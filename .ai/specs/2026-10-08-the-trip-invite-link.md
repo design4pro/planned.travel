@@ -106,7 +106,7 @@ link, I have an account, now what?_
 | `src/server/public/secret.ts` (pure leaf: derive, digest, shape guard), `rate-limit.ts` (budgets are parameters), `trip-invite.ts` (the anonymous projection) - new                                                                                                                                                                          | `src/server/calendar/**` (06-S5's; re-pointed only if it exists, see Architecture)                 |
 | `src/routes/join/$token.tsx`, `join/-server/join.ts`, `join/-ui/join-card.tsx` - new (**`pnpm generate-routes`**, the regenerated `routeTree.gen.ts` travels in the diff)                                                                                                                                                                    | `src/routeTree.gen.ts` (generated, never hand-edited)                                              |
 | `src/components/marketing/chrome.tsx` - edit: `MarketingHeader` gains a `minimal` prop (logo only, no sign-in / start-free / pricing); the guest shell sets `scroll-padding-top` for the sticky header                                                                                                                                       | `src/components/ui/**` (no primitive and no token is added), `package.json`, `pnpm-lock.yaml`      |
-| `src/routes/_app/trips/$tripId/-server/invite.ts`, `-ui/invite-link-panel.tsx` - new; `-server/people.ts` - edit (`TripPeoplePayload.invite`); `-ui/people-screen.tsx` - edit: one mount point and the local `ConfirmDialog` exported                                                                                                        | `src/server/do/**` (no new entity kind; the signal is a patch on the existing `trip` kind)         |
+| `src/routes/_app/trips/$tripId/-server/invite.ts`, `-ui/invite-link-panel.tsx` - new; `-server/people.ts` - edit (`TripPeoplePayload.invite`); `-ui/people-screen.tsx` - edit: one mount point and the local `ConfirmDialog` exported (it gains an optional `pendingLabel` prop for its loading label)                                                                                                        | `src/server/do/**` (no new entity kind; the signal is a patch on the existing `trip` kind)         |
 | `src/routes/(auth)/register.tsx`, `verify-email.tsx` - edit (Phase 1); `(auth)` responses gain `Referrer-Policy: strict-origin` (Phase 3)                                                                                                                                                                                                    | `src/server/billing/**` (no metric; see Quota)                                                     |
 | `src/lib/sentry-scrub.ts` and the server logger - edit: secret redaction (Phase 3); `src/lib/__tests__/sentry-scrub.test.ts`                                                                                                                                                                                                                 | `e2e/places-and-maps.spec.ts`, `e2e/trips-core.spec.ts`, `e2e/journeys.spec.ts`                    |
 | `src/server/audit/trail.ts` - edit: three action names                                                                                                                                                                                                                                                                                       | The plan file (the `Delivered:` line is added by whoever closes the last ticket)                   |
@@ -187,8 +187,10 @@ therefore **derived, not stored**:
 
 Built on `createTenantRepository`; exports:
 
-- `readTripInvite(scope, tripId)` - the row's non-secret fields plus the derived panel state, or `null`.
-  `requireTrip` first.
+- `readTripInvite(scope, tripId, key)` - the row's non-secret fields plus the derived panel state, or `null`.
+  `requireTrip` first. It takes the derivation `key` because the `stale` state is "the derived digest differs from
+  the stored one"; `-server/people.ts` passes the secret read by `src/server/auth/env.ts`. The secret itself is
+  never returned.
 - `revealTripInviteSecret(scope, tripId, key)` - owner only (above).
 - `createTripInvite(scope, tripId, { role, key })` - owner only, `requireWritableTrip`; **insert-if-absent**: the id
   is generated in application code, the secret and digest computed, and the row inserted; a unique violation on
@@ -214,12 +216,15 @@ Built on `createTenantRepository`; exports:
   **member of the link's workspace**, and a banned creator - **all in one statement**, with `trips` and
   `trip_members` matched on the invite row's own `organization_id` (not only `trip_id`, because that foreign key is
   not composite). A dead link of any kind is the same `null`.
-- `readInvitePreview(db, digest, viewerUserId | null)` - builds the read scope **inside `src/server/repos`**
+- `readInvitePreview(db, digest, viewer: { id, banned } | null)` - builds the read scope **inside `src/server/repos`**
   (`createScope(db, { organizationId, userId: createdBy, role: 'member' })`) and returns the discriminated
   projection (below). The viewer's workspace membership is read through the passed `db` from the `member` table,
   as `members.ts` does; repos call neither `authDb()` nor `membershipRoleFor`. `src/server/public/**` never
   constructs a scope (ACCESS §3.7 rule 2).
-- `joinTripByInvite(db, digest, user)` - below.
+- `joinTripByInvite(db, digest, viewer: { id, banned, impersonated })` - below. `join/-server/join.ts` fills
+  `viewer` from the session (`impersonated` is true when `session.impersonatedBy` is set; it is not on `AuthUser`).
+  `join.ts` is the **named caller** of `readInvitePreview` and `joinTripByInvite` in the `unscoped-shape.test.ts` map,
+  beside `public/trip-invite.ts` for the finder.
 
 ### Liveness: when a link is honoured
 
@@ -242,7 +247,11 @@ column-whitelisted projections, no SQL and no fabricated scope. It is also **ses
 viewer from the session and calls the repo-level `readInvitePreview` with the user id to get the signed-in variants.
 
 **Order** (a per-link budget needs the link id, which exists only after the lookup): per-IP check -> shape guard ->
-hash -> `findLiveTripInviteByDigestUnscoped` -> per-link check -> projection.
+hash -> `findLiveTripInviteByDigestUnscoped` -> per-link check -> projection. **`loadInvite` always calls
+`resolveTripInvite` first**, for an anonymous and a signed-in visitor alike (budgets, shape guard, hash, miss count),
+so a dead link is the same 404 and counts against the miss budget either way. A signed-in viewer then adds exactly
+one `readInvitePreview` call (with the viewer's `{ id, banned }`; a banned viewer gets `unavailable`), and the
+per-link budget is applied once.
 
 | Visitor                                             | Projection                                                                                                                                  |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -312,10 +321,10 @@ shared insert** and **extracts the part that must not exist twice**:
   unique-violation-to-`TripMemberExistsError` translation out of `addTripMember` into one **exported**
   `insertTripMember(scope, values)` in `trips.ts`; `addTripMember` keeps its three guards and calls it. The existing
   `addTripMember` tests run unchanged and must stay green.
-- **Phase 3:** `joinTripByInvite(db, digest, user)` lives in **`invites.ts`** (so `invites.ts` imports `trips.ts`,
+- **Phase 3:** `joinTripByInvite(db, digest, viewer)` lives in **`invites.ts`** (so `invites.ts` imports `trips.ts`,
   never the reverse; no cycle), takes the **digest** (nothing from the render is trusted) and calls
   `findLiveTripInviteByDigestUnscoped` in-module. Its order is fixed:
-  1. the joiner is not banned (`user.banned`) and the session is not impersonated: either is
+  1. the joiner is not banned (`viewer.banned`) and the session is not impersonated (`viewer.impersonated`): either is
      `{ outcome: 'unavailable' }` and nothing is written;
   2. re-resolve the link by digest (Liveness applies again) - a rotated, switched-off or orphaned link is
      `{ outcome: 'unavailable' }`;
@@ -380,7 +389,9 @@ inviter email, creates no workspace invitation and no request-to-join, notifies 
 tells the person to ask the inviter to add them to the workspace first (and, if they already hold a workspace
 invitation email, to accept it and open this link again), shows the email they are signed in with so they can tell
 the inviter which address to use, and offers **Sign in with another account** (a friend may be in the workspace
-under a work address) and a way to their own trips. The plan's pointer to `accept-invitation.$invitationId` is
+under a work address; it **signs the current session out first**, then navigates to
+`loginHrefFor('/join/<secret>')`, because `login.tsx` redirects an already signed-in visitor straight back) and a way
+to their own trips. The plan's pointer to `accept-invitation.$invitationId` is
 dropped: that route needs an invitation id this card does not have. Whether a trip link may ever lead into the
 workspace, and on what seat terms, is a product call, tracked as a follow-up (Phasing, last row).
 
@@ -412,9 +423,10 @@ carries `expectedRotation`). Zod v4 `z.strictObject`, the `error` parameter nami
 `z.enum(['editor','viewer'])`. The guards (`assertTripRole` owner, `requireWritableTrip`) live **in the repository**.
 `TripArchivedError` and `TripRoleError` are caught in `invite.ts` and returned as `reason` codes
 (`archived`, `notOwner`, `changed`) that map to `invite.refusal.*`; the authored-English error messages never reach
-a locale. **Pending behaviour:** Create, Replace's confirm, the role select and the switch ignore input while a
-request is in flight (`aria-disabled`, not `disabled`, so focus stays); a double tap or a second owner returns the
-current state rather than a dead URL.
+a locale. **Pending behaviour:** the role select and the switch ignore input while a request is in flight
+(`aria-disabled`, not `disabled`, so focus stays); Create, Join and Replace's confirm use the `Button` `loading`
+state (which sets the native `disabled`), and focus is placed explicitly when the request settles (the focus map).
+A double tap or a second owner returns the current state rather than a dead URL.
 
 **Upgrading the role** from viewer to editor applies to **every copy already sent**: it asks for a confirmation that
 says so. Downgrading and switching **off** do not confirm; the switch shows its `onHint` while on (switching off kills
@@ -463,7 +475,7 @@ when Phase 2 is implemented, the digest helper moves to `public/secret.ts` and t
 the same PR; if the calendar stage lands later, its ticket imports `public/secret.ts` (noted in this PR's body, not by
 editing that spec). The calendar spec's reference to ADR 0035 is already taken (`0035-agents-take-every-pr-to-develop`)
 
-- a follow-up for that spec, noted in the PR body.
+follow-up for that spec, noted in the PR body.
 
 ## 📝 Data Model
 
@@ -491,16 +503,18 @@ and records the link's creator.
   **joined**), **needs workspace** (with its actions), **unavailable** (on `--color-surface-2`; for a signed-in
   visitor the exit is "Go to your trips", otherwise "Sign in"), loading skeleton, error. Guest chrome:
   `SkipToContent`, the `minimal` `MarketingHeader` (logo only - the marketing "Sign in", "Start free" and "See
-  pricing" links would drop `?redirect=` and show "Sign in" to someone already signed in), `MarketingFooter`. At 360px
-  the card is the whole screen with the primary action above the fold; the URL element wraps and never scrolls
-  sideways.
+  pricing" links would drop `?redirect=` and show "Sign in" to someone already signed in), and `MarketingFooter` in
+  the same `minimal` variant (no "Start free" or "See pricing": its `/register` link is the same dead end). On the
+  anonymous `invited` card, `join.newHere` sits directly under the `join.requirement` line, above the Sign in action.
+  At 360px the card is the whole screen with the primary action above the fold; the URL field scrolls its own text
+  and the page never scrolls sideways.
 - **Owner's panel.** As specified under "The owner's panel". Every control has rest, hover, focus-visible, active,
   disabled and loading states. Skeleton: the card outline with a title bar and a button-sized block. Error: an
   `Alert` variant `danger` with "Try again". After a Replace or a switch-on the panel confirms on screen ("New link
   ready - copy it and send it again") because the URL changes.
 - **Reused primitives:** `Card`, `Button`, `Avatar`, `Badge`, `Alert`, `EmptyState`, `Skeleton`, `Separator`,
   `Input`, `SwitchField`, `SimpleSelect` from `#/components/ui`; the people screen's `ConfirmDialog` (exported, with
-  `onCloseAutoFocus`). **`CopyValue` is not used**: it builds English strings in code, upper-cases the value, is
+  `onCloseAutoFocus` and an optional `pendingLabel`, so `invite.replace.pending` is shown and announced). **`CopyValue` is not used**: it builds English strings in code, upper-cases the value, is
   about 16px tall and cannot select the URL. No primitive and no token is added.
 - **Motion.** The card enters at 220 ms on `--ease-out-quint` with a 6px rise; a state change cross-fades at 150 ms
   with the outgoing state `inert`; transform and opacity only; `prefers-reduced-motion: reduce` collapses both to
@@ -512,7 +526,7 @@ and records the link's creator.
   | Join page load                        | nowhere (no autofocus); `<main id="main">` is the skip link target    |
   | Join -> joined / member               | the new state's `h1` (`tabIndex={-1}`)                                |
   | Join -> unavailable                   | the unavailable `h1`                                                  |
-  | Join submit error                     | stays on the re-enabled Join button; an `Alert` `danger` appears      |
+  | Join submit error                     | returned to the Join button (a ref); an `Alert` `danger` appears      |
   | Create link                           | the Copy button (Create unmounts)                                     |
   | Replace from `active`                 | back on "Replace link"                                                |
   | Replace from `stale` / `creator-gone` | the Copy button (`onCloseAutoFocus`, the `people-screen.tsx` pattern) |
@@ -555,6 +569,7 @@ skill; the parity test enforces it). Namespaces `join.*` and `invite.*`; the rol
 | Key                                | Text (`en`)                                                                                                                                       |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `join.page.title`                  | `Trip invite link` (generic: no trip title, no inviter)                                                                                           |
+| `join.page.description`            | `Open this link to join a shared trip on planned.travel.` (generic: no trip title, no inviter)                                                    |
 | `join.title.invited`               | `{inviter} invited you to a trip`                                                                                                                 |
 | `join.requirement`                 | `This link works for people who are already in {inviter}'s workspace.`                                                                            |
 | `join.newHere`                     | `New here? Ask {inviter} to add you to their workspace first.`                                                                                    |
@@ -614,10 +629,10 @@ skill; the parity test enforces it). Namespaces `join.*` and `invite.*`; the rol
 | `invite.creatorGone`               | `This link stopped working because the person who created it is no longer an owner. Replace it.`                                                  |
 | `invite.archived`                  | `This trip is archived. The link does not work while it is, and works again when the trip is restored.`                                           |
 | `invite.announce.created`          | `Invite link created`                                                                                                                             |
-| `invite.announce.roleChanged`      | `People who join will become {role}`                                                                                                              |
+| `invite.announce.roleEditor`       | `People who join will become editors`                                                                                                              |
 | `invite.announce.off`              | `Invite link switched off`                                                                                                                        |
-| `invite.announce.on`               | `New invite link ready. Copy it and send it again.`                                                                                               |
-| `invite.announce.replaced`         | `New invite link ready. Copy it and send it again.`                                                                                               |
+| `invite.announce.newLink`          | `New invite link ready. Copy it and send it again.`                                                                                               |
+| `invite.announce.roleViewer`       | `People who join will become viewers`                                                                                                             |
 | `invite.error.title`               | `The invite link did not load`                                                                                                                    |
 | `invite.error.retry`               | `Try again`                                                                                                                                       |
 | `invite.refusal.archived`          | `This trip is archived.`                                                                                                                          |
@@ -776,8 +791,8 @@ same for the panel. Nothing is deferred to a polish ticket.
 3. Tests: owner-only reveal (an editor, a viewer, a workspace admin who is not on the trip, and another workspace are
    refused or `NotFoundError`; `invite` is `null` for each); the read has no secret field; the old secret stops
    resolving right after replace and after switch-on; role cannot be `owner`; the takeover (owner A mints, A is
-   demoted, owner B changes the role - the old secret resolves to `null` only after B replaces it, and B's role
-   change on a `creator-gone` link is not offered); every panel state renders; component tests as in Phase 3.
+   demoted: the old secret resolves to `null`; it still resolves to `null` after B's role change; B's Replace issues a
+   new secret and the old one stays `null`; B's role change on a `creator-gone` link is not offered); every panel state renders; component tests as in Phase 3.
 4. `e2e/collaboration-and-sharing.spec.ts`: one `test.describe('07-S10 - ...')`. The owner (cached demo session)
    creates a link using only the keyboard, copies it, opens it in the same context and sees the **already a
    member** state with the joined count unchanged, a **fresh anonymous context** opens it and sees the invite with a
@@ -790,7 +805,7 @@ same for the panel. Nothing is deferred to a polish ticket.
 ## Verification
 
 - Gate, in order (`validation.commands`): `pnpm typecheck`, `pnpm lint`, `pnpm test`,
-  `bash .ai/scripts/check-generated.sh`, `pnpm build`; plus `pnpm vitest run scripts/specs` for this spec.
+  `bash .ai/scripts/check-generated.sh`, `pnpm build`; plus `pnpm exec vitest run --project=tooling scripts/specs` for this spec.
 - `pnpm generate-routes` in Phase 3 (a route file is added); the tree is inspected, not edited.
 - `pnpm generate-spec-index` after any change to this spec.
 - Migration review (Phase 2): one `CREATE TABLE`, three indexes, no rebuild.
@@ -805,20 +820,20 @@ updating, revealing B's invite is `NotFoundError`, with B's row **byte-identical
 `use_count` included); touching B's invite id is `NotFoundError`. `invites.test.ts` covers the unscoped resolver: a
 valid digest resolves to its own organization and trip and no other; every kind of dead link (disabled, rotated away
 
-- asserted by replacing and then resolving the old value in the same test -, archived trip, creator demoted, creator
-  removed from the trip, creator removed from the workspace, creator banned, role outside the narrowed enum, and a
-  hand-made row whose `organization_id` disagrees with its trip's) resolves to `null`; `readInvitePreview` can read that
-  trip and raises `NotFoundError` for any other trip id; a joiner who is not a member of the row's organization is
-  refused and no `trip_members` row is written. Functions covered: `readTripInvite`, `revealTripInviteSecret`,
-  `createTripInvite`, `replaceTripInvite`, `updateTripInvite`, `touchTripInvite`, `findLiveTripInviteByDigestUnscoped`,
-  `readInvitePreview`, `joinTripByInvite`.
+(asserted by replacing and then resolving the old value in the same test), archived trip, creator demoted, creator
+removed from the trip, creator removed from the workspace, creator banned, role outside the narrowed enum, and a
+hand-made row whose `organization_id` disagrees with its trip's) resolves to `null`; `readInvitePreview` can read that
+trip and raises `NotFoundError` for any other trip id; a joiner who is not a member of the row's organization is
+refused and no `trip_members` row is written. Functions covered: `readTripInvite`, `revealTripInviteSecret`,
+`createTripInvite`, `replaceTripInvite`, `updateTripInvite`, `touchTripInvite`, `findLiveTripInviteByDigestUnscoped`,
+`readInvitePreview`, `joinTripByInvite`.
 
 ## Definition of done
 
 The six items of `docs/SPEC.md` §7 apply unchanged, and:
 
 - [ ] Spacing on the 4px grid from `--space-*`.
-- [ ] Hover, focus-visible, active, disabled (`aria-disabled` while pending) and loading on the join action, the copy
+- [ ] Hover, focus-visible, active, disabled (`aria-disabled` on the select and switch while pending; `loading` on buttons) and loading on the join action, the copy
       button, the role select, the switch and the replace confirmation.
 - [ ] Empty, skeleton and error states designed on `--color-surface-2`, including the never-minted owner state and the
       unavailable landing.
@@ -876,7 +891,19 @@ The six items of `docs/SPEC.md` §7 apply unchanged, and:
 
 ## Panel verdicts
 
-Round 1 (on the first written draft), all five reviewers: architect - approve with conditions (confidence high);
-product owner - approve with conditions (medium); security and tenancy - approve with conditions (medium);
-accessibility - approve with conditions (medium); traveller / manual tester - **revise** (medium). Every condition was
-applied in this revision; none escalated (ESCALATE: no from all five). Round 2 verdicts are recorded below once given.
+**Round 1** (on the first written draft): architect - approve with conditions (confidence high); product owner -
+approve with conditions (medium); security and tenancy - approve with conditions (medium); accessibility - approve
+with conditions (medium); traveller / manual tester - **revise** (medium). Every condition was applied in the
+revision (commit `e48f9376`); none escalated (ESCALATE: no from all five).
+
+**Round 2** (on the revision): product owner - **approve** (high), no conditions; software architect - approve with
+conditions (high); security and tenancy - approve with conditions (high); accessibility - approve with conditions
+(high); traveller / manual tester - approve with conditions (high). Every round 2 condition was a text edit and was
+applied in the next commit: the viewer object carrying `banned` and `impersonated` into the preview and the join,
+`readTripInvite` taking the derivation key, the signed-in `loadInvite` path running the same budgets and miss
+accounting, `join.ts` registered as the named caller in the unscoped-shape map, the takeover test wording (no
+revival), `aria-disabled` limited to the select and switch with `loading` buttons and explicit focus, the dialog's
+`pendingLabel`, the URL field scrolling its own text, sign-out before "Sign in with another account", the minimal
+footer, whole-sentence role announcements, the generic meta description key and the placement of `join.newHere`.
+No specialist asked for a third round and none escalated (ESCALATE: no from all five). Not checked by any reviewer:
+anything that needs the running app, a real screen reader or computed colours - those are Phase 3 and 4 evidence.
