@@ -402,6 +402,8 @@ const messages = {
   'action.delete.confirm': 'Hapus akun',
   'action.delete.note':
     'Isi yang dibuat orang ini di dalam sebuah ruang kerja tetap menjadi milik ruang kerja itu. Menangguhkan alih-alih menghapus menjaga catatannya dan hanya mencabut aksesnya.',
+  'action.delete.owners':
+    'Akun yang menjadi satu-satunya pemilik sebuah ruang kerja yang juga dimasuki orang lain tidak bisa dihapus. Jadikan orang lain pemilik di sana lebih dulu, atau tangguhkan akunnya sebagai gantinya.',
   'action.delete.done': 'Akun dihapus',
   'action.delete.done.body':
     '{name} dan segala yang terikat pada akun itu sudah lenyap.',

@@ -406,6 +406,8 @@ const messages = {
   'action.delete.confirm': 'Konto löschen',
   'action.delete.note':
     'Inhalte eines Arbeitsbereichs, die diese Person angelegt hat, bleiben beim Arbeitsbereich, dem sie gehören. Das Konto stattdessen zu sperren, behält den Eintrag und nimmt nur den Zugang.',
+  'action.delete.owners':
+    'Ein Konto, das einziger Eigentümer eines Arbeitsbereichs ist, dem weitere Personen angehören, kann nicht gelöscht werden. Dort zuerst eine andere Person zum Eigentümer machen oder das Konto stattdessen sperren.',
   'action.delete.done': 'Konto gelöscht',
   'action.delete.done.body': '{name} und alles, was am Konto hing, ist fort.',
 

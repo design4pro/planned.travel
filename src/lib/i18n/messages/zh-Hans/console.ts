@@ -367,6 +367,8 @@ const messages = {
   'action.delete.confirm': '删除账户',
   'action.delete.note':
     '这个人在工作空间里创建的内容，仍归拥有它的工作空间所有。用停用代替删除，可以保住记录而只收走访问权。',
+  'action.delete.owners':
+    '如果一个账号是某个还有其他成员的工作空间的唯一所有者，就无法删除。请先在该工作空间指定另一位所有者，或改为停用该账号。',
   'action.delete.done': '账户已删除',
   'action.delete.done.body': '{name} 以及与该账户绑定的一切都已消失。',
 

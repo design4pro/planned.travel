@@ -93,7 +93,7 @@ import {
   platformUserSchema,
   toConsoleUser,
 } from './projections'
-import { readTargetUser, refuseSelfTarget } from './target'
+import { readTargetUser, refuseSelfTarget, refuseSoleOwner } from './target'
 
 import type { ConsoleCall } from './context'
 import type { ConsoleUser, PlatformUserRow } from './projections'
@@ -565,6 +565,10 @@ export async function setPlatformUserPassword(
  * The before-state is read first because after the delete there is nothing left to describe, and a
  * `platform.user.deleted` row whose `changes` says nothing about who was deleted is a row that
  * answers no question thirteen months later.
+ *
+ * **The only owner of a workspace other people belong to is refused** (`target-sole-owner`, see
+ * {@link refuseSoleOwner}): `removeUser` cascades the `member` rows past every organization hook, and
+ * nothing else would stop it leaving a workspace nobody can administer.
  */
 export async function deletePlatformUser(
   input: z.input<typeof deletePlatformUserInputSchema>,
@@ -578,6 +582,9 @@ export async function deletePlatformUser(
     'You cannot delete your own account from the console.',
   )
   const before = await readTargetUser(call, data.userId)
+  // After the target is read and before anything is touched: a refusal leaves the rows, the KV
+  // blobs and the ledger exactly as they were.
+  await refuseSoleOwner(call, before.id)
 
   // Before `removeUser`, which deletes the `session` rows the token names live in. Afterwards
   // there is nothing left to read them from, and a blob nobody can name keeps resolving through

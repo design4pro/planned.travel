@@ -400,6 +400,8 @@ const messages = {
   'action.delete.confirm': 'Xoá tài khoản',
   'action.delete.note':
     'Những gì người này tạo ra bên trong một không gian làm việc vẫn thuộc về không gian sở hữu chúng. Đình chỉ thay vì xoá sẽ giữ lại dấu vết mà chỉ thu hồi quyền truy cập.',
+  'action.delete.owners':
+    'Không thể xoá tài khoản là chủ sở hữu duy nhất của một không gian làm việc có người khác tham gia. Hãy chỉ định người khác làm chủ sở hữu ở đó trước, hoặc đình chỉ tài khoản thay vì xoá.',
   'action.delete.done': 'Đã xoá tài khoản',
   'action.delete.done.body':
     '{name} và mọi thứ gắn với tài khoản ấy đều đã biến mất.',

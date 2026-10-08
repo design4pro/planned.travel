@@ -386,6 +386,8 @@ const messages = {
   'action.delete.confirm': '계정 삭제',
   'action.delete.note':
     '이 사람이 워크스페이스 안에서 만든 것은 그것을 소유한 워크스페이스에 남습니다. 삭제 대신 정지하면 기록은 지키면서 접근만 거둘 수 있습니다.',
+  'action.delete.owners':
+    '다른 사람이 속해 있는 워크스페이스의 유일한 소유자인 계정은 삭제할 수 없습니다. 먼저 그 워크스페이스에서 다른 소유자를 지정하거나, 삭제 대신 계정을 정지하세요.',
   'action.delete.done': '계정을 삭제했습니다',
   'action.delete.done.body':
     '{name}과(와) 계정에 묶여 있던 모든 것이 사라졌습니다.',

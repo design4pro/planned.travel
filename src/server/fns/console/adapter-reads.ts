@@ -1,5 +1,5 @@
 /**
- * The two D1 reads this directory takes through Better Auth's own database adapter, written so they
+ * The D1 reads this directory takes through Better Auth's own database adapter, written so they
  * can be driven by a test rather than described by one.
  *
  * They used to live in `./bindings`, which imports `cloudflare:workers` and therefore cannot be
@@ -23,7 +23,14 @@
 
 import { z } from 'zod'
 
+import {
+  OWNERSHIP_READ_LIMIT,
+  isOwnerRole,
+  readOwnershipPage,
+} from './last-owner'
+
 import type { getAuth } from '#/server/auth'
+import type { OwnershipRead } from './last-owner'
 import type { SessionRowPage } from './session-keys'
 
 /**
@@ -233,6 +240,50 @@ export async function readAccountMemberships(
     const parsed = memberRowSchema.safeParse(row)
     return parsed.success ? [parsed.data] : []
   })
+}
+
+/**
+ * The target's memberships, and everyone else's in the workspaces the target owns.
+ *
+ * Two reads, the second only when the target owns something. Ordered by nothing: the answer is a
+ * count, and a complete page has no order to preserve.
+ */
+export async function readWorkspaceOwnership(
+  source: AuthReadAdapterSource,
+  userId: string,
+  limit: number = OWNERSHIP_READ_LIMIT,
+): Promise<OwnershipRead> {
+  const adapter = await source()
+
+  const own = readOwnershipPage(
+    await adapter.findMany<unknown>({
+      model: 'member',
+      where: [{ field: 'userId', value: userId }],
+      select: ['organizationId', 'role'],
+      limit,
+    }),
+    limit,
+  )
+  if (own === null) return { complete: false }
+
+  const owned = own
+    .filter((row) => isOwnerRole(row.role))
+    .map((row) => row.organizationId)
+  if (owned.length === 0) return { complete: true, own, others: [] }
+
+  const others = readOwnershipPage(
+    await adapter.findMany<unknown>({
+      model: 'member',
+      where: [
+        { field: 'organizationId', operator: 'in', value: owned },
+        { field: 'userId', operator: 'ne', value: userId },
+      ],
+      select: ['organizationId', 'role'],
+      limit,
+    }),
+    limit,
+  )
+  return others === null ? { complete: false } : { complete: true, own, others }
 }
 
 /**
