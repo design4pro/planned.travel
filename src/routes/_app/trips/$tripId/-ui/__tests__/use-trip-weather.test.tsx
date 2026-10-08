@@ -1,0 +1,118 @@
+// @vitest-environment jsdom
+import * as React from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderHook, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { TripWeather } from '#/lib/weather'
+
+const loadTripWeatherFn = vi.hoisted(() => vi.fn())
+
+vi.mock('../../-server/weather', () => ({ loadTripWeatherFn }))
+
+const { TRIP_WEATHER_STALE_MS, tripWeatherKey, useTripWeather } =
+  await import('../use-trip-weather')
+
+const ANSWER: TripWeather = {
+  distanceUnit: 'imperial',
+  days: [
+    {
+      dayId: 'd1',
+      status: 'ok',
+      reading: {
+        kind: 'forecast',
+        source: 'met-norway',
+        tempMinC: 1,
+        tempMaxC: 2,
+        symbol: 'cloudy',
+      },
+    },
+    { dayId: 'd2', status: 'none' },
+  ],
+}
+
+function wrapper(client: QueryClient) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  }
+}
+
+function newClient(): QueryClient {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } })
+}
+
+beforeEach(() => {
+  loadTripWeatherFn.mockReset()
+})
+
+describe('useTripWeather', () => {
+  it('is keyed by the trip and stale after fifteen minutes', () => {
+    expect(tripWeatherKey('t1')).toEqual(['trip-weather', 't1'])
+    expect(TRIP_WEATHER_STALE_MS).toBe(15 * 60_000)
+  })
+
+  it('says loading for every day until the answer is in, then each day’s own entry', async () => {
+    let resolve: (value: TripWeather) => void = () => undefined
+    loadTripWeatherFn.mockReturnValue(
+      new Promise<TripWeather>((done) => {
+        resolve = done
+      }),
+    )
+    const { result } = renderHook(() => useTripWeather('t1'), {
+      wrapper: wrapper(newClient()),
+    })
+
+    expect(result.current.viewOf('d1')).toEqual({ status: 'loading' })
+    expect(result.current.unit).toBe('metric')
+
+    resolve(ANSWER)
+    await waitFor(() => {
+      expect(result.current.viewOf('d1').status).toBe('ok')
+    })
+    expect(result.current.viewOf('d2')).toEqual({ dayId: 'd2', status: 'none' })
+    expect(result.current.unit).toBe('imperial')
+    expect(loadTripWeatherFn).toHaveBeenCalledWith({ data: { tripId: 't1' } })
+  })
+
+  it('shows a day the answer does not mention as nothing, not as a guess', async () => {
+    loadTripWeatherFn.mockResolvedValue(ANSWER)
+    const { result } = renderHook(() => useTripWeather('t1'), {
+      wrapper: wrapper(newClient()),
+    })
+
+    await waitFor(() => {
+      expect(result.current.viewOf('d1').status).toBe('ok')
+    })
+    expect(result.current.viewOf('d9')).toEqual({ dayId: 'd9', status: 'none' })
+  })
+
+  it('turns a failed request into unavailable days rather than an error', async () => {
+    loadTripWeatherFn.mockRejectedValue(new Error('offline'))
+    const { result } = renderHook(() => useTripWeather('t1'), {
+      wrapper: wrapper(newClient()),
+    })
+
+    await waitFor(() => {
+      expect(result.current.viewOf('d1').status).toBe('unavailable')
+    })
+    expect(result.current.unit).toBe('metric')
+  })
+
+  it('asks once for two readers of the same trip inside the stale window', async () => {
+    loadTripWeatherFn.mockResolvedValue(ANSWER)
+    const client = newClient()
+    const first = renderHook(() => useTripWeather('t1'), {
+      wrapper: wrapper(client),
+    })
+    await waitFor(() => {
+      expect(first.result.current.viewOf('d1').status).toBe('ok')
+    })
+
+    const second = renderHook(() => useTripWeather('t1'), {
+      wrapper: wrapper(client),
+    })
+
+    expect(second.result.current.viewOf('d1').status).toBe('ok')
+    expect(loadTripWeatherFn).toHaveBeenCalledTimes(1)
+  })
+})

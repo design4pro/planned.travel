@@ -322,6 +322,113 @@ export async function getTripItinerary(
   }))
 }
 
+/** A point on the map, in decimal degrees. */
+export interface DayCoordinate {
+  readonly lat: number
+  readonly lng: number
+}
+
+/**
+ * Where one day is, for anything that looks a day up by place - today the weather.
+ *
+ * Only the day, its date and a coordinate: no place, stay or member id, because the reader of this
+ * shape hands it onward and a caller must not be able to leak what it never held.
+ */
+export interface DayLocation {
+  readonly dayId: string
+  readonly date: string | null
+  readonly location: DayCoordinate | null
+}
+
+function coordinateOf(place: Place | undefined): DayCoordinate | null {
+  return place !== undefined && place.lat !== null && place.lng !== null
+    ? { lat: place.lat, lng: place.lng }
+    : null
+}
+
+/**
+ * The location of each of a trip's days, in day order.
+ *
+ * A day's location is, first, the place of the stay that covers it. When several stays cover the
+ * day the one that **starts** that day wins (the traveller has just arrived there), then the one
+ * with the latest start (the most recent decision), then the lowest id so the answer never depends
+ * on row order. A stay with no place is skipped. With no usable stay, the place of the day's first
+ * stop is used. A place missing either coordinate is not a location at all - half a coordinate is
+ * not a point - so the search moves on to the next candidate; a day with none answers `null`.
+ *
+ * The trip's readability is checked first, so a private trip the reader cannot open is
+ * {@link NotFoundError} before a single day is read.
+ */
+export async function readDayLocations(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<DayLocation>> {
+  await requireTrip(scope, tripId)
+
+  const [days, assignments, accommodations] = await Promise.all([
+    listTripDays(scope, tripId),
+    listTripAssignments(scope, tripId),
+    listTripAccommodations(scope, tripId),
+  ])
+
+  const placeIds = [
+    ...new Set([
+      ...assignments.map((row) => row.placeId),
+      ...accommodations.flatMap((stay) =>
+        stay.placeId === null ? [] : [stay.placeId],
+      ),
+    ]),
+  ]
+  const placesById = new Map(
+    (await placesRepository.findByIds(scope, placeIds)).map((row) => [
+      row.id,
+      row,
+    ]),
+  )
+
+  const dayNumbers = new Map(days.map((day) => [day.id, day.dayNumber]))
+  const stays = accommodations
+    .flatMap((stay) => {
+      const from = dayNumbers.get(stay.startDayId)
+      const to = dayNumbers.get(stay.endDayId)
+      const location = coordinateOf(
+        stay.placeId === null ? undefined : placesById.get(stay.placeId),
+      )
+      return from === undefined || to === undefined || location === null
+        ? []
+        : [{ id: stay.id, from, to, location }]
+    })
+    .sort((a, b) => b.from - a.from || (a.id < b.id ? -1 : 1))
+
+  const stopsByDay = new Map<string, Array<DayAssignment>>()
+  for (const assignment of assignments) {
+    const bucket = stopsByDay.get(assignment.dayId)
+    if (bucket) {
+      bucket.push(assignment)
+    } else {
+      stopsByDay.set(assignment.dayId, [assignment])
+    }
+  }
+
+  return days.map((day) => {
+    const covering = stays.filter(
+      (stay) => day.dayNumber >= stay.from && day.dayNumber <= stay.to,
+    )
+    // `stays` is sorted latest start first, so the stay starting on this day, if any, leads.
+    const stay = covering.at(0)
+    const stopLocation =
+      (stopsByDay.get(day.id) ?? [])
+        .map((stop) => coordinateOf(placesById.get(stop.placeId)))
+        .find((location) => location !== null) ?? null
+
+    return {
+      dayId: day.id,
+      date: day.date,
+      location: stay?.location ?? stopLocation,
+    }
+  })
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Writes
  * ---------------------------------------------------------------------------------------------- */

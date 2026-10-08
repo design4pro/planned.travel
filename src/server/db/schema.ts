@@ -407,11 +407,14 @@ export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
 /**
  * Providers whose outbound calls this repository actually makes, and can therefore count.
  *
- * Five, because five clients exist: `src/server/queue/handlers/email.ts`,
+ * Seven: six clients exist - `src/server/queue/handlers/email.ts`,
  * `src/server/queue/handlers/pdf-export.ts`, the injected `fetch` of
- * `src/server/billing/polar.ts`, `src/server/geo/geoapify.ts` and `src/server/transit/here.ts`. A
- * slug earns a place here when a call site can name it, never before — {@link PLANNED_PROVIDERS} is where an intention lives, and
- * moving a slug across is what adopting a provider looks like.
+ * `src/server/billing/polar.ts`, `src/server/geo/geoapify.ts`, `src/server/transit/here.ts` and
+ * `src/server/weather/met-norway.ts` - and the seventh, `nasa-power`, is registered with the pair
+ * it was decided with (the weather provider decision) ahead of `src/server/weather/nasa-power.ts`,
+ * the call site that will name it. A slug otherwise earns a place here when a call site can name
+ * it, never before - {@link PLANNED_PROVIDERS} is where an intention lives, and moving a slug
+ * across is what adopting a provider looks like.
  */
 export const METERED_PROVIDERS = [
   'resend',
@@ -419,6 +422,8 @@ export const METERED_PROVIDERS = [
   'polar',
   'geoapify',
   'here',
+  'met-norway',
+  'nasa-power',
 ] as const
 
 /**

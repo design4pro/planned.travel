@@ -1,0 +1,55 @@
+import { useQuery } from '@tanstack/react-query'
+
+import { loadTripWeatherFn } from '../-server/weather'
+
+import type { DayWeatherView } from '#/components/planner/weather-model'
+import type { WeatherUnit } from '#/lib/weather'
+
+/** A forecast moves slowly, and the server keeps its own, fresher, cache behind this one. */
+export const TRIP_WEATHER_STALE_MS = 15 * 60_000
+
+export function tripWeatherKey(tripId: string) {
+  return ['trip-weather', tripId] as const
+}
+
+export interface TripWeatherView {
+  /** What to draw for one day: the answer, `loading` before it, `unavailable` if it failed. */
+  readonly viewOf: (dayId: string) => DayWeatherView
+  /** The reader's unit, for drawing the metric readings. */
+  readonly unit: WeatherUnit
+}
+
+/**
+ * The weather of a trip's days, fetched after the screen is on the page.
+ *
+ * Deliberately a query and not a route loader: the board paints from the loader's data alone, and
+ * a provider that is slow or down must not hold it back. Until the answer is in every day reads
+ * `loading`; a request that fails outright reads `unavailable` for every day, because the server
+ * function already turns each provider failure into that answer and what is left is the network.
+ * A day the answer does not mention reads `none`.
+ */
+export function useTripWeather(tripId: string): TripWeatherView {
+  const query = useQuery({
+    queryKey: tripWeatherKey(tripId),
+    queryFn: () => loadTripWeatherFn({ data: { tripId } }),
+    staleTime: TRIP_WEATHER_STALE_MS,
+  })
+
+  if (query.isError) {
+    return {
+      unit: 'metric',
+      viewOf: (dayId) => ({ dayId, status: 'unavailable' }),
+    }
+  }
+
+  const answer = query.data
+  if (answer === undefined) {
+    return { unit: 'metric', viewOf: () => ({ status: 'loading' }) }
+  }
+
+  const byDay = new Map(answer.days.map((day) => [day.dayId, day]))
+  return {
+    unit: answer.distanceUnit,
+    viewOf: (dayId) => byDay.get(dayId) ?? { dayId, status: 'none' },
+  }
+}

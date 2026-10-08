@@ -515,6 +515,20 @@ const messages = {
     'A trip holds at most {limit} guests, because a longer list makes the participant pickers and the split arithmetic hard to read',
   'people.error.guestMergeTarget':
     'Choose somebody who is already on this trip',
+  'plan.weather.badge.forecast': 'Forecast: {condition}, high {max}, low {min}',
+  'plan.weather.badge.forecastNoCondition': 'Forecast: high {max}, low {min}',
+  'plan.weather.badge.unavailable': 'Weather unavailable for this day',
+  'plan.weather.badge.loading': 'Loading weather',
+  'plan.weather.condition.clear': 'Clear',
+  'plan.weather.condition.fair': 'Fair',
+  'plan.weather.condition.partlyCloudy': 'Partly cloudy',
+  'plan.weather.condition.cloudy': 'Cloudy',
+  'plan.weather.condition.fog': 'Fog',
+  'plan.weather.condition.rain': 'Rain',
+  'plan.weather.condition.heavyRain': 'Heavy rain',
+  'plan.weather.condition.sleet': 'Sleet',
+  'plan.weather.condition.snow': 'Snow',
+  'plan.weather.condition.thunder': 'Thunder',
 } as const satisfies NamespaceMessages
 
 export default messages
