@@ -49,7 +49,7 @@ export function importStore(): KVNamespace {
 /** Memoised per isolate: the logger holds no request state. */
 let logger: Logger | undefined
 
-function log(): Logger {
+export function log(): Logger {
   logger ??= loggerFromEnv(env, { context: { component: 'server-fn' } })
   return logger
 }

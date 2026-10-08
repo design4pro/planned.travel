@@ -115,6 +115,17 @@ const messages = {
   'workspace.label': 'Workspace',
   'workspace.switchFailed': 'Could not switch workspace',
   'workspace.switchFailedBody': 'Check your connection and try again.',
+  'workspace.create': 'Create workspace',
+  'workspace.createTitle': 'Create a workspace',
+  'workspace.createDescription':
+    'A separate space for its own trips, places and people. It starts on the Free plan.',
+  'workspace.createName': 'Workspace name',
+  'workspace.createUpgrade': 'Creating more workspaces is part of a paid plan.',
+  'workspace.createLimitReached':
+    'You have reached the most workspaces one account can belong to.',
+  'workspace.createRoleRequired':
+    'Only a workspace admin can create a workspace. Ask an admin of this workspace, or switch to a workspace you administer.',
+  'workspace.createFailed': 'Could not create the workspace',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Appearance',

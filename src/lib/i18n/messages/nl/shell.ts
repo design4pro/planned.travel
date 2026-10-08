@@ -71,6 +71,18 @@ const messages = {
   'workspace.switchFailed': 'Wisselen van werkruimte is niet gelukt',
   'workspace.switchFailedBody':
     'Controleer je verbinding en probeer het opnieuw.',
+  'workspace.create': 'Werkruimte maken',
+  'workspace.createTitle': 'Een werkruimte maken',
+  'workspace.createDescription':
+    'Een aparte ruimte met eigen reizen, plekken en mensen. Begint met het abonnement Gratis.',
+  'workspace.createName': 'Naam van de werkruimte',
+  'workspace.createUpgrade':
+    'Extra werkruimtes maken hoort bij een betaald abonnement.',
+  'workspace.createLimitReached':
+    'Je hebt het maximale aantal werkruimtes bereikt waartoe één account kan behoren.',
+  'workspace.createRoleRequired':
+    'Alleen een beheerder van de werkruimte kan een werkruimte maken. Vraag een beheerder van deze werkruimte of wissel naar een werkruimte die je beheert.',
+  'workspace.createFailed': 'De werkruimte kon niet worden gemaakt',
 
   /* --------------------------------------------------------- theme switcher */
   'theme.label': 'Weergave',
