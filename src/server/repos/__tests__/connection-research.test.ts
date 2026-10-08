@@ -14,6 +14,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { NotFoundError } from '../context'
 import { listTripDays } from '../days'
@@ -26,7 +27,6 @@ import {
   reorderDayTransports,
   replaceTransportChain,
   saveSearchedConnection,
-  updateTransport,
 } from '../transports'
 import type { Day, TransportLeg } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -323,7 +323,8 @@ describe('a saved connection that is searched again', () => {
 
   it('leaves the record’s own title, status, booking fields and days as they were', async () => {
     const transportId = await saveUnanchored(1)
-    await updateTransport(tenant.scope, transportId, {
+    await editTransport(tenant.scope, tripId, transportId, {
+      title: 'Osaka to Tokyo',
       status: 'confirmed',
       bookingCode: 'ABC123',
       dayId: days[1].id,

@@ -457,11 +457,12 @@ describe('price conversion', () => {
 describe('the draft as the record writers take it', () => {
   const TRIP = 'trip-42'
 
-  /** Exactly what the dialog hands the save: the record, the row's id and the chain. */
+  /** Exactly what the dialog hands the save: the record, the row's id, its intent and the chain. */
   function savePayload(transportDraft: TransportDraft, chain: ChainDraft) {
     return {
       ...transportPayload(transportDraft, chain, TRIP),
       transportId: 'draft-1',
+      intent: 'create' as const,
       ...chainPayload(chain),
     }
   }
