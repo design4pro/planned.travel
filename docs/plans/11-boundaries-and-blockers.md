@@ -679,13 +679,13 @@ This stage records what a row is waiting on; when the waiting ends, the row leav
 rather than the register quietly keeping it. Five ADRs did it, and each is the argument this file
 deliberately does not make itself:
 
-| Row                    | Closed by                                                    | Now built by                                         |
-| ---------------------- | ------------------------------------------------------------ | ---------------------------------------------------- |
-| BKG-07                 | `docs/adr/0010-airport-catalogue-from-public-domain-data.md` | `03-S2`, wave 2                                      |
-| BKG-08                 | `docs/adr/0011-here-for-public-transit-routing.md`           | `03-S3`, wave 3                                      |
-| BKG-03, and BKG-04     | `docs/adr/0012-workers-ai-for-confirmation-extraction.md`    | `03-S7`, wave 5                                      |
-| MAP-01, MAP-02, MAP-03 | `docs/adr/0013-geoapify-for-geocoding.md`                    | `02-S4` w3 mints the proxy; `02-S13` w4, `02-S11` w6 |
-| MAP-08, MAP-09         | `docs/adr/0019-here-for-road-routing.md`                     | `02-S9` w5, `02-S12` w6, once plan 02 cites the ADR  |
+| Row                    | Closed by                                                    | Now built by                                                        |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| BKG-07                 | `docs/adr/0010-airport-catalogue-from-public-domain-data.md` | `03-S2`, wave 2                                                     |
+| BKG-08                 | `docs/adr/0011-here-for-public-transit-routing.md`           | `03-S3`, wave 3                                                     |
+| BKG-03, and BKG-04     | `docs/adr/0012-workers-ai-for-confirmation-extraction.md`    | `03-S7`, wave 5                                                     |
+| MAP-01, MAP-02, MAP-03 | `docs/adr/0013-geoapify-for-geocoding.md`                    | #281 minted the proxy; `02-S4` w3, `02-S13` w4, `02-S11` w6 call it |
+| MAP-08, MAP-09         | `docs/adr/0019-here-for-road-routing.md`                     | `02-S9` w5, `02-S12` w6, once plan 02 cites the ADR                 |
 
 BKG-08's wave moved from 2 to 3 when `03-S3` was rewritten around a real provider; the table above
 now states 3, and `03-reservations-and-transport.md` is the authority. BKG-04 is not one of the
