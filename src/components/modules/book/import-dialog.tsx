@@ -3,17 +3,19 @@
  *
  * The one rule that shapes this file: **nothing a machine read reaches the desk until a person has
  * pressed a button beside it** (ADR 0012). So the dialog does four things in order — refuse what it
- * cannot read, *there and by name*; upload what it can through the existing `uploadFile`, which
- * posts over `XMLHttpRequest` and therefore measures real bytes; show what came back; and write
- * only the rows that survived pruning.
+ * cannot read, *there and by name*; hand what it can to the job module, which uploads it through
+ * the existing `uploadFile`, which posts over `XMLHttpRequest` and therefore measures real bytes;
+ * show what came back; and write only the rows that survived pruning.
  *
  * A refusal is worded as what it is. The extraction ceiling has its own state rather than borrowing
  * the transit search's; a format the conversion cannot read is named with the file that carried it
  * and the list that works; a price the document did not state clearly is marked and left empty.
  *
- * The dialog can be closed and the reading continues — `./import-widget` is where that lives, and
- * this file reads the same register, so reopening the dialog (or arriving from the widget's Review)
- * finds the job again.
+ * The dialog can be closed and the reading continues — `./import-jobs` owns the jobs and
+ * `./import-widget` shows them in the shell, and this file reads the same store, so reopening the
+ * dialog (or arriving from the widget's Review) finds the job again. What is left here is what the
+ * reader sees and does: the drop target, the refusals at the boundary, the review list and the
+ * selection.
  */
 import { useEffect, useId, useReducer, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
@@ -38,35 +40,23 @@ import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { formatStorage } from '#/lib/plans'
 import { bookingTypeLabel } from './booking-form'
-import { uploadFile } from '../files/upload'
-import { useAction } from '../shared/use-action'
+import { messageOf } from '../shared/use-action'
 import {
   NO_IMPORT_SELECTION,
-  acceptedImportRows,
   groupImportDrafts,
   importSelectionCount,
   importSelectionReducer,
   isImportRowSelected,
 } from './import-drafts'
-import {
-  forgetBookImports,
-  registerBookImports,
-  useBookImportPoll,
-  useBookImports,
-} from './import-widget'
+import { useBookImports } from './import-jobs'
 import {
   IMPORT_ACCEPT_ATTRIBUTE,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_FILES,
   importFormatFor,
 } from '#/server/fns/file-policy'
-import {
-  confirmBookingImportFn,
-  startBookingImportFn,
-} from '#/server/fns/booking-import'
 
 import type { ImportFileDrafts } from './import-drafts'
-import type { BookImportJob } from './import-widget'
 import type { BookingImportDraft } from '#/server/fns/booking-import'
 
 /** The screen's second header action, beside `NewBookingAction`. */
@@ -123,10 +113,9 @@ export function ImportBookingsDialog({
     NO_IMPORT_SELECTION,
   )
 
-  const registered = useBookImports(userId).filter(
-    (job) => job.tripId === tripId,
-  )
-  const { progress, views, recheck } = useBookImportPoll(open ? registered : [])
+  const { entries, jobs } = useBookImports(userId)
+  const registered = entries.filter((entry) => entry.job.tripId === tripId)
+  const [confirming, setConfirming] = useState(false)
 
   /*
    * The toast titles are the catalogue's generic one, because both of these failures already have a
@@ -134,46 +123,25 @@ export function ImportBookingsDialog({
    * counts the rows. Wording them from the import's own copy meant interpolating values nobody
    * had: `“” could not be read`, and `0 of 0 bookings were added`.
    */
-  const start = useAction(startBookingImportFn, {
-    failure: t('modules.form.saveError'),
-  })
-  const confirm = useAction(confirmBookingImportFn, {
-    invalidate: false,
-    failure: t('modules.form.saveError'),
-  })
+  const reportFailure = (cause: unknown): void => {
+    toast.error(t('modules.form.saveError'), {
+      description: messageOf(cause, t('modules.book.import.actionFailed')),
+    })
+  }
 
-  /*
-   * A row a previous confirm already wrote is not offered again: `written` on the staged record is
-   * what makes a retry after a partial failure write only the rest.
-   */
+  // The job module leaves out the rows a previous confirm already wrote, so a retry after a partial
+  // failure offers, and writes, only the rest.
   const files: Array<ImportFileDrafts> = groupImportDrafts(
-    registered.flatMap((job) => {
-      const staged = views.get(job.jobId)?.staged
-      if (staged === undefined) {
-        return []
-      }
-      const written = new Set(staged.written)
-      return [
-        {
-          jobId: job.jobId,
-          filename: job.filename,
-          drafts: staged.drafts.filter((draft) => !written.has(draft.index)),
-        },
-      ]
-    }),
+    registered.map((entry) => ({
+      jobId: entry.job.jobId,
+      filename: entry.job.filename,
+      drafts: entry.drafts,
+    })),
   )
 
-  const refusal = registered
-    .map((job) => ({ job, refusal: views.get(job.jobId)?.refusal }))
-    .find((row) => row.refusal !== undefined)
-  const stalled = registered.some(
-    (job) => progress.get(job.jobId) === 'stalled',
-  )
-  const working =
-    registered.length > 0 &&
-    registered.some(
-      (job) => (progress.get(job.jobId) ?? 'working') === 'working',
-    )
+  const refusal = registered.find((entry) => entry.refusal !== undefined)
+  const stalled = registered.some((entry) => entry.status === 'stalled')
+  const working = registered.some((entry) => entry.status === 'working')
 
   // Freshly read rows arrive selected: a reader prunes what the extractor got wrong, and asking
   // them to tick seven correct rows first is a worse default than asking them to untick one.
@@ -194,11 +162,8 @@ export function ImportBookingsDialog({
   /**
    * Back to the drop target, keeping whatever is still being read.
    *
-   * Only the refusals are forgotten. A reader who takes one file's refusal away has said nothing
-   * about the other four, and the register is the only handle there is on a job id: dropping a
-   * `ready` job would put a reading the workspace has already paid for out of reach before anyone
-   * saw it, and a `stalled` one is not finished at all — it is a client-side poll budget running
-   * out while the queue is still working. Neither has stopped.
+   * The job module forgets only the refusals: a reader who takes one file's refusal away has said
+   * nothing about the other four.
    *
    * The selection is left alone for the same reason. Nothing with rows in it is forgotten here, so
    * there is nothing stale to clear, and clearing it would untick the rows of a file that stays on
@@ -207,12 +172,7 @@ export function ImportBookingsDialog({
   const reset = (): void => {
     setStage({ kind: 'idle' })
     setRefusals([])
-    forgetBookImports(
-      userId,
-      registered
-        .filter((job) => progress.get(job.jobId) === 'refused')
-        .map((job) => job.jobId),
-    )
+    jobs.forgetRefused(tripId)
   }
 
   /**
@@ -260,83 +220,51 @@ export function ImportBookingsDialog({
     }
 
     setStage({ kind: 'uploading', progress: 0 })
-    const started: Array<BookImportJob> = []
-    for (const [index, file] of usable.entries()) {
-      const answer = await uploadFile({
-        file,
-        tripId,
-        onProgress: (fraction) => {
-          setStage({
-            kind: 'uploading',
-            progress: (index + fraction) / usable.length,
-          })
-        },
-      })
-      if (!answer.ok) {
-        setStage({ kind: 'uploadFailed', filename: file.name })
-        return
-      }
-      // The index is the queue's stagger, so five files do not all reach the model at once.
-      const job = await start.run({
-        data: { tripId, fileId: answer.file.id, index },
-      })
-      if (job === null) {
-        setStage({ kind: 'uploadFailed', filename: file.name })
-        return
-      }
-      // Registered as each one starts, not after the loop: a file that fails to upload returns
-      // early, and the jobs already enqueued have spent the workspace's reading allowance. A
-      // register written only on the way out would leave them running and invisible.
-      // The stagger goes into the register too: the widget's stall budget is measured from the
-      // job's scheduled start, and the server's answer is the only place that states it.
-      started.push({
-        jobId: job.jobId,
-        tripId,
-        filename: file.name,
-        delayMs: (job.delaySeconds ?? 0) * 1_000,
-      })
-      registerBookImports(userId, started)
+    const outcome = await jobs.startDrop({
+      tripId,
+      files: usable,
+      onProgress: (fraction) => {
+        setStage({ kind: 'uploading', progress: fraction })
+      },
+      afterStart: () => router.invalidate(),
+    })
+    if (outcome.kind === 'startFailed') {
+      reportFailure(outcome.cause)
+    }
+    if (outcome.kind !== 'started') {
+      setStage({ kind: 'uploadFailed', filename: outcome.filename })
+      return
     }
     setStage({ kind: 'reviewing' })
   }
 
-  /** One call per file, and the register is cleared only when nothing is left to write. */
+  /** One call per file, and the job module clears the register only when nothing is left to write. */
   const write = async (): Promise<void> => {
-    let written = 0
-    let left = 0
-    for (const file of files) {
-      const accept = acceptedImportRows(selection, file.jobId)
-      if (accept.length === 0) {
-        continue
-      }
-      const answer = await confirm.run({
-        data: { tripId, jobId: file.jobId, accept },
+    setConfirming(true)
+    const outcome = await jobs
+      .confirm({
+        tripId,
+        selection,
+        afterWritten: () => router.invalidate(),
       })
-      if (answer === null) {
-        left += accept.length
-        continue
-      }
-      written += answer.written
-      left += answer.remaining
-    }
+      .finally(() => {
+        setConfirming(false)
+      })
 
-    await router.invalidate()
-    if (left > 0) {
-      // The poll stops asking about a job the moment it answers anything but `working`, so without
-      // this the review list keeps rendering the answer from before the confirm — every row still
-      // listed and still ticked, the ones just written among them, and "Add the rest" re-sending
-      // their indices. `router.invalidate()` does not reach it: the drafts are this hook's own
-      // state, not a loader's. Re-arming is what turns `written` on the staged record into what the
-      // reader sees, which is how a partial confirm names the rows that are actually still failing.
-      recheck()
-      setStage({ kind: 'partial', written, total: written + left })
+    for (const cause of outcome.failures) {
+      reportFailure(cause)
+    }
+    if (outcome.left > 0) {
+      setStage({
+        kind: 'partial',
+        written: outcome.written,
+        total: outcome.written + outcome.left,
+      })
       return
     }
-    forgetBookImports(
-      userId,
-      files.map((file) => file.jobId),
+    toast.success(
+      t('modules.book.import.toast.added', { count: outcome.written }),
     )
-    toast.success(t('modules.book.import.toast.added', { count: written }))
     setStage({ kind: 'idle' })
     dispatch({ kind: 'none' })
     onOpenChange(false)
@@ -419,7 +347,9 @@ export function ImportBookingsDialog({
                     size="sm"
                     shape="pill"
                     className="self-start"
-                    onClick={recheck}
+                    onClick={() => {
+                      jobs.recheck(tripId)
+                    }}
                   >
                     {t('modules.book.import.widget.check')}
                   </Button>
@@ -476,7 +406,7 @@ export function ImportBookingsDialog({
                 ? t('modules.book.import.review.confirmNone')
                 : undefined
             }
-            loading={confirm.pending}
+            loading={confirming}
             loadingLabel={t('modules.book.import.review.confirm', {
               count: selected,
             })}

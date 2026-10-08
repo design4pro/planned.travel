@@ -201,6 +201,7 @@ const messages = {
   'book.import.failed.retry': 'Prova en annan fil',
   'book.import.uploadFailed': '”{filename}” laddades inte upp',
   'book.import.uploadRetry': 'Försök igen',
+  'book.import.actionFailed': 'Försök igen om en stund.',
   'book.import.toast.added': {
     one: 'En bokning tillagd',
     other: '{count} bokningar tillagda',

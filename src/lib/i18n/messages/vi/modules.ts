@@ -195,6 +195,7 @@ const messages = {
   'book.import.failed.retry': 'Thử tệp khác',
   'book.import.uploadFailed': '“{filename}” chưa tải lên được',
   'book.import.uploadRetry': 'Thử lại',
+  'book.import.actionFailed': 'Hãy thử lại sau giây lát.',
   'book.import.toast.added': {
     other: 'Đã thêm {count} chỗ đặt',
   },

@@ -200,6 +200,7 @@ const messages = {
   'book.import.failed.retry': 'Başka bir dosya dene',
   'book.import.uploadFailed': '“{filename}” yüklenmedi',
   'book.import.uploadRetry': 'Yeniden dene',
+  'book.import.actionFailed': 'Birazdan yeniden dene.',
   'book.import.toast.added': {
     one: 'Bir rezervasyon eklendi',
     other: '{count} rezervasyon eklendi',
