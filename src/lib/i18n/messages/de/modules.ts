@@ -600,6 +600,7 @@ const messages = {
     'Zwei Halte und ein Datum, und der Fahrplan antwortet. Gespeichert wird nichts, bis du eine wählst.',
   'transports.connection.empty':
     'Zwischen diesen beiden Halten wurde an dem Datum keine Verbindung gefunden. Versuche einen Nachbarbahnhof oder erweitere den Modusfilter.',
+  'transports.connection.credit': 'Fahrplandaten von',
   'transports.connection.searchFailed': 'Die Suche lief nicht',
   'transports.connection.searchFailedBody': 'Versuche es gleich noch einmal.',
   'transports.connection.saved': 'Verbindung gespeichert',

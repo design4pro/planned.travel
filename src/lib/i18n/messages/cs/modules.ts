@@ -600,6 +600,7 @@ const messages = {
     'Dvě zastávky a datum, a jízdní řády odpoví. Nic se neuloží, dokud si nevybereš.',
   'transports.connection.empty':
     'Mezi těmi dvěma zastávkami se v ten den žádné spojení nenašlo. Zkus sousední stanici nebo rozšiř filtr módů.',
+  'transports.connection.credit': 'Údaje o jízdních řádech od',
   'transports.connection.searchFailed': 'Hledání neproběhlo',
   'transports.connection.searchFailedBody': 'Zkus to za chvíli znovu.',
   'transports.connection.saved': 'Spojení uloženo',

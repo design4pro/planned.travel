@@ -604,6 +604,7 @@ const messages = {
     'Дві зупинки й дата — розклад відповість. Нічого не зберігається, доки ви не оберете.',
   'transports.connection.empty':
     'Між цими двома зупинками на цю дату сполучення не знайдено. Спробуйте сусідню станцію або розширте фільтр.',
+  'transports.connection.credit': 'Дані розкладу від',
   'transports.connection.searchFailed': 'Пошук не відбувся',
   'transports.connection.searchFailedBody': 'Спробуйте ще раз за мить.',
   'transports.connection.saved': 'Сполучення збережено',

@@ -560,6 +560,7 @@ const messages = {
     '停留所を二つと日付を、時刻表が答えます。選ぶまで何も保存されません。',
   'transports.connection.empty':
     'その日、その二つの停留所を結ぶ接続は見つかりませんでした。隣の駅を試すか、交通手段の絞り込みを広げてください。',
+  'transports.connection.credit': '時刻表データ提供:',
   'transports.connection.searchFailed': '検索は実行されませんでした',
   'transports.connection.searchFailedBody':
     '少ししてからもう一度お試しください。',

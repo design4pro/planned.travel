@@ -601,6 +601,7 @@ const messages = {
     'Dues parades i una data, i els horaris responen. No es desa res fins que en triïs una.',
   'transports.connection.empty':
     'No s’ha trobat cap connexió entre aquestes dues parades en aquesta data. Prova una estació veïna o amplia el filtre de modes.',
+  'transports.connection.credit': "Dades d'horaris de",
   'transports.connection.searchFailed': 'La cerca no s’ha fet',
   'transports.connection.searchFailedBody':
     'Torna-ho a provar d’aquí a un moment.',
