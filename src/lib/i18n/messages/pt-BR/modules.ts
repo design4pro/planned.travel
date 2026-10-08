@@ -599,6 +599,7 @@ const messages = {
     'Duas paradas e uma data, e os horários respondem. Nada é salvo até você escolher uma.',
   'transports.connection.empty':
     'Nenhuma conexão foi encontrada entre essas duas paradas nessa data. Tente uma estação vizinha, ou amplie o filtro de modos.',
+  'transports.connection.credit': 'Dados de horários de',
   'transports.connection.searchFailed': 'A busca não rodou',
   'transports.connection.searchFailedBody': 'Tente de novo daqui a pouco.',
   'transports.connection.saved': 'Conexão salva',

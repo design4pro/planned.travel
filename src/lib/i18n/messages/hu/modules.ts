@@ -590,6 +590,7 @@ const messages = {
     'Két megálló és egy dátum, és a menetrend válaszol. Semmi sem mentődik, amíg nem választasz.',
   'transports.connection.empty':
     'Azon a napon nem találtunk kapcsolatot a két megálló között. Próbálj szomszédos állomást, vagy bővítsd a szűrőt.',
+  'transports.connection.credit': 'Menetrendi adatok forrása:',
   'transports.connection.searchFailed': 'A keresés nem futott le',
   'transports.connection.searchFailedBody': 'Próbáld újra egy pillanat múlva.',
   'transports.connection.saved': 'Kapcsolat mentve',
