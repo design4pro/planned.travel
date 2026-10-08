@@ -866,6 +866,22 @@ describe('Dismiss and the rows still on offer', () => {
   })
 })
 
+describe('a watcher that joins a stalled store', () => {
+  it('gives the stalled jobs a fresh budget instead of inheriting the stall', async () => {
+    register([row('a')])
+    const port = fakePort()
+    const jobs = watched(port)
+    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
+    expect(statusOf(jobs, 'a')).toBe('stalled')
+    port.view.mockResolvedValue(ready())
+
+    jobs.subscribe(() => {})
+    await tick(0)
+
+    expect(statusOf(jobs, 'a')).toBe('ready')
+  })
+})
+
 describe('answers that arrive late', () => {
   function deferred() {
     let resolve!: (view: BookingImportView) => void

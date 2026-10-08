@@ -543,6 +543,13 @@ export function createBookImportJobs(
         snapshot = build()
         window.addEventListener('storage', onStorage)
         arm()
+      } else if (
+        register.some((job) => answers.get(job.jobId)?.status === 'stalled')
+      ) {
+        // A screen that mounts while the others have given up asks again with a fresh budget, as a
+        // freshly mounted screen always did; without this it would inherit the stall and show
+        // Check again for a job the server may have finished long ago.
+        recheck()
       }
       return () => {
         listeners.delete(listener)
