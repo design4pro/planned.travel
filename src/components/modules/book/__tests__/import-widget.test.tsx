@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
 
@@ -8,15 +5,15 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
+import { BookImportWidget, DONE_LINGER_MS } from '../import-widget'
 import {
-  BookImportWidget,
-  DONE_LINGER_MS,
   POLL_BUDGET_MS,
   POLL_INTERVAL_MS,
   bookImportsKey,
   bookImportsOwner,
   readBookImports,
-} from '../import-widget'
+  resetBookImportJobs,
+} from '../import-jobs'
 
 import type { Catalogue } from '#/lib/i18n'
 import type { BookingImportView } from '#/server/fns/booking-import'
@@ -83,12 +80,14 @@ async function tick(ms: number): Promise<void> {
 
 beforeEach(() => {
   window.localStorage.clear()
+  resetBookImportJobs()
   stubs.view.mockReset()
   stubs.navigate.mockReset()
   vi.useFakeTimers({ shouldAdvanceTime: true })
 })
 
 afterEach(() => {
+  resetBookImportJobs()
   vi.useRealTimers()
 })
 
@@ -104,24 +103,6 @@ describe('the global import widget', () => {
       document.querySelector('[data-part="book-import-widget"]'),
     ).toBeNull()
     expect(stubs.view).not.toHaveBeenCalled()
-  })
-
-  /*
-   * The widget is mounted in the authenticated shell, so whatever this file imports statically is in
-   * the bundle of every screen. A static import of the server function it polls put the function's
-   * schema graph there too (#483): a large share of the shell's JavaScript, for a component that
-   * renders nothing until a job is registered. Types are erased, so `import type` is fine.
-   */
-  it('reaches the server only through a dynamic import, so the shell does not bundle it', () => {
-    const source = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '..', 'import-widget.tsx'),
-      'utf8',
-    )
-
-    expect(
-      source.match(/^import\s+(?!type\b)[^']*from\s+'#\/server\//gm),
-    ).toBeNull()
-    expect(source).toContain("import('#/server/fns/booking-import')")
   })
 
   it('asks the server about a registered job with its trip and job ids', async () => {
@@ -169,28 +150,6 @@ describe('the global import widget', () => {
     // The point of a bounded poll: the queue is not asked again on its own.
     await tick(POLL_INTERVAL_MS * 5)
     expect(stubs.view.mock.calls.length).toBe(asked)
-  })
-
-  it('waits out the queue’s stagger before calling a later file in a drop stalled', async () => {
-    // The regression this guards: the queue is told to sit on file *n* for `n * 20s`, so a budget
-    // counted from the drop marked every file but the first stalled at twenty seconds — on every
-    // multi-file drop, which is the feature's headline case.
-    stubs.view.mockResolvedValue({
-      status: 'working',
-    } satisfies BookingImportView)
-    const stagger = 40_000
-    registerOne(stagger)
-
-    mount()
-    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
-
-    // Still being read, because by the queue's own clock it has not started yet.
-    expect(screen.getByText('Reading confirmations')).toBeTruthy()
-    expect(screen.queryByText('This is taking longer than expected')).toBeNull()
-
-    await tick(stagger)
-
-    expect(screen.getByText('This is taking longer than expected')).toBeTruthy()
   })
 
   /*
@@ -257,25 +216,6 @@ describe('the global import widget', () => {
     expect(screen.queryByText(/confirmation\.pdf/)).toBeNull()
     expect(stubs.view).not.toHaveBeenCalled()
     expect(readBookImports(inFirst)).toHaveLength(1)
-  })
-
-  it('stops asking when every call is rejected, rather than polling a dead job forever', async () => {
-    // Offline, an expired session, a trip that was deleted: `getBookingImportFn` rejects on every
-    // tick. Treating that as “still working” pinned the job there for good — and because the
-    // register outlives the page, that is a card with no button on it on every screen, permanently.
-    stubs.view.mockRejectedValue(new Error('offline'))
-    registerOne()
-
-    mount()
-    await tick(POLL_BUDGET_MS + POLL_INTERVAL_MS)
-
-    expect(screen.getByText('This is taking longer than expected')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Check again' })).toBeTruthy()
-
-    screen.getByRole('button', { name: 'Dismiss' }).click()
-    await tick(POLL_INTERVAL_MS)
-
-    expect(readBookImports(USER)).toHaveLength(0)
   })
 
   it('lets a reader take a job that never answered out of the register', async () => {

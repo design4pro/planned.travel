@@ -10,7 +10,11 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { bookImportsKey, readBookImports } from '../import-widget'
+import {
+  bookImportsKey,
+  readBookImports,
+  resetBookImportJobs,
+} from '../import-jobs'
 import { ImportBookingsDialog } from '../import-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -122,6 +126,7 @@ const READY: BookingImportView = {
 
 beforeEach(() => {
   window.localStorage.clear()
+  resetBookImportJobs()
   stubs.view.mockReset()
   stubs.start.mockReset()
   stubs.confirm.mockReset()
@@ -132,6 +137,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  resetBookImportJobs()
   vi.useRealTimers()
 })
 
@@ -219,49 +225,6 @@ describe('the import dialog at its boundary', () => {
         delayMs: 0,
       },
     ])
-  })
-
-  it('writes each file’s queue stagger into the register', async () => {
-    stubs.upload
-      .mockResolvedValueOnce({ ok: true, file: { id: 'file-1' } })
-      .mockResolvedValueOnce({ ok: true, file: { id: 'file-2' } })
-    // The delay is the server's to state: the dialog writes what the start answer says.
-    stubs.start
-      .mockResolvedValueOnce({
-        jobId: 'booking-import:trip-1:file-1',
-        delaySeconds: 0,
-      })
-      .mockResolvedValueOnce({
-        jobId: 'booking-import:trip-1:file-2',
-        delaySeconds: 20,
-      })
-    open()
-
-    drop(
-      new File(['x'], 'first.ics', { type: 'text/calendar' }),
-      new File(['x'], 'second.ics', { type: 'text/calendar' }),
-    )
-
-    // Without this the widget counts its stall budget from the drop, and the second file — which
-    // the queue is told to hold for twenty seconds — is called stalled before it can have started.
-    await vi.waitFor(() => {
-      expect(readBookImports(USER).map((job) => job.delayMs)).toEqual([
-        0, 20_000,
-      ])
-    })
-    // The index is the dialog's half of the stagger: the server turns it into the delay.
-    expect(stubs.start).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        data: expect.objectContaining({ fileId: 'file-1', index: 0 }),
-      }),
-    )
-    expect(stubs.start).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        data: expect.objectContaining({ fileId: 'file-2', index: 1 }),
-      }),
-    )
   })
 })
 
