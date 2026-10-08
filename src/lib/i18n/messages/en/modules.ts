@@ -736,6 +736,7 @@ const messages = {
     'Two stops and a date, and the timetable answers. Nothing is saved until you choose one.',
   'transports.connection.empty':
     'No connection was found between those two stops on that date. Try a neighbouring station, or widen the mode filter.',
+  'transports.connection.credit': 'Timetable data from',
   'transports.connection.searchFailed': 'The search did not run',
   'transports.connection.searchFailedBody': 'Try again in a moment.',
   'transports.connection.saved': 'Connection saved',
