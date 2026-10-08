@@ -69,7 +69,7 @@ Ownership follows the waves and adds nothing to plan 03: **plan 02 mints the pro
 wave 3** - `src/server/geo/geocode.ts` behind a route-local `-server/geocode.ts` - and `02-S11`,
 `02-S13` and `03-S7` call what is already there. Wave 3 rather than wave 1 because `02-S4` is the
 stage that needs it first and it is scheduled there; nothing in wave 1 of that plan touches a
-geocoder.
+geocoder. (Ownership and the ceiling were corrected afterwards - see the amendment below.)
 
 ## Consequences
 
@@ -100,3 +100,27 @@ to take, on its own evidence, and this ADR does not take it.
 - **Keeping the deferral and creating places without coordinates.** Legal at HEAD - `lat` and `lng`
   are nullable and the map filters those rows out - and it remains the fallback behaviour when a
   lookup fails. As the permanent answer it ships a place the map cannot show.
+
+### Amendment, 2026-10-08 - #281 minted the proxy, and the tenant ceiling is monthly
+
+Two sentences above did not survive contact with what shipped. The body is left as it was accepted;
+this amendment is where it is corrected.
+
+**The proxy was minted by #281 in `src/server/geo/`, not by `02-S4`.** The paragraph on ownership
+says plan 02 mints the proxy in `02-S4`, wave 3. Round 1 of the grilling on #281 overrode that: under
+`docs/SPEC.md` section 8 a geocoding proxy is one concept with one owner, plan 02 had no tickets in
+the tracker, and three of its four consumers would each have had to re-derive the same cache key,
+the same ceiling and the same failure vocabulary. The issue took the ownership and promised to
+correct this ADR when the plan 02 requirements issue (#437) landed. #437 closed and the correction was
+not made, so a plan written from this ADR would have given the proxy a second owner. `02-S4`,
+`02-S11`, `02-S13` and `03-S7` are callers of `src/server/geo/`, and none of them mints it.
+
+**The per-tenant ceiling is the monthly `geocode_lookups_per_month`, not a daily one.** The bullet on
+the per-tenant ceiling says a workspace "cannot spend the whole daily allowance", and plan 02 named the
+metric `geocode_calls_per_day`. That name is superseded. The shipped metric is
+`geocode_lookups_per_month`, one of `RATE_METRICS` in `src/server/billing/limits.ts`, spent through the
+rate meter in `src/server/metering/rate.ts` per organization and per calendar month. It is monthly
+for the same reason the other two metered providers, transit and extraction, are: one allowance model
+per workspace rather than three. Everything else in that bullet stands: the
+ceiling lives in `resolveLimits()`, and the debounce, the minimum query length and the
+cancel-on-supersede remain cost controls and not manners.
