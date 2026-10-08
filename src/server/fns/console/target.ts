@@ -7,8 +7,9 @@
  * copy of either would be a second answer to "does this account exist".
  */
 
-import { platformApi } from './bindings'
+import { platformApi, readOwnership, readWorkspaces } from './bindings'
 import { ConsoleActionError, isAuthNotFound } from './errors'
+import { findSoleOwnedWorkspaces } from './last-owner'
 import { platformUserSchema } from './projections'
 
 import type { ConsoleCall } from './context'
@@ -58,4 +59,68 @@ export function refuseSelfTarget(
   if (call.actor.userId === id) {
     throw new ConsoleActionError('target-is-self', message)
   }
+}
+
+/** Workspace names a refusal lists before it says "and N more". */
+const NAMED_WORKSPACES = 5
+
+/** Longest workspace name a refusal quotes, so a long one cannot crowd out the advice. */
+const NAME_LENGTH = 60
+
+function quoted(name: string): string {
+  const shown =
+    name.length > NAME_LENGTH ? `${name.slice(0, NAME_LENGTH - 1)}…` : name
+  return `"${shown}"`
+}
+
+/**
+ * Refuses to delete the only owner of a workspace that other people still belong to.
+ *
+ * `removeUser` cascades the `member` rows and runs no organization hook, so the plugin's own
+ * last-owner refusals never see a deletion; without this, the workspace is left with nobody who can
+ * administer its members, its billing or its deletion, and nothing in the product can put that right.
+ * A target whose workspaces have nobody else in them is not refused: that is every new account's
+ * personal workspace, and it is deleted exactly as before. See `./last-owner` for the counting.
+ *
+ * The sentence names the target's own workspaces - which the console shows beside the account - and
+ * the two exits. It names nobody else, and neither does anything this function logs.
+ *
+ * A read that could not be completed refuses too, under `target-beyond-cap`, rather than deciding on
+ * what it saw.
+ */
+export async function refuseSoleOwner(
+  call: ConsoleCall,
+  id: string,
+): Promise<void> {
+  const ownership = await readOwnership(id)
+  if (!ownership.complete) {
+    call.logger.warn(
+      'console could not read every membership of a deletion target',
+      {
+        entityId: id,
+      },
+    )
+    throw new ConsoleActionError(
+      'target-beyond-cap',
+      'The console could not confirm that this account is not the only owner of a workspace other people belong to. Promote another owner in each of its workspaces first, or ban the account instead of deleting it.',
+    )
+  }
+
+  const stranded = findSoleOwnedWorkspaces(ownership)
+  if (stranded.length === 0) return
+
+  const names = (await readWorkspaces(stranded)).map((row) => quoted(row.name))
+  const listed = names.slice(0, NAMED_WORKSPACES).join(', ')
+  const more = names.length - NAMED_WORKSPACES
+  const where =
+    names.length === 0
+      ? 'a workspace'
+      : more > 0
+        ? `${listed} and ${more} more`
+        : listed
+
+  throw new ConsoleActionError(
+    'target-sole-owner',
+    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. Promote another owner there first, or ban the account instead of deleting it.`,
+  )
 }

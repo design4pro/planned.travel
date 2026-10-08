@@ -8,7 +8,7 @@
  * seconds later is an action people press twice.
  *
  * **Refusals are shown, not swallowed.** `src/server/fns/console/errors.ts` raises
- * `ConsoleActionError` with a closed seven-code vocabulary and copy that names the way forward -
+ * `ConsoleActionError` with a closed vocabulary of refusal codes and copy that names the way forward -
  * "revoke every session of the account instead", "demote the account first, then restore its role".
  * Those sentences are the point, so a rejection is rendered inside the dialog, beside the button
  * that produced it, and the dialog stays open. A toast that replaces the panel would take the

@@ -411,6 +411,8 @@ const messages = {
   'action.delete.confirm': 'Borrar cuenta',
   'action.delete.note':
     'El contenido del espacio de trabajo que creó esta persona se queda con el espacio que lo posee. Suspender la cuenta en vez de borrarla conserva el registro y quita el acceso.',
+  'action.delete.owners':
+    'No se puede eliminar una cuenta que es la única propietaria de un espacio de trabajo al que pertenecen otras personas. Nombra primero a otra persona propietaria ahí, o suspende la cuenta en su lugar.',
   'action.delete.done': 'Cuenta borrada',
   'action.delete.done.body':
     '{name} y todo lo que llevaba enganchado la cuenta han desaparecido.',

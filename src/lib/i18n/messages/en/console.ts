@@ -21,7 +21,7 @@
  *   id, the host and the branch name, which are also stored strings. They are
  *   data being read out, not copy being written. `origin` is the exception and
  *   is here, because it was already a hand-written display map.
- * - *Server refusals.* `ConsoleActionError`'s seven-code vocabulary is authored
+ * - *Server refusals.* `ConsoleActionError`'s closed vocabulary of refusal codes is authored
  *   on the server (`src/server/fns/console/errors.ts`) and arrives through the
  *   redaction envelope already worded. Only the fallback for a rejection that
  *   carries no readable sentence at all is below.
@@ -407,6 +407,8 @@ const messages = {
   'action.delete.confirm': 'Delete account',
   'action.delete.note':
     'Workspace content this person created stays with the workspace that owns it. Suspending the account instead keeps the record and takes away the access.',
+  'action.delete.owners':
+    'An account that is the only owner of a workspace other people belong to cannot be deleted. Make someone else an owner there first, or suspend the account instead.',
   'action.delete.done': 'Account deleted',
   'action.delete.done.body':
     '{name} and everything attached to the account are gone.',
