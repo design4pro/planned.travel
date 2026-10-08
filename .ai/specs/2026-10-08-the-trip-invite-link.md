@@ -227,8 +227,7 @@ Built on `createTenantRepository`; exports:
   constructs a scope (ACCESS §3.7 rule 2).
 - `joinTripByInviteUnscoped(db, digest, viewer: { id, banned, impersonated })` - below. `join/-server/join.ts` fills
   `viewer` from the session (`impersonated` is true when `session.impersonatedBy` is set; it is not on `AuthUser`).
-  `join.ts` is the **named caller** of `readInvitePreviewUnscoped` and `joinTripByInviteUnscoped` in the `unscoped-shape.test.ts` map,
-  beside `public/trip-invite.ts` for the finder.
+  `join.ts` is the **named caller** of `joinTripByInviteUnscoped`, and `join.ts` and `public/trip-invite.ts` (the anonymous call, `viewer = null`) are the named callers of `readInvitePreviewUnscoped`, in the `unscoped-shape.test.ts` map, beside `public/trip-invite.ts` for the finder.
 
 ### Liveness: when a link is honoured
 
@@ -247,14 +246,14 @@ A failure of any of these is the same `null`, the same 404, the same "unavailabl
 
 `docs/ACCESS.md` §3.7 and `docs/SPEC.md` §6 make `src/server/public/**` the only session-less read path, with
 column-whitelisted projections, no SQL and no fabricated scope. It is also **sessionless**, so it yields only the
-**anonymous** projection and the dead-link answer. The loader's server function (`join/-server/join.ts`) adds the
+**anonymous** projection and the dead-link answer, which it gets by calling the repository (`findLiveTripInviteByDigestUnscoped`, then `readInvitePreviewUnscoped(db, digest, null)`; it holds no SQL itself). The loader's server function (`join/-server/join.ts`) adds the
 viewer from the session and calls the repo-level `readInvitePreviewUnscoped` with the user id to get the signed-in variants.
 
 **Order** (a per-link budget needs the link id, which exists only after the lookup): per-IP check -> shape guard ->
 hash -> `findLiveTripInviteByDigestUnscoped` -> per-link check -> projection. **`loadInvite` always calls
 `resolveTripInvite` first**, for an anonymous and a signed-in visitor alike (budgets, shape guard, hash, miss count),
 so a dead link is the same 404 and counts against the miss budget either way. A signed-in viewer then adds exactly
-one `readInvitePreviewUnscoped` call (with the viewer's `{ id, banned }`; a banned viewer gets `unavailable`), and the
+one more `readInvitePreviewUnscoped` call (with the viewer's `{ id, banned }`; a banned viewer gets `unavailable`), and the
 per-link budget is applied once.
 
 | Visitor                                             | Projection                                                                                                                                  |
@@ -296,7 +295,7 @@ so the directive would never be read). A GET **never writes**: no `use_count`, n
 the `referer` header (added to `FORBIDDEN_HEADERS`), navigation / fetch / xhr breadcrumbs, and transaction and span
 names (the template `/join/$token` is used), and the URL-encoded secret inside `redirect=` and `callbackURL=`
 values; `src/client.tsx` and `src/server/observability/sentry.ts` wire it into the breadcrumb, transaction and span
-hooks, and `src/lib/sentry-replay.ts` into the replay URL filters. The server logger is not changed: `join.ts` logs the
+hooks, and `src/lib/sentry-replay.ts` into the replay integration's `beforeAddRecordingEvent` (and its network URL options), so no replay event carries the path. The server logger is not changed: `join.ts` logs the
 link id and the outcome, never the path or the secret (a test pins it). The three sign-in pages send
 `<meta name="referrer" content="strict-origin">` so same-origin requests from them do not carry the query string.
 A test pins each redaction in `src/lib/__tests__/sentry-scrub.test.ts`.
@@ -503,14 +502,14 @@ and records the link's creator.
 
 ## 📝 API Contracts
 
-| Function                                 | Method | Auth            | Input (Zod v4 `strictObject`)                   | Answer                                                                                                       |
-| ---------------------------------------- | ------ | --------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `loadInvite` (join loader, session-less) | POST   | none (optional) | `{ secret: string(43) }`                        | one of the closed projections above; 404 for `unavailable`; 429 over budget                                  |
-| `joinTripFn`                             | POST   | session         | `{ secret: string(43) }`                        | `{ outcome: 'joined'\|'member', tripId, organizationId }` or `{ outcome: 'needs-workspace'\|'unavailable' }` |
-| `revealInviteLinkFn`                     | POST   | trip owner      | `{ tripId }`                                    | `{ url }`, `no-store`                                                                                        |
-| `createInviteLinkFn`                     | POST   | trip owner      | `{ tripId, role: 'editor'\|'viewer' }`          | `{ ok: true, url }` (the existing link if one exists) or `{ ok: false, reason }`                             |
-| `replaceInviteLinkFn`                    | POST   | trip owner      | `{ tripId, role, expectedRotation }`            | `{ ok: true, url }` or `{ ok: false, reason: 'changed'\|'archived'\|'notOwner' }`                            |
-| `updateInviteLinkFn`                     | POST   | trip owner      | `{ tripId, role?, enabled?, expectedRotation }` | `{ ok: true, url? }` (a new url on switch-on) or `{ ok: false, reason }`                                     |
+| Function                                                                                                             | Method | Auth            | Input (Zod v4 `strictObject`)                   | Answer                                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `loadInvite` (join loader, session-less; the **client re-fetch** path - the first render reads the param in-process) | POST   | none (optional) | `{ secret: string(43) }`                        | one of the closed projections above; 404 for `unavailable`; 429 over budget                                  |
+| `joinTripFn`                                                                                                         | POST   | session         | `{ secret: string(43) }`                        | `{ outcome: 'joined'\|'member', tripId, organizationId }` or `{ outcome: 'needs-workspace'\|'unavailable' }` |
+| `revealInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId }`                                    | `{ url }`, `no-store`                                                                                        |
+| `createInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId, role: 'editor'\|'viewer' }`          | `{ ok: true, url }` (the existing link if one exists) or `{ ok: false, reason }`                             |
+| `replaceInviteLinkFn`                                                                                                | POST   | trip owner      | `{ tripId, role, expectedRotation }`            | `{ ok: true, url }` or `{ ok: false, reason: 'changed'\|'archived'\|'notOwner' }`                            |
+| `updateInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId, role?, enabled?, expectedRotation }` | `{ ok: true, url? }` (a new url on switch-on) or `{ ok: false, reason }`                                     |
 
 ## 📝 UI/UX
 
@@ -845,8 +844,8 @@ updating, revealing B's invite is `NotFoundError`, with B's row **byte-identical
 valid digest resolves to its own organization and trip and no other; every kind of dead link (disabled, rotated away
 (asserted by replacing and then resolving the old value in the same test), archived trip, creator demoted, creator
 removed from the trip, creator removed from the workspace, creator banned, role outside the narrowed enum, and a
-hand-made row whose `organization_id` disagrees with its trip's) resolves to `null`; `readInvitePreviewUnscoped` can read that
-trip and raises `NotFoundError` for any other trip id; a joiner who is not a member of the row's organization is
+hand-made row whose `organization_id` disagrees with its trip's) resolves to `null`; `readInvitePreviewUnscoped` reads only the
+trip the digest points at (never another trip of the same or another organization); a joiner who is not a member of the row's organization is
 refused and no `trip_members` row is written. Functions covered: `readTripInvite`, `revealTripInviteSecret`,
 `createTripInvite`, `replaceTripInvite`, `updateTripInvite`, `touchTripInvite`, `findLiveTripInviteByDigestUnscoped`,
 `readInvitePreviewUnscoped`, `joinTripByInviteUnscoped`.
