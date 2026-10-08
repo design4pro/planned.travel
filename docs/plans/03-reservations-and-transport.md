@@ -1634,7 +1634,7 @@ placeName, startTime }`, read through `getTripItinerary` — a function that alr
 priceMinor, currency, spentOn, category })`, then `linkReservationExpense(scope, reservation.id,
 expense.id)`. Two writes, and the second is what makes the third save of the same booking an update
     rather than a fourth ledger line.
-  - `priceMinor > 0` and `expenseId !== null` → `updateExpense(scope, reservation.expenseId, { title,
+  - `priceMinor > 0` and `expenseId !== null` → `updateExpense(scope, reservation.tripId, reservation.expenseId, { title,
 amountMinor: priceMinor, currency })`. No new row, no new link.
   - `priceMinor` cleared or zero and `expenseId !== null` → `linkReservationExpense(scope,
 reservation.id, null)` and **nothing else**. The ledger line is not deleted: deleting it because a

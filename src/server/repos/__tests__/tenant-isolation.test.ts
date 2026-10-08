@@ -90,12 +90,22 @@ import {
   createBudgetItem,
   createExpense,
   createSettlement,
+  deleteBudgetItem,
+  deleteExpense,
+  deleteSettlement,
   expenseSharesRepository,
   expensesRepository,
   getExpense,
+  getExpenseWithShares,
   getMemberBalances,
   getTripSpendSummary,
+  listBudgetItems,
+  listSettlements,
+  markShareSettled,
+  setExpenseShares,
   settlementsRepository,
+  updateBudgetItem,
+  updateExpense,
 } from '../expenses'
 import { getStorageUsage, recordFile, tripFilesRepository } from '../files'
 import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
@@ -3269,6 +3279,53 @@ describe('tenant isolation', () => {
       )
     })
   })
+  /**
+   * The money writers take the trip the caller is working in *and* the row's id. Naming one's own
+   * trip together with another workspace's row must not find the row, and must write nothing.
+   */
+  describe('the money writers', () => {
+    it('refuse every B ledger row named through A’s own trip, and change nothing', async () => {
+      const scope = alpha.tenant.scope
+      const ledgerOfB = async (): Promise<unknown> => ({
+        expense: await getExpenseWithShares(beta.tenant.scope, beta.expenseId),
+        budgetItems: await listBudgetItems(beta.tenant.scope, beta.tripId),
+        settlements: await listSettlements(beta.tenant.scope, beta.tripId),
+      })
+      const before = await ledgerOfB()
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          updateExpense(scope, alpha.tripId, beta.expenseId, {
+            title: 'Hijacked',
+            amountMinor: 1,
+          }),
+        () => deleteExpense(scope, alpha.tripId, beta.expenseId),
+        () =>
+          setExpenseShares(scope, alpha.tripId, beta.expenseId, [
+            { userId: alpha.tenant.ownerUserId },
+          ]),
+        () => markShareSettled(scope, alpha.tripId, beta.expenseShareId, true),
+        () =>
+          updateBudgetItem(scope, alpha.tripId, beta.budgetItemId, {
+            name: 'Hijacked',
+          }),
+        () => deleteBudgetItem(scope, alpha.tripId, beta.budgetItemId),
+        () => deleteSettlement(scope, alpha.tripId, beta.settlementId),
+        // B's own trip does not help either: it is not A's to read.
+        () => deleteExpense(scope, beta.tripId, beta.expenseId),
+        () =>
+          updateExpense(scope, beta.tripId, beta.expenseId, {
+            title: 'Hijacked',
+          }),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await ledgerOfB()).toEqual(before)
+    })
+  })
+
   /**
    * 03-S4 — a booking that knows which stop it is for, and what it cost.
    *
