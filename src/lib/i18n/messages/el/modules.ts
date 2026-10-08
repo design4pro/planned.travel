@@ -205,6 +205,7 @@ const messages = {
   'book.import.failed.retry': 'Δοκίμασε άλλο αρχείο',
   'book.import.uploadFailed': 'Το «{filename}» δεν ανέβηκε',
   'book.import.uploadRetry': 'Δοκίμασε πάλι',
+  'book.import.actionFailed': 'Δοκίμασε ξανά σε λίγο.',
   'book.import.toast.added': {
     one: 'Μία κράτηση προστέθηκε',
     other: '{count} κρατήσεις προστέθηκαν',

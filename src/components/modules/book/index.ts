@@ -68,13 +68,12 @@ export type {
 export { ImportBookingsAction, ImportBookingsDialog } from './import-dialog'
 export type { ImportBookingsDialogProps } from './import-dialog'
 
+export { BookImportWidget } from './import-widget'
+
 export {
   BOOK_IMPORTS_PREFIX,
-  BookImportWidget,
   bookImportsKey,
   bookImportsOwner,
-  forgetBookImports,
   readBookImports,
-  registerBookImports,
-} from './import-widget'
-export type { BookImportJob } from './import-widget'
+} from './import-jobs'
+export type { BookImportJob } from './import-jobs'

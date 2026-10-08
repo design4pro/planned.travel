@@ -283,6 +283,7 @@ const messages = {
   'book.import.failed.retry': 'Try another file',
   'book.import.uploadFailed': '“{filename}” did not upload',
   'book.import.uploadRetry': 'Try again',
+  'book.import.actionFailed': 'Try again in a moment.',
   'book.import.toast.added': {
     one: 'One booking added',
     other: '{count} bookings added',

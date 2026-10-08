@@ -211,6 +211,7 @@ const messages = {
   'book.import.failed.retry': 'Prova un altre fitxer',
   'book.import.uploadFailed': '«{filename}» no s’ha pujat',
   'book.import.uploadRetry': 'Torna-ho a provar',
+  'book.import.actionFailed': 'Torna-ho a provar d’aquí a un moment.',
   'book.import.toast.added': {
     one: 'Una reserva afegida',
     many: '{count} reserves afegides',
