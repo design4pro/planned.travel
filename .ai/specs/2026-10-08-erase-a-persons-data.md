@@ -17,8 +17,8 @@ touched, the person's personal workspace is left with no members, and the privac
 account deletes your content".
 
 This spec designs **one erasure engine** and fixes, for every place a person's data lives, exactly one outcome and a
-reason: **remove**, **anonymise** (the row stays, the id becomes a per-workspace "Former member" id), **revoke** (a
-credential that cannot be deleted) or **keep** (with the reason, and the person who owns the retention decision). The
+reason: **remove**, **anonymise** (the row stays, the id becomes a per-workspace "Former member" id), **null** (an optional
+reference is cleared), **revoke** (a credential that cannot be deleted) or **keep** (with the reason, and the person who owns the retention decision). The
 shape in one paragraph: the erasure is a resumable queue job entered from the console's existing `user:delete`
 permission; it finds the workspaces that hold the person's rows through a participation anchor that survives
 departure; it scrubs each workspace through tenant-scoped repository functions driven by a registry that a test keeps
@@ -42,14 +42,17 @@ Measured at HEAD (`86841140`), by reading the code.
   order: `refuseSoleOwner` (#807: refuses a sole owner of a workspace other people belong to), `clearSessionCache` (the
   KV session blobs), `platformApi().removeUser`, `endSessionIndex` (`active-sessions-<userId>`), then one
   `platform.user.deleted` row in `platform_audit_log` whose `changes.before` holds the person's **name and email**
-  (`auditUserState`). Self-service `user.deleteUser` is not enabled; there is no `user` or `session` database hook and no
-  `organizationHooks` in `src/server/auth/index.ts`.
+  (`auditUserState`). Self-service `user.deleteUser` is not enabled. `src/server/auth/index.ts` has no delete hook and no `organizationHooks`;
+  it does have `user.create.after` (personal-workspace provisioning), a `user.update` ban tripwire and
+  `session.create.before`, which provisions a personal workspace for a signed-in person who has none (see the engine's
+  step 2: the ban must stop that hook before the personal workspace is deleted).
 - **What cascades from `user`:** `session`, `account`, `two_factor`, `passkey`, `member` (all `ON DELETE CASCADE`) and
   `invitation.inviter_id`, so every invitation the person sent disappears in every workspace. Not cascading:
-  `verification` (identifier = email) and `session.impersonated_by` (plain text).
+  `verification` (rows keyed by email, by token, or holding the user id in `value`, such as the app's
+  `passkey-challenge:<challenge>` rows whose JSON value carries `userId`) and `session.impersonated_by` (plain text).
 - **Dangling ids.** Every domain column that names a user is `userRef()`: a plain `text` column with no foreign key.
-  There are **47** of them (48 matches of `userRef(` in `schema.ts`, one being the helper itself), in 44 tables; three of
-  those tables are global (`staff_api_tokens`, `platform_audit_log`, `provider_registry`, SPEC §5). After a deletion
+  There are **47** of them (48 matches of `userRef(` in `schema.ts`, one being the helper itself), in 41 tables (38 tenant tables and
+  3 global ones); the three global ones are (`staff_api_tokens`, `platform_audit_log`, `provider_registry`, SPEC §5). After a deletion
   these ids point at nothing, nothing removes them, and nothing rewrites them. The comment above `userRef()` says user
   rows are removed "through the account-deletion flow, which fans out through the repositories"; no such flow exists.
 - **The personal workspace.** Every signup gets one (`provisionPersonalOrganization`, `src/server/auth/provisioning.ts`).
@@ -127,19 +130,31 @@ through one shared helper as the localised **Former member**.
 #### 1. The participation anchor (new, the one schema addition the slices make)
 
 A person's rows survive their departure, so finding workspaces through `member` misses them. A new tenant table
-`workspace_participants` (`organization_id` through `orgRef()`, `user_id`, `first_seen_at`; unique on organization and
+`workspace_participants` (`organization_id` through `orgRef()`, `user_id`; unique on organization and
 user; an index on `user_id`; plus the job-state columns `erasure_id`, `tombstone_id`, `scrubbed_at`, all nullable) records
 "this person took part in this workspace" and is **not removed on departure**. It is written wherever a `member` row is
 created: Better Auth's organization plugin (create, accept invitation, add member) and the one direct insert in
-`provisioning.ts`. A test lists every `insert(member)` call site and fails on one with no anchor write. An idempotent
-backfill (`INSERT OR IGNORE`, driven by the registry below so a new column is covered) fills it from every registered
-`userRef` column per organization, so people who left before the anchor existed are found. The erasure removes the
+`provisioning.ts`. A test lists every `insert(member)` call site and fails on one with no anchor write. The erasure removes the
 person's anchor rows at the very end; the table keeps no user id once the job is done.
 
-The read that lists a person's workspaces is **cross-tenant** and returns organization ids only. SPEC §5/§6 state that
+**Backfill.** People who left before the anchor existed are found by a one-off, idempotent **backfill job**, not by a
+migration (a registry-driven `INSERT OR IGNORE` over the 38 tenant tables is not something `pnpm db:generate` emits, and a
+hand-written `drizzle/*.sql` is a blocker, BACKWARD_COMPATIBILITY §1). It is a queue task, `participant-backfill`, one
+message per organization, paged: the organization ids come from a second session-less catalog read of the same shape as
+the discovery read (organization ids only, paged), and each message runs through a `TenantScope` bound to that one
+organization, where it reads the distinct user ids of every registered `userRef` column and of `member`, and inserts the
+anchor rows with `INSERT OR IGNORE`. Its cost is one indexed read per table per organization, once; it is resumable and a
+rerun is a no-op. **Ordering:** the anchor writes ship and deploy first, and the backfill runs after, so a `member` row
+that an older Worker inserts during the window is still found because the backfill reads `member` too. **The engine fails
+closed until the backfill has completed:** a completion record (a KV key set when the last organization page finishes,
+recomputable by running the job again) is checked by discovery, and an erasure started before it is refused with a named
+reason rather than run against an incomplete anchor.
+
+The reads that list a person's workspaces and, for the backfill, all workspaces are **cross-tenant** and return
+organization ids only. SPEC §5/§6 state that
 the two stated exceptions to "all SQL goes through the tenant repository" are closed and that a third is a change to the
 contract. This spec asks for that change explicitly: the read lives in `src/server/catalog/erasure.ts`, session-less in
-shape (organization ids and the erasure id, paged), guarded by its shape the way `listDueTripReminders` is, and **every
+shape (organization ids and the erasure id, paged; the backfill's listing returns organization ids and nothing else), guarded by its shape the way `listDueTripReminders` is, and **every
 scrub then runs through a `TenantScope` bound to one workspace**. Merging this spec is the acceptance of that amendment;
 the first slice writes it into SPEC §5/§6 and an ADR.
 
@@ -194,7 +209,9 @@ Three global tables, reached through `src/server/catalog` with a `system` actor:
 
 #### 3. Trips, by classification
 
-- **Solo private trip** (no other trip member, `visibility = 'private'`, or the workspace has no other member): deleted as
+- **Solo private trip** (no other trip member and `visibility` of `private` or `public`, or the workspace has no other
+  member): `public` is reserved for session-less sharing and grants a signed-in reader nothing on its own (CONTEXT.md, ADR
+  0007), so it is treated as private; its share links go with the trip. Deleted as
   `deleteTrip` does, including the `trip-purge` of its R2 keys and its trip-room reset. The person is the only reader.
 - **Solo trip with `visibility = 'organization'` in a workspace that has other members:** kept and anonymised; the
   workspace's longest-standing owner becomes its trip owner (a `trip_members` row), because colleagues already read and rely on it.
@@ -211,14 +228,18 @@ The person's own entries and photos are removed everywhere, with their R2 object
 read rule unchanged: a journey tied to a readable trip stays readable to that trip's readers, and an orphaned journey
 becomes unreadable by everybody, which is ADR 0034's existing "owner leaves" outcome. "A journey stays with its owner"
 holds; no other member's entry is destroyed (the reason ADR 0034 rejected cascading with a trip). A short ADR amends 0034
-to record the Former member owner. No production code writes journeys today (only the dev seed), so the immediate
-exposure is small; the rule is settled now so the writers do not decide it later.
+to record the Former member owner. Journey creation has one production writer (`createJourneyFn` in `src/routes/_app/-server/library.ts`, which sets
+`owner_user_id`); entries and photos are written only by the dev seed today. The rule is settled now so the entry and
+photo writers do not decide it later.
 
 #### 5. Auth tables and the account
 
 The `user` row is deleted **last**; `account`, `session`, `two_factor`, `passkey` and `member` go with it through the
 existing cascade. Also: pending and accepted `invitation` rows addressed **to** the person's email are deleted;
-`verification` rows whose identifier is the email are deleted; sessions with `impersonated_by` = the person are ended;
+`verification` rows that name the person are deleted, by `identifier` and by `value`: the identifier equal to the email,
+and the user id inside the identifier or the value (Better Auth's reset-password and OTP rows, and the app's
+`passkey-challenge:` rows, whose JSON value carries `userId`; the Phase 3 ticket lists the key shapes from the installed
+Better Auth source); sessions with `impersonated_by` = the person are ended;
 `user.image` goes with the row and the future `avatars/<org>/<user>` object is swept. Invitations the person **sent**
 cascade (changing that foreign key would be a table recreate and is not additive); the workspace owners are told how many
 pending invitations disappeared.
@@ -228,7 +249,7 @@ pending invitations disappeared.
 | Store                                                                                 | Holds                                                                                   | Outcome                                                                                                                                                                                                                      |
 | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R2 `trips/<org>/<trip>/…` (files, covers)                                             | Trip files; metadata `uploadedBy`                                                       | Removed with a deleted trip (`trip-purge`) and with a deleted workspace (prefix sweep). Kept for shared trips, metadata rewritten.                                                                                           |
-| R2 `exports/<org>/<trip>/…`                                                           | Plan exports                                                                            | Swept with the workspace prefix. **Nothing writes them today** and nothing deletes them; whatever starts producing them ships its deleter.                                                                                   |
+| R2 `exports/<org>/<trip>/…`                                                           | Plan exports                                                                            | Swept with the workspace prefix. The `pdf-export` handler writes them (and a KV `export:<taskId>` record) but no producer enqueues it today, and nothing deletes them; whatever starts producing them ships its deleter.     |
 | R2 journey photo keys                                                                 | Journey photos (no production writer; keys are caller-chosen, no org segment)           | Collected from `journey_photos` before the rows go; swept by key.                                                                                                                                                            |
 | R2 `avatars/<org>/<user>`                                                             | Portrait (plan 09; not written today)                                                   | Swept by key when it exists.                                                                                                                                                                                                 |
 | R2 `dead-letter/<date>/<id>.json`                                                     | Whole failed message bodies (emails with token URLs, `requestedBy`), **no org segment** | Not scanned per person. A date-prefixed retention deleter is a **prerequisite slice**; the erasure's own envelopes carry no user id.                                                                                         |
@@ -238,6 +259,7 @@ pending invitations disappeared.
 | KV rate-limit counters `<ip>                                                          | <path>`                                                                                 | An IP, no user                                                                                                                                                                                                               | Left to expire. |
 | Durable Object `TripRoom` (one per trip)                                              | Entity fields and commit log stamped `by: <userId>`; presence in socket attachments     | Reset for every trip the person touched, shared or deleted alike: close sockets, `deleteAll`; D1 is the record and the room rebuilds. An active room never clears itself, so waiting for the 7-day idle erase is not enough. |
 | Logs (Workers Observability, Sentry with `enableLogs`)                                | `logAuth` writes recipient emails; many lines carry `userId`                            | Not erasable per person. **Residual stated** until the log retention period (owner confirms). A slice stops logging recipient emails.                                                                                        |
+| Resend delivery logs                                                                  | Recipient emails of auth and notification mail                                          | **keep**, third party: not erasable by this job. **Residual stated** until the provider's retention (owner confirms).                                                                                                        |
 | Polar                                                                                 | The purchaser's email, name, keyed to the workspace                                     | **keep**: the erasure makes no Polar call. Tax records are kept as tax law requires (privacy page). Owner confirms.                                                                                                          |
 
 #### 7. A workspace with no member left
@@ -251,10 +273,12 @@ prefixes (`trips/<org>/`, `exports/<org>/`, `avatars/<org>/`) plus the journey p
 to 1,000 keys, resumably. Plan 09's sweep prefix `<organizationId>/` matches none of today's keys and would delete nothing;
 the note this spec adds to plan 09 says so.
 
-**Billing.** A workspace the erasure would delete, with a subscription in `trialing`, `active`, `past_due`, `unpaid` or
-`paused` that is not already set to cancel at period end, **blocks the erasure**: the console refuses, names the
+**Billing.** Only a paid subscription counts: a free workspace's `subscriptions` row has `plan = 'free'`, `status =
+'active'` and no `provider_subscription_id` (the column defaults in `schema.ts`), and must not block. A workspace the
+erasure would delete, with a row that has a `provider_subscription_id`, a status of `trialing`, `active`, `past_due`,
+`unpaid` or `paused` and no cancel at period end, **blocks the erasure**: the console refuses, names the
 workspace, and says to cancel in the billing portal or in Polar first. A subscription that is `canceled`, already
-cancelling at period end, `incomplete` or `incomplete_expired` does not block. The code never cancels or refunds anything,
+cancelling at period end, `incomplete` or `incomplete_expired`, and a free row, does not block. The code never cancels or refunds anything,
 and a Polar webhook that arrives for a deleted organization id is accepted and does not recreate the `subscriptions` row.
 Cancel-versus-refund policy, Polar customer retention and the cost effects are **owner confirms**.
 
@@ -275,23 +299,34 @@ anchor id), **never a user id**: dead letters keep whole bodies indefinitely.
 1. **Refusals**, all before any change: self-target (existing); #807's sole-owner refusal (existing); a live subscription on a
    workspace that would be deleted (new). A refusal leaves rows, KV blobs and ledger exactly as they were.
 2. **Make the account inert:** purge the session KV (existing `clearSessionCache`), revoke sessions, ban, so no write
-   arrives during the job. Notices go to trip owners and workspace owners (promotion, removed invitations, "a member's
+   arrives during the job. The ban must also stop `session.create.before`, which provisions a personal workspace for a
+   signed-in person who has none: an erasure test signs in as the banned person after their personal workspace is deleted
+   and asserts no workspace is created. Notices go to trip owners and workspace owners (promotion, removed invitations, "a member's
    data was erased").
 3. **Discover** the workspaces from the anchor (catalog read), set `erasure_id` on the anchor rows.
-4. **Per workspace**, through a `TenantScope` bound to it: classify trips; collect R2 keys; scrub D1 per module in a
+4. **Per workspace**, through a `TenantScope` bound to it. The job has no signed-in person, so the scope carries a
+   reserved system user id and the `owner` role, the way `scopeForWorkspace` in `queue/handlers/billing.ts` builds a probe
+   scope. Authorisation was decided once, at `user:delete`; the scrubs do not re-check the erased person's trip
+   membership, so the trip deletion calls the purge body of `deleteTrip` without `requireOwnedTrip`, and `deleteWorkspace`
+   passes `assertCanAdminister` through the owner role. A test runs both for a person who has already left and is banned, and asserts they succeed.
+   The steps: classify trips; collect R2 keys; scrub D1 per module in a
    `runBatch`; enqueue `trip-purge`; record the room resets; set `tombstone_id` on first use and `scrubbed_at` at the end.
    A workspace left with no member is deleted instead of scrubbed, after the subscription check passed in step 1.
 5. **Sweep** R2, KV and the rooms.
 6. **Delete the `user` row** (`removeUser`), then `endSessionIndex`.
 7. **Verify:** for every registered column, zero occurrences of the user id in every affected workspace and in the auth
    tables; the non-`userRef` places named above (`audit_log.entity_id`, `notifications.entity_id`, `invitation.email`,
-   `verification.identifier`, `session.impersonated_by`); `head` of the rewritten R2 keys; `active-sessions-<userId>` absent.
+   `verification.identifier` and `verification.value`, `session.impersonated_by`); `head` of the rewritten R2 keys; `active-sessions-<userId>` absent.
    `platform_audit_log` is the one registered exception.
 8. **Finish:** delete the anchor rows (and with them every `tombstone_id`), write `platform.user.erased` with the request
    reference and per-table counts - **no name, email or user id** (its `entity_id` is the erasure id). From the first
    engine slice on, the console writes this row instead of the PII-bearing `platform.user.deleted`.
 
-A failure at any step leaves the account banned and retries; "done" means the `user` row is gone **and** the verification
+A failure at any step leaves the account banned and retries (the queue allows 5 deliveries, `wrangler.jsonc`); after the
+last one the consumer dead-letters and acks the message, which leaves a banned account and an incomplete erasure. The
+owner of that state is the operator: the console user detail shows an erasure whose anchor rows still carry an
+`erasure_id` as **incomplete**, and running the action again **resumes** it under the same `erasure_id`. The dead letter
+also raises through `src/server/observability`. "Done" means the `user` row is gone **and** the verification
 sweep passes. Collect-before-delete is the `trip-purge` rule, and R2 `delete` of an absent key succeeds, so a redelivery
 finishes. Billing is not multiplied: one bounded job per erasure plus R2 delete calls.
 
@@ -317,7 +352,10 @@ adds its registry entry in the same change; the drift test fails otherwise.
 ### Entry points
 
 - **Console (this spec's slices):** `user:delete` stays the only permission that may erase someone else's account, refused
-  on the server for anyone else; `deletePlatformUser` becomes a call to the engine. The dialog requires the operator to
+  on the server for anyone else; `deletePlatformUser` stays exported and callable for
+  one release and delegates to the engine's entry function with its old input and result shape (BACKWARD_COMPATIBILITY §2: a
+  browser tab that loaded the previous bundle still calls it); `eraseUserFn` is additive, the console client switches to
+  it, and a follow-up PR removes `deletePlatformUser`. The dialog requires the operator to
   type the target's email and a **request reference** (an opaque ticket id, max 280 characters like the ban reason, never
   personal data because it lands in `platform_audit_log`). No second reviewer (a pending-approval state would need an exit
   with no automatic route; whether to require one is an owner-confirms item).
@@ -380,14 +418,22 @@ Additive only (`BACKWARD_COMPATIBILITY.md` §1); this spec itself changes nothin
   reading it. Generated through `pnpm db:generate`, never by hand.
 - No change to any existing column, foreign key or `ON DELETE` rule. The `invitation.inviter_id` cascade stays because
   changing it would be a table recreate.
-- New queue task kind `person-erasure` (envelope: `erasureId` or anchor id, no user id) and new platform audit actions
+- New queue task kinds `person-erasure` and `participant-backfill` (envelope: `erasureId` or anchor id, or an organization
+  id; no user id). A Worker that predates a kind rejects it in `taskEnvelopeSchema`, dead-letters it and acks it, so the
+  job would be lost without a trace. BACKWARD_COMPATIBILITY §6 therefore fixes the order: the kind and its handler ship
+  and deploy in one release, inert, and the producer (the engine entry, the backfill trigger) ships in a later one.
+- The tenant `audit_log` header says "rows are never updated" (`repos/audit.ts`). The erase function is the one updater,
+  limited to `actor_user_id`, `entity_id`, `ip`, `user_agent` and the `metadata` keys named above; the Phase 3 ticket edits
+  that header in the same change.
+- New platform audit actions
   `platform.user.erased` and `platform.user.erase_refused`, added to `docs/ACCESS.md` §4.2's closed list in the same
   change that writes them.
 
 ## 📝 API Contracts
 
 - `eraseUserFn` (console, `user:delete`): input `{ userId, confirmEmail, requestRef }`, Zod-validated; returns `{ erasureId }`;
-  refusals reuse `ConsoleActionError` with new codes for the subscription gate. `deletePlatformUser` is replaced by it.
+  refusals reuse `ConsoleActionError` with new codes for the subscription gate and for an incomplete backfill.
+  `deletePlatformUser` stays for one release as a delegating wrapper (see "Entry points").
 - `person-erasure` task: idempotent; a redelivery finishes.
 - No public route. Self-service is `09-S3`'s.
 
@@ -420,18 +466,22 @@ New `en` keys (each lands in all 23 locales per the `i18n-messages` skill; names
 - `console:action.erase.done` - "Account erased"
 - `console:audit.action.erased` - "Account erased"
 - `shell:person.former` - "Former member"
-- `trips:notify.erasure.promoted` - "{trip} has a new owner because a member's data was erased."
-- `trips:notify.erasure.invitations` - "{count} pending invitations disappeared because a member's data was erased."
+- `shell:notification.trip.owner_promoted.title` / `.body` - "{tripTitle} has a new owner", "A member's data was erased."
+- `shell:notification.workspace.invitations_removed.title` / `.body` - "Pending invitations disappeared", "{count} pending invitations disappeared because a member's data was erased."
 
-The existing sole-owner refusal text (`console:action.delete.refused`, #807) is reused unchanged. The privacy page wording
+The existing sole-owner refusal text (`console:action.delete.owners`, authored in the console target code, #807) is reused
+unchanged, and so are the other refusals of `deletePlatformUser`. The `action.delete.*` and `audit.action.deleted` keys
+stay while `deletePlatformUser` exists and go with it in the follow-up PR. The privacy page wording
 is not changed here (owner confirms).
 
 ## 📝 Edge Cases & Failure Scenarios
 
 - **The person already left a workspace.** Found through the anchor; scrubbed like any other. Without a backfill that
-  covers pre-anchor departures they would be missed, so the backfill is part of the first slice that uses the anchor.
+  covers pre-anchor departures they would be missed, so the backfill job ships with the anchor and discovery fails closed until it has completed.
 - **Two erased people on one expense or poll.** Distinct Former member ids; unique indexes hold. Tested.
 - **The person is the only member of a team workspace.** It is deleted like the personal one; pending invitations go with it.
+- **A job exhausts its deliveries.** The account stays banned, the erasure is incomplete and visible as such in the console,
+  and the operator resumes it (see "The engine").
 - **A job step fails half-way.** The account stays banned; the job resumes from `scrubbed_at` per workspace and reuses the
   `tombstone_id`. R2 deletes are idempotent.
 - **`user` row deleted but verification fails.** The anchor rows are kept, so the job can be retried; the account is inert.
@@ -478,17 +528,18 @@ spec-level ones are checked now.
 
 ## 📝 Risks & Impact Review
 
-| Risk                                                                             | Mitigation                                                                                                                        |
-| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Irreversible deletion of the wrong rows (`risk-high`: tenancy, data loss)        | Every scrub runs through one `TenantScope`; collect-before-delete; per-slice isolation tests; the account is made inert first.    |
-| A cross-tenant discovery read widens the tenancy contract                        | Organization ids only, paged, guarded by shape, in `src/server/catalog`; SPEC §5/§6 amended explicitly and accepted by the merge. |
-| The registry drifts from the schema                                              | The drift test fails on any `userRef` column added or removed without an entry.                                                   |
-| A user id leaks through the erasure's own envelopes or logs                      | Envelopes carry an opaque id; the dead-letter deleter ships first; logs carry counts only.                                        |
-| Anonymising money rows changes balances                                          | A balance-equality test before and after, with two erased people on one expense.                                                  |
-| Deleting a workspace with a live subscription strands a paying customer          | The subscription gate blocks it; no code cancels or refunds.                                                                      |
-| Plan 09's `beforeDelete` would sweep a prefix that matches no key                | Superseded by this spec; a note lands in plan 09.                                                                                 |
-| Memberless workspaces already left by past console deletions                     | Listed as a finding, not fixed silently; a tool lists them and the same `deleteWorkspace` removes them.                           |
-| Residual copies (logs, backups, 14-day KV, dead letters until the deleter ships) | Stated in the table; the periods are owner confirms.                                                                              |
+| Risk                                                                             | Mitigation                                                                                                                         |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Irreversible deletion of the wrong rows (`risk-high`: tenancy, data loss)        | Every scrub runs through one `TenantScope`; collect-before-delete; per-slice isolation tests; the account is made inert first.     |
+| A cross-tenant discovery read widens the tenancy contract                        | Organization ids only, paged, guarded by shape, in `src/server/catalog`; SPEC §5/§6 amended explicitly and accepted by the merge.  |
+| The registry drifts from the schema                                              | The drift test fails on any `userRef` column added or removed without an entry.                                                    |
+| A user id leaks through the erasure's own envelopes or logs                      | Envelopes carry an opaque id; the dead-letter deleter (Phase 7) is a prerequisite of the engine (Phase 6); logs carry counts only. |
+| Anonymising money rows changes balances                                          | A balance-equality test before and after, with two erased people on one expense.                                                   |
+| Deleting a workspace with a live subscription strands a paying customer          | The subscription gate blocks it; no code cancels or refunds.                                                                       |
+| Plan 09's `beforeDelete` would sweep a prefix that matches no key                | Superseded by this spec; a note lands in plan 09.                                                                                  |
+| Memberless workspaces already left by past console deletions                     | Listed as a finding, not fixed silently; a tool lists them and the same `deleteWorkspace` removes them.                            |
+| The engine is lost on a Worker that predates `person-erasure`                    | Handler first, producer one release later (BACKWARD_COMPATIBILITY §6); the same order for `participant-backfill`.                  |
+| Residual copies (logs, backups, 14-day KV, dead letters until the deleter ships) | Stated in the table; the periods are owner confirms.                                                                               |
 
 ### Out of scope
 
@@ -512,18 +563,20 @@ and any change made by this PR to code, schema or migrations.
 
 ## 📋 Phasing
 
-| Phase | Slice                                                                                                                     | Blocked by | Usable when it merges                                      |
-| ----- | ------------------------------------------------------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------- |
-| 1     | Registry, drift test, SPEC §5/§6 amendment, ADRs (erasure outcomes, ADR 0034 amendment), CONTEXT                          | none       | The contract exists and cannot drift; no behaviour changes |
-| 2     | Participation anchor: table, writes, backfill, catalog discovery read, isolation test                                     | 1          | Every workspace a person ever took part in can be listed   |
-| 3     | Scrub functions per module (trips and money; collaboration; personal modules; journeys, vacay, collections; tenant audit) | 1, 2       | Each module can erase a person inside one workspace        |
-| 4     | `deleteWorkspace`, R2 prefix sweep, trip-room reset, subscription gate                                                    | 1          | A memberless workspace can be deleted completely           |
-| 5     | The engine job, console entry and dialog, refusals, notices, `platform.user.erased`, Former member label                  | 2, 3, 4    | An operator can erase an account end to end                |
-| 6     | Non-D1 stores and the verification sweep (KV keys, R2 metadata rewrite, DO resets)                                        | 5          | "Done" is proven, not assumed                              |
-| 7     | Prerequisites: dead-letter retention deleter, stop logging recipient emails, soft-delete body clear                       | none       | Residuals shrink; independent of the rest                  |
-| 8     | Operator procedure page and the `09-S3` amendment                                                                         | 5          | An emailed request has a written procedure                 |
+| Phase | Slice                                                                                                                     | Blocked by    | Usable when it merges                                      |
+| ----- | ------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------------------------------- |
+| 1     | Registry, drift test, SPEC §5/§6 amendment, ADRs (erasure outcomes, ADR 0034 amendment), CONTEXT                          | none          | The contract exists and cannot drift; no behaviour changes |
+| 2     | Participation anchor: table, writes, backfill job, catalog reads, isolation test                                          | 1             | Every workspace a person ever took part in can be listed   |
+| 3     | Scrub functions per module (trips and money; collaboration; personal modules; journeys, vacay, collections; tenant audit) | 1, 2          | Each module can erase a person inside one workspace        |
+| 4     | `deleteWorkspace`, R2 prefix sweep, trip-room reset, subscription gate                                                    | 1             | A memberless workspace can be deleted completely           |
+| 5     | Non-D1 stores and the verification sweep as functions (KV keys, R2 metadata rewrite, DO resets, the sweep)                | 1, 2          | "Done" can be proven, not assumed                          |
+| 6     | The engine job, console entry and dialog, refusals, notices, `platform.user.erased`, Former member label                  | 2, 3, 4, 5, 7 | An operator can erase an account end to end                |
+| 7     | Prerequisites: dead-letter retention deleter, stop logging recipient emails, soft-delete body clear                       | none          | Residuals shrink; independent of the rest                  |
+| 8     | Operator procedure page and the `09-S3` amendment                                                                         | 6             | An emailed request has a written procedure                 |
 
-Phase 5 is the first one a person can see. Phases 1 and 7 can start at once.
+Phase 6 is the first one a person can see, and it does not start before the stores, the sweep (5) and the dead-letter
+deleter (7) exist: a destructive console action must not ship without proof that it finished. Phases 1 and 7 can start
+at once.
 
 ## 📋 Implementation Plan
 
@@ -537,15 +590,16 @@ drift test (add a `userRef` column in a fixture, see it fail).
 
 ### Phase 2 - Anchor
 
-`workspace_participants`, writes at every `member` insert (the plugin's organization hooks if Better Auth 1.7.1 exposes
-them for create, accept and add; the direct insert in `provisioning.ts`), the `insert(member)` call-site test, the backfill,
-`listWorkspacesHoldingUser` in `src/server/catalog/erasure.ts`. **Test seam:** the catalog function through its interface
+`workspace_participants`, the `participant-backfill` job (same two-release order as the engine's kind), writes at every `member` insert (the plugin's organization hooks if Better Auth 1.7.1 exposes
+them for create, accept and add; the direct insert in `provisioning.ts`), the `insert(member)` call-site test,
+`listWorkspacesHoldingUser` and the organization listing for the backfill in `src/server/catalog/erasure.ts`. **Test seam:** the catalog function through its interface
 (returns organization ids only; a person who left is still found); tenant-isolation test.
 
 ### Phase 3 - Scrubs
 
 One `eraseUser…` per repository module, `(scope, userId, tombstoneId)`. **Test seam:** each function at the repository
-interface, per outcome row; cross-workspace tenant-isolation test per function (rows of another organisation are
+interface, per outcome row; a volume case with more rows than one D1 batch and its bound-parameter limit holds (chunked, no
+truncation); the tenant `audit_log` header edit; cross-workspace tenant-isolation test per function (rows of another organisation are
 invisible and unchanged); balance equality; two erased people on one record; a reply to an erased message.
 
 ### Phase 4 - Workspace deletion
@@ -554,16 +608,18 @@ invisible and unchanged); balance equality; two erased people on one record; a r
 the room reset, the subscription gate. **Test seam:** `deleteWorkspace` (A's call leaves B untouched; refused with two
 members); the prefix sweep with a fake bucket, 1,000-key batches, resumable; a Polar webhook for a deleted organization.
 
-### Phase 5 - Engine
+### Phase 5 - Stores and verification
 
-`src/server/erasure/` orchestration, `person-erasure` handler, `eraseUserFn`, the console dialog, `refuseSoleOwner` first,
-notices, audit actions. **Test seam:** the engine with in-memory stores through its entry function: refusal leaves
-everything; a failure at each step resumes; the job never puts a user id in an envelope.
+KV key purges, R2 metadata rewrite, room resets, the verification sweep, as functions the engine calls. **Test seam:** the
+sweep finds a planted id in each registered place and in each non-`userRef` place, and reports none after a full run.
 
-### Phase 6 - Stores and verification
+### Phase 6 - Engine
 
-KV key purges, R2 metadata rewrite, room resets, the verification sweep. **Test seam:** the sweep finds a planted id in
-each registered place and in each non-`userRef` place, and reports none after a full run.
+`src/server/erasure/` orchestration, `eraseUserFn`, the console dialog, `refuseSoleOwner` first, notices, audit actions,
+`deletePlatformUser` as a delegating wrapper. Two releases, in this order (BACKWARD_COMPATIBILITY §6): the `person-erasure`
+kind and its handler, with nothing that enqueues it; then the producer. **Test seam:** the engine with in-memory stores
+through its entry function: refusal leaves everything; a failure at each step resumes (and a dead-lettered job resumes
+from the console); the job never puts a user id in an envelope; a banned person's sign-in provisions no workspace.
 
 ### Phase 7 - Prerequisites
 
@@ -600,23 +656,23 @@ Open items a person decides. This spec does not decide them and records the defa
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                     | Applied default                                                                                                                                                                                                                                              | Why                                                                                                                                                                                                                                                                  |
-| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | How are the person's workspaces found?       | A participation anchor that survives departure, read through a catalog function that returns organization ids; SPEC §5/§6 amended explicitly.                                                                                                                | Decided by the security and tenancy sub-agent (confidence medium): `member`-only misses departed workspaces; scanning is also cross-tenant; the anchor is additive and reversible. Corrected: a plugin hook alone would miss the direct insert in `provisioning.ts`. |
-| 2   | Solo and shared trips, and a sole trip owner | Solo private trip deleted; solo organization-visible trip kept and handed to the longest-standing workspace owner; sole trip owner on a shared trip replaced by promotion.                                                                                   | Decided by the security and tenancy sub-agent (confidence medium): refusing blocks a data subject on someone else's action; leaving no owner has no exit (SDLC.md). Company-versus-person is owner confirms (item 5).                                                |
-| 3   | Column outcomes                              | The table above, with these changes to the first draft: tokens revoked and anonymised (no hard delete), vacay plan with invited members kept, `saved_by` anonymised in others' collections, shares links revoked, chat bodies cleared, `paid_by` anonymised. | Decided by the security and tenancy sub-agent (confidence medium) against the code: `platform_audit_log.token_id` is `RESTRICT`; `share_links.revoked_at` exists; nulling `paid_by` changes balances.                                                                |
-| 4   | Collections shared with others, and journeys | Delete when no other contributor remains, otherwise keep under the Former member owner.                                                                                                                                                                      | Default applied for collections, by analogy to the journey verdict (decided by the security and tenancy sub-agent, confidence medium, reusing ADR 0034's "owner leaves" outcome); no production code writes journeys today.                                          |
-| 5   | `provider_registry.updated_by`               | Anonymise.                                                                                                                                                                                                                                                   | Default applied: a mutable configuration row the verdict did not address; the ceiling must stay.                                                                                                                                                                     |
-| 6   | Audit rows                                   | Tenant rows anonymised and stripped of ip/user agent; platform ledger kept; a PII-free `platform.user.erased` row replaces the PII-bearing `platform.user.deleted`.                                                                                          | Decided by the security and tenancy sub-agent (confidence medium): rewriting the platform ledger contradicts its append-only rule and `CHECK`s. Retention is owner confirms.                                                                                         |
-| 7   | What replaces the id                         | `erased_<nanoid>` per workspace per erasure, no stored mapping after the job.                                                                                                                                                                                | Decided by the security and tenancy sub-agent (confidence high): a constant breaks unique indexes, an HMAC is reversible, one id links workspaces.                                                                                                                   |
-| 8   | Auth leftovers                               | Delete the `user` row last; delete invitations to the email and the matching `verification` rows; end impersonated sessions; let the sent-invitation cascade stand.                                                                                          | Decided by the security and tenancy sub-agent (confidence high): changing the `inviter_id` key is a table recreate and not additive.                                                                                                                                 |
-| 9   | Non-D1 stores and order                      | One resumable job: make inert, discover, scrub per workspace, sweep, delete the user last, verify; KV/DO/R2 purged or left to expire with the residual stated.                                                                                               | Decided by the security and tenancy sub-agent (confidence medium): D1 is the record; an active room never clears itself; dead letters need a retention deleter first.                                                                                                |
-| 10  | The sole owner of a team (#807)              | The refusal stays; the request waits for a handover; no auto-promotion; an audit row records the refusal.                                                                                                                                                    | Decided by the security and tenancy sub-agent (confidence medium): doing nothing is the most reversible, auto-promotion moves billing. The statutory-deadline question is owner confirms (item 7).                                                                   |
-| 11  | A workspace with no member left, and billing | Deleted at once with an R2 prefix sweep; a live subscription blocks the erasure; no Polar call; the Polar customer is kept.                                                                                                                                  | Decided by the product owner sub-agent (confidence medium): a grace state needs an exit the missing retention handler cannot give; money stays out of code; Polar is Merchant of Record. Gap closed: plan 09's rules never mentioned a subscription.                 |
-| 12  | Is self-service offered here?                | No: console only; one engine entry; `09-S3` calls it and plan 09's rules 2 to 4 are superseded; a documented operator procedure; type-the-email plus a request reference.                                                                                    | Decided by the product owner sub-agent (confidence medium): plan 09 owns self-service (SPEC §8, one owner); a second reviewer adds a state with no exit.                                                                                                             |
-| 13  | Export before deletion                       | Mentioned only; neither offered nor enforced.                                                                                                                                                                                                                | Decided by the product owner sub-agent (confidence high): the export does not exist, enforcing it would block a legal request.                                                                                                                                       |
-| 14  | A grace window before the job                | None; the job starts at once; the window is owner confirms.                                                                                                                                                                                                  | Default applied after the two verdicts disagreed (the security sub-agent suggested a window as a mitigation, the product sub-agent warned a grace state needs an exit): the more reversible direction is immediate, since a window can be added in front later.      |
-| 15  | Does the spec edit anything but itself       | A note in `docs/plans/09-account-and-settings.md` and two `CONTEXT.md` entries.                                                                                                                                                                              | Default applied: plan 09's sweep prefix is wrong against today's keys and the repo's docs rule asks every document that states what this changes to be updated.                                                                                                      |
+| #   | Question                                     | Applied default                                                                                                                                                                                                                                                     | Why                                                                                                                                                                                                                                                                         |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | How are the person's workspaces found?       | A participation anchor that survives departure, read through a catalog function that returns organization ids; SPEC §5/§6 amended explicitly.                                                                                                                       | Decided by the security and tenancy sub-agent (confidence medium): `member`-only misses departed workspaces; scanning is also cross-tenant; the anchor is additive and reversible. Corrected: a plugin hook alone would miss the direct insert in `provisioning.ts`.        |
+| 2   | Solo and shared trips, and a sole trip owner | Solo private trip deleted; solo organization-visible trip kept and handed to the longest-standing workspace owner; sole trip owner on a shared trip replaced by promotion.                                                                                          | Decided by the security and tenancy sub-agent (confidence medium): refusing blocks a data subject on someone else's action; leaving no owner has no exit (SDLC.md). Company-versus-person is owner confirms (item 5).                                                       |
+| 3   | Column outcomes                              | The table above, with these outcomes settled by the specialist: tokens revoked and anonymised (no hard delete), vacay plan with invited members kept, `saved_by` anonymised in others' collections, share links revoked, chat bodies cleared, `paid_by` anonymised. | Decided by the security and tenancy sub-agent (confidence medium) against the code: `platform_audit_log.token_id` is `RESTRICT`; `share_links.revoked_at` exists; nulling `paid_by` changes balances.                                                                       |
+| 4   | Collections shared with others, and journeys | Delete when no other contributor remains, otherwise keep under the Former member owner.                                                                                                                                                                             | Default applied for collections, by analogy to the journey verdict (decided by the security and tenancy sub-agent, confidence medium, reusing ADR 0034's "owner leaves" outcome); journeys have one production writer (`createJourneyFn`) and no entry or photo writer yet. |
+| 5   | `provider_registry.updated_by`               | Anonymise.                                                                                                                                                                                                                                                          | Default applied: a mutable configuration row the verdict did not address; the ceiling must stay.                                                                                                                                                                            |
+| 6   | Audit rows                                   | Tenant rows anonymised and stripped of ip/user agent; platform ledger kept; a PII-free `platform.user.erased` row replaces the PII-bearing `platform.user.deleted`.                                                                                                 | Decided by the security and tenancy sub-agent (confidence medium): rewriting the platform ledger contradicts its append-only rule and `CHECK`s. Retention is owner confirms.                                                                                                |
+| 7   | What replaces the id                         | `erased_<nanoid>` per workspace per erasure, no stored mapping after the job.                                                                                                                                                                                       | Decided by the security and tenancy sub-agent (confidence high): a constant breaks unique indexes, an HMAC is reversible, one id links workspaces.                                                                                                                          |
+| 8   | Auth leftovers                               | Delete the `user` row last; delete invitations to the email and the `verification` rows that name the person (by identifier and value); end impersonated sessions; let the sent-invitation cascade stand.                                                           | Decided by the security and tenancy sub-agent (confidence high): changing the `inviter_id` key is a table recreate and not additive.                                                                                                                                        |
+| 9   | Non-D1 stores and order                      | One resumable job: make inert, discover, scrub per workspace, sweep, delete the user last, verify; KV/DO/R2 purged or left to expire with the residual stated.                                                                                                      | Decided by the security and tenancy sub-agent (confidence medium): D1 is the record; an active room never clears itself; dead letters need a retention deleter first.                                                                                                       |
+| 10  | The sole owner of a team (#807)              | The refusal stays; the request waits for a handover; no auto-promotion; an audit row records the refusal.                                                                                                                                                           | Decided by the security and tenancy sub-agent (confidence medium): doing nothing is the most reversible, auto-promotion moves billing. The statutory-deadline question is owner confirms (item 7).                                                                          |
+| 11  | A workspace with no member left, and billing | Deleted at once with an R2 prefix sweep; a live subscription blocks the erasure; no Polar call; the Polar customer is kept.                                                                                                                                         | Decided by the product owner sub-agent (confidence medium): a grace state needs an exit the missing retention handler cannot give; money stays out of code; Polar is Merchant of Record. Gap closed: plan 09's rules never mentioned a subscription.                        |
+| 12  | Is self-service offered here?                | No: console only; one engine entry; `09-S3` calls it and plan 09's rules 2 to 4 are superseded; a documented operator procedure; type-the-email plus a request reference.                                                                                           | Decided by the product owner sub-agent (confidence medium): plan 09 owns self-service (SPEC §8, one owner); a second reviewer adds a state with no exit.                                                                                                                    |
+| 13  | Export before deletion                       | Mentioned only; neither offered nor enforced.                                                                                                                                                                                                                       | Decided by the product owner sub-agent (confidence high): the export does not exist, enforcing it would block a legal request.                                                                                                                                              |
+| 14  | A grace window before the job                | None; the job starts at once; the window is owner confirms.                                                                                                                                                                                                         | Default applied after the two verdicts disagreed (the security sub-agent suggested a window as a mitigation, the product sub-agent warned a grace state needs an exit): the more reversible direction is immediate, since a window can be added in front later.             |
+| 15  | Does the spec edit anything but itself       | A note in `docs/plans/09-account-and-settings.md` and two `CONTEXT.md` entries.                                                                                                                                                                                     | Default applied: plan 09's sweep prefix is wrong against today's keys and the repo's docs rule asks every document that states what this changes to be updated.                                                                                                             |
 
 ## Panel verdicts
 

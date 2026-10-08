@@ -1052,7 +1052,9 @@ configuration exactly as it stands, and no plugin is added or removed.
 > to this path too. Two corrections the spec makes: the R2 prefix in rule 2 (`<organizationId>/`) matches no key
 > the product writes (the real prefixes are `trips/<organizationId>/`, `exports/<organizationId>/` and
 > `avatars/<organizationId>/`), and the rules never say what happens to a workspace's subscription (the spec
-> blocks the erasure until it is cancelled). The rest of this stage (the dialog, the two confirmations) stands.
+> blocks the erasure until it is cancelled). `deleteWorkspace` is also built earlier, by the spec's workspace-deletion
+> slice, which puts it in `src/server/repos/members.ts` where this stage and plan 10 expect it; whichever lands first adds
+> it and the other consumes it. The rest of this stage (the dialog, the two confirmations) stands.
 
 1. The reader confirms by email — Better Auth's own verification round-trip — and then by typing
    their password. Both, not either.
