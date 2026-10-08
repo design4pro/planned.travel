@@ -45,10 +45,13 @@ export function useTripWeather(tripId: string, plan: unknown): TripWeatherView {
     refetchOnWindowFocus: true,
   })
 
-  const seen = React.useRef(plan)
+  // Remember the trip with the plan: a screen kept mounted across a switch to another trip sees a
+  // different plan, but that is a new trip (its query is already asking), not an edit of this one.
+  const seen = React.useRef({ tripId, plan })
   React.useEffect(() => {
-    if (seen.current !== plan) {
-      seen.current = plan
+    const before = seen.current
+    seen.current = { tripId, plan }
+    if (before.tripId === tripId && before.plan !== plan) {
       void client.invalidateQueries({ queryKey: tripWeatherKey(tripId) })
     }
   }, [client, plan, tripId])

@@ -157,4 +157,30 @@ describe('useTripWeather', () => {
       expect(loadTripWeatherFn).toHaveBeenCalledTimes(2)
     })
   })
+
+  it('asks once for a stale trip the mounted screen switches to, not again for its new plan', async () => {
+    const client = newClient()
+    // The second trip was read before and has gone stale, so switching to it refetches in place.
+    client.setQueryData(tripWeatherKey('t2'), ANSWER, {
+      updatedAt: Date.now() - 2 * TRIP_WEATHER_STALE_MS,
+    })
+    loadTripWeatherFn.mockResolvedValue(ANSWER)
+    let trip = { id: 't1', plan: {} }
+    const { result, rerender } = renderHook(
+      () => useTripWeather(trip.id, trip.plan),
+      { wrapper: wrapper(client) },
+    )
+    await waitFor(() => {
+      expect(result.current.viewOf('d1').status).toBe('ok')
+    })
+
+    trip = { id: 't2', plan: {} }
+    rerender()
+    await waitFor(() => {
+      expect(loadTripWeatherFn).toHaveBeenCalledWith({ data: { tripId: 't2' } })
+    })
+    await client.isFetching()
+
+    expect(loadTripWeatherFn).toHaveBeenCalledTimes(2)
+  })
 })
