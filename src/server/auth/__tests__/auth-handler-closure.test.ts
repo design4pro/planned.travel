@@ -42,6 +42,7 @@ import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { authSchema } from '#/server/db/auth-schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'
+import type { AuthDb } from '../db'
 import type { Auth } from '../index'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
 
@@ -121,6 +122,9 @@ const { PLATFORM_ACTIONS, PLATFORM_SYSTEM_ACTOR } = await import(
   '#/server/catalog/audit'
 )
 const { getAuth } = await import('../index')
+const { WORKSPACE_LIMIT, createOrganizationFor } = await import(
+  '../provisioning'
+)
 const { getSession } = await import('../session')
 
 /* -------------------------------------------------------------------------------------------------
@@ -681,5 +685,131 @@ describe('organization/set-active', () => {
     expect(active).not.toBe(foreignOrganizationId)
     // Cleared rather than kept: the behaviour the switcher's FORBIDDEN branch re-syncs around.
     expect(active).toBeNull()
+  })
+})
+
+/* -------------------------------------------------------------------------------------------------
+ * Creating a workspace is server-side only (#804)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * `createWorkspace` carries the plan gate, the role rule, the workspace limit and the impersonation
+ * veto, and the plugin's own endpoint carries none of them. `allowUserToCreateOrganization: false`
+ * is what keeps a hand-made `POST /api/auth/organization/create` from being a way round all four,
+ * so it is pinned against the real handler rather than read off the options. `disabledPaths` stays
+ * the admin plugin's list (docs/ACCESS.md §2.6): this closure lives inside the plugin's own config.
+ */
+describe('organization/create', () => {
+  let cookie: string
+  let activeBefore: string | null
+
+  function organizationCount(): number {
+    const row = sqlite
+      .prepare('select count(*) as n from organization')
+      .get() as {
+      n: number
+    }
+    return row.n
+  }
+
+  function activeOrganizationOf(email: string): string | null {
+    const row = sqlite
+      .prepare(
+        'select s.active_organization_id as id from session s join user u on u.id = s.user_id where u.email = ? order by s.created_at desc limit 1',
+      )
+      .get(email) as { id: string | null } | undefined
+    if (row === undefined) throw new Error(`no session for ${email}`)
+    return row.id
+  }
+
+  beforeAll(async () => {
+    await createAccount('creator@planned.travel')
+    shared.kv.clear()
+    cookie = sessionCookie(await signIn('creator@planned.travel'))
+    activeBefore = activeOrganizationOf('creator@planned.travel')
+  })
+
+  it('refuses a signed-in caller with 403 and writes nothing', async () => {
+    const before = organizationCount()
+
+    const response = await post(
+      '/organization/create',
+      { name: 'Sneaky', slug: 'sneaky' },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+    // The plugin's own refusal, so a 403 from an origin check or other middleware cannot stand in.
+    const body: { code?: string } = await response.json()
+    expect(body.code).toBe('YOU_ARE_NOT_ALLOWED_TO_CREATE_A_NEW_ORGANIZATION')
+    expect(organizationCount()).toBe(before)
+  })
+
+  it('answers an anonymous caller with 401', async () => {
+    const response = await post('/organization/create', {
+      name: 'Anonymous',
+      slug: 'anonymous',
+    })
+
+    expect(response.status).toBe(401)
+  })
+
+  it('leaves organization/set-active answering for the same session (positive control)', async () => {
+    expect(activeBefore).not.toBeNull()
+
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: activeBefore },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+  })
+
+  it('makes an in-process activation visible on the next getSession(), read uncached', async () => {
+    // `createWorkspace` activates the new workspace in process, with the request's headers. The
+    // reader must land in it on the very next request, so the session row is what is asserted.
+    const userId = (
+      sqlite
+        .prepare('select id from user where email = ?')
+        .get('creator@planned.travel') as { id: string }
+    ).id
+    const created = await createOrganizationFor(
+      authDatabase as unknown as AuthDb,
+      { id: userId },
+      { name: 'Created in process', metadata: null },
+    )
+    shared.request.current = new Request(BASE_URL, { headers: { cookie } })
+
+    await getAuth().api.setActiveOrganization({
+      headers: shared.request.current.headers,
+      body: { organizationId: created },
+    })
+    const spy = vi.spyOn(getAuth().api, 'getSession')
+    const session = await getSession()
+
+    expect(session?.session.activeOrganizationId).toBe(created)
+    expect(spy.mock.calls[0][0]?.query).toEqual({ disableCookieCache: true })
+    spy.mockRestore()
+    // And the new workspace is listed for the caller, which is what the switcher reads.
+    const listed = await getAuth().api.listOrganizations({
+      headers: shared.request.current.headers,
+    })
+    expect(listed.map((entry) => entry.id)).toContain(created)
+  })
+
+  it('reads the workspace limit from the one exported constant', () => {
+    // The plugin enforces `organizationLimit` only inside its own create endpoint, and creation
+    // no longer goes through it: `createWorkspace` counts against the same constant.
+    const plugin = getAuth().options.plugins?.find(
+      (entry) => entry.id === 'organization',
+    )
+    const options =
+      plugin !== undefined && 'options' in plugin ? plugin.options : undefined
+
+    expect(options).toMatchObject({
+      organizationLimit: WORKSPACE_LIMIT,
+      allowUserToCreateOrganization: false,
+    })
   })
 })
