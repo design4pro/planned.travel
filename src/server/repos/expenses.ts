@@ -22,9 +22,9 @@ import {
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
-import { placesRepository } from './places'
+import { requirePlaceOfTrip } from './places'
 import { unlinkReservationsFromExpense } from './reservations'
-import { requireTrip } from './trips'
+import { assertTripRole, requireTrip, tripMemberUserIds } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -44,6 +44,7 @@ import type {
   Settlement,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TripRole } from './trips'
 
 export const budgetItemsRepository = createTenantRepository(
   budgetItems,
@@ -60,6 +61,45 @@ export const settlementsRepository = createTenantRepository(
 )
 
 /* -------------------------------------------------------------------------------------------------
+ * Who writes money
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Trip roles that may change a trip's money: its expenses, their shares, its payments and its
+ * planned budget lines. A `viewer` reads the ledger, and so does a workspace member who only sees an
+ * organization-visible trip (`CONTEXT.md`, "Trip member").
+ *
+ * The one place the money writers' role list is declared. Enforcement is {@link assertTripRole},
+ * the trip's own guard, through {@link requireMoneyTrip}; {@link canWriteMoney} reads the same list
+ * for a screen that has to decide which controls to draw.
+ */
+export const MONEY_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+
+/**
+ * Whether a trip role may write money - the role-only answer the costs screen draws its controls
+ * from. Deliberately not `canWritePlan`: that also refuses an archived trip, and archived trips are
+ * not decided for money (the writers here do not check archiving), so a control drawn from it
+ * would disagree with the server.
+ */
+export function canWriteMoney(role: string | null): boolean {
+  return MONEY_WRITE_ROLES.some((allowed) => allowed === role)
+}
+
+/**
+ * The two guards every money writer starts with, in the order the boundary needs them:
+ * {@link requireTrip} first, so a caller who may not see the trip is answered with
+ * {@link NotFoundError} and learns nothing, and only then the role, whose `TripRoleError` is safe
+ * because by that point they have proved they may see the trip.
+ */
+async function requireMoneyTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<void> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, MONEY_WRITE_ROLES)
+}
+
+/* -------------------------------------------------------------------------------------------------
  * Rows of the trip in the request
  * ---------------------------------------------------------------------------------------------- */
 
@@ -69,7 +109,8 @@ export const settlementsRepository = createTenantRepository(
  * lives in the workspace, so someone who may read any trip could rewrite another trip's ledger -
  * a private one included. Every writer below therefore asks for the pair, after the trip itself
  * has been checked, and a row of another trip answers exactly as a row that is not there: the
- * same {@link NotFoundError}, so the refusal does not say which ids exist.
+ * same {@link NotFoundError}, so the refusal does not say which ids exist. The role follows the
+ * trip check and precedes the row lookup, so a viewer is refused whether or not the id exists.
  */
 
 async function requireTripExpense(
@@ -77,7 +118,7 @@ async function requireTripExpense(
   tripId: string,
   expenseId: string,
 ): Promise<Expense> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const expense = await expensesRepository.findOne(
     scope,
     allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
@@ -93,7 +134,7 @@ async function requireTripBudgetItem(
   tripId: string,
   budgetItemId: string,
 ): Promise<BudgetItem> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const item = await budgetItemsRepository.findOne(
     scope,
     allOf(eq(budgetItems.id, budgetItemId), eq(budgetItems.tripId, tripId)),
@@ -109,7 +150,7 @@ async function requireTripShare(
   tripId: string,
   shareId: string,
 ): Promise<ExpenseShare> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const share = await expenseSharesRepository.findOne(
     scope,
     allOf(eq(expenseShares.id, shareId), eq(expenseShares.tripId, tripId)),
@@ -125,7 +166,7 @@ async function requireTripSettlement(
   tripId: string,
   settlementId: string,
 ): Promise<Settlement> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const settlement = await settlementsRepository.findOne(
     scope,
     allOf(eq(settlements.id, settlementId), eq(settlements.tripId, tripId)),
@@ -134,6 +175,69 @@ async function requireTripSettlement(
     throw new NotFoundError(settlementsRepository.entityName, settlementId)
   }
   return settlement
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * People of the trip in the request
+ * ---------------------------------------------------------------------------------------------- */
+
+/*
+ * A split, a payer and both sides of a payment are plain user ids, and `getMemberBalances` groups by
+ * them without asking who is on the trip, so an id nobody checked would surface as a balance row of
+ * a stranger. The people a money write may name are the trip's members (`trip_members`, not
+ * everyone who may read the trip: an organization-visible trip is readable by the whole workspace)
+ * and whoever the trip's money already carries. The second half is what lets a person who has since
+ * left the trip keep their expense editable and their debt payable; a person the money has never
+ * seen is always refused.
+ *
+ * One refusal for the whole submitted set: {@link NotFoundError} prints the id it is given, so the
+ * message names the request rather than any id in it, and the caller cannot tell which id was wrong.
+ */
+
+async function requireTripPeople(
+  scope: TenantScope,
+  tripId: string,
+  userIds: ReadonlyArray<string | null | undefined>,
+  alreadyOnMoney: () => Promise<ReadonlyArray<string>>,
+): Promise<void> {
+  const named = new Set(userIds.filter((id): id is string => !!id))
+  if (named.size === 0) {
+    return
+  }
+  const members = new Set(await tripMemberUserIds(scope, tripId))
+  const outsiders = [...named].filter((id) => !members.has(id))
+  if (outsiders.length === 0) {
+    return
+  }
+  const known = new Set(await alreadyOnMoney())
+  if (outsiders.some((id) => !known.has(id))) {
+    throw new NotFoundError('trip member', 'named in the request')
+  }
+}
+
+/** Who one expense already carries: its payer and everyone it is split between. */
+async function peopleOnExpense(
+  scope: TenantScope,
+  expense: Expense,
+): Promise<Array<string>> {
+  const shares = await expenseSharesRepository.findMany(scope, {
+    where: eq(expenseShares.expenseId, expense.id),
+  })
+  return [
+    ...(expense.paidBy === null ? [] : [expense.paidBy]),
+    ...shares.map((share) => share.userId),
+  ]
+}
+
+/** Who still has money on the trip: a balance that is not zero, whether they owe or are owed. */
+async function peopleWithBalance(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<string>> {
+  const balances = await getMemberBalances(scope, tripId)
+  return balances
+    .filter((row) => row.balanceMinor !== 0)
+    .map((row) => row.userId)
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -363,7 +467,7 @@ export async function createBudgetItem(
   input: CreateBudgetItemInput,
 ): Promise<BudgetItem> {
   const values = createBudgetItemInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireMoneyTrip(scope, values.tripId)
   return budgetItemsRepository.insert(scope, values)
 }
 
@@ -443,16 +547,22 @@ export async function createExpense(
   input: CreateExpenseInput,
 ): Promise<ExpenseWithShares> {
   const { participants, ...values } = createExpenseInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireMoneyTrip(scope, values.tripId)
   if (values.dayId) {
     await requireTripDay(scope, values.tripId, values.dayId)
   }
   if (values.placeId) {
-    await placesRepository.requireById(scope, values.placeId)
+    await requirePlaceOfTrip(scope, values.tripId, values.placeId)
   }
   if (values.budgetItemId) {
-    await budgetItemsRepository.requireById(scope, values.budgetItemId)
+    await requireTripBudgetItem(scope, values.tripId, values.budgetItemId)
   }
+  await requireTripPeople(
+    scope,
+    values.tripId,
+    [values.paidBy, ...(participants ?? []).map((part) => part.userId)],
+    async () => [],
+  )
 
   const expense = await expensesRepository.insert(scope, {
     ...values,
@@ -479,6 +589,18 @@ export async function updateExpense(
   if (patch.dayId) {
     await requireTripDay(scope, existing.tripId, patch.dayId)
   }
+  if (patch.placeId) {
+    await requirePlaceOfTrip(scope, existing.tripId, patch.placeId)
+  }
+  if (patch.budgetItemId) {
+    await requireTripBudgetItem(scope, existing.tripId, patch.budgetItemId)
+  }
+  await requireTripPeople(
+    scope,
+    existing.tripId,
+    [patch.paidBy, ...(participants ?? []).map((part) => part.userId)],
+    () => peopleOnExpense(scope, existing),
+  )
   const expense = await expensesRepository.requireUpdate(
     scope,
     expenseId,
@@ -514,6 +636,12 @@ export async function setExpenseShares(
     .array(splitParticipantInput)
     .max(100)
     .parse([...participants])
+  await requireTripPeople(
+    scope,
+    expense.tripId,
+    parsed.map((part) => part.userId),
+    () => peopleOnExpense(scope, expense),
+  )
   return writeShares(scope, expense, parsed, method ?? expense.splitMethod)
 }
 
@@ -614,7 +742,13 @@ export async function createSettlement(
       'INVALID_SETTLEMENT',
     )
   }
-  await requireTrip(scope, values.tripId)
+  await requireMoneyTrip(scope, values.tripId)
+  await requireTripPeople(
+    scope,
+    values.tripId,
+    [values.fromUserId, values.toUserId],
+    () => peopleWithBalance(scope, values.tripId),
+  )
   return settlementsRepository.insert(scope, {
     ...values,
     createdBy: scope.ctx.userId,

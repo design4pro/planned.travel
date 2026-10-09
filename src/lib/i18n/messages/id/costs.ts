@@ -157,6 +157,14 @@ const messages = {
   'payments.empty.title': 'Belum ada pembayaran',
   'payments.empty.body':
     'Begitu seseorang melunasi saldo, transfernya dicatat di sini.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Kamu bisa melihat biaya, tetapi tidak bisa mengubahnya',
+  'readOnly.body':
+    'Hanya pemilik perjalanan dan orang yang bisa mengedit yang dapat menambah, mengubah, atau menghapus pengeluaran dan mencatat pembayaran. Tanyakan kepada pemilik jika ada yang perlu diubah.',
+  'readOnly.empty':
+    'Belum ada pengeluaran yang dicatat untuk perjalanan ini. Pengeluaran akan muncul di sini setelah pemilik atau editor menambahkannya.',
+  'readOnly.settleEmpty':
+    'Saat ini tidak perlu ada transfer. Selisih apa pun akan muncul di sini.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

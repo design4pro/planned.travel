@@ -226,9 +226,36 @@ export const transitConnectionSchema = z.object({
   legs: z.array(legSchema),
 })
 
+/**
+ * A notice HERE says "must be fully displayed to the end-users" with a route (Public Transit API
+ * v8, "Copyright notices"). It is vendor data shown exactly as returned (Platform Terms §6.4 c):
+ * never a catalogue key, never translated. `href` and `hrefText` are `null` when HERE sent no link
+ * or a link that is not a web address; `hrefText` is the clickable part of `text`, and `null` means
+ * the whole text.
+ */
+export interface TransitAttribution {
+  readonly id: string
+  readonly text: string
+  readonly href: string | null
+  readonly hrefText: string | null
+}
+
+export const transitAttributionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  href: z.string().nullable(),
+  hrefText: z.string().nullable(),
+})
+
+/**
+ * The stored answer. `v: 2` is the first entry that carries the attributions, and the field is
+ * required: an entry written before it existed (`v: 1`) fails this schema and is a miss, so a
+ * cached answer is never shown without notices a fresh one would carry. The key does not change.
+ */
 const cachedSchema = z.object({
-  v: z.literal(1),
+  v: z.literal(2),
   connections: z.array(transitConnectionSchema),
+  attributions: z.array(transitAttributionSchema),
 })
 
 /* ------------------------------------------------------------------ failure */
@@ -363,6 +390,8 @@ export function transitCacheKey(
  */
 export interface TransitAnswer {
   readonly connections: ReadonlyArray<TransitConnection>
+  /** The notices that go with these connections, each once; empty when HERE sent none. */
+  readonly attributions: ReadonlyArray<TransitAttribution>
   readonly caching: CachingHeaders
 }
 
@@ -399,6 +428,7 @@ export interface TransitSearchRuntime {
 
 export interface TransitSearchResult {
   readonly connections: ReadonlyArray<TransitConnection>
+  readonly attributions: ReadonlyArray<TransitAttribution>
   readonly cached: boolean
   /** Searches spent this month after this one, or `null` when this one spent nothing. */
   readonly spent: number | null
@@ -408,7 +438,7 @@ export interface TransitSearchResult {
 async function cached(
   runtime: TransitSearchRuntime,
   key: string,
-): Promise<ReadonlyArray<TransitConnection> | null> {
+): Promise<Pick<TransitAnswer, 'connections' | 'attributions'> | null> {
   let raw: string | null = null
   try {
     raw = await runtime.cache.get(key)
@@ -424,7 +454,12 @@ async function cached(
   }
   try {
     const parsed = cachedSchema.safeParse(JSON.parse(raw))
-    return parsed.success ? parsed.data.connections : null
+    return parsed.success
+      ? {
+          connections: parsed.data.connections,
+          attributions: parsed.data.attributions,
+        }
+      : null
   } catch {
     return null
   }
@@ -462,7 +497,8 @@ export async function searchTransitConnections(
   const hit = await cached(runtime, key)
   if (hit !== null) {
     return {
-      connections: hit,
+      connections: hit.connections,
+      attributions: hit.attributions,
       cached: true,
       spent: null,
       ceiling: runtime.ceiling,
@@ -489,7 +525,7 @@ export async function searchTransitConnections(
   })
 
   const { client } = runtime
-  const { connections, caching } = await callProvider(
+  const { connections, attributions, caching } = await callProvider(
     runtime.outbound,
     {
       provider: 'here',
@@ -506,9 +542,11 @@ export async function searchTransitConnections(
   const lifetime = storableLifetimeSeconds(caching)
   if (connections.length > 0 && lifetime !== null) {
     try {
-      await runtime.cache.put(key, JSON.stringify({ v: 1, connections }), {
-        expirationTtl: Math.min(lifetime, TRANSIT_CACHE_MAX_TTL_SECONDS),
-      })
+      await runtime.cache.put(
+        key,
+        JSON.stringify({ v: 2, connections, attributions }),
+        { expirationTtl: Math.min(lifetime, TRANSIT_CACHE_MAX_TTL_SECONDS) },
+      )
     } catch (cause) {
       runtime.logger?.warn('transit.cache.write_failed', {
         message: cause instanceof Error ? cause.message : String(cause),
@@ -516,5 +554,11 @@ export async function searchTransitConnections(
     }
   }
 
-  return { connections, cached: false, spent, ceiling: runtime.ceiling }
+  return {
+    connections,
+    attributions,
+    cached: false,
+    spent,
+    ceiling: runtime.ceiling,
+  }
 }

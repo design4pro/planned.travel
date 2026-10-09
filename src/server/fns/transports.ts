@@ -21,6 +21,7 @@ import {
   listTripDays,
   listTripLegs,
   listTripTransports,
+  requireTransportOfTrip,
   requireTrip,
   saveSearchedConnection,
   saveTransport,
@@ -53,6 +54,7 @@ import type { AirportMatch } from '#/server/catalog/airports'
 import type { TransportLeg } from '#/server/db/types'
 import type { TenantScope, TransportModeTotals } from '#/server/repos'
 import type {
+  TransitAttribution,
   TransitConnection,
   TransitFailureReason,
 } from '#/server/transit/search'
@@ -412,6 +414,9 @@ export const setTransportStatusFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly status: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
+    // Everything below acts on `data.tripId` - the room it tells - so the transport must be one of
+    // that trip's, not merely one the caller may edit on some trip of theirs.
+    await requireTransportOfTrip(scope, data.tripId, data.transportId)
     await setTransportStatus(scope, data.transportId, data.status)
 
     await mirrorToRoom(scope, data.tripId, [
@@ -425,6 +430,7 @@ export const deleteTransportFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
+    await requireTransportOfTrip(scope, data.tripId, data.transportId)
     await deleteTransport(scope, data.transportId)
 
     await mirrorToRoom(scope, data.tripId, [
@@ -452,6 +458,8 @@ export type ConnectionSearchOutcome =
   | {
       readonly ok: true
       readonly connections: ReadonlyArray<TransitConnection>
+      /** The notices HERE requires beside these connections, exactly as it sent them. */
+      readonly attributions: ReadonlyArray<TransitAttribution>
       /** True when nobody's allowance was spent, because the answer was already held. */
       readonly cached: boolean
       /** Searches left this month, or `null` when this one cost nothing. */
@@ -528,6 +536,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
       return {
         ok: true,
         connections: result.connections,
+        attributions: result.attributions,
         cached: result.cached,
         remaining:
           result.spent === null ? null : Math.max(0, ceiling - result.spent),
@@ -595,6 +604,7 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
  * `leg-form.ts` restates the mode list instead of importing it.
  */
 export type {
+  TransitAttribution,
   TransitConnection,
   TransitLeg,
   TransitMode,

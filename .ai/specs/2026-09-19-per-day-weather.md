@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value        |
-| ------------------ | ------------ |
-| **Status**         | in-progress  |
-| **Issue**          | #631         |
-| **Spec PR**        | #636         |
-| **Implementation** | #1003, #1004 |
+| Field              | Value               |
+| ------------------ | ------------------- |
+| **Status**         | in-progress         |
+| **Issue**          | #631                |
+| **Spec PR**        | #636                |
+| **Implementation** | #1003, #1004, #1044 |
 
 ## 📝 TLDR
 
@@ -500,8 +500,9 @@ file; the day/night suffix is dropped for the label.
 ## 📝 Observability
 
 `resolveTripWeather` emits one structured log per resolution - `weather.resolved` with
-`{ locations, forecastDays, recordedDays, estimateDays, hits, misses, unavailable }` and no tenant
-identifier beyond `organizationId` - on top of `callProvider`'s existing `calls` / `errors` /
+`{ organizationId, locations, days, hits, misses, unavailable }`, where `days` counts the asked days
+per kind (`{ forecast: 5 }`, so a new kind adds a key and not a field) and `hits` and `misses` count
+locations - and no tenant identifier beyond `organizationId`, on top of `callProvider`'s existing `calls` / `errors` /
 `blocked` counters. The two rates that decide whether this feature is working are the cache hit
 ratio and the share of days rendering `unavailable`; without that line both are invisible until a
 user reports a blank badge.
@@ -771,5 +772,6 @@ What ships in #1004 (phase 2, the forecast slice, #820) differs from the design 
 8. **`nasa-power` is registered as a metered provider ahead of its client** (#823), as the ticket lists both slugs; there is no CHECK on the slug column, so no migration.
 9. **A dated day with no forecast keeps an empty, reserved box**, so a late answer shifts nothing; an undated day draws nothing. The box's width is a floor (`min-w-20`), so a rare wide reading widens it instead of painting over the day header.
 10. **The plan screen asks again when the plan is edited.** The weather query is keyed by trip only, so the screen invalidates it when the board's data is reloaded; an answer already in hand survives a failed refetch.
-11. **Daily highs and lows come from the `instant` temperatures only.** The `compact` product carries no `air_temperature_max/min` for its six-hour steps, so beyond the hourly stretch a day's extremes are the extremes of the steps present (at most four a day) and can understate the true peak. Recorded as a known limit; #821 decides whether another product is worth its size.
+11. **Daily highs and lows come from the `instant` temperatures only.** The `compact` product carries no `air_temperature_max/min` for its six-hour steps, so beyond the hourly stretch a day's extremes are the extremes of the steps present (at most four a day) and can understate the true peak. Recorded as a known limit; #821 (re-validation, failure memory, the resolution log) did not take up whether another product is worth its size, so it stays a limit until a ticket asks for it.
 12. **Attribution is not on screen yet.** CC BY 4.0 requires it with the reading; it lands with the popover (#822) and must precede any promotion to `main`.
+13. **A stored forecast entry gained `lastModified` without a version bump (#821).** The field is additive and defaults to `null`, so an entry written before it is read as before and fetched without a validator once it expires; bumping `WEATHER_CACHE_VERSION` would have discarded entries still inside their six-hour retention for no gain. The "any change to a stored shape bumps it" rule above is for a change an older reader cannot survive.

@@ -159,6 +159,14 @@ const messages = {
   'payments.empty.title': 'Nog geen betalingen',
   'payments.empty.body':
     'Zodra iemand een saldo terugbetaalt, wordt de overboeking hier vastgelegd.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Je kunt de kosten bekijken, maar niet wijzigen',
+  'readOnly.body':
+    'Alleen de eigenaren van de reis en mensen die hem mogen bewerken voegen uitgaven toe, wijzigen of verwijderen ze en leggen betalingen vast. Vraag een eigenaar als er iets moet veranderen.',
+  'readOnly.empty':
+    'Er zijn nog geen uitgaven vastgelegd voor deze reis. Ze verschijnen hier zodra een eigenaar of bewerker ze toevoegt.',
+  'readOnly.settleEmpty':
+    'Er zijn op dit moment geen overboekingen nodig. Een eventueel verschil zou hier verschijnen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

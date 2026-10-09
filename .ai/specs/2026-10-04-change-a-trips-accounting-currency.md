@@ -622,8 +622,10 @@ with amounts.
   with an expense id can edit or delete an expense on another trip of the workspace, a private one
   included. Filed as #836 and fixed in #880: every money writer now takes the trip id and looks the
   row up as (trip, row).
-- No money writer calls `assertTripRole`, so a viewer can log, edit and delete expenses and record
-  payments, against `CONTEXT.md` ("a viewer reads").
+- No money writer called `assertTripRole`, so a viewer could log, edit and delete expenses and record
+  payments, against `CONTEXT.md` ("a viewer reads"). Filed as #837 and fixed there: every money
+  writer in `expenses.ts` now runs `requireTrip` and then `assertTripRole` with owner and editor,
+  and the costs payload carries a role-only `canWrite`.
 - `getTripSpendSummary` sums `amount_minor` across currencies, so a booking-synced yen line is added
   into a EUR total.
 - The Reconciler treats `04-S1`, `04-S2`, `04-S3` as covered by incidental mentions in unrelated

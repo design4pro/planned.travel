@@ -100,6 +100,7 @@ import {
 } from '../transports'
 import {
   MAX_BOUND_PARAMETERS,
+  addTripMember,
   createTrip,
   getTripBySlug,
   listTrips,
@@ -345,6 +346,11 @@ describe('repositories', () => {
         startDate: '2026-07-01',
         endDate: '2026-07-02',
       })
+      await addTripMember(tenant.scope, {
+        tripId: trip.id,
+        userId: other,
+        role: 'editor',
+      })
 
       const dinner = await createExpense(tenant.scope, {
         tripId: trip.id,
@@ -407,6 +413,11 @@ describe('repositories', () => {
         title: 'Tokyo',
         currency: 'JPY',
       })
+      await addTripMember(tenant.scope, {
+        tripId: trip.id,
+        userId: other,
+        role: 'editor',
+      })
       const payment = {
         tripId: trip.id,
         fromUserId: other,
@@ -461,6 +472,11 @@ describe('repositories', () => {
     it('leaves the three source columns null when the payment is in the trip currency', async () => {
       const other = await tenant.addUser('Third traveller')
       const trip = await createTrip(tenant.scope, { title: 'Porto again' })
+      await addTripMember(tenant.scope, {
+        tripId: trip.id,
+        userId: other,
+        role: 'editor',
+      })
 
       await createExpense(tenant.scope, {
         tripId: trip.id,

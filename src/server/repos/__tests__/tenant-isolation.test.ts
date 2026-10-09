@@ -101,6 +101,7 @@ import {
   getTripSpendSummary,
   listBudgetItems,
   listSettlements,
+  listTripExpenses,
   markShareSettled,
   setExpenseShares,
   settlementsRepository,
@@ -220,6 +221,7 @@ import {
   nextDeparture,
   reorderDayTransports,
   replaceTransportChain,
+  requireTransportOfTrip,
   saveSearchedConnection,
   saveTransport,
   setTransportStatus,
@@ -371,6 +373,8 @@ const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
 interface World {
   readonly tenant: SeededTenant
   readonly secondUserId: string
+  /** On the world's trip, and the person its expense is split with and its payment comes from. */
+  readonly companionUserId: string
   readonly tripId: string
   readonly dayId: string
   readonly lastDayId: string
@@ -447,6 +451,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     seats: 5,
   })
   const secondUserId = await tenant.addUser('Second traveller')
+  const companionUserId = await tenant.addUser('Travelling companion')
 
   const trip = await createTrip(scope, {
     title: 'Lisbon in spring',
@@ -524,6 +529,11 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     category: 'food',
     plannedAmountMinor: 30_000,
   })
+  await addTripMember(scope, {
+    tripId: trip.id,
+    userId: companionUserId,
+    role: 'editor',
+  })
   const expense = await createExpense(scope, {
     tripId: trip.id,
     dayId: firstDay.id,
@@ -533,7 +543,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     amountMinor: 9_000,
     spentOn: '2026-04-10',
     paidBy: tenant.ownerUserId,
-    participants: [{ userId: tenant.ownerUserId }, { userId: secondUserId }],
+    participants: [{ userId: tenant.ownerUserId }, { userId: companionUserId }],
   })
   const expenseShare = expense.shares.at(0)
   if (expenseShare === undefined) {
@@ -541,7 +551,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   }
   const settlement = await createSettlement(scope, {
     tripId: trip.id,
-    fromUserId: secondUserId,
+    fromUserId: companionUserId,
     toUserId: tenant.ownerUserId,
     amountMinor: 4_500,
     settledOn: '2026-04-13',
@@ -751,6 +761,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   return {
     tenant,
     secondUserId,
+    companionUserId,
     tripId: trip.id,
     dayId: firstDay.id,
     lastDayId: lastDay.id,
@@ -1696,7 +1707,8 @@ describe('tenant isolation', () => {
       expect(dashboard.trips.total).toBe(1)
       expect(dashboard.counts.places).toBe(1)
       expect(dashboard.counts.files).toBe(1)
-      expect(dashboard.counts.members).toBe(2)
+      // The owner, the second traveller and the companion on the trip.
+      expect(dashboard.counts.members).toBe(3)
       expect(dashboard.counts.visitedCountries).toBe(1)
       expect(dashboard.upcomingTrips.map((trip) => trip.id)).toEqual([
         alpha.tripId,
@@ -1705,7 +1717,7 @@ describe('tenant isolation', () => {
 
     it('keeps the member directory inside the tenant', async () => {
       const profiles = await listMemberProfiles(alpha.tenant.scope)
-      expect(profiles).toHaveLength(2)
+      expect(profiles).toHaveLength(3)
       expect(profiles.map((row) => row.userId)).not.toContain(
         beta.tenant.ownerUserId,
       )
@@ -2261,7 +2273,8 @@ describe('tenant isolation', () => {
   describe('travel stats for a workspace member who is on no trip', () => {
     it('counts none of A’s trips for a non-member, and none of B’s for either', async () => {
       // `seedWorld` adds the second traveller to the organization and to nothing else: the only
-      // `trip_members` row on A's trip is the owner's, written by `createTrip`.
+      // `trip_members` rows on A's trip are the owner's, written by `createTrip`, and the
+      // companion's, who is there for the expense and the payment.
       const outsider = await recomputeTravelStats(
         alpha.tenant.scope,
         alpha.secondUserId,
@@ -2401,7 +2414,7 @@ describe('tenant isolation', () => {
       const error = await captureError(() =>
         createSettlement(alpha.tenant.scope, {
           tripId: beta.tripId,
-          fromUserId: beta.secondUserId,
+          fromUserId: beta.companionUserId,
           toUserId: beta.tenant.ownerUserId,
           ...payment,
         }),
@@ -2418,7 +2431,7 @@ describe('tenant isolation', () => {
     it('is invisible to the other tenant once recorded', async () => {
       const own = await createSettlement(alpha.tenant.scope, {
         tripId: alpha.tripId,
-        fromUserId: alpha.secondUserId,
+        fromUserId: alpha.companionUserId,
         toUserId: alpha.tenant.ownerUserId,
         ...payment,
       })
@@ -2799,6 +2812,8 @@ describe('tenant isolation', () => {
           }),
         () => setTransportStatus(scope, beta.transportId, 'cancelled'),
         () => deleteTransport(scope, beta.transportId),
+        // B's transport under B's own trip still resolves to nothing from A.
+        () => requireTransportOfTrip(scope, beta.tripId, beta.transportId),
       ]
       for (const attempt of attempts) {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
@@ -3341,6 +3356,90 @@ describe('tenant isolation', () => {
       }
 
       expect(await ledgerOfB()).toEqual(before)
+    })
+
+    /**
+     * A write stamps the row with the caller's own organization, so an id of another workspace that
+     * got through would be stored as a row A owns and B cannot see. Each is refused as an id that is
+     * not there, on the create path and on the edit path.
+     */
+    it('refuse B’s people, place and planned item named in A’s own trip, and write nothing', async () => {
+      const scope = alpha.tenant.scope
+      const own = await createExpense(scope, {
+        tripId: alpha.tripId,
+        title: 'Taxi',
+        amountMinor: 1_000,
+        spentOn: '2026-04-10',
+      })
+      const ledgerOfA = async (): Promise<unknown> => ({
+        expenses: await listTripExpenses(scope, alpha.tripId),
+        shares: await getExpenseWithShares(scope, own.expense.id),
+        settlements: await listSettlements(scope, alpha.tripId),
+        balances: await getMemberBalances(scope, alpha.tripId),
+      })
+      const before = await ledgerOfA()
+      const stranger = beta.tenant.ownerUserId
+      const create = {
+        tripId: alpha.tripId,
+        title: 'Stolen',
+        amountMinor: 1_000,
+        spentOn: '2026-04-10',
+      }
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          createExpense(scope, {
+            ...create,
+            participants: [{ userId: stranger }],
+          }),
+        () => createExpense(scope, { ...create, paidBy: stranger }),
+        () => createExpense(scope, { ...create, placeId: beta.placeId }),
+        () =>
+          createExpense(scope, { ...create, budgetItemId: beta.budgetItemId }),
+        () =>
+          updateExpense(scope, alpha.tripId, own.expense.id, {
+            participants: [{ userId: stranger }],
+          }),
+        () =>
+          updateExpense(scope, alpha.tripId, own.expense.id, {
+            paidBy: stranger,
+          }),
+        () =>
+          updateExpense(scope, alpha.tripId, own.expense.id, {
+            placeId: beta.placeId,
+          }),
+        () =>
+          updateExpense(scope, alpha.tripId, own.expense.id, {
+            budgetItemId: beta.budgetItemId,
+          }),
+        () =>
+          setExpenseShares(scope, alpha.tripId, own.expense.id, [
+            { userId: stranger },
+          ]),
+        () =>
+          createSettlement(scope, {
+            tripId: alpha.tripId,
+            fromUserId: stranger,
+            toUserId: alpha.tenant.ownerUserId,
+            amountMinor: 500,
+            settledOn: '2026-04-11',
+          }),
+        () =>
+          createSettlement(scope, {
+            tripId: alpha.tripId,
+            fromUserId: alpha.tenant.ownerUserId,
+            toUserId: stranger,
+            amountMinor: 500,
+            settledOn: '2026-04-11',
+          }),
+      ]
+      for (const attempt of attempts) {
+        const error = await captureError(attempt)
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((error as NotFoundError).message).not.toContain(stranger)
+      }
+
+      expect(await ledgerOfA()).toEqual(before)
     })
   })
 
