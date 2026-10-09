@@ -491,9 +491,10 @@ separate fix makes the reader land in it.
   `updateOrganization` exist in `src/server/repos/members.ts` with no caller; giving them one is
   `docs/plans/10-administration.md` stage `10-S1` (`ADM-02`).
 - **Renaming, leaving or deleting a workspace** - `deleteWorkspace(scope)` is minted by
-  `docs/plans/09-account-and-settings.md:944-1062`. Worth a separate look: `/organization/delete` is
-  reachable today and cascades through every tenant table, with no confirmation step of the
-  product's own.
+  `docs/plans/09-account-and-settings.md:944-1062`. Worth a separate look: `/organization/delete` was
+  reachable when this was written and cascades through every tenant table, with no confirmation step
+  of the product's own. It is closed at the handler since #999 (`disableOrganizationDeletion`,
+  `docs/ACCESS.md` §2.6).
 - **A workspace segment in the URL**, and with it the two-tab limitation.
 - **Promoting the switcher out of the account menu** into `top-nav.tsx`.
 - **A `command` palette primitive.**
