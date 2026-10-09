@@ -694,6 +694,7 @@ const messages = {
   'collab.poll.error.tooFew': '投票至少要有兩樣可選的東西。',
   'collab.poll.error.duplicate': '兩個項目說的是一回事。給每個都換個說法。',
   'collab.presence.viewingNow': '人正在看',
+  'collab.presence.unnamed': '未命名成員',
   'collab.presence.tabsOpen': {
     other: '{name} — 開著 {count} 個分頁',
   },

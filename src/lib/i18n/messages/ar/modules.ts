@@ -775,6 +775,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'خيارَان يقولان الشيء نفسه. أعطِ كل واحد صياغته.',
   'collab.presence.viewingNow': 'يشاهدون الآن',
+  'collab.presence.unnamed': 'عضو بلا اسم',
   'collab.presence.tabsOpen': {
     zero: '{name} — لا تبويبات مفتوحة',
     one: '{name} — تبويب واحد مفتوح',

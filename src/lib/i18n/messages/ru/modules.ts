@@ -776,6 +776,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Два варианта говорят одно и то же. Дайте каждому своё звучание.',
   'collab.presence.viewingNow': 'смотрят сейчас',
+  'collab.presence.unnamed': 'Участник без имени',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} открытая вкладка',
     few: '{name} — {count} открытые вкладки',

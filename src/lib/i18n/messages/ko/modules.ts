@@ -724,6 +724,7 @@ const messages = {
   'collab.poll.error.duplicate':
     '두 항목이 같은 말을 합니다. 각각 다르게 써 주세요.',
   'collab.presence.viewingNow': '명이 보고 있음',
+  'collab.presence.unnamed': '이름 없는 멤버',
   'collab.presence.tabsOpen': {
     other: '{name} — 탭 {count}개 열림',
   },

@@ -785,6 +785,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Dwie opcje mówią to samo. Nadaj każdej własne brzmienie.',
   'collab.presence.viewingNow': 'oglądają teraz',
+  'collab.presence.unnamed': 'Członek bez nazwy',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} otwarta karta',
     few: '{name} — {count} otwarte karty',

@@ -787,6 +787,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Deux réponses disent la même chose. Donne à chacune sa propre formulation.',
   'collab.presence.viewingNow': 'regardent en ce moment',
+  'collab.presence.unnamed': 'Membre sans nom',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} onglet ouvert',
     many: '{name} — {count} onglets ouverts',

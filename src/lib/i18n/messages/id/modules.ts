@@ -757,6 +757,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Dua butir mengatakan hal yang sama. Beri masing-masing kata sendiri.',
   'collab.presence.viewingNow': 'sedang melihat',
+  'collab.presence.unnamed': 'Anggota tanpa nama',
   'collab.presence.tabsOpen': {
     other: '{name} — {count} tab terbuka',
   },

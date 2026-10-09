@@ -48,6 +48,17 @@ function json(body: unknown, status: number): Response {
   })
 }
 
+/**
+ * The display name the room may show, or `null` when the person has none. The
+ * session layer already stands in the email for a missing name, so a name that is
+ * only the email counts as no name: an email address is never broadcast to a room.
+ */
+function displayNameOf(user: { name: string; email: string }): string | null {
+  const name = user.name.trim()
+  if (name.length === 0) return null
+  return name.toLowerCase() === user.email.trim().toLowerCase() ? null : name
+}
+
 /** Two letters for the presence avatar, taken from the display name. */
 function initialsOf(name: string): string {
   const letters = name
@@ -118,14 +129,11 @@ export async function serveTripRoom(
 
   const tripRole = await tripRoleFor(scope, trip.id, context.userId)
 
-  const name =
-    session.user.name.trim().length > 0
-      ? session.user.name.trim()
-      : session.user.email
+  const name = displayNameOf(session.user)
   const user: PresenceUser = {
     id: context.userId,
-    name: name.slice(0, 80),
-    initials: initialsOf(name),
+    name: name === null ? null : name.slice(0, 80),
+    initials: name === null ? '?' : initialsOf(name),
     hue: hueOf(context.userId),
     avatarUrl: absoluteAvatar(session.user.image),
   }
