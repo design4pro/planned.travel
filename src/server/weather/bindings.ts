@@ -20,6 +20,7 @@ import { env } from 'cloudflare:workers'
 import { requestOutboundRuntime } from '#/server/metering/bindings'
 import { createMetNorwayClient } from './met-norway'
 
+import type { Logger, LogFields } from '#/server/observability'
 import type { WeatherRuntime } from './weather'
 
 export interface WeatherRuntimeOptions {
@@ -30,6 +31,25 @@ export interface WeatherRuntimeOptions {
 }
 
 /**
+ * The policy logs plain objects and does not import the Worker's logger; this is the one place
+ * the two meet, so the narrowing from `unknown` to the logger's fields is written once.
+ */
+function policyLogger(logger: Logger): NonNullable<WeatherRuntime['logger']> {
+  const fieldsOf = (fields: unknown): LogFields | undefined =>
+    typeof fields === 'object' && fields !== null
+      ? (fields as LogFields)
+      : undefined
+  return {
+    warn: (message, fields) => {
+      logger.warn(message, fieldsOf(fields))
+    },
+    info: (message, fields) => {
+      logger.info(message, fieldsOf(fields))
+    },
+  }
+}
+
+/**
  * The weather policy's runtime, bound to this Worker.
  *
  * **One namespace, two roles, and they must not be confused**: the readings are keyed on a
@@ -37,10 +57,12 @@ export interface WeatherRuntimeOptions {
  * credential is read, because the provider is keyless.
  */
 export function weatherRuntime(options: WeatherRuntimeOptions): WeatherRuntime {
+  const outbound = requestOutboundRuntime()
   return {
     cache: env.KV,
     counters: env.KV,
-    outbound: requestOutboundRuntime(),
+    outbound,
+    logger: policyLogger(outbound.logger.child({ component: 'weather' })),
     organizationId: options.organizationId,
     ceiling: options.ceiling,
     now: () => new Date(),

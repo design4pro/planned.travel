@@ -329,6 +329,20 @@ describe('loadTripWeather', () => {
     ])
   })
 
+  it('does not ask a provider that has just failed again on the next load', async () => {
+    const port = ports({ failing: true })
+
+    await loadTripWeather(owner, { tripId }, port)
+    const reload = await loadTripWeather(owner, { tripId }, port)
+
+    expect(port.requested).toHaveLength(1)
+    expect(reload.days.map((day) => day.status)).toEqual([
+      'unavailable',
+      'unavailable',
+      'unavailable',
+    ])
+  })
+
   it('contains nothing but the day ids, the statuses, the readings and the unit', async () => {
     const result = await loadTripWeather(owner, { tripId }, ports())
 

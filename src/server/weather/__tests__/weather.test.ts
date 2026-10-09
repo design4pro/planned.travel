@@ -19,18 +19,20 @@ import {
   WEATHER_CALL_TIMEOUT_MS,
   WEATHER_DEADLINE_MS,
   WEATHER_MAX_LOCATIONS,
+  failureCacheKey,
   forecastCacheKey,
   resolveTripWeather,
 } from '../weather'
 import { OSLO_FORECAST } from './locationforecast.fixture'
 
-import type { WeatherQuery, WeatherRuntime } from '../weather'
+import type { WeatherOutcome, WeatherQuery, WeatherRuntime } from '../weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 
 const NOW = new Date('2026-10-08T19:10:00Z')
 const ZONE = 'Europe/Oslo'
 const OSLO = { lat: 59.9139, lng: 10.7522 }
 const EXPIRES = 'Thu, 08 Oct 2026 19:29:27 GMT'
+const LAST_MODIFIED = 'Thu, 08 Oct 2026 19:05:00 GMT'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -47,21 +49,40 @@ interface MemoryKv {
   ) => Promise<void>
   readonly entries: Map<string, string>
   readonly ttls: Map<string, number | undefined>
+  /** When set, an entry whose TTL has run out by this clock is gone, as in Workers KV. */
+  clock: (() => Date) | null
 }
 
 function memoryKv(): MemoryKv {
   const entries = new Map<string, string>()
   const ttls = new Map<string, number | undefined>()
-  return {
+  const expiresAt = new Map<string, number>()
+  const kv: MemoryKv = {
     entries,
     ttls,
-    get: (key) => Promise.resolve(entries.get(key) ?? null),
+    clock: null,
+    get: (key) => {
+      const until = expiresAt.get(key)
+      if (
+        kv.clock !== null &&
+        until !== undefined &&
+        kv.clock().getTime() >= until
+      ) {
+        entries.delete(key)
+        expiresAt.delete(key)
+      }
+      return Promise.resolve(entries.get(key) ?? null)
+    },
     put: (key, value, options) => {
       entries.set(key, value)
       ttls.set(key, options?.expirationTtl)
+      if (kv.clock !== null && options?.expirationTtl !== undefined) {
+        expiresAt.set(key, kv.clock().getTime() + options.expirationTtl * 1000)
+      }
       return Promise.resolve()
     },
   }
+  return kv
 }
 
 function silentOutbound(): OutboundRuntime {
@@ -81,24 +102,30 @@ function silentOutbound(): OutboundRuntime {
 interface Provider {
   readonly fetch: typeof fetch
   readonly urls: Array<string>
+  /** The `If-Modified-Since` each request carried, `null` when it carried none. */
+  readonly validators: Array<string | null>
 }
 
 /** A MET Norway that answers every request with the recording, or with whatever `respond` says. */
 function provider(
-  respond: (url: string) => Promise<Response> = () =>
+  respond: (url: string, validator: string | null) => Promise<Response> = () =>
     Promise.resolve(
       new Response(JSON.stringify(OSLO_FORECAST), {
         status: 200,
-        headers: { Expires: EXPIRES },
+        headers: { Expires: EXPIRES, 'Last-Modified': LAST_MODIFIED },
       }),
     ),
 ): Provider {
   const urls: Array<string> = []
-  const fake = (input: string): Promise<Response> => {
+  const validators: Array<string | null> = []
+  const fake = (input: string, init?: RequestInit): Promise<Response> => {
+    const headers = new Headers(init?.headers)
+    const validator = headers.get('If-Modified-Since')
     urls.push(input)
-    return respond(input)
+    validators.push(validator)
+    return respond(input, validator)
   }
-  return { fetch: fake as unknown as typeof fetch, urls }
+  return { fetch: fake as unknown as typeof fetch, urls, validators }
 }
 
 interface World {
@@ -122,6 +149,7 @@ function world(
   const counters = overrides.counters ?? memoryKv()
   const upstream = overrides.provider ?? provider()
   const state: { now: Date } = { now: NOW }
+  cache.clock = () => state.now
   const runtime: WeatherRuntime = {
     cache,
     counters,
@@ -445,7 +473,7 @@ describe('the cache', () => {
       put: () => Promise.reject(new Error('KV is down')),
     }
     const warn = vi.fn()
-    const w = world({ cache: broken, logger: { warn } })
+    const w = world({ cache: broken, logger: { warn, info: vi.fn() } })
 
     const [outcome] = await resolveTripWeather(
       w.runtime,
@@ -494,9 +522,536 @@ describe('the cache', () => {
     expect(Object.keys(stored).sort()).toEqual([
       'expires',
       'fetchedAt',
+      'lastModified',
       'series',
       'v',
     ])
+  })
+})
+
+/* ------------------------------------------------------- re-validation */
+
+/** The recording with every temperature shifted, so a replaced entry can be told from a kept one. */
+function warmer(delta: number): string {
+  return JSON.stringify({
+    ...OSLO_FORECAST,
+    properties: {
+      ...OSLO_FORECAST.properties,
+      timeseries: OSLO_FORECAST.properties.timeseries.map((step) => ({
+        ...step,
+        data: {
+          ...step.data,
+          instant: {
+            details: {
+              air_temperature:
+                step.data.instant.details.air_temperature + delta,
+            },
+          },
+        },
+      })),
+    },
+  })
+}
+
+const NOT_MODIFIED = (expires: string, lastModified?: string): Response =>
+  new Response(null, {
+    status: 304,
+    headers: {
+      Expires: expires,
+      ...(lastModified === undefined ? {} : { 'Last-Modified': lastModified }),
+    },
+  })
+
+const storedEntry = (w: World): Record<string, unknown> =>
+  JSON.parse(
+    w.cache.entries.get(forecastCacheKey(OSLO.lat, OSLO.lng)) ?? 'null',
+  ) as Record<string, unknown>
+
+const reading = (outcome: WeatherOutcome | undefined) =>
+  outcome?.status === 'ok' ? outcome.reading : null
+
+describe('a cached forecast past its expiry', () => {
+  const PAST_EXPIRY = new Date('2026-10-08T19:29:28Z')
+  const NEW_EXPIRES = 'Thu, 08 Oct 2026 19:59:27 GMT'
+
+  it('is asked about once, carrying the last-modified validator, and a "not modified" answer keeps the series', async () => {
+    const w = world({
+      provider: provider((_, validator) =>
+        Promise.resolve(
+          validator === null
+            ? new Response(JSON.stringify(OSLO_FORECAST), {
+                headers: { Expires: EXPIRES, 'Last-Modified': LAST_MODIFIED },
+              })
+            : NOT_MODIFIED(NEW_EXPIRES),
+        ),
+      ),
+    })
+    const [first] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+    const before = storedEntry(w)
+    w.now = PAST_EXPIRY
+
+    const [second] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(w.provider.validators).toEqual([null, LAST_MODIFIED])
+    expect(spent(w.counters)).toBe(2)
+    expect(second).toEqual(first)
+    const after = storedEntry(w)
+    expect(after.series).toEqual(before.series)
+    expect(after.lastModified).toBe(LAST_MODIFIED)
+    expect(after.expires).toBe('2026-10-08T19:59:27.000Z')
+  })
+
+  it('is served from the cache again once re-validated, with no further call', async () => {
+    const w = world({
+      provider: provider((_, validator) =>
+        Promise.resolve(
+          validator === null
+            ? new Response(JSON.stringify(OSLO_FORECAST), {
+                headers: { Expires: EXPIRES, 'Last-Modified': LAST_MODIFIED },
+              })
+            : NOT_MODIFIED(NEW_EXPIRES),
+        ),
+      ),
+    })
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    w.now = PAST_EXPIRY
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    w.now = new Date('2026-10-08T19:50:00Z')
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('ok')
+    expect(w.provider.urls).toHaveLength(2)
+    expect(spent(w.counters)).toBe(2)
+  })
+
+  it('keeps the entry another six hours after a "not modified" answer, not six hours from the first fetch', async () => {
+    const w = world({
+      provider: provider((_, validator) =>
+        Promise.resolve(
+          validator === null
+            ? new Response(JSON.stringify(OSLO_FORECAST), {
+                headers: { Expires: EXPIRES, 'Last-Modified': LAST_MODIFIED },
+              })
+            : NOT_MODIFIED('Fri, 09 Oct 2026 01:30:00 GMT'),
+        ),
+      ),
+    })
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    w.now = new Date('2026-10-09T01:00:00Z')
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    // 01:20Z is past the six hours the first fetch bought, inside the six the validation bought.
+    w.now = new Date('2026-10-09T01:20:00Z')
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('ok')
+    expect(w.provider.urls).toHaveLength(2)
+    expect(storedEntry(w).series).toBeDefined()
+  })
+
+  it('is replaced wholesale by a full answer', async () => {
+    let answers = 0
+    const w = world({
+      provider: provider(() => {
+        answers += 1
+        return Promise.resolve(
+          new Response(
+            answers === 1 ? JSON.stringify(OSLO_FORECAST) : warmer(10),
+            {
+              headers: {
+                Expires: answers === 1 ? EXPIRES : NEW_EXPIRES,
+                'Last-Modified':
+                  answers === 1
+                    ? LAST_MODIFIED
+                    : 'Thu, 08 Oct 2026 19:25:00 GMT',
+              },
+            },
+          ),
+        )
+      }),
+    })
+    const [first] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+    w.now = PAST_EXPIRY
+
+    const [second] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(w.provider.validators).toEqual([null, LAST_MODIFIED])
+    expect(reading(second)?.tempMaxC).toBeCloseTo(
+      (reading(first)?.tempMaxC ?? 0) + 10,
+    )
+    expect(storedEntry(w).lastModified).toBe('Thu, 08 Oct 2026 19:25:00 GMT')
+    expect(spent(w.counters)).toBe(2)
+  })
+
+  it('is fetched unconditionally once it has been evicted', async () => {
+    const w = world()
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    w.cache.entries.clear()
+    w.now = PAST_EXPIRY
+
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    expect(w.provider.validators).toEqual([null, null])
+  })
+
+  it('is fetched unconditionally when it was stored without a validator', async () => {
+    const cache = memoryKv()
+    cache.entries.set(
+      forecastCacheKey(OSLO.lat, OSLO.lng),
+      JSON.stringify({
+        v: 1,
+        fetchedAt: '2026-10-08T19:00:00.000Z',
+        expires: '2026-10-08T19:05:00.000Z',
+        series: [],
+      }),
+    )
+    const w = world({ cache })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('ok')
+    expect(w.provider.validators).toEqual([null])
+  })
+
+  it('is not kept on a "not modified" answer to a request that carried no validator', async () => {
+    const cache = memoryKv()
+    cache.entries.set(
+      forecastCacheKey(OSLO.lat, OSLO.lng),
+      JSON.stringify({
+        v: 1,
+        fetchedAt: '2026-10-08T19:00:00.000Z',
+        expires: '2026-10-08T19:05:00.000Z',
+        series: [],
+      }),
+    )
+    const w = world({
+      cache,
+      provider: provider(() => Promise.resolve(NOT_MODIFIED(NEW_EXPIRES))),
+    })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(w.provider.validators).toEqual([null])
+    expect(outcome.status).toBe('unavailable')
+  })
+
+  it('is never served past its expiry when the provider cannot be asked', async () => {
+    let answers = 0
+    const w = world({
+      provider: provider(() => {
+        answers += 1
+        return Promise.resolve(
+          answers === 1
+            ? new Response(JSON.stringify(OSLO_FORECAST), {
+                headers: { Expires: EXPIRES, 'Last-Modified': LAST_MODIFIED },
+              })
+            : new Response('no', { status: 503 }),
+        )
+      }),
+    })
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    w.now = PAST_EXPIRY
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('unavailable')
+  })
+
+  it('is unavailable when the provider says "not modified" to a request that asked no question', async () => {
+    const w = world({
+      provider: provider(() => Promise.resolve(NOT_MODIFIED(NEW_EXPIRES))),
+    })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('unavailable')
+    expect(w.cache.entries.has(forecastCacheKey(OSLO.lat, OSLO.lng))).toBe(
+      false,
+    )
+  })
+})
+
+/* ------------------------------------------------------ a remembered failure */
+
+describe('a provider that failed', () => {
+  const failing = () =>
+    provider(() => Promise.resolve(new Response('no', { status: 503 })))
+  const FAILURE_KEY = 'wx:v1:fail:met-norway:59.9139:10.7522'
+
+  it('is not asked again, and costs nothing, while the failure is remembered', async () => {
+    const w = world({ provider: failing() })
+    await resolveTripWeather(w.runtime, trip('2026-10-08', '2026-10-12'), ZONE)
+    expect(w.provider.urls).toHaveLength(1)
+    expect(spent(w.counters)).toBe(1)
+
+    w.now = new Date(NOW.getTime() + 4 * 60_000)
+    const outcomes = await resolveTripWeather(
+      w.runtime,
+      trip('2026-10-08', '2026-10-12'),
+      ZONE,
+    )
+
+    expect(outcomes.every((outcome) => outcome.status === 'unavailable')).toBe(
+      true,
+    )
+    expect(w.provider.urls).toHaveLength(1)
+    expect(spent(w.counters)).toBe(1)
+  })
+
+  it('is asked again once the five minutes are over', async () => {
+    const w = world({ provider: failing() })
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    w.now = new Date(NOW.getTime() + 5 * 60_000 + 1000)
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    expect(w.provider.urls).toHaveLength(2)
+    expect(spent(w.counters)).toBe(2)
+  })
+
+  it('is remembered for a timeout, too', async () => {
+    vi.useFakeTimers({ now: NOW })
+    const w = world({
+      provider: provider(() => new Promise<Response>(() => undefined)),
+    })
+    const pending = resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    await vi.advanceTimersByTimeAsync(WEATHER_CALL_TIMEOUT_MS)
+    await pending
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('unavailable')
+    expect(w.provider.urls).toHaveLength(1)
+    expect(spent(w.counters)).toBe(1)
+  })
+
+  it('leaves a remembered failure carrying a coordinate and nothing else, for five minutes', async () => {
+    const w = world({ provider: failing() })
+
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    expect(w.cache.entries.get(FAILURE_KEY)).toBeDefined()
+    expect(JSON.parse(w.cache.entries.get(FAILURE_KEY) ?? 'null')).toEqual({
+      v: 1,
+      lat: 59.9139,
+      lng: 10.7522,
+    })
+    expect(w.cache.ttls.get(FAILURE_KEY)).toBe(5 * 60)
+    expect([...w.cache.entries.keys()].join()).not.toContain('org-alpha')
+    expect([...w.cache.entries.values()].join()).not.toContain('org-alpha')
+  })
+
+  it('hides only the days of the place that failed', async () => {
+    const paris = { lat: 48.8566, lng: 2.3522 }
+    const w = world({
+      provider: provider((url) =>
+        url.includes('lat=48.8566')
+          ? Promise.resolve(new Response('no', { status: 500 }))
+          : Promise.resolve(
+              new Response(JSON.stringify(OSLO_FORECAST), {
+                headers: { Expires: EXPIRES },
+              }),
+            ),
+      ),
+    })
+    const queries = [day('2026-10-10'), day('2026-10-10', paris)]
+    await resolveTripWeather(w.runtime, queries, ZONE)
+
+    const outcomes = await resolveTripWeather(w.runtime, queries, ZONE)
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      'ok',
+      'unavailable',
+    ])
+    expect(w.provider.urls).toHaveLength(2)
+  })
+
+  it('is keyed per provider, so another provider’s outage hides nothing here', async () => {
+    const cache = memoryKv()
+    cache.entries.set(
+      failureCacheKey('nasa-power', OSLO.lat, OSLO.lng),
+      JSON.stringify({ v: 1, lat: OSLO.lat, lng: OSLO.lng }),
+    )
+    const w = world({ cache })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('ok')
+    expect(failureCacheKey('nasa-power', OSLO.lat, OSLO.lng)).not.toBe(
+      failureCacheKey('met-norway', OSLO.lat, OSLO.lng),
+    )
+    expect(failureCacheKey('met-norway', OSLO.lat, OSLO.lng)).toBe(FAILURE_KEY)
+  })
+
+  it('treats a failure entry that cannot be read as no failure, and logs it', async () => {
+    const warn = vi.fn()
+    const cache = memoryKv()
+    const read = cache.get
+    cache.get = (key) =>
+      key.includes(':fail:')
+        ? Promise.reject(new Error('KV is down'))
+        : read(key)
+    const w = world({ cache, logger: { warn, info: vi.fn() } })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('ok')
+    expect(warn).toHaveBeenCalledWith(
+      'weather.cache.read_failed',
+      expect.anything(),
+    )
+  })
+
+  it('stays unavailable, and resolves, when the failure cannot be written down', async () => {
+    const warn = vi.fn()
+    const cache = memoryKv()
+    cache.put = () => Promise.reject(new Error('KV is down'))
+    const w = world({
+      cache,
+      provider: failing(),
+      logger: { warn, info: vi.fn() },
+    })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('unavailable')
+    expect(warn).toHaveBeenCalledWith(
+      'weather.cache.write_failed',
+      expect.anything(),
+    )
+  })
+})
+
+/* ---------------------------------------------------------- the resolve log */
+
+describe('the line each resolution leaves', () => {
+  function logged() {
+    const info = vi.fn()
+    return { info, logger: { warn: vi.fn(), info } }
+  }
+
+  it('counts the locations, the days per kind, the hits, the misses and the unavailable days', async () => {
+    const { info, logger } = logged()
+    const w = world({ logger })
+
+    await resolveTripWeather(w.runtime, trip('2026-10-08', '2026-10-12'), ZONE)
+
+    expect(info).toHaveBeenCalledTimes(1)
+    expect(info).toHaveBeenCalledWith('weather.resolved', {
+      organizationId: 'org-alpha',
+      locations: 1,
+      days: { forecast: 5 },
+      hits: 0,
+      misses: 1,
+      unavailable: 0,
+    })
+  })
+
+  it('counts a warm location as a hit', async () => {
+    const { info, logger } = logged()
+    const w = world({ logger })
+    await resolveTripWeather(w.runtime, trip('2026-10-08', '2026-10-12'), ZONE)
+    info.mockClear()
+
+    await resolveTripWeather(w.runtime, trip('2026-10-08', '2026-10-12'), ZONE)
+
+    expect(info).toHaveBeenCalledTimes(1)
+    expect(info).toHaveBeenCalledWith(
+      'weather.resolved',
+      expect.objectContaining({ hits: 1, misses: 0, unavailable: 0 }),
+    )
+  })
+
+  it('counts the days it could not answer', async () => {
+    const { info, logger } = logged()
+    const w = world({
+      logger,
+      provider: provider(() =>
+        Promise.resolve(new Response('no', { status: 503 })),
+      ),
+    })
+
+    await resolveTripWeather(w.runtime, trip('2026-10-08', '2026-10-12'), ZONE)
+
+    expect(info).toHaveBeenCalledWith(
+      'weather.resolved',
+      expect.objectContaining({ hits: 0, misses: 1, unavailable: 5 }),
+    )
+  })
+
+  it('is left even when nothing was asked of a provider, and names no one but the organisation', async () => {
+    const { info, logger } = logged()
+    const w = world({ logger })
+
+    await resolveTripWeather(w.runtime, [day(null)], ZONE)
+
+    expect(info).toHaveBeenCalledTimes(1)
+    const [, fields] = info.mock.calls[0] as [string, Record<string, unknown>]
+    expect(fields).toEqual({
+      organizationId: 'org-alpha',
+      locations: 0,
+      days: {},
+      hits: 0,
+      misses: 0,
+      unavailable: 0,
+    })
   })
 })
 
@@ -639,7 +1194,9 @@ describe('when the provider is in trouble', () => {
     expect(outcomes.every((outcome) => outcome.status === 'unavailable')).toBe(
       true,
     )
-    expect(w.cache.entries.size).toBe(0)
+    expect([...w.cache.entries.keys()]).toEqual([
+      failureCacheKey('met-norway', OSLO.lat, OSLO.lng),
+    ])
   })
 
   it('leaves the locations that did answer intact', async () => {
@@ -676,7 +1233,7 @@ describe('when the provider is in trouble', () => {
       if (init?.signal) signals.push(init.signal)
       return hung.fetch(input, init)
     }) as unknown as typeof fetch
-    const w = world({ provider: { fetch: fetchWithSignal, urls: hung.urls } })
+    const w = world({ provider: { ...hung, fetch: fetchWithSignal } })
 
     let settled = false
     const pending = resolveTripWeather(

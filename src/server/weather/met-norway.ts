@@ -11,7 +11,9 @@
  * the request carries a `User-Agent` that identifies the application (an anonymous one is answered
  * with 403), the coordinates are cut to four decimals (finer ones are answered with 403 as well, and
  * a finer URL would also fragment every cache that keys on it), and the `Expires` header is read so
- * the caller can honour it. The attribution is the planner's, not this file's.
+ * the caller can honour it. The `Last-Modified` header is read too, and sent back as
+ * `If-Modified-Since` when the caller holds one, which is how a stale entry is re-validated for the
+ * price of a request rather than a body. The attribution is the planner's, not this file's.
  *
  * **No `Accept-Encoding` is set.** The Workers runtime negotiates compression on every outbound
  * `fetch`, which is what satisfies the provider's request to receive gzip; a header written by hand
@@ -166,6 +168,12 @@ function expiryOf(response: Response): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
+/** The validator to send back, when the provider gave one that is a date. */
+function lastModifiedOf(response: Response): string | null {
+  const header = response.headers.get('Last-Modified')
+  return header !== null && !Number.isNaN(Date.parse(header)) ? header : null
+}
+
 /* ------------------------------------------------------------------ client */
 
 export interface MetNorwayClientOptions {
@@ -192,7 +200,12 @@ export function createMetNorwayClient(
       let response: Response
       try {
         response = await options.fetch(url.toString(), {
-          headers: { 'User-Agent': MET_NORWAY_USER_AGENT },
+          headers: {
+            'User-Agent': MET_NORWAY_USER_AGENT,
+            ...(init.lastModified
+              ? { 'If-Modified-Since': init.lastModified }
+              : {}),
+          },
           signal: init.signal,
         })
       } catch (cause) {
@@ -203,6 +216,15 @@ export function createMetNorwayClient(
           'unreachable',
           'MET Norway could not be reached.',
         )
+      }
+
+      // The provider's answer to a validator that still holds: no body, a new expiry.
+      if (response.status === 304) {
+        return {
+          notModified: true,
+          expires: expiryOf(response),
+          lastModified: lastModifiedOf(response),
+        }
       }
 
       if (!response.ok) {
@@ -222,7 +244,11 @@ export function createMetNorwayClient(
         )
       }
 
-      return { series: parseSteps(body), expires: expiryOf(response) }
+      return {
+        series: parseSteps(body),
+        expires: expiryOf(response),
+        lastModified: lastModifiedOf(response),
+      }
     },
   }
 }
