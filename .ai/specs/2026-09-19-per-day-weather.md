@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value        |
-| ------------------ | ------------ |
-| **Status**         | in-progress  |
-| **Issue**          | #631         |
-| **Spec PR**        | #636         |
-| **Implementation** | #1003, #1004 |
+| Field              | Value               |
+| ------------------ | ------------------- |
+| **Status**         | in-progress         |
+| **Issue**          | #631                |
+| **Spec PR**        | #636                |
+| **Implementation** | #1003, #1004, #1046 |
 
 ## 📝 TLDR
 
