@@ -163,6 +163,8 @@ const messages = {
     'Hanya pemilik perjalanan dan orang yang bisa mengedit yang dapat menambah, mengubah, atau menghapus pengeluaran dan mencatat pembayaran. Tanyakan kepada pemilik jika ada yang perlu diubah.',
   'readOnly.empty':
     'Belum ada pengeluaran yang dicatat untuk perjalanan ini. Pengeluaran akan muncul di sini setelah pemilik atau editor menambahkannya.',
+  'readOnly.settleEmpty':
+    'Saat ini tidak perlu ada transfer. Selisih apa pun akan muncul di sini.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

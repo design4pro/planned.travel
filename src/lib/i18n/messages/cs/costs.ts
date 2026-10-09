@@ -168,6 +168,8 @@ const messages = {
     'Výdaje přidávat, upravovat a mazat a zapisovat platby mohou jen vlastníci cesty a lidé s právem ji upravovat. Pokud je třeba něco změnit, požádejte vlastníka.',
   'readOnly.empty':
     'Na této cestě zatím nejsou zapsány žádné výdaje. Objeví se tady, jakmile je přidá vlastník nebo editor.',
+  'readOnly.settleEmpty':
+    'Teď není potřeba žádný převod. Případný nevyrovnaný zůstatek se ukáže tady.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

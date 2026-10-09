@@ -163,6 +163,8 @@ const messages = {
     'Bara resens ägare och de som får redigera den lägger till, ändrar eller tar bort utgifter och registrerar betalningar. Fråga en ägare om något behöver ändras.',
   'readOnly.empty':
     'Inga utgifter har registrerats för den här resan än. De visas här när en ägare eller redigerare lägger till dem.',
+  'readOnly.settleEmpty':
+    'Just nu behövs inga överföringar. Eventuell obalans skulle visas här.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

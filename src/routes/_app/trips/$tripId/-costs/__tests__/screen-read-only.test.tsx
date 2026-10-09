@@ -203,4 +203,11 @@ describe('the costs screen for a reader', () => {
       screen.queryByRole('button', { name: 'Add the first expense' }),
     ).toBeNull()
   })
+
+  it('does not tell a reader with nothing to settle to log an expense', () => {
+    mount(payload({ canWrite: false, suggestions: [] }))
+
+    expect(screen.getByText(Costs['readOnly.settleEmpty'])).toBeTruthy()
+    expect(screen.queryByText(Costs['settle.empty.body'])).toBeNull()
+  })
 })

@@ -170,6 +170,8 @@ const messages = {
     'Solo i proprietari del viaggio e chi può modificarlo aggiungono, cambiano o eliminano spese e registrano pagamenti. Chiedi a un proprietario se qualcosa va cambiato.',
   'readOnly.empty':
     'In questo viaggio non è ancora stata registrata nessuna spesa. Appariranno qui quando un proprietario o un editor le aggiungerà.',
+  'readOnly.settleEmpty':
+    'Al momento non servono trasferimenti. Qualsiasi squilibrio apparirebbe qui.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

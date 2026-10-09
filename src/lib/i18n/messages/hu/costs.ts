@@ -168,6 +168,8 @@ const messages = {
     'Kiadást hozzáadni, módosítani vagy törölni, illetve befizetést rögzíteni csak az utazás tulajdonosai és a szerkesztési joggal rendelkezők tudnak. Ha valamit módosítani kell, kérj meg egy tulajdonost.',
   'readOnly.empty':
     'Ehhez az utazáshoz még nem rögzítettek kiadást. Itt jelennek meg, amint egy tulajdonos vagy szerkesztő hozzáadja őket.',
+  'readOnly.settleEmpty':
+    'Jelenleg nincs szükség átutalásra. Az esetleges egyenlőtlenség itt jelenne meg.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

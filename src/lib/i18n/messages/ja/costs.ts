@@ -163,6 +163,8 @@ const messages = {
     '経費の追加・編集・削除や支払いの記録ができるのは、旅行のオーナーと編集権限のあるメンバーだけです。変更が必要な場合はオーナーにお問い合わせください。',
   'readOnly.empty':
     'この旅行にはまだ経費が記録されていません。オーナーまたは編集者が追加すると、ここに表示されます。',
+  'readOnly.settleEmpty':
+    '現在、送金は必要ありません。差額が生じた場合はここに表示されます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

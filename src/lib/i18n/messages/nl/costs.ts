@@ -165,6 +165,8 @@ const messages = {
     'Alleen de eigenaren van de reis en mensen die hem mogen bewerken voegen uitgaven toe, wijzigen of verwijderen ze en leggen betalingen vast. Vraag een eigenaar als er iets moet veranderen.',
   'readOnly.empty':
     'Er zijn nog geen uitgaven vastgelegd voor deze reis. Ze verschijnen hier zodra een eigenaar of bewerker ze toevoegt.',
+  'readOnly.settleEmpty':
+    'Er zijn op dit moment geen overboekingen nodig. Een eventueel verschil zou hier verschijnen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

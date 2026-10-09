@@ -147,7 +147,11 @@ function SettleUp({
             tone="brand"
             icon={<Scale />}
             title={t('costs.settle.empty.title')}
-            description={t('costs.settle.empty.body')}
+            description={t(
+              canWrite
+                ? 'costs.settle.empty.body'
+                : 'costs.readOnly.settleEmpty',
+            )}
           />
         </div>
       ) : (

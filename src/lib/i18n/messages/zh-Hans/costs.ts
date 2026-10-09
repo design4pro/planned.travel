@@ -151,6 +151,7 @@ const messages = {
     '只有行程的所有者和有编辑权限的人才能添加、修改或删除支出以及记录付款。如需更改，请联系所有者。',
   'readOnly.empty':
     '此行程还没有记录任何支出。所有者或编辑者添加后会显示在这里。',
+  'readOnly.settleEmpty': '目前无需任何转账。如有差额，会显示在这里。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

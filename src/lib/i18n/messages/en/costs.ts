@@ -205,6 +205,8 @@ const messages = {
     'Only the trip’s owners and the people who can edit it add, change or delete expenses and record payments. Ask an owner if something needs changing.',
   'readOnly.empty':
     'No expenses have been logged on this trip yet. They appear here once an owner or an editor adds them.',
+  'readOnly.settleEmpty':
+    'No transfers are needed right now. Any imbalance would show up here.',
 } as const satisfies NamespaceMessages
 
 export default messages

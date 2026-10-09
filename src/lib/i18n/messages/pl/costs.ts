@@ -172,6 +172,8 @@ const messages = {
     'Wydatki dodają, zmieniają i usuwają oraz wpłaty zapisują tylko właściciele wyjazdu i osoby, które mogą go edytować. Jeśli coś trzeba poprawić, poproś właściciela.',
   'readOnly.empty':
     'Na tym wyjeździe nie zapisano jeszcze żadnych wydatków. Pojawią się tutaj, gdy doda je właściciel lub edytor.',
+  'readOnly.settleEmpty':
+    'Na razie nie trzeba robić żadnych przelewów. Ewentualna nierównowaga pojawiłaby się tutaj.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

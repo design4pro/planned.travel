@@ -168,6 +168,8 @@ const messages = {
     'Només els propietaris del viatge i les persones que el poden editar afegeixen, modifiquen o eliminen despeses i registren pagaments. Demana-ho a un propietari si cal canviar alguna cosa.',
   'readOnly.empty':
     'Encara no s’ha registrat cap despesa en aquest viatge. Apareixeran aquí quan un propietari o un editor les afegeixi.',
+  'readOnly.settleEmpty':
+    'Ara no cal cap transferència. Qualsevol desequilibri apareixerà aquí.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
