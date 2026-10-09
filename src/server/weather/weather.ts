@@ -227,7 +227,7 @@ export function forecastCacheKey(lat: number, lng: number): string {
 }
 
 /**
- * `wx:v1:fail:{provider}:{lat}:{lng}` - the provider, a coordinate and nothing about who asked.
+ * `wx:v2:fail:{provider}:{lat}:{lng}` - the provider, a coordinate and nothing about who asked.
  *
  * Per provider, so one vendor's outage never hides the days another vendor can still answer, and
  * not per kind, because an outage is the vendor's. A new provider needs a new argument and nothing

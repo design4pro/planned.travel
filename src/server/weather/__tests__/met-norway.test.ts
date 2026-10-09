@@ -188,7 +188,7 @@ describe('the MET Norway client', () => {
 
   describe('the fuller reading', () => {
     const forecast = async (body: unknown) =>
-      (await createMetNorwayClient(answer(body)).forecast(1, 2, INIT)).series
+      (await fetchedFrom(createMetNorwayClient(answer(body)))).series
 
     it('reads the wind off every step', async () => {
       const series = await forecast(OSLO_FORECAST_DETAIL)

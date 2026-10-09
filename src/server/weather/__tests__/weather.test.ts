@@ -817,7 +817,7 @@ describe('a cached forecast past its expiry', () => {
 describe('a provider that failed', () => {
   const failing = () =>
     provider(() => Promise.resolve(new Response('no', { status: 503 })))
-  const FAILURE_KEY = 'wx:v1:fail:met-norway:59.9139:10.7522'
+  const FAILURE_KEY = 'wx:v2:fail:met-norway:59.9139:10.7522'
 
   it('is not asked again, and costs nothing, while the failure is remembered', async () => {
     const w = world({ provider: failing() })
