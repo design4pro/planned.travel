@@ -246,9 +246,13 @@ export async function assertBookingRole(
 
 /**
  * The booking a writer is about to change, once the caller has been shown to be allowed to change
- * it: `NotFoundError` when the row is not theirs, `TripRoleError` when it is theirs to read and not
- * to edit. Every writer below that starts from a booking id starts here, so the two refusals cannot
- * drift apart between them.
+ * it: `NotFoundError` when the row is not theirs or sits on a private trip they are not on,
+ * `TripRoleError` when it is theirs to read and not to edit. Every writer below that starts from a
+ * booking id starts here, so the two refusals cannot drift apart between them.
+ *
+ * The order is the boundary's (ADR 0007): the row, then `requireTrip` on its trip, then the role.
+ * Asked the other way round, someone who may not see the trip and holds a booking id is told
+ * `FORBIDDEN` for a row that, from where they stand, does not exist.
  */
 async function requireWritableReservation(
   scope: TenantScope,
@@ -258,6 +262,7 @@ async function requireWritableReservation(
     scope,
     reservationId,
   )
+  await requireTrip(scope, existing.tripId)
   await assertBookingRole(scope, existing.tripId)
   return existing
 }

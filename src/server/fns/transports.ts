@@ -21,6 +21,7 @@ import {
   listTripDays,
   listTripLegs,
   listTripTransports,
+  requireTransportOfTrip,
   requireTrip,
   saveSearchedConnection,
   saveTransport,
@@ -413,6 +414,9 @@ export const setTransportStatusFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly status: string }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
+    // Everything below acts on `data.tripId` - the room it tells - so the transport must be one of
+    // that trip's, not merely one the caller may edit on some trip of theirs.
+    await requireTransportOfTrip(scope, data.tripId, data.transportId)
     await setTransportStatus(scope, data.transportId, data.status)
 
     await mirrorToRoom(scope, data.tripId, [
@@ -426,6 +430,7 @@ export const deleteTransportFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
+    await requireTransportOfTrip(scope, data.tripId, data.transportId)
     await deleteTransport(scope, data.transportId)
 
     await mirrorToRoom(scope, data.tripId, [

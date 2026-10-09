@@ -750,6 +750,7 @@ export async function updateAccommodation(
     scope,
     accommodationId,
   )
+  await requireTrip(scope, existing.tripId)
   await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
   if (values.startDayId) {
     await requireTripDay(scope, existing.tripId, values.startDayId)
@@ -778,6 +779,7 @@ export async function deleteAccommodation(
     scope,
     accommodationId,
   )
+  await requireTrip(scope, existing.tripId)
   await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
   await dayAccommodationsRepository.requireRemove(scope, accommodationId)
 }

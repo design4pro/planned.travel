@@ -221,6 +221,7 @@ import {
   nextDeparture,
   reorderDayTransports,
   replaceTransportChain,
+  requireTransportOfTrip,
   saveSearchedConnection,
   saveTransport,
   setTransportStatus,
@@ -2811,6 +2812,8 @@ describe('tenant isolation', () => {
           }),
         () => setTransportStatus(scope, beta.transportId, 'cancelled'),
         () => deleteTransport(scope, beta.transportId),
+        // B's transport under B's own trip still resolves to nothing from A.
+        () => requireTransportOfTrip(scope, beta.tripId, beta.transportId),
       ]
       for (const attempt of attempts) {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)

@@ -16,7 +16,14 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
-import { createAssignment, reorderDayTimelines } from '../itinerary'
+import {
+  createAccommodation,
+  createAssignment,
+  deleteAccommodation,
+  listTripAccommodations,
+  reorderDayTimelines,
+  updateAccommodation,
+} from '../itinerary'
 import {
   addPhoto,
   attachPhotoToEntry,
@@ -64,9 +71,13 @@ import {
 } from '../expenses'
 import { createPlace } from '../places'
 import {
+  clearReservationImported,
   createReservation,
+  deleteReservation,
   getReservation,
   linkReservationExpense,
+  setReservationStatus,
+  updateReservation,
 } from '../reservations'
 import {
   addTripMember,
@@ -104,7 +115,17 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
-import { listTripDayTransports, reorderDayTransports } from '../transports'
+import {
+  createTransport,
+  deleteTransport,
+  getTransport,
+  listTransportLegs,
+  listTripDayTransports,
+  reorderDayTransports,
+  replaceTransportChain,
+  requireTransportOfTrip,
+  setTransportStatus,
+} from '../transports'
 import {
   captureError,
   createHarness,
@@ -1874,6 +1895,198 @@ describe('member isolation', () => {
         amountMinor: 25_000,
       })
       expect(edited.expense.amountMinor).toBe(25_000)
+    })
+  })
+
+  /**
+   * A writer that starts from a row id finds the row, then asks the row's trip the question every
+   * trip-scoped writer asks first: may this caller see it at all (`requireTrip`). Only then does the
+   * role guard run. In the other order a caller who may not see a private trip, and holds one of its
+   * row ids (a former member, say), is answered `FORBIDDEN` for a row that, from where they stand,
+   * does not exist - which tells them it does (ADR 0007).
+   */
+  describe('the writers that start from a transport, booking or stay id (#1027)', () => {
+    let transportId: string
+    let reservationId: string
+    let stayId: string
+    let expenseId: string
+
+    const chain = {
+      stations: [{ name: 'Lisbon Oriente' }, { name: 'Porto Campanhã' }],
+      legs: [{}],
+    }
+
+    /** Everything an attacker could change on the three rows, read back as the owner. */
+    async function rowsOf(): Promise<unknown> {
+      return {
+        transport: await getTransport(alpha.scope, transportId),
+        legs: await listTransportLegs(alpha.scope, transportId),
+        booking: await getReservation(alpha.scope, reservationId),
+        stays: await listTripAccommodations(alpha.scope, fixture.tripId),
+      }
+    }
+
+    function writersAs(
+      scope: TenantScope,
+    ): ReadonlyArray<readonly [string, () => Promise<unknown>]> {
+      return [
+        [
+          'setting a transport’s status',
+          () => setTransportStatus(scope, transportId, 'cancelled'),
+        ],
+        ['deleting a transport', () => deleteTransport(scope, transportId)],
+        [
+          'replacing a transport’s chain',
+          () => replaceTransportChain(scope, transportId, chain),
+        ],
+        [
+          'updating a booking',
+          () => updateReservation(scope, reservationId, { title: 'Hijacked' }),
+        ],
+        [
+          'setting a booking’s status',
+          () => setReservationStatus(scope, reservationId, 'cancelled'),
+        ],
+        ['deleting a booking', () => deleteReservation(scope, reservationId)],
+        [
+          'linking a booking to an expense',
+          () => linkReservationExpense(scope, reservationId, expenseId),
+        ],
+        [
+          'clearing a booking’s import marker',
+          () => clearReservationImported(scope, reservationId),
+        ],
+        [
+          'updating a stay',
+          () => updateAccommodation(scope, stayId, { name: 'Hijacked' }),
+        ],
+        ['deleting a stay', () => deleteAccommodation(scope, stayId)],
+      ]
+    }
+
+    beforeEach(async () => {
+      transportId = (
+        await createTransport(alpha.scope, {
+          tripId: fixture.tripId,
+          title: 'Lisbon to Porto',
+          mode: 'train',
+        })
+      ).id
+      reservationId = (
+        await createReservation(alpha.scope, {
+          tripId: fixture.tripId,
+          title: 'Table for two',
+        })
+      ).id
+      stayId = (
+        await createAccommodation(alpha.scope, {
+          tripId: fixture.tripId,
+          name: 'Pensão Amor',
+          startDayId: fixture.dayId,
+          endDayId: fixture.dayId,
+        })
+      ).id
+      expenseId = (
+        await createExpense(alpha.scope, {
+          tripId: fixture.tripId,
+          title: 'Dinner',
+          amountMinor: 4_000,
+          spentOn: '2026-04-10',
+        })
+      ).expense.id
+    })
+
+    it('answers a non-member with NotFoundError, not the role refusal, and changes nothing', async () => {
+      const before = await rowsOf()
+
+      for (const [label, write] of writersAs(stranger)) {
+        const error = await captureError(write)
+        expect(error, label).toBeInstanceOf(NotFoundError)
+        expect(error, label).not.toBeInstanceOf(TripRoleError)
+        expect((error as NotFoundError).code, label).toBe('NOT_FOUND')
+      }
+
+      expect(await rowsOf()).toEqual(before)
+    })
+
+    it('answers a former member the same way once they have left the trip', async () => {
+      const former = await alpha.addUser('Alpha who left')
+      const membership = await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: former,
+        role: 'editor',
+      })
+      await removeTripMember(alpha.scope, membership.id)
+      const before = await rowsOf()
+
+      for (const [label, write] of writersAs(alpha.scopeFor(former))) {
+        expect(await captureError(write), label).toBeInstanceOf(NotFoundError)
+      }
+      expect(await rowsOf()).toEqual(before)
+    })
+
+    it('answers a row on a private trip exactly as a row that is not there', async () => {
+      const missing = '0'.repeat(26)
+      const refusals = [
+        await captureError(() =>
+          setTransportStatus(stranger, transportId, 'cancelled'),
+        ),
+        await captureError(() =>
+          setTransportStatus(stranger, missing, 'cancelled'),
+        ),
+      ]
+      for (const error of refusals) {
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((error as NotFoundError).code).toBe('NOT_FOUND')
+      }
+    })
+
+    it('still refuses a viewer with the role refusal, and changes nothing', async () => {
+      const viewerId = await alpha.addUser('Alpha the viewer')
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const before = await rowsOf()
+
+      for (const [label, write] of writersAs(alpha.scopeFor(viewerId))) {
+        expect(await captureError(write), label).toBeInstanceOf(TripRoleError)
+      }
+      expect(await rowsOf()).toEqual(before)
+    })
+
+    it('still refuses a non-member of an organization-visible trip with the role refusal', async () => {
+      // They may see the trip, so NotFoundError would be the wrong answer: only a trip a person
+      // may not see is indistinguishable from a missing one (ADR 0007).
+      await updateTrip(alpha.scope, fixture.tripId, {
+        visibility: 'organization',
+      })
+      const before = await rowsOf()
+
+      for (const [label, write] of writersAs(stranger)) {
+        expect(await captureError(write), label).toBeInstanceOf(TripRoleError)
+      }
+      expect(await rowsOf()).toEqual(before)
+    })
+
+    it('pairs a transport with the trip a request names', async () => {
+      const other = await createTrip(alpha.scope, {
+        title: 'Faro, another time',
+        slug: 'faro-another-time-2',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+
+      expect(
+        (await requireTransportOfTrip(alpha.scope, fixture.tripId, transportId))
+          .id,
+      ).toBe(transportId)
+      expect(
+        await captureError(() =>
+          requireTransportOfTrip(alpha.scope, other.id, transportId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
     })
   })
 })
