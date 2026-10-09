@@ -38,7 +38,7 @@
  * first one gave, and the language, because a geocoder answers *in* a language — the language is
  * part of the question rather than a fact about who asked.
  *
- * Nothing is written with an `expirationTtl`, unlike `TRANSIT_CACHE_TTL_SECONDS`. A timetable goes
+ * Nothing is written with an `expirationTtl`, unlike the transit proxy's. A timetable goes
  * stale and a doorway does not, and permanent storage is precisely the right ADR 0013 bought.
  * {@link GEO_CACHE_VERSION} is the only eviction lever, which is why it exists — and why empty
  * answers are never written: with no TTL, a wrong empty would be permanent.

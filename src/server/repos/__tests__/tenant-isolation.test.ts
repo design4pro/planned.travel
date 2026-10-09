@@ -3685,8 +3685,8 @@ describe('tenant isolation', () => {
    * another workspace's journey with a route it never asked for.
    *
    * The cache key is asserted where it lives, in
-   * `src/server/transit/__tests__/search.test.ts`, and for the opposite reason:
-   * it must be the *same* string for both tenants.
+   * `src/server/transit/__tests__/search.test.ts`: it names the workspace and
+   * the member, so it must be a *different* string for every pair of them.
    */
   describe('a connection saved as a journey, and re-searched in place', () => {
     /** Two legs, so a refusal that dropped one would still be visible. */
