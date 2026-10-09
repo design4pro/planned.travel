@@ -772,6 +772,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Δύο απαντήσεις λένε το ίδιο. Δώσε στην καθεμιά τη δική της διατύπωση.',
   'collab.presence.viewingNow': 'βλέπουν τώρα',
+  'collab.presence.unnamed': 'Μέλος χωρίς όνομα',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} ανοιχτή καρτέλα',
     other: '{name} — {count} ανοιχτές καρτέλες',

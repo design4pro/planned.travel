@@ -93,7 +93,12 @@ export function entityKey(ref: EntityRef): string {
 
 export const presenceUserSchema = z.object({
   id: z.string().min(1).max(64),
-  name: z.string().min(1).max(80),
+  /**
+   * `null` when the person has no display name of their own: the room never
+   * carries a placeholder or their email, and each client words the absence in
+   * its own language.
+   */
+  name: z.string().min(1).max(80).nullable(),
   /** Two-letter fallback used by `AvatarStack` when there is no image. */
   initials: z.string().min(1).max(3),
   /** Presence accent, resolved from the design tokens on the client. */

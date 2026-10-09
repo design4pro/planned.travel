@@ -785,6 +785,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Due risposte dicono la stessa cosa. Dai a ognuna la sua formulazione.',
   'collab.presence.viewingNow': 'stanno guardando ora',
+  'collab.presence.unnamed': 'Membro senza nome',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} scheda aperta',
     many: '{name} — {count} schede aperte',

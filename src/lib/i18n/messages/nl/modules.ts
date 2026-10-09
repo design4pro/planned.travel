@@ -768,6 +768,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Twee antwoorden zeggen hetzelfde. Geef elk zijn eigen woorden.',
   'collab.presence.viewingNow': 'kijken nu mee',
+  'collab.presence.unnamed': 'Naamloos lid',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} tabblad open',
     other: '{name} — {count} tabbladen open',

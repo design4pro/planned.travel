@@ -921,6 +921,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Two options say the same thing. Give each one its own wording.',
   'collab.presence.viewingNow': 'viewing now',
+  'collab.presence.unnamed': 'Unnamed member',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} tab open',
     other: '{name} — {count} tabs open',

@@ -779,6 +779,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Dues respostes diuen el mateix. Dona a cadascuna la seva redacció.',
   'collab.presence.viewingNow': 'ho estan veient ara',
+  'collab.presence.unnamed': 'Membre sense nom',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} pestanya oberta',
     many: '{name} — {count} pestanyes obertes',

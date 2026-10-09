@@ -755,6 +755,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Två svar säger samma sak. Ge vart och ett sin egen formulering.',
   'collab.presence.viewingNow': 'tittar just nu',
+  'collab.presence.unnamed': 'Medlem utan namn',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} öppen flik',
     other: '{name} — {count} öppna flikar',
