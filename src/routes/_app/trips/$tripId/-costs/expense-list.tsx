@@ -38,6 +38,8 @@ export interface ExpenseListProps {
   readonly viewerUserId: string
   readonly currency: string
   readonly busyExpenseIds: ReadonlySet<string>
+  /** Whether the row offers edit and delete. A reader sees the ledger and none of its controls. */
+  readonly canWrite: boolean
   readonly onEdit: (row: CostsExpense) => void
   readonly onDelete: (row: CostsExpense) => void
 }
@@ -48,6 +50,7 @@ export function ExpenseList({
   viewerUserId,
   currency,
   busyExpenseIds,
+  canWrite,
   onEdit,
   onDelete,
 }: ExpenseListProps) {
@@ -73,6 +76,7 @@ export function ExpenseList({
                     viewerUserId={viewerUserId}
                     currency={currency}
                     busy={busyExpenseIds.has(row.id)}
+                    canWrite={canWrite}
                     onEdit={onEdit}
                     onDelete={onDelete}
                   />
@@ -92,6 +96,7 @@ function ExpenseRow({
   viewerUserId,
   currency,
   busy,
+  canWrite,
   onEdit,
   onDelete,
 }: {
@@ -100,6 +105,7 @@ function ExpenseRow({
   viewerUserId: string
   currency: string
   busy: boolean
+  canWrite: boolean
   onEdit: (row: CostsExpense) => void
   onDelete: (row: CostsExpense) => void
 }) {
@@ -186,30 +192,32 @@ function ExpenseRow({
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5">
-        {locked ? (
-          <span className="grid size-8 place-items-center text-ink-4">
-            <Spinner size="xs" label="Saving" />
-          </span>
-        ) : (
-          <>
-            <IconButton
-              size="sm"
-              variant="ghost"
-              icon={<Pencil aria-hidden />}
-              label={`Edit ${row.title}`}
-              onClick={() => onEdit(row)}
-            />
-            <IconButton
-              size="sm"
-              variant="danger"
-              icon={<Trash2 aria-hidden />}
-              label={`Delete ${row.title}`}
-              onClick={() => onDelete(row)}
-            />
-          </>
-        )}
-      </div>
+      {canWrite ? (
+        <div className="flex shrink-0 items-center gap-0.5">
+          {locked ? (
+            <span className="grid size-8 place-items-center text-ink-4">
+              <Spinner size="xs" label="Saving" />
+            </span>
+          ) : (
+            <>
+              <IconButton
+                size="sm"
+                variant="ghost"
+                icon={<Pencil aria-hidden />}
+                label={`Edit ${row.title}`}
+                onClick={() => onEdit(row)}
+              />
+              <IconButton
+                size="sm"
+                variant="danger"
+                icon={<Trash2 aria-hidden />}
+                label={`Delete ${row.title}`}
+                onClick={() => onDelete(row)}
+              />
+            </>
+          )}
+        </div>
+      ) : null}
     </div>
   )
 }

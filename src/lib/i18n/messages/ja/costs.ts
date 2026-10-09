@@ -157,6 +157,12 @@ const messages = {
   'payments.label': '記録された支払い',
   'payments.empty.title': 'まだ支払いはありません',
   'payments.empty.body': '誰かが残高を返済すると、送金がここに記録されます。',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': '費用は閲覧のみで、変更はできません',
+  'readOnly.body':
+    '経費の追加・編集・削除や支払いの記録ができるのは、旅行のオーナーと編集権限のあるメンバーだけです。変更が必要な場合はオーナーにお問い合わせください。',
+  'readOnly.empty':
+    'この旅行にはまだ経費が記録されていません。オーナーまたは編集者が追加すると、ここに表示されます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

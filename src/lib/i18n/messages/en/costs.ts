@@ -199,6 +199,12 @@ const messages = {
    */
   'payments.empty.body':
     'Once someone pays a balance back, the transfer is logged here.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'You can read the costs, not change them',
+  'readOnly.body':
+    'Only the trip’s owners and the people who can edit it add, change or delete expenses and record payments. Ask an owner if something needs changing.',
+  'readOnly.empty':
+    'No expenses have been logged on this trip yet. They appear here once an owner or an editor adds them.',
 } as const satisfies NamespaceMessages
 
 export default messages

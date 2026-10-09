@@ -157,6 +157,12 @@ const messages = {
   'payments.empty.title': 'Inga betalningar än',
   'payments.empty.body':
     'När någon betalar tillbaka ett saldo loggas överföringen här.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Du kan se kostnaderna men inte ändra dem',
+  'readOnly.body':
+    'Bara resens ägare och de som får redigera den lägger till, ändrar eller tar bort utgifter och registrerar betalningar. Fråga en ägare om något behöver ändras.',
+  'readOnly.empty':
+    'Inga utgifter har registrerats för den här resan än. De visas här när en ägare eller redigerare lägger till dem.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

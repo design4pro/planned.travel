@@ -164,6 +164,12 @@ const messages = {
   'payments.empty.title': 'Nessun pagamento ancora',
   'payments.empty.body':
     'Quando qualcuno restituisce un saldo, il trasferimento viene registrato qui.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Puoi vedere i costi, ma non modificarli',
+  'readOnly.body':
+    'Solo i proprietari del viaggio e chi può modificarlo aggiungono, cambiano o eliminano spese e registrano pagamenti. Chiedi a un proprietario se qualcosa va cambiato.',
+  'readOnly.empty':
+    'In questo viaggio non è ancora stata registrata nessuna spesa. Appariranno qui quando un proprietario o un editor le aggiungerà.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

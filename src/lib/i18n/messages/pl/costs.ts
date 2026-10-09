@@ -166,6 +166,12 @@ const messages = {
   'payments.empty.title': 'Jeszcze bez wpłat',
   'payments.empty.body':
     'Gdy ktoś oddaje saldo, przelew zostaje zapisany tutaj.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Koszty możesz przeglądać, ale nie zmieniać',
+  'readOnly.body':
+    'Wydatki dodają, zmieniają i usuwają oraz wpłaty zapisują tylko właściciele wyjazdu i osoby, które mogą go edytować. Jeśli coś trzeba poprawić, poproś właściciela.',
+  'readOnly.empty':
+    'Na tym wyjeździe nie zapisano jeszcze żadnych wydatków. Pojawią się tutaj, gdy doda je właściciel lub edytor.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -153,6 +153,12 @@ const messages = {
   'payments.label': '기록된 결제',
   'payments.empty.title': '아직 결제가 없습니다',
   'payments.empty.body': '누군가 잔액을 갚으면 송금이 여기에 기록됩니다.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': '비용은 볼 수만 있고 변경할 수 없습니다',
+  'readOnly.body':
+    '지출을 추가·수정·삭제하고 결제를 기록할 수 있는 사람은 여행의 소유자와 편집 권한이 있는 사람뿐입니다. 변경이 필요하면 소유자에게 문의하세요.',
+  'readOnly.empty':
+    '이 여행에는 아직 기록된 지출이 없습니다. 소유자나 편집자가 추가하면 여기에 표시됩니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

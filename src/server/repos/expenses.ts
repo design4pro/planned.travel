@@ -24,7 +24,7 @@ import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { placesRepository } from './places'
 import { unlinkReservationsFromExpense } from './reservations'
-import { requireTrip } from './trips'
+import { assertTripRole, requireTrip } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -44,6 +44,7 @@ import type {
   Settlement,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TripRole } from './trips'
 
 export const budgetItemsRepository = createTenantRepository(
   budgetItems,
@@ -60,6 +61,45 @@ export const settlementsRepository = createTenantRepository(
 )
 
 /* -------------------------------------------------------------------------------------------------
+ * Who writes money
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Trip roles that may change a trip's money: its expenses, their shares, its payments and its
+ * planned budget lines. A `viewer` reads the ledger, and so does a workspace member who only sees an
+ * organization-visible trip (`CONTEXT.md`, "Trip member").
+ *
+ * The one place the money writers' role list is declared. Enforcement is {@link assertTripRole},
+ * the trip's own guard, through {@link requireMoneyTrip}; {@link canWriteMoney} reads the same list
+ * for a screen that has to decide which controls to draw.
+ */
+export const MONEY_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+
+/**
+ * Whether a trip role may write money - the role-only answer the costs screen draws its controls
+ * from. Deliberately not `canWritePlan`: that also refuses an archived trip, and archived trips are
+ * not decided for money (the writers here do not check archiving), so a control drawn from it
+ * would disagree with the server.
+ */
+export function canWriteMoney(role: string | null): boolean {
+  return MONEY_WRITE_ROLES.some((allowed) => allowed === role)
+}
+
+/**
+ * The two guards every money writer starts with, in the order the boundary needs them:
+ * {@link requireTrip} first, so a caller who may not see the trip is answered with
+ * {@link NotFoundError} and learns nothing, and only then the role, whose `TripRoleError` is safe
+ * because by that point they have proved they may see the trip.
+ */
+async function requireMoneyTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<void> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, MONEY_WRITE_ROLES)
+}
+
+/* -------------------------------------------------------------------------------------------------
  * Rows of the trip in the request
  * ---------------------------------------------------------------------------------------------- */
 
@@ -69,7 +109,8 @@ export const settlementsRepository = createTenantRepository(
  * lives in the workspace, so someone who may read any trip could rewrite another trip's ledger -
  * a private one included. Every writer below therefore asks for the pair, after the trip itself
  * has been checked, and a row of another trip answers exactly as a row that is not there: the
- * same {@link NotFoundError}, so the refusal does not say which ids exist.
+ * same {@link NotFoundError}, so the refusal does not say which ids exist. The role follows the
+ * trip check and precedes the row lookup, so a viewer is refused whether or not the id exists.
  */
 
 async function requireTripExpense(
@@ -77,7 +118,7 @@ async function requireTripExpense(
   tripId: string,
   expenseId: string,
 ): Promise<Expense> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const expense = await expensesRepository.findOne(
     scope,
     allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
@@ -93,7 +134,7 @@ async function requireTripBudgetItem(
   tripId: string,
   budgetItemId: string,
 ): Promise<BudgetItem> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const item = await budgetItemsRepository.findOne(
     scope,
     allOf(eq(budgetItems.id, budgetItemId), eq(budgetItems.tripId, tripId)),
@@ -109,7 +150,7 @@ async function requireTripShare(
   tripId: string,
   shareId: string,
 ): Promise<ExpenseShare> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const share = await expenseSharesRepository.findOne(
     scope,
     allOf(eq(expenseShares.id, shareId), eq(expenseShares.tripId, tripId)),
@@ -125,7 +166,7 @@ async function requireTripSettlement(
   tripId: string,
   settlementId: string,
 ): Promise<Settlement> {
-  await requireTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId)
   const settlement = await settlementsRepository.findOne(
     scope,
     allOf(eq(settlements.id, settlementId), eq(settlements.tripId, tripId)),
@@ -363,7 +404,7 @@ export async function createBudgetItem(
   input: CreateBudgetItemInput,
 ): Promise<BudgetItem> {
   const values = createBudgetItemInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireMoneyTrip(scope, values.tripId)
   return budgetItemsRepository.insert(scope, values)
 }
 
@@ -443,7 +484,7 @@ export async function createExpense(
   input: CreateExpenseInput,
 ): Promise<ExpenseWithShares> {
   const { participants, ...values } = createExpenseInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireMoneyTrip(scope, values.tripId)
   if (values.dayId) {
     await requireTripDay(scope, values.tripId, values.dayId)
   }
@@ -614,7 +655,7 @@ export async function createSettlement(
       'INVALID_SETTLEMENT',
     )
   }
-  await requireTrip(scope, values.tripId)
+  await requireMoneyTrip(scope, values.tripId)
   return settlementsRepository.insert(scope, {
     ...values,
     createdBy: scope.ctx.userId,
