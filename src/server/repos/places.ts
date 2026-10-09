@@ -149,9 +149,9 @@ export async function listTripPlaces(
 }
 
 /**
- * Resolves a place and asserts it belongs to `tripId`. Every repository that stores a `place_id`
- * calls this, so a place from another trip - or another tenant - is refused as an id that is not
- * there instead of being linked.
+ * Resolves a place and asserts it belongs to `tripId`, so a place from another trip - or another
+ * tenant - is refused as an id that is not there instead of being linked. The itinerary and the
+ * expense writers call it; a repository that stores a `place_id` and does not is a gap.
  */
 export async function requirePlaceOfTrip(
   scope: TenantScope,

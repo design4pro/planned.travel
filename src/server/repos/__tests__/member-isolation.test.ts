@@ -1785,6 +1785,37 @@ describe('member isolation', () => {
         )
       })
 
+      it('does not let them be put on a different existing expense', async () => {
+        const { expense: other } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Museum',
+          amountMinor: 2_000,
+          spentOn: '2026-04-12',
+          participants: [{ userId: ownerId }],
+        })
+
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, other.id, {
+              participants: [{ userId: ownerId }, { userId: formerId }],
+            }),
+          formerId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, other.id, { paidBy: formerId }),
+          formerId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            setExpenseShares(alpha.scope, tripId, other.id, [
+              { userId: ownerId },
+              { userId: formerId },
+            ]),
+          formerId,
+        )
+      })
+
       it('lets a debt they still owe be recorded as paid, and a credit be paid back', async () => {
         const balances = await getMemberBalances(alpha.scope, tripId)
         expect(balances.map((row) => row.userId)).toContain(formerId)
