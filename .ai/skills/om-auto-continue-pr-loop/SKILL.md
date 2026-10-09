@@ -9,7 +9,7 @@ Extends the installed skill: read the installed `SKILL.md` of the same name unde
 2. **SQL**: only in `src/server/repos`, through the tenant-scoped base repository; `src/server/catalog` is the single exception. Every new or changed repo method ships a tenant-isolation test (rows of another organisation are invisible).
 3. **Layering**: `src/components/ui` never fetches data and never imports from `src/server`; routes call server functions in `src/server/fns`; a server function never calls another server function.
 4. **Inputs**: Zod on every server-function input.
-5. **Generated files**: `src/routeTree.gen.ts` only via `pnpm generate-routes`, `drizzle/` only via `pnpm db:generate`; never edit them by hand. D1 migrations are additive (`BACKWARD_COMPATIBILITY.md`).
+5. **Generated files**: `src/routeTree.gen.ts` only via `pnpm generate-routes`, `drizzle/` only via `pnpm db:generate`; never edit them by hand. D1 migrations are additive (`BACKWARD_COMPATIBILITY.md`). A server-function input schema only gains optional fields: a required one fails every tab loaded before the deploy (#972, #846).
 6. **Stack**: never `pnpm add|remove|update`; a change that needs a dependency ends as `Status: blocked`.
 7. **Style**: TypeScript strict, no `any`, named exports (route modules excepted), `cn()` for classes, no nested ternaries, no `console.log`/TODO/commented-out code. Conventional Commits in English.
 
