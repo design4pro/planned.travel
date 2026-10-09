@@ -56,6 +56,7 @@ import {
   getMemberBalances,
   listBudgetItems,
   listSettlements,
+  listTripExpenses,
   markShareSettled,
   setExpenseShares,
   updateBudgetItem,
@@ -85,6 +86,7 @@ import {
   restoreTrip,
   startTripCopy,
   TripRoleError,
+  tripMemberUserIds,
   updateTrip,
   updateTripMember,
 } from '../trips'
@@ -1189,6 +1191,11 @@ describe('member isolation', () => {
       scope: TenantScope,
       ids: { readonly payer: string; readonly other: string },
     ): Promise<Ledger> {
+      for (const userId of [ids.payer, ids.other]) {
+        if (!(await tripMemberUserIds(scope, tripId)).includes(userId)) {
+          await addTripMember(scope, { tripId, userId, role: 'editor' })
+        }
+      }
       const { expense, shares } = await createExpense(scope, {
         tripId,
         title: 'Dinner',
@@ -1431,6 +1438,442 @@ describe('member isolation', () => {
           updateExpense(stranger, mine, own.expense.id, { title: 'Gone' }),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  /**
+   * A money write names people, and optionally a place and a planned item. The trip in the request
+   * decides which of them are allowed: its members, and anyone the trip's money already carries, so
+   * someone who has since left the trip does not lock their own expense or their own debt. A person
+   * the trip has never seen, and a place or planned item of another trip, answer as an id that is
+   * not there - once for the whole submitted set, without saying which id was wrong.
+   */
+  describe('the people, places and planned items a money write names', () => {
+    let ownerId: string
+    let memberId: string
+    /** In the workspace, on no trip: what a crafted request would name. */
+    let outsiderId: string
+    let tripId: string
+    let elsewhere: {
+      readonly placeId: string
+      readonly budgetItemId: string
+    }
+
+    async function expectRefusedWithoutNaming(
+      write: () => Promise<unknown>,
+      ...ids: ReadonlyArray<string>
+    ): Promise<void> {
+      const error = await captureError(write)
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect((error as NotFoundError).code).toBe('NOT_FOUND')
+      for (const id of ids) {
+        expect((error as NotFoundError).message).not.toContain(id)
+      }
+    }
+
+    async function ledger(): Promise<unknown> {
+      return {
+        expenses: await listTripExpenses(alpha.scope, tripId),
+        settlements: await listSettlements(alpha.scope, tripId),
+        balances: await getMemberBalances(alpha.scope, tripId),
+      }
+    }
+
+    beforeEach(async () => {
+      tripId = fixture.tripId
+      ownerId = alpha.ownerUserId
+      memberId = await alpha.addUser('Alpha on the trip')
+      outsiderId = strangerId
+      await addTripMember(alpha.scope, {
+        tripId,
+        userId: memberId,
+        role: 'editor',
+      })
+      const other = await createTrip(alpha.scope, {
+        title: 'Faro, another time',
+        slug: 'faro-another-time',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      const place = await createPlace(alpha.scope, {
+        tripId: other.id,
+        name: 'Ponta da Piedade',
+      })
+      const item = await createBudgetItem(alpha.scope, {
+        tripId: other.id,
+        name: 'Boat',
+      })
+      elsewhere = { placeId: place.id, budgetItemId: item.id }
+    })
+
+    async function dinner(): Promise<string> {
+      const { expense } = await createExpense(alpha.scope, {
+        tripId,
+        title: 'Dinner',
+        amountMinor: 6_000,
+        spentOn: '2026-04-10',
+        paidBy: ownerId,
+        participants: [{ userId: ownerId }, { userId: memberId }],
+      })
+      return expense.id
+    }
+
+    describe('refuse a person the trip has never seen', () => {
+      it('in the split of a new expense, writing nothing', async () => {
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-10',
+              participants: [{ userId: ownerId }, { userId: outsiderId }],
+            }),
+          outsiderId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('as the payer of a new expense', async () => {
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-10',
+              paidBy: outsiderId,
+            }),
+          outsiderId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('in the split or as the payer of an edit, leaving the expense as it was', async () => {
+        const expenseId = await dinner()
+        const before = await ledger()
+        const sharesBefore = await getExpenseWithShares(alpha.scope, expenseId)
+
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, {
+              participants: [{ userId: ownerId }, { userId: outsiderId }],
+            }),
+          outsiderId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, {
+              title: 'Rewritten',
+              paidBy: outsiderId,
+            }),
+          outsiderId,
+        )
+
+        expect(await ledger()).toEqual(before)
+        expect(await getExpenseWithShares(alpha.scope, expenseId)).toEqual(
+          sharesBefore,
+        )
+      })
+
+      it('when the split of an expense is replaced', async () => {
+        const expenseId = await dinner()
+        const sharesBefore = await getExpenseWithShares(alpha.scope, expenseId)
+        await expectRefusedWithoutNaming(
+          () =>
+            setExpenseShares(alpha.scope, tripId, expenseId, [
+              { userId: ownerId },
+              { userId: outsiderId },
+            ]),
+          outsiderId,
+        )
+        expect(await getExpenseWithShares(alpha.scope, expenseId)).toEqual(
+          sharesBefore,
+        )
+      })
+
+      it('on either side of a payment', async () => {
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: outsiderId,
+              toUserId: ownerId,
+              amountMinor: 500,
+              settledOn: '2026-04-11',
+            }),
+          outsiderId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: ownerId,
+              toUserId: outsiderId,
+              amountMinor: 500,
+              settledOn: '2026-04-11',
+            }),
+          outsiderId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('with one refusal for the whole set, whichever id was the wrong one', async () => {
+        const second = await alpha.addUser('Alpha the third')
+        const first = await captureError(() =>
+          createExpense(alpha.scope, {
+            tripId,
+            title: 'Taxi',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+            participants: [{ userId: outsiderId }],
+          }),
+        )
+        const other = await captureError(() =>
+          createExpense(alpha.scope, {
+            tripId,
+            title: 'Taxi',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+            participants: [{ userId: ownerId }, { userId: second }],
+          }),
+        )
+        expect((first as NotFoundError).message).toBe(
+          (other as NotFoundError).message,
+        )
+      })
+    })
+
+    describe('refuse a place or planned item of another trip', () => {
+      it('when the expense is created', async () => {
+        const before = await ledger()
+        await expectRefusedWithoutNaming(() =>
+          createExpense(alpha.scope, {
+            tripId,
+            title: 'Boat',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+            placeId: elsewhere.placeId,
+          }),
+        )
+        await expectRefusedWithoutNaming(() =>
+          createExpense(alpha.scope, {
+            tripId,
+            title: 'Boat',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+            budgetItemId: elsewhere.budgetItemId,
+          }),
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('when the expense is edited', async () => {
+        const expenseId = await dinner()
+        const before = await ledger()
+        await expectRefusedWithoutNaming(() =>
+          updateExpense(alpha.scope, tripId, expenseId, {
+            placeId: elsewhere.placeId,
+          }),
+        )
+        await expectRefusedWithoutNaming(() =>
+          updateExpense(alpha.scope, tripId, expenseId, {
+            budgetItemId: elsewhere.budgetItemId,
+          }),
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('and still link the trip’s own, or clear the link', async () => {
+        const item = await createBudgetItem(alpha.scope, {
+          tripId,
+          name: 'Food',
+        })
+        const { expense } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Lunch',
+          amountMinor: 1_000,
+          spentOn: '2026-04-10',
+          placeId: fixture.placeId,
+          budgetItemId: item.id,
+        })
+        expect(expense.placeId).toBe(fixture.placeId)
+        expect(expense.budgetItemId).toBe(item.id)
+
+        const cleared = await updateExpense(alpha.scope, tripId, expense.id, {
+          placeId: null,
+          budgetItemId: null,
+        })
+        expect(cleared.expense.placeId).toBeNull()
+        expect(cleared.expense.budgetItemId).toBeNull()
+      })
+    })
+
+    describe('keep working for someone who has left the trip', () => {
+      let formerId: string
+      let expenseId: string
+
+      beforeEach(async () => {
+        formerId = await alpha.addUser('Alpha who left')
+        const membership = await addTripMember(alpha.scope, {
+          tripId,
+          userId: formerId,
+          role: 'editor',
+        })
+        const created = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: formerId,
+          participants: [
+            { userId: formerId },
+            { userId: ownerId },
+            { userId: memberId },
+          ],
+        })
+        expenseId = created.expense.id
+        await removeTripMember(alpha.scope, membership.id)
+      })
+
+      it('lets an expense they paid and share be edited with the same people', async () => {
+        const edited = await updateExpense(alpha.scope, tripId, expenseId, {
+          title: 'Boat trip, corrected',
+          paidBy: formerId,
+          participants: [
+            { userId: formerId },
+            { userId: ownerId },
+            { userId: memberId },
+          ],
+        })
+        expect(edited.expense.title).toBe('Boat trip, corrected')
+        expect(edited.shares.map((row) => row.userId).sort()).toEqual(
+          [formerId, ownerId, memberId].sort(),
+        )
+
+        const resplit = await setExpenseShares(alpha.scope, tripId, expenseId, [
+          { userId: formerId },
+          { userId: ownerId },
+        ])
+        expect(resplit).toHaveLength(2)
+      })
+
+      it('still refuses a new outsider on that same expense', async () => {
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, {
+              participants: [{ userId: formerId }, { userId: outsiderId }],
+            }),
+          outsiderId,
+        )
+      })
+
+      it('does not let them be added to another expense', async () => {
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              participants: [{ userId: formerId }],
+            }),
+          formerId,
+        )
+      })
+
+      it('does not let them be put on a different existing expense', async () => {
+        const { expense: other } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Museum',
+          amountMinor: 2_000,
+          spentOn: '2026-04-12',
+          participants: [{ userId: ownerId }],
+        })
+
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, other.id, {
+              participants: [{ userId: ownerId }, { userId: formerId }],
+            }),
+          formerId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, other.id, { paidBy: formerId }),
+          formerId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            setExpenseShares(alpha.scope, tripId, other.id, [
+              { userId: ownerId },
+              { userId: formerId },
+            ]),
+          formerId,
+        )
+      })
+
+      it('lets a debt they still owe be recorded as paid, and a credit be paid back', async () => {
+        const balances = await getMemberBalances(alpha.scope, tripId)
+        expect(balances.map((row) => row.userId)).toContain(formerId)
+
+        const owed = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: ownerId,
+          toUserId: formerId,
+          amountMinor: 1_000,
+          settledOn: '2026-04-12',
+        })
+        expect(owed.toUserId).toBe(formerId)
+
+        const paid = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: formerId,
+          toUserId: memberId,
+          amountMinor: 500,
+          settledOn: '2026-04-12',
+        })
+        expect(paid.fromUserId).toBe(formerId)
+      })
+
+      it('refuses a payment with someone who left and owes and is owed nothing', async () => {
+        const gone = await alpha.addUser('Alpha long gone')
+        const membership = await addTripMember(alpha.scope, {
+          tripId,
+          userId: gone,
+          role: 'viewer',
+        })
+        await removeTripMember(alpha.scope, membership.id)
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: gone,
+              toUserId: ownerId,
+              amountMinor: 500,
+              settledOn: '2026-04-12',
+            }),
+          gone,
+        )
+      })
+    })
+
+    it('leaves an expense with no people, as booking sync writes it, unchanged', async () => {
+      const { expense, shares } = await createExpense(alpha.scope, {
+        tripId,
+        title: 'Guesthouse',
+        amountMinor: 24_000,
+        spentOn: '2026-04-10',
+      })
+      expect(shares).toEqual([])
+      const edited = await updateExpense(alpha.scope, tripId, expense.id, {
+        title: 'Guesthouse, confirmed',
+        amountMinor: 25_000,
+      })
+      expect(edited.expense.amountMinor).toBe(25_000)
     })
   })
 })

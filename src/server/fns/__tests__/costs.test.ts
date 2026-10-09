@@ -117,6 +117,11 @@ describe('the costs boundary', () => {
     tripId = trip.id
     await addTripMember(tenant.scope, {
       tripId,
+      userId: payerId,
+      role: 'viewer',
+    })
+    await addTripMember(tenant.scope, {
+      tripId,
       userId: viewerId,
       role: 'viewer',
     })

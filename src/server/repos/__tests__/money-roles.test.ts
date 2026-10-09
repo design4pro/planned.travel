@@ -75,6 +75,11 @@ describe('who writes a trip’s money', () => {
     })
     await addTripMember(tenant.scope, {
       tripId: trip.id,
+      userId: payerId,
+      role: 'viewer',
+    })
+    await addTripMember(tenant.scope, {
+      tripId: trip.id,
       userId: viewerId,
       role: 'viewer',
     })
