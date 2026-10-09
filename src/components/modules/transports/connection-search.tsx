@@ -723,7 +723,9 @@ export function SearchOutcome({
         {t('modules.transports.connection.credit')}{' '}
         <MapCreditList credits={HERE_CREDIT_LINKS} />
         {outcome.attributions.map((attribution) => (
-          <Fragment key={`${attribution.id}:${attribution.text}`}>
+          <Fragment
+            key={`${attribution.text}|${attribution.href ?? ''}|${attribution.hrefText ?? ''}`}
+          >
             <span aria-hidden="true" className="mx-1 text-ink-4">
               ·
             </span>

@@ -262,8 +262,12 @@ function attributionOf(
     id: wire.id,
     text: wire.text,
     href,
-    // The clickable part means nothing without a link to click.
-    hrefText: href === null ? null : (wire.hrefText ?? null),
+    // The clickable part means nothing without a link to click, and a blank one is a link nobody
+    // can name.
+    hrefText:
+      href === null || wire.hrefText?.trim() === ''
+        ? null
+        : (wire.hrefText ?? null),
   }
 }
 

@@ -841,21 +841,57 @@ describe('the HERE client', () => {
       ])
     })
 
-    it('keeps the words of a link that is not a web address and drops the link', async () => {
-      const answer = await answerFor(
-        withAttributions([
+    it.each([
+      ['javascript:alert(1)'],
+      ['data:text/html,x'],
+      ['//evil.example'],
+      ['java\nscript:alert(1)'],
+      ['  JaVaScript:alert(1)'],
+      [''],
+    ])(
+      'keeps the words of a link that is not a web address (%j) and drops the link',
+      async (href) => {
+        const answer = await answerFor(
+          withAttributions([
+            {
+              id: 'x',
+              text: 'Data by the operator',
+              href,
+              hrefText: 'operator',
+            },
+          ]),
+        )
+
+        expect(answer.attributions).toEqual([
+          { id: 'x', text: 'Data by the operator', href: null, hrefText: null },
+        ])
+      },
+    )
+
+    it.each([[''], ['   ']])(
+      'treats a blank clickable part (%j) as none, so no link is left without a name',
+      async (hrefText) => {
+        const answer = await answerFor(
+          withAttributions([
+            {
+              id: 'x',
+              text: 'Data by the operator',
+              href: 'https://example.com/terms',
+              hrefText,
+            },
+          ]),
+        )
+
+        expect(answer.attributions).toEqual([
           {
             id: 'x',
             text: 'Data by the operator',
-            href: 'javascript:alert(1)',
+            href: 'https://example.com/terms',
+            hrefText: null,
           },
-        ]),
-      )
-
-      expect(answer.attributions).toEqual([
-        { id: 'x', text: 'Data by the operator', href: null, hrefText: null },
-      ])
-    })
+        ])
+      },
+    )
 
     it.each([
       ['a list that is not a list', 'CP'],
