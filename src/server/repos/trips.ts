@@ -2033,8 +2033,10 @@ export async function tripRoleFor(
  * because it is that role read to a boolean, and a second copy of it is what would let the board
  * and its notes disagree about who may write the day the roles change (`docs/SPEC.md` §8). Pure, so
  * a read that already holds the trip and the role pays nothing for it. The write guards
- * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement; this only draws the
- * affordance.
+ * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement of every D1 write; this
+ * draws the affordance, and it is also the rule that decides the role the trip room connects a
+ * person with (`src/routes/api/trip-room/-lib/connect.ts`), so widening it widens who may patch the
+ * room.
  */
 export function canWritePlan(
   trip: Pick<Trip, 'isArchived'>,

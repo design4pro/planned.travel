@@ -12,8 +12,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   TRIP_ROOM_IDENTITY_HEADER,
   decodeTripRoomIdentity,
+  encodeTripRoomIdentity,
 } from '#/server/do/protocol'
-import { addTripMember, archiveTrip, createTrip } from '#/server/repos'
+import {
+  addTripMember,
+  archiveTrip,
+  createTrip,
+  updateTripMember,
+} from '#/server/repos'
 import {
   createHarness,
   subscribeTenant,
@@ -93,20 +99,32 @@ describe('the trip room connection role', () => {
   let alpha: SeededTenant
   let tripId: string
 
-  /** Acts as `userId` of the alpha workspace for the next connection. */
-  function actAs(userId: string): void {
+  /**
+   * Acts as `userId` of the alpha workspace for the next connection, with the workspace role the
+   * session would carry: the owner by default for the workspace owner, a member for anyone else.
+   */
+  function actAs(
+    userId: string,
+    workspaceRole: TenantContext['role'] = userId === alpha.ownerUserId
+      ? 'owner'
+      : 'member',
+  ): void {
     stubs.ctx = {
       userId,
       organizationId: alpha.organizationId,
-      role: userId === alpha.ownerUserId ? 'owner' : 'member',
+      role: workspaceRole,
     }
   }
 
   /** Connects as `userId` and returns the role the room was told. */
-  async function roleOf(userId: string): Promise<TripRoomIdentity['role']> {
-    actAs(userId)
+  async function roleOf(
+    userId: string,
+    workspaceRole?: TenantContext['role'],
+    request: Request = upgrade(tripId),
+  ): Promise<TripRoomIdentity['role']> {
+    actAs(userId, workspaceRole)
     const { namespace, identities } = recordingNamespace()
-    const response = await serveTripRoom(namespace, upgrade(tripId), tripId)
+    const response = await serveTripRoom(namespace, request, tripId)
     expect(response.status).toBe(200)
     expect(identities).toHaveLength(1)
     expect(identities[0]?.user.id).toBe(userId)
@@ -162,6 +180,66 @@ describe('the trip room connection role', () => {
     expect(await roleOf(editorId)).toBe('viewer')
   })
 
+  it('admits a workspace admin with no trip membership as a viewer: the workspace role sets nothing', async () => {
+    expect(await roleOf(await alpha.addUser('Ada'), 'admin')).toBe('viewer')
+  })
+
+  it('admits a workspace owner who is only a trip viewer as a viewer', async () => {
+    expect(await roleOf(await joinAs('Olive', 'viewer'), 'owner')).toBe(
+      'viewer',
+    )
+  })
+
+  it('ignores an identity header the client sends itself', async () => {
+    const userId = await joinAs('Vera', 'viewer')
+    const forged = new Request(
+      `https://planned.travel/api/trip-room/${tripId}`,
+      {
+        headers: {
+          upgrade: 'websocket',
+          [TRIP_ROOM_IDENTITY_HEADER]: encodeTripRoomIdentity({
+            tripId,
+            orgId: alpha.organizationId,
+            user: {
+              id: userId,
+              name: 'Vera',
+              initials: 'V',
+              hue: 1,
+              avatarUrl: null,
+            },
+            role: 'editor',
+          }),
+        },
+      },
+    )
+
+    expect(await roleOf(userId, undefined, forged)).toBe('viewer')
+  })
+
+  it('reads the stored role at every connection, so a demotion applies on the next reconnect', async () => {
+    const userId = await alpha.addUser('Eddie')
+    const member = await addTripMember(alpha.scope, {
+      tripId,
+      userId,
+      role: 'editor',
+    })
+    expect(await roleOf(userId)).toBe('editor')
+
+    await updateTripMember(alpha.scope, member.id, { role: 'viewer' })
+
+    expect(await roleOf(userId)).toBe('viewer')
+  })
+
+  it('addresses the room of the resolved trip', async () => {
+    actAs(alpha.ownerUserId)
+    const { namespace } = recordingNamespace()
+    const idFromName = vi.spyOn(namespace, 'idFromName')
+
+    await serveTripRoom(namespace, upgrade(tripId), tripId)
+
+    expect(idFromName).toHaveBeenCalledWith(tripId)
+  })
+
   it('answers 404 for a trip of another workspace and never reaches the namespace', async () => {
     const beta = await harness.seedTenant('beta')
     stubs.ctx = {
@@ -204,6 +282,7 @@ describe('the trip room connection role', () => {
   it('answers 426 to a request that is not a WebSocket upgrade', async () => {
     actAs(alpha.ownerUserId)
     const { namespace } = recordingNamespace()
+    const get = vi.spyOn(namespace, 'get')
 
     const response = await serveTripRoom(
       namespace,
@@ -212,5 +291,6 @@ describe('the trip room connection role', () => {
     )
 
     expect(response.status).toBe(426)
+    expect(get).not.toHaveBeenCalled()
   })
 })

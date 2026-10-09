@@ -20,8 +20,8 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  *
  * The room itself is only reachable through its binding and trusts whatever
  * identity the app Worker asserts, so this handler is the whole authorisation
- * boundary: it re-reads the session, re-reads the membership (never trusting the
- * cookie's cached role), resolves the trip *inside* that tenant — a trip id from
+ * boundary: it re-reads the session, re-reads the caller's stored trip role (never
+ * trusting the cookie's cached role), resolves the trip *inside* that tenant — a trip id from
  * another workspace is a 404 before the socket exists — and only then forwards
  * the upgrade with a signed-in-fact identity attached.
  *
