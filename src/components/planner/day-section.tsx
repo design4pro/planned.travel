@@ -194,7 +194,11 @@ export function DaySection({
           </span>
         </button>
         {weather === undefined || day.dateLabel === null ? null : (
-          <DayWeatherBadge weather={weather} unit={weatherUnit} />
+          <DayWeatherBadge
+            weather={weather}
+            unit={weatherUnit}
+            dateLabel={day.dateLabel}
+          />
         )}
       </div>
 

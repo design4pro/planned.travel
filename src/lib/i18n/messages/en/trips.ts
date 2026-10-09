@@ -529,6 +529,17 @@ const messages = {
   'plan.weather.condition.sleet': 'Sleet',
   'plan.weather.condition.snow': 'Snow',
   'plan.weather.condition.thunder': 'Thunder',
+  'plan.weather.panel.title': 'Weather for {date}',
+  'plan.weather.panel.temperature': 'High / low',
+  'plan.weather.panel.precipitation': 'Precipitation',
+  'plan.weather.panel.probability': '{percent} chance',
+  'plan.weather.panel.wind': 'Wind',
+  'plan.weather.panel.slots': 'Through the day',
+  'plan.weather.panel.slot.night': 'Night',
+  'plan.weather.panel.slot.morning': 'Morning',
+  'plan.weather.panel.slot.afternoon': 'Afternoon',
+  'plan.weather.panel.slot.evening': 'Evening',
+  'plan.weather.attribution.metNorway': 'Forecast data: MET Norway, CC BY 4.0',
 } as const satisfies NamespaceMessages
 
 export default messages

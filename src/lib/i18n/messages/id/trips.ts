@@ -319,6 +319,17 @@ const messages = {
   'plan.weather.condition.sleet': 'Hujan bercampur salju',
   'plan.weather.condition.snow': 'Salju',
   'plan.weather.condition.thunder': 'Petir',
+  'plan.weather.panel.title': 'Cuaca untuk {date}',
+  'plan.weather.panel.temperature': 'Tertinggi / terendah',
+  'plan.weather.panel.precipitation': 'Curah hujan',
+  'plan.weather.panel.probability': 'Peluang {percent}',
+  'plan.weather.panel.wind': 'Angin',
+  'plan.weather.panel.slots': 'Sepanjang hari',
+  'plan.weather.panel.slot.night': 'Dini hari',
+  'plan.weather.panel.slot.morning': 'Pagi',
+  'plan.weather.panel.slot.afternoon': 'Siang',
+  'plan.weather.panel.slot.evening': 'Malam',
+  'plan.weather.attribution.metNorway': 'Data prakiraan: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

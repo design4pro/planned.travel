@@ -208,8 +208,8 @@ export class TripRoom implements DurableObject {
     if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
       return json({ error: 'Expected a WebSocket upgrade' }, 426)
     }
-    // Identity is asserted by the app Worker, which has already authorised the
-    // membership. The room is only reachable through its binding, never publicly.
+    // Identity is asserted by the app Worker, which has already resolved the
+    // caller's stored trip role into the room role. The room is only reachable through its binding, never publicly.
     const identity = decodeTripRoomIdentity(
       request.headers.get(TRIP_ROOM_IDENTITY_HEADER) ??
         new URL(request.url).searchParams.get('identity'),

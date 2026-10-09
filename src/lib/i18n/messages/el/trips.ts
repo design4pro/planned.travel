@@ -335,6 +335,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Χιονόνερο',
   'plan.weather.condition.snow': 'Χιόνι',
   'plan.weather.condition.thunder': 'Καταιγίδα',
+  'plan.weather.panel.title': 'Καιρός για {date}',
+  'plan.weather.panel.temperature': 'Μέγιστη / ελάχιστη',
+  'plan.weather.panel.precipitation': 'Βροχόπτωση',
+  'plan.weather.panel.probability': 'Πιθανότητα {percent}',
+  'plan.weather.panel.wind': 'Άνεμος',
+  'plan.weather.panel.slots': 'Μέσα στην ημέρα',
+  'plan.weather.panel.slot.night': 'Νύχτα',
+  'plan.weather.panel.slot.morning': 'Πρωί',
+  'plan.weather.panel.slot.afternoon': 'Απόγευμα',
+  'plan.weather.panel.slot.evening': 'Βράδυ',
+  'plan.weather.attribution.metNorway':
+    'Δεδομένα πρόγνωσης: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

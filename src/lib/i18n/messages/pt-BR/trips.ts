@@ -337,6 +337,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Chuva com neve',
   'plan.weather.condition.snow': 'Neve',
   'plan.weather.condition.thunder': 'Trovoada',
+  'plan.weather.panel.title': 'Tempo em {date}',
+  'plan.weather.panel.temperature': 'Máxima / mínima',
+  'plan.weather.panel.precipitation': 'Precipitação',
+  'plan.weather.panel.probability': '{percent} de chance',
+  'plan.weather.panel.wind': 'Vento',
+  'plan.weather.panel.slots': 'Ao longo do dia',
+  'plan.weather.panel.slot.night': 'Madrugada',
+  'plan.weather.panel.slot.morning': 'Manhã',
+  'plan.weather.panel.slot.afternoon': 'Tarde',
+  'plan.weather.panel.slot.evening': 'Noite',
+  'plan.weather.attribution.metNorway':
+    'Dados da previsão: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

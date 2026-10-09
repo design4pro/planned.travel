@@ -342,6 +342,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Déšť se sněhem',
   'plan.weather.condition.snow': 'Sníh',
   'plan.weather.condition.thunder': 'Bouřka',
+  'plan.weather.panel.title': 'Počasí na {date}',
+  'plan.weather.panel.temperature': 'Max. / min.',
+  'plan.weather.panel.precipitation': 'Srážky',
+  'plan.weather.panel.probability': 'pravděpodobnost {percent}',
+  'plan.weather.panel.wind': 'Vítr',
+  'plan.weather.panel.slots': 'Během dne',
+  'plan.weather.panel.slot.night': 'Noc',
+  'plan.weather.panel.slot.morning': 'Dopoledne',
+  'plan.weather.panel.slot.afternoon': 'Odpoledne',
+  'plan.weather.panel.slot.evening': 'Večer',
+  'plan.weather.attribution.metNorway':
+    'Data předpovědi: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

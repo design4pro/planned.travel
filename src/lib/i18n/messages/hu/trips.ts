@@ -329,6 +329,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Havas eső',
   'plan.weather.condition.snow': 'Hó',
   'plan.weather.condition.thunder': 'Zivatar',
+  'plan.weather.panel.title': 'Időjárás: {date}',
+  'plan.weather.panel.temperature': 'Max. / min.',
+  'plan.weather.panel.precipitation': 'Csapadék',
+  'plan.weather.panel.probability': '{percent} esély',
+  'plan.weather.panel.wind': 'Szél',
+  'plan.weather.panel.slots': 'A nap folyamán',
+  'plan.weather.panel.slot.night': 'Éjszaka',
+  'plan.weather.panel.slot.morning': 'Délelőtt',
+  'plan.weather.panel.slot.afternoon': 'Délután',
+  'plan.weather.panel.slot.evening': 'Este',
+  'plan.weather.attribution.metNorway':
+    'Előrejelzési adatok: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages
