@@ -4,10 +4,12 @@
  * This is the seam PRD #167's testing decision 4 names — the one place three properties can be
  * seen at all:
  *
- * - **The cache key is identical for two tenants issuing the same query.** The failure it guards
- *   against is the opposite of the usual one. A key that accidentally carried an organization id
- *   would leak nothing; it would silently multiply the provider bill by the number of workspaces,
- *   and nothing on any screen would look wrong.
+ * - **The cache key belongs to one member of one workspace.** HERE Platform Terms §6.4 l and §6.4 h
+ *   forbid one Request serving more than one End User, and ADR 0011 (amended, see ADR 0019) reads an
+ *   End User as every person using the product. A key that dropped either id would serve one
+ *   member's answer to another, and nothing on any screen would look wrong.
+ * - **Only what HERE's caching headers allow is stored, for as long as they say** (Exhibit 2 §1.3),
+ *   and never for longer than 24 hours.
  * - **The meter refuses at the ceiling, and a cache hit does not spend it.** A tally in KV is the
  *   only shape a ceiling on an outbound call can take: a search leaves no row, so `assertQuota()`
  *   has nothing to `COUNT(*)`.
@@ -26,7 +28,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createHereClient } from '../here'
 import { RateCeilingError, rateMeterKey } from '#/server/metering/rate'
 import {
-  TRANSIT_CACHE_TTL_SECONDS,
+  TRANSIT_CACHE_MAX_TTL_SECONDS,
   TransitProviderError,
   searchTransitConnections,
   transitCacheKey,
@@ -34,8 +36,10 @@ import {
 
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
+import type { CachingHeaders } from '#/lib/http-cache'
 import type { Logger } from '#/server/observability'
 import type {
+  TransitAnswer,
   TransitClient,
   TransitConnection,
   TransitQuery,
@@ -49,21 +53,25 @@ function memoryStore(): RateCounterStore & {
   readonly entries: Map<string, string>
   readonly reads: Array<string>
   readonly writes: Array<string>
+  readonly ttls: Map<string, number | undefined>
 } {
   const entries = new Map<string, string>()
   const reads: Array<string> = []
   const writes: Array<string> = []
+  const ttls = new Map<string, number | undefined>()
   return {
     entries,
     reads,
     writes,
+    ttls,
     get(key) {
       reads.push(key)
       return Promise.resolve(entries.get(key) ?? null)
     },
-    put(key, value) {
+    put(key, value, options) {
       writes.push(key)
       entries.set(key, value)
+      ttls.set(key, options?.expirationTtl)
       return Promise.resolve()
     },
   }
@@ -99,15 +107,24 @@ const CONNECTION: TransitConnection = {
   ],
 }
 
+/** Headers that let a shared cache keep an answer for an hour. */
+const FOR_AN_HOUR: CachingHeaders = {
+  cacheControl: 'public, max-age=3600',
+  expires: null,
+  date: 'Thu, 01 Oct 2026 10:00:00 GMT',
+  age: null,
+}
+
 function stubClient(
   connections: ReadonlyArray<TransitConnection> = [CONNECTION],
+  caching: CachingHeaders = FOR_AN_HOUR,
 ): TransitClient & { readonly calls: Array<TransitQuery> } {
   const calls: Array<TransitQuery> = []
   return {
     calls,
-    search(query) {
+    search(query): Promise<TransitAnswer> {
       calls.push(query)
-      return Promise.resolve(connections)
+      return Promise.resolve({ connections, caching })
     },
   }
 }
@@ -147,6 +164,7 @@ function runtime(
     client: stubClient(),
     outbound: outboundWithoutLedger(),
     organizationId: 'org-alpha',
+    userId: 'user-ana',
     ceiling: 250,
     now: () => new Date('2026-09-01T10:00:00Z'),
     ...overrides,
@@ -155,47 +173,68 @@ function runtime(
 
 /* --------------------------------------------------------------- the key */
 
+const ALPHA_ANA = { organizationId: 'org-alpha', userId: 'user-ana' }
+
 describe('transitCacheKey', () => {
   /**
-   * The property ADR 0011 chose this cache for. Two workspaces asking the same question of the
-   * same timetable are one question, and the answer is a public fact about a train.
+   * HERE Platform Terms §6.4 l and §6.4 h: one Request may not serve more than one End User, and
+   * every person using the product is one. So the key belongs to a member of a workspace, and the
+   * same question asked by two members, or by two workspaces, is two questions.
    */
-  it('is the same string for two different tenants asking the same question', () => {
-    // Neither call is handed an organization: the key has nowhere to put one.
-    expect(transitCacheKey(QUERY)).toBe(transitCacheKey({ ...QUERY }))
-    expect(transitCacheKey(QUERY)).not.toContain('org-')
+  it('is a different string for another member of the same workspace', () => {
+    expect(transitCacheKey(ALPHA_ANA, QUERY)).not.toBe(
+      transitCacheKey({ ...ALPHA_ANA, userId: 'user-ben' }, QUERY),
+    )
+  })
+
+  it('is a different string for another workspace', () => {
+    expect(transitCacheKey(ALPHA_ANA, QUERY)).not.toBe(
+      transitCacheKey({ ...ALPHA_ANA, organizationId: 'org-beta' }, QUERY),
+    )
+  })
+
+  it('is the same string for the same member asking the same question twice', () => {
+    expect(transitCacheKey(ALPHA_ANA, QUERY)).toBe(
+      transitCacheKey({ ...ALPHA_ANA }, { ...QUERY }),
+    )
+  })
+
+  it('moves to a new version, so no entry written under the shared key is read again', () => {
+    expect(transitCacheKey(ALPHA_ANA, QUERY).startsWith('transit:v2:')).toBe(
+      true,
+    )
   })
 
   it('answers the same key however the traveller labelled the stops', () => {
     expect(
-      transitCacheKey({
+      transitCacheKey(ALPHA_ANA, {
         ...QUERY,
         origin: { ...QUERY.origin, name: 'Santa Apolónia station' },
         destination: { ...QUERY.destination, name: 'porto campanha' },
       }),
-    ).toBe(transitCacheKey(QUERY))
+    ).toBe(transitCacheKey(ALPHA_ANA, QUERY))
   })
 
   it('answers the same key however the mode filter was ordered', () => {
-    expect(transitCacheKey({ ...QUERY, modes: ['bus', 'train'] })).toBe(
-      transitCacheKey(QUERY),
-    )
-    expect(transitCacheKey({ ...QUERY, modes: ['bus', 'train', 'bus'] })).toBe(
-      transitCacheKey(QUERY),
-    )
+    expect(
+      transitCacheKey(ALPHA_ANA, { ...QUERY, modes: ['bus', 'train'] }),
+    ).toBe(transitCacheKey(ALPHA_ANA, QUERY))
+    expect(
+      transitCacheKey(ALPHA_ANA, { ...QUERY, modes: ['bus', 'train', 'bus'] }),
+    ).toBe(transitCacheKey(ALPHA_ANA, QUERY))
   })
 
   it('separates a different date, a different clock, a different filter and a different stop', () => {
     const keys = new Set([
-      transitCacheKey(QUERY),
-      transitCacheKey({ ...QUERY, date: '2026-10-10' }),
+      transitCacheKey(ALPHA_ANA, QUERY),
+      transitCacheKey(ALPHA_ANA, { ...QUERY, date: '2026-10-10' }),
       // The clock has to be in the key: the provider answers with the services *after* it, so the
       // morning and the evening of one day are two questions. Keyed on the date alone, whichever
-      // was asked first would be served to the whole workspace for the next six hours.
-      transitCacheKey({ ...QUERY, time: '18:15' }),
-      transitCacheKey({ ...QUERY, modes: ['train'] }),
-      transitCacheKey({ ...QUERY, modes: [] }),
-      transitCacheKey({
+      // was asked first would be served to the member for the rest of the entry's life.
+      transitCacheKey(ALPHA_ANA, { ...QUERY, time: '18:15' }),
+      transitCacheKey(ALPHA_ANA, { ...QUERY, modes: ['train'] }),
+      transitCacheKey(ALPHA_ANA, { ...QUERY, modes: [] }),
+      transitCacheKey(ALPHA_ANA, {
         ...QUERY,
         destination: { ...QUERY.destination, lat: 41.2 },
       }),
@@ -203,11 +242,18 @@ describe('transitCacheKey', () => {
     expect(keys.size).toBe(6)
   })
 
-  it('stays inside a KV key, whatever the traveller typed', () => {
-    const key = transitCacheKey({
-      ...QUERY,
-      origin: { ...QUERY.origin, name: 'x'.repeat(4000) },
-    })
+  it('stays inside a KV key, whatever the traveller typed and whatever the ids', () => {
+    // 64 is the longest id `requireTenantContext` accepts; five modes is the longest filter.
+    const key = transitCacheKey(
+      { organizationId: 'o'.repeat(64), userId: 'm'.repeat(64) },
+      {
+        origin: { name: 'x'.repeat(4000), lat: -89.999_9, lng: -179.999_9 },
+        destination: { name: 'y', lat: -89.999_9, lng: -179.999_9 },
+        date: '2026-10-09',
+        time: '08:00',
+        modes: ['train', 'bus', 'tram', 'metro', 'ferry'],
+      },
+    )
     expect(new TextEncoder().encode(key).length).toBeLessThanOrEqual(512)
   })
 })
@@ -225,7 +271,7 @@ describe('searchTransitConnections', () => {
     expect(first.cached).toBe(false)
     expect(first.connections).toEqual([CONNECTION])
     expect(client.calls).toHaveLength(1)
-    expect(cache.entries.has(transitCacheKey(QUERY))).toBe(true)
+    expect(cache.entries.has(transitCacheKey(ALPHA_ANA, QUERY))).toBe(true)
   })
 
   it('answers a second, identical query from the cache without calling the provider', async () => {
@@ -241,8 +287,11 @@ describe('searchTransitConnections', () => {
     expect(client.calls).toHaveLength(1)
   })
 
-  /** The shared cache, seen from the side that matters: β pays nothing for α's question. */
-  it('serves one workspace the answer another workspace paid for', async () => {
+  /**
+   * The shared cache is gone, seen from the side that matters: β's identical question is β's own
+   * Request, and it spends β's own unit.
+   */
+  it('makes a second workspace its own Request and spends its own unit', async () => {
     const cache = memoryStore()
     const counters = memoryStore()
     const client = stubClient()
@@ -256,13 +305,57 @@ describe('searchTransitConnections', () => {
       QUERY,
     )
 
-    expect(beta.cached).toBe(true)
-    expect(client.calls).toHaveLength(1)
-    expect(beta.spent).toBeNull()
-    // One search was made and one was counted, against the workspace that made it.
-    expect([...counters.entries.keys()]).toEqual([
-      rateMeterKey('transit_searches_per_month', 'org-alpha', '2026-09'),
-    ])
+    expect(beta.cached).toBe(false)
+    expect(client.calls).toHaveLength(2)
+    expect(beta.spent).toBe(1)
+    expect([...counters.entries.keys()].sort()).toEqual(
+      [
+        rateMeterKey('transit_searches_per_month', 'org-alpha', '2026-09'),
+        rateMeterKey('transit_searches_per_month', 'org-beta', '2026-09'),
+      ].sort(),
+    )
+    expect(cache.entries.size).toBe(2)
+  })
+
+  it('makes a second member of the same workspace its own Request and spends a unit of the same allowance', async () => {
+    const cache = memoryStore()
+    const counters = memoryStore()
+    const client = stubClient()
+
+    await searchTransitConnections(
+      runtime({ cache, counters, client, userId: 'user-ana' }),
+      QUERY,
+    )
+    const ben = await searchTransitConnections(
+      runtime({ cache, counters, client, userId: 'user-ben' }),
+      QUERY,
+    )
+
+    expect(ben.cached).toBe(false)
+    expect(client.calls).toHaveLength(2)
+    // Both units come out of the workspace's one allowance.
+    expect(ben.spent).toBe(2)
+    expect(cache.entries.size).toBe(2)
+  })
+
+  /** Tenant isolation: an entry written for one owner is invisible to every other. */
+  it('never reads an entry written for another member or another workspace', async () => {
+    const cache = memoryStore()
+    await searchTransitConnections(
+      runtime({ cache, organizationId: 'org-alpha', userId: 'user-ana' }),
+      QUERY,
+    )
+    const written = new Set(cache.entries.keys())
+    cache.reads.length = 0
+
+    for (const other of [
+      { organizationId: 'org-alpha', userId: 'user-ben' },
+      { organizationId: 'org-beta', userId: 'user-ana' },
+    ]) {
+      await searchTransitConnections(runtime({ cache, ...other }), QUERY)
+      expect(cache.reads.some((key) => written.has(key))).toBe(false)
+      cache.reads.length = 0
+    }
   })
 
   it('spends nothing on a cache hit', async () => {
@@ -330,36 +423,29 @@ describe('searchTransitConnections', () => {
   })
 
   /**
-   * The one place the shared cache and the plan boundary meet, and they have to be ordered.
+   * The plan boundary and the cache, and they have to be ordered.
    *
-   * A zero ceiling is not "no searches left this month", it is "this plan does not search" — and
-   * the cache is shared by design, so a paying workspace asking about a popular route leaves an
-   * answer sitting there for six hours. Answered from the cache, a Free workspace would get real
-   * results with `ok: true`, no meter and no refusal. Nothing leaks and nothing is billed, which
-   * is exactly why this needs a test: every symptom the mistake has is invisible.
+   * A zero ceiling is not "no searches left this month", it is "this plan does not search" - and a
+   * workspace downgraded to such a plan still has its members' old entries in the cache. Answered
+   * from them, the workspace would get real results with `ok: true`, no meter and no refusal.
+   * Nothing leaks and nothing is billed, which is exactly why this needs a test.
    */
-  it('refuses a zero ceiling even when another tenant has warmed the cache', async () => {
+  it('refuses a zero ceiling even when the member has a warm entry from before a downgrade', async () => {
     const cache = memoryStore()
     const client = stubClient()
 
-    // A paying workspace asks first, and the answer is now in the shared entry.
-    const paying = await searchTransitConnections(
-      runtime({ cache, client, organizationId: 'org-alpha', ceiling: 250 }),
+    const before = await searchTransitConnections(
+      runtime({ cache, client, ceiling: 250 }),
       QUERY,
     )
-    expect(paying.cached).toBe(false)
+    expect(before.cached).toBe(false)
 
-    const free = runtime({
-      cache,
-      client,
-      organizationId: 'org-free',
-      ceiling: 0,
-    })
-    await expect(searchTransitConnections(free, QUERY)).rejects.toBeInstanceOf(
-      RateCeilingError,
-    )
+    const downgraded = runtime({ cache, client, ceiling: 0 })
+    await expect(
+      searchTransitConnections(downgraded, QUERY),
+    ).rejects.toBeInstanceOf(RateCeilingError)
     // And the refusal is a gate rather than a race: the entry is still there for the plan that
-    // may read it.
+    // may read it again.
     expect(
       (await searchTransitConnections(runtime({ cache, client }), QUERY))
         .cached,
@@ -369,7 +455,10 @@ describe('searchTransitConnections', () => {
   it('treats a cache entry it cannot parse as a miss rather than as an answer', async () => {
     const cache = memoryStore()
     const client = stubClient()
-    await cache.put(transitCacheKey(QUERY), '{"connections":[{"id":42}]}')
+    await cache.put(
+      transitCacheKey(ALPHA_ANA, QUERY),
+      '{"connections":[{"id":42}]}',
+    )
 
     const result = await searchTransitConnections(
       runtime({ cache, client }),
@@ -407,9 +496,93 @@ describe('searchTransitConnections', () => {
     expect((error as TransitProviderError).reason).toBe('unreachable')
   })
 
-  it('caches for a bounded window rather than for ever', () => {
-    expect(TRANSIT_CACHE_TTL_SECONDS).toBeGreaterThan(0)
-    expect(TRANSIT_CACHE_TTL_SECONDS).toBeLessThanOrEqual(86_400)
+  /**
+   * Exhibit 2 §1.3: nothing is stored "except as explicitly allowed by the caching headers". The
+   * fixtures are the cases the proxy has to tell apart; the arithmetic is `http-cache`'s own.
+   */
+  describe('what the caching headers allow', () => {
+    const KEY = transitCacheKey(ALPHA_ANA, QUERY)
+
+    async function stored(
+      caching: Partial<CachingHeaders>,
+      connections: ReadonlyArray<TransitConnection> = [CONNECTION],
+    ): Promise<ReturnType<typeof memoryStore>> {
+      const cache = memoryStore()
+      await searchTransitConnections(
+        runtime({
+          cache,
+          client: stubClient(connections, { ...FOR_AN_HOUR, ...caching }),
+        }),
+        QUERY,
+      )
+      return cache
+    }
+
+    it('stores an answer for the lifetime the headers state', async () => {
+      const cache = await stored({ cacheControl: 'public, max-age=3600' })
+      expect(cache.ttls.get(KEY)).toBe(3600)
+    })
+
+    it('takes s-maxage over max-age and takes Age off the lifetime', async () => {
+      const cache = await stored({
+        cacheControl: 'max-age=7200, s-maxage=900',
+        age: '100',
+      })
+      expect(cache.ttls.get(KEY)).toBe(800)
+    })
+
+    it('never keeps an answer longer than 24 hours, whatever the headers allow', async () => {
+      const cache = await stored({
+        cacheControl: `max-age=${30 * 24 * 60 * 60}`,
+      })
+      expect(TRANSIT_CACHE_MAX_TTL_SECONDS).toBe(24 * 60 * 60)
+      expect(cache.ttls.get(KEY)).toBe(TRANSIT_CACHE_MAX_TTL_SECONDS)
+    })
+
+    it.each([
+      ['no-store', { cacheControl: 'no-store' }],
+      ['no-cache', { cacheControl: 'no-cache, max-age=3600' }],
+      ['private', { cacheControl: 'private, max-age=3600' }],
+      ['no freshness at all', { cacheControl: null }],
+      ['a lifetime under the KV minimum', { cacheControl: 'max-age=59' }],
+      [
+        'a lifetime Age has used up',
+        { cacheControl: 'max-age=300', age: '300' },
+      ],
+    ])('does not store an answer with %s', async (_label, caching) => {
+      const cache = await stored(caching)
+      expect(cache.entries.size).toBe(0)
+    })
+
+    it('still returns the answer it did not store', async () => {
+      const deps = runtime({
+        client: stubClient([CONNECTION], {
+          ...FOR_AN_HOUR,
+          cacheControl: 'no-store',
+        }),
+      })
+      const result = await searchTransitConnections(deps, QUERY)
+      expect(result.connections).toEqual([CONNECTION])
+      expect(result.cached).toBe(false)
+    })
+
+    it('spends a unit again for a question it was not allowed to keep', async () => {
+      const client = stubClient([CONNECTION], {
+        ...FOR_AN_HOUR,
+        cacheControl: 'no-store',
+      })
+      const deps = runtime({ client })
+      await searchTransitConnections(deps, QUERY)
+      const second = await searchTransitConnections(deps, QUERY)
+      expect(second.cached).toBe(false)
+      expect(second.spent).toBe(2)
+      expect(client.calls).toHaveLength(2)
+    })
+
+    it('does not store an empty answer even when the headers allow it', async () => {
+      const cache = await stored({}, [])
+      expect(cache.entries.size).toBe(0)
+    })
   })
 })
 
@@ -461,6 +634,7 @@ const HERE_RESPONSE = {
 function jsonFetch(
   body: unknown,
   status = 200,
+  headers: Record<string, string> = {},
 ): { fetch: typeof fetch; readonly urls: Array<string> } {
   const urls: Array<string> = []
   const impl = ((input: RequestInfo | URL) => {
@@ -468,7 +642,7 @@ function jsonFetch(
     return Promise.resolve(
       new Response(JSON.stringify(body), {
         status,
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...headers },
       }),
     )
   }) as typeof fetch
@@ -483,7 +657,7 @@ describe('the HERE client', () => {
       fetch: transport.fetch,
     })
 
-    const [connection] = await client.search(QUERY)
+    const [connection] = (await client.search(QUERY)).connections
 
     expect(connection.id).toBe('R1')
     // The wall clock at the place it applies to, with the provider's offset dropped.
@@ -502,6 +676,43 @@ describe('the HERE client', () => {
         at: '2026-10-09T08:44:00',
       },
     ])
+  })
+
+  /**
+   * The seam that makes Exhibit 2 §1.3 enforceable: the client used to drop the response headers,
+   * so nothing downstream could honour them.
+   */
+  it('hands the response’s caching headers to the proxy beside the connections', async () => {
+    const transport = jsonFetch(HERE_RESPONSE, 200, {
+      'cache-control': 'public, max-age=300',
+      expires: 'Thu, 01 Oct 2026 10:05:00 GMT',
+      date: 'Thu, 01 Oct 2026 10:00:00 GMT',
+      age: '12',
+    })
+    const answer = await createHereClient({
+      apiKey: 'secret',
+      fetch: transport.fetch,
+    }).search(QUERY)
+
+    expect(answer.caching).toEqual({
+      cacheControl: 'public, max-age=300',
+      expires: 'Thu, 01 Oct 2026 10:05:00 GMT',
+      date: 'Thu, 01 Oct 2026 10:00:00 GMT',
+      age: '12',
+    })
+    expect(answer.connections).toHaveLength(1)
+  })
+
+  it('reports a response with no caching headers as one that may not be stored', async () => {
+    const { fetch: transport } = jsonFetch(HERE_RESPONSE)
+    const answer = await createHereClient({
+      apiKey: 'secret',
+      fetch: transport,
+    }).search(QUERY)
+
+    expect(answer.caching.cacheControl).toBeNull()
+    expect(answer.caching.expires).toBeNull()
+    expect(answer.caching.age).toBeNull()
   })
 
   it('asks for the question it was given, and for the detail the list expands into', async () => {
@@ -638,7 +849,7 @@ describe('the HERE client', () => {
  *
  * The second case is the one that rots. `./here` says nothing outside this directory imports it,
  * and a server function reaching for `createHereClient` to wire a key would be a plausible-looking
- * edit that quietly makes the proxy optional — the cache, the ceiling and the shared key with it.
+ * edit that quietly makes the proxy optional — the cache, the ceiling and the per-member key with it.
  */
 describe('the transit directory keeps its bindings in one file', () => {
   const DIRECTORY = fileURLToPath(new URL('../', import.meta.url))
