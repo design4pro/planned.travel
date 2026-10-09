@@ -316,6 +316,17 @@ const messages = {
   'plan.weather.condition.sleet': 'Mưa tuyết',
   'plan.weather.condition.snow': 'Tuyết',
   'plan.weather.condition.thunder': 'Dông',
+  'plan.weather.panel.title': 'Thời tiết ngày {date}',
+  'plan.weather.panel.temperature': 'Cao nhất / thấp nhất',
+  'plan.weather.panel.precipitation': 'Lượng mưa',
+  'plan.weather.panel.probability': 'Xác suất {percent}',
+  'plan.weather.panel.wind': 'Gió',
+  'plan.weather.panel.slots': 'Trong ngày',
+  'plan.weather.panel.slot.night': 'Đêm',
+  'plan.weather.panel.slot.morning': 'Sáng',
+  'plan.weather.panel.slot.afternoon': 'Chiều',
+  'plan.weather.panel.slot.evening': 'Tối',
+  'plan.weather.attribution.metNorway': 'Dữ liệu dự báo: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

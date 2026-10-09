@@ -348,6 +348,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Мокрый снег',
   'plan.weather.condition.snow': 'Снег',
   'plan.weather.condition.thunder': 'Гроза',
+  'plan.weather.panel.title': 'Погода на {date}',
+  'plan.weather.panel.temperature': 'Макс. / мин.',
+  'plan.weather.panel.precipitation': 'Осадки',
+  'plan.weather.panel.probability': 'вероятность {percent}',
+  'plan.weather.panel.wind': 'Ветер',
+  'plan.weather.panel.slots': 'В течение дня',
+  'plan.weather.panel.slot.night': 'Ночь',
+  'plan.weather.panel.slot.morning': 'Утро',
+  'plan.weather.panel.slot.afternoon': 'День',
+  'plan.weather.panel.slot.evening': 'Вечер',
+  'plan.weather.attribution.metNorway':
+    'Данные прогноза: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

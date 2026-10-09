@@ -357,6 +357,17 @@ const messages = {
   'plan.weather.condition.sleet': 'مطر ثلجي',
   'plan.weather.condition.snow': 'ثلج',
   'plan.weather.condition.thunder': 'عاصفة رعدية',
+  'plan.weather.panel.title': 'الطقس ليوم {date}',
+  'plan.weather.panel.temperature': 'العظمى / الصغرى',
+  'plan.weather.panel.precipitation': 'هطول الأمطار',
+  'plan.weather.panel.probability': 'احتمال {percent}',
+  'plan.weather.panel.wind': 'الرياح',
+  'plan.weather.panel.slots': 'على مدار اليوم',
+  'plan.weather.panel.slot.night': 'ليلًا',
+  'plan.weather.panel.slot.morning': 'صباحًا',
+  'plan.weather.panel.slot.afternoon': 'بعد الظهر',
+  'plan.weather.panel.slot.evening': 'مساءً',
+  'plan.weather.attribution.metNorway': 'بيانات التنبؤ: MET Norway، CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

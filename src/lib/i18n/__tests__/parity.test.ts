@@ -102,6 +102,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'modules.transports.mode.bus',
     'modules.transports.mode.taxi',
     'trips.plan.note.icon.ticket',
+    'trips.plan.weather.panel.wind',
   ],
   es: [
     'modules.transports.mode.metro',
@@ -144,6 +145,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'modules.transports.mode.taxi',
     'modules.transports.mode.tram',
     'settings.billing.orders.document',
+    'trips.plan.weather.panel.wind',
   ],
   pl: ['modules.transports.mode.metro'],
   sv: ['marketing.legal.badge.version', 'modules.transports.mode.taxi'],

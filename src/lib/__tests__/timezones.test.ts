@@ -22,6 +22,7 @@ import { describe, expect, it } from 'vitest'
 import { FALLBACK_TIME_ZONE, resolveTimeZone } from '#/lib/time'
 import {
   TIME_ZONES,
+  hourIn,
   isKnownTimeZone,
   localClockLabel,
   timeZoneOffsetLabel,
@@ -157,5 +158,30 @@ describe('the local-clock label under a time input', () => {
         date: '2026-07-15',
       }),
     ).toBe('14:05 · Mars/Olympus_Mons (UTC)')
+  })
+})
+
+describe('hourIn', () => {
+  it('reads the hour of an instant on the wall clock of the zone', () => {
+    // 22:00Z on 13 October is midnight in Oslo (UTC+2) and 11:00 the next day in Auckland (UTC+13).
+    expect(hourIn('2026-10-13T22:00:00Z', 'Europe/Oslo')).toBe(0)
+    expect(hourIn('2026-10-13T22:00:00Z', 'Pacific/Auckland')).toBe(11)
+    expect(hourIn('2026-10-13T22:00:00Z', 'UTC')).toBe(22)
+  })
+
+  it('answers 0, never 24, for the first hour of a day', () => {
+    expect(hourIn('2026-10-14T00:30:00Z', 'UTC')).toBe(0)
+  })
+
+  it('follows a zone’s own offset on the date, not a fixed one', () => {
+    // Oslo is UTC+1 in winter and UTC+2 in summer.
+    expect(hourIn('2026-01-15T12:00:00Z', 'Europe/Oslo')).toBe(13)
+    expect(hourIn('2026-07-15T12:00:00Z', 'Europe/Oslo')).toBe(14)
+  })
+
+  it('reads a half-hour zone by its whole hour', () => {
+    // 18:30Z is 00:00 in Kolkata (UTC+5:30), so the hour is 0 and the day has just begun.
+    expect(hourIn('2026-10-13T18:30:00Z', 'Asia/Kolkata')).toBe(0)
+    expect(hourIn('2026-10-13T18:29:00Z', 'Asia/Kolkata')).toBe(23)
   })
 })

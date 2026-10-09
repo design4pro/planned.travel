@@ -328,6 +328,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Natte sneeuw',
   'plan.weather.condition.snow': 'Sneeuw',
   'plan.weather.condition.thunder': 'Onweer',
+  'plan.weather.panel.title': 'Weer op {date}',
+  'plan.weather.panel.temperature': 'Hoogste / laagste',
+  'plan.weather.panel.precipitation': 'Neerslag',
+  'plan.weather.panel.probability': '{percent} kans',
+  'plan.weather.panel.wind': 'Wind',
+  'plan.weather.panel.slots': 'Gedurende de dag',
+  'plan.weather.panel.slot.night': 'Nacht',
+  'plan.weather.panel.slot.morning': 'Ochtend',
+  'plan.weather.panel.slot.afternoon': 'Middag',
+  'plan.weather.panel.slot.evening': 'Avond',
+  'plan.weather.attribution.metNorway':
+    'Voorspellingsgegevens: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

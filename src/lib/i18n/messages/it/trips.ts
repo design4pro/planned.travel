@@ -342,6 +342,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Nevischio',
   'plan.weather.condition.snow': 'Neve',
   'plan.weather.condition.thunder': 'Temporale',
+  'plan.weather.panel.title': 'Meteo del {date}',
+  'plan.weather.panel.temperature': 'Massima / minima',
+  'plan.weather.panel.precipitation': 'Precipitazioni',
+  'plan.weather.panel.probability': '{percent} di probabilità',
+  'plan.weather.panel.wind': 'Vento',
+  'plan.weather.panel.slots': 'Nel corso della giornata',
+  'plan.weather.panel.slot.night': 'Notte',
+  'plan.weather.panel.slot.morning': 'Mattina',
+  'plan.weather.panel.slot.afternoon': 'Pomeriggio',
+  'plan.weather.panel.slot.evening': 'Sera',
+  'plan.weather.attribution.metNorway':
+    'Dati della previsione: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

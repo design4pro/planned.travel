@@ -22,6 +22,7 @@ import {
   subscribeTenant,
 } from '#/server/repos/__tests__/harness'
 import { createMetNorwayClient } from '#/server/weather/met-norway'
+import { OSLO_FORECAST_DETAIL } from '#/server/weather/__tests__/locationforecast-detail.fixture'
 import { OSLO_FORECAST } from '#/server/weather/__tests__/locationforecast.fixture'
 
 import type { OutboundRuntime } from '#/server/metering/outbound'
@@ -57,7 +58,14 @@ interface Ports {
 }
 
 /** An in-memory runtime over a provider that answers with the recording, or fails. */
-function ports(options: { readonly failing?: boolean } = {}): Ports {
+function ports(
+  options: {
+    readonly failing?: boolean
+    readonly recording?: unknown
+    readonly now?: Date
+  } = {},
+): Ports {
+  const at = options.now ?? NOW
   const requested: Array<string> = []
   const entries = new Map<string, string>()
   const store = {
@@ -72,7 +80,7 @@ function ports(options: { readonly failing?: boolean } = {}): Ports {
     return options.failing === true
       ? Promise.reject(new TypeError('offline'))
       : Promise.resolve(
-          new Response(JSON.stringify(OSLO_FORECAST), {
+          new Response(JSON.stringify(options.recording ?? OSLO_FORECAST), {
             status: 200,
             headers: { Expires: 'Thu, 08 Oct 2026 19:29:27 GMT' },
           }),
@@ -90,11 +98,11 @@ function ports(options: { readonly failing?: boolean } = {}): Ports {
         warn: () => undefined,
         error: () => undefined,
       } as unknown as OutboundRuntime['logger'],
-      now: () => NOW,
+      now: () => at,
     },
     organizationId: runtime.organizationId,
     ceiling: runtime.ceiling,
-    now: () => NOW,
+    now: () => at,
     logger: null,
     metNorway: createMetNorwayClient({
       fetch: fake as unknown as typeof fetch,
@@ -179,6 +187,39 @@ describe('loadTripWeather', () => {
     expect(first.reading.tempMaxC).toBeGreaterThan(first.reading.tempMinC)
     // One call serves every forecast day at the same location.
     expect(port.requested).toHaveLength(1)
+  })
+
+  it('carries the fuller reading across the wire: wind, precipitation and the day’s slots', async () => {
+    // A recording that carries wind and amounts, read on the day it was taken.
+    const result = await loadTripWeather(
+      owner,
+      { tripId },
+      ports({
+        recording: OSLO_FORECAST_DETAIL,
+        now: new Date('2026-10-09T13:35:00Z'),
+      }),
+    )
+
+    const [past, today, tomorrow] = result.days
+    expect(past.status).toBe('none')
+    if (today.status !== 'ok' || tomorrow.status !== 'ok') {
+      throw new Error('Today and tomorrow are inside the recording.')
+    }
+    expect(tomorrow.reading.windMs).toBeGreaterThan(0)
+    expect(tomorrow.reading.precipitationMm).toBeGreaterThanOrEqual(0)
+    expect(tomorrow.reading.slots?.map((slot) => slot.from)).toEqual([
+      '00:00',
+      '06:00',
+      '12:00',
+      '18:00',
+    ])
+    // The hours of today already gone are not drawn as empty slots.
+    expect(today.reading.slots?.map((slot) => slot.from)).toEqual([
+      '12:00',
+      '18:00',
+    ])
+    // Nothing about who looked a point up, and nothing about where it is.
+    expect(JSON.stringify(result)).not.toMatch(/fetchedAt|lat|lng|59\.9/)
   })
 
   it('lets a viewer of the trip read it', async () => {

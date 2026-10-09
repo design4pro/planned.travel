@@ -70,20 +70,20 @@ describe('a cache every workspace shares holds nothing about one of them', () =>
   it('builds a key from a kind and a coordinate, and nothing else', () => {
     expect(weather.forecastCacheKey.length).toBe(2)
     expect(weather.forecastCacheKey(59.9139, 10.7522)).toBe(
-      'wx:v1:forecast:59.9139:10.7522',
+      'wx:v2:forecast:59.9139:10.7522',
     )
     expect(weather.forecastCacheKey(-33.868_82, 151.209_3)).toBe(
-      'wx:v1:forecast:-33.8688:151.2093',
+      'wx:v2:forecast:-33.8688:151.2093',
     )
   })
 
   it('builds a failure key from a provider and a coordinate, and nothing else', () => {
     expect(weather.failureCacheKey.length).toBe(3)
     expect(weather.failureCacheKey('met-norway', 59.9139, 10.7522)).toBe(
-      'wx:v1:fail:met-norway:59.9139:10.7522',
+      'wx:v2:fail:met-norway:59.9139:10.7522',
     )
     expect(weather.failureCacheKey('nasa-power', 59.9139, 10.7522)).toBe(
-      'wx:v1:fail:nasa-power:59.9139:10.7522',
+      'wx:v2:fail:nasa-power:59.9139:10.7522',
     )
   })
 

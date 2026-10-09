@@ -322,6 +322,17 @@ const messages = {
   'plan.weather.condition.sleet': 'Snöblandat regn',
   'plan.weather.condition.snow': 'Snö',
   'plan.weather.condition.thunder': 'Åska',
+  'plan.weather.panel.title': 'Väder {date}',
+  'plan.weather.panel.temperature': 'Högsta / lägsta',
+  'plan.weather.panel.precipitation': 'Nederbörd',
+  'plan.weather.panel.probability': '{percent} chans',
+  'plan.weather.panel.wind': 'Vind',
+  'plan.weather.panel.slots': 'Under dagen',
+  'plan.weather.panel.slot.night': 'Natt',
+  'plan.weather.panel.slot.morning': 'Förmiddag',
+  'plan.weather.panel.slot.afternoon': 'Eftermiddag',
+  'plan.weather.panel.slot.evening': 'Kväll',
+  'plan.weather.attribution.metNorway': 'Prognosdata: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

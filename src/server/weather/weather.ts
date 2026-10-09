@@ -54,10 +54,11 @@
 import { z } from 'zod'
 
 import { dayKeyIn, resolveTimeZone, todayKeyIn } from '#/lib/time'
+import { hourIn } from '#/lib/timezones'
 import { callProvider } from '#/server/metering/outbound'
 import { spendRateUnits } from '#/server/metering/rate'
 
-import type { DayReading } from '#/lib/weather'
+import type { DayReading, DaySlot } from '#/lib/weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
 
@@ -91,6 +92,12 @@ export interface ForecastStep {
   readonly tempC: number
   /** The condition for the stretch after this step, day/night suffix removed; `null` when none. */
   readonly symbol: string | null
+  /** Wind speed at the step, metres per second; `null` when the step carries none. */
+  readonly windMs: number | null
+  /** Millimetres in the stretch after this step - the hourly figure, else the six-hourly one. */
+  readonly precipitationMm: number | null
+  /** Chance of precipitation after this step, 0 to 100; `null` when the provider states none. */
+  readonly precipitationProbability: number | null
 }
 
 export interface ForecastFetch {
@@ -201,7 +208,7 @@ const FORECAST_PROVIDER = 'met-norway'
 /* --------------------------------------------------------------------- keys */
 
 /** Bumped when a stored shape changes; the previous prefix is left to expire on its own. */
-export const WEATHER_CACHE_VERSION = 'v1'
+export const WEATHER_CACHE_VERSION = 'v2'
 
 /**
  * A coordinate cut to four decimals, as the provider's terms require and as every key uses.
@@ -214,13 +221,13 @@ export function roundCoordinate(value: number): string {
   return Number(fixed) === 0 ? '0.0000' : fixed
 }
 
-/** `wx:v1:forecast:{lat}:{lng}` - a kind and a coordinate, and nothing about who asked. */
+/** `wx:v2:forecast:{lat}:{lng}` - a kind and a coordinate, and nothing about who asked. */
 export function forecastCacheKey(lat: number, lng: number): string {
   return `wx:${WEATHER_CACHE_VERSION}:forecast:${roundCoordinate(lat)}:${roundCoordinate(lng)}`
 }
 
 /**
- * `wx:v1:fail:{provider}:{lat}:{lng}` - the provider, a coordinate and nothing about who asked.
+ * `wx:v2:fail:{provider}:{lat}:{lng}` - the provider, a coordinate and nothing about who asked.
  *
  * Per provider, so one vendor's outage never hides the days another vendor can still answer, and
  * not per kind, because an outage is the vendor's. A new provider needs a new argument and nothing
@@ -241,11 +248,11 @@ export function stripDayNight(code: string): string {
 
 /* ------------------------------------------------------------------ the days */
 
-interface ForecastDay {
-  readonly tempMinC: number
-  readonly tempMaxC: number
-  readonly symbol: string | null
-}
+type ForecastDay = Omit<DayReading, 'kind' | 'source'>
+
+/** A day is read in four slots of this many hours. */
+const SLOT_HOURS = 6
+const SLOT_COUNT = 24 / SLOT_HOURS
 
 interface GroupedForecast {
   readonly days: ReadonlyMap<string, ForecastDay>
@@ -276,28 +283,12 @@ export function groupForecastDays(
   timeZone: string,
 ): GroupedForecast {
   const zone = resolveTimeZone(timeZone)
-  const days = new Map<
-    string,
-    { min: number; max: number; symbols: Map<string, number> }
-  >()
+  const byDate = new Map<string, Array<ForecastStep>>()
   let lastDate: string | null = null
 
   for (const step of series) {
     const date = dayKeyIn(step.time, zone)
-    const bucket = days.get(date) ?? {
-      min: step.tempC,
-      max: step.tempC,
-      symbols: new Map<string, number>(),
-    }
-    bucket.min = Math.min(bucket.min, step.tempC)
-    bucket.max = Math.max(bucket.max, step.tempC)
-    if (step.symbol !== null) {
-      bucket.symbols.set(
-        step.symbol,
-        (bucket.symbols.get(step.symbol) ?? 0) + 1,
-      )
-    }
-    days.set(date, bucket)
+    byDate.set(date, [...(byDate.get(date) ?? []), step])
     if (lastDate === null || date > lastDate) {
       lastDate = date
     }
@@ -305,17 +296,110 @@ export function groupForecastDays(
 
   return {
     days: new Map(
-      [...days].map(([date, bucket]) => [
-        date,
-        {
-          tempMinC: bucket.min,
-          tempMaxC: bucket.max,
-          symbol: dominant(bucket.symbols),
-        },
-      ]),
+      [...byDate].map(([date, steps]) => [date, readDay(steps, zone)]),
     ),
     lastCompleteDate: lastDate === null ? null : shiftDate(lastDate, -1),
   }
+}
+
+/** The largest of the figures a day has, or `null` when it has none. */
+function highest(values: ReadonlyArray<number | null>): number | null {
+  const present = values.filter((value): value is number => value !== null)
+  return present.length === 0 ? null : Math.max(...present)
+}
+
+/** One decimal, which is what the provider states and what a reader can use; no float dust. */
+function tenth(value: number): number {
+  return Math.round(value * 10) / 10
+}
+
+/** One local day's steps read into the figures the planner draws. */
+function readDay(
+  steps: ReadonlyArray<ForecastStep>,
+  zone: string,
+): ForecastDay {
+  const temperatures = steps.map((step) => step.tempC)
+  const rain = steps.flatMap((step) =>
+    step.precipitationMm === null ? [] : [step.precipitationMm],
+  )
+  const wind = highest(steps.map((step) => step.windMs))
+  const symbols = new Map<string, number>()
+  for (const step of steps) {
+    if (step.symbol !== null) {
+      symbols.set(step.symbol, (symbols.get(step.symbol) ?? 0) + 1)
+    }
+  }
+  return {
+    tempMinC: Math.min(...temperatures),
+    tempMaxC: Math.max(...temperatures),
+    symbol: dominant(symbols),
+    precipitationMm:
+      rain.length === 0 ? null : tenth(rain.reduce((a, b) => a + b, 0)),
+    precipitationProbability: highest(
+      steps.map((step) => step.precipitationProbability),
+    ),
+    windMs: wind === null ? null : tenth(wind),
+    slots: slotsOf(steps, zone),
+  }
+}
+
+/**
+ * The day's steps cut into night, morning, afternoon and evening by local hour.
+ *
+ * A slot's temperature is the mean of the steps inside it. A slot that no step is inside or covers
+ * is left out, never drawn with a value from its neighbour - which is how today, once the morning
+ * has gone, has two.
+ *
+ * A step's sky describes the six hours that start at the step, and past the hourly stretch the
+ * steps sit at 00, 06, 12 and 18 UTC, which is not the start of a local slot in most zones (05:00,
+ * 11:00 and so on in Los Angeles). So the slot takes the sky of the step whose six hours overlap it
+ * most, and none when that is less than half of the slot: a slot is never given the sky of other
+ * hours than its own.
+ */
+function slotsOf(
+  steps: ReadonlyArray<ForecastStep>,
+  zone: string,
+): ReadonlyArray<DaySlot> | null {
+  const starts = steps.map((step) => hourIn(step.time, zone))
+  const slots: Array<DaySlot> = []
+  for (let index = 0; index < SLOT_COUNT; index += 1) {
+    const slotStart = index * SLOT_HOURS
+    const inSlot = steps.filter(
+      (_, at) => Math.floor(starts[at] / SLOT_HOURS) === index,
+    )
+    const covering = coveringStep(steps, starts, slotStart)
+    const sources =
+      inSlot.length > 0 ? inSlot : covering === null ? [] : [covering]
+    if (sources.length === 0) {
+      continue
+    }
+    slots.push({
+      from: `${String(slotStart).padStart(2, '0')}:00`,
+      symbol: covering?.symbol ?? null,
+      tempC: tenth(
+        sources.reduce((sum, step) => sum + step.tempC, 0) / sources.length,
+      ),
+    })
+  }
+  return slots.length === 0 ? null : slots
+}
+
+/** The step whose six hours cover at least half of the slot starting at `slotStart`, most first. */
+function coveringStep(
+  steps: ReadonlyArray<ForecastStep>,
+  starts: ReadonlyArray<number>,
+  slotStart: number,
+): ForecastStep | null {
+  let best: ForecastStep | null = null
+  let bestOverlap = 0
+  for (const [at, step] of steps.entries()) {
+    const overlap = Math.max(0, SLOT_HOURS - Math.abs(starts[at] - slotStart))
+    if (overlap > bestOverlap) {
+      best = step
+      bestOverlap = overlap
+    }
+  }
+  return bestOverlap * 2 >= SLOT_HOURS ? best : null
 }
 
 /** The most frequent symbol; the first one seen wins a tie, so the answer is deterministic. */
@@ -334,16 +418,19 @@ function dominant(counts: ReadonlyMap<string, number>): string | null {
 /* ---------------------------------------------------------------- the cache */
 
 const entrySchema = z.object({
-  v: z.literal(1),
+  v: z.literal(2),
   fetchedAt: z.string(),
   expires: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
-  // Entries stored before the validator was kept have none; they are re-fetched unconditionally.
+  // A provider that sent no `Last-Modified` leaves none; such an entry is re-fetched unconditionally.
   lastModified: z.string().nullable().default(null),
   series: z.array(
     z.object({
       time: z.string(),
       tempC: z.number(),
       symbol: z.string().nullable(),
+      windMs: z.number().nullable(),
+      precipitationMm: z.number().nullable(),
+      precipitationProbability: z.number().nullable(),
     }),
   ),
 })
@@ -388,7 +475,7 @@ async function writeEntry(
       ? stated
       : new Date(at.getTime() + MIN_FRESH_MS)
   const entry: ForecastEntry = {
-    v: 1,
+    v: 2,
     fetchedAt: at.toISOString(),
     expires: expires.toISOString(),
     lastModified: fetched.lastModified,
@@ -794,9 +881,7 @@ export async function resolveTripWeather(
       reading: {
         kind: 'forecast',
         source: 'met-norway',
-        tempMinC: day.tempMinC,
-        tempMaxC: day.tempMaxC,
-        symbol: day.symbol,
+        ...day,
       },
     }
   })
