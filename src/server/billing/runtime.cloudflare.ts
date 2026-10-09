@@ -27,8 +27,8 @@ import { getDb } from '#/server/db/client'
 import {
   countMembers,
   countPendingInvitations,
+  countTripsAgainstPlan,
   getStorageUsage,
-  tripsRepository,
 } from '#/server/repos'
 import type { TenantScope } from '#/server/repos'
 import { requestOutboundRuntime } from '#/server/metering/bindings'
@@ -102,7 +102,7 @@ export function createUsageReader(scope: TenantScope): UsageReader {
       const [members, invitations, trips, storage] = await Promise.all([
         countMembers(scope),
         countPendingInvitations(scope),
-        tripsRepository.count(scope),
+        countTripsAgainstPlan(scope),
         getStorageUsage(scope),
       ])
 

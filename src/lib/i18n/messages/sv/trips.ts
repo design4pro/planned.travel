@@ -306,6 +306,22 @@ const messages = {
   'people.error.guestLimit':
     'En resa rymmer högst {limit} gäster, eftersom en längre lista gör deltagarväljarna och kostnadsfördelningen svåra att läsa',
   'people.error.guestMergeTarget': 'Välj någon som redan är med på resan',
+  'plan.weather.badge.forecast':
+    'Prognos: {condition}, högst {max}, lägst {min}',
+  'plan.weather.badge.forecastNoCondition': 'Prognos: högst {max}, lägst {min}',
+  'plan.weather.badge.unavailable':
+    'Vädret är inte tillgängligt för den här dagen',
+  'plan.weather.badge.loading': 'Läser in vädret',
+  'plan.weather.condition.clear': 'Klart',
+  'plan.weather.condition.fair': 'Fint',
+  'plan.weather.condition.partlyCloudy': 'Delvis molnigt',
+  'plan.weather.condition.cloudy': 'Molnigt',
+  'plan.weather.condition.fog': 'Dimma',
+  'plan.weather.condition.rain': 'Regn',
+  'plan.weather.condition.heavyRain': 'Kraftigt regn',
+  'plan.weather.condition.sleet': 'Snöblandat regn',
+  'plan.weather.condition.snow': 'Snö',
+  'plan.weather.condition.thunder': 'Åska',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -90,12 +90,22 @@ import {
   createBudgetItem,
   createExpense,
   createSettlement,
+  deleteBudgetItem,
+  deleteExpense,
+  deleteSettlement,
   expenseSharesRepository,
   expensesRepository,
   getExpense,
+  getExpenseWithShares,
   getMemberBalances,
   getTripSpendSummary,
+  listBudgetItems,
+  listSettlements,
+  markShareSettled,
+  setExpenseShares,
   settlementsRepository,
+  updateBudgetItem,
+  updateExpense,
 } from '../expenses'
 import { getStorageUsage, recordFile, tripFilesRepository } from '../files'
 import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
@@ -111,6 +121,7 @@ import {
   getTripItinerary,
   listDayAssignments,
   listTripAccommodations,
+  readDayLocations,
   reorderDayTimelines,
   setAssignmentParticipants,
   updateAccommodation,
@@ -1355,6 +1366,7 @@ describe('tenant isolation', () => {
             },
           }),
         () => getTripItinerary(scope, beta.tripId),
+        () => readDayLocations(scope, beta.tripId),
         () => getTripSpendSummary(scope, beta.tripId),
         () => getMemberBalances(scope, beta.tripId),
         () => updateTrip(scope, beta.tripId, { title: 'Stolen title' }),
@@ -1740,6 +1752,22 @@ describe('tenant isolation', () => {
       expect(itinerary[0]?.accommodations).toHaveLength(1)
       expect(itinerary[2]?.accommodations).toHaveLength(1)
       expect(itinerary[0]?.stops[0]?.participantUserIds).toHaveLength(2)
+    })
+
+    it('reads day locations only for the tenant’s own trip', async () => {
+      const own = await readDayLocations(alpha.tenant.scope, alpha.tripId)
+      // The positive control: the seeded stop is a place with both coordinates.
+      expect(own).toHaveLength(3)
+      expect(own[0]?.location).toEqual({ lat: 38.7167, lng: -9.1333 })
+
+      expect(
+        await captureError(() =>
+          readDayLocations(alpha.tenant.scope, beta.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      const theirs = await readDayLocations(beta.tenant.scope, beta.tripId)
+      expect(theirs.map((row) => row.dayId)).toContain(beta.dayId)
+      expect(theirs.map((row) => row.dayId)).not.toContain(alpha.dayId)
     })
 
     // The itinerary carried the day notes until #393; the isolation it proved moves here, to the
@@ -3270,6 +3298,53 @@ describe('tenant isolation', () => {
     })
   })
   /**
+   * The money writers take the trip the caller is working in *and* the row's id. Naming one's own
+   * trip together with another workspace's row must not find the row, and must write nothing.
+   */
+  describe('the money writers', () => {
+    it('refuse every B ledger row named through A’s own trip, and change nothing', async () => {
+      const scope = alpha.tenant.scope
+      const ledgerOfB = async (): Promise<unknown> => ({
+        expense: await getExpenseWithShares(beta.tenant.scope, beta.expenseId),
+        budgetItems: await listBudgetItems(beta.tenant.scope, beta.tripId),
+        settlements: await listSettlements(beta.tenant.scope, beta.tripId),
+      })
+      const before = await ledgerOfB()
+
+      const attempts: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          updateExpense(scope, alpha.tripId, beta.expenseId, {
+            title: 'Hijacked',
+            amountMinor: 1,
+          }),
+        () => deleteExpense(scope, alpha.tripId, beta.expenseId),
+        () =>
+          setExpenseShares(scope, alpha.tripId, beta.expenseId, [
+            { userId: alpha.tenant.ownerUserId },
+          ]),
+        () => markShareSettled(scope, alpha.tripId, beta.expenseShareId, true),
+        () =>
+          updateBudgetItem(scope, alpha.tripId, beta.budgetItemId, {
+            name: 'Hijacked',
+          }),
+        () => deleteBudgetItem(scope, alpha.tripId, beta.budgetItemId),
+        () => deleteSettlement(scope, alpha.tripId, beta.settlementId),
+        // B's own trip does not help either: it is not A's to read.
+        () => deleteExpense(scope, beta.tripId, beta.expenseId),
+        () =>
+          updateExpense(scope, beta.tripId, beta.expenseId, {
+            title: 'Hijacked',
+          }),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await ledgerOfB()).toEqual(before)
+    })
+  })
+
+  /**
    * 03-S4 — a booking that knows which stop it is for, and what it cost.
    *
    * Three surfaces cross the boundary here and each is asserted from the side
@@ -3610,8 +3685,8 @@ describe('tenant isolation', () => {
    * another workspace's journey with a route it never asked for.
    *
    * The cache key is asserted where it lives, in
-   * `src/server/transit/__tests__/search.test.ts`, and for the opposite reason:
-   * it must be the *same* string for both tenants.
+   * `src/server/transit/__tests__/search.test.ts`: it names the workspace and
+   * the member, so it must be a *different* string for every pair of them.
    */
   describe('a connection saved as a journey, and re-searched in place', () => {
     /** Two legs, so a refusal that dropped one would still be visible. */

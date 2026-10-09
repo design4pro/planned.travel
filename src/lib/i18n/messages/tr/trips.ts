@@ -305,6 +305,22 @@ const messages = {
   'people.error.guestLimit':
     'Bir gezide en fazla {limit} misafir olabilir; daha uzun bir liste katılımcı seçimini ve masraf paylaşımını okumayı zorlaştırır',
   'people.error.guestMergeTarget': 'Bu gezide zaten olan birini seç',
+  'plan.weather.badge.forecast':
+    'Tahmin: {condition}, en yüksek {max}, en düşük {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Tahmin: en yüksek {max}, en düşük {min}',
+  'plan.weather.badge.unavailable': 'Bu gün için hava durumu kullanılamıyor',
+  'plan.weather.badge.loading': 'Hava durumu yükleniyor',
+  'plan.weather.condition.clear': 'Açık',
+  'plan.weather.condition.fair': 'Güzel',
+  'plan.weather.condition.partlyCloudy': 'Parçalı bulutlu',
+  'plan.weather.condition.cloudy': 'Bulutlu',
+  'plan.weather.condition.fog': 'Sis',
+  'plan.weather.condition.rain': 'Yağmur',
+  'plan.weather.condition.heavyRain': 'Sağanak yağmur',
+  'plan.weather.condition.sleet': 'Karla karışık yağmur',
+  'plan.weather.condition.snow': 'Kar',
+  'plan.weather.condition.thunder': 'Gök gürültülü fırtına',
 } satisfies TranslationOf<typeof En>
 
 export default messages

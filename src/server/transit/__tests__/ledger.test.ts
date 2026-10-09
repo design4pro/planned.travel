@@ -114,7 +114,11 @@ function vendorFetch(respond: () => Response | Promise<Response>): {
 const answers = (): Response =>
   new Response(JSON.stringify(HERE_ANSWER), {
     status: 200,
-    headers: { 'content-type': 'application/json' },
+    // HERE's answer says a shared cache may keep it, which is what lets a repeat be a cache hit.
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'public, max-age=3600',
+    },
   })
 
 let tables: PlatformTables
@@ -147,11 +151,12 @@ interface Workspace {
   readonly counters: ReturnType<typeof memoryStore>
 }
 
-/** The shared cache is one store across workspaces; the counters are one per test. */
+/** The cache is one store across workspaces (keyed per member); the counters are one per test. */
 function runtime(
   organizationId: string,
   stores: Workspace,
   vendor: ReturnType<typeof vendorFetch> | null,
+  userId = 'user-ana',
 ): TransitSearchRuntime {
   return {
     cache: stores.cache,
@@ -162,6 +167,7 @@ function runtime(
         : createHereClient({ apiKey: 'test-key', fetch: vendor.fetch }),
     outbound: outboundRuntime(),
     organizationId,
+    userId,
     ceiling: 250,
     now: () => AT,
   }
@@ -216,7 +222,28 @@ describe('the provider ledger around a connection search', () => {
     })
   })
 
-  it('neither charges nor records a second workspace served the same route from the cache', async () => {
+  it('neither charges nor records the same member served the same route from the cache', async () => {
+    const stores = freshStores()
+    const vendor = vendorFetch(answers)
+
+    await searchTransitConnections(
+      runtime('org-alpha', stores, vendor),
+      LISBON_PORTO,
+    )
+    const served = await searchTransitConnections(
+      runtime('org-alpha', stores, vendor),
+      LISBON_PORTO,
+    )
+
+    expect(served.cached).toBe(true)
+    expect(vendor.calls).toHaveLength(1)
+    const rows = await ledger()
+    expect(rows.map((row) => row.organizationId)).toEqual(['org-alpha'])
+    expect(rows[0]).toMatchObject({ calls: 1 })
+    expect(spentBy(stores, 'org-alpha')).toBe(1)
+  })
+
+  it('records and charges another workspace that repeats the route, as the cache is not shared', async () => {
     const shared = freshStores()
     const vendor = vendorFetch(answers)
     const alpha = { cache: shared.cache, counters: memoryStore() }
@@ -226,17 +253,19 @@ describe('the provider ledger around a connection search', () => {
       runtime('org-alpha', alpha, vendor),
       LISBON_PORTO,
     )
-    const served = await searchTransitConnections(
-      runtime('org-bravo', bravo, vendor),
+    const second = await searchTransitConnections(
+      runtime('org-bravo', bravo, vendor, 'user-bia'),
       LISBON_PORTO,
     )
 
-    expect(served.cached).toBe(true)
-    expect(vendor.calls).toHaveLength(1)
+    expect(second.cached).toBe(false)
+    expect(vendor.calls).toHaveLength(2)
     const rows = await ledger()
-    expect(rows.map((row) => row.organizationId)).toEqual(['org-alpha'])
-    expect(spentBy(alpha, 'org-alpha')).toBe(1)
-    expect(spentBy(bravo, 'org-bravo')).toBe(0)
+    expect(rows.map((row) => row.organizationId).sort()).toEqual([
+      'org-alpha',
+      'org-bravo',
+    ])
+    expect(spentBy(bravo, 'org-bravo')).toBe(1)
   })
 
   it('attributes each ledger row to the workspace that made the call', async () => {
@@ -345,9 +374,14 @@ describe('the provider ledger around a connection search', () => {
       // Refused *before* the vendor: a block that arrived afterwards would bill for exactly the
       // calls it exists to prevent.
       expect(vendor.calls).toEqual([])
-      expect(shared.cache.entries.has(transitCacheKey(LISBON_PORTO))).toBe(
-        false,
-      )
+      expect(
+        shared.cache.entries.has(
+          transitCacheKey(
+            { organizationId: 'org-alpha', userId: 'user-ana' },
+            LISBON_PORTO,
+          ),
+        ),
+      ).toBe(false)
       const rows = await ledger()
       expect(rows).toHaveLength(1)
       expect(rows[0]).toMatchObject({
@@ -411,19 +445,19 @@ describe('the provider ledger around a connection search', () => {
       })
       resetProviderLimitMemo()
 
-      const bravo = { cache: shared.cache, counters: memoryStore() }
+      const repeat = { cache: shared.cache, counters: memoryStore() }
       const vendor = vendorFetch(answers)
       const rowsBefore = await ledger()
 
       const served = await searchTransitConnections(
-        runtime('org-bravo', bravo, vendor),
+        runtime('org-alpha', repeat, vendor),
         LISBON_PORTO,
       )
 
       expect(served.cached).toBe(true)
       // A live vendor that is never asked, no allowance spent and no new row, blocked or not.
       expect(vendor.calls).toEqual([])
-      expect(spentBy(bravo, 'org-bravo')).toBe(0)
+      expect(spentBy(repeat, 'org-alpha')).toBe(0)
       expect(await ledger()).toEqual(rowsBefore)
     })
   })

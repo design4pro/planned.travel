@@ -328,6 +328,22 @@ const messages = {
     'Un voyage compte au plus {limit} invités, car une liste plus longue rend illisibles le choix des participants et le partage des dépenses',
   'people.error.guestMergeTarget':
     'Choisissez quelqu’un qui fait déjà partie de ce voyage',
+  'plan.weather.badge.forecast':
+    'Prévisions : {condition}, max. {max}, min. {min}',
+  'plan.weather.badge.forecastNoCondition':
+    'Prévisions : max. {max}, min. {min}',
+  'plan.weather.badge.unavailable': 'Météo indisponible pour ce jour',
+  'plan.weather.badge.loading': 'Chargement de la météo',
+  'plan.weather.condition.clear': 'Dégagé',
+  'plan.weather.condition.fair': 'Beau temps',
+  'plan.weather.condition.partlyCloudy': 'Partiellement nuageux',
+  'plan.weather.condition.cloudy': 'Nuageux',
+  'plan.weather.condition.fog': 'Brouillard',
+  'plan.weather.condition.rain': 'Pluie',
+  'plan.weather.condition.heavyRain': 'Forte pluie',
+  'plan.weather.condition.sleet': 'Neige fondue',
+  'plan.weather.condition.snow': 'Neige',
+  'plan.weather.condition.thunder': 'Orage',
 } satisfies TranslationOf<typeof En>
 
 export default messages
