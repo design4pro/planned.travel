@@ -41,6 +41,7 @@ import type { Logger } from '#/server/observability'
 import type {
   TransitAnswer,
   TransitClient,
+  TransitAttribution,
   TransitConnection,
   TransitQuery,
   TransitSearchRuntime,
@@ -115,16 +116,25 @@ const FOR_AN_HOUR: CachingHeaders = {
   age: null,
 }
 
+/** A notice HERE says must be shown with the route (Public Transit v8, "Copyright notices"). */
+const OPERATOR_NOTICE: TransitAttribution = {
+  id: 'R1-S1-link-0',
+  text: 'Timetable data provided by CP - Comboios de Portugal',
+  href: 'https://www.cp.pt/disclaimer',
+  hrefText: 'CP - Comboios de Portugal',
+}
+
 function stubClient(
   connections: ReadonlyArray<TransitConnection> = [CONNECTION],
   caching: CachingHeaders = FOR_AN_HOUR,
+  attributions: ReadonlyArray<TransitAttribution> = [],
 ): TransitClient & { readonly calls: Array<TransitQuery> } {
   const calls: Array<TransitQuery> = []
   return {
     calls,
     search(query): Promise<TransitAnswer> {
       calls.push(query)
-      return Promise.resolve({ connections, caching })
+      return Promise.resolve({ connections, caching, attributions })
     },
   }
 }
@@ -452,6 +462,83 @@ describe('searchTransitConnections', () => {
     ).toBe(true)
   })
 
+  describe('the attributions HERE requires beside a route', () => {
+    it('stores them beside the connections, in a v2 entry', async () => {
+      const cache = memoryStore()
+      const client = stubClient([CONNECTION], FOR_AN_HOUR, [OPERATOR_NOTICE])
+
+      const result = await searchTransitConnections(
+        runtime({ cache, client }),
+        QUERY,
+      )
+
+      expect(result.attributions).toEqual([OPERATOR_NOTICE])
+      expect(
+        JSON.parse(cache.entries.get(transitCacheKey(ALPHA_ANA, QUERY)) ?? ''),
+      ).toEqual({
+        v: 2,
+        connections: [CONNECTION],
+        attributions: [OPERATOR_NOTICE],
+      })
+    })
+
+    it('round-trips them through the cache without a second provider call', async () => {
+      const cache = memoryStore()
+      const client = stubClient([CONNECTION], FOR_AN_HOUR, [OPERATOR_NOTICE])
+      const deps = runtime({ cache, client })
+
+      await searchTransitConnections(deps, QUERY)
+      const second = await searchTransitConnections(deps, QUERY)
+
+      expect(second.cached).toBe(true)
+      expect(second.attributions).toEqual([OPERATOR_NOTICE])
+      expect(client.calls).toHaveLength(1)
+    })
+
+    it('keeps the cache key where it was, so only the entry changes version', () => {
+      expect(transitCacheKey(ALPHA_ANA, QUERY)).toMatch(/^transit:v2:/)
+    })
+
+    /**
+     * A cached answer must never be shown without notices a fresh one would carry: an entry written
+     * before the field existed is one provider call, not an answer.
+     */
+    it('treats a stored v1 entry as a miss and calls the provider exactly once', async () => {
+      const cache = memoryStore()
+      const client = stubClient([CONNECTION], FOR_AN_HOUR, [OPERATOR_NOTICE])
+      await cache.put(
+        transitCacheKey(ALPHA_ANA, QUERY),
+        JSON.stringify({ v: 1, connections: [CONNECTION] }),
+      )
+
+      const result = await searchTransitConnections(
+        runtime({ cache, client }),
+        QUERY,
+      )
+
+      expect(result.cached).toBe(false)
+      expect(result.attributions).toEqual([OPERATOR_NOTICE])
+      expect(client.calls).toHaveLength(1)
+    })
+
+    it('treats a v2 entry without the attributions field as a miss', async () => {
+      const cache = memoryStore()
+      const client = stubClient()
+      await cache.put(
+        transitCacheKey(ALPHA_ANA, QUERY),
+        JSON.stringify({ v: 2, connections: [CONNECTION] }),
+      )
+
+      const result = await searchTransitConnections(
+        runtime({ cache, client }),
+        QUERY,
+      )
+
+      expect(result.cached).toBe(false)
+      expect(client.calls).toHaveLength(1)
+    })
+  })
+
   it('treats a cache entry it cannot parse as a miss rather than as an answer', async () => {
     const cache = memoryStore()
     const client = stubClient()
@@ -676,6 +763,113 @@ describe('the HERE client', () => {
         at: '2026-10-09T08:44:00',
       },
     ])
+  })
+
+  describe('the attributions a response carries', () => {
+    function withAttributions(sectionAttributions: unknown) {
+      const [route] = HERE_RESPONSE.routes
+      const [section] = route.sections
+      return {
+        routes: [
+          {
+            ...route,
+            sections: [{ ...section, attributions: sectionAttributions }],
+          },
+        ],
+      }
+    }
+
+    async function answerFor(body: unknown) {
+      return createHereClient({
+        apiKey: 'secret',
+        fetch: jsonFetch(body).fetch,
+      }).search(QUERY)
+    }
+
+    it('reads them exactly as HERE wrote them', async () => {
+      const answer = await answerFor(
+        withAttributions([
+          {
+            id: 'R1-S1-link-0',
+            href: 'https://www.cp.pt/disclaimer',
+            text: 'Timetable data provided by CP - Comboios de Portugal',
+            hrefText: 'CP - Comboios de Portugal',
+            type: 'disclaimer',
+          },
+          { id: 'R1-S1-link-1', text: 'Fares: see the operator' },
+        ]),
+      )
+
+      expect(answer.attributions).toEqual([
+        OPERATOR_NOTICE,
+        {
+          id: 'R1-S1-link-1',
+          text: 'Fares: see the operator',
+          href: null,
+          hrefText: null,
+        },
+      ])
+    })
+
+    it('is an empty list when the response carries none', async () => {
+      expect((await answerFor(HERE_RESPONSE)).attributions).toEqual([])
+    })
+
+    it('shows a notice once however many sections repeat it', async () => {
+      const [route] = HERE_RESPONSE.routes
+      const [section] = route.sections
+      const notice = { id: 'shared', text: 'Data by the operator' }
+      const answer = await answerFor({
+        routes: [
+          {
+            ...route,
+            sections: [
+              { ...section, attributions: [notice] },
+              { ...section, attributions: [notice] },
+            ],
+          },
+          {
+            ...route,
+            id: 'R2',
+            sections: [{ ...section, attributions: [notice] }],
+          },
+        ],
+      })
+
+      expect(answer.attributions.map((entry) => entry.text)).toEqual([
+        'Data by the operator',
+      ])
+    })
+
+    it('keeps the words of a link that is not a web address and drops the link', async () => {
+      const answer = await answerFor(
+        withAttributions([
+          {
+            id: 'x',
+            text: 'Data by the operator',
+            href: 'javascript:alert(1)',
+          },
+        ]),
+      )
+
+      expect(answer.attributions).toEqual([
+        { id: 'x', text: 'Data by the operator', href: null, hrefText: null },
+      ])
+    })
+
+    it.each([
+      ['a list that is not a list', 'CP'],
+      ['an entry without its text', [{ id: 'x' }]],
+      ['an entry without its id', [{ text: 'CP' }]],
+      ['a link that is not a string', [{ id: 'x', text: 'CP', href: 7 }]],
+    ])('refuses %s', async (_name, attributions) => {
+      const error = await answerFor(withAttributions(attributions)).catch(
+        (cause: unknown) => cause,
+      )
+
+      expect(error).toBeInstanceOf(TransitProviderError)
+      expect((error as TransitProviderError).reason).toBe('malformed')
+    })
   })
 
   /**

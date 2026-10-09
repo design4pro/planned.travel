@@ -32,7 +32,7 @@
  * nothing. The mode filter is not — it changes the question, so it is part of the query and part
  * of the cache key.
  */
-import { useEffect, useId, useMemo, useState } from 'react'
+import { Fragment, useEffect, useId, useMemo, useState } from 'react'
 import { ArrowRight, ChevronDown, Search } from 'lucide-react'
 
 import {
@@ -66,6 +66,7 @@ import type { ChainPayload } from './leg-form'
 import type {
   ConnectionSearchOutcome,
   StationMatch,
+  TransitAttribution,
   TransitConnection,
   TransitLeg,
   TransitMode,
@@ -82,6 +83,32 @@ const HERE_CREDIT_LINKS = HERE_CREDITS.map((credit) => ({
   label: credit.name,
   href: credit.url,
 }))
+
+/**
+ * One notice HERE sent with the route, exactly as it wrote it (Platform Terms §6.4 c): vendor
+ * words, not catalogue copy. The link is on the part HERE names (`hrefText`), else on the whole
+ * text; a link with no address, or a clickable part the text does not contain, leaves the words
+ * whole. The credit list draws the link, so this is no second credit component.
+ */
+function AttributionNotice({
+  attribution,
+}: {
+  attribution: TransitAttribution
+}) {
+  const { text, href, hrefText } = attribution
+  if (href === null) {
+    return <>{text}</>
+  }
+  const linked = hrefText !== null && text.includes(hrefText) ? hrefText : text
+  const at = text.indexOf(linked)
+  return (
+    <>
+      {text.slice(0, at)}
+      <MapCreditList credits={[{ label: linked, href }]} />
+      {text.slice(at + linked.length)}
+    </>
+  )
+}
 
 /* ------------------------------------------------------------------- filter */
 
@@ -613,6 +640,10 @@ export function refusalBody(
  * scrolling body, so no footer or other control covers it. The skeleton reserves no line for it:
  * the list already grows past the skeleton's three rows when the answer has more, so one caption
  * line at the end of the scroll body is no new shift.
+ *
+ * **So do the notices HERE sends with the route** (#808): HERE's terms say they "must be fully
+ * displayed" with it, so they follow the credit in the same caption, from the same answer, and in
+ * no other state.
  */
 export function SearchOutcome({
   pending,
@@ -691,6 +722,14 @@ export function SearchOutcome({
       <p data-part="connection-credit" className="mt-3 text-caption text-ink-3">
         {t('modules.transports.connection.credit')}{' '}
         <MapCreditList credits={HERE_CREDIT_LINKS} />
+        {outcome.attributions.map((attribution) => (
+          <Fragment key={`${attribution.id}:${attribution.text}`}>
+            <span aria-hidden="true" className="mx-1 text-ink-4">
+              ·
+            </span>
+            <AttributionNotice attribution={attribution} />
+          </Fragment>
+        ))}
       </p>
     </>
   )

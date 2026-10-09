@@ -165,6 +165,23 @@ Four further terms travel with it:
   connection search (ADR 0011) shows it as a caption after the ranked list, and only while a list is on
   screen; the supplier terms prescribe no wording for the credit itself (read 2026-10-07), so the caption
   names the vendor and links its site.
+
+  _Update, 2026-10-09 (#808): "where applicable" is answered for transit: a Public Transit v8
+  response does carry source attributions that must be shown. HERE's "Copyright notices - Public
+  Transit API v8" (https://docs.here.com/transit/docs/copyrights.md, read 2026-10-09) says: "If a
+  routing response contains this type of data, the Public Transit API v8 adds operator attribution
+  information to the route response. Operator attribution must be displayed together with a route.
+  This requirement is part of the terms and conditions for Public Transit API v8", and that an
+  `attributions` element inside `sections` "must be fully displayed to the end-users"; the OpenAPI
+  schema (https://docs.here.com/transit/openapi/public-transit-v8-openapi.yml, 8.0.1, read
+  2026-10-09) types it on transit sections as "List of required attributions to display"
+  (`id` and `text` required, `href`, `hrefText` and `type` optional). The HERE client therefore
+  reads them, the answer and the cache entry (`v: 2`, `attributions` required, so an entry written
+  without them is a miss) carry them, and the connection search shows them in the credit's caption,
+  each once, exactly as HERE wrote them (§6.4 c): vendor words, not catalogue keys. A link that is
+  not a web address is dropped and its words kept. Road routing has no such field in its response
+  and is unchanged._
+
 - **Personal data reaching HERE carries a notice duty.** "If any personal data of End Users is
   delivered to HERE by the End User or through the End User's use of your Application ... you shall
   make the End User Terms and the HERE Privacy Policy available to End Users in Applications or

@@ -53,6 +53,7 @@ import type { AirportMatch } from '#/server/catalog/airports'
 import type { TransportLeg } from '#/server/db/types'
 import type { TenantScope, TransportModeTotals } from '#/server/repos'
 import type {
+  TransitAttribution,
   TransitConnection,
   TransitFailureReason,
 } from '#/server/transit/search'
@@ -452,6 +453,8 @@ export type ConnectionSearchOutcome =
   | {
       readonly ok: true
       readonly connections: ReadonlyArray<TransitConnection>
+      /** The notices HERE requires beside these connections, exactly as it sent them. */
+      readonly attributions: ReadonlyArray<TransitAttribution>
       /** True when nobody's allowance was spent, because the answer was already held. */
       readonly cached: boolean
       /** Searches left this month, or `null` when this one cost nothing. */
@@ -528,6 +531,7 @@ export const searchConnectionsFn = createServerFn({ method: 'POST' })
       return {
         ok: true,
         connections: result.connections,
+        attributions: result.attributions,
         cached: result.cached,
         remaining:
           result.spent === null ? null : Math.max(0, ceiling - result.spent),
@@ -595,6 +599,7 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
  * `leg-form.ts` restates the mode list instead of importing it.
  */
 export type {
+  TransitAttribution,
   TransitConnection,
   TransitLeg,
   TransitMode,
