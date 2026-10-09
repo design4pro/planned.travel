@@ -148,6 +148,18 @@ function offsetMinutes(timeZone: string, at: Date): number {
 }
 
 /**
+ * The hour of the day, 0 to 23, at an instant in a zone - read from the numeric `hour` part, which
+ * is why the formatter is 24-hour (`h23`): a `12-hour` or `hour12: false` reading answers `24` at
+ * midnight in some engines and would file the day's first hour under its last.
+ *
+ * `zone` is expected to be one the platform accepts, as {@link resolveTimeZone} makes it.
+ */
+export function hourIn(iso: string, zone: string): number {
+  const parts = offsetFormatter(zone).formatToParts(new Date(iso))
+  return Number(parts.find((part) => part.type === 'hour')?.value ?? '0')
+}
+
+/**
  * `UTC+9`, `UTC+5:30`, `UTC-8`, `UTC` — the offset of a zone on a given date.
  *
  * The minutes are printed only when there are any, because `UTC+9:00` reads as a

@@ -8,7 +8,7 @@
  */
 
 import type { MessageKey } from '#/lib/i18n'
-import type { DayWeather, WeatherUnit } from '#/lib/weather'
+import type { DayReading, DayWeather, WeatherUnit } from '#/lib/weather'
 
 /** The plan screen's view of a day: the server's answer, or "not in yet". */
 export type DayWeatherView = DayWeather | { readonly status: 'loading' }
@@ -81,6 +81,96 @@ export function unitSymbol(unit: WeatherUnit): 'C' | 'F' {
   return unit === 'imperial' ? 'F' : 'C'
 }
 
+/**
+ * What a reader's unit does to the other figures of a reading; metric in, theirs out. The unit is
+ * a symbol (`mm`, `km/h`), not copy: it is written the same in every locale, as `formatDistance`
+ * writes `km`.
+ */
+export function precipitationIn(
+  millimetres: number,
+  unit: WeatherUnit,
+): { readonly value: number; readonly unit: 'mm' | 'in' } {
+  return unit === 'imperial'
+    ? { value: Math.round((millimetres / 25.4) * 100) / 100, unit: 'in' }
+    : { value: Math.round(millimetres * 10) / 10, unit: 'mm' }
+}
+
+export function windIn(
+  metresPerSecond: number,
+  unit: WeatherUnit,
+): { readonly value: number; readonly unit: 'km/h' | 'mph' } {
+  return unit === 'imperial'
+    ? { value: Math.round(metresPerSecond * 2.236_936), unit: 'mph' }
+    : { value: Math.round(metresPerSecond * 3.6), unit: 'km/h' }
+}
+
+export type WeatherSlotName = 'night' | 'morning' | 'afternoon' | 'evening'
+
+export const SLOT_LABEL: { readonly [K in WeatherSlotName]: MessageKey } = {
+  night: 'trips.plan.weather.panel.slot.night',
+  morning: 'trips.plan.weather.panel.slot.morning',
+  afternoon: 'trips.plan.weather.panel.slot.afternoon',
+  evening: 'trips.plan.weather.panel.slot.evening',
+}
+
+/** Which stretch of the day a slot that starts at this local time is. */
+const SLOT_BY_START: { readonly [from: string]: WeatherSlotName } = {
+  '00:00': 'night',
+  '06:00': 'morning',
+  '12:00': 'afternoon',
+  '18:00': 'evening',
+}
+
+export interface WeatherPanelModel {
+  readonly condition: WeatherCondition | null
+  readonly max: number
+  readonly min: number
+  readonly unit: 'C' | 'F'
+  /** `null` when the provider gave no amount: the row is left out, never a zero. */
+  readonly precipitation: ReturnType<typeof precipitationIn> | null
+  /** The chance of it, 0 to 100, or `null` when none was given. */
+  readonly probability: number | null
+  readonly wind: ReturnType<typeof windIn> | null
+  /** `null` when the reading has no slots: the region is omitted, never empty columns. */
+  readonly slots: ReadonlyArray<{
+    readonly name: WeatherSlotName
+    readonly condition: WeatherCondition | null
+    readonly temp: number
+  }> | null
+}
+
+/** The fuller reading of a forecast day, in the reader's unit. */
+export function panelModel(
+  reading: DayReading,
+  unit: WeatherUnit,
+): WeatherPanelModel {
+  const slots = (reading.slots ?? []).flatMap((slot) => {
+    const name = SLOT_BY_START[slot.from]
+    return name === undefined
+      ? []
+      : [
+          {
+            name,
+            condition: conditionOf(slot.symbol),
+            temp: temperatureIn(slot.tempC, unit),
+          },
+        ]
+  })
+  return {
+    condition: conditionOf(reading.symbol),
+    max: temperatureIn(reading.tempMaxC, unit),
+    min: temperatureIn(reading.tempMinC, unit),
+    unit: unitSymbol(unit),
+    precipitation:
+      reading.precipitationMm === null
+        ? null
+        : precipitationIn(reading.precipitationMm, unit),
+    probability: reading.precipitationProbability,
+    wind: reading.windMs === null ? null : windIn(reading.windMs, unit),
+    slots: slots.length === 0 ? null : slots,
+  }
+}
+
 export type WeatherBadgeModel =
   | { readonly kind: 'loading' }
   | { readonly kind: 'unavailable' }
@@ -90,6 +180,8 @@ export type WeatherBadgeModel =
       readonly max: number
       readonly min: number
       readonly unit: 'C' | 'F'
+      /** The reading behind the badge, for the fuller panel it opens. */
+      readonly reading: DayReading
     }
 
 /** What to draw for a day, or `null` when it draws nothing at all. */
@@ -111,6 +203,7 @@ export function badgeModel(
         max: temperatureIn(weather.reading.tempMaxC, unit),
         min: temperatureIn(weather.reading.tempMinC, unit),
         unit: unitSymbol(unit),
+        reading: weather.reading,
       }
   }
 }

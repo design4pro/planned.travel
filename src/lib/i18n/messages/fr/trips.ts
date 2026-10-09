@@ -344,6 +344,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Neige fondue',
   'plan.weather.condition.snow': 'Neige',
   'plan.weather.condition.thunder': 'Orage',
+  'plan.weather.panel.title': 'Météo du {date}',
+  'plan.weather.panel.temperature': 'Maximale / minimale',
+  'plan.weather.panel.precipitation': 'Précipitations',
+  'plan.weather.panel.probability': '{percent} de probabilité',
+  'plan.weather.panel.wind': 'Vent',
+  'plan.weather.panel.slots': 'Au fil de la journée',
+  'plan.weather.panel.slot.night': 'Nuit',
+  'plan.weather.panel.slot.morning': 'Matin',
+  'plan.weather.panel.slot.afternoon': 'Après-midi',
+  'plan.weather.panel.slot.evening': 'Soir',
+  'plan.weather.attribution.metNorway':
+    'Données de prévision : MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

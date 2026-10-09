@@ -311,6 +311,17 @@ const messages = {
   'plan.weather.condition.sleet': '진눈깨비',
   'plan.weather.condition.snow': '눈',
   'plan.weather.condition.thunder': '뇌우',
+  'plan.weather.panel.title': '{date} 날씨',
+  'plan.weather.panel.temperature': '최고 / 최저',
+  'plan.weather.panel.precipitation': '강수량',
+  'plan.weather.panel.probability': '강수 확률 {percent}',
+  'plan.weather.panel.wind': '바람',
+  'plan.weather.panel.slots': '시간대별',
+  'plan.weather.panel.slot.night': '새벽',
+  'plan.weather.panel.slot.morning': '오전',
+  'plan.weather.panel.slot.afternoon': '오후',
+  'plan.weather.panel.slot.evening': '저녁',
+  'plan.weather.attribution.metNorway': '예보 데이터: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

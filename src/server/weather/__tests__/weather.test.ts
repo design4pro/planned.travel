@@ -416,9 +416,13 @@ describe('the cache', () => {
     for (const garbage of [
       'not json',
       '{}',
-      '{"v":2,"fetchedAt":"x","expires":"2999-01-01T00:00:00Z","series":[]}',
-      '{"v":1,"fetchedAt":"x","expires":"2999-01-01T00:00:00Z","series":"no"}',
-      '{"v":1,"fetchedAt":"x","expires":"not a date","series":[]}',
+      '{"v":3,"fetchedAt":"x","expires":"2999-01-01T00:00:00Z","series":[]}',
+      // The shape before the fuller reading: right version for then, wrong for now.
+      '{"v":1,"fetchedAt":"x","expires":"2999-01-01T00:00:00Z","series":[]}',
+      // A step missing the fields the fuller reading reads is not served as if it had them.
+      '{"v":2,"fetchedAt":"x","expires":"2999-01-01T00:00:00Z","series":[{"time":"2026-10-10T00:00:00Z","tempC":1,"symbol":null}]}',
+      '{"v":2,"fetchedAt":"x","expires":"2999-01-01T00:00:00Z","series":"no"}',
+      '{"v":2,"fetchedAt":"x","expires":"not a date","series":[]}',
     ]) {
       cache.entries.set(key, garbage)
       const w = world({ cache })
@@ -475,7 +479,7 @@ describe('the cache', () => {
     await resolveTripWeather(w.runtime, trip('2026-10-08', '2026-10-17'), ZONE)
 
     const keys = [...w.cache.entries.keys()]
-    expect(keys).toEqual(['wx:v1:forecast:59.9139:10.7522'])
+    expect(keys).toEqual(['wx:v2:forecast:59.9139:10.7522'])
     expect(keys.join()).not.toContain('org-alpha')
   })
 

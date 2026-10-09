@@ -46,10 +46,11 @@
 import { z } from 'zod'
 
 import { dayKeyIn, resolveTimeZone, todayKeyIn } from '#/lib/time'
+import { hourIn } from '#/lib/timezones'
 import { callProvider } from '#/server/metering/outbound'
 import { spendRateUnits } from '#/server/metering/rate'
 
-import type { DayReading } from '#/lib/weather'
+import type { DayReading, DaySlot } from '#/lib/weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
 
@@ -83,6 +84,12 @@ export interface ForecastStep {
   readonly tempC: number
   /** The condition for the stretch after this step, day/night suffix removed; `null` when none. */
   readonly symbol: string | null
+  /** Wind speed at the step, metres per second; `null` when the step carries none. */
+  readonly windMs: number | null
+  /** Millimetres in the stretch after this step - the hourly figure, else the six-hourly one. */
+  readonly precipitationMm: number | null
+  /** Chance of precipitation after this step, 0 to 100; `null` when the provider states none. */
+  readonly precipitationProbability: number | null
 }
 
 export interface ForecastFetch {
@@ -168,7 +175,7 @@ const RETENTION_SECONDS = 6 * 60 * 60
 /* --------------------------------------------------------------------- keys */
 
 /** Bumped when a stored shape changes; the previous prefix is left to expire on its own. */
-export const WEATHER_CACHE_VERSION = 'v1'
+export const WEATHER_CACHE_VERSION = 'v2'
 
 /**
  * A coordinate cut to four decimals, as the provider's terms require and as every key uses.
@@ -193,11 +200,11 @@ export function stripDayNight(code: string): string {
 
 /* ------------------------------------------------------------------ the days */
 
-interface ForecastDay {
-  readonly tempMinC: number
-  readonly tempMaxC: number
-  readonly symbol: string | null
-}
+type ForecastDay = Omit<DayReading, 'kind' | 'source'>
+
+/** A day is read in four slots of this many hours. */
+const SLOT_HOURS = 6
+const SLOT_COUNT = 24 / SLOT_HOURS
 
 interface GroupedForecast {
   readonly days: ReadonlyMap<string, ForecastDay>
@@ -228,28 +235,12 @@ export function groupForecastDays(
   timeZone: string,
 ): GroupedForecast {
   const zone = resolveTimeZone(timeZone)
-  const days = new Map<
-    string,
-    { min: number; max: number; symbols: Map<string, number> }
-  >()
+  const byDate = new Map<string, Array<ForecastStep>>()
   let lastDate: string | null = null
 
   for (const step of series) {
     const date = dayKeyIn(step.time, zone)
-    const bucket = days.get(date) ?? {
-      min: step.tempC,
-      max: step.tempC,
-      symbols: new Map<string, number>(),
-    }
-    bucket.min = Math.min(bucket.min, step.tempC)
-    bucket.max = Math.max(bucket.max, step.tempC)
-    if (step.symbol !== null) {
-      bucket.symbols.set(
-        step.symbol,
-        (bucket.symbols.get(step.symbol) ?? 0) + 1,
-      )
-    }
-    days.set(date, bucket)
+    byDate.set(date, [...(byDate.get(date) ?? []), step])
     if (lastDate === null || date > lastDate) {
       lastDate = date
     }
@@ -257,17 +248,82 @@ export function groupForecastDays(
 
   return {
     days: new Map(
-      [...days].map(([date, bucket]) => [
-        date,
-        {
-          tempMinC: bucket.min,
-          tempMaxC: bucket.max,
-          symbol: dominant(bucket.symbols),
-        },
-      ]),
+      [...byDate].map(([date, steps]) => [date, readDay(steps, zone)]),
     ),
     lastCompleteDate: lastDate === null ? null : shiftDate(lastDate, -1),
   }
+}
+
+/** The largest of the figures a day has, or `null` when it has none. */
+function highest(values: ReadonlyArray<number | null>): number | null {
+  const present = values.filter((value): value is number => value !== null)
+  return present.length === 0 ? null : Math.max(...present)
+}
+
+/** One decimal, which is what the provider states and what a reader can use; no float dust. */
+function tenth(value: number): number {
+  return Math.round(value * 10) / 10
+}
+
+/** One local day's steps read into the figures the planner draws. */
+function readDay(
+  steps: ReadonlyArray<ForecastStep>,
+  zone: string,
+): ForecastDay {
+  const temperatures = steps.map((step) => step.tempC)
+  const rain = steps.flatMap((step) =>
+    step.precipitationMm === null ? [] : [step.precipitationMm],
+  )
+  const wind = highest(steps.map((step) => step.windMs))
+  const symbols = new Map<string, number>()
+  for (const step of steps) {
+    if (step.symbol !== null) {
+      symbols.set(step.symbol, (symbols.get(step.symbol) ?? 0) + 1)
+    }
+  }
+  return {
+    tempMinC: Math.min(...temperatures),
+    tempMaxC: Math.max(...temperatures),
+    symbol: dominant(symbols),
+    precipitationMm:
+      rain.length === 0 ? null : tenth(rain.reduce((a, b) => a + b, 0)),
+    precipitationProbability: highest(
+      steps.map((step) => step.precipitationProbability),
+    ),
+    windMs: wind === null ? null : tenth(wind),
+    slots: slotsOf(steps, zone),
+  }
+}
+
+/**
+ * The day's steps cut into night, morning, afternoon and evening by local hour.
+ *
+ * A slot's sky is its first step's: that step is the one whose own six-hour summary starts where
+ * the slot does, and in the hourly stretch the later steps' summaries only repeat it shifted. Its
+ * temperature is the mean of the steps inside it. A slot with no step is left out, never drawn
+ * with a value from its neighbour - which is how today, once the morning has gone, has two.
+ */
+function slotsOf(
+  steps: ReadonlyArray<ForecastStep>,
+  zone: string,
+): ReadonlyArray<DaySlot> | null {
+  const slots: Array<DaySlot> = []
+  for (let index = 0; index < SLOT_COUNT; index += 1) {
+    const inSlot = steps.filter(
+      (step) => Math.floor(hourIn(step.time, zone) / SLOT_HOURS) === index,
+    )
+    if (inSlot.length === 0) {
+      continue
+    }
+    slots.push({
+      from: `${String(index * SLOT_HOURS).padStart(2, '0')}:00`,
+      symbol: inSlot[0].symbol,
+      tempC: tenth(
+        inSlot.reduce((sum, step) => sum + step.tempC, 0) / inSlot.length,
+      ),
+    })
+  }
+  return slots.length === 0 ? null : slots
 }
 
 /** The most frequent symbol; the first one seen wins a tie, so the answer is deterministic. */
@@ -286,7 +342,7 @@ function dominant(counts: ReadonlyMap<string, number>): string | null {
 /* ---------------------------------------------------------------- the cache */
 
 const entrySchema = z.object({
-  v: z.literal(1),
+  v: z.literal(2),
   fetchedAt: z.string(),
   expires: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
   series: z.array(
@@ -294,6 +350,9 @@ const entrySchema = z.object({
       time: z.string(),
       tempC: z.number(),
       symbol: z.string().nullable(),
+      windMs: z.number().nullable(),
+      precipitationMm: z.number().nullable(),
+      precipitationProbability: z.number().nullable(),
     }),
   ),
 })
@@ -338,7 +397,7 @@ async function writeEntry(
       ? stated
       : new Date(at.getTime() + MIN_FRESH_MS)
   const entry: ForecastEntry = {
-    v: 1,
+    v: 2,
     fetchedAt: at.toISOString(),
     expires: expires.toISOString(),
     series: [...fetched.series],
@@ -601,9 +660,7 @@ export async function resolveTripWeather(
       reading: {
         kind: 'forecast',
         source: 'met-norway',
-        tempMinC: day.tempMinC,
-        tempMaxC: day.tempMaxC,
-        symbol: day.symbol,
+        ...day,
       },
     }
   })
