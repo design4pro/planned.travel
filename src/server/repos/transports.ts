@@ -381,13 +381,49 @@ export async function createTransport(
   return transportsRepository.insert(scope, values)
 }
 
+/**
+ * The transport a writer is about to change, once its trip is shown to be one the caller may see and
+ * write to: `NotFoundError` when the row is not theirs or sits on a private trip they are not on,
+ * `TripRoleError` when it is theirs to read and not to edit.
+ *
+ * The order is the boundary's (ADR 0007): the row, then `requireTrip` on *its* trip, then the role.
+ * Asked the other way round, a caller who may not see a private trip and holds one of its transport
+ * ids is told `FORBIDDEN` for a row that, from where they stand, does not exist.
+ */
+async function requireWritableTransport(
+  scope: TenantScope,
+  transportId: string,
+): Promise<Transport> {
+  const existing = await transportsRepository.requireById(scope, transportId)
+  await requireTrip(scope, existing.tripId)
+  await assertTripRole(scope, existing.tripId, WRITERS)
+  return existing
+}
+
+/**
+ * The transport, when it is a transport of `tripId`: `NotFoundError` otherwise, the same answer a
+ * missing id gets, so naming another trip's transport reveals nothing about it. For every caller
+ * that names a trip and a transport together and then acts on the trip's id - the room it tells,
+ * the trail it writes - the counterpart of `requireReservationOfTrip`.
+ */
+export async function requireTransportOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  transportId: string,
+): Promise<Transport> {
+  const transport = await transportsRepository.requireById(scope, transportId)
+  if (transport.tripId !== tripId) {
+    throw new NotFoundError('transport', transportId)
+  }
+  return transport
+}
+
 export async function setTransportStatus(
   scope: TenantScope,
   transportId: string,
   status: (typeof TRANSPORT_STATUSES)[number],
 ): Promise<Transport> {
-  const existing = await transportsRepository.requireById(scope, transportId)
-  await assertTripRole(scope, existing.tripId, WRITERS)
+  await requireWritableTransport(scope, transportId)
   return transportsRepository.requireUpdate(scope, transportId, {
     status: z.enum(TRANSPORT_STATUSES).parse(status),
   })
@@ -397,8 +433,7 @@ export async function deleteTransport(
   scope: TenantScope,
   transportId: string,
 ): Promise<void> {
-  const existing = await transportsRepository.requireById(scope, transportId)
-  await assertTripRole(scope, existing.tripId, WRITERS)
+  await requireWritableTransport(scope, transportId)
   await transportsRepository.requireRemove(scope, transportId)
 }
 
@@ -1069,8 +1104,7 @@ export async function replaceTransportChain(
   input: TransportChainInput,
 ): Promise<Array<TransportLeg>> {
   const chain = transportChainInput.parse(input)
-  const parent = await transportsRepository.requireById(scope, transportId)
-  await assertTripRole(scope, parent.tripId, WRITERS)
+  const parent = await requireWritableTransport(scope, transportId)
 
   requireLegOrder(chain.stations, chain.legs)
   await requireChainDays(scope, parent.tripId, chain.legs)
