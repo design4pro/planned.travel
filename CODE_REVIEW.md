@@ -57,7 +57,8 @@ floor guard script; the review now does.
 - **A server-function input schema only gains optional fields.** A new `.string()` or `.number()`
   that is required makes every tab loaded before the deploy fail its next save; make it `.optional()`
   and default it in the handler, and make it required one release later (BACKWARD_COMPATIBILITY.md
-  §2). A required new field is a blocker in code (#972) and a should-fix in a spec (#846).
+  §2: only optional inputs are non-breaking). A required new field is a blocker in code (#972) and a
+  should-fix in a spec (#846).
 - **`src/components/ui` never fetches data and never imports from `src/server`.**
 - **`src/server/public` returns named, column-whitelisted, read-only projections**, with the tenant
   scope derived from the resolved share record.
