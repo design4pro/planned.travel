@@ -22,6 +22,7 @@ import {
   SPLIT_METHODS,
 } from '#/server/db/schema'
 import {
+  canWriteMoney,
   createExpense,
   createSettlement,
   deleteExpense,
@@ -34,6 +35,7 @@ import {
   listUserProfiles,
   requireTrip,
   suggestSettlements,
+  tripRoleFor,
   updateExpense,
 } from '#/server/repos'
 import { impliedRate } from '#/lib/money'
@@ -144,6 +146,12 @@ export interface CostsPayload {
   readonly suggestions: ReadonlyArray<CostsSuggestion>
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
+  /**
+   * Whether the viewer may add, edit or delete money on this trip. Role only, worked out here from
+   * the stored role: the browser never inspects `people[].role` for it, and it is not `canWritePlan`
+   * (which also refuses an archived trip) because the money writers do not refuse one.
+   */
+  readonly canWrite: boolean
 }
 
 /* -------------------------------------------------------------------------- */
@@ -371,84 +379,99 @@ function toRepoInput(
  */
 export const loadCosts = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: tripIdSchema }))
-  .handler(async ({ data }): Promise<CostsPayload> => {
-    const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+  .handler(async ({ data }): Promise<CostsPayload> =>
+    costsPayload(await appScope(), data.tripId),
+  )
 
-    const [summary, rows, balances, settled, suggestions, people] =
-      await Promise.all([
-        getTripSpendSummary(scope, trip.id),
-        listTripExpenses(scope, trip.id),
-        getMemberBalances(scope, trip.id),
-        listSettlements(scope, trip.id),
-        suggestSettlements(scope, trip.id),
-        loadPeople(scope, trip.id),
-      ])
+/**
+ * What {@link loadCosts} answers, as a plain function.
+ *
+ * Split out because a server function's return value only survives across a Start build's RPC
+ * pair - outside one the handler runs and its answer is discarded - so this is the half a test can
+ * hold. `bookingDeskPayload` in `./reservations` makes the same split, for the same reason.
+ */
+export async function costsPayload(
+  scope: TenantScope,
+  tripId: string,
+): Promise<CostsPayload> {
+  const trip = await requireTrip(scope, tripId)
 
-    // The split rows are what make "your share" honest on every line, so they are
-    // fetched per expense rather than inferred from the balance aggregate.
-    const withShares = await Promise.all(
-      rows.map((row) => getExpenseWithShares(scope, row.id)),
-    )
+  const [summary, rows, balances, settled, suggestions, people, role] =
+    await Promise.all([
+      getTripSpendSummary(scope, trip.id),
+      listTripExpenses(scope, trip.id),
+      getMemberBalances(scope, trip.id),
+      listSettlements(scope, trip.id),
+      suggestSettlements(scope, trip.id),
+      loadPeople(scope, trip.id),
+      tripRoleFor(scope, trip.id, scope.ctx.userId),
+    ])
 
-    return {
-      tripId: trip.id,
-      currency: summary.currency,
-      today: todayIso(),
-      startDate: trip.startDate,
-      endDate: trip.endDate,
-      plannedMinor: summary.plannedMinor,
-      spentMinor: summary.spentMinor,
-      budgetTargetMinor: summary.budgetTargetMinor,
-      expenseCount: summary.expenseCount,
-      byCategory: summary.byCategory.map((row) => ({
-        category: row.category,
-        plannedMinor: row.plannedMinor,
-        spentMinor: row.spentMinor,
-        expenseCount: row.expenseCount,
-      })),
-      people,
-      viewerUserId: scope.ctx.userId,
-      expenses: withShares.map(({ expense, shares }) => ({
-        id: expense.id,
-        title: expense.title,
-        category: expense.category,
-        amountMinor: expense.amountMinor,
-        currency: expense.currency,
-        originalAmountMinor: expense.originalAmountMinor,
-        originalCurrency: expense.originalCurrency,
-        exchangeRate: expense.exchangeRate,
-        spentOn: expense.spentOn,
-        paidBy: expense.paidBy,
-        splitMethod: expense.splitMethod,
-        notes: expense.notes,
-        shares: shares.map(toShare),
-      })),
-      balances: balances.map((row) => ({
-        userId: row.userId,
-        paidMinor: row.paidMinor,
-        shareMinor: row.shareMinor,
-        settledOutMinor: row.settledOutMinor,
-        settledInMinor: row.settledInMinor,
-        balanceMinor: row.balanceMinor,
-      })),
-      settlements: settled.map((row) => ({
-        id: row.id,
-        fromUserId: row.fromUserId,
-        toUserId: row.toUserId,
-        amountMinor: row.amountMinor,
-        currency: row.currency,
-        method: row.method,
-        settledOn: row.settledOn,
-        note: row.note,
-      })),
-      suggestions: suggestions.map((row) => ({
-        fromUserId: row.fromUserId,
-        toUserId: row.toUserId,
-        amountMinor: row.amountMinor,
-      })),
-    }
-  })
+  // The split rows are what make "your share" honest on every line, so they are
+  // fetched per expense rather than inferred from the balance aggregate.
+  const withShares = await Promise.all(
+    rows.map((row) => getExpenseWithShares(scope, row.id)),
+  )
+
+  return {
+    tripId: trip.id,
+    currency: summary.currency,
+    today: todayIso(),
+    startDate: trip.startDate,
+    endDate: trip.endDate,
+    plannedMinor: summary.plannedMinor,
+    spentMinor: summary.spentMinor,
+    budgetTargetMinor: summary.budgetTargetMinor,
+    expenseCount: summary.expenseCount,
+    byCategory: summary.byCategory.map((row) => ({
+      category: row.category,
+      plannedMinor: row.plannedMinor,
+      spentMinor: row.spentMinor,
+      expenseCount: row.expenseCount,
+    })),
+    people,
+    viewerUserId: scope.ctx.userId,
+    canWrite: canWriteMoney(role),
+    expenses: withShares.map(({ expense, shares }) => ({
+      id: expense.id,
+      title: expense.title,
+      category: expense.category,
+      amountMinor: expense.amountMinor,
+      currency: expense.currency,
+      originalAmountMinor: expense.originalAmountMinor,
+      originalCurrency: expense.originalCurrency,
+      exchangeRate: expense.exchangeRate,
+      spentOn: expense.spentOn,
+      paidBy: expense.paidBy,
+      splitMethod: expense.splitMethod,
+      notes: expense.notes,
+      shares: shares.map(toShare),
+    })),
+    balances: balances.map((row) => ({
+      userId: row.userId,
+      paidMinor: row.paidMinor,
+      shareMinor: row.shareMinor,
+      settledOutMinor: row.settledOutMinor,
+      settledInMinor: row.settledInMinor,
+      balanceMinor: row.balanceMinor,
+    })),
+    settlements: settled.map((row) => ({
+      id: row.id,
+      fromUserId: row.fromUserId,
+      toUserId: row.toUserId,
+      amountMinor: row.amountMinor,
+      currency: row.currency,
+      method: row.method,
+      settledOn: row.settledOn,
+      note: row.note,
+    })),
+    suggestions: suggestions.map((row) => ({
+      fromUserId: row.fromUserId,
+      toUserId: row.toUserId,
+      amountMinor: row.amountMinor,
+    })),
+  }
+}
 
 /* -------------------------------------------------------------------------- */
 /* Writes                                                                     */

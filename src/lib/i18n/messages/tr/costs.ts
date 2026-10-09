@@ -159,6 +159,14 @@ const messages = {
   'payments.empty.title': 'Henüz ödeme yok',
   'payments.empty.body':
     'Biri bir bakiyeyi geri ödediğinde transfer buraya kaydedilir.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Masrafları görebilirsin ama değiştiremezsin',
+  'readOnly.body':
+    'Harcama ekleme, düzenleme, silme ve ödeme kaydetme yetkisi yalnızca gezinin sahiplerinde ve düzenleme izni olanlarda var. Bir şeyin değişmesi gerekiyorsa bir sahibe sor.',
+  'readOnly.empty':
+    'Bu gezi için henüz harcama kaydedilmedi. Bir sahip ya da düzenleyici ekleyince burada görünür.',
+  'readOnly.settleEmpty':
+    'Şu an hiçbir transfer gerekmiyor. Olası bir dengesizlik burada görünürdü.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
