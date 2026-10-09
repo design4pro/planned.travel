@@ -39,7 +39,9 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * or a visibility narrowed to private closes the whole room (`closeRoom`), both in
  * `src/server/fns/context.ts`. The shipped client reconnects through this handler,
  * which is what picks up the stored role. The close is best effort: a room that
- * cannot be reached is logged and the old role holds until the socket drops.
+ * cannot be reached is logged and the old role holds until the socket drops, and so
+ * does the role of a connect that was already in flight - its role was read before
+ * the write, and its upgrade can reach the room after the close found no socket.
  */
 
 function json(body: unknown, status: number): Response {

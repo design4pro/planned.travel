@@ -44,6 +44,15 @@ export const TRIP_ROOM_IDLE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** How often the room's alarm runs housekeeping while it holds state. */
 export const TRIP_ROOM_ALARM_INTERVAL_MS = 5 * 60 * 1000
 
+/**
+ * The close the room sends when somebody's access or the trip's state changed (`/close`). The
+ * reason, not the code, tells the client apart from the other 1012 closes (no session, protocol
+ * mismatch): only this one means the screen's role-dependent data may be stale, so only this one
+ * makes the hook re-read its loader.
+ */
+export const TRIP_ROOM_CLOSED_CODE = 1012
+export const TRIP_ROOM_CLOSED_REASON = 'Room closed'
+
 /** Client keepalive interval. The room answers pings without leaving hibernation. */
 export const TRIP_ROOM_PING_INTERVAL_MS = 25_000
 

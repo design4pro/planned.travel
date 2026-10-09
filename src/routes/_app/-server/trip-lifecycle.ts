@@ -679,6 +679,8 @@ export const tripDeleteSummaryFn = createServerFn({ method: 'GET' })
  *    `trip-purge`. The delete never waits on it and a queue failure never surfaces.
  * 5. **Fan the statistics out** to the members read in step 1 — after the cascade there is nobody
  *    left to read.
+ * 6. **Close the trip's room.** Last, because it awaits a Durable Object round trip that has no
+ *    timeout and must not hold up the durable steps above; it logs and never fails the request.
  */
 export const deleteTripFn = createServerFn({ method: 'POST' })
   .validator(deleteTripInputSchema)
@@ -696,7 +698,6 @@ export const deleteTripFn = createServerFn({ method: 'POST' })
     ]
 
     await deleteTrip(scope, trip.id)
-    await evictRoom(scope, trip.id)
     await enqueueTripPurge(scope, trip.id, keys)
     await enqueueTravelStats(
       scope,
@@ -704,6 +705,7 @@ export const deleteTripFn = createServerFn({ method: 'POST' })
       affectedStatYears(trip.startDate),
       memberIds,
     )
+    await evictRoom(scope, trip.id)
 
     return { deleted: true }
   })

@@ -342,7 +342,9 @@ as `07-S2` does.
   The role is read at connect, so the writes that change it close the sockets they affect and the
   client's reconnect picks the stored role up: a role change, a removal or a leave closes that
   person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
-  whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). Nothing in this
+  whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). The close is
+  best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
+  the room after the close, leaves the old role until the socket drops. Nothing in this
   stage relaxes any of that, and the provider does not pass a trip id the layout did not already
   resolve through its own loader.
 - **The wire contract, stated so no later stage regresses it.** These four sentences are the part of

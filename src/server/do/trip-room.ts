@@ -21,6 +21,8 @@
 
 import {
   TRIP_ROOM_ALARM_INTERVAL_MS,
+  TRIP_ROOM_CLOSED_CODE,
+  TRIP_ROOM_CLOSED_REASON,
   TRIP_ROOM_IDENTITY_HEADER,
   TRIP_ROOM_IDLE_TTL_MS,
   TRIP_ROOM_LOG_CAPACITY,
@@ -142,7 +144,7 @@ const LOG_PREFIX = 'l:'
 const LOG_SEQ_WIDTH = 12
 const PRESENCE_TOUCH_INTERVAL_MS = 5_000
 const CLOSE_RATE_LIMITED = 1013
-const CLOSE_ROOM_CLOSED = 1012
+const CLOSE_ROOM_CLOSED = TRIP_ROOM_CLOSED_CODE
 
 function logKey(version: number): string {
   return `${LOG_PREFIX}${String(version).padStart(LOG_SEQ_WIDTH, '0')}`
@@ -323,7 +325,7 @@ export class TripRoom implements DurableObject {
         if (session.joined) departed.push(session.connectionId)
       }
       try {
-        socket.close(CLOSE_ROOM_CLOSED, 'Room closed')
+        socket.close(CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON)
       } catch {
         // A socket already gone is exactly the state we wanted.
       }
