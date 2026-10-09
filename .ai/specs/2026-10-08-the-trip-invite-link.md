@@ -881,7 +881,7 @@ The six items of `docs/SPEC.md` §7 apply unchanged, and:
 - A `trip_members` quota metric (`TRP-11`'s, a catalogue change).
 - `07-S6` (the public share link and the guest viewer): untouched; it may later add a share dialog that links to this
   panel.
-- `closeTripRoom` still has no caller after this stage (it evicts a socket on **removal**, `TRP-11`'s path).
+- This stage adds no caller of `closeTripRoom`: evicting a socket is what a role change, a removal and the trip lifecycle need, and #1050 gave them their callers (`closeRoomFor`, `closeRoom` in `src/server/fns/context.ts`).
 
 ## Resolved assumptions (autonomous defaults)
 

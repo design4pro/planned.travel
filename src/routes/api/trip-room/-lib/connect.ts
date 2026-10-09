@@ -33,9 +33,15 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * viewer receives commits and their patches are refused by the room, which is
  * the same answer `assertTripRole` gives their write to D1.
  *
- * The role is read once, at connect: an open socket keeps it until it
- * reconnects, so a demotion, a removal or an archive takes effect on the next
- * connection.
+ * The role is read once, at connect, and an open socket keeps it - so the writes
+ * that change it close the sockets they affect: a new role, a removal or a leave
+ * closes that person's sockets (`closeRoomFor`), and an archive, a restore, a delete
+ * or a visibility narrowed to private closes the whole room (`closeRoom`), both in
+ * `src/server/fns/context.ts`. The shipped client reconnects through this handler,
+ * which is what picks up the stored role. The close is best effort: a room that
+ * cannot be reached is logged and the old role holds until the socket drops, and so
+ * does the role of a connect that was already in flight - its role was read before
+ * the write, and its upgrade can reach the room after the close found no socket.
  */
 
 function json(body: unknown, status: number): Response {

@@ -339,8 +339,12 @@ as `07-S2` does.
   identity to the room. The room role is `canWritePlan(trip, tripRole)`: an owner or editor of a
   trip that is not archived connects as `editor`; a trip viewer, a traveller who is not on the trip,
   and anyone on an archived trip connect as `viewer` and have their patches refused inside the room.
-  The role is read at connect, so a demotion, a removal or an archive reaches an open socket on its
-  next reconnect. Nothing in this
+  The role is read at connect, so the writes that change it close the sockets they affect and the
+  client's reconnect picks the stored role up: a role change, a removal or a leave closes that
+  person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
+  whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). The close is
+  best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
+  the room after the close, leaves the old role until the socket drops. Nothing in this
   stage relaxes any of that, and the provider does not pass a trip id the layout did not already
   resolve through its own loader.
 - **The wire contract, stated so no later stage regresses it.** These four sentences are the part of
@@ -1375,9 +1379,9 @@ row, because nothing has ever called `createShareLink`.
     per-connection budget of 40 messages per second is a member's budget, and presence is a list of
     people the members know. Putting an anonymous stranger into a tenant's room would put all three
     in the hands of anyone holding a URL. So the guest viewer is server-rendered and has no socket,
-    and `closeTripRoom` — which exists at `src/server/do/trip-room-client.ts:99` and has no caller —
-    is deliberately still not called here; its natural first caller is member removal, which is
-    `TRP-11`'s row in `01-trips-core.md`.
+    and `closeTripRoom` — which exists in `src/server/do/trip-room-client.ts` and is called when a trip
+    is archived, restored or deleted or narrowed to private (#1050) — is deliberately not called
+    here; a guest never has a socket for it to close.
   - **A revoked link takes effect on the next request, and the guest makes one every 60 seconds
     while the tab is visible.** The page polls a tiny liveness endpoint — the same token resolution,
     returning only whether the link still resolves — gated on `document.visibilityState`, and
@@ -2474,9 +2478,10 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
   has not landed, this stage waits.
 - No package is required. No binding is required: the digest uses `crypto.subtle` and the bucket
   uses the existing `KV` binding.
-- One observation recorded rather than acted on, because it belongs to another row:
-  `closeTripRoom` still has no caller after this stage. Evicting a live socket is what **removal**
-  from a trip needs, not what an invite link needs, and its first caller belongs to `TRP-11`.
+- One observation recorded rather than acted on, because it belongs to another row: this stage adds
+  no caller of `closeTripRoom`. Evicting a live socket is what **removal** from a trip needs, not
+  what an invite link needs, and #1050 gave removal, role changes and the trip lifecycle their
+  callers (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
 
 ## Cross-plan collisions
 
