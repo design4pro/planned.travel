@@ -55,6 +55,27 @@ const stubs = vi.hoisted(() => ({
   sent: [] as Array<unknown>,
   /** When true, `notify()` fails the way an unreachable D1 would. */
   notifyRejects: false,
+  /** Every room eviction asked for: one person's sockets, or (`userId` null) the whole room. */
+  evicted: [] as Array<{ tripId: string; userId: string | null }>,
+}))
+
+/**
+ * `#/server/fns/context` is where the room evictions live, and it imports `cloudflare:workers`,
+ * which does not resolve in the plain-Node project this suite runs in. It is replaced wholesale with
+ * a recorder; the helpers' own behaviour (the namespace they call, the warning they log) is held by
+ * `src/server/fns/__tests__/room-eviction.test.ts`.
+ */
+vi.mock('#/server/fns/context', () => ({
+  closeRoomFor: async (
+    _scope: TenantScope,
+    tripId: string,
+    userId: string,
+  ): Promise<void> => {
+    stubs.evicted.push({ tripId, userId })
+  },
+  closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
+    stubs.evicted.push({ tripId, userId: null })
+  },
 }))
 
 vi.mock('../../../../-server/context', async () => {
@@ -179,6 +200,7 @@ beforeEach(async () => {
   stubs.scope = owner
   stubs.sent = []
   stubs.notifyRejects = false
+  stubs.evicted = []
 
   const editorId = await tenant.addUser('An editor')
   const viewerId = await tenant.addUser('A reader')
@@ -734,5 +756,194 @@ describe('guests', () => {
       expect((error as RepositoryError).code).toBe('FORBIDDEN')
       expect(await guestNames()).toEqual(['Anna'])
     })
+  })
+})
+
+/* ------------------------------------------------------------ the trip room */
+
+describe('the trip room after a change of someone’s access', () => {
+  it('evicts a demoted member’s sockets, and only theirs', async () => {
+    const memberId = await memberIdOf(fixture.editorId)
+
+    await inRequest(() =>
+      setTripRoleFn({
+        data: { tripId: fixture.tripId, memberId, role: 'viewer' },
+      }),
+    )
+
+    expect(stubs.evicted).toEqual([
+      { tripId: fixture.tripId, userId: fixture.editorId },
+    ])
+  })
+
+  it('evicts a promoted member too, so they edit live', async () => {
+    const memberId = await memberIdOf(fixture.viewerId)
+
+    await inRequest(() =>
+      setTripRoleFn({
+        data: { tripId: fixture.tripId, memberId, role: 'editor' },
+      }),
+    )
+
+    expect(stubs.evicted).toEqual([
+      { tripId: fixture.tripId, userId: fixture.viewerId },
+    ])
+  })
+
+  it('leaves the room alone when the role did not change', async () => {
+    const memberId = await memberIdOf(fixture.editorId)
+
+    await inRequest(() =>
+      setTripRoleFn({
+        data: { tripId: fixture.tripId, memberId, role: 'editor' },
+      }),
+    )
+
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('evicts a removed member, naming the person from the membership row', async () => {
+    const memberId = await memberIdOf(fixture.viewerId)
+
+    await inRequest(() =>
+      removeTripMemberFn({ data: { tripId: fixture.tripId, memberId } }),
+    )
+
+    expect(stubs.evicted).toEqual([
+      { tripId: fixture.tripId, userId: fixture.viewerId },
+    ])
+  })
+
+  it('evicts a member who leaves, and nobody when the sole owner is refused', async () => {
+    stubs.scope = tenant.scopeFor(fixture.viewerId)
+    await inRequest(() => leaveTripFn({ data: { tripId: fixture.tripId } }))
+    expect(stubs.evicted).toEqual([
+      { tripId: fixture.tripId, userId: fixture.viewerId },
+    ])
+
+    stubs.evicted = []
+    stubs.scope = owner
+    await inRequest(() => leaveTripFn({ data: { tripId: fixture.tripId } }))
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing when the caller may not change the role', async () => {
+    stubs.scope = tenant.scopeFor(fixture.editorId)
+    const memberId = await memberIdOf(fixture.viewerId)
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        setTripRoleFn({
+          data: { tripId: fixture.tripId, memberId, role: 'editor' },
+        }),
+      ),
+    )
+
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing when a member tries to remove another member', async () => {
+    stubs.scope = tenant.scopeFor(fixture.editorId)
+    const memberId = await memberIdOf(fixture.viewerId)
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        removeTripMemberFn({ data: { tripId: fixture.tripId, memberId } }),
+      ),
+    )
+
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing across workspaces, for the role, the removal and the leave alike', async () => {
+    const memberId = await memberIdOf(fixture.viewerId)
+    const foreign = await harness.seedTenant('elsewhere')
+    stubs.scope = foreign.scope
+
+    const calls: Array<() => Promise<unknown>> = [
+      () =>
+        setTripRoleFn({
+          data: { tripId: fixture.tripId, memberId, role: 'editor' },
+        }),
+      () => removeTripMemberFn({ data: { tripId: fixture.tripId, memberId } }),
+      () => leaveTripFn({ data: { tripId: fixture.tripId } }),
+      () =>
+        setTripVisibilityFn({
+          data: { tripId: fixture.tripId, visibility: 'private' },
+        }),
+    ]
+    for (const call of calls) {
+      const error = await captureError(() => inRequest(call))
+      expect(error).toBeInstanceOf(NotFoundError)
+    }
+
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing when a private trip is one the caller cannot read', async () => {
+    stubs.scope = tenant.scopeFor(fixture.outsiderId)
+    const memberId = await memberIdOf(fixture.viewerId)
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        removeTripMemberFn({ data: { tripId: fixture.tripId, memberId } }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(NotFoundError)
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('evicts the whole room when the visibility narrows from organization to private', async () => {
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+    expect(stubs.evicted).toEqual([])
+
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'private' },
+      }),
+    )
+    expect(stubs.evicted).toEqual([{ tripId: fixture.tripId, userId: null }])
+  })
+
+  it('leaves the room alone when private stays private, or the trip only widens', async () => {
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'private' },
+      }),
+    )
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing when a non-owner tries to narrow the visibility', async () => {
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+    stubs.scope = tenant.scopeFor(fixture.editorId)
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        setTripVisibilityFn({
+          data: { tripId: fixture.tripId, visibility: 'private' },
+        }),
+      ),
+    )
+
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(stubs.evicted).toEqual([])
   })
 })

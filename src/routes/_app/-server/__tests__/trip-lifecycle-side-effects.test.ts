@@ -62,6 +62,19 @@ const stubs = vi.hoisted(() => ({
   batches: [] as Array<Array<unknown>>,
   /** When true, the queue refuses the way an unreachable binding does. */
   queueRejects: false,
+  /** Every whole-room eviction asked for, as the trip it was asked for. */
+  evicted: [] as Array<string>,
+}))
+
+/**
+ * `#/server/fns/context` is where the room eviction lives, and it imports `cloudflare:workers`, which
+ * does not resolve in the plain-Node project this suite runs in. It is replaced with a recorder; the
+ * helper's own behaviour is held by `src/server/fns/__tests__/room-eviction.test.ts`.
+ */
+vi.mock('#/server/fns/context', () => ({
+  closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
+    stubs.evicted.push(tripId)
+  },
 }))
 
 /**
@@ -252,6 +265,7 @@ beforeEach(async () => {
   stubs.scope = tenant.scope
   stubs.batches = []
   stubs.queueRejects = false
+  stubs.evicted = []
 })
 
 afterEach(() => {
@@ -921,6 +935,79 @@ describe('the storage purge a delete leaves behind', () => {
     expect(new Set(statYears(sent()))).toEqual(
       new Set([ALL_TIME_STAT_YEAR, 2026]),
     )
+  })
+})
+
+/* ------------------------------------------------------------ the trip room */
+
+describe('the trip room after a lifecycle write', () => {
+  async function sketchTrip(): Promise<string> {
+    await createTrip({
+      title: 'Lisbon',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    return newestTripId()
+  }
+
+  it('evicts the whole room when the trip is archived, restored and deleted', async () => {
+    const tripId = await sketchTrip()
+
+    await archiveTrip({ tripId })
+    expect(stubs.evicted).toEqual([tripId])
+
+    await restoreTrip({ tripId })
+    expect(stubs.evicted).toEqual([tripId, tripId])
+
+    await deleteTrip({ tripId })
+    expect(stubs.evicted).toEqual([tripId, tripId, tripId])
+  })
+
+  it('stays out of the room for an edit and a star', async () => {
+    const tripId = await sketchTrip()
+
+    await updateTrip({ tripId, title: 'Lisbon again' })
+    await setTripFavourite({ tripId, isFavourite: true })
+
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing when the caller is a member who may not shelve or delete the trip', async () => {
+    const tripId = await sketchTrip()
+    const editor = await tenant.addUser('An editor')
+    await addTripMember(tenant.scope, {
+      tripId,
+      userId: editor,
+      role: 'editor',
+    })
+    stubs.scope = tenant.scopeFor(editor)
+
+    await expect(archiveTrip({ tripId })).rejects.toThrow()
+    await expect(restoreTrip({ tripId })).rejects.toThrow()
+    await expect(deleteTrip({ tripId })).rejects.toThrow()
+
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing for a private trip the caller cannot read, or one in another workspace', async () => {
+    const tripId = await sketchTrip()
+    const foreign = await harness.seedTenant('elsewhere')
+
+    for (const scope of [
+      tenant.scopeFor(await tenant.addUser('Bystander')),
+      foreign.scope,
+    ]) {
+      stubs.scope = scope
+      await expect(archiveTrip({ tripId })).rejects.toThrow()
+      await expect(restoreTrip({ tripId })).rejects.toThrow()
+      await expect(deleteTrip({ tripId })).rejects.toThrow()
+    }
+
+    expect(stubs.evicted).toEqual([])
+    stubs.scope = tenant.scope
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
   })
 })
 

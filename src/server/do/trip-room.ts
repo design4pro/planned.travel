@@ -127,6 +127,12 @@ interface SessionAttachment {
   focus: PresenceFocus | null
   /** `hello` handshake completed. Patches before that are refused. */
   joined: boolean
+  /**
+   * The room asked this socket to close. The runtime stops delivering frames once it has, but a
+   * closing socket stays listed until the handshake finishes, so the room does not rely on that: an
+   * evicted socket is never joined, never counted in presence and never answered.
+   */
+  evicted: boolean
   rate: { windowStart: number; count: number }
 }
 
@@ -230,6 +236,7 @@ export class TripRoom implements DurableObject {
       lastSeenAt: now,
       focus: null,
       joined: false,
+      evicted: false,
       rate: { windowStart: now, count: 0 },
     }
 
@@ -285,18 +292,45 @@ export class TripRoom implements DurableObject {
     return json({ version: result.version, entries: result.entries })
   }
 
+  /**
+   * Evicts sockets so the next connect goes back through the app Worker, which re-reads the stored
+   * trip role. An empty body closes the whole room; `{ userId }` closes that one person's sockets
+   * (every tab and device, found by the identity tag) and tells the people who stay.
+   */
   private async handleClose(request: Request): Promise<Response> {
     if (request.method !== 'POST') {
       return json({ error: 'Use POST to close a room' }, 405)
     }
-    for (const socket of this.state.getWebSockets()) {
+    const text = await request.text()
+    if (text.length === 0) {
+      this.evict(this.state.getWebSockets())
+      return json({ closed: true })
+    }
+    const userId = closeTargetOf(text)
+    if (userId === null) {
+      return json({ error: '`userId` must be a non-empty string' }, 400)
+    }
+    this.evict(this.state.getWebSockets(userId))
+    return json({ closed: true })
+  }
+
+  private evict(sockets: ReadonlyArray<TripRoomSocket>): void {
+    const departed: Array<string> = []
+    for (const socket of sockets) {
+      const session = readAttachment(socket)
+      if (session) {
+        socket.serializeAttachment({ ...session, joined: false, evicted: true } satisfies SessionAttachment)
+        if (session.joined) departed.push(session.connectionId)
+      }
       try {
         socket.close(CLOSE_ROOM_CLOSED, 'Room closed')
       } catch {
         // A socket already gone is exactly the state we wanted.
       }
     }
-    return json({ closed: true })
+    for (const connectionId of departed) {
+      this.broadcast({ t: 'presence', peers: this.presence(), left: connectionId })
+    }
   }
 
   /* ------------------------------------------------- websocket lifecycle -- */
@@ -308,6 +342,7 @@ export class TripRoom implements DurableObject {
       ws.close(CLOSE_ROOM_CLOSED, 'No session')
       return
     }
+    if (session.evicted) return
     this.tripId = session.identity.tripId
 
     const now = this.now()
@@ -838,6 +873,7 @@ function readAttachment(ws: TripRoomSocket): SessionAttachment | null {
     lastSeenAt: candidate.lastSeenAt ?? 0,
     focus: candidate.focus ?? null,
     joined: candidate.joined ?? false,
+    evicted: candidate.evicted ?? false,
     rate: candidate.rate ?? { windowStart: 0, count: 0 },
   }
 }
@@ -853,6 +889,18 @@ function json(body: unknown, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   })
+}
+
+/** The person a `close` request names, or `null` when the body does not name one. */
+function closeTargetOf(text: string): string | null {
+  try {
+    const body: unknown = JSON.parse(text)
+    if (typeof body !== 'object' || body === null) return null
+    const { userId } = body as { userId?: unknown }
+    return typeof userId === 'string' && userId.length > 0 ? userId : null
+  } catch {
+    return null
+  }
 }
 
 interface ServerCommitBody {

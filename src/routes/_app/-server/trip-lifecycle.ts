@@ -558,6 +558,19 @@ export const createTripFn = createServerFn({ method: 'POST' })
   })
 
 /**
+ * Closes every socket in the trip's room after the trip was archived, restored or deleted, so an
+ * open tab goes back through the connect handler instead of keeping the role it connected with.
+ *
+ * The bridge is reached at call time for the reason `taskQueue` is above: `#/server/fns/context`
+ * imports `cloudflare:workers`, which a route module's static graph must not. A room that cannot be
+ * reached is logged inside the helper and never fails the write.
+ */
+async function evictRoom(scope: TenantScope, tripId: string): Promise<void> {
+  const { closeRoom } = await import('#/server/fns/context')
+  await closeRoom(scope, tripId)
+}
+
+/**
  * Edits a trip's metadata. Owner only, decided in the repository.
  *
  * The day run follows the dates without anything here arranging it: `updateTrip` reconciles it
@@ -597,6 +610,7 @@ export const archiveTripFn = createServerFn({ method: 'POST' })
     }): Promise<{ readonly tripId: string; readonly isArchived: true }> => {
       const scope = await appScope()
       const trip = await archiveTrip(scope, data.tripId)
+      await evictRoom(scope, trip.id)
       return { tripId: trip.id, isArchived: true }
     },
   )
@@ -610,6 +624,7 @@ export const restoreTripFn = createServerFn({ method: 'POST' })
     }): Promise<{ readonly tripId: string; readonly isArchived: false }> => {
       const scope = await appScope()
       const trip = await restoreTrip(scope, data.tripId)
+      await evictRoom(scope, trip.id)
       return { tripId: trip.id, isArchived: false }
     },
   )
@@ -681,6 +696,7 @@ export const deleteTripFn = createServerFn({ method: 'POST' })
     ]
 
     await deleteTrip(scope, trip.id)
+    await evictRoom(scope, trip.id)
     await enqueueTripPurge(scope, trip.id, keys)
     await enqueueTravelStats(
       scope,

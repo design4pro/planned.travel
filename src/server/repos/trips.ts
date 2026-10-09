@@ -2036,7 +2036,9 @@ export async function tripRoleFor(
  * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement of every D1 write; this
  * draws the affordance, and it is also the rule that decides the role the trip room connects a
  * person with (`src/routes/api/trip-room/-lib/connect.ts`), so widening it widens who may patch the
- * room.
+ * room. The room reads it once, at connect: the writes that change a role, remove a member or archive
+ * the trip close the sockets they affect, so the next connect applies this rule again
+ * (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
  */
 export function canWritePlan(
   trip: Pick<Trip, 'isArchived'>,
