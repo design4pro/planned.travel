@@ -284,6 +284,10 @@ function attributionsOf(
   for (const route of routes) {
     for (const section of route.sections) {
       for (const wire of section.attributions ?? []) {
+        // A notice with no words says nothing to display, and a link around nothing has no name.
+        if (wire.text.trim() === '') {
+          continue
+        }
         const attribution = attributionOf(wire)
         const identity = JSON.stringify([
           attribution.text,

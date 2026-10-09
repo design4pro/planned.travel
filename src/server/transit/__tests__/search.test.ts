@@ -869,6 +869,22 @@ describe('the HERE client', () => {
     )
 
     it.each([[''], ['   ']])(
+      'drops a notice that carries no words (%j) rather than show a lone separator',
+      async (text) => {
+        const answer = await answerFor(
+          withAttributions([
+            { id: 'x', text, href: 'https://example.com/terms' },
+            { id: 'y', text: 'Data by the operator' },
+          ]),
+        )
+
+        expect(answer.attributions.map((entry) => entry.text)).toEqual([
+          'Data by the operator',
+        ])
+      },
+    )
+
+    it.each([[''], ['   ']])(
       'treats a blank clickable part (%j) as none, so no link is left without a name',
       async (hrefText) => {
         const answer = await answerFor(

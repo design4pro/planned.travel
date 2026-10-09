@@ -719,17 +719,24 @@ export function SearchOutcome({
           />
         ))}
       </ul>
-      <p data-part="connection-credit" className="mt-3 text-caption text-ink-3">
+      <p
+        data-part="connection-credit"
+        className="mt-3 text-caption text-ink-3 wrap-anywhere"
+      >
         {t('modules.transports.connection.credit')}{' '}
         <MapCreditList credits={HERE_CREDIT_LINKS} />
         {outcome.attributions.map((attribution) => (
           <Fragment
             key={`${attribution.text}|${attribution.href ?? ''}|${attribution.hrefText ?? ''}`}
           >
+            {' '}
             <span aria-hidden="true" className="mx-1 text-ink-4">
               ·
-            </span>
-            <AttributionNotice attribution={attribution} />
+            </span>{' '}
+            {/* `bdi`: a notice is the vendor's words in the vendor's script, whatever the page's. */}
+            <bdi>
+              <AttributionNotice attribution={attribution} />
+            </bdi>
           </Fragment>
         ))}
       </p>
