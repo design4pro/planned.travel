@@ -10,7 +10,7 @@
  * reads it without that predicate.
  */
 
-import { and, asc, count, eq, inArray, ne } from 'drizzle-orm'
+import { and, asc, count, eq, exists, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   INVITATION_STATUSES,
@@ -25,6 +25,8 @@ import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base
 import { NotFoundError, RepositoryError, assertCanAdminister } from './context'
 import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
 import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
+import type { SQL } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { TenantScope } from './base'
 
 export const membersRepository = createTenantRepository(member, 'member')
@@ -139,6 +141,27 @@ export async function listMemberProfiles(scope: TenantScope): Promise<Array<Memb
 
 export async function countMembers(scope: TenantScope): Promise<number> {
   return membersRepository.count(scope)
+}
+
+/**
+ * Whether the person a column names still holds a `member` row in this workspace, as one correlated
+ * `EXISTS`. The single home of "this user still belongs here" for the quotas that leave out what
+ * only a departed person could reach: the orphaned journey (#799) and the stranded trip (#810).
+ *
+ * Worked out inside the query that needs it rather than when a person leaves, because people leave
+ * through Better Auth's organization endpoints and through the console deleting the user, neither of
+ * which passes through the repositories — and so that the answer reverses when they return.
+ */
+export function stillInWorkspace(
+  scope: TenantScope,
+  userId: SQLiteColumn,
+): SQL {
+  return exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(member)
+      .where(tenantFilter(scope, member, eq(member.userId, userId))),
+  )
 }
 
 export async function getMembership(

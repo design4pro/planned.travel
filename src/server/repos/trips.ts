@@ -64,7 +64,7 @@ import {
   NotFoundError,
   RepositoryError,
 } from './context'
-import { getMembership } from './members'
+import { getMembership, stillInWorkspace } from './members'
 import {
   dayNotesRepository,
   daysRepository,
@@ -116,8 +116,9 @@ export { MAX_BOUND_PARAMETERS, chunkFor } from './batch'
  * Every trip in the tenant, readable or not.
  *
  * Tenant-filtered and nothing more, so it answers the questions that are asked *about the workspace*
- * rather than on a reader's behalf: the quota count, the slug reservation, the plan-usage figure, and
- * the writes, which are gated by {@link requireTrip} before they get here. A read that answers a
+ * rather than on a reader's behalf: the slug reservation and the writes, which are gated by
+ * {@link requireTrip} before they get here. The quota count and the plan-usage figure start from it
+ * too, through {@link countTripsAgainstPlan}. A read that answers a
  * person goes through {@link readableTrips} instead.
  */
 export const tripsRepository = createTenantRepository(trips, 'trip')
@@ -287,6 +288,44 @@ export function readableTripFilter(scope: TenantScope): SQL {
   return anyOf(eq(trips.visibility, 'organization'), isMember)
 }
 
+/**
+ * The trips the quota counts: every row, less a stranded trip (#810) — one that is not readable by
+ * the whole workspace (`visibility` other than `organization`) and none of whose `trip_members` rows
+ * belongs to somebody who still holds a `member` row here. ADR 0007 makes such a trip readable by
+ * nobody and every trip write demands a trip owner, so the slot it holds could never be given back.
+ *
+ * Worked out when the quota is checked rather than when a person leaves (see {@link stillInWorkspace}),
+ * so it covers every way of leaving and the trip counts again if a member returns. Nothing is
+ * deleted, moved or handed over, and the read rule in {@link readableTripFilter} is untouched.
+ */
+function strandedTripFilter(scope: TenantScope): SQL {
+  const hasMemberInWorkspace = exists(
+    scope.db
+      .select({ present: sql`1` })
+      .from(tripMembers)
+      .where(
+        tenantFilter(
+          scope,
+          tripMembers,
+          eq(tripMembers.tripId, trips.id),
+          stillInWorkspace(scope, tripMembers.userId),
+        ),
+      ),
+  )
+  return allOf(ne(trips.visibility, 'organization'), not(hasMemberInWorkspace))
+}
+
+/**
+ * How many trips count against the plan: the one figure {@link createTrip}, {@link startTripCopy}
+ * and the plan-usage figure in `billing/runtime.cloudflare.ts` are all worked out from, so what is
+ * enforced and what the plan page shows cannot disagree.
+ */
+export async function countTripsAgainstPlan(
+  scope: TenantScope,
+): Promise<number> {
+  return tripsRepository.count(scope, not(strandedTripFilter(scope)))
+}
+
 /** The three reads a trip reader needs, with {@link readableTripFilter} already inside them. */
 export interface ReadableTrips {
   findOne: (where: SQL) => Promise<Trip | null>
@@ -300,8 +339,9 @@ export interface ReadableTrips {
  * ADR 0002's archetype for the tenant filter is that it cannot be removed — it is not something a
  * query says, it is something the handle does — and after ADR 0007 the read predicate carries the
  * same weight and deserves the same treatment. `tripsRepository` answers for *every* trip in the
- * tenant, which is right for the quota count in {@link createTrip}, for the slug reservation, and for
- * the plan-usage figure in `billing/runtime.cloudflare.ts`, and wrong for every reader. While both
+ * tenant, which is right for the slug reservation and (less the stranded trips of
+ * {@link countTripsAgainstPlan}) for the quota count and the plan-usage figure, and wrong for every
+ * reader. While both
  * were spelled `tripsRepository.findMany`, nothing but memory told them apart, and memory had already
  * missed two: `listTripsWithoutJourney` and `journalCoverage` in `journey.ts` offered a workspace
  * member the titles and counts of private trips they cannot open until #196 routed them through here.
@@ -952,7 +992,7 @@ export async function createTrip(
     )
   }
 
-  await assertQuota(scope, 'trips', await tripsRepository.count(scope))
+  await assertQuota(scope, 'trips', await countTripsAgainstPlan(scope))
 
   const slug = await reserveTripSlug(scope, values.slug ?? values.title)
   return mintTrip(
@@ -1163,7 +1203,7 @@ export async function startTripCopy(
 
   const source = await requireTrip(scope, tripId)
 
-  await assertQuota(scope, 'trips', await tripsRepository.count(scope))
+  await assertQuota(scope, 'trips', await countTripsAgainstPlan(scope))
   await assertQuota(
     scope,
     'places',
