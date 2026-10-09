@@ -80,17 +80,17 @@ map layer.
 
 ### What the stage owns and what it does not
 
-| Owned (this stage writes it)                                                                                                                                                                         | Not owned (read only, or left alone)                                                                                                                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/server/repos/atlas.ts` - edit: `regionCodeFor`, `BUCKET_LIST_MAX_PER_TRAVELLER`, `BucketListLimitError`, the ceiling in `createBucketListItem`, the region `userId`-free input schemas          | `src/server/db/schema.ts`, `drizzle/` - **no schema change, no migration**                                                                                                                            |
-| `src/server/fns/atlas.ts` - edit: five new functions (below), the shared country-record helpers extracted from the two country functions                                                             | `src/routes/_app/atlas.tsx` - unchanged; no route is added and `pnpm generate-routes` is not run                                                                                                      |
-| `src/lib/atlas/place-name.ts` (+ test) - new: `foldPlaceName`, the one definition of "the same name" for regions and bucket entries                                                                  | `src/components/atlas/atlas-panel.tsx`, `country-overlay.tsx` - **not edited for the regions section** (it hangs off `CountryActions`); `atlas-panel.tsx` is edited in 08-S2b for the bucket tab only |
-| `src/components/atlas/world-map.tsx` - new (moved from `src/routes/_app/-ui/world-map.tsx`, which is deleted); `atlas-screen.tsx` - one import line and its doc comment                              | `src/routes/_app/-server/library.ts` (`ATLAS_BUCKET_LIST_LIMIT = 40`, a read cap, stays as it is)                                                                                                     |
-| `src/components/atlas/region-record.tsx` (+ test) - new; `bucket-list-dialog.tsx` (+ test) - new; `country-actions.tsx` (+ test) and `atlas-panel.tsx` (bucket tab) - edit; `index.ts` - two exports | `src/server/queue/**` (the recompute producer and consumer are reused as they are)                                                                                                                    |
-| `src/components/atlas/__tests__/copy-rules.test.ts` - edit: drop the explicit `world-map.tsx` path (the directory walk now covers the file)                                                          | `achieveBucketListItem` has no server function; ticking an entry off is a follow-up (Out of scope)                                                                                                    |
-| `src/lib/i18n/messages/<23 locales>/atlas.ts` - the new keys; `CONTEXT.md` - **Visited region**, **Bucket list item**                                                                                | The map's region layers and any tileset (deferred, Blockers)                                                                                                                                          |
-| `src/server/fns/__tests__/atlas.test.ts`, `src/server/repos/__tests__/tenant-isolation.test.ts` - append                                                                                             | `src/server/billing/**`, `PLAN_QUOTAS`, `resolveLimits()` - nothing is added                                                                                                                          |
-| `e2e/product-modules.spec.ts` - created if absent, otherwise a `test.describe` is appended (the leave-planner stage creates the same file; whichever lands first creates it)                         |                                                                                                                                                                                                       |
+| Owned (this stage writes it)                                                                                                                                                                                                                                                                                                                                 | Not owned (read only, or left alone)                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/server/repos/atlas.ts` - edit: async `regionCodeFor`, `BucketListLimitError`, `VisitedRegionLimitError`, the two ceilings in `createBucketListItem` / `markRegionVisited`. The repository inputs keep their optional `userId` (the dev seeder and `travel-stats.test.ts` pass it); the `userId`-free schemas are new boundary schemas in `fns/atlas.ts` | `src/server/db/schema.ts`, `drizzle/` - **no schema change, no migration**                                                                                                                            |
+| `src/server/fns/atlas.ts` - edit: five new functions (below), the shared country-record helpers extracted from the two country functions                                                                                                                                                                                                                     | `src/routes/_app/atlas.tsx` - unchanged; no route is added and `pnpm generate-routes` is not run                                                                                                      |
+| `src/lib/atlas/place-name.ts` (+ test) - new: `foldPlaceName`, the one definition of "the same name" for regions and bucket entries; `src/lib/atlas/limits.ts` - new: the two ceilings as isomorphic constants (the dialog and the section need them on the client)                                                                                          | `src/components/atlas/atlas-panel.tsx`, `country-overlay.tsx` - **not edited for the regions section** (it hangs off `CountryActions`); `atlas-panel.tsx` is edited in 08-S2b for the bucket tab only |
+| `src/components/atlas/world-map.tsx` - new (moved from `src/routes/_app/-ui/world-map.tsx`, which is deleted); `atlas-screen.tsx` - one import line and its doc comment                                                                                                                                                                                      | `src/routes/_app/-server/library.ts` (`ATLAS_BUCKET_LIST_LIMIT = 40`, a read cap, stays as it is)                                                                                                     |
+| `src/components/atlas/region-record.tsx` (+ test) - new; `bucket-list-dialog.tsx` (+ test) - new; `country-actions.tsx` (+ test) and `atlas-panel.tsx` (bucket tab) - edit; `index.ts` - two exports                                                                                                                                                         | `src/server/queue/**` (the recompute producer and consumer are reused as they are)                                                                                                                    |
+| `src/components/atlas/__tests__/copy-rules.test.ts` - edit: drop the explicit `world-map.tsx` path (the directory walk now covers the file)                                                                                                                                                                                                                  | `achieveBucketListItem` has no server function; ticking an entry off is a follow-up (Out of scope)                                                                                                    |
+| `src/lib/i18n/messages/<23 locales>/atlas.ts` - the new keys; `CONTEXT.md` - **Visited region**, **Bucket list item**                                                                                                                                                                                                                                        | The map's region layers and any tileset (deferred, Blockers)                                                                                                                                          |
+| `src/server/fns/__tests__/atlas.test.ts`, `src/server/repos/__tests__/tenant-isolation.test.ts` - append                                                                                                                                                                                                                                                     | `src/server/billing/**`, `PLAN_QUOTAS`, `resolveLimits()` - nothing is added                                                                                                                          |
+| `e2e/product-modules.spec.ts` - created if absent, otherwise a `test.describe` is appended (the leave-planner stage creates the same file; whichever lands first creates it)                                                                                                                                                                                 |                                                                                                                                                                                                       |
 
 ### Phase boundaries (tickets)
 
@@ -99,77 +99,98 @@ map layer.
 | 1     | 08-S2a | A traveller records "Bavaria" inside Germany from the country panel, sees a removable chip, and Germany is now visited |
 | 2     | 08-S2b | A traveller adds "Old town" (place) and "Dolomites" (region) from the bucket tab, and removes any entry from the list  |
 
-08-S2b is blocked by 08-S2a: both edit `country-actions.tsx`, `index.ts`, the atlas locale files and
-`e2e/product-modules.spec.ts`. If 08-S2a does not fit one context window, the `world-map` move stands alone as a third,
-first ticket (`08-S2a0`), still blocked-by-ordered and never cut by layer.
+08-S2b is blocked by 08-S2a: its duplicate key uses `foldPlaceName` (08-S2a, step 1) and `src/lib/atlas/limits.ts`, and both tickets edit
+`src/server/fns/atlas.ts`, `src/server/repos/atlas.ts`, `index.ts`, the atlas locale files and `e2e/product-modules.spec.ts`. If 08-S2a
+does not fit one context window, the `world-map` move stands alone as a third, first ticket (`08-S2a0`), still ordered and never cut
+by layer.
 
 ### Region identity (decided here, Resolved assumptions 1 and 2)
 
 A traveller types a **name**; the client never sends a code. The server derives it:
 
-- `foldPlaceName(name)` in `src/lib/atlas/place-name.ts`: NFKC, trim, collapse runs of whitespace, remove combining marks after NFKD,
-  lower-case, and refuse (empty result, or a Unicode `Cc` / `Cf` character such as a control or bidi override, in the _raw_ input)
-  with a validation error. It is pure and isomorphic; the folded form is the identity of a name, so "Bavaria", " bavaria " and
-  "BAVARIA" are one region and "Sao Paulo" matches "São Paulo".
-- `regionCodeFor(countryCode, name)` in `src/server/repos/atlas.ts` (the owner of the unique key): the country's two letters, a
-  hyphen, and the first 12 hex characters of SHA-256 over `"<CC>|<folded name>"` - 15 characters, so the repository's 16-character
-  validator is untouched. The country prefix is inside the hash input and the code's prefix, so the same name in two countries
-  never collides although the unique index omits `country_code`.
-- **Resolve by name before deriving.** The handler lists the acting traveller's own regions for that country
-  (`listVisitedRegions(scope, ctx.userId)` filtered in memory - bounded by the world times one traveller) and, when a recorded
-  `regionName` folds to the same string, **that existing row is the answer** (including seeded ISO rows such as `JP-13`
-  "Tokyo": typing "Tokyo" must not create a second `JP-<hash>`). Only when none matches is a code derived and a row written.
+- `foldPlaceName(name)` in `src/lib/atlas/place-name.ts`: NFKC, trim, collapse runs of whitespace (spaces, tabs and newlines are
+  whitespace, not rejected controls), lower-case, and remove **only** the combining diacritics U+0300 to U+036F after NFKD (never
+  all of `\p{M}`: Indic vowel signs, the virama and Thai marks are marks and are part of the name, so stripping them would merge
+  distinct names). It refuses, with a validation error naming the cause, an empty result and any `Cc` character other than
+  whitespace or any bidi / invisible-control character (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069). ZWNJ (U+200C) and
+  ZWJ (U+200D) are allowed: Persian and Indic names need them. It is pure and isomorphic; "Bavaria", " bavaria " and "BAVARIA" are one
+  region and "Sao Paulo" matches "São Paulo". The **stored `regionName` is the NFKC-trimmed, whitespace-collapsed input in its own
+  case**, not the folded form.
+- `regionCodeFor(countryCode, name)` in `src/server/repos/atlas.ts` (the owner of the unique key) is **async** (`crypto.subtle`;
+  Workers have no `node:crypto`): the country's two letters, a hyphen, and the first 12 hex characters of SHA-256 over
+  `"<CC>|<folded name>"` - 15 characters, so the repository's 16-character validator is untouched. The country prefix is inside the
+  hash input and the code's prefix, so the same name in two countries never collides although the unique index omits `country_code`.
+  The code is internal: any future export or share uses `region_name` plus the country, never the hash.
+- **Resolve by name before deriving.** The handler lists the acting traveller's own regions (`listVisitedRegions(scope, ctx.userId)`,
+  filtered by country in memory; bounded by the region ceiling below) and, when a recorded `regionName` folds to the same string,
+  **that existing row is the answer** (including seeded ISO rows such as `JP-13` "Tokyo": typing "Tokyo" must not create a second
+  `JP-<hash>`). Only when none matches is a code derived and a row written.
 
 ### Server functions (`src/server/fns/atlas.ts`)
 
 All inputs are `z.strictObject({...})` with the `error` parameter (unknown keys such as `userId` and `organizationId` are
-**rejected, not stripped**); a country code must be a key of `COUNTRY_NAMES`. The boundary validators are written out per
-function; they **do not** reuse `markRegionVisitedInput` / `createBucketListItemInput` unchanged (both carry `userId`); the
-repository still parses its own input again. The plan's "four new functions" is five:
+**rejected, not stripped**); a country code must be a key of `COUNTRY_NAMES`. The boundary validators are new and written out per
+function; they **do not** reuse `markRegionVisitedInput` / `createBucketListItemInput` (both carry `userId`, and both stay as they are
+for the seeder and the repository suites); the repository still parses its own input again. The plan's "four new functions" is five:
 
-| Function                 | Method | Input                                                                                                                                  | Behaviour                                                                                                                                                                                                                      |
-| ------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `loadCountryRegionsFn`   | GET    | `{ countryCode }`                                                                                                                      | The acting traveller's own regions for that country, `{ id, name }[]`, ordered by name. No suggestions list (Resolved assumption 3).                                                                                           |
-| `markRegionVisitedFn`    | POST   | `{ countryCode, regionName }` (1-120 characters after folding rules; no date)                                                          | Resolve-by-name, else derive and insert; **then** ensure the country is recorded (also when the region already existed, so re-adding heals a country that was since unmarked). Returns the regions list and the country state. |
-| `unmarkRegionVisitedFn`  | POST   | `{ regionId }` (1-64)                                                                                                                  | Proves the row is the acting traveller's (own-row list, `NotFoundError` for unknown **and** foreign ids alike), then `alreadyGone(unmarkRegionVisited)`. Never unmarks the country.                                            |
-| `addBucketListItemFn`    | POST   | `{ kind, name?, countryCode?, targetYear? }` (name <= 200; target year 1900-2200; **no** note, sort order, coordinates or region code) | Per-kind rules below. Idempotent, race-safe. Returns the entry and the country state if it is a country entry.                                                                                                                 |
-| `removeBucketListItemFn` | POST   | `{ itemId }` (1-64)                                                                                                                    | Own-row proof first (any kind, not the country-only guard of `removeCountryFromBucketListFn`), then `alreadyGone(deleteBucketListItem)`.                                                                                       |
+| Function                 | Method | Input                                                                                                                                  | Behaviour                                                                                                                                                                                                                                                                                                    |
+| ------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `loadCountryRegionsFn`   | GET    | `{ countryCode }`                                                                                                                      | The acting traveller's own regions for that country, `{ id, name }[]`, ordered by name. No suggestions list (Resolved assumption 3).                                                                                                                                                                         |
+| `markRegionVisitedFn`    | POST   | `{ countryCode, regionName }` (1-120 characters; no date)                                                                              | Resolve-by-name, else derive and insert (refused past the region ceiling); **then** ensure the country is recorded (also when the region already existed, so re-adding heals a country that was since unmarked). Returns the regions list and the country state, and whether the country was newly recorded. |
+| `unmarkRegionVisitedFn`  | POST   | `{ regionId }` (1-64)                                                                                                                  | Proves the row is the acting traveller's (own-row list, `NotFoundError` for unknown **and** foreign ids alike), then `alreadyGone(unmarkRegionVisited)`. Never unmarks the country.                                                                                                                          |
+| `addBucketListItemFn`    | POST   | `{ kind, name?, countryCode?, targetYear? }` (name <= 200; target year 1900-2200; **no** note, sort order, coordinates or region code) | Per-kind rules below. Idempotent, race-safe. Returns the entry and the country state if it is a country entry.                                                                                                                                                                                               |
+| `removeBucketListItemFn` | POST   | `{ itemId }` (1-64)                                                                                                                    | Own-row proof first (any kind, not the country-only guard of `removeCountryFromBucketListFn`), then `alreadyGone(deleteBucketListItem)`.                                                                                                                                                                     |
 
 **Per-kind bucket rules.** `country`: `countryCode` required, the name is `countryName(code)` and any client name is ignored; the
-handler delegates to the same helper `addCountryToBucketListFn` uses, so there is one implementation of the country entry.
-`region`: `countryCode` and `name` required. `place`: `name` required, `countryCode` optional. For `region` and `place` the
-duplicate key is _(traveller, kind, country or null, `foldPlaceName(name)`)_ over **non-achieved** entries only (an achieved
-"Old town" does not block adding it again). After the insert the handler re-reads and keeps the lowest id, exactly as the
-country path does, by generalising `collapseRivalGoals` to take a key predicate rather than copying it. There is still no unique
-index (a unique index over free text would reject a second "Old town" in another country, and drizzle-kit rebuilds a SQLite
-table for an index change).
+handler calls a new module-private helper `addCountryGoal(scope, code, targetYear, note)` that is **extracted from the inline body of
+`addCountryToBucketListFn`** (which then calls it too), so there is one implementation of the country entry. `region`: `countryCode`
+and `name` required. `place`: `name` required, `countryCode` optional. For `region` and `place` the duplicate key is _(traveller,
+kind, country or null, `foldPlaceName(name)`)_ over **non-achieved** entries only (an achieved "Old town" does not block adding it
+again). After the insert the handler re-reads and keeps the lowest id, exactly as the country path does, by generalising
+`collapseRivalGoals` to take a key predicate rather than copying it. There is still no unique index (a unique index over free text
+would reject a second "Old town" in another country, and drizzle-kit rebuilds a SQLite table for an index change).
 
-**Extracted helpers (module-private, one owner).** The country functions' race-safe loop becomes
-`recordCountryVisit(scope, code, visitedOn)` and the undo becomes `unrecordCountryVisit(scope, visit)`; both country
-functions call them and so does the region cascade. Their existing tests must stay green with no edits (that is the proof of the
-extraction). Neither helper is exported from the module.
+**Extracted helpers (module-private, one owner).** The race-safe loop of `markCountryVisitedFn` becomes
+`recordCountryVisit(scope, code, { visitedOn, note }) -> { state, created }` (`created` is false when the row already existed, which the
+"enqueue at most once" rule needs); `markCountryVisitedFn`, and the region cascade, call it. The undo is **not** extracted:
+`unmarkRegionVisitedFn` never unmarks a country, so `unmarkCountryVisitedFn` keeps its body. The extractions (`recordCountryVisit`,
+`addCountryGoal`) leave the existing tests of the four country functions green with no edits, which is their proof. Neither helper is
+exported from the module.
 
 **Authorisation, decided in the handler.** Both tables are per-traveller inside a workspace. Every handler passes
 `scope.ctx.userId` and no input carries a user id. An id the traveller does not own, a colleague's id and an id from another
 workspace throw the **same** `NotFoundError`. A unique-index refusal on a region is read as "somebody already did it"
-(re-read, answer); a second consecutive refusal becomes a 409 `AtlasConflictError`-style error that carries no driver text,
-statement, organisation id or user id.
+(re-read, answer); a second consecutive refusal becomes a conflict error that carries no driver text, statement, organisation id or
+user id.
 
 **The statistics recompute.** The all-time `travel_stats` row stores `regionCount`; the atlas loader reads it live but the
 statistics stage prints the stored figure. So `markRegionVisitedFn` and `unmarkRegionVisitedFn` enqueue the recompute (the
 deterministic `travel-stats` envelope: all-time year `0`, acting traveller only, `route: 'atlas'`) on every write **that changed a
-row**, never on an idempotent no-op, and **at most once per call**: when the cascade recorded the country, the helper's enqueue
-(which carries the all-time year) is the call's only one. The bucket-list functions enqueue nothing: `bucket_list_items` feeds no
+row**, never on an idempotent no-op, and **at most once per call**: when `recordCountryVisit` reports `created`, its enqueue (which
+carries the all-time year) is the call's only one. The bucket-list functions enqueue nothing: `bucket_list_items` feeds no
 `travel_stats` column. A refused queue never fails the write (the producer already logs and returns).
 
-**The ceiling.** `createBucketListItem` counts the traveller's rows (`bucketListRepository.count(scope, eq(userId, ctx.userId))`)
-and refuses past `BUCKET_LIST_MAX_PER_TRAVELLER = 500` (achieved entries included) with `BucketListLimitError`
-(`status = 422`, a message naming the limit; not the 402 of `AtlasQuotaError`, which is reserved for a plan, and not the 409 of a
-race). It is a noisy-neighbour guard, not a plan quota: the count-then-insert is not atomic and may overshoot by the requests in
-flight, which is stated in the code. Both `addBucketListItemFn` and `addCountryToBucketListFn` translate it (the latter through a
-second branch next to `withQuotaBoundary`, which handles only `QuotaExceededError`). Nothing is added to `resolveLimits()`,
-`PLAN_QUOTAS` or `limits.test.ts`. `ATLAS_BUCKET_LIST_LIMIT = 40` stays: it caps the SSR payload, is a different control for a
-different reason, and both constants carry a comment saying so.
+**The ceilings (noisy-neighbour guards, not plan quotas).** `src/lib/atlas/limits.ts` exports `BUCKET_LIST_MAX_PER_TRAVELLER = 500`
+(achieved entries included) and `VISITED_REGIONS_MAX_PER_TRAVELLER = 1000`. Free-text names make both tables unbounded otherwise, and
+every region write can enqueue a queue message. `createBucketListItem` and `markRegionVisited` count the rows of the id they write for
+(`values.userId ?? scope.ctx.userId`, through the tenant-scoped `count`) and refuse past the constant with `BucketListLimitError` /
+`VisitedRegionLimitError` (repository errors, not forwarded: the public failure channel is closed, see below). The count-then-insert is
+not atomic and may overshoot by the requests in flight; the code comment says so. Both add paths for a bucket entry
+(`addBucketListItemFn`, `addCountryToBucketListFn`) let the refusal reach the screen as the generic add failure, and the **screen
+prevents it first**: the dialog reads the `bucketTotal` it already receives and `RegionRecord` its loaded count, and each shows its
+"full" message instead of submitting. Nothing is added to `resolveLimits()`, `PLAN_QUOTAS` or `limits.test.ts`.
+`ATLAS_BUCKET_LIST_LIMIT = 40` stays: it caps the SSR payload, is a different control for a different reason, and the constants carry a
+comment saying so.
+
+**The error channel (`docs/SPEC.md` §9 rule 10).** A server function's failure crosses to the client as `unexpected` plus a reference,
+except the classes in `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`); statuses and messages do not cross, and that set is closed
+and pinned by `public.test.ts`. This stage adds **no** public failure code. So no 422 or 409 is promised to a caller: every refusal
+reaches the screen as the action's own failure message (`failure` / `fallback` keys on `useAction`), and the conditions the screen can
+know in advance (full list, empty name, hidden characters) are checked in the browser with `foldPlaceName` and `limits.ts`.
+
+**Statement budget.** A region add runs about eight or nine D1 statements (own-regions read, count, insert, country read, country
+insert, the read-back, optional re-read); `docs/ARCHITECTURE.md` §2.2 asks for one to four. The excess is accepted and bounded: every
+statement is indexed on `(organization_id, user_id)`, none holds a lock across an await, and the country half is the existing loop.
 
 ### Entitlement
 
@@ -178,25 +199,42 @@ check is invented here; until that stage lands the module behaves as it does tod
 
 ### Decisions on the screen
 
-- **The regions section hangs off `CountryActions`** (`RegionRecord` renders inside it, below the two rows), so both hosts - the
-  map-anchored `CountryOverlay` panel and the `AtlasPanel` country pane, each already a scrolling column - gain it without a host
-  edit. `data-part="country-panel-regions"` is on `RegionRecord`'s own root. `CountryActions` stays keyed by `countryCode`, so a
-  section loaded for one country is never shown for another.
+- **The regions section hangs off `CountryActions`** (`RegionRecord` renders inside it, after the two rows and their message strip,
+  and receives the same `headingLevel` as its `SectionLabel`), so both hosts - the map-anchored `CountryOverlay` panel and the
+  `AtlasPanel` country pane, each already a scrolling column - gain it without a host edit. `data-part="country-panel-regions"` is on
+  `RegionRecord`'s own root. `RegionRecord` is **keyed by `countryCode` inside `CountryActions`** and ignores a late answer for another
+  country. (`CountryActions` itself is keyed by country only in the overlay; in the shelf it carries a fixed `key="actions"` on
+  purpose, to avoid remounts - so the key has to live one level down.)
+- **Writes coordinate.** A pending region write disables the two action rows and a pending row write disables the region controls,
+  the same rule the two rows already follow (`RegionRecord` reports `onPendingChange` to `CountryActions`). Region writes refresh the
+  route data (`useAction` invalidates the router), which is intended: when adding a region records the country, the visit row, the
+  map and the statistics must change with it. The section's own list is driven by the write's returned list, not the loader.
 - **Removing the last region does not unmark the country.** A country with a trip behind it stays visited; the section says so in
-  place ("Removing a region does not remove {country} from your atlas").
+  place ("Removing a region does not remove {country} from your atlas"). Where the country is _not_ visited and regions exist, a
+  different line is shown (the regions stay, and re-adding one or marking the country heals the pair).
 - **The reverse case.** Unmarking a country leaves its regions in place (nothing is cascade-deleted; keeping them can always be
-  undone). `RegionRecord` reports its count to `CountryActions` through an `onCountChange` callback; when the traveller has one
-  or more regions in the country, the unmark press goes through the existing `ConfirmDialog` and its body says the regions stay.
-  The panel then lists them under the unvisited country with the in-place line, and re-adding a region (or marking the country)
-  heals the pair.
-- **Plain text input, not `Combobox`.** `RegionRecord` is an `Input` labelled "Add a region in {country}" with an "Add region"
-  `Button`; `Enter` submits. Because suggestions are the traveller's own regions _in this country_, which are already the chips
-  above the input, a suggestion list would add nothing and is not built (Resolved assumption 3). Duplicates are absorbed by the
-  server's fold, not refused.
+  undone). `RegionRecord` reports its count to `CountryActions` through `onCountChange`; when the traveller has one or more regions in
+  the country, the unmark press goes through the existing `ConfirmDialog`, whose body says the regions stay. `ConfirmRequest.description`
+  is one string, so when the visit also has history the two sentences come from **one** plural key (`actions.confirm.visitRegions.body`
+  takes the existing history line as a parameter) rather than two pasted together. While the count is still loading the press behaves
+  as it does today: nothing is lost either way. This confirmation is this product's form of the reference row's "guard on a derived
+  record": a country the traveller built up by hand is not unmarked in one stray press.
+- **A list, not `Chip`.** The regions are a `<ul>` labelled by the "Regions" heading; each `<li>` holds the name as text and an
+  `IconButton size="sm"` named "Remove {region}" (`loading` / `disabled` supported). `Chip` is not used: its body is always an
+  `aria-pressed` toggle and its remove button is a fixed 20 px with no pending state (WCAG 4.1.2, 2.5.8).
+- **Plain text input, not `Combobox`.** `RegionRecord` is a `Field` + `Input` whose visible label is "Add a region in {country}" (the
+  placeholder is only an example) with an "Add region" `Button`; `Enter` submits. Because suggestions are the traveller's own regions
+  _in this country_, which are already the list above the input, a suggestion list would add nothing and is not built (Resolved
+  assumption 3). A duplicate is absorbed by the server's fold and answered with "already on your record", not refused.
 - **No date, no rename.** A region is added by name; `first_visited_on` stays null. An optional date is additive later.
-- **The bucket tab gains "Add something" and a per-row remove** (an `IconButton` named "Remove {name} from your bucket list"). Only
-  an achieved entry asks for confirmation (the existing `atlas.actions.confirm.goal.*` pattern). The empty state keeps its
-  place and gains the same primary action.
+- **The bucket tab gains "Add something" and a per-row remove** (an `IconButton` named by the existing
+  `atlas.actions.goal.remove.name` key). Only an achieved entry asks for confirmation (the existing `atlas.actions.confirm.goal.*`
+  pattern); the tab's rows carry no note, so no other entry has anything hidden to lose. The empty state keeps its place and gains the
+  same primary action.
+- **A new entry can land past the 40 rows the tab shows.** Rows are ordered by `(isAchieved, sortOrder, id)` and new entries are
+  written with sort order 0, so where one lands among equals is not promised. When the total after an add exceeds
+  `ATLAS_BUCKET_LIST_LIMIT`, the success toast says the list shows its first entries and where the new one is ("{name} is on your list;
+  the list shows its first {shown} entries"), so nothing is added invisibly. A "show all" list is out of scope (Out of scope).
 
 ### Alternatives considered, and why they lost
 
@@ -212,9 +250,9 @@ check is invented here; until that stage lands the module behaves as it does tod
 
 ## 📝 Architecture
 
-- Owner modules: region identity `regionCodeFor` and the ceiling in `src/server/repos/atlas.ts` (the owner of the unique key and of
+- Owner modules: region identity `regionCodeFor` and the two ceilings' enforcement in `src/server/repos/atlas.ts` (the owner of the unique key and of
   every insert into `bucket_list_items`); "the same name" in `src/lib/atlas/place-name.ts` (isomorphic, used by the handler and
-  unit-testable without a database); the country-record loop in one module-private helper in `src/server/fns/atlas.ts`.
+  unit-testable without a database); the country-record loop (`recordCountryVisit`) and the country goal (`addCountryGoal`) in two module-private helpers in `src/server/fns/atlas.ts`; the two ceilings as constants in `src/lib/atlas/limits.ts`.
 - `components/ui` is untouched and never fetches. `RegionRecord` and `BucketListDialog` live in `components/atlas`, which already
   imports server functions (`country-actions.tsx` does).
 - No Durable Object, no realtime patch (the atlas is per-traveller and has no room), no KV, no R2, no new queue envelope.
@@ -225,8 +263,8 @@ check is invented here; until that stage lands the module behaves as it does tod
 
 **No schema change and none is filed.** `visited_regions` (`country_code`, `region_code`, `region_name`, `first_visited_on`;
 unique `(organization_id, user_id, region_code)`; `visited_regions_org_country_idx`) and `bucket_list_items` (`kind`, `name`,
-`country_code`, `region_code`, `target_year`, `is_achieved`; no unique index) exist as they are. The one validator change is in the
-repository's _function_ inputs, never the table: nothing here raises the 16-character `regionCode` cap.
+`country_code`, `region_code`, `target_year`, `is_achieved`; no unique index) exist as they are. Nothing here raises the 16-character `regionCode` cap, and the repository's function inputs keep their
+shape (they still accept an optional `userId` for the seeder).
 
 ## 📝 API Contracts
 
@@ -236,45 +274,66 @@ The five functions of "Server functions" above, with these response shapes (type
   region writes return the same plus `country: AtlasCountryState` (the existing type).
 - `addBucketListItemFn` returns `{ item: AtlasBucketGoal & { kind, countryCode }, country: AtlasCountryState | null }`;
   `removeBucketListItemFn` returns `{ removedId }`.
-- Errors a caller may see: validation (400, with the field named), `NotFoundError` (404), `BucketListLimitError` (422), conflict
-  (409). Nothing else is forwarded.
+- Failures: a validation failure names the field; `NotFoundError` is the one refusal for an id the traveller does not own. Nothing
+  else is promised to a caller: the ceilings and a lost race reach the screen as the action's generic failure (see "The error
+  channel"), and no new class joins `AUTHORED_ERROR_NAMES`.
 
 ## 📝 UI/UX
 
 ### The regions section (`RegionRecord`)
 
-- A `SectionLabel` "Regions", a one-line hint ("Marking a region marks {country} too"), the removable `Chip`s, and the input row.
+- A `SectionLabel` "Regions" (its `headingLevel` passed down from the host, so the outline stays valid in both), a one-line hint
+  ("Adding a region marks {country} as visited too."), the `<ul>` of regions, and the input row.
 - **Empty** (`--color-surface-2`): "No regions recorded here yet" and one line on what a region is for; the input is the next tab
   stop, so the empty state is the input and not a dead end.
-- **Loading:** three `Skeleton` chips at the settled chip height while `loadCountryRegionsFn` resolves.
-- **Error:** a failed write keeps the chip and shows a `danger` `Alert` under the section naming what failed with "Try again"; a
-  failed load shows the same alert with a reload action and never blanks the panel around it.
-- **Pending:** the Add button and each chip's remove control take `loading`/`disabled`; an optimistic chip renders at 60% opacity
-  until the server answers and rolls back on failure. Focus returns to the input after an add and to the nearest remaining chip's
-  remove control (or the input) after a remove; a rolled-back add keeps the typed text and returns focus to the input.
-- **Motion:** a chip enters on 180 ms opacity and scale from 0.96 on `--ease-out-quint`, leaves on 150 ms; stagger 20 ms, capped at
-  eight; `prefers-reduced-motion: reduce` collapses to opacity. The map is never animated by this stage.
+- **Loading:** three `Skeleton` rows at the settled row height while `loadCountryRegionsFn` resolves, with the status text "Loading
+  your regions" in a polite live region.
+- **Messages.** The section uses the same fixed-height message strip as the two action rows, not a `Alert` that grows. It is **not**
+  a live region: the failure is spoken once, by the toast the action raises (`useAction` `failure` / `fallback` keys). The strip stays
+  after the toast for a reader who looks again. A failed load shows its message and a "Reload regions" button in the strip and never
+  blanks the panel around it.
+- **Pending.** Adds are **not** optimistic: the typed name is not a known row until the server derives the identity, so a pending add
+  lives in local state (the Add button shows `loading` and the status line says "Adding {region}"); a failed add keeps the typed text
+  and returns focus to the input. Removals use `useOptimistic` (the row leaves at once, comes back in place on failure, and a failed
+  remove keeps the item). Pending is shown through the spinner and the busy labels, never through reduced opacity (contrast).
+- **Status announcements** (polite, one at a time): "Added {region}", "{region} is already on your record", "Removed {region}", and,
+  when the cascade recorded the country, "{country} is now marked as visited".
+- **Focus.** After an add, focus stays on the input (cleared on success). After a remove it moves to the next remaining row's remove
+  control, else the previous one, else the input.
+- **Motion:** a row enters on 180 ms opacity and a 4 px rise on `--ease-out-quint`, leaves on 150 ms; `prefers-reduced-motion: reduce`
+  collapses to opacity. The map is never animated by this stage.
 - **Height discipline.** The overlay sizes its surface with `placeCountrySurface` / `PANEL_MIN_HEIGHT` (288) and places the actions
   in a scrolling column. The section must not move the controls above it when it loads (skeleton at the settled height) and the
   implementer verifies, at 360x800 and 1280x900, that the panel still places and the regions scroll inside the column rather than
-  pushing the two action rows off screen.
-- 360 px: the section scrolls inside the existing column; touch targets are at least 44 px under `pointer: coarse`.
+  pushing the two action rows off screen; and that the on-screen keyboard open on the input at 360x800 leaves the input visible.
+- **Targets.** The remove `IconButton size="sm"` meets WCAG 2.5.8 (24 px minimum) and the row is at least 44 px tall under
+  `pointer: coarse`.
 
 ### The bucket tab and `BucketListDialog`
 
-- "Add something" (primary) in the tab header and in the empty state opens a `Dialog`: **Name** `Input` (required, except for a
-  country entry, whose name is the country's), **Kind** `Select` over the schema's kinds (default `place`), **Country**
-  `Combobox` over the existing country search data (required for `country` and `region`, optional for `place`), **Target year** (optional). The dialog opens
-  from the bucket tab only; a country-panel entry point (the plan's pre-filled country) is out of scope.
-- Focus enters the dialog on the first invalid or first field, returns to its trigger on close, and moves to the alert on a failed
-  save with the typed values kept. `BucketListLimitError` shows "Your bucket list is full ({limit} entries). Remove one to add another."
-- Each row gains a remove `IconButton` (a rolled-back optimistic removal restores the row in place).
+- "Add something" (primary) in the tab header and in the empty state opens a `Dialog`. Field order: **Kind** `Select` over the schema's
+  kinds (default `place`) first, because it decides the rest; **Country** `Combobox` over the existing country search data (required for
+  `country` and `region`, optional for `place`, reusing `atlas.search.placeholder` / `atlas.search.results.none`); **Name** `Input`
+  (required for `region` and `place`, **hidden** for `country`, whose name is the country's); **Target year** (optional, 1900-2200,
+  with its own error `bucket.error.year`). Each is a `Field`; required ones carry `required`; the "optional" suffix appears only on the
+  fields that are optional for the chosen kind (`place` country, and target year).
+- The dialog opens from the bucket tab only; a country-panel entry point (the plan's pre-filled country) is out of scope.
+- Focus enters the dialog on the Kind field, returns to its trigger on close, and moves to the failure alert on a failed save (the
+  alert takes `tabIndex={-1}`) with the typed values kept. Escape and a backdrop click keep the draft until Save or Cancel is pressed.
+  The Save button shows a busy label while pending ("Adding to your list").
+- **Full list:** when `bucketTotal` already reaches `BUCKET_LIST_MAX_PER_TRAVELLER` the dialog shows `bucket.error.limit` and does not
+  submit. A server-side refusal (a race past the line) shows the generic add failure.
+- **Duplicate:** adding an entry that already exists is an idempotent success; the toast says "{name} is already on your list".
+- Each row gains a remove `IconButton` (a rolled-back optimistic removal restores the row in place). Offline, the controls reuse
+  `atlas.actions.offline` as the two action rows do.
+- When the total after an add exceeds the 40 visible rows, the success toast says so (`bucket.added.hidden`, see "Decisions on the
+  screen").
 
 ## 📝 Visual change expected
 
 `/atlas`, light and dark, desktop (1280x900, 2560x1440) and mobile (360x800):
 
-- the country panel (map-anchored overlay and shelf country pane) with the new **Regions** section: empty, with chips, loading, error;
+- the country panel (map-anchored overlay and shelf country pane) with the new **Regions** section: empty, with rows, loading, error;
 - the bucket tab with the **Add something** action, a remove control on each row, and the open dialog (empty, invalid, limit reached);
 - the **confirmation** raised by unmarking a country that has regions.
 
@@ -285,62 +344,80 @@ The resting `/atlas` screen changes only by the bucket tab's header action. The 
 All keys are added to `src/lib/i18n/messages/en/atlas.ts` and land in all 23 locales in the same change (`i18n-messages` skill; plural
 keys carry every category each locale needs, and `{count}` keeps its name). `{country}` is `countryName(code)`.
 
-| Key (en)                                              | Text                                                                         |
-| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `regions.label`                                       | Regions                                                                      |
-| `regions.hint`                                        | Marking a region marks {country} too.                                        |
-| `regions.keeps`                                       | Removing a region does not remove {country} from your atlas.                 |
-| `regions.empty.title`                                 | No regions recorded here yet                                                 |
-| `regions.empty.body`                                  | Add a state, province or area you have visited in {country}.                 |
-| `regions.input.label`                                 | Add a region in {country}                                                    |
-| `regions.input.placeholder`                           | For example, Bavaria                                                         |
-| `regions.add` / `regions.adding`                      | Add region / Adding {region}                                                 |
-| `regions.remove` / `regions.removing`                 | Remove {region} / Removing {region}                                          |
-| `regions.loading`                                     | Loading your regions                                                         |
-| `regions.error.invalid`                               | Enter a region name.                                                         |
-| `regions.error.load`                                  | We could not load your regions for {country}.                                |
-| `regions.error.add`                                   | We could not add {region}. Try again.                                        |
-| `regions.error.remove`                                | We could not remove {region}. Try again.                                     |
-| `regions.error.conflict`                              | {region} was being changed somewhere else at the same moment. Try again.     |
-| `regions.retry` / `regions.reload`                    | Try again / Reload regions                                                   |
-| `actions.confirm.regions.body` (plural)               | {count} regions you recorded in {country} stay on your record.               |
-| `panel.bucket.add`                                    | Add something                                                                |
-| `bucket.dialog.title`                                 | Add to your bucket list                                                      |
-| `bucket.dialog.name` / `.kind` / `.country` / `.year` | Name / Kind / Country / Target year (optional)                               |
-| `bucket.dialog.save` / `.cancel`                      | Add to list / Cancel                                                         |
-| `bucket.error.name` / `.country`                      | Enter a name. / Choose a country.                                            |
-| `bucket.error.limit`                                  | Your bucket list is full ({limit} entries). Remove one to add another.       |
-| `bucket.error.add` / `.remove`                        | We could not add {name}. Try again. / We could not remove {name}. Try again. |
-| `panel.bucket.remove`                                 | Remove {name} from your bucket list                                          |
+| Key (en)                                              | Text                                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `regions.label`                                       | Regions                                                                                     |
+| `regions.hint`                                        | Adding a region marks {country} as visited too.                                             |
+| `regions.keeps`                                       | Removing a region does not remove {country} from your atlas.                                |
+| `regions.keeps.unvisited`                             | These regions stay on your record. Adding another, or marking {country}, restores the pair. |
+| `regions.empty.title`                                 | No regions recorded here yet                                                                |
+| `regions.empty.body`                                  | Add a state, province or area you have visited in {country}.                                |
+| `regions.input.label`                                 | Add a region in {country}                                                                   |
+| `regions.input.placeholder`                           | For example, Bavaria                                                                        |
+| `regions.add` / `regions.adding`                      | Add region / Adding {region}                                                                |
+| `regions.remove` / `regions.removing`                 | Remove {region} / Removing {region}                                                         |
+| `regions.loading`                                     | Loading your regions                                                                        |
+| `regions.status.added` / `.exists` / `.removed`       | Added {region} / {region} is already on your record / Removed {region}                      |
+| `regions.status.country`                              | {country} is now marked as visited                                                          |
+| `regions.error.invalid`                               | Enter a region name.                                                                        |
+| `regions.error.hidden`                                | That name contains characters we cannot keep. Remove them and try again.                    |
+| `regions.error.load`                                  | We could not load your regions for {country}.                                               |
+| `regions.error.add` / `.remove`                       | We could not add {region}. Try again. / We could not remove {region}. Try again.            |
+| `regions.error.full`                                  | You have recorded {limit} regions. Remove one to add another.                               |
+| `regions.reload`                                      | Reload regions                                                                              |
+| `actions.confirm.visitRegions.body` (plural)          | `{count}` regions you recorded in {country} stay on your record (one / other)               |
+| `actions.confirm.visitRegionsHistory.body` (plural)   | The same sentence followed by the existing visit-history line, as one string                |
+| `panel.bucket.add`                                    | Add something                                                                               |
+| `bucket.dialog.title`                                 | Add to your bucket list                                                                     |
+| `bucket.dialog.name` / `.kind` / `.country` / `.year` | Name / Kind / Country / Target year (optional)                                              |
+| `bucket.dialog.save` / `.saving` / `.cancel`          | Add to list / Adding to your list / Cancel                                                  |
+| `bucket.error.name` / `.country` / `.year`            | Enter a name. / Choose a country. / Enter a year between 1900 and 2200.                     |
+| `bucket.error.hidden`                                 | That name contains characters we cannot keep. Remove them and try again.                    |
+| `bucket.error.limit`                                  | Your bucket list is full ({limit} entries). Remove one to add another.                      |
+| `bucket.error.add` / `.remove`                        | We could not add {name}. Try again. / We could not remove {name}. Try again.                |
+| `bucket.added` / `bucket.added.exists`                | {name} is on your list. / {name} is already on your list.                                   |
+| `bucket.added.hidden`                                 | {name} is on your list; the list shows its first {shown} entries.                           |
+| `panel.bucket.remove` / `.removing`                   | Remove {name} from your bucket list / Removing {name}                                       |
+| `panel.bucket.empty.body` (rewritten)                 | The existing body promises entries arrive from elsewhere; it now points at "Add something"  |
+
+Reused as they are: `atlas.actions.goal.remove.name`, `atlas.actions.offline`, `atlas.actions.toast.listed` / `unlisted`,
+`atlas.search.placeholder` / `atlas.search.results.none`, `atlas.panel.bucket.kind.*`, `atlas.actions.confirm.goal.*`.
+Plural keys carry every category each locale needs; `{count}` keeps its name; `{regions}` and `{limit}` are formatted numbers.
+The unmark confirmation is **one** string: a plural key that includes the history line where the visit has one
+(`visitRegionsHistory`), and the regions-only key otherwise; the two are never concatenated at runtime.
 
 The kind labels reuse the existing `atlas.panel.bucket.kind.*`; the achieved-entry confirmation reuses
 `atlas.actions.confirm.goal.*`. Glossary: `CONTEXT.md` gains **Visited region** (a named area inside a country a traveller has
-recorded; it never replaces the country) and **Bucket list item** (an aspiration of kind country, region or place; per traveller).
+recorded; it never replaces the country) and **Bucket list item** (an aspiration of kind country, region or place; per traveller;
+its `place` kind is a free-text aspiration and is **not** a **Place**, the location attached to a trip).
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                                                 | Expected                                                                                        |
-| ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| "Bavaria", " bavaria ", "BAVARIA" typed in turn                                      | One row, one chip; later submits are idempotent successes                                       |
-| "Tokyo" typed in Japan when the seed holds `JP-13` "Tokyo"                           | Resolves to the existing row; no second row                                                     |
-| Same name in two countries                                                           | Two rows (the country is in the code)                                                           |
-| Name whose folded form is empty, or contains a control / bidi character              | Validation error, nothing written                                                               |
-| Non-Latin name ("東京都")                                                            | Accepted; identity is the hash of the folded name                                               |
-| Two overlapping adds of the same new region                                          | The loser's unique refusal is read as "already done"; one row; no driver text leaves the module |
-| Region added in a country the traveller has not visited                              | Region written, then country recorded once; one recompute enqueue                               |
-| Region re-added after the country was unmarked                                       | Country re-recorded (heal), no duplicate region                                                 |
-| Last region removed                                                                  | Country stays visited; the in-place line says so                                                |
-| Unmark a country that has regions                                                    | Confirmation names the count and that they stay; regions remain                                 |
-| `unmarkRegionVisitedFn` with a colleague's id, another workspace's id, an unknown id | The same `NotFoundError`; the row survives                                                      |
-| Input carrying `userId` / `organizationId` / an unknown key                          | Rejected by the strict validator                                                                |
-| Country code outside `COUNTRY_NAMES`                                                 | Validation error                                                                                |
-| Queue binding refuses the recompute                                                  | The write succeeds; the failure is logged once                                                  |
-| Adding a bucket `country` entry twice, or overlapping                                | One entry (lowest id kept)                                                                      |
-| Adding "Old town" (`place`, Estonia) while an achieved "Old town" exists             | A new entry (achieved entries do not count as duplicates)                                       |
-| 501st bucket entry (through either add function)                                     | `BucketListLimitError` (422) with the limit in the message; nothing written                     |
-| Removing a bucket entry twice                                                        | The second is a success (`alreadyGone`)                                                         |
-| An entry beyond the 40 rows the loader shows                                         | Added and counted; the existing "N more" line covers it                                         |
-| Offline / failed write                                                               | Optimistic row or chip rolls back where the reader can see it; the message says what failed     |
+| Case                                                                                 | Expected                                                                                           |
+| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| "Bavaria", " bavaria ", "BAVARIA" typed in turn                                      | One row; later submits are idempotent successes                                                    |
+| "Tokyo" typed in Japan when the seed holds `JP-13` "Tokyo"                           | Resolves to the existing row; no second row                                                        |
+| Same name in two countries                                                           | Two rows (the country is in the code)                                                              |
+| Name whose folded form is empty, or contains a control / bidi character              | Validation error, nothing written                                                                  |
+| Non-Latin name ("東京都")                                                            | Accepted; identity is the hash of the folded name                                                  |
+| Two overlapping adds of the same new region                                          | The loser's unique refusal is read as "already done"; one row; no driver text leaves the module    |
+| A name with a bidi or invisible control character                                    | Refused in the browser (`regions.error.hidden`) and again by the server                            |
+| The 1001st region, or the 501st bucket entry typed past a stale screen               | Refused by the repository; the screen shows the generic add failure; nothing is written            |
+| A region add that races with unmarking the country from another tab                  | The country is recorded after the region, so the pair ends consistent                              |
+| Region added in a country the traveller has not visited                              | Region written, then country recorded once; one recompute enqueue                                  |
+| Region re-added after the country was unmarked                                       | Country re-recorded (heal), no duplicate region                                                    |
+| Last region removed                                                                  | Country stays visited; the in-place line says so (a different line if the country is unvisited)    |
+| Unmark a country that has regions                                                    | Confirmation names the count and that they stay; regions remain                                    |
+| `unmarkRegionVisitedFn` with a colleague's id, another workspace's id, an unknown id | The same `NotFoundError`; the row survives                                                         |
+| Input carrying `userId` / `organizationId` / an unknown key                          | Rejected by the strict validator                                                                   |
+| Country code outside `COUNTRY_NAMES`                                                 | Validation error                                                                                   |
+| Queue binding refuses the recompute                                                  | The write succeeds; the failure is logged once                                                     |
+| Adding a bucket `country` entry twice, or overlapping                                | One entry (lowest id kept)                                                                         |
+| Adding "Old town" (`place`, Estonia) while an achieved "Old town" exists             | A new entry (achieved entries do not count as duplicates)                                          |
+| 501st bucket entry (through either add function)                                     | `BucketListLimitError` in the repository; the screen shows the full-list message first             |
+| Removing a bucket entry twice                                                        | The second is a success (`alreadyGone`)                                                            |
+| An entry beyond the 40 rows the loader shows                                         | Added and counted; the toast says the list shows its first entries; the "N more" line stays        |
+| Offline / failed write                                                               | A removed row comes back in place; a failed add keeps the typed text; the message says what failed |
 
 ## ✅ Acceptance criteria
 
@@ -351,21 +428,24 @@ recorded; it never replaces the country) and **Bucket list item** (an aspiration
 3. `unmarkRegionVisitedFn` and `removeBucketListItemFn` refuse a colleague's id, a foreign-workspace id and an unknown id with the
    same `NotFoundError`, and delete nothing.
 4. No input of any new function accepts `userId`, `organizationId`, `regionCode` or `sortOrder`; the strict validators reject them.
-5. `unmarkCountryVisitedFn` leaves regions in place; its confirmation fires when regions exist and says they stay.
+5. `unmarkCountryVisitedFn` leaves regions in place; its confirmation fires when regions exist, says they stay, and is one string
+   (with the history line when the visit has one).
 6. A region write that changed a row enqueues one all-time `travel-stats` envelope; an idempotent no-op enqueues none; a cascade
    plus a new region enqueues one, not two; the bucket-list functions enqueue none.
 7. A bucket entry of each kind round-trips; `country` ignores a client name; the 501st entry is refused with `BucketListLimitError`
-   through both add functions and nothing is written.
+   in the repository through both add functions, nothing is written, and the screen shows the full-list message before submitting.
 8. The extracted country helpers leave the existing tests of the four country functions green without edits.
-9. `RegionRecord`: `Enter` submits; an optimistic chip rolls back on rejection and keeps the typed text; every chip's remove control
-   is keyboard-reachable with an accessible name that includes the region; focus lands as stated under "Pending".
-10. `BucketListDialog`: name required (except country), country required for `country` and `region`, kind defaults to `place`,
-    focus returns to the trigger on close, the limit error is announced.
-11. The panel's tab order runs actions -> regions -> input in both hosts; `[data-part="country-panel-regions"]` resolves to exactly
+9. `RegionRecord`: `Enter` submits; a failed add keeps the typed text and focus on the input; a failed remove keeps the row; every
+   row's remove control is keyboard-reachable with an accessible name that includes the region; focus lands as stated; pending write
+   and the two action rows disable each other; a late answer for another country is ignored.
+10. `BucketListDialog`: Kind first and defaulting to `place`; name hidden for `country`, required otherwise; country required for
+    `country` and `region`; focus enters on Kind and returns to the trigger on close; the failure alert takes focus; the draft survives
+    Escape; the full-list message is shown instead of submitting.
+11. The panel's tab order runs actions -> regions list -> input -> Add in both hosts; `[data-part="country-panel-regions"]` resolves to exactly
     one element in each.
 12. `world-map.tsx` lives under `src/components/atlas/`, `copy-rules.test.ts` still reads it, and no file imports the old path.
 13. All new copy exists in 23 locales (parity test) and no component carries an English literal (`copy-rules.test.ts`).
-14. Tenant isolation: the new `describe` (below) passes.
+14. Tenant isolation: the new `describe` (below) passes, including the cross-workspace ceiling case.
 15. The browser journey passes with an empty console (`watchConsole`) in both themes and on `mobile-safari` for read-only checks.
 
 ## 📝 Risks & Impact Review
@@ -377,6 +457,8 @@ recorded; it never replaces the country) and **Bucket list item** (an aspiration
 | Overlay surface no longer fits with the extra section   | Medium   | Skeleton at settled height, scroll inside the existing column, 360x800 and 1280x900 frames, `country-overlay.test.tsx` kept green |
 | Refactor of the country functions regresses idempotence | Medium   | The existing tests are the guard; no edits to them in the same commit                                                             |
 | A seeded ISO row and a typed name diverge               | Low      | Resolve-by-name before deriving                                                                                                   |
+| A region add costs 8-9 D1 statements                    | Low      | Recorded against `docs/ARCHITECTURE.md` §2.2; all indexed on `(organization_id, user_id)`; the ceiling bounds the list read       |
+| Hashed codes leak into a future export                  | Low      | The share/export rule is written into the spec: use `region_name` plus the country, never the code                                |
 | Overshoot of the 500-row ceiling under a race           | Low      | A noisy-neighbour guard, documented as non-atomic                                                                                 |
 | Stored `regionCount` lags if the queue is down          | Low      | Producer logs and the next recompute heals; the atlas reads it live                                                               |
 
@@ -384,7 +466,7 @@ recorded; it never replaces the country) and **Bucket list item** (an aspiration
 
 A clickable or painted region layer and its tileset; editing or renaming a region; a visited date on a region; ticking a bucket
 entry off or editing it (`achieveBucketListItem` has no server function and the row does not ask for one); a repository-level
-`userId` guard on `unmarkRegionVisited` / `deleteBucketListItem`; workspace-wide suggestions.
+`userId` guard on `unmarkRegionVisited` / `deleteBucketListItem`; workspace-wide suggestions; a "show all" bucket list beyond the 40 rows; an undo toast for a removed entry.
 
 ### Blockers
 
@@ -408,8 +490,8 @@ See "Phase boundaries (tickets)": 08-S2a then 08-S2b.
 ### Phase 1 - regions on the record (08-S2a)
 
 1. `src/lib/atlas/place-name.ts` and its test, test first (the Edge Cases rows on folding).
-2. `regionCodeFor` and the region input schemas in `src/server/repos/atlas.ts`; repository cases.
-3. Extract `recordCountryVisit` / `unrecordCountryVisit` from the country functions with their tests unchanged; then
+2. Async `regionCodeFor` and `VisitedRegionLimitError` in `src/server/repos/atlas.ts`; the boundary schemas in `fns/atlas.ts`; repository cases.
+3. Extract `recordCountryVisit` from `markCountryVisitedFn` with its tests unchanged; add `src/lib/atlas/limits.ts` and the region ceiling; then
    `loadCountryRegionsFn`, `markRegionVisitedFn`, `unmarkRegionVisitedFn` and their cases in `atlas.test.ts`; the tenant-isolation `describe`.
 4. Move `world-map.tsx`; fix `atlas-screen.tsx` and `copy-rules.test.ts`.
 5. `region-record.tsx`, the `CountryActions` edit (mount, `onCountChange`, the unmark confirmation), `index.ts`; the region keys in
@@ -417,8 +499,8 @@ See "Phase boundaries (tickets)": 08-S2a then 08-S2b.
 
 ### Phase 2 - the bucket list (08-S2b)
 
-1. `BucketListLimitError`, `BUCKET_LIST_MAX_PER_TRAVELLER` and the count in `createBucketListItem`; generalise `collapseRivalGoals`; repository cases.
-2. `addBucketListItemFn`, `removeBucketListItemFn`, the second error translation in `addCountryToBucketListFn`; their cases.
+1. `BucketListLimitError` and the count in `createBucketListItem` (the constant is already in `limits.ts`); generalise `collapseRivalGoals`; repository cases.
+2. Extract `addCountryGoal` from `addCountryToBucketListFn`; `addBucketListItemFn`, `removeBucketListItemFn`; their cases (the ceiling through both add functions).
 3. `bucket-list-dialog.tsx`, the `atlas-panel.tsx` bucket-tab edit (action, row remove, empty state), `index.ts`; the bucket keys in
    23 locales; `CONTEXT.md` **Bucket list item**; the e2e `describe`.
 
@@ -429,12 +511,15 @@ See "Phase boundaries (tickets)": 08-S2a then 08-S2b.
   unmark, folded duplicates, seeded-row match, colleague and cross-workspace refusals, strict-input refusals, ceiling through both
   add functions, enqueue counts, race refusal read as success); `region-record.test.tsx`; `bucket-list-dialog.test.tsx`;
   `country-actions.test.tsx` (existing cases hold with the section mounted; the confirmation with regions).
+- Definition of done: the `docs/SPEC.md` §7 checklist, item by item, in each PR body.
 - Tenant isolation, appended to `src/server/repos/__tests__/tenant-isolation.test.ts` as one `describe`: in A's scope,
   `markRegionVisited` for a region whose country only B has visited writes A's row and leaves B's; `unmarkRegionVisited(scopeA, bRegionId)`,
   `deleteBucketListItem(scopeA, bItemId)` and `achieveBucketListItem(scopeA, bItemId)` are `NotFoundError` with B's rows intact; reversed,
   `listVisitedRegions(scopeB, aUserId)` is `[]` and `visitedRegionsRepository.requireById(scopeB, aRowId)` is the `NotFoundError`
-  (both asserted); the cascade writes A's `visited_countries` row and leaves B's count unchanged. The same-workspace colleague cases live
-  in `atlas.test.ts` (the repository functions are workspace-scoped by design).
+  (both asserted); the cascade writes A's `visited_countries` row and leaves B's count unchanged. The cross-workspace ceiling case: the ceiling in A's scope counts A's rows only (a full list in B does not refuse A's add, and the reverse).
+  The same-workspace colleague cases live in `atlas.test.ts` and are four: a colleague's `unmarkRegionVisitedFn`, a colleague's
+  `removeBucketListItemFn`, a colleague's rows absent from `loadCountryRegionsFn`, and a colleague's rows not counted against the ceiling
+  (the repository functions are workspace-scoped by design).
 - Browser, per `docs/plans/12-verification-protocol.md` and ADR 0016 (no baselines, no pixel comparison, no `e2e/__screenshots__`):
   `e2e/product-modules.spec.ts` asserts `/atlas` (declared with `map: true` in `e2e/helpers/routes.ts`, already so) answers, hydrates,
   says nothing in the console, adds and removes a region and a bucket entry and restores what it changed. The writing describes are
@@ -445,26 +530,36 @@ See "Phase boundaries (tickets)": 08-S2a then 08-S2b.
 - Frames, the blind A/B pair a person reads at review, from `scripts/visual/capture.mjs` (the plan's `scripts/ultrabuild` path does not exist):
   `PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs --url "http://localhost:$PORT/atlas" --out "<scratchpad>/shots/08-S2" --label B --viewports 360x800,1280x900,2560x1440 --themes light,dark --auth --map`,
   plus `--state regions --click '[data-part="country-panel-regions"]'` after selecting a country, and `--state bucket-dialog` on the dialog's trigger. The selectors are
-  verified to resolve by the spec run reaching the same state.
+  verified to resolve by the spec run reaching the same state. The spec run also asserts layout shift 0 when the regions load
+  (chromium; a `test.skip` on `mobile-safari`), and a 360x800 frame is taken with the on-screen keyboard open on the region input.
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                           | Applied default                                                                                                                                                                          | Why                                                                                                                                                                                                                             |
-| --- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | How does a typed region name become `region_code`?                 | Server-derived: `<CC>-` + 12 hex of SHA-256 over `<CC>\|<folded name>`; resolve by folded name against the traveller's own rows first; the client never sends a code                     | Decided by software architect (high) and security and tenancy (medium) sub-agents; they differed on a readable code vs a hash; the hash was taken: fits the 16-character validator, no Unicode edge cases, more reversible      |
-| 2   | Raise the repository's `regionCode` cap?                           | No; the cap stays at 16                                                                                                                                                                  | Consequence of row 1                                                                                                                                                                                                            |
-| 3   | Region-name suggestions, and whose?                                | None: the input is plain text; the traveller's own regions in the country are already the chips                                                                                          | Security and tenancy sub-agent (high): own rows only; applied default: `Combobox` is single-select with no create mode, so the plan's "combobox that accepts a typed name" does not exist, and own-only suggestions add nothing |
-| 4   | Region layer on the map?                                           | Deferred; list-shaped record; a tracker issue for the tileset decision is filed by 08-S2a                                                                                                | Plan decision verified (`public/atlas/`, `style.ts`); product owner sub-agent (medium): the plan's pointer into the blockers plan is dangling                                                                                   |
-| 5   | Which region writes enqueue a recompute?                           | Every write that changed a row, all-time year, at most once per call; none for no-ops or bucket writes                                                                                   | Decided by software architect sub-agent (medium): `regionCount` is a stored column the statistics stage prints                                                                                                                  |
-| 6   | Where does the country loop live, and who proves ownership?        | Module-private helpers extracted in `fns/atlas.ts`; each id-addressed handler lists the traveller's own rows first                                                                       | Decided by software architect (high) and security and tenancy (high) sub-agents                                                                                                                                                 |
-| 7   | Bucket kinds and duplicates                                        | `country` delegates to the country path; `region` needs a country; `place` does not; duplicates keyed on (traveller, kind, country, folded name) over non-achieved entries               | Decided by software architect sub-agent (medium)                                                                                                                                                                                |
-| 8   | The ceiling                                                        | 500 per traveller, achieved included, `BucketListLimitError` (422), non-atomic and said so; both add paths translate it                                                                  | Architect proposed 200, security and tenancy 500; the larger was taken (a limit is easy to lower later and never evicts); security and tenancy sub-agent (medium)                                                               |
-| 9   | Where does the regions section mount?                              | Inside `CountryActions`, so both hosts get it without editing files the stage does not own                                                                                               | Decided by software architect sub-agent (high)                                                                                                                                                                                  |
-| 10  | Is "remove" part of the slice?                                     | Yes: a remove control on every bucket row (confirmation for an achieved entry only); no tick-off, no edit                                                                                | Decided by product owner sub-agent (high)                                                                                                                                                                                       |
-| 11  | A date or a rename on a region?                                    | No                                                                                                                                                                                       | Decided by product owner sub-agent (high): additive later                                                                                                                                                                       |
-| 12  | Ticket cut                                                         | Two tickets, each a full path; the `world-map` move rides with the first (a third only if the first does not fit)                                                                        | Decided by product owner sub-agent (medium)                                                                                                                                                                                     |
-| 13  | Close `ADD-05` as done or partial?                                 | Done, with 08-S2b                                                                                                                                                                        | Decided by product owner sub-agent (medium): the plan's closing rule names this case                                                                                                                                            |
-| 14  | Removing the last region, and unmarking a country that has regions | The country stays visited; unmarking keeps regions, behind a confirmation that says so                                                                                                   | Decided by product owner (medium) and security and tenancy (high) sub-agents                                                                                                                                                    |
-| 15  | The plan's strict-object and validator-reuse wording               | `z.strictObject` per function, no `userId`; repository inputs are not reused as boundary validators                                                                                      | Security and tenancy sub-agent (high): the repository schemas declare `userId`                                                                                                                                                  |
-| 16  | Plan paths that no longer exist                                    | `e2e/product-modules.spec.ts` (no snapshots, created by whichever stage lands first), `scripts/visual/capture.mjs`, no `e2e/__screenshots__`; `copy-rules.test.ts` joins the owned paths | Applied default: ADR 0016 and `docs/plans/12-verification-protocol.md`; verified by `ls`                                                                                                                                        |
-| 17  | Name later stages by id in this spec?                              | No                                                                                                                                                                                       | Applied default, verified in `.ai/scripts/backlog-status.mjs`                                                                                                                                                                   |
+| #   | Question                                                              | Applied default                                                                                                                                                                          | Why                                                                                                                                                                                                                             |
+| --- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | How does a typed region name become `region_code`?                    | Server-derived: `<CC>-` + 12 hex of SHA-256 over `<CC>\|<folded name>`; resolve by folded name against the traveller's own rows first; the client never sends a code                     | Decided by software architect (high) and security and tenancy (medium) sub-agents; they differed on a readable code vs a hash; the hash was taken: fits the 16-character validator, no Unicode edge cases, more reversible      |
+| 2   | Raise the repository's `regionCode` cap?                              | No; the cap stays at 16                                                                                                                                                                  | Consequence of row 1                                                                                                                                                                                                            |
+| 3   | Region-name suggestions, and whose?                                   | None: the input is plain text; the traveller's own regions in the country are already the chips                                                                                          | Security and tenancy sub-agent (high): own rows only; applied default: `Combobox` is single-select with no create mode, so the plan's "combobox that accepts a typed name" does not exist, and own-only suggestions add nothing |
+| 4   | Region layer on the map?                                              | Deferred; list-shaped record; a tracker issue for the tileset decision is filed by 08-S2a                                                                                                | Plan decision verified (`public/atlas/`, `style.ts`); product owner sub-agent (medium): the plan's pointer into the blockers plan is dangling                                                                                   |
+| 5   | Which region writes enqueue a recompute?                              | Every write that changed a row, all-time year, at most once per call; none for no-ops or bucket writes                                                                                   | Decided by software architect sub-agent (medium): `regionCount` is a stored column the statistics stage prints                                                                                                                  |
+| 6   | Where does the country loop live, and who proves ownership?           | Module-private helpers extracted in `fns/atlas.ts`; each id-addressed handler lists the traveller's own rows first                                                                       | Decided by software architect (high) and security and tenancy (high) sub-agents                                                                                                                                                 |
+| 7   | Bucket kinds and duplicates                                           | `country` delegates to the country path; `region` needs a country; `place` does not; duplicates keyed on (traveller, kind, country, folded name) over non-achieved entries               | Decided by software architect sub-agent (medium)                                                                                                                                                                                |
+| 8   | The bucket ceiling                                                    | 500 per traveller, achieved included, `BucketListLimitError` in the repository, non-atomic and said so; the screen prevents it first                                                     | Architect proposed 200, security and tenancy 500; the larger was taken (a limit is easy to lower later and never evicts); security and tenancy sub-agent (medium)                                                               |
+| 9   | Where does the regions section mount?                                 | Inside `CountryActions`, so both hosts get it without editing files the stage does not own                                                                                               | Decided by software architect sub-agent (high)                                                                                                                                                                                  |
+| 10  | Is "remove" part of the slice?                                        | Yes: a remove control on every bucket row (confirmation for an achieved entry only); no tick-off, no edit                                                                                | Decided by product owner sub-agent (high)                                                                                                                                                                                       |
+| 11  | A date or a rename on a region?                                       | No                                                                                                                                                                                       | Decided by product owner sub-agent (high): additive later                                                                                                                                                                       |
+| 12  | Ticket cut                                                            | Two tickets, each a full path; the `world-map` move rides with the first (a third only if the first does not fit)                                                                        | Decided by product owner sub-agent (medium)                                                                                                                                                                                     |
+| 13  | Close `ADD-05` as done or partial?                                    | Done, with 08-S2b                                                                                                                                                                        | Decided by product owner sub-agent (medium): the plan's closing rule names this case                                                                                                                                            |
+| 14  | Removing the last region, and unmarking a country that has regions    | The country stays visited; unmarking keeps regions, behind a confirmation that says so                                                                                                   | Decided by product owner (medium) and security and tenancy (high) sub-agents                                                                                                                                                    |
+| 15  | The plan's strict-object and validator-reuse wording                  | `z.strictObject` per function, no `userId`; repository inputs are not reused as boundary validators                                                                                      | Security and tenancy sub-agent (high): the repository schemas declare `userId`                                                                                                                                                  |
+| 16  | Plan paths that no longer exist                                       | `e2e/product-modules.spec.ts` (no snapshots, created by whichever stage lands first), `scripts/visual/capture.mjs`, no `e2e/__screenshots__`; `copy-rules.test.ts` joins the owned paths | Applied default: ADR 0016 and `docs/plans/12-verification-protocol.md`; verified by `ls`                                                                                                                                        |
+| 17  | Name later stages by id in this spec?                                 | No                                                                                                                                                                                       | Applied default, verified in `.ai/scripts/backlog-status.mjs`                                                                                                                                                                   |
+| 18  | A ceiling on `visited_regions` too?                                   | Yes: 1000 per traveller, `VisitedRegionLimitError`, constants in `src/lib/atlas/limits.ts`, screen pre-check                                                                             | Security and tenancy panel (round 1): free-text names make the table unbounded and each write can enqueue a message                                                                                                             |
+| 19  | How does a refusal reach the screen?                                  | As the action's generic failure; no new class in `AUTHORED_ERROR_NAMES`; the conditions the screen can know are checked in the browser                                                   | Architect panel (round 1): `docs/SPEC.md` §9 rule 10 and `public.test.ts` pin a closed set; applied default, option (b)                                                                                                         |
+| 20  | `Chip` for the regions?                                               | No: a `<ul>` with text and an `IconButton size="sm"`                                                                                                                                     | Accessibility panel (round 1): `Chip` is an `aria-pressed` toggle with a fixed 20 px remove button and no pending state                                                                                                         |
+| 21  | Optimistic adds?                                                      | No for adds (identity is server-derived), yes for removals                                                                                                                               | Architect and UX panel (round 1): `useOptimistic` cannot show a row whose id does not exist yet                                                                                                                                 |
+| 22  | Confirm before removing a bucket entry?                               | Only an achieved one; no undo toast                                                                                                                                                      | Product owner panel (round 1): the tab's rows hold no note, so nothing hidden is lost                                                                                                                                           |
+| 23  | Entries beyond the 40 visible rows                                    | Added and counted; the toast says the list shows its first entries; a "show all" list is out of scope                                                                                    | UX panel (round 1): nothing may be added invisibly                                                                                                                                                                              |
+| 24  | A country-panel entry point to the dialog, and the dialog's tab order | Out of scope; Kind first, Name hidden for `country`                                                                                                                                      | Product owner and UX panel (round 1)                                                                                                                                                                                            |
+| 25  | Statement budget of a region add                                      | 8-9 D1 statements accepted against `docs/ARCHITECTURE.md` §2.2 and recorded                                                                                                              | Architect panel (round 1)                                                                                                                                                                                                       |
+| 26  | Panel, round 1                                                        | Product owner, software architect, security and tenancy, accessibility, UX: all five **approve with conditions**; every condition applied in the revision commit                         | Panel round 1                                                                                                                                                                                                                   |
