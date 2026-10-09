@@ -22,9 +22,9 @@ import {
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
-import { placesRepository } from './places'
+import { requirePlaceOfTrip } from './places'
 import { unlinkReservationsFromExpense } from './reservations'
-import { requireTrip } from './trips'
+import { requireTrip, tripMemberUserIds } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -134,6 +134,69 @@ async function requireTripSettlement(
     throw new NotFoundError(settlementsRepository.entityName, settlementId)
   }
   return settlement
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * People of the trip in the request
+ * ---------------------------------------------------------------------------------------------- */
+
+/*
+ * A split, a payer and both sides of a payment are plain user ids, and `getMemberBalances` groups by
+ * them without asking who is on the trip, so an id nobody checked would surface as a balance row of
+ * a stranger. The people a money write may name are the trip's members (`trip_members`, not
+ * everyone who may read the trip: an organization-visible trip is readable by the whole workspace)
+ * and whoever the trip's money already carries. The second half is what lets a person who has since
+ * left the trip keep their expense editable and their debt payable; a person the money has never
+ * seen is always refused.
+ *
+ * One refusal for the whole submitted set: {@link NotFoundError} prints the id it is given, so the
+ * message names the request rather than any id in it, and the caller cannot tell which id was wrong.
+ */
+
+async function requireTripPeople(
+  scope: TenantScope,
+  tripId: string,
+  userIds: ReadonlyArray<string | null | undefined>,
+  alreadyOnMoney: () => Promise<ReadonlyArray<string>>,
+): Promise<void> {
+  const named = new Set(userIds.filter((id): id is string => !!id))
+  if (named.size === 0) {
+    return
+  }
+  const members = new Set(await tripMemberUserIds(scope, tripId))
+  const outsiders = [...named].filter((id) => !members.has(id))
+  if (outsiders.length === 0) {
+    return
+  }
+  const known = new Set(await alreadyOnMoney())
+  if (outsiders.some((id) => !known.has(id))) {
+    throw new NotFoundError('trip member', 'named in the request')
+  }
+}
+
+/** Who one expense already carries: its payer and everyone it is split between. */
+async function peopleOnExpense(
+  scope: TenantScope,
+  expense: Expense,
+): Promise<Array<string>> {
+  const shares = await expenseSharesRepository.findMany(scope, {
+    where: eq(expenseShares.expenseId, expense.id),
+  })
+  return [
+    ...(expense.paidBy === null ? [] : [expense.paidBy]),
+    ...shares.map((share) => share.userId),
+  ]
+}
+
+/** Who still has money on the trip: a balance that is not zero, whether they owe or are owed. */
+async function peopleWithBalance(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<string>> {
+  const balances = await getMemberBalances(scope, tripId)
+  return balances
+    .filter((row) => row.balanceMinor !== 0)
+    .map((row) => row.userId)
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -448,11 +511,17 @@ export async function createExpense(
     await requireTripDay(scope, values.tripId, values.dayId)
   }
   if (values.placeId) {
-    await placesRepository.requireById(scope, values.placeId)
+    await requirePlaceOfTrip(scope, values.tripId, values.placeId)
   }
   if (values.budgetItemId) {
-    await budgetItemsRepository.requireById(scope, values.budgetItemId)
+    await requireTripBudgetItem(scope, values.tripId, values.budgetItemId)
   }
+  await requireTripPeople(
+    scope,
+    values.tripId,
+    [values.paidBy, ...(participants ?? []).map((part) => part.userId)],
+    async () => [],
+  )
 
   const expense = await expensesRepository.insert(scope, {
     ...values,
@@ -479,6 +548,18 @@ export async function updateExpense(
   if (patch.dayId) {
     await requireTripDay(scope, existing.tripId, patch.dayId)
   }
+  if (patch.placeId) {
+    await requirePlaceOfTrip(scope, existing.tripId, patch.placeId)
+  }
+  if (patch.budgetItemId) {
+    await requireTripBudgetItem(scope, existing.tripId, patch.budgetItemId)
+  }
+  await requireTripPeople(
+    scope,
+    existing.tripId,
+    [patch.paidBy, ...(participants ?? []).map((part) => part.userId)],
+    () => peopleOnExpense(scope, existing),
+  )
   const expense = await expensesRepository.requireUpdate(
     scope,
     expenseId,
@@ -514,6 +595,12 @@ export async function setExpenseShares(
     .array(splitParticipantInput)
     .max(100)
     .parse([...participants])
+  await requireTripPeople(
+    scope,
+    expense.tripId,
+    parsed.map((part) => part.userId),
+    () => peopleOnExpense(scope, expense),
+  )
   return writeShares(scope, expense, parsed, method ?? expense.splitMethod)
 }
 
@@ -615,6 +702,12 @@ export async function createSettlement(
     )
   }
   await requireTrip(scope, values.tripId)
+  await requireTripPeople(
+    scope,
+    values.tripId,
+    [values.fromUserId, values.toUserId],
+    () => peopleWithBalance(scope, values.tripId),
+  )
   return settlementsRepository.insert(scope, {
     ...values,
     createdBy: scope.ctx.userId,
