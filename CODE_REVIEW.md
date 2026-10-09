@@ -43,11 +43,21 @@ floor guard script; the review now does.
   cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
   must be invisible to the call. No test, blocker.
+- **A guard added to one writer reaches every sibling writer of that surface in the same PR.** A
+  trip, role or ownership check on one money, booking or transport writer is applied to the others
+  that take the same ids, or the PR body names each one left out with its issue. A sibling a lower
+  role can still reach is a blocker; otherwise a should-fix. The guard also ships with a tenant and a
+  member isolation test (#880, #921, #934, #1029, #1032, #1043: #836 -> #837 -> #878 -> #1027 -> #923
+  each found the next unguarded sibling).
 - **Routes call server functions (`src/server/fns`); server functions call repos.** A route with
   a query in it, or a server function called from inside another server function's handler
   (`scripts/check-server-fn-manifest.mjs` explains why that ships broken), is a blocker.
 - **Zod on every server-function input.** An input typed by hand or trusted from the client is a
   blocker.
+- **A server-function input schema only gains optional fields.** A new `.string()` or `.number()`
+  that is required makes every tab loaded before the deploy fail its next save; make it `.optional()`
+  and default it in the handler, and make it required one release later (BACKWARD_COMPATIBILITY.md
+  §2). A required new field is a blocker in code (#972) and a major in a spec (#846).
 - **`src/components/ui` never fetches data and never imports from `src/server`.**
 - **`src/server/public` returns named, column-whitelisted, read-only projections**, with the tenant
   scope derived from the resolved share record.
@@ -93,6 +103,13 @@ time prefix, so their order is random: assert a set, or give the rows distinct i
   comments, and fixes each statement it makes false in the same PR (#542, #543, #498, #563, #653,
   #657, #772, #775). The PR body's "Docs grep" box lists the terms searched; a ticked box with
   no terms counts as unchecked.
+- **The docs grep covers what code says too.** A PR that renames, deletes or changes the behaviour of a
+  function, module, constant or rule greps its name and the claim it made across the waiting specs
+  in `.ai/specs/` (a spec still telling a ticket to delete what is already gone), `CONTEXT.md`, and the
+  docblocks and comments in `src/` - not only `docs/`. Leaving one stale is a should-fix, and a
+  "none" in the PR body's grep box on a PR that changed behaviour counts as unchecked (#880, #925,
+  #964, #977, #798; waiting specs also in #682's and #819's runs). A `docs/plans/` file headed
+  "Migrated - frozen" is not edited (#968 reverted it): the stale statement goes in the PR body.
 - **Widening what an unattended run accepts names every input it now admits.** A PR that drops or
   loosens a filter, trusted-author list or trigger of an automation, schedule or `afk-*` skill
   (`authors`, labels, who may comment, which issue sources) lists the input classes the old filter
@@ -103,6 +120,14 @@ time prefix, so their order is random: assert a set, or give the rows distinct i
   the new runner, and every tool the job calls (`pnpm`, `gh`, what an action unpacks itself with) is
   installed by a step in the workflow rather than assumed from the image; for a required check or a
   shipping job (deploy, rollback) a gap is a blocker (#497, #563).
+
+## Specs (major)
+
+A spec that says a design is "bounded", "atomic" or "works by construction" names the platform or
+library limit it rests on and shows it was read, not remembered: D1's bound parameters per statement
+(a test harness refuses oversized ones), the Queues message size, what a Better Auth hook does and does
+not fire, which store an optimistic overlay updates. A claim contradicted by the limit is a major
+finding, not a nit (#846, #847, #875, #877, #827).
 
 ## Definition of done (docs/SPEC.md §7)
 
