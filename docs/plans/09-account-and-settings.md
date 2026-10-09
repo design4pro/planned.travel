@@ -1043,7 +1043,9 @@ workspace-internal and nothing shared may hold a copy. A new route file means **
 - The `databaseHooks.user.update.before` image guard.
 
 Nothing else in that file changes: `twoFactor()`, `organization()` and `passkey()` keep their
-configuration exactly as it stands, and no plugin is added or removed.
+configuration exactly as it stands (`organization()` carries `disableOrganizationDeletion: true` since
+#999, and `deleteWorkspace` deletes through repository SQL, never through the plugin's
+`organization/delete`), and no plugin is added or removed.
 
 **Deletion, stated as rules rather than as code**, because getting it wrong is unrecoverable:
 
