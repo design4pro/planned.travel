@@ -158,6 +158,14 @@ const messages = {
   'payments.empty.title': 'Chưa có khoản trả nào',
   'payments.empty.body':
     'Khi ai đó trả lại số dư, giao dịch sẽ được ghi ở đây.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Bạn có thể xem chi phí nhưng không thể thay đổi',
+  'readOnly.body':
+    'Chỉ chủ chuyến đi và những người được phép chỉnh sửa mới có thể thêm, sửa hoặc xóa khoản chi và ghi nhận thanh toán. Hãy hỏi chủ chuyến đi nếu cần thay đổi gì.',
+  'readOnly.empty':
+    'Chuyến đi này chưa ghi khoản chi nào. Các khoản chi sẽ hiện ở đây khi chủ chuyến đi hoặc người chỉnh sửa thêm vào.',
+  'readOnly.settleEmpty':
+    'Hiện chưa cần chuyển khoản nào. Mọi khoản chênh lệch sẽ hiện ở đây.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

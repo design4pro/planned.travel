@@ -16,7 +16,7 @@ import { Coins, Download, Plus, Scale } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
-import { Button, Card, EmptyState } from '#/components/ui'
+import { Alert, Button, Card, EmptyState } from '#/components/ui'
 import {
   ConfirmDeleteDialog,
   CostsToolbar,
@@ -31,7 +31,7 @@ import {
   isFiltered,
   totalsFor,
 } from '#/components/costs'
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { pluralise } from '../../../-lib/format'
@@ -79,6 +79,7 @@ export function CostsScreen({
   onFiltersChange,
 }: CostsScreenProps) {
   const locale = useLocale()
+  const t = useTranslate()
   const { trip } = useTripHeader()
   const { snapshot, addExpense, editExpense, removeExpense, addPayment } =
     useCostsActions(data)
@@ -235,6 +236,42 @@ export function CostsScreen({
     [openPayment],
   )
 
+  // A reader has no expense to add, so an empty ledger offers them no call to action and says
+  // whose move it is instead.
+  const emptyLedgerHint = data.canWrite
+    ? `Log what you spend as you go. planned.travel splits it between everyone travelling and keeps the running total in ${data.currency}.`
+    : t('costs.readOnly.empty')
+
+  const addFirstExpense = data.canWrite ? (
+    <Button
+      type="button"
+      variant="primary"
+      shape="pill"
+      icon={<Plus aria-hidden strokeWidth={2.5} />}
+      onClick={() => openExpense(null)}
+    >
+      Add the first expense
+    </Button>
+  ) : null
+
+  const clearFilters = (
+    <Button
+      type="button"
+      variant="secondary"
+      shape="pill"
+      onClick={() =>
+        onFiltersChange({
+          q: undefined,
+          category: undefined,
+          day: undefined,
+          view: 'all',
+        })
+      }
+    >
+      Clear the filters
+    </Button>
+  )
+
   return (
     <AppFrame>
       <AppSections>
@@ -257,29 +294,39 @@ export function CostsScreen({
               >
                 Export CSV
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                shape="pill"
-                icon={<Scale aria-hidden />}
-                onClick={() => openPayment(null)}
-              >
-                Settle up
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                shape="pill"
-                icon={<Plus aria-hidden strokeWidth={2.5} />}
-                onClick={() => openExpense(null)}
-              >
-                Add expense
-              </Button>
+              {data.canWrite ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    shape="pill"
+                    icon={<Scale aria-hidden />}
+                    onClick={() => openPayment(null)}
+                  >
+                    Settle up
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    shape="pill"
+                    icon={<Plus aria-hidden strokeWidth={2.5} />}
+                    onClick={() => openExpense(null)}
+                  >
+                    Add expense
+                  </Button>
+                </>
+              ) : null}
             </>
           }
         />
+
+        {data.canWrite ? null : (
+          <Alert tone="info" size="sm" title={t('costs.readOnly.title')}>
+            {t('costs.readOnly.body')}
+          </Alert>
+        )}
 
         <StatTiles
           snapshot={snapshot}
@@ -324,37 +371,13 @@ export function CostsScreen({
                   }
                   description={
                     snapshot.expenses.length === 0
-                      ? `Log what you spend as you go. planned.travel splits it between everyone travelling and keeps the running total in ${data.currency}.`
+                      ? emptyLedgerHint
                       : 'Widen the search, pick another day, or clear the filters to see the whole trip again.'
                   }
                   action={
-                    snapshot.expenses.length === 0 ? (
-                      <Button
-                        type="button"
-                        variant="primary"
-                        shape="pill"
-                        icon={<Plus aria-hidden strokeWidth={2.5} />}
-                        onClick={() => openExpense(null)}
-                      >
-                        Add the first expense
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        shape="pill"
-                        onClick={() =>
-                          onFiltersChange({
-                            q: undefined,
-                            category: undefined,
-                            day: undefined,
-                            view: 'all',
-                          })
-                        }
-                      >
-                        Clear the filters
-                      </Button>
-                    )
+                    snapshot.expenses.length === 0
+                      ? addFirstExpense
+                      : clearFilters
                   }
                 />
               </Card>
@@ -365,6 +388,7 @@ export function CostsScreen({
                 viewerUserId={data.viewerUserId}
                 currency={data.currency}
                 busyExpenseIds={snapshot.busyExpenseIds}
+                canWrite={data.canWrite}
                 onEdit={openExpense}
                 onDelete={openDelete}
               />
@@ -377,6 +401,7 @@ export function CostsScreen({
             viewerUserId={data.viewerUserId}
             currency={data.currency}
             budgetTargetMinor={data.budgetTargetMinor}
+            canWrite={data.canWrite}
             onSettle={settle}
             onAddPayment={() => openPayment(null)}
           />

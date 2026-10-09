@@ -18,6 +18,7 @@ import {
 import { assertQuota, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { categoriesRepository } from './categories'
+import { NotFoundError } from './context'
 import { requireTrip } from './trips'
 import {
   countryCodeSchema,
@@ -145,6 +146,23 @@ export async function listTripPlaces(
     orderBy: [asc(places.sortOrder), asc(places.id)],
     limit: options.limit,
   })
+}
+
+/**
+ * Resolves a place and asserts it belongs to `tripId`, so a place from another trip - or another
+ * tenant - is refused as an id that is not there instead of being linked. The itinerary and the
+ * expense writers call it; a repository that stores a `place_id` and does not is a gap.
+ */
+export async function requirePlaceOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  placeId: string,
+): Promise<Place> {
+  const place = await placesRepository.requireById(scope, placeId)
+  if (place.tripId !== tripId) {
+    throw new NotFoundError('place', placeId)
+  }
+  return place
 }
 
 export async function getPlace(scope: TenantScope, placeId: string): Promise<Place | null> {

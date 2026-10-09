@@ -26,7 +26,7 @@ import {
 import { runBatch } from './batch'
 import { NotFoundError } from './context'
 import { listTripDayNotes, listTripDays, requireTripDay } from './days'
-import { placesRepository } from './places'
+import { placesRepository, requirePlaceOfTrip } from './places'
 import { requireReservationOfTrip } from './reservations'
 import { assertTripRole, requireTrip } from './trips'
 import {
@@ -176,22 +176,6 @@ export const updateAccommodationInput = z.object({
   reservationId: idSchema.nullish(),
 })
 export type UpdateAccommodationInput = z.infer<typeof updateAccommodationInput>
-
-/* -------------------------------------------------------------------------------------------------
- * Guards
- * ---------------------------------------------------------------------------------------------- */
-
-async function requirePlaceOfTrip(
-  scope: TenantScope,
-  tripId: string,
-  placeId: string,
-): Promise<Place> {
-  const place = await placesRepository.requireById(scope, placeId)
-  if (place.tripId !== tripId) {
-    throw new NotFoundError('place', placeId)
-  }
-  return place
-}
 
 /* -------------------------------------------------------------------------------------------------
  * Reads

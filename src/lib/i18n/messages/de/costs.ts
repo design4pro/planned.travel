@@ -161,6 +161,14 @@ const messages = {
   'payments.empty.title': 'Noch keine Zahlungen',
   'payments.empty.body':
     'Sobald jemand einen Saldo zurückzahlt, wird die Überweisung hier erfasst.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Du kannst die Kosten ansehen, aber nicht ändern',
+  'readOnly.body':
+    'Ausgaben hinzufügen, ändern oder löschen und Zahlungen erfassen können nur die Eigentümer der Reise und Personen mit Bearbeitungsrechten. Wende dich an einen Eigentümer, wenn etwas geändert werden muss.',
+  'readOnly.empty':
+    'Auf dieser Reise wurden noch keine Ausgaben erfasst. Sie erscheinen hier, sobald ein Eigentümer oder Bearbeiter sie hinzufügt.',
+  'readOnly.settleEmpty':
+    'Im Moment sind keine Überweisungen nötig. Ein offener Saldo würde hier erscheinen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

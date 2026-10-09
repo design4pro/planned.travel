@@ -15,7 +15,10 @@ import { SearchOutcome } from '../connection-search'
 
 import type * as React from 'react'
 import type { ComponentProps } from 'react'
-import type { TransitConnection } from '#/server/fns/transports'
+import type {
+  TransitAttribution,
+  TransitConnection,
+} from '#/server/fns/transports'
 
 // The real module reaches `cloudflare:workers`, which has no meaning in jsdom; no state under test
 // calls a server function.
@@ -67,7 +70,27 @@ const CONNECTION: TransitConnection = {
   ],
 }
 
-const ANSWER = { ok: true, cached: false, remaining: 10, ceiling: 20 } as const
+const ANSWER = {
+  ok: true,
+  attributions: [],
+  cached: false,
+  remaining: 10,
+  ceiling: 20,
+} as const
+
+/** What HERE says must be shown with the route (#808): vendor words, shown as they came. */
+const NOTICE: TransitAttribution = {
+  id: 'R1-S1-link-0',
+  text: 'Timetable data provided by CP - Comboios de Portugal',
+  href: 'https://www.cp.pt/disclaimer',
+  hrefText: 'CP - Comboios de Portugal',
+}
+const PLAIN_NOTICE: TransitAttribution = {
+  id: 'R1-S1-link-1',
+  text: 'Fares are set by the operator',
+  href: null,
+  hrefText: null,
+}
 
 type Props = ComponentProps<typeof SearchOutcome>
 
@@ -128,5 +151,83 @@ describe('the HERE credit on the connection search', () => {
     outcome({ outcome: { ok: false, reason: 'unreachable', ceiling: 20 } })
     expect(screen.getByRole('alert')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'HERE' })).toBeNull()
+  })
+})
+
+describe('the source attributions HERE sends with a route', () => {
+  it('stand beside the HERE credit, with the clickable part as the link', () => {
+    outcome({
+      outcome: { ...ANSWER, connections: [CONNECTION], attributions: [NOTICE] },
+      results: [CONNECTION],
+    })
+
+    const credit = screen.getByRole('link', { name: 'HERE' }).closest('p')
+    // The whole text is shown, as HERE wrote it, in the same caption as the credit.
+    expect(credit?.textContent).toContain(NOTICE.text)
+
+    const link = screen.getByRole('link', { name: 'CP - Comboios de Portugal' })
+    expect(link.getAttribute('href')).toBe(NOTICE.href)
+    expect(link.getAttribute('target')).toBe('_blank')
+    expect(link.getAttribute('rel')).toContain('noreferrer')
+    expect(link.closest('p')).toBe(credit)
+  })
+
+  it('link the whole text when HERE names no clickable part', () => {
+    outcome({
+      outcome: {
+        ...ANSWER,
+        connections: [CONNECTION],
+        attributions: [{ ...NOTICE, hrefText: null }],
+      },
+      results: [CONNECTION],
+    })
+
+    const link = screen.getByRole('link', { name: NOTICE.text })
+    expect(link.getAttribute('href')).toBe(NOTICE.href)
+  })
+
+  it('are plain words when HERE sends no link, and every one of them is shown', () => {
+    outcome({
+      outcome: {
+        ...ANSWER,
+        connections: [CONNECTION],
+        attributions: [NOTICE, PLAIN_NOTICE],
+      },
+      results: [CONNECTION],
+    })
+
+    const credit = screen.getByRole('link', { name: 'HERE' }).closest('p')
+    expect(credit?.textContent).toContain(PLAIN_NOTICE.text)
+    expect(screen.queryByRole('link', { name: PLAIN_NOTICE.text })).toBeNull()
+  })
+
+  it('leave the caption as it was when HERE sent none', () => {
+    outcome({
+      outcome: { ...ANSWER, connections: [CONNECTION] },
+      results: [CONNECTION],
+    })
+
+    const credit = screen.getByRole('link', { name: 'HERE' }).closest('p')
+    expect(credit?.textContent).toBe('Timetable data from HERE')
+  })
+
+  it('are absent while a new answer is pending, on an empty answer and on a refusal', () => {
+    const { unmount } = outcome({
+      pending: true,
+      outcome: { ...ANSWER, connections: [CONNECTION], attributions: [NOTICE] },
+      results: [CONNECTION],
+    })
+    expect(screen.queryByText(NOTICE.text, { exact: false })).toBeNull()
+    unmount()
+
+    const empty = outcome({
+      outcome: { ...ANSWER, connections: [], attributions: [NOTICE] },
+      results: [],
+    })
+    expect(screen.queryByText(NOTICE.text, { exact: false })).toBeNull()
+    empty.unmount()
+
+    outcome({ outcome: { ok: false, reason: 'unreachable', ceiling: 20 } })
+    expect(screen.queryByText(NOTICE.text, { exact: false })).toBeNull()
   })
 })

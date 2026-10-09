@@ -14,7 +14,7 @@ import { createPlace } from '../places'
 import { createReservation } from '../reservations'
 import { createTransport } from '../transports'
 import { listTripDays } from '../days'
-import { tripsRepository } from '../trips'
+import { addTripMember, tripMemberUserIds, tripsRepository } from '../trips'
 import type { TenantScope } from '../base'
 
 export interface PricedKind {
@@ -25,6 +25,17 @@ export interface PricedKind {
     tripId: string,
     otherUserId: string,
   ) => Promise<void>
+}
+
+/** A split or a payment may only name the trip's people, so the other traveller joins first. */
+async function joinTrip(
+  scope: TenantScope,
+  tripId: string,
+  userId: string,
+): Promise<void> {
+  if (!(await tripMemberUserIds(scope, tripId)).includes(userId)) {
+    await addTripMember(scope, { tripId, userId, role: 'editor' })
+  }
 }
 
 export const PRICED_KINDS: ReadonlyArray<PricedKind> = [
@@ -42,6 +53,7 @@ export const PRICED_KINDS: ReadonlyArray<PricedKind> = [
   {
     name: 'an expense with a share',
     async seed(scope, tripId, otherUserId) {
+      await joinTrip(scope, tripId, otherUserId)
       await createExpense(scope, {
         tripId,
         title: 'Taxi',
@@ -54,6 +66,7 @@ export const PRICED_KINDS: ReadonlyArray<PricedKind> = [
   {
     name: 'a payment',
     async seed(scope, tripId, otherUserId) {
+      await joinTrip(scope, tripId, otherUserId)
       await createSettlement(scope, {
         tripId,
         fromUserId: otherUserId,

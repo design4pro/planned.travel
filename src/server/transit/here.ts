@@ -33,6 +33,7 @@ import { TransitProviderError } from './search'
 
 import type {
   TransitAnswer,
+  TransitAttribution,
   TransitClient,
   TransitConnection,
   TransitLeg,
@@ -65,8 +66,22 @@ const wirePlace = z.object({
 
 const wireEndpoint = z.object({ time: z.string(), place: wirePlace.optional() })
 
+/**
+ * A notice the response says must be displayed with the route (Public Transit v8, "Copyright
+ * notices"): on transit sections only, `id` and `text` required. The link, when sent, is read as
+ * a string and checked by {@link attributionOf}; the `type` of link is not read, because nothing
+ * here distinguishes a disclaimer from a tariff page.
+ */
+const wireAttribution = z.object({
+  id: z.string(),
+  text: z.string(),
+  href: z.string().optional(),
+  hrefText: z.string().optional(),
+})
+
 const wireSection = z.object({
   type: z.string(),
+  attributions: z.array(wireAttribution).optional(),
   departure: wireEndpoint,
   arrival: wireEndpoint,
   transport: z
@@ -224,6 +239,70 @@ function fareOf(
   return null
 }
 
+/* ------------------------------------------------------------ attributions */
+
+/** A link is kept only when it is a web address; anything else is shown as words alone. */
+function webAddressOf(href: string | undefined): string | null {
+  if (href === undefined) {
+    return null
+  }
+  try {
+    const { protocol } = new URL(href)
+    return protocol === 'https:' || protocol === 'http:' ? href : null
+  } catch {
+    return null
+  }
+}
+
+function attributionOf(
+  wire: z.infer<typeof wireAttribution>,
+): TransitAttribution {
+  const href = webAddressOf(wire.href)
+  return {
+    id: wire.id,
+    text: wire.text,
+    href,
+    // The clickable part means nothing without a link to click, and a blank one is a link nobody
+    // can name.
+    hrefText:
+      href === null || wire.hrefText?.trim() === ''
+        ? null
+        : (wire.hrefText ?? null),
+  }
+}
+
+/**
+ * Every notice the kept routes carry, each once, in the order HERE sent them.
+ *
+ * "Once" is by content rather than by `id`: HERE's ids are scoped to a route (`R008001-C0-S1-link-0`),
+ * so the same operator's notice arrives under a new id with every alternative.
+ */
+function attributionsOf(
+  routes: ReadonlyArray<z.infer<typeof wireResponse>['routes'][number]>,
+): ReadonlyArray<TransitAttribution> {
+  const seen = new Map<string, TransitAttribution>()
+  for (const route of routes) {
+    for (const section of route.sections) {
+      for (const wire of section.attributions ?? []) {
+        // A notice with no words says nothing to display, and a link around nothing has no name.
+        if (wire.text.trim() === '') {
+          continue
+        }
+        const attribution = attributionOf(wire)
+        const identity = JSON.stringify([
+          attribution.text,
+          attribution.href,
+          attribution.hrefText,
+        ])
+        if (!seen.has(identity)) {
+          seen.set(identity, attribution)
+        }
+      }
+    }
+  }
+  return [...seen.values()]
+}
+
 /* ------------------------------------------------------------------ parse */
 
 function stopOf(
@@ -368,11 +447,16 @@ export function createHereClient(options: HereClientOptions): TransitClient {
         )
       }
 
-      const connections = parsed.data.routes.flatMap((route, index) => {
+      // A route that makes no connection is not shown, so its notices are not either.
+      const kept = parsed.data.routes.flatMap((route, index) => {
         const connection = connectionOf(route, index)
-        return connection === null ? [] : [connection]
+        return connection === null ? [] : [{ route, connection }]
       })
-      return { connections, caching: cachingHeadersOf(response.headers) }
+      return {
+        connections: kept.map(({ connection }) => connection),
+        attributions: attributionsOf(kept.map(({ route }) => route)),
+        caching: cachingHeadersOf(response.headers),
+      }
     },
   }
 }

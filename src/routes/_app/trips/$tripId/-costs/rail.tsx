@@ -35,6 +35,8 @@ export interface CostsRailProps {
   readonly viewerUserId: string
   readonly currency: string
   readonly budgetTargetMinor: number | null
+  /** A reader sees the proposed transfers and none of the buttons that record one. */
+  readonly canWrite: boolean
   readonly onSettle: (suggestion: CostsSuggestion) => void
   readonly onAddPayment: () => void
 }
@@ -45,6 +47,7 @@ export function CostsRail({
   viewerUserId,
   currency,
   budgetTargetMinor,
+  canWrite,
   onSettle,
   onAddPayment,
 }: CostsRailProps) {
@@ -63,6 +66,7 @@ export function CostsRail({
         currency={currency}
         nameOf={nameOf}
         imageOf={imageOf}
+        canWrite={canWrite}
         onSettle={onSettle}
         onAddPayment={onAddPayment}
         busy={snapshot.busy}
@@ -98,6 +102,7 @@ function SettleUp({
   currency,
   nameOf,
   imageOf,
+  canWrite,
   onSettle,
   onAddPayment,
   busy,
@@ -107,6 +112,7 @@ function SettleUp({
   currency: string
   nameOf: (userId: string) => string
   imageOf: (userId: string) => string | null
+  canWrite: boolean
   onSettle: (suggestion: CostsSuggestion) => void
   onAddPayment: () => void
   busy: boolean
@@ -119,16 +125,18 @@ function SettleUp({
       label={t('costs.settle.label')}
       count={suggestions.length === 0 ? undefined : String(suggestions.length)}
       action={
-        <Button
-          type="button"
-          variant="subtle"
-          size="sm"
-          shape="pill"
-          icon={<Plus aria-hidden strokeWidth={2.5} />}
-          onClick={onAddPayment}
-        >
-          {t('costs.settle.addPayment')}
-        </Button>
+        canWrite ? (
+          <Button
+            type="button"
+            variant="subtle"
+            size="sm"
+            shape="pill"
+            icon={<Plus aria-hidden strokeWidth={2.5} />}
+            onClick={onAddPayment}
+          >
+            {t('costs.settle.addPayment')}
+          </Button>
+        ) : undefined
       }
       flush
     >
@@ -139,7 +147,11 @@ function SettleUp({
             tone="brand"
             icon={<Scale />}
             title={t('costs.settle.empty.title')}
-            description={t('costs.settle.empty.body')}
+            description={t(
+              canWrite
+                ? 'costs.settle.empty.body'
+                : 'costs.readOnly.settleEmpty',
+            )}
           />
         </div>
       ) : (
@@ -178,16 +190,18 @@ function SettleUp({
                       {formatMoney(row.amountMinor, currency, locale)}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant={mine ? 'primary' : 'secondary'}
-                    size="sm"
-                    shape="pill"
-                    disabled={busy}
-                    onClick={() => onSettle(row)}
-                  >
-                    {t('costs.settle.action')}
-                  </Button>
+                  {canWrite ? (
+                    <Button
+                      type="button"
+                      variant={mine ? 'primary' : 'secondary'}
+                      size="sm"
+                      shape="pill"
+                      disabled={busy}
+                      onClick={() => onSettle(row)}
+                    >
+                      {t('costs.settle.action')}
+                    </Button>
+                  ) : null}
                 </PanelRow>
               </li>
             )
