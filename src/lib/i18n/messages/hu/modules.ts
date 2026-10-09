@@ -766,6 +766,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Két válasz ugyanazt mondja. Adj mindegyiknek külön megfogalmazást.',
   'collab.presence.viewingNow': 'nézi éppen',
+  'collab.presence.unnamed': 'Névtelen tag',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} nyitott lap',
     other: '{name} — {count} nyitott lap',

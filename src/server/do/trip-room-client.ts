@@ -95,12 +95,28 @@ export async function commitToTripRoom(
   return (await response.json())
 }
 
-/** Evicts every connected client, e.g. after a trip is deleted or access revoked. */
-export async function closeTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
+async function postClose(namespace: TripRoomNamespace, tripId: string, body?: string): Promise<void> {
   const response = await stubFor(namespace, tripId).fetch(
-    new Request(tripRoomUrl(tripId, 'close'), { method: 'POST' }),
+    new Request(tripRoomUrl(tripId, 'close'), { method: 'POST', body }),
   )
   if (!response.ok) {
     throw new Error(`Trip room close failed with ${response.status}`)
   }
+}
+
+/**
+ * Evicts every connected client, e.g. after a trip is archived, restored or deleted. The shipped
+ * client reconnects through the connect handler, which re-checks the stored role.
+ */
+export function closeTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
+  return postClose(namespace, tripId)
+}
+
+/**
+ * Evicts one person's sockets — every tab and device — and nobody else's, e.g. after their role on
+ * the trip changed or they were taken off it. The room finds them by the identity tag it put on each
+ * socket at connect.
+ */
+export function closeTripRoomFor(namespace: TripRoomNamespace, tripId: string, userId: string): Promise<void> {
+  return postClose(namespace, tripId, JSON.stringify({ userId }))
 }

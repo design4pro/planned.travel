@@ -47,14 +47,17 @@ const STATUS_COPY: {
   },
 }
 
+interface Person {
+  id: string
+  /** `null` when the person has no display name; the label is worded at render time. */
+  name: string | null
+  image: string | null
+  tabs: number
+}
+
 /** One entry per person, however many tabs they have open. */
-function uniquePeople(
-  peers: ReadonlyArray<PresenceMember>,
-): Array<{ id: string; name: string; image: string | null; tabs: number }> {
-  const byUser = new Map<
-    string,
-    { id: string; name: string; image: string | null; tabs: number }
-  >()
+function uniquePeople(peers: ReadonlyArray<PresenceMember>): Array<Person> {
+  const byUser = new Map<string, Person>()
   for (const peer of peers) {
     const existing = byUser.get(peer.user.id)
     if (existing === undefined) {
@@ -89,6 +92,7 @@ export function PresenceBar({
   const room = useTripRoom(tripId, { onCommit })
   const people = useMemo(() => uniquePeople(room.peers), [room.peers])
   const copy = STATUS_COPY[room.status]
+  const unnamed = t('modules.collab.presence.unnamed')
 
   return (
     <div className={cn('flex min-w-0 flex-wrap items-center gap-3', className)}>
@@ -130,31 +134,35 @@ export function PresenceBar({
       {people.length === 0 ? null : (
         <span className="flex min-w-0 items-center gap-2">
           <span className="flex items-center">
-            {people.slice(0, 5).map((person) => (
-              <Tooltip
-                key={person.id}
-                content={
-                  person.tabs > 1
-                    ? t('modules.collab.presence.tabsOpen', {
-                        name: person.name,
-                        count: person.tabs,
-                      })
-                    : person.name
-                }
-              >
-                <span
-                  tabIndex={0}
-                  className="-ms-1.5 rounded-full first:ms-0 focus-ring"
+            {people.slice(0, 5).map((person) => {
+              const name = person.name ?? unnamed
+              return (
+                <Tooltip
+                  key={person.id}
+                  content={
+                    person.tabs > 1
+                      ? t('modules.collab.presence.tabsOpen', {
+                          name,
+                          count: person.tabs,
+                        })
+                      : name
+                  }
                 >
-                  <Avatar
-                    name={person.name}
-                    src={person.image}
-                    size="sm"
-                    className="ring-2 ring-surface"
-                  />
-                </span>
-              </Tooltip>
-            ))}
+                  <span
+                    tabIndex={0}
+                    className="-ms-1.5 rounded-full first:ms-0 focus-ring"
+                  >
+                    <Avatar
+                      name={name}
+                      initials={person.name === null ? '?' : undefined}
+                      src={person.image}
+                      size="sm"
+                      className="ring-2 ring-surface"
+                    />
+                  </span>
+                </Tooltip>
+              )
+            })}
             {people.length > 5 ? (
               <span className="-ms-1.5 inline-flex size-6 items-center justify-center rounded-full bg-surface-2 text-micro font-semibold tabular-nums text-ink-3 ring-2 ring-surface">
                 +{people.length - 5}

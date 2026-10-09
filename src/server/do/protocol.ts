@@ -44,6 +44,15 @@ export const TRIP_ROOM_IDLE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 /** How often the room's alarm runs housekeeping while it holds state. */
 export const TRIP_ROOM_ALARM_INTERVAL_MS = 5 * 60 * 1000
 
+/**
+ * The close the room sends when somebody's access or the trip's state changed (`/close`). The
+ * reason, not the code, tells the client apart from the other 1012 closes (no session, protocol
+ * mismatch): only this one means the screen's role-dependent data may be stale, so only this one
+ * makes the hook re-read its loader.
+ */
+export const TRIP_ROOM_CLOSED_CODE = 1012
+export const TRIP_ROOM_CLOSED_REASON = 'Room closed'
+
 /** Client keepalive interval. The room answers pings without leaving hibernation. */
 export const TRIP_ROOM_PING_INTERVAL_MS = 25_000
 
@@ -93,7 +102,12 @@ export function entityKey(ref: EntityRef): string {
 
 export const presenceUserSchema = z.object({
   id: z.string().min(1).max(64),
-  name: z.string().min(1).max(80),
+  /**
+   * `null` when the person has no display name of their own: the room never
+   * carries a placeholder or their email, and each client words the absence in
+   * its own language.
+   */
+  name: z.string().min(1).max(80).nullable(),
   /** Two-letter fallback used by `AvatarStack` when there is no image. */
   initials: z.string().min(1).max(3),
   /** Presence accent, resolved from the design tokens on the client. */

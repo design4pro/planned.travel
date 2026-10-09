@@ -558,6 +558,19 @@ export const createTripFn = createServerFn({ method: 'POST' })
   })
 
 /**
+ * Closes every socket in the trip's room after the trip was archived, restored or deleted, so an
+ * open tab goes back through the connect handler instead of keeping the role it connected with.
+ *
+ * The bridge is reached at call time for the reason `taskQueue` is above: `#/server/fns/context`
+ * imports `cloudflare:workers`, which a route module's static graph must not. A room that cannot be
+ * reached is logged inside the helper and never fails the write.
+ */
+async function evictRoom(scope: TenantScope, tripId: string): Promise<void> {
+  const { closeRoom } = await import('#/server/fns/context')
+  await closeRoom(scope, tripId)
+}
+
+/**
  * Edits a trip's metadata. Owner only, decided in the repository.
  *
  * The day run follows the dates without anything here arranging it: `updateTrip` reconciles it
@@ -597,6 +610,7 @@ export const archiveTripFn = createServerFn({ method: 'POST' })
     }): Promise<{ readonly tripId: string; readonly isArchived: true }> => {
       const scope = await appScope()
       const trip = await archiveTrip(scope, data.tripId)
+      await evictRoom(scope, trip.id)
       return { tripId: trip.id, isArchived: true }
     },
   )
@@ -610,6 +624,7 @@ export const restoreTripFn = createServerFn({ method: 'POST' })
     }): Promise<{ readonly tripId: string; readonly isArchived: false }> => {
       const scope = await appScope()
       const trip = await restoreTrip(scope, data.tripId)
+      await evictRoom(scope, trip.id)
       return { tripId: trip.id, isArchived: false }
     },
   )
@@ -664,6 +679,8 @@ export const tripDeleteSummaryFn = createServerFn({ method: 'GET' })
  *    `trip-purge`. The delete never waits on it and a queue failure never surfaces.
  * 5. **Fan the statistics out** to the members read in step 1 — after the cascade there is nobody
  *    left to read.
+ * 6. **Close the trip's room.** Last, because it awaits a Durable Object round trip that has no
+ *    timeout and must not hold up the durable steps above; it logs and never fails the request.
  */
 export const deleteTripFn = createServerFn({ method: 'POST' })
   .validator(deleteTripInputSchema)
@@ -688,6 +705,7 @@ export const deleteTripFn = createServerFn({ method: 'POST' })
       affectedStatYears(trip.startDate),
       memberIds,
     )
+    await evictRoom(scope, trip.id)
 
     return { deleted: true }
   })

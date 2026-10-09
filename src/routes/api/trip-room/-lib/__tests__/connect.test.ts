@@ -34,6 +34,7 @@ import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 
 const stubs = vi.hoisted(() => ({
   signedIn: true,
+  userName: 'Ada Lovelace',
   ctx: null as TenantContext | null,
   db: null as unknown,
 }))
@@ -47,7 +48,7 @@ vi.mock('#/server/auth/session', async () => {
       stubs.signedIn
         ? {
             user: {
-              name: 'Ada Lovelace',
+              name: stubs.userName,
               email: 'ada@example.test',
               image: null,
             },
@@ -144,6 +145,7 @@ describe('the trip room connection role', () => {
     harness = await createHarness()
     stubs.db = harness.db
     stubs.signedIn = true
+    stubs.userName = 'Ada Lovelace'
     alpha = await harness.seedTenant('alpha')
     await subscribeTenant(alpha.scope, 'crew', 5)
     const trip = await createTrip(alpha.scope, {
@@ -292,5 +294,46 @@ describe('the trip room connection role', () => {
 
     expect(response.status).toBe(426)
     expect(get).not.toHaveBeenCalled()
+  })
+
+  describe('who the room is told the person is', () => {
+    async function identityOf(): Promise<TripRoomIdentity> {
+      actAs(alpha.ownerUserId)
+      const { namespace, identities } = recordingNamespace()
+      const response = await serveTripRoom(namespace, upgrade(tripId), tripId)
+      expect(response.status).toBe(200)
+      const identity = identities[0]
+      if (identity === undefined) throw new Error('no identity was handed over')
+      return identity
+    }
+
+    it('hands a person with a display name over exactly as before', async () => {
+      const { user } = await identityOf()
+
+      expect(user.name).toBe('Ada Lovelace')
+      expect(user.initials).toBe('AL')
+      expect(user.avatarUrl).toBeNull()
+      expect(Number.isInteger(user.hue)).toBe(true)
+    })
+
+    it.each([
+      ['empty', ''],
+      ['whitespace-only', '   '],
+      ['equal to their email', 'ada@example.test'],
+      ['their email in other case, padded', '  Ada@Example.TEST '],
+    ])(
+      'tells the room there is no name when the name is %s',
+      async (_, name) => {
+        stubs.userName = name
+
+        const { user } = await identityOf()
+
+        expect(user.name).toBeNull()
+        expect(user.initials).toBe('?')
+        const encoded = encodeTripRoomIdentity(await identityOf())
+        expect(encoded).not.toContain('example.test')
+        expect(encoded).not.toContain('@')
+      },
+    )
   })
 })

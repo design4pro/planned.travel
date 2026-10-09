@@ -729,6 +729,7 @@ const messages = {
   'collab.poll.error.duplicate':
     '二つの項目が同じことを言っています。それぞれ別の言い方にしてください。',
   'collab.presence.viewingNow': 'が閲覧中',
+  'collab.presence.unnamed': '名前のないメンバー',
   'collab.presence.tabsOpen': {
     other: '{name} — タブ {count} 個を開いています',
   },

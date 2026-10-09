@@ -301,6 +301,25 @@ async function memberOnTrip(
 }
 
 /**
+ * Closes a person's open sockets in the trip's room, so a role change, a removal or a leave reaches
+ * a tab that is already open instead of waiting for it to reconnect (the room reads the role once,
+ * at connect).
+ *
+ * Called only once the write has succeeded, with the trip and person from the rows the repository
+ * resolved. The bridge is reached at call time for the reason `plan.ts` records at `mirrorDayOrder`:
+ * `#/server/fns/context` imports `cloudflare:workers`, and this file is in the planner route's module
+ * graph. A room that cannot be reached is logged inside the helper and never fails the write.
+ */
+async function evictFromRoom(
+  scope: TenantScope,
+  tripId: string,
+  userId: string,
+): Promise<void> {
+  const { closeRoomFor } = await import('#/server/fns/context')
+  await closeRoomFor(scope, tripId, userId)
+}
+
+/**
  * Tells somebody they are on a trip.
  *
  * Caught, logged once, and the add still answers success: the membership row *is* the write, D1 has
@@ -403,6 +422,9 @@ export const setTripRoleFn = createServerFn({ method: 'POST' })
         const updated = await updateTripMember(scope, row.id, {
           role: data.role,
         })
+        if (updated.role !== row.role) {
+          await evictFromRoom(scope, updated.tripId, updated.userId)
+        }
         return { memberId: updated.id, role: data.role }
       })
     },
@@ -419,6 +441,7 @@ export const removeTripMemberFn = createServerFn({ method: 'POST' })
         const row = await memberOnTrip(scope, trip.id, data.memberId)
 
         await removeTripMember(scope, row.id)
+        await evictFromRoom(scope, trip.id, row.userId)
         await enqueueTripStatsFor(scope, trip, [row.userId])
 
         return { removed: true }
@@ -448,6 +471,7 @@ export const leaveTripFn = createServerFn({ method: 'POST' })
         }
 
         await removeTripMember(scope, row.id)
+        await evictFromRoom(scope, trip.id, row.userId)
         await enqueueTripStatsFor(scope, trip, [row.userId])
 
         return { removed: true }
@@ -473,9 +497,20 @@ export const setTripVisibilityFn = createServerFn({ method: 'POST' })
       readonly visibility: TripVisibility
     }> => {
       const scope = await appScope()
+      // Read before the write: only the row as it stood knows whether this narrows the trip.
+      const before = await requireTrip(scope, data.tripId)
       const trip = await updateTrip(scope, data.tripId, {
         visibility: data.visibility,
       })
+      if (
+        visibilityOf(before) === 'organization' &&
+        visibilityOf(trip) === 'private'
+      ) {
+        // Workspace members who stop being able to read the trip were never on it, so the room
+        // cannot name them: every socket goes, and the members reconnect through the connect handler.
+        const { closeRoom } = await import('#/server/fns/context')
+        await closeRoom(scope, trip.id)
+      }
       return { tripId: trip.id, visibility: visibilityOf(trip) }
     },
   )
