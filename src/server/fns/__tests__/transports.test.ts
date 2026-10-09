@@ -200,6 +200,41 @@ describe('a transport write naming another trip of the same caller', () => {
   })
 })
 
+describe('the pairing is checked before the role', () => {
+  it('answers NotFoundError, not the role refusal, to a viewer of the transport’s trip naming another trip', async () => {
+    // Editor on A, viewer on B: the role guard on B would refuse with TripRoleError, so only a
+    // pairing that runs first can answer NotFoundError.
+    const viewerOfB = await tenant.addUser('Editor on A, viewer of B')
+    await addTripMember(owner, {
+      tripId: tripA,
+      userId: viewerOfB,
+      role: 'editor',
+    })
+    await addTripMember(owner, {
+      tripId: tripB,
+      userId: viewerOfB,
+      role: 'viewer',
+    })
+    stubs.scope = tenant.scopeFor(viewerOfB)
+
+    const status = await captureError(() =>
+      setStatus({
+        tripId: tripA,
+        transportId: transportB,
+        status: 'cancelled',
+      }),
+    )
+    const removal = await captureError(() =>
+      remove({ tripId: tripA, transportId: transportB }),
+    )
+
+    expect(status).toBeInstanceOf(NotFoundError)
+    expect(removal).toBeInstanceOf(NotFoundError)
+    expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+    expect((await getTransport(owner, transportB))?.status).toBe('pending')
+  })
+})
+
 describe('a transport write naming its own trip', () => {
   it('changes the status and tells that trip’s room', async () => {
     await setStatus({

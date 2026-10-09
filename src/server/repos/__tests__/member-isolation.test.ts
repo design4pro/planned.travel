@@ -2056,6 +2056,20 @@ describe('member isolation', () => {
       expect(await rowsOf()).toEqual(before)
     })
 
+    it('still refuses a non-member of an organization-visible trip with the role refusal', async () => {
+      // They may see the trip, so NotFoundError would be the wrong answer: only a trip a person
+      // may not see is indistinguishable from a missing one (ADR 0007).
+      await updateTrip(alpha.scope, fixture.tripId, {
+        visibility: 'organization',
+      })
+      const before = await rowsOf()
+
+      for (const [label, write] of writersAs(stranger)) {
+        expect(await captureError(write), label).toBeInstanceOf(TripRoleError)
+      }
+      expect(await rowsOf()).toEqual(before)
+    })
+
     it('pairs a transport with the trip a request names', async () => {
       const other = await createTrip(alpha.scope, {
         title: 'Faro, another time',
