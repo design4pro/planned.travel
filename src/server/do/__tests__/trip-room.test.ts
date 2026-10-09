@@ -10,7 +10,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { TripRoom } from '../trip-room'
-import { TRIP_ROOM_PROTOCOL_VERSION } from '../protocol'
+import {
+  TRIP_ROOM_CLOSED_REASON,
+  TRIP_ROOM_PROTOCOL_VERSION,
+} from '../protocol'
 
 import type {
   TripRoomSocket,
@@ -64,6 +67,7 @@ interface FakeSocket extends TripRoomSocket {
   sent: Array<{ t: string; [key: string]: unknown }>
   /** The code of the `close` the room asked for, or `null` while the socket is open. */
   closedWith: number | null
+  closedReason: string | null
 }
 
 function fakeSocket(
@@ -82,11 +86,13 @@ function fakeSocket(
   const socket: FakeSocket = {
     sent: [],
     closedWith: null,
+    closedReason: null,
     send: (message) => {
       socket.sent.push(JSON.parse(message) as { t: string })
     },
-    close: (code) => {
+    close: (code, reason) => {
       socket.closedWith = code ?? 1005
+      socket.closedReason = reason ?? null
     },
     serializeAttachment: (value) => {
       attachment = value
@@ -253,6 +259,8 @@ describe('closing one person’s sockets', () => {
     expect(response.status).toBe(200)
     expect(phone.closedWith).toBe(CLOSE_ROOM_CLOSED)
     expect(laptop.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    // The client re-reads its loader on exactly this reason (use-trip-room.ts).
+    expect(phone.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
     expect(ben.closedWith).toBeNull()
   })
 
@@ -357,6 +365,7 @@ describe('closing the whole room', () => {
     expect(response.status).toBe(200)
     expect(ana.closedWith).toBe(CLOSE_ROOM_CLOSED)
     expect(ben.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    expect(ana.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
 
     ana.sent.length = 0
     ben.sent.length = 0

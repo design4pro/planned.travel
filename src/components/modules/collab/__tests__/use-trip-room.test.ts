@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { renderHook } from '@testing-library/react'
+import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -30,7 +30,7 @@ const { useTripRoom } = await import('../use-trip-room')
 
 function close(code: number, reason: string): void {
   const { onClose } = captured.options as SocketOptions
-  onClose({ code, reason })
+  act(() => onClose({ code, reason }))
 }
 
 describe('useTripRoom - a close that changes what the viewer may do', () => {
