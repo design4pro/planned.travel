@@ -116,7 +116,7 @@ export function DayWeatherBadge({
               'inline-flex h-7 items-center gap-1 rounded-md px-1 text-caption tabular-nums',
               transitionBase,
               focusRing,
-              'hover:bg-hover data-[state=open]:bg-hover',
+              'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
             )}
           >
             <Icon

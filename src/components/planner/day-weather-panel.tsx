@@ -122,11 +122,8 @@ function Row({
   return (
     <>
       <dt className="text-ink-3">{label}</dt>
-      <dd
-        dir="ltr"
-        className="m-0 text-end font-semibold tabular-nums text-ink-2"
-      >
-        {children}
+      <dd className="m-0 text-end font-semibold tabular-nums text-ink-2">
+        <bdi dir="ltr">{children}</bdi>
       </dd>
     </>
   )

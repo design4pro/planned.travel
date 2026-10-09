@@ -162,11 +162,11 @@ export function panelModel(
     min: temperatureIn(reading.tempMinC, unit),
     unit: unitSymbol(unit),
     precipitation:
-      reading.precipitationMm === null
+      reading.precipitationMm == null
         ? null
         : precipitationIn(reading.precipitationMm, unit),
     probability: reading.precipitationProbability,
-    wind: reading.windMs === null ? null : windIn(reading.windMs, unit),
+    wind: reading.windMs == null ? null : windIn(reading.windMs, unit),
     slots: slots.length === 0 ? null : slots,
   }
 }

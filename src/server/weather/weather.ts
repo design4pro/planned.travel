@@ -188,7 +188,7 @@ export function roundCoordinate(value: number): string {
   return Number(fixed) === 0 ? '0.0000' : fixed
 }
 
-/** `wx:v1:forecast:{lat}:{lng}` - a kind and a coordinate, and nothing about who asked. */
+/** `wx:v2:forecast:{lat}:{lng}` - a kind and a coordinate, and nothing about who asked. */
 export function forecastCacheKey(lat: number, lng: number): string {
   return `wx:${WEATHER_CACHE_VERSION}:forecast:${roundCoordinate(lat)}:${roundCoordinate(lng)}`
 }
@@ -298,32 +298,60 @@ function readDay(
 /**
  * The day's steps cut into night, morning, afternoon and evening by local hour.
  *
- * A slot's sky is its first step's: that step is the one whose own six-hour summary starts where
- * the slot does, and in the hourly stretch the later steps' summaries only repeat it shifted. Its
- * temperature is the mean of the steps inside it. A slot with no step is left out, never drawn
- * with a value from its neighbour - which is how today, once the morning has gone, has two.
+ * A slot's temperature is the mean of the steps inside it. A slot that no step is inside or covers
+ * is left out, never drawn with a value from its neighbour - which is how today, once the morning
+ * has gone, has two.
+ *
+ * A step's sky describes the six hours that start at the step, and past the hourly stretch the
+ * steps sit at 00, 06, 12 and 18 UTC, which is not the start of a local slot in most zones (05:00,
+ * 11:00 and so on in Los Angeles). So the slot takes the sky of the step whose six hours overlap it
+ * most, and none when that is less than half of the slot: a slot is never given the sky of other
+ * hours than its own.
  */
 function slotsOf(
   steps: ReadonlyArray<ForecastStep>,
   zone: string,
 ): ReadonlyArray<DaySlot> | null {
+  const starts = steps.map((step) => hourIn(step.time, zone))
   const slots: Array<DaySlot> = []
   for (let index = 0; index < SLOT_COUNT; index += 1) {
+    const slotStart = index * SLOT_HOURS
     const inSlot = steps.filter(
-      (step) => Math.floor(hourIn(step.time, zone) / SLOT_HOURS) === index,
+      (_, at) => Math.floor(starts[at] / SLOT_HOURS) === index,
     )
-    if (inSlot.length === 0) {
+    const covering = coveringStep(steps, starts, slotStart)
+    const sources =
+      inSlot.length > 0 ? inSlot : covering === null ? [] : [covering]
+    if (sources.length === 0) {
       continue
     }
     slots.push({
-      from: `${String(index * SLOT_HOURS).padStart(2, '0')}:00`,
-      symbol: inSlot[0].symbol,
+      from: `${String(slotStart).padStart(2, '0')}:00`,
+      symbol: covering?.symbol ?? null,
       tempC: tenth(
-        inSlot.reduce((sum, step) => sum + step.tempC, 0) / inSlot.length,
+        sources.reduce((sum, step) => sum + step.tempC, 0) / sources.length,
       ),
     })
   }
   return slots.length === 0 ? null : slots
+}
+
+/** The step whose six hours cover at least half of the slot starting at `slotStart`, most first. */
+function coveringStep(
+  steps: ReadonlyArray<ForecastStep>,
+  starts: ReadonlyArray<number>,
+  slotStart: number,
+): ForecastStep | null {
+  let best: ForecastStep | null = null
+  let bestOverlap = 0
+  for (const [at, step] of steps.entries()) {
+    const overlap = Math.max(0, SLOT_HOURS - Math.abs(starts[at] - slotStart))
+    if (overlap > bestOverlap) {
+      best = step
+      bestOverlap = overlap
+    }
+  }
+  return bestOverlap * 2 >= SLOT_HOURS ? best : null
 }
 
 /** The most frequent symbol; the first one seen wins a tie, so the answer is deterministic. */

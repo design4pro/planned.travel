@@ -201,6 +201,32 @@ const step = (
   ...over,
 })
 
+describe('six-hour steps in a zone whose slots do not start where the steps do', () => {
+  // Los Angeles is UTC-7: the provider's 00, 06, 12 and 18 UTC steps fall at 17, 23, 05 and 11 local.
+  const series = [
+    step({ time: '2026-10-11T00:00:00Z', symbol: 'rain' }),
+    step({ time: '2026-10-11T06:00:00Z', symbol: 'cloudy' }),
+    step({ time: '2026-10-11T12:00:00Z', symbol: 'clearsky' }),
+    step({ time: '2026-10-11T18:00:00Z', symbol: 'fair' }),
+    step({ time: '2026-10-12T00:00:00Z', symbol: 'rain' }),
+  ]
+
+  it('gives a slot the sky of the hours it covers, and none where no step covers them', () => {
+    const day = groupForecastDays(series, 'America/Los_Angeles').days.get(
+      '2026-10-11',
+    )
+
+    // The day's steps are at 05:00, 11:00 and 17:00 local. The 05:00 step covers one hour of the
+    // night, less than half of it; the evening has no step inside it, but 17:00 covers five of it.
+    expect(day?.slots).toEqual([
+      { from: '00:00', symbol: null, tempC: 10 },
+      { from: '06:00', symbol: 'clearsky', tempC: 10 },
+      { from: '12:00', symbol: 'fair', tempC: 10 },
+      { from: '18:00', symbol: 'rain', tempC: 10 },
+    ])
+  })
+})
+
 describe('a day the provider says little about', () => {
   it('leaves precipitation, wind and chance empty rather than zero', () => {
     const grouped = groupForecastDays(
