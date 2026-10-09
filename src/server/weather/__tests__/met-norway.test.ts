@@ -21,6 +21,12 @@ interface Sent {
   readonly headers: Record<string, string>
 }
 
+/** `null` is a response with no body, which is what a 304 is. */
+function bodyOf(body: unknown): string | null {
+  if (body === null) return null
+  return typeof body === 'string' ? body : JSON.stringify(body)
+}
+
 function answer(
   body: unknown,
   init: ResponseInit = {},
@@ -36,17 +42,27 @@ function answer(
         ]),
       ),
     })
-    return Promise.resolve(
-      new Response(typeof body === 'string' ? body : JSON.stringify(body), {
-        status: 200,
-        ...init,
-      }),
-    )
+    return Promise.resolve(new Response(bodyOf(body), { status: 200, ...init }))
   }
   return { fetch: fake as unknown as typeof fetch, sent }
 }
 
 const INIT = { signal: new AbortController().signal }
+const LAST_MODIFIED = 'Thu, 08 Oct 2026 19:05:00 GMT'
+
+/** The answer of a call that carried no validator: always a body, never "not modified". */
+async function fetchedFrom(
+  client: ReturnType<typeof createMetNorwayClient>,
+  init: Parameters<
+    ReturnType<typeof createMetNorwayClient>['forecast']
+  >[2] = INIT,
+) {
+  const result = await client.forecast(59.9139, 10.7522, init)
+  if ('notModified' in result) {
+    throw new Error('expected a body')
+  }
+  return result
+}
 
 describe('the MET Norway client', () => {
   it('asks for a point cut to four decimals, with an identifying agent and no encoding of its own', async () => {
@@ -101,11 +117,7 @@ describe('the MET Norway client', () => {
       headers: { Expires: 'Thu, 08 Oct 2026 19:29:27 GMT' },
     })
 
-    const result = await createMetNorwayClient({ fetch }).forecast(
-      59.9139,
-      10.7522,
-      INIT,
-    )
+    const result = await fetchedFrom(createMetNorwayClient({ fetch }))
 
     expect(result.expires?.toISOString()).toBe('2026-10-08T19:29:27.000Z')
     expect(result.series).toHaveLength(
@@ -126,14 +138,14 @@ describe('the MET Norway client', () => {
   })
 
   it('reports no expiry when the header is absent or unreadable', async () => {
-    const absent = await createMetNorwayClient(answer(OSLO_FORECAST)).forecast(
-      59.9,
-      10.7,
-      INIT,
+    const absent = await fetchedFrom(
+      createMetNorwayClient(answer(OSLO_FORECAST)),
     )
-    const garbled = await createMetNorwayClient(
-      answer(OSLO_FORECAST, { headers: { Expires: 'next Tuesday' } }),
-    ).forecast(59.9, 10.7, INIT)
+    const garbled = await fetchedFrom(
+      createMetNorwayClient(
+        answer(OSLO_FORECAST, { headers: { Expires: 'next Tuesday' } }),
+      ),
+    )
 
     expect(absent.expires).toBeNull()
     expect(garbled.expires).toBeNull()
@@ -152,7 +164,7 @@ describe('the MET Norway client', () => {
       },
     })
 
-    const result = await createMetNorwayClient({ fetch }).forecast(1, 2, INIT)
+    const result = await fetchedFrom(createMetNorwayClient({ fetch }))
 
     expect(result.series).toEqual([
       { time: '2026-10-08T19:00:00Z', tempC: 3, symbol: null },
@@ -196,5 +208,62 @@ describe('the MET Norway client', () => {
       .catch((cause: unknown) => cause)
 
     expect(failure).toBeInstanceOf(WeatherProviderError)
+  })
+
+  it('reads the validator off the answer, when it is a date', async () => {
+    const given = await fetchedFrom(
+      createMetNorwayClient(
+        answer(OSLO_FORECAST, { headers: { 'Last-Modified': LAST_MODIFIED } }),
+      ),
+    )
+    const absent = await fetchedFrom(
+      createMetNorwayClient(answer(OSLO_FORECAST)),
+    )
+    const garbled = await fetchedFrom(
+      createMetNorwayClient(
+        answer(OSLO_FORECAST, { headers: { 'Last-Modified': 'yesterday' } }),
+      ),
+    )
+
+    expect(given.lastModified).toBe(LAST_MODIFIED)
+    expect(absent.lastModified).toBeNull()
+    expect(garbled.lastModified).toBeNull()
+  })
+
+  it('sends the validator it is given as If-Modified-Since, and only then', async () => {
+    const { fetch, sent } = answer(OSLO_FORECAST)
+    const client = createMetNorwayClient({ fetch })
+
+    await client.forecast(59.9139, 10.7522, INIT)
+    await client.forecast(59.9139, 10.7522, {
+      ...INIT,
+      lastModified: LAST_MODIFIED,
+    })
+
+    expect(sent[0].headers).not.toHaveProperty('if-modified-since')
+    expect(sent[1].headers['if-modified-since']).toBe(LAST_MODIFIED)
+    expect(sent[1].headers['user-agent']).toBe(MET_NORWAY_USER_AGENT)
+  })
+
+  it('reports "not modified" with the new expiry and no series', async () => {
+    const { fetch } = answer(null, {
+      status: 304,
+      headers: {
+        Expires: 'Thu, 08 Oct 2026 19:59:27 GMT',
+        'Last-Modified': LAST_MODIFIED,
+      },
+    })
+
+    const result = await createMetNorwayClient({ fetch }).forecast(
+      59.9139,
+      10.7522,
+      { ...INIT, lastModified: LAST_MODIFIED },
+    )
+
+    expect(result).toEqual({
+      notModified: true,
+      expires: new Date('2026-10-08T19:59:27Z'),
+      lastModified: LAST_MODIFIED,
+    })
   })
 })

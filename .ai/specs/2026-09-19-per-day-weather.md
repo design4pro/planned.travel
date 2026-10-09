@@ -500,8 +500,9 @@ file; the day/night suffix is dropped for the label.
 ## 📝 Observability
 
 `resolveTripWeather` emits one structured log per resolution - `weather.resolved` with
-`{ locations, forecastDays, recordedDays, estimateDays, hits, misses, unavailable }` and no tenant
-identifier beyond `organizationId` - on top of `callProvider`'s existing `calls` / `errors` /
+`{ organizationId, locations, days, hits, misses, unavailable }`, where `days` counts the asked days
+per kind (`{ forecast: 5 }`, so a new kind adds a key and not a field) and `hits` and `misses` count
+locations - and no tenant identifier beyond `organizationId`, on top of `callProvider`'s existing `calls` / `errors` /
 `blocked` counters. The two rates that decide whether this feature is working are the cache hit
 ratio and the share of days rendering `unavailable`; without that line both are invisible until a
 user reports a blank badge.

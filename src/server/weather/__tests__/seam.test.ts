@@ -77,6 +77,16 @@ describe('a cache every workspace shares holds nothing about one of them', () =>
     )
   })
 
+  it('builds a failure key from a provider and a coordinate, and nothing else', () => {
+    expect(weather.failureCacheKey.length).toBe(3)
+    expect(weather.failureCacheKey('met-norway', 59.9139, 10.7522)).toBe(
+      'wx:v1:fail:met-norway:59.9139:10.7522',
+    )
+    expect(weather.failureCacheKey('nasa-power', 59.9139, 10.7522)).toBe(
+      'wx:v1:fail:nasa-power:59.9139:10.7522',
+    )
+  })
+
   it('exports no function that can be handed a trip, a place, a member or a day', () => {
     const identifiers = /\b(trip|place|member|user|day|organization|stay)Id\b/i
     const offenders = Object.entries(weather)

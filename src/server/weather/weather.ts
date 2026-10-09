@@ -22,6 +22,14 @@
  *    the allowance is a workspace's month, the ledger is this deployment's bill.
  * 4. **The cache write last**, so a failed call leaves nothing behind that could be served.
  *
+ * Two rules sit around that order and are not specific to one vendor. **An entry past its stated
+ * expiry is re-validated, not discarded**: the entry holds the provider's last-modified validator,
+ * so the one call that follows is conditional, and a "not modified" answer keeps the series and
+ * moves the expiry on. **A failure is remembered** for {@link FAILURE_TTL_SECONDS}, per provider and
+ * coordinate, because a spent unit cannot be refunded and a reload during an outage would
+ * otherwise bill a workspace for a feature it was never given. The failure entry is read after the
+ * cache and before the allowance, so a remembered failure costs neither a call nor a unit.
+ *
  * **Nothing here throws at a caller for a provider reason.** A provider error, a timeout, a body
  * that does not parse, a spent allowance and a blocked vendor all turn the affected days into
  * `unavailable`. A planner that waited on this module for its first paint would be taken down by
@@ -89,6 +97,18 @@ export interface ForecastFetch {
   readonly series: ReadonlyArray<ForecastStep>
   /** The provider's stated expiry, or `null` when it gave none that can be read. */
   readonly expires: Date | null
+  /** The provider's last-modified validator, or `null` when it gave none that can be read. */
+  readonly lastModified: string | null
+}
+
+/**
+ * The answer to a conditional request whose validator still holds: no series, because the caller
+ * already has it, and the expiry (and validator) the provider now states.
+ */
+export interface ForecastNotModified {
+  readonly notModified: true
+  readonly expires: Date | null
+  readonly lastModified: string | null
 }
 
 /** The provider seam. `./met-norway` implements it; a test hands over a stub. */
@@ -96,8 +116,12 @@ export interface ForecastProvider {
   readonly forecast: (
     lat: number,
     lng: number,
-    init: { readonly signal: AbortSignal },
-  ) => Promise<ForecastFetch>
+    init: {
+      readonly signal: AbortSignal
+      /** The stored validator; the request is conditional when it is given. */
+      readonly lastModified?: string | null
+    },
+  ) => Promise<ForecastFetch | ForecastNotModified>
 }
 
 export type WeatherFailureReason =
@@ -140,7 +164,10 @@ export interface WeatherRuntime {
   /** `resolveLimits().rates.weather_lookups_per_month` for this workspace. */
   readonly ceiling: number
   readonly now: () => Date
-  readonly logger?: { warn: (message: string, fields?: unknown) => void } | null
+  readonly logger?: {
+    warn: (message: string, fields?: unknown) => void
+    info: (message: string, fields?: unknown) => void
+  } | null
   readonly metNorway: ForecastProvider
 }
 
@@ -165,6 +192,12 @@ const MIN_FRESH_MS = 60_000
 /** Retention, not freshness: how long an entry is kept whatever its expiry says. */
 const RETENTION_SECONDS = 6 * 60 * 60
 
+/** How long a failed provider is left alone at a coordinate. */
+export const FAILURE_TTL_SECONDS = 5 * 60
+
+/** The vendor behind the forecast kind; the failure entry is keyed on it. */
+const FORECAST_PROVIDER = 'met-norway'
+
 /* --------------------------------------------------------------------- keys */
 
 /** Bumped when a stored shape changes; the previous prefix is left to expire on its own. */
@@ -184,6 +217,21 @@ export function roundCoordinate(value: number): string {
 /** `wx:v1:forecast:{lat}:{lng}` - a kind and a coordinate, and nothing about who asked. */
 export function forecastCacheKey(lat: number, lng: number): string {
   return `wx:${WEATHER_CACHE_VERSION}:forecast:${roundCoordinate(lat)}:${roundCoordinate(lng)}`
+}
+
+/**
+ * `wx:v1:fail:{provider}:{lat}:{lng}` - the provider, a coordinate and nothing about who asked.
+ *
+ * Per provider, so one vendor's outage never hides the days another vendor can still answer, and
+ * not per kind, because an outage is the vendor's. A new provider needs a new argument and nothing
+ * else.
+ */
+export function failureCacheKey(
+  provider: string,
+  lat: number,
+  lng: number,
+): string {
+  return `wx:${WEATHER_CACHE_VERSION}:fail:${provider}:${roundCoordinate(lat)}:${roundCoordinate(lng)}`
 }
 
 /** `partlycloudy_night` -> `partlycloudy`: the label does not depend on the hour. */
@@ -289,6 +337,8 @@ const entrySchema = z.object({
   v: z.literal(1),
   fetchedAt: z.string(),
   expires: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
+  // Entries stored before the validator was kept have none; they are re-fetched unconditionally.
+  lastModified: z.string().nullable().default(null),
   series: z.array(
     z.object({
       time: z.string(),
@@ -329,7 +379,7 @@ async function readEntry(
 async function writeEntry(
   runtime: WeatherRuntime,
   key: string,
-  fetched: ForecastFetch,
+  fetched: Pick<ForecastFetch, 'series' | 'expires' | 'lastModified'>,
 ): Promise<void> {
   const at = runtime.now()
   const stated = fetched.expires
@@ -341,6 +391,7 @@ async function writeEntry(
     v: 1,
     fetchedAt: at.toISOString(),
     expires: expires.toISOString(),
+    lastModified: fetched.lastModified,
     series: [...fetched.series],
   }
   try {
@@ -386,34 +437,81 @@ function withTimeout<T>(
   })
 }
 
-/** A place's cached series while it is still fresh, else `null`. */
-async function readFresh(
+/** Whether an entry may be served without asking: only until the expiry stored inside it. */
+function isFresh(runtime: WeatherRuntime, entry: ForecastEntry): boolean {
+  return runtime.now().getTime() < Date.parse(entry.expires)
+}
+
+const failureSchema = z.object({
+  v: z.literal(1),
+  lat: z.number(),
+  lng: z.number(),
+})
+
+/** Whether `provider` failed at this coordinate within {@link FAILURE_TTL_SECONDS}. */
+async function hasFailed(
   runtime: WeatherRuntime,
-  key: string,
-): Promise<ReadonlyArray<ForecastStep> | null> {
-  const entry = await readEntry(runtime, key)
-  return entry !== null && runtime.now().getTime() < Date.parse(entry.expires)
-    ? entry.series
-    : null
+  provider: string,
+  coordinate: WeatherCoordinate,
+): Promise<boolean> {
+  try {
+    const raw = await runtime.cache.get(
+      failureCacheKey(provider, coordinate.lat, coordinate.lng),
+    )
+    return raw !== null && failureSchema.safeParse(JSON.parse(raw)).success
+  } catch (cause) {
+    // A failure that cannot be read is no failure: the worst case is one call we could have saved.
+    runtime.logger?.warn('weather.cache.read_failed', {
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+    return false
+  }
+}
+
+/** Remembers that `provider` failed here, as the coordinate and nothing else. */
+async function rememberFailure(
+  runtime: WeatherRuntime,
+  provider: string,
+  coordinate: WeatherCoordinate,
+): Promise<void> {
+  const entry: z.infer<typeof failureSchema> = {
+    v: 1,
+    lat: Number(roundCoordinate(coordinate.lat)),
+    lng: Number(roundCoordinate(coordinate.lng)),
+  }
+  try {
+    await runtime.cache.put(
+      failureCacheKey(provider, coordinate.lat, coordinate.lng),
+      JSON.stringify(entry),
+      { expirationTtl: FAILURE_TTL_SECONDS },
+    )
+  } catch (cause) {
+    runtime.logger?.warn('weather.cache.write_failed', {
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
 }
 
 /**
  * One place's series from the provider, or `null` when it cannot be had.
  *
- * Every failure collapses to `null` here, including a defect of our own: this runs after first
- * paint and must not be able to reject, and an `unavailable` day is the honest rendering of all of
- * them.
+ * `previous` is the entry that went stale, when there is one: its validator makes the call
+ * conditional, and its series is what a "not modified" answer keeps. Every failure collapses to
+ * `null` here, including a defect of our own: this runs after first paint and must not be able to
+ * reject, and an `unavailable` day is the honest rendering of all of them. A failure of the call
+ * itself is remembered, so the next resolution spends nothing on a provider that has just failed.
  */
 async function fetchSeries(
   runtime: WeatherRuntime,
   key: string,
   coordinate: WeatherCoordinate,
+  previous: ForecastEntry | null,
 ): Promise<ReadonlyArray<ForecastStep> | null> {
   try {
-    const fetched = await callProvider(
+    const answer = await callProvider(
       runtime.outbound,
       {
-        provider: 'met-norway',
+        provider: FORECAST_PROVIDER,
         operation: 'forecast',
         organizationId: runtime.organizationId,
       },
@@ -421,45 +519,87 @@ async function fetchSeries(
         withTimeout(WEATHER_CALL_TIMEOUT_MS, (signal) =>
           runtime.metNorway.forecast(coordinate.lat, coordinate.lng, {
             signal,
+            lastModified: previous?.lastModified ?? null,
           }),
         ),
     )
-    await writeEntry(runtime, key, fetched)
-    return fetched.series
+    if ('notModified' in answer) {
+      if (previous === null) {
+        throw new WeatherProviderError(
+          'malformed',
+          'The weather provider answered "not modified" to an unconditional request.',
+        )
+      }
+      const revalidated = {
+        series: previous.series,
+        expires: answer.expires,
+        lastModified: answer.lastModified ?? previous.lastModified,
+      }
+      await writeEntry(runtime, key, revalidated)
+      return revalidated.series
+    }
+    await writeEntry(runtime, key, answer)
+    return answer.series
   } catch (cause) {
     runtime.logger?.warn('weather.forecast_unavailable', {
       reason: cause instanceof Error ? cause.name : 'unknown',
       message: cause instanceof Error ? cause.message : String(cause),
     })
+    await rememberFailure(runtime, FORECAST_PROVIDER, coordinate)
     return null
   }
+}
+
+/** What reading the cache for a request found, for the line each resolution leaves. */
+interface CacheTally {
+  /** Places served from an entry still inside its expiry. */
+  hits: number
 }
 
 /**
  * Resolves each place into `into`: the cache first, then the provider for as many cold places as
  * the allowance grants, earliest day first.
  *
- * The allowance is spent once for the whole request, after the cache has been read, so a warm
- * place costs nothing and the grant goes to the days that come first rather than to whichever read
- * finished first. A place the grant does not reach is `null` - unavailable, the same as a failed
- * call.
+ * A cold place is one with no entry inside its expiry. If the provider failed there a moment ago
+ * it is `null` at once, before the allowance is touched. The allowance is spent once for the whole
+ * request, after the cache has been read, so a warm place costs nothing and the grant goes to the
+ * days that come first rather than to whichever read finished first. A place the grant does not
+ * reach is `null` - unavailable, the same as a failed call.
  */
 async function resolvePlaces(
   runtime: WeatherRuntime,
   places: ReadonlyMap<string, WeatherCoordinate>,
   into: Map<string, ReadonlyArray<ForecastStep> | null>,
+  tally: CacheTally,
 ): Promise<void> {
   try {
+    const stale = new Map<string, ForecastEntry>()
     await Promise.all(
       [...places].map(async ([key]) => {
-        const fresh = await readFresh(runtime, key)
-        if (fresh !== null) {
-          into.set(key, fresh)
+        const entry = await readEntry(runtime, key)
+        if (entry !== null && isFresh(runtime, entry)) {
+          into.set(key, entry.series)
+          tally.hits += 1
+        } else if (entry !== null) {
+          stale.set(key, entry)
         }
       }),
     )
 
-    const cold = [...places].filter(([key]) => !into.has(key))
+    const missing = [...places].filter(([key]) => !into.has(key))
+    const failed = new Set<string>()
+    await Promise.all(
+      missing.map(async ([key, coordinate]) => {
+        if (await hasFailed(runtime, FORECAST_PROVIDER, coordinate)) {
+          failed.add(key)
+        }
+      }),
+    )
+    for (const key of failed) {
+      into.set(key, null)
+    }
+
+    const cold = missing.filter(([key]) => !failed.has(key))
     const granted = await spendRateUnits(
       runtime.counters,
       {
@@ -476,7 +616,14 @@ async function resolvePlaces(
       cold.map(async ([key, coordinate], index) => {
         into.set(
           key,
-          index < granted ? await fetchSeries(runtime, key, coordinate) : null,
+          index < granted
+            ? await fetchSeries(
+                runtime,
+                key,
+                coordinate,
+                stale.get(key) ?? null,
+              )
+            : null,
         )
       }),
     )
@@ -492,7 +639,11 @@ async function resolvePlaces(
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 
+/** The kinds of reading a day can ask for; the log counts days per kind. */
+type WeatherKind = 'forecast'
+
 interface Eligible {
+  readonly kind: WeatherKind
   readonly date: string
   readonly coordinate: WeatherCoordinate
   readonly key: string
@@ -512,6 +663,42 @@ async function untilDeadline(
   } finally {
     clearTimeout(timer)
   }
+}
+
+/**
+ * The one line each resolution leaves, so the two rates that say whether the feature works - how
+ * often the cache answers and how many days render `unavailable` - can be read without waiting for
+ * a traveller to report a blank badge.
+ *
+ * `hits` and `misses` count locations, not days: a location is a hit when an entry inside its
+ * expiry served it and a miss otherwise, whether the provider was then asked or not. The only
+ * identifier is the organisation's, which the call was already metered against.
+ */
+function logResolution(
+  runtime: WeatherRuntime,
+  resolution: {
+    readonly locations: number
+    readonly eligible: ReadonlyArray<Eligible | null>
+    readonly hits: number
+    readonly outcomes: ReadonlyArray<WeatherOutcome>
+  },
+): void {
+  const days: Record<string, number> = {}
+  for (const entry of resolution.eligible) {
+    if (entry !== null) {
+      days[entry.kind] = (days[entry.kind] ?? 0) + 1
+    }
+  }
+  runtime.logger?.info('weather.resolved', {
+    organizationId: runtime.organizationId,
+    locations: resolution.locations,
+    days,
+    hits: resolution.hits,
+    misses: resolution.locations - resolution.hits,
+    unavailable: resolution.outcomes.filter(
+      (outcome) => outcome.status === 'unavailable',
+    ).length,
+  })
 }
 
 /**
@@ -546,6 +733,7 @@ export async function resolveTripWeather(
       return null
     }
     return {
+      kind: 'forecast',
       date,
       coordinate: location,
       key: forecastCacheKey(location.lat, location.lng),
@@ -564,7 +752,11 @@ export async function resolveTripWeather(
   }
 
   const series = new Map<string, ReadonlyArray<ForecastStep> | null>()
-  await untilDeadline(resolvePlaces(runtime, kept, series), WEATHER_DEADLINE_MS)
+  const tally: CacheTally = { hits: 0 }
+  await untilDeadline(
+    resolvePlaces(runtime, kept, series, tally),
+    WEATHER_DEADLINE_MS,
+  )
 
   const grouped = new Map<string, GroupedForecast>()
   const groupedFor = (key: string, steps: ReadonlyArray<ForecastStep>) => {
@@ -577,7 +769,7 @@ export async function resolveTripWeather(
     return made
   }
 
-  return eligible.map((entry): WeatherOutcome => {
+  const outcomes = eligible.map((entry): WeatherOutcome => {
     if (entry === null) {
       return { status: 'none' }
     }
@@ -607,4 +799,12 @@ export async function resolveTripWeather(
       },
     }
   })
+
+  logResolution(runtime, {
+    locations: kept.size,
+    eligible,
+    hits: tally.hits,
+    outcomes,
+  })
+  return outcomes
 }
