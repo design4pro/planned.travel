@@ -4,14 +4,16 @@
  * It knows nothing about trips, tenants or D1, and it is named for the vendor on purpose — when
  * the provider changes, the file to replace is the one with the vendor's name on it, and a
  * search through the codebase is not part of the job. Everything that decides *whether* a call is
- * made — the cache, the workspace's allowance, the shared key — lives in `./search`, and nothing
- * outside this directory imports this module.
+ * made, and whether its answer is kept - the cache, the workspace's allowance, the per-member key,
+ * what the caching headers permit - lives in `./search`, and nothing outside this directory
+ * imports this module. This module reports the response's caching headers and decides nothing
+ * about them.
  *
  * **The provider is HERE, behind our own proxy** (ADR 0011). The community instance the reference
  * product uses forbids commercial use in its own operator's words, so it was never the cheaper
  * option; a free endpoint whose terms exclude us is not an option at all. That argument is the
- * ADR's and is not restated here — but see the note in `./search` about the document itself not
- * being on disk at this HEAD.
+ * ADR's and is not restated here, and neither is its reading of the HERE Platform Terms on caching
+ * and End Users, which `./search` applies.
  *
  * **The credential is a `wrangler secret`.** It is handed in as a string; this module never reads
  * an environment, and a per-tenant provider credential is neither offered nor accepted — one
@@ -25,10 +27,12 @@
 
 import { z } from 'zod'
 
+import { cachingHeadersOf } from '#/lib/http-cache'
 import { minorUnitDigits } from '#/lib/money'
 import { TransitProviderError } from './search'
 
 import type {
+  TransitAnswer,
   TransitClient,
   TransitConnection,
   TransitLeg,
@@ -312,9 +316,7 @@ export function createHereClient(options: HereClientOptions): TransitClient {
   }
 
   return {
-    async search(
-      query: TransitQuery,
-    ): Promise<ReadonlyArray<TransitConnection>> {
+    async search(query: TransitQuery): Promise<TransitAnswer> {
       const url = requestUrl(options, query)
       // The credential rides in the query, which is the only form the vendor accepts, so the URL
       // is never logged and never appears in a failure message — see the cases below, which quote
@@ -366,10 +368,11 @@ export function createHereClient(options: HereClientOptions): TransitClient {
         )
       }
 
-      return parsed.data.routes.flatMap((route, index) => {
+      const connections = parsed.data.routes.flatMap((route, index) => {
         const connection = connectionOf(route, index)
         return connection === null ? [] : [connection]
       })
+      return { connections, caching: cachingHeadersOf(response.headers) }
     },
   }
 }

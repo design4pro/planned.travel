@@ -280,6 +280,10 @@ expiry and shows them to the trip's other members, which §6.4 j and §6.4 h rea
 this ADR's to fix: `03-reservations-and-transport.md` is frozen and migrated to PRD #167, so the
 correction is tracked in #516, as an amendment to ADR 0011 and a change to that module.
 
+_Update, 2026-10-03: #516 made that correction for the shared cache. ADR 0011 is amended, the transit
+cache is keyed per member and stores only what HERE's caching headers permit, and this paragraph
+describes the module as it was. The saved-connection half is not ruled and is tracked in #797._
+
 The proxy is still the seam that keeps the choice reversible. A provider that permits a shared cache,
 or a self-hosted router the day one runs on our runtime, replaces what sits behind it and changes
 nothing in front.
