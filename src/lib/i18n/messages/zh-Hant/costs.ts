@@ -145,6 +145,13 @@ const messages = {
   'payments.label': '已記錄的付款',
   'payments.empty.title': '尚無付款',
   'payments.empty.body': '有人還清餘額後，轉帳會記錄在這裡。',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': '你可以查看費用，但無法變更',
+  'readOnly.body':
+    '只有行程的擁有者和具編輯權限的人才能新增、修改或刪除支出並記錄付款。如需變更，請聯絡擁有者。',
+  'readOnly.empty':
+    '此行程尚未記錄任何支出。擁有者或編輯者新增後會顯示在這裡。',
+  'readOnly.settleEmpty': '目前不需要任何轉帳。若有差額，會顯示在這裡。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

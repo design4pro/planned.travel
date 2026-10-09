@@ -165,6 +165,14 @@ const messages = {
   'payments.empty.title': 'Aucun paiement pour l’instant',
   'payments.empty.body':
     'Dès que quelqu’un rembourse un solde, le virement est enregistré ici.',
+  /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.title': 'Vous pouvez consulter les coûts, pas les modifier',
+  'readOnly.body':
+    'Seuls les propriétaires du voyage et les personnes autorisées à le modifier peuvent ajouter, modifier ou supprimer des dépenses et enregistrer des paiements. Contactez un propriétaire si quelque chose doit changer.',
+  'readOnly.empty':
+    'Aucune dépense n’a encore été enregistrée pour ce voyage. Elles apparaîtront ici dès qu’un propriétaire ou un éditeur les ajoutera.',
+  'readOnly.settleEmpty':
+    'Aucun virement n’est nécessaire pour le moment. Un éventuel déséquilibre apparaîtrait ici.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

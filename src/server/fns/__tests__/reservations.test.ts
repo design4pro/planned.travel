@@ -21,6 +21,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  addTripMember,
   createAssignment,
   createExpense,
   createPlace,
@@ -860,5 +861,80 @@ describe('deleting an expense a booking points at, as deployed', () => {
     expect(
       (await getReservation(other.scope, otherReservation.id))?.expenseId,
     ).toBe(otherExpense.expense.id)
+  })
+})
+
+/**
+ * `syncReservationExpense` swallows a refused ledger write as `'failed'`, so a money guard narrower
+ * than the booking guard would stop pricing bookings for editors without a single error anywhere.
+ * An editor may write a booking, and so may write the cost line it produces.
+ */
+describe('a priced booking saved by an editor', () => {
+  beforeEach(async () => {
+    const editorId = await tenant.addUser('An editor')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: editorId,
+      role: 'editor',
+    })
+    stubs.scope = tenant.scopeFor(editorId)
+  })
+
+  it('still creates, then updates, its cost line', async () => {
+    await createBooking(
+      bookingPayload({
+        tripId: trip.id,
+        title: 'Dinner at Den',
+        startDate: '2026-04-11',
+        priceMinor: 24_000,
+        currency: 'JPY',
+      }),
+    )
+    const created = await onlyBooking()
+    expect(created.expenseId).not.toBeNull()
+    expect(await listTripExpenses(scope, trip.id)).toHaveLength(1)
+
+    await updateBooking(
+      bookingPayload({
+        tripId: trip.id,
+        reservationId: created.id,
+        title: 'Dinner at Den',
+        startDate: '2026-04-11',
+        priceMinor: 30_000,
+        currency: 'JPY',
+      }),
+    )
+
+    const lines = await listTripExpenses(scope, trip.id)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]?.amountMinor).toBe(30_000)
+  })
+
+  it('answers “created” and “updated” from the sync itself, never “failed”', async () => {
+    const editorScope = stubs.scope
+    if (editorScope === null) {
+      throw new Error('The editor scope was not set.')
+    }
+    const reservation = await createReservation(editorScope, {
+      tripId: trip.id,
+      title: 'Dinner at Den',
+      startDate: '2026-04-11',
+      priceMinor: 9_000,
+      currency: 'JPY',
+    })
+
+    expect(
+      await syncReservationExpense(editorScope, { reservation, trip }),
+    ).toBe('created')
+    const linked = await getReservation(editorScope, reservation.id)
+    if (linked === null) {
+      throw new Error('The booking vanished.')
+    }
+    expect(
+      await syncReservationExpense(editorScope, {
+        reservation: { ...linked, priceMinor: 12_000 },
+        trip,
+      }),
+    ).toBe('updated')
   })
 })
