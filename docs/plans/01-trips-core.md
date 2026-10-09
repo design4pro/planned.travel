@@ -953,9 +953,10 @@ both asserted **in the synchronous half** so that a copy which cannot fit is ref
 is looking rather than in a consumer they cannot see.
 
 - **`trips`.** `startTripCopy` creates a trip row. It calls
-  `assertQuota(scope, 'trips', await tripsRepository.count(scope))` as its **first** write-path
+  `assertQuota(scope, 'trips', await countTripsAgainstPlan(scope))` as its **first** write-path
   statement, before the insert and before any child row, copying `createTrip`'s call at
-  `src/server/repos/trips.ts:315`. Usage is a live `COUNT(*)`, never `usage_records`. The metric is a
+  `src/server/repos/trips.ts:315`. Usage is a live `COUNT(*)`, never `usage_records`. Since #810 that
+  count leaves out a stranded trip, one nobody remaining in the workspace can read (CONTEXT.md). The metric is a
   catalogue metric resolved by `resolveLimits()` in `src/server/billing/limits.ts:227` and is
   deliberately absent from `PLAN_QUOTAS`; nothing is added to either.
 - **`places`.** A copy also duplicates the source's place inventory, which is metered. `startTripCopy`

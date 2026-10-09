@@ -22,7 +22,6 @@ import {
   sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
-import { member } from '#/server/db/auth-schema'
 import {
   COLLECTION_VISIBILITIES,
   JOURNEY_ENTRY_TYPES,
@@ -42,6 +41,7 @@ import {
 } from './base'
 import { NotFoundError } from './context'
 import { checkInsRepository } from './collab'
+import { stillInWorkspace } from './members'
 import { placesRepository } from './places'
 import { readableTripFilter, readableTrips, requireTrip } from './trips'
 import {
@@ -280,16 +280,7 @@ function inReadableJourney(scope: TenantScope, journeyId: SQLiteColumn): SQL {
  * `trip_deleted_at` and keeps counting, whoever owns it.
  */
 function countedJourneyFilter(scope: TenantScope): SQL {
-  const ownerHasLeft = not(
-    exists(
-      scope.db
-        .select({ present: sql`1` })
-        .from(member)
-        .where(
-          tenantFilter(scope, member, eq(member.userId, journeys.ownerUserId)),
-        ),
-    ),
-  )
+  const ownerHasLeft = not(stillInWorkspace(scope, journeys.ownerUserId))
   return not(
     allOf(
       isNull(journeys.tripId),
