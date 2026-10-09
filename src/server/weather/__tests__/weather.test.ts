@@ -724,9 +724,34 @@ describe('a cached forecast past its expiry', () => {
     cache.entries.set(
       forecastCacheKey(OSLO.lat, OSLO.lng),
       JSON.stringify({
+        v: 2,
+        fetchedAt: '2026-10-08T19:00:00.000Z',
+        expires: '2026-10-08T19:05:00.000Z',
+        lastModified: null,
+        series: [],
+      }),
+    )
+    const w = world({ cache })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(outcome.status).toBe('ok')
+    expect(w.provider.validators).toEqual([null])
+  })
+
+  it('ignores an entry stored under the previous cache version', async () => {
+    const cache = memoryKv()
+    cache.entries.set(
+      forecastCacheKey(OSLO.lat, OSLO.lng).replace('wx:v2:', 'wx:v1:'),
+      JSON.stringify({
         v: 1,
         fetchedAt: '2026-10-08T19:00:00.000Z',
         expires: '2026-10-08T19:05:00.000Z',
+        lastModified: 'Thu, 08 Oct 2026 19:00:00 GMT',
         series: [],
       }),
     )
@@ -747,9 +772,10 @@ describe('a cached forecast past its expiry', () => {
     cache.entries.set(
       forecastCacheKey(OSLO.lat, OSLO.lng),
       JSON.stringify({
-        v: 1,
+        v: 2,
         fetchedAt: '2026-10-08T19:00:00.000Z',
         expires: '2026-10-08T19:05:00.000Z',
+        lastModified: null,
         series: [],
       }),
     )

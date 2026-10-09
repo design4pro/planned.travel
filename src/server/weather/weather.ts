@@ -421,7 +421,7 @@ const entrySchema = z.object({
   v: z.literal(2),
   fetchedAt: z.string(),
   expires: z.string().refine((value) => !Number.isNaN(Date.parse(value))),
-  // Entries stored before the validator was kept have none; they are re-fetched unconditionally.
+  // A provider that sent no `Last-Modified` leaves none; such an entry is re-fetched unconditionally.
   lastModified: z.string().nullable().default(null),
   series: z.array(
     z.object({
