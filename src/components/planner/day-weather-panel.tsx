@@ -80,7 +80,9 @@ export function DayWeatherPanel({
                 key={slot.name}
                 className="flex flex-col items-center gap-1 text-caption tabular-nums"
               >
-                <span className="text-ink-3">{t(SLOT_LABEL[slot.name])}</span>
+                <span className="max-w-full text-center hyphens-auto wrap-anywhere text-ink-3">
+                  {t(SLOT_LABEL[slot.name])}
+                </span>
                 {Icon === null || slot.condition === null ? (
                   <span aria-hidden="true" className="size-4" />
                 ) : (
