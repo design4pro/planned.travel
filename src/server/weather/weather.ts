@@ -524,7 +524,8 @@ async function fetchSeries(
         ),
     )
     if ('notModified' in answer) {
-      if (previous === null) {
+      // Only a request that carried a validator can be answered "not modified".
+      if (previous === null || previous.lastModified === null) {
         throw new WeatherProviderError(
           'malformed',
           'The weather provider answered "not modified" to an unconditional request.',

@@ -738,6 +738,32 @@ describe('a cached forecast past its expiry', () => {
     expect(w.provider.validators).toEqual([null])
   })
 
+  it('is not kept on a "not modified" answer to a request that carried no validator', async () => {
+    const cache = memoryKv()
+    cache.entries.set(
+      forecastCacheKey(OSLO.lat, OSLO.lng),
+      JSON.stringify({
+        v: 1,
+        fetchedAt: '2026-10-08T19:00:00.000Z',
+        expires: '2026-10-08T19:05:00.000Z',
+        series: [],
+      }),
+    )
+    const w = world({
+      cache,
+      provider: provider(() => Promise.resolve(NOT_MODIFIED(NEW_EXPIRES))),
+    })
+
+    const [outcome] = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(w.provider.validators).toEqual([null])
+    expect(outcome.status).toBe('unavailable')
+  })
+
   it('is never served past its expiry when the provider cannot be asked', async () => {
     let answers = 0
     const w = world({

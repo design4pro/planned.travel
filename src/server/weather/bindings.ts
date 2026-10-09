@@ -62,7 +62,7 @@ export function weatherRuntime(options: WeatherRuntimeOptions): WeatherRuntime {
     cache: env.KV,
     counters: env.KV,
     outbound,
-    logger: policyLogger(outbound.logger),
+    logger: policyLogger(outbound.logger.child({ component: 'weather' })),
     organizationId: options.organizationId,
     ceiling: options.ceiling,
     now: () => new Date(),
