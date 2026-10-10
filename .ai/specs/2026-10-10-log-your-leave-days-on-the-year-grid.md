@@ -38,7 +38,7 @@ feed), and therefore any control for the holiday-calendar subscriptions and the 
 that paints nothing is a placeholder (`docs/SPEC.md` §7.5). `ADD-03` therefore stays `partial` (Resolved assumption 1). The open
 half of `ADD-03` (the day-source decision, the subscription controls and `holidaysEnabled`) has an owner: the plan records the
 blocker only in its own stage block (`docs/plans/08-product-modules.md`, Stage 08-S5, Blockers) and says it is also recorded in
-`docs/plans/11-boundaries-and-blockers.md`, **which does not mention it**. A follow-up issue filed with this spec, named in the PR
+`docs/plans/11-boundaries-and-blockers.md`, **which does not mention it**. The follow-up issue #1107, filed with this spec and named in the PR
 body, carries it; choosing a feed is a licence and cost decision, so it is a person's.
 
 This spec describes the work that is **left** at HEAD (`4ed3a555`). It departs from the plan's stage block wherever the code the
@@ -700,7 +700,8 @@ Each criterion belongs to one ticket.
 
 - Public holidays from an external source, the holiday-calendar subscription controls, the `holidaysEnabled` switch: deferred behind
   the day-source decision. The plan records that blocker in its own stage block only (it points at
-  `docs/plans/11-boundaries-and-blockers.md`, which does not mention it), and follow-up issue #1107, named in this spec's PR body, owns the open half of `ADD-03`. Choosing a feed is a licence, cost and outbound-subrequest decision, so that issue is a person's. Nothing
+  `docs/plans/11-boundaries-and-blockers.md`, which does not mention it), and follow-up issue #1107, named in this spec's PR body, owns the open half of
+  `ADD-03`. Choosing a feed is a licence, cost and outbound-subrequest decision, so that issue is a person's. Nothing
   built here becomes wrong if a feed arrives (the rows it would fill are the rows this stage writes).
 - Logging for another traveller, inviting plan members, the read-only settings view for a member (the shared-plan stage).
 - Editing a company holiday's label; a note on a day; undo of a clear (the count in the choice is the warning).
