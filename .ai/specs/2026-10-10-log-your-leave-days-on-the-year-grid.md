@@ -700,8 +700,7 @@ Each criterion belongs to one ticket.
 
 - Public holidays from an external source, the holiday-calendar subscription controls, the `holidaysEnabled` switch: deferred behind
   the day-source decision. The plan records that blocker in its own stage block only (it points at
-  `docs/plans/11-boundaries-and-blockers.md`, which does not mention it), and a follow-up issue named in this spec's PR body owns the
-  open half of `ADD-03`. Choosing a feed is a licence, cost and outbound-subrequest decision, so that issue is a person's. Nothing
+  `docs/plans/11-boundaries-and-blockers.md`, which does not mention it), and follow-up issue #1107, named in this spec's PR body, owns the open half of `ADD-03`. Choosing a feed is a licence, cost and outbound-subrequest decision, so that issue is a person's. Nothing
   built here becomes wrong if a feed arrives (the rows it would fill are the rows this stage writes).
 - Logging for another traveller, inviting plan members, the read-only settings view for a member (the shared-plan stage).
 - Editing a company holiday's label; a note on a day; undo of a clear (the count in the choice is the warning).
