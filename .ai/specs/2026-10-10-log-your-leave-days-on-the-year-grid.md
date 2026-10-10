@@ -91,8 +91,9 @@ Verified against the repository at HEAD:
 - **The screen is English.** `vacay.tsx` carries its copy as literals (`docs/SPEC.md` §9). The allowance spec localises the lines it
   rewrites; the rest is this stage's.
 - **Mobile chrome.** Below `lg` a fixed tab bar (`src/components/layout/mobile-nav.tsx`) and a "Report a problem" button sit at the
-  bottom; `AppToaster` already clears both with `offset="calc(var(--safe-bottom) + 5.5rem)"`
-  (`src/components/layout/app-toaster.tsx`). Anything this stage anchors to the bottom has to clear them too.
+  bottom; `AppToaster` clears the tab bar only (`offset` 5.5rem, `mobileOffset` 5.25rem in `src/components/layout/app-toaster.tsx`). The
+  "Report a problem" actor (`#sentry-feedback`) floats in the end corner up to 132px above the foot, which is why `AppFrame` pads
+  `calc(var(--safe-bottom) + 8.5rem)` (#557). Anything this stage anchors to the bottom has to clear both.
 
 The reader this serves: a traveller who plans leave around their trips and needs to record "I am away 3 to 14 August" without
 leaving the keyboard, on a phone, in their own language, and to see the allowance move as they do it. The reference behaviour (twelve
@@ -135,7 +136,7 @@ planId)` (plus `isOwner`, else `PlanOwnerOnlyError`) - are **prerequisites**, no
   second person on a plan today. `setEntry` and `setEntryRange` call `requirePlanActor` in place; their repository input keeps the
   optional `userId` only for the dev seeder, under the allowance spec's rule: a `userId` other than the caller's is **owner only**
   (an accepted non-owner gets `PlanOwnerOnlyError`), the target must be an accepted plan member **and** a current workspace member
-  (else `NotFoundError`), and nothing is written on a refusal. Both paths are tested (criteria 5 and 13).
+  (else `NotFoundError`), and nothing is written on a refusal. Both paths are tested (criteria 5 and 14).
 - **Clearing is by plan, caller and date range.** `clearEntries(scope, { planId, from, to })` calls `requirePlanActor`, then deletes
   with `plan_id = ?` and `user_id = scope.ctx.userId` and the range, in one statement (`removeWhere`). There is no row-id path to
   another person's day; a colleague's rows on the same dates are untouched; clearing nothing is not an error. `removeEntry` stays
@@ -164,7 +165,7 @@ planId)` (plus `isOwner`, else `PlanOwnerOnlyError`) - are **prerequisites**, no
 
 - `src/lib/vacay/entry-kinds.ts`: the one owner of the kind list's order, the allowance cost of each kind (`ENTRY_KIND_COST`, moved
   out of `vacay.ts`, which imports it) and `MAX_ENTRY_RANGE_DAYS = 366`. Day arithmetic reuses `inclusiveDays` and `shiftDate` from
-  `src/lib/trip-dates.ts`; no new date helper is written, and `calendarRange` in `vacay.ts` is replaced by them.
+  `src/lib/trip-dates.ts`; no new date helper is written, and 08-S5c replaces `calendarRange` in `vacay.ts` with them when it rewrites `setEntryRange`, its only caller.
 - `src/lib/vacay/day-rules.ts`: `isWeekend(date)` by the **actual weekday** (Saturday and Sunday, fixed - there is no weekend
   setting - Resolved assumption 12); `blockedReason(date, plan)` (`'weekend' | 'companyHoliday' | null`) from the plan's stored
   `blockWeekends`, `companyHolidaysEnabled` and company-holiday dates; and `daysToWrite(dates, kind, plan)`, which returns `{ days,
@@ -180,8 +181,9 @@ vacay_entries.note)`, `updated_at = excluded.updated_at`) and the only value the
   its `setWhere`. **Chunk size is derived, not assumed, and `chunkFor` in `src/server/repos/batch.ts` stays its one owner** (it gains an optional count of reserved parameters; `setCompanyHolidayRange` uses the same derivation): `floor((MAX_BOUND_PARAMETERS - conflictParameters) / columnsPerRow)`, with
   `vacay_entries` at nine columns and one conflict parameter that is 11 rows (100 parameters) and 34 statements for 366 days. If the
   built statement binds more than that (for example a literal `updated_at` bound in `SET`), the chunk shrinks to 10 rows and 37
-  statements. A unit test builds a full-size chunk and asserts `toSQL().params.length <= MAX_BOUND_PARAMETERS`: the Node SQLite the
-  tests run on does not refuse a 101-parameter statement, so only that assertion catches the D1 failure.
+  statements. The repository harness (`src/server/repos/__tests__/harness.ts`) refuses a statement over `MAX_BOUND_PARAMETERS` and rolls a
+  failed batch back; the 366-day test asserts through `harness.statements` (width and count of each statement), which is also the
+  statement counter criterion 14 names.
 - `setEntry` is the **single-day case of that helper** (no read-then-write, so two tabs on the same new day cannot trip the unique
   index): `requirePlanActor`, `blockedReason` (a blocked day is refused by a diagnostic repository error), one statement, then
   `recomputeCarryOver(scope, planId, userId)` (the allowance spec's function, which the entry writers must call).
@@ -195,7 +197,7 @@ vacay_entries.note)`, `updated_at = excluded.updated_at`) and the only value the
 
 **Server functions (`src/routes/_app/-server/vacay.ts`).**
 
-- `loadVacayGridFn` (GET, `{ year }`): `{ today }` from `todayIso()` (`serialise.ts`; server-resolved, so `aria-current` and the empty
+- `loadVacayGridFn` (GET, `{ year }`): `{ today }` from `todayIso()` (`serialise.ts`, which delegates to `serverToday()` in `src/server/clock.ts`: the wall-clock date on the Worker, not the workspace's `timezone` setting; server-resolved, so `aria-current` and the empty
   state's action never read `new Date()` at render and cannot differ between server and client). 08-S5b adds `weekStartsOn`, 08-S5e
   adds `tripWindows`. It takes no plan id and calls no `ensurePlan`, so the route loader runs it in parallel with `loadVacay`
   (`Promise.all`), then the allowance function with that plan's id, as the allowance spec orders it.
@@ -205,7 +207,7 @@ vacay_entries.note)`, `updated_at = excluded.updated_at`) and the only value the
 
 **Language of the grid.** Month and weekday names come from `monthName` / `weekdayName` in `src/lib/format.ts` (the frozen tables;
 **never** `Intl` at render, which hydrates differently on workerd and WebKit), so the extracted `month-grid.tsx` carries no English
-literal from the day it exists. Headings render the `short` form; `NameWidth` has no narrower form. If a locale's short form does
+literal from the day it exists. Column headings render the `short` form and month card titles the `long` form; `NameWidth` has no narrower form. If a locale's short form does
 not fit its column at the four-column layout (`ar`, `pl`, `vi`, `zh` are the ones that can), an e2e no-overflow check fails and the
 fix is a narrow form in `format.ts` with the long name as the accessible text. The legend is rewritten in this ticket and uses the
 kind keys. The header stays Monday-first until 08-S5b.
@@ -241,7 +243,7 @@ Nothing was writable before this ticket, so nothing changes for a traveller who 
   (`day-rules.ts`) and shows the true count and cost; the repository runs the same function, so the cost shown is the cost charged.
 - **`setEntryRange` rewritten (atomic).** The Phase 1 upsert helper over the whole range: **all** statements handed to one
   `runBatch` (one D1 batch, so a half-written fortnight is not a reachable state), then `recomputeCarryOver`. `organization_id` is
-  stamped from the scope; there is no `.returning()`. Semantics kept from today: `kind` is in `SET` only when supplied (an omitted
+  stamped from the scope; the range case has no `.returning()` (the single-day case adds one, which binds no extra parameter, so `setEntry` still returns its row). Semantics kept from today: `kind` is in `SET` only when supplied (an omitted
   kind keeps the existing value; a new row takes the column default), `note` is `coalesce(excluded.note, vacay_entries.note)`,
   `updated_at` is set. Days `daysToWrite` leaves out (a blocked weekend, a company holiday) are skipped, not an error. It returns the
   number of days written; the old return value (every entry of the user in every year) is dropped - the seeder and
@@ -254,8 +256,12 @@ Nothing was writable before this ticket, so nothing changes for a traveller who 
   truth, not a guess.
 - **Gestures (all produce the same value from the same model).** The required path is the two-tap "from / to" started from the
   picker's "Select more days". Shift+arrow (keyboard) and Shift+click and a mouse drag (`pointerType === 'mouse'` only) are
-  shortcuts; touch keeps the default `touch-action`, so the page scrolls normally. Either end of a run may be a blocked weekend: "I am
-  away from Saturday the 1st" still works, because the run skips the blocked days.
+  shortcuts; touch keeps the default `touch-action`, so the page scrolls normally. The **end** of a run may be a blocked weekend
+  (while a range is pending a blocked cell is operable as the end; it is selected and counted in the "left out" line, and the
+  blocked-reason answer applies only outside range mode). The start of a touch run is a writable day, because the picker that
+  starts it does not open on a blocked empty cell; Shift+arrow, Shift+click and a mouse drag may start on a blocked cell. "I am away
+  from Saturday the 1st" on a phone is started on the next writable day, which writes the same days, because the run skips the
+  blocked ones.
 - **Clear.** "Clear {n} marked days" in the picker applies to the selection and names the count; no confirmation dialog (the count is
   the warning; Resolved assumption 4).
 
@@ -264,7 +270,7 @@ Nothing was writable before this ticket, so nothing changes for a traveller who 
 - `plan-settings-dialog.tsx` (allowance spec) gains one `CheckboxField` row, **Block weekends**; `updateVacayPlanFn`'s `pick` widens
   to `blockWeekends`. Nothing else changes in the grid: it already follows the stored value (Phase 1), so turning it off makes weekend
   cells writable on the next read and turning it on makes them inert again (existing weekend entries stay visible and clearable).
-- The cell's reason text switches from `vacay.blocked.weekend` to `vacay.blocked.weekendChange`, which names the switch (a new key, so the 22 translated locales cannot keep stale text under an edited one).
+- The cell's reason text switches from `vacay.blocked.weekend` to `vacay.blocked.weekendChange`, which names the switch (a new key, so the 22 translated locales cannot keep stale text under an edited one). The same PR deletes `vacay.blocked.weekend` from all 23 locales, because `src/lib/i18n/__tests__/coverage.test.ts` fails on a key with no whole-literal reader (`BACKWARD_COMPATIBILITY.md` allows removing a key once its last reader is gone).
 - The slice a person sees: "I work Saturdays" turns blocking off and logs a Saturday. Resolved assumption 24 records that a fixed
   Saturday-Sunday weekend blocks Sunday, a working day for many `ar` readers, and that this switch is their remedy.
 
@@ -284,7 +290,7 @@ title, startDate, endDate }` and nothing else, has no `userId` parameter and doe
 ### Phase 6 (08-S5f) - company holidays
 
 - **Mode control (`mode-control.tsx`).** A `RadioGroup` of two, labelled "Mark days as": "My time off" / "Company holiday", shown only
-  to the plan's owner and only while the plan's company holidays are on. Not `PillNav` (primary navigation: a `<nav>` of links), not
+  to the plan's owner (`isOwner`, which 08-S5f adds to `loadVacayGridFn`'s output, computed by the repository from the plan's owner; `loadVacay` and `VacayPayload` are not edited) and only while the plan's company holidays are on. Not `PillNav` (primary navigation: a `<nav>` of links), not
   `Tabs` (there is no tab panel), and not a `Switch` (its off state would leave the default mode unnamed). Changing it is announced
   politely; each month grid's accessible name carries the mode.
 - **In company mode** the same gestures (tap, two-tap range, Shift+arrows) record or clear company holidays instead; the picker offers
@@ -352,14 +358,14 @@ trips by the existing membership index `(organization_id, user_id)`.
 
 ## 📝 API Contracts
 
-| Function                 | Method | Input (all `z.strictObject`, no `userId`) | Output                                                   | Ticket                    |
-| ------------------------ | ------ | ----------------------------------------- | -------------------------------------------------------- | ------------------------- |
-| `loadVacayGridFn`        | GET    | `{ year }`                                | `{ today, weekStartsOn, tripWindows }` (grows by ticket) | a, b, e                   |
-| `setVacayEntryFn`        | POST   | `{ planId, date, kind }`                  | the entry row                                            | a                         |
-| `clearVacayEntriesFn`    | POST   | `{ planId, from, to }`                    | `{ removed }`                                            | a (c reuses it for a run) |
-| `setVacayEntryRangeFn`   | POST   | `{ planId, from, to, kind }`              | `{ written, skipped }`                                   | c                         |
-| `setCompanyHolidaysFn`   | POST   | `{ planId, from, to }`                    | `{ written }`                                            | f                         |
-| `clearCompanyHolidaysFn` | POST   | `{ planId, from, to }`                    | `{ removed }`                                            | f                         |
+| Function                 | Method | Input (all `z.strictObject`, no `userId`) | Output                                                            | Ticket                    |
+| ------------------------ | ------ | ----------------------------------------- | ----------------------------------------------------------------- | ------------------------- |
+| `loadVacayGridFn`        | GET    | `{ year }`                                | `{ today, weekStartsOn, tripWindows, isOwner }` (grows by ticket) | a, b, e, f                |
+| `setVacayEntryFn`        | POST   | `{ planId, date, kind }`                  | the entry row                                                     | a                         |
+| `clearVacayEntriesFn`    | POST   | `{ planId, from, to }`                    | `{ removed }`                                                     | a (c reuses it for a run) |
+| `setVacayEntryRangeFn`   | POST   | `{ planId, from, to, kind }`              | `{ written, skipped }`                                            | c                         |
+| `setCompanyHolidaysFn`   | POST   | `{ planId, from, to }`                    | `{ written }`                                                     | f                         |
+| `clearCompanyHolidaysFn` | POST   | `{ planId, from, to }`                    | `{ removed }`                                                     | f                         |
 
 Errors: a plan the caller may not see is `NotFoundError`; a non-owner recording a company holiday is `PlanOwnerOnlyError`; a write on a
 blocked day is a diagnostic repository error. None is authored copy (`AUTHORED_ERROR_NAMES` stays closed), so each crosses the wire as
@@ -411,7 +417,7 @@ Route `/vacay` exists: no route file, no `pnpm generate-routes`. SSR stays the d
 
 ### The picker (08-S5a)
 
-- `Popover` anchored to the day on a fine pointer, bottom `Sheet` on a narrow or coarse screen (`src/lib/breakpoints.ts`). Its title
+- `Popover` anchored to the day on a fine pointer, bottom `Sheet` on a narrow screen (`MEDIA_MD_DOWN` in `src/lib/breakpoints.ts`; that file has no pointer query and none is added, so a wide touch screen gets the Popover). Its title
   reads `Mark {date}` with the localised long date; the Popover content is a `role="dialog"` named by `aria-labelledby` on that
   visible title, and the Sheet uses `SheetTitle`. Six kind options, the current kind marked (`aria-pressed`), each with a **cost
   line** under the name: "Uses 1 day of your allowance" / "Uses half a day of your allowance" / "Doesn't use your allowance".
@@ -426,9 +432,9 @@ Route `/vacay` exists: no route file, no `pnpm generate-routes`. SSR stays the d
 ### The bottom region, success, failure, empty and loading (08-S5a)
 
 - **One bottom region** (`data-part="vacay-bottom-region"`) holds, stacked from the bottom: the transient status strip, the range bar
-  (08-S5c) and the failure alert. It is fixed with the same clearance `AppToaster` uses (`calc(var(--safe-bottom) + 5.5rem)` on
-  desktop widths, `5.25rem` below the mobile breakpoint), so it never sits under the mobile tab bar or the "Report a problem" button,
-  and the grid has matching bottom padding. A polite live region is mounted **empty at first render** inside it and only its content
+  (08-S5c) and the failure alert. It is fixed with the clearance `AppFrame` uses below `lg` (`calc(var(--safe-bottom) + 8.5rem)`, which
+  clears the tab bar and the end-corner "Report a problem" actor; `AppToaster`'s 5.25rem would not), so it never sits under either, and
+  the grid has matching bottom padding. A polite live region is mounted **empty at first render** inside it and only its content
   changes (a `role="status"` that mounts already holding its text is not reliably announced).
 - **Success.** The cell fills at once (optimistic), `router.invalidate()` re-reads the balances, and the status strip shows - visibly,
   for a few seconds, and through the live region - "{kind}: {date}." followed by the allowance spec's `vacay.allowance.daysLeft`
@@ -436,11 +442,11 @@ Route `/vacay` exists: no route file, no `pnpm generate-routes`. SSR stays the d
   mark cost. A run: "{kind}: {range}, {n} days marked."
 - **Failure.** The cell reverts to its previous fill and **one** `Alert tone="danger"` (`role="alert"`) appears in the bottom
   region. It names the date - or, for a run, the range through `formatDateRange` - says nothing was saved for
-  them, and offers "Try again" (re-sends exactly the failed writes) only for a transport error or a 5xx; any other failure just
+  them, and offers "Try again" (re-sends exactly the failed writes) only for a transport error or a 5xx **and** only while the re-read still shows the day writable (a refusal such as a weekend blocked in another tab arrives as an unexpected error and offers none); any other failure just
   re-reads the page. Focus stays on the day. The alert clears on the next success. A failed range reverts every day in it. A succeeded write whose carry-over recompute failed is **not** a failure here (Phase 1). The alert is shown after the `router.invalidate()` re-read, not before: when the response was lost but the write committed, the re-read already shows the intended state and the success status is shown instead.
 - **Empty.** The "Nothing marked in {year}" card stays; its description names the gesture ("Select any day to mark it as time off.")
-  and its action, "Go to {month}", scrolls to and focuses today in the current year or 1 January in any other (not "the first of the
-  current month"). It makes no claim about weekends or company holidays showing up on their own: a company holiday appears only if
+  and its action - "Go to today" in the current year, "Go to the start of the year" in any other (two whole keys, no month name dropped
+  into a sentence) - scrolls to and focuses today or 1 January (not "the first of the current month"). It makes no claim about weekends or company holidays showing up on their own: a company holiday appears only if
   the owner records one.
 - **Loading.** `VacayPending` renders twelve month cards of `Skeleton` cells at the settled cell size, so the grid does not jump.
 - **Motion.** A cell's fill transitions over 150ms on `--ease-out-quint`; the range preview is opacity only; nothing animates a layout
@@ -455,7 +461,7 @@ Route `/vacay` exists: no route file, no `pnpm generate-routes`. SSR stays the d
   {date}. Select the last day." through the live region and offers a visible Cancel (at least 44px). The next tap on any day, either
   side of the start and across months, sets the end and reopens the picker for the whole range: its title is the range through `formatDateRange` with the day count, each kind's cost line shows the real cost of **this** range ("Uses 10 days of your allowance") from `daysToWrite`,
   and, when days are left out, one line says how many ("4 days left out (blocked weekends or company holidays)") so a title of 14 days
-  beside a cost of 10 is never unexplained; "Clear {n} marked days" applies to the selection. Selecting the start day again returns to
+  beside a cost of 10 is never unexplained, and when some of the days already hold an entry one more line says how many ("3 of these days are already marked"), because the cost line states what is written, not the change to the allowance; "Clear {n} marked days" applies to the selection. Selecting the start day again returns to
   the single-day picker. `Escape`, Cancel or a year change leave range mode with nothing written.
 - Cells in a selection carry `aria-selected="true"`; each grid is `aria-multiselectable`. The hint tied to the grids with `aria-describedby` names the keyboard path through the new key `vacay.grid.hint.range`, read after `vacay.grid.hint`.
 - When the bar or an alert is showing, `scroll-padding-bottom` makes sure it **never covers the focused day**.
@@ -472,10 +478,10 @@ Route `/vacay`, light and dark, desktop (1280), mobile (360) and 2560:
 - Resting: every day is a control with a focus ring and hover/active states; marked days carry their kind cue; company holidays carry
   the dashed border; trip hairline (08-S5e); a mode control in the header for the plan's owner (08-S5f); a legend with the new rows;
   localised month and weekday names (08-S5a) in the user's week (08-S5b).
-- States: the kind picker open over a day (`--state kind-picker --click '[data-part="vacay-day"][data-date="2026-08-19"]'`); a
-  pending range with the bottom bar (`--state range`); company mode (`--state company --click '[data-part="vacay-mode"]
-[data-value="company"]'`); the failure alert (reached with `page.route()` failing a write); a blocked weekend's reason in the bottom
-  region; the twelve-card skeleton.
+- States: the kind picker open over a day (`--state kind-picker --click '[data-part="vacay-day"][data-date="2026-08-19"]'`); company mode (`--state company --click '[data-part="vacay-mode"]
+[data-value="company"]'`). `capture.mjs` takes one `--click`, so the states that need several interactions or a failing route - a
+  pending range with the bottom bar, the failure alert (`page.route()` failing a write), a blocked weekend's reason in the bottom
+  region, the twelve-card skeleton - are Playwright screenshots taken in `e2e/product-modules.spec.ts` instead.
 - Frames are the blind A/B pair from `scripts/visual/capture.mjs`; nothing is compared to a stored image (ADR 0016).
 
 ## 📝 Copy
@@ -513,7 +519,8 @@ literal JSX text or props, logical properties). The success line reuses the allo
 | `vacay.blocked.companyHoliday`                       | `This day is a company holiday, so it can't be marked as time off.`                                                                             | a      |
 | `vacay.empty.title`                                  | `Nothing marked in {year}`                                                                                                                      | a      |
 | `vacay.empty.description`                            | `Select any day to mark it as time off.`                                                                                                        | a      |
-| `vacay.empty.action`                                 | `Go to {month}`                                                                                                                                 | a      |
+| `vacay.empty.action.today`                           | `Go to today`                                                                                                                                   | a      |
+| `vacay.empty.action.start`                           | `Go to the start of the year`                                                                                                                   | a      |
 | `vacay.legend.title`                                 | `Legend`                                                                                                                                        | a      |
 | `vacay.legend.mine` / `.companyHoliday` / `.weekend` | `Your time off` / `Company holiday` / `Weekend`                                                                                                 | a      |
 | `vacay.legend.others` / `.trip`                      | `Someone else away` / `Your trip`                                                                                                               | a / e  |
@@ -525,6 +532,7 @@ literal JSX text or props, logical properties). The success line reuses the allo
 | `vacay.range.count`                                  | plural on `count`: `{value} day` / `{value} days`                                                                                               | c      |
 | `vacay.range.skipped`                                | plural on `count`: `{value} day left out (blocked weekend or company holiday)` / `{value} days left out (blocked weekends or company holidays)` | c      |
 | `vacay.kind.cost.days`                               | plural on `count`: `Uses {value} day of your allowance` / `Uses {value} days of your allowance`                                                 | c      |
+| `vacay.picker.alreadyMarked`                         | plural on `count`: `{value} of these days is already marked` / `{value} of these days are already marked`                                       | c      |
 | `vacay.picker.clear.range`                           | plural on `count`: `Clear {value} marked day` / `Clear {value} marked days`                                                                     | c      |
 | `vacay.status.markedRange`                           | plural on `count`: `{kind}: {range}, {value} day marked.` / `{kind}: {range}, {value} days marked.`                                             | c      |
 | `vacay.status.clearedRange`                          | plural on `count`: `Cleared {value} day, {range}.` / `Cleared {value} days, {range}.`                                                           | c      |
@@ -633,7 +641,7 @@ Each criterion belongs to one ticket.
     current workspace member gets `NotFoundError`, with nothing written in either case. `setVacayEntryRangeFn`'s strict input carries
     no weekend or holiday field.
 15. On a 360px viewport a traveller logs a run of days with taps only, sees the real allowance cost of the range - and how many days
-    are left out - before choosing, and clears a selection with one choice that names the count; either end may be a blocked weekend;
+    are left out - before choosing, and clears a selection with one choice that names the count; the end may be a blocked weekend (a touch run starts on a writable day, which writes the same days);
     `Escape` / Cancel / a year change write nothing; the page still scrolls during selection (`touch-action` is the default); "Cancel"
     is tappable at 360px with the page scrolled to December and is not under the tab bar or the "Report a problem" button.
 16. Cells in a selection are `aria-selected` and carry the solid inset border; the bar is announced through the live region mounted
@@ -710,7 +718,7 @@ Each criterion belongs to one ticket.
 ### Reference-row disposition
 
 `ADD-03` stays `partial`: the plan closes it "done", but the row expects public holidays from an external source and that half is
-deferred to the follow-up issue together with the subscription controls and `holidaysEnabled`; every other path it names ships.
+deferred to the follow-up issue together with the subscription controls and `holidaysEnabled`; every other path it names ships. This departs from `docs/plans/08-product-modules.md` (the `ADD-03` row, and its statement that `ADD-10` is the one row that closes as partial); the 08-S5f PR edits that table row and paragraph and the counts in `docs/plans/README.md` in the same change.
 `ADD-02` (allowance, carry-over, settings) closes with 08-S5f, the last ticket that adds a settings row, as the allowance spec hands
 over.
 
@@ -733,8 +741,7 @@ part one logs one day with its kind (guarded `setEntry`, `setVacayEntryFn`, the 
 
 ### Phase 1 - log and clear one day (08-S5a)
 
-1. `entry-kinds.ts`, `day-rules.ts` and their tests; move `ENTRY_KIND_COST`; replace `calendarRange` with
-   `inclusiveDays`/`shiftDate`.
+1. `entry-kinds.ts`, `day-rules.ts` and their tests; move `ENTRY_KIND_COST` (`calendarRange` stays until 08-S5c).
 2. The upsert helper, `setEntry` as its single-day case, `clearEntries`, the cap in the schema, the recompute call (a failure is
    logged, not thrown); tests first: the actor rules, the explicit-`userId` paths, tenant isolation, the colleague-rows case, the
    chunk-parameter assertion, the allowlist edit.
@@ -752,7 +759,7 @@ part one logs one day with its kind (guarded `setEntry`, `setVacayEntryFn`, the 
 ### Phase 3 - a run of days (08-S5c)
 
 1. `range-select.ts` and its test; the cap agreement test.
-2. `setEntryRange` rewritten over the helper, tests for >12 new days, a mix, omitted kind, skipped days, atomicity, the statement
+2. `setEntryRange` rewritten over the helper (`calendarRange` removed with it), tests for >12 new days, a mix, omitted kind, skipped days, atomicity, the statement
    count, cap, cross-workspace, the explicit-`userId` paths; `setVacayEntryRangeFn`.
 3. `RangeBar`, Shift+arrows, mouse drag, the range picker, the live-region messages, keys.
 4. The dev seeder counts the returned `written`; the existing `repositories.test.ts` `setEntryRange` cases that cross a weekend or a company holiday are updated for the skip.
@@ -793,7 +800,7 @@ part one logs one day with its kind (guarded `setEntry`, `setVacayEntryFn`, the 
 e2e/product-modules.spec.ts`, with the port from `bash .ai/scripts/e2e.sh`.
 - Frames, the blind A/B pair a person reads at review: `PT_SERVER_TODAY=2026-08-20 node scripts/visual/capture.mjs --url
 "http://localhost:$PORT/vacay?year=2026" --out "<scratchpad>/shots/08-S5" --label B --viewports 360x800,1280x900,2560x1440 --themes
-light,dark --auth`, with the states named under Visual change expected. Each selector is verified to resolve by the spec run passing.
+light,dark --auth`, with the two click-reachable states named under Visual change expected. Each selector is verified to resolve by the spec run passing.
 
 ## Resolved assumptions (autonomous defaults)
 
