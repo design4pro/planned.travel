@@ -74,7 +74,7 @@ Verified against the repository at HEAD:
 | `src/routes/_app/journey/index.tsx`, `src/routes/_app/journey/$journeyId.tsx`, `src/routes/_app/collections/index.tsx` (one import line)                                                                                                                                  | `journeys.trip_id`: this stage never writes it, so it never changes who can read a journal                                                                                 |
 | `src/components/layout/__tests__/copy-rules.test.ts`, the comment in `src/components/console/index.ts`, `src/lib/i18n/messages/*/journal.ts` (23 locales), `src/routes/_app/-server/__tests__/`, `src/server/repos/__tests__/` (journey suites, tenant isolation, member) | `e2e/journeys.spec.ts` (the critical-journey declarations stay as they are)                                                                                                |
 | `e2e/product-modules.spec.ts` - create or append (no baselines; ADR 0016)                                                                                                                                                                                                 | `drizzle/`, `src/server/db/schema.ts`: no schema change                                                                                                                    |
-| `CONTEXT.md` - **Anchor**; the **Archive** entry gains the journal case                                                                                                                                                                                                   |                                                                                                                                                                            |
+| `CONTEXT.md` - **Anchor**; the **Archive** entry rewritten to state the trip meaning and the journal meaning separately; `docs/adr/<next free number>-journal-anchors-are-copies.md` (08-S3b)                                                                             |                                                                                                                                                                            |
 
 ### Phase boundaries (tickets)
 
@@ -94,9 +94,16 @@ both edit `journey/$journeyId.tsx` and `library.ts`, and the second mounts its d
 - **The guard lives in the repository.** `requireOwnedJourney(scope, journeyId)`: `requireJourney` first (an unreadable or foreign
   id is the same `NotFoundError` a missing one is, so nothing leaks), then `canManageJourney(journey, scope.ctx.userId)` from
   `src/lib/journal/policy.ts`, else a `JourneyOwnerError` (a `RepositoryError`, code `FORBIDDEN`, deliberately **not** in
-  `AUTHED_ERROR_NAMES`: a menu that hides the item makes the refusal a forged-request edge, so the reader sees the caller's
-  localised generic failure, `docs/SPEC.md` §9 rule 10). It is called by `updateJourney`, `publishJourney`, `unpublishJourney`,
-  `deleteJourney`, the two new status verbs and `importTripPlaceAnchors`.
+  `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`). The trip precedent, `TripRoleError`, is authored because the trip screens
+  show a role's reason to a person who can see the control; here the menu is not rendered for a non-owner, so the refusal is a
+  forged-request edge and the reader sees the caller's localised generic failure, `docs/SPEC.md` §9 rule 10). It is called by
+  `updateJourney`, `publishJourney`, `unpublishJourney`, `deleteJourney`, the two new status verbs and `importTripPlaceAnchors`.
+  Its callers outside the server functions are the dev seeder (`src/routes/api/dev/-seed/apply.ts` calls
+  `deleteJourney(owner, stale.id)`; the phase verifies the stale row's owner is always that actor, else the seeder deletes as the
+  owner it created the row for) and the repository suites, whose fixtures must act as the journal's owner.
+- **`archived` implies no token, in the repository.** `updateJourneyInput` (repository) still accepts `status` and `visibility`
+  for the seeder; so `updateJourney` writes `public_token = null` whenever the resulting `status` is `'archived'`, and
+  `archiveJourney` is the same rule with the guard in front. No path leaves an archived journal with a token.
 - `canManage: boolean` is computed **server-side** by the same `canManageJourney` and carried on the loaders. The client never
   compares ids and no user id is shipped. It is a rendering hint; the repository is the authority.
 - **Workspace owners and admins have no override in this stage.** A journal whose owner left the workspace but which is still
@@ -121,25 +128,36 @@ with a client-known literal.
 - **`listJourneyTrips(scope, journeyId)`** resolves the journal through `requireJourney`, then two indexed reads: a group-by of
   `source_trip_id` over the journal's entries on `journey_entries_org_journey_idx` with the anchor count (`type = 'place'`), and
   `readableTrips(scope).findMany` for titles. The seed `journeys.trip_id` is unioned in code. It returns
-  `{ trips: [{ tripId, title, anchorCount }], otherTripCount }`: **a trip the viewer cannot read gets no badge and no title**
-  (a title is data, ADR 0007); the viewer is told only "and N more". A deleted trip drops out (`source_trip_id` is nulled; its
-  anchors keep their text).
+  `{ trips: [{ tripId, title, anchorCount }] }`: **a trip the viewer cannot read gets no badge, no title and no count** - not even
+  "and N more" (ADR 0007: a non-member of a private trip sees no row, count or aggregate of it). A deleted trip drops out
+  (`source_trip_id` is nulled; its anchors keep their text).
 - **`importTripPlaceAnchors(scope, journeyId, tripId)`**: `requireOwnedJourney`, then `requireTrip` (never `getTrip`, which returns
   `null`, and never a bare `requireById`), then the **audience rule**, then the plan below. Returns
   `{ added, skipped, remaining }`.
 - **The audience rule** (Resolved assumption 9). The copies are readable by the journal's readers, not the trip's. So a trip may be
   imported only when everyone who can read the journal can already read it: for a journal with no trip, the trip's
-  `visibility` is `organization`; for a trip-bound journal, the trip is the journal's own `trip_id` or is `organization`-visible;
-  for an orphan (owner-only readable, ADR 0034), any trip the owner can read. Otherwise `JourneyTripAudienceError`
+  `visibility` is **exactly** `organization` (`public` gives a signed-in reader nothing, `src/server/repos/trips.ts`, so it does not
+  qualify); for a trip-bound journal, the trip is the journal's own `trip_id` or is `organization`-visible; for an orphan
+  (owner-only readable, ADR 0034), any trip the owner can read. Otherwise `JourneyTripAudienceError`
   (`FORBIDDEN`-coded, same treatment as the owner error) and **no row is written**. The dialog lists only eligible trips, and says
-  who will see the places (`policy.ts` exports `journalAudience(journey)` and `canImportTrip(journey, trip)`, pure and tested).
+  who will see the places (`policy.ts` exports `journalAudience(journey)` and `canImportTrip(journey, trip)`, pure and tested,
+  with a `public` and a `private` case).
+- **Anchors are copies, and that is a decision on record.** The audience check runs once, at import. If the trip later goes from
+  `organization` to `private`, or a member loses access to it, the copied names, coordinates and dates stay readable by the
+  journal's readers, and the trip's owner is not warned. That is a reader rule beyond ADR 0007, 0020 and 0034, so 08-S3b records it
+  in `docs/adr/<next free number>-journal-anchors-are-copies.md` (decision, the dialog's stated audience as the mitigation, and the
+  conditions the later stages inherit: see Risks). It is not hidden by a read-time check, because that would make a journal's
+  text depend on a trip it no longer reads from.
 - **The anchors.** One `type = 'place'` entry per place not yet anchored in this journal (any entry type with that
   `source_place_id` counts as anchored): `title` and `location_name` = the place's name, `lat`/`lng` as the place has them (both or
-  neither), `source_trip_id`, `source_place_id`, `author_user_id` = the caller, `body` null. Organization and ids are stamped by the
-  repository (`createTenantRepository` omits the tenant column from the caller's payload, `src/server/repos/base.ts`).
+  neither), `source_trip_id`, `source_place_id`, `author_user_id` = the caller, `body` null. **The hand-written insert does not
+  go through `createTenantRepository`**, so the tenant stamp is explicit: `organization_id` is bound from `scope.ctx`, never from
+  the caller, and the tenant test asserts the organization of every written row.
 - **`entry_date` (pure, `src/lib/journal/anchors.ts`, `today` injected):** the earliest non-null `days.date` among the place's
   `day_assignments`; else the trip's `start_date`; else the journal's `started_on`; else the import day. Not clamped to the journal's
-  range. **`sort_order`:** `max(existing sort_order in this journal, 0) + 1 + k`, `k` = the anchor's index in import order
+  range. The inputs come from the existing readers - `listTripDays` (`src/server/repos/days.ts`) and `listTripAssignments`
+  (`src/server/repos/itinerary.ts`) - so `journey.ts` hand-rolls no read of tables those repositories own; `anchors.ts` is the
+  pure join. **`sort_order`:** `max(existing sort_order in this journal, 0) + 1 + k`, `k` = the anchor's index in import order
   (anchor date, `places.sort_order`, id); listing already orders by `entry_date, sort_order, id`, so the read is deterministic even
   if the base read races.
 - **Idempotent under overlap** (Resolved assumption 10). There is no unique index on `(journey_id, source_place_id)` and none is
@@ -148,12 +166,19 @@ with a client-known literal.
 journey_entries WHERE organization_id = ? AND journey_id = ? AND source_place_id = ?)`, ids from `newId()` in JS, all in one
   `runBatch` (D1 runs a batch's statements serially and atomically, so statement N sees a rival's committed rows). A place deleted
   between the read and the batch is silently skipped. Each statement binds about 25-30 parameters, under the 100 ceiling
-  (`MAX_BOUND_PARAMETERS`). Step 1 of the phase is a **spike** that proves Drizzle 0.45's `insert().select()` (or a `sql` select)
-  batches on D1 and on the test harness; if neither does, the fallback is read-then-insert in `runBatch` with the overlap race
-  stated in the code and in the dialog's copy-free behaviour (the owner can delete a duplicate once entries can be deleted).
-- **Cap:** `MAX_ANCHORS_PER_CALL = 200` (one batch, D1's per-invocation query budget). `remaining > 0` tells the dialog "Added 200 of
-  340; import again for the rest"; repeating is safe and makes progress. `added` is counted from the minted ids that now exist
-  (chunks of 90), not assumed.
+  (`MAX_BOUND_PARAMETERS`). Drizzle's `insert().select()` emits a **full-column** insert and `$defaultFn` defaults (id, timestamps)
+  do not run, so the SELECT supplies **every column in schema order**, including `created_at` and `updated_at` in the column's
+  storage unit; and it carries `places.trip_id = ?` so a place moved or swapped between the read and the batch is never anchored
+  under the wrong `source_trip_id`. Step 1 of the phase is a **spike** that proves this batches on D1 and on the test harness. The
+  fallback is decided now, not left open: the same statement as a `sql` template inside the same `runBatch` (repository SQL is
+  allowed there); **never** read-then-insert, which reopens the race. `runBatch` falls back to sequential awaits on a driver
+  without `batch()`: each guarded statement stays idempotent on its own, only the all-or-nothing atomicity is lost, and the test
+  harness case says so.
+- **Cap:** `MAX_ANCHORS_PER_CALL = 50`. D1 counts each statement of a batch as a query, and a Worker invocation may issue 50 on the
+  Workers free plan (1000 on paid); the cap follows the lower so the import works on both, and `batch.ts` asks for small batches.
+  The result carries `remaining`; the dialog repeats the call while `remaining > 0` and `added > 0`, one click, announcing the
+  running count, so a 340-place trip is seven calls and still one gesture. A failure part-way keeps what was added; repeating is
+  safe and makes progress. `added` is counted from the minted ids that now exist (chunks of 90), not assumed.
 - **No ceiling on `journey_entries` in this stage.** Anchors are bounded by metered places, one per place per journal; the unmetered
   growth is writing entries, which the stage that adds it owns.
 
@@ -193,8 +218,12 @@ journey_entries WHERE organization_id = ? AND journey_id = ? AND source_place_id
   repository, the loaders and the components); the write boundary and its Zod -> `src/routes/_app/-server/journal.ts`; the
   presentation -> `src/components/journey/`; the new-collection dialog -> `src/components/collections/`.
 - `components/ui` is untouched and still never fetches. Nothing enqueues; no Durable Object, no KV.
-- Entry counts: the predicate "entry of type `place`" is defined **once** in the repository and used by `listJourneysWithCounts`
-  and `getJourneyStory`, so the card and the cover cannot disagree.
+- Entry counts: the predicate "entry of type `place`" is defined **once** in the repository and used by `listJourneysWithCounts`,
+  `getJourneyStory` and `listRecentEntries`, so the card, the cover and the "what did you last write" strip cannot disagree.
+  08-S3a introduces the predicate and the delete summary (which needs it); 08-S3b changes `entryCount` to exclude anchors, adds
+  `placeCount` and the Places figure, and makes the recent strip skip anchors, so no ticket ships a changed count without the
+  figure that explains it. 08-S3a also makes the recent strip skip the entries of archived journals (an archived journal leaves
+  the default lists).
 
 ## 📝 Data Model
 
@@ -210,18 +239,18 @@ carry that as a condition. Nothing to purge here.
 All POST unless noted; every input `z.strictObject` with the `error` parameter; ids `idSchema`; none accepts a `userId`,
 `organizationId`, `status` (except the two-value `setJourneyStatusFn`), `visibility`, `publicToken` or `slug`.
 
-| Function                       | Input                                                | Output                                                                                                                             |
-| ------------------------------ | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `updateJourneyFn`              | `{ journeyId, title, subtitle, startedOn, endedOn }` | `{ journeyId }`; the route invalidates                                                                                             |
-| `setJourneyStatusFn`           | `{ journeyId, status: 'archived' \| 'draft' }`       | `{ status }`                                                                                                                       |
-| `journalDeleteSummaryFn` (GET) | `{ journeyId }`                                      | `{ title, entries, places, photos, requiresTitle }`                                                                                |
-| `deleteJourneyFn`              | `{ journeyId, confirmTitle? }`                       | `{ ok: true }`                                                                                                                     |
-| `loadJourneyTripLinks` (GET)   | `{ journeyId }`                                      | `{ audience, linked: [{ tripId, title, anchorCount }], otherTripCount, linkable: [{ tripId, title, startDate, endDate, toAdd }] }` |
-| `importTripPlacesFn`           | `{ journeyId, tripId }`                              | `{ added, skipped, remaining }`                                                                                                    |
+| Function                       | Input                                                | Output                                                                                                             |
+| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `updateJourneyFn`              | `{ journeyId, title, subtitle, startedOn, endedOn }` | `{ journeyId }`; the route invalidates                                                                             |
+| `setJourneyStatusFn`           | `{ journeyId, status: 'archived' \| 'draft' }`       | `{ status }`                                                                                                       |
+| `journalDeleteSummaryFn` (GET) | `{ journeyId }`                                      | `{ title, entries, places, photos, requiresTitle }`                                                                |
+| `deleteJourneyFn`              | `{ journeyId, confirmTitle? }`                       | `{ ok: true }`                                                                                                     |
+| `loadJourneyTripLinks` (GET)   | `{ journeyId }`                                      | `{ audience, linked: [{ tripId, title, anchorCount }], linkable: [{ tripId, title, startDate, endDate, toAdd }] }` |
+| `importTripPlacesFn`           | `{ journeyId, tripId }`                              | `{ added, skipped, remaining }`                                                                                    |
 
-`loadJourneys` and `loadJourneyStory` gain `canManage` and `placeCount`; `entryCount` becomes the count of entries that are **not**
-anchors (so a 14-place import does not read as "14 entries" next to "14 places"); `loadJourneyStory` also carries
-`trips` and `otherTripCount` for the badges. Errors: a refusal reaches the screen as the action's generic failure (no new class in
+`loadJourneys` and `loadJourneyStory` gain `canManage` (08-S3a) and `placeCount` (08-S3b); `entryCount` becomes the count of entries
+that are **not** anchors (08-S3b; so a 14-place import does not read as "14 entries" next to "14 places"); `loadJourneyStory` also
+carries `trips` for the badges (08-S3b). Errors: a refusal reaches the screen as the action's generic failure (no new class in
 `AUTHORED_ERROR_NAMES`); `QuotaExceededError` is not thrown (no metered row is created).
 
 `loadJourneyTripLinks` is owner-only (`requireOwnedJourney`). `linkable` is the trips the caller can read **and** the audience rule
@@ -235,45 +264,67 @@ still the new-journey dialog's.
 
 A `DropdownMenu` (the primitive has no bottom-sheet mode; `trip-actions.tsx` uses a plain menu at every width, and so does this)
 with: **Edit details**, **Archive** (hint: "Tucks it away. It still counts toward your plan's journal limit.") or **Restore** on an
-archived journal, **Delete...** (danger tone), and on the story header only **Trips...** (08-S3b). Rendered only when `canManage`.
+archived journal, **Delete...** (danger tone). Rendered only when `canManage`. The way into the trip dialog is the one **Import a
+trip's places** button in the story aside (08-S3b); there is no second entry in the menu.
 
-- **Story header** (`$journeyId.tsx`): in the cover card's top row, beside the status `Badge`.
+- **Story header** (`$journeyId.tsx`): in the cover card's top row, beside the status `Badge`. The cover is an inverse surface, so
+  the trigger is `IconButton variant="inverse"`.
 - **Index card** (`JourneyTile`): the `<li>` becomes `relative`; the `Card asChild interactive` + `Link` stay byte-identical; the
-  menu is a **sibling** of the link, absolutely positioned at the top-end (`end-3 top-3`, logical properties), 44 px hit area,
-  accessible name "Actions for {title}". The photo-count chip moves to the bottom-end of the cover so the corner is free. Focus
-  order: link, then menu.
+  menu is a **sibling** of the link, absolutely positioned at the top-end (`end-3 top-3`, logical properties), accessible name
+  "Actions for {title}". The trigger is an `IconButton` at `size="lg"` (48 px, above the 44 px target) and is **always visible at
+  every width** - it is not hidden until hover, so a keyboard or touch user never meets an invisible control (2.4.7). The
+  photo-count chip moves to the bottom-end of the cover so the corner is free. Focus order: link, then menu.
+- The 44 px claim covers triggers and buttons. Menu items keep the shared primitive's row height (`components/ui` is not touched
+  here), which still meets WCAG 2.5.8 (24 px).
 - **Edit details** opens a `Sheet` (the trip edit sheet's pattern): title, subtitle, started on, ended on (existing field
-  labels); an error keeps the sheet open with its values and a retry; a save in flight owns the sheet.
+  labels), a **Cancel** and a submit button; an error keeps the sheet open with its values and a retry; a save in flight owns the
+  sheet.
 - **Archive** is one click (reversible, no confirmation) with a toast; **Restore** returns it to `draft`.
-- **Delete** opens a `Dialog` that names the journal and its entries, places and photographs as counts, says it cannot be undone and
-  points to Archive; when `requiresTitle`, a field that must match the title character for character. A failed delete keeps the
-  dialog open and never navigates away; success from the story page navigates to `/journey`.
+- **Delete** opens a `Dialog`. It reads `journalDeleteSummaryFn` on open: four `Skeleton` rows with `role="status"` and a label
+  while loading; if the read fails, an `Alert` with its own error title and a retry, and no delete button. Loaded, it names the
+  journal and its entries, places and photographs as counts, says it cannot be undone and points to Archive. When `requiresTitle`,
+  it follows the trip delete dialog's pattern (3.3.2, 3.3.1): a labelled field with the expected title as the Field `hint` (wired
+  through `aria-describedby`), and the delete button **disabled until the text matches** exactly; there is no per-keystroke
+  announcement. **Cancel** and `Escape` close it. A failed delete keeps the dialog open and never navigates away.
+- **Where focus goes** (2.4.3), by case:
+  - Edit saved or cancelled: the menu trigger that opened the sheet.
+  - Archive or Restore on the **story page**: the trigger, which stays.
+  - Archive or Restore on an **index card**: the tile moves between the grid and the archived section, so focus goes to the moved
+    tile's menu trigger when it is rendered (the section opens to show a just-archived tile only if the user opened it; otherwise to
+    the `<summary>` of "Archived"), and restoring moves focus to the restored tile's trigger in the grid.
+  - Delete from the **index**: the next tile's link, else the previous, else the page `h1`.
+  - Delete from the **story page**: after navigating to `/journey`, the `h1`.
 
 ### Index
 
 Archived journals leave the main grid for one **collapsed "Archived (N)" section** after it (a native `<details>`, so it is keyboard
-and screen-reader complete), keeping the status badge and the actions menu. `drafts` becomes `journeys - published - archived`.
-The page description and the "published / in draft" caption stop counting archived journals as drafts.
+and screen-reader complete), keeping the status badge and the actions menu. The `<summary>` carries the `focusRing` token, is at
+least 44 px tall and holds text only (no heading inside it); the section is **not rendered when N is 0**. `drafts` becomes
+`journeys - published - archived`. The page description and the "published / in draft" caption stop counting archived journals as
+drafts.
 
 ### Trips (08-S3b)
 
-- Story page: a **Trips** panel in the aside lists the journal's trips as `Badge`s (readable ones only, plus "and N more trip you
-  can't open") and, for the owner, an **Import a trip's places** button that opens `TripLinkDialog`. Empty state on
+- Story page: a **Trips** panel in the aside lists the journal's readable trips as `Badge`s (nothing at all about a trip the viewer
+  cannot read) and, for the owner, an **Import a trip's places** button that opens `TripLinkDialog`. Empty state on
   `--color-surface-2`: "This journal is not tied to a trip yet" with the button and one line saying what an anchor is.
-- `TripLinkDialog`: a trip `Select` over `linkable` (four `Skeleton` rows while loading); after a choice, "Adds {count} places as
-  anchors; ones already here are skipped" and the audience sentence ("Everyone in this workspace will see these places" / "Everyone
-  who can open {trip} will see them" / "Only you will see them", plus "The copies stay if the trip is later changed or deleted").
-  The import button reports progress as a count. Outcomes: success toast with the count; **zero new** is an informational `Alert`
-  ("Every place from that trip is already here"), not an error; `remaining > 0` says "Added {added} of {total}; import again for the
-  rest"; a failure keeps the dialog open with a retry. A trip that the audience rule excludes is not offered, with one line saying
-  private trips cannot be added to a journal other people can read.
+- `TripLinkDialog`: a trip `Select` over `linkable` (four `Skeleton` rows with `role="status"` and a label while loading; a load
+  failure is an `Alert` with its own title and a retry; an empty `linkable` list says "No trips to import" and why - private trips
+  cannot be added to a journal other people can read). After a choice: "Adds {count} places as anchors; ones already here are
+  skipped" and the audience sentence ("Everyone in this workspace will see these places" / "Everyone who can open {trip} will see
+  them" / "Only you will see them", plus "The copies stay if the trip is later changed or deleted"), **Cancel** and an import
+  button with `loadingLabel` "Importing" and the running count in a polite live region.
+- Outcomes (4.1.3), all rendered as an `Alert` (`role="status"`) inside the dialog, with focus staying on the import button:
+  **full success** shows the count in a toast and closes the dialog, returning focus to the **Import a trip's places** button;
+  **zero new** is an informational `Alert` ("Every place from that trip is already here"), not an error, and the dialog stays
+  open; **partial** (the loop stopped on an error after some calls) says "Added {added} of {total}. Import again for the rest."
+  and the dialog stays open; a **failure** keeps the dialog open with a retry.
 - Cards and the cover add a **Places** figure (`tabular-nums`); `Entries` counts entries that are not anchors.
 - Imported anchors enter the story list on a 200 ms opacity and 4 px translate on `--ease-out-quint`, staggered 24 ms and capped at
   eight; `prefers-reduced-motion: reduce` collapses to opacity.
 
-Accessibility: every item and button has a visible focus ring and an accessible name; the dialog and sheet trap and return focus to
-the trigger; `Escape` cancels; the delete confirmation's field has a label and its mismatch is announced; counts are not colour
-only; the archived `<details>` has a text summary; touch targets 44 px; 360 px to 2560 px, light and dark.
+Accessibility: every item and button has a visible focus ring and an accessible name; the dialog and sheet trap focus and return
+it as the cases above say; `Escape` cancels; counts are not colour only; 360 px to 2560 px, light and dark.
 
 ## 📝 Visual change expected
 
@@ -292,96 +343,102 @@ skill; plural keys carry every category each locale needs and `{count}` keeps it
 `shell.newJourney.*` and `shell.newCollection.*` keys unchanged** (no 23-locale churn); the copy-rules test reads the moved files
 from a second list. Field labels reuse existing keys.
 
-| Key (en)                                          | Text                                                                                                                                      |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `actions.trigger`                                 | Actions for {title}                                                                                                                       |
-| `actions.edit`                                    | Edit details                                                                                                                              |
-| `actions.archive`                                 | Archive                                                                                                                                   |
-| `actions.archiveHint`                             | Tucks it away. It still counts toward your plan's journal limit.                                                                          |
-| `actions.restore`                                 | Restore                                                                                                                                   |
-| `actions.delete`                                  | Delete...                                                                                                                                 |
-| `actions.trips`                                   | Trips...                                                                                                                                  |
-| `edit.title`                                      | Edit journal                                                                                                                              |
-| `edit.submit` / `edit.saving`                     | Save changes / Saving                                                                                                                     |
-| `edit.saved`                                      | Journal updated                                                                                                                           |
-| `edit.errorTitle` / `edit.error` / `edit.retry`   | Could not save / That did not save. Nothing was changed. / Try again                                                                      |
-| `status.archived`                                 | Archived                                                                                                                                  |
-| `status.archivedBody`                             | It still counts toward your plan's journal limit.                                                                                         |
-| `status.restored`                                 | Restored as a draft                                                                                                                       |
-| `status.error`                                    | That did not change. Try again.                                                                                                           |
-| `delete.title`                                    | Delete {title}?                                                                                                                           |
-| `delete.entries` (plural)                         | {count} entries / 1 entry                                                                                                                 |
-| `delete.places` (plural)                          | {count} places / 1 place                                                                                                                  |
-| `delete.photos` (plural)                          | {count} photographs / 1 photograph                                                                                                        |
-| `delete.irreversible`                             | This cannot be undone. Archive it instead if you might want it back.                                                                      |
-| `delete.typeTitle`                                | Type {title} to delete it.                                                                                                                |
-| `delete.confirm` / `delete.deleting`              | Delete journal / Deleting                                                                                                                 |
-| `delete.deleted`                                  | Journal deleted                                                                                                                           |
-| `delete.error`                                    | The journal was not deleted. Nothing was removed.                                                                                         |
-| `index.archived` (plural)                         | Archived ({count})                                                                                                                        |
-| `figure.places`                                   | Places                                                                                                                                    |
-| `trips.label`                                     | Trips                                                                                                                                     |
-| `trips.more` (plural)                             | and {count} more trip you can't open / ...trips...                                                                                        |
-| `trips.empty.title` / `trips.empty.body`          | This journal is not tied to a trip yet / An anchor is a place from a trip that you can write against.                                     |
-| `trips.import`                                    | Import a trip's places                                                                                                                    |
-| `trips.dialog.title` / `trips.dialog.description` | Import a trip's places / Each place becomes an anchor in this journal. Places already here are skipped.                                   |
-| `trips.pick`                                      | Trip                                                                                                                                      |
-| `trips.privateNote`                               | Private trips can't be added to a journal other people can read.                                                                          |
-| `trips.willAdd` (plural)                          | Adds {count} places as anchors; ones already here are skipped                                                                             |
-| `trips.audience.workspace` / `.trip` / `.owner`   | Everyone in this workspace will see these places. / Everyone who can open {trip} will see these places. / Only you will see these places. |
-| `trips.audience.stays`                            | The copies stay if the trip is later changed or deleted.                                                                                  |
-| `trips.importing`                                 | Importing                                                                                                                                 |
-| `trips.added` (plural)                            | Added {count} places                                                                                                                      |
-| `trips.partial`                                   | Added {added} of {total}. Import again for the rest.                                                                                      |
-| `trips.none`                                      | Every place from that trip is already here                                                                                                |
-| `trips.error`                                     | The places were not imported. Nothing was added twice.                                                                                    |
+| Key (en)                                                      | Text                                                                                                                                      |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `actions.trigger`                                             | Actions for {title}                                                                                                                       |
+| `actions.edit`                                                | Edit details                                                                                                                              |
+| `actions.archive`                                             | Archive                                                                                                                                   |
+| `actions.archiveHint`                                         | Tucks it away. It still counts toward your plan's journal limit.                                                                          |
+| `actions.restore`                                             | Restore                                                                                                                                   |
+| `actions.delete`                                              | Delete...                                                                                                                                 |
+| `edit.title`                                                  | Edit journal                                                                                                                              |
+| `edit.submit` / `edit.saving`                                 | Save changes / Saving                                                                                                                     |
+| `edit.saved`                                                  | Journal updated                                                                                                                           |
+| `edit.errorTitle` / `edit.error` / `edit.retry`               | Could not save / That did not save. Nothing was changed. / Try again                                                                      |
+| `status.archived`                                             | Archived                                                                                                                                  |
+| `status.archivedBody`                                         | It still counts toward your plan's journal limit.                                                                                         |
+| `status.restored`                                             | Restored as a draft                                                                                                                       |
+| `status.error`                                                | That did not change. Try again.                                                                                                           |
+| `delete.title`                                                | Delete {title}?                                                                                                                           |
+| `delete.entries` (plural)                                     | {count} entries / 1 entry                                                                                                                 |
+| `delete.places` (plural)                                      | {count} places / 1 place                                                                                                                  |
+| `delete.photos` (plural)                                      | {count} photographs / 1 photograph                                                                                                        |
+| `delete.irreversible`                                         | This cannot be undone. Archive it instead if you might want it back.                                                                      |
+| `delete.typeTitle`                                            | Type {title} to delete it.                                                                                                                |
+| `delete.confirm` / `delete.deleting`                          | Delete journal / Deleting                                                                                                                 |
+| `delete.deleted`                                              | Journal deleted                                                                                                                           |
+| `delete.error`                                                | The journal was not deleted. Nothing was removed.                                                                                         |
+| `index.archived` (plural)                                     | Archived ({count})                                                                                                                        |
+| `figure.places`                                               | Places                                                                                                                                    |
+| `trips.label`                                                 | Trips                                                                                                                                     |
+| `trips.empty.title` / `trips.empty.body`                      | This journal is not tied to a trip yet / An anchor is a place from a trip that you can write against.                                     |
+| `trips.import`                                                | Import a trip's places                                                                                                                    |
+| `trips.dialog.title` / `trips.dialog.description`             | Import a trip's places / Each place becomes an anchor in this journal. Places already here are skipped.                                   |
+| `trips.pick`                                                  | Trip                                                                                                                                      |
+| `trips.privateNote`                                           | Private trips can't be added to a journal other people can read.                                                                          |
+| `trips.willAdd` (plural)                                      | Adds {count} places as anchors; ones already here are skipped                                                                             |
+| `trips.audience.workspace` / `.trip` / `.owner`               | Everyone in this workspace will see these places. / Everyone who can open {trip} will see these places. / Only you will see these places. |
+| `trips.audience.stays`                                        | The copies stay if the trip is later changed or deleted.                                                                                  |
+| `trips.importing`                                             | Importing                                                                                                                                 |
+| `trips.added` (plural)                                        | Added {count} places                                                                                                                      |
+| `trips.partial`                                               | Added {added} of {total}. Import again for the rest.                                                                                      |
+| `trips.none`                                                  | Every place from that trip is already here                                                                                                |
+| `trips.error`                                                 | The places were not imported. Nothing was added twice.                                                                                    |
+| `edit.cancel` / `delete.cancel` / `trips.cancel`              | Cancel                                                                                                                                    |
+| `delete.loading`                                              | Loading what this journal holds                                                                                                           |
+| `delete.loadErrorTitle` / `delete.loadError` / `delete.retry` | Could not check the journal / Nothing was deleted. Try again. / Try again                                                                 |
+| `delete.titleLabel`                                           | Journal title                                                                                                                             |
+| `trips.loading`                                               | Loading your trips                                                                                                                        |
+| `trips.loadErrorTitle` / `trips.loadError` / `trips.retry`    | Could not load your trips / Nothing was imported. Try again. / Try again                                                                  |
+| `trips.noneToImport.title` / `trips.noneToImport.body`        | No trips to import / Private trips can't be added to a journal other people can read.                                                     |
+| `trips.progress` (plural)                                     | Added {count} places so far                                                                                                               |
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                              | Behaviour                                                                                                             |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| A member who is not the owner forges `deleteJourneyFn`            | `JourneyOwnerError` (FORBIDDEN, generic failure on screen); a non-reader of a trip-bound journal gets `NotFoundError` |
-| A foreign workspace's journal or trip id                          | `NotFoundError`; nothing written                                                                                      |
-| Owner imports a private trip into a workspace-readable journal    | `JourneyTripAudienceError`; no row written; the trip is not offered                                                   |
-| Orphaned journal (ADR 0034), the owner reads it                   | Owner keeps every action; anyone else gets `NotFoundError`; any trip the owner can read is importable                 |
-| Orphan whose owner left, journal still readable (not orphan)      | Cannot be edited or deleted by anyone; keeps its slot. Follow-up, see Risks                                           |
-| Archive a published (seeded) journal                              | Status `archived` and `public_token` null in one update; restore gives `draft`                                        |
-| Archive when it is the only slot on the free plan                 | Allowed; the toast and the hint say it still counts; the section keeps it findable so it can be deleted               |
-| Delete a journal with entries, no `confirmTitle` (forged)         | Refused by the handler's own count; nothing removed                                                                   |
-| Delete during a navigation / second tab already deleted it        | `NotFoundError` -> generic failure; the dialog closes on refresh                                                      |
-| End date before start date                                        | Refused on the boundary (and on the form); nothing saved                                                              |
-| Rename to a title whose slug clashes                              | `updateJourney` reserves a unique slug as it does today; the title wins, the slug gets a suffix                       |
-| Import the same trip twice, or two overlapping requests           | Each place is anchored once; the second reports `skipped` (and `added: 0`)                                            |
-| A trip with 340 places                                            | 200 added, `remaining: 140`, the dialog says to import again; the rest follow                                         |
-| A place deleted between the read and the batch                    | Skipped silently; the others are added                                                                                |
-| A place on several days, an undated trip, a journal with no dates | `entry_date` from the chain; deterministic; the import day only as the last resort                                    |
-| A place with no coordinates                                       | Anchored with `location_name` and null lat/lng                                                                        |
-| A trip deleted after import                                       | `source_trip_id`/`source_place_id` nulled; the anchors keep their text; the badge disappears                          |
-| The viewer can read the journal but not an imported trip          | No badge, no title; "and N more trip you can't open"                                                                  |
-| Double-tap on any button                                          | Disabled while pending; the server operations are idempotent or refused the second time                               |
-| Dropped connection mid-save or mid-import                         | The dialog stays open with its values and a retry; an import retried adds only what is missing                        |
-| RTL locales, 23 locales                                           | Logical properties only; the plural keys carry every category; counts use `tabular-nums`                              |
+| Case                                                              | Behaviour                                                                                                                                                                           |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A member who is not the owner forges `deleteJourneyFn`            | `JourneyOwnerError` (FORBIDDEN, generic failure on screen); a non-reader of a trip-bound journal gets `NotFoundError`                                                               |
+| A foreign workspace's journal or trip id                          | `NotFoundError`; nothing written                                                                                                                                                    |
+| Owner imports a private trip into a workspace-readable journal    | `JourneyTripAudienceError`; no row written; the trip is not offered                                                                                                                 |
+| Orphaned journal (ADR 0034), the owner reads it                   | Owner keeps every action; anyone else gets `NotFoundError`; any trip the owner can read is importable                                                                               |
+| Orphan whose owner left, journal still readable (not orphan)      | Cannot be edited or deleted by anyone; keeps its slot. Follow-up, see Risks                                                                                                         |
+| Archive a published (seeded) journal                              | Status `archived` and `public_token` null in one update; restore gives `draft`                                                                                                      |
+| Archive when it is the only slot on the free plan                 | Allowed; the toast and the hint say it still counts; the section keeps it findable so it can be deleted                                                                             |
+| Delete a journal with entries, no `confirmTitle` (forged)         | Refused by the handler's own count; nothing removed                                                                                                                                 |
+| Delete during a navigation / second tab already deleted it        | `NotFoundError` -> generic failure; the dialog closes on refresh                                                                                                                    |
+| End date before start date                                        | Refused on the boundary (and on the form); nothing saved                                                                                                                            |
+| Rename a journal                                                  | The slug stays as it is: `updateJourneyFn` has no slug field and `updateJourney` reserves a slug only when one is passed; the old address keeps working                             |
+| Import the same trip twice, or two overlapping requests           | Each place is anchored once; the second reports `skipped` (and `added: 0`)                                                                                                          |
+| A trip with 340 places                                            | The dialog calls the import seven times (50 per call) while `remaining > 0`, announcing the running count; a failure part-way keeps what was added and a retry continues from there |
+| A place deleted between the read and the batch                    | Skipped silently; the others are added                                                                                                                                              |
+| A place on several days, an undated trip, a journal with no dates | `entry_date` from the chain; deterministic; the import day only as the last resort                                                                                                  |
+| A place with no coordinates                                       | Anchored with `location_name` and null lat/lng                                                                                                                                      |
+| A trip deleted after import                                       | `source_trip_id`/`source_place_id` nulled; the anchors keep their text; the badge disappears                                                                                        |
+| The viewer can read the journal but not an imported trip          | No badge, no title, no count of hidden trips; the anchors themselves are copies and read like any entry                                                                             |
+| Double-tap on any button                                          | Disabled while pending; the server operations are idempotent or refused the second time                                                                                             |
+| Dropped connection mid-save or mid-import                         | The dialog stays open with its values and a retry; an import retried adds only what is missing                                                                                      |
+| RTL locales, 23 locales                                           | Logical properties only; the plural keys carry every category; counts use `tabular-nums`                                                                                            |
 
 ## ✅ Acceptance criteria
 
 1. Only the owner can edit, archive, restore, delete or import: every guarded repository function and server function refuses a
    reader who is not the owner (`FORBIDDEN`), and an unreadable or foreign id is `NotFoundError`, with nothing changed.
-2. `updateJourneyFn` cannot change `status`, `visibility`, `slug`, a cover or a token; renaming keeps the slug rule.
+2. `updateJourneyFn` cannot change `status`, `visibility`, `slug`, a cover or a token; a rename leaves the slug unchanged.
 3. Archiving clears `public_token`; restoring yields `draft`; both are idempotent; the index shelves archived journals in their own
    disclosure and `drafts` excludes them.
 4. A journal with any entry or photograph cannot be deleted without its exact title, enforced by the server from its own counts; an
    empty journal deletes with one confirmation; the dialog names the counts and offers Archive.
-5. `listJourneyTrips` returns the distinct source trips plus the seed trip, readable ones only, with the count of the rest; a member
-   who cannot read trip B never receives B's title.
+5. `listJourneyTrips` returns the distinct source trips plus the seed trip, readable ones only and no count of the rest; a member
+   who cannot read trip B never receives B's title or a hint that it exists.
 6. `importTripPlaceAnchors` writes one anchor per not-yet-anchored place with the date and order rules above, stamped with the
    caller's organization and user, in one batch; importing again adds nothing; an overlapping request (a rival anchor committed
-   between the read and the batch) leaves exactly one entry per place; 150 places import in one call, 340 import 200 with
-   `remaining: 140` and a second call completes them.
+   between the read and the batch) leaves exactly one entry per place; 120 places import as
+   50 + 50 + 20, each call reporting `remaining`, and the dialog completes them from one click.
 7. The audience rule refuses a trip the journal's readers could not already read, writing nothing; the dialog lists only eligible
    trips and states the audience.
 8. A foreign trip into the caller's journal, and the caller's trip into a foreign journal, are `NotFoundError` with the entry
    counts unchanged.
-9. `entryCount` excludes anchors and `placeCount` counts them, from one predicate, on the card and the cover.
+9. `entryCount` excludes anchors and `placeCount` counts them, from one predicate, on the card, the cover and the recent-entries strip (which also skips the entries of archived journals).
 10. `create-dialogs.tsx` is gone; both dialogs behave as before; the copy-rules test still passes and still checks the moved files'
     literals, directional icons and key reads; `grep -rn create-dialogs src` finds nothing.
 11. All new keys exist in all 23 locales; the parity test passes; no hard-coded literal is added (the index route's existing English
@@ -391,21 +448,24 @@ from a second list. Field labels reuse existing keys.
 
 ## 📝 Risks & Impact Review
 
-| Risk                                                                                        | Severity | Mitigation / residual                                                                                                                                                    |
-| ------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A guard added to existing repository functions changes their contract                       | medium   | They have no production caller; run the journey, member-isolation and tenant suites and fix any test that mutated as a non-owner by making the fixture's actor the owner |
-| Disclosure by import (names, coordinates, dates of a trip copied where its readers are not) | high     | The audience rule refuses it; the dialog states the audience; the copies outlive the trip and the dialog says so                                                         |
-| Idempotence under overlap depends on Drizzle expressing a guarded insert                    | medium   | The spike is step 1; the harness refuses > 100 parameters; the fallback and its stated race are decided above                                                            |
-| Parenting attack: own journal + foreign trip, foreign journal + own trip                    | high     | `requireOwnedJourney` + `requireTrip`, both tenant-and-readability aware; tested with unchanged entry counts                                                             |
-| A departed owner's still-readable journal holds a quota slot nobody can free                | medium   | Out of scope and named; follow-up for a narrow workspace-admin path (archive/restore/delete only)                                                                        |
-| Journal delete will orphan R2 objects once uploads exist                                    | medium   | None exist now; the uploads change owns the purge (Data Model)                                                                                                           |
-| `journey_entries` is unmetered                                                              | low      | Anchors are one per place per journal and bounded by the metered places; the entry-writing change owns a ceiling                                                         |
-| The index route still ships English literals                                                | low      | Pre-existing; this stage adds none and does not touch them; named in Out of scope                                                                                        |
-| `humaniseToken(status)` labels are English-derived                                          | low      | Pre-existing (documented in `en/journal.ts`); the archived section title is a catalogue key                                                                              |
+| Risk                                                                                                                                                                                                                                                                                                        | Severity | Mitigation / residual                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A guard added to existing repository functions changes their contract                                                                                                                                                                                                                                       | medium   | They have no production caller; run the journey, member-isolation and tenant suites and fix any test that mutated as a non-owner by making the fixture's actor the owner                                                                                                                                                                          |
+| Disclosure by import (names, coordinates, dates of a trip copied where its readers are not)                                                                                                                                                                                                                 | high     | The audience rule refuses it; the dialog states the audience; the copies outlive the trip and the dialog says so                                                                                                                                                                                                                                  |
+| Idempotence under overlap depends on Drizzle expressing a guarded insert                                                                                                                                                                                                                                    | medium   | The spike is step 1 and the fallback is decided (the same statement as a `sql` template in the same `runBatch`; never read-then-insert); the harness refuses > 100 parameters; the sequential-await driver fallback loses only atomicity                                                                                                          |
+| Parenting attack: own journal + foreign trip, foreign journal + own trip                                                                                                                                                                                                                                    | high     | `requireOwnedJourney` + `requireTrip`, both tenant-and-readability aware; tested with unchanged entry counts                                                                                                                                                                                                                                      |
+| A departed owner's journal that never had a trip stays readable by every member (ADR 0034 hides only a trip-bound orphan), keeps its quota slot (`countedJourneyFilter` excludes an orphan only) and, under this spec, nobody can delete it; on the free plan that blocks the workspace's only journal slot | medium   | Out of scope for the guard here. A human decides the admin path, because it touches the plan quota: the slicing step files a follow-up issue for a narrow workspace-owner path (archive, restore, delete only) and links it from the tickets                                                                                                      |
+| Journal delete will orphan R2 objects once uploads exist                                                                                                                                                                                                                                                    | medium   | None exist now; the uploads change owns the purge (Data Model)                                                                                                                                                                                                                                                                                    |
+| Anchors outlive the trip's visibility (the trip goes private, a member loses access; the copies stay readable by the journal's readers and the trip's owner is not warned)                                                                                                                                  | medium   | Recorded as a decision in the ADR 08-S3b adds; the dialog states the audience and that the copies stay; later stages inherit the conditions below                                                                                                                                                                                                 |
+| Later stages that touch the same rows                                                                                                                                                                                                                                                                       | medium   | Conditions carried to them: the stage that publishes a journal **re-checks the audience rule** (anchors become public through the token); the stage that lets other members write entries **warns before a journal delete cascades away their entries**; the stage that uploads photographs **purges R2 objects in the same batch as the delete** |
+| Archived journals keep a quota slot                                                                                                                                                                                                                                                                         | low      | The hint and the toast say so; the archived section keeps them findable so they can be deleted                                                                                                                                                                                                                                                    |
+| `journey_entries` is unmetered                                                                                                                                                                                                                                                                              | low      | Anchors are one per place per journal and bounded by the metered places; the entry-writing change owns a ceiling                                                                                                                                                                                                                                  |
+| The index route still ships English literals                                                                                                                                                                                                                                                                | low      | Pre-existing; this stage adds none and does not touch them; named in Out of scope                                                                                                                                                                                                                                                                 |
+| `humaniseToken(status)` labels are English-derived                                                                                                                                                                                                                                                          | low      | Pre-existing (documented in `en/journal.ts`); the archived section title is a catalogue key                                                                                                                                                                                                                                                       |
 
 ### Out of scope
 
-Publishing, unpublishing and the public page; the cover (image or gradient); the entry composer, photographs and their storage and
+Publishing, unpublishing and the public page; re-covering a journal (an image URL is a hotlink, and a gradient-only picker has no home until a cover can be uploaded - a deviation from the plan, whose owner is the stage that adds photograph uploads); the entry composer, photographs and their storage and
 purge; a ceiling on entries; workspace-admin override for a departed owner's journal; a localisation pass over `journey/index.tsx`'s
 existing literals; promoting `cover-art.tsx` to a shared home; soft delete.
 
@@ -429,25 +489,33 @@ drawing on trips whose places become anchors) is complete after both tickets.
 
 1. `src/lib/journal/policy.ts` (`canManageJourney`, `journalAudience`, `canImportTrip`) and its test, test first.
 2. Repository: `JourneyOwnerError`, `requireOwnedJourney`, the guard inside `updateJourney`, `publishJourney`, `unpublishJourney`,
-   `deleteJourney`; `archiveJourney`, `restoreJourney`; the delete summary read; the single place-count predicate. Repository, member
-   and tenant-isolation cases (owner, non-owner reader, non-reader, foreign, orphan).
+   `deleteJourney`; `archiveJourney`, `restoreJourney`; `updateJourney` nulls the token whenever the status becomes `archived`; the delete
+   summary read; the single place-count predicate; the recent strip skips the entries of archived journals. Repository, member and
+   tenant-isolation cases (owner, non-owner reader, non-reader, foreign, orphan). Verify `src/routes/api/dev/-seed/apply.ts` (its
+   `deleteJourney(owner, stale.id)`) still acts as the stale row's owner, and fix the repository fixtures that mutated as a non-owner.
 3. `src/routes/_app/-server/journal.ts`: the four functions with strict schemas and `journal.test.ts` (non-owner refused, forged
    delete without title refused, archive clears the token).
 4. Move the dialogs into `src/components/journey/` and `src/components/collections/` with `create` props and a local wrapper in
    `journey/index.tsx`; update both route imports; `copy-rules.test.ts` (`APP_FILES` loses the entry, a `MODULE_FILES` list reads
-   the moved files); the `console/index.ts` comment; `grep -rn create-dialogs src` is empty.
+   the moved files); the `console/index.ts` comment; `grep -rn create-dialogs src` is empty. This is the plan's consolidated move table for
+   `create-dialogs.tsx` (one source file -> `new-journey-dialog.tsx` and `new-collection-dialog.tsx`, one owner); the table's other
+   row, the atlas map, belongs to the atlas tracker's own spec and is not repeated here.
 5. `JourneyActions`, `JourneyEditSheet`, `JourneyDeleteDialog`, the tile restructure, the archived disclosure, `canManage` on the
-   loaders; component tests; the `journal.*` keys in 23 locales; `CONTEXT.md` **Archive** (a journal's archive is a status, it
-   unpublishes, restore returns to draft).
+   loaders; component tests; the `journal.*` keys in 23 locales; `CONTEXT.md` **Archive** rewritten as two stated meanings (a trip's
+   archive is not a status and restore brings the lifecycle status back; a journal's archive is a status, it unpublishes, and
+   restore returns to draft).
 6. The e2e `describe`.
 
 ### Phase 2 - draw on trips (08-S3b)
 
-1. The insert-select spike in the harness (parameters, batching, overlap).
+1. The insert-select spike in the harness (full-column insert with explicit timestamps, `places.trip_id` guard, batching, overlap,
+   the 50-statement cap).
 2. `src/lib/journal/anchors.ts` (+ test, table-driven), `importTripPlaceAnchors`, `listJourneyTrips`; repository cases incl. the
-   overlap wrapper, the 150/340 cases and the tenant parenting cases.
-3. `loadJourneyTripLinks`, `importTripPlacesFn` and cases; `trips`/`otherTripCount`/`placeCount` on `loadJourneyStory`.
-4. `TripLinkDialog`, the Trips panel, the Places figure, the motion; component tests; keys in 23 locales; `CONTEXT.md` **Anchor**.
+   overlap wrapper, the 120-place (50 + 50 + 20) case and the tenant parenting cases.
+3. `loadJourneyTripLinks`, `importTripPlacesFn` and cases; `entryCount` excludes anchors, `placeCount` and `trips` on
+   `loadJourneyStory`; the recent strip skips anchors.
+4. `TripLinkDialog` (with the repeat-while-`remaining` loop), the Trips panel, the Places figure, the motion; component tests; keys
+   in 23 locales; `CONTEXT.md` **Anchor**; the ADR `journal-anchors-are-copies` (next free number).
 5. The e2e `describe`.
 
 ## Verification
@@ -460,7 +528,8 @@ drawing on trips whose places become anchors) is complete after both tickets.
 - Tenant isolation, appended to `src/server/repos/__tests__/tenant-isolation.test.ts` as one `describe`: in A's scope against B's
   ids, `updateJourney`, `archiveJourney`, `restoreJourney`, `publishJourney`, `unpublishJourney`, `deleteJourney` and
   `listJourneyTrips` are `NotFoundError` (not `[]`) with B's rows intact; `importTripPlaceAnchors(scopeA, aJourney, bTrip)` and
-  `(scopeA, bJourney, aTrip)` are `NotFoundError` and **A's and B's entry counts are unchanged** (asserted, not only the throw).
+  `(scopeA, bJourney, aTrip)` are `NotFoundError` and **A's and B's entry counts are unchanged** (asserted, not only the throw); a
+  successful import asserts the `organization_id` of **every written row** is the caller's.
   Same-workspace cases in `member-isolation`: non-owner reader `FORBIDDEN` for each verb, non-reader of a trip-bound journal
   `NotFoundError`, non-owner on an orphan `NotFoundError`, a member never receives a title of a trip they cannot read.
 - Browser, per `docs/plans/12-verification-protocol.md` and ADR 0016 (no baselines, no `e2e/__screenshots__`):
@@ -480,25 +549,34 @@ drawing on trips whose places become anchors) is complete after both tickets.
 
 ## Resolved assumptions (autonomous defaults)
 
-| #   | Question                                                               | Applied default                                                                                                                                                              | Why                                                                                                                                                                                                                                 |
-| --- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Publish and unpublish in this stage's menu?                            | No. The menu has edit, archive, restore, delete (and trips). `publishJourney`/`unpublishJourney` stay, gain the owner guard                                                  | Decided by product owner sub-agent (high): no route resolves `public_token`; a Publish item promises a dead link; one owner per concept (`docs/SPEC.md` §8). `ADD-07` still closes: publishing is not in its behaviour set          |
-| 2   | Where do archived journals go, what does restore do, is the cost said? | A collapsed "Archived (N)" section; `drafts` excludes them; restore -> `draft`; the hint and the toast say it still counts toward the journal limit                          | Decided by product owner sub-agent (medium): an archive that stays in the grid contradicts `CONTEXT.md` "leaves the default lists"; the quota counts archived rows. The glossary entry is amended in the same change                |
-| 3   | Who may rename and edit?                                               | The owner alone, with every other journal-level change                                                                                                                       | Decided by product owner (medium-high) and security and tenancy (medium) sub-agents: title, cover and dates frame the whole journal; narrowest and easiest to widen later                                                           |
-| 4   | Where does the owner guard live, and what does a refusal look like?    | In the repository (`requireOwnedJourney`); `NotFoundError` for an unreadable id, `FORBIDDEN` class not in `AUTHORED_ERROR_NAMES` otherwise; `canManage` computed server-side | Decided by security and tenancy (medium) and software architect sub-agents; `requireOwnedTrip` is the pattern; SPEC §9 rule 10 closes the authored set                                                                              |
-| 5   | The plan's `requireById` for journal and trip?                         | Superseded: `requireJourney`/`requireOwnedJourney` and `requireTrip`                                                                                                         | Security and tenancy and architect sub-agents (both high): `requireById` is tenant-only and skips ADR 0007/0020/0034                                                                                                                |
-| 6   | Which fields may an edit change?                                       | Title, subtitle, started on, ended on; no status, visibility, slug, cover or token field in the schema                                                                       | Security and tenancy sub-agent (high): reusing `updateJourneyInput` would let an edit publish or archive past `setJourneyStatusFn`                                                                                                  |
-| 7   | The plan's "edit the cover"?                                           | Left out; out of scope                                                                                                                                                       | Applied default: a pasted image URL is a hotlink that sends every reader's address to a third party and uploads do not exist yet; reversible. Re-review as a condition                                                              |
-| 8   | How hard does delete ask?                                              | Typed title when the journal holds any entry (anchors included) or photograph; one confirmation when empty; the server re-derives the rule; Archive offered                  | Decided by product owner sub-agent (medium-high): mirrors the trip rule (PRD #104 decision 10); a later change makes journals hold prose and should not have to change the ceremony                                                 |
-| 9   | May the copies reach people who cannot read the trip?                  | No. The audience rule refuses it and the dialog states the audience; only eligible trips are offered                                                                         | Security and tenancy (medium: import owner-only, dialog names the audience) and software architect (high: enforce the rule) sub-agents; the stricter, more reversible union taken                                                   |
-| 10  | How is the import idempotent under overlap, and how big is a call?     | One guarded insert per place in one `runBatch`, spike first, stated fallback; cap 200 per call with `remaining`                                                              | Decided by software architect sub-agent (medium-high); security and tenancy sub-agent proposed 500 and best-effort idempotence; the architect's 200 and the in-statement guard taken (D1 per-invocation query budget; no new index) |
-| 11  | `entry_date` and `sort_order` of an anchor?                            | Earliest dated assigned day, else trip start, else journal start, else the import day; `max + 1 + k`                                                                         | Decided by software architect sub-agent (medium-high); pure and injectable `today`                                                                                                                                                  |
-| 12  | A `journey_trips` table?                                               | No: derive from `source_trip_id` plus `journeys.trip_id`; never write `trip_id`                                                                                              | Plan decision verified in the schema; software architect sub-agent (high): sound given `ON DELETE SET NULL`; readable trips only for titles                                                                                         |
-| 13  | The places count?                                                      | Added to the card and the cover; `entryCount` excludes anchors, from one predicate                                                                                           | Decided by product owner sub-agent (high): the reference behaviour names places as a count; without the split an import reads as "14 entries"                                                                                       |
-| 14  | Ticket cut and where the dialog move rides                             | Two tickets; the move rides with 08-S3a; 08-S3b is `Blocked by` 08-S3a                                                                                                       | Decided by product owner sub-agent (high): a move-only ticket is not a tracer bullet                                                                                                                                                |
-| 15  | Server home and layering                                               | `src/routes/_app/-server/journal.ts`; components receive server calls as props                                                                                               | Decided by software architect sub-agent (high, medium on props): `console/index.ts` states the seam; no component imports a route's `-server/` today                                                                                |
-| 16  | The menu as a bottom sheet at 360 px (plan)?                           | A plain `DropdownMenu` at every width; the edit form is a `Sheet`                                                                                                            | Applied default: the primitive has no bottom-sheet mode and `trip-actions.tsx` does the same                                                                                                                                        |
-| 17  | Admin override for a departed owner's journal?                         | Not in this stage; named in Risks                                                                                                                                            | Product owner sub-agent: follow-up. Security and tenancy sub-agent (medium) proposed a narrow admin path; the more reversible option (do less now) taken                                                                            |
-| 18  | R2 purge on delete                                                     | None now; the photograph-upload change owns it                                                                                                                               | Decided by security and tenancy sub-agent (high): nothing belongs to a journal at HEAD                                                                                                                                              |
-| 19  | Plan paths that no longer exist                                        | `e2e/product-modules.spec.ts` (no baselines), `scripts/visual/capture.mjs`, no `e2e/__screenshots__`; `copy-rules.test.ts` joins the owned paths                             | Applied default: ADR 0016 and `docs/plans/12-verification-protocol.md`; verified by `ls`                                                                                                                                            |
-| 20  | Name other plan stages by id in this spec?                             | No                                                                                                                                                                           | Applied default, verified in `.ai/scripts/backlog-status.mjs`: an id in a spec marks that stage covered                                                                                                                             |
+| #   | Question                                                                        | Applied default                                                                                                                                                              | Why                                                                                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Publish and unpublish in this stage's menu?                                     | No. The menu has edit, archive, restore, delete (and trips). `publishJourney`/`unpublishJourney` stay, gain the owner guard                                                  | Decided by product owner sub-agent (high): no route resolves `public_token`; a Publish item promises a dead link; one owner per concept (`docs/SPEC.md` §8). `ADD-07` still closes: publishing is not in its behaviour set                                                                                                                     |
+| 2   | Where do archived journals go, what does restore do, is the cost said?          | A collapsed "Archived (N)" section; `drafts` excludes them; restore -> `draft`; the hint and the toast say it still counts toward the journal limit                          | Decided by product owner sub-agent (medium): an archive that stays in the grid contradicts `CONTEXT.md` "leaves the default lists"; the quota counts archived rows. The glossary entry is amended in the same change                                                                                                                           |
+| 3   | Who may rename and edit?                                                        | The owner alone, with every other journal-level change                                                                                                                       | Decided by product owner (medium-high) and security and tenancy (medium) sub-agents: title, cover and dates frame the whole journal; narrowest and easiest to widen later                                                                                                                                                                      |
+| 4   | Where does the owner guard live, and what does a refusal look like?             | In the repository (`requireOwnedJourney`); `NotFoundError` for an unreadable id, `FORBIDDEN` class not in `AUTHORED_ERROR_NAMES` otherwise; `canManage` computed server-side | Decided by security and tenancy (medium) and software architect sub-agents; `requireOwnedTrip` is the pattern; SPEC §9 rule 10 closes the authored set                                                                                                                                                                                         |
+| 5   | The plan's `requireById` for journal and trip?                                  | Superseded: `requireJourney`/`requireOwnedJourney` and `requireTrip`                                                                                                         | Security and tenancy and architect sub-agents (both high): `requireById` is tenant-only and skips ADR 0007/0020/0034                                                                                                                                                                                                                           |
+| 6   | Which fields may an edit change?                                                | Title, subtitle, started on, ended on; no status, visibility, slug, cover or token field in the schema                                                                       | Security and tenancy sub-agent (high): reusing `updateJourneyInput` would let an edit publish or archive past `setJourneyStatusFn`                                                                                                                                                                                                             |
+| 7   | The plan's "edit the cover"?                                                    | Left out entirely, image URL and gradient; a deviation from the plan, owned by the stage that adds photograph uploads                                                        | Applied default: a pasted image URL is a hotlink that sends every reader's address to a third party and uploads do not exist yet; a gradient-only picker has no home without an image cover; reversible. Product owner sub-agent asked that the deviation be recorded                                                                          |
+| 8   | How hard does delete ask?                                                       | Typed title when the journal holds any entry (anchors included) or photograph; one confirmation when empty; the server re-derives the rule; Archive offered                  | Decided by product owner sub-agent (medium-high): mirrors the trip rule (PRD #104 decision 10); a later change makes journals hold prose and should not have to change the ceremony                                                                                                                                                            |
+| 9   | May the copies reach people who cannot read the trip?                           | No. The audience rule refuses it and the dialog states the audience; only eligible trips are offered                                                                         | Security and tenancy (medium: import owner-only, dialog names the audience) and software architect (high: enforce the rule) sub-agents; the stricter, more reversible union taken                                                                                                                                                              |
+| 10  | How is the import idempotent under overlap, and how big is a call?              | One guarded insert per place in one `runBatch`, spike first, stated fallback; cap 50 per call with `remaining`, the dialog repeating                                         | Decided by software architect sub-agent (medium-high); security and tenancy sub-agent proposed 500 and best-effort idempotence; the architect's in-statement guard taken, and the cap lowered to 50 after the architect's second look: D1 counts each batch statement as a query and a free-plan Worker invocation may issue 50 (no new index) |
+| 11  | `entry_date` and `sort_order` of an anchor?                                     | Earliest dated assigned day, else trip start, else journal start, else the import day; `max + 1 + k`                                                                         | Decided by software architect sub-agent (medium-high); pure and injectable `today`                                                                                                                                                                                                                                                             |
+| 12  | A `journey_trips` table?                                                        | No: derive from `source_trip_id` plus `journeys.trip_id`; never write `trip_id`                                                                                              | Plan decision verified in the schema; software architect sub-agent (high): sound given `ON DELETE SET NULL`; readable trips only for titles                                                                                                                                                                                                    |
+| 13  | The places count?                                                               | Added to the card and the cover; `entryCount` excludes anchors, from one predicate                                                                                           | Decided by product owner sub-agent (high): the reference behaviour names places as a count; without the split an import reads as "14 entries"                                                                                                                                                                                                  |
+| 14  | Ticket cut and where the dialog move rides                                      | Two tickets; the move rides with 08-S3a; 08-S3b is `Blocked by` 08-S3a                                                                                                       | Decided by product owner sub-agent (high): a move-only ticket is not a tracer bullet                                                                                                                                                                                                                                                           |
+| 15  | Server home and layering                                                        | `src/routes/_app/-server/journal.ts`; components receive server calls as props                                                                                               | Decided by software architect sub-agent (high, medium on props): `console/index.ts` states the seam; no component imports a route's `-server/` today                                                                                                                                                                                           |
+| 16  | The menu as a bottom sheet at 360 px (plan)?                                    | A plain `DropdownMenu` at every width; the edit form is a `Sheet`                                                                                                            | Applied default: the primitive has no bottom-sheet mode and `trip-actions.tsx` does the same                                                                                                                                                                                                                                                   |
+| 17  | Admin override for a departed owner's journal?                                  | Not in this stage; named in Risks                                                                                                                                            | Product owner sub-agent: follow-up. Security and tenancy sub-agent (medium) proposed a narrow admin path; the more reversible option (do less now) taken                                                                                                                                                                                       |
+| 18  | R2 purge on delete                                                              | None now; the photograph-upload change owns it                                                                                                                               | Decided by security and tenancy sub-agent (high): nothing belongs to a journal at HEAD                                                                                                                                                                                                                                                         |
+| 19  | Plan paths that no longer exist                                                 | `e2e/product-modules.spec.ts` (no baselines), `scripts/visual/capture.mjs`, no `e2e/__screenshots__`; `copy-rules.test.ts` joins the owned paths                             | Applied default: ADR 0016 and `docs/plans/12-verification-protocol.md`; verified by `ls`                                                                                                                                                                                                                                                       |
+| 20  | Name other plan stages by id in this spec?                                      | No                                                                                                                                                                           | Applied default, verified in `.ai/scripts/backlog-status.mjs`: an id in a spec marks that stage covered                                                                                                                                                                                                                                        |
+| 21  | Do anchors keep following the trip's visibility?                                | No: they are copies, recorded as a decision (ADR in 08-S3b); the dialog states the audience; later stages inherit conditions                                                 | Security and tenancy sub-agent (round 1): a new reader rule beyond ADR 0007, 0020 and 0034 needs a record; hiding anchors at read time would make a journal's text depend on a trip it no longer reads from                                                                                                                                    |
+| 22  | Does the story tell a viewer how many trips they cannot read?                   | No: nothing about an unreadable trip, not even a count                                                                                                                       | Security and tenancy sub-agent (round 1): ADR 0007 allows no row, count or aggregate of a trip a viewer cannot read                                                                                                                                                                                                                            |
+| 23  | Where does "archived implies no token" live?                                    | In the repository (`updateJourney` nulls the token when the status becomes `archived`; `archiveJourney` is the same rule behind the guard)                                   | Security and tenancy sub-agent (round 1): the repository `updateJourneyInput` still accepts `status` for the seeder                                                                                                                                                                                                                            |
+| 24  | How big is one import call?                                                     | 50 anchors per call; the dialog repeats while `remaining > 0`                                                                                                                | Software architect sub-agent (round 1): a batch statement counts as a D1 query and a free-plan invocation may issue 50; supersedes row 10's 200                                                                                                                                                                                                |
+| 25  | Who reads `days` and `day_assignments` for the date chain?                      | The existing `listTripDays` and `listTripAssignments`; `anchors.ts` joins them purely                                                                                        | Software architect sub-agent (round 1): `journey.ts` must not hand-roll reads of tables other repositories own                                                                                                                                                                                                                                 |
+| 26  | Does a rename change the slug?                                                  | No: the slug stays                                                                                                                                                           | Product owner sub-agent (round 1): `updateJourney` reserves a slug only when one is passed and the boundary schema has none                                                                                                                                                                                                                    |
+| 27  | Do anchors and archived journals appear in the "what did you last write" strip? | Anchors no (08-S3b); entries of archived journals no (08-S3a), from the same predicate                                                                                       | Product owner sub-agent (round 1): the strip is about writing, and archived leaves the default lists                                                                                                                                                                                                                                           |
+| 28  | How many ways into the trip dialog?                                             | One: the **Import a trip's places** button in the aside; no menu item                                                                                                        | Product owner sub-agent (round 1, nit)                                                                                                                                                                                                                                                                                                         |
+| 29  | Hover-revealed card trigger?                                                    | No: always visible; 48 px `IconButton`; `variant="inverse"` on the cover                                                                                                     | Accessibility auditor sub-agent (round 1): 2.4.7 and 2.5.8; the menu items' row height is the shared primitive's                                                                                                                                                                                                                               |
