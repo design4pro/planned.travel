@@ -362,6 +362,30 @@ export function readableTrips(scope: TenantScope): ReadableTrips {
 }
 
 /**
+ * The ids of every trip the acting user could open in this workspace, archived ones included.
+ *
+ * The population a person's trip-room sockets can be in, which is what the eviction after they
+ * leave the workspace (or the platform removes them) walks: the same {@link readableTripFilter}
+ * the connect handler's `getTrip` applies, so the list cannot name a room the person could not have
+ * joined, and a second copy of the rule cannot drift from it. Ids only - the caller closes rooms,
+ * it reads no titles. A trip of another workspace is never listed: the scope's tenant filter is on
+ * the trip side and on the membership side.
+ *
+ * The person is `scope.ctx.userId`, so a caller acting for somebody who has just left builds a scope
+ * for them. The workspace membership is not asked: this answers "which trips would the rule admit
+ * them to", and the rule's `trip_members` half survives a workspace removal.
+ */
+export async function reachableTripIds(
+  scope: TenantScope,
+): Promise<Array<string>> {
+  const rows = await scope.db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(tenantFilter(scope, trips, readableTripFilter(scope)))
+  return rows.map((row) => row.id)
+}
+
+/**
  * Which trips the acting user has starred, as one correlated `EXISTS` over `trip_favourites`
  * (PRD #104 decision 5).
  *

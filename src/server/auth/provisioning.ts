@@ -180,6 +180,18 @@ export async function firstOrganizationIdFor(
   return rows[0]?.organizationId ?? null
 }
 
+/** Every organization the user belongs to, in no particular order. */
+export async function organizationIdsFor(
+  db: AuthDb,
+  userId: string,
+): Promise<Array<string>> {
+  const rows = await db
+    .select({ organizationId: member.organizationId })
+    .from(member)
+    .where(eq(member.userId, userId))
+  return rows.map((row) => row.organizationId)
+}
+
 /** Resolves a user's role inside one organization, or `null` if not a member. */
 export async function membershipRoleFor(
   db: AuthDb,
