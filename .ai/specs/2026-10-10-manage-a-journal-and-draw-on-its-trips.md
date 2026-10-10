@@ -177,8 +177,8 @@ journey_entries WHERE organization_id = ? AND journey_id = ? AND source_place_id
   harness case says so.
 - **Cap:** `MAX_ANCHORS_PER_CALL = 30`. D1 counts each statement of a batch as a query, and a Worker invocation may issue 50 on the
   Workers free plan (1000 on paid). The call also spends about ten queries on reads (the session, `requireOwnedJourney`,
-  `requireTrip`, days, assignments, the existing anchors, the max sort order) and one on the recount, so 30 inserts keep it under
-  50 on both plans; `batch.ts` asks for small batches.
+  `requireTrip`, the trip's places, days, assignments, the existing anchors, the max sort order) and one on the recount, about 43 in
+  all, and the spike asserts that total; 30 inserts keep it under 50 on both plans; `batch.ts` asks for small batches.
   The result carries `remaining`; the dialog knows the total from the chosen trip's `toAdd` and repeats the call while
   `remaining > 0` and `added > 0`, one click, announcing the running count, so a 340-place trip is twelve calls and still one
   gesture. If a call returns `added = 0` with `remaining > 0` (a rival import anchored the whole chunk), the loop stops and the
@@ -228,7 +228,15 @@ journey_entries WHERE organization_id = ? AND journey_id = ? AND source_place_id
   08-S3a introduces the predicate and the delete summary (which needs it); 08-S3b changes `entryCount` to exclude anchors, adds
   `placeCount` and the Places figure, and makes the recent strip skip anchors, so no ticket ships a changed count without the
   figure that explains it. 08-S3a also makes the recent strip skip the entries of archived journals (an archived journal leaves
-  the default lists).
+  the default lists). The index's own totals (entries written, journeys, photographs) and the moods tally are **not** filtered: they
+  deliberately count archived work too, because archiving shelves a journal rather than erasing what was written in it. The
+  predicate `type = 'place'` also matches a hand-written place entry once a composer exists; that is accepted (a deleted place
+  nulls `source_place_id`, so the entry survives as text) and is a decision the composer's owner inherits.
+
+**Backward compatibility** (`BACKWARD_COMPATIBILITY.md`): every new field and function is additive. `entryCount` changes meaning
+(anchors no longer count) in 08-S3b, which ships with its only consumers (the card and the cover) in the same change. The owner guard
+changes the contract of four repository functions that have no caller outside the dev seeder and the repository tests; no URL,
+stored value, event or migration is touched.
 
 ## 📝 Data Model
 
@@ -406,29 +414,29 @@ from a second list. Field labels reuse existing keys.
 
 ## 📝 Edge Cases & Failure Scenarios
 
-| Case                                                                              | Behaviour                                                                                                                                                                            |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A member who is not the owner forges `deleteJourneyFn`                            | `JourneyOwnerError` (FORBIDDEN, generic failure on screen); a non-reader of a trip-bound journal gets `NotFoundError`                                                                |
-| A foreign workspace's journal or trip id                                          | `NotFoundError`; nothing written                                                                                                                                                     |
-| Owner imports a private trip into a workspace-readable journal                    | `JourneyTripAudienceError`; no row written; the trip is not offered                                                                                                                  |
-| Orphaned journal (ADR 0034), the owner reads it                                   | Owner keeps every action; anyone else gets `NotFoundError`; any trip the owner can read is importable                                                                                |
-| Owner left, journal still readable (never had a trip, or its trip stays readable) | Cannot be edited or deleted by anyone; keeps its slot. Follow-up, see Risks                                                                                                          |
-| Archive a published (seeded) journal                                              | Status `archived` and `public_token` null in one update; restore gives `draft`                                                                                                       |
-| Archive when it is the only slot on the free plan                                 | Allowed; the toast and the hint say it still counts; the section keeps it findable so it can be deleted                                                                              |
-| Delete a journal with entries, no `confirmTitle` (forged)                         | Refused by the handler's own count; nothing removed                                                                                                                                  |
-| Delete during a navigation / second tab already deleted it                        | `NotFoundError` -> generic failure; the dialog closes on refresh                                                                                                                     |
-| End date before start date                                                        | Refused on the boundary (and on the form); nothing saved                                                                                                                             |
-| Rename a journal                                                                  | The slug stays as it is: `updateJourneyFn` has no slug field and `updateJourney` reserves a slug only when one is passed; the old address keeps working                              |
-| Import the same trip twice, or two overlapping requests                           | Each place is anchored once; the second reports `skipped` (and `added: 0`)                                                                                                           |
-| A trip with 340 places                                                            | The dialog calls the import twelve times (30 per call) while `remaining > 0`, announcing the running count; a failure part-way keeps what was added and a retry continues from there |
-| A place deleted between the read and the batch                                    | Skipped silently; the others are added                                                                                                                                               |
-| A place on several days, an undated trip, a journal with no dates                 | `entry_date` from the chain; deterministic; the import day only as the last resort                                                                                                   |
-| A place with no coordinates                                                       | Anchored with `location_name` and null lat/lng                                                                                                                                       |
-| A trip deleted after import                                                       | `source_trip_id`/`source_place_id` nulled; the anchors keep their text; the badge disappears                                                                                         |
-| The viewer can read the journal but not an imported trip                          | No badge, no title, no count of hidden trips; the anchors themselves are copies and read like any entry                                                                              |
-| Double-tap on any button                                                          | Disabled while pending; the server operations are idempotent or refused the second time                                                                                              |
-| Dropped connection mid-save or mid-import                                         | The dialog stays open with its values and a retry; an import retried adds only what is missing                                                                                       |
-| RTL locales, 23 locales                                                           | Logical properties only; the plural keys carry every category; counts use `tabular-nums`                                                                                             |
+| Case                                                                              | Behaviour                                                                                                                                                                               |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A member who is not the owner forges `deleteJourneyFn`                            | `JourneyOwnerError` (FORBIDDEN, generic failure on screen); a non-reader of a trip-bound journal gets `NotFoundError`                                                                   |
+| A foreign workspace's journal or trip id                                          | `NotFoundError`; nothing written                                                                                                                                                        |
+| Owner imports a private trip into a workspace-readable journal                    | `JourneyTripAudienceError`; no row written; the trip is not offered                                                                                                                     |
+| Orphaned journal (ADR 0034), the owner reads it                                   | Owner keeps every action; anyone else gets `NotFoundError`; any trip the owner can read is importable                                                                                   |
+| Owner left, journal still readable (never had a trip, or its trip stays readable) | Cannot be edited or deleted by anyone; keeps its slot. Follow-up, see Risks                                                                                                             |
+| Archive a published (seeded) journal                                              | Status `archived` and `public_token` null in one update; restore gives `draft`                                                                                                          |
+| Archive when it is the only slot on the free plan                                 | Allowed; the toast and the hint say it still counts; the section keeps it findable so it can be deleted                                                                                 |
+| Delete a journal with entries, no `confirmTitle` (forged)                         | Refused by the handler's own count; nothing removed                                                                                                                                     |
+| Delete during a navigation / second tab already deleted it                        | `NotFoundError` -> generic failure; the dialog closes on refresh                                                                                                                        |
+| End date before start date                                                        | Refused on the boundary (and on the form); nothing saved                                                                                                                                |
+| Rename a journal                                                                  | The slug stays as it is: `updateJourneyFn` has no slug field and `updateJourney` reserves a slug only when one is passed; journal routes use the id, so nothing resolves the slug today |
+| Import the same trip twice, or two overlapping requests                           | Each place is anchored once; the second reports `skipped` (and `added: 0`)                                                                                                              |
+| A trip with 340 places                                                            | The dialog calls the import twelve times (30 per call) while `remaining > 0`, announcing the running count; a failure part-way keeps what was added and a retry continues from there    |
+| A place deleted between the read and the batch                                    | Skipped silently; the others are added                                                                                                                                                  |
+| A place on several days, an undated trip, a journal with no dates                 | `entry_date` from the chain; deterministic; the import day only as the last resort                                                                                                      |
+| A place with no coordinates                                                       | Anchored with `location_name` and null lat/lng                                                                                                                                          |
+| A trip deleted after import                                                       | `source_trip_id`/`source_place_id` nulled; the anchors keep their text; the badge disappears                                                                                            |
+| The viewer can read the journal but not an imported trip                          | No badge, no title, no count of hidden trips; the anchors themselves are copies and read like any entry                                                                                 |
+| Double-tap on any button                                                          | Disabled while pending; the server operations are idempotent or refused the second time                                                                                                 |
+| Dropped connection mid-save or mid-import                                         | The dialog stays open with its values and a retry; an import retried adds only what is missing                                                                                          |
+| RTL locales, 23 locales                                                           | Logical properties only; the plural keys carry every category; counts use `tabular-nums`                                                                                                |
 
 ## ✅ Acceptance criteria
 
@@ -546,7 +554,7 @@ drawing on trips whose places become anchors) is complete after both tickets.
 - Browser, per `docs/plans/12-verification-protocol.md` and ADR 0016 (no baselines, no `e2e/__screenshots__`):
   `e2e/product-modules.spec.ts` (create or append; `/journey` is already declared in `e2e/helpers/routes.ts`) reaches the story by
   clicking the first card, edits and restores a title, archives and restores a journal, creates then deletes a throwaway journal,
-  imports a trip twice (second reports zero), asserts the console is silent; serial, `chromium` only (`test.skip` on
+  imports an `organization`-visibility trip twice into the throwaway journal before deleting it (second reports zero), so a rerun on the same database drifts nothing, asserts the console is silent; serial, `chromium` only (`test.skip` on
   `mobile-safari`), named among the fixture writers in `playwright.config.ts`. Port from `bash .ai/scripts/e2e.sh`:
   `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup` then
   `... pnpm exec playwright test e2e/product-modules.spec.ts`.
