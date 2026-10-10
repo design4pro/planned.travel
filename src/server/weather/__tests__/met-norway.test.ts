@@ -14,6 +14,7 @@ import {
   createMetNorwayClient,
 } from '../met-norway'
 import { WeatherProviderError } from '../weather'
+import { OSLO_FORECAST_DETAIL } from './locationforecast-detail.fixture'
 import { OSLO_FORECAST } from './locationforecast.fixture'
 
 interface Sent {
@@ -128,12 +129,19 @@ describe('the MET Norway client', () => {
       tempC: 7.5,
       // The six-hour summary wins over the one-hour one, with its day/night suffix removed.
       symbol: 'partlycloudy',
+      // This recording was trimmed to temperatures and symbols: no wind, no amounts.
+      windMs: null,
+      precipitationMm: null,
+      precipitationProbability: null,
     })
     // The last step carries no summary at all, which is a symbol-less step rather than a bad one.
     expect(result.series.at(-1)).toEqual({
       time: '2026-10-18T18:00:00Z',
       tempC: 9.6,
       symbol: null,
+      windMs: null,
+      precipitationMm: null,
+      precipitationProbability: null,
     })
   })
 
@@ -167,8 +175,98 @@ describe('the MET Norway client', () => {
     const result = await fetchedFrom(createMetNorwayClient({ fetch }))
 
     expect(result.series).toEqual([
-      { time: '2026-10-08T19:00:00Z', tempC: 3, symbol: null },
+      {
+        time: '2026-10-08T19:00:00Z',
+        tempC: 3,
+        symbol: null,
+        windMs: null,
+        precipitationMm: null,
+        precipitationProbability: null,
+      },
     ])
+  })
+
+  describe('the fuller reading', () => {
+    const forecast = async (body: unknown) =>
+      (await fetchedFrom(createMetNorwayClient(answer(body)))).series
+
+    it('reads the wind off every step', async () => {
+      const series = await forecast(OSLO_FORECAST_DETAIL)
+
+      expect(series[0].windMs).toBe(0.7)
+      expect(series[1].windMs).toBe(1.5)
+    })
+
+    it('takes the hourly amount where a step has one, and never adds the overlapping six-hourly one', async () => {
+      const series = await forecast(OSLO_FORECAST_DETAIL)
+      const wire = OSLO_FORECAST_DETAIL.properties.timeseries
+      // A step carrying both, with different amounts, so that reading the wrong one shows.
+      const index = wire.findIndex((step) => {
+        const hour = step.data.next_1_hours?.details.precipitation_amount
+        const six = step.data.next_6_hours?.details.precipitation_amount
+        return hour !== undefined && six !== undefined && hour !== six
+      })
+
+      expect(index).toBeGreaterThanOrEqual(0)
+      expect(series[index].precipitationMm).toBe(
+        wire[index].data.next_1_hours?.details.precipitation_amount,
+      )
+    })
+
+    it('takes the six-hourly amount where the step has no hourly one', async () => {
+      const series = await forecast(OSLO_FORECAST_DETAIL)
+      const index = OSLO_FORECAST_DETAIL.properties.timeseries.findIndex(
+        (step) => !('next_1_hours' in step.data) && 'next_6_hours' in step.data,
+      )
+
+      expect(index).toBeGreaterThan(0)
+      expect(series[index].precipitationMm).toBe(
+        OSLO_FORECAST_DETAIL.properties.timeseries[index].data.next_6_hours
+          ?.details.precipitation_amount,
+      )
+    })
+
+    it('has no amount for the last step, which has nothing after it', async () => {
+      expect((await forecast(OSLO_FORECAST_DETAIL)).at(-1)).toMatchObject({
+        precipitationMm: null,
+        precipitationProbability: null,
+      })
+    })
+
+    it('has no chance of rain from the compact product, which does not send one', async () => {
+      const series = await forecast(OSLO_FORECAST_DETAIL)
+
+      expect(
+        series.every((step) => step.precipitationProbability === null),
+      ).toBe(true)
+    })
+
+    it('carries the chance of rain when a summary states one', async () => {
+      const [step] = await forecast({
+        properties: {
+          timeseries: [
+            {
+              time: '2026-10-08T19:00:00Z',
+              data: {
+                instant: { details: { air_temperature: 3 } },
+                next_6_hours: {
+                  summary: { symbol_code: 'rain' },
+                  details: {
+                    precipitation_amount: 2.5,
+                    probability_of_precipitation: 70,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      })
+
+      expect(step).toMatchObject({
+        precipitationMm: 2.5,
+        precipitationProbability: 70,
+      })
+    })
   })
 
   it.each([

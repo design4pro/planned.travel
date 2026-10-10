@@ -14,6 +14,19 @@
 /** Which unit a reader sees temperatures in; the reader's existing distance unit decides. */
 export type WeatherUnit = 'metric' | 'imperial'
 
+/**
+ * One six-hour stretch of a day: its start in the trip's local time (`00:00`, `06:00`, `12:00` or
+ * `18:00`), the sky and the temperature over it. Six hours because that is the finest step the
+ * provider carries for every day of a forecast, so every day has the same four.
+ */
+export interface DaySlot {
+  /** Local `HH:mm` at which the slot starts. */
+  readonly from: string
+  readonly symbol: string | null
+  /** The mean of the slot's forecast temperatures, in degrees Celsius. */
+  readonly tempC: number
+}
+
 /** A forecast for one local day, metric. */
 export interface DayReading {
   readonly kind: 'forecast'
@@ -26,6 +39,18 @@ export interface DayReading {
    * `null` when the day carries none. The planner maps it onto a condition group.
    */
   readonly symbol: string | null
+  /** What falls over the day, in millimetres, or `null` when the provider gave no amount. */
+  readonly precipitationMm: number | null
+  /** The chance of it, 0 to 100, or `null` when the provider gave none - which the compact product never does. */
+  readonly precipitationProbability: number | null
+  /** The strongest wind of the day, in metres per second. */
+  readonly windMs: number | null
+  /**
+   * The slots of the day that have a forecast, earliest first; at most four, and fewer for today
+   * once part of it has gone. `null` when the day has none: the panel omits the region then, and
+   * never draws a column with nothing in it.
+   */
+  readonly slots: ReadonlyArray<DaySlot> | null
 }
 
 /**

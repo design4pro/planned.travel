@@ -321,6 +321,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Karla karışık yağmur',
   'plan.weather.condition.snow': 'Kar',
   'plan.weather.condition.thunder': 'Gök gürültülü fırtına',
+  'plan.weather.panel.title': '{date} hava durumu',
+  'plan.weather.panel.temperature': 'En yüksek / en düşük',
+  'plan.weather.panel.precipitation': 'Yağış',
+  'plan.weather.panel.probability': '{percent} ihtimal',
+  'plan.weather.panel.wind': 'Rüzgâr',
+  'plan.weather.panel.slots': 'Gün boyunca',
+  'plan.weather.panel.slot.night': 'Gece',
+  'plan.weather.panel.slot.morning': 'Sabah',
+  'plan.weather.panel.slot.afternoon': 'Öğleden sonra',
+  'plan.weather.panel.slot.evening': 'Akşam',
+  'plan.weather.attribution.metNorway':
+    'Tahmin verileri: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

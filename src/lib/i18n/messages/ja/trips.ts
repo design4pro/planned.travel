@@ -312,6 +312,17 @@ const messages = {
   'plan.weather.condition.sleet': 'みぞれ',
   'plan.weather.condition.snow': '雪',
   'plan.weather.condition.thunder': '雷雨',
+  'plan.weather.panel.title': '{date}の天気',
+  'plan.weather.panel.temperature': '最高 / 最低',
+  'plan.weather.panel.precipitation': '降水量',
+  'plan.weather.panel.probability': '降水確率 {percent}',
+  'plan.weather.panel.wind': '風',
+  'plan.weather.panel.slots': '時間帯別',
+  'plan.weather.panel.slot.night': '深夜',
+  'plan.weather.panel.slot.morning': '午前',
+  'plan.weather.panel.slot.afternoon': '午後',
+  'plan.weather.panel.slot.evening': '夜',
+  'plan.weather.attribution.metNorway': '予報データ: MET Norway、CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

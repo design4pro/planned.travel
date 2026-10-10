@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import useWebSocket from 'partysocket/use-ws'
 
 import {
+  TRIP_ROOM_CLOSED_REASON,
   TRIP_ROOM_PING_INTERVAL_MS,
   TRIP_ROOM_PROTOCOL_VERSION,
   parseServerMessage,
@@ -151,7 +152,14 @@ export function useTripRoom(
             return
         }
       },
-      onClose: () => {
+      onClose: (event: CloseEvent) => {
+        // The room closed this socket because the viewer's role or the trip's
+        // state changed. The reconnect re-checks access, but the screen's own
+        // controls come from the loader, so it is re-read too: a promoted member
+        // gets the edit controls, a removed one gets the not-found state.
+        if (event.reason === TRIP_ROOM_CLOSED_REASON) {
+          onCommit.current?.()
+        }
         setPeers([])
         setYou(null)
         setStatus((current) =>

@@ -13,7 +13,7 @@ import { env } from 'cloudflare:workers'
 import { appUrl, taskQueue } from '#/server/auth/env'
 import { requireOrg } from '#/server/auth/session'
 import { getDb } from '#/server/db/client'
-import { commitToTripRoom } from '#/server/do'
+import { closeTripRoom, closeTripRoomFor, commitToTripRoom } from '#/server/do'
 import { loggerFromEnv, serializeError } from '#/server/observability'
 import { createScope } from '#/server/repos'
 
@@ -86,6 +86,60 @@ export async function mirrorToRoom(
       ...serializeError(cause),
     })
   }
+}
+
+/**
+ * Runs a room eviction on the same terms as {@link mirrorToRoom}: D1 already holds the change that
+ * makes it necessary, so a room that cannot be reached is logged and never fails the request.
+ * The log carries ids only, never a name or an email.
+ */
+async function evictQuietly(
+  scope: TenantScope,
+  tripId: string,
+  userId: string | null,
+  close: (namespace: TripRoomNamespace) => Promise<void>,
+): Promise<void> {
+  try {
+    await close(env.TRIP_ROOM)
+  } catch (cause) {
+    log().warn('trip room eviction failed', {
+      tripId,
+      organizationId: scope.ctx.organizationId,
+      ...(userId === null ? {} : { userId }),
+      ...serializeError(cause),
+    })
+  }
+}
+
+/**
+ * Closes one person's open sockets in a trip's room, after their access to the trip changed (a new
+ * role, a removal, leaving). The room reads a connection's role once, at connect, so this is what
+ * makes the change reach a tab that is already open: it reconnects through the connect handler and
+ * picks up the stored role.
+ *
+ * Call it only after the database write succeeded, with ids taken from the rows the repository
+ * resolved - never straight from the request.
+ */
+export function closeRoomFor(
+  scope: TenantScope,
+  tripId: string,
+  userId: string,
+): Promise<void> {
+  return evictQuietly(scope, tripId, userId, (namespace) =>
+    closeTripRoomFor(namespace, tripId, userId),
+  )
+}
+
+/**
+ * Closes every socket in a trip's room, after a change whose audience the server cannot enumerate:
+ * the trip was archived, restored or deleted, or its visibility narrowed to private (the people who
+ * lose the right to read it are workspace members who were never on it). Same terms as
+ * {@link closeRoomFor}.
+ */
+export function closeRoom(scope: TenantScope, tripId: string): Promise<void> {
+  return evictQuietly(scope, tripId, null, (namespace) =>
+    closeTripRoom(namespace, tripId),
+  )
 }
 
 /**

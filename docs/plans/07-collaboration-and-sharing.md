@@ -332,11 +332,22 @@ as `07-S2` does.
 - **Zod.** No new input schema. `src/server/do/protocol.ts` already validates every frame on both
   sides through `parseClientMessage`, and this stage adds no message type.
 - **Authorisation.** Unchanged and re-stated because it is the part a reader must not have to infer.
-  The socket's authorisation boundary is `src/routes/api/trip-room/$tripId.ts` and nowhere else: it
-  re-reads the session, re-reads trip membership rather than trusting a cached role, resolves the
-  trip _inside_ the caller's tenant so a foreign trip id is a 404 before a socket exists, and only
-  then asserts an identity to the room. A traveller who is not on the trip, and anyone on an
-  archived trip, connects as `viewer` and has their patches refused inside the room. Nothing in this
+  The socket's authorisation boundary is `src/routes/api/trip-room/-lib/connect.ts` (the route module
+  `$tripId.ts` only reads the binding) and nowhere else: it re-reads the session, re-reads the
+  caller's stored trip role rather than trusting a cached role, resolves the trip _inside_ the
+  caller's tenant so a foreign trip id is a 404 before a socket exists, and only then asserts an
+  identity to the room. The room role is `canWritePlan(trip, tripRole)`: an owner or editor of a
+  trip that is not archived connects as `editor`; a trip viewer, a traveller who is not on the trip,
+  and anyone on an archived trip connect as `viewer` and have their patches refused inside the room.
+  The role is read at connect, so the writes that change it close the sockets they affect and the
+  client's reconnect picks the stored role up: a role change, a removal or a leave closes that
+  person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
+  whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). A person who
+  stops belonging to the workspace - removed, leaving, or banned, signed out everywhere or deleted by
+  the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
+  task, which the auth hooks enqueue once the change committed (#1073). The close is
+  best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
+  the room after the close, leaves the old role until the socket drops. Nothing in this
   stage relaxes any of that, and the provider does not pass a trip id the layout did not already
   resolve through its own loader.
 - **The wire contract, stated so no later stage regresses it.** These four sentences are the part of
@@ -415,7 +426,7 @@ are keys in `MODULE_KEYS` (`src/lib/plans.ts:126-139`) and `hasFeature`
 **No case is added, and the reason is that the stage adds no repository function.** Every read and
 write it touches already runs through a scoped repository with its own case in the suite. That is
 the only answer this heading accepts, so the stage instead states where its tenant boundary is
-proved: `src/routes/api/trip-room/$tripId.ts` resolves the trip through `getTrip(scope, tripId)`
+proved: `src/routes/api/trip-room/-lib/connect.ts` resolves the trip through `getTrip(scope, tripId)`
 inside the caller's own scope and answers 404 when the trip is not in the caller's workspace, which
 is the same `NotFoundError` semantics the suite asserts for every other entity. The unit test named
 below holds that the provider passes the layout's already-resolved trip id and never a value from a
@@ -1371,9 +1382,9 @@ row, because nothing has ever called `createShareLink`.
     per-connection budget of 40 messages per second is a member's budget, and presence is a list of
     people the members know. Putting an anonymous stranger into a tenant's room would put all three
     in the hands of anyone holding a URL. So the guest viewer is server-rendered and has no socket,
-    and `closeTripRoom` — which exists at `src/server/do/trip-room-client.ts:99` and has no caller —
-    is deliberately still not called here; its natural first caller is member removal, which is
-    `TRP-11`'s row in `01-trips-core.md`.
+    and `closeTripRoom` — which exists in `src/server/do/trip-room-client.ts` and is called when a trip
+    is archived, restored or deleted or narrowed to private (#1050) — is deliberately not called
+    here; a guest never has a socket for it to close.
   - **A revoked link takes effect on the next request, and the guest makes one every 60 seconds
     while the tab is visible.** The page polls a tiny liveness endpoint — the same token resolution,
     returning only whether the link still resolves — gated on `document.visibilityState`, and
@@ -2470,9 +2481,10 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
   has not landed, this stage waits.
 - No package is required. No binding is required: the digest uses `crypto.subtle` and the bucket
   uses the existing `KV` binding.
-- One observation recorded rather than acted on, because it belongs to another row:
-  `closeTripRoom` still has no caller after this stage. Evicting a live socket is what **removal**
-  from a trip needs, not what an invite link needs, and its first caller belongs to `TRP-11`.
+- One observation recorded rather than acted on, because it belongs to another row: this stage adds
+  no caller of `closeTripRoom`. Evicting a live socket is what **removal** from a trip needs, not
+  what an invite link needs, and #1050 gave removal, role changes and the trip lifecycle their
+  callers (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
 
 ## Cross-plan collisions
 

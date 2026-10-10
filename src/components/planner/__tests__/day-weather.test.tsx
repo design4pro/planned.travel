@@ -1,22 +1,26 @@
 // @vitest-environment jsdom
 import * as React from 'react'
 import { describe, expect, it } from 'vitest'
-import { render as mount, screen } from '@testing-library/react'
+import { render as mount, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { DndContext } from '@dnd-kit/core'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { DaySection } from '../day-section'
 import { DayWeatherBadge } from '../day-weather-badge'
+import { DayWeatherPanel } from '../day-weather-panel'
 
-import type { DayWeather } from '#/lib/weather'
+import type { DayReading, DayWeather } from '#/lib/weather'
 import type { PlannerDay } from '../types'
 
 /**
- * The day weather badge, mounted for real under the `en` catalogue.
+ * The day weather badge and the fuller reading behind it, mounted for real under the `en`
+ * catalogue.
  *
  * What is checked is what only the DOM shows: that the badge's name begins with the word a reader
  * must hear first, that an unavailable day is not a number, that the same reading is drawn in the
- * reader's unit, and that the box a late answer fills is the box that was already there.
+ * reader's unit, that the box a late answer fills is the box that was already there, and that the
+ * panel opens and closes from the keyboard with focus handed back to where it came from.
  */
 
 const MESSAGES = await loadCatalogue('en')
@@ -29,15 +33,32 @@ function render(ui: React.ReactElement) {
   )
 }
 
-const READING = {
+const READING: DayReading = {
   kind: 'forecast',
   source: 'met-norway',
   tempMinC: 4.2,
   tempMaxC: 11.6,
   symbol: 'rainshowers',
-} as const
+  precipitationMm: 5.1,
+  precipitationProbability: 70,
+  windMs: 5,
+  slots: [
+    { from: '00:00', symbol: 'cloudy', tempC: 5.4 },
+    { from: '06:00', symbol: 'rain', tempC: 6.2 },
+    { from: '12:00', symbol: 'partlycloudy', tempC: 11.6 },
+    { from: '18:00', symbol: 'clearsky', tempC: 8.1 },
+  ],
+}
 
-const FORECAST: DayWeather = { dayId: 'd1', status: 'ok', reading: READING }
+const DATE_LABEL = 'Fri, 9 Oct'
+
+const forecast = (reading: DayReading = READING): DayWeather => ({
+  dayId: 'd1',
+  status: 'ok',
+  reading,
+})
+
+const FORECAST = forecast()
 
 function day(dateLabel: string | null): PlannerDay {
   return {
@@ -51,69 +72,69 @@ function day(dateLabel: string | null): PlannerDay {
   }
 }
 
+function badge(
+  weather: React.ComponentProps<typeof DayWeatherBadge>['weather'],
+  unit: React.ComponentProps<typeof DayWeatherBadge>['unit'] = 'metric',
+) {
+  return render(
+    <DayWeatherBadge weather={weather} unit={unit} dateLabel={DATE_LABEL} />,
+  )
+}
+
 describe('DayWeatherBadge', () => {
   it('names a forecast with the word Forecast first, then the condition, high and low', () => {
-    render(<DayWeatherBadge weather={FORECAST} unit="metric" />)
+    badge(FORECAST)
 
     expect(
-      screen.getByRole('img', { name: 'Forecast: Rain, high 12°C, low 4°C' }),
+      screen.getByRole('button', {
+        name: 'Forecast: Rain, high 12°C, low 4°C',
+      }),
     ).toBeDefined()
   })
 
   it('draws the same reading in Fahrenheit for an imperial reader', () => {
-    render(<DayWeatherBadge weather={FORECAST} unit="imperial" />)
+    badge(FORECAST, 'imperial')
 
     expect(
-      screen.getByRole('img', { name: 'Forecast: Rain, high 53°F, low 40°F' }),
+      screen.getByRole('button', {
+        name: 'Forecast: Rain, high 53°F, low 40°F',
+      }),
     ).toBeDefined()
     expect(screen.getByText('53°')).toBeDefined()
   })
 
   it('says only the temperatures when the sky is unknown', () => {
-    render(
-      <DayWeatherBadge
-        weather={{
-          dayId: 'd1',
-          status: 'ok',
-          reading: { ...READING, symbol: null },
-        }}
-        unit="metric"
-      />,
-    )
+    badge(forecast({ ...READING, symbol: null }))
 
     expect(
-      screen.getByRole('img', { name: 'Forecast: high 12°C, low 4°C' }),
+      screen.getByRole('button', { name: 'Forecast: high 12°C, low 4°C' }),
     ).toBeDefined()
   })
 
   it('shows an unavailable day as a muted dash named for what it is, never a number', () => {
-    render(
-      <DayWeatherBadge
-        weather={{ dayId: 'd1', status: 'unavailable' }}
-        unit="metric"
-      />,
-    )
+    badge({ dayId: 'd1', status: 'unavailable' })
 
-    const badge = screen.getByRole('img', {
+    const dash = screen.getByRole('img', {
       name: 'Weather unavailable for this day',
     })
-    expect(badge.textContent).toBe('—')
+    expect(dash.textContent).toBe('—')
+    // There is nothing to open, so it is not a control.
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('shows a skeleton while loading, named, with no numbers in it', () => {
-    render(<DayWeatherBadge weather={{ status: 'loading' }} unit="metric" />)
+    badge({ status: 'loading' })
 
-    const badge = screen.getByRole('img', { name: 'Loading weather' })
-    expect(badge.textContent).toBe('')
+    const skeleton = screen.getByRole('img', { name: 'Loading weather' })
+    expect(skeleton.textContent).toBe('')
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('reserves the same box in every state, so a late answer shifts nothing', () => {
     const boxOf = (
       weather: React.ComponentProps<typeof DayWeatherBadge>['weather'],
     ) => {
-      const { container, unmount } = render(
-        <DayWeatherBadge weather={weather} unit="metric" />,
-      )
+      const { container, unmount } = badge(weather)
       const box = container.querySelector('[data-part="day-weather"]')
       const classes = box?.className ?? ''
       unmount()
@@ -132,15 +153,160 @@ describe('DayWeatherBadge', () => {
   })
 
   it('leaves a day with nothing to show as empty space, named for nobody', () => {
-    const { container } = render(
-      <DayWeatherBadge
-        weather={{ dayId: 'd1', status: 'none' }}
+    const { container } = badge({ dayId: 'd1', status: 'none' })
+
+    expect(screen.queryByRole('img')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(container.textContent).toBe('')
+  })
+})
+
+describe('the fuller forecast behind the badge', () => {
+  const open = async () => {
+    const user = userEvent.setup()
+    badge(FORECAST)
+    await user.click(screen.getByRole('button', { name: /^Forecast/ }))
+    return { user, dialog: await screen.findByRole('dialog') }
+  }
+
+  it('opens a dialog named for the day, from the badge', async () => {
+    const { dialog } = await open()
+
+    expect(dialog.getAttribute('aria-labelledby')).not.toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Weather for Fri, 9 Oct' })).toBe(
+      dialog,
+    )
+    const trigger = screen.getByRole('button', { name: /^Forecast/ })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('shows the high and low, precipitation with its chance, and the wind', async () => {
+    const { dialog } = await open()
+    const panel = within(dialog)
+
+    expect(panel.getByText('High / low')).toBeDefined()
+    expect(panel.getByText('12° / 4°C')).toBeDefined()
+    expect(panel.getByText('Precipitation')).toBeDefined()
+    expect(panel.getByText('5.1 mm · 70% chance')).toBeDefined()
+    expect(panel.getByText('Wind')).toBeDefined()
+    expect(panel.getByText('18 km/h')).toBeDefined()
+  })
+
+  it('shows four six-hour slots, each with its name, condition and temperature', async () => {
+    const { dialog } = await open()
+
+    const slots = within(
+      within(dialog).getByRole('list', { name: 'Through the day' }),
+    ).getAllByRole('listitem')
+    expect(slots.map((slot) => slot.textContent)).toEqual([
+      'NightCloudy5°',
+      'MorningRain6°',
+      'AfternoonPartly cloudy12°',
+      'EveningClear8°',
+    ])
+  })
+
+  it('names MET Norway and its licence', async () => {
+    const { dialog } = await open()
+
+    expect(
+      within(dialog).getByText('Forecast data: MET Norway, CC BY 4.0'),
+    ).toBeDefined()
+  })
+
+  it('opens on Enter and on Space, closes on Escape, and hands focus back to the badge', async () => {
+    const user = userEvent.setup()
+    badge(FORECAST)
+    const trigger = screen.getByRole('button', { name: /^Forecast/ })
+
+    await user.tab()
+    expect(document.activeElement).toBe(trigger)
+
+    await user.keyboard('{Enter}')
+    expect(await screen.findByRole('dialog')).toBeDefined()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+
+    await user.keyboard(' ')
+    expect(await screen.findByRole('dialog')).toBeDefined()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('draws every figure in the reader’s unit', async () => {
+    const user = userEvent.setup()
+    badge(FORECAST, 'imperial')
+    await user.click(screen.getByRole('button', { name: /^Forecast/ }))
+    const panel = within(await screen.findByRole('dialog'))
+
+    expect(panel.getByText('53° / 40°F')).toBeDefined()
+    expect(panel.getByText('0.2 in · 70% chance')).toBeDefined()
+    expect(panel.getByText('11 mph')).toBeDefined()
+  })
+})
+
+describe('DayWeatherPanel', () => {
+  it('omits the slots region entirely for a reading with no slots', () => {
+    render(
+      <DayWeatherPanel reading={{ ...READING, slots: null }} unit="metric" />,
+    )
+
+    expect(screen.queryByRole('list')).toBeNull()
+    expect(screen.queryByText('Through the day')).toBeNull()
+    expect(screen.queryByText('Night')).toBeNull()
+    // The rest of the reading is still there.
+    expect(screen.getByText('12° / 4°C')).toBeDefined()
+  })
+
+  it('draws only the slots a reading has, and nothing in place of the others', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [
+            { from: '12:00', symbol: 'cloudy', tempC: 10 },
+            { from: '18:00', symbol: null, tempC: 8 },
+          ],
+        }}
         unit="metric"
       />,
     )
 
-    expect(screen.queryByRole('img')).toBeNull()
-    expect(container.textContent).toBe('')
+    expect(
+      screen.getAllByRole('listitem').map((slot) => slot.textContent),
+    ).toEqual(['AfternoonCloudy10°', 'Evening8°'])
+  })
+
+  it('leaves out a row the provider gave nothing for, rather than writing a zero', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          precipitationMm: null,
+          precipitationProbability: null,
+          windMs: null,
+        }}
+        unit="metric"
+      />,
+    )
+
+    expect(screen.queryByText('Precipitation')).toBeNull()
+    expect(screen.queryByText('Wind')).toBeNull()
+    expect(screen.getByText('High / low')).toBeDefined()
+  })
+
+  it('says the amount alone when the provider states no chance', () => {
+    render(
+      <DayWeatherPanel
+        reading={{ ...READING, precipitationProbability: null }}
+        unit="metric"
+      />,
+    )
+
+    expect(screen.getByText('5.1 mm')).toBeDefined()
   })
 })
 
@@ -162,14 +328,38 @@ describe('DaySection with weather', () => {
   }
 
   it('puts the badge beside the header button, never inside it', () => {
-    renderDay('Fri, 9 Oct', FORECAST)
+    renderDay(DATE_LABEL, FORECAST)
 
-    const badge = screen.getByRole('img', { name: /^Forecast/ })
-    const header = screen.getByRole('button', { name: /Asakusa and the river/ })
-    expect(header.contains(badge)).toBe(false)
+    const badgeButton = screen.getByRole('button', { name: /^Forecast/ })
+    const header = screen.getByRole('button', {
+      name: /Asakusa and the river/,
+    })
+    expect(header.contains(badgeButton)).toBe(false)
+    expect(badgeButton.contains(header)).toBe(false)
     expect(header.parentElement).toBe(
-      badge.closest('[data-part="day-weather"]')?.parentElement,
+      badgeButton.closest('[data-part="day-weather"]')?.parentElement,
     )
+  })
+
+  it('leaves the header button as wide as the row allows, narrowed only by the badge', () => {
+    renderDay(DATE_LABEL, FORECAST)
+
+    const header = screen.getByRole('button', {
+      name: /Asakusa and the river/,
+    })
+    expect(header.className).toContain('flex-1')
+    expect(header.className).toContain('min-w-0')
+  })
+
+  it('opens the fuller forecast from the day’s own badge, naming the day’s date', async () => {
+    const user = userEvent.setup()
+    renderDay(DATE_LABEL, FORECAST)
+
+    await user.click(screen.getByRole('button', { name: /^Forecast/ }))
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Weather for Fri, 9 Oct' }),
+    ).toBeDefined()
   })
 
   it('leaves the header exactly as it was for a day without a date', () => {
@@ -179,7 +369,7 @@ describe('DaySection with weather', () => {
   })
 
   it('draws no badge at all when the screen offers no weather', () => {
-    const { container } = renderDay('Fri, 9 Oct')
+    const { container } = renderDay(DATE_LABEL)
 
     expect(container.querySelector('[data-part="day-weather"]')).toBeNull()
   })

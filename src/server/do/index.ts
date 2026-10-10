@@ -9,6 +9,7 @@ export type {
 
 export {
   closeTripRoom,
+  closeTripRoomFor,
   commitToTripRoom,
   connectToTripRoom,
   readTripRoomSnapshot,

@@ -48,6 +48,12 @@ export const MET_NORWAY_USER_AGENT =
 
 const summary = z.object({
   summary: z.object({ symbol_code: z.string() }),
+  details: z
+    .object({
+      precipitation_amount: z.number().optional(),
+      probability_of_precipitation: z.number().optional(),
+    })
+    .optional(),
 })
 
 /**
@@ -64,7 +70,10 @@ const wireResponse = z.object({
         time: z.string(),
         data: z.object({
           instant: z.object({
-            details: z.object({ air_temperature: z.number().optional() }),
+            details: z.object({
+              air_temperature: z.number().optional(),
+              wind_speed: z.number().optional(),
+            }),
           }),
           next_1_hours: summary.optional(),
           next_6_hours: summary.optional(),
@@ -93,6 +102,35 @@ function symbolOf(step: WireStep): string | null {
   return code === undefined ? null : stripDayNight(code)
 }
 
+/**
+ * What falls in the stretch after a step, in millimetres - the one-hour figure where the step has
+ * it and the six-hour figure where it does not.
+ *
+ * Never both: the hourly steps each carry a six-hour figure that overlaps the next five steps, so
+ * adding every figure a step carries would count the same rain up to six times. Choosing the finest
+ * one means the steps of a series, hourly then six-hourly, cover the days once between them.
+ */
+function precipitationOf(step: WireStep): number | null {
+  return (
+    step.data.next_1_hours?.details?.precipitation_amount ??
+    step.data.next_6_hours?.details?.precipitation_amount ??
+    null
+  )
+}
+
+/**
+ * The chance of rain after a step, when the provider states one. The `compact` product does not -
+ * its summaries carry an amount and no probability - so this is `null` for every step it sends;
+ * it reads the field so that a product which does carry it is shown without another change.
+ */
+function probabilityOf(step: WireStep): number | null {
+  return (
+    step.data.next_6_hours?.details?.probability_of_precipitation ??
+    step.data.next_12_hours?.details?.probability_of_precipitation ??
+    null
+  )
+}
+
 function parseSteps(body: unknown): ReadonlyArray<ForecastStep> {
   const parsed = wireResponse.safeParse(body)
   if (!parsed.success) {
@@ -109,7 +147,14 @@ function parseSteps(body: unknown): ReadonlyArray<ForecastStep> {
     if (tempC === undefined || Number.isNaN(Date.parse(step.time))) {
       continue
     }
-    steps.push({ time: step.time, tempC, symbol: symbolOf(step) })
+    steps.push({
+      time: step.time,
+      tempC,
+      symbol: symbolOf(step),
+      windMs: step.data.instant.details.wind_speed ?? null,
+      precipitationMm: precipitationOf(step),
+      precipitationProbability: probabilityOf(step),
+    })
   }
   return steps
 }

@@ -569,7 +569,7 @@ and any change made by this PR to code, schema or migrations.
 - **F4. `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
 - **F5. Soft-deleted chat messages keep their body** (`collab.ts` `deleteMessage`).
 - **F6. Tenant `audit_log` has `pruneAuditLog` and no caller**; the period is owner confirms.
-- **F7. Presence falls back to the email as display name** when the name is empty (`api/trip-room/$tripId.ts`).
+- **F7. Presence falls back to the email as display name** when the name is empty (`api/trip-room/-lib/connect.ts`).
 - **F8. Trip-purge's `belongsTo` comment is wrong for `dead-letter/`** (no org segment).
 
 ## 📋 Phasing

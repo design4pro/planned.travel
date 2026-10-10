@@ -362,6 +362,30 @@ export function readableTrips(scope: TenantScope): ReadableTrips {
 }
 
 /**
+ * The ids of every trip the acting user could open in this workspace, archived ones included.
+ *
+ * The population a person's trip-room sockets can be in, which is what the eviction after they
+ * leave the workspace (or the platform removes them) walks: the same {@link readableTripFilter}
+ * the connect handler's `getTrip` applies, so the list cannot name a room the person could not have
+ * joined, and a second copy of the rule cannot drift from it. Ids only - the caller closes rooms,
+ * it reads no titles. A trip of another workspace is never listed: the scope's tenant filter is on
+ * the trip side and on the membership side.
+ *
+ * The person is `scope.ctx.userId`, so a caller acting for somebody who has just left builds a scope
+ * for them. The workspace membership is not asked: this answers "which trips would the rule admit
+ * them to", and the rule's `trip_members` half survives a workspace removal.
+ */
+export async function reachableTripIds(
+  scope: TenantScope,
+): Promise<Array<string>> {
+  const rows = await scope.db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(tenantFilter(scope, trips, readableTripFilter(scope)))
+  return rows.map((row) => row.id)
+}
+
+/**
  * Which trips the acting user has starred, as one correlated `EXISTS` over `trip_favourites`
  * (PRD #104 decision 5).
  *
@@ -2033,8 +2057,12 @@ export async function tripRoleFor(
  * because it is that role read to a boolean, and a second copy of it is what would let the board
  * and its notes disagree about who may write the day the roles change (`docs/SPEC.md` §8). Pure, so
  * a read that already holds the trip and the role pays nothing for it. The write guards
- * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement; this only draws the
- * affordance.
+ * ({@link requireWritableTrip}, {@link assertTripRole}) are the enforcement of every D1 write; this
+ * draws the affordance, and it is also the rule that decides the role the trip room connects a
+ * person with (`src/routes/api/trip-room/-lib/connect.ts`), so widening it widens who may patch the
+ * room. The room reads it once, at connect: the writes that change a role, remove a member or archive
+ * the trip close the sockets they affect, so the next connect applies this rule again
+ * (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
  */
 export function canWritePlan(
   trip: Pick<Trip, 'isArchived'>,

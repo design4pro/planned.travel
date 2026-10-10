@@ -337,6 +337,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Aiguaneu',
   'plan.weather.condition.snow': 'Neu',
   'plan.weather.condition.thunder': 'Tempesta',
+  'plan.weather.panel.title': 'Temps del {date}',
+  'plan.weather.panel.temperature': 'Màxima / mínima',
+  'plan.weather.panel.precipitation': 'Precipitació',
+  'plan.weather.panel.probability': '{percent} de probabilitat',
+  'plan.weather.panel.wind': 'Vent',
+  'plan.weather.panel.slots': 'Al llarg del dia',
+  'plan.weather.panel.slot.night': 'Nit',
+  'plan.weather.panel.slot.morning': 'Matí',
+  'plan.weather.panel.slot.afternoon': 'Tarda',
+  'plan.weather.panel.slot.evening': 'Vespre',
+  'plan.weather.attribution.metNorway':
+    'Dades de la previsió: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

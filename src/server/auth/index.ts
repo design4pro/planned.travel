@@ -32,6 +32,11 @@ import {
   resolveOrProvisionOrganization,
   WORKSPACE_LIMIT,
 } from './provisioning'
+import {
+  queueRoomEviction,
+  roomEvictionHook,
+  workspaceIdsOf,
+} from './room-eviction'
 import { createKvSecondaryStorage } from './secondary-storage'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
@@ -112,6 +117,16 @@ type BanAuditAction =
  * request that dies between the two halves leaves nothing behind.
  */
 const pendingBanAudit = new WeakMap<object, BanAuditAction>()
+
+/**
+ * The workspaces an account belonged to, read in `delete.before` and queued for a trip-room close
+ * in `delete.after`.
+ *
+ * `removeUser` takes the account's `member` rows with it, so the list of workspaces is gone by the
+ * time the row is. Keyed on the user object the adapter hands to both halves of one deletion, and
+ * weak so a deletion that dies between them leaves nothing behind.
+ */
+const pendingRoomEviction = new WeakMap<object, Array<string>>()
 
 /**
  * The handle the tripwire writes `platform_audit_log` through.
@@ -325,6 +340,9 @@ function buildAuth() {
       },
     },
 
+    // Closes a person's open trip-room sockets once they lose their place in a workspace (#1073).
+    hooks: { after: roomEvictionHook },
+
     databaseHooks: {
       user: {
         create: {
@@ -337,6 +355,19 @@ function buildAuth() {
               userId: user.id,
               organizationId,
             })
+          },
+        },
+        delete: {
+          // Returns nothing on purpose: `false` would cancel the deletion.
+          before: async (user) => {
+            pendingRoomEviction.set(user, await workspaceIdsOf(user.id))
+          },
+          after: async (user) => {
+            const organizationIds = pendingRoomEviction.get(user)
+            pendingRoomEviction.delete(user)
+            if (organizationIds !== undefined) {
+              await queueRoomEviction(user.id, organizationIds)
+            }
           },
         },
         update: {

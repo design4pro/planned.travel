@@ -66,6 +66,11 @@ FR #136, found the mechanism it proposed would put a fresh D1 bound-parameter cl
   only the last.
 - Run `pnpm generate-spec-index` after any of that. The index is generated; the validation gate
   compares it.
+- When a merge of `develop` conflicts in the index, take develop's file with
+  `git checkout --theirs .ai/specs/README.md`, run `pnpm generate-spec-index` and `git add` the file;
+  never resolve the markers by hand. This holds for a merge, not a rebase, and a conflict in a spec
+  file itself is still resolved by hand. Every spec that merges to `develop` conflicts the index of
+  each open spec pull request, so expect it again on every later merge (#896, #984, #985, #1002).
 - Repoint anything that follows a moved spec today — an `assets/` README, a code comment. A dated
   record of what a run or a design saw (`.ai/runs/`, a merged PR body, the body of the spec itself)
   is history and is not rewritten.

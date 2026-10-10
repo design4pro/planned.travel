@@ -751,6 +751,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'İki seçenek aynı şeyi söylüyor. Her birine kendi ifadesini ver.',
   'collab.presence.viewingNow': 'şu anda bakıyor',
+  'collab.presence.unnamed': 'Adsız üye',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} sekme açık',
     other: '{name} — {count} sekme açık',

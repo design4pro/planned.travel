@@ -742,6 +742,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Hai phương án nói cùng một điều. Hãy diễn đạt mỗi cái một cách.',
   'collab.presence.viewingNow': 'đang xem',
+  'collab.presence.unnamed': 'Thành viên chưa đặt tên',
   'collab.presence.tabsOpen': {
     other: '{name} — {count} thẻ đang mở',
   },

@@ -771,6 +771,7 @@ const messages = {
   'collab.poll.error.duplicate':
     'Dvě odpovědi říkají totéž. Dej každé vlastní formulaci.',
   'collab.presence.viewingNow': 'se právě dívají',
+  'collab.presence.unnamed': 'Člen bez jména',
   'collab.presence.tabsOpen': {
     one: '{name} — {count} otevřená karta',
     few: '{name} — {count} otevřené karty',

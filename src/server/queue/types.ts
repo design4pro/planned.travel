@@ -28,6 +28,11 @@ export const TASK_KINDS = [
   // inventory. `places` is unbounded on a paid tier, so duplicating one is an
   // unbounded write and belongs nowhere near a request path.
   'trip-copy',
+  // A person lost their place in a workspace (removed, left, banned, signed out everywhere, deleted):
+  // their open trip-room sockets in that workspace are closed so the next connect re-runs the
+  // session and tenancy checks. A fan-out over every room they could open, so it is queued rather
+  // than run on the request that caused it.
+  'trip-room-evict',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   //
@@ -240,6 +245,19 @@ export const tripCopyPayloadSchema = z.strictObject({
 export type TripCopyPayload = z.infer<typeof tripCopyPayloadSchema>
 
 /**
+ * Whose sockets to close (#1073). The workspace is the envelope's `orgId`, which is also the only
+ * tenant the handler reads a trip from: a forged message can only name rooms of the workspace on
+ * its envelope, and `{ userId }` is closed in them and nobody else.
+ *
+ * `strictObject` for the same reason the three above are.
+ */
+export const tripRoomEvictPayloadSchema = z.strictObject({
+  userId: z.string().min(1).max(64),
+})
+
+export type TripRoomEvictPayload = z.infer<typeof tripRoomEvictPayloadSchema>
+
+/**
  * Billing payloads mirror the `BillingTask` union in `../billing/types`. They
  * repeat their own `kind` because the webhook adapter enqueues the whole task
  * object as the payload, and `providerEventId` is what makes the envelope id
@@ -282,6 +300,7 @@ export interface TaskPayloadMap {
   'travel-stats': TravelStatsPayload
   'trip-purge': TripPurgePayload
   'trip-copy': TripCopyPayload
+  'trip-room-evict': TripRoomEvictPayload
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
 }
@@ -344,6 +363,11 @@ export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
     ...envelopeBase,
     kind: z.literal('trip-copy'),
     payload: tripCopyPayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('trip-room-evict'),
+    payload: tripRoomEvictPayloadSchema,
   }),
   z.object({
     ...envelopeBase,

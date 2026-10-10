@@ -291,6 +291,17 @@ const messages = {
   'plan.weather.condition.sleet': '雨夹雪',
   'plan.weather.condition.snow': '雪',
   'plan.weather.condition.thunder': '雷暴',
+  'plan.weather.panel.title': '{date}天气',
+  'plan.weather.panel.temperature': '最高 / 最低',
+  'plan.weather.panel.precipitation': '降水量',
+  'plan.weather.panel.probability': '降水概率 {percent}',
+  'plan.weather.panel.wind': '风',
+  'plan.weather.panel.slots': '全天概览',
+  'plan.weather.panel.slot.night': '夜间',
+  'plan.weather.panel.slot.morning': '上午',
+  'plan.weather.panel.slot.afternoon': '下午',
+  'plan.weather.panel.slot.evening': '傍晚',
+  'plan.weather.attribution.metNorway': '预报数据：MET Norway，CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

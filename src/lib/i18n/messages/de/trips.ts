@@ -336,6 +336,18 @@ const messages = {
   'plan.weather.condition.sleet': 'Schneeregen',
   'plan.weather.condition.snow': 'Schnee',
   'plan.weather.condition.thunder': 'Gewitter',
+  'plan.weather.panel.title': 'Wetter am {date}',
+  'plan.weather.panel.temperature': 'Höchst- / Tiefstwert',
+  'plan.weather.panel.precipitation': 'Niederschlag',
+  'plan.weather.panel.probability': '{percent} Wahrscheinlichkeit',
+  'plan.weather.panel.wind': 'Wind',
+  'plan.weather.panel.slots': 'Im Tagesverlauf',
+  'plan.weather.panel.slot.night': 'Nacht',
+  'plan.weather.panel.slot.morning': 'Vormittag',
+  'plan.weather.panel.slot.afternoon': 'Nachmittag',
+  'plan.weather.panel.slot.evening': 'Abend',
+  'plan.weather.attribution.metNorway':
+    'Vorhersagedaten: MET Norway, CC BY 4.0',
 } satisfies TranslationOf<typeof En>
 
 export default messages

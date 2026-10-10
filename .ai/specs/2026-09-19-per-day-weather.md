@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value               |
-| ------------------ | ------------------- |
-| **Status**         | in-progress         |
-| **Issue**          | #631                |
-| **Spec PR**        | #636                |
-| **Implementation** | #1003, #1004, #1044 |
+| Field              | Value                      |
+| ------------------ | -------------------------- |
+| **Status**         | in-progress                |
+| **Issue**          | #631                       |
+| **Spec PR**        | #636                       |
+| **Implementation** | #1003, #1004, #1044, #1046 |
 
 ## 📝 TLDR
 
@@ -773,5 +773,13 @@ What ships in #1004 (phase 2, the forecast slice, #820) differs from the design 
 9. **A dated day with no forecast keeps an empty, reserved box**, so a late answer shifts nothing; an undated day draws nothing. The box's width is a floor (`min-w-20`), so a rare wide reading widens it instead of painting over the day header.
 10. **The plan screen asks again when the plan is edited.** The weather query is keyed by trip only, so the screen invalidates it when the board's data is reloaded; an answer already in hand survives a failed refetch.
 11. **Daily highs and lows come from the `instant` temperatures only.** The `compact` product carries no `air_temperature_max/min` for its six-hour steps, so beyond the hourly stretch a day's extremes are the extremes of the steps present (at most four a day) and can understate the true peak. Recorded as a known limit; #821 (re-validation, failure memory, the resolution log) did not take up whether another product is worth its size, so it stays a limit until a ticket asks for it.
-12. **Attribution is not on screen yet.** CC BY 4.0 requires it with the reading; it lands with the popover (#822) and must precede any promotion to `main`.
+12. **Attribution is not on screen yet.** CC BY 4.0 requires it with the reading; it lands with the popover (#822) and must precede any promotion to `main`. _Closed by the popover below (#822)._
 13. **A stored forecast entry gained `lastModified` without a version bump (#821).** The field is additive and defaults to `null`, so an entry written before it is read as before and fetched without a validator once it expires; bumping `WEATHER_CACHE_VERSION` would have discarded entries still inside their six-hour retention for no gain. The "any change to a stored shape bumps it" rule above is for a change an older reader cannot survive.
+
+What ships with the popover (#822, the fuller forecast) differs from the design above in these places.
+
+14. **The panel is `DayWeatherPanel` in `day-weather-panel.tsx`**, a unit with no popover in it, and the badge in `day-weather-badge.tsx` puts it in one. A forecast badge is now a button, the day header button's sibling; an unavailable, loading or empty day stays a picture or empty space, because there is nothing behind it to open. Sunrise and sunset, and the recorded and estimate notes, are not in the panel: neither the computed sun times nor those two kinds exist yet.
+15. **`DayReading` carries `precipitationMm`, `precipitationProbability`, `windMs` and `slots`**, all metric, converted at render like the temperatures (`mm` or `in`, `km/h` or `mph`; the unit symbols are written the way `formatDistance` writes `km`, not as copy). The daily total is the sum of the steps' amounts, each step contributing its hourly figure and only otherwise its six-hourly one, so the overlapping six-hour figures are never added on top of the hourly ones; it is `null`, never `0`, when no step carries one.
+16. **The compact product sends no chance of rain.** Its summaries carry `precipitation_amount` and nothing else (`next_12_hours.details` is empty, recorded 2026-10-09), so `precipitationProbability` is `null` for every MET reading today and the panel's "chance" is not drawn. The client still reads `probability_of_precipitation` when a summary states one, so a richer product needs no further change.
+17. **Slots are the slots that have a step, or one that covers them**, so today, once the morning has gone, has two and a later day four. `from` is the slot's local start (`00:00`, `06:00`, `12:00`, `18:00`), the sky is that of the step whose six hours cover most of the slot (none when they cover less than half of it, because past the hourly stretch the steps sit at 00, 06, 12 and 18 UTC, which is not a slot start in most zones), and the temperature is the mean of the steps inside the slot. `slots` is `null` when a day has none, which the panel reads as no region at all.
+18. **The forecast cache is `wx:v2:forecast:<lat4>:<lng4>`.** A step now stores wind, precipitation and the chance, which is a change of stored shape; `WEATHER_CACHE_VERSION` moved from `v1` to `v2` as the Data Model requires (the failure key carries the same prefix, so its `v1` entries are dropped too, which costs at most one retry), and the `v1` entries are left to expire on their 6 h retention. Unlike `lastModified` (item 13), the new step fields are required, so an older entry cannot be read as the new shape and a bump, not a default, is the right answer. Until they do, a board opened for a point costs one call it would not have, which is the price of never serving a step without the fields it is now read for.
