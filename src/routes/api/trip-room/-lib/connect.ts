@@ -37,8 +37,11 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * that change it close the sockets they affect: a new role, a removal or a leave
  * closes that person's sockets (`closeRoomFor`), and an archive, a restore, a delete
  * or a visibility narrowed to private closes the whole room (`closeRoom`), both in
- * `src/server/fns/context.ts`. The shipped client reconnects through this handler,
- * which is what picks up the stored role. The close is best effort: a room that
+ * `src/server/fns/context.ts`. A person who stops belonging to the workspace
+ * (removed, leaving, or banned, signed out or deleted by the platform console) has
+ * the sockets they hold in every room of it closed by the `trip-room-evict` task.
+ * The shipped client reconnects through this handler, which is what picks up the
+ * stored role. The close is best effort: a room that
  * cannot be reached is logged and the old role holds until the socket drops, and so
  * does the role of a connect that was already in flight - its role was read before
  * the write, and its upgrade can reach the room after the close found no socket.
