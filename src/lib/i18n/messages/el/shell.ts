@@ -556,12 +556,6 @@ const messages = {
   'copyTrip.errorTitle': 'Αυτό δεν αντιγράφηκε',
   'copyTrip.error': 'Το ταξίδι δεν αντιγράφηκε. Δοκιμάστε ξανά σε λίγο.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Ποιος μπορεί να το δει',
-  'visibility.private': 'Μόνο εγώ',
-  'visibility.organization': 'Όλοι στον χώρο',
-  'visibility.public': 'Όποιος έχει τον σύνδεσμο',
-
   'trips.error': 'Τα ταξίδια σου δεν φορτώθηκαν',
   'trips.eyebrow': 'Χώρος',
   'trips.nothingPlanned': 'Τίποτα σχεδιασμένο ακόμη',

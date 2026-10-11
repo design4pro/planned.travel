@@ -449,12 +449,6 @@ const messages = {
   'copyTrip.errorTitle': '未能複製',
   'copyTrip.error': '行程複製失敗。請稍後再試。',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': '誰能看到',
-  'visibility.private': '僅我可見',
-  'visibility.organization': '工作區內所有人',
-  'visibility.public': '任何拿到連結的人',
-
   'trips.error': '你的行程沒有載入',
   'trips.eyebrow': '工作區',
   'trips.nothingPlanned': '還沒有任何計畫',

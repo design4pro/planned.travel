@@ -576,12 +576,6 @@ const messages = {
   'copyTrip.error':
     'Az utazást nem sikerült lemásolni. Próbáld újra kis idő múlva.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Ki láthatja',
-  'visibility.private': 'Csak én',
-  'visibility.organization': 'Mindenki a munkaterületen',
-  'visibility.public': 'Bárki, akinek megvan a link',
-
   'trips.error': 'Az utazásaid nem töltődtek be',
   'trips.eyebrow': 'Munkaterület',
   'trips.nothingPlanned': 'Még semmi sincs betervezve',

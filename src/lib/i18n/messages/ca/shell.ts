@@ -599,12 +599,6 @@ const messages = {
   'copyTrip.error':
     'El viatge no s’ha pogut copiar. Torna-ho a provar d’aquí a un moment.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Qui ho pot veure',
-  'visibility.private': 'Només jo',
-  'visibility.organization': 'Tothom de l’espai',
-  'visibility.public': 'Qualsevol amb l’enllaç',
-
   'trips.error': 'Els teus viatges no s’han carregat',
   'trips.eyebrow': 'Espai',
   'trips.nothingPlanned': 'Encara no hi ha res planificat',

@@ -667,12 +667,6 @@ const messages = {
   'copyTrip.errorTitle': 'لم يُنسَخ ذلك',
   'copyTrip.error': 'تعذّر نسخ الرحلة. حاول مرة أخرى بعد قليل.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'من يمكنه رؤيته',
-  'visibility.private': 'أنا فقط',
-  'visibility.organization': 'كل من في مساحة العمل',
-  'visibility.public': 'كل من لديه الرابط',
-
   'trips.error': 'لم تُحمَّل رحلاتك',
   'trips.eyebrow': 'مساحة العمل',
   'trips.nothingPlanned': 'لا شيء مخطَّط بعد',

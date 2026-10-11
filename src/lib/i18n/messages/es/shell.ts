@@ -597,12 +597,6 @@ const messages = {
   'copyTrip.error':
     'El viaje no se pudo copiar. Inténtalo de nuevo en un momento.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Quién puede verlo',
-  'visibility.private': 'Solo yo',
-  'visibility.organization': 'Todos en el espacio',
-  'visibility.public': 'Cualquiera con el enlace',
-
   'trips.error': 'Tus viajes no se cargaron',
   'trips.eyebrow': 'Espacio',
   'trips.nothingPlanned': 'Nada planeado todavía',

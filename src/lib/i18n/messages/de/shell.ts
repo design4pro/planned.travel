@@ -585,12 +585,6 @@ const messages = {
   'copyTrip.error':
     'Die Reise konnte nicht kopiert werden. Versuche es gleich noch einmal.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Wer es sehen kann',
-  'visibility.private': 'Nur ich',
-  'visibility.organization': 'Alle im Workspace',
-  'visibility.public': 'Jeder mit dem Link',
-
   'trips.error': 'Deine Reisen wurden nicht geladen',
   'trips.eyebrow': 'Arbeitsbereich',
   'trips.nothingPlanned': 'Noch nichts geplant',

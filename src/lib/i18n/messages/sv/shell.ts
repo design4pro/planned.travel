@@ -559,12 +559,6 @@ const messages = {
   'copyTrip.errorTitle': 'Det kopierades inte',
   'copyTrip.error': 'Resan kunde inte kopieras. Försök igen om en stund.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Vem som kan se det',
-  'visibility.private': 'Bara jag',
-  'visibility.organization': 'Alla i arbetsytan',
-  'visibility.public': 'Alla med länken',
-
   'trips.error': 'Dina resor kunde inte laddas',
   'trips.eyebrow': 'Arbetsyta',
   'trips.nothingPlanned': 'Inget planerat än',

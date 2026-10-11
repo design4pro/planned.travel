@@ -518,12 +518,6 @@ const messages = {
   'copyTrip.errorTitle': 'Itu tidak tersalin',
   'copyTrip.error': 'Perjalanan tidak dapat disalin. Coba lagi sebentar.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Siapa yang bisa melihat',
-  'visibility.private': 'Hanya saya',
-  'visibility.organization': 'Semua orang di ruang kerja',
-  'visibility.public': 'Siapa pun yang punya tautannya',
-
   'trips.error': 'Perjalananmu gagal dimuat',
   'trips.eyebrow': 'Ruang kerja',
   'trips.nothingPlanned': 'Belum ada rencana',
