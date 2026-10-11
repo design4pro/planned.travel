@@ -4,7 +4,7 @@
 | ------------------ | ---------------------------------------- |
 | **Status**         | ready                                    |
 | **Issue**          | none                                     |
-| **Spec PR**        | none                                     |
+| **Spec PR**        | #1122                                    |
 | **Implementation** | none                                     |
 | **Plan**           | 08-S8 (docs/plans/08-product-modules.md) |
 
