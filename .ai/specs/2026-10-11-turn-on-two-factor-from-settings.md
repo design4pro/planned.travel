@@ -526,7 +526,8 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
 
 17. "Show setup key again" calls `getTotpUri` and never `enable`, asks for the password (`INVALID_PASSWORD` is a field error and a
     429 shows the ten-second wait, as in the first screen ticket), shows the key through `TwoFactorKey` inside `data-sentry-block`,
-    and "Done" discards the key from state.
+    and "Done" discards the key from state. The `get-totp-uri` response, or an error that carries it, never reaches Sentry or the
+    console, and no Sentry network-detail or body capture is added for it.
 
 09-S2d:
 
@@ -558,7 +559,7 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
 - **Session Replay.** The setup key rides in an `href` that attribute masking does not clearly cover; the key display, the setup-key
   dialog body and the backup-code panel are blocked from the recording (`data-sentry-block`).
 - **Per-IP limits depend on the client address.** The "per IP" figures assume the Worker sees a single-value `x-forwarded-for`; if it
-  does not, better-auth puts every user in one `no-trusted-ip` bucket per path (`@better-auth/core` `utils/ip.mjs`, the rate limiter),
+  does not, better-auth puts every user in one `no-trusted-ip` bucket per path (`@better-auth/core` `utils/ip.mjs`, and `better-auth` `dist/api/rate-limiter/index.mjs`, which holds the key),
   so anyone can exhaust the 3-per-10-seconds allowance for every user and block turning two-factor on or off, not merely tighten
   the limit. Not verified here (needs a running Worker); the screen's 429 handling holds either way, and the follow-up for the
   password-gated endpoints' rate limit names this shared bucket.
@@ -611,7 +612,10 @@ security decision; clearing trusted devices; sign out other devices). It is clos
 1. `src/server/auth/two-factor-guard.ts` and its wiring in `src/server/auth/index.ts` (add `before`, keep `after`).
 2. A test in `src/server/auth/__tests__/` through the real `auth.handler`, using the harness `auth-handler-closure.test.ts`
    builds: enabled account refused with the secret and codes unchanged and the old code still verifying; no row allowed; unverified
-   row allowed; allowed again after `disable`; no session left to the endpoint's 401. Each case uses a distinct `x-forwarded-for` or
+   row allowed; allowed again after `disable`; no session left to the endpoint's 401. It also covers the guard's three properties
+   (AC 5): fails closed (the session read throws, and separately the adapter read throws, and `enable` is never reached); one path
+   only (another `/two-factor/*` call passes through unchanged); each half of the refusal condition alone (the flag on with no row,
+   the flag on with an unverified row, a verified row with the flag off). Each case uses a distinct `x-forwarded-for` or
    a fresh KV (the 3-per-10-seconds rule would otherwise answer 429); no `rateLimit` setting is relaxed.
 3. `TWO_FACTOR_ALREADY_ENABLED` in `describeFailure`, two keys in `en/auth.ts`, 23 locales.
 
