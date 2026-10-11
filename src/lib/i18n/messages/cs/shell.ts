@@ -618,12 +618,6 @@ const messages = {
   'copyTrip.error':
     'Cestu se nepodařilo zkopírovat. Zkuste to za chvíli znovu.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Kdo to uvidí',
-  'visibility.private': 'Jen já',
-  'visibility.organization': 'Všichni v prostoru',
-  'visibility.public': 'Kdokoli s odkazem',
-
   'trips.error': 'Vaše cesty se nenačetly',
   'trips.eyebrow': 'Prostor',
   'trips.nothingPlanned': 'Zatím nic naplánováno',

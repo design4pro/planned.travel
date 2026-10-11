@@ -28,7 +28,6 @@ import {
 import { SwatchPicker } from '#/components/modules/shared'
 import { useTranslate } from '#/lib/i18n'
 
-import type { MessageKey } from '#/lib/i18n'
 import { REQUIRED_DEFAULT, REQUIRED_SWATCHES } from '#/lib/swatches'
 import { createCollectionFn, createJourneyFn } from '../-server/library'
 
@@ -270,15 +269,6 @@ export function NewJourneyDialog({
 
 /* -------------------------------------------------------------- collections */
 
-const VISIBILITIES: ReadonlyArray<{
-  value: 'private' | 'organization' | 'public'
-  label: MessageKey
-}> = [
-  { value: 'private', label: 'shell.visibility.private' },
-  { value: 'organization', label: 'shell.visibility.organization' },
-  { value: 'public', label: 'shell.visibility.public' },
-]
-
 export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   const t = useTranslate()
   const router = useRouter()
@@ -290,9 +280,6 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [colour, setColour] = useState(REQUIRED_DEFAULT)
-  const [visibility, setVisibility] = useState<
-    'private' | 'organization' | 'public'
-  >('organization')
 
   const canSave = name.trim().length > 0 && !saving
 
@@ -300,7 +287,6 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
     setName('')
     setDescription('')
     setColour(REQUIRED_DEFAULT)
-    setVisibility('organization')
     setError(null)
   }
 
@@ -313,7 +299,6 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
           name: name.trim(),
           description: description.trim(),
           colour,
-          visibility,
         },
       })
       await router.invalidate()
@@ -408,26 +393,6 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
                  to offer and the palette ends on the neutral instead. */
               swatches={REQUIRED_SWATCHES}
             />
-
-            <Field label={t('shell.visibility.label')}>
-              <SimpleSelect
-                options={VISIBILITIES.map((option) => ({
-                  value: option.value,
-                  label: t(option.label),
-                }))}
-                value={visibility}
-                onValueChange={(next) => {
-                  if (
-                    next === 'private' ||
-                    next === 'organization' ||
-                    next === 'public'
-                  ) {
-                    setVisibility(next)
-                  }
-                }}
-                ariaLabel={t('shell.visibility.label')}
-              />
-            </Field>
           </form>
         </DialogBody>
 

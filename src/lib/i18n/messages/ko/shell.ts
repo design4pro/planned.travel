@@ -466,12 +466,6 @@ const messages = {
   'copyTrip.errorTitle': '복사되지 않았습니다',
   'copyTrip.error': '여행을 복사하지 못했습니다. 잠시 후 다시 시도해 주세요.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': '볼 수 있는 사람',
-  'visibility.private': '나만',
-  'visibility.organization': '워크스페이스 전체',
-  'visibility.public': '링크를 가진 누구나',
-
   'trips.error': '여행을 불러오지 못했습니다',
   'trips.eyebrow': '워크스페이스',
   'trips.nothingPlanned': '아직 계획이 없습니다',

@@ -628,12 +628,6 @@ const messages = {
   'copyTrip.error':
     'Не удалось скопировать поездку. Попробуйте ещё раз через мгновение.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Кто это увидит',
-  'visibility.private': 'Только я',
-  'visibility.organization': 'Все в пространстве',
-  'visibility.public': 'Любой, у кого есть ссылка',
-
   'trips.error': 'Ваши поездки не загрузились',
   'trips.eyebrow': 'Пространство',
   'trips.nothingPlanned': 'Пока ничего не запланировано',

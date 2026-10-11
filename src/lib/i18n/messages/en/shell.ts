@@ -646,12 +646,6 @@ const messages = {
   'copyTrip.errorTitle': 'That did not copy',
   'copyTrip.error': 'The trip could not be copied. Try again in a moment.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Who can see it',
-  'visibility.private': 'Only me',
-  'visibility.organization': 'Everyone in the workspace',
-  'visibility.public': 'Anyone with the link',
-
   'trips.error': 'Your trips did not load',
   'trips.eyebrow': 'Workspace',
   'trips.nothingPlanned': 'Nothing planned yet',

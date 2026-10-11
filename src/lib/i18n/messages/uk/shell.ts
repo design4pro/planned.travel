@@ -619,12 +619,6 @@ const messages = {
   'copyTrip.errorTitle': 'Це не скопіювалося',
   'copyTrip.error': 'Не вдалося скопіювати поїздку. Спробуйте ще раз за мить.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Хто це побачить',
-  'visibility.private': 'Тільки я',
-  'visibility.organization': 'Усі в просторі',
-  'visibility.public': 'Будь-хто з посиланням',
-
   'trips.error': 'Твої поїздки не завантажилися',
   'trips.eyebrow': 'Простір',
   'trips.nothingPlanned': 'Поки нічого не заплановано',

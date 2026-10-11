@@ -35,6 +35,7 @@ import {
   tallyMoods,
 } from '#/server/repos'
 import { appScope } from './context'
+import { createCollectionSchema } from './library-wire'
 import { currentYear, isoOf, isoOfRequired, todayIso } from './serialise'
 
 const idInput = z.string().trim().min(1).max(64)
@@ -732,7 +733,6 @@ export interface CollectionCard {
   readonly description: string | null
   readonly colour: string
   readonly icon: string
-  readonly visibility: string
   readonly coverImageUrl: string | null
   readonly placeCount: number
   readonly updatedAt: string
@@ -762,7 +762,6 @@ export const loadCollections = createServerFn({ method: 'GET' }).handler(
         description: row.description,
         colour: row.colour,
         icon: row.icon,
-        visibility: row.visibility,
         coverImageUrl: row.coverImageUrl,
         placeCount: row.placeCount,
         updatedAt: isoOfRequired(row.updatedAt),
@@ -845,7 +844,6 @@ export const loadCollectionDetail = createServerFn({ method: 'GET' })
         description: collection.description,
         colour: collection.colour,
         icon: collection.icon,
-        visibility: collection.visibility,
         coverImageUrl: collection.coverImageUrl,
         placeCount: places.length,
         updatedAt: isoOfRequired(collection.updatedAt),
@@ -916,24 +914,14 @@ export const createJourneyFn = createServerFn({ method: 'POST' })
 
 /** Starts a collection of saved places. */
 export const createCollectionFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      name: z.string().trim().min(1).max(120),
-      description: z.string().trim().max(2000),
-      colour: z
-        .string()
-        .trim()
-        .regex(/^#[0-9a-fA-F]{6}$/),
-      visibility: z.enum(['private', 'organization', 'public']),
-    }),
-  )
+  .validator(createCollectionSchema)
   .handler(async ({ data }): Promise<{ readonly collectionId: string }> => {
     const scope = await appScope()
+    // `visibility` is never passed: the column's own default shares it with the workspace.
     const collection = await createCollection(scope, {
       name: data.name,
       description: data.description === '' ? null : data.description,
       colour: data.colour,
-      visibility: data.visibility,
     })
     return { collectionId: collection.id }
   })

@@ -85,17 +85,12 @@ function CollectionPage() {
             pluralise(data.collection.placeCount, 'saved place')
           }
           actions={
-            <>
-              <Button asChild variant="ghost" size="sm" shape="pill">
-                <Link to="/collections">
-                  <ChevronLeft aria-hidden />
-                  All collections
-                </Link>
-              </Button>
-              <Badge tone="outline" size="lg">
-                {humaniseToken(data.collection.visibility)}
-              </Badge>
-            </>
+            <Button asChild variant="ghost" size="sm" shape="pill">
+              <Link to="/collections">
+                <ChevronLeft aria-hidden />
+                All collections
+              </Link>
+            </Button>
           }
         >
           <FilterBar>

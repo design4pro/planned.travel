@@ -553,12 +553,6 @@ const messages = {
   'copyTrip.errorTitle': 'Bu kopyalanmadı',
   'copyTrip.error': 'Gezi kopyalanamadı. Birazdan yeniden deneyin.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Kim görebilir',
-  'visibility.private': 'Yalnızca ben',
-  'visibility.organization': 'Çalışma alanındaki herkes',
-  'visibility.public': 'Bağlantısı olan herkes',
-
   'trips.error': 'Gezilerin yüklenemedi',
   'trips.eyebrow': 'Çalışma alanı',
   'trips.nothingPlanned': 'Henüz bir plan yok',

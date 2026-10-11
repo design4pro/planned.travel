@@ -447,12 +447,6 @@ const messages = {
   'copyTrip.errorTitle': '未能复制',
   'copyTrip.error': '行程复制失败。请稍后重试。',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': '谁能看到',
-  'visibility.private': '仅我可见',
-  'visibility.organization': '工作区内所有人',
-  'visibility.public': '任何拿到链接的人',
-
   'trips.error': '你的行程没有加载出来',
   'trips.eyebrow': '工作区',
   'trips.nothingPlanned': '还没有任何计划',
