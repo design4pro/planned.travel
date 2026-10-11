@@ -76,7 +76,7 @@ the endpoint changes in `src/server/auth/passkey/plugin.ts`, `src/routes/_app/-l
 entry in `CONTEXT.md`, a sentence in `docs/ACCESS.md` §6.4, the tests below and `e2e/account-and-settings.spec.ts`.
 
 Does **not** touch: `src/routes/_app/settings/security.tsx` (stage `09-S3`), `src/server/auth/index.ts` (`09-S3` edits it; the rate-limit
-rules live in the plugin, see Resolved assumption 2), `src/routes/(auth)/*` (`09-S2` and `09-S3` repair `/two-factor` and
+rules live in the plugin, see Resolved assumption 2; the one exception is the client-address fix of the Rate limits paragraph, if its proof fails), `src/routes/(auth)/*` (`09-S2` and `09-S3` repair `/two-factor` and
 `/reset-password`), `src/routes/_app/-ui/settings-nav.tsx` (`09-S8`), the `passkey` table (no migration, no column).
 
 ### Neighbouring work
@@ -165,8 +165,12 @@ with a password exists. It is a hint that decides which dialog the screen draws 
 above is still needed. Better Auth reads the client address from `x-forwarded-for` only and falls back to one shared `no-trusted-ip` bucket per
 path when it cannot resolve one, which would turn "5 per 300 s" on `/passkey/delete` into a limit for the whole product. 09-S1a's PR therefore
 states how the client address resolves behind Cloudflare (the app already reads `cf-connecting-ip`, `src/server/fns/console/context.ts`) and
-proves the limiter tells two clients apart, or sets `advanced.ipAddress` in a change it names; `src/server/auth/index.ts` stays out of this
-stage unless that proof fails, and then the change is a one-line addition reviewed with the stage. `src/server/auth/index.ts` is not touched. The in-memory harness of `auth-handler-closure.test.ts` does not exercise the
+proves the limiter tells two clients apart, or sets `advanced.ipAddress` in a change it names. The proof uses the header shape production
+delivers, not one hand-set `x-forwarded-for` per client (that passes trivially, and under `isTest()` an absent header becomes `127.0.0.1`); a
+client that sends its own `X-Forwarded-For` can produce a two-value header, which resolves to the shared bucket, so the recommended fix is
+`advanced.ipAddress.ipAddressHeaders: ['cf-connecting-ip']`, matching `src/server/fns/console/context.ts` and `src/server/audit/trail.ts`.
+That setting re-keys the existing `customRules` (sign-in, sign-up, password reset, two-factor), so the PR says so and review checks it as a
+change to all of those limits. Otherwise `src/server/auth/index.ts` is not touched. The in-memory harness of `auth-handler-closure.test.ts` does not exercise the
 limiter by itself: each ticket's test asserts the shape of its rule in the array, and at least one rule per ticket is proven over HTTP through
 `auth.handler` (the request past `max` answers `429`), which needs the test to turn `rateLimit.enabled` on for its own instance.
 
