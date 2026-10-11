@@ -477,12 +477,6 @@ const messages = {
   'copyTrip.error':
     '旅行を複製できませんでした。少し経ってからもう一度お試しください。',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': '見られる人',
-  'visibility.private': '自分だけ',
-  'visibility.organization': 'ワークスペースの全員',
-  'visibility.public': 'リンクを持つ人すべて',
-
   'trips.error': '旅行を読み込めませんでした',
   'trips.eyebrow': 'ワークスペース',
   'trips.nothingPlanned': 'まだ何も計画されていません',

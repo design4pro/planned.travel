@@ -633,12 +633,6 @@ const messages = {
   'copyTrip.error':
     'Nie udało się skopiować wyjazdu. Spróbuj ponownie za chwilę.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Kto to zobaczy',
-  'visibility.private': 'Tylko ja',
-  'visibility.organization': 'Wszyscy w przestrzeni',
-  'visibility.public': 'Każdy, kto ma link',
-
   'trips.error': 'Twoje wyjazdy się nie wczytały',
   'trips.eyebrow': 'Przestrzeń',
   'trips.nothingPlanned': 'Nic jeszcze nie zaplanowano',

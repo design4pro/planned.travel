@@ -518,12 +518,6 @@ const messages = {
   'copyTrip.errorTitle': 'Chưa sao chép được',
   'copyTrip.error': 'Không sao chép được chuyến đi. Hãy thử lại sau giây lát.',
 
-  /* ------------------------------------ who can see a thing */
-  'visibility.label': 'Ai có thể xem',
-  'visibility.private': 'Chỉ tôi',
-  'visibility.organization': 'Mọi người trong không gian',
-  'visibility.public': 'Bất kỳ ai có liên kết',
-
   'trips.error': 'Không tải được các chuyến đi của bạn',
   'trips.eyebrow': 'Không gian',
   'trips.nothingPlanned': 'Chưa có kế hoạch nào',

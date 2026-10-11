@@ -5,14 +5,13 @@ import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
-import { Badge, Card, EmptyState } from '#/components/ui'
+import { Card, EmptyState } from '#/components/ui'
 import { paintFor } from '#/lib/swatches'
 import { loadCollections } from '../-server/library'
 import {
   countryFlag,
   countryName,
   formatNumber,
-  humaniseToken,
   pluralise,
 } from '../-lib/format'
 import { NewCollectionDialog } from '../-ui/create-dialogs'
@@ -89,14 +88,9 @@ function CollectionsPage() {
                         style={{ backgroundColor: paintFor(collection.colour) }}
                       />
                       <div className="flex min-w-0 flex-1 flex-col gap-2 p-5">
-                        <div className="flex items-start justify-between gap-3">
-                          <h2 className="min-w-0 truncate font-display text-subtitle font-bold tracking-tight text-ink">
-                            {collection.name}
-                          </h2>
-                          <Badge tone="outline" size="sm" className="shrink-0">
-                            {humaniseToken(collection.visibility)}
-                          </Badge>
-                        </div>
+                        <h2 className="min-w-0 truncate font-display text-subtitle font-bold tracking-tight text-ink">
+                          {collection.name}
+                        </h2>
                         {collection.description === null ? null : (
                           <p className="line-clamp-2 text-caption leading-relaxed text-ink-3">
                             {collection.description}

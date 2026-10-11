@@ -35,6 +35,7 @@ import {
   tallyMoods,
 } from '#/server/repos'
 import { appScope } from './context'
+import { createCollectionSchema } from './library-wire'
 import { currentYear, isoOf, isoOfRequired, todayIso } from './serialise'
 
 const idInput = z.string().trim().min(1).max(64)
@@ -732,6 +733,7 @@ export interface CollectionCard {
   readonly description: string | null
   readonly colour: string
   readonly icon: string
+  /** Still returned for one release: a tab on the previous bundle renders it (BACKWARD_COMPATIBILITY.md section 2). No screen shows it. */
   readonly visibility: string
   readonly coverImageUrl: string | null
   readonly placeCount: number
@@ -916,24 +918,14 @@ export const createJourneyFn = createServerFn({ method: 'POST' })
 
 /** Starts a collection of saved places. */
 export const createCollectionFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      name: z.string().trim().min(1).max(120),
-      description: z.string().trim().max(2000),
-      colour: z
-        .string()
-        .trim()
-        .regex(/^#[0-9a-fA-F]{6}$/),
-      visibility: z.enum(['private', 'organization', 'public']),
-    }),
-  )
+  .validator(createCollectionSchema)
   .handler(async ({ data }): Promise<{ readonly collectionId: string }> => {
     const scope = await appScope()
+    // `visibility` is never passed: the column's own default shares it with the workspace.
     const collection = await createCollection(scope, {
       name: data.name,
       description: data.description === '' ? null : data.description,
       colour: data.colour,
-      visibility: data.visibility,
     })
     return { collectionId: collection.id }
   })
