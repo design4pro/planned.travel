@@ -733,6 +733,8 @@ export interface CollectionCard {
   readonly description: string | null
   readonly colour: string
   readonly icon: string
+  /** Still returned for one release: a tab on the previous bundle renders it (BACKWARD_COMPATIBILITY.md section 2). No screen shows it. */
+  readonly visibility: string
   readonly coverImageUrl: string | null
   readonly placeCount: number
   readonly updatedAt: string
@@ -762,6 +764,7 @@ export const loadCollections = createServerFn({ method: 'GET' }).handler(
         description: row.description,
         colour: row.colour,
         icon: row.icon,
+        visibility: row.visibility,
         coverImageUrl: row.coverImageUrl,
         placeCount: row.placeCount,
         updatedAt: isoOfRequired(row.updatedAt),
@@ -844,6 +847,7 @@ export const loadCollectionDetail = createServerFn({ method: 'GET' })
         description: collection.description,
         colour: collection.colour,
         icon: collection.icon,
+        visibility: collection.visibility,
         coverImageUrl: collection.coverImageUrl,
         placeCount: places.length,
         updatedAt: isoOfRequired(collection.updatedAt),
