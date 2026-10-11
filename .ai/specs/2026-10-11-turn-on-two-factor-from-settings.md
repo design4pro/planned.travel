@@ -135,7 +135,7 @@ stage is named here by id.
 ### The redirect (09-S2b)
 
 `src/routes/(auth)/two-factor.tsx` gains `beforeLoad: async () => { const config = await loadAuthConfig(); if (config.signedIn)
-throw redirect({ href: '/settings/two-factor' }) }`, the idiom `src/routes/(auth)/login.tsx:43-44` already uses to keep a signed-in
+throw redirect({ href: '/settings/two-factor' }) }`, the idiom `src/routes/(auth)/login.tsx:43-49` already uses to keep a signed-in
 visitor off the sign-in screen. `signedIn` is true only for a full session. A person in the middle of sign-in holds the
 two-factor cookie and **no** session, so `signedIn` is false and the challenge renders unchanged. That is what keeps enrolment
 and challenge two screens rather than one. The `?redirect=` search param of the challenge is not forwarded: a signed-in visitor
@@ -143,13 +143,17 @@ has nothing to be sent on to.
 
 ### The guard (09-S2a)
 
-`two-factor-guard.ts` exports a `createAuthMiddleware` hook (the same API `room-eviction.ts` uses) whose matcher is
-`context.path === '/two-factor/enable'`. It:
+`two-factor-guard.ts` exports a `createAuthMiddleware` hook (the same API `room-eviction.ts` uses). A `hooks.before` entry has no
+matcher: the library runs it for **every** endpoint, so the handler's first line is the path check
+`ctx.path === '/two-factor/enable'` (`ctx.path` is the endpoint's own path, not the request's), and any other path returns
+`undefined` untouched. For `/two-factor/enable` it:
 
 1. resolves the session itself (`getSessionFromCtx`; `ctx.context.session` is not populated in a `before` hook). No session:
    returns `undefined`, and the endpoint's own `sessionMiddleware` answers 401;
 2. reads the user row and the `twoFactor` row **fresh through `ctx.context.adapter.findOne`**, keyed on the session's user id and
-   nothing else (no hand-written SQL), never from session data;
+   nothing else (no hand-written SQL), never from session data. **The guard fails closed:** a failed session or adapter read
+   propagates as an error and `enable` is never reached. It does not catch and return `undefined`; `room-eviction.ts` is written
+   never to fail, and that habit must not be copied here;
 3. throws `APIError.from('BAD_REQUEST', { code: 'TWO_FACTOR_ALREADY_ENABLED', message: ... })` (`APIError` from `better-auth/api`,
    the form the plugin itself uses for `TWO_FACTOR_NOT_ENABLED`; status 400) when `user.twoFactorEnabled === true` **or** the row
    exists with `verified === true` (the exact condition in the library that causes the overwrite). `toAuthFailure` in
@@ -481,6 +485,11 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
    `auth.error.twoFactorOn.*` keys, present in 23 locales; the client's `toAuthFailure` surfaces `TWO_FACTOR_ALREADY_ENABLED`.
 5. The test drives the real handler, and its cases do not hit the plugin's 3-per-10-seconds rule on `/two-factor/enable`: each case
    uses a distinct `x-forwarded-for` or a fresh KV. No `rateLimit` setting in `src/server/auth/index.ts` is relaxed to make it pass.
+   It also proves three things about the guard: it **fails closed** (a test makes the session read and the adapter read throw and
+   shows `enable` is never reached); it sits on **one path only** (at least one other `/two-factor/*` call passes through the hook
+   unchanged); and **each half of the refusal condition is sufficient alone** (the flag on with no row, the flag on with an
+   unverified row, and a verified row with the flag off each answer 400 `TWO_FACTOR_ALREADY_ENABLED` with the secret and backup
+   codes unchanged).
 
 09-S2b:
 
@@ -488,7 +497,9 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
    signed-out visitor on `/settings/two-factor` lands on `/login`.
 7. With the factor off and a password on the account, the three steps turn it on; at no point is the key, the URI, the password or a
    backup code present in the URL, storage, loader data or console, and the subtrees that show the key or the codes carry
-   `data-sentry-block` (Session Replay).
+   `data-sentry-block` (Session Replay). The screen adds no Sentry network-detail or body capture for `/api/auth/*`, and never
+   passes the response of `enable`, `generate-backup-codes` or `get-totp-uri`, or an error that carries it, to Sentry or the
+   console.
 8. Step 3 never sends `trustDevice`; `INVALID_CODE` is a field error; "Done" on the panel is inert (`aria-disabled`, described by
    `codes.gate`) until the box is ticked and then clears the codes from state.
 9. A router invalidation while the panel is open does not unmount it, and leaving with the box unticked is guarded.
@@ -547,8 +558,10 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
 - **Session Replay.** The setup key rides in an `href` that attribute masking does not clearly cover; the key display, the setup-key
   dialog body and the backup-code panel are blocked from the recording (`data-sentry-block`).
 - **Per-IP limits depend on the client address.** The "per IP" figures assume the Worker sees a single-value `x-forwarded-for`; if it
-  does not, better-auth shares one bucket per path across all users and the limits are tighter than stated. Not verified here (needs a
-  running Worker); the screen's 429 handling holds either way.
+  does not, better-auth puts every user in one `no-trusted-ip` bucket per path (`@better-auth/core` `utils/ip.mjs`, the rate limiter),
+  so anyone can exhaust the 3-per-10-seconds allowance for every user and block turning two-factor on or off, not merely tighten
+  the limit. Not verified here (needs a running Worker); the screen's 429 handling holds either way, and the follow-up for the
+  password-gated endpoints' rate limit names this shared bucket.
 - **Closing the panel loses the codes.** Unavoidable (they are shown once); a leave guard asks first and the recovery is "Replace backup
   codes".
 - **A hand-rolled encoder can be subtly wrong.** Known-answer vectors plus a real phone scan; the typed key is always the working
@@ -667,3 +680,4 @@ The "Show setup key again" dialog, its call, its keys; it mounts `TwoFactorKey`.
 | 17  | Accessibility structure                                                                                                            | `h2` screen / `h3` sections; inline panel, never a Dialog or sheet; the key is `<p dir="ltr">`, not an input; always-mounted polite live region; "Done" is `aria-disabled` with `aria-describedby`; dialogs override `onCloseAutoFocus`; back arrow mirrors                                                                | Decided by accessibility specialist sub-agent (confidence high): each is a testable acceptance criterion (AC 16)                                                                                                                                                                                             |
 | 18  | Panel round 1 (product owner, software architect, security and tenancy, accessibility, traveller)                                  | All five: **approve with conditions**. Every condition applied in the commit that follows the first commit of this spec: replace-codes moved into the first screen ticket, one `TwoFactorKey`, pinned hook and test, screen-local 429 and field errors, Session Replay blocking, leave guard, copy and accessibility fixes | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; no specialist answered revise                                                                                                                                                                                                                    |
 | 19  | Panel round 2 (product owner, security and tenancy, software architect, accessibility)                                             | Product owner: **approve**. Security and tenancy: **approve**. Software architect: **approve with conditions** (reword the on-mount call claim; applied). Accessibility: **approve with conditions** (four focus-path wording fixes; applied). Both conditions were wording only; no third round was needed                | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; nobody answered revise after round 2 and the security reviewer approved                                                                                                                                                                          |
+| 20  | Security verdict on head `70f7e7c6` (autopilot round 1)                                                                            | **Ship with fixes**; five conditions applied to the spec text: the guard fails closed, checks its path inside the handler, and each half of its condition is tested alone; no Sentry capture of auth responses; the shared rate-limit bucket is named                                                                      | Decided by security and tenancy sub-agent (confidence high): every claim checked out against the library and the repository; the conditions bind tickets 09-S2a and 09-S2b                                                                                                                                   |
