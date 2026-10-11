@@ -111,8 +111,9 @@ exists).
 **Guards common to the four mutating endpoints (09-S1a for registration, 09-S1b for rename, 09-S1c for delete).** Evaluated first, before any
 read or write:
 
-- _Impersonation veto._ `ctx.context.session.session.impersonatedBy != null` (the `guard.ts:82` and `workspace-writes.ts:74` rule: an empty
-  string counts as impersonation, so these endpoints are never weaker than the existing guard) means `FORBIDDEN` with `PASSKEY_IMPERSONATED`,
+- _Impersonation veto._ `ctx.context.session.session.impersonatedBy != null` (the `workspace-writes.ts:74` rule: an empty
+  string counts as impersonation. `guard.ts:82` reads a session that `tenant.ts` has normalised through `asString`, which turns `''` into `null`,
+  so the raw check here is the stricter of the two and these endpoints are never weaker than the existing guard) means `FORBIDDEN` with `PASSKEY_IMPERSONATED`,
   on `register/options`, `register/verify`, `rename` and `delete`. An impersonated session is brand new, so it would pass any freshness rule, and a passkey an
   operator registers outlives the 900-second impersonation with no audit row. That breaks `docs/ACCESS.md` §6.4 ("a debugging instrument, not
   a second set of admin hands"); §6.4 gains a sentence naming passkey registration, rename and removal among the refused actions.
@@ -161,7 +162,11 @@ with a password exists. It is a hint that decides which dialog the screen draws 
 **Rate limits, each ticket adding only its own rule.** The plugin gains a `rateLimit` array (the limiter applies plugin rules,
 `rate-limiter/index.mjs:251-258`): 09-S1a adds `/passkey/register/options` 10 per 300 s and `/passkey/register/verify` 10 per 300 s; 09-S1b adds
 `/passkey/rename` 5 per 300 s; 09-S1c adds `/passkey/delete` 5 per 300 s. The limiter keys on IP and path, not on the user, so the per-user ceiling
-above is still needed. `src/server/auth/index.ts` is not touched. The in-memory harness of `auth-handler-closure.test.ts` does not exercise the
+above is still needed. Better Auth reads the client address from `x-forwarded-for` only and falls back to one shared `no-trusted-ip` bucket per
+path when it cannot resolve one, which would turn "5 per 300 s" on `/passkey/delete` into a limit for the whole product. 09-S1a's PR therefore
+states how the client address resolves behind Cloudflare (the app already reads `cf-connecting-ip`, `src/server/fns/console/context.ts`) and
+proves the limiter tells two clients apart, or sets `advanced.ipAddress` in a change it names; `src/server/auth/index.ts` stays out of this
+stage unless that proof fails, and then the change is a one-line addition reviewed with the stage. `src/server/auth/index.ts` is not touched. The in-memory harness of `auth-handler-closure.test.ts` does not exercise the
 limiter by itself: each ticket's test asserts the shape of its rule in the array, and at least one rule per ticket is proven over HTTP through
 `auth.handler` (the request past `max` answers `429`), which needs the test to turn `rateLimit.enabled` on for its own instance.
 
@@ -437,7 +442,7 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
    after paint is 0 (Chromium).
 7. A passkey without a name renders `passkeys.row.fallbackName` (display-only, with `dir="auto"`), and that text appears in no request body.
 8. The `rateLimit` array carries `register/options` and `register/verify` (10 per 300 s each); one of them answers `429` past `max` over HTTP through
-   `auth.handler`; `src/server/auth/index.ts` is unchanged.
+   `auth.handler`; `src/server/auth/index.ts` is unchanged unless the client-address proof in the Rate limits paragraph fails, and the PR says how the address resolves.
 9. All `passkeys.*` keys of ticket a exist in 23 locales; `coverage.test.ts` and `parity.test.ts` stay green and the settings copy gate walks the
    three new sources (`passkeys.tsx`, `passkey-manager.tsx`, `passkey-errors.ts`).
 
@@ -474,6 +479,9 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
   rate rules are the whole storage control.
 - **Rate limits are per IP and path**, not per user; a determined attacker behind many addresses is bounded by the password check itself and by
   the 24-hour freshness window for passwordless accounts.
+- **Registration needs a fresh session but not a password.** A session cookie stolen within `freshAge` of sign-in can add a passkey that survives a
+  password reset, and the owner gets no email when a passkey is added or removed. Accepted for this stage; a notification email, or the
+  password on registration for accounts that have one, is a follow-up (filed when the stage ships), not part of it.
 - **Parallel sessions on a passwordless account** can remove passkeys within the freshness window; accepted, same rule as the library's own
   account deletion.
 - **Passkeys already used to open sessions.** Removing a passkey does not end those sessions (see Edge Cases); a person who lost a device ends them
