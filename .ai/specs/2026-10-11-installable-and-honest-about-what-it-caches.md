@@ -4,7 +4,7 @@
 | ------------------ | --------------------------------------------- |
 | **Status**         | ready                                         |
 | **Issue**          | none                                          |
-| **Spec PR**        | none                                          |
+| **Spec PR**        | #1158                                         |
 | **Implementation** | none                                          |
 | **Plan**           | 09-S4 (docs/plans/09-account-and-settings.md) |
 
