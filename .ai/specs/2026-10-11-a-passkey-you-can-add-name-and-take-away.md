@@ -22,12 +22,13 @@ The stage repairs the **destination, not the link**: `/passkeys` becomes a real 
 to stage `09-S3` in the same wave). It ships as **three tickets that are each a full path from the auth endpoint to the screen**:
 
 1. **09-S1a - see your passkeys and add one.** The route, the list (skeleton, empty, error, unsupported), the registration ceremony in
-   `src/lib/auth/client.ts`, `requiresPassword` on the list response, the per-user ceiling, a fresh-session rule and an impersonation
-   veto on registration, and the registration rate limits.
-2. **09-S1b - name a passkey.** `POST /passkey/rename` (with its rate limit and the same impersonation veto), the inline rename (a new
-   row opens in rename mode), the never-persisted fallback name.
+   `src/lib/auth/client.ts`, the never-persisted fallback name every unnamed row shows, the per-user ceiling, a fresh-session rule and an
+   impersonation veto on registration, and the registration rate limits.
+2. **09-S1b - name a passkey.** `POST /passkey/rename` (with its rate limit and the same impersonation veto) and the inline rename (a new
+   row opens in rename mode).
 3. **09-S1c - take a passkey away.** `/passkey/delete` re-proves identity (password, or a fresh session when the account has none),
-   refuses an impersonated session, the delete dialog, the delete rate limit.
+   `requiresPassword` on the list response (its only reader is the dialog), refuses an impersonated session, the delete dialog, the
+   delete rate limit.
 
 ## 📝 Problem Statement
 
@@ -86,11 +87,11 @@ other. `09-S8` will give the settings shell a section for this screen; until the
 
 ### Phase boundaries (tickets)
 
-| Ticket | A person can...                                              | Server change                                                                                                                                                      | Screen change                                                           |
-| ------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| 09-S1a | open `/passkeys`, see their passkeys, add one on this device | list returns `requiresPassword`; ceiling of 20; fresh-session rule and impersonation veto on registration; rate rules for `register/options` and `register/verify` | route, list states, add button, status region, `requestAuth` + ceremony |
-| 09-S1b | name a passkey, rename it later                              | `POST /passkey/rename` with its impersonation veto and rate rule                                                                                                   | new row opens in rename mode; per-row Rename; fallback name             |
-| 09-S1c | remove a passkey, proving it is them                         | `/passkey/delete` password or fresh session, impersonation veto, rate rule                                                                                         | delete dialog (password field or plain confirmation)                    |
+| Ticket | A person can...                                              | Server change                                                                                                                     | Screen change                                                                          |
+| ------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 09-S1a | open `/passkeys`, see their passkeys, add one on this device | ceiling of 20; fresh-session rule and impersonation veto on registration; rate rules for `register/options` and `register/verify` | route, list states, add button, status region, fallback name, `requestAuth` + ceremony |
+| 09-S1b | name a passkey, rename it later                              | `POST /passkey/rename` with its impersonation veto and rate rule                                                                  | new row opens in rename mode; per-row Rename                                           |
+| 09-S1c | remove a passkey, proving it is them                         | list returns `requiresPassword`; `/passkey/delete` password or fresh session, impersonation veto, rate rule                       | delete dialog (password field or plain confirmation)                                   |
 
 Order is a, b, c. a mints `e2e/account-and-settings.spec.ts` and the `passkeys.*` block; b and c append to both.
 
@@ -110,8 +111,9 @@ exists).
 **Guards common to the four mutating endpoints (09-S1a for registration, 09-S1b for rename, 09-S1c for delete).** Evaluated first, before any
 read or write:
 
-- _Impersonation veto._ `ctx.context.session.session.impersonatedBy` set means `FORBIDDEN` with `PASSKEY_IMPERSONATED`, on `register/options`,
-  `register/verify`, `rename` and `delete`. An impersonated session is brand new, so it would pass any freshness rule, and a passkey an
+- _Impersonation veto._ `ctx.context.session.session.impersonatedBy != null` (the `guard.ts:82` and `workspace-writes.ts:74` rule: an empty
+  string counts as impersonation, so these endpoints are never weaker than the existing guard) means `FORBIDDEN` with `PASSKEY_IMPERSONATED`,
+  on `register/options`, `register/verify`, `rename` and `delete`. An impersonated session is brand new, so it would pass any freshness rule, and a passkey an
   operator registers outlives the 900-second impersonation with no audit row. That breaks `docs/ACCESS.md` §6.4 ("a debugging instrument, not
   a second set of admin hands"); §6.4 gains a sentence naming passkey registration, rename and removal among the refused actions.
 - _Fresh session for registration._ `register/options` and `register/verify` require, for **every** account,
@@ -119,7 +121,8 @@ read or write:
   otherwise `PASSKEY_SESSION_NOT_FRESH`. A borrowed 30-day session that adds a passkey would otherwise keep access after a password reset,
   because `revokeSessionsOnPasswordReset` revokes sessions and not passkeys.
 - _One definition of "has a password"._ `Boolean(account?.password)` where `account = await ctx.context.internalAdapter.findCredentialAccount(user.id)`
-  (the library's `shouldRequirePassword`), used for `requiresPassword` on the list **and** for the delete branch. A credential account row with a
+  (the library's `shouldRequirePassword`), used for `requiresPassword` on the list **and** for the delete branch. Both land in 09-S1c, beside
+  the dialog that is the only reader of the hint, so the definition is written once. A credential account row with a
   null password takes the passwordless (freshness) path and never reaches `password.verify` with a null hash.
 
 **Ceiling (09-S1a).** A constant `MAX_PASSKEYS_PER_USER = 20`, exported from the plugin module. `register/options` and `register/verify` both
@@ -151,7 +154,7 @@ the client:
 The order inside the handler is: find the record, check the owner, decide the identity proof, delete. A successful delete returns
 `{ deleted: true }` as today.
 
-**List (09-S1a).** `/passkey/list` returns `{ passkeys, requiresPassword }`. `requiresPassword` is `true` exactly when a credential account
+**List (09-S1c).** `/passkey/list` returns `{ passkeys, requiresPassword }`. `requiresPassword` is `true` exactly when a credential account
 with a password exists. It is a hint that decides which dialog the screen draws and nothing else; `/passkey/delete` re-decides on its own.
 `toPublicPasskey` is unchanged.
 
@@ -212,7 +215,7 @@ All under `/api/auth`, cookie-authenticated, each behind `sessionMiddleware` exc
 
 | Endpoint                         | Change                                                                               | Success body                     | Refusals (`code`)                                                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /passkey/list`              | adds `requiresPassword`                                                              | `{ passkeys, requiresPassword }` | 401 without a session                                                                                                             |
+| `GET /passkey/list`              | adds `requiresPassword` (09-S1c)                                                     | `{ passkeys, requiresPassword }` | 401 without a session                                                                                                             |
 | `POST /passkey/register/options` | impersonation veto; fresh session; refuses at the ceiling before any write; 10/300 s | unchanged                        | `PASSKEY_IMPERSONATED`, `PASSKEY_SESSION_NOT_FRESH`, `PASSKEY_LIMIT_REACHED`                                                      |
 | `POST /passkey/register/verify`  | impersonation veto; fresh session; ceiling before consume; 10/300 s                  | `{ passkey }`                    | `PASSKEY_IMPERSONATED`, `PASSKEY_SESSION_NOT_FRESH`, `PASSKEY_LIMIT_REACHED`, existing expiry and verification errors             |
 | `POST /passkey/rename` (new)     | impersonation veto; owner check, strict body, 5/300 s                                | `{ passkey }`                    | `PASSKEY_IMPERSONATED`, `PASSKEY_NOT_FOUND`                                                                                       |
@@ -232,7 +235,8 @@ written into that one region. Reused components, none rebuilt: `Card`, `Button`,
 `IconButton`, `Badge`, `Dialog`, `Input`, `Field`, `Alert`, `EmptyState`, `Skeleton`, `Spinner`. Dates are `formatDate(iso, locale)` from
 `src/routes/_app/-lib/format.ts` (the one date formatter), on a `tabular-nums` span for the last-used date.
 
-The list is a `ul` of `li` rows labelled by a heading ("Your passkeys"), `aria-busy` while loading (as `skeleton.tsx` expects). Each **row**:
+The list is a `ul` of `li` rows labelled by an `h2` ("Your passkeys", under the `PageHeader` `h1`; the `EmptyState` title is an `h3` below it),
+`aria-busy` while loading (as `skeleton.tsx` expects). Each **row**:
 name (or the display-only fallback, below, rendered with `dir="auto"` so a Latin-script name sits correctly inside Arabic text), a `Badge`
 **Synced** when `backedUp`, a `Badge` **On one device only** when `deviceType` is `singleDevice`, "Added {date}", "Last used {date}" or "Not
 used to sign in yet", and the row actions (a per-row Rename and Remove, each named with the passkey). `deviceType` is the authenticator's
@@ -246,8 +250,9 @@ report about syncing, not "the device in your hand", so the badge says what it k
   key, and the same primary button as the header.
 - **Error** - `Alert tone="danger"` with catalogue text chosen by failure code, and a **Try again** button that re-runs the fetch and then
   moves focus to the list heading (`tabIndex={-1}`) so it is not lost when the alert unmounts. `429` is "Too many attempts. Try again in a few
-  minutes." (the plugin windows are 300 s) and maps the same way in the add, rename and delete paths, not only here. A `401` (the session ended)
-  gets the "sign in again" action below instead of a Try again that can never succeed.
+  minutes." (the plugin windows are 300 s) and maps the same way in the add, rename and delete paths, not only here. A `401` on **any** request
+  (list, add, rename, delete) means the session ended: it shows `passkeys.error.sessionEnded` with the **Sign in again** action (below) instead
+  of a Try again that can never succeed. The generic failure body is advice only, because the title already says what failed.
 - **Unsupported** - an explanatory line under the Add button, linked to it with `aria-describedby`, and the button disabled. Not a
   `Tooltip`: `Button` sets a native `disabled`, so the button cannot take focus or pointer events and a Radix tooltip never opens for anyone
   (`src/components/ui/button.tsx`), and `tooltip.tsx` says a tooltip is never the only place a fact appears. Until the support check (an
@@ -255,12 +260,17 @@ report about syncing, not "the device in your hand", so the badge says what it k
 - **Enrolling** - the button carries `loading` and `loadingLabel` ("Waiting for your device") for the whole ceremony **and** the verify call,
   so a second tap cannot start a second ceremony. `loading` makes the button natively disabled, which drops keyboard focus; every outcome
   (success, dismissed, exists, limit, failed) therefore puts focus back on the Add button, and from 09-S1b a success puts it on the new row's
-  rename input instead.
+  rename input instead. When the Add button is disabled at that moment (the limit outcome, an unsupported browser after a removal), focus goes
+  to the list heading (`tabIndex={-1}`), never to `<body>`. The stale outcome is the exception: it moves focus to **Sign in again** (below).
 - **Failed** - verify failures, an expired challenge or a dropped connection after the sheet closed: "The passkey was not added. Try again." in
   the status region in the danger tone.
-- **Session not fresh or ended** - `PASSKEY_SESSION_NOT_FRESH` on registration (and a `401`) shows the sentence "For your safety, sign in again
-  to continue." with a **Sign in again** button that posts to `SIGN_OUT_ENDPOINT` (`src/components/layout/session.ts`) and then goes to
-  `/login?redirect=/passkeys`. A plain "sign in again" is a loop otherwise: `login.tsx` redirects a signed-in visitor straight back.
+- **Session not fresh or ended** - two different sentences, never swapped. `PASSKEY_SESSION_NOT_FRESH` (registration here, removal in 09-S1c)
+  means the session is valid but too old: registration writes `passkeys.add.stale` ("For your safety, sign in again to continue.") into the
+  status region, removal `passkeys.delete.stale` in the dialog. A `401` means the session is gone: `passkeys.error.sessionEnded` ("Your session
+  has ended. Sign in again to continue."). Both offer the same **Sign in again** button, which moves focus to itself when it appears, shows
+  `loading` while it posts to `SIGN_OUT_ENDPOINT` (`src/components/layout/session.ts`) and then goes to `/login?redirect=/passkeys`. A plain
+  "sign in again" is a loop otherwise: `login.tsx` redirects a signed-in visitor straight back. A `401` during rename shows the same session-ended
+  line and action beside the row.
 - **Dismissed or timed out sheet** - a quiet neutral line "No passkey was added" in the polite status region, cleared when the reader tries
   again. Not a danger Alert and not a toast.
 - **Already enrolled on this device** (`InvalidStateError`) - its own message "This device already has a passkey for your account".
@@ -271,26 +281,32 @@ report about syncing, not "the device in your hand", so the badge says what it k
 
 The ceremony runs first and sends **no name**; the new row opens in rename mode and the status region announces "Passkey added". The input sits
 in a `Field` with a **visible** label ("Name this passkey"; its accessible name contains that visible text, WCAG 2.5.3), a visible placeholder
-("Name it, like Work phone") and `enterKeyHint="done"`. Every row carries a **Rename
+("Name it, like Work phone"), `enterKeyHint="done"`, `maxLength={64}` and `dir="auto"`; only one row is in rename mode at a time, so the shared
+label is never duplicated on the page. Every row carries a **Rename
 {name}** control (`IconButton`, at least 24px, named per row) that moves focus into the input; Enter, Escape and a successful save return focus
 to that control; a failed save keeps focus in the input and shows the error through `Field`'s `error`. Enter commits; blur commits only a non-empty changed value; Escape reverts; an empty value
 or Escape sends no request and leaves `name` null. A spinner shows while the rename saves; a failed rename reverts the text and says so
 inline. The input is a full-width tap target of at least 44px high and the design does not depend on focus opening the keyboard after the sheet
-closes (iOS will not). A passkey with no name shows the **display-only fallback** "Passkey · added {date}", built at render time from a
-catalogue key and `formatDate`, in the reader's locale. It is never saved, never put in the verify body, and replaced by an aaguid-derived
-name only if a future stage owns such a table.
+closes (iOS will not).
+
+**The fallback name (shipped by 09-S1a, because every passkey a registers is unnamed).** A passkey with no name shows the **display-only
+fallback** "Passkey · added {date}", built at render time from a catalogue key and `formatDate`, in the reader's locale. It is never saved, never
+put in the verify body or any request body, and replaced by an aaguid-derived name only if a future stage owns such a table.
 
 ### Removing (09-S1c)
 
 A **Remove {name}** `IconButton` per row opens a `Dialog` that names the passkey; the sentence that names it is the `DialogDescription`. When
-`requiresPassword` is true it carries a password `Field` (`autocomplete="current-password"`, `required`, marked as such) and the confirm button;
-when false it asks for a plain confirmation. The confirm button is `loading` with a loading label ("Removing the passkey") and Cancel is
-disabled while the request runs. Refusals are inline and mapped from the codes: `PASSKEY_PASSWORD_REQUIRED` and `PASSKEY_INVALID_PASSWORD`
-through the password `Field`'s `error`, `PASSKEY_SESSION_NOT_FRESH` as an `Alert` inside the dialog (focusable with `tabIndex={-1}`) with the same
-**Sign in again** action as above. After any refusal focus moves to the password field, or to that alert in the confirm-only variant, so it never
-rests on `<body>` after the button's `loading`. `Escape` cancels and focus returns to the row's trigger. After a successful removal, focus moves
-to the header Add button (never the empty state's duplicate), implemented with `onCloseAutoFocus` and `preventDefault()` because the opener row
-is gone, and the status region announces "Passkey removed". If the last passkey of a person who also has no password is removed, nothing else
+`requiresPassword` is true it carries a password `Field` (`autocomplete="current-password"`, `required`, with `passkeys.delete.passwordHint` as its
+hint; `Field` sets neither `required` nor `aria-required` on the control, so the `Input` itself carries the native `required` attribute) and the
+confirm button; when false it asks for a plain confirmation (`passkeys.delete.confirmOnly`). The confirm button is `loading` with a loading label
+("Removing the passkey") and Cancel is disabled while the request runs. Refusals are inline and mapped from the codes: `PASSKEY_PASSWORD_REQUIRED`
+(`passkeys.delete.passwordRequired`) and `PASSKEY_INVALID_PASSWORD` (`passkeys.delete.wrongPassword`) through the password `Field`'s `error`;
+**every other refusal** is one `Alert` inside the dialog (focusable with `tabIndex={-1}`), in both variants: `PASSKEY_SESSION_NOT_FRESH`
+(`passkeys.delete.stale`, with the same **Sign in again** action), a `401` (`passkeys.error.sessionEnded`, same action), a `429`
+(`passkeys.error.rateLimited`), and `PASSKEY_NOT_FOUND`, `PASSKEY_IMPERSONATED` or a network failure (`passkeys.delete.failed`); the dialog stays
+open. After any refusal focus moves to the password field, or to that alert, so it never rests on `<body>` after the button's `loading`. `Escape` cancels and focus returns to the row's trigger. After a successful removal, focus moves
+to the header Add button (never the empty state's duplicate; the list heading when that button is disabled), implemented with `onCloseAutoFocus` and
+`preventDefault()` because the opener row is gone, and the status region announces "Passkey removed". If the last passkey of a person who also has no password is removed, nothing else
 changes: sign-in by social provider still works, and the stage does not invent a password for a passwordless account.
 
 ### Motion and tokens
@@ -330,7 +346,7 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.add.exists`              | This device already has a passkey for your account                                                         | a      |
 | `passkeys.add.failed`              | The passkey was not added. Try again.                                                                      | a      |
 | `passkeys.add.stale`               | For your safety, sign in again to continue.                                                                | a      |
-| `passkeys.error.sessionEnded`      | Your session has ended. Sign in again to see your passkeys.                                                | a      |
+| `passkeys.error.sessionEnded`      | Your session has ended. Sign in again to continue.                                                         | a      |
 | `passkeys.signInAgain`             | Sign in again                                                                                              | a      |
 | `passkeys.add.limit`               | You have reached the limit of {value} passkeys. Remove one to add another.                                 | a      |
 | `passkeys.add.unsupported`         | This browser cannot create passkeys. Try another browser or device.                                        | a      |
@@ -345,7 +361,7 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.error.title`             | Your passkeys did not load                                                                                 | a      |
 | `passkeys.error.retry`             | Try again                                                                                                  | a      |
 | `passkeys.error.rateLimited`       | Too many attempts. Try again in a few minutes.                                                             | a      |
-| `passkeys.error.generic`           | Your passkeys could not be loaded. Check your connection and try again.                                    | a      |
+| `passkeys.error.generic`           | Check your connection and try again.                                                                       | a      |
 | `passkeys.rename.action`           | Rename {name}                                                                                              | b      |
 | `passkeys.rename.fieldLabel`       | Name this passkey                                                                                          | b      |
 | `passkeys.rename.placeholder`      | Name it, like Work phone                                                                                   | b      |
@@ -367,7 +383,8 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.delete.removing`         | Removing the passkey                                                                                       | c      |
 | `passkeys.delete.passwordRequired` | Enter your password to remove this passkey.                                                                | c      |
 
-`{name}` is the passkey's own name or the fallback; user-typed names are rendered as text, never as markup. The server's English `message`
+`{name}` is the passkey's own name or the fallback; user-typed names are rendered as text, never as markup, and wherever `{name}` sits inside a
+sentence (`delete.body`, the row actions) it is wrapped in a `dir="auto"` element (`bdi`). The server's English `message`
 is never shown. The word "passkey" follows `auth.ts` (`passkey.action`) and `settings.ts` (`security.passkeys.*`); "Synced" is new vocabulary, introduced here.
 `signInAgain` is the action label shared by the registration, list and delete stale-session states; `passkeys.add.stale` is the registration
 sentence, `passkeys.delete.stale` the removal one. `passkeys.add.added` is written into the status region by 09-S1a (and from 09-S1b the focus
@@ -395,8 +412,8 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 | Delete on a passwordless account with a session older than `freshAge` | `PASSKEY_SESSION_NOT_FRESH`; the row survives; the dialog asks the person to sign in again.                                                             |
 | Delete of another person's credential id                              | `NOT_FOUND` whatever else was sent; the other row is unchanged.                                                                                         |
 | Delete the passkey just used to sign in                               | Allowed; the session stays valid, the next sign-in uses another factor.                                                                                 |
-| Session expired while the page is open                                | The list or action answers 401; the screen shows the error alert; the next navigation hits the `_app` guard.                                            |
-| Operator impersonating the member                                     | Registration, rename and delete answer `PASSKEY_IMPERSONATED`; the screen shows its generic failure text.                                               |
+| Session expired while the page is open                                | The list or an action answers 401; the screen shows `passkeys.error.sessionEnded` and the Sign in again action (not the "for your safety" line).        |
+| Operator impersonating the member                                     | Registration, rename and delete answer `PASSKEY_IMPERSONATED`; the screen shows `add.failed`, `rename.failed` and `delete.failed` respectively.         |
 | Registration on a session older than `freshAge`                       | `PASSKEY_SESSION_NOT_FRESH`; the screen offers Sign in again (sign-out, then `/login?redirect=/passkeys`).                                              |
 | Removing a passkey that already opened sessions                       | Those sessions stay: a session does not record the credential that created it. A lost device's sessions are ended through session revocation, not here. |
 | 23 locales, Arabic                                                    | All keys exist in every locale; logical CSS properties; `data-mirror-rtl` on directional icons.                                                         |
@@ -406,39 +423,43 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 09-S1a:
 
 1. `/passkeys` answers, hydrates and is console-silent for a signed-in member; an anonymous visitor is redirected by the `_app` guard.
-2. `GET /passkey/list` returns only the caller's passkeys and `requiresPassword` (true for a password account, false for a social-only account
-   and for a credential row with a null password), and `toPublicPasskey` is unchanged (no public key in any response).
+2. `GET /passkey/list` returns only the caller's passkeys, and `toPublicPasskey` is unchanged (no public key in any response).
 3. `register/options` and `register/verify` refuse at 20 credentials with `PASSKEY_LIMIT_REACHED`; `register/options` writes no challenge row when it
    refuses; `register/verify` refuses **before** the challenge is consumed or any attestation is verified, so a 21st request leaves 20 rows.
 4. `register/options` and `register/verify` refuse an impersonated session with `PASSKEY_IMPERSONATED` (no row, no challenge written) and a stale
    session, for every account, with `PASSKEY_SESSION_NOT_FRESH`; a fresh session passes. `docs/ACCESS.md` §6.4 names the refusal.
 5. `registerPasskey()` turns `NotAllowedError` and `AbortError` into `{ ok: false, aborted: true }`, `InvalidStateError` into its own arm, a non-OK
    verify into an `AuthFailure` with the server's status and code, and an unknown transport string is dropped.
-6. Skeleton, empty, error (a named 429 and a 401 with Sign in again), unsupported, enrolling, dismissed, failed, exists, stale and limit states
-   exist and are keyboard reachable; every outcome returns focus to the Add button; the one status region exists from first render; the limit and
-   unsupported lines are `aria-describedby` of the disabled button; the layout shift after paint is 0 (Chromium).
-7. The `rateLimit` array carries `register/options` and `register/verify` (10 per 300 s each); one of them answers `429` past `max` over HTTP through
+6. Skeleton, empty, error (a named 429 and a 401 with `passkeys.error.sessionEnded` and Sign in again), unsupported, enrolling, dismissed, failed,
+   exists, stale and limit states exist and are keyboard reachable; every outcome returns focus to the Add button, or to the list heading when
+   that button is disabled, and the stale outcome to Sign in again; `passkeys.add.stale` shows only for `PASSKEY_SESSION_NOT_FRESH`; the one
+   status region exists from first render; the limit and unsupported lines are `aria-describedby` of the disabled button; the layout shift
+   after paint is 0 (Chromium).
+7. A passkey without a name renders `passkeys.row.fallbackName` (display-only, with `dir="auto"`), and that text appears in no request body.
+8. The `rateLimit` array carries `register/options` and `register/verify` (10 per 300 s each); one of them answers `429` past `max` over HTTP through
    `auth.handler`; `src/server/auth/index.ts` is unchanged.
-8. All `passkeys.*` keys of ticket a exist in 23 locales; `coverage.test.ts` and `parity.test.ts` stay green and the settings copy gate walks the
+9. All `passkeys.*` keys of ticket a exist in 23 locales; `coverage.test.ts` and `parity.test.ts` stay green and the settings copy gate walks the
    three new sources (`passkeys.tsx`, `passkey-manager.tsx`, `passkey-errors.ts`).
 
 09-S1b:
 
-9. `POST /passkey/rename` trims, requires 1 to 64 characters, refuses any other field, refuses an impersonated session, and answers `NOT_FOUND`
-   for another user's id with that user's `name` unchanged; its `rateLimit` rule (5 per 300 s) is in the array.
-10. A newly added row opens in rename mode with focus in a `Field` with a visible label; empty, Escape and an unchanged blur send no request; the
-    fallback is never persisted; each row has a Rename control named with the passkey; focus returns to it after Enter, Escape or a saved name.
+10. `POST /passkey/rename` trims, requires 1 to 64 characters, refuses any other field, refuses an impersonated session (`impersonatedBy` of `''`
+    included), and answers `NOT_FOUND` for another user's id with that user's `name` unchanged; its `rateLimit` rule (5 per 300 s) is in the array.
+11. A newly added row opens in rename mode with focus in a `Field` with a visible label; empty, Escape and an unchanged blur send no request;
+    each row has a Rename control named with the passkey; focus returns to it after Enter, Escape or a saved name.
 
 09-S1c:
 
-11. `POST /passkey/delete` on a password account without or with a wrong password is `BAD_REQUEST` (`PASSKEY_PASSWORD_REQUIRED`,
-    `PASSKEY_INVALID_PASSWORD`) and the row survives; with the right password it deletes.
-12. On a passwordless account (including a null-password credential row) a session younger than `freshAge` deletes and an older one is refused with
+12. `GET /passkey/list` also returns `requiresPassword` (true for a password account, false for a social-only account and for a credential row with
+    a null password), and `POST /passkey/delete` on a password account without or with a wrong password is `BAD_REQUEST`
+    (`PASSKEY_PASSWORD_REQUIRED`, `PASSKEY_INVALID_PASSWORD`) and the row survives; with the right password it deletes.
+13. On a passwordless account (including a null-password credential row) a session younger than `freshAge` deletes and an older one is refused with
     `PASSKEY_SESSION_NOT_FRESH`; an impersonated session is refused with `PASSKEY_IMPERSONATED` and the row survives.
-13. Another user's id is `NOT_FOUND` for delete and that user's row is byte-identical afterwards; its `rateLimit` rule (5 per 300 s) is in the array.
-14. The dialog shows a password field when `requiresPassword` is true and a plain confirmation otherwise, disables Cancel and shows a loading label
-    while it works, returns focus to the trigger on cancel, moves it to the password field (or the stale alert) after a refusal, and to the header
-    Add button after a removal.
+14. Another user's id is `NOT_FOUND` for delete and that user's row is byte-identical afterwards; its `rateLimit` rule (5 per 300 s) is in the array.
+15. The dialog shows a password field (native `required` on the input) when `requiresPassword` is true and a plain confirmation otherwise, disables
+    Cancel and shows a loading label while it works, returns focus to the trigger on cancel, shows every non-password refusal in one in-dialog alert
+    that takes focus, moves focus to the password field after a password refusal, and after a removal to the header Add button (the list heading when
+    it is disabled).
 
 ## 📝 Risks & Impact Review
 
@@ -483,12 +504,12 @@ slicer cuts exactly these three (at most eight is the limit; this stage needs th
 ### Phase 1 - see your passkeys and add one (09-S1a)
 
 1. `plugin.ts`: the impersonation veto and the fresh-session rule on both registration endpoints, `MAX_PASSKEYS_PER_USER` and the count guard in
-   `register/options` (before `createVerificationValue`) and `register/verify` (before `consumeCeremony`), `requiresPassword` on the list (one
-   `hasPassword` definition), the plugin `rateLimit` array with the two registration rules, error codes; `plugin-endpoints.test.ts` (list
-   isolation, ceiling, `requiresPassword`, impersonated, fresh and stale, one rule over HTTP). `docs/ACCESS.md` §6.4 gains its sentence.
+   `register/options` (before `createVerificationValue`) and `register/verify` (before `consumeCeremony`), the plugin `rateLimit` array with the
+   two registration rules, error codes; `plugin-endpoints.test.ts` (list isolation, ceiling, impersonated, fresh and stale, one rule over HTTP).
+   `docs/ACCESS.md` §6.4 gains its sentence.
 2. `client.ts`: `requestAuth`, `isPasskeyEnrolmentSupported`, `registerPasskey`, `listPasskeys`; `passkey-client.test.ts`.
-3. `passkeys.tsx`, `passkey-manager.tsx`, `passkey-errors.ts`, the ticket-a keys in 23 locales, the `copy-rules.test.ts` allow-list, `pnpm
-generate-routes`; component tests.
+3. `passkeys.tsx`, `passkey-manager.tsx` (including the fallback name for unnamed rows), `passkey-errors.ts`, the ticket-a keys in 23 locales, the
+   `copy-rules.test.ts` allow-list, `pnpm generate-routes`; component tests.
 4. `e2e/account-and-settings.spec.ts` minted: the page answers, hydrates, console silent; Chromium-only serial walk that adds a passkey with a
    virtual authenticator.
 5. `CONTEXT.md`: a **Passkey** entry (it has none today).
@@ -498,12 +519,13 @@ generate-routes`; component tests.
 1. `plugin.ts`: `POST /passkey/rename` with the impersonation veto and its `rateLimit` rule; test cases (owner, strict body, trim, 64 limit, foreign
    id and the other user's name unchanged, impersonated).
 2. `client.ts`: `renamePasskey`; test.
-3. Manager: rename mode, fallback name; ticket-b keys in 23 locales; component tests; the spec walk gains rename.
+3. Manager: rename mode; ticket-b keys in 23 locales; component tests; the spec walk gains rename.
 
 ### Phase 3 - take a passkey away (09-S1c)
 
-1. `plugin.ts`: delete with `password?`, impersonation veto, fresh-session rule, codes, the `delete` rate rule; endpoint tests (wrong, missing, right
-   password, null-password credential row, passwordless fresh and stale, impersonated, foreign id).
+1. `plugin.ts`: `requiresPassword` on the list (the one `hasPassword` definition), delete with `password?`, impersonation veto, fresh-session rule,
+   codes, the `delete` rate rule; endpoint tests (`requiresPassword` true and false, wrong, missing, right password, null-password credential row,
+   passwordless fresh and stale, impersonated, foreign id).
 2. `client.ts`: `deletePasskey`; test.
 3. Manager: delete dialog; ticket-c keys in 23 locales; tests; the spec walk gains remove and the `finally` cleanup.
 
@@ -517,11 +539,12 @@ generate-routes`; component tests.
     status and code; an unknown transport is dropped; `requestAuth` keeps `credentials: 'include'` and uses `GET` for the list.
   - `src/server/auth/passkey/__tests__/plugin-endpoints.test.ts` (the `server` project), on the pattern of
     `src/server/auth/__tests__/auth-handler-closure.test.ts`: a real in-memory `betterAuth` over `authSchema`, real cookies, passkey rows
-    seeded through the adapter. Cases: list shows only the caller's rows; `requiresPassword` true and false; ceiling (seed 20, the 21st
+    seeded through the adapter; the instance includes the admin plugin, as that file's does, so the adapter keeps `impersonatedBy`. Cases, each in
+    the ticket named in Phasing: list shows only the caller's rows (a); `requiresPassword` true and false (c); ceiling (a; seed 20, the 21st
     `register/options` and `register/verify` are `PASSKEY_LIMIT_REACHED` and 20 rows remain, and `register/options` wrote no challenge row; no
     attestation fixture is needed because the guard runs first, but the `register/verify` body must still pass the endpoint's Zod credential
-    schema, so the test sends a syntactically valid credential with dummy strings); impersonated sessions (a session row with `impersonatedBy` set)
-    are refused on all four mutating endpoints with nothing written; registration with a fresh and with a stale session; `requiresPassword` and
+    schema, so the test sends a syntactically valid credential with dummy strings); impersonated sessions (a session row with `impersonatedBy` set,
+    and one case with `impersonatedBy` of `''`) are refused on all four mutating endpoints with nothing written; registration with a fresh and with a stale session; `requiresPassword` and
     the delete branch agree for a credential row with a null password; a registration whose stored challenge belongs to another user is refused (the guard at `plugin.ts:186-196`, held here so a later
     edit cannot drop it); rename (own id, foreign id, empty and 65-character names, extra field); delete (foreign id `NOT_FOUND` and the other row
     intact, wrong password, missing password on a password account, right password, passwordless with a fresh session, passwordless with a stale
@@ -583,12 +606,12 @@ exec playwright test --project=setup` then `... pnpm exec playwright test e2e/ac
 
 ## Panel verdicts
 
-Reviewed before the PR opened, through `afk-decide`: "approve this spec for unattended slicing and implementation, or what must change?".
+Reviewed before the PR opened, through `afk-decide`: "approve this spec for unattended slicing and implementation, or what must change?". Two rounds; every round-2 condition is applied in this spec and no specialist answered revise.
 
-| Specialist           | Round 1                 | Conditions applied in this spec                                                                                                                                                                             | Round 2 |
-| -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| Product owner        | approve with conditions | `passkey-errors.ts` in the copy gate; rename rate rule and isolation case into ticket b; isolation ACs split by ticket; `CONTEXT.md` entry a definite step                                                  | R2-PO   |
-| Software architect   | approve with conditions | `passkey-errors.ts` in the copy gate; `passkeys.add.added` read by ticket a; the verify body must still pass Zod; rate rules asserted by shape and once over HTTP; placeholders replaced                    | R2-ARCH |
-| Security and tenancy | approve with conditions | impersonation veto on four endpoints; fresh session for registration; one `hasPassword` definition; ceiling before `createVerificationValue`; `register/options` rule; sessions-stay edge case; ACCESS §6.4 | R2-SEC  |
-| Accessibility        | approve with conditions | focus after every outcome; per-row Rename; visible Field label; one always-mounted status region; limit line described-by; delete dialog errors and focus; list semantics; `dir="auto"`                     | R2-A11Y |
-| UX                   | approve with conditions | "On one device only" badge; Sign in again action; `add.failed`; "a few minutes"; delete loading label; per-row Rename name and placeholder; copy gate; honest "Synced" vocabulary note                      | R2-UX   |
+| Specialist           | Round 1                 | Conditions applied in this spec                                                                                                                                                                             | Round 2                                                                                                                                         |
+| -------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Product owner        | approve with conditions | `passkey-errors.ts` in the copy gate; rename rate rule and isolation case into ticket b; isolation ACs split by ticket; `CONTEXT.md` entry a definite step                                                  | approve with conditions: fallback name moved to ticket a, `requiresPassword` moved to ticket c (applied)                                        |
+| Software architect   | approve with conditions | `passkey-errors.ts` in the copy gate; `passkeys.add.added` read by ticket a; the verify body must still pass Zod; rate rules asserted by shape and once over HTTP; placeholders replaced                    | approve (optional edits applied: per-path failure keys, admin plugin in the test instance)                                                      |
+| Security and tenancy | approve with conditions | impersonation veto on four endpoints; fresh session for registration; one `hasPassword` definition; ceiling before `createVerificationValue`; `register/options` rule; sessions-stay edge case; ACCESS §6.4 | approve with conditions: `impersonatedBy != null`, empty-string case tested (applied); approves as risk-high / security work                    |
+| Accessibility        | approve with conditions | focus after every outcome; per-row Rename; visible Field label; one always-mounted status region; limit line described-by; delete dialog errors and focus; list semantics; `dir="auto"`                     | approve with conditions: focus to the list heading when Add is disabled, stale outcome focus, one in-dialog alert, native `required` (applied)  |
+| UX                   | approve with conditions | "On one device only" badge; Sign in again action; `add.failed`; "a few minutes"; delete loading label; per-row Rename name and placeholder; copy gate; honest "Synced" vocabulary note                      | approve with conditions: 401 shows `sessionEnded`, stale lines only for `PASSKEY_SESSION_NOT_FRESH`, delete keys placed, generic body (applied) |
