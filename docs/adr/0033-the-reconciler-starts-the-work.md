@@ -92,8 +92,9 @@ exists, and a trigger per event cannot see a difference.
 
 - A merged spec is the product of one agent and a panel, with no person reading it before it lands. It is
   design-only and changes no behaviour, the panel's verdicts are Resolved assumptions rows in the PR and
-  the spec, and overturning one is an ordinary review finding; a panel that does not approve leaves the PR
-  `blocked` for a person, and a security reviewer that does not approve always does.
+  the spec, and overturning one is an ordinary review finding; a security reviewer that does not approve
+  leaves the PR `blocked` for a person, and so does a verdict that escalates a case `afk-decide` § 5 lists. Any
+  other specialist's **revise** still standing after the second round goes to a second specialist, not to a person.
 - Only a spec `afk-plan-to-spec` wrote merges by itself (a `Plan` row, panel verdicts in the PR body). The
   spec task `implement-ticket` writes for a request too large for a few slices has an `Issue` row and no
   `Plan` row, so its PR still ends at merge-ready and a person merges it; while it is open it also holds
