@@ -12,7 +12,7 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
 | [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
 
-## Ready — merged, waiting for a build (20)
+## Ready — merged, waiting for a build (21)
 
 | Spec                                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                           | Implementation |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ----------------------------------------------------------------- | -------------- |
