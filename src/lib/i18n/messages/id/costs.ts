@@ -152,6 +152,13 @@ const messages = {
   'categories.progressLabel': 'Terpakai terhadap anggaran perjalanan',
   'categories.empty':
     'Baris anggaran dan pengeluaran dirinci di sini begitu ada yang bisa dirinci.',
+  'categories.legendLabel': 'Pengeluaran per kategori',
+  'categories.planned': '{amount} direncanakan',
+  'categories.nothingSpent':
+    'Belum ada yang dibelanjakan. Ini yang sudah Anda rencanakan.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'kurang dari {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Pembayaran tercatat',
   'payments.empty.title': 'Belum ada pembayaran',

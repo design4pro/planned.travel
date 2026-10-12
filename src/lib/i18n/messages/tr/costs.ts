@@ -154,6 +154,13 @@ const messages = {
   'categories.progressLabel': 'Gezi bütçesine karşı harcanan',
   'categories.empty':
     'Bütçe satırları ve giderler, dökülecek bir şey olduğunda burada dökülür.',
+  'categories.legendLabel': 'Kategoriye göre harcama',
+  'categories.planned': '{amount} planlandı',
+  'categories.nothingSpent':
+    'Henüz bir şey harcanmadı. Planladığınız şeyler burada.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': '{percent} altında',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Kaydedilen ödemeler',
   'payments.empty.title': 'Henüz ödeme yok',

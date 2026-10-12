@@ -157,6 +157,13 @@ const messages = {
   'categories.progressLabel': 'Gastat respecte al pressupost del viatge',
   'categories.empty':
     'Les línies de pressupost i les despeses es desglossen aquí quan hi ha alguna cosa a desglossar.',
+  'categories.legendLabel': 'Despesa per categoria',
+  'categories.planned': '{amount} previst',
+  'categories.nothingSpent':
+    "Encara no s'ha gastat res. Això és el que has previst.",
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'menys de {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Pagaments registrats',
   'payments.empty.title': 'Encara cap pagament',

@@ -157,6 +157,13 @@ const messages = {
   'categories.progressLabel': 'Витрачено відносно бюджету подорожі',
   'categories.empty':
     'Рядки бюджету й витрати розкладуться тут, коли буде що розкладати.',
+  'categories.legendLabel': 'Витрати за категоріями',
+  'categories.planned': 'заплановано {amount}',
+  'categories.nothingSpent':
+    'Поки що нічого не витрачено. Ось що ви запланували.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'менше {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Записані платежі',
   'payments.empty.title': 'Платежів ще немає',

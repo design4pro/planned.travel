@@ -141,6 +141,12 @@ const messages = {
   'categories.againstBudget': '对照行程预算',
   'categories.progressLabel': '对照行程预算的支出',
   'categories.empty': '预算项和支出一旦有内容，就会在这里拆解开来。',
+  'categories.legendLabel': '按类别划分的支出',
+  'categories.planned': '计划 {amount}',
+  'categories.nothingSpent': '尚未支出。以下是你的计划。',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': '不到 {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': '已记录的付款',
   'payments.empty.title': '暂无付款',
