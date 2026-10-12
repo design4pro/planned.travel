@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Thermometer } from 'lucide-react'
+import { Clock, Thermometer } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import {
@@ -17,8 +17,10 @@ import { DayWeatherPanel } from './day-weather-panel'
 import { CONDITION_ICON } from './weather-icons'
 import { CONDITION_LABEL, badgeModel } from './weather-model'
 
+import type { LucideIcon } from 'lucide-react'
+import type { Locale, Translate } from '#/lib/i18n'
 import type { WeatherUnit } from '#/lib/weather'
-import type { DayWeatherView } from './weather-model'
+import type { DayWeatherView, WeatherBadgeModel } from './weather-model'
 
 /**
  * The box every state is drawn in.
@@ -76,34 +78,29 @@ export function DayWeatherBadge({
   }
 
   if (model.kind === 'unavailable') {
+    return <UnavailableBadge />
+  }
+
+  if (model.kind === 'notYetRecorded') {
     return (
       <div data-part="day-weather" className={BOX}>
         <span
           role="img"
-          aria-label={t('trips.plan.weather.badge.unavailable')}
-          className="text-caption text-ink-4"
+          aria-label={t('trips.plan.weather.badge.notYetRecorded')}
+          title={t('trips.plan.weather.badge.notYetRecorded')}
+          className="text-ink-4"
         >
-          —
+          <Clock size={15} strokeWidth={2} aria-hidden="true" />
         </span>
       </div>
     )
   }
 
-  const max = `${formatNumber(model.max, locale)}°`
-  const min = `${formatNumber(model.min, locale)}°`
-  const name =
-    model.condition === null
-      ? t('trips.plan.weather.badge.forecastNoCondition', {
-          max: `${max}${model.unit}`,
-          min: `${min}${model.unit}`,
-        })
-      : t('trips.plan.weather.badge.forecast', {
-          condition: t(CONDITION_LABEL[model.condition]),
-          max: `${max}${model.unit}`,
-          min: `${min}${model.unit}`,
-        })
-  const Icon =
-    model.condition === null ? Thermometer : CONDITION_ICON[model.condition]
+  const face = readingFace(model, t, locale)
+  if (face === null) {
+    return <UnavailableBadge />
+  }
+  const { name, Icon, muted, lead, trail } = face
 
   return (
     <div data-part="day-weather" className={BOX}>
@@ -123,15 +120,14 @@ export function DayWeatherBadge({
               size={15}
               strokeWidth={2}
               aria-hidden="true"
-              className={cn(
-                'shrink-0',
-                model.condition === null ? 'text-ink-4' : 'text-info',
-              )}
+              className={cn('shrink-0', muted ? 'text-ink-4' : 'text-info')}
             />
             {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
             <span dir="ltr" className="whitespace-nowrap">
-              <span className="font-semibold text-ink-2">{max}</span>
-              <span className="text-ink-3">/{min}</span>
+              <span className="font-semibold text-ink-2">{lead}</span>
+              {trail === null ? null : (
+                <span className="text-ink-3">/{trail}</span>
+              )}
               <span className="text-ink-4">{model.unit}</span>
             </span>
           </button>
@@ -151,4 +147,101 @@ export function DayWeatherBadge({
       </Popover>
     </div>
   )
+}
+
+/** A day that should have a reading and has none: a dash with a name, never a figure. */
+function UnavailableBadge() {
+  const t = useTranslate()
+  return (
+    <div data-part="day-weather" className={BOX}>
+      <span
+        role="img"
+        aria-label={t('trips.plan.weather.badge.unavailable')}
+        className="text-caption text-ink-4"
+      >
+        —
+      </span>
+    </div>
+  )
+}
+
+type ReadingModel = Extract<
+  WeatherBadgeModel,
+  { readonly kind: 'forecast' | 'recorded' }
+>
+
+/**
+ * How a reading is drawn and named. A forecast is the condition icon and "high/low"; a recorded day
+ * is the thermometer, and its name begins "Recorded" so nobody takes a measurement for a forecast
+ * or the reverse. A recorded day that lacks one temperature draws the one it has, and its name
+ * says which it is, and one with neither has no face.
+ */
+function readingFace(
+  model: ReadingModel,
+  t: Translate,
+  locale: Locale,
+): {
+  readonly name: string
+  readonly Icon: LucideIcon
+  readonly muted: boolean
+  readonly lead: string
+  readonly trail: string | null
+} | null {
+  const figure = (value: number) => `${formatNumber(value, locale)}°`
+  if (model.kind === 'forecast') {
+    const max = figure(model.max)
+    const min = figure(model.min)
+    const figures = { max: `${max}${model.unit}`, min: `${min}${model.unit}` }
+    return {
+      name:
+        model.condition === null
+          ? t('trips.plan.weather.badge.forecastNoCondition', figures)
+          : t('trips.plan.weather.badge.forecast', {
+              condition: t(CONDITION_LABEL[model.condition]),
+              ...figures,
+            }),
+      Icon:
+        model.condition === null
+          ? Thermometer
+          : CONDITION_ICON[model.condition],
+      muted: model.condition === null,
+      lead: max,
+      trail: min,
+    }
+  }
+  const { max, min } = model
+  const withUnit = (value: number) => `${figure(value)}${model.unit}`
+  if (max !== null && min !== null) {
+    return {
+      name: t('trips.plan.weather.badge.recorded', {
+        max: withUnit(max),
+        min: withUnit(min),
+      }),
+      Icon: Thermometer,
+      muted: true,
+      lead: figure(max),
+      trail: figure(min),
+    }
+  }
+  if (max !== null) {
+    return {
+      name: t('trips.plan.weather.badge.recordedHigh', { max: withUnit(max) }),
+      Icon: Thermometer,
+      muted: true,
+      lead: figure(max),
+      trail: null,
+    }
+  }
+  // A recorded reading always has one of the two, but the type cannot say so, and a missing
+  // figure is not drawn as a zero.
+  if (min === null) {
+    return null
+  }
+  return {
+    name: t('trips.plan.weather.badge.recordedLow', { min: withUnit(min) }),
+    Icon: Thermometer,
+    muted: true,
+    lead: figure(min),
+    trail: null,
+  }
 }

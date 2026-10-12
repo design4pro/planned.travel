@@ -312,6 +312,10 @@ const messages = {
   'plan.weather.badge.unavailable':
     'Vädret är inte tillgängligt för den här dagen',
   'plan.weather.badge.loading': 'Läser in vädret',
+  'plan.weather.badge.recorded': 'Uppmätt: högst {max}, lägst {min}',
+  'plan.weather.badge.recordedHigh': 'Uppmätt: högst {max}',
+  'plan.weather.badge.recordedLow': 'Uppmätt: lägst {min}',
+  'plan.weather.badge.notYetRecorded': 'Ännu inte registrerat',
   'plan.weather.condition.clear': 'Klart',
   'plan.weather.condition.fair': 'Fint',
   'plan.weather.condition.partlyCloudy': 'Delvis molnigt',
@@ -336,7 +340,12 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Förmiddag',
   'plan.weather.panel.slot.afternoon': 'Eftermiddag',
   'plan.weather.panel.slot.evening': 'Kväll',
+  'plan.weather.panel.high': 'Högsta',
+  'plan.weather.panel.low': 'Lägsta',
+  'plan.weather.panel.recordedNote': 'Uppmätta värden för den här dagen.',
   'plan.weather.attribution.metNorway': 'Prognosdata: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Datakälla: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

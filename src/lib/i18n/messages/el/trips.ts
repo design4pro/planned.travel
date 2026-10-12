@@ -325,6 +325,10 @@ const messages = {
   'plan.weather.badge.unavailable':
     'Ο καιρός δεν είναι διαθέσιμος για αυτή την ημέρα',
   'plan.weather.badge.loading': 'Φόρτωση καιρού',
+  'plan.weather.badge.recorded': 'Καταγραφή: μέγιστη {max}, ελάχιστη {min}',
+  'plan.weather.badge.recordedHigh': 'Καταγραφή: μέγιστη {max}',
+  'plan.weather.badge.recordedLow': 'Καταγραφή: ελάχιστη {min}',
+  'plan.weather.badge.notYetRecorded': 'Δεν έχει καταγραφεί ακόμη',
   'plan.weather.condition.clear': 'Αίθριος',
   'plan.weather.condition.fair': 'Σχετικά αίθριος',
   'plan.weather.condition.partlyCloudy': 'Λίγα σύννεφα',
@@ -349,8 +353,13 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Πρωί',
   'plan.weather.panel.slot.afternoon': 'Απόγευμα',
   'plan.weather.panel.slot.evening': 'Βράδυ',
+  'plan.weather.panel.high': 'Μέγιστη',
+  'plan.weather.panel.low': 'Ελάχιστη',
+  'plan.weather.panel.recordedNote': 'Μετρημένες τιμές για αυτήν την ημέρα.',
   'plan.weather.attribution.metNorway':
     'Δεδομένα πρόγνωσης: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Δεδομένα: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

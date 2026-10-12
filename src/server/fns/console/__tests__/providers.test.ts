@@ -188,7 +188,7 @@ describe('saveProviderLimit', () => {
     ['met-norway', 'MET Norway'],
     ['nasa-power', 'NASA POWER'],
   ] as const)(
-    'saves a ceiling for the weather provider %s, which is metered before its client lands',
+    'saves a ceiling for the weather provider %s, which is metered with its client',
     async (slug, label) => {
       const panel = await saveProviderLimit({
         ...INPUT,

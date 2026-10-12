@@ -327,6 +327,10 @@ const messages = {
   'plan.weather.badge.unavailable':
     'El temps no està disponible per a aquest dia',
   'plan.weather.badge.loading': "S'està carregant el temps",
+  'plan.weather.badge.recorded': 'Registrat: màxima {max}, mínima {min}',
+  'plan.weather.badge.recordedHigh': 'Registrat: màxima {max}',
+  'plan.weather.badge.recordedLow': 'Registrat: mínima {min}',
+  'plan.weather.badge.notYetRecorded': 'Encara no registrat',
   'plan.weather.condition.clear': 'Serè',
   'plan.weather.condition.fair': 'Bon temps',
   'plan.weather.condition.partlyCloudy': 'Parcialment ennuvolat',
@@ -351,8 +355,13 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Matí',
   'plan.weather.panel.slot.afternoon': 'Tarda',
   'plan.weather.panel.slot.evening': 'Vespre',
+  'plan.weather.panel.high': 'Màxima',
+  'plan.weather.panel.low': 'Mínima',
+  'plan.weather.panel.recordedNote': "Valors mesurats d'aquest dia.",
   'plan.weather.attribution.metNorway':
     'Dades de la previsió: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Dades: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

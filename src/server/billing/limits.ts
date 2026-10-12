@@ -169,11 +169,12 @@ export type RateMetric = (typeof RATE_METRICS)[number]
  * assumes a debounced client and this module cannot enforce one; the server bounds the
  * half it can see, which is the query's length.
  *
- * `weather_lookups_per_month` — a forecast for a place, read from MET Norway under
- * `src/server/weather/`. Only an outbound call spends it, one unit each, and a cached day
- * spends nothing, so the figure counts requests to the provider and not days shown on a
- * board. The providers cost nothing per call; the ceiling exists to bound a loop and to
- * respect the provider's own rate policy. A cold trip spends one unit per location, so
+ * `weather_lookups_per_month` — a forecast for a place, read from MET Norway, or the recorded
+ * days of a one-decimal cell, read from NASA POWER, both under `src/server/weather/`. Only an
+ * outbound call spends it, one unit each, and a cached day spends nothing, so the figure counts
+ * requests to the provider and not days shown on a board. The providers cost nothing per call;
+ * the ceiling exists to bound a loop and to respect the provider's own rate policy. A cold trip
+ * spends one unit per location, and two for a place it has both left and still has ahead, so
  * Free's 300 is hundreds of cold trip views a month, and Solo and Crew keep the
  * four-times step the others have. Free's allowance is non-zero because the surface that
  * spends it is on: the day-by-day itinerary is in Free's catalogue entry

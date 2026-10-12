@@ -309,6 +309,10 @@ const messages = {
     'Prakiraan: tertinggi {max}, terendah {min}',
   'plan.weather.badge.unavailable': 'Cuaca tidak tersedia untuk hari ini',
   'plan.weather.badge.loading': 'Memuat cuaca',
+  'plan.weather.badge.recorded': 'Tercatat: tertinggi {max}, terendah {min}',
+  'plan.weather.badge.recordedHigh': 'Tercatat: tertinggi {max}',
+  'plan.weather.badge.recordedLow': 'Tercatat: terendah {min}',
+  'plan.weather.badge.notYetRecorded': 'Belum tercatat',
   'plan.weather.condition.clear': 'Cerah',
   'plan.weather.condition.fair': 'Cukup cerah',
   'plan.weather.condition.partlyCloudy': 'Sebagian berawan',
@@ -333,7 +337,12 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Pagi',
   'plan.weather.panel.slot.afternoon': 'Siang',
   'plan.weather.panel.slot.evening': 'Malam',
+  'plan.weather.panel.high': 'Tertinggi',
+  'plan.weather.panel.low': 'Terendah',
+  'plan.weather.panel.recordedNote': 'Nilai terukur pada hari tersebut.',
   'plan.weather.attribution.metNorway': 'Data prakiraan: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Sumber data: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages
