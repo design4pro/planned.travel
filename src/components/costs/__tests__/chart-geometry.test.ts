@@ -214,6 +214,16 @@ describe('allocatePercents', () => {
     expect(allocatePercents([80, 24, 24])).toEqual([62, 19, 19])
   })
 
+  it('never gives a row 100 while another row has spend', () => {
+    // 99.7 and 0.3: the point goes to the sliver, so no row claims the whole.
+    expect(allocatePercents([997, 3])).toEqual([99, 1])
+    expect(allocatePercents([1, 99_999])).toEqual([1, 99])
+  })
+
+  it('still gives a lone row all 100', () => {
+    expect(allocatePercents([0, 5_000])).toEqual([0, 100])
+  })
+
   it('gives a skipped value zero and still sums to 100', () => {
     const percents = allocatePercents([2, -1, 1])
 

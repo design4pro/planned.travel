@@ -141,6 +141,9 @@ function Legend({
 
   return (
     <ul
+      // Safari drops the list role from a list whose items are `display: grid`, and
+      // the label with it.
+      role="list"
       aria-label={t('costs.categories.legendLabel')}
       className="flex flex-col gap-3"
     >

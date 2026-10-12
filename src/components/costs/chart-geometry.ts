@@ -10,8 +10,14 @@ import { formatPercent } from '#/lib/format'
 
 import type { Locale } from '#/lib/i18n'
 
-/** The least a segment may sweep, so a sliver of spend is still a visible mark. */
-export const MIN_SWEEP_DEGREES = 0.5
+/**
+ * The least a segment may sweep, so a sliver of spend is still a visible mark.
+ *
+ * The gap between neighbours is a 1.5-unit stroke centred on each edge, so it covers
+ * 0.75 units of the segment at both ends. At the inner radius (31 of 100) a segment
+ * must be wider than that plus a pixel or so to show any fill: 5 degrees is 2.7 units.
+ */
+export const MIN_SWEEP_DEGREES = 5
 
 /** The share below which a category reads `<1%` instead of a rounded `0%` or `1%`. */
 const BELOW_ONE_SHARE = 0.01
@@ -140,7 +146,9 @@ export function ringPath(
  * Whole percents that add up to exactly 100, by the largest-remainder method.
  *
  * Floor every share, then hand the leftover points one each to the biggest fractional
- * parts, ties going to the earlier row. Leaving the whole residue on the largest row
+ * parts, ties going to the earlier row. A row never reaches 100 while another row has
+ * spend, so the legend cannot print "100%" beside a category that is not nothing: the
+ * point goes to the next remainder instead. Leaving the whole residue on the largest row
  * would misstate it by up to `n - 1` points: eight categories at 12.5% would print 16%
  * on one. A value that is not a positive finite number gets 0.
  */
@@ -159,9 +167,13 @@ export function allocatePercents(values: ReadonlyArray<number>): Array<number> {
     .map((share, index) => ({ index, remainder: share - Math.floor(share) }))
     .filter(({ index }) => weights[index] > 0)
     .sort((a, b) => b.remainder - a.remainder || a.index - b.index)
+  const sharedAmongSeveral = byRemainder.length > 1
   for (const { index } of byRemainder) {
     if (leftover <= 0) {
       break
+    }
+    if (sharedAmongSeveral && percents[index] >= 99) {
+      continue
     }
     percents[index] += 1
     leftover -= 1

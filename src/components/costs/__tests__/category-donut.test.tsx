@@ -129,6 +129,16 @@ describe('the ring', () => {
 })
 
 describe('the legend', () => {
+  it('carries an explicit list role, which Safari drops from a grid list', () => {
+    renderDonut(ROWS)
+
+    expect(
+      screen
+        .getByRole('list', { name: 'Spend by category' })
+        .getAttribute('role'),
+    ).toBe('list')
+  })
+
   it('is a labelled list with a row per category that has spend or a plan', () => {
     renderDonut([...ROWS, donut('fees', 0, 0, 'Fees & charges')])
 
@@ -156,6 +166,8 @@ describe('the legend', () => {
     expect(accessibleText(fees)).toBe('Fees & charges, less than 1%, €3.00')
     expect(fees.textContent).toContain('<1%')
     expect(legendItems()[0].textContent).not.toContain('<1%')
+    // Not "100%": no row claims the whole beside a category that has spend.
+    expect(accessibleText(legendItems()[0])).toBe('Food & drink, 99%, €997.00')
   })
 
   it('never reads a zero share as below one', () => {
