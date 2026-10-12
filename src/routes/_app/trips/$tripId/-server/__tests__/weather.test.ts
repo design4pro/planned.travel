@@ -317,7 +317,7 @@ describe('loadTripWeather', () => {
     const port = ports()
 
     await expect(
-      loadTripWeather(outsider, { tripId }, port),
+      loadTripWeather(outsider, { tripId, recorded: true }, port),
     ).rejects.toBeInstanceOf(NotFoundError)
 
     expect(port.weather).not.toHaveBeenCalled()
@@ -328,7 +328,7 @@ describe('loadTripWeather', () => {
     const port = ports()
 
     await expect(
-      loadTripWeather(owner, { tripId: foreignTripId }, port),
+      loadTripWeather(owner, { tripId: foreignTripId, recorded: true }, port),
     ).rejects.toBeInstanceOf(NotFoundError)
 
     expect(port.weather).not.toHaveBeenCalled()
@@ -363,7 +363,11 @@ describe('loadTripWeather', () => {
   })
 
   it('contains nothing but the day ids, the statuses, the readings and the unit', async () => {
-    const result = await loadTripWeather(owner, { tripId }, ports())
+    const result = await loadTripWeather(
+      owner,
+      { tripId, recorded: true },
+      ports(),
+    )
 
     const text = JSON.stringify(result)
     const hotelStayKeys = ['placeId', 'accommodation', 'userId', 'memberId']

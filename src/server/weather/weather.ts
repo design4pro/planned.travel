@@ -55,7 +55,8 @@
  *
  * ## Bounds
  *
- * A request resolves at most {@link WEATHER_MAX_LOCATIONS} distinct locations, in the order given.
+ * A request resolves at most {@link WEATHER_MAX_LOCATIONS} distinct locations, in the order given,
+ * those with a forecast before those with only recorded days.
  * Each call is aborted at {@link WEATHER_CALL_TIMEOUT_MS}, inside a {@link WEATHER_DEADLINE_MS}
  * deadline for the whole request. The per-call bound is the smaller on purpose: calls fan out under
  * the deadline, and a per-call bound above it could never fire - one hung provider would take every
@@ -161,6 +162,12 @@ export interface RecordedProvider {
    * property of the service and not of this policy.
    */
   readonly lagDays: number
+  /**
+   * The first date the provider holds data for (`YYYY-MM-DD`). A trip dated earlier is read as `none`
+   * and never asked for: the provider refuses such a range, and a refusal is remembered per cell, so
+   * one workspace's mistyped year would otherwise blank the cell for every other workspace.
+   */
+  readonly firstDate: string
   /** Every day from `range.start` to `range.end` (inclusive, `YYYY-MM-DD`), keyed by its date. */
   readonly daily: (
     lat: number,
@@ -883,18 +890,24 @@ export interface KindWindow {
   readonly forecastEnd: string
   /** The last date the recorded provider has published; see {@link lastRecordedDate}. */
   readonly recordedEnd: string
+  /** The first date the recorded provider holds data for. */
+  readonly recordedStart: string
 }
 
 /**
  * Which kind of reading a date gets. Pure, and the one place the boundaries between the kinds are
  * written: today is always a forecast day, the forecast stops where its window ends, and a past day
- * is recorded once the provider has published it and not yet recorded until then.
+ * is recorded once the provider has published it and not yet recorded until then. A past day from
+ * before the provider's data begins is `none`.
  *
- * A date beyond the forecast is `none` today; it is where a climate estimate will take over.
+ * A date beyond the forecast is `none` today; it is where an estimate will take over.
  */
 export function selectKind(date: string, window: KindWindow): DayKind {
   if (date >= window.today) {
     return date <= window.forecastEnd ? 'forecast' : 'none'
+  }
+  if (date < window.recordedStart) {
+    return 'none'
   }
   return date <= window.recordedEnd ? 'recorded' : 'not-yet-recorded'
 }
@@ -1044,7 +1057,12 @@ async function resolvePlaces(
     const coldForecast = [...plan.forecast].filter(
       ([key]) => !into.forecast.has(key),
     )
-    const coldRecorded = [...pending]
+    // In the order of the plan, not of the reads: which cell the grant reaches must not depend on
+    // which cache read finished first.
+    const coldRecorded = [...plan.recorded.keys()].flatMap((cell) => {
+      const dates = pending.get(cell)
+      return dates === undefined ? [] : [[cell, dates] as const]
+    })
     const granted = await spendRateUnits(
       runtime.counters,
       {
@@ -1183,7 +1201,7 @@ const cellOf = (coordinate: WeatherCoordinate): string =>
  * for recorded days, in which case it is `recorded` or, inside the provider's publication lag,
  * `not-yet-recorded`. The rest are grouped by rounded coordinate - one call serves every forecast
  * day at a place, and one every recorded day of a cell - and at most {@link WEATHER_MAX_LOCATIONS}
- * places are resolved, the earliest first.
+ * places are resolved, those with a forecast first and each kind earliest first.
  */
 export async function resolveTripWeather(
   runtime: WeatherRuntime,
@@ -1201,6 +1219,7 @@ export async function resolveTripWeather(
       todayKeyIn('UTC', runtime.now()),
       runtime.nasaPower.lagDays,
     ),
+    recordedStart: runtime.nasaPower.firstDate,
   }
 
   const eligible = queries.map((query): Eligible | null => {
@@ -1227,15 +1246,19 @@ export async function resolveTripWeather(
   })
 
   // A day not yet recorded asks nothing of anyone, so it takes no place in the cap.
+  // The forecast takes its places before the recorded days do, each in day order: a trip under way
+  // keeps today's forecast however many places it has already left behind.
   const kept = new Map<string, WeatherCoordinate>()
-  for (const entry of eligible) {
-    if (
-      entry !== null &&
-      entry.kind !== 'not-yet-recorded' &&
-      !kept.has(entry.key) &&
-      kept.size < WEATHER_MAX_LOCATIONS
-    ) {
-      kept.set(entry.key, entry.coordinate)
+  for (const kind of ['forecast', 'recorded'] as const) {
+    for (const entry of eligible) {
+      if (
+        entry !== null &&
+        entry.kind === kind &&
+        !kept.has(entry.key) &&
+        kept.size < WEATHER_MAX_LOCATIONS
+      ) {
+        kept.set(entry.key, entry.coordinate)
+      }
     }
   }
 

@@ -78,17 +78,7 @@ export function DayWeatherBadge({
   }
 
   if (model.kind === 'unavailable') {
-    return (
-      <div data-part="day-weather" className={BOX}>
-        <span
-          role="img"
-          aria-label={t('trips.plan.weather.badge.unavailable')}
-          className="text-caption text-ink-4"
-        >
-          —
-        </span>
-      </div>
-    )
+    return <UnavailableBadge />
   }
 
   if (model.kind === 'notYetRecorded') {
@@ -97,6 +87,7 @@ export function DayWeatherBadge({
         <span
           role="img"
           aria-label={t('trips.plan.weather.badge.notYetRecorded')}
+          title={t('trips.plan.weather.badge.notYetRecorded')}
           className="text-ink-4"
         >
           <Clock size={15} strokeWidth={2} aria-hidden="true" />
@@ -105,7 +96,11 @@ export function DayWeatherBadge({
     )
   }
 
-  const { name, Icon, muted, lead, trail } = readingFace(model, t, locale)
+  const face = readingFace(model, t, locale)
+  if (face === null) {
+    return <UnavailableBadge />
+  }
+  const { name, Icon, muted, lead, trail } = face
 
   return (
     <div data-part="day-weather" className={BOX}>
@@ -150,6 +145,22 @@ export function DayWeatherBadge({
   )
 }
 
+/** A day that should have a reading and has none: a dash with a name, never a figure. */
+function UnavailableBadge() {
+  const t = useTranslate()
+  return (
+    <div data-part="day-weather" className={BOX}>
+      <span
+        role="img"
+        aria-label={t('trips.plan.weather.badge.unavailable')}
+        className="text-caption text-ink-4"
+      >
+        —
+      </span>
+    </div>
+  )
+}
+
 type ReadingModel = Extract<
   WeatherBadgeModel,
   { readonly kind: 'forecast' | 'recorded' }
@@ -159,7 +170,7 @@ type ReadingModel = Extract<
  * How a reading is drawn and named. A forecast is the condition icon and "high/low"; a recorded day
  * is the thermometer, and its name begins "Recorded" so nobody takes a measurement for a forecast
  * or the reverse. A recorded day that lacks one temperature draws the one it has, and its name
- * says which it is.
+ * says which it is, and one with neither has no face.
  */
 function readingFace(
   model: ReadingModel,
@@ -171,7 +182,7 @@ function readingFace(
   readonly muted: boolean
   readonly lead: string
   readonly trail: string | null
-} {
+} | null {
   const figure = (value: number) => `${formatNumber(value, locale)}°`
   if (model.kind === 'forecast') {
     const max = figure(model.max)
@@ -217,13 +228,16 @@ function readingFace(
       trail: null,
     }
   }
-  // A recorded reading always has one of the two; the type cannot say so.
-  const only = min ?? 0
+  // A recorded reading always has one of the two, but the type cannot say so, and a missing
+  // figure is not drawn as a zero.
+  if (min === null) {
+    return null
+  }
   return {
-    name: t('trips.plan.weather.badge.recordedLow', { min: withUnit(only) }),
+    name: t('trips.plan.weather.badge.recordedLow', { min: withUnit(min) }),
     Icon: Thermometer,
     muted: true,
-    lead: figure(only),
+    lead: figure(min),
     trail: null,
   }
 }

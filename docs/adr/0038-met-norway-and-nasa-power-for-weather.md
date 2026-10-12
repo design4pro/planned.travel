@@ -57,7 +57,7 @@ are the only code that changes.
 - A `User-Agent` that identifies the application and gives a contact. A request without one is answered
   with 403.
 - Responses are cached, and `Expires` and `If-Modified-Since` are honoured.
-- Coordinates are truncated to at most four decimals.
+- Coordinates are truncated to at most four decimals (NASA POWER is sent one; see the Amendment).
 - At most 20 requests per second per application, spread out rather than simultaneous.
 - HTTPS and gzip. The Workers runtime negotiates gzip on every outbound `fetch`, so no `Accept-Encoding`
   header is set by hand.
@@ -72,7 +72,7 @@ are the only code that changes.
 ### What each provider receives, and what it may do with it
 
 The only tenant data a provider receives is **a trip coordinate, truncated to four decimals** (about
-11 m), taken from a place the trip already holds. Neither request carries a trip id, a place id, a
+11 m; one decimal for NASA POWER, see the Amendment), taken from a place the trip already holds. Neither request carries a trip id, a place id, a
 workspace id, a member id, a name or a note. The date or date range asked for is the second thing a
 provider learns, and with the coordinate it is the whole of the disclosure.
 
@@ -82,7 +82,7 @@ provider learns, and with the coordinate it is the whole of the disclosure.
 | NASA POWER | Coordinate (one decimal), date range, Worker egress address                     | Answer the request. The terms place no restriction on our use of what it returns, and none is relied on for what it does with the request.                                | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
 
 Because a provider may keep a request log for as long as it likes, the rule is about what we send, not
-about what they delete: the four-decimal truncation is applied before the request is built and before
+about what they delete: the truncation (four decimals, one for NASA POWER) is applied before the request is built and before
 the cache key is built, and nothing else about the trip, the workspace or the traveller is attached.
 
 What we may keep is the other half of the retention question, and it is the one that decided ADR 0013.

@@ -48,15 +48,19 @@ export function DayWeatherPanel({
         }),
   ].filter((part): part is string => part !== null)
 
+  const temperature = temperatureText(model.max, model.min, model.unit, locale)
+
   return (
     <div
       data-part="day-weather-panel"
       className={cn('flex flex-col gap-3', className)}
     >
       <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-caption">
-        <Row label={t(temperatureLabel(model.max, model.min))}>
-          {temperatureText(model.max, model.min, model.unit, locale)}
-        </Row>
+        {temperature === null ? null : (
+          <Row label={t(temperatureLabel(model.max, model.min))}>
+            {temperature}
+          </Row>
+        )}
         {precipitation.length === 0 ? null : (
           <Row label={t('trips.plan.weather.panel.precipitation')}>
             {precipitation.join(' · ')}
@@ -135,15 +139,17 @@ function temperatureLabel(max: number | null, min: number | null): MessageKey {
   return 'trips.plan.weather.panel.temperature'
 }
 
+/** The figures of a day, or `null` when it has neither: a missing figure is never drawn as a zero. */
 function temperatureText(
   max: number | null,
   min: number | null,
   unit: 'C' | 'F',
   locale: Locale,
-): string {
+): string | null {
   const figure = (value: number) => `${formatNumber(value, locale)}°`
   if (max === null || min === null) {
-    return `${figure(max ?? min ?? 0)}${unit}`
+    const only = max ?? min
+    return only === null ? null : `${figure(only)}${unit}`
   }
   return `${figure(max)} / ${figure(min)}${unit}`
 }

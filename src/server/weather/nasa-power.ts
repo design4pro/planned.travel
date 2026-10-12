@@ -44,6 +44,13 @@ export const NASA_POWER_ENDPOINT =
  */
 export const POWER_LAG_DAYS = 3
 
+/**
+ * The first date the service holds data for. A range starting earlier is refused with a 422 ("Your
+ * start date out of range. The data starts at 1981/01/01."), measured against the live service on
+ * 2026-10-12 for 1926-01-01 and 1980-01-01 while 1981-01-01 answered 200.
+ */
+export const POWER_FIRST_DATE = '1981-01-01'
+
 /** What the service answers in a field's place for a day it has no value for. */
 const FILL_VALUE = -999
 
@@ -137,6 +144,7 @@ export function createNasaPowerClient(
 ): NasaPowerClient {
   return {
     lagDays: POWER_LAG_DAYS,
+    firstDate: POWER_FIRST_DATE,
     async daily(lat, lng, range, init) {
       const url = new URL(NASA_POWER_ENDPOINT)
       url.searchParams.set('parameters', PARAMETERS)

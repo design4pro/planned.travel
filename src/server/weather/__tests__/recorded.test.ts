@@ -265,6 +265,7 @@ describe('choosing the kind of reading a day gets', () => {
     today: '2026-10-12',
     forecastEnd: '2026-10-17',
     recordedEnd: '2026-10-09',
+    recordedStart: '1981-01-01',
   }
 
   it('gives today a forecast, and the day before it a day not yet recorded', () => {
@@ -281,6 +282,11 @@ describe('choosing the kind of reading a day gets', () => {
     expect(selectKind('2026-10-10', window)).toBe('not-yet-recorded')
     expect(selectKind('2026-10-09', window)).toBe('recorded')
     expect(selectKind('2026-09-01', window)).toBe('recorded')
+  })
+
+  it('gives a past day from before the provider’s data begins nothing', () => {
+    expect(selectKind('1981-01-01', window)).toBe('recorded')
+    expect(selectKind('1980-12-31', window)).toBe('none')
   })
 
   it('treats today as a forecast day even when the forecast reaches no further than today', () => {
@@ -306,6 +312,24 @@ describe('choosing the kind of reading a day gets', () => {
 /* ------------------------------------------------------------ what a day gets */
 
 describe('the days a trip has already lived', () => {
+  it('never asks the provider for a day before its data begins, and blames no cell for the date', async () => {
+    const w = world()
+
+    const outcomes = await resolveTripWeather(
+      w.runtime,
+      [day('1026-10-05'), day('1980-12-31')],
+      ZONE,
+      RECORDED,
+    )
+
+    expect(statuses(outcomes)).toEqual(['none', 'none'])
+    expect(w.vendors.nasa).toHaveLength(0)
+    expect(spent(w.counters)).toBe(0)
+    expect(
+      [...w.cache.entries.keys()].filter((key) => key.includes(':fail:')),
+    ).toEqual([])
+  })
+
   it('reads every recorded day of a place from one call', async () => {
     const w = world()
 
@@ -851,6 +875,26 @@ describe('the allowance', () => {
     expect(spent(w.counters)).toBe(1)
   })
 
+  it('grants the cells in the order of the trip, not of the cache reads', async () => {
+    const w = world({ ceiling: 1 })
+    const cells = [
+      { lat: 59.9, lng: 10.8 },
+      { lat: 48.9, lng: 2.4 },
+      { lat: 41.9, lng: 12.5 },
+    ]
+
+    const outcomes = await resolveTripWeather(
+      w.runtime,
+      cells.map((location) => day('2026-10-05', location)),
+      ZONE,
+      RECORDED,
+    )
+
+    expect(statuses(outcomes)).toEqual(['ok', 'unavailable', 'unavailable'])
+    expect(w.vendors.nasa).toHaveLength(1)
+    expect(new URL(w.vendors.nasa[0]).searchParams.get('latitude')).toBe('59.9')
+  })
+
   it('leaves cached recorded days drawn when it is spent', async () => {
     const w = world()
     const queries = trip('2026-10-01', '2026-10-03')
@@ -893,6 +937,29 @@ describe('the cap on a single request', () => {
     )
     expect(outcomes[WEATHER_MAX_LOCATIONS]).toEqual({ status: 'unavailable' })
     expect(w.vendors.nasa).toHaveLength(WEATHER_MAX_LOCATIONS)
+  })
+
+  it('keeps today’s forecast however many places the trip has already left behind', async () => {
+    const w = world()
+    const places = Array.from(
+      { length: WEATHER_MAX_LOCATIONS + 1 },
+      (_, i) => ({ lat: 10 + i * 2, lng: 20 }),
+    )
+    const here = { lat: 59.9139, lng: 10.7522 }
+
+    const outcomes = await resolveTripWeather(
+      w.runtime,
+      [
+        ...places.map((place) => day('2026-10-01', place)),
+        day('2026-10-13', here),
+      ],
+      ZONE,
+      RECORDED,
+    )
+
+    expect(outcomes.at(-1)?.status).toBe('ok')
+    expect(w.vendors.met).toHaveLength(1)
+    expect(w.vendors.nasa).toHaveLength(WEATHER_MAX_LOCATIONS - 1)
   })
 })
 

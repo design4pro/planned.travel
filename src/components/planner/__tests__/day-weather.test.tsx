@@ -171,11 +171,22 @@ describe('DayWeatherBadge', () => {
     expect(button.textContent).toBe('8°C')
   })
 
+  it('draws a recorded day with neither temperature as the unavailable dash, never as a zero', () => {
+    badge(recorded({ ...RECORDED, tempMinC: null, tempMaxC: null }))
+
+    const dash = screen.getByRole('img', {
+      name: 'Weather unavailable for this day',
+    })
+    expect(dash.textContent).toBe('—')
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
   it('shows a not-yet-recorded day as its own picture, with no control and no number', () => {
     badge(NOT_YET)
 
     const picture = screen.getByRole('img', { name: 'Not yet recorded' })
     expect(picture.textContent).toBe('')
+    expect(picture.getAttribute('title')).toBe('Not yet recorded')
     expect(screen.queryByRole('button')).toBeNull()
     // It is not the unavailable dash.
     expect(
