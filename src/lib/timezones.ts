@@ -160,6 +160,19 @@ export function hourIn(iso: string, zone: string): number {
 }
 
 /**
+ * The wall-clock time, `HH:mm`, at an instant in a zone, from the same `h23` parts as
+ * {@link hourIn} so midnight is `00:00` and never `24:00`.
+ *
+ * `zone` is expected to be one the platform accepts, as {@link resolveTimeZone} makes it.
+ */
+export function clockIn(iso: string, zone: string): string {
+  const parts = offsetFormatter(zone).formatToParts(new Date(iso))
+  const read = (type: 'hour' | 'minute') =>
+    parts.find((part) => part.type === type)?.value ?? '00'
+  return `${read('hour')}:${read('minute')}`
+}
+
+/**
  * `UTC+9`, `UTC+5:30`, `UTC-8`, `UTC` — the offset of a zone on a given date.
  *
  * The minutes are printed only when there are any, because `UTC+9:00` reads as a

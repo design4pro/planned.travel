@@ -237,6 +237,20 @@ describe('loadTripWeather', () => {
     expect(JSON.stringify(result)).not.toMatch(/fetchedAt|lat|lng|59\.9/)
   })
 
+  it('carries each located day’s sunrise and sunset, in the trip’s zone, for no further call', async () => {
+    const port = ports()
+
+    const result = await loadTripWeather(owner, { tripId }, port)
+
+    const last = result.days[2]
+    if (last.status !== 'ok') {
+      throw new Error('The last day has a stay and is inside the window.')
+    }
+    // Oslo on 10 October at UTC+2, as the NOAA Solar Calculator's own code works it out.
+    expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+    expect(port.requested).toHaveLength(1)
+  })
+
   it('lets a viewer of the trip read it', async () => {
     const result = await loadTripWeather(reader, { tripId }, ports())
 
@@ -275,7 +289,7 @@ describe('loadTripWeather', () => {
     ).toBeLessThan(30)
   })
 
-  it('groups a trip with no time zone in UTC, whatever zone the reader is in', async () => {
+  it('groups a trip with no time zone in UTC, whatever zone the reader is in, and gives it no sun times', async () => {
     const make = async (timezone: string | undefined) => {
       const trip = await createTrip(owner, {
         title: 'Zone check',
@@ -310,7 +324,15 @@ describe('loadTripWeather', () => {
     const utc = await make('UTC')
     await updateOrganizationSettings(owner, { timezone: 'Pacific/Auckland' })
 
-    expect(await readings(unzoned)).toEqual(await readings(utc))
+    const withSun = await readings(utc)
+    // The groupings are one and the same; the unzoned trip simply carries no sun, because sunrise
+    // and sunset in UTC would be the wrong clock for the place.
+    expect(await readings(unzoned)).toEqual(
+      withSun.map((day) =>
+        day.status === 'ok' ? { status: 'ok', reading: day.reading } : day,
+      ),
+    )
+    expect(withSun.some((day) => day.status === 'ok' && day.sun)).toBe(true)
   })
 
   it('is not-found for a private trip the caller is not on, before the runtime is built', async () => {

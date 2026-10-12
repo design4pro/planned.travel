@@ -11,6 +11,8 @@
  * coordinate with another must not be able to tell from it that the other one exists.
  */
 
+import type { SunTimes } from '#/lib/sun'
+
 /** Which unit a reader sees temperatures in; the reader's existing distance unit decides. */
 export type WeatherUnit = 'metric' | 'imperial'
 
@@ -92,6 +94,12 @@ export type DayWeather =
       readonly dayId: string
       readonly status: 'ok'
       readonly reading: DayReading
+      /**
+       * Sunrise and sunset in the trip's zone, worked out from the place and the date. Absent
+       * from an answer that predates it and from a trip with no zone of its own, whose UTC clock
+       * would be the wrong one; the panel leaves the rows out then.
+       */
+      readonly sun?: SunTimes
     }
 
 export interface TripWeather {
