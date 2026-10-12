@@ -604,6 +604,13 @@ const messages = {
   'passkeys.error.retry': 'Повторити',
   'passkeys.error.rateLimited': 'Забагато спроб. Повторіть за кілька хвилин.',
   'passkeys.error.generic': 'Перевірте з’єднання й повторіть спробу.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Перейменувати: {name}',
+  'passkeys.rename.fieldLabel': 'Назвіть цей ключ доступу',
+  'passkeys.rename.placeholder': 'Дайте назву, наприклад Робочий телефон',
+  'passkeys.rename.saving': 'Зберігаємо назву',
+  'passkeys.rename.saved': 'Назву збережено',
+  'passkeys.rename.failed': 'Назву не збережено',
 } satisfies TranslationOf<typeof En>
 
 export default messages

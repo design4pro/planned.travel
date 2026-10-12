@@ -589,6 +589,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Túl sok próbálkozás. Próbálja újra néhány perc múlva.',
   'passkeys.error.generic': 'Ellenőrizze a kapcsolatot, és próbálja újra.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': '{name} átnevezése',
+  'passkeys.rename.fieldLabel': 'Nevezze el ezt a belépési kulcsot',
+  'passkeys.rename.placeholder': 'Adjon neki nevet, például Munkahelyi telefon',
+  'passkeys.rename.saving': 'A név mentése',
+  'passkeys.rename.saved': 'Név elmentve',
+  'passkeys.rename.failed': 'A név nem lett elmentve',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -582,6 +582,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin.',
   'passkeys.error.generic': 'Bağlantınızı kontrol edip tekrar deneyin.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': '{name} adını değiştir',
+  'passkeys.rename.fieldLabel': 'Bu geçiş anahtarını adlandırın',
+  'passkeys.rename.placeholder': 'Bir ad verin, örneğin İş telefonu',
+  'passkeys.rename.saving': 'Ad kaydediliyor',
+  'passkeys.rename.saved': 'Ad kaydedildi',
+  'passkeys.rename.failed': 'Ad kaydedilmedi',
 } satisfies TranslationOf<typeof En>
 
 export default messages

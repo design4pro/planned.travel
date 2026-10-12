@@ -596,6 +596,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Te veel pogingen. Probeer het over een paar minuten opnieuw.',
   'passkeys.error.generic': 'Controleer je verbinding en probeer het opnieuw.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': '{name} hernoemen',
+  'passkeys.rename.fieldLabel': 'Geef deze toegangssleutel een naam',
+  'passkeys.rename.placeholder': 'Geef hem een naam, zoals Werktelefoon',
+  'passkeys.rename.saving': 'Naam opslaan',
+  'passkeys.rename.saved': 'Naam opgeslagen',
+  'passkeys.rename.failed': 'De naam is niet opgeslagen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -51,6 +51,17 @@ export function loadFailureNotice(failure: AuthFailure): PasskeyNotice {
   )
 }
 
+/**
+ * Why a name was not saved. A `401` and a `429` say so by name, as everywhere on this screen;
+ * anything else (a refused or impersonated session, a passkey that is gone, a dropped connection)
+ * is the one sentence "The name was not saved".
+ */
+export function renameFailureNotice(failure: AuthFailure): PasskeyNotice {
+  return (
+    sharedNotice(failure) ?? notice('settings.passkeys.rename.failed', 'danger')
+  )
+}
+
 /** The outcome of a registration that did not add a passkey. */
 export type RegistrationOutcome =
   /** The account is at the ceiling: a standing line beside the button, not a passing message. */

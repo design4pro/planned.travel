@@ -667,6 +667,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Too many attempts. Try again in a few minutes.',
   'passkeys.error.generic': 'Check your connection and try again.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Rename {name}',
+  'passkeys.rename.fieldLabel': 'Name this passkey',
+  'passkeys.rename.placeholder': 'Name it, like Work phone',
+  'passkeys.rename.saving': 'Saving the name',
+  'passkeys.rename.saved': 'Name saved',
+  'passkeys.rename.failed': 'The name was not saved',
 } as const satisfies NamespaceMessages
 
 export default messages

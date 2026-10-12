@@ -580,6 +580,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Terlalu banyak percobaan. Coba lagi dalam beberapa menit.',
   'passkeys.error.generic': 'Periksa koneksi Anda lalu coba lagi.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Ganti nama {name}',
+  'passkeys.rename.fieldLabel': 'Beri nama kunci sandi ini',
+  'passkeys.rename.placeholder': 'Beri nama, misalnya Ponsel kerja',
+  'passkeys.rename.saving': 'Menyimpan nama',
+  'passkeys.rename.saved': 'Nama disimpan',
+  'passkeys.rename.failed': 'Nama tidak disimpan',
 } satisfies TranslationOf<typeof En>
 
 export default messages

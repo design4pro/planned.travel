@@ -376,6 +376,30 @@ export async function listPasskeys(): Promise<PasskeyListResult> {
   }
 }
 
+export type PasskeyRenameResult =
+  | { readonly ok: true; readonly passkey: PasskeySummary }
+  | { readonly ok: false; readonly failure: AuthFailure }
+
+/** Names a passkey, or changes its name. The server trims; it never accepts an empty name. */
+export async function renamePasskey(
+  id: string,
+  name: string,
+): Promise<PasskeyRenameResult> {
+  try {
+    const payload = await postToAuth('/passkey/rename', { id, name })
+    const passkey =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { passkey?: unknown }).passkey
+        : undefined
+    if (!isPasskeySummary(passkey)) {
+      return { ok: false, failure: UNKNOWN_FAILURE }
+    }
+    return { ok: true, passkey }
+  } catch (cause) {
+    return { ok: false, failure: passkeyFailure(cause) }
+  }
+}
+
 interface RegistrationOptionsResponse {
   challenge: string
   rp: PublicKeyCredentialRpEntity

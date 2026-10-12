@@ -228,6 +228,14 @@ export function createAuthHarness({ sqlite, handler, kv }: HarnessOptions) {
     return row.total
   }
 
+  /** The stored name of a passkey, `null` when it is unnamed; `undefined` when the row is gone. */
+  function passkeyName(id: string): string | null | undefined {
+    const row = sqlite
+      .prepare('select name from passkey where id = ?')
+      .get(id) as { name: string | null } | undefined
+    return row?.name
+  }
+
   /** Open registration challenges: every one is a row `register/options` wrote and nothing consumed. */
   function challengeCount(): number {
     const row = sqlite
@@ -247,6 +255,7 @@ export function createAuthHarness({ sqlite, handler, kv }: HarnessOptions) {
     editSession,
     seedPasskeys,
     passkeyCount,
+    passkeyName,
     challengeCount,
   }
 }

@@ -8,8 +8,9 @@
  * reaches.
  *
  * Ticket 09-S1a: list isolation, the per-user ceiling, the impersonation veto and the freshness
- * rule on registration, and the registration rate limits. Tickets b and c append their cases to
- * this file and reuse `./harness`.
+ * rule on registration, and the registration rate limits. Ticket 09-S1b: rename (ownership, the
+ * strict body, the impersonation veto, its rate limit). Ticket c appends its cases to this file and
+ * reuses `./harness`.
  *
  * The mocks are the ones `../../__tests__/auth-handler-closure.test.ts` establishes: `env`
  * imports `cloudflare:workers`, so it is replaced with plain values, the database is an
@@ -410,5 +411,169 @@ describe('the registration rate limits', () => {
 
     // Another client is untouched by the first one's budget.
     expect((await register(cookie, behindCloudflare(second))).status).toBe(200)
+  })
+})
+
+describe('POST /passkey/rename', () => {
+  function rename(cookie: string | undefined, body: unknown) {
+    return auth.post('/passkey/rename', body, { cookie })
+  }
+
+  it('renames the callers own passkey, trimmed, and returns it without a public key', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    const response = await rename(cookie, {
+      id: 'alice-1',
+      name: '  Work phone ',
+    })
+
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as {
+      passkey: { id: string; name: string }
+    }
+    expect(body.passkey).toMatchObject({ id: 'alice-1', name: 'Work phone' })
+    expect(body.passkey).not.toHaveProperty('publicKey')
+    expect(auth.passkeyName('alice-1')).toBe('Work phone')
+  })
+
+  it('renames a passkey that already has a name', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Old' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    expect((await rename(cookie, { id: 'alice-1', name: 'New' })).status).toBe(
+      200,
+    )
+    expect(auth.passkeyName('alice-1')).toBe('New')
+  })
+
+  it('answers not-found, never forbidden, for another persons passkey and leaves its name alone', async () => {
+    auth.seedPasskeys(bobId, [{ id: 'bob-1', name: 'Bobs key' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    const response = await rename(cookie, { id: 'bob-1', name: 'Mine now' })
+
+    expect(response.status).toBe(404)
+    expect(((await response.json()) as ErrorBody).code).toBe(
+      'PASSKEY_NOT_FOUND',
+    )
+    expect(auth.passkeyName('bob-1')).toBe('Bobs key')
+  })
+
+  it('answers the same not-found for an id that does not exist', async () => {
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    const response = await rename(cookie, { id: 'nobody', name: 'x' })
+
+    expect(response.status).toBe(404)
+    expect(((await response.json()) as ErrorBody).code).toBe(
+      'PASSKEY_NOT_FOUND',
+    )
+  })
+
+  it.each([
+    ['an empty name', ''],
+    ['a blank name', '   '],
+    ['a 65-character name', 'a'.repeat(65)],
+  ])('refuses %s and keeps the stored name', async (_label, name) => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Kept' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    const response = await rename(cookie, { id: 'alice-1', name })
+
+    expect(response.status).toBe(400)
+    expect(auth.passkeyName('alice-1')).toBe('Kept')
+  })
+
+  it('accepts a 64-character name (positive control for the bound)', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    const name = 'a'.repeat(64)
+    expect((await rename(cookie, { id: 'alice-1', name })).status).toBe(200)
+    expect(auth.passkeyName('alice-1')).toBe(name)
+  })
+
+  it('refuses a field the body does not declare, and writes nothing', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Kept' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+
+    const response = await rename(cookie, {
+      id: 'alice-1',
+      name: 'New',
+      userId: bobId,
+    })
+
+    expect(response.status).toBe(400)
+    expect(auth.passkeyName('alice-1')).toBe('Kept')
+  })
+
+  it('answers 401 without a session', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Kept' }])
+
+    const response = await rename(undefined, { id: 'alice-1', name: 'New' })
+
+    expect(response.status).toBe(401)
+    expect(auth.passkeyName('alice-1')).toBe('Kept')
+  })
+
+  it.each([
+    ['an operator id', 'usr_operator'],
+    ['an empty string', ''],
+  ])(
+    'refuses an impersonated session when impersonatedBy is %s, and writes nothing',
+    async (_label, marker) => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Kept' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+      auth.editSession(aliceId, 'impersonated_by', marker)
+
+      const response = await rename(cookie, { id: 'alice-1', name: 'New' })
+
+      expect(response.status).toBe(403)
+      expect(((await response.json()) as ErrorBody).code).toBe(
+        'PASSKEY_IMPERSONATED',
+      )
+      expect(auth.passkeyName('alice-1')).toBe('Kept')
+    },
+  )
+
+  it('is not held back by the freshness rule, which belongs to registration', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+    auth.editSession(aliceId, 'created_at', Date.now() - 25 * HOUR_MS)
+
+    expect(
+      (await rename(cookie, { id: 'alice-1', name: 'Old session' })).status,
+    ).toBe(200)
+  })
+})
+
+describe('the rename rate limit', () => {
+  const rules = passkey({
+    relyingPartyId: 'localhost',
+    relyingPartyName: 'planned.travel',
+    origins: [BASE_URL],
+  }).rateLimit
+
+  it('carries a rule of 5 per 300 s for /passkey/rename', () => {
+    const rule = rules?.find((entry) => entry.pathMatcher('/passkey/rename'))
+    expect(rule).toMatchObject({ window: 300, max: 5 })
+  })
+
+  it('answers 429 past the maximum, over HTTP', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+    const headers = {
+      'cf-connecting-ip': '203.0.113.30',
+      'x-forwarded-for': '198.51.100.7, 203.0.113.30',
+    }
+    const rename = (name: string) =>
+      auth.post('/passkey/rename', { id: 'alice-1', name }, { cookie, headers })
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      expect((await rename(`name ${attempt}`)).status).toBe(200)
+    }
+    expect((await rename('one too many')).status).toBe(429)
+    expect(auth.passkeyName('alice-1')).toBe('name 4')
   })
 })

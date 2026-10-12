@@ -579,6 +579,13 @@ const messages = {
   'passkeys.error.retry': 'Thử lại',
   'passkeys.error.rateLimited': 'Thử quá nhiều lần. Hãy thử lại sau vài phút.',
   'passkeys.error.generic': 'Hãy kiểm tra kết nối rồi thử lại.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Đổi tên {name}',
+  'passkeys.rename.fieldLabel': 'Đặt tên cho khóa truy cập này',
+  'passkeys.rename.placeholder': 'Đặt tên, ví dụ Điện thoại công việc',
+  'passkeys.rename.saving': 'Đang lưu tên',
+  'passkeys.rename.saved': 'Đã lưu tên',
+  'passkeys.rename.failed': 'Chưa lưu được tên',
 } satisfies TranslationOf<typeof En>
 
 export default messages

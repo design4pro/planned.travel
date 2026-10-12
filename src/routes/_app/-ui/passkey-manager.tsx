@@ -1,18 +1,31 @@
 import { useEffect, useRef, useState } from 'react'
-import { Fingerprint, Plus } from 'lucide-react'
+import { Fingerprint, Pencil, Plus } from 'lucide-react'
 
 import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
-import { Alert, Badge, Button, EmptyState, Skeleton } from '#/components/ui'
+import {
+  Alert,
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  Skeleton,
+} from '#/components/ui'
 import {
   isPasskeyEnrolmentSupported,
   listPasskeys,
   registerPasskey,
+  renamePasskey,
 } from '#/lib/auth/client'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import { cn } from '#/lib/cn'
 import { useI18n } from '#/lib/i18n'
 import { formatDate, formatNumber } from '../-lib/format'
-import { loadFailureNotice, registrationOutcome } from '../-lib/passkey-errors'
+import {
+  loadFailureNotice,
+  registrationOutcome,
+  renameFailureNotice,
+} from '../-lib/passkey-errors'
+import { PasskeyRenameField } from './passkey-rename-field'
 
 import type { Ref } from 'react'
 import type { PasskeySummary } from '#/lib/auth/client'
@@ -25,6 +38,17 @@ type ListState =
       readonly status: 'ready'
       readonly passkeys: ReadonlyArray<PasskeySummary>
     }
+
+/**
+ * The one row in rename mode. `attention` is bumped when the field must take focus again, and
+ * `error` is the notice of a save that failed.
+ */
+interface RenameState {
+  readonly id: string
+  readonly saving: boolean
+  readonly error: PasskeyNotice | null
+  readonly attention: number
+}
 
 /** Where focus goes once an outcome has settled and the Add button is enabled again. */
 type FocusTarget = 'add' | 'heading' | 'signIn'
@@ -45,6 +69,17 @@ const SIGN_OUT_FAILED: PasskeyNotice = {
 // The standing limit line is the visible text; this is only its announcement.
 const LIMIT_REACHED: PasskeyNotice = {
   key: 'settings.passkeys.add.limit',
+  tone: 'neutral',
+  signInAgain: false,
+}
+
+const SAVING: PasskeyNotice = {
+  key: 'settings.passkeys.rename.saving',
+  tone: 'neutral',
+  signInAgain: false,
+}
+const SAVED: PasskeyNotice = {
+  key: 'settings.passkeys.rename.saved',
   tone: 'neutral',
   signInAgain: false,
 }
@@ -143,10 +178,29 @@ function AddPasskeyButton({
   )
 }
 
-function PasskeyRow({ passkey }: { passkey: PasskeySummary }) {
+function PasskeyRow({
+  passkey,
+  rename,
+  registerRenameButton,
+  onStartRename,
+  onSubmitName,
+  onCancelRename,
+  onSignOutFailed,
+}: {
+  passkey: PasskeySummary
+  /** Set only on the row that is in rename mode. */
+  rename: RenameState | null
+  registerRenameButton: (element: HTMLButtonElement | null) => void
+  onStartRename: () => void
+  onSubmitName: (value: string, viaKey: boolean) => void
+  onCancelRename: (viaKey: boolean) => void
+  onSignOutFailed: () => void
+}) {
   const { t, locale } = useI18n()
   const added = formatDate(passkey.createdAt, locale) ?? passkey.createdAt
   const lastUsed = formatDate(passkey.lastUsedAt, locale)
+  const displayName =
+    passkey.name ?? t('settings.passkeys.row.fallbackName', { date: added })
 
   return (
     <li
@@ -165,8 +219,7 @@ function PasskeyRow({ passkey }: { passkey: PasskeySummary }) {
             dir="auto"
             className="min-w-0 truncate text-body font-semibold text-ink"
           >
-            {passkey.name ??
-              t('settings.passkeys.row.fallbackName', { date: added })}
+            {displayName}
           </span>
           {passkey.backedUp ? (
             <Badge tone="info">{t('settings.passkeys.badge.synced')}</Badge>
@@ -185,7 +238,32 @@ function PasskeyRow({ passkey }: { passkey: PasskeySummary }) {
             </span>
           )}
         </p>
+        {rename === null ? null : (
+          <>
+            <PasskeyRenameField
+              initial={passkey.name ?? ''}
+              saving={rename.saving}
+              error={rename.error === null ? null : t(rename.error.key)}
+              attention={rename.attention}
+              onSubmit={onSubmitName}
+              onCancel={onCancelRename}
+            />
+            {rename.error?.signInAgain ? (
+              <div className="mt-2">
+                <SignInAgain onFailed={onSignOutFailed} />
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
+      <IconButton
+        ref={registerRenameButton}
+        data-part="passkey-rename"
+        size="sm"
+        icon={<Pencil />}
+        label={t('settings.passkeys.rename.action', { name: displayName })}
+        onClick={onStartRename}
+      />
     </li>
   )
 }
@@ -208,6 +286,12 @@ export function PasskeyManager() {
   // text node is keyed on this and remounts.
   const [statusTick, setStatusTick] = useState(0)
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
+  const [rename, setRename] = useState<RenameState | null>(null)
+  // The row whose Rename control takes focus back once its rename mode has closed.
+  const [renameFocusId, setRenameFocusId] = useState<string | null>(null)
+  const renameButtons = useRef(new Map<string, HTMLButtonElement>())
+  // Read by a save that finishes after another row took over rename mode.
+  const renameRef = useRef<RenameState | null>(null)
   const addRef = useRef<HTMLButtonElement>(null)
   const emptyAddRef = useRef<HTMLButtonElement>(null)
   // The Add button the person pressed, so focus returns to it and not to the other one.
@@ -228,6 +312,16 @@ export function PasskeyManager() {
   useEffect(() => {
     setSupported(isPasskeyEnrolmentSupported())
   }, [])
+
+  useEffect(() => {
+    renameRef.current = rename
+  }, [rename])
+
+  useEffect(() => {
+    if (renameFocusId === null || rename !== null) return
+    renameButtons.current.get(renameFocusId)?.focus()
+    setRenameFocusId(null)
+  }, [renameFocusId, rename])
 
   const count = list.status === 'ready' ? list.passkeys.length : 0
   const atLimit = limitHit || count >= MAX_PASSKEYS_PER_USER
@@ -288,7 +382,8 @@ export function PasskeyManager() {
       // A list that never loaded cannot show the new row: read it again.
       if (list.status === 'failed') void fetchList().then(setList)
       setStatus(ADDED)
-      setFocusTarget('add')
+      // The ceremony sent no name: the new row opens in rename mode, and focus goes to its input.
+      startRename(result.passkey.id)
       return
     }
 
@@ -307,7 +402,7 @@ export function PasskeyManager() {
           next.passkeys.length > before
         ) {
           setStatus(ADDED)
-          setFocusTarget('add')
+          startRename(next.passkeys[0].id)
         }
       })
     }
@@ -321,6 +416,68 @@ export function PasskeyManager() {
     }
     setStatus(outcome.notice)
     setFocusTarget(outcome.notice.signInAgain ? 'signIn' : 'add')
+  }
+
+  function startRename(id: string): void {
+    setRename((previous) => ({
+      id,
+      saving: false,
+      error: null,
+      attention: previous?.id === id ? previous.attention + 1 : 0,
+    }))
+  }
+
+  function closeRename(id: string, returnFocus: boolean): void {
+    setRename((previous) => (previous?.id === id ? null : previous))
+    if (returnFocus) setRenameFocusId(id)
+  }
+
+  async function submitName(
+    id: string,
+    value: string,
+    returnFocus: boolean,
+  ): Promise<void> {
+    setRename((previous) =>
+      previous?.id === id ? { ...previous, saving: true } : previous,
+    )
+    setStatus(SAVING)
+    const result = await renamePasskey(id, value)
+
+    if (result.ok) {
+      setList((previous) =>
+        previous.status === 'ready'
+          ? {
+              status: 'ready',
+              passkeys: previous.passkeys.map((entry) =>
+                entry.id === id ? result.passkey : entry,
+              ),
+            }
+          : previous,
+      )
+      closeRename(id, returnFocus)
+      setStatus(SAVED)
+      return
+    }
+
+    const notice = renameFailureNotice(result.failure)
+    if (renameRef.current?.id === id) {
+      // The field is still on screen: the error sits beside it and focus returns to the input.
+      setRename((previous) =>
+        previous?.id === id
+          ? {
+              ...previous,
+              saving: false,
+              error: notice,
+              attention: previous.attention + 1,
+            }
+          : previous,
+      )
+      setStatus(null)
+      return
+    }
+    // Another row took rename mode while this one saved: the status region says so instead.
+    setStatus(notice)
+    setStatusTick((tick) => tick + 1)
   }
 
   function signOutFailed(): void {
@@ -439,7 +596,31 @@ export function PasskeyManager() {
         {list.status === 'ready' && list.passkeys.length > 0 ? (
           <ul data-part="passkey-list" className="flex flex-col gap-2">
             {list.passkeys.map((passkey) => (
-              <PasskeyRow key={passkey.id} passkey={passkey} />
+              <PasskeyRow
+                key={passkey.id}
+                passkey={passkey}
+                rename={rename?.id === passkey.id ? rename : null}
+                registerRenameButton={(element) => {
+                  if (element === null) renameButtons.current.delete(passkey.id)
+                  else renameButtons.current.set(passkey.id, element)
+                }}
+                onStartRename={() => {
+                  startRename(passkey.id)
+                }}
+                onSubmitName={(value, viaKey) => {
+                  void submitName(passkey.id, value, viaKey)
+                }}
+                onCancelRename={(viaKey) => {
+                  closeRename(passkey.id, viaKey)
+                }}
+                onSignOutFailed={() => {
+                  setRename((previous) =>
+                    previous?.id === passkey.id
+                      ? { ...previous, error: SIGN_OUT_FAILED }
+                      : previous,
+                  )
+                }}
+              />
             ))}
           </ul>
         ) : null}

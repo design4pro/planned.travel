@@ -630,7 +630,7 @@ Reviewed before the PR opened, through `afk-decide`: "approve this spec for unat
 
 ## Amendment
 
-What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these places. Phases 2 and 3 (#1145, #1146) are unbuilt.
+What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these places. Phase 3 (#1146) is unbuilt; Phase 2 (#1145) is listed after these.
 
 1. **The WebAuthn origin check reads the dev port wildcards.** The design assumed dev trusts loopback origins "by port" for the ceremony too. That held for Better Auth's request-origin check only: `assertClientData` compared with an exact `includes`, so every ceremony on a port other than `APP_URL`'s answered `400 WebAuthn origin is not trusted`. `isTrustedOrigin` in `src/server/auth/passkey/webauthn.ts` now reads a `scheme://host:*` entry as the same scheme and hostname on any port, and refuses any origin that is not in its serialised form. Production's list (`trustedOrigins()`) has no wildcard, and `src/server/auth/__tests__/trusted-origins.test.ts` pins it. The change reaches passkey sign-in as well as registration, because the check is shared.
 2. **`MAX_PASSKEYS_PER_USER` lives in `src/lib/auth/passkey-limit.ts`**, re-exported by the plugin: the screen cannot import server code.
@@ -639,3 +639,11 @@ What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these pla
 5. **Outcomes re-read the list.** Any registration outcome other than a dismissed sheet reads the list again and keeps it when the read fails, so a reply lost after the row was written, or a second tab, cannot leave the screen stale. A new row is never added twice.
 6. **A server limit refusal is announced** in the status region (visually hidden: the standing limit line is the visible text), and a failed sign-out keeps the Sign in again action mounted.
 7. **The ceiling is advisory under a burst.** The count and the write are separate statements, so a burst overshoots by at most what the registration rate limit lets one address start in its window (10 per 300 s). A post-write recount was weighed and not built: nothing in the harness can produce a valid attestation to test it, and the ceiling bounds storage, not an entitlement.
+
+Phase 2 (09-S1b, #1145) differs from the design in these places:
+
+8. **The rename field is its own module.** `src/routes/_app/-ui/passkey-rename-field.tsx` owns the draft text and the keys (Enter, Escape, blur); `passkey-manager.tsx` owns the one row in rename mode, the request and the focus handed back to the Rename control. The copy gate walks the new file.
+9. **A blur does not take focus back.** Enter and Escape return focus to the row's Rename control; a name saved by a blur leaves focus where the person moved it. An empty or unchanged value, on any of the three, closes rename mode without a request.
+10. **The impersonation veto is one helper.** `assertNotImpersonated` in `plugin.ts` is called by both registration endpoints and by rename; the delete endpoint of 09-S1c calls it too.
+11. **Failed saves by status.** `renameFailureNotice` maps a `401` to `passkeys.error.sessionEnded` with Sign in again beside the row, a `429` to `passkeys.error.rateLimited`, anything else to `passkeys.rename.failed`. A save that fails after another row took rename mode says so in the status region instead. `passkeys.rename.saving` is announced there while a save runs.
+12. **A lost reply opens rename mode too.** When the registration reply is lost and the reloaded list holds the new row, that row (the newest) opens in rename mode like any added one.

@@ -595,6 +595,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Πάρα πολλές προσπάθειες. Δοκιμάστε ξανά σε λίγα λεπτά.',
   'passkeys.error.generic': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Μετονομασία του {name}',
+  'passkeys.rename.fieldLabel': 'Δώστε όνομα σε αυτό το κλειδί πρόσβασης',
+  'passkeys.rename.placeholder': 'Δώστε του όνομα, π.χ. Κινητό εργασίας',
+  'passkeys.rename.saving': 'Αποθήκευση του ονόματος',
+  'passkeys.rename.saved': 'Το όνομα αποθηκεύτηκε',
+  'passkeys.rename.failed': 'Το όνομα δεν αποθηκεύτηκε',
 } satisfies TranslationOf<typeof En>
 
 export default messages
