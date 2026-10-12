@@ -294,7 +294,7 @@ type DayWeather =
   | { dayId: string; status: 'none' } // undated day, or no location
   | { dayId: string; status: 'unavailable'; kind: WeatherKind } // provider/ceiling/parse failure
   | { dayId: string; status: 'not-yet-recorded' } // past day inside POWER_LAG_DAYS
-  | { dayId: string; status: 'ok'; reading: DayReading; sun: SunTimes | null }
+  | { dayId: string; status: 'ok'; reading: DayReading; sun?: SunTimes } // `sun` is absent only on an answer that predates it
 
 type WeatherKind = 'forecast' | 'recorded' | 'estimate'
 
@@ -316,7 +316,7 @@ interface DayReading {
 }
 
 interface SunTimes {
-  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); null in polar night / midnight sun
+  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); both sides null in polar night / midnight sun
   sunset: string | null
 }
 

@@ -10,6 +10,7 @@ import { DaySection } from '../day-section'
 import { DayWeatherBadge } from '../day-weather-badge'
 import { DayWeatherPanel } from '../day-weather-panel'
 
+import type { SunTimes } from '#/lib/sun'
 import type { DayReading, DayWeather } from '#/lib/weather'
 import type { PlannerDay } from '../types'
 
@@ -307,6 +308,53 @@ describe('DayWeatherPanel', () => {
     )
 
     expect(screen.getByText('5.1 mm')).toBeDefined()
+  })
+})
+
+describe('sunrise and sunset in the fuller forecast', () => {
+  const openWith = async (sun: SunTimes) => {
+    const user = userEvent.setup()
+    badge({ dayId: 'd1', status: 'ok', reading: READING, sun })
+    await user.click(screen.getByRole('button', { name: /^Forecast/ }))
+    return within(await screen.findByRole('dialog'))
+  }
+
+  it('shows both as clock times in the trip’s zone', async () => {
+    const panel = await openWith({ sunrise: '06:12', sunset: '17:36' })
+
+    expect(panel.getByText('Sunrise')).toBeDefined()
+    expect(panel.getByText('06:12')).toBeDefined()
+    expect(panel.getByText('Sunset')).toBeDefined()
+    expect(panel.getByText('17:36')).toBeDefined()
+  })
+
+  it('shows a dash named for each side in polar night, never a time', async () => {
+    const panel = await openWith({ sunrise: null, sunset: null })
+
+    expect(panel.getByRole('img', { name: 'No sunrise' }).textContent).toBe('—')
+    expect(panel.getByRole('img', { name: 'No sunset' }).textContent).toBe('—')
+    expect(panel.queryByText('00:00')).toBeNull()
+  })
+
+  it('names only the side that is missing', () => {
+    render(
+      <DayWeatherPanel
+        reading={READING}
+        sun={{ sunrise: '03:54', sunset: null }}
+        unit="metric"
+      />,
+    )
+
+    expect(screen.getByText('03:54')).toBeDefined()
+    expect(screen.queryByRole('img', { name: 'No sunrise' })).toBeNull()
+    expect(screen.getByRole('img', { name: 'No sunset' })).toBeDefined()
+  })
+
+  it('leaves both rows out when the answer carried no sun times', () => {
+    render(<DayWeatherPanel reading={READING} unit="metric" />)
+
+    expect(screen.queryByText('Sunrise')).toBeNull()
+    expect(screen.queryByText('Sunset')).toBeNull()
   })
 })
 

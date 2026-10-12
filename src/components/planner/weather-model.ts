@@ -8,6 +8,7 @@
  */
 
 import type { MessageKey } from '#/lib/i18n'
+import type { SunTimes } from '#/lib/sun'
 import type { DayReading, DayWeather, WeatherUnit } from '#/lib/weather'
 
 /** The plan screen's view of a day: the server's answer, or "not in yet". */
@@ -182,6 +183,8 @@ export type WeatherBadgeModel =
       readonly unit: 'C' | 'F'
       /** The reading behind the badge, for the fuller panel it opens. */
       readonly reading: DayReading
+      /** Sunrise and sunset behind the fuller panel; absent when the answer carried none. */
+      readonly sun: SunTimes | null
     }
 
 /** What to draw for a day, or `null` when it draws nothing at all. */
@@ -204,6 +207,7 @@ export function badgeModel(
         min: temperatureIn(weather.reading.tempMinC, unit),
         unit: unitSymbol(unit),
         reading: weather.reading,
+        sun: weather.sun ?? null,
       }
   }
 }

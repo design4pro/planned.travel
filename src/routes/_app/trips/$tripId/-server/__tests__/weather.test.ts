@@ -222,6 +222,20 @@ describe('loadTripWeather', () => {
     expect(JSON.stringify(result)).not.toMatch(/fetchedAt|lat|lng|59\.9/)
   })
 
+  it('carries each located day’s sunrise and sunset, in the trip’s zone, for no further call', async () => {
+    const port = ports()
+
+    const result = await loadTripWeather(owner, { tripId }, port)
+
+    const last = result.days[2]
+    if (last.status !== 'ok') {
+      throw new Error('The last day has a stay and is inside the window.')
+    }
+    // Oslo on 10 October at UTC+2, as the NOAA Solar Calculator's own code works it out.
+    expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+    expect(port.requested).toHaveLength(1)
+  })
+
   it('lets a viewer of the trip read it', async () => {
     const result = await loadTripWeather(reader, { tripId }, ports())
 

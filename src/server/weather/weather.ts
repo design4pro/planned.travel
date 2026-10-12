@@ -53,11 +53,13 @@
 
 import { z } from 'zod'
 
+import { sunTimes } from '#/lib/sun'
 import { dayKeyIn, resolveTimeZone, todayKeyIn } from '#/lib/time'
 import { hourIn } from '#/lib/timezones'
 import { callProvider } from '#/server/metering/outbound'
 import { spendRateUnits } from '#/server/metering/rate'
 
+import type { SunTimes } from '#/lib/sun'
 import type { DayReading, DaySlot } from '#/lib/weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
@@ -83,7 +85,11 @@ export interface WeatherQuery {
 export type WeatherOutcome =
   | { readonly status: 'none' }
   | { readonly status: 'unavailable' }
-  | { readonly status: 'ok'; readonly reading: DayReading }
+  | {
+      readonly status: 'ok'
+      readonly reading: DayReading
+      readonly sun: SunTimes
+    }
 
 /** One instant of a provider's series, reduced to what the planner reads. */
 export interface ForecastStep {
@@ -883,6 +889,13 @@ export async function resolveTripWeather(
         source: 'met-norway',
         ...day,
       },
+      // Computed from the place and the date: no request, no unit of the allowance.
+      sun: sunTimes(
+        entry.coordinate.lat,
+        entry.coordinate.lng,
+        entry.date,
+        zone,
+      ),
     }
   })
 
