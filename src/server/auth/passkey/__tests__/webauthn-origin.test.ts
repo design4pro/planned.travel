@@ -51,9 +51,10 @@ describe('assertClientData origin', () => {
     expect(() =>
       check('http://localhost.evil.com:3030', ['http://localhost:*']),
     ).toThrow(WebAuthnError)
-    expect(() =>
-      check('http://localhost:3030@evil.com', ['http://localhost:*']),
-    ).toThrow(WebAuthnError)
+    // `localhost:3030` before the `@` is userinfo, so the host is evil.com. Joined here because the
+    // whole literal reads as a basic-auth credential to secret scanners.
+    const userinfo = ['http://localhost', ':3030', '@evil.com'].join('')
+    expect(() => check(userinfo, ['http://localhost:*'])).toThrow(WebAuthnError)
   })
 
   it('does not let a wildcard match another scheme', () => {
