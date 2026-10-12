@@ -161,6 +161,13 @@ const messages = {
   'categories.progressLabel': 'Потрачено относительно бюджета поездки',
   'categories.empty':
     'Строки бюджета и расходы разложатся здесь, когда будет что раскладывать.',
+  'categories.legendLabel': 'Расходы по категориям',
+  'categories.planned': 'запланировано {amount}',
+  'categories.nothingSpent':
+    'Пока ничего не потрачено. Вот что вы запланировали.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'меньше {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Записанные платежи',
   'payments.empty.title': 'Пока нет платежей',

@@ -157,6 +157,12 @@ const messages = {
   'categories.progressLabel': 'Elköltve az út költségvetéséhez mérve',
   'categories.empty':
     'A költségvetési sorok és a kiadások itt bomlanak le, amint van mit lebontani.',
+  'categories.legendLabel': 'Költés kategóriánként',
+  'categories.planned': '{amount} tervezve',
+  'categories.nothingSpent': 'Még nem költöttetek semmit. Ezt tervezitek.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'kevesebb, mint {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Rögzített fizetések',
   'payments.empty.title': 'Még nincs fizetés',

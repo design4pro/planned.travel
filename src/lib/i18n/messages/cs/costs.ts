@@ -158,6 +158,13 @@ const messages = {
   'categories.progressLabel': 'Utraceno vůči rozpočtu cesty',
   'categories.empty':
     'Položky rozpočtu i výdaje se tady rozepíšou, až bude co rozepsat.',
+  'categories.legendLabel': 'Výdaje podle kategorie',
+  'categories.planned': 'plánováno {amount}',
+  'categories.nothingSpent':
+    'Zatím nic nevydáno. Tady je, co máte naplánováno.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'méně než {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Zaznamenané platby',
   'payments.empty.title': 'Zatím žádné platby',

@@ -156,6 +156,12 @@ const messages = {
   'categories.progressLabel': 'Ausgegeben gegen das Reisebudget',
   'categories.empty':
     'Budgetposten und Ausgaben schlüsseln sich hier auf, sobald es etwas aufzuschlüsseln gibt.',
+  'categories.legendLabel': 'Ausgaben nach Kategorie',
+  'categories.planned': '{amount} geplant',
+  'categories.nothingSpent': 'Noch nichts ausgegeben. Das hast du geplant.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'weniger als {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Erfasste Zahlungen',
   'payments.empty.title': 'Noch keine Zahlungen',

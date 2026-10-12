@@ -154,6 +154,13 @@ const messages = {
   'categories.progressLabel': 'Besteed ten opzichte van het reisbudget',
   'categories.empty':
     'Budgetregels en uitgaven worden hier uitgesplitst zodra er iets uit te splitsen valt.',
+  'categories.legendLabel': 'Uitgaven per categorie',
+  'categories.planned': '{amount} gepland',
+  'categories.nothingSpent':
+    'Nog niets uitgegeven. Dit is wat je hebt gepland.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'minder dan {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Vastgelegde betalingen',
   'payments.empty.title': 'Nog geen betalingen',

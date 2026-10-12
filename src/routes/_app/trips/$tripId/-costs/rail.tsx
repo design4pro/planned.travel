@@ -14,13 +14,13 @@ import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney, formatSignedMoney } from '#/lib/money'
-import { formatDayLabel } from '#/components/costs'
+import { CategoryDonut, formatDayLabel } from '#/components/costs'
 import { Panel, PanelRow } from '../../../-ui/scaffold'
 import { humaniseToken } from '../../../-lib/format'
-import { categoryLabel } from './categories'
-import { swatchFor } from '../../../-lib/tone'
+import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
+import { categoryColour } from './chart-colours'
 
-import type { CostsSnapshot } from '#/components/costs'
+import type { CostsSnapshot, DonutRow } from '#/components/costs'
 import type {
   CostsBalance,
   CostsCategoryTotal,
@@ -309,6 +309,13 @@ function Balances({
 
 /* -------------------------------------------------------------------------- */
 
+/** A category's place in the ring; one outside the enum goes last, in the order it came. */
+function categoryRank(row: CostsCategoryTotal): number {
+  const order: ReadonlyArray<string> = EXPENSE_CATEGORY_ORDER
+  const rank = order.indexOf(row.category)
+  return rank === -1 ? order.length : rank
+}
+
 function ByCategory({
   rows,
   spentMinor,
@@ -321,11 +328,16 @@ function ByCategory({
   currency: string
 }) {
   const locale = useLocale()
-  const visible = rows
-    .filter((row) => row.spentMinor > 0 || row.plannedMinor > 0)
-    .sort((left, right) => right.spentMinor - left.spentMinor)
-  const total = Math.max(spentMinor, 1)
   const t = useTranslate()
+  const donutRows = [...rows]
+    .sort((left, right) => categoryRank(left) - categoryRank(right))
+    .map((row): DonutRow => ({
+      key: row.category,
+      label: categoryLabel(row.category),
+      spentMinor: row.spentMinor,
+      plannedMinor: row.plannedMinor,
+      colour: categoryColour(row.category),
+    }))
 
   return (
     <Panel
@@ -353,56 +365,7 @@ function ByCategory({
         )
       }
     >
-      {visible.length === 0 ? (
-        <p className="text-caption text-ink-3">{t('costs.categories.empty')}</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {visible.map((row, index) => (
-            <li key={row.category}>
-              <div className="mb-1.5 flex items-baseline justify-between gap-3">
-                <span className="flex min-w-0 items-center gap-2 text-caption text-ink-2">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      'size-2 shrink-0 rounded-full',
-                      swatchFor(index),
-                    )}
-                  />
-                  <span className="truncate">
-                    {categoryLabel(row.category)}
-                  </span>
-                </span>
-                <span className="shrink-0 text-caption font-semibold tabular-nums text-ink">
-                  {formatMoney(row.spentMinor, currency, locale)}
-                </span>
-              </div>
-              {/* Turned round for Arabic so the fill grows from the reading
-                  start; `origin-left` on the child cannot be spelled logically. */}
-              <div
-                aria-hidden
-                className="h-1.5 overflow-hidden rounded-full bg-surface-inset rtl:-scale-x-100"
-              >
-                <span
-                  className={cn(
-                    'block h-full origin-left rounded-full transition-[scale] duration-base ease-out-quint',
-                    swatchFor(index),
-                  )}
-                  /* A value, not motion — see `costs/split-editor.tsx`. With
-                     `data-motion-transform` and an inline `transform` this rail
-                     showed every category at its full budget under
-                     reduce-motion. */
-                  style={{ scale: `${Math.min(row.spentMinor / total, 1)} 1` }}
-                />
-              </div>
-              {row.plannedMinor === 0 ? null : (
-                <p className="mt-1 text-caption tabular-nums text-ink-4">
-                  {formatMoney(row.plannedMinor, currency, locale)} planned
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+      <CategoryDonut rows={donutRows} currency={currency} />
     </Panel>
   )
 }
