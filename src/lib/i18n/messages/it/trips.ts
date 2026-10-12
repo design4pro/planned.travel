@@ -335,6 +335,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Registrato: massima {max}, minima {min}',
   'plan.weather.badge.recordedHigh': 'Registrato: massima {max}',
   'plan.weather.badge.recordedLow': 'Registrato: minima {min}',
+  'plan.weather.badge.estimate':
+    'Stima: massima tipica {max}, minima tipica {min}',
+  'plan.weather.badge.estimateHigh': 'Stima: massima tipica {max}',
+  'plan.weather.badge.estimateLow': 'Stima: minima tipica {min}',
   'plan.weather.badge.notYetRecorded': 'Non ancora registrato',
   'plan.weather.condition.clear': 'Sereno',
   'plan.weather.condition.fair': 'Poco nuvoloso',
@@ -363,6 +367,9 @@ const messages = {
   'plan.weather.panel.high': 'Massima',
   'plan.weather.panel.low': 'Minima',
   'plan.weather.panel.recordedNote': 'Valori misurati per questo giorno.',
+  'plan.weather.panel.temperatureTypical': 'Massima / minima tipiche',
+  'plan.weather.panel.estimateNote':
+    'Una media di lungo periodo per questo mese, non una previsione.',
   'plan.weather.attribution.metNorway':
     'Dati della previsione: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

@@ -78,7 +78,7 @@ describe('useTripWeather', () => {
     expect(result.current.viewOf('d2')).toEqual({ dayId: 'd2', status: 'none' })
     expect(result.current.unit).toBe('imperial')
     expect(loadTripWeatherFn).toHaveBeenCalledWith({
-      data: { tripId: 't1', recorded: true },
+      data: { tripId: 't1', recorded: true, estimate: true },
     })
   })
 
@@ -184,7 +184,7 @@ describe('useTripWeather', () => {
     rerender()
     await waitFor(() => {
       expect(loadTripWeatherFn).toHaveBeenCalledWith({
-        data: { tripId: 't2', recorded: true },
+        data: { tripId: 't2', recorded: true, estimate: true },
       })
     })
     await client.isFetching()

@@ -304,6 +304,9 @@ const messages = {
   'plan.weather.badge.recorded': '관측: 최고 {max}, 최저 {min}',
   'plan.weather.badge.recordedHigh': '관측: 최고 {max}',
   'plan.weather.badge.recordedLow': '관측: 최저 {min}',
+  'plan.weather.badge.estimate': '추정: 평년 최고 {max}, 최저 {min}',
+  'plan.weather.badge.estimateHigh': '추정: 평년 최고 {max}',
+  'plan.weather.badge.estimateLow': '추정: 평년 최저 {min}',
   'plan.weather.badge.notYetRecorded': '아직 관측되지 않음',
   'plan.weather.condition.clear': '맑음',
   'plan.weather.condition.fair': '대체로 맑음',
@@ -332,6 +335,8 @@ const messages = {
   'plan.weather.panel.high': '최고',
   'plan.weather.panel.low': '최저',
   'plan.weather.panel.recordedNote': '이 날의 관측값입니다.',
+  'plan.weather.panel.temperatureTypical': '평년 최고 / 최저',
+  'plan.weather.panel.estimateNote': '이 달의 장기 평균이며 예보가 아닙니다.',
   'plan.weather.attribution.metNorway': '예보 데이터: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     '데이터: NASA Langley Research Center POWER Project',

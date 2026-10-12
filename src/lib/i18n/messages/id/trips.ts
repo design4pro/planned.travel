@@ -312,6 +312,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Tercatat: tertinggi {max}, terendah {min}',
   'plan.weather.badge.recordedHigh': 'Tercatat: tertinggi {max}',
   'plan.weather.badge.recordedLow': 'Tercatat: terendah {min}',
+  'plan.weather.badge.estimate':
+    'Estimasi: tertinggi umumnya {max}, terendah umumnya {min}',
+  'plan.weather.badge.estimateHigh': 'Estimasi: tertinggi umumnya {max}',
+  'plan.weather.badge.estimateLow': 'Estimasi: terendah umumnya {min}',
   'plan.weather.badge.notYetRecorded': 'Belum tercatat',
   'plan.weather.condition.clear': 'Cerah',
   'plan.weather.condition.fair': 'Cukup cerah',
@@ -340,6 +344,9 @@ const messages = {
   'plan.weather.panel.high': 'Tertinggi',
   'plan.weather.panel.low': 'Terendah',
   'plan.weather.panel.recordedNote': 'Nilai terukur pada hari tersebut.',
+  'plan.weather.panel.temperatureTypical': 'Tertinggi / terendah umumnya',
+  'plan.weather.panel.estimateNote':
+    'Rata-rata jangka panjang untuk bulan ini, bukan prakiraan.',
   'plan.weather.attribution.metNorway': 'Data prakiraan: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Sumber data: NASA Langley Research Center POWER Project',

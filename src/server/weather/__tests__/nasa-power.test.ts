@@ -9,11 +9,13 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  NASA_POWER_CLIMATOLOGY_ENDPOINT,
   NASA_POWER_ENDPOINT,
   POWER_LAG_DAYS,
   createNasaPowerClient,
 } from '../nasa-power'
 import { WeatherProviderError } from '../weather'
+import { OSLO_CLIMATOLOGY } from './nasa-power-climatology.fixture'
 import { OSLO_DAILY } from './nasa-power.fixture'
 
 function answer(
@@ -259,5 +261,111 @@ describe('the NASA POWER client', () => {
     expect(createNasaPowerClient({ fetch }).lagDays).toBe(POWER_LAG_DAYS)
     expect(Number.isInteger(POWER_LAG_DAYS)).toBe(true)
     expect(POWER_LAG_DAYS).toBeGreaterThan(0)
+  })
+})
+
+describe('the NASA POWER climatology call', () => {
+  it('asks for a point cut to one decimal and the three climate parameters, with no dates and no wind', async () => {
+    const { fetch, urls } = answer(OSLO_CLIMATOLOGY)
+
+    await createNasaPowerClient({ fetch }).climatology(
+      59.913_912_345,
+      10.752_249_99,
+      INIT,
+    )
+
+    expect(urls).toHaveLength(1)
+    const url = new URL(urls[0])
+    expect(`${url.origin}${url.pathname}`).toBe(NASA_POWER_CLIMATOLOGY_ENDPOINT)
+    expect(url.searchParams.get('latitude')).toBe('59.9')
+    expect(url.searchParams.get('longitude')).toBe('10.8')
+    expect(url.searchParams.get('parameters')).toBe(
+      'T2M_MAX,T2M_MIN,PRECTOTCORR',
+    )
+    expect([...url.searchParams.keys()].sort()).toEqual([
+      'community',
+      'format',
+      'latitude',
+      'longitude',
+      'parameters',
+    ])
+  })
+
+  it('reads twelve months, January first, and leaves the annual figure out', async () => {
+    const { fetch } = answer(OSLO_CLIMATOLOGY)
+
+    const months = await createNasaPowerClient({ fetch }).climatology(
+      59.9,
+      10.8,
+      INIT,
+    )
+
+    expect(months).toHaveLength(12)
+    expect(months[0]).toEqual({
+      tempMaxC: 6.41,
+      tempMinC: -26.2,
+      precipitationMm: 2.5,
+    })
+    expect(months[9]).toEqual({
+      tempMaxC: 18.84,
+      tempMinC: -10.21,
+      precipitationMm: 3.35,
+    })
+  })
+
+  it('turns the fill value into an absent field and never into a number', async () => {
+    const body = structuredClone(OSLO_CLIMATOLOGY) as unknown as {
+      properties: { parameter: Record<string, Record<string, number>> }
+    }
+    body.properties.parameter.T2M_MIN.JUL = -999
+    body.properties.parameter.PRECTOTCORR.JUL = -999
+    const { fetch } = answer(body)
+
+    const months = await createNasaPowerClient({ fetch }).climatology(
+      59.9,
+      10.8,
+      INIT,
+    )
+
+    expect(months[6]).toEqual({
+      tempMaxC: 31.24,
+      tempMinC: null,
+      precipitationMm: null,
+    })
+  })
+
+  it('answers a month a parameter does not mention as absent', async () => {
+    const { fetch } = answer({
+      properties: { parameter: { T2M_MAX: { JAN: 1 } } },
+    })
+
+    const months = await createNasaPowerClient({ fetch }).climatology(
+      0,
+      0,
+      INIT,
+    )
+
+    expect(months[0]).toEqual({
+      tempMaxC: 1,
+      tempMinC: null,
+      precipitationMm: null,
+    })
+    expect(months[1]).toEqual({
+      tempMaxC: null,
+      tempMinC: null,
+      precipitationMm: null,
+    })
+  })
+
+  it('raises a typed error for a refusal and for a body that is not an answer', async () => {
+    const refused = answer('nope', { status: 503 })
+    await expect(
+      createNasaPowerClient({ fetch: refused.fetch }).climatology(1, 1, INIT),
+    ).rejects.toMatchObject({ name: 'WeatherProviderError', reason: 'refused' })
+
+    const malformed = answer({ properties: { parameter: { T2M_MAX: 'hot' } } })
+    await expect(
+      createNasaPowerClient({ fetch: malformed.fetch }).climatology(1, 1, INIT),
+    ).rejects.toBeInstanceOf(WeatherProviderError)
   })
 })

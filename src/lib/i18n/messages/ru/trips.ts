@@ -341,6 +341,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Зафиксировано: максимум {max}, минимум {min}',
   'plan.weather.badge.recordedHigh': 'Зафиксировано: максимум {max}',
   'plan.weather.badge.recordedLow': 'Зафиксировано: минимум {min}',
+  'plan.weather.badge.estimate':
+    'Оценка: типичный максимум {max}, минимум {min}',
+  'plan.weather.badge.estimateHigh': 'Оценка: типичный максимум {max}',
+  'plan.weather.badge.estimateLow': 'Оценка: типичный минимум {min}',
   'plan.weather.badge.notYetRecorded': 'Ещё не зафиксировано',
   'plan.weather.condition.clear': 'Ясно',
   'plan.weather.condition.fair': 'Малооблачно',
@@ -369,6 +373,9 @@ const messages = {
   'plan.weather.panel.high': 'Максимум',
   'plan.weather.panel.low': 'Минимум',
   'plan.weather.panel.recordedNote': 'Измеренные значения за этот день.',
+  'plan.weather.panel.temperatureTypical': 'Типичные макс. / мин.',
+  'plan.weather.panel.estimateNote':
+    'Многолетнее среднее за этот месяц, а не прогноз.',
   'plan.weather.attribution.metNorway':
     'Данные прогноза: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

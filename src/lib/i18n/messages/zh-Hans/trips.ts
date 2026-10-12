@@ -284,6 +284,9 @@ const messages = {
   'plan.weather.badge.recorded': '实测：最高 {max}， 最低 {min}',
   'plan.weather.badge.recordedHigh': '实测：最高 {max}',
   'plan.weather.badge.recordedLow': '实测：最低 {min}',
+  'plan.weather.badge.estimate': '估算：常年最高 {max}，最低 {min}',
+  'plan.weather.badge.estimateHigh': '估算：常年最高 {max}',
+  'plan.weather.badge.estimateLow': '估算：常年最低 {min}',
   'plan.weather.badge.notYetRecorded': '尚无实测',
   'plan.weather.condition.clear': '晴',
   'plan.weather.condition.fair': '大致晴朗',
@@ -312,6 +315,8 @@ const messages = {
   'plan.weather.panel.high': '最高',
   'plan.weather.panel.low': '最低',
   'plan.weather.panel.recordedNote': '这一天的实测数值。',
+  'plan.weather.panel.temperatureTypical': '常年最高 / 最低',
+  'plan.weather.panel.estimateNote': '本月的长期平均值，并非预报。',
   'plan.weather.attribution.metNorway': '预报数据：MET Norway，CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     '数据：NASA Langley Research Center POWER Project',

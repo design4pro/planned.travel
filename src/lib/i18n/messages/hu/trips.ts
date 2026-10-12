@@ -322,6 +322,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Mért adat: maximum {max}, minimum {min}',
   'plan.weather.badge.recordedHigh': 'Mért adat: maximum {max}',
   'plan.weather.badge.recordedLow': 'Mért adat: minimum {min}',
+  'plan.weather.badge.estimate':
+    'Becslés: jellemző maximum {max}, jellemző minimum {min}',
+  'plan.weather.badge.estimateHigh': 'Becslés: jellemző maximum {max}',
+  'plan.weather.badge.estimateLow': 'Becslés: jellemző minimum {min}',
   'plan.weather.badge.notYetRecorded': 'Még nincs mért adat',
   'plan.weather.condition.clear': 'Tiszta',
   'plan.weather.condition.fair': 'Derült',
@@ -350,6 +354,9 @@ const messages = {
   'plan.weather.panel.high': 'Maximum',
   'plan.weather.panel.low': 'Minimum',
   'plan.weather.panel.recordedNote': 'Mért értékek erre a napra.',
+  'plan.weather.panel.temperatureTypical': 'Jellemző max. / min.',
+  'plan.weather.panel.estimateNote':
+    'Az adott hónap hosszú távú átlaga, nem előrejelzés.',
   'plan.weather.attribution.metNorway':
     'Előrejelzési adatok: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

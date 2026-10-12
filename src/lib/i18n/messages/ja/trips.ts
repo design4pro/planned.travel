@@ -305,6 +305,9 @@ const messages = {
   'plan.weather.badge.recorded': '観測値: 最高 {max}、 最低 {min}',
   'plan.weather.badge.recordedHigh': '観測値: 最高 {max}',
   'plan.weather.badge.recordedLow': '観測値: 最低 {min}',
+  'plan.weather.badge.estimate': '推定: 平年の最高 {max}、最低 {min}',
+  'plan.weather.badge.estimateHigh': '推定: 平年の最高 {max}',
+  'plan.weather.badge.estimateLow': '推定: 平年の最低 {min}',
   'plan.weather.badge.notYetRecorded': 'まだ観測されていません',
   'plan.weather.condition.clear': '快晴',
   'plan.weather.condition.fair': '晴れ',
@@ -333,6 +336,9 @@ const messages = {
   'plan.weather.panel.high': '最高',
   'plan.weather.panel.low': '最低',
   'plan.weather.panel.recordedNote': 'この日の観測値です。',
+  'plan.weather.panel.temperatureTypical': '平年の最高 / 最低',
+  'plan.weather.panel.estimateNote':
+    'この月の長期平均であり、予報ではありません。',
   'plan.weather.attribution.metNorway': '予報データ: MET Norway、CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'データ: NASA Langley Research Center POWER Project',

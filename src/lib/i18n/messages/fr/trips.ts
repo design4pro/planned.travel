@@ -337,6 +337,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Relevé : max. {max}, min. {min}',
   'plan.weather.badge.recordedHigh': 'Relevé : max. {max}',
   'plan.weather.badge.recordedLow': 'Relevé : min. {min}',
+  'plan.weather.badge.estimate':
+    'Estimation : max. habituelle {max}, min. habituelle {min}',
+  'plan.weather.badge.estimateHigh': 'Estimation : max. habituelle {max}',
+  'plan.weather.badge.estimateLow': 'Estimation : min. habituelle {min}',
   'plan.weather.badge.notYetRecorded': 'Pas encore relevé',
   'plan.weather.condition.clear': 'Dégagé',
   'plan.weather.condition.fair': 'Beau temps',
@@ -365,6 +369,9 @@ const messages = {
   'plan.weather.panel.high': 'Maximale',
   'plan.weather.panel.low': 'Minimale',
   'plan.weather.panel.recordedNote': 'Valeurs mesurées pour ce jour.',
+  'plan.weather.panel.temperatureTypical': 'Max. / min. habituelles',
+  'plan.weather.panel.estimateNote':
+    'Moyenne à long terme pour ce mois, et non une prévision.',
   'plan.weather.attribution.metNorway':
     'Données de prévision : MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

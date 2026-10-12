@@ -328,6 +328,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Καταγραφή: μέγιστη {max}, ελάχιστη {min}',
   'plan.weather.badge.recordedHigh': 'Καταγραφή: μέγιστη {max}',
   'plan.weather.badge.recordedLow': 'Καταγραφή: ελάχιστη {min}',
+  'plan.weather.badge.estimate':
+    'Εκτίμηση: τυπική μέγιστη {max}, τυπική ελάχιστη {min}',
+  'plan.weather.badge.estimateHigh': 'Εκτίμηση: τυπική μέγιστη {max}',
+  'plan.weather.badge.estimateLow': 'Εκτίμηση: τυπική ελάχιστη {min}',
   'plan.weather.badge.notYetRecorded': 'Δεν έχει καταγραφεί ακόμη',
   'plan.weather.condition.clear': 'Αίθριος',
   'plan.weather.condition.fair': 'Σχετικά αίθριος',
@@ -356,6 +360,9 @@ const messages = {
   'plan.weather.panel.high': 'Μέγιστη',
   'plan.weather.panel.low': 'Ελάχιστη',
   'plan.weather.panel.recordedNote': 'Μετρημένες τιμές για αυτήν την ημέρα.',
+  'plan.weather.panel.temperatureTypical': 'Τυπική μέγιστη / ελάχιστη',
+  'plan.weather.panel.estimateNote':
+    'Μακροπρόθεσμος μέσος όρος για αυτόν τον μήνα, όχι πρόγνωση.',
   'plan.weather.attribution.metNorway':
     'Δεδομένα πρόγνωσης: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

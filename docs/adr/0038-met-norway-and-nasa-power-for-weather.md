@@ -149,3 +149,12 @@ The publication lag is measured, not assumed: on 2026-10-12 at 11:42 and again a
 held values through 2026-10-09 and the fill value (`-999`) for 10, 11 and 12 October at six locations on
 five continents, so `POWER_LAG_DAYS` is 3 and a date is published once it is three or more days before
 today in UTC.
+
+## Amendment (#825, the estimate kind)
+
+The climatology service is sent the same coordinate cut to one decimal and the fixed parameters
+(`T2M_MAX,T2M_MIN,PRECTOTCORR`), and no date range: it answers one long-term mean per month for the
+point, so the row of the table above reads "Coordinate (one decimal), date range where the service
+takes one". The answer is kept thirty days under a key that carries the coordinate and nothing else,
+the climatology having no reason to change within a month. Measured on 2026-10-12 against the live
+service, it answers 2001 to 2025 means with `-999` as the fill value, as the daily service does.

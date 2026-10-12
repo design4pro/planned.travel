@@ -309,6 +309,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Đã ghi nhận: cao nhất {max}, thấp nhất {min}',
   'plan.weather.badge.recordedHigh': 'Đã ghi nhận: cao nhất {max}',
   'plan.weather.badge.recordedLow': 'Đã ghi nhận: thấp nhất {min}',
+  'plan.weather.badge.estimate':
+    'Ước tính: cao nhất thường là {max}, thấp nhất thường là {min}',
+  'plan.weather.badge.estimateHigh': 'Ước tính: cao nhất thường là {max}',
+  'plan.weather.badge.estimateLow': 'Ước tính: thấp nhất thường là {min}',
   'plan.weather.badge.notYetRecorded': 'Chưa ghi nhận',
   'plan.weather.condition.clear': 'Trời quang',
   'plan.weather.condition.fair': 'Trời đẹp',
@@ -337,6 +341,9 @@ const messages = {
   'plan.weather.panel.high': 'Cao nhất',
   'plan.weather.panel.low': 'Thấp nhất',
   'plan.weather.panel.recordedNote': 'Giá trị đo được của ngày này.',
+  'plan.weather.panel.temperatureTypical': 'Cao nhất / thấp nhất thường gặp',
+  'plan.weather.panel.estimateNote':
+    'Mức trung bình dài hạn của tháng này, không phải dự báo.',
   'plan.weather.attribution.metNorway': 'Dữ liệu dự báo: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Dữ liệu: NASA Langley Research Center POWER Project',

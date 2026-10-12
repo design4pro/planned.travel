@@ -314,6 +314,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Kaydedilen: en yüksek {max}, en düşük {min}',
   'plan.weather.badge.recordedHigh': 'Kaydedilen: en yüksek {max}',
   'plan.weather.badge.recordedLow': 'Kaydedilen: en düşük {min}',
+  'plan.weather.badge.estimate':
+    'Yaklaşık değer: tipik en yüksek {max}, en düşük {min}',
+  'plan.weather.badge.estimateHigh': 'Yaklaşık değer: tipik en yüksek {max}',
+  'plan.weather.badge.estimateLow': 'Yaklaşık değer: tipik en düşük {min}',
   'plan.weather.badge.notYetRecorded': 'Henüz kaydedilmedi',
   'plan.weather.condition.clear': 'Açık',
   'plan.weather.condition.fair': 'Güzel',
@@ -342,6 +346,9 @@ const messages = {
   'plan.weather.panel.high': 'En yüksek',
   'plan.weather.panel.low': 'En düşük',
   'plan.weather.panel.recordedNote': 'Bu güne ait ölçülen değerler.',
+  'plan.weather.panel.temperatureTypical': 'Tipik en yüksek / en düşük',
+  'plan.weather.panel.estimateNote':
+    'Bu ay için uzun vadeli ortalama; tahmin değildir.',
   'plan.weather.attribution.metNorway':
     'Tahmin verileri: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

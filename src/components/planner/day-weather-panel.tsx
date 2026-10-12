@@ -28,7 +28,8 @@ export interface DayWeatherPanelProps {
  * did not state is a row left out, never a zero; a reading with no slots has no strip at all, never
  * empty columns and never a value worked out from the high and low. A recorded day is a
  * measurement: it has no slots and no chance of rain, and it says so in a line of its own and
- * credits NASA POWER instead of MET Norway.
+ * credits NASA POWER instead of MET Norway. An estimate is a long-term average: it has neither
+ * of those and no wind either, and its line says it is not a forecast.
  *
  * Figures are fixed left to right inside their own run, so "12° / 4°C" reads the same in every
  * direction of text.
@@ -63,7 +64,7 @@ export function DayWeatherPanel({
     >
       <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5 text-caption">
         {temperature === null ? null : (
-          <Row label={t(temperatureLabel(model.max, model.min))}>
+          <Row label={t(temperatureLabel(model.kind, model.max, model.min))}>
             {temperature}
           </Row>
         )}
@@ -134,29 +135,42 @@ export function DayWeatherPanel({
         </ul>
       )}
 
-      {model.kind === 'recorded' ? (
+      {model.kind === 'forecast' ? (
+        <p className="text-caption text-ink-4">
+          {t('trips.plan.weather.attribution.metNorway')}
+        </p>
+      ) : (
         <>
-          <p className="text-caption text-ink-3">
-            {t('trips.plan.weather.panel.recordedNote')}
-          </p>
+          <p className="text-caption text-ink-3">{t(NOTE[model.kind])}</p>
           <p className="text-caption text-ink-4">
             {t('trips.plan.weather.attribution.nasaPower')}
           </p>
         </>
-      ) : (
-        <p className="text-caption text-ink-4">
-          {t('trips.plan.weather.attribution.metNorway')}
-        </p>
       )}
     </div>
   )
 }
 
-/** A day lacking one of its temperatures says which it has, instead of a bare number. */
-function temperatureLabel(max: number | null, min: number | null): MessageKey {
+/** The one line under a reading that is not a forecast, saying what the figures are. */
+const NOTE = {
+  recorded: 'trips.plan.weather.panel.recordedNote',
+  estimate: 'trips.plan.weather.panel.estimateNote',
+} as const satisfies { readonly [K in 'recorded' | 'estimate']: MessageKey }
+
+/**
+ * A day lacking one of its temperatures says which it has, instead of a bare number. An estimate's
+ * pair is "typical", because a row labelled "High / low" over an average would read as a prediction.
+ */
+function temperatureLabel(
+  kind: DayReading['kind'],
+  max: number | null,
+  min: number | null,
+): MessageKey {
   if (max === null) return 'trips.plan.weather.panel.low'
   if (min === null) return 'trips.plan.weather.panel.high'
-  return 'trips.plan.weather.panel.temperature'
+  return kind === 'estimate'
+    ? 'trips.plan.weather.panel.temperatureTypical'
+    : 'trips.plan.weather.panel.temperature'
 }
 
 /** The figures of a day, or `null` when it has neither: a missing figure is never drawn as a zero. */
