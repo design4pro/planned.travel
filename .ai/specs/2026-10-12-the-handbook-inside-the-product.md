@@ -37,15 +37,15 @@ paragraphs** and are added by follow-up issues, never promised in the text.
 
 ## 📝 Visual change expected
 
-| Route / state                      | Change                                                                                                                                                                      |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Account menu (every `_app` screen) | One new entry, "Handbook", between Billing and the admin entries                                                                                                            |
-| `/help`                            | New. Page header, the contents sidebar with a title filter, the overview of articles. At 360px the sidebar becomes a "Contents" button opening a sheet                      |
-| `/help/{slug}`                     | New. One article in a 68-character measure; headings with a section-link affordance (always visible without hover); blocks: paragraph, list, steps, callout, shortcut, link |
-| `/help` filter with no match       | New. `EmptyState` "Nothing matches that" with a "Clear search" action                                                                                                       |
-| `/help/{unknown}`                  | New. A handbook not-found panel (title, body, "Back to the handbook") in the app frame, without the sidebar                                                                 |
-| Route pending and error            | New. A skeleton at final heights; `ErrorPanel` "The handbook did not load"                                                                                                  |
-| Any of the above in `ar`           | Mirrors: sidebar on the right, anchor affordance at the heading's end, directional icons mirror                                                                             |
+| Route / state                      | Change                                                                                                                                                                                                                           |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Account menu (every `_app` screen) | One new entry, "Handbook", between Billing and the admin entries                                                                                                                                                                 |
+| `/help`                            | New. Page header, the contents sidebar with a title filter, the overview of articles; below `lg` the filter sits inline above the cards. On an article, at 360px, the contents become a sticky "Contents" button opening a sheet |
+| `/help/{slug}`                     | New. One article in a 68-character measure; headings with a section-link affordance (always visible without hover); blocks: paragraph, list, steps, callout, shortcut, link                                                      |
+| `/help` filter with no match       | New. `EmptyState` "Nothing matches that" with a "Clear search" action                                                                                                                                                            |
+| `/help/{unknown}`                  | New. A handbook not-found panel (title, body, "Back to the handbook") in the app frame, without the sidebar                                                                                                                      |
+| Route pending and error            | New. A skeleton at final heights; `ErrorPanel` "The handbook did not load"                                                                                                                                                       |
+| Any of the above in `ar`           | Mirrors: sidebar on the right, anchor affordance at the heading's end, directional icons mirror                                                                                                                                  |
 
 Light and dark, 360px, 1280px and 2560px, per ADR 0016 (the blind A/B pair from `scripts/visual/capture.mjs`, no baselines). Declared
 non-resting states: the contents sheet open at 360px, the empty filter, an anchor affordance hovered and its "copied" state.
@@ -144,7 +144,7 @@ The contents are **one flat ordered list** (eight articles do not need groups, a
 locale's own case folding (`toLocaleLowerCase(locale)`) and Unicode decomposition with combining marks stripped, so `uber` finds "Über" and
 `istanbul` finds "İstanbul". Debounce 150 ms; the result count is announced through an always-mounted `aria-live="polite"` region (so its
 first change is announced); Escape clears and "Clear search" clears, and both return focus to the input. The filter state is component
-state, not a URL parameter. On `/help` the filter narrows the overview cards as well as the contents.
+state, not a URL parameter. On `/help` the filter narrows the overview cards as well as the contents, and **below `lg` it renders inline above the cards** (search landmark, count region and empty state included), since `/help` has no Contents button.
 
 **Below `lg`** the contents are not a squeezed column. On `/help/{slug}` a "Contents" button, sticky below the top navigation so it stays
 reachable at the foot of a long article, opens a `Sheet` (`side="start"` through `useSheetDirection`, never a physical edge) whose
@@ -160,7 +160,7 @@ returns focus to the input, and the next closes the sheet. A unit test proves th
 One column at a 68-character measure; `--font-display` headings, `--font-ui` body. `steps` is an ordered list with `tabular-nums`. Details that are accessibility contracts, not styling:
 
 - **Headings and deep links.** Each heading carries its `id`, `tabIndex={-1}` and
-  `scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]` (there is no global `scroll-padding-top`; `legal.tsx` is the precedent), and every
+  `scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]`, plus below `lg` the height of the sticky Contents bar (published as `--help-contents-h`) (there is no global `scroll-padding-top`; `legal.tsx` is the precedent), and every
   focusable element in an article carries the same offset so Shift+Tab does not park focus under the sticky header. On a client
   transition to `#anchor`, focus moves to that heading.
 - **The section-link affordance** is an `<a href="#{anchor}">` placed beside the heading text, not inside it, so a headings list reads only the
@@ -186,7 +186,7 @@ One column at a 68-character measure; `--font-display` headings, `--font-ui` bod
   an error.
 - **Not found:** the layout's `notFoundComponent` (above).
 
-Motion: a 220 ms cross-fade between articles on `--ease-out-quint`, and a row stagger of 20 ms steps capped at eight rows with a 120 ms row
+Motion: a 220 ms cross-fade between articles on `--ease-out-quint`, and a row stagger of 20 ms steps capped at eight rows with a 160 ms row
 duration (seven steps plus the duration stay under 400 ms), opacity and transform only. Under `prefers-reduced-motion: reduce` the global
 rule (`src/styles/styles.css`) removes the animation, so the end state is shown at once; a transform is opted in with
 `data-motion-transform` as elsewhere.
@@ -278,7 +278,7 @@ in this stage. These issues sit outside the eight-ticket cap.
 
 The `-content/` and `-ui/` directories are dash-prefixed non-route folders, the convention `src/routes/_app/-lib/`, `-server/` and
 `-ui/` already use. `components/ui` is reused, not edited: `Card`, `Input`, `Badge`, `Alert`, `Kbd`, `SectionLabel`, `Separator`,
-`ScrollArea`, `EmptyState`, `Skeleton`, `Button`, `Sheet`; `PageHeader`, `AppFrame`, `AppSections`, `NotFoundPanel`, `ErrorPanel`. No
+`ScrollArea`, `EmptyState`, `Skeleton`, `Button`, `Sheet`; `PageHeader`, `AppFrame`, `AppSections`, `ErrorPanel`. No
 component fetches data or imports from `server/`. The account-menu entry's label key lives in `settings.help.*` (not `shell.*`) so the
 handbook is one owner and the single prefix stays movable.
 
@@ -296,9 +296,9 @@ no `TenantScope` is taken, no quota metric is consumed, and no case is appended 
 ## 📝 UI/UX
 
 - `/help`: `PageHeader` (eyebrow, title, description), the contents, and an overview list of the articles as `Card`s with title and summary.
-- `/help/{slug}`: the article with a "Next article" link at its foot when one follows.
+- `/help/{slug}`: the article with a "Next: {title}" link at its foot when one follows.
 - Every interactive element has hover, `:focus-visible`, active and disabled states; the contents button, the anchor affordance and the
-  filter are reachable by keyboard in reading order; focus returns to the Contents button when the sheet closes.
+  filter are reachable by keyboard in reading order; focus returns to the Contents button when the sheet is dismissed without choosing an article.
 - Spacing on the 4px grid from `--space-*`; no new tokens; WCAG 2.2 AA contrast in both themes, dark shadows re-declared; the small layout is
   designed (the article is the page; contents behind a sheet), and the page clears the floating "Report a problem" actor below `lg` the way
   `AppFrame` already does.
@@ -355,11 +355,11 @@ is reviewed as copy; this spec fixes the chrome strings above.
 ## ✅ Acceptance criteria
 
 1. The account menu lists "Handbook" on every `_app` screen and opens `/help`; the entry is in all 23 locales.
-2. `/help` lists the articles that exist; `/help/{slug}` renders each with the article title as its only `<h1>` (the page header is on `/help` only), a route `head` title, and one level-2 heading before any level-3.
+2. `/help` lists the articles that exist; `/help/{slug}` renders each with the article title as its only `<h1>` (the page header is on `/help` only), a route `head` title from the translated title (or, when the shell has no seam for one, a reference to the filed app-wide page-title issue), and one level-2 heading before any level-3.
 3. The sidebar mirrors the contents; the current article has `aria-current="page"`; moving between articles does not load a document.
 4. The filter matches the translated title by case- and diacritic-insensitive substring, announces the count politely, clears on Escape and returns focus to the input, and
    shows the empty state for no match. In the sheet the first Escape clears a non-empty filter and the next closes the sheet.
-5. At 360px an article's contents open in a sheet from a sticky "Contents" button (none on `/help`); choosing an article closes the sheet and focuses its `<h1>`; no horizontal scroll.
+5. At 360px an article's contents open in a sheet from a sticky "Contents" button (none on `/help`, where the filter sits inline above the cards); choosing an article closes the sheet and focuses its `<h1>`; a deep-linked heading clears the sticky Contents bar; no horizontal scroll.
 6. `/help/{unknown}` shows the handbook not-found panel with a way back; each leaf route has its own pending and error component; a unit test covers the skeleton at final heights.
 7. Every heading's anchor is unique within its article, equals the derivation of its English text, and `/help/{slug}#{anchor}` lands on it.
 8. Every internal `link` block resolves to an existing article (and anchor when given); a broken one fails `pnpm typecheck` or `content.test.ts`.
@@ -463,7 +463,7 @@ each row whose feature has merged or file its follow-up issue; file the review-r
 - **E2E** (one journey in `e2e/journeys.spec.ts`; routing and sessions are what ADR 0016 admits): the two new `APP_ROUTES` entries are
   walked in both themes by "a member reaches every screen behind the session"; a journey opens the account menu, goes to the Handbook, tabs
   from the filter into the article and back with focus visible, follows an article link without a document load, loads
-  `/help/getting-started#<anchor>` and asserts that the heading's top is at or below the header's bottom and that `document.activeElement` is the heading
+  `/help/getting-started#<anchor>` and asserts that the heading's top is at or below the bottom of the lowest sticky element (the header, and at 360px also the Contents bar) and that `document.activeElement` is the heading
   (in the viewport alone would pass while it sat under the sticky header), and loads `/help/nope` and sees the handbook not-found panel
   with its way back.
   `watchConsole` attached before navigation; no addition to the tolerated console warnings; no `toHaveScreenshot`. Run:
@@ -490,8 +490,12 @@ each row whose feature has merged or file its follow-up issue; file the review-r
 | 8   | Where does the account-menu label live?                                                         | `settings.help.menu`, not `shell.*`                                                                                                                                                                                                                                                           | One owner for handbook copy and a single movable prefix; `useTranslate` reads any namespace (the plan's reasoning, kept).                                                                                                                                                                 |
 | 9   | Images in articles?                                                                             | No `figure` block; a later decision                                                                                                                                                                                                                                                           | Screenshots of a product in development go stale; `steps`/`shortcut`/`callout` carry the weight.                                                                                                                                                                                          |
 | 10  | Plans-and-billing and account-and-security claims                                               | No prices, refund/cancellation terms, tax or invoice promises; no security or compliance claims                                                                                                                                                                                               | Product owner condition: commercial and compliance statements are a person's; the live billing screen is the only place figures appear.                                                                                                                                                   |
-| 11  | Panel round 1                                                                                   | Applied; verdicts in rows 12-15                                                                                                                                                                                                                                                               | Step 5 of `afk-plan-to-spec`.                                                                                                                                                                                                                                                             |
+| 11  | Panel round 1                                                                                   | Applied; verdicts in rows 12-19                                                                                                                                                                                                                                                               | Step 5 of `afk-plan-to-spec`.                                                                                                                                                                                                                                                             |
 | 12  | Product owner panel: approve this spec for slicing?                                             | Approve with conditions (round 1), applied: five more specs in Pending paragraphs and a rebuild of that table in ticket 8; a review-rule follow-up issue; a flat contents list; the layout-shift assertion moved to ticket 2; numbering and "Where to go next" links fixed                    | Decided by product owner sub-agent (confidence high): the spec covers 09-S6 and nothing outside it; ticket 1 is a real vertical slice.                                                                                                                                                    |
 | 13  | Software architect panel                                                                        | Approve with conditions (round 1), applied: `pendingComponent` and `errorComponent` on the leaf routes, `notFoundComponent` on the layout with a handbook panel, tests placed with the module that owns the behaviour, the `ar` capture procedure stated                                      | Decided by software architect sub-agent (confidence high): claims verified against the repository (TanStack `Match.tsx` pending/error resolution; `capture.mjs` pins `en-GB`).                                                                                                            |
 | 14  | UX (traveller) panel                                                                            | Approve with conditions (round 1), applied: section-link affordance visible without hover, success and failure feedback keys, handbook not-found copy, one `<h1>` per page, the 360px flow, copy fixes, a `CONTEXT.md` "Handbook" entry, a follow-up issue for neighbouring hardcoded strings | Decided by UX specialist sub-agent (confidence high): a phone reader could otherwise never get a section link, and chrome strings would be invented by the ticket.                                                                                                                        |
 | 15  | Accessibility panel                                                                             | Approve with conditions (round 1), applied: Escape order in the sheet, `callout` as `role="note"`, text key names in `shortcut`, the affordance's full contract, `scroll-mt` and focus on deep links, landmark and sheet names, focus rules, route titles, motion tokens                      | Decided by accessibility specialist sub-agent (confidence high): the reused `Sheet`, `Alert` and `Kbd` defaults cause these barriers unless the spec overrides them.                                                                                                                      |
+| 16  | Product owner panel, round 2 (does the revision settle each point?)                             | Approve with conditions: all five round-1 points settled; three contradictions fixed in a commit (acceptance criterion 2 now allows the filed page-title issue; focus return qualified; stale `NotFoundPanel` and "Next article" lines corrected)                                             | Decided by product owner sub-agent (confidence high).                                                                                                                                                                                                                                     |
+| 17  | Software architect panel, round 2                                                               | Approve with conditions: all four points settled; the stale `NotFoundPanel` mention in Architecture removed                                                                                                                                                                                   | Decided by software architect sub-agent (confidence high).                                                                                                                                                                                                                                |
+| 18  | UX (traveller) panel, round 2                                                                   | Approve with conditions: eight points settled; the `/help` filter below `lg` now renders inline above the cards, the deep-link offset includes the sticky Contents bar (`--help-contents-h`), four stale lines reconciled                                                                     | Decided by UX specialist sub-agent (confidence high).                                                                                                                                                                                                                                     |
+| 19  | Accessibility panel, round 2                                                                    | Approve with conditions: nine points settled; the sticky-bar offset added and measured at 360px, the row duration raised to 160 ms (the 150-260 ms range), the focus-return sentence qualified                                                                                                | Decided by accessibility specialist sub-agent (confidence high). Every round-2 condition is editorial or a one-line addition and is applied; no point is a standing revise.                                                                                                               |
