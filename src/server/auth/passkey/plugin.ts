@@ -26,8 +26,11 @@ const CHALLENGE_PREFIX = 'passkey-challenge:'
 
 /**
  * The ceiling is `MAX_PASSKEYS_PER_USER`, shared with the screen that words it. The count and the
- * write are two statements, so two ceremonies started at 19 can both finish and leave 21; that is
- * a known property of a ceiling that bounds storage and is not a quota anyone sells.
+ * write are two statements, so ceremonies that all pass the count before the first one writes can
+ * all finish: a burst overshoots by at most what the registration rate limit lets one address
+ * start in its window (10 per 300 s). That is a known property of a ceiling that bounds storage
+ * and is not a quota anyone sells; the list reads newest first, so the rows that could fall past
+ * its `limit` are the oldest.
  */
 export { MAX_PASSKEYS_PER_USER }
 
@@ -150,7 +153,8 @@ function assertMayRegister(ctx: RegistrationGuardContext): void {
   const freshAge = ctx.context.sessionConfig.freshAge * 1000
   if (freshAge !== 0) {
     const age = Date.now() - new Date(session.createdAt).getTime()
-    if (age >= freshAge) {
+    // Written so that an unreadable `createdAt` (NaN) refuses instead of passing.
+    if (!(age < freshAge)) {
       throw ctx.error('BAD_REQUEST', {
         code: PASSKEY_ERROR_CODES.sessionNotFresh,
         message: 'Sign in again to add a passkey.',

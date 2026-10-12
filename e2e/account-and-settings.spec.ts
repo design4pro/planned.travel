@@ -214,7 +214,8 @@ test.describe('ACC-03 - a member adds a passkey on this device', () => {
     try {
       const watched = watchConsole(page, PASSKEYS)
       await visit(page, PASSKEYS, 'light')
-      const add = page.getByRole('button', { name: 'Add a passkey' })
+      // The empty state draws a second Add button; the header's is the first.
+      const add = page.getByRole('button', { name: 'Add a passkey' }).first()
       await expect(add).toBeEnabled()
       const before = await rows(page).count()
 

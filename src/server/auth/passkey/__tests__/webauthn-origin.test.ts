@@ -69,6 +69,20 @@ describe('assertClientData origin', () => {
     )
   })
 
+  it('only accepts a client origin in its serialised form', () => {
+    const dev = ['http://localhost:*']
+    expect(() => check('http://localhost:3030/path', dev)).toThrow(
+      WebAuthnError,
+    )
+    expect(() => check('HTTP://LOCALHOST:3030', dev)).toThrow(WebAuthnError)
+  })
+
+  it('ignores a wildcard entry that is not a plain host', () => {
+    expect(() => check('http://localhost:3030', ['http://%:*'])).toThrow(
+      WebAuthnError,
+    )
+  })
+
   it('treats a wildcard anywhere but the port as a literal string', () => {
     expect(() => check('http://localhost:3030', ['http://*:3030'])).toThrow(
       WebAuthnError,

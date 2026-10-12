@@ -153,7 +153,7 @@ function isTrustedOrigin(
 ): boolean {
   if (trusted.includes(origin)) return true
   const wildcards = trusted.filter((entry) =>
-    /^[a-z]+:\/\/[^/:*@]+:\*$/.test(entry),
+    /^[a-z]+:\/\/[a-z0-9.-]+:\*$/.test(entry),
   )
   if (wildcards.length === 0) return false
 
@@ -167,6 +167,9 @@ function isTrustedOrigin(
   if (candidate.origin === 'null' || candidate.username || candidate.password) {
     return false
   }
+  // A browser always sends the serialised origin, so anything that parses to something else
+  // (a path, an upper-case host, an alternative host spelling) is not one.
+  if (candidate.origin !== origin) return false
   return wildcards.some((entry) => {
     const pattern = new URL(entry.replace(/:\*$/, ''))
     return (

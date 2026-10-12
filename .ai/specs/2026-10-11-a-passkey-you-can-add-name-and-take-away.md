@@ -2,10 +2,10 @@
 
 | Field              | Value                                         |
 | ------------------ | --------------------------------------------- |
-| **Status**         | ready                                         |
+| **Status**         | in-progress                                   |
 | **Issue**          | none                                          |
 | **Spec PR**        | #1140                                         |
-| **Implementation** | none                                          |
+| **Implementation** | #1185                                         |
 | **Plan**           | 09-S1 (docs/plans/09-account-and-settings.md) |
 
 ## 📝 TLDR
@@ -627,3 +627,15 @@ Reviewed before the PR opened, through `afk-decide`: "approve this spec for unat
 | Security and tenancy | approve with conditions | impersonation veto on four endpoints; fresh session for registration; one `hasPassword` definition; ceiling before `createVerificationValue`; `register/options` rule; sessions-stay edge case; ACCESS §6.4 | approve with conditions: `impersonatedBy != null`, empty-string case tested (applied); approves as risk-high / security work                    |
 | Accessibility        | approve with conditions | focus after every outcome; per-row Rename; visible Field label; one always-mounted status region; limit line described-by; delete dialog errors and focus; list semantics; `dir="auto"`                     | approve with conditions: focus to the list heading when Add is disabled, stale outcome focus, one in-dialog alert, native `required` (applied)  |
 | UX                   | approve with conditions | "On one device only" badge; Sign in again action; `add.failed`; "a few minutes"; delete loading label; per-row Rename name and placeholder; copy gate; honest "Synced" vocabulary note                      | approve with conditions: 401 shows `sessionEnded`, stale lines only for `PASSKEY_SESSION_NOT_FRESH`, delete keys placed, generic body (applied) |
+
+## Amendment
+
+What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these places. Phases 2 and 3 (#1145, #1146) are unbuilt.
+
+1. **The WebAuthn origin check reads the dev port wildcards.** The design assumed dev trusts loopback origins "by port" for the ceremony too. That held for Better Auth's request-origin check only: `assertClientData` compared with an exact `includes`, so every ceremony on a port other than `APP_URL`'s answered `400 WebAuthn origin is not trusted`. `isTrustedOrigin` in `src/server/auth/passkey/webauthn.ts` now reads a `scheme://host:*` entry as the same scheme and hostname on any port, and refuses any origin that is not in its serialised form. Production's list (`trustedOrigins()`) has no wildcard, and `src/server/auth/__tests__/trusted-origins.test.ts` pins it. The change reaches passkey sign-in as well as registration, because the check is shared.
+2. **`MAX_PASSKEYS_PER_USER` lives in `src/lib/auth/passkey-limit.ts`**, re-exported by the plugin: the screen cannot import server code.
+3. **`advanced.ipAddress.ipAddressHeaders: ['cf-connecting-ip']`** in `src/server/auth/index.ts`. Without it Better Auth saw no client address behind Cloudflare and every rate limit shared one bucket. This re-keys every existing limit (sign-in, sign-up, password reset, two-factor), which is the intended behaviour.
+4. **The Add button is drawn twice when the list is empty** (the header's and the empty state's action), the same component with the same states. The header one owns the focus return.
+5. **Outcomes re-read the list.** Any registration outcome other than a dismissed sheet reads the list again and keeps it when the read fails, so a reply lost after the row was written, or a second tab, cannot leave the screen stale. A new row is never added twice.
+6. **A server limit refusal is announced** in the status region (visually hidden: the standing limit line is the visible text), and a failed sign-out keeps the Sign in again action mounted.
+7. **The ceiling is advisory under a burst.** The count and the write are separate statements, so a burst overshoots by at most what the registration rate limit lets one address start in its window (10 per 300 s). A post-write recount was weighed and not built: nothing in the harness can produce a valid attestation to test it, and the ceiling bounds storage, not an entitlement.

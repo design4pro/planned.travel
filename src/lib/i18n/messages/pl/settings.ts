@@ -587,7 +587,7 @@ const messages = {
   'passkeys.page.title': 'Klucze dostępu',
   'passkeys.page.description':
     'Klucz dostępu pozwala zalogować się odciskiem palca, twarzą lub kluczem sprzętowym, bez wpisywania czegokolwiek.',
-  'passkeys.page.back': 'Wróć do bezpieczeństwa',
+  'passkeys.page.back': 'Wróć do ustawień bezpieczeństwa',
   'passkeys.list.label': 'Twoje klucze dostępu',
   'passkeys.add.action': 'Dodaj klucz dostępu',
   'passkeys.add.loading': 'Czekamy na Twoje urządzenie',
@@ -596,7 +596,7 @@ const messages = {
   'passkeys.add.exists': 'To urządzenie ma już klucz dostępu do Twojego konta',
   'passkeys.add.failed': 'Nie dodano klucza dostępu. Spróbuj ponownie.',
   'passkeys.add.stale':
-    'Dla bezpieczeństwa zaloguj się ponownie, aby kontynuować.',
+    'Ze względów bezpieczeństwa zaloguj się ponownie, aby kontynuować.',
   'passkeys.error.sessionEnded':
     'Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.',
   'passkeys.signInAgain': 'Zaloguj się ponownie',
@@ -610,7 +610,7 @@ const messages = {
   'passkeys.row.fallbackName': 'Klucz dostępu · dodano {date}',
   'passkeys.row.added': 'Dodano {date}',
   'passkeys.row.lastUsed': 'Ostatnio użyty {date}',
-  'passkeys.row.neverUsed': 'Jeszcze nie użyto do logowania',
+  'passkeys.row.neverUsed': 'Jeszcze nie używany do logowania',
   'passkeys.badge.synced': 'Synchronizowany',
   'passkeys.badge.singleDevice': 'Tylko na jednym urządzeniu',
   'passkeys.error.title': 'Nie udało się wczytać Twoich kluczy dostępu',

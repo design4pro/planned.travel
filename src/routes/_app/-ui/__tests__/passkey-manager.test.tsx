@@ -52,8 +52,9 @@ async function mount(): Promise<void> {
   await screen.findByRole('heading', { name: 'Your passkeys' })
 }
 
+/** The header's button; the empty state draws a second one with the same states. */
 function addButton(): HTMLElement {
-  return screen.getByRole('button', { name: /Add a passkey|Waiting for/ })
+  return screen.getAllByRole('button', { name: /Add a passkey|Waiting for/ })[0]
 }
 
 beforeEach(() => {
@@ -191,10 +192,8 @@ describe('adding a passkey', () => {
 
     await userEvent.click(addButton())
 
-    expect(screen.getByRole('button', { name: /Waiting for/ })).toHaveProperty(
-      'disabled',
-      true,
-    )
+    expect(addButton()).toHaveProperty('disabled', true)
+    expect(addButton().textContent).toContain('Waiting for')
     expect(client.registerPasskey).toHaveBeenCalledTimes(1)
 
     finish({ ok: false, aborted: true })
@@ -324,6 +323,130 @@ describe('adding a passkey', () => {
     expect(screen.getByRole('button', { name: 'Sign in again' })).toBeTruthy()
   })
 
+  it('draws the same Add button in the empty state', async () => {
+    await mount()
+    await screen.findByText('No passkeys yet')
+
+    expect(
+      screen.getAllByRole('button', { name: 'Add a passkey' }),
+    ).toHaveLength(2)
+  })
+
+  it('does not add a passkey twice when a reload already returned it', async () => {
+    client.listPasskeys.mockResolvedValueOnce({
+      ok: true,
+      passkeys: [passkey({ id: 'pk_new' })],
+    })
+    client.registerPasskey.mockResolvedValue({
+      ok: true,
+      passkey: passkey({ id: 'pk_new' }),
+    })
+    await mount()
+    await screen.findAllByRole('listitem')
+
+    await userEvent.click(addButton())
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('Passkey added'),
+    )
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('reads a list that never loaded again once a passkey was added', async () => {
+    client.listPasskeys.mockResolvedValueOnce(failure(500))
+    client.registerPasskey.mockResolvedValue({
+      ok: true,
+      passkey: passkey({ id: 'pk_new' }),
+    })
+    await mount()
+    await screen.findByRole('alert')
+    client.listPasskeys.mockResolvedValue({
+      ok: true,
+      passkeys: [passkey({ id: 'pk_new' })],
+    })
+
+    await userEvent.click(addButton())
+
+    expect(await screen.findAllByRole('listitem')).toHaveLength(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('reads the list again after a failure that may have left a row behind', async () => {
+    client.registerPasskey.mockResolvedValue({
+      ok: false,
+      aborted: false,
+      alreadyEnrolled: false,
+      failure: { code: null, status: 0, message: '' },
+    })
+    await mount()
+    await screen.findByText('No passkeys yet')
+    client.listPasskeys.mockResolvedValue({
+      ok: true,
+      passkeys: [passkey({ id: 'pk_written' })],
+    })
+
+    await userEvent.click(addButton())
+
+    expect(await screen.findAllByRole('listitem')).toHaveLength(1)
+    expect(client.listPasskeys).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not read the list again when the sheet was only dismissed', async () => {
+    client.registerPasskey.mockResolvedValue({ ok: false, aborted: true })
+    await mount()
+    await screen.findByText('No passkeys yet')
+
+    await userEvent.click(addButton())
+
+    await waitFor(() => expect(addButton()).toHaveProperty('disabled', false))
+    expect(client.listPasskeys).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces a limit refusal in the status region, which the standing line does not do', async () => {
+    client.registerPasskey.mockResolvedValue({
+      ok: false,
+      aborted: false,
+      alreadyEnrolled: false,
+      failure: { code: 'PASSKEY_LIMIT_REACHED', status: 400, message: '' },
+    })
+    await mount()
+    await screen.findByText('No passkeys yet')
+
+    await userEvent.click(addButton())
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        `You have reached the limit of ${MAX_PASSKEYS_PER_USER} passkeys`,
+      ),
+    )
+  })
+
+  it('keeps Sign in again on screen when signing out fails, and puts focus back on it', async () => {
+    client.registerPasskey.mockResolvedValue({
+      ok: false,
+      aborted: false,
+      alreadyEnrolled: false,
+      failure: { code: 'PASSKEY_SESSION_NOT_FRESH', status: 400, message: '' },
+    })
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('offline'))
+    vi.stubGlobal('fetch', fetchMock)
+    await mount()
+    await screen.findByText('No passkeys yet')
+    await userEvent.click(addButton())
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Sign in again' }),
+    )
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        'Check your connection and try again.',
+      ),
+    )
+    const retry = screen.getByRole('button', { name: 'Sign in again' })
+    await waitFor(() => expect(document.activeElement).toBe(retry))
+    vi.unstubAllGlobals()
+  })
+
   it('keeps the ceiling on screen, tied to the disabled button, and puts focus on the heading', async () => {
     client.registerPasskey.mockResolvedValue({
       ok: false,
@@ -336,9 +459,13 @@ describe('adding a passkey', () => {
 
     await userEvent.click(addButton())
 
-    const hint = await screen.findByText(
-      `You have reached the limit of ${MAX_PASSKEYS_PER_USER} passkeys. Remove one to add another.`,
+    // The standing line, plus its announcement in the status region.
+    await waitFor(() =>
+      expect(document.getElementById('passkey-add-hint')?.textContent).toBe(
+        `You have reached the limit of ${MAX_PASSKEYS_PER_USER} passkeys. Remove one to add another.`,
+      ),
     )
+    const hint = document.getElementById('passkey-add-hint') as HTMLElement
     expect(addButton()).toHaveProperty('disabled', true)
     expect(addButton().getAttribute('aria-describedby')).toBe(hint.id)
     await waitFor(() =>
