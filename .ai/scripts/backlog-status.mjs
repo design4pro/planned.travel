@@ -666,6 +666,16 @@ export function buildPlan({
 
 const issueText = (issue) => `${issue.title ?? ""}\n${issue.body ?? ""}`;
 
+/**
+ * How many open issues and PRs one `gh ... list` call asks for. Every issue outside the window is
+ * invisible to the report, and a blocker outside it counts as closed: with the old 200, 103 of 303
+ * open issues were never classified and #913 read READY while the open #907 blocked it.
+ */
+export const LIST_LIMIT = 1000;
+
+/** True when a listing came back full, so rows past the limit may be missing. */
+export const isTruncated = (rows, limit = LIST_LIMIT) => rows.length >= limit;
+
 const gh = (args) =>
   JSON.parse(
     execFileSync("gh", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }),
@@ -737,13 +747,17 @@ function main(argv) {
   const { labels } = JSON.parse(readFileSync(CONFIG, "utf8"));
   const trusted = trustedAuthors(JSON.parse(readFileSync(AUTOMATIONS, "utf8")));
   const prs = gh([
-    "pr", "list", "--state", "open", "--limit", "200",
+    "pr", "list", "--state", "open", "--limit", String(LIST_LIMIT),
     "--json", `number,title,body,headRefName,author,labels,updatedAt${plan ? ",files" : ""}`,
   ]);
   const openIssues = gh([
-    "issue", "list", "--state", "open", "--limit", "200",
+    "issue", "list", "--state", "open", "--limit", String(LIST_LIMIT),
     "--json", "number,title,url,labels,updatedAt,body,comments,author",
   ]);
+
+  for (const [what, rows] of [["open pull requests", prs], ["open issues", openIssues]])
+    if (isTruncated(rows))
+      console.error(`backlog-status: ${rows.length} ${what} fill the limit of ${LIST_LIMIT}; some are not classified. Raise LIST_LIMIT.`);
 
   const records = readRunRecords();
   const context = {

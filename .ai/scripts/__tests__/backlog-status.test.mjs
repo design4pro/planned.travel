@@ -39,6 +39,8 @@ import {
   frozenPlans,
   isAlive,
   marksDeliveredStages,
+  isTruncated,
+  LIST_LIMIT,
   linkOpenPrs,
   parseArgs,
   pickNext,
@@ -184,6 +186,18 @@ describe("linkOpenPrs", () => {
       { number: 8, title: "t", body: "Closes #5\nCloses #6", headRefName: "feat/issue-5-thing" },
     ]);
     expect(links.get(6)).toEqual([{ number: 8, title: "t", viaKeyword: true }]);
+  });
+});
+
+describe("isTruncated", () => {
+  it("lists more than the 303 open issues the old limit of 200 cut off", () => {
+    expect(LIST_LIMIT).toBeGreaterThan(303);
+  });
+
+  it("flags a listing that filled the limit and passes one that did not", () => {
+    expect(isTruncated(new Array(LIST_LIMIT).fill({}))).toBe(true);
+    expect(isTruncated(new Array(LIST_LIMIT - 1).fill({}))).toBe(false);
+    expect(isTruncated(new Array(5).fill({}), 5)).toBe(true);
   });
 });
 
