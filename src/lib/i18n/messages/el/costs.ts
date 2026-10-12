@@ -154,6 +154,13 @@ const messages = {
   'categories.progressLabel': 'Δαπάνες έναντι του προϋπολογισμού του ταξιδιού',
   'categories.empty':
     'Οι γραμμές του προϋπολογισμού και τα έξοδα αναλύονται εδώ μόλις υπάρχει κάτι να αναλυθεί.',
+  'categories.legendLabel': 'Δαπάνες ανά κατηγορία',
+  'categories.planned': '{amount} προγραμματισμένα',
+  'categories.nothingSpent':
+    'Δεν έχει ξοδευτεί τίποτα ακόμα. Δείτε τι έχετε προγραμματίσει.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'λιγότερο από {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Καταγεγραμμένες πληρωμές',
   'payments.empty.title': 'Καμία πληρωμή ακόμη',

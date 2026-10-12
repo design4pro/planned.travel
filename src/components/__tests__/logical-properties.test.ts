@@ -100,13 +100,11 @@ const DECIDED_TRANSFORM: Readonly<Record<string, ReadonlyArray<string>>> = {
   // keyword, so the *track* carries `rtl:-scale-x-100` and turns the whole box
   // round instead — the device `ui/progress.tsx` uses for the same problem.
   'src/components/costs/split-editor.tsx': ['origin-left'],
-  'src/routes/_app/trips/$tripId/-costs/rail.tsx': ['origin-left'],
 }
 
 /** The mirror that makes an `origin-left` above correct. */
 const TRANSFORM_GUARD: Readonly<Record<string, string>> = {
   'src/components/costs/split-editor.tsx': 'rtl:-scale-x-100',
-  'src/routes/_app/trips/$tripId/-costs/rail.tsx': 'rtl:-scale-x-100',
 }
 
 /**

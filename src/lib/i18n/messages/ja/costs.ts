@@ -153,6 +153,13 @@ const messages = {
   'categories.progressLabel': '旅行の予算に対する支出',
   'categories.empty':
     '予算項目と支出は、内訳が生まれた時点でここに分解されます。',
+  'categories.legendLabel': 'カテゴリ別の支出',
+  'categories.planned': '予定 {amount}',
+  'categories.nothingSpent':
+    'まだ支出はありません。予定している内容は次のとおりです。',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': '{percent}未満',
   /* ------------------------------------------------- payments recorded */
   'payments.label': '記録された支払い',
   'payments.empty.title': 'まだ支払いはありません',

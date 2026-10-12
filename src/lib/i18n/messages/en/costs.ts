@@ -190,6 +190,13 @@ const messages = {
   'categories.progressLabel': 'Spent against the trip budget',
   'categories.empty':
     'Budget lines and expenses both break down here once there is something to break down.',
+  'categories.legendLabel': 'Spend by category',
+  'categories.planned': '{amount} planned',
+  'categories.nothingSpent':
+    'Nothing spent yet. Here is what you have planned.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'less than {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Payments recorded',
   'payments.empty.title': 'No payments yet',
