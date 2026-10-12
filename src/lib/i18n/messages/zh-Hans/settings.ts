@@ -456,6 +456,39 @@ const messages = {
   'billing.order.stillWritingBody':
     '发票 {number} 正在生成。下载会在几秒后自动恢复。',
   'billing.order.openFailed': '那张发票没有打开',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': '账号',
+  'passkeys.page.title': '通行密钥',
+  'passkeys.page.description':
+    '有了通行密钥，什么都不用打，用指纹、面容或安全密钥就能登录。',
+  'passkeys.page.back': '返回安全设置',
+  'passkeys.list.label': '你的通行密钥',
+  'passkeys.add.action': '添加通行密钥',
+  'passkeys.add.loading': '正在等待你的设备',
+  'passkeys.add.added': '已添加通行密钥',
+  'passkeys.add.dismissed': '没有添加通行密钥',
+  'passkeys.add.exists': '这台设备已经有你账号的通行密钥',
+  'passkeys.add.failed': '没有添加成功。请再试一次。',
+  'passkeys.add.stale': '为了你的安全，请重新登录后继续。',
+  'passkeys.error.sessionEnded': '你的会话已结束。请重新登录后继续。',
+  'passkeys.signInAgain': '重新登录',
+  'passkeys.add.limit':
+    '你已达到 {value} 个通行密钥的上限。请先删除一个，再添加新的。',
+  'passkeys.add.unsupported':
+    '此浏览器无法创建通行密钥。请换一个浏览器或设备试试。',
+  'passkeys.empty.title': '还没有通行密钥',
+  'passkeys.empty.body':
+    '添加一个，就能用指纹、面容或安全密钥登录，什么都不用打。',
+  'passkeys.row.fallbackName': '通行密钥 · 添加于 {date}',
+  'passkeys.row.added': '添加于 {date}',
+  'passkeys.row.lastUsed': '上次使用：{date}',
+  'passkeys.row.neverUsed': '还没有用来登录过',
+  'passkeys.badge.synced': '已同步',
+  'passkeys.badge.singleDevice': '仅在一台设备上',
+  'passkeys.error.title': '没能加载你的通行密钥',
+  'passkeys.error.retry': '重试',
+  'passkeys.error.rateLimited': '尝试次数过多。请几分钟后再试。',
+  'passkeys.error.generic': '请检查网络连接后再试。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -10,6 +10,7 @@
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import * as z from 'zod'
+import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import type { BetterAuthPlugin } from 'better-auth'
 import { base64UrlDecode, base64UrlEncode, utf8Decode, utf8Encode } from './bytes'
 import {
@@ -22,6 +23,34 @@ import { SUPPORTED_COSE_ALGORITHMS } from './cose'
 /** How long a WebAuthn ceremony may stay open. */
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
 const CHALLENGE_PREFIX = 'passkey-challenge:'
+
+/**
+ * The ceiling is `MAX_PASSKEYS_PER_USER`, shared with the screen that words it. The count and the
+ * write are two statements, so ceremonies that all pass the count before the first one writes can
+ * all finish: a burst overshoots by what the registration rate limit lets each address involved
+ * start in its window (10 per 300 s, per address and not per user). That is a known property of a ceiling that bounds storage
+ * and is not a quota anyone sells; the list reads newest first, so the rows that could fall past
+ * its `limit` are the oldest.
+ */
+export { MAX_PASSKEYS_PER_USER }
+
+/**
+ * Registration is the dangerous half of a sign-in factor. Better Auth's limiter keys on address
+ * and path, never on the user, so these bound attempts from one client and the per-user ceiling
+ * above still bounds what a person can end up holding.
+ */
+const REGISTRATION_RATE_LIMIT = { window: 300, max: 10 } as const
+const REGISTRATION_PATHS: ReadonlySet<string> = new Set([
+  '/passkey/register/options',
+  '/passkey/register/verify',
+])
+
+/** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */
+export const PASSKEY_ERROR_CODES = {
+  limitReached: 'PASSKEY_LIMIT_REACHED',
+  sessionNotFresh: 'PASSKEY_SESSION_NOT_FRESH',
+  impersonated: 'PASSKEY_IMPERSONATED',
+} as const
 
 export type PasskeyPluginOptions = {
   /** Relying-party id — the registrable domain, no scheme and no port. */
@@ -78,6 +107,76 @@ const pubKeyCredParams = SUPPORTED_COSE_ALGORITHMS.map((alg) => ({
   alg,
 }))
 
+type RefusalStatus = 'BAD_REQUEST' | 'FORBIDDEN'
+
+/** The slice of an endpoint context the registration guards read. */
+type RegistrationGuardContext = {
+  context: {
+    session: {
+      session: { createdAt: Date | string; impersonatedBy?: unknown }
+      user: { id: string }
+    }
+    sessionConfig: { freshAge: number }
+    adapter: {
+      count: (input: {
+        model: string
+        where: Array<{ field: string; value: string }>
+      }) => Promise<number>
+    }
+  }
+  error: (
+    status: RefusalStatus,
+    body: { code: string; message: string },
+  ) => Error
+}
+
+/**
+ * Evaluated first on both registration endpoints, before any read or write.
+ *
+ * - An impersonated session is refused for every operator, because a passkey an operator registers
+ *   outlives the 900-second impersonation with no audit row (docs/ACCESS.md §6.4). Any non-null
+ *   marker counts, an empty string included: `guard.ts` reads a session that `tenant.ts` has
+ *   normalised, so the raw check here is the stricter of the two.
+ * - The session must be younger than the library's `freshAge` (0 switches the check off, as in
+ *   the library), for every account. A borrowed 30-day session that adds a passkey would otherwise
+ *   keep access after a password reset, which revokes sessions and not passkeys.
+ */
+function assertMayRegister(ctx: RegistrationGuardContext): void {
+  const { session } = ctx.context.session
+  if (session.impersonatedBy !== null && session.impersonatedBy !== undefined) {
+    throw ctx.error('FORBIDDEN', {
+      code: PASSKEY_ERROR_CODES.impersonated,
+      message: 'An impersonated session cannot register a passkey.',
+    })
+  }
+
+  const freshAge = ctx.context.sessionConfig.freshAge * 1000
+  if (freshAge !== 0) {
+    const age = Date.now() - new Date(session.createdAt).getTime()
+    // Written so that an unreadable `createdAt` (NaN) refuses instead of passing.
+    if (!(age < freshAge)) {
+      throw ctx.error('BAD_REQUEST', {
+        code: PASSKEY_ERROR_CODES.sessionNotFresh,
+        message: 'Sign in again to add a passkey.',
+      })
+    }
+  }
+}
+
+/** Refuses at the ceiling. Called before anything is written or consumed. */
+async function assertUnderCeiling(ctx: RegistrationGuardContext) {
+  const held = await ctx.context.adapter.count({
+    model: 'passkey',
+    where: [{ field: 'userId', value: ctx.context.session.user.id }],
+  })
+  if (held >= MAX_PASSKEYS_PER_USER) {
+    throw ctx.error('BAD_REQUEST', {
+      code: PASSKEY_ERROR_CODES.limitReached,
+      message: 'The passkey limit has been reached.',
+    })
+  }
+}
+
 function descriptorsFor(passkeys: Array<StoredPasskey>) {
   return passkeys.map((entry) => ({
     id: entry.credentialId,
@@ -93,6 +192,11 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
 
   return {
     id: 'passkey',
+
+    rateLimit: [...REGISTRATION_PATHS].map((path) => ({
+      pathMatcher: (candidate: string) => candidate === path,
+      ...REGISTRATION_RATE_LIMIT,
+    })),
 
     schema: {
       passkey: {
@@ -128,6 +232,8 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
         '/passkey/register/options',
         { method: 'POST', use: [sessionMiddleware] },
         async (ctx) => {
+          assertMayRegister(ctx)
+          await assertUnderCeiling(ctx)
           const { user } = ctx.context.session
           const challenge = createChallenge()
 
@@ -179,6 +285,9 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           }),
         },
         async (ctx) => {
+          assertMayRegister(ctx)
+          // Before `consumeCeremony` and any attestation work: a refused call burns no challenge.
+          await assertUnderCeiling(ctx)
           const { user } = ctx.context.session
           const challenge = readClientDataChallenge(
             ctx.body.credential.response.clientDataJSON,

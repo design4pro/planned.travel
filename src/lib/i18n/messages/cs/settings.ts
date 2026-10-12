@@ -563,6 +563,41 @@ const messages = {
   'billing.order.stillWritingBody':
     'Faktura {number} se vytváří. Stahování se samo za pár sekund vrátí.',
   'billing.order.openFailed': 'Tuto fakturu nešlo otevřít',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Účet',
+  'passkeys.page.title': 'Přístupové klíče',
+  'passkeys.page.description':
+    'Přístupový klíč vám umožní přihlásit se otiskem prstu, obličejem nebo bezpečnostním klíčem, bez psaní.',
+  'passkeys.page.back': 'Zpět na zabezpečení',
+  'passkeys.list.label': 'Vaše přístupové klíče',
+  'passkeys.add.action': 'Přidat přístupový klíč',
+  'passkeys.add.loading': 'Čekáme na vaše zařízení',
+  'passkeys.add.added': 'Přístupový klíč byl přidán',
+  'passkeys.add.dismissed': 'Žádný přístupový klíč nebyl přidán',
+  'passkeys.add.exists': 'Toto zařízení už má přístupový klíč k vašemu účtu',
+  'passkeys.add.failed': 'Přístupový klíč nebyl přidán. Zkuste to znovu.',
+  'passkeys.add.stale': 'Pro vaši bezpečnost se přihlaste znovu a pokračujte.',
+  'passkeys.error.sessionEnded':
+    'Vaše sezení skončilo. Přihlaste se znovu a pokračujte.',
+  'passkeys.signInAgain': 'Přihlásit se znovu',
+  'passkeys.add.limit':
+    'Dosáhli jste limitu {value} přístupových klíčů. Odeberte jeden, abyste mohli přidat další.',
+  'passkeys.add.unsupported':
+    'Tento prohlížeč neumí vytvářet přístupové klíče. Zkuste jiný prohlížeč nebo zařízení.',
+  'passkeys.empty.title': 'Zatím žádné přístupové klíče',
+  'passkeys.empty.body':
+    'Přidejte jeden a přihlásíte se otiskem prstu, obličejem nebo bezpečnostním klíčem, bez psaní.',
+  'passkeys.row.fallbackName': 'Přístupový klíč · přidán {date}',
+  'passkeys.row.added': 'Přidáno {date}',
+  'passkeys.row.lastUsed': 'Naposledy použito {date}',
+  'passkeys.row.neverUsed': 'Zatím nepoužito k přihlášení',
+  'passkeys.badge.synced': 'Synchronizovaný',
+  'passkeys.badge.singleDevice': 'Jen na jednom zařízení',
+  'passkeys.error.title': 'Vaše přístupové klíče se nenačetly',
+  'passkeys.error.retry': 'Zkusit znovu',
+  'passkeys.error.rateLimited':
+    'Příliš mnoho pokusů. Zkuste to znovu za pár minut.',
+  'passkeys.error.generic': 'Zkontrolujte připojení a zkuste to znovu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
