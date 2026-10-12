@@ -28,9 +28,10 @@ export const TASK_KINDS = [
   // inventory. `places` is unbounded on a paid tier, so duplicating one is an
   // unbounded write and belongs nowhere near a request path.
   'trip-copy',
-  // A person lost their place in a workspace (removed, left, banned, signed out everywhere, deleted):
-  // their open trip-room sockets in that workspace are closed so the next connect re-runs the
-  // session and tenancy checks. A fan-out over every room they could open, so it is queued rather
+  // A person lost their place in a workspace (removed, left, banned, signed out everywhere, deleted)
+  // or ended their own session (password reset, a password change that revoked the others,
+  // sign-out, revoking one, the other or all sessions): their open trip-room sockets are closed so
+  // the next connect re-runs the session and tenancy checks. A fan-out over every room they could open, so it is queued rather
   // than run on the request that caused it.
   'trip-room-evict',
   // Billing follow-ups. The provider webhook answers the provider immediately and

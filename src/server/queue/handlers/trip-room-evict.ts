@@ -5,11 +5,12 @@
  * A trip room reads a person's role once, at connect, so a socket opened before the person was
  * removed from the workspace (by an owner, by leaving, or by the platform console banning, signing
  * out or deleting the account) keeps receiving every commit and presence frame until it drops;
- * so does a socket of a person who then resets their password or signs out (#1093), where the
- * next connect is refused only if the session is gone. A socket is not tied to a session, so every
- * socket of that person closes, on their other devices too.
+ * so does a socket of a person who then resets their password or signs out (#1093). A socket is
+ * not tied to a session, so every socket of that person closes, on their other devices too.
  * #1050 closes sockets on trip-level changes; this is the same close for the workspace-level ones,
- * and the person's next connect re-runs the session and tenancy checks and is refused.
+ * and the person's next connect re-runs the session and tenancy checks. After losing a place that
+ * connect is refused; after ending one's own session it is refused only on a device with no valid
+ * session left.
  *
  * Queued rather than run in the request because it is a fan-out over every room the person could
  * open, and because the producer is the auth layer (`src/server/auth/room-eviction.ts`), whose

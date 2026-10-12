@@ -477,7 +477,7 @@ describe('ending one’s own session queues the close of the person’s trip-roo
     expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
   })
 
-  it('queues nothing for a reset token that is bad, expired or already used', async () => {
+  it('queues nothing for a reset token that is made up or already used', async () => {
     const person = await signedInPerson('forgetful')
     const token = await resetTokenFor(person)
     await getAuth().api.resetPassword({
@@ -495,6 +495,33 @@ describe('ending one’s own session queues the close of the person’s trip-roo
         body: { token: 'not-a-token', newPassword: 'a-brand-new-passphrase-1' },
       }),
     ).rejects.toBeDefined()
+
+    expect(evictions()).toEqual([])
+  })
+
+  it('reads the reset token from the query when the body has none', async () => {
+    const person = await signedInPerson('querying')
+    const spaces = memberOfTwoMore(person)
+    const token = await resetTokenFor(person)
+
+    await getAuth().api.resetPassword({
+      body: { newPassword: 'a-brand-new-passphrase-1' } as {
+        newPassword: string
+      },
+      query: { token },
+    })
+
+    expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
+  })
+
+  it('does not let a caller of the auth API name the person to close', async () => {
+    const victim = await signedInPerson('victim')
+    memberOfTwoMore(victim)
+
+    await getAuth().api.signOut({
+      headers: new Headers(),
+      roomEvictionUserId: victim.userId,
+    } as { headers: Headers })
 
     expect(evictions()).toEqual([])
   })

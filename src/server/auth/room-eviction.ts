@@ -106,7 +106,7 @@ async function evictEverywhere(userId: string, source: string): Promise<void> {
 
 /**
  * The endpoints that end a session by what the session is or what the caller holds, not by an id in
- * the request: the person is read by {@link roomEvictionPrepare} before the endpoint deletes it.
+ * the request: the person is read by {@link roomEvictionPrepareHook} before the endpoint deletes it.
  */
 const SESSION_ENDING_PATHS: ReadonlySet<string> = new Set([
   '/reset-password',
@@ -117,14 +117,13 @@ const SESSION_ENDING_PATHS: ReadonlySet<string> = new Set([
   '/admin/revoke-user-session',
 ])
 
-/** What {@link roomEvictionPrepare} leaves on the request for {@link roomEvictionHook}. */
+/** What {@link roomEvictionPrepareHook} leaves on the request for {@link roomEvictionHook}. */
 const resolvedPerson = z.object({ roomEvictionUserId: z.string().min(1) })
 
 const tokenBody = z.object({ token: z.string().min(1) })
 const sessionTokenBody = z.object({ sessionToken: z.string().min(1) })
 /** Better Auth reads the reset token from the body first, then from the query. */
-const resetBody = z.object({ token: z.string().min(1).optional() })
-const resetQuery = z.object({ token: z.string().min(1).optional() })
+const optionalToken = z.object({ token: z.string().min(1).optional() })
 
 /**
  * The `before` hook for the endpoints that end a session: it resolves the person while the session or
@@ -135,10 +134,9 @@ const resetQuery = z.object({ token: z.string().min(1).optional() })
  * nothing, and nothing in this hook can reject into the request.
  */
 const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
+  let userId: string | null = null
   try {
-    const userId = await personEndingSession(ctx)
-    if (userId === null) return
-    return { context: { roomEvictionUserId: userId } }
+    userId = await personEndingSession(ctx)
   } catch (cause) {
     // The error's name only: a failed query's message carries its parameters, which here are a
     // session token or a reset token, and a credential is never logged.
@@ -147,10 +145,13 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
       reason: cause instanceof Error ? cause.name : 'unknown',
     })
   }
+  // Always written, empty when nobody was resolved: a key an in-process `auth.api.*` caller put on
+  // the call itself must not survive into the `after` hook and name somebody else.
+  return { context: { roomEvictionUserId: userId ?? '' } }
 })
 
 /**
- * {@link roomEvictionPrepare} as a plugin with a matcher rather than as `hooks.before`: the
+ * {@link roomEvictionPrepareHook} as a plugin with a matcher rather than as `hooks.before`: the
  * single `hooks.before` slot of the auth options is left free for a guard that must run on one
  * endpoint (the two-factor enrolment guard), and this one only runs on the paths that need it.
  */
@@ -176,8 +177,8 @@ async function personEndingSession(
 
   if (ctx.path === '/reset-password') {
     const token =
-      resetBody.safeParse(ctx.body).data?.token ??
-      resetQuery.safeParse(ctx.query).data?.token
+      optionalToken.safeParse(ctx.body).data?.token ??
+      optionalToken.safeParse(ctx.query).data?.token
     if (token === undefined) return null
     const verification = await internalAdapter.findVerificationValue(
       `reset-password:${token}`,
@@ -214,9 +215,10 @@ async function personEndingSession(
 
 /**
  * `hooks.after` for the endpoints whose success ends a person's place in a workspace or ends their
- * sessions: remove member, leave, ban, sign out every session, and the self-service ones (#1093). Keyed on the path and on a
- * response that is not an error, and on the ids the endpoint itself resolved (the member it
- * returned, the validated `userId` it was given), never on anything read from a request header.
+ * sessions: remove member, leave, ban, sign out every session, and the self-service ones (#1093).
+ * Keyed on the path and on a response that is not an error, and on the ids the endpoint itself resolved (the member it
+ * returned, the validated `userId` it was given, the person {@link roomEvictionPrepareHook} read from
+ * the store), never on anything read from a request header.
  */
 export const roomEvictionHook = createAuthMiddleware(async (ctx) => {
   const returned: unknown = ctx.context.returned
