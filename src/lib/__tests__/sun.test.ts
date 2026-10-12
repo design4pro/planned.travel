@@ -120,13 +120,13 @@ describe('a day the sun does not cross the horizon', () => {
   it('has no sunrise at Tromsø in polar night', () => {
     const times = sunTimes(TROMSO.lat, TROMSO.lng, '2026-12-21', TROMSO.zone)
 
-    expect(times.sunrise).toBeNull()
+    expect(times).toEqual({ sunrise: null, sunset: null })
   })
 
   it('has no sunset at Tromsø in midnight sun', () => {
     const times = sunTimes(TROMSO.lat, TROMSO.lng, '2026-06-21', TROMSO.zone)
 
-    expect(times.sunset).toBeNull()
+    expect(times).toEqual({ sunrise: null, sunset: null })
   })
 
   it('has neither side at the south pole in the southern winter', () => {
@@ -158,8 +158,22 @@ describe('input that is not a place and a date', () => {
   })
 
   it('writes midnight as 00, never 24', () => {
-    const { sunset } = sunTimes(59.9139, 10.7522, '2026-06-21', 'UTC')
+    const { sunset } = sunTimes(
+      64.1466,
+      -21.9426,
+      '2026-06-21',
+      'Atlantic/Reykjavik',
+    )
 
-    expect(sunset).toMatch(/^([01]\d|2[0-3]):[0-5]\d$/)
+    expect(sunset).toBe('00:04')
+  })
+
+  it('keeps a sunset that falls on the local date when the neighbouring anchor day has none', () => {
+    // Longyearbyen on 2026-04-18: the sun does not set on the 18th (UTC), but it set at 22:11Z on
+    // the 17th at about 22:12Z, which is 00:12 local on the 18th.
+    expect(sunTimes(78.22, 15.65, '2026-04-18', 'Europe/Oslo')).toEqual({
+      sunrise: '01:39',
+      sunset: '00:12',
+    })
   })
 })

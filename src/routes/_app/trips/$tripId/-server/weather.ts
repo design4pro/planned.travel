@@ -12,8 +12,9 @@
  * has to know why and an error crossing the wire is not one more thing to render as an apology. An
  * unreadable trip is not a degraded lookup, so that still throws.
  *
- * What is returned is a function of the trip's days and of the provider's forecast: no place, stay
- * or member id, no coordinate, and no time at which anyone looked a point up.
+ * What is returned is a function of the trip's days, of the provider's forecast and of each day's
+ * coordinate (through the computed sun times): no place, stay or member id, no coordinate itself,
+ * and no time at which anyone looked a point up.
  */
 
 import { createServerFn } from '@tanstack/react-start'

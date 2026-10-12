@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                      |
-| ------------------ | -------------------------- |
-| **Status**         | in-progress                |
-| **Issue**          | #631                       |
-| **Spec PR**        | #636                       |
-| **Implementation** | #1003, #1004, #1044, #1046 |
+| Field              | Value                             |
+| ------------------ | --------------------------------- |
+| **Status**         | in-progress                       |
+| **Issue**          | #631                              |
+| **Spec PR**        | #636                              |
+| **Implementation** | #1003, #1004, #1044, #1046, #1197 |
 
 ## 📝 TLDR
 
@@ -778,8 +778,14 @@ What ships in #1004 (phase 2, the forecast slice, #820) differs from the design 
 
 What ships with the popover (#822, the fuller forecast) differs from the design above in these places.
 
-14. **The panel is `DayWeatherPanel` in `day-weather-panel.tsx`**, a unit with no popover in it, and the badge in `day-weather-badge.tsx` puts it in one. A forecast badge is now a button, the day header button's sibling; an unavailable, loading or empty day stays a picture or empty space, because there is nothing behind it to open. Sunrise and sunset, and the recorded and estimate notes, are not in the panel: neither the computed sun times nor those two kinds exist yet.
+14. **The panel is `DayWeatherPanel` in `day-weather-panel.tsx`**, a unit with no popover in it, and the badge in `day-weather-badge.tsx` puts it in one. A forecast badge is now a button, the day header button's sibling; an unavailable, loading or empty day stays a picture or empty space, because there is nothing behind it to open. Sunrise and sunset are rows of the panel since #824 (computed in `src/lib/sun.ts`, carried on every `ok` outcome); the recorded and estimate notes are not in it, because those two kinds do not exist yet.
 15. **`DayReading` carries `precipitationMm`, `precipitationProbability`, `windMs` and `slots`**, all metric, converted at render like the temperatures (`mm` or `in`, `km/h` or `mph`; the unit symbols are written the way `formatDistance` writes `km`, not as copy). The daily total is the sum of the steps' amounts, each step contributing its hourly figure and only otherwise its six-hourly one, so the overlapping six-hour figures are never added on top of the hourly ones; it is `null`, never `0`, when no step carries one.
 16. **The compact product sends no chance of rain.** Its summaries carry `precipitation_amount` and nothing else (`next_12_hours.details` is empty, recorded 2026-10-09), so `precipitationProbability` is `null` for every MET reading today and the panel's "chance" is not drawn. The client still reads `probability_of_precipitation` when a summary states one, so a richer product needs no further change.
 17. **Slots are the slots that have a step, or one that covers them**, so today, once the morning has gone, has two and a later day four. `from` is the slot's local start (`00:00`, `06:00`, `12:00`, `18:00`), the sky is that of the step whose six hours cover most of the slot (none when they cover less than half of it, because past the hourly stretch the steps sit at 00, 06, 12 and 18 UTC, which is not a slot start in most zones), and the temperature is the mean of the steps inside the slot. `slots` is `null` when a day has none, which the panel reads as no region at all.
 18. **The forecast cache is `wx:v2:forecast:<lat4>:<lng4>`.** A step now stores wind, precipitation and the chance, which is a change of stored shape; `WEATHER_CACHE_VERSION` moved from `v1` to `v2` as the Data Model requires (the failure key carries the same prefix, so its `v1` entries are dropped too, which costs at most one retry), and the `v1` entries are left to expire on their 6 h retention. Unlike `lastModified` (item 13), the new step fields are required, so an older entry cannot be read as the new shape and a bump, not a default, is the right answer. Until they do, a board opened for a point costs one call it would not have, which is the price of never serving a step without the fields it is now read for.
+
+What ships with the sun times (#824, #1197) differs from the design above in these places.
+
+19. **`sunTimes` returns a `SunTimes`, not `SunTimes | null`, and both sides are `null` together in polar night and midnight sun.** The NOAA algorithm has one hour-angle test per side, and a day on which the sun does not cross the horizon fails it for both, so there is no day with a sunrise and no sunset to return. A bad date, coordinate or zone also gives `{ sunrise: null, sunset: null }`.
+20. **`sun` is optional on the wire type** (`sun?: SunTimes` on `DayWeather`'s `ok` member) and required on the server's `WeatherOutcome`, so an answer cached or served by a worker that predates it leaves the two rows out instead of breaking the panel.
+21. **The fixtures sit inside `src/lib/__tests__/sun.test.ts`**, not in a `sun.fixtures.ts`, and number seven for the within-two-minutes check (Oslo twice, Quito, Sydney, and Tokyo, Los Angeles and Apia, whose zones put the crossing on a neighbouring UTC day); Tromsø is asserted separately as `null`. The values are the output of NOAA's published `main.js`, run under node, rounded to the minute.

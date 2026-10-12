@@ -19,7 +19,8 @@ export interface DayWeatherPanelProps {
 
 /**
  * The fuller reading of a forecast day: the high and low, what falls and how likely it is, the
- * wind, and a strip of the day's six-hour slots, with the provider's credit underneath.
+ * wind, the day's sunrise and sunset, and a strip of the day's six-hour slots, with the provider's
+ * credit underneath.
  *
  * It is a unit with no popover in it - the badge puts it in one today, and the day detail screen
  * will mount it in its weather region without the badge's popover around it. Whatever the provider

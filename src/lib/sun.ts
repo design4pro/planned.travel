@@ -163,8 +163,10 @@ function localClock(
       lat,
       lng,
     )
+    // No crossing on this anchor day says nothing about the neighbours: on the day a polar
+    // transition begins, the crossing that falls on the local date can belong to the day before.
     if (instant === null) {
-      return null
+      continue
     }
     // Whole minutes first, so a crossing at 05:40:50 reads 05:41 and not 05:40.
     const rounded = new Date(
