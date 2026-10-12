@@ -141,6 +141,41 @@ export function parseClientData(bytes: Uint8Array): ParsedClientData {
   }
 }
 
+/**
+ * Whether `origin` is one of `trusted`. An entry is an exact origin, or `scheme://host:*`, which
+ * `trustedOrigins()` writes in development because `vite dev` moves to the next free port. The
+ * wildcard covers the port only: scheme and hostname are compared as parsed URL parts, never as
+ * a prefix, so `http://localhost.evil.com:3000` does not match `http://localhost:*`.
+ */
+function isTrustedOrigin(
+  origin: string,
+  trusted: ReadonlyArray<string>,
+): boolean {
+  if (trusted.includes(origin)) return true
+  const wildcards = trusted.filter((entry) =>
+    /^[a-z]+:\/\/[^/:*@]+:\*$/.test(entry),
+  )
+  if (wildcards.length === 0) return false
+
+  let candidate: URL
+  try {
+    candidate = new URL(origin)
+  } catch {
+    return false
+  }
+  // `URL` keeps userinfo out of the origin; an origin that carries any is not one.
+  if (candidate.origin === 'null' || candidate.username || candidate.password) {
+    return false
+  }
+  return wildcards.some((entry) => {
+    const pattern = new URL(entry.replace(/:\*$/, ''))
+    return (
+      pattern.protocol === candidate.protocol &&
+      pattern.hostname === candidate.hostname
+    )
+  })
+}
+
 /** Enforces the ceremony type, challenge and origin checks. */
 export function assertClientData(
   clientData: ParsedClientData,
@@ -161,7 +196,7 @@ export function assertClientData(
   ) {
     throw new WebAuthnError('WebAuthn challenge did not match.')
   }
-  if (!expected.origins.includes(clientData.origin)) {
+  if (!isTrustedOrigin(clientData.origin, expected.origins)) {
     throw new WebAuthnError('WebAuthn origin is not trusted.')
   }
   if (clientData.crossOrigin) {

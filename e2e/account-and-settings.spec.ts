@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import type { RouteCase } from './helpers/routes.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
@@ -19,6 +20,13 @@ const PASSKEYS: RouteCase = {
   name: 'passkeys',
   path: '/passkeys',
   ready: '#passkey-list-heading',
+}
+
+/** The passkey rows only: the app shell has list items of its own. */
+function rows(page: Page) {
+  return page
+    .getByRole('region', { name: 'Your passkeys' })
+    .getByRole('listitem')
 }
 
 const LIST_ENDPOINT = '**/api/auth/passkey/list'
@@ -134,7 +142,8 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
     })
 
     release()
-    await expect(page.getByRole('listitem')).toHaveCount(2)
+    // Hydration of a dev-server route can take longer than the default assertion budget.
+    await expect(rows(page)).toHaveCount(2, { timeout: 20_000 })
     await expect(page.locator('ul[aria-busy="true"]')).toHaveCount(0)
     await expect(page.getByText('Synced')).toBeVisible()
     await expect(page.getByText('Work laptop')).toBeVisible()
@@ -207,7 +216,7 @@ test.describe('ACC-03 - a member adds a passkey on this device', () => {
       await visit(page, PASSKEYS, 'light')
       const add = page.getByRole('button', { name: 'Add a passkey' })
       await expect(add).toBeEnabled()
-      const before = await page.getByRole('listitem').count()
+      const before = await rows(page).count()
 
       const verified = page.waitForResponse(
         (response) =>
@@ -231,13 +240,13 @@ test.describe('ACC-03 - a member adds a passkey on this device', () => {
       expect(created, 'verify answers with the new passkey').not.toBeNull()
 
       await expect(page.getByRole('status')).toHaveText('Passkey added')
-      await expect(page.getByRole('listitem')).toHaveCount(before + 1)
+      await expect(rows(page)).toHaveCount(before + 1)
       await expect(add, 'focus comes back to the button').toBeFocused()
       // The row has no name yet; the fallback is display-only.
       await expect(page.getByText(/^Passkey · added /)).toBeVisible()
 
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await expect(page.getByRole('listitem')).toHaveCount(before + 1)
+      await expect(rows(page)).toHaveCount(before + 1, { timeout: 20_000 })
 
       expect(
         watched().fatal,

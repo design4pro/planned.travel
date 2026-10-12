@@ -233,6 +233,8 @@ absent client-side database). Its named hosted equivalent is `ACC-07`, which `09
 `09-S1` · Wave 1 · effort **M**. The first of the two dead-affordance repairs, and the only one whose
 target route does not exist at all.
 
+> Built as `.ai/specs/2026-10-11-a-passkey-you-can-add-name-and-take-away.md`, whose Problem Statement lists where the code and this block disagree (the visual spec, the headless claim below, `settings.ts` already existing).
+
 ### Reference rows
 
 - `ACC-03` partial → **done**.
