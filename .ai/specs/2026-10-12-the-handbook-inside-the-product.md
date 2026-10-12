@@ -144,13 +144,13 @@ The contents are **one flat ordered list** (eight articles do not need groups, a
 locale's own case folding (`toLocaleLowerCase(locale)`) and Unicode decomposition with combining marks stripped, so `uber` finds "Über" and
 `istanbul` finds "İstanbul". Debounce 150 ms; the result count is announced through an always-mounted `aria-live="polite"` region (so its
 first change is announced); Escape clears and "Clear search" clears, and both return focus to the input. The filter state is component
-state, not a URL parameter. On `/help` the filter narrows the overview cards as well as the contents, and **below `lg` it renders inline above the cards** (search landmark, count region and empty state included), since `/help` has no Contents button.
+state held in the help layout and shared with the overview cards through a context, not a URL parameter; one search landmark and one count region are mounted per breakpoint, never both. On `/help` the filter narrows the overview cards as well as the contents, and **below `lg` it renders inline above the cards** (search landmark, count region and empty state included), since `/help` has no Contents button.
 
 **Below `lg`** the contents are not a squeezed column. On `/help/{slug}` a "Contents" button, sticky below the top navigation so it stays
 reachable at the foot of a long article, opens a `Sheet` (`side="start"` through `useSheetDirection`, never a physical edge) whose
 `SheetTitle` is `settings.help.contents` and which carries a description or `aria-describedby={undefined}` (Radix warns in the console
 otherwise, and the console must stay silent). `/help` shows no Contents button: its cards already are the contents. Choosing an article in
-the sheet closes it and moves focus to the new article's `<h1>` (not back to the button); on desktop focus stays on the chosen link.
+the sheet closes it and moves focus to the new article's `<h1>` (not back to the button: `SheetContent` sets `onCloseAutoFocus` to `preventDefault()` for this close, because Radix would otherwise restore focus to the opener after the heading took it); on desktop focus stays on the chosen link.
 **Escape in the sheet:** Radix registers Escape on the document in the capture phase, so the input's own handler never runs first;
 `SheetContent` therefore sets `onEscapeKeyDown` to `preventDefault()` while the filter has text, the first Escape clears the filter and
 returns focus to the input, and the next closes the sheet. A unit test proves the order.
@@ -160,7 +160,7 @@ returns focus to the input, and the next closes the sheet. A unit test proves th
 One column at a 68-character measure; `--font-display` headings, `--font-ui` body. `steps` is an ordered list with `tabular-nums`. Details that are accessibility contracts, not styling:
 
 - **Headings and deep links.** Each heading carries its `id`, `tabIndex={-1}` and
-  `scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]`, plus below `lg` the height of the sticky Contents bar (published as `--help-contents-h`) (there is no global `scroll-padding-top`; `legal.tsx` is the precedent), and every
+  `scroll-mt-[calc(var(--nav-h)+var(--impersonation-h))]`, plus below `lg` the height of the sticky Contents bar (published as `--help-contents-h`) (there is no global `scroll-padding-top`; `src/routes/index.tsx` and `src/routes/pricing.tsx` are the precedent), and every
   focusable element in an article carries the same offset so Shift+Tab does not park focus under the sticky header. On a client
   transition to `#anchor`, focus moves to that heading.
 - **The section-link affordance** is an `<a href="#{anchor}">` placed beside the heading text, not inside it, so a headings list reads only the
@@ -435,7 +435,7 @@ pipeline merges one spec ticket at a time anyway. A chain also makes the stage's
 For each: the article's blocks in `articles.ts`, its keys in 23 locales, the claim-to-source list in the PR, a `link` block from
 `getting-started`'s "Where to go next" to it, and (ticket 7) the shortcut re-grep. `content.test.ts` already covers structure, so the ticket
 adds only the article. **Ticket 2** also extends the journey with the layout-shift assertion (navigating between two articles of different
-length; Chromium only, gated on `supportedEntryTypes`, following `e2e/places-and-maps.spec.ts:510-533`) and a check that "Next: {title}"
+length; Chromium only, gated by `test.skip(browserName !== 'chromium')` as in `e2e/places-and-maps.spec.ts`, and moving that spec's `recordShifts` and `readShifts` helpers into `e2e/helpers/` so both specs share them) and a check that "Next: {title}"
 navigates without a document load, because ticket 1 has only one article to move between.
 
 ### Phase 8 - plans and billing, the sweep and the close (ticket 8)
