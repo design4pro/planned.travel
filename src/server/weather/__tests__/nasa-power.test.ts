@@ -279,12 +279,10 @@ describe('the NASA POWER climatology call', () => {
     expect(`${url.origin}${url.pathname}`).toBe(NASA_POWER_CLIMATOLOGY_ENDPOINT)
     expect(url.searchParams.get('latitude')).toBe('59.9')
     expect(url.searchParams.get('longitude')).toBe('10.8')
-    // The mean of the daily maximum and minimum, never `T2M_MAX` / `T2M_MIN`: those are the hottest
-    // and coldest hour of the month, and drawn as "typical" they would send a traveller to Oslo in
-    // October for 19 and -10 degrees.
-    expect(url.searchParams.get('parameters')).toBe(
-      'T2M_MAX_AVG,T2M_MIN_AVG,PRECTOTCORR',
-    )
+    // The mean temperature and the mean daily range, never `T2M_MAX` / `T2M_MIN` or their `_AVG`
+    // variants: those are the hottest and coldest hour of the month, and drawn as "typical" they
+    // would send a traveller to Tokyo in October for 27 and 9 degrees.
+    expect(url.searchParams.get('parameters')).toBe('T2M,T2M_RANGE,PRECTOTCORR')
     expect([...url.searchParams.keys()].sort()).toEqual([
       'community',
       'format',
@@ -305,13 +303,13 @@ describe('the NASA POWER climatology call', () => {
 
     expect(months).toHaveLength(12)
     expect(months[0]).toEqual({
-      tempMaxC: 1.79,
-      tempMinC: -18.42,
+      tempMaxC: -3.45,
+      tempMinC: -8.43,
       precipitationMm: 2.5,
     })
     expect(months[9]).toEqual({
-      tempMaxC: 13.62,
-      tempMinC: -4.4,
+      tempMaxC: 7.38,
+      tempMinC: 1.57,
       precipitationMm: 3.35,
     })
   })
@@ -320,7 +318,7 @@ describe('the NASA POWER climatology call', () => {
     const body = structuredClone(OSLO_CLIMATOLOGY) as unknown as {
       properties: { parameter: Record<string, Record<string, number>> }
     }
-    body.properties.parameter.T2M_MIN_AVG.JUL = -999
+    body.properties.parameter.T2M_RANGE.JUL = -999
     body.properties.parameter.PRECTOTCORR.JUL = -999
     const { fetch } = answer(body)
 
@@ -330,8 +328,10 @@ describe('the NASA POWER climatology call', () => {
       INIT,
     )
 
+    // The typical high and low are the mean moved half the range either way, so one missing
+    // figure takes both away.
     expect(months[6]).toEqual({
-      tempMaxC: 26.04,
+      tempMaxC: null,
       tempMinC: null,
       precipitationMm: null,
     })
@@ -339,7 +339,13 @@ describe('the NASA POWER climatology call', () => {
 
   it('answers a month a parameter does not mention as absent', async () => {
     const { fetch } = answer({
-      properties: { parameter: { T2M_MAX_AVG: { JAN: 1 } } },
+      properties: {
+        parameter: {
+          T2M: { JAN: 1 },
+          T2M_RANGE: { JAN: 2 },
+          PRECTOTCORR: { FEB: 3 },
+        },
+      },
     })
 
     const months = await createNasaPowerClient({ fetch }).climatology(
@@ -349,14 +355,14 @@ describe('the NASA POWER climatology call', () => {
     )
 
     expect(months[0]).toEqual({
-      tempMaxC: 1,
-      tempMinC: null,
+      tempMaxC: 2,
+      tempMinC: 0,
       precipitationMm: null,
     })
     expect(months[1]).toEqual({
       tempMaxC: null,
       tempMinC: null,
-      precipitationMm: null,
+      precipitationMm: 3,
     })
   })
 
@@ -367,7 +373,7 @@ describe('the NASA POWER climatology call', () => {
     ).rejects.toMatchObject({ name: 'WeatherProviderError', reason: 'refused' })
 
     const malformed = answer({
-      properties: { parameter: { T2M_MAX_AVG: 'hot' } },
+      properties: { parameter: { T2M: 'hot' } },
     })
     await expect(
       createNasaPowerClient({ fetch: malformed.fetch }).climatology(1, 1, INIT),

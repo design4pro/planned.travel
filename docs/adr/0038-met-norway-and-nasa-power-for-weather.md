@@ -153,14 +153,18 @@ today in UTC.
 ## Amendment (#825, the estimate kind)
 
 The climatology service is sent the same coordinate cut to one decimal and the fixed parameters
-(`T2M_MAX_AVG,T2M_MIN_AVG,PRECTOTCORR`), and no date range: it answers one long-term mean per month
+(`T2M,T2M_RANGE,PRECTOTCORR`), and no date range: it answers one long-term mean per month
 for the point, so the row of the table above reads "Coordinate (one decimal), date range where the service
 takes one". The answer is kept thirty days under a key that carries the coordinate and nothing else,
 the climatology having no reason to change within a month. Measured on 2026-10-12 against the live
 service, it answers 2001 to 2025 means with `-999` as the fill value, as the daily service does.
 
-The temperatures are the `_AVG` parameters, which NASA defines as the average of the daily maximum
-and minimum in the period. The plain `T2M_MAX` and `T2M_MIN` look the same in the answer and are not:
-they are the hottest and coldest hour of the month (for Oslo in October 18.84 and -10.21 against
-13.62 and -4.4), so an estimate drawn from them would be an extreme labelled "typical". The
-climatology fixture was first recorded with them and caught in review.
+The typical high and low are derived: the mean temperature (`T2M`) moved half the mean daily range
+(`T2M_RANGE`) up and down, rounded to two decimals. The service has no parameter for the mean of the
+daily maximum. `T2M_MAX` and `T2M_MIN` are the hottest and coldest hour of the period, and the
+`T2M_MAX_AVG` and `T2M_MIN_AVG` that look like the answer are those extremes averaged over the years;
+an estimate drawn from either would be an extreme labelled "typical". Measured on 2026-10-12 for
+Tokyo in October: `T2M_MAX_AVG` 27.45 and `T2M_MIN_AVG` 9.14 against 21.8 and 14.5 from the mean 18.13
+and the range 7.33 (Oslo: 13.62 and -4.4 against 7.38 and 1.57). The climatology fixture was first
+recorded with the plain parameters, then with the `_AVG` ones; review and the QA panel caught each.
+One missing figure removes both temperatures of a month.

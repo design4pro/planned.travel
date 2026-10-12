@@ -559,8 +559,8 @@ describe('loadTripWeather', () => {
       ])
       expect(readings[0]).toMatchObject({
         source: 'nasa-power',
-        tempMaxC: 24.26,
-        tempMinC: 4.49,
+        tempMaxC: 18.31,
+        tempMinC: 9.39,
         windMs: null,
       })
       expect(port.requested).toHaveLength(1)

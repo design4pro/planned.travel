@@ -67,12 +67,15 @@ const FILL_VALUE = -999
 const PARAMETERS = 'T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M'
 
 /**
- * The climatology asks for no wind: an estimate does not carry one. Its temperatures are the
- * `_AVG` parameters, the mean of the daily maximum and minimum over the period. The plain
- * `T2M_MAX` and `T2M_MIN` are the hottest and coldest hour ever recorded in the month - the
- * extremes, not what a traveller can expect.
+ * The climatology asks for no wind: an estimate does not carry one. It asks for the mean
+ * temperature and the mean daily range and derives the typical high and low from them. The
+ * climatology's own maximum and minimum parameters, `T2M_MAX` and `T2M_MIN` and their `_AVG`
+ * variants alike, are the hottest and coldest hour of the period (averaged over the years for
+ * `_AVG`): extremes, not what a traveller can expect. Measured against the live service on
+ * 2026-10-12 for Tokyo in October they answered 27.5 and 9.1 degrees where the mean 18.1 and
+ * the mean range 7.3 give 21.8 and 14.5.
  */
-const CLIMATE_PARAMETERS = 'T2M_MAX_AVG,T2M_MIN_AVG,PRECTOTCORR'
+const CLIMATE_PARAMETERS = 'T2M,T2M_RANGE,PRECTOTCORR'
 
 /* ---------------------------------------------------------------- the wire */
 
@@ -150,8 +153,8 @@ function parseDays(body: unknown): ReadonlyMap<string, RecordedValues> {
 const climatologyResponse = z.object({
   properties: z.object({
     parameter: z.object({
-      T2M_MAX_AVG: figures.optional(),
-      T2M_MIN_AVG: figures.optional(),
+      T2M: figures.optional(),
+      T2M_RANGE: figures.optional(),
       PRECTOTCORR: figures.optional(),
     }),
   }),
@@ -192,9 +195,17 @@ function parseMonths(body: unknown): ReadonlyArray<ClimateMonth> {
       ? null
       : value
   }
+  /** The mean temperature moved half the mean daily range up or down; both are needed for either. */
+  const typicalOf = (month: string, direction: 1 | -1): number | null => {
+    const mean = figureOf(parameter.T2M, month)
+    const range = figureOf(parameter.T2M_RANGE, month)
+    return mean === null || range === null
+      ? null
+      : Math.round((mean + (direction * range) / 2) * 100) / 100
+  }
   return MONTHS.map((month) => ({
-    tempMaxC: figureOf(parameter.T2M_MAX_AVG, month),
-    tempMinC: figureOf(parameter.T2M_MIN_AVG, month),
+    tempMaxC: typicalOf(month, 1),
+    tempMinC: typicalOf(month, -1),
     precipitationMm: figureOf(parameter.PRECTOTCORR, month),
   }))
 }

@@ -284,8 +284,8 @@ describe('a trip that straddles all three kinds', () => {
       reading: {
         kind: 'estimate',
         source: 'nasa-power',
-        tempMaxC: 13.62,
-        tempMinC: -4.4,
+        tempMaxC: 7.38,
+        tempMinC: 1.57,
         precipitationMm: 3.35,
         windMs: null,
       },
@@ -378,7 +378,7 @@ describe('a trip that straddles all three kinds', () => {
     const highs = outcomes.map((outcome) =>
       outcome.status === 'ok' ? outcome.reading.tempMaxC : null,
     )
-    expect(highs).toEqual([24.26, 26.04])
+    expect(highs).toEqual([18.31, 20.35])
     expect(w.vendors.climatology).toHaveLength(1)
   })
 })
@@ -621,13 +621,12 @@ describe('when a provider does not give', () => {
     expect(answer.at(-1)).toBe('estimate')
   })
 
-  it('is unavailable for a month with neither temperature, and draws one temperature on its own', async () => {
+  it('is unavailable for a month missing the mean or the range', async () => {
     const body = structuredClone(OSLO_CLIMATOLOGY) as unknown as {
       properties: { parameter: Record<string, Record<string, number>> }
     }
-    body.properties.parameter.T2M_MAX_AVG.JUN = -999
-    body.properties.parameter.T2M_MIN_AVG.JUN = -999
-    body.properties.parameter.T2M_MIN_AVG.JUL = -999
+    body.properties.parameter.T2M.JUN = -999
+    body.properties.parameter.T2M_RANGE.JUL = -999
     const w = world({ vendors: vendors(body) })
 
     const outcomes = await resolveTripWeather(
@@ -640,10 +639,7 @@ describe('when a provider does not give', () => {
       ALL,
     )
 
-    expect(statuses(outcomes)).toEqual(['unavailable', 'ok'])
-    expect(outcomes[1]).toMatchObject({
-      reading: { kind: 'estimate', tempMaxC: 26.04, tempMinC: null },
-    })
+    expect(statuses(outcomes)).toEqual(['unavailable', 'unavailable'])
   })
 })
 
