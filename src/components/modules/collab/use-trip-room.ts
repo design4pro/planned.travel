@@ -154,7 +154,7 @@ export function useTripRoom(
       },
       onClose: (event: CloseEvent) => {
         // The room closed this socket because the viewer's role or the trip's
-        // state changed. The reconnect re-checks access, but the screen's own
+        // state changed, or because a session of theirs ended. The reconnect re-checks access, but the screen's own
         // controls come from the loader, so it is re-read too: a promoted member
         // gets the edit controls, a removed one gets the not-found state.
         if (event.reason === TRIP_ROOM_CLOSED_REASON) {
