@@ -39,7 +39,10 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * or a visibility narrowed to private closes the whole room (`closeRoom`), both in
  * `src/server/fns/context.ts`. A person who stops belonging to the workspace
  * (removed, leaving, or banned, signed out or deleted by the platform console) has
- * the sockets they hold in every room of it closed by the `trip-room-evict` task.
+ * the sockets they hold in every room of it closed by the `trip-room-evict` task, and
+ * so does a person who ends their own session (a password reset, a password change that
+ * revokes the others, a sign-out, a revoke of one, the other or all sessions, #1093):
+ * the sockets of all their devices close and the next connect re-runs this handler.
  * The shipped client reconnects through this handler, which is what picks up the
  * stored role. The close is best effort: a room that
  * cannot be reached is logged and the old role holds until the socket drops, and so

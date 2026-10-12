@@ -1,10 +1,13 @@
 /**
  * `trip-room-evict` - closes a person's open trip-room sockets when they lose their place in a
- * workspace (#1073).
+ * workspace (#1073) or end their own session (#1093).
  *
  * A trip room reads a person's role once, at connect, so a socket opened before the person was
  * removed from the workspace (by an owner, by leaving, or by the platform console banning, signing
- * out or deleting the account) keeps receiving every commit and presence frame until it drops.
+ * out or deleting the account) keeps receiving every commit and presence frame until it drops;
+ * so does a socket of a person who then resets their password or signs out (#1093), where the
+ * next connect is refused only if the session is gone. A socket is not tied to a session, so every
+ * socket of that person closes, on their other devices too.
  * #1050 closes sockets on trip-level changes; this is the same close for the workspace-level ones,
  * and the person's next connect re-runs the session and tenancy checks and is refused.
  *
