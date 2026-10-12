@@ -5,7 +5,7 @@
 | **Status**         | in-progress                                   |
 | **Issue**          | none                                          |
 | **Spec PR**        | #1140                                         |
-| **Implementation** | #1185                                         |
+| **Implementation** | #1185, #1202                                  |
 | **Plan**           | 09-S1 (docs/plans/09-account-and-settings.md) |
 
 ## 📝 TLDR
