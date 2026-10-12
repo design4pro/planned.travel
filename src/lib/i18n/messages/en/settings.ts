@@ -632,6 +632,41 @@ const messages = {
   'billing.order.stillWritingBody':
     'Invoice {number} is being rendered. The download comes back on its own in a few seconds.',
   'billing.order.openFailed': 'That invoice did not open',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Account',
+  'passkeys.page.title': 'Passkeys',
+  'passkeys.page.description':
+    'A passkey lets you sign in with your fingerprint, your face or a security key instead of typing anything.',
+  'passkeys.page.back': 'Back to security',
+  'passkeys.list.label': 'Your passkeys',
+  'passkeys.add.action': 'Add a passkey',
+  'passkeys.add.loading': 'Waiting for your device',
+  'passkeys.add.added': 'Passkey added',
+  'passkeys.add.dismissed': 'No passkey was added',
+  'passkeys.add.exists': 'This device already has a passkey for your account',
+  'passkeys.add.failed': 'The passkey was not added. Try again.',
+  'passkeys.add.stale': 'For your safety, sign in again to continue.',
+  'passkeys.error.sessionEnded':
+    'Your session has ended. Sign in again to continue.',
+  'passkeys.signInAgain': 'Sign in again',
+  'passkeys.add.limit':
+    'You have reached the limit of {value} passkeys. Remove one to add another.',
+  'passkeys.add.unsupported':
+    'This browser cannot create passkeys. Try another browser or device.',
+  'passkeys.empty.title': 'No passkeys yet',
+  'passkeys.empty.body':
+    'Add one and you can sign in with your fingerprint, your face or a security key instead of typing anything.',
+  'passkeys.row.fallbackName': 'Passkey · added {date}',
+  'passkeys.row.added': 'Added {date}',
+  'passkeys.row.lastUsed': 'Last used {date}',
+  'passkeys.row.neverUsed': 'Not used to sign in yet',
+  'passkeys.badge.synced': 'Synced',
+  'passkeys.badge.singleDevice': 'On one device only',
+  'passkeys.error.title': 'Your passkeys did not load',
+  'passkeys.error.retry': 'Try again',
+  'passkeys.error.rateLimited':
+    'Too many attempts. Try again in a few minutes.',
+  'passkeys.error.generic': 'Check your connection and try again.',
 } as const satisfies NamespaceMessages
 
 export default messages

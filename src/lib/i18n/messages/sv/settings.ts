@@ -552,6 +552,42 @@ const messages = {
   'billing.order.stillWritingBody':
     'Faktura {number} tas fram. Nedladdningen kommer tillbaka av sig själv om några sekunder.',
   'billing.order.openFailed': 'Den fakturan gick inte att öppna',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Konto',
+  'passkeys.page.title': 'Lösenordsnycklar',
+  'passkeys.page.description':
+    'Med en lösenordsnyckel loggar du in med fingeravtryck, ansiktslås eller en säkerhetsnyckel i stället för att skriva något.',
+  'passkeys.page.back': 'Tillbaka till säkerhet',
+  'passkeys.list.label': 'Dina lösenordsnycklar',
+  'passkeys.add.action': 'Lägg till en lösenordsnyckel',
+  'passkeys.add.loading': 'Väntar på din enhet',
+  'passkeys.add.added': 'Lösenordsnyckel tillagd',
+  'passkeys.add.dismissed': 'Ingen lösenordsnyckel lades till',
+  'passkeys.add.exists':
+    'Den här enheten har redan en lösenordsnyckel för ditt konto',
+  'passkeys.add.failed': 'Lösenordsnyckeln lades inte till. Försök igen.',
+  'passkeys.add.stale': 'Av säkerhetsskäl: logga in igen för att fortsätta.',
+  'passkeys.error.sessionEnded':
+    'Din session har avslutats. Logga in igen för att fortsätta.',
+  'passkeys.signInAgain': 'Logga in igen',
+  'passkeys.add.limit':
+    'Du har nått gränsen på {value} lösenordsnycklar. Ta bort en för att lägga till en ny.',
+  'passkeys.add.unsupported':
+    'Den här webbläsaren kan inte skapa lösenordsnycklar. Prova en annan webbläsare eller enhet.',
+  'passkeys.empty.title': 'Inga lösenordsnycklar än',
+  'passkeys.empty.body':
+    'Lägg till en så loggar du in med fingeravtryck, ansiktslås eller en säkerhetsnyckel i stället för att skriva något.',
+  'passkeys.row.fallbackName': 'Lösenordsnyckel · tillagd {date}',
+  'passkeys.row.added': 'Tillagd {date}',
+  'passkeys.row.lastUsed': 'Senast använd {date}',
+  'passkeys.row.neverUsed': 'Har inte använts för inloggning än',
+  'passkeys.badge.synced': 'Synkad',
+  'passkeys.badge.singleDevice': 'Bara på en enhet',
+  'passkeys.error.title': 'Dina lösenordsnycklar gick inte att läsa in',
+  'passkeys.error.retry': 'Försök igen',
+  'passkeys.error.rateLimited':
+    'För många försök. Försök igen om några minuter.',
+  'passkeys.error.generic': 'Kontrollera din anslutning och försök igen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

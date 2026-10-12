@@ -582,6 +582,42 @@ const messages = {
   'billing.order.stillWritingBody':
     'Faktura {number} jest generowana. Pobieranie wróci samo za kilka sekund.',
   'billing.order.openFailed': 'Ta faktura się nie otworzyła',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Konto',
+  'passkeys.page.title': 'Klucze dostępu',
+  'passkeys.page.description':
+    'Klucz dostępu pozwala zalogować się odciskiem palca, twarzą lub kluczem sprzętowym, bez wpisywania czegokolwiek.',
+  'passkeys.page.back': 'Wróć do ustawień bezpieczeństwa',
+  'passkeys.list.label': 'Twoje klucze dostępu',
+  'passkeys.add.action': 'Dodaj klucz dostępu',
+  'passkeys.add.loading': 'Czekamy na Twoje urządzenie',
+  'passkeys.add.added': 'Dodano klucz dostępu',
+  'passkeys.add.dismissed': 'Nie dodano klucza dostępu',
+  'passkeys.add.exists': 'To urządzenie ma już klucz dostępu do Twojego konta',
+  'passkeys.add.failed': 'Nie dodano klucza dostępu. Spróbuj ponownie.',
+  'passkeys.add.stale':
+    'Ze względów bezpieczeństwa zaloguj się ponownie, aby kontynuować.',
+  'passkeys.error.sessionEnded':
+    'Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.',
+  'passkeys.signInAgain': 'Zaloguj się ponownie',
+  'passkeys.add.limit':
+    'Osiągnięto limit {value} kluczy dostępu. Usuń jeden, aby dodać kolejny.',
+  'passkeys.add.unsupported':
+    'Ta przeglądarka nie potrafi tworzyć kluczy dostępu. Spróbuj w innej przeglądarce lub na innym urządzeniu.',
+  'passkeys.empty.title': 'Brak kluczy dostępu',
+  'passkeys.empty.body':
+    'Dodaj jeden, a zalogujesz się odciskiem palca, twarzą lub kluczem sprzętowym, bez wpisywania czegokolwiek.',
+  'passkeys.row.fallbackName': 'Klucz dostępu · dodano {date}',
+  'passkeys.row.added': 'Dodano {date}',
+  'passkeys.row.lastUsed': 'Ostatnio użyty {date}',
+  'passkeys.row.neverUsed': 'Jeszcze nie używany do logowania',
+  'passkeys.badge.synced': 'Synchronizowany',
+  'passkeys.badge.singleDevice': 'Tylko na jednym urządzeniu',
+  'passkeys.error.title': 'Nie udało się wczytać Twoich kluczy dostępu',
+  'passkeys.error.retry': 'Spróbuj ponownie',
+  'passkeys.error.rateLimited':
+    'Za dużo prób. Spróbuj ponownie za kilka minut.',
+  'passkeys.error.generic': 'Sprawdź połączenie i spróbuj ponownie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -331,6 +331,12 @@ function buildAuth() {
 
     advanced: {
       cookiePrefix: 'planned',
+      // Cloudflare terminates the connection, so `cf-connecting-ip` is the client address and no
+      // visitor can set it. The default, `x-forwarded-for`, is the visitor's own value with the
+      // client appended: a visitor who sends the header produces two values, which resolve to no
+      // address and drop every such request into one shared `no-trusted-ip` bucket per path. The
+      // same header is read by `src/server/audit/trail.ts` and `src/server/fns/console/context.ts`.
+      ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
       database: {
         // Short, URL-safe, collision-resistant ids, matching the rest of the app.
         generateId: () => nanoid(24),

@@ -559,6 +559,43 @@ const messages = {
   'billing.order.stillWritingBody':
     'Factuur {number} wordt gemaakt. De download komt over een paar seconden van zelf terug.',
   'billing.order.openFailed': 'Die factuur ging niet open',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Mijn account',
+  'passkeys.page.title': 'Toegangssleutels',
+  'passkeys.page.description':
+    'Met een toegangssleutel log je in met je vingerafdruk, gezichtsherkenning of een beveiligingssleutel in plaats van iets te typen.',
+  'passkeys.page.back': 'Terug naar beveiliging',
+  'passkeys.list.label': 'Je toegangssleutels',
+  'passkeys.add.action': 'Toegangssleutel toevoegen',
+  'passkeys.add.loading': 'Wachten op je apparaat',
+  'passkeys.add.added': 'Toegangssleutel toegevoegd',
+  'passkeys.add.dismissed': 'Er is geen toegangssleutel toegevoegd',
+  'passkeys.add.exists':
+    'Dit apparaat heeft al een toegangssleutel voor je account',
+  'passkeys.add.failed':
+    'De toegangssleutel is niet toegevoegd. Probeer het opnieuw.',
+  'passkeys.add.stale': 'Voor je veiligheid: log opnieuw in om door te gaan.',
+  'passkeys.error.sessionEnded':
+    'Je sessie is beëindigd. Log opnieuw in om door te gaan.',
+  'passkeys.signInAgain': 'Opnieuw inloggen',
+  'passkeys.add.limit':
+    'Je hebt de limiet van {value} toegangssleutels bereikt. Verwijder er een om een andere toe te voegen.',
+  'passkeys.add.unsupported':
+    'Deze browser kan geen toegangssleutels maken. Probeer een andere browser of een ander apparaat.',
+  'passkeys.empty.title': 'Nog geen toegangssleutels',
+  'passkeys.empty.body':
+    'Voeg er een toe en log in met je vingerafdruk, gezichtsherkenning of een beveiligingssleutel in plaats van iets te typen.',
+  'passkeys.row.fallbackName': 'Toegangssleutel · toegevoegd op {date}',
+  'passkeys.row.added': 'Toegevoegd op {date}',
+  'passkeys.row.lastUsed': 'Laatst gebruikt op {date}',
+  'passkeys.row.neverUsed': 'Nog niet gebruikt om in te loggen',
+  'passkeys.badge.synced': 'Gesynchroniseerd',
+  'passkeys.badge.singleDevice': 'Alleen op één apparaat',
+  'passkeys.error.title': 'Je toegangssleutels zijn niet geladen',
+  'passkeys.error.retry': 'Opnieuw proberen',
+  'passkeys.error.rateLimited':
+    'Te veel pogingen. Probeer het over een paar minuten opnieuw.',
+  'passkeys.error.generic': 'Controleer je verbinding en probeer het opnieuw.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

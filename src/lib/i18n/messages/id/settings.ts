@@ -544,6 +544,42 @@ const messages = {
   'billing.order.stillWritingBody':
     'Tagihan {number} sedang dibuat. Unduhannya kembali sendiri dalam beberapa detik.',
   'billing.order.openFailed': 'Tagihan itu tidak terbuka',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Akun',
+  'passkeys.page.title': 'Kunci sandi',
+  'passkeys.page.description':
+    'Kunci sandi memungkinkan Anda masuk dengan sidik jari, wajah, atau kunci keamanan tanpa mengetik apa pun.',
+  'passkeys.page.back': 'Kembali ke keamanan',
+  'passkeys.list.label': 'Kunci sandi Anda',
+  'passkeys.add.action': 'Tambahkan kunci sandi',
+  'passkeys.add.loading': 'Menunggu perangkat Anda',
+  'passkeys.add.added': 'Kunci sandi ditambahkan',
+  'passkeys.add.dismissed': 'Tidak ada kunci sandi yang ditambahkan',
+  'passkeys.add.exists':
+    'Perangkat ini sudah punya kunci sandi untuk akun Anda',
+  'passkeys.add.failed': 'Kunci sandi tidak ditambahkan. Coba lagi.',
+  'passkeys.add.stale': 'Demi keamanan Anda, masuk lagi untuk melanjutkan.',
+  'passkeys.error.sessionEnded':
+    'Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.',
+  'passkeys.signInAgain': 'Masuk lagi',
+  'passkeys.add.limit':
+    'Anda telah mencapai batas {value} kunci sandi. Hapus satu untuk menambahkan yang lain.',
+  'passkeys.add.unsupported':
+    'Peramban ini tidak bisa membuat kunci sandi. Coba peramban atau perangkat lain.',
+  'passkeys.empty.title': 'Belum ada kunci sandi',
+  'passkeys.empty.body':
+    'Tambahkan satu dan Anda bisa masuk dengan sidik jari, wajah, atau kunci keamanan tanpa mengetik apa pun.',
+  'passkeys.row.fallbackName': 'Kunci sandi · ditambahkan {date}',
+  'passkeys.row.added': 'Ditambahkan {date}',
+  'passkeys.row.lastUsed': 'Terakhir dipakai {date}',
+  'passkeys.row.neverUsed': 'Belum dipakai untuk masuk',
+  'passkeys.badge.synced': 'Tersinkron',
+  'passkeys.badge.singleDevice': 'Hanya di satu perangkat',
+  'passkeys.error.title': 'Kunci sandi Anda tidak termuat',
+  'passkeys.error.retry': 'Coba lagi',
+  'passkeys.error.rateLimited':
+    'Terlalu banyak percobaan. Coba lagi dalam beberapa menit.',
+  'passkeys.error.generic': 'Periksa koneksi Anda lalu coba lagi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

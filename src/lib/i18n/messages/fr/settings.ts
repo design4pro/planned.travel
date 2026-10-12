@@ -569,6 +569,42 @@ const messages = {
   'billing.order.stillWritingBody':
     'La facture {number} est en cours de génération. Le téléchargement revient de lui-même dans quelques secondes.',
   'billing.order.openFailed': "Cette facture ne s'est pas ouverte",
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Compte',
+  'passkeys.page.title': 'Clés d’accès',
+  'passkeys.page.description':
+    'Une clé d’accès vous permet de vous connecter avec votre empreinte, votre visage ou une clé de sécurité, sans rien saisir.',
+  'passkeys.page.back': 'Retour à la sécurité',
+  'passkeys.list.label': 'Vos clés d’accès',
+  'passkeys.add.action': 'Ajouter une clé d’accès',
+  'passkeys.add.loading': 'En attente de votre appareil',
+  'passkeys.add.added': 'Clé d’accès ajoutée',
+  'passkeys.add.dismissed': 'Aucune clé d’accès n’a été ajoutée',
+  'passkeys.add.exists':
+    'Cet appareil a déjà une clé d’accès pour votre compte',
+  'passkeys.add.failed': 'La clé d’accès n’a pas été ajoutée. Réessayez.',
+  'passkeys.add.stale': 'Pour votre sécurité, reconnectez-vous pour continuer.',
+  'passkeys.error.sessionEnded':
+    'Votre session est terminée. Reconnectez-vous pour continuer.',
+  'passkeys.signInAgain': 'Se reconnecter',
+  'passkeys.add.limit':
+    'Vous avez atteint la limite de {value} clés d’accès. Supprimez-en une pour en ajouter une autre.',
+  'passkeys.add.unsupported':
+    'Ce navigateur ne peut pas créer de clés d’accès. Essayez un autre navigateur ou un autre appareil.',
+  'passkeys.empty.title': 'Aucune clé d’accès pour l’instant',
+  'passkeys.empty.body':
+    'Ajoutez-en une et connectez-vous avec votre empreinte, votre visage ou une clé de sécurité, sans rien saisir.',
+  'passkeys.row.fallbackName': 'Clé d’accès · ajoutée le {date}',
+  'passkeys.row.added': 'Ajoutée le {date}',
+  'passkeys.row.lastUsed': 'Dernière utilisation : {date}',
+  'passkeys.row.neverUsed': 'Pas encore utilisée pour se connecter',
+  'passkeys.badge.synced': 'Synchronisée',
+  'passkeys.badge.singleDevice': 'Sur un seul appareil',
+  'passkeys.error.title': 'Vos clés d’accès ne se sont pas chargées',
+  'passkeys.error.retry': 'Réessayer',
+  'passkeys.error.rateLimited':
+    'Trop de tentatives. Réessayez dans quelques minutes.',
+  'passkeys.error.generic': 'Vérifiez votre connexion et réessayez.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

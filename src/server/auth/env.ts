@@ -43,7 +43,9 @@ export function relyingPartyId(): string {
  *
  * In dev the loopback origins are wildcarded by port: `vite dev` silently falls
  * back to the next free port when its configured one is taken, and pinning the
- * list to a single port turns every auth request into a 403 "Invalid origin".
+ * list to a single port turns every auth request into a 403 "Invalid origin". The WebAuthn
+ * origin check reads the same `scheme://host:*` form (`isTrustedOrigin` in
+ * `passkey/webauthn.ts`), so a passkey ceremony works on whichever port dev landed on.
  * Production stays strict — only the configured `APP_URL` origin is trusted.
  */
 export function trustedOrigins(): Array<string> {

@@ -489,6 +489,41 @@ const messages = {
   'billing.order.stillWritingBody':
     '청구서 {number}을 만들고 있습니다. 다운로드는 몇 초 뒤에 저절로 돌아옵니다.',
   'billing.order.openFailed': '그 청구서는 열리지 않았습니다',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': '계정',
+  'passkeys.page.title': '패스키',
+  'passkeys.page.description':
+    '패스키를 쓰면 아무것도 입력하지 않고 지문이나 얼굴, 보안 키로 로그인할 수 있어요.',
+  'passkeys.page.back': '보안으로 돌아가기',
+  'passkeys.list.label': '내 패스키',
+  'passkeys.add.action': '패스키 추가',
+  'passkeys.add.loading': '기기를 기다리는 중',
+  'passkeys.add.added': '패스키를 추가했어요',
+  'passkeys.add.dismissed': '패스키가 추가되지 않았어요',
+  'passkeys.add.exists': '이 기기에는 이미 내 계정의 패스키가 있어요',
+  'passkeys.add.failed': '패스키를 추가하지 못했어요. 다시 시도해 주세요.',
+  'passkeys.add.stale': '안전을 위해 계속하려면 다시 로그인해 주세요.',
+  'passkeys.error.sessionEnded':
+    '세션이 끝났어요. 계속하려면 다시 로그인해 주세요.',
+  'passkeys.signInAgain': '다시 로그인',
+  'passkeys.add.limit':
+    '패스키 {value}개 한도에 도달했어요. 다른 패스키를 추가하려면 하나를 삭제해 주세요.',
+  'passkeys.add.unsupported':
+    '이 브라우저에서는 패스키를 만들 수 없어요. 다른 브라우저나 기기를 사용해 보세요.',
+  'passkeys.empty.title': '아직 패스키가 없어요',
+  'passkeys.empty.body':
+    '하나 추가하면 아무것도 입력하지 않고 지문이나 얼굴, 보안 키로 로그인할 수 있어요.',
+  'passkeys.row.fallbackName': '패스키 · {date} 추가',
+  'passkeys.row.added': '{date} 추가',
+  'passkeys.row.lastUsed': '마지막 사용: {date}',
+  'passkeys.row.neverUsed': '아직 로그인에 쓴 적 없어요',
+  'passkeys.badge.synced': '동기화됨',
+  'passkeys.badge.singleDevice': '기기 한 대에만 있음',
+  'passkeys.error.title': '패스키를 불러오지 못했어요',
+  'passkeys.error.retry': '다시 시도',
+  'passkeys.error.rateLimited':
+    '시도가 너무 많아요. 몇 분 뒤에 다시 시도해 주세요.',
+  'passkeys.error.generic': '연결을 확인한 뒤 다시 시도해 주세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
