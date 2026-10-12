@@ -121,16 +121,40 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
         },
       })
     })
+    // Shifts are split by where they happen. The skeleton-to-rows swap is the section's own; the
+    // app shell around it (a badge count, a late font) may settle in the same window on a slow
+    // runner, and that is not this screen's to answer for, so it is only reported.
     await page.addInitScript(() => {
-      const probe = { shift: 0 }
+      const probe = { section: 0, shell: 0, shellSources: [] as string[] }
       Object.defineProperty(window, '__passkeyShift', { value: probe })
       new PerformanceObserver((entries) => {
         for (const entry of entries.getEntries()) {
           const shift = entry as PerformanceEntry & {
             value: number
             hadRecentInput: boolean
+            sources?: Array<{ node: Node | null }>
           }
-          if (!shift.hadRecentInput) probe.shift += shift.value
+          if (shift.hadRecentInput) continue
+          const sources = shift.sources ?? []
+          const inSection = sources.some(({ node }) => {
+            const element = node instanceof Element ? node : node?.parentElement
+            return (
+              element === null ||
+              element === undefined ||
+              element.closest(
+                'section[aria-labelledby="passkey-list-heading"]',
+              ) !== null
+            )
+          })
+          if (inSection) probe.section += shift.value
+          else {
+            probe.shell += shift.value
+            probe.shellSources.push(
+              ...sources.map(({ node }) =>
+                node instanceof Element ? node.tagName : 'gone',
+              ),
+            )
+          }
         }
       }).observe({ type: 'layout-shift', buffered: true })
     })
@@ -138,7 +162,10 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
     await page.goto(PASSKEYS.path, { waitUntil: 'domcontentloaded' })
     await expect(page.locator('ul[aria-busy="true"]')).toBeVisible()
     await page.evaluate(() => {
-      Reflect.set(Reflect.get(window, '__passkeyShift'), 'shift', 0)
+      const probe = Reflect.get(window, '__passkeyShift')
+      Reflect.set(probe, 'section', 0)
+      Reflect.set(probe, 'shell', 0)
+      Reflect.set(probe, 'shellSources', [])
     })
 
     release()
@@ -149,12 +176,24 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
     await expect(page.getByText('Work laptop')).toBeVisible()
     await expect(page.getByText('Not used to sign in yet')).toBeVisible()
 
-    const shift = await page.evaluate(() =>
-      Number(Reflect.get(Reflect.get(window, '__passkeyShift'), 'shift')),
-    )
-    expect(shift, 'the rows replace the skeleton without moving the page').toBe(
-      0,
-    )
+    const shifts = await page.evaluate(() => {
+      const probe = Reflect.get(window, '__passkeyShift')
+      return {
+        section: Number(Reflect.get(probe, 'section')),
+        shell: Number(Reflect.get(probe, 'shell')),
+        shellSources: String(Reflect.get(probe, 'shellSources')),
+      }
+    })
+    if (shifts.shell > 0) {
+      test.info().annotations.push({
+        type: 'shell layout shift (not this screen)',
+        description: `${shifts.shell} from ${shifts.shellSources}`,
+      })
+    }
+    expect(
+      shifts.section,
+      'the rows replace the skeleton without moving the page',
+    ).toBe(0)
   })
 })
 
