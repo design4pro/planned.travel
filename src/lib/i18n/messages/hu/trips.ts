@@ -340,6 +340,7 @@ const messages = {
   'plan.weather.panel.title': 'Időjárás: {date}',
   'plan.weather.panel.temperature': 'Max. / min.',
   'plan.weather.panel.precipitation': 'Csapadék',
+  'plan.weather.panel.precipitationTypical': 'Jellemző napi csapadék',
   'plan.weather.panel.probability': '{percent} esély',
   'plan.weather.panel.wind': 'Szél',
   'plan.weather.panel.sunrise': 'Napkelte',

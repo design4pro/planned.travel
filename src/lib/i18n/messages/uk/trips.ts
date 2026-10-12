@@ -356,6 +356,7 @@ const messages = {
   'plan.weather.panel.title': 'Погода на {date}',
   'plan.weather.panel.temperature': 'Макс. / мін.',
   'plan.weather.panel.precipitation': 'Опади',
+  'plan.weather.panel.precipitationTypical': 'Типові опади за день',
   'plan.weather.panel.probability': 'імовірність {percent}',
   'plan.weather.panel.wind': 'Вітер',
   'plan.weather.panel.sunrise': 'Схід сонця',

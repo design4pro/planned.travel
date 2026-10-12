@@ -327,6 +327,7 @@ const messages = {
   'plan.weather.panel.title': 'Thời tiết ngày {date}',
   'plan.weather.panel.temperature': 'Cao nhất / thấp nhất',
   'plan.weather.panel.precipitation': 'Lượng mưa',
+  'plan.weather.panel.precipitationTypical': 'Lượng mưa thường gặp mỗi ngày',
   'plan.weather.panel.probability': 'Xác suất {percent}',
   'plan.weather.panel.wind': 'Gió',
   'plan.weather.panel.sunrise': 'Mặt trời mọc',

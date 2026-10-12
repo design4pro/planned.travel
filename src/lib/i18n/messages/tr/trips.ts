@@ -332,6 +332,7 @@ const messages = {
   'plan.weather.panel.title': '{date} hava durumu',
   'plan.weather.panel.temperature': 'En yüksek / en düşük',
   'plan.weather.panel.precipitation': 'Yağış',
+  'plan.weather.panel.precipitationTypical': 'Günlük tipik yağış',
   'plan.weather.panel.probability': '{percent} ihtimal',
   'plan.weather.panel.wind': 'Rüzgâr',
   'plan.weather.panel.sunrise': 'Gün doğumu',

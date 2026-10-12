@@ -368,6 +368,7 @@ const messages = {
   'plan.weather.panel.title': 'الطقس ليوم {date}',
   'plan.weather.panel.temperature': 'العظمى / الصغرى',
   'plan.weather.panel.precipitation': 'هطول الأمطار',
+  'plan.weather.panel.precipitationTypical': 'هطول الأمطار المعتاد يوميًا',
   'plan.weather.panel.probability': 'احتمال {percent}',
   'plan.weather.panel.wind': 'الرياح',
   'plan.weather.panel.sunrise': 'الشروق',

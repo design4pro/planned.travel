@@ -330,6 +330,7 @@ const messages = {
   'plan.weather.panel.title': 'Cuaca untuk {date}',
   'plan.weather.panel.temperature': 'Tertinggi / terendah',
   'plan.weather.panel.precipitation': 'Curah hujan',
+  'plan.weather.panel.precipitationTypical': 'Curah hujan harian umumnya',
   'plan.weather.panel.probability': 'Peluang {percent}',
   'plan.weather.panel.wind': 'Angin',
   'plan.weather.panel.sunrise': 'Matahari terbit',

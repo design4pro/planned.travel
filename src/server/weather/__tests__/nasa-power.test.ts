@@ -279,8 +279,11 @@ describe('the NASA POWER climatology call', () => {
     expect(`${url.origin}${url.pathname}`).toBe(NASA_POWER_CLIMATOLOGY_ENDPOINT)
     expect(url.searchParams.get('latitude')).toBe('59.9')
     expect(url.searchParams.get('longitude')).toBe('10.8')
+    // The mean of the daily maximum and minimum, never `T2M_MAX` / `T2M_MIN`: those are the hottest
+    // and coldest hour of the month, and drawn as "typical" they would send a traveller to Oslo in
+    // October for 19 and -10 degrees.
     expect(url.searchParams.get('parameters')).toBe(
-      'T2M_MAX,T2M_MIN,PRECTOTCORR',
+      'T2M_MAX_AVG,T2M_MIN_AVG,PRECTOTCORR',
     )
     expect([...url.searchParams.keys()].sort()).toEqual([
       'community',
@@ -302,13 +305,13 @@ describe('the NASA POWER climatology call', () => {
 
     expect(months).toHaveLength(12)
     expect(months[0]).toEqual({
-      tempMaxC: 6.41,
-      tempMinC: -26.2,
+      tempMaxC: 1.79,
+      tempMinC: -18.42,
       precipitationMm: 2.5,
     })
     expect(months[9]).toEqual({
-      tempMaxC: 18.84,
-      tempMinC: -10.21,
+      tempMaxC: 13.62,
+      tempMinC: -4.4,
       precipitationMm: 3.35,
     })
   })
@@ -317,7 +320,7 @@ describe('the NASA POWER climatology call', () => {
     const body = structuredClone(OSLO_CLIMATOLOGY) as unknown as {
       properties: { parameter: Record<string, Record<string, number>> }
     }
-    body.properties.parameter.T2M_MIN.JUL = -999
+    body.properties.parameter.T2M_MIN_AVG.JUL = -999
     body.properties.parameter.PRECTOTCORR.JUL = -999
     const { fetch } = answer(body)
 
@@ -328,7 +331,7 @@ describe('the NASA POWER climatology call', () => {
     )
 
     expect(months[6]).toEqual({
-      tempMaxC: 31.24,
+      tempMaxC: 26.04,
       tempMinC: null,
       precipitationMm: null,
     })
@@ -336,7 +339,7 @@ describe('the NASA POWER climatology call', () => {
 
   it('answers a month a parameter does not mention as absent', async () => {
     const { fetch } = answer({
-      properties: { parameter: { T2M_MAX: { JAN: 1 } } },
+      properties: { parameter: { T2M_MAX_AVG: { JAN: 1 } } },
     })
 
     const months = await createNasaPowerClient({ fetch }).climatology(
@@ -363,7 +366,9 @@ describe('the NASA POWER climatology call', () => {
       createNasaPowerClient({ fetch: refused.fetch }).climatology(1, 1, INIT),
     ).rejects.toMatchObject({ name: 'WeatherProviderError', reason: 'refused' })
 
-    const malformed = answer({ properties: { parameter: { T2M_MAX: 'hot' } } })
+    const malformed = answer({
+      properties: { parameter: { T2M_MAX_AVG: 'hot' } },
+    })
     await expect(
       createNasaPowerClient({ fetch: malformed.fetch }).climatology(1, 1, INIT),
     ).rejects.toBeInstanceOf(WeatherProviderError)

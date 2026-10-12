@@ -484,7 +484,15 @@ describe('the fuller reading of an estimated day', () => {
     expect(within(dialog).queryByText('Wind')).toBeNull()
     expect(within(dialog).queryByRole('list')).toBeNull()
     expect(within(dialog).queryByText(/chance/)).toBeNull()
-    expect(within(dialog).getByText('Precipitation')).toBeDefined()
+  })
+
+  it('labels the rain as a typical figure per day, not as a day’s total', async () => {
+    const { dialog } = await open()
+
+    expect(
+      within(dialog).getByText('Typical precipitation per day'),
+    ).toBeDefined()
+    expect(within(dialog).queryByText('Precipitation')).toBeNull()
   })
 
   it('draws the figures in the reader’s unit', async () => {

@@ -322,6 +322,7 @@ const messages = {
   'plan.weather.panel.title': '{date}の天気',
   'plan.weather.panel.temperature': '最高 / 最低',
   'plan.weather.panel.precipitation': '降水量',
+  'plan.weather.panel.precipitationTypical': '平年の1日あたり降水量',
   'plan.weather.panel.probability': '降水確率 {percent}',
   'plan.weather.panel.wind': '風',
   'plan.weather.panel.sunrise': '日の出',

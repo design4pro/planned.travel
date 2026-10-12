@@ -300,6 +300,13 @@ const FORECAST_PROVIDER = 'met-norway'
 /** The vendor behind the recorded and estimate kinds; the failure entry is keyed on it. */
 const NASA_PROVIDER = 'nasa-power'
 
+/**
+ * The failure entry of the estimate kind. The climatology is a different service from the daily one
+ * that happens to share a vendor, so one being down says nothing about the other: a failed
+ * precautionary climatology call must not blank a place's recorded days.
+ */
+const CLIMATE_PROVIDER = 'nasa-power-climatology'
+
 /** A recorded day this many days old or more is settled; a younger one may still be revised. */
 export const RECORDED_RECENT_DAYS = 90
 
@@ -1048,7 +1055,7 @@ async function fetchEstimate(
       message: cause instanceof Error ? cause.message : String(cause),
     })
     into.set(cell, null)
-    await rememberFailure(runtime, NASA_PROVIDER, coordinate)
+    await rememberFailure(runtime, CLIMATE_PROVIDER, coordinate)
   }
 }
 
@@ -1228,7 +1235,7 @@ async function resolvePlaces(
       ...[...plan.estimate]
         .filter(([cell]) => !into.estimate.has(cell))
         .map(async ([cell, place]) => {
-          if (await hasFailed(runtime, NASA_PROVIDER, place.coordinate)) {
+          if (await hasFailed(runtime, CLIMATE_PROVIDER, place.coordinate)) {
             into.estimate.set(cell, null)
           }
         }),
@@ -1567,9 +1574,9 @@ export async function resolveTripWeather(
 
   /** An estimated day: its month's figures, or `unavailable` when the climatology did not arrive. */
   const estimateOutcome = (entry: Eligible): WeatherOutcome => {
-    const month = resolved.estimate
-      .get(cellOf(entry.coordinate))
-      ?.at(Number(entry.date.slice(5, 7)) - 1)
+    const month = resolved.estimate.get(cellOf(entry.coordinate))?.[
+      Number(entry.date.slice(5, 7)) - 1
+    ]
     if (month === undefined || !hasTemperature(month)) {
       return { status: 'unavailable' }
     }

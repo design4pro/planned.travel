@@ -153,8 +153,14 @@ today in UTC.
 ## Amendment (#825, the estimate kind)
 
 The climatology service is sent the same coordinate cut to one decimal and the fixed parameters
-(`T2M_MAX,T2M_MIN,PRECTOTCORR`), and no date range: it answers one long-term mean per month for the
-point, so the row of the table above reads "Coordinate (one decimal), date range where the service
+(`T2M_MAX_AVG,T2M_MIN_AVG,PRECTOTCORR`), and no date range: it answers one long-term mean per month
+for the point, so the row of the table above reads "Coordinate (one decimal), date range where the service
 takes one". The answer is kept thirty days under a key that carries the coordinate and nothing else,
 the climatology having no reason to change within a month. Measured on 2026-10-12 against the live
 service, it answers 2001 to 2025 means with `-999` as the fill value, as the daily service does.
+
+The temperatures are the `_AVG` parameters, which NASA defines as the average of the daily maximum
+and minimum in the period. The plain `T2M_MAX` and `T2M_MIN` look the same in the answer and are not:
+they are the hottest and coldest hour of the month (for Oslo in October 18.84 and -10.21 against
+13.62 and -4.4), so an estimate drawn from them would be an extreme labelled "typical". The
+climatology fixture was first recorded with them and caught in review.

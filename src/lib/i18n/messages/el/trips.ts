@@ -346,6 +346,7 @@ const messages = {
   'plan.weather.panel.title': 'Καιρός για {date}',
   'plan.weather.panel.temperature': 'Μέγιστη / ελάχιστη',
   'plan.weather.panel.precipitation': 'Βροχόπτωση',
+  'plan.weather.panel.precipitationTypical': 'Τυπική ημερήσια βροχόπτωση',
   'plan.weather.panel.probability': 'Πιθανότητα {percent}',
   'plan.weather.panel.wind': 'Άνεμος',
   'plan.weather.panel.sunrise': 'Ανατολή ηλίου',

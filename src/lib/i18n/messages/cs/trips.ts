@@ -353,6 +353,7 @@ const messages = {
   'plan.weather.panel.title': 'Počasí na {date}',
   'plan.weather.panel.temperature': 'Max. / min.',
   'plan.weather.panel.precipitation': 'Srážky',
+  'plan.weather.panel.precipitationTypical': 'Typické srážky za den',
   'plan.weather.panel.probability': 'pravděpodobnost {percent}',
   'plan.weather.panel.wind': 'Vítr',
   'plan.weather.panel.sunrise': 'Východ slunce',

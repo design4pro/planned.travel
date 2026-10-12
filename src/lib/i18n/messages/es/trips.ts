@@ -350,6 +350,7 @@ const messages = {
   'plan.weather.panel.title': 'El tiempo del {date}',
   'plan.weather.panel.temperature': 'Máxima / mínima',
   'plan.weather.panel.precipitation': 'Precipitación',
+  'plan.weather.panel.precipitationTypical': 'Precipitación diaria habitual',
   'plan.weather.panel.probability': '{percent} de probabilidad',
   'plan.weather.panel.wind': 'Viento',
   'plan.weather.panel.sunrise': 'Salida del sol',

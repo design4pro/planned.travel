@@ -333,6 +333,7 @@ const messages = {
   'plan.weather.panel.title': 'Väder {date}',
   'plan.weather.panel.temperature': 'Högsta / lägsta',
   'plan.weather.panel.precipitation': 'Nederbörd',
+  'plan.weather.panel.precipitationTypical': 'Typisk nederbörd per dag',
   'plan.weather.panel.probability': '{percent} chans',
   'plan.weather.panel.wind': 'Vind',
   'plan.weather.panel.sunrise': 'Soluppgång',

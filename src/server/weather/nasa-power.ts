@@ -66,8 +66,13 @@ const FILL_VALUE = -999
 /** The parameters asked for: daily maximum and minimum temperature, precipitation and wind at 2 m. */
 const PARAMETERS = 'T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M'
 
-/** The climatology asks for no wind: an estimate does not carry one. */
-const CLIMATE_PARAMETERS = 'T2M_MAX,T2M_MIN,PRECTOTCORR'
+/**
+ * The climatology asks for no wind: an estimate does not carry one. Its temperatures are the
+ * `_AVG` parameters, the mean of the daily maximum and minimum over the period. The plain
+ * `T2M_MAX` and `T2M_MIN` are the hottest and coldest hour ever recorded in the month - the
+ * extremes, not what a traveller can expect.
+ */
+const CLIMATE_PARAMETERS = 'T2M_MAX_AVG,T2M_MIN_AVG,PRECTOTCORR'
 
 /* ---------------------------------------------------------------- the wire */
 
@@ -145,8 +150,8 @@ function parseDays(body: unknown): ReadonlyMap<string, RecordedValues> {
 const climatologyResponse = z.object({
   properties: z.object({
     parameter: z.object({
-      T2M_MAX: figures.optional(),
-      T2M_MIN: figures.optional(),
+      T2M_MAX_AVG: figures.optional(),
+      T2M_MIN_AVG: figures.optional(),
       PRECTOTCORR: figures.optional(),
     }),
   }),
@@ -188,8 +193,8 @@ function parseMonths(body: unknown): ReadonlyArray<ClimateMonth> {
       : value
   }
   return MONTHS.map((month) => ({
-    tempMaxC: figureOf(parameter.T2M_MAX, month),
-    tempMinC: figureOf(parameter.T2M_MIN, month),
+    tempMaxC: figureOf(parameter.T2M_MAX_AVG, month),
+    tempMinC: figureOf(parameter.T2M_MIN_AVG, month),
     precipitationMm: figureOf(parameter.PRECTOTCORR, month),
   }))
 }

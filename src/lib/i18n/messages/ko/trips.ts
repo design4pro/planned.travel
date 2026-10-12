@@ -321,6 +321,7 @@ const messages = {
   'plan.weather.panel.title': '{date} 날씨',
   'plan.weather.panel.temperature': '최고 / 최저',
   'plan.weather.panel.precipitation': '강수량',
+  'plan.weather.panel.precipitationTypical': '평년 일평균 강수량',
   'plan.weather.panel.probability': '강수 확률 {percent}',
   'plan.weather.panel.wind': '바람',
   'plan.weather.panel.sunrise': '일출',

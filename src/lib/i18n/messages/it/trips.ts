@@ -353,6 +353,8 @@ const messages = {
   'plan.weather.panel.title': 'Meteo del {date}',
   'plan.weather.panel.temperature': 'Massima / minima',
   'plan.weather.panel.precipitation': 'Precipitazioni',
+  'plan.weather.panel.precipitationTypical':
+    'Precipitazioni giornaliere tipiche',
   'plan.weather.panel.probability': '{percent} di probabilità',
   'plan.weather.panel.wind': 'Vento',
   'plan.weather.panel.sunrise': 'Alba',

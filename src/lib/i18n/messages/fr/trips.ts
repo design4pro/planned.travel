@@ -355,6 +355,8 @@ const messages = {
   'plan.weather.panel.title': 'Météo du {date}',
   'plan.weather.panel.temperature': 'Maximale / minimale',
   'plan.weather.panel.precipitation': 'Précipitations',
+  'plan.weather.panel.precipitationTypical':
+    'Précipitations quotidiennes habituelles',
   'plan.weather.panel.probability': '{percent} de probabilité',
   'plan.weather.panel.wind': 'Vent',
   'plan.weather.panel.sunrise': 'Lever du soleil',

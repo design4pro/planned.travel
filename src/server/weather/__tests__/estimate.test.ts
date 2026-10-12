@@ -284,8 +284,8 @@ describe('a trip that straddles all three kinds', () => {
       reading: {
         kind: 'estimate',
         source: 'nasa-power',
-        tempMaxC: 18.84,
-        tempMinC: -10.21,
+        tempMaxC: 13.62,
+        tempMinC: -4.4,
         precipitationMm: 3.35,
         windMs: null,
       },
@@ -378,7 +378,7 @@ describe('a trip that straddles all three kinds', () => {
     const highs = outcomes.map((outcome) =>
       outcome.status === 'ok' ? outcome.reading.tempMaxC : null,
     )
-    expect(highs).toEqual([29.67, 31.24])
+    expect(highs).toEqual([24.26, 26.04])
     expect(w.vendors.climatology).toHaveLength(1)
   })
 })
@@ -552,6 +552,25 @@ describe('when a provider does not give', () => {
     expect(calls(w.vendors)).toBe(before)
   })
 
+  it('remembers a climatology failure apart from the daily service, so the recorded days are not blanked', async () => {
+    const w = world({
+      vendors: vendors(OSLO_CLIMATOLOGY, (url) =>
+        url.includes('/climatology/')
+          ? new Response('down', { status: 500 })
+          : null,
+      ),
+    })
+
+    await resolveTripWeather(w.runtime, STRADDLE, ZONE, ALL)
+
+    const failures = [...w.cache.entries.keys()].filter((key) =>
+      key.includes(':fail:'),
+    )
+    expect(failures).toEqual([
+      'wx:v2:fail:nasa-power-climatology:59.9000:10.8000',
+    ])
+  })
+
   it('aborts a hung climatology at the per-call timeout and still draws the other kinds', async () => {
     vi.useFakeTimers({ now: NOW })
     const w = world({
@@ -606,9 +625,9 @@ describe('when a provider does not give', () => {
     const body = structuredClone(OSLO_CLIMATOLOGY) as unknown as {
       properties: { parameter: Record<string, Record<string, number>> }
     }
-    body.properties.parameter.T2M_MAX.JUN = -999
-    body.properties.parameter.T2M_MIN.JUN = -999
-    body.properties.parameter.T2M_MIN.JUL = -999
+    body.properties.parameter.T2M_MAX_AVG.JUN = -999
+    body.properties.parameter.T2M_MIN_AVG.JUN = -999
+    body.properties.parameter.T2M_MIN_AVG.JUL = -999
     const w = world({ vendors: vendors(body) })
 
     const outcomes = await resolveTripWeather(
@@ -623,7 +642,7 @@ describe('when a provider does not give', () => {
 
     expect(statuses(outcomes)).toEqual(['unavailable', 'ok'])
     expect(outcomes[1]).toMatchObject({
-      reading: { kind: 'estimate', tempMaxC: 31.24, tempMinC: null },
+      reading: { kind: 'estimate', tempMaxC: 26.04, tempMinC: null },
     })
   })
 })

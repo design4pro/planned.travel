@@ -301,6 +301,7 @@ const messages = {
   'plan.weather.panel.title': '{date}天氣',
   'plan.weather.panel.temperature': '最高 / 最低',
   'plan.weather.panel.precipitation': '降雨量',
+  'plan.weather.panel.precipitationTypical': '常年日均降雨量',
   'plan.weather.panel.probability': '降雨機率 {percent}',
   'plan.weather.panel.wind': '風',
   'plan.weather.panel.sunrise': '日出',

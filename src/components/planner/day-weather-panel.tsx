@@ -69,7 +69,7 @@ export function DayWeatherPanel({
           </Row>
         )}
         {precipitation.length === 0 ? null : (
-          <Row label={t('trips.plan.weather.panel.precipitation')}>
+          <Row label={t(PRECIPITATION[model.kind])}>
             {precipitation.join(' · ')}
           </Row>
         )}
@@ -156,6 +156,16 @@ const NOTE = {
   recorded: 'trips.plan.weather.panel.recordedNote',
   estimate: 'trips.plan.weather.panel.estimateNote',
 } as const satisfies { readonly [K in 'recorded' | 'estimate']: MessageKey }
+
+/**
+ * An estimate's rainfall is the mean per day over the month, not a day's total, so its row says so:
+ * "Precipitation 2.5 mm" under an average would read as a monthly total and a dry month.
+ */
+const PRECIPITATION = {
+  forecast: 'trips.plan.weather.panel.precipitation',
+  recorded: 'trips.plan.weather.panel.precipitation',
+  estimate: 'trips.plan.weather.panel.precipitationTypical',
+} as const satisfies { readonly [K in DayReading['kind']]: MessageKey }
 
 /**
  * A day lacking one of its temperatures says which it has, instead of a bare number. An estimate's
