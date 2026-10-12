@@ -1,10 +1,10 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                             |
-| ------------------ | --------------------------------- |
-| **Status**         | in-progress                       |
-| **Issue**          | #631                              |
-| **Spec PR**        | #636                              |
+| Field              | Value                                    |
+| ------------------ | ---------------------------------------- |
+| **Status**         | in-progress                              |
+| **Issue**          | #631                                     |
+| **Spec PR**        | #636                                     |
 | **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197 |
 
 ## 📝 TLDR
@@ -805,3 +805,4 @@ What ships with the sun times (#824, #1197) differs from the design above in the
 32. **The fixtures sit inside `src/lib/__tests__/sun.test.ts`**, not in a `sun.fixtures.ts`, and number seven for the within-two-minutes check (Oslo twice, Quito, Sydney, and Tokyo, Los Angeles and Apia, whose zones put the crossing on a neighbouring UTC day); Tromsø is asserted separately as `null`. The values are the output of NOAA's published `main.js`, run under node, rounded to the minute.
 33. **A trip with no time zone shows no sun times.** `trips.timezone` is written by the seeds only, so a trip created through the UI has none and the weather read falls back to UTC for day bucketing (the edge-case table above). Sunrise and sunset would then be UTC clock times of a place elsewhere, up to hours off and sometimes a sunset before a sunrise, so the route leaves `sun` off those days and the panel draws neither row. The Data Model's `sun` is optional for the same reason. Giving a trip a zone is #1198; until then the rows appear on seeded trips only.
 34. **A recorded day carries `sun` too.** `sun` rides on every `ok` outcome, so the `recorded` kind (#823), which has a popover of its own, gets the two rows as a forecast does; the sun is computed from the place and the date and needs nothing from NASA POWER. The badge model's `recorded` member carries `sun` beside `reading`, as the `forecast` one does.
+35. **A side belongs to the local calendar date its instant falls on, which leaves a gap where a sunset first passes midnight.** Where the evening sunset drifts past 00:00 (Reykjavik around 15 June, Fairbanks in late May, the days before a polar day in northern Norway) the one date whose sunset lands after midnight has `sunset: null`, and the next date shows `00:00`-ish, the evening before's sunset, ahead of its own sunrise. The panel names the missing side ("No sunset"), which is true of that calendar date and reads oddly in a city that has no polar day. Resolving a side against the solar day instead (a sunset after midnight shown for the day it follows, with a "+1" or the date) needs a display decision and is #1201; `sun.test.ts` pins the Reykjavik dates so a change of rule is deliberate.

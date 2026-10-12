@@ -168,6 +168,17 @@ describe('input that is not a place and a date', () => {
     expect(sunset).toBe('00:04')
   })
 
+  it('has no sunset on the one date a sunset first passes midnight, a known limit of the calendar-date rule', () => {
+    // Reykjavik is not in midnight sun, but around 15 June the evening sunset slips past 00:00:
+    // the 14th sets at 23:59, the 16th shows 00:00 (the 15th's evening, local date the 16th), and
+    // the 15th itself has none on its own date. Amendment 35 of the per-day-weather spec.
+    const sweep = ['2026-06-14', '2026-06-15', '2026-06-16'].map(
+      (date) => sunTimes(64.1466, -21.9426, date, 'Atlantic/Reykjavik').sunset,
+    )
+
+    expect(sweep).toEqual(['23:59', null, '00:00'])
+  })
+
   it('keeps a sunset that falls on the local date when the neighbouring anchor day has none', () => {
     // Longyearbyen on 2026-04-18: the sun does not set on the 18th (UTC), but it set at 22:11Z on
     // the 17th at about 22:12Z, which is 00:12 local on the 18th.
