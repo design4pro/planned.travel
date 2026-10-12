@@ -553,6 +553,42 @@ const messages = {
   'billing.order.stillWritingBody':
     'A(z) {number} számla készül. A letöltés magától visszatér néhány másodperc múlva.',
   'billing.order.openFailed': 'Az a számla nem nyílt meg',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Fiók',
+  'passkeys.page.title': 'Belépési kulcsok',
+  'passkeys.page.description':
+    'A belépési kulccsal ujjlenyomattal, arcfelismeréssel vagy biztonsági kulccsal léphet be, gépelés nélkül.',
+  'passkeys.page.back': 'Vissza a biztonsághoz',
+  'passkeys.list.label': 'Az Ön belépési kulcsai',
+  'passkeys.add.action': 'Belépési kulcs hozzáadása',
+  'passkeys.add.loading': 'Várakozás az eszközére',
+  'passkeys.add.added': 'Belépési kulcs hozzáadva',
+  'passkeys.add.dismissed': 'Nem lett belépési kulcs hozzáadva',
+  'passkeys.add.exists': 'Ezen az eszközön már van belépési kulcs a fiókjához',
+  'passkeys.add.failed': 'A belépési kulcs nem lett hozzáadva. Próbálja újra.',
+  'passkeys.add.stale':
+    'A biztonsága érdekében a folytatáshoz jelentkezzen be újra.',
+  'passkeys.error.sessionEnded':
+    'A munkamenete véget ért. A folytatáshoz jelentkezzen be újra.',
+  'passkeys.signInAgain': 'Bejelentkezés újra',
+  'passkeys.add.limit':
+    'Elérte a(z) {value} belépési kulcsos korlátot. Távolítson el egyet, hogy újat adhasson hozzá.',
+  'passkeys.add.unsupported':
+    'Ez a böngésző nem tud belépési kulcsot létrehozni. Próbáljon másik böngészőt vagy eszközt.',
+  'passkeys.empty.title': 'Még nincs belépési kulcs',
+  'passkeys.empty.body':
+    'Adjon hozzá egyet, és ujjlenyomattal, arcfelismeréssel vagy biztonsági kulccsal léphet be, gépelés nélkül.',
+  'passkeys.row.fallbackName': 'Belépési kulcs · hozzáadva: {date}',
+  'passkeys.row.added': 'Hozzáadva: {date}',
+  'passkeys.row.lastUsed': 'Utoljára használva: {date}',
+  'passkeys.row.neverUsed': 'Belépéshez még nem használták',
+  'passkeys.badge.synced': 'Szinkronizált',
+  'passkeys.badge.singleDevice': 'Csak egy eszközön',
+  'passkeys.error.title': 'A belépési kulcsok nem töltődtek be',
+  'passkeys.error.retry': 'Újra',
+  'passkeys.error.rateLimited':
+    'Túl sok próbálkozás. Próbálja újra néhány perc múlva.',
+  'passkeys.error.generic': 'Ellenőrizze a kapcsolatot, és próbálja újra.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

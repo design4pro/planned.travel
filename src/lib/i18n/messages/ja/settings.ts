@@ -513,6 +513,44 @@ const messages = {
   'billing.order.stillWritingBody':
     '請求書 {number} を作成しています。ダウンロードは数秒で自動的に戻ります。',
   'billing.order.openFailed': 'その請求書は開けませんでした',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'アカウント',
+  'passkeys.page.title': 'パスキー',
+  'passkeys.page.description':
+    'パスキーを使うと、何も入力せず、指紋認証や顔認証、セキュリティキーでサインインできます。',
+  'passkeys.page.back': 'セキュリティに戻る',
+  'passkeys.list.label': 'あなたのパスキー',
+  'passkeys.add.action': 'パスキーを追加',
+  'passkeys.add.loading': 'お使いのデバイスを待っています',
+  'passkeys.add.added': 'パスキーを追加しました',
+  'passkeys.add.dismissed': 'パスキーは追加されませんでした',
+  'passkeys.add.exists':
+    'このデバイスには、あなたのアカウントのパスキーがすでにあります',
+  'passkeys.add.failed':
+    'パスキーを追加できませんでした。もう一度お試しください。',
+  'passkeys.add.stale':
+    '安全のため、続けるにはもう一度サインインしてください。',
+  'passkeys.error.sessionEnded':
+    'セッションが終了しました。続けるにはもう一度サインインしてください。',
+  'passkeys.signInAgain': 'もう一度サインイン',
+  'passkeys.add.limit':
+    'パスキーの上限（{value} 件）に達しました。別のパスキーを追加するには、どれかを削除してください。',
+  'passkeys.add.unsupported':
+    'このブラウザーではパスキーを作成できません。別のブラウザーかデバイスをお試しください。',
+  'passkeys.empty.title': 'パスキーはまだありません',
+  'passkeys.empty.body':
+    '追加すると、何も入力せず、指紋認証や顔認証、セキュリティキーでサインインできます。',
+  'passkeys.row.fallbackName': 'パスキー · {date} に追加',
+  'passkeys.row.added': '{date} に追加',
+  'passkeys.row.lastUsed': '最終使用: {date}',
+  'passkeys.row.neverUsed': 'サインインにはまだ使われていません',
+  'passkeys.badge.synced': '同期済み',
+  'passkeys.badge.singleDevice': '1 台のデバイスのみ',
+  'passkeys.error.title': 'パスキーを読み込めませんでした',
+  'passkeys.error.retry': 'もう一度試す',
+  'passkeys.error.rateLimited':
+    '試行回数が多すぎます。数分後にもう一度お試しください。',
+  'passkeys.error.generic': '接続を確認して、もう一度お試しください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

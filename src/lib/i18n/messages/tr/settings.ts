@@ -545,6 +545,43 @@ const messages = {
   'billing.order.stillWritingBody':
     '{number} numaralı fatura oluşturuluyor. İndirme birkaç saniye içinde kendiliğinden geri gelir.',
   'billing.order.openFailed': 'O fatura açılmadı',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Hesap',
+  'passkeys.page.title': 'Geçiş anahtarları',
+  'passkeys.page.description':
+    'Geçiş anahtarıyla bir şey yazmadan parmak izinizle, yüzünüzle veya güvenlik anahtarınızla giriş yaparsınız.',
+  'passkeys.page.back': 'Güvenliğe dön',
+  'passkeys.list.label': 'Geçiş anahtarlarınız',
+  'passkeys.add.action': 'Geçiş anahtarı ekle',
+  'passkeys.add.loading': 'Cihazınız bekleniyor',
+  'passkeys.add.added': 'Geçiş anahtarı eklendi',
+  'passkeys.add.dismissed': 'Hiçbir geçiş anahtarı eklenmedi',
+  'passkeys.add.exists':
+    'Bu cihazda hesabınız için zaten bir geçiş anahtarı var',
+  'passkeys.add.failed': 'Geçiş anahtarı eklenmedi. Tekrar deneyin.',
+  'passkeys.add.stale':
+    'Güvenliğiniz için devam etmek üzere yeniden giriş yapın.',
+  'passkeys.error.sessionEnded':
+    'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+  'passkeys.signInAgain': 'Yeniden giriş yap',
+  'passkeys.add.limit':
+    '{value} geçiş anahtarı sınırına ulaştınız. Yenisini eklemek için birini kaldırın.',
+  'passkeys.add.unsupported':
+    'Bu tarayıcı geçiş anahtarı oluşturamıyor. Başka bir tarayıcı veya cihaz deneyin.',
+  'passkeys.empty.title': 'Henüz geçiş anahtarı yok',
+  'passkeys.empty.body':
+    'Bir tane ekleyin; bir şey yazmadan parmak izinizle, yüzünüzle veya güvenlik anahtarınızla giriş yapın.',
+  'passkeys.row.fallbackName': 'Geçiş anahtarı · {date} tarihinde eklendi',
+  'passkeys.row.added': '{date} tarihinde eklendi',
+  'passkeys.row.lastUsed': 'Son kullanım: {date}',
+  'passkeys.row.neverUsed': 'Henüz giriş için kullanılmadı',
+  'passkeys.badge.synced': 'Eşitlendi',
+  'passkeys.badge.singleDevice': 'Yalnızca bir cihazda',
+  'passkeys.error.title': 'Geçiş anahtarlarınız yüklenemedi',
+  'passkeys.error.retry': 'Tekrar dene',
+  'passkeys.error.rateLimited':
+    'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin.',
+  'passkeys.error.generic': 'Bağlantınızı kontrol edip tekrar deneyin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

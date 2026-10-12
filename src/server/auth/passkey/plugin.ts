@@ -10,6 +10,7 @@
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import * as z from 'zod'
+import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import type { BetterAuthPlugin } from 'better-auth'
 import { base64UrlDecode, base64UrlEncode, utf8Decode, utf8Encode } from './bytes'
 import {
@@ -24,12 +25,11 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000
 const CHALLENGE_PREFIX = 'passkey-challenge:'
 
 /**
- * How many passkeys one person may hold. Below the `limit: 50` window of the list and of the
- * exclude list, so both stay complete. The count and the write are two statements, so two
- * ceremonies started at 19 can both finish and leave 21; that is a known property of a ceiling
- * that bounds storage and is not a quota anyone sells.
+ * The ceiling is `MAX_PASSKEYS_PER_USER`, shared with the screen that words it. The count and the
+ * write are two statements, so two ceremonies started at 19 can both finish and leave 21; that is
+ * a known property of a ceiling that bounds storage and is not a quota anyone sells.
  */
-export const MAX_PASSKEYS_PER_USER = 20
+export { MAX_PASSKEYS_PER_USER }
 
 /**
  * Registration is the dangerous half of a sign-in factor. Better Auth's limiter keys on address

@@ -562,6 +562,45 @@ const messages = {
   'billing.order.stillWritingBody':
     'Rechnung {number} wird erstellt. Der Download kommt von selbst in wenigen Sekunden zurück.',
   'billing.order.openFailed': 'Diese Rechnung ließ sich nicht öffnen',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Konto',
+  'passkeys.page.title': 'Zugangsschlüssel',
+  'passkeys.page.description':
+    'Mit einem Zugangsschlüssel meldest du dich per Fingerabdruck, Gesichtserkennung oder Sicherheitsstick an, statt etwas zu tippen.',
+  'passkeys.page.back': 'Zurück zur Sicherheit',
+  'passkeys.list.label': 'Deine Zugangsschlüssel',
+  'passkeys.add.action': 'Zugangsschlüssel hinzufügen',
+  'passkeys.add.loading': 'Warten auf dein Gerät',
+  'passkeys.add.added': 'Zugangsschlüssel hinzugefügt',
+  'passkeys.add.dismissed': 'Es wurde kein Zugangsschlüssel hinzugefügt',
+  'passkeys.add.exists':
+    'Dieses Gerät hat bereits einen Zugangsschlüssel für dein Konto',
+  'passkeys.add.failed':
+    'Der Zugangsschlüssel wurde nicht hinzugefügt. Versuch es noch einmal.',
+  'passkeys.add.stale':
+    'Zu deiner Sicherheit: Melde dich erneut an, um fortzufahren.',
+  'passkeys.error.sessionEnded':
+    'Deine Sitzung ist beendet. Melde dich erneut an, um fortzufahren.',
+  'passkeys.signInAgain': 'Erneut anmelden',
+  'passkeys.add.limit':
+    'Du hast das Limit von {value} Zugangsschlüsseln erreicht. Entferne einen, um einen weiteren hinzuzufügen.',
+  'passkeys.add.unsupported':
+    'Dieser Browser kann keine Zugangsschlüssel erstellen. Probiere einen anderen Browser oder ein anderes Gerät.',
+  'passkeys.empty.title': 'Noch keine Zugangsschlüssel',
+  'passkeys.empty.body':
+    'Füge einen hinzu und melde dich per Fingerabdruck, Gesichtserkennung oder Sicherheitsstick an, statt etwas zu tippen.',
+  'passkeys.row.fallbackName': 'Zugangsschlüssel · hinzugefügt am {date}',
+  'passkeys.row.added': 'Hinzugefügt am {date}',
+  'passkeys.row.lastUsed': 'Zuletzt verwendet am {date}',
+  'passkeys.row.neverUsed': 'Noch nicht zum Anmelden verwendet',
+  'passkeys.badge.synced': 'Synchronisiert',
+  'passkeys.badge.singleDevice': 'Nur auf einem Gerät',
+  'passkeys.error.title': 'Deine Zugangsschlüssel wurden nicht geladen',
+  'passkeys.error.retry': 'Erneut versuchen',
+  'passkeys.error.rateLimited':
+    'Zu viele Versuche. Versuch es in ein paar Minuten noch einmal.',
+  'passkeys.error.generic':
+    'Prüfe deine Verbindung und versuch es noch einmal.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -568,6 +568,43 @@ const messages = {
   'billing.order.stillWritingBody':
     'La factura {number} s’està generant. La descàrrega torna sola en uns segons.',
   'billing.order.openFailed': 'Aquesta factura no s’ha obert',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Compte',
+  'passkeys.page.title': 'Claus d’accés',
+  'passkeys.page.description':
+    'Una clau d’accés et permet d’entrar amb l’empremta, el rostre o una clau de seguretat, sense escriure res.',
+  'passkeys.page.back': 'Torna a seguretat',
+  'passkeys.list.label': 'Les teves claus d’accés',
+  'passkeys.add.action': 'Afegeix una clau d’accés',
+  'passkeys.add.loading': 'Esperant el teu dispositiu',
+  'passkeys.add.added': 'Clau d’accés afegida',
+  'passkeys.add.dismissed': 'No s’ha afegit cap clau d’accés',
+  'passkeys.add.exists':
+    'Aquest dispositiu ja té una clau d’accés per al teu compte',
+  'passkeys.add.failed': 'No s’ha afegit la clau d’accés. Torna-ho a provar.',
+  'passkeys.add.stale':
+    'Per la teva seguretat, torna a iniciar la sessió per continuar.',
+  'passkeys.error.sessionEnded':
+    'La teva sessió ha acabat. Torna a iniciar la sessió per continuar.',
+  'passkeys.signInAgain': 'Inicia la sessió de nou',
+  'passkeys.add.limit':
+    'Has arribat al límit de {value} claus d’accés. Elimina’n una per afegir-ne una altra.',
+  'passkeys.add.unsupported':
+    'Aquest navegador no pot crear claus d’accés. Prova amb un altre navegador o dispositiu.',
+  'passkeys.empty.title': 'Encara no hi ha claus d’accés',
+  'passkeys.empty.body':
+    'Afegeix-ne una i podràs entrar amb l’empremta, el rostre o una clau de seguretat, sense escriure res.',
+  'passkeys.row.fallbackName': 'Clau d’accés · afegida el {date}',
+  'passkeys.row.added': 'Afegida el {date}',
+  'passkeys.row.lastUsed': 'Darrer ús: {date}',
+  'passkeys.row.neverUsed': 'Encara no s’ha usat per entrar',
+  'passkeys.badge.synced': 'Sincronitzada',
+  'passkeys.badge.singleDevice': 'Només en un dispositiu',
+  'passkeys.error.title': 'No s’han carregat les teves claus d’accés',
+  'passkeys.error.retry': 'Torna-ho a provar',
+  'passkeys.error.rateLimited':
+    'Massa intents. Torna-ho a provar d’aquí a uns minuts.',
+  'passkeys.error.generic': 'Comprova la connexió i torna-ho a provar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

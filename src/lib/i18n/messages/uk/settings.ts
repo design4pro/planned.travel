@@ -569,6 +569,41 @@ const messages = {
   'billing.order.stillWritingBody':
     'Рахунок {number} формується. Завантаження повернеться саме за кілька секунд.',
   'billing.order.openFailed': 'Цей рахунок не відкрився',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Акаунт',
+  'passkeys.page.title': 'Ключі доступу',
+  'passkeys.page.description':
+    'Ключ доступу дає змогу заходити за відбитком пальця, обличчям або апаратним ключем — друкувати нічого не треба.',
+  'passkeys.page.back': 'Назад до безпеки',
+  'passkeys.list.label': 'Ваші ключі доступу',
+  'passkeys.add.action': 'Додати ключ доступу',
+  'passkeys.add.loading': 'Чекаємо на ваш пристрій',
+  'passkeys.add.added': 'Ключ доступу додано',
+  'passkeys.add.dismissed': 'Ключ доступу не додано',
+  'passkeys.add.exists':
+    'На цьому пристрої вже є ключ доступу до вашого акаунта',
+  'passkeys.add.failed': 'Ключ доступу не додано. Спробуйте ще раз.',
+  'passkeys.add.stale': 'Для вашої безпеки увійдіть знову, щоб продовжити.',
+  'passkeys.error.sessionEnded':
+    'Ваш сеанс завершено. Увійдіть знову, щоб продовжити.',
+  'passkeys.signInAgain': 'Увійти знову',
+  'passkeys.add.limit':
+    'Досягнуто ліміту: {value} ключів доступу. Видаліть один, щоб додати інший.',
+  'passkeys.add.unsupported':
+    'Цей браузер не вміє створювати ключі доступу. Спробуйте інший браузер або пристрій.',
+  'passkeys.empty.title': 'Ключів доступу ще немає',
+  'passkeys.empty.body':
+    'Додайте один — і заходьте за відбитком пальця, обличчям або апаратним ключем, нічого не друкуючи.',
+  'passkeys.row.fallbackName': 'Ключ доступу · додано {date}',
+  'passkeys.row.added': 'Додано {date}',
+  'passkeys.row.lastUsed': 'Востаннє використано: {date}',
+  'passkeys.row.neverUsed': 'Для входу ще не використовувався',
+  'passkeys.badge.synced': 'Синхронізується',
+  'passkeys.badge.singleDevice': 'Лише на одному пристрої',
+  'passkeys.error.title': 'Ключі доступу не завантажилися',
+  'passkeys.error.retry': 'Повторити',
+  'passkeys.error.rateLimited': 'Забагато спроб. Повторіть за кілька хвилин.',
+  'passkeys.error.generic': 'Перевірте з’єднання й повторіть спробу.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

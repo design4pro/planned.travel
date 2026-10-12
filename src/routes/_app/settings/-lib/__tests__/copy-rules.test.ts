@@ -70,6 +70,18 @@ const BASEMAP_PICKER_FILE = join(
   'basemap-picker.tsx',
 )
 
+/**
+ * The passkeys screen (09-S1a) lives in `_app/` rather than under settings, and so do the two
+ * modules that hold its copy. `passkey-errors.ts` is the one that matters most: it is the only
+ * reader of `add.exists`, `error.rateLimited`, `error.generic` and the stale keys, so without it
+ * they look like dead copy to the orphan check below.
+ */
+const PASSKEY_FILES = [
+  ['passkeys.tsx'],
+  ['-ui', 'passkey-manager.tsx'],
+  ['-lib', 'passkey-errors.ts'],
+].map((segments) => join(process.cwd(), 'src', 'routes', '_app', ...segments))
+
 interface Source {
   readonly path: string
   readonly text: string
@@ -100,6 +112,9 @@ function shippedSources(): ReadonlyArray<Source> {
     path: BASEMAP_PICKER_FILE,
     text: readFileSync(BASEMAP_PICKER_FILE, 'utf8'),
   })
+  for (const path of PASSKEY_FILES) {
+    files.push({ path, text: readFileSync(path, 'utf8') })
+  }
   files.push({
     path: PLAN_COPY_FILE,
     text: readFileSync(PLAN_COPY_FILE, 'utf8'),
@@ -145,6 +160,9 @@ describe('the settings module ships no English literal', () => {
         'billing.tsx',
         'settings-nav.tsx',
         'basemap-picker.tsx',
+        'passkeys.tsx',
+        'passkey-manager.tsx',
+        'passkey-errors.ts',
         'plan-copy.ts',
       ]),
     )

@@ -1,0 +1,352 @@
+import { useEffect, useRef, useState } from 'react'
+import { Fingerprint, Plus } from 'lucide-react'
+
+import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
+import { Alert, Badge, Button, EmptyState, Skeleton } from '#/components/ui'
+import {
+  isPasskeyEnrolmentSupported,
+  listPasskeys,
+  registerPasskey,
+} from '#/lib/auth/client'
+import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
+import { cn } from '#/lib/cn'
+import { useI18n } from '#/lib/i18n'
+import { formatDate, formatNumber } from '../-lib/format'
+import { loadFailureNotice, registrationOutcome } from '../-lib/passkey-errors'
+
+import type { Ref } from 'react'
+import type { PasskeySummary } from '#/lib/auth/client'
+import type { PasskeyNotice } from '../-lib/passkey-errors'
+
+type ListState =
+  | { readonly status: 'loading' }
+  | { readonly status: 'failed'; readonly notice: PasskeyNotice }
+  | {
+      readonly status: 'ready'
+      readonly passkeys: ReadonlyArray<PasskeySummary>
+    }
+
+/** Where focus goes once an outcome has settled and the Add button is enabled again. */
+type FocusTarget = 'add' | 'heading' | 'signIn'
+
+const LOADING: ListState = { status: 'loading' }
+const ADDED: PasskeyNotice = {
+  key: 'settings.passkeys.add.added',
+  tone: 'neutral',
+  signInAgain: false,
+}
+const SIGN_OUT_FAILED: PasskeyNotice = {
+  key: 'settings.passkeys.error.generic',
+  tone: 'danger',
+  signInAgain: false,
+}
+
+const HINT_ID = 'passkey-add-hint'
+const HEADING_ID = 'passkey-list-heading'
+const SKELETON_ROWS = 3
+
+async function fetchList(): Promise<ListState> {
+  const result = await listPasskeys()
+  return result.ok
+    ? { status: 'ready', passkeys: result.passkeys }
+    : { status: 'failed', notice: loadFailureNotice(result.failure) }
+}
+
+/**
+ * Signing in again from a signed-in session is a loop: `/login` sends a signed-in visitor
+ * straight back. So the session is ended first, and the sign-in returns to this screen.
+ */
+function SignInAgain({
+  buttonRef,
+  onFailed,
+}: {
+  buttonRef?: Ref<HTMLButtonElement>
+  onFailed: () => void
+}) {
+  const { t } = useI18n()
+  const [pending, setPending] = useState(false)
+
+  async function signInAgain(): Promise<void> {
+    setPending(true)
+    try {
+      const response = await fetch(SIGN_OUT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      })
+      if (!response.ok) throw new Error(`Sign out failed: ${response.status}`)
+      // An untyped href: the sign-in routes live outside this tree.
+      window.location.assign(
+        `/login?redirect=${encodeURIComponent('/passkeys')}`,
+      )
+    } catch {
+      setPending(false)
+      onFailed()
+    }
+  }
+
+  return (
+    <Button
+      ref={buttonRef}
+      variant="secondary"
+      size="sm"
+      shape="pill"
+      loading={pending}
+      loadingLabel={t('settings.passkeys.signInAgain')}
+      onClick={() => {
+        void signInAgain()
+      }}
+    >
+      {t('settings.passkeys.signInAgain')}
+    </Button>
+  )
+}
+
+function PasskeyRow({ passkey }: { passkey: PasskeySummary }) {
+  const { t, locale } = useI18n()
+  const added = formatDate(passkey.createdAt, locale) ?? passkey.createdAt
+  const lastUsed = formatDate(passkey.lastUsedAt, locale)
+
+  return (
+    <li className="animate-rise flex min-h-18 items-center gap-3 rounded-lg border border-edge bg-surface-2 px-4 py-3">
+      <span
+        aria-hidden
+        className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-inset text-ink-3"
+      >
+        <Fingerprint className="size-5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            dir="auto"
+            className="min-w-0 truncate text-body font-semibold text-ink"
+          >
+            {passkey.name ??
+              t('settings.passkeys.row.fallbackName', { date: added })}
+          </span>
+          {passkey.backedUp ? (
+            <Badge tone="info">{t('settings.passkeys.badge.synced')}</Badge>
+          ) : null}
+          {passkey.deviceType === 'singleDevice' ? (
+            <Badge>{t('settings.passkeys.badge.singleDevice')}</Badge>
+          ) : null}
+        </div>
+        <p className="mt-0.5 flex flex-wrap gap-x-3 text-label text-ink-3">
+          <span>{t('settings.passkeys.row.added', { date: added })}</span>
+          {lastUsed === null ? (
+            <span>{t('settings.passkeys.row.neverUsed')}</span>
+          ) : (
+            <span className="tabular-nums">
+              {t('settings.passkeys.row.lastUsed', { date: lastUsed })}
+            </span>
+          )}
+        </p>
+      </div>
+    </li>
+  )
+}
+
+/**
+ * The passkeys of the signed-in person: the list, and the button that runs the registration
+ * ceremony. UI only; every call goes through `#/lib/auth/client`.
+ */
+export function PasskeyManager() {
+  const { t, locale } = useI18n()
+  const [list, setList] = useState<ListState>(LOADING)
+  // `null` until the support check has run, so a supported browser never flashes the
+  // "cannot create passkeys" line.
+  const [supported, setSupported] = useState<boolean | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
+  // Set by the server's own refusal, for a count the list did not predict.
+  const [limitHit, setLimitHit] = useState(false)
+  const [status, setStatus] = useState<PasskeyNotice | null>(null)
+  const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
+  const addRef = useRef<HTMLButtonElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const signInRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    let current = true
+    void fetchList().then((next) => {
+      if (current) setList(next)
+    })
+    return () => {
+      current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    setSupported(isPasskeyEnrolmentSupported())
+  }, [])
+
+  const count = list.status === 'ready' ? list.passkeys.length : 0
+  const atLimit = limitHit || count >= MAX_PASSKEYS_PER_USER
+  const addDisabled = supported !== true || list.status === 'loading' || atLimit
+  let hint: string | null = null
+  if (supported === false) {
+    hint = t('settings.passkeys.add.unsupported')
+  } else if (atLimit) {
+    hint = t('settings.passkeys.add.limit', {
+      value: formatNumber(MAX_PASSKEYS_PER_USER, locale),
+    })
+  }
+
+  // `loading` disables the button, which drops focus; every outcome hands it back here, to the
+  // list heading when the button stays disabled, so it never falls to <body>.
+  useEffect(() => {
+    if (focusTarget === null || enrolling) return
+    let target: HTMLElement | null = headingRef.current
+    if (focusTarget === 'signIn') target = signInRef.current ?? target
+    if (focusTarget === 'add' && !addDisabled) target = addRef.current ?? target
+    target?.focus()
+    setFocusTarget(null)
+  }, [focusTarget, enrolling, addDisabled])
+
+  async function addPasskey(): Promise<void> {
+    setStatus(null)
+    setEnrolling(true)
+    const result = await registerPasskey()
+    setEnrolling(false)
+
+    if (result.ok) {
+      setList((previous) =>
+        previous.status === 'ready'
+          ? {
+              status: 'ready',
+              passkeys: [result.passkey, ...previous.passkeys],
+            }
+          : previous,
+      )
+      setStatus(ADDED)
+      setFocusTarget('add')
+      return
+    }
+
+    const outcome = registrationOutcome(result)
+    if (outcome.kind === 'limit') {
+      setLimitHit(true)
+      setFocusTarget('heading')
+      return
+    }
+    setStatus(outcome.notice)
+    setFocusTarget(outcome.notice.signInAgain ? 'signIn' : 'add')
+  }
+
+  function retry(): void {
+    setList(LOADING)
+    void fetchList().then(setList)
+    setFocusTarget('heading')
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            ref={addRef}
+            disabled={addDisabled}
+            loading={enrolling}
+            loadingLabel={t('settings.passkeys.add.loading')}
+            aria-describedby={hint === null ? undefined : HINT_ID}
+            onClick={() => {
+              void addPasskey()
+            }}
+          >
+            <Plus aria-hidden />
+            {t('settings.passkeys.add.action')}
+          </Button>
+          {status?.signInAgain ? (
+            <SignInAgain
+              buttonRef={signInRef}
+              onFailed={() => {
+                setStatus(SIGN_OUT_FAILED)
+              }}
+            />
+          ) : null}
+        </div>
+        {/* Mounted on the first render and never conditionally: a live region that appears
+            with its text is not announced by every screen reader. */}
+        <p
+          role="status"
+          className={cn(
+            'min-h-5 text-label',
+            status?.tone === 'danger' ? 'text-danger' : 'text-ink-3',
+          )}
+        >
+          {status === null ? null : t(status.key)}
+        </p>
+        {hint === null ? null : (
+          <p id={HINT_ID} className="text-label text-ink-3">
+            {hint}
+          </p>
+        )}
+      </div>
+
+      <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
+        <h2
+          ref={headingRef}
+          id={HEADING_ID}
+          tabIndex={-1}
+          className="text-subtitle font-semibold text-ink"
+        >
+          {t('settings.passkeys.list.label')}
+        </h2>
+
+        {list.status === 'loading' ? (
+          <ul aria-busy="true" className="flex flex-col gap-2">
+            {Array.from({ length: SKELETON_ROWS }, (_, index) => (
+              <li key={index}>
+                <Skeleton radius="lg" className="h-18" />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {list.status === 'failed' ? (
+          <Alert
+            tone="danger"
+            title={t('settings.passkeys.error.title')}
+            actions={
+              list.notice.signInAgain ? (
+                <SignInAgain
+                  onFailed={() => {
+                    setStatus(SIGN_OUT_FAILED)
+                  }}
+                />
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  shape="pill"
+                  onClick={retry}
+                >
+                  {t('settings.passkeys.error.retry')}
+                </Button>
+              )
+            }
+          >
+            {t(list.notice.key)}
+          </Alert>
+        ) : null}
+
+        {list.status === 'ready' && list.passkeys.length === 0 ? (
+          <EmptyState
+            variant="filled"
+            icon={<Fingerprint />}
+            title={t('settings.passkeys.empty.title')}
+            titleAs="h3"
+            description={t('settings.passkeys.empty.body')}
+          />
+        ) : null}
+
+        {list.status === 'ready' && list.passkeys.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {list.passkeys.map((passkey) => (
+              <PasskeyRow key={passkey.id} passkey={passkey} />
+            ))}
+          </ul>
+        ) : null}
+      </section>
+    </div>
+  )
+}
