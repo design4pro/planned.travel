@@ -33,6 +33,7 @@ actions for the Reconciler (ADR 0033); this report never starts one.
 | `QUEUED`       | The cockpit has a queued or running run for it                             | Wait                                          |
 | `STUCK`        | A claim gone stale                                                          | Check the run, then remove `in-progress`      |
 | `IN_REVIEW`    | An open pull request addresses it                                           | `/om-pr-autopilot <pr>`                       |
+| `MERGED`       | A merged pull request closes it by keyword; the close is pending            | Nothing - housekeeping closes it              |
 | `TRACKING`     | A spec parent `afk-to-tickets` filed (`Spec: .ai/specs/...`)                | Nothing - its tickets carry the work          |
 | `WAITING`      | An issue under its `## Blocked by` is still open                            | Nothing - the Reconciler takes it once it closes |
 | `NOT_READY`    | An unanswered 🤖 not-ready comment, or `implement-ticket`'s `STOP:` comment | Answer it, then `issue-groom` from the cockpit |

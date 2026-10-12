@@ -79,6 +79,7 @@ export const STATE_ORDER = [
   "QUEUED",
   "STUCK",
   "IN_REVIEW",
+  "MERGED",
   "TRACKING",
   "WAITING",
   "NOT_READY",
@@ -171,6 +172,20 @@ export function linkOpenPrs(prs) {
 }
 
 /**
+ * Merged pull requests keyed by the issue each one closes by keyword. A branch-only link is left
+ * out: it says the work belongs to the issue, not that it finished it (`#268` was a partial fix), so
+ * it must never take an issue off the queue.
+ */
+export function linkMergedPrs(prs) {
+  const closing = new Map();
+  for (const [issue, links] of linkOpenPrs(prs)) {
+    const keyworded = links.filter((link) => link.viaKeyword);
+    if (keyworded.length) closing.set(issue, keyworded);
+  }
+  return closing;
+}
+
+/**
  * The logins the issue automations trust: the union of their `authors` gates. An automation with
  * no gate adds nobody, so a missing gate makes nothing ready rather than everything.
  */
@@ -246,13 +261,14 @@ const SENTRY_MARKER = /<!--\s*sentry-issue:/;
 /** One issue's state and the single next step that moves it. Pure: every input is passed in. */
 export function classify(
   issue,
-  { trusted, sdlcLabels, openIssues, runs, prLinks, staleHours, now },
+  { trusted, sdlcLabels, openIssues, runs, prLinks, mergedLinks = new Map(), staleHours, now },
 ) {
   const labels = issue.labels.map((label) => label.name);
   const has = (label) => labels.includes(label);
   const comments = issue.comments ?? [];
   const run = runs.get(issue.number);
   const prs = prLinks.get(issue.number) ?? [];
+  const merged = mergedLinks.get(issue.number) ?? [];
 
   // A `RESOLVED:` comment is the answer, never the question, even when it quotes the `STOP:` it
   // answers.
@@ -359,6 +375,15 @@ export function classify(
       warning,
     );
   }
+
+  // A merged pull request already closed it and only the close is pending (`om-close-fixed-issues`,
+  // run by housekeeping). Without this the issue reads READY and the Reconciler re-implements work
+  // that is done: on 2026-10-10..12 about twenty runs went to six such issues.
+  if (merged.length)
+    return state(
+      "MERGED",
+      `${merged.map((pr) => `#${pr.number}`).join(", ")} merged and closes it: housekeeping closes the issue. Nothing to do.`,
+    );
 
   // The parent afk-to-tickets files for a spec: its tickets carry the work, it carries none.
   if (/^Spec: \.ai\/specs\//.test(issue.body ?? ""))
@@ -750,6 +775,10 @@ function main(argv) {
     "pr", "list", "--state", "open", "--limit", String(LIST_LIMIT),
     "--json", `number,title,body,headRefName,author,labels,updatedAt${plan ? ",files" : ""}`,
   ]);
+  const mergedPrs = gh([
+    "pr", "list", "--state", "merged", "--limit", "200",
+    "--json", "number,title,body,headRefName",
+  ]);
   const openIssues = gh([
     "issue", "list", "--state", "open", "--limit", String(LIST_LIMIT),
     "--json", "number,title,url,labels,updatedAt,body,comments,author",
@@ -766,6 +795,7 @@ function main(argv) {
     openIssues: new Set(openIssues.map((issue) => issue.number)),
     runs: runsByIssue(records),
     prLinks: linkOpenPrs(prs),
+    mergedLinks: linkMergedPrs(mergedPrs),
     staleHours,
     now: Date.now(),
   };
