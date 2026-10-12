@@ -12,12 +12,7 @@ import { setSessionCookie } from 'better-auth/cookies'
 import * as z from 'zod'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import type { BetterAuthPlugin } from 'better-auth'
-import {
-  base64UrlDecode,
-  base64UrlEncode,
-  utf8Decode,
-  utf8Encode,
-} from './bytes'
+import { base64UrlDecode, base64UrlEncode, utf8Decode, utf8Encode } from './bytes'
 import {
   createChallenge,
   verifyAuthentication,
@@ -431,12 +426,13 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
             const account =
               await ctx.context.internalAdapter.findUserByEmail(email)
             if (account) {
-              const passkeys =
-                await ctx.context.adapter.findMany<StoredPasskey>({
+              const passkeys = await ctx.context.adapter.findMany<StoredPasskey>(
+                {
                   model: 'passkey',
                   where: [{ field: 'userId', value: account.user.id }],
                   limit: 50,
-                })
+                },
+              )
               allowCredentials = descriptorsFor(passkeys)
             }
           }
@@ -474,9 +470,7 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
 
           const record = await ctx.context.adapter.findOne<StoredPasskey>({
             model: 'passkey',
-            where: [
-              { field: 'credentialId', value: ctx.body.credential.rawId },
-            ],
+            where: [{ field: 'credentialId', value: ctx.body.credential.rawId }],
           })
           if (!record) {
             throw ctx.error('UNAUTHORIZED', {
@@ -590,7 +584,10 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           }
           const updated = await ctx.context.adapter.update<StoredPasskey>({
             model: 'passkey',
-            where: [{ field: 'id', value: record.id }],
+            where: [
+              { field: 'id', value: record.id },
+              { field: 'userId', value: ctx.context.session.user.id },
+            ],
             update: { name: ctx.body.name },
           })
           if (!updated) throw notFound()

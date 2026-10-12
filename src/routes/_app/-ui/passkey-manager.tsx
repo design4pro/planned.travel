@@ -40,14 +40,15 @@ type ListState =
     }
 
 /**
- * The one row in rename mode. `attention` is bumped when the field must take focus again, and
- * `error` is the notice of a save that failed.
+ * The one row in rename mode. `attention` is bumped when the field must take focus again,
+ * `error` is the notice of a save that failed and `failures` counts them.
  */
 interface RenameState {
   readonly id: string
   readonly saving: boolean
   readonly error: PasskeyNotice | null
   readonly attention: number
+  readonly failures: number
 }
 
 /** Where focus goes once an outcome has settled and the Add button is enabled again. */
@@ -245,6 +246,7 @@ function PasskeyRow({
               saving={rename.saving}
               error={rename.error === null ? null : t(rename.error.key)}
               attention={rename.attention}
+              failures={rename.failures}
               onSubmit={onSubmitName}
               onCancel={onCancelRename}
             />
@@ -380,7 +382,16 @@ export function PasskeyManager() {
           : previous,
       )
       // A list that never loaded cannot show the new row: read it again.
-      if (list.status === 'failed') void fetchList().then(setList)
+      if (list.status === 'failed') {
+        void fetchList().then((next) => {
+          setList(next)
+          // No row to open: rename mode would wait for nothing, and focus has nowhere to go.
+          if (next.status !== 'ready') {
+            setRename(null)
+            setFocusTarget('add')
+          }
+        })
+      }
       setStatus(ADDED)
       // The ceremony sent no name: the new row opens in rename mode, and focus goes to its input.
       startRename(result.passkey.id)
@@ -419,17 +430,26 @@ export function PasskeyManager() {
   }
 
   function startRename(id: string): void {
-    setRename((previous) => ({
-      id,
-      saving: false,
-      error: null,
-      attention: previous?.id === id ? previous.attention + 1 : 0,
-    }))
+    setRename((previous) => {
+      // A save is running: the Rename control pressed meanwhile (a blur just started it) must not
+      // make the field editable again.
+      if (previous?.id === id && previous.saving) return previous
+      return {
+        id,
+        saving: false,
+        error: null,
+        attention: previous?.id === id ? previous.attention + 1 : 0,
+        failures: previous?.id === id ? previous.failures : 0,
+      }
+    })
   }
 
   function closeRename(id: string, returnFocus: boolean): void {
     setRename((previous) => (previous?.id === id ? null : previous))
-    if (returnFocus) setRenameFocusId(id)
+    // Another row took rename mode while this one saved: focus is theirs now.
+    const otherRowOpen =
+      renameRef.current !== null && renameRef.current.id !== id
+    if (returnFocus && !otherRowOpen) setRenameFocusId(id)
   }
 
   async function submitName(
@@ -438,7 +458,9 @@ export function PasskeyManager() {
     returnFocus: boolean,
   ): Promise<void> {
     setRename((previous) =>
-      previous?.id === id ? { ...previous, saving: true } : previous,
+      previous?.id === id
+        ? { ...previous, saving: true, error: null }
+        : previous,
     )
     setStatus(SAVING)
     const result = await renamePasskey(id, value)
@@ -461,18 +483,24 @@ export function PasskeyManager() {
 
     const notice = renameFailureNotice(result.failure)
     if (renameRef.current?.id === id) {
-      // The field is still on screen: the error sits beside it and focus returns to the input.
+      // The field is still on screen: the error sits beside it. A save started by a key takes focus
+      // back into the input; one started by a blur leaves it where the person moved it. The status
+      // region says it too, once and without the sign-in action the row already carries.
       setRename((previous) =>
         previous?.id === id
           ? {
               ...previous,
               saving: false,
               error: notice,
-              attention: previous.attention + 1,
+              attention: returnFocus
+                ? previous.attention + 1
+                : previous.attention,
+              failures: previous.failures + 1,
             }
           : previous,
       )
-      setStatus(null)
+      setStatus({ ...notice, signInAgain: false, quiet: true })
+      setStatusTick((tick) => tick + 1)
       return
     }
     // Another row took rename mode while this one saved: the status region says so instead.
@@ -523,7 +551,12 @@ export function PasskeyManager() {
               })}
             </span>
           ) : (
-            <span key={statusTick}>{t(status.key)}</span>
+            <span
+              key={statusTick}
+              className={status.quiet ? 'sr-only' : undefined}
+            >
+              {t(status.key)}
+            </span>
           )}
         </p>
         {hint === null ? null : (

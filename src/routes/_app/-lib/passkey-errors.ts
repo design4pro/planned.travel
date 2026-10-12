@@ -19,6 +19,8 @@ export interface PasskeyNotice {
   readonly key: MessageKey
   readonly tone: 'neutral' | 'danger'
   readonly signInAgain: boolean
+  /** Heard in the status region but not drawn there: the screen already shows the sentence. */
+  readonly quiet?: boolean
 }
 
 function notice(

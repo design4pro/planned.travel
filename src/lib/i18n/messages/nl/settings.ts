@@ -600,7 +600,7 @@ const messages = {
   'passkeys.rename.action': '{name} hernoemen',
   'passkeys.rename.fieldLabel': 'Geef deze toegangssleutel een naam',
   'passkeys.rename.placeholder': 'Geef hem een naam, zoals Werktelefoon',
-  'passkeys.rename.saving': 'Naam opslaan',
+  'passkeys.rename.saving': 'Naam wordt opgeslagen',
   'passkeys.rename.saved': 'Naam opgeslagen',
   'passkeys.rename.failed': 'De naam is niet opgeslagen',
 } satisfies TranslationOf<typeof En>
