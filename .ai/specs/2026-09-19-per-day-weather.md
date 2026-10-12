@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                      |
-| ------------------ | -------------------------- |
-| **Status**         | in-progress                |
-| **Issue**          | #631                       |
-| **Spec PR**        | #636                       |
-| **Implementation** | #1003, #1004, #1044, #1046 |
+| Field              | Value                             |
+| ------------------ | --------------------------------- |
+| **Status**         | in-progress                       |
+| **Issue**          | #631                              |
+| **Spec PR**        | #636                              |
+| **Implementation** | #1003, #1004, #1044, #1046, #1192 |
 
 ## 📝 TLDR
 
@@ -421,7 +421,7 @@ export const loadTripWeather: ServerFn<
   `DayWeather` variant (`status: 'not-yet-recorded'`) because "we have not published it yet" and
   "we asked and it failed" are different answers to the traveller and `unavailable`'s copy is fixed
   regardless of kind: folding the two together would make AC14 unsatisfiable, since a genuine NASA
-  failure on a `recorded` day already produces `{ status: 'unavailable', kind: 'recorded' }`.
+  failure on a `recorded` day already produces `{ status: 'unavailable' }` (shipped without `kind`, Amendment 22).
 - **Colour**: semantic tokens only (`--color-info`, `--color-warning`, `--color-danger` and their
   `-soft` companions). There is no weather palette and no change to `src/styles/tokens.css`. The icons
   come from the icon set already in use.
@@ -564,7 +564,7 @@ them.
   no outbound call while the `wx:v1:fail:` entry lives.
 - **AC14** A past day inside `POWER_LAG_DAYS` resolves to `status: 'not-yet-recorded'`, renders
   "Not yet recorded" as its accessible name, and is never back-filled from a forecast. A NASA
-  failure on a past day outside the lag resolves to `{ status: 'unavailable', kind: 'recorded' }`
+  failure on a past day outside the lag resolves to `{ status: 'unavailable' }` (shipped without `kind`, Amendment 22)
   instead, so the two are distinguishable by the type and not only by the copy.
 
 ## 📝 Risks & Impact Review
@@ -783,3 +783,17 @@ What ships with the popover (#822, the fuller forecast) differs from the design 
 16. **The compact product sends no chance of rain.** Its summaries carry `precipitation_amount` and nothing else (`next_12_hours.details` is empty, recorded 2026-10-09), so `precipitationProbability` is `null` for every MET reading today and the panel's "chance" is not drawn. The client still reads `probability_of_precipitation` when a summary states one, so a richer product needs no further change.
 17. **Slots are the slots that have a step, or one that covers them**, so today, once the morning has gone, has two and a later day four. `from` is the slot's local start (`00:00`, `06:00`, `12:00`, `18:00`), the sky is that of the step whose six hours cover most of the slot (none when they cover less than half of it, because past the hourly stretch the steps sit at 00, 06, 12 and 18 UTC, which is not a slot start in most zones), and the temperature is the mean of the steps inside the slot. `slots` is `null` when a day has none, which the panel reads as no region at all.
 18. **The forecast cache is `wx:v2:forecast:<lat4>:<lng4>`.** A step now stores wind, precipitation and the chance, which is a change of stored shape; `WEATHER_CACHE_VERSION` moved from `v1` to `v2` as the Data Model requires (the failure key carries the same prefix, so its `v1` entries are dropped too, which costs at most one retry), and the `v1` entries are left to expire on their 6 h retention. Unlike `lastModified` (item 13), the new step fields are required, so an older entry cannot be read as the new shape and a bump, not a default, is the right answer. Until they do, a board opened for a point costs one call it would not have, which is the price of never serving a step without the fields it is now read for.
+
+What ships with the recorded kind (#823) differs from the design above in these places.
+
+19. **`POWER_LAG_DAYS` is 3, measured 2026-10-12.** At 11:42 and 12:09 UTC the daily point service held values through 2026-10-09 and the fill value for 10 to 12 October at Oslo, Sydney, Tokyo, New York, Nairobi and Reykjavik. A date is published once it is three or more days before today in UTC (`lastRecordedDate`), whatever the trip's zone, because the service publishes on its own clock; a request whose `end` is after today is answered clipped to today, so the call never asks past the newest published day.
+20. **NASA is sent one decimal, not four.** The grid is about 0.5 degrees, so the request, the recorded key (`wx:v2:recorded:<lat1>:<lng1>:<date>`, `v2` with the forecast key) and the failure entry (`wx:v2:fail:nasa-power:<lat1>:<lng1>`, the one-decimal value written with four, as `59.9000:10.8000`, by the shared `failureCacheKey`) share one rounding. ADR 0038 is amended to say so.
+21. **Day kind is one pure function.** `selectKind(date, { today, forecastEnd, recordedEnd, recordedStart })` returns `forecast`, `recorded`, `not-yet-recorded` or `none`; it runs once before the fetch with `forecastEnd = today + FORECAST_LOOKAHEAD_DAYS` (so a far-future day is never fetched) and once after, with the last date the forecast really covers. The estimate kind does not exist yet and a day past the window is `none`.
+22. **The wire reading is a union on `kind`.** `DayReading = ForecastReading | RecordedReading`. A recorded day has nullable temperatures (a fill value is an absent field, never a number; both absent is `unavailable`, and has no reading), precipitation and wind, `source: 'nasa-power'`, no symbol and no slots. `unavailable` still has no `kind` (item 3): "unavailable for the recorded kind" is told from `not-yet-recorded` by `status`.
+23. **Recorded days are an opt-in of the request.** `loadTripWeather` takes `recorded?: boolean`, absent meaning `false`, and the planner always sends `true`. A tab loaded before this deploy runs a bundle that cannot draw `not-yet-recorded` (its badge model has no such branch) and would draw a null temperature as `0`, so without the flag the server answers `none` for a past day, exactly as before. A schema only gains an optional field (`BACKWARD_COMPATIBILITY.md`). The field is removable once no tab older than this release can be open.
+24. **One allowance grant covers both kinds.** The cold calls of both kinds are one list, forecast calls first, so a month that runs out costs the recorded days before the forecast ones. One recorded call per location covers every cold past day of it, and the range sent is the span of the cold days, not of the trip.
+25. **Retention of an empty day is one hour.** A day the provider answers with neither temperature (the fill value beyond the lag, or a gap) is `unavailable`, is not given the 24 h / 30 d retention of a real reading, and is kept for an hour so a gap does not spend an allowance unit on every view.
+26. **Copy.** `plan.weather.badge.recordedHigh` and `recordedLow` name a recorded day that has only one temperature, and `plan.weather.panel.high` and `low` label the lone figure; the recorded note and the attribution are two lines in the panel. A not-yet-recorded day is drawn as a muted clock with its own accessible name, not as the unavailable dash, so the two never look alike. The clock also carries a `title`, so a pointer reader sees the words.
+27. **Nothing dated before the provider's data is asked for.** NASA POWER refuses a range that starts before 1981-01-01 with a 422 (measured 2026-10-12), and a refusal is remembered per provider and cell for every workspace, so one mistyped year ("1026") would blank the cell for all of them for five minutes at a time. `RecordedProvider.firstDate` (`POWER_FIRST_DATE`, `1981-01-01`) reaches `selectKind` as `recordedStart`: an earlier past day is `none`, with no call, no unit and no failure entry.
+28. **The forecast takes its places in the cap first.** Of the 12 locations a request resolves, those with a forecast day are kept before those with only recorded days, each in day order, so a trip under way with a dozen past stays still shows today's forecast. A finished trip with more than 12 locations still leaves the later ones `unavailable`; counting recorded days by one-decimal cell rather than by location is a follow-up.
+29. **Known limit of the lag.** `POWER_LAG_DAYS = 3` was measured at midday UTC (item 19), so the first hours of the UTC day on which a date turns "recorded" are unmeasured. If the service publishes later than 00:00 UTC, that date reads `unavailable` for those hours (one allowance unit per cell per hour at most, by the one-hour retention of an empty day). Re-measure just after 00:00 UTC; a lag of 4 is the safe value if it differs.

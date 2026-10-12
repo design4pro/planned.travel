@@ -12,7 +12,7 @@
  * has to know why and an error crossing the wire is not one more thing to render as an apology. An
  * unreadable trip is not a degraded lookup, so that still throws.
  *
- * What is returned is a function of the trip's days and of the provider's forecast: no place, stay
+ * What is returned is a function of the trip's days and of the providers' answers: no place, stay
  * or member id, no coordinate, and no time at which anyone looked a point up.
  */
 
@@ -37,7 +37,14 @@ import type { TenantScope } from '#/server/repos'
 
 const id = z.string().trim().min(1).max(64)
 
-export const tripWeatherInputSchema = z.strictObject({ tripId: id })
+export const tripWeatherInputSchema = z.strictObject({
+  tripId: id,
+  /**
+   * Opt in to the recorded days. A tab loaded before they existed does not send it and keeps
+   * seeing `none` for a past day, which is the only answer its bundle can draw.
+   */
+  recorded: z.boolean().optional(),
+})
 
 export type TripWeatherInput = z.infer<typeof tripWeatherInputSchema>
 
@@ -73,6 +80,7 @@ export async function loadTripWeather(
     // The trip's own zone, UTC when it has none: never the reader's, so two members of one trip
     // see one answer.
     trip.timezone ?? 'UTC',
+    { recorded: input.recorded === true },
   )
 
   return {

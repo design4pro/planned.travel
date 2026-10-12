@@ -311,6 +311,10 @@ const messages = {
     'Tahmin: en yüksek {max}, en düşük {min}',
   'plan.weather.badge.unavailable': 'Bu gün için hava durumu kullanılamıyor',
   'plan.weather.badge.loading': 'Hava durumu yükleniyor',
+  'plan.weather.badge.recorded': 'Kaydedilen: en yüksek {max}, en düşük {min}',
+  'plan.weather.badge.recordedHigh': 'Kaydedilen: en yüksek {max}',
+  'plan.weather.badge.recordedLow': 'Kaydedilen: en düşük {min}',
+  'plan.weather.badge.notYetRecorded': 'Henüz kaydedilmedi',
   'plan.weather.condition.clear': 'Açık',
   'plan.weather.condition.fair': 'Güzel',
   'plan.weather.condition.partlyCloudy': 'Parçalı bulutlu',
@@ -331,8 +335,13 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Sabah',
   'plan.weather.panel.slot.afternoon': 'Öğleden sonra',
   'plan.weather.panel.slot.evening': 'Akşam',
+  'plan.weather.panel.high': 'En yüksek',
+  'plan.weather.panel.low': 'En düşük',
+  'plan.weather.panel.recordedNote': 'Bu güne ait ölçülen değerler.',
   'plan.weather.attribution.metNorway':
     'Tahmin verileri: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Veriler: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

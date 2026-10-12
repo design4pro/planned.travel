@@ -8,7 +8,13 @@
  */
 
 import type { MessageKey } from '#/lib/i18n'
-import type { DayReading, DayWeather, WeatherUnit } from '#/lib/weather'
+import type {
+  DayReading,
+  DayWeather,
+  ForecastReading,
+  RecordedReading,
+  WeatherUnit,
+} from '#/lib/weather'
 
 /** The plan screen's view of a day: the server's answer, or "not in yet". */
 export type DayWeatherView = DayWeather | { readonly status: 'loading' }
@@ -122,9 +128,12 @@ const SLOT_BY_START: { readonly [from: string]: WeatherSlotName } = {
 }
 
 export interface WeatherPanelModel {
+  /** Which kind of reading this is: a forecast, or what was measured on a day that is over. */
+  readonly kind: DayReading['kind']
   readonly condition: WeatherCondition | null
-  readonly max: number
-  readonly min: number
+  /** `null` when the day has no such figure (a measurement can lack one of its two). */
+  readonly max: number | null
+  readonly min: number | null
   readonly unit: 'C' | 'F'
   /** `null` when the provider gave no amount: the row is left out, never a zero. */
   readonly precipitation: ReturnType<typeof precipitationIn> | null
@@ -139,11 +148,22 @@ export interface WeatherPanelModel {
   }> | null
 }
 
-/** The fuller reading of a forecast day, in the reader's unit. */
-export function panelModel(
+/** A temperature a reading may lack, in the reader's unit; absent stays absent, never `0`. */
+function optionalTemperatureIn(
+  celsius: number | null,
+  unit: WeatherUnit,
+): number | null {
+  return celsius === null ? null : temperatureIn(celsius, unit)
+}
+
+/** The slots of a forecast day, in the reader's unit; a recorded day has none. */
+function slotsOf(
   reading: DayReading,
   unit: WeatherUnit,
-): WeatherPanelModel {
+): WeatherPanelModel['slots'] {
+  if (reading.kind !== 'forecast') {
+    return null
+  }
   const slots = (reading.slots ?? []).flatMap((slot) => {
     const name = SLOT_BY_START[slot.from]
     return name === undefined
@@ -156,24 +176,35 @@ export function panelModel(
           },
         ]
   })
+  return slots.length === 0 ? null : slots
+}
+
+/** The fuller reading of a day, in the reader's unit. */
+export function panelModel(
+  reading: DayReading,
+  unit: WeatherUnit,
+): WeatherPanelModel {
   return {
-    condition: conditionOf(reading.symbol),
-    max: temperatureIn(reading.tempMaxC, unit),
-    min: temperatureIn(reading.tempMinC, unit),
+    kind: reading.kind,
+    condition: reading.kind === 'forecast' ? conditionOf(reading.symbol) : null,
+    max: optionalTemperatureIn(reading.tempMaxC, unit),
+    min: optionalTemperatureIn(reading.tempMinC, unit),
     unit: unitSymbol(unit),
     precipitation:
       reading.precipitationMm == null
         ? null
         : precipitationIn(reading.precipitationMm, unit),
-    probability: reading.precipitationProbability,
+    probability:
+      reading.kind === 'forecast' ? reading.precipitationProbability : null,
     wind: reading.windMs == null ? null : windIn(reading.windMs, unit),
-    slots: slots.length === 0 ? null : slots,
+    slots: slotsOf(reading, unit),
   }
 }
 
 export type WeatherBadgeModel =
   | { readonly kind: 'loading' }
   | { readonly kind: 'unavailable' }
+  | { readonly kind: 'notYetRecorded' }
   | {
       readonly kind: 'forecast'
       readonly condition: WeatherCondition | null
@@ -181,7 +212,15 @@ export type WeatherBadgeModel =
       readonly min: number
       readonly unit: 'C' | 'F'
       /** The reading behind the badge, for the fuller panel it opens. */
-      readonly reading: DayReading
+      readonly reading: ForecastReading
+    }
+  | {
+      readonly kind: 'recorded'
+      /** Either may be `null`: a measurement can lack one of its two temperatures, not both. */
+      readonly max: number | null
+      readonly min: number | null
+      readonly unit: 'C' | 'F'
+      readonly reading: RecordedReading
     }
 
 /** What to draw for a day, or `null` when it draws nothing at all. */
@@ -196,14 +235,27 @@ export function badgeModel(
       return { kind: 'loading' }
     case 'unavailable':
       return { kind: 'unavailable' }
-    case 'ok':
+    case 'not-yet-recorded':
+      return { kind: 'notYetRecorded' }
+    case 'ok': {
+      const { reading } = weather
+      if (reading.kind === 'recorded') {
+        return {
+          kind: 'recorded',
+          max: optionalTemperatureIn(reading.tempMaxC, unit),
+          min: optionalTemperatureIn(reading.tempMinC, unit),
+          unit: unitSymbol(unit),
+          reading,
+        }
+      }
       return {
         kind: 'forecast',
-        condition: conditionOf(weather.reading.symbol),
-        max: temperatureIn(weather.reading.tempMaxC, unit),
-        min: temperatureIn(weather.reading.tempMinC, unit),
+        condition: conditionOf(reading.symbol),
+        max: temperatureIn(reading.tempMaxC, unit),
+        min: temperatureIn(reading.tempMinC, unit),
         unit: unitSymbol(unit),
-        reading: weather.reading,
+        reading,
       }
+    }
   }
 }
