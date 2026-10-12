@@ -463,7 +463,12 @@ describe('sunrise and sunset in the fuller forecast', () => {
 
   it('shows them on a recorded day as well, which has a popover of its own', async () => {
     const user = userEvent.setup()
-    badge({ ...recorded(), sun: { sunrise: '07:22', sunset: '18:50' } })
+    badge({
+      dayId: 'd1',
+      status: 'ok',
+      reading: RECORDED,
+      sun: { sunrise: '07:22', sunset: '18:50' },
+    })
     await user.click(screen.getByRole('button', { name: /^Recorded/ }))
     const panel = within(await screen.findByRole('dialog'))
 
