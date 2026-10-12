@@ -4,11 +4,15 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 import { CONDITION_ICON } from './weather-icons'
 import { CONDITION_LABEL, SLOT_LABEL, panelModel } from './weather-model'
 
+import type { ReactNode } from 'react'
 import type { Locale, MessageKey } from '#/lib/i18n'
+import type { SunTimes } from '#/lib/sun'
 import type { DayReading, WeatherUnit } from '#/lib/weather'
 
 export interface DayWeatherPanelProps {
   readonly reading: DayReading
+  /** Sunrise and sunset for the day; `null` or absent leaves the two rows out. */
+  readonly sun?: SunTimes | null
   /** The reader's unit; the reading itself is always metric. */
   readonly unit: WeatherUnit
   readonly className?: string
@@ -16,7 +20,8 @@ export interface DayWeatherPanelProps {
 
 /**
  * The fuller reading of a day: the high and low, what falls and how likely it is, the
- * wind, and a strip of the day's six-hour slots, with the provider's credit underneath.
+ * wind, the day's sunrise and sunset, and a strip of the day's six-hour slots, with the provider's
+ * credit underneath.
  *
  * It is a unit with no popover in it - the badge puts it in one today, and the day detail screen
  * will mount it in its weather region without the badge's popover around it. Whatever the provider
@@ -30,6 +35,7 @@ export interface DayWeatherPanelProps {
  */
 export function DayWeatherPanel({
   reading,
+  sun = null,
   unit,
   className,
 }: DayWeatherPanelProps) {
@@ -70,6 +76,20 @@ export function DayWeatherPanel({
           <Row label={t('trips.plan.weather.panel.wind')}>
             {`${formatNumber(model.wind.value, locale)} ${model.wind.unit}`}
           </Row>
+        )}
+        {sun === null ? null : (
+          <>
+            <SunRow
+              label={t('trips.plan.weather.panel.sunrise')}
+              missing={t('trips.plan.weather.panel.noSunrise')}
+              time={sun.sunrise}
+            />
+            <SunRow
+              label={t('trips.plan.weather.panel.sunset')}
+              missing={t('trips.plan.weather.panel.noSunset')}
+              time={sun.sunset}
+            />
+          </>
         )}
       </dl>
 
@@ -159,7 +179,7 @@ function Row({
   children,
 }: {
   readonly label: string
-  readonly children: string
+  readonly children: ReactNode
 }) {
   return (
     <>
@@ -168,5 +188,31 @@ function Row({
         <bdi dir="ltr">{children}</bdi>
       </dd>
     </>
+  )
+}
+
+/**
+ * Sunrise or sunset as the clock time in the trip's zone. A side the day does not have - polar
+ * night, midnight sun - is a dash that names what is missing, never a blank and never `00:00`.
+ */
+function SunRow({
+  label,
+  missing,
+  time,
+}: {
+  readonly label: string
+  readonly missing: string
+  readonly time: string | null
+}) {
+  return (
+    <Row label={label}>
+      {time === null ? (
+        <span role="img" aria-label={missing} className="text-ink-4">
+          —
+        </span>
+      ) : (
+        time
+      )}
+    </Row>
   )
 }

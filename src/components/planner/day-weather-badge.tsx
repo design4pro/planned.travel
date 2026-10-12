@@ -138,7 +138,11 @@ export function DayWeatherBadge({
               {t('trips.plan.weather.panel.title', { date: dateLabel })}
             </h2>
           </PopoverHeader>
-          <DayWeatherPanel reading={model.reading} unit={unit} />
+          <DayWeatherPanel
+            reading={model.reading}
+            sun={model.sun}
+            unit={unit}
+          />
         </PopoverContent>
       </Popover>
     </div>

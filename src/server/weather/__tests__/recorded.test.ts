@@ -357,6 +357,8 @@ describe('the days a trip has already lived', () => {
         precipitationMm: 0.1,
         windMs: 1.5,
       },
+      // Worked out from the place and the date, so a measured day has its sun like a forecast one.
+      sun: { sunrise: '07:22', sunset: '18:50' },
     })
   })
 
@@ -556,6 +558,7 @@ describe('a value the provider does not have', () => {
         precipitationMm: 0.3,
         windMs: 1.5,
       },
+      sun: { sunrise: '07:27', sunset: '18:44' },
     })
   })
 

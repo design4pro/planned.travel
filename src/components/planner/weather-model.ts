@@ -8,6 +8,7 @@
  */
 
 import type { MessageKey } from '#/lib/i18n'
+import type { SunTimes } from '#/lib/sun'
 import type {
   DayReading,
   DayWeather,
@@ -213,6 +214,8 @@ export type WeatherBadgeModel =
       readonly unit: 'C' | 'F'
       /** The reading behind the badge, for the fuller panel it opens. */
       readonly reading: ForecastReading
+      /** Sunrise and sunset behind the fuller panel; absent when the answer carried none. */
+      readonly sun: SunTimes | null
     }
   | {
       readonly kind: 'recorded'
@@ -221,6 +224,8 @@ export type WeatherBadgeModel =
       readonly min: number | null
       readonly unit: 'C' | 'F'
       readonly reading: RecordedReading
+      /** Sunrise and sunset behind the fuller panel; absent when the answer carried none. */
+      readonly sun: SunTimes | null
     }
 
 /** What to draw for a day, or `null` when it draws nothing at all. */
@@ -246,6 +251,7 @@ export function badgeModel(
           min: optionalTemperatureIn(reading.tempMinC, unit),
           unit: unitSymbol(unit),
           reading,
+          sun: weather.sun ?? null,
         }
       }
       return {
@@ -255,6 +261,7 @@ export function badgeModel(
         min: temperatureIn(reading.tempMinC, unit),
         unit: unitSymbol(unit),
         reading,
+        sun: weather.sun ?? null,
       }
     }
   }
