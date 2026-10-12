@@ -294,7 +294,7 @@ type DayWeather =
   | { dayId: string; status: 'none' } // undated day, or no location
   | { dayId: string; status: 'unavailable'; kind: WeatherKind } // provider/ceiling/parse failure
   | { dayId: string; status: 'not-yet-recorded' } // past day inside POWER_LAG_DAYS
-  | { dayId: string; status: 'ok'; reading: DayReading; sun?: SunTimes } // `sun` is absent only on an answer that predates it
+  | { dayId: string; status: 'ok'; reading: DayReading; sun?: SunTimes } // `sun` is absent on an answer that predates it and on a trip with no time zone (amendment 22)
 
 type WeatherKind = 'forecast' | 'recorded' | 'estimate'
 
@@ -316,7 +316,7 @@ interface DayReading {
 }
 
 interface SunTimes {
-  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); both sides null in polar night / midnight sun
+  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); null for a side the sun does not cross the horizon for (amendment 19)
   sunset: string | null
 }
 
@@ -789,4 +789,4 @@ What ships with the sun times (#824, #1197) differs from the design above in the
 19. **`sunTimes` returns a `SunTimes`, not `SunTimes | null`, and a side is `null` when the sun does not cross the horizon for it on that local date.** On a full polar day that is both sides; on the first or last day of a polar period it can be one side alone, because each side is resolved on its own. A bad date or coordinate gives `{ sunrise: null, sunset: null }`; an unknown zone is read as UTC, as `resolveTimeZone` does everywhere else.
 20. **`sun` is optional on the wire type** (`sun?: SunTimes` on `DayWeather`'s `ok` member) and required on the server's `WeatherOutcome`, so an answer cached or served by a worker that predates it leaves the two rows out instead of breaking the panel.
 21. **The fixtures sit inside `src/lib/__tests__/sun.test.ts`**, not in a `sun.fixtures.ts`, and number seven for the within-two-minutes check (Oslo twice, Quito, Sydney, and Tokyo, Los Angeles and Apia, whose zones put the crossing on a neighbouring UTC day); Tromsø is asserted separately as `null`. The values are the output of NOAA's published `main.js`, run under node, rounded to the minute.
-22. **A trip with no time zone shows no sun times.** `trips.timezone` is written by the seeds only, so a trip created through the UI has none and the weather read falls back to UTC for day bucketing (the edge-case table above). Sunrise and sunset would then be UTC clock times of a place elsewhere, up to hours off and sometimes a sunset before a sunrise, so the route leaves `sun` off those days and the panel draws neither row. The Data Model's `sun` is optional for the same reason.
+22. **A trip with no time zone shows no sun times.** `trips.timezone` is written by the seeds only, so a trip created through the UI has none and the weather read falls back to UTC for day bucketing (the edge-case table above). Sunrise and sunset would then be UTC clock times of a place elsewhere, up to hours off and sometimes a sunset before a sunrise, so the route leaves `sun` off those days and the panel draws neither row. The Data Model's `sun` is optional for the same reason. Giving a trip a zone is #1198; until then the rows appear on seeded trips only.
