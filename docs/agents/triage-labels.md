@@ -19,7 +19,7 @@ retired vocabularies.
 
 There is no `status:` axis and no intake ladder. Where an open issue stands is computed by
 `node .ai/scripts/backlog-status.mjs` from what is already on it: the holds, the claim, an open PR,
-its `Blocked by` list, its author and its Agent Brief (`SDLC.md` § Readiness). `in-progress` on an
+a merged PR that closes it by keyword, its `Blocked by` list, its author and its Agent Brief (`SDLC.md` § Readiness). `in-progress` on an
 issue or PR is the claim protocol of `SDLC.md` (assignee + label + 🤖 comment); a claim that
 outlives its run is reported by `om-review-prs`, not repaired by a sweeper.
 
