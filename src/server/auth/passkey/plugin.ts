@@ -27,8 +27,8 @@ const CHALLENGE_PREFIX = 'passkey-challenge:'
 /**
  * The ceiling is `MAX_PASSKEYS_PER_USER`, shared with the screen that words it. The count and the
  * write are two statements, so ceremonies that all pass the count before the first one writes can
- * all finish: a burst overshoots by at most what the registration rate limit lets one address
- * start in its window (10 per 300 s). That is a known property of a ceiling that bounds storage
+ * all finish: a burst overshoots by what the registration rate limit lets each address involved
+ * start in its window (10 per 300 s, per address and not per user). That is a known property of a ceiling that bounds storage
  * and is not a quota anyone sells; the list reads newest first, so the rows that could fall past
  * its `limit` are the oldest.
  */

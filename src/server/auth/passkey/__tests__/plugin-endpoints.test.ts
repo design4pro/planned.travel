@@ -298,6 +298,15 @@ describe('registration needs a fresh session, for every account', () => {
     expect(auth.challengeCount()).toBe(0)
   })
 
+  it('refuses, rather than lets through, a session whose creation time cannot be read', async () => {
+    const cookie = await auth.signIn('alice@planned.travel')
+    auth.editSession(aliceId, 'created_at', 'not a date')
+
+    const options = await auth.post('/passkey/register/options', {}, { cookie })
+    expect(options.status).not.toBe(200)
+    expect(auth.challengeCount()).toBe(0)
+  })
+
   it('refuses a stale session whether or not the account has a password', async () => {
     // Carol's credential row has its password taken away after she signs in, which leaves a
     // stale session on a passwordless account: it must meet the same refusal as Alice's.
