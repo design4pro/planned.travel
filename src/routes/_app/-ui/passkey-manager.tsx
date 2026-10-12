@@ -204,8 +204,14 @@ export function PasskeyManager() {
   // Set by the server's own refusal, for a count the list did not predict.
   const [limitHit, setLimitHit] = useState(false)
   const [status, setStatus] = useState<PasskeyNotice | null>(null)
+  // Bumped by a repeated failure with the same text: a live region only announces a change, so the
+  // text node is keyed on this and remounts.
+  const [statusTick, setStatusTick] = useState(0)
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
   const addRef = useRef<HTMLButtonElement>(null)
+  const emptyAddRef = useRef<HTMLButtonElement>(null)
+  // The Add button the person pressed, so focus returns to it and not to the other one.
+  const addOrigin = useRef(addRef)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const signInRef = useRef<HTMLButtonElement>(null)
 
@@ -235,13 +241,17 @@ export function PasskeyManager() {
     })
   }
 
+  // With the list failed on a ended session, the Alert carries the one Sign in again action.
+  const alertOwnsSignIn = list.status === 'failed' && list.notice.signInAgain
+
   const addButtonProps = {
     disabled: addDisabled,
     enrolling,
     describedBy: hint === null ? undefined : HINT_ID,
-    onAdd: () => {
-      void addPasskey()
-    },
+  }
+  const addFrom = (origin: typeof addRef) => () => {
+    addOrigin.current = origin
+    void addPasskey()
   }
 
   // `loading` disables the button, which drops focus; every outcome hands it back here, to the
@@ -250,12 +260,16 @@ export function PasskeyManager() {
     if (focusTarget === null || enrolling) return
     let target: HTMLElement | null = headingRef.current
     if (focusTarget === 'signIn') target = signInRef.current ?? target
-    if (focusTarget === 'add' && !addDisabled) target = addRef.current ?? target
+    if (focusTarget === 'add' && !addDisabled) {
+      target = addOrigin.current.current ?? addRef.current ?? target
+    }
     target?.focus()
     setFocusTarget(null)
   }, [focusTarget, enrolling, addDisabled])
 
   async function addPasskey(): Promise<void> {
+    // Counted before the ceremony, to tell a row it wrote from one already there.
+    const before = list.status === 'ready' ? list.passkeys.length : null
     setStatus(null)
     setEnrolling(true)
     const result = await registerPasskey()
@@ -282,7 +296,19 @@ export function PasskeyManager() {
     // row was written, a second tab): read it again, and keep it when the read fails.
     if (!result.aborted) {
       void fetchList().then((next) => {
-        if (next.status === 'ready') setList(next)
+        if (next.status !== 'ready') return
+        setList(next)
+        // No answer reached us (status 0), yet the row is there: the write succeeded, so the
+        // status must not tell the person to try again.
+        if (
+          !result.alreadyEnrolled &&
+          result.failure?.status === 0 &&
+          before !== null &&
+          next.passkeys.length > before
+        ) {
+          setStatus(ADDED)
+          setFocusTarget('add')
+        }
       })
     }
 
@@ -299,6 +325,7 @@ export function PasskeyManager() {
 
   function signOutFailed(): void {
     setStatus(SIGN_OUT_FAILED)
+    setStatusTick((tick) => tick + 1)
     setFocusTarget('signIn')
   }
 
@@ -316,8 +343,9 @@ export function PasskeyManager() {
             {...addButtonProps}
             buttonRef={addRef}
             dataPart="passkey-add"
+            onAdd={addFrom(addRef)}
           />
-          {status?.signInAgain ? (
+          {status?.signInAgain && !alertOwnsSignIn ? (
             <SignInAgain buttonRef={signInRef} onFailed={signOutFailed} />
           ) : null}
         </div>
@@ -338,7 +366,7 @@ export function PasskeyManager() {
               })}
             </span>
           ) : (
-            t(status.key)
+            <span key={statusTick}>{t(status.key)}</span>
           )}
         </p>
         {hint === null ? null : (
@@ -374,7 +402,7 @@ export function PasskeyManager() {
             title={t('settings.passkeys.error.title')}
             actions={
               list.notice.signInAgain ? (
-                <SignInAgain onFailed={signOutFailed} />
+                <SignInAgain buttonRef={signInRef} onFailed={signOutFailed} />
               ) : (
                 <Button
                   variant="secondary"
@@ -398,7 +426,13 @@ export function PasskeyManager() {
             title={t('settings.passkeys.empty.title')}
             titleAs="h3"
             description={t('settings.passkeys.empty.body')}
-            action={<AddPasskeyButton {...addButtonProps} />}
+            action={
+              <AddPasskeyButton
+                {...addButtonProps}
+                buttonRef={emptyAddRef}
+                onAdd={addFrom(emptyAddRef)}
+              />
+            }
           />
         ) : null}
 

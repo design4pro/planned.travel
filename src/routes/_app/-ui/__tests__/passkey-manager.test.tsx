@@ -447,6 +447,89 @@ describe('adding a passkey', () => {
     vi.unstubAllGlobals()
   })
 
+  it('announces a second failed sign-out too, by replacing the text node in the live region', async () => {
+    client.registerPasskey.mockResolvedValue({
+      ok: false,
+      aborted: false,
+      alreadyEnrolled: false,
+      failure: { code: 'PASSKEY_SESSION_NOT_FRESH', status: 400, message: '' },
+    })
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
+    await mount()
+    await screen.findByText('No passkeys yet')
+    await userEvent.click(addButton())
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Sign in again' }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        'Check your connection',
+      ),
+    )
+    const first = screen.getByRole('status').firstElementChild
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').firstElementChild).not.toBe(first),
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('shows one Sign in again when the list failed on an ended session and signing out fails', async () => {
+    client.listPasskeys.mockResolvedValue(failure(401))
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
+    await mount()
+    const alert = await screen.findByRole('alert')
+
+    await userEvent.click(
+      within(alert).getByRole('button', { name: 'Sign in again' }),
+    )
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        'Check your connection',
+      ),
+    )
+    const buttons = screen.getAllByRole('button', { name: 'Sign in again' })
+    expect(buttons).toHaveLength(1)
+    await waitFor(() => expect(document.activeElement).toBe(buttons[0]))
+    vi.unstubAllGlobals()
+  })
+
+  it('returns focus to the empty-state button when that is the one pressed', async () => {
+    client.registerPasskey.mockResolvedValue({ ok: false, aborted: true })
+    await mount()
+    await screen.findByText('No passkeys yet')
+    const emptyAdd = screen.getAllByRole('button', { name: 'Add a passkey' })[1]
+
+    await userEvent.click(emptyAdd)
+
+    await waitFor(() => expect(document.activeElement).toBe(emptyAdd))
+  })
+
+  it('says the passkey was added when the reply was lost but the reloaded list holds the row', async () => {
+    client.registerPasskey.mockResolvedValue({
+      ok: false,
+      aborted: false,
+      alreadyEnrolled: false,
+      failure: { code: null, status: 0, message: '' },
+    })
+    await mount()
+    await screen.findByText('No passkeys yet')
+    client.listPasskeys.mockResolvedValue({
+      ok: true,
+      passkeys: [passkey({ id: 'pk_written' })],
+    })
+
+    await userEvent.click(addButton())
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe('Passkey added'),
+    )
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+  })
+
   it('keeps the ceiling on screen, tied to the disabled button, and puts focus on the heading', async () => {
     client.registerPasskey.mockResolvedValue({
       ok: false,
