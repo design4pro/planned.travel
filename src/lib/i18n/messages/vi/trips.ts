@@ -306,6 +306,10 @@ const messages = {
     'Dự báo: cao nhất {max}, thấp nhất {min}',
   'plan.weather.badge.unavailable': 'Không có thông tin thời tiết cho ngày này',
   'plan.weather.badge.loading': 'Đang tải thời tiết',
+  'plan.weather.badge.recorded': 'Đã ghi nhận: cao nhất {max}, thấp nhất {min}',
+  'plan.weather.badge.recordedHigh': 'Đã ghi nhận: cao nhất {max}',
+  'plan.weather.badge.recordedLow': 'Đã ghi nhận: thấp nhất {min}',
+  'plan.weather.badge.notYetRecorded': 'Chưa ghi nhận',
   'plan.weather.condition.clear': 'Trời quang',
   'plan.weather.condition.fair': 'Trời đẹp',
   'plan.weather.condition.partlyCloudy': 'Có mây rải rác',
@@ -326,7 +330,12 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Sáng',
   'plan.weather.panel.slot.afternoon': 'Chiều',
   'plan.weather.panel.slot.evening': 'Tối',
+  'plan.weather.panel.high': 'Cao nhất',
+  'plan.weather.panel.low': 'Thấp nhất',
+  'plan.weather.panel.recordedNote': 'Giá trị đo được của ngày này.',
   'plan.weather.attribution.metNorway': 'Dữ liệu dự báo: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Dữ liệu: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -318,6 +318,10 @@ const messages = {
     'Voorspelling: maximaal {max}, minimaal {min}',
   'plan.weather.badge.unavailable': 'Weer niet beschikbaar voor deze dag',
   'plan.weather.badge.loading': 'Weer laden',
+  'plan.weather.badge.recorded': 'Gemeten: maximaal {max}, minimaal {min}',
+  'plan.weather.badge.recordedHigh': 'Gemeten: maximaal {max}',
+  'plan.weather.badge.recordedLow': 'Gemeten: minimaal {min}',
+  'plan.weather.badge.notYetRecorded': 'Nog niet geregistreerd',
   'plan.weather.condition.clear': 'Helder',
   'plan.weather.condition.fair': 'Mooi weer',
   'plan.weather.condition.partlyCloudy': 'Half bewolkt',
@@ -338,8 +342,13 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Ochtend',
   'plan.weather.panel.slot.afternoon': 'Middag',
   'plan.weather.panel.slot.evening': 'Avond',
+  'plan.weather.panel.high': 'Hoogste',
+  'plan.weather.panel.low': 'Laagste',
+  'plan.weather.panel.recordedNote': 'Gemeten waarden voor deze dag.',
   'plan.weather.attribution.metNorway':
     'Voorspellingsgegevens: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Gegevens: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

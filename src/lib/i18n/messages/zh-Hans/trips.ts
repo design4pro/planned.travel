@@ -281,6 +281,10 @@ const messages = {
   'plan.weather.badge.forecastNoCondition': '预报：最高 {max}，最低 {min}',
   'plan.weather.badge.unavailable': '这一天的天气暂不可用',
   'plan.weather.badge.loading': '正在加载天气',
+  'plan.weather.badge.recorded': '实测：最高 {max}， 最低 {min}',
+  'plan.weather.badge.recordedHigh': '实测：最高 {max}',
+  'plan.weather.badge.recordedLow': '实测：最低 {min}',
+  'plan.weather.badge.notYetRecorded': '尚无实测',
   'plan.weather.condition.clear': '晴',
   'plan.weather.condition.fair': '大致晴朗',
   'plan.weather.condition.partlyCloudy': '局部多云',
@@ -301,7 +305,12 @@ const messages = {
   'plan.weather.panel.slot.morning': '上午',
   'plan.weather.panel.slot.afternoon': '下午',
   'plan.weather.panel.slot.evening': '傍晚',
+  'plan.weather.panel.high': '最高',
+  'plan.weather.panel.low': '最低',
+  'plan.weather.panel.recordedNote': '这一天的实测数值。',
   'plan.weather.attribution.metNorway': '预报数据：MET Norway，CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    '数据：NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

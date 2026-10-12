@@ -347,6 +347,10 @@ const messages = {
     'التوقعات: العظمى {max}، الصغرى {min}',
   'plan.weather.badge.unavailable': 'حالة الطقس غير متاحة لهذا اليوم',
   'plan.weather.badge.loading': 'جارٍ تحميل الطقس',
+  'plan.weather.badge.recorded': 'المسجَّل: العظمى {max}، الصغرى {min}',
+  'plan.weather.badge.recordedHigh': 'المسجَّل: العظمى {max}',
+  'plan.weather.badge.recordedLow': 'المسجَّل: الصغرى {min}',
+  'plan.weather.badge.notYetRecorded': 'لم يُسجَّل بعد',
   'plan.weather.condition.clear': 'صافٍ',
   'plan.weather.condition.fair': 'طقس لطيف',
   'plan.weather.condition.partlyCloudy': 'غائم جزئيًا',
@@ -367,7 +371,12 @@ const messages = {
   'plan.weather.panel.slot.morning': 'صباحًا',
   'plan.weather.panel.slot.afternoon': 'بعد الظهر',
   'plan.weather.panel.slot.evening': 'مساءً',
+  'plan.weather.panel.high': 'العظمى',
+  'plan.weather.panel.low': 'الصغرى',
+  'plan.weather.panel.recordedNote': 'قيم مقيسة لهذا اليوم.',
   'plan.weather.attribution.metNorway': 'بيانات التنبؤ: MET Norway، CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'البيانات: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

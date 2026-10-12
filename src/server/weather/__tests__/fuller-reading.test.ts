@@ -15,6 +15,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createMetNorwayClient } from '../met-norway'
+import { createNasaPowerClient } from '../nasa-power'
 import { groupForecastDays, resolveTripWeather } from '../weather'
 import { OSLO_FORECAST_DETAIL } from './locationforecast-detail.fixture'
 
@@ -64,6 +65,9 @@ function runtime(): WeatherRuntime {
     metNorway: createMetNorwayClient({
       fetch: upstream as unknown as typeof fetch,
     }),
+    nasaPower: createNasaPowerClient({
+      fetch: upstream as unknown as typeof fetch,
+    }),
   }
 }
 
@@ -73,7 +77,7 @@ async function reading(date: string) {
     [{ date, location: OSLO }],
     ZONE,
   )
-  if (outcome.status !== 'ok') {
+  if (outcome.status !== 'ok' || outcome.reading.kind !== 'forecast') {
     throw new Error(`${date} should be a forecast day, got ${outcome.status}.`)
   }
   return outcome.reading

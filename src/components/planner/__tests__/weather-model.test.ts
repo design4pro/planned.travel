@@ -178,6 +178,7 @@ describe('windIn', () => {
 describe('panelModel', () => {
   it('carries every figure of the reading in the reader’s unit', () => {
     expect(panelModel(READING, 'metric')).toEqual({
+      kind: 'forecast',
       condition: 'rain',
       max: 12,
       min: 4,
@@ -242,5 +243,75 @@ describe('panelModel', () => {
       { name: 'afternoon', condition: 'cloudy', temp: 10 },
       { name: 'evening', condition: null, temp: 8 },
     ])
+  })
+})
+
+describe('a recorded day', () => {
+  const RECORDED: DayWeather = {
+    dayId: 'd1',
+    status: 'ok',
+    reading: {
+      kind: 'recorded',
+      source: 'nasa-power',
+      tempMinC: 1.9,
+      tempMaxC: 8.4,
+      precipitationMm: 0.2,
+      windMs: 0.9,
+    },
+  }
+
+  it('is a recorded badge in the reader’s unit, with no condition to claim', () => {
+    expect(badgeModel(RECORDED, 'metric')).toMatchObject({
+      kind: 'recorded',
+      max: 8,
+      min: 2,
+      unit: 'C',
+    })
+    expect(badgeModel(RECORDED, 'imperial')).toMatchObject({
+      max: 47,
+      min: 35,
+      unit: 'F',
+    })
+  })
+
+  it('keeps an absent temperature absent, never a zero', () => {
+    const model = badgeModel(
+      {
+        ...RECORDED,
+        reading: {
+          kind: 'recorded',
+          source: 'nasa-power',
+          tempMinC: null,
+          tempMaxC: 8.4,
+          precipitationMm: null,
+          windMs: null,
+        },
+      },
+      'metric',
+    )
+
+    expect(model).toMatchObject({ kind: 'recorded', max: 8, min: null })
+  })
+
+  it('has a panel with no sky, no chance of rain and no slots', () => {
+    if (RECORDED.status !== 'ok') throw new Error('unreachable')
+    expect(panelModel(RECORDED.reading, 'metric')).toMatchObject({
+      kind: 'recorded',
+      condition: null,
+      probability: null,
+      slots: null,
+      precipitation: { value: 0.2, unit: 'mm' },
+    })
+  })
+
+  it('draws a not-yet-recorded day as its own badge, distinct from unavailable', () => {
+    expect(
+      badgeModel({ dayId: 'd1', status: 'not-yet-recorded' }, 'metric'),
+    ).toEqual({ kind: 'notYetRecorded' })
+    expect(
+      badgeModel({ dayId: 'd1', status: 'unavailable' }, 'metric'),
+    ).toEqual({
+      kind: 'unavailable',
+    })
   })
 })

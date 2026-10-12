@@ -15,6 +15,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createMetNorwayClient } from '../met-norway'
+import { createNasaPowerClient } from '../nasa-power'
 import {
   WEATHER_CALL_TIMEOUT_MS,
   WEATHER_DEADLINE_MS,
@@ -159,6 +160,7 @@ function world(
     now: () => state.now,
     logger: overrides.logger ?? null,
     metNorway: createMetNorwayClient({ fetch: upstream.fetch }),
+    nasaPower: createNasaPowerClient({ fetch: upstream.fetch }),
   }
   return {
     runtime,
@@ -281,9 +283,11 @@ describe('a forecast for the days of a trip', () => {
       ZONE,
     )
 
-    expect(outcome.status === 'ok' ? outcome.reading.symbol : null).toMatch(
-      /^[a-z]+$/,
-    )
+    expect(
+      outcome.status === 'ok' && outcome.reading.kind === 'forecast'
+        ? outcome.reading.symbol
+        : null,
+    ).toMatch(/^[a-z]+$/)
   })
 
   it('treats today as a forecast day although the series started part-way through it', async () => {
