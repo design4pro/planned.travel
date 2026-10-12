@@ -409,7 +409,9 @@ describe('sunrise and sunset', () => {
     expect(spent(w.counters)).toBe(1)
     expect(warm).toEqual(cold)
     expect(
-      warm.every((outcome) => outcome.status === 'ok' && outcome.sun !== null),
+      warm.every(
+        (outcome) => outcome.status === 'ok' && outcome.sun !== undefined,
+      ),
     ).toBe(true)
   })
 

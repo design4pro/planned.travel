@@ -270,7 +270,7 @@ describe('loadTripWeather', () => {
     expect(first.status === 'ok' && first.reading.tempMaxC).toBeLessThan(30)
   })
 
-  it('groups a trip with no time zone in UTC, whatever zone the reader is in', async () => {
+  it('groups a trip with no time zone in UTC, whatever zone the reader is in, and gives it no sun times', async () => {
     const make = async (timezone: string | undefined) => {
       const trip = await createTrip(owner, {
         title: 'Zone check',
@@ -305,7 +305,15 @@ describe('loadTripWeather', () => {
     const utc = await make('UTC')
     await updateOrganizationSettings(owner, { timezone: 'Pacific/Auckland' })
 
-    expect(await readings(unzoned)).toEqual(await readings(utc))
+    const withSun = await readings(utc)
+    // The groupings are one and the same; the unzoned trip simply carries no sun, because sunrise
+    // and sunset in UTC would be the wrong clock for the place.
+    expect(await readings(unzoned)).toEqual(
+      withSun.map((day) =>
+        day.status === 'ok' ? { status: 'ok', reading: day.reading } : day,
+      ),
+    )
+    expect(withSun.some((day) => day.status === 'ok' && day.sun)).toBe(true)
   })
 
   it('is not-found for a private trip the caller is not on, before the runtime is built', async () => {

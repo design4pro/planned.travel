@@ -11,7 +11,8 @@
  * single-zone trip model, recorded in the per-day weather spec, not something to correct here.
  *
  * Where the sun does not cross the horizon that day (polar night, midnight sun) there is nothing
- * to report, and both sides come back `null`.
+ * to report and that side comes back `null`: both sides on a full polar day, one side alone on the
+ * first or last day of a polar period.
  */
 
 import { dayKeyIn, resolveTimeZone } from '#/lib/time'

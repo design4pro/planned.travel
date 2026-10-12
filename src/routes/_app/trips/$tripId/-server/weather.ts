@@ -33,7 +33,7 @@ import { appScope } from '../../../-server/context'
 
 import type { TripWeather } from '#/lib/weather'
 import type { WeatherRuntimeOptions } from '#/server/weather/bindings'
-import type { WeatherRuntime } from '#/server/weather/weather'
+import type { WeatherOutcome, WeatherRuntime } from '#/server/weather/weather'
 import type { TenantScope } from '#/server/repos'
 
 const id = z.string().trim().min(1).max(64)
@@ -45,6 +45,21 @@ export type TripWeatherInput = z.infer<typeof tripWeatherInputSchema>
 export interface TripWeatherPorts {
   /** The runtime the forecast is read through. */
   readonly weather: (options: WeatherRuntimeOptions) => WeatherRuntime
+}
+
+/**
+ * The outcome as it goes on the wire. A trip with no zone of its own has days bucketed in UTC, and
+ * sunrise and sunset in UTC are the wrong clock for the place, so its days carry no `sun`: the
+ * panel then draws neither row rather than a time that can be hours off.
+ */
+function withSunOf(outcome: WeatherOutcome | undefined, hasZone: boolean) {
+  if (outcome === undefined) {
+    return { status: 'unavailable' as const }
+  }
+  if (outcome.status !== 'ok' || hasZone) {
+    return outcome
+  }
+  return { status: 'ok' as const, reading: outcome.reading }
 }
 
 /**
@@ -80,7 +95,7 @@ export async function loadTripWeather(
     distanceUnit: settings.distanceUnit,
     days: locations.map(({ dayId }, index) => ({
       dayId,
-      ...(outcomes[index] ?? { status: 'unavailable' as const }),
+      ...withSunOf(outcomes[index], trip.timezone !== null),
     })),
   }
 }
