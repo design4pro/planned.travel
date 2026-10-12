@@ -334,6 +334,10 @@ const messages = {
     'Prévisions : max. {max}, min. {min}',
   'plan.weather.badge.unavailable': 'Météo indisponible pour ce jour',
   'plan.weather.badge.loading': 'Chargement de la météo',
+  'plan.weather.badge.recorded': 'Relevé : max. {max}, min. {min}',
+  'plan.weather.badge.recordedHigh': 'Relevé : max. {max}',
+  'plan.weather.badge.recordedLow': 'Relevé : min. {min}',
+  'plan.weather.badge.notYetRecorded': 'Pas encore relevé',
   'plan.weather.condition.clear': 'Dégagé',
   'plan.weather.condition.fair': 'Beau temps',
   'plan.weather.condition.partlyCloudy': 'Partiellement nuageux',
@@ -354,8 +358,13 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Matin',
   'plan.weather.panel.slot.afternoon': 'Après-midi',
   'plan.weather.panel.slot.evening': 'Soir',
+  'plan.weather.panel.high': 'Maximale',
+  'plan.weather.panel.low': 'Minimale',
+  'plan.weather.panel.recordedNote': 'Valeurs mesurées pour ce jour.',
   'plan.weather.attribution.metNorway':
     'Données de prévision : MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Données : NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

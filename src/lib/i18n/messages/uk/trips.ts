@@ -335,6 +335,10 @@ const messages = {
     'Прогноз: максимум {max}, мінімум {min}',
   'plan.weather.badge.unavailable': 'Погода на цей день недоступна',
   'plan.weather.badge.loading': 'Завантаження погоди',
+  'plan.weather.badge.recorded': 'Зафіксовано: максимум {max}, мінімум {min}',
+  'plan.weather.badge.recordedHigh': 'Зафіксовано: максимум {max}',
+  'plan.weather.badge.recordedLow': 'Зафіксовано: мінімум {min}',
+  'plan.weather.badge.notYetRecorded': 'Ще не зафіксовано',
   'plan.weather.condition.clear': 'Ясно',
   'plan.weather.condition.fair': 'Малохмарно',
   'plan.weather.condition.partlyCloudy': 'Мінлива хмарність',
@@ -355,7 +359,12 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Ранок',
   'plan.weather.panel.slot.afternoon': 'День',
   'plan.weather.panel.slot.evening': 'Вечір',
+  'plan.weather.panel.high': 'Максимум',
+  'plan.weather.panel.low': 'Мінімум',
+  'plan.weather.panel.recordedNote': 'Виміряні значення за цей день.',
   'plan.weather.attribution.metNorway': 'Дані прогнозу: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Дані: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -79,7 +79,7 @@ provider learns, and with the coordinate it is the whole of the disclosure.
 | Provider   | Receives                                                                        | May do with it                                                                                                                                                            | For how long                                                                                                |
 | ---------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | MET Norway | Coordinate (four decimals), date range, our `User-Agent`, Worker egress address | Answer the request. The terms require the `User-Agent` to identify the application and give a contact. They set no use of the request beyond that, and none is relied on. | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
-| NASA POWER | Coordinate (four decimals), date range, Worker egress address                   | Answer the request. The terms place no restriction on our use of what it returns, and none is relied on for what it does with the request.                                | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
+| NASA POWER | Coordinate (one decimal), date range, Worker egress address                     | Answer the request. The terms place no restriction on our use of what it returns, and none is relied on for what it does with the request.                                | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
 
 Because a provider may keep a request log for as long as it likes, the rule is about what we send, not
 about what they delete: the four-decimal truncation is applied before the request is built and before
@@ -135,3 +135,17 @@ new one; the policy module and the surface do not change.
   spring needs.
 - **Keeping the block.** A trip planner with no weather leaves a traveller to find it elsewhere, and the
   block existed only for want of a licence we have now read.
+
+## Amendment (#823, the recorded kind)
+
+NASA POWER is sent a coordinate cut to **one decimal** (about 11 km), not four. Its grid is about
+0.5 degrees, so a finer coordinate buys no better answer and would only tell the vendor more than the
+answer needs; the recorded cache key and the failure entry carry the same one-decimal coordinate, so
+two places in one cell share a reading. The truncation is applied before the request and the key are
+built, as the rule above requires, and a test of the request URL holds it. The table above states the
+disclosure as built.
+
+The publication lag is measured, not assumed: on 2026-10-12 at 11:42 and again at 12:09 UTC the service
+held values through 2026-10-09 and the fill value (`-999`) for 10, 11 and 12 October at six locations on
+five continents, so `POWER_LAG_DAYS` is 3 and a date is published once it is three or more days before
+today in UTC.

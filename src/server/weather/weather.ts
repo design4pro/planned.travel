@@ -35,6 +35,17 @@
  * `unavailable`. A planner that waited on this module for its first paint would be taken down by
  * somebody else's outage, which is why it is called after paint and why it cannot reject.
  *
+ * ## Recorded days
+ *
+ * A day already past is read from a second provider, the same way and through the same path: the
+ * cache per date, the remembered failure, the one grant of the allowance, the provider ledger, the
+ * per-call timeout. It differs in three ways. The provider publishes a day some days after it ends,
+ * so a past day inside that lag is `not-yet-recorded` - its own answer, which asks nothing of
+ * anyone, spends nothing and is never filled in from a forecast. One call covers every recorded day
+ * of a place, and each day is kept on its own, so a trip that grows by a day asks for that day.
+ * And a reader that does not ask for recorded days (a tab loaded before they existed) is answered
+ * as it always was: a past day is `none`.
+ *
  * ## The cache is shared across tenants, and holds nothing about them
  *
  * A key is a kind, a coordinate and nothing else: that a point has a forecast is a public fact, not
@@ -58,7 +69,7 @@ import { hourIn } from '#/lib/timezones'
 import { callProvider } from '#/server/metering/outbound'
 import { spendRateUnits } from '#/server/metering/rate'
 
-import type { DayReading, DaySlot } from '#/lib/weather'
+import type { DayReading, DaySlot, ForecastReading } from '#/lib/weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
 
@@ -83,6 +94,7 @@ export interface WeatherQuery {
 export type WeatherOutcome =
   | { readonly status: 'none' }
   | { readonly status: 'unavailable' }
+  | { readonly status: 'not-yet-recorded' }
   | { readonly status: 'ok'; readonly reading: DayReading }
 
 /** One instant of a provider's series, reduced to what the planner reads. */
@@ -131,6 +143,33 @@ export interface ForecastProvider {
   ) => Promise<ForecastFetch | ForecastNotModified>
 }
 
+/** One recorded day, metric. A field the provider had nothing for is `null`, never a number. */
+export interface RecordedValues {
+  readonly tempMinC: number | null
+  readonly tempMaxC: number | null
+  /** Millimetres that fell over the day. */
+  readonly precipitationMm: number | null
+  /** The mean wind over the day at two metres, metres per second. */
+  readonly windMs: number | null
+}
+
+/** The provider seam for recorded days. `./nasa-power` implements it; a test hands over a stub. */
+export interface RecordedProvider {
+  /**
+   * How many whole days the provider takes to publish a day: a day is recorded once its date is at
+   * least this many days before the provider's own today. Held by the client, because it is a
+   * property of the service and not of this policy.
+   */
+  readonly lagDays: number
+  /** Every day from `range.start` to `range.end` (inclusive, `YYYY-MM-DD`), keyed by its date. */
+  readonly daily: (
+    lat: number,
+    lng: number,
+    range: { readonly start: string; readonly end: string },
+    init: { readonly signal: AbortSignal },
+  ) => Promise<ReadonlyMap<string, RecordedValues>>
+}
+
 export type WeatherFailureReason =
   'unreachable' | 'refused' | 'malformed' | 'timeout'
 
@@ -176,6 +215,7 @@ export interface WeatherRuntime {
     info: (message: string, fields?: unknown) => void
   } | null
   readonly metNorway: ForecastProvider
+  readonly nasaPower: RecordedProvider
 }
 
 /* ------------------------------------------------------------------- bounds */
@@ -205,25 +245,64 @@ export const FAILURE_TTL_SECONDS = 5 * 60
 /** The vendor behind the forecast kind; the failure entry is keyed on it. */
 const FORECAST_PROVIDER = 'met-norway'
 
+/** The vendor behind the recorded kind; the failure entry is keyed on it. */
+const RECORDED_PROVIDER = 'nasa-power'
+
+/** A recorded day this many days old or more is settled; a younger one may still be revised. */
+export const RECORDED_RECENT_DAYS = 90
+
+/** How long a recorded day under {@link RECORDED_RECENT_DAYS} old is kept. */
+export const RECORDED_RECENT_TTL_SECONDS = 24 * 60 * 60
+
+/** How long a recorded day of {@link RECORDED_RECENT_DAYS} old or more is kept. */
+export const RECORDED_SETTLED_TTL_SECONDS = 30 * 24 * 60 * 60
+
+/**
+ * How long a day the provider answered with nothing in it is remembered as empty.
+ *
+ * Short on purpose: the answer was real, so it is not a provider failure and the failure entry does
+ * not apply, but a hole is exactly what a late publication or a gap can fill, and keeping it for a
+ * day or a month would pin it. Remembering it at all is what stops every view of the board from
+ * spending a unit to be told the same thing.
+ */
+export const RECORDED_EMPTY_TTL_SECONDS = 60 * 60
+
 /* --------------------------------------------------------------------- keys */
 
 /** Bumped when a stored shape changes; the previous prefix is left to expire on its own. */
 export const WEATHER_CACHE_VERSION = 'v2'
 
 /**
- * A coordinate cut to four decimals, as the provider's terms require and as every key uses.
+ * A coordinate cut to `digits` decimals, four by default: the provider's terms for the forecast and
+ * what its keys use.
  *
  * Four decimals is about eleven metres, so one doorway is one entry. `-0.0000` is folded into
  * `0.0000` so that two spellings of the equator are one key.
  */
-export function roundCoordinate(value: number): string {
-  const fixed = value.toFixed(4)
-  return Number(fixed) === 0 ? '0.0000' : fixed
+export function roundCoordinate(value: number, digits = 4): string {
+  const fixed = value.toFixed(digits)
+  return Number(fixed) === 0 ? (0).toFixed(digits) : fixed
 }
 
 /** `wx:v2:forecast:{lat}:{lng}` - a kind and a coordinate, and nothing about who asked. */
 export function forecastCacheKey(lat: number, lng: number): string {
   return `wx:${WEATHER_CACHE_VERSION}:forecast:${roundCoordinate(lat)}:${roundCoordinate(lng)}`
+}
+
+/**
+ * `wx:v2:recorded:{lat}:{lng}:{date}` - a coordinate cut to one decimal, a date and nothing about
+ * who asked.
+ *
+ * One decimal because the provider's grid is about half a degree: a finer key only fragments the
+ * cache for the same cell, and a finer coordinate sent to the provider would disclose more than the
+ * answer needs. The request is built from the same rounded value.
+ */
+export function recordedCacheKey(
+  lat: number,
+  lng: number,
+  date: string,
+): string {
+  return `wx:${WEATHER_CACHE_VERSION}:recorded:${roundCoordinate(lat, 1)}:${roundCoordinate(lng, 1)}:${date}`
 }
 
 /**
@@ -248,7 +327,7 @@ export function stripDayNight(code: string): string {
 
 /* ------------------------------------------------------------------ the days */
 
-type ForecastDay = Omit<DayReading, 'kind' | 'source'>
+type ForecastDay = Omit<ForecastReading, 'kind' | 'source'>
 
 /** A day is read in four slots of this many hours. */
 const SLOT_HOURS = 6
@@ -638,56 +717,334 @@ async function fetchSeries(
   }
 }
 
+/* ------------------------------------------------------------- recorded days */
+
+const recordedEntrySchema = z.object({
+  v: z.literal(2),
+  fetchedAt: z.string(),
+  day: z.object({
+    tempMinC: z.number().nullable(),
+    tempMaxC: z.number().nullable(),
+    precipitationMm: z.number().nullable(),
+    windMs: z.number().nullable(),
+  }),
+})
+
+/** Whether a recorded day can be drawn: at least one temperature is a number. */
+function hasTemperature(values: RecordedValues): boolean {
+  return values.tempMinC !== null || values.tempMaxC !== null
+}
+
+/**
+ * What the cache holds for one recorded day: `miss` when it holds nothing usable, `empty` for a day
+ * the provider answered with no temperature in it, otherwise the figures.
+ */
+type RecordedRead = 'miss' | 'empty' | RecordedValues
+
+async function readRecordedEntry(
+  runtime: WeatherRuntime,
+  coordinate: WeatherCoordinate,
+  date: string,
+): Promise<RecordedRead> {
+  let raw: string | null = null
+  try {
+    raw = await runtime.cache.get(
+      recordedCacheKey(coordinate.lat, coordinate.lng, date),
+    )
+  } catch (cause) {
+    runtime.logger?.warn('weather.cache.read_failed', {
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+    return 'miss'
+  }
+  if (raw === null) {
+    return 'miss'
+  }
+  try {
+    const parsed = recordedEntrySchema.safeParse(JSON.parse(raw))
+    if (!parsed.success) {
+      return 'miss'
+    }
+    return hasTemperature(parsed.data.day) ? parsed.data.day : 'empty'
+  } catch {
+    return 'miss'
+  }
+}
+
+/** Kept a day while it can still be revised, a month once it is settled, an hour when it is empty. */
+function recordedTtl(
+  date: string,
+  today: string,
+  values: RecordedValues,
+): number {
+  if (!hasTemperature(values)) {
+    return RECORDED_EMPTY_TTL_SECONDS
+  }
+  return date > shiftDate(today, -RECORDED_RECENT_DAYS)
+    ? RECORDED_RECENT_TTL_SECONDS
+    : RECORDED_SETTLED_TTL_SECONDS
+}
+
+async function writeRecordedEntry(
+  runtime: WeatherRuntime,
+  coordinate: WeatherCoordinate,
+  date: string,
+  today: string,
+  values: RecordedValues,
+): Promise<void> {
+  const entry: z.infer<typeof recordedEntrySchema> = {
+    v: 2,
+    fetchedAt: runtime.now().toISOString(),
+    day: values,
+  }
+  try {
+    await runtime.cache.put(
+      recordedCacheKey(coordinate.lat, coordinate.lng, date),
+      JSON.stringify(entry),
+      { expirationTtl: recordedTtl(date, today, values) },
+    )
+  } catch (cause) {
+    runtime.logger?.warn('weather.cache.write_failed', {
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+  }
+}
+
+const NO_VALUES: RecordedValues = {
+  tempMinC: null,
+  tempMaxC: null,
+  precipitationMm: null,
+  windMs: null,
+}
+
+/** One place's recorded days: a date to its figures, or to `null` when the day cannot be drawn. */
+type RecordedDays = Map<string, RecordedValues | null>
+
+/**
+ * One cell's missing recorded days from the provider, in one call spanning them.
+ *
+ * Every date asked for ends up in `into`: its figures when the provider had a temperature for it,
+ * otherwise `null`. A day without one is kept as empty for a short while rather than not at all, so
+ * that the next view does not spend a unit to hear the same thing; a failure of the call itself is
+ * remembered per provider and cell, and leaves nothing in the cache.
+ */
+async function fetchRecorded(
+  runtime: WeatherRuntime,
+  coordinate: WeatherCoordinate,
+  dates: ReadonlyArray<string>,
+  today: string,
+  into: RecordedDays,
+): Promise<void> {
+  const ordered = [...dates].sort()
+  const range = { start: ordered[0], end: ordered[ordered.length - 1] }
+  try {
+    const days = await callProvider(
+      runtime.outbound,
+      {
+        provider: RECORDED_PROVIDER,
+        operation: 'daily',
+        organizationId: runtime.organizationId,
+      },
+      () =>
+        withTimeout(WEATHER_CALL_TIMEOUT_MS, (signal) =>
+          runtime.nasaPower.daily(coordinate.lat, coordinate.lng, range, {
+            signal,
+          }),
+        ),
+    )
+    await Promise.all(
+      ordered.map(async (date) => {
+        const values = days.get(date) ?? NO_VALUES
+        into.set(date, hasTemperature(values) ? values : null)
+        await writeRecordedEntry(runtime, coordinate, date, today, values)
+      }),
+    )
+  } catch (cause) {
+    runtime.logger?.warn('weather.recorded_unavailable', {
+      reason: cause instanceof Error ? cause.name : 'unknown',
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+    for (const date of ordered) {
+      into.set(date, null)
+    }
+    await rememberFailure(runtime, RECORDED_PROVIDER, coordinate)
+  }
+}
+
+/* -------------------------------------------------------------- which kind */
+
+/** What a day of a trip is read as, by where it sits in time. */
+export type DayKind = 'forecast' | 'recorded' | 'not-yet-recorded' | 'none'
+
+export interface KindWindow {
+  /** Today in the trip's zone. */
+  readonly today: string
+  /** The last date a forecast covers in full, and never earlier than today. */
+  readonly forecastEnd: string
+  /** The last date the recorded provider has published; see {@link lastRecordedDate}. */
+  readonly recordedEnd: string
+}
+
+/**
+ * Which kind of reading a date gets. Pure, and the one place the boundaries between the kinds are
+ * written: today is always a forecast day, the forecast stops where its window ends, and a past day
+ * is recorded once the provider has published it and not yet recorded until then.
+ *
+ * A date beyond the forecast is `none` today; it is where a climate estimate will take over.
+ */
+export function selectKind(date: string, window: KindWindow): DayKind {
+  if (date >= window.today) {
+    return date <= window.forecastEnd ? 'forecast' : 'none'
+  }
+  return date <= window.recordedEnd ? 'recorded' : 'not-yet-recorded'
+}
+
+/**
+ * The last date a recorded provider has published, given a lag in whole days.
+ *
+ * The lag is counted from the provider's own today, which is UTC's, and not from the traveller's: in
+ * Tokyo it is already tomorrow while the provider is still on yesterday, and a day it has not
+ * published must not be asked for and reported as a failure. And it never reaches today in the
+ * trip's zone, because a day that has not ended has no record.
+ */
+export function lastRecordedDate(
+  today: string,
+  utcToday: string,
+  lagDays: number,
+): string {
+  const published = shiftDate(utcToday, -lagDays)
+  const yesterday = shiftDate(today, -1)
+  return published < yesterday ? published : yesterday
+}
+
+/* ---------------------------------------------------------------- one request */
+
+/** The places a request resolves, by what is asked of each. */
+interface Plan {
+  /** Every location the request resolves, by forecast key, for the line it leaves. */
+  readonly locations: ReadonlySet<string>
+  readonly forecast: ReadonlyMap<string, WeatherCoordinate>
+  readonly recorded: ReadonlyMap<string, RecordedPlace>
+}
+
+/** A one-decimal cell, the recorded days asked of it and the locations those days belong to. */
+interface RecordedPlace {
+  readonly coordinate: WeatherCoordinate
+  readonly dates: Set<string>
+  readonly locations: Set<string>
+}
+
+/** What a request found, filled as it goes so that a deadline leaves what had arrived. */
+interface Resolved {
+  readonly forecast: Map<string, ReadonlyArray<ForecastStep> | null>
+  readonly recorded: Map<string, RecordedDays>
+}
+
 /** What reading the cache for a request found, for the line each resolution leaves. */
 interface CacheTally {
-  /** Places served from an entry still inside its expiry. */
+  /** Locations every reading of which was served from an entry still inside its expiry. */
   hits: number
 }
 
 /**
  * Resolves each place into `into`: the cache first, then the provider for as many cold places as
- * the allowance grants, earliest day first.
+ * the allowance grants, the forecast before the recorded days and the earliest day first.
  *
- * A cold place is one with no entry inside its expiry. If the provider failed there a moment ago
- * it is `null` at once, before the allowance is touched. The allowance is spent once for the whole
- * request, after the cache has been read, so a warm place costs nothing and the grant goes to the
- * days that come first rather than to whichever read finished first. A place the grant does not
- * reach is `null` - unavailable, the same as a failed call.
+ * A cold place is one with no entry inside its expiry, or a recorded cell with a date nobody has
+ * kept. If the provider failed there a moment ago it is `null` at once, before the allowance is
+ * touched. The allowance is spent once for the whole request, after the cache has been read, so a
+ * warm place costs nothing and the grant goes to the days that come first rather than to whichever
+ * read finished first. A place the grant does not reach is `null` - unavailable, the same as a
+ * failed call.
  */
 async function resolvePlaces(
   runtime: WeatherRuntime,
-  places: ReadonlyMap<string, WeatherCoordinate>,
-  into: Map<string, ReadonlyArray<ForecastStep> | null>,
+  plan: Plan,
+  today: string,
+  into: Resolved,
   tally: CacheTally,
 ): Promise<void> {
   try {
     const stale = new Map<string, ForecastEntry>()
-    await Promise.all(
-      [...places].map(async ([key]) => {
+    const pending = new Map<string, Array<string>>()
+    const unserved = new Set<string>()
+
+    await Promise.all([
+      ...[...plan.forecast].map(async ([key]) => {
         const entry = await readEntry(runtime, key)
         if (entry !== null && isFresh(runtime, entry)) {
-          into.set(key, entry.series)
-          tally.hits += 1
-        } else if (entry !== null) {
+          into.forecast.set(key, entry.series)
+          return
+        }
+        unserved.add(key)
+        if (entry !== null) {
           stale.set(key, entry)
         }
       }),
-    )
-
-    const missing = [...places].filter(([key]) => !into.has(key))
-    const failed = new Set<string>()
-    await Promise.all(
-      missing.map(async ([key, coordinate]) => {
-        if (await hasFailed(runtime, FORECAST_PROVIDER, coordinate)) {
-          failed.add(key)
+      ...[...plan.recorded].map(async ([cell, place]) => {
+        const days: RecordedDays = new Map()
+        into.recorded.set(cell, days)
+        const missing: Array<string> = []
+        await Promise.all(
+          [...place.dates].map(async (date) => {
+            const read = await readRecordedEntry(
+              runtime,
+              place.coordinate,
+              date,
+            )
+            if (read === 'miss') {
+              missing.push(date)
+            } else {
+              days.set(date, read === 'empty' ? null : read)
+            }
+          }),
+        )
+        if (missing.length > 0) {
+          pending.set(cell, missing)
+          for (const location of place.locations) {
+            unserved.add(location)
+          }
         }
       }),
-    )
-    for (const key of failed) {
-      into.set(key, null)
+    ])
+    tally.hits += [...plan.locations].filter(
+      (location) => !unserved.has(location),
+    ).length
+
+    const failedForecast = new Set<string>()
+    const failedRecorded = new Set<string>()
+    await Promise.all([
+      ...[...plan.forecast]
+        .filter(([key]) => !into.forecast.has(key))
+        .map(async ([key, coordinate]) => {
+          if (await hasFailed(runtime, FORECAST_PROVIDER, coordinate)) {
+            failedForecast.add(key)
+          }
+        }),
+      ...[...pending.keys()].map(async (cell) => {
+        const place = plan.recorded.get(cell)
+        if (
+          place &&
+          (await hasFailed(runtime, RECORDED_PROVIDER, place.coordinate))
+        ) {
+          failedRecorded.add(cell)
+        }
+      }),
+    ])
+    for (const key of failedForecast) {
+      into.forecast.set(key, null)
+    }
+    for (const cell of failedRecorded) {
+      for (const date of pending.get(cell) ?? []) {
+        into.recorded.get(cell)?.set(date, null)
+      }
+      pending.delete(cell)
     }
 
-    const cold = missing.filter(([key]) => !failed.has(key))
+    const coldForecast = [...plan.forecast].filter(
+      ([key]) => !into.forecast.has(key),
+    )
+    const coldRecorded = [...pending]
     const granted = await spendRateUnits(
       runtime.counters,
       {
@@ -697,12 +1054,12 @@ async function resolvePlaces(
         now: runtime.now,
         logger: runtime.logger,
       },
-      cold.length,
+      coldForecast.length + coldRecorded.length,
     )
 
-    await Promise.all(
-      cold.map(async ([key, coordinate], index) => {
-        into.set(
+    await Promise.all([
+      ...coldForecast.map(async ([key, coordinate], index) => {
+        into.forecast.set(
           key,
           index < granted
             ? await fetchSeries(
@@ -714,7 +1071,21 @@ async function resolvePlaces(
             : null,
         )
       }),
-    )
+      ...coldRecorded.map(async ([cell, dates], index) => {
+        const place = plan.recorded.get(cell)
+        const days = into.recorded.get(cell)
+        if (place === undefined || days === undefined) {
+          return
+        }
+        if (coldForecast.length + index < granted) {
+          await fetchRecorded(runtime, place.coordinate, dates, today, days)
+          return
+        }
+        for (const date of dates) {
+          days.set(date, null)
+        }
+      }),
+    ])
   } catch (cause) {
     // A defect of our own: what is already in `into` stands, the rest is unavailable.
     runtime.logger?.warn('weather.resolve_failed', {
@@ -727,8 +1098,8 @@ async function resolvePlaces(
 
 const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/
 
-/** The kinds of reading a day can ask for; the log counts days per kind. */
-type WeatherKind = 'forecast'
+/** The kinds of reading a day can ask the policy for; the log counts days per kind. */
+type WeatherKind = Exclude<DayKind, 'none'>
 
 interface Eligible {
   readonly kind: WeatherKind
@@ -758,9 +1129,9 @@ async function untilDeadline(
  * often the cache answers and how many days render `unavailable` - can be read without waiting for
  * a traveller to report a blank badge.
  *
- * `hits` and `misses` count locations, not days: a location is a hit when an entry inside its
- * expiry served it and a miss otherwise, whether the provider was then asked or not. The only
- * identifier is the organisation's, which the call was already metered against.
+ * `hits` and `misses` count locations, not days: a location is a hit when entries inside their
+ * expiry served every reading it needed and a miss otherwise, whether the provider was then asked
+ * or not. The only identifier is the organisation's, which the call was already metered against.
  */
 function logResolution(
   runtime: WeatherRuntime,
@@ -789,23 +1160,48 @@ function logResolution(
   })
 }
 
+export interface ResolveOptions {
+  /**
+   * Whether the reader draws recorded days. A reader that does not (a tab loaded before they
+   * existed, which would draw a measurement as a forecast or fail on a status it does not know) is
+   * answered as it always was: a past day is `none`, nothing is asked of the recorded provider and
+   * nothing is spent on it.
+   */
+  readonly recorded?: boolean
+}
+
+/** One-decimal cell of a point: the unit the recorded provider and the recorded keys are in. */
+const cellOf = (coordinate: WeatherCoordinate): string =>
+  `${roundCoordinate(coordinate.lat, 1)}:${roundCoordinate(coordinate.lng, 1)}`
+
 /**
  * The weather of a trip's days, in one batched resolution that never rejects.
  *
  * `queries` are the trip's days in day order; the outcome at an index answers the query at that
- * index. A day with no date or no location, a day already gone and a day further out than any
- * forecast reaches ask nothing of the provider and come back `none`. The rest are grouped by
- * rounded coordinate - one call serves every forecast day at a place - and at most
- * {@link WEATHER_MAX_LOCATIONS} places are resolved, the earliest first.
+ * index. A day with no date or no location and a day further out than any forecast reaches ask
+ * nothing of a provider and come back `none`; so does a day already gone, unless the reader asked
+ * for recorded days, in which case it is `recorded` or, inside the provider's publication lag,
+ * `not-yet-recorded`. The rest are grouped by rounded coordinate - one call serves every forecast
+ * day at a place, and one every recorded day of a cell - and at most {@link WEATHER_MAX_LOCATIONS}
+ * places are resolved, the earliest first.
  */
 export async function resolveTripWeather(
   runtime: WeatherRuntime,
   queries: ReadonlyArray<WeatherQuery>,
   timeZone: string,
+  options: ResolveOptions = {},
 ): Promise<Array<WeatherOutcome>> {
   const zone = resolveTimeZone(timeZone)
   const today = todayKeyIn(zone, runtime.now())
-  const horizon = shiftDate(today, FORECAST_LOOKAHEAD_DAYS)
+  const window: KindWindow = {
+    today,
+    forecastEnd: shiftDate(today, FORECAST_LOOKAHEAD_DAYS),
+    recordedEnd: lastRecordedDate(
+      today,
+      todayKeyIn('UTC', runtime.now()),
+      runtime.nasaPower.lagDays,
+    ),
+  }
 
   const eligible = queries.map((query): Eligible | null => {
     const { date, location } = query
@@ -813,25 +1209,29 @@ export async function resolveTripWeather(
       date === null ||
       location === null ||
       !DATE_KEY.test(date) ||
-      date < today ||
-      date > horizon ||
       !Number.isFinite(location.lat) ||
       !Number.isFinite(location.lng)
     ) {
       return null
     }
+    const kind = selectKind(date, window)
+    if (kind === 'none' || (kind !== 'forecast' && options.recorded !== true)) {
+      return null
+    }
     return {
-      kind: 'forecast',
+      kind,
       date,
       coordinate: location,
       key: forecastCacheKey(location.lat, location.lng),
     }
   })
 
+  // A day not yet recorded asks nothing of anyone, so it takes no place in the cap.
   const kept = new Map<string, WeatherCoordinate>()
   for (const entry of eligible) {
     if (
       entry !== null &&
+      entry.kind !== 'not-yet-recorded' &&
       !kept.has(entry.key) &&
       kept.size < WEATHER_MAX_LOCATIONS
     ) {
@@ -839,10 +1239,40 @@ export async function resolveTripWeather(
     }
   }
 
-  const series = new Map<string, ReadonlyArray<ForecastStep> | null>()
+  const forecast = new Map<string, WeatherCoordinate>()
+  const recorded = new Map<string, RecordedPlace>()
+  for (const entry of eligible) {
+    if (entry === null || !kept.has(entry.key)) {
+      continue
+    }
+    if (entry.kind === 'forecast') {
+      forecast.set(entry.key, entry.coordinate)
+    } else if (entry.kind === 'recorded') {
+      const cell = cellOf(entry.coordinate)
+      const place = recorded.get(cell) ?? {
+        coordinate: {
+          lat: Number(roundCoordinate(entry.coordinate.lat, 1)),
+          lng: Number(roundCoordinate(entry.coordinate.lng, 1)),
+        },
+        dates: new Set<string>(),
+        locations: new Set<string>(),
+      }
+      place.dates.add(entry.date)
+      place.locations.add(entry.key)
+      recorded.set(cell, place)
+    }
+  }
+
+  const resolved: Resolved = { forecast: new Map(), recorded: new Map() }
   const tally: CacheTally = { hits: 0 }
   await untilDeadline(
-    resolvePlaces(runtime, kept, series, tally),
+    resolvePlaces(
+      runtime,
+      { locations: new Set(kept.keys()), forecast, recorded },
+      today,
+      resolved,
+      tally,
+    ),
     WEATHER_DEADLINE_MS,
   )
 
@@ -861,18 +1291,41 @@ export async function resolveTripWeather(
     if (entry === null) {
       return { status: 'none' }
     }
-    const steps = series.get(entry.key)
+    if (entry.kind === 'not-yet-recorded') {
+      return { status: 'not-yet-recorded' }
+    }
+
+    if (entry.kind === 'recorded') {
+      const values = resolved.recorded
+        .get(cellOf(entry.coordinate))
+        ?.get(entry.date)
+      // Not resolved (over the cap, past the deadline, failed) or a day with no temperature.
+      if (values === undefined || values === null) {
+        return { status: 'unavailable' }
+      }
+      return {
+        status: 'ok',
+        reading: { kind: 'recorded', source: 'nasa-power', ...values },
+      }
+    }
+
+    const steps = resolved.forecast.get(entry.key)
     // Not resolved: over the cap, past the deadline, or failed.
     if (steps === undefined || steps === null) {
       return { status: 'unavailable' }
     }
 
-    const forecast = groupedFor(entry.key, steps)
-    const day = forecast.days.get(entry.date)
+    const grouping = groupedFor(entry.key, steps)
+    const day = grouping.days.get(entry.date)
     const covered =
-      entry.date === today ||
-      (forecast.lastCompleteDate !== null &&
-        entry.date <= forecast.lastCompleteDate)
+      selectKind(entry.date, {
+        ...window,
+        forecastEnd:
+          grouping.lastCompleteDate !== null &&
+          grouping.lastCompleteDate > today
+            ? grouping.lastCompleteDate
+            : today,
+      }) === 'forecast'
     if (day === undefined || !covered) {
       return { status: 'none' }
     }

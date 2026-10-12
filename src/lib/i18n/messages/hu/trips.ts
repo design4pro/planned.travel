@@ -319,6 +319,10 @@ const messages = {
     'Előrejelzés: maximum {max}, minimum {min}',
   'plan.weather.badge.unavailable': 'Az időjárás nem érhető el erre a napra',
   'plan.weather.badge.loading': 'Időjárás betöltése',
+  'plan.weather.badge.recorded': 'Mért adat: maximum {max}, minimum {min}',
+  'plan.weather.badge.recordedHigh': 'Mért adat: maximum {max}',
+  'plan.weather.badge.recordedLow': 'Mért adat: minimum {min}',
+  'plan.weather.badge.notYetRecorded': 'Még nincs mért adat',
   'plan.weather.condition.clear': 'Tiszta',
   'plan.weather.condition.fair': 'Derült',
   'plan.weather.condition.partlyCloudy': 'Részben felhős',
@@ -339,8 +343,13 @@ const messages = {
   'plan.weather.panel.slot.morning': 'Délelőtt',
   'plan.weather.panel.slot.afternoon': 'Délután',
   'plan.weather.panel.slot.evening': 'Este',
+  'plan.weather.panel.high': 'Maximum',
+  'plan.weather.panel.low': 'Minimum',
+  'plan.weather.panel.recordedNote': 'Mért értékek erre a napra.',
   'plan.weather.attribution.metNorway':
     'Előrejelzési adatok: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Adatok: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

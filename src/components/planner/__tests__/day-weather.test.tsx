@@ -10,7 +10,7 @@ import { DaySection } from '../day-section'
 import { DayWeatherBadge } from '../day-weather-badge'
 import { DayWeatherPanel } from '../day-weather-panel'
 
-import type { DayReading, DayWeather } from '#/lib/weather'
+import type { DayReading, DayWeather, RecordedReading } from '#/lib/weather'
 import type { PlannerDay } from '../types'
 
 /**
@@ -49,6 +49,23 @@ const READING: DayReading = {
     { from: '18:00', symbol: 'clearsky', tempC: 8.1 },
   ],
 }
+
+const RECORDED: RecordedReading = {
+  kind: 'recorded',
+  source: 'nasa-power',
+  tempMinC: 1.9,
+  tempMaxC: 8.4,
+  precipitationMm: 0.2,
+  windMs: 0.9,
+}
+
+const recorded = (reading: RecordedReading = RECORDED): DayWeather => ({
+  dayId: 'd1',
+  status: 'ok',
+  reading,
+})
+
+const NOT_YET: DayWeather = { dayId: 'd1', status: 'not-yet-recorded' }
 
 const DATE_LABEL = 'Fri, 9 Oct'
 
@@ -130,6 +147,42 @@ describe('DayWeatherBadge', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
+  it('names a recorded day with the word Recorded first, then the high and low', () => {
+    badge(recorded())
+
+    expect(
+      screen.getByRole('button', { name: 'Recorded: high 8°C, low 2°C' }),
+    ).toBeDefined()
+    expect(screen.queryByRole('button', { name: /^Forecast/ })).toBeNull()
+  })
+
+  it('draws a recorded day in Fahrenheit for an imperial reader', () => {
+    badge(recorded(), 'imperial')
+
+    expect(
+      screen.getByRole('button', { name: 'Recorded: high 47°F, low 35°F' }),
+    ).toBeDefined()
+  })
+
+  it('names the one temperature a recorded day has, and never draws the other as a zero', () => {
+    badge(recorded({ ...RECORDED, tempMinC: null }))
+
+    const button = screen.getByRole('button', { name: 'Recorded: high 8°C' })
+    expect(button.textContent).toBe('8°C')
+  })
+
+  it('shows a not-yet-recorded day as its own picture, with no control and no number', () => {
+    badge(NOT_YET)
+
+    const picture = screen.getByRole('img', { name: 'Not yet recorded' })
+    expect(picture.textContent).toBe('')
+    expect(screen.queryByRole('button')).toBeNull()
+    // It is not the unavailable dash.
+    expect(
+      screen.queryByRole('img', { name: 'Weather unavailable for this day' }),
+    ).toBeNull()
+  })
+
   it('reserves the same box in every state, so a late answer shifts nothing', () => {
     const boxOf = (
       weather: React.ComponentProps<typeof DayWeatherBadge>['weather'],
@@ -147,6 +200,8 @@ describe('DayWeatherBadge', () => {
       FORECAST,
       { dayId: 'd1', status: 'unavailable' } as const,
       { dayId: 'd1', status: 'none' } as const,
+      recorded(),
+      NOT_YET,
     ]) {
       expect(boxOf(weather)).toBe(loading)
     }
@@ -245,6 +300,51 @@ describe('the fuller forecast behind the badge', () => {
     expect(panel.getByText('53° / 40°F')).toBeDefined()
     expect(panel.getByText('0.2 in · 70% chance')).toBeDefined()
     expect(panel.getByText('11 mph')).toBeDefined()
+  })
+})
+
+describe('the fuller reading of a recorded day', () => {
+  const open = async () => {
+    const user = userEvent.setup()
+    badge(recorded())
+    await user.click(screen.getByRole('button', { name: /^Recorded/ }))
+    return { user, dialog: await screen.findByRole('dialog') }
+  }
+
+  it('has no slots region and no chance of rain', async () => {
+    const { dialog } = await open()
+
+    expect(within(dialog).queryByRole('list')).toBeNull()
+    expect(within(dialog).queryByText('Through the day')).toBeNull()
+    expect(within(dialog).queryByText(/chance/)).toBeNull()
+    expect(within(dialog).getByText('8° / 2°C')).toBeDefined()
+  })
+
+  it('says the values were measured and credits NASA POWER, not MET Norway', async () => {
+    const { dialog } = await open()
+
+    expect(
+      within(dialog).getByText('Measured values for this day.'),
+    ).toBeDefined()
+    expect(
+      within(dialog).getByText(
+        'Data: NASA Langley Research Center POWER Project',
+      ),
+    ).toBeDefined()
+    expect(within(dialog).queryByText(/MET Norway/)).toBeNull()
+  })
+
+  it('labels the lone figure of a day that has only one temperature', () => {
+    render(
+      <DayWeatherPanel
+        reading={{ ...RECORDED, tempMaxC: null }}
+        unit="metric"
+      />,
+    )
+
+    expect(screen.getByText('Low')).toBeDefined()
+    expect(screen.getByText('2°C')).toBeDefined()
+    expect(screen.queryByText('High / low')).toBeNull()
   })
 })
 

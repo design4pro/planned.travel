@@ -301,6 +301,10 @@ const messages = {
   'plan.weather.badge.forecastNoCondition': '예보: 최고 {max}, 최저 {min}',
   'plan.weather.badge.unavailable': '이 날의 날씨를 불러올 수 없습니다',
   'plan.weather.badge.loading': '날씨 불러오는 중',
+  'plan.weather.badge.recorded': '관측: 최고 {max}, 최저 {min}',
+  'plan.weather.badge.recordedHigh': '관측: 최고 {max}',
+  'plan.weather.badge.recordedLow': '관측: 최저 {min}',
+  'plan.weather.badge.notYetRecorded': '아직 관측되지 않음',
   'plan.weather.condition.clear': '맑음',
   'plan.weather.condition.fair': '대체로 맑음',
   'plan.weather.condition.partlyCloudy': '구름 조금',
@@ -321,7 +325,12 @@ const messages = {
   'plan.weather.panel.slot.morning': '오전',
   'plan.weather.panel.slot.afternoon': '오후',
   'plan.weather.panel.slot.evening': '저녁',
+  'plan.weather.panel.high': '최고',
+  'plan.weather.panel.low': '최저',
+  'plan.weather.panel.recordedNote': '이 날의 관측값입니다.',
   'plan.weather.attribution.metNorway': '예보 데이터: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    '데이터: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

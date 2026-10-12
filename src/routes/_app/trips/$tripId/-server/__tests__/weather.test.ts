@@ -22,6 +22,8 @@ import {
   subscribeTenant,
 } from '#/server/repos/__tests__/harness'
 import { createMetNorwayClient } from '#/server/weather/met-norway'
+import { createNasaPowerClient } from '#/server/weather/nasa-power'
+import { OSLO_DAILY } from '#/server/weather/__tests__/nasa-power.fixture'
 import { OSLO_FORECAST_DETAIL } from '#/server/weather/__tests__/locationforecast-detail.fixture'
 import { OSLO_FORECAST } from '#/server/weather/__tests__/locationforecast.fixture'
 
@@ -44,7 +46,7 @@ vi.mock('../../../../-server/context', () => ({
   },
 }))
 
-const { loadTripWeather } = await import('../weather')
+const { loadTripWeather, tripWeatherInputSchema } = await import('../weather')
 
 const NOW = new Date('2026-10-08T19:10:00Z')
 
@@ -77,6 +79,11 @@ function ports(
   }
   const fake = (input: string): Promise<Response> => {
     requested.push(input)
+    if (new URL(input).host === 'power.larc.nasa.gov') {
+      return options.failing === true
+        ? Promise.reject(new TypeError('offline'))
+        : Promise.resolve(new Response(JSON.stringify(OSLO_DAILY)))
+    }
     return options.failing === true
       ? Promise.reject(new TypeError('offline'))
       : Promise.resolve(
@@ -105,6 +112,9 @@ function ports(
     now: () => at,
     logger: null,
     metNorway: createMetNorwayClient({
+      fetch: fake as unknown as typeof fetch,
+    }),
+    nasaPower: createNasaPowerClient({
       fetch: fake as unknown as typeof fetch,
     }),
   }))
@@ -178,7 +188,7 @@ describe('loadTripWeather', () => {
     expect(result.days.map((day) => day.dayId)).toEqual(days.map((d) => d.id))
     expect(result.days.map((day) => day.status)).toEqual(['ok', 'ok', 'ok'])
     const first = result.days[0]
-    if (first.status !== 'ok') {
+    if (first.status !== 'ok' || first.reading.kind !== 'forecast') {
       throw new Error(
         'The first day has a stay and today is inside the window.',
       )
@@ -202,7 +212,12 @@ describe('loadTripWeather', () => {
 
     const [past, today, tomorrow] = result.days
     expect(past.status).toBe('none')
-    if (today.status !== 'ok' || tomorrow.status !== 'ok') {
+    if (
+      today.status !== 'ok' ||
+      today.reading.kind !== 'forecast' ||
+      tomorrow.status !== 'ok' ||
+      tomorrow.reading.kind !== 'forecast'
+    ) {
       throw new Error('Today and tomorrow are inside the recording.')
     }
     expect(tomorrow.reading.windMs).toBeGreaterThan(0)
@@ -253,7 +268,11 @@ describe('loadTripWeather', () => {
     expect(result.distanceUnit).toBe('imperial')
     // The reading itself stays metric: the cached entry behind it is shared by every workspace.
     const first = result.days[0]
-    expect(first.status === 'ok' && first.reading.tempMaxC).toBeLessThan(30)
+    expect(
+      first.status === 'ok' && first.reading.kind === 'forecast'
+        ? first.reading.tempMaxC
+        : null,
+    ).toBeLessThan(30)
   })
 
   it('groups a trip with no time zone in UTC, whatever zone the reader is in', async () => {
@@ -355,5 +374,95 @@ describe('loadTripWeather', () => {
     expect(text).not.toContain('59.9139')
     expect(text).not.toContain('fetchedAt')
     expect(Object.keys(result).sort()).toEqual(['days', 'distanceUnit'])
+  })
+
+  describe('the days that are already over', () => {
+    /** A trip that ended before the forecast window: 1 to 8 October, with "now" on the 8th. */
+    async function pastTrip(): Promise<string> {
+      const trip = await createTrip(owner, {
+        title: 'Oslo, last week',
+        startDate: '2026-10-01',
+        endDate: '2026-10-08',
+        currency: 'NOK',
+        timezone: 'Europe/Oslo',
+      })
+      const days = await listTripDays(owner, trip.id)
+      const hotel = await createPlace(owner, {
+        tripId: trip.id,
+        name: 'Hotel',
+        lat: 59.9139,
+        lng: 10.7522,
+      })
+      await createAccommodation(owner, {
+        tripId: trip.id,
+        startDayId: days[0].id,
+        endDayId: days[days.length - 1].id,
+        placeId: hotel.id,
+        name: 'Hotel',
+      })
+      return trip.id
+    }
+
+    it('shows nothing for them to a caller that did not ask for them, as before', async () => {
+      const past = await pastTrip()
+      const port = ports()
+
+      const result = await loadTripWeather(owner, { tripId: past }, port)
+
+      expect(result.days.slice(0, 7).map((day) => day.status)).toEqual(
+        Array.from({ length: 7 }, () => 'none'),
+      )
+      expect(port.requested.every((url) => !url.includes('nasa.gov'))).toBe(
+        true,
+      )
+    })
+
+    it('reads them as recorded when asked, and names the days inside the lag', async () => {
+      const past = await pastTrip()
+      const port = ports()
+
+      const result = await loadTripWeather(
+        owner,
+        { tripId: past, recorded: true },
+        port,
+      )
+
+      expect(result.days.map((day) => day.status)).toEqual([
+        'ok',
+        'ok',
+        'ok',
+        'ok',
+        'ok',
+        'not-yet-recorded',
+        'not-yet-recorded',
+        'ok',
+      ])
+      const first = result.days[0]
+      if (first.status !== 'ok' || first.reading.kind !== 'recorded') {
+        throw new Error('The first day is long enough ago to be recorded.')
+      }
+      expect(first.reading.source).toBe('nasa-power')
+      expect(first.reading.tempMaxC).toBe(15.47)
+    })
+
+    it('sends only a rounded coordinate and a date range to the recorded provider', async () => {
+      const past = await pastTrip()
+      const port = ports()
+
+      await loadTripWeather(owner, { tripId: past, recorded: true }, port)
+
+      const sent = port.requested.filter((url) => url.includes('nasa.gov'))
+      expect(sent).toHaveLength(1)
+      const url = new URL(sent[0])
+      expect(url.searchParams.get('latitude')).toBe('59.9')
+      expect(url.searchParams.get('longitude')).toBe('10.8')
+    })
+
+    it('rejects a flag that is not a boolean', () => {
+      expect(
+        tripWeatherInputSchema.safeParse({ tripId, recorded: 'yes' }).success,
+      ).toBe(false)
+      expect(tripWeatherInputSchema.safeParse({ tripId }).success).toBe(true)
+    })
   })
 })

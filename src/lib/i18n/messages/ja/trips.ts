@@ -302,6 +302,10 @@ const messages = {
   'plan.weather.badge.forecastNoCondition': '予報: 最高 {max}、最低 {min}',
   'plan.weather.badge.unavailable': 'この日の天気は取得できません',
   'plan.weather.badge.loading': '天気を読み込み中',
+  'plan.weather.badge.recorded': '観測値: 最高 {max}、 最低 {min}',
+  'plan.weather.badge.recordedHigh': '観測値: 最高 {max}',
+  'plan.weather.badge.recordedLow': '観測値: 最低 {min}',
+  'plan.weather.badge.notYetRecorded': 'まだ観測されていません',
   'plan.weather.condition.clear': '快晴',
   'plan.weather.condition.fair': '晴れ',
   'plan.weather.condition.partlyCloudy': '一部曇り',
@@ -322,7 +326,12 @@ const messages = {
   'plan.weather.panel.slot.morning': '午前',
   'plan.weather.panel.slot.afternoon': '午後',
   'plan.weather.panel.slot.evening': '夜',
+  'plan.weather.panel.high': '最高',
+  'plan.weather.panel.low': '最低',
+  'plan.weather.panel.recordedNote': 'この日の観測値です。',
   'plan.weather.attribution.metNorway': '予報データ: MET Norway、CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'データ: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages
