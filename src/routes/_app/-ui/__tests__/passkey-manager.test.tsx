@@ -857,11 +857,11 @@ describe('naming a passkey', () => {
       await userEvent.type(renameInput(), '2{Enter}')
     }
 
-    it('keeps focus in the input, reverts the text and says so inline, never with the server message', async () => {
+    it('keeps focus in the input, keeps the typed text and says so inline, never with the server message', async () => {
       await failWith(500)
 
       await screen.findByText('The name was not saved', { selector: 'p' })
-      expect((renameInput() as HTMLInputElement).value).toBe('Work phone')
+      expect((renameInput() as HTMLInputElement).value).toBe('Work phone2')
       await waitFor(() => expect(document.activeElement).toBe(renameInput()))
       expect(renameInput().getAttribute('aria-describedby') ?? '').toContain(
         '-error',
@@ -903,10 +903,14 @@ describe('naming a passkey', () => {
       await screen.findByText('The name was not saved', { selector: 'p' })
       client.renamePasskey.mockResolvedValue(renamed('pk_1', 'Work phone2'))
 
-      await userEvent.type(renameInput(), '2{Enter}')
+      await userEvent.keyboard('{Enter}')
 
       await screen.findByText('Work phone2')
       expect(client.renamePasskey).toHaveBeenCalledTimes(2)
+      expect(client.renamePasskey).toHaveBeenLastCalledWith(
+        'pk_1',
+        'Work phone2',
+      )
     })
 
     it('announces the failure in the status region, once, without a second Sign in again', async () => {
@@ -918,6 +922,38 @@ describe('naming a passkey', () => {
       expect(
         screen.getAllByRole('button', { name: 'Sign in again' }),
       ).toHaveLength(1)
+    })
+
+    it('keeps Sign in again reachable after the text was edited again, and a blur sends nothing', async () => {
+      await failWith(401)
+      await screen.findByText(/Your session has ended/, { selector: 'p' })
+      await userEvent.type(renameInput(), '3')
+
+      await userEvent.tab()
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Sign in again' }),
+      )
+      expect(client.renamePasskey).toHaveBeenCalledTimes(1)
+    })
+
+    it('puts focus back on Sign in again when signing out fails', async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockRejectedValue(new Error('offline'))
+      await failWith(401)
+      await screen.findByText(/Your session has ended/, { selector: 'p' })
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Sign in again' }),
+      )
+
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole('button', { name: 'Sign in again' }),
+        ),
+      )
+      fetchSpy.mockRestore()
     })
 
     it('keeps Sign in again reachable: tabbing to it does not close rename mode', async () => {
@@ -943,7 +979,7 @@ describe('naming a passkey', () => {
 
       await screen.findByText('The name was not saved', { selector: 'p' })
       expect(document.activeElement).toBe(heading)
-      expect((renameInput() as HTMLInputElement).value).toBe('Work phone')
+      expect((renameInput() as HTMLInputElement).value).toBe('Laptop')
     })
   })
 
@@ -976,6 +1012,35 @@ describe('naming a passkey', () => {
 
     expect(client.renamePasskey).not.toHaveBeenCalled()
     expect(renameInput()).toBeTruthy()
+  })
+
+  it('does not commit on the WebKit Enter that ends an IME composition (key code 229)', async () => {
+    await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '2')
+
+    fireEvent.keyDown(renameInput(), { key: 'Enter', keyCode: 229 })
+
+    expect(client.renamePasskey).not.toHaveBeenCalled()
+  })
+
+  it('leaves focus where the person put it when a key-started save finishes', async () => {
+    await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+    let finish: (value: unknown) => void = () => {}
+    client.renamePasskey.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '2{Enter}')
+    const heading = screen.getByRole('heading', { name: 'Your passkeys' })
+    heading.focus()
+
+    finish(renamed('pk_1', 'Work phone2'))
+
+    await screen.findByText('Work phone2')
+    expect(document.activeElement).toBe(heading)
   })
 
   it('clears the previous error while a retry runs, so the next failure is announced again', async () => {

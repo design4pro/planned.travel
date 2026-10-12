@@ -41,14 +41,13 @@ type ListState =
 
 /**
  * The one row in rename mode. `attention` is bumped when the field must take focus again,
- * `error` is the notice of a save that failed and `failures` counts them.
+ * `error` is the notice of a save that failed.
  */
 interface RenameState {
   readonly id: string
   readonly saving: boolean
   readonly error: PasskeyNotice | null
   readonly attention: number
-  readonly failures: number
 }
 
 /** Where focus goes once an outcome has settled and the Add button is enabled again. */
@@ -179,6 +178,16 @@ function AddPasskeyButton({
   )
 }
 
+/** True while focus is in the rename field, or nowhere (a disabled control dropped it). */
+function focusIsInRenameField(): boolean {
+  const active = document.activeElement
+  return (
+    active === null ||
+    active === document.body ||
+    active.closest('[data-part="passkey-rename-field"]') !== null
+  )
+}
+
 function PasskeyRow({
   passkey,
   rename,
@@ -187,6 +196,7 @@ function PasskeyRow({
   onSubmitName,
   onCancelRename,
   onSignOutFailed,
+  signInRef,
 }: {
   passkey: PasskeySummary
   /** Set only on the row that is in rename mode. */
@@ -196,6 +206,7 @@ function PasskeyRow({
   onSubmitName: (value: string, viaKey: boolean) => void
   onCancelRename: (viaKey: boolean) => void
   onSignOutFailed: () => void
+  signInRef: Ref<HTMLButtonElement>
 }) {
   const { t, locale } = useI18n()
   const added = formatDate(passkey.createdAt, locale) ?? passkey.createdAt
@@ -246,13 +257,12 @@ function PasskeyRow({
               saving={rename.saving}
               error={rename.error === null ? null : t(rename.error.key)}
               attention={rename.attention}
-              failures={rename.failures}
               onSubmit={onSubmitName}
               onCancel={onCancelRename}
             />
             {rename.error?.signInAgain ? (
               <div className="mt-2">
-                <SignInAgain onFailed={onSignOutFailed} />
+                <SignInAgain buttonRef={signInRef} onFailed={onSignOutFailed} />
               </div>
             ) : null}
           </>
@@ -439,7 +449,6 @@ export function PasskeyManager() {
         saving: false,
         error: null,
         attention: previous?.id === id ? previous.attention + 1 : 0,
-        failures: previous?.id === id ? previous.failures : 0,
       }
     })
   }
@@ -455,7 +464,7 @@ export function PasskeyManager() {
   async function submitName(
     id: string,
     value: string,
-    returnFocus: boolean,
+    viaKey: boolean,
   ): Promise<void> {
     setRename((previous) =>
       previous?.id === id
@@ -464,6 +473,8 @@ export function PasskeyManager() {
     )
     setStatus(SAVING)
     const result = await renamePasskey(id, value)
+    // Focus follows the person: a key started this save, but they may have clicked elsewhere since.
+    const returnFocus = viaKey && focusIsInRenameField()
 
     if (result.ok) {
       setList((previous) =>
@@ -495,7 +506,6 @@ export function PasskeyManager() {
               attention: returnFocus
                 ? previous.attention + 1
                 : previous.attention,
-              failures: previous.failures + 1,
             }
           : previous,
       )
@@ -646,12 +656,20 @@ export function PasskeyManager() {
                 onCancelRename={(viaKey) => {
                   closeRename(passkey.id, viaKey)
                 }}
+                signInRef={signInRef}
                 onSignOutFailed={() => {
                   setRename((previous) =>
                     previous?.id === passkey.id
                       ? { ...previous, error: SIGN_OUT_FAILED }
                       : previous,
                   )
+                  setStatus({
+                    ...SIGN_OUT_FAILED,
+                    signInAgain: false,
+                    quiet: true,
+                  })
+                  setStatusTick((tick) => tick + 1)
+                  setFocusTarget('signIn')
                 }}
               />
             ))}
