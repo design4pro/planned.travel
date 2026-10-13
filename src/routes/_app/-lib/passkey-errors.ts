@@ -78,8 +78,9 @@ export function renameFailureNotice(failure: AuthFailure): PasskeyNotice {
 
 /**
  * A refused removal, and where it is shown. A password refusal belongs to the password field, which
- * takes focus; every other refusal (session not fresh or ended, rate limit, a passkey that is gone,
- * an impersonated session, a dropped connection) is the one alert inside the dialog.
+ * takes focus; every other refusal (session not fresh or ended, rate limit, an impersonated session,
+ * a dropped connection) is the one alert inside the dialog. A passkey that is gone is not a refusal:
+ * the dialog treats `PASSKEY_NOT_FOUND` as removed before it asks for one.
  */
 export interface DeleteFailure {
   readonly target: 'password' | 'alert'
