@@ -3,6 +3,7 @@ import {
   isPasskeyEnrolmentSupported,
   listPasskeys,
   registerPasskey,
+  renamePasskey,
 } from '../client'
 
 /**
@@ -317,5 +318,56 @@ describe('listPasskeys', () => {
   it('fails on a body that is not a list', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { passkeys: 'nope' }))
     expect(await listPasskeys()).toMatchObject({ ok: false })
+  })
+})
+
+describe('renamePasskey', () => {
+  it('posts the id and the name with the cookie, and returns the renamed passkey', async () => {
+    const renamed = { ...PASSKEY, name: 'Work phone' }
+    fetchMock.mockResolvedValueOnce(reply(200, { passkey: renamed }))
+
+    const result = await renamePasskey('pk_1', 'Work phone')
+
+    expect(result).toEqual({ ok: true, passkey: renamed })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/passkey/rename')
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+    })
+    expect(sentBody(0)).toEqual({ id: 'pk_1', name: 'Work phone' })
+  })
+
+  it.each([
+    [401, null],
+    [403, 'PASSKEY_IMPERSONATED'],
+    [404, 'PASSKEY_NOT_FOUND'],
+    [429, null],
+  ])(
+    'carries the status %i and code of a refused rename',
+    async (status, code) => {
+      fetchMock.mockResolvedValueOnce(
+        reply(status, { ...(code ? { code } : {}), message: 'No.' }),
+      )
+
+      expect(await renamePasskey('pk_1', 'x')).toEqual({
+        ok: false,
+        failure: { code, status, message: 'No.' },
+      })
+    },
+  )
+
+  it('reports a dropped connection as a failure with status 0', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    expect(await renamePasskey('pk_1', 'x')).toMatchObject({
+      ok: false,
+      failure: { status: 0 },
+    })
+  })
+
+  it('reports a reply without a passkey as a failure, not a crash', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, { ok: true }))
+
+    expect(await renamePasskey('pk_1', 'x')).toMatchObject({ ok: false })
   })
 })

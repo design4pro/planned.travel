@@ -5,10 +5,11 @@ import type { RouteCase } from './helpers/routes.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
 
 /**
- * `ACC-03` - a member sees their passkeys and adds one (plan stage 09-S1, ticket 09-S1a).
+ * `ACC-03` - a member sees their passkeys, adds one and names it (plan stage 09-S1, tickets 09-S1a
+ * and 09-S1b).
  *
  * `/passkeys` is not in `APP_ROUTES`: that table is the walk every journey covers, and this is one
- * screen inside the account area. 09-S1b and 09-S1c append their walks to this file.
+ * screen inside the account area. 09-S1c appends its walk to this file.
  *
  * Two halves, in the order they can be trusted in. The first is what everyone gets: the page
  * answers, hydrates, says nothing in the console and does not move when the list resolves. The
@@ -31,6 +32,16 @@ function rows(page: Page) {
 
 const LIST_ENDPOINT = '**/api/auth/passkey/list'
 const VERIFY_ENDPOINT = '/api/auth/passkey/register/verify'
+const RENAME_ENDPOINT = '/api/auth/passkey/rename'
+
+/** Resolves with the reply to the next rename request. */
+function renameReply(page: Page) {
+  return page.waitForResponse(
+    (reply) =>
+      reply.url().endsWith(RENAME_ENDPOINT) &&
+      reply.request().method() === 'POST',
+  )
+}
 
 /** What the endpoint returns for a registered passkey; the screen reads exactly these fields. */
 function listed(id: string, overrides: Record<string, unknown> = {}) {
@@ -197,7 +208,7 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
   })
 })
 
-test.describe('ACC-03 - a member adds a passkey on this device', () => {
+test.describe('ACC-03 - a member adds a passkey on this device and names it', () => {
   /*
    * Chromium only, for two reasons. The CDP `WebAuthn` domain that provides a virtual
    * authenticator exists nowhere else, and the walk writes a credential row for the demo member,
@@ -220,7 +231,7 @@ test.describe('ACC-03 - a member adds a passkey on this device', () => {
     )
   })
 
-  test('adds a passkey with a virtual authenticator, and it is still there after a reload', async ({
+  test('adds a passkey with a virtual authenticator, names and renames it, and it is still there after a reload', async ({
     context,
     page,
     baseURL,
@@ -281,20 +292,51 @@ test.describe('ACC-03 - a member adds a passkey on this device', () => {
 
       await expect(page.getByRole('status')).toHaveText('Passkey added')
       await expect(rows(page)).toHaveCount(before + 1)
-      await expect(add, 'focus comes back to the button').toBeFocused()
-      // The row has no name yet; the fallback is display-only.
+      // The ceremony sent no name: the new row opens in rename mode, with focus in the field.
+      const field = page.getByRole('textbox', { name: 'Name this passkey' })
+      await expect(
+        field,
+        'focus goes to the new row’s rename input',
+      ).toBeFocused()
       await expect(page.getByText(/^Passkey · added /)).toBeVisible()
+
+      // Naming it: Enter saves, the name replaces the fallback, focus returns to the Rename control.
+      await field.fill('Work phone')
+      const named = renameReply(page)
+      await field.press('Enter')
+      expect((await named).status(), 'naming it succeeds').toBe(200)
+      await expect(
+        rows(page).getByText('Work phone', { exact: true }),
+      ).toBeVisible()
+      await expect(page.getByRole('status')).toHaveText('Name saved')
+      const rename = page.getByRole('button', { name: 'Rename Work phone' })
+      await expect(rename, 'focus returns to the Rename control').toBeFocused()
+
+      // Renaming it later goes through the same control.
+      await rename.click()
+      await expect(field).toHaveValue('Work phone')
+      await field.fill('Laptop')
+      const renamed = renameReply(page)
+      await field.press('Enter')
+      expect((await renamed).status(), 'renaming it succeeds').toBe(200)
+      await expect(
+        rows(page).getByText('Laptop', { exact: true }),
+      ).toBeVisible()
 
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(rows(page)).toHaveCount(before + 1, { timeout: 20_000 })
+      await expect(
+        rows(page).getByText('Laptop', { exact: true }),
+        'the name is stored, not only drawn',
+      ).toBeVisible()
 
       expect(
         watched().fatal,
         'the console stays clean through the ceremony',
       ).toEqual([])
     } finally {
-      // Nothing in 09-S1a removes a passkey, so the walk cleans up through the endpoint; the
-      // delete dialog arrives with 09-S1c. Both calls are best effort: a failed cleanup must
+      // Nothing in 09-S1a or 09-S1b removes a passkey, so the walk cleans up through the endpoint;
+      // the delete dialog arrives with 09-S1c. Both calls are best effort: a failed cleanup must
       // not hide the failure that got us here.
       if (created !== null) {
         await page.request.post('/api/auth/passkey/delete', {

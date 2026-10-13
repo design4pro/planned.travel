@@ -551,6 +551,13 @@ const messages = {
   'passkeys.error.rateLimited':
     '試行回数が多すぎます。数分後にもう一度お試しください。',
   'passkeys.error.generic': '接続を確認して、もう一度お試しください。',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': '{name} の名前を変更',
+  'passkeys.rename.fieldLabel': 'このパスキーに名前を付ける',
+  'passkeys.rename.placeholder': '名前を入力（例: 仕事用スマホ）',
+  'passkeys.rename.saving': '名前を保存しています',
+  'passkeys.rename.saved': '名前を保存しました',
+  'passkeys.rename.failed': '名前を保存できませんでした',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -489,6 +489,13 @@ const messages = {
   'passkeys.error.retry': '重试',
   'passkeys.error.rateLimited': '尝试次数过多。请几分钟后再试。',
   'passkeys.error.generic': '请检查网络连接后再试。',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': '重命名 {name}',
+  'passkeys.rename.fieldLabel': '为这个通行密钥命名',
+  'passkeys.rename.placeholder': '起个名字，例如“工作手机”',
+  'passkeys.rename.saving': '正在保存名称',
+  'passkeys.rename.saved': '名称已保存',
+  'passkeys.rename.failed': '名称未能保存',
 } satisfies TranslationOf<typeof En>
 
 export default messages

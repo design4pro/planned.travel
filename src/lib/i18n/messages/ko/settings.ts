@@ -524,6 +524,13 @@ const messages = {
   'passkeys.error.rateLimited':
     '시도가 너무 많아요. 몇 분 뒤에 다시 시도해 주세요.',
   'passkeys.error.generic': '연결을 확인한 뒤 다시 시도해 주세요.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': '{name} 이름 바꾸기',
+  'passkeys.rename.fieldLabel': '이 패스키에 이름 붙이기',
+  'passkeys.rename.placeholder': '이름을 입력해 주세요. 예: 회사 휴대폰',
+  'passkeys.rename.saving': '이름을 저장하는 중',
+  'passkeys.rename.saved': '이름을 저장했어요',
+  'passkeys.rename.failed': '이름을 저장하지 못했어요',
 } satisfies TranslationOf<typeof En>
 
 export default messages

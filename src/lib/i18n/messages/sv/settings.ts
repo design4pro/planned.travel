@@ -588,6 +588,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'För många försök. Försök igen om några minuter.',
   'passkeys.error.generic': 'Kontrollera din anslutning och försök igen.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Byt namn på {name}',
+  'passkeys.rename.fieldLabel': 'Ge lösenordsnyckeln ett namn',
+  'passkeys.rename.placeholder': 'Ge den ett namn, till exempel Jobbtelefon',
+  'passkeys.rename.saving': 'Sparar namnet',
+  'passkeys.rename.saved': 'Namnet sparades',
+  'passkeys.rename.failed': 'Namnet sparades inte',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -19,6 +19,8 @@ export interface PasskeyNotice {
   readonly key: MessageKey
   readonly tone: 'neutral' | 'danger'
   readonly signInAgain: boolean
+  /** Heard in the status region but not drawn there: the screen already shows the sentence. */
+  readonly quiet?: boolean
 }
 
 function notice(
@@ -48,6 +50,17 @@ function sharedNotice(failure: AuthFailure): PasskeyNotice | null {
 export function loadFailureNotice(failure: AuthFailure): PasskeyNotice {
   return (
     sharedNotice(failure) ?? notice('settings.passkeys.error.generic', 'danger')
+  )
+}
+
+/**
+ * Why a name was not saved. A `401` and a `429` say so by name, as everywhere on this screen;
+ * anything else (a refused or impersonated session, a passkey that is gone, a dropped connection)
+ * is the one sentence "The name was not saved".
+ */
+export function renameFailureNotice(failure: AuthFailure): PasskeyNotice {
+  return (
+    sharedNotice(failure) ?? notice('settings.passkeys.rename.failed', 'danger')
   )
 }
 

@@ -45,11 +45,16 @@ const REGISTRATION_PATHS: ReadonlySet<string> = new Set([
   '/passkey/register/verify',
 ])
 
+/** A rename changes what a person sees in a list, so it gets the tighter budget of the two. */
+const RENAME_RATE_LIMIT = { window: 300, max: 5 } as const
+const RENAME_PATH = '/passkey/rename'
+
 /** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */
 export const PASSKEY_ERROR_CODES = {
   limitReached: 'PASSKEY_LIMIT_REACHED',
   sessionNotFresh: 'PASSKEY_SESSION_NOT_FRESH',
   impersonated: 'PASSKEY_IMPERSONATED',
+  notFound: 'PASSKEY_NOT_FOUND',
 } as const
 
 export type PasskeyPluginOptions = {
@@ -107,13 +112,25 @@ const pubKeyCredParams = SUPPORTED_COSE_ALGORITHMS.map((alg) => ({
   alg,
 }))
 
-type RefusalStatus = 'BAD_REQUEST' | 'FORBIDDEN'
+type RefusalStatus = 'BAD_REQUEST' | 'FORBIDDEN' | 'NOT_FOUND'
+
+type RefusalContext = {
+  error: (
+    status: RefusalStatus,
+    body: { code: string; message: string },
+  ) => Error
+}
+
+/** The slice of an endpoint context the impersonation veto reads. */
+type ImpersonationGuardContext = RefusalContext & {
+  context: { session: { session: { id: string; impersonatedBy?: unknown } } }
+}
 
 /** The slice of an endpoint context the registration guards read. */
-type RegistrationGuardContext = {
+type RegistrationGuardContext = ImpersonationGuardContext & {
   context: {
     session: {
-      session: { createdAt: Date | string; impersonatedBy?: unknown }
+      session: { createdAt: Date | string }
       user: { id: string }
     }
     sessionConfig: { freshAge: number }
@@ -124,31 +141,42 @@ type RegistrationGuardContext = {
       }) => Promise<number>
     }
   }
-  error: (
-    status: RefusalStatus,
-    body: { code: string; message: string },
-  ) => Error
+}
+
+/**
+ * An impersonated session is refused for every operator, because a passkey an operator registers
+ * or renames outlives the 900-second impersonation with no audit row (docs/ACCESS.md §6.4). Any
+ * non-null marker counts, an empty string included: `guard.ts` reads a session that `tenant.ts`
+ * has normalised, so the raw check here is the stricter of the two. Evaluated first on every
+ * mutating endpoint, before any read or write.
+ */
+function assertNotImpersonated(
+  ctx: ImpersonationGuardContext,
+  message: string,
+): void {
+  const { impersonatedBy } = ctx.context.session.session
+  if (impersonatedBy !== null && impersonatedBy !== undefined) {
+    throw ctx.error('FORBIDDEN', {
+      code: PASSKEY_ERROR_CODES.impersonated,
+      message,
+    })
+  }
 }
 
 /**
  * Evaluated first on both registration endpoints, before any read or write.
  *
- * - An impersonated session is refused for every operator, because a passkey an operator registers
- *   outlives the 900-second impersonation with no audit row (docs/ACCESS.md §6.4). Any non-null
- *   marker counts, an empty string included: `guard.ts` reads a session that `tenant.ts` has
- *   normalised, so the raw check here is the stricter of the two.
+ * - The impersonation veto above.
  * - The session must be younger than the library's `freshAge` (0 switches the check off, as in
  *   the library), for every account. A borrowed 30-day session that adds a passkey would otherwise
  *   keep access after a password reset, which revokes sessions and not passkeys.
  */
 function assertMayRegister(ctx: RegistrationGuardContext): void {
+  assertNotImpersonated(
+    ctx,
+    'An impersonated session cannot register a passkey.',
+  )
   const { session } = ctx.context.session
-  if (session.impersonatedBy !== null && session.impersonatedBy !== undefined) {
-    throw ctx.error('FORBIDDEN', {
-      code: PASSKEY_ERROR_CODES.impersonated,
-      message: 'An impersonated session cannot register a passkey.',
-    })
-  }
 
   const freshAge = ctx.context.sessionConfig.freshAge * 1000
   if (freshAge !== 0) {
@@ -193,10 +221,16 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
   return {
     id: 'passkey',
 
-    rateLimit: [...REGISTRATION_PATHS].map((path) => ({
-      pathMatcher: (candidate: string) => candidate === path,
-      ...REGISTRATION_RATE_LIMIT,
-    })),
+    rateLimit: [
+      ...[...REGISTRATION_PATHS].map((path) => ({
+        pathMatcher: (candidate: string) => candidate === path,
+        ...REGISTRATION_RATE_LIMIT,
+      })),
+      {
+        pathMatcher: (candidate: string) => candidate === RENAME_PATH,
+        ...RENAME_RATE_LIMIT,
+      },
+    ],
 
     schema: {
       passkey: {
@@ -512,6 +546,52 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
             limit: 50,
           })
           return ctx.json({ passkeys: passkeys.map(toPublicPasskey) })
+        },
+      ),
+
+      /**
+       * POST `/passkey/rename` — name one of the user's passkeys, or change its name. A rename never
+       * clears a name: an empty one is refused by the schema, and clearing is not an operation.
+       */
+      renamePasskey: createAuthEndpoint(
+        RENAME_PATH,
+        {
+          method: 'POST',
+          use: [sessionMiddleware],
+          body: z.strictObject({
+            id: z.string().min(1),
+            name: z.string().trim().min(1).max(64),
+          }),
+        },
+        async (ctx) => {
+          assertNotImpersonated(
+            ctx,
+            'An impersonated session cannot rename a passkey.',
+          )
+          const record = await ctx.context.adapter.findOne<StoredPasskey>({
+            model: 'passkey',
+            where: [{ field: 'id', value: ctx.body.id }],
+          })
+          // The same answer for a missing id and another person's, so the endpoint never confirms
+          // that someone else's credential exists.
+          const notFound = () =>
+            ctx.error('NOT_FOUND', {
+              code: PASSKEY_ERROR_CODES.notFound,
+              message: 'Passkey not found.',
+            })
+          if (!record || record.userId !== ctx.context.session.user.id) {
+            throw notFound()
+          }
+          const updated = await ctx.context.adapter.update<StoredPasskey>({
+            model: 'passkey',
+            where: [
+              { field: 'id', value: record.id },
+              { field: 'userId', value: ctx.context.session.user.id },
+            ],
+            update: { name: ctx.body.name },
+          })
+          if (!updated) throw notFound()
+          return ctx.json({ passkey: toPublicPasskey(updated) })
         },
       ),
 

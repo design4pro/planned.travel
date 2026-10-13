@@ -598,6 +598,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Příliš mnoho pokusů. Zkuste to znovu za pár minut.',
   'passkeys.error.generic': 'Zkontrolujte připojení a zkuste to znovu.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Přejmenovat {name}',
+  'passkeys.rename.fieldLabel': 'Pojmenujte tento přístupový klíč',
+  'passkeys.rename.placeholder': 'Pojmenujte ho, například Pracovní telefon',
+  'passkeys.rename.saving': 'Ukládáme název',
+  'passkeys.rename.saved': 'Název byl uložen',
+  'passkeys.rename.failed': 'Název nebyl uložen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

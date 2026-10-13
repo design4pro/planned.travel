@@ -71,14 +71,15 @@ const BASEMAP_PICKER_FILE = join(
 )
 
 /**
- * The passkeys screen (09-S1a) lives in `_app/` rather than under settings, and so do the two
- * modules that hold its copy. `passkey-errors.ts` is the one that matters most: it is the only
- * reader of `add.exists`, `error.rateLimited`, `error.generic` and the stale keys, so without it
- * they look like dead copy to the orphan check below.
+ * The passkeys screen (09-S1a) lives in `_app/` rather than under settings, and so do the
+ * modules that hold its copy; 09-S1b adds the rename field. `passkey-errors.ts` is the one that
+ * matters most: it is the only reader of `add.exists`, `error.rateLimited`, `error.generic` and the
+ * stale keys, so without it they look like dead copy to the orphan check below.
  */
 const PASSKEY_FILES = [
   ['passkeys.tsx'],
   ['-ui', 'passkey-manager.tsx'],
+  ['-ui', 'passkey-rename-field.tsx'],
   ['-lib', 'passkey-errors.ts'],
 ].map((segments) => join(process.cwd(), 'src', 'routes', '_app', ...segments))
 
@@ -162,6 +163,7 @@ describe('the settings module ships no English literal', () => {
         'basemap-picker.tsx',
         'passkeys.tsx',
         'passkey-manager.tsx',
+        'passkey-rename-field.tsx',
         'passkey-errors.ts',
         'plan-copy.ts',
       ]),

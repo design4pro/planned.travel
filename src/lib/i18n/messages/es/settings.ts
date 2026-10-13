@@ -606,6 +606,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Demasiados intentos. Inténtalo de nuevo en unos minutos.',
   'passkeys.error.generic': 'Comprueba tu conexión e inténtalo de nuevo.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Cambiar el nombre de {name}',
+  'passkeys.rename.fieldLabel': 'Ponle nombre a esta clave de acceso',
+  'passkeys.rename.placeholder': 'Ponle un nombre, como Móvil del trabajo',
+  'passkeys.rename.saving': 'Guardando el nombre',
+  'passkeys.rename.saved': 'Nombre guardado',
+  'passkeys.rename.failed': 'No se guardó el nombre',
 } satisfies TranslationOf<typeof En>
 
 export default messages

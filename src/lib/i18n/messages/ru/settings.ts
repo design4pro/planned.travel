@@ -615,6 +615,13 @@ const messages = {
   'passkeys.error.rateLimited':
     'Слишком много попыток. Повторите через несколько минут.',
   'passkeys.error.generic': 'Проверьте соединение и повторите попытку.',
+  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  'passkeys.rename.action': 'Переименовать: {name}',
+  'passkeys.rename.fieldLabel': 'Назовите этот ключ доступа',
+  'passkeys.rename.placeholder': 'Дайте имя, например Рабочий телефон',
+  'passkeys.rename.saving': 'Сохраняем название',
+  'passkeys.rename.saved': 'Название сохранено',
+  'passkeys.rename.failed': 'Название не сохранено',
 } satisfies TranslationOf<typeof En>
 
 export default messages
