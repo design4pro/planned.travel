@@ -163,6 +163,18 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'kevesebb, mint {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Kire költöttek',
+  'memberBar.others': {
+    one: '{others} további utazó',
+    other: '{others} további utazó',
+  },
+  'memberBar.notSplit': 'Senkihez nincs rendelve',
+  'totalTile.label': 'Az utazás teljes költése',
+  'totalTile.captionPlanned': '{amount} tervezve az összes utazónak',
+  'totalTile.captionBudget': '{amount} költségvetés az utazásra',
+  'totalTile.yourShare': 'A te részed',
+  'totalTile.youPaid': 'Te fizettél',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Rögzített fizetések',
   'payments.empty.title': 'Még nincs fizetés',

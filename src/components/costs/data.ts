@@ -461,6 +461,37 @@ export function totalsFor(
   }
 }
 
+/** One traveller's responsibility across every split, in integer minor units. */
+export interface MemberShareTotal {
+  readonly userId: string
+  readonly shareMinor: number
+}
+
+/**
+ * What each traveller's shares add up to over the expense rows, ascending by user id.
+ *
+ * The rows are the source, not `balances[].shareMinor`: while a write is in flight the
+ * overlay folds it into `balanceMinor` only, so the expense rows are the one place the
+ * new expense's shares are already counted. With nothing in flight the two agree. The
+ * user id is the one key no write changes, so it is the deterministic order.
+ */
+export function memberShares(
+  expenses: ReadonlyArray<CostsExpense>,
+): Array<MemberShareTotal> {
+  const totals = new Map<string, number>()
+  for (const row of expenses) {
+    for (const share of row.shares) {
+      totals.set(
+        share.userId,
+        (totals.get(share.userId) ?? 0) + share.shareMinor,
+      )
+    }
+  }
+  return [...totals]
+    .map(([userId, shareMinor]) => ({ userId, shareMinor }))
+    .sort((a, b) => (a.userId < b.userId ? -1 : 1))
+}
+
 /* -------------------------------------------------------------------------- */
 /* CSV export                                                                 */
 /* -------------------------------------------------------------------------- */

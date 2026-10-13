@@ -166,6 +166,19 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'meno del {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Per chi è stata spesa',
+  'memberBar.others': {
+    one: '{others} altro viaggiatore',
+    many: '{others} altri viaggiatori',
+    other: '{others} altri viaggiatori',
+  },
+  'memberBar.notSplit': 'Non assegnato a nessuno',
+  'totalTile.label': 'Spesa totale del viaggio',
+  'totalTile.captionPlanned': '{amount} previsti per tutti i viaggiatori',
+  'totalTile.captionBudget': '{amount} di budget per il viaggio',
+  'totalTile.yourShare': 'La tua parte',
+  'totalTile.youPaid': 'Hai pagato',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Pagamenti registrati',
   'payments.empty.title': 'Nessun pagamento ancora',

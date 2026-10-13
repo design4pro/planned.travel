@@ -161,6 +161,18 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': '{percent} altında',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Para kimin için harcandı',
+  'memberBar.others': {
+    one: '{others} diğer gezgin',
+    other: '{others} diğer gezgin',
+  },
+  'memberBar.notSplit': 'Kimseye atanmadı',
+  'totalTile.label': 'Toplam gezi harcaması',
+  'totalTile.captionPlanned': 'Tüm gezginler için {amount} planlandı',
+  'totalTile.captionBudget': 'Gezi için {amount} bütçe',
+  'totalTile.yourShare': 'Senin payın',
+  'totalTile.youPaid': 'Senin ödediğin',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Kaydedilen ödemeler',
   'payments.empty.title': 'Henüz ödeme yok',

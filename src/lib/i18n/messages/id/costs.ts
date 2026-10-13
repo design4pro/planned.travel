@@ -159,6 +159,17 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'kurang dari {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Dikeluarkan untuk siapa',
+  'memberBar.others': {
+    other: '{others} pelancong lainnya',
+  },
+  'memberBar.notSplit': 'Tidak ditetapkan ke siapa pun',
+  'totalTile.label': 'Total pengeluaran perjalanan',
+  'totalTile.captionPlanned': 'Direncanakan {amount} untuk semua pelancong',
+  'totalTile.captionBudget': 'Anggaran {amount} untuk perjalanan',
+  'totalTile.yourShare': 'Bagianmu',
+  'totalTile.youPaid': 'Kamu bayar',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Pembayaran tercatat',
   'payments.empty.title': 'Belum ada pembayaran',
