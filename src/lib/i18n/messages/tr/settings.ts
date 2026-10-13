@@ -582,13 +582,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin.',
   'passkeys.error.generic': 'Bağlantınızı kontrol edip tekrar deneyin.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '{name} adını değiştir',
   'passkeys.rename.fieldLabel': 'Bu geçiş anahtarını adlandırın',
   'passkeys.rename.placeholder': 'Bir ad verin, örneğin İş telefonu',
   'passkeys.rename.saving': 'Ad kaydediliyor',
   'passkeys.rename.saved': 'Ad kaydedildi',
   'passkeys.rename.failed': 'Ad kaydedilmedi',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Kaldır: {name}',
+  'passkeys.delete.title': 'Bu geçiş anahtarı kaldırılsın mı?',
+  'passkeys.delete.body': 'Artık şununla giriş yapamayacaksınız: {name}.',
+  'passkeys.delete.password': 'Şifre',
+  'passkeys.delete.passwordHint': 'Onaylamak için şifrenizi girin.',
+  'passkeys.delete.confirmOnly':
+    'Hesabınızın şifresi yok. Bu geçiş anahtarını kaldırmak istediğinizi onaylayın.',
+  'passkeys.delete.confirm': 'Geçiş anahtarını kaldır',
+  'passkeys.delete.cancel': 'İptal',
+  'passkeys.delete.wrongPassword': 'Bu şifre doğru değil.',
+  'passkeys.delete.stale':
+    'Güvenliğiniz için bir geçiş anahtarını kaldırmadan önce yeniden giriş yapın.',
+  'passkeys.delete.removed': 'Geçiş anahtarı kaldırıldı',
+  'passkeys.delete.failed': 'Geçiş anahtarı kaldırılamadı. Tekrar deneyin.',
+  'passkeys.delete.removing': 'Geçiş anahtarı kaldırılıyor',
+  'passkeys.delete.passwordRequired':
+    'Bu geçiş anahtarını kaldırmak için şifrenizi girin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

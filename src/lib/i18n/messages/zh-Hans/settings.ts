@@ -489,13 +489,29 @@ const messages = {
   'passkeys.error.retry': '重试',
   'passkeys.error.rateLimited': '尝试次数过多。请几分钟后再试。',
   'passkeys.error.generic': '请检查网络连接后再试。',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '重命名 {name}',
   'passkeys.rename.fieldLabel': '为这个通行密钥命名',
   'passkeys.rename.placeholder': '起个名字，例如“工作手机”',
   'passkeys.rename.saving': '正在保存名称',
   'passkeys.rename.saved': '名称已保存',
   'passkeys.rename.failed': '名称未能保存',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '删除 {name}',
+  'passkeys.delete.title': '删除这个通行密钥？',
+  'passkeys.delete.body': '删除后，你将无法再使用 {name} 登录。',
+  'passkeys.delete.password': '密码',
+  'passkeys.delete.passwordHint': '请输入你的密码以确认。',
+  'passkeys.delete.confirmOnly':
+    '你的账户没有密码。请确认你要删除这个通行密钥。',
+  'passkeys.delete.confirm': '删除通行密钥',
+  'passkeys.delete.cancel': '取消',
+  'passkeys.delete.wrongPassword': '这个密码不正确。',
+  'passkeys.delete.stale': '为了你的安全，请先重新登录，再删除通行密钥。',
+  'passkeys.delete.removed': '通行密钥已删除',
+  'passkeys.delete.failed': '通行密钥未能删除。请重试。',
+  'passkeys.delete.removing': '正在删除通行密钥',
+  'passkeys.delete.passwordRequired': '请输入你的密码以删除这个通行密钥。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

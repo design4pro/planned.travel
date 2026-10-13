@@ -579,13 +579,31 @@ const messages = {
   'passkeys.error.retry': 'Thử lại',
   'passkeys.error.rateLimited': 'Thử quá nhiều lần. Hãy thử lại sau vài phút.',
   'passkeys.error.generic': 'Hãy kiểm tra kết nối rồi thử lại.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Đổi tên {name}',
   'passkeys.rename.fieldLabel': 'Đặt tên cho khóa truy cập này',
   'passkeys.rename.placeholder': 'Đặt tên, ví dụ Điện thoại công việc',
   'passkeys.rename.saving': 'Đang lưu tên',
   'passkeys.rename.saved': 'Đã lưu tên',
   'passkeys.rename.failed': 'Chưa lưu được tên',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Xóa {name}',
+  'passkeys.delete.title': 'Xóa khóa truy cập này?',
+  'passkeys.delete.body': 'Bạn sẽ không thể đăng nhập bằng {name} nữa.',
+  'passkeys.delete.password': 'Mật khẩu',
+  'passkeys.delete.passwordHint': 'Nhập mật khẩu của bạn để xác nhận.',
+  'passkeys.delete.confirmOnly':
+    'Tài khoản của bạn không có mật khẩu. Hãy xác nhận bạn muốn xóa khóa truy cập này.',
+  'passkeys.delete.confirm': 'Xóa khóa truy cập',
+  'passkeys.delete.cancel': 'Hủy',
+  'passkeys.delete.wrongPassword': 'Mật khẩu này không đúng.',
+  'passkeys.delete.stale':
+    'Để an toàn, hãy đăng nhập lại trước khi xóa khóa truy cập.',
+  'passkeys.delete.removed': 'Đã xóa khóa truy cập',
+  'passkeys.delete.failed': 'Chưa xóa được khóa truy cập. Hãy thử lại.',
+  'passkeys.delete.removing': 'Đang xóa khóa truy cập',
+  'passkeys.delete.passwordRequired':
+    'Hãy nhập mật khẩu của bạn để xóa khóa truy cập này.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

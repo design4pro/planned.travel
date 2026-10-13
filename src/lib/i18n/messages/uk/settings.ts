@@ -604,13 +604,31 @@ const messages = {
   'passkeys.error.retry': 'Повторити',
   'passkeys.error.rateLimited': 'Забагато спроб. Повторіть за кілька хвилин.',
   'passkeys.error.generic': 'Перевірте з’єднання й повторіть спробу.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Перейменувати: {name}',
   'passkeys.rename.fieldLabel': 'Назвіть цей ключ доступу',
   'passkeys.rename.placeholder': 'Дайте назву, наприклад Робочий телефон',
   'passkeys.rename.saving': 'Зберігаємо назву',
   'passkeys.rename.saved': 'Назву збережено',
   'passkeys.rename.failed': 'Назву не збережено',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Видалити: {name}',
+  'passkeys.delete.title': 'Видалити цей ключ доступу?',
+  'passkeys.delete.body': 'Ви більше не зможете входити за допомогою: {name}.',
+  'passkeys.delete.password': 'Пароль',
+  'passkeys.delete.passwordHint': 'Введіть пароль для підтвердження.',
+  'passkeys.delete.confirmOnly':
+    'Ваш обліковий запис не має пароля. Підтвердьте, що хочете видалити цей ключ доступу.',
+  'passkeys.delete.confirm': 'Видалити ключ доступу',
+  'passkeys.delete.cancel': 'Скасувати',
+  'passkeys.delete.wrongPassword': 'Цей пароль неправильний.',
+  'passkeys.delete.stale':
+    'Для вашої безпеки увійдіть знову, перш ніж видаляти ключ доступу.',
+  'passkeys.delete.removed': 'Ключ доступу видалено',
+  'passkeys.delete.failed': 'Ключ доступу не видалено. Спробуйте ще раз.',
+  'passkeys.delete.removing': 'Видаляємо ключ доступу',
+  'passkeys.delete.passwordRequired':
+    'Введіть пароль, щоб видалити цей ключ доступу.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

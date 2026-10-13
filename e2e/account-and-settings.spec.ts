@@ -2,14 +2,19 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import type { RouteCase } from './helpers/routes.ts'
-import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  hasSession,
+  useSession,
+} from './helpers/session.ts'
 
 /**
- * `ACC-03` - a member sees their passkeys, adds one and names it (plan stage 09-S1, tickets 09-S1a
- * and 09-S1b).
+ * `ACC-03` - a member sees their passkeys, adds one, names it and takes it away (plan stage 09-S1,
+ * tickets 09-S1a, 09-S1b and 09-S1c).
  *
  * `/passkeys` is not in `APP_ROUTES`: that table is the walk every journey covers, and this is one
- * screen inside the account area. 09-S1c appends its walk to this file.
+ * screen inside the account area.
  *
  * Two halves, in the order they can be trusted in. The first is what everyone gets: the page
  * answers, hydrates, says nothing in the console and does not move when the list resolves. The
@@ -30,15 +35,32 @@ function rows(page: Page) {
     .getByRole('listitem')
 }
 
+/** The rows while a modal dialog is open: the page behind it is `aria-hidden`, so ask for hidden. */
+function rowsBehindDialog(page: Page) {
+  return page
+    .getByRole('region', { name: 'Your passkeys', includeHidden: true })
+    .getByRole('listitem', { includeHidden: true })
+}
+
 const LIST_ENDPOINT = '**/api/auth/passkey/list'
 const VERIFY_ENDPOINT = '/api/auth/passkey/register/verify'
 const RENAME_ENDPOINT = '/api/auth/passkey/rename'
+const DELETE_ENDPOINT = '/api/auth/passkey/delete'
 
 /** Resolves with the reply to the next rename request. */
 function renameReply(page: Page) {
   return page.waitForResponse(
     (reply) =>
       reply.url().endsWith(RENAME_ENDPOINT) &&
+      reply.request().method() === 'POST',
+  )
+}
+
+/** Resolves with the reply to the next remove request. */
+function deleteReply(page: Page) {
+  return page.waitForResponse(
+    (reply) =>
+      reply.url().endsWith(DELETE_ENDPOINT) &&
       reply.request().method() === 'POST',
   )
 }
@@ -208,7 +230,7 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
   })
 })
 
-test.describe('ACC-03 - a member adds a passkey on this device and names it', () => {
+test.describe('ACC-03 - a member adds a passkey on this device, names it and takes it away', () => {
   /*
    * Chromium only, for two reasons. The CDP `WebAuthn` domain that provides a virtual
    * authenticator exists nowhere else, and the walk writes a credential row for the demo member,
@@ -231,7 +253,7 @@ test.describe('ACC-03 - a member adds a passkey on this device and names it', ()
     )
   })
 
-  test('adds a passkey with a virtual authenticator, names and renames it, and it is still there after a reload', async ({
+  test('adds a passkey with a virtual authenticator, names and renames it, keeps it across a reload and removes it with the password', async ({
     context,
     page,
     baseURL,
@@ -330,18 +352,63 @@ test.describe('ACC-03 - a member adds a passkey on this device and names it', ()
         'the name is stored, not only drawn',
       ).toBeVisible()
 
+      // Taking it away: the demo member has a password, so the dialog asks for it. A wrong one is
+      // refused on the field and the row stays; the right one removes it.
+      await page.getByRole('button', { name: 'Remove Laptop' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Remove this passkey?' })
+      const password = dialog.getByLabel('Password')
+      await expect(password).toBeFocused()
+      await password.fill(`${DEMO_PASSWORD}-wrong`)
+      const refused = deleteReply(page)
+      await dialog.getByRole('button', { name: 'Remove passkey' }).click()
+      expect((await refused).status(), 'a wrong password is refused').toBe(400)
+      await expect(
+        dialog.getByText('That password is not right.'),
+      ).toBeVisible()
+      await expect(password, 'focus goes back to the password').toBeFocused()
+      await expect(rowsBehindDialog(page), 'the row survives').toHaveCount(
+        before + 1,
+      )
+
+      await password.fill(DEMO_PASSWORD)
+      const removed = deleteReply(page)
+      await dialog.getByRole('button', { name: 'Remove passkey' }).click()
+      expect((await removed).status(), 'the right password removes it').toBe(
+        200,
+      )
+      await expect(dialog).toBeHidden()
+      await expect(rows(page)).toHaveCount(before)
+      await expect(page.getByRole('status')).toHaveText('Passkey removed')
+      await expect(
+        page.getByRole('button', { name: 'Add a passkey' }).first(),
+        'focus goes to the Add button',
+      ).toBeFocused()
+      created = null
+
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(
+        page.getByRole('region', { name: 'Your passkeys' }),
+      ).toBeVisible()
+      await expect(rows(page), 'the removal is stored').toHaveCount(before, {
+        timeout: 20_000,
+      })
+
+      // The wrong password was refused on purpose, and the browser itself logs the 400 of that one
+      // request; nothing else may reach the console.
       expect(
         watched().fatal,
-        'the console stays clean through the ceremony',
-      ).toEqual([])
+        'the console shows only the deliberate refusal through the ceremony',
+      ).toEqual([
+        'error: Failed to load resource: the server responded with a status of 400 (Bad Request)',
+      ])
     } finally {
-      // Nothing in 09-S1a or 09-S1b removes a passkey, so the walk cleans up through the endpoint;
-      // the delete dialog arrives with 09-S1c. Both calls are best effort: a failed cleanup must
+      // A walk that failed before the removal still owns its row, so the cleanup deletes it through
+      // the endpoint with the member's password. Both calls are best effort: a failed cleanup must
       // not hide the failure that got us here.
       if (created !== null) {
-        await page.request.post('/api/auth/passkey/delete', {
+        await page.request.post(DELETE_ENDPOINT, {
           headers: { origin: baseURL ?? 'http://localhost:3000' },
-          data: { id: created },
+          data: { id: created, password: DEMO_PASSWORD },
           failOnStatusCode: false,
         })
       }

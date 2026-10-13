@@ -315,3 +315,64 @@ describe('a recorded day', () => {
     })
   })
 })
+
+describe('an estimated day', () => {
+  const ESTIMATE: DayWeather = {
+    dayId: 'd1',
+    status: 'ok',
+    reading: {
+      kind: 'estimate',
+      source: 'nasa-power',
+      tempMinC: 1.9,
+      tempMaxC: 8.4,
+      precipitationMm: 2.5,
+      windMs: null,
+    },
+  }
+
+  it('is an estimate badge in the reader’s unit, with no condition to claim', () => {
+    expect(badgeModel(ESTIMATE, 'metric')).toMatchObject({
+      kind: 'estimate',
+      max: 8,
+      min: 2,
+      unit: 'C',
+    })
+    expect(badgeModel(ESTIMATE, 'imperial')).toMatchObject({
+      kind: 'estimate',
+      max: 47,
+      min: 35,
+      unit: 'F',
+    })
+  })
+
+  it('keeps an absent temperature absent, never a zero', () => {
+    const model = badgeModel(
+      {
+        ...ESTIMATE,
+        reading: {
+          kind: 'estimate',
+          source: 'nasa-power',
+          tempMinC: null,
+          tempMaxC: 8.4,
+          precipitationMm: null,
+          windMs: null,
+        },
+      },
+      'metric',
+    )
+
+    expect(model).toMatchObject({ kind: 'estimate', max: 8, min: null })
+  })
+
+  it('has a panel with no sky, no chance of rain, no wind and no slots', () => {
+    if (ESTIMATE.status !== 'ok') throw new Error('unreachable')
+    expect(panelModel(ESTIMATE.reading, 'metric')).toMatchObject({
+      kind: 'estimate',
+      condition: null,
+      probability: null,
+      wind: null,
+      slots: null,
+      precipitation: { value: 2.5, unit: 'mm' },
+    })
+  })
+})

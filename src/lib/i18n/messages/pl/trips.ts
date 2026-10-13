@@ -342,6 +342,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Zarejestrowano: maks. {max}, min. {min}',
   'plan.weather.badge.recordedHigh': 'Zarejestrowano: maks. {max}',
   'plan.weather.badge.recordedLow': 'Zarejestrowano: min. {min}',
+  'plan.weather.badge.estimate':
+    'Wartość szacunkowa: typowe maks. {max}, typowe min. {min}',
+  'plan.weather.badge.estimateHigh': 'Wartość szacunkowa: typowe maks. {max}',
+  'plan.weather.badge.estimateLow': 'Wartość szacunkowa: typowe min. {min}',
   'plan.weather.badge.notYetRecorded': 'Jeszcze nie zarejestrowano',
   'plan.weather.condition.clear': 'Bezchmurnie',
   'plan.weather.condition.fair': 'Pogodnie',
@@ -356,6 +360,7 @@ const messages = {
   'plan.weather.panel.title': 'Pogoda na {date}',
   'plan.weather.panel.temperature': 'Maks. / min.',
   'plan.weather.panel.precipitation': 'Opady',
+  'plan.weather.panel.precipitationTypical': 'Typowe opady dziennie',
   'plan.weather.panel.probability': '{percent} szans',
   'plan.weather.panel.wind': 'Wiatr',
   'plan.weather.panel.sunrise': 'Wschód słońca',
@@ -370,6 +375,9 @@ const messages = {
   'plan.weather.panel.high': 'Maks.',
   'plan.weather.panel.low': 'Min.',
   'plan.weather.panel.recordedNote': 'Wartości zmierzone dla tego dnia.',
+  'plan.weather.panel.temperatureTypical': 'Typowe maks. / min.',
+  'plan.weather.panel.estimateNote':
+    'Wieloletnia średnia dla tego miesiąca, a nie prognoza.',
   'plan.weather.attribution.metNorway': 'Dane prognozy: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Dane: NASA Langley Research Center POWER Project',

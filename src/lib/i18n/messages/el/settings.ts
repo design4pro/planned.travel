@@ -595,13 +595,34 @@ const messages = {
   'passkeys.error.rateLimited':
     'Πάρα πολλές προσπάθειες. Δοκιμάστε ξανά σε λίγα λεπτά.',
   'passkeys.error.generic': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Μετονομασία του {name}',
   'passkeys.rename.fieldLabel': 'Δώστε όνομα σε αυτό το κλειδί πρόσβασης',
   'passkeys.rename.placeholder': 'Δώστε του όνομα, π.χ. Κινητό εργασίας',
   'passkeys.rename.saving': 'Αποθήκευση του ονόματος',
   'passkeys.rename.saved': 'Το όνομα αποθηκεύτηκε',
   'passkeys.rename.failed': 'Το όνομα δεν αποθηκεύτηκε',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Αφαίρεση του {name}',
+  'passkeys.delete.title': 'Να αφαιρεθεί αυτό το κλειδί πρόσβασης;',
+  'passkeys.delete.body': 'Δεν θα μπορείτε πια να συνδέεστε με το {name}.',
+  'passkeys.delete.password': 'Κωδικός πρόσβασης',
+  'passkeys.delete.passwordHint':
+    'Εισαγάγετε τον κωδικό πρόσβασής σας για επιβεβαίωση.',
+  'passkeys.delete.confirmOnly':
+    'Ο λογαριασμός σας δεν έχει κωδικό πρόσβασης. Επιβεβαιώστε ότι θέλετε να αφαιρέσετε αυτό το κλειδί πρόσβασης.',
+  'passkeys.delete.confirm': 'Αφαίρεση κλειδιού πρόσβασης',
+  'passkeys.delete.cancel': 'Ακύρωση',
+  'passkeys.delete.wrongPassword':
+    'Αυτός ο κωδικός πρόσβασης δεν είναι σωστός.',
+  'passkeys.delete.stale':
+    'Για την ασφάλειά σας, συνδεθείτε ξανά πριν αφαιρέσετε ένα κλειδί πρόσβασης.',
+  'passkeys.delete.removed': 'Το κλειδί πρόσβασης αφαιρέθηκε',
+  'passkeys.delete.failed':
+    'Το κλειδί πρόσβασης δεν αφαιρέθηκε. Δοκιμάστε ξανά.',
+  'passkeys.delete.removing': 'Αφαίρεση του κλειδιού πρόσβασης',
+  'passkeys.delete.passwordRequired':
+    'Εισαγάγετε τον κωδικό πρόσβασής σας για να αφαιρέσετε αυτό το κλειδί πρόσβασης.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

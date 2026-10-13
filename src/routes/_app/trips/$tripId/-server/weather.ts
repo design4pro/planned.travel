@@ -45,6 +45,11 @@ export const tripWeatherInputSchema = z.strictObject({
    * seeing `none` for a past day, which is the only answer its bundle can draw.
    */
   recorded: z.boolean().optional(),
+  /**
+   * Opt in to the estimated days. A tab loaded before they existed does not send it and keeps seeing
+   * `none` for a day beyond the forecast, which is the only answer its bundle can draw.
+   */
+  estimate: z.boolean().optional(),
 })
 
 export type TripWeatherInput = z.infer<typeof tripWeatherInputSchema>
@@ -96,7 +101,7 @@ export async function loadTripWeather(
     // The trip's own zone, UTC when it has none: never the reader's, so two members of one trip
     // see one answer.
     trip.timezone ?? 'UTC',
-    { recorded: input.recorded === true },
+    { recorded: input.recorded === true, estimate: input.estimate === true },
   )
 
   return {

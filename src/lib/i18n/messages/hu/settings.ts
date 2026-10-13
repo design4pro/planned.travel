@@ -589,13 +589,32 @@ const messages = {
   'passkeys.error.rateLimited':
     'Túl sok próbálkozás. Próbálja újra néhány perc múlva.',
   'passkeys.error.generic': 'Ellenőrizze a kapcsolatot, és próbálja újra.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '{name} átnevezése',
   'passkeys.rename.fieldLabel': 'Nevezze el ezt a belépési kulcsot',
   'passkeys.rename.placeholder': 'Adjon neki nevet, például Munkahelyi telefon',
   'passkeys.rename.saving': 'A név mentése',
   'passkeys.rename.saved': 'Név elmentve',
   'passkeys.rename.failed': 'A név nem lett elmentve',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '{name} eltávolítása',
+  'passkeys.delete.title': 'Eltávolítja ezt a belépési kulcsot?',
+  'passkeys.delete.body': 'Ezzel többé nem tud bejelentkezni: {name}.',
+  'passkeys.delete.password': 'Jelszó',
+  'passkeys.delete.passwordHint': 'A megerősítéshez adja meg a jelszavát.',
+  'passkeys.delete.confirmOnly':
+    'A fiókjának nincs jelszava. Erősítse meg, hogy el szeretné távolítani ezt a belépési kulcsot.',
+  'passkeys.delete.confirm': 'Belépési kulcs eltávolítása',
+  'passkeys.delete.cancel': 'Mégse',
+  'passkeys.delete.wrongPassword': 'Ez a jelszó nem helyes.',
+  'passkeys.delete.stale':
+    'A biztonsága érdekében a belépési kulcs eltávolítása előtt jelentkezzen be újra.',
+  'passkeys.delete.removed': 'Belépési kulcs eltávolítva',
+  'passkeys.delete.failed':
+    'A belépési kulcs eltávolítása nem sikerült. Próbálja újra.',
+  'passkeys.delete.removing': 'A belépési kulcs eltávolítása folyamatban',
+  'passkeys.delete.passwordRequired':
+    'A belépési kulcs eltávolításához adja meg a jelszavát.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

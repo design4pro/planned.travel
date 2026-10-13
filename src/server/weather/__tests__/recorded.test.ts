@@ -273,9 +273,9 @@ describe('choosing the kind of reading a day gets', () => {
     expect(selectKind('2026-10-11', window)).toBe('not-yet-recorded')
   })
 
-  it('gives the last fully covered forecast day a forecast and the day after it nothing', () => {
+  it('gives the last fully covered forecast day a forecast and the day after it an estimate', () => {
     expect(selectKind('2026-10-17', window)).toBe('forecast')
-    expect(selectKind('2026-10-18', window)).toBe('none')
+    expect(selectKind('2026-10-18', window)).toBe('estimate')
   })
 
   it('keeps a past day inside the lag apart from one beyond it', () => {
@@ -295,7 +295,7 @@ describe('choosing the kind of reading a day gets', () => {
     ).toBe('forecast')
     expect(
       selectKind('2026-10-13', { ...window, forecastEnd: '2026-10-12' }),
-    ).toBe('none')
+    ).toBe('estimate')
   })
 
   it('ends the recorded days lagDays before the provider’s own today, and never past yesterday', () => {

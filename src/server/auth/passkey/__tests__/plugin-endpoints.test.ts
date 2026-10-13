@@ -9,8 +9,9 @@
  *
  * Ticket 09-S1a: list isolation, the per-user ceiling, the impersonation veto and the freshness
  * rule on registration, and the registration rate limits. Ticket 09-S1b: rename (ownership, the
- * strict body, the impersonation veto, its rate limit). Ticket c appends its cases to this file and
- * reuses `./harness`.
+ * strict body, the impersonation veto, its rate limit). Ticket 09-S1c: the password hint on the list
+ * and delete (the identity proof, decided on the server; ownership; the impersonation veto; its rate
+ * limit).
  *
  * The mocks are the ones `../../__tests__/auth-handler-closure.test.ts` establishes: `env`
  * imports `cloudflare:workers`, so it is replaced with plain values, the database is an
@@ -26,7 +27,7 @@ import {
   vi,
 } from 'vitest'
 import { MAX_PASSKEYS_PER_USER, passkey } from '../plugin'
-import { createAuthHarness, openAuthDatabase } from './harness'
+import { PASSWORD, createAuthHarness, openAuthDatabase } from './harness'
 import type { AuthHarness } from './harness'
 import type { DatabaseSync } from 'node:sqlite'
 
@@ -575,5 +576,343 @@ describe('the rename rate limit', () => {
     }
     expect((await rename('one too many')).status).toBe(429)
     expect(auth.passkeyName('alice-1')).toBe('name 4')
+  })
+})
+
+/** A new account per case: these tests change the account row itself, which `alice` must keep. */
+let accountSerial = 0
+async function freshAccount(): Promise<{ email: string; userId: string }> {
+  accountSerial += 1
+  const email = `remover-${accountSerial}@planned.travel`
+  return { email, userId: await auth.createAccount(email) }
+}
+
+describe('GET /passkey/list password hint', () => {
+  async function hint(email: string): Promise<unknown> {
+    const cookie = await auth.signIn(email)
+    const response = await auth.get('/passkey/list', { cookie })
+    expect(response.status).toBe(200)
+    return ((await response.json()) as { requiresPassword?: unknown })
+      .requiresPassword
+  }
+
+  it('is true for an account with a password', async () => {
+    expect(await hint('alice@planned.travel')).toBe(true)
+  })
+
+  it('is false for an account with no credential row (social-only)', async () => {
+    const { email, userId } = await freshAccount()
+    const cookie = await auth.signIn(email)
+    auth.removeCredentialAccount(userId)
+
+    const response = await auth.get('/passkey/list', { cookie })
+    expect(
+      ((await response.json()) as { requiresPassword: boolean })
+        .requiresPassword,
+    ).toBe(false)
+  })
+
+  it('is false for a credential row with a null password', async () => {
+    const { email, userId } = await freshAccount()
+    const cookie = await auth.signIn(email)
+    auth.clearPassword(userId)
+
+    const response = await auth.get('/passkey/list', { cookie })
+    expect(
+      ((await response.json()) as { requiresPassword: boolean })
+        .requiresPassword,
+    ).toBe(false)
+  })
+})
+
+describe('POST /passkey/delete', () => {
+  function remove(
+    cookie: string | undefined,
+    body: unknown,
+    headers?: Record<string, string>,
+  ) {
+    return auth.post('/passkey/delete', body, { cookie, headers })
+  }
+
+  async function code(response: Response): Promise<string | undefined> {
+    return ((await response.json()) as ErrorBody).code
+  }
+
+  describe('on an account with a password', () => {
+    it('deletes with the right password', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }, { id: 'alice-2' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      const response = await remove(cookie, {
+        id: 'alice-1',
+        password: PASSWORD,
+      })
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ deleted: true })
+      expect(auth.passkeyName('alice-1')).toBeUndefined()
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+
+    it('refuses a missing password with its own code and keeps the row', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      const response = await remove(cookie, { id: 'alice-1' })
+
+      expect(response.status).toBe(400)
+      expect(await code(response)).toBe('PASSKEY_PASSWORD_REQUIRED')
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+
+    it('refuses a wrong password with its own code and keeps the row', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      const response = await remove(cookie, {
+        id: 'alice-1',
+        password: 'not-the-password',
+      })
+
+      expect(response.status).toBe(400)
+      expect(await code(response)).toBe('PASSKEY_INVALID_PASSWORD')
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+
+    it('does not accept session age in place of the password', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      // A brand-new session is fresh, and still must not delete without the password.
+      expect((await remove(cookie, { id: 'alice-1' })).status).toBe(400)
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+
+    it('does not need a fresh session when the password is right', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+      auth.editSession(aliceId, 'created_at', Date.now() - 25 * HOUR_MS)
+
+      expect(
+        (await remove(cookie, { id: 'alice-1', password: PASSWORD })).status,
+      ).toBe(200)
+    })
+
+    it('refuses an empty password at validation, before the handler reads it', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      expect(
+        (await remove(cookie, { id: 'alice-1', password: '' })).status,
+      ).toBe(400)
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+  })
+
+  describe.each([
+    ['a social-only account', 'removeCredentialAccount'],
+    ['a credential row with a null password', 'clearPassword'],
+  ] as const)('on %s', (_label, strip) => {
+    async function passwordless() {
+      const { email, userId } = await freshAccount()
+      const cookie = await auth.signIn(email)
+      auth[strip](userId)
+      auth.seedPasskeys(userId, [{ id: `${userId}-key` }])
+      return { cookie, userId, id: `${userId}-key` }
+    }
+
+    it('agrees with the list hint, and a fresh session deletes without a password', async () => {
+      const { cookie, userId, id } = await passwordless()
+
+      const list = await auth.get('/passkey/list', { cookie })
+      expect(
+        ((await list.json()) as { requiresPassword: boolean }).requiresPassword,
+      ).toBe(false)
+
+      const response = await remove(cookie, { id })
+      expect(response.status).toBe(200)
+      expect(auth.passkeyCount(userId)).toBe(0)
+    })
+
+    it('ignores a password in the body and decides by session age', async () => {
+      const { cookie, userId, id } = await passwordless()
+      auth.editSession(userId, 'created_at', Date.now() - 25 * HOUR_MS)
+
+      const response = await remove(cookie, { id, password: PASSWORD })
+
+      expect(response.status).toBe(400)
+      expect(await code(response)).toBe('PASSKEY_SESSION_NOT_FRESH')
+      expect(auth.passkeyCount(userId)).toBe(1)
+    })
+
+    it('refuses a session older than the freshness window and keeps the row', async () => {
+      const { cookie, userId, id } = await passwordless()
+      auth.editSession(userId, 'created_at', Date.now() - 25 * HOUR_MS)
+
+      const response = await remove(cookie, { id })
+
+      expect(response.status).toBe(400)
+      expect(await code(response)).toBe('PASSKEY_SESSION_NOT_FRESH')
+      expect(auth.passkeyCount(userId)).toBe(1)
+    })
+
+    it('still lets a session just inside the window delete (positive control)', async () => {
+      const { cookie, userId, id } = await passwordless()
+      auth.editSession(userId, 'created_at', Date.now() - 23 * HOUR_MS)
+
+      expect((await remove(cookie, { id })).status).toBe(200)
+      expect(auth.passkeyCount(userId)).toBe(0)
+    })
+
+    it('refuses a session whose creation time cannot be read, rather than letting it through', async () => {
+      const { cookie, userId, id } = await passwordless()
+      auth.editSession(userId, 'created_at', 'not a date')
+
+      const response = await remove(cookie, { id })
+
+      expect(response.status).not.toBe(200)
+      expect(auth.passkeyCount(userId)).toBe(1)
+    })
+  })
+
+  describe('ownership', () => {
+    it.each([
+      ['with the right password', { password: PASSWORD }],
+      ['with no password', {}],
+      ['with a wrong password', { password: 'nope' }],
+    ])(
+      "answers not-found for another person's id %s, and leaves their row byte-identical",
+      async (_label, extra) => {
+        auth.seedPasskeys(bobId, [{ id: 'bob-1', name: 'Bobs key' }])
+        const before = auth.passkeyRow('bob-1')
+        const cookie = await auth.signIn('alice@planned.travel')
+
+        const response = await remove(cookie, { id: 'bob-1', ...extra })
+
+        expect(response.status).toBe(404)
+        expect(await code(response)).toBe('PASSKEY_NOT_FOUND')
+        expect(auth.passkeyRow('bob-1')).toEqual(before)
+      },
+    )
+
+    it('answers the same not-found for an id that does not exist', async () => {
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      const response = await remove(cookie, { id: 'nobody' })
+
+      expect(response.status).toBe(404)
+      expect(await code(response)).toBe('PASSKEY_NOT_FOUND')
+    })
+
+    it('answers not-found to a passwordless account for another persons id, whatever its session age', async () => {
+      const { email, userId } = await freshAccount()
+      const cookie = await auth.signIn(email)
+      auth.removeCredentialAccount(userId)
+      auth.editSession(userId, 'created_at', Date.now() - 25 * HOUR_MS)
+      auth.seedPasskeys(bobId, [{ id: 'bob-1' }])
+      const before = auth.passkeyRow('bob-1')
+
+      const response = await remove(cookie, { id: 'bob-1' })
+
+      expect(response.status).toBe(404)
+      expect(auth.passkeyRow('bob-1')).toEqual(before)
+    })
+  })
+
+  describe('the body', () => {
+    it('refuses a field it does not declare, and deletes nothing', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+
+      const response = await remove(cookie, {
+        id: 'alice-1',
+        password: PASSWORD,
+        userId: bobId,
+      })
+
+      expect(response.status).toBe(400)
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+
+    it('answers 401 without a session', async () => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+
+      const response = await remove(undefined, {
+        id: 'alice-1',
+        password: PASSWORD,
+      })
+
+      expect(response.status).toBe(401)
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    })
+  })
+
+  it.each([
+    ['an operator id', 'usr_operator'],
+    ['an empty string', ''],
+  ])(
+    'refuses an impersonated session when impersonatedBy is %s, even with the right password, and keeps the row',
+    async (_label, marker) => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
+      auth.editSession(aliceId, 'impersonated_by', marker)
+
+      const response = await remove(cookie, {
+        id: 'alice-1',
+        password: PASSWORD,
+      })
+
+      expect(response.status).toBe(403)
+      expect(await code(response)).toBe('PASSKEY_IMPERSONATED')
+      expect(auth.passkeyCount(aliceId)).toBe(1)
+    },
+  )
+
+  it('refuses an impersonated session on a passwordless account too, where it would be fresh', async () => {
+    const { email, userId } = await freshAccount()
+    const cookie = await auth.signIn(email)
+    auth.removeCredentialAccount(userId)
+    auth.seedPasskeys(userId, [{ id: 'victim-1' }])
+    auth.editSession(userId, 'impersonated_by', 'usr_operator')
+
+    const response = await remove(cookie, { id: 'victim-1' })
+
+    expect(response.status).toBe(403)
+    expect(auth.passkeyCount(userId)).toBe(1)
+  })
+})
+
+describe('the delete rate limit', () => {
+  const rules = passkey({
+    relyingPartyId: 'localhost',
+    relyingPartyName: 'planned.travel',
+    origins: [BASE_URL],
+  }).rateLimit
+
+  it('carries a rule of 5 per 300 s for /passkey/delete', () => {
+    const rule = rules?.find((entry) => entry.pathMatcher('/passkey/delete'))
+    expect(rule).toMatchObject({ window: 300, max: 5 })
+  })
+
+  it('answers 429 past the maximum, over HTTP, and the refused call deletes nothing', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+    const headers = {
+      'cf-connecting-ip': '203.0.113.40',
+      'x-forwarded-for': '198.51.100.7, 203.0.113.40',
+    }
+    const attempt = (password: string) =>
+      auth.post(
+        '/passkey/delete',
+        { id: 'alice-1', password },
+        { cookie, headers },
+      )
+
+    for (let tries = 0; tries < 5; tries += 1) {
+      expect((await attempt('wrong')).status).toBe(400)
+    }
+    // The right password past the budget is still refused: the limiter runs before the handler.
+    expect((await attempt(PASSWORD)).status).toBe(429)
+    expect(auth.passkeyCount(aliceId)).toBe(1)
   })
 })

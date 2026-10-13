@@ -38,7 +38,10 @@ export function useTripWeather(tripId: string, plan: unknown): TripWeatherView {
   const client = useQueryClient()
   const query = useQuery({
     queryKey: tripWeatherKey(tripId),
-    queryFn: () => loadTripWeatherFn({ data: { tripId, recorded: true } }),
+    queryFn: () =>
+      loadTripWeatherFn({
+        data: { tripId, recorded: true, estimate: true },
+      }),
     staleTime: TRIP_WEATHER_STALE_MS,
     // A planner left open over midnight must not keep yesterday's "today"; stale entries only.
     refetchOnMount: true,
