@@ -418,5 +418,15 @@ describe('the rate lookup', () => {
       // The barrel re-exports every repository, this one included.
       expect(reachable.has(resolve(HERE, '../index.ts'))).toBe(false)
     })
+
+    it('is not named by the server functions that feed those writers', () => {
+      // `toRepoInput` in `fns/costs.ts` derives the stored rate and reaches the repositories through
+      // the barrel, which re-exports this module, so an import closure cannot tell: read the names.
+      const source = readFileSync(resolve(HERE, '../../fns/costs.ts'), 'utf8')
+
+      expect(source).not.toMatch(
+        /\b(?:resolveRate|findLatestFrozenRate|RateSource)\b/,
+      )
+    })
   })
 })

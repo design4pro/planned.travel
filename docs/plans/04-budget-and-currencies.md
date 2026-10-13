@@ -478,7 +478,8 @@ where a _live_ one will one day come from. All SQL is here.
   can read (`source: 'recent'`, the query `findLatestFrozenRate` shares), then the injected
   `RateSource` port. **The port has no implementation in this stage and there is no cache**: the KV
   cache is `04-S7`'s, because nothing writes it until a provider exists; see **Blockers**. A manual
-  rate that is not finite and positive is refused, and so is a port answer. It returns
+  rate that is not finite and positive is refused (it throws), while a port answer that is not
+  finite and positive is a miss. It returns
   `{ rate, source } | null`, `null` when nothing answers, and it never invents, extrapolates or rounds a rate into existence.
   **It is never reached from a per-row writer.** Its two callers across this whole plan are the
   display conversion in `loadCosts`, which changes what a figure looks like and never what is
@@ -2878,9 +2879,11 @@ The rules it must satisfy, all of which are contracts `04-S1` already relies on:
   belongs in `resolveLimits()` like every other ceiling, never in a constant inside this module.
 
 **This stage writes no row and adds no SQL**, which is why it names no table and files no migration.
-The one tenant-scoped query in the module is `findLatestFrozenRate`, shipped by `04-S1`: it starts
-from `tenantFilter()` in `src/server/repos/base.ts`, so every statement carries
-`organization_id = ?` as its leading predicate before the trip predicate is `AND`-ed on. This stage
+The one tenant-scoped frozen-rate query in the module is the one `findLatestFrozenRate` and the
+`recent` source of `resolveRate` share, shipped by `04-S1`: it starts from `tenantFilter()` in
+`src/server/repos/base.ts`, so every statement carries `organization_id = ?` as its leading
+predicate, and it is restricted to the trips the caller can read (a private trip the caller is not
+on never answers); the trip predicate is `AND`-ed on only when a trip id is given. This stage
 does not touch it, does not widen it and does not add a second read beside it — the port it
 implements is an outbound `fetch` and a `KV` read, neither of which reaches D1 at all. The isolation
 block appended below asserts that separation rather than assuming it.
