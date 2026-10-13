@@ -120,7 +120,7 @@ const messages = {
   'payment.whoPaid': 'Ki kapja',
   'payment.amountIn': 'Összeg {currency}-ben',
   'payment.amountPositive': 'Írj be nullánál nagyobb összeget.',
-  'payment.currencyLabel': 'A fizetés pénzneme',
+  'payment.currencyLabel': 'Valuta, amelyben a fizetés történt',
   'payment.how': 'Hogyan',
   'payment.howMade': 'Hogyan történt a fizetés',
   'payment.dateLabel': 'A fizetés dátuma',

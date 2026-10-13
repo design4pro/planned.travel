@@ -161,6 +161,31 @@ export function PaymentDialog({
       ? 'costs.expense.convertedNotANumber'
       : 'costs.payment.amountPositive'
 
+  /**
+   * The suggested amount a Settle press seeds is in the trip's currency. Picking another
+   * currency moves it to the converted field, where it still means what it says, instead of
+   * relabelling it as a sum in the new currency; picking the trip's currency again moves it back.
+   */
+  const changeSourceCurrency = (next: string): void => {
+    const seeded =
+      seed === null ? null : toAmountInput(seed.amountMinor, currency)
+    const toForeign = currencyCode(next) !== currencyCode(currency)
+    if (seeded !== null && toForeign && !foreign && amount === seeded) {
+      setAmount('')
+      setConverted(seeded)
+    } else if (
+      seeded !== null &&
+      !toForeign &&
+      foreign &&
+      amount === '' &&
+      converted === seeded
+    ) {
+      setAmount(seeded)
+      setConverted('')
+    }
+    setSourceCurrency(next)
+  }
+
   const nameOf = (userId: string): string =>
     people.find((person) => person.userId === userId)?.name ?? 'Traveller'
 
@@ -300,7 +325,7 @@ export function PaymentDialog({
                     description: entry.name,
                   }))}
                   value={sourceCurrency}
-                  onValueChange={setSourceCurrency}
+                  onValueChange={changeSourceCurrency}
                   ariaLabel={t('costs.payment.currencyLabel')}
                 />
               </Field>

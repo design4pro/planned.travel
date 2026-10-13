@@ -471,6 +471,8 @@ describe('repositories', () => {
           { originalCurrency: 'GBP' },
           { originalAmountMinor: null, originalCurrency: 'GBP' },
           { originalAmountMinor: 0, originalCurrency: 'GBP' },
+          // Nothing sent is refused whichever currency it names, the trip's own included.
+          { originalAmountMinor: 0, originalCurrency: 'JPY' },
         ] as const
         for (const source of attempts) {
           const error = await createSettlement(tenant.scope, {

@@ -237,7 +237,7 @@ describe('the costs boundary', () => {
       })
 
       it.each([
-        ['a currency with no converted amount', { originalCurrency: 'GBP' }],
+        ['a currency with no source amount', { originalCurrency: 'GBP' }],
         ['an amount with no currency', { originalAmountMinor: 850 }],
         [
           'a source amount of nothing',

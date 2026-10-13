@@ -2480,7 +2480,7 @@ describe('tenant isolation', () => {
       // answer does not say which of them was wrong.
       for (const source of [
         payment,
-        { amountMinor: 11_700, settledOn: payment.settledOn },
+        { ...payment, originalAmountMinor: undefined },
         { ...payment, originalAmountMinor: 0 },
       ]) {
         const error = await captureError(() =>

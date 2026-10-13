@@ -15,7 +15,7 @@ import { PaymentDialog } from '../payment-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
 import type { CostsPerson } from '#/server/fns/costs'
-import type { PaymentFormValue } from '../payment-dialog'
+import type { PaymentFormValue, PaymentSeed } from '../payment-dialog'
 
 const EN: Catalogue = {
   ...namespaceCatalogue('costs', Costs),
@@ -37,13 +37,14 @@ function hand(): ReturnType<typeof userEvent.setup> {
 function open(
   onSubmit: (value: PaymentFormValue) => Promise<void> = async () => {},
   onOpenChange: (open: boolean) => void = () => {},
+  seed: PaymentSeed | null = null,
 ): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <PaymentDialog
         open
         onOpenChange={onOpenChange}
-        seed={null}
+        seed={seed}
         people={PEOPLE}
         viewerUserId="u1"
         currency="EUR"
@@ -135,6 +136,34 @@ describe('the payment dialog', () => {
       originalCurrency: 'GBP',
     })
     expect(Object.keys(sent ?? {})).not.toContain('exchangeRate')
+  })
+
+  it('moves the suggested amount to the converted field when another currency is picked, and back', async () => {
+    const onSubmit = vi.fn(async (_value: PaymentFormValue) => {})
+    const user = hand()
+    open(onSubmit, () => {}, {
+      fromUserId: 'u2',
+      toUserId: 'u1',
+      amountMinor: 4_650,
+    })
+    expect(screen.getByLabelText(/Amount in EUR/)).toHaveProperty(
+      'value',
+      '46.50',
+    )
+
+    await pickCurrency(user, 'GBP')
+    expect(screen.getByLabelText(/Amount in GBP/)).toHaveProperty('value', '')
+    expect(screen.getByLabelText(/Converted to EUR/)).toHaveProperty(
+      'value',
+      '46.50',
+    )
+
+    await pickCurrency(user, 'EUR')
+    expect(screen.getByLabelText(/Amount in EUR/)).toHaveProperty(
+      'value',
+      '46.50',
+    )
+    expect(screen.queryByLabelText(/Converted to/)).toBeNull()
   })
 
   it('keeps everything the payer typed on screen when the write is refused', async () => {

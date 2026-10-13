@@ -754,6 +754,9 @@ function settlementConversion(
   if (originalAmountMinor === null || originalCurrency === null) {
     throw conversionIncomplete()
   }
+  if (originalAmountMinor === 0) {
+    throw conversionIncomplete()
+  }
   if (originalCurrency.toUpperCase() === tripCurrency.toUpperCase()) {
     return none
   }
