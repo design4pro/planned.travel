@@ -286,7 +286,9 @@ claim that the design renders identically on another.
 
 ### Stage id
 
-`04-S1` · Wave 1 · effort **L**. The first stage in this file, because it is the stage that consumes
+`04-S1` · Wave 1 · effort **L**. Delivered in slices: #835 (the conversion and the two rate
+lookups, server and library only), #843 (a payment in a foreign currency), #844 (the reader's display
+currency) and #845 (the suggested figure in the expense dialog). The first stage in this file, because it is the stage that consumes
 the `settlements` currency columns of migration `0002`, and because every later money surface in this
 file renders a converted amount through the arithmetic and the display-currency resolver that land
 here.
@@ -323,8 +325,8 @@ Behaviour sourced from `wiki: Currencies`, restated in our own vocabulary.
   is changed; `impliedRate` and `formatExchangeRate` in particular are read by this stage and edited
   by nobody in it.
 - `src/lib/__tests__/money.test.ts` — edit.
-- `src/server/repos/rates.ts` — new. The frozen-rate read, the `resolveRate` seam with its KV cache,
-  and the only reader and only writer of the `user_settings.display_currency` column filed below.
+- `src/server/repos/rates.ts` — new. The frozen-rate read, the `resolveRate` seam (without a cache:
+  the rate cache is `04-S7`'s), and the only reader and only writer of the `user_settings.display_currency` column filed below.
   The module answers one question — "what currency does this reader see, and what rate gets them
   there" — and the preference is its first half. **Server** states why that preference is not written
   through the settings repository, and the answer is a measured wave-1 ownership fact rather than a
@@ -453,21 +455,31 @@ called out here so the contrast is deliberate rather than an inconsistency someb
 **Repository — `src/server/repos/rates.ts` (new).** Where a _suggested_ rate comes from, and the seam
 where a _live_ one will one day come from. All SQL is here.
 
-- `findLatestFrozenRate(scope, { tripId, from, to })` — the most recent rate this workspace has
-  already used for that ordered pair, read from the frozen `exchange_rate` on `expenses` and, after
-  `00-S1`, on `settlements`. Built on `tenantFilter()`, so the query starts from
-  `eq(expenses.organizationId, scope.ctx.organizationId)` and the trip predicate is `AND`-ed onto it;
-  a rate from another tenant is unreachable rather than merely unlikely. Returns
-  `{ rate, source: 'recent', observedOn } | null`. **No per-row writer reads it.** Its two consumers
+- `findLatestFrozenRate(scope, { tripId, from, to })` — the most recent rate this trip has already
+  frozen for that ordered pair (the receipt currency to the row's own currency, never inverted), read
+  from the frozen `exchange_rate` on `expenses` and, after `00-S1`, on `settlements`. It resolves the
+  trip in the caller's scope first, so a trip of another workspace or a private trip the caller is not
+  on is a `NotFoundError` and nothing is read. Built on `tenantFilter()`, so the query starts from
+  `eq(expenses.organizationId, scope.ctx.organizationId)`; a rate from another tenant is unreachable
+  rather than merely unlikely. A row with no source figures (the all-null "paid in the accounting
+  currency" row) is never an observation. Returns `{ rate, source: 'recent', observedOn } | null`.
+  Both this function and the `recent` source of `resolveRate` run **one** frozen-rate query over
+  expenses and payments, restricted to the trips the caller can read (`readableTripFilter`: a
+  private trip is readable only by its members, a workspace-visible one by every member), with the
+  trip id narrowing it only when given. The workspace filter alone is not enough: it would hand a
+  private trip's rate to a member who is not on it. **No per-row writer reads it.** Its two consumers
   are the pre-filled converted figure described under **UI** — which the reader sees, can overwrite,
   and which is discarded the moment they type over it — and `resolveRate` below, which reaches it on
   behalf of the display conversion and of `04-S5`'s previewed whole-trip re-basing. Neither of those
   is a receipt form, and neither can put a rate on a row a reader did not confirm.
 - `resolveRate(scope, { from, to, on, manual? })` — the seam. It consults, in order: a rate the
   caller was given by a reader (`source: 'manual'`, used only by `04-S5`'s whole-trip re-basing),
-  then `findLatestFrozenRate`, then the KV cache under `fx:<from>:<to>:<date>`, then the injected
-  `RateSource` port. **The port has no implementation in this stage**; see **Blockers**. It returns
-  `null` when nothing answers, and it never invents, extrapolates or rounds a rate into existence.
+  then the most recent rate the workspace has frozen for the ordered pair over the trips the caller
+  can read (`source: 'recent'`, the query `findLatestFrozenRate` shares), then the injected
+  `RateSource` port. **The port has no implementation in this stage and there is no cache**: the KV
+  cache is `04-S7`'s, because nothing writes it until a provider exists; see **Blockers**. A manual
+  rate that is not finite and positive is refused, and so is a port answer. It returns
+  `{ rate, source } | null`, `null` when nothing answers, and it never invents, extrapolates or rounds a rate into existence.
   **It is never reached from a per-row writer.** Its two callers across this whole plan are the
   display conversion in `loadCosts`, which changes what a figure looks like and never what is
   stored, and `changeTripCurrency` in `04-S5`, which the reader confirms against a preview. The unit
@@ -479,10 +491,9 @@ where a _live_ one will one day come from. All SQL is here.
   `rates.ts` writes a row at all. `setDisplayCurrency` resolves the row by
   `organization_id` **and** the caller's own `user_id` inside the scope, and stores `NULL` for "each
   trip in its own currency" rather than a reserved code.
-- The KV read/write follows the shape `src/server/billing/entitlements.ts:110-136` already
-  established: a malformed or stale-shaped entry is a miss, never an error, and the TTL is a named
-  constant beside the reason for its length. Only the rate path uses it: a preference is one row read
-  by primary key and is never cached, so it can never be stale.
+- A preference is one row read by primary key and is never cached, so it can never be stale. The
+  rate cache (its read, its write, its key and the cross-tenant assertion) is `04-S7`'s; it follows
+  the shape `src/server/billing/entitlements.ts:110-136` already established.
 
 **Repository — `src/server/repos/expenses.ts` (edit).** **One** writer changes, and it is the
 settlement writer.
@@ -744,10 +755,16 @@ Functions covered: `findLatestFrozenRate`, `resolveRate` and `setDisplayCurrency
 and `updateExpense` are not covered here — they are unchanged by this stage and their isolation cases
 already exist in that file.
 
-The rate cache gets its own assertion, because it is the one thing here that is deliberately shared:
-a cache key is a currency pair and a date, which is a public fact and correctly shared across
-tenants — but `findLatestFrozenRate` reads tenant rows and its result is never written to that cache.
-The test asserts a key derived from tenant data cannot be constructed by the module.
+The frozen-rate reads get their own cases in the same block: a trip of B is a `NotFoundError` for
+`findLatestFrozenRate` in A's scope; a rate frozen in B never answers either function in A; and a
+rate frozen on a private trip of A's workspace that the caller is not a member of never answers
+either function, while a rate frozen on a workspace-visible trip does (the case `04-S5`'s preview
+requires).
+
+The rate cache's assertion is `04-S7`'s, with the cache: a cache key is a currency pair and a date,
+which is a public fact and correctly shared across tenants — but `findLatestFrozenRate` reads tenant
+rows and its result is never written to that cache. The test asserts a key derived from tenant data
+cannot be constructed by the module.
 
 ### Verification
 
@@ -764,9 +781,10 @@ The test asserts a key derived from tenant data cannot be constructed by the mod
   consult no rate. No reserved code is a control value anywhere in the function, which is the
   regression test for the sentinel this stage removed.
 - `src/server/repos/__tests__/rates.test.ts` (new) — `resolveRate` prefers a manual rate over a
-  frozen one, a frozen one over the cache and the cache over the port; it returns `null` rather than
-  a guess when nothing answers; a malformed cache entry is a miss and not a throw;
-  `findLatestFrozenRate` returns the most recent observation and ignores rows from another trip.
+  frozen one and a frozen one over the port; it returns `null` rather than a guess when nothing
+  answers; `findLatestFrozenRate` returns the most recent observation and ignores rows from another
+  trip and the all-null payment. The cache cases (a malformed entry is a miss and not a throw) are
+  `04-S7`'s.
   `setDisplayCurrency` round-trips a code and round-trips `NULL`, and writing `NULL` after a code
   restores the per-trip rendering rather than leaving the previous code behind — the state machine
   has two states and both are reachable in both directions. And
@@ -886,8 +904,8 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked for every surface
   `11-boundaries-and-blockers.md` (`11-S3`) records the constraint: a tier whose terms exclude a
   commercial, subscription-funded product is unusable to us at any traffic level, and what a provider
   permits us to **cache**, and for how long, decides the cost more than the per-call price does.
-  Disposition: **defer**. This stage builds the `RateSource` port, the KV cache around it and every
-  surface that consumes a rate, and ships with the two sources that need no provider — the converted
+  Disposition: **defer**. This stage builds the `RateSource` port and every surface that consumes a
+  rate (the KV cache around the port is `04-S7`'s: nothing writes it until a provider exists), and ships with the two sources that need no provider — the converted
   figure the reader reads off their own statement, which is what a stored rate is derived from today
   and stays so, and the most recent rate this workspace already used for that pair, offered as a
   suggestion. It does not write a client for an unnamed service and does not degrade into inventing a
@@ -895,7 +913,7 @@ On top of those, the `docs/SPEC.md` §2 visual clauses, ticked for every surface
   When the decision lands, `04-S7` implements the port and nothing above it changes.
 
 No package outside the `docs/SPEC.md` §3 pinned set is needed: the conversion is arithmetic, the
-formatting is `Intl`, the cache is the `KV` binding that already exists.
+formatting is `Intl`, the cache (`04-S7`) is the `KV` binding that already exists.
 
 **No new binding and no new cron trigger is required either**, and that is checkable against
 `wrangler.jsonc` rather than borrowed from another plan. `11-boundaries-and-blockers.md` (`11-S3`)
@@ -2802,13 +2820,14 @@ Four rows across three other plans wait on the same decision and become buildabl
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
   this stage adds its own PNGs and overwrites nobody else's.
 
-Deliberately small. `04-S1` builds the port, the cache, the refusal path and every surface that
-consumes a rate; this stage supplies one implementation of the port. If landing a provider requires
+Deliberately small. `04-S1` builds the port, the refusal path and every surface that consumes a
+rate; this stage supplies one implementation of the port and the cache around it. If landing a provider requires
 more than these four files, the seam `04-S1` built was wrong and that is the finding, not the
 workaround.
 
 The isolation suite is `append`, not `edit`: the case this stage owns is the cache-key rule, which is
-its own subject and its own block, so it never edits the block `04-S1` wrote.
+its own subject and its own block, so it never edits the block `04-S1` wrote (frozen-rate reads
+only; the cache is this stage's).
 
 Its two exclusive claims — `src/server/repos/rates.ts` and its test — are both held by `04-S1` in
 wave 1, four waves earlier, so they are cross-wave and legal rather than a collision. That is a
@@ -2825,7 +2844,7 @@ feature — never a schema shaped around a provider nobody has chosen, because w
 us to **retain** differs from provider to provider and is often the binding term.
 
 A rate that is merely cached, not retained, needs no table: the `KV` binding already exists and
-`04-S1` already writes through it. If the chosen provider's terms require a retention record — a
+this stage writes through it (`04-S1` ships no cache). If the chosen provider's terms require a retention record — a
 snapshot of what was published on a given day, held for audit — that is one additive table filed to
 `00-foundations.md` at that time, holding any amount as an integer in minor units paired with a
 separate `text(3)` ISO-4217 currency column, exactly as every other table in this area.
@@ -2839,6 +2858,12 @@ re-open trips that were settled.
 **Repository — `src/server/repos/rates.ts` (edit).** One implementation of the `RateSource` port.
 The rules it must satisfy, all of which are contracts `04-S1` already relies on:
 
+- The rate cache lands here, between the frozen rate and the port: `fx:<from>:<to>:<date>`, a named
+  TTL beside the reason for its length, and the read/write shape of
+  `src/server/billing/entitlements.ts:110-136`. The key is built only from validated codes and a
+  validated date; a cached value is validated as finite and positive, else it is a miss; only a
+  provider answer is ever cached (never a frozen or a manual rate); and no server function writes
+  the keys.
 - The outbound call is never made on the request path when the cache can answer it
   (`docs/ARCHITECTURE.md` §4).
 - The credential is a secret, set through `wrangler secret`, never a checked-in value and never

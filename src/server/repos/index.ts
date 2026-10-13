@@ -21,6 +21,7 @@
  * | `transports`    | `transports` |
  * | `reservations`  | `reservations` |
  * | `expenses`      | `budget_items`, `expenses`, `expense_shares`, `settlements` |
+ * | `rates`         | — reads `expenses` and `settlements` for the newest frozen rate of a currency pair |
  * | `lists`         | `packing_lists`, `packing_items`, `packing_templates`, `packing_template_items` |
  * | `files`         | `trip_files` |
  * | `collab`        | `collab_messages`, `collab_message_reactions`, `collab_notes`, `collab_polls`, `collab_poll_votes`, `check_ins` |
@@ -57,6 +58,7 @@ export * from './lists'
 export * from './members'
 export * from './notifications'
 export * from './places'
+export * from './rates'
 export * from './reservations'
 export * from './settings'
 export * from './tags'

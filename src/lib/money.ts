@@ -227,6 +227,49 @@ export function impliedRate(input: {
   return Number.isFinite(rate) && rate > 0 ? rate : null
 }
 
+/**
+ * An amount in one currency's minor unit, expressed in another's.
+ *
+ * `rate` is major-per-major: `1 <from> = rate <to>`, so the figure is the amount times the rate with
+ * the difference in minor-unit digits applied — a yen is not a hundredth of anything, and a dinar has
+ * a thousand fils. It is rounded half-up (away from zero) exactly once, at the end, and returned as an
+ * integer.
+ *
+ * Throws on a rate that is not finite and positive (and on an amount that is not a safe integer, or
+ * a result that does not fit one) rather than answering `NaN` or `0`: a converted figure that is
+ * silently wrong is worse than one that is missing. A same-currency conversion at rate 1 is the
+ * identity.
+ */
+export function convertMinor(
+  minor: number,
+  rate: number,
+  from: string,
+  to: string,
+): number {
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw new RangeError('A conversion rate must be a finite, positive number.')
+  }
+  if (!Number.isSafeInteger(minor)) {
+    throw new RangeError('A minor-unit amount must be a safe integer.')
+  }
+  const digitShift = minorUnitDigits(to) - minorUnitDigits(from)
+  // Divide by a power of ten rather than multiply by a negative one: `10 ** 2` is exact, `10 ** -2`
+  // is not, and the division is correctly rounded.
+  const scaled =
+    digitShift >= 0
+      ? minor * rate * 10 ** digitShift
+      : (minor * rate) / 10 ** -digitShift
+  // 15 significant digits is what a double holds honestly; trimming the representation noise stops
+  // an exact half (`1.15 × 10`) from landing a hair under it and rounding the wrong way.
+  // Half away from zero, so a net balance of -2.5 and +2.5 convert to mirror images, and never `-0`.
+  const magnitude = Math.round(Math.abs(Number(scaled.toPrecision(15))))
+  const converted = minor < 0 && magnitude !== 0 ? -magnitude : magnitude
+  if (!Number.isSafeInteger(converted)) {
+    throw new RangeError('The converted amount does not fit a safe integer.')
+  }
+  return converted
+}
+
 /* -------------------------------------------------------------------------- */
 /* Parsing                                                                    */
 /* -------------------------------------------------------------------------- */
