@@ -343,6 +343,8 @@ describe('the legend link', () => {
 
     expect(dimmed(container)).toEqual([])
     await user.click(legendRow('Food & drink'))
+    // The click also hovers the row; only the pin may be left dimming the ring.
+    await user.unhover(legendRow('Food & drink'))
 
     expect(legendRow('Food & drink').getAttribute('aria-pressed')).toBe('true')
     expect(legendRow('Transport').getAttribute('aria-pressed')).toBe('false')
@@ -370,6 +372,7 @@ describe('the legend link', () => {
 
     await user.click(legendRow('Food & drink'))
     await user.click(legendRow('Transport'))
+    await user.unhover(legendRow('Transport'))
 
     expect(legendRow('Food & drink').getAttribute('aria-pressed')).toBe('false')
     expect(legendRow('Transport').getAttribute('aria-pressed')).toBe('true')
@@ -406,6 +409,35 @@ describe('the legend link', () => {
     act(() => row.blur())
 
     expect(dimmed(container)).toEqual([])
+  })
+
+  it('pins and unpins from the keyboard', async () => {
+    stubFocusVisible(true)
+    const user = userEvent.setup()
+    renderDonut(ROWS)
+    const row = legendRow('Accommodation')
+
+    await user.tab()
+    expect(document.activeElement).toBe(row)
+    await user.keyboard(' ')
+    expect(row.getAttribute('aria-pressed')).toBe('true')
+    await user.keyboard('{Enter}')
+
+    expect(row.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('returns to the pin once a keyboard focus elsewhere is blurred', () => {
+    stubFocusVisible(true)
+    const { container } = renderDonut(ROWS)
+    const food = legendRow('Food & drink')
+    const transport = legendRow('Transport')
+
+    fireEvent.click(food)
+    act(() => transport.focus())
+    expect(dimmed(container)).toEqual(['accommodation', 'food'])
+    act(() => transport.blur())
+
+    expect(dimmed(container)).toEqual(['accommodation', 'transport'])
   })
 
   it('highlights nothing for focus that a click or a tap left behind', () => {

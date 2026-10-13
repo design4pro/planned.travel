@@ -7,8 +7,9 @@
  * opaque CSS value here so the palette can change without touching this file.
  *
  * The ring is a picture and is hidden from assistive technology; the legend is its
- * text alternative, so no figure exists only in the drawing. There is no focusable
- * segment and no tooltip: a hand-drawn arc half a degree wide is not a pointer target.
+ * text alternative, so no figure exists only in the drawing. A segment answers a mouse
+ * hover but takes no focus and no press, and there is no tooltip: a thin arc is not a
+ * reliable pointer target, so the legend row is the control.
  *
  * A legend row with spend is a button that pins its segment, and the ring and the
  * legend highlight each other: a mouse over a row or a segment, or keyboard focus on a
@@ -30,7 +31,7 @@ import type { FocusEvent, PointerEvent } from 'react'
 import type { Locale } from '#/lib/i18n'
 
 export interface DonutRow {
-  /** The category; also what a later highlight refers to. */
+  /** The category; also what the legend link (highlight and pin) refers to. */
   readonly key: string
   /** The caller's category label. */
   readonly label: string
@@ -240,7 +241,7 @@ function Legend({
             className={cn(
               // Wider than the list by its own padding, so the row's ground reaches
               // past the text and the inset focus ring stays inside the panel.
-              'focus-ring-inset -mx-2 grid w-[calc(100%+1rem)] grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 gap-y-0.5 rounded-md px-2 py-1 text-start text-caption',
+              'focus-ring-inset -mx-2 grid w-[calc(100%+1rem)] grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 gap-y-0.5 rounded-md px-2 py-1 text-start text-caption active:bg-surface-inset',
               // Pinned is a line as well as a ground, and a box-shadow rather than an
               // outline, which is the property the focus ring uses.
               link.pinned === row.key
