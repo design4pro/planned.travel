@@ -356,21 +356,33 @@ function isPasskeySummary(value: unknown): value is PasskeySummary {
 const UNKNOWN_FAILURE: AuthFailure = { code: null, status: 0, message: '' }
 
 export type PasskeyListResult =
-  | { readonly ok: true; readonly passkeys: ReadonlyArray<PasskeySummary> }
+  | {
+      readonly ok: true
+      readonly passkeys: ReadonlyArray<PasskeySummary>
+      /** A hint for the delete dialog only: `/passkey/delete` decides for itself. */
+      readonly requiresPassword: boolean
+    }
   | { readonly ok: false; readonly failure: AuthFailure }
 
 /** The signed-in person's passkeys, newest first. */
 export async function listPasskeys(): Promise<PasskeyListResult> {
   try {
     const payload = await requestAuth('GET', '/passkey/list')
-    const passkeys =
+    const record =
       typeof payload === 'object' && payload !== null
-        ? (payload as { passkeys?: unknown }).passkeys
-        : undefined
+        ? (payload as { passkeys?: unknown; requiresPassword?: unknown })
+        : {}
+    const { passkeys } = record
     if (!Array.isArray(passkeys) || !passkeys.every(isPasskeySummary)) {
       return { ok: false, failure: UNKNOWN_FAILURE }
     }
-    return { ok: true, passkeys }
+    // Anything but an explicit `false` asks for the password: a dialog that asks too much is
+    // refused by the server and corrected, one that asks too little is not a dialog at all.
+    return {
+      ok: true,
+      passkeys,
+      requiresPassword: record.requiresPassword !== false,
+    }
   } catch (cause) {
     return { ok: false, failure: passkeyFailure(cause) }
   }
@@ -395,6 +407,33 @@ export async function renamePasskey(
       return { ok: false, failure: UNKNOWN_FAILURE }
     }
     return { ok: true, passkey }
+  } catch (cause) {
+    return { ok: false, failure: passkeyFailure(cause) }
+  }
+}
+
+export type PasskeyDeleteResult =
+  { readonly ok: true } | { readonly ok: false; readonly failure: AuthFailure }
+
+/**
+ * Removes a passkey. `password` is sent only when the screen asked for one; the server decides
+ * whether the account needs it and refuses with a code when it does and none came.
+ */
+export async function deletePasskey(
+  id: string,
+  password?: string,
+): Promise<PasskeyDeleteResult> {
+  try {
+    const payload = await postToAuth(
+      '/passkey/delete',
+      password === undefined ? { id } : { id, password },
+    )
+    const deleted =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { deleted?: unknown }).deleted
+        : undefined
+    if (deleted !== true) return { ok: false, failure: UNKNOWN_FAILURE }
+    return { ok: true }
   } catch (cause) {
     return { ok: false, failure: passkeyFailure(cause) }
   }

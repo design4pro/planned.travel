@@ -2,10 +2,10 @@
 
 | Field              | Value                                         |
 | ------------------ | --------------------------------------------- |
-| **Status**         | in-progress                                   |
+| **Status**         | implemented                                   |
 | **Issue**          | none                                          |
 | **Spec PR**        | #1140                                         |
-| **Implementation** | #1185, #1202                                  |
+| **Implementation** | #1185, #1202, #1207                           |
 | **Plan**           | 09-S1 (docs/plans/09-account-and-settings.md) |
 
 ## 📝 TLDR
@@ -630,7 +630,7 @@ Reviewed before the PR opened, through `afk-decide`: "approve this spec for unat
 
 ## Amendment
 
-What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these places. Phase 3 (#1146) is unbuilt; Phase 2 (#1145) is listed after these.
+What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these places. Phase 2 (#1145) and Phase 3 (#1146) are listed after these.
 
 1. **The WebAuthn origin check reads the dev port wildcards.** The design assumed dev trusts loopback origins "by port" for the ceremony too. That held for Better Auth's request-origin check only: `assertClientData` compared with an exact `includes`, so every ceremony on a port other than `APP_URL`'s answered `400 WebAuthn origin is not trusted`. `isTrustedOrigin` in `src/server/auth/passkey/webauthn.ts` now reads a `scheme://host:*` entry as the same scheme and hostname on any port, and refuses any origin that is not in its serialised form. Production's list (`trustedOrigins()`) has no wildcard, and `src/server/auth/__tests__/trusted-origins.test.ts` pins it. The change reaches passkey sign-in as well as registration, because the check is shared.
 2. **`MAX_PASSKEYS_PER_USER` lives in `src/lib/auth/passkey-limit.ts`**, re-exported by the plugin: the screen cannot import server code.
@@ -648,3 +648,11 @@ Phase 2 (09-S1b, #1145) differs from the design in these places:
 11. **Failed saves by status.** `renameFailureNotice` maps a `401` to `passkeys.error.sessionEnded` with Sign in again beside the row, a `429` to `passkeys.error.rateLimited`, anything else to `passkeys.rename.failed`. A save that fails after another row took rename mode says so in the status region instead. `passkeys.rename.saving` is announced there while a save runs.
 12. **A lost reply opens rename mode too.** When the registration reply is lost and the reloaded list holds the new row, that row (the newest) opens in rename mode like any added one.
 13. **A failed save leaves the field open, reachable and filled.** The design (lines "a failed rename reverts the text" and the Rename-request-fails row) and the ticket's acceptance criterion said the text reverts. Build review (WCAG 2.2 3.3.7, Redundant Entry, level A: a retry after a `429` or a dropped connection must not mean typing the name again) overturned that: the typed text stays in the field, and the stored name is still drawn in the row above it. A blur never decides while the field shows an error (it neither saves nor closes), so Sign in again beside the row can be reached; Enter and Escape still decide. A failure after a blur does not move focus back into the input, and focus is handed back after a key-started save only while it is still in the field. Every failure is also announced in the status region (visually hidden, no second Sign in again), the Rename control pressed while its own row saves does not reopen the field, an Enter that ends an IME composition (`isComposing`, or key code 229 in WebKit) does not commit, a failed sign-out from the row puts focus back on that button, and the update is scoped to the caller's `userId` as well as the passkey id.
+
+Phase 3 (09-S1c, #1146) differs from the design in these places:
+
+14. **One definition of "has a password".** `findPasswordHash` in `plugin.ts` returns the credential account's hash only when it is truthy. The list's `requiresPassword` and the delete branch both read it, so a credential row with a null password is a passwordless account for both and takes the fresh-session path; it never reaches `password.verify`.
+15. **Delete order.** Impersonation veto, then the passkey lookup and ownership check (`NOT_FOUND` for another user's id, the row untouched), then the identity proof (`PASSKEY_PASSWORD_REQUIRED` and `PASSKEY_INVALID_PASSWORD` for a password account, `PASSKEY_SESSION_NOT_FRESH` for a passwordless one), then a delete scoped by id and `userId`. The freshness check is the one `assertFreshSession` that registration uses.
+16. **A missing hint asks for the password.** The client reads `requiresPassword !== false`, so a list reply without the field draws the password field; the server decides what it needs either way.
+17. **The delete dialog is its own module** (`passkey-delete-dialog.tsx`) and owns the request, the password and the refusals; the manager owns the list and where focus goes once it has closed. `SignInAgain` moved to `passkey-sign-in-again.tsx` so both read it. The passkey's name sits in a `bdi dir="auto"` inside the translated sentence (a sentinel character is split out of the message, because the catalogue has no markup). The copy gate walks both new files.
+18. **Removing lifts the ceiling line.** A removed passkey clears the standing "limit reached" line, so "Remove one to add another" holds without a reload.

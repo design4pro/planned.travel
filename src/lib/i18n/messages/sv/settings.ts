@@ -588,13 +588,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'För många försök. Försök igen om några minuter.',
   'passkeys.error.generic': 'Kontrollera din anslutning och försök igen.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Byt namn på {name}',
   'passkeys.rename.fieldLabel': 'Ge lösenordsnyckeln ett namn',
   'passkeys.rename.placeholder': 'Ge den ett namn, till exempel Jobbtelefon',
   'passkeys.rename.saving': 'Sparar namnet',
   'passkeys.rename.saved': 'Namnet sparades',
   'passkeys.rename.failed': 'Namnet sparades inte',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Ta bort {name}',
+  'passkeys.delete.title': 'Ta bort den här lösenordsnyckeln?',
+  'passkeys.delete.body': 'Du kommer inte längre kunna logga in med {name}.',
+  'passkeys.delete.password': 'Lösenord',
+  'passkeys.delete.passwordHint': 'Ange ditt lösenord för att bekräfta.',
+  'passkeys.delete.confirmOnly':
+    'Ditt konto har inget lösenord. Bekräfta att du vill ta bort den här lösenordsnyckeln.',
+  'passkeys.delete.confirm': 'Ta bort lösenordsnyckel',
+  'passkeys.delete.cancel': 'Avbryt',
+  'passkeys.delete.wrongPassword': 'Lösenordet stämmer inte.',
+  'passkeys.delete.stale':
+    'Av säkerhetsskäl: logga in igen innan du tar bort en lösenordsnyckel.',
+  'passkeys.delete.removed': 'Lösenordsnyckeln togs bort',
+  'passkeys.delete.failed': 'Lösenordsnyckeln togs inte bort. Försök igen.',
+  'passkeys.delete.removing': 'Tar bort lösenordsnyckeln',
+  'passkeys.delete.passwordRequired':
+    'Ange ditt lösenord för att ta bort den här lösenordsnyckeln.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

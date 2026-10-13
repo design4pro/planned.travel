@@ -615,13 +615,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'Слишком много попыток. Повторите через несколько минут.',
   'passkeys.error.generic': 'Проверьте соединение и повторите попытку.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Переименовать: {name}',
   'passkeys.rename.fieldLabel': 'Назовите этот ключ доступа',
   'passkeys.rename.placeholder': 'Дайте имя, например Рабочий телефон',
   'passkeys.rename.saving': 'Сохраняем название',
   'passkeys.rename.saved': 'Название сохранено',
   'passkeys.rename.failed': 'Название не сохранено',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Удалить: {name}',
+  'passkeys.delete.title': 'Удалить этот ключ доступа?',
+  'passkeys.delete.body': 'Вы больше не сможете входить с помощью: {name}.',
+  'passkeys.delete.password': 'Пароль',
+  'passkeys.delete.passwordHint': 'Введите пароль для подтверждения.',
+  'passkeys.delete.confirmOnly':
+    'У вашей учётной записи нет пароля. Подтвердите, что хотите удалить этот ключ доступа.',
+  'passkeys.delete.confirm': 'Удалить ключ доступа',
+  'passkeys.delete.cancel': 'Отмена',
+  'passkeys.delete.wrongPassword': 'Этот пароль неверный.',
+  'passkeys.delete.stale':
+    'Для вашей безопасности войдите снова, прежде чем удалять ключ доступа.',
+  'passkeys.delete.removed': 'Ключ доступа удалён',
+  'passkeys.delete.failed': 'Ключ доступа не удалён. Попробуйте ещё раз.',
+  'passkeys.delete.removing': 'Удаляем ключ доступа',
+  'passkeys.delete.passwordRequired':
+    'Введите пароль, чтобы удалить этот ключ доступа.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

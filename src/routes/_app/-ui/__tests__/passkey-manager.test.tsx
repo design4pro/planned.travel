@@ -21,6 +21,7 @@ const client = vi.hoisted(() => ({
   listPasskeys: vi.fn(),
   registerPasskey: vi.fn(),
   renamePasskey: vi.fn(),
+  deletePasskey: vi.fn(),
 }))
 
 vi.mock('#/lib/auth/client', () => client)
@@ -1085,5 +1086,445 @@ describe('naming a passkey', () => {
 
     expect(screen.queryByRole('textbox')).toBeNull()
     expect(document.activeElement).toBe(heading)
+  })
+})
+
+describe('removing a passkey', () => {
+  async function mountWithRows(
+    requiresPassword: boolean,
+    ...rows: Array<PasskeySummary>
+  ): Promise<void> {
+    client.listPasskeys.mockResolvedValue({
+      ok: true,
+      passkeys: rows,
+      requiresPassword,
+    })
+    await mount()
+    await screen.findAllByRole('listitem')
+  }
+
+  function removeButton(name: string): HTMLElement {
+    return screen.getByRole('button', { name: `Remove ${name}` })
+  }
+
+  /** The rows behind the dialog: the dialog's own `bdi` repeats the name, so text queries clash. */
+  function rowCount(): number {
+    return document.querySelectorAll('[data-part="passkey-row"]').length
+  }
+
+  function dialog(): HTMLElement {
+    return screen.getByRole('dialog')
+  }
+
+  function passwordInput(): HTMLElement {
+    return within(dialog()).getByLabelText('Password')
+  }
+
+  function confirmButton(): HTMLElement {
+    return within(dialog()).getByRole('button', {
+      name: /Remove passkey|Removing/,
+    })
+  }
+
+  const WORK = passkey({ id: 'pk_1', name: 'Work phone' })
+  const LAPTOP = passkey({ id: 'pk_2', name: 'Laptop' })
+
+  it('names every row’s Remove control with the passkey, the fallback included', async () => {
+    await mountWithRows(true, WORK, passkey({ id: 'pk_2' }))
+
+    expect(removeButton('Work phone')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: /^Remove Passkey · added / }),
+    ).toBeTruthy()
+  })
+
+  describe('on an account with a password', () => {
+    it('asks for the password in a field that is natively required, and names the passkey', async () => {
+      await mountWithRows(true, WORK, LAPTOP)
+
+      await userEvent.click(removeButton('Work phone'))
+
+      expect(
+        within(dialog()).getByRole('heading', { name: 'Remove this passkey?' }),
+      ).toBeTruthy()
+      const description = dialog().getAttribute('aria-describedby') ?? ''
+      const sentence = document.getElementById(description)
+      expect(sentence?.textContent).toBe(
+        'You will no longer be able to sign in with Work phone.',
+      )
+      expect(sentence?.querySelector('bdi')?.getAttribute('dir')).toBe('auto')
+      const input = passwordInput()
+      expect(input.getAttribute('type')).toBe('password')
+      expect(input.hasAttribute('required')).toBe(true)
+      expect(input.getAttribute('autocomplete')).toBe('current-password')
+      expect(
+        within(dialog()).getByText('Enter your password to confirm.'),
+      ).toBeTruthy()
+      expect(within(dialog()).queryByText(/has no password/)).toBeNull()
+    })
+
+    it('sends the password, drops the row, announces it and hands focus to the header Add button', async () => {
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      await mountWithRows(true, WORK, LAPTOP)
+      await userEvent.click(removeButton('Work phone'))
+
+      await userEvent.type(passwordInput(), 'hunter2')
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(client.deletePasskey).toHaveBeenCalledWith('pk_1', 'hunter2')
+      expect(screen.queryByText('Work phone')).toBeNull()
+      expect(screen.getByText('Laptop')).toBeTruthy()
+      expect(screen.getByRole('status').textContent).toBe('Passkey removed')
+      await waitFor(() => expect(document.activeElement).toBe(addButton()))
+    })
+
+    it('does not send an empty password: the field is natively required', async () => {
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+
+      await userEvent.click(confirmButton())
+
+      expect(client.deletePasskey).not.toHaveBeenCalled()
+      expect(dialog()).toBeTruthy()
+    })
+
+    it('says a wrong password inline, keeps the dialog and the row, and focuses the field', async () => {
+      client.deletePasskey.mockResolvedValue(
+        failure(400, 'PASSKEY_INVALID_PASSWORD'),
+      )
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'nope{Enter}')
+
+      expect(
+        await within(dialog()).findByText('That password is not right.'),
+      ).toBeTruthy()
+      expect(passwordInput().getAttribute('aria-invalid')).toBe('true')
+      await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
+      expect(within(dialog()).queryByRole('alert')).toBeNull()
+      expect(rowCount()).toBe(1)
+      expect(confirmButton()).toHaveProperty('disabled', false)
+    })
+
+    it('says a missing password the same inline way', async () => {
+      client.deletePasskey.mockResolvedValue(
+        failure(400, 'PASSKEY_PASSWORD_REQUIRED'),
+      )
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'x{Enter}')
+
+      expect(
+        await within(dialog()).findByText(
+          'Enter your password to remove this passkey.',
+        ),
+      ).toBeTruthy()
+      await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
+    })
+
+    it('can try again after a refusal', async () => {
+      client.deletePasskey
+        .mockResolvedValueOnce(failure(400, 'PASSKEY_INVALID_PASSWORD'))
+        .mockResolvedValueOnce({ ok: true })
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'nope{Enter}')
+      await within(dialog()).findByText('That password is not right.')
+
+      await userEvent.clear(passwordInput())
+      await userEvent.type(passwordInput(), 'right{Enter}')
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(client.deletePasskey).toHaveBeenLastCalledWith('pk_1', 'right')
+    })
+  })
+
+  describe('on an account without a password', () => {
+    it('asks for a plain confirmation and sends no password', async () => {
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      await mountWithRows(false, WORK)
+      await userEvent.click(removeButton('Work phone'))
+
+      expect(within(dialog()).queryByLabelText('Password')).toBeNull()
+      expect(
+        within(dialog()).getByText(
+          'Your account has no password. Confirm that you want to remove this passkey.',
+        ),
+      ).toBeTruthy()
+
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(client.deletePasskey).toHaveBeenCalledWith('pk_1', undefined)
+    })
+
+    it('puts the first focus on Cancel, the safe answer to a destructive question', async () => {
+      await mountWithRows(false, WORK)
+
+      await userEvent.click(removeButton('Work phone'))
+
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          within(dialog()).getByRole('button', { name: 'Cancel' }),
+        ),
+      )
+    })
+  })
+
+  describe('cancelling', () => {
+    it('returns focus to the Remove control of that row and sends nothing', async () => {
+      await mountWithRows(true, WORK, LAPTOP)
+      await userEvent.click(removeButton('Laptop'))
+
+      await userEvent.click(
+        within(dialog()).getByRole('button', { name: 'Cancel' }),
+      )
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(client.deletePasskey).not.toHaveBeenCalled()
+      await waitFor(() =>
+        expect(document.activeElement).toBe(removeButton('Laptop')),
+      )
+      expect(screen.getByText('Laptop')).toBeTruthy()
+    })
+
+    it('does the same on Escape', async () => {
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+
+      await userEvent.keyboard('{Escape}')
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await waitFor(() =>
+        expect(document.activeElement).toBe(removeButton('Work phone')),
+      )
+    })
+
+    it('starts the next opening clean: no password and no earlier refusal', async () => {
+      client.deletePasskey.mockResolvedValue(
+        failure(400, 'PASSKEY_INVALID_PASSWORD'),
+      )
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'nope{Enter}')
+      await within(dialog()).findByText('That password is not right.')
+      await userEvent.click(
+        within(dialog()).getByRole('button', { name: 'Cancel' }),
+      )
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+      await userEvent.click(removeButton('Work phone'))
+
+      expect((passwordInput() as HTMLInputElement).value).toBe('')
+      expect(
+        within(dialog()).queryByText('That password is not right.'),
+      ).toBeNull()
+    })
+  })
+
+  describe('while the request runs', () => {
+    it('disables Cancel, shows the loading label, sends once and ignores Escape', async () => {
+      let finish: (value: unknown) => void = () => {}
+      client.deletePasskey.mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+      )
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'hunter2{Enter}')
+
+      expect(
+        within(dialog()).getByRole('button', { name: 'Cancel' }),
+      ).toHaveProperty('disabled', true)
+      expect(confirmButton().textContent).toContain('Removing the passkey')
+      expect(confirmButton()).toHaveProperty('disabled', true)
+
+      await userEvent.keyboard('{Escape}')
+      await userEvent.keyboard('{Enter}')
+      expect(screen.getByRole('dialog')).toBeTruthy()
+      expect(client.deletePasskey).toHaveBeenCalledTimes(1)
+
+      finish({ ok: true })
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    })
+  })
+
+  describe.each([
+    ['with a password', true],
+    ['without one', false],
+  ])('every other refusal, %s', (_label, requiresPassword) => {
+    async function refuse(result: unknown): Promise<HTMLElement> {
+      client.deletePasskey.mockResolvedValue(result)
+      await mountWithRows(requiresPassword, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      if (requiresPassword) await userEvent.type(passwordInput(), 'x{Enter}')
+      else await userEvent.click(confirmButton())
+      return within(dialog()).findByRole('alert')
+    }
+
+    it.each([
+      [
+        'a stale session',
+        failure(400, 'PASSKEY_SESSION_NOT_FRESH'),
+        'For your safety, sign in again before removing a passkey.',
+      ],
+      [
+        'an ended session',
+        failure(401),
+        'Your session has ended. Sign in again to continue.',
+      ],
+      [
+        'a rate limit',
+        failure(429),
+        'Too many attempts. Try again in a few minutes.',
+      ],
+      [
+        'a passkey that is gone',
+        failure(404, 'PASSKEY_NOT_FOUND'),
+        'The passkey was not removed. Try again.',
+      ],
+      [
+        'an impersonated session',
+        failure(403, 'PASSKEY_IMPERSONATED'),
+        'The passkey was not removed. Try again.',
+      ],
+      [
+        'a dropped connection',
+        failure(0),
+        'The passkey was not removed. Try again.',
+      ],
+    ])(
+      'shows %s in one alert that takes focus, and keeps the dialog and the row',
+      async (_name, result, text) => {
+        const alert = await refuse(result)
+
+        expect(alert.textContent).toContain(text)
+        expect(alert.textContent).not.toContain('English')
+        await waitFor(() => expect(document.activeElement).toBe(alert))
+        expect(within(dialog()).getAllByRole('alert')).toHaveLength(1)
+        expect(rowCount()).toBe(1)
+      },
+    )
+
+    it('offers Sign in again, and only, for a stale or an ended session', async () => {
+      const stale = await refuse(failure(400, 'PASSKEY_SESSION_NOT_FRESH'))
+      expect(
+        within(stale).getByRole('button', { name: 'Sign in again' }),
+      ).toBeTruthy()
+    })
+
+    it('does not offer Sign in again for a refusal that signing in cannot fix', async () => {
+      const alert = await refuse(failure(404, 'PASSKEY_NOT_FOUND'))
+      expect(within(alert).queryByRole('button')).toBeNull()
+    })
+
+    it('never shows the server message', async () => {
+      await refuse(failure(500, 'SOMETHING_ELSE'))
+      expect(screen.queryByText('English')).toBeNull()
+    })
+  })
+
+  it('puts focus back on Sign in again when signing out fails inside the dialog', async () => {
+    client.deletePasskey.mockResolvedValue(
+      failure(400, 'PASSKEY_SESSION_NOT_FRESH'),
+    )
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
+    await mountWithRows(false, WORK)
+    await userEvent.click(removeButton('Work phone'))
+    await userEvent.click(confirmButton())
+    await userEvent.click(
+      await within(dialog()).findByRole('button', { name: 'Sign in again' }),
+    )
+
+    await within(dialog()).findByText('Check your connection and try again.')
+    const retry = within(dialog()).getByRole('button', {
+      name: 'Sign in again',
+    })
+    await waitFor(() => expect(document.activeElement).toBe(retry))
+    vi.unstubAllGlobals()
+  })
+
+  describe('after a removal', () => {
+    it('empties the list into the empty state and hands focus to the header Add button, not the empty one', async () => {
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      await mountWithRows(false, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.click(confirmButton())
+
+      expect(await screen.findByText('No passkeys yet')).toBeTruthy()
+      await waitFor(() => expect(document.activeElement).toBe(addButton()))
+      const adds = screen.getAllByRole('button', { name: 'Add a passkey' })
+      expect(adds).toHaveLength(2)
+      expect(document.activeElement).toBe(adds[0])
+    })
+
+    it('hands focus to the list heading when the Add button is disabled', async () => {
+      client.isPasskeyEnrolmentSupported.mockReturnValue(false)
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      await mountWithRows(false, WORK, LAPTOP)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole('heading', { name: 'Your passkeys' }),
+        ),
+      )
+    })
+
+    it('lifts the ceiling: the standing limit line goes and Add works again', async () => {
+      const full = Array.from({ length: MAX_PASSKEYS_PER_USER }, (_, index) =>
+        passkey({ id: `pk_${index}`, name: `Key ${index}` }),
+      )
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      await mountWithRows(false, ...full)
+      expect(addButton()).toHaveProperty('disabled', true)
+      expect(screen.getByText(/You have reached the limit of/)).toBeTruthy()
+
+      await userEvent.click(removeButton('Key 0'))
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(addButton()).toHaveProperty('disabled', false))
+      expect(screen.queryByText(/You have reached the limit of/)).toBeNull()
+      await waitFor(() => expect(document.activeElement).toBe(addButton()))
+    })
+
+    it('lifts a limit the server refused with, which the list had not predicted', async () => {
+      client.registerPasskey.mockResolvedValue({
+        ok: false,
+        aborted: false,
+        alreadyEnrolled: false,
+        failure: { code: 'PASSKEY_LIMIT_REACHED', status: 400, message: '' },
+      })
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      await mountWithRows(false, WORK, LAPTOP)
+      await userEvent.click(addButton())
+      await screen.findAllByText(/You have reached the limit of/)
+
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(addButton()).toHaveProperty('disabled', false))
+    })
+
+    it('closes the rename field of the removed row', async () => {
+      client.deletePasskey.mockResolvedValue({ ok: true })
+      client.registerPasskey.mockResolvedValue({
+        ok: true,
+        passkey: passkey({ id: 'pk_new' }),
+      })
+      await mountWithRows(false, WORK)
+      await userEvent.click(addButton())
+      await screen.findByRole('textbox', { name: 'Name this passkey' })
+      const remove = screen.getAllByRole('button', { name: /^Remove / })[0]
+      fireEvent.click(remove)
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(screen.queryByRole('textbox')).toBeNull()
+    })
   })
 })

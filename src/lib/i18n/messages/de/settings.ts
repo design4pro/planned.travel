@@ -601,13 +601,32 @@ const messages = {
     'Zu viele Versuche. Versuch es in ein paar Minuten noch einmal.',
   'passkeys.error.generic':
     'Prüfe deine Verbindung und versuch es noch einmal.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '{name} umbenennen',
   'passkeys.rename.fieldLabel': 'Gib diesem Zugangsschlüssel einen Namen',
   'passkeys.rename.placeholder': 'Gib ihm einen Namen, z. B. Diensthandy',
   'passkeys.rename.saving': 'Name wird gespeichert',
   'passkeys.rename.saved': 'Name gespeichert',
   'passkeys.rename.failed': 'Der Name wurde nicht gespeichert',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '{name} entfernen',
+  'passkeys.delete.title': 'Diesen Zugangsschlüssel entfernen?',
+  'passkeys.delete.body': 'Du kannst dich dann nicht mehr mit {name} anmelden.',
+  'passkeys.delete.password': 'Passwort',
+  'passkeys.delete.passwordHint': 'Gib zur Bestätigung dein Passwort ein.',
+  'passkeys.delete.confirmOnly':
+    'Dein Konto hat kein Passwort. Bestätige, dass du diesen Zugangsschlüssel entfernen möchtest.',
+  'passkeys.delete.confirm': 'Zugangsschlüssel entfernen',
+  'passkeys.delete.cancel': 'Abbrechen',
+  'passkeys.delete.wrongPassword': 'Dieses Passwort ist nicht richtig.',
+  'passkeys.delete.stale':
+    'Zu deiner Sicherheit: Melde dich erneut an, bevor du einen Zugangsschlüssel entfernst.',
+  'passkeys.delete.removed': 'Zugangsschlüssel entfernt',
+  'passkeys.delete.failed':
+    'Der Zugangsschlüssel wurde nicht entfernt. Versuche es erneut.',
+  'passkeys.delete.removing': 'Zugangsschlüssel wird entfernt',
+  'passkeys.delete.passwordRequired':
+    'Gib dein Passwort ein, um diesen Zugangsschlüssel zu entfernen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

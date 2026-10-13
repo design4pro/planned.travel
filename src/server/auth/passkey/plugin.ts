@@ -12,7 +12,12 @@ import { setSessionCookie } from 'better-auth/cookies'
 import * as z from 'zod'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import type { BetterAuthPlugin } from 'better-auth'
-import { base64UrlDecode, base64UrlEncode, utf8Decode, utf8Encode } from './bytes'
+import {
+  base64UrlDecode,
+  base64UrlEncode,
+  utf8Decode,
+  utf8Encode,
+} from './bytes'
 import {
   createChallenge,
   verifyAuthentication,
@@ -49,12 +54,18 @@ const REGISTRATION_PATHS: ReadonlySet<string> = new Set([
 const RENAME_RATE_LIMIT = { window: 300, max: 5 } as const
 const RENAME_PATH = '/passkey/rename'
 
+/** Removing a sign-in factor is as sensitive as renaming one and gets the same tight budget. */
+const DELETE_RATE_LIMIT = { window: 300, max: 5 } as const
+const DELETE_PATH = '/passkey/delete'
+
 /** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */
 export const PASSKEY_ERROR_CODES = {
   limitReached: 'PASSKEY_LIMIT_REACHED',
   sessionNotFresh: 'PASSKEY_SESSION_NOT_FRESH',
   impersonated: 'PASSKEY_IMPERSONATED',
   notFound: 'PASSKEY_NOT_FOUND',
+  passwordRequired: 'PASSKEY_PASSWORD_REQUIRED',
+  invalidPassword: 'PASSKEY_INVALID_PASSWORD',
 } as const
 
 export type PasskeyPluginOptions = {
@@ -126,22 +137,27 @@ type ImpersonationGuardContext = RefusalContext & {
   context: { session: { session: { id: string; impersonatedBy?: unknown } } }
 }
 
-/** The slice of an endpoint context the registration guards read. */
-type RegistrationGuardContext = ImpersonationGuardContext & {
+/** The slice of an endpoint context the freshness rule reads. */
+type RegistrationFreshnessContext = RefusalContext & {
   context: {
-    session: {
-      session: { createdAt: Date | string }
-      user: { id: string }
-    }
+    session: { session: { createdAt: Date | string } }
     sessionConfig: { freshAge: number }
-    adapter: {
-      count: (input: {
-        model: string
-        where: Array<{ field: string; value: string }>
-      }) => Promise<number>
-    }
   }
 }
+
+/** The slice of an endpoint context the registration guards read. */
+type RegistrationGuardContext = ImpersonationGuardContext &
+  RegistrationFreshnessContext & {
+    context: {
+      session: { user: { id: string } }
+      adapter: {
+        count: (input: {
+          model: string
+          where: Array<{ field: string; value: string }>
+        }) => Promise<number>
+      }
+    }
+  }
 
 /**
  * An impersonated session is refused for every operator, because a passkey an operator registers
@@ -164,31 +180,38 @@ function assertNotImpersonated(
 }
 
 /**
+ * The session must be younger than the library's `freshAge` (0 switches the check off, as in the
+ * library). Written so that an unreadable `createdAt` (NaN) refuses instead of passing.
+ */
+function assertFreshSession(
+  ctx: RegistrationFreshnessContext,
+  message: string,
+): void {
+  const freshAge = ctx.context.sessionConfig.freshAge * 1000
+  if (freshAge === 0) return
+  const age =
+    Date.now() - new Date(ctx.context.session.session.createdAt).getTime()
+  if (!(age < freshAge)) {
+    throw ctx.error('BAD_REQUEST', {
+      code: PASSKEY_ERROR_CODES.sessionNotFresh,
+      message,
+    })
+  }
+}
+
+/**
  * Evaluated first on both registration endpoints, before any read or write.
  *
  * - The impersonation veto above.
- * - The session must be younger than the library's `freshAge` (0 switches the check off, as in
- *   the library), for every account. A borrowed 30-day session that adds a passkey would otherwise
- *   keep access after a password reset, which revokes sessions and not passkeys.
+ * - A fresh session, for every account. A borrowed 30-day session that adds a passkey would
+ *   otherwise keep access after a password reset, which revokes sessions and not passkeys.
  */
 function assertMayRegister(ctx: RegistrationGuardContext): void {
   assertNotImpersonated(
     ctx,
     'An impersonated session cannot register a passkey.',
   )
-  const { session } = ctx.context.session
-
-  const freshAge = ctx.context.sessionConfig.freshAge * 1000
-  if (freshAge !== 0) {
-    const age = Date.now() - new Date(session.createdAt).getTime()
-    // Written so that an unreadable `createdAt` (NaN) refuses instead of passing.
-    if (!(age < freshAge)) {
-      throw ctx.error('BAD_REQUEST', {
-        code: PASSKEY_ERROR_CODES.sessionNotFresh,
-        message: 'Sign in again to add a passkey.',
-      })
-    }
-  }
+  assertFreshSession(ctx, 'Sign in again to add a passkey.')
 }
 
 /** Refuses at the ceiling. Called before anything is written or consumed. */
@@ -203,6 +226,32 @@ async function assertUnderCeiling(ctx: RegistrationGuardContext) {
       message: 'The passkey limit has been reached.',
     })
   }
+}
+
+/** The slice of an endpoint context that reads the credential account. */
+type CredentialContext = {
+  context: {
+    internalAdapter: {
+      findCredentialAccount: (
+        userId: string,
+      ) => Promise<{ password?: string | null } | null>
+    }
+  }
+}
+
+/**
+ * The one definition of "has a password": a credential account whose hash is set (the library's
+ * `shouldRequirePassword`). The list hint and the delete branch both read it, so they cannot
+ * disagree; a credential row with a null hash counts as no password and never reaches
+ * `password.verify`.
+ */
+async function findPasswordHash(
+  ctx: CredentialContext,
+  userId: string,
+): Promise<string | null> {
+  const account =
+    await ctx.context.internalAdapter.findCredentialAccount(userId)
+  return account?.password ? account.password : null
 }
 
 function descriptorsFor(passkeys: Array<StoredPasskey>) {
@@ -229,6 +278,10 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
       {
         pathMatcher: (candidate: string) => candidate === RENAME_PATH,
         ...RENAME_RATE_LIMIT,
+      },
+      {
+        pathMatcher: (candidate: string) => candidate === DELETE_PATH,
+        ...DELETE_RATE_LIMIT,
       },
     ],
 
@@ -426,13 +479,12 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
             const account =
               await ctx.context.internalAdapter.findUserByEmail(email)
             if (account) {
-              const passkeys = await ctx.context.adapter.findMany<StoredPasskey>(
-                {
+              const passkeys =
+                await ctx.context.adapter.findMany<StoredPasskey>({
                   model: 'passkey',
                   where: [{ field: 'userId', value: account.user.id }],
                   limit: 50,
-                },
-              )
+                })
               allowCredentials = descriptorsFor(passkeys)
             }
           }
@@ -470,7 +522,9 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
 
           const record = await ctx.context.adapter.findOne<StoredPasskey>({
             model: 'passkey',
-            where: [{ field: 'credentialId', value: ctx.body.credential.rawId }],
+            where: [
+              { field: 'credentialId', value: ctx.body.credential.rawId },
+            ],
           })
           if (!record) {
             throw ctx.error('UNAUTHORIZED', {
@@ -534,18 +588,26 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
         },
       ),
 
-      /** GET `/passkey/list` — the signed-in user's registered passkeys. */
+      /**
+       * GET `/passkey/list` — the signed-in user's registered passkeys. `requiresPassword` is a hint
+       * that only decides which dialog the screen draws: `/passkey/delete` decides for itself.
+       */
       listPasskeys: createAuthEndpoint(
         '/passkey/list',
         { method: 'GET', use: [sessionMiddleware] },
         async (ctx) => {
+          const { user } = ctx.context.session
           const passkeys = await ctx.context.adapter.findMany<StoredPasskey>({
             model: 'passkey',
-            where: [{ field: 'userId', value: ctx.context.session.user.id }],
+            where: [{ field: 'userId', value: user.id }],
             sortBy: { field: 'createdAt', direction: 'desc' },
             limit: 50,
           })
-          return ctx.json({ passkeys: passkeys.map(toPublicPasskey) })
+          const passwordHash = await findPasswordHash(ctx, user.id)
+          return ctx.json({
+            passkeys: passkeys.map(toPublicPasskey),
+            requiresPassword: passwordHash !== null,
+          })
         },
       ),
 
@@ -595,25 +657,67 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
         },
       ),
 
-      /** POST `/passkey/delete` — remove one of the user's passkeys. */
+      /**
+       * POST `/passkey/delete` — remove one of the user's passkeys, after the person proves it is
+       * them. The server decides how: a password when the account has one (a missing and a wrong
+       * one are distinct refusals), a session younger than `freshAge` when it has none. The body
+       * and the list hint are never trusted for that choice.
+       */
       deletePasskey: createAuthEndpoint(
-        '/passkey/delete',
+        DELETE_PATH,
         {
           method: 'POST',
           use: [sessionMiddleware],
-          body: z.object({ id: z.string().min(1) }),
+          body: z.strictObject({
+            id: z.string().min(1),
+            password: z.string().min(1).optional(),
+          }),
         },
         async (ctx) => {
+          assertNotImpersonated(
+            ctx,
+            'An impersonated session cannot remove a passkey.',
+          )
+          const { user } = ctx.context.session
           const record = await ctx.context.adapter.findOne<StoredPasskey>({
             model: 'passkey',
             where: [{ field: 'id', value: ctx.body.id }],
           })
-          if (!record || record.userId !== ctx.context.session.user.id) {
-            throw ctx.error('NOT_FOUND', { message: 'Passkey not found.' })
+          // Ownership comes before the identity proof, so another person's id is not-found
+          // whatever else was sent, and the endpoint never confirms that their credential exists.
+          if (!record || record.userId !== user.id) {
+            throw ctx.error('NOT_FOUND', {
+              code: PASSKEY_ERROR_CODES.notFound,
+              message: 'Passkey not found.',
+            })
           }
+
+          const passwordHash = await findPasswordHash(ctx, user.id)
+          if (passwordHash === null) {
+            assertFreshSession(ctx, 'Sign in again to remove a passkey.')
+          } else if (ctx.body.password === undefined) {
+            throw ctx.error('BAD_REQUEST', {
+              code: PASSKEY_ERROR_CODES.passwordRequired,
+              message: 'Enter your password to remove a passkey.',
+            })
+          } else if (
+            !(await ctx.context.password.verify({
+              hash: passwordHash,
+              password: ctx.body.password,
+            }))
+          ) {
+            throw ctx.error('BAD_REQUEST', {
+              code: PASSKEY_ERROR_CODES.invalidPassword,
+              message: 'That password is not right.',
+            })
+          }
+
           await ctx.context.adapter.delete({
             model: 'passkey',
-            where: [{ field: 'id', value: record.id }],
+            where: [
+              { field: 'id', value: record.id },
+              { field: 'userId', value: user.id },
+            ],
           })
           return ctx.json({ deleted: true })
         },

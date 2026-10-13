@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  deletePasskey,
   isPasskeyEnrolmentSupported,
   listPasskeys,
   registerPasskey,
@@ -287,11 +288,17 @@ describe('registerPasskey', () => {
 
 describe('listPasskeys', () => {
   it('reads with GET, sends the cookie and no body', async () => {
-    fetchMock.mockResolvedValueOnce(reply(200, { passkeys: [PASSKEY] }))
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { passkeys: [PASSKEY], requiresPassword: true }),
+    )
 
     const result = await listPasskeys()
 
-    expect(result).toEqual({ ok: true, passkeys: [PASSKEY] })
+    expect(result).toEqual({
+      ok: true,
+      passkeys: [PASSKEY],
+      requiresPassword: true,
+    })
     expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/passkey/list')
     const init = fetchMock.mock.calls[0][1]
     expect(init).toMatchObject({ method: 'GET', credentials: 'include' })
@@ -299,8 +306,31 @@ describe('listPasskeys', () => {
   })
 
   it('returns an empty list as a success', async () => {
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { passkeys: [], requiresPassword: false }),
+    )
+    expect(await listPasskeys()).toEqual({
+      ok: true,
+      passkeys: [],
+      requiresPassword: false,
+    })
+  })
+
+  it('passes the password hint through when it is false', async () => {
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { passkeys: [PASSKEY], requiresPassword: false }),
+    )
+    expect(await listPasskeys()).toMatchObject({ requiresPassword: false })
+  })
+
+  it('asks for the password when the hint is missing or not a boolean', async () => {
     fetchMock.mockResolvedValueOnce(reply(200, { passkeys: [] }))
-    expect(await listPasskeys()).toEqual({ ok: true, passkeys: [] })
+    expect(await listPasskeys()).toMatchObject({ requiresPassword: true })
+
+    fetchMock.mockResolvedValueOnce(
+      reply(200, { passkeys: [], requiresPassword: 'no' }),
+    )
+    expect(await listPasskeys()).toMatchObject({ requiresPassword: true })
   })
 
   it.each([401, 429, 500])(
@@ -369,5 +399,64 @@ describe('renamePasskey', () => {
     fetchMock.mockResolvedValueOnce(reply(200, { ok: true }))
 
     expect(await renamePasskey('pk_1', 'x')).toMatchObject({ ok: false })
+  })
+})
+
+describe('deletePasskey', () => {
+  it('posts the id and the password with the cookie', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, { deleted: true }))
+
+    expect(await deletePasskey('pk_1', 'hunter2')).toEqual({ ok: true })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/auth/passkey/delete')
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'POST',
+      credentials: 'include',
+    })
+    expect(sentBody(0)).toEqual({ id: 'pk_1', password: 'hunter2' })
+  })
+
+  it('sends no password field for a plain confirmation', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, { deleted: true }))
+
+    await deletePasskey('pk_1')
+
+    expect(sentBody(0)).toEqual({ id: 'pk_1' })
+  })
+
+  it.each([
+    [400, 'PASSKEY_PASSWORD_REQUIRED'],
+    [400, 'PASSKEY_INVALID_PASSWORD'],
+    [400, 'PASSKEY_SESSION_NOT_FRESH'],
+    [403, 'PASSKEY_IMPERSONATED'],
+    [404, 'PASSKEY_NOT_FOUND'],
+    [401, null],
+    [429, null],
+  ])(
+    'carries the status %i and code %s of a refused delete',
+    async (status, code) => {
+      fetchMock.mockResolvedValueOnce(
+        reply(status, { ...(code ? { code } : {}), message: 'No.' }),
+      )
+
+      expect(await deletePasskey('pk_1', 'x')).toEqual({
+        ok: false,
+        failure: { code, status, message: 'No.' },
+      })
+    },
+  )
+
+  it('reports a dropped connection as a failure with status 0', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+
+    expect(await deletePasskey('pk_1')).toMatchObject({
+      ok: false,
+      failure: { status: 0 },
+    })
+  })
+
+  it('does not report success for a reply that does not say it deleted', async () => {
+    fetchMock.mockResolvedValueOnce(reply(200, {}))
+
+    expect(await deletePasskey('pk_1')).toMatchObject({ ok: false })
   })
 })

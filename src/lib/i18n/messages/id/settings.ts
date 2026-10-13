@@ -580,13 +580,32 @@ const messages = {
   'passkeys.error.rateLimited':
     'Terlalu banyak percobaan. Coba lagi dalam beberapa menit.',
   'passkeys.error.generic': 'Periksa koneksi Anda lalu coba lagi.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Ganti nama {name}',
   'passkeys.rename.fieldLabel': 'Beri nama kunci sandi ini',
   'passkeys.rename.placeholder': 'Beri nama, misalnya Ponsel kerja',
   'passkeys.rename.saving': 'Menyimpan nama',
   'passkeys.rename.saved': 'Nama disimpan',
   'passkeys.rename.failed': 'Nama tidak disimpan',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Hapus {name}',
+  'passkeys.delete.title': 'Hapus kunci sandi ini?',
+  'passkeys.delete.body': 'Anda tidak akan bisa lagi masuk dengan {name}.',
+  'passkeys.delete.password': 'Kata sandi',
+  'passkeys.delete.passwordHint':
+    'Masukkan kata sandi Anda untuk mengonfirmasi.',
+  'passkeys.delete.confirmOnly':
+    'Akun Anda tidak memiliki kata sandi. Konfirmasi bahwa Anda ingin menghapus kunci sandi ini.',
+  'passkeys.delete.confirm': 'Hapus kunci sandi',
+  'passkeys.delete.cancel': 'Batal',
+  'passkeys.delete.wrongPassword': 'Kata sandi itu tidak tepat.',
+  'passkeys.delete.stale':
+    'Demi keamanan Anda, masuk lagi sebelum menghapus kunci sandi.',
+  'passkeys.delete.removed': 'Kunci sandi dihapus',
+  'passkeys.delete.failed': 'Kunci sandi tidak dihapus. Coba lagi.',
+  'passkeys.delete.removing': 'Menghapus kunci sandi',
+  'passkeys.delete.passwordRequired':
+    'Masukkan kata sandi Anda untuk menghapus kunci sandi ini.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

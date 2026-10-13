@@ -134,7 +134,7 @@ export default defineConfig({
   // walk; the stay walk puts the project in its marker, so its two projects
   // never count each other's badges. `ACC-03` in `e2e/account-and-settings.spec.ts` is one more
   // writer: a Chromium-only serial walk that registers a passkey for the demo member through a
-  // virtual authenticator and deletes it in its `finally`. The real contention is the auth rate
+  // virtual authenticator, takes it away through the delete dialog and, if it failed first, deletes it in its `finally`. The real contention is the auth rate
   // limiter's single per-path bucket, which `hasSession()` now asks once per worker.
   // One per CI shard, measured: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two

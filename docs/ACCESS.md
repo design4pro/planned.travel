@@ -1071,8 +1071,8 @@ is the second set of admin hands this section rules out. The `passkey` endpoints
 but `/passkey/register/options` and `/passkey/register/verify` answer `FORBIDDEN` with
 `PASSKEY_IMPERSONATED` when `session.impersonatedBy` is set at all, an empty string included: the
 raw column is read, not the `asString`-normalised value `guard.ts` sees, so these endpoints are
-never weaker than the guard. `/passkey/rename` takes the same veto (ticket #1145), and removing a
-passkey takes it when that endpoint lands (ticket #1146 of the passkey spec). Registration also
+never weaker than the guard. `/passkey/rename` takes the same veto (ticket #1145), and so does `/passkey/delete` (ticket #1146),
+before it looks the passkey up. Registration also
 needs a session younger than `session.freshAge` (24 hours), for every account, because a borrowed
 thirty-day session that adds a passkey would keep its access after a password reset, which revokes
 sessions and not passkeys.

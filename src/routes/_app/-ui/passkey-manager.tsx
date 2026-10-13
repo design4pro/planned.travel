@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Fingerprint, Pencil, Plus } from 'lucide-react'
+import { Fingerprint, Pencil, Plus, Trash2 } from 'lucide-react'
 
-import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
 import {
   Alert,
   Badge,
@@ -21,14 +20,18 @@ import { cn } from '#/lib/cn'
 import { useI18n } from '#/lib/i18n'
 import { formatDate, formatNumber } from '../-lib/format'
 import {
+  SIGN_OUT_FAILED,
   loadFailureNotice,
   registrationOutcome,
   renameFailureNotice,
 } from '../-lib/passkey-errors'
+import { PasskeyDeleteDialog } from './passkey-delete-dialog'
 import { PasskeyRenameField } from './passkey-rename-field'
+import { SignInAgain } from './passkey-sign-in-again'
 
 import type { Ref } from 'react'
 import type { PasskeySummary } from '#/lib/auth/client'
+import type { I18nContextValue } from '#/lib/i18n'
 import type { PasskeyNotice } from '../-lib/passkey-errors'
 
 type ListState =
@@ -37,6 +40,8 @@ type ListState =
   | {
       readonly status: 'ready'
       readonly passkeys: ReadonlyArray<PasskeySummary>
+      /** Which dialog the Remove control draws; the server decides for itself on delete. */
+      readonly requiresPassword: boolean
     }
 
 /**
@@ -50,6 +55,18 @@ interface RenameState {
   readonly attention: number
 }
 
+/**
+ * The passkey whose removal dialog is, or was just, on screen. The dialog stays mounted while it
+ * closes so its exit and its focus hand-over run; `serial` gives each opening fresh state, and
+ * `removed` tells the hand-over whether the opener row still exists.
+ */
+interface Removal {
+  readonly passkey: PasskeySummary
+  readonly open: boolean
+  readonly removed: boolean
+  readonly serial: number
+}
+
 /** Where focus goes once an outcome has settled and the Add button is enabled again. */
 type FocusTarget = 'add' | 'heading' | 'signIn'
 
@@ -59,16 +76,15 @@ const ADDED: PasskeyNotice = {
   tone: 'neutral',
   signInAgain: false,
 }
-// Keeps the Sign in again action mounted, so a failed sign-out can be tried again and the focused
-// button never unmounts under the person.
-const SIGN_OUT_FAILED: PasskeyNotice = {
-  key: 'settings.passkeys.error.generic',
-  tone: 'danger',
-  signInAgain: true,
-}
 // The standing limit line is the visible text; this is only its announcement.
 const LIMIT_REACHED: PasskeyNotice = {
   key: 'settings.passkeys.add.limit',
+  tone: 'neutral',
+  signInAgain: false,
+}
+
+const REMOVED: PasskeyNotice = {
+  key: 'settings.passkeys.delete.removed',
   tone: 'neutral',
   signInAgain: false,
 }
@@ -91,58 +107,12 @@ const SKELETON_ROWS = 3
 async function fetchList(): Promise<ListState> {
   const result = await listPasskeys()
   return result.ok
-    ? { status: 'ready', passkeys: result.passkeys }
+    ? {
+        status: 'ready',
+        passkeys: result.passkeys,
+        requiresPassword: result.requiresPassword,
+      }
     : { status: 'failed', notice: loadFailureNotice(result.failure) }
-}
-
-/**
- * Signing in again from a signed-in session is a loop: `/login` sends a signed-in visitor
- * straight back. So the session is ended first, and the sign-in returns to this screen.
- */
-function SignInAgain({
-  buttonRef,
-  onFailed,
-}: {
-  buttonRef?: Ref<HTMLButtonElement>
-  onFailed: () => void
-}) {
-  const { t } = useI18n()
-  const [pending, setPending] = useState(false)
-
-  async function signInAgain(): Promise<void> {
-    setPending(true)
-    try {
-      const response = await fetch(SIGN_OUT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: '{}',
-      })
-      if (!response.ok) throw new Error(`Sign out failed: ${response.status}`)
-      // An untyped href: the sign-in routes live outside this tree.
-      window.location.assign(
-        `/login?redirect=${encodeURIComponent('/passkeys')}`,
-      )
-    } catch {
-      setPending(false)
-      onFailed()
-    }
-  }
-
-  return (
-    <Button
-      ref={buttonRef}
-      variant="secondary"
-      size="sm"
-      shape="pill"
-      loading={pending}
-      loadingLabel={t('settings.passkeys.signInAgain')}
-      onClick={() => {
-        void signInAgain()
-      }}
-    >
-      {t('settings.passkeys.signInAgain')}
-    </Button>
-  )
 }
 
 /** The Add button, drawn in the header and again in the empty state, with the same states. */
@@ -178,6 +148,16 @@ function AddPasskeyButton({
   )
 }
 
+/** The passkey's own name, or the display-only fallback built from its date, never saved. */
+function displayNameOf(
+  passkey: PasskeySummary,
+  { t, locale }: Pick<I18nContextValue, 't' | 'locale'>,
+): string {
+  if (passkey.name !== null) return passkey.name
+  const added = formatDate(passkey.createdAt, locale) ?? passkey.createdAt
+  return t('settings.passkeys.row.fallbackName', { date: added })
+}
+
 /** True while focus is in the rename field, or nowhere (a disabled control dropped it). */
 function focusIsInRenameField(): boolean {
   const active = document.activeElement
@@ -192,7 +172,9 @@ function PasskeyRow({
   passkey,
   rename,
   registerRenameButton,
+  registerRemoveButton,
   onStartRename,
+  onStartRemove,
   onSubmitName,
   onCancelRename,
   onSignOutFailed,
@@ -202,17 +184,19 @@ function PasskeyRow({
   /** Set only on the row that is in rename mode. */
   rename: RenameState | null
   registerRenameButton: (element: HTMLButtonElement | null) => void
+  registerRemoveButton: (element: HTMLButtonElement | null) => void
   onStartRename: () => void
+  onStartRemove: () => void
   onSubmitName: (value: string, viaKey: boolean) => void
   onCancelRename: (viaKey: boolean) => void
   onSignOutFailed: () => void
   signInRef: Ref<HTMLButtonElement>
 }) {
-  const { t, locale } = useI18n()
+  const i18n = useI18n()
+  const { t, locale } = i18n
   const added = formatDate(passkey.createdAt, locale) ?? passkey.createdAt
   const lastUsed = formatDate(passkey.lastUsedAt, locale)
-  const displayName =
-    passkey.name ?? t('settings.passkeys.row.fallbackName', { date: added })
+  const displayName = displayNameOf(passkey, i18n)
 
   return (
     <li
@@ -276,6 +260,15 @@ function PasskeyRow({
         label={t('settings.passkeys.rename.action', { name: displayName })}
         onClick={onStartRename}
       />
+      <IconButton
+        ref={registerRemoveButton}
+        data-part="passkey-delete"
+        size="sm"
+        variant="danger"
+        icon={<Trash2 />}
+        label={t('settings.passkeys.delete.action', { name: displayName })}
+        onClick={onStartRemove}
+      />
     </li>
   )
 }
@@ -285,7 +278,8 @@ function PasskeyRow({
  * ceremony. UI only; every call goes through `#/lib/auth/client`.
  */
 export function PasskeyManager() {
-  const { t, locale } = useI18n()
+  const i18n = useI18n()
+  const { t, locale } = i18n
   const [list, setList] = useState<ListState>(LOADING)
   // `null` until the support check has run, so a supported browser never flashes the
   // "cannot create passkeys" line.
@@ -302,6 +296,9 @@ export function PasskeyManager() {
   // The row whose Rename control takes focus back once its rename mode has closed.
   const [renameFocusId, setRenameFocusId] = useState<string | null>(null)
   const renameButtons = useRef(new Map<string, HTMLButtonElement>())
+  const removeButtons = useRef(new Map<string, HTMLButtonElement>())
+  const [removal, setRemoval] = useState<Removal | null>(null)
+  const removalSerial = useRef(0)
   // Read by a save that finishes after another row took over rename mode.
   const renameRef = useRef<RenameState | null>(null)
   const addRef = useRef<HTMLButtonElement>(null)
@@ -386,7 +383,7 @@ export function PasskeyManager() {
         previous.status === 'ready' &&
         !previous.passkeys.some(({ id }) => id === result.passkey.id)
           ? {
-              status: 'ready',
+              ...previous,
               passkeys: [result.passkey, ...previous.passkeys],
             }
           : previous,
@@ -480,7 +477,7 @@ export function PasskeyManager() {
       setList((previous) =>
         previous.status === 'ready'
           ? {
-              status: 'ready',
+              ...previous,
               passkeys: previous.passkeys.map((entry) =>
                 entry.id === id ? result.passkey : entry,
               ),
@@ -516,6 +513,58 @@ export function PasskeyManager() {
     // Another row took rename mode while this one saved: the status region says so instead.
     setStatus(notice)
     setStatusTick((tick) => tick + 1)
+  }
+
+  function startRemove(passkey: PasskeySummary): void {
+    removalSerial.current += 1
+    setRemoval({
+      passkey,
+      open: true,
+      removed: false,
+      serial: removalSerial.current,
+    })
+  }
+
+  function cancelRemove(): void {
+    setRemoval((previous) =>
+      previous === null ? previous : { ...previous, open: false },
+    )
+  }
+
+  function passkeyRemoved(id: string): void {
+    setList((previous) =>
+      previous.status === 'ready'
+        ? {
+            ...previous,
+            passkeys: previous.passkeys.filter((entry) => entry.id !== id),
+          }
+        : previous,
+    )
+    // A refusal at the ceiling is stale the moment a row is gone: "Remove one to add another".
+    setLimitHit(false)
+    // The row may be the one in rename mode; its field goes with it.
+    if (renameRef.current?.id === id) setRename(null)
+    setRemoval((previous) =>
+      previous === null
+        ? previous
+        : { ...previous, open: false, removed: true },
+    )
+    setStatus(REMOVED)
+    setStatusTick((tick) => tick + 1)
+  }
+
+  // The dialog closes either by Cancel or Escape, which return to the row's Remove control, or by a
+  // removal, after which the row is gone: focus goes to the header Add button, or to the list
+  // heading when that is disabled, so it never falls to <body>.
+  function returnFocusAfterRemove(event: Event): void {
+    event.preventDefault()
+    let target: HTMLElement | null = headingRef.current
+    if (removal?.removed === true) {
+      if (!addDisabled) target = addRef.current ?? target
+    } else {
+      target = removeButtons.current.get(removal?.passkey.id ?? '') ?? target
+    }
+    target?.focus()
   }
 
   function signOutFailed(): void {
@@ -647,8 +696,15 @@ export function PasskeyManager() {
                   if (element === null) renameButtons.current.delete(passkey.id)
                   else renameButtons.current.set(passkey.id, element)
                 }}
+                registerRemoveButton={(element) => {
+                  if (element === null) removeButtons.current.delete(passkey.id)
+                  else removeButtons.current.set(passkey.id, element)
+                }}
                 onStartRename={() => {
                   startRename(passkey.id)
+                }}
+                onStartRemove={() => {
+                  startRemove(passkey)
                 }}
                 onSubmitName={(value, viaKey) => {
                   void submitName(passkey.id, value, viaKey)
@@ -676,6 +732,23 @@ export function PasskeyManager() {
           </ul>
         ) : null}
       </section>
+
+      {removal === null || list.status !== 'ready' ? null : (
+        <PasskeyDeleteDialog
+          key={removal.serial}
+          passkey={removal.passkey}
+          displayName={displayNameOf(removal.passkey, i18n)}
+          open={removal.open}
+          requiresPassword={list.requiresPassword}
+          onOpenChange={(open) => {
+            if (!open) cancelRemove()
+          }}
+          onRemoved={() => {
+            passkeyRemoved(removal.passkey.id)
+          }}
+          onCloseAutoFocus={returnFocusAfterRemove}
+        />
+      )}
     </div>
   )
 }

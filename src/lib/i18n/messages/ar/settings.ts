@@ -589,13 +589,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'محاولات كثيرة جدًا. حاول مرة أخرى بعد بضع دقائق.',
   'passkeys.error.generic': 'تحقق من اتصالك وحاول مرة أخرى.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'إعادة تسمية {name}',
   'passkeys.rename.fieldLabel': 'سمِّ مفتاح المرور هذا',
   'passkeys.rename.placeholder': 'سمّه، مثل هاتف العمل',
   'passkeys.rename.saving': 'جارٍ حفظ الاسم',
   'passkeys.rename.saved': 'تم حفظ الاسم',
   'passkeys.rename.failed': 'لم يتم حفظ الاسم',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'إزالة {name}',
+  'passkeys.delete.title': 'هل تريد إزالة مفتاح المرور هذا؟',
+  'passkeys.delete.body': 'لن تتمكن بعد الآن من تسجيل الدخول باستخدام {name}.',
+  'passkeys.delete.password': 'كلمة المرور',
+  'passkeys.delete.passwordHint': 'أدخل كلمة المرور للتأكيد.',
+  'passkeys.delete.confirmOnly':
+    'حسابك لا يحتوي على كلمة مرور. أكّد أنك تريد إزالة مفتاح المرور هذا.',
+  'passkeys.delete.confirm': 'إزالة مفتاح المرور',
+  'passkeys.delete.cancel': 'إلغاء',
+  'passkeys.delete.wrongPassword': 'كلمة المرور هذه غير صحيحة.',
+  'passkeys.delete.stale':
+    'حفاظًا على أمانك، سجّل الدخول مرة أخرى قبل إزالة مفتاح المرور.',
+  'passkeys.delete.removed': 'تمت إزالة مفتاح المرور',
+  'passkeys.delete.failed': 'لم تتم إزالة مفتاح المرور. حاول مرة أخرى.',
+  'passkeys.delete.removing': 'جارٍ إزالة مفتاح المرور',
+  'passkeys.delete.passwordRequired':
+    'أدخل كلمة المرور لإزالة مفتاح المرور هذا.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

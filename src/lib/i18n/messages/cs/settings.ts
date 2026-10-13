@@ -598,13 +598,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'Příliš mnoho pokusů. Zkuste to znovu za pár minut.',
   'passkeys.error.generic': 'Zkontrolujte připojení a zkuste to znovu.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Přejmenovat {name}',
   'passkeys.rename.fieldLabel': 'Pojmenujte tento přístupový klíč',
   'passkeys.rename.placeholder': 'Pojmenujte ho, například Pracovní telefon',
   'passkeys.rename.saving': 'Ukládáme název',
   'passkeys.rename.saved': 'Název byl uložen',
   'passkeys.rename.failed': 'Název nebyl uložen',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Odebrat {name}',
+  'passkeys.delete.title': 'Odebrat tento přístupový klíč?',
+  'passkeys.delete.body': 'Pomocí {name} se už nebudete moci přihlásit.',
+  'passkeys.delete.password': 'Heslo',
+  'passkeys.delete.passwordHint': 'Pro potvrzení zadejte své heslo.',
+  'passkeys.delete.confirmOnly':
+    'Váš účet nemá heslo. Potvrďte, že chcete tento přístupový klíč odebrat.',
+  'passkeys.delete.confirm': 'Odebrat přístupový klíč',
+  'passkeys.delete.cancel': 'Zrušit',
+  'passkeys.delete.wrongPassword': 'Toto heslo není správné.',
+  'passkeys.delete.stale':
+    'Pro vaši bezpečnost se před odebráním přístupového klíče přihlaste znovu.',
+  'passkeys.delete.removed': 'Přístupový klíč byl odebrán',
+  'passkeys.delete.failed': 'Přístupový klíč nebyl odebrán. Zkuste to znovu.',
+  'passkeys.delete.removing': 'Odebíráme přístupový klíč',
+  'passkeys.delete.passwordRequired':
+    'Pro odebrání tohoto přístupového klíče zadejte své heslo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
