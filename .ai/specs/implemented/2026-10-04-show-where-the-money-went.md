@@ -2,10 +2,10 @@
 
 | Field              | Value                                          |
 | ------------------ | ---------------------------------------------- |
-| **Status**         | in-progress                                    |
+| **Status**         | implemented                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #827                                           |
-| **Implementation** | #1199, #1206                                   |
+| **Implementation** | #1199, #1206, #1211                            |
 | **Plan**           | 04-S4 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR
@@ -597,3 +597,8 @@ What Phase 1 shipped differently from the text above (#1199):
 - **No row reads 100% while another row has spend.** `allocatePercents` passes the last point to the next biggest remainder instead of raising a row to 100, so food at 99.7% and fees at 0.3% read 99% and `<1%`. The allocated integers still sum to 100.
 - **Owned paths:** `src/components/__tests__/logical-properties.test.ts` also changed (its two `-costs/rail.tsx` entries guarded the bar list this phase removes).
 - **The legend list carries `role="list"`**, because Safari drops the list role, and its label, from a grid list.
+
+What Phase 3 shipped differently from the text above (#1211):
+
+- **The per-member sums live in `components/costs/data.ts`** (`memberShares`, beside `totalsFor`); `stat-tiles.tsx` only attaches names. The segment geometry is `memberSegments` in `chart-geometry.ts`, and `MemberSegment` carries `weightMinor`.
+- **The footer's `dt` labels ("Your share", "You paid") wrap instead of truncating.** Now they are catalogue strings, a longer translation (pl "Zapłacone przez Ciebie") was cut to an ellipsis in the half-width column; they use `[overflow-wrap:anywhere]` like the member list. The `dd` figures still truncate.

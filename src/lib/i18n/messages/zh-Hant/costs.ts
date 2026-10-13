@@ -147,6 +147,17 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': '不到 {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': '這筆錢花在了誰身上',
+  'memberBar.others': {
+    other: '另外 {others} 位旅行者',
+  },
+  'memberBar.notSplit': '未分配給任何人',
+  'totalTile.label': '行程總支出',
+  'totalTile.captionPlanned': '所有旅行者合計預計 {amount}',
+  'totalTile.captionBudget': '行程預算 {amount}',
+  'totalTile.yourShare': '你的份額',
+  'totalTile.youPaid': '你已支付',
   /* ------------------------------------------------- payments recorded */
   'payments.label': '已記錄的付款',
   'payments.empty.title': '尚無付款',

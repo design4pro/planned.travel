@@ -160,6 +160,17 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'dưới {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Khoản chi dành cho ai',
+  'memberBar.others': {
+    other: '{others} người đi khác',
+  },
+  'memberBar.notSplit': 'Chưa gán cho ai',
+  'totalTile.label': 'Tổng chi phí chuyến đi',
+  'totalTile.captionPlanned': 'Dự kiến {amount} cho tất cả người đi',
+  'totalTile.captionBudget': 'Ngân sách chuyến đi {amount}',
+  'totalTile.yourShare': 'Phần của bạn',
+  'totalTile.youPaid': 'Bạn đã trả',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Khoản trả đã ghi',
   'payments.empty.title': 'Chưa có khoản trả nào',

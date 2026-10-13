@@ -156,6 +156,17 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': '{percent} 미만',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': '누구를 위한 지출인가요',
+  'memberBar.others': {
+    other: '외 여행자 {others}명',
+  },
+  'memberBar.notSplit': '누구에게도 배정되지 않음',
+  'totalTile.label': '여행 총지출',
+  'totalTile.captionPlanned': '모든 여행자 합계 {amount} 예정',
+  'totalTile.captionBudget': '여행 예산 {amount}',
+  'totalTile.yourShare': '내 분담액',
+  'totalTile.youPaid': '내가 결제한 금액',
   /* ------------------------------------------------- payments recorded */
   'payments.label': '기록된 결제',
   'payments.empty.title': '아직 결제가 없습니다',
