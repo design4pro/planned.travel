@@ -134,7 +134,7 @@ export function StatTiles({
                 lives under "By category", on a surface built for it. */}
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
               <div className="min-w-0">
-                <dt className="truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
+                <dt className="text-micro font-semibold uppercase tracking-label text-inverse-muted [overflow-wrap:anywhere]">
                   {t('costs.totalTile.yourShare')}
                 </dt>
                 <dd className="truncate text-label font-semibold tabular-nums text-inverse-on">
@@ -142,7 +142,7 @@ export function StatTiles({
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
+                <dt className="text-micro font-semibold uppercase tracking-label text-inverse-muted [overflow-wrap:anywhere]">
                   {t('costs.totalTile.youPaid')}
                 </dt>
                 <dd className="truncate text-label font-semibold tabular-nums text-inverse-on">

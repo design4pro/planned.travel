@@ -173,7 +173,7 @@ const messages = {
   'totalTile.label': 'Az utazás teljes költése',
   'totalTile.captionPlanned': '{amount} tervezve az összes utazónak',
   'totalTile.captionBudget': '{amount} költségvetés az utazásra',
-  'totalTile.yourShare': 'Te részed',
+  'totalTile.yourShare': 'A te részed',
   'totalTile.youPaid': 'Te fizettél',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Rögzített fizetések',
