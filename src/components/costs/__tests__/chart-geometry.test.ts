@@ -5,11 +5,12 @@ import {
   MIN_SWEEP_DEGREES,
   allocatePercents,
   formatSharePercent,
+  memberSegments,
   ringGeometry,
   ringPath,
 } from '../chart-geometry'
 
-import type { RingSegment } from '../chart-geometry'
+import type { MemberSegment, RingSegment } from '../chart-geometry'
 
 function row(key: string, spentMinor: number) {
   return { key, spentMinor }
@@ -282,5 +283,179 @@ describe('formatSharePercent', () => {
     expect(formatSharePercent(0.5, 50, 'de').text).toBe(
       formatPercent(0.5, 'de'),
     )
+  })
+})
+
+function member(userId: string, shareMinor: number) {
+  return { userId, name: userId.toUpperCase(), shareMinor }
+}
+
+function summary(segments: ReadonlyArray<MemberSegment>): Array<string> {
+  return segments.map((segment) =>
+    segment.kind === 'member'
+      ? segment.userId
+      : segment.kind === 'others'
+        ? `others:${segment.count}`
+        : 'unassigned',
+  )
+}
+
+function percentsOf(segments: ReadonlyArray<MemberSegment>): Array<number> {
+  return segments.map((segment) => segment.percent)
+}
+
+describe('memberSegments', () => {
+  it('has nothing to show for no members or no shares', () => {
+    expect(memberSegments([], 1_000)).toEqual([])
+    expect(memberSegments([member('a', 0)], 0)).toEqual([])
+  })
+
+  it('drops members with a zero share', () => {
+    const segments = memberSegments(
+      [member('a', 500), member('b', 0), member('c', 500)],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['a', 'c'])
+  })
+
+  it('measures each share against the spend and sums the percents to 100', () => {
+    const segments = memberSegments(
+      [member('a', 300), member('b', 300), member('c', 400)],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['c', 'a', 'b'])
+    expect(segments.map((segment) => segment.share)).toEqual([0.4, 0.3, 0.3])
+    expect(percentsOf(segments)).toEqual([40, 30, 30])
+  })
+
+  it('orders by share descending and breaks a tie by ascending user id', () => {
+    const segments = memberSegments(
+      [member('c', 100), member('a', 100), member('b', 100), member('d', 700)],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['d', 'a', 'b', 'c'])
+  })
+
+  it('adds one "Not assigned to anyone" segment when the shares fall short', () => {
+    const segments = memberSegments([member('a', 600), member('b', 300)], 1_000)
+
+    expect(summary(segments)).toEqual(['a', 'b', 'unassigned'])
+    expect(segments[2].share).toBeCloseTo(0.1, 10)
+    expect(percentsOf(segments)).toEqual([60, 30, 10])
+  })
+
+  it('has no remainder segment when the shares cover the spend exactly', () => {
+    const segments = memberSegments([member('a', 600), member('b', 400)], 1_000)
+
+    expect(summary(segments)).toEqual(['a', 'b'])
+  })
+
+  it('measures against the sum of the shares when they exceed the spend', () => {
+    const segments = memberSegments([member('a', 900), member('b', 300)], 1_000)
+
+    expect(summary(segments)).toEqual(['a', 'b'])
+    expect(segments.map((segment) => segment.share)).toEqual([0.75, 0.25])
+    expect(percentsOf(segments)).toEqual([75, 25])
+  })
+
+  it('measures against the sum when the spend is not a positive number', () => {
+    const segments = memberSegments(
+      [member('a', 500), member('b', 500)],
+      Number.NaN,
+    )
+
+    expect(percentsOf(segments)).toEqual([50, 50])
+  })
+
+  it('shows four members as they are', () => {
+    const segments = memberSegments(
+      [member('a', 400), member('b', 300), member('c', 200), member('d', 100)],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('groups everyone past the top three into one "others" segment', () => {
+    const segments = memberSegments(
+      [
+        member('a', 300),
+        member('b', 250),
+        member('c', 200),
+        member('d', 150),
+        member('e', 100),
+      ],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['a', 'b', 'c', 'others:2'])
+    expect(segments[3].share).toBeCloseTo(0.25, 10)
+    expect(percentsOf(segments)).toEqual([30, 25, 20, 25])
+  })
+
+  it('has at most five segments: three, others and the remainder', () => {
+    const segments = memberSegments(
+      [
+        member('a', 200),
+        member('b', 150),
+        member('c', 120),
+        member('d', 90),
+        member('e', 60),
+        member('f', 30),
+      ],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['a', 'b', 'c', 'others:3', 'unassigned'])
+    expect(segments).toHaveLength(5)
+  })
+
+  it('counts only members with a share when it groups the others', () => {
+    const segments = memberSegments(
+      [
+        member('a', 400),
+        member('b', 300),
+        member('c', 200),
+        member('d', 100),
+        member('e', 0),
+      ],
+      1_000,
+    )
+
+    expect(summary(segments)).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('always sums the whole percents to 100', () => {
+    const segments = memberSegments(
+      [member('a', 1), member('b', 1), member('c', 1)],
+      3,
+    )
+    const shortOfSpend = memberSegments(
+      [member('a', 1), member('b', 1), member('c', 1)],
+      4,
+    )
+
+    expect(percentsOf(segments).reduce((sum, p) => sum + p, 0)).toBe(100)
+    expect(percentsOf(shortOfSpend).reduce((sum, p) => sum + p, 0)).toBe(100)
+  })
+
+  it('keeps the real share beside the allocated percent for a sliver', () => {
+    const segments = memberSegments(
+      [member('a', 9_990), member('b', 10)],
+      10_000,
+    )
+
+    expect(segments[1].share).toBeCloseTo(0.001, 10)
+    expect(percentsOf(segments)).toEqual([99, 1])
+    expect(
+      formatSharePercent(segments[1].share, segments[1].percent, 'en').belowOne,
+    ).toBe(true)
+  })
+
+  it('returns the one segment of a single member and leaves hiding it to the bar', () => {
+    expect(summary(memberSegments([member('a', 1_000)], 1_000))).toEqual(['a'])
   })
 })

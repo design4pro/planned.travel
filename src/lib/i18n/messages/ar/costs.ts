@@ -168,6 +168,22 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'أقل من {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'على مَن أُنفق المال',
+  'memberBar.others': {
+    zero: '{others} مسافر آخر',
+    one: '{others} مسافر آخر',
+    two: '{others} مسافران آخران',
+    few: '{others} مسافرين آخرين',
+    many: '{others} مسافرًا آخر',
+    other: '{others} مسافر آخر',
+  },
+  'memberBar.notSplit': 'غير مخصّص لأي شخص',
+  'totalTile.label': 'إجمالي إنفاق الرحلة',
+  'totalTile.captionPlanned': 'المخطَّط {amount} لجميع المسافرين',
+  'totalTile.captionBudget': 'ميزانية الرحلة {amount}',
+  'totalTile.yourShare': 'حصتك',
+  'totalTile.youPaid': 'دفعتَ',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'الدفعات المسجّلة',
   'payments.empty.title': 'لا دفعات بعد',

@@ -164,6 +164,20 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'менше {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'На кого витрачено гроші',
+  'memberBar.others': {
+    one: 'ще {others} мандрівник',
+    few: 'ще {others} мандрівники',
+    many: 'ще {others} мандрівників',
+    other: 'ще {others} мандрівника',
+  },
+  'memberBar.notSplit': 'Нікому не призначено',
+  'totalTile.label': 'Загальні витрати на подорож',
+  'totalTile.captionPlanned': 'Заплановано {amount} на всіх мандрівників',
+  'totalTile.captionBudget': 'Бюджет подорожі: {amount}',
+  'totalTile.yourShare': 'Ваша частка',
+  'totalTile.youPaid': 'Ви заплатили',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Записані платежі',
   'payments.empty.title': 'Платежів ще немає',

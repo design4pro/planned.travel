@@ -160,6 +160,17 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': '{percent}未満',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': '誰のための支出か',
+  'memberBar.others': {
+    other: 'ほか{others}人',
+  },
+  'memberBar.notSplit': '誰にも割り当てなし',
+  'totalTile.label': '旅行の支出合計',
+  'totalTile.captionPlanned': '全員で{amount}を予定',
+  'totalTile.captionBudget': '旅行の予算は{amount}',
+  'totalTile.yourShare': 'あなたの負担額',
+  'totalTile.youPaid': 'あなたの支払額',
   /* ------------------------------------------------- payments recorded */
   'payments.label': '記録された支払い',
   'payments.empty.title': 'まだ支払いはありません',

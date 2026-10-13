@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { memberSegments } from '../chart-geometry'
 import {
   applyOps,
   csvFilename,
@@ -12,6 +13,7 @@ import {
   groupByDay,
   isFiltered,
   isOptimisticId,
+  memberShares,
   optimisticId,
   parseDay,
   shareOf,
@@ -575,6 +577,57 @@ describe('totalsFor', () => {
     expect(totals.owedMinor).toBe(0)
     expect(totals.viewerShareMinor).toBe(0)
     expect(totals.viewerPaidMinor).toBe(0)
+  })
+})
+
+describe('memberShares', () => {
+  const summed = (expenses: ReadonlyArray<CostsExpense>) =>
+    memberShares(expenses).map((row) => [row.userId, row.shareMinor])
+
+  it('adds each traveller’s shares over the rows, ascending by user id', () => {
+    expect(summed(ROWS)).toEqual([
+      ['u-jonas', 164_960],
+      ['u-mika', 164_960],
+      ['u-rafal', 164_960],
+    ])
+  })
+
+  it('is empty for no rows or rows with no split', () => {
+    expect(memberShares([])).toEqual([])
+    expect(memberShares([ROWS[2]])).toEqual([])
+  })
+
+  it('follows an in-flight create, and leaves the unsplit expense as the only gap', () => {
+    const created = expense({
+      id: 'pending-abc',
+      amountMinor: 9_000,
+      shares: [
+        { userId: 'u-mika', shareMinor: 6_000, weight: 2, isSettled: false },
+        { userId: 'u-jonas', shareMinor: 3_000, weight: 1, isSettled: false },
+      ],
+    })
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'create', key: 'k1', row: created },
+    ])
+    const members = memberShares(snapshot.expenses).map((row) => ({
+      ...row,
+      name: row.userId,
+    }))
+    const segments = memberSegments(members, snapshot.spentMinor)
+
+    expect(summed(snapshot.expenses)).toEqual([
+      ['u-jonas', 167_960],
+      ['u-mika', 170_960],
+      ['u-rafal', 164_960],
+    ])
+    expect(segments.map((segment) => segment.kind)).toEqual([
+      'member',
+      'member',
+      'member',
+      'unassigned',
+    ])
+    // Only the Konbini run, which has no participants, is unassigned - never the new row.
+    expect(segments[3].weightMinor).toBe(4_800)
   })
 })
 

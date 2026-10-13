@@ -168,6 +168,20 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'меньше {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'На кого потрачены деньги',
+  'memberBar.others': {
+    one: 'ещё {others} путешественник',
+    few: 'ещё {others} путешественника',
+    many: 'ещё {others} путешественников',
+    other: 'ещё {others} путешественника',
+  },
+  'memberBar.notSplit': 'Не отнесено ни к кому',
+  'totalTile.label': 'Общие расходы на поездку',
+  'totalTile.captionPlanned': 'Запланировано {amount} на всех путешественников',
+  'totalTile.captionBudget': 'Бюджет поездки: {amount}',
+  'totalTile.yourShare': 'Ваша доля',
+  'totalTile.youPaid': 'Вы заплатили',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Записанные платежи',
   'payments.empty.title': 'Пока нет платежей',

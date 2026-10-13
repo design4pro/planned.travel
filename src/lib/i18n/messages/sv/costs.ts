@@ -158,6 +158,18 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'mindre än {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Vem pengarna gick till',
+  'memberBar.others': {
+    one: '{others} annan resenär',
+    other: '{others} andra resenärer',
+  },
+  'memberBar.notSplit': 'Inte tilldelat någon',
+  'totalTile.label': 'Reseutgifter totalt',
+  'totalTile.captionPlanned': '{amount} planerat för alla resenärer',
+  'totalTile.captionBudget': '{amount} i budget för resan',
+  'totalTile.yourShare': 'Din andel',
+  'totalTile.youPaid': 'Du betalade',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Registrerade betalningar',
   'payments.empty.title': 'Inga betalningar än',

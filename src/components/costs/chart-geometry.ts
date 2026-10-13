@@ -207,3 +207,93 @@ export function formatSharePercent(
   }
   return { belowOne: false, text: formatPercent(allocated / 100, locale) }
 }
+
+/** The most people the member bar names before it folds the rest into "others". */
+const MEMBER_NAMES_SHOWN = 3
+
+export interface MemberShare {
+  readonly userId: string
+  /** Already resolved for the reader: the viewer's "You", a removed traveller's fallback. */
+  readonly name: string
+  /** Integer minor units of the trip's spend this person's share covers. */
+  readonly shareMinor: number
+}
+
+interface MemberSegmentBase {
+  /** Integer minor units of the spend this segment stands for. */
+  readonly weightMinor: number
+  /** The real share of the whole, between 0 and 1 - not the allocated whole percent. */
+  readonly share: number
+  /** The whole percent `allocatePercents` gave this segment; the segments add up to 100. */
+  readonly percent: number
+}
+
+export type MemberSegment =
+  | (MemberSegmentBase & {
+      readonly kind: 'member'
+      readonly userId: string
+      readonly name: string
+    })
+  | (MemberSegmentBase & {
+      readonly kind: 'others'
+      /** How many people the segment stands for. */
+      readonly count: number
+    })
+  | (MemberSegmentBase & { readonly kind: 'unassigned' })
+
+type MemberDraft<S extends MemberSegment = MemberSegment> = S extends S
+  ? Omit<S, 'share' | 'percent'>
+  : never
+
+/**
+ * Splits the trip's spend into the segments of the member bar.
+ *
+ * Widths are measured against the spend, so when the shares fall short (an expense can
+ * have no participants) the gap is its own `unassigned` segment and nobody is
+ * overstated. Should the shares ever exceed the spend, the sum is the whole instead.
+ * A zero share is left out; past four people the top three by share keep their names
+ * and the rest fold into one `others` segment, so there are at most five segments.
+ * Order is share descending, ties by ascending user id, then `others`, then
+ * `unassigned` - the order the bar and the list beneath it are both drawn in.
+ */
+export function memberSegments(
+  members: ReadonlyArray<MemberShare>,
+  spentMinor: number,
+): Array<MemberSegment> {
+  const sharing = members
+    .filter((member) => isSpend(member.shareMinor))
+    .sort(
+      (a, b) => b.shareMinor - a.shareMinor || (a.userId < b.userId ? -1 : 1),
+    )
+  const shared = sharing.reduce((sum, member) => sum + member.shareMinor, 0)
+  if (shared <= 0) {
+    return []
+  }
+  const whole = isSpend(spentMinor) ? Math.max(spentMinor, shared) : shared
+
+  const named = sharing.length > 4 ? MEMBER_NAMES_SHOWN : sharing.length
+  const folded = sharing.slice(named)
+  const drafts: Array<MemberDraft> = sharing.slice(0, named).map((member) => ({
+    kind: 'member',
+    userId: member.userId,
+    name: member.name,
+    weightMinor: member.shareMinor,
+  }))
+  if (folded.length > 0) {
+    drafts.push({
+      kind: 'others',
+      count: folded.length,
+      weightMinor: folded.reduce((sum, member) => sum + member.shareMinor, 0),
+    })
+  }
+  if (whole > shared) {
+    drafts.push({ kind: 'unassigned', weightMinor: whole - shared })
+  }
+
+  const percents = allocatePercents(drafts.map((draft) => draft.weightMinor))
+  return drafts.map((draft, index): MemberSegment => ({
+    ...draft,
+    share: draft.weightMinor / whole,
+    percent: percents[index],
+  }))
+}
