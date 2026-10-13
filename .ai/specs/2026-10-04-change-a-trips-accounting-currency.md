@@ -55,8 +55,9 @@ What is missing:
 - No way to change the currency that keeps the books true.
 - No `budget_items` source columns, so a planned figure cannot be re-based without rewriting what the
   traveller typed.
-- `convertMinor()`, `resolveRate()` and `src/server/repos/rates.ts` (plan stage `04-S1`) do not exist
-  yet, and `04-S1`, `04-S2`, `04-S3` have no spec at this commit.
+- `convertMinor()`, `resolveRate()` and `src/server/repos/rates.ts` (plan stage `04-S1`, #835) did
+  not exist when this spec was written; they are on `develop` now, and `04-S2`, `04-S3` still have
+  no spec.
 
 Why it matters: a currency change is the traveller correcting "I picked EUR but we are paying in
 JPY". Done as a relabel, 12,400 JPY becomes 12,400 EUR with no error anywhere; done as a re-basing

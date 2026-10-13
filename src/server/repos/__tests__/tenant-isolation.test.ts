@@ -295,6 +295,7 @@ import { dispatch } from '#/server/notifications/dispatch'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
+import { findLatestFrozenRate, resolveRate } from '../rates'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
@@ -5556,6 +5557,123 @@ describe('tenant isolation', () => {
           tripsRepository.requireById(inBeta, alpha.tripId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+  describe('frozen rates', () => {
+    // `findLatestFrozenRate` and `resolveRate` are the first workspace-wide money reads, so the
+    // trip a rate was frozen on decides who may see it: another workspace's, and a private trip of
+    // this one that the caller is not on, never answer (#835, and #839 which depends on it).
+    const pair = { from: 'GBP', to: 'EUR', on: '2026-04-20' } as const
+
+    async function freezeRate(world: World, tripId: string, rate: number) {
+      await createExpense(world.tenant.scope, {
+        tripId,
+        title: 'Receipt in pounds',
+        amountMinor: 11_500,
+        currency: 'EUR',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'GBP',
+        exchangeRate: rate,
+        spentOn: '2026-04-11',
+      })
+    }
+
+    async function snapshot() {
+      return {
+        alphaExpenses: await expensesRepository.findMany(alpha.tenant.scope),
+        betaExpenses: await expensesRepository.findMany(beta.tenant.scope),
+        alphaSettlements: await settlementsRepository.findMany(
+          alpha.tenant.scope,
+        ),
+        betaSettlements: await settlementsRepository.findMany(
+          beta.tenant.scope,
+        ),
+      }
+    }
+
+    it('answers a trip of another workspace as not found, and reads no rate from it', async () => {
+      await freezeRate(beta, beta.tripId, 1.3)
+      const before = await snapshot()
+
+      const refusal = await captureError(() =>
+        findLatestFrozenRate(alpha.tenant.scope, {
+          tripId: beta.tripId,
+          from: 'GBP',
+          to: 'EUR',
+        }),
+      )
+
+      expect(refusal).toBeInstanceOf(NotFoundError)
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('never answers with a rate frozen in another workspace', async () => {
+      await freezeRate(beta, beta.tripId, 1.3)
+      const before = await snapshot()
+
+      expect(await resolveRate(alpha.tenant.scope, pair)).toBeNull()
+      expect(
+        await findLatestFrozenRate(alpha.tenant.scope, {
+          tripId: alpha.tripId,
+          from: 'GBP',
+          to: 'EUR',
+        }),
+      ).toBeNull()
+      // The positive control: the same rate answers in the workspace that froze it.
+      expect((await resolveRate(beta.tenant.scope, pair))?.rate).toBe(1.3)
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('never answers with a rate frozen on a private trip the caller is not on, and does with a workspace-visible one', async () => {
+      const stranger = alpha.tenant.scopeFor(
+        await alpha.tenant.addUser('A member who is on no trip'),
+      )
+      const priv = await createTrip(alpha.tenant.scope, {
+        title: 'Owner only',
+        startDate: '2026-09-01',
+        endDate: '2026-09-03',
+        currency: 'EUR',
+        visibility: 'private',
+      })
+      await freezeRate(alpha, priv.id, 1.4)
+      const before = await snapshot()
+
+      expect(await resolveRate(stranger, pair)).toBeNull()
+      expect(
+        await captureError(() =>
+          findLatestFrozenRate(stranger, {
+            tripId: priv.id,
+            from: 'GBP',
+            to: 'EUR',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      // The owner reads their own private trip's rate.
+      expect((await resolveRate(alpha.tenant.scope, pair))?.rate).toBe(1.4)
+
+      await updateTrip(alpha.tenant.scope, priv.id, {
+        visibility: 'organization',
+      })
+      expect(await resolveRate(stranger, pair)).toEqual({
+        rate: 1.4,
+        source: 'recent',
+      })
+      expect(
+        (
+          await findLatestFrozenRate(stranger, {
+            tripId: priv.id,
+            from: 'GBP',
+            to: 'EUR',
+          })
+        )?.rate,
+      ).toBe(1.4)
+
+      // Reading changed nothing; only the visibility switch above did.
+      const after = await snapshot()
+      expect(after.alphaExpenses).toEqual(before.alphaExpenses)
+      expect(after.betaExpenses).toEqual(before.betaExpenses)
+      expect(after.alphaSettlements).toEqual(before.alphaSettlements)
+      expect(after.betaSettlements).toEqual(before.betaSettlements)
     })
   })
 })

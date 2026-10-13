@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  CURRENCY_OPTIONS,
+  convertMinor,
   currencyCode,
   formatConversion,
   formatExchangeRate,
@@ -475,5 +477,76 @@ describe('suggestTransfers', () => {
     expect(transfers).toEqual([
       { fromUserId: 'b', toUserId: 'a', amountMinor: 100 },
     ])
+  })
+})
+
+describe('convertMinor', () => {
+  it('moves a two-decimal currency into a zero-decimal one without a factor of a hundred', () => {
+    // 1 GBP = 195 JPY: £2,384.00 is ¥464,880.
+    expect(convertMinor(238_400, 195, 'GBP', 'JPY')).toBe(464_880)
+  })
+
+  it('and back again', () => {
+    // 1 JPY = 1/195 GBP: ¥464,880 is £2,384.00.
+    expect(convertMinor(464_880, 1 / 195, 'JPY', 'GBP')).toBe(238_400)
+  })
+
+  it('reads a three-decimal currency in both directions', () => {
+    // 1 KWD = 3.25 EUR: 12.500 KWD is €40.63 (40.625 rounds half-up).
+    expect(convertMinor(12_500, 3.25, 'KWD', 'EUR')).toBe(4063)
+    // 1 EUR = 0.25 KWD: €40.00 is 10.000 KWD.
+    expect(convertMinor(4000, 0.25, 'EUR', 'KWD')).toBe(10_000)
+  })
+
+  it('rounds half-up exactly once, on the figure in the target minor unit', () => {
+    expect(convertMinor(1, 0.5, 'EUR', 'EUR')).toBe(1)
+    expect(convertMinor(3, 0.5, 'EUR', 'EUR')).toBe(2)
+    // 1.15 × 10 sits a hair under 11.5 in a double; it is still a half.
+    expect(convertMinor(10, 1.15, 'EUR', 'EUR')).toBe(12)
+    expect(convertMinor(1, 0.4999, 'EUR', 'EUR')).toBe(0)
+  })
+
+  it('rounds a negative balance as the mirror image of a positive one', () => {
+    expect(convertMinor(-3, 0.5, 'EUR', 'EUR')).toBe(-2)
+    expect(convertMinor(-1, 0.1, 'EUR', 'EUR')).toBe(0)
+    expect(Object.is(convertMinor(-1, 0.1, 'EUR', 'EUR'), 0)).toBe(true)
+  })
+
+  it('returns an integer for every kind of input', () => {
+    expect(Number.isInteger(convertMinor(12_345, 1.0837, 'EUR', 'USD'))).toBe(
+      true,
+    )
+  })
+
+  it.each(CURRENCY_OPTIONS.map((option) => [option.code] as const))(
+    'is the identity for %s at rate 1',
+    (code) => {
+      for (const minor of [0, 1, 99, 100, 12_345, 99_999_999]) {
+        expect(convertMinor(minor, 1, code, code)).toBe(minor)
+      }
+    },
+  )
+
+  it.each([
+    ['zero', 0],
+    ['negative', -1.5],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+  ])(
+    'refuses a rate that is %s instead of answering NaN or 0',
+    (_name, rate) => {
+      expect(() => convertMinor(100, rate, 'EUR', 'USD')).toThrow(RangeError)
+    },
+  )
+
+  it('refuses an amount that is not a safe integer', () => {
+    expect(() => convertMinor(1.5, 1, 'EUR', 'USD')).toThrow(RangeError)
+    expect(() => convertMinor(Number.NaN, 1, 'EUR', 'USD')).toThrow(RangeError)
+  })
+
+  it('refuses a result that no longer fits an integer', () => {
+    expect(() =>
+      convertMinor(Number.MAX_SAFE_INTEGER, 1e6, 'EUR', 'USD'),
+    ).toThrow(RangeError)
   })
 })
