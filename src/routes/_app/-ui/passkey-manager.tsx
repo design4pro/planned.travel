@@ -549,8 +549,6 @@ export function PasskeyManager() {
         ? previous
         : { ...previous, open: false, removed: true },
     )
-    setStatus(REMOVED)
-    setStatusTick((tick) => tick + 1)
   }
 
   // The dialog closes either by Cancel or Escape, which return to the row's Remove control, or by a
@@ -561,6 +559,10 @@ export function PasskeyManager() {
     let target: HTMLElement | null = headingRef.current
     if (removal?.removed === true) {
       if (!addDisabled) target = addRef.current ?? target
+      // Said now, not when the row left: until the dialog is gone the page behind it is hidden
+      // from assistive technology, and a change inside a hidden region is not announced.
+      setStatus(REMOVED)
+      setStatusTick((tick) => tick + 1)
     } else {
       target = removeButtons.current.get(removal?.passkey.id ?? '') ?? target
     }

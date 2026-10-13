@@ -15,7 +15,11 @@ import {
 } from '#/components/ui'
 import { deletePasskey } from '#/lib/auth/client'
 import { useI18n } from '#/lib/i18n'
-import { SIGN_OUT_FAILED, deleteFailure } from '../-lib/passkey-errors'
+import {
+  PASSKEY_NOT_FOUND,
+  SIGN_OUT_FAILED,
+  deleteFailure,
+} from '../-lib/passkey-errors'
 import { SignInAgain } from './passkey-sign-in-again'
 
 import type { FormEvent } from 'react'
@@ -38,7 +42,9 @@ function NamedSentence({ sentence, name }: { sentence: string; name: string }) {
       {before}
       {rest.map((after, index) => (
         <span key={index}>
-          <bdi dir="auto">{name}</bdi>
+          <bdi dir="auto" className="[overflow-wrap:anywhere]">
+            {name}
+          </bdi>
           {after}
         </span>
       ))}
@@ -84,6 +90,9 @@ export function PasskeyDeleteDialog({
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
   const [refusal, setRefusal] = useState<Refusal | null>(null)
+  // The list's hint can be stale (a password set in another tab): a password refusal draws the
+  // field instead of leaving the person with a refusal and nowhere to answer it.
+  const [askPassword, setAskPassword] = useState(requiresPassword)
   const passwordRef = useRef<HTMLInputElement>(null)
   const alertRef = useRef<HTMLDivElement>(null)
   const signInRef = useRef<HTMLButtonElement>(null)
@@ -107,14 +116,17 @@ export function PasskeyDeleteDialog({
     setRefusal(null)
     const result = await deletePasskey(
       passkey.id,
-      requiresPassword ? password : undefined,
+      askPassword ? password : undefined,
     )
     setPending(false)
-    if (result.ok) {
+    // A passkey that is already gone (another tab, or a removal whose reply was lost) is what was
+    // asked for: the row leaves instead of a "not removed" that every retry would repeat.
+    if (result.ok || result.failure.code === PASSKEY_NOT_FOUND) {
       onRemoved()
       return
     }
     const refused = deleteFailure(result.failure)
+    if (refused.target === 'password') setAskPassword(true)
     setRefusal({ notice: refused.notice, focus: refused.target })
   }
 
@@ -154,7 +166,7 @@ export function PasskeyDeleteDialog({
               void submit(event)
             }}
           >
-            {requiresPassword ? (
+            {askPassword ? (
               <Field
                 label={t('settings.passkeys.delete.password')}
                 hint={t('settings.passkeys.delete.passwordHint')}

@@ -698,7 +698,7 @@ describe('POST /passkey/delete', () => {
       ).toBe(200)
     })
 
-    it('refuses an empty password as missing, not as a wrong one', async () => {
+    it('refuses an empty password at validation, before the handler reads it', async () => {
       auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
       const cookie = await auth.signIn('alice@planned.travel')
 

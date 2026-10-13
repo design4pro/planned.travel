@@ -1175,7 +1175,9 @@ describe('removing a passkey', () => {
       expect(client.deletePasskey).toHaveBeenCalledWith('pk_1', 'hunter2')
       expect(screen.queryByText('Work phone')).toBeNull()
       expect(screen.getByText('Laptop')).toBeTruthy()
-      expect(screen.getByRole('status').textContent).toBe('Passkey removed')
+      await waitFor(() =>
+        expect(screen.getByRole('status').textContent).toBe('Passkey removed'),
+      )
       await waitFor(() => expect(document.activeElement).toBe(addButton()))
     })
 
@@ -1221,6 +1223,41 @@ describe('removing a passkey', () => {
         ),
       ).toBeTruthy()
       await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
+    })
+
+    it('draws the password field when the server asks for one the hint did not predict', async () => {
+      client.deletePasskey
+        .mockResolvedValueOnce(failure(400, 'PASSKEY_PASSWORD_REQUIRED'))
+        .mockResolvedValueOnce({ ok: true })
+      await mountWithRows(false, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.click(confirmButton())
+
+      expect(
+        await within(dialog()).findByText(
+          'Enter your password to remove this passkey.',
+        ),
+      ).toBeTruthy()
+      await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
+      expect(within(dialog()).queryByRole('alert')).toBeNull()
+      expect(client.deletePasskey).toHaveBeenLastCalledWith('pk_1', undefined)
+
+      await userEvent.type(passwordInput(), 'hunter2{Enter}')
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(client.deletePasskey).toHaveBeenLastCalledWith('pk_1', 'hunter2')
+    })
+
+    it('treats a passkey that is already gone as removed', async () => {
+      client.deletePasskey.mockResolvedValue(failure(404, 'PASSKEY_NOT_FOUND'))
+      await mountWithRows(true, WORK, LAPTOP)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'hunter2{Enter}')
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(screen.queryByText('Work phone')).toBeNull()
+      await waitFor(() =>
+        expect(screen.getByRole('status').textContent).toBe('Passkey removed'),
+      )
     })
 
     it('can try again after a refusal', async () => {
@@ -1381,11 +1418,6 @@ describe('removing a passkey', () => {
         'Too many attempts. Try again in a few minutes.',
       ],
       [
-        'a passkey that is gone',
-        failure(404, 'PASSKEY_NOT_FOUND'),
-        'The passkey was not removed. Try again.',
-      ],
-      [
         'an impersonated session',
         failure(403, 'PASSKEY_IMPERSONATED'),
         'The passkey was not removed. Try again.',
@@ -1416,7 +1448,7 @@ describe('removing a passkey', () => {
     })
 
     it('does not offer Sign in again for a refusal that signing in cannot fix', async () => {
-      const alert = await refuse(failure(404, 'PASSKEY_NOT_FOUND'))
+      const alert = await refuse(failure(403, 'PASSKEY_IMPERSONATED'))
       expect(within(alert).queryByRole('button')).toBeNull()
     })
 

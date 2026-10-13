@@ -1065,7 +1065,7 @@ plan or writes a row. Every such write appends the impersonator's user id to the
 existing `metadata` column of the tenant `audit_log`, so a workspace owner reading their own audit
 trail can see that an operator, not they, made the change.
 
-**Registering a passkey is refused by name as well.** A passkey is a sign-in factor, and one an
+**Registering, renaming and removing a passkey are refused by name as well.** A passkey is a sign-in factor, and one an
 operator registers outlives the 900-second impersonation with no audit row to show for it, which
 is the second set of admin hands this section rules out. The `passkey` endpoints stay open (§2.6),
 but `/passkey/register/options` and `/passkey/register/verify` answer `FORBIDDEN` with

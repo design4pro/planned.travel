@@ -15,6 +15,8 @@ const LIMIT_REACHED = 'PASSKEY_LIMIT_REACHED'
 const SESSION_NOT_FRESH = 'PASSKEY_SESSION_NOT_FRESH'
 const PASSWORD_REQUIRED = 'PASSKEY_PASSWORD_REQUIRED'
 const INVALID_PASSWORD = 'PASSKEY_INVALID_PASSWORD'
+/** The passkey is not on the account (anymore): the removal's goal already holds. */
+export const PASSKEY_NOT_FOUND = 'PASSKEY_NOT_FOUND'
 
 /** A sentence for the status region, and whether it comes with the Sign in again action. */
 export interface PasskeyNotice {
