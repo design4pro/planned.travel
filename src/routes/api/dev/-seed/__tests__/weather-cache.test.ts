@@ -9,11 +9,8 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 
-import {
-  resolveTripWeather,
-  type WeatherOutcome,
-  type WeatherRuntime,
-} from '#/server/weather/weather'
+import { resolveTripWeather } from '#/server/weather/weather'
+import type { WeatherOutcome, WeatherRuntime } from '#/server/weather/weather'
 import { PLAN_RATE_CEILINGS } from '#/server/billing/limits'
 import { rateMeterKey } from '#/server/metering/rate'
 import { SEED_ANCHOR_INSTANT, flagshipTrip, lisbonTrip } from '../dataset'
@@ -60,8 +57,8 @@ function queriesOf(trip: SeedTrip) {
     (Date.parse(`${trip.endDate}T00:00:00.000Z`) - start) / MS_PER_DAY,
   )
   return Array.from({ length: days + 1 }, (_, index) => {
-    const stop = trip.stops.find((s) => s.dayNumber === index + 1)
-    const place = trip.places.find((p) => p.key === stop?.placeKey)
+    const stop = (trip.stops ?? []).find((s) => s.dayNumber === index + 1)
+    const place = (trip.places ?? []).find((p) => p.key === stop?.placeKey)
     return {
       date: new Date(start + index * MS_PER_DAY).toISOString().slice(0, 10),
       location: place === undefined ? null : { lat: place.lat, lng: place.lng },

@@ -31,6 +31,19 @@ export const NOT_YET_RECORDED = 'Not yet recorded'
 export const UNAVAILABLE = 'Weather unavailable for this day'
 export const LOADING = 'Loading weather'
 
+/** Below this width the itinerary is a sheet behind the "Days" button, not a rail (`lg`). */
+const RAILS_MIN_WIDTH = 1024
+
+/** Put the days on screen: nothing to do beside the map on a desktop, one tap on a phone. */
+export async function showDays(page: Page): Promise<void> {
+  const width = page.viewportSize()?.width ?? RAILS_MIN_WIDTH
+  if (width >= RAILS_MIN_WIDTH) {
+    return
+  }
+  await page.getByRole('button', { name: 'Days', exact: true }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+}
+
 /** The planner's section for one day, by the title its header carries. */
 export function dayRegion(page: Page, title: string): Locator {
   const escaped = title.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)

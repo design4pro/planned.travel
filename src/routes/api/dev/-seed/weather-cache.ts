@@ -77,8 +77,10 @@ function pointOfDay(
   trip: SeedTrip,
   dayNumber: number,
 ): { readonly lat: number; readonly lng: number } {
-  const stop = trip.stops.find((candidate) => candidate.dayNumber === dayNumber)
-  const place = trip.places.find(
+  const stop = (trip.stops ?? []).find(
+    (candidate) => candidate.dayNumber === dayNumber,
+  )
+  const place = (trip.places ?? []).find(
     (candidate) => candidate.key === stop?.placeKey,
   )
   if (place === undefined) {

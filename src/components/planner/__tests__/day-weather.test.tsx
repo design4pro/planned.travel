@@ -18,6 +18,7 @@ import type {
   RecordedReading,
 } from '#/lib/weather'
 import type { PlannerDay } from '../types'
+import type { DayWeatherView } from '../weather-model'
 
 /**
  * The day weather badge and the fuller reading behind it, mounted for real under the `en`
@@ -304,7 +305,7 @@ describe('DayWeatherBadge', () => {
     // The browser reports a layout shift for an element that persists and moves. React keeps an
     // element of the same type in the same place, so a clock drawn over the skeleton's span would
     // be the skeleton's span with a new left edge: a measured shift the traveller cannot see.
-    const view = (weather: DayWeather) => (
+    const view = (weather: DayWeatherView) => (
       <I18nProvider locale="en" messages={MESSAGES}>
         <DayWeatherBadge
           weather={weather}
@@ -313,7 +314,7 @@ describe('DayWeatherBadge', () => {
         />
       </I18nProvider>
     )
-    const { rerender } = mount(view({ dayId: 'd1', status: 'loading' }))
+    const { rerender } = mount(view({ status: 'loading' }))
     const loadingPicture = screen.getByRole('img', { name: 'Loading weather' })
 
     rerender(view(NOT_YET))

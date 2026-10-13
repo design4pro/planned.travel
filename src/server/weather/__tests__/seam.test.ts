@@ -55,14 +55,20 @@ describe('the weather directory keeps its bindings in one file', () => {
     expect(offenders).toEqual(['bindings.ts'])
   })
 
-  it('is reached from the one module outside itself that has a door', () => {
+  it('is reached from the two modules outside itself that have a door', () => {
     const importers = sourceFiles(SRC)
       .filter((file) => !file.startsWith(DIRECTORY))
       // Shipped modules only. A test that names `bindings.ts` names it in order to replace it.
       .filter((file) => !file.includes(`${sep}__tests__${sep}`))
       .filter((file) => /from '#\/server\/weather\//.test(codeOf(file)))
       .map((file) => file.slice(SRC.length))
-    expect(importers).toEqual(['routes/_app/trips/$tripId/-server/weather.ts'])
+    // The second door is the development seed, which writes the cache entries the policy reads and
+    // so must build their keys with the policy's own functions rather than copy the format. It is
+    // reached only from `/api/dev/seed`, which the production build folds away.
+    expect(importers).toEqual([
+      'routes/_app/trips/$tripId/-server/weather.ts',
+      'routes/api/dev/-seed/weather-cache.ts',
+    ])
   })
 })
 

@@ -16,6 +16,7 @@ import {
   dayHeader,
   dayRegion,
   holdWeatherRead,
+  showDays,
   layoutShiftSum,
   shiftsSoFar,
   vendorCalls,
@@ -85,6 +86,7 @@ test.describe('DOC-08 — the weather of a day', () => {
       const held = await holdWeatherRead(page)
 
       await visit(page, route, 'light')
+      await showDays(page)
 
       // The page is up and waiting: every dated day shows that it is loading.
       const first = dayHeader(dayRegion(page, LISBON_DAYS.recorded))
@@ -143,6 +145,7 @@ test.describe('DOC-08 — the weather of a day', () => {
   }) => {
     const tripId = await tripIdByName(context, TOKYO)
     await onRoute(context, planRoute(tripId), async (page) => {
+      await showDays(page)
       const badge = page.getByRole('button', { name: BADGE.estimate })
       await expect(
         badge,
@@ -166,6 +169,7 @@ test.describe('DOC-08 — the weather of a day', () => {
   }) => {
     const lisbon = await tripIdByName(context, LISBON)
     await onRoute(context, planRoute(lisbon), async (page) => {
+      await showDays(page)
       await openAndCloseByKeyboard(
         page,
         dayRegion(page, LISBON_DAYS.forecastToday),
@@ -180,6 +184,7 @@ test.describe('DOC-08 — the weather of a day', () => {
 
     const tokyo = await tripIdByName(context, TOKYO)
     await onRoute(context, planRoute(tokyo), async (page) => {
+      await showDays(page)
       await openAndCloseByKeyboard(
         page,
         page.getByRole('region').filter({
@@ -244,6 +249,7 @@ test.describe('DOC-08 — evidence', () => {
           await page.setViewportSize({ width, height: EVIDENCE_HEIGHT })
           const held = await holdWeatherRead(page)
           await visit(page, planRoute(lisbon), theme)
+          await showDays(page)
 
           const day = (title: string) => dayRegion(page, title)
           await expect(
@@ -283,6 +289,7 @@ test.describe('DOC-08 — evidence', () => {
         try {
           await away.setViewportSize({ width, height: EVIDENCE_HEIGHT })
           await visit(away, planRoute(tokyo), theme)
+          await showDays(away)
           const estimate = away.getByRole('region').filter({
             has: away.getByRole('button', { name: BADGE.estimate }),
           })
