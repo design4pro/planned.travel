@@ -271,7 +271,11 @@ export function memberSegments(
   }
   const whole = isSpend(spentMinor) ? Math.max(spentMinor, shared) : shared
 
-  const named = sharing.length > 4 ? MEMBER_NAMES_SHOWN : sharing.length
+  // Four people are all named: an "others" row for one would take the line of a name.
+  const named =
+    sharing.length > MEMBER_NAMES_SHOWN + 1
+      ? MEMBER_NAMES_SHOWN
+      : sharing.length
   const folded = sharing.slice(named)
   const drafts: Array<MemberDraft> = sharing.slice(0, named).map((member) => ({
     kind: 'member',

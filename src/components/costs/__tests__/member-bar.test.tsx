@@ -83,9 +83,11 @@ describe('MemberBar', () => {
         node.getAttribute('data-segment'),
       )
 
-    expect(kinds(container.querySelector('[data-part="member-bar"]')!)).toEqual(
-      kinds(screen.getByRole('list')),
-    )
+    const bar = container.querySelector('[data-part="member-bar"]')
+    if (bar === null) {
+      throw new Error('the member bar did not render')
+    }
+    expect(kinds(bar)).toEqual(kinds(screen.getByRole('list')))
     expect(kinds(screen.getByRole('list'))).toEqual([
       'member',
       'member',

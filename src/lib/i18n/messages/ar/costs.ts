@@ -183,7 +183,7 @@ const messages = {
   'totalTile.captionPlanned': 'المخطَّط {amount} لجميع المسافرين',
   'totalTile.captionBudget': 'ميزانية الرحلة {amount}',
   'totalTile.yourShare': 'حصتك',
-  'totalTile.youPaid': 'دفعتَ',
+  'totalTile.youPaid': 'دفعت',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'الدفعات المسجّلة',
   'payments.empty.title': 'لا دفعات بعد',

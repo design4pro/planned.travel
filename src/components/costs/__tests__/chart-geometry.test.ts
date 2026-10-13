@@ -291,13 +291,16 @@ function member(userId: string, shareMinor: number) {
 }
 
 function summary(segments: ReadonlyArray<MemberSegment>): Array<string> {
-  return segments.map((segment) =>
-    segment.kind === 'member'
-      ? segment.userId
-      : segment.kind === 'others'
-        ? `others:${segment.count}`
-        : 'unassigned',
-  )
+  return segments.map((segment) => {
+    switch (segment.kind) {
+      case 'member':
+        return segment.userId
+      case 'others':
+        return `others:${segment.count}`
+      case 'unassigned':
+        return 'unassigned'
+    }
+  })
 }
 
 function percentsOf(segments: ReadonlyArray<MemberSegment>): Array<number> {
