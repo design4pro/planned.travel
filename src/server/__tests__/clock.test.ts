@@ -17,7 +17,7 @@ import { readFileSync } from 'node:fs'
 import { requestHandler } from '@tanstack/react-start/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { serverToday } from '../clock'
+import { serverNow, serverToday } from '../clock'
 
 /**
  * The wire name of the pin, duplicated on purpose.
@@ -163,5 +163,29 @@ describe('serverToday', () => {
     expect(pinned?.[1], 'playwright.config.ts pins no fixture day').toBeTypeOf(
       'string',
     )
+  })
+})
+
+describe('serverNow', () => {
+  /** `serverNow` answers a `Date`; the helper above answers a string, so read it as an instant. */
+  const instantDuringRequest = (headers: Record<string, string>) =>
+    duringRequest(headers, () => serverNow().toISOString())
+
+  it('is midday UTC of the pinned day, so it agrees with serverToday', async () => {
+    await expect(
+      instantDuringRequest({ [PIN_HEADER]: '2026-08-20' }),
+    ).resolves.toBe('2026-08-20T12:00:00.000Z')
+  })
+
+  it('falls back to the wall clock when the header is absent or malformed', async () => {
+    await expect(instantDuringRequest({})).resolves.toBe(WALL_CLOCK_NOW)
+    await expect(
+      instantDuringRequest({ [PIN_HEADER]: '2026-02-30' }),
+    ).resolves.toBe(WALL_CLOCK_NOW)
+  })
+
+  it('returns the wall clock when no request is in scope, and does not throw', () => {
+    expect(() => serverNow()).not.toThrow()
+    expect(serverNow().toISOString()).toBe(WALL_CLOCK_NOW)
   })
 })

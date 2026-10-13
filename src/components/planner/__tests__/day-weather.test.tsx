@@ -300,6 +300,29 @@ describe('DayWeatherBadge', () => {
     }
   })
 
+  it('replaces the loading picture when the answer is not-yet-recorded, never reuses its element', () => {
+    // The browser reports a layout shift for an element that persists and moves. React keeps an
+    // element of the same type in the same place, so a clock drawn over the skeleton's span would
+    // be the skeleton's span with a new left edge: a measured shift the traveller cannot see.
+    const view = (weather: DayWeather) => (
+      <I18nProvider locale="en" messages={MESSAGES}>
+        <DayWeatherBadge
+          weather={weather}
+          unit="metric"
+          dateLabel={DATE_LABEL}
+        />
+      </I18nProvider>
+    )
+    const { rerender } = mount(view({ dayId: 'd1', status: 'loading' }))
+    const loadingPicture = screen.getByRole('img', { name: 'Loading weather' })
+
+    rerender(view(NOT_YET))
+
+    const clock = screen.getByRole('img', { name: 'Not yet recorded' })
+    expect(loadingPicture.isConnected).toBe(false)
+    expect(clock).not.toBe(loadingPicture)
+  })
+
   it('leaves a day with nothing to show as empty space, named for nobody', () => {
     const { container } = badge({ dayId: 'd1', status: 'none' })
 
