@@ -1,0 +1,293 @@
+/**
+ * The NASA POWER client: one request, one response, parsed into our own shape.
+ *
+ * It knows nothing about tenants, caches or allowances, and it is named for the vendor on purpose -
+ * when the provider changes, the file to replace is the one with the vendor's name on it. Everything
+ * that decides *whether* a call is made lives in `./weather`, and nothing outside this directory
+ * imports this module.
+ *
+ * **What the provider is given is decided here, because it is a property of the request.** The
+ * service has no restriction on use, commercial use included, and asks to be cited; the citation is
+ * the planner's, not this file's. It needs no credential and no identifying header. What it learns
+ * from us is a coordinate cut to one decimal (about eleven kilometres, finer than its half-degree
+ * grid needs and the same cut the cache key uses), a range of dates for the daily service (the
+ * climatology takes none) and the fixed parameters - never a name, an id or anything about the trip.
+ *
+ * **The fill value is not a number.** For a day it has not got, the service answers `-999` in the
+ * field's place. That becomes `null` here, so nothing downstream can average it, convert it or draw
+ * it as a temperature of minus 999 degrees.
+ *
+ * **`fetch` is a parameter.** No test in this repository calls NASA, and none can: the transport
+ * arrives as an argument, so the seam is the module boundary rather than a global somebody
+ * remembered to intercept.
+ */
+
+import { z } from 'zod'
+
+import { WeatherProviderError, roundCoordinate } from './weather'
+
+import type {
+  ClimateMonth,
+  ClimateProvider,
+  RecordedProvider,
+  RecordedValues,
+} from './weather'
+
+/** Where the daily point service lives. */
+export const NASA_POWER_ENDPOINT =
+  'https://power.larc.nasa.gov/api/temporal/daily/point'
+
+/** Where the climatology point service lives: one long-term mean per month, for one point. */
+export const NASA_POWER_CLIMATOLOGY_ENDPOINT =
+  'https://power.larc.nasa.gov/api/temporal/climatology/point'
+
+/**
+ * How many days after a date the service publishes it, measured against the live service on
+ * 2026-10-12 at 11:42 UTC: it held values through 2026-10-09 and the fill value for 10, 11 and 12
+ * October, at Oslo, Sydney, Tokyo, New York, Nairobi and Reykjavik alike. So a date is published
+ * once it is three or more days before today in UTC, and a day inside the lag is "not yet recorded".
+ *
+ * Re-measure it when the service changes how it publishes, and change the date here with the value:
+ * a lag set too short turns "not yet recorded" into "unavailable" for days that are merely late, and
+ * one set too long hides days that exist.
+ */
+export const POWER_LAG_DAYS = 3
+
+/**
+ * The first date the service holds data for. A range starting earlier is refused with a 422 ("Your
+ * start date out of range. The data starts at 1981/01/01."), measured against the live service on
+ * 2026-10-12 for 1926-01-01 and 1980-01-01 while 1981-01-01 answered 200.
+ */
+export const POWER_FIRST_DATE = '1981-01-01'
+
+/** What the service answers in a field's place for a day it has no value for. */
+const FILL_VALUE = -999
+
+/** The parameters asked for: daily maximum and minimum temperature, precipitation and wind at 2 m. */
+const PARAMETERS = 'T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M'
+
+/**
+ * The climatology asks for no wind: an estimate does not carry one. It asks for the mean
+ * temperature and the mean daily range and derives the typical high and low from them. The
+ * climatology's own maximum and minimum parameters, `T2M_MAX` and `T2M_MIN` and their `_AVG`
+ * variants alike, are the hottest and coldest hour of the period (averaged over the years for
+ * `_AVG`): extremes, not what a traveller can expect. Measured against the live service on
+ * 2026-10-12 for Tokyo in October they answered 27.5 and 9.1 degrees where the mean 18.1 and
+ * the mean range 7.3 give 21.8 and 14.5.
+ */
+const CLIMATE_PARAMETERS = 'T2M,T2M_RANGE,PRECTOTCORR'
+
+/* ---------------------------------------------------------------- the wire */
+
+/**
+ * The answer the service promises, as much of it as we read.
+ *
+ * Each parameter maps a `YYYYMMDD` day to a figure. A parameter the answer leaves out is read as
+ * having no days, but a figure that is not a number is refused outright: a response that
+ * half-parses is a day with a temperature from nowhere.
+ */
+const figures = z.record(z.string(), z.number())
+
+const wireResponse = z.object({
+  properties: z.object({
+    parameter: z.object({
+      T2M_MAX: figures.optional(),
+      T2M_MIN: figures.optional(),
+      PRECTOTCORR: figures.optional(),
+      WS2M: figures.optional(),
+    }),
+  }),
+  header: z.object({ fill_value: z.number().optional() }).optional(),
+})
+
+const compact = (isoDate: string): string => isoDate.replaceAll('-', '')
+
+const expand = (compactDate: string): string =>
+  `${compactDate.slice(0, 4)}-${compactDate.slice(4, 6)}-${compactDate.slice(6, 8)}`
+
+function parseDays(body: unknown): ReadonlyMap<string, RecordedValues> {
+  const parsed = wireResponse.safeParse(body)
+  if (!parsed.success) {
+    throw new WeatherProviderError(
+      'malformed',
+      'NASA POWER answered with a body that is not a daily series.',
+    )
+  }
+  const { parameter } = parsed.data.properties
+  const fill = parsed.data.header?.fill_value ?? FILL_VALUE
+  const figureOf = (
+    series: Record<string, number> | undefined,
+    day: string,
+  ): number | null => {
+    const value = series?.[day]
+    return value === undefined || value === fill || value === FILL_VALUE
+      ? null
+      : value
+  }
+
+  const dates = new Set(
+    [
+      parameter.T2M_MAX,
+      parameter.T2M_MIN,
+      parameter.PRECTOTCORR,
+      parameter.WS2M,
+    ].flatMap((series) => Object.keys(series ?? {})),
+  )
+  const days = new Map<string, RecordedValues>()
+  for (const date of dates) {
+    days.set(expand(date), {
+      tempMaxC: figureOf(parameter.T2M_MAX, date),
+      tempMinC: figureOf(parameter.T2M_MIN, date),
+      precipitationMm: figureOf(parameter.PRECTOTCORR, date),
+      windMs: figureOf(parameter.WS2M, date),
+    })
+  }
+  return days
+}
+
+/**
+ * The climatology answer: each parameter maps `JAN` to `DEC` (and `ANN`, which is not read) to a
+ * figure. The shape is the same promise as the daily one - a parameter left out has no months, and
+ * a figure that is not a number refuses the whole body.
+ */
+const climatologyResponse = z.object({
+  properties: z.object({
+    parameter: z.object({
+      T2M: figures.optional(),
+      T2M_RANGE: figures.optional(),
+      PRECTOTCORR: figures.optional(),
+    }),
+  }),
+  header: z.object({ fill_value: z.number().optional() }).optional(),
+})
+
+const MONTHS = [
+  'JAN',
+  'FEB',
+  'MAR',
+  'APR',
+  'MAY',
+  'JUN',
+  'JUL',
+  'AUG',
+  'SEP',
+  'OCT',
+  'NOV',
+  'DEC',
+] as const
+
+function parseMonths(body: unknown): ReadonlyArray<ClimateMonth> {
+  const parsed = climatologyResponse.safeParse(body)
+  if (!parsed.success) {
+    throw new WeatherProviderError(
+      'malformed',
+      'NASA POWER answered with a body that is not a climatology.',
+    )
+  }
+  const { parameter } = parsed.data.properties
+  const fill = parsed.data.header?.fill_value ?? FILL_VALUE
+  const figureOf = (
+    series: Record<string, number> | undefined,
+    month: string,
+  ): number | null => {
+    const value = series?.[month]
+    return value === undefined || value === fill || value === FILL_VALUE
+      ? null
+      : value
+  }
+  /** The mean temperature moved half the mean daily range up or down; both are needed for either. */
+  const typicalOf = (month: string, direction: 1 | -1): number | null => {
+    const mean = figureOf(parameter.T2M, month)
+    const range = figureOf(parameter.T2M_RANGE, month)
+    return mean === null || range === null
+      ? null
+      : Math.round((mean + (direction * range) / 2) * 100) / 100
+  }
+  return MONTHS.map((month) => ({
+    tempMaxC: typicalOf(month, 1),
+    tempMinC: typicalOf(month, -1),
+    precipitationMm: figureOf(parameter.PRECTOTCORR, month),
+  }))
+}
+
+/* ------------------------------------------------------------------ client */
+
+export interface NasaPowerClientOptions {
+  readonly fetch: typeof fetch
+}
+
+export type NasaPowerClient = RecordedProvider & ClimateProvider
+
+/**
+ * The daily point client over a transport.
+ *
+ * A failure is a {@link WeatherProviderError} whose message carries the status and nothing else:
+ * never the URL, which holds a coordinate, and never the body, which is the provider's text.
+ */
+export function createNasaPowerClient(
+  options: NasaPowerClientOptions,
+): NasaPowerClient {
+  /**
+   * One GET and its JSON body. Both endpoints fail the same way and say the same thing about it, so
+   * the transport and its errors are written once.
+   */
+  async function getJson(url: URL, signal: AbortSignal): Promise<unknown> {
+    let response: Response
+    try {
+      response = await options.fetch(url.toString(), { signal })
+    } catch (cause) {
+      if (signal.aborted) {
+        throw cause
+      }
+      throw new WeatherProviderError(
+        'unreachable',
+        'NASA POWER could not be reached.',
+      )
+    }
+
+    if (!response.ok) {
+      throw new WeatherProviderError(
+        'refused',
+        `NASA POWER answered ${response.status}.`,
+      )
+    }
+
+    try {
+      return await response.json()
+    } catch {
+      throw new WeatherProviderError(
+        'malformed',
+        'NASA POWER answered with a body that is not JSON.',
+      )
+    }
+  }
+
+  return {
+    lagDays: POWER_LAG_DAYS,
+    firstDate: POWER_FIRST_DATE,
+    async daily(lat, lng, range, init) {
+      const url = new URL(NASA_POWER_ENDPOINT)
+      url.searchParams.set('parameters', PARAMETERS)
+      url.searchParams.set('community', 'AG')
+      url.searchParams.set('latitude', roundCoordinate(lat, 1))
+      url.searchParams.set('longitude', roundCoordinate(lng, 1))
+      url.searchParams.set('start', compact(range.start))
+      url.searchParams.set('end', compact(range.end))
+      url.searchParams.set('format', 'JSON')
+      // Local solar time, so a day is the day at the place and not the day in Greenwich.
+      url.searchParams.set('time-standard', 'LST')
+
+      return parseDays(await getJson(url, init.signal))
+    },
+    async climatology(lat, lng, init) {
+      const url = new URL(NASA_POWER_CLIMATOLOGY_ENDPOINT)
+      url.searchParams.set('parameters', CLIMATE_PARAMETERS)
+      url.searchParams.set('community', 'AG')
+      url.searchParams.set('latitude', roundCoordinate(lat, 1))
+      url.searchParams.set('longitude', roundCoordinate(lng, 1))
+      url.searchParams.set('format', 'JSON')
+
+      return parseMonths(await getJson(url, init.signal))
+    },
+  }
+}

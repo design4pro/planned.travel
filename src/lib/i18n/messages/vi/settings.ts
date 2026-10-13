@@ -544,6 +544,66 @@ const messages = {
   'billing.order.stillWritingBody':
     'Hoá đơn {number} đang được tạo. Bản tải về sẽ tự trở lại sau vài giây.',
   'billing.order.openFailed': 'Hoá đơn đó không mở được',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Tài khoản',
+  'passkeys.page.title': 'Khóa truy cập',
+  'passkeys.page.description':
+    'Khóa truy cập cho phép bạn đăng nhập bằng vân tay, khuôn mặt hoặc khóa bảo mật mà không phải gõ gì.',
+  'passkeys.page.back': 'Quay lại bảo mật',
+  'passkeys.list.label': 'Khóa truy cập của bạn',
+  'passkeys.add.action': 'Thêm khóa truy cập',
+  'passkeys.add.loading': 'Đang chờ thiết bị của bạn',
+  'passkeys.add.added': 'Đã thêm khóa truy cập',
+  'passkeys.add.dismissed': 'Chưa có khóa truy cập nào được thêm',
+  'passkeys.add.exists':
+    'Thiết bị này đã có khóa truy cập cho tài khoản của bạn',
+  'passkeys.add.failed': 'Chưa thêm được khóa truy cập. Hãy thử lại.',
+  'passkeys.add.stale': 'Để an toàn, hãy đăng nhập lại để tiếp tục.',
+  'passkeys.error.sessionEnded':
+    'Phiên của bạn đã kết thúc. Hãy đăng nhập lại để tiếp tục.',
+  'passkeys.signInAgain': 'Đăng nhập lại',
+  'passkeys.add.limit':
+    'Bạn đã đạt giới hạn {value} khóa truy cập. Hãy xóa một khóa để thêm khóa khác.',
+  'passkeys.add.unsupported':
+    'Trình duyệt này không tạo được khóa truy cập. Hãy thử trình duyệt hoặc thiết bị khác.',
+  'passkeys.empty.title': 'Chưa có khóa truy cập nào',
+  'passkeys.empty.body':
+    'Thêm một khóa và bạn có thể đăng nhập bằng vân tay, khuôn mặt hoặc khóa bảo mật mà không phải gõ gì.',
+  'passkeys.row.fallbackName': 'Khóa truy cập · thêm ngày {date}',
+  'passkeys.row.added': 'Thêm ngày {date}',
+  'passkeys.row.lastUsed': 'Dùng lần cuối {date}',
+  'passkeys.row.neverUsed': 'Chưa dùng để đăng nhập',
+  'passkeys.badge.synced': 'Đã đồng bộ',
+  'passkeys.badge.singleDevice': 'Chỉ trên một thiết bị',
+  'passkeys.error.title': 'Không tải được khóa truy cập của bạn',
+  'passkeys.error.retry': 'Thử lại',
+  'passkeys.error.rateLimited': 'Thử quá nhiều lần. Hãy thử lại sau vài phút.',
+  'passkeys.error.generic': 'Hãy kiểm tra kết nối rồi thử lại.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Đổi tên {name}',
+  'passkeys.rename.fieldLabel': 'Đặt tên cho khóa truy cập này',
+  'passkeys.rename.placeholder': 'Đặt tên, ví dụ Điện thoại công việc',
+  'passkeys.rename.saving': 'Đang lưu tên',
+  'passkeys.rename.saved': 'Đã lưu tên',
+  'passkeys.rename.failed': 'Chưa lưu được tên',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Xóa {name}',
+  'passkeys.delete.title': 'Xóa khóa truy cập này?',
+  'passkeys.delete.body': 'Bạn sẽ không thể đăng nhập bằng {name} nữa.',
+  'passkeys.delete.password': 'Mật khẩu',
+  'passkeys.delete.passwordHint': 'Nhập mật khẩu của bạn để xác nhận.',
+  'passkeys.delete.confirmOnly':
+    'Tài khoản của bạn không có mật khẩu. Hãy xác nhận bạn muốn xóa khóa truy cập này.',
+  'passkeys.delete.confirm': 'Xóa khóa truy cập',
+  'passkeys.delete.cancel': 'Hủy',
+  'passkeys.delete.wrongPassword': 'Mật khẩu này không đúng.',
+  'passkeys.delete.stale':
+    'Để an toàn, hãy đăng nhập lại trước khi xóa khóa truy cập.',
+  'passkeys.delete.removed': 'Đã xóa khóa truy cập',
+  'passkeys.delete.failed': 'Chưa xóa được khóa truy cập. Hãy thử lại.',
+  'passkeys.delete.removing': 'Đang xóa khóa truy cập',
+  'passkeys.delete.passwordRequired':
+    'Hãy nhập mật khẩu của bạn để xóa khóa truy cập này.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

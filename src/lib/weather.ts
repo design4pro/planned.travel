@@ -11,6 +11,8 @@
  * coordinate with another must not be able to tell from it that the other one exists.
  */
 
+import type { SunTimes } from '#/lib/sun'
+
 /** Which unit a reader sees temperatures in; the reader's existing distance unit decides. */
 export type WeatherUnit = 'metric' | 'imperial'
 
@@ -28,7 +30,7 @@ export interface DaySlot {
 }
 
 /** A forecast for one local day, metric. */
-export interface DayReading {
+export interface ForecastReading {
   readonly kind: 'forecast'
   readonly source: 'met-norway'
   /** The day's lowest and highest forecast temperature, in degrees Celsius. */
@@ -54,20 +56,68 @@ export interface DayReading {
 }
 
 /**
+ * What was measured on a day that is already past, metric. A field the provider had nothing for is
+ * `null`, never a number, and at least one of the two temperatures is present: a day with neither
+ * is `unavailable` and has no reading at all. There is no sky, no chance of rain and no slots - a
+ * measurement has none, and none is worked out from the high and the low.
+ */
+export interface RecordedReading {
+  readonly kind: 'recorded'
+  readonly source: 'nasa-power'
+  readonly tempMinC: number | null
+  readonly tempMaxC: number | null
+  /** What fell over the day, in millimetres. */
+  readonly precipitationMm: number | null
+  /** The mean wind over the day at two metres, in metres per second. */
+  readonly windMs: number | null
+}
+
+/**
+ * What a day this far out typically has, metric: the long-term mean high and low and the mean daily
+ * precipitation of the day's month, from a climatology. It is not a forecast and is never drawn as
+ * one. A field the provider had nothing for is `null`, and at least one of the two temperatures is
+ * present: a day with neither is `unavailable` and has no reading at all. There is no wind, no sky,
+ * no chance of rain and no slots - an average over decades carries none of them.
+ */
+export interface EstimateReading {
+  readonly kind: 'estimate'
+  readonly source: 'nasa-power'
+  readonly tempMinC: number | null
+  readonly tempMaxC: number | null
+  /** The mean millimetres per day over the month. */
+  readonly precipitationMm: number | null
+  /** Always `null`: an estimate does not carry a wind, and the panel draws no row for one. */
+  readonly windMs: null
+}
+
+/** What a day's weather is, by where the day sits in time. */
+export type DayReading = ForecastReading | RecordedReading | EstimateReading
+
+/**
  * One day of a trip, as the planner draws it.
  *
- * `none` is a day with nothing to show - no date, no location, or a day outside the forecast
- * window - and renders exactly as it did before weather existed. `unavailable` is a day that should
+ * `none` is a day with nothing to show - no date, no location, or a day beyond the forecast window
+ * for a reader that does not draw estimates - and renders exactly as it did before weather existed. `unavailable` is a day that should
  * have a reading and does not: the provider failed, timed out or answered something unreadable, or
- * the workspace has spent its allowance. The two must never look alike, and neither is a zero.
+ * the workspace has spent its allowance. `not-yet-recorded` is a past day the provider has not
+ * published yet: it is neither of the other two, because nothing failed and nothing is missing for
+ * good, and it is never filled in from a forecast. The three must never look alike, and none is a
+ * zero.
  */
 export type DayWeather =
   | { readonly dayId: string; readonly status: 'none' }
   | { readonly dayId: string; readonly status: 'unavailable' }
+  | { readonly dayId: string; readonly status: 'not-yet-recorded' }
   | {
       readonly dayId: string
       readonly status: 'ok'
       readonly reading: DayReading
+      /**
+       * Sunrise and sunset in the trip's zone, worked out from the place and the date. Absent
+       * from an answer that predates it and from a trip with no zone of its own, whose UTC clock
+       * would be the wrong one; the panel leaves the rows out then.
+       */
+      readonly sun?: SunTimes
     }
 
 export interface TripWeather {

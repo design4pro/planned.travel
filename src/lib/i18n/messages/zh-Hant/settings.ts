@@ -460,6 +460,62 @@ const messages = {
   'billing.order.stillWritingBody':
     '發票 {number} 正在產生。下載會在幾秒後自動恢復。',
   'billing.order.openFailed': '那張發票沒有開啟',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': '帳號',
+  'passkeys.page.title': '密碼金鑰',
+  'passkeys.page.description':
+    '有了密碼金鑰，什麼都不用打，用指紋、臉部或安全金鑰就能登入。',
+  'passkeys.page.back': '返回安全性',
+  'passkeys.list.label': '你的密碼金鑰',
+  'passkeys.add.action': '新增密碼金鑰',
+  'passkeys.add.loading': '正在等待你的裝置',
+  'passkeys.add.added': '已新增密碼金鑰',
+  'passkeys.add.dismissed': '沒有新增密碼金鑰',
+  'passkeys.add.exists': '這個裝置已經有你帳號的密碼金鑰',
+  'passkeys.add.failed': '沒有新增成功。請再試一次。',
+  'passkeys.add.stale': '為了你的安全，請重新登入後繼續。',
+  'passkeys.error.sessionEnded': '你的工作階段已結束。請重新登入後繼續。',
+  'passkeys.signInAgain': '重新登入',
+  'passkeys.add.limit':
+    '你已達到 {value} 個密碼金鑰的上限。請先移除一個，再新增新的。',
+  'passkeys.add.unsupported':
+    '這個瀏覽器無法建立密碼金鑰。請換個瀏覽器或裝置試試。',
+  'passkeys.empty.title': '還沒有密碼金鑰',
+  'passkeys.empty.body':
+    '新增一個，就能用指紋、臉部或安全金鑰登入，什麼都不用打。',
+  'passkeys.row.fallbackName': '密碼金鑰 · 新增於 {date}',
+  'passkeys.row.added': '新增於 {date}',
+  'passkeys.row.lastUsed': '上次使用：{date}',
+  'passkeys.row.neverUsed': '還沒有用來登入過',
+  'passkeys.badge.synced': '已同步',
+  'passkeys.badge.singleDevice': '僅在一個裝置上',
+  'passkeys.error.title': '沒能載入你的密碼金鑰',
+  'passkeys.error.retry': '重試',
+  'passkeys.error.rateLimited': '嘗試次數過多。請幾分鐘後再試。',
+  'passkeys.error.generic': '請檢查網路連線後再試。',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': '重新命名 {name}',
+  'passkeys.rename.fieldLabel': '為這個密碼金鑰命名',
+  'passkeys.rename.placeholder': '取個名稱，例如「工作手機」',
+  'passkeys.rename.saving': '正在儲存名稱',
+  'passkeys.rename.saved': '名稱已儲存',
+  'passkeys.rename.failed': '名稱未能儲存',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '移除 {name}',
+  'passkeys.delete.title': '移除這個密碼金鑰？',
+  'passkeys.delete.body': '移除後，你將無法再使用 {name} 登入。',
+  'passkeys.delete.password': '密碼',
+  'passkeys.delete.passwordHint': '請輸入你的密碼以確認。',
+  'passkeys.delete.confirmOnly':
+    '你的帳戶沒有密碼。請確認你要移除這個密碼金鑰。',
+  'passkeys.delete.confirm': '移除密碼金鑰',
+  'passkeys.delete.cancel': '取消',
+  'passkeys.delete.wrongPassword': '這個密碼不正確。',
+  'passkeys.delete.stale': '為了你的安全，請先重新登入，再移除密碼金鑰。',
+  'passkeys.delete.removed': '密碼金鑰已移除',
+  'passkeys.delete.failed': '密碼金鑰未能移除。請再試一次。',
+  'passkeys.delete.removing': '正在移除密碼金鑰',
+  'passkeys.delete.passwordRequired': '請輸入你的密碼以移除這個密碼金鑰。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

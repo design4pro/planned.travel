@@ -582,6 +582,67 @@ const messages = {
   'billing.order.stillWritingBody':
     'Faktura {number} jest generowana. Pobieranie wróci samo za kilka sekund.',
   'billing.order.openFailed': 'Ta faktura się nie otworzyła',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Konto',
+  'passkeys.page.title': 'Klucze dostępu',
+  'passkeys.page.description':
+    'Klucz dostępu pozwala zalogować się odciskiem palca, twarzą lub kluczem sprzętowym, bez wpisywania czegokolwiek.',
+  'passkeys.page.back': 'Wróć do ustawień bezpieczeństwa',
+  'passkeys.list.label': 'Twoje klucze dostępu',
+  'passkeys.add.action': 'Dodaj klucz dostępu',
+  'passkeys.add.loading': 'Czekamy na Twoje urządzenie',
+  'passkeys.add.added': 'Dodano klucz dostępu',
+  'passkeys.add.dismissed': 'Nie dodano klucza dostępu',
+  'passkeys.add.exists': 'To urządzenie ma już klucz dostępu do Twojego konta',
+  'passkeys.add.failed': 'Nie dodano klucza dostępu. Spróbuj ponownie.',
+  'passkeys.add.stale':
+    'Ze względów bezpieczeństwa zaloguj się ponownie, aby kontynuować.',
+  'passkeys.error.sessionEnded':
+    'Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.',
+  'passkeys.signInAgain': 'Zaloguj się ponownie',
+  'passkeys.add.limit':
+    'Osiągnięto limit {value} kluczy dostępu. Usuń jeden, aby dodać kolejny.',
+  'passkeys.add.unsupported':
+    'Ta przeglądarka nie potrafi tworzyć kluczy dostępu. Spróbuj w innej przeglądarce lub na innym urządzeniu.',
+  'passkeys.empty.title': 'Brak kluczy dostępu',
+  'passkeys.empty.body':
+    'Dodaj jeden, a zalogujesz się odciskiem palca, twarzą lub kluczem sprzętowym, bez wpisywania czegokolwiek.',
+  'passkeys.row.fallbackName': 'Klucz dostępu · dodano {date}',
+  'passkeys.row.added': 'Dodano {date}',
+  'passkeys.row.lastUsed': 'Ostatnio użyty {date}',
+  'passkeys.row.neverUsed': 'Jeszcze nie używany do logowania',
+  'passkeys.badge.synced': 'Synchronizowany',
+  'passkeys.badge.singleDevice': 'Tylko na jednym urządzeniu',
+  'passkeys.error.title': 'Nie udało się wczytać Twoich kluczy dostępu',
+  'passkeys.error.retry': 'Spróbuj ponownie',
+  'passkeys.error.rateLimited':
+    'Za dużo prób. Spróbuj ponownie za kilka minut.',
+  'passkeys.error.generic': 'Sprawdź połączenie i spróbuj ponownie.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Zmień nazwę: {name}',
+  'passkeys.rename.fieldLabel': 'Nazwij ten klucz dostępu',
+  'passkeys.rename.placeholder': 'Nadaj nazwę, na przykład Telefon służbowy',
+  'passkeys.rename.saving': 'Zapisujemy nazwę',
+  'passkeys.rename.saved': 'Zapisano nazwę',
+  'passkeys.rename.failed': 'Nie zapisano nazwy',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Usuń: {name}',
+  'passkeys.delete.title': 'Usunąć ten klucz dostępu?',
+  'passkeys.delete.body': 'Nie zalogujesz się już przy użyciu: {name}.',
+  'passkeys.delete.password': 'Hasło',
+  'passkeys.delete.passwordHint': 'Wpisz hasło, aby potwierdzić.',
+  'passkeys.delete.confirmOnly':
+    'Twoje konto nie ma hasła. Potwierdź, że chcesz usunąć ten klucz dostępu.',
+  'passkeys.delete.confirm': 'Usuń klucz dostępu',
+  'passkeys.delete.cancel': 'Anuluj',
+  'passkeys.delete.wrongPassword': 'To hasło jest nieprawidłowe.',
+  'passkeys.delete.stale':
+    'Ze względów bezpieczeństwa zaloguj się ponownie przed usunięciem klucza dostępu.',
+  'passkeys.delete.removed': 'Usunięto klucz dostępu',
+  'passkeys.delete.failed': 'Nie usunięto klucza dostępu. Spróbuj ponownie.',
+  'passkeys.delete.removing': 'Usuwamy klucz dostępu',
+  'passkeys.delete.passwordRequired':
+    'Wpisz hasło, aby usunąć ten klucz dostępu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

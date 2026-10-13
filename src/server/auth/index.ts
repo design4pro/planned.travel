@@ -35,6 +35,7 @@ import {
 import {
   queueRoomEviction,
   roomEvictionHook,
+  roomEvictionPrepare,
   workspaceIdsOf,
 } from './room-eviction'
 import { createKvSecondaryStorage } from './secondary-storage'
@@ -330,6 +331,12 @@ function buildAuth() {
 
     advanced: {
       cookiePrefix: 'planned',
+      // Cloudflare terminates the connection, so `cf-connecting-ip` is the client address and no
+      // visitor can set it. The default, `x-forwarded-for`, is the visitor's own value with the
+      // client appended: a visitor who sends the header produces two values, which resolve to no
+      // address and drop every such request into one shared `no-trusted-ip` bucket per path. The
+      // same header is read by `src/server/audit/trail.ts` and `src/server/fns/console/context.ts`.
+      ipAddress: { ipAddressHeaders: ['cf-connecting-ip'] },
       database: {
         // Short, URL-safe, collision-resistant ids, matching the rest of the app.
         generateId: () => nanoid(24),
@@ -340,7 +347,8 @@ function buildAuth() {
       },
     },
 
-    // Closes a person's open trip-room sockets once they lose their place in a workspace (#1073).
+    // Closes a person's open trip-room sockets once they lose their place in a workspace (#1073) or
+    // end their own session (#1093; its `before` half is the `roomEvictionPrepare` plugin below).
     hooks: { after: roomEvictionHook },
 
     databaseHooks: {
@@ -366,7 +374,7 @@ function buildAuth() {
             const organizationIds = pendingRoomEviction.get(user)
             pendingRoomEviction.delete(user)
             if (organizationIds !== undefined) {
-              await queueRoomEviction(user.id, organizationIds)
+              await queueRoomEviction(user.id, organizationIds, 'user.delete')
             }
           },
         },
@@ -417,6 +425,9 @@ function buildAuth() {
       // other plugin, and before our own organization provisioning, does work on
       // its behalf. Nothing here replaces the hooks below; both run.
       admin(adminOptions),
+
+      // Reads the person a session-ending endpoint is about before it deletes the session (#1093).
+      roomEvictionPrepare,
 
       twoFactor({
         issuer: APP_NAME,

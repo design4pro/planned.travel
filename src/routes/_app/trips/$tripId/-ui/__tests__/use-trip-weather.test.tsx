@@ -77,7 +77,9 @@ describe('useTripWeather', () => {
     })
     expect(result.current.viewOf('d2')).toEqual({ dayId: 'd2', status: 'none' })
     expect(result.current.unit).toBe('imperial')
-    expect(loadTripWeatherFn).toHaveBeenCalledWith({ data: { tripId: 't1' } })
+    expect(loadTripWeatherFn).toHaveBeenCalledWith({
+      data: { tripId: 't1', recorded: true, estimate: true },
+    })
   })
 
   it('shows a day the answer does not mention as nothing, not as a guess', async () => {
@@ -181,7 +183,9 @@ describe('useTripWeather', () => {
     trip = { id: 't2', plan: {} }
     rerender()
     await waitFor(() => {
-      expect(loadTripWeatherFn).toHaveBeenCalledWith({ data: { tripId: 't2' } })
+      expect(loadTripWeatherFn).toHaveBeenCalledWith({
+        data: { tripId: 't2', recorded: true, estimate: true },
+      })
     })
     await client.isFetching()
 

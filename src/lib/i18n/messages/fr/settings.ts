@@ -569,6 +569,68 @@ const messages = {
   'billing.order.stillWritingBody':
     'La facture {number} est en cours de génération. Le téléchargement revient de lui-même dans quelques secondes.',
   'billing.order.openFailed': "Cette facture ne s'est pas ouverte",
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Compte',
+  'passkeys.page.title': 'Clés d’accès',
+  'passkeys.page.description':
+    'Une clé d’accès vous permet de vous connecter avec votre empreinte, votre visage ou une clé de sécurité, sans rien saisir.',
+  'passkeys.page.back': 'Retour à la sécurité',
+  'passkeys.list.label': 'Vos clés d’accès',
+  'passkeys.add.action': 'Ajouter une clé d’accès',
+  'passkeys.add.loading': 'En attente de votre appareil',
+  'passkeys.add.added': 'Clé d’accès ajoutée',
+  'passkeys.add.dismissed': 'Aucune clé d’accès n’a été ajoutée',
+  'passkeys.add.exists':
+    'Cet appareil a déjà une clé d’accès pour votre compte',
+  'passkeys.add.failed': 'La clé d’accès n’a pas été ajoutée. Réessayez.',
+  'passkeys.add.stale': 'Pour votre sécurité, reconnectez-vous pour continuer.',
+  'passkeys.error.sessionEnded':
+    'Votre session est terminée. Reconnectez-vous pour continuer.',
+  'passkeys.signInAgain': 'Se reconnecter',
+  'passkeys.add.limit':
+    'Vous avez atteint la limite de {value} clés d’accès. Supprimez-en une pour en ajouter une autre.',
+  'passkeys.add.unsupported':
+    'Ce navigateur ne peut pas créer de clés d’accès. Essayez un autre navigateur ou un autre appareil.',
+  'passkeys.empty.title': 'Aucune clé d’accès pour l’instant',
+  'passkeys.empty.body':
+    'Ajoutez-en une et connectez-vous avec votre empreinte, votre visage ou une clé de sécurité, sans rien saisir.',
+  'passkeys.row.fallbackName': 'Clé d’accès · ajoutée le {date}',
+  'passkeys.row.added': 'Ajoutée le {date}',
+  'passkeys.row.lastUsed': 'Dernière utilisation : {date}',
+  'passkeys.row.neverUsed': 'Pas encore utilisée pour se connecter',
+  'passkeys.badge.synced': 'Synchronisée',
+  'passkeys.badge.singleDevice': 'Sur un seul appareil',
+  'passkeys.error.title': 'Vos clés d’accès ne se sont pas chargées',
+  'passkeys.error.retry': 'Réessayer',
+  'passkeys.error.rateLimited':
+    'Trop de tentatives. Réessayez dans quelques minutes.',
+  'passkeys.error.generic': 'Vérifiez votre connexion et réessayez.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Renommer {name}',
+  'passkeys.rename.fieldLabel': 'Nommez cette clé d’accès',
+  'passkeys.rename.placeholder': 'Donnez-lui un nom, par exemple Téléphone pro',
+  'passkeys.rename.saving': 'Enregistrement du nom',
+  'passkeys.rename.saved': 'Nom enregistré',
+  'passkeys.rename.failed': 'Le nom n’a pas été enregistré',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Supprimer {name}',
+  'passkeys.delete.title': 'Supprimer cette clé d’accès ?',
+  'passkeys.delete.body': 'Vous ne pourrez plus vous connecter avec {name}.',
+  'passkeys.delete.password': 'Mot de passe',
+  'passkeys.delete.passwordHint':
+    'Saisissez votre mot de passe pour confirmer.',
+  'passkeys.delete.confirmOnly':
+    'Votre compte n’a pas de mot de passe. Confirmez que vous voulez supprimer cette clé d’accès.',
+  'passkeys.delete.confirm': 'Supprimer la clé d’accès',
+  'passkeys.delete.cancel': 'Annuler',
+  'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',
+  'passkeys.delete.stale':
+    'Pour votre sécurité, reconnectez-vous avant de supprimer une clé d’accès.',
+  'passkeys.delete.removed': 'Clé d’accès supprimée',
+  'passkeys.delete.failed': 'La clé d’accès n’a pas été supprimée. Réessayez.',
+  'passkeys.delete.removing': 'Suppression de la clé d’accès',
+  'passkeys.delete.passwordRequired':
+    'Saisissez votre mot de passe pour supprimer cette clé d’accès.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

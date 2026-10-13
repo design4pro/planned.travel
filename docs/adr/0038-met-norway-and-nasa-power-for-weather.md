@@ -57,7 +57,7 @@ are the only code that changes.
 - A `User-Agent` that identifies the application and gives a contact. A request without one is answered
   with 403.
 - Responses are cached, and `Expires` and `If-Modified-Since` are honoured.
-- Coordinates are truncated to at most four decimals.
+- Coordinates are truncated to at most four decimals (NASA POWER is sent one; see the Amendment).
 - At most 20 requests per second per application, spread out rather than simultaneous.
 - HTTPS and gzip. The Workers runtime negotiates gzip on every outbound `fetch`, so no `Accept-Encoding`
   header is set by hand.
@@ -72,17 +72,17 @@ are the only code that changes.
 ### What each provider receives, and what it may do with it
 
 The only tenant data a provider receives is **a trip coordinate, truncated to four decimals** (about
-11 m), taken from a place the trip already holds. Neither request carries a trip id, a place id, a
+11 m; one decimal for NASA POWER, see the Amendment), taken from a place the trip already holds. Neither request carries a trip id, a place id, a
 workspace id, a member id, a name or a note. The date or date range asked for is the second thing a
 provider learns, and with the coordinate it is the whole of the disclosure.
 
 | Provider   | Receives                                                                        | May do with it                                                                                                                                                            | For how long                                                                                                |
 | ---------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | MET Norway | Coordinate (four decimals), date range, our `User-Agent`, Worker egress address | Answer the request. The terms require the `User-Agent` to identify the application and give a contact. They set no use of the request beyond that, and none is relied on. | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
-| NASA POWER | Coordinate (four decimals), date range, Worker egress address                   | Answer the request. The terms place no restriction on our use of what it returns, and none is relied on for what it does with the request.                                | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
+| NASA POWER | Coordinate (one decimal), date range, Worker egress address                     | Answer the request. The terms place no restriction on our use of what it returns, and none is relied on for what it does with the request.                                | The terms as read state no retention period for request logs. We rely on none and assume the logs are kept. |
 
 Because a provider may keep a request log for as long as it likes, the rule is about what we send, not
-about what they delete: the four-decimal truncation is applied before the request is built and before
+about what they delete: the truncation (four decimals, one for NASA POWER) is applied before the request is built and before
 the cache key is built, and nothing else about the trip, the workspace or the traveller is attached.
 
 What we may keep is the other half of the retention question, and it is the one that decided ADR 0013.
@@ -135,3 +135,36 @@ new one; the policy module and the surface do not change.
   spring needs.
 - **Keeping the block.** A trip planner with no weather leaves a traveller to find it elsewhere, and the
   block existed only for want of a licence we have now read.
+
+## Amendment (#823, the recorded kind)
+
+NASA POWER is sent a coordinate cut to **one decimal** (about 11 km), not four. Its grid is about
+0.5 degrees, so a finer coordinate buys no better answer and would only tell the vendor more than the
+answer needs; the recorded cache key and the failure entry carry the same one-decimal coordinate, so
+two places in one cell share a reading. The truncation is applied before the request and the key are
+built, as the rule above requires, and a test of the request URL holds it. The table above states the
+disclosure as built.
+
+The publication lag is measured, not assumed: on 2026-10-12 at 11:42 and again at 12:09 UTC the service
+held values through 2026-10-09 and the fill value (`-999`) for 10, 11 and 12 October at six locations on
+five continents, so `POWER_LAG_DAYS` is 3 and a date is published once it is three or more days before
+today in UTC.
+
+## Amendment (#825, the estimate kind)
+
+The climatology service is sent the same coordinate cut to one decimal and the fixed parameters
+(`T2M,T2M_RANGE,PRECTOTCORR`), and no date range: it answers one long-term mean per month
+for the point, so the row of the table above reads "Coordinate (one decimal), date range where the service
+takes one". The answer is kept thirty days under a key that carries the coordinate and nothing else,
+the climatology having no reason to change within a month. Measured on 2026-10-12 against the live
+service, it answers 2001 to 2025 means with `-999` as the fill value, as the daily service does.
+
+The typical high and low are derived: the mean temperature (`T2M`) moved half the mean daily range
+(`T2M_RANGE`) up and down, rounded to two decimals. The service has no parameter for the mean of the
+daily maximum. `T2M_MAX` and `T2M_MIN` are the hottest and coldest hour of the period, and the
+`T2M_MAX_AVG` and `T2M_MIN_AVG` that look like the answer are those extremes averaged over the years;
+an estimate drawn from either would be an extreme labelled "typical". Measured on 2026-10-12 for
+Tokyo in October: `T2M_MAX_AVG` 27.45 and `T2M_MIN_AVG` 9.14 against 21.8 and 14.5 from the mean 18.13
+and the range 7.33 (Oslo: 13.62 and -4.4 against 7.38 and 1.57). The climatology fixture was first
+recorded with the plain parameters, then with the `_AVG` ones; review and the QA panel caught each.
+One missing figure removes both temperatures of a month.

@@ -345,7 +345,9 @@ as `07-S2` does.
   whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). A person who
   stops belonging to the workspace - removed, leaving, or banned, signed out everywhere or deleted by
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
-  task, which the auth hooks enqueue once the change committed (#1073). The close is
+  task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends
+  their own session - a password reset, a password change that revokes the other sessions, a
+  sign-out, a revoke of one, the other or all sessions (#1093). The close is
   best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
   the room after the close, leaves the old role until the socket drops. Nothing in this
   stage relaxes any of that, and the provider does not pass a trip id the layout did not already

@@ -312,6 +312,14 @@ const messages = {
   'plan.weather.badge.unavailable':
     'Vädret är inte tillgängligt för den här dagen',
   'plan.weather.badge.loading': 'Läser in vädret',
+  'plan.weather.badge.recorded': 'Uppmätt: högst {max}, lägst {min}',
+  'plan.weather.badge.recordedHigh': 'Uppmätt: högst {max}',
+  'plan.weather.badge.recordedLow': 'Uppmätt: lägst {min}',
+  'plan.weather.badge.estimate':
+    'Uppskattning: typiskt högst {max}, lägst {min}',
+  'plan.weather.badge.estimateHigh': 'Uppskattning: typiskt högst {max}',
+  'plan.weather.badge.estimateLow': 'Uppskattning: typiskt lägst {min}',
+  'plan.weather.badge.notYetRecorded': 'Ännu inte registrerat',
   'plan.weather.condition.clear': 'Klart',
   'plan.weather.condition.fair': 'Fint',
   'plan.weather.condition.partlyCloudy': 'Delvis molnigt',
@@ -325,14 +333,27 @@ const messages = {
   'plan.weather.panel.title': 'Väder {date}',
   'plan.weather.panel.temperature': 'Högsta / lägsta',
   'plan.weather.panel.precipitation': 'Nederbörd',
+  'plan.weather.panel.precipitationTypical': 'Typisk nederbörd per dag',
   'plan.weather.panel.probability': '{percent} chans',
   'plan.weather.panel.wind': 'Vind',
+  'plan.weather.panel.sunrise': 'Soluppgång',
+  'plan.weather.panel.sunset': 'Solnedgång',
+  'plan.weather.panel.noSunrise': 'Ingen soluppgång',
+  'plan.weather.panel.noSunset': 'Ingen solnedgång',
   'plan.weather.panel.slots': 'Under dagen',
   'plan.weather.panel.slot.night': 'Natt',
   'plan.weather.panel.slot.morning': 'Förmiddag',
   'plan.weather.panel.slot.afternoon': 'Eftermiddag',
   'plan.weather.panel.slot.evening': 'Kväll',
+  'plan.weather.panel.high': 'Högsta',
+  'plan.weather.panel.low': 'Lägsta',
+  'plan.weather.panel.recordedNote': 'Uppmätta värden för den här dagen.',
+  'plan.weather.panel.temperatureTypical': 'Typiskt högsta / lägsta',
+  'plan.weather.panel.estimateNote':
+    'Ett långtidsmedelvärde för den här månaden, inte en prognos.',
   'plan.weather.attribution.metNorway': 'Prognosdata: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Datakälla: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

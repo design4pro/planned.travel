@@ -558,6 +558,71 @@ const messages = {
   'billing.order.stillWritingBody':
     'Το παραστατικό {number} δημιουργείται. Η λήψη επιστρέφει από μόνη της σε λίγα δευτερόλεπτα.',
   'billing.order.openFailed': 'Αυτό το παραστατικό δεν άνοιξε',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Λογαριασμός',
+  'passkeys.page.title': 'Κλειδιά πρόσβασης',
+  'passkeys.page.description':
+    'Ένα κλειδί πρόσβασης σάς επιτρέπει να συνδεθείτε με το δακτυλικό αποτύπωμα, το πρόσωπό σας ή ένα κλειδί ασφαλείας, χωρίς να πληκτρολογήσετε τίποτα.',
+  'passkeys.page.back': 'Πίσω στην ασφάλεια',
+  'passkeys.list.label': 'Τα κλειδιά πρόσβασής σας',
+  'passkeys.add.action': 'Προσθήκη κλειδιού πρόσβασης',
+  'passkeys.add.loading': 'Αναμονή για τη συσκευή σας',
+  'passkeys.add.added': 'Το κλειδί πρόσβασης προστέθηκε',
+  'passkeys.add.dismissed': 'Δεν προστέθηκε κανένα κλειδί πρόσβασης',
+  'passkeys.add.exists':
+    'Αυτή η συσκευή έχει ήδη κλειδί πρόσβασης για τον λογαριασμό σας',
+  'passkeys.add.failed': 'Το κλειδί πρόσβασης δεν προστέθηκε. Δοκιμάστε ξανά.',
+  'passkeys.add.stale':
+    'Για την ασφάλειά σας, συνδεθείτε ξανά για να συνεχίσετε.',
+  'passkeys.error.sessionEnded':
+    'Η συνεδρία σας έληξε. Συνδεθείτε ξανά για να συνεχίσετε.',
+  'passkeys.signInAgain': 'Σύνδεση ξανά',
+  'passkeys.add.limit':
+    'Φτάσατε το όριο των {value} κλειδιών πρόσβασης. Αφαιρέστε ένα για να προσθέσετε άλλο.',
+  'passkeys.add.unsupported':
+    'Αυτό το πρόγραμμα περιήγησης δεν μπορεί να δημιουργήσει κλειδιά πρόσβασης. Δοκιμάστε άλλο πρόγραμμα ή άλλη συσκευή.',
+  'passkeys.empty.title': 'Κανένα κλειδί πρόσβασης ακόμη',
+  'passkeys.empty.body':
+    'Προσθέστε ένα και θα συνδέεστε με το δακτυλικό αποτύπωμα, το πρόσωπό σας ή ένα κλειδί ασφαλείας, χωρίς να πληκτρολογείτε τίποτα.',
+  'passkeys.row.fallbackName': 'Κλειδί πρόσβασης · προστέθηκε στις {date}',
+  'passkeys.row.added': 'Προστέθηκε στις {date}',
+  'passkeys.row.lastUsed': 'Τελευταία χρήση: {date}',
+  'passkeys.row.neverUsed': 'Δεν έχει χρησιμοποιηθεί ακόμη για σύνδεση',
+  'passkeys.badge.synced': 'Συγχρονισμένο',
+  'passkeys.badge.singleDevice': 'Μόνο σε μία συσκευή',
+  'passkeys.error.title': 'Τα κλειδιά πρόσβασής σας δεν φορτώθηκαν',
+  'passkeys.error.retry': 'Δοκιμή ξανά',
+  'passkeys.error.rateLimited':
+    'Πάρα πολλές προσπάθειες. Δοκιμάστε ξανά σε λίγα λεπτά.',
+  'passkeys.error.generic': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Μετονομασία του {name}',
+  'passkeys.rename.fieldLabel': 'Δώστε όνομα σε αυτό το κλειδί πρόσβασης',
+  'passkeys.rename.placeholder': 'Δώστε του όνομα, π.χ. Κινητό εργασίας',
+  'passkeys.rename.saving': 'Αποθήκευση του ονόματος',
+  'passkeys.rename.saved': 'Το όνομα αποθηκεύτηκε',
+  'passkeys.rename.failed': 'Το όνομα δεν αποθηκεύτηκε',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Αφαίρεση του {name}',
+  'passkeys.delete.title': 'Να αφαιρεθεί αυτό το κλειδί πρόσβασης;',
+  'passkeys.delete.body': 'Δεν θα μπορείτε πια να συνδέεστε με το {name}.',
+  'passkeys.delete.password': 'Κωδικός πρόσβασης',
+  'passkeys.delete.passwordHint':
+    'Εισαγάγετε τον κωδικό πρόσβασής σας για επιβεβαίωση.',
+  'passkeys.delete.confirmOnly':
+    'Ο λογαριασμός σας δεν έχει κωδικό πρόσβασης. Επιβεβαιώστε ότι θέλετε να αφαιρέσετε αυτό το κλειδί πρόσβασης.',
+  'passkeys.delete.confirm': 'Αφαίρεση κλειδιού πρόσβασης',
+  'passkeys.delete.cancel': 'Ακύρωση',
+  'passkeys.delete.wrongPassword':
+    'Αυτός ο κωδικός πρόσβασης δεν είναι σωστός.',
+  'passkeys.delete.stale':
+    'Για την ασφάλειά σας, συνδεθείτε ξανά πριν αφαιρέσετε ένα κλειδί πρόσβασης.',
+  'passkeys.delete.removed': 'Το κλειδί πρόσβασης αφαιρέθηκε',
+  'passkeys.delete.failed':
+    'Το κλειδί πρόσβασης δεν αφαιρέθηκε. Δοκιμάστε ξανά.',
+  'passkeys.delete.removing': 'Αφαίρεση του κλειδιού πρόσβασης',
+  'passkeys.delete.passwordRequired':
+    'Εισαγάγετε τον κωδικό πρόσβασής σας για να αφαιρέσετε αυτό το κλειδί πρόσβασης.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

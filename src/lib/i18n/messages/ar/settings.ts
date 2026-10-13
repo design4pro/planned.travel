@@ -555,6 +555,65 @@ const messages = {
   'billing.order.stillWritingBody':
     'الفاتورة {number} قيد الإنشاء. سيعود التنزيل من تلقاء نفسه بعد ثوانٍ.',
   'billing.order.openFailed': 'لم تُفتح تلك الفاتورة',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'الحساب',
+  'passkeys.page.title': 'مفاتيح المرور',
+  'passkeys.page.description':
+    'يتيح لك مفتاح المرور تسجيل الدخول ببصمة إصبعك أو وجهك أو بمفتاح أمان بدلًا من كتابة أي شيء.',
+  'passkeys.page.back': 'العودة إلى الأمان',
+  'passkeys.list.label': 'مفاتيح المرور الخاصة بك',
+  'passkeys.add.action': 'إضافة مفتاح مرور',
+  'passkeys.add.loading': 'في انتظار جهازك',
+  'passkeys.add.added': 'تمت إضافة مفتاح المرور',
+  'passkeys.add.dismissed': 'لم تتم إضافة أي مفتاح مرور',
+  'passkeys.add.exists': 'يحتوي هذا الجهاز بالفعل على مفتاح مرور لحسابك',
+  'passkeys.add.failed': 'لم تتم إضافة مفتاح المرور. حاول مرة أخرى.',
+  'passkeys.add.stale': 'حفاظًا على أمانك، سجّل الدخول مرة أخرى للمتابعة.',
+  'passkeys.error.sessionEnded': 'انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.',
+  'passkeys.signInAgain': 'تسجيل الدخول مرة أخرى',
+  'passkeys.add.limit':
+    'وصلت إلى الحد الأقصى وهو {value} من مفاتيح المرور. احذف أحدها لتتمكن من إضافة مفتاح آخر.',
+  'passkeys.add.unsupported':
+    'لا يستطيع هذا المتصفح إنشاء مفاتيح مرور. جرّب متصفحًا أو جهازًا آخر.',
+  'passkeys.empty.title': 'لا توجد مفاتيح مرور بعد',
+  'passkeys.empty.body':
+    'أضف مفتاحًا واحدًا لتسجّل الدخول ببصمة إصبعك أو وجهك أو بمفتاح أمان بدلًا من كتابة أي شيء.',
+  'passkeys.row.fallbackName': 'مفتاح مرور · أُضيف في {date}',
+  'passkeys.row.added': 'أُضيف في {date}',
+  'passkeys.row.lastUsed': 'آخر استخدام: {date}',
+  'passkeys.row.neverUsed': 'لم يُستخدم لتسجيل الدخول بعد',
+  'passkeys.badge.synced': 'متزامن',
+  'passkeys.badge.singleDevice': 'على جهاز واحد فقط',
+  'passkeys.error.title': 'تعذّر تحميل مفاتيح المرور الخاصة بك',
+  'passkeys.error.retry': 'حاول مرة أخرى',
+  'passkeys.error.rateLimited':
+    'محاولات كثيرة جدًا. حاول مرة أخرى بعد بضع دقائق.',
+  'passkeys.error.generic': 'تحقق من اتصالك وحاول مرة أخرى.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'إعادة تسمية {name}',
+  'passkeys.rename.fieldLabel': 'سمِّ مفتاح المرور هذا',
+  'passkeys.rename.placeholder': 'سمّه، مثل هاتف العمل',
+  'passkeys.rename.saving': 'جارٍ حفظ الاسم',
+  'passkeys.rename.saved': 'تم حفظ الاسم',
+  'passkeys.rename.failed': 'لم يتم حفظ الاسم',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'إزالة {name}',
+  'passkeys.delete.title': 'هل تريد إزالة مفتاح المرور هذا؟',
+  'passkeys.delete.body': 'لن تتمكن بعد الآن من تسجيل الدخول باستخدام {name}.',
+  'passkeys.delete.password': 'كلمة المرور',
+  'passkeys.delete.passwordHint': 'أدخل كلمة المرور للتأكيد.',
+  'passkeys.delete.confirmOnly':
+    'حسابك لا يحتوي على كلمة مرور. أكّد أنك تريد إزالة مفتاح المرور هذا.',
+  'passkeys.delete.confirm': 'إزالة مفتاح المرور',
+  'passkeys.delete.cancel': 'إلغاء',
+  'passkeys.delete.wrongPassword': 'كلمة المرور هذه غير صحيحة.',
+  'passkeys.delete.stale':
+    'حفاظًا على أمانك، سجّل الدخول مرة أخرى قبل إزالة مفتاح المرور.',
+  'passkeys.delete.removed': 'تمت إزالة مفتاح المرور',
+  'passkeys.delete.failed': 'لم تتم إزالة مفتاح المرور. حاول مرة أخرى.',
+  'passkeys.delete.removing': 'جارٍ إزالة مفتاح المرور',
+  'passkeys.delete.passwordRequired':
+    'أدخل كلمة المرور لإزالة مفتاح المرور هذا.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

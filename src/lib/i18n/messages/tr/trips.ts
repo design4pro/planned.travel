@@ -311,6 +311,14 @@ const messages = {
     'Tahmin: en yüksek {max}, en düşük {min}',
   'plan.weather.badge.unavailable': 'Bu gün için hava durumu kullanılamıyor',
   'plan.weather.badge.loading': 'Hava durumu yükleniyor',
+  'plan.weather.badge.recorded': 'Kaydedilen: en yüksek {max}, en düşük {min}',
+  'plan.weather.badge.recordedHigh': 'Kaydedilen: en yüksek {max}',
+  'plan.weather.badge.recordedLow': 'Kaydedilen: en düşük {min}',
+  'plan.weather.badge.estimate':
+    'Yaklaşık değer: tipik en yüksek {max}, en düşük {min}',
+  'plan.weather.badge.estimateHigh': 'Yaklaşık değer: tipik en yüksek {max}',
+  'plan.weather.badge.estimateLow': 'Yaklaşık değer: tipik en düşük {min}',
+  'plan.weather.badge.notYetRecorded': 'Henüz kaydedilmedi',
   'plan.weather.condition.clear': 'Açık',
   'plan.weather.condition.fair': 'Güzel',
   'plan.weather.condition.partlyCloudy': 'Parçalı bulutlu',
@@ -324,15 +332,28 @@ const messages = {
   'plan.weather.panel.title': '{date} hava durumu',
   'plan.weather.panel.temperature': 'En yüksek / en düşük',
   'plan.weather.panel.precipitation': 'Yağış',
+  'plan.weather.panel.precipitationTypical': 'Günlük tipik yağış',
   'plan.weather.panel.probability': '{percent} ihtimal',
   'plan.weather.panel.wind': 'Rüzgâr',
+  'plan.weather.panel.sunrise': 'Gün doğumu',
+  'plan.weather.panel.sunset': 'Gün batımı',
+  'plan.weather.panel.noSunrise': 'Gün doğumu yok',
+  'plan.weather.panel.noSunset': 'Gün batımı yok',
   'plan.weather.panel.slots': 'Gün boyunca',
   'plan.weather.panel.slot.night': 'Gece',
   'plan.weather.panel.slot.morning': 'Sabah',
   'plan.weather.panel.slot.afternoon': 'Öğleden sonra',
   'plan.weather.panel.slot.evening': 'Akşam',
+  'plan.weather.panel.high': 'En yüksek',
+  'plan.weather.panel.low': 'En düşük',
+  'plan.weather.panel.recordedNote': 'Bu güne ait ölçülen değerler.',
+  'plan.weather.panel.temperatureTypical': 'Tipik en yüksek / en düşük',
+  'plan.weather.panel.estimateNote':
+    'Bu ay için uzun vadeli ortalama; tahmin değildir.',
   'plan.weather.attribution.metNorway':
     'Tahmin verileri: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Veriler: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

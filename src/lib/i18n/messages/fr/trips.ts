@@ -334,6 +334,14 @@ const messages = {
     'Prévisions : max. {max}, min. {min}',
   'plan.weather.badge.unavailable': 'Météo indisponible pour ce jour',
   'plan.weather.badge.loading': 'Chargement de la météo',
+  'plan.weather.badge.recorded': 'Relevé : max. {max}, min. {min}',
+  'plan.weather.badge.recordedHigh': 'Relevé : max. {max}',
+  'plan.weather.badge.recordedLow': 'Relevé : min. {min}',
+  'plan.weather.badge.estimate':
+    'Estimation : max. habituelle {max}, min. habituelle {min}',
+  'plan.weather.badge.estimateHigh': 'Estimation : max. habituelle {max}',
+  'plan.weather.badge.estimateLow': 'Estimation : min. habituelle {min}',
+  'plan.weather.badge.notYetRecorded': 'Pas encore relevé',
   'plan.weather.condition.clear': 'Dégagé',
   'plan.weather.condition.fair': 'Beau temps',
   'plan.weather.condition.partlyCloudy': 'Partiellement nuageux',
@@ -347,15 +355,29 @@ const messages = {
   'plan.weather.panel.title': 'Météo du {date}',
   'plan.weather.panel.temperature': 'Maximale / minimale',
   'plan.weather.panel.precipitation': 'Précipitations',
+  'plan.weather.panel.precipitationTypical':
+    'Précipitations quotidiennes habituelles',
   'plan.weather.panel.probability': '{percent} de probabilité',
   'plan.weather.panel.wind': 'Vent',
+  'plan.weather.panel.sunrise': 'Lever du soleil',
+  'plan.weather.panel.sunset': 'Coucher du soleil',
+  'plan.weather.panel.noSunrise': 'Pas de lever du soleil',
+  'plan.weather.panel.noSunset': 'Pas de coucher du soleil',
   'plan.weather.panel.slots': 'Au fil de la journée',
   'plan.weather.panel.slot.night': 'Nuit',
   'plan.weather.panel.slot.morning': 'Matin',
   'plan.weather.panel.slot.afternoon': 'Après-midi',
   'plan.weather.panel.slot.evening': 'Soir',
+  'plan.weather.panel.high': 'Maximale',
+  'plan.weather.panel.low': 'Minimale',
+  'plan.weather.panel.recordedNote': 'Valeurs mesurées pour ce jour.',
+  'plan.weather.panel.temperatureTypical': 'Max. / min. habituelles',
+  'plan.weather.panel.estimateNote':
+    'Moyenne à long terme pour ce mois, et non une prévision.',
   'plan.weather.attribution.metNorway':
     'Données de prévision : MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Données : NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -19,6 +19,7 @@ import { env } from 'cloudflare:workers'
 
 import { requestOutboundRuntime } from '#/server/metering/bindings'
 import { createMetNorwayClient } from './met-norway'
+import { createNasaPowerClient } from './nasa-power'
 
 import type { Logger, LogFields } from '#/server/observability'
 import type { WeatherRuntime } from './weather'
@@ -67,5 +68,6 @@ export function weatherRuntime(options: WeatherRuntimeOptions): WeatherRuntime {
     ceiling: options.ceiling,
     now: () => new Date(),
     metNorway: createMetNorwayClient({ fetch }),
+    nasaPower: createNasaPowerClient({ fetch }),
   }
 }

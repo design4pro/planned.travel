@@ -325,6 +325,14 @@ const messages = {
   'plan.weather.badge.unavailable':
     'Ο καιρός δεν είναι διαθέσιμος για αυτή την ημέρα',
   'plan.weather.badge.loading': 'Φόρτωση καιρού',
+  'plan.weather.badge.recorded': 'Καταγραφή: μέγιστη {max}, ελάχιστη {min}',
+  'plan.weather.badge.recordedHigh': 'Καταγραφή: μέγιστη {max}',
+  'plan.weather.badge.recordedLow': 'Καταγραφή: ελάχιστη {min}',
+  'plan.weather.badge.estimate':
+    'Εκτίμηση: τυπική μέγιστη {max}, τυπική ελάχιστη {min}',
+  'plan.weather.badge.estimateHigh': 'Εκτίμηση: τυπική μέγιστη {max}',
+  'plan.weather.badge.estimateLow': 'Εκτίμηση: τυπική ελάχιστη {min}',
+  'plan.weather.badge.notYetRecorded': 'Δεν έχει καταγραφεί ακόμη',
   'plan.weather.condition.clear': 'Αίθριος',
   'plan.weather.condition.fair': 'Σχετικά αίθριος',
   'plan.weather.condition.partlyCloudy': 'Λίγα σύννεφα',
@@ -338,15 +346,28 @@ const messages = {
   'plan.weather.panel.title': 'Καιρός για {date}',
   'plan.weather.panel.temperature': 'Μέγιστη / ελάχιστη',
   'plan.weather.panel.precipitation': 'Βροχόπτωση',
+  'plan.weather.panel.precipitationTypical': 'Τυπική ημερήσια βροχόπτωση',
   'plan.weather.panel.probability': 'Πιθανότητα {percent}',
   'plan.weather.panel.wind': 'Άνεμος',
+  'plan.weather.panel.sunrise': 'Ανατολή ηλίου',
+  'plan.weather.panel.sunset': 'Δύση ηλίου',
+  'plan.weather.panel.noSunrise': 'Χωρίς ανατολή ηλίου',
+  'plan.weather.panel.noSunset': 'Χωρίς δύση ηλίου',
   'plan.weather.panel.slots': 'Μέσα στην ημέρα',
   'plan.weather.panel.slot.night': 'Νύχτα',
   'plan.weather.panel.slot.morning': 'Πρωί',
   'plan.weather.panel.slot.afternoon': 'Απόγευμα',
   'plan.weather.panel.slot.evening': 'Βράδυ',
+  'plan.weather.panel.high': 'Μέγιστη',
+  'plan.weather.panel.low': 'Ελάχιστη',
+  'plan.weather.panel.recordedNote': 'Μετρημένες τιμές για αυτήν την ημέρα.',
+  'plan.weather.panel.temperatureTypical': 'Τυπική μέγιστη / ελάχιστη',
+  'plan.weather.panel.estimateNote':
+    'Μακροπρόθεσμος μέσος όρος για αυτόν τον μήνα, όχι πρόγνωση.',
   'plan.weather.attribution.metNorway':
     'Δεδομένα πρόγνωσης: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Δεδομένα: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

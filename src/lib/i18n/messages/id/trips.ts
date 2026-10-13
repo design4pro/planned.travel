@@ -309,6 +309,14 @@ const messages = {
     'Prakiraan: tertinggi {max}, terendah {min}',
   'plan.weather.badge.unavailable': 'Cuaca tidak tersedia untuk hari ini',
   'plan.weather.badge.loading': 'Memuat cuaca',
+  'plan.weather.badge.recorded': 'Tercatat: tertinggi {max}, terendah {min}',
+  'plan.weather.badge.recordedHigh': 'Tercatat: tertinggi {max}',
+  'plan.weather.badge.recordedLow': 'Tercatat: terendah {min}',
+  'plan.weather.badge.estimate':
+    'Estimasi: tertinggi umumnya {max}, terendah umumnya {min}',
+  'plan.weather.badge.estimateHigh': 'Estimasi: tertinggi umumnya {max}',
+  'plan.weather.badge.estimateLow': 'Estimasi: terendah umumnya {min}',
+  'plan.weather.badge.notYetRecorded': 'Belum tercatat',
   'plan.weather.condition.clear': 'Cerah',
   'plan.weather.condition.fair': 'Cukup cerah',
   'plan.weather.condition.partlyCloudy': 'Sebagian berawan',
@@ -322,14 +330,27 @@ const messages = {
   'plan.weather.panel.title': 'Cuaca untuk {date}',
   'plan.weather.panel.temperature': 'Tertinggi / terendah',
   'plan.weather.panel.precipitation': 'Curah hujan',
+  'plan.weather.panel.precipitationTypical': 'Curah hujan harian umumnya',
   'plan.weather.panel.probability': 'Peluang {percent}',
   'plan.weather.panel.wind': 'Angin',
+  'plan.weather.panel.sunrise': 'Matahari terbit',
+  'plan.weather.panel.sunset': 'Matahari terbenam',
+  'plan.weather.panel.noSunrise': 'Tidak ada matahari terbit',
+  'plan.weather.panel.noSunset': 'Tidak ada matahari terbenam',
   'plan.weather.panel.slots': 'Sepanjang hari',
   'plan.weather.panel.slot.night': 'Dini hari',
   'plan.weather.panel.slot.morning': 'Pagi',
   'plan.weather.panel.slot.afternoon': 'Siang',
   'plan.weather.panel.slot.evening': 'Malam',
+  'plan.weather.panel.high': 'Tertinggi',
+  'plan.weather.panel.low': 'Terendah',
+  'plan.weather.panel.recordedNote': 'Nilai terukur pada hari tersebut.',
+  'plan.weather.panel.temperatureTypical': 'Tertinggi / terendah umumnya',
+  'plan.weather.panel.estimateNote':
+    'Rata-rata jangka panjang untuk bulan ini, bukan prakiraan.',
   'plan.weather.attribution.metNorway': 'Data prakiraan: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Sumber data: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -338,6 +338,14 @@ const messages = {
     'Прогноз: максимум {max}, минимум {min}',
   'plan.weather.badge.unavailable': 'Погода на этот день недоступна',
   'plan.weather.badge.loading': 'Загрузка погоды',
+  'plan.weather.badge.recorded': 'Зафиксировано: максимум {max}, минимум {min}',
+  'plan.weather.badge.recordedHigh': 'Зафиксировано: максимум {max}',
+  'plan.weather.badge.recordedLow': 'Зафиксировано: минимум {min}',
+  'plan.weather.badge.estimate':
+    'Оценка: типичный максимум {max}, минимум {min}',
+  'plan.weather.badge.estimateHigh': 'Оценка: типичный максимум {max}',
+  'plan.weather.badge.estimateLow': 'Оценка: типичный минимум {min}',
+  'plan.weather.badge.notYetRecorded': 'Ещё не зафиксировано',
   'plan.weather.condition.clear': 'Ясно',
   'plan.weather.condition.fair': 'Малооблачно',
   'plan.weather.condition.partlyCloudy': 'Переменная облачность',
@@ -351,15 +359,28 @@ const messages = {
   'plan.weather.panel.title': 'Погода на {date}',
   'plan.weather.panel.temperature': 'Макс. / мин.',
   'plan.weather.panel.precipitation': 'Осадки',
+  'plan.weather.panel.precipitationTypical': 'Типичные осадки за день',
   'plan.weather.panel.probability': 'вероятность {percent}',
   'plan.weather.panel.wind': 'Ветер',
+  'plan.weather.panel.sunrise': 'Восход',
+  'plan.weather.panel.sunset': 'Закат',
+  'plan.weather.panel.noSunrise': 'Нет восхода',
+  'plan.weather.panel.noSunset': 'Нет заката',
   'plan.weather.panel.slots': 'В течение дня',
   'plan.weather.panel.slot.night': 'Ночь',
   'plan.weather.panel.slot.morning': 'Утро',
   'plan.weather.panel.slot.afternoon': 'День',
   'plan.weather.panel.slot.evening': 'Вечер',
+  'plan.weather.panel.high': 'Максимум',
+  'plan.weather.panel.low': 'Минимум',
+  'plan.weather.panel.recordedNote': 'Измеренные значения за этот день.',
+  'plan.weather.panel.temperatureTypical': 'Типичные макс. / мин.',
+  'plan.weather.panel.estimateNote':
+    'Многолетнее среднее за этот месяц, а не прогноз.',
   'plan.weather.attribution.metNorway':
     'Данные прогноза: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Данные: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

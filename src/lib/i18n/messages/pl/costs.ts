@@ -161,6 +161,12 @@ const messages = {
   'categories.progressLabel': 'Wydane wobec budżetu wyjazdu',
   'categories.empty':
     'Pozycje budżetu i wydatki rozbijają się tutaj, gdy jest co rozbijać.',
+  'categories.legendLabel': 'Wydatki według kategorii',
+  'categories.planned': '{amount} zaplanowano',
+  'categories.nothingSpent': 'Jeszcze nic nie wydano. Oto, co zaplanowano.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'mniej niż {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Zapisane wpłaty',
   'payments.empty.title': 'Jeszcze bez wpłat',

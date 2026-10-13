@@ -77,6 +77,17 @@ describe('a cache every workspace shares holds nothing about one of them', () =>
     )
   })
 
+  it('builds a recorded key from a coordinate cut to one decimal and a date, and nothing else', () => {
+    expect(weather.recordedCacheKey.length).toBe(3)
+    expect(weather.recordedCacheKey(59.9139, 10.7522, '2026-10-01')).toBe(
+      'wx:v2:recorded:59.9:10.8:2026-10-01',
+    )
+    // Two places in one grid cell share an entry.
+    expect(weather.recordedCacheKey(59.9412, 10.7501, '2026-10-01')).toBe(
+      weather.recordedCacheKey(59.9139, 10.7522, '2026-10-01'),
+    )
+  })
+
   it('builds a failure key from a provider and a coordinate, and nothing else', () => {
     expect(weather.failureCacheKey.length).toBe(3)
     expect(weather.failureCacheKey('met-norway', 59.9139, 10.7522)).toBe(

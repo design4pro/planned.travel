@@ -149,6 +149,13 @@ const messages = {
   'categories.againstBudget': '여행 예산 대비',
   'categories.progressLabel': '여행 예산 대비 지출',
   'categories.empty': '예산 항목과 지출은 나눌 것이 생기면 여기에 나뉩니다.',
+  'categories.legendLabel': '카테고리별 지출',
+  'categories.planned': '{amount} 예정',
+  'categories.nothingSpent':
+    '아직 지출이 없습니다. 계획한 항목은 다음과 같습니다.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': '{percent} 미만',
   /* ------------------------------------------------- payments recorded */
   'payments.label': '기록된 결제',
   'payments.empty.title': '아직 결제가 없습니다',

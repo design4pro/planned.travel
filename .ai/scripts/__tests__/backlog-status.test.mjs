@@ -39,6 +39,9 @@ import {
   frozenPlans,
   isAlive,
   marksDeliveredStages,
+  isTruncated,
+  LIST_LIMIT,
+  linkMergedPrs,
   linkOpenPrs,
   parseArgs,
   pickNext,
@@ -187,6 +190,29 @@ describe("linkOpenPrs", () => {
   });
 });
 
+describe("isTruncated", () => {
+  it("lists more than the 303 open issues the old limit of 200 cut off", () => {
+    expect(LIST_LIMIT).toBeGreaterThan(303);
+  });
+
+  it("flags a listing that filled the limit and passes one that did not", () => {
+    expect(isTruncated(new Array(LIST_LIMIT).fill({}))).toBe(true);
+    expect(isTruncated(new Array(LIST_LIMIT - 1).fill({}))).toBe(false);
+    expect(isTruncated(new Array(5).fill({}), 5)).toBe(true);
+  });
+});
+
+describe("linkMergedPrs", () => {
+  it("keeps only the issues a merged pull request closes by keyword", () => {
+    const links = linkMergedPrs([
+      { number: 1076, title: "Close sockets", body: "Fixes #50", headRefName: "fix/issue-50-sockets" },
+      { number: 268, title: "Partial", body: "Does not close it.", headRefName: "fix/issue-189-part" },
+    ]);
+    expect([...links.keys()]).toEqual([50]);
+    expect(links.get(50)).toEqual([{ number: 1076, title: "Close sockets", viaKeyword: true }]);
+  });
+});
+
 describe("blockedBy", () => {
   it("reads the issues under the ticket's Blocked by heading, up to the next heading", () => {
     expect(blockedBy("## Acceptance\n- see #3\n\n## Blocked by\n- #12\n- #13\n\n## Notes\n#99")).toEqual([12, 13]);
@@ -224,6 +250,24 @@ describe("classify", () => {
     const seen = decide({ comments: [] }, { prLinks });
     expect(seen.state).toBe("IN_REVIEW");
     expect(seen.warning).toBeNull();
+  });
+
+  it("waits for housekeeping on an issue a merged pull request already closes, instead of re-implementing it", () => {
+    const mergedLinks = new Map([[42, [{ number: 1076, title: "t", viaKeyword: true }]]]);
+    const seen = decide({}, { mergedLinks });
+    expect(seen.state).toBe("MERGED");
+    expect(seen.next).toContain("#1076");
+  });
+
+  it("keeps an open pull request ahead of an earlier merged one", () => {
+    const prLinks = new Map([[42, [{ number: 300, title: "t", viaKeyword: true }]]]);
+    const mergedLinks = new Map([[42, [{ number: 1076, title: "t", viaKeyword: true }]]]);
+    expect(decide({}, { prLinks, mergedLinks }).state).toBe("IN_REVIEW");
+  });
+
+  it("still reads a hold ahead of a merged pull request", () => {
+    const mergedLinks = new Map([[42, [{ number: 1076, title: "t", viaKeyword: true }]]]);
+    expect(decide({ labels: [{ name: "do-not-close" }] }, { mergedLinks }).state).toBe("BLOCKED");
   });
 
   it("asks about a branch-only link instead of prescribing a closing keyword", () => {

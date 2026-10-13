@@ -347,6 +347,14 @@ const messages = {
     'التوقعات: العظمى {max}، الصغرى {min}',
   'plan.weather.badge.unavailable': 'حالة الطقس غير متاحة لهذا اليوم',
   'plan.weather.badge.loading': 'جارٍ تحميل الطقس',
+  'plan.weather.badge.recorded': 'المسجَّل: العظمى {max}، الصغرى {min}',
+  'plan.weather.badge.recordedHigh': 'المسجَّل: العظمى {max}',
+  'plan.weather.badge.recordedLow': 'المسجَّل: الصغرى {min}',
+  'plan.weather.badge.estimate':
+    'التقدير: العظمى المعتادة {max}، الصغرى المعتادة {min}',
+  'plan.weather.badge.estimateHigh': 'التقدير: العظمى المعتادة {max}',
+  'plan.weather.badge.estimateLow': 'التقدير: الصغرى المعتادة {min}',
+  'plan.weather.badge.notYetRecorded': 'لم يُسجَّل بعد',
   'plan.weather.condition.clear': 'صافٍ',
   'plan.weather.condition.fair': 'طقس لطيف',
   'plan.weather.condition.partlyCloudy': 'غائم جزئيًا',
@@ -360,14 +368,27 @@ const messages = {
   'plan.weather.panel.title': 'الطقس ليوم {date}',
   'plan.weather.panel.temperature': 'العظمى / الصغرى',
   'plan.weather.panel.precipitation': 'هطول الأمطار',
+  'plan.weather.panel.precipitationTypical': 'هطول الأمطار المعتاد يوميًا',
   'plan.weather.panel.probability': 'احتمال {percent}',
   'plan.weather.panel.wind': 'الرياح',
+  'plan.weather.panel.sunrise': 'الشروق',
+  'plan.weather.panel.sunset': 'الغروب',
+  'plan.weather.panel.noSunrise': 'لا يوجد شروق',
+  'plan.weather.panel.noSunset': 'لا يوجد غروب',
   'plan.weather.panel.slots': 'على مدار اليوم',
   'plan.weather.panel.slot.night': 'ليلًا',
   'plan.weather.panel.slot.morning': 'صباحًا',
   'plan.weather.panel.slot.afternoon': 'بعد الظهر',
   'plan.weather.panel.slot.evening': 'مساءً',
+  'plan.weather.panel.high': 'العظمى',
+  'plan.weather.panel.low': 'الصغرى',
+  'plan.weather.panel.recordedNote': 'قيم مقيسة لهذا اليوم.',
+  'plan.weather.panel.temperatureTypical': 'العظمى / الصغرى المعتادة',
+  'plan.weather.panel.estimateNote':
+    'متوسط طويل الأمد لهذا الشهر، وليس توقعًا.',
   'plan.weather.attribution.metNorway': 'بيانات التنبؤ: MET Norway، CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'البيانات: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

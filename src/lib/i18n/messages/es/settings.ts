@@ -569,6 +569,69 @@ const messages = {
   'billing.order.stillWritingBody':
     'La factura {number} se está generando. La descarga vuelve por sí sola en unos segundos.',
   'billing.order.openFailed': 'Esa factura no se abrió',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Cuenta',
+  'passkeys.page.title': 'Claves de acceso',
+  'passkeys.page.description':
+    'Una clave de acceso te permite entrar con tu huella, tu rostro o una llave de seguridad, sin escribir nada.',
+  'passkeys.page.back': 'Volver a seguridad',
+  'passkeys.list.label': 'Tus claves de acceso',
+  'passkeys.add.action': 'Añadir una clave de acceso',
+  'passkeys.add.loading': 'Esperando a tu dispositivo',
+  'passkeys.add.added': 'Clave de acceso añadida',
+  'passkeys.add.dismissed': 'No se añadió ninguna clave de acceso',
+  'passkeys.add.exists':
+    'Este dispositivo ya tiene una clave de acceso para tu cuenta',
+  'passkeys.add.failed': 'No se añadió la clave de acceso. Inténtalo de nuevo.',
+  'passkeys.add.stale':
+    'Por tu seguridad, vuelve a iniciar sesión para continuar.',
+  'passkeys.error.sessionEnded':
+    'Tu sesión ha terminado. Vuelve a iniciar sesión para continuar.',
+  'passkeys.signInAgain': 'Iniciar sesión de nuevo',
+  'passkeys.add.limit':
+    'Has alcanzado el límite de {value} claves de acceso. Elimina una para añadir otra.',
+  'passkeys.add.unsupported':
+    'Este navegador no puede crear claves de acceso. Prueba con otro navegador u otro dispositivo.',
+  'passkeys.empty.title': 'Aún no hay claves de acceso',
+  'passkeys.empty.body':
+    'Añade una y podrás entrar con tu huella, tu rostro o una llave de seguridad, sin escribir nada.',
+  'passkeys.row.fallbackName': 'Clave de acceso · añadida el {date}',
+  'passkeys.row.added': 'Añadida el {date}',
+  'passkeys.row.lastUsed': 'Último uso: {date}',
+  'passkeys.row.neverUsed': 'Aún no se ha usado para entrar',
+  'passkeys.badge.synced': 'Sincronizada',
+  'passkeys.badge.singleDevice': 'Solo en un dispositivo',
+  'passkeys.error.title': 'No se cargaron tus claves de acceso',
+  'passkeys.error.retry': 'Reintentar',
+  'passkeys.error.rateLimited':
+    'Demasiados intentos. Inténtalo de nuevo en unos minutos.',
+  'passkeys.error.generic': 'Comprueba tu conexión e inténtalo de nuevo.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Cambiar el nombre de {name}',
+  'passkeys.rename.fieldLabel': 'Ponle nombre a esta clave de acceso',
+  'passkeys.rename.placeholder': 'Ponle un nombre, como Móvil del trabajo',
+  'passkeys.rename.saving': 'Guardando el nombre',
+  'passkeys.rename.saved': 'Nombre guardado',
+  'passkeys.rename.failed': 'No se guardó el nombre',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Eliminar {name}',
+  'passkeys.delete.title': '¿Eliminar esta clave de acceso?',
+  'passkeys.delete.body': 'Ya no podrás iniciar sesión con {name}.',
+  'passkeys.delete.password': 'Contraseña',
+  'passkeys.delete.passwordHint': 'Introduce tu contraseña para confirmar.',
+  'passkeys.delete.confirmOnly':
+    'Tu cuenta no tiene contraseña. Confirma que quieres eliminar esta clave de acceso.',
+  'passkeys.delete.confirm': 'Eliminar clave de acceso',
+  'passkeys.delete.cancel': 'Cancelar',
+  'passkeys.delete.wrongPassword': 'Esa contraseña no es correcta.',
+  'passkeys.delete.stale':
+    'Por tu seguridad, vuelve a iniciar sesión antes de eliminar una clave de acceso.',
+  'passkeys.delete.removed': 'Clave de acceso eliminada',
+  'passkeys.delete.failed':
+    'No se eliminó la clave de acceso. Inténtalo de nuevo.',
+  'passkeys.delete.removing': 'Eliminando la clave de acceso',
+  'passkeys.delete.passwordRequired':
+    'Introduce tu contraseña para eliminar esta clave de acceso.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

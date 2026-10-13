@@ -2,10 +2,10 @@
 
 | Field              | Value                                         |
 | ------------------ | --------------------------------------------- |
-| **Status**         | ready                                         |
+| **Status**         | implemented                                   |
 | **Issue**          | none                                          |
 | **Spec PR**        | #1140                                         |
-| **Implementation** | none                                          |
+| **Implementation** | #1185, #1202, #1207                           |
 | **Plan**           | 09-S1 (docs/plans/09-account-and-settings.md) |
 
 ## 📝 TLDR
@@ -294,7 +294,7 @@ in a `Field` with a **visible** label ("Name this passkey"; its accessible name 
 label is never duplicated on the page. Every row carries a **Rename
 {name}** control (`IconButton`, at least 24px, named per row) that moves focus into the input; Enter, Escape and a successful save return focus
 to that control; a failed save keeps focus in the input and shows the error through `Field`'s `error`. Enter commits; blur commits only a non-empty changed value; Escape reverts; an empty value
-or Escape sends no request and leaves `name` null. A spinner shows while the rename saves; a failed rename reverts the text and says so
+or Escape sends no request and leaves `name` null. A spinner shows while the rename saves; a failed rename keeps the typed text and says so
 inline. The input is a full-width tap target of at least 44px high and the design does not depend on focus opening the keyboard after the sheet
 closes (iOS will not).
 
@@ -312,8 +312,8 @@ confirm button; when false it asks for a plain confirmation (`passkeys.delete.co
 (`passkeys.delete.passwordRequired`) and `PASSKEY_INVALID_PASSWORD` (`passkeys.delete.wrongPassword`) through the password `Field`'s `error`;
 **every other refusal** is one `Alert` inside the dialog (focusable with `tabIndex={-1}`), in both variants: `PASSKEY_SESSION_NOT_FRESH`
 (`passkeys.delete.stale`, with the same **Sign in again** action), a `401` (`passkeys.error.sessionEnded`, same action), a `429`
-(`passkeys.error.rateLimited`), and `PASSKEY_NOT_FOUND`, `PASSKEY_IMPERSONATED` or a network failure (`passkeys.delete.failed`); the dialog stays
-open. After any refusal focus moves to the password field, or to that alert, so it never rests on `<body>` after the button's `loading`. `Escape` cancels and focus returns to the row's trigger. After a successful removal, focus moves
+(`passkeys.error.rateLimited`), and `PASSKEY_IMPERSONATED` or a network failure (`passkeys.delete.failed`); the dialog stays
+open (`PASSKEY_NOT_FOUND` is not a refusal: the passkey is already gone, see Amendment 19). After any refusal focus moves to the password field, or to that alert, so it never rests on `<body>` after the button's `loading`. `Escape` cancels and focus returns to the row's trigger. After a successful removal, focus moves
 to the header Add button (never the empty state's duplicate; the list heading when that button is disabled), implemented with `onCloseAutoFocus` and
 `preventDefault()` because the opener row is gone, and the status region announces "Passkey removed". If the last passkey of a person who also has no password is removed, nothing else
 changes: sign-in by social provider still works, and the stage does not invent a password for a passwordless account.
@@ -416,7 +416,7 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 | List request fails or returns 429                                     | Error alert with Try again; 429 says so by name.                                                                                                        |
 | Rename to an empty string, Escape, or blur unchanged                  | No request; name stays as it was (null stays null).                                                                                                     |
 | Rename of another person's credential id                              | `NOT_FOUND`; the other row is unchanged.                                                                                                                |
-| Rename request fails                                                  | Text reverts, inline "The name was not saved".                                                                                                          |
+| Rename request fails                                                  | Text stays, inline "The name was not saved".                                                                                                            |
 | Delete with a wrong password / no password on a password account      | `BAD_REQUEST` with the matching code; the row survives; the dialog says so inline and stays open.                                                       |
 | Delete on a passwordless account with a session older than `freshAge` | `PASSKEY_SESSION_NOT_FRESH`; the row survives; the dialog asks the person to sign in again.                                                             |
 | Delete of another person's credential id                              | `NOT_FOUND` whatever else was sent; the other row is unchanged.                                                                                         |
@@ -627,3 +627,33 @@ Reviewed before the PR opened, through `afk-decide`: "approve this spec for unat
 | Security and tenancy | approve with conditions | impersonation veto on four endpoints; fresh session for registration; one `hasPassword` definition; ceiling before `createVerificationValue`; `register/options` rule; sessions-stay edge case; ACCESS §6.4 | approve with conditions: `impersonatedBy != null`, empty-string case tested (applied); approves as risk-high / security work                    |
 | Accessibility        | approve with conditions | focus after every outcome; per-row Rename; visible Field label; one always-mounted status region; limit line described-by; delete dialog errors and focus; list semantics; `dir="auto"`                     | approve with conditions: focus to the list heading when Add is disabled, stale outcome focus, one in-dialog alert, native `required` (applied)  |
 | UX                   | approve with conditions | "On one device only" badge; Sign in again action; `add.failed`; "a few minutes"; delete loading label; per-row Rename name and placeholder; copy gate; honest "Synced" vocabulary note                      | approve with conditions: 401 shows `sessionEnded`, stale lines only for `PASSKEY_SESSION_NOT_FRESH`, delete keys placed, generic body (applied) |
+
+## Amendment
+
+What ships in #1185 (Phase 1, 09-S1a) differs from the design above in these places. Phase 2 (#1145) and Phase 3 (#1146) are listed after these.
+
+1. **The WebAuthn origin check reads the dev port wildcards.** The design assumed dev trusts loopback origins "by port" for the ceremony too. That held for Better Auth's request-origin check only: `assertClientData` compared with an exact `includes`, so every ceremony on a port other than `APP_URL`'s answered `400 WebAuthn origin is not trusted`. `isTrustedOrigin` in `src/server/auth/passkey/webauthn.ts` now reads a `scheme://host:*` entry as the same scheme and hostname on any port, and refuses any origin that is not in its serialised form. Production's list (`trustedOrigins()`) has no wildcard, and `src/server/auth/__tests__/trusted-origins.test.ts` pins it. The change reaches passkey sign-in as well as registration, because the check is shared.
+2. **`MAX_PASSKEYS_PER_USER` lives in `src/lib/auth/passkey-limit.ts`**, re-exported by the plugin: the screen cannot import server code.
+3. **`advanced.ipAddress.ipAddressHeaders: ['cf-connecting-ip']`** in `src/server/auth/index.ts`. Without it Better Auth saw no client address behind Cloudflare and every rate limit shared one bucket. This re-keys every existing limit (sign-in, sign-up, password reset, two-factor), which is the intended behaviour.
+4. **The Add button is drawn twice when the list is empty** (the header's and the empty state's action), the same component with the same states. The header one owns the focus return.
+5. **Outcomes re-read the list.** Any registration outcome other than a dismissed sheet reads the list again and keeps it when the read fails, so a reply lost after the row was written, or a second tab, cannot leave the screen stale. A new row is never added twice.
+6. **A server limit refusal is announced** in the status region (visually hidden: the standing limit line is the visible text), and a failed sign-out keeps the Sign in again action mounted.
+7. **The ceiling is advisory under a burst.** The count and the write are separate statements, so a burst overshoots by at most what the registration rate limit lets one address start in its window (10 per 300 s). A post-write recount was weighed and not built: nothing in the harness can produce a valid attestation to test it, and the ceiling bounds storage, not an entitlement.
+
+Phase 2 (09-S1b, #1145) differs from the design in these places:
+
+8. **The rename field is its own module.** `src/routes/_app/-ui/passkey-rename-field.tsx` owns the draft text and the keys (Enter, Escape, blur); `passkey-manager.tsx` owns the one row in rename mode, the request and the focus handed back to the Rename control. The copy gate walks the new file.
+9. **A blur does not take focus back.** Enter and Escape return focus to the row's Rename control; a name saved by a blur leaves focus where the person moved it. An empty or unchanged value, on any of the three, closes rename mode without a request.
+10. **The impersonation veto is one helper.** `assertNotImpersonated` in `plugin.ts` is called by both registration endpoints and by rename; the delete endpoint of 09-S1c calls it too.
+11. **Failed saves by status.** `renameFailureNotice` maps a `401` to `passkeys.error.sessionEnded` with Sign in again beside the row, a `429` to `passkeys.error.rateLimited`, anything else to `passkeys.rename.failed`. A save that fails after another row took rename mode says so in the status region instead. `passkeys.rename.saving` is announced there while a save runs.
+12. **A lost reply opens rename mode too.** When the registration reply is lost and the reloaded list holds the new row, that row (the newest) opens in rename mode like any added one.
+13. **A failed save leaves the field open, reachable and filled.** The design (lines "a failed rename reverts the text" and the Rename-request-fails row) and the ticket's acceptance criterion said the text reverts. Build review (WCAG 2.2 3.3.7, Redundant Entry, level A: a retry after a `429` or a dropped connection must not mean typing the name again) overturned that: the typed text stays in the field, and the stored name is still drawn in the row above it. A blur never decides while the field shows an error (it neither saves nor closes), so Sign in again beside the row can be reached; Enter and Escape still decide. A failure after a blur does not move focus back into the input, and focus is handed back after a key-started save only while it is still in the field. Every failure is also announced in the status region (visually hidden, no second Sign in again), the Rename control pressed while its own row saves does not reopen the field, an Enter that ends an IME composition (`isComposing`, or key code 229 in WebKit) does not commit, a failed sign-out from the row puts focus back on that button, and the update is scoped to the caller's `userId` as well as the passkey id.
+
+Phase 3 (09-S1c, #1146) differs from the design in these places:
+
+14. **One definition of "has a password".** `findPasswordHash` in `plugin.ts` returns the credential account's hash only when it is truthy. The list's `requiresPassword` and the delete branch both read it, so a credential row with a null password is a passwordless account for both and takes the fresh-session path; it never reaches `password.verify`.
+15. **Delete order.** Impersonation veto, then the passkey lookup and ownership check (`NOT_FOUND` for another user's id, the row untouched), then the identity proof (`PASSKEY_PASSWORD_REQUIRED` and `PASSKEY_INVALID_PASSWORD` for a password account, `PASSKEY_SESSION_NOT_FRESH` for a passwordless one), then a delete scoped by id and `userId`. The freshness check is the one `assertFreshSession` that registration uses.
+16. **A missing hint asks for the password.** The client reads `requiresPassword !== false`, so a list reply without the field draws the password field; the server decides what it needs either way.
+17. **The delete dialog is its own module** (`passkey-delete-dialog.tsx`) and owns the request, the password and the refusals; the manager owns the list and where focus goes once it has closed. `SignInAgain` moved to `passkey-sign-in-again.tsx` so both read it. The passkey's name sits in a `bdi dir="auto"` inside the translated sentence (a sentinel character is split out of the message, because the catalogue has no markup). The copy gate walks both new files.
+18. **Removing lifts the ceiling line.** A removed passkey clears the standing "limit reached" line, so "Remove one to add another" holds without a reload.
+19. **Removal answers that are not refusals.** `PASSKEY_NOT_FOUND` on delete (another tab removed it, or a reply was lost and the retry reached the server) counts as removed: the row leaves, the dialog closes and "Passkey removed" is announced, because retrying could never succeed. A password refusal with no field drawn (the list's hint was stale) switches the dialog to password mode and draws the field. "Passkey removed" is written from `onCloseAutoFocus`, after the dialog has gone, because until then the page behind it is `aria-hidden` and the change would not be announced.

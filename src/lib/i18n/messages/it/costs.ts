@@ -159,6 +159,13 @@ const messages = {
   'categories.progressLabel': 'Speso rispetto al budget del viaggio',
   'categories.empty':
     'Le voci di budget e le spese si scompongono qui quando c’è qualcosa da scomporre.',
+  'categories.legendLabel': 'Spesa per categoria',
+  'categories.planned': '{amount} previsti',
+  'categories.nothingSpent':
+    'Non è stato ancora speso nulla. Ecco cosa hai previsto.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'meno del {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Pagamenti registrati',
   'payments.empty.title': 'Nessun pagamento ancora',

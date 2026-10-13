@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                      |
-| ------------------ | -------------------------- |
-| **Status**         | in-progress                |
-| **Issue**          | #631                       |
-| **Spec PR**        | #636                       |
-| **Implementation** | #1003, #1004, #1044, #1046 |
+| Field              | Value                                    |
+| ------------------ | ---------------------------------------- |
+| **Status**         | in-progress                              |
+| **Issue**          | #631                                     |
+| **Spec PR**        | #636                                     |
+| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197 |
 
 ## 📝 TLDR
 
@@ -294,7 +294,7 @@ type DayWeather =
   | { dayId: string; status: 'none' } // undated day, or no location
   | { dayId: string; status: 'unavailable'; kind: WeatherKind } // provider/ceiling/parse failure
   | { dayId: string; status: 'not-yet-recorded' } // past day inside POWER_LAG_DAYS
-  | { dayId: string; status: 'ok'; reading: DayReading; sun: SunTimes | null }
+  | { dayId: string; status: 'ok'; reading: DayReading; sun?: SunTimes } // `sun` is absent on an answer that predates it and on a trip with no time zone (amendment 33)
 
 type WeatherKind = 'forecast' | 'recorded' | 'estimate'
 
@@ -316,7 +316,7 @@ interface DayReading {
 }
 
 interface SunTimes {
-  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); null in polar night / midnight sun
+  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); null for a side the sun does not cross the horizon for (amendment 30)
   sunset: string | null
 }
 
@@ -421,7 +421,7 @@ export const loadTripWeather: ServerFn<
   `DayWeather` variant (`status: 'not-yet-recorded'`) because "we have not published it yet" and
   "we asked and it failed" are different answers to the traveller and `unavailable`'s copy is fixed
   regardless of kind: folding the two together would make AC14 unsatisfiable, since a genuine NASA
-  failure on a `recorded` day already produces `{ status: 'unavailable', kind: 'recorded' }`.
+  failure on a `recorded` day already produces `{ status: 'unavailable' }` (shipped without `kind`, Amendment 22).
 - **Colour**: semantic tokens only (`--color-info`, `--color-warning`, `--color-danger` and their
   `-soft` companions). There is no weather palette and no change to `src/styles/tokens.css`. The icons
   come from the icon set already in use.
@@ -519,7 +519,7 @@ user reports a blank badge.
 | Workspace hits `weather_lookups_per_month`                         | Cached days still render. Uncached days show "unavailable". The ceiling is never exceeded.                                                                                                                                                                     |
 | Provider ledger blocks a vendor (`ProviderBlockedError`)           | Same as an outage for that vendor.                                                                                                                                                                                                                             |
 | KV read or write fails                                             | Treated as a miss, with a logged event. The reading is still served from the provider.                                                                                                                                                                         |
-| Trip time zone missing or invalid                                  | `resolveTimeZone` falls back to UTC, which is the existing behaviour.                                                                                                                                                                                          |
+| Trip time zone missing or invalid                                  | `resolveTimeZone` falls back to UTC, which is the existing behaviour. A trip with no zone shows no sun rows (amendment 33).                                                                                                                                    |
 | Trip spanning two time zones                                       | Days are bucketed and sun times computed in the trip's single zone. Wrong by the offset for the far leg - the limitation recorded in the Data Model, not a defect to file.                                                                                     |
 | Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                                                                                                                                 |
 | Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                                                                                                                                      |
@@ -564,7 +564,7 @@ them.
   no outbound call while the `wx:v1:fail:` entry lives.
 - **AC14** A past day inside `POWER_LAG_DAYS` resolves to `status: 'not-yet-recorded'`, renders
   "Not yet recorded" as its accessible name, and is never back-filled from a forecast. A NASA
-  failure on a past day outside the lag resolves to `{ status: 'unavailable', kind: 'recorded' }`
+  failure on a past day outside the lag resolves to `{ status: 'unavailable' }` (shipped without `kind`, Amendment 22)
   instead, so the two are distinguishable by the type and not only by the copy.
 
 ## 📝 Risks & Impact Review
@@ -652,8 +652,8 @@ Each phase is one pull request and leaves `develop` green.
    returning the new headers without a series.
 5. Write `src/server/weather/nasa-power.ts` with `createNasaPowerClient({ fetch })`, `daily(lat, lng,
 start, end)` using `T2M_MAX,T2M_MIN,PRECTOTCORR,WS2M`, `community=AG`, `time-standard=LST`, and
-   `climatology(lat, lng)` using `T2M_MAX,T2M_MIN,PRECTOTCORR` (no wind, because an estimate does not
-   show it). `-999` becomes `null`. Tests use fixtures for
+   `climatology(lat, lng)` using `T2M,T2M_RANGE,PRECTOTCORR` (no wind, because an estimate does not
+   show it; the typical high and low are the mean moved half the range up and down, see ADR 0038). `-999` becomes `null`. Tests use fixtures for
    both endpoints and a fill-value case.
    6a. Write the **pure half** of `src/server/weather/weather.ts`:
    `selectKind(dateKey, today, forecastWindowEnd, powerLagDays)` and `groupByLocation(days)` - no
@@ -778,8 +778,40 @@ What ships in #1004 (phase 2, the forecast slice, #820) differs from the design 
 
 What ships with the popover (#822, the fuller forecast) differs from the design above in these places.
 
-14. **The panel is `DayWeatherPanel` in `day-weather-panel.tsx`**, a unit with no popover in it, and the badge in `day-weather-badge.tsx` puts it in one. A forecast badge is now a button, the day header button's sibling; an unavailable, loading or empty day stays a picture or empty space, because there is nothing behind it to open. Sunrise and sunset, and the recorded and estimate notes, are not in the panel: neither the computed sun times nor those two kinds exist yet.
+14. **The panel is `DayWeatherPanel` in `day-weather-panel.tsx`**, a unit with no popover in it, and the badge in `day-weather-badge.tsx` puts it in one. A forecast badge is now a button, the day header button's sibling; an unavailable, loading or empty day stays a picture or empty space, because there is nothing behind it to open. Sunrise and sunset are rows of the panel since #824 (computed in `src/lib/sun.ts`, carried on every `ok` outcome the server resolves, and left off the wire for a trip with no time zone, amendment 33); the recorded note is a line of it since #823 (amendment 26), and the estimate note since #825 (amendment 36).
 15. **`DayReading` carries `precipitationMm`, `precipitationProbability`, `windMs` and `slots`**, all metric, converted at render like the temperatures (`mm` or `in`, `km/h` or `mph`; the unit symbols are written the way `formatDistance` writes `km`, not as copy). The daily total is the sum of the steps' amounts, each step contributing its hourly figure and only otherwise its six-hourly one, so the overlapping six-hour figures are never added on top of the hourly ones; it is `null`, never `0`, when no step carries one.
 16. **The compact product sends no chance of rain.** Its summaries carry `precipitation_amount` and nothing else (`next_12_hours.details` is empty, recorded 2026-10-09), so `precipitationProbability` is `null` for every MET reading today and the panel's "chance" is not drawn. The client still reads `probability_of_precipitation` when a summary states one, so a richer product needs no further change.
 17. **Slots are the slots that have a step, or one that covers them**, so today, once the morning has gone, has two and a later day four. `from` is the slot's local start (`00:00`, `06:00`, `12:00`, `18:00`), the sky is that of the step whose six hours cover most of the slot (none when they cover less than half of it, because past the hourly stretch the steps sit at 00, 06, 12 and 18 UTC, which is not a slot start in most zones), and the temperature is the mean of the steps inside the slot. `slots` is `null` when a day has none, which the panel reads as no region at all.
 18. **The forecast cache is `wx:v2:forecast:<lat4>:<lng4>`.** A step now stores wind, precipitation and the chance, which is a change of stored shape; `WEATHER_CACHE_VERSION` moved from `v1` to `v2` as the Data Model requires (the failure key carries the same prefix, so its `v1` entries are dropped too, which costs at most one retry), and the `v1` entries are left to expire on their 6 h retention. Unlike `lastModified` (item 13), the new step fields are required, so an older entry cannot be read as the new shape and a bump, not a default, is the right answer. Until they do, a board opened for a point costs one call it would not have, which is the price of never serving a step without the fields it is now read for.
+
+What ships with the recorded kind (#823) differs from the design above in these places.
+
+19. **`POWER_LAG_DAYS` is 3, measured 2026-10-12.** At 11:42 and 12:09 UTC the daily point service held values through 2026-10-09 and the fill value for 10 to 12 October at Oslo, Sydney, Tokyo, New York, Nairobi and Reykjavik. A date is published once it is three or more days before today in UTC (`lastRecordedDate`), whatever the trip's zone, because the service publishes on its own clock; a request whose `end` is after today is answered clipped to today, so the call never asks past the newest published day.
+20. **NASA is sent one decimal, not four.** The grid is about 0.5 degrees, so the request, the recorded key (`wx:v2:recorded:<lat1>:<lng1>:<date>`, `v2` with the forecast key) and the failure entry (`wx:v2:fail:nasa-power:<lat1>:<lng1>`, the one-decimal value written with four, as `59.9000:10.8000`, by the shared `failureCacheKey`) share one rounding. ADR 0038 is amended to say so.
+21. **Day kind is one pure function.** `selectKind(date, { today, forecastEnd, recordedEnd, recordedStart })` returns `forecast`, `recorded`, `not-yet-recorded` or `none`; it runs once before the fetch with `forecastEnd = today + FORECAST_LOOKAHEAD_DAYS` (so a far-future day is never fetched) and once after, with the last date the forecast really covers. Since #825 a day past the window is an `estimate` (amendment 36).
+22. **The wire reading is a union on `kind`.** `DayReading = ForecastReading | RecordedReading`. A recorded day has nullable temperatures (a fill value is an absent field, never a number; both absent is `unavailable`, and has no reading), precipitation and wind, `source: 'nasa-power'`, no symbol and no slots. `unavailable` still has no `kind` (item 3): "unavailable for the recorded kind" is told from `not-yet-recorded` by `status`.
+23. **Recorded days are an opt-in of the request.** `loadTripWeather` takes `recorded?: boolean`, absent meaning `false`, and the planner always sends `true`. A tab loaded before this deploy runs a bundle that cannot draw `not-yet-recorded` (its badge model has no such branch) and would draw a null temperature as `0`, so without the flag the server answers `none` for a past day, exactly as before. A schema only gains an optional field (`BACKWARD_COMPATIBILITY.md`). The field is removable once no tab older than this release can be open.
+24. **One allowance grant covers both kinds.** The cold calls of both kinds are one list, forecast calls first, so a month that runs out costs the recorded days before the forecast ones. One recorded call per location covers every cold past day of it, and the range sent is the span of the cold days, not of the trip.
+25. **Retention of an empty day is one hour.** A day the provider answers with neither temperature (the fill value beyond the lag, or a gap) is `unavailable`, is not given the 24 h / 30 d retention of a real reading, and is kept for an hour so a gap does not spend an allowance unit on every view.
+26. **Copy.** `plan.weather.badge.recordedHigh` and `recordedLow` name a recorded day that has only one temperature, and `plan.weather.panel.high` and `low` label the lone figure; the recorded note and the attribution are two lines in the panel. A not-yet-recorded day is drawn as a muted clock with its own accessible name, not as the unavailable dash, so the two never look alike. The clock also carries a `title`, so a pointer reader sees the words.
+27. **Nothing dated before the provider's data is asked for.** NASA POWER refuses a range that starts before 1981-01-01 with a 422 (measured 2026-10-12), and a refusal is remembered per provider and cell for every workspace, so one mistyped year ("1026") would blank the cell for all of them for five minutes at a time. `RecordedProvider.firstDate` (`POWER_FIRST_DATE`, `1981-01-01`) reaches `selectKind` as `recordedStart`: an earlier past day is `none`, with no call, no unit and no failure entry.
+28. **The forecast takes its places in the cap first.** Of the 12 locations a request resolves, those with a forecast day are kept before those with only recorded days, each in day order, so a trip under way with a dozen past stays still shows today's forecast. A finished trip with more than 12 locations still leaves the later ones `unavailable`; counting recorded days by one-decimal cell rather than by location is a follow-up.
+29. **Known limit of the lag.** `POWER_LAG_DAYS = 3` was measured at midday UTC (item 19), so the first hours of the UTC day on which a date turns "recorded" are unmeasured. If the service publishes later than 00:00 UTC, that date reads `unavailable` for those hours (one allowance unit per cell per hour at most, by the one-hour retention of an empty day). Re-measure just after 00:00 UTC; a lag of 4 is the safe value if it differs.
+
+What ships with the sun times (#824, #1197) differs from the design above in these places.
+
+30. **`sunTimes` returns a `SunTimes`, not `SunTimes | null`, and a side is `null` when the sun does not cross the horizon for it on that local date.** On a full polar day that is both sides; on the first or last day of a polar period it can be one side alone, because each side is resolved on its own. A bad date or coordinate gives `{ sunrise: null, sunset: null }`; an unknown zone is read as UTC, as `resolveTimeZone` does everywhere else.
+31. **`sun` is optional on the wire type** (`sun?: SunTimes` on `DayWeather`'s `ok` member) and required on the server's `WeatherOutcome`, so an answer cached or served by a worker that predates it leaves the two rows out instead of breaking the panel.
+32. **The fixtures sit inside `src/lib/__tests__/sun.test.ts`**, not in a `sun.fixtures.ts`, and number seven for the within-two-minutes check (Oslo twice, Quito, Sydney, and Tokyo, Los Angeles and Apia, whose zones put the crossing on a neighbouring UTC day); Tromsø is asserted separately as `null`. The values are the output of NOAA's published `main.js`, run under node, rounded to the minute.
+33. **A trip with no time zone shows no sun times.** `trips.timezone` is written by the seeds only, so a trip created through the UI has none and the weather read falls back to UTC for day bucketing (the edge-case table above). Sunrise and sunset would then be UTC clock times of a place elsewhere, up to hours off and sometimes a sunset before a sunrise, so the route leaves `sun` off those days and the panel draws neither row. The Data Model's `sun` is optional for the same reason. Giving a trip a zone is #1198; until then the rows appear on seeded trips only.
+34. **A recorded day carries `sun` too.** `sun` rides on every `ok` outcome, so the `recorded` kind (#823), which has a popover of its own, gets the two rows as a forecast does; the sun is computed from the place and the date and needs nothing from NASA POWER. The badge model's `recorded` member carries `sun` beside `reading`, as the `forecast` one does.
+35. **A side belongs to the local calendar date its instant falls on, which leaves a gap where a sunset first passes midnight.** Where the evening sunset drifts past 00:00 (Reykjavik around 15 June, Fairbanks in late May, the days before a polar day in northern Norway) the one date whose sunset lands after midnight has `sunset: null`, and the next date shows `00:00`-ish, the evening before's sunset, ahead of its own sunrise. The panel names the missing side ("No sunset"), which is true of that calendar date and reads oddly in a city that has no polar day. Resolving a side against the solar day instead (a sunset after midnight shown for the day it follows, with a "+1" or the date) needs a display decision and is #1201; `sun.test.ts` pins the Reykjavik dates so a change of rule is deliberate.
+
+What ships with the estimate kind (#825) differs from the design above in these places.
+
+36. **A day is an estimate before the fetch when it is further out than `FORECAST_LOOKAHEAD_DAYS`, and after it when the forecast stops short.** `selectKind` returns `estimate` for a date after `forecastEnd`. A day within the lookahead is a forecast day until the series has been read; the allowance is granted once, up front, so the climatology is asked for before that is known. A place with a forecast day past `FORECAST_CERTAIN_DAYS` (7; MET's compact series ran to today plus nine on 2026-10-12) therefore asks for its climatology too, and a forecast day the series does not cover becomes an estimate when the place asked for one. A forecast that could not be had (outage, spent allowance) leaves a day past those seven with its estimate and a nearer day `unavailable`. A trip wholly inside the seven days never calls the climatology.
+37. **Estimates are an opt-in of the request.** `loadTripWeather` takes `estimate?: boolean`, absent meaning `false`, and the planner always sends `true`, for the reason item 23 gives for `recorded`: a bundle that predates the kind would draw an average as a forecast. Without the flag a day beyond the forecast is `none`, nothing is asked of the climatology and nothing is spent.
+38. **The estimate key is `wx:v2:estimate:<lat1>:<lng1>`**, `v2` because `WEATHER_CACHE_VERSION` is `v2` since item 18, and the value is `{ v:2, fetchedAt, months }` with twelve months, January first. It is kept thirty days, or an hour when no month has a temperature. A climatology failure is remembered under its own entry (`wx:v2:fail:nasa-power-climatology:<lat>:<lng>`), not the daily one: they are two services, and a failed precautionary call (item 36) must not blank a place's recorded days.
+39. **The allowance and the cap follow the order forecast, estimate, recorded.** The cold calls are one list in that order, so a ceiling of one buys the forecast and a ceiling of two the forecast and the estimate; a climatology asked only as a precaution (item 36) ranks as an estimate all the same, because the ticket's own fourteen-day trip needs it to; the 12-location cap keeps places with a forecast day, then with an estimate, then with only recorded days.
+40. **`EstimateReading` carries `windMs: null`** so the panel's wind row is left out by the rule that already leaves out a row with no value, and it carries `sun` like every other kind. The climatology reader derives the high and the low together, so a month has both or neither, and a month with neither is `unavailable`. A reading that does carry one temperature (the shape allows it) draws the one it has: the badge is named `estimateHigh` or `estimateLow`, and the panel labels the lone figure `High` or `Low`.
+41. **The badge marks an estimate with a `≈` that is hidden from assistive technology and a dashed `border-info` outline**; the accessible name begins "Estimate" in every locale. Copy added: `plan.weather.badge.estimate`, `estimateHigh`, `estimateLow`, `plan.weather.panel.temperatureTypical`, `estimateNote` and `precipitationTypical` ("Typical precipitation per day", the mean in mm per day), in all 23 locales. Where a locale's word for a forecast and for an estimate would be one word (Turkish, Indonesian), the estimate uses a different one.

@@ -564,6 +564,66 @@ const messages = {
   'billing.order.stillWritingBody':
     'La fattura {number} è in generazione. Il download torna da sé tra pochi secondi.',
   'billing.order.openFailed': 'Quella fattura non si è aperta',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Account personale',
+  'passkeys.page.title': 'Chiavi d’accesso',
+  'passkeys.page.description':
+    'Una chiave d’accesso ti permette di entrare con l’impronta, il volto o una chiave di sicurezza, senza scrivere niente.',
+  'passkeys.page.back': 'Torna a sicurezza',
+  'passkeys.list.label': 'Le tue chiavi d’accesso',
+  'passkeys.add.action': 'Aggiungi una chiave d’accesso',
+  'passkeys.add.loading': 'In attesa del tuo dispositivo',
+  'passkeys.add.added': 'Chiave d’accesso aggiunta',
+  'passkeys.add.dismissed': 'Nessuna chiave d’accesso è stata aggiunta',
+  'passkeys.add.exists':
+    'Questo dispositivo ha già una chiave d’accesso per il tuo account',
+  'passkeys.add.failed': 'La chiave d’accesso non è stata aggiunta. Riprova.',
+  'passkeys.add.stale': 'Per la tua sicurezza, accedi di nuovo per continuare.',
+  'passkeys.error.sessionEnded':
+    'La tua sessione è terminata. Accedi di nuovo per continuare.',
+  'passkeys.signInAgain': 'Accedi di nuovo',
+  'passkeys.add.limit':
+    'Hai raggiunto il limite di {value} chiavi d’accesso. Rimuovine una per aggiungerne un’altra.',
+  'passkeys.add.unsupported':
+    'Questo browser non può creare chiavi d’accesso. Prova con un altro browser o dispositivo.',
+  'passkeys.empty.title': 'Ancora nessuna chiave d’accesso',
+  'passkeys.empty.body':
+    'Aggiungine una e potrai entrare con l’impronta, il volto o una chiave di sicurezza, senza scrivere niente.',
+  'passkeys.row.fallbackName': 'Chiave d’accesso · aggiunta il {date}',
+  'passkeys.row.added': 'Aggiunta il {date}',
+  'passkeys.row.lastUsed': 'Ultimo utilizzo: {date}',
+  'passkeys.row.neverUsed': 'Non ancora usata per entrare',
+  'passkeys.badge.synced': 'Sincronizzata',
+  'passkeys.badge.singleDevice': 'Solo su un dispositivo',
+  'passkeys.error.title': 'Le tue chiavi d’accesso non si sono caricate',
+  'passkeys.error.retry': 'Riprova',
+  'passkeys.error.rateLimited': 'Troppi tentativi. Riprova tra qualche minuto.',
+  'passkeys.error.generic': 'Controlla la connessione e riprova.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Rinomina {name}',
+  'passkeys.rename.fieldLabel': 'Dai un nome a questa chiave d’accesso',
+  'passkeys.rename.placeholder': 'Dalle un nome, ad esempio Telefono di lavoro',
+  'passkeys.rename.saving': 'Salvataggio del nome',
+  'passkeys.rename.saved': 'Nome salvato',
+  'passkeys.rename.failed': 'Il nome non è stato salvato',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Rimuovi {name}',
+  'passkeys.delete.title': 'Rimuovere questa chiave d’accesso?',
+  'passkeys.delete.body': 'Non potrai più accedere con {name}.',
+  'passkeys.delete.password': 'La tua password',
+  'passkeys.delete.passwordHint': 'Inserisci la tua password per confermare.',
+  'passkeys.delete.confirmOnly':
+    'Il tuo account non ha una password. Conferma di voler rimuovere questa chiave d’accesso.',
+  'passkeys.delete.confirm': 'Rimuovi la chiave d’accesso',
+  'passkeys.delete.cancel': 'Annulla',
+  'passkeys.delete.wrongPassword': 'Questa password non è corretta.',
+  'passkeys.delete.stale':
+    'Per la tua sicurezza, accedi di nuovo prima di rimuovere una chiave d’accesso.',
+  'passkeys.delete.removed': 'Chiave d’accesso rimossa',
+  'passkeys.delete.failed': 'La chiave d’accesso non è stata rimossa. Riprova.',
+  'passkeys.delete.removing': 'Rimozione della chiave d’accesso',
+  'passkeys.delete.passwordRequired':
+    'Inserisci la tua password per rimuovere questa chiave d’accesso.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

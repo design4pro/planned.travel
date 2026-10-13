@@ -563,6 +563,66 @@ const messages = {
   'billing.order.stillWritingBody':
     'Faktura {number} se vytváří. Stahování se samo za pár sekund vrátí.',
   'billing.order.openFailed': 'Tuto fakturu nešlo otevřít',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Účet',
+  'passkeys.page.title': 'Přístupové klíče',
+  'passkeys.page.description':
+    'Přístupový klíč vám umožní přihlásit se otiskem prstu, obličejem nebo bezpečnostním klíčem, bez psaní.',
+  'passkeys.page.back': 'Zpět na zabezpečení',
+  'passkeys.list.label': 'Vaše přístupové klíče',
+  'passkeys.add.action': 'Přidat přístupový klíč',
+  'passkeys.add.loading': 'Čekáme na vaše zařízení',
+  'passkeys.add.added': 'Přístupový klíč byl přidán',
+  'passkeys.add.dismissed': 'Žádný přístupový klíč nebyl přidán',
+  'passkeys.add.exists': 'Toto zařízení už má přístupový klíč k vašemu účtu',
+  'passkeys.add.failed': 'Přístupový klíč nebyl přidán. Zkuste to znovu.',
+  'passkeys.add.stale': 'Pro vaši bezpečnost se přihlaste znovu a pokračujte.',
+  'passkeys.error.sessionEnded':
+    'Vaše sezení skončilo. Přihlaste se znovu a pokračujte.',
+  'passkeys.signInAgain': 'Přihlásit se znovu',
+  'passkeys.add.limit':
+    'Dosáhli jste limitu {value} přístupových klíčů. Odeberte jeden, abyste mohli přidat další.',
+  'passkeys.add.unsupported':
+    'Tento prohlížeč neumí vytvářet přístupové klíče. Zkuste jiný prohlížeč nebo zařízení.',
+  'passkeys.empty.title': 'Zatím žádné přístupové klíče',
+  'passkeys.empty.body':
+    'Přidejte jeden a přihlásíte se otiskem prstu, obličejem nebo bezpečnostním klíčem, bez psaní.',
+  'passkeys.row.fallbackName': 'Přístupový klíč · přidán {date}',
+  'passkeys.row.added': 'Přidáno {date}',
+  'passkeys.row.lastUsed': 'Naposledy použito {date}',
+  'passkeys.row.neverUsed': 'Zatím nepoužito k přihlášení',
+  'passkeys.badge.synced': 'Synchronizovaný',
+  'passkeys.badge.singleDevice': 'Jen na jednom zařízení',
+  'passkeys.error.title': 'Vaše přístupové klíče se nenačetly',
+  'passkeys.error.retry': 'Zkusit znovu',
+  'passkeys.error.rateLimited':
+    'Příliš mnoho pokusů. Zkuste to znovu za pár minut.',
+  'passkeys.error.generic': 'Zkontrolujte připojení a zkuste to znovu.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Přejmenovat {name}',
+  'passkeys.rename.fieldLabel': 'Pojmenujte tento přístupový klíč',
+  'passkeys.rename.placeholder': 'Pojmenujte ho, například Pracovní telefon',
+  'passkeys.rename.saving': 'Ukládáme název',
+  'passkeys.rename.saved': 'Název byl uložen',
+  'passkeys.rename.failed': 'Název nebyl uložen',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Odebrat {name}',
+  'passkeys.delete.title': 'Odebrat tento přístupový klíč?',
+  'passkeys.delete.body': 'Pomocí {name} se už nebudete moci přihlásit.',
+  'passkeys.delete.password': 'Heslo',
+  'passkeys.delete.passwordHint': 'Pro potvrzení zadejte své heslo.',
+  'passkeys.delete.confirmOnly':
+    'Váš účet nemá heslo. Potvrďte, že chcete tento přístupový klíč odebrat.',
+  'passkeys.delete.confirm': 'Odebrat přístupový klíč',
+  'passkeys.delete.cancel': 'Zrušit',
+  'passkeys.delete.wrongPassword': 'Toto heslo není správné.',
+  'passkeys.delete.stale':
+    'Pro vaši bezpečnost se před odebráním přístupového klíče přihlaste znovu.',
+  'passkeys.delete.removed': 'Přístupový klíč byl odebrán',
+  'passkeys.delete.failed': 'Přístupový klíč nebyl odebrán. Zkuste to znovu.',
+  'passkeys.delete.removing': 'Odebíráme přístupový klíč',
+  'passkeys.delete.passwordRequired':
+    'Pro odebrání tohoto přístupového klíče zadejte své heslo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

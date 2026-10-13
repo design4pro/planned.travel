@@ -153,6 +153,13 @@ const messages = {
   'categories.progressLabel': 'Đã chi so với ngân sách chuyến đi',
   'categories.empty':
     'Các dòng ngân sách và chi phí sẽ được bóc tách ở đây khi có gì để bóc tách.',
+  'categories.legendLabel': 'Chi tiêu theo danh mục',
+  'categories.planned': '{amount} dự kiến',
+  'categories.nothingSpent':
+    'Chưa chi gì cả. Đây là những gì bạn đã lên kế hoạch.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'dưới {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Khoản trả đã ghi',
   'payments.empty.title': 'Chưa có khoản trả nào',

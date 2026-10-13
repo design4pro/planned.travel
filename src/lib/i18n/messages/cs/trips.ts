@@ -332,6 +332,14 @@ const messages = {
     'Předpověď: maximum {max}, minimum {min}',
   'plan.weather.badge.unavailable': 'Počasí pro tento den není k dispozici',
   'plan.weather.badge.loading': 'Načítání počasí',
+  'plan.weather.badge.recorded': 'Naměřeno: maximum {max}, minimum {min}',
+  'plan.weather.badge.recordedHigh': 'Naměřeno: maximum {max}',
+  'plan.weather.badge.recordedLow': 'Naměřeno: minimum {min}',
+  'plan.weather.badge.estimate':
+    'Odhad: typické maximum {max}, typické minimum {min}',
+  'plan.weather.badge.estimateHigh': 'Odhad: typické maximum {max}',
+  'plan.weather.badge.estimateLow': 'Odhad: typické minimum {min}',
+  'plan.weather.badge.notYetRecorded': 'Zatím nezaznamenáno',
   'plan.weather.condition.clear': 'Jasno',
   'plan.weather.condition.fair': 'Hezky',
   'plan.weather.condition.partlyCloudy': 'Polojasno',
@@ -345,15 +353,28 @@ const messages = {
   'plan.weather.panel.title': 'Počasí na {date}',
   'plan.weather.panel.temperature': 'Max. / min.',
   'plan.weather.panel.precipitation': 'Srážky',
+  'plan.weather.panel.precipitationTypical': 'Typické srážky za den',
   'plan.weather.panel.probability': 'pravděpodobnost {percent}',
   'plan.weather.panel.wind': 'Vítr',
+  'plan.weather.panel.sunrise': 'Východ slunce',
+  'plan.weather.panel.sunset': 'Západ slunce',
+  'plan.weather.panel.noSunrise': 'Žádný východ slunce',
+  'plan.weather.panel.noSunset': 'Žádný západ slunce',
   'plan.weather.panel.slots': 'Během dne',
   'plan.weather.panel.slot.night': 'Noc',
   'plan.weather.panel.slot.morning': 'Dopoledne',
   'plan.weather.panel.slot.afternoon': 'Odpoledne',
   'plan.weather.panel.slot.evening': 'Večer',
+  'plan.weather.panel.high': 'Maximum',
+  'plan.weather.panel.low': 'Minimum',
+  'plan.weather.panel.recordedNote': 'Naměřené hodnoty pro tento den.',
+  'plan.weather.panel.temperatureTypical': 'Typické max. / min.',
+  'plan.weather.panel.estimateNote':
+    'Dlouhodobý průměr pro tento měsíc, nikoli předpověď.',
   'plan.weather.attribution.metNorway':
     'Data předpovědi: MET Norway, CC BY 4.0',
+  'plan.weather.attribution.nasaPower':
+    'Zdroj dat: NASA Langley Research Center POWER Project',
 } satisfies TranslationOf<typeof En>
 
 export default messages

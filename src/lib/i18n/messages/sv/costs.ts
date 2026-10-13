@@ -152,6 +152,12 @@ const messages = {
   'categories.progressLabel': 'Spenderat mot resans budget',
   'categories.empty':
     'Budgetposter och utgifter bryts ner här när det finns något att bryta ner.',
+  'categories.legendLabel': 'Utgifter per kategori',
+  'categories.planned': '{amount} planerat',
+  'categories.nothingSpent': 'Inget är utgivet än. Det här har ni planerat.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'mindre än {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Registrerade betalningar',
   'payments.empty.title': 'Inga betalningar än',

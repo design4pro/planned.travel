@@ -578,6 +578,68 @@ const messages = {
   'billing.order.stillWritingBody':
     'Счёт {number} формируется. Загрузка вернётся сама через несколько секунд.',
   'billing.order.openFailed': 'Этот счёт не открылся',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Аккаунт',
+  'passkeys.page.title': 'Ключи доступа',
+  'passkeys.page.description':
+    'Ключ доступа позволяет входить по отпечатку пальца, лицу или аппаратному ключу — ничего печатать не нужно.',
+  'passkeys.page.back': 'Назад к безопасности',
+  'passkeys.list.label': 'Ваши ключи доступа',
+  'passkeys.add.action': 'Добавить ключ доступа',
+  'passkeys.add.loading': 'Ждём ваше устройство',
+  'passkeys.add.added': 'Ключ доступа добавлен',
+  'passkeys.add.dismissed': 'Ключ доступа не добавлен',
+  'passkeys.add.exists':
+    'На этом устройстве уже есть ключ доступа к вашему аккаунту',
+  'passkeys.add.failed': 'Ключ доступа не добавлен. Попробуйте ещё раз.',
+  'passkeys.add.stale':
+    'Для вашей безопасности войдите снова, чтобы продолжить.',
+  'passkeys.error.sessionEnded':
+    'Ваш сеанс завершён. Войдите снова, чтобы продолжить.',
+  'passkeys.signInAgain': 'Войти снова',
+  'passkeys.add.limit':
+    'Достигнут предел: {value} ключей доступа. Удалите один, чтобы добавить другой.',
+  'passkeys.add.unsupported':
+    'Этот браузер не умеет создавать ключи доступа. Попробуйте другой браузер или устройство.',
+  'passkeys.empty.title': 'Ключей доступа пока нет',
+  'passkeys.empty.body':
+    'Добавьте один — и входите по отпечатку пальца, лицу или аппаратному ключу, ничего не печатая.',
+  'passkeys.row.fallbackName': 'Ключ доступа · добавлен {date}',
+  'passkeys.row.added': 'Добавлен {date}',
+  'passkeys.row.lastUsed': 'Последнее использование: {date}',
+  'passkeys.row.neverUsed': 'Для входа ещё не использовался',
+  'passkeys.badge.synced': 'Синхронизируется',
+  'passkeys.badge.singleDevice': 'Только на одном устройстве',
+  'passkeys.error.title': 'Ключи доступа не загрузились',
+  'passkeys.error.retry': 'Повторить',
+  'passkeys.error.rateLimited':
+    'Слишком много попыток. Повторите через несколько минут.',
+  'passkeys.error.generic': 'Проверьте соединение и повторите попытку.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Переименовать: {name}',
+  'passkeys.rename.fieldLabel': 'Назовите этот ключ доступа',
+  'passkeys.rename.placeholder': 'Дайте имя, например Рабочий телефон',
+  'passkeys.rename.saving': 'Сохраняем название',
+  'passkeys.rename.saved': 'Название сохранено',
+  'passkeys.rename.failed': 'Название не сохранено',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Удалить: {name}',
+  'passkeys.delete.title': 'Удалить этот ключ доступа?',
+  'passkeys.delete.body': 'Вы больше не сможете входить с помощью: {name}.',
+  'passkeys.delete.password': 'Пароль',
+  'passkeys.delete.passwordHint': 'Введите пароль для подтверждения.',
+  'passkeys.delete.confirmOnly':
+    'У вашей учётной записи нет пароля. Подтвердите, что хотите удалить этот ключ доступа.',
+  'passkeys.delete.confirm': 'Удалить ключ доступа',
+  'passkeys.delete.cancel': 'Отмена',
+  'passkeys.delete.wrongPassword': 'Этот пароль неверный.',
+  'passkeys.delete.stale':
+    'Для вашей безопасности войдите снова, прежде чем удалять ключ доступа.',
+  'passkeys.delete.removed': 'Ключ доступа удалён',
+  'passkeys.delete.failed': 'Ключ доступа не удалён. Попробуйте ещё раз.',
+  'passkeys.delete.removing': 'Удаляем ключ доступа',
+  'passkeys.delete.passwordRequired':
+    'Введите пароль, чтобы удалить этот ключ доступа.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

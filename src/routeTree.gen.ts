@@ -23,6 +23,7 @@ import { Route as AppAtlasRouteImport } from './routes/_app/atlas'
 import { Route as AppConsoleRouteRouteImport } from './routes/_app/console/route'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppPasskeysRouteImport } from './routes/_app/passkeys'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
 import { Route as AppVacayRouteImport } from './routes/_app/vacay'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
@@ -130,6 +131,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppPasskeysRoute = AppPasskeysRouteImport.update({
+  id: '/passkeys',
+  path: '/passkeys',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppSettingsRouteRoute = AppSettingsRouteRouteImport.update({
@@ -347,6 +353,7 @@ export interface FileRoutesByFullPath {
   '/atlas': typeof AppAtlasRoute
   '/dashboard': typeof AppDashboardRoute
   '/notifications': typeof AppNotificationsRoute
+  '/passkeys': typeof AppPasskeysRoute
   '/vacay': typeof AppVacayRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -399,6 +406,7 @@ export interface FileRoutesByTo {
   '/atlas': typeof AppAtlasRoute
   '/dashboard': typeof AppDashboardRoute
   '/notifications': typeof AppNotificationsRoute
+  '/passkeys': typeof AppPasskeysRoute
   '/vacay': typeof AppVacayRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -453,6 +461,7 @@ export interface FileRoutesById {
   '/_app/atlas': typeof AppAtlasRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/passkeys': typeof AppPasskeysRoute
   '/_app/vacay': typeof AppVacayRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -509,6 +518,7 @@ export interface FileRouteTypes {
     | '/atlas'
     | '/dashboard'
     | '/notifications'
+    | '/passkeys'
     | '/vacay'
     | '/legal/privacy'
     | '/legal/terms'
@@ -561,6 +571,7 @@ export interface FileRouteTypes {
     | '/atlas'
     | '/dashboard'
     | '/notifications'
+    | '/passkeys'
     | '/vacay'
     | '/legal/privacy'
     | '/legal/terms'
@@ -614,6 +625,7 @@ export interface FileRouteTypes {
     | '/_app/atlas'
     | '/_app/dashboard'
     | '/_app/notifications'
+    | '/_app/passkeys'
     | '/_app/vacay'
     | '/legal/privacy'
     | '/legal/terms'
@@ -773,6 +785,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/passkeys': {
+      id: '/_app/passkeys'
+      path: '/passkeys'
+      fullPath: '/passkeys'
+      preLoaderRoute: typeof AppPasskeysRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/settings': {
@@ -1140,6 +1159,7 @@ interface AppRouteRouteChildren {
   AppAtlasRoute: typeof AppAtlasRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
+  AppPasskeysRoute: typeof AppPasskeysRoute
   AppVacayRoute: typeof AppVacayRoute
   AppTripsTripIdRouteRoute: typeof AppTripsTripIdRouteRouteWithChildren
   AppCollectionsCollectionIdRoute: typeof AppCollectionsCollectionIdRoute
@@ -1156,6 +1176,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppAtlasRoute: AppAtlasRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppNotificationsRoute: AppNotificationsRoute,
+  AppPasskeysRoute: AppPasskeysRoute,
   AppVacayRoute: AppVacayRoute,
   AppTripsTripIdRouteRoute: AppTripsTripIdRouteRouteWithChildren,
   AppCollectionsCollectionIdRoute: AppCollectionsCollectionIdRoute,

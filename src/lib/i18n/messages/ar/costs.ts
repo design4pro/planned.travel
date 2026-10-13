@@ -162,6 +162,12 @@ const messages = {
   'categories.progressLabel': 'المصروف مقابل ميزانية الرحلة',
   'categories.empty':
     'تتفصّل بنود الميزانية والمصروفات هنا عندما يكون هناك ما يُفصّل.',
+  'categories.legendLabel': 'الإنفاق حسب الفئة',
+  'categories.planned': '{amount} مخطط',
+  'categories.nothingSpent': 'لم يُنفق شيء بعد. هذا ما خططت له.',
+  /* A share under one percent; the glyph is hidden, the spoken form is read. */
+  'percent.belowOne': '<{percent}',
+  'percent.belowOneSpoken': 'أقل من {percent}',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'الدفعات المسجّلة',
   'payments.empty.title': 'لا دفعات بعد',

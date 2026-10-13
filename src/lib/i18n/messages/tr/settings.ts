@@ -545,6 +545,68 @@ const messages = {
   'billing.order.stillWritingBody':
     '{number} numaralı fatura oluşturuluyor. İndirme birkaç saniye içinde kendiliğinden geri gelir.',
   'billing.order.openFailed': 'O fatura açılmadı',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Hesap',
+  'passkeys.page.title': 'Geçiş anahtarları',
+  'passkeys.page.description':
+    'Geçiş anahtarıyla bir şey yazmadan parmak izinizle, yüzünüzle veya güvenlik anahtarınızla giriş yaparsınız.',
+  'passkeys.page.back': 'Güvenliğe dön',
+  'passkeys.list.label': 'Geçiş anahtarlarınız',
+  'passkeys.add.action': 'Geçiş anahtarı ekle',
+  'passkeys.add.loading': 'Cihazınız bekleniyor',
+  'passkeys.add.added': 'Geçiş anahtarı eklendi',
+  'passkeys.add.dismissed': 'Hiçbir geçiş anahtarı eklenmedi',
+  'passkeys.add.exists':
+    'Bu cihazda hesabınız için zaten bir geçiş anahtarı var',
+  'passkeys.add.failed': 'Geçiş anahtarı eklenmedi. Tekrar deneyin.',
+  'passkeys.add.stale':
+    'Güvenliğiniz için devam etmek üzere yeniden giriş yapın.',
+  'passkeys.error.sessionEnded':
+    'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+  'passkeys.signInAgain': 'Yeniden giriş yap',
+  'passkeys.add.limit':
+    '{value} geçiş anahtarı sınırına ulaştınız. Yenisini eklemek için birini kaldırın.',
+  'passkeys.add.unsupported':
+    'Bu tarayıcı geçiş anahtarı oluşturamıyor. Başka bir tarayıcı veya cihaz deneyin.',
+  'passkeys.empty.title': 'Henüz geçiş anahtarı yok',
+  'passkeys.empty.body':
+    'Bir tane ekleyin; bir şey yazmadan parmak izinizle, yüzünüzle veya güvenlik anahtarınızla giriş yapın.',
+  'passkeys.row.fallbackName': 'Geçiş anahtarı · {date} tarihinde eklendi',
+  'passkeys.row.added': '{date} tarihinde eklendi',
+  'passkeys.row.lastUsed': 'Son kullanım: {date}',
+  'passkeys.row.neverUsed': 'Henüz giriş için kullanılmadı',
+  'passkeys.badge.synced': 'Eşitlendi',
+  'passkeys.badge.singleDevice': 'Yalnızca bir cihazda',
+  'passkeys.error.title': 'Geçiş anahtarlarınız yüklenemedi',
+  'passkeys.error.retry': 'Tekrar dene',
+  'passkeys.error.rateLimited':
+    'Çok fazla deneme. Birkaç dakika sonra tekrar deneyin.',
+  'passkeys.error.generic': 'Bağlantınızı kontrol edip tekrar deneyin.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': '{name} adını değiştir',
+  'passkeys.rename.fieldLabel': 'Bu geçiş anahtarını adlandırın',
+  'passkeys.rename.placeholder': 'Bir ad verin, örneğin İş telefonu',
+  'passkeys.rename.saving': 'Ad kaydediliyor',
+  'passkeys.rename.saved': 'Ad kaydedildi',
+  'passkeys.rename.failed': 'Ad kaydedilmedi',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Kaldır: {name}',
+  'passkeys.delete.title': 'Bu geçiş anahtarı kaldırılsın mı?',
+  'passkeys.delete.body': 'Artık şununla giriş yapamayacaksınız: {name}.',
+  'passkeys.delete.password': 'Şifre',
+  'passkeys.delete.passwordHint': 'Onaylamak için şifrenizi girin.',
+  'passkeys.delete.confirmOnly':
+    'Hesabınızın şifresi yok. Bu geçiş anahtarını kaldırmak istediğinizi onaylayın.',
+  'passkeys.delete.confirm': 'Geçiş anahtarını kaldır',
+  'passkeys.delete.cancel': 'İptal',
+  'passkeys.delete.wrongPassword': 'Bu şifre doğru değil.',
+  'passkeys.delete.stale':
+    'Güvenliğiniz için bir geçiş anahtarını kaldırmadan önce yeniden giriş yapın.',
+  'passkeys.delete.removed': 'Geçiş anahtarı kaldırıldı',
+  'passkeys.delete.failed': 'Geçiş anahtarı kaldırılamadı. Tekrar deneyin.',
+  'passkeys.delete.removing': 'Geçiş anahtarı kaldırılıyor',
+  'passkeys.delete.passwordRequired':
+    'Bu geçiş anahtarını kaldırmak için şifrenizi girin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

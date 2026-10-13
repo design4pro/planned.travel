@@ -562,6 +562,68 @@ const messages = {
   'billing.order.stillWritingBody':
     'A fatura {number} está sendo gerada. O download volta sozinho em alguns segundos.',
   'billing.order.openFailed': 'Essa fatura não abriu',
+  // 09-S1a: the passkeys screen. 09-S1b and 09-S1c append their keys below this line.
+  'passkeys.page.eyebrow': 'Conta',
+  'passkeys.page.title': 'Chaves de acesso',
+  'passkeys.page.description':
+    'Uma chave de acesso permite entrar com a digital, o rosto ou uma chave de segurança, sem digitar nada.',
+  'passkeys.page.back': 'Voltar para segurança',
+  'passkeys.list.label': 'Suas chaves de acesso',
+  'passkeys.add.action': 'Adicionar uma chave de acesso',
+  'passkeys.add.loading': 'Aguardando o seu dispositivo',
+  'passkeys.add.added': 'Chave de acesso adicionada',
+  'passkeys.add.dismissed': 'Nenhuma chave de acesso foi adicionada',
+  'passkeys.add.exists':
+    'Este dispositivo já tem uma chave de acesso para a sua conta',
+  'passkeys.add.failed': 'A chave de acesso não foi adicionada. Tente de novo.',
+  'passkeys.add.stale': 'Para a sua segurança, entre de novo para continuar.',
+  'passkeys.error.sessionEnded':
+    'Sua sessão terminou. Entre de novo para continuar.',
+  'passkeys.signInAgain': 'Entrar de novo',
+  'passkeys.add.limit':
+    'Você atingiu o limite de {value} chaves de acesso. Remova uma para adicionar outra.',
+  'passkeys.add.unsupported':
+    'Este navegador não consegue criar chaves de acesso. Tente outro navegador ou dispositivo.',
+  'passkeys.empty.title': 'Nenhuma chave de acesso ainda',
+  'passkeys.empty.body':
+    'Adicione uma e entre com a digital, o rosto ou uma chave de segurança, sem digitar nada.',
+  'passkeys.row.fallbackName': 'Chave de acesso · adicionada em {date}',
+  'passkeys.row.added': 'Adicionada em {date}',
+  'passkeys.row.lastUsed': 'Último uso em {date}',
+  'passkeys.row.neverUsed': 'Ainda não usada para entrar',
+  'passkeys.badge.synced': 'Sincronizada',
+  'passkeys.badge.singleDevice': 'Em um só dispositivo',
+  'passkeys.error.title': 'Suas chaves de acesso não carregaram',
+  'passkeys.error.retry': 'Tentar de novo',
+  'passkeys.error.rateLimited':
+    'Tentativas demais. Tente de novo em alguns minutos.',
+  'passkeys.error.generic': 'Verifique sua conexão e tente de novo.',
+  // 09-S1b: naming a passkey.
+  'passkeys.rename.action': 'Renomear {name}',
+  'passkeys.rename.fieldLabel': 'Dê um nome a esta chave de acesso',
+  'passkeys.rename.placeholder': 'Dê um nome, como Celular do trabalho',
+  'passkeys.rename.saving': 'Salvando o nome',
+  'passkeys.rename.saved': 'Nome salvo',
+  'passkeys.rename.failed': 'O nome não foi salvo',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Remover {name}',
+  'passkeys.delete.title': 'Remover esta chave de acesso?',
+  'passkeys.delete.body': 'Você não poderá mais entrar com {name}.',
+  'passkeys.delete.password': 'Senha',
+  'passkeys.delete.passwordHint': 'Digite a sua senha para confirmar.',
+  'passkeys.delete.confirmOnly':
+    'Sua conta não tem senha. Confirme que você quer remover esta chave de acesso.',
+  'passkeys.delete.confirm': 'Remover chave de acesso',
+  'passkeys.delete.cancel': 'Cancelar',
+  'passkeys.delete.wrongPassword': 'Essa senha não está correta.',
+  'passkeys.delete.stale':
+    'Para a sua segurança, entre de novo antes de remover uma chave de acesso.',
+  'passkeys.delete.removed': 'Chave de acesso removida',
+  'passkeys.delete.failed':
+    'A chave de acesso não foi removida. Tente de novo.',
+  'passkeys.delete.removing': 'Removendo a chave de acesso',
+  'passkeys.delete.passwordRequired':
+    'Digite a sua senha para remover esta chave de acesso.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

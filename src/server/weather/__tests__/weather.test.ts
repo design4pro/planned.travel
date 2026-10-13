@@ -15,6 +15,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createMetNorwayClient } from '../met-norway'
+import { createNasaPowerClient } from '../nasa-power'
 import {
   WEATHER_CALL_TIMEOUT_MS,
   WEATHER_DEADLINE_MS,
@@ -159,6 +160,7 @@ function world(
     now: () => state.now,
     logger: overrides.logger ?? null,
     metNorway: createMetNorwayClient({ fetch: upstream.fetch }),
+    nasaPower: createNasaPowerClient({ fetch: upstream.fetch }),
   }
   return {
     runtime,
@@ -281,9 +283,11 @@ describe('a forecast for the days of a trip', () => {
       ZONE,
     )
 
-    expect(outcome.status === 'ok' ? outcome.reading.symbol : null).toMatch(
-      /^[a-z]+$/,
-    )
+    expect(
+      outcome.status === 'ok' && outcome.reading.kind === 'forecast'
+        ? outcome.reading.symbol
+        : null,
+    ).toMatch(/^[a-z]+$/)
   })
 
   it('treats today as a forecast day although the series started part-way through it', async () => {
@@ -364,6 +368,75 @@ describe('a forecast for the days of a trip', () => {
 })
 
 /* ------------------------------------------------------------------ the cache */
+
+describe('sunrise and sunset', () => {
+  it('rides with every forecast day in the trip’s zone, taken from the NOAA Solar Calculator', async () => {
+    const [outcome] = await resolveTripWeather(
+      world().runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    // 07:44 and 18:23 are what the calculator's own code gives for Oslo on 10 October at UTC+2.
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      sun: { sunrise: '07:44', sunset: '18:23' },
+    })
+  })
+
+  it('is written in the trip’s zone, not the place’s', async () => {
+    const [outcome] = await resolveTripWeather(
+      world().runtime,
+      [day('2026-10-10')],
+      'UTC',
+    )
+
+    expect(outcome).toMatchObject({
+      sun: { sunrise: '05:44', sunset: '16:23' },
+    })
+  })
+
+  it('makes no request and spends no unit of its own', async () => {
+    const w = world()
+    const days = trip('2026-10-09', '2026-10-17')
+
+    const cold = await resolveTripWeather(w.runtime, days, ZONE)
+    const callsAfterCold = w.provider.urls.length
+    const spentAfterCold = spent(w.counters)
+    const warm = await resolveTripWeather(w.runtime, days, ZONE)
+
+    // The sun of nine days costs exactly the one call and the one unit the forecast does...
+    expect(callsAfterCold).toBe(1)
+    expect(spentAfterCold).toBe(1)
+    // ...and a warm second read of them, sun and all, costs nothing at all.
+    expect(w.provider.urls).toHaveLength(1)
+    expect(spent(w.counters)).toBe(1)
+    expect(warm).toEqual(cold)
+    expect(
+      warm.every(
+        (outcome) => outcome.status === 'ok' && outcome.sun !== undefined,
+      ),
+    ).toBe(true)
+  })
+
+  it('is carried only by a day that has a reading', async () => {
+    const outcomes = await resolveTripWeather(
+      world({
+        provider: provider(() =>
+          Promise.resolve(new Response('', { status: 500 })),
+        ),
+      }).runtime,
+      [day('2026-10-10'), day(null), day('2026-10-01')],
+      ZONE,
+    )
+
+    expect(outcomes).toEqual([
+      { status: 'unavailable' },
+      { status: 'none' },
+      { status: 'none' },
+    ])
+  })
+})
 
 describe('the cache', () => {
   it('serves a warm entry inside its stated expiry with no call and no unit', async () => {

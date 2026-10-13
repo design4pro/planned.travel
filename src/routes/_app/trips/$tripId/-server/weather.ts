@@ -12,8 +12,9 @@
  * has to know why and an error crossing the wire is not one more thing to render as an apology. An
  * unreadable trip is not a degraded lookup, so that still throws.
  *
- * What is returned is a function of the trip's days and of the provider's forecast: no place, stay
- * or member id, no coordinate, and no time at which anyone looked a point up.
+ * What is returned is a function of the trip's days, of the providers' answers and of each day's
+ * coordinate (through the computed sun times): no place, stay or member id, no coordinate itself,
+ * and no time at which anyone looked a point up.
  */
 
 import { createServerFn } from '@tanstack/react-start'
@@ -32,18 +33,45 @@ import { appScope } from '../../../-server/context'
 
 import type { TripWeather } from '#/lib/weather'
 import type { WeatherRuntimeOptions } from '#/server/weather/bindings'
-import type { WeatherRuntime } from '#/server/weather/weather'
+import type { WeatherOutcome, WeatherRuntime } from '#/server/weather/weather'
 import type { TenantScope } from '#/server/repos'
 
 const id = z.string().trim().min(1).max(64)
 
-export const tripWeatherInputSchema = z.strictObject({ tripId: id })
+export const tripWeatherInputSchema = z.strictObject({
+  tripId: id,
+  /**
+   * Opt in to the recorded days. A tab loaded before they existed does not send it and keeps
+   * seeing `none` for a past day, which is the only answer its bundle can draw.
+   */
+  recorded: z.boolean().optional(),
+  /**
+   * Opt in to the estimated days. A tab loaded before they existed does not send it and keeps seeing
+   * `none` for a day beyond the forecast, which is the only answer its bundle can draw.
+   */
+  estimate: z.boolean().optional(),
+})
 
 export type TripWeatherInput = z.infer<typeof tripWeatherInputSchema>
 
 export interface TripWeatherPorts {
   /** The runtime the forecast is read through. */
   readonly weather: (options: WeatherRuntimeOptions) => WeatherRuntime
+}
+
+/**
+ * The outcome as it goes on the wire. A trip with no zone of its own has days bucketed in UTC, and
+ * sunrise and sunset in UTC are the wrong clock for the place, so its days carry no `sun`: the
+ * panel then draws neither row rather than a time that can be hours off.
+ */
+function withSunOf(outcome: WeatherOutcome | undefined, hasZone: boolean) {
+  if (outcome === undefined) {
+    return { status: 'unavailable' as const }
+  }
+  if (outcome.status !== 'ok' || hasZone) {
+    return outcome
+  }
+  return { status: 'ok' as const, reading: outcome.reading }
 }
 
 /**
@@ -73,13 +101,14 @@ export async function loadTripWeather(
     // The trip's own zone, UTC when it has none: never the reader's, so two members of one trip
     // see one answer.
     trip.timezone ?? 'UTC',
+    { recorded: input.recorded === true, estimate: input.estimate === true },
   )
 
   return {
     distanceUnit: settings.distanceUnit,
     days: locations.map(({ dayId }, index) => ({
       dayId,
-      ...(outcomes[index] ?? { status: 'unavailable' as const }),
+      ...withSunOf(outcomes[index], trip.timezone !== null),
     })),
   }
 }
