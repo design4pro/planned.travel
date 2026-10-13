@@ -601,3 +601,4 @@ What Phase 1 shipped differently from the text above (#1199):
 What Phase 3 shipped differently from the text above (#1211):
 
 - **The per-member sums live in `components/costs/data.ts`** (`memberShares`, beside `totalsFor`); `stat-tiles.tsx` only attaches names. The segment geometry is `memberSegments` in `chart-geometry.ts`, and `MemberSegment` carries `weightMinor`.
+- **The footer's `dt` labels ("Your share", "You paid") wrap instead of truncating.** Now they are catalogue strings, a longer translation (pl "Zapłacone przez Ciebie") was cut to an ellipsis in the half-width column; they use `[overflow-wrap:anywhere]` like the member list. The `dd` figures still truncate.
