@@ -145,7 +145,7 @@ After the rows are written the route also writes the weather the planner reads f
 (`-seed/weather-cache.ts`), so the weather journey (`e2e/trip-weather.spec.ts`) needs no provider stub:
 Lisbon day 1 is a recorded day, days 4 and 5 are forecasts, Tokyo day 1 is an estimate, and the
 workspace's weather allowance for the fixture month is spent, so every other located day is
-unavailable without a call going out. The report's `weather` field lists what was written.
+unavailable without a call going out. The report's `weather` field counts what was written (`entries`, `allowanceWindow`, `allowance`).
 
 Directories prefixed with `-` are ignored by the router, so nothing under `-seed/` becomes a route.
 

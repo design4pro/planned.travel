@@ -16,9 +16,10 @@ import {
   dayHeader,
   dayRegion,
   holdWeatherRead,
-  showDays,
   layoutShiftSum,
+  layoutShiftsReported,
   shiftsSoFar,
+  showDays,
   vendorCalls,
   watchVendorRequests,
 } from './helpers/trip-weather.ts'
@@ -61,6 +62,9 @@ const LISBON_DAYS = {
 /** Two plan screens and a console screen, each cold on a dev server: the budget of the map journeys. */
 const WEATHER_JOURNEY_TIMEOUT_MS = 120_000
 
+/** The first assertion that waits on the weather answer: a cold server function, then D1 and KV. */
+const WEATHER_ANSWER_TIMEOUT_MS = 30_000
+
 test.describe('DOC-08 — the weather of a day', () => {
   test.beforeEach(async ({ context, page, baseURL }) => {
     test.setTimeout(WEATHER_JOURNEY_TIMEOUT_MS)
@@ -95,17 +99,18 @@ test.describe('DOC-08 — the weather of a day', () => {
           name: LOADING,
         }),
       ).toBeVisible()
-      const before = await first.boundingBox()
-      expect(before, 'the first day header is on screen').not.toBeNull()
 
       // The shell has done its own loading; what moves from here on, moves for the weather.
       const shellShifts = await shiftsSoFar(page)
+      const before = await first.boundingBox()
+      expect(before, 'the first day header is on screen').not.toBeNull()
       held.release()
 
       const recorded = dayRegion(page, LISBON_DAYS.recorded)
+      // The first read of the weather is a cold compile on a dev server.
       await expect(
         recorded.getByRole('button', { name: BADGE.recorded }),
-      ).toBeVisible()
+      ).toBeVisible({ timeout: WEATHER_ANSWER_TIMEOUT_MS })
       await expect(
         page.getByRole('img', { name: LOADING }),
         'no day is still loading once the answer is in',
@@ -114,10 +119,13 @@ test.describe('DOC-08 — the weather of a day', () => {
 
       // The header is where it was: a late answer fills a box that was already there.
       expect(await first.boundingBox()).toEqual(before)
-      expect(
-        await layoutShiftSum(page, shellShifts),
-        'the plan route shifted its layout while the weather arrived',
-      ).toBe(0)
+      // WebKit publishes no layout shifts: there an empty list proves nothing, so it is not asserted.
+      if (await layoutShiftsReported(page)) {
+        expect(
+          await layoutShiftSum(page, shellShifts),
+          'the plan route shifted its layout while the weather arrived',
+        ).toBe(0)
+      }
       test.info().annotations.push({
         type: 'layout shift of the whole visit',
         description: `${await layoutShiftSum(page)} (the shell's nav, before any weather; ${await layoutShiftSum(page, shellShifts)} after the answer)`,
@@ -150,7 +158,7 @@ test.describe('DOC-08 — the weather of a day', () => {
       await expect(
         badge,
         'exactly one Tokyo day has a cached climate',
-      ).toHaveCount(1)
+      ).toHaveCount(1, { timeout: WEATHER_ANSWER_TIMEOUT_MS })
       await expect(badge).toBeVisible()
       // The sign that sets it apart from a forecast, drawn but never read out.
       await expect(badge).toContainText('≈')

@@ -87,6 +87,7 @@ export async function holdWeatherRead(
 
 /** The page's own list of layout shifts, as the browser reported them. */
 const SHIFTS_KEY = '__ptLayoutShifts'
+const SHIFTS_SUPPORTED_KEY = '__ptLayoutShiftsReported'
 
 type LayoutShiftEntry = PerformanceEntry & {
   readonly value: number
@@ -104,18 +105,38 @@ type LayoutShiftEntry = PerformanceEntry & {
  * timestamps the browser puts on a shift.
  */
 export async function countLayoutShifts(page: Page): Promise<void> {
-  await page.addInitScript((key) => {
-    const holder = window as unknown as Record<string, Array<number>>
-    holder[key] = []
-    new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        const shift = entry as LayoutShiftEntry
-        if (!shift.hadRecentInput) {
-          holder[key].push(shift.value)
-        }
+  await page.addInitScript(
+    ([key, supportedKey]) => {
+      const holder = window as unknown as Record<string, Array<number>>
+      holder[key] = []
+      const supported =
+        PerformanceObserver.supportedEntryTypes.includes('layout-shift')
+      ;(window as unknown as Record<string, boolean>)[supportedKey] = supported
+      if (!supported) {
+        return
       }
-    }).observe({ type: 'layout-shift', buffered: true })
-  }, SHIFTS_KEY)
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          const shift = entry as LayoutShiftEntry
+          if (!shift.hadRecentInput) {
+            holder[key].push(shift.value)
+          }
+        }
+      }).observe({ type: 'layout-shift', buffered: true })
+    },
+    [SHIFTS_KEY, SHIFTS_SUPPORTED_KEY] as const,
+  )
+}
+
+/**
+ * Whether this browser reports layout shifts at all. WebKit does not, and an empty list there says
+ * nothing about the page, so a journey asserts the sum only where this is true.
+ */
+export async function layoutShiftsReported(page: Page): Promise<boolean> {
+  return page.evaluate(
+    (key) => (window as unknown as Record<string, boolean>)[key],
+    SHIFTS_SUPPORTED_KEY,
+  )
 }
 
 /** Two frames, so a shift the last change caused has been reported before it is read. */
@@ -184,12 +205,19 @@ export async function vendorCalls(
       main.getByText('nasa-power', { exact: true }).first(),
     ).toBeVisible({ timeout: 30_000 })
     await expect(main.getByText(/this month/).first()).toBeVisible()
-    const text = await main.innerText()
+    const lines = (await main.innerText()).split('\n')
+    // A row is the lines from its slug up to the next slug-looking line, so a vendor whose row
+    // states no count never borrows the next vendor's. "N this month" is a row with no agreed
+    // ceiling, "N of M" one with a ceiling.
     const read = (vendor: WeatherVendor): number => {
-      const match = new RegExp(`${vendor}[\\s\\S]*?([\\d,]+) this month`).exec(
-        text,
+      const start = lines.findIndex((line) => line.trim() === vendor)
+      const rest = lines.slice(start + 1)
+      const end = rest.findIndex((line) =>
+        /^[a-z][a-z0-9-]+$/.test(line.trim()),
       )
-      if (match === null) {
+      const row = (end === -1 ? rest : rest.slice(0, end)).join('\n')
+      const match = /([\d,]+) (?:this month|of [\d,]+)/.exec(row)
+      if (start === -1 || match === null) {
         throw new Error(`/console/providers does not state calls for ${vendor}`)
       }
       return Number(match[1].replaceAll(',', ''))

@@ -7,7 +7,7 @@
  * directory's tests possible: the cache, the counters and the provider arrive as arguments.
  *
  * The named list of importers is its own control: "nothing was found" passes just as well when the
- * walk is broken, which is why the case asserts the one door by name rather than an empty set.
+ * walk is broken, which is why the case asserts the doors by name rather than an empty set.
  *
  * The last two cases are the isolation rule for a cache that every workspace shares: it is keyed on
  * a kind, a coordinate and a date, and nothing exported here can be handed anything else.
@@ -69,6 +69,10 @@ describe('the weather directory keeps its bindings in one file', () => {
       'routes/_app/trips/$tripId/-server/weather.ts',
       'routes/api/dev/-seed/weather-cache.ts',
     ])
+  })
+
+  it('reads the Worker clock through `serverNow`, the seam a journey pins', () => {
+    expect(codeOf(join(DIRECTORY, 'bindings.ts'))).toContain('now: serverNow')
   })
 })
 

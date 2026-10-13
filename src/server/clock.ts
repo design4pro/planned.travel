@@ -10,7 +10,8 @@
  * past one of them the Worker returned a different set of rows and a baseline
  * recorded the day before failed on content nobody had changed.
  *
- * So "today" is one decision, made here, once per request:
+ * So "today" is one decision, made here, once per request (`serverNow()` below is the same decision
+ * as an instant):
  *
  * - In development the caller may pin it with a request header, which is how
  *   `playwright.config.ts` holds the whole suite on the day the baselines were
