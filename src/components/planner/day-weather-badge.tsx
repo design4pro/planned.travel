@@ -18,7 +18,7 @@ import { CONDITION_ICON } from './weather-icons'
 import { CONDITION_LABEL, badgeModel } from './weather-model'
 
 import type { LucideIcon } from 'lucide-react'
-import type { Locale, Translate } from '#/lib/i18n'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { WeatherUnit } from '#/lib/weather'
 import type { DayWeatherView, WeatherBadgeModel } from './weather-model'
 
@@ -32,6 +32,29 @@ import type { DayWeatherView, WeatherBadgeModel } from './weather-model'
  * three-digit Fahrenheit high) widens the box instead of painting over the day's header button.
  */
 const BOX = 'flex h-7 min-w-20 shrink-0 items-center justify-end'
+
+/**
+ * What a reading that is only temperatures is called, by what it is and by which of its two
+ * figures it has. The word it starts with is what a reader hears first, so it is never shared.
+ */
+const TEMPERATURE_NAME: {
+  readonly [K in 'recorded' | 'estimate']: {
+    readonly both: MessageKey
+    readonly high: MessageKey
+    readonly low: MessageKey
+  }
+} = {
+  recorded: {
+    both: 'trips.plan.weather.badge.recorded',
+    high: 'trips.plan.weather.badge.recordedHigh',
+    low: 'trips.plan.weather.badge.recordedLow',
+  },
+  estimate: {
+    both: 'trips.plan.weather.badge.estimate',
+    high: 'trips.plan.weather.badge.estimateHigh',
+    low: 'trips.plan.weather.badge.estimateLow',
+  },
+}
 
 export interface DayWeatherBadgeProps {
   readonly weather: DayWeatherView
@@ -101,6 +124,7 @@ export function DayWeatherBadge({
     return <UnavailableBadge />
   }
   const { name, Icon, muted, lead, trail } = face
+  const approximate = model.kind === 'estimate'
 
   return (
     <div data-part="day-weather" className={BOX}>
@@ -114,6 +138,8 @@ export function DayWeatherBadge({
               transitionBase,
               focusRing,
               'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
+              // An estimate is outlined, so it is not mistaken for a forecast at a glance.
+              approximate && 'border border-dashed border-info',
             )}
           >
             <Icon
@@ -124,6 +150,11 @@ export function DayWeatherBadge({
             />
             {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
             <span dir="ltr" className="whitespace-nowrap">
+              {approximate ? (
+                <span aria-hidden="true" className="text-info">
+                  ≈
+                </span>
+              ) : null}
               <span className="font-semibold text-ink-2">{lead}</span>
               {trail === null ? null : (
                 <span className="text-ink-3">/{trail}</span>
@@ -167,14 +198,15 @@ function UnavailableBadge() {
 
 type ReadingModel = Extract<
   WeatherBadgeModel,
-  { readonly kind: 'forecast' | 'recorded' }
+  { readonly kind: 'forecast' | 'recorded' | 'estimate' }
 >
 
 /**
  * How a reading is drawn and named. A forecast is the condition icon and "high/low"; a recorded day
  * is the thermometer, and its name begins "Recorded" so nobody takes a measurement for a forecast
- * or the reverse. A recorded day that lacks one temperature draws the one it has, and its name
- * says which it is, and one with neither has no face.
+ * or the reverse. An estimate is the same picture under a name that begins "Estimate"; the sign
+ * and the outline that set it apart are the badge's. A day of either that lacks one temperature
+ * draws the one it has, and its name says which it is, and one with neither has no face.
  */
 function readingFace(
   model: ReadingModel,
@@ -210,10 +242,11 @@ function readingFace(
     }
   }
   const { max, min } = model
+  const names = TEMPERATURE_NAME[model.kind]
   const withUnit = (value: number) => `${figure(value)}${model.unit}`
   if (max !== null && min !== null) {
     return {
-      name: t('trips.plan.weather.badge.recorded', {
+      name: t(names.both, {
         max: withUnit(max),
         min: withUnit(min),
       }),
@@ -225,20 +258,20 @@ function readingFace(
   }
   if (max !== null) {
     return {
-      name: t('trips.plan.weather.badge.recordedHigh', { max: withUnit(max) }),
+      name: t(names.high, { max: withUnit(max) }),
       Icon: Thermometer,
       muted: true,
       lead: figure(max),
       trail: null,
     }
   }
-  // A recorded reading always has one of the two, but the type cannot say so, and a missing
+  // Such a reading always has one of the two, but the type cannot say so, and a missing
   // figure is not drawn as a zero.
   if (min === null) {
     return null
   }
   return {
-    name: t('trips.plan.weather.badge.recordedLow', { min: withUnit(min) }),
+    name: t(names.low, { min: withUnit(min) }),
     Icon: Thermometer,
     muted: true,
     lead: figure(min),

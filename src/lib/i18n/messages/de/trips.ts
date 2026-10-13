@@ -329,6 +329,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Gemessen: Höchstwert {max}, Tiefstwert {min}',
   'plan.weather.badge.recordedHigh': 'Gemessen: Höchstwert {max}',
   'plan.weather.badge.recordedLow': 'Gemessen: Tiefstwert {min}',
+  'plan.weather.badge.estimate':
+    'Schätzung: typischer Höchstwert {max}, typischer Tiefstwert {min}',
+  'plan.weather.badge.estimateHigh': 'Schätzung: typischer Höchstwert {max}',
+  'plan.weather.badge.estimateLow': 'Schätzung: typischer Tiefstwert {min}',
   'plan.weather.badge.notYetRecorded': 'Noch nicht erfasst',
   'plan.weather.condition.clear': 'Klar',
   'plan.weather.condition.fair': 'Heiter',
@@ -343,6 +347,7 @@ const messages = {
   'plan.weather.panel.title': 'Wetter am {date}',
   'plan.weather.panel.temperature': 'Höchst- / Tiefstwert',
   'plan.weather.panel.precipitation': 'Niederschlag',
+  'plan.weather.panel.precipitationTypical': 'Typischer Niederschlag pro Tag',
   'plan.weather.panel.probability': '{percent} Wahrscheinlichkeit',
   'plan.weather.panel.wind': 'Wind',
   'plan.weather.panel.sunrise': 'Sonnenaufgang',
@@ -357,6 +362,9 @@ const messages = {
   'plan.weather.panel.high': 'Höchstwert',
   'plan.weather.panel.low': 'Tiefstwert',
   'plan.weather.panel.recordedNote': 'Gemessene Werte für diesen Tag.',
+  'plan.weather.panel.temperatureTypical': 'Typischer Höchst- / Tiefstwert',
+  'plan.weather.panel.estimateNote':
+    'Ein langjähriger Durchschnitt für diesen Monat, keine Vorhersage.',
   'plan.weather.attribution.metNorway':
     'Vorhersagedaten: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

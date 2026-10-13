@@ -522,6 +522,9 @@ const messages = {
   'plan.weather.badge.recorded': 'Recorded: high {max}, low {min}',
   'plan.weather.badge.recordedHigh': 'Recorded: high {max}',
   'plan.weather.badge.recordedLow': 'Recorded: low {min}',
+  'plan.weather.badge.estimate': 'Estimate: typical high {max}, low {min}',
+  'plan.weather.badge.estimateHigh': 'Estimate: typical high {max}',
+  'plan.weather.badge.estimateLow': 'Estimate: typical low {min}',
   'plan.weather.badge.notYetRecorded': 'Not yet recorded',
   'plan.weather.condition.clear': 'Clear',
   'plan.weather.condition.fair': 'Fair',
@@ -536,6 +539,7 @@ const messages = {
   'plan.weather.panel.title': 'Weather for {date}',
   'plan.weather.panel.temperature': 'High / low',
   'plan.weather.panel.precipitation': 'Precipitation',
+  'plan.weather.panel.precipitationTypical': 'Typical precipitation per day',
   'plan.weather.panel.probability': '{percent} chance',
   'plan.weather.panel.wind': 'Wind',
   'plan.weather.panel.sunrise': 'Sunrise',
@@ -550,6 +554,9 @@ const messages = {
   'plan.weather.panel.high': 'High',
   'plan.weather.panel.low': 'Low',
   'plan.weather.panel.recordedNote': 'Measured values for this day.',
+  'plan.weather.panel.temperatureTypical': 'Typical high / low',
+  'plan.weather.panel.estimateNote':
+    'A long-term average for this month, not a forecast.',
   'plan.weather.attribution.metNorway': 'Forecast data: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Data: NASA Langley Research Center POWER Project',

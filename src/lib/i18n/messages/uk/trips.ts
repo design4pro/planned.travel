@@ -338,6 +338,10 @@ const messages = {
   'plan.weather.badge.recorded': 'Зафіксовано: максимум {max}, мінімум {min}',
   'plan.weather.badge.recordedHigh': 'Зафіксовано: максимум {max}',
   'plan.weather.badge.recordedLow': 'Зафіксовано: мінімум {min}',
+  'plan.weather.badge.estimate':
+    'Оцінка: типовий максимум {max}, мінімум {min}',
+  'plan.weather.badge.estimateHigh': 'Оцінка: типовий максимум {max}',
+  'plan.weather.badge.estimateLow': 'Оцінка: типовий мінімум {min}',
   'plan.weather.badge.notYetRecorded': 'Ще не зафіксовано',
   'plan.weather.condition.clear': 'Ясно',
   'plan.weather.condition.fair': 'Малохмарно',
@@ -352,6 +356,7 @@ const messages = {
   'plan.weather.panel.title': 'Погода на {date}',
   'plan.weather.panel.temperature': 'Макс. / мін.',
   'plan.weather.panel.precipitation': 'Опади',
+  'plan.weather.panel.precipitationTypical': 'Типові опади за день',
   'plan.weather.panel.probability': 'імовірність {percent}',
   'plan.weather.panel.wind': 'Вітер',
   'plan.weather.panel.sunrise': 'Схід сонця',
@@ -366,6 +371,9 @@ const messages = {
   'plan.weather.panel.high': 'Максимум',
   'plan.weather.panel.low': 'Мінімум',
   'plan.weather.panel.recordedNote': 'Виміряні значення за цей день.',
+  'plan.weather.panel.temperatureTypical': 'Типові макс. / мін.',
+  'plan.weather.panel.estimateNote':
+    'Багаторічне середнє за цей місяць, а не прогноз.',
   'plan.weather.attribution.metNorway': 'Дані прогнозу: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Дані: NASA Langley Research Center POWER Project',

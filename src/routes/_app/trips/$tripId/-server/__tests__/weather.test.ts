@@ -23,6 +23,7 @@ import {
 } from '#/server/repos/__tests__/harness'
 import { createMetNorwayClient } from '#/server/weather/met-norway'
 import { createNasaPowerClient } from '#/server/weather/nasa-power'
+import { OSLO_CLIMATOLOGY } from '#/server/weather/__tests__/nasa-power-climatology.fixture'
 import { OSLO_DAILY } from '#/server/weather/__tests__/nasa-power.fixture'
 import { OSLO_FORECAST_DETAIL } from '#/server/weather/__tests__/locationforecast-detail.fixture'
 import { OSLO_FORECAST } from '#/server/weather/__tests__/locationforecast.fixture'
@@ -82,7 +83,13 @@ function ports(
     if (new URL(input).host === 'power.larc.nasa.gov') {
       return options.failing === true
         ? Promise.reject(new TypeError('offline'))
-        : Promise.resolve(new Response(JSON.stringify(OSLO_DAILY)))
+        : Promise.resolve(
+            new Response(
+              JSON.stringify(
+                input.includes('/climatology/') ? OSLO_CLIMATOLOGY : OSLO_DAILY,
+              ),
+            ),
+          )
     }
     return options.failing === true
       ? Promise.reject(new TypeError('offline'))
@@ -489,6 +496,84 @@ describe('loadTripWeather', () => {
         tripWeatherInputSchema.safeParse({ tripId, recorded: 'yes' }).success,
       ).toBe(false)
       expect(tripWeatherInputSchema.safeParse({ tripId }).success).toBe(true)
+    })
+  })
+  describe('the days beyond the forecast', () => {
+    /** A trip next summer: far past any forecast, so every day is an estimate when asked for. */
+    async function farTrip(): Promise<string> {
+      const trip = await createTrip(owner, {
+        title: 'Oslo, next summer',
+        startDate: '2027-06-20',
+        endDate: '2027-06-22',
+        currency: 'NOK',
+        timezone: 'Europe/Oslo',
+      })
+      const days = await listTripDays(owner, trip.id)
+      const hotel = await createPlace(owner, {
+        tripId: trip.id,
+        name: 'Hotel',
+        lat: 59.9139,
+        lng: 10.7522,
+      })
+      await createAccommodation(owner, {
+        tripId: trip.id,
+        startDayId: days[0].id,
+        endDayId: days[days.length - 1].id,
+        placeId: hotel.id,
+        name: 'Hotel',
+      })
+      return trip.id
+    }
+
+    it('shows nothing for them to a caller that did not ask for them, as before', async () => {
+      const far = await farTrip()
+      const port = ports()
+
+      const result = await loadTripWeather(owner, { tripId: far }, port)
+
+      expect(result.days.map((day) => day.status)).toEqual([
+        'none',
+        'none',
+        'none',
+      ])
+      expect(port.requested).toEqual([])
+    })
+
+    it('reads them as estimates when asked, from one climatology call', async () => {
+      const far = await farTrip()
+      const port = ports()
+
+      const result = await loadTripWeather(
+        owner,
+        { tripId: far, estimate: true },
+        port,
+      )
+
+      const readings = result.days.map((day) =>
+        day.status === 'ok' ? day.reading : null,
+      )
+      expect(readings.map((reading) => reading?.kind)).toEqual([
+        'estimate',
+        'estimate',
+        'estimate',
+      ])
+      expect(readings[0]).toMatchObject({
+        source: 'nasa-power',
+        tempMaxC: 18.31,
+        tempMinC: 9.39,
+        windMs: null,
+      })
+      expect(port.requested).toHaveLength(1)
+      expect(port.requested[0]).toContain('/climatology/')
+    })
+
+    it('rejects a flag that is not a boolean', () => {
+      expect(
+        tripWeatherInputSchema.safeParse({ tripId, estimate: 'yes' }).success,
+      ).toBe(false)
+      expect(
+        tripWeatherInputSchema.safeParse({ tripId, estimate: true }).success,
+      ).toBe(true)
     })
   })
 })

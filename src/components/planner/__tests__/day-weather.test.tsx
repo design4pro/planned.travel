@@ -11,7 +11,12 @@ import { DayWeatherBadge } from '../day-weather-badge'
 import { DayWeatherPanel } from '../day-weather-panel'
 
 import type { SunTimes } from '#/lib/sun'
-import type { DayReading, DayWeather, RecordedReading } from '#/lib/weather'
+import type {
+  DayReading,
+  DayWeather,
+  EstimateReading,
+  RecordedReading,
+} from '#/lib/weather'
 import type { PlannerDay } from '../types'
 
 /**
@@ -61,6 +66,21 @@ const RECORDED: RecordedReading = {
 }
 
 const recorded = (reading: RecordedReading = RECORDED): DayWeather => ({
+  dayId: 'd1',
+  status: 'ok',
+  reading,
+})
+
+const ESTIMATE: EstimateReading = {
+  kind: 'estimate',
+  source: 'nasa-power',
+  tempMinC: 1.9,
+  tempMaxC: 8.4,
+  precipitationMm: 2.5,
+  windMs: null,
+}
+
+const estimate = (reading: EstimateReading = ESTIMATE): DayWeather => ({
   dayId: 'd1',
   status: 'ok',
   reading,
@@ -182,6 +202,66 @@ describe('DayWeatherBadge', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 
+  it('names an estimate with the word Estimate first, then the typical high and low', () => {
+    badge(estimate())
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Estimate: typical high 8°C, low 2°C',
+      }),
+    ).toBeDefined()
+    expect(screen.queryByRole('button', { name: /^Forecast/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Recorded/ })).toBeNull()
+  })
+
+  it('draws an estimate in Fahrenheit for an imperial reader', () => {
+    badge(estimate(), 'imperial')
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Estimate: typical high 47°F, low 35°F',
+      }),
+    ).toBeDefined()
+  })
+
+  it('marks an estimate with an approximately sign and a dashed outline in the informational colour', () => {
+    const first = badge(estimate())
+
+    const button = screen.getByRole('button', { name: /^Estimate/ })
+    const sign = within(button).getByText('≈')
+    expect(sign.getAttribute('aria-hidden')).toBe('true')
+    expect(button.textContent?.startsWith('≈')).toBe(true)
+    expect(button.className).toContain('border-dashed')
+    expect(button.className).toContain('border-info')
+    first.unmount()
+    // A forecast and a recorded day carry neither the sign nor the outline.
+    for (const other of [FORECAST, recorded()]) {
+      const { unmount } = badge(other)
+      const control = screen.getByRole('button')
+      expect(control.textContent).not.toContain('≈')
+      expect(control.className).not.toContain('border-dashed')
+      unmount()
+    }
+  })
+
+  it('names the one temperature an estimate has, and never draws the other as a zero', () => {
+    badge(estimate({ ...ESTIMATE, tempMinC: null }))
+
+    const button = screen.getByRole('button', {
+      name: 'Estimate: typical high 8°C',
+    })
+    expect(button.textContent).toBe('≈8°C')
+  })
+
+  it('draws an estimate with neither temperature as the unavailable dash, never as a zero', () => {
+    badge(estimate({ ...ESTIMATE, tempMinC: null, tempMaxC: null }))
+
+    expect(
+      screen.getByRole('img', { name: 'Weather unavailable for this day' }),
+    ).toBeDefined()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
   it('shows a not-yet-recorded day as its own picture, with no control and no number', () => {
     badge(NOT_YET)
 
@@ -213,6 +293,7 @@ describe('DayWeatherBadge', () => {
       { dayId: 'd1', status: 'unavailable' } as const,
       { dayId: 'd1', status: 'none' } as const,
       recorded(),
+      estimate(),
       NOT_YET,
     ]) {
       expect(boxOf(weather)).toBe(loading)
@@ -357,6 +438,67 @@ describe('the fuller reading of a recorded day', () => {
     expect(screen.getByText('Low')).toBeDefined()
     expect(screen.getByText('2°C')).toBeDefined()
     expect(screen.queryByText('High / low')).toBeNull()
+  })
+})
+
+describe('the fuller reading of an estimated day', () => {
+  const open = async (unit: 'metric' | 'imperial' = 'metric') => {
+    const user = userEvent.setup()
+    badge(estimate(), unit)
+    await user.click(screen.getByRole('button', { name: /^Estimate/ }))
+    return { user, dialog: await screen.findByRole('dialog') }
+  }
+
+  it('labels the row as typical, so it does not read as a prediction', async () => {
+    const { dialog } = await open()
+
+    expect(within(dialog).getByText('Typical high / low')).toBeDefined()
+    expect(within(dialog).queryByText('High / low')).toBeNull()
+    expect(within(dialog).getByText('8° / 2°C')).toBeDefined()
+  })
+
+  it('says it is a long-term average and not a forecast', async () => {
+    const { dialog } = await open()
+
+    expect(
+      within(dialog).getByText(
+        'A long-term average for this month, not a forecast.',
+      ),
+    ).toBeDefined()
+  })
+
+  it('credits NASA POWER, not MET Norway', async () => {
+    const { dialog } = await open()
+
+    expect(
+      within(dialog).getByText(
+        'Data: NASA Langley Research Center POWER Project',
+      ),
+    ).toBeDefined()
+    expect(within(dialog).queryByText(/MET Norway/)).toBeNull()
+  })
+
+  it('has no wind, no slots region and no chance of rain', async () => {
+    const { dialog } = await open()
+
+    expect(within(dialog).queryByText('Wind')).toBeNull()
+    expect(within(dialog).queryByRole('list')).toBeNull()
+    expect(within(dialog).queryByText(/chance/)).toBeNull()
+  })
+
+  it('labels the rain as a typical figure per day, not as a day’s total', async () => {
+    const { dialog } = await open()
+
+    expect(
+      within(dialog).getByText('Typical precipitation per day'),
+    ).toBeDefined()
+    expect(within(dialog).queryByText('Precipitation')).toBeNull()
+  })
+
+  it('draws the figures in the reader’s unit', async () => {
+    const { dialog } = await open('imperial')
+
+    expect(within(dialog).getByText('47° / 35°F')).toBeDefined()
   })
 })
 

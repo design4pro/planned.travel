@@ -12,6 +12,7 @@ import type { SunTimes } from '#/lib/sun'
 import type {
   DayReading,
   DayWeather,
+  EstimateReading,
   ForecastReading,
   RecordedReading,
   WeatherUnit,
@@ -129,7 +130,7 @@ const SLOT_BY_START: { readonly [from: string]: WeatherSlotName } = {
 }
 
 export interface WeatherPanelModel {
-  /** Which kind of reading this is: a forecast, or what was measured on a day that is over. */
+  /** Which kind of reading this is: a forecast, what was measured on a day that is over, or an estimate. */
   readonly kind: DayReading['kind']
   readonly condition: WeatherCondition | null
   /** `null` when the day has no such figure (a measurement can lack one of its two). */
@@ -218,12 +219,16 @@ export type WeatherBadgeModel =
       readonly sun: SunTimes | null
     }
   | {
-      readonly kind: 'recorded'
-      /** Either may be `null`: a measurement can lack one of its two temperatures, not both. */
+      /**
+       * A measurement or a long-term average: both are only temperatures, with no sky to claim, and
+       * differ in what they are called.
+       */
+      readonly kind: 'recorded' | 'estimate'
+      /** Either may be `null`: such a reading can lack one of its two temperatures, not both. */
       readonly max: number | null
       readonly min: number | null
       readonly unit: 'C' | 'F'
-      readonly reading: RecordedReading
+      readonly reading: RecordedReading | EstimateReading
       /** Sunrise and sunset behind the fuller panel; absent when the answer carried none. */
       readonly sun: SunTimes | null
     }
@@ -244,9 +249,9 @@ export function badgeModel(
       return { kind: 'notYetRecorded' }
     case 'ok': {
       const { reading } = weather
-      if (reading.kind === 'recorded') {
+      if (reading.kind === 'recorded' || reading.kind === 'estimate') {
         return {
-          kind: 'recorded',
+          kind: reading.kind,
           max: optionalTemperatureIn(reading.tempMaxC, unit),
           min: optionalTemperatureIn(reading.tempMinC, unit),
           unit: unitSymbol(unit),
