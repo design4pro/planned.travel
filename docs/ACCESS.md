@@ -1065,14 +1065,14 @@ plan or writes a row. Every such write appends the impersonator's user id to the
 existing `metadata` column of the tenant `audit_log`, so a workspace owner reading their own audit
 trail can see that an operator, not they, made the change.
 
-**Registering a passkey is refused by name as well.** A passkey is a sign-in factor, and one an
+**Registering, renaming and removing a passkey are refused by name as well.** A passkey is a sign-in factor, and one an
 operator registers outlives the 900-second impersonation with no audit row to show for it, which
 is the second set of admin hands this section rules out. The `passkey` endpoints stay open (§2.6),
 but `/passkey/register/options` and `/passkey/register/verify` answer `FORBIDDEN` with
 `PASSKEY_IMPERSONATED` when `session.impersonatedBy` is set at all, an empty string included: the
 raw column is read, not the `asString`-normalised value `guard.ts` sees, so these endpoints are
-never weaker than the guard. `/passkey/rename` takes the same veto (ticket #1145), and removing a
-passkey takes it when that endpoint lands (ticket #1146 of the passkey spec). Registration also
+never weaker than the guard. `/passkey/rename` takes the same veto (ticket #1145), and so does `/passkey/delete` (ticket #1146),
+before it looks the passkey up. Registration also
 needs a session younger than `session.freshAge` (24 hours), for every account, because a borrowed
 thirty-day session that adds a passkey would keep its access after a password reset, which revokes
 sessions and not passkeys.

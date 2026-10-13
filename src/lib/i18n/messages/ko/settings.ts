@@ -524,13 +524,31 @@ const messages = {
   'passkeys.error.rateLimited':
     '시도가 너무 많아요. 몇 분 뒤에 다시 시도해 주세요.',
   'passkeys.error.generic': '연결을 확인한 뒤 다시 시도해 주세요.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '{name} 이름 바꾸기',
   'passkeys.rename.fieldLabel': '이 패스키에 이름 붙이기',
   'passkeys.rename.placeholder': '이름을 입력해 주세요. 예: 회사 휴대폰',
   'passkeys.rename.saving': '이름을 저장하는 중',
   'passkeys.rename.saved': '이름을 저장했어요',
   'passkeys.rename.failed': '이름을 저장하지 못했어요',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '{name} 삭제',
+  'passkeys.delete.title': '이 패스키를 삭제할까요?',
+  'passkeys.delete.body': '이제 {name}(으)로는 로그인할 수 없어요.',
+  'passkeys.delete.password': '비밀번호',
+  'passkeys.delete.passwordHint': '확인을 위해 비밀번호를 입력해 주세요.',
+  'passkeys.delete.confirmOnly':
+    '이 계정에는 비밀번호가 없어요. 이 패스키를 삭제하는 것이 맞는지 확인해 주세요.',
+  'passkeys.delete.confirm': '패스키 삭제',
+  'passkeys.delete.cancel': '취소',
+  'passkeys.delete.wrongPassword': '비밀번호가 맞지 않아요.',
+  'passkeys.delete.stale':
+    '안전을 위해 패스키를 삭제하기 전에 다시 로그인해 주세요.',
+  'passkeys.delete.removed': '패스키를 삭제했어요',
+  'passkeys.delete.failed': '패스키를 삭제하지 못했어요. 다시 시도해 주세요.',
+  'passkeys.delete.removing': '패스키를 삭제하는 중',
+  'passkeys.delete.passwordRequired':
+    '이 패스키를 삭제하려면 비밀번호를 입력해 주세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

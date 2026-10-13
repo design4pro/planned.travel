@@ -493,13 +493,29 @@ const messages = {
   'passkeys.error.retry': '重試',
   'passkeys.error.rateLimited': '嘗試次數過多。請幾分鐘後再試。',
   'passkeys.error.generic': '請檢查網路連線後再試。',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '重新命名 {name}',
   'passkeys.rename.fieldLabel': '為這個密碼金鑰命名',
   'passkeys.rename.placeholder': '取個名稱，例如「工作手機」',
   'passkeys.rename.saving': '正在儲存名稱',
   'passkeys.rename.saved': '名稱已儲存',
   'passkeys.rename.failed': '名稱未能儲存',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '移除 {name}',
+  'passkeys.delete.title': '移除這個密碼金鑰？',
+  'passkeys.delete.body': '移除後，你將無法再使用 {name} 登入。',
+  'passkeys.delete.password': '密碼',
+  'passkeys.delete.passwordHint': '請輸入你的密碼以確認。',
+  'passkeys.delete.confirmOnly':
+    '你的帳戶沒有密碼。請確認你要移除這個密碼金鑰。',
+  'passkeys.delete.confirm': '移除密碼金鑰',
+  'passkeys.delete.cancel': '取消',
+  'passkeys.delete.wrongPassword': '這個密碼不正確。',
+  'passkeys.delete.stale': '為了你的安全，請先重新登入，再移除密碼金鑰。',
+  'passkeys.delete.removed': '密碼金鑰已移除',
+  'passkeys.delete.failed': '密碼金鑰未能移除。請再試一次。',
+  'passkeys.delete.removing': '正在移除密碼金鑰',
+  'passkeys.delete.passwordRequired': '請輸入你的密碼以移除這個密碼金鑰。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -605,13 +605,32 @@ const messages = {
   'passkeys.error.rateLimited':
     'Massa intents. Torna-ho a provar d’aquí a uns minuts.',
   'passkeys.error.generic': 'Comprova la connexió i torna-ho a provar.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Canvia el nom de {name}',
   'passkeys.rename.fieldLabel': 'Posa un nom a aquesta clau d’accés',
   'passkeys.rename.placeholder': 'Posa-li nom, per exemple Mòbil de la feina',
   'passkeys.rename.saving': 'Desant el nom',
   'passkeys.rename.saved': 'Nom desat',
   'passkeys.rename.failed': 'No s’ha desat el nom',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Elimina {name}',
+  'passkeys.delete.title': 'Vols eliminar aquesta clau d’accés?',
+  'passkeys.delete.body': 'Ja no podràs iniciar la sessió amb {name}.',
+  'passkeys.delete.password': 'Contrasenya',
+  'passkeys.delete.passwordHint': 'Introdueix la contrasenya per confirmar-ho.',
+  'passkeys.delete.confirmOnly':
+    'El teu compte no té contrasenya. Confirma que vols eliminar aquesta clau d’accés.',
+  'passkeys.delete.confirm': 'Elimina la clau d’accés',
+  'passkeys.delete.cancel': 'Cancel·la',
+  'passkeys.delete.wrongPassword': 'Aquesta contrasenya no és correcta.',
+  'passkeys.delete.stale':
+    'Per la teva seguretat, torna a iniciar la sessió abans d’eliminar una clau d’accés.',
+  'passkeys.delete.removed': 'Clau d’accés eliminada',
+  'passkeys.delete.failed':
+    'No s’ha eliminat la clau d’accés. Torna-ho a provar.',
+  'passkeys.delete.removing': 'Eliminant la clau d’accés',
+  'passkeys.delete.passwordRequired':
+    'Introdueix la contrasenya per eliminar aquesta clau d’accés.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

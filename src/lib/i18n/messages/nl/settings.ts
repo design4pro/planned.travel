@@ -596,13 +596,32 @@ const messages = {
   'passkeys.error.rateLimited':
     'Te veel pogingen. Probeer het over een paar minuten opnieuw.',
   'passkeys.error.generic': 'Controleer je verbinding en probeer het opnieuw.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': '{name} hernoemen',
   'passkeys.rename.fieldLabel': 'Geef deze toegangssleutel een naam',
   'passkeys.rename.placeholder': 'Geef hem een naam, zoals Werktelefoon',
   'passkeys.rename.saving': 'Naam wordt opgeslagen',
   'passkeys.rename.saved': 'Naam opgeslagen',
   'passkeys.rename.failed': 'De naam is niet opgeslagen',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': '{name} verwijderen',
+  'passkeys.delete.title': 'Deze toegangssleutel verwijderen?',
+  'passkeys.delete.body': 'Je kunt dan niet meer inloggen met {name}.',
+  'passkeys.delete.password': 'Wachtwoord',
+  'passkeys.delete.passwordHint': 'Voer ter bevestiging je wachtwoord in.',
+  'passkeys.delete.confirmOnly':
+    'Je account heeft geen wachtwoord. Bevestig dat je deze toegangssleutel wilt verwijderen.',
+  'passkeys.delete.confirm': 'Toegangssleutel verwijderen',
+  'passkeys.delete.cancel': 'Annuleren',
+  'passkeys.delete.wrongPassword': 'Dat wachtwoord klopt niet.',
+  'passkeys.delete.stale':
+    'Voor je veiligheid: log opnieuw in voordat je een toegangssleutel verwijdert.',
+  'passkeys.delete.removed': 'Toegangssleutel verwijderd',
+  'passkeys.delete.failed':
+    'De toegangssleutel is niet verwijderd. Probeer het opnieuw.',
+  'passkeys.delete.removing': 'Toegangssleutel wordt verwijderd',
+  'passkeys.delete.passwordRequired':
+    'Voer je wachtwoord in om deze toegangssleutel te verwijderen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

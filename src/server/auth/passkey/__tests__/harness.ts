@@ -236,6 +236,29 @@ export function createAuthHarness({ sqlite, handler, kv }: HarnessOptions) {
     return row?.name
   }
 
+  /** Every column of a passkey row, to prove another person's row is byte-identical afterwards. */
+  function passkeyRow(id: string): unknown {
+    return sqlite.prepare('select * from passkey where id = ?').get(id)
+  }
+
+  /** The account keeps its credential row but has no password hash (an account that never set one). */
+  function clearPassword(userId: string): void {
+    sqlite
+      .prepare(
+        "update account set password = null where user_id = ? and provider_id = 'credential'",
+      )
+      .run(userId)
+  }
+
+  /** The account has no credential row at all, as after a social-only sign-up. */
+  function removeCredentialAccount(userId: string): void {
+    sqlite
+      .prepare(
+        "delete from account where user_id = ? and provider_id = 'credential'",
+      )
+      .run(userId)
+  }
+
   /** Open registration challenges: every one is a row `register/options` wrote and nothing consumed. */
   function challengeCount(): number {
     const row = sqlite
@@ -256,6 +279,9 @@ export function createAuthHarness({ sqlite, handler, kv }: HarnessOptions) {
     seedPasskeys,
     passkeyCount,
     passkeyName,
+    passkeyRow,
+    clearPassword,
+    removeCredentialAccount,
     challengeCount,
   }
 }

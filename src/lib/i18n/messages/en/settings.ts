@@ -667,13 +667,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'Too many attempts. Try again in a few minutes.',
   'passkeys.error.generic': 'Check your connection and try again.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Rename {name}',
   'passkeys.rename.fieldLabel': 'Name this passkey',
   'passkeys.rename.placeholder': 'Name it, like Work phone',
   'passkeys.rename.saving': 'Saving the name',
   'passkeys.rename.saved': 'Name saved',
   'passkeys.rename.failed': 'The name was not saved',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Remove {name}',
+  'passkeys.delete.title': 'Remove this passkey?',
+  'passkeys.delete.body': 'You will no longer be able to sign in with {name}.',
+  'passkeys.delete.password': 'Password',
+  'passkeys.delete.passwordHint': 'Enter your password to confirm.',
+  'passkeys.delete.confirmOnly':
+    'Your account has no password. Confirm that you want to remove this passkey.',
+  'passkeys.delete.confirm': 'Remove passkey',
+  'passkeys.delete.cancel': 'Cancel',
+  'passkeys.delete.wrongPassword': 'That password is not right.',
+  'passkeys.delete.stale':
+    'For your safety, sign in again before removing a passkey.',
+  'passkeys.delete.removed': 'Passkey removed',
+  'passkeys.delete.failed': 'The passkey was not removed. Try again.',
+  'passkeys.delete.removing': 'Removing the passkey',
+  'passkeys.delete.passwordRequired':
+    'Enter your password to remove this passkey.',
 } as const satisfies NamespaceMessages
 
 export default messages

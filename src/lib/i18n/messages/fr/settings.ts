@@ -605,13 +605,32 @@ const messages = {
   'passkeys.error.rateLimited':
     'Trop de tentatives. Réessayez dans quelques minutes.',
   'passkeys.error.generic': 'Vérifiez votre connexion et réessayez.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Renommer {name}',
   'passkeys.rename.fieldLabel': 'Nommez cette clé d’accès',
   'passkeys.rename.placeholder': 'Donnez-lui un nom, par exemple Téléphone pro',
   'passkeys.rename.saving': 'Enregistrement du nom',
   'passkeys.rename.saved': 'Nom enregistré',
   'passkeys.rename.failed': 'Le nom n’a pas été enregistré',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Supprimer {name}',
+  'passkeys.delete.title': 'Supprimer cette clé d’accès ?',
+  'passkeys.delete.body': 'Vous ne pourrez plus vous connecter avec {name}.',
+  'passkeys.delete.password': 'Mot de passe',
+  'passkeys.delete.passwordHint':
+    'Saisissez votre mot de passe pour confirmer.',
+  'passkeys.delete.confirmOnly':
+    'Votre compte n’a pas de mot de passe. Confirmez que vous voulez supprimer cette clé d’accès.',
+  'passkeys.delete.confirm': 'Supprimer la clé d’accès',
+  'passkeys.delete.cancel': 'Annuler',
+  'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',
+  'passkeys.delete.stale':
+    'Pour votre sécurité, reconnectez-vous avant de supprimer une clé d’accès.',
+  'passkeys.delete.removed': 'Clé d’accès supprimée',
+  'passkeys.delete.failed': 'La clé d’accès n’a pas été supprimée. Réessayez.',
+  'passkeys.delete.removing': 'Suppression de la clé d’accès',
+  'passkeys.delete.passwordRequired':
+    'Saisissez votre mot de passe pour supprimer cette clé d’accès.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

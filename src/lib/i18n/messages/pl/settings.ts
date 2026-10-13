@@ -618,13 +618,31 @@ const messages = {
   'passkeys.error.rateLimited':
     'Za dużo prób. Spróbuj ponownie za kilka minut.',
   'passkeys.error.generic': 'Sprawdź połączenie i spróbuj ponownie.',
-  // 09-S1b: naming a passkey. 09-S1c appends its keys below this line.
+  // 09-S1b: naming a passkey.
   'passkeys.rename.action': 'Zmień nazwę: {name}',
   'passkeys.rename.fieldLabel': 'Nazwij ten klucz dostępu',
   'passkeys.rename.placeholder': 'Nadaj nazwę, na przykład Telefon służbowy',
   'passkeys.rename.saving': 'Zapisujemy nazwę',
   'passkeys.rename.saved': 'Zapisano nazwę',
   'passkeys.rename.failed': 'Nie zapisano nazwy',
+  // 09-S1c: taking a passkey away.
+  'passkeys.delete.action': 'Usuń: {name}',
+  'passkeys.delete.title': 'Usunąć ten klucz dostępu?',
+  'passkeys.delete.body': 'Nie zalogujesz się już przy użyciu: {name}.',
+  'passkeys.delete.password': 'Hasło',
+  'passkeys.delete.passwordHint': 'Wpisz hasło, aby potwierdzić.',
+  'passkeys.delete.confirmOnly':
+    'Twoje konto nie ma hasła. Potwierdź, że chcesz usunąć ten klucz dostępu.',
+  'passkeys.delete.confirm': 'Usuń klucz dostępu',
+  'passkeys.delete.cancel': 'Anuluj',
+  'passkeys.delete.wrongPassword': 'To hasło jest nieprawidłowe.',
+  'passkeys.delete.stale':
+    'Ze względów bezpieczeństwa zaloguj się ponownie przed usunięciem klucza dostępu.',
+  'passkeys.delete.removed': 'Usunięto klucz dostępu',
+  'passkeys.delete.failed': 'Nie usunięto klucza dostępu. Spróbuj ponownie.',
+  'passkeys.delete.removing': 'Usuwamy klucz dostępu',
+  'passkeys.delete.passwordRequired':
+    'Wpisz hasło, aby usunąć ten klucz dostępu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
