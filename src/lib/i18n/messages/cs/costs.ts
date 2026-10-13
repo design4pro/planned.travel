@@ -165,6 +165,20 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'méně než {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Na koho se utratilo',
+  'memberBar.others': {
+    one: '{others} další cestovatel',
+    few: '{others} další cestovatelé',
+    many: '{others} dalšího cestovatele',
+    other: '{others} dalších cestovatelů',
+  },
+  'memberBar.notSplit': 'Nikomu nepřiřazeno',
+  'totalTile.label': 'Celkové výdaje na cestu',
+  'totalTile.captionPlanned': 'Plánováno {amount} pro všechny cestovatele',
+  'totalTile.captionBudget': 'Rozpočet cesty: {amount}',
+  'totalTile.yourShare': 'Tvůj podíl',
+  'totalTile.youPaid': 'Zaplaceno tebou',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Zaznamenané platby',
   'payments.empty.title': 'Zatím žádné platby',

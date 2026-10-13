@@ -13,9 +13,9 @@
 import { ArrowDownLeft, ArrowUpRight, CircleAlert, Coins } from 'lucide-react'
 
 import { Avatar, StatCard } from '#/components/ui'
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
-import { dailySeries } from '#/components/costs'
+import { MemberBar, dailySeries, memberShares } from '#/components/costs'
 import { pluralise } from '../../../-lib/format'
 
 import type { CostsSnapshot, CostsTotals } from '#/components/costs'
@@ -41,9 +41,12 @@ export function StatTiles({
   plannedMinor,
 }: StatTilesProps) {
   const locale = useLocale()
+  const t = useTranslate()
   const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ??
-    'Removed traveller'
+    userId === viewerUserId
+      ? t('costs.person.you')
+      : (people.find((person) => person.userId === userId)?.name ??
+        t('costs.person.removed'))
 
   const creditors = snapshot.suggestions.filter(
     (row) => row.fromUserId === viewerUserId,
@@ -52,6 +55,10 @@ export function StatTiles({
     (row) => row.toUserId === viewerUserId,
   )
   const series = dailySeries(snapshot.expenses)
+  const members = memberShares(snapshot.expenses).map((member) => ({
+    ...member,
+    name: nameOf(member.userId),
+  }))
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -107,31 +114,36 @@ export function StatTiles({
       <StatCard
         tone="inverse"
         icon={<Coins />}
-        label="Total trip spend"
+        label={t('costs.totalTile.label')}
         value={formatMoney(snapshot.spentMinor, currency, locale)}
         sparkline={series.length > 1 ? series : undefined}
         caption={
           budgetTargetMinor === null || budgetTargetMinor === 0
-            ? `Planned ${formatMoney(plannedMinor, currency, locale)} across all travellers`
-            : `${formatMoney(budgetTargetMinor, currency, locale)} budgeted for the trip`
+            ? t('costs.totalTile.captionPlanned', {
+                amount: formatMoney(plannedMinor, currency, locale),
+              })
+            : t('costs.totalTile.captionBudget', {
+                amount: formatMoney(budgetTargetMinor, currency, locale),
+              })
         }
         footer={
-          <div className="w-full">
+          <div className="flex w-full flex-col gap-3">
+            <MemberBar members={members} spentMinor={snapshot.spentMinor} />
             {/* No budget bar here on purpose: the track token is drawn for a light
                 surface and this tile is the inverse one. The budget's progress
                 lives under "By category", on a surface built for it. */}
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1">
               <div className="min-w-0">
-                <dt className="truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
-                  Your share
+                <dt className="text-micro font-semibold uppercase tracking-label text-inverse-muted [overflow-wrap:anywhere]">
+                  {t('costs.totalTile.yourShare')}
                 </dt>
                 <dd className="truncate text-label font-semibold tabular-nums text-inverse-on">
                   {formatMoney(totals.viewerShareMinor, currency, locale)}
                 </dd>
               </div>
               <div className="min-w-0">
-                <dt className="truncate text-micro font-semibold uppercase tracking-label text-inverse-muted">
-                  You paid
+                <dt className="text-micro font-semibold uppercase tracking-label text-inverse-muted [overflow-wrap:anywhere]">
+                  {t('costs.totalTile.youPaid')}
                 </dt>
                 <dd className="truncate text-label font-semibold tabular-nums text-inverse-on">
                   {formatMoney(totals.viewerPaidMinor, currency, locale)}

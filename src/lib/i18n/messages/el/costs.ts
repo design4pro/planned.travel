@@ -161,6 +161,19 @@ const messages = {
   /* A share under one percent; the glyph is hidden, the spoken form is read. */
   'percent.belowOne': '<{percent}',
   'percent.belowOneSpoken': 'λιγότερο από {percent}',
+  /* ------------------------------------------------- member bar (#833) */
+  'memberBar.label': 'Για ποιον ξοδεύτηκαν τα χρήματα',
+  'memberBar.others': {
+    one: '{others} ακόμη ταξιδιώτης',
+    other: '{others} ακόμη ταξιδιώτες',
+  },
+  'memberBar.notSplit': 'Δεν έχει ανατεθεί σε κανέναν',
+  'totalTile.label': 'Συνολικά έξοδα ταξιδιού',
+  'totalTile.captionPlanned':
+    'Προγραμματισμένα {amount} για όλους τους ταξιδιώτες',
+  'totalTile.captionBudget': '{amount} προϋπολογισμός για το ταξίδι',
+  'totalTile.yourShare': 'Το μερίδιό σας',
+  'totalTile.youPaid': 'Πληρώσατε',
   /* ------------------------------------------------- payments recorded */
   'payments.label': 'Καταγεγραμμένες πληρωμές',
   'payments.empty.title': 'Καμία πληρωμή ακόμη',
