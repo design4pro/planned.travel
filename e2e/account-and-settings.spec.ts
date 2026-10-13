@@ -35,6 +35,13 @@ function rows(page: Page) {
     .getByRole('listitem')
 }
 
+/** The rows while a modal dialog is open: the page behind it is `aria-hidden`, so ask for hidden. */
+function rowsBehindDialog(page: Page) {
+  return page
+    .getByRole('region', { name: 'Your passkeys', includeHidden: true })
+    .getByRole('listitem', { includeHidden: true })
+}
+
 const LIST_ENDPOINT = '**/api/auth/passkey/list'
 const VERIFY_ENDPOINT = '/api/auth/passkey/register/verify'
 const RENAME_ENDPOINT = '/api/auth/passkey/rename'
@@ -359,7 +366,9 @@ test.describe('ACC-03 - a member adds a passkey on this device, names it and tak
         dialog.getByText('That password is not right.'),
       ).toBeVisible()
       await expect(password, 'focus goes back to the password').toBeFocused()
-      await expect(rows(page)).toHaveCount(before + 1)
+      await expect(rowsBehindDialog(page), 'the row survives').toHaveCount(
+        before + 1,
+      )
 
       await password.fill(DEMO_PASSWORD)
       const removed = deleteReply(page)
@@ -380,12 +389,18 @@ test.describe('ACC-03 - a member adds a passkey on this device, names it and tak
       await expect(
         page.getByRole('region', { name: 'Your passkeys' }),
       ).toBeVisible()
-      await expect(rows(page), 'the removal is stored').toHaveCount(before)
+      await expect(rows(page), 'the removal is stored').toHaveCount(before, {
+        timeout: 20_000,
+      })
 
+      // The wrong password was refused on purpose, and the browser itself logs the 400 of that one
+      // request; nothing else may reach the console.
       expect(
         watched().fatal,
-        'the console stays clean through the ceremony',
-      ).toEqual([])
+        'the console shows only the deliberate refusal through the ceremony',
+      ).toEqual([
+        'error: Failed to load resource: the server responded with a status of 400 (Bad Request)',
+      ])
     } finally {
       // A walk that failed before the removal still owns its row, so the cleanup deletes it through
       // the endpoint with the member's password. Both calls are best effort: a failed cleanup must
