@@ -123,6 +123,7 @@ const messages = {
   'payment.whoPaid': 'من يستلم',
   'payment.amountIn': 'المبلغ بعملة {currency}',
   'payment.amountPositive': 'اكتب مبلغًا أكبر من صفر.',
+  'payment.currencyLabel': 'العملة التي تم بها الدفع',
   'payment.how': 'كيف',
   'payment.howMade': 'كيف جرت الدفعة',
   'payment.dateLabel': 'تاريخ الدفعة',

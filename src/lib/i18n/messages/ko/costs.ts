@@ -116,6 +116,7 @@ const messages = {
   'payment.whoPaid': '받는 사람',
   'payment.amountIn': '{currency} 금액',
   'payment.amountPositive': '0보다 큰 금액을 입력해 주세요.',
+  'payment.currencyLabel': '결제에 사용한 통화',
   'payment.how': '방법',
   'payment.howMade': '결제 방법',
   'payment.dateLabel': '결제한 날짜',

@@ -121,6 +121,7 @@ const messages = {
   'payment.whoPaid': 'Chi riceve',
   'payment.amountIn': 'Importo in {currency}',
   'payment.amountPositive': 'Scrivi un importo maggiore di zero.',
+  'payment.currencyLabel': 'Valuta in cui è stato effettuato il pagamento',
   'payment.how': 'Come',
   'payment.howMade': 'Come è stato fatto il pagamento',
   'payment.dateLabel': 'Data del pagamento',

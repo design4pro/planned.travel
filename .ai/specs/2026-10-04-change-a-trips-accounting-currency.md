@@ -284,8 +284,9 @@ caller (#836) and look the row up inside that trip. The guard is keyed on the **
 `currency`, because booking sync legitimately writes a booking's own currency
 (`fns/reservations.ts:312`) and passes no assertion (it is server-derived and cannot be stale).
 `createExpenseFn` / `updateExpenseFn` pass `body.currency`, which the expense dialog already sends;
-`recordPaymentSchema` gains an optional field named `expectedTripCurrency` (not `currency`, which
-`04-S1`'s foreign-currency payment fields will want for the payment's own currency) that the
+`recordPaymentSchema` gains an optional field named `expectedTripCurrency` (not `currency`: a payment's own
+currency is the trip's, and `04-S1`'s foreign-currency fields are `originalAmountMinor` and
+`originalCurrency`) that the
 payment dialog sends, while `recordPaymentFn` keeps writing `trip.currency`. A missing value keeps
 today's behaviour for one release (`BACKWARD_COMPATIBILITY.md` §2) and becoming required is a
 follow-up.

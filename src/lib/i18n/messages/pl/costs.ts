@@ -124,6 +124,7 @@ const messages = {
   'payment.whoPaid': 'Kto otrzymuje',
   'payment.amountIn': 'Kwota w {currency}',
   'payment.amountPositive': 'Wpisz kwotę większą od zera.',
+  'payment.currencyLabel': 'Waluta, w której dokonano płatności',
   'payment.how': 'Jak',
   'payment.howMade': 'Jak wykonano płatność',
   'payment.dateLabel': 'Data płatności',

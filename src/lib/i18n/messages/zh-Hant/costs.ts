@@ -109,6 +109,7 @@ const messages = {
   'payment.whoPaid': '誰收款',
   'payment.amountIn': '以 {currency} 計的金額',
   'payment.amountPositive': '請填寫大於零的金額。',
+  'payment.currencyLabel': '付款所用的貨幣',
   'payment.how': '方式',
   'payment.howMade': '這筆付款是怎麼付的',
   'payment.dateLabel': '付款日期',

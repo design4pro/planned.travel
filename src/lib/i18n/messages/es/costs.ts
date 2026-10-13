@@ -120,6 +120,7 @@ const messages = {
   'payment.whoPaid': 'Quién recibe',
   'payment.amountIn': 'Importe en {currency}',
   'payment.amountPositive': 'Escribe un importe mayor que cero.',
+  'payment.currencyLabel': 'Moneda en la que se hizo el pago',
   'payment.how': 'Cómo',
   'payment.howMade': 'Cómo se hizo el pago',
   'payment.dateLabel': 'Fecha del pago',

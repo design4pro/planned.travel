@@ -41,6 +41,7 @@ import {
   listCollectionPlacesWithLabels,
   setCollectionPlaceLabels,
 } from '../collections'
+import { RepositoryError } from '../context'
 import { createDayNote, listTripDays, syncTripDays } from '../days'
 import {
   createExpense,
@@ -50,6 +51,7 @@ import {
   listDailySpend,
   listSettlements,
   setExpenseShares,
+  settlementsRepository,
   suggestSettlements,
 } from '../expenses'
 import {
@@ -407,66 +409,186 @@ describe('repositories', () => {
       expect(daily).toEqual([{ spentOn: '2026-07-01', spentMinor: 5_001 }])
     })
 
-    it('records a settlement paid in another currency, or none of it at all', async () => {
-      const other = await tenant.addUser('Payer')
-      const trip = await createTrip(tenant.scope, {
-        title: 'Tokyo',
-        currency: 'JPY',
-      })
-      await addTripMember(tenant.scope, {
-        tripId: trip.id,
-        userId: other,
-        role: 'editor',
-      })
-      const payment = {
-        tripId: trip.id,
-        fromUserId: other,
-        toUserId: tenant.ownerUserId,
-        amountMinor: 46_488,
-        currency: 'JPY',
-        settledOn: '2026-10-12',
-      } as const
+    describe('a settlement paid in another currency', () => {
+      async function tokyoTrip(): Promise<{
+        readonly payment: {
+          readonly tripId: string
+          readonly fromUserId: string
+          readonly toUserId: string
+          readonly amountMinor: number
+          readonly settledOn: string
+        }
+        readonly written: () => Promise<number>
+      }> {
+        const other = await tenant.addUser('Payer')
+        const trip = await createTrip(tenant.scope, {
+          title: 'Tokyo',
+          currency: 'JPY',
+        })
+        await addTripMember(tenant.scope, {
+          tripId: trip.id,
+          userId: other,
+          role: 'editor',
+        })
+        return {
+          payment: {
+            tripId: trip.id,
+            fromUserId: other,
+            toUserId: tenant.ownerUserId,
+            amountMinor: 46_488,
+            settledOn: '2026-10-12',
+          },
+          written: async () =>
+            (await listSettlements(tenant.scope, trip.id)).length,
+        }
+      }
 
-      // Two of the three source fields is a half-recorded conversion, and the repository refuses
-      // it rather than storing an amount whose rate nobody can reproduce.
-      await expect(
-        createSettlement(tenant.scope, {
+      it('derives the rate from the amount pair and freezes it on the row', async () => {
+        const { payment } = await tokyoTrip()
+
+        const converted = await createSettlement(tenant.scope, {
           ...payment,
           originalAmountMinor: 59_600,
           originalCurrency: 'GBP',
-        }),
-      ).rejects.toThrow(/together/)
-      await expect(
-        createSettlement(tenant.scope, {
-          ...payment,
-          originalCurrency: 'GBP',
-          exchangeRate: 195,
-        }),
-      ).rejects.toThrow(/together/)
+        })
 
-      // The table deliberately carries no CHECK for this, so the guard is the input's.
-      await expect(
-        createSettlement(tenant.scope, {
-          ...payment,
-          originalAmountMinor: -1,
-          originalCurrency: 'GBP',
-          exchangeRate: 195,
-        }),
-      ).rejects.toThrow()
-
-      const converted = await createSettlement(tenant.scope, {
-        ...payment,
-        originalAmountMinor: 59_600,
-        originalCurrency: 'GBP',
-        exchangeRate: 195,
+        const stored = (
+          await listSettlements(tenant.scope, payment.tripId)
+        ).find((row) => row.id === converted.id)
+        expect(stored?.amountMinor).toBe(46_488)
+        expect(stored?.currency).toBe('JPY')
+        expect(stored?.originalAmountMinor).toBe(59_600)
+        expect(stored?.originalCurrency).toBe('GBP')
+        // 46,488 yen for 596.00 pounds: 78 yen to the pound, major per major.
+        expect(stored?.exchangeRate).toBe(78)
       })
 
-      const stored = (await listSettlements(tenant.scope, trip.id)).find(
-        (row) => row.id === converted.id,
-      )
-      expect(stored?.originalAmountMinor).toBe(59_600)
-      expect(stored?.originalCurrency).toBe('GBP')
-      expect(stored?.exchangeRate).toBe(195)
+      it('refuses a half-recorded pair and a source amount of nothing, and writes nothing', async () => {
+        const { payment, written } = await tokyoTrip()
+
+        const attempts = [
+          { originalAmountMinor: 59_600 },
+          { originalCurrency: 'GBP' },
+          { originalAmountMinor: null, originalCurrency: 'GBP' },
+          { originalAmountMinor: 0, originalCurrency: 'GBP' },
+        ] as const
+        for (const source of attempts) {
+          const error = await createSettlement(tenant.scope, {
+            ...payment,
+            ...source,
+          }).then(
+            () => null,
+            (cause: unknown) => cause,
+          )
+          expect(error).toBeInstanceOf(RepositoryError)
+          expect((error as RepositoryError).code).toBe('CONVERSION_INCOMPLETE')
+        }
+
+        // The table deliberately carries no CHECK for this, so the guard is the writer's.
+        await expect(
+          createSettlement(tenant.scope, {
+            ...payment,
+            originalAmountMinor: -1,
+            originalCurrency: 'GBP',
+          }),
+        ).rejects.toThrow()
+        expect(await written()).toBe(0)
+      })
+
+      it('does not accept a rate from the caller, whether or not it agrees with the amounts', async () => {
+        const { payment, written } = await tokyoTrip()
+        const body = {
+          ...payment,
+          originalAmountMinor: 59_600,
+          originalCurrency: 'GBP',
+        }
+
+        for (const exchangeRate of [78, 195]) {
+          const result = createSettlementInput.safeParse({
+            ...body,
+            exchangeRate,
+          })
+          expect(result.success).toBe(false)
+          expect(result.error?.issues[0]?.code).toBe('unrecognized_keys')
+          await expect(
+            createSettlement(tenant.scope, { ...body, exchangeRate } as never),
+          ).rejects.toThrow(/exchangeRate/)
+        }
+        expect(await written()).toBe(0)
+      })
+
+      it('takes the currency from the trip and refuses one that differs', async () => {
+        const { payment, written } = await tokyoTrip()
+
+        const error = await createSettlement(tenant.scope, {
+          ...payment,
+          currency: 'EUR',
+        }).then(
+          () => null,
+          (cause: unknown) => cause,
+        )
+        expect(error).toBeInstanceOf(RepositoryError)
+        expect(await written()).toBe(0)
+
+        const own = await createSettlement(tenant.scope, {
+          ...payment,
+          currency: 'JPY',
+        })
+        expect(own.currency).toBe('JPY')
+        const fallback = await createSettlement(tenant.scope, payment)
+        expect(fallback.currency).toBe('JPY')
+      })
+
+      it('stores no source figures when the source currency is the trip’s own', async () => {
+        const { payment } = await tokyoTrip()
+
+        const same = await createSettlement(tenant.scope, {
+          ...payment,
+          originalAmountMinor: payment.amountMinor,
+          originalCurrency: 'JPY',
+        })
+
+        expect(same.originalAmountMinor).toBeNull()
+        expect(same.originalCurrency).toBeNull()
+        expect(same.exchangeRate).toBeNull()
+      })
+
+      it('still clears a trip to zero when converted and unconverted payments are mixed', async () => {
+        const { payment } = await tokyoTrip()
+        await createExpense(tenant.scope, {
+          tripId: payment.tripId,
+          title: 'Ramen',
+          amountMinor: 100_000,
+          spentOn: '2026-10-11',
+          paidBy: tenant.ownerUserId,
+          participants: [
+            { userId: tenant.ownerUserId },
+            { userId: payment.fromUserId },
+          ],
+        })
+
+        // A payment written before the source columns existed: three nulls, face value.
+        const legacy = await settlementsRepository.insert(tenant.scope, {
+          ...payment,
+          amountMinor: 20_000,
+          currency: 'JPY',
+          createdBy: tenant.ownerUserId,
+        })
+        expect(legacy.originalAmountMinor).toBeNull()
+        expect(legacy.originalCurrency).toBeNull()
+        expect(legacy.exchangeRate).toBeNull()
+
+        await createSettlement(tenant.scope, {
+          ...payment,
+          amountMinor: 30_000,
+          originalAmountMinor: 38_462,
+          originalCurrency: 'GBP',
+        })
+
+        const balances = await getMemberBalances(tenant.scope, payment.tripId)
+        expect(balances).toHaveLength(2)
+        expect(balances.every((row) => row.balanceMinor === 0)).toBe(true)
+      })
     })
 
     it('leaves the three source columns null when the payment is in the trip currency', async () => {

@@ -115,6 +115,7 @@ const messages = {
   'payment.whoPaid': 'Vem som får',
   'payment.amountIn': 'Belopp i {currency}',
   'payment.amountPositive': 'Skriv ett belopp större än noll.',
+  'payment.currencyLabel': 'Valuta som betalningen gjordes i',
   'payment.how': 'Hur',
   'payment.howMade': 'Hur betalningen gjordes',
   'payment.dateLabel': 'Datum för betalningen',

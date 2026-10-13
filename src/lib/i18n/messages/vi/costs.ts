@@ -117,6 +117,7 @@ const messages = {
   'payment.whoPaid': 'Ai nhận',
   'payment.amountIn': 'Số tiền bằng {currency}',
   'payment.amountPositive': 'Nhập số tiền lớn hơn không.',
+  'payment.currencyLabel': 'Loại tiền dùng để thanh toán',
   'payment.how': 'Bằng cách nào',
   'payment.howMade': 'Khoản trả được thực hiện thế nào',
   'payment.dateLabel': 'Ngày trả',

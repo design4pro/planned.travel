@@ -8,6 +8,12 @@
  *
  * Like the expense dialog, this owns no data access. The caller hands it a submit
  * function; it hands back exactly the shape `recordPaymentFn` validates.
+ *
+ * The currency pair follows the expense dialog's rule. `amount` is typed in whatever
+ * currency the money left the account in; when that is not the trip's own, a second
+ * field appears for what the payer's statement shows in the trip's currency, and the
+ * implied rate is shown under it. The rate is never sent: the server derives it from
+ * the two amounts.
  */
 import { useId, useState } from 'react'
 import { ArrowRight, Coins } from 'lucide-react'
@@ -33,7 +39,9 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { MessageKey } from '#/lib/i18n'
 import {
+  CURRENCY_OPTIONS,
   currencyCode,
+  formatExchangeRate,
   formatMoney,
   parseMoney,
   toAmountInput,
@@ -57,7 +65,11 @@ const SETTLEMENT_METHOD_OPTIONS: ReadonlyArray<{
 export interface PaymentFormValue {
   readonly fromUserId: string
   readonly toUserId: string
+  /** The sum in the trip's currency, as the payer's statement shows it. */
   readonly amountMinor: number
+  /** The sum that left the account, when it was in another currency. */
+  readonly originalAmountMinor: number | null
+  readonly originalCurrency: string | null
   readonly method: SettlementMethod
   readonly settledOn: string
   readonly note: string | null
@@ -108,6 +120,8 @@ export function PaymentDialog({
   const [amount, setAmount] = useState(
     seed === null ? '' : toAmountInput(seed.amountMinor, currency),
   )
+  const [sourceCurrency, setSourceCurrency] = useState(currencyCode(currency))
+  const [converted, setConverted] = useState('')
   const [method, setMethod] = useState<SettlementMethod>('bank_transfer')
   const [settledOn, setSettledOn] = useState(today)
   const [note, setNote] = useState('')
@@ -115,10 +129,37 @@ export function PaymentDialog({
   const [error, setError] = useState<string | null>(null)
   const formId = `payment-form-${useId()}`
 
-  const amountMinor = parseMoney(amount, currency)
+  const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
+  const typedMinor = parseMoney(amount, sourceCurrency)
+  const amountMinor = foreign ? parseMoney(converted, currency) : typedMinor
+  const rate = foreign
+    ? formatExchangeRate(
+        {
+          originalAmountMinor: typedMinor,
+          originalCurrency: sourceCurrency,
+          amountMinor: amountMinor ?? 0,
+          currency,
+        },
+        locale,
+      )
+    : null
   const distinct =
     fromUserId !== '' && toUserId !== '' && fromUserId !== toUserId
-  const canSave = distinct && amountMinor !== null && amountMinor > 0 && !saving
+  const canSave =
+    distinct &&
+    typedMinor !== null &&
+    typedMinor > 0 &&
+    amountMinor !== null &&
+    amountMinor > 0 &&
+    !saving
+  const convertedInvalid =
+    foreign &&
+    converted.trim() !== '' &&
+    !(amountMinor !== null && amountMinor > 0)
+  const convertedErrorKey: MessageKey =
+    amountMinor === null
+      ? 'costs.expense.convertedNotANumber'
+      : 'costs.payment.amountPositive'
 
   const nameOf = (userId: string): string =>
     people.find((person) => person.userId === userId)?.name ?? 'Traveller'
@@ -135,6 +176,8 @@ export function PaymentDialog({
         fromUserId,
         toUserId,
         amountMinor,
+        originalAmountMinor: foreign ? typedMinor : null,
+        originalCurrency: foreign ? currencyCode(sourceCurrency) : null,
         method,
         settledOn,
         note: note.trim() === '' ? null : note.trim(),
@@ -221,15 +264,15 @@ export function PaymentDialog({
               </Field>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9.5rem]">
               <Field
                 label={t('costs.payment.amountIn', {
-                  currency: currencyCode(currency),
+                  currency: currencyCode(sourceCurrency),
                 })}
                 required
                 error={
                   amount.trim() !== '' &&
-                  (amountMinor === null || amountMinor === 0)
+                  (typedMinor === null || typedMinor === 0)
                     ? t('costs.payment.amountPositive')
                     : undefined
                 }
@@ -237,6 +280,51 @@ export function PaymentDialog({
                 <Input
                   value={amount}
                   onChange={(event) => setAmount(event.target.value)}
+                  placeholder={toAmountInput(0, sourceCurrency)}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  className="tabular-nums"
+                  leading={<Coins />}
+                  required
+                />
+              </Field>
+              <Field
+                label={t('costs.field.currency')}
+                disabled={saving}
+                data-part="payment-currency"
+              >
+                <SimpleSelect
+                  options={CURRENCY_OPTIONS.map((entry) => ({
+                    value: entry.code,
+                    label: entry.code,
+                    description: entry.name,
+                  }))}
+                  value={sourceCurrency}
+                  onValueChange={setSourceCurrency}
+                  ariaLabel={t('costs.payment.currencyLabel')}
+                />
+              </Field>
+            </div>
+
+            {foreign ? (
+              <Field
+                label={t('costs.expense.convertedTo', {
+                  currency: currencyCode(currency),
+                })}
+                required
+                disabled={saving}
+                hint={
+                  rate ??
+                  t('costs.expense.convertedHint', {
+                    from: currencyCode(sourceCurrency),
+                    to: currencyCode(currency),
+                  })
+                }
+                error={convertedInvalid ? t(convertedErrorKey) : undefined}
+              >
+                <Input
+                  value={converted}
+                  onChange={(event) => setConverted(event.target.value)}
                   placeholder={toAmountInput(0, currency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -245,6 +333,9 @@ export function PaymentDialog({
                   required
                 />
               </Field>
+            ) : null}
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t('costs.payment.how')}>
                 <SimpleSelect
                   options={SETTLEMENT_METHOD_OPTIONS.map((entry) => ({
@@ -256,17 +347,16 @@ export function PaymentDialog({
                   ariaLabel={t('costs.payment.howMade')}
                 />
               </Field>
+              <Field label={t('costs.field.date')}>
+                <DatePicker
+                  value={parseDay(settledOn)}
+                  onChange={(next) =>
+                    setSettledOn(next === null ? today : toDayString(next))
+                  }
+                  ariaLabel={t('costs.payment.dateLabel')}
+                />
+              </Field>
             </div>
-
-            <Field label={t('costs.field.date')}>
-              <DatePicker
-                value={parseDay(settledOn)}
-                onChange={(next) =>
-                  setSettledOn(next === null ? today : toDayString(next))
-                }
-                ariaLabel={t('costs.payment.dateLabel')}
-              />
-            </Field>
 
             <Field
               label={t('costs.payment.note')}
