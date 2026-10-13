@@ -39,8 +39,10 @@ defaults that would otherwise smuggle one in are supplied by the fixture itself:
 `src/routes/api/dev/-seed/fixture-rows.ts` hands the seed a primary key and a row instant derived
 from the anchor, so the id a trip's cover drawing is hashed from is the same id on every run. That
 is a claim, and `--today` is how it gets tested instead of trusted. The flag sends the day as the
-`x-pt-server-today` header; `serverToday()` in `src/server/clock.ts` reads it, guarded by
-`import.meta.env.DEV` so the production build folds the whole path away.
+`x-pt-server-today` header; `serverToday()` and `serverNow()` in `src/server/clock.ts` read it, guarded by
+`import.meta.env.DEV` so the production build folds the whole path away. `serverNow()` is the instant the
+weather policy reads (`src/server/weather/bindings.ts`), so the cached days below are forecast, recorded
+or estimate relative to the fixture day and not to the wall clock.
 
 Seed the same dataset under three widely separated days and the rows written must be
 byte-identical:
@@ -129,12 +131,21 @@ src/routes/api/dev/-seed/
   dataset/workspace.ts              people, atlas, journal, collections, vacay, inbox
   apply-trip.ts                     one generic pass that writes any trip
   apply.ts                          orchestration, idempotence, the report
+  weather-cache.ts                  the weather cache entries and the spent allowance (KV)
   dataset/second-workspace.ts       the second workspace's name, slug and one trip
   bootstrap.ts                      owner lookup by email + the collaborator user rows
                                     + `ensureSecondWorkspace`
 scripts/seed/seed.mjs               trigger
 scripts/seed/verify.mjs             read-back and consistency checks
 ```
+
+### The weather cache
+
+After the rows are written the route also writes the weather the planner reads from KV
+(`-seed/weather-cache.ts`), so the weather journey (`e2e/trip-weather.spec.ts`) needs no provider stub:
+Lisbon day 1 is a recorded day, days 4 and 5 are forecasts, Tokyo day 1 is an estimate, and the
+workspace's weather allowance for the fixture month is spent, so every other located day is
+unavailable without a call going out. The report's `weather` field counts what was written (`entries`, `allowanceWindow`, `allowance`).
 
 Directories prefixed with `-` are ignored by the router, so nothing under `-seed/` becomes a route.
 

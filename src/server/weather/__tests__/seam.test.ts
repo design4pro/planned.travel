@@ -7,7 +7,7 @@
  * directory's tests possible: the cache, the counters and the provider arrive as arguments.
  *
  * The named list of importers is its own control: "nothing was found" passes just as well when the
- * walk is broken, which is why the case asserts the one door by name rather than an empty set.
+ * walk is broken, which is why the case asserts the doors by name rather than an empty set.
  *
  * The last two cases are the isolation rule for a cache that every workspace shares: it is keyed on
  * a kind, a coordinate and a date, and nothing exported here can be handed anything else.
@@ -55,14 +55,24 @@ describe('the weather directory keeps its bindings in one file', () => {
     expect(offenders).toEqual(['bindings.ts'])
   })
 
-  it('is reached from the one module outside itself that has a door', () => {
+  it('is reached from the two modules outside itself that have a door', () => {
     const importers = sourceFiles(SRC)
       .filter((file) => !file.startsWith(DIRECTORY))
       // Shipped modules only. A test that names `bindings.ts` names it in order to replace it.
       .filter((file) => !file.includes(`${sep}__tests__${sep}`))
       .filter((file) => /from '#\/server\/weather\//.test(codeOf(file)))
       .map((file) => file.slice(SRC.length))
-    expect(importers).toEqual(['routes/_app/trips/$tripId/-server/weather.ts'])
+    // The second door is the development seed, which writes the cache entries the policy reads and
+    // so must build their keys with the policy's own functions rather than copy the format. It is
+    // reached only from `/api/dev/seed`, which the production build folds away.
+    expect(importers).toEqual([
+      'routes/_app/trips/$tripId/-server/weather.ts',
+      'routes/api/dev/-seed/weather-cache.ts',
+    ])
+  })
+
+  it('reads the Worker clock through `serverNow`, the seam a journey pins', () => {
+    expect(codeOf(join(DIRECTORY, 'bindings.ts'))).toContain('now: serverNow')
   })
 })
 

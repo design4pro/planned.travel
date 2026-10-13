@@ -10,7 +10,8 @@
  * past one of them the Worker returned a different set of rows and a baseline
  * recorded the day before failed on content nobody had changed.
  *
- * So "today" is one decision, made here, once per request:
+ * So "today" is one decision, made here, once per request (`serverNow()` below is the same decision
+ * as an instant):
  *
  * - In development the caller may pin it with a request header, which is how
  *   `playwright.config.ts` holds the whole suite on the day the baselines were
@@ -65,12 +66,12 @@ function isCalendarDay(value: string): boolean {
 }
 
 /**
- * Today in `YYYY-MM-DD`, as the Worker should answer it for this request.
+ * The day this request is pinned to, or `null` when it is not.
  *
- * Use this anywhere a loader, server function or repository call needs the day
- * to compare a date column against. It never throws.
+ * The whole of the pin lives here, inside the development guard, so the production build folds the
+ * header name, the `getRequest()` call and the parsing away together.
  */
-export const serverToday: () => string = createServerOnlyFn((): string => {
+function pinnedDay(): string | null {
   if (import.meta.env.DEV) {
     let header: string | null
     try {
@@ -86,5 +87,29 @@ export const serverToday: () => string = createServerOnlyFn((): string => {
     }
     if (header !== null && isCalendarDay(header)) return header
   }
-  return wallClockToday()
+  return null
+}
+
+/**
+ * Today in `YYYY-MM-DD`, as the Worker should answer it for this request.
+ *
+ * Use this anywhere a loader, server function or repository call needs the day
+ * to compare a date column against. It never throws.
+ */
+export const serverToday: () => string = createServerOnlyFn(
+  (): string => pinnedDay() ?? wallClockToday(),
+)
+
+/**
+ * The instant the Worker should treat as "now" for this request.
+ *
+ * For a reader that needs an instant rather than a day - the weather policy compares the expiry of
+ * a cached reading against it and names the month its allowance is tallied in. It is the wall
+ * clock, exactly, unless the request is pinned, and then it is midday UTC of the pinned day, the
+ * same instant the demo fixture calls "now" (`SEED_ANCHOR_INSTANT`), so a pinned request and the
+ * fixture it reads agree about the time as well as the day. It never throws.
+ */
+export const serverNow: () => Date = createServerOnlyFn((): Date => {
+  const pinned = pinnedDay()
+  return pinned === null ? new Date() : new Date(`${pinned}T12:00:00.000Z`)
 })

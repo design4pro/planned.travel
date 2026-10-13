@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { env } from 'cloudflare:workers'
 // Loads the Start module augmentation that adds `server` to route options.
 import type {} from '@tanstack/react-start'
 
@@ -19,6 +20,8 @@ import { RepositoryError, appSettingsStore } from '#/server/repos'
  * Query parameters:
  * - `email` — the workspace owner to seed. Defaults to `rafal@planned.travel`.
  * - `force=1` — re-seed even though the `demo.seed` marker says this dataset version is applied.
+ *
+ * The response also reports the weather cache it wrote (`weather`), see `./-seed/weather-cache`.
  *
  * Optional JSON body:
  * - `password` — the password the owner's account should have, so the seeded workspace can be signed
@@ -85,7 +88,8 @@ async function post({ request }: { request: Request }): Promise<Response> {
     return notFound()
   }
 
-  const { SeedBootstrapError, applySeed } = await import('./-seed')
+  const { SeedBootstrapError, applySeed, seedWeatherCache } =
+    await import('./-seed')
   const url = new URL(request.url)
   const email = url.searchParams.get('email')
   const force = url.searchParams.get('force')
@@ -98,7 +102,10 @@ async function post({ request }: { request: Request }): Promise<Response> {
       keepExistingPassword: keepPassword,
       force: force === '1' || force === 'true',
     })
-    return json({ ok: true, ...report })
+    // After the seed and on every run, a warm one included: the weather journey reads this cache
+    // and allowance, and a rebuild mints a new organization that the allowance is keyed on.
+    const weather = await seedWeatherCache(env.KV, report.organizationId)
+    return json({ ok: true, ...report, weather })
   } catch (error) {
     if (error instanceof SeedBootstrapError) {
       return json({ ok: false, error: error.message }, 409)

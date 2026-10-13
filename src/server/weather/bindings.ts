@@ -17,6 +17,7 @@
 
 import { env } from 'cloudflare:workers'
 
+import { serverNow } from '#/server/clock'
 import { requestOutboundRuntime } from '#/server/metering/bindings'
 import { createMetNorwayClient } from './met-norway'
 import { createNasaPowerClient } from './nasa-power'
@@ -66,7 +67,7 @@ export function weatherRuntime(options: WeatherRuntimeOptions): WeatherRuntime {
     logger: policyLogger(outbound.logger.child({ component: 'weather' })),
     organizationId: options.organizationId,
     ceiling: options.ceiling,
-    now: () => new Date(),
+    now: serverNow,
     metNorway: createMetNorwayClient({ fetch }),
     nasaPower: createNasaPowerClient({ fetch }),
   }
