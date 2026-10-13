@@ -5,7 +5,7 @@
 | **Status**         | in-progress                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #827                                           |
-| **Implementation** | #1199                                          |
+| **Implementation** | #1199, #1206                                   |
 | **Plan**           | 04-S4 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR
