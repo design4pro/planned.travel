@@ -45,14 +45,40 @@ export const candidateSchema = z.object({
 
 export type Candidate = z.infer<typeof candidateSchema>
 
+/**
+ * A report a person wrote in the feedback widget (`src/lib/sentry-feedback.ts`).
+ *
+ * Deliberately has no field for the verbatim message, the contact address or the screenshot: what
+ * the agent may carry out of Sentry is its own one-line paraphrase and nothing a stranger typed.
+ */
+export const feedbackSchema = z.object({
+  shortId: z.string().regex(/^[A-Z0-9]+(?:-[A-Z0-9]+)+$/),
+  issueUrl: z.string().url(),
+  kind: z.enum(['bug', 'feature', 'other']),
+  summary: z.string(),
+  /** The route the widget was opened on, path only. */
+  page: z.string().nullable(),
+  environment: z.enum(['production', 'staging']).nullable(),
+  sentryStatus: z.enum(['unresolved', 'resolved', 'ignored', 'archived']),
+  receivedAt: z.string(),
+  /** The error issue Sentry linked the report to, if any. */
+  linkedShortId: z.string().nullable(),
+  judgement: z.enum(['file', 'noise']),
+  judgementReason: z.string(),
+})
+
+export type Feedback = z.infer<typeof feedbackSchema>
+
 export const reportSchema = z.object({
   status: z.enum(['ok', 'mcp-unavailable', 'no-data']),
   window: z.string(),
   scanned: z.object({
     production: z.number().int().nonnegative(),
     staging: z.number().int().nonnegative(),
+    feedback: z.number().int().nonnegative().default(0),
   }),
   candidates: z.array(candidateSchema).max(12),
+  feedback: z.array(feedbackSchema).max(12).default([]),
   skipped: z
     .array(z.object({ shortId: z.string(), reason: z.string() }))
     .max(40),
@@ -457,5 +483,120 @@ export function renderIssueBody(options: RenderBodyOptions): string {
     forcedReason === undefined
       ? `_Filed by \`pnpm sentry-triage --file-issues\` (run ${runLabel}) from Sentry issue ${candidate.shortId}. Full report: ${reportPath}_`
       : `_Filed by hand with \`pnpm sentry-triage --force ${candidate.shortId} --file-issues\` (run ${runLabel}), against the policy - see the FORCED line above. Full report: ${reportPath}_`,
+  ].join('\n')
+}
+
+/* ---------------------------------------------------------------- feedback -- */
+
+const FEEDBACK_SUMMARY_MAX = 240
+const FEEDBACK_SUMMARY_MIN = 12
+const FEEDBACK_TITLE_MAX = 80
+
+/**
+ * The barrier the prompt cannot be trusted to hold.
+ *
+ * The agent is told to paraphrase, but it has read text a stranger typed, and its output lands in a
+ * ticket other agents read. So whatever it wrote is flattened to one line and stripped of everything
+ * that does something on GitHub or identifies a person: comment syntax (a forged `sentry-issue`
+ * marker would poison the dedup index), code fences, links, addresses, mentions and issue references.
+ */
+export function sanitizeFeedbackText(text: string): string {
+  const flat = text
+    .replace(/<!--|-->/g, ' ')
+    .replace(/[`<>]/g, ' ')
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/\S+/gi, '[link]')
+    .replace(/\S+@\S+\.\S+/g, '[address]')
+    .replace(/(^|\s)[@#](?=\w)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return flat.length <= FEEDBACK_SUMMARY_MAX
+    ? flat
+    : `${flat.slice(0, FEEDBACK_SUMMARY_MAX - 1).trimEnd()}…`
+}
+
+/** A route path and nothing else: no query string, no fragment, no host. */
+const PAGE_PATTERN = /^\/[A-Za-z0-9_\-/.$]{0,119}$/
+
+/**
+ * No numeric bar, unlike `selectionVerdict`: a report is one person choosing to write, so it never
+ * recurs and never has a user count. What is left to check is that somebody still wants it looked at
+ * and that the paraphrase says something.
+ */
+export function feedbackVerdict(feedback: Feedback): SelectionVerdict {
+  if (feedback.sentryStatus !== 'unresolved') {
+    return {
+      ok: false,
+      reason: `${feedback.sentryStatus} in Sentry - a maintainer decided that`,
+    }
+  }
+  if (feedback.kind === 'other') {
+    return { ok: false, reason: 'neither a defect nor a request' }
+  }
+  if (Number.isNaN(Date.parse(feedback.receivedAt))) {
+    return { ok: false, reason: 'unparseable received time' }
+  }
+  if (sanitizeFeedbackText(feedback.summary).length < FEEDBACK_SUMMARY_MIN) {
+    return { ok: false, reason: 'no usable summary' }
+  }
+  return { ok: true }
+}
+
+/**
+ * A category and a middling priority: one person asked, and nothing has measured how many others
+ * the same thing reaches. `feature` and `bug` are the two categories a report can be (SDLC.md).
+ */
+export function feedbackLabels(feedback: Feedback): ReadonlyArray<string> {
+  return [feedback.kind === 'bug' ? 'bug' : 'feature', 'priority-medium']
+}
+
+export function renderFeedbackTitle(feedback: Feedback): string {
+  const summary = sanitizeFeedbackText(feedback.summary)
+  const short =
+    summary.length <= FEEDBACK_TITLE_MAX
+      ? summary
+      : `${summary.slice(0, FEEDBACK_TITLE_MAX - 1).trimEnd()}…`
+  return `User feedback: ${short}`
+}
+
+export interface RenderFeedbackOptions {
+  readonly feedback: Feedback
+  readonly sequence: number
+  readonly runLabel: string
+  readonly reportPath: string
+}
+
+/**
+ * The ticket for a user report. Same contract as `renderIssueBody`: evidence, not a diagnosis.
+ *
+ * What the person typed, their address and their screenshot stay in Sentry behind the link. The
+ * body carries the agent's paraphrase only, through `sanitizeFeedbackText`.
+ */
+export function renderFeedbackBody(options: RenderFeedbackOptions): string {
+  const { feedback, sequence, runLabel, reportPath } = options
+  const page =
+    feedback.page !== null && PAGE_PATTERN.test(feedback.page)
+      ? feedback.page
+      : 'unknown'
+
+  return [
+    `A user reported this through the in-app feedback widget${feedback.environment === null ? '' : ` in ${feedback.environment}`}.`,
+    '',
+    renderMarker(feedback.shortId, sequence),
+    '',
+    '```',
+    `Sentry feedback: ${feedback.shortId}  ${feedback.issueUrl}`,
+    `Kind:            ${feedback.kind}`,
+    `Page:            ${page}`,
+    `Received:        ${feedback.receivedAt}`,
+    `Linked error:    ${feedback.linkedShortId ?? 'none'}`,
+    '```',
+    '',
+    `Summary (paraphrased by the agent, unverified): ${sanitizeFeedbackText(feedback.summary)}`,
+    '',
+    'The report as written, its screenshot and any contact address stay in Sentry - follow the link.',
+    'This ticket is evidence, not a diagnosis: reproduce it at HEAD before any brief is written.',
+    '',
+    '---',
+    `_Filed by \`pnpm sentry-triage --file-issues\` (run ${runLabel}) from Sentry feedback ${feedback.shortId}. Full report: ${reportPath}_`,
   ].join('\n')
 }
