@@ -122,6 +122,16 @@ describe('the "Total trip spend" tile', () => {
     expect(screen.queryByText('You paid')).toBeNull()
   })
 
+  it('wraps the footer labels instead of cutting a long translation off', () => {
+    mount('de', namespaceCatalogue('costs', De), snapshot)
+
+    for (const label of ['Dein Anteil', 'Du hast gezahlt']) {
+      const term = screen.getByText(label)
+      expect(term.className).not.toContain('truncate')
+      expect(term.className).toContain('[overflow-wrap:anywhere]')
+    }
+  })
+
   it('draws no bar, label or list for a trip split between one person', () => {
     mount(
       'en',
