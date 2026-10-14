@@ -927,6 +927,16 @@ const messages = {
     other: 'Laddar upp {count} filer',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - skapad {when}',
+  'files.export.email.subject': '{title} är klar',
+  'files.export.email.body': {
+    one: 'Reseexporten är klar. Den sparas i {count} dag.',
+    other: 'Reseexporten är klar. Den sparas i {count} dagar.',
+  },
+  'files.export.email.action': 'Öppna {title}',
+  'files.export.email.text': 'Reseexporten är klar: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uppladdningen avbruten.',
   'files.error.badAnswer':

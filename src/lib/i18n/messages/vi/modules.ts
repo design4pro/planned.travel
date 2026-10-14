@@ -906,6 +906,16 @@ const messages = {
     other: 'Đang tải lên {count} tệp',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - tạo lúc {when}',
+  'files.export.email.subject': '{title} đã sẵn sàng',
+  'files.export.email.body': {
+    other:
+      'Bản xuất chuyến đi đã sẵn sàng. Bản này được lưu trong {count} ngày.',
+  },
+  'files.export.email.action': 'Mở {title}',
+  'files.export.email.text': 'Bản xuất chuyến đi đã sẵn sàng: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Đã hủy tải lên.',
   'files.error.badAnswer':

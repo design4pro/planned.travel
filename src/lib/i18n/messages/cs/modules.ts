@@ -956,6 +956,18 @@ const messages = {
     other: 'Nahrávání {count} souborů',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - vytvořeno {when}',
+  'files.export.email.subject': 'Hotovo: {title}',
+  'files.export.email.body': {
+    one: 'Export cesty je hotový. Uchovává se {count} den.',
+    few: 'Export cesty je hotový. Uchovávají se {count} dny.',
+    many: 'Export cesty je hotový. Uchovává se {count} dne.',
+    other: 'Export cesty je hotový. Uchovává se {count} dní.',
+  },
+  'files.export.email.action': 'Otevřít {title}',
+  'files.export.email.text': 'Export cesty je hotový: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Nahrávání zrušeno.',
   'files.error.badAnswer':

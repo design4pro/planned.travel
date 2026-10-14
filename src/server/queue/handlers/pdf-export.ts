@@ -7,34 +7,54 @@
  * a real PDF through the Cloudflare REST API and stores the PDF alongside. The
  * download link the UI hands the user always points at whichever artifact exists,
  * so the feature works on day one and gets better when the token is added.
+ *
+ * ## Order is the contract
+ *
+ * The scope is re-checked first, so a requester who has left the workspace or a trip that is gone
+ * ends the job before anything is written or sent. Then the PDF (when one was rendered), then the
+ * printable page, then the pointer: the page is written last because it is the marker a listing
+ * reads as "this artifact is finished" (`storage/export-artifacts.ts`). The old artifacts are pruned
+ * only after that, and a failing prune is a warning, never a failed job: failing it would retry a
+ * render that already succeeded and cost the traveller nothing but a second metered call.
  */
 
+import { drizzle } from 'drizzle-orm/d1'
+import {
+  DEFAULT_LOCALE,
+  directionOf,
+  isSupportedLocale,
+} from '#/lib/i18n/locales'
+import { createTranslator, loadCatalogue } from '#/lib/i18n/catalogue'
+import { formatDate } from '#/lib/format'
+import { isOrganizationRole } from '#/server/auth/tenant'
 import { isProviderBlockedError } from '#/server/metering/errors'
+import { serializeError } from '#/server/observability'
+import {
+  NotFoundError,
+  createScope,
+  getMembership,
+  requireTrip,
+} from '#/server/repos'
+import {
+  EXPORT_TTL_SECONDS,
+  exportObjectKey,
+  exportPointerKey,
+  pruneExportArtifacts,
+} from '#/server/storage/export-artifacts'
 import { assertUpstreamOk } from '../http'
 import { enqueueTask } from '../jobs'
-import { TaskConfigurationError } from '../types'
+import { TaskConfigurationError, TaskPermanentError } from '../types'
+import type { Locale } from '#/lib/i18n'
+import type { Database } from '#/server/db/types'
+import type { TenantScope } from '#/server/repos'
 import type {
   ExportDocument,
   PdfExportPayload,
   TaskContext,
+  TaskHandler,
   TaskMetrics,
 } from '../types'
-
-/** Export artifacts are kept for a week; the KV pointer expires with them. */
-export const EXPORT_TTL_SECONDS = 7 * 24 * 60 * 60
-
-export function exportObjectKey(
-  orgId: string,
-  tripId: string,
-  taskId: string,
-  extension: 'html' | 'pdf',
-): string {
-  return `exports/${orgId}/${tripId}/${taskId}.${extension}`
-}
-
-export function exportPointerKey(taskId: string): string {
-  return `export:${taskId}`
-}
+import type { DatabaseFor } from './travel-stats'
 
 export interface ExportPointer {
   taskId: string
@@ -90,23 +110,28 @@ const PRINT_CSS = `
   }
   .note { color: #6e6d65; margin: 0 0 3mm; }
   table { width: 100%; border-collapse: collapse; }
-  td { padding: 2.4mm 0; border-bottom: 1px solid #ece9e3; vertical-align: top; }
-  td.label { width: 38%; font-weight: 500; }
+  th, td { padding: 2.4mm 0; border-bottom: 1px solid #ece9e3; vertical-align: top; text-align: start; }
+  th.label { width: 38%; font-weight: 500; }
   td.value { width: 47%; font-variant-numeric: tabular-nums; }
-  td.meta { width: 15%; color: #89877f; text-align: right; font-variant-numeric: tabular-nums; }
-  footer { margin-top: 10mm; padding-top: 4mm; border-top: 1px solid #e5e2db; color: #89877f; font-size: 8pt; }
+  td.meta { width: 15%; color: #6e6d65; text-align: end; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 10mm; padding-top: 4mm; border-top: 1px solid #e5e2db; color: #6e6d65; font-size: 8pt; }
 `
 
+/**
+ * The printable page. Pure: the locale and the already-translated footer are arguments, so nothing
+ * here reads the catalogue or the clock. `lang` and `dir` come from the closed set of supported
+ * locales, never from the document.
+ */
 export function renderExportDocument(
   document: ExportDocument,
-  meta: { appName: string; generatedAt: number },
+  meta: { locale: Locale; footer: string },
 ): string {
   const sections = document.sections
     .map((section) => {
       const rows = section.rows
         .map(
           (row) =>
-            `<tr><td class="label">${escapeHtml(row.label)}</td><td class="value">${escapeHtml(
+            `<tr><th scope="row" class="label">${escapeHtml(row.label)}</th><td class="value">${escapeHtml(
               row.value,
             )}</td><td class="meta">${escapeHtml(row.meta ?? '')}</td></tr>`,
         )
@@ -125,100 +150,247 @@ export function renderExportDocument(
       : `<p class="subtitle">${escapeHtml(document.subtitle)}</p>`
 
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>${escapeHtml(document.title)}</title>
+<html lang="${meta.locale}" dir="${directionOf(meta.locale)}"><head><meta charset="utf-8"><title>${escapeHtml(document.title)}</title>
 <style>${PRINT_CSS}</style></head>
 <body>
 <header><h1>${escapeHtml(document.title)}</h1>${subtitle}</header>
 ${sections}
-<footer>${escapeHtml(meta.appName)} · generated ${new Date(meta.generatedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC</footer>
+<footer>${escapeHtml(meta.footer)}</footer>
 </body></html>`
 }
 
-export async function handlePdfExport(
-  payload: PdfExportPayload,
+/** The scope the re-check runs under: the envelope's organization, the requester, their real role. */
+function scopeFor(
+  db: Database,
+  organizationId: string,
+  userId: string,
+  role: string,
+): TenantScope {
+  return createScope(db, {
+    userId,
+    organizationId,
+    // An unrecognised value resolves to the least privilege, never to "unset, therefore permissive".
+    role: isOrganizationRole(role) ? role : 'member',
+  })
+}
+
+/**
+ * Re-checks, before anything is written or emailed, that the requester is still in the workspace
+ * and the trip is still readable to them. Reads for authorisation only: the document stays the one
+ * the request built. The organization is the envelope's, never the payload's.
+ *
+ * A member row or trip that is gone cannot come back on retry, so both are permanent. Anything
+ * else (a D1 hiccup) rethrows, and the queue redelivers.
+ */
+async function recheckScope(
+  db: Database,
   context: TaskContext,
-): Promise<TaskMetrics> {
-  const generatedAt = context.now()
-  const html = renderExportDocument(payload.document, {
-    appName: context.env.APP_NAME ?? 'planned.travel',
-    generatedAt,
-  })
-
-  const htmlKey = exportObjectKey(
-    context.orgId,
-    payload.tripId,
-    context.taskId,
-    'html',
-  )
-  await context.env.FILES.put(htmlKey, html, {
-    httpMetadata: {
-      contentType: 'text/html; charset=utf-8',
-      cacheControl: 'private, max-age=0',
-    },
-  })
-
-  let pointer: ExportPointer = {
-    taskId: context.taskId,
-    tripId: payload.tripId,
-    orgId: context.orgId,
-    key: htmlKey,
-    format: 'html',
-    bytes: new TextEncoder().encode(html).byteLength,
-    createdAt: generatedAt,
-  }
-
-  const pdf = await renderPdf(html, context)
-  if (pdf !== null) {
-    const pdfKey = exportObjectKey(
-      context.orgId,
-      payload.tripId,
-      context.taskId,
-      'pdf',
+  payload: PdfExportPayload,
+): Promise<{ tripId: string }> {
+  const probe = scopeFor(db, context.orgId, payload.requestedBy, 'member')
+  const membership = await getMembership(probe, payload.requestedBy)
+  if (membership === null) {
+    throw new TaskPermanentError(
+      `User ${payload.requestedBy} is no longer a member of ${context.orgId}; the trip export is abandoned`,
     )
-    await context.env.FILES.put(pdfKey, pdf, {
+  }
+  const scope = scopeFor(
+    db,
+    context.orgId,
+    payload.requestedBy,
+    membership.role,
+  )
+  try {
+    const trip = await requireTrip(scope, payload.tripId)
+    return { tripId: trip.id }
+  } catch (cause) {
+    if (cause instanceof NotFoundError) {
+      throw new TaskPermanentError(
+        `Trip ${payload.tripId} is gone; there is nothing left to export`,
+        { cause },
+      )
+    }
+    throw cause
+  }
+}
+
+const SECONDS_PER_DAY = 24 * 60 * 60
+
+/** `14 Oct 2026, 12:00 UTC`, through the locale's own date formatter rather than an ISO slice. */
+function generatedWhen(generatedAt: number, locale: Locale): string {
+  const instant = new Date(generatedAt).toISOString()
+  return `${formatDate(instant, locale) ?? instant.slice(0, 10)}, ${instant.slice(11, 16)} UTC`
+}
+
+/**
+ * Builds the handler over a database seam. {@link handlePdfExport} is the one the consumer
+ * registers; a test builds its own against the harness. The seam exists for the reason it does in
+ * `trip-copy`: `src/server/db/client.ts` reads the ambient Worker environment at module scope, and
+ * `consumer.ts` imports every handler, so the default is the Drizzle handle over the Worker's D1.
+ */
+export function createPdfExportHandler(
+  databaseFor: DatabaseFor = (binding) => drizzle(binding),
+): TaskHandler<'pdf-export'> {
+  return async function pdfExport(
+    payload: PdfExportPayload,
+    context: TaskContext,
+  ): Promise<TaskMetrics> {
+    const binding = context.env.DB
+    if (binding === undefined) {
+      throw new TaskConfigurationError(
+        'DB binding is not available to the queue consumer; a trip export cannot run',
+      )
+    }
+    const { tripId } = await recheckScope(
+      databaseFor(binding),
+      context,
+      payload,
+    )
+
+    const locale = isSupportedLocale(payload.locale)
+      ? payload.locale
+      : DEFAULT_LOCALE
+    const t = createTranslator(locale, await loadCatalogue(locale))
+    const generatedAt = context.now()
+    const html = renderExportDocument(payload.document, {
+      locale,
+      footer: t('modules.files.export.doc.footer', {
+        app: context.env.APP_NAME ?? 'planned.travel',
+        when: generatedWhen(generatedAt, locale),
+      }),
+    })
+
+    // The PDF first and the page last: the page is the marker a listing reads as "finished".
+    const pdf = await renderPdf(html, context)
+    const pdfKey = exportObjectKey(context.orgId, tripId, context.taskId, 'pdf')
+    const htmlKey = exportObjectKey(
+      context.orgId,
+      tripId,
+      context.taskId,
+      'html',
+    )
+    if (pdf !== null) {
+      await context.env.FILES.put(pdfKey, pdf, {
+        httpMetadata: {
+          contentType: 'application/pdf',
+          cacheControl: 'private, max-age=0',
+        },
+      })
+    }
+    await context.env.FILES.put(htmlKey, html, {
       httpMetadata: {
-        contentType: 'application/pdf',
+        contentType: 'text/html; charset=utf-8',
         cacheControl: 'private, max-age=0',
       },
     })
-    pointer = { ...pointer, key: pdfKey, format: 'pdf', bytes: pdf.byteLength }
-  }
 
-  await context.env.KV.put(
-    exportPointerKey(context.taskId),
-    JSON.stringify(pointer),
-    {
-      expirationTtl: EXPORT_TTL_SECONDS,
-    },
-  )
+    const pointer: ExportPointer =
+      pdf === null
+        ? {
+            taskId: context.taskId,
+            tripId,
+            orgId: context.orgId,
+            key: htmlKey,
+            format: 'html',
+            bytes: new TextEncoder().encode(html).byteLength,
+            createdAt: generatedAt,
+          }
+        : {
+            taskId: context.taskId,
+            tripId,
+            orgId: context.orgId,
+            key: pdfKey,
+            format: 'pdf',
+            bytes: pdf.byteLength,
+            createdAt: generatedAt,
+          }
+    await context.env.KV.put(
+      exportPointerKey(context.taskId),
+      JSON.stringify(pointer),
+      { expirationTtl: EXPORT_TTL_SECONDS },
+    )
 
-  if (payload.notify !== undefined) {
-    const url = `${context.env.APP_URL ?? ''}/app/trips/${encodeURIComponent(payload.tripId)}/exports/${encodeURIComponent(context.taskId)}`
-    await enqueueTask(context.env.TASKS, {
-      kind: 'email',
-      orgId: context.orgId,
-      id: `export-ready:${context.taskId}`,
-      payload: {
-        to: [payload.notify],
-        subject: `${payload.document.title} is ready to download`,
-        html: `<p>Your itinerary export is ready.</p><p><a href="${escapeHtml(url)}">Download ${escapeHtml(payload.document.title)}</a></p>`,
-        text: `Your itinerary export is ready: ${url}`,
-        tag: 'export-ready',
-      },
+    if (payload.notify !== undefined) {
+      await enqueueTask(context.env.TASKS, {
+        kind: 'email',
+        orgId: context.orgId,
+        id: `export-ready:${context.taskId}`,
+        payload: readyEmail(
+          t,
+          locale,
+          payload.notify,
+          payload.document.title,
+          `${context.env.APP_URL ?? ''}/trips/${encodeURIComponent(tripId)}/files?export=${encodeURIComponent(context.taskId)}`,
+        ),
+      })
+    }
+
+    const pruned = await pruneOldExports(context, tripId)
+
+    context.logger.info('trip export written', {
+      tripId,
+      key: pointer.key,
+      format: pointer.format,
+      bytes: pointer.bytes,
+      pruned,
+      locale,
     })
+
+    return {
+      format: pointer.format,
+      bytes: pointer.bytes,
+      sections: payload.document.sections.length,
+    }
   }
+}
 
-  context.logger.info('trip export written', {
-    tripId: payload.tripId,
-    key: pointer.key,
-    format: pointer.format,
-    bytes: pointer.bytes,
+/** The handler `consumer.ts` registers, over the Worker's own D1 binding. */
+export const handlePdfExport = createPdfExportHandler()
+
+/**
+ * The "ready" email, in the requester's language. The sentence is escaped **after** the title has
+ * been interpolated into it, so a title carrying markup stays text however the catalogue words it.
+ */
+function readyEmail(
+  t: ReturnType<typeof createTranslator>,
+  locale: Locale,
+  to: string,
+  title: string,
+  url: string,
+) {
+  const body = t('modules.files.export.email.body', {
+    count: EXPORT_TTL_SECONDS / SECONDS_PER_DAY,
   })
-
+  const action = t('modules.files.export.email.action', { title })
   return {
-    format: pointer.format,
-    bytes: pointer.bytes,
-    sections: payload.document.sections.length,
+    to: [to],
+    subject: t('modules.files.export.email.subject', { title }),
+    html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
+    text: t('modules.files.export.email.text', { url }),
+    tag: 'export-ready',
+  }
+}
+
+/** Housekeeping after the artifact is durable: a failure is logged and never fails the job. */
+async function pruneOldExports(
+  context: TaskContext,
+  tripId: string,
+): Promise<number> {
+  try {
+    return await pruneExportArtifacts(
+      context.env.FILES,
+      context.orgId,
+      tripId,
+      {
+        now: context.now(),
+      },
+    )
+  } catch (cause) {
+    context.logger.warn('export prune failed', {
+      tripId,
+      ...serializeError(cause),
+    })
+    return 0
   }
 }
 
@@ -262,7 +434,11 @@ async function renderPdf(
             },
             body: JSON.stringify({
               html,
-              pdfOptions: { format: 'A4', printBackground: true },
+              pdfOptions: {
+                format: 'A4',
+                printBackground: true,
+                tagged: true,
+              },
             }),
           },
         ),

@@ -972,6 +972,20 @@ const messages = {
     other: 'جارٍ رفع {count} ملف',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - أُنشئ في {when}',
+  'files.export.email.subject': '{title} جاهز',
+  'files.export.email.body': {
+    zero: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يوم.',
+    one: 'تصدير الرحلة جاهز. يُحفظ لمدة يوم واحد.',
+    two: 'تصدير الرحلة جاهز. يُحفظ لمدة يومين.',
+    few: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} أيام.',
+    many: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يومًا.',
+    other: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يوم.',
+  },
+  'files.export.email.action': 'افتح {title}',
+  'files.export.email.text': 'تصدير الرحلة جاهز: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'أُلغي الرفع.',
   'files.error.badAnswer': 'أرسل الخادم ردًا لم يستطع هذا المتصفح قراءته.',

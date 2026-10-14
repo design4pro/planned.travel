@@ -855,6 +855,15 @@ const messages = {
     other: '正在上传 {count} 个文件',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 生成于 {when}',
+  'files.export.email.subject': '{title} 已准备好',
+  'files.export.email.body': {
+    other: '行程导出已准备好。将保留 {count} 天。',
+  },
+  'files.export.email.action': '打开 {title}',
+  'files.export.email.text': '行程导出已准备好：{url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上传。',
   'files.error.badAnswer': '服务器返回的内容这个浏览器读不了。',

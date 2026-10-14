@@ -1112,6 +1112,16 @@ const messages = {
     other: 'Uploading {count} files',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generated {when}',
+  'files.export.email.subject': '{title} is ready',
+  'files.export.email.body': {
+    one: 'Your trip export is ready. It is kept for {count} day.',
+    other: 'Your trip export is ready. It is kept for {count} days.',
+  },
+  'files.export.email.action': 'Open {title}',
+  'files.export.email.text': 'Your trip export is ready: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Upload cancelled.',
   'files.error.badAnswer':
