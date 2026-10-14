@@ -19,6 +19,7 @@ import type {
   CostsPayload,
   CostsPerson,
 } from '#/server/fns/costs'
+import type { ReactElement } from 'react'
 import type { ExpenseFormValue } from '../expense-dialog'
 
 const EN: Catalogue = {
@@ -513,6 +514,30 @@ describe('the expense dialog’s suggested converted figure', () => {
       expect(amountField()).toHaveProperty('value', '')
       expect(
         screen.getByRole('button', { name: 'Save changes' }),
+      ).toHaveProperty('disabled', true)
+    })
+
+    it('adopts the new currency once when the screen refreshes before the refusal arrives, as it does in the app', async () => {
+      const user = hand()
+      let rerender: (ui: ReactElement) => void = () => {}
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockImplementationOnce(async () => {
+          rerender(dialog('JPY', onSubmit))
+          throw new Error(REFUSAL)
+        })
+        .mockResolvedValue(undefined)
+      rerender = render(dialog('EUR', onSubmit)).rerender
+      await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+      await user.type(amountField(), '4000')
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+
+      expect(await screen.findByText(/now JPY/)).toBeTruthy()
+      await vi.waitFor(() => expect(document.activeElement).toBe(amountField()))
+      expect(amountField()).toHaveProperty('value', '4000')
+      expect(screen.queryByText('That did not save')).toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Add expense' }),
       ).toHaveProperty('disabled', true)
     })
   })

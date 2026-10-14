@@ -96,6 +96,8 @@ function optimisticConverted(
   return display.mode === 'per-trip' ? amountMinor : null
 }
 
+const COSTS_ROUTE_ID = '/_app/trips/$tripId/costs'
+
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
@@ -133,16 +135,21 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         await router.invalidate()
       } catch (cause) {
         if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
-          // The trip's current currency is asked for first, on its own: a reload that fails would
-          // swap the whole screen (and the open dialog with what was typed) for the error panel, so
-          // the screen is only refreshed once the server has answered. The dialog and the toast
-          // then both name the currency the trip is in now; `sync` makes the promise wait for the
-          // loader, where a background reload would resolve while the old figures are still shown.
+          // The refused row must not read as saved while the figures are fetched.
+          drop(op.key)
+          // The trip's current currency is asked for first, on its own: a reload that fails does not
+          // reject, it swaps the screen (and the open dialog with what was typed) for the error
+          // panel, so the screen is only reloaded once the server has answered, and only the costs
+          // match is reloaded. `sync` makes the promise wait for the loader, where a background
+          // reload would resolve while the old figures are still shown.
           const live = await loadCosts({ data: { tripId: payload.tripId } })
             .then((fresh) => fresh.currency)
             .catch(() => null)
           if (live !== null) {
-            await router.invalidate({ sync: true }).catch(() => undefined)
+            await router.invalidate({
+              sync: true,
+              filter: (match) => match.routeId === COSTS_ROUTE_ID,
+            })
           }
           toast.error(
             live === null || live === payload.currency

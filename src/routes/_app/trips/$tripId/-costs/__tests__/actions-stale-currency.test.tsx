@@ -113,7 +113,10 @@ describe('the costs write runner on a stale trip currency', () => {
   it('refreshes the screen synchronously, names the live currency in the toast and rethrows the refusal', async () => {
     const thrown = await refusedAdd()
 
-    expect(refresh.invalidate).toHaveBeenCalledWith({ sync: true })
+    expect(refresh.invalidate).toHaveBeenCalledWith({
+      sync: true,
+      filter: expect.any(Function),
+    })
     expect(toast.error).toHaveBeenCalledTimes(1)
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('now JPY'))
     expect(thrown).toBeInstanceOf(Error)
@@ -144,14 +147,25 @@ describe('the costs write runner on a stale trip currency', () => {
     expect(toast.error).toHaveBeenCalledWith('That did not save')
   })
 
-  it('keeps the refusal as it was when the refresh itself fails', async () => {
-    refresh.invalidate.mockRejectedValueOnce(new Error('offline'))
-
-    const thrown = await refusedAdd()
-
-    expect(thrown).toHaveProperty(
-      'message',
-      'costs.refusal.tripCurrencyChanged',
+  it('does not show the refused row while the live currency is fetched', async () => {
+    let answer: (payload: CostsPayload) => void = () => {}
+    vi.mocked(loadCosts).mockReturnValue(
+      new Promise<CostsPayload>((resolve) => {
+        answer = resolve
+      }),
     )
+    const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
+    let pending: Promise<void> = Promise.resolve()
+    act(() => {
+      pending = result.current.addExpense(EXPENSE).catch(() => undefined)
+    })
+    await vi.waitFor(() => expect(loadCosts).toHaveBeenCalledOnce())
+
+    expect(result.current.snapshot.expenses).toHaveLength(0)
+
+    await act(async () => {
+      answer({ ...PAYLOAD, currency: 'JPY' })
+      await pending
+    })
   })
 })
