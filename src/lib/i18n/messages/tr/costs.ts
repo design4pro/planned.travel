@@ -187,6 +187,26 @@ const messages = {
     'Bu gezi için henüz harcama kaydedilmedi. Bir sahip ya da düzenleyici ekleyince burada görünür.',
   'readOnly.settleEmpty':
     'Şu an hiçbir transfer gerekmiyor. Olası bir dengesizlik burada görünürdü.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Görüntüleme para birimi',
+  'display.indicator.perTrip': 'Kendi para birimi',
+  'display.indicator.fixed': 'Ayrıca {code} olarak',
+  'display.menu.perTrip': 'Her gezi kendi para biriminde',
+  'display.menu.workspace': '{code} (çalışma alanı varsayılanı)',
+  'display.menu.rateHint': 'Bir gezide kayıtlı kuru kullanır',
+  'display.menu.currentHint': 'Seçili, ancak kayıtlı hiçbir kur onu kapsamıyor',
+  'display.menu.needsLiveRate': 'Henüz mevcut olmayan canlı bir kur gerektirir',
+  'display.menu.saving': 'Seçiminiz kaydediliyor',
+  'display.error.title': 'Görüntüleme para birimi kaydedilmedi',
+  'display.error.body': 'Seçiminiz kaydedilemedi. Birazdan tekrar deneyin.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Görüntüleme para biriminizde yaklaşık {amount} {code}',
+  'display.row.notConverted': 'Çevrilmedi',
+  'display.alert.title': 'Bazı tutarlar çevrilmedi',
+  'display.alert.body':
+    'Bu para birimi çiftleri için kayıtlı kur yok, bu yüzden bu tutarlar bütçe para biriminde kalıyor:',
+  'display.alert.pair': '{date} tarihinde {from} - {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

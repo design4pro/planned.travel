@@ -295,7 +295,13 @@ import { dispatch } from '#/server/notifications/dispatch'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
-import { findLatestFrozenRate, resolveRate } from '../rates'
+import {
+  findLatestFrozenRate,
+  getDisplayCurrency,
+  listAnsweringCurrencies,
+  resolveRate,
+  setDisplayCurrency,
+} from '../rates'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
@@ -5719,6 +5725,81 @@ describe('tenant isolation', () => {
       expect(after.betaExpenses).toEqual(before.betaExpenses)
       expect(after.alphaSettlements).toEqual(before.alphaSettlements)
       expect(after.betaSettlements).toEqual(before.betaSettlements)
+    })
+  })
+  /**
+   * `04-S1` (#844): the reader's display currency is the one write the slice makes outside the money
+   * tables. It is the caller's own row, resolved by organization and user inside the scope, so a
+   * second workspace's row for the same person is unreachable rather than merely unlikely.
+   */
+  describe('a reader’s display currency', () => {
+    async function rowOf(world: World, userId: string) {
+      return getUserSettings(world.tenant.scope, userId)
+    }
+
+    it('written in one workspace leaves the same person’s row in the other byte-identical', async () => {
+      const traveller = await alpha.tenant.addUser(
+        'A traveller in two workspaces',
+      )
+      await beta.tenant.addMembership(traveller)
+      const inAlpha = alpha.tenant.scopeFor(traveller)
+      const inBeta = beta.tenant.scopeFor(traveller)
+
+      await setDisplayCurrency(inBeta, 'USD')
+      const betaBefore = await rowOf(beta, traveller)
+      expect(betaBefore?.displayCurrency).toBe('USD')
+
+      await setDisplayCurrency(inAlpha, 'GBP')
+
+      expect(await rowOf(beta, traveller)).toEqual(betaBefore)
+      // Each workspace reads back its own value, never the other's.
+      expect(await getDisplayCurrency(inAlpha, traveller)).toBe('GBP')
+      expect(await getDisplayCurrency(inBeta, traveller)).toBe('USD')
+
+      await setDisplayCurrency(inAlpha, null)
+      expect(await getDisplayCurrency(inAlpha, traveller)).toBeNull()
+      expect(await rowOf(beta, traveller)).toEqual(betaBefore)
+    })
+
+    it('refuses someone who belongs to the other workspace only, and writes nothing', async () => {
+      const betaOnly = await beta.tenant.addUser('Only in the other workspace')
+      await setDisplayCurrency(beta.tenant.scopeFor(betaOnly), 'USD')
+      const betaBefore = await rowOf(beta, betaOnly)
+
+      const refusal = await captureError(() =>
+        setDisplayCurrency(alpha.tenant.scopeFor(betaOnly), 'GBP'),
+      )
+
+      expect(refusal).toBeInstanceOf(NotFoundError)
+      expect(await rowOf(alpha, betaOnly)).toBeNull()
+      expect(await rowOf(beta, betaOnly)).toEqual(betaBefore)
+    })
+
+    it('lists no code from the other workspace’s frozen rates', async () => {
+      // Beta froze EUR to GBP; Alpha's reader must not be offered GBP because of it.
+      const betaTrip = await createTrip(beta.tenant.scope, {
+        title: 'Beta in pounds',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      await createExpense(beta.tenant.scope, {
+        tripId: betaTrip.id,
+        title: 'Tickets',
+        amountMinor: 8_500,
+        currency: 'GBP',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'EUR',
+        exchangeRate: 0.85,
+        spentOn: '2026-05-02',
+      })
+
+      expect(await listAnsweringCurrencies(beta.tenant.scope, 'EUR')).toEqual([
+        'GBP',
+      ])
+      expect(await listAnsweringCurrencies(alpha.tenant.scope, 'EUR')).toEqual(
+        [],
+      )
     })
   })
 })

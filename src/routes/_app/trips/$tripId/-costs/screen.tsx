@@ -81,8 +81,15 @@ export function CostsScreen({
   const locale = useLocale()
   const t = useTranslate()
   const { trip } = useTripHeader()
-  const { snapshot, addExpense, editExpense, removeExpense, addPayment } =
-    useCostsActions(data)
+  const {
+    snapshot,
+    addExpense,
+    editExpense,
+    removeExpense,
+    addPayment,
+    setDisplay,
+    savingDisplay,
+  } = useCostsActions(data)
 
   const [session, setSession] = useState<Session>({ kind: 'none' })
   const [open, setOpen] = useState(false)
@@ -218,12 +225,20 @@ export function CostsScreen({
         rows: visible,
         people: data.people,
         viewerUserId: data.viewerUserId,
+        display: data.displayCurrency,
       }),
     )
     toast.success('Export ready', {
       description: `${pluralise(visible.length, 'expense')} written to CSV.`,
     })
-  }, [data.people, data.today, data.viewerUserId, trip.title, visible])
+  }, [
+    data.displayCurrency,
+    data.people,
+    data.today,
+    data.viewerUserId,
+    trip.title,
+    visible,
+  ])
 
   const settle = useCallback(
     (suggestion: CostsSuggestion): void => {
@@ -328,6 +343,28 @@ export function CostsScreen({
           </Alert>
         )}
 
+        {data.unconverted.length === 0 ? null : (
+          <Alert
+            tone="warning"
+            size="sm"
+            title={t('costs.display.alert.title')}
+            data-part="display-currency-alert"
+          >
+            <p>{t('costs.display.alert.body')}</p>
+            <ul className="mt-1 list-disc ps-5">
+              {data.unconverted.map((pair) => (
+                <li key={`${pair.from}-${pair.to}-${pair.on}`}>
+                  {t('costs.display.alert.pair', {
+                    from: pair.from,
+                    to: pair.to,
+                    date: formatDayShort(pair.on, locale),
+                  })}
+                </li>
+              ))}
+            </ul>
+          </Alert>
+        )}
+
         <StatTiles
           snapshot={snapshot}
           totals={totals}
@@ -354,6 +391,10 @@ export function CostsScreen({
                   total={snapshot.expenses.length}
                   shownMinor={visibleMinor}
                   currency={data.currency}
+                  display={data.displayCurrency}
+                  displayChoices={data.displayChoices}
+                  savingDisplay={savingDisplay}
+                  onDisplayChange={(code) => void setDisplay(code)}
                 />
               </Card>
             )}
@@ -387,6 +428,7 @@ export function CostsScreen({
                 people={data.people}
                 viewerUserId={data.viewerUserId}
                 currency={data.currency}
+                display={data.displayCurrency}
                 busyExpenseIds={snapshot.busyExpenseIds}
                 canWrite={data.canWrite}
                 onEdit={openExpense}
@@ -400,6 +442,7 @@ export function CostsScreen({
             people={data.people}
             viewerUserId={data.viewerUserId}
             currency={data.currency}
+            display={data.displayCurrency}
             budgetTargetMinor={data.budgetTargetMinor}
             canWrite={data.canWrite}
             onSettle={settle}

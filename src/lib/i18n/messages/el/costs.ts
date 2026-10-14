@@ -188,6 +188,30 @@ const messages = {
     'Δεν έχει καταγραφεί ακόμη κανένα έξοδο σε αυτό το ταξίδι. Θα εμφανιστούν εδώ μόλις τα προσθέσει ιδιοκτήτης ή συντάκτης.',
   'readOnly.settleEmpty':
     'Προς το παρόν δεν χρειάζεται καμία μεταφορά. Οποιαδήποτε διαφορά θα εμφανιστεί εδώ.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Νόμισμα εμφάνισης',
+  'display.indicator.perTrip': 'Δικό του νόμισμα',
+  'display.indicator.fixed': 'Και σε {code}',
+  'display.menu.perTrip': 'Κάθε ταξίδι στο δικό του νόμισμα',
+  'display.menu.workspace': '{code} (προεπιλογή του χώρου εργασίας)',
+  'display.menu.rateHint':
+    'Χρησιμοποιεί ισοτιμία που έχει ήδη καταγραφεί σε ταξίδι',
+  'display.menu.currentHint':
+    'Επιλεγμένο, αλλά καμία καταγεγραμμένη ισοτιμία δεν το καλύπτει',
+  'display.menu.needsLiveRate':
+    'Απαιτεί ζωντανή ισοτιμία, που δεν είναι ακόμη διαθέσιμη',
+  'display.menu.saving': 'Αποθήκευση της επιλογής σας',
+  'display.error.title': 'Το νόμισμα εμφάνισης δεν αποθηκεύτηκε',
+  'display.error.body':
+    'Η επιλογή σας δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Περίπου {amount} {code} στο νόμισμα εμφάνισής σας',
+  'display.row.notConverted': 'Χωρίς μετατροπή',
+  'display.alert.title': 'Ορισμένα ποσά δεν έχουν μετατραπεί',
+  'display.alert.body':
+    'Για αυτά τα ζεύγη νομισμάτων δεν υπάρχει καταγεγραμμένη ισοτιμία, επομένως τα ποσά μένουν στο νόμισμα του προϋπολογισμού:',
+  'display.alert.pair': '{from} σε {to} στις {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

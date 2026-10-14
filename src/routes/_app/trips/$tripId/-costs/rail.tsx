@@ -19,8 +19,10 @@ import { Panel, PanelRow } from '../../../-ui/scaffold'
 import { humaniseToken } from '../../../-lib/format'
 import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
 import { categoryColour } from './chart-colours'
+import { ConvertedFigure } from './converted-figure'
 
 import type { CostsSnapshot, DonutRow } from '#/components/costs'
+import type { DisplayCurrency } from '#/lib/money'
 import type {
   CostsBalance,
   CostsCategoryTotal,
@@ -34,6 +36,7 @@ export interface CostsRailProps {
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
   readonly currency: string
+  readonly display: DisplayCurrency
   readonly budgetTargetMinor: number | null
   /** A reader sees the proposed transfers and none of the buttons that record one. */
   readonly canWrite: boolean
@@ -46,6 +49,7 @@ export function CostsRail({
   people,
   viewerUserId,
   currency,
+  display,
   budgetTargetMinor,
   canWrite,
   onSettle,
@@ -87,6 +91,7 @@ export function CostsRail({
       <Payments
         settlements={snapshot.settlements}
         currency={currency}
+        display={display}
         nameOf={nameOf}
         viewerUserId={viewerUserId}
       />
@@ -375,11 +380,13 @@ function ByCategory({
 function Payments({
   settlements,
   currency,
+  display,
   nameOf,
   viewerUserId,
 }: {
   settlements: ReadonlyArray<CostsSettlement>
   currency: string
+  display: DisplayCurrency
   nameOf: (userId: string) => string
   viewerUserId: string
 }) {
@@ -421,13 +428,15 @@ function Payments({
                     {humaniseToken(row.method)}
                   </p>
                 </div>
-                <Badge
-                  tone="success"
-                  size="sm"
-                  className="shrink-0 tabular-nums"
-                >
-                  {formatMoney(row.amountMinor, currency, locale)}
-                </Badge>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <Badge tone="success" size="sm" className="tabular-nums">
+                    {formatMoney(row.amountMinor, currency, locale)}
+                  </Badge>
+                  <ConvertedFigure
+                    display={display}
+                    convertedMinor={row.convertedMinor}
+                  />
+                </div>
               </PanelRow>
             </li>
           ))}

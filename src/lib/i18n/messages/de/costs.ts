@@ -188,6 +188,27 @@ const messages = {
     'Auf dieser Reise wurden noch keine Ausgaben erfasst. Sie erscheinen hier, sobald ein Eigentümer oder Bearbeiter sie hinzufügt.',
   'readOnly.settleEmpty':
     'Im Moment sind keine Überweisungen nötig. Ein offener Saldo würde hier erscheinen.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Anzeigewährung',
+  'display.indicator.perTrip': 'Eigene Währung',
+  'display.indicator.fixed': 'Auch in {code}',
+  'display.menu.perTrip': 'Jede Reise in ihrer Währung',
+  'display.menu.workspace': '{code} (Standard des Arbeitsbereichs)',
+  'display.menu.rateHint': 'Nutzt einen auf einer Reise erfassten Kurs',
+  'display.menu.currentHint': 'Gewählt, aber kein erfasster Kurs deckt sie ab',
+  'display.menu.needsLiveRate':
+    'Braucht einen Live-Kurs, der noch nicht verfügbar ist',
+  'display.menu.saving': 'Auswahl wird gespeichert',
+  'display.error.title': 'Die Anzeigewährung wurde nicht gespeichert',
+  'display.error.body':
+    'Deine Auswahl konnte nicht gespeichert werden. Versuche es gleich noch einmal.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': 'Etwa {amount} {code} in deiner Anzeigewährung',
+  'display.row.notConverted': 'Nicht umgerechnet',
+  'display.alert.title': 'Einige Beträge sind nicht umgerechnet',
+  'display.alert.body':
+    'Für diese Währungspaare ist kein Kurs erfasst, daher bleiben die Beträge in der Budgetwährung:',
+  'display.alert.pair': '{from} nach {to} am {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -24,9 +24,11 @@ import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { EXPENSE_VIEWS, isExpenseView, isFiltered } from './data'
+import { DisplayCurrencyMenu } from './display-currency-menu'
 
 import type { MessageKey } from '#/lib/i18n'
-import type { ExpenseCategory } from '#/server/fns/costs'
+import type { DisplayCurrency } from '#/lib/money'
+import type { CostsDisplayChoices, ExpenseCategory } from '#/server/fns/costs'
 import type { CostsFilters, ExpenseView } from './data'
 
 /** Radix rejects an empty item value, so "no filter" needs a sentinel. */
@@ -56,6 +58,10 @@ export interface CostsToolbarProps {
   /** Sum of the rows currently showing. */
   readonly shownMinor: number
   readonly currency: string
+  readonly display: DisplayCurrency
+  readonly displayChoices: CostsDisplayChoices
+  readonly savingDisplay: boolean
+  readonly onDisplayChange: (code: string | null) => void
 }
 
 export function CostsToolbar({
@@ -68,6 +74,10 @@ export function CostsToolbar({
   total,
   shownMinor,
   currency,
+  display,
+  displayChoices,
+  savingDisplay,
+  onDisplayChange,
 }: CostsToolbarProps) {
   const t = useTranslate()
   const locale = useLocale()
@@ -136,6 +146,13 @@ export function CostsToolbar({
         />
 
         <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 sm:mx-0 sm:ms-auto sm:overflow-visible sm:px-0">
+          <DisplayCurrencyMenu
+            display={display}
+            choices={displayChoices}
+            budgetCurrency={currency}
+            saving={savingDisplay}
+            onChange={onDisplayChange}
+          />
           <SimpleSelect
             size="sm"
             className="w-40 shrink-0"

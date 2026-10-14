@@ -190,6 +190,28 @@ const messages = {
     'Nenhuma despesa foi registrada nesta viagem ainda. Elas aparecem aqui quando um proprietário ou um editor as adicionar.',
   'readOnly.settleEmpty':
     'No momento, nenhuma transferência é necessária. Qualquer desequilíbrio apareceria aqui.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Moeda de exibição',
+  'display.indicator.perTrip': 'Moeda própria',
+  'display.indicator.fixed': 'Também em {code}',
+  'display.menu.perTrip': 'Cada viagem na sua moeda',
+  'display.menu.workspace': '{code} (padrão do espaço)',
+  'display.menu.rateHint': 'Usa uma taxa já registrada em uma viagem',
+  'display.menu.currentHint': 'Escolhida, mas nenhuma taxa registrada a cobre',
+  'display.menu.needsLiveRate':
+    'Precisa de uma taxa ao vivo, que ainda não está disponível',
+  'display.menu.saving': 'Salvando sua escolha',
+  'display.error.title': 'A moeda de exibição não foi salva',
+  'display.error.body':
+    'Não foi possível salvar sua escolha. Tente novamente em instantes.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Cerca de {amount} {code} na sua moeda de exibição',
+  'display.row.notConverted': 'Não convertido',
+  'display.alert.title': 'Alguns valores não foram convertidos',
+  'display.alert.body':
+    'Não há taxa registrada para estes pares de moedas, então esses valores ficam na moeda do orçamento:',
+  'display.alert.pair': '{from} para {to} em {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

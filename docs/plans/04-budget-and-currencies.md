@@ -680,8 +680,9 @@ Three surfaces change, and only in the ways listed:
   `wiki: Currencies` states the same rule for payments and this is where we honour it.
 - **Toolbar.** A compact display-currency indicator — the code the figures on screen are in — and a
   `DropdownMenu` behind it with the three choices the server section fixes: "Each trip in its own
-  currency" (writes `NULL`), the workspace's default named with its code, and every code this trip
-  has already frozen a rate against. Choosing one calls `setDisplayCurrencyFn` and reloads the
+  currency" (writes `NULL`), the workspace's default named with its code, and every code a frozen
+  rate from the trip's budget currency answers for (the ordered pair is never inverted, `CONTEXT.md`
+  "Frozen rate"), so each enabled choice converts. Choosing one calls `setDisplayCurrencyFn` and reloads the
   payload. Codes that would need a live rate are rendered **disabled with the reason in their
   description**, not hidden — a control that silently omits the thing a reader is looking for is
   worse than one that explains itself. The indicator is the selector

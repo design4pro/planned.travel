@@ -28,8 +28,10 @@ import { cn } from '#/lib/cn'
 import { formatConversion, formatMoney } from '#/lib/money'
 import { groupByDay, isOptimisticId, shareOf } from '#/components/costs'
 import { Panel } from '../../../-ui/scaffold'
+import { ConvertedFigure } from './converted-figure'
 import { CategoryGlyph, categoryLabel } from './categories'
 
+import type { DisplayCurrency } from '#/lib/money'
 import type { CostsExpense, CostsPerson } from '#/server/fns/costs'
 
 export interface ExpenseListProps {
@@ -37,6 +39,7 @@ export interface ExpenseListProps {
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
   readonly currency: string
+  readonly display: DisplayCurrency
   readonly busyExpenseIds: ReadonlySet<string>
   /** Whether the row offers edit and delete. A reader sees the ledger and none of its controls. */
   readonly canWrite: boolean
@@ -49,6 +52,7 @@ export function ExpenseList({
   people,
   viewerUserId,
   currency,
+  display,
   busyExpenseIds,
   canWrite,
   onEdit,
@@ -75,6 +79,7 @@ export function ExpenseList({
                     people={people}
                     viewerUserId={viewerUserId}
                     currency={currency}
+                    display={display}
                     busy={busyExpenseIds.has(row.id)}
                     canWrite={canWrite}
                     onEdit={onEdit}
@@ -95,6 +100,7 @@ function ExpenseRow({
   people,
   viewerUserId,
   currency,
+  display,
   busy,
   canWrite,
   onEdit,
@@ -104,6 +110,7 @@ function ExpenseRow({
   people: ReadonlyArray<CostsPerson>
   viewerUserId: string
   currency: string
+  display: DisplayCurrency
   busy: boolean
   canWrite: boolean
   onEdit: (row: CostsExpense) => void
@@ -184,7 +191,11 @@ function ExpenseRow({
             )}
           </div>
 
-          <span className="shrink-0 text-caption tabular-nums text-ink-4">
+          <span className="flex shrink-0 items-baseline gap-2 text-caption tabular-nums text-ink-4">
+            <ConvertedFigure
+              display={display}
+              convertedMinor={row.convertedMinor}
+            />
             {mine === 0
               ? 'not your share'
               : `${formatMoney(mine, currency, locale)} yours`}

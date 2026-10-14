@@ -180,6 +180,27 @@ const messages = {
     '이 여행에는 아직 기록된 지출이 없습니다. 소유자나 편집자가 추가하면 여기에 표시됩니다.',
   'readOnly.settleEmpty':
     '지금은 송금이 필요하지 않습니다. 차액이 생기면 여기에 표시됩니다.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': '표시 통화',
+  'display.indicator.perTrip': '여행 자체 통화',
+  'display.indicator.fixed': '{code}로도 표시',
+  'display.menu.perTrip': '각 여행을 해당 여행의 통화로',
+  'display.menu.workspace': '{code}(작업 공간 기본값)',
+  'display.menu.rateHint': '여행에 이미 기록된 환율을 사용합니다',
+  'display.menu.currentHint':
+    '선택했지만 기록된 환율이 이 통화를 지원하지 않습니다',
+  'display.menu.needsLiveRate': '아직 사용할 수 없는 실시간 환율이 필요합니다',
+  'display.menu.saving': '선택을 저장하는 중',
+  'display.error.title': '표시 통화를 저장하지 못했습니다',
+  'display.error.body':
+    '선택을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': '표시 통화로 약 {amount} {code}',
+  'display.row.notConverted': '환산 안 됨',
+  'display.alert.title': '일부 금액이 환산되지 않았습니다',
+  'display.alert.body':
+    '다음 통화 쌍에는 기록된 환율이 없어 해당 금액은 예산 통화로 유지됩니다:',
+  'display.alert.pair': '{date} {from} → {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

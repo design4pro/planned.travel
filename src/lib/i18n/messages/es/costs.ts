@@ -192,6 +192,28 @@ const messages = {
     'Todavía no se ha registrado ningún gasto en este viaje. Aparecerán aquí cuando un propietario o un editor los añada.',
   'readOnly.settleEmpty':
     'Ahora mismo no hace falta ninguna transferencia. Cualquier desequilibrio aparecería aquí.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Moneda de visualización',
+  'display.indicator.perTrip': 'Moneda propia',
+  'display.indicator.fixed': 'También en {code}',
+  'display.menu.perTrip': 'Cada viaje en su moneda',
+  'display.menu.workspace': '{code} (predeterminada del espacio)',
+  'display.menu.rateHint': 'Usa un tipo ya registrado en un viaje',
+  'display.menu.currentHint': 'Elegida, pero ningún tipo registrado la cubre',
+  'display.menu.needsLiveRate':
+    'Necesita un tipo en vivo, que aún no está disponible',
+  'display.menu.saving': 'Guardando tu elección',
+  'display.error.title': 'No se guardó la moneda de visualización',
+  'display.error.body':
+    'No se pudo guardar tu elección. Inténtalo de nuevo en un momento.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Unos {amount} {code} en tu moneda de visualización',
+  'display.row.notConverted': 'Sin convertir',
+  'display.alert.title': 'Algunas cifras no están convertidas',
+  'display.alert.body':
+    'No hay tipo registrado para estos pares de monedas, así que esas cifras se quedan en la moneda del presupuesto:',
+  'display.alert.pair': '{from} a {to} el {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

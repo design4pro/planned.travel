@@ -191,6 +191,28 @@ const messages = {
     'Encara no s’ha registrat cap despesa en aquest viatge. Apareixeran aquí quan un propietari o un editor les afegeixi.',
   'readOnly.settleEmpty':
     'Ara no cal cap transferència. Qualsevol desequilibri apareixerà aquí.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Moneda de visualització',
+  'display.indicator.perTrip': 'Moneda pròpia',
+  'display.indicator.fixed': 'També en {code}',
+  'display.menu.perTrip': 'Cada viatge en la seva moneda',
+  'display.menu.workspace': '{code} (predeterminada de l’espai)',
+  'display.menu.rateHint': 'Fa servir un tipus ja registrat en un viatge',
+  'display.menu.currentHint': 'Triada, però cap tipus registrat la cobreix',
+  'display.menu.needsLiveRate':
+    'Necessita un tipus en directe, que encara no està disponible',
+  'display.menu.saving': 'Desant la teva elecció',
+  'display.error.title': 'No s’ha desat la moneda de visualització',
+  'display.error.body':
+    'No s’ha pogut desar la teva elecció. Torna-ho a provar d’aquí a un moment.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Uns {amount} {code} a la teva moneda de visualització',
+  'display.row.notConverted': 'Sense convertir',
+  'display.alert.title': 'Algunes xifres no estan convertides',
+  'display.alert.body':
+    'No hi ha tipus registrat per a aquests parells de monedes, així que aquestes xifres es queden en la moneda del pressupost:',
+  'display.alert.pair': '{from} a {to} el {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

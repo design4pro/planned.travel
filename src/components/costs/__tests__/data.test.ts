@@ -6,6 +6,7 @@ import {
   csvFilename,
   dailySeries,
   dayOptions,
+  displayCurrencyChoices,
   expensesCsv,
   filterExpenses,
   formatDayLabel,
@@ -67,6 +68,7 @@ function expense(overrides: Partial<CostsExpense> = {}): CostsExpense {
     originalAmountMinor: null,
     originalCurrency: null,
     exchangeRate: null,
+    convertedMinor: overrides.amountMinor ?? 30_000,
     spentOn: '2026-07-04',
     paidBy: 'u-rafal',
     splitMethod: 'equal',
@@ -116,6 +118,7 @@ const SETTLEMENT: CostsSettlement = {
   toUserId: 'u-rafal',
   amountMinor: 40_000,
   currency: 'JPY',
+  convertedMinor: 40_000,
   method: 'bank_transfer',
   settledOn: '2026-07-06',
   note: null,
@@ -145,6 +148,9 @@ const PAYLOAD: CostsPayload = {
       expenseCount: 1,
     },
   ],
+  displayCurrency: { mode: 'per-trip', code: 'JPY' },
+  displayChoices: { workspaceCode: 'EUR', rateCodes: [] },
+  unconverted: [],
   expenses: ROWS,
   balances: [
     {
@@ -511,6 +517,7 @@ describe('applyOps — payment', () => {
     toUserId: 'u-mika',
     amountMinor: 174_960,
     currency: 'JPY',
+    convertedMinor: 174_960,
     method: 'bank_transfer',
     settledOn: '2026-07-08',
     note: null,
@@ -633,10 +640,12 @@ describe('memberShares', () => {
 
 describe('expensesCsv', () => {
   const BOM = '\ufeff'
+  const PER_TRIP = { mode: 'per-trip', code: 'JPY' } as const
   const csv = expensesCsv({
     rows: ROWS,
     people: PEOPLE,
     viewerUserId: 'u-rafal',
+    display: PER_TRIP,
   })
   const lines = csv.slice(BOM.length).trimEnd().split('\r\n')
 
@@ -675,6 +684,7 @@ describe('expensesCsv', () => {
       rows: [expense({ title: 'Dinner, "the good one"\nwith wine' })],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      display: PER_TRIP,
     })
     expect(tricky).toContain('"Dinner, ""the good one""\nwith wine"')
   })
@@ -685,6 +695,7 @@ describe('expensesCsv', () => {
       rows: [expense({ title: '=1+1' })],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      display: PER_TRIP,
     })
     expect(injected).toContain(`"'=1+1"`)
   })
@@ -694,8 +705,83 @@ describe('expensesCsv', () => {
       rows: [],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      display: PER_TRIP,
     })
     expect(empty.slice(BOM.length).trimEnd().split('\r\n')).toHaveLength(1)
+  })
+
+  describe('the display-currency column', () => {
+    const EXISTING = [
+      'Date',
+      'Title',
+      'Category',
+      'Amount',
+      'Currency',
+      'Original amount',
+      'Original currency',
+      'Rate',
+      'Paid by',
+      'Split method',
+      'Your share',
+      'Notes',
+    ]
+
+    function cells(line: string | undefined): Array<string> {
+      return (line ?? '')
+        .slice(1, -1)
+        .split('","')
+        .map((cell) => cell.replace(/""/g, '"'))
+    }
+
+    it('is one extra column at the very end, after every existing one in its place', () => {
+      expect(cells(lines[0])).toEqual([...EXISTING, 'Amount in JPY'])
+      for (const line of lines) {
+        expect(cells(line)).toHaveLength(EXISTING.length + 1)
+      }
+    })
+
+    it('equals the accounting amount in per-trip mode', () => {
+      expect(cells(lines[1]).at(-1)).toBe(cells(lines[1])[3])
+      expect(cells(lines[2]).at(-1)).toBe(cells(lines[2])[3])
+    })
+
+    it('carries the converted figure, in the display currency, in fixed mode', () => {
+      const converted = expensesCsv({
+        rows: [expense({ amountMinor: 30_000, convertedMinor: 1_850 })],
+        people: PEOPLE,
+        viewerUserId: 'u-rafal',
+        display: { mode: 'fixed', code: 'GBP' },
+      })
+      const [header, row] = converted.slice(BOM.length).trimEnd().split('\r\n')
+
+      expect(cells(header).at(-1)).toBe('Amount in GBP')
+      expect(cells(row).at(-1)).toBe('18.50')
+      // The accounting columns are untouched.
+      expect(cells(row)[3]).toBe('30,000')
+      expect(cells(row)[4]).toBe('JPY')
+    })
+
+    it('is empty, never a 1:1, for a row no rate converted', () => {
+      const unconverted = expensesCsv({
+        rows: [expense({ amountMinor: 30_000, convertedMinor: null })],
+        people: PEOPLE,
+        viewerUserId: 'u-rafal',
+        display: { mode: 'fixed', code: 'GBP' },
+      })
+      const [, row] = unconverted.slice(BOM.length).trimEnd().split('\r\n')
+
+      expect(cells(row).at(-1)).toBe('')
+    })
+
+    it('still leads with the byte-order mark', () => {
+      const fixed = expensesCsv({
+        rows: ROWS,
+        people: PEOPLE,
+        viewerUserId: 'u-rafal',
+        display: { mode: 'fixed', code: 'GBP' },
+      })
+      expect(fixed.startsWith(BOM)).toBe(true)
+    })
   })
 })
 
@@ -723,5 +809,84 @@ describe('optimisticId', () => {
   it('does not collide across a burst of writes', () => {
     const ids = new Set(Array.from({ length: 200 }, () => optimisticId()))
     expect(ids.size).toBeGreaterThan(190)
+  })
+})
+
+describe('displayCurrencyChoices', () => {
+  const perTrip = { mode: 'per-trip', code: 'EUR' } as const
+
+  it('enables the workspace default and every code a rate answers for, and no other', () => {
+    const choices = displayCurrencyChoices({
+      display: perTrip,
+      budgetCurrency: 'EUR',
+      choices: { workspaceCode: 'PLN', rateCodes: ['GBP', 'USD'] },
+    })
+
+    expect(choices.enabled).toEqual([
+      { code: 'PLN', reason: 'workspace' },
+      { code: 'GBP', reason: 'rate' },
+      { code: 'USD', reason: 'rate' },
+    ])
+    const offered = choices.enabled.map((entry) => entry.code)
+    for (const code of choices.disabled) {
+      expect(offered).not.toContain(code)
+    }
+  })
+
+  it('disables every other curated code, and never the trip’s own', () => {
+    const choices = displayCurrencyChoices({
+      display: perTrip,
+      budgetCurrency: 'EUR',
+      choices: { workspaceCode: 'PLN', rateCodes: ['GBP'] },
+    })
+
+    expect(choices.disabled).toContain('JPY')
+    expect(choices.disabled).not.toContain('EUR')
+    expect(
+      displayCurrencyChoices({
+        display: { mode: 'fixed', code: 'GBP' },
+        budgetCurrency: 'EUR',
+        choices: { workspaceCode: 'PLN', rateCodes: ['GBP'] },
+      }).disabled,
+    ).not.toContain('EUR')
+    expect(choices.disabled).not.toContain('GBP')
+    expect(choices.disabled).not.toContain('PLN')
+    expect(
+      new Set([
+        ...choices.enabled.map((entry) => entry.code),
+        ...choices.disabled,
+      ]).size,
+    ).toBe(choices.enabled.length + choices.disabled.length)
+  })
+
+  it('does not list the workspace default twice when a rate answers for it as well', () => {
+    const choices = displayCurrencyChoices({
+      display: perTrip,
+      budgetCurrency: 'EUR',
+      choices: { workspaceCode: 'GBP', rateCodes: ['GBP'] },
+    })
+
+    expect(choices.enabled).toEqual([{ code: 'GBP', reason: 'workspace' }])
+  })
+
+  it('keeps a chosen code that nothing answers for in the list, so the checked item is there', () => {
+    const choices = displayCurrencyChoices({
+      display: { mode: 'fixed', code: 'JPY' },
+      budgetCurrency: 'EUR',
+      choices: { workspaceCode: 'PLN', rateCodes: [] },
+    })
+
+    expect(choices.enabled).toContainEqual({ code: 'JPY', reason: 'current' })
+    expect(choices.disabled).not.toContain('JPY')
+  })
+
+  it('offers a workspace default outside the curated list as it is', () => {
+    const choices = displayCurrencyChoices({
+      display: perTrip,
+      budgetCurrency: 'EUR',
+      choices: { workspaceCode: 'QAR', rateCodes: [] },
+    })
+
+    expect(choices.enabled).toEqual([{ code: 'QAR', reason: 'workspace' }])
   })
 })

@@ -197,6 +197,25 @@ const messages = {
     'لم تُسجَّل أي نفقات في هذه الرحلة بعد. ستظهر هنا بمجرد أن يضيفها مالك أو محرّر.',
   'readOnly.settleEmpty':
     'لا حاجة إلى أي تحويلات الآن. أي فرق في الحسابات سيظهر هنا.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'عملة العرض',
+  'display.indicator.perTrip': 'عملته الخاصة',
+  'display.indicator.fixed': 'وأيضًا بـ{code}',
+  'display.menu.perTrip': 'كل رحلة بعملتها',
+  'display.menu.workspace': '{code} (الافتراضية لمساحة العمل)',
+  'display.menu.rateHint': 'يستخدم سعرًا سُجّل مسبقًا في رحلة',
+  'display.menu.currentHint': 'محددة، لكن لا يغطيها أي سعر مسجّل',
+  'display.menu.needsLiveRate': 'تحتاج إلى سعر مباشر غير متاح بعد',
+  'display.menu.saving': 'جارٍ حفظ اختيارك',
+  'display.error.title': 'لم تُحفظ عملة العرض',
+  'display.error.body': 'تعذّر حفظ اختيارك. حاول مرة أخرى بعد قليل.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': 'نحو {amount} {code} بعملة العرض الخاصة بك',
+  'display.row.notConverted': 'غير محوّل',
+  'display.alert.title': 'بعض المبالغ غير محوّلة',
+  'display.alert.body':
+    'لا يوجد سعر مسجّل لهذه الأزواج من العملات، لذلك تبقى هذه المبالغ بعملة الميزانية:',
+  'display.alert.pair': '{from} إلى {to} في {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

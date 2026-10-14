@@ -44,6 +44,7 @@ function expense(
     originalAmountMinor: null,
     originalCurrency: null,
     exchangeRate: null,
+    convertedMinor: amountMinor,
     spentOn: '2026-07-04',
     paidBy: 'u-me',
     splitMethod: 'equal',

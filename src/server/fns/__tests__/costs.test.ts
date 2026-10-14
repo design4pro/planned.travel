@@ -14,15 +14,18 @@ import {
   TripRoleError,
   addTripMember,
   createExpense,
+  createSettlement,
   createTrip,
+  getDisplayCurrency,
   listSettlements,
+  setDisplayCurrency,
   listTripExpenses,
   updateTrip,
 } from '#/server/repos'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
 import type { TenantScope } from '#/server/repos'
-import type { SeededTenant } from '#/server/repos/__tests__/harness'
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 
 const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
@@ -85,10 +88,13 @@ const {
   deleteExpenseFn,
   recordPaymentFn,
   recordPaymentSchema,
+  setDisplayCurrencyFn,
+  setDisplayCurrencySchema,
   updateExpenseFn,
 } = await import('../costs')
 
 describe('the costs boundary', () => {
+  let harness: Harness
   let tenant: SeededTenant
   let tripId: string
   let expenseId: string
@@ -100,7 +106,7 @@ describe('the costs boundary', () => {
 
   beforeEach(async () => {
     stubs.mirrorToRoom.mockClear()
-    const harness = await createHarness()
+    harness = await createHarness()
     tenant = await harness.seedTenant('costs-boundary')
     ownerId = tenant.ownerUserId
     payerId = await tenant.addUser('The payer')
@@ -354,6 +360,172 @@ describe('the costs boundary', () => {
       ['the owner', () => tenant.scope],
     ])('tells %s they can write', async (_name, who) => {
       expect((await costsPayload(who(), tripId)).canWrite).toBe(true)
+    })
+  })
+
+  describe('the display currency', () => {
+    /** A trip kept in pounds on which a receipt in euros froze a rate of 0.85 pounds to the euro. */
+    async function freezeEuroToPound(): Promise<void> {
+      const london = await createTrip(tenant.scope, {
+        title: 'London',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      await createExpense(tenant.scope, {
+        tripId: london.id,
+        title: 'Tickets',
+        amountMinor: 8_500,
+        currency: 'GBP',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'EUR',
+        exchangeRate: 0.85,
+        spentOn: '2026-05-02',
+      })
+    }
+
+    async function addPayments(count: number): Promise<void> {
+      for (let index = 0; index < count; index += 1) {
+        await createSettlement(tenant.scope, {
+          tripId,
+          fromUserId: payerId,
+          toUserId: ownerId,
+          amountMinor: 1_000 + index,
+          settledOn: '2026-04-11',
+        })
+      }
+    }
+
+    /** The statements that looked up the newest frozen rate for a pair (the menu's list has no limit). */
+    function rateLookups(): number {
+      return harness.statements.filter(
+        (sql) => /"original_currency" = \?/.test(sql) && /limit \?/.test(sql),
+      ).length
+    }
+
+    it('shows each trip in its own currency when nothing is stored, and consults no rate', async () => {
+      await addPayments(2)
+      harness.statements.length = 0
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'per-trip', code: 'EUR' })
+      expect(payload.expenses.map((row) => row.convertedMinor)).toEqual([6_000])
+      expect(payload.settlements.map((row) => row.convertedMinor)).toEqual(
+        payload.settlements.map((row) => row.amountMinor),
+      )
+      expect(payload.unconverted).toEqual([])
+      expect(rateLookups()).toBe(0)
+    })
+
+    it('converts each expense and payment into the stored code through the frozen rate', async () => {
+      await freezeEuroToPound()
+      await addPayments(1)
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'fixed', code: 'GBP' })
+      expect(payload.expenses.map((row) => row.convertedMinor)).toEqual([5_100])
+      expect(payload.settlements.map((row) => row.convertedMinor)).toEqual([
+        850,
+      ])
+      expect(payload.unconverted).toEqual([])
+      // The accounting figures are what they were.
+      expect(payload.expenses.map((row) => row.amountMinor)).toEqual([6_000])
+    })
+
+    it('asks for a rate once per pair, however many rows share it', async () => {
+      await freezeEuroToPound()
+      await addPayments(3)
+      await setDisplayCurrency(tenant.scope, 'GBP')
+      await createExpense(tenant.scope, {
+        tripId,
+        title: 'Coffee',
+        amountMinor: 300,
+        spentOn: '2026-04-11',
+      })
+      harness.statements.length = 0
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.expenses).toHaveLength(2)
+      expect(payload.settlements).toHaveLength(3)
+      // One expenses query and one payments query for the single EUR to GBP pair.
+      expect(rateLookups()).toBe(2)
+    })
+
+    it('shows no converted figure, and names the pair and the day, when no rate answers', async () => {
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'fixed', code: 'GBP' })
+      expect(payload.expenses.map((row) => row.convertedMinor)).toEqual([null])
+      expect(payload.unconverted).toEqual([
+        { from: 'EUR', to: 'GBP', on: payload.today },
+      ])
+    })
+
+    it('treats a stored code equal to the trip’s own as per-trip', async () => {
+      await setDisplayCurrency(tenant.scope, 'EUR')
+      harness.statements.length = 0
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'per-trip', code: 'EUR' })
+      expect(rateLookups()).toBe(0)
+    })
+
+    it('reads the caller’s own preference, never another member’s', async () => {
+      await freezeEuroToPound()
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const other = await costsPayload(editor, tripId)
+
+      expect(other.displayCurrency).toEqual({ mode: 'per-trip', code: 'EUR' })
+    })
+
+    it('offers the workspace default and the codes a frozen rate answers for', async () => {
+      await freezeEuroToPound()
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayChoices).toEqual({
+        workspaceCode: 'EUR',
+        rateCodes: ['GBP'],
+      })
+    })
+
+    describe('the preference writer', () => {
+      it('writes the caller’s own row from a code, and clears it from null', async () => {
+        stubs.scope = editor
+        await inStart(() => setDisplayCurrencyFn({ data: { code: 'GBP' } }))
+        const editorId = editor.ctx.userId
+
+        expect(await getDisplayCurrency(editor, editorId)).toBe('GBP')
+        expect(await getDisplayCurrency(tenant.scope, ownerId)).toBeNull()
+
+        await inStart(() => setDisplayCurrencyFn({ data: { code: null } }))
+        expect(await getDisplayCurrency(editor, editorId)).toBeNull()
+      })
+
+      it('is strict: a user id, a lower-case code and a missing code are refused', () => {
+        expect(
+          setDisplayCurrencySchema.safeParse({ code: 'GBP' }).success,
+        ).toBe(true)
+        expect(setDisplayCurrencySchema.safeParse({ code: null }).success).toBe(
+          true,
+        )
+        for (const bad of [
+          { code: 'GBP', userId: 'someone-else' },
+          { code: 'gbp' },
+          { code: 'GB' },
+          {},
+        ]) {
+          expect(setDisplayCurrencySchema.safeParse(bad).success).toBe(false)
+        }
+      })
     })
   })
 })
