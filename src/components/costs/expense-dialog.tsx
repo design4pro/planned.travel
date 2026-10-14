@@ -354,7 +354,14 @@ export function ExpenseDialog({
 
   const titleOk = form.title.trim().length > 0
   const amountOk = typedMinor !== null && (!foreign || convertedMinor !== null)
-  const canSave = titleOk && amountOk && preview.balanced && !saving
+  // After a stale-currency refusal the typed digits are still in the old currency, so the amount
+  // has to be looked at (edited) before it can be saved again.
+  const canSave =
+    titleOk &&
+    amountOk &&
+    preview.balanced &&
+    !saving &&
+    stale.messageFor === null
 
   async function submit(): Promise<void> {
     if (!canSave) {

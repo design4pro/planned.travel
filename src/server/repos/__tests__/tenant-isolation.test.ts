@@ -15,8 +15,11 @@ import {
   assignmentParticipants,
   collabMessageReactions,
   collectionPlaceLabels,
+  dayAccommodations,
   placeTags,
   places,
+  reservations,
+  transports,
 } from '#/server/db/schema'
 import { NotFoundError, QuotaExceededError, RepositoryError } from '../context'
 import {
@@ -6082,6 +6085,13 @@ describe('tenant isolation', () => {
   describe('committing a change of a trip’s budget currency', () => {
     const COMMIT = { to: 'JPY', rate: 160 } as const
 
+    /** The columns every table the commit pins has in common. */
+    interface PricedRow {
+      readonly tripId: string
+      readonly priceMinor: number | null
+      readonly currency: string | null
+    }
+
     /** Every money row of both workspaces, so "untouched" is a comparison of the whole of it. */
     async function money() {
       const both = [alpha.tenant.scope, beta.tenant.scope]
@@ -6099,6 +6109,20 @@ describe('tenant isolation', () => {
         budgetItems: await Promise.all(
           both.map((s) => budgetItemsRepository.findMany(s)),
         ),
+        // The four tables the commit pins with set-based `UPDATE`s, read whole across both workspaces.
+        places: await harness.db.select().from(places),
+        reservations: await harness.db.select().from(reservations),
+        transports: await harness.db.select().from(transports),
+        stays: await harness.db.select().from(dayAccommodations),
+      }
+    }
+
+    /** Every price a trip can hold, left without a currency: the shape the pin statements exist for. */
+    async function priceEverything(world: World, tripId: string) {
+      for (const kind of PRICED_KINDS) {
+        if (kind.name !== 'a trip copy still in progress') {
+          await kind.seed(world.tenant.scope, tripId, world.companionUserId)
+        }
       }
     }
 
@@ -6123,12 +6147,18 @@ describe('tenant isolation', () => {
         name: 'Sibling food',
         plannedAmountMinor: 12_300,
       })
+      await priceEverything(world, trip.id)
+      await tripsRepository.requireUpdate(world.tenant.scope, trip.id, {
+        budgetTargetMinor: 50_000,
+      })
       return trip
     }
 
     it('converts the trip asked about and leaves its sibling and the other workspace exactly as they were', async () => {
       const alphaSibling = await sibling(alpha)
       await sibling(beta)
+      await priceEverything(alpha, alpha.tripId)
+      await priceEverything(beta, beta.tripId)
       const before = await money()
 
       await changeTripCurrency(alpha.tenant.scope, alpha.tripId, COMMIT)
@@ -6144,6 +6174,24 @@ describe('tenant isolation', () => {
       expect(after.settlements[1]).toEqual(before.settlements[1])
       expect(after.budgetItems[1]).toEqual(before.budgetItems[1])
       expect(after.trips[1]).toEqual(before.trips[1])
+      // Priced places, bookings, transports and stays are written by set-based `UPDATE`s: the other
+      // workspace's and the sibling trip's rows are untouched, the trip's own are pinned.
+      const checkPins = (
+        beforeRows: ReadonlyArray<PricedRow>,
+        afterRows: ReadonlyArray<PricedRow>,
+      ) => {
+        const unpinned = (row: PricedRow) =>
+          row.priceMinor !== null && row.currency === null
+        expect(others(beforeRows).some(unpinned)).toBe(true)
+        expect(others(afterRows)).toEqual(others(beforeRows))
+        const priced = own(afterRows).filter((row) => row.priceMinor !== null)
+        expect(priced.length).toBeGreaterThan(0)
+        expect(priced.some(unpinned)).toBe(false)
+      }
+      checkPins(before.places, after.places)
+      checkPins(before.reservations, after.reservations)
+      checkPins(before.transports, after.transports)
+      checkPins(before.stays, after.stays)
       // The sibling trip of the same workspace, in euros still.
       expect(others(after.expenses[0] ?? [])).toEqual(
         others(before.expenses[0] ?? []),
@@ -6151,6 +6199,16 @@ describe('tenant isolation', () => {
       expect(others(after.budgetItems[0] ?? [])).toEqual(
         others(before.budgetItems[0] ?? []),
       )
+      expect(others(after.shares[0] ?? [])).toEqual(
+        others(before.shares[0] ?? []),
+      )
+      expect(others(after.settlements[0] ?? [])).toEqual(
+        others(before.settlements[0] ?? []),
+      )
+      expect(
+        after.trips[0]?.find((trip) => trip.id === alphaSibling.id)
+          ?.budgetTargetMinor,
+      ).toBe(50_000)
       expect(
         after.trips[0]?.find((trip) => trip.id === alphaSibling.id)?.currency,
       ).toBe('EUR')

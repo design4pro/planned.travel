@@ -169,7 +169,10 @@ export function PaymentDialog({
     typedMinor > 0 &&
     amountMinor !== null &&
     amountMinor > 0 &&
-    !saving
+    !saving &&
+    // After a stale-currency refusal the typed digits are still in the old currency, so the amount
+    // has to be looked at (edited) before it can be saved again.
+    stale.messageFor === null
   const convertedInvalid =
     foreign &&
     converted.trim() !== '' &&

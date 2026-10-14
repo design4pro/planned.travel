@@ -95,6 +95,30 @@ function optimisticConverted(
   return display.mode === 'per-trip' ? amountMinor : null
 }
 
+/**
+ * The trip currency the loader has delivered for this trip, read from the router once `invalidate`
+ * has settled. `null` when no match carries it, so the caller falls back to a toast without it.
+ */
+function currencyOnScreen(
+  router: ReturnType<typeof useRouter>,
+  tripId: string,
+): string | null {
+  for (const match of router.state.matches) {
+    const data: unknown = match.loaderData
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'tripId' in data &&
+      data.tripId === tripId &&
+      'currency' in data &&
+      typeof data.currency === 'string'
+    ) {
+      return data.currency
+    }
+  }
+  return null
+}
+
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
@@ -132,10 +156,18 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         await router.invalidate()
       } catch (cause) {
         if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
-          // The dialog names the new currency beside the figure, so the screen is refreshed here,
-          // before the refusal reaches it, and the toast only says what did not happen.
-          await router.invalidate()
-          toast.error(failure)
+          // The screen is refreshed here, before the refusal reaches the dialog, so the dialog and
+          // the toast both name the currency the trip is in now.
+          // A reload that fails must not hide the refusal: the dialog still needs it.
+          await router.invalidate().catch(() => undefined)
+          const live = currencyOnScreen(router, payload.tripId)
+          if (live === null) {
+            toast.error(failure)
+          } else {
+            toast.error(failure, {
+              description: t('costs.refusal.tripCurrencyChanged', { to: live }),
+            })
+          }
         } else {
           toast.error(failure, {
             description: reasonOf(cause, 'The change was rolled back.'),
@@ -146,7 +178,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         drop(op.key)
       }
     },
-    [drop, router],
+    [drop, payload.tripId, router, t],
   )
 
   const addExpense = useCallback(

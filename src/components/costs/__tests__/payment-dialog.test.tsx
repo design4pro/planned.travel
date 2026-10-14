@@ -267,12 +267,18 @@ describe('the payment dialog', () => {
       expect(currencyPicker().textContent).toContain('JPY')
     })
 
-    it('sends the same digits in the new currency on the next press, without making the reader retype them', async () => {
+    it('does not save the old digits until the reader has touched the amount, then sends them in the new currency', async () => {
       const { view, onSubmit, user } = await refuseOnce()
       view.rerender(dialog('JPY', onSubmit))
-      await screen.findByLabelText(/Amount in JPY/)
+      const amount = await screen.findByLabelText(/Amount in JPY/)
 
-      await user.click(screen.getByRole('button', { name: 'Record payment' }))
+      const record = screen.getByRole('button', { name: 'Record payment' })
+      expect(record).toHaveProperty('disabled', true)
+
+      await user.clear(amount)
+      await user.type(amount, '4000')
+      expect(record).toHaveProperty('disabled', false)
+      await user.click(record)
 
       await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
       expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({

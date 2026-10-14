@@ -378,13 +378,19 @@ describe('the expense dialog’s suggested converted figure', () => {
       expect(screen.queryByText(REFUSAL)).toBeNull()
     })
 
-    it('saves the same digits in the new currency on the next press', async () => {
+    it('does not save the old digits until the reader has touched the amount, then sends them in the new currency', async () => {
       const user = hand()
       const { view, onSubmit } = await refuseOnce(user)
       view.rerender(dialog('JPY', onSubmit))
       await screen.findByDisplayValue('4000')
 
-      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+      const add = screen.getByRole('button', { name: 'Add expense' })
+      expect(add).toHaveProperty('disabled', true)
+
+      await user.clear(amountField())
+      await user.type(amountField(), '4000')
+      expect(add).toHaveProperty('disabled', false)
+      await user.click(add)
 
       await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
       expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({

@@ -1068,9 +1068,10 @@ function sameValue(column: SQLiteColumn, value: string | number | null): SQL {
 
 /**
  * The sum of an expense's share rows, as a scalar subquery, correlated to the `expenses` row of the
- * statement that embeds it. Tenant-filtered like every other read; `NULL` when it has no shares.
+ * statement that embeds it. Tenant- and trip-filtered like every other read; `NULL` when it has no
+ * shares.
  */
-function shareTotalOf(scope: TenantScope): SQL {
+function shareTotalOf(scope: TenantScope, tripId: string): SQL {
   return sql`(${scope.db
     .select({ total: sql`sum(${expenseShares.shareMinor})` })
     .from(expenseShares)
@@ -1078,6 +1079,7 @@ function shareTotalOf(scope: TenantScope): SQL {
       tenantFilter(
         scope,
         expenseShares,
+        eq(expenseShares.tripId, tripId),
         eq(expenseShares.expenseId, expenses.id),
       ),
     )})`
@@ -1136,7 +1138,7 @@ function rebaseStatements(
             eq(expenses.splitMethod, old.splitMethod),
             sameValue(expenses.paidBy, old.paidBy),
             // The people sharing it, as the plan read them: an edited share stops the expense.
-            sql`${shareTotalOf(scope)} IS ${sharesOf.has(old.id) ? (oldShares.get(old.id) ?? 0) : null}`,
+            sql`${shareTotalOf(scope, tripId)} IS ${sharesOf.has(old.id) ? (oldShares.get(old.id) ?? 0) : null}`,
           ),
         ),
     )
@@ -1342,8 +1344,8 @@ function movedSinceReadSql(
       expenses,
       tripId,
       and(
-        sql`${shareTotalOf(scope)} IS NOT NULL`,
-        sql`${shareTotalOf(scope)} <> ${expenses.amountMinor}`,
+        sql`${shareTotalOf(scope, tripId)} IS NOT NULL`,
+        sql`${shareTotalOf(scope, tripId)} <> ${expenses.amountMinor}`,
       ),
     ),
     sql`(${shareRows}) <> ${plan.counts.shareRows}`,
