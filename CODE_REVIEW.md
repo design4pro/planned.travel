@@ -96,6 +96,22 @@ An assertion on the order of rows a test wrote itself holds only if the query's 
 those rows in that order. Rows written in the same millisecond tie on `created_at` and on `newId()`'s
 time prefix, so their order is random: assert a set, or give the rows distinct instants (#500, #510).
 
+A constant, fixture or contract that encodes what a vendor returns or refuses (what a parameter
+means, which fields a product carries, the first date a range accepts) is checked against one live
+answer for a place and date whose real value the author knows, not against the parameter's name or a
+recorded fixture. NASA's `T2M_MAX_AVG` is the hottest hour of the month, so Tokyo in October read
+27.5 / 9.1 against about 22 / 14 and two review rounds missed it (#1204); NASA answers 422 before
+1981 and the refusal was cached for every workspace (#1192, a major, because the entry is shared);
+MET's `compact` product carries no chance of rain, found only by calling it (#1046). A PR that
+pins vendor behaviour with no live sample in the PR body is a should-fix finding.
+
+A layout-shift assertion in an e2e journey counts the shifts of the section under test, attributing
+each entry by `sources`, and reports the rest. The app shell shifts 0.0005 to 0.0007 on a slow CI
+runner (font swap, badge counts), so a zero-tolerance assertion over the whole page is green locally
+and red in CI (#1185 failed three times). #1209 met the same 0.00073 shell shift locally and scoped
+its window to the weather request instead, on a test-engineer verdict; that is how docs/SPEC.md's
+"zero layout shift after paint" is measured.
+
 ## Docs and CI (should fix)
 
 - **A change updates every document that states what it changes.** A PR that adds, renames, retires
