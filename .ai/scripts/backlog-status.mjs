@@ -418,7 +418,7 @@ export function classify(
   if (SENTRY_MARKER.test(issue.body ?? ""))
     return state(
       "EXTERNAL",
-      "Filed by sentry-triage from production error data: read it, then start `issue-groom` or `implement-ticket` on it from the cockpit.",
+      "Filed by sentry-triage from production data (an error or a user report): read it, then start `issue-groom` or `implement-ticket` on it from the cockpit.",
     );
 
   if (!trusted.has(issue.author?.login))

@@ -38,7 +38,7 @@ name: e2e · webkit
 on:
   schedule:
     # 03:30 UTC daily — the pool is idle, and the result is waiting before the first
-    # pull request of the day. Away from the Tuesday 06:00 sentry-triage sweep.
+    # pull request of the day. Away from the 06:00 sentry-triage sweep.
     - cron: '30 3 * * *'
   workflow_dispatch:
     inputs:
