@@ -57,7 +57,7 @@ import {
 
 import type { DisplayCurrency } from '#/lib/money'
 import type { ExpenseShare, Trip } from '#/server/db/types'
-import type { ResolvedRate, TenantScope } from '#/server/repos'
+import type { MemberProfile, ResolvedRate, TenantScope } from '#/server/repos'
 
 /* -------------------------------------------------------------------------- */
 /* Shapes                                                                     */
@@ -79,6 +79,17 @@ export interface CostsPerson {
   readonly email: string
   readonly image: string | null
   readonly role: string
+}
+
+/**
+ * Someone a stored split still names who is no longer on the trip. Name and picture only - no email
+ * and no role - and `name` is `null` when this workspace no longer knows them, which the screen
+ * words from the catalogue rather than from here.
+ */
+export interface CostsDepartedPerson {
+  readonly userId: string
+  readonly name: string | null
+  readonly image: string | null
 }
 
 export interface CostsShare {
@@ -181,6 +192,11 @@ export interface CostsPayload {
   readonly settlements: ReadonlyArray<CostsSettlement>
   readonly suggestions: ReadonlyArray<CostsSuggestion>
   readonly people: ReadonlyArray<CostsPerson>
+  /**
+   * Who the expenses' splits name that is not in {@link people}, so an edit can show their share
+   * and keep it instead of dropping it. Read-only: it feeds no writer.
+   */
+  readonly departedPeople: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   /** The currency the reader chose to see figures in, resolved against this trip's own. */
   readonly displayCurrency: DisplayCurrency
@@ -352,6 +368,39 @@ async function loadPeople(
       role: row.role,
     }
   })
+}
+
+/** `listUserProfiles` refuses a longer list, and a trip's history may name more people than that. */
+const PROFILE_LOOKUP_LIMIT = 200
+
+/**
+ * The people the given splits name who are not trip members now, named when the workspace still
+ * knows them. Built from share rows the caller already read, so it adds one tenant-scoped profile
+ * lookup and no query of its own.
+ */
+async function loadDepartedPeople(
+  scope: TenantScope,
+  people: ReadonlyArray<CostsPerson>,
+  shares: ReadonlyArray<ReadonlyArray<{ readonly userId: string }>>,
+): Promise<Array<CostsDepartedPerson>> {
+  const onTrip = new Set(people.map((person) => person.userId))
+  const departed = [
+    ...new Set(shares.flatMap((rows) => rows.map((row) => row.userId))),
+  ].filter((userId) => !onTrip.has(userId))
+
+  const profiles = new Map<string, MemberProfile>()
+  for (let from = 0; from < departed.length; from += PROFILE_LOOKUP_LIMIT) {
+    const chunk = departed.slice(from, from + PROFILE_LOOKUP_LIMIT)
+    for (const profile of await listUserProfiles(scope, chunk)) {
+      profiles.set(profile.userId, profile)
+    }
+  }
+
+  return departed.map((userId) => ({
+    userId,
+    name: profiles.get(userId)?.name ?? null,
+    image: profiles.get(userId)?.image ?? null,
+  }))
 }
 
 /**
@@ -581,6 +630,12 @@ export async function costsPayload(
     }),
   ])
 
+  const departedPeople = await loadDepartedPeople(
+    scope,
+    people,
+    withShares.map(({ shares }) => shares),
+  )
+
   const today = todayIso()
   const display = await displayFor(scope, trip, {
     on: today,
@@ -611,6 +666,7 @@ export async function costsPayload(
       expenseCount: row.expenseCount,
     })),
     people,
+    departedPeople,
     viewerUserId: scope.ctx.userId,
     displayCurrency: display.currency,
     displayChoices: display.choices,

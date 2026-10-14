@@ -59,6 +59,11 @@ const messages = {
   'split.label': 'Podział między',
   'split.everyone': 'Wszyscy',
   'split.nobody': 'Nikt',
+  'split.departed': 'Nie ma już w podróży',
+  'split.departedName': 'Dawny uczestnik podróży',
+  'split.departedHint':
+    'Odznaczenie osoby, której już nie ma w podróży, usuwa jej udział na stałe.',
+  'split.includeFor': 'Uwzględnij {name} w tym podziale',
   'split.how': 'Jak dzieli się ten wydatek',
   'split.method.equal': 'Po równo',
   'split.method.equalHint':

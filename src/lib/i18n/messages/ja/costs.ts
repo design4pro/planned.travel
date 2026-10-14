@@ -53,6 +53,11 @@ const messages = {
   'split.label': '分担する相手',
   'split.everyone': '全員',
   'split.nobody': 'なし',
+  'split.departed': '旅行から抜けました',
+  'split.departedName': '以前の旅行者',
+  'split.departedHint':
+    '旅行から抜けた人のチェックを外すと、その人の負担分は完全に削除されます。',
+  'split.includeFor': '{name}をこの分割に含める',
   'split.how': 'この支出の分け方',
   'split.method.equal': '均等',
   'split.method.equalHint':

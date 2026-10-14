@@ -52,6 +52,11 @@ const messages = {
   'split.label': 'Bölüşenler',
   'split.everyone': 'Herkes',
   'split.nobody': 'Kimse',
+  'split.departed': 'Geziden ayrıldı',
+  'split.departedName': 'Eski bir gezgin',
+  'split.departedHint':
+    'Geziden ayrılan birinin işaretini kaldırmak payını kalıcı olarak siler.',
+  'split.includeFor': '{name} bu bölüşüme dahil edilsin',
   'split.how': 'Bu masraf nasıl bölünüyor',
   'split.method.equal': 'Eşit olarak',
   'split.method.equalHint':

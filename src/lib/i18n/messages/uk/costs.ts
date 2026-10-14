@@ -56,6 +56,11 @@ const messages = {
   'split.label': 'Діляться між',
   'split.everyone': 'Усі',
   'split.nobody': 'Ніхто',
+  'split.departed': 'Більше не в подорожі',
+  'split.departedName': 'Колишній учасник подорожі',
+  'split.departedHint':
+    'Якщо зняти позначку з того, кого вже немає в подорожі, його частку буде видалено назавжди.',
+  'split.includeFor': 'Включити {name} до цього розподілу',
   'split.how': 'Як діляється ця витрата',
   'split.method.equal': 'Порівну',
   'split.method.equalHint':

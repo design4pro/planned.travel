@@ -64,6 +64,7 @@ import {
 import type { ReactNode } from 'react'
 import type { SplitMethod } from '#/lib/money'
 import type {
+  CostsDepartedPerson,
   CostsExpense,
   CostsPayload,
   CostsPerson,
@@ -119,6 +120,11 @@ export interface ExpenseDialogProps {
   /** `null` opens a blank form; an expense opens it seeded for editing. */
   readonly expense: CostsExpense | null
   readonly people: ReadonlyArray<CostsPerson>
+  /**
+   * Everyone a stored split names who is no longer on the trip. The dialog lists only those the
+   * expense being edited carries, so that saving it does not delete their share.
+   */
+  readonly departedPeople?: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly tripCurrency: string
   readonly categories: ReadonlyArray<CategoryOption>
@@ -242,6 +248,7 @@ export function ExpenseDialog({
   onOpenChange,
   expense,
   people,
+  departedPeople,
   viewerUserId,
   tripCurrency,
   categories,
@@ -256,11 +263,18 @@ export function ExpenseDialog({
   const [form, setForm] = useState<FormState>(() =>
     initialState(expense, tripCurrency, today, categories, defaultCategory),
   )
+  // Fixed when the dialog opens, like the draft it seeds: a person who leaves the trip while this is
+  // open keeps the row they had.
+  const [departed] = useState(() =>
+    (departedPeople ?? []).filter((person) =>
+      expense?.shares.some((share) => share.userId === person.userId),
+    ),
+  )
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
       ? emptyDraft(people)
       : draftFor(
-          people,
+          [...people, ...departed],
           expense.amountMinor,
           expense.currency,
           expense.splitMethod,
@@ -583,6 +597,7 @@ export function ExpenseDialog({
 
             <SplitEditor
               people={people}
+              departedPeople={departed}
               viewerUserId={viewerUserId}
               draft={draft}
               onDraftChange={setDraft}

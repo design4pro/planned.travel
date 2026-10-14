@@ -51,6 +51,11 @@ const messages = {
   'split.label': 'Chia giữa',
   'split.everyone': 'Mọi người',
   'split.nobody': 'Không ai',
+  'split.departed': 'Đã rời chuyến đi',
+  'split.departedName': 'Một người từng đi cùng',
+  'split.departedHint':
+    'Bỏ chọn người đã rời chuyến đi sẽ xóa vĩnh viễn phần của họ.',
+  'split.includeFor': 'Bao gồm {name} trong phần chia này',
   'split.how': 'Khoản chi này chia thế nào',
   'split.method.equal': 'Chia đều',
   'split.method.equalHint':

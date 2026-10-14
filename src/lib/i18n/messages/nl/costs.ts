@@ -52,6 +52,11 @@ const messages = {
   'split.label': 'Verdelen tussen',
   'split.everyone': 'Iedereen',
   'split.nobody': 'Niemand',
+  'split.departed': 'Heeft de reis verlaten',
+  'split.departedName': 'Een voormalige reiziger',
+  'split.departedHint':
+    'Als je iemand uitvinkt die de reis heeft verlaten, wordt het aandeel definitief verwijderd.',
+  'split.includeFor': '{name} opnemen in deze verdeling',
   'split.how': 'Hoe deze uitgave verdeeld wordt',
   'split.method.equal': 'Gelijk',
   'split.method.equalHint':

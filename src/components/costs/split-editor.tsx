@@ -39,7 +39,7 @@ import {
 import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { SplitMethod, SplitPreview } from '#/lib/money'
-import type { CostsPerson } from '#/server/fns/costs'
+import type { CostsDepartedPerson, CostsPerson } from '#/server/fns/costs'
 
 /** One traveller's row in the editor, in whichever unit the method uses. */
 export interface SplitDraftRow {
@@ -111,9 +111,13 @@ export function emptyDraft(people: ReadonlyArray<CostsPerson>): SplitDraft {
  * that produced it, so each method's field is seeded from the closest honest
  * reading of that result: exact amounts from the share, weights from the stored
  * weight, percentages from the share's proportion of the total.
+ *
+ * `people` is everyone who gets a row: the trip's members, then anyone who left
+ * the trip but is still in the stored split. A row left out of the draft is a
+ * share deleted by the next save, so the caller must not drop the latter.
  */
 export function draftFor(
-  people: ReadonlyArray<CostsPerson>,
+  people: ReadonlyArray<{ readonly userId: string }>,
   amountMinor: number,
   currency: string,
   splitMethod: string,
@@ -209,6 +213,11 @@ export function previewFor(
 
 export interface SplitEditorProps {
   readonly people: ReadonlyArray<CostsPerson>
+  /**
+   * People who left the trip and still have a row in the draft. They are listed after
+   * `people`, and "Everyone" never puts them back: only their own checkbox does.
+   */
+  readonly departedPeople?: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly draft: SplitDraft
   readonly onDraftChange: (next: SplitDraft) => void
@@ -220,6 +229,7 @@ export interface SplitEditorProps {
 
 export function SplitEditor({
   people,
+  departedPeople = [],
   viewerUserId,
   draft,
   onDraftChange,
@@ -231,6 +241,16 @@ export function SplitEditor({
   const t = useTranslate()
   const locale = useLocale()
   const included = draft.rows.filter((row) => row.included).length
+  const departedIds = new Set(departedPeople.map((person) => person.userId))
+  const currentRows = draft.rows.filter((row) => !departedIds.has(row.userId))
+  const listed = [
+    ...people.map((person) => ({ ...person, departed: false })),
+    ...departedPeople.map((person) => ({
+      ...person,
+      name: person.name ?? t('costs.split.departedName'),
+      departed: true,
+    })),
+  ]
   const shareOf = new Map(
     preview.rows.map((row) => [row.userId, row.shareMinor]),
   )
@@ -249,7 +269,9 @@ export function SplitEditor({
   const setAll = (next: boolean): void => {
     onDraftChange({
       ...draft,
-      rows: draft.rows.map((row) => ({ ...row, included: next })),
+      rows: draft.rows.map((row) =>
+        next && departedIds.has(row.userId) ? row : { ...row, included: next },
+      ),
     })
   }
 
@@ -305,7 +327,7 @@ export function SplitEditor({
             variant="ghost"
             size="sm"
             shape="pill"
-            disabled={disabled || included === draft.rows.length}
+            disabled={disabled || currentRows.every((row) => row.included)}
             onClick={() => setAll(true)}
           >
             {t('costs.split.everyone')}
@@ -346,7 +368,7 @@ export function SplitEditor({
       <p className="text-caption text-ink-3">{t(method.hint)}</p>
 
       <ul className="flex flex-col divide-y divide-edge-faint">
-        {people.map((person) => {
+        {listed.map((person) => {
           const row = draft.rows.find((entry) => entry.userId === person.userId)
           if (row === undefined) {
             return null
@@ -367,12 +389,17 @@ export function SplitEditor({
                 onCheckedChange={(next) =>
                   setRow(person.userId, { included: next === true })
                 }
-                aria-label={`Include ${person.name} in this split`}
+                aria-label={t('costs.split.includeFor', { name: person.name })}
               />
               <Avatar name={person.name} src={person.image} size="xs" />
               <span className="min-w-0 flex-1 basis-32 truncate text-caption font-medium text-ink">
                 {person.userId === viewerUserId ? 'You' : person.name}
               </span>
+              {person.departed ? (
+                <Badge tone="outline" size="md">
+                  {t('costs.split.departed')}
+                </Badge>
+              ) : null}
 
               <span className="ms-auto flex shrink-0 items-center gap-3">
                 {row.included && draft.method !== 'equal' ? (
@@ -407,6 +434,12 @@ export function SplitEditor({
           )
         })}
       </ul>
+
+      {departedIds.size > 0 ? (
+        <p className="text-caption text-ink-3">
+          {t('costs.split.departedHint')}
+        </p>
+      ) : null}
 
       <RemainderBar
         preview={preview}

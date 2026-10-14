@@ -10,18 +10,26 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { eq } from 'drizzle-orm'
+
+import { member } from '#/server/db/auth-schema'
+import { expenseShares } from '#/server/db/schema'
 import {
   CurrencyRefusalError,
+  NotFoundError,
   TripRoleError,
   addTripMember,
   changeTripCurrency,
   createExpense,
   createSettlement,
   createTrip,
+  deleteExpense,
+  getExpenseWithShares,
   getDisplayCurrency,
   listSettlements,
   setDisplayCurrency,
   listTripExpenses,
+  removeTripMember,
   updateTrip,
 } from '#/server/repos'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
@@ -691,6 +699,169 @@ describe('the costs boundary', () => {
           expect(setDisplayCurrencySchema.safeParse(bad).success).toBe(false)
         }
       })
+    })
+  })
+
+  describe('an expense whose split carries someone who has left the trip', () => {
+    let boatId: string
+    let leaverId: string
+    let goneId: string
+    let strangerId: string
+    let strangerEmail: string
+
+    beforeEach(async () => {
+      leaverId = await tenant.addUser('Lena who left the trip')
+      goneId = await tenant.addUser('Gil who left the workspace')
+      const leaving = await addTripMember(tenant.scope, {
+        tripId,
+        userId: leaverId,
+        role: 'editor',
+      })
+      const going = await addTripMember(tenant.scope, {
+        tripId,
+        userId: goneId,
+        role: 'editor',
+      })
+      const boat = await createExpense(tenant.scope, {
+        tripId,
+        title: 'Boat',
+        amountMinor: 9_000,
+        spentOn: '2026-04-11',
+        paidBy: ownerId,
+        participants: [
+          { userId: ownerId },
+          { userId: payerId },
+          { userId: leaverId },
+          { userId: goneId },
+        ],
+      })
+      boatId = boat.expense.id
+      await removeTripMember(tenant.scope, leaving.id)
+      await removeTripMember(tenant.scope, going.id)
+      await harness.db.delete(member).where(eq(member.userId, goneId))
+
+      // A share row naming a user of another workspace: no writer produces one, so it is planted.
+      const other = await harness.seedTenant('another-workspace')
+      strangerId = await other.addUser('Stranger from another workspace')
+      strangerEmail = `${strangerId}@example.test`
+      await harness.db.insert(expenseShares).values({
+        organizationId: tenant.organizationId,
+        tripId,
+        expenseId: boatId,
+        userId: strangerId,
+        shareMinor: 0,
+        weight: 1,
+      })
+    })
+
+    const edit = (participants: Array<{ userId: string }>) => ({
+      tripId,
+      expenseId: boatId,
+      expense: { ...body, title: 'Boat', amountMinor: 9_000, participants },
+    })
+
+    const shareUsers = async (): Promise<Array<string>> =>
+      (await getExpenseWithShares(tenant.scope, boatId)).shares
+        .map((row) => row.userId)
+        .sort()
+
+    it('names them in the payload, with a name only when the workspace still knows them', async () => {
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      const byUser = new Map(
+        payload.departedPeople.map((person) => [person.userId, person]),
+      )
+      expect(byUser.get(leaverId)).toEqual({
+        userId: leaverId,
+        name: 'Lena who left the trip',
+        image: null,
+      })
+      expect(byUser.get(goneId)?.name).toBeNull()
+      expect(
+        payload.departedPeople.map((person) => person.userId).sort(),
+      ).toEqual([leaverId, goneId, strangerId].sort())
+    })
+
+    it('does not list anyone who is still on the trip', async () => {
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      const departed = new Set(
+        payload.departedPeople.map((person) => person.userId),
+      )
+      for (const person of payload.people) {
+        expect(departed.has(person.userId)).toBe(false)
+      }
+    })
+
+    it('shows nothing about a user of another workspace beyond the id the shares already carry', async () => {
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(
+        payload.departedPeople.find((person) => person.userId === strangerId),
+      ).toEqual({ userId: strangerId, name: null, image: null })
+      const wire = JSON.stringify(payload)
+      expect(wire).not.toContain('Stranger from another workspace')
+      expect(wire).not.toContain(strangerEmail)
+    })
+
+    it('carries no email or role for a departed person', async () => {
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      for (const person of payload.departedPeople) {
+        expect(Object.keys(person).sort()).toEqual(['image', 'name', 'userId'])
+      }
+    })
+
+    it('is empty when every share belongs to someone on the trip', async () => {
+      await deleteExpense(tenant.scope, tripId, boatId)
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.departedPeople).toEqual([])
+    })
+
+    it('keeps their share when the edit sends it back, and never touches the trip’s other shares', async () => {
+      stubs.scope = editor
+      const before = (await getExpenseWithShares(tenant.scope, boatId)).shares
+      const keep = [ownerId, payerId, leaverId, goneId, strangerId]
+
+      await inStart(() =>
+        updateExpenseFn({ data: edit(keep.map((userId) => ({ userId }))) }),
+      )
+
+      const after = (await getExpenseWithShares(tenant.scope, boatId)).shares
+      expect(await shareUsers()).toEqual([...keep].sort())
+      expect(after.reduce((sum, row) => sum + row.shareMinor, 0)).toBe(9_000)
+      expect(before.map((row) => row.userId).sort()).toEqual([...keep].sort())
+    })
+
+    it('drops their share when the edit leaves them out on purpose', async () => {
+      stubs.scope = editor
+
+      await inStart(() =>
+        updateExpenseFn({
+          data: edit([{ userId: ownerId }, { userId: payerId }]),
+        }),
+      )
+
+      expect(await shareUsers()).toEqual([ownerId, payerId].sort())
+    })
+
+    it('still refuses a person who was never on the expense, and leaves its split alone', async () => {
+      stubs.scope = editor
+      const neverId = await tenant.addUser('Never on the trip')
+      const before = await shareUsers()
+
+      const error = await captureError(() =>
+        inStart(() =>
+          updateExpenseFn({
+            data: edit([{ userId: ownerId }, { userId: neverId }]),
+          }),
+        ),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await shareUsers()).toEqual(before)
     })
   })
 })

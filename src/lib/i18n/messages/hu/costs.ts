@@ -55,6 +55,11 @@ const messages = {
   'split.label': 'Felosztás',
   'split.everyone': 'Mindenki',
   'split.nobody': 'Senki',
+  'split.departed': 'Elhagyta az utat',
+  'split.departedName': 'Egykori útitárs',
+  'split.departedHint':
+    'Ha valakit, aki elhagyta az utat, kijelölés nélkül hagysz, a részesedése végleg törlődik.',
+  'split.includeFor': '{name} szerepeljen ebben a felosztásban',
   'split.how': 'Hogyan oszlik meg ez a kiadás',
   'split.method.equal': 'Egyenlően',
   'split.method.equalHint':

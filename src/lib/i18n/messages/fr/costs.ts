@@ -56,6 +56,11 @@ const messages = {
   'split.label': 'Partager entre',
   'split.everyone': 'Tout le monde',
   'split.nobody': 'Personne',
+  'split.departed': 'A quitté le voyage',
+  'split.departedName': 'Un ancien voyageur',
+  'split.departedHint':
+    'Décocher une personne qui a quitté le voyage supprime définitivement sa part.',
+  'split.includeFor': 'Inclure {name} dans ce partage',
   'split.how': 'Comment cette dépense se partage',
   'split.method.equal': 'À parts égales',
   'split.method.equalHint':
