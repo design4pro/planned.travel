@@ -162,9 +162,16 @@ function asCategory(
 }
 
 /**
+ * Keeps the left-to-right rate (`1 GBP = 195.00 JPY`) in one piece inside a right-to-left sentence;
+ * without the isolate the bidi algorithm scatters its words and the brackets around them.
+ */
+const LTR_ISOLATE_START = '\u2066'
+const POP_ISOLATE = '\u2069'
+
+/**
  * The converted figure a frozen rate implies for the typed amount, as the field would hold it, or
- * `''` when there is nothing to suggest. An amount too large to convert is nothing to suggest, not
- * an error to show.
+ * `''` when there is nothing to suggest. An amount too large to convert, or one that converts to
+ * nothing, is nothing to suggest, not an error or a `0.00` to show.
  */
 function suggestedFigure(
   typedMinor: number | null,
@@ -176,7 +183,8 @@ function suggestedFigure(
     return ''
   }
   try {
-    return toAmountInput(convertMinor(typedMinor, rate, from, to), to)
+    const convertedMinor = convertMinor(typedMinor, rate, from, to)
+    return convertedMinor > 0 ? toAmountInput(convertedMinor, to) : ''
   } catch (cause) {
     if (cause instanceof RangeError) {
       return ''
@@ -304,7 +312,7 @@ export function ExpenseDialog({
       ? t('costs.expense.convertedSuggested', {
           date:
             formatDate(suggestion.observedOn, locale) ?? suggestion.observedOn,
-          rate: rate ?? '',
+          rate: LTR_ISOLATE_START + (rate ?? '') + POP_ISOLATE,
         })
       : (rate ??
         t('costs.expense.convertedHint', {

@@ -42,7 +42,7 @@ const SUGGESTED: CostsPayload['suggestedRate'] = {
 /** The static hint a foreign expense shows until both figures parse. */
 const STATIC_HINT = 'What GBP came to in EUR on your statement.'
 const SUGGESTED_HINT =
-  'Suggested from the rate used on this trip on 12 May 2026 (1 GBP = 1.15 EUR). Change it to match your statement.'
+  'Suggested from the rate used on this trip on 12 May 2026 (\u20661 GBP = 1.15 EUR\u2069). Change it to match your statement.'
 
 function expenseRow(overrides: Partial<CostsExpense>): CostsExpense {
   return {
@@ -225,6 +225,18 @@ describe('the expense dialog’s suggested converted figure', () => {
 
     await pickCurrency(user, 'USD')
     expect(valueOf(convertedField())).toBe('110.00')
+    expect(screen.queryByText(/Suggested from the rate/)).toBeNull()
+  })
+
+  it('suggests nothing when the typed amount converts to less than the smallest unit', async () => {
+    const user = hand()
+    open({ GBP: { rate: 0.001, observedOn: '2026-05-12' } })
+
+    await pickCurrency(user, 'GBP')
+    await user.type(amountField(), '1.00')
+
+    expect(valueOf(convertedField())).toBe('')
+    expect(screen.getByText(STATIC_HINT)).toBeTruthy()
     expect(screen.queryByText(/Suggested from the rate/)).toBeNull()
   })
 
