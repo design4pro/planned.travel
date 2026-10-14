@@ -74,17 +74,18 @@ export function DisplayCurrencyMenu({
   return (
     <div
       data-part="display-currency"
-      aria-busy={saving}
       className="flex shrink-0 items-center gap-2"
     >
-      {/* The visible saving state: the trigger stays enabled (focus), so the badge says a write is in flight. */}
+      {/* The visible saving state is a dot before the label: the trigger stays enabled (focus), so the badge
+          says a write is in flight without changing its text or its width by more than the dot. */}
       <Badge
         tone={display.mode === 'fixed' ? 'accent' : 'outline'}
         size="sm"
         data-part="display-currency-indicator"
         aria-hidden="true"
+        dot={saving}
       >
-        {saving ? t('costs.display.menu.saving') : indicator}
+        {indicator}
       </Badge>
       <SimpleSelect
         size="sm"

@@ -301,7 +301,9 @@ describe('the display currency on the costs screen', () => {
       expect(live()?.textContent).toBe(Costs['display.menu.saving']),
     )
     expect(trigger().hasAttribute('disabled')).toBe(false)
-    expect(indicator()?.textContent).toBe(Costs['display.menu.saving'])
+    // The visible saving state is the badge's dot; its text stays the indicator.
+    expect(indicator()?.querySelector('span.rounded-full')).not.toBeNull()
+    expect(indicator()?.textContent).toBe(Costs['display.indicator.perTrip'])
     await user.click(trigger())
     await user.click(screen.getByRole('option', { name: /workspace default/ }))
     expect(setDisplayCurrencyFn).toHaveBeenCalledTimes(1)
@@ -310,6 +312,7 @@ describe('the display currency on the costs screen', () => {
     await waitFor(() =>
       expect(live()?.textContent).not.toBe(Costs['display.menu.saving']),
     )
+    expect(indicator()?.querySelector('span.rounded-full')).toBeNull()
   })
 
   it('hands an option its reason as an accessible description', async () => {
