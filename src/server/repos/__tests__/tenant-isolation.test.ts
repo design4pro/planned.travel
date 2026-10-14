@@ -243,6 +243,7 @@ import {
   MAX_BOUND_PARAMETERS,
   copyTripContents,
   countTripsByStatus,
+  TripArchivedError,
   TripRoleError,
   createShareLink,
   createTrip,
@@ -300,6 +301,7 @@ import {
   resolveRate,
   suggestedRatesForTrip,
 } from '../rates'
+import { previewCurrencyChange } from '../trip-currency'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
@@ -5758,6 +5760,236 @@ describe('tenant isolation', () => {
           ...query,
         }),
       ).toEqual({ GBP: { rate: 1.15, observedOn: '2026-04-11' } })
+    })
+  })
+  /**
+   * The preview reads every money row of a trip and can name a rate from the whole workspace, so a
+   * read that forgot the trip, the tenant or the visibility of the trip a rate was frozen on would
+   * show somebody else's money. It also has to write nothing, in either workspace.
+   */
+  describe('previewing a change of a trip’s budget currency', () => {
+    const PREVIEW = { to: 'JPY', rate: 160 } as const
+
+    async function footprint() {
+      const both = [alpha.tenant.scope, beta.tenant.scope]
+      return {
+        trips: await Promise.all(both.map((s) => tripsRepository.findMany(s))),
+        expenses: await Promise.all(
+          both.map((s) => expensesRepository.findMany(s)),
+        ),
+        shares: await Promise.all(
+          both.map((s) => expenseSharesRepository.findMany(s)),
+        ),
+        settlements: await Promise.all(
+          both.map((s) => settlementsRepository.findMany(s)),
+        ),
+        budgetItems: await Promise.all(
+          both.map((s) => budgetItemsRepository.findMany(s)),
+        ),
+      }
+    }
+
+    /** A trip in `world` that already holds money, so a read that lost its trip filter has something to show. */
+    async function richSibling(world: World) {
+      const sibling = await createTrip(world.tenant.scope, {
+        title: 'Sibling with money',
+        startDate: '2026-05-01',
+        endDate: '2026-05-02',
+        currency: 'EUR',
+      })
+      await createExpense(world.tenant.scope, {
+        tripId: sibling.id,
+        title: 'Sibling dinner',
+        amountMinor: 9900,
+        spentOn: '2026-05-01',
+      })
+      await createBudgetItem(world.tenant.scope, {
+        tripId: sibling.id,
+        name: 'Sibling food',
+        plannedAmountMinor: 12_300,
+      })
+      return sibling
+    }
+
+    async function freezeYenRate(world: World, rate: number, title: string) {
+      const yen = await createTrip(world.tenant.scope, {
+        title,
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+        currency: 'JPY',
+      })
+      await createExpense(world.tenant.scope, {
+        tripId: yen.id,
+        title: 'Ramen paid in euros',
+        amountMinor: 1600,
+        currency: 'JPY',
+        originalAmountMinor: 1000,
+        originalCurrency: 'EUR',
+        exchangeRate: rate,
+        spentOn: '2026-06-01',
+      })
+      return yen
+    }
+
+    it('counts only the trip asked about, whatever a sibling trip or another workspace holds', async () => {
+      await richSibling(alpha)
+      await richSibling(beta)
+      const own = (
+        await expensesRepository.findMany(alpha.tenant.scope)
+      ).filter((row) => row.tripId === alpha.tripId)
+      const ownItems = (
+        await budgetItemsRepository.findMany(alpha.tenant.scope)
+      ).filter((row) => row.tripId === alpha.tripId)
+      const before = await footprint()
+
+      const preview = await previewCurrencyChange(
+        alpha.tenant.scope,
+        alpha.tripId,
+        PREVIEW,
+      )
+
+      expect(preview.counts.expenses).toBe(own.length)
+      expect(preview.counts.budgetItems).toBe(ownItems.length)
+      expect(preview.counts.expenses).toBeGreaterThan(0)
+      // Nothing was written, in A's other trip or anywhere in B.
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is not found, and writes nothing, for another workspace’s trip', async () => {
+      const before = await footprint()
+
+      const failure = await captureError(() =>
+        previewCurrencyChange(alpha.tenant.scope, beta.tripId, PREVIEW),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is not found, and writes nothing, for a private trip the caller is not on', async () => {
+      const privateTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Private to A’s owner',
+        currency: 'EUR',
+        visibility: 'private',
+      })
+      const before = await footprint()
+
+      const failure = await captureError(() =>
+        previewCurrencyChange(
+          alpha.tenant.scopeFor(alpha.secondUserId),
+          privateTrip.id,
+          PREVIEW,
+        ),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is refused to an editor and a viewer, who see the trip but do not own it', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: alpha.secondUserId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const before = await footprint()
+
+      for (const userId of [alpha.secondUserId, viewerId]) {
+        const failure = await captureError(() =>
+          previewCurrencyChange(
+            alpha.tenant.scopeFor(userId),
+            alpha.tripId,
+            PREVIEW,
+          ),
+        )
+        expect(failure).toBeInstanceOf(TripRoleError)
+      }
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is refused for an archived trip, and writes nothing', async () => {
+      await archiveTrip(alpha.tenant.scope, alpha.tripId)
+      const before = await footprint()
+
+      const failure = await captureError(() =>
+        previewCurrencyChange(alpha.tenant.scope, alpha.tripId, PREVIEW),
+      )
+
+      expect(failure).toBeInstanceOf(TripArchivedError)
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('never suggests a rate frozen in another workspace', async () => {
+      await freezeYenRate(beta, 150, 'Beta’s Tokyo')
+      const before = await footprint()
+
+      const alphaPreview = await previewCurrencyChange(
+        alpha.tenant.scope,
+        alpha.tripId,
+        { to: 'JPY' },
+      )
+
+      expect(alphaPreview.rate).toBeNull()
+      expect(alphaPreview.refusal).toEqual({ kind: 'no-rate' })
+      // The positive control: the workspace that froze it is offered it.
+      const betaPreview = await previewCurrencyChange(
+        beta.tenant.scope,
+        beta.tripId,
+        { to: 'JPY' },
+      )
+      expect(betaPreview.rate).toEqual({ value: 150, source: 'recent' })
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('never suggests a rate frozen on a private trip the caller cannot read, and does once it is shared', async () => {
+      const secondScope = alpha.tenant.scopeFor(alpha.secondUserId)
+      const theirs = await createTrip(secondScope, {
+        title: 'The second traveller’s own trip',
+        currency: 'EUR',
+      })
+      await createExpense(secondScope, {
+        tripId: theirs.id,
+        title: 'Dinner',
+        amountMinor: 4200,
+        spentOn: '2026-04-10',
+      })
+      const privateYen = await createTrip(alpha.tenant.scope, {
+        title: 'Owner only',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+        currency: 'JPY',
+        visibility: 'private',
+      })
+      await createExpense(alpha.tenant.scope, {
+        tripId: privateYen.id,
+        title: 'Ramen paid in euros',
+        amountMinor: 1600,
+        currency: 'JPY',
+        originalAmountMinor: 1000,
+        originalCurrency: 'EUR',
+        exchangeRate: 155,
+        spentOn: '2026-06-01',
+      })
+
+      const hidden = await previewCurrencyChange(secondScope, theirs.id, {
+        to: 'JPY',
+      })
+      expect(hidden.rate).toBeNull()
+      expect(hidden.refusal).toEqual({ kind: 'no-rate' })
+
+      await updateTrip(alpha.tenant.scope, privateYen.id, {
+        visibility: 'organization',
+      })
+      const shared = await previewCurrencyChange(secondScope, theirs.id, {
+        to: 'JPY',
+      })
+      expect(shared.rate).toEqual({ value: 155, source: 'recent' })
     })
   })
 })

@@ -64,6 +64,8 @@ describe('the rate lookup', () => {
       tripId: trip,
       fromUserId: friendId,
       toUserId: ownerId,
+      // A payment cannot be handed a rate: it derives the rate from the two amounts, so the
+      // converted amount is the one that makes `rate` the implied one (#843).
       amountMinor: Math.round(4000 * rate),
       currency: to,
       originalAmountMinor: 4000,
