@@ -108,7 +108,15 @@ import {
   updateBudgetItem,
   updateExpense,
 } from '../expenses'
-import { getStorageUsage, recordFile, tripFilesRepository } from '../files'
+import {
+  deleteFile,
+  getFile,
+  getStorageUsage,
+  listTripFiles,
+  recordFile,
+  tripFilesRepository,
+  updateFile,
+} from '../files'
 import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
 import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
@@ -4670,6 +4678,145 @@ describe('tenant isolation', () => {
           requireDayNote(alpha.tenant.scope, beta.dayNoteId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  /**
+   * A trip's file writes. Membership is not a role: a viewer reads the trip's files and writes none
+   * of them, an archived trip refuses everybody, and a file id is bound to the trip it names, so the
+   * trip a caller proved they may change is the trip whose file they change.
+   */
+  describe('trip files', () => {
+    const INPUT = {
+      storageKey: 'files/written.pdf',
+      filename: 'written.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 10,
+    }
+
+    async function memberScope(
+      role: 'viewer' | 'editor',
+    ): Promise<TenantScope> {
+      const userId = await alpha.tenant.addUser(`File ${role} of A`)
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId,
+        role,
+      })
+      return alpha.tenant.scopeFor(userId)
+    }
+
+    /** The three writers, aimed at A's own file on A's trip. */
+    function writersAs(
+      scope: TenantScope,
+    ): ReadonlyArray<() => Promise<unknown>> {
+      return [
+        () => recordFile(scope, { ...INPUT, tripId: alpha.tripId }),
+        () =>
+          updateFile(scope, alpha.tripId, alpha.fileId, {
+            filename: 'new.pdf',
+          }),
+        () => deleteFile(scope, alpha.tripId, alpha.fileId),
+      ]
+    }
+
+    async function filesOf(scope: TenantScope, tripId: string) {
+      return listTripFiles(scope, tripId)
+    }
+
+    it('refuses a viewer all three writes and changes nothing', async () => {
+      const viewer = await memberScope('viewer')
+      const before = await filesOf(alpha.tenant.scope, alpha.tripId)
+
+      for (const attempt of writersAs(viewer)) {
+        expect(await captureError(attempt)).toBeInstanceOf(TripRoleError)
+      }
+
+      expect(await filesOf(alpha.tenant.scope, alpha.tripId)).toEqual(before)
+    })
+
+    it('admits an editor and an owner on the same trip', async () => {
+      const editor = await memberScope('editor')
+
+      await recordFile(editor, { ...INPUT, tripId: alpha.tripId })
+      const renamed = await updateFile(editor, alpha.tripId, alpha.fileId, {
+        filename: 'editor.pdf',
+      })
+      expect(renamed.filename).toBe('editor.pdf')
+      expect(await deleteFile(editor, alpha.tripId, alpha.fileId)).toEqual(
+        expect.any(String),
+      )
+
+      const second = await recordFile(alpha.tenant.scope, {
+        ...INPUT,
+        storageKey: 'files/owner.pdf',
+        tripId: alpha.tripId,
+      })
+      await updateFile(alpha.tenant.scope, alpha.tripId, second.id, {
+        filename: 'owner.pdf',
+      })
+      await deleteFile(alpha.tenant.scope, alpha.tripId, second.id)
+    })
+
+    it('refuses every write on an archived trip, owner included, before the role', async () => {
+      const viewer = await memberScope('viewer')
+      await archiveTrip(alpha.tenant.scope, alpha.tripId)
+      const before = await filesOf(alpha.tenant.scope, alpha.tripId)
+
+      for (const scope of [alpha.tenant.scope, viewer]) {
+        for (const attempt of writersAs(scope)) {
+          expect(await captureError(attempt)).toBeInstanceOf(TripArchivedError)
+        }
+      }
+
+      expect(await filesOf(alpha.tenant.scope, alpha.tripId)).toEqual(before)
+    })
+
+    it('answers a member of the workspace who cannot see a private trip with NotFound', async () => {
+      const strangerId = await alpha.tenant.addUser('Stranger')
+      const stranger = alpha.tenant.scopeFor(strangerId)
+
+      for (const attempt of writersAs(stranger)) {
+        const error = await captureError(attempt)
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(error).not.toBeInstanceOf(TripRoleError)
+      }
+    })
+
+    it('binds a file id to the trip it names', async () => {
+      // A second trip the editor may change, and a file on a trip they may only read.
+      const editor = await memberScope('editor')
+      const other = await createTrip(alpha.tenant.scope, { title: 'Porto' })
+      const onOther = await recordFile(alpha.tenant.scope, {
+        ...INPUT,
+        tripId: other.id,
+      })
+      const before = await getFile(alpha.tenant.scope, onOther.id)
+
+      // The caller may write on A's trip but is not on the other (private) one at all.
+      for (const attempt of [
+        () =>
+          updateFile(editor, alpha.tripId, onOther.id, { filename: 'x.pdf' }),
+        () => deleteFile(editor, alpha.tripId, onOther.id),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+      expect(await getFile(alpha.tenant.scope, onOther.id)).toEqual(before)
+    })
+
+    it('refuses a file id of another workspace', async () => {
+      const before = await getFile(beta.tenant.scope, beta.fileId)
+
+      for (const attempt of [
+        () =>
+          updateFile(alpha.tenant.scope, alpha.tripId, beta.fileId, {
+            filename: 'x.pdf',
+          }),
+        () => deleteFile(alpha.tenant.scope, alpha.tripId, beta.fileId),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+      expect(await getFile(beta.tenant.scope, beta.fileId)).toEqual(before)
     })
   })
 
