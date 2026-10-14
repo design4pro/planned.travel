@@ -7,7 +7,13 @@
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { clearTripCoverIfKey, createTrip, getTrip, updateTrip } from '../trips'
+import {
+  addTripMember,
+  clearTripCoverIfKey,
+  createTrip,
+  getTrip,
+  updateTrip,
+} from '../trips'
 import { createHarness } from './harness'
 import type { Harness, SeededTenant } from './harness'
 import type { Trip } from '#/server/db/types'
@@ -60,11 +66,25 @@ describe('clearTripCoverIfKey', () => {
     expect((await getTrip(other.scope, foreign.id))?.coverImageKey).toBe(KEY)
   })
 
-  it('is open to a member who is not the trip owner', async () => {
+  it('is open to an editor of the trip, not only its owner', async () => {
     const editorId = await tenant.addUser('Editor')
+    await addTripMember(tenant.scope, {
+      tripId: trip.id,
+      userId: editorId,
+      role: 'editor',
+    })
 
     expect(
       await clearTripCoverIfKey(tenant.scopeFor(editorId), trip.id, KEY),
     ).toBe(true)
+  })
+
+  it('does not reach a private trip the caller is not on', async () => {
+    const strangerId = await tenant.addUser('Stranger')
+
+    expect(
+      await clearTripCoverIfKey(tenant.scopeFor(strangerId), trip.id, KEY),
+    ).toBe(false)
+    expect((await getTrip(tenant.scope, trip.id))?.coverImageKey).toBe(KEY)
   })
 })

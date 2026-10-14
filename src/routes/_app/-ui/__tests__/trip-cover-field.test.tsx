@@ -83,7 +83,10 @@ describe('TripCoverField', () => {
   it('takes an image dropped on it', () => {
     const { onChoose } = mount()
     fireEvent.drop(screen.getByRole('button', { name: 'Add a cover image' }), {
-      dataTransfer: { files: [image('drop.webp', 'image/webp')] },
+      dataTransfer: {
+        types: ['Files'],
+        files: [image('drop.webp', 'image/webp')],
+      },
     })
     expect(onChoose).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'drop.webp' }),
@@ -111,7 +114,10 @@ describe('TripCoverField', () => {
   it('refuses a file that cannot be a cover and says why', () => {
     const { onChoose } = mount()
     fireEvent.drop(screen.getByRole('button', { name: 'Add a cover image' }), {
-      dataTransfer: { files: [image('doc.pdf', 'application/pdf')] },
+      dataTransfer: {
+        types: ['Files'],
+        files: [image('doc.pdf', 'application/pdf')],
+      },
     })
     expect(onChoose).not.toHaveBeenCalled()
     expect(screen.getByRole('alert').textContent).toContain('“doc.pdf”')
@@ -127,6 +133,40 @@ describe('TripCoverField', () => {
       screen.getByRole('button', { name: 'Remove the cover image' }),
     )
     expect(onRemove).toHaveBeenCalledOnce()
+  })
+
+  it('returns focus to the region when the choice is removed', async () => {
+    mount({ file: image() })
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove the cover image' }),
+    )
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Change the cover image' }),
+    )
+  })
+
+  it('takes the first of several dropped files', () => {
+    const { onChoose } = mount()
+    fireEvent.drop(screen.getByRole('button', { name: 'Add a cover image' }), {
+      dataTransfer: {
+        types: ['Files'],
+        files: [image('a.png'), image('b.png')],
+      },
+    })
+    expect(onChoose).toHaveBeenCalledOnce()
+    expect(onChoose).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'a.png' }),
+    )
+  })
+
+  it('keeps the page from navigating to a file dropped beside the region', () => {
+    mount()
+    const dropped = new Event('drop', { cancelable: true })
+    Object.defineProperty(dropped, 'dataTransfer', {
+      value: { types: ['Files'] },
+    })
+    window.dispatchEvent(dropped)
+    expect(dropped.defaultPrevented).toBe(true)
   })
 
   it('shows the trip’s current cover, and nothing to remove once it is removed', () => {

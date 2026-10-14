@@ -21,7 +21,7 @@
  * function that hands it `requiresTitle` re-derives the rule on the write, so a browser that skipped
  * the dialog gains nothing.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import {
   Archive,
@@ -123,7 +123,16 @@ export function TripEditSheet({
   const [error, setError] = useState<string | null>(null)
   const [coverProgress, setCoverProgress] = useState<number | null>(null)
   /** The file that did not become the cover, named in the sentence that offers to go on without. */
-  const [coverFailure, setCoverFailure] = useState<string | null>(null)
+  const [coverFailure, setCoverFailure] = useState<{
+    name: string
+    reason: string | null
+  } | null>(null)
+  const failureRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (coverFailure !== null) {
+      failureRef.current?.focus()
+    }
+  }, [coverFailure])
   /** A file already stored whose cover write failed, so a retry does not upload it twice. */
   const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
     null,
@@ -171,7 +180,7 @@ export function TripEditSheet({
     })
     setCoverProgress(null)
     if (!answer.ok) {
-      setCoverFailure(cover.name)
+      setCoverFailure({ name: cover.name, reason: answer.message })
       return 'failed'
     }
     setUploaded({ file: cover, id: answer.file.id })
@@ -270,38 +279,45 @@ export function TripEditSheet({
             )}
 
             {coverFailure === null ? null : (
-              <Alert
-                tone="warning"
-                title={t('shell.newTrip.coverFailedTitle')}
-                actions={
-                  <>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      shape="pill"
-                      onClick={() => {
-                        if (form.canSave) void submit()
-                      }}
-                    >
-                      {t('shell.editTrip.retry')}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      shape="pill"
-                      onClick={() => {
-                        if (form.canSave) void submit({ skipCover: true })
-                      }}
-                    >
-                      {t('shell.editTrip.coverContinue')}
-                    </Button>
-                  </>
-                }
-              >
-                {t('shell.editTrip.coverFailed', { name: coverFailure })}
-              </Alert>
+              <div ref={failureRef} tabIndex={-1} className="outline-none">
+                <Alert
+                  tone="warning"
+                  title={t('shell.newTrip.coverFailedTitle')}
+                  actions={
+                    <>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        shape="pill"
+                        onClick={() => {
+                          if (form.canSave) void submit()
+                        }}
+                      >
+                        {t('shell.editTrip.retry')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        shape="pill"
+                        onClick={() => {
+                          if (form.canSave) void submit({ skipCover: true })
+                        }}
+                      >
+                        {t('shell.editTrip.coverContinue')}
+                      </Button>
+                    </>
+                  }
+                >
+                  {t('shell.editTrip.coverFailed', { name: coverFailure.name })}
+                  {coverFailure.reason === null ? null : (
+                    <span className="mt-1 block break-words">
+                      {coverFailure.reason}
+                    </span>
+                  )}
+                </Alert>
+              </div>
             )}
 
             <TripFormFields

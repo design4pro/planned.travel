@@ -93,6 +93,8 @@ export interface TripForm {
   removeCover: () => void
   /** Named on the Return field, and the reason {@link TripForm.canSave} is false. */
   datesOutOfOrder: boolean
+  /** A save is in flight: the fields are locked, so what was sent is what is on screen. */
+  saving: boolean
   /** A name, dates in order, and no save already in flight. */
   canSave: boolean
 }
@@ -185,6 +187,7 @@ export function useTripForm(
       }
     },
     datesOutOfOrder,
+    saving,
     canSave: values.title.trim().length > 0 && !datesOutOfOrder && !saving,
   }
 }
@@ -263,14 +266,16 @@ export function TripFormFields({
   const showDuration = undatedDays || !neitherDate
 
   return (
-    <>
+    // `display: contents` keeps the fields in the parent's flex column; the fieldset is only the
+    // switch that locks every control at once while a save, which may include an upload, runs.
+    <fieldset disabled={form.saving} className="contents">
       {owner ? (
         <TripCoverField
           file={form.cover}
           currentUrl={currentCoverUrl}
           removed={form.coverRemoved}
           progress={coverProgress}
-          disabled={coverProgress !== null}
+          disabled={form.saving || coverProgress !== null}
           onChoose={form.chooseCover}
           onRemove={form.removeCover}
         />
@@ -362,7 +367,7 @@ export function TripFormFields({
       />
 
       {owner ? <ReminderField form={form} /> : null}
-    </>
+    </fieldset>
   )
 }
 

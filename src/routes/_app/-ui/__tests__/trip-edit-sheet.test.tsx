@@ -185,6 +185,18 @@ describe('the trip edit sheet and the cover image', () => {
     )
   })
 
+  it('says why the server refused the image', async () => {
+    upload.upload.mockResolvedValue({
+      ok: false,
+      code: 'quota',
+      message: 'The workspace is out of storage.',
+    })
+    const user = await chooseCover()
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await screen.findByText('The workspace is out of storage.')
+  })
+
   it('writes nothing when the image fails, and saves the rest on request', async () => {
     upload.upload.mockResolvedValue({ ok: false, code: 'x', message: 'no' })
     server.update.mockResolvedValue(undefined)

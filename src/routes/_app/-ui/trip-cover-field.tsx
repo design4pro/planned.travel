@@ -58,6 +58,7 @@ export function TripCoverField({
   const t = useTranslate()
   const hintId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const regionRef = useRef<HTMLButtonElement>(null)
   const [dragging, setDragging] = useState(false)
   const [problem, setProblem] = useState<{
     kind: CoverProblem
@@ -77,6 +78,22 @@ export function TripCoverField({
       URL.revokeObjectURL(url)
     }
   }, [file])
+
+  // A file dropped just outside the region would make the browser navigate to it and lose the
+  // form. The region handles its own drops; everywhere else a dragged file is simply ignored.
+  useEffect(() => {
+    const ignoreFiles = (event: DragEvent): void => {
+      if (event.dataTransfer?.types.includes('Files')) {
+        event.preventDefault()
+      }
+    }
+    window.addEventListener('dragover', ignoreFiles)
+    window.addEventListener('drop', ignoreFiles)
+    return () => {
+      window.removeEventListener('dragover', ignoreFiles)
+      window.removeEventListener('drop', ignoreFiles)
+    }
+  }, [])
 
   const shown = previewUrl ?? (removed ? null : currentUrl)
   const uploading = progress !== null
@@ -112,6 +129,7 @@ export function TripCoverField({
       />
 
       <button
+        ref={regionRef}
         type="button"
         disabled={disabled}
         aria-describedby={hintId}
@@ -169,7 +187,11 @@ export function TripCoverField({
         </span>
       </button>
 
-      <p id={hintId} className="text-caption text-ink-3">
+      <p
+        id={hintId}
+        aria-live="polite"
+        className="break-words text-caption text-ink-3"
+      >
         {file === null
           ? t('shell.newTrip.coverHint')
           : t('shell.newTrip.coverChosen', { name: file.name })}
@@ -184,7 +206,7 @@ export function TripCoverField({
       ) : null}
 
       {problem === null ? null : (
-        <p role="alert" className="text-caption text-danger">
+        <p role="alert" className="break-words text-caption text-danger">
           {problem.kind === 'type'
             ? t('shell.newTrip.coverTypeError', { name: problem.name })
             : t('shell.newTrip.coverSizeError', {
@@ -205,6 +227,8 @@ export function TripCoverField({
             onClick={() => {
               setProblem(null)
               onRemove()
+              // The button unmounts with the choice; focus would otherwise fall to the page.
+              regionRef.current?.focus()
             }}
           >
             {t('shell.newTrip.coverRemove')}

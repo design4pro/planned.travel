@@ -4,6 +4,7 @@
  * One definition so the two screens can never drift: same cover treatment,
  * same status badge, same date line, same hover lift.
  */
+import { useState } from 'react'
 import type * as React from 'react'
 import { Link } from '@tanstack/react-router'
 import { CalendarDays, MapPin, Star } from 'lucide-react'
@@ -90,6 +91,40 @@ function washesFor(
   })
 }
 
+/**
+ * The tile's picture: the trip's cover, or the shipped cover art when it has none or the cover
+ * cannot be loaded (the object is gone, or the reader's session ended), so a tile never shows a
+ * broken image.
+ */
+function TileCover({
+  id,
+  url,
+  wash,
+  ink,
+}: {
+  id: string
+  url: string | null
+  wash: string
+  ink: string
+}) {
+  const [failed, setFailed] = useState(false)
+  if (url === null || failed) {
+    return <CoverArt id={id} wash={wash} ink={ink} />
+  }
+  return (
+    <img
+      src={url}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className="size-full object-cover"
+      onError={() => {
+        setFailed(true)
+      }}
+    />
+  )
+}
+
 export function TripTile({
   trip,
   today,
@@ -136,15 +171,13 @@ export function TripTile({
       <div className="relative h-28 shrink-0 overflow-hidden bg-surface-2">
         {copying ? (
           <Skeleton radius="sm" className="size-full rounded-none" />
-        ) : trip.coverImageUrl === null ? (
-          <CoverArt id={trip.id} wash={cover.wash} ink={cover.ink} />
         ) : (
-          <img
-            src={trip.coverImageUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="size-full object-cover"
+          <TileCover
+            key={trip.coverImageUrl}
+            id={trip.id}
+            url={trip.coverImageUrl}
+            wash={cover.wash}
+            ink={cover.ink}
           />
         )}
 

@@ -5,7 +5,7 @@
  * reachable, so it lives beside the screen that needs it rather than in a
  * feature module of its own.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -63,7 +63,15 @@ export function NewTripDialog({
     tripId: string
     filename: string
     uploadedFileId: string | null
+    reason: string | null
   } | null>(null)
+  const failureRef = useRef<HTMLDivElement>(null)
+  // The form is replaced by the failure notice, so focus would otherwise fall to the dialog root.
+  useEffect(() => {
+    if (coverFailure !== null) {
+      failureRef.current?.focus()
+    }
+  }, [coverFailure])
   const form = useTripForm(
     {
       title: '',
@@ -120,6 +128,7 @@ export function NewTripDialog({
       tripId,
       filename: attached.filename,
       uploadedFileId: attached.uploadedFileId,
+      reason: attached.reason,
     })
   }
 
@@ -218,17 +227,27 @@ export function NewTripDialog({
                 coverProgress={coverProgress}
               />
             ) : (
-              <Alert tone="warning" title={t('shell.newTrip.coverFailedTitle')}>
-                {t('shell.newTrip.coverFailed', {
-                  name: coverFailure.filename,
-                })}
-              </Alert>
+              <div ref={failureRef} tabIndex={-1} className="outline-none">
+                <Alert
+                  tone="warning"
+                  title={t('shell.newTrip.coverFailedTitle')}
+                >
+                  {t('shell.newTrip.coverFailed', {
+                    name: coverFailure.filename,
+                  })}
+                  {coverFailure.reason === null ? null : (
+                    <span className="mt-1 block break-words">
+                      {coverFailure.reason}
+                    </span>
+                  )}
+                </Alert>
+              </div>
             )}
           </form>
         </DialogBody>
 
         {coverFailure === null ? (
-          <DialogFooter>
+          <DialogFooter key="create">
             <Button
               type="button"
               variant="ghost"
@@ -253,12 +272,14 @@ export function NewTripDialog({
             </Button>
           </DialogFooter>
         ) : (
-          <DialogFooter>
+          <DialogFooter key="cover-failed">
             <Button
               type="button"
               variant="ghost"
               shape="pill"
               disabled={saving}
+              loading={saving}
+              loadingLabel={t('shell.newTrip.coverUploading')}
               onClick={() => {
                 void retryCover()
               }}
