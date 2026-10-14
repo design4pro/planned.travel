@@ -93,6 +93,8 @@ const messages = {
   'expense.currencyLabel': 'Moeda em que este comprovante foi emitido',
   'expense.convertedTo': 'Convertido para {currency}',
   'expense.convertedHint': 'Quanto {from} deu em {to} no seu extrato.',
+  'expense.convertedSuggested':
+    'Sugerido a partir da taxa usada nesta viagem em {date} ({rate}). Altere para bater com o seu extrato.',
   'expense.convertedNotANumber': 'Escreva o valor convertido como número.',
   'expense.dateLabel': 'Data da despesa',
   'expense.paidByHint':

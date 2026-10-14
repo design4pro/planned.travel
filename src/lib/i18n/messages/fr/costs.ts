@@ -95,6 +95,8 @@ const messages = {
   'expense.currencyLabel': 'Devise dans laquelle ce justificatif est libellé',
   'expense.convertedTo': 'Converti en {currency}',
   'expense.convertedHint': 'Ce que {from} a donné en {to} sur votre relevé.',
+  'expense.convertedSuggested':
+    'Suggéré d’après le taux utilisé sur ce voyage le {date} ({rate}). Modifiez-le pour qu’il corresponde à votre relevé.',
   'expense.convertedNotANumber':
     'Saisissez le montant converti sous forme de nombre.',
   'expense.dateLabel': 'Date de la dépense',

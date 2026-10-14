@@ -90,6 +90,8 @@ const messages = {
   'expense.currencyLabel': 'Mata uang yang tertulis di kuitansi ini',
   'expense.convertedTo': 'Dikonversi ke {currency}',
   'expense.convertedHint': 'Berapa {from} jadinya dalam {to} di rekeningmu.',
+  'expense.convertedSuggested':
+    'Disarankan dari kurs yang dipakai di perjalanan ini pada {date} ({rate}). Ubah agar sesuai dengan rekeningmu.',
   'expense.convertedNotANumber': 'Tulis jumlah hasil konversi sebagai angka.',
   'expense.dateLabel': 'Tanggal pengeluaran',
   'expense.paidByHint':

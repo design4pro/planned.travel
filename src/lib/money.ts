@@ -197,8 +197,17 @@ export function formatExchangeRate(
   if (rate === null || input.originalCurrency === null) {
     return null
   }
-  const figure = formatRate(rate, locale)
-  return `1 ${currencyCode(input.originalCurrency)} = ${figure} ${currencyCode(input.currency)}`
+  return formatRateLine(rate, input.originalCurrency, input.currency, locale)
+}
+
+/** `1 GBP = 195.37 JPY`: a rate stated outright, for one that is known rather than implied. */
+export function formatRateLine(
+  rate: number,
+  from: string,
+  to: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return `1 ${currencyCode(from)} = ${formatRate(rate, locale)} ${currencyCode(to)}`
 }
 
 /**

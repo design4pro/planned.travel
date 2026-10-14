@@ -98,6 +98,8 @@ const messages = {
   'expense.currencyLabel': 'Waluta, w której wystawiono paragon',
   'expense.convertedTo': 'Przeliczone na {currency}',
   'expense.convertedHint': 'Ile {from} wyszło w {to} na twoim wyciągu.',
+  'expense.convertedSuggested':
+    'Podpowiedź z kursu użytego w tej podróży dnia {date} ({rate}). Zmień kwotę, aby zgadzała się z twoim wyciągiem.',
   'expense.convertedNotANumber': 'Wpisz przeliczoną kwotę jako liczbę.',
   'expense.dateLabel': 'Data wydatku',
   'expense.paidByHint':

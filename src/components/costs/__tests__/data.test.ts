@@ -185,6 +185,7 @@ const PAYLOAD: CostsPayload = {
   people: PEOPLE,
   viewerUserId: 'u-rafal',
   canWrite: true,
+  suggestedRate: null,
 }
 
 const ALL: CostsFilters = {

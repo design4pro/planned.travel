@@ -66,6 +66,9 @@ const ACCEPTED: ReadonlyMap<string, FileKind> = new Map<string, FileKind>([
   ['application/gpx+xml', 'map'],
   ['application/json', 'document'],
   ['application/zip', 'other'],
+  // An airline's wallet pass. Most senders label it `application/octet-stream`, so the extension
+  // table below is the path that fires in practice.
+  ['application/vnd.apple.pkpass', 'ticket'],
 ])
 
 /** The `accept` attribute for the file input, so the OS dialog filters too. */
@@ -92,6 +95,7 @@ export const ACCEPT_ATTRIBUTE = [
   '.gpx',
   '.json',
   '.zip',
+  '.pkpass',
 ].join(',')
 
 /** Extensions we can classify when the browser sends no usable media type. */
@@ -117,6 +121,7 @@ const BY_EXTENSION: ReadonlyMap<string, { type: string; kind: FileKind }> =
     ['gpx', { type: 'application/gpx+xml', kind: 'map' }],
     ['json', { type: 'application/json', kind: 'document' }],
     ['zip', { type: 'application/zip', kind: 'other' }],
+    ['pkpass', { type: 'application/vnd.apple.pkpass', kind: 'ticket' }],
   ])
 
 function extensionOf(filename: string): string {
@@ -191,6 +196,38 @@ export function sanitiseFilename(filename: string): string {
     .trim()
     .slice(0, 160)
   return cleaned.length === 0 ? 'attachment' : cleaned
+}
+
+/**
+ * The one `content-disposition` a stored file is served and written under: always an attachment.
+ *
+ * Shared by {@link attachmentHeaders} and by the metadata written when an object is stored, so the
+ * two cannot drift.
+ */
+export function contentDispositionFor(filename: string): string {
+  return `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+}
+
+/**
+ * The response headers for downloading a stored file.
+ *
+ * `content-type` is the stored media type echoed as it is, never re-derived, so a wallet pass
+ * leaves as `application/vnd.apple.pkpass`. The file is always an attachment, private to the
+ * workspace and uncached, and `nosniff` stops a browser reinterpreting the bytes as another type.
+ */
+export function attachmentHeaders(file: {
+  readonly filename: string
+  readonly contentType: string
+  readonly sizeBytes: number
+}): Record<string, string> {
+  return {
+    'content-type': file.contentType,
+    'content-length': String(file.sizeBytes),
+    'content-disposition': contentDispositionFor(file.filename),
+    // Attachments are private to a workspace; nothing may hold a copy.
+    'cache-control': 'private, no-store',
+    'x-content-type-options': 'nosniff',
+  }
 }
 
 /** Object key inside the `FILES` bucket. Tenant first, so a listing is scoped. */

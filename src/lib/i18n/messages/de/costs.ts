@@ -93,6 +93,8 @@ const messages = {
   'expense.currencyLabel': 'Währung, in der dieser Belegt ausgestellt wurde',
   'expense.convertedTo': 'Umgerechnet in {currency}',
   'expense.convertedHint': 'Was {from} auf deinem Auszug in {to} ergab.',
+  'expense.convertedSuggested':
+    'Vorgeschlagen nach dem Kurs, der auf dieser Reise am {date} verwendet wurde ({rate}). Ändere den Betrag, damit er zu deinem Auszug passt.',
   'expense.convertedNotANumber': 'Gib den umgerechneten Betrag als Zahl ein.',
   'expense.dateLabel': 'Datum der Ausgabe',
   'expense.paidByHint':

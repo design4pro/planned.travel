@@ -477,6 +477,7 @@ export function CostsScreen({
           categories={CATEGORY_OPTIONS}
           defaultCategory={defaultCategory}
           today={data.today}
+          suggestedRate={data.suggestedRate}
           onSubmit={(value) =>
             session.row === null
               ? addExpense(value)

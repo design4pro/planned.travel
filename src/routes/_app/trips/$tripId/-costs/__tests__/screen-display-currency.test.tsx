@@ -136,6 +136,7 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
     displayChoices: { workspaceCode: 'EUR', rateCodes: [] },
     unconverted: [],
     canWrite: false,
+    suggestedRate: null,
     ...overrides,
   }
 }

@@ -96,6 +96,8 @@ const messages = {
   'expense.currencyLabel': 'العملة التي كُتب بها هذا الإيصال',
   'expense.convertedTo': 'محوَّل إلى {currency}',
   'expense.convertedHint': 'ما صار إليه {from} بعملة {to} في كشف حسابك.',
+  'expense.convertedSuggested':
+    'مقترح من السعر المستخدم في هذه الرحلة بتاريخ {date} ({rate}). عدّله ليطابق كشف حسابك.',
   'expense.convertedNotANumber': 'اكتب المبلغ المحوَّل رقمًا.',
   'expense.dateLabel': 'تاريخ المصروف',
   'expense.paidByHint':

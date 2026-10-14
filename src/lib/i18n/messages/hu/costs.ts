@@ -94,6 +94,8 @@ const messages = {
   'expense.currencyLabel': 'Az a valuta, amiben a számla készült',
   'expense.convertedTo': 'Átszámítva {currency}-re',
   'expense.convertedHint': 'Mennyi lett {from} a kivonatodon {to}-ben.',
+  'expense.convertedSuggested':
+    'Javasolt érték az ezen az úton használt árfolyam alapján ({date}, {rate}). Módosítsd, hogy egyezzen a kivonatoddal.',
   'expense.convertedNotANumber': 'Írd be az átszámított összeget számként.',
   'expense.dateLabel': 'A kiadás dátuma',
   'expense.paidByHint':

@@ -94,6 +94,8 @@ const messages = {
   'expense.currencyLabel': 'Валюта, у якій виписано чек',
   'expense.convertedTo': 'Перераховано в {currency}',
   'expense.convertedHint': 'У скільки {from} вийшло в {to} за вашою випискою.',
+  'expense.convertedSuggested':
+    'Запропоновано за курсом, використаним у цій поїздці ({date}, {rate}). Змініть суму, щоб вона збігалася з вашою випискою.',
   'expense.convertedNotANumber': 'Введіть перераховану суму числом.',
   'expense.dateLabel': 'Дата витрати',
   'expense.paidByHint':

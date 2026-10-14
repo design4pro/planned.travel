@@ -109,6 +109,8 @@ const messages = {
   'expense.currencyLabel': 'Currency this receipt was written in',
   'expense.convertedTo': 'Converted to {currency}',
   'expense.convertedHint': 'What {from} came to in {to} on your statement.',
+  'expense.convertedSuggested':
+    'Suggested from the rate used on this trip on {date} ({rate}). Change it to match your statement.',
   'expense.convertedNotANumber': 'Enter the converted amount as a number.',
   'expense.dateLabel': 'Date this was spent',
   'expense.paidByHint':

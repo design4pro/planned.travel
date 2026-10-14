@@ -84,6 +84,8 @@ const messages = {
   'expense.currencyLabel': '这张收据所用的货币',
   'expense.convertedTo': '换算为 {currency}',
   'expense.convertedHint': '你的账单上 {from} 折成 {to} 是多少。',
+  'expense.convertedSuggested':
+    '根据本次旅行在 {date} 使用的汇率（{rate}）给出的建议。请改成与你的账单一致。',
   'expense.convertedNotANumber': '请用数字填写换算后的金额。',
   'expense.dateLabel': '支出日期',
   'expense.paidByHint': '如果录入的是还没人垫付的收据，付款人可以留空。',

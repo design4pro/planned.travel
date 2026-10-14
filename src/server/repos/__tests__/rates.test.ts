@@ -59,7 +59,10 @@ describe('the rate lookup', () => {
     })
   }
 
-  /** A payment made in `from` on a trip kept in `to`, with the rate frozen on the row. */
+  /**
+   * A payment made in `from` on a trip kept in `to`. A payment's rate is derived from its amount
+   * pair (#843), so the paid figure is the source figure times `rate`.
+   */
   async function paymentAt(
     trip: string,
     settledOn: string,

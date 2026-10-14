@@ -91,6 +91,8 @@ const messages = {
   'expense.currencyLabel': 'Valuta waarin deze bon is opgemaakt',
   'expense.convertedTo': 'Omgerekend naar {currency}',
   'expense.convertedHint': 'Waar {from} op je afschrift in {to} op uitkwam.',
+  'expense.convertedSuggested':
+    'Voorgesteld op basis van de koers die op deze reis op {date} is gebruikt ({rate}). Pas het aan zodat het klopt met je afschrift.',
   'expense.convertedNotANumber': 'Vul het omgerekende bedrag in als getal.',
   'expense.dateLabel': 'Datum van de uitgave',
   'expense.paidByHint':

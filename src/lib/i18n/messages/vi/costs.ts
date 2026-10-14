@@ -91,6 +91,8 @@ const messages = {
   'expense.convertedTo': 'Quy đổi thành {currency}',
   'expense.convertedHint':
     '{from} quy ra {to} trên sao kê của bạn là bao nhiêu.',
+  'expense.convertedSuggested':
+    'Gợi ý từ tỷ giá đã dùng trong chuyến đi này ({date}, {rate}). Hãy sửa lại cho khớp với sao kê của bạn.',
   'expense.convertedNotANumber': 'Nhập số tiền quy đổi dưới dạng số.',
   'expense.dateLabel': 'Ngày phát sinh khoản chi',
   'expense.paidByHint':
