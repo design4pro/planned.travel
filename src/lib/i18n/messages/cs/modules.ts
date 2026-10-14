@@ -546,6 +546,10 @@ const messages = {
   'book.ledger.refused.body':
     'Rezervace je na výletě. Přidat její položku do nákladů výletu se nepovedlo — zkus tuhle půlku znovu.',
   'book.action.ledgerRetry': 'Přidat do nákladů',
+  'book.ledger.splitStale.title': 'Uloženo, ale rozdělení už nesedí',
+  'book.ledger.splitStale.body':
+    'Rezervace i její nová cena jsou uloženy, ale rozdělení této položky mezi lidi nemohlo následovat nový součet. Otevřete položku v Nákladech a rozdělení opravte.',
+  'book.action.done': 'Hotovo',
   'book.copyConfirmation': 'potvrzovací číslo pro {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

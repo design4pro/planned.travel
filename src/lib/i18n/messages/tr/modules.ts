@@ -526,6 +526,10 @@ const messages = {
   'book.ledger.refused.body':
     'Rezervasyon gezide. Masraf satırını gezinin masraflarına eklemek olmadı — o yarısını tekrar dene.',
   'book.action.ledgerRetry': 'Masraflara ekle',
+  'book.ledger.splitStale.title': 'Kaydedildi, ancak bölüşüm artık tutmuyor',
+  'book.ledger.splitStale.body':
+    'Rezervasyon ve yeni fiyatı kaydedildi, ancak bu masrafın bölüşümü yeni toplamı izleyemedi. Masraflar bölümünde kalemi açıp bölüşümü düzeltin.',
+  'book.action.done': 'Tamam',
   'book.copyConfirmation': '{title} için onay numarası',
 
   /* -------------------------- transports: modes, ends, refusals */

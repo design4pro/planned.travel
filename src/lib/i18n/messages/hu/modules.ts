@@ -536,6 +536,10 @@ const messages = {
   'book.ledger.refused.body':
     'A foglalás rajta van az úton. A költségsorát nem sikerült az út költségeihez adni — próbáld újra ezt a felét.',
   'book.action.ledgerRetry': 'Hozzáadás a költségekhez',
+  'book.ledger.splitStale.title': 'Mentve, de a megosztás már nem jön ki',
+  'book.ledger.splitStale.body':
+    'A foglalás és az új ára mentve lett, de a költségtétel megosztása nem tudta követni az új végösszeget. Nyisd meg a tételt a Költségeknél, és javítsd a megosztást.',
+  'book.action.done': 'Kész',
   'book.copyConfirmation': '{title} visszaigazolási száma',
 
   /* -------------------------- transports: modes, ends, refusals */

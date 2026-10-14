@@ -538,6 +538,11 @@ const messages = {
   'book.ledger.refused.body':
     'De boeking staat op de reis. De kostenregel bij de reiskosten zetten lukte niet — probeer die helft opnieuw.',
   'book.action.ledgerRetry': 'Bij de kosten zetten',
+  'book.ledger.splitStale.title':
+    'Opgeslagen, maar de verdeling klopt niet meer',
+  'book.ledger.splitStale.body':
+    'De boeking en de nieuwe prijs zijn opgeslagen, maar de verdeling van deze kostenpost kon het nieuwe totaal niet volgen. Open de post bij Kosten en corrigeer de verdeling.',
+  'book.action.done': 'Klaar',
   'book.copyConfirmation': 'het bevestigingsnummer van {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

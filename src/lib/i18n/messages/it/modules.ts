@@ -554,6 +554,10 @@ const messages = {
   'book.ledger.refused.body':
     'La prenotazione è sul viaggio. Aggiungere la sua voce ai costi del viaggio non è andata a buon fine — riprova quella metà.',
   'book.action.ledgerRetry': 'Aggiungilo ai costi',
+  'book.ledger.splitStale.title': 'Salvato, ma la divisione non torna più',
+  'book.ledger.splitStale.body':
+    'La prenotazione e il suo nuovo prezzo sono salvati, ma la divisione di questa voce di costo non ha potuto seguire il nuovo totale. Apri la voce in Costi e correggi la divisione.',
+  'book.action.done': 'Fatto',
   'book.copyConfirmation': 'il numero di conferma di {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

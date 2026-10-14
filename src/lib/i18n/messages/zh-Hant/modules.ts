@@ -490,6 +490,10 @@ const messages = {
   'book.ledger.refused.body':
     '預訂已在行程裡。把它的費用列加進行程費用沒有成功 — 請重試這一半。',
   'book.action.ledgerRetry': '加入費用',
+  'book.ledger.splitStale.title': '已儲存，但分攤已與總額不符',
+  'book.ledger.splitStale.body':
+    '預訂及其新價格已儲存，但這筆費用的分攤無法跟隨新的總額。請在「費用」中開啟這一項並修正分攤。',
+  'book.action.done': '完成',
   'book.copyConfirmation': '{title} 的確認號',
 
   /* -------------------------- transports: modes, ends, refusals */

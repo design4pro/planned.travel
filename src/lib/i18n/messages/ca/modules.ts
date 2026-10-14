@@ -548,6 +548,10 @@ const messages = {
   'book.ledger.refused.body':
     'La reserva és al viatge. Afegir-ne la línia de despesa a les despeses del viatge no ha funcionat — torna a provar aquesta meitat.',
   'book.action.ledgerRetry': 'Afegeix-ho a les despeses',
+  'book.ledger.splitStale.title': 'Desat, però el repartiment ja no quadra',
+  'book.ledger.splitStale.body':
+    'La reserva i el nou preu s’han desat, però el repartiment d’aquesta despesa no ha pogut seguir el nou total. Obre la despesa a Despeses i corregeix el repartiment.',
+  'book.action.done': 'Fet',
   'book.copyConfirmation': 'el número de confirmació de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

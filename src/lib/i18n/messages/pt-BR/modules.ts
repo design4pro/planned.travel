@@ -545,6 +545,10 @@ const messages = {
   'book.ledger.refused.body':
     'A reserva está na viagem. Adicionar a linha de custo aos custos da viagem não deu certo — tente essa metade de novo.',
   'book.action.ledgerRetry': 'Adicionar aos custos',
+  'book.ledger.splitStale.title': 'Salvo, mas a divisão não bate mais',
+  'book.ledger.splitStale.body':
+    'A reserva e o novo preço foram salvos, mas a divisão deste custo não conseguiu acompanhar o novo total. Abra o item em Custos e corrija a divisão.',
+  'book.action.done': 'Concluído',
   'book.copyConfirmation': 'o número de confirmação de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
