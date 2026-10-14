@@ -93,6 +93,8 @@ const messages = {
   'expense.currencyLabel': 'Moneda en la que está el recibo',
   'expense.convertedTo': 'Convertido a {currency}',
   'expense.convertedHint': 'A cuánto salió {from} en {to} en tu extracto.',
+  'expense.convertedSuggested':
+    'Sugerido a partir del tipo de cambio usado en este viaje el {date} ({rate}). Cámbialo para que coincida con tu extracto.',
   'expense.convertedNotANumber': 'Escribe el importe convertido como número.',
   'expense.dateLabel': 'Fecha del gasto',
   'expense.paidByHint':

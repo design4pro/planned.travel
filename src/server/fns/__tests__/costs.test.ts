@@ -355,5 +355,56 @@ describe('the costs boundary', () => {
     ])('tells %s they can write', async (_name, who) => {
       expect((await costsPayload(who(), tripId)).canWrite).toBe(true)
     })
+
+    describe('the suggested rate', () => {
+      async function pounds(
+        trip: string,
+        rate: number,
+        spentOn: string,
+      ): Promise<void> {
+        await createExpense(tenant.scope, {
+          tripId: trip,
+          title: 'Receipt in pounds',
+          amountMinor: 11_500,
+          currency: 'EUR',
+          originalAmountMinor: 10_000,
+          originalCurrency: 'GBP',
+          exchangeRate: rate,
+          spentOn,
+        })
+      }
+
+      it('is null while the trip has no foreign expense', async () => {
+        expect(
+          (await costsPayload(tenant.scope, tripId)).suggestedRate,
+        ).toBeNull()
+      })
+
+      it('names the rate this trip last froze for each foreign currency, and the day it records', async () => {
+        await pounds(tripId, 1.1, '2026-04-10')
+        await pounds(tripId, 1.15, '2026-04-12')
+
+        expect((await costsPayload(viewer, tripId)).suggestedRate).toEqual({
+          GBP: { rate: 1.15, observedOn: '2026-04-12' },
+        })
+      })
+
+      it('never carries a rate frozen on another trip, even a later one', async () => {
+        const other = await createTrip(tenant.scope, {
+          title: 'Porto, alone',
+          startDate: '2026-07-10',
+          endDate: '2026-07-13',
+          currency: 'EUR',
+        })
+        await pounds(tripId, 1.15, '2026-04-12')
+        await pounds(other.id, 1.5, '2026-07-11')
+
+        expect(
+          (await costsPayload(tenant.scope, tripId)).suggestedRate,
+        ).toEqual({
+          GBP: { rate: 1.15, observedOn: '2026-04-12' },
+        })
+      })
+    })
   })
 })

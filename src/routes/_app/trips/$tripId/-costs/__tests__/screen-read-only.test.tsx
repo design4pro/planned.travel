@@ -130,6 +130,7 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
     ],
     viewerUserId: 'u-grace',
     canWrite: false,
+    suggestedRate: null,
     ...overrides,
   }
 }

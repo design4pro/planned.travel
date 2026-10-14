@@ -12,6 +12,12 @@
  * under it. That is deliberately manual — we do not have a rate feed, and inventing
  * one would put a number on the screen that nobody can reconcile against a bank
  * statement.
+ *
+ * The one concession: when this trip has already frozen a rate for the picked currency, the
+ * converted field starts out as the figure that rate implies, with a hint saying where it came
+ * from. It is a suggestion in a field the reader has not touched, never a value they typed: the
+ * first keystroke in the field ends it for good, and what is submitted is still the amount pair,
+ * from which the server derives the stored rate. No rate is sent from here.
  */
 import { useId, useMemo, useState } from 'react'
 import { Coins, Tag, Wallet } from 'lucide-react'
@@ -32,11 +38,14 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   CURRENCY_OPTIONS,
   currencyCode,
+  convertMinor,
   formatExchangeRate,
+  formatRateLine,
   formatMoney,
   parseMoney,
   toAmountInput,
@@ -54,6 +63,7 @@ import type { ReactNode } from 'react'
 import type { SplitMethod } from '#/lib/money'
 import type {
   CostsExpense,
+  CostsPayload,
   CostsPerson,
   ExpenseCategory,
 } from '#/server/fns/costs'
@@ -118,6 +128,11 @@ export interface ExpenseDialogProps {
   readonly defaultCategory: ExpenseCategory
   /** `YYYY-MM-DD`, used as the default date on a new expense. */
   readonly today: string
+  /**
+   * The rate this trip last froze per foreign currency, from the costs payload. Absent, `null` or
+   * without an entry for the picked currency, the converted field is not pre-filled.
+   */
+  readonly suggestedRate?: CostsPayload['suggestedRate']
   readonly onSubmit: (value: ExpenseFormValue) => Promise<void>
 }
 
@@ -145,6 +160,38 @@ function asCategory(
   categories: ReadonlyArray<CategoryOption>,
 ): ExpenseCategory {
   return categories.find((entry) => entry.value === value)?.value ?? 'other'
+}
+
+/**
+ * Keeps the left-to-right rate (`1 GBP = 195.00 JPY`) in one piece inside a right-to-left sentence;
+ * without the isolate the bidi algorithm scatters its words and the brackets around them.
+ */
+const LTR_ISOLATE_START = '\u2066'
+const POP_ISOLATE = '\u2069'
+
+/**
+ * The converted figure a frozen rate implies for the typed amount, as the field would hold it, or
+ * `''` when there is nothing to suggest. An amount too large to convert, or one that converts to
+ * nothing, is nothing to suggest, not an error or a `0.00` to show.
+ */
+function suggestedFigure(
+  typedMinor: number | null,
+  rate: number | undefined,
+  from: string,
+  to: string,
+): string {
+  if (rate === undefined || typedMinor === null || typedMinor <= 0) {
+    return ''
+  }
+  try {
+    const convertedMinor = convertMinor(typedMinor, rate, from, to)
+    return convertedMinor > 0 ? toAmountInput(convertedMinor, to) : ''
+  } catch (cause) {
+    if (cause instanceof RangeError) {
+      return ''
+    }
+    throw cause
+  }
 }
 
 function initialState(
@@ -198,6 +245,7 @@ export function ExpenseDialog({
   categories,
   defaultCategory,
   today,
+  suggestedRate,
   onSubmit,
 }: ExpenseDialogProps) {
   const t = useTranslate()
@@ -217,14 +265,30 @@ export function ExpenseDialog({
           expense.shares,
         ),
   )
+  // Up while the converted field is still the one the dialog opened with (empty) and the reader has
+  // not typed in it. Never raised again: a stored or typed figure must not be overwritten, and a
+  // field the reader cleared is theirs.
+  const [suggesting, setSuggesting] = useState(form.converted === '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const formId = `expense-form-${useId()}`
 
   const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
   const typedMinor = parseMoney(form.amount, form.currency)
+  const suggestion = suggestedRate?.[currencyCode(form.currency)]
+  const suggested =
+    suggesting && foreign
+      ? suggestedFigure(
+          typedMinor,
+          suggestion?.rate,
+          form.currency,
+          tripCurrency,
+        )
+      : ''
+  // Computed here, not in an effect, so the figure follows the amount and the currency at once.
+  const converted = suggesting ? suggested : form.converted
   const convertedMinor = foreign
-    ? parseMoney(form.converted, tripCurrency)
+    ? parseMoney(converted, tripCurrency)
     : typedMinor
   const amountMinor = convertedMinor ?? 0
 
@@ -244,6 +308,26 @@ export function ExpenseDialog({
         locale,
       )
     : null
+  const convertedHint =
+    suggested !== '' && suggestion !== undefined
+      ? t('costs.expense.convertedSuggested', {
+          date:
+            formatDate(suggestion.observedOn, locale) ?? suggestion.observedOn,
+          rate:
+            LTR_ISOLATE_START +
+            formatRateLine(
+              suggestion.rate,
+              form.currency,
+              tripCurrency,
+              locale,
+            ) +
+            POP_ISOLATE,
+        })
+      : (rate ??
+        t('costs.expense.convertedHint', {
+          from: currencyCode(form.currency),
+          to: currencyCode(tripCurrency),
+        }))
 
   const titleOk = form.title.trim().length > 0
   const amountOk = typedMinor !== null && (!foreign || convertedMinor !== null)
@@ -366,24 +450,19 @@ export function ExpenseDialog({
                   currency: currencyCode(tripCurrency),
                 })}
                 required
-                hint={
-                  rate ??
-                  t('costs.expense.convertedHint', {
-                    from: currencyCode(form.currency),
-                    to: currencyCode(tripCurrency),
-                  })
-                }
+                hint={convertedHint}
                 error={
-                  form.converted.trim() !== '' && convertedMinor === null
+                  converted.trim() !== '' && convertedMinor === null
                     ? t('costs.expense.convertedNotANumber')
                     : undefined
                 }
               >
                 <Input
-                  value={form.converted}
-                  onChange={(event) =>
+                  value={converted}
+                  onChange={(event) => {
+                    setSuggesting(false)
                     setForm({ ...form, converted: event.target.value })
-                  }
+                  }}
                   placeholder={toAmountInput(0, tripCurrency)}
                   inputMode="decimal"
                   autoComplete="off"

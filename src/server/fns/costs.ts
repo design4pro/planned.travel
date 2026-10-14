@@ -35,6 +35,7 @@ import {
   listUserProfiles,
   requireTrip,
   suggestSettlements,
+  suggestedRatesForTrip,
   tripRoleFor,
   updateExpense,
 } from '#/server/repos'
@@ -129,6 +130,12 @@ export interface CostsCategoryTotal {
   readonly expenseCount: number
 }
 
+/** The rate this trip last froze for a receipt currency, and the day the row it came from records. */
+export interface CostsSuggestedRate {
+  readonly rate: number
+  readonly observedOn: string
+}
+
 export interface CostsPayload {
   readonly tripId: string
   readonly currency: string
@@ -152,6 +159,12 @@ export interface CostsPayload {
    * (which also refuses an archived trip) because the money writers do not refuse one.
    */
   readonly canWrite: boolean
+  /**
+   * Per foreign currency this trip's expenses were entered in, the rate the trip last froze for it
+   * against the trip's own currency, which the expense dialog offers as a pre-filled, editable
+   * converted figure. `null` when no such currency has one. Read-only: it feeds no writer.
+   */
+  readonly suggestedRate: Readonly<Record<string, CostsSuggestedRate>> | null
 }
 
 /* -------------------------------------------------------------------------- */
@@ -249,6 +262,18 @@ export const recordPaymentSchema = z.strictObject({
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
+
+/** The receipt currencies of the rows that were entered in one other than the trip's own. */
+function foreignCurrencies(
+  rows: ReadonlyArray<{ readonly originalCurrency: string | null }>,
+  tripCurrency: string,
+): Array<string> {
+  return rows.flatMap((row) =>
+    row.originalCurrency === null || row.originalCurrency === tripCurrency
+      ? []
+      : [row.originalCurrency],
+  )
+}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -424,9 +449,14 @@ export async function costsPayload(
 
   // The split rows are what make "your share" honest on every line, so they are
   // fetched per expense rather than inferred from the balance aggregate.
-  const withShares = await Promise.all(
-    rows.map((row) => getExpenseWithShares(scope, row.id)),
-  )
+  const [withShares, suggestedRate] = await Promise.all([
+    Promise.all(rows.map((row) => getExpenseWithShares(scope, row.id))),
+    suggestedRatesForTrip(scope, {
+      tripId: trip.id,
+      from: foreignCurrencies(rows, summary.currency),
+      to: summary.currency,
+    }),
+  ])
 
   return {
     tripId: trip.id,
@@ -447,6 +477,7 @@ export async function costsPayload(
     people,
     viewerUserId: scope.ctx.userId,
     canWrite: canWriteMoney(role),
+    suggestedRate,
     expenses: withShares.map(({ expense, shares }) => ({
       id: expense.id,
       title: expense.title,

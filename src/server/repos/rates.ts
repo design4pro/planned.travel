@@ -258,6 +258,48 @@ export async function findLatestFrozenRate(
   return latestFrozenRate(scope, { from, to }, tripId)
 }
 
+/** The rate to offer for one receipt currency, and the day the row it came from records. */
+export interface SuggestedRate {
+  readonly rate: number
+  readonly observedOn: string
+}
+
+/**
+ * For each receipt currency in `from`, the rate this trip last froze for it against the trip's own
+ * currency `to`, as {@link findLatestFrozenRate} answers it: one entry per currency that has one,
+ * `null` when none has. Nothing outside the trip is read.
+ *
+ * This is the read the expense dialog's pre-fill draws on. It sits here rather than in the costs
+ * server function because that module also derives the stored rate of a row, and the call-graph
+ * test in `__tests__/rates.test.ts` keeps every name of this lookup out of it.
+ */
+export async function suggestedRatesForTrip(
+  scope: TenantScope,
+  query: {
+    readonly tripId: string
+    readonly from: ReadonlyArray<string>
+    readonly to: string
+  },
+): Promise<Readonly<Record<string, SuggestedRate>> | null> {
+  const found = await Promise.all(
+    [...new Set(query.from)].map(async (from) => {
+      const frozen = await findLatestFrozenRate(scope, {
+        tripId: query.tripId,
+        from,
+        to: query.to,
+      })
+      return frozen === null
+        ? null
+        : ([
+            from,
+            { rate: frozen.rate, observedOn: frozen.observedOn },
+          ] as const)
+    }),
+  )
+  const entries = found.filter((entry) => entry !== null)
+  return entries.length === 0 ? null : Object.fromEntries(entries)
+}
+
 /* -------------------------------------------------------------------------------------------------
  * The seam
  * ---------------------------------------------------------------------------------------------- */

@@ -92,6 +92,8 @@ const messages = {
   'expense.currencyLabel': 'このレシートが書かれている通貨',
   'expense.convertedTo': '{currency} に換算',
   'expense.convertedHint': '明細で {from} が {to} でいくらになったか。',
+  'expense.convertedSuggested':
+    'この旅行で {date} に使われたレート ({rate}) から提案しています。明細に合わせて変更してください。',
   'expense.convertedNotANumber': '換算後の金額は数字で入力してください。',
   'expense.dateLabel': '支出した日',
   'expense.paidByHint':
