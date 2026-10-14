@@ -221,11 +221,26 @@ const deleteExpenseSchema = z.object({
   expenseId: idSchema,
 })
 
-const recordPaymentSchema = z.object({
+/**
+ * A payment is typed as the payer's statement shows it, in the trip's currency, and a payment made
+ * in another currency adds the sum that actually left the account and its currency - both optional,
+ * so a tab loaded before this field existed still validates.
+ *
+ * Strict, and with no rate and no currency: the rate is derived from the pair by the writer, and
+ * the currency is the trip's, resolved on the server. A client that sends either is refused.
+ */
+export const recordPaymentSchema = z.strictObject({
   tripId: tripIdSchema,
   fromUserId: idSchema,
   toUserId: idSchema,
   amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
+  originalAmountMinor: minorSchema.nullish(),
+  originalCurrency: z
+    .string()
+    .trim()
+    .length(3)
+    .regex(/^[A-Za-z]{3}$/)
+    .nullish(),
   method: z.enum(SETTLEMENT_METHODS),
   settledOn: dateSchema,
   note: z.string().trim().max(500).nullable(),
@@ -540,7 +555,8 @@ export const recordPaymentFn = createServerFn({ method: 'POST' })
       fromUserId: data.fromUserId,
       toUserId: data.toUserId,
       amountMinor: data.amountMinor,
-      currency: trip.currency,
+      originalAmountMinor: data.originalAmountMinor,
+      originalCurrency: data.originalCurrency?.toUpperCase(),
       method: data.method,
       settledOn: data.settledOn,
       note: data.note,

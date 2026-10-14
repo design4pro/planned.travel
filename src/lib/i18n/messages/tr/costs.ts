@@ -118,6 +118,7 @@ const messages = {
   'payment.whoPaid': 'Kime ödeniyor',
   'payment.amountIn': '{currency} cinsinden tutar',
   'payment.amountPositive': 'Sıfırdan büyük bir tutar yaz.',
+  'payment.currencyLabel': 'Ödemenin yapıldığı para birimi',
   'payment.how': 'Nasıl',
   'payment.howMade': 'Ödeme nasıl yapıldı',
   'payment.dateLabel': 'Ödemenin tarihi',

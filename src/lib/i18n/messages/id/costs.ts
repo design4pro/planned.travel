@@ -116,6 +116,7 @@ const messages = {
   'payment.whoPaid': 'Siapa yang dibayar',
   'payment.amountIn': 'Jumlah dalam {currency}',
   'payment.amountPositive': 'Tulis jumlah yang lebih dari nol.',
+  'payment.currencyLabel': 'Mata uang pembayaran',
   'payment.how': 'Bagaimana',
   'payment.howMade': 'Bagaimana pembayarannya dilakukan',
   'payment.dateLabel': 'Tanggal pembayaran',

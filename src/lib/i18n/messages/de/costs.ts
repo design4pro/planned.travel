@@ -119,6 +119,7 @@ const messages = {
   'payment.whoPaid': 'Wer bezahlt wird',
   'payment.amountIn': 'Betrag in {currency}',
   'payment.amountPositive': 'Gib einen Betrag über null ein.',
+  'payment.currencyLabel': 'Währung, in der bezahlt wurde',
   'payment.how': 'Wie',
   'payment.howMade': 'Wie die Zahlung erfolgt ist',
   'payment.dateLabel': 'Datum der Zahlung',

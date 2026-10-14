@@ -1,19 +1,20 @@
 name: Sentry triage
 
-# Weekly sweep of Sentry for recurring, high-impact errors, filing the ones that clear the
-# threshold as `bug` + `priority-high`. No cezar run starts from it: backlog-status.mjs trusts
+# Daily sweep of Sentry for recurring, high-impact errors, filing the ones that clear the
+# threshold as `bug` + `priority-high`, and for reports from the in-app feedback widget, filed as
+# `bug` or `feature` + `priority-medium`. No cezar run starts from it: backlog-status.mjs trusts
 # maintainer authors only and this job files as the Actions bot, and it never hands a ticket
-# carrying the `sentry-issue` marker to an unattended run, because its body quotes production data.
+# carrying the `sentry-issue` marker to an unattended run, because its body is drawn from production data.
 # A person reads it and starts a run from the cockpit (ADR 0018, ADR 0032).
 #
 # It runs the SAME script as `pnpm sentry-triage`, on the runner: the thresholds, the dedup index
 # and the issue body live in scripts/sentry-triage/policy.ts, so the local run and this one cannot
-# drift. One sweep a week, at most three issues, and a report artifact either way.
+# drift. One sweep a day, at most three issues, and a report artifact either way.
 on:
   schedule:
-    # Tuesdays 06:00 UTC — after Monday's deploys have soaked for a day, and early enough that the
-    # tickets are waiting when somebody plans the week.
-    - cron: '0 6 * * 2'
+    # 06:00 UTC daily — the look-back is the day that just ended, and the tickets are waiting
+    # before the first pull request of the next one.
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       file_issues:
@@ -24,7 +25,7 @@ on:
         description: 'Look-back window'
         type: choice
         options: ['24h', '7d', '14d', '30d']
-        default: '7d'
+        default: '24h'
       max_issues:
         description: 'Cap on issues filed in this run'
         type: string
@@ -105,7 +106,7 @@ jobs:
           SENTRY_PROJECT_SLUGS: ${{ vars.SENTRY_PROJECT_SLUGS || vars.SENTRY_PROJECT }}
         run: |
           pnpm sentry-triage \
-            --window "${{ inputs.window || '7d' }}" \
+            --window "${{ inputs.window || '24h' }}" \
             --max "${{ inputs.max_issues || '3' }}" \
             ${{ (github.event_name == 'schedule' || inputs.file_issues) && '--file-issues' || '' }}
 

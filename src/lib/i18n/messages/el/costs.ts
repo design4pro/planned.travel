@@ -117,6 +117,7 @@ const messages = {
   'payment.whoPaid': 'Ποιος πληρώνεται',
   'payment.amountIn': 'Ποσό σε {currency}',
   'payment.amountPositive': 'Γράψε ποσό μεγαλύτερο από μηδέν.',
+  'payment.currencyLabel': 'Νόμισμα στο οποίο έγινε η πληρωμή',
   'payment.how': 'Πώς',
   'payment.howMade': 'Πώς έγινε η πληρωμή',
   'payment.dateLabel': 'Ημερομηνία της πληρωμής',

@@ -119,6 +119,7 @@ const messages = {
   'payment.whoPaid': 'Qui rep',
   'payment.amountIn': 'Import en {currency}',
   'payment.amountPositive': 'Escriu un import més gran que zero.',
+  'payment.currencyLabel': 'Moneda en què s’ha fet el pagament',
   'payment.how': 'Com',
   'payment.howMade': 'Com es va fer el pagament',
   'payment.dateLabel': 'Data del pagament',

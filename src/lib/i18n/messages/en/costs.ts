@@ -135,6 +135,7 @@ const messages = {
   'payment.whoPaid': 'Who is being paid',
   'payment.amountIn': 'Amount in {currency}',
   'payment.amountPositive': 'Enter an amount greater than zero.',
+  'payment.currencyLabel': 'Currency the payment was made in',
   'payment.how': 'How',
   'payment.howMade': 'How the payment was made',
   'payment.dateLabel': 'Date of the payment',

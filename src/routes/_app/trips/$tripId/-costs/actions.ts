@@ -207,6 +207,8 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
               fromUserId: value.fromUserId,
               toUserId: value.toUserId,
               amountMinor: value.amountMinor,
+              originalAmountMinor: value.originalAmountMinor,
+              originalCurrency: value.originalCurrency,
               method: value.method,
               settledOn: value.settledOn,
               note: value.note,

@@ -107,7 +107,10 @@ export function DayWeatherBadge({
   if (model.kind === 'notYetRecorded') {
     return (
       <div data-part="day-weather" className={BOX}>
+        {/* A key of its own: without it React turns the skeleton's span into this one, and the
+            browser reports the span's new left edge as a layout shift when the answer arrives. */}
         <span
+          key="not-yet-recorded"
           role="img"
           aria-label={t('trips.plan.weather.badge.notYetRecorded')}
           title={t('trips.plan.weather.badge.notYetRecorded')}

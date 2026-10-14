@@ -121,6 +121,7 @@ const messages = {
   'payment.whoPaid': 'Kdo dostává',
   'payment.amountIn': 'Částka v {currency}',
   'payment.amountPositive': 'Zadejte částku větší než nula.',
+  'payment.currencyLabel': 'Měna, ve které byla platba provedena',
   'payment.how': 'Jak',
   'payment.howMade': 'Jak platba proběhla',
   'payment.dateLabel': 'Datum platby',

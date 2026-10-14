@@ -18,6 +18,7 @@ import type {
   RecordedReading,
 } from '#/lib/weather'
 import type { PlannerDay } from '../types'
+import type { DayWeatherView } from '../weather-model'
 
 /**
  * The day weather badge and the fuller reading behind it, mounted for real under the `en`
@@ -298,6 +299,29 @@ describe('DayWeatherBadge', () => {
     ]) {
       expect(boxOf(weather)).toBe(loading)
     }
+  })
+
+  it('replaces the loading picture when the answer is not-yet-recorded, never reuses its element', () => {
+    // The browser reports a layout shift for an element that persists and moves. React keeps an
+    // element of the same type in the same place, so a clock drawn over the skeleton's span would
+    // be the skeleton's span with a new left edge: a measured shift the traveller cannot see.
+    const view = (weather: DayWeatherView) => (
+      <I18nProvider locale="en" messages={MESSAGES}>
+        <DayWeatherBadge
+          weather={weather}
+          unit="metric"
+          dateLabel={DATE_LABEL}
+        />
+      </I18nProvider>
+    )
+    const { rerender } = mount(view({ status: 'loading' }))
+    const loadingPicture = screen.getByRole('img', { name: 'Loading weather' })
+
+    rerender(view(NOT_YET))
+
+    const clock = screen.getByRole('img', { name: 'Not yet recorded' })
+    expect(loadingPicture.isConnected).toBe(false)
+    expect(clock).not.toBe(loadingPicture)
   })
 
   it('leaves a day with nothing to show as empty space, named for nobody', () => {

@@ -1,12 +1,13 @@
-// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` tickets,
-// and a person decides whether one is groomed and fixed, from the cezar cockpit (ADR 0008 as
-// amended by ADR 0018 and ADR 0032). Nothing here starts a run: the body quotes production data,
+// Sentry → GitHub issues. Recurring, high-impact errors become `bug` + `priority-high` tickets and
+// reports from the feedback widget become `bug` or `feature` + `priority-medium` ones, and a person
+// decides whether one is groomed and fixed, from the cezar cockpit (ADR 0008 as amended by ADR 0018
+// and ADR 0032). Nothing here starts a run: the body is drawn from production data,
 // so .ai/scripts/backlog-status.mjs never lets an unattended run implement a ticket carrying the
 // `sentry-issue` marker, and the routine has reproduced nothing.
 //
 //   pnpm sentry-triage                      # report only — files nothing
 //   pnpm sentry-triage --file-issues        # also file, capped
-//   pnpm sentry-triage --window 14d --max 2
+//   pnpm sentry-triage --window 7d --max 2
 //
 // Report-only by default: a manual run must never surprise the operator by writing to the
 // backlog. The scheduled workflow (.github/workflows/sentry-triage.yml) passes --file-issues.
@@ -25,8 +26,12 @@ import { fileURLToPath } from 'node:url'
 import {
   buildTrackedIndex,
   dedupeVerdict,
+  feedbackLabels,
+  feedbackVerdict,
   filingOrder,
   parseMarkers,
+  renderFeedbackBody,
+  renderFeedbackTitle,
   renderIssueBody,
   renderTitle,
   reportSchema,
@@ -74,7 +79,7 @@ function flag(name: string, fallback: string): string {
   return at === -1 ? fallback : (argv[at + 1] ?? fallback)
 }
 
-const windowArg = flag('window', '7d')
+const windowArg = flag('window', '24h')
 const maxFiled = Number(flag('max', String(DEFAULT_MAX_FILED)))
 /**
  * A Sentry short id to file even though the policy rejected it.
@@ -104,8 +109,11 @@ const gh = (args: ReadonlyArray<string>, input?: string): string =>
     ...(input === undefined ? {} : { input }),
   })
 
+/** The categories this routine files under, and so the ones its own tickets are found by. */
+const TRACKED_LABELS = ['bug', 'feature'] as const
+
 /**
- * Every `bug` ticket, open and closed, read through the issues API.
+ * Every `bug` and `feature` ticket, open and closed, read through the issues API.
  *
  * `--state all` is not optional: a closed ticket means the bug was fixed, and re-filing it silently
  * would be this routine's worst failure. Nor is the choice of API — `--search` goes through
@@ -113,25 +121,32 @@ const gh = (args: ReadonlyArray<string>, input?: string): string =>
  * see nothing and file the same ticket twice.
  */
 function trackedIssues(): ReadonlyArray<TrackedIssue> {
-  const raw = gh([
-    'issue',
-    'list',
-    '--state',
-    'all',
-    '--label',
-    'bug',
-    '--limit',
-    '500',
-    '--json',
-    'number,state,closedAt,body',
-  ])
-  const rows = JSON.parse(raw) as Array<{
-    number: number
-    state: string
-    closedAt: string | null
-    body: string | null
-  }>
-  return rows.map((row) => ({
+  // One listing per label: `--label a --label b` asks for tickets carrying both.
+  const rows = TRACKED_LABELS.flatMap(
+    (label) =>
+      JSON.parse(
+        gh([
+          'issue',
+          'list',
+          '--state',
+          'all',
+          '--label',
+          label,
+          '--limit',
+          '500',
+          '--json',
+          'number,state,closedAt,body',
+        ]),
+      ) as Array<{
+        number: number
+        state: string
+        closedAt: string | null
+        body: string | null
+      }>,
+  )
+  // A ticket relabelled into both categories would otherwise count twice against the pressure limit.
+  const unique = [...new Map(rows.map((row) => [row.number, row])).values()]
+  return unique.map((row) => ({
     number: row.number,
     state: row.state === 'OPEN' ? 'OPEN' : 'CLOSED',
     closedAt: row.closedAt,
@@ -255,10 +270,10 @@ const reportPath = join(REPORT_DIR, `sentry-triage-${runLabel}.json`)
 writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 
 console.log(
-  `Scanned ${String(report.scanned.production)} production and ${String(report.scanned.staging)} staging issues over ${report.window}.`,
+  `Scanned ${String(report.scanned.production)} production and ${String(report.scanned.staging)} staging issues over ${report.window}, and ${String(report.scanned.feedback)} user reports.`,
 )
 console.log(
-  `${String(report.candidates.length)} candidate(s). Report: ${reportPath}`,
+  `${String(report.candidates.length)} candidate(s), ${String(report.feedback.length)} user report(s). Report: ${reportPath}`,
 )
 for (const skip of report.skipped)
   console.log(`  skipped ${skip.shortId}: ${skip.reason}`)
@@ -318,6 +333,56 @@ if (pressure >= BACKLOG_PRESSURE_LIMIT) {
 
 const now = Date.now()
 let filed = 0
+
+// Before the errors, because the cap is shared and a report is the scarcer signal: a person wrote
+// it once and it will not fire again tomorrow the way a recurring error does.
+for (const feedback of report.feedback) {
+  if (filed >= maxFiled) break
+
+  const gate = feedbackVerdict(feedback)
+  if (!gate.ok) {
+    console.log(`  ${feedback.shortId}: not filed — ${gate.reason}`)
+    continue
+  }
+  if (feedback.judgement === 'noise') {
+    console.log(
+      `  ${feedback.shortId}: vetoed by the agent — ${feedback.judgementReason}`,
+    )
+    continue
+  }
+  const verdict = dedupeVerdict(
+    { shortId: feedback.shortId, lastSeen: feedback.receivedAt },
+    tracked,
+  )
+  // A report is a single event, so it cannot regress; anything but a first filing is a duplicate.
+  if (verdict.action !== 'file') {
+    console.log(
+      `  ${feedback.shortId}: ${verdict.action === 'skip' ? verdict.reason : 'already filed and closed'}`,
+    )
+    continue
+  }
+
+  const title = renderFeedbackTitle(feedback)
+  gh(
+    [
+      'issue',
+      'create',
+      '--title',
+      title,
+      ...feedbackLabels(feedback).flatMap((label) => ['--label', label]),
+      '--body-file',
+      '-',
+    ],
+    renderFeedbackBody({
+      feedback,
+      sequence: verdict.sequence,
+      runLabel,
+      reportPath,
+    }),
+  )
+  filed += 1
+  console.log(`  filed: ${title}`)
+}
 
 for (const candidate of filingOrder(report.candidates, forced)) {
   if (filed >= maxFiled) {

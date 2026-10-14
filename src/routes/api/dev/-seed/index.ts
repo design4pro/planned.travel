@@ -8,3 +8,4 @@
 export { applySeed, type ApplySeedOptions, type SeedReport } from './apply'
 export { SeedBootstrapError } from './bootstrap'
 export { DATASET_VERSION } from './dataset'
+export { seedWeatherCache } from './weather-cache'

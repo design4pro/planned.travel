@@ -22,7 +22,7 @@ Three details that are each load-bearing:
 - **`--organization-slug`** constrains every call to our organization.
 - **The version is pinned.** `@latest` in a scheduled job is an unpinned dependency in everything
   but name: the server's top-level tool surface has changed inside a minor before now, which would
-  silently make `prompt.md` wrong on a Tuesday morning with nobody watching. Same discipline as the
+  silently make `prompt.md` wrong one morning with nobody watching. Same discipline as the
   Playwright image pin in `ci.yml`.
 
 The token needs four read scopes and no more: `org:read`, `project:read`, `team:read`, `event:read`.
@@ -64,6 +64,38 @@ decision on a false premise.
 Without `--file-issues`, `--force` prints the gate's verdict and the ticket it would file, and
 writes nothing.
 
+## One sweep a day, and what the day does to the bar
+
+The workflow runs at 06:00 UTC every day with `--window 24h` (ADR 0039). `THRESHOLDS` did not move
+with it: 25 events or 5 users in production is now a bar an error has to clear **inside one day**,
+where it used to have a week. That is deliberate - a daily sweep that kept the weekly numbers per
+day files what is on fire, not what is merely present - and it is the first thing to revisit if the
+sweep goes quiet. `--window 7d` on a manual run is the old population.
+
+The dedup index is what makes a daily run safe: a short id with an open ticket is skipped, so the
+same error is never filed on consecutive mornings.
+
+## User feedback
+
+A report from the in-app widget (`src/lib/sentry-feedback.ts`) is a Sentry issue of category
+`feedback`, and the sweep files it as `bug` or `feature` + `priority-medium`. Four things differ
+from an error, each for a reason:
+
+- **It is searched over a fixed 7 days, not `--window`.** A report is one event. If the cap drops it
+  this morning, a 24-hour search would never see it again.
+- **It has no numeric bar.** One person wrote once; there is no count to threshold. The gate is
+  `feedbackVerdict` (unresolved, a defect or a request, a usable summary) and the agent's veto.
+- **It is filed before the errors, under the same `--max`.** A recurring error is back tomorrow; a
+  report is not.
+- **Nothing the person typed reaches GitHub.** The schema has no field for the message, the address
+  or the screenshot. The agent reports its own one-line paraphrase, and `sanitizeFeedbackText`
+  strips comment syntax, code, links, addresses, mentions and issue references from it before it is
+  printed - the prompt asks for the same, and the prompt is not what is relied on.
+
+That last point lowers the risk; it does not remove it. The paraphrase is written by a model that
+has read hostile text, so a filed report carries the `sentry-issue` marker like any other finding
+and no unattended run picks it up (ADR 0032).
+
 ## Why the workflow runs this script rather than `claude-code-action`
 
 The prompt is not the whole routine: the dedup, the caps and the body live in `policy.ts`. Driving a
@@ -91,8 +123,7 @@ Sentry tool calls or issue filing. It requires the same environment as the sweep
 transport and tool availability, not token authorization against Sentry data; the agent still must
 successfully call `find_projects`. Either failure exits non-zero. Neither becomes an empty-findings
 report. Missing workflow credentials also fail instead of silently skipping the sweep. Diagnostic
-report uploads are best effort and expire after two days. The weekly schedule, selection policy and
-deduplication remain unchanged.
+report uploads are best effort and expire after two days.
 
 Protocol reference: [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle)
 and [tools discovery](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).

@@ -52,7 +52,7 @@ if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
  * less, on a morning nobody touched it, which is exactly the silent loss ADR 0016
  * says the thinner e2e layer must not buy.
  *
- * `serverToday()` in `src/server/clock.ts` therefore accepts this header on a
+ * `serverToday()` and `serverNow()` in `src/server/clock.ts` therefore accept this header on a
  * development request, and both browser projects send it on every request the
  * context makes, so the SSR document and the server-function RPCs that follow it
  * agree about the day. It is deliberately *not* `FROZEN_NOW`, which pins the clock

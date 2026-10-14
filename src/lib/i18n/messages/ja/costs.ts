@@ -118,6 +118,7 @@ const messages = {
   'payment.whoPaid': '受け取る人',
   'payment.amountIn': '{currency} での金額',
   'payment.amountPositive': '0 より大きい金額を入力してください。',
+  'payment.currencyLabel': '支払いに使った通貨',
   'payment.how': '方法',
   'payment.howMade': '支払いの方法',
   'payment.dateLabel': '支払った日',

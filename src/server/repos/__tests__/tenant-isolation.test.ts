@@ -243,6 +243,7 @@ import {
   MAX_BOUND_PARAMETERS,
   copyTripContents,
   countTripsByStatus,
+  TripArchivedError,
   TripRoleError,
   createShareLink,
   createTrip,
@@ -295,6 +296,8 @@ import { dispatch } from '#/server/notifications/dispatch'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
+import { findLatestFrozenRate, resolveRate } from '../rates'
+import { previewCurrencyChange } from '../trip-currency'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
@@ -2399,13 +2402,13 @@ describe('tenant isolation', () => {
   })
 
   describe('a settlement paid in another currency', () => {
+    // EUR 117.00 for GBP 150.00 is 0.78 euros to the pound: the pair implies the rate, so the
+    // fixture no longer carries a rate of its own that the amounts contradict.
     const payment = {
-      amountMinor: 46_488,
-      currency: 'JPY',
+      amountMinor: 11_700,
       settledOn: '2026-04-14',
-      originalAmountMinor: 59_600,
+      originalAmountMinor: 15_000,
       originalCurrency: 'GBP',
-      exchangeRate: 195,
     } as const
 
     it('cannot be recorded onto a foreign trip', async () => {
@@ -2435,9 +2438,9 @@ describe('tenant isolation', () => {
         toUserId: alpha.tenant.ownerUserId,
         ...payment,
       })
-      expect(own.originalAmountMinor).toBe(59_600)
+      expect(own.originalAmountMinor).toBe(15_000)
       expect(own.originalCurrency).toBe('GBP')
-      expect(own.exchangeRate).toBe(195)
+      expect(own.exchangeRate).toBeCloseTo(0.78, 10)
 
       expect(
         await settlementsRepository.findById(beta.tenant.scope, own.id),
@@ -2450,6 +2453,51 @@ describe('tenant isolation', () => {
       expect(
         await settlementsRepository.findById(alpha.tenant.scope, own.id),
       ).not.toBeNull()
+    })
+
+    it('is not found by id from the other workspace, and the trip id does not help', async () => {
+      const scope = alpha.tenant.scope
+      expect(
+        await settlementsRepository.findById(scope, beta.settlementId),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          deleteSettlement(scope, beta.tripId, beta.settlementId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          deleteSettlement(scope, alpha.tripId, beta.settlementId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses a foreign-currency payment onto the other workspace’s trip and leaves its rows as they were', async () => {
+      const ledgerOfB = async (): Promise<unknown> => ({
+        settlements: await settlementsRepository.findMany(beta.tenant.scope),
+        balances: await getMemberBalances(beta.tenant.scope, beta.tripId),
+      })
+      const before = await ledgerOfB()
+
+      // Complete, incomplete and zero alike: the trip is refused before the pair is read, so the
+      // answer does not say which of them was wrong.
+      for (const source of [
+        payment,
+        { ...payment, originalAmountMinor: undefined },
+        { ...payment, originalAmountMinor: 0 },
+      ]) {
+        const error = await captureError(() =>
+          createSettlement(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            fromUserId: beta.companionUserId,
+            toUserId: beta.tenant.ownerUserId,
+            ...source,
+          }),
+        )
+        expect(error).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await ledgerOfB()).toEqual(before)
     })
   })
 
@@ -5556,6 +5604,353 @@ describe('tenant isolation', () => {
           tripsRepository.requireById(inBeta, alpha.tripId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+  describe('frozen rates', () => {
+    // `findLatestFrozenRate` and `resolveRate` are the first workspace-wide money reads, so the
+    // trip a rate was frozen on decides who may see it: another workspace's, and a private trip of
+    // this one that the caller is not on, never answer (#835, and #839 which depends on it).
+    const pair = { from: 'GBP', to: 'EUR', on: '2026-04-20' } as const
+
+    async function freezeRate(world: World, tripId: string, rate: number) {
+      await createExpense(world.tenant.scope, {
+        tripId,
+        title: 'Receipt in pounds',
+        amountMinor: 11_500,
+        currency: 'EUR',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'GBP',
+        exchangeRate: rate,
+        spentOn: '2026-04-11',
+      })
+    }
+
+    async function snapshot() {
+      return {
+        alphaExpenses: await expensesRepository.findMany(alpha.tenant.scope),
+        betaExpenses: await expensesRepository.findMany(beta.tenant.scope),
+        alphaSettlements: await settlementsRepository.findMany(
+          alpha.tenant.scope,
+        ),
+        betaSettlements: await settlementsRepository.findMany(
+          beta.tenant.scope,
+        ),
+      }
+    }
+
+    it('answers a trip of another workspace as not found, and reads no rate from it', async () => {
+      await freezeRate(beta, beta.tripId, 1.3)
+      const before = await snapshot()
+
+      const refusal = await captureError(() =>
+        findLatestFrozenRate(alpha.tenant.scope, {
+          tripId: beta.tripId,
+          from: 'GBP',
+          to: 'EUR',
+        }),
+      )
+
+      expect(refusal).toBeInstanceOf(NotFoundError)
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('never answers with a rate frozen in another workspace', async () => {
+      await freezeRate(beta, beta.tripId, 1.3)
+      const before = await snapshot()
+
+      expect(await resolveRate(alpha.tenant.scope, pair)).toBeNull()
+      expect(
+        await findLatestFrozenRate(alpha.tenant.scope, {
+          tripId: alpha.tripId,
+          from: 'GBP',
+          to: 'EUR',
+        }),
+      ).toBeNull()
+      // The positive control: the same rate answers in the workspace that froze it.
+      expect((await resolveRate(beta.tenant.scope, pair))?.rate).toBe(1.3)
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('never answers with a rate frozen on a private trip the caller is not on, and does with a workspace-visible one', async () => {
+      const stranger = alpha.tenant.scopeFor(
+        await alpha.tenant.addUser('A member who is on no trip'),
+      )
+      const priv = await createTrip(alpha.tenant.scope, {
+        title: 'Owner only',
+        startDate: '2026-09-01',
+        endDate: '2026-09-03',
+        currency: 'EUR',
+        visibility: 'private',
+      })
+      await freezeRate(alpha, priv.id, 1.4)
+      const before = await snapshot()
+
+      expect(await resolveRate(stranger, pair)).toBeNull()
+      expect(
+        await captureError(() =>
+          findLatestFrozenRate(stranger, {
+            tripId: priv.id,
+            from: 'GBP',
+            to: 'EUR',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      // The owner reads their own private trip's rate.
+      expect((await resolveRate(alpha.tenant.scope, pair))?.rate).toBe(1.4)
+
+      await updateTrip(alpha.tenant.scope, priv.id, {
+        visibility: 'organization',
+      })
+      expect(await resolveRate(stranger, pair)).toEqual({
+        rate: 1.4,
+        source: 'recent',
+      })
+      expect(
+        (
+          await findLatestFrozenRate(stranger, {
+            tripId: priv.id,
+            from: 'GBP',
+            to: 'EUR',
+          })
+        )?.rate,
+      ).toBe(1.4)
+
+      // Reading changed nothing; only the visibility switch above did.
+      const after = await snapshot()
+      expect(after.alphaExpenses).toEqual(before.alphaExpenses)
+      expect(after.betaExpenses).toEqual(before.betaExpenses)
+      expect(after.alphaSettlements).toEqual(before.alphaSettlements)
+      expect(after.betaSettlements).toEqual(before.betaSettlements)
+    })
+  })
+  /**
+   * The preview reads every money row of a trip and can name a rate from the whole workspace, so a
+   * read that forgot the trip, the tenant or the visibility of the trip a rate was frozen on would
+   * show somebody else's money. It also has to write nothing, in either workspace.
+   */
+  describe('previewing a change of a trip’s budget currency', () => {
+    const PREVIEW = { to: 'JPY', rate: 160 } as const
+
+    async function footprint() {
+      const both = [alpha.tenant.scope, beta.tenant.scope]
+      return {
+        trips: await Promise.all(both.map((s) => tripsRepository.findMany(s))),
+        expenses: await Promise.all(
+          both.map((s) => expensesRepository.findMany(s)),
+        ),
+        shares: await Promise.all(
+          both.map((s) => expenseSharesRepository.findMany(s)),
+        ),
+        settlements: await Promise.all(
+          both.map((s) => settlementsRepository.findMany(s)),
+        ),
+        budgetItems: await Promise.all(
+          both.map((s) => budgetItemsRepository.findMany(s)),
+        ),
+      }
+    }
+
+    /** A trip in `world` that already holds money, so a read that lost its trip filter has something to show. */
+    async function richSibling(world: World) {
+      const sibling = await createTrip(world.tenant.scope, {
+        title: 'Sibling with money',
+        startDate: '2026-05-01',
+        endDate: '2026-05-02',
+        currency: 'EUR',
+      })
+      await createExpense(world.tenant.scope, {
+        tripId: sibling.id,
+        title: 'Sibling dinner',
+        amountMinor: 9900,
+        spentOn: '2026-05-01',
+      })
+      await createBudgetItem(world.tenant.scope, {
+        tripId: sibling.id,
+        name: 'Sibling food',
+        plannedAmountMinor: 12_300,
+      })
+      return sibling
+    }
+
+    async function freezeYenRate(world: World, rate: number, title: string) {
+      const yen = await createTrip(world.tenant.scope, {
+        title,
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+        currency: 'JPY',
+      })
+      await createExpense(world.tenant.scope, {
+        tripId: yen.id,
+        title: 'Ramen paid in euros',
+        amountMinor: 1600,
+        currency: 'JPY',
+        originalAmountMinor: 1000,
+        originalCurrency: 'EUR',
+        exchangeRate: rate,
+        spentOn: '2026-06-01',
+      })
+      return yen
+    }
+
+    it('counts only the trip asked about, whatever a sibling trip or another workspace holds', async () => {
+      await richSibling(alpha)
+      await richSibling(beta)
+      const own = (
+        await expensesRepository.findMany(alpha.tenant.scope)
+      ).filter((row) => row.tripId === alpha.tripId)
+      const ownItems = (
+        await budgetItemsRepository.findMany(alpha.tenant.scope)
+      ).filter((row) => row.tripId === alpha.tripId)
+      const before = await footprint()
+
+      const preview = await previewCurrencyChange(
+        alpha.tenant.scope,
+        alpha.tripId,
+        PREVIEW,
+      )
+
+      expect(preview.counts.expenses).toBe(own.length)
+      expect(preview.counts.budgetItems).toBe(ownItems.length)
+      expect(preview.counts.expenses).toBeGreaterThan(0)
+      // Nothing was written, in A's other trip or anywhere in B.
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is not found, and writes nothing, for another workspace’s trip', async () => {
+      const before = await footprint()
+
+      const failure = await captureError(() =>
+        previewCurrencyChange(alpha.tenant.scope, beta.tripId, PREVIEW),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is not found, and writes nothing, for a private trip the caller is not on', async () => {
+      const privateTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Private to A’s owner',
+        currency: 'EUR',
+        visibility: 'private',
+      })
+      const before = await footprint()
+
+      const failure = await captureError(() =>
+        previewCurrencyChange(
+          alpha.tenant.scopeFor(alpha.secondUserId),
+          privateTrip.id,
+          PREVIEW,
+        ),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is refused to an editor and a viewer, who see the trip but do not own it', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: alpha.secondUserId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const before = await footprint()
+
+      for (const userId of [alpha.secondUserId, viewerId]) {
+        const failure = await captureError(() =>
+          previewCurrencyChange(
+            alpha.tenant.scopeFor(userId),
+            alpha.tripId,
+            PREVIEW,
+          ),
+        )
+        expect(failure).toBeInstanceOf(TripRoleError)
+      }
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('is refused for an archived trip, and writes nothing', async () => {
+      await archiveTrip(alpha.tenant.scope, alpha.tripId)
+      const before = await footprint()
+
+      const failure = await captureError(() =>
+        previewCurrencyChange(alpha.tenant.scope, alpha.tripId, PREVIEW),
+      )
+
+      expect(failure).toBeInstanceOf(TripArchivedError)
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('never suggests a rate frozen in another workspace', async () => {
+      await freezeYenRate(beta, 150, 'Beta’s Tokyo')
+      const before = await footprint()
+
+      const alphaPreview = await previewCurrencyChange(
+        alpha.tenant.scope,
+        alpha.tripId,
+        { to: 'JPY' },
+      )
+
+      expect(alphaPreview.rate).toBeNull()
+      expect(alphaPreview.refusal).toEqual({ kind: 'no-rate' })
+      // The positive control: the workspace that froze it is offered it.
+      const betaPreview = await previewCurrencyChange(
+        beta.tenant.scope,
+        beta.tripId,
+        { to: 'JPY' },
+      )
+      expect(betaPreview.rate).toEqual({ value: 150, source: 'recent' })
+      expect(await footprint()).toEqual(before)
+    })
+
+    it('never suggests a rate frozen on a private trip the caller cannot read, and does once it is shared', async () => {
+      const secondScope = alpha.tenant.scopeFor(alpha.secondUserId)
+      const theirs = await createTrip(secondScope, {
+        title: 'The second traveller’s own trip',
+        currency: 'EUR',
+      })
+      await createExpense(secondScope, {
+        tripId: theirs.id,
+        title: 'Dinner',
+        amountMinor: 4200,
+        spentOn: '2026-04-10',
+      })
+      const privateYen = await createTrip(alpha.tenant.scope, {
+        title: 'Owner only',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+        currency: 'JPY',
+        visibility: 'private',
+      })
+      await createExpense(alpha.tenant.scope, {
+        tripId: privateYen.id,
+        title: 'Ramen paid in euros',
+        amountMinor: 1600,
+        currency: 'JPY',
+        originalAmountMinor: 1000,
+        originalCurrency: 'EUR',
+        exchangeRate: 155,
+        spentOn: '2026-06-01',
+      })
+
+      const hidden = await previewCurrencyChange(secondScope, theirs.id, {
+        to: 'JPY',
+      })
+      expect(hidden.rate).toBeNull()
+      expect(hidden.refusal).toEqual({ kind: 'no-rate' })
+
+      await updateTrip(alpha.tenant.scope, privateYen.id, {
+        visibility: 'organization',
+      })
+      const shared = await previewCurrencyChange(secondScope, theirs.id, {
+        to: 'JPY',
+      })
+      expect(shared.rate).toEqual({ value: 155, source: 'recent' })
     })
   })
 })

@@ -120,6 +120,7 @@ const messages = {
   'payment.whoPaid': 'Хто отримує',
   'payment.amountIn': 'Сума в {currency}',
   'payment.amountPositive': 'Введіть суму більшу за нуль.',
+  'payment.currencyLabel': 'Валюта, у якій здійснено платіж',
   'payment.how': 'Як',
   'payment.howMade': 'Як пройшов платіж',
   'payment.dateLabel': 'Дата платежу',
