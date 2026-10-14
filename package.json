@@ -35,7 +35,8 @@
     "worktree:bootstrap": "bash scripts/worktree/bootstrap.sh",
     "prepare": "husky",
     "sentry-triage": "tsx scripts/sentry-triage/sentry-triage.ts",
-    "install-skills": "npx -y skills@latest add open-mercato/skills --skill \"*\" -a claude-code -y && npx -y skills@latest update --project -y"
+    "install-skills": "npx -y skills@latest add open-mercato/skills --skill \"*\" -a claude-code -y && npx -y skills@latest update --project -y",
+    "test:e2e": "e2e run"
   },
   "lint-staged": {
     "*": "prettier --ignore-unknown --write"
@@ -79,6 +80,8 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
     "@cloudflare/workers-types": "^5.20260818.1",
+    "@e2e-dev/web": "^0.14.0",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
     "@playwright/test": "^1.62.1",
     "@sentry/vite-plugin": "^5.4.0",
     "@tanstack/devtools-vite": "latest",
@@ -90,7 +93,9 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.11",
+    "ai": "^7.0.0",
     "drizzle-kit": "^0.31.10",
+    "e2e": "^0.20.0",
     "husky": "^9.1.7",
     "jsdom": "^30.0.1",
     "lint-staged": "^17.3.0",
