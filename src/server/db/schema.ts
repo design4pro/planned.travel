@@ -1410,6 +1410,17 @@ export const budgetItems = sqliteTable(
     name: text('name').notNull(),
     plannedAmountMinor: minor('planned_amount_minor').notNull().default(0),
     currency: currency().notNull().default('EUR'),
+    /**
+     * What the traveller typed, kept beside the figure above once a re-basing of the trip's budget
+     * currency has converted it - the same three columns `expenses` and `settlements` carry. All
+     * three null is every row written before them and every row nobody has re-based, and it reads
+     * as: no conversion happened, implied rate 1. Only a re-basing fills them
+     * (`src/server/repos/trip-currency.ts`); no other writer of a planned item does. They carry no
+     * `CHECK`, because a constraint change rebuilds the table on SQLite.
+     */
+    originalAmountMinor: minor('original_amount_minor'),
+    originalCurrency: currency('original_currency'),
+    exchangeRate: real('exchange_rate'),
     persons: integer('persons'),
     days: integer('days'),
     note: text('note'),
