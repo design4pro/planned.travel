@@ -139,9 +139,10 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           drop(op.key)
           // The trip's current currency is asked for first, on its own: a reload that fails does not
           // reject, it swaps the screen (and the open dialog with what was typed) for the error
-          // panel, so the screen is only reloaded once the server has answered, and only the costs
-          // match is reloaded. `sync` makes the promise wait for the loader, where a background
-          // reload would resolve while the old figures are still shown.
+          // panel, so the screen is only reloaded once the server has answered. The filter keeps the
+          // root loader out; the trip header loader and the `_app` guard still re-run, exactly as
+          // after every successful save. `sync` makes the promise wait for the loader, where a
+          // background reload would resolve while the old figures are still shown.
           const live = await loadCosts({ data: { tripId: payload.tripId } })
             .then((fresh) => fresh.currency)
             .catch(() => null)

@@ -22,7 +22,7 @@ import type { CostsPayload } from '#/server/fns/costs'
 const EN: Catalogue = namespaceCatalogue('costs', Costs)
 
 const refresh = vi.hoisted(() => ({
-  invalidate: vi.fn<() => Promise<void>>(),
+  invalidate: vi.fn<(options?: unknown) => Promise<void>>(),
 }))
 
 vi.mock('#/server/fns/costs', () => ({
@@ -117,6 +117,12 @@ describe('the costs write runner on a stale trip currency', () => {
       sync: true,
       filter: expect.any(Function),
     })
+    const options = refresh.invalidate.mock.calls[0]?.[0] as unknown as {
+      filter: (match: { routeId: string }) => boolean
+    }
+    expect(options.filter({ routeId: '/_app/trips/$tripId/costs' })).toBe(true)
+    expect(options.filter({ routeId: '/_app/trips/$tripId' })).toBe(false)
+    expect(options.filter({ routeId: '__root__' })).toBe(false)
     expect(toast.error).toHaveBeenCalledTimes(1)
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('now JPY'))
     expect(thrown).toBeInstanceOf(Error)
