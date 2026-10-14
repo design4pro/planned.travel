@@ -449,9 +449,45 @@ describe('the expense dialog’s suggested converted figure', () => {
       const user = hand()
       await refuseOnce(user)
 
-      expect(document.activeElement).toBe(amountField())
+      await vi.waitFor(() => expect(document.activeElement).toBe(amountField()))
       expect(screen.getByText('That did not save')).toBeTruthy()
+      expect(
+        screen.getByText(/trip changed while you were confirming/),
+      ).toBeTruthy()
       expect(screen.queryByText(REFUSAL)).toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Add expense' }),
+      ).toHaveProperty('disabled', false)
+    })
+
+    it('keeps the stored receipt amount of a foreign-currency expense and only drops the converted figure', async () => {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const stored = expenseRow({
+        amountMinor: 11_500,
+        currency: 'EUR',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'GBP',
+        exchangeRate: 1.15,
+        shares: [
+          { userId: 'u1', shareMinor: 5_750, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 5_750, weight: 1, isSettled: false },
+        ],
+      })
+      const view = render(dialog('EUR', onSubmit, stored))
+      await user.click(screen.getByRole('button', { name: 'Save changes' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit, stored))
+
+      expect(await screen.findByText(/now JPY/)).toBeTruthy()
+      expect(amountField()).toHaveProperty('value', '100.00')
+      expect(screen.getByLabelText(/^Converted to JPY/)).toHaveProperty(
+        'value',
+        '',
+      )
     })
 
     it('drops the stored digits of an edited expense once the trip has moved on, so they are not saved as new-currency figures', async () => {

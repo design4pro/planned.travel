@@ -134,7 +134,11 @@ export function PaymentDialog({
   const convertedRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const stale = useStaleTripCurrency(currency)
+  const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
+  // The figure that carries the old currency's digits: the converted one when there is one.
+  const stale = useStaleTripCurrency(currency, saving, () =>
+    foreign ? convertedRef.current : amountRef.current,
+  )
   const formId = `payment-form-${useId()}`
 
   // The trip's currency changed while this was open and the screen has refreshed: what was typed
@@ -145,7 +149,10 @@ export function PaymentDialog({
     if (currencyCode(sourceCurrency) === stale.adopt.from) {
       setSourceCurrency(stale.adopt.to)
     }
-    if (amount === openedAmount) {
+    if (
+      amount === openedAmount &&
+      currencyCode(sourceCurrency) === stale.adopt.from
+    ) {
       setAmount('')
     }
     setConverted('')
@@ -155,14 +162,12 @@ export function PaymentDialog({
       ? undefined
       : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
-  const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
   const typedMinor = parseMoney(amount, sourceCurrency)
+  const staleOnAmount = foreign ? undefined : staleMessage
   const amountError =
     amount.trim() !== '' && (typedMinor === null || typedMinor === 0)
       ? t('costs.payment.amountPositive')
-      : foreign
-        ? undefined
-        : staleMessage
+      : staleOnAmount
   const amountMinor = foreign ? parseMoney(converted, currency) : typedMinor
   const rate = foreign
     ? formatExchangeRate(
@@ -232,6 +237,7 @@ export function PaymentDialog({
     }
     setSaving(true)
     setError(null)
+    stale.dismiss()
     try {
       await onSubmit({
         fromUserId,
@@ -247,8 +253,6 @@ export function PaymentDialog({
     } catch (cause) {
       if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
         stale.refuse(currencyCode(currency))
-        // Save is about to stay disabled, so the keyboard is taken to the figure that has to be looked at.
-        ;(foreign ? convertedRef : amountRef).current?.focus()
       } else {
         setError(messageOf(cause, t('costs.payment.failed')))
       }
@@ -287,7 +291,7 @@ export function PaymentDialog({
           >
             {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
-                {error}
+                {error ?? t('costs.refusal.rebaseChanged')}
               </Alert>
             )}
 

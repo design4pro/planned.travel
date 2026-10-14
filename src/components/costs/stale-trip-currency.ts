@@ -7,9 +7,10 @@
  * dialog cannot derive: which currency it was saving under, so it can tell when the refreshed one
  * has arrived.
  *
- * Framework-free apart from `useState`, and with no copy: the dialog renders the message.
+ * Framework-free apart from `useState` and the focus effect, and with no copy: the dialog renders
+ * the message.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { currencyCode } from '#/lib/money'
 
@@ -38,10 +39,26 @@ export interface StaleTripCurrency {
   readonly dismiss: () => void
 }
 
-export function useStaleTripCurrency(tripCurrency: string): StaleTripCurrency {
+/**
+ * `focusTarget` names the field the reader has to look at, read after the dialog has rendered with
+ * the refreshed currency (a converted field can vanish with it) and once `saving` is over (a
+ * disabled input cannot take focus); the refusal is focused once per state it moves through.
+ */
+export function useStaleTripCurrency(
+  tripCurrency: string,
+  saving: boolean,
+  focusTarget: () => HTMLElement | null,
+): StaleTripCurrency {
   const [refusal, setRefusal] = useState<Refusal | null>(null)
+  const focusedFor = useRef<Refusal | null>(null)
   const current = currencyCode(tripCurrency)
   const refreshed = refusal !== null && refusal.from !== current
+  useEffect(() => {
+    if (refusal !== null && !saving && focusedFor.current !== refusal) {
+      focusedFor.current = refusal
+      focusTarget()?.focus()
+    }
+  })
   return {
     adopt:
       refreshed && !refusal.adopted

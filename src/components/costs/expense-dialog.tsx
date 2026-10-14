@@ -278,7 +278,11 @@ export function ExpenseDialog({
   const convertedRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const stale = useStaleTripCurrency(tripCurrency)
+  const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
+  // The figure that carries the old currency's digits: the converted one when there is one.
+  const stale = useStaleTripCurrency(tripCurrency, saving, () =>
+    foreign ? convertedRef.current : amountRef.current,
+  )
   const formId = `expense-form-${useId()}`
 
   // The trip's currency changed while this was open and the screen has refreshed: what was typed
@@ -292,7 +296,12 @@ export function ExpenseDialog({
         currencyCode(form.currency) === stale.adopt.from
           ? stale.adopt.to
           : form.currency,
-      amount: editing && form.amount === openedAmount ? '' : form.amount,
+      amount:
+        editing &&
+        form.amount === openedAmount &&
+        currencyCode(form.currency) === stale.adopt.from
+          ? ''
+          : form.amount,
       converted: '',
     })
     setSuggesting(true)
@@ -302,14 +311,12 @@ export function ExpenseDialog({
       ? undefined
       : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
-  const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
   const typedMinor = parseMoney(form.amount, form.currency)
+  const staleOnAmount = foreign ? undefined : staleMessage
   const amountError =
     form.amount.trim() !== '' && typedMinor === null
       ? t('costs.expense.amountNotANumber')
-      : foreign
-        ? undefined
-        : staleMessage
+      : staleOnAmount
   const suggestion = suggestedRate?.[currencyCode(form.currency)]
   const suggested =
     suggesting && foreign
@@ -381,6 +388,7 @@ export function ExpenseDialog({
     }
     setSaving(true)
     setError(null)
+    stale.dismiss()
     try {
       await onSubmit({
         title: form.title.trim(),
@@ -400,8 +408,6 @@ export function ExpenseDialog({
     } catch (cause) {
       if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
         stale.refuse(currencyCode(tripCurrency))
-        // Save is about to stay disabled, so the keyboard is taken to the figure that has to be looked at.
-        ;(foreign ? convertedRef : amountRef).current?.focus()
       } else {
         setError(messageOf(cause))
       }
@@ -437,7 +443,7 @@ export function ExpenseDialog({
           >
             {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
-                {error}
+                {error ?? t('costs.refusal.rebaseChanged')}
               </Alert>
             )}
 

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
-import { createExpenseFn } from '#/server/fns/costs'
+import { createExpenseFn, loadCosts } from '#/server/fns/costs'
 import { useCostsActions } from '../actions'
 
 import type { ReactNode } from 'react'
@@ -15,18 +15,19 @@ import type { CostsPayload } from '#/server/fns/costs'
 
 /**
  * The shared write runner when the server refuses a save because the trip's budget currency
- * changed (`costs.refusal.tripCurrencyChanged`): it refreshes the screen first, names the currency
- * the loader delivered in the reader's language, and still hands the refusal to the dialog.
+ * changed (`costs.refusal.tripCurrencyChanged`): it asks the server for the trip's current currency,
+ * refreshes the screen only when that answers, names the currency in the reader's language, and
+ * still hands the refusal to the dialog.
  */
 const EN: Catalogue = namespaceCatalogue('costs', Costs)
 
 const refresh = vi.hoisted(() => ({
   invalidate: vi.fn<() => Promise<void>>(),
-  matches: [] as Array<{ loaderData: unknown }>,
 }))
 
 vi.mock('#/server/fns/costs', () => ({
   createExpenseFn: vi.fn(),
+  loadCosts: vi.fn(),
   updateExpenseFn: vi.fn(),
   deleteExpenseFn: vi.fn(),
   recordPaymentFn: vi.fn(),
@@ -35,11 +36,6 @@ vi.mock('#/server/fns/costs', () => ({
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     invalidate: refresh.invalidate,
-    state: {
-      get matches() {
-        return refresh.matches
-      },
-    },
   }),
 }))
 vi.mock('sonner', () => ({
@@ -108,18 +104,13 @@ describe('the costs write runner on a stale trip currency', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     refresh.invalidate.mockResolvedValue(undefined)
-    refresh.matches = []
+    vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, currency: 'JPY' })
     vi.mocked(createExpenseFn).mockRejectedValue(
       new Error('costs.refusal.tripCurrencyChanged'),
     )
   })
 
-  it('refreshes the screen, names the live currency in the toast and rethrows the refusal', async () => {
-    refresh.matches = [
-      { loaderData: { tripId: 'trip-1', currency: 'JPY' } },
-      { loaderData: { trip: { id: 'trip-1', currency: 'USD' } } },
-    ]
-
+  it('refreshes the screen synchronously, names the live currency in the toast and rethrows the refusal', async () => {
     const thrown = await refusedAdd()
 
     expect(refresh.invalidate).toHaveBeenCalledWith({ sync: true })
@@ -132,14 +123,25 @@ describe('the costs write runner on a stale trip currency', () => {
     )
   })
 
-  it('falls back to the plain toast when the loader delivered no currency for the trip', async () => {
-    refresh.matches = [
-      { loaderData: { tripId: 'another-trip', currency: 'JPY' } },
-    ]
+  it('leaves the screen alone when the server cannot say what the currency is now, so the open dialog keeps what was typed', async () => {
+    vi.mocked(loadCosts).mockRejectedValue(new Error('offline'))
+
+    const thrown = await refusedAdd()
+
+    expect(refresh.invalidate).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('That did not save')
+    expect(thrown).toHaveProperty(
+      'message',
+      'costs.refusal.tripCurrencyChanged',
+    )
+  })
+
+  it('falls back to the plain toast when the currency is the one the save was made under', async () => {
+    vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, currency: 'EUR' })
 
     await refusedAdd()
 
-    expect(toast.error).toHaveBeenCalledWith('The expense was not added')
+    expect(toast.error).toHaveBeenCalledWith('That did not save')
   })
 
   it('keeps the refusal as it was when the refresh itself fails', async () => {

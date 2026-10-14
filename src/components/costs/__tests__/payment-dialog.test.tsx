@@ -331,11 +331,37 @@ describe('the payment dialog', () => {
     it('takes the keyboard to the amount and says so in the dialog when the refreshed currency has not arrived', async () => {
       await refuseOnce()
 
-      expect(document.activeElement).toBe(
-        screen.getByLabelText(/Amount in EUR/),
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByLabelText(/Amount in EUR/),
+        ),
       )
       expect(screen.getByText('That did not save')).toBeTruthy()
+      expect(
+        screen.getByText(/trip changed while you were confirming/),
+      ).toBeTruthy()
       expect(screen.queryByText(REFUSAL)).toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Record payment' }),
+      ).toHaveProperty('disabled', false)
+    })
+
+    it('takes the keyboard to the converted figure of a foreign payment once saving is over', async () => {
+      const onSubmit = vi
+        .fn<(value: PaymentFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      render(dialog('EUR', onSubmit))
+      await pickCurrency(user, 'GBP')
+      await user.type(screen.getByLabelText(/Amount in GBP/), '85.00')
+      await user.type(screen.getByLabelText(/Converted to EUR/), '100.00')
+      await user.click(screen.getByRole('button', { name: 'Record payment' }))
+
+      await vi.waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByLabelText(/Converted to EUR/),
+        ),
+      )
     })
 
     it('drops a Settle-suggested amount once the trip has moved on, so it is not saved as a new-currency figure', async () => {

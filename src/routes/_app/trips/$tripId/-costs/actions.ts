@@ -21,6 +21,7 @@ import { impliedRate } from '#/lib/money'
 import {
   createExpenseFn,
   deleteExpenseFn,
+  loadCosts,
   recordPaymentFn,
   setDisplayCurrencyFn,
   updateExpenseFn,
@@ -95,30 +96,6 @@ function optimisticConverted(
   return display.mode === 'per-trip' ? amountMinor : null
 }
 
-/**
- * The trip currency the loader has delivered for this trip, read from the router once `invalidate`
- * has settled. `null` when no match carries it, so the caller falls back to a toast without it.
- */
-function currencyOnScreen(
-  router: ReturnType<typeof useRouter>,
-  tripId: string,
-): string | null {
-  for (const match of router.state.matches) {
-    const data: unknown = match.loaderData
-    if (
-      typeof data === 'object' &&
-      data !== null &&
-      'tripId' in data &&
-      data.tripId === tripId &&
-      'currency' in data &&
-      typeof data.currency === 'string'
-    ) {
-      return data.currency
-    }
-  }
-  return null
-}
-
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
@@ -156,16 +133,22 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         await router.invalidate()
       } catch (cause) {
         if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
-          // The screen is refreshed here, before the refusal reaches the dialog, so the dialog and
-          // the toast both name the currency the trip is in now. `sync` makes the promise wait for
-          // the loader; a background reload would resolve it while the old figures are still there.
-          await router.invalidate({ sync: true }).catch(() => undefined)
-          const live = currencyOnScreen(router, payload.tripId)
-          if (live === null) {
-            toast.error(failure)
-          } else {
-            toast.error(t('costs.refusal.tripCurrencyChanged', { to: live }))
+          // The trip's current currency is asked for first, on its own: a reload that fails would
+          // swap the whole screen (and the open dialog with what was typed) for the error panel, so
+          // the screen is only refreshed once the server has answered. The dialog and the toast
+          // then both name the currency the trip is in now; `sync` makes the promise wait for the
+          // loader, where a background reload would resolve while the old figures are still shown.
+          const live = await loadCosts({ data: { tripId: payload.tripId } })
+            .then((fresh) => fresh.currency)
+            .catch(() => null)
+          if (live !== null) {
+            await router.invalidate({ sync: true }).catch(() => undefined)
           }
+          toast.error(
+            live === null || live === payload.currency
+              ? t('costs.expense.saveFailed')
+              : t('costs.refusal.tripCurrencyChanged', { to: live }),
+          )
         } else {
           toast.error(failure, {
             description: reasonOf(cause, 'The change was rolled back.'),
@@ -176,7 +159,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         drop(op.key)
       }
     },
-    [drop, payload.tripId, router, t],
+    [drop, payload.currency, payload.tripId, router, t],
   )
 
   const addExpense = useCallback(
