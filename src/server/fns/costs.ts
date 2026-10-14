@@ -536,9 +536,13 @@ export async function costsPayload(
   const today = todayIso()
   const display = await displayFor(scope, trip, {
     on: today,
+    // One entry per distinct currency: the lookup refuses a list longer than it has pairs, and a
+    // busy trip has far more rows than currencies.
     currencies: [
-      ...withShares.map(({ expense }) => expense.currency),
-      ...settled.map((row) => row.currency),
+      ...new Set([
+        ...withShares.map(({ expense }) => expense.currency),
+        ...settled.map((row) => row.currency),
+      ]),
     ],
   })
 

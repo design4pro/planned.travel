@@ -20,6 +20,7 @@ import { Alert, Button, Card, EmptyState } from '#/components/ui'
 import {
   ConfirmDeleteDialog,
   CostsToolbar,
+  DisplayCurrencyMenu,
   ExpenseDialog,
   PaymentDialog,
   csvFilename,
@@ -378,8 +379,21 @@ export function CostsScreen({
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
           <div className="flex min-w-0 flex-col gap-6">
             {/* No rows means nothing to filter, and a bar of empty controls over an
-                empty state is furniture rather than help. */}
-            {snapshot.expenses.length === 0 ? null : (
+                empty state is furniture rather than help. Payments still carry a converted
+                figure, so a trip with only those keeps the one control that governs it. */}
+            {snapshot.expenses.length === 0 ? (
+              snapshot.settlements.length === 0 ? null : (
+                <div className="flex justify-end">
+                  <DisplayCurrencyMenu
+                    display={data.displayCurrency}
+                    choices={data.displayChoices}
+                    budgetCurrency={data.currency}
+                    saving={savingDisplay}
+                    onChange={(code) => void setDisplay(code)}
+                  />
+                </div>
+              )
+            ) : (
               <Card className="py-4">
                 <CostsToolbar
                   filters={filters}

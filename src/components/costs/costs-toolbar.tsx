@@ -145,7 +145,7 @@ export function CostsToolbar({
           wrapperClassName="sm:w-64 lg:w-72"
         />
 
-        <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 sm:mx-0 sm:ms-auto sm:overflow-visible sm:px-0">
+        <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 sm:mx-0 sm:ms-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0">
           <DisplayCurrencyMenu
             display={display}
             choices={displayChoices}

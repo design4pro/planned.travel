@@ -198,7 +198,7 @@ function ExpenseRow({
           </span>
         </div>
 
-        {display.mode === 'fixed' ? (
+        {display.mode === 'fixed' && !locked ? (
           // Its own line, under the amount it converts: beside the share it would take the width
           // the payer and category need on a 360px column.
           <div className="flex justify-end">

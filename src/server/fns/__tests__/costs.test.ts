@@ -455,6 +455,16 @@ describe('the costs boundary', () => {
       expect(rateLookups()).toBe(2)
     })
 
+    it('still loads a trip with more rows than the lookup accepts currencies', async () => {
+      await addPayments(70)
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.settlements).toHaveLength(70)
+      expect(payload.displayCurrency).toEqual({ mode: 'fixed', code: 'GBP' })
+    })
+
     it('shows no converted figure, and names the pair and the day, when no rate answers', async () => {
       await setDisplayCurrency(tenant.scope, 'GBP')
 

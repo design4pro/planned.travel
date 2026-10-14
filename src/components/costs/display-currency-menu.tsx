@@ -22,7 +22,7 @@ export interface DisplayCurrencyMenuProps {
   readonly display: DisplayCurrency
   readonly choices: CostsDisplayChoices
   readonly budgetCurrency: string
-  /** A write is in flight: the control keeps its place but cannot be changed until it settles. */
+  /** A write is in flight: the control keeps its place and focus, and a second pick is ignored until it settles. */
   readonly saving: boolean
   /** `null` is "each trip in its own currency". */
   readonly onChange: (code: string | null) => void
@@ -48,6 +48,11 @@ export function DisplayCurrencyMenu({
     return undefined
   }
 
+  const indicator =
+    display.mode === 'fixed'
+      ? t('costs.display.indicator.fixed', { code: display.code })
+      : t('costs.display.indicator.perTrip')
+
   const options = [
     { value: PER_TRIP, label: t('costs.display.menu.perTrip') },
     ...enabled.map((choice) => ({
@@ -69,32 +74,37 @@ export function DisplayCurrencyMenu({
   return (
     <div
       data-part="display-currency"
-      aria-busy={saving}
       className="flex shrink-0 items-center gap-2"
     >
       <Badge
         tone={display.mode === 'fixed' ? 'accent' : 'outline'}
         size="sm"
         data-part="display-currency-indicator"
+        aria-hidden="true"
       >
-        {display.mode === 'fixed'
-          ? t('costs.display.indicator.fixed', { code: display.code })
-          : t('costs.display.indicator.perTrip')}
+        {indicator}
       </Badge>
       <SimpleSelect
         size="sm"
         className="w-44 shrink-0"
         options={options}
         value={display.mode === 'fixed' ? display.code : PER_TRIP}
-        disabled={saving}
-        onValueChange={(next) => onChange(next === PER_TRIP ? null : next)}
+        // Not `disabled`: a disabled trigger cannot take the focus Radix hands back when the list
+        // closes, and the reader would lose their place. A pick made mid-write is ignored instead.
+        onValueChange={(next) => {
+          if (!saving) onChange(next === PER_TRIP ? null : next)
+        }}
         ariaLabel={t('costs.display.label')}
       />
-      {saving ? (
-        <span role="status" className="sr-only">
-          {t('costs.display.menu.saving')}
-        </span>
-      ) : null}
+      {/* Always mounted, so a change of its text is announced: the write in flight, then the choice
+          now in force (the visible indicator is hidden from a screen reader so it is read once). */}
+      <span
+        aria-live="polite"
+        data-part="display-currency-live"
+        className="sr-only"
+      >
+        {saving ? t('costs.display.menu.saving') : indicator}
+      </span>
     </div>
   )
 }

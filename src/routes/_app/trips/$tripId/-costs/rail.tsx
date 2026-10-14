@@ -14,7 +14,11 @@ import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney, formatSignedMoney } from '#/lib/money'
-import { CategoryDonut, formatDayLabel } from '#/components/costs'
+import {
+  CategoryDonut,
+  formatDayLabel,
+  isOptimisticId,
+} from '#/components/costs'
 import { Panel, PanelRow } from '../../../-ui/scaffold'
 import { humaniseToken } from '../../../-lib/format'
 import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
@@ -432,10 +436,12 @@ function Payments({
                   <Badge tone="success" size="sm" className="tabular-nums">
                     {formatMoney(row.amountMinor, currency, locale)}
                   </Badge>
-                  <ConvertedFigure
-                    display={display}
-                    convertedMinor={row.convertedMinor}
-                  />
+                  {isOptimisticId(row.id) ? null : (
+                    <ConvertedFigure
+                      display={display}
+                      convertedMinor={row.convertedMinor}
+                    />
+                  )}
                 </div>
               </PanelRow>
             </li>

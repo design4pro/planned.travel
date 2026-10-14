@@ -169,11 +169,31 @@ function withRow(convertedMinor: number | null): Partial<CostsPayload> {
   return { expenses: [{ ...row, convertedMinor }] }
 }
 
+function live(): Element | null {
+  return document.querySelector('[data-part="display-currency-live"]')
+}
+
+function indicator(): Element | null {
+  return document.querySelector('[data-part="display-currency-indicator"]')
+}
+
+const SETTLEMENT = {
+  id: 's-1',
+  fromUserId: 'u-grace',
+  toUserId: 'u-ada',
+  amountMinor: 1_000,
+  currency: 'EUR',
+  convertedMinor: 850,
+  method: 'cash',
+  settledOn: '2026-04-11',
+  note: null,
+}
+
 describe('the display currency on the costs screen', () => {
   it('shows no converted figure and no alert while every trip is in its own currency', () => {
     mount(payload({ canWrite: true }))
 
-    expect(screen.getByText(Costs['display.indicator.perTrip'])).toBeTruthy()
+    expect(indicator()?.textContent).toBe(Costs['display.indicator.perTrip'])
     expect(document.querySelector('[data-part="converted-figure"]')).toBeNull()
     expect(screen.queryByText(Costs['display.alert.title'])).toBeNull()
   })
@@ -187,7 +207,7 @@ describe('the display currency on the costs screen', () => {
       }),
     )
 
-    expect(screen.getByText('Also in GBP')).toBeTruthy()
+    expect(indicator()?.textContent).toBe('Also in GBP')
     const figure = document.querySelector('[data-part="converted-figure"]')
     expect(figure?.querySelector('[aria-hidden="true"]')?.textContent).toBe(
       '≈ 51.00 GBP',
@@ -256,5 +276,86 @@ describe('the display currency on the costs screen', () => {
     const usd = screen.getByRole('option', { name: /USD/ })
     expect(usd.getAttribute('aria-disabled')).toBe('true')
     expect(usd.textContent).toContain(Costs['display.menu.needsLiveRate'])
+  })
+  it('keeps the trigger focusable while the choice is saving and ignores a second pick', async () => {
+    const user = userEvent.setup()
+    let finish: (value: { code: string | null }) => void = () => undefined
+    vi.mocked(setDisplayCurrencyFn).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    mount(
+      payload({
+        canWrite: true,
+        displayChoices: { workspaceCode: 'EUR', rateCodes: ['GBP'] },
+      }),
+    )
+    const trigger = () =>
+      screen.getByRole('combobox', { name: Costs['display.label'] })
+
+    await user.click(trigger())
+    await user.click(screen.getByRole('option', { name: /GBP/ }))
+
+    await waitFor(() =>
+      expect(live()?.textContent).toBe(Costs['display.menu.saving']),
+    )
+    expect(trigger().hasAttribute('disabled')).toBe(false)
+    await user.click(trigger())
+    await user.click(screen.getByRole('option', { name: /workspace default/ }))
+    expect(setDisplayCurrencyFn).toHaveBeenCalledTimes(1)
+
+    finish({ code: 'GBP' })
+    await waitFor(() =>
+      expect(live()?.textContent).not.toBe(Costs['display.menu.saving']),
+    )
+  })
+
+  it('hands an option its reason as an accessible description', async () => {
+    const user = userEvent.setup()
+    mount(payload({ canWrite: true }))
+
+    await user.click(
+      screen.getByRole('combobox', { name: Costs['display.label'] }),
+    )
+
+    const usd = screen.getByRole('option', { name: /USD/ })
+    const describedBy = usd.getAttribute('aria-describedby')
+    expect(describedBy).not.toBeNull()
+    expect(document.getElementById(describedBy ?? '')?.textContent).toBe(
+      Costs['display.menu.needsLiveRate'],
+    )
+  })
+
+  it('keeps the control reachable on a trip that has payments and no expenses', () => {
+    mount(
+      payload({
+        canWrite: true,
+        displayCurrency: FIXED,
+        expenses: [],
+        expenseCount: 0,
+        spentMinor: 0,
+        settlements: [SETTLEMENT],
+      }),
+    )
+
+    expect(
+      screen.getByRole('combobox', { name: Costs['display.label'] }),
+    ).toBeTruthy()
+    expect(indicator()?.textContent).toBe('Also in GBP')
+  })
+
+  it('shows no converted figure on a payment still being recorded', () => {
+    mount(
+      payload({
+        canWrite: true,
+        displayCurrency: FIXED,
+        settlements: [
+          { ...SETTLEMENT, id: 'pending-s-1', convertedMinor: null },
+        ],
+      }),
+    )
+
+    expect(screen.queryByText(Costs['display.row.notConverted'])).toBeNull()
   })
 })
