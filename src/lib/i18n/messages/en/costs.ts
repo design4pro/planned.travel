@@ -320,7 +320,7 @@ const messages = {
   'rebase.outOfRange':
     'With this rate an amount on the trip would be too large to store in {to}. Check the rate and which way round it is.',
   'rebase.tooLarge':
-    'This trip has too many entries to change in one step: it would need {count} changes at once and the limit is {limit}. The budget stays in {from} for now.',
+    'This trip has too many entries to change in one step: it would need {changes} changes at once and the limit is {limit}. The budget stays in {from} for now.',
   'rebase.copyPending':
     'This trip is still being copied. Try again in a moment.',
   'rebase.error': 'The conversion could not be loaded. Nothing was changed.',

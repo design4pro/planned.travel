@@ -195,6 +195,57 @@ const messages = {
   'display.alert.body':
     '这些货币对没有已记录的汇率，因此相关金额仍以预算货币显示：',
   'display.alert.pair': '{date} 的 {from} 兑 {to}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': '更改预算货币',
+  'rebase.title': '更改预算货币',
+  'rebase.description':
+    '你输入的金额保持不变。这趟行程的合计和余额会换算成新的货币。',
+  'rebase.to': '新货币',
+  'rebase.toPlaceholder': '选择货币',
+  'rebase.rateLabel': '汇率（1 {from} 兑 {to}）',
+  'rebase.rateInverse': '也就是 1 {to} = {inverse} {from}。',
+  'rebase.rateInvalid': '请输入大于零的汇率。',
+  'rebase.rateOutOfRange': '这个汇率看起来过大或过小，请检查兑换方向是否反了。',
+  'rebase.source.recent': '此工作区最近使用的汇率',
+  'rebase.source.manual': '你输入的汇率',
+  'rebase.noRate': '没有 {from} 兑 {to} 的汇率记录。请输入你想使用的汇率。',
+  'rebase.waitingForRate': '有了汇率就会显示预览。',
+  'rebase.loading': '正在计算换算结果',
+  'rebase.example': '{original} 保持你输入的样子，并按 {converted} 计算。',
+  'rebase.count.expenses': {
+    other: '{count} 笔支出将按 {to} 计算。',
+  },
+  'rebase.count.payments': {
+    other: '{count} 笔付款将按 {to} 计算。',
+  },
+  'rebase.count.planned': {
+    other: '{count} 个计划项将按 {to} 计算。',
+  },
+  'rebase.pinned': '地点、预订、住宿和交通的价格仍以 {from} 计价。',
+  'rebase.target': '行程预算 {before} 将变为 {after}。',
+  'rebase.rounding': '每笔金额只四舍五入一次，因此余额最多可能变动 {amount}。',
+  'rebase.leftover': '更改后，{name} 将欠 {other} {amount}。',
+  'rebase.someone': '某人',
+  'rebase.nothing': '这趟行程还没有定价的内容，所以无需换算。',
+  'rebase.unconverted': {
+    other:
+      '有 {count} 条记录使用的不是 {from}，无法自动换算。它们通常是由以其他货币定价的预订生成的支出：请编辑或删除后再试。',
+  },
+  'rebase.unsplittable': {
+    other:
+      '有 {count} 笔支出的分摊无法沿用，因为其中每一份都是零。请编辑或删除后再试。',
+  },
+  'rebase.outOfRange':
+    '按这个汇率，行程中有一笔金额会大到无法以 {to} 存储。请检查汇率和兑换方向。',
+  'rebase.tooLarge':
+    '这趟行程的记录太多，无法一次改完：需要同时做 {changes} 处更改，而上限是 {limit}。预算暂时仍以 {from} 计。',
+  'rebase.copyPending': '这趟行程仍在复制中。请稍后再试。',
+  'rebase.error': '无法加载换算结果。没有做任何更改。',
+  'rebase.commitError': '无法更改预算货币。没有做任何更改。',
+  'rebase.retry': '重试',
+  'rebase.confirm': '改为 {to}',
+  'rebase.committing': '正在更改预算货币',
+  'rebase.done': '预算现在以 {to} 计。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

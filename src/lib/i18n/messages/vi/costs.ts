@@ -213,6 +213,66 @@ const messages = {
   'display.alert.body':
     'Chưa có tỷ giá nào được ghi cho các cặp tiền tệ này, nên các số tiền đó giữ nguyên theo tiền tệ ngân sách:',
   'display.alert.pair': '{from} sang {to} ngày {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Đổi tiền tệ của ngân sách',
+  'rebase.title': 'Đổi tiền tệ của ngân sách',
+  'rebase.description':
+    'Các số tiền bạn đã nhập được giữ nguyên. Tổng và số dư của chuyến đi được quy đổi sang tiền tệ mới.',
+  'rebase.to': 'Tiền tệ mới',
+  'rebase.toPlaceholder': 'Chọn một loại tiền tệ',
+  'rebase.rateLabel': 'Tỷ giá (1 {from} sang {to})',
+  'rebase.rateInverse': 'Tức là 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Nhập tỷ giá lớn hơn không.',
+  'rebase.rateOutOfRange':
+    'Tỷ giá này có vẻ quá lớn hoặc quá nhỏ. Hãy kiểm tra xem có bị ngược chiều không.',
+  'rebase.source.recent':
+    'Tỷ giá được dùng gần nhất trong không gian làm việc này',
+  'rebase.source.manual': 'Tỷ giá bạn đã nhập',
+  'rebase.noRate':
+    'Chưa có tỷ giá nào được ghi cho {from} sang {to}. Hãy nhập tỷ giá bạn muốn dùng.',
+  'rebase.waitingForRate': 'Bản xem trước sẽ hiện ngay khi có tỷ giá.',
+  'rebase.loading': 'Đang tính phần quy đổi',
+  'rebase.example':
+    '{original} được giữ nguyên như bạn đã nhập và được tính là {converted}.',
+  'rebase.count.expenses': {
+    other: '{count} khoản chi sẽ được tính bằng {to}.',
+  },
+  'rebase.count.payments': {
+    other: '{count} khoản trả sẽ được tính bằng {to}.',
+  },
+  'rebase.count.planned': {
+    other: '{count} mục dự kiến sẽ được tính bằng {to}.',
+  },
+  'rebase.pinned':
+    'Giá của địa điểm, đặt chỗ, lưu trú và di chuyển vẫn giữ nguyên theo {from}.',
+  'rebase.target': 'Ngân sách chuyến đi {before} sẽ thành {after}.',
+  'rebase.rounding':
+    'Mỗi số tiền chỉ được làm tròn một lần, nên số dư có thể lệch tối đa {amount}.',
+  'rebase.leftover': 'Sau thay đổi, {name} sẽ còn nợ {other} {amount}.',
+  'rebase.someone': 'Một người',
+  'rebase.nothing':
+    'Chuyến đi này chưa có gì được định giá, nên không cần quy đổi gì.',
+  'rebase.unconverted': {
+    other:
+      '{count} mục dùng tiền tệ khác {from} nên không thể quy đổi tự động. Thường đó là khoản chi tạo từ một đặt chỗ có giá bằng tiền tệ khác: hãy sửa hoặc xóa rồi thử lại.',
+  },
+  'rebase.unsplittable': {
+    other:
+      '{count} khoản chi có cách chia không thể chuyển sang, vì mọi phần chia trong đó đều bằng không. Hãy sửa hoặc xóa rồi thử lại.',
+  },
+  'rebase.outOfRange':
+    'Với tỷ giá này, một số tiền trong chuyến đi sẽ quá lớn để lưu bằng {to}. Hãy kiểm tra tỷ giá và chiều quy đổi.',
+  'rebase.tooLarge':
+    'Chuyến đi này có quá nhiều mục để đổi trong một lần: cần {changes} thay đổi cùng lúc, trong khi giới hạn là {limit}. Ngân sách tạm thời vẫn tính bằng {from}.',
+  'rebase.copyPending':
+    'Chuyến đi này vẫn đang được sao chép. Hãy thử lại sau giây lát.',
+  'rebase.error': 'Không tải được phần quy đổi. Chưa có gì bị thay đổi.',
+  'rebase.commitError':
+    'Không đổi được tiền tệ của ngân sách. Chưa có gì bị thay đổi.',
+  'rebase.retry': 'Thử lại',
+  'rebase.confirm': 'Đổi sang {to}',
+  'rebase.committing': 'Đang đổi tiền tệ của ngân sách',
+  'rebase.done': 'Ngân sách giờ tính bằng {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

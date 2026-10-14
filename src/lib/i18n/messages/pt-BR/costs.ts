@@ -218,6 +218,76 @@ const messages = {
   'display.alert.body':
     'Não há taxa registrada para estes pares de moedas, então esses valores ficam na moeda do orçamento:',
   'display.alert.pair': '{from} para {to} em {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Alterar moeda do orçamento',
+  'rebase.title': 'Alterar a moeda do orçamento',
+  'rebase.description':
+    'Os valores que você digitou continuam como estão. Os totais e saldos desta viagem são convertidos para a nova moeda.',
+  'rebase.to': 'Nova moeda',
+  'rebase.toPlaceholder': 'Escolha uma moeda',
+  'rebase.rateLabel': 'Taxa de câmbio (1 {from} em {to})',
+  'rebase.rateInverse': 'Ou seja, 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Escreva uma taxa maior que zero.',
+  'rebase.rateOutOfRange':
+    'Essa taxa parece grande ou pequena demais. Confira em que sentido ela está.',
+  'rebase.source.recent': 'A última taxa usada neste espaço',
+  'rebase.source.manual': 'A taxa que você digitou',
+  'rebase.noRate':
+    'Não há taxa registrada de {from} para {to}. Digite a taxa que quer usar.',
+  'rebase.waitingForRate': 'A prévia aparece assim que houver uma taxa.',
+  'rebase.loading': 'Calculando a conversão',
+  'rebase.example':
+    '{original} continua como você digitou e é contado como {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} despesa será contada em {to}.',
+    many: '{count} despesas serão contadas em {to}.',
+    other: '{count} despesas serão contadas em {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} pagamento será contado em {to}.',
+    many: '{count} pagamentos serão contados em {to}.',
+    other: '{count} pagamentos serão contados em {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} item previsto será contado em {to}.',
+    many: '{count} itens previstos serão contados em {to}.',
+    other: '{count} itens previstos serão contados em {to}.',
+  },
+  'rebase.pinned':
+    'Os preços de lugares, reservas, hospedagens e transportes continuam em {from}.',
+  'rebase.target': 'O orçamento da viagem, {before}, passa a ser {after}.',
+  'rebase.rounding':
+    'Cada valor é arredondado uma vez, então um saldo pode variar em até {amount}.',
+  'rebase.leftover':
+    'Depois da mudança, {name} ficaria devendo {amount} a {other}.',
+  'rebase.someone': 'Alguém',
+  'rebase.nothing':
+    'Nada nesta viagem tem preço ainda, então não há o que converter.',
+  'rebase.unconverted': {
+    one: '{count} lançamento está em outra moeda que não {from} e não pode ser convertido automaticamente. Em geral é uma despesa criada a partir de uma reserva com preço em outra moeda: edite ou exclua e tente de novo.',
+    many: '{count} lançamentos estão em outra moeda que não {from} e não podem ser convertidos automaticamente. Em geral são despesas criadas a partir de reservas com preço em outra moeda: edite ou exclua e tente de novo.',
+    other:
+      '{count} lançamentos estão em outra moeda que não {from} e não podem ser convertidos automaticamente. Em geral são despesas criadas a partir de reservas com preço em outra moeda: edite ou exclua e tente de novo.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} despesa tem uma divisão que não pode ser mantida, porque todas as partes nela são zero. Edite ou exclua e tente de novo.',
+    many: '{count} despesas têm uma divisão que não pode ser mantida, porque todas as partes nelas são zero. Edite ou exclua e tente de novo.',
+    other:
+      '{count} despesas têm uma divisão que não pode ser mantida, porque todas as partes nelas são zero. Edite ou exclua e tente de novo.',
+  },
+  'rebase.outOfRange':
+    'Com essa taxa, um valor da viagem ficaria grande demais para ser guardado em {to}. Confira a taxa e o sentido dela.',
+  'rebase.tooLarge':
+    'Esta viagem tem lançamentos demais para mudar de uma vez: seriam {changes} alterações juntas e o limite é {limit}. O orçamento continua em {from} por enquanto.',
+  'rebase.copyPending':
+    'Esta viagem ainda está sendo copiada. Tente de novo daqui a pouco.',
+  'rebase.error': 'Não foi possível carregar a conversão. Nada foi alterado.',
+  'rebase.commitError':
+    'Não foi possível alterar a moeda do orçamento. Nada foi alterado.',
+  'rebase.retry': 'Tentar de novo',
+  'rebase.confirm': 'Mudar para {to}',
+  'rebase.committing': 'Alterando a moeda do orçamento',
+  'rebase.done': 'O orçamento agora está em {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

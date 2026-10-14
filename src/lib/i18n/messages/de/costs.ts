@@ -215,6 +215,73 @@ const messages = {
   'display.alert.body':
     'Für diese Währungspaare ist kein Kurs erfasst, daher bleiben die Beträge in der Budgetwährung:',
   'display.alert.pair': '{from} nach {to} am {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Budgetwährung ändern',
+  'rebase.title': 'Die Budgetwährung ändern',
+  'rebase.description':
+    'Die Beträge bleiben so, wie du sie eingegeben hast. Die Summen und Salden dieser Reise werden in die neue Währung umgerechnet.',
+  'rebase.to': 'Neue Währung',
+  'rebase.toPlaceholder': 'Währung wählen',
+  'rebase.rateLabel': 'Wechselkurs (1 {from} in {to})',
+  'rebase.rateInverse': 'Das entspricht 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Gib einen Kurs größer als null ein.',
+  'rebase.rateOutOfRange':
+    'Dieser Kurs wirkt viel zu groß oder zu klein. Prüfe, in welche Richtung er gilt.',
+  'rebase.source.recent':
+    'Der zuletzt in diesem Arbeitsbereich verwendete Kurs',
+  'rebase.source.manual': 'Der Kurs, den du eingegeben hast',
+  'rebase.noRate':
+    'Für {from} zu {to} ist kein Kurs erfasst. Gib den Kurs ein, den du verwenden möchtest.',
+  'rebase.waitingForRate': 'Die Vorschau erscheint, sobald ein Kurs vorliegt.',
+  'rebase.loading': 'Die Umrechnung wird berechnet',
+  'rebase.example':
+    '{original} bleibt, wie du es eingegeben hast, und wird als {converted} gezählt.',
+  'rebase.count.expenses': {
+    one: '{count} Ausgabe wird in {to} gezählt.',
+    other: '{count} Ausgaben werden in {to} gezählt.',
+  },
+  'rebase.count.payments': {
+    one: '{count} Zahlung wird in {to} gezählt.',
+    other: '{count} Zahlungen werden in {to} gezählt.',
+  },
+  'rebase.count.planned': {
+    one: '{count} geplanter Eintrag wird in {to} gezählt.',
+    other: '{count} geplante Einträge werden in {to} gezählt.',
+  },
+  'rebase.pinned':
+    'Preise von Orten, Buchungen, Unterkünften und Fahrten bleiben in {from}.',
+  'rebase.target': 'Das Reisebudget {before} wird zu {after}.',
+  'rebase.rounding':
+    'Jeder Betrag wird einmal gerundet, daher kann sich ein Saldo um bis zu {amount} verschieben.',
+  'rebase.leftover':
+    'Nach der Änderung würde {name} {other} {amount} schulden.',
+  'rebase.someone': 'Jemand',
+  'rebase.nothing':
+    'Auf dieser Reise hat noch nichts einen Preis, daher muss nichts umgerechnet werden.',
+  'rebase.unconverted': {
+    one: '{count} Eintrag ist in einer anderen Währung als {from} und kann nicht automatisch umgerechnet werden. Meist ist es eine Ausgabe, die aus einer in anderer Währung bepreisten Buchung entstanden ist: Bearbeite oder lösche sie und versuche es dann erneut.',
+    other:
+      '{count} Einträge sind in einer anderen Währung als {from} und können nicht automatisch umgerechnet werden. Meist sind es Ausgaben, die aus in anderer Währung bepreisten Buchungen entstanden sind: Bearbeite oder lösche sie und versuche es dann erneut.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} Ausgabe hat eine Aufteilung, die sich nicht übernehmen lässt, weil jeder Anteil darin null ist. Bearbeite oder lösche sie und versuche es dann erneut.',
+    other:
+      '{count} Ausgaben haben eine Aufteilung, die sich nicht übernehmen lässt, weil in ihnen jeder Anteil null ist. Bearbeite oder lösche sie und versuche es dann erneut.',
+  },
+  'rebase.outOfRange':
+    'Mit diesem Kurs wäre ein Betrag auf der Reise zu groß, um in {to} gespeichert zu werden. Prüfe den Kurs und seine Richtung.',
+  'rebase.tooLarge':
+    'Diese Reise hat zu viele Einträge, um sie in einem Schritt zu ändern: Es wären {changes} Änderungen auf einmal nötig, erlaubt sind {limit}. Das Budget bleibt vorerst in {from}.',
+  'rebase.copyPending':
+    'Diese Reise wird noch kopiert. Versuche es gleich noch einmal.',
+  'rebase.error':
+    'Die Umrechnung konnte nicht geladen werden. Es wurde nichts geändert.',
+  'rebase.commitError':
+    'Wir konnten die Budgetwährung nicht ändern. Es wurde nichts geändert.',
+  'rebase.retry': 'Erneut versuchen',
+  'rebase.confirm': 'Auf {to} umstellen',
+  'rebase.committing': 'Die Budgetwährung wird geändert',
+  'rebase.done': 'Das Budget ist jetzt in {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

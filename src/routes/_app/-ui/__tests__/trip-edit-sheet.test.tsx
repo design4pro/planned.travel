@@ -83,7 +83,7 @@ describe('the trip edit sheet when the budget currency cannot change', () => {
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain(
-      'This trip already has prices in it, so its budget currency can’t be changed here. Set it back to EUR to save your other changes.',
+      'This trip already has prices in it, so its budget currency can’t be changed here. Use Change budget currency on the Costs tab, or set it back to EUR to save your other changes.',
     )
     expect(alert.textContent).not.toContain('shell.editTrip')
     expect(alert.textContent).not.toContain('{current}')
@@ -98,7 +98,8 @@ describe('the trip edit sheet when the budget currency cannot change', () => {
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain('Ten wyjazd ma już ceny')
-    expect(alert.textContent).toContain('Ustaw z powrotem EUR')
+    expect(alert.textContent).toContain('Zmień walutę budżetu')
+    expect(alert.textContent).toContain('ustaw z powrotem EUR')
   })
 
   it('keeps the sheet open and the trip unchanged on screen', async () => {

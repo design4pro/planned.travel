@@ -220,6 +220,75 @@ const messages = {
   'display.alert.body':
     'No hay tipo registrado para estos pares de monedas, así que esas cifras se quedan en la moneda del presupuesto:',
   'display.alert.pair': '{from} a {to} el {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Cambiar la moneda del presupuesto',
+  'rebase.title': 'Cambiar la moneda del presupuesto',
+  'rebase.description':
+    'Los importes que escribiste se quedan tal cual. Los totales y los saldos de este viaje se convierten a la nueva moneda.',
+  'rebase.to': 'Nueva moneda',
+  'rebase.toPlaceholder': 'Elige una moneda',
+  'rebase.rateLabel': 'Tipo de cambio (1 {from} en {to})',
+  'rebase.rateInverse': 'Es decir, 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Escribe un tipo mayor que cero.',
+  'rebase.rateOutOfRange':
+    'Ese tipo parece demasiado alto o demasiado bajo. Comprueba en qué sentido va.',
+  'rebase.source.recent': 'El último tipo usado en este espacio',
+  'rebase.source.manual': 'El tipo que escribiste',
+  'rebase.noRate':
+    'No hay ningún tipo registrado de {from} a {to}. Escribe el que quieras usar.',
+  'rebase.waitingForRate': 'La vista previa aparece en cuanto haya un tipo.',
+  'rebase.loading': 'Calculando la conversión',
+  'rebase.example':
+    '{original} se queda como lo escribiste y se cuenta como {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} gasto se contará en {to}.',
+    many: '{count} de gastos se contarán en {to}.',
+    other: '{count} gastos se contarán en {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} pago se contará en {to}.',
+    many: '{count} de pagos se contarán en {to}.',
+    other: '{count} pagos se contarán en {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} elemento previsto se contará en {to}.',
+    many: '{count} de elementos previstos se contarán en {to}.',
+    other: '{count} elementos previstos se contarán en {to}.',
+  },
+  'rebase.pinned':
+    'Los precios de lugares, reservas, alojamientos y transportes se quedan en {from}.',
+  'rebase.target': 'El presupuesto del viaje {before} pasa a ser {after}.',
+  'rebase.rounding':
+    'Cada importe se redondea una sola vez, así que un saldo puede variar hasta {amount}.',
+  'rebase.leftover': 'Tras el cambio, {name} le debería {amount} a {other}.',
+  'rebase.someone': 'Alguien',
+  'rebase.nothing':
+    'Nada de este viaje tiene precio todavía, así que no hay nada que convertir.',
+  'rebase.unconverted': {
+    one: '{count} entrada está en una moneda distinta de {from} y no se puede convertir automáticamente. Suele ser un gasto creado a partir de una reserva con el precio en otra moneda: edítalo o elimínalo y vuelve a intentarlo.',
+    many: '{count} de entradas están en una moneda distinta de {from} y no se pueden convertir automáticamente. Suelen ser gastos creados a partir de reservas con el precio en otra moneda: edítalos o elimínalos y vuelve a intentarlo.',
+    other:
+      '{count} entradas están en una moneda distinta de {from} y no se pueden convertir automáticamente. Suelen ser gastos creados a partir de reservas con el precio en otra moneda: edítalos o elimínalos y vuelve a intentarlo.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} gasto tiene un reparto que no se puede trasladar, porque todas sus partes son cero. Edítalo o elimínalo y vuelve a intentarlo.',
+    many: '{count} de gastos tienen un reparto que no se puede trasladar, porque todas sus partes son cero. Edítalos o elimínalos y vuelve a intentarlo.',
+    other:
+      '{count} gastos tienen un reparto que no se puede trasladar, porque todas sus partes son cero. Edítalos o elimínalos y vuelve a intentarlo.',
+  },
+  'rebase.outOfRange':
+    'Con este tipo, un importe del viaje sería demasiado grande para guardarlo en {to}. Revisa el tipo y en qué sentido va.',
+  'rebase.tooLarge':
+    'Este viaje tiene demasiadas entradas para cambiarlas de una vez: harían falta {changes} cambios a la vez y el límite es {limit}. Por ahora el presupuesto sigue en {from}.',
+  'rebase.copyPending':
+    'Este viaje todavía se está copiando. Inténtalo de nuevo en un momento.',
+  'rebase.error': 'No se pudo cargar la conversión. No se cambió nada.',
+  'rebase.commitError':
+    'No pudimos cambiar la moneda del presupuesto. No se cambió nada.',
+  'rebase.retry': 'Reintentar',
+  'rebase.confirm': 'Cambiar a {to}',
+  'rebase.committing': 'Cambiando la moneda del presupuesto',
+  'rebase.done': 'El presupuesto ahora está en {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

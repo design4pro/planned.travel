@@ -367,6 +367,38 @@ export function toAmountInput(
   return (minor / 10 ** digits).toFixed(digits)
 }
 
+/**
+ * The bounds of an exchange rate (`1 old = rate new`) a trip's budget currency can be re-based at:
+ * wide enough for VND to KWD and back, narrow enough to catch a typo. The server holds the same two
+ * numbers (`MIN_REBASE_RATE`, `MAX_REBASE_RATE`); a test pins the pair.
+ */
+export const MIN_EXCHANGE_RATE = 1e-7
+export const MAX_EXCHANGE_RATE = 1e7
+
+/**
+ * A rate typed into a field, in the locale's own notation or the other one: `0,0060` and `0.0060`
+ * both read `0.006`. `null` for anything that is not a positive number.
+ *
+ * Whichever separator comes last is the decimal mark when both appear (`1.234,5`, `1,234.5`); one
+ * that repeats is grouping (`1,234,567`); a single one is a decimal mark, so a lone `1,234` is
+ * `1.234`. That last reading is a guess, which is why the dialog prints the inverse beside the rate:
+ * a rate read the wrong way round is visible before it is confirmed.
+ */
+export function parseRate(text: string): number | null {
+  const figure = text.replace(/[\s\u00a0\u202f]/g, '')
+  if (!/^[\d.,]+$/.test(figure)) {
+    return null
+  }
+  const last = Math.max(figure.lastIndexOf('.'), figure.lastIndexOf(','))
+  // A mark that appears once, and last, is the decimal mark; one that repeats is grouping.
+  const decimalAt =
+    last >= 0 && figure.split(figure.charAt(last)).length === 2 ? last : -1
+  const whole = decimalAt < 0 ? figure : figure.slice(0, decimalAt)
+  const fraction = decimalAt < 0 ? '' : figure.slice(decimalAt + 1)
+  const value = Number(`${whole.replace(/[.,]/g, '')}.${fraction || '0'}`)
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
 /** A percentage typed into a field. `null` for anything outside 0–100. */
 export function parsePercentage(text: string): number | null {
   const trimmed = text.trim().replace('%', '')
