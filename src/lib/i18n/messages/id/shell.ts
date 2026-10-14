@@ -447,6 +447,22 @@ const messages = {
   'newTrip.error': 'Perjalanan tidak bisa dibuat. Coba lagi sebentar.',
   'newTrip.created': 'Perjalanan dibuat',
   'newTrip.createdBody': 'Mulai menaruh tempat di peta.',
+  'newTrip.coverChoose': 'Tambahkan gambar sampul',
+  'newTrip.coverChange': 'Ganti gambar sampul',
+  'newTrip.coverHint':
+    'Jatuhkan gambar di sini, tempel gambar, atau pilih file. PNG, JPEG, WebP, AVIF, atau GIF.',
+  'newTrip.coverChosen': 'Gambar sampul: {name}',
+  'newTrip.coverRemove': 'Hapus gambar sampul',
+  'newTrip.coverTypeError':
+    '“{name}” tidak bisa menjadi gambar sampul. Pilih PNG, JPEG, WebP, AVIF, atau GIF.',
+  'newTrip.coverSizeError':
+    '“{name}” lebih besar dari {max}. Pilih gambar yang lebih kecil.',
+  'newTrip.coverUploading': 'Mengunggah gambar sampul',
+  'newTrip.coverFailedTitle': 'Gambar sampul tidak ditambahkan',
+  'newTrip.coverFailed':
+    'Perjalanan sudah dibuat, tetapi “{name}” tidak bisa diunggah sebagai sampulnya.',
+  'newTrip.coverRetry': 'Coba lagi',
+  'newTrip.coverContinue': 'Buka perjalanan tanpa sampul',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Tindakan untuk {title}',
@@ -473,6 +489,9 @@ const messages = {
   'editTrip.errorTitle': 'Itu tidak tersimpan',
   'editTrip.retry': 'Coba lagi',
   'editTrip.error': 'Perjalanan tidak dapat disimpan. Coba lagi sebentar.',
+  'editTrip.coverFailed':
+    '“{name}” tidak bisa diunggah sebagai sampul. Belum ada hal lain yang tersimpan.',
+  'editTrip.coverContinue': 'Simpan tanpa sampul baru',
   'editTrip.currencyLocked':
     'Perjalanan ini sudah memiliki harga, sehingga mata uang anggarannya tidak dapat diubah di sini. Kembalikan ke {current} untuk menyimpan perubahan lainnya.',
   /* ------------------------------ the delete-trip dialog */

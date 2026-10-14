@@ -32,6 +32,7 @@ const server = vi.hoisted(() => ({
   update: vi.fn(),
 }))
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
+const upload = vi.hoisted(() => ({ upload: vi.fn() }))
 
 vi.mock('../../-server/trip-lifecycle', () => ({
   archiveTripFn: server.archive,
@@ -43,6 +44,9 @@ vi.mock('../../-server/trip-lifecycle', () => ({
   updateTripFn: server.update,
 }))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
+vi.mock('#/components/modules/files/upload', () => ({
+  uploadFile: upload.upload,
+}))
 
 afterEach(cleanup)
 

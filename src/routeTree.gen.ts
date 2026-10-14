@@ -63,6 +63,7 @@ import { Route as AppTripsTripIdListsRouteImport } from './routes/_app/trips/$tr
 import { Route as AppTripsTripIdPeopleRouteImport } from './routes/_app/trips/$tripId/people'
 import { Route as AppTripsTripIdPlanRouteImport } from './routes/_app/trips/$tripId/plan'
 import { Route as AppTripsTripIdTransportsRouteImport } from './routes/_app/trips/$tripId/transports'
+import { Route as ApiTripsTripIdCoverRouteImport } from './routes/api/trips/$tripId/cover'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -337,6 +338,11 @@ const AppTripsTripIdTransportsRoute =
     path: '/transports',
     getParentRoute: () => AppTripsTripIdRouteRoute,
   } as any)
+const ApiTripsTripIdCoverRoute = ApiTripsTripIdCoverRouteImport.update({
+  id: '/api/trips/$tripId/cover',
+  path: '/api/trips/$tripId/cover',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -390,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/trips/$tripId/people': typeof AppTripsTripIdPeopleRoute
   '/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
+  '/api/trips/$tripId/cover': typeof ApiTripsTripIdCoverRoute
   '/console/users/': typeof AppConsoleUsersIndexRoute
   '/trips/$tripId/': typeof AppTripsTripIdIndexRoute
 }
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/trips/$tripId/people': typeof AppTripsTripIdPeopleRoute
   '/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
+  '/api/trips/$tripId/cover': typeof ApiTripsTripIdCoverRoute
   '/console/users': typeof AppConsoleUsersIndexRoute
   '/trips/$tripId': typeof AppTripsTripIdIndexRoute
 }
@@ -498,6 +506,7 @@ export interface FileRoutesById {
   '/_app/trips/$tripId/people': typeof AppTripsTripIdPeopleRoute
   '/_app/trips/$tripId/plan': typeof AppTripsTripIdPlanRoute
   '/_app/trips/$tripId/transports': typeof AppTripsTripIdTransportsRoute
+  '/api/trips/$tripId/cover': typeof ApiTripsTripIdCoverRoute
   '/_app/console/users/': typeof AppConsoleUsersIndexRoute
   '/_app/trips/$tripId/': typeof AppTripsTripIdIndexRoute
 }
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId/people'
     | '/trips/$tripId/plan'
     | '/trips/$tripId/transports'
+    | '/api/trips/$tripId/cover'
     | '/console/users/'
     | '/trips/$tripId/'
   fileRoutesByTo: FileRoutesByTo
@@ -606,6 +616,7 @@ export interface FileRouteTypes {
     | '/trips/$tripId/people'
     | '/trips/$tripId/plan'
     | '/trips/$tripId/transports'
+    | '/api/trips/$tripId/cover'
     | '/console/users'
     | '/trips/$tripId'
   id:
@@ -662,6 +673,7 @@ export interface FileRouteTypes {
     | '/_app/trips/$tripId/people'
     | '/_app/trips/$tripId/plan'
     | '/_app/trips/$tripId/transports'
+    | '/api/trips/$tripId/cover'
     | '/_app/console/users/'
     | '/_app/trips/$tripId/'
   fileRoutesById: FileRoutesById
@@ -685,6 +697,7 @@ export interface RootRouteChildren {
   ApiSandcastleSplatRoute: typeof ApiSandcastleSplatRoute
   ApiTilesSplatRoute: typeof ApiTilesSplatRoute
   ApiTripRoomTripIdRoute: typeof ApiTripRoomTripIdRoute
+  ApiTripsTripIdCoverRoute: typeof ApiTripsTripIdCoverRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1067,6 +1080,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTripsTripIdTransportsRouteImport
       parentRoute: typeof AppTripsTripIdRouteRoute
     }
+    '/api/trips/$tripId/cover': {
+      id: '/api/trips/$tripId/cover'
+      path: '/api/trips/$tripId/cover'
+      fullPath: '/api/trips/$tripId/cover'
+      preLoaderRoute: typeof ApiTripsTripIdCoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1209,6 +1229,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSandcastleSplatRoute: ApiSandcastleSplatRoute,
   ApiTilesSplatRoute: ApiTilesSplatRoute,
   ApiTripRoomTripIdRoute: ApiTripRoomTripIdRoute,
+  ApiTripsTripIdCoverRoute: ApiTripsTripIdCoverRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

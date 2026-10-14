@@ -119,6 +119,8 @@ function fakeTasks() {
  * than widened to the port — which is why the bucket and the queue are parameters instead of a
  * `Partial<TaskBindings>` spread.
  */
+const APP_URL = 'https://planned.travel'
+
 function fakeEnv(
   files: ReturnType<typeof fakeFiles> = fakeFiles(),
   options: { readonly withoutDb?: boolean } = {},
@@ -131,6 +133,7 @@ function fakeEnv(
       list: async () => ({ keys: [], list_complete: true }),
     },
     FILES: files,
+    APP_URL: APP_URL as string | undefined,
     TASKS: fakeTasks(),
     // Present but never dereferenced: the handler builds its Drizzle handle through the injected
     // seam, so only the guard reads this. Its absence is the deployment defect that guard exists for.
@@ -476,7 +479,40 @@ describe('handleTripCopy', () => {
     expect(env.FILES.objects.size).toBe(2)
     const target = await getTrip(tenant.scope, targetId)
     expect(target?.coverImageKey).toBe(targetKey)
-    expect(target?.coverImageUrl).toBe('https://cdn.example.com/lisbon.jpg')
+    // The target's own URL on the app origin, never the source's.
+    expect(target?.coverImageUrl).toBe(
+      `${APP_URL}/api/trips/${targetId}/cover?v=cover1`,
+    )
+  })
+
+  it('does not copy a cover when the app origin is not configured', async () => {
+    const source = await seedSource()
+    const sourceKey = `trips/${tenant.organizationId}/${source.id}/cover1-lisbon.jpg`
+    await updateTrip(tenant.scope, source.id, {
+      coverImageKey: sourceKey,
+      coverImageUrl: `${APP_URL}/api/trips/${source.id}/cover?v=cover1`,
+    })
+    const targetId = await startCopy(source)
+    const env = fakeEnv(
+      fakeFiles({ [sourceKey]: { body: 'jpeg', contentType: 'image/jpeg' } }),
+    )
+    delete env.APP_URL
+
+    await copy(
+      {
+        sourceTripId: source.id,
+        targetTripId: targetId,
+        requestedBy: tenant.ownerUserId,
+      },
+      context(tenant.organizationId, env),
+    )
+
+    // Nothing moved, and the copy still finished without a cover.
+    expect(env.FILES.objects.size).toBe(1)
+    const target = await getTrip(tenant.scope, targetId)
+    expect(target?.copyPendingAt).toBeNull()
+    expect(target?.coverImageKey).toBeNull()
+    expect(target?.coverImageUrl).toBeNull()
   })
 
   it('tolerates a cover that is not there and finishes the copy anyway', async () => {

@@ -376,6 +376,20 @@ const messages = {
   'newTrip.error': '行程创建失败。请稍后再试。',
   'newTrip.created': '行程已创建',
   'newTrip.createdBody': '开始在地图上放置地点吧。',
+  'newTrip.coverChoose': '添加封面图片',
+  'newTrip.coverChange': '更换封面图片',
+  'newTrip.coverHint':
+    '将图片拖放到此处、粘贴图片，或选择文件。支持 PNG、JPEG、WebP、AVIF 或 GIF。',
+  'newTrip.coverChosen': '封面图片：{name}',
+  'newTrip.coverRemove': '移除封面图片',
+  'newTrip.coverTypeError':
+    '“{name}”不能用作封面图片。请选择 PNG、JPEG、WebP、AVIF 或 GIF。',
+  'newTrip.coverSizeError': '“{name}”超过 {max}。请选择更小的图片。',
+  'newTrip.coverUploading': '正在上传封面图片',
+  'newTrip.coverFailedTitle': '封面图片未添加',
+  'newTrip.coverFailed': '行程已创建，但“{name}”未能上传为封面。',
+  'newTrip.coverRetry': '重试',
+  'newTrip.coverContinue': '不带封面打开行程',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 的操作',
@@ -402,6 +416,8 @@ const messages = {
   'editTrip.errorTitle': '未能保存',
   'editTrip.retry': '重试',
   'editTrip.error': '行程保存失败。请稍后重试。',
+  'editTrip.coverFailed': '“{name}”未能上传为封面。其他内容尚未保存。',
+  'editTrip.coverContinue': '不使用新封面并保存',
   'editTrip.currencyLocked':
     '这趟行程已经有价格，所以不能在这里更改预算货币。请改回 {current}，再保存其他修改。',
   /* ------------------------------ the delete-trip dialog */

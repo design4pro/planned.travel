@@ -505,6 +505,22 @@ const messages = {
     'Die Reise konnte nicht angelegt werden. Versuche es in einem Moment erneut.',
   'newTrip.created': 'Reise angelegt',
   'newTrip.createdBody': 'Fang an, Orte auf der Karte zu setzen.',
+  'newTrip.coverChoose': 'Titelbild hinzufügen',
+  'newTrip.coverChange': 'Titelbild ändern',
+  'newTrip.coverHint':
+    'Zieh ein Bild hierher, füge eines ein oder wähle eine Datei. PNG, JPEG, WebP, AVIF oder GIF.',
+  'newTrip.coverChosen': 'Titelbild: {name}',
+  'newTrip.coverRemove': 'Titelbild entfernen',
+  'newTrip.coverTypeError':
+    '„{name}“ kann nicht als Titelbild dienen. Wähle eine PNG-, JPEG-, WebP-, AVIF- oder GIF-Datei.',
+  'newTrip.coverSizeError':
+    '„{name}“ ist größer als {max}. Wähle ein kleineres Bild.',
+  'newTrip.coverUploading': 'Titelbild wird hochgeladen',
+  'newTrip.coverFailedTitle': 'Das Titelbild wurde nicht hinzugefügt',
+  'newTrip.coverFailed':
+    'Die Reise wurde angelegt, aber „{name}“ konnte nicht als Titelbild hochgeladen werden.',
+  'newTrip.coverRetry': 'Erneut versuchen',
+  'newTrip.coverContinue': 'Reise ohne Titelbild öffnen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Aktionen für {title}',
@@ -533,6 +549,9 @@ const messages = {
   'editTrip.retry': 'Erneut versuchen',
   'editTrip.error':
     'Die Reise konnte nicht gespeichert werden. Versuche es gleich noch einmal.',
+  'editTrip.coverFailed':
+    '„{name}“ konnte nicht als Titelbild hochgeladen werden. Sonst wurde noch nichts gespeichert.',
+  'editTrip.coverContinue': 'Ohne das neue Titelbild speichern',
   'editTrip.currencyLocked':
     'Diese Reise enthält bereits Preise, deshalb lässt sich die Budgetwährung hier nicht ändern. Stelle wieder {current} ein, um deine übrigen Änderungen zu speichern.',
   /* ------------------------------ the delete-trip dialog */

@@ -497,6 +497,22 @@ const messages = {
     'Az utazást nem sikerült létrehozni. Próbáld újra egy pillanat múlva.',
   'newTrip.created': 'Utazás létrehozva',
   'newTrip.createdBody': 'Kezdj helyeket rakni a térképre.',
+  'newTrip.coverChoose': 'Borítókép hozzáadása',
+  'newTrip.coverChange': 'Borítókép cseréje',
+  'newTrip.coverHint':
+    'Húzz ide egy képet, illessz be egyet, vagy válassz egy fájlt. PNG, JPEG, WebP, AVIF vagy GIF.',
+  'newTrip.coverChosen': 'Borítókép: {name}',
+  'newTrip.coverRemove': 'Borítókép eltávolítása',
+  'newTrip.coverTypeError':
+    'A(z) „{name}” nem lehet borítókép. Válassz PNG, JPEG, WebP, AVIF vagy GIF fájlt.',
+  'newTrip.coverSizeError':
+    'A(z) „{name}” nagyobb, mint {max}. Válassz kisebb képet.',
+  'newTrip.coverUploading': 'A borítókép feltöltése folyamatban',
+  'newTrip.coverFailedTitle': 'A borítóképet nem sikerült hozzáadni',
+  'newTrip.coverFailed':
+    'Az utazás létrejött, de a(z) „{name}” fájlt nem sikerült borítóként feltölteni.',
+  'newTrip.coverRetry': 'Próbáld újra',
+  'newTrip.coverContinue': 'Az utazás megnyitása borítókép nélkül',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Műveletek: {title}',
@@ -524,6 +540,9 @@ const messages = {
   'editTrip.retry': 'Újra',
   'editTrip.error':
     'Az utazást nem sikerült menteni. Próbáld újra egy pillanat múlva.',
+  'editTrip.coverFailed':
+    'A(z) „{name}” fájlt nem sikerült borítóként feltölteni. Más még nem került mentésre.',
+  'editTrip.coverContinue': 'Mentés az új borítókép nélkül',
   'editTrip.currencyLocked':
     'Ennek az utazásnak már vannak árai, ezért a költségvetés pénznemét itt nem lehet módosítani. Állítsd vissza {current} értékre, hogy a többi módosításod mentődjön.',
   /* ------------------------------ the delete-trip dialog */

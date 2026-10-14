@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { newId } from '#/server/db/schema'
 import {
+  clearTripCoverIfKey,
   deleteFile,
   getFile,
   getStorageUsage,
@@ -271,6 +272,13 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
     await requireTrip(scope, data.tripId)
 
     const row = await getFile(scope, data.fileId)
+    // A trip's cover is one of its files, and a deleted file must not leave the tile pointing at
+    // bytes that are gone. Cleared on the trip the *file row* names, where the cover is that very
+    // object - and before the bucket delete, by a write that is open to every role, so an editor's
+    // delete cannot fail halfway with the object already removed.
+    if (row !== null) {
+      await clearTripCoverIfKey(scope, row.tripId, row.storageKey)
+    }
     const storageKey = await deleteFile(scope, data.fileId)
     await filesBucket().delete(storageKey)
 

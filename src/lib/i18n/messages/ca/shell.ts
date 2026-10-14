@@ -516,6 +516,22 @@ const messages = {
     'No s’ha pogut crear el viatge. Torna-ho a provar en un moment.',
   'newTrip.created': 'Viatge creat',
   'newTrip.createdBody': 'Comença a posar llocs al mapa.',
+  'newTrip.coverChoose': 'Afegeix una imatge de portada',
+  'newTrip.coverChange': 'Canvia la imatge de portada',
+  'newTrip.coverHint':
+    'Deixa anar una imatge aquí, enganxa’n una o tria un fitxer. PNG, JPEG, WebP, AVIF o GIF.',
+  'newTrip.coverChosen': 'Imatge de portada: {name}',
+  'newTrip.coverRemove': 'Treu la imatge de portada',
+  'newTrip.coverTypeError':
+    '«{name}» no pot ser una imatge de portada. Tria un PNG, JPEG, WebP, AVIF o GIF.',
+  'newTrip.coverSizeError':
+    '«{name}» pesa més de {max}. Tria una imatge més petita.',
+  'newTrip.coverUploading': 'S’està pujant la imatge de portada',
+  'newTrip.coverFailedTitle': 'No s’ha afegit la imatge de portada',
+  'newTrip.coverFailed':
+    'El viatge s’ha creat, però no s’ha pogut pujar «{name}» com a portada.',
+  'newTrip.coverRetry': 'Torna-ho a provar',
+  'newTrip.coverContinue': 'Obre el viatge sense portada',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Accions per a {title}',
@@ -543,6 +559,9 @@ const messages = {
   'editTrip.retry': 'Torna-ho a provar',
   'editTrip.error':
     'No s’ha pogut desar el viatge. Torna-ho a provar d’aquí a un moment.',
+  'editTrip.coverFailed':
+    'No s’ha pogut pujar «{name}» com a portada. Encara no s’ha desat res més.',
+  'editTrip.coverContinue': 'Desa sense la portada nova',
   'editTrip.currencyLocked':
     'Aquest viatge ja té preus, per això la moneda del pressupost no es pot canviar aquí. Torna a posar {current} per desar els altres canvis.',
   /* ------------------------------ the delete-trip dialog */

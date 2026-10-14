@@ -514,6 +514,22 @@ const messages = {
   'newTrip.error': "Le voyage n'a pas pu être créé. Réessayez dans un instant.",
   'newTrip.created': 'Voyage créé',
   'newTrip.createdBody': 'Commencez à poser des lieux sur la carte.',
+  'newTrip.coverChoose': 'Ajouter une image de couverture',
+  'newTrip.coverChange': 'Changer l’image de couverture',
+  'newTrip.coverHint':
+    'Déposez une image ici, collez-en une ou choisissez un fichier. PNG, JPEG, WebP, AVIF ou GIF.',
+  'newTrip.coverChosen': 'Image de couverture : {name}',
+  'newTrip.coverRemove': 'Retirer l’image de couverture',
+  'newTrip.coverTypeError':
+    '« {name} » ne peut pas servir d’image de couverture. Choisissez un PNG, JPEG, WebP, AVIF ou GIF.',
+  'newTrip.coverSizeError':
+    '« {name} » dépasse {max}. Choisissez une image plus légère.',
+  'newTrip.coverUploading': 'Envoi de l’image de couverture',
+  'newTrip.coverFailedTitle': 'L’image de couverture n’a pas été ajoutée',
+  'newTrip.coverFailed':
+    'Le voyage a été créé, mais « {name} » n’a pas pu être envoyé comme couverture.',
+  'newTrip.coverRetry': 'Réessayer',
+  'newTrip.coverContinue': 'Ouvrir le voyage sans couverture',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Actions pour {title}',
@@ -541,6 +557,9 @@ const messages = {
   'editTrip.retry': 'Réessayer',
   'editTrip.error':
     'Le voyage n’a pas pu être enregistré. Réessayez dans un instant.',
+  'editTrip.coverFailed':
+    '« {name} » n’a pas pu être envoyé comme couverture. Rien d’autre n’a encore été enregistré.',
+  'editTrip.coverContinue': 'Enregistrer sans la nouvelle couverture',
   'editTrip.currencyLocked':
     'Ce voyage contient déjà des prix : la devise du budget ne peut donc pas être modifiée ici. Remettez {current} pour enregistrer vos autres modifications.',
   /* ------------------------------ the delete-trip dialog */

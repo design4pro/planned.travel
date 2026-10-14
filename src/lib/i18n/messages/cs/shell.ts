@@ -531,6 +531,22 @@ const messages = {
   'newTrip.error': 'Cestu nešlo vytvořit. Zkuste to za chvíli znovu.',
   'newTrip.created': 'Cesta vytvořena',
   'newTrip.createdBody': 'Začněte na mapu přidávat místa.',
+  'newTrip.coverChoose': 'Přidat titulní obrázek',
+  'newTrip.coverChange': 'Změnit titulní obrázek',
+  'newTrip.coverHint':
+    'Přetáhněte sem obrázek, vložte ho ze schránky nebo vyberte soubor. PNG, JPEG, WebP, AVIF nebo GIF.',
+  'newTrip.coverChosen': 'Titulní obrázek: {name}',
+  'newTrip.coverRemove': 'Odebrat titulní obrázek',
+  'newTrip.coverTypeError':
+    'Soubor „{name}“ nelze použít jako titulní obrázek. Vyberte PNG, JPEG, WebP, AVIF nebo GIF.',
+  'newTrip.coverSizeError':
+    'Soubor „{name}“ je větší než {max}. Vyberte menší obrázek.',
+  'newTrip.coverUploading': 'Nahrává se titulní obrázek',
+  'newTrip.coverFailedTitle': 'Titulní obrázek se nepřidal',
+  'newTrip.coverFailed':
+    'Cesta byla vytvořena, ale soubor „{name}“ se nepodařilo nahrát jako titulní obrázek.',
+  'newTrip.coverRetry': 'Zkusit znovu',
+  'newTrip.coverContinue': 'Otevřít cestu bez titulního obrázku',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Akce pro {title}',
@@ -557,6 +573,9 @@ const messages = {
   'editTrip.errorTitle': 'Neuložilo se to',
   'editTrip.retry': 'Zkusit znovu',
   'editTrip.error': 'Cestu se nepodařilo uložit. Zkuste to za chvíli znovu.',
+  'editTrip.coverFailed':
+    'Soubor „{name}“ se nepodařilo nahrát jako titulní obrázek. Zatím se neuložilo nic dalšího.',
+  'editTrip.coverContinue': 'Uložit bez nového titulního obrázku',
   'editTrip.currencyLocked':
     'Tato cesta už obsahuje ceny, proto tady nejde změnit měnu rozpočtu. Nastavte zpět {current} a uložte ostatní změny.',
   /* ------------------------------ the delete-trip dialog */

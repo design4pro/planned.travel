@@ -496,6 +496,22 @@ const messages = {
     'De reis kon niet worden aangemaakt. Probeer het straks opnieuw.',
   'newTrip.created': 'Reis aangemaakt',
   'newTrip.createdBody': 'Begin plekken op de kaart te zetten.',
+  'newTrip.coverChoose': 'Omslagafbeelding toevoegen',
+  'newTrip.coverChange': 'Omslagafbeelding wijzigen',
+  'newTrip.coverHint':
+    'Sleep hier een afbeelding naartoe, plak er een of kies een bestand. PNG, JPEG, WebP, AVIF of GIF.',
+  'newTrip.coverChosen': 'Omslagafbeelding: {name}',
+  'newTrip.coverRemove': 'Omslagafbeelding verwijderen',
+  'newTrip.coverTypeError':
+    '‘{name}’ kan niet als omslagafbeelding dienen. Kies een PNG-, JPEG-, WebP-, AVIF- of GIF-bestand.',
+  'newTrip.coverSizeError':
+    '‘{name}’ is groter dan {max}. Kies een kleinere afbeelding.',
+  'newTrip.coverUploading': 'Omslagafbeelding wordt geüpload',
+  'newTrip.coverFailedTitle': 'De omslagafbeelding is niet toegevoegd',
+  'newTrip.coverFailed':
+    'De reis is aangemaakt, maar ‘{name}’ kon niet als omslag worden geüpload.',
+  'newTrip.coverRetry': 'Opnieuw proberen',
+  'newTrip.coverContinue': 'Reis openen zonder omslag',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acties voor {title}',
@@ -523,6 +539,9 @@ const messages = {
   'editTrip.retry': 'Opnieuw proberen',
   'editTrip.error':
     'De reis kon niet worden opgeslagen. Probeer het zo nog eens.',
+  'editTrip.coverFailed':
+    '‘{name}’ kon niet als omslag worden geüpload. Er is nog niets anders opgeslagen.',
+  'editTrip.coverContinue': 'Opslaan zonder de nieuwe omslag',
   'editTrip.currencyLocked':
     'Deze reis bevat al prijzen, dus de valuta van het budget kan hier niet worden gewijzigd. Zet het terug op {current} om je andere wijzigingen op te slaan.',
   /* ------------------------------ the delete-trip dialog */

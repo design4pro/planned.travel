@@ -1716,6 +1716,34 @@ export async function finishTripCopy(
   })
 }
 
+/**
+ * Clears a trip's cover when - and only when - it is the object `storageKey` names.
+ *
+ * Called when a file is deleted, so the tile falls back to the shipped cover art instead of
+ * pointing at bytes that are gone. **Not owner-only, deliberately**: the delete it rides on is open
+ * to an editor, and an owner-only guard here would let an editor's delete fail halfway - the row
+ * removed, the cover still pointing at it. Two conditions are the guard instead: the caller must be
+ * able to read the trip (a workspace member taken off a private trip cannot change it), and the
+ * cover must be that very object, so a trip whose cover is another object, or none, is not touched.
+ * Tenant-scoped like every write here, so a key from another workspace matches nothing.
+ */
+export async function clearTripCoverIfKey(
+  scope: TenantScope,
+  tripId: string,
+  storageKey: string,
+): Promise<boolean> {
+  const rows = await tripsRepository.updateWhere(
+    scope,
+    allOf(
+      eq(trips.id, tripId),
+      eq(trips.coverImageKey, storageKey),
+      readableTripFilter(scope),
+    ),
+    { coverImageKey: null, coverImageUrl: null },
+  )
+  return rows.length > 0
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Trip membership
  * ---------------------------------------------------------------------------------------------- */

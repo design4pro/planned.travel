@@ -477,6 +477,22 @@ const messages = {
   'newTrip.error': 'Το ταξίδι δεν δημιουργήθηκε. Δοκίμασε ξανά σε λίγο.',
   'newTrip.created': 'Το ταξίδι δημιουργήθηκε',
   'newTrip.createdBody': 'Ξεκίνα να βάζεις μέρη στον χάρτη.',
+  'newTrip.coverChoose': 'Προσθήκη εικόνας εξωφύλλου',
+  'newTrip.coverChange': 'Αλλαγή εικόνας εξωφύλλου',
+  'newTrip.coverHint':
+    'Σύρε εδώ μια εικόνα, επικόλλησέ την ή επίλεξε αρχείο. PNG, JPEG, WebP, AVIF ή GIF.',
+  'newTrip.coverChosen': 'Εικόνα εξωφύλλου: {name}',
+  'newTrip.coverRemove': 'Αφαίρεση εικόνας εξωφύλλου',
+  'newTrip.coverTypeError':
+    'Το «{name}» δεν μπορεί να γίνει εικόνα εξωφύλλου. Επίλεξε PNG, JPEG, WebP, AVIF ή GIF.',
+  'newTrip.coverSizeError':
+    'Το «{name}» είναι μεγαλύτερο από {max}. Επίλεξε μικρότερη εικόνα.',
+  'newTrip.coverUploading': 'Μεταφόρτωση της εικόνας εξωφύλλου',
+  'newTrip.coverFailedTitle': 'Η εικόνα εξωφύλλου δεν προστέθηκε',
+  'newTrip.coverFailed':
+    'Το ταξίδι δημιουργήθηκε, αλλά το «{name}» δεν μεταφορτώθηκε ως εξώφυλλο.',
+  'newTrip.coverRetry': 'Δοκίμασε ξανά',
+  'newTrip.coverContinue': 'Άνοιγμα του ταξιδιού χωρίς εξώφυλλο',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ενέργειες για {title}',
@@ -503,6 +519,9 @@ const messages = {
   'editTrip.errorTitle': 'Αυτό δεν αποθηκεύτηκε',
   'editTrip.retry': 'Δοκιμάστε ξανά',
   'editTrip.error': 'Το ταξίδι δεν αποθηκεύτηκε. Δοκιμάστε ξανά σε λίγο.',
+  'editTrip.coverFailed':
+    'Το «{name}» δεν μεταφορτώθηκε ως εξώφυλλο. Τίποτε άλλο δεν έχει αποθηκευτεί ακόμη.',
+  'editTrip.coverContinue': 'Αποθήκευση χωρίς το νέο εξώφυλλο',
   'editTrip.currencyLocked':
     'Αυτό το ταξίδι έχει ήδη τιμές, γι’ αυτό το νόμισμα προϋπολογισμού δεν μπορεί να αλλάξει εδώ. Ορίστε ξανά {current} για να αποθηκευτούν οι υπόλοιπες αλλαγές σας.',
   /* ------------------------------ the delete-trip dialog */

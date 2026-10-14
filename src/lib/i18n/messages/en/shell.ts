@@ -569,6 +569,22 @@ const messages = {
   'newTrip.error': 'The trip could not be created. Try again in a moment.',
   'newTrip.created': 'Trip created',
   'newTrip.createdBody': 'Start dropping places on the map.',
+  'newTrip.coverChoose': 'Add a cover image',
+  'newTrip.coverChange': 'Change the cover image',
+  'newTrip.coverHint':
+    'Drop an image here, paste one, or choose a file. PNG, JPEG, WebP, AVIF or GIF.',
+  'newTrip.coverChosen': 'Cover image: {name}',
+  'newTrip.coverRemove': 'Remove the cover image',
+  'newTrip.coverTypeError':
+    '“{name}” cannot be a cover image. Choose a PNG, JPEG, WebP, AVIF or GIF.',
+  'newTrip.coverSizeError':
+    '“{name}” is larger than {max}. Choose a smaller image.',
+  'newTrip.coverUploading': 'Uploading the cover image',
+  'newTrip.coverFailedTitle': 'The cover image was not added',
+  'newTrip.coverFailed':
+    'The trip was created, but “{name}” could not be uploaded as its cover.',
+  'newTrip.coverRetry': 'Try again',
+  'newTrip.coverContinue': 'Open the trip without a cover',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Actions for {title}',
@@ -595,6 +611,9 @@ const messages = {
   'editTrip.errorTitle': 'That did not save',
   'editTrip.retry': 'Try again',
   'editTrip.error': 'The trip could not be saved. Try again in a moment.',
+  'editTrip.coverFailed':
+    '“{name}” could not be uploaded as the cover. Nothing else has been saved yet.',
+  'editTrip.coverContinue': 'Save without the new cover',
   'editTrip.currencyLocked':
     'This trip already has prices in it, so its budget currency can’t be changed here. Set it back to {current} to save your other changes.',
   /* ------------------------------ the delete-trip dialog */

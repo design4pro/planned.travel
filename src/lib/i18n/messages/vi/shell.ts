@@ -447,6 +447,21 @@ const messages = {
   'newTrip.error': 'Không tạo được chuyến đi. Thử lại sau một lát.',
   'newTrip.created': 'Đã tạo chuyến đi',
   'newTrip.createdBody': 'Bắt đầu đặt địa điểm lên bản đồ.',
+  'newTrip.coverChoose': 'Thêm ảnh bìa',
+  'newTrip.coverChange': 'Đổi ảnh bìa',
+  'newTrip.coverHint':
+    'Thả ảnh vào đây, dán ảnh hoặc chọn tệp. PNG, JPEG, WebP, AVIF hoặc GIF.',
+  'newTrip.coverChosen': 'Ảnh bìa: {name}',
+  'newTrip.coverRemove': 'Xóa ảnh bìa',
+  'newTrip.coverTypeError':
+    '“{name}” không dùng được làm ảnh bìa. Hãy chọn PNG, JPEG, WebP, AVIF hoặc GIF.',
+  'newTrip.coverSizeError': '“{name}” lớn hơn {max}. Hãy chọn ảnh nhỏ hơn.',
+  'newTrip.coverUploading': 'Đang tải ảnh bìa lên',
+  'newTrip.coverFailedTitle': 'Chưa thêm được ảnh bìa',
+  'newTrip.coverFailed':
+    'Đã tạo chuyến đi, nhưng không tải “{name}” lên làm ảnh bìa được.',
+  'newTrip.coverRetry': 'Thử lại',
+  'newTrip.coverContinue': 'Mở chuyến đi không có ảnh bìa',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Thao tác cho {title}',
@@ -473,6 +488,9 @@ const messages = {
   'editTrip.errorTitle': 'Chưa lưu được',
   'editTrip.retry': 'Thử lại',
   'editTrip.error': 'Không lưu được chuyến đi. Hãy thử lại sau giây lát.',
+  'editTrip.coverFailed':
+    'Không tải “{name}” lên làm ảnh bìa được. Chưa lưu thêm gì khác.',
+  'editTrip.coverContinue': 'Lưu mà không có ảnh bìa mới',
   'editTrip.currencyLocked':
     'Chuyến đi này đã có giá, nên không thể đổi tiền tệ của ngân sách tại đây. Hãy đặt lại {current} để lưu các thay đổi khác.',
   /* ------------------------------ the delete-trip dialog */
