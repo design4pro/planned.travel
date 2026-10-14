@@ -821,6 +821,8 @@ const messages = {
   'files.calendar.download.error': '我們無法準備檔案，請再試一次。',
   'files.calendar.timesNote': '帶時區的行程段在任何地方都顯示為同一時刻。其他內容依計畫的時鐘時間顯示，無論你的行事曆在哪裡。',
   'files.drop.active': '放開即可上傳',
+  'files.reject.blockedType':
+    '「{name}」未新增：基於安全考量，這裡不儲存 XML 檔案與壓縮的 SVG 檔案。請將其另存為 PDF 或圖片，再新增那個檔案。',
   'files.drop.idle': '把檔案拖到這裡',
   'files.empty.title': '這趟出行還沒有檔案',
   'files.empty.body':

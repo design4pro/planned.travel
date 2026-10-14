@@ -904,6 +904,8 @@ const messages = {
   'files.calendar.download.error': 'We konden het bestand niet voorbereiden. Probeer het opnieuw.',
   'files.calendar.timesNote': 'Ritten met een tijdzone verschijnen overal op hetzelfde moment. Al het andere verschijnt op de geplande kloktijd, waar je agenda ook is.',
   'files.drop.active': 'Loslaten om te uploaden',
+  'files.reject.blockedType':
+    '„{name}” is niet toegevoegd: XML-bestanden en gecomprimeerde SVG-bestanden worden hier om veiligheidsredenen niet opgeslagen. Sla het op als pdf of afbeelding en voeg dat in plaats daarvan toe.',
   'files.drop.idle': 'Sleep bestanden hierheen',
   'files.empty.title': 'Geen bestanden op deze reis',
   'files.empty.body':

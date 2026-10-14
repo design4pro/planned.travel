@@ -1075,6 +1075,8 @@ const messages = {
   'files.calendar.download.error': 'We couldn’t prepare the file. Try again.',
   'files.calendar.timesNote': 'Journeys with a time zone show at the same moment everywhere. Everything else shows at its planned clock time, wherever your calendar is.',
   'files.drop.active': 'Drop to upload',
+  'files.reject.blockedType':
+    '“{name}” was not added: XML and compressed SVG files are not stored here, for safety. Save it as a PDF or an image and add that instead.',
   'files.drop.idle': 'Drag files here',
   'files.empty.title': 'No files on this trip',
   'files.empty.body':

@@ -929,6 +929,8 @@ const messages = {
   'files.calendar.download.error': 'Nous n’avons pas pu préparer le fichier. Réessayez.',
   'files.calendar.timesNote': 'Les trajets avec fuseau horaire s’affichent au même instant partout. Tout le reste s’affiche à l’heure prévue sur l’horloge, où que soit votre calendrier.',
   'files.drop.active': 'Lâche pour envoyer',
+  'files.reject.blockedType':
+    '« {name} » n’a pas été ajouté : les fichiers XML et SVG compressés ne sont pas conservés ici, par sécurité. Enregistre-le en PDF ou en image et ajoute plutôt cela.',
   'files.drop.idle': 'Fais glisser des fichiers ici',
   'files.empty.title': 'Aucun fichier sur ce voyage',
   'files.empty.body':

@@ -891,6 +891,8 @@ const messages = {
   'files.calendar.download.error': 'Vi kunde inte förbereda filen. Försök igen.',
   'files.calendar.timesNote': 'Resor med tidszon visas vid samma tidpunkt överallt. Allt annat visas på sin planerade klocktid, var din kalender än finns.',
   'files.drop.active': 'Släpp för att ladda upp',
+  'files.reject.blockedType':
+    '”{name}” lades inte till: XML-filer och komprimerade SVG-filer sparas inte här, av säkerhetsskäl. Spara den som PDF eller bild och lägg till den i stället.',
   'files.drop.idle': 'Dra filer hit',
   'files.empty.title': 'Inga filer på den här resan',
   'files.empty.body':

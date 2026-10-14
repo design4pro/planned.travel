@@ -859,6 +859,8 @@ const messages = {
   'files.calendar.download.error': 'ファイルを準備できませんでした。もう一度お試しください。',
   'files.calendar.timesNote': 'タイムゾーンのある移動は、世界中どこでも同じ瞬間に表示されます。それ以外は、カレンダーがどこにあっても予定した時刻のまま表示されます。',
   'files.drop.active': 'ドロップしてアップロード',
+  'files.reject.blockedType':
+    '「{name}」は追加されませんでした。XML ファイルと圧縮された SVG ファイルは、安全のためここには保存されません。PDF か画像として保存し、そちらを追加してください。',
   'files.drop.idle': 'ここにファイルをドラッグ',
   'files.empty.title': 'この旅行にファイルはありません',
   'files.empty.body':

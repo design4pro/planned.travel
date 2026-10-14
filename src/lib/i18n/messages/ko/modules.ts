@@ -855,6 +855,8 @@ const messages = {
   'files.calendar.download.error': '파일을 준비하지 못했습니다. 다시 시도해 주세요.',
   'files.calendar.timesNote': '시간대가 있는 이동은 어디서나 같은 순간에 표시됩니다. 나머지는 캘린더가 어디에 있든 계획한 시계 시각 그대로 표시됩니다.',
   'files.drop.active': '놓으면 올라갑니다',
+  'files.reject.blockedType':
+    '‘{name}’은(는) 추가되지 않았습니다. XML 파일과 압축된 SVG 파일은 안전을 위해 여기에 저장되지 않습니다. PDF나 이미지로 저장한 뒤 그 파일을 대신 추가해 주세요.',
   'files.drop.idle': '여기로 파일을 끌어 오세요',
   'files.empty.title': '이 여행에 파일이 없습니다',
   'files.empty.body':

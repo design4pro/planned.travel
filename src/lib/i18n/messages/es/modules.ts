@@ -920,6 +920,8 @@ const messages = {
   'files.calendar.download.error': 'No hemos podido preparar el archivo. Inténtalo de nuevo.',
   'files.calendar.timesNote': 'Los trayectos con zona horaria se muestran en el mismo instante en todas partes. Todo lo demás se muestra a la hora prevista del reloj, esté donde esté tu calendario.',
   'files.drop.active': 'Suelta para subir',
+  'files.reject.blockedType':
+    '«{name}» no se añadió: aquí no se guardan archivos XML ni SVG comprimidos, por seguridad. Guárdalo como PDF o como imagen y añade eso en su lugar.',
   'files.drop.idle': 'Arrastra archivos aquí',
   'files.empty.title': 'No hay archivos en este viaje',
   'files.empty.body':

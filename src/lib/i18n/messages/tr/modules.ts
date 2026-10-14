@@ -884,6 +884,8 @@ const messages = {
   'files.calendar.download.error': 'Dosyayı hazırlayamadık. Tekrar dene.',
   'files.calendar.timesNote': 'Saat dilimi olan yolculuklar her yerde aynı anda görünür. Geri kalan her şey, takvimin nerede olursa olsun planlanan saat değerinde görünür.',
   'files.drop.active': 'Yüklemek için bırak',
+  'files.reject.blockedType':
+    '“{name}” eklenmedi: XML ve sıkıştırılmış SVG dosyaları güvenlik nedeniyle burada saklanmaz. Onu PDF veya görsel olarak kaydet ve onun yerine onu ekle.',
   'files.drop.idle': 'Dosyaları buraya sürükle',
   'files.empty.title': 'Bu yolculukta dosya yok',
   'files.empty.body':

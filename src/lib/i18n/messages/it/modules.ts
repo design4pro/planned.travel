@@ -925,6 +925,8 @@ const messages = {
   'files.calendar.download.error': 'Non siamo riusciti a preparare il file. Riprova.',
   'files.calendar.timesNote': 'I tragitti con fuso orario compaiono nello stesso momento ovunque. Tutto il resto compare all’ora prevista sull’orologio, ovunque sia il tuo calendario.',
   'files.drop.active': 'Rilascia per caricare',
+  'files.reject.blockedType':
+    '«{name}» non è stato aggiunto: qui i file XML e SVG compressi non vengono conservati, per sicurezza. Salvalo come PDF o come immagine e aggiungi quello al suo posto.',
   'files.drop.idle': 'Trascina i file qui',
   'files.empty.title': 'Nessun file in questo viaggio',
   'files.empty.body':

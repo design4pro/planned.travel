@@ -929,6 +929,8 @@ const messages = {
   'files.calendar.download.error': 'Nie udało się przygotować pliku. Spróbuj ponownie.',
   'files.calendar.timesNote': 'Przejazdy ze strefą czasową pokazują się w tym samym momencie na całym świecie. Reszta pokazuje się o zaplanowanej godzinie zegarowej, gdziekolwiek jest Twój kalendarz.',
   'files.drop.active': 'Upuść, aby wysłać',
+  'files.reject.blockedType':
+    '„{name}” nie został dodany: pliki XML i skompresowane SVG nie są tu przechowywane, ze względów bezpieczeństwa. Zapisz go jako PDF lub obraz i dodaj to zamiast niego.',
   'files.drop.idle': 'Przeciągnij pliki tutaj',
   'files.empty.title': 'Brak plików na tym wyjeździe',
   'files.empty.body':

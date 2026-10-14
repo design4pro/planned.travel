@@ -887,6 +887,8 @@ const messages = {
   'files.calendar.download.error': 'Kami tidak dapat menyiapkan berkas. Coba lagi.',
   'files.calendar.timesNote': 'Perjalanan dengan zona waktu muncul pada saat yang sama di mana pun. Semua yang lain muncul pada jam yang direncanakan, di mana pun kalendermu berada.',
   'files.drop.active': 'Lepas untuk mengunggah',
+  'files.reject.blockedType':
+    '“{name}” tidak ditambahkan: berkas XML dan SVG terkompresi tidak disimpan di sini demi keamanan. Simpan sebagai PDF atau gambar, lalu tambahkan itu sebagai gantinya.',
   'files.drop.idle': 'Seret berkas ke sini',
   'files.empty.title': 'Belum ada berkas di perjalanan ini',
   'files.empty.body':

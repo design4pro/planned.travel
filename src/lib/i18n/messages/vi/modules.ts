@@ -871,6 +871,8 @@ const messages = {
   'files.calendar.download.error': 'Chúng tôi không thể chuẩn bị tệp. Hãy thử lại.',
   'files.calendar.timesNote': 'Các hành trình có múi giờ hiển thị cùng một thời điểm ở mọi nơi. Mọi thứ khác hiển thị đúng giờ đã lên kế hoạch, dù lịch của bạn ở đâu.',
   'files.drop.active': 'Thả ra để tải lên',
+  'files.reject.blockedType':
+    '“{name}” chưa được thêm: tệp XML và tệp SVG nén không được lưu ở đây vì lý do an toàn. Hãy lưu nó thành PDF hoặc hình ảnh rồi thêm tệp đó thay thế.',
   'files.drop.idle': 'Kéo tệp vào đây',
   'files.empty.title': 'Chuyến này chưa có tệp nào',
   'files.empty.body':

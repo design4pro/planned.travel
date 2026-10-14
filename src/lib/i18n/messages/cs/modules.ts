@@ -915,6 +915,8 @@ const messages = {
   'files.calendar.download.error': 'Soubor se nepodařilo připravit. Zkus to znovu.',
   'files.calendar.timesNote': 'Cesty s časovým pásmem se zobrazí všude ve stejný okamžik. Vše ostatní se zobrazí v plánovaný čas na hodinách, ať je tvůj kalendář kdekoli.',
   'files.drop.active': 'Pusť a nahraje se',
+  'files.reject.blockedType':
+    'Soubor „{name}“ nebyl přidán: soubory XML a komprimované SVG se tu z bezpečnostních důvodů neukládají. Ulož ho jako PDF nebo obrázek a přidej místo něj to.',
   'files.drop.idle': 'Přetáhni soubory sem',
   'files.empty.title': 'Na téhle cestě nejsou soubory',
   'files.empty.body':

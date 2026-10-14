@@ -928,6 +928,8 @@ const messages = {
   'files.calendar.download.error': 'تعذّر علينا تجهيز الملف. حاول مرة أخرى.',
   'files.calendar.timesNote': 'تظهر الرحلات ذات المنطقة الزمنية في اللحظة نفسها في كل مكان. أما بقية العناصر فتظهر في ساعتها المخطط لها، أينما كان تقويمك.',
   'files.drop.active': 'أفلِت للرفع',
+  'files.reject.blockedType':
+    'لم تتم إضافة «{name}»: لا تُحفظ هنا ملفات XML وملفات SVG المضغوطة حفاظًا على الأمان. احفظه بصيغة PDF أو كصورة ثم أضف ذلك بدلًا منه.',
   'files.drop.idle': 'اسحب الملفات إلى هنا',
   'files.empty.title': 'لا ملفات في هذه الرحلة',
   'files.empty.body':

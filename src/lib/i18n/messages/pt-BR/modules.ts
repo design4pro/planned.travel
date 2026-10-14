@@ -916,6 +916,8 @@ const messages = {
   'files.calendar.download.error': 'Não foi possível preparar o arquivo. Tente novamente.',
   'files.calendar.timesNote': 'Trajetos com fuso horário aparecem no mesmo momento em qualquer lugar. Todo o resto aparece no horário planejado do relógio, onde quer que esteja o seu calendário.',
   'files.drop.active': 'Solte para enviar',
+  'files.reject.blockedType':
+    '“{name}” não foi adicionado: arquivos XML e SVG compactados não são guardados aqui, por segurança. Salve como PDF ou imagem e adicione isso no lugar.',
   'files.drop.idle': 'Arraste arquivos para cá',
   'files.empty.title': 'Nenhum arquivo nesta viagem',
   'files.empty.body':
