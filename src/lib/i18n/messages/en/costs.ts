@@ -326,6 +326,8 @@ const messages = {
   'rebase.error': 'The conversion could not be loaded. Nothing was changed.',
   'rebase.commitError':
     "We couldn't change the budget currency. Nothing was changed.",
+  'rebase.stale':
+    "The trip's budget currency is now {current}, not {from}. Close this dialog and open it again.",
   'rebase.sameCurrency':
     'The budget is already in {to}. Pick a different currency.',
   'rebase.commitUnknown':

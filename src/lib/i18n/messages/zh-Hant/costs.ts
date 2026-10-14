@@ -242,6 +242,8 @@ const messages = {
   'rebase.copyPending': '這趟行程仍在複製中。請稍後再試。',
   'rebase.error': '無法載入換算結果。沒有做任何變更。',
   'rebase.commitError': '無法變更預算貨幣。沒有做任何變更。',
+  'rebase.stale':
+    '行程的預算貨幣現在是{current}，不再是{from}。請關閉此對話框後重新開啟。',
   'rebase.sameCurrency': '預算已使用{to}。請選擇其他貨幣。',
   'rebase.commitUnknown':
     '無法確認預算貨幣是否已變更為{to}。請先重新整理頁面檢查，再重試。',

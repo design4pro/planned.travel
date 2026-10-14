@@ -269,6 +269,8 @@ const messages = {
   'rebase.error': 'Konversi tidak bisa dimuat. Tidak ada yang diubah.',
   'rebase.commitError':
     'Kami tidak bisa mengubah mata uang anggaran. Tidak ada yang diubah.',
+  'rebase.stale':
+    'Mata uang anggaran perjalanan sekarang {current}, bukan {from}. Tutup dialog ini lalu buka lagi.',
   'rebase.sameCurrency': 'Anggaran sudah dalam {to}. Pilih mata uang lain.',
   'rebase.commitUnknown':
     'Kami tidak dapat memastikan apakah mata uang anggaran sudah berubah ke {to}. Muat ulang halaman untuk memeriksanya sebelum mencoba lagi.',

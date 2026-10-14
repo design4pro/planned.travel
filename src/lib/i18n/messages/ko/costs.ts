@@ -262,6 +262,8 @@ const messages = {
   'rebase.error': '환산 결과를 불러오지 못했습니다. 변경된 내용은 없습니다.',
   'rebase.commitError':
     '예산 통화를 변경하지 못했습니다. 변경된 내용은 없습니다.',
+  'rebase.stale':
+    '여행의 예산 통화가 이제 {from}이(가) 아니라 {current}입니다. 이 대화상자를 닫고 다시 여세요.',
   'rebase.sameCurrency':
     '예산이 이미 {to}(으)로 설정되어 있습니다. 다른 통화를 선택하세요.',
   'rebase.commitUnknown':

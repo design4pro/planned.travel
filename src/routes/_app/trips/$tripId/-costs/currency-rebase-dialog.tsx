@@ -102,7 +102,8 @@ interface CommitFailure {
   readonly kind: 'unknown' | 'unconfirmed' | 'changed'
 }
 
-type RateProblem = 'invalid' | 'range'
+// `pending`: nothing typed yet, or only the start of a number (`0`, `0.`); no error, no request.
+type RateProblem = 'invalid' | 'range' | 'pending'
 
 const TIMED_OUT = 'timeout'
 
@@ -118,6 +119,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 function readTypedRate(
   text: string,
 ): { readonly value: number } | { readonly problem: RateProblem } {
+  if (/^[\s0.,]*$/.test(text)) {
+    return { problem: 'pending' }
+  }
   const value = parseRate(text)
   if (value === null) {
     return { problem: 'invalid' }
@@ -192,6 +196,7 @@ export function CurrencyRebaseDialog({
   const retryRef = useRef<HTMLButtonElement>(null)
   const changedRef = useRef<HTMLDivElement>(null)
   const changedId = useId()
+  const failureId = useId()
   const resultRef = useRef<HTMLDivElement>(null)
   // Set the moment a commit starts, so a second tap in the same frame cannot start another.
   const submitting = useRef(false)
@@ -226,8 +231,15 @@ export function CurrencyRebaseDialog({
   // Nothing priced and no rate asked for: the change is only the label.
   const nothingToConvert =
     ready !== null && refusal === null && ready.rate === null
+  // The server prices `trip.currency -> to`; if another tab changed that since this dialog opened,
+  // the labels and the typed rate belong to a pair the preview is no longer about.
+  const stale = ready !== null && currencyCode(ready.from) !== from
   const confirmable =
-    !committing && ready !== null && refusal === null && !previewFailed
+    !committing &&
+    ready !== null &&
+    refusal === null &&
+    !previewFailed &&
+    !stale
 
   useEffect(() => {
     if (requestKey === null) {
@@ -276,6 +288,8 @@ export function CurrencyRebaseDialog({
   }, [shownFailure])
 
   function askAgain(): void {
+    // The retry button that called this is about to go away; keep focus on what replaces it.
+    resultRef.current?.focus()
     setOutcome(null)
     setAttempt((count) => count + 1)
   }
@@ -294,7 +308,7 @@ export function CurrencyRebaseDialog({
     }
     submitting.current = true
     const request: RebaseCommit = {
-      from: ready.from,
+      from,
       to: ready.to,
       rate: ready.rate?.value,
     }
@@ -309,8 +323,16 @@ export function CurrencyRebaseDialog({
     } catch (cause) {
       if (currencyRefusalOf(cause) === 'costs.refusal.rebaseChanged') {
         // Something moved since the preview: show why, and work out the figures again.
+        // A commit that timed out earlier may have landed meanwhile; then the trip is already done.
+        const now = await withTimeout(readCurrency(), READ_TIMEOUT_MS).catch(
+          () => null,
+        )
         setCommitting(false)
         submitting.current = false
+        if (now !== null && currencyCode(now) === currencyCode(request.to)) {
+          finish(request.to)
+          return
+        }
         setFailure({ key, kind: 'changed' })
         askAgain()
         return
@@ -362,7 +384,15 @@ export function CurrencyRebaseDialog({
     people.find((person) => person.userId === userId)?.name ??
     t('costs.rebase.someone')
 
-  const refusalMessage = ready === null ? null : refusalText(ready, t, locale)
+  let refusalMessage: string | null = null
+  if (ready !== null && stale) {
+    refusalMessage = t('costs.rebase.stale', {
+      from,
+      current: currencyCode(ready.from),
+    })
+  } else if (ready !== null) {
+    refusalMessage = refusalText(ready, t, locale)
+  }
 
   let rateHint: ReactNode
   if (refusal?.kind === 'no-rate') {
@@ -384,11 +414,16 @@ export function CurrencyRebaseDialog({
     )
   } else if (!touched && loading) {
     // Two lines are reserved while the first preview loads, so the field does not jump when it lands.
-    rateHint = <Skeleton className="h-9 w-48" />
+    rateHint = (
+      <span
+        aria-hidden="true"
+        className="block h-9 w-48 rounded-md bg-surface-inset"
+      />
+    )
   }
 
   let result: ReactNode = null
-  if (ready !== null && refusal === null) {
+  if (ready !== null && refusal === null && !stale) {
     result = nothingToConvert ? (
       <p className="text-body text-ink">{t('costs.rebase.nothing')}</p>
     ) : (
@@ -448,7 +483,11 @@ export function CurrencyRebaseDialog({
                   required={!nothingToConvert}
                   disabled={committing}
                   hint={rateHint}
-                  error={rateProblem === null ? undefined : t(rateErrorKey)}
+                  error={
+                    rateProblem === null || rateProblem === 'pending'
+                      ? undefined
+                      : t(rateErrorKey)
+                  }
                 >
                   <Input
                     value={rateField}
@@ -541,6 +580,7 @@ export function CurrencyRebaseDialog({
                     actions={
                       <Button
                         ref={retryRef}
+                        aria-describedby={failureId}
                         type="button"
                         variant="secondary"
                         size="sm"
@@ -551,12 +591,14 @@ export function CurrencyRebaseDialog({
                       </Button>
                     }
                   >
-                    {t(
-                      shownFailure.kind === 'unconfirmed'
-                        ? 'costs.rebase.commitUnknown'
-                        : 'costs.rebase.commitError',
-                      { to: currencyCode(to) },
-                    )}
+                    <span id={failureId}>
+                      {t(
+                        shownFailure.kind === 'unconfirmed'
+                          ? 'costs.rebase.commitUnknown'
+                          : 'costs.rebase.commitError',
+                        { to: currencyCode(to) },
+                      )}
+                    </span>
                   </Alert>
                 ) : null}
 

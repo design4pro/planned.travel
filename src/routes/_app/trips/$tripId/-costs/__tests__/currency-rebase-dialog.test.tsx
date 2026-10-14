@@ -938,6 +938,72 @@ describe('the budget currency dialog: a commit that is still in doubt', () => {
   })
 })
 
+describe('the budget currency dialog: when the trip moved under it', () => {
+  it('holds confirm and says to reopen when the preview is for another currency than the dialog opened on', async () => {
+    const { commit } = open({ load: async () => preview({ from: 'USD' }) })
+    const user = hand()
+
+    await pick(user, 'JPY')
+    await settled()
+
+    expect(
+      within(result()).getByText(
+        "The trip's budget currency is now USD, not EUR. Close this dialog and open it again.",
+      ),
+    ).toBeTruthy()
+    expect((confirm() as HTMLButtonElement).disabled).toBe(true)
+    expect(commit).not.toHaveBeenCalled()
+  })
+
+  it('sends the currency the dialog opened on, not the one the preview happened to read', async () => {
+    const { commit } = open()
+    const user = hand()
+    await pick(user, 'JPY')
+    await settled()
+
+    await user.click(confirm())
+
+    expect(commit).toHaveBeenCalledWith(
+      expect.objectContaining({ from: 'EUR' }),
+    )
+  })
+
+  it('shows success when a commit that timed out landed meanwhile and the retry is refused', async () => {
+    const commit = vi
+      .fn<Commit>()
+      .mockRejectedValue(new Error('costs.refusal.rebaseChanged'))
+    const { onChanged } = open({ commit, readCurrency: async () => 'JPY' })
+    const user = hand()
+    await pick(user, 'JPY')
+    await settled()
+
+    await user.click(confirm())
+
+    await waitFor(() =>
+      expect(onChanged).toHaveBeenCalledExactlyOnceWith('JPY'),
+    )
+  })
+
+  it('does not call a number that is still being typed an error', async () => {
+    const { loadPreview } = open()
+    const user = hand()
+    await pick(user, 'JPY')
+    await settled()
+    loadPreview.mockClear()
+
+    await user.clear(rateField())
+    await user.type(rateField(), '0.')
+
+    expect(rateField().getAttribute('aria-invalid')).not.toBe('true')
+    expect((confirm() as HTMLButtonElement).disabled).toBe(true)
+    await user.type(rateField(), '85')
+    await waitFor(() => expect(loadPreview).toHaveBeenCalledTimes(1), {
+      timeout: 2_000,
+    })
+    expect(loadPreview).toHaveBeenCalledWith({ to: 'JPY', rate: 0.85 })
+  })
+})
+
 describe('the budget currency dialog: its code', () => {
   it('imports nothing at run time from the server layer', () => {
     const source = readFileSync(

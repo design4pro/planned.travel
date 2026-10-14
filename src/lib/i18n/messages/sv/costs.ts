@@ -269,6 +269,8 @@ const messages = {
   'rebase.copyPending': 'Resan kopieras fortfarande. Försök igen om en stund.',
   'rebase.error': 'Omräkningen kunde inte läsas in. Inget har ändrats.',
   'rebase.commitError': 'Vi kunde inte ändra budgetvalutan. Inget har ändrats.',
+  'rebase.stale':
+    'Resans budgetvaluta är nu {current}, inte {from}. Stäng dialogrutan och öppna den igen.',
   'rebase.sameCurrency': 'Budgeten är redan i {to}. Välj en annan valuta.',
   'rebase.commitUnknown':
     'Vi kunde inte bekräfta om budgetvalutan ändrades till {to}. Ladda om sidan och kontrollera innan du försöker igen.',

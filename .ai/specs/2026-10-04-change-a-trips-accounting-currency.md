@@ -459,7 +459,7 @@ number>.optional(), from: <currency code>.optional() })`; `rate` is required unl
     runs; only otherwise does it say nothing was changed (`rebase.commitError`), which is then true
     because the batch is atomic. When that re-read itself fails, or the commit timed out (it may still
     land), the dialog says it could not confirm (`rebase.commitUnknown`) instead of claiming nothing
-    changed; a retry is safe because the commit carries `from`.
+    changed; a retry is safe because the commit carries `from`: the currency the dialog opened on. A preview that comes back for another currency (`rebase.stale`) holds confirm and asks to reopen the dialog.
   - Success: the dialog closes, `router.invalidate()`, a toast `rebase.done`.
 - **A stale tab keeps what the traveller typed.** When an expense, payment or planned-item save is
   refused with `costs.refusal.tripCurrencyChanged`, the existing dialog stays open with its input,
@@ -525,6 +525,7 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | `rebase.copyPending`                | `This trip is still being copied. Try again in a moment.`                                                                                                                                                         |
 | `rebase.error`                      | `The conversion could not be loaded. Nothing was changed.`                                                                                                                                                        |
 | `rebase.commitError`                | `We couldn't change the budget currency. Nothing was changed.`                                                                                                                                                    |
+| `rebase.stale`                      | `The trip's budget currency is now {current}, not {from}. Close this dialog and open it again.`                                                                                                                   |
 | `rebase.sameCurrency`               | `The budget is already in {to}. Pick a different currency.`                                                                                                                                                       |
 | `rebase.commitUnknown`              | `We couldn't confirm whether the budget currency changed to {to}. Reload the page to check before trying again.`                                                                                                  |
 | `rebase.retry`                      | `Try again`                                                                                                                                                                                                       |

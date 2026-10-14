@@ -273,6 +273,8 @@ const messages = {
   'rebase.error': 'Çevrim yüklenemedi. Hiçbir şey değişmedi.',
   'rebase.commitError':
     'Bütçe para birimi değiştirilemedi. Hiçbir şey değişmedi.',
+  'rebase.stale':
+    'Gezinin bütçe para birimi artık {from} değil, {current}. Bu pencereyi kapatıp yeniden açın.',
   'rebase.sameCurrency':
     'Bütçe zaten {to} cinsinden. Başka bir para birimi seçin.',
   'rebase.commitUnknown':

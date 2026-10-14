@@ -269,6 +269,8 @@ const messages = {
   'rebase.error': 'Không tải được phần quy đổi. Chưa có gì bị thay đổi.',
   'rebase.commitError':
     'Không đổi được tiền tệ của ngân sách. Chưa có gì bị thay đổi.',
+  'rebase.stale':
+    'Tiền tệ ngân sách của chuyến đi hiện là {current}, không còn là {from}. Hãy đóng hộp thoại này và mở lại.',
   'rebase.sameCurrency': 'Ngân sách đã dùng {to}. Hãy chọn loại tiền khác.',
   'rebase.commitUnknown':
     'Chúng tôi không thể xác nhận tiền tệ ngân sách đã đổi sang {to} hay chưa. Hãy tải lại trang để kiểm tra trước khi thử lại.',

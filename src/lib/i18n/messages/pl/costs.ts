@@ -295,6 +295,8 @@ const messages = {
     'Nie udało się wczytać przeliczenia. Nic nie zostało zmienione.',
   'rebase.commitError':
     'Nie udało się zmienić waluty budżetu. Nic nie zostało zmienione.',
+  'rebase.stale':
+    'Waluta budżetu podróży to teraz {current}, a nie {from}. Zamknij to okno i otwórz je ponownie.',
   'rebase.sameCurrency': 'Budżet jest już w walucie {to}. Wybierz inną walutę.',
   'rebase.commitUnknown':
     'Nie udało się potwierdzić, czy waluta budżetu zmieniła się na {to}. Zanim spróbujesz ponownie, odśwież stronę i sprawdź.',

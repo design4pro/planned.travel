@@ -285,6 +285,8 @@ const messages = {
   'rebase.error': 'No se pudo cargar la conversión. No se cambió nada.',
   'rebase.commitError':
     'No pudimos cambiar la moneda del presupuesto. No se cambió nada.',
+  'rebase.stale':
+    'La moneda del presupuesto del viaje ahora es {current}, no {from}. Cierra este diálogo y vuelve a abrirlo.',
   'rebase.sameCurrency': 'El presupuesto ya está en {to}. Elige otra moneda.',
   'rebase.commitUnknown':
     'No pudimos confirmar si la moneda del presupuesto cambió a {to}. Recarga la página para comprobarlo antes de volver a intentarlo.',

@@ -279,6 +279,8 @@ const messages = {
   'rebase.error': 'Az átváltást nem sikerült betölteni. Semmi sem változott.',
   'rebase.commitError':
     'Nem sikerült módosítani a költségvetés pénznemét. Semmi sem változott.',
+  'rebase.stale':
+    'Az utazás költségvetési pénzneme mostantól {current}, nem {from}. Zárd be ezt az ablakot, és nyisd meg újra.',
   'rebase.sameCurrency':
     'A költségvetés már {to} pénznemben van. Válassz másik pénznemet.',
   'rebase.commitUnknown':

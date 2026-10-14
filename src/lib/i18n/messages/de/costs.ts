@@ -278,6 +278,8 @@ const messages = {
     'Die Umrechnung konnte nicht geladen werden. Es wurde nichts geändert.',
   'rebase.commitError':
     'Wir konnten die Budgetwährung nicht ändern. Es wurde nichts geändert.',
+  'rebase.stale':
+    'Die Budgetwährung der Reise ist jetzt {current}, nicht {from}. Schließe diesen Dialog und öffne ihn erneut.',
   'rebase.sameCurrency':
     'Das Budget ist bereits in {to}. Wähle eine andere Währung.',
   'rebase.commitUnknown':
