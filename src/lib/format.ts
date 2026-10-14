@@ -108,6 +108,7 @@ const monthYearFormatters = new Map<Locale, Intl.DateTimeFormat>()
 const numberFormatters = new Map<Locale, Intl.NumberFormat>()
 const percentFormatters = new Map<Locale, Intl.NumberFormat>()
 const fixedFormatters = new Map<string, Intl.NumberFormat>()
+const rateInputFormatters = new Map<Locale, Intl.NumberFormat>()
 const currencySymbols = new Map<string, string>()
 
 /** The frozen row for a locale: names, patterns and layouts, no `Intl`. */
@@ -504,6 +505,45 @@ export function formatRate(
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   }).format(value)
+}
+
+/**
+ * The other way round of a rate, for the sentence that lets a reader see a rate typed the wrong way
+ * round: six significant digits, grouped, so `1 / 52631` reads `0.0000190` and not `0.00`, where
+ * {@link formatRate}'s four fraction digits would round it away.
+ */
+export function formatInverseRate(
+  value: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return makeNumberFormat(locale, {
+    style: 'decimal',
+    maximumSignificantDigits: 6,
+  }).format(value)
+}
+
+/**
+ * An exchange rate as the text a field should hold: the locale's decimal mark, no grouping and as
+ * many significant digits as the rate has (ten at most), so `0.0000115` is not shown as `0.00`.
+ *
+ * The numbering system is the frozen row's, like every other number here; grouping is off because
+ * the reader is about to edit the text, and `parseRate` (`#/lib/money`) reads it back.
+ */
+export function formatRateInput(
+  value: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const cached = rateInputFormatters.get(locale)
+  const formatter =
+    cached ??
+    new Intl.NumberFormat(formatsFor(locale).intlLocale, {
+      useGrouping: false,
+      maximumSignificantDigits: 10,
+    })
+  if (cached === undefined) {
+    rateInputFormatters.set(locale, formatter)
+  }
+  return formatter.format(value)
 }
 
 /** `-3` → `3`, keeping the sign out of a label that already says "ago". */

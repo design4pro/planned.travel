@@ -505,6 +505,11 @@ const messages = {
   'book.ledger.refused.body':
     '예약은 여행에 들어갔습니다. 비용 항목을 여행 비용에 추가하지 못했습니다 — 그 절반만 다시 시도하세요.',
   'book.action.ledgerRetry': '비용에 추가',
+  'book.ledger.splitStale.title':
+    '저장했지만 정산 분배가 더 이상 맞지 않습니다',
+  'book.ledger.splitStale.body':
+    '예약과 새 가격은 저장했지만, 이 비용 항목의 분배는 새 합계를 따라가지 못했습니다. 비용에서 이 항목을 열어 분배를 고쳐 주세요.',
+  'book.action.done': '완료',
   'book.copyConfirmation': '{title}의 확인 번호',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -843,6 +848,8 @@ const messages = {
   'files.action.choose': '파일 고르기',
   'files.action.upload': '파일 올리기',
   'files.drop.active': '놓으면 올라갑니다',
+  'files.reject.blockedType':
+    '‘{name}’은(는) 추가되지 않았습니다. XML 파일과 압축된 SVG 파일은 안전을 위해 여기에 저장되지 않습니다. PDF나 이미지로 저장한 뒤 그 파일을 대신 추가해 주세요.',
   'files.drop.idle': '여기로 파일을 끌어 오세요',
   'files.empty.title': '이 여행에 파일이 없습니다',
   'files.empty.body':

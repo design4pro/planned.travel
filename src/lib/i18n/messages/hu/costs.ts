@@ -55,6 +55,10 @@ const messages = {
   'split.label': 'Felosztás',
   'split.everyone': 'Mindenki',
   'split.nobody': 'Senki',
+  'split.departed': 'Elhagyta az utat',
+  'split.departedHint':
+    'Ha valakit, aki elhagyta az utat, kijelölés nélkül hagysz, a részesedése végleg törlődik.',
+  'split.includeFor': '{name} szerepeljen ebben a felosztásban',
   'split.how': 'Hogyan oszlik meg ez a kiadás',
   'split.method.equal': 'Egyenlően',
   'split.method.equalHint':
@@ -218,6 +222,77 @@ const messages = {
   'display.alert.body':
     'Ezekhez a pénznempárokhoz nincs rögzített árfolyam, ezért ezek az összegek a költségkeret pénznemében maradnak:',
   'display.alert.pair': '{from} → {to}, {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Költségvetés pénznemének módosítása',
+  'rebase.title': 'A költségvetés pénznemének módosítása',
+  'rebase.description':
+    'A beírt összegek úgy maradnak, ahogy beírtad őket. Az utazás összesítései és egyenlegei az új pénznemre lesznek átváltva.',
+  'rebase.to': 'Új pénznem',
+  'rebase.toPlaceholder': 'Válassz pénznemet',
+  'rebase.rateLabel': 'Árfolyam (1 {from} ennyi {to})',
+  'rebase.rateInverse': 'Vagyis 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Nullánál nagyobb árfolyamot adj meg.',
+  'rebase.rateOutOfRange':
+    'Ez az árfolyam túl nagynak vagy túl kicsinek tűnik. Ellenőrizd, melyik irányban értendő.',
+  'rebase.source.recent': 'A munkaterületen utoljára használt árfolyam',
+  'rebase.source.manual': 'Az általad megadott árfolyam',
+  'rebase.noRate':
+    'Nincs rögzített árfolyam: {from} → {to}. Add meg azt, amelyiket használni szeretnéd.',
+  'rebase.waitingForRate': 'Az előnézet megjelenik, amint van árfolyam.',
+  'rebase.loading': 'Az átváltás kiszámítása',
+  'rebase.example':
+    '{original} úgy marad, ahogy beírtad, és {converted} értékben számít.',
+  'rebase.count.expenses': {
+    one: '{count} kiadás {to} pénznemben lesz számolva.',
+    other: '{count} kiadás {to} pénznemben lesz számolva.',
+  },
+  'rebase.count.payments': {
+    one: '{count} fizetés {to} pénznemben lesz számolva.',
+    other: '{count} fizetés {to} pénznemben lesz számolva.',
+  },
+  'rebase.count.planned': {
+    one: '{count} tervezett tétel {to} pénznemben lesz számolva.',
+    other: '{count} tervezett tétel {to} pénznemben lesz számolva.',
+  },
+  'rebase.pinned':
+    'A helyek, foglalások, szállások és közlekedés árai {from} pénznemben maradnak.',
+  'rebase.target': 'Az utazás költségvetése {before} helyett {after} lesz.',
+  'rebase.rounding':
+    'Minden összeg csak egyszer lesz kerekítve, ezért egy egyenleg legfeljebb {amount} összeggel változhat.',
+  'rebase.leftover':
+    'A módosítás után {name} {amount} összeggel tartozna {other} részére.',
+  'rebase.someone': 'Valaki',
+  'rebase.nothing':
+    'Ezen az utazáson még semmi nincs beárazva, ezért nincs mit átváltani.',
+  'rebase.unconverted': {
+    one: '{count} tétel nem {from} pénznemben van, ezért nem váltható át automatikusan. Ez általában egy másik pénznemben beárazott foglalásból létrejött kiadás: szerkeszd vagy töröld, majd próbáld újra.',
+    other:
+      '{count} tétel nem {from} pénznemben van, ezért nem váltható át automatikusan. Ezek általában másik pénznemben beárazott foglalásokból létrejött kiadások: szerkeszd vagy töröld őket, majd próbáld újra.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} kiadás felosztása nem vihető át, mert minden részesedése nulla. Szerkeszd vagy töröld, majd próbáld újra.',
+    other:
+      '{count} kiadás felosztása nem vihető át, mert minden részesedésük nulla. Szerkeszd vagy töröld őket, majd próbáld újra.',
+  },
+  'rebase.outOfRange':
+    'Ezzel az árfolyammal az utazás egyik összege túl nagy lenne ahhoz, hogy {to} pénznemben el lehessen tárolni. Ellenőrizd az árfolyamot és az irányát.',
+  'rebase.tooLarge':
+    'Ennek az utazásnak túl sok tétele van ahhoz, hogy egy lépésben módosítsuk: egyszerre {changes} módosításra lenne szükség, a korlát pedig {limit}. A költségvetés egyelőre {from} pénznemben marad.',
+  'rebase.copyPending':
+    'Az utazás másolása még folyamatban van. Próbáld újra egy pillanat múlva.',
+  'rebase.error': 'Az átváltást nem sikerült betölteni. Semmi sem változott.',
+  'rebase.commitError':
+    'Nem sikerült módosítani a költségvetés pénznemét. Semmi sem változott.',
+  'rebase.stale':
+    'Az utazás költségvetési pénzneme mostantól {current}, nem {from}. Zárd be ezt az ablakot, és nyisd meg újra.',
+  'rebase.sameCurrency':
+    'A költségvetés már {to} pénznemben van. Válassz másik pénznemet.',
+  'rebase.commitUnknown':
+    'Nem tudtuk megerősíteni, hogy a költségvetés pénzneme {to}-ra változott-e. Újrapróbálkozás előtt töltsd újra az oldalt, és ellenőrizd.',
+  'rebase.retry': 'Újra',
+  'rebase.confirm': 'Váltás: {to}',
+  'rebase.committing': 'A költségvetés pénznemének módosítása folyamatban',
+  'rebase.done': 'A költségvetés mostantól {to} pénznemben van.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

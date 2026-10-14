@@ -684,6 +684,10 @@ const messages = {
   'book.ledger.refused.body':
     'The booking is on the trip. Adding its cost line to the trip’s costs did not go through — try that half again.',
   'book.action.ledgerRetry': 'Add it to the ledger',
+  'book.ledger.splitStale.title': 'Saved, but the split no longer adds up',
+  'book.ledger.splitStale.body':
+    'The booking and its new price are saved, but the way this cost line was split could not follow the new total. Open the line on Costs and fix the split.',
+  'book.action.done': 'Done',
   'book.copyConfirmation': 'the confirmation number for {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -1064,6 +1068,8 @@ const messages = {
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
   'files.drop.active': 'Drop to upload',
+  'files.reject.blockedType':
+    '“{name}” was not added: XML and compressed SVG files are not stored here, for safety. Save it as a PDF or an image and add that instead.',
   'files.drop.idle': 'Drag files here',
   'files.empty.title': 'No files on this trip',
   'files.empty.body':

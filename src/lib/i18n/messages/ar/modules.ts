@@ -556,6 +556,10 @@ const messages = {
   'book.ledger.refused.body':
     'الحجز على الرحلة. إضافة بند تكلفته إلى تكاليف الرحلة لم تنجح — أعد محاولة هذا النصف.',
   'book.action.ledgerRetry': 'أضفه إلى دفتر التكاليف',
+  'book.ledger.splitStale.title': 'حُفظ، لكن التقسيم لم يعد يطابق الإجمالي',
+  'book.ledger.splitStale.body':
+    'حُفظ الحجز وسعره الجديد، لكن طريقة تقسيم بند التكلفة هذا لم تتمكن من مواكبة الإجمالي الجديد. افتح البند في التكاليف وصحّح التقسيم.',
+  'book.action.done': 'تم',
   'book.copyConfirmation': 'رقم التأكيد الخاص بـ {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -917,6 +921,8 @@ const messages = {
   'files.action.choose': 'اختيار ملفات',
   'files.action.upload': 'رفع الملفات',
   'files.drop.active': 'أفلِت للرفع',
+  'files.reject.blockedType':
+    'لم تتم إضافة «{name}»: لا تُحفظ هنا ملفات XML وملفات SVG المضغوطة حفاظًا على الأمان. احفظه بصيغة PDF أو كصورة ثم أضف ذلك بدلًا منه.',
   'files.drop.idle': 'اسحب الملفات إلى هنا',
   'files.empty.title': 'لا ملفات في هذه الرحلة',
   'files.empty.body':

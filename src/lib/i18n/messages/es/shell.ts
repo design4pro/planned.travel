@@ -561,7 +561,7 @@ const messages = {
     'No se pudo subir «{name}» como portada. Todavía no se ha guardado nada más.',
   'editTrip.coverContinue': 'Guardar sin la nueva portada',
   'editTrip.currencyLocked':
-    'Este viaje ya tiene precios, así que su moneda del presupuesto no se puede cambiar aquí. Vuelve a poner {current} para guardar tus otros cambios.',
+    'Este viaje ya tiene precios, así que su moneda del presupuesto no se puede cambiar aquí. Usa Cambiar la moneda del presupuesto en la pestaña Gastos o vuelve a poner {current} para guardar tus otros cambios.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '¿Eliminar «{title}» para siempre?',
   'deleteTrip.description':

@@ -56,6 +56,10 @@ const messages = {
   'split.label': 'Partager entre',
   'split.everyone': 'Tout le monde',
   'split.nobody': 'Personne',
+  'split.departed': 'A quitté le voyage',
+  'split.departedHint':
+    'Décocher une personne qui a quitté le voyage supprime définitivement sa part.',
+  'split.includeFor': 'Inclure {name} dans ce partage',
   'split.how': 'Comment cette dépense se partage',
   'split.method.equal': 'À parts égales',
   'split.method.equalHint':
@@ -223,6 +227,82 @@ const messages = {
   'display.alert.body':
     'Aucun taux n’est enregistré pour ces paires de devises, ces montants restent donc dans la devise du budget :',
   'display.alert.pair': '{from} vers {to} le {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Changer la devise du budget',
+  'rebase.title': 'Changer la devise du budget',
+  'rebase.description':
+    'Les montants que vous avez saisis restent tels quels. Les totaux et les soldes de ce voyage sont convertis dans la nouvelle devise.',
+  'rebase.to': 'Nouvelle devise',
+  'rebase.toPlaceholder': 'Choisissez une devise',
+  'rebase.rateLabel': 'Taux de change (1 {from} en {to})',
+  'rebase.rateInverse': 'Soit 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Saisissez un taux supérieur à zéro.',
+  'rebase.rateOutOfRange':
+    'Ce taux semble beaucoup trop grand ou trop petit. Vérifiez dans quel sens il va.',
+  'rebase.source.recent': 'Le dernier taux utilisé dans cet espace',
+  'rebase.source.manual': 'Le taux que vous avez saisi',
+  'rebase.noRate':
+    'Aucun taux n’est enregistré pour {from} vers {to}. Saisissez celui que vous voulez utiliser.',
+  'rebase.waitingForRate': 'L’aperçu apparaît dès qu’il y a un taux.',
+  'rebase.loading': 'Calcul de la conversion',
+  'rebase.example':
+    '{original} reste tel que vous l’avez saisi et est compté comme {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} dépense sera comptée en {to}.',
+    many: '{count} de dépenses seront comptées en {to}.',
+    other: '{count} dépenses seront comptées en {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} paiement sera compté en {to}.',
+    many: '{count} de paiements seront comptés en {to}.',
+    other: '{count} paiements seront comptés en {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} élément prévu sera compté en {to}.',
+    many: '{count} d’éléments prévus seront comptés en {to}.',
+    other: '{count} éléments prévus seront comptés en {to}.',
+  },
+  'rebase.pinned':
+    'Les prix des lieux, des réservations, des hébergements et des trajets restent en {from}.',
+  'rebase.target': 'Le budget du voyage {before} devient {after}.',
+  'rebase.rounding':
+    'Chaque montant est arrondi une seule fois, un solde peut donc varier de {amount} au plus.',
+  'rebase.leftover': 'Après le changement, {name} devrait {amount} à {other}.',
+  'rebase.someone': 'Quelqu’un',
+  'rebase.nothing':
+    'Rien n’a encore de prix sur ce voyage, il n’y a donc rien à convertir.',
+  'rebase.unconverted': {
+    one: '{count} entrée est dans une devise autre que {from} et ne peut pas être convertie automatiquement. C’est en général une dépense créée à partir d’une réservation dont le prix est dans une autre devise : modifiez-la ou supprimez-la, puis réessayez.',
+    many: '{count} d’entrées sont dans une devise autre que {from} et ne peuvent pas être converties automatiquement. Ce sont en général des dépenses créées à partir de réservations dont le prix est dans une autre devise : modifiez-les ou supprimez-les, puis réessayez.',
+    other:
+      '{count} entrées sont dans une devise autre que {from} et ne peuvent pas être converties automatiquement. Ce sont en général des dépenses créées à partir de réservations dont le prix est dans une autre devise : modifiez-les ou supprimez-les, puis réessayez.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} dépense a une répartition qui ne peut pas être reportée, car toutes ses parts sont à zéro. Modifiez-la ou supprimez-la, puis réessayez.',
+    many: '{count} de dépenses ont une répartition qui ne peut pas être reportée, car toutes leurs parts sont à zéro. Modifiez-les ou supprimez-les, puis réessayez.',
+    other:
+      '{count} dépenses ont une répartition qui ne peut pas être reportée, car toutes leurs parts sont à zéro. Modifiez-les ou supprimez-les, puis réessayez.',
+  },
+  'rebase.outOfRange':
+    'Avec ce taux, un montant du voyage serait trop grand pour être enregistré en {to}. Vérifiez le taux et son sens.',
+  'rebase.tooLarge':
+    'Ce voyage a trop d’entrées pour être modifié en une seule fois : il faudrait {changes} modifications à la fois et la limite est de {limit}. Le budget reste en {from} pour le moment.',
+  'rebase.copyPending':
+    'Ce voyage est encore en cours de copie. Réessayez dans un instant.',
+  'rebase.error':
+    'La conversion n’a pas pu être chargée. Rien n’a été modifié.',
+  'rebase.commitError':
+    'Nous n’avons pas pu changer la devise du budget. Rien n’a été modifié.',
+  'rebase.stale':
+    'La devise du budget du voyage est maintenant {current}, et non {from}. Fermez cette boîte de dialogue et rouvrez-la.',
+  'rebase.sameCurrency':
+    'Le budget est déjà en {to}. Choisissez une autre devise.',
+  'rebase.commitUnknown':
+    "Nous n'avons pas pu confirmer si la devise du budget est passée en {to}. Rechargez la page pour vérifier avant de réessayer.",
+  'rebase.retry': 'Réessayer',
+  'rebase.confirm': 'Passer en {to}',
+  'rebase.committing': 'Changement de la devise du budget',
+  'rebase.done': 'Le budget est maintenant en {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -556,6 +556,10 @@ const messages = {
   'book.ledger.refused.body':
     'Rezerwacja jest na wyjeździe. Dodanie jej pozycji do kosztów wyjazdu się nie udało — spróbuj jeszcze raz tej połowy.',
   'book.action.ledgerRetry': 'Dodaj do kosztów',
+  'book.ledger.splitStale.title': 'Zapisano, ale podział przestał się zgadzać',
+  'book.ledger.splitStale.body':
+    'Rezerwacja i jej nowa cena są zapisane, ale podział tego kosztu nie mógł podążyć za nową sumą. Otwórz pozycję w Kosztach i popraw podział.',
+  'book.action.done': 'Gotowe',
   'book.copyConfirmation': 'numer potwierdzenia dla: {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -918,6 +922,8 @@ const messages = {
   'files.action.choose': 'Wybierz pliki',
   'files.action.upload': 'Wyślij pliki',
   'files.drop.active': 'Upuść, aby wysłać',
+  'files.reject.blockedType':
+    '„{name}” nie został dodany: pliki XML i skompresowane SVG nie są tu przechowywane, ze względów bezpieczeństwa. Zapisz go jako PDF lub obraz i dodaj to zamiast niego.',
   'files.drop.idle': 'Przeciągnij pliki tutaj',
   'files.empty.title': 'Brak plików na tym wyjeździe',
   'files.empty.body':

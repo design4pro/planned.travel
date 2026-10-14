@@ -29,19 +29,23 @@ import {
   createTrip,
   deleteExpense,
   getExpense,
+  getExpenseWithShares,
   getReservation,
   linkReservationExpense,
   listTripDays,
   listAuditLog,
   listTripExpenses,
   listTripReservations,
+  markShareSettled,
+  updateExpense,
 } from '#/server/repos'
 import { NotFoundError } from '#/server/repos/context'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
-import type { TenantScope } from '#/server/repos'
-import type { Trip } from '#/server/db/types'
+import type { SplitParticipantInput, TenantScope } from '#/server/repos'
+import type { SPLIT_METHODS } from '#/server/db/schema'
+import type { Expense, ExpenseShare, Trip } from '#/server/db/types'
 
 /* ------------------------------------------------------------------ mocking */
 
@@ -936,5 +940,300 @@ describe('a priced booking saved by an editor', () => {
         trip,
       }),
     ).toBe('updated')
+  })
+})
+
+/**
+ * A booking's price is the one figure of its cost line that moves without the Costs screen, so a
+ * split line has to follow it: shares that no longer add up to the total put `getMemberBalances`
+ * off by the difference, silently (#881). Everything here is the real repositories on a migrated
+ * database; the claim is about what the shares and the outcome are afterwards.
+ */
+describe('a booking price change on a cost line that is split', () => {
+  const PRICE = 10_000
+  let people: ReadonlyArray<string>
+  let reservation: Awaited<ReturnType<typeof createReservation>>
+  let expenseId: string
+
+  beforeEach(async () => {
+    people = [
+      tenant.ownerUserId,
+      ...(await Promise.all(
+        ['Aiko', 'Ben'].map(async (name) => {
+          const userId = await tenant.addUser(name)
+          await addTripMember(scope, {
+            tripId: trip.id,
+            userId,
+            role: 'editor',
+          })
+          return userId
+        }),
+      )),
+    ]
+    const created = await createReservation(scope, {
+      tripId: trip.id,
+      title: 'Dinner at Den',
+      type: 'restaurant',
+      startDate: '2026-04-11',
+      priceMinor: PRICE,
+      currency: 'JPY',
+    })
+    await syncReservationExpense(scope, { reservation: created, trip })
+    const linked = await getReservation(scope, created.id)
+    if (linked === null || linked.expenseId === null) {
+      throw new Error('The booking should be linked to its cost line.')
+    }
+    reservation = linked
+    expenseId = linked.expenseId
+  })
+
+  /** The line as the Costs screen reads it: shares in ascending id order, the order that settles ties. */
+  async function line(): Promise<{
+    expense: Expense
+    shares: ReadonlyArray<ExpenseShare>
+  }> {
+    // `getExpenseWithShares` already orders by id the way SQLite does (binary). A `localeCompare`
+    // here ordered the random tail of same-millisecond ids differently and made the test flaky.
+    return getExpenseWithShares(scope, expenseId)
+  }
+
+  /** The Costs screen's own write: the method lands on the line and the people on its shares. */
+  async function split(
+    participants: ReadonlyArray<SplitParticipantInput>,
+    splitMethod: (typeof SPLIT_METHODS)[number],
+  ): Promise<void> {
+    await updateExpense(scope, trip.id, expenseId, {
+      splitMethod,
+      participants: [...participants],
+    })
+  }
+
+  const total = (shares: ReadonlyArray<ExpenseShare>): number =>
+    shares.reduce((sum, share) => sum + share.shareMinor, 0)
+
+  async function reprice(priceMinor: number) {
+    return syncReservationExpense(scope, {
+      reservation: { ...reservation, priceMinor },
+      trip,
+    })
+  }
+
+  it('re-divides an equal split so it adds up to a total that does not divide evenly', async () => {
+    await split(
+      people.map((userId) => ({ userId })),
+      'equal',
+    )
+    const before = await line()
+    const settled = before.shares[1]
+    if (settled === undefined) {
+      throw new Error('Expected three shares.')
+    }
+    await markShareSettled(scope, trip.id, settled.id, true)
+
+    expect(await reprice(10_001)).toBe('updated')
+
+    const after = await line()
+    expect(after.expense.amountMinor).toBe(10_001)
+    expect(total(after.shares)).toBe(10_001)
+    // The two leftover cents go to the first two shares by id, every time.
+    expect(after.shares.map((share) => share.shareMinor)).toEqual([
+      3_334, 3_334, 3_333,
+    ])
+    expect(after.shares.map((share) => share.id)).toEqual(
+      before.shares.map((share) => share.id),
+    )
+    expect(after.shares.map((share) => share.isSettled)).toEqual([
+      false,
+      true,
+      false,
+    ])
+    expect(after.shares.map((share) => share.userId)).toEqual(
+      before.shares.map((share) => share.userId),
+    )
+  })
+
+  it('re-divides a shares split by its stored weights', async () => {
+    await split(
+      people.map((userId, index) => ({ userId, weight: index + 1 })),
+      'shares',
+    )
+    const before = await line()
+
+    expect(await reprice(12_001)).toBe('updated')
+
+    const after = await line()
+    expect(total(after.shares)).toBe(12_001)
+    // The weights are what the split is, so they and the method survive the new figures.
+    expect(after.shares.map((share) => share.weight)).toEqual(
+      before.shares.map((share) => share.weight),
+    )
+    expect(after.expense.splitMethod).toBe('shares')
+    // 12_001 / 6 per weight: each share is its weight's part, give or take the leftover cent.
+    for (const share of after.shares) {
+      expect(
+        Math.abs(share.shareMinor - (12_001 * share.weight) / 6),
+      ).toBeLessThan(1)
+    }
+  })
+
+  it('re-divides a percentage split without refusing its stored weights', async () => {
+    const percentages = [50, 30, 20]
+    await split(
+      people.map((userId, index) => ({
+        userId,
+        percentage: percentages[index],
+      })),
+      'percentage',
+    )
+    const before = await line()
+
+    // A percentage split stores its percent in `weight`; handing it back as a weight would throw.
+    expect(await reprice(10_001)).toBe('updated')
+
+    const after = await line()
+    expect(total(after.shares)).toBe(10_001)
+    expect(after.shares.map((share) => share.weight)).toEqual(
+      before.shares.map((share) => share.weight),
+    )
+    for (const share of after.shares) {
+      expect(
+        Math.abs(share.shareMinor - (10_001 * share.weight) / 100),
+      ).toBeLessThan(1)
+    }
+  })
+
+  it('keeps an exact split as it was, saves the amount and says the split is stale', async () => {
+    await split(
+      [
+        { userId: people[0] ?? '', shareMinor: 4_000 },
+        { userId: people[1] ?? '', shareMinor: 3_000 },
+        { userId: people[2] ?? '', shareMinor: 3_000 },
+      ],
+      'exact',
+    )
+    const before = await line()
+
+    expect(await reprice(12_000)).toBe('split-stale')
+
+    const after = await line()
+    expect(after.expense.amountMinor).toBe(12_000)
+    expect(after.shares).toEqual(before.shares)
+  })
+
+  it('leaves shares that already add up alone when only the title changes', async () => {
+    await split(
+      [
+        { userId: people[0] ?? '', shareMinor: 4_000 },
+        { userId: people[1] ?? '', shareMinor: 3_000 },
+        { userId: people[2] ?? '', shareMinor: 3_000 },
+      ],
+      'exact',
+    )
+    const before = await line()
+
+    const outcome = await syncReservationExpense(scope, {
+      reservation: { ...reservation, title: 'Dinner at Den, moved' },
+      trip,
+    })
+
+    expect(outcome).toBe('updated')
+    const after = await line()
+    expect(after.expense.title).toBe('Dinner at Den, moved')
+    expect(after.shares).toEqual(before.shares)
+  })
+
+  it('treats stored weights the split arithmetic refuses as stale, not as a failure', async () => {
+    await split(
+      people.map((userId) => ({ userId, weight: 1 })),
+      'shares',
+    )
+    const before = await line()
+    harness.sqlite.exec(
+      `UPDATE expense_shares SET weight = 0 WHERE expense_id = '${expenseId}'`,
+    )
+
+    expect(await reprice(12_000)).toBe('split-stale')
+
+    const after = await line()
+    expect(after.expense.amountMinor).toBe(12_000)
+    expect(after.shares.map((share) => share.shareMinor)).toEqual(
+      before.shares.map((share) => share.shareMinor),
+    )
+  })
+
+  it('writes the new amount and the shares together or not at all', async () => {
+    await split(
+      people.map((userId) => ({ userId })),
+      'equal',
+    )
+    const before = await line()
+    const database = scope.db as unknown as {
+      batch: (...args: ReadonlyArray<unknown>) => Promise<unknown>
+    }
+    const batch = vi
+      .spyOn(database, 'batch')
+      .mockRejectedValueOnce(new Error('D1 refused the batch'))
+
+    expect(await reprice(12_000)).toBe('failed')
+
+    batch.mockRestore()
+    const after = await line()
+    expect(after.expense.amountMinor).toBe(PRICE)
+    expect(after.shares).toEqual(before.shares)
+  })
+
+  it('leaves a line with no shares as it behaved before', async () => {
+    const statementsBefore = harness.statements.length
+
+    expect(await reprice(12_000)).toBe('updated')
+
+    const after = await line()
+    expect(after.expense.amountMinor).toBe(12_000)
+    expect(after.shares).toEqual([])
+    expect(
+      harness.statements
+        .slice(statementsBefore)
+        .filter(
+          (sql) =>
+            /expense_shares/iu.test(sql) &&
+            /^(insert|update|delete)/iu.test(sql),
+        ),
+    ).toEqual([])
+  })
+
+  it('does not rewrite the shares of a line another workspace owns', async () => {
+    const elsewhere = await harness.seedTenant('elsewhere')
+    const abroad = await createTrip(elsewhere.scope, {
+      title: 'Lisbon',
+      startDate: '2026-05-01',
+      endDate: '2026-05-03',
+      currency: 'JPY',
+    })
+    const foreign = await createExpense(elsewhere.scope, {
+      tripId: abroad.id,
+      title: 'A cost in another workspace',
+      amountMinor: PRICE,
+      spentOn: '2026-05-01',
+      participants: [{ userId: elsewhere.ownerUserId }],
+    })
+    const snapshot = await getExpenseWithShares(
+      elsewhere.scope,
+      foreign.expense.id,
+    )
+
+    expect(
+      await syncReservationExpense(scope, {
+        reservation: {
+          ...reservation,
+          expenseId: foreign.expense.id,
+          priceMinor: 12_000,
+        },
+        trip,
+      }),
+    ).toBe('failed')
+
+    expect(
+      await getExpenseWithShares(elsewhere.scope, foreign.expense.id),
+    ).toEqual(snapshot)
   })
 })

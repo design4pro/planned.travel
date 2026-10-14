@@ -544,7 +544,7 @@ const messages = {
     'A(z) „{name}” fájlt nem sikerült borítóként feltölteni. Más még nem került mentésre.',
   'editTrip.coverContinue': 'Mentés az új borítókép nélkül',
   'editTrip.currencyLocked':
-    'Ennek az utazásnak már vannak árai, ezért a költségvetés pénznemét itt nem lehet módosítani. Állítsd vissza {current} értékre, hogy a többi módosításod mentődjön.',
+    'Ennek az utazásnak már vannak árai, ezért a költségvetés pénznemét itt nem lehet módosítani. A Költségek fülön használd a Költségvetés pénznemének módosítása gombot, vagy állítsd vissza {current} értékre, hogy a többi módosításod mentődjön.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Véglegesen törlöd ezt: „{title}”?',
   'deleteTrip.description':

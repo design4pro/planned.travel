@@ -1043,8 +1043,16 @@ export async function previewCurrencyChange(
  * The commit
  * ---------------------------------------------------------------------------------------------- */
 
-/** What the commit asks: the previewed `to` and `rate`, nothing else. The same shape as the preview. */
-export const changeTripCurrencyInput = previewCurrencyChangeInput
+/**
+ * What the commit asks: the previewed `to` and `rate`, and the `from` they were previewed against.
+ * `from` is optional only so a tab loaded before it existed keeps working; the dialog always sends
+ * it, and a `from` that is not the trip's currency now is refused, because a rate quoted for one
+ * pair converted another pair is wrong by the ratio of the two currencies and still inside the
+ * bounds.
+ */
+export const changeTripCurrencyInput = previewCurrencyChangeInput.extend({
+  from: currencySchema.optional(),
+})
 export type ChangeTripCurrencyInput = z.input<typeof changeTripCurrencyInput>
 
 /** The request as the server function receives it; strict, so an extra key is a parse error. */
@@ -1378,14 +1386,18 @@ export async function changeTripCurrency(
   tripId: string,
   input: ChangeTripCurrencyInput,
 ): Promise<TripCurrencyChange> {
-  const { to, rate } = changeTripCurrencyInput.parse(input)
+  const { to, rate, from: previewedFrom } = changeTripCurrencyInput.parse(input)
   const id = idSchema.parse(tripId)
 
   const trip = await requireWritableTrip(scope, id)
   await assertTripRole(scope, id, ['owner'])
 
   const from = trip.currency
-  if (to === from || trip.copyPendingAt !== null) {
+  if (
+    to === from ||
+    (previewedFrom !== undefined && previewedFrom !== from) ||
+    trip.copyPendingAt !== null
+  ) {
     throw rebaseChanged()
   }
 

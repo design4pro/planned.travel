@@ -528,7 +528,7 @@ const messages = {
     '”{name}” kunde inte laddas upp som omslag. Inget annat har sparats ännu.',
   'editTrip.coverContinue': 'Spara utan det nya omslaget',
   'editTrip.currencyLocked':
-    'Resan har redan priser, så budgetvalutan kan inte ändras här. Ställ tillbaka den på {current} för att spara dina övriga ändringar.',
+    'Resan har redan priser, så budgetvalutan kan inte ändras här. Använd Ändra budgetvaluta på fliken Kostnader eller ställ tillbaka den på {current} för att spara dina övriga ändringar.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Ta bort ”{title}” för gott?',
   'deleteTrip.description':

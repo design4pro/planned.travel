@@ -493,7 +493,7 @@ const messages = {
     '“{name}” tidak bisa diunggah sebagai sampul. Belum ada hal lain yang tersimpan.',
   'editTrip.coverContinue': 'Simpan tanpa sampul baru',
   'editTrip.currencyLocked':
-    'Perjalanan ini sudah memiliki harga, sehingga mata uang anggarannya tidak dapat diubah di sini. Kembalikan ke {current} untuk menyimpan perubahan lainnya.',
+    'Perjalanan ini sudah memiliki harga, sehingga mata uang anggarannya tidak dapat diubah di sini. Gunakan Ubah mata uang anggaran di tab Biaya, atau kembalikan ke {current} untuk menyimpan perubahan lainnya.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Hapus “{title}” selamanya?',
   'deleteTrip.description':

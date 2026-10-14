@@ -548,6 +548,10 @@ const messages = {
   'book.ledger.refused.body':
     'La reserva está en el viaje. Añadir su línea de gasto a los gastos del viaje no funcionó — vuelve a intentar esa mitad.',
   'book.action.ledgerRetry': 'Añádelo a los gastos',
+  'book.ledger.splitStale.title': 'Guardado, pero el reparto ya no cuadra',
+  'book.ledger.splitStale.body':
+    'La reserva y su nuevo precio se han guardado, pero el reparto de este gasto no ha podido seguir el nuevo total. Abre el gasto en Gastos y corrige el reparto.',
+  'book.action.done': 'Hecho',
   'book.copyConfirmation': 'el número de confirmación de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -909,6 +913,8 @@ const messages = {
   'files.action.choose': 'Elegir archivos',
   'files.action.upload': 'Subir archivos',
   'files.drop.active': 'Suelta para subir',
+  'files.reject.blockedType':
+    '«{name}» no se añadió: aquí no se guardan archivos XML ni SVG comprimidos, por seguridad. Guárdalo como PDF o como imagen y añade eso en su lugar.',
   'files.drop.idle': 'Arrastra archivos aquí',
   'files.empty.title': 'No hay archivos en este viaje',
   'files.empty.body':

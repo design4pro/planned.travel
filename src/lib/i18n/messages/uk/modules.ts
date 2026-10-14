@@ -551,6 +551,10 @@ const messages = {
   'book.ledger.refused.body':
     'Бронювання вже в подорожі. Додати його рядок до витрат подорожі не вдалося — повторіть цю половину.',
   'book.action.ledgerRetry': 'Додати до витрат',
+  'book.ledger.splitStale.title': 'Збережено, але розподіл більше не сходиться',
+  'book.ledger.splitStale.body':
+    'Бронювання та його нова ціна збережені, але розподіл цієї витрати не зміг підлаштуватися під нову суму. Відкрийте витрату в розділі «Витрати» й виправте розподіл.',
+  'book.action.done': 'Готово',
   'book.copyConfirmation': 'номер підтвердження для {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -910,6 +914,8 @@ const messages = {
   'files.action.choose': 'Вибрати файли',
   'files.action.upload': 'Надіслати файли',
   'files.drop.active': 'Відпустіть, щоб надіслати',
+  'files.reject.blockedType':
+    '«{name}» не додано: файли XML і стиснуті SVG тут не зберігаються, з міркувань безпеки. Збережіть його як PDF або зображення й додайте натомість це.',
   'files.drop.idle': 'Перетягніть файли сюди',
   'files.empty.title': 'У цій поїздці немає файлів',
   'files.empty.body':

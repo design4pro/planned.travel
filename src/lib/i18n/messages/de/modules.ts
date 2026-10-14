@@ -547,6 +547,11 @@ const messages = {
   'book.ledger.refused.body':
     'Die Buchung steht auf der Reise. Ihre Kostenzeile zu den Reisekosten hinzuzufügen hat nicht geklappt — versuche diese Hälfte noch einmal.',
   'book.action.ledgerRetry': 'Zu den Kosten hinzufügen',
+  'book.ledger.splitStale.title':
+    'Gespeichert, aber die Aufteilung stimmt nicht mehr',
+  'book.ledger.splitStale.body':
+    'Die Buchung und ihr neuer Preis sind gespeichert, doch die Aufteilung dieses Kostenpostens konnte dem neuen Gesamtbetrag nicht folgen. Öffne den Posten unter Kosten und korrigiere die Aufteilung.',
+  'book.action.done': 'Fertig',
   'book.copyConfirmation': 'die Bestätigungsnummer für {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -903,6 +908,8 @@ const messages = {
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
   'files.drop.active': 'Zum Hochladen loslassen',
+  'files.reject.blockedType':
+    '„{name}“ wurde nicht hinzugefügt: XML- und komprimierte SVG-Dateien werden hier aus Sicherheitsgründen nicht gespeichert. Speichere sie als PDF oder Bild und füge stattdessen das hinzu.',
   'files.drop.idle': 'Dateien hierher ziehen',
   'files.empty.title': 'Keine Dateien auf dieser Reise',
   'files.empty.body':

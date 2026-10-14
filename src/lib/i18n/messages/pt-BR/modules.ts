@@ -545,6 +545,10 @@ const messages = {
   'book.ledger.refused.body':
     'A reserva está na viagem. Adicionar a linha de custo aos custos da viagem não deu certo — tente essa metade de novo.',
   'book.action.ledgerRetry': 'Adicionar aos custos',
+  'book.ledger.splitStale.title': 'Salvo, mas a divisão não bate mais',
+  'book.ledger.splitStale.body':
+    'A reserva e o novo preço foram salvos, mas a divisão deste custo não conseguiu acompanhar o novo total. Abra o item em Custos e corrija a divisão.',
+  'book.action.done': 'Concluído',
   'book.copyConfirmation': 'o número de confirmação de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -905,6 +909,8 @@ const messages = {
   'files.action.choose': 'Escolher arquivos',
   'files.action.upload': 'Enviar arquivos',
   'files.drop.active': 'Solte para enviar',
+  'files.reject.blockedType':
+    '“{name}” não foi adicionado: arquivos XML e SVG compactados não são guardados aqui, por segurança. Salve como PDF ou imagem e adicione isso no lugar.',
   'files.drop.idle': 'Arraste arquivos para cá',
   'files.empty.title': 'Nenhum arquivo nesta viagem',
   'files.empty.body':

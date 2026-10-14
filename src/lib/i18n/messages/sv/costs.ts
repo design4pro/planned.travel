@@ -51,6 +51,10 @@ const messages = {
   'split.label': 'Fördela mellan',
   'split.everyone': 'Alla',
   'split.nobody': 'Ingen',
+  'split.departed': 'Har lämnat resan',
+  'split.departedHint':
+    'Om du avmarkerar någon som har lämnat resan tas den personens andel bort för gott.',
+  'split.includeFor': 'Ta med {name} i den här fördelningen',
   'split.how': 'Hur den här utgiften fördelas',
   'split.method.equal': 'Jämnt',
   'split.method.equalHint':
@@ -210,6 +214,74 @@ const messages = {
   'display.alert.body':
     'För dessa valutapar finns ingen sparad kurs, så beloppen stannar i budgetvalutan:',
   'display.alert.pair': '{from} till {to} den {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Ändra budgetvaluta',
+  'rebase.title': 'Ändra budgetvalutan',
+  'rebase.description':
+    'Beloppen du skrev in står kvar som de är. Resans summor och saldon räknas om till den nya valutan.',
+  'rebase.to': 'Ny valuta',
+  'rebase.toPlaceholder': 'Välj en valuta',
+  'rebase.rateLabel': 'Växelkurs (1 {from} i {to})',
+  'rebase.rateInverse': 'Det betyder 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Skriv en kurs som är större än noll.',
+  'rebase.rateOutOfRange':
+    'Kursen ser alldeles för stor eller för liten ut. Kontrollera åt vilket håll den gäller.',
+  'rebase.source.recent': 'Den senast använda kursen i den här arbetsytan',
+  'rebase.source.manual': 'Kursen du skrev in',
+  'rebase.noRate':
+    'Det finns ingen sparad kurs för {from} till {to}. Skriv in den kurs du vill använda.',
+  'rebase.waitingForRate': 'Förhandsvisningen visas så fort det finns en kurs.',
+  'rebase.loading': 'Räknar ut omräkningen',
+  'rebase.example':
+    '{original} står kvar som du skrev det och räknas som {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} utgift räknas i {to}.',
+    other: '{count} utgifter räknas i {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} betalning räknas i {to}.',
+    other: '{count} betalningar räknas i {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} planerad post räknas i {to}.',
+    other: '{count} planerade poster räknas i {to}.',
+  },
+  'rebase.pinned':
+    'Priser på platser, bokningar, boenden och färder står kvar i {from}.',
+  'rebase.target': 'Resans budget {before} blir {after}.',
+  'rebase.rounding':
+    'Varje belopp avrundas en gång, så ett saldo kan förskjutas med upp till {amount}.',
+  'rebase.leftover':
+    'Efter ändringen skulle {name} vara skyldig {other} {amount}.',
+  'rebase.someone': 'Någon',
+  'rebase.nothing':
+    'Inget på den här resan har något pris än, så det finns inget att räkna om.',
+  'rebase.unconverted': {
+    one: '{count} post är i en annan valuta än {from} och kan inte räknas om automatiskt. Det är oftast en utgift som skapats från en bokning med pris i en annan valuta: redigera eller ta bort den och försök igen.',
+    other:
+      '{count} poster är i en annan valuta än {from} och kan inte räknas om automatiskt. Det är oftast utgifter som skapats från bokningar med pris i en annan valuta: redigera eller ta bort dem och försök igen.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} utgift har en delning som inte kan föras över, eftersom alla andelar i den är noll. Redigera eller ta bort den och försök igen.',
+    other:
+      '{count} utgifter har en delning som inte kan föras över, eftersom alla andelar i dem är noll. Redigera eller ta bort dem och försök igen.',
+  },
+  'rebase.outOfRange':
+    'Med den här kursen skulle ett belopp på resan bli för stort för att sparas i {to}. Kontrollera kursen och åt vilket håll den gäller.',
+  'rebase.tooLarge':
+    'Den här resan har för många poster för att ändras i ett steg: det skulle krävas {changes} ändringar på en gång och gränsen är {limit}. Budgeten står kvar i {from} tills vidare.',
+  'rebase.copyPending': 'Resan kopieras fortfarande. Försök igen om en stund.',
+  'rebase.error': 'Omräkningen kunde inte läsas in. Inget har ändrats.',
+  'rebase.commitError': 'Vi kunde inte ändra budgetvalutan. Inget har ändrats.',
+  'rebase.stale':
+    'Resans budgetvaluta är nu {current}, inte {from}. Stäng dialogrutan och öppna den igen.',
+  'rebase.sameCurrency': 'Budgeten är redan i {to}. Välj en annan valuta.',
+  'rebase.commitUnknown':
+    'Vi kunde inte bekräfta om budgetvalutan ändrades till {to}. Ladda om sidan och kontrollera innan du försöker igen.',
+  'rebase.retry': 'Försök igen',
+  'rebase.confirm': 'Ändra till {to}',
+  'rebase.committing': 'Ändrar budgetvalutan',
+  'rebase.done': 'Budgeten är nu i {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

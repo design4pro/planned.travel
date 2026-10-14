@@ -561,7 +561,7 @@ const messages = {
     '« {name} » n’a pas pu être envoyé comme couverture. Rien d’autre n’a encore été enregistré.',
   'editTrip.coverContinue': 'Enregistrer sans la nouvelle couverture',
   'editTrip.currencyLocked':
-    'Ce voyage contient déjà des prix : la devise du budget ne peut donc pas être modifiée ici. Remettez {current} pour enregistrer vos autres modifications.',
+    'Ce voyage contient déjà des prix : la devise du budget ne peut donc pas être modifiée ici. Utilisez Changer la devise du budget dans l’onglet Dépenses, ou remettez {current} pour enregistrer vos autres modifications.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Supprimer « {title} » définitivement ?',
   'deleteTrip.description':

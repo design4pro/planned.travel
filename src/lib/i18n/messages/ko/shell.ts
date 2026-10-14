@@ -441,7 +441,7 @@ const messages = {
     '“{name}”을(를) 표지로 업로드하지 못했습니다. 다른 변경 사항은 아직 저장되지 않았습니다.',
   'editTrip.coverContinue': '새 표지 없이 저장',
   'editTrip.currencyLocked':
-    '이 여행에는 이미 금액이 있어서 여기서는 예산 통화를 바꿀 수 없습니다. 다른 변경 사항을 저장하려면 통화를 {current}(으)로 되돌려 주세요.',
+    '이 여행에는 이미 금액이 있어서 여기서는 예산 통화를 바꿀 수 없습니다. 비용 탭의 “예산 통화 변경”을 사용하거나, 다른 변경 사항을 저장하려면 통화를 {current}(으)로 되돌려 주세요.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}”을(를) 영구 삭제할까요?',
   'deleteTrip.description':

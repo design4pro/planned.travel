@@ -17,7 +17,7 @@ import {
   sanitiseFilename,
   storageKeyFor,
 } from '#/server/fns/file-policy'
-import { kindForFile, screenFiles } from '../screening'
+import { describeRejection, kindForFile, screenFiles } from '../screening'
 
 const UNLIMITED = { usedBytes: 0, limitBytes: Number.POSITIVE_INFINITY }
 
@@ -378,12 +378,60 @@ describe('screenFiles', () => {
 
     expect(accepted).toHaveLength(MAX_FILES_PER_UPLOAD)
     expect(rejected).toHaveLength(2)
-    expect(rejected[0]?.message).toContain('at once')
+    expect(rejected[0]?.message).toEqual({
+      key: 'modules.files.error.tooMany',
+      params: {
+        count: MAX_FILES_PER_UPLOAD,
+        name: 'pass-' + MAX_FILES_PER_UPLOAD + '.pdf',
+      },
+    })
+  })
+
+  it('words a blocked type from the catalogue, with the file name', () => {
+    const { accepted, rejected } = screenFiles(
+      [file('notes.xml', 'application/pdf', 16)],
+      UNLIMITED,
+    )
+
+    expect(accepted).toEqual([])
+    expect(rejected[0]?.message).toEqual({
+      key: 'modules.files.reject.blockedType',
+      params: { name: 'notes.xml' },
+    })
   })
 
   it('accepts an empty drop without complaint', () => {
     expect(screenFiles([], UNLIMITED)).toEqual({ accepted: [], rejected: [] })
   })
+})
+
+describe('describeRejection', () => {
+  const FALLBACK = 'English, built where the policy decided'
+
+  it('maps a blocked type to its catalogue sentence with the parameters it carries', () => {
+    expect(
+      describeRejection('blocked-type', { name: 'notes.xml' }, FALLBACK),
+    ).toEqual({
+      key: 'modules.files.reject.blockedType',
+      params: { name: 'notes.xml' },
+    })
+  })
+
+  it('keeps the English message of a blocked type that arrived without the file name', () => {
+    expect(describeRejection('blocked-type', undefined, FALLBACK)).toBe(
+      FALLBACK,
+    )
+    expect(describeRejection('blocked-type', {}, FALLBACK)).toBe(FALLBACK)
+  })
+
+  it.each(['empty', 'too-large', 'unsupported-type', 'quota', 'rejected', 'x'])(
+    'leaves %s as the English message it carries',
+    (code) => {
+      expect(describeRejection(code, { name: 'a.pdf' }, FALLBACK)).toBe(
+        FALLBACK,
+      )
+    },
+  )
 })
 
 describe('kindForFile', () => {

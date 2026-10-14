@@ -536,6 +536,10 @@ const messages = {
   'book.ledger.refused.body':
     'A foglalás rajta van az úton. A költségsorát nem sikerült az út költségeihez adni — próbáld újra ezt a felét.',
   'book.action.ledgerRetry': 'Hozzáadás a költségekhez',
+  'book.ledger.splitStale.title': 'Mentve, de a megosztás már nem jön ki',
+  'book.ledger.splitStale.body':
+    'A foglalás és az új ára mentve lett, de a költségtétel megosztása nem tudta követni az új végösszeget. Nyisd meg a tételt a Költségeknél, és javítsd a megosztást.',
+  'book.action.done': 'Kész',
   'book.copyConfirmation': '{title} visszaigazolási száma',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -889,6 +893,8 @@ const messages = {
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
   'files.drop.active': 'Engedd el a feltöltéshez',
+  'files.reject.blockedType':
+    'A(z) „{name}” nem lett hozzáadva: az XML és a tömörített SVG fájlokat biztonsági okból nem tároljuk itt. Mentsd el PDF-ként vagy képként, és azt add hozzá helyette.',
   'files.drop.idle': 'Húzd ide a fájlokat',
   'files.empty.title': 'Nincsenek fájlok ezen az úton',
   'files.empty.body':

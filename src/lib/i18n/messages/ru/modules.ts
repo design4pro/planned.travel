@@ -549,6 +549,10 @@ const messages = {
   'book.ledger.refused.body':
     'Бронь уже в поездке. Добавить её строку в расходы поездки не удалось — повторите эту половину.',
   'book.action.ledgerRetry': 'Добавить в расходы',
+  'book.ledger.splitStale.title': 'Сохранено, но разделение больше не сходится',
+  'book.ledger.splitStale.body':
+    'Бронирование и его новая цена сохранены, но разделение этого расхода не смогло подстроиться под новую сумму. Откройте расход в разделе «Расходы» и исправьте разделение.',
+  'book.action.done': 'Готово',
   'book.copyConfirmation': 'номер подтверждения для {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -909,6 +913,8 @@ const messages = {
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
   'files.drop.active': 'Отпустите, чтобы отправить',
+  'files.reject.blockedType':
+    '«{name}» не добавлен: файлы XML и сжатые SVG здесь не хранятся, из соображений безопасности. Сохраните его как PDF или изображение и добавьте вместо него.',
   'files.drop.idle': 'Перетащите файлы сюда',
   'files.empty.title': 'В этой поездке нет файлов',
   'files.empty.body':
