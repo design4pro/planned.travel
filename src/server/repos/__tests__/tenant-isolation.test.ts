@@ -4783,6 +4783,29 @@ describe('tenant isolation', () => {
       }
     })
 
+    it('refuses a workspace member who can read an organization-visible trip but is not on it', async () => {
+      // Readable is not writable: with no `trip_members` row the role is null, which no write allows.
+      const open = await createTrip(alpha.tenant.scope, {
+        title: 'Open to the workspace',
+        visibility: 'organization',
+      })
+      const onOpen = await recordFile(alpha.tenant.scope, {
+        ...INPUT,
+        tripId: open.id,
+      })
+      const outsider = alpha.tenant.scopeFor(
+        await alpha.tenant.addUser('Reader of A'),
+      )
+
+      for (const attempt of [
+        () => recordFile(outsider, { ...INPUT, tripId: open.id }),
+        () => updateFile(outsider, open.id, onOpen.id, { filename: 'new.pdf' }),
+        () => deleteFile(outsider, open.id, onOpen.id),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(TripRoleError)
+      }
+    })
+
     it('binds a file id to the trip it names', async () => {
       // A second trip the editor may change, and a file on a trip they may only read.
       const editor = await memberScope('editor')
