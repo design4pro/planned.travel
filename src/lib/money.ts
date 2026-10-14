@@ -279,6 +279,33 @@ export function convertMinor(
   return converted
 }
 
+/** What a reader sees a trip's figures in: the trip's own currency, or one code for every trip. */
+export interface DisplayCurrency {
+  readonly mode: 'per-trip' | 'fixed'
+  readonly code: string
+}
+
+/**
+ * The currency a reader's figures are shown in, from the stored preference and the trip's own.
+ *
+ * `null` is "each trip in its own currency" and no code stands in for it, so there is nothing to
+ * mistake for a currency. A stored code equal to the trip's own resolves to `per-trip` as well,
+ * which is what keeps that case from consulting a rate for a conversion that changes nothing.
+ */
+export function resolveDisplayCurrency(input: {
+  readonly preference: string | null
+  readonly tripCurrency: string
+}): DisplayCurrency {
+  const tripCode = currencyCode(input.tripCurrency)
+  if (input.preference === null) {
+    return { mode: 'per-trip', code: tripCode }
+  }
+  const code = input.preference.trim().toUpperCase()
+  return code === tripCode
+    ? { mode: 'per-trip', code: tripCode }
+    : { mode: 'fixed', code }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Parsing                                                                    */
 /* -------------------------------------------------------------------------- */

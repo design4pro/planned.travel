@@ -186,6 +186,26 @@ const messages = {
     'Inga utgifter har registrerats för den här resan än. De visas här när en ägare eller redigerare lägger till dem.',
   'readOnly.settleEmpty':
     'Just nu behövs inga överföringar. Eventuell obalans skulle visas här.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Visningsvaluta',
+  'display.indicator.perTrip': 'Egen valuta',
+  'display.indicator.fixed': 'Även i {code}',
+  'display.menu.perTrip': 'Varje resa i sin egen valuta',
+  'display.menu.workspace': '{code} (arbetsytans standard)',
+  'display.menu.rateHint': 'Använder en kurs som redan är sparad på en resa',
+  'display.menu.currentHint': 'Vald, men ingen sparad kurs täcker den',
+  'display.menu.needsLiveRate':
+    'Kräver en aktuell kurs, som inte är tillgänglig ännu',
+  'display.menu.saving': 'Sparar ditt val',
+  'display.error.title': 'Visningsvalutan sparades inte',
+  'display.error.body': 'Ditt val kunde inte sparas. Försök igen om en stund.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': 'Ungefär {amount} {code} i din visningsvaluta',
+  'display.row.notConverted': 'Inte omräknat',
+  'display.alert.title': 'Vissa belopp är inte omräknade',
+  'display.alert.body':
+    'För dessa valutapar finns ingen sparad kurs, så beloppen stannar i budgetvalutan:',
+  'display.alert.pair': '{from} till {to} den {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

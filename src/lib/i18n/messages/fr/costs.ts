@@ -196,6 +196,29 @@ const messages = {
     'Aucune dépense n’a encore été enregistrée pour ce voyage. Elles apparaîtront ici dès qu’un propriétaire ou un éditeur les ajoutera.',
   'readOnly.settleEmpty':
     'Aucun virement n’est nécessaire pour le moment. Un éventuel déséquilibre apparaîtrait ici.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Devise d’affichage',
+  'display.indicator.perTrip': 'Devise propre',
+  'display.indicator.fixed': 'Aussi en {code}',
+  'display.menu.perTrip': 'Chaque voyage dans sa devise',
+  'display.menu.workspace': '{code} (par défaut de l’espace)',
+  'display.menu.rateHint': 'Utilise un taux déjà enregistré sur un voyage',
+  'display.menu.currentHint':
+    'Choisie, mais aucun taux enregistré ne la couvre',
+  'display.menu.needsLiveRate':
+    'Nécessite un taux en direct, pas encore disponible',
+  'display.menu.saving': 'Enregistrement du choix',
+  'display.error.title': 'La devise d’affichage n’a pas été enregistrée',
+  'display.error.body':
+    'Votre choix n’a pas pu être enregistré. Réessayez dans un instant.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Environ {amount} {code} dans votre devise d’affichage',
+  'display.row.notConverted': 'Non converti',
+  'display.alert.title': 'Certains montants ne sont pas convertis',
+  'display.alert.body':
+    'Aucun taux n’est enregistré pour ces paires de devises, ces montants restent donc dans la devise du budget :',
+  'display.alert.pair': '{from} vers {to} le {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -37,6 +37,7 @@ vi.mock('#/server/fns/costs', () => ({
   updateExpenseFn: vi.fn(),
   deleteExpenseFn: vi.fn(),
   recordPaymentFn: vi.fn(),
+  setDisplayCurrencyFn: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', () => ({
   useLoaderData: () => ({
@@ -92,6 +93,7 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
         originalAmountMinor: null,
         originalCurrency: null,
         exchangeRate: null,
+        convertedMinor: 6_000,
         spentOn: '2026-04-10',
         paidBy: 'u-ada',
         splitMethod: 'equal',
@@ -129,6 +131,9 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
       { ...OWNER, userId: 'u-grace', name: 'Grace Hopper', role: 'viewer' },
     ],
     viewerUserId: 'u-grace',
+    displayCurrency: { mode: 'per-trip', code: 'EUR' },
+    displayChoices: { workspaceCode: 'EUR', rateCodes: [] },
+    unconverted: [],
     canWrite: false,
     suggestedRate: null,
     ...overrides,

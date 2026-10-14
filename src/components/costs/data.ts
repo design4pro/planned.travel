@@ -13,13 +13,20 @@
  */
 import { formatDayMonth, formatWeekday } from '#/lib/format'
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
-import { currencyCode, formatMoneyPlain, suggestTransfers } from '#/lib/money'
+import {
+  CURRENCY_OPTIONS,
+  currencyCode,
+  formatMoneyPlain,
+  suggestTransfers,
+} from '#/lib/money'
 
 import type { Locale } from '#/lib/i18n/locales'
+import type { DisplayCurrency } from '#/lib/money'
 
 import type {
   CostsBalance,
   CostsCategoryTotal,
+  CostsDisplayChoices,
   CostsExpense,
   CostsPayload,
   CostsPerson,
@@ -493,6 +500,59 @@ export function memberShares(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Display currency                                                           */
+/* -------------------------------------------------------------------------- */
+
+/** Why a code is on the menu and enabled: the workspace default, a recorded rate, or the reader's own pick. */
+export type DisplayChoiceReason = 'workspace' | 'rate' | 'current'
+
+export interface DisplayCurrencyChoices {
+  readonly enabled: ReadonlyArray<{
+    readonly code: string
+    readonly reason: DisplayChoiceReason
+  }>
+  /** Every other curated code, listed so the menu can say why it cannot be picked. */
+  readonly disabled: ReadonlyArray<string>
+}
+
+/**
+ * What the display-currency menu offers besides "each trip in its own currency".
+ *
+ * Enabled: the workspace default named by its code, every code a recorded rate answers for, and -
+ * only so the checked item is on the menu - the code the reader already chose when neither of
+ * those covers it. Every other curated code is disabled; the trip's own currency is none of them,
+ * because "each trip in its own currency" is that choice.
+ */
+export function displayCurrencyChoices(input: {
+  readonly display: DisplayCurrency
+  readonly choices: CostsDisplayChoices
+  readonly budgetCurrency: string
+}): DisplayCurrencyChoices {
+  const { display, choices, budgetCurrency } = input
+  const enabled: Array<{
+    readonly code: string
+    readonly reason: DisplayChoiceReason
+  }> = [{ code: choices.workspaceCode, reason: 'workspace' }]
+  const offered = new Set(enabled.map((entry) => entry.code))
+  for (const code of choices.rateCodes) {
+    if (!offered.has(code)) {
+      offered.add(code)
+      enabled.push({ code, reason: 'rate' })
+    }
+  }
+  if (display.mode === 'fixed' && !offered.has(display.code)) {
+    offered.add(display.code)
+    enabled.push({ code: display.code, reason: 'current' })
+  }
+  return {
+    enabled,
+    disabled: CURRENCY_OPTIONS.map((option) => option.code).filter(
+      (code) => !offered.has(code) && code !== currencyCode(budgetCurrency),
+    ),
+  }
+}
+
+/* -------------------------------------------------------------------------- */
 /* CSV export                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -513,6 +573,11 @@ const CSV_HEADERS = [
   'Your share',
   'Notes',
 ] as const
+
+/** The one column added after the others, named for the currency it is in. */
+function displayHeader(display: DisplayCurrency): string {
+  return `Amount in ${currencyCode(display.code)}`
+}
 
 /**
  * One CSV field, quoted per RFC 4180.
@@ -537,17 +602,22 @@ function csvLine(fields: ReadonlyArray<string>): string {
  * Amounts are written unformatted in major units so a spreadsheet reads them as
  * numbers, and the currency travels in its own column. A BOM leads the file
  * because Excel on Windows otherwise renders `¥` and `£` as mojibake.
+ *
+ * The last column is the amount in the reader's display currency: the accounting amount in
+ * per-trip mode, the converted figure in fixed mode, and empty for a row no rate converted - a
+ * blank is honest where a repeated accounting figure would pass for a conversion.
  */
 export function expensesCsv(input: {
   readonly rows: ReadonlyArray<CostsExpense>
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
+  readonly display: DisplayCurrency
 }): string {
   const nameOf = new Map(
     input.people.map((person) => [person.userId, person.name]),
   )
 
-  const lines = [csvLine(CSV_HEADERS)]
+  const lines = [csvLine([...CSV_HEADERS, displayHeader(input.display)])]
   for (const row of input.rows) {
     lines.push(
       csvLine([
@@ -567,6 +637,9 @@ export function expensesCsv(input: {
         row.splitMethod,
         formatMoneyPlain(shareOf(row, input.viewerUserId), row.currency),
         row.notes ?? '',
+        row.convertedMinor === null
+          ? ''
+          : formatMoneyPlain(row.convertedMinor, input.display.code),
       ]),
     )
   }

@@ -186,6 +186,29 @@ const messages = {
     'Belum ada pengeluaran yang dicatat untuk perjalanan ini. Pengeluaran akan muncul di sini setelah pemilik atau editor menambahkannya.',
   'readOnly.settleEmpty':
     'Saat ini tidak perlu ada transfer. Selisih apa pun akan muncul di sini.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Mata uang tampilan',
+  'display.indicator.perTrip': 'Mata uang sendiri',
+  'display.indicator.fixed': 'Juga dalam {code}',
+  'display.menu.perTrip': 'Setiap perjalanan dalam mata uangnya sendiri',
+  'display.menu.workspace': '{code} (default ruang kerja)',
+  'display.menu.rateHint':
+    'Memakai kurs yang sudah tercatat pada sebuah perjalanan',
+  'display.menu.currentHint':
+    'Dipilih, tetapi tidak ada kurs tercatat yang mencakupnya',
+  'display.menu.needsLiveRate': 'Memerlukan kurs langsung yang belum tersedia',
+  'display.menu.saving': 'Menyimpan pilihan Anda',
+  'display.error.title': 'Mata uang tampilan tidak tersimpan',
+  'display.error.body':
+    'Pilihan Anda tidak dapat disimpan. Coba lagi sebentar lagi.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Sekitar {amount} {code} dalam mata uang tampilan Anda',
+  'display.row.notConverted': 'Belum dikonversi',
+  'display.alert.title': 'Beberapa angka belum dikonversi',
+  'display.alert.body':
+    'Tidak ada kurs tercatat untuk pasangan mata uang ini, jadi angka tersebut tetap dalam mata uang anggaran:',
+  'display.alert.pair': '{from} ke {to} pada {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
