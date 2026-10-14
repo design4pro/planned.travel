@@ -301,6 +301,7 @@ describe('the display currency on the costs screen', () => {
       expect(live()?.textContent).toBe(Costs['display.menu.saving']),
     )
     expect(trigger().hasAttribute('disabled')).toBe(false)
+    expect(indicator()?.textContent).toBe(Costs['display.menu.saving'])
     await user.click(trigger())
     await user.click(screen.getByRole('option', { name: /workspace default/ }))
     expect(setDisplayCurrencyFn).toHaveBeenCalledTimes(1)
