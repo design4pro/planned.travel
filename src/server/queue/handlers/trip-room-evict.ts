@@ -10,7 +10,10 @@
  * #1050 closes sockets on trip-level changes; this is the same close for the workspace-level ones,
  * and the person's next connect re-runs the session and tenancy checks. After losing a place that
  * connect is refused; after ending one's own session it is refused only on a device with no valid
- * session left.
+ * session left. For a password reset, a revoke of all sessions and a password change that revokes
+ * the others, the producer first deletes the cached blob of each ended session by name, so a blob
+ * the KV session index missed cannot re-admit the reconnect (#1176) - within the KV convergence
+ * window, about a minute across colos.
  *
  * Queued rather than run in the request because it is a fan-out over every room the person could
  * open, and because the producer is the auth layer (`src/server/auth/room-eviction.ts`), whose

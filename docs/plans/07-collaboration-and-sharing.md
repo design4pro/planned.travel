@@ -347,7 +347,9 @@ as `07-S2` does.
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
   task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends
   their own session - a password reset, a password change that revokes the other sessions, a
-  sign-out, a revoke of one, the other or all sessions (#1093). The close is
+  sign-out, a revoke of one, the other or all sessions (#1093); a password reset, a revoke of all
+  sessions and a password change that revokes the others also delete the cached session blob of each
+  ended session by name, so the reconnect is refused (#1176). The close is
   best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
   the room after the close, leaves the old role until the socket drops. Nothing in this
   stage relaxes any of that, and the provider does not pass a trip id the layout did not already

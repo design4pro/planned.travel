@@ -2,9 +2,14 @@ import { createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { z } from 'zod'
 import { QUEUE_BATCH_MAX, enqueueTasks } from '#/server/queue/jobs'
 import { authDb } from './db'
-import { taskQueue } from './env'
+import { sessionStore, taskQueue } from './env'
 import { logAuth } from './log'
 import { organizationIdsFor } from './provisioning'
+import {
+  collectSessionTokens,
+  createSessionPageReader,
+  deleteSessionBlobs,
+} from './session-blobs'
 
 import type { BetterAuthPlugin } from 'better-auth'
 
@@ -30,6 +35,15 @@ import type { BetterAuthPlugin } from 'better-auth'
  * (`src/server/queue/handlers/trip-room-evict.ts`) reads the rooms and closes them. A job is queued
  * only after the change has committed, and nothing here can reject into the request: a failure to
  * queue is logged with ids and the removal stands.
+ *
+ * The close fires once, so a reconnect has to be refused (#1176). A password reset, a revoke of all
+ * sessions and a password change that revokes the others end every session row, but Better Auth
+ * removes only the cached blobs the eventually-consistent `active-sessions-<userId>` index lists; a
+ * blob the index missed keeps authenticating the account. On those three paths the `before` half
+ * therefore reads the person's session tokens from the durable rows while they still exist, and the
+ * `after` half deletes each blob by name once the endpoint has succeeded, before the sockets are
+ * closed. Best effort, like the close: the person's own action never fails on a KV error, and the
+ * limit is the KV convergence window (see `./session-blobs`), not "immediately".
  */
 
 /**
@@ -117,8 +131,31 @@ const SESSION_ENDING_PATHS: ReadonlySet<string> = new Set([
   '/admin/revoke-user-session',
 ])
 
+/** {@link SESSION_ENDING_PATHS} plus the one whose success depends on a flag in the body. */
+const PREPARED_PATHS: ReadonlySet<string> = new Set([
+  ...SESSION_ENDING_PATHS,
+  '/change-password',
+])
+
+/**
+ * The paths that end every session row of the person while Better Auth removes only the indexed
+ * blobs (`internalAdapter.deleteUserSessions`). Sign-out and the revoke of one delete their blob by
+ * name already; revoke-other-sessions lists from the same index, so its gap is a revocation gap.
+ */
+const BLOB_PURGING_PATHS: ReadonlySet<string> = new Set([
+  '/reset-password',
+  '/revoke-sessions',
+  '/change-password',
+])
+
 /** What {@link roomEvictionPrepareHook} leaves on the request for {@link roomEvictionHook}. */
 const resolvedPerson = z.object({ roomEvictionUserId: z.string().min(1) })
+const resolvedTokens = z.object({
+  roomEvictionSessionTokens: z.array(z.string().min(1)),
+})
+
+/** `/change-password` ends the other sessions only when asked to, and only then is there anything to purge. */
+const revokingBody = z.object({ revokeOtherSessions: z.literal(true) })
 
 const tokenBody = z.object({ token: z.string().min(1) })
 const sessionTokenBody = z.object({ sessionToken: z.string().min(1) })
@@ -130,13 +167,30 @@ const optionalToken = z.object({ token: z.string().min(1).optional() })
  * the reset token still exists, because an endpoint like sign-out deletes it and the `after` hook
  * then has nothing left to read. The person is never taken from the request: it is the owner of the
  * session cookie, of the session a token names, or the user a reset token was issued to, each read
- * from the store. Nothing is queued here, only handed on; a request whose endpoint then fails queues
- * nothing, and nothing in this hook can reject into the request.
+ * from the store. On the paths that end every session row it also reads the tokens those rows name,
+ * which is the only moment they can be read. Nothing is queued or deleted here, only handed on; a
+ * request whose endpoint then fails changes nothing, and nothing in this hook can reject into the
+ * request.
  */
 const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
   let userId: string | null = null
+  let tokens: ReadonlyArray<string> = []
   try {
     userId = await personEndingSession(ctx)
+    if (userId !== null && endsEveryRow(ctx)) {
+      try {
+        tokens = await collectSessionTokens(
+          createSessionPageReader(async () => ctx.context.adapter, userId),
+        )
+      } catch (cause) {
+        // Same rule as below: the error's name only, a failed query's message can carry a token.
+        logAuth('warn', 'room-eviction.blobs.unread', {
+          userId,
+          source: ctx.path,
+          reason: cause instanceof Error ? cause.name : 'unknown',
+        })
+      }
+    }
   } catch (cause) {
     // The error's name only: a failed query's message carries its parameters, which here are a
     // session token or a reset token, and a credential is never logged.
@@ -146,8 +200,14 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
     })
   }
   // Always written, empty when nobody was resolved: a key an in-process `auth.api.*` caller put on
-  // the call itself must not survive into the `after` hook and name somebody else.
-  return { context: { roomEvictionUserId: userId ?? '' } }
+  // the call itself must not survive into the `after` hook and name somebody else, or somebody
+  // else's blobs.
+  return {
+    context: {
+      roomEvictionUserId: userId ?? '',
+      roomEvictionSessionTokens: [...tokens],
+    },
+  }
 })
 
 /**
@@ -161,7 +221,7 @@ export const roomEvictionPrepare: BetterAuthPlugin = {
     before: [
       {
         matcher: (ctx) =>
-          ctx.path !== undefined && SESSION_ENDING_PATHS.has(ctx.path),
+          ctx.path !== undefined && PREPARED_PATHS.has(ctx.path),
         handler: roomEvictionPrepareHook,
       },
     ],
@@ -169,6 +229,13 @@ export const roomEvictionPrepare: BetterAuthPlugin = {
 }
 
 type PrepareContext = Parameters<Parameters<typeof createAuthMiddleware>[0]>[0]
+
+function endsEveryRow(ctx: PrepareContext): boolean {
+  if (ctx.path === undefined || !BLOB_PURGING_PATHS.has(ctx.path)) return false
+  return (
+    ctx.path !== '/change-password' || revokingBody.safeParse(ctx.body).success
+  )
+}
 
 async function personEndingSession(
   ctx: PrepareContext,
@@ -259,6 +326,7 @@ export const roomEvictionHook = createAuthMiddleware(async (ctx) => {
     // A password change that leaves the other sessions alone closes nothing: it answers a null `token`.
     const parsed = changedPassword.safeParse(returned)
     if (!parsed.success || parsed.data.token === null) return
+    await purgeEndedSessions(ctx, parsed.data.user.id, ctx.path)
     await evictEverywhere(parsed.data.user.id, ctx.path)
     return
   }
@@ -266,6 +334,48 @@ export const roomEvictionHook = createAuthMiddleware(async (ctx) => {
   if (SESSION_ENDING_PATHS.has(ctx.path)) {
     const prepared = resolvedPerson.safeParse(ctx)
     if (!prepared.success) return
+    await purgeEndedSessions(ctx, prepared.data.roomEvictionUserId, ctx.path)
     await evictEverywhere(prepared.data.roomEvictionUserId, ctx.path)
   }
 })
+
+/**
+ * Deletes, by name, the cached blob of each session the `before` half read, once the endpoint has
+ * succeeded. Never rejects: every delete is attempted and the failures are retried once, then logged
+ * at error level with the person's id, the path and the counts, never a token. The per-user index
+ * key is not touched, and a session the endpoint created is not in the list.
+ */
+async function purgeEndedSessions(
+  ctx: { path: string },
+  userId: string,
+  source: string,
+): Promise<void> {
+  const prepared = resolvedTokens.safeParse(ctx)
+  if (
+    !prepared.success ||
+    prepared.data.roomEvictionSessionTokens.length === 0
+  ) {
+    return
+  }
+  try {
+    const purge = await deleteSessionBlobs(
+      sessionStore(),
+      prepared.data.roomEvictionSessionTokens,
+    )
+    if (purge.failed > 0) {
+      logAuth('error', 'room-eviction.blobs.failed', {
+        userId,
+        source,
+        enumerated: purge.enumerated,
+        deleted: purge.deleted,
+        failed: purge.failed,
+      })
+    }
+  } catch (cause) {
+    logAuth('error', 'room-eviction.blobs.failed', {
+      userId,
+      source,
+      reason: cause instanceof Error ? cause.name : 'unknown',
+    })
+  }
+}
