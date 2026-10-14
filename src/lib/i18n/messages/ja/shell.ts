@@ -404,6 +404,22 @@ const messages = {
   'newTrip.error': '旅行を作成できませんでした。少し経ってからお試しください。',
   'newTrip.created': '旅行を作成しました',
   'newTrip.createdBody': '地図に場所を置いていきましょう。',
+  'newTrip.coverChoose': 'カバー画像を追加',
+  'newTrip.coverChange': 'カバー画像を変更',
+  'newTrip.coverHint':
+    'ここに画像をドロップするか、貼り付けるか、ファイルを選択してください。PNG、JPEG、WebP、AVIF、GIF に対応しています。',
+  'newTrip.coverChosen': 'カバー画像: {name}',
+  'newTrip.coverRemove': 'カバー画像を削除',
+  'newTrip.coverTypeError':
+    '「{name}」はカバー画像にできません。PNG、JPEG、WebP、AVIF、GIF のいずれかを選んでください。',
+  'newTrip.coverSizeError':
+    '「{name}」は {max} を超えています。もっと小さい画像を選んでください。',
+  'newTrip.coverUploading': 'カバー画像をアップロードしています',
+  'newTrip.coverFailedTitle': 'カバー画像を追加できませんでした',
+  'newTrip.coverFailed':
+    '旅行は作成されましたが、「{name}」をカバーとしてアップロードできませんでした。',
+  'newTrip.coverRetry': '再試行',
+  'newTrip.coverContinue': 'カバーなしで旅行を開く',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} の操作',
@@ -431,6 +447,9 @@ const messages = {
   'editTrip.retry': '再試行',
   'editTrip.error':
     '旅行を保存できませんでした。しばらくしてからもう一度お試しください。',
+  'editTrip.coverFailed':
+    '「{name}」をカバーとしてアップロードできませんでした。ほかの変更はまだ保存されていません。',
+  'editTrip.coverContinue': '新しいカバーなしで保存',
   'editTrip.currencyLocked':
     'この旅行にはすでに金額が入っているため、予算の通貨はここでは変更できません。ほかの変更を保存するには、通貨を {current} に戻してください。',
   /* ------------------------------ the delete-trip dialog */

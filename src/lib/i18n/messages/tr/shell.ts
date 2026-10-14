@@ -477,6 +477,22 @@ const messages = {
   'newTrip.error': 'Gezi oluşturulamadı. Birazdan yeniden dene.',
   'newTrip.created': 'Gezi oluşturuldu',
   'newTrip.createdBody': 'Haritaya yer eklemeye başla.',
+  'newTrip.coverChoose': 'Kapak görseli ekle',
+  'newTrip.coverChange': 'Kapak görselini değiştir',
+  'newTrip.coverHint':
+    'Bir görseli buraya bırak, yapıştır ya da bir dosya seç. PNG, JPEG, WebP, AVIF veya GIF.',
+  'newTrip.coverChosen': 'Kapak görseli: {name}',
+  'newTrip.coverRemove': 'Kapak görselini kaldır',
+  'newTrip.coverTypeError':
+    '“{name}” kapak görseli olamaz. PNG, JPEG, WebP, AVIF veya GIF seç.',
+  'newTrip.coverSizeError':
+    '“{name}” {max} boyutundan büyük. Daha küçük bir görsel seç.',
+  'newTrip.coverUploading': 'Kapak görseli yükleniyor',
+  'newTrip.coverFailedTitle': 'Kapak görseli eklenemedi',
+  'newTrip.coverFailed':
+    'Gezi oluşturuldu ama “{name}” kapak olarak yüklenemedi.',
+  'newTrip.coverRetry': 'Yeniden dene',
+  'newTrip.coverContinue': 'Geziyi kapaksız aç',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} için işlemler',
@@ -503,6 +519,9 @@ const messages = {
   'editTrip.errorTitle': 'Bu kaydedilmedi',
   'editTrip.retry': 'Yeniden dene',
   'editTrip.error': 'Gezi kaydedilemedi. Birazdan yeniden deneyin.',
+  'editTrip.coverFailed':
+    '“{name}” kapak olarak yüklenemedi. Başka hiçbir şey henüz kaydedilmedi.',
+  'editTrip.coverContinue': 'Yeni kapak olmadan kaydet',
   'editTrip.currencyLocked':
     'Bu gezide zaten fiyatlar var, bu yüzden bütçe para birimi burada değiştirilemez. Diğer değişiklikleri kaydetmek için {current} değerine geri döndürün.',
   /* ------------------------------ the delete-trip dialog */

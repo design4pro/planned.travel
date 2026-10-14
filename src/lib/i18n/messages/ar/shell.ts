@@ -571,6 +571,20 @@ const messages = {
   'newTrip.error': 'لم يتسنَّ إنشاء الرحلة. أعد المحاولة بعد لحظة.',
   'newTrip.created': 'أُنشئت الرحلة',
   'newTrip.createdBody': 'ابدأ بوضع الأماكن على الخريطة.',
+  'newTrip.coverChoose': 'أضف صورة غلاف',
+  'newTrip.coverChange': 'غيّر صورة الغلاف',
+  'newTrip.coverHint':
+    'أسقط صورة هنا أو الصقها أو اختر ملفًا. PNG أو JPEG أو WebP أو AVIF أو GIF.',
+  'newTrip.coverChosen': 'صورة الغلاف: {name}',
+  'newTrip.coverRemove': 'أزل صورة الغلاف',
+  'newTrip.coverTypeError':
+    'لا يمكن استخدام «{name}» صورة غلاف. اختر ملف PNG أو JPEG أو WebP أو AVIF أو GIF.',
+  'newTrip.coverSizeError': 'حجم «{name}» أكبر من {max}. اختر صورة أصغر.',
+  'newTrip.coverUploading': 'يجري رفع صورة الغلاف',
+  'newTrip.coverFailedTitle': 'لم تُضف صورة الغلاف',
+  'newTrip.coverFailed': 'أُنشئت الرحلة، لكن تعذّر رفع «{name}» كغلاف لها.',
+  'newTrip.coverRetry': 'حاول مرة أخرى',
+  'newTrip.coverContinue': 'افتح الرحلة بلا غلاف',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'إجراءات {title}',
@@ -597,6 +611,8 @@ const messages = {
   'editTrip.errorTitle': 'لم يُحفَظ ذلك',
   'editTrip.retry': 'حاول مرة أخرى',
   'editTrip.error': 'تعذّر حفظ الرحلة. حاول مرة أخرى بعد قليل.',
+  'editTrip.coverFailed': 'تعذّر رفع «{name}» كغلاف. لم يُحفظ أي شيء آخر بعد.',
+  'editTrip.coverContinue': 'احفظ بلا الغلاف الجديد',
   'editTrip.currencyLocked':
     'لهذه الرحلة أسعار مسجَّلة بالفعل، لذا لا يمكن تغيير عملة الميزانية من هنا. أعِد ضبطها على {current} لحفظ تغييراتك الأخرى.',
   /* ------------------------------ the delete-trip dialog */

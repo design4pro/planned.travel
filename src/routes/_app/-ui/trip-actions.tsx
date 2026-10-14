@@ -68,6 +68,7 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
+import { uploadFile } from '#/components/modules/files/upload'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { inclusiveDays } from '#/lib/trip-dates'
@@ -120,6 +121,13 @@ export function TripEditSheet({
   const isOwner = trip.role === 'owner'
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [coverProgress, setCoverProgress] = useState<number | null>(null)
+  /** The file that did not become the cover, named in the sentence that offers to go on without. */
+  const [coverFailure, setCoverFailure] = useState<string | null>(null)
+  /** A file already stored whose cover write failed, so a retry does not upload it twice. */
+  const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
+    null,
+  )
   const form = useTripForm(
     {
       title: trip.title,
@@ -136,10 +144,49 @@ export function TripEditSheet({
     saving,
   )
 
-  async function submit(): Promise<void> {
+  /**
+   * The cover change this save carries: a file id once the chosen image is stored, `null` to drop the
+   * cover, `undefined` to leave it. `'failed'` when the image could not be stored - the trip's fields
+   * are then not written, so the reader chooses between trying again and saving without it.
+   */
+  async function coverChange(
+    skip: boolean,
+  ): Promise<string | null | undefined | 'failed'> {
+    if (!isOwner || skip) {
+      return undefined
+    }
+    const { cover } = form
+    if (cover === null) {
+      return form.coverRemoved ? null : undefined
+    }
+    if (uploaded?.file === cover) {
+      return uploaded.id
+    }
+    setCoverProgress(0)
+    const answer = await uploadFile({
+      file: cover,
+      tripId: trip.id,
+      kind: 'image',
+      onProgress: setCoverProgress,
+    })
+    setCoverProgress(null)
+    if (!answer.ok) {
+      setCoverFailure(cover.name)
+      return 'failed'
+    }
+    setUploaded({ file: cover, id: answer.file.id })
+    return answer.file.id
+  }
+
+  async function submit({ skipCover = false } = {}): Promise<void> {
     setSaving(true)
     setError(null)
+    setCoverFailure(null)
     try {
+      const coverFileId = await coverChange(skipCover)
+      if (coverFileId === 'failed') {
+        return
+      }
       const { currency, ...fields } = tripFormPayload(form, {
         creating: false,
         owner: isOwner,
@@ -149,6 +196,7 @@ export function TripEditSheet({
           tripId: trip.id,
           ...fields,
           ...(currency === trip.currency ? {} : { currency }),
+          ...(coverFileId === undefined ? {} : { coverFileId }),
         },
       })
       await router.invalidate()
@@ -221,7 +269,48 @@ export function TripEditSheet({
               </Alert>
             )}
 
-            <TripFormFields form={form} undatedDays={false} owner={isOwner} />
+            {coverFailure === null ? null : (
+              <Alert
+                tone="warning"
+                title={t('shell.newTrip.coverFailedTitle')}
+                actions={
+                  <>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      shape="pill"
+                      onClick={() => {
+                        if (form.canSave) void submit()
+                      }}
+                    >
+                      {t('shell.editTrip.retry')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      shape="pill"
+                      onClick={() => {
+                        if (form.canSave) void submit({ skipCover: true })
+                      }}
+                    >
+                      {t('shell.editTrip.coverContinue')}
+                    </Button>
+                  </>
+                }
+              >
+                {t('shell.editTrip.coverFailed', { name: coverFailure })}
+              </Alert>
+            )}
+
+            <TripFormFields
+              form={form}
+              undatedDays={false}
+              owner={isOwner}
+              currentCoverUrl={trip.coverImageUrl}
+              coverProgress={coverProgress}
+            />
           </form>
         </SheetBody>
 

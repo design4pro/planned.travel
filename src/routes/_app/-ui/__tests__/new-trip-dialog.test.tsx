@@ -20,11 +20,16 @@ const EN: Catalogue = {
 }
 
 /** `createTripFn` reaches `cloudflare:workers`; the test only needs a write that does not settle. */
-const server = vi.hoisted(() => ({ create: vi.fn() }))
+const server = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }))
+const upload = vi.hoisted(() => ({ upload: vi.fn() }))
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
 vi.mock('../../-server/trip-lifecycle', () => ({
   createTripFn: server.create,
+  updateTripFn: server.update,
+}))
+vi.mock('#/components/modules/files/upload', () => ({
+  uploadFile: upload.upload,
 }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => router,

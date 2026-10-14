@@ -513,6 +513,22 @@ const messages = {
     'Non è stato possibile creare il viaggio. Riprova tra un momento.',
   'newTrip.created': 'Viaggio creato',
   'newTrip.createdBody': 'Comincia a mettere luoghi sulla mappa.',
+  'newTrip.coverChoose': 'Aggiungi un’immagine di copertina',
+  'newTrip.coverChange': 'Cambia l’immagine di copertina',
+  'newTrip.coverHint':
+    'Trascina qui un’immagine, incollane una o scegli un file. PNG, JPEG, WebP, AVIF o GIF.',
+  'newTrip.coverChosen': 'Immagine di copertina: {name}',
+  'newTrip.coverRemove': 'Rimuovi l’immagine di copertina',
+  'newTrip.coverTypeError':
+    '“{name}” non può essere un’immagine di copertina. Scegli un PNG, JPEG, WebP, AVIF o GIF.',
+  'newTrip.coverSizeError':
+    '“{name}” supera {max}. Scegli un’immagine più piccola.',
+  'newTrip.coverUploading': 'Caricamento dell’immagine di copertina',
+  'newTrip.coverFailedTitle': 'L’immagine di copertina non è stata aggiunta',
+  'newTrip.coverFailed':
+    'Il viaggio è stato creato, ma non è stato possibile caricare “{name}” come copertina.',
+  'newTrip.coverRetry': 'Riprova',
+  'newTrip.coverContinue': 'Apri il viaggio senza copertina',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Azioni per {title}',
@@ -540,6 +556,9 @@ const messages = {
   'editTrip.retry': 'Riprova',
   'editTrip.error':
     'Non è stato possibile salvare il viaggio. Riprova tra un momento.',
+  'editTrip.coverFailed':
+    'Non è stato possibile caricare “{name}” come copertina. Non è stato ancora salvato nient’altro.',
+  'editTrip.coverContinue': 'Salva senza la nuova copertina',
   'editTrip.currencyLocked':
     'Questo viaggio ha già dei prezzi, quindi la valuta del budget non si può cambiare da qui. Rimetti {current} per salvare le altre modifiche.',
   /* ------------------------------ the delete-trip dialog */

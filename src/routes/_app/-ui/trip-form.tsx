@@ -12,6 +12,9 @@
  * read only; with neither it is editable and the trip is created with that many undated days. Moving
  * the start keeps the duration (the end follows), moving the end changes it. The payload carries one
  * face, never both: the server refuses a day count beside a date.
+ *
+ * **The cover is not in the payload.** It is a file, chosen here and uploaded by the caller once the
+ * trip exists, so the form holds it beside the values and the payload never carries it.
  */
 import { useMemo, useState } from 'react'
 
@@ -33,6 +36,7 @@ import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_DAY_COUNT_MAX, inclusiveDays, shiftDate } from '#/lib/trip-dates'
 import { openedCurrencyLabel } from '../settings/-lib/regional'
+import { TripCoverField } from './trip-cover-field'
 
 import type { ComboboxOption } from '#/components/ui'
 
@@ -80,6 +84,13 @@ export interface TripForm {
   ) => void
   /** Back to the values the form opened with, or to a new set of them. */
   reset: (next?: TripFormValues) => void
+  /** The image chosen for the cover, uploaded by the caller once the trip exists. */
+  cover: File | null
+  /** Edit only: the reader asked to drop the cover the trip already has. */
+  coverRemoved: boolean
+  chooseCover: (file: File | null) => void
+  /** Drops the chosen file, or - with none chosen - the cover the trip already has. */
+  removeCover: () => void
   /** Named on the Return field, and the reason {@link TripForm.canSave} is false. */
   datesOutOfOrder: boolean
   /** A name, dates in order, and no save already in flight. */
@@ -142,6 +153,8 @@ export function useTripForm(
   saving: boolean,
 ): TripForm {
   const [values, setValues] = useState(initial)
+  const [cover, setCover] = useState<File | null>(null)
+  const [coverRemoved, setCoverRemoved] = useState(false)
 
   const datesOutOfOrder =
     values.startDate !== '' &&
@@ -155,6 +168,21 @@ export function useTripForm(
     },
     reset: (next) => {
       setValues(next ?? initial)
+      setCover(null)
+      setCoverRemoved(false)
+    },
+    cover,
+    coverRemoved,
+    chooseCover: (file) => {
+      setCover(file)
+      setCoverRemoved(false)
+    },
+    removeCover: () => {
+      if (cover === null) {
+        setCoverRemoved(true)
+      } else {
+        setCover(null)
+      }
     },
     datesOutOfOrder,
     canSave: values.title.trim().length > 0 && !datesOutOfOrder && !saving,
@@ -212,6 +240,10 @@ export interface TripFormFieldsProps {
   undatedDays?: boolean
   /** Renders the owner-only fields. The sheet passes whether the payload's role says owner. */
   owner?: boolean
+  /** The cover the trip already has, shown in the cover region on edit. */
+  currentCoverUrl?: string | null
+  /** `0`-`1` while the chosen cover uploads, otherwise `null`. */
+  coverProgress?: number | null
 }
 
 export function TripFormFields({
@@ -219,6 +251,8 @@ export function TripFormFields({
   placeholders,
   undatedDays = true,
   owner = true,
+  currentCoverUrl = null,
+  coverProgress = null,
 }: TripFormFieldsProps) {
   const t = useTranslate()
   const { values, set } = form
@@ -230,6 +264,18 @@ export function TripFormFields({
 
   return (
     <>
+      {owner ? (
+        <TripCoverField
+          file={form.cover}
+          currentUrl={currentCoverUrl}
+          removed={form.coverRemoved}
+          progress={coverProgress}
+          disabled={coverProgress !== null}
+          onChoose={form.chooseCover}
+          onRemove={form.removeCover}
+        />
+      ) : null}
+
       <Field label={t('shell.newTrip.name')} required>
         <Input
           value={values.title}

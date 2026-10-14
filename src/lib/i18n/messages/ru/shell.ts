@@ -540,6 +540,22 @@ const messages = {
   'newTrip.error': 'Поездку не удалось создать. Попробуйте через минуту.',
   'newTrip.created': 'Поездка создана',
   'newTrip.createdBody': 'Начните расставлять места на карте.',
+  'newTrip.coverChoose': 'Добавить обложку',
+  'newTrip.coverChange': 'Заменить обложку',
+  'newTrip.coverHint':
+    'Перетащите сюда изображение, вставьте его из буфера или выберите файл. PNG, JPEG, WebP, AVIF или GIF.',
+  'newTrip.coverChosen': 'Обложка: {name}',
+  'newTrip.coverRemove': 'Убрать обложку',
+  'newTrip.coverTypeError':
+    'Файл «{name}» не подходит для обложки. Выберите PNG, JPEG, WebP, AVIF или GIF.',
+  'newTrip.coverSizeError':
+    'Файл «{name}» больше {max}. Выберите изображение поменьше.',
+  'newTrip.coverUploading': 'Загружаем обложку',
+  'newTrip.coverFailedTitle': 'Обложка не добавлена',
+  'newTrip.coverFailed':
+    'Поездка создана, но файл «{name}» не удалось загрузить как обложку.',
+  'newTrip.coverRetry': 'Повторить',
+  'newTrip.coverContinue': 'Открыть поездку без обложки',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Действия для «{title}»',
@@ -567,6 +583,9 @@ const messages = {
   'editTrip.retry': 'Повторить',
   'editTrip.error':
     'Не удалось сохранить поездку. Попробуйте ещё раз через мгновение.',
+  'editTrip.coverFailed':
+    'Файл «{name}» не удалось загрузить как обложку. Больше ничего пока не сохранено.',
+  'editTrip.coverContinue': 'Сохранить без новой обложки',
   'editTrip.currencyLocked':
     'В этой поездке уже есть цены, поэтому валюту бюджета здесь изменить нельзя. Верните {current}, чтобы сохранить остальные изменения.',
   /* ------------------------------ the delete-trip dialog */
