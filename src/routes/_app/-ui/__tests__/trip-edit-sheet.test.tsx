@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -47,6 +47,7 @@ vi.mock('#/components/modules/files/upload', () => ({
 afterEach(() => {
   cleanup()
   server.update.mockReset()
+  upload.upload.mockReset()
 })
 
 /** What a server function's refusal looks like once it has crossed the redaction middleware. */
@@ -138,5 +139,93 @@ describe('what the trip edit sheet sends', () => {
     const { data } = server.update.mock.calls[0][0]
     expect(data).toMatchObject({ tripId: expect.any(String) })
     expect(data).not.toHaveProperty('currency')
+  })
+})
+
+describe('the trip edit sheet and the cover image', () => {
+  const cover = new File(['x'], 'beach.png', { type: 'image/png' })
+
+  async function chooseCover() {
+    URL.createObjectURL = vi.fn(() => 'blob:preview')
+    URL.revokeObjectURL = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <TripEditSheet
+          trip={tripCard({ currency: 'EUR' })}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </I18nProvider>,
+    )
+    const input = document.querySelector('input[type="file"]')
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('no file input')
+    }
+    await user.upload(input, cover)
+    return user
+  }
+
+  it('uploads the image first and sends its id in the one update', async () => {
+    upload.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+    server.update.mockResolvedValue(undefined)
+    const user = await chooseCover()
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(server.update).toHaveBeenCalledTimes(1)
+    })
+    expect(server.update.mock.calls[0][0].data).toMatchObject({
+      tripId: 'trip-1',
+      coverFileId: 'file-1',
+    })
+    expect(server.update.mock.invocationCallOrder[0]).toBeGreaterThan(
+      upload.upload.mock.invocationCallOrder[0],
+    )
+  })
+
+  it('writes nothing when the image fails, and saves the rest on request', async () => {
+    upload.upload.mockResolvedValue({ ok: false, code: 'x', message: 'no' })
+    server.update.mockResolvedValue(undefined)
+    const user = await chooseCover()
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await screen.findByText(/could not be uploaded as the cover/)
+    expect(server.update).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getByRole('button', { name: 'Save without the new cover' }),
+    )
+    await waitFor(() => {
+      expect(server.update).toHaveBeenCalledTimes(1)
+    })
+    expect(server.update.mock.calls[0][0].data).not.toHaveProperty(
+      'coverFileId',
+    )
+  })
+
+  it('asks to drop the current cover with a null id', async () => {
+    server.update.mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <TripEditSheet
+          trip={tripCard({ coverImageUrl: '/api/trips/trip-1/cover?v=f' })}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </I18nProvider>,
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Remove the cover image' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(server.update).toHaveBeenCalledTimes(1)
+    })
+    expect(server.update.mock.calls[0][0].data.coverFileId).toBeNull()
+    expect(upload.upload).not.toHaveBeenCalled()
   })
 })

@@ -8,11 +8,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  addTripMember,
-  createTrip,
-  updateTrip,
-} from '#/server/repos'
+import { addTripMember, createTrip, updateTrip } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
 import { serveTripCover } from '../serve-cover'
@@ -32,7 +28,9 @@ vi.mock('#/server/auth/session', async () => {
   return {
     isAuthRequirementError,
     getSession: async () =>
-      stubs.signedIn ? { user: { name: 'Ada', email: 'ada@example.test' } } : null,
+      stubs.signedIn
+        ? { user: { name: 'Ada', email: 'ada@example.test' } }
+        : null,
     requireOrg: async () => {
       if (stubs.ctx === null) {
         throw new AuthRequirementError(
@@ -108,7 +106,9 @@ describe('the trip cover route', () => {
   })
 
   it('serves the image inline, with sniffing off and a private cache', async () => {
-    const bucket = fakeBucket({ [key]: { body: 'jpeg', contentType: 'image/jpeg' } })
+    const bucket = fakeBucket({
+      [key]: { body: 'jpeg', contentType: 'image/jpeg' },
+    })
 
     const response = await serveTripCover(bucket, ask(tripId, '?v=f1'), tripId)
 
@@ -136,7 +136,9 @@ describe('the trip cover route', () => {
 
   it('answers 401 with no session', async () => {
     stubs.signedIn = false
-    const bucket = fakeBucket({ [key]: { body: 'x', contentType: 'image/png' } })
+    const bucket = fakeBucket({
+      [key]: { body: 'x', contentType: 'image/png' },
+    })
 
     const response = await serveTripCover(bucket, ask(tripId), tripId)
 
@@ -146,7 +148,9 @@ describe('the trip cover route', () => {
 
   it('answers 403 for a caller with no workspace', async () => {
     stubs.ctx = null
-    const bucket = fakeBucket({ [key]: { body: 'x', contentType: 'image/png' } })
+    const bucket = fakeBucket({
+      [key]: { body: 'x', contentType: 'image/png' },
+    })
 
     const response = await serveTripCover(bucket, ask(tripId), tripId)
 
@@ -157,7 +161,9 @@ describe('the trip cover route', () => {
   it('answers a trip of another workspace exactly as a trip that is not there', async () => {
     const beta = await harness.seedTenant('cover-route-beta')
     actAs(beta, beta.ownerUserId)
-    const bucket = fakeBucket({ [key]: { body: 'x', contentType: 'image/png' } })
+    const bucket = fakeBucket({
+      [key]: { body: 'x', contentType: 'image/png' },
+    })
 
     const foreign = await serveTripCover(bucket, ask(tripId), tripId)
     const missing = await serveTripCover(bucket, ask('nope'), 'nope')
@@ -170,7 +176,9 @@ describe('the trip cover route', () => {
 
   it('answers 404 for a private trip the caller is not on', async () => {
     actAs(alpha, await alpha.addUser('Colleague'))
-    const bucket = fakeBucket({ [key]: { body: 'x', contentType: 'image/png' } })
+    const bucket = fakeBucket({
+      [key]: { body: 'x', contentType: 'image/png' },
+    })
 
     const response = await serveTripCover(bucket, ask(tripId), tripId)
 
@@ -179,7 +187,9 @@ describe('the trip cover route', () => {
   })
 
   it('serves a viewer, and a workspace member of an organization-visible trip', async () => {
-    const bucket = fakeBucket({ [key]: { body: 'x', contentType: 'image/png' } })
+    const bucket = fakeBucket({
+      [key]: { body: 'x', contentType: 'image/png' },
+    })
     const viewer = await alpha.addUser('Viewer')
     await addTripMember(alpha.scope, { tripId, userId: viewer, role: 'viewer' })
     actAs(alpha, viewer)
@@ -223,7 +233,10 @@ describe('the trip cover route', () => {
 
     const response = await serveTripCover(
       bucket,
-      ask(tripId, `?v=${encodeURIComponent('f9-secret.png')}&key=${encodeURIComponent(other)}`),
+      ask(
+        tripId,
+        `?v=${encodeURIComponent('f9-secret.png')}&key=${encodeURIComponent(other)}`,
+      ),
       tripId,
     )
 

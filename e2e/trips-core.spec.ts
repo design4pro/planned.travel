@@ -1827,3 +1827,92 @@ test.describe('01-S8a — One trip form for creating and editing', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S8b — A cover image by drop, paste and picker', () => {
+  const TRIPS: RouteCase = {
+    name: 'trips',
+    path: '/trips',
+    ready: 'main',
+  }
+
+  const CARD = '[data-part="trip-tile"]:visible, [data-part="trip-row"]:visible'
+  const TRIGGER = '[data-part="trip-actions-trigger"]:visible'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * Nothing here saves, for the reason 01-S8a gives: a created trip is one more row in the demo
+   * workspace. The cover region is read and driven up to the point of the write, which is covered
+   * where the server functions and the cover route live.
+   */
+  test('the create dialog offers the cover region first, previews a picked image and refuses a document', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    await page.getByRole('button', { name: 'New trip' }).first().click()
+    const dialog = page.locator('[role="dialog"]')
+    const region = dialog.getByRole('button', { name: 'Add a cover image' })
+    await expect(region).toBeVisible()
+
+    const picker = dialog.locator('input[type="file"]')
+    await picker.setInputFiles({
+      name: 'notes.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4'),
+    })
+    await expect(dialog.getByRole('alert')).toContainText('notes.pdf')
+    await expect(region).toBeVisible()
+
+    // A 1x1 PNG: enough for the browser to accept the preview.
+    await picker.setInputFiles({
+      name: 'beach.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+    })
+    await expect(
+      dialog.getByRole('button', { name: 'Change the cover image' }),
+    ).toBeVisible()
+    await expect(dialog.getByText('Cover image: beach.png')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Remove the cover image' }).click()
+    await expect(region).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+
+  test('the edit sheet offers the cover region to the owner', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    await page.locator(CARD).first().locator(TRIGGER).click()
+    await page.getByRole('menuitem', { name: 'Edit' }).click()
+
+    const sheet = page.locator('[data-part="trip-edit-sheet"]')
+    await expect(sheet).toBeVisible()
+    await expect(
+      sheet.getByRole('button', { name: /^(Add a|Change the) cover image$/ }),
+    ).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})

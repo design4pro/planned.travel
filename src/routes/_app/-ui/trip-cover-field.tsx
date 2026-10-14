@@ -150,6 +150,7 @@ export function TripCoverField({
           <img
             src={shown}
             alt=""
+            loading="eager"
             className="absolute inset-0 size-full object-cover"
           />
         )}

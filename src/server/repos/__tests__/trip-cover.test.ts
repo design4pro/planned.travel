@@ -56,9 +56,7 @@ describe('clearTripCoverIfKey', () => {
       coverImageUrl: URL,
     })
 
-    expect(await clearTripCoverIfKey(tenant.scope, foreign.id, KEY)).toBe(
-      false,
-    )
+    expect(await clearTripCoverIfKey(tenant.scope, foreign.id, KEY)).toBe(false)
     expect((await getTrip(other.scope, foreign.id))?.coverImageKey).toBe(KEY)
   })
 

@@ -42,6 +42,7 @@ vi.mock('../../-server/trip-lifecycle', () => ({
   tripDeleteSummaryFn: server.summary,
   updateTripFn: server.update,
 }))
+vi.mock('#/components/modules/files/upload', () => ({ uploadFile: vi.fn() }))
 
 /**
  * `Link` stands in as a plain anchor, so "is this tile a link?" is answered by the accessibility

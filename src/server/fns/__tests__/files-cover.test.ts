@@ -63,7 +63,10 @@ const startStorage = ((): AsyncLocalStorage<StartContext> => {
 
 const { deleteTripFileFn } = await import('../files')
 
-function deleteFile(data: { tripId: string; fileId: string }): Promise<unknown> {
+function deleteFile(data: {
+  tripId: string
+  fileId: string
+}): Promise<unknown> {
   return startStorage.run(
     {
       startOptions: {},
@@ -147,7 +150,11 @@ describe('deleteTripFileFn and the cover', () => {
   it('lets an editor delete the cover file without failing halfway', async () => {
     const { tripId, fileId } = await tripWithCover()
     const editorId = await tenant.addUser('Editor')
-    await addTripMember(tenant.scope, { tripId, userId: editorId, role: 'editor' })
+    await addTripMember(tenant.scope, {
+      tripId,
+      userId: editorId,
+      role: 'editor',
+    })
     stubs.scope = tenant.scopeFor(editorId)
 
     await deleteFile({ tripId, fileId })
