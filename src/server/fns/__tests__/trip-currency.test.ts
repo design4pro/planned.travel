@@ -158,6 +158,23 @@ describe('committing a change of a trip’s budget currency', () => {
     expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
   })
 
+  it('passes the currency the owner previewed on, so a stale tab’s rate is refused', async () => {
+    stubs.scope = tenant.scope
+
+    const error = await captureError(() =>
+      inStart(() =>
+        changeTripCurrencyFn({
+          data: { tripId, from: 'GBP', to: 'JPY', rate: 160 },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(CurrencyRefusalError)
+    expect((await requireTrip(tenant.scope, tripId)).currency).toBe('EUR')
+    expect(await listEntityHistory(tenant.scope, 'trip', tripId)).toEqual([])
+    expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+  })
+
   it('refuses an editor, who may log money but not change the trip’s currency', async () => {
     stubs.scope = editor
 

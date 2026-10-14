@@ -615,7 +615,7 @@ const messages = {
     '“{name}” could not be uploaded as the cover. Nothing else has been saved yet.',
   'editTrip.coverContinue': 'Save without the new cover',
   'editTrip.currencyLocked':
-    'This trip already has prices in it, so its budget currency can’t be changed here. Set it back to {current} to save your other changes.',
+    'This trip already has prices in it, so its budget currency can’t be changed here. Use Change budget currency on the Costs tab, or set it back to {current} to save your other changes.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Delete “{title}” for good?',
   'deleteTrip.description':

@@ -207,6 +207,71 @@ const messages = {
   'display.alert.body':
     '다음 통화 쌍에는 기록된 환율이 없어 해당 금액은 예산 통화로 유지됩니다:',
   'display.alert.pair': '{date} {from} → {to}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': '예산 통화 변경',
+  'rebase.title': '예산 통화 변경하기',
+  'rebase.description':
+    '입력한 금액은 그대로 유지됩니다. 이 여행의 합계와 잔액은 새 통화로 환산됩니다.',
+  'rebase.to': '새 통화',
+  'rebase.toPlaceholder': '통화 선택',
+  'rebase.rateLabel': '환율 (1 {from} 기준 {to})',
+  'rebase.rateInverse': '즉, 1 {to} = {inverse} {from}입니다.',
+  'rebase.rateInvalid': '0보다 큰 환율을 입력해 주세요.',
+  'rebase.rateOutOfRange':
+    '환율이 너무 크거나 너무 작아 보입니다. 통화의 방향이 맞는지 확인해 주세요.',
+  'rebase.source.recent': '이 작업 공간에서 마지막으로 사용한 환율',
+  'rebase.source.manual': '직접 입력한 환율',
+  'rebase.noRate':
+    '{from} → {to} 환율이 기록되어 있지 않습니다. 사용할 환율을 입력해 주세요.',
+  'rebase.waitingForRate': '환율이 정해지면 미리보기가 표시됩니다.',
+  'rebase.loading': '환산 중입니다',
+  'rebase.example':
+    '{original}은(는) 입력한 그대로 유지되며 {converted}(으)로 집계됩니다.',
+  'rebase.count.expenses': {
+    other: '지출 {count}건이 {to}(으)로 집계됩니다.',
+  },
+  'rebase.count.payments': {
+    other: '결제 {count}건이 {to}(으)로 집계됩니다.',
+  },
+  'rebase.count.planned': {
+    other: '예정 항목 {count}건이 {to}(으)로 집계됩니다.',
+  },
+  'rebase.pinned': '장소, 예약, 숙소, 이동의 가격은 {from}(으)로 유지됩니다.',
+  'rebase.target': '여행 예산이 {before}에서 {after}(으)로 바뀝니다.',
+  'rebase.rounding':
+    '금액마다 한 번씩 반올림하므로 잔액이 최대 {amount}만큼 달라질 수 있습니다.',
+  'rebase.leftover':
+    '변경 후에는 {name}이(가) {other}에게 {amount}을(를) 갚아야 합니다.',
+  'rebase.someone': '누군가',
+  'rebase.nothing':
+    '이 여행에는 아직 가격이 입력된 항목이 없어 환산할 것이 없습니다.',
+  'rebase.unconverted': {
+    other:
+      '{count}건이 {from} 이외의 통화라서 자동으로 환산할 수 없습니다. 대개 다른 통화로 가격이 매겨진 예약에서 만들어진 지출입니다. 수정하거나 삭제한 뒤 다시 시도해 주세요.',
+  },
+  'rebase.unsplittable': {
+    other:
+      '지출 {count}건은 모든 분담액이 0이라 분담 내역을 옮길 수 없습니다. 수정하거나 삭제한 뒤 다시 시도해 주세요.',
+  },
+  'rebase.outOfRange':
+    '이 환율로는 여행의 금액이 {to}(으)로 저장하기에는 너무 커집니다. 환율과 통화의 방향을 확인해 주세요.',
+  'rebase.tooLarge':
+    '이 여행은 항목이 너무 많아 한 번에 변경할 수 없습니다. 한 번에 {changes}건을 바꿔야 하는데 한도는 {limit}건입니다. 예산은 당분간 {from}(으)로 유지됩니다.',
+  'rebase.copyPending':
+    '이 여행을 아직 복사하는 중입니다. 잠시 후 다시 시도해 주세요.',
+  'rebase.error': '환산 결과를 불러오지 못했습니다. 변경된 내용은 없습니다.',
+  'rebase.commitError':
+    '예산 통화를 변경하지 못했습니다. 변경된 내용은 없습니다.',
+  'rebase.stale':
+    '여행의 예산 통화가 이제 {from}이(가) 아니라 {current}입니다. 이 대화상자를 닫고 다시 여세요.',
+  'rebase.sameCurrency':
+    '예산이 이미 {to}(으)로 설정되어 있습니다. 다른 통화를 선택하세요.',
+  'rebase.commitUnknown':
+    '예산 통화가 {to}(으)로 변경되었는지 확인하지 못했습니다. 다시 시도하기 전에 페이지를 새로고침해 확인하세요.',
+  'rebase.retry': '다시 시도',
+  'rebase.confirm': '{to}(으)로 변경',
+  'rebase.committing': '예산 통화를 변경하는 중입니다',
+  'rebase.done': '예산이 {to}(으)로 바뀌었습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

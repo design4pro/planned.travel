@@ -223,6 +223,87 @@ const messages = {
   'display.alert.body':
     'Dla tych par walut nie zapisano kursu, więc te kwoty zostają w walucie budżetu:',
   'display.alert.pair': '{from} na {to}, {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Zmień walutę budżetu',
+  'rebase.title': 'Zmiana waluty budżetu',
+  'rebase.description':
+    'Wpisane kwoty zostają takie, jakie je wpisano. Sumy i salda tego wyjazdu zostaną przeliczone na nową walutę.',
+  'rebase.to': 'Nowa waluta',
+  'rebase.toPlaceholder': 'Wybierz walutę',
+  'rebase.rateLabel': 'Kurs wymiany (1 {from} w {to})',
+  'rebase.rateInverse': 'Czyli 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Wpisz kurs większy od zera.',
+  'rebase.rateOutOfRange':
+    'Ten kurs wygląda na zdecydowanie za duży lub za mały. Sprawdź, w którą stronę jest podany.',
+  'rebase.source.recent': 'Ostatni kurs użyty w tej przestrzeni',
+  'rebase.source.manual': 'Kurs wpisany przez ciebie',
+  'rebase.noRate':
+    'Brak zapisanego kursu {from} na {to}. Wpisz kurs, którego chcesz użyć.',
+  'rebase.waitingForRate': 'Podgląd pojawi się, gdy tylko będzie kurs.',
+  'rebase.loading': 'Trwa przeliczanie',
+  'rebase.example':
+    '{original} zostaje tak, jak wpisano, i jest liczone jako {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} wydatek zostanie policzony w {to}.',
+    few: '{count} wydatki zostaną policzone w {to}.',
+    many: '{count} wydatków zostanie policzonych w {to}.',
+    other: '{count} wydatku zostanie policzonego w {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} płatność zostanie policzona w {to}.',
+    few: '{count} płatności zostaną policzone w {to}.',
+    many: '{count} płatności zostanie policzonych w {to}.',
+    other: '{count} płatności zostanie policzonej w {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} zaplanowana pozycja zostanie policzona w {to}.',
+    few: '{count} zaplanowane pozycje zostaną policzone w {to}.',
+    many: '{count} zaplanowanych pozycji zostanie policzonych w {to}.',
+    other: '{count} zaplanowanej pozycji zostanie policzonej w {to}.',
+  },
+  'rebase.pinned':
+    'Ceny miejsc, rezerwacji, noclegów i przejazdów zostają w {from}.',
+  'rebase.target': 'Budżet wyjazdu {before} zmieni się na {after}.',
+  'rebase.rounding':
+    'Każda kwota jest zaokrąglana raz, więc saldo może się zmienić najwyżej o {amount}.',
+  'rebase.leftover':
+    'Po zmianie: {name} - dług wobec {other} wyniesie {amount}.',
+  'rebase.someone': 'Ktoś',
+  'rebase.nothing':
+    'Nic na tym wyjeździe nie ma jeszcze ceny, więc nie ma czego przeliczać.',
+  'rebase.unconverted': {
+    one: '{count} pozycja jest w innej walucie niż {from} i nie da się jej przeliczyć automatycznie. To zwykle wydatek utworzony z rezerwacji z ceną w innej walucie: edytuj go lub usuń, a potem spróbuj ponownie.',
+    few: '{count} pozycje są w innej walucie niż {from} i nie da się ich przeliczyć automatycznie. To zwykle wydatki utworzone z rezerwacji z ceną w innej walucie: edytuj je lub usuń, a potem spróbuj ponownie.',
+    many: '{count} pozycji jest w innej walucie niż {from} i nie da się ich przeliczyć automatycznie. To zwykle wydatki utworzone z rezerwacji z ceną w innej walucie: edytuj je lub usuń, a potem spróbuj ponownie.',
+    other:
+      '{count} pozycji jest w innej walucie niż {from} i nie da się ich przeliczyć automatycznie. To zwykle wydatki utworzone z rezerwacji z ceną w innej walucie: edytuj je lub usuń, a potem spróbuj ponownie.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} wydatek ma podział, którego nie da się przenieść, bo każdy udział w nim wynosi zero. Edytuj go lub usuń, a potem spróbuj ponownie.',
+    few: '{count} wydatki mają podział, którego nie da się przenieść, bo każdy udział w nich wynosi zero. Edytuj je lub usuń, a potem spróbuj ponownie.',
+    many: '{count} wydatków ma podział, którego nie da się przenieść, bo każdy udział w nich wynosi zero. Edytuj je lub usuń, a potem spróbuj ponownie.',
+    other:
+      '{count} wydatku ma podział, którego nie da się przenieść, bo każdy udział w nim wynosi zero. Edytuj go lub usuń, a potem spróbuj ponownie.',
+  },
+  'rebase.outOfRange':
+    'Przy tym kursie jakaś kwota na wyjeździe byłaby zbyt duża, by zapisać ją w {to}. Sprawdź kurs i w którą stronę jest podany.',
+  'rebase.tooLarge':
+    'Ten wyjazd ma za dużo pozycji, by zmienić je w jednym kroku: potrzeba by {changes} zmian naraz, a limit to {limit}. Budżet na razie zostaje w {from}.',
+  'rebase.copyPending':
+    'Ten wyjazd jest jeszcze kopiowany. Spróbuj ponownie za chwilę.',
+  'rebase.error':
+    'Nie udało się wczytać przeliczenia. Nic nie zostało zmienione.',
+  'rebase.commitError':
+    'Nie udało się zmienić waluty budżetu. Nic nie zostało zmienione.',
+  'rebase.stale':
+    'Waluta budżetu podróży to teraz {current}, a nie {from}. Zamknij to okno i otwórz je ponownie.',
+  'rebase.sameCurrency': 'Budżet jest już w walucie {to}. Wybierz inną walutę.',
+  'rebase.commitUnknown':
+    'Nie udało się potwierdzić, czy waluta budżetu zmieniła się na {to}. Zanim spróbujesz ponownie, odśwież stronę i sprawdź.',
+  'rebase.retry': 'Spróbuj ponownie',
+  'rebase.confirm': 'Zmień na {to}',
+  'rebase.committing': 'Zmieniam walutę budżetu',
+  'rebase.done': 'Budżet jest teraz w {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

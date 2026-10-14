@@ -523,7 +523,7 @@ const messages = {
     '“{name}” kapak olarak yüklenemedi. Başka hiçbir şey henüz kaydedilmedi.',
   'editTrip.coverContinue': 'Yeni kapak olmadan kaydet',
   'editTrip.currencyLocked':
-    'Bu gezide zaten fiyatlar var, bu yüzden bütçe para birimi burada değiştirilemez. Diğer değişiklikleri kaydetmek için {current} değerine geri döndürün.',
+    'Bu gezide zaten fiyatlar var, bu yüzden bütçe para birimi burada değiştirilemez. Masraflar sekmesindeki “Bütçe para birimini değiştir” düğmesini kullanın ya da diğer değişiklikleri kaydetmek için {current} değerine geri döndürün.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” kalıcı olarak silinsin mi?',
   'deleteTrip.description':

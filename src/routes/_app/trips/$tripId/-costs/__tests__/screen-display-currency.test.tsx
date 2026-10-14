@@ -40,6 +40,10 @@ vi.mock('#/server/fns/costs', () => ({
   recordPaymentFn: vi.fn(),
   setDisplayCurrencyFn: vi.fn(),
 }))
+vi.mock('#/server/fns/trip-currency', () => ({
+  previewCurrencyChangeFn: vi.fn(),
+  changeTripCurrencyFn: vi.fn(),
+}))
 vi.mock('@tanstack/react-router', () => ({
   useLoaderData: () => ({
     today: '2026-04-10',

@@ -219,6 +219,81 @@ const messages = {
   'display.alert.body':
     'No hi ha tipus registrat per a aquests parells de monedes, així que aquestes xifres es queden en la moneda del pressupost:',
   'display.alert.pair': '{from} a {to} el {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Canvia la moneda del pressupost',
+  'rebase.title': 'Canvi de la moneda del pressupost',
+  'rebase.description':
+    'Els imports que has escrit es queden tal com els has escrit. Els totals i els saldos d’aquest viatge es converteixen a la moneda nova.',
+  'rebase.to': 'Moneda nova',
+  'rebase.toPlaceholder': 'Tria una moneda',
+  'rebase.rateLabel': 'Tipus de canvi (1 {from} en {to})',
+  'rebase.rateInverse': 'És a dir, 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Escriu un tipus major que zero.',
+  'rebase.rateOutOfRange':
+    'Aquest tipus sembla massa gran o massa petit. Comprova en quin sentit va.',
+  'rebase.source.recent': 'L’últim tipus utilitzat en aquest espai',
+  'rebase.source.manual': 'El tipus que has escrit',
+  'rebase.noRate':
+    'No hi ha cap tipus registrat de {from} a {to}. Escriu el tipus que vols fer servir.',
+  'rebase.waitingForRate':
+    'La previsualització apareix tan bon punt hi ha un tipus.',
+  'rebase.loading': 'Calculant la conversió',
+  'rebase.example':
+    '{original} es queda tal com l’has escrit i es compta com a {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} despesa es comptarà en {to}.',
+    many: '{count} despeses es comptaran en {to}.',
+    other: '{count} despeses es comptaran en {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} pagament es comptarà en {to}.',
+    many: '{count} pagaments es comptaran en {to}.',
+    other: '{count} pagaments es comptaran en {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} element previst es comptarà en {to}.',
+    many: '{count} elements previstos es comptaran en {to}.',
+    other: '{count} elements previstos es comptaran en {to}.',
+  },
+  'rebase.pinned':
+    'Els preus dels llocs, les reserves, els allotjaments i els trajectes es queden en {from}.',
+  'rebase.target': 'El pressupost del viatge {before} passa a ser {after}.',
+  'rebase.rounding':
+    'Cada import s’arrodoneix una sola vegada, així que un saldo pot variar fins a {amount}.',
+  'rebase.leftover': 'Després del canvi, {name} deuria {amount} a {other}.',
+  'rebase.someone': 'Algú',
+  'rebase.nothing':
+    'Encara no hi ha res amb preu en aquest viatge, així que no cal convertir res.',
+  'rebase.unconverted': {
+    one: '{count} entrada és en una moneda diferent de {from} i no es pot convertir automàticament. Normalment és una despesa creada a partir d’una reserva amb preu en una altra moneda: edita-la o elimina-la i torna-ho a provar.',
+    many: '{count} entrades són en una moneda diferent de {from} i no es poden convertir automàticament. Normalment són despeses creades a partir de reserves amb preu en una altra moneda: edita-les o elimina-les i torna-ho a provar.',
+    other:
+      '{count} entrades són en una moneda diferent de {from} i no es poden convertir automàticament. Normalment són despeses creades a partir de reserves amb preu en una altra moneda: edita-les o elimina-les i torna-ho a provar.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} despesa té un repartiment que no es pot traslladar, perquè totes les parts hi són zero. Edita-la o elimina-la i torna-ho a provar.',
+    many: '{count} despeses tenen un repartiment que no es pot traslladar, perquè totes les parts hi són zero. Edita-les o elimina-les i torna-ho a provar.',
+    other:
+      '{count} despeses tenen un repartiment que no es pot traslladar, perquè totes les parts hi són zero. Edita-les o elimina-les i torna-ho a provar.',
+  },
+  'rebase.outOfRange':
+    'Amb aquest tipus un import del viatge seria massa gran per desar-lo en {to}. Comprova el tipus i en quin sentit va.',
+  'rebase.tooLarge':
+    'Aquest viatge té massa entrades per canviar-les d’una sola vegada: caldrien {changes} canvis alhora i el límit és {limit}. De moment el pressupost es queda en {from}.',
+  'rebase.copyPending':
+    'Aquest viatge encara s’està copiant. Torna-ho a provar d’aquí a un moment.',
+  'rebase.error': 'No s’ha pogut carregar la conversió. No s’ha canviat res.',
+  'rebase.commitError':
+    'No hem pogut canviar la moneda del pressupost. No s’ha canviat res.',
+  'rebase.stale':
+    "La moneda del pressupost del viatge ara és {current}, no {from}. Tanca aquest diàleg i torna'l a obrir.",
+  'rebase.sameCurrency': 'El pressupost ja és en {to}. Tria una altra moneda.',
+  'rebase.commitUnknown':
+    'No hem pogut confirmar si la moneda del pressupost ha canviat a {to}. Recarrega la pàgina per comprovar-ho abans de tornar-ho a provar.',
+  'rebase.retry': 'Torna-ho a provar',
+  'rebase.confirm': 'Canvia a {to}',
+  'rebase.committing': 'Canviant la moneda del pressupost',
+  'rebase.done': 'Ara el pressupost és en {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

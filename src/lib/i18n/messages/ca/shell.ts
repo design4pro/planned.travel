@@ -563,7 +563,7 @@ const messages = {
     'No s’ha pogut pujar «{name}» com a portada. Encara no s’ha desat res més.',
   'editTrip.coverContinue': 'Desa sense la portada nova',
   'editTrip.currencyLocked':
-    'Aquest viatge ja té preus, per això la moneda del pressupost no es pot canviar aquí. Torna a posar {current} per desar els altres canvis.',
+    'Aquest viatge ja té preus, per això la moneda del pressupost no es pot canviar aquí. Fes servir «Canvia la moneda del pressupost» a la pestanya Despeses o torna a posar {current} per desar els altres canvis.',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Vols eliminar «{title}» per sempre?',
   'deleteTrip.description':
