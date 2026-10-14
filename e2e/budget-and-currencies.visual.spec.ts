@@ -133,8 +133,8 @@ async function frame(
 /**
  * `04-S1` - the display currency (`docs/plans/04-budget-and-currencies.md`, stage 04-S1, "Toolbar").
  *
- * The seeded Tokyo & Kyoto trip is kept in yen and the workspace default is the euro, so choosing the
- * workspace default asks for the ordered pair JPY to EUR. No seeded trip froze that pair, so the lookup
+ * The seeded Tokyo & Kyoto trip is kept in yen and the workspace default is the pound, so choosing the
+ * workspace default asks for the ordered pair JPY to GBP. No seeded trip froze that pair, so the lookup
  * answers nothing - the fallback state: every row is marked as not converted and an alert names the pair
  * and the date, with no figure invented. The choice is stored on the reader, so each journey puts it back
  * to "each trip in its own currency" before it ends.
@@ -223,7 +223,7 @@ test.describe('04-S1 — display currency', () => {
 
       await expect(page.getByText(NOT_CONVERTED).first()).toBeVisible()
       await expect(
-        page.getByRole('status').filter({ hasText: /JPY to EUR on / }),
+        page.getByRole('status').filter({ hasText: /JPY to GBP on / }),
       ).toBeVisible()
 
       await restorePerTrip(page)

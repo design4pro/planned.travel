@@ -191,16 +191,23 @@ function ExpenseRow({
             )}
           </div>
 
-          <span className="flex shrink-0 items-baseline gap-2 text-caption tabular-nums text-ink-4">
-            <ConvertedFigure
-              display={display}
-              convertedMinor={row.convertedMinor}
-            />
+          <span className="shrink-0 text-caption tabular-nums text-ink-4">
             {mine === 0
               ? 'not your share'
               : `${formatMoney(mine, currency, locale)} yours`}
           </span>
         </div>
+
+        {display.mode === 'fixed' ? (
+          // Its own line, under the amount it converts: beside the share it would take the width
+          // the payer and category need on a 360px column.
+          <div className="flex justify-end">
+            <ConvertedFigure
+              display={display}
+              convertedMinor={row.convertedMinor}
+            />
+          </div>
+        ) : null}
       </div>
 
       {canWrite ? (
