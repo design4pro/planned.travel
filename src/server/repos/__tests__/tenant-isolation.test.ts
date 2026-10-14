@@ -2400,13 +2400,13 @@ describe('tenant isolation', () => {
   })
 
   describe('a settlement paid in another currency', () => {
+    // EUR 117.00 for GBP 150.00 is 0.78 euros to the pound: the pair implies the rate, so the
+    // fixture no longer carries a rate of its own that the amounts contradict.
     const payment = {
-      amountMinor: 46_488,
-      currency: 'JPY',
+      amountMinor: 11_700,
       settledOn: '2026-04-14',
-      originalAmountMinor: 59_600,
+      originalAmountMinor: 15_000,
       originalCurrency: 'GBP',
-      exchangeRate: 195,
     } as const
 
     it('cannot be recorded onto a foreign trip', async () => {
@@ -2436,9 +2436,9 @@ describe('tenant isolation', () => {
         toUserId: alpha.tenant.ownerUserId,
         ...payment,
       })
-      expect(own.originalAmountMinor).toBe(59_600)
+      expect(own.originalAmountMinor).toBe(15_000)
       expect(own.originalCurrency).toBe('GBP')
-      expect(own.exchangeRate).toBe(195)
+      expect(own.exchangeRate).toBeCloseTo(0.78, 10)
 
       expect(
         await settlementsRepository.findById(beta.tenant.scope, own.id),
@@ -2451,6 +2451,51 @@ describe('tenant isolation', () => {
       expect(
         await settlementsRepository.findById(alpha.tenant.scope, own.id),
       ).not.toBeNull()
+    })
+
+    it('is not found by id from the other workspace, and the trip id does not help', async () => {
+      const scope = alpha.tenant.scope
+      expect(
+        await settlementsRepository.findById(scope, beta.settlementId),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          deleteSettlement(scope, beta.tripId, beta.settlementId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          deleteSettlement(scope, alpha.tripId, beta.settlementId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('refuses a foreign-currency payment onto the other workspace’s trip and leaves its rows as they were', async () => {
+      const ledgerOfB = async (): Promise<unknown> => ({
+        settlements: await settlementsRepository.findMany(beta.tenant.scope),
+        balances: await getMemberBalances(beta.tenant.scope, beta.tripId),
+      })
+      const before = await ledgerOfB()
+
+      // Complete, incomplete and zero alike: the trip is refused before the pair is read, so the
+      // answer does not say which of them was wrong.
+      for (const source of [
+        payment,
+        { ...payment, originalAmountMinor: undefined },
+        { ...payment, originalAmountMinor: 0 },
+      ]) {
+        const error = await captureError(() =>
+          createSettlement(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            fromUserId: beta.companionUserId,
+            toUserId: beta.tenant.ownerUserId,
+            ...source,
+          }),
+        )
+        expect(error).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await ledgerOfB()).toEqual(before)
     })
   })
 

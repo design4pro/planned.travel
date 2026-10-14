@@ -10,6 +10,7 @@
 
 import { and, asc, count, desc, eq, sum } from 'drizzle-orm'
 import { z } from 'zod'
+import { impliedRate } from '#/lib/money'
 import {
   EXPENSE_CATEGORIES,
   SETTLEMENT_METHODS,
@@ -42,6 +43,7 @@ import type {
   Expense,
   ExpenseShare,
   Settlement,
+  Trip,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
 import type { TripRole } from './trips'
@@ -94,9 +96,10 @@ export function canWriteMoney(role: string | null): boolean {
 async function requireMoneyTrip(
   scope: TenantScope,
   tripId: string,
-): Promise<void> {
-  await requireTrip(scope, tripId)
+): Promise<Trip> {
+  const trip = await requireTrip(scope, tripId)
   await assertTripRole(scope, tripId, MONEY_WRITE_ROLES)
+  return trip
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -284,9 +287,9 @@ export const updateBudgetItemInput = z.object({
 export type UpdateBudgetItemInput = z.infer<typeof updateBudgetItemInput>
 
 /**
- * What a payment made in a currency other than the trip's own keeps beside the converted amount:
+ * What an expense made in a currency other than the trip's own keeps beside the converted amount:
  * the sum that actually left the account, the currency it was in, and the rate frozen at the
- * moment it was recorded. An expense and a settlement carry the same three.
+ * moment it was recorded. A settlement keeps the first two and derives the third itself.
  */
 const sourceAmountFields = {
   originalAmountMinor: minorAmountSchema.nullish(),
@@ -329,40 +332,29 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseInput>
 /**
  * A payment recorded against a trip.
  *
- * {@link sourceAmountFields} is the settlement half of the rule `expenses` already keeps. The
- * database holds no `CHECK` for any of it — one would rebuild the table on SQLite — so the
- * invariants are here: all three together or none of them, and a source amount that is a
- * non-negative integer in minor units, which is what {@link minorAmountSchema} already means.
+ * `amountMinor` is the sum in the trip's own currency, as the payer's statement shows it. A payment
+ * made in another currency also names the sum that actually left the account and its currency;
+ * {@link createSettlement} derives the rate from that pair and freezes it. The database holds no
+ * `CHECK` for any of it - one would rebuild the table on SQLite - so the invariants are the
+ * writer's: both source fields or neither, and a source amount that is not zero.
  *
- * `exchangeRate` is not a client's to send. The writing surface derives it with `impliedRate()`
- * from the two amounts, as `toRepoInput` already does for an expense (`src/server/fns/costs.ts`),
- * so the rate can never disagree with the figures printed beside it. `impliedRate()` returns `null`
- * for a source amount of zero, which is the one pair this rule refuses rather than half-records: a
- * payment of nothing has no rate to freeze, and a settlement of nothing is not a payment.
- * `recordPaymentFn` sends none of the three today, so every settlement is still trip-currency.
- *
- * The object is strict so a misspelled field is a parse error rather than a silently dropped one.
+ * There is no rate field, and the object is strict, so a client that sends one is refused as an
+ * unrecognised key rather than trusted or silently dropped: a rate that disagreed with the amounts
+ * printed beside it would put a lie under the row. `currency` is accepted only so a caller that
+ * names the trip's own can be told apart from one that names another, which is refused.
  */
-export const createSettlementInput = z
-  .strictObject({
-    tripId: idSchema,
-    fromUserId: idSchema,
-    toUserId: idSchema,
-    amountMinor: minorAmountSchema,
-    currency: currencySchema.optional(),
-    ...sourceAmountFields,
-    method: z.enum(SETTLEMENT_METHODS).optional(),
-    settledOn: dateSchema,
-    note: shortTextSchema.nullish(),
-  })
-  .refine((values) => {
-    const recorded = [
-      values.originalAmountMinor,
-      values.originalCurrency,
-      values.exchangeRate,
-    ].filter((field) => field !== undefined && field !== null).length
-    return recorded === 0 || recorded === 3
-  }, 'a settlement records its source amount, source currency and rate together, or none of them')
+export const createSettlementInput = z.strictObject({
+  tripId: idSchema,
+  fromUserId: idSchema,
+  toUserId: idSchema,
+  amountMinor: minorAmountSchema,
+  currency: currencySchema.optional(),
+  originalAmountMinor: sourceAmountFields.originalAmountMinor,
+  originalCurrency: sourceAmountFields.originalCurrency,
+  method: z.enum(SETTLEMENT_METHODS).optional(),
+  settledOn: dateSchema,
+  note: shortTextSchema.nullish(),
+})
 export type CreateSettlementInput = z.infer<typeof createSettlementInput>
 
 /* -------------------------------------------------------------------------------------------------
@@ -731,18 +723,81 @@ export async function listSettlements(
   })
 }
 
+/**
+ * The three source columns of a settlement, from the pair the payer typed.
+ *
+ * A pair in the trip's own currency is not a conversion, so it stores nothing (`JPY → JPY` would
+ * make the row claim one it never had). A foreign pair freezes the rate `impliedRate` derives from
+ * the two amounts; one with a missing half, or a source amount of zero, has no rate to freeze and
+ * is refused, because a half-recorded conversion cannot be reproduced later.
+ */
+function settlementConversion(
+  values: Pick<
+    CreateSettlementInput,
+    'amountMinor' | 'originalAmountMinor' | 'originalCurrency'
+  >,
+  tripCurrency: string,
+): Pick<
+  Settlement,
+  'originalAmountMinor' | 'originalCurrency' | 'exchangeRate'
+> {
+  const none = {
+    originalAmountMinor: null,
+    originalCurrency: null,
+    exchangeRate: null,
+  }
+  const originalAmountMinor = values.originalAmountMinor ?? null
+  const originalCurrency = values.originalCurrency ?? null
+  if (originalAmountMinor === null && originalCurrency === null) {
+    return none
+  }
+  if (originalAmountMinor === null || originalCurrency === null) {
+    throw conversionIncomplete()
+  }
+  if (originalAmountMinor === 0) {
+    throw conversionIncomplete()
+  }
+  if (originalCurrency.toUpperCase() === tripCurrency.toUpperCase()) {
+    return none
+  }
+  const exchangeRate = impliedRate({
+    originalAmountMinor,
+    originalCurrency,
+    amountMinor: values.amountMinor,
+    currency: tripCurrency,
+  })
+  if (exchangeRate === null) {
+    throw conversionIncomplete()
+  }
+  return { originalAmountMinor, originalCurrency, exchangeRate }
+}
+
+function conversionIncomplete(): RepositoryError {
+  return new RepositoryError(
+    'A payment in another currency needs the amount that was sent and a converted amount above zero.',
+    'CONVERSION_INCOMPLETE',
+  )
+}
+
 export async function createSettlement(
   scope: TenantScope,
   input: CreateSettlementInput,
 ): Promise<Settlement> {
-  const values = createSettlementInput.parse(input)
+  const { currency, ...values } = createSettlementInput.parse(input)
   if (values.fromUserId === values.toUserId) {
     throw new RepositoryError(
       'A settlement needs two different people.',
       'INVALID_SETTLEMENT',
     )
   }
-  await requireMoneyTrip(scope, values.tripId)
+  const trip = await requireMoneyTrip(scope, values.tripId)
+  if (currency !== undefined && currency !== trip.currency) {
+    throw new RepositoryError(
+      'A settlement is recorded in the trip’s own currency.',
+      'INVALID_SETTLEMENT',
+    )
+  }
+  const conversion = settlementConversion(values, trip.currency)
   await requireTripPeople(
     scope,
     values.tripId,
@@ -751,6 +806,8 @@ export async function createSettlement(
   )
   return settlementsRepository.insert(scope, {
     ...values,
+    ...conversion,
+    currency: trip.currency,
     createdBy: scope.ctx.userId,
   })
 }

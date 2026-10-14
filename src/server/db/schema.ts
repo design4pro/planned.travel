@@ -1563,9 +1563,10 @@ export const settlements = sqliteTable(
      * The three columns below record a payment made in a currency other than the trip's own — the
      * same shape `expenses` carries. All three null is what every row written before them is, and
      * it reads as: paid in the accounting currency, no conversion, implied rate 1. They carry no
-     * `CHECK`, because a constraint change rebuilds the table on SQLite; the all-three-or-none
-     * rule and the non-negative guard live in `createSettlementInput`
-     * (`src/server/repos/expenses.ts`) instead.
+     * `CHECK`, because a constraint change rebuilds the table on SQLite; `createSettlement`
+     * (`src/server/repos/expenses.ts`) keeps the rule instead: source amount and currency
+     * together or neither, a source amount above zero, and the rate derived from the pair, never
+     * supplied.
      */
     originalAmountMinor: minor('original_amount_minor'),
     originalCurrency: currency('original_currency'),

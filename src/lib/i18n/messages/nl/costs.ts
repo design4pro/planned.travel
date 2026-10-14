@@ -117,6 +117,7 @@ const messages = {
   'payment.whoPaid': 'Wie betaald wordt',
   'payment.amountIn': 'Bedrag in {currency}',
   'payment.amountPositive': 'Vul een bedrag groter dan nul in.',
+  'payment.currencyLabel': 'Valuta waarin de betaling is gedaan',
   'payment.how': 'Hoe',
   'payment.howMade': 'Hoe de betaling is gedaan',
   'payment.dateLabel': 'Datum van de betaling',

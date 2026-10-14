@@ -84,6 +84,7 @@ const {
   createExpenseFn,
   deleteExpenseFn,
   recordPaymentFn,
+  recordPaymentSchema,
   updateExpenseFn,
 } = await import('../costs')
 
@@ -191,6 +192,116 @@ describe('the costs boundary', () => {
       await inStart(() => recordPaymentFn({ data: payment() }))
 
       expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
+    })
+
+    describe('in another currency', () => {
+      it('keeps the pair the payer typed and the rate the server derived from it', async () => {
+        stubs.scope = editor
+
+        // The statement shows EUR 10.00; GBP 8.50 left the account.
+        await inStart(() =>
+          recordPaymentFn({
+            data: {
+              ...payment(),
+              originalAmountMinor: 850,
+              originalCurrency: 'gbp',
+            },
+          }),
+        )
+
+        const [stored] = await listSettlements(tenant.scope, tripId)
+        expect(stored?.amountMinor).toBe(1_000)
+        expect(stored?.currency).toBe('EUR')
+        expect(stored?.originalAmountMinor).toBe(850)
+        expect(stored?.originalCurrency).toBe('GBP')
+        expect(stored?.exchangeRate).toBeCloseTo(1_000 / 850, 10)
+      })
+
+      it('stores no source figures when the source currency is the trip’s own', async () => {
+        stubs.scope = editor
+
+        await inStart(() =>
+          recordPaymentFn({
+            data: {
+              ...payment(),
+              originalAmountMinor: 1_000,
+              originalCurrency: 'eur',
+            },
+          }),
+        )
+
+        const [stored] = await listSettlements(tenant.scope, tripId)
+        expect(stored?.originalAmountMinor).toBeNull()
+        expect(stored?.originalCurrency).toBeNull()
+        expect(stored?.exchangeRate).toBeNull()
+      })
+
+      it.each([
+        ['a currency with no source amount', { originalCurrency: 'GBP' }],
+        ['an amount with no currency', { originalAmountMinor: 850 }],
+        [
+          'a source amount of nothing',
+          { originalAmountMinor: 0, originalCurrency: 'GBP' },
+        ],
+      ])(
+        'is refused with %s, and nothing is written',
+        async (_name, source) => {
+          stubs.scope = editor
+
+          const error = await captureError(() =>
+            inStart(() =>
+              recordPaymentFn({ data: { ...payment(), ...source } }),
+            ),
+          )
+
+          expect((error as { code?: string }).code).toBe(
+            'CONVERSION_INCOMPLETE',
+          )
+          expect(await listSettlements(tenant.scope, tripId)).toEqual([])
+          expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+        },
+      )
+    })
+
+    describe('input', () => {
+      it('accepts the source pair, or neither of them', () => {
+        expect(recordPaymentSchema.safeParse(payment()).success).toBe(true)
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            originalAmountMinor: 850,
+            originalCurrency: 'GBP',
+          }).success,
+        ).toBe(true)
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            originalAmountMinor: null,
+            originalCurrency: null,
+          }).success,
+        ).toBe(true)
+      })
+
+      it.each([
+        ['a rate', { exchangeRate: 1.18 }],
+        ['a currency', { currency: 'GBP' }],
+        ['a misspelled source amount', { originalAmount: 850 }],
+      ])('is strict: %s is refused rather than dropped', (_name, extra) => {
+        const result = recordPaymentSchema.safeParse({ ...payment(), ...extra })
+
+        expect(result.success).toBe(false)
+        expect(result.error?.issues[0]?.code).toBe('unrecognized_keys')
+      })
+
+      it('refuses a source currency that is not three letters', () => {
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            originalAmountMinor: 850,
+            originalCurrency: 'GB',
+          }).success,
+        ).toBe(false)
+      })
     })
   })
 
