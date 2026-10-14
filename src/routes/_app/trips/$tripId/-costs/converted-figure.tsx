@@ -38,16 +38,22 @@ export function ConvertedFigure({
     )
   }
   const amount = formatMoneyPlain(convertedMinor, display.code, locale)
+  // A span has no role, so an aria-label on it is not announced; the phrase is text instead, and the
+  // short visible form is hidden from a screen reader so the figure is read once.
   return (
     <span
       data-part="converted-figure"
-      aria-label={t('costs.display.row.convertedLabel', {
-        amount,
-        code: display.code,
-      })}
       className="shrink-0 text-caption tabular-nums text-ink-3"
     >
-      {t('costs.display.row.converted', { amount, code: display.code })}
+      <span aria-hidden="true">
+        {t('costs.display.row.converted', { amount, code: display.code })}
+      </span>
+      <span className="sr-only">
+        {t('costs.display.row.convertedLabel', {
+          amount,
+          code: display.code,
+        })}
+      </span>
     </span>
   )
 }

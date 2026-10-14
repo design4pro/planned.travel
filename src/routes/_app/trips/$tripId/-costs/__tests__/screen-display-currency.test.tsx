@@ -189,10 +189,13 @@ describe('the display currency on the costs screen', () => {
 
     expect(screen.getByText('Also in GBP')).toBeTruthy()
     const figure = document.querySelector('[data-part="converted-figure"]')
-    expect(figure?.textContent).toBe('≈ 51.00 GBP')
-    expect(figure?.getAttribute('aria-label')).toBe(
+    expect(figure?.querySelector('[aria-hidden="true"]')?.textContent).toBe(
+      '≈ 51.00 GBP',
+    )
+    expect(figure?.querySelector('.sr-only')?.textContent).toBe(
       'About 51.00 GBP in your display currency',
     )
+    expect(figure?.hasAttribute('aria-label')).toBe(false)
     expect(screen.getAllByText('€60.00').length).toBeGreaterThan(0)
   })
 
