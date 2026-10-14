@@ -460,7 +460,6 @@ export function CurrencyRebaseDialog({
             <Field label={t('costs.rebase.to')} disabled={committing}>
               <SimpleSelect
                 options={options}
-                value={to === '' ? undefined : to}
                 placeholder={t('costs.rebase.toPlaceholder')}
                 disabled={committing}
                 onValueChange={(next) => {
