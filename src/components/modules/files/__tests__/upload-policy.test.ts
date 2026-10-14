@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  ACCEPT_ATTRIBUTE,
   IMPORT_ACCEPT_ATTRIBUTE,
   MAX_FILE_BYTES,
   MAX_FILES_PER_UPLOAD,
   MAX_IMPORT_BYTES,
   MAX_IMPORT_FILES,
+  attachmentHeaders,
   checkUpload,
+  contentDispositionFor,
   defaultKindFor,
   importFormatFor,
   isFileKind,
@@ -53,6 +56,99 @@ describe('resolveContentType', () => {
 
   it('refuses a file with no extension and no usable type', () => {
     expect(resolveContentType('README', '')).toBeNull()
+  })
+})
+
+describe('a wallet pass', () => {
+  const PASS_TYPE = 'application/vnd.apple.pkpass'
+
+  it.each(['', 'application/octet-stream', PASS_TYPE])(
+    'resolves to the pass type through the extension when the claimed type is %j',
+    (claimed) => {
+      expect(resolveContentType('boarding.pkpass', claimed)).toBe(PASS_TYPE)
+      expect(resolveContentType('BOARDING.PKPASS', claimed)).toBe(PASS_TYPE)
+    },
+  )
+
+  it('is filed as a ticket, whichever way its type arrives', () => {
+    expect(defaultKindFor('boarding.pkpass', PASS_TYPE)).toBe('ticket')
+    expect(defaultKindFor('boarding.pkpass', 'application/octet-stream')).toBe(
+      'ticket',
+    )
+    expect(kindForFile(file('boarding.pkpass', '', 128))).toBe('ticket')
+    expect(kindForFile(file('boarding.pkpass', PASS_TYPE, 128))).toBe('ticket')
+  })
+
+  it('passes the upload policy with an empty or generic-binary type', () => {
+    for (const contentType of ['', 'application/octet-stream']) {
+      expect(
+        checkUpload(
+          { filename: 'boarding.pkpass', contentType, sizeBytes: 4096 },
+          UNLIMITED,
+        ),
+      ).toBeNull()
+    }
+  })
+
+  it('is offered by the file picker', () => {
+    expect(ACCEPT_ATTRIBUTE.split(',')).toContain('.pkpass')
+  })
+
+  it('is still refused by the booking import, which cannot read a zip', () => {
+    expect(IMPORT_ACCEPT_ATTRIBUTE.split(',')).not.toContain('.pkpass')
+    expect(importFormatFor('boarding.pkpass', PASS_TYPE)).toBeNull()
+  })
+
+  it('is screened as accepted before it leaves the browser', () => {
+    const { accepted, rejected } = screenFiles(
+      [file('boarding.pkpass', 'application/octet-stream', 4096)],
+      { usedBytes: 0, limitBytes: Number.POSITIVE_INFINITY },
+    )
+    expect(accepted).toHaveLength(1)
+    expect(rejected).toHaveLength(0)
+  })
+})
+
+describe('contentDispositionFor', () => {
+  it('is an attachment carrying the encoded name', () => {
+    expect(contentDispositionFor('Boarding pass.pkpass')).toBe(
+      "attachment; filename*=UTF-8''Boarding%20pass.pkpass",
+    )
+  })
+
+  it('encodes a non-Latin name so the header stays ASCII', () => {
+    expect(contentDispositionFor('京都.pdf')).toBe(
+      "attachment; filename*=UTF-8''%E4%BA%AC%E9%83%BD.pdf",
+    )
+  })
+})
+
+describe('attachmentHeaders', () => {
+  it('serves a wallet pass under the pass type, as an uncached attachment', () => {
+    const headers = attachmentHeaders({
+      filename: 'boarding.pkpass',
+      contentType: 'application/vnd.apple.pkpass',
+      sizeBytes: 4096,
+    })
+    expect(headers).toEqual({
+      'content-type': 'application/vnd.apple.pkpass',
+      'content-length': '4096',
+      'content-disposition': contentDispositionFor('boarding.pkpass'),
+      'cache-control': 'private, no-store',
+      'x-content-type-options': 'nosniff',
+    })
+  })
+
+  it('echoes a stored text/html type verbatim and still forbids sniffing', () => {
+    const headers = attachmentHeaders({
+      filename: 'page.html',
+      contentType: 'text/html',
+      sizeBytes: 12,
+    })
+    expect(headers['content-type']).toBe('text/html')
+    expect(headers['content-disposition']).toMatch(/^attachment;/u)
+    expect(headers['cache-control']).toBe('private, no-store')
+    expect(headers['x-content-type-options']).toBe('nosniff')
   })
 })
 
