@@ -197,6 +197,28 @@ const messages = {
     'Na tym wyjeździe nie zapisano jeszcze żadnych wydatków. Pojawią się tutaj, gdy doda je właściciel lub edytor.',
   'readOnly.settleEmpty':
     'Na razie nie trzeba robić żadnych przelewów. Ewentualna nierównowaga pojawiłaby się tutaj.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Waluta wyświetlania',
+  'display.indicator.perTrip': 'Waluta wyjazdu',
+  'display.indicator.fixed': 'Także w {code}',
+  'display.menu.perTrip': 'Każdy wyjazd w jego walucie',
+  'display.menu.workspace': '{code} (domyślna w przestrzeni)',
+  'display.menu.rateHint': 'Używa kursu zapisanego na wyjeździe',
+  'display.menu.currentHint':
+    'Wybrana, ale żaden zapisany kurs jej nie obejmuje',
+  'display.menu.needsLiveRate':
+    'Wymaga kursu bieżącego, który nie jest jeszcze dostępny',
+  'display.menu.saving': 'Zapisywanie wyboru',
+  'display.error.title': 'Nie zapisano waluty wyświetlania',
+  'display.error.body':
+    'Nie udało się zapisać wyboru. Spróbuj ponownie za chwilę.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': 'Około {amount} {code} w walucie wyświetlania',
+  'display.row.notConverted': 'Nieprzeliczone',
+  'display.alert.title': 'Część kwot nie jest przeliczona',
+  'display.alert.body':
+    'Dla tych par walut nie zapisano kursu, więc te kwoty zostają w walucie budżetu:',
+  'display.alert.pair': '{from} na {to}, {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

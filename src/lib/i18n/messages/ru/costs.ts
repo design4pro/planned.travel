@@ -198,6 +198,28 @@ const messages = {
     'В этой поездке пока нет записанных расходов. Они появятся здесь, когда владелец или редактор их добавит.',
   'readOnly.settleEmpty':
     'Сейчас переводы не нужны. Любой дисбаланс появился бы здесь.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Валюта отображения',
+  'display.indicator.perTrip': 'Своя валюта',
+  'display.indicator.fixed': 'Также в {code}',
+  'display.menu.perTrip': 'Каждая поездка в своей валюте',
+  'display.menu.workspace': '{code} (по умолчанию в пространстве)',
+  'display.menu.rateHint': 'Использует курс, уже записанный в поездке',
+  'display.menu.currentHint':
+    'Выбрана, но ни один записанный курс её не покрывает',
+  'display.menu.needsLiveRate': 'Нужен текущий курс, который пока недоступен',
+  'display.menu.saving': 'Сохраняем ваш выбор',
+  'display.error.title': 'Валюта отображения не сохранена',
+  'display.error.body':
+    'Не удалось сохранить ваш выбор. Попробуйте ещё раз чуть позже.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Около {amount} {code} в вашей валюте отображения',
+  'display.row.notConverted': 'Не пересчитано',
+  'display.alert.title': 'Некоторые суммы не пересчитаны',
+  'display.alert.body':
+    'Для этих пар валют курс не записан, поэтому суммы остаются в валюте бюджета:',
+  'display.alert.pair': '{from} в {to} на {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

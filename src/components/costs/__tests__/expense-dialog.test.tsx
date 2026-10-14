@@ -54,6 +54,7 @@ function expenseRow(overrides: Partial<CostsExpense>): CostsExpense {
     originalAmountMinor: null,
     originalCurrency: null,
     exchangeRate: null,
+    convertedMinor: null,
     spentOn: '2026-05-10',
     paidBy: 'u1',
     splitMethod: 'equal',
