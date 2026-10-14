@@ -99,6 +99,10 @@ const PRINT_CSS = `
     font-size: 10.5pt;
     line-height: 1.5;
   }
+  /* The page margin is the printer's; opened on a screen the page needs its own. */
+  @media screen { body { padding: 16px; } }
+  /* A booking URL or a long name must wrap inside the page, not widen the table past it. */
+  h1, .subtitle, .note, th, td { overflow-wrap: anywhere; }
   header { border-bottom: 1px solid #e5e2db; padding-bottom: 10mm; margin-bottom: 8mm; }
   h1 { font-size: 26pt; line-height: 1.05; margin: 0 0 3mm; letter-spacing: -0.01em; }
   .subtitle { margin: 0; color: #6e6d65; font-size: 11pt; }
@@ -113,7 +117,7 @@ const PRINT_CSS = `
   /* Letter-spacing disconnects cursive scripts, so a right-to-left page keeps its headings joined. */
   html[dir='rtl'] h2 { letter-spacing: 0; }
   .note { color: #6e6d65; margin: 0 0 3mm; }
-  table { width: 100%; border-collapse: collapse; }
+  table { width: 100%; table-layout: fixed; border-collapse: collapse; }
   th, td { padding: 2.4mm 0; border-bottom: 1px solid #ece9e3; vertical-align: top; text-align: start; }
   th.label { width: 38%; font-weight: 500; }
   td.value { width: 47%; font-variant-numeric: tabular-nums; }
@@ -135,30 +139,32 @@ export function renderExportDocument(
       const rows = section.rows
         .map(
           (row) =>
-            `<tr><th scope="row" class="label">${escapeHtml(row.label)}</th><td class="value">${escapeHtml(
+            `<tr><th scope="row" class="label" dir="auto">${escapeHtml(row.label)}</th><td class="value" dir="auto">${escapeHtml(
               row.value,
-            )}</td><td class="meta">${escapeHtml(row.meta ?? '')}</td></tr>`,
+            )}</td><td class="meta" dir="auto">${escapeHtml(row.meta ?? '')}</td></tr>`,
         )
         .join('')
       const note =
         section.note === undefined
           ? ''
-          : `<p class="note">${escapeHtml(section.note)}</p>`
-      return `<section><h2>${escapeHtml(section.heading)}</h2>${note}<table>${rows}</table></section>`
+          : `<p class="note" dir="auto">${escapeHtml(section.note)}</p>`
+      // An empty `<table>` is announced as a table with no rows, so a section with none has none.
+      const table = rows === '' ? '' : `<table>${rows}</table>`
+      return `<section><h2 dir="auto">${escapeHtml(section.heading)}</h2>${note}${table}</section>`
     })
     .join('')
 
   const subtitle =
     document.subtitle === undefined
       ? ''
-      : `<p class="subtitle">${escapeHtml(document.subtitle)}</p>`
+      : `<p class="subtitle" dir="auto">${escapeHtml(document.subtitle)}</p>`
 
   return `<!doctype html>
-<html lang="${meta.locale}" dir="${directionOf(meta.locale)}"><head><meta charset="utf-8"><title>${escapeHtml(document.title)}</title>
+<html lang="${meta.locale}" dir="${directionOf(meta.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(document.title)}</title>
 <style>${PRINT_CSS}</style></head>
 <body>
-<header><h1>${escapeHtml(document.title)}</h1>${subtitle}</header>
-${sections}
+<header><h1 dir="auto">${escapeHtml(document.title)}</h1>${subtitle}</header>
+<main>${sections}</main>
 <footer>${escapeHtml(meta.footer)}</footer>
 </body></html>`
 }
@@ -394,11 +400,19 @@ function readyEmail(
   return {
     to: [to],
     // A title may be 200 characters; the email payload's subject is capped at the same 200.
-    subject: t('modules.files.export.email.subject', { title }).slice(0, 200),
+    subject: cutSubject(t('modules.files.export.email.subject', { title })),
     html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
     text: t('modules.files.export.email.text', { url }),
     tag: 'export-ready',
   }
+}
+
+const SUBJECT_MAX = 200
+
+/** The email payload caps a subject at 200 UTF-16 units; a cut never leaves half an emoji behind. */
+function cutSubject(subject: string): string {
+  const cut = subject.slice(0, SUBJECT_MAX)
+  return /[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut
 }
 
 /** Housekeeping after the artifact is durable: a failure is logged and never fails the job. */

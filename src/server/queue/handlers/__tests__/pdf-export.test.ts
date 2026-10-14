@@ -27,10 +27,12 @@ import { createPdfExportHandler, renderExportDocument } from '../pdf-export'
 import {
   TaskConfigurationError,
   TaskPermanentError,
+  TaskRetryableError,
   pdfExportPayloadSchema,
 } from '../../types'
 
 import type { Locale } from '#/lib/i18n'
+import type { Database } from '#/server/db/types'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { LogRecord } from '#/server/observability/logger'
 import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
@@ -276,6 +278,27 @@ describe('the artifact the handler writes', () => {
     expect(sent.pdfOptions).toMatchObject({ format: 'A4', tagged: true })
   })
 
+  it('rethrows a Browser Rendering 5xx as retryable, with nothing written, sent or pointed at', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response('upstream is down', { status: 503 }),
+    )
+    const rigged = rig()
+
+    await expect(
+      run({ notify: 'owner@example.com' }, rigged),
+    ).rejects.toBeInstanceOf(TaskRetryableError)
+    expect(rigged.events).toEqual([])
+  })
+
+  it('is a configuration failure, with nothing written, when the render token has no account id', async () => {
+    const rigged = rig()
+    delete (rigged.context.env as { CLOUDFLARE_ACCOUNT_ID?: string })
+      .CLOUDFLARE_ACCOUNT_ID
+
+    await expect(run({}, rigged)).rejects.toBeInstanceOf(TaskConfigurationError)
+    expect(rigged.events).toEqual([])
+  })
+
   it('takes the organization from the envelope and the trip from the re-checked trip', async () => {
     const rigged = rig({ withPdf: false })
 
@@ -441,6 +464,24 @@ describe('the scope re-check', () => {
     expect(rigged.bucket.objects.size).toBe(1)
   })
 
+  it('rethrows a database failure instead of abandoning the export, so the queue redelivers it', async () => {
+    const down = new Proxy({} as Database, {
+      get() {
+        throw new Error('d1 is down')
+      },
+    })
+    const rigged = rig()
+
+    const failure = createPdfExportHandler(() => down)(
+      { tripId, requestedBy: tenant.ownerUserId, document: DOCUMENT },
+      rigged.context,
+    )
+
+    await expect(failure).rejects.toThrow('d1 is down')
+    await expect(failure).rejects.not.toBeInstanceOf(TaskPermanentError)
+    await expectNothingWritten(rigged)
+  })
+
   it('is a configuration failure when the database binding is missing', async () => {
     const rigged = rig({ withoutDb: true })
 
@@ -590,6 +631,25 @@ describe('the ready link', () => {
     expect(rigged.emails[0]?.subject).toHaveLength(200)
   })
 
+  it('never cuts the subject through the middle of an emoji', async () => {
+    const rigged = rig({ withPdf: false })
+    // 'Gotowe: ' is 8 units, so the emoji's two halves sit at units 199 and 200.
+    const title = `${'a'.repeat(191)}😀${'b'.repeat(20)}`
+
+    await run(
+      {
+        locale: 'pl',
+        notify: 'owner@example.com',
+        document: { ...DOCUMENT, title },
+      },
+      rigged,
+    )
+
+    const subject = rigged.emails[0]?.subject ?? ''
+    expect(subject.length).toBeLessThanOrEqual(200)
+    expect(subject).not.toMatch(/[\uD800-\uDBFF]$/)
+  })
+
   it('refuses before anything is written when an email is asked for and APP_URL is not set', async () => {
     const rigged = rig({ appUrl: null })
 
@@ -631,14 +691,14 @@ describe('renderExportDocument', () => {
   it('has one top heading and one section heading per section', () => {
     const html = render()
 
-    expect(html.match(/<h1>/g)).toHaveLength(1)
-    expect(html.match(/<h2>/g)).toHaveLength(DOCUMENT.sections.length)
+    expect(html.match(/<h1[ >]/g)).toHaveLength(1)
+    expect(html.match(/<h2[ >]/g)).toHaveLength(DOCUMENT.sections.length)
   })
 
   it('makes every label cell a row header', () => {
     const html = render()
 
-    expect(html.match(/<th scope="row" class="label">/g)).toHaveLength(2)
+    expect(html.match(/<th scope="row" class="label"/g)).toHaveLength(2)
     expect(html).not.toContain('<td class="label">')
   })
 
@@ -654,6 +714,48 @@ describe('renderExportDocument', () => {
     expect(render(DOCUMENT, 'ar')).toMatch(
       /html\[dir='rtl'\] h2 \{[^}]*letter-spacing: 0/,
     )
+  })
+
+  it('lets the browser pick the direction of every user-entered text, so mixed scripts keep their punctuation', () => {
+    const html = render(
+      {
+        ...DOCUMENT,
+        subtitle: 'Sub',
+        sections: [{ ...DOCUMENT.sections[0], note: 'A note' }],
+      },
+      'ar',
+    )
+
+    for (const tag of [
+      '<h1 dir="auto">',
+      '<p class="subtitle" dir="auto">',
+      '<p class="note" dir="auto">',
+      '<h2 dir="auto">',
+      '<th scope="row" class="label" dir="auto">',
+      '<td class="value" dir="auto">',
+      '<td class="meta" dir="auto">',
+    ]) {
+      expect(html).toContain(tag)
+    }
+  })
+
+  it('wraps long unbroken text inside a fixed table, and pads the page on a screen only', () => {
+    const html = render()
+
+    expect(html).toMatch(/th, td \{[^}]*overflow-wrap: anywhere/)
+    expect(html).toMatch(/table \{[^}]*table-layout: fixed/)
+    expect(html).toMatch(/@media screen \{ body \{ padding: 16px; \} \}/)
+    expect(html).toContain('<meta name="viewport"')
+  })
+
+  it('leaves out the table of a section with no rows, and puts the sections in main', () => {
+    const html = render({
+      ...DOCUMENT,
+      sections: [{ heading: 'Empty', rows: [] }, ...DOCUMENT.sections],
+    })
+
+    expect(html.match(/<table>/g)).toHaveLength(2)
+    expect(html).toMatch(/<main><section><h2 dir="auto">Empty<\/h2><\/section>/)
   })
 
   it('escapes every user-entered value, including after interpolation', () => {
