@@ -559,6 +559,8 @@ const messages = {
   'editTrip.coverContinue': 'Salvar sem a nova capa',
   'editTrip.currencyLocked':
     'Esta viagem já tem preços, então a moeda do orçamento não pode ser alterada aqui. Use Alterar moeda do orçamento na aba Gastos ou volte para {current} para salvar as outras alterações.',
+  'editTrip.currencyReadonly': 'A moeda do orçamento é alterada na aba Gastos.',
+  'editTrip.currencyLink': 'Abrir a aba Gastos',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Excluir “{title}” para sempre?',
   'deleteTrip.description':

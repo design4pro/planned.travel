@@ -562,6 +562,9 @@ const messages = {
   'editTrip.coverContinue': 'Guardar sin la nueva portada',
   'editTrip.currencyLocked':
     'Este viaje ya tiene precios, así que su moneda del presupuesto no se puede cambiar aquí. Usa Cambiar la moneda del presupuesto en la pestaña Gastos o vuelve a poner {current} para guardar tus otros cambios.',
+  'editTrip.currencyReadonly':
+    'La moneda del presupuesto se cambia desde la pestaña Gastos.',
+  'editTrip.currencyLink': 'Abrir la pestaña Gastos',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '¿Eliminar «{title}» para siempre?',
   'deleteTrip.description':

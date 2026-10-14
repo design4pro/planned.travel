@@ -1,7 +1,7 @@
 // The currency list is a Radix popover, which needs the pointer-capture and scroll stubs jsdom lacks.
 import '#/components/ui/__tests__/test-env'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -36,6 +36,29 @@ const EMPTY: TripFormValues = {
   currency: 'EUR',
   reminderDays: 3,
 }
+
+// `Link` stands in as a plain anchor that keeps the destination it was given, so the test can say where
+// the pointer goes without a router.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    children,
+    to,
+    params,
+  }: {
+    children?: React.ReactNode
+    to: string
+    params: Record<string, string>
+  }) => (
+    <a
+      href={Object.entries(params).reduce(
+        (path, [key, value]) => path.replace(`$${key}`, value),
+        to,
+      )}
+    >
+      {children}
+    </a>
+  ),
+}))
 
 afterEach(cleanup)
 
@@ -206,5 +229,40 @@ describe('the currency control', () => {
     await user.clear(screen.getByRole('combobox'))
     await user.type(screen.getByRole('combobox'), 'sek')
     expect(screen.getByRole('option', { name: /SEK/ })).toBeTruthy()
+  })
+})
+
+describe('the budget currency by mode', () => {
+  it('offers the select when a trip is created', () => {
+    mount()
+
+    expect(screen.getByRole('button', { name: 'Budget currency' })).toBeTruthy()
+    expect(
+      screen.queryByText('The budget currency is changed from the Costs tab.'),
+    ).toBeNull()
+    expect(screen.queryByRole('link')).toBeNull()
+  })
+
+  it('reads as text with a pointer to the Costs tab when a trip is edited', () => {
+    mount({ tripId: 'trip-1' })
+
+    expect(screen.queryByRole('button', { name: 'Budget currency' })).toBeNull()
+    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.getByText('Budget currency')).toBeTruthy()
+    expect(screen.getByText('EUR — Euro')).toBeTruthy()
+    expect(
+      screen.getByText('The budget currency is changed from the Costs tab.'),
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: 'Open the Costs tab' })
+        .getAttribute('href'),
+    ).toBe('/trips/trip-1/costs')
+  })
+
+  it('keeps the currency in the payload, so an edit caller decides whether to send it', () => {
+    mount({ tripId: 'trip-1', initial: { ...EMPTY, currency: 'PLN' } })
+
+    expect(payload()).toMatchObject({ currency: 'PLN' })
   })
 })
