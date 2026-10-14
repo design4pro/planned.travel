@@ -508,6 +508,21 @@ export function formatRate(
 }
 
 /**
+ * The other way round of a rate, for the sentence that lets a reader see a rate typed the wrong way
+ * round: six significant digits, grouped, so `1 / 52631` reads `0.0000190` and not `0.00`, where
+ * {@link formatRate}'s four fraction digits would round it away.
+ */
+export function formatInverseRate(
+  value: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return makeNumberFormat(locale, {
+    style: 'decimal',
+    maximumSignificantDigits: 6,
+  }).format(value)
+}
+
+/**
  * An exchange rate as the text a field should hold: the locale's decimal mark, no grouping and as
  * many significant digits as the rate has (ten at most), so `0.0000115` is not shown as `0.00`.
  *

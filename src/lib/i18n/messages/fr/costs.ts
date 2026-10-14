@@ -289,6 +289,10 @@ const messages = {
     'La conversion n’a pas pu être chargée. Rien n’a été modifié.',
   'rebase.commitError':
     'Nous n’avons pas pu changer la devise du budget. Rien n’a été modifié.',
+  'rebase.sameCurrency':
+    'Le budget est déjà en {to}. Choisissez une autre devise.',
+  'rebase.commitUnknown':
+    "Nous n'avons pas pu confirmer si la devise du budget est passée en {to}. Rechargez la page pour vérifier avant de réessayer.",
   'rebase.retry': 'Réessayer',
   'rebase.confirm': 'Passer en {to}',
   'rebase.committing': 'Changement de la devise du budget',

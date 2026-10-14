@@ -80,7 +80,11 @@ type Session =
       readonly seed: PaymentSeed | null
     }
   | { readonly kind: 'delete'; readonly id: number; readonly row: CostsExpense }
-  | { readonly kind: 'currency'; readonly id: number }
+  | {
+      readonly kind: 'currency'
+      readonly id: number
+      readonly currency: string
+    }
 
 export function CostsScreen({
   data,
@@ -134,9 +138,11 @@ export function CostsScreen({
     [start],
   )
 
+  // The dialog previews against the currency it opened on; a refresh behind it must not move that base.
+  const budgetCurrency = data.currency
   const openCurrency = useCallback((): void => {
-    start((id) => ({ kind: 'currency', id }))
-  }, [start])
+    start((id) => ({ kind: 'currency', id, currency: budgetCurrency }))
+  }, [start, budgetCurrency])
 
   // Only the owner of a live trip is offered the change; the server refuses anyone else regardless.
   const canChangeCurrency =
@@ -538,7 +544,7 @@ export function CostsScreen({
           key={`currency-${session.id}`}
           open={open}
           onOpenChange={setOpen}
-          currency={data.currency}
+          currency={session.currency}
           people={data.people}
           loadPreview={(request) =>
             previewCurrencyChangeFn({

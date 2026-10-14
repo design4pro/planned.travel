@@ -262,6 +262,10 @@ const messages = {
   'rebase.error': '환산 결과를 불러오지 못했습니다. 변경된 내용은 없습니다.',
   'rebase.commitError':
     '예산 통화를 변경하지 못했습니다. 변경된 내용은 없습니다.',
+  'rebase.sameCurrency':
+    '예산이 이미 {to}(으)로 설정되어 있습니다. 다른 통화를 선택하세요.',
+  'rebase.commitUnknown':
+    '예산 통화가 {to}(으)로 변경되었는지 확인하지 못했습니다. 다시 시도하기 전에 페이지를 새로고침해 확인하세요.',
   'rebase.retry': '다시 시도',
   'rebase.confirm': '{to}(으)로 변경',
   'rebase.committing': '예산 통화를 변경하는 중입니다',

@@ -278,6 +278,10 @@ const messages = {
     'Die Umrechnung konnte nicht geladen werden. Es wurde nichts geändert.',
   'rebase.commitError':
     'Wir konnten die Budgetwährung nicht ändern. Es wurde nichts geändert.',
+  'rebase.sameCurrency':
+    'Das Budget ist bereits in {to}. Wähle eine andere Währung.',
+  'rebase.commitUnknown':
+    'Wir konnten nicht bestätigen, ob die Budgetwährung auf {to} umgestellt wurde. Lade die Seite neu und prüfe es, bevor du es erneut versuchst.',
   'rebase.retry': 'Erneut versuchen',
   'rebase.confirm': 'Auf {to} umstellen',
   'rebase.committing': 'Die Budgetwährung wird geändert',

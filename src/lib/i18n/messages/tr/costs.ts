@@ -273,6 +273,10 @@ const messages = {
   'rebase.error': 'Çevrim yüklenemedi. Hiçbir şey değişmedi.',
   'rebase.commitError':
     'Bütçe para birimi değiştirilemedi. Hiçbir şey değişmedi.',
+  'rebase.sameCurrency':
+    'Bütçe zaten {to} cinsinden. Başka bir para birimi seçin.',
+  'rebase.commitUnknown':
+    'Bütçe para biriminin {to} olarak değişip değişmediğini doğrulayamadık. Tekrar denemeden önce sayfayı yenileyip kontrol edin.',
   'rebase.retry': 'Yeniden dene',
   'rebase.confirm': '{to} olarak değiştir',
   'rebase.committing': 'Bütçe para birimi değiştiriliyor',

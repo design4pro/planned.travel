@@ -249,6 +249,9 @@ function scan(): void {
   ).not.toBeNull()
 }
 
+const UNCONFIRMED =
+  "We couldn't confirm whether the budget currency changed to JPY. Reload the page to check before trying again."
+
 describe('the budget currency dialog: before a currency is chosen', () => {
   it('says what will happen and offers only the currency select', () => {
     const { loadPreview } = open()
@@ -262,8 +265,11 @@ describe('the budget currency dialog: before a currency is chosen', () => {
     expect(screen.queryByLabelText(/Exchange rate/)).toBeNull()
     expect(document.querySelector('[data-part="rebase-result"]')).toBeNull()
     expect(
-      (screen.getByRole('button', { name: /^Change to / }) as HTMLButtonElement)
-        .disabled,
+      (
+        screen.getByRole('button', {
+          name: 'Change budget currency',
+        }) as HTMLButtonElement
+      ).disabled,
     ).toBe(true)
     expect(loadPreview).not.toHaveBeenCalled()
     scan()
@@ -409,6 +415,7 @@ describe('the budget currency dialog: the preview', () => {
     await user.click(confirm())
 
     expect(commit).toHaveBeenCalledExactlyOnceWith({
+      from: 'EUR',
       to: 'JPY',
       rate: undefined,
     })
@@ -435,7 +442,7 @@ describe('the budget currency dialog: the rate', () => {
       .map((id) => document.getElementById(id)?.textContent ?? '')
       .join(' ')
     expect(hint).toContain('The last rate used in this workspace')
-    expect(hint).toContain('That is 1 JPY = 0.0061 EUR.')
+    expect(hint).toContain('That is 1 JPY = 0.00606061 EUR.')
     scan()
   })
 
@@ -562,7 +569,11 @@ describe('the budget currency dialog: the rate', () => {
 
     await user.click(confirm())
 
-    expect(commit).toHaveBeenCalledExactlyOnceWith({ to: 'JPY', rate: 160 })
+    expect(commit).toHaveBeenCalledExactlyOnceWith({
+      from: 'EUR',
+      to: 'JPY',
+      rate: 160,
+    })
   })
 
   it('previews on Enter at once and never commits on it', async () => {
@@ -609,7 +620,11 @@ describe('the budget currency dialog: the rate', () => {
     await user.click(confirm())
 
     expect(loadPreview).toHaveBeenLastCalledWith({ to: 'PLN', rate: undefined })
-    expect(commit).toHaveBeenCalledExactlyOnceWith({ to: 'PLN', rate: 4 })
+    expect(commit).toHaveBeenCalledExactlyOnceWith({
+      from: 'EUR',
+      to: 'PLN',
+      rate: 4,
+    })
   })
 })
 
@@ -643,6 +658,11 @@ describe('the budget currency dialog: refusals', () => {
       name: 'a split that cannot be carried over',
       refusal: { kind: 'unsplittable', count: 3 },
       text: /3 expenses have a split that cannot be carried over/,
+    },
+    {
+      name: 'the currency the trip is already in',
+      refusal: { kind: 'same-currency' },
+      text: /The budget is already in JPY/,
     },
     {
       name: 'an amount out of range',
@@ -704,7 +724,11 @@ describe('the budget currency dialog: committing', () => {
 
     await user.click(confirm())
 
-    expect(commit).toHaveBeenCalledExactlyOnceWith({ to: 'JPY', rate: 165 })
+    expect(commit).toHaveBeenCalledExactlyOnceWith({
+      from: 'EUR',
+      to: 'JPY',
+      rate: 165,
+    })
     await waitFor(() =>
       expect(onChanged).toHaveBeenCalledExactlyOnceWith('JPY'),
     )
@@ -766,11 +790,7 @@ describe('the budget currency dialog: committing', () => {
       await vi.advanceTimersByTimeAsync(COMMIT_TIMEOUT_MS + 100)
     })
 
-    expect(
-      await screen.findByText(
-        "We couldn't change the budget currency. Nothing was changed.",
-      ),
-    ).toBeTruthy()
+    expect(await screen.findByText(UNCONFIRMED)).toBeTruthy()
     expect(confirm().getAttribute('aria-busy')).not.toBe('true')
     expect(
       (screen.getByRole('button', { name: 'Cancel' }) as HTMLButtonElement)
@@ -806,7 +826,11 @@ describe('the budget currency dialog: a commit that fails', () => {
     await user.click(retry)
 
     await waitFor(() => expect(commit).toHaveBeenCalledTimes(2))
-    expect(commit).toHaveBeenLastCalledWith({ to: 'JPY', rate: 165 })
+    expect(commit).toHaveBeenLastCalledWith({
+      from: 'EUR',
+      to: 'JPY',
+      rate: 165,
+    })
     await waitFor(() => expect(onChanged).toHaveBeenCalledWith('JPY'))
   })
 
@@ -844,11 +868,7 @@ describe('the budget currency dialog: a commit that fails', () => {
 
     await user.click(confirm())
 
-    expect(
-      await screen.findByText(
-        "We couldn't change the budget currency. Nothing was changed.",
-      ),
-    ).toBeTruthy()
+    expect(await screen.findByText(UNCONFIRMED)).toBeTruthy()
     expect(onChanged).not.toHaveBeenCalled()
   })
 
@@ -867,13 +887,54 @@ describe('the budget currency dialog: a commit that fails', () => {
     const message = await screen.findByText(
       'The trip changed while you were confirming, so nothing was changed. Check the new figures and confirm again.',
     )
-    expect(liveAncestors(message).length).toBe(1)
+    // Focus moves to the notice and its label is its text, so the live region stays off: once, not twice.
+    expect(liveAncestors(message).length).toBe(0)
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('aria-labelledby')).toBe(
+        message.id,
+      ),
+    )
     await waitFor(() => expect(loadPreview).toHaveBeenCalledTimes(2))
     await settled()
     expect(onChanged).not.toHaveBeenCalled()
     expect(commit).toHaveBeenCalledTimes(1)
     // The new figures are on screen and confirm is available again for them.
     expect((confirm() as HTMLButtonElement).disabled).toBe(false)
+  })
+})
+
+describe('the budget currency dialog: a commit that is still in doubt', () => {
+  it('does not send a second commit while the trip is being re-read', async () => {
+    const { commit, readCurrency } = open({
+      commit: async () => {
+        throw new Error('network')
+      },
+      readCurrency: () => new Promise(() => {}),
+    })
+    const user = hand()
+    await pick(user, 'JPY')
+    await settled()
+
+    await user.click(confirm())
+    await waitFor(() => expect(readCurrency).toHaveBeenCalled())
+    await user.click(confirm())
+
+    expect(commit).toHaveBeenCalledTimes(1)
+  })
+
+  it('announces that it is working while the commit runs', async () => {
+    const { commit } = open({ commit: () => new Promise(() => {}) })
+    const user = hand()
+    await pick(user, 'JPY')
+    await settled()
+
+    await user.click(confirm())
+    await waitFor(() => expect(commit).toHaveBeenCalled())
+
+    expect(
+      within(result()).getByText('Changing the budget currency'),
+    ).toBeTruthy()
+    expect(document.activeElement).toBe(result())
   })
 })
 

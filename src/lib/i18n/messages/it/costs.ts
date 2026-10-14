@@ -287,6 +287,9 @@ const messages = {
     'Non è stato possibile caricare la conversione. Non è stato modificato nulla.',
   'rebase.commitError':
     'Non siamo riusciti a cambiare la valuta del budget. Non è stato modificato nulla.',
+  'rebase.sameCurrency': "Il budget è già in {to}. Scegli un'altra valuta.",
+  'rebase.commitUnknown':
+    'Non siamo riusciti a confermare se la valuta del budget sia passata a {to}. Ricarica la pagina per verificare prima di riprovare.',
   'rebase.retry': 'Riprova',
   'rebase.confirm': 'Passa a {to}',
   'rebase.committing': 'Cambio della valuta del budget',

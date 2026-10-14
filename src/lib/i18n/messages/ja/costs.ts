@@ -266,6 +266,9 @@ const messages = {
   'rebase.error': '換算を読み込めませんでした。何も変更されていません。',
   'rebase.commitError':
     '予算の通貨を変更できませんでした。何も変更されていません。',
+  'rebase.sameCurrency': '予算はすでに{to}です。別の通貨を選んでください。',
+  'rebase.commitUnknown':
+    '予算の通貨が{to}に変更されたか確認できませんでした。もう一度試す前に、ページを再読み込みして確認してください。',
   'rebase.retry': 'もう一度試す',
   'rebase.confirm': '{to} に変更',
   'rebase.committing': '予算の通貨を変更しています',

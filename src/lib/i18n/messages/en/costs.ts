@@ -326,6 +326,10 @@ const messages = {
   'rebase.error': 'The conversion could not be loaded. Nothing was changed.',
   'rebase.commitError':
     "We couldn't change the budget currency. Nothing was changed.",
+  'rebase.sameCurrency':
+    'The budget is already in {to}. Pick a different currency.',
+  'rebase.commitUnknown':
+    "We couldn't confirm whether the budget currency changed to {to}. Reload the page to check before trying again.",
   'rebase.retry': 'Try again',
   'rebase.confirm': 'Change to {to}',
   'rebase.committing': 'Changing the budget currency',

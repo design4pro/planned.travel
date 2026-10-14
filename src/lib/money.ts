@@ -375,6 +375,16 @@ export function toAmountInput(
 export const MIN_EXCHANGE_RATE = 1e-7
 export const MAX_EXCHANGE_RATE = 1e7
 
+/** Full-width, Arabic-Indic and Persian digits and the Arabic decimal mark, as ASCII. */
+function toAsciiDigits(text: string): string {
+  return text
+    .replace(/[\uff10-\uff19]/g, (ch) => String(ch.charCodeAt(0) - 0xff10))
+    .replace(/[\u0660-\u0669]/g, (ch) => String(ch.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (ch) => String(ch.charCodeAt(0) - 0x06f0))
+    .replace(/[\u066b\uff0e]/g, '.')
+    .replace(/[\u066c\uff0c]/g, ',')
+}
+
 /**
  * A rate typed into a field, in the locale's own notation or the other one: `0,0060` and `0.0060`
  * both read `0.006`. `null` for anything that is not a positive number.
@@ -385,7 +395,7 @@ export const MAX_EXCHANGE_RATE = 1e7
  * a rate read the wrong way round is visible before it is confirmed.
  */
 export function parseRate(text: string): number | null {
-  const figure = text.replace(/[\s\u00a0\u202f]/g, '')
+  const figure = toAsciiDigits(text).replace(/[\s\u00a0\u202f]/g, '')
   if (!/^[\d.,]+$/.test(figure)) {
     return null
   }

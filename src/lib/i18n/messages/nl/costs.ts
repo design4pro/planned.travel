@@ -277,6 +277,9 @@ const messages = {
     'De omrekening kon niet worden geladen. Er is niets gewijzigd.',
   'rebase.commitError':
     'We konden de valuta van het budget niet wijzigen. Er is niets gewijzigd.',
+  'rebase.sameCurrency': 'Het budget staat al in {to}. Kies een andere valuta.',
+  'rebase.commitUnknown':
+    'We konden niet bevestigen of de budgetvaluta is gewijzigd naar {to}. Laad de pagina opnieuw om het te controleren voordat je het nog eens probeert.',
   'rebase.retry': 'Opnieuw proberen',
   'rebase.confirm': 'Wijzigen naar {to}',
   'rebase.committing': 'De valuta van het budget wordt gewijzigd',

@@ -266,7 +266,8 @@ const messages = {
   'rebase.target': 'Budżet wyjazdu {before} zmieni się na {after}.',
   'rebase.rounding':
     'Każda kwota jest zaokrąglana raz, więc saldo może się zmienić najwyżej o {amount}.',
-  'rebase.leftover': 'Po zmianie dług {name} wobec {other} wyniesie {amount}.',
+  'rebase.leftover':
+    'Po zmianie: {name} - dług wobec {other} wyniesie {amount}.',
   'rebase.someone': 'Ktoś',
   'rebase.nothing':
     'Nic na tym wyjeździe nie ma jeszcze ceny, więc nie ma czego przeliczać.',
@@ -294,6 +295,9 @@ const messages = {
     'Nie udało się wczytać przeliczenia. Nic nie zostało zmienione.',
   'rebase.commitError':
     'Nie udało się zmienić waluty budżetu. Nic nie zostało zmienione.',
+  'rebase.sameCurrency': 'Budżet jest już w walucie {to}. Wybierz inną walutę.',
+  'rebase.commitUnknown':
+    'Nie udało się potwierdzić, czy waluta budżetu zmieniła się na {to}. Zanim spróbujesz ponownie, odśwież stronę i sprawdź.',
   'rebase.retry': 'Spróbuj ponownie',
   'rebase.confirm': 'Zmień na {to}',
   'rebase.committing': 'Zmieniam walutę budżetu',

@@ -289,6 +289,9 @@ const messages = {
   'rebase.copyPending': 'Tato cesta se ještě kopíruje. Zkuste to za chvíli.',
   'rebase.error': 'Přepočet se nepodařilo načíst. Nic se nezměnilo.',
   'rebase.commitError': 'Měnu rozpočtu se nepodařilo změnit. Nic se nezměnilo.',
+  'rebase.sameCurrency': 'Rozpočet už je v měně {to}. Vyberte jinou měnu.',
+  'rebase.commitUnknown':
+    'Nepodařilo se potvrdit, zda se měna rozpočtu změnila na {to}. Než to zkusíte znovu, načtěte stránku znovu a ověřte to.',
   'rebase.retry': 'Zkusit znovu',
   'rebase.confirm': 'Změnit na {to}',
   'rebase.committing': 'Měním měnu rozpočtu',

@@ -230,7 +230,7 @@ const messages = {
   'rebase.to': 'العملة الجديدة',
   'rebase.toPlaceholder': 'اختر عملة',
   'rebase.rateLabel': 'سعر الصرف (1 {from} مقابل {to})',
-  'rebase.rateInverse': 'أي أن 1 {to} = {inverse} {from}.',
+  'rebase.rateInverse': 'أي أن \u20661 {to} = {inverse} {from}\u2069.',
   'rebase.rateInvalid': 'أدخل سعرًا أكبر من صفر.',
   'rebase.rateOutOfRange':
     'يبدو هذا السعر كبيرًا جدًا أو صغيرًا جدًا. تحقق من اتجاه التحويل.',
@@ -299,6 +299,9 @@ const messages = {
   'rebase.copyPending': 'ما زال نسخ هذه الرحلة جاريًا. أعد المحاولة بعد لحظة.',
   'rebase.error': 'تعذّر تحميل التحويل. لم يتغيّر شيء.',
   'rebase.commitError': 'لم نتمكن من تغيير عملة الميزانية. لم يتغيّر شيء.',
+  'rebase.sameCurrency': 'الميزانية مُعدّة بالفعل بعملة {to}. اختر عملة أخرى.',
+  'rebase.commitUnknown':
+    'تعذّر التأكد من تغيير عملة الميزانية إلى {to}. أعد تحميل الصفحة للتحقق قبل المحاولة مجددًا.',
   'rebase.retry': 'أعد المحاولة',
   'rebase.confirm': 'التغيير إلى {to}',
   'rebase.committing': 'جارٍ تغيير عملة الميزانية',

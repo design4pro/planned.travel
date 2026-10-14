@@ -384,7 +384,11 @@ shareRows, pinnedPrices }, example: { original, converted } | null, budgetTarget
 statements, ceiling, refusal: null | { kind, … } }`. With no `rate` it asks `resolveRate` (manual
   absent); with a `rate` it uses it as `manual`. `leftovers` carries participant ids as `getMemberBalances` keys them, never names.
 - `changeTripCurrencyFn` (`POST`) input `z.strictObject({ tripId, to, rate: <the same bounded
-number>.optional() })`; `rate` is required unless `pricedRowsExist` is false. Output: the
+number>.optional(), from: <currency code>.optional() })`; `rate` is required unless `pricedRowsExist`
+  is false. `from` is the currency the owner previewed against (the Costs dialog always sends it): when
+  present and different from the trip's current currency the commit throws
+  `CurrencyRefusalError('costs.refusal.rebaseChanged')` before it reads or writes anything, so a stale
+  tab or a late commit can never apply a rate meant for another pair. Absent, behaviour is unchanged. Output: the
   counts it actually wrote. An extra key (say `expenseIds`) is a parse error.
 - Bounds: every converted amount must be a safe integer, else the commit throws
   `CurrencyRefusalError('costs.refusal.rebaseChanged')` after the preview would have refused it;
@@ -453,7 +457,9 @@ number>.optional() })`; `rate` is required unless `pricedRowsExist` is false. Ou
     any failure that is not a known refusal** (a dropped response, a timeout) the dialog first
     re-reads the trip: if its currency is already `to` the change went through and the success path
     runs; only otherwise does it say nothing was changed (`rebase.commitError`), which is then true
-    because the batch is atomic.
+    because the batch is atomic. When that re-read itself fails, or the commit timed out (it may still
+    land), the dialog says it could not confirm (`rebase.commitUnknown`) instead of claiming nothing
+    changed; a retry is safe because the commit carries `from`.
   - Success: the dialog closes, `router.invalidate()`, a toast `rebase.done`.
 - **A stale tab keeps what the traveller typed.** When an expense, payment or planned-item save is
   refused with `costs.refusal.tripCurrencyChanged`, the existing dialog stays open with its input,
@@ -519,6 +525,8 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | `rebase.copyPending`                | `This trip is still being copied. Try again in a moment.`                                                                                                                                                         |
 | `rebase.error`                      | `The conversion could not be loaded. Nothing was changed.`                                                                                                                                                        |
 | `rebase.commitError`                | `We couldn't change the budget currency. Nothing was changed.`                                                                                                                                                    |
+| `rebase.sameCurrency`               | `The budget is already in {to}. Pick a different currency.`                                                                                                                                                       |
+| `rebase.commitUnknown`              | `We couldn't confirm whether the budget currency changed to {to}. Reload the page to check before trying again.`                                                                                                  |
 | `rebase.retry`                      | `Try again`                                                                                                                                                                                                       |
 | `rebase.confirm`                    | `Change to {to}`                                                                                                                                                                                                  |
 | `rebase.done`                       | `The budget is now in {to}.`                                                                                                                                                                                      |

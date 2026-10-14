@@ -898,6 +898,34 @@ describe('committing a change of a trip’s budget currency', () => {
       expect(refusal.message).toBe(CHANGED)
     })
 
+    it('refuses a rate previewed against another currency than the trip has now, and writes nothing', async () => {
+      await seedLedger()
+      const before = await footprint(harness)
+
+      const refusal = await captureError(() =>
+        changeTripCurrency(tenant.scope, tripId, {
+          from: 'GBP',
+          to: 'JPY',
+          rate: RATE,
+        }),
+      )
+
+      expect(refusal.message).toBe(CHANGED)
+      expect(await footprint(harness)).toEqual(before)
+    })
+
+    it('commits when the currency it was previewed against is still the trip’s, and when none was named', async () => {
+      await seedLedger()
+
+      await changeTripCurrency(tenant.scope, tripId, {
+        from: 'EUR',
+        to: 'JPY',
+        rate: RATE,
+      })
+
+      expect((await requireTrip(tenant.scope, tripId)).currency).toBe('JPY')
+    })
+
     it('refuses a trip whose copy is still in progress, and writes nothing', async () => {
       await seedLedger()
       await tripsRepository.requireUpdate(tenant.scope, tripId, {
@@ -933,6 +961,12 @@ describe('committing a change of a trip’s budget currency', () => {
         to: 'JPY',
         rate: 160,
       })
+      expect(
+        changeTripCurrencyInput.parse({ from: 'EUR', to: 'JPY', rate: 160 }),
+      ).toEqual({ from: 'EUR', to: 'JPY', rate: 160 })
+      expect(() =>
+        changeTripCurrencyInput.parse({ from: 'euro', to: 'JPY' }),
+      ).toThrow()
     })
   })
 

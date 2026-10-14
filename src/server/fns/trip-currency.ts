@@ -62,6 +62,7 @@ export const changeTripCurrencyFn = createServerFn({ method: 'POST' })
     const change = await changeTripCurrency(scope, data.tripId, {
       to: data.to,
       rate: data.rate,
+      from: data.from,
     })
 
     await mirrorToRoom(scope, data.tripId, [

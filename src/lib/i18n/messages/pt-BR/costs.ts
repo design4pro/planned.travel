@@ -284,6 +284,9 @@ const messages = {
   'rebase.error': 'Não foi possível carregar a conversão. Nada foi alterado.',
   'rebase.commitError':
     'Não foi possível alterar a moeda do orçamento. Nada foi alterado.',
+  'rebase.sameCurrency': 'O orçamento já está em {to}. Escolha outra moeda.',
+  'rebase.commitUnknown':
+    'Não conseguimos confirmar se a moeda do orçamento mudou para {to}. Recarregue a página para conferir antes de tentar de novo.',
   'rebase.retry': 'Tentar de novo',
   'rebase.confirm': 'Mudar para {to}',
   'rebase.committing': 'Alterando a moeda do orçamento',

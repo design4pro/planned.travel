@@ -242,6 +242,9 @@ const messages = {
   'rebase.copyPending': '这趟行程仍在复制中。请稍后再试。',
   'rebase.error': '无法加载换算结果。没有做任何更改。',
   'rebase.commitError': '无法更改预算货币。没有做任何更改。',
+  'rebase.sameCurrency': '预算已使用{to}。请选择其他货币。',
+  'rebase.commitUnknown':
+    '无法确认预算货币是否已更改为{to}。请先刷新页面检查，再重试。',
   'rebase.retry': '重试',
   'rebase.confirm': '改为 {to}',
   'rebase.committing': '正在更改预算货币',

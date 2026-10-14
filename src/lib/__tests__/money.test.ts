@@ -23,7 +23,7 @@ import {
   toAmountInput,
 } from '../money'
 
-import { formatRateInput } from '../format'
+import { formatInverseRate, formatRateInput } from '../format'
 
 import type { SplitInput } from '../money'
 
@@ -228,6 +228,12 @@ describe('parseRate', () => {
     expect(parseRate(' 165.5 ')).toBe(165.5)
   })
 
+  it('reads full-width and Arabic-Indic digits', () => {
+    expect(parseRate('１６５．５')).toBe(165.5)
+    expect(parseRate('٠٫٠٠٦')).toBe(0.006)
+    expect(parseRate('۱۶۵٫۵')).toBe(165.5)
+  })
+
   it('reads the last separator as the decimal mark when both appear', () => {
     expect(parseRate('1,234.5')).toBe(1234.5)
     expect(parseRate('1.234,5')).toBe(1234.5)
@@ -266,6 +272,17 @@ describe('formatRateInput', () => {
   it('keeps the digits a small rate needs', () => {
     expect(formatRateInput(0.0000115, 'en')).toBe('0.0000115')
     expect(formatRateInput(165.123456, 'en')).toBe('165.123456')
+  })
+})
+
+describe('formatInverseRate', () => {
+  it('keeps the digits of a small inverse instead of rounding it to zero', () => {
+    expect(formatInverseRate(1 / 52631, 'en')).toBe('0.0000190002')
+  })
+
+  it('groups a large one and reads the usual one plainly', () => {
+    expect(formatInverseRate(1 / 0.006, 'en')).toBe('166.667')
+    expect(formatInverseRate(1_234_567, 'en')).toBe('1,234,570')
   })
 })
 
