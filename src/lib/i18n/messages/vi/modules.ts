@@ -520,6 +520,10 @@ const messages = {
   'book.ledger.refused.body':
     'Đặt chỗ đã nằm trong chuyến đi. Việc thêm dòng chi phí vào chi phí chuyến đi không thành — hãy thử lại nửa đó.',
   'book.action.ledgerRetry': 'Thêm vào chi phí',
+  'book.ledger.splitStale.title': 'Đã lưu, nhưng phần chia không còn khớp',
+  'book.ledger.splitStale.body':
+    'Đặt chỗ và giá mới đã được lưu, nhưng cách chia khoản chi phí này không theo kịp tổng mới. Hãy mở khoản đó trong Chi phí và sửa lại phần chia.',
+  'book.action.done': 'Xong',
   'book.copyConfirmation': 'mã xác nhận của {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

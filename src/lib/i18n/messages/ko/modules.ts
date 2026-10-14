@@ -505,6 +505,11 @@ const messages = {
   'book.ledger.refused.body':
     '예약은 여행에 들어갔습니다. 비용 항목을 여행 비용에 추가하지 못했습니다 — 그 절반만 다시 시도하세요.',
   'book.action.ledgerRetry': '비용에 추가',
+  'book.ledger.splitStale.title':
+    '저장했지만 정산 분배가 더 이상 맞지 않습니다',
+  'book.ledger.splitStale.body':
+    '예약과 새 가격은 저장했지만, 이 비용 항목의 분배는 새 합계를 따라가지 못했습니다. 비용에서 이 항목을 열어 분배를 고쳐 주세요.',
+  'book.action.done': '완료',
   'book.copyConfirmation': '{title}의 확인 번호',
 
   /* -------------------------- transports: modes, ends, refusals */

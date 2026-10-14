@@ -528,6 +528,11 @@ const messages = {
   'book.ledger.refused.body':
     'Bokningen ligger på resan. Att lägga dess kostnadsrad till resans kostnader gick inte — försök med den halvan igen.',
   'book.action.ledgerRetry': 'Lägg till i kostnaderna',
+  'book.ledger.splitStale.title':
+    'Sparat, men uppdelningen stämmer inte längre',
+  'book.ledger.splitStale.body':
+    'Bokningen och dess nya pris är sparade, men uppdelningen av den här kostnaden kunde inte följa den nya summan. Öppna posten under Kostnader och rätta uppdelningen.',
+  'book.action.done': 'Klart',
   'book.copyConfirmation': 'bokningsnumret för {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

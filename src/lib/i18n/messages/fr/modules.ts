@@ -555,6 +555,11 @@ const messages = {
   'book.ledger.refused.body':
     'La réservation est sur le voyage. L’ajout de sa ligne de dépense aux dépenses du voyage n’a pas abouti — réessayez cette moitié.',
   'book.action.ledgerRetry': 'Ajouter aux dépenses',
+  'book.ledger.splitStale.title':
+    'Enregistré, mais la répartition ne tombe plus juste',
+  'book.ledger.splitStale.body':
+    'La réservation et son nouveau prix sont enregistrés, mais la répartition de cette dépense n’a pas pu suivre le nouveau total. Ouvrez la dépense dans Dépenses et corrigez la répartition.',
+  'book.action.done': 'Terminé',
   'book.copyConfirmation': 'le numéro de confirmation de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

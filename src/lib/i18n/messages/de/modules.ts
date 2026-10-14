@@ -547,6 +547,11 @@ const messages = {
   'book.ledger.refused.body':
     'Die Buchung steht auf der Reise. Ihre Kostenzeile zu den Reisekosten hinzuzufügen hat nicht geklappt — versuche diese Hälfte noch einmal.',
   'book.action.ledgerRetry': 'Zu den Kosten hinzufügen',
+  'book.ledger.splitStale.title':
+    'Gespeichert, aber die Aufteilung stimmt nicht mehr',
+  'book.ledger.splitStale.body':
+    'Die Buchung und ihr neuer Preis sind gespeichert, doch die Aufteilung dieses Kostenpostens konnte dem neuen Gesamtbetrag nicht folgen. Öffne den Posten unter Kosten und korrigiere die Aufteilung.',
+  'book.action.done': 'Fertig',
   'book.copyConfirmation': 'die Bestätigungsnummer für {title}',
 
   /* -------------------------- transports: modes, ends, refusals */

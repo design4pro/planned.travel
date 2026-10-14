@@ -527,6 +527,11 @@ const messages = {
   'book.ledger.refused.body':
     'Pemesanan sudah ada di perjalanan. Menambahkan baris biayanya ke biaya perjalanan tidak berhasil — coba lagi bagian itu.',
   'book.action.ledgerRetry': 'Tambahkan ke biaya',
+  'book.ledger.splitStale.title':
+    'Tersimpan, tetapi pembagiannya tidak lagi pas',
+  'book.ledger.splitStale.body':
+    'Pemesanan dan harga barunya tersimpan, tetapi pembagian biaya ini tidak bisa mengikuti total yang baru. Buka baris itu di Biaya dan perbaiki pembagiannya.',
+  'book.action.done': 'Selesai',
   'book.copyConfirmation': 'nomor konfirmasi untuk {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
