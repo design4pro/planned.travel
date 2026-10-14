@@ -52,6 +52,10 @@ const messages = {
   'split.label': 'Μοιρασιά μεταξύ',
   'split.everyone': 'Όλοι',
   'split.nobody': 'Κανείς',
+  'split.departed': 'Έφυγε από το ταξίδι',
+  'split.departedHint':
+    'Αν αποεπιλέξετε κάποιον που έφυγε από το ταξίδι, το μερίδιό του αφαιρείται οριστικά.',
+  'split.includeFor': 'Συμπερίληψη του {name} σε αυτόν τον διαχωρισμό',
   'split.how': 'Πώς μοιράζεται αυτό το έξοδο',
   'split.method.equal': 'Ισόποσα',
   'split.method.equalHint':

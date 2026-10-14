@@ -134,6 +134,7 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
       { ...OWNER, userId: 'u-ada', name: 'Ada Lovelace' },
       { ...OWNER, userId: 'u-grace', name: 'Grace Hopper', role: 'viewer' },
     ],
+    departedPeople: [],
     viewerUserId: 'u-grace',
     displayCurrency: { mode: 'per-trip', code: 'EUR' },
     displayChoices: { workspaceCode: 'EUR', rateCodes: [] },

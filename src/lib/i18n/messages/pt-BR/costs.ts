@@ -54,6 +54,10 @@ const messages = {
   'split.label': 'Dividir entre',
   'split.everyone': 'Todos',
   'split.nobody': 'Ninguém',
+  'split.departed': 'Saiu da viagem',
+  'split.departedHint':
+    'Desmarcar alguém que saiu da viagem remove a parte dessa pessoa para sempre.',
+  'split.includeFor': 'Incluir {name} nesta divisão',
   'split.how': 'Como esta despesa se divide',
   'split.method.equal': 'Igualmente',
   'split.method.equalHint':

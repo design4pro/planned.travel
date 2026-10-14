@@ -511,6 +511,7 @@ export function CostsScreen({
           onOpenChange={setOpen}
           expense={session.row}
           people={data.people}
+          departedPeople={data.departedPeople}
           viewerUserId={data.viewerUserId}
           tripCurrency={data.currency}
           categories={CATEGORY_OPTIONS}
