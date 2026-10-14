@@ -22,6 +22,7 @@
  * | `reservations`  | `reservations` |
  * | `expenses`      | `budget_items`, `expenses`, `expense_shares`, `settlements` |
  * | `rates`         | — reads `expenses` and `settlements` for the newest frozen rate of a currency pair |
+ * | `trip-currency` | — previews re-basing a trip's budget currency; reads `expenses`, `expense_shares`, `settlements`, `budget_items` and the priced rows of `places`, `reservations`, `transports`, `day_accommodations` |
  * | `lists`         | `packing_lists`, `packing_items`, `packing_templates`, `packing_template_items` |
  * | `files`         | `trip_files` |
  * | `collab`        | `collab_messages`, `collab_message_reactions`, `collab_notes`, `collab_polls`, `collab_poll_votes`, `check_ins` |
@@ -64,6 +65,7 @@ export * from './settings'
 export * from './tags'
 export * from './transports'
 export * from './trip-cards'
+export * from './trip-currency'
 export * from './trip-guests'
 export * from './trip-favourites'
 export * from './trips'

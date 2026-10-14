@@ -1013,14 +1013,19 @@ export interface SettlementSuggestion {
 }
 
 /**
- * The shortest set of transfers that clears the trip: greedily match the biggest debtor against the
- * biggest creditor until every balance is zero. At most `members − 1` transfers.
+ * The shortest set of transfers that clears a set of balances: greedily match the biggest debtor
+ * against the biggest creditor until every balance is zero. At most `members − 1` transfers.
+ *
+ * Pure, so the settlement suggestions and the preview of a budget-currency change (which names the
+ * debts a rounding would leave behind) read one matching rule. `balances` must already be ordered
+ * biggest creditor first, as {@link getMemberBalances} returns them.
  */
-export async function suggestSettlements(
-  scope: TenantScope,
-  tripId: string,
-): Promise<Array<SettlementSuggestion>> {
-  const balances = await getMemberBalances(scope, tripId)
+export function settlementsFromBalances(
+  balances: ReadonlyArray<{
+    readonly userId: string
+    readonly balanceMinor: number
+  }>,
+): Array<SettlementSuggestion> {
   const creditors = balances
     .filter((row) => row.balanceMinor > 0)
     .map((row) => ({ userId: row.userId, amount: row.balanceMinor }))
@@ -1057,6 +1062,14 @@ export async function suggestSettlements(
   }
 
   return suggestions
+}
+
+/** The shortest set of transfers that clears the trip. */
+export async function suggestSettlements(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<SettlementSuggestion>> {
+  return settlementsFromBalances(await getMemberBalances(scope, tripId))
 }
 
 /** Daily spend for a trip, oldest first — the costs sparkline. */
