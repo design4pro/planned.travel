@@ -924,6 +924,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - dibuat pada {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': '{title} sudah siap',
   'files.export.email.body': {
     other: 'Ekspor perjalanan sudah siap. Disimpan selama {count} hari.',

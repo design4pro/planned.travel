@@ -14,6 +14,7 @@ import {
   deleteTrip,
   getMembership,
   removeMember,
+  updateTrip,
 } from '#/server/repos'
 import {
   createHarness,
@@ -100,6 +101,8 @@ function rig(
     readonly withoutDb?: boolean
     readonly listFails?: boolean
     readonly deleteFails?: boolean
+    /** `null` leaves `APP_URL` unset; omitted uses the default origin. */
+    readonly appUrl?: string | null
   } = {},
 ): Rig {
   const events: Array<string> = []
@@ -130,7 +133,7 @@ function rig(
 
   const env = {
     APP_NAME: 'planned.travel',
-    APP_URL,
+    ...(options.appUrl === null ? {} : { APP_URL: options.appUrl ?? APP_URL }),
     ...(options.withPdf === false
       ? {}
       : {
@@ -414,6 +417,30 @@ describe('the scope re-check', () => {
     await expectNothingWritten(rigged)
   })
 
+  it('is permanent when the requester is in the workspace but not on the private trip', async () => {
+    await updateTrip(tenant.scope, tripId, { visibility: 'private' })
+    const colleagueId = await tenant.addUser('Colleague')
+    const rigged = rig()
+
+    await expect(
+      run(
+        { requestedBy: colleagueId, notify: 'colleague@example.com' },
+        rigged,
+      ),
+    ).rejects.toBeInstanceOf(TaskPermanentError)
+    await expectNothingWritten(rigged)
+  })
+
+  it('lets a workspace member export a trip the whole workspace may read', async () => {
+    await updateTrip(tenant.scope, tripId, { visibility: 'organization' })
+    const colleagueId = await tenant.addUser('Colleague')
+    const rigged = rig({ withPdf: false })
+
+    await run({ requestedBy: colleagueId }, rigged)
+
+    expect(rigged.bucket.objects.size).toBe(1)
+  })
+
   it('is a configuration failure when the database binding is missing', async () => {
     const rigged = rig({ withoutDb: true })
 
@@ -449,10 +476,40 @@ describe('the requester’s language', () => {
     await run({ locale: 'pl' }, polish)
 
     expect(htmlOf(english)).toContain(
-      '<footer>planned.travel - generated 14 Oct 2026, 12:00 UTC</footer>',
+      '<footer>planned.travel - generated 14 Oct 2026, 12:00 PM</footer>',
     )
-    expect(htmlOf(polish)).toContain('wygenerowano')
+    expect(htmlOf(polish)).toContain('wygenerowano 14 paź 2026, 12:00')
     expect(htmlOf(polish)).not.toContain('generated')
+  })
+
+  it("reads the footer's date and clock time in the trip's own zone", async () => {
+    // 12:00 UTC is 21:00 on the same day in Tokyo, and 05:00 the same day in Los Angeles.
+    await updateTrip(tenant.scope, tripId, { timezone: 'Asia/Tokyo' })
+    const tokyo = rig({ withPdf: false })
+    await run({}, tokyo)
+    await updateTrip(tenant.scope, tripId, { timezone: 'Pacific/Kiritimati' })
+    const kiritimati = rig({ withPdf: false })
+    await run({}, kiritimati)
+
+    expect(htmlOf(tokyo)).toContain('generated 14 Oct 2026, 9:00 PM')
+    // UTC+14: 02:00 on the 15th, so the date moves with the clock, never apart from it.
+    expect(htmlOf(kiritimati)).toContain('generated 15 Oct 2026, 2:00 AM')
+  })
+
+  it('falls back to UTC, date and time together, for a zone the runtime cannot format', async () => {
+    await updateTrip(tenant.scope, tripId, { timezone: 'Not/AZone' })
+    const rigged = rig({ withPdf: false })
+
+    await run({}, rigged)
+
+    expect(htmlOf(rigged)).toContain('generated 14 Oct 2026, 12:00 PM')
+  })
+
+  it("joins the footer's date and time with the locale's own separator", async () => {
+    const arabic = rig({ withPdf: false })
+    await run({ locale: 'ar' }, arabic)
+
+    expect(htmlOf(arabic)).toMatch(/14 [^،<]+ 2026، /)
   })
 
   it('writes the email subject, body and link text from the catalogue', async () => {
@@ -519,6 +576,45 @@ describe('the ready link', () => {
     )
   })
 
+  it('cuts a subject made from a 200-character title to the 200 the email payload accepts', async () => {
+    const rigged = rig({ withPdf: false })
+
+    await run(
+      {
+        notify: 'owner@example.com',
+        document: { ...DOCUMENT, title: 'L'.repeat(200) },
+      },
+      rigged,
+    )
+
+    expect(rigged.emails[0]?.subject).toHaveLength(200)
+  })
+
+  it('refuses before anything is written when an email is asked for and APP_URL is not set', async () => {
+    const rigged = rig({ appUrl: null })
+
+    await expect(
+      run({ notify: 'owner@example.com' }, rigged),
+    ).rejects.toBeInstanceOf(TaskConfigurationError)
+    expect(rigged.events).toEqual([])
+  })
+
+  it('still writes the export without APP_URL when no email is asked for', async () => {
+    const rigged = rig({ appUrl: null, withPdf: false })
+
+    await run({}, rigged)
+
+    expect(rigged.bucket.objects.size).toBe(1)
+  })
+
+  it('does not double the slash when APP_URL ends in one', async () => {
+    const rigged = rig({ appUrl: `${APP_URL}/`, withPdf: false })
+
+    await run({ notify: 'owner@example.com' }, rigged)
+
+    expect(rigged.emails[0]?.text).toContain(`${APP_URL}/trips/${tripId}/files`)
+  })
+
   it('sends no email without an address', async () => {
     const rigged = rig({ withPdf: false })
 
@@ -552,6 +648,12 @@ describe('renderExportDocument', () => {
     expect(html).not.toContain('#89877f')
     expect(html).toMatch(/td\.meta \{[^}]*text-align: end/)
     expect(html).toMatch(/th, td \{[^}]*text-align: start/)
+  })
+
+  it('does not letter-space a right-to-left page, where it would break the joined letters', () => {
+    expect(render(DOCUMENT, 'ar')).toMatch(
+      /html\[dir='rtl'\] h2 \{[^}]*letter-spacing: 0/,
+    )
   })
 
   it('escapes every user-entered value, including after interpolation', () => {

@@ -962,6 +962,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - generado el {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': 'Listo: {title}',
   'files.export.email.body': {
     one: 'La exportación del viaje está lista. Se conserva durante {count} día.',

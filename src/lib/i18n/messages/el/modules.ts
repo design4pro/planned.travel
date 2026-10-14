@@ -947,6 +947,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - δημιουργήθηκε στις {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': 'Έτοιμο: {title}',
   'files.export.email.body': {
     one: 'Η εξαγωγή του ταξιδιού είναι έτοιμη. Διατηρείται για {count} ημέρα.',

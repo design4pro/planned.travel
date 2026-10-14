@@ -939,6 +939,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - létrehozva: {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': '{title} elkészült',
   'files.export.email.body': {
     one: 'Az utazás exportja elkészült. {count} napig őrizzük meg.',

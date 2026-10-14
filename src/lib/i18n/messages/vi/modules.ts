@@ -908,6 +908,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - tạo lúc {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': '{title} đã sẵn sàng',
   'files.export.email.body': {
     other:

@@ -857,6 +857,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - 產生於 {when}',
+  'files.export.madeAt': '{date} {time}',
   'files.export.email.subject': '{title} 已準備好',
   'files.export.email.body': {
     other: '行程匯出已準備好。將保留 {count} 天。',

@@ -943,6 +943,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - gemaakt op {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': '{title} is klaar',
   'files.export.email.body': {
     one: 'De reisexport is klaar. Hij wordt {count} dag bewaard.',

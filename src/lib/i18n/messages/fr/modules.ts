@@ -970,7 +970,8 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - généré le {when}',
-  'files.export.email.subject': 'Prêt : {title}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Prêt : {title}',
   'files.export.email.body': {
     one: 'L’exportation du voyage est prête. Elle est conservée {count} jour.',
     many: 'L’exportation du voyage est prête. Elle est conservée {count} jours.',
@@ -978,7 +979,7 @@ const messages = {
       'L’exportation du voyage est prête. Elle est conservée {count} jours.',
   },
   'files.export.email.action': 'Ouvrir {title}',
-  'files.export.email.text': 'L’exportation du voyage est prête : {url}',
+  'files.export.email.text': 'L’exportation du voyage est prête : {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Envoi annulé.',

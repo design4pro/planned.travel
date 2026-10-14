@@ -890,6 +890,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - 생성: {when}',
+  'files.export.madeAt': '{date} {time}',
   'files.export.email.subject': '{title} 준비 완료',
   'files.export.email.body': {
     other: '여행 내보내기가 준비되었습니다. {count}일 동안 보관됩니다.',

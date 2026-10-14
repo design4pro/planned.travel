@@ -924,6 +924,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - oluşturulma: {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': '{title} hazır',
   'files.export.email.body': {
     one: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',

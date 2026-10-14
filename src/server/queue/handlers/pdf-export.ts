@@ -25,7 +25,9 @@ import {
   isSupportedLocale,
 } from '#/lib/i18n/locales'
 import { createTranslator, loadCatalogue } from '#/lib/i18n/catalogue'
+import { zoneClockTime } from '#/lib/clock-zones'
 import { formatDate } from '#/lib/format'
+import { FALLBACK_TIME_ZONE, dayKeyIn, resolveTimeZone } from '#/lib/time'
 import { isOrganizationRole } from '#/server/auth/tenant'
 import { isProviderBlockedError } from '#/server/metering/errors'
 import { serializeError } from '#/server/observability'
@@ -108,6 +110,8 @@ const PRINT_CSS = `
     color: #6e6d65;
     margin: 0 0 3mm;
   }
+  /* Letter-spacing disconnects cursive scripts, so a right-to-left page keeps its headings joined. */
+  html[dir='rtl'] h2 { letter-spacing: 0; }
   .note { color: #6e6d65; margin: 0 0 3mm; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 2.4mm 0; border-bottom: 1px solid #ece9e3; vertical-align: top; text-align: start; }
@@ -186,7 +190,7 @@ async function recheckScope(
   db: Database,
   context: TaskContext,
   payload: PdfExportPayload,
-): Promise<{ tripId: string }> {
+): Promise<{ tripId: string; timeZone: string }> {
   const probe = scopeFor(db, context.orgId, payload.requestedBy, 'member')
   const membership = await getMembership(probe, payload.requestedBy)
   if (membership === null) {
@@ -202,7 +206,7 @@ async function recheckScope(
   )
   try {
     const trip = await requireTrip(scope, payload.tripId)
-    return { tripId: trip.id }
+    return { tripId: trip.id, timeZone: resolveTimeZone(trip.timezone) }
   } catch (cause) {
     if (cause instanceof NotFoundError) {
       throw new TaskPermanentError(
@@ -216,10 +220,26 @@ async function recheckScope(
 
 const SECONDS_PER_DAY = 24 * 60 * 60
 
-/** `14 Oct 2026, 12:00 UTC`, through the locale's own date formatter rather than an ISO slice. */
-function generatedWhen(generatedAt: number, locale: Locale): string {
-  const instant = new Date(generatedAt).toISOString()
-  return `${formatDate(instant, locale) ?? instant.slice(0, 10)}, ${instant.slice(11, 16)} UTC`
+/**
+ * The footer's `{when}`: the date and the clock time of the instant, both read in the trip's own
+ * zone (UTC when the trip has none, or the runtime cannot format it), so the two halves are never
+ * in different zones. The join is the catalogue's, not a literal here.
+ */
+function generatedWhen(
+  generatedAt: number,
+  locale: Locale,
+  timeZone: string,
+  t: ReturnType<typeof createTranslator>,
+): string {
+  const zone =
+    zoneClockTime(timeZone, generatedAt, locale) === null
+      ? FALLBACK_TIME_ZONE
+      : timeZone
+  const date = dayKeyIn(new Date(generatedAt).toISOString(), zone)
+  return t('modules.files.export.madeAt', {
+    date: formatDate(date, locale) ?? date,
+    time: zoneClockTime(zone, generatedAt, locale) ?? '',
+  })
 }
 
 /**
@@ -241,11 +261,20 @@ export function createPdfExportHandler(
         'DB binding is not available to the queue consumer; a trip export cannot run',
       )
     }
-    const { tripId } = await recheckScope(
+    const { tripId, timeZone } = await recheckScope(
       databaseFor(binding),
       context,
       payload,
     )
+
+    // A relative link in an email goes nowhere, so a notification without an origin is a
+    // configuration error found before anything is rendered or written.
+    const appUrl = context.env.APP_URL?.replace(/\/+$/, '')
+    if (payload.notify !== undefined && !appUrl) {
+      throw new TaskConfigurationError(
+        'APP_URL is not set; the trip export email would carry a link that cannot open',
+      )
+    }
 
     const locale = isSupportedLocale(payload.locale)
       ? payload.locale
@@ -256,7 +285,7 @@ export function createPdfExportHandler(
       locale,
       footer: t('modules.files.export.doc.footer', {
         app: context.env.APP_NAME ?? 'planned.travel',
-        when: generatedWhen(generatedAt, locale),
+        when: generatedWhen(generatedAt, locale, timeZone, t),
       }),
     })
 
@@ -320,7 +349,7 @@ export function createPdfExportHandler(
           locale,
           payload.notify,
           payload.document.title,
-          `${context.env.APP_URL ?? ''}/trips/${encodeURIComponent(tripId)}/files?export=${encodeURIComponent(context.taskId)}`,
+          `${appUrl}/trips/${encodeURIComponent(tripId)}/files?export=${encodeURIComponent(context.taskId)}`,
         ),
       })
     }
@@ -364,7 +393,8 @@ function readyEmail(
   const action = t('modules.files.export.email.action', { title })
   return {
     to: [to],
-    subject: t('modules.files.export.email.subject', { title }),
+    // A title may be 200 characters; the email payload's subject is capped at the same 200.
+    subject: t('modules.files.export.email.subject', { title }).slice(0, 200),
     html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
     text: t('modules.files.export.email.text', { url }),
     tag: 'export-ready',

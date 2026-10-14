@@ -963,6 +963,7 @@ const messages = {
 
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - создано {when}',
+  'files.export.madeAt': '{date}, {time}',
   'files.export.email.subject': 'Готово: {title}',
   'files.export.email.body': {
     one: 'Экспорт поездки готов. Он хранится {count} день.',
