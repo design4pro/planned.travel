@@ -199,6 +199,28 @@ const messages = {
     'Il viaggio è cambiato mentre confermavi, quindi non è stato modificato nulla. Controlla le nuove cifre e conferma di nuovo.',
   'refusal.tripCurrencyChanged':
     'La valuta del budget di questo viaggio ora è {to}, quindi non è stato salvato nulla. La pagina è stata aggiornata: controlla l’importo e salva di nuovo.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Valuta di visualizzazione',
+  'display.indicator.perTrip': 'Valuta propria',
+  'display.indicator.fixed': 'Anche in {code}',
+  'display.menu.perTrip': 'Ogni viaggio nella sua valuta',
+  'display.menu.workspace': '{code} (predefinita dello spazio)',
+  'display.menu.rateHint': 'Usa un tasso già registrato su un viaggio',
+  'display.menu.currentHint': 'Scelta, ma nessun tasso registrato la copre',
+  'display.menu.needsLiveRate':
+    'Richiede un tasso in tempo reale, non ancora disponibile',
+  'display.menu.saving': 'Salvataggio della scelta',
+  'display.error.title': 'La valuta di visualizzazione non è stata salvata',
+  'display.error.body':
+    'Non è stato possibile salvare la scelta. Riprova tra un momento.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Circa {amount} {code} nella tua valuta di visualizzazione',
+  'display.row.notConverted': 'Non convertito',
+  'display.alert.title': 'Alcuni importi non sono convertiti',
+  'display.alert.body':
+    'Per queste coppie di valute non è registrato alcun tasso, quindi gli importi restano nella valuta del budget:',
+  'display.alert.pair': '{from} in {to} il {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

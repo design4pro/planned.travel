@@ -15,6 +15,7 @@ import {
   parseMoney,
   parsePercentage,
   parseWeight,
+  resolveDisplayCurrency,
   splitPreview,
   splitShares,
   suggestTransfers,
@@ -548,5 +549,57 @@ describe('convertMinor', () => {
     expect(() =>
       convertMinor(Number.MAX_SAFE_INTEGER, 1e6, 'EUR', 'USD'),
     ).toThrow(RangeError)
+  })
+})
+
+describe('resolveDisplayCurrency', () => {
+  it('is per-trip, in the trip’s own code, when nothing is stored', () => {
+    expect(
+      resolveDisplayCurrency({ preference: null, tripCurrency: 'JPY' }),
+    ).toEqual({ mode: 'per-trip', code: 'JPY' })
+  })
+
+  it('is fixed, in the stored code, for any other code', () => {
+    expect(
+      resolveDisplayCurrency({ preference: 'GBP', tripCurrency: 'JPY' }),
+    ).toEqual({ mode: 'fixed', code: 'GBP' })
+  })
+
+  it('is per-trip again when the stored code is the trip’s own, which consults no rate', () => {
+    expect(
+      resolveDisplayCurrency({ preference: 'JPY', tripCurrency: 'JPY' }),
+    ).toEqual({ mode: 'per-trip', code: 'JPY' })
+  })
+
+  it('compares codes by their canonical form, not their case', () => {
+    expect(
+      resolveDisplayCurrency({ preference: 'jpy', tripCurrency: 'JPY' }),
+    ).toEqual({ mode: 'per-trip', code: 'JPY' })
+  })
+
+  it('treats the clearing write as a return to per-trip, never as the code before it', () => {
+    const chosen = resolveDisplayCurrency({
+      preference: 'GBP',
+      tripCurrency: 'EUR',
+    })
+    const cleared = resolveDisplayCurrency({
+      preference: null,
+      tripCurrency: 'EUR',
+    })
+    expect(chosen.mode).toBe('fixed')
+    expect(cleared).toEqual({ mode: 'per-trip', code: 'EUR' })
+  })
+
+  it('gives no code the meaning of "no preference"', () => {
+    for (const { code } of CURRENCY_OPTIONS) {
+      const resolved = resolveDisplayCurrency({
+        preference: code,
+        tripCurrency: 'EUR',
+      })
+      expect(resolved.mode).toBe(code === 'EUR' ? 'per-trip' : 'fixed')
+    }
+    expect(
+      resolveDisplayCurrency({ preference: 'XXX', tripCurrency: 'EUR' }),
+    ).toEqual({ mode: 'fixed', code: 'XXX' })
   })
 })

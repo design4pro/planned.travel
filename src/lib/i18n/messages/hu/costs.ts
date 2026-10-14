@@ -195,6 +195,29 @@ const messages = {
     'Az utazás megváltozott, miközben megerősítetted, ezért semmi sem módosult. Nézd át az új összegeket, és erősítsd meg újra.',
   'refusal.tripCurrencyChanged':
     'Az utazás költségvetésének pénzneme mostantól {to}, ezért nem mentődött el. Az oldal frissült: ellenőrizd az összeget, és mentsd újra.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Megjelenítési pénznem',
+  'display.indicator.perTrip': 'Saját pénznem',
+  'display.indicator.fixed': '{code} is',
+  'display.menu.perTrip': 'Minden utazás a saját pénznemében',
+  'display.menu.workspace': '{code} (a munkaterület alapértelmezettje)',
+  'display.menu.rateHint': 'Egy utazásnál már rögzített árfolyamot használ',
+  'display.menu.currentHint':
+    'Kiválasztva, de egyetlen rögzített árfolyam sem fedi le',
+  'display.menu.needsLiveRate':
+    'Élő árfolyam kell hozzá, ami még nem érhető el',
+  'display.menu.saving': 'A választás mentése folyamatban',
+  'display.error.title': 'A megjelenítési pénznem nem lett elmentve',
+  'display.error.body':
+    'A választást nem sikerült elmenteni. Próbáld újra egy pillanat múlva.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Kb. {amount} {code} a megjelenítési pénznemedben',
+  'display.row.notConverted': 'Nincs átváltva',
+  'display.alert.title': 'Néhány összeg nincs átváltva',
+  'display.alert.body':
+    'Ezekhez a pénznempárokhoz nincs rögzített árfolyam, ezért ezek az összegek a költségkeret pénznemében maradnak:',
+  'display.alert.pair': '{from} → {to}, {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

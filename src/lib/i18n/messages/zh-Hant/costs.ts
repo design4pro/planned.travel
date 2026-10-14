@@ -176,6 +176,25 @@ const messages = {
     '你確認的過程中行程發生了變化，所以沒有做任何變更。請核對新的金額後再次確認。',
   'refusal.tripCurrencyChanged':
     '這趟行程的預算貨幣現在是 {to}，所以沒有儲存。頁面已重新整理，請核對金額後再次儲存。',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': '顯示貨幣',
+  'display.indicator.perTrip': '行程自身貨幣',
+  'display.indicator.fixed': '同時以 {code} 顯示',
+  'display.menu.perTrip': '每個行程使用其自身貨幣',
+  'display.menu.workspace': '{code}（工作區預設）',
+  'display.menu.rateHint': '使用行程中已記錄的匯率',
+  'display.menu.currentHint': '已選擇，但沒有已記錄的匯率適用',
+  'display.menu.needsLiveRate': '需要即時匯率，目前尚無法使用',
+  'display.menu.saving': '正在儲存你的選擇',
+  'display.error.title': '未能儲存顯示貨幣',
+  'display.error.body': '無法儲存你的選擇，請稍後再試。',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': '依你的顯示貨幣約合 {amount} {code}',
+  'display.row.notConverted': '未換算',
+  'display.alert.title': '部分金額尚未換算',
+  'display.alert.body':
+    '這些貨幣對沒有已記錄的匯率，因此相關金額仍以預算貨幣顯示：',
+  'display.alert.pair': '{date} 的 {from} 兌 {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

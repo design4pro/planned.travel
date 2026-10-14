@@ -221,6 +221,38 @@ const messages = {
    */
   'payments.empty.body':
     'Once someone pays a balance back, the transfer is logged here.',
+  /* ---------------------------------------- display currency (#844) */
+  /**
+   * The reader's display currency: a second figure beside the budget-currency one, never a
+   * replacement for it. "Budget currency" is the glossary's word; "accounting currency" and
+   * "trip currency" are not used in copy.
+   */
+  'display.label': 'Display currency',
+  /** The indicator while the reader has chosen no currency: every trip stays in its own. */
+  'display.indicator.perTrip': 'Own currency',
+  /** The indicator once a code is chosen; the totals above stay in the budget currency. */
+  'display.indicator.fixed': 'Also in {code}',
+  'display.menu.perTrip': 'Each trip in its own currency',
+  /** The workspace default, named with the code it will store. */
+  'display.menu.workspace': '{code} (workspace default)',
+  'display.menu.rateHint': 'Uses a rate already recorded on a trip',
+  'display.menu.currentHint': 'Chosen, but no recorded rate answers for it yet',
+  /** The reason a code cannot be picked, in words rather than by colour alone. */
+  'display.menu.needsLiveRate': 'Needs a live rate, which is not available yet',
+  'display.menu.saving': 'Saving your choice',
+  'display.error.title': 'The display currency was not saved',
+  'display.error.body':
+    'Your choice could not be saved. Try again in a moment.',
+  /** The converted figure on a row: the amount without a symbol, then the code, so two dollars never look alike. */
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'About {amount} {code} in your display currency',
+  'display.row.notConverted': 'Not converted',
+  'display.alert.title': 'Some figures are not converted',
+  'display.alert.body':
+    'No rate is recorded for these currency pairs, so those figures stay in the budget currency:',
+  /** One pair the alert lists: "EUR to GBP on 14 Oct". */
+  'display.alert.pair': '{from} to {to} on {date}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.title': 'You can read the costs, not change them',
   'readOnly.body':

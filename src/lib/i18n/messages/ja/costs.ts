@@ -190,6 +190,28 @@ const messages = {
     '確認している間に旅行が変更されたため、何も変更されていません。新しい金額を確認して、もう一度確定してください。',
   'refusal.tripCurrencyChanged':
     'この旅行の予算の通貨が {to} に変わったため、保存されませんでした。ページを更新しました。金額を確認して、もう一度保存してください。',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': '表示通貨',
+  'display.indicator.perTrip': 'その旅行の通貨',
+  'display.indicator.fixed': '{code} でも表示',
+  'display.menu.perTrip': '各旅行をその旅行の通貨で',
+  'display.menu.workspace': '{code}（ワークスペースの既定）',
+  'display.menu.rateHint': '旅行に記録済みのレートを使用します',
+  'display.menu.currentHint':
+    '選択中ですが、記録済みのレートが対応していません',
+  'display.menu.needsLiveRate':
+    'リアルタイムのレートが必要ですが、まだ利用できません',
+  'display.menu.saving': '選択を保存しています',
+  'display.error.title': '表示通貨を保存できませんでした',
+  'display.error.body':
+    '選択を保存できませんでした。しばらくしてからもう一度お試しください。',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': '表示通貨でおよそ {amount} {code}',
+  'display.row.notConverted': '未換算',
+  'display.alert.title': '一部の金額は換算されていません',
+  'display.alert.body':
+    '次の通貨ペアにはレートが記録されていないため、これらの金額は予算の通貨のままです：',
+  'display.alert.pair': '{date} の {from} から {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

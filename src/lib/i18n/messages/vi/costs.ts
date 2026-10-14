@@ -191,6 +191,28 @@ const messages = {
     'Chuyến đi đã thay đổi trong lúc bạn xác nhận, nên chưa có gì bị thay đổi. Hãy kiểm tra các số mới rồi xác nhận lại.',
   'refusal.tripCurrencyChanged':
     'Tiền tệ của ngân sách chuyến đi này giờ là {to}, nên chưa lưu gì. Trang đã được làm mới: hãy kiểm tra số tiền rồi lưu lại.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Tiền tệ hiển thị',
+  'display.indicator.perTrip': 'Tiền tệ riêng',
+  'display.indicator.fixed': 'Cũng bằng {code}',
+  'display.menu.perTrip': 'Mỗi chuyến đi theo tiền tệ riêng',
+  'display.menu.workspace': '{code} (mặc định của không gian làm việc)',
+  'display.menu.rateHint': 'Dùng tỷ giá đã ghi trên một chuyến đi',
+  'display.menu.currentHint':
+    'Đã chọn, nhưng không có tỷ giá đã ghi nào bao phủ',
+  'display.menu.needsLiveRate': 'Cần tỷ giá trực tiếp, hiện chưa có',
+  'display.menu.saving': 'Đang lưu lựa chọn của bạn',
+  'display.error.title': 'Chưa lưu được tiền tệ hiển thị',
+  'display.error.body':
+    'Không thể lưu lựa chọn của bạn. Hãy thử lại sau giây lát.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Khoảng {amount} {code} theo tiền tệ hiển thị của bạn',
+  'display.row.notConverted': 'Chưa quy đổi',
+  'display.alert.title': 'Một số số tiền chưa được quy đổi',
+  'display.alert.body':
+    'Chưa có tỷ giá nào được ghi cho các cặp tiền tệ này, nên các số tiền đó giữ nguyên theo tiền tệ ngân sách:',
+  'display.alert.pair': '{from} sang {to} ngày {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

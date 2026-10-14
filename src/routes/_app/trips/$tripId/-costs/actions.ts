@@ -16,11 +16,13 @@ import { toast } from 'sonner'
 
 import { applyOps, optimisticId } from '#/components/costs'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
+import { useTranslate } from '#/lib/i18n'
 import { impliedRate } from '#/lib/money'
 import {
   createExpenseFn,
   deleteExpenseFn,
   recordPaymentFn,
+  setDisplayCurrencyFn,
   updateExpenseFn,
 } from '#/server/fns/costs'
 
@@ -42,6 +44,9 @@ export interface CostsActions {
   ) => Promise<void>
   readonly removeExpense: (expense: CostsExpense) => Promise<void>
   readonly addPayment: (value: PaymentFormValue) => Promise<void>
+  /** Store the reader's display currency (`null` = each trip in its own) and reload the figures. */
+  readonly setDisplay: (code: string | null) => Promise<void>
+  readonly savingDisplay: boolean
 }
 
 /** The form's value as the row the list should show while the write is in flight. */
@@ -49,6 +54,7 @@ function optimisticExpense(
   id: string,
   value: ExpenseFormValue,
   currency: string,
+  display: CostsPayload['displayCurrency'],
 ): CostsExpense {
   return {
     id,
@@ -64,6 +70,7 @@ function optimisticExpense(
       amountMinor: value.amountMinor,
       currency,
     }),
+    convertedMinor: optimisticConverted(value.amountMinor, display),
     spentOn: value.spentOn,
     paidBy: value.paidBy,
     splitMethod: value.splitMethod,
@@ -77,6 +84,17 @@ function optimisticExpense(
   }
 }
 
+/**
+ * A row not yet on the server has no rate behind it, so in fixed mode it is not converted until the
+ * loader answers; in per-trip mode the figure is the amount itself.
+ */
+function optimisticConverted(
+  amountMinor: number,
+  display: CostsPayload['displayCurrency'],
+): number | null {
+  return display.mode === 'per-trip' ? amountMinor : null
+}
+
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
@@ -85,7 +103,9 @@ function reasonOf(error: unknown, fallback: string): string {
 
 export function useCostsActions(payload: CostsPayload): CostsActions {
   const router = useRouter()
+  const t = useTranslate()
   const [ops, setOps] = useState<ReadonlyArray<CostsOp>>([])
+  const [savingDisplay, setSavingDisplay] = useState(false)
 
   const snapshot = useMemo(() => applyOps(payload, ops), [payload, ops])
 
@@ -136,7 +156,12 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         {
           kind: 'create',
           key,
-          row: optimisticExpense(key, value, payload.currency),
+          row: optimisticExpense(
+            key,
+            value,
+            payload.currency,
+            payload.displayCurrency,
+          ),
         },
         () =>
           createExpenseFn({
@@ -146,7 +171,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       )
       toast.success('Expense added', { description: value.title })
     },
-    [payload.currency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run],
   )
 
   const editExpense = useCallback(
@@ -157,7 +182,12 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           kind: 'update',
           key,
           previous: expense,
-          row: optimisticExpense(expense.id, value, payload.currency),
+          row: optimisticExpense(
+            expense.id,
+            value,
+            payload.currency,
+            payload.displayCurrency,
+          ),
         },
         () =>
           updateExpenseFn({
@@ -171,7 +201,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       )
       toast.success('Expense updated', { description: value.title })
     },
-    [payload.currency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run],
   )
 
   const removeExpense = useCallback(
@@ -203,6 +233,10 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
             toUserId: value.toUserId,
             amountMinor: value.amountMinor,
             currency: payload.currency,
+            convertedMinor: optimisticConverted(
+              value.amountMinor,
+              payload.displayCurrency,
+            ),
             method: value.method,
             settledOn: value.settledOn,
             note: value.note,
@@ -229,10 +263,35 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         description: 'Both balances are updated.',
       })
     },
-    [payload.currency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run],
   )
 
-  return { snapshot, addExpense, editExpense, removeExpense, addPayment }
+  const setDisplay = useCallback(
+    async (code: string | null): Promise<void> => {
+      setSavingDisplay(true)
+      try {
+        await setDisplayCurrencyFn({ data: { code } })
+        await router.invalidate()
+      } catch {
+        toast.error(t('costs.display.error.title'), {
+          description: t('costs.display.error.body'),
+        })
+      } finally {
+        setSavingDisplay(false)
+      }
+    },
+    [router, t],
+  )
+
+  return {
+    snapshot,
+    addExpense,
+    editExpense,
+    removeExpense,
+    addPayment,
+    setDisplay,
+    savingDisplay,
+  }
 }
 
 /**

@@ -159,6 +159,8 @@ import {
   createList,
   createListItem,
   createTemplate,
+  listTemplateItems,
+  listTemplates,
   packingItemsRepository,
   packingListsRepository,
   packingTemplateItemsRepository,
@@ -299,7 +301,10 @@ import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
 import {
   findLatestFrozenRate,
+  getDisplayCurrency,
+  listAnsweringCurrencies,
   resolveRate,
+  setDisplayCurrency,
   suggestedRatesForTrip,
 } from '../rates'
 import { changeTripCurrency, previewCurrencyChange } from '../trip-currency'
@@ -5764,6 +5769,81 @@ describe('tenant isolation', () => {
     })
   })
   /**
+   * `04-S1` (#844): the reader's display currency is the one write the slice makes outside the money
+   * tables. It is the caller's own row, resolved by organization and user inside the scope, so a
+   * second workspace's row for the same person is unreachable rather than merely unlikely.
+   */
+  describe('a reader’s display currency', () => {
+    async function rowOf(world: World, userId: string) {
+      return getUserSettings(world.tenant.scope, userId)
+    }
+
+    it('written in one workspace leaves the same person’s row in the other byte-identical', async () => {
+      const traveller = await alpha.tenant.addUser(
+        'A traveller in two workspaces',
+      )
+      await beta.tenant.addMembership(traveller)
+      const inAlpha = alpha.tenant.scopeFor(traveller)
+      const inBeta = beta.tenant.scopeFor(traveller)
+
+      await setDisplayCurrency(inBeta, 'USD')
+      const betaBefore = await rowOf(beta, traveller)
+      expect(betaBefore?.displayCurrency).toBe('USD')
+
+      await setDisplayCurrency(inAlpha, 'GBP')
+
+      expect(await rowOf(beta, traveller)).toEqual(betaBefore)
+      // Each workspace reads back its own value, never the other's.
+      expect(await getDisplayCurrency(inAlpha, traveller)).toBe('GBP')
+      expect(await getDisplayCurrency(inBeta, traveller)).toBe('USD')
+
+      await setDisplayCurrency(inAlpha, null)
+      expect(await getDisplayCurrency(inAlpha, traveller)).toBeNull()
+      expect(await rowOf(beta, traveller)).toEqual(betaBefore)
+    })
+
+    it('refuses someone who belongs to the other workspace only, and writes nothing', async () => {
+      const betaOnly = await beta.tenant.addUser('Only in the other workspace')
+      await setDisplayCurrency(beta.tenant.scopeFor(betaOnly), 'USD')
+      const betaBefore = await rowOf(beta, betaOnly)
+
+      const refusal = await captureError(() =>
+        setDisplayCurrency(alpha.tenant.scopeFor(betaOnly), 'GBP'),
+      )
+
+      expect(refusal).toBeInstanceOf(NotFoundError)
+      expect(await rowOf(alpha, betaOnly)).toBeNull()
+      expect(await rowOf(beta, betaOnly)).toEqual(betaBefore)
+    })
+
+    it('lists no code from the other workspace’s frozen rates', async () => {
+      // Beta froze EUR to GBP; Alpha's reader must not be offered GBP because of it.
+      const betaTrip = await createTrip(beta.tenant.scope, {
+        title: 'Beta in pounds',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      await createExpense(beta.tenant.scope, {
+        tripId: betaTrip.id,
+        title: 'Tickets',
+        amountMinor: 8_500,
+        currency: 'GBP',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'EUR',
+        exchangeRate: 0.85,
+        spentOn: '2026-05-02',
+      })
+
+      expect(await listAnsweringCurrencies(beta.tenant.scope, 'EUR')).toEqual([
+        'GBP',
+      ])
+      expect(await listAnsweringCurrencies(alpha.tenant.scope, 'EUR')).toEqual(
+        [],
+      )
+    })
+  })
+  /**
    * The preview reads every money row of a trip and can name a rate from the whole workspace, so a
    * read that forgot the trip, the tenant or the visibility of the trip a rate was frozen on would
    * show somebody else's money. It also has to write nothing, in either workspace.
@@ -6244,6 +6324,67 @@ describe('tenant isolation', () => {
           expect(await money()).toEqual(before)
         },
       )
+    })
+  })
+
+  describe('template writes', () => {
+    // `createTemplate` writes its rows with raw inserts in one batch, so the tenant column is
+    // stamped by the function itself and not by the base repository. A read through the writer's own
+    // scope would hide a row with the wrong stamp, so the rows are counted straight off the tables.
+    function organizationsOf(table: string, where: string, id: string) {
+      const statement = harness.sqlite.prepare(
+        `select organization_id as organizationId, count(*) as n from ${table} where ${where} = ? group by organization_id`,
+      )
+      return (
+        statement.all(id) as Array<{
+          organizationId: string
+          n: number | bigint
+        }>
+      ).map((row) => [row.organizationId, Number(row.n)] as const)
+    }
+
+    it('stamps the template and every chunk of its items with the writer’s workspace', async () => {
+      const untouched = await packingTemplatesRepository.requireById(
+        beta.tenant.scope,
+        beta.templateId,
+      )
+      const names = Array.from(
+        { length: 30 },
+        (_, index) => `Island item ${index}`,
+      )
+
+      const saved = await createTemplate(alpha.tenant.scope, {
+        name: 'Island hop',
+        items: names.map((name) => ({ name })),
+      })
+
+      expect(saved.organizationId).toBe(alpha.tenant.organizationId)
+      expect(organizationsOf('packing_templates', 'id', saved.id)).toEqual([
+        [alpha.tenant.organizationId, 1],
+      ])
+      expect(
+        organizationsOf('packing_template_items', 'template_id', saved.id),
+      ).toEqual([[alpha.tenant.organizationId, 30]])
+
+      expect(
+        await packingTemplatesRepository.findById(beta.tenant.scope, saved.id),
+      ).toBeNull()
+      expect(await listTemplateItems(beta.tenant.scope, saved.id)).toEqual([])
+      expect(
+        (await listTemplates(beta.tenant.scope)).map((template) => template.id),
+      ).not.toContain(saved.id)
+      expect(
+        (await listTemplateItems(alpha.tenant.scope, saved.id)).map(
+          (item) => item.name,
+        ),
+      ).toEqual(names)
+
+      expect(
+        await packingTemplatesRepository.requireById(
+          beta.tenant.scope,
+          beta.templateId,
+        ),
+      ).toEqual(untouched)
     })
   })
 })

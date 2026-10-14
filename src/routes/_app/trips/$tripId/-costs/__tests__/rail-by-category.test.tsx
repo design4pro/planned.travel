@@ -52,6 +52,7 @@ function mountRail(
         people={[]}
         viewerUserId="u-1"
         currency="EUR"
+        display={{ mode: 'per-trip', code: 'EUR' }}
         budgetTargetMinor={budgetTargetMinor}
         canWrite={false}
         onSettle={() => undefined}
