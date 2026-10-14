@@ -15,11 +15,13 @@ import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { applyOps, optimisticId } from '#/components/costs'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useTranslate } from '#/lib/i18n'
 import { impliedRate } from '#/lib/money'
 import {
   createExpenseFn,
   deleteExpenseFn,
+  loadCosts,
   recordPaymentFn,
   setDisplayCurrencyFn,
   updateExpenseFn,
@@ -94,6 +96,8 @@ function optimisticConverted(
   return display.mode === 'per-trip' ? amountMinor : null
 }
 
+const COSTS_ROUTE_ID = '/_app/trips/$tripId/costs'
+
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
@@ -130,15 +134,40 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         await send()
         await router.invalidate()
       } catch (cause) {
-        toast.error(failure, {
-          description: reasonOf(cause, 'The change was rolled back.'),
-        })
+        if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+          // The refused row must not read as saved while the figures are fetched.
+          drop(op.key)
+          // The trip's current currency is asked for first, on its own: a reload that fails does not
+          // reject, it swaps the screen (and the open dialog with what was typed) for the error
+          // panel, so the screen is only reloaded once the server has answered. The filter keeps the
+          // root loader out; the trip header loader and the `_app` guard still re-run, exactly as
+          // after every successful save. `sync` makes the promise wait for the loader, where a
+          // background reload would resolve while the old figures are still shown.
+          const live = await loadCosts({ data: { tripId: payload.tripId } })
+            .then((fresh) => fresh.currency)
+            .catch(() => null)
+          if (live !== null) {
+            await router.invalidate({
+              sync: true,
+              filter: (match) => match.routeId === COSTS_ROUTE_ID,
+            })
+          }
+          toast.error(
+            live === null || live === payload.currency
+              ? t('costs.expense.saveFailed')
+              : t('costs.refusal.tripCurrencyChanged', { to: live }),
+          )
+        } else {
+          toast.error(failure, {
+            description: reasonOf(cause, 'The change was rolled back.'),
+          })
+        }
         throw cause
       } finally {
         drop(op.key)
       }
     },
-    [drop, router],
+    [drop, payload.currency, payload.tripId, router, t],
   )
 
   const addExpense = useCallback(
@@ -238,6 +267,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           recordPaymentFn({
             data: {
               tripId: payload.tripId,
+              expectedTripCurrency: payload.currency,
               fromUserId: value.fromUserId,
               toUserId: value.toUserId,
               amountMinor: value.amountMinor,

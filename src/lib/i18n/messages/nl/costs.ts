@@ -189,6 +189,10 @@ const messages = {
     'Er zijn nog geen uitgaven vastgelegd voor deze reis. Ze verschijnen hier zodra een eigenaar of bewerker ze toevoegt.',
   'readOnly.settleEmpty':
     'Er zijn op dit moment geen overboekingen nodig. Een eventueel verschil zou hier verschijnen.',
+  'refusal.rebaseChanged':
+    'De reis is veranderd terwijl je bevestigde, dus er is niets gewijzigd. Controleer de nieuwe bedragen en bevestig opnieuw.',
+  'refusal.tripCurrencyChanged':
+    'De valuta van het budget van deze reis is nu {to}, dus er is niets opgeslagen. De pagina is vernieuwd: controleer het bedrag en sla opnieuw op.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Weergavevaluta',
   'display.indicator.perTrip': 'Eigen valuta',

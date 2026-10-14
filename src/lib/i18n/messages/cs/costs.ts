@@ -194,6 +194,10 @@ const messages = {
     'Na této cestě zatím nejsou zapsány žádné výdaje. Objeví se tady, jakmile je přidá vlastník nebo editor.',
   'readOnly.settleEmpty':
     'Teď není potřeba žádný převod. Případný nevyrovnaný zůstatek se ukáže tady.',
+  'refusal.rebaseChanged':
+    'Cesta se změnila, zatímco jste potvrzovali, takže se nic nezměnilo. Zkontrolujte nové částky a potvrďte znovu.',
+  'refusal.tripCurrencyChanged':
+    'Měna rozpočtu této cesty je nyní {to}, proto se nic neuložilo. Stránka byla obnovena: zkontrolujte částku a uložte znovu.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Zobrazená měna',
   'display.indicator.perTrip': 'Vlastní měna',

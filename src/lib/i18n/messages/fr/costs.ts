@@ -196,6 +196,10 @@ const messages = {
     'Aucune dépense n’a encore été enregistrée pour ce voyage. Elles apparaîtront ici dès qu’un propriétaire ou un éditeur les ajoutera.',
   'readOnly.settleEmpty':
     'Aucun virement n’est nécessaire pour le moment. Un éventuel déséquilibre apparaîtrait ici.',
+  'refusal.rebaseChanged':
+    'Le voyage a changé pendant votre confirmation : rien n’a donc été modifié. Vérifiez les nouveaux montants et confirmez à nouveau.',
+  'refusal.tripCurrencyChanged':
+    'La devise du budget de ce voyage est maintenant {to} : rien n’a donc été enregistré. La page a été actualisée : vérifiez le montant et enregistrez à nouveau.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Devise d’affichage',
   'display.indicator.perTrip': 'Devise propre',

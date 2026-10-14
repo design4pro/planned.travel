@@ -172,6 +172,10 @@ const messages = {
   'readOnly.empty':
     '此行程还没有记录任何支出。所有者或编辑者添加后会显示在这里。',
   'readOnly.settleEmpty': '目前无需任何转账。如有差额，会显示在这里。',
+  'refusal.rebaseChanged':
+    '你确认的过程中行程发生了变化，所以没有做任何更改。请核对新的金额后再次确认。',
+  'refusal.tripCurrencyChanged':
+    '这趟行程的预算货币现在是 {to}，所以没有保存。页面已刷新，请核对金额后再次保存。',
   /* ---------------------------------------- display currency (#844) */
   'display.label': '显示货币',
   'display.indicator.perTrip': '行程自身货币',

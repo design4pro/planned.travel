@@ -189,6 +189,10 @@ const messages = {
     'Bu gezi için henüz harcama kaydedilmedi. Bir sahip ya da düzenleyici ekleyince burada görünür.',
   'readOnly.settleEmpty':
     'Şu an hiçbir transfer gerekmiyor. Olası bir dengesizlik burada görünürdü.',
+  'refusal.rebaseChanged':
+    'Onaylarken gezi değişti, bu yüzden hiçbir şey değiştirilmedi. Yeni tutarları kontrol edin ve yeniden onaylayın.',
+  'refusal.tripCurrencyChanged':
+    'Bu gezinin bütçe para birimi artık {to}, bu yüzden kaydedilmedi. Sayfa yenilendi: tutarı kontrol edin ve yeniden kaydedin.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Görüntüleme para birimi',
   'display.indicator.perTrip': 'Kendi para birimi',

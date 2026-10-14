@@ -21,6 +21,8 @@ import type { MessageKey } from '#/lib/i18n'
 
 export const CURRENCY_REFUSAL_KEYS = [
   'shell.editTrip.currencyLocked',
+  'costs.refusal.tripCurrencyChanged',
+  'costs.refusal.rebaseChanged',
 ] as const satisfies ReadonlyArray<MessageKey>
 
 /** One of the keys above, so a thrower cannot invent another. */

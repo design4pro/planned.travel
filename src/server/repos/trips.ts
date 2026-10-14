@@ -636,7 +636,7 @@ export class CurrencyRefusalError extends RepositoryError {
  * tenant-filtered too, but a subquery that forgot either would count a sibling trip's rows, or
  * another workspace's, and a refusal triggered by somebody else's data is a leak of its own.
  */
-function tripHoldsRow(
+export function tripHoldsRow(
   scope: TenantScope,
   table: TenantTable & { readonly tripId: SQLiteColumn },
   tripId: string,
@@ -710,7 +710,7 @@ const CAUSE_DEPTH = 8
  * trips.currency: SQLITE_CONSTRAINT` itself. Matching the sentence along the chain covers both, and
  * matching it to this one column means any other failure of the same statement is rethrown.
  */
-function isCurrencyNotNullFailure(cause: unknown): boolean {
+export function isCurrencyNotNullFailure(cause: unknown): boolean {
   let current: unknown = cause
   for (let depth = 0; depth < CAUSE_DEPTH; depth += 1) {
     if (!(current instanceof Error)) {
@@ -724,6 +724,25 @@ function isCurrencyNotNullFailure(cause: unknown): boolean {
     current = current.cause
   }
   return false
+}
+
+/**
+ * Refuses a money write whose tab believes the trip is in another currency than it now is.
+ *
+ * The five client-originated money writers (`createExpense`, `updateExpense`, `createSettlement`,
+ * `createBudgetItem`, `updateBudgetItem`) take an optional `expectedTripCurrency`: the currency the
+ * form was filled in under. A tab loaded before an owner re-based the trip (`./trip-currency`)
+ * would otherwise save its typed digits into the new currency as if they were already in it. The
+ * check reads the trip the writer has just resolved, so it costs no query; a caller that says
+ * nothing (booking sync, the seed) is not checked. Nothing has been written when this throws.
+ */
+export function assertExpectedTripCurrency(
+  trip: Pick<Trip, 'currency'>,
+  expected: string | undefined,
+): void {
+  if (expected !== undefined && expected !== trip.currency) {
+    throw new CurrencyRefusalError('costs.refusal.tripCurrencyChanged')
+  }
 }
 
 /**

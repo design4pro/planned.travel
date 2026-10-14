@@ -19,6 +19,7 @@ import type {
   CostsPayload,
   CostsPerson,
 } from '#/server/fns/costs'
+import type { ReactElement } from 'react'
 import type { ExpenseFormValue } from '../expense-dialog'
 
 const EN: Catalogue = {
@@ -320,5 +321,226 @@ describe('the expense dialog’s suggested converted figure', { timeout: 20_000 
       originalCurrency: 'GBP',
     })
     expect(Object.keys(sent ?? {})).not.toContain('exchangeRate')
+  })
+
+  describe('when the trip’s currency changed while it was open', () => {
+    const REFUSAL = 'costs.refusal.tripCurrencyChanged'
+
+    function dialog(
+      tripCurrency: string,
+      onSubmit: (value: ExpenseFormValue) => Promise<void>,
+      expense: CostsExpense | null = null,
+    ) {
+      return (
+        <I18nProvider locale="en" messages={EN}>
+          <ExpenseDialog
+            open
+            onOpenChange={() => {}}
+            expense={expense}
+            people={PEOPLE}
+            viewerUserId="u1"
+            tripCurrency={tripCurrency}
+            categories={[{ value: 'food', label: 'Food', icon: null }]}
+            defaultCategory="food"
+            today="2026-10-12"
+            suggestedRate={null}
+            onSubmit={onSubmit}
+          />
+        </I18nProvider>
+      )
+    }
+
+    async function refuseOnce(user: ReturnType<typeof userEvent.setup>) {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+        .mockResolvedValue(undefined)
+      const view = render(dialog('EUR', onSubmit))
+      await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+      await user.type(amountField(), '4000')
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+      return { onSubmit, view }
+    }
+
+    it('keeps the digits, names the new currency on the amount and moves the currency control to it', async () => {
+      const user = hand()
+      const { view, onSubmit } = await refuseOnce(user)
+
+      view.rerender(dialog('JPY', onSubmit))
+
+      expect(await screen.findByDisplayValue('4000')).toBe(amountField())
+      expect(amountField().getAttribute('aria-invalid')).toBe('true')
+      expect(
+        screen.getByText(/budget currency of this trip is now JPY/),
+      ).toBeTruthy()
+      expect(
+        screen.getByRole('combobox', {
+          name: 'Currency this receipt was written in',
+        }).textContent,
+      ).toContain('JPY')
+      expect(screen.queryByText(REFUSAL)).toBeNull()
+    })
+
+    it('does not save the old digits until the reader has touched the amount, then sends them in the new currency', async () => {
+      const user = hand()
+      const { view, onSubmit } = await refuseOnce(user)
+      view.rerender(dialog('JPY', onSubmit))
+      await screen.findByDisplayValue('4000')
+
+      const add = screen.getByRole('button', { name: 'Add expense' })
+      expect(add).toHaveProperty('disabled', true)
+
+      await user.clear(amountField())
+      await user.type(amountField(), '4000')
+      expect(add).toHaveProperty('disabled', false)
+      await user.click(add)
+
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
+      expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({
+        amountMinor: 4_000,
+        currency: 'JPY',
+        originalAmountMinor: null,
+        originalCurrency: null,
+      })
+    })
+
+    it('stops naming the currency as soon as the amount is edited', async () => {
+      const user = hand()
+      const { view, onSubmit } = await refuseOnce(user)
+      view.rerender(dialog('JPY', onSubmit))
+      await screen.findByDisplayValue('4000')
+
+      await user.type(amountField(), '5')
+
+      expect(
+        screen.queryByText(/budget currency of this trip is now/),
+      ).toBeNull()
+    })
+
+    it('leaves a receipt currency the reader chose on purpose, and drops the converted figure that was in the old currency', async () => {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const view = render(dialog('EUR', onSubmit))
+      await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+      await pickCurrency(user, 'GBP')
+      await user.type(amountField(), '100.00')
+      await user.type(convertedField(), '115.00')
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit))
+
+      expect(await screen.findByDisplayValue('100.00')).toBe(amountField())
+      expect(
+        screen.getByRole('combobox', {
+          name: 'Currency this receipt was written in',
+        }).textContent,
+      ).toContain('GBP')
+      expect(screen.getByLabelText(/^Converted to JPY/)).toHaveProperty(
+        'value',
+        '',
+      )
+      expect(
+        screen.getByText(/budget currency of this trip is now JPY/),
+      ).toBeTruthy()
+    })
+
+    it('takes the keyboard to the amount and says so in the dialog when the refreshed currency has not arrived', async () => {
+      const user = hand()
+      await refuseOnce(user)
+
+      await vi.waitFor(() => expect(document.activeElement).toBe(amountField()))
+      expect(screen.getByText('That did not save')).toBeTruthy()
+      expect(
+        screen.getByText(/trip changed while you were confirming/),
+      ).toBeTruthy()
+      expect(screen.queryByText(REFUSAL)).toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Add expense' }),
+      ).toHaveProperty('disabled', false)
+    })
+
+    it('keeps the stored receipt amount of a foreign-currency expense and only drops the converted figure', async () => {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const stored = expenseRow({
+        amountMinor: 11_500,
+        currency: 'EUR',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'GBP',
+        exchangeRate: 1.15,
+        shares: [
+          { userId: 'u1', shareMinor: 5_750, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 5_750, weight: 1, isSettled: false },
+        ],
+      })
+      const view = render(dialog('EUR', onSubmit, stored))
+      await user.click(screen.getByRole('button', { name: 'Save changes' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit, stored))
+
+      expect(await screen.findByText(/now JPY/)).toBeTruthy()
+      expect(amountField()).toHaveProperty('value', '100.00')
+      expect(screen.getByLabelText(/^Converted to JPY/)).toHaveProperty(
+        'value',
+        '',
+      )
+    })
+
+    it('drops the stored digits of an edited expense once the trip has moved on, so they are not saved as new-currency figures', async () => {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const stored = expenseRow({
+        amountMinor: 6_000,
+        currency: 'EUR',
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      })
+      const view = render(dialog('EUR', onSubmit, stored))
+      await user.click(screen.getByRole('button', { name: 'Save changes' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit, stored))
+
+      expect(await screen.findByText(/now JPY/)).toBeTruthy()
+      expect(amountField()).toHaveProperty('value', '')
+      expect(
+        screen.getByRole('button', { name: 'Save changes' }),
+      ).toHaveProperty('disabled', true)
+    })
+
+    it('adopts the new currency once when the screen refreshes before the refusal arrives, as it does in the app', async () => {
+      const user = hand()
+      let rerender: (ui: ReactElement) => void = () => {}
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockImplementationOnce(async () => {
+          rerender(dialog('JPY', onSubmit))
+          throw new Error(REFUSAL)
+        })
+        .mockResolvedValue(undefined)
+      rerender = render(dialog('EUR', onSubmit)).rerender
+      await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+      await user.type(amountField(), '4000')
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+
+      expect(await screen.findByText(/now JPY/)).toBeTruthy()
+      await vi.waitFor(() => expect(document.activeElement).toBe(amountField()))
+      expect(amountField()).toHaveProperty('value', '4000')
+      expect(screen.queryByText('That did not save')).toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Add expense' }),
+      ).toHaveProperty('disabled', true)
+    })
   })
 })

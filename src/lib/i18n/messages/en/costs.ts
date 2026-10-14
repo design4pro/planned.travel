@@ -261,6 +261,11 @@ const messages = {
     'No expenses have been logged on this trip yet. They appear here once an owner or an editor adds them.',
   'readOnly.settleEmpty':
     'No transfers are needed right now. Any imbalance would show up here.',
+  /* ------------------------------- a money change refused (#840) */
+  'refusal.rebaseChanged':
+    'The trip changed while you were confirming, so nothing was changed. Check the new figures and confirm again.',
+  'refusal.tripCurrencyChanged':
+    'The budget currency of this trip is now {to}, so this was not saved. The page has been refreshed: check the amount and save again.',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -8,7 +8,7 @@
  * (`original_amount_minor`, `original_currency`, `exchange_rate`). This module is the one owner of
  * that rule.
  *
- * Two halves:
+ * Three parts:
  *
  * - **The pure core.** {@link planRebase} is handed the rows of a trip, read once, and answers
  *   either the plan - every row as it would be written, the counts, the statement count, the
@@ -18,8 +18,12 @@
  * - **The thin shell.** {@link previewCurrencyChange} guards the caller, reads the rows with a fixed
  *   number of queries (one per table, never one per expense), asks `resolveRate` for the one rate
  *   and returns the plan as data. It writes nothing.
+ * - **The commit.** {@link changeTripCurrency} reads the rows again, plans with the same
+ *   {@link planRebase} at the previewed `to` and `rate` (it never looks a rate up) and writes the
+ *   plan in one atomic batch whose last statement moves `trips.currency` and refuses when anything
+ *   moved since the read.
  *
- * Refusals are **data**, never thrown messages: the dialog renders each one from the locale
+ * The preview's refusals are **data**, never thrown messages: the dialog renders each one from the locale
  * catalogue (`docs/SPEC.md` §9), so a refusal that travelled as an `Error` message would reach a
  * Polish phone in English.
  *
@@ -27,7 +31,7 @@
  * (`./rates`); neither is rebuilt here (`docs/SPEC.md` §8, one concept one owner).
  */
 
-import { asc, count, eq, isNotNull, isNull, sql } from 'drizzle-orm'
+import { and, asc, count, eq, isNotNull, isNull, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { convertMinor } from '#/lib/money'
 import {
@@ -40,13 +44,21 @@ import {
   reservations,
   settlements,
   transports,
+  trips,
 } from '#/server/db/schema'
-import { tenantFilter } from './base'
-import { MAX_BOUND_PARAMETERS } from './batch'
+import { anyOf, inIds, tenantFilter } from './base'
+import { MAX_BOUND_PARAMETERS, runBatch } from './batch'
 import { computeShares, settlementsFromBalances } from './expenses'
 import { resolveRate } from './rates'
-import { assertTripRole, requireWritableTrip } from './trips'
+import {
+  CurrencyRefusalError,
+  assertTripRole,
+  isCurrencyNotNullFailure,
+  requireWritableTrip,
+  tripHoldsRow,
+} from './trips'
 import { currencySchema, idSchema } from './validation'
+import type { SQL } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { TenantScope, TenantTable } from './base'
 import type { SplitParticipantInput } from './expenses'
@@ -61,13 +73,15 @@ import type { SplitParticipantInput } from './expenses'
  * A re-basing is one `db.batch()` because a chunked one is not atomic: a half-re-based trip would
  * be a reachable state. That is an exception to `docs/SPEC.md` §5 ("keep D1 transactions small"),
  * taken deliberately and bounded by this ceiling. It sits under D1's per-invocation query limit
- * (1,000 on the paid plan, every statement of a batch counting), leaving 100 for the rest of the
- * invocation: auth, the guards, the pre-reads, the audit row and the room mirror. In a traveller's
- * terms it admits a trip of roughly 400 logged expenses and payments together.
+ * (Cloudflare D1 limits, https://developers.cloudflare.com/d1/platform/limits/, checked 2026-10-14:
+ * 1,000 queries per Worker invocation on Workers Paid, 50 on Free, and 100 bound parameters per
+ * query; every statement of a batch counts). Production runs on Workers Paid (`docs/DEPLOY.md` §0),
+ * so 900 leaves 100 for the rest of the invocation: auth, the guards, the pre-reads, the audit row
+ * and the room mirror. In a traveller's terms it admits a trip of roughly 400 logged expenses and
+ * payments together.
  *
- * The preview's figure is advisory; the commit enforces this again before it builds the batch.
- * The commit's author checks the limit against Cloudflare's current page and the plan production
- * runs on, and lowers the constant if the page says less.
+ * The preview's figure is advisory; the commit enforces this again before it builds the batch. A
+ * deployment on the Free plan would have to lower the constant to fit 50.
  */
 export const MAX_REBASE_STATEMENTS = 900
 
@@ -1022,5 +1036,379 @@ export async function previewCurrencyChange(
     statements: plan.statements,
     ceiling: MAX_REBASE_STATEMENTS,
     refusal: null,
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The commit
+ * ---------------------------------------------------------------------------------------------- */
+
+/** What the commit asks: the previewed `to` and `rate`, nothing else. The same shape as the preview. */
+export const changeTripCurrencyInput = previewCurrencyChangeInput
+export type ChangeTripCurrencyInput = z.input<typeof changeTripCurrencyInput>
+
+/** The request as the server function receives it; strict, so an extra key is a parse error. */
+export const changeTripCurrencyRequest = changeTripCurrencyInput.extend({
+  tripId: idSchema,
+})
+
+/** What was written, for the audit row and the room. Nothing in it is a name. */
+export interface TripCurrencyChange {
+  readonly from: string
+  readonly to: string
+  readonly rate: number | null
+  readonly counts: RebaseCounts
+  readonly budgetTarget: RebasePlan['budgetTarget']
+}
+
+/** `column IS value`, which unlike `=` also matches a `NULL` on both sides. */
+function sameValue(column: SQLiteColumn, value: string | number | null): SQL {
+  return value === null ? isNull(column) : eq(column, value)
+}
+
+/**
+ * The sum of an expense's share rows, as a scalar subquery, correlated to the `expenses` row of the
+ * statement that embeds it. Tenant- and trip-filtered like every other read; `NULL` when it has no
+ * shares.
+ */
+function shareTotalOf(scope: TenantScope, tripId: string): SQL {
+  return sql`(${scope.db
+    .select({ total: sql`sum(${expenseShares.shareMinor})` })
+    .from(expenseShares)
+    .where(
+      tenantFilter(
+        scope,
+        expenseShares,
+        eq(expenseShares.tripId, tripId),
+        eq(expenseShares.expenseId, expenses.id),
+      ),
+    )})`
+}
+
+/**
+ * The statements of one re-basing, in the order they run. Every row is rewritten only while it is
+ * still exactly as the plan read it, so a row that moved in between is left in the old currency and
+ * the last statement - the one that changes `trips.currency` - sees it and fails the whole batch
+ * (see {@link movedSinceReadSql}).
+ */
+function rebaseStatements(
+  scope: TenantScope,
+  tripId: string,
+  snapshot: RebaseSnapshot,
+  plan: RebasePlan,
+) {
+  const { from, to } = plan
+  const statements: Array<PromiseLike<unknown>> = []
+
+  const planned = new Map(plan.expenses.map((row) => [row.id, row]))
+  const oldShares = new Map<string, number>()
+  for (const row of snapshot.shares) {
+    oldShares.set(
+      row.expenseId,
+      (oldShares.get(row.expenseId) ?? 0) + row.shareMinor,
+    )
+  }
+  const sharesOf = new Set(snapshot.shares.map((row) => row.expenseId))
+  for (const old of snapshot.expenses) {
+    const next = planned.get(old.id)
+    if (next === undefined) {
+      continue
+    }
+    statements.push(
+      scope.db
+        .update(expenses)
+        .set({
+          amountMinor: next.amountMinor,
+          currency: next.currency,
+          originalAmountMinor: next.originalAmountMinor,
+          originalCurrency: next.originalCurrency,
+          exchangeRate: next.exchangeRate,
+        })
+        .where(
+          tenantFilter(
+            scope,
+            expenses,
+            eq(expenses.tripId, tripId),
+            eq(expenses.id, old.id),
+            eq(expenses.amountMinor, old.amountMinor),
+            eq(expenses.currency, old.currency),
+            sameValue(expenses.originalAmountMinor, old.originalAmountMinor),
+            sameValue(expenses.originalCurrency, old.originalCurrency),
+            sameValue(expenses.exchangeRate, old.exchangeRate),
+            eq(expenses.splitMethod, old.splitMethod),
+            sameValue(expenses.paidBy, old.paidBy),
+            // The people sharing it, as the plan read them: an edited share stops the expense.
+            sql`${shareTotalOf(scope, tripId)} IS ${sharesOf.has(old.id) ? (oldShares.get(old.id) ?? 0) : null}`,
+          ),
+        ),
+    )
+  }
+
+  for (const next of plan.expenses) {
+    for (
+      let index = 0;
+      index < next.shares.length;
+      index += SHARE_ROWS_PER_STATEMENT
+    ) {
+      const chunk = next.shares.slice(index, index + SHARE_ROWS_PER_STATEMENT)
+      const cases = chunk.map(
+        (share) =>
+          sql`WHEN ${expenseShares.id} = ${share.id} THEN ${share.shareMinor}`,
+      )
+      statements.push(
+        scope.db
+          .update(expenseShares)
+          .set({
+            shareMinor: sql`CASE ${sql.join(cases, sql` `)} ELSE ${expenseShares.shareMinor} END`,
+          })
+          .where(
+            tenantFilter(
+              scope,
+              expenseShares,
+              eq(expenseShares.tripId, tripId),
+              eq(expenseShares.expenseId, next.id),
+              inIds(
+                expenseShares.id,
+                chunk.map((share) => share.id),
+              ),
+            ),
+          ),
+      )
+    }
+  }
+
+  const oldPayments = new Map(snapshot.payments.map((row) => [row.id, row]))
+  for (const next of plan.payments) {
+    const old = oldPayments.get(next.id)
+    if (old === undefined) {
+      continue
+    }
+    statements.push(
+      scope.db
+        .update(settlements)
+        .set({
+          amountMinor: next.amountMinor,
+          currency: next.currency,
+          originalAmountMinor: next.originalAmountMinor,
+          originalCurrency: next.originalCurrency,
+          exchangeRate: next.exchangeRate,
+        })
+        .where(
+          tenantFilter(
+            scope,
+            settlements,
+            eq(settlements.tripId, tripId),
+            eq(settlements.id, old.id),
+            eq(settlements.amountMinor, old.amountMinor),
+            eq(settlements.currency, old.currency),
+            sameValue(settlements.originalAmountMinor, old.originalAmountMinor),
+            sameValue(settlements.originalCurrency, old.originalCurrency),
+            sameValue(settlements.exchangeRate, old.exchangeRate),
+          ),
+        ),
+    )
+  }
+
+  const oldItems = new Map(snapshot.plannedItems.map((row) => [row.id, row]))
+  for (const next of plan.plannedItems) {
+    const old = oldItems.get(next.id)
+    if (old === undefined) {
+      continue
+    }
+    statements.push(
+      scope.db
+        .update(budgetItems)
+        .set({
+          plannedAmountMinor: next.amountMinor,
+          currency: next.currency,
+          originalAmountMinor: next.originalAmountMinor,
+          originalCurrency: next.originalCurrency,
+          exchangeRate: next.exchangeRate,
+        })
+        .where(
+          tenantFilter(
+            scope,
+            budgetItems,
+            eq(budgetItems.tripId, tripId),
+            eq(budgetItems.id, old.id),
+            eq(budgetItems.plannedAmountMinor, old.plannedAmountMinor),
+            eq(budgetItems.currency, old.currency),
+            sameValue(budgetItems.originalAmountMinor, old.originalAmountMinor),
+            sameValue(budgetItems.originalCurrency, old.originalCurrency),
+            sameValue(budgetItems.exchangeRate, old.exchangeRate),
+          ),
+        ),
+    )
+  }
+
+  // Rule 7: a reference price with no currency of its own has meant "the trip's"; pin it to the old
+  // currency before the trip moves, set-based so a price that arrived since the read is pinned too.
+  statements.push(
+    scope.db
+      .update(places)
+      .set({ currency: from })
+      .where(
+        tenantFilter(
+          scope,
+          places,
+          eq(places.tripId, tripId),
+          isNotNull(places.priceMinor),
+          isNull(places.currency),
+        ),
+      ),
+    scope.db
+      .update(reservations)
+      .set({ currency: from })
+      .where(
+        tenantFilter(
+          scope,
+          reservations,
+          eq(reservations.tripId, tripId),
+          isNotNull(reservations.priceMinor),
+          isNull(reservations.currency),
+        ),
+      ),
+    scope.db
+      .update(transports)
+      .set({ currency: from })
+      .where(
+        tenantFilter(
+          scope,
+          transports,
+          eq(transports.tripId, tripId),
+          isNotNull(transports.priceMinor),
+          isNull(transports.currency),
+        ),
+      ),
+    scope.db
+      .update(dayAccommodations)
+      .set({ currency: from })
+      .where(
+        tenantFilter(
+          scope,
+          dayAccommodations,
+          eq(dayAccommodations.tripId, tripId),
+          isNotNull(dayAccommodations.priceMinor),
+          isNull(dayAccommodations.currency),
+        ),
+      ),
+  )
+
+  statements.push(
+    scope.db
+      .update(trips)
+      .set({
+        budgetTargetMinor: plan.budgetTarget?.after,
+        currency: sql`CASE WHEN ${movedSinceReadSql(scope, tripId, snapshot, plan)} THEN NULL ELSE ${to} END`,
+      })
+      .where(tenantFilter(scope, trips, eq(trips.id, tripId))),
+  )
+  return statements
+}
+
+/**
+ * True when the trip is not exactly as the plan read it, as a predicate the final `UPDATE` embeds so
+ * the test and the write are one statement and cannot see different data.
+ *
+ * It is the whole stale test, and it lives inside the `CASE` rather than in a `WHERE`: a `WHERE` that
+ * matched nothing would make a trip that already moved (a double commit, a rival's commit) report
+ * success, while `NULL` into the `NOT NULL` column always raises. It holds when:
+ *
+ * - the trip is no longer in the old currency, a copy of it has started, or its budget target moved;
+ * - any expense, payment or planned item is still, or has become, a row in some other currency than
+ *   the new one: a row that was edited stayed out of its own `UPDATE`, a row logged since the read
+ *   was never in the plan;
+ * - an expense's shares no longer add up to it, or the trip's share rows are not the ones read.
+ */
+function movedSinceReadSql(
+  scope: TenantScope,
+  tripId: string,
+  snapshot: RebaseSnapshot,
+  plan: RebasePlan,
+): SQL {
+  const shareRows = scope.db
+    .select({ rows: count() })
+    .from(expenseShares)
+    .where(tenantFilter(scope, expenseShares, eq(expenseShares.tripId, tripId)))
+  return anyOf(
+    ne(trips.currency, plan.from),
+    isNotNull(trips.copyPendingAt),
+    snapshot.budgetTargetMinor === null
+      ? isNotNull(trips.budgetTargetMinor)
+      : sql`${trips.budgetTargetMinor} IS NOT ${snapshot.budgetTargetMinor}`,
+    tripHoldsRow(scope, expenses, tripId, ne(expenses.currency, plan.to)),
+    tripHoldsRow(scope, settlements, tripId, ne(settlements.currency, plan.to)),
+    tripHoldsRow(scope, budgetItems, tripId, ne(budgetItems.currency, plan.to)),
+    tripHoldsRow(
+      scope,
+      expenses,
+      tripId,
+      and(
+        sql`${shareTotalOf(scope, tripId)} IS NOT NULL`,
+        sql`${shareTotalOf(scope, tripId)} <> ${expenses.amountMinor}`,
+      ),
+    ),
+    sql`(${shareRows}) <> ${plan.counts.shareRows}`,
+  )
+}
+
+/** The one refusal of a commit that cannot, or can no longer, be made: the owner re-previews. */
+function rebaseChanged(): CurrencyRefusalError {
+  return new CurrencyRefusalError('costs.refusal.rebaseChanged')
+}
+
+/**
+ * Re-bases the trip's budget currency to `to` at `rate`, atomically, or writes nothing.
+ *
+ * The caller must be the owner of a trip that is not archived, checked exactly as
+ * {@link previewCurrencyChange} checks it and before any money row is read. The rows are read again
+ * and planned with the same {@link planRebase} the preview used, at the `rate` the owner confirmed:
+ * the commit never looks one up, so what is written is what was shown. One `db.batch()` then
+ * rewrites every expense, payment and planned item, recomputes the shares, pins the reference
+ * prices to the old currency, converts the trip's budget target and changes `trips.currency` last.
+ *
+ * Anything that makes the confirmed figures untrue - a missing or unusable rate, a third currency,
+ * a trip over the statement ceiling, a copy in progress, a currency that is already `to`, and
+ * above all a row that moved between the read and the batch - is a {@link CurrencyRefusalError}
+ * with `costs.refusal.rebaseChanged` and leaves the database exactly as it was. A failure of any
+ * other kind is rethrown as itself.
+ */
+export async function changeTripCurrency(
+  scope: TenantScope,
+  tripId: string,
+  input: ChangeTripCurrencyInput,
+): Promise<TripCurrencyChange> {
+  const { to, rate } = changeTripCurrencyInput.parse(input)
+  const id = idSchema.parse(tripId)
+
+  const trip = await requireWritableTrip(scope, id)
+  await assertTripRole(scope, id, ['owner'])
+
+  const from = trip.currency
+  if (to === from || trip.copyPendingAt !== null) {
+    throw rebaseChanged()
+  }
+
+  const snapshot = await readSnapshot(scope, id, trip.budgetTargetMinor)
+  const outcome = planRebase(snapshot, { from, to, rate: rate ?? null })
+  if (outcome.kind === 'refused') {
+    throw rebaseChanged()
+  }
+  const { plan } = outcome
+
+  try {
+    await runBatch(scope, rebaseStatements(scope, id, snapshot, plan))
+  } catch (error) {
+    if (isCurrencyNotNullFailure(error)) {
+      throw rebaseChanged()
+    }
+    throw error
+  }
+  return {
+    from,
+    to,
+    rate: plan.rate,
+    counts: plan.counts,
+    budgetTarget: plan.budgetTarget,
   }
 }

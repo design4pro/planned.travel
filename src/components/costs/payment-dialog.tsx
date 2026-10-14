@@ -15,7 +15,7 @@
  * implied rate is shown under it. The rate is never sent: the server derives it from
  * the two amounts.
  */
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { ArrowRight, Coins } from 'lucide-react'
 
 import {
@@ -35,6 +35,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { MessageKey } from '#/lib/i18n'
@@ -47,6 +48,7 @@ import {
   toAmountInput,
 } from '#/lib/money'
 import { parseDay, toDayString } from './data'
+import { useStaleTripCurrency } from './stale-trip-currency'
 
 import type { CostsPerson, SettlementMethod } from '#/server/fns/costs'
 
@@ -125,12 +127,47 @@ export function PaymentDialog({
   const [method, setMethod] = useState<SettlementMethod>('bank_transfer')
   const [settledOn, setSettledOn] = useState(today)
   const [note, setNote] = useState('')
+  // What the dialog opened with: a Settle-suggested amount is in the currency the suggestion was made
+  // in, so after a re-basing it is only worth keeping if the reader typed it.
+  const [openedAmount] = useState(amount)
+  const amountRef = useRef<HTMLInputElement>(null)
+  const convertedRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
+  // The figure that carries the old currency's digits: the converted one when there is one.
+  const stale = useStaleTripCurrency(currency, saving, () =>
+    foreign ? convertedRef.current : amountRef.current,
+  )
   const formId = `payment-form-${useId()}`
 
-  const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
+  // The trip's currency changed while this was open and the screen has refreshed: what was typed
+  // stays, a currency control still on the old one follows the trip, and a converted figure (which
+  // was in the old currency) is dropped rather than saved under the new one.
+  if (stale.adopt !== null) {
+    stale.adopted()
+    if (currencyCode(sourceCurrency) === stale.adopt.from) {
+      setSourceCurrency(stale.adopt.to)
+    }
+    if (
+      amount === openedAmount &&
+      currencyCode(sourceCurrency) === stale.adopt.from
+    ) {
+      setAmount('')
+    }
+    setConverted('')
+  }
+  const staleMessage =
+    stale.messageFor === null
+      ? undefined
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
+
   const typedMinor = parseMoney(amount, sourceCurrency)
+  const staleOnAmount = foreign ? undefined : staleMessage
+  const amountError =
+    amount.trim() !== '' && (typedMinor === null || typedMinor === 0)
+      ? t('costs.payment.amountPositive')
+      : staleOnAmount
   const amountMinor = foreign ? parseMoney(converted, currency) : typedMinor
   const rate = foreign
     ? formatExchangeRate(
@@ -151,7 +188,10 @@ export function PaymentDialog({
     typedMinor > 0 &&
     amountMinor !== null &&
     amountMinor > 0 &&
-    !saving
+    !saving &&
+    // After a stale-currency refusal the typed digits are still in the old currency, so the amount
+    // has to be looked at (edited) before it can be saved again.
+    stale.messageFor === null
   const convertedInvalid =
     foreign &&
     converted.trim() !== '' &&
@@ -183,6 +223,7 @@ export function PaymentDialog({
       setAmount(seeded)
       setConverted('')
     }
+    stale.dismiss()
     setSourceCurrency(next)
   }
 
@@ -196,6 +237,7 @@ export function PaymentDialog({
     }
     setSaving(true)
     setError(null)
+    stale.dismiss()
     try {
       await onSubmit({
         fromUserId,
@@ -209,7 +251,11 @@ export function PaymentDialog({
       })
       onOpenChange(false)
     } catch (cause) {
-      setError(messageOf(cause, t('costs.payment.failed')))
+      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+        stale.refuse(currencyCode(currency))
+      } else {
+        setError(messageOf(cause, t('costs.payment.failed')))
+      }
     } finally {
       setSaving(false)
     }
@@ -243,9 +289,9 @@ export function PaymentDialog({
               void submit()
             }}
           >
-            {error === null ? null : (
+            {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
-                {error}
+                {error ?? t('costs.refusal.rebaseChanged')}
               </Alert>
             )}
 
@@ -295,16 +341,15 @@ export function PaymentDialog({
                   currency: currencyCode(sourceCurrency),
                 })}
                 required
-                error={
-                  amount.trim() !== '' &&
-                  (typedMinor === null || typedMinor === 0)
-                    ? t('costs.payment.amountPositive')
-                    : undefined
-                }
+                error={amountError}
               >
                 <Input
+                  ref={amountRef}
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => {
+                    stale.dismiss()
+                    setAmount(event.target.value)
+                  }}
                   placeholder={toAmountInput(0, sourceCurrency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -345,11 +390,15 @@ export function PaymentDialog({
                     to: currencyCode(currency),
                   })
                 }
-                error={convertedInvalid ? t(convertedErrorKey) : undefined}
+                error={convertedInvalid ? t(convertedErrorKey) : staleMessage}
               >
                 <Input
+                  ref={convertedRef}
                   value={converted}
-                  onChange={(event) => setConverted(event.target.value)}
+                  onChange={(event) => {
+                    stale.dismiss()
+                    setConverted(event.target.value)
+                  }}
                   placeholder={toAmountInput(0, currency)}
                   inputMode="decimal"
                   autoComplete="off"
