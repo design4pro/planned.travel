@@ -329,7 +329,15 @@ export async function syncReservationExpense(
         reservation.expenseId,
         { title: reservation.title, amountMinor, currency },
       )
-      return splitStale ? 'split-stale' : 'updated'
+      if (!splitStale) {
+        return 'updated'
+      }
+      log().info('booking price change left its cost-line split stale', {
+        reservationId: reservation.id,
+        tripId: reservation.tripId,
+        organizationId: scope.ctx.organizationId,
+      })
+      return 'split-stale'
     }
 
     const spentOn = await spentOnFor(scope, reservation, trip)

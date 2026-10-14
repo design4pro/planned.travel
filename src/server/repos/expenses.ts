@@ -702,16 +702,25 @@ function recomputeShares(
   }
 }
 
+/** The shares of a line add up to this, which is what its total is supposed to be. */
+function sumShares(shares: ReadonlyArray<ExpenseShare>): number {
+  return shares.reduce((total, share) => total + share.shareMinor, 0)
+}
+
 /**
  * Moves an expense to a new title, amount and currency on a booking's behalf, and keeps its split
  * adding up to the new amount.
  *
- * A line with shares has them recomputed in place from the line's own method and weights: each share
- * is updated by id, so ids, `is_settled`, `weight` and the set of people survive, and the new amount
- * and every share go out in one {@link runBatch} - on D1 one transaction, so a split cannot end up
- * off its total because half of the writes landed. Each statement carries the tenant filter and the
- * expense and trip it belongs to. A line whose shares cannot be recomputed keeps them, saves the
+ * A line with shares that no longer add up to the new amount has them recomputed in place from the
+ * line's own method and weights: each share is updated by id, so ids, `is_settled`, `weight` and the
+ * set of people survive, and the new amount and every share go out in one {@link runBatch} - on D1
+ * one transaction, so a split cannot end up off its total because half of the writes landed. Each
+ * statement carries the tenant filter and the expense and trip it belongs to. Shares that already add
+ * up (a retitled booking, an unchanged price) are left alone: re-dividing them could move a leftover
+ * cent between people for no reason. A line whose shares cannot be recomputed keeps them, saves the
  * amount and says so through `splitStale`; a line with none behaves as {@link updateExpense} did.
+ * `splitStale` is read from the shares as they stand after the write, so a split that is off its
+ * total is reported whichever way it got there.
  */
 export async function repriceExpense(
   scope: TenantScope,
@@ -727,7 +736,7 @@ export async function repriceExpense(
   })
 
   const recomputed =
-    shares.length === 0
+    shares.length === 0 || sumShares(shares) === patch.amountMinor
       ? null
       : recomputeShares(existing, shares, patch.amountMinor)
   if (recomputed === null) {
@@ -736,7 +745,12 @@ export async function repriceExpense(
       expenseId,
       patch,
     )
-    return { expense, shares, splitStale: shares.length > 0 }
+    return {
+      expense,
+      shares,
+      splitStale:
+        sumShares(shares) !== expense.amountMinor && shares.length > 0,
+    }
   }
 
   const shareMinorOf = new Map(
@@ -775,7 +789,11 @@ export async function repriceExpense(
     where: eq(expenseShares.expenseId, expenseId),
     orderBy: [asc(expenseShares.id)],
   })
-  return { expense, shares: written, splitStale: false }
+  return {
+    expense,
+    shares: written,
+    splitStale: sumShares(written) !== expense.amountMinor,
+  }
 }
 
 /** Replaces an expense's split rows. Passing an empty participant list removes the split. */

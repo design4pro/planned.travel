@@ -992,11 +992,9 @@ describe('a booking price change on a cost line that is split', () => {
     expense: Expense
     shares: ReadonlyArray<ExpenseShare>
   }> {
-    const { expense, shares } = await getExpenseWithShares(scope, expenseId)
-    return {
-      expense,
-      shares: [...shares].sort((a, b) => a.id.localeCompare(b.id)),
-    }
+    // `getExpenseWithShares` already orders by id the way SQLite does (binary). A `localeCompare`
+    // here ordered the random tail of same-millisecond ids differently and made the test flaky.
+    return getExpenseWithShares(scope, expenseId)
   }
 
   /** The Costs screen's own write: the method lands on the line and the people on its shares. */
@@ -1119,6 +1117,28 @@ describe('a booking price change on a cost line that is split', () => {
 
     const after = await line()
     expect(after.expense.amountMinor).toBe(12_000)
+    expect(after.shares).toEqual(before.shares)
+  })
+
+  it('leaves shares that already add up alone when only the title changes', async () => {
+    await split(
+      [
+        { userId: people[0] ?? '', shareMinor: 4_000 },
+        { userId: people[1] ?? '', shareMinor: 3_000 },
+        { userId: people[2] ?? '', shareMinor: 3_000 },
+      ],
+      'exact',
+    )
+    const before = await line()
+
+    const outcome = await syncReservationExpense(scope, {
+      reservation: { ...reservation, title: 'Dinner at Den, moved' },
+      trip,
+    })
+
+    expect(outcome).toBe('updated')
+    const after = await line()
+    expect(after.expense.title).toBe('Dinner at Den, moved')
     expect(after.shares).toEqual(before.shares)
   })
 
