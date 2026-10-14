@@ -7,9 +7,7 @@ test('landing page renders its headline', async ({ app, browser }) => {
   await expect(browser.locator('h1').first()).toBeVisible()
 })
 
-// With OPENROUTER_API_KEY in the environment, uncomment:
-// test('the agent drives a flow', async ({ app, agent }) => {
-//   await app.open('/');
-//   await agent.act('open the pricing page from the header');
-//   await agent.assert('the page lists the plans with their prices');
-// });
+test('the agent reads the landing page', async ({ app, agent }) => {
+  await app.open('/')
+  await agent.assert('the page shows a main headline')
+})

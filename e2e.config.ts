@@ -1,12 +1,12 @@
 import type { E2EConfig } from 'e2e'
 import { web } from '@e2e-dev/web'
-import { openrouter } from '@openrouter/ai-sdk-provider'
+import { chatgpt } from 'e2e/oauth/chatgpt'
 
 export default {
-  // OpenRouter reads OPENROUTER_API_KEY from the environment; the key never lives in the repository.
+  // Signs in with the ChatGPT subscription stored by `npx e2e login openai`; no API key lives in the repository.
   agents: {
     default: {
-      model: openrouter('openai/gpt-6-luna-fast'),
+      model: chatgpt('gpt-6-luna'),
       system: 'You are a thorough QA agent. Verify every outcome.',
     },
   },
