@@ -3,7 +3,14 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -42,6 +49,7 @@ vi.mock('../../-server/trip-lifecycle', () => ({
   tripDeleteSummaryFn: server.summary,
   updateTripFn: server.update,
 }))
+vi.mock('#/components/modules/files/upload', () => ({ uploadFile: vi.fn() }))
 
 /**
  * `Link` stands in as a plain anchor, so "is this tile a link?" is answered by the accessibility
@@ -80,6 +88,18 @@ function tile(): HTMLElement {
   }
   return found
 }
+
+describe('a trip tile with a cover image', () => {
+  it('shows the image, and the generated art when it cannot be loaded', () => {
+    mount(tripCard({ coverImageUrl: '/api/trips/trip-1/cover?v=f' }))
+    const img = tile().querySelector('img')
+    expect(img?.getAttribute('src')).toBe('/api/trips/trip-1/cover?v=f')
+
+    fireEvent.error(img as HTMLImageElement)
+
+    expect(tile().querySelector('img')).toBeNull()
+  })
+})
 
 describe('a trip tile whose copy is still running', () => {
   /**

@@ -49,6 +49,7 @@ import {
 } from '#/server/repos'
 import { copyObject } from '#/server/storage/objects'
 import { storageKeyFor } from '#/server/fns/file-policy'
+import { coverUrlFor, fileIdOfStorageKey } from '#/lib/trip-cover'
 import { QUEUE_BATCH_MAX, enqueueTasks } from '../jobs'
 import { recomputeDelaySeconds, travelStatsTaskId } from './travel-stats'
 import {
@@ -171,9 +172,25 @@ async function copyCover(
     return {}
   }
 
+  // The target's own URL, never the source's: the cover route reads the key off the trip it is asked
+  // about, so a copied URL would show the source's picture, or a 404 once the source is gone. Both
+  // inputs are checked before any byte moves, so a refusal leaves no object behind.
+  const fileId = fileIdOfStorageKey(targetKey)
+  const origin = context.env.APP_URL
+  if (fileId === null || origin === undefined || origin === '') {
+    context.logger.warn('a trip cover was not copied', {
+      tripId: targetTripId,
+      reason: fileId === null ? 'no file id in the key' : 'no app origin',
+    })
+    return {}
+  }
+
   try {
     await copyObject(context.env.FILES, sourceKey, targetKey)
-    return { coverImageKey: targetKey, coverImageUrl: source.coverImageUrl }
+    return {
+      coverImageKey: targetKey,
+      coverImageUrl: coverUrlFor(origin, targetTripId, fileId),
+    }
   } catch (cause) {
     context.logger.warn('a trip cover was not copied', {
       tripId: targetTripId,

@@ -545,6 +545,22 @@ const messages = {
     'Nie udało się utworzyć wyjazdu. Spróbuj ponownie za chwilę.',
   'newTrip.created': 'Wyjazd utworzony',
   'newTrip.createdBody': 'Zacznij nanosić miejsca na mapę.',
+  'newTrip.coverChoose': 'Dodaj obraz okładki',
+  'newTrip.coverChange': 'Zmień obraz okładki',
+  'newTrip.coverHint':
+    'Upuść tutaj obraz, wklej go albo wybierz plik. PNG, JPEG, WebP, AVIF lub GIF.',
+  'newTrip.coverChosen': 'Obraz okładki: {name}',
+  'newTrip.coverRemove': 'Usuń obraz okładki',
+  'newTrip.coverTypeError':
+    'Plik „{name}” nie może być okładką. Wybierz plik PNG, JPEG, WebP, AVIF lub GIF.',
+  'newTrip.coverSizeError':
+    'Plik „{name}” jest większy niż {max}. Wybierz mniejszy obraz.',
+  'newTrip.coverUploading': 'Przesyłanie obrazu okładki',
+  'newTrip.coverFailedTitle': 'Nie dodano obrazu okładki',
+  'newTrip.coverFailed':
+    'Wyjazd został utworzony, ale nie udało się przesłać pliku „{name}” jako okładki.',
+  'newTrip.coverRetry': 'Spróbuj ponownie',
+  'newTrip.coverContinue': 'Otwórz wyjazd bez okładki',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Działania dla „{title}”',
@@ -572,6 +588,9 @@ const messages = {
   'editTrip.retry': 'Spróbuj ponownie',
   'editTrip.error':
     'Nie udało się zapisać wyjazdu. Spróbuj ponownie za chwilę.',
+  'editTrip.coverFailed':
+    'Nie udało się przesłać pliku „{name}” jako okładki. Nic więcej nie zostało jeszcze zapisane.',
+  'editTrip.coverContinue': 'Zapisz bez nowej okładki',
   'editTrip.currencyLocked':
     'Ten wyjazd ma już ceny, więc nie można tu zmienić waluty budżetu. Ustaw z powrotem {current}, aby zapisać pozostałe zmiany.',
   /* ------------------------------ the delete-trip dialog */

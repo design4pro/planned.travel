@@ -395,6 +395,22 @@ const messages = {
   'newTrip.error': '여행을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
   'newTrip.created': '여행을 만들었습니다',
   'newTrip.createdBody': '지도에 장소를 놓아 보세요.',
+  'newTrip.coverChoose': '표지 이미지 추가',
+  'newTrip.coverChange': '표지 이미지 변경',
+  'newTrip.coverHint':
+    '이미지를 여기에 끌어다 놓거나 붙여넣거나 파일을 선택하세요. PNG, JPEG, WebP, AVIF, GIF를 지원합니다.',
+  'newTrip.coverChosen': '표지 이미지: {name}',
+  'newTrip.coverRemove': '표지 이미지 삭제',
+  'newTrip.coverTypeError':
+    '“{name}”은(는) 표지 이미지로 쓸 수 없습니다. PNG, JPEG, WebP, AVIF, GIF 중에서 선택하세요.',
+  'newTrip.coverSizeError':
+    '“{name}” 파일이 {max}보다 큽니다. 더 작은 이미지를 선택하세요.',
+  'newTrip.coverUploading': '표지 이미지를 업로드하고 있습니다',
+  'newTrip.coverFailedTitle': '표지 이미지를 추가하지 못했습니다',
+  'newTrip.coverFailed':
+    '여행은 만들었지만 “{name}”을(를) 표지로 업로드하지 못했습니다.',
+  'newTrip.coverRetry': '다시 시도',
+  'newTrip.coverContinue': '표지 없이 여행 열기',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 작업',
@@ -421,6 +437,9 @@ const messages = {
   'editTrip.errorTitle': '저장되지 않았습니다',
   'editTrip.retry': '다시 시도',
   'editTrip.error': '여행을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'editTrip.coverFailed':
+    '“{name}”을(를) 표지로 업로드하지 못했습니다. 다른 변경 사항은 아직 저장되지 않았습니다.',
+  'editTrip.coverContinue': '새 표지 없이 저장',
   'editTrip.currencyLocked':
     '이 여행에는 이미 금액이 있어서 여기서는 예산 통화를 바꿀 수 없습니다. 다른 변경 사항을 저장하려면 통화를 {current}(으)로 되돌려 주세요.',
   /* ------------------------------ the delete-trip dialog */

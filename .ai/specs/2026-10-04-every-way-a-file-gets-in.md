@@ -2,10 +2,10 @@
 
 | Field              | Value                                        |
 | ------------------ | -------------------------------------------- |
-| **Status**         | ready                                        |
+| **Status**         | in-progress                                  |
 | **Issue**          | none                                         |
 | **Spec PR**        | #866                                         |
-| **Implementation** | none                                         |
+| **Implementation** | #1236, #1248                                 |
 | **Plan**           | 06-S1 (docs/plans/06-documents-and-media.md) |
 
 ## 📝 TLDR
@@ -367,10 +367,13 @@ nothing new crosses the boundary untyped. Where an existing schema is touched it
 
 **Authorisation, stated as it is.** `uploadTripFileFn`, `updateTripFileFn` and `deleteTripFileFn`
 start with `appScope()` and `requireTrip(scope, tripId)` before anything is read or written, which
-proves the trip belongs to the caller's workspace and that the caller can see it. **They check no trip
-role and no writable-trip guard**, so a viewer can upload, rename and delete files, on an archived
-trip too. That is an existing gap, not decided here and not widened by this stage; Phase 1 files it
-as a `security` follow-up (above). A trip id from the browser is a claim, not an authorisation.
+proves the trip belongs to the caller's workspace and that the caller can see it. **They checked no
+trip role and no writable-trip guard**, so a viewer could upload, rename and delete files, on an
+archived trip too. That gap was not decided here and not widened by this stage; Phase 1 filed it as
+a `security` follow-up (above), which #1233 closed: the file writers in `src/server/repos/files.ts`
+run `requireWritableTrip` then `assertTripRole(['owner', 'editor'])` on the trip the stored file
+names, and the upload function runs the same pair before its bucket write. A trip id from the
+browser is a claim, not an authorisation.
 Nothing is slow enough to enqueue.
 
 **Quota.** The metrics are `files` and `storage_bytes`, both already enforced on this write path by

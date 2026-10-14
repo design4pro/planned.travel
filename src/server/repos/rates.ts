@@ -21,6 +21,14 @@
  * pair, never looked up, so a rate on a row can never disagree with the figures beside it. The
  * call-graph test in `__tests__/rates.test.ts` pins that.
  *
+ * **The reader's display currency lives here too.** {@link getDisplayCurrency} and
+ * {@link setDisplayCurrency} are the only reader and only writer of `user_settings.display_currency`,
+ * and the settings repository is not widened to reach it: the regional form cannot touch the
+ * preference, and `updateUserSettingsInput` does not name it. {@link listAnsweringCurrencies} and
+ * {@link resolveDisplayRates} are the two reads the display conversion needs; both go through the same
+ * frozen-rate predicate as {@link resolveRate}, so the menu never offers a code the conversion cannot
+ * answer.
+ *
  * **Which trips a rate may come from.** Every frozen-rate read is restricted to the trips the caller
  * can read (`readableTripFilter`, ADR 0007): a rate frozen on a private trip the caller is not on
  * answers neither function. The workspace filter alone is not enough, because a private trip lives
@@ -31,9 +39,17 @@ import { desc, eq, gt, inArray, isNotNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import { expenses, settlements, trips } from '#/server/db/schema'
 import { tenantFilter } from './base'
+import { NotFoundError } from './context'
+import { getMembership } from './members'
+import {
+  ensureUserSettings,
+  getUserSettings,
+  userSettingsRepository,
+} from './settings'
 import { readableTripFilter, requireTrip } from './trips'
 import { currencySchema, dateSchema, idSchema } from './validation'
 import type { SQL } from 'drizzle-orm'
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { TenantScope } from './base'
 
 /* -------------------------------------------------------------------------------------------------
@@ -108,6 +124,37 @@ function readableTripIds(scope: TenantScope) {
 }
 
 /**
+ * The columns a row must carry to be a frozen-rate observation, which `expenses` and `settlements`
+ * both do.
+ */
+interface FrozenRateColumns {
+  readonly originalCurrency: SQLiteColumn
+  readonly currency: SQLiteColumn
+  readonly exchangeRate: SQLiteColumn
+  readonly tripId: SQLiteColumn
+}
+
+/**
+ * What makes a row an observation of a frozen rate, in one place: it records a source currency
+ * different from its own and a positive rate, on a trip the caller can read. `pair` narrows it to
+ * one ordered pair; without it every pair qualifies, which is what lists the codes a rate answers for.
+ */
+function frozenRatePredicates(
+  scope: TenantScope,
+  table: FrozenRateColumns,
+  pair?: { readonly from: string; readonly to?: string },
+): Array<SQL | undefined> {
+  return [
+    pair === undefined ? undefined : eq(table.originalCurrency, pair.from),
+    pair?.to === undefined ? undefined : eq(table.currency, pair.to),
+    ne(table.originalCurrency, table.currency),
+    isNotNull(table.exchangeRate),
+    gt(table.exchangeRate, 0),
+    inArray(table.tripId, readableTripIds(scope)),
+  ]
+}
+
+/**
  * The newest expense that froze a rate for the ordered pair, or `null`. A row is an observation
  * only when it records a source currency different from its own and a rate: the all-null row of a
  * payment made in the accounting currency is not one.
@@ -128,12 +175,7 @@ async function newestExpenseObservation(
       tenantFilter(
         scope,
         expenses,
-        eq(expenses.originalCurrency, pair.from),
-        eq(expenses.currency, pair.to),
-        ne(expenses.originalCurrency, expenses.currency),
-        isNotNull(expenses.exchangeRate),
-        gt(expenses.exchangeRate, 0),
-        inArray(expenses.tripId, readableTripIds(scope)),
+        ...frozenRatePredicates(scope, expenses, pair),
         trip,
       ),
     )
@@ -163,12 +205,7 @@ async function newestSettlementObservation(
       tenantFilter(
         scope,
         settlements,
-        eq(settlements.originalCurrency, pair.from),
-        eq(settlements.currency, pair.to),
-        ne(settlements.originalCurrency, settlements.currency),
-        isNotNull(settlements.exchangeRate),
-        gt(settlements.exchangeRate, 0),
-        inArray(settlements.tripId, readableTripIds(scope)),
+        ...frozenRatePredicates(scope, settlements, pair),
         trip,
       ),
     )
@@ -258,6 +295,48 @@ export async function findLatestFrozenRate(
   return latestFrozenRate(scope, { from, to }, tripId)
 }
 
+/** The rate to offer for one receipt currency, and the day the row it came from records. */
+export interface SuggestedRate {
+  readonly rate: number
+  readonly observedOn: string
+}
+
+/**
+ * For each receipt currency in `from`, the rate this trip last froze for it against the trip's own
+ * currency `to`, as {@link findLatestFrozenRate} answers it: one entry per currency that has one,
+ * `null` when none has. Nothing outside the trip is read.
+ *
+ * This is the read the expense dialog's pre-fill draws on. It sits here rather than in the costs
+ * server function because that module also derives the stored rate of a row, and the call-graph
+ * test in `__tests__/rates.test.ts` keeps every name of this lookup out of it.
+ */
+export async function suggestedRatesForTrip(
+  scope: TenantScope,
+  query: {
+    readonly tripId: string
+    readonly from: ReadonlyArray<string>
+    readonly to: string
+  },
+): Promise<Readonly<Record<string, SuggestedRate>> | null> {
+  const found = await Promise.all(
+    [...new Set(query.from)].map(async (from) => {
+      const frozen = await findLatestFrozenRate(scope, {
+        tripId: query.tripId,
+        from,
+        to: query.to,
+      })
+      return frozen === null
+        ? null
+        : ([
+            from,
+            { rate: frozen.rate, observedOn: frozen.observedOn },
+          ] as const)
+    }),
+  )
+  const entries = found.filter((entry) => entry !== null)
+  return entries.length === 0 ? null : Object.fromEntries(entries)
+}
+
 /* -------------------------------------------------------------------------------------------------
  * The seam
  * ---------------------------------------------------------------------------------------------- */
@@ -289,4 +368,123 @@ export async function resolveRate(
   return answer !== null && rateSchema.safeParse(answer.rate).success
     ? { rate: answer.rate, source: answer.source }
     : null
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The display conversion
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The codes a rate from `from` answers for: every currency that a readable expense or payment froze
+ * a rate toward from `from`, sorted. A code listed here is one {@link resolveRate} answers for with
+ * `from` as the source, because both read the same predicate.
+ *
+ * Only the ordered pair counts. A trip kept in `EUR` that froze `GBP` to `EUR` lists `EUR` for
+ * `GBP` and nothing for `EUR`: the opposite pair is never inferred.
+ */
+export async function listAnsweringCurrencies(
+  scope: TenantScope,
+  from: string,
+): Promise<Array<string>> {
+  const source = currencySchema.parse(from)
+  const [fromExpenses, fromPayments] = await Promise.all([
+    scope.db
+      .selectDistinct({ code: expenses.currency })
+      .from(expenses)
+      .where(
+        tenantFilter(
+          scope,
+          expenses,
+          ...frozenRatePredicates(scope, expenses, { from: source }),
+        ),
+      ),
+    scope.db
+      .selectDistinct({ code: settlements.currency })
+      .from(settlements)
+      .where(
+        tenantFilter(
+          scope,
+          settlements,
+          ...frozenRatePredicates(scope, settlements, { from: source }),
+        ),
+      ),
+  ])
+  return [
+    ...new Set([...fromExpenses, ...fromPayments].map((row) => row.code)),
+  ].sort()
+}
+
+const displayRatesInput = z.strictObject({
+  /** The currencies the figures are in. Repeats are folded: one lookup per distinct pair. */
+  from: z.array(currencySchema).max(64),
+  to: currencySchema,
+  on: dateSchema,
+})
+
+export type DisplayRatesQuery = z.input<typeof displayRatesInput>
+
+/**
+ * The rate to the display currency for each distinct source currency, `null` where nothing answers.
+ *
+ * One {@link resolveRate} call per distinct pair, whatever the number of rows that share it; a
+ * source that already is the target needs no rate and answers the identity, so a figure that is
+ * already in the display currency is never run through a lookup. A pair nothing answers is `null`,
+ * never a 1:1.
+ */
+export async function resolveDisplayRates(
+  scope: TenantScope,
+  query: DisplayRatesQuery,
+  port?: RateSource,
+): Promise<Map<string, ResolvedRate | null>> {
+  const { from, to, on } = displayRatesInput.parse(query)
+  const sources = [...new Set(from)]
+  const answers = await Promise.all(
+    sources.map((source) =>
+      source === to
+        ? { rate: 1, source: 'identity' }
+        : resolveRate(scope, { from: source, to, on }, port),
+    ),
+  )
+  return new Map(
+    sources.map((source, index) => [source, answers[index] ?? null]),
+  )
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The reader's display preference
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The currency the given reader chose, or `null` for "each trip in its own currency" - which is
+ * also what a member who has never had a settings row reads. The caller passes its own id only.
+ */
+export async function getDisplayCurrency(
+  scope: TenantScope,
+  userId: string,
+): Promise<string | null> {
+  return (await getUserSettings(scope, userId))?.displayCurrency ?? null
+}
+
+/**
+ * Stores the caller's own display currency, or `null` to return to per-trip.
+ *
+ * Takes no user id: the row is the caller's, resolved by organization and user inside the scope.
+ * The caller must be a member of the workspace in scope - a session whose membership has lapsed, or
+ * a scope built for someone who never joined, is a {@link NotFoundError} and no row is inserted.
+ * Writes the one column; the accounting default the settings screen owns is never touched.
+ */
+export async function setDisplayCurrency(
+  scope: TenantScope,
+  code: string | null,
+): Promise<string | null> {
+  const next = code === null ? null : currencySchema.parse(code)
+  const userId = scope.ctx.userId
+  if ((await getMembership(scope, userId)) === null) {
+    throw new NotFoundError('workspace member', userId)
+  }
+  const row = await ensureUserSettings(scope, userId)
+  const updated = await userSettingsRepository.requireUpdate(scope, row.id, {
+    displayCurrency: next,
+  })
+  return updated.displayCurrency
 }

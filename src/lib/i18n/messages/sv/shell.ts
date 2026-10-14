@@ -483,6 +483,21 @@ const messages = {
   'newTrip.error': 'Resan kunde inte skapas. Försök igen om en stund.',
   'newTrip.created': 'Resa skapad',
   'newTrip.createdBody': 'Börja lägga ut platser på kartan.',
+  'newTrip.coverChoose': 'Lägg till omslagsbild',
+  'newTrip.coverChange': 'Byt omslagsbild',
+  'newTrip.coverHint':
+    'Släpp en bild här, klistra in en eller välj en fil. PNG, JPEG, WebP, AVIF eller GIF.',
+  'newTrip.coverChosen': 'Omslagsbild: {name}',
+  'newTrip.coverRemove': 'Ta bort omslagsbilden',
+  'newTrip.coverTypeError':
+    '”{name}” kan inte vara omslagsbild. Välj en PNG-, JPEG-, WebP-, AVIF- eller GIF-fil.',
+  'newTrip.coverSizeError': '”{name}” är större än {max}. Välj en mindre bild.',
+  'newTrip.coverUploading': 'Laddar upp omslagsbilden',
+  'newTrip.coverFailedTitle': 'Omslagsbilden lades inte till',
+  'newTrip.coverFailed':
+    'Resan skapades, men ”{name}” kunde inte laddas upp som omslag.',
+  'newTrip.coverRetry': 'Försök igen',
+  'newTrip.coverContinue': 'Öppna resan utan omslag',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Åtgärder för {title}',
@@ -509,6 +524,9 @@ const messages = {
   'editTrip.errorTitle': 'Det sparades inte',
   'editTrip.retry': 'Försök igen',
   'editTrip.error': 'Resan kunde inte sparas. Försök igen om en stund.',
+  'editTrip.coverFailed':
+    '”{name}” kunde inte laddas upp som omslag. Inget annat har sparats ännu.',
+  'editTrip.coverContinue': 'Spara utan det nya omslaget',
   'editTrip.currencyLocked':
     'Resan har redan priser, så budgetvalutan kan inte ändras här. Ställ tillbaka den på {current} för att spara dina övriga ändringar.',
   /* ------------------------------ the delete-trip dialog */

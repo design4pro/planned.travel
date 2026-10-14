@@ -12,8 +12,14 @@
  * under it. That is deliberately manual — we do not have a rate feed, and inventing
  * one would put a number on the screen that nobody can reconcile against a bank
  * statement.
+ *
+ * The one concession: when this trip has already frozen a rate for the picked currency, the
+ * converted field starts out as the figure that rate implies, with a hint saying where it came
+ * from. It is a suggestion in a field the reader has not touched, never a value they typed: the
+ * first keystroke in the field ends it for good, and what is submitted is still the amount pair,
+ * from which the server derives the stored rate. No rate is sent from here.
  */
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { Coins, Tag, Wallet } from 'lucide-react'
 
 import {
@@ -32,16 +38,21 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
+import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import {
   CURRENCY_OPTIONS,
   currencyCode,
+  convertMinor,
   formatExchangeRate,
+  formatRateLine,
   formatMoney,
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
 import { parseDay, toDayString } from './data'
+import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
   draftFor,
@@ -54,6 +65,7 @@ import type { ReactNode } from 'react'
 import type { SplitMethod } from '#/lib/money'
 import type {
   CostsExpense,
+  CostsPayload,
   CostsPerson,
   ExpenseCategory,
 } from '#/server/fns/costs'
@@ -118,6 +130,11 @@ export interface ExpenseDialogProps {
   readonly defaultCategory: ExpenseCategory
   /** `YYYY-MM-DD`, used as the default date on a new expense. */
   readonly today: string
+  /**
+   * The rate this trip last froze per foreign currency, from the costs payload. Absent, `null` or
+   * without an entry for the picked currency, the converted field is not pre-filled.
+   */
+  readonly suggestedRate?: CostsPayload['suggestedRate']
   readonly onSubmit: (value: ExpenseFormValue) => Promise<void>
 }
 
@@ -145,6 +162,38 @@ function asCategory(
   categories: ReadonlyArray<CategoryOption>,
 ): ExpenseCategory {
   return categories.find((entry) => entry.value === value)?.value ?? 'other'
+}
+
+/**
+ * Keeps the left-to-right rate (`1 GBP = 195.00 JPY`) in one piece inside a right-to-left sentence;
+ * without the isolate the bidi algorithm scatters its words and the brackets around them.
+ */
+const LTR_ISOLATE_START = '\u2066'
+const POP_ISOLATE = '\u2069'
+
+/**
+ * The converted figure a frozen rate implies for the typed amount, as the field would hold it, or
+ * `''` when there is nothing to suggest. An amount too large to convert, or one that converts to
+ * nothing, is nothing to suggest, not an error or a `0.00` to show.
+ */
+function suggestedFigure(
+  typedMinor: number | null,
+  rate: number | undefined,
+  from: string,
+  to: string,
+): string {
+  if (rate === undefined || typedMinor === null || typedMinor <= 0) {
+    return ''
+  }
+  try {
+    const convertedMinor = convertMinor(typedMinor, rate, from, to)
+    return convertedMinor > 0 ? toAmountInput(convertedMinor, to) : ''
+  } catch (cause) {
+    if (cause instanceof RangeError) {
+      return ''
+    }
+    throw cause
+  }
 }
 
 function initialState(
@@ -198,6 +247,7 @@ export function ExpenseDialog({
   categories,
   defaultCategory,
   today,
+  suggestedRate,
   onSubmit,
 }: ExpenseDialogProps) {
   const t = useTranslate()
@@ -217,14 +267,70 @@ export function ExpenseDialog({
           expense.shares,
         ),
   )
+  // Up while the converted field is still the one the dialog opened with (empty) and the reader has
+  // not typed in it. Never raised again: a stored or typed figure must not be overwritten, and a
+  // field the reader cleared is theirs.
+  const [suggesting, setSuggesting] = useState(form.converted === '')
+  // What the dialog opened with: an edited expense's stored digits are in the currency it was saved
+  // in, so after a re-basing they are only worth keeping if the reader typed them.
+  const [openedAmount] = useState(form.amount)
+  const amountRef = useRef<HTMLInputElement>(null)
+  const convertedRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
+  // The figure that carries the old currency's digits: the converted one when there is one.
+  const stale = useStaleTripCurrency(tripCurrency, saving, () =>
+    foreign ? convertedRef.current : amountRef.current,
+  )
   const formId = `expense-form-${useId()}`
 
-  const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
+  // The trip's currency changed while this was open and the screen has refreshed: what was typed
+  // stays, a currency control still on the old one follows the trip, and a converted figure (which
+  // was in the old currency) is dropped and offered again from the trip's rates.
+  if (stale.adopt !== null) {
+    stale.adopted()
+    setForm({
+      ...form,
+      currency:
+        currencyCode(form.currency) === stale.adopt.from
+          ? stale.adopt.to
+          : form.currency,
+      amount:
+        editing &&
+        form.amount === openedAmount &&
+        currencyCode(form.currency) === stale.adopt.from
+          ? ''
+          : form.amount,
+      converted: '',
+    })
+    setSuggesting(true)
+  }
+  const staleMessage =
+    stale.messageFor === null
+      ? undefined
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
+
   const typedMinor = parseMoney(form.amount, form.currency)
+  const staleOnAmount = foreign ? undefined : staleMessage
+  const amountError =
+    form.amount.trim() !== '' && typedMinor === null
+      ? t('costs.expense.amountNotANumber')
+      : staleOnAmount
+  const suggestion = suggestedRate?.[currencyCode(form.currency)]
+  const suggested =
+    suggesting && foreign
+      ? suggestedFigure(
+          typedMinor,
+          suggestion?.rate,
+          form.currency,
+          tripCurrency,
+        )
+      : ''
+  // Computed here, not in an effect, so the figure follows the amount and the currency at once.
+  const converted = suggesting ? suggested : form.converted
   const convertedMinor = foreign
-    ? parseMoney(form.converted, tripCurrency)
+    ? parseMoney(converted, tripCurrency)
     : typedMinor
   const amountMinor = convertedMinor ?? 0
 
@@ -244,10 +350,37 @@ export function ExpenseDialog({
         locale,
       )
     : null
+  const convertedHint =
+    suggested !== '' && suggestion !== undefined
+      ? t('costs.expense.convertedSuggested', {
+          date:
+            formatDate(suggestion.observedOn, locale) ?? suggestion.observedOn,
+          rate:
+            LTR_ISOLATE_START +
+            formatRateLine(
+              suggestion.rate,
+              form.currency,
+              tripCurrency,
+              locale,
+            ) +
+            POP_ISOLATE,
+        })
+      : (rate ??
+        t('costs.expense.convertedHint', {
+          from: currencyCode(form.currency),
+          to: currencyCode(tripCurrency),
+        }))
 
   const titleOk = form.title.trim().length > 0
   const amountOk = typedMinor !== null && (!foreign || convertedMinor !== null)
-  const canSave = titleOk && amountOk && preview.balanced && !saving
+  // After a stale-currency refusal the typed digits are still in the old currency, so the amount
+  // has to be looked at (edited) before it can be saved again.
+  const canSave =
+    titleOk &&
+    amountOk &&
+    preview.balanced &&
+    !saving &&
+    stale.messageFor === null
 
   async function submit(): Promise<void> {
     if (!canSave) {
@@ -255,6 +388,7 @@ export function ExpenseDialog({
     }
     setSaving(true)
     setError(null)
+    stale.dismiss()
     try {
       await onSubmit({
         title: form.title.trim(),
@@ -272,7 +406,11 @@ export function ExpenseDialog({
       })
       onOpenChange(false)
     } catch (cause) {
-      setError(messageOf(cause))
+      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+        stale.refuse(currencyCode(tripCurrency))
+      } else {
+        setError(messageOf(cause))
+      }
     } finally {
       setSaving(false)
     }
@@ -303,9 +441,9 @@ export function ExpenseDialog({
               void submit()
             }}
           >
-            {error === null ? null : (
+            {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
-                {error}
+                {error ?? t('costs.refusal.rebaseChanged')}
               </Alert>
             )}
 
@@ -327,17 +465,15 @@ export function ExpenseDialog({
               <Field
                 label={t('costs.field.amount')}
                 required
-                error={
-                  form.amount.trim() !== '' && typedMinor === null
-                    ? t('costs.expense.amountNotANumber')
-                    : undefined
-                }
+                error={amountError}
               >
                 <Input
+                  ref={amountRef}
                   value={form.amount}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    stale.dismiss()
                     setForm({ ...form, amount: event.target.value })
-                  }
+                  }}
                   placeholder={toAmountInput(0, form.currency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -354,7 +490,10 @@ export function ExpenseDialog({
                     description: entry.name,
                   }))}
                   value={form.currency}
-                  onValueChange={(next) => setForm({ ...form, currency: next })}
+                  onValueChange={(next) => {
+                    stale.dismiss()
+                    setForm({ ...form, currency: next })
+                  }}
                   ariaLabel={t('costs.expense.currencyLabel')}
                 />
               </Field>
@@ -366,24 +505,21 @@ export function ExpenseDialog({
                   currency: currencyCode(tripCurrency),
                 })}
                 required
-                hint={
-                  rate ??
-                  t('costs.expense.convertedHint', {
-                    from: currencyCode(form.currency),
-                    to: currencyCode(tripCurrency),
-                  })
-                }
+                hint={convertedHint}
                 error={
-                  form.converted.trim() !== '' && convertedMinor === null
+                  converted.trim() !== '' && convertedMinor === null
                     ? t('costs.expense.convertedNotANumber')
-                    : undefined
+                    : staleMessage
                 }
               >
                 <Input
-                  value={form.converted}
-                  onChange={(event) =>
+                  ref={convertedRef}
+                  value={converted}
+                  onChange={(event) => {
+                    stale.dismiss()
+                    setSuggesting(false)
                     setForm({ ...form, converted: event.target.value })
-                  }
+                  }}
                   placeholder={toAmountInput(0, tripCurrency)}
                   inputMode="decimal"
                   autoComplete="off"

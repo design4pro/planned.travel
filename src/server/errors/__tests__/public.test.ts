@@ -60,6 +60,8 @@ describe('the currency refusal keys are closed', () => {
   it('names exactly the keys a changed budget currency may be refused with', () => {
     expect([...CURRENCY_REFUSAL_KEYS]).toEqual([
       'shell.editTrip.currencyLocked',
+      'costs.refusal.tripCurrencyChanged',
+      'costs.refusal.rebaseChanged',
     ])
   })
 
@@ -82,7 +84,8 @@ describe('the currency refusal keys are closed', () => {
     ['a key with a prefix', 'x.shell.editTrip.currencyLocked'],
     ['a key with padding', ' shell.editTrip.currencyLocked '],
     ['a key of the same family', 'shell.editTrip.currency'],
-    ['a key a later ticket adds', 'costs.refusal.tripCurrencyChanged'],
+    ['a key of the costs family that is not listed', 'costs.refusal.other'],
+    ['a listed key with a suffix', 'costs.refusal.rebaseChanged.'],
   ])('still redacts %s thrown as a repository error', (_name, message) => {
     expect(classifyFailure(new RepositoryError(message, 'ANY'))).toEqual({
       kind: 'unexpected',

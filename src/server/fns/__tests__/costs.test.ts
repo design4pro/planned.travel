@@ -11,18 +11,23 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  CurrencyRefusalError,
   TripRoleError,
   addTripMember,
+  changeTripCurrency,
   createExpense,
+  createSettlement,
   createTrip,
+  getDisplayCurrency,
   listSettlements,
+  setDisplayCurrency,
   listTripExpenses,
   updateTrip,
 } from '#/server/repos'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
 import type { TenantScope } from '#/server/repos'
-import type { SeededTenant } from '#/server/repos/__tests__/harness'
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 
 const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
@@ -85,10 +90,13 @@ const {
   deleteExpenseFn,
   recordPaymentFn,
   recordPaymentSchema,
+  setDisplayCurrencyFn,
+  setDisplayCurrencySchema,
   updateExpenseFn,
 } = await import('../costs')
 
 describe('the costs boundary', () => {
+  let harness: Harness
   let tenant: SeededTenant
   let tripId: string
   let expenseId: string
@@ -100,7 +108,7 @@ describe('the costs boundary', () => {
 
   beforeEach(async () => {
     stubs.mirrorToRoom.mockClear()
-    const harness = await createHarness()
+    harness = await createHarness()
     tenant = await harness.seedTenant('costs-boundary')
     ownerId = tenant.ownerUserId
     payerId = await tenant.addUser('The payer')
@@ -192,6 +200,42 @@ describe('the costs boundary', () => {
       await inStart(() => recordPaymentFn({ data: payment() }))
 
       expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
+    })
+
+    describe('from a tab that has not seen the trip change its currency', () => {
+      beforeEach(async () => {
+        await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: 160 })
+      })
+
+      it('is refused with the key, records nothing and tells no room', async () => {
+        stubs.scope = editor
+
+        const error = await captureError(() =>
+          inStart(() =>
+            recordPaymentFn({
+              data: { ...payment(), expectedTripCurrency: 'eur' },
+            }),
+          ),
+        )
+
+        expect(error).toBeInstanceOf(CurrencyRefusalError)
+        expect(error.message).toBe('costs.refusal.tripCurrencyChanged')
+        expect(await listSettlements(tenant.scope, tripId)).toEqual([])
+        expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+      })
+
+      it('is recorded when the tab names the currency the trip now has, or none', async () => {
+        stubs.scope = editor
+
+        await inStart(() =>
+          recordPaymentFn({
+            data: { ...payment(), expectedTripCurrency: 'JPY' },
+          }),
+        )
+        await inStart(() => recordPaymentFn({ data: payment() }))
+
+        expect(await listSettlements(tenant.scope, tripId)).toHaveLength(2)
+      })
     })
 
     describe('in another currency', () => {
@@ -293,6 +337,21 @@ describe('the costs boundary', () => {
         expect(result.error?.issues[0]?.code).toBe('unrecognized_keys')
       })
 
+      it('accepts the currency the form was filled in under, and refuses one that is not a code', () => {
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            expectedTripCurrency: 'EUR',
+          }).success,
+        ).toBe(true)
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            expectedTripCurrency: 'EU',
+          }).success,
+        ).toBe(false)
+      })
+
       it('refuses a source currency that is not three letters', () => {
         expect(
           recordPaymentSchema.safeParse({
@@ -332,6 +391,57 @@ describe('the costs boundary', () => {
 
       expect(await listTripExpenses(tenant.scope, tripId)).toHaveLength(2)
     })
+
+    describe('from a tab that has not seen the trip change its currency', () => {
+      beforeEach(async () => {
+        await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: 160 })
+        stubs.mirrorToRoom.mockClear()
+      })
+
+      it.each([
+        [
+          'logging',
+          () =>
+            createExpenseFn({
+              data: { tripId, expense: { ...body, currency: 'EUR' } },
+            }),
+        ],
+        [
+          'editing',
+          () =>
+            updateExpenseFn({
+              data: {
+                tripId,
+                expenseId,
+                expense: { ...body, currency: 'EUR' },
+              },
+            }),
+        ],
+      ])(
+        'refuses %s with the key and writes nothing',
+        async (_name, attempt) => {
+          stubs.scope = editor
+          const before = await listTripExpenses(tenant.scope, tripId)
+
+          const error = await captureError(() => inStart(attempt))
+
+          expect(error).toBeInstanceOf(CurrencyRefusalError)
+          expect(error.message).toBe('costs.refusal.tripCurrencyChanged')
+          expect(await listTripExpenses(tenant.scope, tripId)).toEqual(before)
+          expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+        },
+      )
+
+      it('still takes an expense from a tab that names no currency', async () => {
+        stubs.scope = editor
+
+        await inStart(() =>
+          createExpenseFn({ data: { tripId, expense: body } }),
+        )
+
+        expect(await listTripExpenses(tenant.scope, tripId)).toHaveLength(2)
+      })
+    })
   })
 
   describe('the costs payload', () => {
@@ -354,6 +464,233 @@ describe('the costs boundary', () => {
       ['the owner', () => tenant.scope],
     ])('tells %s they can write', async (_name, who) => {
       expect((await costsPayload(who(), tripId)).canWrite).toBe(true)
+    })
+
+    describe('the suggested rate', () => {
+      async function pounds(
+        trip: string,
+        rate: number,
+        spentOn: string,
+      ): Promise<void> {
+        await createExpense(tenant.scope, {
+          tripId: trip,
+          title: 'Receipt in pounds',
+          amountMinor: 11_500,
+          currency: 'EUR',
+          originalAmountMinor: 10_000,
+          originalCurrency: 'GBP',
+          exchangeRate: rate,
+          spentOn,
+        })
+      }
+
+      it('is null while the trip has no foreign expense', async () => {
+        expect(
+          (await costsPayload(tenant.scope, tripId)).suggestedRate,
+        ).toBeNull()
+      })
+
+      it('names the rate this trip last froze for each foreign currency, and the day it records', async () => {
+        await pounds(tripId, 1.1, '2026-04-10')
+        await pounds(tripId, 1.15, '2026-04-12')
+
+        expect((await costsPayload(viewer, tripId)).suggestedRate).toEqual({
+          GBP: { rate: 1.15, observedOn: '2026-04-12' },
+        })
+      })
+
+      it('never carries a rate frozen on another trip, even a later one', async () => {
+        const other = await createTrip(tenant.scope, {
+          title: 'Porto, alone',
+          startDate: '2026-07-10',
+          endDate: '2026-07-13',
+          currency: 'EUR',
+        })
+        await pounds(tripId, 1.15, '2026-04-12')
+        await pounds(other.id, 1.5, '2026-07-11')
+
+        expect(
+          (await costsPayload(tenant.scope, tripId)).suggestedRate,
+        ).toEqual({
+          GBP: { rate: 1.15, observedOn: '2026-04-12' },
+        })
+      })
+    })
+  })
+
+  describe('the display currency', () => {
+    /** A trip kept in pounds on which a receipt in euros froze a rate of 0.85 pounds to the euro. */
+    async function freezeEuroToPound(): Promise<void> {
+      const london = await createTrip(tenant.scope, {
+        title: 'London',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      await createExpense(tenant.scope, {
+        tripId: london.id,
+        title: 'Tickets',
+        amountMinor: 8_500,
+        currency: 'GBP',
+        originalAmountMinor: 10_000,
+        originalCurrency: 'EUR',
+        exchangeRate: 0.85,
+        spentOn: '2026-05-02',
+      })
+    }
+
+    async function addPayments(count: number): Promise<void> {
+      for (let index = 0; index < count; index += 1) {
+        await createSettlement(tenant.scope, {
+          tripId,
+          fromUserId: payerId,
+          toUserId: ownerId,
+          amountMinor: 1_000 + index,
+          settledOn: '2026-04-11',
+        })
+      }
+    }
+
+    /** The statements that looked up the newest frozen rate for a pair (the menu's list has no limit). */
+    function rateLookups(): number {
+      return harness.statements.filter(
+        (sql) => /"original_currency" = \?/.test(sql) && /limit \?/.test(sql),
+      ).length
+    }
+
+    it('shows each trip in its own currency when nothing is stored, and consults no rate', async () => {
+      await addPayments(2)
+      harness.statements.length = 0
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'per-trip', code: 'EUR' })
+      expect(payload.expenses.map((row) => row.convertedMinor)).toEqual([6_000])
+      expect(payload.settlements.map((row) => row.convertedMinor)).toEqual(
+        payload.settlements.map((row) => row.amountMinor),
+      )
+      expect(payload.unconverted).toEqual([])
+      expect(rateLookups()).toBe(0)
+    })
+
+    it('converts each expense and payment into the stored code through the frozen rate', async () => {
+      await freezeEuroToPound()
+      await addPayments(1)
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'fixed', code: 'GBP' })
+      expect(payload.expenses.map((row) => row.convertedMinor)).toEqual([5_100])
+      expect(payload.settlements.map((row) => row.convertedMinor)).toEqual([
+        850,
+      ])
+      expect(payload.unconverted).toEqual([])
+      // The accounting figures are what they were.
+      expect(payload.expenses.map((row) => row.amountMinor)).toEqual([6_000])
+    })
+
+    it('asks for a rate once per pair, however many rows share it', async () => {
+      await freezeEuroToPound()
+      await addPayments(3)
+      await setDisplayCurrency(tenant.scope, 'GBP')
+      await createExpense(tenant.scope, {
+        tripId,
+        title: 'Coffee',
+        amountMinor: 300,
+        spentOn: '2026-04-11',
+      })
+      harness.statements.length = 0
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.expenses).toHaveLength(2)
+      expect(payload.settlements).toHaveLength(3)
+      // One expenses query and one payments query for the single EUR to GBP pair.
+      expect(rateLookups()).toBe(2)
+    })
+
+    it('still loads a trip with more rows than the lookup accepts currencies', async () => {
+      await addPayments(70)
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.settlements).toHaveLength(70)
+      expect(payload.displayCurrency).toEqual({ mode: 'fixed', code: 'GBP' })
+    })
+
+    it('shows no converted figure, and names the pair and the day, when no rate answers', async () => {
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'fixed', code: 'GBP' })
+      expect(payload.expenses.map((row) => row.convertedMinor)).toEqual([null])
+      expect(payload.unconverted).toEqual([
+        { from: 'EUR', to: 'GBP', on: payload.today },
+      ])
+    })
+
+    it('treats a stored code equal to the trip’s own as per-trip', async () => {
+      await setDisplayCurrency(tenant.scope, 'EUR')
+      harness.statements.length = 0
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayCurrency).toEqual({ mode: 'per-trip', code: 'EUR' })
+      expect(rateLookups()).toBe(0)
+    })
+
+    it('reads the caller’s own preference, never another member’s', async () => {
+      await freezeEuroToPound()
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const other = await costsPayload(editor, tripId)
+
+      expect(other.displayCurrency).toEqual({ mode: 'per-trip', code: 'EUR' })
+    })
+
+    it('offers the workspace default and the codes a frozen rate answers for', async () => {
+      await freezeEuroToPound()
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(payload.displayChoices).toEqual({
+        workspaceCode: 'EUR',
+        rateCodes: ['GBP'],
+      })
+    })
+
+    describe('the preference writer', () => {
+      it('writes the caller’s own row from a code, and clears it from null', async () => {
+        stubs.scope = editor
+        await inStart(() => setDisplayCurrencyFn({ data: { code: 'GBP' } }))
+        const editorId = editor.ctx.userId
+
+        expect(await getDisplayCurrency(editor, editorId)).toBe('GBP')
+        expect(await getDisplayCurrency(tenant.scope, ownerId)).toBeNull()
+
+        await inStart(() => setDisplayCurrencyFn({ data: { code: null } }))
+        expect(await getDisplayCurrency(editor, editorId)).toBeNull()
+      })
+
+      it('is strict: a user id, a lower-case code and a missing code are refused', () => {
+        expect(
+          setDisplayCurrencySchema.safeParse({ code: 'GBP' }).success,
+        ).toBe(true)
+        expect(setDisplayCurrencySchema.safeParse({ code: null }).success).toBe(
+          true,
+        )
+        for (const bad of [
+          { code: 'GBP', userId: 'someone-else' },
+          { code: 'gbp' },
+          { code: 'GB' },
+          {},
+        ]) {
+          expect(setDisplayCurrencySchema.safeParse(bad).success).toBe(false)
+        }
+      })
     })
   })
 })

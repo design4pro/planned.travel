@@ -94,6 +94,8 @@ const messages = {
   'expense.currencyLabel': 'Валюта, у якій виписано чек',
   'expense.convertedTo': 'Перераховано в {currency}',
   'expense.convertedHint': 'У скільки {from} вийшло в {to} за вашою випискою.',
+  'expense.convertedSuggested':
+    'Запропоновано за курсом, використаним у цій поїздці ({date}, {rate}). Змініть суму, щоб вона збігалася з вашою випискою.',
   'expense.convertedNotANumber': 'Введіть перераховану суму числом.',
   'expense.dateLabel': 'Дата витрати',
   'expense.paidByHint':
@@ -191,6 +193,31 @@ const messages = {
     'У цій подорожі ще немає записаних витрат. Вони з’являться тут, коли власник або редактор їх додасть.',
   'readOnly.settleEmpty':
     'Зараз перекази не потрібні. Будь-який дисбаланс з’явився б тут.',
+  'refusal.rebaseChanged':
+    'Поїздка змінилася, поки ви підтверджували, тому нічого не змінено. Перевірте нові суми й підтвердьте ще раз.',
+  'refusal.tripCurrencyChanged':
+    'Валюта бюджету цієї поїздки тепер {to}, тому нічого не збережено. Сторінку оновлено: перевірте суму й збережіть ще раз.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Валюта відображення',
+  'display.indicator.perTrip': 'Власна валюта',
+  'display.indicator.fixed': 'Також у {code}',
+  'display.menu.perTrip': 'Кожна подорож у своїй валюті',
+  'display.menu.workspace': '{code} (типова в просторі)',
+  'display.menu.rateHint': 'Використовує курс, уже записаний у подорожі',
+  'display.menu.currentHint': 'Обрана, але жоден записаний курс її не покриває',
+  'display.menu.needsLiveRate': 'Потрібен поточний курс, який поки недоступний',
+  'display.menu.saving': 'Зберігаємо ваш вибір',
+  'display.error.title': 'Валюту відображення не збережено',
+  'display.error.body':
+    'Не вдалося зберегти ваш вибір. Спробуйте ще раз за мить.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Приблизно {amount} {code} у вашій валюті відображення',
+  'display.row.notConverted': 'Не перераховано',
+  'display.alert.title': 'Деякі суми не перераховано',
+  'display.alert.body':
+    'Для цих пар валют курс не записано, тому суми залишаються у валюті бюджету:',
+  'display.alert.pair': '{from} у {to} на {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

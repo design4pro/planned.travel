@@ -29,12 +29,14 @@ export interface ObjectStore {
   delete: (keys: string | Array<string>) => Promise<void>
   get?: (key: string) => Promise<{
     body: ReadableStream | null
-    httpMetadata?: { contentType?: string }
+    httpMetadata?: { contentType?: string; contentDisposition?: string }
   } | null>
   put?: (
     key: string,
     value: ReadableStream,
-    options?: { httpMetadata?: { contentType?: string } },
+    options?: {
+      httpMetadata?: { contentType?: string; contentDisposition?: string }
+    },
   ) => Promise<unknown>
 }
 
@@ -119,10 +121,16 @@ export async function copyObject(
     )
   }
 
-  const contentType = source.httpMetadata?.contentType
+  // Both travel together: a copy that kept the type and lost the `attachment` disposition would be
+  // a stored object a public domain could serve inline (see the markup argument in `file-policy.ts`).
+  const { contentType, contentDisposition } = source.httpMetadata ?? {}
+  const httpMetadata = {
+    ...(contentType === undefined ? {} : { contentType }),
+    ...(contentDisposition === undefined ? {} : { contentDisposition }),
+  }
   await store.put(
     targetKey,
     source.body,
-    contentType === undefined ? undefined : { httpMetadata: { contentType } },
+    Object.keys(httpMetadata).length === 0 ? undefined : { httpMetadata },
   )
 }

@@ -34,6 +34,7 @@ import {
   countTripReservationsByStatus,
   createTrip,
   deleteTrip,
+  getFile,
   getTripSpendSummary,
   listTripStorageKeys,
   requireTrip,
@@ -43,6 +44,8 @@ import {
   summariseTripTransports,
   tripMemberUserIds,
   updateTrip,
+  NotFoundError,
+  RepositoryError,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
 import { QUEUE_BATCH_MAX, enqueueTask, enqueueTasks } from '#/server/queue/jobs'
@@ -54,6 +57,7 @@ import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import { MAX_PURGE_KEYS } from '#/server/queue/types'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
+import { coverUrlFor, isCoverContentType } from '#/lib/trip-cover'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
@@ -214,6 +218,13 @@ export const updateTripInputSchema = z
     endDate: dateOrBlankSchema.optional(),
     currency: currencySchema.optional(),
     reminderDays: reminderDaysSchema.optional(),
+    /**
+     * The file that becomes the cover, or `null` to clear it. A file id and never a key or a URL: the
+     * server resolves the file inside the caller's workspace and derives both from it, so a client
+     * cannot point a trip at an object it does not own. Optional like every field of this patch, so a
+     * tab loaded before this shipped keeps saving.
+     */
+    coverFileId: z.string().trim().min(1).max(64).nullable().optional(),
   })
   .refine(datesInOrder, datesOutOfOrder)
 
@@ -570,8 +581,66 @@ async function evictRoom(scope: TenantScope, tripId: string): Promise<void> {
   await closeRoom(scope, tripId)
 }
 
+/** The two columns a cover is: the object it is stored as, and the URL a browser reads it from. */
+export interface TripCoverPatch {
+  readonly coverImageKey: string | null
+  readonly coverImageUrl: string | null
+}
+
+/**
+ * What a cover-file reference turns into: the key and the URL, derived here and never taken from the
+ * client (`null` clears both).
+ *
+ * Exported for the reason {@link readTripForDelete} is: a handler's return value is discarded outside
+ * a Start build, so the derivation is asserted against a real database through this.
+ *
+ * Four refusals, in this order, and the order is the point:
+ *
+ * 1. **The trip, then the role.** An editor or a viewer is refused before the file is looked at, so
+ *    a reference they are not allowed to make cannot be used to probe which file ids exist.
+ * 2. **The file, in the caller's workspace.** `getFile` is tenant-scoped, so an id from another
+ *    workspace is not there - `NotFoundError`, the same answer as an id that never existed.
+ * 3. **The file, on this trip.** One from another trip of the same workspace is refused alike: a
+ *    cover is served to every reader of the trip, and a file attached to a private trip must not be
+ *    published to another by naming it.
+ * 4. **An image the cover route will serve.** `isCoverContentType` is the route's own list.
+ *
+ * `origin` is the configured app origin, passed in because reading it reaches `cloudflare:workers`.
+ */
+export async function coverPatchFor(
+  scope: TenantScope,
+  tripId: string,
+  fileId: string | null,
+  origin: string,
+): Promise<TripCoverPatch> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, ['owner'])
+
+  if (fileId === null) {
+    return { coverImageKey: null, coverImageUrl: null }
+  }
+
+  const file = await getFile(scope, fileId)
+  if (file === null || file.tripId !== tripId) {
+    throw new NotFoundError('file', fileId)
+  }
+  if (!isCoverContentType(file.contentType)) {
+    throw new RepositoryError(
+      'That file is not an image a cover can use.',
+      'COVER_FILE_REFUSED',
+    )
+  }
+  return {
+    coverImageKey: file.storageKey,
+    coverImageUrl: coverUrlFor(origin, tripId, file.id),
+  }
+}
+
 /**
  * Edits a trip's metadata. Owner only, decided in the repository.
+ *
+ * A `coverFileId` makes the file the cover (`null` clears it) through {@link coverPatchFor}, which
+ * derives the key and the URL itself.
  *
  * The day run follows the dates without anything here arranging it: `updateTrip` reconciles it
  * through `syncTripDays` when the range moves, which is why the edit path needs no day handling of
@@ -581,12 +650,23 @@ export const updateTripFn = createServerFn({ method: 'POST' })
   .validator(updateTripInputSchema)
   .handler(async ({ data }): Promise<{ readonly tripId: string }> => {
     const scope = await appScope()
-    const { tripId, ...patch } = data
+    const { tripId, coverFileId, ...patch } = data
 
     // Read before the write, for one reason: the year a trip *leaves* has to be recomputed as well as
     // the one it arrives in, and only the row as it stood knows which year that was.
     const before = await requireTrip(scope, tripId)
-    const trip = await updateTrip(scope, tripId, patch)
+    const cover =
+      coverFileId === undefined
+        ? {}
+        : await coverPatchFor(
+            scope,
+            tripId,
+            coverFileId,
+            // At call time: `#/server/auth/env` reaches `cloudflare:workers`, which a route
+            // module's static graph must not (see `taskQueue` above).
+            (await import('#/server/auth/env')).appUrl(),
+          )
+    const trip = await updateTrip(scope, tripId, { ...patch, ...cover })
 
     await enqueueTravelStats(
       scope,

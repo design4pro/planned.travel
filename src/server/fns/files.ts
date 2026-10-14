@@ -18,18 +18,25 @@ import { z } from 'zod'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { newId } from '#/server/db/schema'
 import {
+  clearTripCoverIfKey,
   deleteFile,
   getFile,
   getStorageUsage,
   recordFile,
+  requireFileForWrite,
   requireTrip,
+  requireTripForFileWrite,
   resolveQuotas,
+  TripArchivedError,
+  TripRoleError,
   updateFile,
 } from '#/server/repos'
 import { appScope, filesBucket, mirrorToRoom, orNull, patch } from './context'
 import {
   FILE_KIND_VALUES,
+  attachmentHeaders,
   checkUpload,
+  contentDispositionFor,
   defaultKindFor,
   isFileKind,
   resolveContentType,
@@ -37,6 +44,7 @@ import {
   storageKeyFor,
 } from './file-policy'
 
+import type { Trip } from '#/server/db/types'
 import type { FileKind } from './file-policy'
 
 /* ------------------------------------------------------------------ shapes */
@@ -117,7 +125,21 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<Response> => {
     const request = readUpload(data)
     const scope = await appScope()
-    const trip = await requireTrip(scope, request.tripId)
+    // Before the quota reads and the bucket write: a refused caller must not spend workspace
+    // storage. The two authored refusals go back as the body the uploader renders; anything else,
+    // `NotFoundError` first, propagates so the existence of a trip the caller cannot see stays hidden.
+    let trip: Trip
+    try {
+      trip = await requireTripForFileWrite(scope, request.tripId)
+    } catch (cause) {
+      if (
+        cause instanceof TripArchivedError ||
+        cause instanceof TripRoleError
+      ) {
+        return refuse(cause.code, cause.message)
+      }
+      throw cause
+    }
 
     const filename = sanitiseFilename(request.file.name)
     const contentType = resolveContentType(filename, request.file.type)
@@ -159,7 +181,7 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
     await bucket.put(storageKey, request.file.stream(), {
       httpMetadata: {
         contentType,
-        contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        contentDisposition: contentDispositionFor(filename),
       },
       customMetadata: {
         organizationId: scope.ctx.organizationId,
@@ -243,7 +265,7 @@ export const updateTripFileFn = createServerFn({ method: 'POST' })
     await requireTrip(scope, data.tripId)
 
     const filename = sanitiseFilename(data.filename)
-    const row = await updateFile(scope, data.fileId, {
+    const row = await updateFile(scope, data.tripId, data.fileId, {
       filename,
       kind: data.kind,
       description: orNull(data.description),
@@ -268,8 +290,15 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
 
-    const row = await getFile(scope, data.fileId)
-    const storageKey = await deleteFile(scope, data.fileId)
+    // The guards come first, on the trip the stored row names: the cover clear below is a write, and
+    // a viewer, an archived trip or a file of another trip must not reach it.
+    const row = await requireFileForWrite(scope, data.tripId, data.fileId)
+    // A trip's cover is one of its files, and a deleted file must not leave the tile pointing at
+    // bytes that are gone. Cleared on the trip the *file row* names, where the cover is that very
+    // object - and before the bucket delete, by a write that is open to every role, so an editor's
+    // delete cannot fail halfway with the object already removed.
+    await clearTripCoverIfKey(scope, row.tripId, row.storageKey)
+    const storageKey = await deleteFile(scope, data.tripId, data.fileId)
     await filesBucket().delete(storageKey)
 
     await mirrorToRoom(scope, data.tripId, [
@@ -285,8 +314,8 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
       entityId: data.fileId,
       metadata: {
         tripId: data.tripId,
-        filename: row?.filename ?? null,
-        sizeBytes: row?.sizeBytes ?? null,
+        filename: row.filename,
+        sizeBytes: row.sizeBytes,
       },
     })
     return { deleted: true }
@@ -329,13 +358,5 @@ export const downloadTripFileFn = createServerFn({ method: 'GET' })
       )
     }
 
-    return new Response(object.body, {
-      headers: {
-        'content-type': row.contentType,
-        'content-length': String(row.sizeBytes),
-        'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(row.filename)}`,
-        // Attachments are private to a workspace; nothing may hold a copy.
-        'cache-control': 'private, no-store',
-      },
-    })
+    return new Response(object.body, { headers: attachmentHeaders(row) })
   })

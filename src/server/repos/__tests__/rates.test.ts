@@ -15,7 +15,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { NotFoundError } from '../context'
 import { createExpense, createSettlement } from '../expenses'
-import { findLatestFrozenRate, resolveRate } from '../rates'
+import { eq } from 'drizzle-orm'
+import { userSettings } from '#/server/db/schema'
+import {
+  findLatestFrozenRate,
+  getDisplayCurrency,
+  listAnsweringCurrencies,
+  resolveDisplayRates,
+  resolveRate,
+  setDisplayCurrency,
+} from '../rates'
 import { addTripMember, createTrip, updateTrip } from '../trips'
 import { captureError, createHarness, subscribeTenant } from './harness'
 import type { RateSource } from '../rates'
@@ -50,7 +59,10 @@ describe('the rate lookup', () => {
     })
   }
 
-  /** A payment made in `from` on a trip kept in `to`, with the rate frozen on the row. */
+  /**
+   * A payment made in `from` on a trip kept in `to`. A payment's rate is derived from its amount
+   * pair (#843), so the paid figure is the source figure times `rate`.
+   */
   async function paymentAt(
     trip: string,
     settledOn: string,
@@ -428,6 +440,234 @@ describe('the rate lookup', () => {
       expect(source).not.toMatch(
         /\b(?:resolveRate|findLatestFrozenRate|RateSource)\b/,
       )
+    })
+  })
+  describe('the reader’s display currency', () => {
+    async function storedRow() {
+      const rows = await harness.db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, ownerId))
+      return rows
+    }
+
+    it('reads null for a member who has never had a settings row', async () => {
+      expect(await getDisplayCurrency(tenant.scope, ownerId)).toBeNull()
+      expect(await storedRow()).toHaveLength(0)
+    })
+
+    it('round-trips a code and round-trips null, in both directions', async () => {
+      await setDisplayCurrency(tenant.scope, 'GBP')
+      expect(await getDisplayCurrency(tenant.scope, ownerId)).toBe('GBP')
+
+      await setDisplayCurrency(tenant.scope, 'USD')
+      expect(await getDisplayCurrency(tenant.scope, ownerId)).toBe('USD')
+
+      // Writing null after a code restores per-trip rather than leaving the code behind.
+      await setDisplayCurrency(tenant.scope, null)
+      expect(await getDisplayCurrency(tenant.scope, ownerId)).toBeNull()
+
+      await setDisplayCurrency(tenant.scope, 'GBP')
+      expect(await getDisplayCurrency(tenant.scope, ownerId)).toBe('GBP')
+    })
+
+    it('writes the display-currency column and nothing else on the row', async () => {
+      await setDisplayCurrency(tenant.scope, null)
+      const [before] = await storedRow()
+      await setDisplayCurrency(tenant.scope, 'GBP')
+      const [after] = await storedRow()
+
+      expect(after?.displayCurrency).toBe('GBP')
+      expect({ ...after, displayCurrency: null, updatedAt: null }).toEqual({
+        ...before,
+        displayCurrency: null,
+        updatedAt: null,
+      })
+      expect(after?.currency).toBe(before?.currency)
+    })
+
+    it('never touches the accounting default the settings screen owns', async () => {
+      await harness.db.insert(userSettings).values({
+        organizationId: tenant.organizationId,
+        userId: ownerId,
+        currency: 'PLN',
+      })
+      await setDisplayCurrency(tenant.scope, 'GBP')
+
+      const [row] = await storedRow()
+      expect(row?.currency).toBe('PLN')
+      expect(row?.displayCurrency).toBe('GBP')
+    })
+
+    it('refuses a code that is not a three-letter upper-case currency', async () => {
+      for (const bad of ['gbp', 'GB', 'GBPX', '', '   ']) {
+        await expect(setDisplayCurrency(tenant.scope, bad)).rejects.toThrow()
+      }
+      expect(await getDisplayCurrency(tenant.scope, ownerId)).toBeNull()
+    })
+
+    it('refuses someone who is not a member of the workspace in scope, and inserts no row', async () => {
+      const stranger = tenant.scopeFor('not-a-member-of-this-workspace')
+
+      const refusal = await captureError(() =>
+        setDisplayCurrency(stranger, 'GBP'),
+      )
+
+      expect(refusal).toBeInstanceOf(NotFoundError)
+      const rows = await harness.db
+        .select()
+        .from(userSettings)
+        .where(eq(userSettings.userId, 'not-a-member-of-this-workspace'))
+      expect(rows).toHaveLength(0)
+    })
+  })
+
+  describe('listAnsweringCurrencies', () => {
+    it('is empty when nothing was frozen toward any code', async () => {
+      expect(await listAnsweringCurrencies(tenant.scope, 'EUR')).toEqual([])
+    })
+
+    it('lists the codes a frozen rate from the given currency answers for, sorted', async () => {
+      // A trip kept in GBP on which a payer paid in EUR, and one kept in USD likewise.
+      const gbp = await createTrip(tenant.scope, {
+        title: 'London',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      const usd = await createTrip(tenant.scope, {
+        title: 'New York',
+        startDate: '2026-06-01',
+        endDate: '2026-06-03',
+        currency: 'USD',
+      })
+      await addTripMember(tenant.scope, {
+        tripId: usd.id,
+        userId: friendId,
+        role: 'viewer',
+      })
+      await expenseAt(gbp.id, '2026-05-02', 0.85, { from: 'EUR', to: 'GBP' })
+      await paymentAt(usd.id, '2026-06-02', 1.08, { from: 'EUR', to: 'USD' })
+
+      expect(await listAnsweringCurrencies(tenant.scope, 'EUR')).toEqual([
+        'GBP',
+        'USD',
+      ])
+    })
+
+    it('does not list a code reached only by the opposite pair', async () => {
+      // The EUR trip froze GBP to EUR; that answers GBP to EUR, never EUR to GBP.
+      await expenseAt(tripId, '2026-04-10', 1.15)
+
+      expect(await listAnsweringCurrencies(tenant.scope, 'EUR')).toEqual([])
+      expect(await listAnsweringCurrencies(tenant.scope, 'GBP')).toEqual([
+        'EUR',
+      ])
+    })
+
+    it('does not list a row with no source figures', async () => {
+      await createExpense(tenant.scope, {
+        tripId,
+        title: 'Paid in euros',
+        amountMinor: 4000,
+        currency: 'EUR',
+        spentOn: '2026-04-12',
+      })
+
+      expect(await listAnsweringCurrencies(tenant.scope, 'EUR')).toEqual([])
+    })
+
+    it('agrees with resolveRate for every code it lists', async () => {
+      const gbp = await createTrip(tenant.scope, {
+        title: 'London',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      await expenseAt(gbp.id, '2026-05-02', 0.85, { from: 'EUR', to: 'GBP' })
+
+      for (const code of await listAnsweringCurrencies(tenant.scope, 'EUR')) {
+        expect(
+          await resolveRate(tenant.scope, {
+            from: 'EUR',
+            to: code,
+            on: '2026-05-10',
+          }),
+        ).not.toBeNull()
+      }
+    })
+
+    it('leaves out a private trip the caller is not on', async () => {
+      const stranger = tenant.scopeFor(await tenant.addUser('Not on the trip'))
+      const gbp = await createTrip(tenant.scope, {
+        title: 'London',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'GBP',
+      })
+      await expenseAt(gbp.id, '2026-05-02', 0.85, { from: 'EUR', to: 'GBP' })
+
+      expect(await listAnsweringCurrencies(stranger, 'EUR')).toEqual([])
+    })
+  })
+
+  describe('resolveDisplayRates', () => {
+    const on = '2026-04-20'
+
+    function counting(answer: number | null): RateSource {
+      return {
+        lookup: vi.fn(async () =>
+          answer === null ? null : { rate: answer, source: 'provider' },
+        ),
+      }
+    }
+
+    it('asks for one rate per distinct currency pair, however many sources repeat', async () => {
+      const injected = counting(1.4)
+
+      const rates = await resolveDisplayRates(
+        tenant.scope,
+        { from: ['EUR', 'EUR', 'EUR', 'JPY', 'JPY'], to: 'GBP', on },
+        injected,
+      )
+
+      expect(injected.lookup).toHaveBeenCalledTimes(2)
+      expect([...rates.keys()].sort()).toEqual(['EUR', 'JPY'])
+    })
+
+    it('asks for nothing when the source is the target, and answers the identity', async () => {
+      const injected = counting(1.4)
+
+      const rates = await resolveDisplayRates(
+        tenant.scope,
+        { from: ['GBP'], to: 'GBP', on },
+        injected,
+      )
+
+      expect(injected.lookup).not.toHaveBeenCalled()
+      expect(rates.get('GBP')).toEqual({ rate: 1, source: 'identity' })
+    })
+
+    it('answers null for a pair nothing answers, never a 1:1', async () => {
+      const rates = await resolveDisplayRates(tenant.scope, {
+        from: ['EUR'],
+        to: 'GBP',
+        on,
+      })
+
+      expect(rates.get('EUR')).toBeNull()
+    })
+
+    it('answers a frozen rate of the ordered pair', async () => {
+      await expenseAt(tripId, '2026-04-10', 1.15)
+
+      const rates = await resolveDisplayRates(tenant.scope, {
+        from: ['GBP'],
+        to: 'EUR',
+        on,
+      })
+
+      expect(rates.get('GBP')).toEqual({ rate: 1.15, source: 'recent' })
     })
   })
 })

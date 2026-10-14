@@ -25,7 +25,12 @@ import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { requirePlaceOfTrip } from './places'
 import { unlinkReservationsFromExpense } from './reservations'
-import { assertTripRole, requireTrip, tripMemberUserIds } from './trips'
+import {
+  assertExpectedTripCurrency,
+  assertTripRole,
+  requireTrip,
+  tripMemberUserIds,
+} from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -96,9 +101,11 @@ export function canWriteMoney(role: string | null): boolean {
 async function requireMoneyTrip(
   scope: TenantScope,
   tripId: string,
+  expectedTripCurrency?: string,
 ): Promise<Trip> {
   const trip = await requireTrip(scope, tripId)
   await assertTripRole(scope, tripId, MONEY_WRITE_ROLES)
+  assertExpectedTripCurrency(trip, expectedTripCurrency)
   return trip
 }
 
@@ -120,8 +127,9 @@ async function requireTripExpense(
   scope: TenantScope,
   tripId: string,
   expenseId: string,
+  expectedTripCurrency?: string,
 ): Promise<Expense> {
-  await requireMoneyTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId, expectedTripCurrency)
   const expense = await expensesRepository.findOne(
     scope,
     allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
@@ -136,8 +144,9 @@ async function requireTripBudgetItem(
   scope: TenantScope,
   tripId: string,
   budgetItemId: string,
+  expectedTripCurrency?: string,
 ): Promise<BudgetItem> {
-  await requireMoneyTrip(scope, tripId)
+  await requireMoneyTrip(scope, tripId, expectedTripCurrency)
   const item = await budgetItemsRepository.findOne(
     scope,
     allOf(eq(budgetItems.id, budgetItemId), eq(budgetItems.tripId, tripId)),
@@ -261,8 +270,16 @@ export const splitParticipantInput = z.object({
 })
 export type SplitParticipantInput = z.infer<typeof splitParticipantInput>
 
+/**
+ * The currency the form was filled in under, sent by the five client-originated money writers. A
+ * trip re-based since (`./trip-currency`) refuses the write with `costs.refusal.tripCurrencyChanged`
+ * before anything is stored; it is a guard, never a column, and is stripped before the row is built.
+ */
+const expectedTripCurrency = currencySchema.optional()
+
 export const createBudgetItemInput = z.object({
   tripId: idSchema,
+  expectedTripCurrency,
   category: categorySchema.optional(),
   name: titleSchema,
   plannedAmountMinor: minorAmountSchema.optional(),
@@ -275,6 +292,7 @@ export const createBudgetItemInput = z.object({
 export type CreateBudgetItemInput = z.infer<typeof createBudgetItemInput>
 
 export const updateBudgetItemInput = z.object({
+  expectedTripCurrency,
   category: categorySchema.optional(),
   name: titleSchema.optional(),
   plannedAmountMinor: minorAmountSchema.optional(),
@@ -298,6 +316,7 @@ const sourceAmountFields = {
 }
 
 const expenseFields = {
+  expectedTripCurrency,
   dayId: idSchema.nullish(),
   placeId: idSchema.nullish(),
   budgetItemId: idSchema.nullish(),
@@ -345,6 +364,7 @@ export type UpdateExpenseInput = z.infer<typeof updateExpenseInput>
  */
 export const createSettlementInput = z.strictObject({
   tripId: idSchema,
+  expectedTripCurrency,
   fromUserId: idSchema,
   toUserId: idSchema,
   amountMinor: minorAmountSchema,
@@ -458,8 +478,9 @@ export async function createBudgetItem(
   scope: TenantScope,
   input: CreateBudgetItemInput,
 ): Promise<BudgetItem> {
-  const values = createBudgetItemInput.parse(input)
-  await requireMoneyTrip(scope, values.tripId)
+  const { expectedTripCurrency: expected, ...values } =
+    createBudgetItemInput.parse(input)
+  await requireMoneyTrip(scope, values.tripId, expected)
   return budgetItemsRepository.insert(scope, values)
 }
 
@@ -469,11 +490,13 @@ export async function updateBudgetItem(
   budgetItemId: string,
   input: UpdateBudgetItemInput,
 ): Promise<BudgetItem> {
-  await requireTripBudgetItem(scope, tripId, budgetItemId)
+  const { expectedTripCurrency: expected, ...patch } =
+    updateBudgetItemInput.parse(input)
+  await requireTripBudgetItem(scope, tripId, budgetItemId, expected)
   return budgetItemsRepository.requireUpdate(
     scope,
     budgetItemId,
-    definedOnly(updateBudgetItemInput.parse(input)),
+    definedOnly(patch),
   )
 }
 
@@ -538,8 +561,12 @@ export async function createExpense(
   scope: TenantScope,
   input: CreateExpenseInput,
 ): Promise<ExpenseWithShares> {
-  const { participants, ...values } = createExpenseInput.parse(input)
-  await requireMoneyTrip(scope, values.tripId)
+  const {
+    participants,
+    expectedTripCurrency: expected,
+    ...values
+  } = createExpenseInput.parse(input)
+  await requireMoneyTrip(scope, values.tripId, expected)
   if (values.dayId) {
     await requireTripDay(scope, values.tripId, values.dayId)
   }
@@ -576,8 +603,12 @@ export async function updateExpense(
   expenseId: string,
   input: UpdateExpenseInput,
 ): Promise<ExpenseWithShares> {
-  const { participants, ...patch } = updateExpenseInput.parse(input)
-  const existing = await requireTripExpense(scope, tripId, expenseId)
+  const {
+    participants,
+    expectedTripCurrency: expected,
+    ...patch
+  } = updateExpenseInput.parse(input)
+  const existing = await requireTripExpense(scope, tripId, expenseId, expected)
   if (patch.dayId) {
     await requireTripDay(scope, existing.tripId, patch.dayId)
   }
@@ -783,14 +814,18 @@ export async function createSettlement(
   scope: TenantScope,
   input: CreateSettlementInput,
 ): Promise<Settlement> {
-  const { currency, ...values } = createSettlementInput.parse(input)
+  const {
+    currency,
+    expectedTripCurrency: expected,
+    ...values
+  } = createSettlementInput.parse(input)
   if (values.fromUserId === values.toUserId) {
     throw new RepositoryError(
       'A settlement needs two different people.',
       'INVALID_SETTLEMENT',
     )
   }
-  const trip = await requireMoneyTrip(scope, values.tripId)
+  const trip = await requireMoneyTrip(scope, values.tripId, expected)
   if (currency !== undefined && currency !== trip.currency) {
     throw new RepositoryError(
       'A settlement is recorded in the trip’s own currency.',

@@ -20,6 +20,7 @@ import { Alert, Button, Card, EmptyState } from '#/components/ui'
 import {
   ConfirmDeleteDialog,
   CostsToolbar,
+  DisplayCurrencyMenu,
   ExpenseDialog,
   PaymentDialog,
   csvFilename,
@@ -81,8 +82,15 @@ export function CostsScreen({
   const locale = useLocale()
   const t = useTranslate()
   const { trip } = useTripHeader()
-  const { snapshot, addExpense, editExpense, removeExpense, addPayment } =
-    useCostsActions(data)
+  const {
+    snapshot,
+    addExpense,
+    editExpense,
+    removeExpense,
+    addPayment,
+    setDisplay,
+    savingDisplay,
+  } = useCostsActions(data)
 
   const [session, setSession] = useState<Session>({ kind: 'none' })
   const [open, setOpen] = useState(false)
@@ -218,12 +226,20 @@ export function CostsScreen({
         rows: visible,
         people: data.people,
         viewerUserId: data.viewerUserId,
+        display: data.displayCurrency,
       }),
     )
     toast.success('Export ready', {
       description: `${pluralise(visible.length, 'expense')} written to CSV.`,
     })
-  }, [data.people, data.today, data.viewerUserId, trip.title, visible])
+  }, [
+    data.displayCurrency,
+    data.people,
+    data.today,
+    data.viewerUserId,
+    trip.title,
+    visible,
+  ])
 
   const settle = useCallback(
     (suggestion: CostsSuggestion): void => {
@@ -328,6 +344,28 @@ export function CostsScreen({
           </Alert>
         )}
 
+        {data.unconverted.length === 0 ? null : (
+          <Alert
+            tone="warning"
+            size="sm"
+            title={t('costs.display.alert.title')}
+            data-part="display-currency-alert"
+          >
+            <p>{t('costs.display.alert.body')}</p>
+            <ul className="mt-1 list-disc ps-5">
+              {data.unconverted.map((pair) => (
+                <li key={`${pair.from}-${pair.to}-${pair.on}`}>
+                  {t('costs.display.alert.pair', {
+                    from: pair.from,
+                    to: pair.to,
+                    date: formatDayShort(pair.on, locale),
+                  })}
+                </li>
+              ))}
+            </ul>
+          </Alert>
+        )}
+
         <StatTiles
           snapshot={snapshot}
           totals={totals}
@@ -341,8 +379,21 @@ export function CostsScreen({
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
           <div className="flex min-w-0 flex-col gap-6">
             {/* No rows means nothing to filter, and a bar of empty controls over an
-                empty state is furniture rather than help. */}
-            {snapshot.expenses.length === 0 ? null : (
+                empty state is furniture rather than help. Payments still carry a converted
+                figure, so a trip with only those keeps the one control that governs it. */}
+            {snapshot.expenses.length === 0 ? (
+              snapshot.settlements.length === 0 ? null : (
+                <div className="flex justify-end">
+                  <DisplayCurrencyMenu
+                    display={data.displayCurrency}
+                    choices={data.displayChoices}
+                    budgetCurrency={data.currency}
+                    saving={savingDisplay}
+                    onChange={(code) => void setDisplay(code)}
+                  />
+                </div>
+              )
+            ) : (
               <Card className="py-4">
                 <CostsToolbar
                   filters={filters}
@@ -354,6 +405,10 @@ export function CostsScreen({
                   total={snapshot.expenses.length}
                   shownMinor={visibleMinor}
                   currency={data.currency}
+                  display={data.displayCurrency}
+                  displayChoices={data.displayChoices}
+                  savingDisplay={savingDisplay}
+                  onDisplayChange={(code) => void setDisplay(code)}
                 />
               </Card>
             )}
@@ -387,6 +442,7 @@ export function CostsScreen({
                 people={data.people}
                 viewerUserId={data.viewerUserId}
                 currency={data.currency}
+                display={data.displayCurrency}
                 busyExpenseIds={snapshot.busyExpenseIds}
                 canWrite={data.canWrite}
                 onEdit={openExpense}
@@ -400,6 +456,7 @@ export function CostsScreen({
             people={data.people}
             viewerUserId={data.viewerUserId}
             currency={data.currency}
+            display={data.displayCurrency}
             budgetTargetMinor={data.budgetTargetMinor}
             canWrite={data.canWrite}
             onSettle={settle}
@@ -420,6 +477,7 @@ export function CostsScreen({
           categories={CATEGORY_OPTIONS}
           defaultCategory={defaultCategory}
           today={data.today}
+          suggestedRate={data.suggestedRate}
           onSubmit={(value) =>
             session.row === null
               ? addExpense(value)

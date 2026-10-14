@@ -93,6 +93,8 @@ const messages = {
   'expense.currencyLabel': 'Moneda en la que está el recibo',
   'expense.convertedTo': 'Convertido a {currency}',
   'expense.convertedHint': 'A cuánto salió {from} en {to} en tu extracto.',
+  'expense.convertedSuggested':
+    'Sugerido a partir del tipo de cambio usado en este viaje el {date} ({rate}). Cámbialo para que coincida con tu extracto.',
   'expense.convertedNotANumber': 'Escribe el importe convertido como número.',
   'expense.dateLabel': 'Fecha del gasto',
   'expense.paidByHint':
@@ -192,6 +194,32 @@ const messages = {
     'Todavía no se ha registrado ningún gasto en este viaje. Aparecerán aquí cuando un propietario o un editor los añada.',
   'readOnly.settleEmpty':
     'Ahora mismo no hace falta ninguna transferencia. Cualquier desequilibrio aparecería aquí.',
+  'refusal.rebaseChanged':
+    'El viaje cambió mientras lo confirmabas, así que no se modificó nada. Revisa las cifras nuevas y vuelve a confirmar.',
+  'refusal.tripCurrencyChanged':
+    'La moneda del presupuesto de este viaje ahora es {to}, así que no se guardó. La página se ha actualizado: revisa el importe y vuelve a guardar.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Moneda de visualización',
+  'display.indicator.perTrip': 'Moneda propia',
+  'display.indicator.fixed': 'También en {code}',
+  'display.menu.perTrip': 'Cada viaje en su moneda',
+  'display.menu.workspace': '{code} (predeterminada del espacio)',
+  'display.menu.rateHint': 'Usa un tipo ya registrado en un viaje',
+  'display.menu.currentHint': 'Elegida, pero ningún tipo registrado la cubre',
+  'display.menu.needsLiveRate':
+    'Necesita un tipo en vivo, que aún no está disponible',
+  'display.menu.saving': 'Guardando tu elección',
+  'display.error.title': 'No se guardó la moneda de visualización',
+  'display.error.body':
+    'No se pudo guardar tu elección. Inténtalo de nuevo en un momento.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Unos {amount} {code} en tu moneda de visualización',
+  'display.row.notConverted': 'Sin convertir',
+  'display.alert.title': 'Algunas cifras no están convertidas',
+  'display.alert.body':
+    'No hay tipo registrado para estos pares de monedas, así que esas cifras se quedan en la moneda del presupuesto:',
+  'display.alert.pair': '{from} a {to} el {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

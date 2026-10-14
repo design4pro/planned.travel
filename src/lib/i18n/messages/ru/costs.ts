@@ -96,6 +96,8 @@ const messages = {
   'expense.convertedTo': 'Пересчитано в {currency}',
   'expense.convertedHint':
     'Во сколько {from} обошлось в {to} по вашей выписке.',
+  'expense.convertedSuggested':
+    'Предложено по курсу, использованному в этой поездке ({date}, {rate}). Измените сумму, чтобы она совпадала с вашей выпиской.',
   'expense.convertedNotANumber': 'Введите пересчитанную сумму числом.',
   'expense.dateLabel': 'Дата траты',
   'expense.paidByHint':
@@ -196,6 +198,32 @@ const messages = {
     'В этой поездке пока нет записанных расходов. Они появятся здесь, когда владелец или редактор их добавит.',
   'readOnly.settleEmpty':
     'Сейчас переводы не нужны. Любой дисбаланс появился бы здесь.',
+  'refusal.rebaseChanged':
+    'Поездка изменилась, пока вы подтверждали, поэтому ничего не было изменено. Проверьте новые суммы и подтвердите снова.',
+  'refusal.tripCurrencyChanged':
+    'Валюта бюджета этой поездки теперь {to}, поэтому ничего не сохранено. Страница обновлена: проверьте сумму и сохраните снова.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Валюта отображения',
+  'display.indicator.perTrip': 'Своя валюта',
+  'display.indicator.fixed': 'Также в {code}',
+  'display.menu.perTrip': 'Каждая поездка в своей валюте',
+  'display.menu.workspace': '{code} (по умолчанию в пространстве)',
+  'display.menu.rateHint': 'Использует курс, уже записанный в поездке',
+  'display.menu.currentHint':
+    'Выбрана, но ни один записанный курс её не покрывает',
+  'display.menu.needsLiveRate': 'Нужен текущий курс, который пока недоступен',
+  'display.menu.saving': 'Сохраняем ваш выбор',
+  'display.error.title': 'Валюта отображения не сохранена',
+  'display.error.body':
+    'Не удалось сохранить ваш выбор. Попробуйте ещё раз чуть позже.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Около {amount} {code} в вашей валюте отображения',
+  'display.row.notConverted': 'Не пересчитано',
+  'display.alert.title': 'Некоторые суммы не пересчитаны',
+  'display.alert.body':
+    'Для этих пар валют курс не записан, поэтому суммы остаются в валюте бюджета:',
+  'display.alert.pair': '{from} в {to} на {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

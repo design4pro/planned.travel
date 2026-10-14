@@ -167,6 +167,9 @@ describe('the field set', () => {
   it('renders the owner-only reminder only to an owner', () => {
     mount({ owner: false })
     expect(screen.queryByRole('radiogroup')).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Add a cover image' }),
+    ).toBeNull()
     expect(payload()).not.toHaveProperty('reminderDays')
     cleanup()
     mount()

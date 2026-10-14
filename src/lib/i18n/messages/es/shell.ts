@@ -514,6 +514,22 @@ const messages = {
     'No se pudo crear el viaje. Inténtalo de nuevo en un momento.',
   'newTrip.created': 'Viaje creado',
   'newTrip.createdBody': 'Empieza a poner lugares en el mapa.',
+  'newTrip.coverChoose': 'Añadir imagen de portada',
+  'newTrip.coverChange': 'Cambiar la imagen de portada',
+  'newTrip.coverHint':
+    'Suelta una imagen aquí, pega una o elige un archivo. PNG, JPEG, WebP, AVIF o GIF.',
+  'newTrip.coverChosen': 'Imagen de portada: {name}',
+  'newTrip.coverRemove': 'Quitar la imagen de portada',
+  'newTrip.coverTypeError':
+    '«{name}» no puede ser una imagen de portada. Elige un PNG, JPEG, WebP, AVIF o GIF.',
+  'newTrip.coverSizeError':
+    '«{name}» pesa más de {max}. Elige una imagen más pequeña.',
+  'newTrip.coverUploading': 'Subiendo la imagen de portada',
+  'newTrip.coverFailedTitle': 'No se añadió la imagen de portada',
+  'newTrip.coverFailed':
+    'El viaje se creó, pero no se pudo subir «{name}» como portada.',
+  'newTrip.coverRetry': 'Inténtalo de nuevo',
+  'newTrip.coverContinue': 'Abrir el viaje sin portada',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acciones para {title}',
@@ -541,6 +557,9 @@ const messages = {
   'editTrip.retry': 'Reintentar',
   'editTrip.error':
     'No se pudo guardar el viaje. Inténtalo de nuevo en un momento.',
+  'editTrip.coverFailed':
+    'No se pudo subir «{name}» como portada. Todavía no se ha guardado nada más.',
+  'editTrip.coverContinue': 'Guardar sin la nueva portada',
   'editTrip.currencyLocked':
     'Este viaje ya tiene precios, así que su moneda del presupuesto no se puede cambiar aquí. Vuelve a poner {current} para guardar tus otros cambios.',
   /* ------------------------------ the delete-trip dialog */

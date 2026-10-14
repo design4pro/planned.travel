@@ -670,7 +670,9 @@ async function settle(
 ): Promise<void> {
   await syncReservationExpense(scope, { reservation, trip })
   try {
-    await updateFile(scope, fileId, { reservationId: reservation.id })
+    await updateFile(scope, trip.id, fileId, {
+      reservationId: reservation.id,
+    })
   } catch (cause) {
     log().warn('booking import file not linked', {
       fileId,

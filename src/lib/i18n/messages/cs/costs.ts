@@ -95,6 +95,8 @@ const messages = {
   'expense.currencyLabel': 'Měna, ve které je účtenka vystavená',
   'expense.convertedTo': 'Přepočteno na {currency}',
   'expense.convertedHint': 'Kolik {from} vyšlo v {to} na vašem výpisu.',
+  'expense.convertedSuggested':
+    'Navrženo podle kurzu použitého na této cestě dne {date} ({rate}). Upravte částku tak, aby seděla s vaším výpisem.',
   'expense.convertedNotANumber': 'Zadejte přepočtenou částku jako číslo.',
   'expense.dateLabel': 'Datum výdaje',
   'expense.paidByHint':
@@ -192,6 +194,32 @@ const messages = {
     'Na této cestě zatím nejsou zapsány žádné výdaje. Objeví se tady, jakmile je přidá vlastník nebo editor.',
   'readOnly.settleEmpty':
     'Teď není potřeba žádný převod. Případný nevyrovnaný zůstatek se ukáže tady.',
+  'refusal.rebaseChanged':
+    'Cesta se změnila, zatímco jste potvrzovali, takže se nic nezměnilo. Zkontrolujte nové částky a potvrďte znovu.',
+  'refusal.tripCurrencyChanged':
+    'Měna rozpočtu této cesty je nyní {to}, proto se nic neuložilo. Stránka byla obnovena: zkontrolujte částku a uložte znovu.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Zobrazená měna',
+  'display.indicator.perTrip': 'Vlastní měna',
+  'display.indicator.fixed': 'Také v {code}',
+  'display.menu.perTrip': 'Každá cesta ve své měně',
+  'display.menu.workspace': '{code} (výchozí v pracovním prostoru)',
+  'display.menu.rateHint': 'Použije kurz už uložený u cesty',
+  'display.menu.currentHint': 'Vybraná, ale žádný uložený kurz ji nepokrývá',
+  'display.menu.needsLiveRate':
+    'Vyžaduje aktuální kurz, který zatím není k dispozici',
+  'display.menu.saving': 'Ukládám váš výběr',
+  'display.error.title': 'Zobrazená měna nebyla uložena',
+  'display.error.body':
+    'Váš výběr se nepodařilo uložit. Zkuste to za chvíli znovu.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Přibližně {amount} {code} ve vaší zobrazené měně',
+  'display.row.notConverted': 'Nepřepočteno',
+  'display.alert.title': 'Některé částky nejsou přepočtené',
+  'display.alert.body':
+    'Pro tyto dvojice měn není uložený kurz, proto tyto částky zůstávají v měně rozpočtu:',
+  'display.alert.pair': '{from} na {to} dne {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

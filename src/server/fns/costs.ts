@@ -25,20 +25,27 @@ import {
   canWriteMoney,
   createExpense,
   createSettlement,
+  currencySchema,
   deleteExpense,
   getExpenseWithShares,
+  ensureOrganizationSettings,
+  getDisplayCurrency,
   getMemberBalances,
   getTripSpendSummary,
+  listAnsweringCurrencies,
   listSettlements,
   listTripExpenses,
   listTripMembers,
   listUserProfiles,
   requireTrip,
+  resolveDisplayRates,
+  setDisplayCurrency,
   suggestSettlements,
+  suggestedRatesForTrip,
   tripRoleFor,
   updateExpense,
 } from '#/server/repos'
-import { impliedRate } from '#/lib/money'
+import { convertMinor, impliedRate, resolveDisplayCurrency } from '#/lib/money'
 import { dispatchQuietly } from '#/server/notifications/dispatch'
 import {
   appScope,
@@ -48,8 +55,9 @@ import {
   tombstone,
 } from './context'
 
+import type { DisplayCurrency } from '#/lib/money'
 import type { ExpenseShare, Trip } from '#/server/db/types'
-import type { TenantScope } from '#/server/repos'
+import type { ResolvedRate, TenantScope } from '#/server/repos'
 
 /* -------------------------------------------------------------------------- */
 /* Shapes                                                                     */
@@ -89,6 +97,11 @@ export interface CostsExpense {
   readonly originalAmountMinor: number | null
   readonly originalCurrency: string | null
   readonly exchangeRate: number | null
+  /**
+   * The amount in the reader's display currency, converted once from `amountMinor`. Equal to it in
+   * per-trip mode; `null` in fixed mode when no rate answers - never a 1:1 and never a guess.
+   */
+  readonly convertedMinor: number | null
   readonly spentOn: string
   readonly paidBy: string | null
   readonly splitMethod: string
@@ -111,6 +124,8 @@ export interface CostsSettlement {
   readonly toUserId: string
   readonly amountMinor: number
   readonly currency: string
+  /** As {@link CostsExpense.convertedMinor}. */
+  readonly convertedMinor: number | null
   readonly method: string
   readonly settledOn: string
   readonly note: string | null
@@ -127,6 +142,27 @@ export interface CostsCategoryTotal {
   readonly plannedMinor: number
   readonly spentMinor: number
   readonly expenseCount: number
+}
+
+/** A pair no rate answered for, on the day the figures were wanted. */
+export interface CostsUnconvertedPair {
+  readonly from: string
+  readonly to: string
+  readonly on: string
+}
+
+/** What the display-currency menu may offer, besides "each trip in its own currency". */
+export interface CostsDisplayChoices {
+  /** The workspace's default currency, which the menu names by its code. */
+  readonly workspaceCode: string
+  /** Every code a frozen rate from the budget currency answers for, sorted. */
+  readonly rateCodes: ReadonlyArray<string>
+}
+
+/** The rate this trip last froze for a receipt currency, and the day the row it came from records. */
+export interface CostsSuggestedRate {
+  readonly rate: number
+  readonly observedOn: string
 }
 
 export interface CostsPayload {
@@ -146,12 +182,23 @@ export interface CostsPayload {
   readonly suggestions: ReadonlyArray<CostsSuggestion>
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
+  /** The currency the reader chose to see figures in, resolved against this trip's own. */
+  readonly displayCurrency: DisplayCurrency
+  readonly displayChoices: CostsDisplayChoices
+  /** The pairs the reader's display currency could not be reached for; empty in per-trip mode. */
+  readonly unconverted: ReadonlyArray<CostsUnconvertedPair>
   /**
    * Whether the viewer may add, edit or delete money on this trip. Role only, worked out here from
    * the stored role: the browser never inspects `people[].role` for it, and it is not `canWritePlan`
    * (which also refuses an archived trip) because the money writers do not refuse one.
    */
   readonly canWrite: boolean
+  /**
+   * Per foreign currency this trip's expenses were entered in, the rate the trip last froze for it
+   * against the trip's own currency, which the expense dialog offers as a pre-filled, editable
+   * converted figure. `null` when no such currency has one. Read-only: it feeds no writer.
+   */
+  readonly suggestedRate: Readonly<Record<string, CostsSuggestedRate>> | null
 }
 
 /* -------------------------------------------------------------------------- */
@@ -231,6 +278,16 @@ const deleteExpenseSchema = z.object({
  */
 export const recordPaymentSchema = z.strictObject({
   tripId: tripIdSchema,
+  /**
+   * The trip's currency as the form that sent this was filled in under. Optional, so a tab loaded
+   * before this field existed still validates; a trip re-based since refuses the write.
+   */
+  expectedTripCurrency: z
+    .string()
+    .trim()
+    .length(3)
+    .regex(/^[A-Za-z]{3}$/)
+    .optional(),
   fromUserId: idSchema,
   toUserId: idSchema,
   amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
@@ -246,9 +303,29 @@ export const recordPaymentSchema = z.strictObject({
   note: z.string().trim().max(500).nullable(),
 })
 
+/**
+ * The reader's display currency. A code, or `null` for "each trip in its own currency" - no
+ * reserved code stands for that. Strict and without a user id: the row written is the caller's own.
+ */
+export const setDisplayCurrencySchema = z.strictObject({
+  code: currencySchema.nullable(),
+})
+
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
+
+/** The receipt currencies of the rows that were entered in one other than the trip's own. */
+function foreignCurrencies(
+  rows: ReadonlyArray<{ readonly originalCurrency: string | null }>,
+  tripCurrency: string,
+): Array<string> {
+  return rows.flatMap((row) =>
+    row.originalCurrency === null || row.originalCurrency === tripCurrency
+      ? []
+      : [row.originalCurrency],
+  )
+}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -328,6 +405,14 @@ function toShare(row: ExpenseShare): CostsShare {
 type ExpenseBody = z.infer<typeof expenseBodySchema>
 
 /**
+ * The trip currency the form was filled in under: the currency it sent for the row, which the dialog
+ * always sets to the trip's own. A write that names none (an older tab) is not checked.
+ */
+function expectedCurrencyOf(body: ExpenseBody): string | undefined {
+  return body.currency?.toUpperCase()
+}
+
+/**
  * Form values into the repository's create/update input.
  *
  * A source currency that matches the trip's own is dropped: `original_currency`
@@ -381,6 +466,69 @@ function toRepoInput(
   }
 }
 
+/**
+ * The reader's display currency for one trip, and the conversion into it.
+ *
+ * The preference is the caller's own, read with the caller's own id. In per-trip mode nothing is
+ * converted and no rate is consulted. In fixed mode the rate is asked for once per distinct source
+ * currency - not once per row - and an amount whose pair no rate answers converts to `null`: the
+ * screen then shows the accounting amount, marked as not converted, instead of a 1:1.
+ *
+ * The figure being converted is already netted in the trip's own currency; this changes what it
+ * looks like and stores nothing.
+ */
+async function displayFor(
+  scope: TenantScope,
+  trip: Trip,
+  input: { readonly on: string; readonly currencies: ReadonlyArray<string> },
+): Promise<{
+  readonly currency: DisplayCurrency
+  readonly choices: CostsDisplayChoices
+  readonly unconverted: Array<CostsUnconvertedPair>
+  readonly convert: (minor: number, from: string) => number | null
+}> {
+  const [preference, workspace, rateCodes] = await Promise.all([
+    getDisplayCurrency(scope, scope.ctx.userId),
+    ensureOrganizationSettings(scope),
+    listAnsweringCurrencies(scope, trip.currency),
+  ])
+  const currency = resolveDisplayCurrency({
+    preference,
+    tripCurrency: trip.currency,
+  })
+  const choices = {
+    workspaceCode: workspace.defaultCurrency,
+    rateCodes,
+  }
+
+  if (currency.mode === 'per-trip') {
+    return {
+      currency,
+      choices,
+      unconverted: [],
+      convert: (minor) => minor,
+    }
+  }
+
+  const rates: Map<string, ResolvedRate | null> = await resolveDisplayRates(
+    scope,
+    { from: [...input.currencies], to: currency.code, on: input.on },
+  )
+  return {
+    currency,
+    choices,
+    unconverted: [...rates]
+      .filter(([, answer]) => answer === null)
+      .map(([from]) => ({ from, to: currency.code, on: input.on })),
+    convert: (minor, from) => {
+      const answer = rates.get(from)
+      return answer === undefined || answer === null
+        ? null
+        : convertMinor(minor, answer.rate, from, currency.code)
+    },
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* Read                                                                       */
 /* -------------------------------------------------------------------------- */
@@ -424,14 +572,32 @@ export async function costsPayload(
 
   // The split rows are what make "your share" honest on every line, so they are
   // fetched per expense rather than inferred from the balance aggregate.
-  const withShares = await Promise.all(
-    rows.map((row) => getExpenseWithShares(scope, row.id)),
-  )
+  const [withShares, suggestedRate] = await Promise.all([
+    Promise.all(rows.map((row) => getExpenseWithShares(scope, row.id))),
+    suggestedRatesForTrip(scope, {
+      tripId: trip.id,
+      from: foreignCurrencies(rows, summary.currency),
+      to: summary.currency,
+    }),
+  ])
+
+  const today = todayIso()
+  const display = await displayFor(scope, trip, {
+    on: today,
+    // One entry per distinct currency: the lookup refuses a list longer than it has pairs, and a
+    // busy trip has far more rows than currencies.
+    currencies: [
+      ...new Set([
+        ...withShares.map(({ expense }) => expense.currency),
+        ...settled.map((row) => row.currency),
+      ]),
+    ],
+  })
 
   return {
     tripId: trip.id,
     currency: summary.currency,
-    today: todayIso(),
+    today,
     startDate: trip.startDate,
     endDate: trip.endDate,
     plannedMinor: summary.plannedMinor,
@@ -446,7 +612,11 @@ export async function costsPayload(
     })),
     people,
     viewerUserId: scope.ctx.userId,
+    displayCurrency: display.currency,
+    displayChoices: display.choices,
+    unconverted: display.unconverted,
     canWrite: canWriteMoney(role),
+    suggestedRate,
     expenses: withShares.map(({ expense, shares }) => ({
       id: expense.id,
       title: expense.title,
@@ -456,6 +626,7 @@ export async function costsPayload(
       originalAmountMinor: expense.originalAmountMinor,
       originalCurrency: expense.originalCurrency,
       exchangeRate: expense.exchangeRate,
+      convertedMinor: display.convert(expense.amountMinor, expense.currency),
       spentOn: expense.spentOn,
       paidBy: expense.paidBy,
       splitMethod: expense.splitMethod,
@@ -476,6 +647,7 @@ export async function costsPayload(
       toUserId: row.toUserId,
       amountMinor: row.amountMinor,
       currency: row.currency,
+      convertedMinor: display.convert(row.amountMinor, row.currency),
       method: row.method,
       settledOn: row.settledOn,
       note: row.note,
@@ -500,6 +672,7 @@ export const createExpenseFn = createServerFn({ method: 'POST' })
     const { expense, shares } = await createExpense(scope, {
       tripId: trip.id,
       ...toRepoInput(data.expense, trip.currency),
+      expectedTripCurrency: expectedCurrencyOf(data.expense),
     })
 
     await mirrorToRoom(scope, trip.id, [
@@ -520,6 +693,7 @@ export const updateExpenseFn = createServerFn({ method: 'POST' })
     const trip = await requireTrip(scope, data.tripId)
     const { expense } = await updateExpense(scope, trip.id, data.expenseId, {
       ...toRepoInput(data.expense, trip.currency),
+      expectedTripCurrency: expectedCurrencyOf(data.expense),
     })
 
     await mirrorToRoom(scope, trip.id, [
@@ -552,6 +726,7 @@ export const recordPaymentFn = createServerFn({ method: 'POST' })
     const trip = await requireTrip(scope, data.tripId)
     const settlement = await createSettlement(scope, {
       tripId: trip.id,
+      expectedTripCurrency: data.expectedTripCurrency?.toUpperCase(),
       fromUserId: data.fromUserId,
       toUserId: data.toUserId,
       amountMinor: data.amountMinor,
@@ -569,3 +744,9 @@ export const recordPaymentFn = createServerFn({ method: 'POST' })
     ])
     return { settlementId: settlement.id }
   })
+
+export const setDisplayCurrencyFn = createServerFn({ method: 'POST' })
+  .validator(setDisplayCurrencySchema)
+  .handler(async ({ data }): Promise<{ readonly code: string | null }> => ({
+    code: await setDisplayCurrency(await appScope(), data.code),
+  }))

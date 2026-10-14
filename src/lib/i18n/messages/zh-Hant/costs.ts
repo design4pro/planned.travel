@@ -84,6 +84,8 @@ const messages = {
   'expense.currencyLabel': '這張收據所用的貨幣',
   'expense.convertedTo': '換算為 {currency}',
   'expense.convertedHint': '你的帳單上 {from} 折成 {to} 是多少。',
+  'expense.convertedSuggested':
+    '依據本次旅行在 {date} 使用的匯率（{rate}）所提供的建議。請改成與你的帳單一致。',
   'expense.convertedNotANumber': '請用數字填寫換算後的金額。',
   'expense.dateLabel': '支出日期',
   'expense.paidByHint': '如果輸入的是還沒人代墊的收據，付款人可以留空。',
@@ -170,6 +172,29 @@ const messages = {
   'readOnly.empty':
     '此行程尚未記錄任何支出。擁有者或編輯者新增後會顯示在這裡。',
   'readOnly.settleEmpty': '目前不需要任何轉帳。若有差額，會顯示在這裡。',
+  'refusal.rebaseChanged':
+    '你確認的過程中行程發生了變化，所以沒有做任何變更。請核對新的金額後再次確認。',
+  'refusal.tripCurrencyChanged':
+    '這趟行程的預算貨幣現在是 {to}，所以沒有儲存。頁面已重新整理，請核對金額後再次儲存。',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': '顯示貨幣',
+  'display.indicator.perTrip': '行程自身貨幣',
+  'display.indicator.fixed': '同時以 {code} 顯示',
+  'display.menu.perTrip': '每個行程使用其自身貨幣',
+  'display.menu.workspace': '{code}（工作區預設）',
+  'display.menu.rateHint': '使用行程中已記錄的匯率',
+  'display.menu.currentHint': '已選擇，但沒有已記錄的匯率適用',
+  'display.menu.needsLiveRate': '需要即時匯率，目前尚無法使用',
+  'display.menu.saving': '正在儲存你的選擇',
+  'display.error.title': '未能儲存顯示貨幣',
+  'display.error.body': '無法儲存你的選擇，請稍後再試。',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': '依你的顯示貨幣約合 {amount} {code}',
+  'display.row.notConverted': '未換算',
+  'display.alert.title': '部分金額尚未換算',
+  'display.alert.body':
+    '這些貨幣對沒有已記錄的匯率，因此相關金額仍以預算貨幣顯示：',
+  'display.alert.pair': '{date} 的 {from} 兌 {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

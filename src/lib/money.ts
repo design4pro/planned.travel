@@ -197,8 +197,17 @@ export function formatExchangeRate(
   if (rate === null || input.originalCurrency === null) {
     return null
   }
-  const figure = formatRate(rate, locale)
-  return `1 ${currencyCode(input.originalCurrency)} = ${figure} ${currencyCode(input.currency)}`
+  return formatRateLine(rate, input.originalCurrency, input.currency, locale)
+}
+
+/** `1 GBP = 195.37 JPY`: a rate stated outright, for one that is known rather than implied. */
+export function formatRateLine(
+  rate: number,
+  from: string,
+  to: string,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  return `1 ${currencyCode(from)} = ${formatRate(rate, locale)} ${currencyCode(to)}`
 }
 
 /**
@@ -268,6 +277,33 @@ export function convertMinor(
     throw new RangeError('The converted amount does not fit a safe integer.')
   }
   return converted
+}
+
+/** What a reader sees a trip's figures in: the trip's own currency, or one code for every trip. */
+export interface DisplayCurrency {
+  readonly mode: 'per-trip' | 'fixed'
+  readonly code: string
+}
+
+/**
+ * The currency a reader's figures are shown in, from the stored preference and the trip's own.
+ *
+ * `null` is "each trip in its own currency" and no code stands in for it, so there is nothing to
+ * mistake for a currency. A stored code equal to the trip's own resolves to `per-trip` as well,
+ * which is what keeps that case from consulting a rate for a conversion that changes nothing.
+ */
+export function resolveDisplayCurrency(input: {
+  readonly preference: string | null
+  readonly tripCurrency: string
+}): DisplayCurrency {
+  const tripCode = currencyCode(input.tripCurrency)
+  if (input.preference === null) {
+    return { mode: 'per-trip', code: tripCode }
+  }
+  const code = input.preference.trim().toUpperCase()
+  return code === tripCode
+    ? { mode: 'per-trip', code: tripCode }
+    : { mode: 'fixed', code }
 }
 
 /* -------------------------------------------------------------------------- */

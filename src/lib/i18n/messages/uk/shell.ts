@@ -533,6 +533,22 @@ const messages = {
   'newTrip.error': 'Поїздку не вдалося створити. Спробуй за хвилину.',
   'newTrip.created': 'Поїздку створено',
   'newTrip.createdBody': 'Почни розставляти місця на карті.',
+  'newTrip.coverChoose': 'Додати обкладинку',
+  'newTrip.coverChange': 'Змінити обкладинку',
+  'newTrip.coverHint':
+    'Перетягни сюди зображення, встав його або обери файл. PNG, JPEG, WebP, AVIF або GIF.',
+  'newTrip.coverChosen': 'Обкладинка: {name}',
+  'newTrip.coverRemove': 'Прибрати обкладинку',
+  'newTrip.coverTypeError':
+    'Файл «{name}» не підходить для обкладинки. Обери PNG, JPEG, WebP, AVIF або GIF.',
+  'newTrip.coverSizeError':
+    'Файл «{name}» більший за {max}. Обери менше зображення.',
+  'newTrip.coverUploading': 'Завантажуємо обкладинку',
+  'newTrip.coverFailedTitle': 'Обкладинку не додано',
+  'newTrip.coverFailed':
+    'Поїздку створено, але файл «{name}» не вдалося завантажити як обкладинку.',
+  'newTrip.coverRetry': 'Спробувати ще раз',
+  'newTrip.coverContinue': 'Відкрити поїздку без обкладинки',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Дії для «{title}»',
@@ -559,6 +575,9 @@ const messages = {
   'editTrip.errorTitle': 'Це не збереглося',
   'editTrip.retry': 'Спробувати ще раз',
   'editTrip.error': 'Не вдалося зберегти поїздку. Спробуйте ще раз за мить.',
+  'editTrip.coverFailed':
+    'Файл «{name}» не вдалося завантажити як обкладинку. Більше нічого ще не збережено.',
+  'editTrip.coverContinue': 'Зберегти без нової обкладинки',
   'editTrip.currencyLocked':
     'У цій поїздці вже є ціни, тому валюту бюджету тут змінити не можна. Поверніть {current}, щоб зберегти решту змін.',
   /* ------------------------------ the delete-trip dialog */

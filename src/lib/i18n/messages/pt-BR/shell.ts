@@ -511,6 +511,22 @@ const messages = {
     'Não foi possível criar a viagem. Tente de novo em um instante.',
   'newTrip.created': 'Viagem criada',
   'newTrip.createdBody': 'Comece a marcar lugares no mapa.',
+  'newTrip.coverChoose': 'Adicionar imagem de capa',
+  'newTrip.coverChange': 'Trocar a imagem de capa',
+  'newTrip.coverHint':
+    'Solte uma imagem aqui, cole uma ou escolha um arquivo. PNG, JPEG, WebP, AVIF ou GIF.',
+  'newTrip.coverChosen': 'Imagem de capa: {name}',
+  'newTrip.coverRemove': 'Remover a imagem de capa',
+  'newTrip.coverTypeError':
+    '“{name}” não pode ser uma imagem de capa. Escolha um PNG, JPEG, WebP, AVIF ou GIF.',
+  'newTrip.coverSizeError':
+    '“{name}” é maior que {max}. Escolha uma imagem menor.',
+  'newTrip.coverUploading': 'Enviando a imagem de capa',
+  'newTrip.coverFailedTitle': 'A imagem de capa não foi adicionada',
+  'newTrip.coverFailed':
+    'A viagem foi criada, mas não foi possível enviar “{name}” como capa.',
+  'newTrip.coverRetry': 'Tentar de novo',
+  'newTrip.coverContinue': 'Abrir a viagem sem capa',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ações de {title}',
@@ -538,6 +554,9 @@ const messages = {
   'editTrip.retry': 'Tentar de novo',
   'editTrip.error':
     'Não foi possível salvar a viagem. Tente de novo em instantes.',
+  'editTrip.coverFailed':
+    'Não foi possível enviar “{name}” como capa. Mais nada foi salvo ainda.',
+  'editTrip.coverContinue': 'Salvar sem a nova capa',
   'editTrip.currencyLocked':
     'Esta viagem já tem preços, então a moeda do orçamento não pode ser alterada aqui. Volte para {current} para salvar as outras alterações.',
   /* ------------------------------ the delete-trip dialog */

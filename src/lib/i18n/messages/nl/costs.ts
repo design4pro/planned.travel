@@ -91,6 +91,8 @@ const messages = {
   'expense.currencyLabel': 'Valuta waarin deze bon is opgemaakt',
   'expense.convertedTo': 'Omgerekend naar {currency}',
   'expense.convertedHint': 'Waar {from} op je afschrift in {to} op uitkwam.',
+  'expense.convertedSuggested':
+    'Voorgesteld op basis van de koers die op deze reis op {date} is gebruikt ({rate}). Pas het aan zodat het klopt met je afschrift.',
   'expense.convertedNotANumber': 'Vul het omgerekende bedrag in als getal.',
   'expense.dateLabel': 'Datum van de uitgave',
   'expense.paidByHint':
@@ -187,6 +189,32 @@ const messages = {
     'Er zijn nog geen uitgaven vastgelegd voor deze reis. Ze verschijnen hier zodra een eigenaar of bewerker ze toevoegt.',
   'readOnly.settleEmpty':
     'Er zijn op dit moment geen overboekingen nodig. Een eventueel verschil zou hier verschijnen.',
+  'refusal.rebaseChanged':
+    'De reis is veranderd terwijl je bevestigde, dus er is niets gewijzigd. Controleer de nieuwe bedragen en bevestig opnieuw.',
+  'refusal.tripCurrencyChanged':
+    'De valuta van het budget van deze reis is nu {to}, dus er is niets opgeslagen. De pagina is vernieuwd: controleer het bedrag en sla opnieuw op.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Weergavevaluta',
+  'display.indicator.perTrip': 'Eigen valuta',
+  'display.indicator.fixed': 'Ook in {code}',
+  'display.menu.perTrip': 'Elke reis in zijn eigen valuta',
+  'display.menu.workspace': '{code} (standaard van de werkruimte)',
+  'display.menu.rateHint':
+    'Gebruikt een koers die al op een reis is vastgelegd',
+  'display.menu.currentHint': 'Gekozen, maar geen vastgelegde koers dekt hem',
+  'display.menu.needsLiveRate':
+    'Heeft een actuele koers nodig, die nog niet beschikbaar is',
+  'display.menu.saving': 'Je keuze wordt opgeslagen',
+  'display.error.title': 'De weergavevaluta is niet opgeslagen',
+  'display.error.body':
+    'Je keuze kon niet worden opgeslagen. Probeer het zo opnieuw.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': 'Ongeveer {amount} {code} in je weergavevaluta',
+  'display.row.notConverted': 'Niet omgerekend',
+  'display.alert.title': 'Sommige bedragen zijn niet omgerekend',
+  'display.alert.body':
+    'Voor deze valutaparen is geen koers vastgelegd, dus die bedragen blijven in de budgetvaluta:',
+  'display.alert.pair': '{from} naar {to} op {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

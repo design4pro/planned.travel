@@ -15,11 +15,15 @@ import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { applyOps, optimisticId } from '#/components/costs'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
+import { useTranslate } from '#/lib/i18n'
 import { impliedRate } from '#/lib/money'
 import {
   createExpenseFn,
   deleteExpenseFn,
+  loadCosts,
   recordPaymentFn,
+  setDisplayCurrencyFn,
   updateExpenseFn,
 } from '#/server/fns/costs'
 
@@ -41,6 +45,9 @@ export interface CostsActions {
   ) => Promise<void>
   readonly removeExpense: (expense: CostsExpense) => Promise<void>
   readonly addPayment: (value: PaymentFormValue) => Promise<void>
+  /** Store the reader's display currency (`null` = each trip in its own) and reload the figures. */
+  readonly setDisplay: (code: string | null) => Promise<void>
+  readonly savingDisplay: boolean
 }
 
 /** The form's value as the row the list should show while the write is in flight. */
@@ -48,6 +55,7 @@ function optimisticExpense(
   id: string,
   value: ExpenseFormValue,
   currency: string,
+  display: CostsPayload['displayCurrency'],
 ): CostsExpense {
   return {
     id,
@@ -63,6 +71,7 @@ function optimisticExpense(
       amountMinor: value.amountMinor,
       currency,
     }),
+    convertedMinor: optimisticConverted(value.amountMinor, display),
     spentOn: value.spentOn,
     paidBy: value.paidBy,
     splitMethod: value.splitMethod,
@@ -76,6 +85,19 @@ function optimisticExpense(
   }
 }
 
+/**
+ * A row not yet on the server has no rate behind it, so in fixed mode it is not converted until the
+ * loader answers; in per-trip mode the figure is the amount itself.
+ */
+function optimisticConverted(
+  amountMinor: number,
+  display: CostsPayload['displayCurrency'],
+): number | null {
+  return display.mode === 'per-trip' ? amountMinor : null
+}
+
+const COSTS_ROUTE_ID = '/_app/trips/$tripId/costs'
+
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof Error && error.message.length > 0
     ? error.message
@@ -84,7 +106,9 @@ function reasonOf(error: unknown, fallback: string): string {
 
 export function useCostsActions(payload: CostsPayload): CostsActions {
   const router = useRouter()
+  const t = useTranslate()
   const [ops, setOps] = useState<ReadonlyArray<CostsOp>>([])
+  const [savingDisplay, setSavingDisplay] = useState(false)
 
   const snapshot = useMemo(() => applyOps(payload, ops), [payload, ops])
 
@@ -110,15 +134,40 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         await send()
         await router.invalidate()
       } catch (cause) {
-        toast.error(failure, {
-          description: reasonOf(cause, 'The change was rolled back.'),
-        })
+        if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+          // The refused row must not read as saved while the figures are fetched.
+          drop(op.key)
+          // The trip's current currency is asked for first, on its own: a reload that fails does not
+          // reject, it swaps the screen (and the open dialog with what was typed) for the error
+          // panel, so the screen is only reloaded once the server has answered. The filter keeps the
+          // root loader out; the trip header loader and the `_app` guard still re-run, exactly as
+          // after every successful save. `sync` makes the promise wait for the loader, where a
+          // background reload would resolve while the old figures are still shown.
+          const live = await loadCosts({ data: { tripId: payload.tripId } })
+            .then((fresh) => fresh.currency)
+            .catch(() => null)
+          if (live !== null) {
+            await router.invalidate({
+              sync: true,
+              filter: (match) => match.routeId === COSTS_ROUTE_ID,
+            })
+          }
+          toast.error(
+            live === null || live === payload.currency
+              ? t('costs.expense.saveFailed')
+              : t('costs.refusal.tripCurrencyChanged', { to: live }),
+          )
+        } else {
+          toast.error(failure, {
+            description: reasonOf(cause, 'The change was rolled back.'),
+          })
+        }
         throw cause
       } finally {
         drop(op.key)
       }
     },
-    [drop, router],
+    [drop, payload.currency, payload.tripId, router, t],
   )
 
   const addExpense = useCallback(
@@ -128,7 +177,12 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         {
           kind: 'create',
           key,
-          row: optimisticExpense(key, value, payload.currency),
+          row: optimisticExpense(
+            key,
+            value,
+            payload.currency,
+            payload.displayCurrency,
+          ),
         },
         () =>
           createExpenseFn({
@@ -138,7 +192,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       )
       toast.success('Expense added', { description: value.title })
     },
-    [payload.currency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run],
   )
 
   const editExpense = useCallback(
@@ -149,7 +203,12 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           kind: 'update',
           key,
           previous: expense,
-          row: optimisticExpense(expense.id, value, payload.currency),
+          row: optimisticExpense(
+            expense.id,
+            value,
+            payload.currency,
+            payload.displayCurrency,
+          ),
         },
         () =>
           updateExpenseFn({
@@ -163,7 +222,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       )
       toast.success('Expense updated', { description: value.title })
     },
-    [payload.currency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run],
   )
 
   const removeExpense = useCallback(
@@ -195,6 +254,10 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
             toUserId: value.toUserId,
             amountMinor: value.amountMinor,
             currency: payload.currency,
+            convertedMinor: optimisticConverted(
+              value.amountMinor,
+              payload.displayCurrency,
+            ),
             method: value.method,
             settledOn: value.settledOn,
             note: value.note,
@@ -204,6 +267,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           recordPaymentFn({
             data: {
               tripId: payload.tripId,
+              expectedTripCurrency: payload.currency,
               fromUserId: value.fromUserId,
               toUserId: value.toUserId,
               amountMinor: value.amountMinor,
@@ -220,10 +284,35 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         description: 'Both balances are updated.',
       })
     },
-    [payload.currency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run],
   )
 
-  return { snapshot, addExpense, editExpense, removeExpense, addPayment }
+  const setDisplay = useCallback(
+    async (code: string | null): Promise<void> => {
+      setSavingDisplay(true)
+      try {
+        await setDisplayCurrencyFn({ data: { code } })
+        await router.invalidate()
+      } catch {
+        toast.error(t('costs.display.error.title'), {
+          description: t('costs.display.error.body'),
+        })
+      } finally {
+        setSavingDisplay(false)
+      }
+    },
+    [router, t],
+  )
+
+  return {
+    snapshot,
+    addExpense,
+    editExpense,
+    removeExpense,
+    addPayment,
+    setDisplay,
+    savingDisplay,
+  }
 }
 
 /**

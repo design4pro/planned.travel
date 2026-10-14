@@ -636,7 +636,7 @@ export class CurrencyRefusalError extends RepositoryError {
  * tenant-filtered too, but a subquery that forgot either would count a sibling trip's rows, or
  * another workspace's, and a refusal triggered by somebody else's data is a leak of its own.
  */
-function tripHoldsRow(
+export function tripHoldsRow(
   scope: TenantScope,
   table: TenantTable & { readonly tripId: SQLiteColumn },
   tripId: string,
@@ -710,7 +710,7 @@ const CAUSE_DEPTH = 8
  * trips.currency: SQLITE_CONSTRAINT` itself. Matching the sentence along the chain covers both, and
  * matching it to this one column means any other failure of the same statement is rethrown.
  */
-function isCurrencyNotNullFailure(cause: unknown): boolean {
+export function isCurrencyNotNullFailure(cause: unknown): boolean {
   let current: unknown = cause
   for (let depth = 0; depth < CAUSE_DEPTH; depth += 1) {
     if (!(current instanceof Error)) {
@@ -724,6 +724,25 @@ function isCurrencyNotNullFailure(cause: unknown): boolean {
     current = current.cause
   }
   return false
+}
+
+/**
+ * Refuses a money write whose tab believes the trip is in another currency than it now is.
+ *
+ * The five client-originated money writers (`createExpense`, `updateExpense`, `createSettlement`,
+ * `createBudgetItem`, `updateBudgetItem`) take an optional `expectedTripCurrency`: the currency the
+ * form was filled in under. A tab loaded before an owner re-based the trip (`./trip-currency`)
+ * would otherwise save its typed digits into the new currency as if they were already in it. The
+ * check reads the trip the writer has just resolved, so it costs no query; a caller that says
+ * nothing (booking sync, the seed) is not checked. Nothing has been written when this throws.
+ */
+export function assertExpectedTripCurrency(
+  trip: Pick<Trip, 'currency'>,
+  expected: string | undefined,
+): void {
+  if (expected !== undefined && expected !== trip.currency) {
+    throw new CurrencyRefusalError('costs.refusal.tripCurrencyChanged')
+  }
 }
 
 /**
@@ -1714,6 +1733,34 @@ export async function finishTripCopy(
     ...definedOnly(finishTripCopyInput.parse(cover)),
     copyPendingAt: null,
   })
+}
+
+/**
+ * Clears a trip's cover when - and only when - it is the object `storageKey` names.
+ *
+ * Called when a file is deleted, so the tile falls back to the shipped cover art instead of
+ * pointing at bytes that are gone. **Not owner-only, deliberately**: the delete it rides on is open
+ * to an editor, and an owner-only guard here would let an editor's delete fail halfway - the row
+ * removed, the cover still pointing at it. Two conditions are the guard instead: the caller must be
+ * able to read the trip (a workspace member taken off a private trip cannot change it), and the
+ * cover must be that very object, so a trip whose cover is another object, or none, is not touched.
+ * Tenant-scoped like every write here, so a key from another workspace matches nothing.
+ */
+export async function clearTripCoverIfKey(
+  scope: TenantScope,
+  tripId: string,
+  storageKey: string,
+): Promise<boolean> {
+  const rows = await tripsRepository.updateWhere(
+    scope,
+    allOf(
+      eq(trips.id, tripId),
+      eq(trips.coverImageKey, storageKey),
+      readableTripFilter(scope),
+    ),
+    { coverImageKey: null, coverImageUrl: null },
+  )
+  return rows.length > 0
 }
 
 /* -------------------------------------------------------------------------------------------------

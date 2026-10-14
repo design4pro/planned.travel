@@ -180,33 +180,42 @@ export type SelectItemProps = React.ComponentPropsWithoutRef<
 }
 
 export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ className, icon, description, children, ...props }, ref) => (
-    <SelectPrimitive.Item
-      ref={ref}
-      className={cn(menuItemBase, 'pe-8', className)}
-      {...props}
-    >
-      {icon ? (
-        <span
-          className="grid size-4 shrink-0 place-items-center text-ink-4"
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-      ) : null}
-      <span className="min-w-0 flex-1">
-        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-        {description ? (
-          <span className="block truncate text-caption text-ink-4">
-            {description}
+  ({ className, icon, description, children, ...props }, ref) => {
+    // The option is named by its text alone; the second line is its description, which is the
+    // part that says why a choice is unavailable.
+    const descriptionId = React.useId()
+    return (
+      <SelectPrimitive.Item
+        ref={ref}
+        className={cn(menuItemBase, 'pe-8', className)}
+        aria-describedby={description ? descriptionId : undefined}
+        {...props}
+      >
+        {icon ? (
+          <span
+            className="grid size-4 shrink-0 place-items-center text-ink-4"
+            aria-hidden="true"
+          >
+            {icon}
           </span>
         ) : null}
-      </span>
-      <SelectPrimitive.ItemIndicator className="absolute end-2.5 grid place-items-center text-brand">
-        <Check size={14} aria-hidden="true" />
-      </SelectPrimitive.ItemIndicator>
-    </SelectPrimitive.Item>
-  ),
+        <span className="min-w-0 flex-1">
+          <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+          {description ? (
+            <span
+              id={descriptionId}
+              className="block truncate text-caption text-ink-4"
+            >
+              {description}
+            </span>
+          ) : null}
+        </span>
+        <SelectPrimitive.ItemIndicator className="absolute end-2.5 grid place-items-center text-brand">
+          <Check size={14} aria-hidden="true" />
+        </SelectPrimitive.ItemIndicator>
+      </SelectPrimitive.Item>
+    )
+  },
 )
 SelectItem.displayName = 'SelectItem'
 

@@ -50,11 +50,37 @@
  * Nothing in this module reaches a binding, a request or the auth instance. It takes what it needs
  * as arguments, which is what lets `__tests__/session-keys.test.ts` drive it with a KV double whose
  * index key is missing — the exact shape of the failure it exists to close.
+ *
+ * **The walk and the delete moved to `#/server/auth/session-blobs` (#1176)**, because the auth
+ * module's self-service revocation hooks need the same purge and may not import the console layer.
+ * What is left here is the console's own: the bounded list, the index key, and the mapping of the
+ * walk's runaway guard to the console's refusal. The names below are re-exported unchanged.
  */
 
-import { z } from 'zod'
+import {
+  SESSION_PAGE_SIZE,
+  SessionWalkLimitError,
+  purgeSessionBlobs as purgeAllSessionBlobs,
+} from '#/server/auth/session-blobs'
 
 import { ConsoleActionError } from './errors'
+
+import type {
+  SessionBlobPurge,
+  SessionKeyStore,
+  SessionRowPage,
+} from '#/server/auth/session-blobs'
+
+export {
+  SESSION_PAGE_SIZE,
+  SESSION_PURGE_PAGE_LIMIT,
+  sessionTokensFrom,
+} from '#/server/auth/session-blobs'
+export type {
+  SessionBlobPurge,
+  SessionKeyStore,
+  SessionRowPage,
+} from '#/server/auth/session-blobs'
 
 /**
  * Better Auth's per-user session index, whose staleness is the whole problem
@@ -69,16 +95,6 @@ export function activeSessionsIndexKey(userId: string): string {
 }
 
 /**
- * How many session rows one D1 read asks for.
- *
- * Both walks are paged rather than capped at a single read, so an account holding more sessions than
- * one page is walked rather than truncated — a session past a cap that a truncated read never saw is
- * a session a ban leaves live and a revoke-by-id reports as already ended, which is the failure this
- * whole path exists to prevent.
- */
-export const SESSION_PAGE_SIZE = 200
-
-/**
  * Where the *console's session list* stops, and why only that one stops anywhere.
  *
  * This is a display bound and nothing else: a screen showing an account's devices does not need to
@@ -88,32 +104,6 @@ export const SESSION_PAGE_SIZE = 200
  * name afterwards. Three pages.
  */
 export const SESSION_LIST_CEILING = 600
-
-/**
- * A runaway-loop guard on the exhaustive purge, and emphatically not a policy bound.
- *
- * Fifty thousand sessions is far past any subrequest budget a Workers invocation has, so the
- * platform's own limit is what a real overrun hits first — and it hits it *before* the mutation,
- * leaving the account untouched. This exists so a page function that always returns a full page
- * cannot spin for ever, and it throws for the same reason nothing else here truncates.
- */
-export const SESSION_PURGE_PAGE_LIMIT = 250
-
-/**
- * One page of `session` rows, however the caller reads them.
- *
- * A function rather than a handle, so this module holds the paging rule and nothing else:
- * `./bindings` supplies the Better Auth adapter behind it in production, and a test supplies a page
- * function over an array. The rows stay `unknown` because the paging rule does not care what a
- * session row looks like — {@link sessionTokensFrom} is where that is decided.
- *
- * A page function must apply a **stable** order and a **fixed** expiry instant across every call it
- * serves, or offset paging drops rows between pages; `./bindings` does both.
- */
-export type SessionRowPage = (
-  offset: number,
-  limit: number,
-) => Promise<ReadonlyArray<unknown>>
 
 /** The rows one bounded enumeration saw, and whether it saw all of them. */
 export interface SessionEnumeration {
@@ -155,133 +145,34 @@ export async function enumerateSessionRows(
 }
 
 /**
- * A session blob lives under its *raw token* as the KV key — no prefix, no namespace
- * (`internalAdapter.createSession`: `secondaryStorage.set(sessionToken, …)`). So the token read out
- * of D1 is the key, and nothing derives one from the other.
- */
-const sessionRowSchema = z.object({ token: z.string().trim().min(1) })
-
-/**
- * The tokens, out of whatever the database adapter handed back.
- *
- * Validated rather than cast: the rows arrive from Better Auth's adapter as `unknown`, and a
- * column list that silently stopped including `token` would otherwise become "this account had no
- * sessions" — indistinguishable from a correct ban and wrong in the one direction that matters.
- * A row that does not carry a usable token is dropped and counted by the caller through the
- * difference between {@link SessionBlobPurge.enumerated} and the row count.
- */
-export function sessionTokensFrom(
-  rows: ReadonlyArray<unknown>,
-): ReadonlyArray<string> {
-  const tokens: Array<string> = []
-  for (const row of rows) {
-    const parsed = sessionRowSchema.safeParse(row)
-    if (parsed.success) {
-      tokens.push(parsed.data.token)
-    }
-  }
-  return tokens
-}
-
-/** The slice of `KVNamespace` this module uses, so a test can supply the whole of it. */
-export interface SessionKeyStore {
-  delete: (key: string) => Promise<void>
-}
-
-/** What one exhaustive purge reached, and what it could not. */
-export interface SessionBlobPurge {
-  /** Distinct session tokens read from D1 and attempted. */
-  readonly enumerated: number
-  /** Blobs actually removed. */
-  readonly deleted: number
-  /** Blobs whose delete was still rejected after one retry. */
-  readonly failed: number
-  /**
-   * Which keys those were, so a test can name them and a future caller could retry them.
-   *
-   * Never logged and never returned past this directory: a session token *is* the credential, and a
-   * log line is exactly as durable a place to put one as an audit row. The callers here report the
-   * three counts above and nothing else.
-   */
-  readonly failedKeys: ReadonlyArray<string>
-}
-
-async function deleteEach(
-  store: SessionKeyStore,
-  keys: ReadonlyArray<string>,
-): Promise<{ deleted: number; failedKeys: Array<string> }> {
-  const outcomes = await Promise.allSettled(
-    keys.map((key) => store.delete(key)),
-  )
-  const failedKeys = keys.filter(
-    (_key, index) => outcomes[index]?.status === 'rejected',
-  )
-  return { deleted: keys.length - failedKeys.length, failedKeys }
-}
-
-/**
- * Deletes the cached blob of **every** session the account holds, walking D1 to exhaustion.
+ * Deletes the cached blob of **every** session the account holds, walking D1 to exhaustion - the
+ * shared purge, with the walk's runaway guard mapped to the console's refusal.
  *
  * The blob is what `findSession` answers from, so this is the whole of what makes a ban, a session
  * revocation or a password reset take effect on the target's *next request* rather than on its next
  * sign-in. It deletes blobs only; the per-user index key is {@link deleteSessionIndexKey}'s, because
- * the two are needed on different paths — a role change keeps the index (the sessions survive; only
+ * the two are needed on different paths - a role change keeps the index (the sessions survive; only
  * what they say about their user is stale) and a ban does not.
  *
- * Every key is attempted even when an earlier one fails, and the rejections are then retried once
- * as a batch: a KV delete rejects for transient reasons far more often than for permanent ones, and
- * stopping at the first would leave the *rest* of the account's sessions cached for no reason
- * anybody could reconstruct later. What survives the retry is reported by name rather than thrown,
- * because the caller — which has not mutated anything yet — is the one that decides whether to
- * refuse.
- *
- * Deletion happens page by page rather than after the whole walk, so the work is already done for
- * every page that was read even if a later one fails.
+ * A rejected delete is reported, not thrown, because the caller - which has not mutated anything
+ * yet - is the one that decides whether to refuse. Every caller runs it **before** the mutation that
+ * deletes the rows, so a purge that cannot finish leaves the account exactly as it found it.
  */
 export async function purgeSessionBlobs(
   store: SessionKeyStore,
   page: SessionRowPage,
 ): Promise<SessionBlobPurge> {
-  const seen = new Set<string>()
-  const failedKeys: Array<string> = []
-  let offset = 0
-  let deleted = 0
-
-  for (let index = 0; ; index += 1) {
-    if (index >= SESSION_PURGE_PAGE_LIMIT) {
+  try {
+    return await purgeAllSessionBlobs(store, page)
+  } catch (cause) {
+    if (cause instanceof SessionWalkLimitError) {
       throw new ConsoleActionError(
         'target-beyond-cap',
         'That account holds more sessions than one call can clear. Nothing was changed.',
       )
     }
-
-    const rows = await page(offset, SESSION_PAGE_SIZE)
-    const tokens = sessionTokensFrom(rows).filter((token) => {
-      if (seen.has(token)) return false
-      seen.add(token)
-      return true
-    })
-
-    const outcome = await deleteEach(store, tokens)
-    deleted += outcome.deleted
-    failedKeys.push(...outcome.failedKeys)
-
-    if (rows.length < SESSION_PAGE_SIZE) break
-    offset += rows.length
+    throw cause
   }
-
-  if (failedKeys.length > 0) {
-    const retry = await deleteEach(store, failedKeys)
-    deleted += retry.deleted
-    return {
-      enumerated: seen.size,
-      deleted,
-      failed: retry.failedKeys.length,
-      failedKeys: retry.failedKeys,
-    }
-  }
-
-  return { enumerated: seen.size, deleted, failed: 0, failedKeys: [] }
 }
 
 /**
@@ -302,6 +193,10 @@ export async function deleteSessionIndexKey(
   store: SessionKeyStore,
   userId: string,
 ): Promise<boolean> {
-  const outcome = await deleteEach(store, [activeSessionsIndexKey(userId)])
-  return outcome.failedKeys.length === 0
+  try {
+    await store.delete(activeSessionsIndexKey(userId))
+    return true
+  } catch {
+    return false
+  }
 }

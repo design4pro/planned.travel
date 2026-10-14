@@ -84,6 +84,8 @@ const messages = {
   'expense.currencyLabel': '这张收据所用的货币',
   'expense.convertedTo': '换算为 {currency}',
   'expense.convertedHint': '你的账单上 {from} 折成 {to} 是多少。',
+  'expense.convertedSuggested':
+    '根据本次旅行在 {date} 使用的汇率（{rate}）给出的建议。请改成与你的账单一致。',
   'expense.convertedNotANumber': '请用数字填写换算后的金额。',
   'expense.dateLabel': '支出日期',
   'expense.paidByHint': '如果录入的是还没人垫付的收据，付款人可以留空。',
@@ -170,6 +172,29 @@ const messages = {
   'readOnly.empty':
     '此行程还没有记录任何支出。所有者或编辑者添加后会显示在这里。',
   'readOnly.settleEmpty': '目前无需任何转账。如有差额，会显示在这里。',
+  'refusal.rebaseChanged':
+    '你确认的过程中行程发生了变化，所以没有做任何更改。请核对新的金额后再次确认。',
+  'refusal.tripCurrencyChanged':
+    '这趟行程的预算货币现在是 {to}，所以没有保存。页面已刷新，请核对金额后再次保存。',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': '显示货币',
+  'display.indicator.perTrip': '行程自身货币',
+  'display.indicator.fixed': '同时以 {code} 显示',
+  'display.menu.perTrip': '每个行程使用其自身货币',
+  'display.menu.workspace': '{code}（工作区默认）',
+  'display.menu.rateHint': '使用行程中已记录的汇率',
+  'display.menu.currentHint': '已选择，但没有已记录的汇率适用',
+  'display.menu.needsLiveRate': '需要实时汇率，目前尚不可用',
+  'display.menu.saving': '正在保存你的选择',
+  'display.error.title': '未能保存显示货币',
+  'display.error.body': '无法保存你的选择，请稍后再试。',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel': '按你的显示货币约合 {amount} {code}',
+  'display.row.notConverted': '未换算',
+  'display.alert.title': '部分金额尚未换算',
+  'display.alert.body':
+    '这些货币对没有已记录的汇率，因此相关金额仍以预算货币显示：',
+  'display.alert.pair': '{date} 的 {from} 兑 {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

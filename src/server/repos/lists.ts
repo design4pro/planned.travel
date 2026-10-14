@@ -12,12 +12,14 @@ import { z } from 'zod'
 import {
   ITEM_PRIORITIES,
   LIST_KINDS,
+  newId,
   packingItems,
   packingLists,
   packingTemplateItems,
   packingTemplates,
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
+import { boundParametersPerRow, chunkFor, runBatch } from './batch'
 import { requireTrip } from './trips'
 import {
   colourSchema,
@@ -37,6 +39,7 @@ import type {
   PackingTemplateItem,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { BatchStatement } from './batch'
 
 export const packingListsRepository = createTenantRepository(packingLists, 'list')
 export const packingItemsRepository = createTenantRepository(packingItems, 'list item')
@@ -307,26 +310,40 @@ export async function listTemplateItems(
   })
 }
 
+/**
+ * Writes a template and all of its items in one batch, so a failure leaves neither. The raw inserts
+ * stamp the workspace themselves, on the template and on every item; the items go in chunks sized to
+ * D1's bound-parameter ceiling, which a list of 12 or more would exceed in one statement.
+ */
 export async function createTemplate(
   scope: TenantScope,
   input: CreateTemplateInput,
 ): Promise<PackingTemplate> {
   const { items, ...values } = createTemplateInput.parse(input)
-  const template = await packingTemplatesRepository.insert(scope, {
-    ...values,
-    createdBy: scope.ctx.userId,
-  })
-  if (items && items.length > 0) {
-    await packingTemplateItemsRepository.insertMany(
-      scope,
-      items.map((item, index) => ({
-        templateId: template.id,
-        ...item,
-        sortOrder: item.sortOrder ?? index,
-      })),
-    )
+  const organizationId = scope.ctx.organizationId
+  const templateId = newId()
+
+  const statements: Array<BatchStatement> = [
+    scope.db.insert(packingTemplates).values({
+      ...values,
+      id: templateId,
+      organizationId,
+      createdBy: scope.ctx.userId,
+    }),
+  ]
+  const rows = (items ?? []).map((item, index) => ({
+    ...item,
+    templateId,
+    organizationId,
+    sortOrder: item.sortOrder ?? index,
+  }))
+  const size = chunkFor(boundParametersPerRow(packingTemplateItems))
+  for (let start = 0; start < rows.length; start += size) {
+    statements.push(scope.db.insert(packingTemplateItems).values(rows.slice(start, start + size)))
   }
-  return template
+  await runBatch(scope, statements)
+
+  return packingTemplatesRepository.requireById(scope, templateId)
 }
 
 export async function deleteTemplate(scope: TenantScope, templateId: string): Promise<void> {

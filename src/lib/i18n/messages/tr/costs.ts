@@ -92,6 +92,8 @@ const messages = {
   'expense.convertedTo': '{currency} cinsine çevrildi',
   'expense.convertedHint':
     'Ekstrende {from} tutarının {to} cinsinden karşılığı.',
+  'expense.convertedSuggested':
+    'Bu gezide kullanılan kura göre önerildi ({date}, {rate}). Ekstrenle eşleşecek şekilde değiştir.',
   'expense.convertedNotANumber': 'Çevrilen tutarı sayı olarak yaz.',
   'expense.dateLabel': 'Masrafın tarihi',
   'expense.paidByHint':
@@ -187,6 +189,30 @@ const messages = {
     'Bu gezi için henüz harcama kaydedilmedi. Bir sahip ya da düzenleyici ekleyince burada görünür.',
   'readOnly.settleEmpty':
     'Şu an hiçbir transfer gerekmiyor. Olası bir dengesizlik burada görünürdü.',
+  'refusal.rebaseChanged':
+    'Onaylarken gezi değişti, bu yüzden hiçbir şey değiştirilmedi. Yeni tutarları kontrol edin ve yeniden onaylayın.',
+  'refusal.tripCurrencyChanged':
+    'Bu gezinin bütçe para birimi artık {to}, bu yüzden kaydedilmedi. Sayfa yenilendi: tutarı kontrol edin ve yeniden kaydedin.',
+  /* ---------------------------------------- display currency (#844) */
+  'display.label': 'Görüntüleme para birimi',
+  'display.indicator.perTrip': 'Kendi para birimi',
+  'display.indicator.fixed': 'Ayrıca {code} olarak',
+  'display.menu.perTrip': 'Her gezi kendi para biriminde',
+  'display.menu.workspace': '{code} (çalışma alanı varsayılanı)',
+  'display.menu.rateHint': 'Bir gezide kayıtlı kuru kullanır',
+  'display.menu.currentHint': 'Seçili, ancak kayıtlı hiçbir kur onu kapsamıyor',
+  'display.menu.needsLiveRate': 'Henüz mevcut olmayan canlı bir kur gerektirir',
+  'display.menu.saving': 'Seçiminiz kaydediliyor',
+  'display.error.title': 'Görüntüleme para birimi kaydedilmedi',
+  'display.error.body': 'Seçiminiz kaydedilemedi. Birazdan tekrar deneyin.',
+  'display.row.converted': '≈ {amount} {code}',
+  'display.row.convertedLabel':
+    'Görüntüleme para biriminizde yaklaşık {amount} {code}',
+  'display.row.notConverted': 'Çevrilmedi',
+  'display.alert.title': 'Bazı tutarlar çevrilmedi',
+  'display.alert.body':
+    'Bu para birimi çiftleri için kayıtlı kur yok, bu yüzden bu tutarlar bütçe para biriminde kalıyor:',
+  'display.alert.pair': '{date} tarihinde {from} - {to}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

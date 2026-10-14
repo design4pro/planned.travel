@@ -527,9 +527,12 @@ settlement writer.
   it already returns (`costs.ts:369-371`). The conversion is applied once, after netting, exactly as
   the convention above requires, through `convertMinor()` in `src/lib/money.ts`. In `per-trip` mode
   `convertedMinor` equals `amountMinor` and no rate is consulted at all.
-- `loadCosts` also gains `suggestedRate`, the `findLatestFrozenRate` result for the trip's currency
-  against each code the reader has used on this trip, so the dialog can pre-fill without a second
-  round trip. It is nullable and the screen renders correctly when it is `null`.
+- `loadCosts` also gains `suggestedRate`, a map from each foreign currency code this trip's expenses
+  were entered in to `{ rate, observedOn }`, the `findLatestFrozenRate` result for that code against
+  the trip's currency, so the dialog can pre-fill without a second round trip. It is built by
+  `suggestedRatesForTrip` in `rates.ts`, not in `costs.ts`, which `__tests__/rates.test.ts` keeps free
+  of every name of the lookup. It is `null` when no code has a rate, and the screen renders correctly
+  when it is `null`.
 - `recordPaymentFn` stops hard-coding `currency: trip.currency` (`costs.ts:470`) and accepts the
   optional source pair `{ originalAmountMinor, originalCurrency }` — the pair, never a rate, for the
   reason at the top of this section. Its existing mirror is unchanged: it already tells the room the
@@ -650,7 +653,7 @@ calls `loadCosts`. No route file changes, so `pnpm generate-routes` does not run
 alone.** `SimpleSelect` for the currency pickers (the curated `CURRENCY_OPTIONS` list, 32 entries,
 already in `src/lib/money.ts:40`), `Input` for the converted amount, `Field` for
 label/hint/error, `DropdownMenu` for the display-currency menu, `Badge` for the display-currency
-indicator, `Tooltip` for the suggestion's provenance, `Alert` for the fallback notice, `Button` and
+indicator, the `Field` hint for the suggestion's provenance, `Alert` for the fallback notice, `Button` and
 `Spinner` for the submit state. No primitive is filed to `00-foundations.md`, because none of the 42
 shipped modules is missing.
 
@@ -667,10 +670,13 @@ Three surfaces change, and only in the ways listed:
 - **Expense dialog — one addition, no replacement.** When the picked currency differs from the trip's
   and the converted field is still empty, the field is **pre-filled** with the amount implied by
   `findLatestFrozenRate` for that ordered pair, and a quiet `Field` hint names where the figure came
-  from ("from the rate you used on 12 May" — the `observedOn` the repository returned). The value is
-  a plain suggestion in an editable field, not a computed read-only figure: typing over it replaces
-  it, and the existing `impliedRate` derivation then runs on whatever the reader actually left there,
-  unchanged. When there is no prior rate the field stays empty and the dialog behaves exactly as it
+  from ("Suggested from the rate used on this trip on 12 May 2026" — the `observedOn` the repository
+  returned; not "you used", because a co-traveller may have set the rate). The value is a plain
+  suggestion in an editable field, not a computed read-only figure: it follows the amount and the
+  currency until the reader types in the field, the first keystroke ends it for good, clearing the
+  field does not bring it back, and an expense that is already foreign never gets one. Typing over it
+  replaces it, and the existing `impliedRate` derivation then runs on whatever the reader actually
+  left there, unchanged. When there is no prior rate the field stays empty and the dialog behaves exactly as it
   does at HEAD. Both figures already carry `tabular-nums` (`expense-dialog.tsx:313,352`) and keep it.
 - **Payment dialog.** Gains the currency pair the expense dialog already has, in the same shape and
   with the same copy discipline, because a payment in a foreign currency is the same question asked
@@ -680,8 +686,9 @@ Three surfaces change, and only in the ways listed:
   `wiki: Currencies` states the same rule for payments and this is where we honour it.
 - **Toolbar.** A compact display-currency indicator — the code the figures on screen are in — and a
   `DropdownMenu` behind it with the three choices the server section fixes: "Each trip in its own
-  currency" (writes `NULL`), the workspace's default named with its code, and every code this trip
-  has already frozen a rate against. Choosing one calls `setDisplayCurrencyFn` and reloads the
+  currency" (writes `NULL`), the workspace's default named with its code, and every code a frozen
+  rate from the trip's budget currency answers for (the ordered pair is never inverted, `CONTEXT.md`
+  "Frozen rate"), so each enabled choice converts. Choosing one calls `setDisplayCurrencyFn` and reloads the
   payload. Codes that would need a live rate are rendered **disabled with the reason in their
   description**, not hidden — a control that silently omits the thing a reader is looking for is
   worse than one that explains itself. The indicator is the selector

@@ -9,6 +9,11 @@
 # `worker-configuration.d.ts` is deliberately not here: it is generated and then
 # adjusted to avoid circular imports. Binding/variable parity is checked by
 # src/server/__tests__/wrangler-config.test.ts instead of a raw typegen diff.
+#
+# It compares the regenerated files with the git INDEX, so a file regenerated and not yet staged
+# or committed reads as stale. The validation gate runs before `om-open-pr` commits: stage the
+# regenerated file (`git add`) before the gate, or rerun this step after the commit (#939, #1148,
+# #1199, #1221 each hit a red caused only by an unstaged file).
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -26,6 +31,7 @@ pnpm db:generate < /dev/null
 git add --intent-to-add -- drizzle/
 if ! git diff --exit-code -- drizzle/; then
   echo "ERROR: the schema and drizzle/ disagree. Run 'pnpm db:generate' and commit the result." >&2
+  echo "       This check diffs against the git index: a migration you generated but did not 'git add' fails it too." >&2
   exit 1
 fi
 echo "==> spec index"
@@ -37,6 +43,7 @@ pnpm generate-spec-index
 git add --intent-to-add -- .ai/specs/README.md
 if ! git diff --exit-code -- .ai/specs/README.md; then
   echo "ERROR: .ai/specs/README.md is stale. Run 'pnpm generate-spec-index' and commit the result." >&2
+  echo "       This check diffs against the git index: an index you regenerated but did not 'git add' fails it too." >&2
   exit 1
 fi
 

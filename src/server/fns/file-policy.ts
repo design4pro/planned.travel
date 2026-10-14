@@ -9,7 +9,13 @@
  */
 import { formatStorage } from '#/lib/plans'
 
-/** Hard ceiling for one object. R2 would take far more; a trip document will not. */
+/**
+ * Hard ceiling for one object. R2 would take far more; a trip document will not.
+ *
+ * A storage-cost decision, not a technical limit: a larger ceiling doubles the worst case that
+ * every plan's `storage_bytes` quota has to absorb without moving a published number. Changing it
+ * is a pricing change, not an edit.
+ */
 export const MAX_FILE_BYTES = 25 * 1024 * 1024
 
 /** Objects one request may carry, so a stray loop cannot fan out into the bucket. */
@@ -31,10 +37,82 @@ export function isFileKind(value: string): value is FileKind {
 }
 
 /**
+ * Extensions refused whatever media type is claimed: XML-family markup that can carry script.
+ *
+ * Checked before the size and before the allow-list, so a later widening of the allow-list cannot
+ * re-admit one of these.
+ */
+const BLOCKED_EXTENSIONS: ReadonlySet<string> = new Set([
+  'xhtml',
+  'xml',
+  'svgz',
+])
+
+/** Media types refused under any filename, except for {@link XML_EXCEPTION_EXTENSION}. */
+const BLOCKED_CLAIMED_TYPES: ReadonlySet<string> = new Set([
+  'application/xhtml+xml',
+  'application/xml',
+  'text/xml',
+])
+
+/**
+ * The one XML-based format the product stores: a route file. An operating system may label a
+ * `.gpx` as `application/xml`, so that claim is not refused for it. Written here, not implied.
+ */
+const XML_EXCEPTION_EXTENSION = 'gpx'
+
+/**
+ * The two accepted markup types and the only extensions that may carry them.
+ *
+ * For any other extension the extension decides the type instead (a PDF that claims `text/html` is
+ * stored as a PDF), and a file with no extension keeps its claimed type, because the booking import
+ * reads an extensionless stored file by its media type (`IMPORT_READERS_BY_TYPE`).
+ *
+ * **`.html`, `.htm` and `.svg` stay accepted, on purpose and on the same footing.** A hotel's
+ * confirmation page saved from a browser is a format the booking import reads (ADR 0012), through
+ * this same upload operation, and nothing tells an import from a library upload. Refusing them
+ * would delete a shipped capability. A stored-script attack needs a same-origin navigation to the
+ * markup, and this product offers none. Five controls together are the mitigation, and **any one
+ * going away reopens the decision**:
+ *
+ * - (a) the `FILES` bucket is served to a browser only through `downloadTripFileFn` (the
+ *   booking-import queue handler reads it server-side); `grep -rn FILES_PUBLIC_BASE src/` finds
+ *   only its type;
+ * - (b) that response is `content-disposition: attachment`, `cache-control: private, no-store` and
+ *   `x-content-type-options: nosniff` ({@link attachmentHeaders}). This protects a **direct** fetch
+ *   of the URL. It does not protect the in-app download, because `download.ts` reads the response
+ *   into a blob that keeps the stored media type and the app sets no Content-Security-Policy
+ *   header;
+ * - (c) every **uploaded** object (`uploadTripFileFn`) is **stored** with
+ *   `contentDisposition: attachment`, so a public domain would serve it as a download. `trip-copy`
+ *   copies the cover through `copyObject`, which carries the disposition over with the type;
+ * - (d) **no client code gives the user a same-origin object URL typed `text/html` or
+ *   `image/svg+xml`**: `download.ts` re-types a blob of those two types to
+ *   `application/octet-stream` before `URL.createObjectURL`;
+ * - (e) the file preview never shows an `image/svg+xml` file through a same-origin blob or object
+ *   URL: an SVG gets no inline preview, or a sandboxed or rasterised one. "No open-in-new-tab
+ *   button" is not enough, because the browser's own context menu offers "Open image in new tab"
+ *   on any `<img>`.
+ *
+ * **Hand-off.** `wrangler.jsonc` declares `FILES_PUBLIC_BASE: https://files.planned.travel`, and
+ * `docs/plans/13-content-studio.md` plans to serve a public bucket for `cms/` keys. Whether a
+ * custom domain is bound to the `FILES` bucket is not visible from the repository. Before any stage
+ * binds that domain, it must confirm that **every key outside `cms/`** is unreachable through it:
+ * `trips/`, `exports/` (the PDF export stores HTML as `text/html` with no attachment disposition)
+ * and the dead-letter prefix.
+ */
+const BOUND_TYPES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ['text/html', new Set(['html', 'htm'])],
+  ['image/svg+xml', new Set(['svg'])],
+])
+
+/**
  * Accepted media types, each mapped to the kind it defaults to.
  *
  * An allow-list rather than a block-list: the bucket is served back to
  * travellers, so "anything but scripts" is not a policy we can keep correct.
+ * What the list must never re-admit is stated beside it ({@link BLOCKED_EXTENSIONS},
+ * {@link BLOCKED_CLAIMED_TYPES}) and tested.
  */
 const ACCEPTED: ReadonlyMap<string, FileKind> = new Map<string, FileKind>([
   ['application/pdf', 'document'],
@@ -66,6 +144,9 @@ const ACCEPTED: ReadonlyMap<string, FileKind> = new Map<string, FileKind>([
   ['application/gpx+xml', 'map'],
   ['application/json', 'document'],
   ['application/zip', 'other'],
+  // An airline's wallet pass. Most senders label it `application/octet-stream`, so the extension
+  // table below is the path that fires in practice.
+  ['application/vnd.apple.pkpass', 'ticket'],
 ])
 
 /** The `accept` attribute for the file input, so the OS dialog filters too. */
@@ -92,6 +173,7 @@ export const ACCEPT_ATTRIBUTE = [
   '.gpx',
   '.json',
   '.zip',
+  '.pkpass',
 ].join(',')
 
 /** Extensions we can classify when the browser sends no usable media type. */
@@ -117,6 +199,7 @@ const BY_EXTENSION: ReadonlyMap<string, { type: string; kind: FileKind }> =
     ['gpx', { type: 'application/gpx+xml', kind: 'map' }],
     ['json', { type: 'application/json', kind: 'document' }],
     ['zip', { type: 'application/zip', kind: 'other' }],
+    ['pkpass', { type: 'application/vnd.apple.pkpass', kind: 'ticket' }],
   ])
 
 function extensionOf(filename: string): string {
@@ -128,17 +211,44 @@ function extensionOf(filename: string): string {
  * The media type we will store. Browsers hand back `''` or
  * `application/octet-stream` often enough that trusting the header alone would
  * reject perfectly ordinary PDFs, so the extension is the fallback — never the
- * override.
+ * override. The two exceptions are {@link BOUND_TYPES}: `text/html` and `image/svg+xml` are
+ * honoured only for their own extensions.
  */
 export function resolveContentType(
   filename: string,
   reported: string,
 ): string | null {
-  const normalised = reported.split(';')[0]?.trim().toLowerCase() ?? ''
-  if (ACCEPTED.has(normalised)) {
+  const normalised = normaliseType(reported)
+  const extension = extensionOf(filename)
+  const bound = BOUND_TYPES.get(normalised)
+  const claimHolds =
+    bound === undefined || extension === '' || bound.has(extension)
+  if (ACCEPTED.has(normalised) && claimHolds) {
     return normalised
   }
-  return BY_EXTENSION.get(extensionOf(filename))?.type ?? null
+  return BY_EXTENSION.get(extension)?.type ?? null
+}
+
+function normaliseType(reported: string): string {
+  return reported.split(';')[0]?.trim().toLowerCase() ?? ''
+}
+
+/**
+ * Whether the file is XML-family markup the product never stores, whatever else it claims.
+ *
+ * By extension for `.xhtml`, `.xml` and `.svgz`; by claimed media type for `application/xhtml+xml`,
+ * `application/xml` and `text/xml` under any filename, except a `.gpx`. The name is trimmed first,
+ * because the stored name is, and `notes.xml ` must not pass as an unknown extension.
+ */
+function isBlockedType(filename: string, reported: string): boolean {
+  const extension = extensionOf(filename.trimEnd())
+  if (BLOCKED_EXTENSIONS.has(extension)) {
+    return true
+  }
+  return (
+    BLOCKED_CLAIMED_TYPES.has(normaliseType(reported)) &&
+    extension !== XML_EXCEPTION_EXTENSION
+  )
 }
 
 /** The kind a file lands under when the uploader does not pick one. */
@@ -193,6 +303,38 @@ export function sanitiseFilename(filename: string): string {
   return cleaned.length === 0 ? 'attachment' : cleaned
 }
 
+/**
+ * The one `content-disposition` a stored file is served and written under: always an attachment.
+ *
+ * Shared by {@link attachmentHeaders} and by the metadata written when an object is stored, so the
+ * two cannot drift.
+ */
+export function contentDispositionFor(filename: string): string {
+  return `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
+}
+
+/**
+ * The response headers for downloading a stored file.
+ *
+ * `content-type` is the stored media type echoed as it is, never re-derived, so a wallet pass
+ * leaves as `application/vnd.apple.pkpass`. The file is always an attachment, private to the
+ * workspace and uncached, and `nosniff` stops a browser reinterpreting the bytes as another type.
+ */
+export function attachmentHeaders(file: {
+  readonly filename: string
+  readonly contentType: string
+  readonly sizeBytes: number
+}): Record<string, string> {
+  return {
+    'content-type': file.contentType,
+    'content-length': String(file.sizeBytes),
+    'content-disposition': contentDispositionFor(file.filename),
+    // Attachments are private to a workspace; nothing may hold a copy.
+    'cache-control': 'private, no-store',
+    'x-content-type-options': 'nosniff',
+  }
+}
+
 /** Object key inside the `FILES` bucket. Tenant first, so a listing is scoped. */
 export function storageKeyFor(input: {
   readonly organizationId: string
@@ -209,11 +351,14 @@ export function storageKeyFor(input: {
 }
 
 export type UploadRejectionCode =
-  'empty' | 'too-large' | 'unsupported-type' | 'quota'
+  'empty' | 'blocked-type' | 'too-large' | 'unsupported-type' | 'quota'
 
 export interface UploadRejection {
   readonly code: UploadRejectionCode
+  /** English, built here; the words a traveller reads can come from the catalogue by `code`. */
   readonly message: string
+  /** Values a catalogue sentence for this `code` interpolates. */
+  readonly params?: Readonly<Record<string, string | number>>
 }
 
 export interface UploadCandidate {
@@ -237,6 +382,10 @@ export interface StorageBudget {
 /**
  * The one gate. Returns `null` when the file may be stored, or the reason it may
  * not — phrased for a person, because this string is what they read.
+ *
+ * The order is fixed: empty, blocked type, too large, allow-list, quota. A blocked type comes
+ * before the size so an oversized `.xml` is told what it is, and before the allow-list so a later
+ * widening of the list cannot re-admit it.
  */
 export function checkUpload(
   candidate: UploadCandidate,
@@ -246,6 +395,13 @@ export function checkUpload(
     return {
       code: 'empty',
       message: `“${candidate.filename}” is empty, so there is nothing to store.`,
+    }
+  }
+  if (isBlockedType(candidate.filename, candidate.contentType)) {
+    return {
+      code: 'blocked-type',
+      message: `“${candidate.filename}” is a kind of file this workspace does not store.`,
+      params: { name: candidate.filename },
     }
   }
   if (candidate.sizeBytes > MAX_FILE_BYTES) {
