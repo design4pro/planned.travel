@@ -383,6 +383,44 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
     expect(reservations.update).toHaveBeenCalledTimes(1)
   })
 
+  it('locks the form and moves focus to the notice, so a late edit is not lost to "Done"', async () => {
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-3',
+      ledger: 'split-stale',
+    })
+    openEditing(DINNER, vi.fn())
+    submitTheForm()
+
+    const notice = (
+      await screen.findByText('Saved, but the split no longer adds up')
+    ).closest('[role="status"]')
+    // The form is inert (no edit can be typed, none is thrown away); the notice is outside it.
+    expect(document.querySelector('form')?.hasAttribute('inert')).toBe(true)
+    expect(notice?.closest('form')).toBeNull()
+    expect(document.activeElement).toBe(notice)
+  })
+
+  it('shows only the split notice when the retry of a refused ledger write comes back stale', async () => {
+    reservations.update
+      .mockResolvedValueOnce({ reservationId: 'booking-3', ledger: 'failed' })
+      .mockResolvedValueOnce({
+        reservationId: 'booking-3',
+        ledger: 'split-stale',
+      })
+    openEditing(DINNER, vi.fn())
+    submitTheForm()
+    expect(
+      await screen.findByText('Saved, but not added to the costs'),
+    ).not.toBeNull()
+
+    submitTheForm()
+
+    expect(
+      await screen.findByText('Saved, but the split no longer adds up'),
+    ).not.toBeNull()
+    expect(screen.queryByText('Saved, but not added to the costs')).toBeNull()
+  })
+
   it('says the same after a stay is saved', async () => {
     stays.update.mockResolvedValue({
       reservationId: 'booking-1',
