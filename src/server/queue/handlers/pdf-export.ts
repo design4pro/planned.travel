@@ -118,7 +118,7 @@ const PRINT_CSS = `
   html[dir='rtl'] h2 { letter-spacing: 0; }
   .note { color: #6e6d65; margin: 0 0 3mm; }
   table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-  th, td { padding: 2.4mm 0; border-bottom: 1px solid #ece9e3; vertical-align: top; text-align: start; }
+  th, td { padding: 2.4mm 0; padding-inline-end: 3mm; border-bottom: 1px solid #ece9e3; vertical-align: top; text-align: start; }
   th.label { width: 38%; font-weight: 500; }
   td.value { width: 47%; font-variant-numeric: tabular-nums; }
   td.meta { width: 15%; color: #6e6d65; text-align: end; font-variant-numeric: tabular-nums; }
