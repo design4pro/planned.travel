@@ -605,6 +605,34 @@ describe('buildCalendar', () => {
       expect(event).toContain('DTEND:20260410T223000Z')
     })
 
+    it.each([
+      // Lisbon's 08:00 is earlier on the clock than Tokyo's 09:00 but lands the same day.
+      ['Asia/Tokyo', '09:00', 'Europe/Lisbon', '08:00', '20260410T070000Z'],
+      // Tokyo's 03:00 is the next local day: the same date would arrive before the departure.
+      ['Europe/Warsaw', '07:05', 'Asia/Tokyo', '03:00', '20260410T180000Z'],
+    ])(
+      'ends a leg with no arrival date at the first arrival after the departure (%s %s to %s %s)',
+      (fromTimezone, departureTime, toTimezone, arrivalTime, end) => {
+        const event = only(
+          journey({
+            transports: [transport()],
+            legs: [
+              leg({
+                fromTimezone,
+                departureTime,
+                toTimezone,
+                arrivalTime,
+                arrivalDate: null,
+              }),
+            ],
+          }),
+          'leg-leg1@',
+        )
+
+        expect(event).toContain(`DTEND:${end}`)
+      },
+    )
+
     it('is titled from and to, with the service number when it has one, and located at the departure', () => {
       const event = only(
         journey({

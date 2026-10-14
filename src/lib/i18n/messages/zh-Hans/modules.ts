@@ -817,9 +817,11 @@ const messages = {
   'files.calendar.description': '把这次旅行带到你已在使用的日历应用中。',
   'files.calendar.download.action': '下载日历文件 (.ics)',
   'files.calendar.download.hint': '这是行程当前状态的快照，不会自动更新。',
-  'files.calendar.undated': '这次旅行还没有日期，所以只会出现有日期的预订和行程段。',
+  'files.calendar.undated':
+    '这次旅行还没有日期，所以只会出现有日期的预订和行程段。',
   'files.calendar.download.error': '我们无法准备该文件，请重试。',
-  'files.calendar.timesNote': '带时区的行程段在任何地方都显示为同一时刻。其他内容按计划的时钟时间显示，无论你的日历在哪里。',
+  'files.calendar.timesNote':
+    '带时区的行程段在任何地方都显示为同一时刻。其他内容按计划的时钟时间显示，无论你的日历在哪里。',
   'files.drop.active': '松手即可上传',
   'files.reject.blockedType':
     '「{name}」未添加：出于安全考虑，这里不保存 XML 文件和压缩的 SVG 文件。请将其另存为 PDF 或图片，再添加那个文件。',

@@ -877,12 +877,16 @@ const messages = {
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
   'files.calendar.title': 'Takvim',
-  'files.calendar.description': 'Bu geziyi zaten kullandığın takvim uygulamasına taşı.',
+  'files.calendar.description':
+    'Bu geziyi zaten kullandığın takvim uygulamasına taşı.',
   'files.calendar.download.action': 'Takvim dosyasını indir (.ics)',
-  'files.calendar.download.hint': 'Gezinin şu anki halinin bir anlık görüntüsü. Güncellenmez.',
-  'files.calendar.undated': 'Bu gezinin henüz tarihi yok, bu yüzden yalnızca tarihli rezervasyonlar ve yolculuklar görünür.',
+  'files.calendar.download.hint':
+    'Gezinin şu anki halinin bir anlık görüntüsü. Güncellenmez.',
+  'files.calendar.undated':
+    'Bu gezinin henüz tarihi yok, bu yüzden yalnızca tarihli rezervasyonlar ve yolculuklar görünür.',
   'files.calendar.download.error': 'Dosyayı hazırlayamadık. Tekrar dene.',
-  'files.calendar.timesNote': 'Saat dilimi olan yolculuklar her yerde aynı anda görünür. Geri kalan her şey, takvimin nerede olursa olsun planlanan saat değerinde görünür.',
+  'files.calendar.timesNote':
+    'Saat dilimi olan yolculuklar her yerde aynı anda görünür. Geri kalan her şey, takvimin nerede olursa olsun planlanan saat değerinde görünür.',
   'files.drop.active': 'Yüklemek için bırak',
   'files.reject.blockedType':
     '“{name}” eklenmedi: XML ve sıkıştırılmış SVG dosyaları güvenlik nedeniyle burada saklanmaz. Onu PDF veya görsel olarak kaydet ve onun yerine onu ekle.',

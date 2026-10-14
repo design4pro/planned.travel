@@ -6,6 +6,7 @@ import {
   SEEDED_TRIPS,
   tripIdByName,
 } from './helpers/places-and-maps.ts'
+import { THEMES } from './helpers/routes.ts'
 import type { RouteCase } from './helpers/routes.ts'
 import { callsServerFn } from './helpers/server-fn.ts'
 import { settleMutations } from './helpers/settle.ts'
@@ -153,22 +154,35 @@ test.describe('06-S5 — a calendar that keeps up with the trip', () => {
     })
   })
 
-  test('the action is reachable and fits at 360px', async ({ context }) => {
-    const tripId = await tripIdByName(context, LISBON)
+  for (const theme of THEMES) {
+    test(`the action is reachable and fits at 360px, ${theme}`, async ({
+      context,
+    }) => {
+      const tripId = await tripIdByName(context, LISBON)
+      const route = filesRoute(tripId)
+      const page = await context.newPage()
+      try {
+        await page.setViewportSize(PHONE)
+        const report = watchConsole(page, route)
+        await visit(page, route, theme)
 
-    await onRoute(context, filesRoute(tripId), async (page) => {
-      await page.setViewportSize(PHONE)
-      const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
-      await action.scrollIntoViewIfNeeded()
-      await expect(action).toBeVisible()
+        const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
+        await action.scrollIntoViewIfNeeded()
+        await expect(action).toBeVisible()
 
-      const box = await action.boundingBox()
-      expect(box, 'the action is on screen').not.toBeNull()
-      expect((box?.x ?? -1) >= 0).toBe(true)
-      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(PHONE.width)
-      expect(await scrollsSideways(page), 'the page scrolls sideways').toBe(
-        false,
-      )
+        const box = await action.boundingBox()
+        expect(box, 'the action is on screen').not.toBeNull()
+        expect((box?.x ?? -1) >= 0).toBe(true)
+        expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+          PHONE.width,
+        )
+        expect(await scrollsSideways(page), 'the page scrolls sideways').toBe(
+          false,
+        )
+        expect(report().fatal, 'the console stays clean').toEqual([])
+      } finally {
+        await page.close()
+      }
     })
-  })
+  }
 })

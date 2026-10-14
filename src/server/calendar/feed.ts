@@ -256,8 +256,12 @@ const byId = <T extends { readonly id: string }>(
   rows: ReadonlyArray<T>,
 ): Map<string, T> => new Map(rows.map((row) => [row.id, row]))
 
-const compareText = (a: string, b: string): number =>
-  a < b ? -1 : a > b ? 1 : 0
+function compareText(a: string, b: string): number {
+  if (a < b) {
+    return -1
+  }
+  return a > b ? 1 : 0
+}
 
 /* -------------------------------------------------------------------------------------------------
  * One trip's events
@@ -434,12 +438,12 @@ function stopEvent(
   const linked = index.linkedToStop.get(stop.id)
   const adopted = stop.startTime === null ? adoptableFrom(linked) : null
 
-  const start: LocalTime | null =
-    stop.startTime !== null && day.date !== null
-      ? { date: day.date, time: stop.startTime }
-      : adopted === null
-        ? null
-        : reservationStart(adopted)
+  let start: LocalTime | null = null
+  if (stop.startTime !== null && day.date !== null) {
+    start = { date: day.date, time: stop.startTime }
+  } else if (adopted !== null) {
+    start = reservationStart(adopted)
+  }
   if (start === null) {
     return null
   }
@@ -569,6 +573,40 @@ interface JourneyTimes {
   readonly end?: IcsMoment
 }
 
+/** The farthest an arrival with no date of its own is moved past the departure's date. */
+const MAX_ARRIVAL_DAYS_AFTER = 2
+
+/**
+ * The local reading of an arrival that states a time but no date. Across two zones the wall clocks
+ * are not comparable (a 09:00 Tokyo departure lands at 08:00 in Lisbon the same day), so the first
+ * date whose instant falls after the departure's is taken; the wall-clock roll over midnight stays
+ * the answer when either zone is unusable and the event floats anyway.
+ */
+function guessArrival(
+  from: Endpoint,
+  time: string,
+  zone: string | null,
+): LocalTime {
+  const departs =
+    from.zone === null
+      ? null
+      : zonedToUtc(from.local.date, from.local.time, from.zone)
+  if (departs === null || zone === null) {
+    return endAfter(from.local, from.local.date, time)
+  }
+  for (let days = 0; days <= MAX_ARRIVAL_DAYS_AFTER; days++) {
+    const date = addDays(from.local.date, days)
+    const arrives = zonedToUtc(date, time, zone)
+    if (arrives === null) {
+      break
+    }
+    if (arrives.getTime() > departs.getTime()) {
+      return { date, time }
+    }
+  }
+  return endAfter(from.local, from.local.date, time)
+}
+
 /**
  * The start and end of a leg or a transport: UTC instants when every endpoint the event uses has a
  * usable zone, otherwise the same wall-clock readings floating at both ends. A record with a date
@@ -593,14 +631,14 @@ function journeyTimes(
     local: { date: departure.date, time: departure.time },
     zone: departure.zone,
   }
-  // A stated arrival date is the traveller's own; only a guessed one rolls over midnight.
+  // A stated arrival date is the traveller's own; only a guessed one is moved forward.
   const to: Endpoint | null =
     arrival.time === null
       ? null
       : {
           local:
             arrival.date === null
-              ? endAfter(from.local, departure.date, arrival.time)
+              ? guessArrival(from, arrival.time, arrival.zone)
               : { date: arrival.date, time: arrival.time },
           zone: arrival.zone,
         }

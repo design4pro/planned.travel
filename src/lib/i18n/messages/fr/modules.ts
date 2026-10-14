@@ -922,12 +922,18 @@ const messages = {
   'files.action.choose': 'Choisir des fichiers',
   'files.action.upload': 'Envoyer les fichiers',
   'files.calendar.title': 'Calendrier',
-  'files.calendar.description': 'Ajoutez ce voyage à l’application de calendrier que vous utilisez déjà.',
-  'files.calendar.download.action': 'Télécharger le fichier de calendrier (.ics)',
-  'files.calendar.download.hint': 'Un instantané du voyage tel qu’il est maintenant. Il ne se met pas à jour.',
-  'files.calendar.undated': 'Ce voyage n’a pas encore de dates : seuls les réservations et les trajets datés apparaîtront.',
-  'files.calendar.download.error': 'Nous n’avons pas pu préparer le fichier. Réessayez.',
-  'files.calendar.timesNote': 'Les trajets avec fuseau horaire s’affichent au même instant partout. Tout le reste s’affiche à l’heure prévue sur l’horloge, où que soit votre calendrier.',
+  'files.calendar.description':
+    'Ajoutez ce voyage à l’application de calendrier que vous utilisez déjà.',
+  'files.calendar.download.action':
+    'Télécharger le fichier de calendrier (.ics)',
+  'files.calendar.download.hint':
+    'Un instantané du voyage tel qu’il est maintenant. Il ne se met pas à jour.',
+  'files.calendar.undated':
+    'Ce voyage n’a pas encore de dates : seuls les réservations et les trajets datés apparaîtront.',
+  'files.calendar.download.error':
+    'Nous n’avons pas pu préparer le fichier. Réessayez.',
+  'files.calendar.timesNote':
+    'Les trajets avec fuseau horaire s’affichent au même instant partout. Tout le reste s’affiche à l’heure prévue sur l’horloge, où que soit votre calendrier.',
   'files.drop.active': 'Lâche pour envoyer',
   'files.reject.blockedType':
     '« {name} » n’a pas été ajouté : les fichiers XML et SVG compressés ne sont pas conservés ici, par sécurité. Enregistre-le en PDF ou en image et ajoute plutôt cela.',

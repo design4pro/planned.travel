@@ -852,12 +852,17 @@ const messages = {
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
   'files.calendar.title': 'カレンダー',
-  'files.calendar.description': 'この旅行を、いつも使っているカレンダーアプリに取り込めます。',
+  'files.calendar.description':
+    'この旅行を、いつも使っているカレンダーアプリに取り込めます。',
   'files.calendar.download.action': 'カレンダーファイルをダウンロード (.ics)',
-  'files.calendar.download.hint': '現時点の旅行のスナップショットです。自動では更新されません。',
-  'files.calendar.undated': 'この旅行にはまだ日付がないため、日付のある予約と移動だけが表示されます。',
-  'files.calendar.download.error': 'ファイルを準備できませんでした。もう一度お試しください。',
-  'files.calendar.timesNote': 'タイムゾーンのある移動は、世界中どこでも同じ瞬間に表示されます。それ以外は、カレンダーがどこにあっても予定した時刻のまま表示されます。',
+  'files.calendar.download.hint':
+    '現時点の旅行のスナップショットです。自動では更新されません。',
+  'files.calendar.undated':
+    'この旅行にはまだ日付がないため、日付のある予約と移動だけが表示されます。',
+  'files.calendar.download.error':
+    'ファイルを準備できませんでした。もう一度お試しください。',
+  'files.calendar.timesNote':
+    'タイムゾーンのある移動は、世界中どこでも同じ瞬間に表示されます。それ以外は、カレンダーがどこにあっても予定した時刻のまま表示されます。',
   'files.drop.active': 'ドロップしてアップロード',
   'files.reject.blockedType':
     '「{name}」は追加されませんでした。XML ファイルと圧縮された SVG ファイルは、安全のためここには保存されません。PDF か画像として保存し、そちらを追加してください。',

@@ -914,12 +914,17 @@ const messages = {
   'files.action.choose': 'Tria fitxers',
   'files.action.upload': 'Puja els fitxers',
   'files.calendar.title': 'Calendari',
-  'files.calendar.description': 'Porta aquest viatge a l’aplicació de calendari que ja fas servir.',
+  'files.calendar.description':
+    'Porta aquest viatge a l’aplicació de calendari que ja fas servir.',
   'files.calendar.download.action': 'Baixa el fitxer de calendari (.ics)',
-  'files.calendar.download.hint': 'Una instantània del viatge tal com és ara. No s’actualitza.',
-  'files.calendar.undated': 'Aquest viatge encara no té dates, així que només hi apareixeran les reserves i els trajectes amb data.',
-  'files.calendar.download.error': 'No hem pogut preparar el fitxer. Torna-ho a provar.',
-  'files.calendar.timesNote': 'Els trajectes amb fus horari es mostren al mateix moment a tot arreu. La resta es mostra a l’hora prevista, estigui on estigui el teu calendari.',
+  'files.calendar.download.hint':
+    'Una instantània del viatge tal com és ara. No s’actualitza.',
+  'files.calendar.undated':
+    'Aquest viatge encara no té dates, així que només hi apareixeran les reserves i els trajectes amb data.',
+  'files.calendar.download.error':
+    'No hem pogut preparar el fitxer. Torna-ho a provar.',
+  'files.calendar.timesNote':
+    'Els trajectes amb fus horari es mostren al mateix moment a tot arreu. La resta es mostra a l’hora prevista, estigui on estigui el teu calendari.',
   'files.drop.active': 'Deixa-ho anar per pujar',
   'files.reject.blockedType':
     '«{name}» no s’ha afegit: aquí no es desen fitxers XML ni SVG comprimits, per seguretat. Desa’l com a PDF o com a imatge i afegeix això en lloc seu.',

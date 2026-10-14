@@ -880,12 +880,17 @@ const messages = {
   'files.action.choose': 'Pilih berkas',
   'files.action.upload': 'Unggah berkas',
   'files.calendar.title': 'Kalender',
-  'files.calendar.description': 'Bawa perjalanan ini ke aplikasi kalender yang sudah kamu pakai.',
+  'files.calendar.description':
+    'Bawa perjalanan ini ke aplikasi kalender yang sudah kamu pakai.',
   'files.calendar.download.action': 'Unduh berkas kalender (.ics)',
-  'files.calendar.download.hint': 'Cuplikan perjalanan seperti saat ini. Tidak diperbarui otomatis.',
-  'files.calendar.undated': 'Perjalanan ini belum memiliki tanggal, jadi hanya reservasi dan perjalanan bertanggal yang akan muncul.',
-  'files.calendar.download.error': 'Kami tidak dapat menyiapkan berkas. Coba lagi.',
-  'files.calendar.timesNote': 'Perjalanan dengan zona waktu muncul pada saat yang sama di mana pun. Semua yang lain muncul pada jam yang direncanakan, di mana pun kalendermu berada.',
+  'files.calendar.download.hint':
+    'Cuplikan perjalanan seperti saat ini. Tidak diperbarui otomatis.',
+  'files.calendar.undated':
+    'Perjalanan ini belum memiliki tanggal, jadi hanya reservasi dan perjalanan bertanggal yang akan muncul.',
+  'files.calendar.download.error':
+    'Kami tidak dapat menyiapkan berkas. Coba lagi.',
+  'files.calendar.timesNote':
+    'Perjalanan dengan zona waktu muncul pada saat yang sama di mana pun. Semua yang lain muncul pada jam yang direncanakan, di mana pun kalendermu berada.',
   'files.drop.active': 'Lepas untuk mengunggah',
   'files.reject.blockedType':
     '“{name}” tidak ditambahkan: berkas XML dan SVG terkompresi tidak disimpan di sini demi keamanan. Simpan sebagai PDF atau gambar, lalu tambahkan itu sebagai gantinya.',

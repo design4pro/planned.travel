@@ -909,12 +909,17 @@ const messages = {
   'files.action.choose': 'Escolher arquivos',
   'files.action.upload': 'Enviar arquivos',
   'files.calendar.title': 'Calendário',
-  'files.calendar.description': 'Leve esta viagem para o aplicativo de calendário que você já usa.',
+  'files.calendar.description':
+    'Leve esta viagem para o aplicativo de calendário que você já usa.',
   'files.calendar.download.action': 'Baixar arquivo de calendário (.ics)',
-  'files.calendar.download.hint': 'Um retrato da viagem como ela está agora. Ele não é atualizado.',
-  'files.calendar.undated': 'Esta viagem ainda não tem datas, então só aparecerão reservas e trajetos com data.',
-  'files.calendar.download.error': 'Não foi possível preparar o arquivo. Tente novamente.',
-  'files.calendar.timesNote': 'Trajetos com fuso horário aparecem no mesmo momento em qualquer lugar. Todo o resto aparece no horário planejado do relógio, onde quer que esteja o seu calendário.',
+  'files.calendar.download.hint':
+    'Um retrato da viagem como ela está agora. Ele não é atualizado.',
+  'files.calendar.undated':
+    'Esta viagem ainda não tem datas, então só aparecerão reservas e trajetos com data.',
+  'files.calendar.download.error':
+    'Não foi possível preparar o arquivo. Tente novamente.',
+  'files.calendar.timesNote':
+    'Trajetos com fuso horário aparecem no mesmo momento em qualquer lugar. Todo o resto aparece no horário planejado do relógio, onde quer que esteja o seu calendário.',
   'files.drop.active': 'Solte para enviar',
   'files.reject.blockedType':
     '“{name}” não foi adicionado: arquivos XML e SVG compactados não são guardados aqui, por segurança. Salve como PDF ou imagem e adicione isso no lugar.',

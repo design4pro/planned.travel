@@ -913,12 +913,17 @@ const messages = {
   'files.action.choose': 'Elegir archivos',
   'files.action.upload': 'Subir archivos',
   'files.calendar.title': 'Calendario',
-  'files.calendar.description': 'Lleva este viaje a la aplicación de calendario que ya usas.',
+  'files.calendar.description':
+    'Lleva este viaje a la aplicación de calendario que ya usas.',
   'files.calendar.download.action': 'Descargar archivo de calendario (.ics)',
-  'files.calendar.download.hint': 'Una instantánea del viaje tal como está ahora. No se actualiza.',
-  'files.calendar.undated': 'Este viaje aún no tiene fechas, así que solo aparecerán las reservas y los trayectos con fecha.',
-  'files.calendar.download.error': 'No hemos podido preparar el archivo. Inténtalo de nuevo.',
-  'files.calendar.timesNote': 'Los trayectos con zona horaria se muestran en el mismo instante en todas partes. Todo lo demás se muestra a la hora prevista del reloj, esté donde esté tu calendario.',
+  'files.calendar.download.hint':
+    'Una instantánea del viaje tal como está ahora. No se actualiza.',
+  'files.calendar.undated':
+    'Este viaje aún no tiene fechas, así que solo aparecerán las reservas y los trayectos con fecha.',
+  'files.calendar.download.error':
+    'No hemos podido preparar el archivo. Inténtalo de nuevo.',
+  'files.calendar.timesNote':
+    'Los trayectos con zona horaria se muestran en el mismo instante en todas partes. Todo lo demás se muestra a la hora prevista del reloj, esté donde esté tu calendario.',
   'files.drop.active': 'Suelta para subir',
   'files.reject.blockedType':
     '«{name}» no se añadió: aquí no se guardan archivos XML ni SVG comprimidos, por seguridad. Guárdalo como PDF o como imagen y añade eso en su lugar.',

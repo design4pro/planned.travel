@@ -1068,12 +1068,16 @@ const messages = {
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
   'files.calendar.title': 'Calendar',
-  'files.calendar.description': 'Take this trip into the calendar app you already use.',
+  'files.calendar.description':
+    'Take this trip into the calendar app you already use.',
   'files.calendar.download.action': 'Download calendar file (.ics)',
-  'files.calendar.download.hint': 'A snapshot of the trip as it is now. It does not update.',
-  'files.calendar.undated': 'This trip has no dates yet, so only dated reservations and journeys will appear.',
+  'files.calendar.download.hint':
+    'A snapshot of the trip as it is now. It does not update.',
+  'files.calendar.undated':
+    'This trip has no dates yet, so only dated reservations and journeys will appear.',
   'files.calendar.download.error': 'We couldn’t prepare the file. Try again.',
-  'files.calendar.timesNote': 'Journeys with a time zone show at the same moment everywhere. Everything else shows at its planned clock time, wherever your calendar is.',
+  'files.calendar.timesNote':
+    'Journeys with a time zone show at the same moment everywhere. Everything else shows at its planned clock time, wherever your calendar is.',
   'files.drop.active': 'Drop to upload',
   'files.reject.blockedType':
     '“{name}” was not added: XML and compressed SVG files are not stored here, for safety. Save it as a PDF or an image and add that instead.',

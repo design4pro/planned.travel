@@ -922,12 +922,17 @@ const messages = {
   'files.action.choose': 'Wybierz pliki',
   'files.action.upload': 'Wyślij pliki',
   'files.calendar.title': 'Kalendarz',
-  'files.calendar.description': 'Przenieś tę podróż do aplikacji kalendarza, której już używasz.',
+  'files.calendar.description':
+    'Przenieś tę podróż do aplikacji kalendarza, której już używasz.',
   'files.calendar.download.action': 'Pobierz plik kalendarza (.ics)',
-  'files.calendar.download.hint': 'Migawka podróży w obecnym stanie. Nie aktualizuje się.',
-  'files.calendar.undated': 'Ta podróż nie ma jeszcze dat, więc pojawią się tylko rezerwacje i przejazdy z datą.',
-  'files.calendar.download.error': 'Nie udało się przygotować pliku. Spróbuj ponownie.',
-  'files.calendar.timesNote': 'Przejazdy ze strefą czasową pokazują się w tym samym momencie na całym świecie. Reszta pokazuje się o zaplanowanej godzinie zegarowej, gdziekolwiek jest Twój kalendarz.',
+  'files.calendar.download.hint':
+    'Migawka podróży w obecnym stanie. Nie aktualizuje się.',
+  'files.calendar.undated':
+    'Ta podróż nie ma jeszcze dat, więc pojawią się tylko rezerwacje i przejazdy z datą.',
+  'files.calendar.download.error':
+    'Nie udało się przygotować pliku. Spróbuj ponownie.',
+  'files.calendar.timesNote':
+    'Przejazdy ze strefą czasową pokazują się w tym samym momencie na całym świecie. Reszta pokazuje się o zaplanowanej godzinie zegarowej, gdziekolwiek jest Twój kalendarz.',
   'files.drop.active': 'Upuść, aby wysłać',
   'files.reject.blockedType':
     '„{name}” nie został dodany: pliki XML i skompresowane SVG nie są tu przechowywane, ze względów bezpieczeństwa. Zapisz go jako PDF lub obraz i dodaj to zamiast niego.',
