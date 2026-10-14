@@ -58,6 +58,9 @@ const messages = {
   'split.label': 'التقسيم بين',
   'split.everyone': 'الجميع',
   'split.nobody': 'لا أحد',
+  'split.departed': 'غادر الرحلة',
+  'split.departedHint': 'إلغاء تحديد شخص غادر الرحلة يزيل حصته نهائيًا.',
+  'split.includeFor': 'تضمين {name} في هذا التقسيم',
   'split.how': 'كيف يُقسَّم هذا المصروف',
   'split.method.equal': 'بالتساوي',
   'split.method.equalHint':

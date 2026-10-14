@@ -54,6 +54,10 @@ const messages = {
   'split.label': 'Aufteilen unter',
   'split.everyone': 'Alle',
   'split.nobody': 'Niemand',
+  'split.departed': 'Hat die Reise verlassen',
+  'split.departedHint':
+    'Wenn du jemanden abwählst, der die Reise verlassen hat, wird der Anteil endgültig entfernt.',
+  'split.includeFor': '{name} in diese Aufteilung einbeziehen',
   'split.how': 'Wie sich diese Ausgabe teilt',
   'split.method.equal': 'Gleichmäßig',
   'split.method.equalHint':

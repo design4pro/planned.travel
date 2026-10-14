@@ -58,6 +58,7 @@ const PAYLOAD: CostsPayload = {
   settlements: [],
   suggestions: [],
   people: [],
+  departedPeople: [],
   viewerUserId: 'u-ada',
   displayCurrency: { mode: 'per-trip', code: 'EUR' },
   displayChoices: { workspaceCode: 'EUR', rateCodes: [] },

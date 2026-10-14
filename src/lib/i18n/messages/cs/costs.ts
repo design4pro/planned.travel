@@ -56,6 +56,10 @@ const messages = {
   'split.label': 'Rozdělit mezi',
   'split.everyone': 'Všichni',
   'split.nobody': 'Nikdo',
+  'split.departed': 'Už na cestě není',
+  'split.departedHint':
+    'Odškrtnutím někoho, kdo cestu opustil, jeho podíl nadobro odstraníte.',
+  'split.includeFor': 'Zahrnout {name} do tohoto rozdělení',
   'split.how': 'Jak se tento výdaj dělí',
   'split.method.equal': 'Rovným dílem',
   'split.method.equalHint':

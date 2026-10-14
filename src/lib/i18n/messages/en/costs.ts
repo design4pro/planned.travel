@@ -70,6 +70,10 @@ const messages = {
   'split.label': 'Split between',
   'split.everyone': 'Everyone',
   'split.nobody': 'Nobody',
+  'split.departed': 'Left the trip',
+  'split.departedHint':
+    'Unticking someone who left the trip removes their share for good.',
+  'split.includeFor': 'Include {name} in this split',
   'split.how': 'How this expense divides',
   'split.method.equal': 'Equally',
   'split.method.equalHint':

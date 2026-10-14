@@ -12,6 +12,7 @@
  * handed out — so the numbers a reader approves are the numbers that get stored.
  */
 import { Check, Equal, Percent, PieChart, Scale, Users } from 'lucide-react'
+import { useId } from 'react'
 
 import {
   Avatar,
@@ -33,13 +34,14 @@ import {
   parsePercentage,
   parseWeight,
   splitPreview,
+  splitShares,
   toAmountInput,
 } from '#/lib/money'
 
 import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { SplitMethod, SplitPreview } from '#/lib/money'
-import type { CostsPerson } from '#/server/fns/costs'
+import type { CostsDepartedPerson, CostsPerson } from '#/server/fns/costs'
 
 /** One traveller's row in the editor, in whichever unit the method uses. */
 export interface SplitDraftRow {
@@ -111,9 +113,13 @@ export function emptyDraft(people: ReadonlyArray<CostsPerson>): SplitDraft {
  * that produced it, so each method's field is seeded from the closest honest
  * reading of that result: exact amounts from the share, weights from the stored
  * weight, percentages from the share's proportion of the total.
+ *
+ * `people` is everyone who gets a row: the trip's members, then anyone who left
+ * the trip but is still in the stored split. A row left out of the draft is a
+ * share deleted by the next save, so the caller must not drop the latter.
  */
 export function draftFor(
-  people: ReadonlyArray<CostsPerson>,
+  people: ReadonlyArray<{ readonly userId: string }>,
   amountMinor: number,
   currency: string,
   splitMethod: string,
@@ -145,6 +151,57 @@ export function draftFor(
       }
     }),
   }
+}
+
+/**
+ * The draft of an expense that names people who left the trip.
+ *
+ * The rounding remainder of a split goes to the first rows, so the order of the rows decides who
+ * gets the odd minor unit. The members come first, as they did when the split was made, and a
+ * departed person who sat in the middle would otherwise be moved to the end and lose (or gain) a
+ * unit on a save that changed nothing. When that order does not reproduce the stored shares, the
+ * rows with the larger stored shares go first, which is where the remainder was handed out.
+ */
+export function draftForDeparted(
+  members: ReadonlyArray<{ readonly userId: string }>,
+  departed: ReadonlyArray<{ readonly userId: string }>,
+  amountMinor: number,
+  currency: string,
+  splitMethod: string,
+  shares: ReadonlyArray<{
+    readonly userId: string
+    readonly shareMinor: number
+    readonly weight: number
+  }>,
+): SplitDraft {
+  if (departed.length === 0) {
+    return draftFor(members, amountMinor, currency, splitMethod, shares)
+  }
+  const storedOf = new Map(shares.map((share) => [share.userId, share]))
+  const everyone = [...members, ...departed]
+  const byStoredShare = [...everyone].sort(
+    (a, b) =>
+      (storedOf.get(b.userId)?.shareMinor ?? 0) -
+      (storedOf.get(a.userId)?.shareMinor ?? 0),
+  )
+
+  const candidates = [everyone, byStoredShare].map((order) =>
+    draftFor(order, amountMinor, currency, splitMethod, shares),
+  )
+  const reproduces = (draft: SplitDraft): boolean => {
+    const computed = splitShares(
+      amountMinor,
+      draft.method,
+      draftToInputs(draft, currency),
+    )
+    return (
+      computed.length === shares.length &&
+      computed.every(
+        (row) => storedOf.get(row.userId)?.shareMinor === row.shareMinor,
+      )
+    )
+  }
+  return candidates.find(reproduces) ?? candidates[0]
 }
 
 /**
@@ -209,6 +266,11 @@ export function previewFor(
 
 export interface SplitEditorProps {
   readonly people: ReadonlyArray<CostsPerson>
+  /**
+   * People who left the trip and still have a row in the draft. They are listed after
+   * `people`, and neither "Everyone" nor "Nobody" touches them: only their own checkbox does.
+   */
+  readonly departedPeople?: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly draft: SplitDraft
   readonly onDraftChange: (next: SplitDraft) => void
@@ -220,6 +282,7 @@ export interface SplitEditorProps {
 
 export function SplitEditor({
   people,
+  departedPeople = [],
   viewerUserId,
   draft,
   onDraftChange,
@@ -230,7 +293,23 @@ export function SplitEditor({
 }: SplitEditorProps) {
   const t = useTranslate()
   const locale = useLocale()
+  const departedHintId = useId()
   const included = draft.rows.filter((row) => row.included).length
+  // A person who rejoined the trip while the dialog was open is a member again, not a second row.
+  const memberIds = new Set(people.map((person) => person.userId))
+  const departed = departedPeople.filter(
+    (person) => !memberIds.has(person.userId),
+  )
+  const departedIds = new Set(departed.map((person) => person.userId))
+  const currentRows = draft.rows.filter((row) => !departedIds.has(row.userId))
+  const listed = [
+    ...people.map((person) => ({ ...person, departed: false })),
+    ...departed.map((person) => ({
+      ...person,
+      name: person.name ?? t('costs.person.removed'),
+      departed: true,
+    })),
+  ]
   const shareOf = new Map(
     preview.rows.map((row) => [row.userId, row.shareMinor]),
   )
@@ -249,7 +328,9 @@ export function SplitEditor({
   const setAll = (next: boolean): void => {
     onDraftChange({
       ...draft,
-      rows: draft.rows.map((row) => ({ ...row, included: next })),
+      rows: draft.rows.map((row) =>
+        departedIds.has(row.userId) ? row : { ...row, included: next },
+      ),
     })
   }
 
@@ -305,7 +386,7 @@ export function SplitEditor({
             variant="ghost"
             size="sm"
             shape="pill"
-            disabled={disabled || included === draft.rows.length}
+            disabled={disabled || currentRows.every((row) => row.included)}
             onClick={() => setAll(true)}
           >
             {t('costs.split.everyone')}
@@ -315,7 +396,7 @@ export function SplitEditor({
             variant="ghost"
             size="sm"
             shape="pill"
-            disabled={disabled || included === 0}
+            disabled={disabled || currentRows.every((row) => !row.included)}
             onClick={() => setAll(false)}
           >
             {t('costs.split.nobody')}
@@ -346,7 +427,7 @@ export function SplitEditor({
       <p className="text-caption text-ink-3">{t(method.hint)}</p>
 
       <ul className="flex flex-col divide-y divide-edge-faint">
-        {people.map((person) => {
+        {listed.map((person) => {
           const row = draft.rows.find((entry) => entry.userId === person.userId)
           if (row === undefined) {
             return null
@@ -367,12 +448,18 @@ export function SplitEditor({
                 onCheckedChange={(next) =>
                   setRow(person.userId, { included: next === true })
                 }
-                aria-label={`Include ${person.name} in this split`}
+                aria-label={t('costs.split.includeFor', { name: person.name })}
+                aria-describedby={person.departed ? departedHintId : undefined}
               />
               <Avatar name={person.name} src={person.image} size="xs" />
               <span className="min-w-0 flex-1 basis-32 truncate text-caption font-medium text-ink">
                 {person.userId === viewerUserId ? 'You' : person.name}
               </span>
+              {person.departed ? (
+                <Badge tone="outline" size="md">
+                  {t('costs.split.departed')}
+                </Badge>
+              ) : null}
 
               <span className="ms-auto flex shrink-0 items-center gap-3">
                 {row.included && draft.method !== 'equal' ? (
@@ -407,6 +494,12 @@ export function SplitEditor({
           )
         })}
       </ul>
+
+      {departedIds.size > 0 ? (
+        <p id={departedHintId} className="text-caption text-ink-3">
+          {t('costs.split.departedHint')}
+        </p>
+      ) : null}
 
       <RemainderBar
         preview={preview}

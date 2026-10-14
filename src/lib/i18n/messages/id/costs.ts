@@ -51,6 +51,10 @@ const messages = {
   'split.label': 'Dibagi di antara',
   'split.everyone': 'Semua',
   'split.nobody': 'Tidak ada',
+  'split.departed': 'Sudah keluar dari perjalanan',
+  'split.departedHint':
+    'Menghapus centang orang yang sudah keluar dari perjalanan akan menghapus bagiannya secara permanen.',
+  'split.includeFor': 'Sertakan {name} dalam pembagian ini',
   'split.how': 'Bagaimana pengeluaran ini dibagi',
   'split.method.equal': 'Rata',
   'split.method.equalHint':
