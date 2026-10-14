@@ -90,6 +90,8 @@ const messages = {
   'expense.currencyLabel': '이 영수증에 적힌 통화',
   'expense.convertedTo': '{currency}로 환산',
   'expense.convertedHint': '명세서에서 {from}이 {to}로 얼마가 되었는지.',
+  'expense.convertedSuggested':
+    '이 여행에서 {date}에 사용한 환율({rate})을 바탕으로 제안한 금액입니다. 명세서에 맞게 수정하세요.',
   'expense.convertedNotANumber': '환산된 금액을 숫자로 입력해 주세요.',
   'expense.dateLabel': '지출한 날짜',
   'expense.paidByHint':

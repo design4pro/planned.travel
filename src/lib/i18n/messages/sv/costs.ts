@@ -89,6 +89,8 @@ const messages = {
   'expense.currencyLabel': 'Valuta som kvittot är skrivet i',
   'expense.convertedTo': 'Omräknat till {currency}',
   'expense.convertedHint': 'Vad {from} blev i {to} på ditt utdrag.',
+  'expense.convertedSuggested':
+    'Föreslaget utifrån kursen som användes på den här resan den {date} ({rate}). Ändra så att det stämmer med ditt kontoutdrag.',
   'expense.convertedNotANumber': 'Skriv det omräknade beloppet som ett tal.',
   'expense.dateLabel': 'Datum för utgiften',
   'expense.paidByHint':

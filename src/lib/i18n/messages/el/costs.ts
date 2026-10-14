@@ -91,6 +91,8 @@ const messages = {
   'expense.currencyLabel': 'Το νόμισμα στο οποίο είναι γραμμένη η απόδειξη',
   'expense.convertedTo': 'Μετατράπηκε σε {currency}',
   'expense.convertedHint': 'Σε πόσα βγήκε {from} σε {to} στο αντίγραφό σου.',
+  'expense.convertedSuggested':
+    'Προτείνεται από την ισοτιμία που χρησιμοποιήθηκε σε αυτό το ταξίδι στις {date} ({rate}). Άλλαξέ το ώστε να ταιριάζει με το αντίγραφό σου.',
   'expense.convertedNotANumber': 'Γράψε το μετατραπέν ποσό ως αριθμό.',
   'expense.dateLabel': 'Ημερομηνία του εξόδου',
   'expense.paidByHint':

@@ -95,6 +95,8 @@ const messages = {
   'expense.currencyLabel': 'Měna, ve které je účtenka vystavená',
   'expense.convertedTo': 'Přepočteno na {currency}',
   'expense.convertedHint': 'Kolik {from} vyšlo v {to} na vašem výpisu.',
+  'expense.convertedSuggested':
+    'Navrženo podle kurzu použitého na této cestě dne {date} ({rate}). Upravte částku tak, aby seděla s vaším výpisem.',
   'expense.convertedNotANumber': 'Zadejte přepočtenou částku jako číslo.',
   'expense.dateLabel': 'Datum výdaje',
   'expense.paidByHint':

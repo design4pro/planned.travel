@@ -96,6 +96,8 @@ const messages = {
   'expense.convertedTo': 'Пересчитано в {currency}',
   'expense.convertedHint':
     'Во сколько {from} обошлось в {to} по вашей выписке.',
+  'expense.convertedSuggested':
+    'Предложено по курсу, использованному в этой поездке ({date}, {rate}). Измените сумму, чтобы она совпадала с вашей выпиской.',
   'expense.convertedNotANumber': 'Введите пересчитанную сумму числом.',
   'expense.dateLabel': 'Дата траты',
   'expense.paidByHint':

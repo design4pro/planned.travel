@@ -295,7 +295,11 @@ import { dispatch } from '#/server/notifications/dispatch'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { sweepReminders } from '#/server/queue/reminders'
 import { createScope } from '../base'
-import { findLatestFrozenRate, resolveRate } from '../rates'
+import {
+  findLatestFrozenRate,
+  resolveRate,
+  suggestedRatesForTrip,
+} from '../rates'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
@@ -5719,6 +5723,41 @@ describe('tenant isolation', () => {
       expect(after.betaExpenses).toEqual(before.betaExpenses)
       expect(after.alphaSettlements).toEqual(before.alphaSettlements)
       expect(after.betaSettlements).toEqual(before.betaSettlements)
+    })
+
+    it('offers a pre-fill from the trip’s own rate only, never from another workspace or another trip', async () => {
+      const otherTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Alpha, another trip',
+        startDate: '2026-09-01',
+        endDate: '2026-09-03',
+        currency: 'EUR',
+      })
+      await freezeRate(beta, beta.tripId, 1.3)
+      await freezeRate(alpha, otherTrip.id, 1.5)
+      const query = { from: ['GBP'], to: 'EUR' }
+
+      expect(
+        await suggestedRatesForTrip(alpha.tenant.scope, {
+          tripId: alpha.tripId,
+          ...query,
+        }),
+      ).toBeNull()
+      expect(
+        await captureError(() =>
+          suggestedRatesForTrip(alpha.tenant.scope, {
+            tripId: beta.tripId,
+            ...query,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      await freezeRate(alpha, alpha.tripId, 1.15)
+      expect(
+        await suggestedRatesForTrip(alpha.tenant.scope, {
+          tripId: alpha.tripId,
+          ...query,
+        }),
+      ).toEqual({ GBP: { rate: 1.15, observedOn: '2026-04-11' } })
     })
   })
 })

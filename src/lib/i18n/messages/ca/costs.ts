@@ -92,6 +92,8 @@ const messages = {
   'expense.currencyLabel': 'Moneda en què està escrit aquest rebut',
   'expense.convertedTo': 'Convertit a {currency}',
   'expense.convertedHint': 'A quant va sortir {from} en {to} al teu extracte.',
+  'expense.convertedSuggested':
+    'Suggerit a partir de la taxa usada en aquest viatge el {date} ({rate}). Canvia-ho perquè coincideixi amb el teu extracte.',
   'expense.convertedNotANumber': 'Escriu l’import convertit com a número.',
   'expense.dateLabel': 'Data de la despesa',
   'expense.paidByHint':

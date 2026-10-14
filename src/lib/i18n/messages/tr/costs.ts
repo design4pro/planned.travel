@@ -92,6 +92,8 @@ const messages = {
   'expense.convertedTo': '{currency} cinsine çevrildi',
   'expense.convertedHint':
     'Ekstrende {from} tutarının {to} cinsinden karşılığı.',
+  'expense.convertedSuggested':
+    'Bu gezide kullanılan kura göre önerildi ({date}, {rate}). Ekstrenle eşleşecek şekilde değiştir.',
   'expense.convertedNotANumber': 'Çevrilen tutarı sayı olarak yaz.',
   'expense.dateLabel': 'Masrafın tarihi',
   'expense.paidByHint':

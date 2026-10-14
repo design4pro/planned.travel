@@ -95,6 +95,8 @@ const messages = {
   'expense.convertedTo': 'Convertito in {currency}',
   'expense.convertedHint':
     'Quanto ha dato {from} in {to} sul tuo estratto conto.',
+  'expense.convertedSuggested':
+    'Suggerito dal tasso usato in questo viaggio il {date} ({rate}). Modificalo perché corrisponda al tuo estratto conto.',
   'expense.convertedNotANumber': 'Scrivi l’importo convertito come numero.',
   'expense.dateLabel': 'Data della spesa',
   'expense.paidByHint':
