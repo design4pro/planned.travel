@@ -454,3 +454,177 @@ describe('importFormatFor', () => {
     expect(MAX_IMPORT_FILES).toBeLessThan(MAX_FILES_PER_UPLOAD)
   })
 })
+
+describe('the refusal list', () => {
+  const BLOCKED_EXTENSIONS = ['xhtml', 'xml', 'svgz']
+  const CLAIMED_TYPES = [
+    '',
+    'application/octet-stream',
+    'application/pdf',
+    'text/html',
+    'image/svg+xml',
+    'application/xml',
+  ]
+  const XML_TYPES = ['application/xhtml+xml', 'application/xml', 'text/xml']
+
+  function blocked(
+    filename: string,
+    contentType: string,
+    sizeBytes = 2048,
+  ): string | undefined {
+    return checkUpload({ filename, contentType, sizeBytes }, UNLIMITED)?.code
+  }
+
+  describe.each(BLOCKED_EXTENSIONS)('a .%s file', (extension) => {
+    it.each(CLAIMED_TYPES)(
+      'is refused as a blocked type whatever type %j is claimed',
+      (claimed) => {
+        expect(blocked(`notes.${extension}`, claimed)).toBe('blocked-type')
+        expect(blocked(`NOTES.${extension.toUpperCase()}`, claimed)).toBe(
+          'blocked-type',
+        )
+      },
+    )
+
+    it('is refused as a blocked type, not as too large, when it is oversized', () => {
+      expect(
+        blocked(`notes.${extension}`, 'application/pdf', MAX_FILE_BYTES + 1),
+      ).toBe('blocked-type')
+    })
+
+    it('is refused even when the name carries trailing whitespace', () => {
+      expect(blocked(`notes.${extension} `, 'application/pdf')).toBe(
+        'blocked-type',
+      )
+    })
+  })
+
+  it('names the file in the refusal, for the sentence that is shown today', () => {
+    const rejection = checkUpload(
+      { filename: 'notes.xml', contentType: '', sizeBytes: 10 },
+      UNLIMITED,
+    )
+    expect(rejection?.message).toContain('notes.xml')
+    expect(rejection?.params).toEqual({ name: 'notes.xml' })
+  })
+
+  it.each(XML_TYPES)(
+    'refuses a claimed %s under a neutral filename',
+    (claimed) => {
+      expect(blocked('notes.txt', claimed)).toBe('blocked-type')
+      expect(blocked('notes', claimed)).toBe('blocked-type')
+      expect(blocked('notes.pdf', `${claimed}; charset=utf-8`)).toBe(
+        'blocked-type',
+      )
+    },
+  )
+
+  it('keeps the order of checks: empty, blocked type, too large, allow-list, quota', () => {
+    expect(blocked('notes.xml', 'application/pdf', 0)).toBe('empty')
+    expect(blocked('notes.xml', 'application/pdf', MAX_FILE_BYTES + 1)).toBe(
+      'blocked-type',
+    )
+    expect(blocked('huge.pdf', 'application/pdf', MAX_FILE_BYTES + 1)).toBe(
+      'too-large',
+    )
+    expect(
+      checkUpload(
+        { filename: 'notes.xml', contentType: 'application/pdf', sizeBytes: 5 },
+        { usedBytes: 10, limitBytes: 10 },
+      )?.code,
+    ).toBe('blocked-type')
+  })
+
+  it('stores a route file the operating system labels application/xml', () => {
+    expect(blocked('route.gpx', 'application/xml')).toBeUndefined()
+    expect(blocked('route.gpx', 'text/xml')).toBeUndefined()
+    expect(resolveContentType('route.gpx', 'application/xml')).toBe(
+      'application/gpx+xml',
+    )
+  })
+
+  it('still stores .html, .htm and .svg, which the booking import reads', () => {
+    expect(blocked('hotel.html', 'text/html')).toBeUndefined()
+    expect(blocked('hotel.htm', 'text/html')).toBeUndefined()
+    expect(blocked('logo.svg', 'image/svg+xml')).toBeUndefined()
+    expect(blocked('hotel.html', '')).toBeUndefined()
+    expect(importFormatFor('hotel.html', 'text/html')).toBe('document')
+    expect(importFormatFor('hotel.htm', 'text/html')).toBe('document')
+  })
+
+  it('does not widen the picker to a blocked extension', () => {
+    const accepted = ACCEPT_ATTRIBUTE.split(',')
+    for (const extension of BLOCKED_EXTENSIONS) {
+      expect(accepted).not.toContain(`.${extension}`)
+    }
+  })
+})
+
+describe('the markup types are bound to their extensions', () => {
+  it('stores a PDF that claims text/html as a PDF', () => {
+    expect(resolveContentType('ticket.pdf', 'text/html')).toBe(
+      'application/pdf',
+    )
+    expect(defaultKindFor('ticket.pdf', 'application/pdf')).toBe('document')
+  })
+
+  it('stores a PNG that claims image/svg+xml as a PNG', () => {
+    expect(resolveContentType('photo.png', 'image/svg+xml')).toBe('image/png')
+  })
+
+  it('stores a page that claims to be an SVG as the page its extension says', () => {
+    expect(resolveContentType('hotel.html', 'image/svg+xml')).toBe('text/html')
+    expect(resolveContentType('logo.svg', 'text/html')).toBe('image/svg+xml')
+  })
+
+  it.each(['text/html', 'image/svg+xml'])(
+    'refuses an .exe that claims %s as an unsupported type',
+    (claimed) => {
+      expect(
+        checkUpload(
+          { filename: 'run.exe', contentType: claimed, sizeBytes: 10 },
+          UNLIMITED,
+        )?.code,
+      ).toBe('unsupported-type')
+    },
+  )
+
+  it('honours the claim for .html, .htm and .svg, whatever their case', () => {
+    expect(resolveContentType('hotel.html', 'text/html')).toBe('text/html')
+    expect(resolveContentType('hotel.HTM', 'text/html')).toBe('text/html')
+    expect(resolveContentType('logo.SVG', 'image/svg+xml')).toBe(
+      'image/svg+xml',
+    )
+  })
+
+  it('keeps the claimed type of a file with no extension, which the import reads by type', () => {
+    expect(resolveContentType('confirmation', 'text/html')).toBe('text/html')
+    expect(resolveContentType('logo', 'image/svg+xml')).toBe('image/svg+xml')
+    expect(importFormatFor('confirmation', 'text/html')).toBe('document')
+  })
+
+  it('leaves every other claimed type to win over the extension, as before', () => {
+    expect(resolveContentType('notes.txt', 'application/pdf')).toBe(
+      'application/pdf',
+    )
+  })
+})
+
+describe('the per-file ceiling', () => {
+  const pdf = (sizeBytes: number) => ({
+    filename: 'scan.pdf',
+    contentType: 'application/pdf',
+    sizeBytes,
+  })
+
+  it('is 25 MB', () => {
+    expect(MAX_FILE_BYTES).toBe(25 * 1024 * 1024)
+  })
+
+  it('admits a file of exactly the ceiling and refuses one a byte over', () => {
+    expect(checkUpload(pdf(MAX_FILE_BYTES), UNLIMITED)).toBeNull()
+    expect(checkUpload(pdf(MAX_FILE_BYTES + 1), UNLIMITED)?.code).toBe(
+      'too-large',
+    )
+  })
+})
