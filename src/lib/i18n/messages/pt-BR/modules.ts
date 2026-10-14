@@ -905,6 +905,8 @@ const messages = {
   'files.action.choose': 'Escolher arquivos',
   'files.action.upload': 'Enviar arquivos',
   'files.drop.active': 'Solte para enviar',
+  'files.reject.blockedType':
+    '“{name}” não foi adicionado: arquivos XML e SVG compactados não são guardados aqui, por segurança. Salve como PDF ou imagem e adicione isso no lugar.',
   'files.drop.idle': 'Arraste arquivos para cá',
   'files.empty.title': 'Nenhum arquivo nesta viagem',
   'files.empty.body':

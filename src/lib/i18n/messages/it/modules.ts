@@ -914,6 +914,8 @@ const messages = {
   'files.action.choose': 'Scegli i file',
   'files.action.upload': 'Carica i file',
   'files.drop.active': 'Rilascia per caricare',
+  'files.reject.blockedType':
+    '«{name}» non è stato aggiunto: qui i file XML e SVG compressi non vengono conservati, per sicurezza. Salvalo come PDF o come immagine e aggiungi quello al suo posto.',
   'files.drop.idle': 'Trascina i file qui',
   'files.empty.title': 'Nessun file in questo viaggio',
   'files.empty.body':

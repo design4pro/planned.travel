@@ -1064,6 +1064,8 @@ const messages = {
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
   'files.drop.active': 'Drop to upload',
+  'files.reject.blockedType':
+    '“{name}” was not added: XML and compressed SVG files are not stored here, for safety. Save it as a PDF or an image and add that instead.',
   'files.drop.idle': 'Drag files here',
   'files.empty.title': 'No files on this trip',
   'files.empty.body':

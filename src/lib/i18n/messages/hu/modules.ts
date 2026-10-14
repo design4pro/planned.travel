@@ -889,6 +889,8 @@ const messages = {
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
   'files.drop.active': 'Engedd el a feltöltéshez',
+  'files.reject.blockedType':
+    'A(z) „{name}” nem lett hozzáadva: az XML és a tömörített SVG fájlokat biztonsági okból nem tároljuk itt. Mentsd el PDF-ként vagy képként, és azt add hozzá helyette.',
   'files.drop.idle': 'Húzd ide a fájlokat',
   'files.empty.title': 'Nincsenek fájlok ezen az úton',
   'files.empty.body':

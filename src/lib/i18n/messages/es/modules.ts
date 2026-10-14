@@ -909,6 +909,8 @@ const messages = {
   'files.action.choose': 'Elegir archivos',
   'files.action.upload': 'Subir archivos',
   'files.drop.active': 'Suelta para subir',
+  'files.reject.blockedType':
+    '«{name}» no se añadió: aquí no se guardan archivos XML ni SVG comprimidos, por seguridad. Guárdalo como PDF o como imagen y añade eso en su lugar.',
   'files.drop.idle': 'Arrastra archivos aquí',
   'files.empty.title': 'No hay archivos en este viaje',
   'files.empty.body':

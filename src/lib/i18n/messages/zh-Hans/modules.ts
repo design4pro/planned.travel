@@ -810,6 +810,8 @@ const messages = {
   'files.action.choose': '选择文件',
   'files.action.upload': '上传文件',
   'files.drop.active': '松手即可上传',
+  'files.reject.blockedType':
+    '「{name}」未添加：出于安全考虑，这里不保存 XML 文件和压缩的 SVG 文件。请将其另存为 PDF 或图片，再添加那个文件。',
   'files.drop.idle': '把文件拖到这里',
   'files.empty.title': '这趟出行还没有文件',
   'files.empty.body':

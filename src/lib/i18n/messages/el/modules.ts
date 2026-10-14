@@ -896,6 +896,8 @@ const messages = {
   'files.action.choose': 'Διάλεξε αρχεία',
   'files.action.upload': 'Ανέβασε αρχεία',
   'files.drop.active': 'Άφησέ το για μεταφόρτωση',
+  'files.reject.blockedType':
+    'Το «{name}» δεν προστέθηκε: τα αρχεία XML και τα συμπιεσμένα SVG δεν αποθηκεύονται εδώ, για λόγους ασφαλείας. Αποθήκευσέ το ως PDF ή ως εικόνα και πρόσθεσε αυτό στη θέση του.',
   'files.drop.idle': 'Σύρε αρχεία εδώ',
   'files.empty.title': 'Κανένα αρχείο σε αυτό το ταξίδι',
   'files.empty.body':

@@ -70,7 +70,7 @@ import {
 } from '../shared'
 import { downloadTripFile } from './download'
 import { FileDetailsDialog } from './file-dialogs'
-import { kindForFile, screenFiles } from './screening'
+import { describeRejection, kindForFile, screenFiles } from './screening'
 import { uploadFile } from './upload'
 import {
   activeTasks,
@@ -309,7 +309,15 @@ export function FileLibrary({
         settle(
           answer.code === 'aborted'
             ? { type: 'cancel', id: task.id }
-            : { type: 'fail', id: task.id, message: answer.message },
+            : {
+                type: 'fail',
+                id: task.id,
+                message: describeRejection(
+                  answer.code,
+                  answer.params,
+                  answer.message,
+                ),
+              },
         )
       })
       .catch((cause: unknown) => {

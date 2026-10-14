@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
+import { resolve } from '../../shared/deferred-message'
+import type { DeferredMessage } from '../../shared/deferred-message'
+import { describeRejection, screenFiles } from '../screening'
+
 import {
   activeTasks,
   announcementsFor,
@@ -360,5 +365,98 @@ describe('selectors', () => {
       { type: 'fail', id: 'b', message: 'nope' },
     )
     expect(pendingBytes(state)).toBe(0)
+  })
+})
+
+describe("why a file was refused, in the traveller's words", () => {
+  const BLOCKED =
+    '“notes.xml” was not added: XML and compressed SVG files are not stored here, for safety. Save it as a PDF or an image and add that instead.'
+
+  /** What a screen prints for a message that is a sentence or a catalogue key. */
+  const words = (message: DeferredMessage | string | null): string =>
+    message === null || typeof message === 'string'
+      ? String(message)
+      : resolve(message, t)
+
+  /** The text the row under the file's name shows. */
+  const rowText = (state: UploadQueueState): string =>
+    words(state.tasks[0].message)
+
+  /** The toast a lone refused file raises: the same words as its row. */
+  const toastDescription = (state: UploadQueueState): string =>
+    words(announcementsFor(state.tasks)[0].description)
+
+  it('words a blocked type from the catalogue when the pre-flight refuses it', () => {
+    const file = new File(['<x/>'], 'notes.xml', { type: 'application/xml' })
+    const { rejected } = screenFiles([file], {
+      usedBytes: 0,
+      limitBytes: Number.POSITIVE_INFINITY,
+    })
+    const state = reduce(emptyUploadQueue, {
+      type: 'reject',
+      id: 'a',
+      filename: file.name,
+      sizeBytes: file.size,
+      message: rejected[0].message,
+    })
+
+    expect(rowText(state)).toBe(BLOCKED)
+    expect(toastDescription(state)).toBe(BLOCKED)
+  })
+
+  it('words it the same way when only the server refuses', () => {
+    // The answer a spoofed client gets: the English fallback and the parameters.
+    const answer = {
+      ok: false as const,
+      code: 'blocked-type',
+      message: 'English fallback that must not reach the screen',
+      params: { name: 'notes.xml' },
+    }
+    const state = reduce(
+      withTwo(),
+      { type: 'start', id: 'a' },
+      {
+        type: 'fail',
+        id: 'a',
+        message: describeRejection(answer.code, answer.params, answer.message),
+      },
+    )
+
+    expect(state.tasks[0].message).toEqual({
+      key: 'modules.files.reject.blockedType',
+      params: { name: 'notes.xml' },
+    })
+    expect(rowText(state)).toBe(BLOCKED)
+  })
+
+  it('keeps showing the English message of any other refusal', () => {
+    const state = reduce(
+      withTwo(),
+      { type: 'start', id: 'a' },
+      {
+        type: 'fail',
+        id: 'a',
+        message: describeRejection('quota', undefined, 'Your plan is full.'),
+      },
+    )
+
+    expect(state.tasks[0].message).toBe('Your plan is full.')
+  })
+
+  it('words the "too many at once" refusal from the catalogue', () => {
+    const files = Array.from(
+      { length: 13 },
+      (_, index) =>
+        new File(['%PDF'], `p${index}.pdf`, { type: 'application/pdf' }),
+    )
+    const { rejected } = screenFiles(files, {
+      usedBytes: 0,
+      limitBytes: Number.POSITIVE_INFINITY,
+    })
+
+    expect(rejected).toHaveLength(1)
+    expect(words(rejected[0].message)).toBe(
+      'Only 12 files can be added at once, so “p12.pdf” was left out. Drop it in again on its own.',
+    )
   })
 })

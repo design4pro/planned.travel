@@ -13,6 +13,25 @@ import {
 } from '#/server/fns/file-policy'
 
 import type { FileKind, StorageBudget } from '#/server/fns/file-policy'
+import type { DeferredMessage } from '../shared/deferred-message'
+
+/**
+ * The words a traveller reads for a refusal, chosen by its `code`.
+ *
+ * One code at a time moves into the catalogue: a blocked type does today, and every other code
+ * keeps the English `fallback` it came with (`empty`, `too-large`, `unsupported-type` and `quota`
+ * are built in `file-policy.ts`). The pre-flight and the server's answer both come through here,
+ * so a file only the server refuses is worded the same as one the browser caught.
+ */
+export function describeRejection(
+  code: string,
+  params: Readonly<Record<string, string | number>> | undefined,
+  fallback: string,
+): DeferredMessage | string {
+  return code === 'blocked-type'
+    ? { key: 'modules.files.reject.blockedType', params: params ?? {} }
+    : fallback
+}
 
 /**
  * The pre-flight.
@@ -28,17 +47,23 @@ export function screenFiles(
   budget: StorageBudget,
 ): {
   readonly accepted: ReadonlyArray<File>
-  readonly rejected: ReadonlyArray<{ file: File; message: string }>
+  readonly rejected: ReadonlyArray<{
+    file: File
+    message: DeferredMessage | string
+  }>
 } {
   const accepted: Array<File> = []
-  const rejected: Array<{ file: File; message: string }> = []
+  const rejected: Array<{ file: File; message: DeferredMessage | string }> = []
   let pendingBytes = budget.pendingBytes ?? 0
 
   files.forEach((file, index) => {
     if (index >= MAX_FILES_PER_UPLOAD) {
       rejected.push({
         file,
-        message: `Only ${MAX_FILES_PER_UPLOAD} files can be added at once, so “${file.name}” was left out. Drop it in again on its own.`,
+        message: {
+          key: 'modules.files.error.tooMany',
+          params: { count: MAX_FILES_PER_UPLOAD, name: file.name },
+        },
       })
       return
     }
@@ -50,7 +75,14 @@ export function screenFiles(
       accepted.push(file)
       pendingBytes += file.size
     } else {
-      rejected.push({ file, message: rejection.message })
+      rejected.push({
+        file,
+        message: describeRejection(
+          rejection.code,
+          rejection.params,
+          rejection.message,
+        ),
+      })
     }
   })
 

@@ -810,6 +810,8 @@ const messages = {
   'files.action.choose': '選擇檔案',
   'files.action.upload': '上傳檔案',
   'files.drop.active': '放開即可上傳',
+  'files.reject.blockedType':
+    '「{name}」未新增：基於安全考量，這裡不儲存 XML 檔案與壓縮的 SVG 檔案。請將其另存為 PDF 或圖片，再新增那個檔案。',
   'files.drop.idle': '把檔案拖到這裡',
   'files.empty.title': '這趟出行還沒有檔案',
   'files.empty.body':
