@@ -31,7 +31,7 @@ describe('the rate lookup', () => {
   let tripId: string
   let otherTripId: string
 
-  /** An expense paid in `from` on a trip kept in `to`, whose frozen rate is derived from the two amounts. */
+  /** An expense paid in `from` on a trip kept in `to`, with the rate frozen on the row. */
   async function expenseAt(
     trip: string,
     spentOn: string,
@@ -50,7 +50,7 @@ describe('the rate lookup', () => {
     })
   }
 
-  /** A payment made in `from` on a trip kept in `to`, whose frozen rate is derived from the two amounts. */
+  /** A payment made in `from` on a trip kept in `to`, with the rate frozen on the row. */
   async function paymentAt(
     trip: string,
     settledOn: string,
@@ -61,10 +61,11 @@ describe('the rate lookup', () => {
       tripId: trip,
       fromUserId: friendId,
       toUserId: ownerId,
-      // A payment carries the two amounts, not the rate: the repository derives the rate from them.
-      amountMinor: Math.round(10_000 * rate),
+      // A payment cannot be handed a rate: it derives the rate from the two amounts, so the
+      // converted amount is the one that makes `rate` the implied one (#843).
+      amountMinor: Math.round(4000 * rate),
       currency: to,
-      originalAmountMinor: 10_000,
+      originalAmountMinor: 4000,
       originalCurrency: from,
       settledOn,
     })
