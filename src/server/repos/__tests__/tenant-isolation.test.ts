@@ -159,6 +159,8 @@ import {
   createList,
   createListItem,
   createTemplate,
+  listTemplateItems,
+  listTemplates,
   packingItemsRepository,
   packingListsRepository,
   packingTemplateItemsRepository,
@@ -5990,6 +5992,67 @@ describe('tenant isolation', () => {
         to: 'JPY',
       })
       expect(shared.rate).toEqual({ value: 155, source: 'recent' })
+    })
+  })
+
+  describe('template writes', () => {
+    // `createTemplate` writes its rows with raw inserts in one batch, so the tenant column is
+    // stamped by the function itself and not by the base repository. A read through the writer's own
+    // scope would hide a row with the wrong stamp, so the rows are counted straight off the tables.
+    function organizationsOf(table: string, where: string, id: string) {
+      const statement = harness.sqlite.prepare(
+        `select organization_id as organizationId, count(*) as n from ${table} where ${where} = ? group by organization_id`,
+      )
+      return (
+        statement.all(id) as Array<{
+          organizationId: string
+          n: number | bigint
+        }>
+      ).map((row) => [row.organizationId, Number(row.n)] as const)
+    }
+
+    it('stamps the template and every chunk of its items with the writer’s workspace', async () => {
+      const untouched = await packingTemplatesRepository.requireById(
+        beta.tenant.scope,
+        beta.templateId,
+      )
+      const names = Array.from(
+        { length: 30 },
+        (_, index) => `Island item ${index}`,
+      )
+
+      const saved = await createTemplate(alpha.tenant.scope, {
+        name: 'Island hop',
+        items: names.map((name) => ({ name })),
+      })
+
+      expect(saved.organizationId).toBe(alpha.tenant.organizationId)
+      expect(organizationsOf('packing_templates', 'id', saved.id)).toEqual([
+        [alpha.tenant.organizationId, 1],
+      ])
+      expect(
+        organizationsOf('packing_template_items', 'template_id', saved.id),
+      ).toEqual([[alpha.tenant.organizationId, 30]])
+
+      expect(
+        await packingTemplatesRepository.findById(beta.tenant.scope, saved.id),
+      ).toBeNull()
+      expect(await listTemplateItems(beta.tenant.scope, saved.id)).toEqual([])
+      expect(
+        (await listTemplates(beta.tenant.scope)).map((template) => template.id),
+      ).not.toContain(saved.id)
+      expect(
+        (await listTemplateItems(alpha.tenant.scope, saved.id)).map(
+          (item) => item.name,
+        ),
+      ).toEqual(names)
+
+      expect(
+        await packingTemplatesRepository.requireById(
+          beta.tenant.scope,
+          beta.templateId,
+        ),
+      ).toEqual(untouched)
     })
   })
 })
