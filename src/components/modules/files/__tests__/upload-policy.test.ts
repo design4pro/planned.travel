@@ -417,11 +417,11 @@ describe('describeRejection', () => {
     })
   })
 
-  it('maps a blocked type that arrived without parameters to its sentence too', () => {
-    expect(describeRejection('blocked-type', undefined, FALLBACK)).toEqual({
-      key: 'modules.files.reject.blockedType',
-      params: {},
-    })
+  it('keeps the English message of a blocked type that arrived without the file name', () => {
+    expect(describeRejection('blocked-type', undefined, FALLBACK)).toBe(
+      FALLBACK,
+    )
+    expect(describeRejection('blocked-type', {}, FALLBACK)).toBe(FALLBACK)
   })
 
   it.each(['empty', 'too-large', 'unsupported-type', 'quota', 'rejected', 'x'])(

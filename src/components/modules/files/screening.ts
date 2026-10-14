@@ -28,8 +28,10 @@ export function describeRejection(
   params: Readonly<Record<string, string | number>> | undefined,
   fallback: string,
 ): DeferredMessage | string {
-  return code === 'blocked-type'
-    ? { key: 'modules.files.reject.blockedType', params: params ?? {} }
+  // Without the name the catalogue sentence would print a bare `{name}`; the English fallback
+  // already names the file.
+  return code === 'blocked-type' && params?.name !== undefined
+    ? { key: 'modules.files.reject.blockedType', params }
     : fallback
 }
 
