@@ -897,6 +897,8 @@ const messages = {
   'files.action.choose': 'Bestanden kiezen',
   'files.action.upload': 'Bestanden uploaden',
   'files.drop.active': 'Loslaten om te uploaden',
+  'files.reject.blockedType':
+    '„{name}” is niet toegevoegd: XML-bestanden en gecomprimeerde SVG-bestanden worden hier om veiligheidsredenen niet opgeslagen. Sla het op als pdf of afbeelding en voeg dat in plaats daarvan toe.',
   'files.drop.idle': 'Sleep bestanden hierheen',
   'files.empty.title': 'Geen bestanden op deze reis',
   'files.empty.body':

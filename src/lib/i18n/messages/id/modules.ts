@@ -880,6 +880,8 @@ const messages = {
   'files.action.choose': 'Pilih berkas',
   'files.action.upload': 'Unggah berkas',
   'files.drop.active': 'Lepas untuk mengunggah',
+  'files.reject.blockedType':
+    '“{name}” tidak ditambahkan: berkas XML dan SVG terkompresi tidak disimpan di sini demi keamanan. Simpan sebagai PDF atau gambar, lalu tambahkan itu sebagai gantinya.',
   'files.drop.idle': 'Seret berkas ke sini',
   'files.empty.title': 'Belum ada berkas di perjalanan ini',
   'files.empty.body':

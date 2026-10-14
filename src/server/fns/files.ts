@@ -65,7 +65,10 @@ export interface UploadResult {
 export interface UploadFailure {
   readonly ok: false
   readonly code: string
+  /** English; the words a traveller reads come from the catalogue by `code`. */
   readonly message: string
+  /** Values a catalogue sentence for this `code` interpolates. */
+  readonly params?: Readonly<Record<string, string | number>>
 }
 
 /* --------------------------------------------------------------- validation */
@@ -112,10 +115,15 @@ function readUpload(data: FormData): UploadRequest {
 }
 
 /** A failure the browser can render verbatim, as a 200 with `ok: false`. */
-function refuse(code: string, message: string): Response {
-  return Response.json({ ok: false, code, message } satisfies UploadFailure, {
-    headers: { 'cache-control': 'no-store' },
-  })
+function refuse(
+  code: string,
+  message: string,
+  params?: UploadFailure['params'],
+): Response {
+  return Response.json(
+    { ok: false, code, message, params } satisfies UploadFailure,
+    { headers: { 'cache-control': 'no-store' } },
+  )
 }
 
 /* ------------------------------------------------------------------ upload */
@@ -158,7 +166,7 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
       { usedBytes: usage.bytes, limitBytes: quotas.limits.storage_bytes },
     )
     if (rejection !== null) {
-      return refuse(rejection.code, rejection.message)
+      return refuse(rejection.code, rejection.message, rejection.params)
     }
     if (contentType === null) {
       // `checkUpload` already covers this; kept so the type narrows without a

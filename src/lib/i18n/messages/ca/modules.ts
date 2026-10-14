@@ -914,6 +914,8 @@ const messages = {
   'files.action.choose': 'Tria fitxers',
   'files.action.upload': 'Puja els fitxers',
   'files.drop.active': 'Deixa-ho anar per pujar',
+  'files.reject.blockedType':
+    '«{name}» no s’ha afegit: aquí no es desen fitxers XML ni SVG comprimits, per seguretat. Desa’l com a PDF o com a imatge i afegeix això en lloc seu.',
   'files.drop.idle': 'Arrossega fitxers aquí',
   'files.empty.title': 'No hi ha fitxers en aquest viatge',
   'files.empty.body':
