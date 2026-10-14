@@ -13,6 +13,7 @@
 
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -98,6 +99,10 @@ beforeAll(async () => {
 
 afterAll(() => {
   authDatabase.close()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 beforeEach(() => {
@@ -771,5 +776,299 @@ describe('ending one’s own session queues the close of the person’s trip-roo
     expect(line).toContain(person.userId)
     expect(line).not.toContain(person.email)
     warnings.mockRestore()
+  })
+})
+
+/* ------------------------------------------- purging the cached blobs of ended sessions */
+
+const kv = (): SessionKv => shared.kv.current as SessionKv
+
+const indexKeyOf = (person: Person): string =>
+  `active-sessions-${person.userId}`
+
+/** The failure #1176 closes: the per-user index lost the entry, so Better Auth cannot name the blobs. */
+function loseIndexOf(person: Person): void {
+  kv().store.delete(indexKeyOf(person))
+}
+
+const blobsHeld = (tokens: ReadonlyArray<string>): Array<string> =>
+  tokens.filter((token) => kv().store.has(token))
+
+/** Sessions (sign-up, sign-in and a second device) whose blobs the index no longer names. */
+async function withUnindexedSessions(
+  name: string,
+): Promise<{ person: Person; tokens: Array<string> }> {
+  const person = await signedInPerson(name)
+  const second = await signInAgain(person)
+  const tokens = sessionTokensOf(person)
+  expect(tokens.length).toBeGreaterThan(1)
+  expect(blobsHeld(tokens)).toHaveLength(tokens.length)
+  loseIndexOf(person)
+  return { person: { ...person, headers: second.headers }, tokens }
+}
+
+describe('ending one’s own sessions purges the cached blobs the durable rows name (#1176)', () => {
+  it('removes every blob after a password reset, although the index names none of them', async () => {
+    const { person, tokens } = await withUnindexedSessions('forgetful')
+    const token = await resetTokenFor(person)
+
+    await getAuth().api.resetPassword({
+      body: { token, newPassword: 'a-brand-new-passphrase-1' },
+    })
+
+    expect(blobsHeld(tokens)).toEqual([])
+  })
+
+  it('removes the indexed blobs too', async () => {
+    const person = await signedInPerson('forgetful')
+    await signInAgain(person)
+    const tokens = sessionTokensOf(person)
+    const token = await resetTokenFor(person)
+
+    await getAuth().api.resetPassword({
+      body: { token, newPassword: 'a-brand-new-passphrase-1' },
+    })
+
+    expect(blobsHeld(tokens)).toEqual([])
+  })
+
+  it('removes every blob when a person revokes all their sessions', async () => {
+    const { person, tokens } = await withUnindexedSessions('careful')
+
+    await getAuth().api.revokeSessions({ headers: person.headers })
+
+    expect(blobsHeld(tokens)).toEqual([])
+  })
+
+  it('removes the blobs that existed before a password change that revokes the others, and keeps the new session’s', async () => {
+    const { person, tokens } = await withUnindexedSessions('changer')
+
+    await getAuth().api.changePassword({
+      body: {
+        currentPassword: PASSWORD,
+        newPassword: 'a-brand-new-passphrase-1',
+        revokeOtherSessions: true,
+      },
+      headers: person.headers,
+    })
+
+    expect(blobsHeld(tokens)).toEqual([])
+    const [created] = sessionTokensOf(person)
+    expect(sessionTokensOf(person)).toHaveLength(1)
+    expect(kv().store.has(String(created))).toBe(true)
+    expect(kv().store.get(indexKeyOf(person))).toContain(String(created))
+  })
+
+  it('deletes nothing when a password change revokes nothing', async () => {
+    const { person, tokens } = await withUnindexedSessions('changer')
+    const deletes = kv().deleted.length
+
+    await getAuth().api.changePassword({
+      body: {
+        currentPassword: PASSWORD,
+        newPassword: 'a-brand-new-passphrase-1',
+      },
+      headers: person.headers,
+    })
+
+    expect(kv().deleted).toHaveLength(deletes)
+    expect(blobsHeld(tokens)).toHaveLength(tokens.length)
+  })
+
+  it('deletes nothing when the endpoint refuses', async () => {
+    const { person, tokens } = await withUnindexedSessions('careful')
+    const deletes = kv().deleted.length
+
+    await expect(
+      getAuth().api.changePassword({
+        body: {
+          currentPassword: 'not-the-password-at-all',
+          newPassword: 'a-brand-new-passphrase-1',
+          revokeOtherSessions: true,
+        },
+        headers: person.headers,
+      }),
+    ).rejects.toBeDefined()
+    await expect(
+      getAuth().api.resetPassword({
+        body: { token: 'not-a-token', newPassword: 'a-brand-new-passphrase-1' },
+      }),
+    ).rejects.toBeDefined()
+    await expect(
+      getAuth().api.revokeSessions({ headers: new Headers() }),
+    ).rejects.toBeDefined()
+
+    expect(kv().deleted).toHaveLength(deletes)
+    expect(blobsHeld(tokens)).toHaveLength(tokens.length)
+  })
+
+  it('never reaches another person’s blobs', async () => {
+    const { person } = await withUnindexedSessions('careful')
+    const bystander = await signedInPerson('bystander')
+    loseIndexOf(bystander)
+    const bystanderTokens = sessionTokensOf(bystander)
+
+    await getAuth().api.revokeSessions({ headers: person.headers })
+
+    expect(blobsHeld(bystanderTokens)).toHaveLength(bystanderTokens.length)
+  })
+
+  it('takes the person from the store, never from the request body of a reset', async () => {
+    const attacker = await signedInPerson('attacker')
+    loseIndexOf(attacker)
+    const attackerTokens = sessionTokensOf(attacker)
+    const victim = await signedInPerson('victim')
+    loseIndexOf(victim)
+    const victimTokens = sessionTokensOf(victim)
+    const token = await resetTokenFor(attacker)
+
+    await getAuth().api.resetPassword({
+      body: {
+        token,
+        newPassword: 'a-brand-new-passphrase-1',
+        userId: victim.userId,
+      } as { token: string; newPassword: string },
+    })
+
+    expect(blobsHeld(attackerTokens)).toEqual([])
+    expect(blobsHeld(victimTokens)).toHaveLength(victimTokens.length)
+  })
+
+  it('does not let a caller of the auth API name the blobs to delete', async () => {
+    const victim = await signedInPerson('victim')
+    const victimTokens = sessionTokensOf(victim)
+    const attacker = await signedInPerson('attacker')
+    loseIndexOf(attacker)
+    const attackerTokens = sessionTokensOf(attacker)
+
+    await getAuth().api.revokeSessions({
+      headers: attacker.headers,
+      roomEvictionSessionTokens: victimTokens,
+    } as { headers: Headers })
+
+    expect(blobsHeld(attackerTokens)).toEqual([])
+    expect(blobsHeld(victimTokens)).toHaveLength(victimTokens.length)
+  })
+
+  it('leaves sign-out and the revoke of one session to Better Auth', async () => {
+    const { person, tokens } = await withUnindexedSessions('tidy')
+    const [first, second] = tokens.map(String)
+
+    await getAuth().api.revokeSession({
+      body: { token: String(first) },
+      headers: person.headers,
+    })
+
+    expect(kv().deleted).toEqual([first])
+    expect(kv().store.has(String(second))).toBe(true)
+  })
+
+  it('leaves the other blobs of a person who signs out of one device to Better Auth', async () => {
+    const { person, tokens } = await withUnindexedSessions('tidy')
+
+    await getAuth().api.signOut({ headers: person.headers })
+
+    expect(blobsHeld(tokens)).toHaveLength(tokens.length - 1)
+    expect(kv().deleted).toHaveLength(1)
+  })
+
+  it('never deletes the per-user index key itself', async () => {
+    const person = await signedInPerson('careful')
+    await signInAgain(person)
+    const token = await resetTokenFor(person)
+    const { internalAdapter } = await getAuth().$context
+    const indexDeleteCalls: Array<string> = []
+    const original = kv().delete
+    kv().delete = async (key: string) => {
+      indexDeleteCalls.push(key)
+      return original(key)
+    }
+    vi.spyOn(internalAdapter, 'deleteUserSessions').mockResolvedValue(undefined)
+
+    try {
+      await getAuth().api.resetPassword({
+        body: { token, newPassword: 'a-brand-new-passphrase-1' },
+      })
+    } finally {
+      kv().delete = original
+    }
+
+    expect(indexDeleteCalls).not.toContain(indexKeyOf(person))
+    expect(indexDeleteCalls.length).toBeGreaterThan(0)
+  })
+
+  it('lets the request stand, retries once and logs counts and ids only when a delete is rejected', async () => {
+    const { person, tokens } = await withUnindexedSessions('unlucky')
+    const [stuck] = tokens.map(String)
+    kv().failing.add(stuck)
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    await expect(
+      getAuth().api.revokeSessions({ headers: person.headers }),
+    ).resolves.toMatchObject({ status: true })
+
+    expect(sessionTokensOf(person)).toEqual([])
+    expect(kv().deleted.filter((key) => key === stuck)).toHaveLength(2)
+    expect(blobsHeld(tokens)).toEqual([stuck])
+    expect(errors).toHaveBeenCalledOnce()
+    const line = String(errors.mock.calls[0]?.[0])
+    expect(JSON.parse(line)).toMatchObject({
+      level: 'error',
+      event: 'room-eviction.blobs.failed',
+      userId: person.userId,
+      source: '/revoke-sessions',
+      enumerated: tokens.length,
+      deleted: tokens.length - 1,
+      failed: 1,
+    })
+    for (const token of tokens) expect(line).not.toContain(token)
+  })
+
+  it('still deletes every other blob when one delete is rejected', async () => {
+    const { person, tokens } = await withUnindexedSessions('unlucky')
+    kv().failing.add(String(tokens[0]))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    await getAuth().api.revokeSessions({ headers: person.headers })
+
+    expect(blobsHeld(tokens)).toEqual([String(tokens[0])])
+  })
+
+  it('lets the reset stand and logs no credential when the session list cannot be read', async () => {
+    const { person, tokens } = await withUnindexedSessions('forgetful')
+    const token = await resetTokenFor(person)
+    const { adapter } = await getAuth().$context
+    const real = adapter.findMany.bind(adapter)
+    const unreadable = vi
+      .spyOn(adapter, 'findMany')
+      .mockImplementation(async (query) => {
+        if (query.model === 'session') {
+          throw new Error(`Failed query: select ... params: ${tokens.join()}`)
+        }
+        return real(query)
+      })
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    await expect(
+      getAuth().api.resetPassword({
+        body: { token, newPassword: 'a-brand-new-passphrase-1' },
+      }),
+    ).resolves.toMatchObject({ status: true })
+
+    unreadable.mockRestore()
+    expect(sessionTokensOf(person)).toEqual([])
+    const lines = errors.mock.calls.map((call) => String(call[0]))
+    expect(
+      lines.some((line) => line.includes('room-eviction.blobs.unread')),
+    ).toBe(true)
+    for (const line of lines) {
+      for (const secret of [token, ...tokens]) {
+        expect(line).not.toContain(secret)
+      }
+    }
   })
 })
