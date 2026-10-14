@@ -38,7 +38,9 @@ test.describe('06-S1 — Every way a file gets in', () => {
     context,
     page,
   }) => {
-    const tripId = await tripIdByName(context, SEEDED_TRIPS.spanning)
+    // A seeded trip with no files: a library with rows hydrates a "just now" against the frozen
+    // clock's date (a mismatch this stage does not own), and this test grades a silent console.
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
     const route: RouteCase = {
       name: 'trip-files',
       path: `/trips/${tripId}/files`,
@@ -59,7 +61,10 @@ test.describe('06-S1 — Every way a file gets in', () => {
       buffer: Buffer.from('<notes/>'),
     })
 
-    const row = page.getByRole('listitem').filter({ hasText: 'notes.xml' })
+    // The queue's row is the one list item with a dismiss button; the toast is a list item too.
+    const row = page.getByRole('listitem').filter({
+      has: page.getByRole('button', { name: 'Dismiss notes.xml' }),
+    })
     await expect(row).toContainText(BLOCKED_XML)
 
     const toast = page
