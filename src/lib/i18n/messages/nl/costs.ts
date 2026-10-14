@@ -53,7 +53,6 @@ const messages = {
   'split.everyone': 'Iedereen',
   'split.nobody': 'Niemand',
   'split.departed': 'Heeft de reis verlaten',
-  'split.departedName': 'Een voormalige reiziger',
   'split.departedHint':
     'Als je iemand uitvinkt die de reis heeft verlaten, wordt het aandeel definitief verwijderd.',
   'split.includeFor': '{name} opnemen in deze verdeling',

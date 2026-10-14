@@ -820,7 +820,7 @@ describe('the costs boundary', () => {
       expect(payload.departedPeople).toEqual([])
     })
 
-    it('keeps their share when the edit sends it back, and never touches the trip’s other shares', async () => {
+    it('keeps their share when the edit sends it back, at a full equal part', async () => {
       stubs.scope = editor
       const before = (await getExpenseWithShares(tenant.scope, boatId)).shares
       const keep = [ownerId, payerId, leaverId, goneId, strangerId]
@@ -832,6 +832,11 @@ describe('the costs boundary', () => {
       const after = (await getExpenseWithShares(tenant.scope, boatId)).shares
       expect(await shareUsers()).toEqual([...keep].sort())
       expect(after.reduce((sum, row) => sum + row.shareMinor, 0)).toBe(9_000)
+      // Everyone sent back, a departed person included, carries a full equal part: the cost is
+      // not moved onto the travellers who stayed.
+      for (const row of after) {
+        expect(row.shareMinor).toBe(1_800)
+      }
       expect(before.map((row) => row.userId).sort()).toEqual([...keep].sort())
     })
 

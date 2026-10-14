@@ -55,7 +55,6 @@ const messages = {
   'split.everyone': 'Alle',
   'split.nobody': 'Niemand',
   'split.departed': 'Hat die Reise verlassen',
-  'split.departedName': 'Früheres Reisemitglied',
   'split.departedHint':
     'Wenn du jemanden abwählst, der die Reise verlassen hat, wird der Anteil endgültig entfernt.',
   'split.includeFor': '{name} in diese Aufteilung einbeziehen',

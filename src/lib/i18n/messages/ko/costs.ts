@@ -53,7 +53,6 @@ const messages = {
   'split.everyone': '전원',
   'split.nobody': '없음',
   'split.departed': '여행에서 나감',
-  'split.departedName': '이전 여행자',
   'split.departedHint':
     '여행에서 나간 사람의 선택을 해제하면 해당 몫이 영구적으로 삭제됩니다.',
   'split.includeFor': '{name}을(를) 이 분할에 포함',

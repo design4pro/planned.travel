@@ -56,7 +56,6 @@ const messages = {
   'split.everyone': 'Tutti',
   'split.nobody': 'Nessuno',
   'split.departed': 'Ha lasciato il viaggio',
-  'split.departedName': 'Un ex viaggiatore',
   'split.departedHint':
     'Deselezionare chi ha lasciato il viaggio elimina definitivamente la sua quota.',
   'split.includeFor': 'Includi {name} in questa divisione',

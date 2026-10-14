@@ -57,7 +57,6 @@ const messages = {
   'split.everyone': 'Tout le monde',
   'split.nobody': 'Personne',
   'split.departed': 'A quitté le voyage',
-  'split.departedName': 'Un ancien voyageur',
   'split.departedHint':
     'Décocher une personne qui a quitté le voyage supprime définitivement sa part.',
   'split.includeFor': 'Inclure {name} dans ce partage',

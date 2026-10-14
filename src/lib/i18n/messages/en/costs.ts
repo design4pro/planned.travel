@@ -71,7 +71,6 @@ const messages = {
   'split.everyone': 'Everyone',
   'split.nobody': 'Nobody',
   'split.departed': 'Left the trip',
-  'split.departedName': 'A former traveller',
   'split.departedHint':
     'Unticking someone who left the trip removes their share for good.',
   'split.includeFor': 'Include {name} in this split',

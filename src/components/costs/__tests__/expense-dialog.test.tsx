@@ -594,9 +594,9 @@ describe('the split of an expense that names someone who has left the trip', () 
     })
 
     const row = screen
-      .getByRole('checkbox', { name: 'Include A former traveller in this split' })
+      .getByRole('checkbox', { name: 'Include Removed traveller in this split' })
       .closest('li')
-    expect(row?.textContent).toContain('A former traveller')
+    expect(row?.textContent).toContain('Removed traveller')
   })
 
   it('says that unticking them removes the share for good', () => {
@@ -629,13 +629,29 @@ describe('the split of an expense that names someone who has left the trip', () 
     expect(sent?.shares.map((row) => row.shareMinor)).toEqual([3_000, 3_000])
   })
 
-  it('keeps "Everyone" to the people on the trip, while "Nobody" clears them too', async () => {
+  it('leaves them alone for both "Nobody" and "Everyone": only their own checkbox removes the share', async () => {
     const sent = await saveWith(async (user) => {
       await user.click(screen.getByRole('button', { name: 'Nobody' }))
       await user.click(screen.getByRole('button', { name: 'Everyone' }))
     })
 
-    expect(sent?.participants.map((row) => row.userId)).toEqual(['u1', 'u2'])
+    expect(sent?.participants.map((row) => row.userId)).toEqual([
+      'u1',
+      'u2',
+      'u9',
+    ])
+  })
+
+  it('ties their checkbox to the warning that unticking is final', () => {
+    open(undefined, { expense: DINNER, departedPeople: DEPARTED })
+
+    const hint = screen.getByText(/removes their share for good/)
+    expect(cyBox().getAttribute('aria-describedby')).toBe(hint.id)
+    expect(
+      screen
+        .getByRole('checkbox', { name: /Include Ada/ })
+        .getAttribute('aria-describedby'),
+    ).toBeNull()
   })
 
   it('shows only the departed people this expense names', () => {

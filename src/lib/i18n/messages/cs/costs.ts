@@ -57,7 +57,6 @@ const messages = {
   'split.everyone': 'Všichni',
   'split.nobody': 'Nikdo',
   'split.departed': 'Už na cestě není',
-  'split.departedName': 'Dřívější účastník cesty',
   'split.departedHint':
     'Odškrtnutím někoho, kdo cestu opustil, jeho podíl nadobro odstraníte.',
   'split.includeFor': 'Zahrnout {name} do tohoto rozdělení',

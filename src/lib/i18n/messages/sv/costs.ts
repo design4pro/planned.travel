@@ -52,7 +52,6 @@ const messages = {
   'split.everyone': 'Alla',
   'split.nobody': 'Ingen',
   'split.departed': 'Har lämnat resan',
-  'split.departedName': 'En tidigare resenär',
   'split.departedHint':
     'Om du avmarkerar någon som har lämnat resan tas den personens andel bort för gott.',
   'split.includeFor': 'Ta med {name} i den här fördelningen',

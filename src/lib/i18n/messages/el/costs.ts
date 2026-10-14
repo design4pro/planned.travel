@@ -53,7 +53,6 @@ const messages = {
   'split.everyone': 'Όλοι',
   'split.nobody': 'Κανείς',
   'split.departed': 'Έφυγε από το ταξίδι',
-  'split.departedName': 'Πρώην ταξιδιώτης',
   'split.departedHint':
     'Αν αποεπιλέξετε κάποιον που έφυγε από το ταξίδι, το μερίδιό του αφαιρείται οριστικά.',
   'split.includeFor': 'Συμπερίληψη του {name} σε αυτόν τον διαχωρισμό',

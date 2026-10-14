@@ -60,7 +60,6 @@ const messages = {
   'split.everyone': 'Wszyscy',
   'split.nobody': 'Nikt',
   'split.departed': 'Nie ma już w podróży',
-  'split.departedName': 'Dawny uczestnik podróży',
   'split.departedHint':
     'Odznaczenie osoby, której już nie ma w podróży, usuwa jej udział na stałe.',
   'split.includeFor': 'Uwzględnij {name} w tym podziale',

@@ -55,7 +55,7 @@ import { parseDay, toDayString } from './data'
 import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
-  draftFor,
+  draftForDeparted,
   draftToInputs,
   emptyDraft,
   previewFor,
@@ -273,8 +273,9 @@ export function ExpenseDialog({
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
       ? emptyDraft(people)
-      : draftFor(
-          [...people, ...departed],
+      : draftForDeparted(
+          people,
+          departed,
           expense.amountMinor,
           expense.currency,
           expense.splitMethod,

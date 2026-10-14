@@ -57,7 +57,6 @@ const messages = {
   'split.everyone': 'Усі',
   'split.nobody': 'Ніхто',
   'split.departed': 'Більше не в подорожі',
-  'split.departedName': 'Колишній учасник подорожі',
   'split.departedHint':
     'Якщо зняти позначку з того, кого вже немає в подорожі, його частку буде видалено назавжди.',
   'split.includeFor': 'Включити {name} до цього розподілу',

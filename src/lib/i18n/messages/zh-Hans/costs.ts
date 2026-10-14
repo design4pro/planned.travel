@@ -50,7 +50,6 @@ const messages = {
   'split.everyone': '所有人',
   'split.nobody': '无人',
   'split.departed': '已离开行程',
-  'split.departedName': '前旅伴',
   'split.departedHint': '取消勾选已离开行程的人，会永久删除其份额。',
   'split.includeFor': '将{name}纳入此次分摊',
   'split.how': '这笔支出怎么分',

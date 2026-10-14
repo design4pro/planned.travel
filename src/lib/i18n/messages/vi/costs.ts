@@ -52,7 +52,6 @@ const messages = {
   'split.everyone': 'Mọi người',
   'split.nobody': 'Không ai',
   'split.departed': 'Đã rời chuyến đi',
-  'split.departedName': 'Một người từng đi cùng',
   'split.departedHint':
     'Bỏ chọn người đã rời chuyến đi sẽ xóa vĩnh viễn phần của họ.',
   'split.includeFor': 'Bao gồm {name} trong phần chia này',

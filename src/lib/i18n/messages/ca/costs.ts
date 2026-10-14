@@ -54,7 +54,6 @@ const messages = {
   'split.everyone': 'Tothom',
   'split.nobody': 'Ningú',
   'split.departed': 'Ha deixat el viatge',
-  'split.departedName': 'Un antic viatger',
   'split.departedHint':
     "Si desmarques algú que ha deixat el viatge, la seva part s'elimina definitivament.",
   'split.includeFor': 'Inclou {name} en aquesta divisió',
