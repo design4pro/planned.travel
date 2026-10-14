@@ -157,16 +157,14 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       } catch (cause) {
         if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
           // The screen is refreshed here, before the refusal reaches the dialog, so the dialog and
-          // the toast both name the currency the trip is in now.
-          // A reload that fails must not hide the refusal: the dialog still needs it.
-          await router.invalidate().catch(() => undefined)
+          // the toast both name the currency the trip is in now. `sync` makes the promise wait for
+          // the loader; a background reload would resolve it while the old figures are still there.
+          await router.invalidate({ sync: true }).catch(() => undefined)
           const live = currencyOnScreen(router, payload.tripId)
           if (live === null) {
             toast.error(failure)
           } else {
-            toast.error(failure, {
-              description: t('costs.refusal.tripCurrencyChanged', { to: live }),
-            })
+            toast.error(t('costs.refusal.tripCurrencyChanged', { to: live }))
           }
         } else {
           toast.error(failure, {

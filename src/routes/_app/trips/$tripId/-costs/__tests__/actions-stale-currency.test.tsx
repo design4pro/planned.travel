@@ -122,10 +122,9 @@ describe('the costs write runner on a stale trip currency', () => {
 
     const thrown = await refusedAdd()
 
-    expect(refresh.invalidate).toHaveBeenCalledTimes(1)
-    expect(toast.error).toHaveBeenCalledWith('The expense was not added', {
-      description: expect.stringContaining('JPY'),
-    })
+    expect(refresh.invalidate).toHaveBeenCalledWith({ sync: true })
+    expect(toast.error).toHaveBeenCalledTimes(1)
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('now JPY'))
     expect(thrown).toBeInstanceOf(Error)
     expect(thrown).toHaveProperty(
       'message',

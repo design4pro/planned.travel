@@ -15,7 +15,7 @@
  * implied rate is shown under it. The rate is never sent: the server derives it from
  * the two amounts.
  */
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { ArrowRight, Coins } from 'lucide-react'
 
 import {
@@ -127,6 +127,11 @@ export function PaymentDialog({
   const [method, setMethod] = useState<SettlementMethod>('bank_transfer')
   const [settledOn, setSettledOn] = useState(today)
   const [note, setNote] = useState('')
+  // What the dialog opened with: a Settle-suggested amount is in the currency the suggestion was made
+  // in, so after a re-basing it is only worth keeping if the reader typed it.
+  const [openedAmount] = useState(amount)
+  const amountRef = useRef<HTMLInputElement>(null)
+  const convertedRef = useRef<HTMLInputElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const stale = useStaleTripCurrency(currency)
@@ -140,6 +145,9 @@ export function PaymentDialog({
     if (currencyCode(sourceCurrency) === stale.adopt.from) {
       setSourceCurrency(stale.adopt.to)
     }
+    if (amount === openedAmount) {
+      setAmount('')
+    }
     setConverted('')
   }
   const staleMessage =
@@ -149,6 +157,12 @@ export function PaymentDialog({
 
   const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
   const typedMinor = parseMoney(amount, sourceCurrency)
+  const amountError =
+    amount.trim() !== '' && (typedMinor === null || typedMinor === 0)
+      ? t('costs.payment.amountPositive')
+      : foreign
+        ? undefined
+        : staleMessage
   const amountMinor = foreign ? parseMoney(converted, currency) : typedMinor
   const rate = foreign
     ? formatExchangeRate(
@@ -233,6 +247,8 @@ export function PaymentDialog({
     } catch (cause) {
       if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
         stale.refuse(currencyCode(currency))
+        // Save is about to stay disabled, so the keyboard is taken to the figure that has to be looked at.
+        ;(foreign ? convertedRef : amountRef).current?.focus()
       } else {
         setError(messageOf(cause, t('costs.payment.failed')))
       }
@@ -269,7 +285,7 @@ export function PaymentDialog({
               void submit()
             }}
           >
-            {error === null ? null : (
+            {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
                 {error}
               </Alert>
@@ -321,16 +337,10 @@ export function PaymentDialog({
                   currency: currencyCode(sourceCurrency),
                 })}
                 required
-                error={
-                  amount.trim() !== '' &&
-                  (typedMinor === null || typedMinor === 0)
-                    ? t('costs.payment.amountPositive')
-                    : foreign
-                      ? undefined
-                      : staleMessage
-                }
+                error={amountError}
               >
                 <Input
+                  ref={amountRef}
                   value={amount}
                   onChange={(event) => {
                     stale.dismiss()
@@ -379,6 +389,7 @@ export function PaymentDialog({
                 error={convertedInvalid ? t(convertedErrorKey) : staleMessage}
               >
                 <Input
+                  ref={convertedRef}
                   value={converted}
                   onChange={(event) => {
                     stale.dismiss()

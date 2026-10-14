@@ -222,13 +222,14 @@ describe('the payment dialog', () => {
     function dialog(
       currency: string,
       onSubmit: (value: PaymentFormValue) => Promise<void>,
+      seed: PaymentSeed | null = null,
     ) {
       return (
         <I18nProvider locale="en" messages={EN}>
           <PaymentDialog
             open
             onOpenChange={() => {}}
-            seed={null}
+            seed={seed}
             people={PEOPLE}
             viewerUserId="u1"
             currency={currency}
@@ -325,6 +326,41 @@ describe('the payment dialog', () => {
       expect(
         screen.getByText(/budget currency of this trip is now JPY/),
       ).toBeTruthy()
+    })
+
+    it('takes the keyboard to the amount and says so in the dialog when the refreshed currency has not arrived', async () => {
+      await refuseOnce()
+
+      expect(document.activeElement).toBe(
+        screen.getByLabelText(/Amount in EUR/),
+      )
+      expect(screen.getByText('That did not save')).toBeTruthy()
+      expect(screen.queryByText(REFUSAL)).toBeNull()
+    })
+
+    it('drops a Settle-suggested amount once the trip has moved on, so it is not saved as a new-currency figure', async () => {
+      const seed: PaymentSeed = {
+        fromUserId: 'u2',
+        toUserId: 'u1',
+        amountMinor: 4_000,
+      }
+      const onSubmit = vi
+        .fn<(value: PaymentFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const view = render(dialog('EUR', onSubmit, seed))
+      await user.click(screen.getByRole('button', { name: 'Record payment' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit, seed))
+
+      expect(await screen.findByLabelText(/Amount in JPY/)).toHaveProperty(
+        'value',
+        '',
+      )
+      expect(
+        screen.getByRole('button', { name: 'Record payment' }),
+      ).toHaveProperty('disabled', true)
     })
   })
 })

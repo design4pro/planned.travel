@@ -28,6 +28,8 @@ export interface StaleTripCurrency {
   readonly adopt: { readonly from: string; readonly to: string } | null
   /** The refreshed currency to name in the message while the refusal stands; else `null`. */
   readonly messageFor: string | null
+  /** The save was refused but the refreshed currency has not arrived (or never will): say so plainly. */
+  readonly pending: boolean
   /** The save made under `from` was refused. */
   readonly refuse: (from: string) => void
   /** The dialog has acted on `adopt`. */
@@ -46,6 +48,7 @@ export function useStaleTripCurrency(tripCurrency: string): StaleTripCurrency {
         ? { from: refusal.from, to: current }
         : null,
     messageFor: refreshed ? current : null,
+    pending: refusal !== null && !refreshed,
     refuse: (from) => setRefusal({ from, adopted: false }),
     adopted: () =>
       setRefusal((was) => (was === null ? null : { ...was, adopted: true })),

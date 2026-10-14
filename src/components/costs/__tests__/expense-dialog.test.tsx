@@ -326,13 +326,14 @@ describe('the expense dialog’s suggested converted figure', () => {
     function dialog(
       tripCurrency: string,
       onSubmit: (value: ExpenseFormValue) => Promise<void>,
+      expense: CostsExpense | null = null,
     ) {
       return (
         <I18nProvider locale="en" messages={EN}>
           <ExpenseDialog
             open
             onOpenChange={() => {}}
-            expense={null}
+            expense={expense}
             people={PEOPLE}
             viewerUserId="u1"
             tripCurrency={tripCurrency}
@@ -442,6 +443,41 @@ describe('the expense dialog’s suggested converted figure', () => {
       expect(
         screen.getByText(/budget currency of this trip is now JPY/),
       ).toBeTruthy()
+    })
+
+    it('takes the keyboard to the amount and says so in the dialog when the refreshed currency has not arrived', async () => {
+      const user = hand()
+      await refuseOnce(user)
+
+      expect(document.activeElement).toBe(amountField())
+      expect(screen.getByText('That did not save')).toBeTruthy()
+      expect(screen.queryByText(REFUSAL)).toBeNull()
+    })
+
+    it('drops the stored digits of an edited expense once the trip has moved on, so they are not saved as new-currency figures', async () => {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const stored = expenseRow({
+        amountMinor: 6_000,
+        currency: 'EUR',
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      })
+      const view = render(dialog('EUR', onSubmit, stored))
+      await user.click(screen.getByRole('button', { name: 'Save changes' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit, stored))
+
+      expect(await screen.findByText(/now JPY/)).toBeTruthy()
+      expect(amountField()).toHaveProperty('value', '')
+      expect(
+        screen.getByRole('button', { name: 'Save changes' }),
+      ).toHaveProperty('disabled', true)
     })
   })
 })
