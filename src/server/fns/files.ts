@@ -29,7 +29,9 @@ import {
 import { appScope, filesBucket, mirrorToRoom, orNull, patch } from './context'
 import {
   FILE_KIND_VALUES,
+  attachmentHeaders,
   checkUpload,
+  contentDispositionFor,
   defaultKindFor,
   isFileKind,
   resolveContentType,
@@ -159,7 +161,7 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
     await bucket.put(storageKey, request.file.stream(), {
       httpMetadata: {
         contentType,
-        contentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        contentDisposition: contentDispositionFor(filename),
       },
       customMetadata: {
         organizationId: scope.ctx.organizationId,
@@ -329,13 +331,5 @@ export const downloadTripFileFn = createServerFn({ method: 'GET' })
       )
     }
 
-    return new Response(object.body, {
-      headers: {
-        'content-type': row.contentType,
-        'content-length': String(row.sizeBytes),
-        'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(row.filename)}`,
-        // Attachments are private to a workspace; nothing may hold a copy.
-        'cache-control': 'private, no-store',
-      },
-    })
+    return new Response(object.body, { headers: attachmentHeaders(row) })
   })

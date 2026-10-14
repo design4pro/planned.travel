@@ -2,10 +2,10 @@
 
 | Field              | Value                                        |
 | ------------------ | -------------------------------------------- |
-| **Status**         | ready                                        |
+| **Status**         | in-progress                                  |
 | **Issue**          | none                                         |
 | **Spec PR**        | #866                                         |
-| **Implementation** | none                                         |
+| **Implementation** | #1236                                        |
 | **Plan**           | 06-S1 (docs/plans/06-documents-and-media.md) |
 
 ## 📝 TLDR
