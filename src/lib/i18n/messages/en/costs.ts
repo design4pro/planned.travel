@@ -266,6 +266,70 @@ const messages = {
     'The trip changed while you were confirming, so nothing was changed. Check the new figures and confirm again.',
   'refusal.tripCurrencyChanged':
     'The budget currency of this trip is now {to}, so this was not saved. The page has been refreshed: check the amount and save again.',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Change budget currency',
+  'rebase.title': 'Change the budget currency',
+  'rebase.description':
+    'The amounts you typed stay as you typed them. The totals and balances of this trip are converted to the new currency.',
+  'rebase.to': 'New currency',
+  'rebase.toPlaceholder': 'Choose a currency',
+  'rebase.rateLabel': 'Exchange rate (1 {from} in {to})',
+  'rebase.rateInverse': 'That is 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Enter a rate greater than zero.',
+  'rebase.rateOutOfRange':
+    'That rate looks far too large or too small. Check which way round it is.',
+  'rebase.source.recent': 'The last rate used in this workspace',
+  'rebase.source.manual': 'The rate you entered',
+  'rebase.noRate':
+    'There is no rate on record for {from} to {to}. Enter the rate you want to use.',
+  'rebase.waitingForRate': 'The preview appears as soon as there is a rate.',
+  'rebase.loading': 'Working out the conversion',
+  'rebase.example':
+    '{original} stays as you typed it and is counted as {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} expense will be counted in {to}.',
+    other: '{count} expenses will be counted in {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} payment will be counted in {to}.',
+    other: '{count} payments will be counted in {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} planned item will be counted in {to}.',
+    other: '{count} planned items will be counted in {to}.',
+  },
+  'rebase.pinned':
+    'Prices on places, reservations, stays and transport stay in {from}.',
+  'rebase.target': 'The trip budget {before} becomes {after}.',
+  'rebase.rounding':
+    'Each amount is rounded once, so a balance can move by up to {amount}.',
+  'rebase.leftover': 'After the change, {name} would owe {other} {amount}.',
+  'rebase.someone': 'Someone',
+  'rebase.nothing':
+    'Nothing on this trip is priced yet, so nothing needs converting.',
+  'rebase.unconverted': {
+    one: '{count} entry is in a currency other than {from} and cannot be converted automatically. It is usually an expense created from a reservation priced in another currency: edit or delete it, then try again.',
+    other:
+      '{count} entries are in a currency other than {from} and cannot be converted automatically. They are usually expenses created from reservations priced in another currency: edit or delete them, then try again.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} expense has a split that cannot be carried over, because every share in it is zero. Edit or delete it, then try again.',
+    other:
+      '{count} expenses have a split that cannot be carried over, because every share in them is zero. Edit or delete them, then try again.',
+  },
+  'rebase.outOfRange':
+    'With this rate an amount on the trip would be too large to store in {to}. Check the rate and which way round it is.',
+  'rebase.tooLarge':
+    'This trip has too many entries to change in one step: it would need {count} changes at once and the limit is {limit}. The budget stays in {from} for now.',
+  'rebase.copyPending':
+    'This trip is still being copied. Try again in a moment.',
+  'rebase.error': 'The conversion could not be loaded. Nothing was changed.',
+  'rebase.commitError':
+    "We couldn't change the budget currency. Nothing was changed.",
+  'rebase.retry': 'Try again',
+  'rebase.confirm': 'Change to {to}',
+  'rebase.committing': 'Changing the budget currency',
+  'rebase.done': 'The budget is now in {to}.',
 } as const satisfies NamespaceMessages
 
 export default messages
