@@ -108,7 +108,9 @@ pins vendor behaviour with no live sample in the PR body is a should-fix finding
 A layout-shift assertion in an e2e journey counts the shifts of the section under test, attributing
 each entry by `sources`, and reports the rest. The app shell shifts 0.0005 to 0.0007 on a slow CI
 runner (font swap, badge counts), so a zero-tolerance assertion over the whole page is green locally
-and red in CI (#1185 failed three times, #1209 settled it with a test-engineer verdict).
+and red in CI (#1185 failed three times). #1209 met the same 0.00073 shell shift locally and scoped
+its window to the weather request instead, on a test-engineer verdict; that is how docs/SPEC.md's
+"zero layout shift after paint" is measured.
 
 ## Docs and CI (should fix)
 
