@@ -93,7 +93,11 @@ test.describe('06-S1 — Every way a file gets in', () => {
  * calendar, and the action fits the smallest phone the design system claims.
  */
 
-const LISBON = 'Lisbon, slowly'
+/**
+ * A seeded trip with no files: a library with rows hydrates a "just now" against the frozen clock's
+ * date (a mismatch the 06-S1 block already steps around), and these tests grade a silent console.
+ */
+const PORTO = SEEDED_TRIPS.single
 
 const DOWNLOAD_ACTION = 'Download calendar file (.ics)'
 
@@ -129,7 +133,7 @@ test.describe('06-S5 — a calendar that keeps up with the trip', () => {
   test('the Files screen offers the trip as a calendar file, and the server answers it as one', async ({
     context,
   }) => {
-    const tripId = await tripIdByName(context, LISBON)
+    const tripId = await tripIdByName(context, PORTO)
 
     await onRoute(context, filesRoute(tripId), async (page) => {
       const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
@@ -158,7 +162,7 @@ test.describe('06-S5 — a calendar that keeps up with the trip', () => {
     test(`the action is reachable and fits at 360px, ${theme}`, async ({
       context,
     }) => {
-      const tripId = await tripIdByName(context, LISBON)
+      const tripId = await tripIdByName(context, PORTO)
       const route = filesRoute(tripId)
       const page = await context.newPage()
       try {
