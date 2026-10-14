@@ -716,7 +716,7 @@ describe('renderExportDocument', () => {
     )
   })
 
-  it('lets the browser pick the direction of every user-entered text, so mixed scripts keep their punctuation', () => {
+  it('isolates every user-entered text in a bdi, so mixed scripts keep their punctuation and the page keeps the alignment', () => {
     const html = render(
       {
         ...DOCUMENT,
@@ -727,22 +727,25 @@ describe('renderExportDocument', () => {
     )
 
     for (const tag of [
-      '<h1 dir="auto">',
-      '<p class="subtitle" dir="auto">',
-      '<p class="note" dir="auto">',
-      '<h2 dir="auto">',
-      '<th scope="row" class="label" dir="auto">',
-      '<td class="value" dir="auto">',
-      '<td class="meta" dir="auto">',
+      '<h1><bdi>',
+      '<p class="subtitle"><bdi>',
+      '<p class="note"><bdi>',
+      '<h2><bdi>',
+      '<th scope="row" class="label"><bdi>',
+      '<td class="value"><bdi>',
+      '<td class="meta"><bdi>',
     ]) {
       expect(html).toContain(tag)
     }
+    expect(html).not.toContain('dir="auto"')
   })
 
   it('wraps long unbroken text inside a fixed table, and pads the page on a screen only', () => {
     const html = render()
 
-    expect(html).toMatch(/th, td \{[^}]*overflow-wrap: anywhere/)
+    expect(html).toMatch(
+      /h1, h2, .subtitle, .note, th, td \{[^}]*overflow-wrap: anywhere/,
+    )
     expect(html).toMatch(/table \{[^}]*table-layout: fixed/)
     expect(html).toMatch(/@media screen \{ body \{ padding: 16px; \} \}/)
     expect(html).toContain('<meta name="viewport"')
@@ -755,7 +758,9 @@ describe('renderExportDocument', () => {
     })
 
     expect(html.match(/<table>/g)).toHaveLength(2)
-    expect(html).toMatch(/<main><section><h2 dir="auto">Empty<\/h2><\/section>/)
+    expect(html).toMatch(
+      /<main><section><h2><bdi>Empty<\/bdi><\/h2><\/section>/,
+    )
   })
 
   it('escapes every user-entered value, including after interpolation', () => {

@@ -84,6 +84,15 @@ export function escapeHtml(value: string): string {
 }
 
 /**
+ * User text in its own bidi isolate: its direction follows its own script, while alignment and
+ * column spacing stay with the page, so a Latin name on an Arabic page (or the reverse) neither
+ * flips sides nor swallows the punctuation around it.
+ */
+function isolate(value: string): string {
+  return `<bdi>${escapeHtml(value)}</bdi>`
+}
+
+/**
  * Print stylesheet. Deliberately literal values rather than design tokens: this
  * document leaves our runtime and is rendered by a print engine, so it cannot
  * depend on the app's CSS custom properties.
@@ -102,7 +111,7 @@ const PRINT_CSS = `
   /* The page margin is the printer's; opened on a screen the page needs its own. */
   @media screen { body { padding: 16px; } }
   /* A booking URL or a long name must wrap inside the page, not widen the table past it. */
-  h1, .subtitle, .note, th, td { overflow-wrap: anywhere; }
+  h1, h2, .subtitle, .note, th, td { overflow-wrap: anywhere; }
   header { border-bottom: 1px solid #e5e2db; padding-bottom: 10mm; margin-bottom: 8mm; }
   h1 { font-size: 26pt; line-height: 1.05; margin: 0 0 3mm; letter-spacing: -0.01em; }
   .subtitle { margin: 0; color: #6e6d65; font-size: 11pt; }
@@ -139,31 +148,31 @@ export function renderExportDocument(
       const rows = section.rows
         .map(
           (row) =>
-            `<tr><th scope="row" class="label" dir="auto">${escapeHtml(row.label)}</th><td class="value" dir="auto">${escapeHtml(
+            `<tr><th scope="row" class="label">${isolate(row.label)}</th><td class="value">${isolate(
               row.value,
-            )}</td><td class="meta" dir="auto">${escapeHtml(row.meta ?? '')}</td></tr>`,
+            )}</td><td class="meta">${isolate(row.meta ?? '')}</td></tr>`,
         )
         .join('')
       const note =
         section.note === undefined
           ? ''
-          : `<p class="note" dir="auto">${escapeHtml(section.note)}</p>`
+          : `<p class="note">${isolate(section.note)}</p>`
       // An empty `<table>` is announced as a table with no rows, so a section with none has none.
       const table = rows === '' ? '' : `<table>${rows}</table>`
-      return `<section><h2 dir="auto">${escapeHtml(section.heading)}</h2>${note}${table}</section>`
+      return `<section><h2>${isolate(section.heading)}</h2>${note}${table}</section>`
     })
     .join('')
 
   const subtitle =
     document.subtitle === undefined
       ? ''
-      : `<p class="subtitle" dir="auto">${escapeHtml(document.subtitle)}</p>`
+      : `<p class="subtitle">${isolate(document.subtitle)}</p>`
 
   return `<!doctype html>
 <html lang="${meta.locale}" dir="${directionOf(meta.locale)}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(document.title)}</title>
 <style>${PRINT_CSS}</style></head>
 <body>
-<header><h1 dir="auto">${escapeHtml(document.title)}</h1>${subtitle}</header>
+<header><h1>${isolate(document.title)}</h1>${subtitle}</header>
 <main>${sections}</main>
 <footer>${escapeHtml(meta.footer)}</footer>
 </body></html>`
