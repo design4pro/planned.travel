@@ -45,6 +45,7 @@ import {
   currencyCode,
   convertMinor,
   formatExchangeRate,
+  formatRateLine,
   formatMoney,
   parseMoney,
   toAmountInput,
@@ -312,7 +313,15 @@ export function ExpenseDialog({
       ? t('costs.expense.convertedSuggested', {
           date:
             formatDate(suggestion.observedOn, locale) ?? suggestion.observedOn,
-          rate: LTR_ISOLATE_START + (rate ?? '') + POP_ISOLATE,
+          rate:
+            LTR_ISOLATE_START +
+            formatRateLine(
+              suggestion.rate,
+              form.currency,
+              tripCurrency,
+              locale,
+            ) +
+            POP_ISOLATE,
         })
       : (rate ??
         t('costs.expense.convertedHint', {

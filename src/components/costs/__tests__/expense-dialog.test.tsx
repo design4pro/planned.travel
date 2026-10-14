@@ -228,6 +228,22 @@ describe('the expense dialog’s suggested converted figure', () => {
     expect(screen.queryByText(/Suggested from the rate/)).toBeNull()
   })
 
+  it('names the trip’s own rate in the hint, not the one the rounded figure implies', async () => {
+    const user = hand()
+    open({ GBP: { rate: 1.1537, observedOn: '2026-05-12' } })
+
+    await pickCurrency(user, 'GBP')
+    await user.type(amountField(), '1.00')
+
+    // 1.00 GBP rounds to 1.15 EUR, which would imply 1.15, not the 1.1537 the trip froze.
+    expect(valueOf(convertedField())).toBe('1.15')
+    expect(
+      screen.getByText(
+        /^Suggested from the rate used on this trip on 12 May 2026 \(\u20661 GBP = 1\.1537 EUR\u2069\)\./,
+      ),
+    ).toBeTruthy()
+  })
+
   it('suggests nothing when the typed amount converts to less than the smallest unit', async () => {
     const user = hand()
     open({ GBP: { rate: 0.001, observedOn: '2026-05-12' } })
