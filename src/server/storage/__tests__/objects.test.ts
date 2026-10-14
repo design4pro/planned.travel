@@ -95,6 +95,38 @@ describe('copyObject', () => {
     expect(bucket.objects.get('target')).toEqual({ body: 'bytes' })
   })
 
+  it('carries the content disposition over with the content type', async () => {
+    const disposition = "attachment; filename*=UTF-8''cover.jpg"
+    const bucket = fakeBucket({
+      source: {
+        body: 'jpeg',
+        contentType: 'image/jpeg',
+        contentDisposition: disposition,
+      },
+    })
+
+    await copyObject(bucket, 'source', 'target')
+
+    expect(bucket.objects.get('target')).toEqual({
+      body: 'jpeg',
+      contentType: 'image/jpeg',
+      contentDisposition: disposition,
+    })
+  })
+
+  it('carries a disposition even when the source has no content type', async () => {
+    const bucket = fakeBucket({
+      source: { body: 'bytes', contentDisposition: 'attachment' },
+    })
+
+    await copyObject(bucket, 'source', 'target')
+
+    expect(bucket.objects.get('target')).toEqual({
+      body: 'bytes',
+      contentDisposition: 'attachment',
+    })
+  })
+
   it('refuses a missing source rather than quietly copying nothing', async () => {
     const bucket = fakeBucket(['elsewhere'])
 

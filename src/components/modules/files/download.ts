@@ -9,6 +9,19 @@
  */
 import { downloadTripFileFn } from '#/server/fns/files'
 
+/**
+ * Stored types that must never reach an object URL under their own name.
+ *
+ * A blob URL is same-origin, and the app sets no Content-Security-Policy header, so opening one
+ * typed as markup would run it with the app's authority. Saving the bytes does not need the type.
+ */
+const MARKUP_TYPES: ReadonlySet<string> = new Set([
+  'text/html',
+  'image/svg+xml',
+])
+
+const GENERIC_BINARY = 'application/octet-stream'
+
 /** How long the object URL is kept alive after the click that consumed it. */
 const REVOKE_DELAY_MS = 60_000
 
@@ -50,7 +63,11 @@ export async function downloadTripFile(input: {
     throw new Error(await reasonFor(response))
   }
 
-  const blob = await response.blob()
+  const stored = await response.blob()
+  const storedType = stored.type.split(';')[0]?.trim().toLowerCase() ?? ''
+  const blob = MARKUP_TYPES.has(storedType)
+    ? new Blob([stored], { type: GENERIC_BINARY })
+    : stored
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url

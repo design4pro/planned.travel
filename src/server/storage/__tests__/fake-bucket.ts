@@ -10,10 +10,11 @@
 
 import type { ObjectStore } from '../objects'
 
-/** What one key holds. `contentType` is absent when the writer did not set one. */
+/** What one key holds. `contentType` and `contentDisposition` are absent when the writer set none. */
 export interface FakeObject {
   readonly body: string
   readonly contentType?: string
+  readonly contentDisposition?: string
 }
 
 export interface FakeBucket extends ObjectStore {
@@ -58,18 +59,29 @@ export function fakeBucket(
       if (!object) return null
       return {
         body: streamOf(object.body),
-        ...(object.contentType === undefined
+        ...(object.contentType === undefined &&
+        object.contentDisposition === undefined
           ? {}
-          : { httpMetadata: { contentType: object.contentType } }),
+          : {
+              httpMetadata: {
+                ...(object.contentType === undefined
+                  ? {}
+                  : { contentType: object.contentType }),
+                ...(object.contentDisposition === undefined
+                  ? {}
+                  : { contentDisposition: object.contentDisposition }),
+              },
+            }),
       }
     },
     put: async (key, value, options) => {
       const body = await new Response(value).text()
-      const contentType = options?.httpMetadata?.contentType
-      objects.set(
-        key,
-        contentType === undefined ? { body } : { body, contentType },
-      )
+      const { contentType, contentDisposition } = options?.httpMetadata ?? {}
+      objects.set(key, {
+        body,
+        ...(contentType === undefined ? {} : { contentType }),
+        ...(contentDisposition === undefined ? {} : { contentDisposition }),
+      })
       remaining.add(key)
       return undefined
     },
