@@ -913,6 +913,8 @@ const messages = {
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
   'files.drop.active': 'Отпустите, чтобы отправить',
+  'files.reject.blockedType':
+    '«{name}» не добавлен: файлы XML и сжатые SVG здесь не хранятся, из соображений безопасности. Сохраните его как PDF или изображение и добавьте вместо него.',
   'files.drop.idle': 'Перетащите файлы сюда',
   'files.empty.title': 'В этой поездке нет файлов',
   'files.empty.body':

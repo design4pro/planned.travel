@@ -921,6 +921,8 @@ const messages = {
   'files.action.choose': 'اختيار ملفات',
   'files.action.upload': 'رفع الملفات',
   'files.drop.active': 'أفلِت للرفع',
+  'files.reject.blockedType':
+    'لم تتم إضافة «{name}»: لا تُحفظ هنا ملفات XML وملفات SVG المضغوطة حفاظًا على الأمان. احفظه بصيغة PDF أو كصورة ثم أضف ذلك بدلًا منه.',
   'files.drop.idle': 'اسحب الملفات إلى هنا',
   'files.empty.title': 'لا ملفات في هذه الرحلة',
   'files.empty.body':

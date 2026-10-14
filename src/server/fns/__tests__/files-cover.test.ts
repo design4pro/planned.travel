@@ -305,6 +305,26 @@ describe('file writes and the trip guards', () => {
     await expectUntouched(tripId, fileId, storageKey, 2048)
   })
 
+  it('answers a refused type with the file name as a parameter beside the English message', async () => {
+    const { tripId } = await tripWithCover()
+    const form = new FormData()
+    form.set('tripId', tripId)
+    form.set(
+      'file',
+      new File(['<svg/>'], 'plan.svgz', { type: 'application/pdf' }),
+    )
+
+    const answer = await inRequest(() => uploadTripFileFn({ data: form }))
+
+    expect(await answer.json()).toMatchObject({
+      ok: false,
+      code: 'blocked-type',
+      message: expect.stringContaining('plan.svgz'),
+      params: { name: 'plan.svgz' },
+    })
+    expect(stubs.putKeys).toHaveLength(0)
+  })
+
   it('lets an editor upload and rename', async () => {
     const { tripId, fileId } = await tripWithCover()
     await member(tripId, 'editor')
