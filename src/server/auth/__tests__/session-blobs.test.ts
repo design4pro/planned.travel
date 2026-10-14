@@ -95,7 +95,7 @@ describe('collectSessionTokens', () => {
 })
 
 describe('deleteSessionBlobs', () => {
-  it('deletes exactly the named keys, and never the per-user index key', async () => {
+  it('deletes exactly the keys it is given', async () => {
     const kv = recordingStore()
 
     const purge = await deleteSessionBlobs(kv.store, ['a', 'b'])

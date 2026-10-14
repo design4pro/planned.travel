@@ -13,6 +13,7 @@
 
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -98,6 +99,10 @@ beforeAll(async () => {
 
 afterAll(() => {
   authDatabase.close()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 beforeEach(() => {
@@ -910,6 +915,8 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
 
   it('takes the person from the store, never from the request body of a reset', async () => {
     const attacker = await signedInPerson('attacker')
+    loseIndexOf(attacker)
+    const attackerTokens = sessionTokensOf(attacker)
     const victim = await signedInPerson('victim')
     loseIndexOf(victim)
     const victimTokens = sessionTokensOf(victim)
@@ -923,6 +930,7 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
       } as { token: string; newPassword: string },
     })
 
+    expect(blobsHeld(attackerTokens)).toEqual([])
     expect(blobsHeld(victimTokens)).toHaveLength(victimTokens.length)
   })
 
@@ -930,12 +938,15 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
     const victim = await signedInPerson('victim')
     const victimTokens = sessionTokensOf(victim)
     const attacker = await signedInPerson('attacker')
+    loseIndexOf(attacker)
+    const attackerTokens = sessionTokensOf(attacker)
 
     await getAuth().api.revokeSessions({
       headers: attacker.headers,
       roomEvictionSessionTokens: victimTokens,
     } as { headers: Headers })
 
+    expect(blobsHeld(attackerTokens)).toEqual([])
     expect(blobsHeld(victimTokens)).toHaveLength(victimTokens.length)
   })
 
@@ -952,6 +963,15 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
     expect(kv().store.has(String(second))).toBe(true)
   })
 
+  it('leaves the other blobs of a person who signs out of one device to Better Auth', async () => {
+    const { person, tokens } = await withUnindexedSessions('tidy')
+
+    await getAuth().api.signOut({ headers: person.headers })
+
+    expect(blobsHeld(tokens)).toHaveLength(tokens.length - 1)
+    expect(kv().deleted).toHaveLength(1)
+  })
+
   it('never deletes the per-user index key itself', async () => {
     const person = await signedInPerson('careful')
     await signInAgain(person)
@@ -963,16 +983,16 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
       indexDeleteCalls.push(key)
       return original(key)
     }
-    const purgeOnly = vi
-      .spyOn(internalAdapter, 'deleteUserSessions')
-      .mockResolvedValue(undefined)
+    vi.spyOn(internalAdapter, 'deleteUserSessions').mockResolvedValue(undefined)
 
-    await getAuth().api.resetPassword({
-      body: { token, newPassword: 'a-brand-new-passphrase-1' },
-    })
+    try {
+      await getAuth().api.resetPassword({
+        body: { token, newPassword: 'a-brand-new-passphrase-1' },
+      })
+    } finally {
+      kv().delete = original
+    }
 
-    kv().delete = original
-    purgeOnly.mockRestore()
     expect(indexDeleteCalls).not.toContain(indexKeyOf(person))
     expect(indexDeleteCalls.length).toBeGreaterThan(0)
   })
@@ -1004,7 +1024,6 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
       failed: 1,
     })
     for (const token of tokens) expect(line).not.toContain(token)
-    errors.mockRestore()
   })
 
   it('still deletes every other blob when one delete is rejected', async () => {
@@ -1015,7 +1034,6 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
     await getAuth().api.revokeSessions({ headers: person.headers })
 
     expect(blobsHeld(tokens)).toEqual([String(tokens[0])])
-    vi.restoreAllMocks()
   })
 
   it('lets the reset stand and logs no credential when the session list cannot be read', async () => {
@@ -1031,8 +1049,8 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
         }
         return real(query)
       })
-    const warnings = vi
-      .spyOn(console, 'warn')
+    const errors = vi
+      .spyOn(console, 'error')
       .mockImplementation(() => undefined)
 
     await expect(
@@ -1043,7 +1061,7 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
 
     unreadable.mockRestore()
     expect(sessionTokensOf(person)).toEqual([])
-    const lines = warnings.mock.calls.map((call) => String(call[0]))
+    const lines = errors.mock.calls.map((call) => String(call[0]))
     expect(
       lines.some((line) => line.includes('room-eviction.blobs.unread')),
     ).toBe(true)
@@ -1052,6 +1070,5 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
         expect(line).not.toContain(secret)
       }
     }
-    warnings.mockRestore()
   })
 })

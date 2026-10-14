@@ -173,6 +173,13 @@ const optionalToken = z.object({ token: z.string().min(1).optional() })
  * request.
  */
 const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
+  // A password change that revokes nothing ends no session and purges nothing: nothing to resolve.
+  if (
+    ctx.path === '/change-password' &&
+    !revokingBody.safeParse(ctx.body).success
+  ) {
+    return
+  }
   let userId: string | null = null
   let tokens: ReadonlyArray<string> = []
   try {
@@ -184,7 +191,8 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
         )
       } catch (cause) {
         // Same rule as below: the error's name only, a failed query's message can carry a token.
-        logAuth('warn', 'room-eviction.blobs.unread', {
+        // Error level like a rejected delete: the purge did not happen, on an account-recovery path.
+        logAuth('error', 'room-eviction.blobs.unread', {
           userId,
           source: ctx.path,
           reason: cause instanceof Error ? cause.name : 'unknown',
@@ -283,6 +291,8 @@ async function personEndingSession(
 /**
  * `hooks.after` for the endpoints whose success ends a person's place in a workspace or ends their
  * sessions: remove member, leave, ban, sign out every session, and the self-service ones (#1093).
+ * On a password reset, a revoke of all sessions and a password change that revokes the others it also
+ * deletes the cached session blobs the `before` half read, before queueing the close (#1176).
  * Keyed on the path and on a response that is not an error, and on the ids the endpoint itself resolved (the member it
  * returned, the validated `userId` it was given, the person {@link roomEvictionPrepareHook} read from
  * the store), never on anything read from a request header.

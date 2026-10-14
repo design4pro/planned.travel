@@ -26,6 +26,12 @@ import type { createAuthMiddleware } from 'better-auth/api'
  * blob inside that window. The purge holds within the KV convergence window, barring a refresh race
  * inside it, and not "immediately". Only a D1-authoritative check closes that window.
  *
+ * What losing that race costs: an attacker's request that reaches a colo still showing the old blob,
+ * when the session is due a refresh, makes Better Auth write the blob back to KV with a fresh expiry
+ * and re-add it to the index before it finds the row gone. That request is refused, but the blob then
+ * admits later ones until it expires (up to 30 days). A second "revoke all sessions" clears it, as
+ * the index names the token again; closing it for good is the D1 check above (#1085).
+ *
  * Tokens are credentials: nothing here logs one, and {@link SessionBlobPurge} carries counts.
  */
 
