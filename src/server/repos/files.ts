@@ -10,7 +10,8 @@ import { and, asc, count, desc, eq, sum } from 'drizzle-orm'
 import { z } from 'zod'
 import { FILE_KINDS, tripFiles } from '#/server/db/schema'
 import { assertQuota, createTenantRepository, tenantFilter } from './base'
-import { requireTrip } from './trips'
+import { NotFoundError } from './context'
+import { assertTripRole, requireWritableTrip } from './trips'
 import {
   definedOnly,
   idSchema,
@@ -19,8 +20,9 @@ import {
   shortTextSchema,
   titleSchema,
 } from './validation'
-import type { TripFile } from '#/server/db/types'
+import type { Trip, TripFile } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TripRole } from './trips'
 
 export const tripFilesRepository = createTenantRepository(tripFiles, 'file')
 
@@ -159,12 +161,55 @@ export async function getTripStorageBytes(scope: TenantScope, tripId: string): P
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Trip roles that may change a trip's files. A `viewer` reads and downloads them and writes none.
+ * Declared once: whether a caller holds one of them is {@link assertTripRole}'s answer, so a refusal
+ * here is the `TripRoleError` every other trip writer raises.
+ */
+const FILE_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+
+/**
+ * Resolves a trip whose files the caller may change, or throws: {@link requireWritableTrip} first
+ * (`NotFoundError` for a trip they cannot see, then `TripArchivedError`), then the role - the order
+ * the day-notes writers document. Exported because the upload handler writes bytes to the bucket
+ * before it reaches {@link recordFile}, and a refused caller must not have spent workspace storage.
+ */
+export async function requireTripForFileWrite(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Trip> {
+  const trip = await requireWritableTrip(scope, tripId)
+  await assertTripRole(scope, tripId, FILE_WRITE_ROLES)
+  return trip
+}
+
+/**
+ * The file a writer is about to change, once the caller has been shown to be allowed to change it.
+ *
+ * A file id alone is not an authorisation: the tenant filter proves the row is the workspace's, not
+ * that the caller may write on the trip it sits on. So the guards run on the trip the *stored row*
+ * names, and a file that is not on `tripId` is `NotFoundError` - the same answer a file of another
+ * workspace gets - so the trip a caller proved they may change is the trip whose file they change.
+ */
+export async function requireFileForWrite(
+  scope: TenantScope,
+  tripId: string,
+  fileId: string,
+): Promise<TripFile> {
+  const file = await tripFilesRepository.requireById(scope, fileId)
+  if (file.tripId !== tripId) {
+    throw new NotFoundError('file', fileId)
+  }
+  await requireTripForFileWrite(scope, file.tripId)
+  return file
+}
+
+/**
  * Records an uploaded object. Call it **after** the bytes are in R2 and **before** the response is
  * returned; if the quota check throws, the caller deletes the object it just wrote.
  */
 export async function recordFile(scope: TenantScope, input: RecordFileInput): Promise<TripFile> {
   const values = recordFileInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireTripForFileWrite(scope, values.tripId)
 
   const usage = await getStorageUsage(scope)
   await assertQuota(scope, 'files', usage.fileCount)
@@ -175,18 +220,25 @@ export async function recordFile(scope: TenantScope, input: RecordFileInput): Pr
 
 export async function updateFile(
   scope: TenantScope,
+  tripId: string,
   fileId: string,
   input: UpdateFileInput,
 ): Promise<TripFile> {
-  return tripFilesRepository.requireUpdate(scope, fileId, definedOnly(updateFileInput.parse(input)))
+  const changes = definedOnly(updateFileInput.parse(input))
+  await requireFileForWrite(scope, tripId, fileId)
+  return tripFilesRepository.requireUpdate(scope, fileId, changes)
 }
 
 /**
  * Removes the metadata row and returns the storage key so the caller can delete the object. The row
  * goes first: a dangling object is a cleanup job, a dangling row is a broken download.
  */
-export async function deleteFile(scope: TenantScope, fileId: string): Promise<string> {
-  const file = await tripFilesRepository.requireById(scope, fileId)
+export async function deleteFile(
+  scope: TenantScope,
+  tripId: string,
+  fileId: string,
+): Promise<string> {
+  const file = await requireFileForWrite(scope, tripId, fileId)
   await tripFilesRepository.requireRemove(scope, fileId)
   return file.storageKey
 }
