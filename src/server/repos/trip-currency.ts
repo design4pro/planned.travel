@@ -579,6 +579,20 @@ function converted(money: RebasedMoney | null): RebasedMoney {
   return money
 }
 
+/**
+ * Whether the plan needs a rate at all: any priced row or a budget target to convert. A trip with
+ * only reference prices to pin needs none. The preview asks before it looks a rate up and the plan
+ * asks before it refuses, so the two cannot disagree.
+ */
+function needsRate(snapshot: RebaseSnapshot): boolean {
+  return (
+    snapshot.expenses.length +
+      snapshot.payments.length +
+      snapshot.plannedItems.length >
+      0 || snapshot.budgetTargetMinor !== null
+  )
+}
+
 function refused(refusal: RebaseRefusal): RebaseOutcome {
   return { kind: 'refused', refusal }
 }
@@ -587,10 +601,14 @@ function firstExample(
   rows: ReadonlyArray<RebasedMoney>,
   to: string,
 ): RebasePlan['example'] {
-  const row = rows.find(
+  const priced = rows.filter(
     (candidate) =>
       candidate.amountMinor > 0 && candidate.originalAmountMinor > 0,
   )
+  // A figure typed in the new currency is kept, not converted, so it shows nothing of the rate the
+  // owner is about to confirm: prefer a row that moves.
+  const row =
+    priced.find((candidate) => candidate.originalCurrency !== to) ?? priced[0]
   return row === undefined
     ? null
     : {
@@ -633,13 +651,7 @@ export function planRebase(
       ceiling: MAX_REBASE_STATEMENTS,
     })
   }
-  const hasRows =
-    snapshot.expenses.length +
-      snapshot.payments.length +
-      snapshot.plannedItems.length >
-    0
-  const needsRate = hasRows || snapshot.budgetTargetMinor !== null
-  if (needsRate && rate === null) {
+  if (needsRate(snapshot) && rate === null) {
     return refused({ kind: 'no-rate' })
   }
   const counts = countRebase(snapshot)
@@ -967,13 +979,8 @@ export async function previewCurrencyChange(
   }
 
   const snapshot = await readSnapshot(scope, id, trip.budgetTargetMinor)
-  const needsRate =
-    snapshot.expenses.length +
-      snapshot.payments.length +
-      snapshot.plannedItems.length >
-      0 || snapshot.budgetTargetMinor !== null
 
-  const resolved = needsRate
+  const resolved = needsRate(snapshot)
     ? await resolveRate(scope, { from, to, on: today(), manual: typed })
     : null
   const usable =

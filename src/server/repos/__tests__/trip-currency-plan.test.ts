@@ -540,6 +540,22 @@ describe('planning a re-basing', () => {
       })
     })
 
+    it('shows a row that moves rather than a figure kept as typed', () => {
+      const plan = planned(
+        snapshot({
+          expenses: [
+            expense({ id: 'a-kept', amountMinor: 8000, currency: 'JPY' }),
+            expense({ id: 'b-moved', amountMinor: 4200 }),
+          ],
+        }),
+      )
+
+      expect(plan.example).toEqual({
+        original: { amountMinor: 4200, currency: 'EUR' },
+        converted: { amountMinor: 6720, currency: 'JPY' },
+      })
+    })
+
     it('falls back to the budget target when no row is priced', () => {
       expect(planned(snapshot({ budgetTargetMinor: 2500 })).example).toEqual({
         original: { amountMinor: 2500, currency: 'EUR' },

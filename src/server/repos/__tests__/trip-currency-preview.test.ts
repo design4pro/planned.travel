@@ -32,6 +32,7 @@ import {
   archiveTrip,
   createTrip,
   tripsRepository,
+  updateTrip,
 } from '../trips'
 import {
   MAX_REBASE_STATEMENTS,
@@ -131,6 +132,28 @@ describe('previewing a change of a trip’s budget currency', () => {
         ).toEqual([])
       },
     )
+
+    it('refuses a workspace member who is not on an organization-visible trip, reading no money row first', async () => {
+      // Seeing a trip is not travelling on it: only the trip's own owner role may ask.
+      await updateTrip(tenant.scope, tripId, { visibility: 'organization' })
+      const stranger = await tenant.addUser('Not on the trip')
+      await logDinner()
+      const before = await footprint(harness)
+      harness.statements.length = 0
+
+      const refusal = await captureError(() =>
+        previewCurrencyChange(tenant.scopeFor(stranger), tripId, {
+          to: 'JPY',
+          rate: 160,
+        }),
+      )
+
+      expect(refusal).toBeInstanceOf(TripRoleError)
+      expect(
+        harness.statements.filter((s) => MONEY_ROW_TABLES.test(s)),
+      ).toEqual([])
+      expect(await footprint(harness)).toEqual(before)
+    })
 
     it('refuses an archived trip, reading no money row first', async () => {
       await logDinner()
