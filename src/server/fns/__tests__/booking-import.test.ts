@@ -1099,6 +1099,13 @@ describe('confirmBookingImport', () => {
     expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
     expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
     expect(stubs.vendorCalls).toBe(1)
+    // `settle` logs a refused link instead of throwing, so only the row shows the editor's write held.
+    const [written] = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(
+      (await getFile(alpha.tenant.scope, alpha.fileId))?.reservationId,
+    ).toBe(written.id)
   })
 
   it('answers not found, not a role refusal, to a user who cannot see the trip', async () => {
