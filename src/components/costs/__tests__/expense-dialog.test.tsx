@@ -117,7 +117,9 @@ const convertedField = (): HTMLElement =>
 const valueOf = (field: HTMLElement): string =>
   (field as HTMLInputElement).value
 
-describe('the expense dialog’s suggested converted figure', () => {
+// Each test opens the currency list several times with a real pointer; on the CI runner a test with
+// three or four picks passes 5 s (#1238 failed on it three times, #1242).
+describe('the expense dialog’s suggested converted figure', { timeout: 20_000 }, () => {
   it('pre-fills the figure the last frozen rate implies when the currency is picked before the amount', async () => {
     const user = hand()
     open(SUGGESTED)
