@@ -187,6 +187,10 @@ const messages = {
     'Chuyến đi này chưa ghi khoản chi nào. Các khoản chi sẽ hiện ở đây khi chủ chuyến đi hoặc người chỉnh sửa thêm vào.',
   'readOnly.settleEmpty':
     'Hiện chưa cần chuyển khoản nào. Mọi khoản chênh lệch sẽ hiện ở đây.',
+  'refusal.rebaseChanged':
+    'Chuyến đi đã thay đổi trong lúc bạn xác nhận, nên chưa có gì bị thay đổi. Hãy kiểm tra các số mới rồi xác nhận lại.',
+  'refusal.tripCurrencyChanged':
+    'Tiền tệ của ngân sách chuyến đi này giờ là {to}, nên chưa lưu gì. Trang đã được làm mới: hãy kiểm tra số tiền rồi lưu lại.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

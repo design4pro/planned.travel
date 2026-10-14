@@ -252,6 +252,7 @@ describe('trail', () => {
       ['RESERVATION_CREATED', 'RESERVATION_UPDATED', 'RESERVATION_DELETED'],
     ],
     ['src/routes/_app/-server/settings.ts', ['WORKSPACE_DEFAULTS_CHANGED']],
+    ['src/server/fns/trip-currency.ts', ['TRIP_CURRENCY_CHANGED']],
   ]
 
   it.each(callSites)('%s records through trail()', (path, actions) => {
@@ -274,6 +275,7 @@ describe('trail', () => {
       'reservation.updated',
       'reservation.deleted',
       'workspace.defaults_changed',
+      'trip.currency_changed',
     ])
     // The rule is imported, never re-declared — docs/ACCESS.md §4.2, and the guard in
     // `src/server/catalog/__tests__/audit.test.ts` fails this file for spelling it out again.

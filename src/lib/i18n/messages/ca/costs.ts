@@ -193,6 +193,10 @@ const messages = {
     'Encara no s’ha registrat cap despesa en aquest viatge. Apareixeran aquí quan un propietari o un editor les afegeixi.',
   'readOnly.settleEmpty':
     'Ara no cal cap transferència. Qualsevol desequilibri apareixerà aquí.',
+  'refusal.rebaseChanged':
+    'El viatge ha canviat mentre ho confirmaves, així que no s’ha canviat res. Revisa les xifres noves i torna a confirmar.',
+  'refusal.tripCurrencyChanged':
+    'La moneda del pressupost d’aquest viatge ara és {to}, així que no s’ha desat. La pàgina s’ha actualitzat: revisa l’import i torna a desar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -215,4 +215,110 @@ describe('the payment dialog', () => {
     )
     finish()
   })
+
+  describe('when the trip’s currency changed while it was open', () => {
+    const REFUSAL = 'costs.refusal.tripCurrencyChanged'
+
+    function dialog(
+      currency: string,
+      onSubmit: (value: PaymentFormValue) => Promise<void>,
+    ) {
+      return (
+        <I18nProvider locale="en" messages={EN}>
+          <PaymentDialog
+            open
+            onOpenChange={() => {}}
+            seed={null}
+            people={PEOPLE}
+            viewerUserId="u1"
+            currency={currency}
+            today="2026-10-12"
+            onSubmit={onSubmit}
+          />
+        </I18nProvider>
+      )
+    }
+
+    async function refuseOnce() {
+      const onSubmit = vi
+        .fn<(value: PaymentFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+        .mockResolvedValue(undefined)
+      const user = hand()
+      const view = render(dialog('EUR', onSubmit))
+      await user.type(screen.getByLabelText(/Amount in EUR/), '4000')
+      await user.click(screen.getByRole('button', { name: 'Record payment' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+      return { onSubmit, user, view }
+    }
+
+    it('keeps the digits, names the new currency on the amount, and shows no generic error', async () => {
+      const { view, onSubmit } = await refuseOnce()
+
+      view.rerender(dialog('JPY', onSubmit))
+
+      const amount = await screen.findByLabelText(/Amount in JPY/)
+      expect(amount).toHaveProperty('value', '4000')
+      expect(amount.getAttribute('aria-invalid')).toBe('true')
+      expect(
+        screen.getByText(/budget currency of this trip is now JPY/),
+      ).toBeTruthy()
+      expect(screen.queryByText(REFUSAL)).toBeNull()
+      expect(currencyPicker().textContent).toContain('JPY')
+    })
+
+    it('sends the same digits in the new currency on the next press, without making the reader retype them', async () => {
+      const { view, onSubmit, user } = await refuseOnce()
+      view.rerender(dialog('JPY', onSubmit))
+      await screen.findByLabelText(/Amount in JPY/)
+
+      await user.click(screen.getByRole('button', { name: 'Record payment' }))
+
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
+      expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({
+        amountMinor: 4_000,
+        originalAmountMinor: null,
+        originalCurrency: null,
+      })
+    })
+
+    it('stops naming the currency as soon as the amount is edited', async () => {
+      const { view, onSubmit, user } = await refuseOnce()
+      view.rerender(dialog('JPY', onSubmit))
+      const amount = await screen.findByLabelText(/Amount in JPY/)
+
+      await user.type(amount, '5')
+
+      expect(
+        screen.queryByText(/budget currency of this trip is now/),
+      ).toBeNull()
+      expect(amount.getAttribute('aria-invalid')).not.toBe('true')
+    })
+
+    it('leaves a currency the payer chose on purpose alone, and drops the converted figure that was in the old currency', async () => {
+      const onSubmit = vi
+        .fn<(value: PaymentFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const view = render(dialog('EUR', onSubmit))
+      await pickCurrency(user, 'GBP')
+      await user.type(screen.getByLabelText(/Amount in GBP/), '85.00')
+      await user.type(screen.getByLabelText(/Converted to EUR/), '100.00')
+      await user.click(screen.getByRole('button', { name: 'Record payment' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit))
+
+      expect(await screen.findByLabelText(/Amount in GBP/)).toHaveProperty(
+        'value',
+        '85.00',
+      )
+      expect(currencyPicker().textContent).toContain('GBP')
+      const converted = screen.getByLabelText(/Converted to JPY/)
+      expect(converted).toHaveProperty('value', '')
+      expect(
+        screen.getByText(/budget currency of this trip is now JPY/),
+      ).toBeTruthy()
+    })
+  })
 })

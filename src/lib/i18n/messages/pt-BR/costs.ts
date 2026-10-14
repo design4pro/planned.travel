@@ -192,6 +192,10 @@ const messages = {
     'Nenhuma despesa foi registrada nesta viagem ainda. Elas aparecem aqui quando um proprietário ou um editor as adicionar.',
   'readOnly.settleEmpty':
     'No momento, nenhuma transferência é necessária. Qualquer desequilíbrio apareceria aqui.',
+  'refusal.rebaseChanged':
+    'A viagem mudou enquanto você confirmava, então nada foi alterado. Confira os novos valores e confirme de novo.',
+  'refusal.tripCurrencyChanged':
+    'A moeda do orçamento desta viagem agora é {to}, então nada foi salvo. A página foi atualizada: confira o valor e salve de novo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

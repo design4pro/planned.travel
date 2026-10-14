@@ -186,6 +186,10 @@ const messages = {
     'Inga utgifter har registrerats för den här resan än. De visas här när en ägare eller redigerare lägger till dem.',
   'readOnly.settleEmpty':
     'Just nu behövs inga överföringar. Eventuell obalans skulle visas här.',
+  'refusal.rebaseChanged':
+    'Resan ändrades medan du bekräftade, så ingenting har ändrats. Kontrollera de nya beloppen och bekräfta igen.',
+  'refusal.tripCurrencyChanged':
+    'Budgetvalutan för den här resan är nu {to}, så ingenting sparades. Sidan har uppdaterats: kontrollera beloppet och spara igen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -172,6 +172,10 @@ const messages = {
   'readOnly.empty':
     '此行程尚未記錄任何支出。擁有者或編輯者新增後會顯示在這裡。',
   'readOnly.settleEmpty': '目前不需要任何轉帳。若有差額，會顯示在這裡。',
+  'refusal.rebaseChanged':
+    '你確認的過程中行程發生了變化，所以沒有做任何變更。請核對新的金額後再次確認。',
+  'refusal.tripCurrencyChanged':
+    '這趟行程的預算貨幣現在是 {to}，所以沒有儲存。頁面已重新整理，請核對金額後再次儲存。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

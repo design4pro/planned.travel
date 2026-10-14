@@ -38,6 +38,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import {
@@ -51,6 +52,7 @@ import {
   toAmountInput,
 } from '#/lib/money'
 import { parseDay, toDayString } from './data'
+import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
   draftFor,
@@ -271,7 +273,28 @@ export function ExpenseDialog({
   const [suggesting, setSuggesting] = useState(form.converted === '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const stale = useStaleTripCurrency(tripCurrency)
   const formId = `expense-form-${useId()}`
+
+  // The trip's currency changed while this was open and the screen has refreshed: what was typed
+  // stays, a currency control still on the old one follows the trip, and a converted figure (which
+  // was in the old currency) is dropped and offered again from the trip's rates.
+  if (stale.adopt !== null) {
+    stale.adopted()
+    setForm({
+      ...form,
+      currency:
+        currencyCode(form.currency) === stale.adopt.from
+          ? stale.adopt.to
+          : form.currency,
+      converted: '',
+    })
+    setSuggesting(true)
+  }
+  const staleMessage =
+    stale.messageFor === null
+      ? undefined
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
   const foreign = currencyCode(form.currency) !== currencyCode(tripCurrency)
   const typedMinor = parseMoney(form.amount, form.currency)
@@ -356,7 +379,11 @@ export function ExpenseDialog({
       })
       onOpenChange(false)
     } catch (cause) {
-      setError(messageOf(cause))
+      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+        stale.refuse(currencyCode(tripCurrency))
+      } else {
+        setError(messageOf(cause))
+      }
     } finally {
       setSaving(false)
     }
@@ -414,14 +441,17 @@ export function ExpenseDialog({
                 error={
                   form.amount.trim() !== '' && typedMinor === null
                     ? t('costs.expense.amountNotANumber')
-                    : undefined
+                    : foreign
+                      ? undefined
+                      : staleMessage
                 }
               >
                 <Input
                   value={form.amount}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    stale.dismiss()
                     setForm({ ...form, amount: event.target.value })
-                  }
+                  }}
                   placeholder={toAmountInput(0, form.currency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -438,7 +468,10 @@ export function ExpenseDialog({
                     description: entry.name,
                   }))}
                   value={form.currency}
-                  onValueChange={(next) => setForm({ ...form, currency: next })}
+                  onValueChange={(next) => {
+                    stale.dismiss()
+                    setForm({ ...form, currency: next })
+                  }}
                   ariaLabel={t('costs.expense.currencyLabel')}
                 />
               </Field>
@@ -454,12 +487,13 @@ export function ExpenseDialog({
                 error={
                   converted.trim() !== '' && convertedMinor === null
                     ? t('costs.expense.convertedNotANumber')
-                    : undefined
+                    : staleMessage
                 }
               >
                 <Input
                   value={converted}
                   onChange={(event) => {
+                    stale.dismiss()
                     setSuggesting(false)
                     setForm({ ...form, converted: event.target.value })
                   }}

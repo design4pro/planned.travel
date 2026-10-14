@@ -190,6 +190,10 @@ const messages = {
     'Auf dieser Reise wurden noch keine Ausgaben erfasst. Sie erscheinen hier, sobald ein Eigentümer oder Bearbeiter sie hinzufügt.',
   'readOnly.settleEmpty':
     'Im Moment sind keine Überweisungen nötig. Ein offener Saldo würde hier erscheinen.',
+  'refusal.rebaseChanged':
+    'Die Reise hat sich geändert, während du bestätigt hast, deshalb wurde nichts geändert. Prüfe die neuen Beträge und bestätige erneut.',
+  'refusal.tripCurrencyChanged':
+    'Die Budgetwährung dieser Reise ist jetzt {to}, deshalb wurde nichts gespeichert. Die Seite wurde aktualisiert: Prüfe den Betrag und speichere erneut.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

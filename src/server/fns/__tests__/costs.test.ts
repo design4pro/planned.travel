@@ -11,8 +11,10 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  CurrencyRefusalError,
   TripRoleError,
   addTripMember,
+  changeTripCurrency,
   createExpense,
   createTrip,
   listSettlements,
@@ -194,6 +196,42 @@ describe('the costs boundary', () => {
       expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
     })
 
+    describe('from a tab that has not seen the trip change its currency', () => {
+      beforeEach(async () => {
+        await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: 160 })
+      })
+
+      it('is refused with the key, records nothing and tells no room', async () => {
+        stubs.scope = editor
+
+        const error = await captureError(() =>
+          inStart(() =>
+            recordPaymentFn({
+              data: { ...payment(), expectedTripCurrency: 'eur' },
+            }),
+          ),
+        )
+
+        expect(error).toBeInstanceOf(CurrencyRefusalError)
+        expect(error.message).toBe('costs.refusal.tripCurrencyChanged')
+        expect(await listSettlements(tenant.scope, tripId)).toEqual([])
+        expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+      })
+
+      it('is recorded when the tab names the currency the trip now has, or none', async () => {
+        stubs.scope = editor
+
+        await inStart(() =>
+          recordPaymentFn({
+            data: { ...payment(), expectedTripCurrency: 'JPY' },
+          }),
+        )
+        await inStart(() => recordPaymentFn({ data: payment() }))
+
+        expect(await listSettlements(tenant.scope, tripId)).toHaveLength(2)
+      })
+    })
+
     describe('in another currency', () => {
       it('keeps the pair the payer typed and the rate the server derived from it', async () => {
         stubs.scope = editor
@@ -293,6 +331,21 @@ describe('the costs boundary', () => {
         expect(result.error?.issues[0]?.code).toBe('unrecognized_keys')
       })
 
+      it('accepts the currency the form was filled in under, and refuses one that is not a code', () => {
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            expectedTripCurrency: 'EUR',
+          }).success,
+        ).toBe(true)
+        expect(
+          recordPaymentSchema.safeParse({
+            ...payment(),
+            expectedTripCurrency: 'EU',
+          }).success,
+        ).toBe(false)
+      })
+
       it('refuses a source currency that is not three letters', () => {
         expect(
           recordPaymentSchema.safeParse({
@@ -331,6 +384,57 @@ describe('the costs boundary', () => {
       await inStart(() => createExpenseFn({ data: { tripId, expense: body } }))
 
       expect(await listTripExpenses(tenant.scope, tripId)).toHaveLength(2)
+    })
+
+    describe('from a tab that has not seen the trip change its currency', () => {
+      beforeEach(async () => {
+        await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: 160 })
+        stubs.mirrorToRoom.mockClear()
+      })
+
+      it.each([
+        [
+          'logging',
+          () =>
+            createExpenseFn({
+              data: { tripId, expense: { ...body, currency: 'EUR' } },
+            }),
+        ],
+        [
+          'editing',
+          () =>
+            updateExpenseFn({
+              data: {
+                tripId,
+                expenseId,
+                expense: { ...body, currency: 'EUR' },
+              },
+            }),
+        ],
+      ])(
+        'refuses %s with the key and writes nothing',
+        async (_name, attempt) => {
+          stubs.scope = editor
+          const before = await listTripExpenses(tenant.scope, tripId)
+
+          const error = await captureError(() => inStart(attempt))
+
+          expect(error).toBeInstanceOf(CurrencyRefusalError)
+          expect(error.message).toBe('costs.refusal.tripCurrencyChanged')
+          expect(await listTripExpenses(tenant.scope, tripId)).toEqual(before)
+          expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+        },
+      )
+
+      it('still takes an expense from a tab that names no currency', async () => {
+        stubs.scope = editor
+
+        await inStart(() =>
+          createExpenseFn({ data: { tripId, expense: body } }),
+        )
+
+        expect(await listTripExpenses(tenant.scope, tripId)).toHaveLength(2)
+      })
     })
   })
 

@@ -182,6 +182,10 @@ const messages = {
     '이 여행에는 아직 기록된 지출이 없습니다. 소유자나 편집자가 추가하면 여기에 표시됩니다.',
   'readOnly.settleEmpty':
     '지금은 송금이 필요하지 않습니다. 차액이 생기면 여기에 표시됩니다.',
+  'refusal.rebaseChanged':
+    '확인하는 동안 여행이 바뀌어서 아무것도 변경되지 않았습니다. 새 금액을 확인한 뒤 다시 확인해 주세요.',
+  'refusal.tripCurrencyChanged':
+    '이 여행의 예산 통화가 이제 {to}(이)라서 저장되지 않았습니다. 페이지를 새로 고쳤으니 금액을 확인한 뒤 다시 저장해 주세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

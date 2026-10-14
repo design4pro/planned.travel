@@ -216,9 +216,9 @@ export function TripEditSheet({
       // language of the screen it lands on. `current` is the currency the trip still has.
       const refusal = currencyRefusalOf(cause)
       setError(
-        refusal === null
-          ? messageOf(cause, t('shell.editTrip.error'))
-          : t(refusal, { current: trip.currency }),
+        refusal === 'shell.editTrip.currencyLocked'
+          ? t(refusal, { current: trip.currency })
+          : messageOf(cause, t('shell.editTrip.error')),
       )
     } finally {
       setSaving(false)

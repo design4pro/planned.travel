@@ -35,6 +35,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { MessageKey } from '#/lib/i18n'
@@ -47,6 +48,7 @@ import {
   toAmountInput,
 } from '#/lib/money'
 import { parseDay, toDayString } from './data'
+import { useStaleTripCurrency } from './stale-trip-currency'
 
 import type { CostsPerson, SettlementMethod } from '#/server/fns/costs'
 
@@ -127,7 +129,23 @@ export function PaymentDialog({
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const stale = useStaleTripCurrency(currency)
   const formId = `payment-form-${useId()}`
+
+  // The trip's currency changed while this was open and the screen has refreshed: what was typed
+  // stays, a currency control still on the old one follows the trip, and a converted figure (which
+  // was in the old currency) is dropped rather than saved under the new one.
+  if (stale.adopt !== null) {
+    stale.adopted()
+    if (currencyCode(sourceCurrency) === stale.adopt.from) {
+      setSourceCurrency(stale.adopt.to)
+    }
+    setConverted('')
+  }
+  const staleMessage =
+    stale.messageFor === null
+      ? undefined
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
   const foreign = currencyCode(sourceCurrency) !== currencyCode(currency)
   const typedMinor = parseMoney(amount, sourceCurrency)
@@ -183,6 +201,7 @@ export function PaymentDialog({
       setAmount(seeded)
       setConverted('')
     }
+    stale.dismiss()
     setSourceCurrency(next)
   }
 
@@ -209,7 +228,11 @@ export function PaymentDialog({
       })
       onOpenChange(false)
     } catch (cause) {
-      setError(messageOf(cause, t('costs.payment.failed')))
+      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+        stale.refuse(currencyCode(currency))
+      } else {
+        setError(messageOf(cause, t('costs.payment.failed')))
+      }
     } finally {
       setSaving(false)
     }
@@ -299,12 +322,17 @@ export function PaymentDialog({
                   amount.trim() !== '' &&
                   (typedMinor === null || typedMinor === 0)
                     ? t('costs.payment.amountPositive')
-                    : undefined
+                    : foreign
+                      ? undefined
+                      : staleMessage
                 }
               >
                 <Input
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => {
+                    stale.dismiss()
+                    setAmount(event.target.value)
+                  }}
                   placeholder={toAmountInput(0, sourceCurrency)}
                   inputMode="decimal"
                   autoComplete="off"
@@ -345,11 +373,14 @@ export function PaymentDialog({
                     to: currencyCode(currency),
                   })
                 }
-                error={convertedInvalid ? t(convertedErrorKey) : undefined}
+                error={convertedInvalid ? t(convertedErrorKey) : staleMessage}
               >
                 <Input
                   value={converted}
-                  onChange={(event) => setConverted(event.target.value)}
+                  onChange={(event) => {
+                    stale.dismiss()
+                    setConverted(event.target.value)
+                  }}
                   placeholder={toAmountInput(0, currency)}
                   inputMode="decimal"
                   autoComplete="off"

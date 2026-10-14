@@ -197,6 +197,10 @@ const messages = {
     'Na tym wyjeździe nie zapisano jeszcze żadnych wydatków. Pojawią się tutaj, gdy doda je właściciel lub edytor.',
   'readOnly.settleEmpty':
     'Na razie nie trzeba robić żadnych przelewów. Ewentualna nierównowaga pojawiłaby się tutaj.',
+  'refusal.rebaseChanged':
+    'Wyjazd zmienił się w trakcie potwierdzania, więc nic nie zostało zmienione. Sprawdź nowe kwoty i potwierdź ponownie.',
+  'refusal.tripCurrencyChanged':
+    'Waluta budżetu tego wyjazdu to teraz {to}, więc nic nie zostało zapisane. Strona została odświeżona: sprawdź kwotę i zapisz ponownie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

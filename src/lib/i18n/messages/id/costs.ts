@@ -186,6 +186,10 @@ const messages = {
     'Belum ada pengeluaran yang dicatat untuk perjalanan ini. Pengeluaran akan muncul di sini setelah pemilik atau editor menambahkannya.',
   'readOnly.settleEmpty':
     'Saat ini tidak perlu ada transfer. Selisih apa pun akan muncul di sini.',
+  'refusal.rebaseChanged':
+    'Perjalanan berubah saat Anda mengonfirmasi, jadi tidak ada yang diubah. Periksa angka barunya, lalu konfirmasi lagi.',
+  'refusal.tripCurrencyChanged':
+    'Mata uang anggaran perjalanan ini sekarang {to}, jadi perubahan tidak disimpan. Halaman sudah diperbarui: periksa jumlahnya, lalu simpan lagi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

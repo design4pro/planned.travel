@@ -191,6 +191,10 @@ const messages = {
     'Ehhez az utazáshoz még nem rögzítettek kiadást. Itt jelennek meg, amint egy tulajdonos vagy szerkesztő hozzáadja őket.',
   'readOnly.settleEmpty':
     'Jelenleg nincs szükség átutalásra. Az esetleges egyenlőtlenség itt jelenne meg.',
+  'refusal.rebaseChanged':
+    'Az utazás megváltozott, miközben megerősítetted, ezért semmi sem módosult. Nézd át az új összegeket, és erősítsd meg újra.',
+  'refusal.tripCurrencyChanged':
+    'Az utazás költségvetésének pénzneme mostantól {to}, ezért nem mentődött el. Az oldal frissült: ellenőrizd az összeget, és mentsd újra.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

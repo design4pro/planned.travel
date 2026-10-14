@@ -244,6 +244,16 @@ const deleteExpenseSchema = z.object({
  */
 export const recordPaymentSchema = z.strictObject({
   tripId: tripIdSchema,
+  /**
+   * The trip's currency as the form that sent this was filled in under. Optional, so a tab loaded
+   * before this field existed still validates; a trip re-based since refuses the write.
+   */
+  expectedTripCurrency: z
+    .string()
+    .trim()
+    .length(3)
+    .regex(/^[A-Za-z]{3}$/)
+    .optional(),
   fromUserId: idSchema,
   toUserId: idSchema,
   amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
@@ -351,6 +361,14 @@ function toShare(row: ExpenseShare): CostsShare {
 }
 
 type ExpenseBody = z.infer<typeof expenseBodySchema>
+
+/**
+ * The trip currency the form was filled in under: the currency it sent for the row, which the dialog
+ * always sets to the trip's own. A write that names none (an older tab) is not checked.
+ */
+function expectedCurrencyOf(body: ExpenseBody): string | undefined {
+  return body.currency?.toUpperCase()
+}
 
 /**
  * Form values into the repository's create/update input.
@@ -531,6 +549,7 @@ export const createExpenseFn = createServerFn({ method: 'POST' })
     const { expense, shares } = await createExpense(scope, {
       tripId: trip.id,
       ...toRepoInput(data.expense, trip.currency),
+      expectedTripCurrency: expectedCurrencyOf(data.expense),
     })
 
     await mirrorToRoom(scope, trip.id, [
@@ -551,6 +570,7 @@ export const updateExpenseFn = createServerFn({ method: 'POST' })
     const trip = await requireTrip(scope, data.tripId)
     const { expense } = await updateExpense(scope, trip.id, data.expenseId, {
       ...toRepoInput(data.expense, trip.currency),
+      expectedTripCurrency: expectedCurrencyOf(data.expense),
     })
 
     await mirrorToRoom(scope, trip.id, [
@@ -583,6 +603,7 @@ export const recordPaymentFn = createServerFn({ method: 'POST' })
     const trip = await requireTrip(scope, data.tripId)
     const settlement = await createSettlement(scope, {
       tripId: trip.id,
+      expectedTripCurrency: data.expectedTripCurrency?.toUpperCase(),
       fromUserId: data.fromUserId,
       toUserId: data.toUserId,
       amountMinor: data.amountMinor,

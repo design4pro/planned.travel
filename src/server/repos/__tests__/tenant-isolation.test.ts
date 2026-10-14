@@ -243,6 +243,7 @@ import {
   MAX_BOUND_PARAMETERS,
   copyTripContents,
   countTripsByStatus,
+  CurrencyRefusalError,
   TripArchivedError,
   TripRoleError,
   createShareLink,
@@ -301,7 +302,7 @@ import {
   resolveRate,
   suggestedRatesForTrip,
 } from '../rates'
-import { previewCurrencyChange } from '../trip-currency'
+import { changeTripCurrency, previewCurrencyChange } from '../trip-currency'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
@@ -5990,6 +5991,259 @@ describe('tenant isolation', () => {
         to: 'JPY',
       })
       expect(shared.rate).toEqual({ value: 155, source: 'recent' })
+    })
+  })
+  /**
+   * The commit rewrites every money row of a trip in one batch and decides, in SQL, whether anything
+   * moved since it read them. A rewrite that forgot the trip would convert a sibling's ledger, one
+   * that forgot the workspace would convert somebody else's, and a staleness test that forgot either
+   * would refuse because of money that is not the trip's - or miss money that is.
+   */
+  describe('committing a change of a trip’s budget currency', () => {
+    const COMMIT = { to: 'JPY', rate: 160 } as const
+
+    /** Every money row of both workspaces, so "untouched" is a comparison of the whole of it. */
+    async function money() {
+      const both = [alpha.tenant.scope, beta.tenant.scope]
+      return {
+        trips: await Promise.all(both.map((s) => tripsRepository.findMany(s))),
+        expenses: await Promise.all(
+          both.map((s) => expensesRepository.findMany(s)),
+        ),
+        shares: await Promise.all(
+          both.map((s) => expenseSharesRepository.findMany(s)),
+        ),
+        settlements: await Promise.all(
+          both.map((s) => settlementsRepository.findMany(s)),
+        ),
+        budgetItems: await Promise.all(
+          both.map((s) => budgetItemsRepository.findMany(s)),
+        ),
+      }
+    }
+
+    /** A second trip in `world`, in euros and holding money, next to the one being converted. */
+    async function sibling(world: World) {
+      const trip = await createTrip(world.tenant.scope, {
+        title: 'Sibling with money',
+        startDate: '2026-05-01',
+        endDate: '2026-05-02',
+        currency: 'EUR',
+      })
+      await createExpense(world.tenant.scope, {
+        tripId: trip.id,
+        title: 'Sibling dinner',
+        amountMinor: 9900,
+        spentOn: '2026-05-01',
+        paidBy: world.tenant.ownerUserId,
+        participants: [{ userId: world.tenant.ownerUserId }],
+      })
+      await createBudgetItem(world.tenant.scope, {
+        tripId: trip.id,
+        name: 'Sibling food',
+        plannedAmountMinor: 12_300,
+      })
+      return trip
+    }
+
+    it('converts the trip asked about and leaves its sibling and the other workspace exactly as they were', async () => {
+      const alphaSibling = await sibling(alpha)
+      await sibling(beta)
+      const before = await money()
+
+      await changeTripCurrency(alpha.tenant.scope, alpha.tripId, COMMIT)
+
+      const after = await money()
+      const own = <T extends { tripId: string }>(rows: ReadonlyArray<T>) =>
+        rows.filter((row) => row.tripId === alpha.tripId)
+      const others = <T extends { tripId: string }>(rows: ReadonlyArray<T>) =>
+        rows.filter((row) => row.tripId !== alpha.tripId)
+      // The other workspace: not one row moved.
+      expect(after.expenses[1]).toEqual(before.expenses[1])
+      expect(after.shares[1]).toEqual(before.shares[1])
+      expect(after.settlements[1]).toEqual(before.settlements[1])
+      expect(after.budgetItems[1]).toEqual(before.budgetItems[1])
+      expect(after.trips[1]).toEqual(before.trips[1])
+      // The sibling trip of the same workspace, in euros still.
+      expect(others(after.expenses[0] ?? [])).toEqual(
+        others(before.expenses[0] ?? []),
+      )
+      expect(others(after.budgetItems[0] ?? [])).toEqual(
+        others(before.budgetItems[0] ?? []),
+      )
+      expect(
+        after.trips[0]?.find((trip) => trip.id === alphaSibling.id)?.currency,
+      ).toBe('EUR')
+      // The positive control: the trip asked about did move, and every one of its rows with it.
+      expect(
+        after.trips[0]?.find((trip) => trip.id === alpha.tripId)?.currency,
+      ).toBe('JPY')
+      expect(own(after.expenses[0] ?? []).length).toBeGreaterThan(0)
+      for (const row of [
+        ...own(after.expenses[0] ?? []),
+        ...own(after.settlements[0] ?? []),
+        ...own(after.budgetItems[0] ?? []),
+      ]) {
+        expect(row.currency).toBe('JPY')
+      }
+    })
+
+    it('is not found, and writes nothing, for another workspace’s trip', async () => {
+      const before = await money()
+
+      const failure = await captureError(() =>
+        changeTripCurrency(alpha.tenant.scope, beta.tripId, COMMIT),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(await money()).toEqual(before)
+    })
+
+    it('is not found, and writes nothing, for a private trip the caller is not on', async () => {
+      const privateTrip = await createTrip(alpha.tenant.scope, {
+        title: 'Private to A’s owner',
+        currency: 'EUR',
+        visibility: 'private',
+      })
+      const before = await money()
+
+      const failure = await captureError(() =>
+        changeTripCurrency(
+          alpha.tenant.scopeFor(alpha.secondUserId),
+          privateTrip.id,
+          COMMIT,
+        ),
+      )
+
+      expect(failure).toBeInstanceOf(NotFoundError)
+      expect(await money()).toEqual(before)
+    })
+
+    it('is refused to an editor and a viewer, and writes nothing', async () => {
+      const viewerId = await alpha.tenant.addUser('Viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: alpha.secondUserId,
+        role: 'editor',
+      })
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const before = await money()
+
+      for (const userId of [alpha.secondUserId, viewerId]) {
+        const failure = await captureError(() =>
+          changeTripCurrency(
+            alpha.tenant.scopeFor(userId),
+            alpha.tripId,
+            COMMIT,
+          ),
+        )
+        expect(failure).toBeInstanceOf(TripRoleError)
+      }
+      expect(await money()).toEqual(before)
+    })
+
+    it('is refused for an archived trip, and writes nothing', async () => {
+      await archiveTrip(alpha.tenant.scope, alpha.tripId)
+      const before = await money()
+
+      const failure = await captureError(() =>
+        changeTripCurrency(alpha.tenant.scope, alpha.tripId, COMMIT),
+      )
+
+      expect(failure).toBeInstanceOf(TripArchivedError)
+      expect(await money()).toEqual(before)
+    })
+
+    it('does not let the other workspace’s conversion decide a stale tab’s write here', async () => {
+      await changeTripCurrency(beta.tenant.scope, beta.tripId, COMMIT)
+
+      const { expense } = await createExpense(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        title: 'Written under the belief the trip is in euros',
+        amountMinor: 500,
+        spentOn: '2026-04-11',
+        expectedTripCurrency: 'EUR',
+      })
+
+      expect(expense.currency).toBe('EUR')
+    })
+
+    describe('a stale tab’s write names no other workspace’s trip or row', () => {
+      it.each([
+        [
+          'an expense logged on its trip',
+          () =>
+            createExpense(alpha.tenant.scope, {
+              tripId: beta.tripId,
+              title: 'Probe',
+              amountMinor: 100,
+              spentOn: '2026-04-11',
+              expectedTripCurrency: 'XXX',
+            }),
+        ],
+        [
+          'an expense edited on its trip',
+          () =>
+            updateExpense(alpha.tenant.scope, beta.tripId, beta.expenseId, {
+              amountMinor: 100,
+              expectedTripCurrency: 'XXX',
+            }),
+        ],
+        [
+          'an expense of its trip edited through its own',
+          () =>
+            updateExpense(alpha.tenant.scope, alpha.tripId, beta.expenseId, {
+              amountMinor: 100,
+              expectedTripCurrency: 'EUR',
+            }),
+        ],
+        [
+          'a payment recorded on its trip',
+          () =>
+            createSettlement(alpha.tenant.scope, {
+              tripId: beta.tripId,
+              fromUserId: alpha.tenant.ownerUserId,
+              toUserId: alpha.companionUserId,
+              amountMinor: 100,
+              settledOn: '2026-04-11',
+              expectedTripCurrency: 'XXX',
+            }),
+        ],
+        [
+          'a planned item created on its trip',
+          () =>
+            createBudgetItem(alpha.tenant.scope, {
+              tripId: beta.tripId,
+              name: 'Probe',
+              expectedTripCurrency: 'XXX',
+            }),
+        ],
+        [
+          'a planned item edited on its trip',
+          () =>
+            updateBudgetItem(
+              alpha.tenant.scope,
+              beta.tripId,
+              beta.budgetItemId,
+              { name: 'Probe', expectedTripCurrency: 'XXX' },
+            ),
+        ],
+      ])(
+        'answers %s as not found, never as a currency refusal that would confirm the trip exists',
+        async (_name, attempt) => {
+          const before = await money()
+
+          const failure = await captureError(attempt)
+
+          expect(failure).toBeInstanceOf(NotFoundError)
+          expect(failure).not.toBeInstanceOf(CurrencyRefusalError)
+          expect(await money()).toEqual(before)
+        },
+      )
     })
   })
 })

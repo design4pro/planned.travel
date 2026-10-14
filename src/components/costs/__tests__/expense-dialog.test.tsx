@@ -318,4 +318,123 @@ describe('the expense dialog’s suggested converted figure', () => {
     })
     expect(Object.keys(sent ?? {})).not.toContain('exchangeRate')
   })
+
+  describe('when the trip’s currency changed while it was open', () => {
+    const REFUSAL = 'costs.refusal.tripCurrencyChanged'
+
+    function dialog(
+      tripCurrency: string,
+      onSubmit: (value: ExpenseFormValue) => Promise<void>,
+    ) {
+      return (
+        <I18nProvider locale="en" messages={EN}>
+          <ExpenseDialog
+            open
+            onOpenChange={() => {}}
+            expense={null}
+            people={PEOPLE}
+            viewerUserId="u1"
+            tripCurrency={tripCurrency}
+            categories={[{ value: 'food', label: 'Food', icon: null }]}
+            defaultCategory="food"
+            today="2026-10-12"
+            suggestedRate={null}
+            onSubmit={onSubmit}
+          />
+        </I18nProvider>
+      )
+    }
+
+    async function refuseOnce(user: ReturnType<typeof userEvent.setup>) {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+        .mockResolvedValue(undefined)
+      const view = render(dialog('EUR', onSubmit))
+      await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+      await user.type(amountField(), '4000')
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+      return { onSubmit, view }
+    }
+
+    it('keeps the digits, names the new currency on the amount and moves the currency control to it', async () => {
+      const user = hand()
+      const { view, onSubmit } = await refuseOnce(user)
+
+      view.rerender(dialog('JPY', onSubmit))
+
+      expect(await screen.findByDisplayValue('4000')).toBe(amountField())
+      expect(amountField().getAttribute('aria-invalid')).toBe('true')
+      expect(
+        screen.getByText(/budget currency of this trip is now JPY/),
+      ).toBeTruthy()
+      expect(
+        screen.getByRole('combobox', {
+          name: 'Currency this receipt was written in',
+        }).textContent,
+      ).toContain('JPY')
+      expect(screen.queryByText(REFUSAL)).toBeNull()
+    })
+
+    it('saves the same digits in the new currency on the next press', async () => {
+      const user = hand()
+      const { view, onSubmit } = await refuseOnce(user)
+      view.rerender(dialog('JPY', onSubmit))
+      await screen.findByDisplayValue('4000')
+
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2))
+      expect(onSubmit.mock.calls[1]?.[0]).toMatchObject({
+        amountMinor: 4_000,
+        currency: 'JPY',
+        originalAmountMinor: null,
+        originalCurrency: null,
+      })
+    })
+
+    it('stops naming the currency as soon as the amount is edited', async () => {
+      const user = hand()
+      const { view, onSubmit } = await refuseOnce(user)
+      view.rerender(dialog('JPY', onSubmit))
+      await screen.findByDisplayValue('4000')
+
+      await user.type(amountField(), '5')
+
+      expect(
+        screen.queryByText(/budget currency of this trip is now/),
+      ).toBeNull()
+    })
+
+    it('leaves a receipt currency the reader chose on purpose, and drops the converted figure that was in the old currency', async () => {
+      const onSubmit = vi
+        .fn<(value: ExpenseFormValue) => Promise<void>>()
+        .mockRejectedValueOnce(new Error(REFUSAL))
+      const user = hand()
+      const view = render(dialog('EUR', onSubmit))
+      await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+      await pickCurrency(user, 'GBP')
+      await user.type(amountField(), '100.00')
+      await user.type(convertedField(), '115.00')
+      await user.click(screen.getByRole('button', { name: 'Add expense' }))
+      await vi.waitFor(() => expect(onSubmit).toHaveBeenCalledOnce())
+
+      view.rerender(dialog('JPY', onSubmit))
+
+      expect(await screen.findByDisplayValue('100.00')).toBe(amountField())
+      expect(
+        screen.getByRole('combobox', {
+          name: 'Currency this receipt was written in',
+        }).textContent,
+      ).toContain('GBP')
+      expect(screen.getByLabelText(/^Converted to JPY/)).toHaveProperty(
+        'value',
+        '',
+      )
+      expect(
+        screen.getByText(/budget currency of this trip is now JPY/),
+      ).toBeTruthy()
+    })
+  })
 })

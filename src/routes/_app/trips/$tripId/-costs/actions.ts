@@ -15,6 +15,7 @@ import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { applyOps, optimisticId } from '#/components/costs'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { impliedRate } from '#/lib/money'
 import {
   createExpenseFn,
@@ -110,9 +111,16 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         await send()
         await router.invalidate()
       } catch (cause) {
-        toast.error(failure, {
-          description: reasonOf(cause, 'The change was rolled back.'),
-        })
+        if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+          // The dialog names the new currency beside the figure, so the screen is refreshed here,
+          // before the refusal reaches it, and the toast only says what did not happen.
+          await router.invalidate()
+          toast.error(failure)
+        } else {
+          toast.error(failure, {
+            description: reasonOf(cause, 'The change was rolled back.'),
+          })
+        }
         throw cause
       } finally {
         drop(op.key)
@@ -204,6 +212,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           recordPaymentFn({
             data: {
               tripId: payload.tripId,
+              expectedTripCurrency: payload.currency,
               fromUserId: value.fromUserId,
               toUserId: value.toUserId,
               amountMinor: value.amountMinor,
