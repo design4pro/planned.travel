@@ -29,6 +29,10 @@ const EN: Catalogue = {
 
 afterEach(cleanup)
 
+// Each test chains several Radix combobox and typing interactions: about 1.7 s locally and past the
+// default 5 s on a loaded CI runner (#1242), so this file carries its own ceiling.
+vi.setConfig({ testTimeout: 20_000 })
+
 const PEOPLE: ReadonlyArray<CostsPerson> = [
   { userId: 'u1', name: 'Ada', email: '', image: null, role: 'owner' },
   { userId: 'u2', name: 'Bo', email: '', image: null, role: 'editor' },
