@@ -718,7 +718,7 @@ describe('repositories', () => {
         tripId: trip.id,
         body: 'Oops',
       })
-      await deleteMessage(tenant.scope, removed.id)
+      await deleteMessage(tenant.scope, trip.id, removed.id)
 
       const page = await listMessages(tenant.scope, trip.id)
       expect(page.items.map((row) => row.id)).toEqual([kept.id])
@@ -745,16 +745,16 @@ describe('repositories', () => {
           { id: 'hike', label: 'Hike' },
         ],
       })
-      await castVote(tenant.scope, poll.id, 'beach')
+      await castVote(tenant.scope, trip.id, poll.id, 'beach')
       // A single-choice poll replaces the previous answer.
-      await castVote(tenant.scope, poll.id, 'hike')
+      await castVote(tenant.scope, trip.id, poll.id, 'hike')
 
       const result = await getPollResult(tenant.scope, poll.id)
       expect(result.totalVotes).toBe(1)
       expect(result.tally.map((entry) => entry.votes)).toEqual([0, 1])
 
       // Voting for the same option again withdraws it.
-      await castVote(tenant.scope, poll.id, 'hike')
+      await castVote(tenant.scope, trip.id, poll.id, 'hike')
       expect((await getPollResult(tenant.scope, poll.id)).totalVotes).toBe(0)
     })
 

@@ -14,6 +14,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
+import { postMessage } from '../collab'
 import { NotFoundError, RepositoryError } from '../context'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
 import {
@@ -126,6 +127,12 @@ import {
   requireTransportOfTrip,
   setTransportStatus,
 } from '../transports'
+import {
+  collabRows,
+  creatingWriters,
+  rowWriters,
+  seedCollabRows,
+} from './collab-writers'
 import {
   captureError,
   createHarness,
@@ -2087,6 +2094,49 @@ describe('member isolation', () => {
           requireTransportOfTrip(alpha.scope, other.id, transportId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  describe('a private trip’s conversation, notes and polls (#913)', () => {
+    it('are not reachable by pairing their ids with a trip the non-member can see', async () => {
+      const rows = await seedCollabRows(alpha.scope, fixture.tripId)
+      const own = await createTrip(stranger, {
+        title: 'Porto on my own',
+        slug: 'porto-on-my-own',
+        startDate: '2026-05-01',
+        endDate: '2026-05-04',
+      })
+      const before = await collabRows(alpha.scope)
+
+      for (const tripId of [own.id, fixture.tripId]) {
+        for (const [label, write] of rowWriters(stranger, tripId, rows)) {
+          expect(
+            await captureError(write),
+            `${label} on ${tripId}`,
+          ).toBeInstanceOf(NotFoundError)
+        }
+      }
+      expect(
+        await captureError(() =>
+          postMessage(stranger, {
+            tripId: own.id,
+            body: 'A reply into a trip I cannot open',
+            replyToId: rows.messageId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await collabRows(alpha.scope)).toEqual(before)
+    })
+
+    it('cannot be written to at all by a non-member, the trip being invisible', async () => {
+      await seedCollabRows(alpha.scope, fixture.tripId)
+      const before = await collabRows(alpha.scope)
+
+      for (const [label, write] of creatingWriters(stranger, fixture.tripId)) {
+        expect(await captureError(write), label).toBeInstanceOf(NotFoundError)
+      }
+      expect(await collabRows(alpha.scope)).toEqual(before)
     })
   })
 })
