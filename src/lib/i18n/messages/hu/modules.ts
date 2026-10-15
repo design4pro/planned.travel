@@ -967,6 +967,32 @@ const messages = {
   'files.export.email.action': '{title} megnyitása',
   'files.export.email.text': 'Az utazás exportja elkészült: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Az utazás exportálása',
+  'files.export.description':
+    'Az utazás nyomtatható másolata: napok, megállók, foglalások, közlekedés és szállások. Add át annak, akinek nincs fiókja.',
+  'files.export.kept': {
+    one: 'Minden exportot {count} napig őrzünk meg.',
+    other: 'Minden exportot {count} napig őrzünk meg.',
+  },
+  'files.export.empty.title': 'Még nincs export',
+  'files.export.empty.body':
+    'Készíts nyomtatható másolatot az utazásról, hogy elküldhesd annak, akinek nincs fiókja.',
+  'files.export.empty.bodyViewer':
+    'Az utazás tulajdonosa vagy szerkesztője készíthet egyet.',
+  'files.export.format.pdf': 'PDF-fájl',
+  'files.export.format.html': 'Nyomtatható oldal',
+  'files.export.artifact': 'Utazás exportja, {date}',
+  'files.export.download': 'Letöltés',
+  'files.export.downloadLabelPdf': '{date} időpontban készült PDF letöltése',
+  'files.export.downloadLabelHtml':
+    '{date} időpontban készült nyomtatható oldal letöltése',
+  'files.export.error.list': 'Az exportok listája nem töltődött be.',
+  'files.export.retry': 'Próbáld újra',
+  'files.export.error.missing':
+    'Ezt az exportot már nem őrizzük. Exportáld újra az utazást.',
+  'files.export.error.missingViewer': 'Ezt az exportot már nem őrizzük.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'A feltöltés megszakítva.',
   'files.error.badAnswer':

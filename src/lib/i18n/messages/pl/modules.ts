@@ -1002,6 +1002,33 @@ const messages = {
   'files.export.email.action': 'Otwórz: {title}',
   'files.export.email.text': 'Eksport podróży jest gotowy: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Eksport podróży',
+  'files.export.description':
+    'Drukowalna kopia podróży: dni, przystanki, rezerwacje, transport i noclegi. Przekaż ją komuś, kto nie ma konta.',
+  'files.export.kept': {
+    one: 'Każdy eksport jest przechowywany przez {count} dzień.',
+    few: 'Każdy eksport jest przechowywany przez {count} dni.',
+    many: 'Każdy eksport jest przechowywany przez {count} dni.',
+    other: 'Każdy eksport jest przechowywany przez {count} dnia.',
+  },
+  'files.export.empty.title': 'Brak eksportów',
+  'files.export.empty.body':
+    'Zrób drukowalną kopię podróży, żeby wysłać ją komuś, kto nie ma konta.',
+  'files.export.empty.bodyViewer':
+    'Eksport może zrobić właściciel lub edytor podróży.',
+  'files.export.format.pdf': 'Plik PDF',
+  'files.export.format.html': 'Strona do druku',
+  'files.export.artifact': 'Eksport podróży, {date}',
+  'files.export.download': 'Pobierz',
+  'files.export.downloadLabelPdf': 'Pobierz PDF utworzony {date}',
+  'files.export.downloadLabelHtml': 'Pobierz stronę do druku utworzoną {date}',
+  'files.export.error.list': 'Lista eksportów się nie wczytała.',
+  'files.export.retry': 'Spróbuj ponownie',
+  'files.export.error.missing':
+    'Ten eksport nie jest już przechowywany. Wyeksportuj podróż jeszcze raz.',
+  'files.export.error.missingViewer': 'Ten eksport nie jest już przechowywany.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Wysyłanie anulowane.',
   'files.error.badAnswer':
