@@ -142,6 +142,8 @@ describe('the conversation payload', () => {
   it('stops at the newest fifty and still reads them oldest-first', async () => {
     for (let index = 1; index <= 52; index += 1) {
       await postMessage(scope, { tripId: trip.id, body: `message ${index}` })
+      // Ids sort by millisecond then a random suffix: same-instant posts have no order.
+      await tick()
     }
 
     const messages = await threadPayload(scope, trip)
