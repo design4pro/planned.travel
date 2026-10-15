@@ -10,6 +10,7 @@ import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Pl from '#/lib/i18n/messages/pl/shell'
+import Settings from '#/lib/i18n/messages/en/settings'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { TripEditSheet } from '../trip-actions'
@@ -18,6 +19,7 @@ import { tripCard } from './fixtures'
 import type { Catalogue } from '#/lib/i18n'
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('settings', Settings),
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('ui', Ui),
 }
@@ -39,7 +41,12 @@ vi.mock('../../-server/trip-lifecycle', () => ({
   tripDeleteSummaryFn: vi.fn(),
   updateTripFn: server.update,
 }))
-vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => router,
+  Link: ({ children }: { children?: React.ReactNode }) => (
+    <a href="/trips/trip-1/costs">{children}</a>
+  ),
+}))
 vi.mock('#/components/modules/files/upload', () => ({
   uploadFile: upload.upload,
 }))
@@ -55,7 +62,7 @@ function refusedWith(key: string): Error {
   return new Error(encodePublicFailure({ kind: 'refusal', message: key }))
 }
 
-async function save(locale: 'en' | 'pl', messages: Catalogue) {
+async function save(locale: 'en' | 'pl', messages: Catalogue, submit = true) {
   const user = userEvent.setup()
   render(
     <I18nProvider locale={locale} messages={messages}>
@@ -66,6 +73,7 @@ async function save(locale: 'en' | 'pl', messages: Catalogue) {
       />
     </I18nProvider>,
   )
+  if (!submit) return
   await user.click(
     screen.getByRole('button', {
       name: locale === 'en' ? 'Save changes' : Pl['editTrip.submit'],
@@ -139,6 +147,37 @@ describe('what the trip edit sheet sends', () => {
     expect(server.update).toHaveBeenCalledTimes(1)
     const { data } = server.update.mock.calls[0][0]
     expect(data).toMatchObject({ tripId: expect.any(String) })
+    expect(data).not.toHaveProperty('currency')
+  })
+})
+
+describe('the budget currency in the trip edit sheet', () => {
+  it('reads as text with a pointer to the Costs tab, and offers no select', async () => {
+    await save('en', EN, false)
+
+    expect(screen.queryByRole('button', { name: 'Budget currency' })).toBeNull()
+    expect(screen.getByText('EUR — Euro')).toBeTruthy()
+    expect(
+      screen.getByText('The budget currency is changed from the Costs tab.'),
+    ).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: 'Open the Costs tab' })
+        .getAttribute('href'),
+    ).toBe('/trips/trip-1/costs')
+  })
+
+  it('never sends a currency, whatever else the save changes', async () => {
+    server.update.mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    await save('en', EN, false)
+
+    await user.type(screen.getByLabelText('Destination'), ' and Porto')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(server.update).toHaveBeenCalledTimes(1)
+    const { data } = server.update.mock.calls[0][0]
+    expect(data).toMatchObject({ destination: 'Lisbon and Porto' })
     expect(data).not.toHaveProperty('currency')
   })
 })
