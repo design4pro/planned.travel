@@ -111,6 +111,15 @@ describe('the transcript', () => {
     expect(bubble.className).not.toContain('text-title')
   })
 
+  it("renders the viewer's own emoji without the brand bubble", () => {
+    mount('en', namespaceCatalogue('modules', En), [
+      message('m1', 'user-1', '2026-06-23T09:00:00Z', '👍'),
+    ])
+    const jumbo = screen.getByText('👍', { selector: 'div' })
+    expect(jumbo.className).toContain('text-title')
+    expect(jumbo.className).not.toContain('bg-brand')
+  })
+
   it('writes the day heading in the active locale', () => {
     mount('pl', namespaceCatalogue('modules', Pl), [
       message('m1', 'user-2', '2026-06-23T09:00:00Z', 'Cześć'),
@@ -118,8 +127,9 @@ describe('the transcript', () => {
     const expected = formatWeekday('2026-06-23', 'pl')
     expect(expected).not.toBeNull()
     expect(screen.getByText(expected ?? '')).toBeTruthy()
-    expect(screen.queryByText('Tuesday 23 Jun')).toBeNull()
-    expect(expected).not.toBe(formatWeekday('2026-06-23', 'en'))
+    const english = formatWeekday('2026-06-23', 'en') ?? ''
+    expect(expected).not.toBe(english)
+    expect(screen.queryByText(english)).toBeNull()
   })
 
   it('draws one divider per day', () => {

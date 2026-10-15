@@ -174,6 +174,10 @@ describe('isJumboGlyphs', () => {
     ['a pictograph with a variation selector', '❤️'],
     ['emoji separated by spaces', '😀 😂 🎉'],
     ['emoji with surrounding whitespace', '  🎉\n'],
+    [
+      'three skin-toned ZWJ families, the longest allowed body',
+      '👨🏽‍👩🏽‍👧🏽‍👦🏽 👨🏽‍👩🏽‍👧🏽‍👦🏽 👨🏽‍👩🏽‍👧🏽‍👦🏽',
+    ],
   ])('is true for %s', (_name, body) => {
     expect(isJumboGlyphs(body)).toBe(true)
   })
@@ -188,6 +192,7 @@ describe('isJumboGlyphs', () => {
     ['a trademark sign', '™'],
     ['a lone regional indicator', '🇵'],
     ['plain text', 'ok'],
+    ['a body too long to be glyphs', `🎉${' '.repeat(200)}`],
     ['an empty body', ''],
     ['a whitespace body', '   '],
   ])('is false for %s', (_name, body) => {

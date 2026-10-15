@@ -75,6 +75,12 @@ export function groupThread<M extends RunMessage>(
 const MAX_JUMBO_GLYPHS = 3
 
 /**
+ * Three skin-toned ZWJ families with spaces are 62 UTF-16 units; anything past this
+ * cannot be jumbo, so a long message is never segmented just to be refused.
+ */
+const MAX_JUMBO_LENGTH = 128
+
+/**
  * One emoji element: an emoji-presentation character (not a lone regional
  * indicator) with an optional skin tone, a pictograph made emoji by `U+FE0F`, or
  * a text-presentation base with a skin tone; each may carry a tag sequence
@@ -109,6 +115,9 @@ function graphemesOf(body: string): ReadonlyArray<string> | null {
  * as it always did. A render decision only: the stored text is never touched.
  */
 export function isJumboGlyphs(body: string): boolean {
+  if (body.length > MAX_JUMBO_LENGTH) {
+    return false
+  }
   const graphemes = graphemesOf(body.trim())
   if (graphemes === null) {
     return false
