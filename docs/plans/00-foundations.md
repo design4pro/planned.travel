@@ -546,7 +546,7 @@ Transitively, sixteen rows reach ACC-05 and inherit the unblock: `TRP-02`, `TRP-
 - `src/server/notifications/dispatch.ts` — new. The composition layer: recipients, preference
   filtering, in-app write, email hand-off. Contains no SQL.
 - `src/server/notifications/__tests__/dispatch.test.ts` — new.
-- `src/server/fns/collab.ts` — edit. First production caller: a posted trip message notifies the
+- `src/server/fns/collab-thread-writes.ts` — edit (the writer was `fns/collab.ts` until #907). First production caller: a posted trip message notifies the
   other trip members.
 - `src/server/fns/costs.ts` — edit. Second production caller: an expense that splits onto other
   members notifies them.

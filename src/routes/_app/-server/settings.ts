@@ -36,7 +36,7 @@ import {
   updateUserSettings,
 } from '#/server/repos'
 import { appScope } from './context'
-import { isoOf, isoOfRequired } from './serialise'
+import { isoOf, isoOfRequired } from '#/server/serialise'
 
 import type { Locale } from '#/lib/i18n'
 
