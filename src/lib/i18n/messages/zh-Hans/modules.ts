@@ -881,6 +881,27 @@ const messages = {
   'files.export.email.action': '打开 {title}',
   'files.export.email.text': '行程导出已准备好：{url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '导出行程',
+  'files.export.description':
+    '行程的可打印副本：日程、站点、预订、交通和住宿。可交给没有账户的人。',
+  'files.export.kept': {
+    other: '每份导出保留 {count} 天。',
+  },
+  'files.export.empty.title': '还没有导出',
+  'files.export.empty.body': '制作行程的可打印副本，发给没有账户的人。',
+  'files.export.empty.bodyViewer': '行程的所有者或编辑者可以制作。',
+  'files.export.format.pdf': 'PDF 文件',
+  'files.export.format.html': '可打印页面',
+  'files.export.artifact': '行程导出，{date}',
+  'files.export.download': '下载',
+  'files.export.downloadLabelPdf': '下载 {date} 生成的 PDF',
+  'files.export.downloadLabelHtml': '下载 {date} 生成的可打印页面',
+  'files.export.error.list': '导出列表没有加载出来。',
+  'files.export.retry': '重试',
+  'files.export.error.missing': '这份导出已不再保留。请重新导出行程。',
+  'files.export.error.missingViewer': '这份导出已不再保留。',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上传。',
   'files.error.badAnswer': '服务器返回的内容这个浏览器读不了。',

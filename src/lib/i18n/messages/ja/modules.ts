@@ -922,6 +922,31 @@ const messages = {
   'files.export.email.action': '{title} を開く',
   'files.export.email.text': '旅行のエクスポートの準備ができました: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '旅行をエクスポート',
+  'files.export.description':
+    '旅行の印刷用コピーです。日程、立ち寄り先、予約、移動、宿泊が含まれます。アカウントを持っていない人に渡せます。',
+  'files.export.kept': {
+    other: '各エクスポートは{count}日間保存されます。',
+  },
+  'files.export.empty.title': 'エクスポートはまだありません',
+  'files.export.empty.body':
+    '旅行の印刷用コピーを作って、アカウントのない人に送りましょう。',
+  'files.export.empty.bodyViewer': '旅行のオーナーまたは編集者が作成できます。',
+  'files.export.format.pdf': 'PDFファイル',
+  'files.export.format.html': '印刷用ページ',
+  'files.export.artifact': '旅行のエクスポート、{date}',
+  'files.export.download': 'ダウンロード',
+  'files.export.downloadLabelPdf': '{date} に作成された PDF をダウンロード',
+  'files.export.downloadLabelHtml':
+    '{date} に作成された印刷用ページをダウンロード',
+  'files.export.error.list': 'エクスポートの一覧を読み込めませんでした。',
+  'files.export.retry': 'もう一度試す',
+  'files.export.error.missing':
+    'このエクスポートはすでに保存されていません。もう一度旅行をエクスポートしてください。',
+  'files.export.error.missingViewer':
+    'このエクスポートはすでに保存されていません。',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'アップロードを中止しました。',
   'files.error.badAnswer':

@@ -992,6 +992,33 @@ const messages = {
   'files.export.email.action': 'Abrir {title}',
   'files.export.email.text': 'La exportación del viaje está lista: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Exportar el viaje',
+  'files.export.description':
+    'Una copia imprimible del viaje: días, paradas, reservas, transporte y alojamientos. Entrégala a alguien que no tenga cuenta.',
+  'files.export.kept': {
+    one: 'Cada exportación se conserva durante {count} día.',
+    many: 'Cada exportación se conserva durante {count} días.',
+    other: 'Cada exportación se conserva durante {count} días.',
+  },
+  'files.export.empty.title': 'Aún no hay exportaciones',
+  'files.export.empty.body':
+    'Haz una copia imprimible del viaje para enviarla a alguien que no tenga cuenta.',
+  'files.export.empty.bodyViewer':
+    'El propietario o un editor del viaje puede hacer una.',
+  'files.export.format.pdf': 'Archivo PDF',
+  'files.export.format.html': 'Página imprimible',
+  'files.export.artifact': 'Exportación del viaje, {date}',
+  'files.export.download': 'Descargar',
+  'files.export.downloadLabelPdf': 'Descargar el PDF creado el {date}',
+  'files.export.downloadLabelHtml':
+    'Descargar la página imprimible creada el {date}',
+  'files.export.error.list': 'La lista de exportaciones no se cargó.',
+  'files.export.retry': 'Reintentar',
+  'files.export.error.missing':
+    'Esa exportación ya no se conserva. Exporta el viaje de nuevo.',
+  'files.export.error.missingViewer': 'Esa exportación ya no se conserva.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Subida cancelada.',
   'files.error.badAnswer':

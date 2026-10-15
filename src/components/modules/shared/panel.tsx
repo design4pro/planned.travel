@@ -10,7 +10,7 @@
 import { Card, SectionLabel } from '#/components/ui'
 import { cn } from '#/lib/cn'
 
-import type { ComponentPropsWithoutRef, ReactNode } from 'react'
+import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react'
 
 export interface ModulePanelProps {
   /** The tracked label that opens every panel in the product. */
@@ -33,6 +33,16 @@ export interface ModulePanelProps {
   busy?: boolean
   className?: string
   bodyClassName?: string
+  /**
+   * Extra attributes for the heading: a `ref` and `tabIndex={-1}` make it a focus target for a panel
+   * whose own control disappears (a retry that has just been used).
+   */
+  headingProps?: Omit<
+    ComponentPropsWithoutRef<'div'>,
+    'className' | 'children'
+  > & {
+    ref?: Ref<HTMLDivElement>
+  }
 }
 
 export function ModulePanel({
@@ -46,13 +56,14 @@ export function ModulePanel({
   busy = false,
   className,
   bodyClassName,
+  headingProps,
 }: ModulePanelProps) {
   return (
     <Card padding="none" className={cn('flex min-w-0 flex-col', className)}>
       <div className="flex flex-col gap-3 px-5 pt-4 pb-3">
         <div className="flex min-h-6 items-center justify-between gap-3">
           <div className="flex min-w-0 items-baseline gap-2">
-            <SectionLabel as="h2" className="truncate">
+            <SectionLabel as="h2" className="truncate" {...headingProps}>
               {label}
             </SectionLabel>
             {count === undefined ? null : (
