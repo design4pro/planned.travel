@@ -482,7 +482,7 @@ the module now answers from a CLDR en-GB table instead of asking. That is the fi
 Seven call sites still construct their own `Intl.DateTimeFormat` with `month: 'short'`:
 `src/components/costs/data.ts` (two),
 `src/components/modules/transports/transports-timeline.tsx`,
-`src/components/modules/collab/collab-board.tsx`, `src/components/modules/collab/thread.tsx`,
+`src/components/modules/collab/notes-board.tsx`, `src/components/modules/collab/thread.tsx`,
 `src/components/modules/book/bookings-timeline.tsx` and
 `src/components/modules/files/file-library.tsx`.
 
