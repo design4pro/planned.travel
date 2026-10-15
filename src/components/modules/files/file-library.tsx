@@ -496,9 +496,8 @@ export function FileLibrary({
             setDragging(true)
           }}
           onDragLeave={(event) => {
-            if (!carriesFiles(event.dataTransfer)) {
-              return
-            }
+            // No files check: the count only rises under a files drag, and some browsers report
+            // other types on a leave, which would otherwise strand the zone active.
             event.preventDefault()
             dragDepth.current = Math.max(0, dragDepth.current - 1)
             if (dragDepth.current === 0) {

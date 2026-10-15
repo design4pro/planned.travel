@@ -93,6 +93,7 @@ describe('the drop zone', () => {
 
     fireEvent.dragEnter(zone, TEXT_DRAG)
     fireEvent.dragOver(zone, TEXT_DRAG)
+    fireEvent.dragLeave(zone, TEXT_DRAG)
 
     expect(stateOf(zone)).toBe('idle')
     expect(screen.queryByText('Drop to upload')).toBeNull()
@@ -119,9 +120,11 @@ describe('the drop zone', () => {
     fireEvent.dragLeave(zone, FILES_DRAG)
     expect(stateOf(zone)).toBe('active')
 
-    // The same crossing the other way, with the leave aimed at the child itself.
+    // The pointer moves back off the button onto the zone: the zone is entered, then the button is
+    // left, and the leave names the child as its target. Ends on the leave, so the zone is active
+    // only because the count did not reach zero.
+    fireEvent.dragEnter(zone, FILES_DRAG)
     fireEvent.dragLeave(button, FILES_DRAG)
-    fireEvent.dragEnter(button, FILES_DRAG)
     expect(stateOf(zone)).toBe('active')
   })
 

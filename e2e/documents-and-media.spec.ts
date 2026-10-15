@@ -377,13 +377,11 @@ test.describe('06-S1 — Every way a file gets in', () => {
     page,
   }) => {
     const report = await openEmptyLibrary(context, page)
-    expect(await page.locator(DROP).count(), 'the selector matches once').toBe(
-      1,
-    )
-    expect(
-      await page.locator(`${DROP} [data-part="file-drop-overlay"]`).count(),
+    await expect(page.locator(DROP), 'the selector matches once').toHaveCount(1)
+    await expect(
+      page.locator(`${DROP} [data-part="file-drop-overlay"]`),
       'and so does its overlay',
-    ).toBe(1)
+    ).toHaveCount(1)
     const zone = page.locator(DROP)
     await expect(zone).toHaveAttribute('data-state', 'idle')
 
@@ -423,6 +421,7 @@ test.describe('06-S1 — Every way a file gets in', () => {
     )
     await recordShiftsFromTheStart(page)
     const report = await openEmptyLibrary(context, page)
+    const bodies = await interceptUploads(page)
     const supported = await page.evaluate(() =>
       PerformanceObserver.supportedEntryTypes.includes('layout-shift'),
     )
@@ -468,6 +467,7 @@ test.describe('06-S1 — Every way a file gets in', () => {
       'and a small one',
     ).toBeLessThan(0.1)
 
+    expect(bodies, 'the refusal sent nothing to the workspace').toEqual([])
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 
@@ -476,6 +476,7 @@ test.describe('06-S1 — Every way a file gets in', () => {
     page,
   }, testInfo) => {
     const report = await openEmptyLibrary(context, page)
+    const bodies = await interceptUploads(page)
     const zone = page.locator(DROP)
     const overlay = zone.locator('[data-part="file-drop-overlay"]')
     const widths = [
@@ -528,6 +529,7 @@ test.describe('06-S1 — Every way a file gets in', () => {
     }
 
     await settleMutations(page)
+    expect(bodies, 'the refusals sent nothing to the workspace').toEqual([])
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 })
