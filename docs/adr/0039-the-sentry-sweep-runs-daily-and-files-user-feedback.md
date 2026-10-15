@@ -3,6 +3,7 @@
 Status: accepted
 Date: 2026-10-13
 Amends: ADR 0008 (the cadence, and what counts as a Sentry finding).
+Amended by: ADR 0040 (point 4: a Sentry ticket is triaged unattended).
 
 ## Context
 

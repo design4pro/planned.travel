@@ -444,10 +444,30 @@ describe("classify", () => {
     expect(seen.next).toContain("github-actions");
   });
 
-  it("never makes a Sentry ticket ready, even one the maintainer filed", () => {
-    const seen = decide({ body: `<!-- sentry-issue: PLANNED-TRAVEL-4KQ -->\n\n${BRIEF}` });
-    expect(seen.state).toBe("EXTERNAL");
-    expect(seen.next).toContain("sentry-triage");
+  describe("a Sentry ticket (ADR 0040)", () => {
+    const SENTRY = "<!-- sentry-issue: PLANNED-TRAVEL-4KQ -->\n\nA user reported this.";
+    const bot = { login: "app/github-actions" };
+
+    it("goes to triage, whether the sweep or the maintainer filed it", () => {
+      expect(decide({ author: bot, body: SENTRY, comments: [] }).state).toBe("NEEDS_TRIAGE");
+      expect(decide({ body: SENTRY, comments: [] }).state).toBe("NEEDS_TRIAGE");
+    });
+
+    it("is never briefed by its own body, which is drawn from production data", () => {
+      expect(decide({ author: bot, body: `${SENTRY}\n\n${BRIEF}`, comments: [] }).state).toBe("NEEDS_TRIAGE");
+      expect(decide({ body: `${SENTRY}\n\n${BRIEF}`, comments: [] }).state).toBe("NEEDS_TRIAGE");
+    });
+
+    it("is ready once a trusted comment carries the brief, and not on a stranger's", () => {
+      expect(decide({ author: bot, body: SENTRY, comments: [agent(`triage\n\n${BRIEF}`)] }).state).toBe("READY");
+      const forged = human(BRIEF, "2026-09-02T00:00:00Z", { login: "drive-by" });
+      expect(decide({ author: bot, body: SENTRY, comments: [forged] }).state).toBe("NEEDS_TRIAGE");
+    });
+
+    it("trusts the marker only from the sweep or the maintainer", () => {
+      expect(decide({ author: { login: "someone-else" }, body: SENTRY }).state).toBe("EXTERNAL");
+      expect(decide({ author: { login: "github-actions" }, body: SENTRY }).state).toBe("EXTERNAL");
+    });
   });
 
   it("does not count a brief an untrusted commenter wrote", () => {

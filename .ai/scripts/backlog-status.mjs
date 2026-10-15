@@ -12,8 +12,8 @@
 //   - the category, priority and risk labels come from .ai/agentic.config.json;
 //   - the trusted authors are the `authors` gates of the issue automations in
 //     docs/agents/cezar-automations.json, plus the retired agent account: an issue anyone else
-//     opened is never auto-implemented, and neither is one scripts/sentry-triage filed (its
-//     `sentry-issue` marker), whoever ran it;
+//     opened is never auto-implemented. A ticket scripts/sentry-triage filed (its `sentry-issue`
+//     marker) is triaged unattended, and ready only on a trusted comment's brief (ADR 0040);
 //   - "not ready" is read through the 🤖 comment marker every skill writes
 //     (.ai/trackers/github.md) - a groom's not-ready comment, or the `STOP:` comment implement-ticket
 //     leaves on an issue it would not take - so a human comment newer than it is the answer, and the
@@ -257,6 +257,8 @@ const HUMAN_ONLY = /\bHUMAN-ONLY:/;
 const HUMAN_ONLY_BODY = /^🤖\s*HUMAN-ONLY:/;
 const hasBrief = (text) => /^#{2,3}\s*Agent Brief\b/m.test(stripCode(text));
 const SENTRY_MARKER = /<!--\s*sentry-issue:/;
+// The account `.github/workflows/sentry-triage.yml` files as (`GH_TOKEN: github.token`), as `gh` names it.
+const SENTRY_FILER = "app/github-actions";
 
 /** One issue's state and the single next step that moves it. Pure: every input is passed in. */
 export function classify(
@@ -296,10 +298,13 @@ export function classify(
           c.body.includes("readiness verified") ||
           hasBrief(c.body)),
     );
+  // A Sentry ticket's body is drawn from production data, so only a trusted comment's brief counts
+  // for one (ADR 0040).
+  const sentry = SENTRY_MARKER.test(issue.body ?? "");
   // Only a trusted author's brief counts: the body is the reporter's, so for an issue someone
   // else opened, a brief they wrote into it would be a self-approval.
   const briefed =
-    hasBrief(issue.body) ||
+    (!sentry && hasBrief(issue.body)) ||
     comments.some((c) => trusted.has(c.author?.login) && hasBrief(c.body));
   const missingLabels = Object.entries(sdlcLabels)
     .filter(([, names]) => !names.some(has))
@@ -310,7 +315,7 @@ export function classify(
   // `canUnblock` marks the two states an `unblock` run may try to lift, and only on an issue a run
   // may read at all: its author is trusted and it is no Sentry ticket (the same gate that keeps such
   // an issue out of READY). The rest is what separates a hold an agent set from one a person did.
-  const unblockable = trusted.has(issue.author?.login) && !SENTRY_MARKER.test(issue.body ?? "");
+  const unblockable = trusted.has(issue.author?.login) && !sentry;
   // Every run acts as the maintainer, so a comment speaks for an agent only when a trusted author
   // wrote it: anyone else's `🤖` line is a stranger's text, and must neither start an `unblock` run
   // nor switch one off (afk-unblock reads the same comments as data).
@@ -413,15 +418,10 @@ export function classify(
     );
   }
 
-  // The body quotes production error data, which anyone who can make the app fail can write -
-  // and a local `pnpm sentry-triage --file-issues` files it as the maintainer.
-  if (SENTRY_MARKER.test(issue.body ?? ""))
-    return state(
-      "EXTERNAL",
-      "Filed by sentry-triage from production data (an error or a user report): read it, then start `issue-groom` or `implement-ticket` on it from the cockpit.",
-    );
-
-  if (!trusted.has(issue.author?.login))
+  // The sweep files as the Actions bot, and a local `pnpm sentry-triage --file-issues` as the
+  // maintainer; the marker in anyone else's issue is a stranger's text (ADR 0040).
+  const sentryFiled = sentry && (trusted.has(issue.author?.login) || issue.author?.login === SENTRY_FILER);
+  if (!sentryFiled && !trusted.has(issue.author?.login))
     return state(
       "EXTERNAL",
       `Opened by ${issue.author?.login ?? "an unknown author"}, whom no automation trusts: read it, then start \`issue-groom\` or \`implement-ticket\` on it from the cockpit, or open it again yourself.`,
