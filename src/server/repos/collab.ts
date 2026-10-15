@@ -19,8 +19,8 @@ import {
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { runBatch } from './batch'
-import { ForbiddenError, RepositoryError } from './context'
-import { requireTrip } from './trips'
+import { ForbiddenError, NotFoundError, RepositoryError } from './context'
+import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
 import {
   colourSchema,
   countryCodeSchema,
@@ -43,6 +43,7 @@ import type {
   CollabPollVote,
 } from '#/server/db/types'
 import type { CursorPage, TenantScope } from './base'
+import type { TripRole } from './trips'
 
 export const collabMessagesRepository = createTenantRepository(collabMessages, 'message')
 export const collabMessageReactionsAccess = createTenantTableAccess(
@@ -53,6 +54,52 @@ export const collabNotesRepository = createTenantRepository(collabNotes, 'note')
 export const collabPollsRepository = createTenantRepository(collabPolls, 'poll')
 export const collabPollVotesRepository = createTenantRepository(collabPollVotes, 'poll vote')
 export const checkInsRepository = createTenantRepository(checkIns, 'check-in')
+
+/* -------------------------------------------------------------------------------------------------
+ * Who writes the conversation
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Trip roles that may write a trip's conversation, notes and polls: post, edit, react, vote, close
+ * and delete. A `viewer` reads the trip, and so does a workspace member who only sees an
+ * organization-visible one (`CONTEXT.md`, "Trip member"); ADR 0007 draws the same line, "a member who
+ * reads ... but does not write".
+ */
+export const COLLAB_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+
+/**
+ * The two guards every writer ends with, in the order the boundary needs them:
+ * {@link requireWritableTrip} first, so a caller who may not see the trip is answered with
+ * {@link NotFoundError} and learns nothing, and an archived trip refuses before anyone's role is
+ * discussed; then {@link assertTripRole}, whose `TripRoleError` is safe because by that point the
+ * caller has proved they may see the trip.
+ */
+async function requireCollabTrip(
+  scope: TenantScope,
+  tripId: string,
+): Promise<void> {
+  await requireWritableTrip(scope, tripId)
+  await assertTripRole(scope, tripId, COLLAB_WRITE_ROLES)
+}
+
+/*
+ * A writer that acts on a row is handed two ids: the trip the caller is working in and the row. The
+ * row is looked up by its own id inside the workspace, which is not a statement about the trip, so
+ * the pair is checked before anything else - a row of another trip answers exactly as a row that is
+ * not there, the same {@link NotFoundError}, and the refusal does not say which ids exist. It comes
+ * before the role on purpose: a caller cannot use the role refusal to tell a private trip's row from
+ * a missing one.
+ */
+
+function assertRowOnTrip(
+  entity: string,
+  row: { readonly id: string; readonly tripId: string },
+  tripId: string,
+): void {
+  if (row.tripId !== tripId) {
+    throw new NotFoundError(entity, row.id)
+  }
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -137,9 +184,13 @@ export async function postMessage(
   input: PostMessageInput,
 ): Promise<CollabMessage> {
   const values = postMessageInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireCollabTrip(scope, values.tripId)
   if (values.replyToId) {
-    await collabMessagesRepository.requireById(scope, values.replyToId)
+    const parent = await collabMessagesRepository.requireById(
+      scope,
+      values.replyToId,
+    )
+    assertRowOnTrip(collabMessagesRepository.entityName, parent, values.tripId)
   }
   return collabMessagesRepository.insert(scope, { ...values, userId: scope.ctx.userId })
 }
@@ -147,10 +198,13 @@ export async function postMessage(
 /** Edits a message. Only its author may change the text. */
 export async function editMessage(
   scope: TenantScope,
+  tripId: string,
   messageId: string,
   body: string,
 ): Promise<CollabMessage> {
   const message = await collabMessagesRepository.requireById(scope, messageId)
+  assertRowOnTrip(collabMessagesRepository.entityName, message, tripId)
+  await requireCollabTrip(scope, tripId)
   if (message.userId !== scope.ctx.userId) {
     throw new ForbiddenError('edit another traveller’s message', ['owner'])
   }
@@ -166,9 +220,12 @@ export async function editMessage(
  */
 export async function deleteMessage(
   scope: TenantScope,
+  tripId: string,
   messageId: string,
 ): Promise<CollabMessage> {
   const message = await collabMessagesRepository.requireById(scope, messageId)
+  assertRowOnTrip(collabMessagesRepository.entityName, message, tripId)
+  await requireCollabTrip(scope, tripId)
   if (message.userId !== scope.ctx.userId && scope.ctx.role === 'member') {
     throw new ForbiddenError('delete another traveller’s message', ['owner', 'admin'])
   }
@@ -215,10 +272,13 @@ export async function listReactions(
 /** Adds the acting user's reaction, or removes it when it is already there. */
 export async function toggleReaction(
   scope: TenantScope,
+  tripId: string,
   messageId: string,
   emoji: string,
 ): Promise<boolean> {
-  await collabMessagesRepository.requireById(scope, messageId)
+  const message = await collabMessagesRepository.requireById(scope, messageId)
+  assertRowOnTrip(collabMessagesRepository.entityName, message, tripId)
+  await requireCollabTrip(scope, tripId)
   const value = z.string().trim().min(1).max(16).parse(emoji)
   const where = allOf(
     eq(collabMessageReactions.messageId, messageId),
@@ -256,19 +316,37 @@ export async function createCollabNote(
   input: CreateNoteInput,
 ): Promise<CollabNote> {
   const values = createNoteInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireCollabTrip(scope, values.tripId)
   return collabNotesRepository.insert(scope, { ...values, createdBy: scope.ctx.userId })
+}
+
+/** The note, once it is known to be on the trip the request names and the caller may write it. */
+async function requireNoteOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  noteId: string,
+): Promise<void> {
+  const note = await collabNotesRepository.requireById(scope, noteId)
+  assertRowOnTrip(collabNotesRepository.entityName, note, tripId)
+  await requireCollabTrip(scope, tripId)
 }
 
 export async function updateCollabNote(
   scope: TenantScope,
+  tripId: string,
   noteId: string,
   input: UpdateNoteInput,
 ): Promise<CollabNote> {
+  await requireNoteOfTrip(scope, tripId, noteId)
   return collabNotesRepository.requireUpdate(scope, noteId, definedOnly(updateNoteInput.parse(input)))
 }
 
-export async function deleteCollabNote(scope: TenantScope, noteId: string): Promise<void> {
+export async function deleteCollabNote(
+  scope: TenantScope,
+  tripId: string,
+  noteId: string,
+): Promise<void> {
+  await requireNoteOfTrip(scope, tripId, noteId)
   await collabNotesRepository.requireRemove(scope, noteId)
 }
 
@@ -285,15 +363,37 @@ export async function listPolls(scope: TenantScope, tripId: string): Promise<Arr
 
 export async function createPoll(scope: TenantScope, input: CreatePollInput): Promise<CollabPoll> {
   const values = createPollInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireCollabTrip(scope, values.tripId)
   return collabPollsRepository.insert(scope, { ...values, createdBy: scope.ctx.userId })
 }
 
-export async function closePoll(scope: TenantScope, pollId: string): Promise<CollabPoll> {
+/** The poll, once it is known to be on the trip the request names and the caller may write it. */
+async function requirePollOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  pollId: string,
+): Promise<CollabPoll> {
+  const poll = await collabPollsRepository.requireById(scope, pollId)
+  assertRowOnTrip(collabPollsRepository.entityName, poll, tripId)
+  await requireCollabTrip(scope, tripId)
+  return poll
+}
+
+export async function closePoll(
+  scope: TenantScope,
+  tripId: string,
+  pollId: string,
+): Promise<CollabPoll> {
+  await requirePollOfTrip(scope, tripId, pollId)
   return collabPollsRepository.requireUpdate(scope, pollId, { isClosed: true })
 }
 
-export async function deletePoll(scope: TenantScope, pollId: string): Promise<void> {
+export async function deletePoll(
+  scope: TenantScope,
+  tripId: string,
+  pollId: string,
+): Promise<void> {
+  await requirePollOfTrip(scope, tripId, pollId)
   await collabPollsRepository.requireRemove(scope, pollId)
 }
 
@@ -303,10 +403,11 @@ export async function deletePoll(scope: TenantScope, pollId: string): Promise<vo
  */
 export async function castVote(
   scope: TenantScope,
+  tripId: string,
   pollId: string,
   optionId: string,
 ): Promise<Array<CollabPollVote>> {
-  const poll = await collabPollsRepository.requireById(scope, pollId)
+  const poll = await requirePollOfTrip(scope, tripId, pollId)
   if (poll.isClosed) {
     throw new RepositoryError('This poll is closed.', 'POLL_CLOSED')
   }

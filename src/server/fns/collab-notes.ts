@@ -10,7 +10,6 @@ import { z } from 'zod'
 import {
   createCollabNote,
   deleteCollabNote,
-  requireTrip,
   updateCollabNote,
 } from '#/server/repos'
 import {
@@ -25,7 +24,6 @@ export const createNoteFn = createServerFn({ method: 'POST' })
   .validator(noteInputSchema)
   .handler(async ({ data }): Promise<{ readonly noteId: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
 
     const note = await createCollabNote(scope, {
       tripId: data.tripId,
@@ -46,9 +44,8 @@ export const updateNoteFn = createServerFn({ method: 'POST' })
   .validator(noteUpdateSchema)
   .handler(async ({ data }): Promise<{ readonly noteId: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
 
-    await updateCollabNote(scope, data.noteId, {
+    await updateCollabNote(scope, data.tripId, data.noteId, {
       title: data.title,
       body: orNull(data.body),
       category: orNull(data.category),
@@ -69,8 +66,7 @@ export const deleteNoteFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, noteId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    await deleteCollabNote(scope, data.noteId)
+    await deleteCollabNote(scope, data.tripId, data.noteId)
 
     await mirrorToRoom(scope, data.tripId, [tombstone('note', data.noteId)])
     return { deleted: true }

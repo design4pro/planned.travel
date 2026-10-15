@@ -554,7 +554,7 @@ migration, no event or route renamed.
   `editMessage` and `deleteMessage` call `requireById` on the message id only; a member could react to, and an
   admin delete, a message of a private trip they are not a member of, by pairing its id with a trip they can
   see. A security finding that predates this stage and is not changed by it; the slicing run files it as an
-  issue labelled `security`. `07-S2`'s Phase 1 ticket may already file the same issue: the slicing run files F2 only if no open `security` issue naming `toggleReaction`, `editMessage` or `deleteMessage` exists, and otherwise cites that one.
+  issue labelled `security` (#913, which closed it). `07-S2`'s Phase 1 ticket may already file the same issue: the slicing run files F2 only if no open `security` issue naming `toggleReaction`, `editMessage` or `deleteMessage` exists, and otherwise cites that one.
 - **F3. The clock time of each message** keeps the file's `LOCALE = 'en-GB'` formatter (`thread.tsx:56`),
   shared with the other trip-tab call sites of `12-verification-protocol.md` §7.2.
 - **Tombstones for deleted messages, who deleted, quote replies.** `07-S7` owns them; `startsRun` is built so the

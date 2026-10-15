@@ -320,6 +320,12 @@ import {
 } from '../rates'
 import { changeTripCurrency, previewCurrencyChange } from '../trip-currency'
 import { editTransport } from './edit-transport'
+import {
+  collabRows,
+  creatingWriters,
+  rowWriters,
+  seedCollabRows,
+} from './collab-writers'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
 import { classifyFailure } from '#/server/errors/public'
@@ -332,6 +338,7 @@ import type {
 import type { TaskBindings, TaskQueue } from '#/server/queue/types'
 import type { UserSettings } from '#/server/db/types'
 import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
+import type { CollabRowIds } from './collab-writers'
 import type { Harness, SeededTenant } from './harness'
 import type { StagedImport } from '#/server/queue/handlers/booking-import'
 
@@ -653,7 +660,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     tripId: trip.id,
     body: 'Landed, heading in.',
   })
-  await toggleReaction(scope, message.id, '🎉')
+  await toggleReaction(scope, trip.id, message.id, '🎉')
   const collabNote = await createCollabNote(scope, {
     tripId: trip.id,
     title: 'Ideas',
@@ -664,7 +671,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     question: 'Which morning?',
     options: POLL_OPTIONS,
   })
-  const votes = await castVote(scope, poll.id, 'sunrise')
+  const votes = await castVote(scope, trip.id, poll.id, 'sunrise')
   const vote = votes.at(0)
   if (vote === undefined) {
     throw new Error('Casting a vote must record it.')
@@ -1330,7 +1337,7 @@ describe('tenant isolation', () => {
 
     it('refuses to react to a foreign message', async () => {
       const error = await captureError(() =>
-        toggleReaction(alpha.tenant.scope, beta.messageId, '👍'),
+        toggleReaction(alpha.tenant.scope, alpha.tripId, beta.messageId, '👍'),
       )
       expect(error).toBeInstanceOf(NotFoundError)
     })
@@ -1625,12 +1632,14 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          editMessage(scope, beta.messageId, 'Rewritten'),
+          editMessage(scope, alpha.tripId, beta.messageId, 'Rewritten'),
         ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => castVote(scope, beta.pollId, 'market')),
+        await captureError(() =>
+          castVote(scope, alpha.tripId, beta.pollId, 'market'),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
@@ -6617,6 +6626,78 @@ describe('tenant isolation', () => {
           expect(await money()).toEqual(before)
         },
       )
+    })
+  })
+
+  describe('the collaboration writers', () => {
+    const rowsOf = (world: World): CollabRowIds => ({
+      messageId: world.messageId,
+      noteId: world.collabNoteId,
+      pollId: world.pollId,
+    })
+
+    it('refuse another workspace’s rows, paired with either workspace’s trip, and change nothing', async () => {
+      const scope = alpha.tenant.scope
+      const beforeBeta = await collabRows(beta.tenant.scope)
+      const beforeAlpha = await collabRows(scope)
+
+      for (const tripId of [alpha.tripId, beta.tripId]) {
+        for (const [label, write] of rowWriters(scope, tripId, rowsOf(beta))) {
+          expect(
+            await captureError(write),
+            `${label} on ${tripId}`,
+          ).toBeInstanceOf(NotFoundError)
+        }
+      }
+
+      expect(await collabRows(beta.tenant.scope)).toEqual(beforeBeta)
+      expect(await collabRows(scope)).toEqual(beforeAlpha)
+    })
+
+    it('refuse a row of another trip of the same workspace, in either direction', async () => {
+      const scope = alpha.tenant.scope
+      const second = await createTrip(scope, {
+        title: 'Faro, another time',
+        slug: 'faro-another-time',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      const secondRows = await seedCollabRows(scope, second.id)
+      const before = await collabRows(scope)
+
+      for (const [label, write] of rowWriters(
+        scope,
+        alpha.tripId,
+        secondRows,
+      )) {
+        expect(
+          await captureError(write),
+          `${label}, second row on first trip`,
+        ).toBeInstanceOf(NotFoundError)
+      }
+      for (const [label, write] of rowWriters(
+        scope,
+        second.id,
+        rowsOf(alpha),
+      )) {
+        expect(
+          await captureError(write),
+          `${label}, first row on second trip`,
+        ).toBeInstanceOf(NotFoundError)
+      }
+      expect(await collabRows(scope)).toEqual(before)
+    })
+
+    it('refuse to create a row on another workspace’s trip', async () => {
+      const before = await collabRows(beta.tenant.scope)
+
+      for (const [label, write] of creatingWriters(
+        alpha.tenant.scope,
+        beta.tripId,
+      )) {
+        expect(await captureError(write), label).toBeInstanceOf(NotFoundError)
+      }
+      expect(await collabRows(beta.tenant.scope)).toEqual(before)
     })
   })
 
