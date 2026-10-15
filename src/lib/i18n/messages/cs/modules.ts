@@ -908,6 +908,7 @@ const messages = {
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
   'files.drop.active': 'Pusť a nahraje se',
+  'files.drop.pasteHint': 'vloží zkopírovaný obrázek nebo snímek obrazovky',
   'files.reject.blockedType':
     'Soubor „{name}“ nebyl přidán: soubory XML a komprimované SVG se tu z bezpečnostních důvodů neukládají. Ulož ho jako PDF nebo obrázek a přidej místo něj to.',
   'files.drop.idle': 'Přetáhni soubory sem',

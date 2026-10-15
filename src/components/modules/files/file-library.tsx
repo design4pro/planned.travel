@@ -44,6 +44,7 @@ import {
   Chip,
   EmptyState,
   IconButton,
+  KbdSequence,
   Progress,
   Table,
   TableBody,
@@ -52,6 +53,7 @@ import {
   TableHeader,
   TableRow,
   toast,
+  useHasMounted,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { resolve } from '../shared/deferred-message'
@@ -70,6 +72,7 @@ import {
 } from '../shared'
 import { downloadTripFile } from './download'
 import { FileDetailsDialog } from './file-dialogs'
+import { filesFromClipboard, nameForPaste, shouldTakePaste } from './paste'
 import { describeRejection, kindForFile, screenFiles } from './screening'
 import { uploadFile } from './upload'
 import {
@@ -155,12 +158,18 @@ export function FileLibrary({
   const [kindFilter, setKindFilter] = useState<string>('all')
   const [editing, setEditing] = useState<FileData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
+  /** Bumped by each paste that brought files; the queue is scrolled to once it has rendered. */
+  const [scrollRequest, setScrollRequest] = useState(0)
+  const hintMounted = useHasMounted()
   const t = useTranslate()
   const locale = useLocale()
   const [now, setNow] = useState(() => Date.now())
 
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
+  const queueListRef = useRef<HTMLUListElement>(null)
+  /** Pasted screenshots named per second, for the screen's whole life: names stay unique across pastes. */
+  const pastedPerSecond = useRef(new Map<string, number>())
   /** The controller for the upload actually in flight, so Cancel can abort it. */
   const controllers = useRef(new Map<string, AbortController>())
   /** Files by task id, held outside the reducer: a `File` is not state. */
@@ -246,6 +255,42 @@ export function FileLibrary({
     },
     [workspaceBytes, limitBytes, queue],
   )
+
+  /**
+   * Paste, anywhere on this screen, not only on the drop panel: a traveller who copies a screenshot,
+   * opens Files and presses the shortcut expects it to land without first clicking into a panel.
+   * The listener lives only while this screen does, so a paste elsewhere never uploads to this trip.
+   * It stands down for the details dialog and the confirmation (a paste there is text), and cancels
+   * the browser's default only when it found files, so pasting text behaves as it always did.
+   */
+  useEffect(() => {
+    if (editing !== null || confirm !== null) {
+      return
+    }
+    const onPaste = (event: ClipboardEvent): void => {
+      if (!shouldTakePaste(event) || event.clipboardData === null) {
+        return
+      }
+      const pasted = filesFromClipboard(event.clipboardData)
+      if (pasted.length === 0) {
+        return
+      }
+      event.preventDefault()
+      add(nameForPaste(pasted, new Date(), pastedPerSecond.current))
+      setScrollRequest((count) => count + 1)
+    }
+    document.addEventListener('paste', onPaste)
+    return () => document.removeEventListener('paste', onPaste)
+  }, [add, editing, confirm])
+
+  // After the render that shows the pasted rows: the list only exists once the queue holds a task,
+  // so the handler itself has nothing to scroll to on a first paste. On a long library this is what
+  // lets the traveller see the upload begin instead of pasting a second time.
+  useEffect(() => {
+    if (scrollRequest > 0) {
+      queueListRef.current?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [scrollRequest])
 
   /**
    * The pump. One upload at a time, restarted whenever the queue changes, guarded
@@ -464,6 +509,24 @@ export function FileLibrary({
             <p className="mt-1 text-caption text-ink-3">
               {t('modules.files.empty.hint')}
             </p>
+            {/*
+              Key caps first, then the verb, in every locale. The line is absent on touch, where a
+              screen reader would otherwise read a shortcut nobody can press. Its height is reserved
+              from the first paint (`min-h-5`, the cap's own height) and it fades in by opacity once
+              mounted, so the Ctrl-to-⌘ swap moves nothing.
+            */}
+            <p
+              className={cn(
+                'mt-2 flex min-h-5 items-center justify-center gap-1.5 text-caption text-ink-3',
+                'transition-opacity duration-base ease-out-quint',
+                '[@media(hover:none)]:hidden pointer-coarse:hidden',
+                hintMounted ? 'opacity-100' : 'opacity-0',
+              )}
+              data-part="file-paste-hint"
+            >
+              <KbdSequence keys={['Mod', 'V']} size="sm" />
+              <span>{t('modules.files.drop.pasteHint')}</span>
+            </p>
           </div>
           <Button
             variant="secondary"
@@ -489,7 +552,11 @@ export function FileLibrary({
                 valueText={`${Math.round(overallProgress(queue) * 100)}%`}
               />
             )}
-            <ul className="flex flex-col gap-2">
+            <ul
+              ref={queueListRef}
+              className="flex flex-col gap-2"
+              data-part="file-queue"
+            >
               {queue.tasks.map((task) => (
                 <li
                   key={task.id}

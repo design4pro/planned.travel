@@ -913,6 +913,7 @@ const messages = {
   'files.action.choose': 'Elegir archivos',
   'files.action.upload': 'Subir archivos',
   'files.drop.active': 'Suelta para subir',
+  'files.drop.pasteHint': 'pega una imagen copiada o una captura de pantalla',
   'files.reject.blockedType':
     '«{name}» no se añadió: aquí no se guardan archivos XML ni SVG comprimidos, por seguridad. Guárdalo como PDF o como imagen y añade eso en su lugar.',
   'files.drop.idle': 'Arrastra archivos aquí',
