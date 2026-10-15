@@ -487,6 +487,8 @@ the legal pages. Each one gets an explicit visible list and an explicit never-vi
 that appears in neither list is never-visible: the projections are whitelists, so silence is a
 denial.
 
+A Trip export is a downloadable snapshot for trip members. An owner or editor may include confirmation codes explicitly; the option is off by default, and a file shared outside the workspace should leave it off.
+
 ### 3.1 Shared trip - `/share/$token`
 
 | Visible                                                                                               | Never visible                                                                                                                     |

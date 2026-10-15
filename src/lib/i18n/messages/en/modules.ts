@@ -1200,6 +1200,52 @@ const messages = {
     one: '{count} file did not upload',
     other: '{count} files did not upload',
   },
+
+  'files.export.request': 'Export the trip',
+  'files.export.includeReferences': 'Include confirmation codes',
+  'files.export.includeReferencesHint':
+    'Leave this off if you will send the file to someone outside your workspace.',
+  'files.export.pending':
+    'Preparing your export. You can leave this page; it will be in this list when it is ready.',
+  'files.export.slow':
+    'This is taking longer than usual. It will appear here when it is ready. If it does not, export again.',
+  'files.export.refresh': 'Refresh',
+  'files.export.ready': 'Your export is ready',
+  'files.export.quota': {
+    one: "This workspace's subscription includes {count} export a month, and all of it is used. The count starts again on {date}.",
+    other:
+      "This workspace's subscription includes {count} exports a month, and all of them are used. The count starts again on {date}.",
+  },
+  'files.export.error.request': 'The export was not started',
+  'files.export.error.requestBody':
+    'This attempt was not counted. Try again in a moment.',
+  'files.export.doc.overview': 'Overview',
+  'files.export.doc.timezone': 'Time zone',
+  'files.export.doc.days': 'Days',
+  'files.export.doc.day': {
+    one: 'Day {count} - {date}',
+    other: 'Day {count} - {date}',
+  },
+  'files.export.doc.dayUndated': { one: 'Day {count}', other: 'Day {count}' },
+  'files.export.doc.dayEmpty': 'Nothing planned yet.',
+  'files.export.doc.reservations': 'Reservations',
+  'files.export.doc.transport': 'Transport',
+  'files.export.doc.reference': 'Ref. {code}',
+  'files.export.doc.route': '{from} to {to}',
+  'files.export.doc.stays': 'Where we are staying',
+  'files.export.doc.nights': {
+    one: 'Nights: {count}',
+    other: 'Nights: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'This plan has more days than fit in one document. The first {count} day is shown.',
+    other:
+      'This plan has more days than fit in one document. The first {count} days are shown.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Showing the first {count} of {total}.',
+    other: 'Showing the first {count} of {total}.',
+  },
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -923,6 +923,40 @@ const messages = {
   'files.toast.failedMany': {
     other: '有 {count} 個檔案沒上傳成功',
   },
+
+  'files.export.request': '匯出行程',
+  'files.export.includeReferences': '包含確認碼',
+  'files.export.includeReferencesHint':
+    '如果要將檔案傳送給工作區外的人，請勿勾選。',
+  'files.export.pending':
+    '正在準備匯出。你可以離開此頁；檔案就緒後會出現在清單中。',
+  'files.export.slow':
+    '耗時比平時長。檔案就緒後會顯示在這裡。如果沒有顯示，請重新匯出。',
+  'files.export.refresh': '重新整理',
+  'files.export.ready': '匯出檔案已就緒',
+  'files.export.quota': {
+    other: '此工作區每月{count}次匯出額度已用完。計數將在{date}重新開始。',
+  },
+  'files.export.error.request': '未開始匯出',
+  'files.export.error.requestBody': '本次嘗試未計入額度。請稍後重試。',
+  'files.export.doc.overview': '概覽',
+  'files.export.doc.timezone': '時區',
+  'files.export.doc.days': '天數',
+  'files.export.doc.day': { other: '第{count}天 - {date}' },
+  'files.export.doc.dayUndated': { other: '第{count}天' },
+  'files.export.doc.dayEmpty': '尚無計畫。',
+  'files.export.doc.reservations': '預訂',
+  'files.export.doc.transport': '交通',
+  'files.export.doc.reference': '確認碼 {code}',
+  'files.export.doc.route': '從{from}到{to}',
+  'files.export.doc.stays': '住宿地點',
+  'files.export.doc.nights': { other: '晚數：{count}' },
+  'files.export.doc.truncatedDays': {
+    other: '所有天數無法放入一份文件，僅顯示前{count}天。',
+  },
+  'files.export.doc.truncatedRows': {
+    other: '顯示全部{total}項中的前{count}項。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

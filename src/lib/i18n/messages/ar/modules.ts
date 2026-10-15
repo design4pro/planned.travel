@@ -1071,6 +1071,79 @@ const messages = {
     many: '{count} ملفًا لم تُرفع',
     other: '{count} ملف لم يُرفع',
   },
+
+  'files.export.request': 'تصدير الرحلة',
+  'files.export.includeReferences': 'تضمين رموز التأكيد',
+  'files.export.includeReferencesHint':
+    'اترك هذا الخيار غير محدد إذا كنت سترسل الملف إلى شخص خارج مساحة عملك.',
+  'files.export.pending':
+    'جارٍ إعداد التصدير. يمكنك مغادرة الصفحة؛ سيظهر الملف في القائمة عندما يكون جاهزًا.',
+  'files.export.slow':
+    'يستغرق هذا وقتًا أطول من المعتاد. سيظهر الملف هنا عندما يكون جاهزًا. إن لم يظهر، أعد التصدير.',
+  'files.export.refresh': 'تحديث',
+  'files.export.ready': 'ملف التصدير جاهز',
+  'files.export.quota': {
+    zero: 'نفدت حصة مساحة العمل الشهرية البالغة {count} من عمليات التصدير. يبدأ العد من جديد في {date}.',
+    one: 'نفدت حصة مساحة العمل الشهرية البالغة {count} من عمليات التصدير. يبدأ العد من جديد في {date}.',
+    two: 'نفدت حصة مساحة العمل الشهرية البالغة {count} من عمليات التصدير. يبدأ العد من جديد في {date}.',
+    few: 'نفدت حصة مساحة العمل الشهرية البالغة {count} من عمليات التصدير. يبدأ العد من جديد في {date}.',
+    many: 'نفدت حصة مساحة العمل الشهرية البالغة {count} من عمليات التصدير. يبدأ العد من جديد في {date}.',
+    other:
+      'نفدت حصة مساحة العمل الشهرية البالغة {count} من عمليات التصدير. يبدأ العد من جديد في {date}.',
+  },
+  'files.export.error.request': 'لم يبدأ التصدير',
+  'files.export.error.requestBody':
+    'لم تُحتسب هذه المحاولة. حاول مجددًا بعد قليل.',
+  'files.export.doc.overview': 'نظرة عامة',
+  'files.export.doc.timezone': 'المنطقة الزمنية',
+  'files.export.doc.days': 'الأيام',
+  'files.export.doc.day': {
+    zero: 'اليوم {count} - {date}',
+    one: 'اليوم {count} - {date}',
+    two: 'اليوم {count} - {date}',
+    few: 'اليوم {count} - {date}',
+    many: 'اليوم {count} - {date}',
+    other: 'اليوم {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    zero: 'اليوم {count}',
+    one: 'اليوم {count}',
+    two: 'اليوم {count}',
+    few: 'اليوم {count}',
+    many: 'اليوم {count}',
+    other: 'اليوم {count}',
+  },
+  'files.export.doc.dayEmpty': 'لا توجد خطط بعد.',
+  'files.export.doc.reservations': 'الحجوزات',
+  'files.export.doc.transport': 'النقل',
+  'files.export.doc.reference': 'رمز التأكيد {code}',
+  'files.export.doc.route': 'من {from} إلى {to}',
+  'files.export.doc.stays': 'أماكن إقامتنا',
+  'files.export.doc.nights': {
+    zero: 'عدد الليالي: {count}',
+    one: 'عدد الليالي: {count}',
+    two: 'عدد الليالي: {count}',
+    few: 'عدد الليالي: {count}',
+    many: 'عدد الليالي: {count}',
+    other: 'عدد الليالي: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    zero: 'لا تتسع وثيقة واحدة لكل الأيام. عدد الأيام المعروضة من البداية: {count}.',
+    one: 'لا تتسع وثيقة واحدة لكل الأيام. عدد الأيام المعروضة من البداية: {count}.',
+    two: 'لا تتسع وثيقة واحدة لكل الأيام. عدد الأيام المعروضة من البداية: {count}.',
+    few: 'لا تتسع وثيقة واحدة لكل الأيام. عدد الأيام المعروضة من البداية: {count}.',
+    many: 'لا تتسع وثيقة واحدة لكل الأيام. عدد الأيام المعروضة من البداية: {count}.',
+    other:
+      'لا تتسع وثيقة واحدة لكل الأيام. عدد الأيام المعروضة من البداية: {count}.',
+  },
+  'files.export.doc.truncatedRows': {
+    zero: 'المعروض من البداية: {count} من {total}.',
+    one: 'المعروض من البداية: {count} من {total}.',
+    two: 'المعروض من البداية: {count} من {total}.',
+    few: 'المعروض من البداية: {count} من {total}.',
+    many: 'المعروض من البداية: {count} من {total}.',
+    other: 'المعروض من البداية: {count} من {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

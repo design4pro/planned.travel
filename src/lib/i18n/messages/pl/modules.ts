@@ -1063,6 +1063,67 @@ const messages = {
     many: '{count} plików nie zostało wysłanych',
     other: '{count} pliku nie zostało wysłane',
   },
+
+  'files.export.request': 'Eksportuj podróż',
+  'files.export.includeReferences': 'Dołącz kody potwierdzeń',
+  'files.export.includeReferencesHint':
+    'Nie zaznaczaj, jeśli wyślesz plik komuś spoza swojej przestrzeni.',
+  'files.export.pending':
+    'Przygotowujemy eksport. Możesz opuścić tę stronę; gotowy plik pojawi się na liście.',
+  'files.export.slow':
+    'Trwa to dłużej niż zwykle. Gotowy plik pojawi się tutaj. Jeśli się nie pojawi, wyeksportuj ponownie.',
+  'files.export.refresh': 'Odśwież',
+  'files.export.ready': 'Eksport jest gotowy',
+  'files.export.quota': {
+    one: 'Miesięczny limit eksportów w tej przestrzeni wynosi {count} i został wykorzystany. Licznik odnowi się {date}.',
+    few: 'Miesięczny limit eksportów w tej przestrzeni wynosi {count} i został wykorzystany. Licznik odnowi się {date}.',
+    many: 'Miesięczny limit eksportów w tej przestrzeni wynosi {count} i został wykorzystany. Licznik odnowi się {date}.',
+    other:
+      'Miesięczny limit eksportów w tej przestrzeni wynosi {count} i został wykorzystany. Licznik odnowi się {date}.',
+  },
+  'files.export.error.request': 'Nie rozpoczęto eksportu',
+  'files.export.error.requestBody':
+    'Ta próba nie została naliczona. Spróbuj ponownie za chwilę.',
+  'files.export.doc.overview': 'Przegląd',
+  'files.export.doc.timezone': 'Strefa czasowa',
+  'files.export.doc.days': 'Dni',
+  'files.export.doc.day': {
+    one: 'Dzień {count} - {date}',
+    few: 'Dzień {count} - {date}',
+    many: 'Dzień {count} - {date}',
+    other: 'Dzień {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'Dzień {count}',
+    few: 'Dzień {count}',
+    many: 'Dzień {count}',
+    other: 'Dzień {count}',
+  },
+  'files.export.doc.dayEmpty': 'Nie ma jeszcze planów.',
+  'files.export.doc.reservations': 'Rezerwacje',
+  'files.export.doc.transport': 'Środki transportu',
+  'files.export.doc.reference': 'Nr potw. {code}',
+  'files.export.doc.route': '{from} do {to}',
+  'files.export.doc.stays': 'Gdzie nocujemy',
+  'files.export.doc.nights': {
+    one: 'Liczba nocy: {count}',
+    few: 'Liczba nocy: {count}',
+    many: 'Liczba nocy: {count}',
+    other: 'Liczba nocy: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Nie wszystkie dni mieszczą się w dokumencie. Liczba pokazanych dni od początku: {count}.',
+    few: 'Nie wszystkie dni mieszczą się w dokumencie. Liczba pokazanych dni od początku: {count}.',
+    many: 'Nie wszystkie dni mieszczą się w dokumencie. Liczba pokazanych dni od początku: {count}.',
+    other:
+      'Nie wszystkie dni mieszczą się w dokumencie. Liczba pokazanych dni od początku: {count}.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Pokazano od początku: {count} z {total}.',
+    few: 'Pokazano od początku: {count} z {total}.',
+    many: 'Pokazano od początku: {count} z {total}.',
+    other: 'Pokazano od początku: {count} z {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

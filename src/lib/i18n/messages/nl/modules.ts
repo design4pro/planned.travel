@@ -909,7 +909,8 @@ const messages = {
   'files.calendar.timesNote':
     'Ritten met een tijdzone verschijnen overal op hetzelfde moment. Al het andere verschijnt op de geplande kloktijd, waar je agenda ook is.',
   'files.drop.active': 'Loslaten om te uploaden',
-  'files.drop.pasteHint': 'plakt een gekopieerde afbeelding of schermafbeelding',
+  'files.drop.pasteHint':
+    'plakt een gekopieerde afbeelding of schermafbeelding',
   'files.reject.blockedType':
     '„{name}” is niet toegevoegd: XML-bestanden en gecomprimeerde SVG-bestanden worden hier om veiligheidsredenen niet opgeslagen. Sla het op als pdf of afbeelding en voeg dat in plaats daarvan toe.',
   'files.drop.idle': 'Sleep bestanden hierheen',
@@ -1025,6 +1026,52 @@ const messages = {
   'files.toast.failedMany': {
     one: '{count} bestand is niet geüpload',
     other: '{count} bestanden zijn niet geüpload',
+  },
+
+  'files.export.request': 'Reis exporteren',
+  'files.export.includeReferences': 'Bevestigingscodes opnemen',
+  'files.export.includeReferencesHint':
+    'Laat dit uit als je het bestand naar iemand buiten je werkruimte stuurt.',
+  'files.export.pending':
+    'Je export wordt voorbereid. Je kunt deze pagina verlaten; het bestand verschijnt in deze lijst zodra het klaar is.',
+  'files.export.slow':
+    'Dit duurt langer dan normaal. Het bestand verschijnt hier zodra het klaar is. Exporteer opnieuw als het niet verschijnt.',
+  'files.export.refresh': 'Vernieuwen',
+  'files.export.ready': 'Je export is klaar',
+  'files.export.quota': {
+    one: 'Het maandelijkse tegoed van deze werkruimte van {count} exports is verbruikt. De teller begint opnieuw op {date}.',
+    other:
+      'Het maandelijkse tegoed van deze werkruimte van {count} exports is verbruikt. De teller begint opnieuw op {date}.',
+  },
+  'files.export.error.request': 'De export is niet gestart',
+  'files.export.error.requestBody':
+    'Deze poging is niet meegeteld. Probeer het zo nog eens.',
+  'files.export.doc.overview': 'Overzicht',
+  'files.export.doc.timezone': 'Tijdzone',
+  'files.export.doc.days': 'Dagen',
+  'files.export.doc.day': {
+    one: 'Dag {count} - {date}',
+    other: 'Dag {count} - {date}',
+  },
+  'files.export.doc.dayUndated': { one: 'Dag {count}', other: 'Dag {count}' },
+  'files.export.doc.dayEmpty': 'Nog niets gepland.',
+  'files.export.doc.reservations': 'Reserveringen',
+  'files.export.doc.transport': 'Vervoer',
+  'files.export.doc.reference': 'Referentie {code}',
+  'files.export.doc.route': '{from} naar {to}',
+  'files.export.doc.stays': 'Waar we verblijven',
+  'files.export.doc.nights': {
+    one: 'Nachten: {count}',
+    other: 'Nachten: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Niet alle dagen passen in één document. De eerste {count} dagen worden getoond.',
+    other:
+      'Niet alle dagen passen in één document. De eerste {count} dagen worden getoond.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'De eerste {count} van {total} worden getoond.',
+    other: 'De eerste {count} van {total} worden getoond.',
   },
 } satisfies TranslationOf<typeof En>
 
