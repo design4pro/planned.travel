@@ -536,6 +536,8 @@ export interface FilesPayload {
     readonly bytes: number
   }>
   readonly people: ReadonlyArray<PersonChip>
+  /** Whether the trip has a start date: the calendar file has no trip event without one. */
+  readonly hasDates: boolean
 }
 
 export const loadTripFiles = createServerFn({ method: 'GET' })
@@ -555,6 +557,7 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
     return {
       tripBytes,
       people,
+      hasDates: trip.startDate !== null,
       workspaceBytes: usage.bytes,
       limitBytes: quotas.limits.storage_bytes,
       byKind: usage.byKind,

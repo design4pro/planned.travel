@@ -917,6 +917,18 @@ const messages = {
   'files.action.add': 'Aggiungi file',
   'files.action.choose': 'Scegli i file',
   'files.action.upload': 'Carica i file',
+  'files.calendar.title': 'Calendario',
+  'files.calendar.description':
+    'Porta questo viaggio nell’app di calendario che usi già.',
+  'files.calendar.download.action': 'Scarica il file del calendario (.ics)',
+  'files.calendar.download.hint':
+    'Un’istantanea del viaggio così com’è adesso. Non si aggiorna.',
+  'files.calendar.undated':
+    'Questo viaggio non ha ancora date, quindi compariranno solo le prenotazioni e i tragitti con una data.',
+  'files.calendar.download.error':
+    'Non siamo riusciti a preparare il file. Riprova.',
+  'files.calendar.timesNote':
+    'I tragitti con fuso orario compaiono nello stesso momento ovunque. Tutto il resto compare all’ora prevista sull’orologio, ovunque sia il tuo calendario.',
   'files.drop.active': 'Rilascia per caricare',
   'files.drop.pasteHint': 'incolla un’immagine copiata o uno screenshot',
   'files.reject.blockedType':

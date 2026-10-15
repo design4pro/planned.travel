@@ -5,6 +5,7 @@ import { FileImage, HardDrive, Ticket } from 'lucide-react'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
+  CalendarPanel,
   ExportPanel,
   FileLibrary,
   StorageMeter,
@@ -102,6 +103,8 @@ function FilesPage() {
             caption="Ready for the border and the accountant"
           />
         </div>
+
+        <CalendarPanel tripId={tripId} hasDates={data.hasDates} />
 
         <FileLibrary
           tripId={tripId}

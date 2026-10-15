@@ -35,6 +35,7 @@
  * | `audit`         | `audit_log` |
  * | `members`       | `organization`, `member`, `invitation` |
  * | `billing`       | `subscriptions`, `usage_records` |
+ * | `calendar-feeds` | — reads `trips`, `days`, `places`, `day_assignments`, `day_notes`, `day_accommodations`, `transports`, `transport_legs`, `reservations` (narrowed columns) for the trip calendar |
  * | `dashboard`     | — composition over the modules above |
  */
 
@@ -46,6 +47,7 @@ export * from './validation'
 export * from './atlas'
 export * from './audit'
 export * from './billing'
+export * from './calendar-feeds'
 export * from './categories'
 export * from './collab'
 export * from './collections'

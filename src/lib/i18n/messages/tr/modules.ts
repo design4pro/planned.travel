@@ -876,6 +876,17 @@ const messages = {
   'files.action.add': 'Dosya ekle',
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
+  'files.calendar.title': 'Takvim',
+  'files.calendar.description':
+    'Bu geziyi zaten kullandığın takvim uygulamasına taşı.',
+  'files.calendar.download.action': 'Takvim dosyasını indir (.ics)',
+  'files.calendar.download.hint':
+    'Gezinin şu anki halinin bir anlık görüntüsü. Güncellenmez.',
+  'files.calendar.undated':
+    'Bu gezinin henüz tarihi yok, bu yüzden yalnızca tarihli rezervasyonlar ve yolculuklar görünür.',
+  'files.calendar.download.error': 'Dosyayı hazırlayamadık. Tekrar dene.',
+  'files.calendar.timesNote':
+    'Saat dilimi olan yolculuklar her yerde aynı anda görünür. Geri kalan her şey, takvimin nerede olursa olsun planlanan saat değerinde görünür.',
   'files.drop.active': 'Yüklemek için bırak',
   'files.drop.pasteHint': 'kopyalanan bir görseli veya ekran görüntüsünü yapıştırır',
   'files.reject.blockedType':

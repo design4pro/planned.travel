@@ -2,6 +2,8 @@
 export { FileLibrary, StorageMeter, UploadFilesAction } from './file-library'
 export type { FileLibraryProps } from './file-library'
 
+export { CalendarPanel } from './calendar-panel'
+export type { CalendarPanelProps } from './calendar-panel'
 export { FileDetailsDialog } from './file-dialogs'
 export { downloadTripFile } from './download'
 export { ExportPanel } from './export-panel'

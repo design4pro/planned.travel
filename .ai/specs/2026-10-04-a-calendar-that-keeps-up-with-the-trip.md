@@ -2,10 +2,10 @@
 
 | Field              | Value                                        |
 | ------------------ | -------------------------------------------- |
-| **Status**         | ready                                        |
-| **Issue**          | none                                         |
+| **Status**         | in-progress                                  |
+| **Issue**          | #898                                         |
 | **Spec PR**        | #877                                         |
-| **Implementation** | none                                         |
+| **Implementation** | #1270                                        |
 | **Plan**           | 06-S5 (docs/plans/06-documents-and-media.md) |
 
 ## 📝 TLDR
@@ -1271,6 +1271,14 @@ isolation, the column projection. Browser: that the route is registered under `s
 session and no CSRF check, that the dialog works by keyboard, and that the rendered states are readable. A
 real calendar client's polling cadence and a platform log's contents cannot be exercised unattended; the
 dialog's freshness sentence and the Phase 2 PR's telemetry line are written for exactly that.
+
+## Amendment
+
+What ships in #1270 (phase 1, the download, #899) differs from the design above in these places.
+
+1. **`saveBlob` is extracted from `download.ts`, not added beside the panel.** Phase 1 was to add its own small `saveBlob` next to `calendar-panel.tsx` and leave `06-S1`'s `download.ts` alone. Two copies of the same anchor-click-revoke sequence would be the result, so `download.ts` now exports `saveBlob` and `downloadTripFile` and the calendar download both call it. The change to `download.ts` is that extraction and nothing else.
+2. **`FilesPayload` gains `hasDates`.** An additive output field, so the panel can say that an undated trip lists only dated reservations and journeys without a second read.
+3. **An arrival with a time and no date is placed by instants, not by wall clocks.** Across two zones the clocks are not comparable (Tokyo 09:00 to Lisbon 08:00 lands the same day), so the first date whose instant falls after the departure is taken; the wall-clock roll over midnight stays only where a zone is unusable and the event floats.
 
 ## Resolved assumptions (autonomous defaults)
 
