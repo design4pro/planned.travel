@@ -15,9 +15,11 @@ import {
   listMessages,
   listNotes,
   listPolls,
+  deleteMessage,
+  editMessage,
   postMessage,
 } from '../collab'
-import { NotFoundError } from '../context'
+import { ForbiddenError, NotFoundError } from '../context'
 import {
   TripArchivedError,
   TripRoleError,
@@ -147,6 +149,55 @@ describe('who writes a trip’s conversation, notes and polls', () => {
           )
         }
       }
+      expect(await collabRows(owner)).toEqual(before)
+    })
+  })
+
+  describe('moderating a message', () => {
+    it('lets only the author edit, and an editor who is not an admin delete only their own', async () => {
+      const before = await collabRows(owner)
+
+      expect(
+        await captureError(() =>
+          editMessage(editor, tripId, rows.messageId, 'Rewritten'),
+        ),
+      ).toBeInstanceOf(ForbiddenError)
+      expect(
+        await captureError(() => deleteMessage(editor, tripId, rows.messageId)),
+      ).toBeInstanceOf(ForbiddenError)
+      expect(await collabRows(owner)).toEqual(before)
+    })
+
+    it('lets a workspace admin who holds a trip role delete another traveller’s message', async () => {
+      const adminId = await tenant.addUser('An admin', 'admin')
+      await addTripMember(tenant.scope, {
+        tripId,
+        userId: adminId,
+        role: 'editor',
+      })
+
+      const deleted = await deleteMessage(
+        tenant.scopeFor(adminId, 'admin'),
+        tripId,
+        rows.messageId,
+      )
+
+      expect(deleted.deletedAt).not.toBeNull()
+    })
+
+    it('does not let a workspace admin with no trip role delete it: the trip role gate runs first', async () => {
+      const adminId = await tenant.addUser('An admin who only reads', 'admin')
+      const before = await collabRows(owner)
+
+      expect(
+        await captureError(() =>
+          deleteMessage(
+            tenant.scopeFor(adminId, 'admin'),
+            tripId,
+            rows.messageId,
+          ),
+        ),
+      ).toBeInstanceOf(TripRoleError)
       expect(await collabRows(owner)).toEqual(before)
     })
   })

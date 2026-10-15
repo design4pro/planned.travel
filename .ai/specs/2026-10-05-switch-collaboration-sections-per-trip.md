@@ -450,11 +450,11 @@ like every other trip column write.
 
 ## 📝 API Contracts
 
-| Function                                                | Method | Input                                    | Output                                                              | Who                                    |
-| ------------------------------------------------------- | ------ | ---------------------------------------- | ------------------------------------------------------------------- | -------------------------------------- |
-| `loadTripCollab` (moved)                                | GET    | `{ tripId }`                             | the payload (all three sections) plus `sections`, `canConfigure`    | any reader of the trip                 |
-| `setCollabSectionFn` (new)                              | POST   | `{ tripId, section: <registry id>, on }` | `{ ok: true, sections }` or `{ ok: false, reason: 'last-section' }` | trip `owner` or `editor`, not archived |
-| `postMessageFn` … `deletePollFn` (moved, **unchanged**) | POST   | as today                                 | as today                                                            | as today                               |
+| Function                                                | Method | Input                                    | Output                                                              | Who                                           |
+| ------------------------------------------------------- | ------ | ---------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------- |
+| `loadTripCollab` (moved)                                | GET    | `{ tripId }`                             | the payload (all three sections) plus `sections`, `canConfigure`    | any reader of the trip                        |
+| `setCollabSectionFn` (new)                              | POST   | `{ tripId, section: <registry id>, on }` | `{ ok: true, sections }` or `{ ok: false, reason: 'last-section' }` | trip `owner` or `editor`, not archived        |
+| `postMessageFn` … `deletePollFn` (moved, **unchanged**) | POST   | as today                                 | as today                                                            | trip `owner` or `editor`, not archived (#913) |
 
 ## 📝 UI/UX
 
