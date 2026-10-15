@@ -91,7 +91,6 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
     spentMinor: 6_000,
     budgetTargetMinor: null,
     expenseCount: 1,
-    departedPeople: [],
     byCategory: [],
     expenses: [
       {
