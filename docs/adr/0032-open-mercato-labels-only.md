@@ -9,6 +9,8 @@ Amended by: ADR 0033 (the Reconciler starts implementation; the WIP limit counts
 a person; an agent may lift a hold an agent set).
 Amended by: ADR 0035 (the owner's `qa-approved` on `risk-high` is no longer a brake: agents judge QA
 and risk).
+Amended by: ADR 0040 (a Sentry ticket is triaged unattended, and ready only on a trusted comment's
+brief).
 
 ## Context
 

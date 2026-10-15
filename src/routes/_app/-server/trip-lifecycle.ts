@@ -56,6 +56,7 @@ import {
 import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import { MAX_PURGE_KEYS } from '#/server/queue/types'
+import { listExportKeys } from '#/server/storage/export-artifacts'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import { coverUrlFor, isCoverContentType } from '#/lib/trip-cover'
 import { appScope } from './context'
@@ -398,6 +399,35 @@ function assertConfirmed(summary: TripDeleteSummary, confirmTitle?: string) {
 }
 
 /**
+ * The keys of the exports a deleted trip left in the bucket.
+ *
+ * Its own `try`, because a listing that fails (the binding, R2) must cost the exports only: the purge
+ * goes on with the keys D1 holds, the delete is not failed and the attachment purge is not dropped.
+ * `databaseKeys` is how many of those there are, so the warning says what the purge still carries.
+ */
+async function listTripExportKeys(
+  orgId: string,
+  tripId: string,
+  databaseKeys: number,
+): Promise<Array<string>> {
+  try {
+    const { filesBucket } = await import('#/server/fns/context')
+    return await listExportKeys(filesBucket(), orgId, tripId)
+  } catch (cause) {
+    log().warn(
+      'the exports of a deleted trip could not be listed for the purge',
+      {
+        organizationId: orgId,
+        tripId,
+        keys: databaseKeys,
+        ...serializeError(cause),
+      },
+    )
+    return []
+  }
+}
+
+/**
  * Hands the objects a deleted trip owned to the `trip-purge` handler.
  *
  * Three properties:
@@ -411,6 +441,11 @@ function assertConfirmed(summary: TripDeleteSummary, confirmTitle?: string) {
  *   {@link QUEUE_BATCH_MAX} envelopes per `sendBatch`.
  * - **Each chunk's id is deterministic on it.** Two chunks sharing one id would see the second acked
  *   as a duplicate of the first and its objects left in the bucket for good.
+ *
+ * `keys` is what D1 knows (attachments, cover). The trip's exports are not a row, so they are listed
+ * from the bucket under the caller's own organization and the trip the delete was authorised for,
+ * and added to the same list — before the empty-list return, because a trip whose only objects are
+ * exports must not be skipped. Once the trip is gone no request can run the export prune for it.
  */
 async function enqueueTripPurge(
   scope: TenantScope,
@@ -418,9 +453,12 @@ async function enqueueTripPurge(
   keys: ReadonlyArray<string>,
 ): Promise<void> {
   const orgId = scope.ctx.organizationId
+  const exportKeys = await listTripExportKeys(orgId, tripId, keys.length)
   // A blank string names no object, and one would fail `tripPurgePayloadSchema` inside the `try`
   // below — taking every real key of the same trip down with it, silently.
-  const unique = [...new Set(keys)].filter((key) => key !== '')
+  const unique = [...new Set([...keys, ...exportKeys])].filter(
+    (key) => key !== '',
+  )
   if (unique.length === 0) {
     return
   }
@@ -755,8 +793,9 @@ export const tripDeleteSummaryFn = createServerFn({ method: 'GET' })
  * 2. **Apply the graduated confirmation** (decision 10) to the counts it just read, not to anything
  *    the client claimed about them.
  * 3. **Delete the rows.** D1 cascades, and that is the durable record of what happened.
- * 4. **Enqueue the sweep.** R2 does not cascade, so the objects the trip owned are handed to
- *    `trip-purge`. The delete never waits on it and a queue failure never surfaces.
+ * 4. **Enqueue the sweep.** R2 does not cascade, so the objects the trip owned — its attachments, its
+ *    cover and the exports it made — are handed to `trip-purge`. The delete never waits on it and a
+ *    queue failure never surfaces.
  * 5. **Fan the statistics out** to the members read in step 1 — after the cascade there is nobody
  *    left to read.
  * 6. **Close the trip's room.** Last, because it awaits a Durable Object round trip that has no

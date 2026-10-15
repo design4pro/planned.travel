@@ -261,11 +261,11 @@ Applying this on the host, from the main checkout once it is merged:
 No label starts a run (ADR 0032). Every event trigger is gated on who can produce it: the open
 events by author, and the unlabel event both by author and because only a collaborator can remove
 a label. This matters because the agent step holds Bash with no allowlist and the issue body is its
-prompt: an issue anyone on GitHub can open must not start a run by itself, so an external report,
-and every Sentry finding (filed as the Actions bot, or as the maintainer by a local
-`pnpm sentry-triage`), waits for a person to start a run from the cockpit - `backlog-status.mjs`
-applies the same `authors` list and the `sentry-issue` marker, so the Reconciler never starts one
-either. Agent PRs (opened carrying `review` and driven to the merge inside their own chain)
+prompt: an issue anyone on GitHub can open must not start a run by itself, so an external report
+waits for a person to start a run from the cockpit - `backlog-status.mjs` applies the same `authors`
+list, so the Reconciler never starts one either. A Sentry finding (filed as the Actions bot, or as
+the maintainer by a local `pnpm sentry-triage`) is the exception: the Reconciler starts `triage` on
+it, and it is ready only on the brief afk-triage writes from the code (ADR 0040). Agent PRs (opened carrying `review` and driven to the merge inside their own chain)
 enter only the merge automation, dependabot enters none, and the promotion PR (`do-not-merge`)
 enters no automation. Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25`
 bound a mistaken mass relabel while still reaching a week of events. One run does start another,
