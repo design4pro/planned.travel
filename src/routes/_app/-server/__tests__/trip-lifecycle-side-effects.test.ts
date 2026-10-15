@@ -46,12 +46,15 @@ import {
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
+import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 
 import type { z } from 'zod'
+import type * as Observability from '#/server/observability'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
 import type { TripDeleteSummary } from '../trip-lifecycle'
 import type { TaskEnvelope, TaskEnvelopeOf } from '#/server/queue/types'
+import type { ExportStore } from '#/server/storage/export-artifacts'
 
 /* ------------------------------------------------------------------ mocking */
 
@@ -64,6 +67,10 @@ const stubs = vi.hoisted(() => ({
   queueRejects: false,
   /** Every whole-room eviction asked for, as the trip it was asked for. */
   evicted: [] as Array<string>,
+  /** The `FILES` bucket `filesBucket()` answers with: the export listing a delete reads. */
+  bucket: null as ExportStore | null,
+  /** Every record the module's logger wrote at `warn`. */
+  warnings: [] as Array<{ message: string; fields: Record<string, unknown> }>,
 }))
 
 /**
@@ -75,7 +82,32 @@ vi.mock('#/server/fns/context', () => ({
   closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
     stubs.evicted.push(tripId)
   },
+  filesBucket: (): ExportStore => {
+    if (stubs.bucket === null) {
+      throw new Error('This case has no FILES bucket.')
+    }
+    return stubs.bucket
+  },
 }))
+
+/**
+ * The module's logger, replaced with a recorder so a case can assert what a failed export listing
+ * says: the real one writes to the console and has no reader.
+ */
+vi.mock('#/server/observability', async (importOriginal) => {
+  const actual = await importOriginal<typeof Observability>()
+  return {
+    ...actual,
+    createLogger: () => ({
+      warn: (message: string, fields: Record<string, unknown>) => {
+        stubs.warnings.push({ message, fields })
+      },
+      error: () => undefined,
+      info: () => undefined,
+      debug: () => undefined,
+    }),
+  }
+})
 
 /**
  * The `TASKS` binding. `#/server/auth/env` reads the Worker environment for it and imports
@@ -266,6 +298,8 @@ beforeEach(async () => {
   stubs.batches = []
   stubs.queueRejects = false
   stubs.evicted = []
+  stubs.bucket = fakeBucket()
+  stubs.warnings = []
 })
 
 afterEach(() => {
@@ -897,6 +931,132 @@ describe('the storage purge a delete leaves behind', () => {
       new Set(enqueued.flatMap((envelope) => envelope.payload.keys)),
     ).toEqual(new Set(keys))
   }, 60_000)
+
+  describe('and the exports a trip made', () => {
+    /** The two objects of one finished export: the page is the completion marker. */
+    function exportKeys(orgId: string, tripId: string, taskId: string) {
+      return [
+        `exports/${orgId}/${tripId}/${taskId}.pdf`,
+        `exports/${orgId}/${tripId}/${taskId}.html`,
+      ]
+    }
+
+    async function bareTrip(title: string): Promise<string> {
+      await createTrip({
+        title,
+        destination: '',
+        startDate: '',
+        endDate: '',
+        currency: 'EUR',
+      })
+      return newestTripId()
+    }
+
+    it('enqueues the keys of a trip whose only stored objects are exports', async () => {
+      const tripId = await bareTrip('Exported once')
+      const keys = exportKeys(tenant.organizationId, tripId, 'task_1')
+      stubs.bucket = fakeBucket(keys)
+      stubs.batches = []
+
+      await deleteTrip({ tripId })
+
+      // No attachment and no cover: the empty-list early return must not skip the exports.
+      const enqueued = purges()
+      expect(enqueued).toHaveLength(1)
+      expect(enqueued[0]?.id).toBe(`trip-purge:${tripId}`)
+      expect(enqueued[0]?.orgId).toBe(tenant.organizationId)
+      expect(new Set(enqueued[0]?.payload.keys)).toEqual(new Set(keys))
+    })
+
+    it('carries the exports beside the attachments and the cover in one envelope', async () => {
+      const { tripId, fileKey, coverKey } = await tripWithObjects()
+      const keys = exportKeys(tenant.organizationId, tripId, 'task_1')
+      stubs.bucket = fakeBucket(keys)
+      stubs.batches = []
+
+      await deleteTrip({ tripId, confirmTitle: 'Lisbon in April' })
+
+      const enqueued = purges()
+      expect(enqueued).toHaveLength(1)
+      expect(new Set(enqueued[0]?.payload.keys)).toEqual(
+        new Set([fileKey, coverKey, ...keys]),
+      )
+    })
+
+    it('keeps the attachment purge and the delete when the listing fails', async () => {
+      const { tripId, fileKey, coverKey } = await tripWithObjects()
+      const bucket = fakeBucket()
+      stubs.bucket = {
+        ...bucket,
+        list: async () => {
+          throw new Error('FILES is unreachable')
+        },
+      }
+      stubs.batches = []
+
+      await expect(
+        deleteTrip({ tripId, confirmTitle: 'Lisbon in April' }),
+      ).resolves.toBeUndefined()
+
+      expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+      expect(
+        new Set(purges().flatMap((envelope) => envelope.payload.keys)),
+      ).toEqual(new Set([fileKey, coverKey]))
+      expect(stubs.warnings).toHaveLength(1)
+      expect(stubs.warnings[0]?.fields).toMatchObject({
+        organizationId: tenant.organizationId,
+        tripId,
+        keys: 2,
+      })
+    })
+
+    it('still deletes a trip with nothing to purge when the listing fails', async () => {
+      const tripId = await bareTrip('Nothing stored')
+      stubs.bucket = {
+        ...fakeBucket(),
+        list: async () => {
+          throw new Error('FILES is unreachable')
+        },
+      }
+      stubs.batches = []
+
+      await expect(deleteTrip({ tripId })).resolves.toBeUndefined()
+
+      expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+      expect(purges()).toEqual([])
+      expect(stubs.warnings).toHaveLength(1)
+    })
+
+    it('never lists or deletes another workspace’s prefix', async () => {
+      const tripId = await bareTrip('Mine')
+      const mine = exportKeys(tenant.organizationId, tripId, 'task_1')
+
+      const other = await harness.seedTenant('other')
+      // Same trip id under the other organization, plus a sibling trip of the same workspace whose id
+      // the deleted trip's id is a prefix of: neither may be listed, let alone purged.
+      const foreign = [
+        ...exportKeys(other.organizationId, tripId, 'task_2'),
+        ...exportKeys(tenant.organizationId, `${tripId}2`, 'task_3'),
+      ]
+      const bucket = fakeBucket([...mine, ...foreign])
+      stubs.bucket = bucket
+      stubs.batches = []
+
+      await deleteTrip({ tripId })
+
+      expect(bucket.listCalls.map((call) => call.prefix)).toEqual([
+        `exports/${tenant.organizationId}/${tripId}/`,
+      ])
+      const purged = purges().flatMap((envelope) => envelope.payload.keys)
+      expect(new Set(purged)).toEqual(new Set(mine))
+      // The purge handler refuses a key whose second segment is not the organization.
+      expect(
+        purged.every((key) => key.split('/')[1] === tenant.organizationId),
+      ).toBe(true)
+      expect(bucket.calls).toEqual([])
+      expect(bucket.remaining).toEqual(new Set([...mine, ...foreign]))
+    })
+  })
 
   it('deletes the trip anyway when the queue refuses the sweep', async () => {
     const { tripId } = await tripWithObjects()
