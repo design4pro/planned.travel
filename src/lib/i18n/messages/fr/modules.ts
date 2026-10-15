@@ -935,6 +935,7 @@ const messages = {
   'files.calendar.timesNote':
     'Les trajets avec fuseau horaire s’affichent au même instant partout. Tout le reste s’affiche à l’heure prévue sur l’horloge, où que soit votre calendrier.',
   'files.drop.active': 'Lâche pour envoyer',
+  'files.drop.pasteHint': 'colle une image copiée ou une capture d’écran',
   'files.reject.blockedType':
     '« {name} » n’a pas été ajouté : les fichiers XML et SVG compressés ne sont pas conservés ici, par sécurité. Enregistre-le en PDF ou en image et ajoute plutôt cela.',
   'files.drop.idle': 'Fais glisser des fichiers ici',

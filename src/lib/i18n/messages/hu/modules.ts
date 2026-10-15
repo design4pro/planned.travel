@@ -905,6 +905,7 @@ const messages = {
   'files.calendar.timesNote':
     'Az időzónával rendelkező utak mindenhol ugyanabban a pillanatban jelennek meg. Minden más a tervezett óraidőben látszik, bárhol is van a naptárad.',
   'files.drop.active': 'Engedd el a feltöltéshez',
+  'files.drop.pasteHint': 'beilleszt egy másolt képet vagy képernyőképet',
   'files.reject.blockedType':
     'A(z) „{name}” nem lett hozzáadva: az XML és a tömörített SVG fájlokat biztonsági okból nem tároljuk itt. Mentsd el PDF-ként vagy képként, és azt add hozzá helyette.',
   'files.drop.idle': 'Húzd ide a fájlokat',

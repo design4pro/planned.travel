@@ -926,6 +926,7 @@ const messages = {
   'files.calendar.timesNote':
     'Els trajectes amb fus horari es mostren al mateix moment a tot arreu. La resta es mostra a l’hora prevista, estigui on estigui el teu calendari.',
   'files.drop.active': 'Deixa-ho anar per pujar',
+  'files.drop.pasteHint': 'enganxa una imatge o captura de pantalla copiada',
   'files.reject.blockedType':
     '«{name}» no s’ha afegit: aquí no es desen fitxers XML ni SVG comprimits, per seguretat. Desa’l com a PDF o com a imatge i afegeix això en lloc seu.',
   'files.drop.idle': 'Arrossega fitxers aquí',

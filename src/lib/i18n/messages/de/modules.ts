@@ -920,6 +920,7 @@ const messages = {
   'files.calendar.timesNote':
     'Fahrten mit Zeitzone erscheinen überall zum selben Zeitpunkt. Alles andere erscheint zur geplanten Uhrzeit, wo auch immer dein Kalender ist.',
   'files.drop.active': 'Zum Hochladen loslassen',
+  'files.drop.pasteHint': 'fügt ein kopiertes Bild oder einen Screenshot ein',
   'files.reject.blockedType':
     '„{name}“ wurde nicht hinzugefügt: XML- und komprimierte SVG-Dateien werden hier aus Sicherheitsgründen nicht gespeichert. Speichere sie als PDF oder Bild und füge stattdessen das hinzu.',
   'files.drop.idle': 'Dateien hierher ziehen',
