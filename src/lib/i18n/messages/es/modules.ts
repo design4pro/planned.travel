@@ -967,6 +967,19 @@ const messages = {
     other: 'Subiendo {count} archivos',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generado el {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Listo: {title}',
+  'files.export.email.body': {
+    one: 'La exportación del viaje está lista. Se conserva durante {count} día.',
+    many: 'La exportación del viaje está lista. Se conserva durante {count} días.',
+    other:
+      'La exportación del viaje está lista. Se conserva durante {count} días.',
+  },
+  'files.export.email.action': 'Abrir {title}',
+  'files.export.email.text': 'La exportación del viaje está lista: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Subida cancelada.',
   'files.error.badAnswer':

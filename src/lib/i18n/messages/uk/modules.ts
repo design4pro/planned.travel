@@ -969,6 +969,19 @@ const messages = {
     other: 'Надсилання {count} файлу',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - створено {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Готово: {title}',
+  'files.export.email.body': {
+    one: 'Експорт подорожі готовий. Він зберігається {count} день.',
+    few: 'Експорт подорожі готовий. Він зберігається {count} дні.',
+    many: 'Експорт подорожі готовий. Він зберігається {count} днів.',
+    other: 'Експорт подорожі готовий. Він зберігається {count} дня.',
+  },
+  'files.export.email.action': 'Відкрити: {title}',
+  'files.export.email.text': 'Експорт подорожі готовий: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Надсилання скасовано.',
   'files.error.badAnswer':

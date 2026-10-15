@@ -930,6 +930,16 @@ const messages = {
     other: 'Mengunggah {count} berkas',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - dibuat pada {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} sudah siap',
+  'files.export.email.body': {
+    other: 'Ekspor perjalanan sudah siap. Disimpan selama {count} hari.',
+  },
+  'files.export.email.action': 'Buka {title}',
+  'files.export.email.text': 'Ekspor perjalanan sudah siap: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Unggahan dibatalkan.',
   'files.error.badAnswer':
