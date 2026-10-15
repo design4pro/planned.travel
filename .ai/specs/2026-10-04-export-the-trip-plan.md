@@ -5,7 +5,7 @@
 | **Status**         | in-progress                                  |
 | **Issue**          | none                                         |
 | **Spec PR**        | #875                                         |
-| **Implementation** | #1260, #1286                                 |
+| **Implementation** | #1260, #1286, #1289                          |
 | **Plan**           | 06-S3 (docs/plans/06-documents-and-media.md) |
 
 ## 📝 TLDR
