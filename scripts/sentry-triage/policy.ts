@@ -402,9 +402,10 @@ export function filingOrder(
 /* ----------------------------------------------------------------- ticket -- */
 
 export function renderTitle(
-  candidate: Candidate,
+  rawCandidate: Candidate,
   isRegression: boolean,
 ): string {
+  const candidate = flattenCandidateText(rawCandidate)
   const where = candidate.inAppFrame?.file ?? candidate.culprit
   const scale = `${candidate.eventCount} events, ${candidate.userCount} users in ${candidate.primaryEnvironment}`
   return `${isRegression ? 'Sentry regression' : 'Sentry'}: ${candidate.errorType} in ${where} - ${scale}`
@@ -433,8 +434,8 @@ export interface RenderBodyOptions {
  * reproduction. A confident guess here would be read as evidence and would corrupt that judgement.
  */
 export function renderIssueBody(options: RenderBodyOptions): string {
-  const { candidate, sequence, previous, runLabel, reportPath, forcedReason } =
-    options
+  const { sequence, previous, runLabel, reportPath, forcedReason } = options
+  const candidate = flattenCandidateText(options.candidate)
   const frame =
     candidate.inAppFrame === null
       ? 'none in src/'
@@ -512,6 +513,34 @@ export function sanitizeFeedbackText(text: string): string {
   return flat.length <= FEEDBACK_SUMMARY_MAX
     ? flat
     : `${flat.slice(0, FEEDBACK_SUMMARY_MAX - 1).trimEnd()}…`
+}
+
+/**
+ * An error ticket's free text is whatever the page threw, which a stranger can send to Sentry, and
+ * the agent's suspected cause paraphrases it. An unattended triage run reads the ticket and
+ * backlog-status.mjs scans it for an Agent Brief heading, so the same barrier as the feedback
+ * summary applies before any of it is printed (ADR 0040).
+ */
+function flattenCandidateText(candidate: Candidate): Candidate {
+  return {
+    ...candidate,
+    errorType: sanitizeFeedbackText(candidate.errorType),
+    errorValue: sanitizeFeedbackText(candidate.errorValue),
+    culprit: sanitizeFeedbackText(candidate.culprit),
+    breadcrumbs: candidate.breadcrumbs.map(sanitizeFeedbackText),
+    suspectedCause: sanitizeFeedbackText(candidate.suspectedCause),
+    inAppFrame:
+      candidate.inAppFrame === null
+        ? null
+        : {
+            ...candidate.inAppFrame,
+            file: sanitizeFeedbackText(candidate.inAppFrame.file),
+            fn:
+              candidate.inAppFrame.fn === null
+                ? null
+                : sanitizeFeedbackText(candidate.inAppFrame.fn),
+          },
+  }
 }
 
 /** A route path and nothing else: no query string, no fragment, no host. */
