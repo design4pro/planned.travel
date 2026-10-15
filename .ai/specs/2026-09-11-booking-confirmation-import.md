@@ -610,7 +610,7 @@ disagreed with it and why. Each entry names what the tree forced.
 
 ## Amendment - atomic import markers (#929)
 
-The implementation PR for #929 supersedes the post-insert marker design above (including
+The implementation PR #1300 for #929 supersedes the post-insert marker design above (including
 its original one-statement batch and the later chunked variant from #924). Each accepted row
 is now created through `createImportedReservation(scope, input, importedAt)`: the marker is
 part of the reservation INSERT, with one server-chosen instant shared by all rows of a confirm.
