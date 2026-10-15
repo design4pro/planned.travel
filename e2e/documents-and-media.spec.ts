@@ -101,8 +101,9 @@ const PORTO = SEEDED_TRIPS.single
 
 const DOWNLOAD_ACTION = 'Download calendar file (.ics)'
 
-/** The smallest phone the design system claims. */
-const PHONE = { width: 360, height: 740 } as const
+/** The smallest phone the design system claims, and the 320px WCAG 1.4.10 measures reflow at. */
+const PHONE_WIDTHS = [320, 360] as const
+const PHONE_HEIGHT = 740
 
 function filesRoute(tripId: string): RouteCase {
   return {
@@ -158,35 +159,34 @@ test.describe('06-S5 — a calendar that keeps up with the trip', () => {
     })
   })
 
-  for (const theme of THEMES) {
-    test(`the action is reachable and fits at 360px, ${theme}`, async ({
-      context,
-    }) => {
-      const tripId = await tripIdByName(context, PORTO)
-      const route = filesRoute(tripId)
-      const page = await context.newPage()
-      try {
-        await page.setViewportSize(PHONE)
-        const report = watchConsole(page, route)
-        await visit(page, route, theme)
+  for (const theme of THEMES)
+    for (const width of PHONE_WIDTHS) {
+      test(`the action is reachable and fits at ${width}px, ${theme}`, async ({
+        context,
+      }) => {
+        const tripId = await tripIdByName(context, PORTO)
+        const route = filesRoute(tripId)
+        const page = await context.newPage()
+        try {
+          await page.setViewportSize({ width, height: PHONE_HEIGHT })
+          const report = watchConsole(page, route)
+          await visit(page, route, theme)
 
-        const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
-        await action.scrollIntoViewIfNeeded()
-        await expect(action).toBeVisible()
+          const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
+          await action.scrollIntoViewIfNeeded()
+          await expect(action).toBeVisible()
 
-        const box = await action.boundingBox()
-        expect(box, 'the action is on screen').not.toBeNull()
-        expect((box?.x ?? -1) >= 0).toBe(true)
-        expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
-          PHONE.width,
-        )
-        expect(await scrollsSideways(page), 'the page scrolls sideways').toBe(
-          false,
-        )
-        expect(report().fatal, 'the console stays clean').toEqual([])
-      } finally {
-        await page.close()
-      }
-    })
-  }
+          const box = await action.boundingBox()
+          expect(box, 'the action is on screen').not.toBeNull()
+          expect((box?.x ?? -1) >= 0).toBe(true)
+          expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width)
+          expect(await scrollsSideways(page), 'the page scrolls sideways').toBe(
+            false,
+          )
+          expect(report().fatal, 'the console stays clean').toEqual([])
+        } finally {
+          await page.close()
+        }
+      })
+    }
 })

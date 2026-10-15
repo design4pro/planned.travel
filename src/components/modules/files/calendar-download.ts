@@ -23,14 +23,20 @@ function filenameFrom(disposition: string | null): string {
   }
 }
 
-/** Saves the trip's calendar to the reader's machine; throws when the file was not made. */
+/**
+ * Saves the trip's calendar to the reader's machine; throws when the file was not made.
+ *
+ * `unavailable` is the sentence a failure carries, in the reader's language: the caller owns the
+ * copy, so a refusal that never crossed the server cannot reach a toast in English.
+ */
 export async function downloadTripCalendar(input: {
   readonly tripId: string
+  readonly unavailable: string
 }): Promise<{ readonly filename: string }> {
   const response = await downloadTripIcsFn({ data: { tripId: input.tripId } })
 
   if (!(response instanceof Response) || !response.ok) {
-    throw new Error('The calendar file could not be prepared.')
+    throw new Error(input.unavailable)
   }
 
   const filename = filenameFrom(response.headers.get('content-disposition'))

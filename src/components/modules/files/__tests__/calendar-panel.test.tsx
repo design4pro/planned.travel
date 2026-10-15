@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { toast } from '#/components/ui'
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -45,6 +46,24 @@ afterEach(() => {
 })
 
 describe('CalendarPanel', () => {
+  it('words an unexpected failure from the catalogue, never from the code', async () => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => 'toast')
+    // A server failure with a reference: the reader gets the panel's own sentence.
+    stubs.download.mockRejectedValueOnce(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'evt_1a2b3c' }),
+      ),
+    )
+    mount()
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }))
+
+    await waitFor(() => expect(error).toHaveBeenCalled())
+    expect(error.mock.calls[0]?.[1]).toEqual({
+      description: 'We couldn’t prepare the file. Try again.',
+    })
+  })
+
   it('says what the file is and that it is a snapshot', () => {
     mount()
 
@@ -84,7 +103,10 @@ describe('CalendarPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: ACTION }))
 
     await waitFor(() => expect(stubs.download).toHaveBeenCalledTimes(1))
-    expect(stubs.download).toHaveBeenCalledWith({ tripId: 'trip-1' })
+    expect(stubs.download).toHaveBeenCalledWith({
+      tripId: 'trip-1',
+      unavailable: 'We couldn’t prepare the file. Try again.',
+    })
   })
 
   it('cannot start a second file while the first is being prepared', async () => {
@@ -114,9 +136,10 @@ describe('CalendarPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: ACTION }))
 
     await waitFor(() => expect(error).toHaveBeenCalled())
-    expect(error.mock.calls[0]?.[0]).toBe(
-      'We couldn’t prepare the file. Try again.',
-    )
+    expect(error.mock.calls[0]?.[0]).toBe('The download did not start')
+    expect(error.mock.calls[0]?.[1]).toEqual({
+      description: 'boom',
+    })
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: ACTION }).hasAttribute('disabled'),

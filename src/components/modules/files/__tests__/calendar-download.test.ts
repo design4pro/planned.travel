@@ -9,6 +9,8 @@ vi.mock('#/server/fns/calendar', () => ({ downloadTripIcsFn: vi.fn() }))
 // `saveBlob` lives beside the attachment download, which imports its own server function.
 vi.mock('#/server/fns/files', () => ({ downloadTripFileFn: vi.fn() }))
 
+const UNAVAILABLE = 'Nie udało się przygotować pliku.'
+
 let saved: Array<string>
 
 beforeEach(() => {
@@ -48,7 +50,10 @@ describe('downloadTripCalendar', () => {
       },
     })
 
-    const result = await downloadTripCalendar({ tripId: 'trip-1' })
+    const result = await downloadTripCalendar({
+      tripId: 'trip-1',
+      unavailable: UNAVAILABLE,
+    })
 
     expect(result.filename).toBe('lisbon-in-spring.ics')
     expect(saved).toEqual(['lisbon-in-spring.ics'])
@@ -59,24 +64,36 @@ describe('downloadTripCalendar', () => {
 
   it('falls back to a plain name when the header is missing or cannot be decoded', async () => {
     answer({})
-    expect((await downloadTripCalendar({ tripId: 'trip-1' })).filename).toBe(
-      'trip.ics',
-    )
+    expect(
+      (
+        await downloadTripCalendar({
+          tripId: 'trip-1',
+          unavailable: UNAVAILABLE,
+        })
+      ).filename,
+    ).toBe('trip.ics')
 
     answer({
       headers: {
         'content-disposition': "attachment; filename*=UTF-8''%E0%A4%A",
       },
     })
-    expect((await downloadTripCalendar({ tripId: 'trip-1' })).filename).toBe(
-      'trip.ics',
-    )
+    expect(
+      (
+        await downloadTripCalendar({
+          tripId: 'trip-1',
+          unavailable: UNAVAILABLE,
+        })
+      ).filename,
+    ).toBe('trip.ics')
   })
 
   it('throws, and saves nothing, when the answer is not a file', async () => {
     answer({ status: 404 })
 
-    await expect(downloadTripCalendar({ tripId: 'trip-1' })).rejects.toThrow()
+    await expect(
+      downloadTripCalendar({ tripId: 'trip-1', unavailable: UNAVAILABLE }),
+    ).rejects.toThrow(UNAVAILABLE)
     expect(saved).toEqual([])
   })
 })

@@ -19,9 +19,11 @@ export interface CalendarPanelProps {
 
 export function CalendarPanel({ tripId, hasDates }: CalendarPanelProps) {
   const t = useTranslate()
+  const unavailable = t('modules.files.calendar.download.error')
   // No `invalidate`: a download changes nothing the loader read.
   const download = useAction(downloadTripCalendar, {
-    failure: t('modules.files.calendar.download.error'),
+    failure: t('modules.files.toast.downloadFailed'),
+    fallback: unavailable,
     invalidate: false,
   })
 
@@ -36,8 +38,10 @@ export function CalendarPanel({ tripId, hasDates }: CalendarPanelProps) {
           size="sm"
           shape="pill"
           icon={<CalendarArrowDown aria-hidden strokeWidth={2.5} />}
+          // The label wraps inside the card: a long translation must not scroll the page sideways.
+          className="h-auto min-h-8 max-w-full py-1.5 text-start whitespace-normal"
           loading={download.pending}
-          onClick={() => void download.run({ tripId })}
+          onClick={() => void download.run({ tripId, unavailable })}
         >
           {t('modules.files.calendar.download.action')}
         </Button>
