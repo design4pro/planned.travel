@@ -204,6 +204,7 @@ import { createPlace, placesRepository, setPlaceTags } from '../places'
 import {
   clearReservationImported,
   createReservation,
+  createImportedReservation,
   deleteReservation,
   getReservation,
   linkReservationExpense,
@@ -3808,6 +3809,72 @@ describe('tenant isolation', () => {
       ).toBeNull()
     })
 
+    it('creates an imported reservation atomically inside the tenant and trip guards', async () => {
+      const scope = alpha.tenant.scope
+      const before = await listTripReservations(beta.tenant.scope, {
+        tripId: beta.tripId,
+      })
+      const instant = new Date('2026-10-15T12:00:00Z')
+      // A later UPDATE cannot rescue an unmarked INSERT.
+      harness.sqlite
+        .exec(`CREATE TRIGGER require_import_marker BEFORE INSERT ON reservations
+        WHEN NEW.imported_at IS NULL BEGIN SELECT RAISE(ABORT, 'missing import marker'); END`)
+
+      const created = await createImportedReservation(
+        scope,
+        {
+          tripId: alpha.tripId,
+          title: 'Confirmed import',
+        },
+        instant,
+      )
+      expect(created.importedAt).toEqual(instant)
+      expect(await getReservation(scope, created.id)).toEqual(created)
+      expect(await getReservation(beta.tenant.scope, created.id)).toBeNull()
+
+      const ownBefore = await listTripReservations(scope, {
+        tripId: alpha.tripId,
+      })
+      for (const input of [
+        { tripId: beta.tripId, title: 'Foreign trip' },
+        {
+          tripId: alpha.tripId,
+          title: 'Foreign reference',
+          placeId: beta.placeId,
+        },
+      ]) {
+        expect(
+          await captureError(() =>
+            createImportedReservation(scope, input, instant),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+      const other = await createTrip(scope, { title: 'Other trip' })
+      const place = await createPlace(scope, {
+        tripId: other.id,
+        name: 'Other place',
+      })
+      expect(
+        await captureError(() =>
+          createImportedReservation(
+            scope,
+            {
+              tripId: alpha.tripId,
+              title: 'Wrong trip reference',
+              placeId: place.id,
+            },
+            instant,
+          ),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await listTripReservations(scope, { tripId: alpha.tripId }),
+      ).toEqual(ownBefore)
+      expect(
+        await listTripReservations(beta.tenant.scope, { tripId: beta.tripId }),
+      ).toEqual(before)
+    })
+
     /**
      * The strip defect this stage exists to close, asserted from the outside:
      * `createReservationInput` and `updateReservationInput` are `z.object`s, so an
@@ -3856,6 +3923,12 @@ describe('tenant isolation', () => {
         title: 'Added by the editor',
       })
       expect(written.tripId).toBe(alpha.tripId)
+      const imported = await createImportedReservation(
+        editor,
+        { tripId: alpha.tripId, title: 'Imported by editor' },
+        new Date(),
+      )
+      expect(imported.importedAt).toBeInstanceOf(Date)
 
       // The marker writers are a booking write like any other: an editor is let
       // through on both, and a viewer is refused on both with the marker untouched.
@@ -3889,8 +3962,21 @@ describe('tenant isolation', () => {
         ),
       ).toBe('FORBIDDEN')
 
+      const beforeViewer = await listTripReservations(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+      })
       // And the same refusal on every other writer this file owns.
       for (const attempt of [
+        () =>
+          createImportedReservation(
+            viewer,
+            {
+              tripId: alpha.tripId,
+              title: 'Viewer import',
+              placeId: beta.placeId,
+            },
+            new Date(),
+          ),
         () =>
           updateReservation(viewer, alpha.reservationId, { title: 'Hijacked' }),
         () => setReservationStatus(viewer, alpha.reservationId, 'cancelled'),
@@ -3904,6 +3990,11 @@ describe('tenant isolation', () => {
         expect(await refusalCode(attempt)).toBe('FORBIDDEN')
       }
 
+      expect(
+        await listTripReservations(alpha.tenant.scope, {
+          tripId: alpha.tripId,
+        }),
+      ).toEqual(beforeViewer)
       // A refused viewer changed nothing: not marked, and not cleared once marked.
       expect(
         (await getReservation(alpha.tenant.scope, alpha.reservationId))
