@@ -161,6 +161,7 @@ function TransportsPage() {
         )}
 
         <TransportsTimeline
+          canSearchConnections={data.canSearchConnections}
           tripId={tripId}
           transports={data.transports}
           days={data.days}

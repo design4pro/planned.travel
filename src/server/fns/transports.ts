@@ -17,6 +17,8 @@ import { z } from 'zod'
 
 import { TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
+  assertTripRole,
+  tripRoleFor,
   deleteTransport,
   listTripDays,
   listTripLegs,
@@ -57,6 +59,7 @@ import type {
   TransitAttribution,
   TransitConnection,
   TransitFailureReason,
+  TransitSearchRuntime,
 } from '#/server/transit/search'
 import type {
   TransportInput,
@@ -225,6 +228,8 @@ export interface TransportDayOption {
 }
 
 export interface TransportDeskPayload {
+  /** Role-only capability: archived trips may still search. */
+  readonly canSearchConnections: boolean
   readonly currency: string
   readonly transports: ReadonlyArray<TransportRow>
   readonly days: ReadonlyArray<TransportDayOption>
@@ -248,6 +253,8 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
 
+    const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
+
     const [rows, days, legs, byMode, totalDistanceMetres] = await Promise.all([
       listTripTransports(scope, trip.id),
       listTripDays(scope, trip.id),
@@ -266,6 +273,7 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
     }
 
     return {
+      canSearchConnections: role === 'owner' || role === 'editor',
       currency: trip.currency,
       byMode,
       totalDistanceMetres,
@@ -452,7 +460,7 @@ export const deleteTransportFn = createServerFn({ method: 'POST' })
  * shape that quietly stops working the day somebody rewords a sentence.
  *
  * A failure that is *not* one of these is still thrown: an unauthenticated caller, a trip that is
- * not theirs, a malformed payload. Those are faults, not outcomes.
+ * not theirs, an insufficient trip role, a malformed payload. Those are faults, not outcomes.
  */
 export type ConnectionSearchOutcome =
   | {
@@ -505,51 +513,73 @@ async function transitCeiling(scope: TenantScope): Promise<number> {
  * own earlier Request fetched, the allowance is spent only on a miss, and the provider is reached
  * only after that.
  *
- * `requireTrip` is what makes this a trip member's search rather than anybody's: the query itself
- * carries no tenant data, but the *spending* is the workspace's, and only somebody who can see the
- * trip may spend it.
+ * `requireTrip` resolves visibility before the trip-role guard: only an owner or editor may
+ * spend the workspace allowance, even for a cached search. Archiving does not change this rule.
  */
-export const searchConnectionsFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ tripId, ...transitQuerySchema.shape }))
-  .handler(async ({ data }): Promise<ConnectionSearchOutcome> => {
-    const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+const connectionSearchInput = z.object({ tripId, ...transitQuerySchema.shape })
 
-    const ceiling = await transitCeiling(scope)
-    const query = {
-      origin: data.origin,
-      destination: data.destination,
-      date: data.date,
-      time: data.time,
-      modes: data.modes,
-    }
+interface ConnectionSearchPorts {
+  readonly ceiling: (scope: TenantScope) => Promise<number>
+  readonly transit: (input: {
+    organizationId: string
+    userId: string
+    ceiling: number
+  }) => TransitSearchRuntime
+}
 
-    try {
-      const result = await searchTransitConnections(
-        transitRuntime({
-          organizationId: scope.ctx.organizationId,
-          userId: scope.ctx.userId,
-          ceiling,
-        }),
-        query,
-      )
-      return {
-        ok: true,
-        connections: result.connections,
-        attributions: result.attributions,
-        cached: result.cached,
-        remaining:
-          result.spent === null ? null : Math.max(0, ceiling - result.spent),
+/** Trip visibility and role are checked before any allowance or provider work. */
+export async function searchConnections(
+  scope: TenantScope,
+  data: z.infer<typeof connectionSearchInput>,
+  ports: ConnectionSearchPorts,
+): Promise<ConnectionSearchOutcome> {
+  const trip = await requireTrip(scope, data.tripId)
+  await assertTripRole(scope, trip.id, ['owner', 'editor'])
+
+  const ceiling = await ports.ceiling(scope)
+  const query = {
+    origin: data.origin,
+    destination: data.destination,
+    date: data.date,
+    time: data.time,
+    modes: data.modes,
+  }
+
+  try {
+    const result = await searchTransitConnections(
+      ports.transit({
+        organizationId: scope.ctx.organizationId,
+        userId: scope.ctx.userId,
         ceiling,
-      }
-    } catch (cause) {
-      const reason = refusalReason(cause)
-      if (reason !== null) {
-        return { ok: false, reason, ceiling }
-      }
-      throw cause
+      }),
+      query,
+    )
+    return {
+      ok: true,
+      connections: result.connections,
+      attributions: result.attributions,
+      cached: result.cached,
+      remaining:
+        result.spent === null ? null : Math.max(0, ceiling - result.spent),
+      ceiling,
     }
-  })
+  } catch (cause) {
+    const reason = refusalReason(cause)
+    if (reason !== null) {
+      return { ok: false, reason, ceiling }
+    }
+    throw cause
+  }
+}
+
+export const searchConnectionsFn = createServerFn({ method: 'POST' })
+  .validator(connectionSearchInput)
+  .handler(async ({ data }): Promise<ConnectionSearchOutcome> =>
+    searchConnections(await appScope(), data, {
+      ceiling: transitCeiling,
+      transit: transitRuntime,
+    }),
+  )
 
 /**
  * Save a chosen connection as an ordinary journey, or replace the route of one already saved.

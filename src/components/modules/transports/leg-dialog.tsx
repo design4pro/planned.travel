@@ -153,6 +153,7 @@ export function TransportDialog({
   transport,
   days,
   currency,
+  canSearchConnections,
   open,
   onOpenChange,
 }: {
@@ -162,6 +163,7 @@ export function TransportDialog({
   /** The trip's days, in order. Empty while the trip has none. */
   days: ReadonlyArray<TransportDayData>
   currency: string
+  canSearchConnections: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -209,7 +211,8 @@ export function TransportDialog({
    * at all rather than shown and then explained — a disabled affordance for something unavailable
    * is a promise the reader can see and cannot take up.
    */
-  const searchable = days.some((day) => day.date !== null)
+  const searchable =
+    canSearchConnections && days.some((day) => day.date !== null)
 
   const save = useAction(
     saveTransportFn,
@@ -364,7 +367,7 @@ export function TransportDialog({
             </div>
           ) : null}
 
-          {fillMode === 'search' ? (
+          {searchable && fillMode === 'search' ? (
             <ConnectionSearch
               tripId={tripId}
               transportId={editing ? transport.id : undefined}
@@ -814,7 +817,7 @@ export function TransportDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            {fillMode === 'search'
+            {searchable && fillMode === 'search'
               ? t('ui.action.close')
               : t('modules.action.cancel')}
           </Button>
@@ -823,7 +826,7 @@ export function TransportDialog({
             is one chosen connection, so the button belongs on the row that names it rather than
             at the bottom of a dialog with nothing selected.
           */}
-          {fillMode === 'search' ? null : (
+          {searchable && fillMode === 'search' ? null : (
             <Button
               type="submit"
               form={formId}

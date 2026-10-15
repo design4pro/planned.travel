@@ -7,7 +7,7 @@ import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables
 import { providerRegistry, providerUsage } from '#/server/db/schema'
 import { resetProviderLimitMemo } from '#/server/metering/outbound'
 import { rateMeterKey, rateWindowOf } from '#/server/metering/rate'
-import { createTrip } from '#/server/repos'
+import { addTripMember, archiveTrip, createTrip } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
 import type { TransitSearchRuntime } from '#/server/transit/search'
@@ -61,7 +61,8 @@ vi.mock('#/server/transit/bindings', () => ({
   },
 }))
 
-const { searchConnectionsFn } = await import('../transports')
+const { searchConnectionsFn, searchConnections, loadTransportDeskFn } =
+  await import('../transports')
 
 beforeEach(() => resetProviderLimitMemo())
 
@@ -138,3 +139,111 @@ it('returns the existing unreachable refusal and preserves the remaining allowan
     { calls: 0, errors: 0, blocked: 1 },
   ])
 })
+
+const query = {
+  origin: { name: 'Lisbon', lat: 38.7132, lng: -9.1224 },
+  destination: { name: 'Porto', lat: 41.1489, lng: -8.5851 },
+  date: '2026-10-09',
+  time: '08:00',
+  modes: [],
+}
+
+it.each(['viewer', 'non-member', 'foreign'] as const)(
+  'refuses %s before resolving a ceiling or constructing a transit runtime',
+  async (role) => {
+    const harness = await createHarness()
+    const tenant = await harness.seedTenant('roles')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Portugal',
+      visibility: 'organization',
+    })
+    const userId = await tenant.addUser('Reader')
+    if (role === 'viewer') {
+      await addTripMember(tenant.scope, { tripId: trip.id, userId, role })
+    }
+    const scope =
+      role === 'foreign'
+        ? (await harness.seedTenant('foreign')).scope
+        : tenant.scopeFor(userId)
+    const ports = { ceiling: vi.fn(), transit: vi.fn() }
+    await expect(
+      searchConnections(scope, { tripId: trip.id, ...query }, ports),
+    ).rejects.toMatchObject({
+      code: role === 'foreign' ? 'NOT_FOUND' : 'FORBIDDEN',
+    })
+    expect(ports.ceiling).not.toHaveBeenCalled()
+    expect(ports.transit).not.toHaveBeenCalled()
+    stubs.scope = scope
+    await expect(
+      searchConnectionsFn({ data: { tripId: trip.id, ...query } }),
+    ).rejects.toMatchObject({
+      code: role === 'foreign' ? 'NOT_FOUND' : 'FORBIDDEN',
+    })
+    if (role !== 'foreign') {
+      expect(
+        await loadTransportDeskFn({ data: { tripId: trip.id } }),
+      ).toMatchObject({ canSearchConnections: false })
+    }
+  },
+)
+
+it.each(['owner', 'editor'] as const)(
+  'allows %s to search and exposes the capability even on an archived trip',
+  async (role) => {
+    const tenant = await (await createHarness()).seedTenant('writer')
+    const trip = await createTrip(tenant.scope, { title: 'Portugal' })
+    const userId = await tenant.addUser('Editor')
+    await addTripMember(tenant.scope, {
+      tripId: trip.id,
+      userId,
+      role: 'editor',
+    })
+    const scope = role === 'owner' ? tenant.scope : tenant.scopeFor(userId)
+    const client = {
+      search: vi.fn(async () => ({
+        connections: [],
+        attributions: [],
+        caching: { cacheControl: null, expires: null, date: null, age: null },
+      })),
+    }
+    const store = { get: async () => null, put: async () => {} }
+    const ports = {
+      ceiling: vi.fn(async () => 250),
+      transit: vi.fn(
+        (input: {
+          organizationId: string
+          userId: string
+          ceiling: number
+        }): TransitSearchRuntime => ({
+          ...input,
+          cache: store,
+          counters: store,
+          client,
+          now: () => new Date('2026-10-01T10:00:00Z'),
+          outbound: {
+            db: null,
+            now: () => new Date('2026-10-01T10:00:00Z'),
+            waitUntil: () => {},
+            logger: {
+              debug: vi.fn(),
+              info: vi.fn(),
+              warn: vi.fn(),
+              error: vi.fn(),
+            } as unknown as Logger,
+          },
+        }),
+      ),
+    }
+    for (const archived of [false, true]) {
+      if (archived) await archiveTrip(tenant.scope, trip.id)
+      stubs.scope = scope
+      expect(
+        await loadTransportDeskFn({ data: { tripId: trip.id } }),
+      ).toMatchObject({ canSearchConnections: true })
+      expect(
+        await searchConnections(scope, { tripId: trip.id, ...query }, ports),
+      ).toMatchObject({ ok: true, cached: false, ceiling: 250, remaining: 249 })
+    }
+    expect(client.search).toHaveBeenCalledTimes(2)
+  },
+)
