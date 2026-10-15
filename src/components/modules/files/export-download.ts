@@ -22,24 +22,28 @@ const GENERIC_BINARY = 'application/octet-stream'
 const REVOKE_DELAY_MS = 60_000
 
 /** The file name the server chose, from `content-disposition: attachment; filename*=UTF-8''…`. */
-function filenameOf(response: Response): string {
+function filenameOf(response: Response, format: string): string {
+  const fallback = `trip-export.${format}`
   const header = response.headers.get('content-disposition') ?? ''
   const encoded = /filename\*=UTF-8''([^;]+)/iu.exec(header)?.[1]
   if (encoded === undefined) {
-    return 'trip-export'
+    return fallback
   }
   try {
     return decodeURIComponent(encoded)
   } catch {
-    return 'trip-export'
+    return fallback
   }
 }
 
 export async function downloadTripExport(input: {
   readonly tripId: string
   readonly taskId: string
+  readonly format: 'pdf' | 'html'
 }): Promise<ExportDownloadResult> {
-  const response = await downloadTripExportFn({ data: input })
+  const response = await downloadTripExportFn({
+    data: { tripId: input.tripId, taskId: input.taskId },
+  })
 
   if (!(response instanceof Response)) {
     return { kind: 'shape' }
@@ -55,7 +59,7 @@ export async function downloadTripExport(input: {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
-  anchor.download = filenameOf(response)
+  anchor.download = filenameOf(response, input.format)
   anchor.rel = 'noopener'
   anchor.style.display = 'none'
   document.body.appendChild(anchor)

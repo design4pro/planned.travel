@@ -116,9 +116,24 @@ function missing(): Response {
   )
 }
 
+/** Room for the title in a name: `sanitiseFilename` keeps 160 UTF-16 units, the day takes 11. */
+const TITLE_BUDGET = 140
+
 function exportFilename(title: string, artifact: ExportArtifact): string {
   const day = new Date(artifact.createdAt).toISOString().slice(0, 10)
-  return `${sanitiseFilename(`${title}-${day}`)}.${artifact.format}`
+  // A slash in a trip title ("Lisbon 1/2") must not read as a path and drop the part before it.
+  // The title is cut by code point and stripped of lone surrogates first: a half surrogate would make the
+  // header encoder throw, and a long title must not push the day and the extension out of the name.
+  let name = ''
+  for (const char of title
+    .replaceAll(/\p{Surrogate}/gu, '')
+    .replaceAll(/[\\/]+/gu, '-')) {
+    if (name.length + char.length > TITLE_BUDGET) {
+      break
+    }
+    name += char
+  }
+  return `${sanitiseFilename(`${name}-${day}`)}.${artifact.format}`
 }
 
 /**

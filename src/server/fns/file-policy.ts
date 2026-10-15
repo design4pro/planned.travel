@@ -75,9 +75,9 @@ const XML_EXCEPTION_EXTENSION = 'gpx'
  * markup, and this product offers none. Five controls together are the mitigation, and **any one
  * going away reopens the decision**:
  *
- * - (a) the `FILES` bucket is served to a browser only through `downloadTripFileFn` (the
- *   booking-import queue handler reads it server-side); `grep -rn FILES_PUBLIC_BASE src/` finds
- *   only its type;
+ * - (a) the `FILES` bucket is served to a browser only through `downloadTripFileFn` and
+ *   `downloadTripExportFn` (the booking-import queue handler reads it server-side);
+ *   `grep -rn FILES_PUBLIC_BASE src/` finds only its type;
  * - (b) that response is `content-disposition: attachment`, `cache-control: private, no-store` and
  *   `x-content-type-options: nosniff` ({@link attachmentHeaders}). This protects a **direct** fetch
  *   of the URL. It does not protect the in-app download, because `download.ts` reads the response
@@ -88,7 +88,8 @@ const XML_EXCEPTION_EXTENSION = 'gpx'
  *   copies the cover through `copyObject`, which carries the disposition over with the type;
  * - (d) **no client code gives the user a same-origin object URL typed `text/html` or
  *   `image/svg+xml`**: `download.ts` re-types a blob of those two types to
- *   `application/octet-stream` before `URL.createObjectURL`;
+ *   `application/octet-stream` before `URL.createObjectURL`, and `export-download.ts` does so for
+ *   every trip export;
  * - (e) the file preview never shows an `image/svg+xml` file through a same-origin blob or object
  *   URL: an SVG gets no inline preview, or a sandboxed or rasterised one. "No open-in-new-tab
  *   button" is not enough, because the browser's own context menu offers "Open image in new tab"

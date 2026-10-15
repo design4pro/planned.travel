@@ -26,6 +26,7 @@ import { dayKeyIn, resolveTimeZone } from '#/lib/time'
 import { listTripExportsFn } from '#/server/fns/exports'
 import { EXPORT_TTL_SECONDS } from '#/server/storage/export-artifacts'
 import { ModulePanel, ModuleRow } from '../shared/panel'
+import { messageOf } from '../shared/use-action'
 import { downloadTripExport } from './export-download'
 
 import type { Locale } from '#/lib/i18n'
@@ -34,7 +35,12 @@ import type { TripExportList } from '#/server/fns/exports'
 type ListState =
   | { readonly status: 'loading' }
   | { readonly status: 'error' }
-  | { readonly status: 'ready'; readonly list: TripExportList }
+  | {
+      readonly status: 'ready'
+      readonly list: TripExportList
+      /** When the list arrived: the age column is measured from it, not from every render. */
+      readonly at: number
+    }
 
 type Artifact = TripExportList['artifacts'][number]
 
@@ -87,6 +93,7 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
   const headingRef = useRef<HTMLDivElement>(null)
   const controls = useRef(new Map<string, HTMLButtonElement>())
   const focusAfter = useRef<string | null>(null)
+  const noticeAfter = useRef('')
   const latest = useRef(0)
 
   const load = useCallback(async () => {
@@ -94,8 +101,11 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
     const request = latest.current
     try {
       const list = await listTripExportsFn({ data: { tripId } })
+      if (!Array.isArray(list.artifacts)) {
+        throw new Error('The list did not come back in a form we can show.')
+      }
       if (request === latest.current) {
-        setState({ status: 'ready', list })
+        setState({ status: 'ready', list, at: Date.now() })
       }
     } catch {
       // A failed re-read keeps the rows the reader already has.
@@ -115,6 +125,8 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
   }, [load])
 
   // Focus comes back once the control is enabled again, and only if the reader has not moved on.
+  // The notice is spoken after that, because a screen reader cuts the sentence it is reading off
+  // when focus moves.
   useEffect(() => {
     const target = focusAfter.current
     if (target === null || downloading !== null) {
@@ -122,10 +134,13 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
     }
     focusAfter.current = null
     const active = document.activeElement
-    if (active !== null && active !== document.body) {
-      return
+    if (active === null || active === document.body) {
+      ;(controls.current.get(target) ?? headingRef.current)?.focus()
     }
-    ;(controls.current.get(target) ?? headingRef.current)?.focus()
+    if (noticeAfter.current !== '') {
+      setNotice(noticeAfter.current)
+      noticeAfter.current = ''
+    }
   })
 
   function retry() {
@@ -140,18 +155,25 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
     focusAfter.current = artifact.taskId
     let result: Awaited<ReturnType<typeof downloadTripExport>> | null = null
     try {
-      result = await downloadTripExport({ tripId, taskId: artifact.taskId })
-    } catch {
-      toast.error(t('modules.files.toast.downloadFailed'))
+      result = await downloadTripExport({
+        tripId,
+        taskId: artifact.taskId,
+        format: artifact.format,
+      })
+    } catch (cause) {
+      // A refusal the server authored (no access any more) is shown; a diagnostic is not.
+      const reason = messageOf(cause, '')
+      toast.error(
+        t('modules.files.toast.downloadFailed'),
+        reason === '' ? undefined : { description: reason },
+      )
     }
 
     if (result?.kind === 'missing') {
-      setNotice(
-        t(
-          canRequest
-            ? 'modules.files.export.error.missing'
-            : 'modules.files.export.error.missingViewer',
-        ),
+      noticeAfter.current = t(
+        canRequest
+          ? 'modules.files.export.error.missing'
+          : 'modules.files.export.error.missingViewer',
       )
       await load()
     } else if (result?.kind === 'failed') {
@@ -167,8 +189,6 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
     }
     setDownloading(null)
   }
-
-  const now = Date.now()
 
   return (
     <div data-part="export-panel" className="min-w-0">
@@ -224,7 +244,7 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
               const when = madeAt(artifact.createdAt, locale, t)
               const age = formatRelative(
                 new Date(artifact.createdAt).toISOString(),
-                now,
+                state.at,
                 locale,
               )
               const { canRequest } = state.list
@@ -234,11 +254,11 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
                   role="listitem"
                   className={cn(ROW, 'justify-between')}
                 >
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="min-w-0 truncate text-caption font-medium text-ink">
-                        {t('modules.files.export.artifact', { date: when })}
-                      </span>
+                  <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:flex-1">
+                    <span className="text-caption font-medium text-ink">
+                      {t('modules.files.export.artifact', { date: when })}
+                    </span>
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption tabular-nums text-ink-3">
                       <Badge tone="neutral" size="sm">
                         {t(
                           artifact.format === 'pdf'
@@ -246,10 +266,10 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
                             : 'modules.files.export.format.html',
                         )}
                       </Badge>
-                    </span>
-                    <span className="text-caption tabular-nums text-ink-3">
-                      {formatStorageSize(artifact.sizeBytes, locale)}
-                      {age === null ? '' : ` · ${age}`}
+                      <span>
+                        {formatStorageSize(artifact.sizeBytes, locale)}
+                        {age === null ? '' : ` · ${age}`}
+                      </span>
                     </span>
                   </div>
                   <Button

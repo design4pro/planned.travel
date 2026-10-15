@@ -112,7 +112,7 @@ function FilesPage() {
           pickRequestedAt={pickRequestedAt}
         />
 
-        <ExportPanel tripId={tripId} />
+        <ExportPanel key={tripId} tripId={tripId} />
       </AppSections>
     </AppFrame>
   )

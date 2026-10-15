@@ -129,6 +129,34 @@ describe('the export panel', () => {
     )
   })
 
+  it('tells two exports of the same format made on the same day apart by their time', async () => {
+    listTripExportsFn.mockResolvedValue({
+      canRequest: true,
+      artifacts: [
+        {
+          taskId: 'task-b',
+          format: 'pdf',
+          sizeBytes: 10,
+          createdAt: NOW - 60_000,
+        },
+        {
+          taskId: 'task-a',
+          format: 'pdf',
+          sizeBytes: 10,
+          createdAt: NOW - 3 * 60 * 60_000,
+        },
+      ],
+    })
+    mount()
+    await screen.findAllByRole('listitem')
+
+    const [later, earlier] = screen
+      .getAllByRole('button', { name: /^Download/u })
+      .map((button) => button.getAttribute('aria-label'))
+
+    expect(later).not.toBe(earlier)
+  })
+
   it('says there are no exports, and offers no request control', async () => {
     listTripExportsFn.mockResolvedValue({ artifacts: [], canRequest: true })
     mount()
@@ -146,6 +174,7 @@ describe('the export panel', () => {
     expect(
       await screen.findByText('An owner or editor of this trip can make one.'),
     ).toBeTruthy()
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
   })
 
   it('says the list failed and retries from the button', async () => {
@@ -223,15 +252,62 @@ describe('the export panel', () => {
   it('returns focus to the control that started the download', async () => {
     const user = userEvent.setup()
     listTripExportsFn.mockResolvedValue(TWO)
-    downloadTripExportFn.mockResolvedValue(file(200, '%PDF'))
+    let finish: (response: Response) => void = () => {}
+    downloadTripExportFn.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finish = resolve
+      }),
+    )
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     mount()
     await screen.findAllByRole('listitem')
     const control = screen.getByRole('button', { name: /Download the PDF/u })
 
     await user.click(control)
+    // Browsers drop focus from a control that turns disabled; jsdom does not (blur() on a disabled
+    // button is a no-op), so park focus on a throwaway element and remove it.
+    const parked = document.createElement('div')
+    parked.tabIndex = -1
+    document.body.appendChild(parked)
+    parked.focus()
+    parked.remove()
+    expect(document.activeElement).toBe(document.body)
+    finish(file(200, '%PDF'))
 
     await waitFor(() => expect(document.activeElement).toBe(control))
+  })
+
+  it('leaves focus where the reader moved it during the download', async () => {
+    const user = userEvent.setup()
+    listTripExportsFn.mockResolvedValue(TWO)
+    let finish: (response: Response) => void = () => {}
+    downloadTripExportFn.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finish = resolve
+      }),
+    )
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    mount()
+    await screen.findAllByRole('listitem')
+
+    await user.click(screen.getByRole('button', { name: /Download the PDF/u }))
+    // The other row's control is disabled while the download is in flight, so the reader moves on
+    // to something outside the panel.
+    const elsewhere = document.createElement('div')
+    elsewhere.tabIndex = -1
+    document.body.appendChild(elsewhere)
+    elsewhere.focus()
+    finish(file(200, '%PDF'))
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: /Download the PDF/u })
+          .hasAttribute('disabled'),
+      ).toBe(false),
+    )
+    expect(document.activeElement).toBe(elsewhere)
+    elsewhere.remove()
   })
 
   it('says the export is gone on a 404, in the status region, and reads the list again', async () => {
@@ -256,6 +332,47 @@ describe('the export panel', () => {
     )
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1))
     expect(listTripExportsFn).toHaveBeenCalledTimes(2)
+  })
+
+  it('puts focus on the heading when the export that was downloaded is gone from the list', async () => {
+    const user = userEvent.setup()
+    listTripExportsFn.mockResolvedValueOnce(TWO)
+    downloadTripExportFn.mockResolvedValue(file(404, '{"error":"missing"}'))
+    mount()
+    await screen.findAllByRole('listitem')
+    listTripExportsFn.mockResolvedValueOnce({
+      canRequest: true,
+      artifacts: [TWO.artifacts[1]],
+    })
+    const control = screen.getByRole('button', { name: /Download the PDF/u })
+
+    await user.click(control)
+    control.blur()
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: 'Export the trip' }),
+      ),
+    )
+  })
+
+  it('keeps the rows it has when the re-read after a 404 fails', async () => {
+    const user = userEvent.setup()
+    listTripExportsFn.mockResolvedValueOnce(TWO)
+    downloadTripExportFn.mockResolvedValue(file(404, '{"error":"missing"}'))
+    mount()
+    await screen.findAllByRole('listitem')
+    listTripExportsFn.mockRejectedValueOnce(new Error('offline'))
+
+    await user.click(screen.getByRole('button', { name: /Download the PDF/u }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain(
+        'no longer kept',
+      ),
+    )
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('words the 404 for a viewer without telling them to export again', async () => {

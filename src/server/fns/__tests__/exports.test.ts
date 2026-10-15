@@ -186,6 +186,27 @@ describe('downloading an export', () => {
     )
   })
 
+  it('keeps the whole trip title in the file name when it holds a slash', async () => {
+    await updateTrip(tenant.scope, tripId, { title: 'Lisbon 1/2' })
+
+    const response = await download('task-new')
+
+    expect(response.headers.get('content-disposition')).toBe(
+      "attachment; filename*=UTF-8''Lisbon%201-2-2026-10-15.pdf",
+    )
+  })
+
+  it('keeps the day and the extension when the title is long or ends in half an emoji', async () => {
+    await updateTrip(tenant.scope, tripId, {
+      title: `${'😀'.repeat(90)}\ud83d`,
+    })
+
+    const response = await download('task-new')
+
+    const disposition = response.headers.get('content-disposition') ?? ''
+    expect(decodeURIComponent(disposition)).toMatch(/2026-10-15\.pdf$/u)
+  })
+
   it('lets a viewer download', async () => {
     const viewer = await readerOf('viewer')
 
