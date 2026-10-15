@@ -19,7 +19,7 @@ import { assertQuota, createTenantRepository, createTenantTableAccess, tenantFil
 import { runBatch } from './batch'
 import { categoriesRepository } from './categories'
 import { NotFoundError } from './context'
-import { requireTrip } from './trips'
+import { assertTripRole, requireTrip } from './trips'
 import {
   countryCodeSchema,
   currencySchema,
@@ -40,6 +40,21 @@ import type { SQL } from 'drizzle-orm'
 import type { OpeningHours } from '#/server/db/schema'
 import type { Place, Tag } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TripRole } from './trips'
+
+/** Shared by the repository writers and the planner's write guard. */
+export const PLACE_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+
+async function requirePlaceWriteRole(scope: TenantScope, tripId: string): Promise<void> {
+  await requireTrip(scope, tripId)
+  await assertTripRole(scope, tripId, PLACE_WRITE_ROLES)
+}
+
+async function requireEditablePlace(scope: TenantScope, placeId: string): Promise<Place> {
+  const place = await placesRepository.requireById(scope, placeId)
+  await requirePlaceWriteRole(scope, place.tripId)
+  return place
+}
 
 export const placesRepository = createTenantRepository(places, 'place')
 export const placeTagsAccess = createTenantTableAccess(placeTags, 'place tag')
@@ -280,7 +295,7 @@ export async function countTripPlaces(scope: TenantScope, tripId: string): Promi
  */
 export async function createPlace(scope: TenantScope, input: CreatePlaceInput): Promise<Place> {
   const values = createPlaceInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requirePlaceWriteRole(scope, values.tripId)
   if (values.categoryId) {
     await categoriesRepository.requireById(scope, values.categoryId)
   }
@@ -307,6 +322,7 @@ export async function updatePlace(
   input: UpdatePlaceInput,
 ): Promise<Place> {
   const values = definedOnly(updatePlaceInput.parse(input))
+  await requireEditablePlace(scope, placeId)
   if (values.categoryId) {
     await categoriesRepository.requireById(scope, values.categoryId)
   }
@@ -318,10 +334,12 @@ export async function setPlaceVisited(
   placeId: string,
   isVisited: boolean,
 ): Promise<Place> {
+  await requireEditablePlace(scope, placeId)
   return placesRepository.requireUpdate(scope, placeId, { isVisited })
 }
 
 export async function deletePlace(scope: TenantScope, placeId: string): Promise<void> {
+  await requireEditablePlace(scope, placeId)
   await placesRepository.requireRemove(scope, placeId)
 }
 
@@ -335,6 +353,9 @@ export async function reorderPlaces(
     scope,
     moves.map((move) => move.placeId),
   )
+  for (const tripId of new Set(known.map((row) => row.tripId))) {
+    await requirePlaceWriteRole(scope, tripId)
+  }
   const knownIds = new Set(known.map((row) => row.id))
   const applicable = moves.filter((move) => knownIds.has(move.placeId))
   if (applicable.length === 0) {
@@ -366,7 +387,7 @@ export async function setPlaceTags(
   placeId: string,
   tagIds: ReadonlyArray<string>,
 ): Promise<Array<string>> {
-  await placesRepository.requireById(scope, placeId)
+  await requireEditablePlace(scope, placeId)
   const parsed = z.array(idSchema).max(50).parse([...tagIds])
   const known =
     parsed.length === 0
