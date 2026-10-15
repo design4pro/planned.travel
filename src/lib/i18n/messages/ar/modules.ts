@@ -920,6 +920,16 @@ const messages = {
   'files.action.add': 'إضافة ملفات',
   'files.action.choose': 'اختيار ملفات',
   'files.action.upload': 'رفع الملفات',
+  'files.calendar.title': 'التقويم',
+  'files.calendar.description':
+    'انقل هذه الرحلة إلى تطبيق التقويم الذي تستخدمه بالفعل.',
+  'files.calendar.download.action': 'نزّل ملف التقويم (.ics)',
+  'files.calendar.download.hint': 'لقطة من الرحلة كما هي الآن. لا يتم تحديثها.',
+  'files.calendar.undated':
+    'ليس لهذه الرحلة تواريخ بعد، لذا ستظهر فقط الحجوزات والرحلات المؤرخة.',
+  'files.calendar.download.error': 'تعذّر علينا تجهيز الملف. حاول مرة أخرى.',
+  'files.calendar.timesNote':
+    'تظهر الرحلات ذات المنطقة الزمنية في اللحظة نفسها في كل مكان. أما بقية العناصر فتظهر في ساعتها المخطط لها، أينما كان تقويمك.',
   'files.drop.active': 'أفلِت للرفع',
   'files.drop.pasteHint': 'يلصق صورة منسوخة أو لقطة شاشة',
   'files.reject.blockedType':
@@ -993,6 +1003,35 @@ const messages = {
   },
   'files.export.email.action': 'افتح {title}',
   'files.export.email.text': 'تصدير الرحلة جاهز: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'تصدير الرحلة',
+  'files.export.description':
+    'نسخة قابلة للطباعة من الرحلة: الأيام والمحطات والحجوزات والنقل والإقامات. سلّمها لمن ليس لديه حساب.',
+  'files.export.kept': {
+    zero: 'يُحفظ كل تصدير لمدة {count} يوم.',
+    one: 'يُحفظ كل تصدير لمدة يوم واحد.',
+    two: 'يُحفظ كل تصدير لمدة يومين.',
+    few: 'يُحفظ كل تصدير لمدة {count} أيام.',
+    many: 'يُحفظ كل تصدير لمدة {count} يومًا.',
+    other: 'يُحفظ كل تصدير لمدة {count} يوم.',
+  },
+  'files.export.empty.title': 'لا توجد تصديرات بعد',
+  'files.export.empty.body':
+    'أنشئ نسخة قابلة للطباعة من الرحلة لإرسالها إلى شخص ليس لديه حساب.',
+  'files.export.empty.bodyViewer': 'يمكن لمالك الرحلة أو محررها إنشاء واحد.',
+  'files.export.format.pdf': 'ملف PDF',
+  'files.export.format.html': 'صفحة قابلة للطباعة',
+  'files.export.artifact': 'تصدير الرحلة، {date}',
+  'files.export.download': 'تنزيل',
+  'files.export.downloadLabelPdf': 'تنزيل ملف PDF المُنشأ في {date}',
+  'files.export.downloadLabelHtml':
+    'تنزيل الصفحة القابلة للطباعة المُنشأة في {date}',
+  'files.export.error.list': 'تعذّر تحميل قائمة التصديرات.',
+  'files.export.retry': 'حاول مرة أخرى',
+  'files.export.error.missing':
+    'لم يعد هذا التصدير محفوظًا. صدّر الرحلة مرة أخرى.',
+  'files.export.error.missingViewer': 'لم يعد هذا التصدير محفوظًا.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'أُلغي الرفع.',

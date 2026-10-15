@@ -900,6 +900,18 @@ const messages = {
   'files.action.add': 'Πρόσθεσε αρχεία',
   'files.action.choose': 'Διάλεξε αρχεία',
   'files.action.upload': 'Ανέβασε αρχεία',
+  'files.calendar.title': 'Ημερολόγιο',
+  'files.calendar.description':
+    'Πάρε αυτό το ταξίδι στην εφαρμογή ημερολογίου που ήδη χρησιμοποιείς.',
+  'files.calendar.download.action': 'Λήψη αρχείου ημερολογίου (.ics)',
+  'files.calendar.download.hint':
+    'Ένα στιγμιότυπο του ταξιδιού όπως είναι τώρα. Δεν ενημερώνεται.',
+  'files.calendar.undated':
+    'Αυτό το ταξίδι δεν έχει ακόμη ημερομηνίες, οπότε θα εμφανιστούν μόνο οι κρατήσεις και οι μετακινήσεις με ημερομηνία.',
+  'files.calendar.download.error':
+    'Δεν μπορέσαμε να ετοιμάσουμε το αρχείο. Δοκίμασε ξανά.',
+  'files.calendar.timesNote':
+    'Οι μετακινήσεις με ζώνη ώρας εμφανίζονται την ίδια στιγμή παντού. Όλα τα υπόλοιπα εμφανίζονται στην προγραμματισμένη ώρα ρολογιού, όπου κι αν βρίσκεται το ημερολόγιό σου.',
   'files.drop.active': 'Άφησέ το για μεταφόρτωση',
   'files.drop.pasteHint': 'επικολλά μια αντιγραμμένη εικόνα ή στιγμιότυπο οθόνης',
   'files.reject.blockedType':
@@ -964,6 +976,32 @@ const messages = {
   },
   'files.export.email.action': 'Άνοιγμα: {title}',
   'files.export.email.text': 'Η εξαγωγή του ταξιδιού είναι έτοιμη: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Εξαγωγή του ταξιδιού',
+  'files.export.description':
+    'Ένα εκτυπώσιμο αντίγραφο του ταξιδιού: ημέρες, στάσεις, κρατήσεις, μεταφορές και διαμονές. Δώστε το σε κάποιον που δεν έχει λογαριασμό.',
+  'files.export.kept': {
+    one: 'Κάθε εξαγωγή διατηρείται για {count} ημέρα.',
+    other: 'Κάθε εξαγωγή διατηρείται για {count} ημέρες.',
+  },
+  'files.export.empty.title': 'Δεν υπάρχουν εξαγωγές ακόμη',
+  'files.export.empty.body':
+    'Φτιάξτε ένα εκτυπώσιμο αντίγραφο του ταξιδιού για να το στείλετε σε κάποιον που δεν έχει λογαριασμό.',
+  'files.export.empty.bodyViewer':
+    'Ο ιδιοκτήτης ή ένας συντάκτης του ταξιδιού μπορεί να φτιάξει μία.',
+  'files.export.format.pdf': 'Αρχείο PDF',
+  'files.export.format.html': 'Εκτυπώσιμη σελίδα',
+  'files.export.artifact': 'Εξαγωγή ταξιδιού, {date}',
+  'files.export.download': 'Λήψη',
+  'files.export.downloadLabelPdf': 'Λήψη του PDF που δημιουργήθηκε στις {date}',
+  'files.export.downloadLabelHtml':
+    'Λήψη της εκτυπώσιμης σελίδας που δημιουργήθηκε στις {date}',
+  'files.export.error.list': 'Η λίστα εξαγωγών δεν φορτώθηκε.',
+  'files.export.retry': 'Δοκιμάστε ξανά',
+  'files.export.error.missing':
+    'Αυτή η εξαγωγή δεν διατηρείται πια. Εξαγάγετε ξανά το ταξίδι.',
+  'files.export.error.missingViewer': 'Αυτή η εξαγωγή δεν διατηρείται πια.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Η μεταφόρτωση ακυρώθηκε.',

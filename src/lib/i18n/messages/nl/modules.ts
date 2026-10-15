@@ -896,6 +896,18 @@ const messages = {
   'files.action.add': 'Bestanden toevoegen',
   'files.action.choose': 'Bestanden kiezen',
   'files.action.upload': 'Bestanden uploaden',
+  'files.calendar.title': 'Agenda',
+  'files.calendar.description':
+    'Neem deze reis mee naar de agenda-app die je al gebruikt.',
+  'files.calendar.download.action': 'Agendabestand downloaden (.ics)',
+  'files.calendar.download.hint':
+    'Een momentopname van de reis zoals die nu is. Hij wordt niet bijgewerkt.',
+  'files.calendar.undated':
+    'Deze reis heeft nog geen data, dus alleen reserveringen en ritten met een datum verschijnen.',
+  'files.calendar.download.error':
+    'We konden het bestand niet voorbereiden. Probeer het opnieuw.',
+  'files.calendar.timesNote':
+    'Ritten met een tijdzone verschijnen overal op hetzelfde moment. Al het andere verschijnt op de geplande kloktijd, waar je agenda ook is.',
   'files.drop.active': 'Loslaten om te uploaden',
   'files.drop.pasteHint': 'plakt een gekopieerde afbeelding of schermafbeelding',
   'files.reject.blockedType':
@@ -959,6 +971,32 @@ const messages = {
   },
   'files.export.email.action': '{title} openen',
   'files.export.email.text': 'De reisexport is klaar: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Reis exporteren',
+  'files.export.description':
+    'Een afdrukbare kopie van de reis: dagen, stops, reserveringen, vervoer en verblijven. Geef hem aan iemand zonder account.',
+  'files.export.kept': {
+    one: 'Elke export wordt {count} dag bewaard.',
+    other: 'Elke export wordt {count} dagen bewaard.',
+  },
+  'files.export.empty.title': 'Nog geen exports',
+  'files.export.empty.body':
+    'Maak een afdrukbare kopie van de reis om naar iemand zonder account te sturen.',
+  'files.export.empty.bodyViewer':
+    'De eigenaar of een bewerker van deze reis kan er een maken.',
+  'files.export.format.pdf': 'PDF-bestand',
+  'files.export.format.html': 'Afdrukbare pagina',
+  'files.export.artifact': 'Reisexport, {date}',
+  'files.export.download': 'Downloaden',
+  'files.export.downloadLabelPdf': 'De pdf van {date} downloaden',
+  'files.export.downloadLabelHtml':
+    'De afdrukbare pagina van {date} downloaden',
+  'files.export.error.list': 'De lijst met exports is niet geladen.',
+  'files.export.retry': 'Opnieuw proberen',
+  'files.export.error.missing':
+    'Die export wordt niet meer bewaard. Exporteer de reis opnieuw.',
+  'files.export.error.missingViewer': 'Die export wordt niet meer bewaard.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uploaden geannuleerd.',

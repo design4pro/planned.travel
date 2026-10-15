@@ -847,6 +847,18 @@ const messages = {
   'files.action.add': '파일 추가',
   'files.action.choose': '파일 고르기',
   'files.action.upload': '파일 올리기',
+  'files.calendar.title': '캘린더',
+  'files.calendar.description':
+    '이 여행을 이미 쓰고 있는 캘린더 앱으로 가져가세요.',
+  'files.calendar.download.action': '캘린더 파일 내려받기 (.ics)',
+  'files.calendar.download.hint':
+    '지금 상태의 여행을 담은 스냅샷입니다. 자동으로 업데이트되지 않습니다.',
+  'files.calendar.undated':
+    '이 여행에는 아직 날짜가 없어서 날짜가 있는 예약과 이동만 표시됩니다.',
+  'files.calendar.download.error':
+    '파일을 준비하지 못했습니다. 다시 시도해 주세요.',
+  'files.calendar.timesNote':
+    '시간대가 있는 이동은 어디서나 같은 순간에 표시됩니다. 나머지는 캘린더가 어디에 있든 계획한 시계 시각 그대로 표시됩니다.',
   'files.drop.active': '놓으면 올라갑니다',
   'files.drop.pasteHint': '복사한 이미지나 스크린샷을 붙여넣습니다',
   'files.reject.blockedType':
@@ -905,6 +917,30 @@ const messages = {
   },
   'files.export.email.action': '{title} 열기',
   'files.export.email.text': '여행 내보내기가 준비되었습니다: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '여행 내보내기',
+  'files.export.description':
+    '여행의 인쇄용 사본입니다: 일정, 방문지, 예약, 이동 수단, 숙소가 담겨 있습니다. 계정이 없는 사람에게 전달하세요.',
+  'files.export.kept': {
+    other: '내보내기는 각각 {count}일 동안 보관됩니다.',
+  },
+  'files.export.empty.title': '아직 내보내기가 없습니다',
+  'files.export.empty.body':
+    '계정이 없는 사람에게 보낼 수 있도록 여행의 인쇄용 사본을 만드세요.',
+  'files.export.empty.bodyViewer': '여행의 소유자나 편집자가 만들 수 있습니다.',
+  'files.export.format.pdf': 'PDF 파일',
+  'files.export.format.html': '인쇄용 페이지',
+  'files.export.artifact': '여행 내보내기, {date}',
+  'files.export.download': '내려받기',
+  'files.export.downloadLabelPdf': '{date}에 만든 PDF 내려받기',
+  'files.export.downloadLabelHtml': '{date}에 만든 인쇄용 페이지 내려받기',
+  'files.export.error.list': '내보내기 목록을 불러오지 못했습니다.',
+  'files.export.retry': '다시 시도',
+  'files.export.error.missing':
+    '이 내보내기는 더 이상 보관되지 않습니다. 여행을 다시 내보내세요.',
+  'files.export.error.missingViewer':
+    '이 내보내기는 더 이상 보관되지 않습니다.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '올리기를 취소했습니다.',

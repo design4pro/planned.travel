@@ -1,8 +1,15 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
-import { SEEDED_TRIPS, tripIdByName } from './helpers/places-and-maps.ts'
-import type { RouteCase } from './helpers/routes.ts'
+import {
+  onRoute,
+  SEEDED_TRIPS,
+  tripIdByName,
+} from './helpers/places-and-maps.ts'
+import { THEMES, applyTheme } from './helpers/routes.ts'
+import type { RouteCase, Theme } from './helpers/routes.ts'
 import { callsServerFn } from './helpers/server-fn.ts'
 import { settleMutations } from './helpers/settle.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
@@ -100,6 +107,88 @@ async function dispatchPaste(
         }),
       )
     }, payload)
+}
+
+const DROP = '[data-part="file-drop"]'
+
+/** The Files screen of a seeded trip with no files, so the console stays silent (see above). */
+async function openEmptyLibrary(
+  context: BrowserContext,
+  page: Page,
+): Promise<() => ReturnType<ReturnType<typeof watchConsole>>> {
+  const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+  const route: RouteCase = {
+    name: 'trip-files',
+    path: `/trips/${tripId}/files`,
+    ready: 'nav[aria-label="Trip sections"]',
+  }
+  const report = watchConsole(page, route)
+  await visit(page, route, 'light')
+  return report
+}
+
+/**
+ * One drag event on `selector`, carrying either a file or selected text, the way a browser builds
+ * its `DataTransfer`: `types` holds `Files` for the first and `text/plain` for the second.
+ */
+async function drag(
+  page: Page,
+  selector: string,
+  type: 'dragenter' | 'dragover' | 'dragleave',
+  carrying: 'files' | 'text',
+): Promise<void> {
+  await page
+    .locator(selector)
+    .first()
+    .evaluate(
+      (target, input) => {
+        const data = new DataTransfer()
+        if (input.carrying === 'files') {
+          data.items.add(
+            new File(['x'], 'ticket.pdf', { type: 'application/pdf' }),
+          )
+        } else {
+          data.setData('text/plain', 'Gate 14')
+        }
+        target.dispatchEvent(
+          new DragEvent(input.type, {
+            dataTransfer: data,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+      },
+      { type, carrying },
+    )
+}
+
+type ShiftWindow = { __shifts?: Array<number> }
+
+async function readShifts(page: Page): Promise<Array<number>> {
+  return page.evaluate(() => (window as unknown as ShiftWindow).__shifts ?? [])
+}
+
+async function shiftsLogged(page: Page): Promise<number> {
+  return (await readShifts(page)).length
+}
+
+/** Records every layout shift no input caused, from before the document exists. */
+async function recordShiftsFromTheStart(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const log = window as unknown as ShiftWindow
+    log.__shifts = []
+    if (!PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
+      return
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as Array<
+        PerformanceEntry & { value: number; hadRecentInput: boolean }
+      >) {
+        if (!entry.hadRecentInput) {
+          log.__shifts?.push(entry.value)
+        }
+      }
+    }).observe({ type: 'layout-shift', buffered: true })
+  })
 }
 
 test.describe('06-S1 — Every way a file gets in', () => {
@@ -286,5 +375,410 @@ test.describe('06-S1 — Every way a file gets in', () => {
     }
 
     expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+  test('the drop zone turns active for a drag carrying files only, and holds over its own children', async ({
+    context,
+    page,
+  }) => {
+    const report = await openEmptyLibrary(context, page)
+    await expect(page.locator(DROP), 'the selector matches once').toHaveCount(1)
+    await expect(
+      page.locator(`${DROP} [data-part="file-drop-overlay"]`),
+      'and so does its overlay',
+    ).toHaveCount(1)
+    const zone = page.locator(DROP)
+    await expect(zone).toHaveAttribute('data-state', 'idle')
+
+    await drag(page, DROP, 'dragenter', 'text')
+    await drag(page, DROP, 'dragover', 'text')
+    await expect(zone, 'selected text leaves the zone idle').toHaveAttribute(
+      'data-state',
+      'idle',
+    )
+
+    await drag(page, DROP, 'dragenter', 'files')
+    await expect(zone).toHaveAttribute('data-state', 'active')
+    await expect(zone).toContainText('Drop to upload')
+
+    // The pointer moves onto the button: it is entered, then the zone is left.
+    await drag(page, `${DROP} button`, 'dragenter', 'files')
+    await drag(page, DROP, 'dragleave', 'files')
+    await expect(zone, 'a child crossing does not flicker').toHaveAttribute(
+      'data-state',
+      'active',
+    )
+
+    await drag(page, `${DROP} button`, 'dragleave', 'files')
+    await expect(zone).toHaveAttribute('data-state', 'idle')
+
+    await settleMutations(page)
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+
+  test('the drag-over fill moves opacity only and shifts nothing; a refusal adds one bounded row', async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name === 'mobile-safari',
+      'WebKit publishes no layout-shift entries to assert against',
+    )
+    await recordShiftsFromTheStart(page)
+    const report = await openEmptyLibrary(context, page)
+    const bodies = await interceptUploads(page)
+    const supported = await page.evaluate(() =>
+      PerformanceObserver.supportedEntryTypes.includes('layout-shift'),
+    )
+    test.skip(!supported, 'this browser reports no layout-shift entries')
+
+    const overlay = page.locator(`${DROP} [data-part="file-drop-overlay"]`)
+    await expect(overlay).toHaveCSS('transition-property', 'opacity')
+    await expect(overlay).toHaveCSS('pointer-events', 'none')
+    await expect(overlay).toHaveAttribute('aria-hidden', 'true')
+    await expect(page.locator(DROP)).toHaveCSS('transition-duration', '0s')
+
+    // Each mark is how many shifts the page has logged, not `performance.now()`: `visit()` pins the
+    // clock with `page.clock`, which fakes `performance.now()` while an entry's `startTime` stays on
+    // the real one, so a timestamp mark sits far from the entries and the check passes vacuously.
+    const filled = await shiftsLogged(page)
+    await drag(page, DROP, 'dragenter', 'files')
+    await expect(overlay).toHaveCSS('opacity', '1')
+    await settleMutations(page)
+    expect(
+      (await readShifts(page)).slice(filled),
+      'entering the active state shifts nothing',
+    ).toEqual([])
+
+    // A refusal inserts its row into the queue, below the zone, and pushes what follows down: that
+    // is the queue appearing, not the zone moving, so it is bounded rather than forbidden (the
+    // spec's Amendment). One entry, well under the 0.1 that reads as a good page.
+    const refused = await shiftsLogged(page)
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'notes.xml',
+      mimeType: 'application/xml',
+      buffer: Buffer.from('<notes/>'),
+    })
+    await expect(
+      page.getByRole('listitem').filter({ hasText: BLOCKED_XML }).first(),
+    ).toBeVisible()
+    await settleMutations(page)
+    const inserted = (await readShifts(page)).slice(refused)
+    expect(inserted.length, 'the row is one shift at most').toBeLessThanOrEqual(
+      1,
+    )
+    expect(
+      inserted.reduce((sum, value) => sum + value, 0),
+      'and a small one',
+    ).toBeLessThan(0.1)
+
+    expect(bodies, 'the refusal sent nothing to the workspace').toEqual([])
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+
+  test('the zone filling and a refusal are framed at three widths in both themes', async ({
+    context,
+    page,
+  }, testInfo) => {
+    const report = await openEmptyLibrary(context, page)
+    const bodies = await interceptUploads(page)
+    const zone = page.locator(DROP)
+    const overlay = zone.locator('[data-part="file-drop-overlay"]')
+    const widths = [
+      { width: 360, height: 800 },
+      { width: 1280, height: 900 },
+      { width: 2560, height: 1440 },
+    ]
+
+    // Frames for a person to read, not for a pixel comparison (ADR 0016): attached to the run, and
+    // also written to `E2E_FRAMES_DIR` when it is set - a directory outside the repository, which
+    // never receives an image.
+    const frame = async (name: string): Promise<void> => {
+      const body = await page.screenshot({ fullPage: false })
+      await testInfo.attach(`${name}.png`, { body, contentType: 'image/png' })
+      const outside = process.env.E2E_FRAMES_DIR
+      if (outside !== undefined) {
+        await mkdir(outside, { recursive: true })
+        await writeFile(join(outside, `${name}.png`), body)
+      }
+    }
+
+    for (const theme of THEMES satisfies ReadonlyArray<Theme>) {
+      await applyTheme(page, theme)
+      for (const { width, height } of widths) {
+        await page.setViewportSize({ width, height })
+        const label = `${testInfo.project.name}-${width}-${theme}`
+        await zone.scrollIntoViewIfNeeded()
+
+        await drag(page, DROP, 'dragenter', 'files')
+        await expect(zone).toHaveAttribute('data-state', 'active')
+        await expect(overlay).toHaveCSS('opacity', '1')
+        await expect(zone).toContainText('Drop to upload')
+        await frame(`drop-active-${label}`)
+        await drag(page, DROP, 'dragleave', 'files')
+        await expect(zone).toHaveAttribute('data-state', 'idle')
+
+        await page.locator('input[type="file"]').setInputFiles({
+          name: 'notes.xml',
+          mimeType: 'application/xml',
+          buffer: Buffer.from('<notes/>'),
+        })
+        const row = page.getByRole('listitem').filter({
+          has: page.getByRole('button', { name: 'Dismiss notes.xml' }),
+        })
+        await expect(row).toContainText(BLOCKED_XML)
+        await frame(`upload-refused-${label}`)
+        await page.getByRole('button', { name: 'Clear finished' }).click()
+        await expect(row).toHaveCount(0)
+      }
+    }
+
+    await settleMutations(page)
+    expect(bodies, 'the refusals sent nothing to the workspace').toEqual([])
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+})
+
+/**
+ * `06-S5` — a calendar that keeps up with the trip
+ * (`.ai/specs/2026-10-04-a-calendar-that-keeps-up-with-the-trip.md`).
+ *
+ * Phase 1 is the file: the Files screen offers the trip as an `.ics`, the server answers it as a
+ * calendar, and the action fits the smallest phone the design system claims.
+ */
+
+/**
+ * A seeded trip with no files: a library with rows hydrates a "just now" against the frozen clock's
+ * date (a mismatch the 06-S1 block already steps around), and these tests grade a silent console.
+ */
+const PORTO = SEEDED_TRIPS.single
+
+const DOWNLOAD_ACTION = 'Download calendar file (.ics)'
+
+/** The smallest phone the design system claims, and the 320px WCAG 1.4.10 measures reflow at. */
+const PHONE_WIDTHS = [320, 360] as const
+const PHONE_HEIGHT = 740
+
+function filesRoute(tripId: string): RouteCase {
+  return {
+    name: 'trip-files',
+    path: `/trips/${tripId}/files`,
+    ready: 'nav[aria-label="Trip sections"]',
+  }
+}
+
+/** Whether the page scrolls sideways: the signature of an action that does not fit its screen. */
+async function scrollsSideways(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
+  )
+}
+
+test.describe('06-S5 — a calendar that keeps up with the trip', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  test('the Files screen offers the trip as a calendar file, and the server answers it as one', async ({
+    context,
+  }) => {
+    const tripId = await tripIdByName(context, PORTO)
+
+    await onRoute(context, filesRoute(tripId), async (page) => {
+      const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
+      await expect(action).toBeVisible()
+
+      const answered = page.waitForResponse((response) =>
+        (response.headers()['content-type'] ?? '').startsWith('text/calendar'),
+      )
+      const saved = page.waitForEvent('download')
+      await action.click()
+
+      const response = await answered
+      expect(response.status()).toBe(200)
+      expect(response.headers()['cache-control']).toBe('private, no-store')
+      expect(response.headers()['content-disposition']).toMatch(
+        /^attachment; filename\*=UTF-8''.+\.ics$/,
+      )
+      expect((await saved).suggestedFilename()).toMatch(/\.ics$/)
+
+      // The button is usable again once the file has been handed over.
+      await expect(action).toBeEnabled()
+    })
+  })
+
+  for (const theme of THEMES)
+    for (const width of PHONE_WIDTHS) {
+      test(`the action is reachable and fits at ${width}px, ${theme}`, async ({
+        context,
+      }) => {
+        const tripId = await tripIdByName(context, PORTO)
+        const route = filesRoute(tripId)
+        const page = await context.newPage()
+        try {
+          await page.setViewportSize({ width, height: PHONE_HEIGHT })
+          const report = watchConsole(page, route)
+          await visit(page, route, theme)
+
+          const action = page.getByRole('button', { name: DOWNLOAD_ACTION })
+          await action.scrollIntoViewIfNeeded()
+          await expect(action).toBeVisible()
+
+          const box = await action.boundingBox()
+          expect(box, 'the action is on screen').not.toBeNull()
+          expect((box?.x ?? -1) >= 0).toBe(true)
+          expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width)
+          expect(await scrollsSideways(page), 'the page scrolls sideways').toBe(
+            false,
+          )
+          expect(report().fatal, 'the console stays clean').toEqual([])
+        } finally {
+          await page.close()
+        }
+      })
+    }
+})
+
+test.describe('06-S3b — Everyone on a trip sees its exports', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** A seeded trip with no files and no exports: the panel's real answer is the empty list. */
+  async function exportsRoute(context: BrowserContext): Promise<RouteCase> {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+    return {
+      name: 'trip-files',
+      path: `/trips/${tripId}/files`,
+      ready: 'nav[aria-label="Trip sections"]',
+    }
+  }
+
+  const isList = (url: URL) => callsServerFn(url, 'listTripExportsFn')
+
+  test('a trip with no exports reads its list once, as a plain GET, and says so with nothing to click', async ({
+    context,
+    page,
+  }) => {
+    const route = await exportsRoute(context)
+    const report = watchConsole(page, route)
+    const listed: Array<{ method: string; body: string | null }> = []
+    page.on('request', (request) => {
+      if (isList(new URL(request.url()))) {
+        listed.push({ method: request.method(), body: request.postData() })
+      }
+    })
+    const forged: Array<string> = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (callsServerFn(url, 'downloadTripExportFn')) forged.push(url.pathname)
+    })
+    await visit(page, route, 'light')
+
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(
+      panel.getByRole('heading', { name: 'Export the trip' }),
+    ).toBeVisible()
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    await expect(panel.getByRole('button')).toHaveCount(0)
+    await expect(panel.getByRole('checkbox')).toHaveCount(0)
+    await expect(panel.locator('[role="status"]')).toHaveText('')
+
+    expect(listed).toHaveLength(1)
+    expect(listed[0]?.method).toBe('GET')
+    expect(listed[0]?.body).toBeNull()
+    expect(forged, 'nothing asks for a download without a click').toEqual([])
+
+    await settleMutations(page)
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+
+  test('a skeleton holds the place while the list is in flight, and the list replaces it', async ({
+    context,
+    page,
+  }) => {
+    const route = await exportsRoute(context)
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await page.route(isList, async (handled) => {
+      await held
+      await handled.continue()
+    })
+    await visit(page, route, 'light')
+
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByTestId('export-skeleton')).toBeVisible()
+    await expect(panel.getByTestId('export-skeleton')).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+
+    release()
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    await expect(panel.getByTestId('export-skeleton')).toHaveCount(0)
+  })
+
+  test('a failed list says so with a retry, and the retry puts focus on the heading and reads again', async ({
+    context,
+    page,
+  }) => {
+    const route = await exportsRoute(context)
+    await page.route(isList, (handled) => handled.abort('failed'))
+    await visit(page, route, 'light')
+
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByRole('alert')).toContainText(
+      'The list of exports did not load.',
+    )
+
+    await page.unroute(isList)
+    await panel.getByRole('button', { name: 'Try again' }).click()
+
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await expect(
+      panel.getByRole('heading', { name: 'Export the trip' }),
+    ).toBeFocused()
+  })
+
+  test('the panel fits a 320 px screen, left to right and right to left', async ({
+    context,
+    page,
+  }) => {
+    const route = await exportsRoute(context)
+    await page.setViewportSize({ width: 320, height: 800 })
+    await visit(page, route, 'light')
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+
+    const overflow = () =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      )
+    expect(await overflow(), 'no horizontal scroll').toBeLessThanOrEqual(0)
+
+    // The reader's direction is a D1 column the shared demo user must not have changed, so the
+    // mirror is applied to the document: logical properties are what is under test, not the words.
+    await page.evaluate(() => {
+      document.documentElement.dir = 'rtl'
+    })
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    expect(
+      await overflow(),
+      'no horizontal scroll when mirrored',
+    ).toBeLessThanOrEqual(0)
   })
 })

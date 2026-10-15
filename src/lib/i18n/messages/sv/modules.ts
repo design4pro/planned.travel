@@ -883,6 +883,18 @@ const messages = {
   'files.action.add': 'Lägg till filer',
   'files.action.choose': 'Välj filer',
   'files.action.upload': 'Ladda upp filer',
+  'files.calendar.title': 'Kalender',
+  'files.calendar.description':
+    'Ta med den här resan till kalenderappen du redan använder.',
+  'files.calendar.download.action': 'Ladda ner kalenderfil (.ics)',
+  'files.calendar.download.hint':
+    'En ögonblicksbild av resan som den ser ut nu. Den uppdateras inte.',
+  'files.calendar.undated':
+    'Den här resan har inga datum än, så bara bokningar och resor med datum visas.',
+  'files.calendar.download.error':
+    'Vi kunde inte förbereda filen. Försök igen.',
+  'files.calendar.timesNote':
+    'Resor med tidszon visas vid samma tidpunkt överallt. Allt annat visas på sin planerade klocktid, var din kalender än finns.',
   'files.drop.active': 'Släpp för att ladda upp',
   'files.drop.pasteHint': 'klistrar in en kopierad bild eller skärmdump',
   'files.reject.blockedType':
@@ -945,6 +957,31 @@ const messages = {
   },
   'files.export.email.action': 'Öppna {title}',
   'files.export.email.text': 'Reseexporten är klar: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Exportera resan',
+  'files.export.description':
+    'En utskrivbar kopia av resan: dagar, stopp, bokningar, transporter och boenden. Ge den till någon som inte har något konto.',
+  'files.export.kept': {
+    one: 'Varje export sparas i {count} dag.',
+    other: 'Varje export sparas i {count} dagar.',
+  },
+  'files.export.empty.title': 'Inga exporter ännu',
+  'files.export.empty.body':
+    'Gör en utskrivbar kopia av resan att skicka till någon som inte har något konto.',
+  'files.export.empty.bodyViewer': 'Resans ägare eller redigerare kan göra en.',
+  'files.export.format.pdf': 'PDF-fil',
+  'files.export.format.html': 'Utskrivbar sida',
+  'files.export.artifact': 'Reseexport, {date}',
+  'files.export.download': 'Ladda ner',
+  'files.export.downloadLabelPdf': 'Ladda ner PDF-filen som skapades {date}',
+  'files.export.downloadLabelHtml':
+    'Ladda ner den utskrivbara sidan som skapades {date}',
+  'files.export.error.list': 'Listan med exporter laddades inte.',
+  'files.export.retry': 'Försök igen',
+  'files.export.error.missing':
+    'Den exporten sparas inte längre. Exportera resan igen.',
+  'files.export.error.missingViewer': 'Den exporten sparas inte längre.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uppladdningen avbruten.',

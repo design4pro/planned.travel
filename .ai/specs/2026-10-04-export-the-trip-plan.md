@@ -5,7 +5,7 @@
 | **Status**         | in-progress                                  |
 | **Issue**          | none                                         |
 | **Spec PR**        | #875                                         |
-| **Implementation** | #1260                                        |
+| **Implementation** | #1260, #1286                                 |
 | **Plan**           | 06-S3 (docs/plans/06-documents-and-media.md) |
 
 ## 📝 TLDR
@@ -796,7 +796,7 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
 - **The `BROWSER_RENDERING` binding** (`11-S3`): a cost-model change and the owner's decision; this stage ships against both
   paths.
 - **Hardcoded English elsewhere on the Files screen** (`files.tsx`'s own headings and stat cards): the one issue `06-S1`'s
-  Phase 4 run files names them (`.ai/specs/2026-10-04-every-way-a-file-gets-in.md`, "Hardcoded English, one follow-up issue");
+  Phase 4 run files names them (`.ai/specs/implemented/2026-10-04-every-way-a-file-gets-in.md`, "Hardcoded English, one follow-up issue");
   this stage touches only the lines it adds and does not file a second.
 
 ## 📋 Phasing

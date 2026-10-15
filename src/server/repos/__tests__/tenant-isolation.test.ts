@@ -49,6 +49,7 @@ import {
   upsertSubscriptionUnscoped,
   usageRecordsRepository,
 } from '../billing'
+import { readFeedSource } from '../calendar-feeds'
 import { categoriesRepository, createCategory } from '../categories'
 import {
   castVote,
@@ -123,6 +124,7 @@ import {
 import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
 import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
+import { exportObjectKey } from '#/server/storage/export-artifacts'
 import {
   countAccommodationNights,
   createAccommodation,
@@ -385,6 +387,8 @@ const { confirmBookingImport, startBookingImport } =
   await import('#/server/fns/booking-import')
 const { stagedImportKey } =
   await import('#/server/queue/handlers/booking-import')
+const { downloadTripExport, listTripExports } =
+  await import('#/server/fns/exports')
 
 /** The confirm's ports, stubbed to throw for the same reason: a refused confirm reaches neither. */
 const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
@@ -6759,6 +6763,248 @@ describe('tenant isolation', () => {
           beta.templateId,
         ),
       ).toEqual(untouched)
+    })
+  })
+
+  /**
+   * The read side of a trip export, driven through `listTripExports` and `downloadTripExport`.
+   *
+   * The pure storage functions take the organization id as a parameter, so testing them alone proves
+   * nothing about tenancy. These are the functions a server function calls once it has the scope, and
+   * the bucket is one fake that holds a real object of each workspace.
+   */
+  describe('trip exports: the list and the download', () => {
+    const NOW = Date.parse('2026-10-15T12:00:00.000Z')
+    const taskA = 'task-of-alpha'
+    const taskB = 'task-of-beta'
+
+    function exportKey(world: World, taskId: string, tripId = world.tripId) {
+      return exportObjectKey(
+        world.tenant.organizationId,
+        tripId,
+        taskId,
+        'html',
+      )
+    }
+
+    function seededBucket() {
+      return fakeBucket({
+        [exportKey(alpha, taskA)]: {
+          body: '<p>alpha</p>',
+          uploaded: new Date(NOW - 60_000),
+        },
+        [exportKey(beta, taskB)]: {
+          body: '<p>beta</p>',
+          uploaded: new Date(NOW - 60_000),
+        },
+      })
+    }
+
+    /** Every byte under a workspace's export prefix, so "untouched" means identical. */
+    function prefixOf(bucket: FakeBucket, world: World) {
+      const prefix = `exports/${world.tenant.organizationId}/`
+      return [...bucket.objects.entries()].filter(([key]) =>
+        key.startsWith(prefix),
+      )
+    }
+
+    it('does not find another workspace’s trip, for the list or the download', async () => {
+      const bucket = seededBucket()
+
+      for (const attempt of [
+        () =>
+          listTripExports(
+            alpha.tenant.scope,
+            bucket,
+            { tripId: beta.tripId },
+            NOW,
+          ),
+        () =>
+          downloadTripExport(
+            alpha.tenant.scope,
+            bucket,
+            { tripId: beta.tripId, taskId: taskB },
+            NOW,
+          ),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+      expect(bucket.listCalls).toEqual([])
+    })
+
+    it('answers a real object of workspace B, asked for through A’s own trip, as the one 404', async () => {
+      const bucket = seededBucket()
+      const before = prefixOf(bucket, beta)
+
+      const response = await downloadTripExport(
+        alpha.tenant.scope,
+        bucket,
+        { tripId: alpha.tripId, taskId: taskB },
+        NOW,
+      )
+
+      expect(response.status).toBe(404)
+      expect(await response.json()).toEqual({ error: 'missing' })
+      expect(prefixOf(bucket, beta)).toEqual(before)
+      expect(bucket.calls).toEqual([])
+    })
+
+    it('lists only A’s own exports and leaves B’s prefix byte-identical', async () => {
+      const bucket = seededBucket()
+      const before = prefixOf(bucket, beta)
+
+      const listed = await listTripExports(
+        alpha.tenant.scope,
+        bucket,
+        { tripId: alpha.tripId },
+        NOW,
+      )
+
+      expect(listed.artifacts.map((artifact) => artifact.taskId)).toEqual([
+        taskA,
+      ])
+      expect(prefixOf(bucket, beta)).toEqual(before)
+      expect(bucket.calls).toEqual([])
+    })
+
+    it('leaves out a trip whose id begins with the same characters', async () => {
+      const bucket = seededBucket()
+      bucket.objects.set(
+        exportKey(alpha, 'task-lookalike', `${alpha.tripId}2`),
+        {
+          body: '<p>another trip</p>',
+          uploaded: new Date(NOW - 60_000),
+        },
+      )
+
+      const listed = await listTripExports(
+        alpha.tenant.scope,
+        bucket,
+        { tripId: alpha.tripId },
+        NOW,
+      )
+
+      expect(listed.artifacts.map((artifact) => artifact.taskId)).toEqual([
+        taskA,
+      ])
+      const response = await downloadTripExport(
+        alpha.tenant.scope,
+        bucket,
+        { tripId: alpha.tripId, taskId: 'task-lookalike' },
+        NOW,
+      )
+      expect(response.status).toBe(404)
+    })
+
+    it('does not find a private trip for a workspace member who is not on it', async () => {
+      await updateTrip(alpha.tenant.scope, alpha.tripId, {
+        visibility: 'private',
+      })
+      const stranger = alpha.tenant.scopeFor(
+        await alpha.tenant.addUser('Export stranger'),
+      )
+      const bucket = seededBucket()
+
+      for (const attempt of [
+        () => listTripExports(stranger, bucket, { tripId: alpha.tripId }, NOW),
+        () =>
+          downloadTripExport(
+            stranger,
+            bucket,
+            { tripId: alpha.tripId, taskId: taskA },
+            NOW,
+          ),
+      ]) {
+        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      }
+      expect(bucket.listCalls).toEqual([])
+    })
+
+    it('lets a viewer list and download, and says they cannot request', async () => {
+      const viewerId = await alpha.tenant.addUser('Export viewer')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const viewer = alpha.tenant.scopeFor(viewerId)
+      const bucket = seededBucket()
+
+      const listed = await listTripExports(
+        viewer,
+        bucket,
+        { tripId: alpha.tripId },
+        NOW,
+      )
+      const response = await downloadTripExport(
+        viewer,
+        bucket,
+        { tripId: alpha.tripId, taskId: taskA },
+        NOW,
+      )
+
+      expect(listed.canRequest).toBe(false)
+      expect(listed.artifacts).toHaveLength(1)
+      expect(response.status).toBe(200)
+      expect(await response.text()).toBe('<p>alpha</p>')
+    })
+  })
+
+  describe('the calendar read model', () => {
+    const rowsOf = (source: Awaited<ReturnType<typeof readFeedSource>>) => [
+      source.trips,
+      source.days,
+      source.places,
+      source.stops,
+      source.dayNotes,
+      source.stays,
+      source.transports,
+      source.legs,
+      source.reservations,
+    ]
+
+    it('returns nothing of another workspace’s trip, asked for by its id', async () => {
+      const source = await readFeedSource(alpha.tenant.scope, {
+        kind: 'trips',
+        tripIds: [beta.tripId],
+      })
+
+      for (const rows of rowsOf(source)) {
+        expect(rows).toEqual([])
+      }
+    })
+
+    it('returns only the caller’s rows when both workspaces’ trips are asked for', async () => {
+      const source = await readFeedSource(alpha.tenant.scope, {
+        kind: 'trips',
+        tripIds: [alpha.tripId, beta.tripId],
+      })
+
+      expect(source.trips.map((row) => row.id)).toEqual([alpha.tripId])
+      expect(source.days.length).toBeGreaterThan(0)
+      expect(source.places.map((row) => row.id)).toEqual([alpha.placeId])
+      expect(source.stops.map((row) => row.id)).toEqual([alpha.assignmentId])
+      expect(source.dayNotes.map((row) => row.id)).toEqual([alpha.dayNoteId])
+      expect(source.stays.map((row) => row.id)).toEqual([alpha.accommodationId])
+      expect(source.transports.map((row) => row.id)).toEqual([
+        alpha.transportId,
+      ])
+      expect(source.reservations.map((row) => row.id)).toEqual([
+        alpha.reservationId,
+      ])
+      const contentRows = [
+        ...source.days,
+        ...source.places,
+        ...source.stops,
+        ...source.dayNotes,
+        ...source.stays,
+        ...source.transports,
+        ...source.legs,
+        ...source.reservations,
+      ]
+      for (const row of contentRows) {
+        expect(row.tripId).toBe(alpha.tripId)
+      }
     })
   })
 })

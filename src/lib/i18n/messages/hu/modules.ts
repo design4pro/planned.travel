@@ -892,6 +892,18 @@ const messages = {
   'files.action.add': 'Fájlok hozzáadása',
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
+  'files.calendar.title': 'Naptár',
+  'files.calendar.description':
+    'Vidd át ezt az utazást a már használt naptáralkalmazásodba.',
+  'files.calendar.download.action': 'Naptárfájl letöltése (.ics)',
+  'files.calendar.download.hint':
+    'Az utazás pillanatképe a jelenlegi állapotában. Nem frissül.',
+  'files.calendar.undated':
+    'Ennek az utazásnak még nincsenek dátumai, ezért csak a dátummal rendelkező foglalások és utak jelennek meg.',
+  'files.calendar.download.error':
+    'Nem sikerült előkészíteni a fájlt. Próbáld újra.',
+  'files.calendar.timesNote':
+    'Az időzónával rendelkező utak mindenhol ugyanabban a pillanatban jelennek meg. Minden más a tervezett óraidőben látszik, bárhol is van a naptárad.',
   'files.drop.active': 'Engedd el a feltöltéshez',
   'files.drop.pasteHint': 'beilleszt egy másolt képet vagy képernyőképet',
   'files.reject.blockedType':
@@ -954,6 +966,32 @@ const messages = {
   },
   'files.export.email.action': '{title} megnyitása',
   'files.export.email.text': 'Az utazás exportja elkészült: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Az utazás exportálása',
+  'files.export.description':
+    'Az utazás nyomtatható másolata: napok, megállók, foglalások, közlekedés és szállások. Add át annak, akinek nincs fiókja.',
+  'files.export.kept': {
+    one: 'Minden exportot {count} napig őrzünk meg.',
+    other: 'Minden exportot {count} napig őrzünk meg.',
+  },
+  'files.export.empty.title': 'Még nincs export',
+  'files.export.empty.body':
+    'Készíts nyomtatható másolatot az utazásról, hogy elküldhesd annak, akinek nincs fiókja.',
+  'files.export.empty.bodyViewer':
+    'Az utazás tulajdonosa vagy szerkesztője készíthet egyet.',
+  'files.export.format.pdf': 'PDF-fájl',
+  'files.export.format.html': 'Nyomtatható oldal',
+  'files.export.artifact': 'Utazás exportja, {date}',
+  'files.export.download': 'Letöltés',
+  'files.export.downloadLabelPdf': '{date} időpontban készült PDF letöltése',
+  'files.export.downloadLabelHtml':
+    '{date} időpontban készült nyomtatható oldal letöltése',
+  'files.export.error.list': 'Az exportok listája nem töltődött be.',
+  'files.export.retry': 'Próbáld újra',
+  'files.export.error.missing':
+    'Ezt az exportot már nem őrizzük. Exportáld újra az utazást.',
+  'files.export.error.missingViewer': 'Ezt az exportot már nem őrizzük.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'A feltöltés megszakítva.',

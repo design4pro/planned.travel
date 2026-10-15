@@ -913,6 +913,18 @@ const messages = {
   'files.action.add': 'Додати файли',
   'files.action.choose': 'Вибрати файли',
   'files.action.upload': 'Надіслати файли',
+  'files.calendar.title': 'Календар',
+  'files.calendar.description':
+    'Додайте цю подорож до застосунку календаря, яким ви вже користуєтеся.',
+  'files.calendar.download.action': 'Завантажити файл календаря (.ics)',
+  'files.calendar.download.hint':
+    'Знімок подорожі в її поточному вигляді. Він не оновлюється.',
+  'files.calendar.undated':
+    'У цієї подорожі ще немає дат, тому з’являться лише бронювання й переїзди з датою.',
+  'files.calendar.download.error':
+    'Не вдалося підготувати файл. Спробуйте ще раз.',
+  'files.calendar.timesNote':
+    'Переїзди з часовим поясом показуються в той самий момент усюди. Усе інше показується в запланований час за годинником, де б не був ваш календар.',
   'files.drop.active': 'Відпустіть, щоб надіслати',
   'files.drop.pasteHint': 'вставляє скопійоване зображення або знімок екрана',
   'files.reject.blockedType':
@@ -981,6 +993,34 @@ const messages = {
   },
   'files.export.email.action': 'Відкрити: {title}',
   'files.export.email.text': 'Експорт подорожі готовий: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Експорт подорожі',
+  'files.export.description':
+    'Друкована копія подорожі: дні, зупинки, бронювання, транспорт і проживання. Передайте її тому, хто не має облікового запису.',
+  'files.export.kept': {
+    one: 'Кожен експорт зберігається {count} день.',
+    few: 'Кожен експорт зберігається {count} дні.',
+    many: 'Кожен експорт зберігається {count} днів.',
+    other: 'Кожен експорт зберігається {count} дня.',
+  },
+  'files.export.empty.title': 'Експортів ще немає',
+  'files.export.empty.body':
+    'Зробіть друковану копію подорожі, щоб надіслати тому, хто не має облікового запису.',
+  'files.export.empty.bodyViewer':
+    'Створити експорт може власник або редактор подорожі.',
+  'files.export.format.pdf': 'Файл PDF',
+  'files.export.format.html': 'Сторінка для друку',
+  'files.export.artifact': 'Експорт подорожі, {date}',
+  'files.export.download': 'Завантажити',
+  'files.export.downloadLabelPdf': 'Завантажити PDF, створений {date}',
+  'files.export.downloadLabelHtml':
+    'Завантажити сторінку для друку, створену {date}',
+  'files.export.error.list': 'Список експортів не завантажився.',
+  'files.export.retry': 'Спробувати знову',
+  'files.export.error.missing':
+    'Цей експорт більше не зберігається. Експортуйте подорож ще раз.',
+  'files.export.error.missingViewer': 'Цей експорт більше не зберігається.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Надсилання скасовано.',

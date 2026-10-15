@@ -851,6 +851,18 @@ const messages = {
   'files.action.add': 'ファイルを追加',
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
+  'files.calendar.title': 'カレンダー',
+  'files.calendar.description':
+    'この旅行を、いつも使っているカレンダーアプリに取り込めます。',
+  'files.calendar.download.action': 'カレンダーファイルをダウンロード (.ics)',
+  'files.calendar.download.hint':
+    '現時点の旅行のスナップショットです。自動では更新されません。',
+  'files.calendar.undated':
+    'この旅行にはまだ日付がないため、日付のある予約と移動だけが表示されます。',
+  'files.calendar.download.error':
+    'ファイルを準備できませんでした。もう一度お試しください。',
+  'files.calendar.timesNote':
+    'タイムゾーンのある移動は、世界中どこでも同じ瞬間に表示されます。それ以外は、カレンダーがどこにあっても予定した時刻のまま表示されます。',
   'files.drop.active': 'ドロップしてアップロード',
   'files.drop.pasteHint': 'コピーした画像やスクリーンショットを貼り付けます',
   'files.reject.blockedType':
@@ -909,6 +921,31 @@ const messages = {
   },
   'files.export.email.action': '{title} を開く',
   'files.export.email.text': '旅行のエクスポートの準備ができました: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '旅行をエクスポート',
+  'files.export.description':
+    '旅行の印刷用コピーです。日程、立ち寄り先、予約、移動、宿泊が含まれます。アカウントを持っていない人に渡せます。',
+  'files.export.kept': {
+    other: '各エクスポートは{count}日間保存されます。',
+  },
+  'files.export.empty.title': 'エクスポートはまだありません',
+  'files.export.empty.body':
+    '旅行の印刷用コピーを作って、アカウントのない人に送りましょう。',
+  'files.export.empty.bodyViewer': '旅行のオーナーまたは編集者が作成できます。',
+  'files.export.format.pdf': 'PDFファイル',
+  'files.export.format.html': '印刷用ページ',
+  'files.export.artifact': '旅行のエクスポート、{date}',
+  'files.export.download': 'ダウンロード',
+  'files.export.downloadLabelPdf': '{date} に作成された PDF をダウンロード',
+  'files.export.downloadLabelHtml':
+    '{date} に作成された印刷用ページをダウンロード',
+  'files.export.error.list': 'エクスポートの一覧を読み込めませんでした。',
+  'files.export.retry': 'もう一度試す',
+  'files.export.error.missing':
+    'このエクスポートはすでに保存されていません。もう一度旅行をエクスポートしてください。',
+  'files.export.error.missingViewer':
+    'このエクスポートはすでに保存されていません。',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'アップロードを中止しました。',

@@ -16,6 +16,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { postMessage } from '../collab'
 import { NotFoundError, RepositoryError } from '../context'
+import { readFeedSource } from '../calendar-feeds'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
 import {
   createAccommodation,
@@ -2094,6 +2095,41 @@ describe('member isolation', () => {
           requireTransportOfTrip(alpha.scope, other.id, transportId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  describe('the calendar read model', () => {
+    it('gives a non-member of a private trip no row of it, and the owner all of them', async () => {
+      const asStranger = await readFeedSource(stranger, {
+        kind: 'trips',
+        tripIds: [fixture.tripId],
+      })
+      expect(asStranger.trips).toEqual([])
+      expect(asStranger.days).toEqual([])
+      expect(asStranger.places).toEqual([])
+      expect(asStranger.stops).toEqual([])
+      expect(asStranger.dayNotes).toEqual([])
+
+      const asOwner = await readFeedSource(alpha.scope, {
+        kind: 'trips',
+        tripIds: [fixture.tripId],
+      })
+      expect(asOwner.trips.map((row) => row.id)).toEqual([fixture.tripId])
+      expect(asOwner.stops.map((row) => row.id)).toEqual([fixture.assignmentId])
+    })
+
+    it('opens an organization-visible trip to a workspace member who is not on it', async () => {
+      await updateTrip(alpha.scope, fixture.tripId, {
+        visibility: 'organization',
+      })
+
+      const asStranger = await readFeedSource(stranger, {
+        kind: 'trips',
+        tripIds: [fixture.tripId],
+      })
+
+      expect(asStranger.trips.map((row) => row.id)).toEqual([fixture.tripId])
+      expect(asStranger.dayNotes.map((row) => row.id)).toEqual([fixture.noteId])
     })
   })
 

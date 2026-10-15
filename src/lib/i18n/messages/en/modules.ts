@@ -1067,6 +1067,17 @@ const messages = {
   'files.action.add': 'Add files',
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
+  'files.calendar.title': 'Calendar',
+  'files.calendar.description':
+    'Take this trip into the calendar app you already use.',
+  'files.calendar.download.action': 'Download calendar file (.ics)',
+  'files.calendar.download.hint':
+    'A snapshot of the trip as it is now. It does not update.',
+  'files.calendar.undated':
+    'This trip has no dates yet, so only dated reservations and journeys will appear.',
+  'files.calendar.download.error': 'We couldn’t prepare the file. Try again.',
+  'files.calendar.timesNote':
+    'Journeys with a time zone show at the same moment everywhere. Everything else shows at its planned clock time, wherever your calendar is.',
   'files.drop.active': 'Drop to upload',
   /**
    * Rendered after the `Ctrl`/`⌘` + `V` key caps (`KbdSequence`), so the line reads "[Ctrl][V] pastes
@@ -1135,6 +1146,31 @@ const messages = {
   },
   'files.export.email.action': 'Open {title}',
   'files.export.email.text': 'Your trip export is ready: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Export the trip',
+  'files.export.description':
+    'A printable copy of the trip: days, stops, reservations, transport and stays. Hand it to someone who has no account.',
+  'files.export.kept': {
+    one: 'Each export is kept for {count} day.',
+    other: 'Each export is kept for {count} days.',
+  },
+  'files.export.empty.title': 'No exports yet',
+  'files.export.empty.body':
+    'Make a printable copy of the trip to send to someone who has no account.',
+  'files.export.empty.bodyViewer':
+    'An owner or editor of this trip can make one.',
+  'files.export.format.pdf': 'PDF file',
+  'files.export.format.html': 'Printable page',
+  'files.export.artifact': 'Trip export, {date}',
+  'files.export.download': 'Download',
+  'files.export.downloadLabelPdf': 'Download the PDF made {date}',
+  'files.export.downloadLabelHtml': 'Download the printable page made {date}',
+  'files.export.error.list': 'The list of exports did not load.',
+  'files.export.retry': 'Try again',
+  'files.export.error.missing':
+    'That export is no longer kept. Export the trip again.',
+  'files.export.error.missingViewer': 'That export is no longer kept.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Upload cancelled.',

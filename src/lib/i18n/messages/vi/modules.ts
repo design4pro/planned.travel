@@ -863,6 +863,18 @@ const messages = {
   'files.action.add': 'Thêm tệp',
   'files.action.choose': 'Chọn tệp',
   'files.action.upload': 'Tải tệp lên',
+  'files.calendar.title': 'Lịch',
+  'files.calendar.description':
+    'Đưa chuyến đi này vào ứng dụng lịch bạn đang dùng.',
+  'files.calendar.download.action': 'Tải tệp lịch (.ics)',
+  'files.calendar.download.hint':
+    'Ảnh chụp nhanh chuyến đi ở thời điểm hiện tại. Tệp không tự cập nhật.',
+  'files.calendar.undated':
+    'Chuyến đi này chưa có ngày, nên chỉ các đặt chỗ và hành trình có ngày mới xuất hiện.',
+  'files.calendar.download.error':
+    'Chúng tôi không thể chuẩn bị tệp. Hãy thử lại.',
+  'files.calendar.timesNote':
+    'Các hành trình có múi giờ hiển thị cùng một thời điểm ở mọi nơi. Mọi thứ khác hiển thị đúng giờ đã lên kế hoạch, dù lịch của bạn ở đâu.',
   'files.drop.active': 'Thả ra để tải lên',
   'files.drop.pasteHint': 'dán hình ảnh đã sao chép hoặc ảnh chụp màn hình',
   'files.reject.blockedType':
@@ -923,6 +935,30 @@ const messages = {
   },
   'files.export.email.action': 'Mở {title}',
   'files.export.email.text': 'Bản xuất chuyến đi đã sẵn sàng: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Xuất chuyến đi',
+  'files.export.description':
+    'Bản sao có thể in của chuyến đi: các ngày, điểm dừng, đặt chỗ, di chuyển và nơi ở. Đưa cho người không có tài khoản.',
+  'files.export.kept': {
+    other: 'Mỗi bản xuất được lưu trong {count} ngày.',
+  },
+  'files.export.empty.title': 'Chưa có bản xuất nào',
+  'files.export.empty.body':
+    'Tạo bản sao có thể in của chuyến đi để gửi cho người không có tài khoản.',
+  'files.export.empty.bodyViewer':
+    'Chủ sở hữu hoặc người chỉnh sửa chuyến đi có thể tạo.',
+  'files.export.format.pdf': 'Tệp PDF',
+  'files.export.format.html': 'Trang để in',
+  'files.export.artifact': 'Bản xuất chuyến đi, {date}',
+  'files.export.download': 'Tải xuống',
+  'files.export.downloadLabelPdf': 'Tải xuống tệp PDF tạo lúc {date}',
+  'files.export.downloadLabelHtml': 'Tải xuống trang để in tạo lúc {date}',
+  'files.export.error.list': 'Danh sách bản xuất chưa tải được.',
+  'files.export.retry': 'Thử lại',
+  'files.export.error.missing':
+    'Bản xuất đó không còn được lưu. Hãy xuất lại chuyến đi.',
+  'files.export.error.missingViewer': 'Bản xuất đó không còn được lưu.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Đã hủy tải lên.',

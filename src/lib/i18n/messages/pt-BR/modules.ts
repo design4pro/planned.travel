@@ -908,6 +908,18 @@ const messages = {
   'files.action.add': 'Adicionar arquivos',
   'files.action.choose': 'Escolher arquivos',
   'files.action.upload': 'Enviar arquivos',
+  'files.calendar.title': 'Calendário',
+  'files.calendar.description':
+    'Leve esta viagem para o aplicativo de calendário que você já usa.',
+  'files.calendar.download.action': 'Baixar arquivo de calendário (.ics)',
+  'files.calendar.download.hint':
+    'Um retrato da viagem como ela está agora. Ele não é atualizado.',
+  'files.calendar.undated':
+    'Esta viagem ainda não tem datas, então só aparecerão reservas e trajetos com data.',
+  'files.calendar.download.error':
+    'Não foi possível preparar o arquivo. Tente novamente.',
+  'files.calendar.timesNote':
+    'Trajetos com fuso horário aparecem no mesmo momento em qualquer lugar. Todo o resto aparece no horário planejado do relógio, onde quer que esteja o seu calendário.',
   'files.drop.active': 'Solte para enviar',
   'files.drop.pasteHint': 'cola uma imagem copiada ou uma captura de tela',
   'files.reject.blockedType':
@@ -975,6 +987,33 @@ const messages = {
   },
   'files.export.email.action': 'Abrir {title}',
   'files.export.email.text': 'A exportação da viagem está pronta: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Exportar a viagem',
+  'files.export.description':
+    'Uma cópia imprimível da viagem: dias, paradas, reservas, transporte e hospedagens. Entregue a quem não tem conta.',
+  'files.export.kept': {
+    one: 'Cada exportação fica guardada por {count} dia.',
+    many: 'Cada exportação fica guardada por {count} dias.',
+    other: 'Cada exportação fica guardada por {count} dias.',
+  },
+  'files.export.empty.title': 'Ainda não há exportações',
+  'files.export.empty.body':
+    'Faça uma cópia imprimível da viagem para enviar a quem não tem conta.',
+  'files.export.empty.bodyViewer':
+    'O proprietário ou um editor da viagem pode fazer uma.',
+  'files.export.format.pdf': 'Arquivo PDF',
+  'files.export.format.html': 'Página imprimível',
+  'files.export.artifact': 'Exportação da viagem, {date}',
+  'files.export.download': 'Baixar',
+  'files.export.downloadLabelPdf': 'Baixar o PDF criado em {date}',
+  'files.export.downloadLabelHtml':
+    'Baixar a página imprimível criada em {date}',
+  'files.export.error.list': 'A lista de exportações não carregou.',
+  'files.export.retry': 'Tentar de novo',
+  'files.export.error.missing':
+    'Essa exportação não está mais guardada. Exporte a viagem de novo.',
+  'files.export.error.missingViewer': 'Essa exportação não está mais guardada.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Envio cancelado.',

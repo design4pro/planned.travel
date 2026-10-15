@@ -813,6 +813,15 @@ const messages = {
   'files.action.add': '新增檔案',
   'files.action.choose': '選擇檔案',
   'files.action.upload': '上傳檔案',
+  'files.calendar.title': '行事曆',
+  'files.calendar.description': '把這趟旅程帶到你已在使用的行事曆應用程式中。',
+  'files.calendar.download.action': '下載行事曆檔案 (.ics)',
+  'files.calendar.download.hint': '這是旅程目前狀態的快照，不會自動更新。',
+  'files.calendar.undated':
+    '這趟旅程尚未設定日期，因此只會顯示有日期的預訂與行程段。',
+  'files.calendar.download.error': '我們無法準備檔案，請再試一次。',
+  'files.calendar.timesNote':
+    '帶時區的行程段在任何地方都顯示為同一時刻。其他內容依計畫的時鐘時間顯示，無論你的行事曆在哪裡。',
   'files.drop.active': '放開即可上傳',
   'files.drop.pasteHint': '貼上已複製的圖片或螢幕截圖',
   'files.reject.blockedType':
@@ -871,6 +880,27 @@ const messages = {
   },
   'files.export.email.action': '開啟 {title}',
   'files.export.email.text': '行程匯出已準備好：{url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '匯出行程',
+  'files.export.description':
+    '行程的可列印副本：日程、站點、預訂、交通與住宿。可交給沒有帳號的人。',
+  'files.export.kept': {
+    other: '每份匯出保留 {count} 天。',
+  },
+  'files.export.empty.title': '還沒有匯出',
+  'files.export.empty.body': '製作行程的可列印副本，傳給沒有帳號的人。',
+  'files.export.empty.bodyViewer': '行程的擁有者或編輯者可以製作。',
+  'files.export.format.pdf': 'PDF 檔案',
+  'files.export.format.html': '可列印頁面',
+  'files.export.artifact': '行程匯出，{date}',
+  'files.export.download': '下載',
+  'files.export.downloadLabelPdf': '下載 {date} 產生的 PDF',
+  'files.export.downloadLabelHtml': '下載 {date} 產生的可列印頁面',
+  'files.export.error.list': '匯出清單沒有載入。',
+  'files.export.retry': '重試',
+  'files.export.error.missing': '這份匯出已不再保留。請重新匯出行程。',
+  'files.export.error.missingViewer': '這份匯出已不再保留。',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上傳。',

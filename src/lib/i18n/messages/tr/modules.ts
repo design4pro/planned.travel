@@ -876,6 +876,17 @@ const messages = {
   'files.action.add': 'Dosya ekle',
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
+  'files.calendar.title': 'Takvim',
+  'files.calendar.description':
+    'Bu geziyi zaten kullandığın takvim uygulamasına taşı.',
+  'files.calendar.download.action': 'Takvim dosyasını indir (.ics)',
+  'files.calendar.download.hint':
+    'Gezinin şu anki halinin bir anlık görüntüsü. Güncellenmez.',
+  'files.calendar.undated':
+    'Bu gezinin henüz tarihi yok, bu yüzden yalnızca tarihli rezervasyonlar ve yolculuklar görünür.',
+  'files.calendar.download.error': 'Dosyayı hazırlayamadık. Tekrar dene.',
+  'files.calendar.timesNote':
+    'Saat dilimi olan yolculuklar her yerde aynı anda görünür. Geri kalan her şey, takvimin nerede olursa olsun planlanan saat değerinde görünür.',
   'files.drop.active': 'Yüklemek için bırak',
   'files.drop.pasteHint': 'kopyalanan bir görseli veya ekran görüntüsünü yapıştırır',
   'files.reject.blockedType':
@@ -939,6 +950,33 @@ const messages = {
   },
   'files.export.email.action': '{title} öğesini aç',
   'files.export.email.text': 'Gezi dışa aktarımı hazır: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Geziyi dışa aktar',
+  'files.export.description':
+    'Gezinin yazdırılabilir bir kopyası: günler, duraklar, rezervasyonlar, ulaşım ve konaklamalar. Hesabı olmayan birine verin.',
+  'files.export.kept': {
+    one: 'Her dışa aktarım {count} gün boyunca saklanır.',
+    other: 'Her dışa aktarım {count} gün boyunca saklanır.',
+  },
+  'files.export.empty.title': 'Henüz dışa aktarım yok',
+  'files.export.empty.body':
+    'Hesabı olmayan birine göndermek için gezinin yazdırılabilir bir kopyasını oluşturun.',
+  'files.export.empty.bodyViewer':
+    'Bunu gezinin sahibi veya düzenleyicisi oluşturabilir.',
+  'files.export.format.pdf': 'PDF dosyası',
+  'files.export.format.html': 'Yazdırılabilir sayfa',
+  'files.export.artifact': 'Gezi dışa aktarımı, {date}',
+  'files.export.download': 'İndir',
+  'files.export.downloadLabelPdf':
+    '{date} tarihinde oluşturulan PDF dosyasını indir',
+  'files.export.downloadLabelHtml':
+    '{date} tarihinde oluşturulan yazdırılabilir sayfayı indir',
+  'files.export.error.list': 'Dışa aktarımların listesi yüklenmedi.',
+  'files.export.retry': 'Tekrar dene',
+  'files.export.error.missing':
+    'Bu dışa aktarım artık saklanmıyor. Geziyi yeniden dışa aktarın.',
+  'files.export.error.missingViewer': 'Bu dışa aktarım artık saklanmıyor.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Yükleme iptal edildi.',

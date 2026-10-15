@@ -912,6 +912,18 @@ const messages = {
   'files.action.add': 'Добавить файлы',
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
+  'files.calendar.title': 'Календарь',
+  'files.calendar.description':
+    'Добавьте эту поездку в приложение календаря, которым вы уже пользуетесь.',
+  'files.calendar.download.action': 'Скачать файл календаря (.ics)',
+  'files.calendar.download.hint':
+    'Снимок поездки в её нынешнем виде. Он не обновляется.',
+  'files.calendar.undated':
+    'У этой поездки пока нет дат, поэтому появятся только бронирования и переезды с датой.',
+  'files.calendar.download.error':
+    'Не удалось подготовить файл. Попробуйте ещё раз.',
+  'files.calendar.timesNote':
+    'Переезды с часовым поясом показываются в один и тот же момент везде. Всё остальное показывается в запланированное время по часам, где бы ни находился ваш календарь.',
   'files.drop.active': 'Отпустите, чтобы отправить',
   'files.drop.pasteHint': 'вставляет скопированное изображение или снимок экрана',
   'files.reject.blockedType':
@@ -980,6 +992,34 @@ const messages = {
   },
   'files.export.email.action': 'Открыть: {title}',
   'files.export.email.text': 'Экспорт поездки готов: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Экспорт поездки',
+  'files.export.description':
+    'Печатная копия поездки: дни, остановки, бронирования, транспорт и проживание. Передайте её тому, у кого нет аккаунта.',
+  'files.export.kept': {
+    one: 'Каждый экспорт хранится {count} день.',
+    few: 'Каждый экспорт хранится {count} дня.',
+    many: 'Каждый экспорт хранится {count} дней.',
+    other: 'Каждый экспорт хранится {count} дня.',
+  },
+  'files.export.empty.title': 'Экспортов пока нет',
+  'files.export.empty.body':
+    'Сделайте печатную копию поездки, чтобы отправить тому, у кого нет аккаунта.',
+  'files.export.empty.bodyViewer':
+    'Создать экспорт может владелец или редактор поездки.',
+  'files.export.format.pdf': 'Файл PDF',
+  'files.export.format.html': 'Страница для печати',
+  'files.export.artifact': 'Экспорт поездки, {date}',
+  'files.export.download': 'Скачать',
+  'files.export.downloadLabelPdf': 'Скачать PDF, созданный {date}',
+  'files.export.downloadLabelHtml':
+    'Скачать страницу для печати, созданную {date}',
+  'files.export.error.list': 'Список экспортов не загрузился.',
+  'files.export.retry': 'Повторить',
+  'files.export.error.missing':
+    'Этот экспорт больше не хранится. Экспортируйте поездку ещё раз.',
+  'files.export.error.missingViewer': 'Этот экспорт больше не хранится.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Отправка отменена.',

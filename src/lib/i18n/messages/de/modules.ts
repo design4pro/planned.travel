@@ -907,6 +907,18 @@ const messages = {
   'files.action.add': 'Dateien hinzufügen',
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
+  'files.calendar.title': 'Kalender',
+  'files.calendar.description':
+    'Übernimm diese Reise in die Kalender-App, die du schon nutzt.',
+  'files.calendar.download.action': 'Kalenderdatei herunterladen (.ics)',
+  'files.calendar.download.hint':
+    'Eine Momentaufnahme der Reise, wie sie jetzt ist. Sie aktualisiert sich nicht.',
+  'files.calendar.undated':
+    'Diese Reise hat noch keine Daten, daher erscheinen nur Reservierungen und Fahrten mit Datum.',
+  'files.calendar.download.error':
+    'Wir konnten die Datei nicht vorbereiten. Versuche es erneut.',
+  'files.calendar.timesNote':
+    'Fahrten mit Zeitzone erscheinen überall zum selben Zeitpunkt. Alles andere erscheint zur geplanten Uhrzeit, wo auch immer dein Kalender ist.',
   'files.drop.active': 'Zum Hochladen loslassen',
   'files.drop.pasteHint': 'fügt ein kopiertes Bild oder einen Screenshot ein',
   'files.reject.blockedType':
@@ -970,6 +982,32 @@ const messages = {
   },
   'files.export.email.action': '{title} öffnen',
   'files.export.email.text': 'Der Reiseexport ist fertig: {url}',
+
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Reise exportieren',
+  'files.export.description':
+    'Eine druckbare Kopie der Reise: Tage, Stopps, Reservierungen, Transport und Unterkünfte. Gib sie an jemanden ohne Konto weiter.',
+  'files.export.kept': {
+    one: 'Jeder Export wird {count} Tag aufbewahrt.',
+    other: 'Jeder Export wird {count} Tage aufbewahrt.',
+  },
+  'files.export.empty.title': 'Noch keine Exporte',
+  'files.export.empty.body':
+    'Erstelle eine druckbare Kopie der Reise, um sie an jemanden ohne Konto zu schicken.',
+  'files.export.empty.bodyViewer':
+    'Wer die Reise besitzt oder bearbeiten darf, kann einen Export erstellen.',
+  'files.export.format.pdf': 'PDF-Datei',
+  'files.export.format.html': 'Druckbare Seite',
+  'files.export.artifact': 'Reiseexport, {date}',
+  'files.export.download': 'Herunterladen',
+  'files.export.downloadLabelPdf': 'PDF vom {date} herunterladen',
+  'files.export.downloadLabelHtml': 'Druckbare Seite vom {date} herunterladen',
+  'files.export.error.list': 'Die Liste der Exporte wurde nicht geladen.',
+  'files.export.retry': 'Erneut versuchen',
+  'files.export.error.missing':
+    'Dieser Export wird nicht mehr aufbewahrt. Exportiere die Reise erneut.',
+  'files.export.error.missingViewer':
+    'Dieser Export wird nicht mehr aufbewahrt.',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Hochladen abgebrochen.',
