@@ -967,6 +967,19 @@ const messages = {
     other: 'S’estan pujant {count} fitxers',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generat el {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'A punt: {title}',
+  'files.export.email.body': {
+    one: 'L’exportació del viatge és a punt. Es conserva durant {count} dia.',
+    many: 'L’exportació del viatge és a punt. Es conserva durant {count} dies.',
+    other:
+      'L’exportació del viatge és a punt. Es conserva durant {count} dies.',
+  },
+  'files.export.email.action': 'Obre {title}',
+  'files.export.email.text': 'L’exportació del viatge és a punt: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Pujada cancel·lada.',
   'files.error.badAnswer':

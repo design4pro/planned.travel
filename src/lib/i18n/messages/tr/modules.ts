@@ -929,6 +929,17 @@ const messages = {
     other: '{count} dosya yükleniyor',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - oluşturulma: {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} hazır',
+  'files.export.email.body': {
+    one: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
+    other: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
+  },
+  'files.export.email.action': '{title} öğesini aç',
+  'files.export.email.text': 'Gezi dışa aktarımı hazır: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Yükleme iptal edildi.',
   'files.error.badAnswer':

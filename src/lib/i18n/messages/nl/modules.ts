@@ -949,6 +949,17 @@ const messages = {
     other: '{count} bestanden worden geüpload',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - gemaakt op {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} is klaar',
+  'files.export.email.body': {
+    one: 'De reisexport is klaar. Hij wordt {count} dag bewaard.',
+    other: 'De reisexport is klaar. Hij wordt {count} dagen bewaard.',
+  },
+  'files.export.email.action': '{title} openen',
+  'files.export.email.text': 'De reisexport is klaar: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uploaden geannuleerd.',
   'files.error.badAnswer':
