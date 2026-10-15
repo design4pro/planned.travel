@@ -922,6 +922,7 @@ const messages = {
   'files.action.choose': 'Wybierz pliki',
   'files.action.upload': 'Wyślij pliki',
   'files.drop.active': 'Upuść, aby wysłać',
+  'files.drop.pasteHint': 'wkleja skopiowany obraz lub zrzut ekranu',
   'files.reject.blockedType':
     '„{name}” nie został dodany: pliki XML i skompresowane SVG nie są tu przechowywane, ze względów bezpieczeństwa. Zapisz go jako PDF lub obraz i dodaj to zamiast niego.',
   'files.drop.idle': 'Przeciągnij pliki tutaj',

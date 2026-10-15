@@ -864,6 +864,7 @@ const messages = {
   'files.action.choose': 'Chọn tệp',
   'files.action.upload': 'Tải tệp lên',
   'files.drop.active': 'Thả ra để tải lên',
+  'files.drop.pasteHint': 'dán hình ảnh đã sao chép hoặc ảnh chụp màn hình',
   'files.reject.blockedType':
     '“{name}” chưa được thêm: tệp XML và tệp SVG nén không được lưu ở đây vì lý do an toàn. Hãy lưu nó thành PDF hoặc hình ảnh rồi thêm tệp đó thay thế.',
   'files.drop.idle': 'Kéo tệp vào đây',
