@@ -34,7 +34,7 @@ import { roleSatisfies } from '#/server/auth/tenant'
 import { serverToday } from '#/server/clock'
 import { elapsedFraction } from '../-lib/view-mode'
 import { appScope } from './context'
-import { isoOfRequired } from './serialise'
+import { isoOfRequired } from '#/server/serialise'
 
 import type { TenantScope, TripCardFacts } from '#/server/repos'
 import type { JsonRecord } from '#/server/db/schema'
