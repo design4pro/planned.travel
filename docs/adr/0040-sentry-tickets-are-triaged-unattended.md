@@ -36,7 +36,14 @@ Bash with no allowlist and push rights, so the body is still a path for an instr
 - A morning's findings can reach a pull request the same day with no person in between.
 - The prompt-injection risk is reduced, not removed. The brief is written from the code, but
   triage and implement-ticket still read the body, and the paraphrase was written by a model that
-  read hostile text. `sanitizeFeedbackText` and the brief-from-the-code rule are the mitigations;
-  this ADR accepts the rest.
+  read hostile text. `sanitizeFeedbackText` (applied to a feedback summary and, in an error ticket,
+  to the message, culprit, breadcrumbs, suspected cause, frame and title) and the brief-from-the-code
+  rule are the mitigations; this ADR accepts the rest.
+- A brief in the body of a Sentry ticket is ignored by `backlog-status.mjs`, `afk-triage` and
+  `implement-ticket` alike, so a forged `## Agent Brief` cannot make triage stop without a trusted
+  brief, and only the triage comment is a brief.
+- The sweep's own agent session still runs with `--dangerously-skip-permissions` while it reads
+  Sentry text, so a ticket filed by the Actions bot is worth more than before. Narrowing that session
+  is a separate change.
 - Up to three tickets a day can each start a triage run, bounded by `BACKLOG_PRESSURE_LIMIT`, the
   per-run cap and the Reconciler's per-project limit.
