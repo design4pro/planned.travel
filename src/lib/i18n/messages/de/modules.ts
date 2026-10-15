@@ -907,6 +907,18 @@ const messages = {
   'files.action.add': 'Dateien hinzufügen',
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
+  'files.calendar.title': 'Kalender',
+  'files.calendar.description':
+    'Übernimm diese Reise in die Kalender-App, die du schon nutzt.',
+  'files.calendar.download.action': 'Kalenderdatei herunterladen (.ics)',
+  'files.calendar.download.hint':
+    'Eine Momentaufnahme der Reise, wie sie jetzt ist. Sie aktualisiert sich nicht.',
+  'files.calendar.undated':
+    'Diese Reise hat noch keine Daten, daher erscheinen nur Reservierungen und Fahrten mit Datum.',
+  'files.calendar.download.error':
+    'Wir konnten die Datei nicht vorbereiten. Versuche es erneut.',
+  'files.calendar.timesNote':
+    'Fahrten mit Zeitzone erscheinen überall zum selben Zeitpunkt. Alles andere erscheint zur geplanten Uhrzeit, wo auch immer dein Kalender ist.',
   'files.drop.active': 'Zum Hochladen loslassen',
   'files.drop.pasteHint': 'fügt ein kopiertes Bild oder einen Screenshot ein',
   'files.reject.blockedType':

@@ -43,6 +43,35 @@ async function reasonFor(response: Response): Promise<string> {
 }
 
 /**
+ * Hands a blob to the browser as a download under `filename`.
+ *
+ * Shared by every download on these screens (an attachment, a calendar file), so the markup guard
+ * and the delayed revoke are written once.
+ */
+export function saveBlob(stored: Blob, filename: string): void {
+  const storedType = stored.type.split(';')[0]?.trim().toLowerCase() ?? ''
+  const blob = MARKUP_TYPES.has(storedType)
+    ? new Blob([stored], { type: GENERIC_BINARY })
+    : stored
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.rel = 'noopener'
+  anchor.style.display = 'none'
+  // `appendChild` rather than `append`: the Workers type surface this project
+  // also compiles against declares its own `Element.append`, and the DOM node is
+  // not one of the shapes it accepts.
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+
+  // Not revoked immediately: some browsers read the blob asynchronously after the
+  // click, and revoking too early cancels the save.
+  window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS)
+}
+
+/**
  * Saves one attachment to the reader's machine.
  *
  * Throws with a message worth showing, so the caller's `useAction` can toast it.
@@ -63,27 +92,7 @@ export async function downloadTripFile(input: {
     throw new Error(await reasonFor(response))
   }
 
-  const stored = await response.blob()
-  const storedType = stored.type.split(';')[0]?.trim().toLowerCase() ?? ''
-  const blob = MARKUP_TYPES.has(storedType)
-    ? new Blob([stored], { type: GENERIC_BINARY })
-    : stored
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = input.filename
-  anchor.rel = 'noopener'
-  anchor.style.display = 'none'
-  // `appendChild` rather than `append`: the Workers type surface this project
-  // also compiles against declares its own `Element.append`, and the DOM node is
-  // not one of the shapes it accepts.
-  document.body.appendChild(anchor)
-  anchor.click()
-  anchor.remove()
-
-  // Not revoked immediately: some browsers read the blob asynchronously after the
-  // click, and revoking too early cancels the save.
-  window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS)
+  saveBlob(await response.blob(), input.filename)
 
   return { filename: input.filename }
 }

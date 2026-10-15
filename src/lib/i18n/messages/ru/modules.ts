@@ -912,6 +912,18 @@ const messages = {
   'files.action.add': 'Добавить файлы',
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
+  'files.calendar.title': 'Календарь',
+  'files.calendar.description':
+    'Добавьте эту поездку в приложение календаря, которым вы уже пользуетесь.',
+  'files.calendar.download.action': 'Скачать файл календаря (.ics)',
+  'files.calendar.download.hint':
+    'Снимок поездки в её нынешнем виде. Он не обновляется.',
+  'files.calendar.undated':
+    'У этой поездки пока нет дат, поэтому появятся только бронирования и переезды с датой.',
+  'files.calendar.download.error':
+    'Не удалось подготовить файл. Попробуйте ещё раз.',
+  'files.calendar.timesNote':
+    'Переезды с часовым поясом показываются в один и тот же момент везде. Всё остальное показывается в запланированное время по часам, где бы ни находился ваш календарь.',
   'files.drop.active': 'Отпустите, чтобы отправить',
   'files.drop.pasteHint': 'вставляет скопированное изображение или снимок экрана',
   'files.reject.blockedType':
