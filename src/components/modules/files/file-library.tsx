@@ -525,7 +525,9 @@ export function FileLibrary({
               data-part="file-paste-hint"
             >
               <KbdSequence keys={['Mod', 'V']} size="sm" />
-              <span>{t('modules.files.drop.pasteHint')}</span>
+              <span className="text-center">
+                {t('modules.files.drop.pasteHint')}
+              </span>
             </p>
           </div>
           <Button
