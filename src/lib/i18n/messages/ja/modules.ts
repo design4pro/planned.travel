@@ -971,6 +971,42 @@ const messages = {
   'files.toast.failedMany': {
     other: '{count} 件のファイルがアップロードされませんでした',
   },
+
+  'files.export.request': '旅行をエクスポート',
+  'files.export.includeReferences': '確認コードを含める',
+  'files.export.includeReferencesHint':
+    'ワークスペース外の人に送る場合は選択しないでください。',
+  'files.export.pending':
+    'エクスポートを準備しています。このページを離れても、準備ができると一覧に表示されます。',
+  'files.export.slow':
+    '通常より時間がかかっています。準備ができるとここに表示されます。表示されない場合は再度エクスポートしてください。',
+  'files.export.refresh': '更新',
+  'files.export.ready': 'エクスポートの準備ができました',
+  'files.export.quota': {
+    other:
+      'このワークスペースの月間上限{count}回を使い切りました。{date}にカウントが再開します。',
+  },
+  'files.export.error.request': 'エクスポートを開始できませんでした',
+  'files.export.error.requestBody':
+    'この試行はカウントされていません。しばらくして再度お試しください。',
+  'files.export.doc.overview': '概要',
+  'files.export.doc.timezone': 'タイムゾーン',
+  'files.export.doc.days': '日数',
+  'files.export.doc.day': { other: '{count}日目 - {date}' },
+  'files.export.doc.dayUndated': { other: '{count}日目' },
+  'files.export.doc.dayEmpty': 'まだ予定はありません。',
+  'files.export.doc.reservations': '予約',
+  'files.export.doc.transport': '交通',
+  'files.export.doc.reference': '確認コード {code}',
+  'files.export.doc.route': '{from}から{to}へ',
+  'files.export.doc.stays': '宿泊先',
+  'files.export.doc.nights': { other: '泊数：{count}' },
+  'files.export.doc.truncatedDays': {
+    other: 'すべての日程が収まらないため、最初の{count}日間を表示しています。',
+  },
+  'files.export.doc.truncatedRows': {
+    other: '全{total}件のうち最初の{count}件を表示。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

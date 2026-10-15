@@ -1021,6 +1021,51 @@ const messages = {
     one: '{count} fájl nem töltődött fel',
     other: '{count} fájl nem töltődött fel',
   },
+
+  'files.export.request': 'Utazás exportálása',
+  'files.export.includeReferences': 'Visszaigazoló kódok belefoglalása',
+  'files.export.includeReferencesHint':
+    'Ne jelölje be, ha a fájlt a munkaterületen kívüli személynek küldi.',
+  'files.export.pending':
+    'Az exportálás előkészítése folyamatban van. Elhagyhatja az oldalt; a kész fájl megjelenik a listában.',
+  'files.export.slow':
+    'Ez a szokásosnál tovább tart. A kész fájl itt jelenik meg. Ha nem, exportálja újra.',
+  'files.export.refresh': 'Frissítés',
+  'files.export.ready': 'Az exportálás elkészült',
+  'files.export.quota': {
+    one: 'A munkaterület havi {count} exportálási lehetősége elfogyott. A számláló {date} napján indul újra.',
+    other:
+      'A munkaterület havi {count} exportálási lehetősége elfogyott. A számláló {date} napján indul újra.',
+  },
+  'files.export.error.request': 'Az exportálás nem indult el',
+  'files.export.error.requestBody':
+    'Ez a kísérlet nem számított bele a keretbe. Próbálja újra később.',
+  'files.export.doc.overview': 'Áttekintés',
+  'files.export.doc.timezone': 'Időzóna',
+  'files.export.doc.days': 'Napok',
+  'files.export.doc.day': {
+    one: '{count}. nap - {date}',
+    other: '{count}. nap - {date}',
+  },
+  'files.export.doc.dayUndated': { one: '{count}. nap', other: '{count}. nap' },
+  'files.export.doc.dayEmpty': 'Még nincs program.',
+  'files.export.doc.reservations': 'Foglalások',
+  'files.export.doc.transport': 'Közlekedés',
+  'files.export.doc.reference': 'Visszaigazolás: {code}',
+  'files.export.doc.route': '{from} - {to}',
+  'files.export.doc.stays': 'Szállásaink',
+  'files.export.doc.nights': {
+    one: 'Éjszakák száma: {count}',
+    other: 'Éjszakák száma: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Nem fér minden nap egy dokumentumba. Az első {count} nap látható.',
+    other: 'Nem fér minden nap egy dokumentumba. Az első {count} nap látható.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Az első {count} elem látható az összesen {total} elemből.',
+    other: 'Az első {count} elem látható az összesen {total} elemből.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

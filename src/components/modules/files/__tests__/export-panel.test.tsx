@@ -1,7 +1,10 @@
 import '#/components/ui/__tests__/test-env'
 
+import { Profiler } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  act,
+  fireEvent,
   cleanup,
   render,
   screen,
@@ -21,9 +24,15 @@ import type { TripExportList } from '#/server/fns/exports'
 
 // The panel's modules import the server functions, which reach `cloudflare:workers`; the panel is
 // tested at the module boundary, with the two functions it calls replaced.
+const requestTripExportFn = vi.fn()
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({ invalidate: vi.fn() }),
+}))
 const listTripExportsFn = vi.fn()
 const downloadTripExportFn = vi.fn()
 vi.mock('#/server/fns/exports', () => ({
+  requestTripExportFn: (...args: Array<unknown>) =>
+    requestTripExportFn(...args),
   listTripExportsFn: (...args: Array<unknown>) => listTripExportsFn(...args),
   downloadTripExportFn: (...args: Array<unknown>) =>
     downloadTripExportFn(...args),
@@ -46,6 +55,7 @@ const NOW = Date.parse('2026-10-15T12:00:00.000Z')
 
 const TWO: TripExportList = {
   canRequest: true,
+  allowance: { used: 0, limit: 3, month: '2026-10', resetsOn: '2026-11-01' },
   artifacts: [
     {
       taskId: 'task-new',
@@ -62,10 +72,12 @@ const TWO: TripExportList = {
   ],
 }
 
-function mount() {
+function mount(onCommit: () => void = () => {}) {
   return render(
     <I18nProvider locale="en" messages={EN}>
-      <ExportPanel tripId="trip-1" />
+      <Profiler id="export-panel" onRender={onCommit}>
+        <ExportPanel tripId="trip-1" />
+      </Profiler>
     </I18nProvider>,
   )
 }
@@ -93,6 +105,7 @@ afterEach(() => {
   listTripExportsFn.mockReset()
   downloadTripExportFn.mockReset()
   toastError.mockReset()
+  requestTripExportFn.mockReset()
 })
 
 describe('the export panel', () => {
@@ -165,14 +178,20 @@ describe('the export panel', () => {
     expect(later).not.toBe(earlier)
   })
 
-  it('says there are no exports, and offers no request control', async () => {
+  it('offers exactly one request control and the confirmation option in the empty state', async () => {
     listTripExportsFn.mockResolvedValue({ artifacts: [], canRequest: true })
     mount()
 
     expect(await screen.findByText('No exports yet')).toBeTruthy()
     expect(screen.getByText(/Make a printable copy of the trip/u)).toBeTruthy()
-    expect(screen.queryAllByRole('button')).toHaveLength(0)
-    expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+    expect(
+      screen.getAllByRole('button', { name: 'Export the trip' }),
+    ).toHaveLength(1)
+    expect(
+      screen
+        .getByRole('checkbox', { name: 'Include confirmation codes' })
+        .getAttribute('aria-checked'),
+    ).toBe('false')
   })
 
   it('tells a viewer who can make one, not to make one', async () => {
@@ -479,4 +498,183 @@ describe('the export panel', () => {
       expect((control as HTMLButtonElement).disabled).toBe(false),
     )
   })
+})
+
+describe('requesting an export', () => {
+  it('sends options, focuses the pending row and keeps one live region', async () => {
+    listTripExportsFn.mockResolvedValue(TWO)
+    requestTripExportFn.mockResolvedValue({
+      ok: true,
+      taskId: 'pending-1',
+      queuedAt: NOW,
+    })
+    mount()
+    const button = await screen.findByRole('button', {
+      name: 'Export the trip',
+    })
+    const user = userEvent.setup()
+    const checkbox = screen.getByRole('checkbox', {
+      name: 'Include confirmation codes',
+    })
+    checkbox.focus()
+    await user.keyboard(' ')
+    expect(checkbox.getAttribute('aria-checked')).toBe('true')
+    await user.click(button)
+    expect(requestTripExportFn).toHaveBeenCalledWith({
+      data: { tripId: 'trip-1', notify: false, includeReferences: true },
+    })
+    expect(button.hasAttribute('disabled')).toBe(true)
+    expect(document.activeElement?.textContent).toContain(
+      'Preparing your export',
+    )
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+  })
+  it('returns quota refusal as an alert without a pending row', async () => {
+    listTripExportsFn.mockResolvedValue(TWO)
+    requestTripExportFn.mockResolvedValue({
+      ok: false,
+      reason: 'quota',
+      used: 3,
+      limit: 3,
+      resetsOn: '2026-11-01',
+    })
+    mount()
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Export the trip' }))
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      '3 exports',
+    )
+    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+  })
+})
+
+describe('following the queue result', () => {
+  async function start(onCommit?: () => void) {
+    listTripExportsFn.mockResolvedValue(TWO)
+    requestTripExportFn.mockResolvedValue({
+      ok: true,
+      taskId: 'pending-1',
+      queuedAt: NOW,
+    })
+    mount(onCommit)
+    const button = await screen.findByRole('button', {
+      name: 'Export the trip',
+    })
+    vi.useFakeTimers()
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    return { button }
+  }
+
+  it('keeps rows on a failed poll and settles once with focus restored', async () => {
+    const committedCounts: Array<number> = []
+    const { button } = await start(() =>
+      committedCounts.push(screen.queryAllByRole('listitem').length),
+    )
+    listTripExportsFn.mockRejectedValueOnce(new Error('offline'))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(button.hasAttribute('disabled')).toBe(true)
+    listTripExportsFn.mockResolvedValue({
+      ...TWO,
+      artifacts: [
+        { taskId: 'pending-1', format: 'html', sizeBytes: 100, createdAt: NOW },
+        ...TWO.artifacts,
+      ],
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
+    expect(screen.getByRole('status').textContent).toBe('Your export is ready')
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(document.activeElement).toBe(button)
+    expect(screen.getAllByRole('listitem')).toHaveLength(3)
+    expect(committedCounts).not.toContain(4)
+    const calls = listTripExportsFn.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9000)
+    })
+    expect(listTripExportsFn).toHaveBeenCalledTimes(calls)
+  })
+
+  it('pauses hidden tabs, resumes a fresh window, then enables another request', async () => {
+    const { button } = await start()
+    const visibility = vi.spyOn(document, 'visibilityState', 'get')
+    visibility.mockReturnValue('hidden')
+    act(() => document.dispatchEvent(new Event('visibilitychange')))
+    const calls = listTripExportsFn.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100_000)
+    })
+    expect(listTripExportsFn).toHaveBeenCalledTimes(calls)
+    visibility.mockReturnValue('visible')
+    act(() => document.dispatchEvent(new Event('visibilitychange')))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(89_999)
+    })
+    expect(button.hasAttribute('disabled')).toBe(true)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(screen.getByRole('status').textContent).toContain(
+      'longer than usual',
+    )
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
+    expect(document.activeElement).toBe(button)
+    const stopped = listTripExportsFn.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000)
+    })
+    expect(listTripExportsFn).toHaveBeenCalledTimes(stopped)
+    visibility.mockRestore()
+  })
+
+  it('preserves focus when the traveller moved elsewhere and shows request failures', async () => {
+    const { button } = await start()
+    const checkbox = screen.getByRole('checkbox', {
+      name: 'Include confirmation codes',
+    })
+    checkbox.focus()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(90_000)
+    })
+    expect(document.activeElement).toBe(checkbox)
+    requestTripExportFn.mockRejectedValue(new Error('unavailable'))
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    expect(toastError).toHaveBeenCalledWith(
+      'The export was not started',
+      expect.anything(),
+    )
+    expect(button.hasAttribute('disabled')).toBe(false)
+  })
+})
+
+it('restores focus after a request rejects once the native button has re-enabled', async () => {
+  listTripExportsFn.mockResolvedValue(TWO)
+  let reject: (cause: Error) => void = () => {}
+  requestTripExportFn.mockReturnValue(
+    new Promise((_resolve, no) => {
+      reject = no
+    }),
+  )
+  mount()
+  const button = await screen.findByRole('button', { name: 'Export the trip' })
+  await userEvent.setup().click(button)
+  expect(button.hasAttribute('disabled')).toBe(true)
+  // Chromium moves focus to body when the native request control becomes disabled.
+  document.body.tabIndex = -1
+  document.body.focus()
+  await act(async () => {
+    reject(new Error('offline'))
+  })
+  expect(button.hasAttribute('disabled')).toBe(false)
+  expect(document.activeElement).toBe(button)
+  document.body.removeAttribute('tabindex')
 })

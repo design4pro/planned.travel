@@ -2,8 +2,8 @@
  * `callProvider` — the one wrapper every outbound third-party call goes through.
  *
  * It exists so that "an outbound call is a counted call" is a property of the code rather than a
- * habit. A call site hands it a label and a thunk; it consults the provider's gate, runs the thunk,
- * and records the attempt. Forgetting to count is not available, because there is nothing to
+ * habit. A call site hands it a label and a thunk; it consults the provider's gate, runs an optional
+ * allowance step, then runs the thunk and records the attempt. Forgetting to count is not available, because there is nothing to
  * forget: the counting is on the path the call already takes.
  *
  * ## Why not `src/server/queue/http.ts`
@@ -249,7 +249,9 @@ function record(
  *
  * Throws {@link ProviderBlockedError} before `send` is called when a blocking ceiling is spent —
  * before, so a refused call costs the vendor nothing and is recorded as demand rather than usage.
- * It never throws for any metering reason of its own.
+ * An optional `beforeSend` step runs after the gate passes and before the vendor attempt. Its
+ * refusal (for example a workspace allowance ceiling) propagates without recording a provider
+ * call or error, since the vendor was never asked. It never throws for a recording fault of its own.
  *
  * A returned `Response` with a non-2xx status is counted as a failed call as well as a call, which
  * is why {@link FailureCheck} exists: `fetch` resolves such a response rather than throwing.
@@ -259,6 +261,7 @@ export async function callProvider<T>(
   label: ProviderCallLabel,
   send: () => Promise<T>,
   isFailure: FailureCheck<T> = looksFailed,
+  beforeSend?: () => Promise<unknown>,
 ): Promise<T> {
   const at = runtime.now()
 
@@ -267,6 +270,8 @@ export async function callProvider<T>(
     record(runtime, label, 'blocked', at)
     throw blocked
   }
+
+  await beforeSend?.()
 
   try {
     const result = await send()

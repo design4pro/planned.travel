@@ -925,7 +925,8 @@ const messages = {
   'files.calendar.timesNote':
     'Переезды с часовым поясом показываются в один и тот же момент везде. Всё остальное показывается в запланированное время по часам, где бы ни находился ваш календарь.',
   'files.drop.active': 'Отпустите, чтобы отправить',
-  'files.drop.pasteHint': 'вставляет скопированное изображение или снимок экрана',
+  'files.drop.pasteHint':
+    'вставляет скопированное изображение или снимок экрана',
   'files.reject.blockedType':
     '«{name}» не добавлен: файлы XML и сжатые SVG здесь не хранятся, из соображений безопасности. Сохраните его как PDF или изображение и добавьте вместо него.',
   'files.drop.idle': 'Перетащите файлы сюда',
@@ -1054,6 +1055,66 @@ const messages = {
     few: '{count} файла не отправились',
     many: '{count} файлов не отправились',
     other: '{count} файла не отправились',
+  },
+
+  'files.export.request': 'Экспортировать поездку',
+  'files.export.includeReferences': 'Включить коды подтверждения',
+  'files.export.includeReferencesHint':
+    'Не отмечайте, если отправите файл человеку вне вашего пространства.',
+  'files.export.pending':
+    'Готовим экспорт. Можно уйти со страницы; готовый файл появится в списке.',
+  'files.export.slow':
+    'Это занимает больше времени, чем обычно. Готовый файл появится здесь. Если нет, повторите экспорт.',
+  'files.export.refresh': 'Обновить',
+  'files.export.ready': 'Экспорт готов',
+  'files.export.quota': {
+    one: 'Месячный лимит экспортов пространства составляет {count} и исчерпан. Счётчик обновится {date}.',
+    few: 'Месячный лимит экспортов пространства составляет {count} и исчерпан. Счётчик обновится {date}.',
+    many: 'Месячный лимит экспортов пространства составляет {count} и исчерпан. Счётчик обновится {date}.',
+    other:
+      'Месячный лимит экспортов пространства составляет {count} и исчерпан. Счётчик обновится {date}.',
+  },
+  'files.export.error.request': 'Экспорт не запущен',
+  'files.export.error.requestBody':
+    'Эта попытка не учтена. Повторите через некоторое время.',
+  'files.export.doc.overview': 'Обзор',
+  'files.export.doc.timezone': 'Часовой пояс',
+  'files.export.doc.days': 'Дни',
+  'files.export.doc.day': {
+    one: 'День {count} - {date}',
+    few: 'День {count} - {date}',
+    many: 'День {count} - {date}',
+    other: 'День {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'День {count}',
+    few: 'День {count}',
+    many: 'День {count}',
+    other: 'День {count}',
+  },
+  'files.export.doc.dayEmpty': 'Пока ничего не запланировано.',
+  'files.export.doc.reservations': 'Бронирования',
+  'files.export.doc.transport': 'Транспорт',
+  'files.export.doc.reference': 'Код подтв. {code}',
+  'files.export.doc.route': '{from} до {to}',
+  'files.export.doc.stays': 'Где мы остановимся',
+  'files.export.doc.nights': {
+    one: 'Количество ночей: {count}',
+    few: 'Количество ночей: {count}',
+    many: 'Количество ночей: {count}',
+    other: 'Количество ночей: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Все дни не помещаются в документ. Показано дней с начала: {count}.',
+    few: 'Все дни не помещаются в документ. Показано дней с начала: {count}.',
+    many: 'Все дни не помещаются в документ. Показано дней с начала: {count}.',
+    other: 'Все дни не помещаются в документ. Показано дней с начала: {count}.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Показано с начала: {count} из {total}.',
+    few: 'Показано с начала: {count} из {total}.',
+    many: 'Показано с начала: {count} из {total}.',
+    other: 'Показано с начала: {count} из {total}.',
   },
 } satisfies TranslationOf<typeof En>
 

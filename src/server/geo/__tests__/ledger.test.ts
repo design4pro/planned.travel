@@ -16,6 +16,7 @@ import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables
 import { providerRegistry, providerUsage } from '#/server/db/schema'
 import { isProviderBlockedError } from '#/server/metering/errors'
 import { resetProviderLimitMemo } from '#/server/metering/outbound'
+import { rateMeterKey, rateWindowOf } from '#/server/metering/rate'
 import { forwardGeocode, reverseGeocode } from '../geocode'
 
 import type { PlatformTables } from '#/server/catalog/__tests__/platform-tables'
@@ -176,31 +177,82 @@ describe('the provider ledger around a lookup', () => {
     expect(rows[0]?.calls).toBe(1)
   })
 
-  it('refuses the lookup when an operator has blocked a spent provider', async () => {
-    await tables.db.insert(providerRegistry).values({
-      slug: 'geoapify',
-      label: 'Geoapify',
-      // The day window ADR 0013 agreed the vendor's own 3,000-credits term under, with the ceiling
-      // set to nothing: a `block` policy alone never closes the gate — a policy is what to do when
-      // the ceiling is spent, and this is the shortest way to write "spent".
-      limitWindow: 'day',
-      callLimit: 0,
-      policy: 'block',
-    })
-    resetProviderLimitMemo()
+  it('spends exactly once when the provider gate cannot be read', async () => {
     const provider = countingProvider()
-
-    const error = await forwardGeocode(runtime(provider), {
-      query: 'Plaza Mayor',
-      language: 'en',
-    }).catch((thrown: unknown) => thrown)
+    const caller = runtime(provider)
+    const broken = new Proxy(tables.db, {
+      get(target, key, receiver) {
+        if (key === 'select')
+          return () => {
+            throw new Error('D1 unavailable')
+          }
+        return Reflect.get(target, key, receiver) as unknown
+      },
+    })
+    const result = await forwardGeocode(
+      { ...caller, outbound: { ...caller.outbound, db: broken } },
+      { query: 'Plaza Mayor', language: 'en' },
+    )
+    expect(result.spent).toBe(1)
+    expect(provider.calls).toEqual(['forward'])
+    expect(
+      await caller.counters.get(
+        rateMeterKey(
+          'geocode_lookups_per_month',
+          'org-alpha',
+          rateWindowOf(AT),
+        ),
+      ),
+    ).toBe('1')
     await settleDeferred()
-
-    expect(isProviderBlockedError(error)).toBe(true)
-    // Refused *before* the vendor, which is the whole point: a block that arrived afterwards would
-    // bill for exactly the calls it exists to prevent.
-    expect(provider.calls).toEqual([])
-    const rows = await tables.db.select().from(providerUsage)
-    expect(rows[0]).toMatchObject({ calls: 0, blocked: 1 })
+    expect(await tables.db.select().from(providerUsage)).toMatchObject([
+      { calls: 1, errors: 0, blocked: 0 },
+    ])
   })
+
+  it.each(['forward', 'reverse'] as const)(
+    'refuses a blocked %s lookup without spending allowance',
+    async (direction) => {
+      await tables.db.insert(providerRegistry).values({
+        slug: 'geoapify',
+        label: 'Geoapify',
+        // The day window ADR 0013 agreed the vendor's own 3,000-credits term under, with the ceiling
+        // set to nothing: a `block` policy alone never closes the gate — a policy is what to do when
+        // the ceiling is spent, and this is the shortest way to write "spent".
+        limitWindow: 'day',
+        callLimit: 0,
+        policy: 'block',
+      })
+      resetProviderLimitMemo()
+      const provider = countingProvider()
+
+      const caller = runtime(provider)
+      const request =
+        direction === 'forward'
+          ? forwardGeocode(caller, { query: 'Plaza Mayor', language: 'en' })
+          : reverseGeocode(caller, {
+              lat: 40.4155,
+              lng: -3.7074,
+              language: 'en',
+            })
+      const error = await request.catch((thrown: unknown) => thrown)
+      await settleDeferred()
+
+      expect(isProviderBlockedError(error)).toBe(true)
+      // Refused *before* the vendor, which is the whole point: a block that arrived afterwards would
+      // bill for exactly the calls it exists to prevent.
+      expect(provider.calls).toEqual([])
+      const rows = await tables.db.select().from(providerUsage)
+      expect(rows[0]).toMatchObject({ calls: 0, blocked: 1 })
+      expect(
+        await caller.counters.get(
+          rateMeterKey(
+            'geocode_lookups_per_month',
+            'org-alpha',
+            rateWindowOf(AT),
+          ),
+        ),
+      ).toBeNull()
+    },
+  )
 })

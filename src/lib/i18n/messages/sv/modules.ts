@@ -1011,6 +1011,52 @@ const messages = {
     one: '{count} fil laddades inte upp',
     other: '{count} filer laddades inte upp',
   },
+
+  'files.export.request': 'Exportera resan',
+  'files.export.includeReferences': 'Ta med bekräftelsekoder',
+  'files.export.includeReferencesHint':
+    'Lämna avmarkerat om du skickar filen till någon utanför din arbetsyta.',
+  'files.export.pending':
+    'Din export förbereds. Du kan lämna sidan; filen visas i listan när den är klar.',
+  'files.export.slow':
+    'Det tar längre tid än vanligt. Filen visas här när den är klar. Exportera igen om den inte dyker upp.',
+  'files.export.refresh': 'Uppdatera',
+  'files.export.ready': 'Din export är klar',
+  'files.export.quota': {
+    one: 'Arbetsytans månadskvot på {count} exporter är slut. Räknaren börjar om {date}.',
+    other:
+      'Arbetsytans månadskvot på {count} exporter är slut. Räknaren börjar om {date}.',
+  },
+  'files.export.error.request': 'Exporten startades inte',
+  'files.export.error.requestBody':
+    'Detta försök räknades inte. Försök igen om en stund.',
+  'files.export.doc.overview': 'Översikt',
+  'files.export.doc.timezone': 'Tidszon',
+  'files.export.doc.days': 'Dagar',
+  'files.export.doc.day': {
+    one: 'Dag {count} - {date}',
+    other: 'Dag {count} - {date}',
+  },
+  'files.export.doc.dayUndated': { one: 'Dag {count}', other: 'Dag {count}' },
+  'files.export.doc.dayEmpty': 'Inget planerat än.',
+  'files.export.doc.reservations': 'Bokningar',
+  'files.export.doc.transport': 'Resor och transporter',
+  'files.export.doc.reference': 'Referens {code}',
+  'files.export.doc.route': '{from} till {to}',
+  'files.export.doc.stays': 'Här bor vi',
+  'files.export.doc.nights': {
+    one: 'Nätter: {count}',
+    other: 'Nätter: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Alla dagar ryms inte i ett dokument. De första {count} dagarna visas.',
+    other:
+      'Alla dagar ryms inte i ett dokument. De första {count} dagarna visas.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Visar de första {count} av {total}.',
+    other: 'Visar de första {count} av {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

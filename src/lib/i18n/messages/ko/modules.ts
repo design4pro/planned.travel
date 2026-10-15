@@ -965,6 +965,42 @@ const messages = {
   'files.toast.failedMany': {
     other: '파일 {count}개가 올라가지 않았습니다',
   },
+
+  'files.export.request': '여행 내보내기',
+  'files.export.includeReferences': '확인 코드 포함',
+  'files.export.includeReferencesHint':
+    '작업 공간 외부의 사람에게 파일을 보낼 경우 선택하지 마세요.',
+  'files.export.pending':
+    '내보내기를 준비하고 있습니다. 이 페이지를 떠나도 준비되면 목록에 표시됩니다.',
+  'files.export.slow':
+    '평소보다 오래 걸리고 있습니다. 준비되면 여기에 표시됩니다. 표시되지 않으면 다시 내보내세요.',
+  'files.export.refresh': '새로고침',
+  'files.export.ready': '내보내기가 준비되었습니다',
+  'files.export.quota': {
+    other:
+      '이 작업 공간의 월간 내보내기 한도 {count}회를 모두 사용했습니다. {date}에 다시 시작됩니다.',
+  },
+  'files.export.error.request': '내보내기가 시작되지 않았습니다',
+  'files.export.error.requestBody':
+    '이번 시도는 사용량에 포함되지 않았습니다. 잠시 후 다시 시도하세요.',
+  'files.export.doc.overview': '개요',
+  'files.export.doc.timezone': '시간대',
+  'files.export.doc.days': '일수',
+  'files.export.doc.day': { other: '{count}일차 - {date}' },
+  'files.export.doc.dayUndated': { other: '{count}일차' },
+  'files.export.doc.dayEmpty': '아직 계획이 없습니다.',
+  'files.export.doc.reservations': '예약',
+  'files.export.doc.transport': '교통',
+  'files.export.doc.reference': '확인 코드 {code}',
+  'files.export.doc.route': '{from}에서 {to}까지',
+  'files.export.doc.stays': '숙소',
+  'files.export.doc.nights': { other: '숙박 일수: {count}' },
+  'files.export.doc.truncatedDays': {
+    other: '모든 일정을 담을 수 없어 처음 {count}일을 표시합니다.',
+  },
+  'files.export.doc.truncatedRows': {
+    other: '전체 {total}개 중 처음 {count}개를 표시합니다.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

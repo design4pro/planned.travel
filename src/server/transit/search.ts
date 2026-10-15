@@ -1,5 +1,5 @@
 /**
- * The transit proxy — cache read, meter, ledgered provider call, cache write, in that order.
+ * The transit proxy — plan gate, cache, credential, provider gate, meter, vendor, cache write.
  *
  * Every caller goes through here and none reaches `./here` directly. That is not tidiness: the
  * three rules this module applies are the ones that make an outbound, metered, third-party call
@@ -32,20 +32,20 @@
  * ## The ceiling is checked after the cache and before the call
  *
  * A cache hit spends nothing, because it costs nothing. A miss - and so a first search by every
- * member - spends one unit of the workspace's `transit_searches_per_month` allowance through
- * `#/server/metering/rate`, and the ceiling itself is resolved by the caller from
+ * member - spends one unit only after the operator's provider gate passes, through the workspace's
+ * `transit_searches_per_month` allowance in `#/server/metering/rate`. The ceiling is resolved from
  * `resolveLimits()` — the published number is the enforced number.
  *
  * ## Two meters, and they are complements
  *
- * The allowance above is the **plan's**: a per-workspace tally in KV, spent on a miss, that decides
- * how many searches a workspace may make. It says nothing about what the vendor was asked or what
+ * The allowance above is the **plan's**: a per-workspace tally in KV, spent on an allowed miss,
+ * that decides how many searches a workspace may make. It says nothing about what the vendor was asked or what
  * it will bill. The **provider ledger** is the platform's: every call that leaves the Worker goes
  * through `callProvider` (`#/server/metering/outbound`), lands in `provider_usage` under the `here`
  * slug and the workspace that made it, and is what an operator's `provider_registry` policy can
  * stop. Neither replaces the other — a cache hit spends the first and writes the second not at
- * all, a call a `block` policy refuses has still spent its workspace's unit, as geocoding does
- * (`src/server/geo/geocode.ts`), so the two modules follow one rule.
+ * all. A call a `block` policy refuses spends no workspace unit, as in geocoding
+ * (`src/server/geo/geocode.ts`); it records only blocked demand in the provider ledger.
  *
  * ## Failure is typed
  *
@@ -468,9 +468,9 @@ async function cached(
 /**
  * Search public-transport connections, through the plan gate, the cache and the meter.
  *
- * The order is the whole contract: **gate, then cache, then meter, then provider**. Checking the
- * *tally* before the cache would charge a workspace for an answer we already had, and calling the
- * provider first would make the ceiling advisory.
+ * The order is the whole contract: **plan gate, cache, credential, provider gate, meter, then vendor**.
+ * Checking the *tally* before the cache would charge a workspace for an answer we already had.
+ * Calling the vendor before the meter would make the ceiling advisory.
  *
  * A provider this deployment has no credential for is not part of it either, and is refused
  * between the cache and the meter: the answers already held are still served, and the workspace is
@@ -515,14 +515,7 @@ export async function searchTransitConnections(
     )
   }
 
-  // Throws `RateCeilingError`, which the caller turns into a refusal the reader can act on.
-  const spent = await spendRateUnit(runtime.counters, {
-    metric: 'transit_searches_per_month',
-    organizationId: runtime.organizationId,
-    ceiling: runtime.ceiling,
-    now: runtime.now,
-    logger: runtime.logger,
-  })
+  let spent: number | null = null
 
   const { client } = runtime
   const { connections, attributions, caching } = await callProvider(
@@ -533,6 +526,17 @@ export async function searchTransitConnections(
       organizationId: runtime.organizationId,
     },
     () => client.search(query),
+    undefined,
+    async () => {
+      // A provider block spends nothing; an allowance refusal never reaches the vendor ledger.
+      spent = await spendRateUnit(runtime.counters, {
+        metric: 'transit_searches_per_month',
+        organizationId: runtime.organizationId,
+        ceiling: runtime.ceiling,
+        now: runtime.now,
+        logger: runtime.logger,
+      })
+    },
   )
 
   // Stored only when HERE's headers permit it, and no longer than they say (Exhibit 2 §1.3). An

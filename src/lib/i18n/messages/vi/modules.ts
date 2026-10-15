@@ -985,6 +985,43 @@ const messages = {
   'files.toast.failedMany': {
     other: '{count} tệp chưa tải lên được',
   },
+
+  'files.export.request': 'Xuất chuyến đi',
+  'files.export.includeReferences': 'Bao gồm mã xác nhận',
+  'files.export.includeReferencesHint':
+    'Không chọn nếu bạn gửi tệp cho người ngoài không gian làm việc.',
+  'files.export.pending':
+    'Đang chuẩn bị bản xuất. Bạn có thể rời trang; tệp sẽ hiện trong danh sách khi sẵn sàng.',
+  'files.export.slow':
+    'Quá trình lâu hơn bình thường. Tệp sẽ hiện ở đây khi sẵn sàng. Nếu không thấy, hãy xuất lại.',
+  'files.export.refresh': 'Làm mới',
+  'files.export.ready': 'Bản xuất đã sẵn sàng',
+  'files.export.quota': {
+    other:
+      'Đã dùng hết hạn mức {count} lần xuất mỗi tháng của không gian này. Bộ đếm bắt đầu lại vào {date}.',
+  },
+  'files.export.error.request': 'Chưa bắt đầu xuất',
+  'files.export.error.requestBody':
+    'Lần thử này không bị tính. Hãy thử lại sau ít phút.',
+  'files.export.doc.overview': 'Tổng quan',
+  'files.export.doc.timezone': 'Múi giờ',
+  'files.export.doc.days': 'Ngày',
+  'files.export.doc.day': { other: 'Ngày {count} - {date}' },
+  'files.export.doc.dayUndated': { other: 'Ngày {count}' },
+  'files.export.doc.dayEmpty': 'Chưa có kế hoạch.',
+  'files.export.doc.reservations': 'Đặt chỗ',
+  'files.export.doc.transport': 'Di chuyển',
+  'files.export.doc.reference': 'Mã xác nhận {code}',
+  'files.export.doc.route': '{from} đến {to}',
+  'files.export.doc.stays': 'Nơi chúng ta ở',
+  'files.export.doc.nights': { other: 'Số đêm: {count}' },
+  'files.export.doc.truncatedDays': {
+    other:
+      'Không thể chứa tất cả các ngày trong một tài liệu. Hiển thị {count} ngày đầu.',
+  },
+  'files.export.doc.truncatedRows': {
+    other: 'Hiển thị {count} mục đầu trong tổng số {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

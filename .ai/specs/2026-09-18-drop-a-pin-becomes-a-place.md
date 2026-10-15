@@ -310,3 +310,12 @@ What ships in #619 differs from the design above in these places. All three phas
 7. **One more key, `trips.plan.drop.error`.** When a lookup is refused for authorisation, the pin is withdrawn and a toast shows the refusal's own sentence. This key is the fallback when the failure carries no sentence.
 8. **The journey does not submit the form.** A created place is an additive write to the workspace both browser projects share, and `trips-core.spec.ts` declines such writes for the same reason. The save path is the unchanged `createPlanPlaceFn`. The journey runs on the unmapped trip, whose empty map also shows the hint. It runs in Chromium only, because the add control is in the desktop rail. It asserts the coordinates, the focused name field and the withdrawn pin rather than a reload.
 9. **The isolation cases gain coordinates in place.** The foreign-trip attempt and the foreign-category attempt in `a foreign parent id is rejected, never re-scoped` carry `lat`/`lng`. The category case now also asserts both tenants' place counts.
+
+## Amendment - operator blocks preserve the allowance (#927)
+
+The failure table and Money risk paragraph above describe the earlier ordering. Geocoding in both directions and
+connection search now check the operator's provider gate before spending a workspace allowance
+unit. A provider block records blocked demand in the deployment ledger and spends no workspace
+allowance, including repeated attempts. A vendor outage or an empty answer after an allowed call
+still spends one unit; an empty answer is still not cached. The plan boundary, cache, credential
+and retention refusals keep their earlier positions before the spend.
