@@ -49,6 +49,7 @@ import {
   upsertSubscriptionUnscoped,
   usageRecordsRepository,
 } from '../billing'
+import { readFeedSource } from '../calendar-feeds'
 import { categoriesRepository, createCategory } from '../categories'
 import {
   castVote,
@@ -6759,6 +6760,64 @@ describe('tenant isolation', () => {
           beta.templateId,
         ),
       ).toEqual(untouched)
+    })
+  })
+
+  describe('the calendar read model', () => {
+    const rowsOf = (source: Awaited<ReturnType<typeof readFeedSource>>) => [
+      source.trips,
+      source.days,
+      source.places,
+      source.stops,
+      source.dayNotes,
+      source.stays,
+      source.transports,
+      source.legs,
+      source.reservations,
+    ]
+
+    it('returns nothing of another workspace’s trip, asked for by its id', async () => {
+      const source = await readFeedSource(alpha.tenant.scope, {
+        kind: 'trips',
+        tripIds: [beta.tripId],
+      })
+
+      for (const rows of rowsOf(source)) {
+        expect(rows).toEqual([])
+      }
+    })
+
+    it('returns only the caller’s rows when both workspaces’ trips are asked for', async () => {
+      const source = await readFeedSource(alpha.tenant.scope, {
+        kind: 'trips',
+        tripIds: [alpha.tripId, beta.tripId],
+      })
+
+      expect(source.trips.map((row) => row.id)).toEqual([alpha.tripId])
+      expect(source.days.length).toBeGreaterThan(0)
+      expect(source.places.map((row) => row.id)).toEqual([alpha.placeId])
+      expect(source.stops.map((row) => row.id)).toEqual([alpha.assignmentId])
+      expect(source.dayNotes.map((row) => row.id)).toEqual([alpha.dayNoteId])
+      expect(source.stays.map((row) => row.id)).toEqual([alpha.accommodationId])
+      expect(source.transports.map((row) => row.id)).toEqual([
+        alpha.transportId,
+      ])
+      expect(source.reservations.map((row) => row.id)).toEqual([
+        alpha.reservationId,
+      ])
+      const contentRows = [
+        ...source.days,
+        ...source.places,
+        ...source.stops,
+        ...source.dayNotes,
+        ...source.stays,
+        ...source.transports,
+        ...source.legs,
+        ...source.reservations,
+      ]
+      for (const row of contentRows) {
+        expect(row.tripId).toBe(alpha.tripId)
+      }
     })
   })
 })

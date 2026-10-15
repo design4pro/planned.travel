@@ -883,6 +883,18 @@ const messages = {
   'files.action.add': 'Lägg till filer',
   'files.action.choose': 'Välj filer',
   'files.action.upload': 'Ladda upp filer',
+  'files.calendar.title': 'Kalender',
+  'files.calendar.description':
+    'Ta med den här resan till kalenderappen du redan använder.',
+  'files.calendar.download.action': 'Ladda ner kalenderfil (.ics)',
+  'files.calendar.download.hint':
+    'En ögonblicksbild av resan som den ser ut nu. Den uppdateras inte.',
+  'files.calendar.undated':
+    'Den här resan har inga datum än, så bara bokningar och resor med datum visas.',
+  'files.calendar.download.error':
+    'Vi kunde inte förbereda filen. Försök igen.',
+  'files.calendar.timesNote':
+    'Resor med tidszon visas vid samma tidpunkt överallt. Allt annat visas på sin planerade klocktid, var din kalender än finns.',
   'files.drop.active': 'Släpp för att ladda upp',
   'files.drop.pasteHint': 'klistrar in en kopierad bild eller skärmdump',
   'files.reject.blockedType':
