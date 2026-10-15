@@ -182,6 +182,26 @@ describe('shouldTakePaste', () => {
     return { defaultPrevented, target }
   }
 
+  /** A paste as `document` receives it from inside an open shadow root: retargeted to the host. */
+  function pasteFromShadow(html: string): Pick<
+    Event,
+    'defaultPrevented' | 'target'
+  > & {
+    composedPath: () => Array<EventTarget>
+  } {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = host.attachShadow({ mode: 'open' })
+    root.innerHTML = html
+    const inner = root.querySelector('[data-target]')
+    if (inner === null) throw new Error('fixture has no target')
+    return {
+      defaultPrevented: false,
+      target: host,
+      composedPath: () => [inner, root, host, document.body],
+    }
+  }
+
   function mount(html: string): Element {
     const host = document.createElement('div')
     host.innerHTML = html
@@ -215,8 +235,29 @@ describe('shouldTakePaste', () => {
       '<div role="alertdialog"><button data-target>x</button></div>',
     ],
     ['inside a menu', '<div role="menu"><button data-target>x</button></div>'],
+    [
+      'inside a native dialog',
+      '<dialog open><button data-target>x</button></dialog>',
+    ],
   ])('ignores a paste on %s', (_name, html) => {
     expect(shouldTakePaste(pasteOn(mount(html)))).toBe(false)
+  })
+
+  it('ignores a paste into a field inside a shadow root, as the feedback form is', () => {
+    expect(
+      shouldTakePaste(pasteFromShadow('<textarea data-target></textarea>')),
+    ).toBe(false)
+    expect(
+      shouldTakePaste(
+        pasteFromShadow('<dialog open><button data-target>x</button></dialog>'),
+      ),
+    ).toBe(false)
+  })
+
+  it('takes a paste from a button inside a shadow root', () => {
+    expect(
+      shouldTakePaste(pasteFromShadow('<button data-target>Go</button>')),
+    ).toBe(true)
   })
 
   it('ignores a paste something already handled', () => {

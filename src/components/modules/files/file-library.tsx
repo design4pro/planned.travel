@@ -1,5 +1,5 @@
 /**
- * The files screen: a drop target, a live upload queue and a library.
+ * The files screen: a drop and paste target, a live upload queue and a library.
  *
  * Three things make this real rather than a rendering of a table:
  *

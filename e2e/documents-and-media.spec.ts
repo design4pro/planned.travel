@@ -190,6 +190,12 @@ test.describe('06-S1 — Every way a file gets in', () => {
     const report = await openLibraryWithFiles(context, page)
     const bodies = await interceptUploads(page)
 
+    // On the page itself, where the screen does listen, a paste with no file keeps its default.
+    const onPage = await dispatchPaste(page, 'body', { text: 'Gate 14' })
+    expect(onPage, 'a paste of text outside a field is not cancelled').toBe(
+      true,
+    )
+
     await page
       .getByRole('button', { name: /^Actions for / })
       .first()

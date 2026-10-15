@@ -2,8 +2,8 @@
  * Paste, as three pure steps the Files screen's listener composes: read the clipboard, name what
  * was pasted, and decide whether this paste is the screen's to take.
  *
- * Nothing here touches a DOM global at run time (a `File` is built from the one the browser hands
- * over, and the target is probed structurally), so the whole module is tested with the real code.
+ * Nothing here touches a DOM global at run time beyond `File` (built from the one the browser hands
+ * over; the target is probed structurally), so the whole module is tested with the real code.
  */
 import {
   pastedFilenameStamp,
@@ -65,7 +65,7 @@ export function nameForPaste(
 
 /** What a paste must not be taken from: fields that take text, and the layers that own the keyboard. */
 const OWNS_PASTE =
-  'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"], [role="alertdialog"], [role="menu"]'
+  'input, textarea, select, [contenteditable]:not([contenteditable="false"]), dialog, [role="dialog"], [role="alertdialog"], [role="menu"]'
 
 interface ProbableTarget {
   readonly isContentEditable?: boolean
@@ -82,19 +82,24 @@ function isProbable(
   )
 }
 
+/** The slice of a paste event the decision reads; `composedPath` is optional so a plain object fits. */
+interface PasteEventLike extends Pick<Event, 'defaultPrevented' | 'target'> {
+  readonly composedPath?: () => ReadonlyArray<EventTarget>
+}
+
 /**
  * Whether the Files screen should treat this paste as files for the library.
  *
  * No when something already handled it, when the target is an editable field, or when it sits in a
- * dialog or a menu: there, a paste is the text of that layer's own business.
+ * dialog or a menu: there, a paste is the text of that layer's own business. The target is the
+ * innermost one on the composed path: a listener on `document` sees a field inside a shadow root
+ * (the feedback widget's form) as its host, which no selector here would match.
  */
-export function shouldTakePaste(
-  event: Pick<Event, 'defaultPrevented' | 'target'>,
-): boolean {
+export function shouldTakePaste(event: PasteEventLike): boolean {
   if (event.defaultPrevented) {
     return false
   }
-  const { target } = event
+  const target = event.composedPath?.()[0] ?? event.target
   if (!isProbable(target)) {
     return true
   }
