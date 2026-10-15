@@ -94,7 +94,7 @@ from an error, each for a reason:
 
 That last point lowers the risk; it does not remove it. The paraphrase is written by a model that
 has read hostile text, so a filed report carries the `sentry-issue` marker like any other finding
-and no unattended run picks it up (ADR 0032).
+and an unattended run implements it only on a brief afk-triage wrote from the code (ADR 0040).
 
 ## Why the workflow runs this script rather than `claude-code-action`
 

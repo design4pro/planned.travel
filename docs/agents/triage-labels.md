@@ -40,7 +40,7 @@ outlives its run is reported by `om-review-prs`, not repaired by a sweeper.
 ## Flow
 
 ```
-issue form ─► category;  Sentry sweep ─► bug + priority-high (EXTERNAL: a person reads it first)
+issue form ─► category;  Sentry sweep ─► bug + priority-high (NEEDS_TRIAGE, ADR 0040)
       ─(Reconciler: backlog-status.mjs --plan, issue by a maintainer)─► triage
             afk-triage: + category, priority, risk, Agent Brief + SLC scope check
                   ├─► Agent Brief ─► ready once its Blocked by issues close
