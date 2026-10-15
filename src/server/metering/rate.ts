@@ -7,7 +7,8 @@
  * search and a confirmation extraction leave no row, so there is nothing to `COUNT(*)`. What
  * bounds them is a tally, kept per organization and per calendar month in KV, checked **after a
  * cache miss and before the call** — a cached answer costs nothing and must therefore spend
- * nothing.
+ * nothing. Geocoding and connection search also pass the operator's provider gate before spending:
+ * an operator block is demand in the provider ledger, never a workspace allowance charge.
  *
  * The numbers are not here. They come from `resolveLimits()` in `src/server/billing/limits.ts`
  * ({@link PLAN_RATE_CEILINGS}), because the published number and the enforced number have to be

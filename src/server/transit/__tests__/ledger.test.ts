@@ -347,6 +347,69 @@ describe('the provider ledger around a connection search', () => {
     expect(spentBy(shared, 'org-alpha')).toBe(0)
   })
 
+  it('does not charge workspace B when workspace A has closed the shared gate', async () => {
+    await tables.db
+      .insert(providerRegistry)
+      .values({
+        slug: 'here',
+        label: 'HERE',
+        limitWindow: 'month',
+        callLimit: 1,
+        policy: 'block',
+      })
+    const stores = freshStores()
+    const vendor = vendorFetch(answers)
+    await searchTransitConnections(
+      runtime('org-alpha', stores, vendor),
+      LISBON_PORTO,
+    )
+    await settleDeferred()
+    const bravo = runtime('org-bravo', stores, vendor, 'user-bia')
+    await expect(
+      searchTransitConnections(bravo, LISBON_PORTO),
+    ).rejects.toSatisfy(isProviderBlockedError)
+    expect(spentBy(stores, 'org-alpha')).toBe(1)
+    expect(spentBy(stores, 'org-bravo')).toBe(0)
+    expect(vendor.calls).toHaveLength(1)
+    expect(await ledger()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          organizationId: 'org-alpha',
+          calls: 1,
+          blocked: 0,
+        }),
+        expect.objectContaining({
+          organizationId: 'org-bravo',
+          calls: 0,
+          blocked: 1,
+        }),
+      ]),
+    )
+  })
+
+  it('spends exactly once and calls the vendor when the provider gate cannot be read', async () => {
+    const stores = freshStores()
+    const vendor = vendorFetch(answers)
+    const caller = runtime('org-alpha', stores, vendor)
+    const broken = new Proxy(tables.db, {
+      get(target, key, receiver) {
+        if (key === 'select')
+          return () => {
+            throw new Error('D1 unavailable')
+          }
+        return Reflect.get(target, key, receiver) as unknown
+      },
+    })
+    const result = await searchTransitConnections(
+      { ...caller, outbound: { ...caller.outbound, db: broken } },
+      LISBON_PORTO,
+    )
+    expect(result.spent).toBe(1)
+    expect(spentBy(stores, 'org-alpha')).toBe(1)
+    expect(vendor.calls).toHaveLength(1)
+    expect(await ledger()).toMatchObject([{ calls: 1, errors: 0, blocked: 0 }])
+  })
+
   describe('when an operator has blocked a spent provider', () => {
     beforeEach(async () => {
       await tables.db.insert(providerRegistry).values({
@@ -393,12 +456,7 @@ describe('the provider ledger around a connection search', () => {
       })
     })
 
-    /**
-     * Pins the rule geo already follows: the ledger sits inside the meter, so the allowance is
-     * spent before the gate is consulted. Changing it is a follow-up covering both modules, and
-     * this case is what makes that a decision rather than a drift.
-     */
-    it('still spends one unit of the workspace allowance, as geocoding does', async () => {
+    it('spends nothing when the operator blocks the call', async () => {
       const shared = freshStores()
 
       await searchTransitConnections(
@@ -406,10 +464,10 @@ describe('the provider ledger around a connection search', () => {
         LISBON_PORTO,
       ).catch(() => undefined)
 
-      expect(spentBy(shared, 'org-alpha')).toBe(1)
+      expect(spentBy(shared, 'org-alpha')).toBe(0)
     })
 
-    it('spends a unit on every retry while the block lasts', async () => {
+    it('spends nothing on every retry while the block lasts', async () => {
       const shared = freshStores()
       const vendor = vendorFetch(answers)
 
@@ -421,7 +479,7 @@ describe('the provider ledger around a connection search', () => {
       }
 
       expect(vendor.calls).toEqual([])
-      expect(spentBy(shared, 'org-alpha')).toBe(2)
+      expect(spentBy(shared, 'org-alpha')).toBe(0)
       const rows = await ledger()
       expect(rows).toHaveLength(1)
       expect(rows[0]).toMatchObject({ calls: 0, blocked: 2 })
