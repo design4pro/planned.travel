@@ -908,6 +908,16 @@ const messages = {
     other: '파일 {count}개 올리는 중',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 생성: {when}',
+  'files.export.madeAt': '{date} {time}',
+  'files.export.email.subject': '{title} 준비 완료',
+  'files.export.email.body': {
+    other: '여행 내보내기가 준비되었습니다. {count}일 동안 보관됩니다.',
+  },
+  'files.export.email.action': '{title} 열기',
+  'files.export.email.text': '여행 내보내기가 준비되었습니다: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '올리기를 취소했습니다.',
   'files.error.badAnswer': '서버가 보낸 답을 이 브라우저가 읽지 못했습니다.',

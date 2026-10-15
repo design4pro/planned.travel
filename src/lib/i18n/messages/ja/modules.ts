@@ -912,6 +912,16 @@ const messages = {
     other: '{count} 件のファイルをアップロード中',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 作成: {when}',
+  'files.export.madeAt': '{date} {time}',
+  'files.export.email.subject': '{title} の準備ができました',
+  'files.export.email.body': {
+    other: '旅行のエクスポートの準備ができました。{count}日間保存されます。',
+  },
+  'files.export.email.action': '{title} を開く',
+  'files.export.email.text': '旅行のエクスポートの準備ができました: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'アップロードを中止しました。',
   'files.error.badAnswer':

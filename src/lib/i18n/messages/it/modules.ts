@@ -983,6 +983,19 @@ const messages = {
     other: 'Caricamento di {count} file',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generato il {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Pronto: {title}',
+  'files.export.email.body': {
+    one: 'L’esportazione del viaggio è pronta. Viene conservata per {count} giorno.',
+    many: 'L’esportazione del viaggio è pronta. Viene conservata per {count} giorni.',
+    other:
+      'L’esportazione del viaggio è pronta. Viene conservata per {count} giorni.',
+  },
+  'files.export.email.action': 'Apri {title}',
+  'files.export.email.text': 'L’esportazione del viaggio è pronta: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Caricamento annullato.',
   'files.error.badAnswer':

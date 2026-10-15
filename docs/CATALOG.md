@@ -1596,9 +1596,10 @@ provenance link remains, and the checksum still prevents a re-scrape from doing 
 so nothing operational depends on the payload surviving.
 
 The prune runs in the existing weekly retention cron, **`17 4 * * 1`**. That cron is **already
-registered** in `wrangler.jsonc` - it is the third entry of `triggers.crons` and today prunes
-expired backups and export artifacts - so phase D adds a catalogue branch to a handler that
-already runs, and adds no cron for the prune.
+registered** in `wrangler.jsonc` - it is the third entry of `triggers.crons`, registered for the
+retention of expired backups and export artifacts (that half is not written yet: a trip export prunes
+its own trip's older artifacts when its job finishes, and nothing else removes them) - so phase D adds
+a catalogue branch to a handler that already runs, and adds no cron for the prune.
 
 The catalogue **scrape** is the different cron, **`0 4 * * 1`**, seventeen minutes earlier. That
 one is genuinely absent from `wrangler.jsonc` and stays absent until phase D gives

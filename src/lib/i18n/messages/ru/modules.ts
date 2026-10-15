@@ -980,6 +980,19 @@ const messages = {
     other: 'Отправка {count} файла',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - создано {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Готово: {title}',
+  'files.export.email.body': {
+    one: 'Экспорт поездки готов. Он хранится {count} день.',
+    few: 'Экспорт поездки готов. Он хранится {count} дня.',
+    many: 'Экспорт поездки готов. Он хранится {count} дней.',
+    other: 'Экспорт поездки готов. Он хранится {count} дня.',
+  },
+  'files.export.email.action': 'Открыть: {title}',
+  'files.export.email.text': 'Экспорт поездки готов: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Отправка отменена.',
   'files.error.badAnswer':

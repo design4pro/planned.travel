@@ -956,6 +956,17 @@ const messages = {
     other: '{count} fájl feltöltése',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - létrehozva: {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} elkészült',
+  'files.export.email.body': {
+    one: 'Az utazás exportja elkészült. {count} napig őrizzük meg.',
+    other: 'Az utazás exportja elkészült. {count} napig őrizzük meg.',
+  },
+  'files.export.email.action': '{title} megnyitása',
+  'files.export.email.text': 'Az utazás exportja elkészült: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'A feltöltés megszakítva.',
   'files.error.badAnswer':

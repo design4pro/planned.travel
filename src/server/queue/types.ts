@@ -93,6 +93,14 @@ export const pdfExportPayloadSchema = z.object({
   document: exportDocumentSchema,
   /** Notify this address when the artifact is ready. */
   notify: z.string().email().optional(),
+  /**
+   * The requester's language, for the document shell and the "ready" email.
+   *
+   * A string and not an enum, so an envelope enqueued by a later build that knows a twenty-fourth
+   * locale never dead-letters; the handler resolves it and falls back to English. Optional, so a
+   * message already on the queue still parses.
+   */
+  locale: z.string().max(16).optional(),
 })
 
 export type PdfExportPayload = z.infer<typeof pdfExportPayloadSchema>

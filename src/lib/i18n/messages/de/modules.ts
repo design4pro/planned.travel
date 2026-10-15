@@ -972,6 +972,17 @@ const messages = {
     other: '{count} Dateien werden hochgeladen',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - erstellt am {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} ist fertig',
+  'files.export.email.body': {
+    one: 'Der Reiseexport ist fertig. Er wird {count} Tag aufbewahrt.',
+    other: 'Der Reiseexport ist fertig. Er wird {count} Tage aufbewahrt.',
+  },
+  'files.export.email.action': '{title} öffnen',
+  'files.export.email.text': 'Der Reiseexport ist fertig: {url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Hochladen abgebrochen.',
   'files.error.badAnswer':

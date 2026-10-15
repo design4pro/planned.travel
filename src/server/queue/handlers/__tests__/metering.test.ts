@@ -14,11 +14,14 @@
  * already writes, and a blocked email has no fallback at all and must surface.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createTrip } from '#/server/repos'
+import { createHarness } from '#/server/repos/__tests__/harness'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { ProviderBlockedError } from '#/server/metering/errors'
 import { handleEmail } from '../email'
-import { handlePdfExport } from '../pdf-export'
+import { createPdfExportHandler } from '../pdf-export'
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { ProviderCallLabel } from '#/server/metering/outbound'
 import type { ExportDocument, TaskBindings, TaskContext } from '../../types'
 
@@ -36,6 +39,7 @@ interface Recorded {
 function harness(
   options: {
     readonly blockOn?: string
+    readonly orgId?: string
     readonly env?: Partial<TaskBindings>
   } = {},
 ) {
@@ -53,8 +57,12 @@ function harness(
       put: async (key: string, value: unknown) => {
         stored.set(key, value)
       },
+      list: async () => ({ objects: [], truncated: false }),
+      delete: async () => undefined,
     },
     KV: { put: async () => undefined },
+    // Never dereferenced: the pdf-export handler is built over the harness database below.
+    DB: {},
     ...options.env,
   } as unknown as TaskBindings
 
@@ -64,7 +72,7 @@ function harness(
     now: () => NOW,
     attempt: 1,
     taskId: 'task_1',
-    orgId: 'org_1',
+    orgId: options.orgId ?? 'org_1',
     callProvider: async <T>(
       label: ProviderCallLabel,
       send: () => Promise<T>,
@@ -127,15 +135,36 @@ describe('email', () => {
 })
 
 describe('pdf export', () => {
+  // The handler re-checks the requester and the trip before it renders, so these cases run against
+  // a real tenant, through the handler's database seam (as `trip-copy` is built).
+  let db: Harness
+  let tenant: SeededTenant
+  let tripId: string
+
+  beforeEach(async () => {
+    db = await createHarness()
+    tenant = await db.seedTenant('alpha')
+    tripId = (await createTrip(tenant.scope, { title: 'Lisbon' })).id
+  })
+
+  afterEach(() => {
+    db.close()
+  })
+
+  const handlePdfExport = (
+    payload: Parameters<ReturnType<typeof createPdfExportHandler>>[0],
+    context: TaskContext,
+  ) => createPdfExportHandler(() => db.db)(payload, context)
+
   it('renders through the meter, labelled as the provider it is', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response(new ArrayBuffer(8), { status: 200 }))
-    const { context, recorded } = harness()
+    const { context, recorded } = harness({ orgId: tenant.organizationId })
 
     try {
       const metrics = await handlePdfExport(
-        { tripId: 'trip_1', requestedBy: 'usr_1', document: DOCUMENT },
+        { tripId, requestedBy: tenant.ownerUserId, document: DOCUMENT },
         context,
       )
       expect(metrics.format).toBe('pdf')
@@ -155,11 +184,14 @@ describe('pdf export', () => {
    */
   it('falls back to the HTML artifact when the provider is over its ceiling', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
-    const { context, stored } = harness({ blockOn: 'browser-rendering' })
+    const { context, stored } = harness({
+      blockOn: 'browser-rendering',
+      orgId: tenant.organizationId,
+    })
 
     try {
       const metrics = await handlePdfExport(
-        { tripId: 'trip_1', requestedBy: 'usr_1', document: DOCUMENT },
+        { tripId, requestedBy: tenant.ownerUserId, document: DOCUMENT },
         context,
       )
 

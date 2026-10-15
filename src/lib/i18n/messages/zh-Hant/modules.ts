@@ -871,6 +871,16 @@ const messages = {
     other: '正在上傳 {count} 個檔案',
   },
 
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 產生於 {when}',
+  'files.export.madeAt': '{date} {time}',
+  'files.export.email.subject': '{title} 已準備好',
+  'files.export.email.body': {
+    other: '行程匯出已準備好。將保留 {count} 天。',
+  },
+  'files.export.email.action': '開啟 {title}',
+  'files.export.email.text': '行程匯出已準備好：{url}',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上傳。',
   'files.error.badAnswer': '伺服器回傳的內容這個瀏覽器讀不了。',
