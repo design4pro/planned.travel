@@ -789,9 +789,8 @@ test.describe('06-S3b — Everyone on a trip sees its exports', () => {
 test.describe('06-S3b - Requesting a trip export', () => {
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)
-    test.skip(
-      !(await hasSession(page)),
-      'The seeded demo session is unavailable',
+    expect(await hasSession(page), 'The seeded demo session is available').toBe(
+      true,
     )
   })
 
