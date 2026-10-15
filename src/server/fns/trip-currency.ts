@@ -3,7 +3,7 @@
  *
  * Two calls: a read that says what changing the currency would do without writing anything, and the
  * commit that writes it. The Costs tab's "Change budget currency" dialog is the one screen that calls
- * them (`.ai/specs/2026-10-04-change-a-trips-accounting-currency.md`, phase 4).
+ * them (`.ai/specs/implemented/2026-10-04-change-a-trips-accounting-currency.md`, phase 4).
  *
  * No SQL and no rule lives here. The guards (the owner of a trip that is not archived), the reads,
  * the rate lookup, the arithmetic and the atomic write are `src/server/repos/trip-currency`; this

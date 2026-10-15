@@ -616,6 +616,9 @@ const messages = {
   'editTrip.coverContinue': 'Save without the new cover',
   'editTrip.currencyLocked':
     'This trip already has prices in it, so its budget currency can’t be changed here. Use Change budget currency on the Costs tab, or set it back to {current} to save your other changes.',
+  'editTrip.currencyReadonly':
+    'The budget currency is changed from the Costs tab.',
+  'editTrip.currencyLink': 'Open the Costs tab',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Delete “{title}” for good?',
   'deleteTrip.description':
