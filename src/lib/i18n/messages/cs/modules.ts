@@ -907,6 +907,18 @@ const messages = {
   'files.action.add': 'Přidat soubory',
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
+  'files.calendar.title': 'Kalendář',
+  'files.calendar.description':
+    'Přenes si tento výlet do aplikace kalendáře, kterou už používáš.',
+  'files.calendar.download.action': 'Stáhnout soubor kalendáře (.ics)',
+  'files.calendar.download.hint':
+    'Snímek výletu v dnešním stavu. Neaktualizuje se.',
+  'files.calendar.undated':
+    'Tento výlet zatím nemá data, takže se objeví jen rezervace a cesty s datem.',
+  'files.calendar.download.error':
+    'Soubor se nepodařilo připravit. Zkus to znovu.',
+  'files.calendar.timesNote':
+    'Cesty s časovým pásmem se zobrazí všude ve stejný okamžik. Vše ostatní se zobrazí v plánovaný čas na hodinách, ať je tvůj kalendář kdekoli.',
   'files.drop.active': 'Pusť a nahraje se',
   'files.drop.pasteHint': 'vloží zkopírovaný obrázek nebo snímek obrazovky',
   'files.reject.blockedType':

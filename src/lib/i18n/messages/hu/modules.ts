@@ -892,6 +892,18 @@ const messages = {
   'files.action.add': 'Fájlok hozzáadása',
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
+  'files.calendar.title': 'Naptár',
+  'files.calendar.description':
+    'Vidd át ezt az utazást a már használt naptáralkalmazásodba.',
+  'files.calendar.download.action': 'Naptárfájl letöltése (.ics)',
+  'files.calendar.download.hint':
+    'Az utazás pillanatképe a jelenlegi állapotában. Nem frissül.',
+  'files.calendar.undated':
+    'Ennek az utazásnak még nincsenek dátumai, ezért csak a dátummal rendelkező foglalások és utak jelennek meg.',
+  'files.calendar.download.error':
+    'Nem sikerült előkészíteni a fájlt. Próbáld újra.',
+  'files.calendar.timesNote':
+    'Az időzónával rendelkező utak mindenhol ugyanabban a pillanatban jelennek meg. Minden más a tervezett óraidőben látszik, bárhol is van a naptárad.',
   'files.drop.active': 'Engedd el a feltöltéshez',
   'files.drop.pasteHint': 'beilleszt egy másolt képet vagy képernyőképet',
   'files.reject.blockedType':
