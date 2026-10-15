@@ -110,7 +110,7 @@ YAMLs spelled the old vocabulary; PR C deleted them, so nothing in the tree read
   issue enters with a category.
 - **Sentry** findings (`.github/workflows/sentry-triage.yml`, ADR 0008 as amended by ADR 0018) as
   `bug` + `priority-high` with `<!-- sentry-issue: SHORT-ID -->` in the body; dedup is keyed on the
-  marker across open and closed issues. The body quotes production error data, so no automation
-  grooms one and the Reconciler never starts one: a person reads it first (ADR 0032).
+  marker across open and closed issues. The body quotes production data, so no automation grooms
+  one; the Reconciler starts `triage` on it, and afk-triage briefs it from the code (ADR 0040).
 - **Follow-ups** from `om-followup-issue-from-pr`, `om-review-prs`, `afk-triage` (a split) and
   `afk-architecture-review`, triaged like any other.
