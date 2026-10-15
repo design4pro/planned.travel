@@ -10,12 +10,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import {
-  deleteMessage,
-  editMessage,
-  requireTrip,
-  toggleReaction,
-} from '#/server/repos'
+import { deleteMessage, editMessage, toggleReaction } from '#/server/repos'
 import { postTripMessage } from './collab-thread-writes'
 import { appScope, mirrorToRoom, patch } from './context'
 import { body, postMessageSchema, rowId, tripId } from './collab-inputs'
@@ -31,8 +26,7 @@ export const editMessageFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, messageId: rowId, body }))
   .handler(async ({ data }): Promise<{ readonly messageId: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    await editMessage(scope, data.messageId, data.body)
+    await editMessage(scope, data.tripId, data.messageId, data.body)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { chatChangedAt: Date.now() }),
@@ -44,8 +38,7 @@ export const deleteMessageFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, messageId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    await deleteMessage(scope, data.messageId)
+    await deleteMessage(scope, data.tripId, data.messageId)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { chatChangedAt: Date.now() }),
@@ -63,8 +56,12 @@ export const toggleReactionFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly added: boolean }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    const added = await toggleReaction(scope, data.messageId, data.emoji)
+    const added = await toggleReaction(
+      scope,
+      data.tripId,
+      data.messageId,
+      data.emoji,
+    )
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { chatChangedAt: Date.now() }),

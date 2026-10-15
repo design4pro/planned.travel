@@ -12,6 +12,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  addTripMember,
   castVote,
   closePoll,
   createCollabNote,
@@ -119,7 +120,7 @@ describe('the conversation payload', () => {
       tripId: trip.id,
       body: 'Bringing snacks',
     })
-    await toggleReaction(scope, second.id, '👍')
+    await toggleReaction(scope, trip.id, second.id, '👍')
 
     const messages = await threadPayload(scope, trip)
 
@@ -184,6 +185,11 @@ describe('the notes payload', () => {
 describe('the polls payload', () => {
   it('counts each option’s votes and lists who cast them', async () => {
     const other = await tenant.addUser('Ayumi')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: other,
+      role: 'editor',
+    })
     const poll = await createPoll(scope, {
       tripId: trip.id,
       question: 'Ramen or sushi?',
@@ -193,9 +199,9 @@ describe('the polls payload', () => {
       ],
       allowMultiple: false,
     })
-    await castVote(scope, poll.id, 'opt-1')
-    await castVote(tenant.scopeFor(other), poll.id, 'opt-1')
-    await closePoll(scope, poll.id)
+    await castVote(scope, trip.id, poll.id, 'opt-1')
+    await castVote(tenant.scopeFor(other), trip.id, poll.id, 'opt-1')
+    await closePoll(scope, trip.id, poll.id)
 
     const polls = await pollsPayload(scope, trip)
 

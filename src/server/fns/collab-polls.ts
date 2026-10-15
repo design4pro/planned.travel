@@ -7,13 +7,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import {
-  castVote,
-  closePoll,
-  createPoll,
-  deletePoll,
-  requireTrip,
-} from '#/server/repos'
+import { castVote, closePoll, createPoll, deletePoll } from '#/server/repos'
 import { pollInputSchema, rowId, tripId } from './collab-inputs'
 import { appScope, mirrorToRoom, patch } from './context'
 
@@ -21,7 +15,6 @@ export const createPollFn = createServerFn({ method: 'POST' })
   .validator(pollInputSchema)
   .handler(async ({ data }): Promise<{ readonly pollId: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
 
     const poll = await createPoll(scope, {
       tripId: data.tripId,
@@ -57,8 +50,7 @@ export const castVoteFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly totalVotes: number }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    const votes = await castVote(scope, data.pollId, data.optionId)
+    const votes = await castVote(scope, data.tripId, data.pollId, data.optionId)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { pollsChangedAt: Date.now() }),
@@ -70,8 +62,7 @@ export const closePollFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, pollId: rowId }))
   .handler(async ({ data }): Promise<{ readonly closed: true }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    await closePoll(scope, data.pollId)
+    await closePoll(scope, data.tripId, data.pollId)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { pollsChangedAt: Date.now() }),
@@ -83,8 +74,7 @@ export const deletePollFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, pollId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    await deletePoll(scope, data.pollId)
+    await deletePoll(scope, data.tripId, data.pollId)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { pollsChangedAt: Date.now() }),
