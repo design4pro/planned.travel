@@ -1,5 +1,5 @@
 /**
- * The geocoding proxy — parse, plan gate, cache, credential, retention, meter, vendor, cache write.
+ * The geocoding proxy — parse, plan gate, cache, credential, retention, provider gate, meter, vendor, cache write.
  *
  * Every consumer enters here and none reaches `./geoapify` directly, for the reason
  * `src/server/transit/search.ts` gives about its own vendor: the rules this module applies are what
@@ -24,11 +24,10 @@
  * 5. **The retention check before the meter.** Refusing a result we may not store *after* paying for
  *    it charges a workspace for nothing. Checking the adapter's declaration up front is strictly
  *    cheaper, and it also keeps the cache from ever holding an unstorable answer.
- * 6. **The meter before the vendor**, or the ceiling is advisory.
- * 7. **The provider ledger around the vendor call**, so the operator's own view of the vendor — the
- *    `provider_usage` tally and the `block` policy an operator can set on it — sees every call this
- *    module makes. It sits inside the meter rather than outside it because the two count different
- *    things: the meter is a workspace's monthly allowance, the ledger is this deployment's bill.
+ * 6. **The provider gate before the meter**, so a call refused by an operator spends no workspace
+ *    allowance. The ledger still records that blocked demand, attributed to the calling workspace.
+ * 7. **The meter after the provider gate and before the vendor**, or the workspace ceiling is
+ *    advisory. The ledger wraps only the vendor attempt: an allowance refusal records no call.
  *
  * ## The cache is shared across tenants, and unexpiring
  *
@@ -401,7 +400,7 @@ function refuseBeforeTheMeter(runtime: GeocodeRuntime): GeocodeProvider {
   return runtime.provider
 }
 
-/** Position 6, and the shape of an answer that had to be paid for. */
+/** Position 7: the workspace allowance, after the provider gate has passed. */
 async function spend(runtime: GeocodeRuntime): Promise<number> {
   // Throws `RateCeilingError`, which carries the metric, the ceiling and the amount spent. The
   // words a traveller reads are the rendering stage's, not this module's.
@@ -415,7 +414,7 @@ async function spend(runtime: GeocodeRuntime): Promise<number> {
 }
 
 /**
- * Position 7: the vendor call, with the provider ledger wrapped around it.
+ * Positions 6 and 7: provider gate, allowance spend, then the ledger-wrapped vendor attempt.
  *
  * The slug comes from `runtime.vendor` rather than from the provider, so the row a call is recorded
  * under is the same one the cache key was built from — one vendor identity, read once. The operation
@@ -432,8 +431,12 @@ async function ask(
   runtime: GeocodeRuntime,
   operation: 'geocode.forward' | 'geocode.reverse',
   send: () => Promise<ReadonlyArray<GeocodeCandidate>>,
-): Promise<ReadonlyArray<GeocodeCandidate>> {
-  return callProvider(
+): Promise<{
+  candidates: ReadonlyArray<GeocodeCandidate>
+  spent: number | null
+}> {
+  let spent: number | null = null
+  const candidates = await callProvider(
     runtime.outbound,
     {
       provider: runtime.vendor.slug,
@@ -441,7 +444,12 @@ async function ask(
       organizationId: runtime.organizationId,
     },
     send,
+    undefined,
+    async () => {
+      spent = await spend(runtime)
+    },
   )
+  return { candidates, spent }
 }
 
 function hit(
@@ -487,9 +495,7 @@ export async function forwardGeocode(
   }
 
   const provider = refuseBeforeTheMeter(runtime)
-  const spent = await spend(runtime)
-
-  const candidates = await ask(runtime, 'geocode.forward', () =>
+  const { candidates, spent } = await ask(runtime, 'geocode.forward', () =>
     provider.forward(query),
   )
   await write(runtime, key, candidates)
@@ -533,9 +539,7 @@ export async function reverseGeocode(
   }
 
   const provider = refuseBeforeTheMeter(runtime)
-  const spent = await spend(runtime)
-
-  const candidates = await ask(runtime, 'geocode.reverse', () =>
+  const { candidates, spent } = await ask(runtime, 'geocode.reverse', () =>
     provider.reverse(query),
   )
   await write(runtime, key, candidates)

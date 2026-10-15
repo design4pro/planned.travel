@@ -1050,6 +1050,61 @@ const messages = {
     many: '{count} archivos no se subieron',
     other: '{count} archivos no se subieron',
   },
+
+  'files.export.request': 'Exportar el viaje',
+  'files.export.includeReferences': 'Incluir códigos de confirmación',
+  'files.export.includeReferencesHint':
+    'No marques esta opción si enviarás el archivo a alguien ajeno a tu espacio.',
+  'files.export.pending':
+    'Preparando la exportación. Puedes salir de esta página; el archivo aparecerá en esta lista cuando esté listo.',
+  'files.export.slow':
+    'Está tardando más de lo habitual. El archivo aparecerá aquí cuando esté listo. Si no aparece, vuelve a exportar.',
+  'files.export.refresh': 'Actualizar',
+  'files.export.ready': 'Tu exportación está lista',
+  'files.export.quota': {
+    one: 'Se ha agotado el cupo mensual de este espacio de {count} exportaciones. El contador se reinicia el {date}.',
+    many: 'Se ha agotado el cupo mensual de este espacio de {count} exportaciones. El contador se reinicia el {date}.',
+    other:
+      'Se ha agotado el cupo mensual de este espacio de {count} exportaciones. El contador se reinicia el {date}.',
+  },
+  'files.export.error.request': 'No se inició la exportación',
+  'files.export.error.requestBody':
+    'Este intento no se ha contabilizado. Vuelve a intentarlo en un momento.',
+  'files.export.doc.overview': 'Resumen',
+  'files.export.doc.timezone': 'Zona horaria',
+  'files.export.doc.days': 'Días',
+  'files.export.doc.day': {
+    one: 'Día {count} - {date}',
+    many: 'Día {count} - {date}',
+    other: 'Día {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'Día {count}',
+    many: 'Día {count}',
+    other: 'Día {count}',
+  },
+  'files.export.doc.dayEmpty': 'Aún no hay planes.',
+  'files.export.doc.reservations': 'Reservas',
+  'files.export.doc.transport': 'Transporte',
+  'files.export.doc.reference': 'Referencia {code}',
+  'files.export.doc.route': '{from} a {to}',
+  'files.export.doc.stays': 'Dónde nos alojamos',
+  'files.export.doc.nights': {
+    one: 'Noches: {count}',
+    many: 'Noches: {count}',
+    other: 'Noches: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'No caben todos los días en un documento. Se muestran los primeros {count} días.',
+    many: 'No caben todos los días en un documento. Se muestran los primeros {count} días.',
+    other:
+      'No caben todos los días en un documento. Se muestran los primeros {count} días.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Se muestran los primeros {count} de {total}.',
+    many: 'Se muestran los primeros {count} de {total}.',
+    other: 'Se muestran los primeros {count} de {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

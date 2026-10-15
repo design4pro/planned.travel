@@ -343,6 +343,14 @@ call throws `QuotaExceededError`. The failure-redaction middleware sends the bro
 ceiling, the plan and the message stay on the server. A screen that owns a quota-limited write
 resolves the code to a localised sentence and a way to the billing page.
 
+Trip exports reserve their monthly unit before checking that same ceiling. After trip access and
+owner/editor role checks, `src/server/repos/exports.ts` atomically bumps `usage_records` for the
+explicit `YYYY-MM` period and checks the returned post-increment value. A refusal releases that
+unit once; a failure after reservation, through enqueue, releases the reserved month's unit.
+Accepted requests remain counted even if their queued job later fails. There is no export table
+to count, and R2 retention deliberately removes old artifacts. The request function returns a
+structured quota answer with the limit, usage and restart date so the panel can translate it.
+
 ### One resolver, one answer
 
 `resolveLimits()` in **`src/server/billing/limits.ts`** is the only implementation of "what may

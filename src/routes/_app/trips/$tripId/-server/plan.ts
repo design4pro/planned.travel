@@ -24,6 +24,7 @@ import { z } from 'zod'
 import { RESERVATION_STATUSES } from '#/server/db/schema'
 import {
   NotFoundError,
+  PLACE_WRITE_ROLES,
   assertTripRole,
   canWritePlan,
   createAssignment,
@@ -313,9 +314,9 @@ export async function readPlanBoard(
  *
  * The archive first, because `requireWritableTrip` also asks whether the caller
  * may see the trip at all, and a caller who may not learns `NotFoundError` and
- * nothing else; the role only after that. The repositories these writes call carry
- * no role guard of their own, so without this a viewer — whom the board no longer
- * offers a write — could still make one by calling the function (PRD #104
+ * nothing else; the role only after that. Place repository writers also enforce
+ * the shared owner/editor role list, so callers outside this handler cannot bypass
+ * it. This handler keeps the archive check before the role check (PRD #104
  * decision 6). The same composition `writableTripDay` records for notes.
  */
 async function requireEditablePlan(
@@ -323,20 +324,18 @@ async function requireEditablePlan(
   tripId: string,
 ): Promise<Trip> {
   const trip = await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, trip.id, ['owner', 'editor'])
+  await assertTripRole(scope, trip.id, PLACE_WRITE_ROLES)
   return trip
 }
 
 /**
  * A place of the trip {@link requireEditablePlan} checked, or `NotFoundError`.
  *
- * The client's `tripId` only names the trip the role is checked on; the row is
- * addressed by its own id, and the repositories scope that id to the workspace, not
- * to a trip. Without this, a caller who owns or edits any trip could name it and
- * write a place of a trip they only read — or cannot see at all. Not-found rather
- * than forbidden, so the answer says nothing about a trip the caller was never
- * shown. `day-notes.ts` reaches the same end the other way round, reading the row
- * first and guarding the trip it names; either order refuses the same calls.
+ * The client's `tripId` names the plan being edited; the place is addressed by
+ * its own id. Repository writers check the place's actual trip role, while this
+ * check also binds the row to the requested plan, even if the caller edits both
+ * trips. Not-found rather than forbidden keeps a mismatched id from disclosing
+ * another trip's contents.
  */
 async function requirePlaceOfPlan(
   scope: TenantScope,

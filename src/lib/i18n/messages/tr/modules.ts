@@ -888,7 +888,8 @@ const messages = {
   'files.calendar.timesNote':
     'Saat dilimi olan yolculuklar her yerde aynı anda görünür. Geri kalan her şey, takvimin nerede olursa olsun planlanan saat değerinde görünür.',
   'files.drop.active': 'Yüklemek için bırak',
-  'files.drop.pasteHint': 'kopyalanan bir görseli veya ekran görüntüsünü yapıştırır',
+  'files.drop.pasteHint':
+    'kopyalanan bir görseli veya ekran görüntüsünü yapıştırır',
   'files.reject.blockedType':
     '“{name}” eklenmedi: XML ve sıkıştırılmış SVG dosyaları güvenlik nedeniyle burada saklanmaz. Onu PDF veya görsel olarak kaydet ve onun yerine onu ekle.',
   'files.drop.idle': 'Dosyaları buraya sürükle',
@@ -1005,6 +1006,51 @@ const messages = {
   'files.toast.failedMany': {
     one: '{count} dosya yüklenmedi',
     other: '{count} dosya yüklenmedi',
+  },
+
+  'files.export.request': 'Geziyi dışa aktar',
+  'files.export.includeReferences': 'Onay kodlarını ekle',
+  'files.export.includeReferencesHint':
+    'Dosyayı çalışma alanınız dışındaki birine gönderecekseniz işaretlemeyin.',
+  'files.export.pending':
+    'Dışa aktarım hazırlanıyor. Sayfadan ayrılabilirsiniz; dosya hazır olduğunda listede görünecek.',
+  'files.export.slow':
+    'Bu işlem normalden uzun sürüyor. Dosya hazır olduğunda burada görünecek. Görünmezse yeniden dışa aktarın.',
+  'files.export.refresh': 'Yenile',
+  'files.export.ready': 'Dışa aktarımınız hazır',
+  'files.export.quota': {
+    one: 'Çalışma alanının aylık {count} dışa aktarım hakkı tükendi. Sayaç {date} tarihinde yenilenir.',
+    other:
+      'Çalışma alanının aylık {count} dışa aktarım hakkı tükendi. Sayaç {date} tarihinde yenilenir.',
+  },
+  'files.export.error.request': 'Dışa aktarım başlatılmadı',
+  'files.export.error.requestBody':
+    'Bu deneme sayılmadı. Biraz sonra yeniden deneyin.',
+  'files.export.doc.overview': 'Genel bakış',
+  'files.export.doc.timezone': 'Saat dilimi',
+  'files.export.doc.days': 'Günler',
+  'files.export.doc.day': {
+    one: 'Gün {count} - {date}',
+    other: 'Gün {count} - {date}',
+  },
+  'files.export.doc.dayUndated': { one: 'Gün {count}', other: 'Gün {count}' },
+  'files.export.doc.dayEmpty': 'Henüz plan yok.',
+  'files.export.doc.reservations': 'Rezervasyonlar',
+  'files.export.doc.transport': 'Ulaşım',
+  'files.export.doc.reference': 'Onay no. {code}',
+  'files.export.doc.route': '{from} - {to}',
+  'files.export.doc.stays': 'Konakladığımız yerler',
+  'files.export.doc.nights': {
+    one: 'Gece sayısı: {count}',
+    other: 'Gece sayısı: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Tüm günler bir belgeye sığmıyor. İlk {count} gün gösteriliyor.',
+    other: 'Tüm günler bir belgeye sığmıyor. İlk {count} gün gösteriliyor.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'İlk {count} / {total} gösteriliyor.',
+    other: 'İlk {count} / {total} gösteriliyor.',
   },
 } satisfies TranslationOf<typeof En>
 

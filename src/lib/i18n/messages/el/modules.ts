@@ -913,7 +913,8 @@ const messages = {
   'files.calendar.timesNote':
     'Οι μετακινήσεις με ζώνη ώρας εμφανίζονται την ίδια στιγμή παντού. Όλα τα υπόλοιπα εμφανίζονται στην προγραμματισμένη ώρα ρολογιού, όπου κι αν βρίσκεται το ημερολόγιό σου.',
   'files.drop.active': 'Άφησέ το για μεταφόρτωση',
-  'files.drop.pasteHint': 'επικολλά μια αντιγραμμένη εικόνα ή στιγμιότυπο οθόνης',
+  'files.drop.pasteHint':
+    'επικολλά μια αντιγραμμένη εικόνα ή στιγμιότυπο οθόνης',
   'files.reject.blockedType':
     'Το «{name}» δεν προστέθηκε: τα αρχεία XML και τα συμπιεσμένα SVG δεν αποθηκεύονται εδώ, για λόγους ασφαλείας. Αποθήκευσέ το ως PDF ή ως εικόνα και πρόσθεσε αυτό στη θέση του.',
   'files.drop.idle': 'Σύρε αρχεία εδώ',
@@ -1030,6 +1031,55 @@ const messages = {
   'files.toast.failedMany': {
     one: '{count} αρχείο δεν ανέβηκε',
     other: '{count} αρχεία δεν ανέβηκαν',
+  },
+
+  'files.export.request': 'Εξαγωγή ταξιδιού',
+  'files.export.includeReferences': 'Συμπερίληψη κωδικών επιβεβαίωσης',
+  'files.export.includeReferencesHint':
+    'Μην το επιλέξετε αν στείλετε το αρχείο σε κάποιον εκτός του χώρου εργασίας.',
+  'files.export.pending':
+    'Η εξαγωγή ετοιμάζεται. Μπορείτε να φύγετε από τη σελίδα· το αρχείο θα εμφανιστεί στη λίστα όταν είναι έτοιμο.',
+  'files.export.slow':
+    'Αυτό διαρκεί περισσότερο από το συνηθισμένο. Το αρχείο θα εμφανιστεί εδώ όταν είναι έτοιμο. Αν όχι, εξαγάγετε ξανά.',
+  'files.export.refresh': 'Ανανέωση',
+  'files.export.ready': 'Η εξαγωγή σας είναι έτοιμη',
+  'files.export.quota': {
+    one: 'Το μηνιαίο όριο των {count} εξαγωγών του χώρου εξαντλήθηκε. Η μέτρηση αρχίζει ξανά στις {date}.',
+    other:
+      'Το μηνιαίο όριο των {count} εξαγωγών του χώρου εξαντλήθηκε. Η μέτρηση αρχίζει ξανά στις {date}.',
+  },
+  'files.export.error.request': 'Η εξαγωγή δεν ξεκίνησε',
+  'files.export.error.requestBody':
+    'Αυτή η προσπάθεια δεν μετρήθηκε. Δοκιμάστε ξανά σε λίγο.',
+  'files.export.doc.overview': 'Επισκόπηση',
+  'files.export.doc.timezone': 'Ζώνη ώρας',
+  'files.export.doc.days': 'Ημέρες',
+  'files.export.doc.day': {
+    one: 'Ημέρα {count} - {date}',
+    other: 'Ημέρα {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'Ημέρα {count}',
+    other: 'Ημέρα {count}',
+  },
+  'files.export.doc.dayEmpty': 'Δεν υπάρχει ακόμη πρόγραμμα.',
+  'files.export.doc.reservations': 'Κρατήσεις',
+  'files.export.doc.transport': 'Μεταφορές',
+  'files.export.doc.reference': 'Κωδ. {code}',
+  'files.export.doc.route': '{from} προς {to}',
+  'files.export.doc.stays': 'Πού μένουμε',
+  'files.export.doc.nights': {
+    one: 'Διανυκτερεύσεις: {count}',
+    other: 'Διανυκτερεύσεις: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Δεν χωρούν όλες οι ημέρες σε ένα έγγραφο. Εμφανίζονται οι πρώτες {count} ημέρες.',
+    other:
+      'Δεν χωρούν όλες οι ημέρες σε ένα έγγραφο. Εμφανίζονται οι πρώτες {count} ημέρες.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Εμφανίζονται οι πρώτες {count} από {total}.',
+    other: 'Εμφανίζονται οι πρώτες {count} από {total}.',
   },
 } satisfies TranslationOf<typeof En>
 
