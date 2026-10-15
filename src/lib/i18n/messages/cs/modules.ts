@@ -988,6 +988,34 @@ const messages = {
   'files.export.email.action': 'Otevřít {title}',
   'files.export.email.text': 'Export cesty je hotový: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Export cesty',
+  'files.export.description':
+    'Tisknutelná kopie cesty: dny, zastávky, rezervace, doprava a ubytování. Předejte ji někomu, kdo nemá účet.',
+  'files.export.kept': {
+    one: 'Každý export se uchovává {count} den.',
+    few: 'Každý export se uchovává {count} dny.',
+    many: 'Každý export se uchovává {count} dne.',
+    other: 'Každý export se uchovává {count} dní.',
+  },
+  'files.export.empty.title': 'Zatím žádné exporty',
+  'files.export.empty.body':
+    'Vytvořte tisknutelnou kopii cesty a pošlete ji někomu, kdo nemá účet.',
+  'files.export.empty.bodyViewer':
+    'Export může vytvořit vlastník nebo editor cesty.',
+  'files.export.format.pdf': 'Soubor PDF',
+  'files.export.format.html': 'Tisknutelná stránka',
+  'files.export.artifact': 'Export cesty, {date}',
+  'files.export.download': 'Stáhnout',
+  'files.export.downloadLabelPdf': 'Stáhnout PDF vytvořené {date}',
+  'files.export.downloadLabelHtml':
+    'Stáhnout tisknutelnou stránku vytvořenou {date}',
+  'files.export.error.list': 'Seznam exportů se nenačetl.',
+  'files.export.retry': 'Zkusit znovu',
+  'files.export.error.missing':
+    'Tento export se už neuchovává. Exportujte cestu znovu.',
+  'files.export.error.missingViewer': 'Tento export se už neuchovává.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Nahrávání zrušeno.',
   'files.error.badAnswer':

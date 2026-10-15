@@ -936,6 +936,30 @@ const messages = {
   'files.export.email.action': 'Mở {title}',
   'files.export.email.text': 'Bản xuất chuyến đi đã sẵn sàng: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Xuất chuyến đi',
+  'files.export.description':
+    'Bản sao có thể in của chuyến đi: các ngày, điểm dừng, đặt chỗ, di chuyển và nơi ở. Đưa cho người không có tài khoản.',
+  'files.export.kept': {
+    other: 'Mỗi bản xuất được lưu trong {count} ngày.',
+  },
+  'files.export.empty.title': 'Chưa có bản xuất nào',
+  'files.export.empty.body':
+    'Tạo bản sao có thể in của chuyến đi để gửi cho người không có tài khoản.',
+  'files.export.empty.bodyViewer':
+    'Chủ sở hữu hoặc người chỉnh sửa chuyến đi có thể tạo.',
+  'files.export.format.pdf': 'Tệp PDF',
+  'files.export.format.html': 'Trang để in',
+  'files.export.artifact': 'Bản xuất chuyến đi, {date}',
+  'files.export.download': 'Tải xuống',
+  'files.export.downloadLabelPdf': 'Tải xuống tệp PDF tạo lúc {date}',
+  'files.export.downloadLabelHtml': 'Tải xuống trang để in tạo lúc {date}',
+  'files.export.error.list': 'Danh sách bản xuất chưa tải được.',
+  'files.export.retry': 'Thử lại',
+  'files.export.error.missing':
+    'Bản xuất đó không còn được lưu. Hãy xuất lại chuyến đi.',
+  'files.export.error.missingViewer': 'Bản xuất đó không còn được lưu.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Đã hủy tải lên.',
   'files.error.badAnswer':

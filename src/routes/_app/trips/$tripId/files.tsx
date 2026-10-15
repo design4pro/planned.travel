@@ -6,6 +6,7 @@ import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
   CalendarPanel,
+  ExportPanel,
   FileLibrary,
   StorageMeter,
   UploadFilesAction,
@@ -113,6 +114,8 @@ function FilesPage() {
           limitBytes={data.limitBytes}
           pickRequestedAt={pickRequestedAt}
         />
+
+        <ExportPanel key={tripId} tripId={tripId} />
       </AppSections>
     </AppFrame>
   )
