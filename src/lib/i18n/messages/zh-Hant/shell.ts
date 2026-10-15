@@ -422,6 +422,8 @@ const messages = {
   'editTrip.coverContinue': '不使用新封面並儲存',
   'editTrip.currencyLocked':
     '這趟行程已經有價格，所以無法在這裡變更預算貨幣。請使用「花費」分頁中的「變更預算貨幣」按鈕，或改回 {current}，再儲存其他修改。',
+  'editTrip.currencyReadonly': '預算貨幣在「花費」分頁中變更。',
+  'editTrip.currencyLink': '開啟「花費」分頁',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '永久刪除「{title}」？',
   'deleteTrip.description':
