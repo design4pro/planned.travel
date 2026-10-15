@@ -889,7 +889,8 @@ export async function confirmBookingImport(
 }
 
 /**
- * One statement for the whole batch, and a shortfall is a bug rather than a refusal.
+ * The marker is written in chunks, so a failure part way leaves the earlier chunks marked, and a
+ * shortfall is a bug rather than a refusal.
  *
  * `markReservationsImported` marks only the rows the caller owns and says how many it marked, so a
  * count below what was written means an id did not resolve inside the scope that just wrote it.
