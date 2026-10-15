@@ -5,6 +5,8 @@
  * is the shared fake, which stores bodies and upload times, so a real object of another workspace
  * can sit in the very bucket this workspace reads from and the test can say what happens to it.
  */
+import { requestHandler } from '@tanstack/react-start/server'
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -12,18 +14,35 @@ import {
   addTripMember,
   createTrip,
   updateTrip,
+  setUsage,
+  getUsageRecord,
+  TripRoleError,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { exportObjectKey } from '#/server/storage/export-artifacts'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 
 import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
+import type { TenantScope } from '#/server/repos'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
+
+const runtime = vi.hoisted(() => ({
+  scope: null as TenantScope | null,
+  send: vi.fn(async (_body: unknown) => undefined),
+  email: 'session@example.test',
+}))
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => ({ send: runtime.send, sendBatch: vi.fn() }),
+}))
+vi.mock('#/server/auth/session', () => ({
+  requireUser: async () => ({ email: runtime.email }),
+}))
 
 /** `./context` imports `cloudflare:workers` at module scope, which plain Node cannot resolve. */
 vi.mock('../context', () => ({
   appScope: () => {
-    throw new Error('appScope is not reached: this suite hands the scope in.')
+    if (runtime.scope === null) throw new Error('unauthenticated')
+    return runtime.scope
   },
   filesBucket: () => {
     throw new Error(
@@ -33,6 +52,9 @@ vi.mock('../context', () => ({
 }))
 
 const {
+  requestTripExportFn,
+  requestTripExport,
+  requestTripExportInputSchema,
   downloadTripExport,
   downloadTripExportInputSchema,
   listTripExports,
@@ -304,4 +326,140 @@ describe('the input schemas', () => {
       }).success,
     ).toBe(false)
   })
+})
+
+describe('requesting a trip export at the function boundary', () => {
+  const month = '2027-02'
+  const options = () => ({
+    month,
+    email: vi.fn(async () => 'session@example.test'),
+    warn: vi.fn(),
+    now: () => NOW,
+  })
+  const input = () => ({ tripId, notify: true, includeReferences: false })
+  const queue = () => ({
+    send: vi.fn(async (_body: unknown) => undefined),
+    sendBatch: vi.fn(async () => undefined),
+  })
+
+  it('enqueues a schema-valid snapshot with fresh ids and only the session address', async () => {
+    const q = queue()
+    const opts = options()
+    const first = await requestTripExport(tenant.scope, q, input(), opts)
+    const second = await requestTripExport(tenant.scope, q, input(), opts)
+    expect(first.ok && second.ok && first.taskId !== second.taskId).toBe(true)
+    const { pdfExportPayloadSchema } = await import('#/server/queue/types')
+    const body = q.send.mock.calls[0]?.[0]
+    expect(body).toMatchObject({
+      orgId: tenant.organizationId,
+      payload: {
+        tripId,
+        requestedBy: tenant.ownerUserId,
+        notify: 'session@example.test',
+        locale: 'en',
+      },
+    })
+    const envelope = body as { payload: unknown }
+    expect(pdfExportPayloadSchema.safeParse(envelope.payload).success).toBe(
+      true,
+    )
+    expect((await getUsageRecord(tenant.scope, 'exports', month))?.value).toBe(
+      2,
+    )
+    expect(await getUsageRecord(tenant.scope, 'exports', 'all')).toBeNull()
+    expect(
+      requestTripExportInputSchema.safeParse({
+        ...input(),
+        email: 'attacker@example.test',
+      }).success,
+    ).toBe(false)
+  })
+
+  it('returns quota without sending, looking up an address or releasing twice', async () => {
+    await setUsage(tenant.scope, { metric: 'exports', period: month, value: 3 })
+    const q = queue()
+    const opts = options()
+    expect(await requestTripExport(tenant.scope, q, input(), opts)).toEqual({
+      ok: false,
+      reason: 'quota',
+      limit: 3,
+      used: 3,
+      resetsOn: '2027-03-01',
+    })
+    expect(q.send).not.toHaveBeenCalled()
+    expect(opts.email).not.toHaveBeenCalled()
+    expect((await getUsageRecord(tenant.scope, 'exports', month))?.value).toBe(
+      3,
+    )
+  })
+
+  it('releases the reserved month when enqueue fails', async () => {
+    const q = queue()
+    q.send.mockRejectedValue(new Error('queue unavailable'))
+    await expect(
+      requestTripExport(tenant.scope, q, input(), options()),
+    ).rejects.toThrow('queue unavailable')
+    expect((await getUsageRecord(tenant.scope, 'exports', month))?.value).toBe(
+      0,
+    )
+    expect(await getUsageRecord(tenant.scope, 'exports', 'all')).toBeNull()
+  })
+
+  it('refuses a direct viewer call before counting or queuing', async () => {
+    const viewer = await readerOf('viewer')
+    const q = queue()
+    await expect(
+      requestTripExport(viewer, q, input(), options()),
+    ).rejects.toBeInstanceOf(TripRoleError)
+    expect(await getUsageRecord(tenant.scope, 'exports', month)).toBeNull()
+    expect(q.send).not.toHaveBeenCalled()
+  })
+
+  it('does not fetch an email when notification is off, and accepts an archived trip', async () => {
+    await updateTrip(tenant.scope, tripId, { status: 'archived' })
+    const opts = options()
+    expect(
+      (
+        await requestTripExport(
+          tenant.scope,
+          queue(),
+          { ...input(), notify: false },
+          opts,
+        )
+      ).ok,
+    ).toBe(true)
+    expect(opts.email).not.toHaveBeenCalled()
+  })
+})
+
+it('the real server function uses the product’s pinned month and session address', async () => {
+  const storageKey = Symbol.for('tanstack-start:start-storage-context')
+  const globals = globalThis as Record<symbol, unknown>
+  globals[storageKey] ??= new AsyncLocalStorage()
+  const storage = globals[storageKey] as AsyncLocalStorage<{
+    startOptions: Record<string, never>
+    request: Request
+  }>
+  runtime.scope = tenant.scope
+  runtime.send.mockClear()
+  const request = new Request('https://planned.travel/_serverFn/export', {
+    method: 'POST',
+    headers: { 'x-pt-server-today': '2027-12-31' },
+  })
+  await requestHandler(async () => {
+    await storage.run({ startOptions: {}, request }, () =>
+      requestTripExportFn({
+        data: { tripId, notify: true, includeReferences: false },
+      }),
+    )
+    return new Response(null, { status: 204 })
+  })(request, {})
+  expect(
+    (await getUsageRecord(tenant.scope, 'exports', '2027-12'))?.value,
+  ).toBe(1)
+  expect(await getUsageRecord(tenant.scope, 'exports', 'all')).toBeNull()
+  expect(runtime.send.mock.calls[0]?.[0]).toMatchObject({
+    payload: { notify: runtime.email },
+  })
+  runtime.scope = null
 })

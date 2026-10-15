@@ -1039,6 +1039,52 @@ const messages = {
     one: '{count} Datei wurde nicht hochgeladen',
     other: '{count} Dateien wurden nicht hochgeladen',
   },
+
+  'files.export.request': 'Reise exportieren',
+  'files.export.includeReferences': 'Bestätigungscodes einschließen',
+  'files.export.includeReferencesHint':
+    'Nicht aktivieren, wenn du die Datei an jemanden außerhalb deines Arbeitsbereichs sendest.',
+  'files.export.pending':
+    'Dein Export wird vorbereitet. Du kannst diese Seite verlassen; die fertige Datei erscheint in dieser Liste.',
+  'files.export.slow':
+    'Es dauert länger als üblich. Die fertige Datei erscheint hier. Falls nicht, exportiere erneut.',
+  'files.export.refresh': 'Aktualisieren',
+  'files.export.ready': 'Dein Export ist fertig',
+  'files.export.quota': {
+    one: 'Das Monatskontingent dieses Arbeitsbereichs von {count} Exporten ist aufgebraucht. Der Zähler beginnt am {date} neu.',
+    other:
+      'Das Monatskontingent dieses Arbeitsbereichs von {count} Exporten ist aufgebraucht. Der Zähler beginnt am {date} neu.',
+  },
+  'files.export.error.request': 'Der Export wurde nicht gestartet',
+  'files.export.error.requestBody':
+    'Dieser Versuch wurde nicht gezählt. Versuche es gleich erneut.',
+  'files.export.doc.overview': 'Übersicht',
+  'files.export.doc.timezone': 'Zeitzone',
+  'files.export.doc.days': 'Tage',
+  'files.export.doc.day': {
+    one: 'Tag {count} - {date}',
+    other: 'Tag {count} - {date}',
+  },
+  'files.export.doc.dayUndated': { one: 'Tag {count}', other: 'Tag {count}' },
+  'files.export.doc.dayEmpty': 'Noch nichts geplant.',
+  'files.export.doc.reservations': 'Reservierungen',
+  'files.export.doc.transport': 'Verkehrsmittel',
+  'files.export.doc.reference': 'Best.-Nr. {code}',
+  'files.export.doc.route': '{from} nach {to}',
+  'files.export.doc.stays': 'Unsere Unterkünfte',
+  'files.export.doc.nights': {
+    one: 'Nächte: {count}',
+    other: 'Nächte: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Nicht alle Tage passen in ein Dokument. Die ersten {count} Tage werden angezeigt.',
+    other:
+      'Nicht alle Tage passen in ein Dokument. Die ersten {count} Tage werden angezeigt.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Die ersten {count} von {total} werden angezeigt.',
+    other: 'Die ersten {count} von {total} werden angezeigt.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

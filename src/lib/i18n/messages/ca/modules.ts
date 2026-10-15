@@ -1049,6 +1049,61 @@ const messages = {
     many: '{count} fitxers no s’han pujat',
     other: '{count} fitxers no s’han pujat',
   },
+
+  'files.export.request': 'Exporta el viatge',
+  'files.export.includeReferences': 'Inclou els codis de confirmació',
+  'files.export.includeReferencesHint':
+    'No ho marquis si enviaràs el fitxer a algú de fora de l’espai.',
+  'files.export.pending':
+    'S’està preparant l’exportació. Pots sortir de la pàgina; el fitxer apareixerà a la llista quan estigui llest.',
+  'files.export.slow':
+    'Triga més del normal. El fitxer apareixerà aquí quan estigui llest. Si no apareix, torna a exportar.',
+  'files.export.refresh': 'Actualitza',
+  'files.export.ready': 'L’exportació està llesta',
+  'files.export.quota': {
+    one: 'S’ha esgotat la quota mensual de {count} exportacions de l’espai. El recompte es reinicia el {date}.',
+    many: 'S’ha esgotat la quota mensual de {count} exportacions de l’espai. El recompte es reinicia el {date}.',
+    other:
+      'S’ha esgotat la quota mensual de {count} exportacions de l’espai. El recompte es reinicia el {date}.',
+  },
+  'files.export.error.request': 'L’exportació no s’ha iniciat',
+  'files.export.error.requestBody':
+    'Aquest intent no s’ha comptabilitzat. Torna-ho a provar d’aquí a un moment.',
+  'files.export.doc.overview': 'Resum',
+  'files.export.doc.timezone': 'Zona horària',
+  'files.export.doc.days': 'Dies',
+  'files.export.doc.day': {
+    one: 'Dia {count} - {date}',
+    many: 'Dia {count} - {date}',
+    other: 'Dia {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'Dia {count}',
+    many: 'Dia {count}',
+    other: 'Dia {count}',
+  },
+  'files.export.doc.dayEmpty': 'Encara no hi ha plans.',
+  'files.export.doc.reservations': 'Reserves',
+  'files.export.doc.transport': 'Mitjans de transport',
+  'files.export.doc.reference': 'Referència {code}',
+  'files.export.doc.route': '{from} a {to}',
+  'files.export.doc.stays': 'On ens allotgem',
+  'files.export.doc.nights': {
+    one: 'Nits: {count}',
+    many: 'Nits: {count}',
+    other: 'Nits: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'No caben tots els dies en un document. Es mostren els primers {count} dies.',
+    many: 'No caben tots els dies en un document. Es mostren els primers {count} dies.',
+    other:
+      'No caben tots els dies en un document. Es mostren els primers {count} dies.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Es mostren els primers {count} de {total}.',
+    many: 'Es mostren els primers {count} de {total}.',
+    other: 'Es mostren els primers {count} de {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1003,6 +1003,43 @@ const messages = {
   'files.toast.failedMany': {
     other: '{count} berkas tidak terunggah',
   },
+
+  'files.export.request': 'Ekspor perjalanan',
+  'files.export.includeReferences': 'Sertakan kode konfirmasi',
+  'files.export.includeReferencesHint':
+    'Jangan centang jika file akan dikirim ke orang di luar ruang kerja.',
+  'files.export.pending':
+    'Ekspor sedang disiapkan. Anda boleh meninggalkan halaman ini; file akan muncul di daftar saat siap.',
+  'files.export.slow':
+    'Proses ini lebih lama dari biasanya. File akan muncul di sini saat siap. Jika tidak, ekspor lagi.',
+  'files.export.refresh': 'Segarkan',
+  'files.export.ready': 'Ekspor Anda siap',
+  'files.export.quota': {
+    other:
+      'Kuota bulanan ruang kerja sebanyak {count} ekspor telah habis. Hitungan dimulai lagi pada {date}.',
+  },
+  'files.export.error.request': 'Ekspor tidak dimulai',
+  'files.export.error.requestBody':
+    'Percobaan ini tidak dihitung. Coba lagi sebentar.',
+  'files.export.doc.overview': 'Ringkasan',
+  'files.export.doc.timezone': 'Zona waktu',
+  'files.export.doc.days': 'Hari',
+  'files.export.doc.day': { other: 'Hari {count} - {date}' },
+  'files.export.doc.dayUndated': { other: 'Hari {count}' },
+  'files.export.doc.dayEmpty': 'Belum ada rencana.',
+  'files.export.doc.reservations': 'Reservasi',
+  'files.export.doc.transport': 'Transportasi',
+  'files.export.doc.reference': 'Kode {code}',
+  'files.export.doc.route': '{from} ke {to}',
+  'files.export.doc.stays': 'Tempat menginap',
+  'files.export.doc.nights': { other: 'Jumlah malam: {count}' },
+  'files.export.doc.truncatedDays': {
+    other:
+      'Semua hari tidak muat dalam satu dokumen. {count} hari pertama ditampilkan.',
+  },
+  'files.export.doc.truncatedRows': {
+    other: 'Menampilkan {count} pertama dari {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

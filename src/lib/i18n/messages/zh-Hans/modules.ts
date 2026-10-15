@@ -923,6 +923,40 @@ const messages = {
   'files.toast.failedMany': {
     other: '有 {count} 个文件没上传成功',
   },
+
+  'files.export.request': '导出行程',
+  'files.export.includeReferences': '包含确认码',
+  'files.export.includeReferencesHint':
+    '如果要将文件发送给工作区外的人，请勿勾选。',
+  'files.export.pending':
+    '正在准备导出。你可以离开此页；文件就绪后会出现在列表中。',
+  'files.export.slow':
+    '耗时比平时长。文件就绪后会显示在这里。如果没有显示，请重新导出。',
+  'files.export.refresh': '刷新',
+  'files.export.ready': '导出文件已就绪',
+  'files.export.quota': {
+    other: '此工作区每月{count}次导出额度已用完。计数将在{date}重新开始。',
+  },
+  'files.export.error.request': '未开始导出',
+  'files.export.error.requestBody': '本次尝试未计入额度。请稍后重试。',
+  'files.export.doc.overview': '概览',
+  'files.export.doc.timezone': '时区',
+  'files.export.doc.days': '天数',
+  'files.export.doc.day': { other: '第{count}天 - {date}' },
+  'files.export.doc.dayUndated': { other: '第{count}天' },
+  'files.export.doc.dayEmpty': '尚无计划。',
+  'files.export.doc.reservations': '预订',
+  'files.export.doc.transport': '交通',
+  'files.export.doc.reference': '确认码 {code}',
+  'files.export.doc.route': '从{from}到{to}',
+  'files.export.doc.stays': '住宿地点',
+  'files.export.doc.nights': { other: '晚数：{count}' },
+  'files.export.doc.truncatedDays': {
+    other: '所有天数无法放入一个文档，仅显示前{count}天。',
+  },
+  'files.export.doc.truncatedRows': {
+    other: '显示全部{total}项中的前{count}项。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages
