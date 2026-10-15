@@ -848,6 +848,7 @@ const messages = {
   'files.action.choose': '파일 고르기',
   'files.action.upload': '파일 올리기',
   'files.drop.active': '놓으면 올라갑니다',
+  'files.drop.pasteHint': '복사한 이미지나 스크린샷을 붙여넣습니다',
   'files.reject.blockedType':
     '‘{name}’은(는) 추가되지 않았습니다. XML 파일과 압축된 SVG 파일은 안전을 위해 여기에 저장되지 않습니다. PDF나 이미지로 저장한 뒤 그 파일을 대신 추가해 주세요.',
   'files.drop.idle': '여기로 파일을 끌어 오세요',

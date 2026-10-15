@@ -852,6 +852,7 @@ const messages = {
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
   'files.drop.active': 'ドロップしてアップロード',
+  'files.drop.pasteHint': 'コピーした画像やスクリーンショットを貼り付けます',
   'files.reject.blockedType':
     '「{name}」は追加されませんでした。XML ファイルと圧縮された SVG ファイルは、安全のためここには保存されません。PDF か画像として保存し、そちらを追加してください。',
   'files.drop.idle': 'ここにファイルをドラッグ',

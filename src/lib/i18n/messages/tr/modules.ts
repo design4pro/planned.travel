@@ -877,6 +877,7 @@ const messages = {
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
   'files.drop.active': 'Yüklemek için bırak',
+  'files.drop.pasteHint': 'kopyalanan bir görseli veya ekran görüntüsünü yapıştırır',
   'files.reject.blockedType':
     '“{name}” eklenmedi: XML ve sıkıştırılmış SVG dosyaları güvenlik nedeniyle burada saklanmaz. Onu PDF veya görsel olarak kaydet ve onun yerine onu ekle.',
   'files.drop.idle': 'Dosyaları buraya sürükle',

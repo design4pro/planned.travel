@@ -303,6 +303,57 @@ export function sanitiseFilename(filename: string): string {
   return cleaned.length === 0 ? 'attachment' : cleaned
 }
 
+function twoDigits(value: number): string {
+  return String(value).padStart(2, '0')
+}
+
+/**
+ * `YYYYMMDD-HHmmss` in the clock of the machine that pasted. The seed of every pasted name, and the
+ * key under which the screen counts the files of one second.
+ */
+export function pastedFilenameStamp(now: Date): string {
+  const date = `${now.getFullYear()}${twoDigits(now.getMonth() + 1)}${twoDigits(now.getDate())}`
+  const time = `${twoDigits(now.getHours())}${twoDigits(now.getMinutes())}${twoDigits(now.getSeconds())}`
+  return `${date}-${time}`
+}
+
+/** The extension a pasted file's media type earns: the table's, else an image's subtype, else `bin`. */
+function extensionForPasted(mediaType: string): string {
+  const type = normaliseType(mediaType)
+  for (const [extension, entry] of BY_EXTENSION) {
+    if (entry.type === type) {
+      return extension
+    }
+  }
+  if (type.startsWith('image/')) {
+    const subtype = type.slice('image/'.length).replaceAll(/[^a-z0-9]/gu, '')
+    if (subtype.length > 0) {
+      return subtype.slice(0, 16)
+    }
+  }
+  return 'bin'
+}
+
+/**
+ * The name a pasted screenshot is stored under: `YYYYMMDD-HHmmss.<ext>`, with `-<n>` before the
+ * extension from the second file of a second on.
+ *
+ * Digits only, because the name shows in the queue row, the toast and the table in every locale, so
+ * no English word can be in it. The extension comes from the media type; an unlisted image type
+ * keeps its subtype (a pasted TIFF is refused as `….tiff`, not as `….bin`). The result goes through
+ * {@link sanitiseFilename}, like every upload.
+ */
+export function safePastedFilename(
+  mediaType: string,
+  now: Date,
+  sequence: number,
+): string {
+  const suffix = sequence >= 2 ? `-${sequence}` : ''
+  return sanitiseFilename(
+    `${pastedFilenameStamp(now)}${suffix}.${extensionForPasted(mediaType)}`,
+  )
+}
+
 /**
  * The one `content-disposition` a stored file is served and written under: always an attachment.
  *

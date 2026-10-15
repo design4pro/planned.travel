@@ -914,6 +914,7 @@ const messages = {
   'files.action.choose': 'Вибрати файли',
   'files.action.upload': 'Надіслати файли',
   'files.drop.active': 'Відпустіть, щоб надіслати',
+  'files.drop.pasteHint': 'вставляє скопійоване зображення або знімок екрана',
   'files.reject.blockedType':
     '«{name}» не додано: файли XML і стиснуті SVG тут не зберігаються, з міркувань безпеки. Збережіть його як PDF або зображення й додайте натомість це.',
   'files.drop.idle': 'Перетягніть файли сюди',
