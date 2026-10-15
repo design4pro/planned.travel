@@ -17,10 +17,6 @@ import {
   getTripStorageBytes,
   listBudgetItems,
   listCategories,
-  listMessages,
-  listNotes,
-  listPolls,
-  listReactions,
   listSettlements,
   listTripDayNotes,
   listTripDays,
@@ -31,21 +27,18 @@ import {
   listTripPlacesWithTags,
   listUnscheduledPlaces,
   listUserProfiles,
-  listVotes,
   requireTrip,
   resolveQuotas,
   listItems,
 } from '#/server/repos'
 import { serverToday } from '#/server/clock'
 import { appScope } from './context'
-import { isoOf, isoOfRequired } from './serialise'
+import { isoOfRequired } from '#/server/serialise'
 
 import type { TenantScope } from '#/server/repos'
 import type { DayNote } from '#/server/db/types'
-import type { PollOption } from '#/server/db/schema'
-import { resolveTimeZone } from '#/lib/time'
 
-const tripInput = z.object({ tripId: z.string().trim().min(1).max(64) })
+export const tripInput = z.object({ tripId: z.string().trim().min(1).max(64) })
 
 /* ------------------------------------------------------------------ shapes */
 
@@ -86,7 +79,7 @@ export interface TripHeaderPayload {
 
 /* ------------------------------------------------------------------ header */
 
-async function loadPeople(
+export async function loadPeople(
   tripId: string,
   scope: TenantScope,
 ): Promise<Array<PersonChip>> {
@@ -578,138 +571,6 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
         uploadedBy: row.uploadedBy,
         createdAt: isoOfRequired(row.createdAt),
       })),
-    }
-  })
-
-/* ----------------------------------------------------------------- collab */
-
-export interface MessageRow {
-  readonly id: string
-  readonly userId: string
-  readonly body: string
-  readonly replyToId: string | null
-  readonly editedAt: string | null
-  readonly createdAt: string
-  readonly reactions: ReadonlyArray<{
-    readonly emoji: string
-    readonly count: number
-    readonly userIds: ReadonlyArray<string>
-  }>
-}
-
-export interface NoteRow {
-  readonly id: string
-  readonly title: string
-  readonly body: string | null
-  readonly category: string | null
-  readonly colour: string | null
-  readonly isPinned: boolean
-  readonly createdBy: string
-  readonly createdAt: string
-}
-
-export interface PollRow {
-  readonly id: string
-  readonly question: string
-  readonly options: ReadonlyArray<PollOption>
-  readonly allowMultiple: boolean
-  readonly isClosed: boolean
-  readonly createdBy: string
-  readonly totalVotes: number
-  readonly tally: ReadonlyArray<{
-    readonly optionId: string
-    readonly label: string
-    readonly votes: number
-    readonly userIds: ReadonlyArray<string>
-  }>
-}
-
-export interface CollabPayload {
-  readonly messages: ReadonlyArray<MessageRow>
-  readonly notes: ReadonlyArray<NoteRow>
-  readonly polls: ReadonlyArray<PollRow>
-  readonly people: ReadonlyArray<PersonChip>
-  readonly viewerUserId: string
-  /**
-   * IANA zone the transcript is read in — the trip's own, falling back to UTC.
-   *
-   * Every timestamp in the thread is formatted in this zone rather than the
-   * browser's. That is the right answer twice over: a shared itinerary is
-   * discussed in the destination's wall-clock time, so two travellers in
-   * different countries read the same "19:30"; and because the zone travels with
-   * the payload, the server and the client format identically and the transcript
-   * hydrates without a mismatch.
-   */
-  readonly timeZone: string
-}
-
-export const loadTripCollab = createServerFn({ method: 'GET' })
-  .validator(tripInput)
-  .handler(async ({ data }): Promise<CollabPayload> => {
-    const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
-
-    const [page, notes, polls, people] = await Promise.all([
-      listMessages(scope, trip.id, { limit: 50 }),
-      listNotes(scope, trip.id),
-      listPolls(scope, trip.id),
-      loadPeople(trip.id, scope),
-    ])
-
-    const reactions = await listReactions(
-      scope,
-      page.items.map((row) => row.id),
-    )
-
-    const votes = await Promise.all(
-      polls.map((poll) => listVotes(scope, poll.id)),
-    )
-
-    return {
-      people,
-      viewerUserId: scope.ctx.userId,
-      timeZone: resolveTimeZone(trip.timezone),
-      // The repository pages newest-first; a transcript reads oldest-first.
-      messages: [...page.items].reverse().map((row) => ({
-        id: row.id,
-        userId: row.userId,
-        body: row.body,
-        replyToId: row.replyToId,
-        editedAt: isoOf(row.editedAt),
-        createdAt: isoOfRequired(row.createdAt),
-        reactions: reactions.get(row.id) ?? [],
-      })),
-      notes: notes.map((row) => ({
-        id: row.id,
-        title: row.title,
-        body: row.body,
-        category: row.category,
-        colour: row.colour,
-        isPinned: row.isPinned,
-        createdBy: row.createdBy,
-        createdAt: isoOfRequired(row.createdAt),
-      })),
-      polls: polls.map((poll, index) => {
-        const cast = votes[index] ?? []
-        return {
-          id: poll.id,
-          question: poll.question,
-          options: poll.options,
-          allowMultiple: poll.allowMultiple,
-          isClosed: poll.isClosed,
-          createdBy: poll.createdBy,
-          totalVotes: cast.length,
-          tally: poll.options.map((option) => {
-            const forOption = cast.filter((vote) => vote.optionId === option.id)
-            return {
-              optionId: option.id,
-              label: option.label,
-              votes: forOption.length,
-              userIds: forOption.map((vote) => vote.userId),
-            }
-          }),
-        }
-      }),
     }
   })
 

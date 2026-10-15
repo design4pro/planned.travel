@@ -3,8 +3,8 @@
  *
  * The `Date` mappers below touch no binding, session or query: they are plain
  * functions the client bundle is allowed to keep, and anything that does touch
- * one lives in `./context`, which is only ever referenced from inside a
- * server-function handler.
+ * one lives in `#/server/fns/context` or `#/routes/_app/-server/context`, which
+ * are only ever referenced from inside a server-function handler.
  *
  * The two calendar helpers are a different kind of thing, and this file is no
  * longer where either of them is decided. "Today" is a decision rather than a

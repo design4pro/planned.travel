@@ -2,10 +2,10 @@
 
 | Field              | Value                                              |
 | ------------------ | -------------------------------------------------- |
-| **Status**         | ready                                              |
+| **Status**         | in-progress                                        |
 | **Issue**          | none                                               |
 | **Spec PR**        | #903                                               |
-| **Implementation** | none                                               |
+| **Implementation** | #1271                                              |
 | **Plan**           | 07-S2 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR

@@ -70,7 +70,7 @@ Measured at HEAD (`86841140`), by reading the code.
   stays in the row.
 - **Other people's inboxes.** `notifications.title_params` / `body_params` carry `actorName` (the sender's display name,
   `src/server/notifications/dispatch.ts`) and `preview` (the first characters of a chat message,
-  `src/server/fns/collab.ts`). A deleted person's name and words therefore sit in rows other people own.
+  `src/server/fns/collab-thread-writes.ts`). A deleted person's name and words therefore sit in rows other people own.
 - **Outside D1** (inventory in "Where a person's data lives"): session blobs and the `active-sessions-<userId>` index in
   KV, staged booking imports carrying `requestedBy`, queue envelope ids embedding user ids, dead-letter R2 objects with
   whole message bodies (auth emails with token URLs, `requestedBy`), `trips/` objects whose metadata holds `uploadedBy`,

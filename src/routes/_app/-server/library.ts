@@ -36,7 +36,7 @@ import {
 } from '#/server/repos'
 import { appScope } from './context'
 import { createCollectionSchema } from './library-wire'
-import { currentYear, isoOf, isoOfRequired, todayIso } from './serialise'
+import { currentYear, isoOf, isoOfRequired, todayIso } from '#/server/serialise'
 
 const idInput = z.string().trim().min(1).max(64)
 
