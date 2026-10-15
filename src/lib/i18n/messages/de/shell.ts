@@ -554,6 +554,9 @@ const messages = {
   'editTrip.coverContinue': 'Ohne das neue Titelbild speichern',
   'editTrip.currencyLocked':
     'Diese Reise enthält bereits Preise, deshalb lässt sich die Budgetwährung hier nicht ändern. Nutze auf dem Tab „Kosten“ die Schaltfläche „Budgetwährung ändern“ oder stelle wieder {current} ein, um deine übrigen Änderungen zu speichern.',
+  'editTrip.currencyReadonly':
+    'Die Budgetwährung wird auf dem Tab „Kosten“ geändert.',
+  'editTrip.currencyLink': 'Tab „Kosten“ öffnen',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '„{title}“ endgültig löschen?',
   'deleteTrip.description':

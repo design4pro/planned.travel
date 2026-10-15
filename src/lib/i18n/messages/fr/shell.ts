@@ -562,6 +562,9 @@ const messages = {
   'editTrip.coverContinue': 'Enregistrer sans la nouvelle couverture',
   'editTrip.currencyLocked':
     'Ce voyage contient déjà des prix : la devise du budget ne peut donc pas être modifiée ici. Utilisez Changer la devise du budget dans l’onglet Dépenses, ou remettez {current} pour enregistrer vos autres modifications.',
+  'editTrip.currencyReadonly':
+    'La devise du budget se change dans l’onglet Dépenses.',
+  'editTrip.currencyLink': 'Ouvrir l’onglet Dépenses',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Supprimer « {title} » définitivement ?',
   'deleteTrip.description':

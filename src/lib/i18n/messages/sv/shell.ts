@@ -529,6 +529,8 @@ const messages = {
   'editTrip.coverContinue': 'Spara utan det nya omslaget',
   'editTrip.currencyLocked':
     'Resan har redan priser, så budgetvalutan kan inte ändras här. Använd Ändra budgetvaluta på fliken Kostnader eller ställ tillbaka den på {current} för att spara dina övriga ändringar.',
+  'editTrip.currencyReadonly': 'Budgetvalutan ändras på fliken Kostnader.',
+  'editTrip.currencyLink': 'Öppna fliken Kostnader',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Ta bort ”{title}” för gott?',
   'deleteTrip.description':
