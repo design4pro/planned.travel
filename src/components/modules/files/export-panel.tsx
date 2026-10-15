@@ -21,12 +21,12 @@ import {
 import { cn } from '#/lib/cn'
 import { zoneClockTime } from '#/lib/clock-zones'
 import { formatDate, formatRelative } from '#/lib/format'
+import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { dayKeyIn, resolveTimeZone } from '#/lib/time'
 import { listTripExportsFn } from '#/server/fns/exports'
 import { EXPORT_TTL_SECONDS } from '#/server/storage/export-artifacts'
 import { ModulePanel, ModuleRow } from '../shared/panel'
-import { messageOf } from '../shared/use-action'
 import { downloadTripExport } from './export-download'
 
 import type { Locale } from '#/lib/i18n'
@@ -137,10 +137,9 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
     if (active === null || active === document.body) {
       ;(controls.current.get(target) ?? headingRef.current)?.focus()
     }
-    if (noticeAfter.current !== '') {
-      setNotice(noticeAfter.current)
-      noticeAfter.current = ''
-    }
+    // Replaces "Downloading ..." with the outcome sentence, or with nothing when it went well.
+    setNotice(noticeAfter.current)
+    noticeAfter.current = ''
   })
 
   function retry() {
@@ -149,9 +148,14 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
     void load()
   }
 
-  async function download(artifact: Artifact, canRequest: boolean) {
+  async function download(
+    artifact: Artifact,
+    canRequest: boolean,
+    name: string,
+  ) {
     setDownloading(artifact.taskId)
-    setNotice('')
+    // The button's own name hides the spinner's "working" text, so say it in the status region.
+    setNotice(t('modules.files.status.downloadingOf', { name }))
     focusAfter.current = artifact.taskId
     let result: Awaited<ReturnType<typeof downloadTripExport>> | null = null
     try {
@@ -161,11 +165,14 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
         format: artifact.format,
       })
     } catch (cause) {
-      // A refusal the server authored (no access any more) is shown; a diagnostic is not.
-      const reason = messageOf(cause, '')
+      // A refusal the server authored (no access any more) is shown. Anything else - offline, a
+      // dropped stream, a platform error page - is a diagnostic, so only the title is shown.
+      const failure = readPublicFailure(cause)
       toast.error(
         t('modules.files.toast.downloadFailed'),
-        reason === '' ? undefined : { description: reason },
+        failure.kind !== 'unexpected' && failure.message !== undefined
+          ? { description: failure.message }
+          : undefined,
       )
     }
 
@@ -289,7 +296,13 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
                         : 'modules.files.export.downloadLabelHtml',
                       { date: when },
                     )}
-                    onClick={() => void download(artifact, canRequest)}
+                    onClick={() =>
+                      void download(
+                        artifact,
+                        canRequest,
+                        t('modules.files.export.artifact', { date: when }),
+                      )
+                    }
                   >
                     {t('modules.files.export.download')}
                   </Button>

@@ -10,6 +10,7 @@ import {
 } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -26,6 +27,12 @@ vi.mock('#/server/fns/exports', () => ({
   listTripExportsFn: (...args: Array<unknown>) => listTripExportsFn(...args),
   downloadTripExportFn: (...args: Array<unknown>) =>
     downloadTripExportFn(...args),
+}))
+
+const toastError = vi.fn()
+vi.mock('#/components/ui', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  toast: { error: (...args: Array<unknown>) => toastError(...args) },
 }))
 
 const { ExportPanel } = await import('../export-panel')
@@ -85,6 +92,7 @@ afterEach(() => {
   vi.useRealTimers()
   listTripExportsFn.mockReset()
   downloadTripExportFn.mockReset()
+  toastError.mockReset()
 })
 
 describe('the export panel', () => {
@@ -275,6 +283,64 @@ describe('the export panel', () => {
     finish(file(200, '%PDF'))
 
     await waitFor(() => expect(document.activeElement).toBe(control))
+  })
+
+  it('says a download has started in the status region, and clears it once saved', async () => {
+    const user = userEvent.setup()
+    listTripExportsFn.mockResolvedValue(TWO)
+    let finish: (response: Response) => void = () => {}
+    downloadTripExportFn.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finish = resolve
+      }),
+    )
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    mount()
+    await screen.findAllByRole('listitem')
+
+    await user.click(screen.getByRole('button', { name: /Download the PDF/u }))
+    expect(screen.getByRole('status').textContent).toMatch(
+      /^Downloading Trip export, 15 Oct 2026/u,
+    )
+
+    finish(file(200, '%PDF'))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toBe(''))
+  })
+
+  it('shows only the title when the request itself fails', async () => {
+    const user = userEvent.setup()
+    listTripExportsFn.mockResolvedValue(TWO)
+    downloadTripExportFn.mockRejectedValue(new TypeError('Failed to fetch'))
+    mount()
+    await screen.findAllByRole('listitem')
+
+    await user.click(screen.getByRole('button', { name: /Download the PDF/u }))
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(1))
+    expect(toastError).toHaveBeenCalledWith(
+      'The download did not start',
+      undefined,
+    )
+  })
+
+  it('shows a refusal the server authored', async () => {
+    const user = userEvent.setup()
+    listTripExportsFn.mockResolvedValue(TWO)
+    downloadTripExportFn.mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'refusal', message: 'Sign in again.' }),
+      ),
+    )
+    mount()
+    await screen.findAllByRole('listitem')
+
+    await user.click(screen.getByRole('button', { name: /Download the PDF/u }))
+
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith('The download did not start', {
+        description: 'Sign in again.',
+      }),
+    )
   })
 
   it('leaves focus where the reader moved it during the download', async () => {
