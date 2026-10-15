@@ -1564,10 +1564,13 @@ than left standing, because a stage nobody can fail is a stage nobody can verify
   number of rows it marked. It parses its argument with `z.array(idSchema).min(1).max(500)` — the
   same 500-row ceiling the import engine already applies, so the bound is the engine's and not a
   second opinion — and writes through
-  `reservationsRepository.updateWhere(scope, inArray(reservations.id, ids), { importedAt: Date.now() })`:
-  **one statement for the whole batch**, whose `where` begins at `tenantFilter()` like every other
+  `reservationsRepository.updateWhere(scope, inArray(reservations.id, ids), { importedAt: Date.now() })`
+  **in chunks that fit D1's 100 bound parameters** (the ids plus the instant, the updated-at stamp,
+  the organization and the trip), one statement after another, so a failure part way leaves the
+  earlier chunks marked. Each chunk's `where` begins at `tenantFilter()` like every other
   statement in the file, so an id belonging to another organization matches no row rather than
-  raising, and the returned count is the number of rows that were genuinely the caller's.
+  raising, and the returned count, summed over the chunks, is the number of rows that were genuinely
+  the caller's.
   `imported_at` is an epoch-millisecond instant, per this plan's date conventions, and `Date.now()`
   is read once for the batch so every row of one import carries the same instant.
 - One new exported function, **`clearReservationImported(scope, reservationId)`**, returning the
@@ -2896,8 +2899,8 @@ format: z.enum(['ics', 'json']) })`.
   entry identifies a staged row by its index-and-external-id pair. It re-reads the staged import,
   re-checks the scope, maps each accepted row into the shape `createReservation` takes, writes them,
   and then marks the whole batch with **one** `markReservationsImported(scope, writtenIds)` call —
-  one statement for up to 500 rows rather than one per row, which is also why that function takes a
-  list. It asserts the returned count equals the number of rows it wrote; a shortfall means an id it
+  chunked statements for up to 500 rows rather than one write per row, which is also why that
+  function takes a list. It asserts the returned count equals the number of rows it wrote; a shortfall means an id it
   had just created did not resolve inside its own scope, which is a bug rather than a user error and
   is logged as one. It then mirrors one `trip` patch into the room so other tabs refresh once rather
   than five hundred times. Rows the reader deselected are simply never written.
