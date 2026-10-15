@@ -958,6 +958,31 @@ const messages = {
   'files.export.email.action': 'Öppna {title}',
   'files.export.email.text': 'Reseexporten är klar: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Exportera resan',
+  'files.export.description':
+    'En utskrivbar kopia av resan: dagar, stopp, bokningar, transporter och boenden. Ge den till någon som inte har något konto.',
+  'files.export.kept': {
+    one: 'Varje export sparas i {count} dag.',
+    other: 'Varje export sparas i {count} dagar.',
+  },
+  'files.export.empty.title': 'Inga exporter ännu',
+  'files.export.empty.body':
+    'Gör en utskrivbar kopia av resan att skicka till någon som inte har något konto.',
+  'files.export.empty.bodyViewer': 'Resans ägare eller redigerare kan göra en.',
+  'files.export.format.pdf': 'PDF-fil',
+  'files.export.format.html': 'Utskrivbar sida',
+  'files.export.artifact': 'Reseexport, {date}',
+  'files.export.download': 'Ladda ner',
+  'files.export.downloadLabelPdf': 'Ladda ner PDF-filen som skapades {date}',
+  'files.export.downloadLabelHtml':
+    'Ladda ner den utskrivbara sidan som skapades {date}',
+  'files.export.error.list': 'Listan med exporter laddades inte.',
+  'files.export.retry': 'Försök igen',
+  'files.export.error.missing':
+    'Den exporten sparas inte längre. Exportera resan igen.',
+  'files.export.error.missingViewer': 'Den exporten sparas inte längre.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uppladdningen avbruten.',
   'files.error.badAnswer':
