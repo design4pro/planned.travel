@@ -25,6 +25,7 @@ import {
   transports,
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
+import { MAX_BOUND_PARAMETERS } from './batch'
 import { NotFoundError } from './context'
 import { requireTripDay } from './days'
 import { getExpense } from './expenses'
@@ -451,8 +452,17 @@ export async function unlinkReservationsFromExpense(
   return rows.length
 }
 
-/** The id list one import may mark in a single statement — the engine's own ceiling, not a second opinion. */
+/** The most bookings one import writes - the import engine's own ceiling, which the marker write chunks around. */
 const IMPORT_BATCH_LIMIT = 500
+
+/**
+ * The bound parameters one marker statement carries besides its ids: the import instant, the row's
+ * updated-at stamp, the organization and the trip. D1 refuses more than `MAX_BOUND_PARAMETERS`.
+ */
+const IMPORT_MARKER_FIXED_PARAMETERS = 4
+
+const IMPORT_MARKER_CHUNK =
+  MAX_BOUND_PARAMETERS - IMPORT_MARKER_FIXED_PARAMETERS
 
 const importedIdsSchema = z.array(idSchema).min(1).max(IMPORT_BATCH_LIMIT)
 
@@ -465,13 +475,16 @@ const importedIdsSchema = z.array(idSchema).min(1).max(IMPORT_BATCH_LIMIT)
  * (`TripRoleError` for a viewer), and only then the write. The batch is bounded to that one trip, so
  * no row of a trip the caller may not write can be marked by being named.
  *
- * One statement for the whole batch, and its `where` begins at `tenantFilter()` like every other
+ * The ids are written in chunks of `IMPORT_MARKER_CHUNK`, one statement after another, because a
+ * single statement over all `IMPORT_BATCH_LIMIT` of them would exceed D1's bound-parameter limit.
+ * The marker write is idempotent, so a failure part way leaves the earlier chunks marked and a
+ * later call marks the rest. Each chunk's `where` begins at `tenantFilter()` like every other
  * statement in this file - so an id belonging to another organization, or to another trip, matches
  * no row rather than raising, and the count is the number of rows that were genuinely the caller's
- * to mark. That count is the reason this returns a number and not `void`: without it a silent no-op
- * on a foreign id is indistinguishable from success.
+ * to mark, summed over the chunks. That count is the reason this returns a number and not `void`:
+ * without it a silent no-op on a foreign id is indistinguishable from success.
  *
- * The clock is read once, so every row of one import carries the same instant.
+ * The clock is read once, so every row of one import carries the same instant across chunks.
  */
 export async function markReservationsImported(
   scope: TenantScope,
@@ -482,12 +495,19 @@ export async function markReservationsImported(
   const trip = await requireTrip(scope, tripId)
   await assertBookingRole(scope, trip.id)
   const markedAt = new Date()
-  const rows = await reservationsRepository.updateWhere(
-    scope,
-    allOf(eq(reservations.tripId, trip.id), inArray(reservations.id, ids)),
-    { importedAt: markedAt },
-  )
-  return rows.length
+  let marked = 0
+  for (let start = 0; start < ids.length; start += IMPORT_MARKER_CHUNK) {
+    const rows = await reservationsRepository.updateWhere(
+      scope,
+      allOf(
+        eq(reservations.tripId, trip.id),
+        inArray(reservations.id, ids.slice(start, start + IMPORT_MARKER_CHUNK)),
+      ),
+      { importedAt: markedAt },
+    )
+    marked += rows.length
+  }
+  return marked
 }
 
 /**

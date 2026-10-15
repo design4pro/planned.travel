@@ -469,6 +469,23 @@ const POLL_OPTIONS = [
   { id: 'market', label: 'Morning market' },
 ]
 
+/** Writes `count` bookings on a trip and returns their ids, the way a confirm leaves them. */
+async function bookingIds(
+  scope: TenantScope,
+  tripId: string,
+  count: number,
+): Promise<Array<string>> {
+  const ids: Array<string> = []
+  for (let index = 0; index < count; index += 1) {
+    const row = await reservationsRepository.insert(scope, {
+      tripId,
+      title: `Imported booking ${index}`,
+    })
+    ids.push(row.id)
+  }
+  return ids
+}
+
 /** Seeds one complete tenant through the public repository API. */
 async function seedWorld(tenant: SeededTenant): Promise<World> {
   const scope = tenant.scope
@@ -3687,6 +3704,54 @@ describe('tenant isolation', () => {
         (await getReservation(beta.tenant.scope, beta.reservationId))
           ?.importedAt,
       ).toBeNull()
+    })
+
+    /**
+     * The statement binds the import instant, the updated-at stamp, the organization and the trip
+     * next to one parameter per id, so one statement fits 96 ids and not 97 under D1's limit of
+     * 100. The harness refuses an over-limit statement too, so these sizes pin that arithmetic
+     * where the limit is enforced; 500 is the import engine's ceiling.
+     */
+    describe.each([96, 97, 98, 500])('a confirm of %i rows', (size) => {
+      it('marks every row it wrote, with one shared instant', async () => {
+        const scope = alpha.tenant.scope
+        const ids = await bookingIds(scope, alpha.tripId, size)
+
+        expect(await markReservationsImported(scope, alpha.tripId, ids)).toBe(
+          size,
+        )
+
+        const rows = await listTripReservations(scope, {
+          tripId: alpha.tripId,
+        })
+        const written = rows.filter((row) => ids.includes(row.id))
+        expect(written).toHaveLength(size)
+        expect(written.every((row) => row.importedAt instanceof Date)).toBe(
+          true,
+        )
+        expect(
+          new Set(written.map((row) => row.importedAt?.getTime())).size,
+        ).toBe(1)
+      })
+    })
+
+    it('skips a foreign id wherever it falls across the chunk boundary', async () => {
+      const scope = alpha.tenant.scope
+      const own = await bookingIds(scope, alpha.tripId, 200)
+
+      // 95 and 96 are the last id of the first chunk and the first of the second.
+      for (const position of [0, 95, 96, 199]) {
+        const ids = own.slice()
+        ids.splice(position, 0, beta.reservationId)
+
+        expect(await markReservationsImported(scope, alpha.tripId, ids)).toBe(
+          own.length,
+        )
+        expect(
+          (await getReservation(beta.tenant.scope, beta.reservationId))
+            ?.importedAt,
+        ).toBeNull()
+      }
     })
 
     it('answers NotFoundError for B\u2019s trip id, and leaves B\u2019s row unmarked', async () => {
