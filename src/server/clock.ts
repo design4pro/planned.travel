@@ -31,7 +31,7 @@
  * the wall clock.
  *
  * `createServerOnlyFn` is load-bearing rather than decorative. `todayIso()` in
- * `src/routes/_app/-server/serialise.ts` delegates here, and that module is
+ * `src/server/serialise.ts` delegates here, and that module is
  * reachable from the client entry — every `_app` route imports its loader from a
  * sibling `-server` module — so Start's import-protection plugin would refuse
  * `@tanstack/react-start/server` along that path. Wrapping the implementation is

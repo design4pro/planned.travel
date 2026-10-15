@@ -11,7 +11,7 @@ import { Thread } from '../thread'
 
 import type { Catalogue } from '#/lib/i18n'
 
-vi.mock('#/server/fns/collab', () => ({
+vi.mock('#/server/fns/collab-thread', () => ({
   deleteMessageFn: vi.fn(),
   editMessageFn: vi.fn(),
   postMessageFn: vi.fn(),
