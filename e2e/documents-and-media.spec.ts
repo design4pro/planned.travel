@@ -62,7 +62,8 @@ async function interceptUploads(page: Page): Promise<Array<string>> {
   await page.route(
     (url) => callsServerFn(url, 'uploadTripFileFn'),
     async (route) => {
-      bodies.push(route.request().postDataBuffer()?.toString('latin1') ?? '')
+      const body = route.request().postDataBuffer()
+      bodies.push(body === null ? '' : new TextDecoder('latin1').decode(body))
       await route.fulfill({ json: { ok: true, file: {} } })
     },
   )
