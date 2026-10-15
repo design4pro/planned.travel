@@ -906,6 +906,30 @@ const messages = {
   'files.export.email.action': '{title} 열기',
   'files.export.email.text': '여행 내보내기가 준비되었습니다: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '여행 내보내기',
+  'files.export.description':
+    '여행의 인쇄용 사본입니다: 일정, 방문지, 예약, 이동 수단, 숙소가 담겨 있습니다. 계정이 없는 사람에게 전달하세요.',
+  'files.export.kept': {
+    other: '내보내기는 각각 {count}일 동안 보관됩니다.',
+  },
+  'files.export.empty.title': '아직 내보내기가 없습니다',
+  'files.export.empty.body':
+    '계정이 없는 사람에게 보낼 수 있도록 여행의 인쇄용 사본을 만드세요.',
+  'files.export.empty.bodyViewer': '여행의 소유자나 편집자가 만들 수 있습니다.',
+  'files.export.format.pdf': 'PDF 파일',
+  'files.export.format.html': '인쇄용 페이지',
+  'files.export.artifact': '여행 내보내기, {date}',
+  'files.export.download': '내려받기',
+  'files.export.downloadLabelPdf': '{date}에 만든 PDF 내려받기',
+  'files.export.downloadLabelHtml': '{date}에 만든 인쇄용 페이지 내려받기',
+  'files.export.error.list': '내보내기 목록을 불러오지 못했습니다.',
+  'files.export.retry': '다시 시도',
+  'files.export.error.missing':
+    '이 내보내기는 더 이상 보관되지 않습니다. 여행을 다시 내보내세요.',
+  'files.export.error.missingViewer':
+    '이 내보내기는 더 이상 보관되지 않습니다.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '올리기를 취소했습니다.',
   'files.error.badAnswer': '서버가 보낸 답을 이 브라우저가 읽지 못했습니다.',

@@ -288,3 +288,142 @@ test.describe('06-S1 — Every way a file gets in', () => {
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 })
+
+test.describe('06-S3b — Everyone on a trip sees its exports', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /** A seeded trip with no files and no exports: the panel's real answer is the empty list. */
+  async function filesRoute(context: BrowserContext): Promise<RouteCase> {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+    return {
+      name: 'trip-files',
+      path: `/trips/${tripId}/files`,
+      ready: 'nav[aria-label="Trip sections"]',
+    }
+  }
+
+  const isList = (url: URL) => callsServerFn(url, 'listTripExportsFn')
+
+  test('a trip with no exports reads its list once, as a plain GET, and says so with nothing to click', async ({
+    context,
+    page,
+  }) => {
+    const route = await filesRoute(context)
+    const report = watchConsole(page, route)
+    const listed: Array<{ method: string; body: string | null }> = []
+    page.on('request', (request) => {
+      if (isList(new URL(request.url()))) {
+        listed.push({ method: request.method(), body: request.postData() })
+      }
+    })
+    const forged: Array<string> = []
+    page.on('request', (request) => {
+      const url = new URL(request.url())
+      if (callsServerFn(url, 'downloadTripExportFn')) forged.push(url.pathname)
+    })
+    await visit(page, route, 'light')
+
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(
+      panel.getByRole('heading', { name: 'Export the trip' }),
+    ).toBeVisible()
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    await expect(panel.getByRole('button')).toHaveCount(0)
+    await expect(panel.getByRole('checkbox')).toHaveCount(0)
+    await expect(panel.locator('[role="status"]')).toHaveText('')
+
+    expect(listed).toHaveLength(1)
+    expect(listed[0]?.method).toBe('GET')
+    expect(listed[0]?.body).toBeNull()
+    expect(forged, 'nothing asks for a download without a click').toEqual([])
+
+    await settleMutations(page)
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+
+  test('a skeleton holds the place while the list is in flight, and the list replaces it', async ({
+    context,
+    page,
+  }) => {
+    const route = await filesRoute(context)
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await page.route(isList, async (handled) => {
+      await held
+      await handled.continue()
+    })
+    await visit(page, route, 'light')
+
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByTestId('export-skeleton')).toBeVisible()
+    await expect(panel.getByTestId('export-skeleton')).toHaveAttribute(
+      'aria-busy',
+      'true',
+    )
+
+    release()
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    await expect(panel.getByTestId('export-skeleton')).toHaveCount(0)
+  })
+
+  test('a failed list says so with a retry, and the retry puts focus on the heading and reads again', async ({
+    context,
+    page,
+  }) => {
+    const route = await filesRoute(context)
+    await page.route(isList, (handled) => handled.abort('failed'))
+    await visit(page, route, 'light')
+
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByRole('alert')).toContainText(
+      'The list of exports did not load.',
+    )
+
+    await page.unroute(isList)
+    await panel.getByRole('button', { name: 'Try again' }).click()
+
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await expect(
+      panel.getByRole('heading', { name: 'Export the trip' }),
+    ).toBeFocused()
+  })
+
+  test('the panel fits a 320 px screen, left to right and right to left', async ({
+    context,
+    page,
+  }) => {
+    const route = await filesRoute(context)
+    await page.setViewportSize({ width: 320, height: 800 })
+    await visit(page, route, 'light')
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+
+    const overflow = () =>
+      page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      )
+    expect(await overflow(), 'no horizontal scroll').toBeLessThanOrEqual(0)
+
+    // The reader's direction is a D1 column the shared demo user must not have changed, so the
+    // mirror is applied to the document: logical properties are what is under test, not the words.
+    await page.evaluate(() => {
+      document.documentElement.dir = 'rtl'
+    })
+    await expect(panel.getByText('No exports yet')).toBeVisible()
+    expect(
+      await overflow(),
+      'no horizontal scroll when mirrored',
+    ).toBeLessThanOrEqual(0)
+  })
+})

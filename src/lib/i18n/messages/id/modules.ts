@@ -940,6 +940,31 @@ const messages = {
   'files.export.email.action': 'Buka {title}',
   'files.export.email.text': 'Ekspor perjalanan sudah siap: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Ekspor perjalanan',
+  'files.export.description':
+    'Salinan perjalanan yang bisa dicetak: hari, pemberhentian, reservasi, transportasi, dan penginapan. Berikan kepada orang yang tidak punya akun.',
+  'files.export.kept': {
+    other: 'Setiap ekspor disimpan selama {count} hari.',
+  },
+  'files.export.empty.title': 'Belum ada ekspor',
+  'files.export.empty.body':
+    'Buat salinan perjalanan yang bisa dicetak untuk dikirim ke orang yang tidak punya akun.',
+  'files.export.empty.bodyViewer':
+    'Pemilik atau editor perjalanan ini bisa membuatnya.',
+  'files.export.format.pdf': 'File PDF',
+  'files.export.format.html': 'Halaman cetak',
+  'files.export.artifact': 'Ekspor perjalanan, {date}',
+  'files.export.download': 'Unduh',
+  'files.export.downloadLabelPdf': 'Unduh PDF yang dibuat pada {date}',
+  'files.export.downloadLabelHtml':
+    'Unduh halaman cetak yang dibuat pada {date}',
+  'files.export.error.list': 'Daftar ekspor tidak termuat.',
+  'files.export.retry': 'Coba lagi',
+  'files.export.error.missing':
+    'Ekspor itu tidak lagi disimpan. Ekspor perjalanan lagi.',
+  'files.export.error.missingViewer': 'Ekspor itu tidak lagi disimpan.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Unggahan dibatalkan.',
   'files.error.badAnswer':

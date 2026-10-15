@@ -1136,6 +1136,31 @@ const messages = {
   'files.export.email.action': 'Open {title}',
   'files.export.email.text': 'Your trip export is ready: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Export the trip',
+  'files.export.description':
+    'A printable copy of the trip: days, stops, reservations, transport and stays. Hand it to someone who has no account.',
+  'files.export.kept': {
+    one: 'Each export is kept for {count} day.',
+    other: 'Each export is kept for {count} days.',
+  },
+  'files.export.empty.title': 'No exports yet',
+  'files.export.empty.body':
+    'Make a printable copy of the trip to send to someone who has no account.',
+  'files.export.empty.bodyViewer':
+    'An owner or editor of this trip can make one.',
+  'files.export.format.pdf': 'PDF file',
+  'files.export.format.html': 'Printable page',
+  'files.export.artifact': 'Trip export, {date}',
+  'files.export.download': 'Download',
+  'files.export.downloadLabelPdf': 'Download the PDF made {date}',
+  'files.export.downloadLabelHtml': 'Download the printable page made {date}',
+  'files.export.error.list': 'The list of exports did not load.',
+  'files.export.retry': 'Try again',
+  'files.export.error.missing':
+    'That export is no longer kept. Export the trip again.',
+  'files.export.error.missingViewer': 'That export is no longer kept.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Upload cancelled.',
   'files.error.badAnswer':

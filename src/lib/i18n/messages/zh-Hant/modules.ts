@@ -872,6 +872,27 @@ const messages = {
   'files.export.email.action': '開啟 {title}',
   'files.export.email.text': '行程匯出已準備好：{url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': '匯出行程',
+  'files.export.description':
+    '行程的可列印副本：日程、站點、預訂、交通與住宿。可交給沒有帳號的人。',
+  'files.export.kept': {
+    other: '每份匯出保留 {count} 天。',
+  },
+  'files.export.empty.title': '還沒有匯出',
+  'files.export.empty.body': '製作行程的可列印副本，傳給沒有帳號的人。',
+  'files.export.empty.bodyViewer': '行程的擁有者或編輯者可以製作。',
+  'files.export.format.pdf': 'PDF 檔案',
+  'files.export.format.html': '可列印頁面',
+  'files.export.artifact': '行程匯出，{date}',
+  'files.export.download': '下載',
+  'files.export.downloadLabelPdf': '下載 {date} 產生的 PDF',
+  'files.export.downloadLabelHtml': '下載 {date} 產生的可列印頁面',
+  'files.export.error.list': '匯出清單沒有載入。',
+  'files.export.retry': '重試',
+  'files.export.error.missing': '這份匯出已不再保留。請重新匯出行程。',
+  'files.export.error.missingViewer': '這份匯出已不再保留。',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上傳。',
   'files.error.badAnswer': '伺服器回傳的內容這個瀏覽器讀不了。',

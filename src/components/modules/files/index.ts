@@ -4,6 +4,7 @@ export type { FileLibraryProps } from './file-library'
 
 export { FileDetailsDialog } from './file-dialogs'
 export { downloadTripFile } from './download'
+export { ExportPanel } from './export-panel'
 export { kindForFile, screenFiles } from './screening'
 export { uploadFile } from './upload'
 export type { UploadAnswer, UploadInput } from './upload'

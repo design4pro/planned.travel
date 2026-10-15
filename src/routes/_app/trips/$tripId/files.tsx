@@ -5,6 +5,7 @@ import { FileImage, HardDrive, Ticket } from 'lucide-react'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import {
+  ExportPanel,
   FileLibrary,
   StorageMeter,
   UploadFilesAction,
@@ -110,6 +111,8 @@ function FilesPage() {
           limitBytes={data.limitBytes}
           pickRequestedAt={pickRequestedAt}
         />
+
+        <ExportPanel tripId={tripId} />
       </AppSections>
     </AppFrame>
   )

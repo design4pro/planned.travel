@@ -982,6 +982,34 @@ const messages = {
   'files.export.email.action': 'Відкрити: {title}',
   'files.export.email.text': 'Експорт подорожі готовий: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Експорт подорожі',
+  'files.export.description':
+    'Друкована копія подорожі: дні, зупинки, бронювання, транспорт і проживання. Передайте її тому, хто не має облікового запису.',
+  'files.export.kept': {
+    one: 'Кожен експорт зберігається {count} день.',
+    few: 'Кожен експорт зберігається {count} дні.',
+    many: 'Кожен експорт зберігається {count} днів.',
+    other: 'Кожен експорт зберігається {count} дня.',
+  },
+  'files.export.empty.title': 'Експортів ще немає',
+  'files.export.empty.body':
+    'Зробіть друковану копію подорожі, щоб надіслати тому, хто не має облікового запису.',
+  'files.export.empty.bodyViewer':
+    'Створити експорт може власник або редактор подорожі.',
+  'files.export.format.pdf': 'Файл PDF',
+  'files.export.format.html': 'Сторінка для друку',
+  'files.export.artifact': 'Експорт подорожі, {date}',
+  'files.export.download': 'Завантажити',
+  'files.export.downloadLabelPdf': 'Завантажити PDF, створений {date}',
+  'files.export.downloadLabelHtml':
+    'Завантажити сторінку для друку, створену {date}',
+  'files.export.error.list': 'Список експортів не завантажився.',
+  'files.export.retry': 'Спробувати знову',
+  'files.export.error.missing':
+    'Цей експорт більше не зберігається. Експортуйте подорож ще раз.',
+  'files.export.error.missingViewer': 'Цей експорт більше не зберігається.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Надсилання скасовано.',
   'files.error.badAnswer':

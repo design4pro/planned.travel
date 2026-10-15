@@ -980,6 +980,32 @@ const messages = {
   'files.export.email.action': 'Obre {title}',
   'files.export.email.text': 'L’exportació del viatge és a punt: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Exporta el viatge',
+  'files.export.description':
+    'Una còpia imprimible del viatge: dies, parades, reserves, transport i allotjaments. Lliura-la a algú que no tingui compte.',
+  'files.export.kept': {
+    one: 'Cada exportació es conserva durant {count} dia.',
+    many: 'Cada exportació es conserva durant {count} dies.',
+    other: 'Cada exportació es conserva durant {count} dies.',
+  },
+  'files.export.empty.title': 'Encara no hi ha exportacions',
+  'files.export.empty.body':
+    'Fes una còpia imprimible del viatge per enviar-la a algú que no tingui compte.',
+  'files.export.empty.bodyViewer':
+    'El propietari o un editor del viatge en pot fer una.',
+  'files.export.format.pdf': 'Fitxer PDF',
+  'files.export.format.html': 'Pàgina imprimible',
+  'files.export.artifact': 'Exportació del viatge, {date}',
+  'files.export.download': 'Baixa',
+  'files.export.downloadLabelPdf': 'Baixa el PDF fet el {date}',
+  'files.export.downloadLabelHtml': 'Baixa la pàgina imprimible feta el {date}',
+  'files.export.error.list': 'No s’ha pogut carregar la llista d’exportacions.',
+  'files.export.retry': 'Torna-ho a provar',
+  'files.export.error.missing':
+    'Aquesta exportació ja no es conserva. Exporta el viatge un altre cop.',
+  'files.export.error.missingViewer': 'Aquesta exportació ja no es conserva.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Pujada cancel·lada.',
   'files.error.badAnswer':

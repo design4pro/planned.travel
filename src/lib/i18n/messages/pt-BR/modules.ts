@@ -976,6 +976,33 @@ const messages = {
   'files.export.email.action': 'Abrir {title}',
   'files.export.email.text': 'A exportação da viagem está pronta: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Exportar a viagem',
+  'files.export.description':
+    'Uma cópia imprimível da viagem: dias, paradas, reservas, transporte e hospedagens. Entregue a quem não tem conta.',
+  'files.export.kept': {
+    one: 'Cada exportação fica guardada por {count} dia.',
+    many: 'Cada exportação fica guardada por {count} dias.',
+    other: 'Cada exportação fica guardada por {count} dias.',
+  },
+  'files.export.empty.title': 'Ainda não há exportações',
+  'files.export.empty.body':
+    'Faça uma cópia imprimível da viagem para enviar a quem não tem conta.',
+  'files.export.empty.bodyViewer':
+    'O proprietário ou um editor da viagem pode fazer uma.',
+  'files.export.format.pdf': 'Arquivo PDF',
+  'files.export.format.html': 'Página imprimível',
+  'files.export.artifact': 'Exportação da viagem, {date}',
+  'files.export.download': 'Baixar',
+  'files.export.downloadLabelPdf': 'Baixar o PDF criado em {date}',
+  'files.export.downloadLabelHtml':
+    'Baixar a página imprimível criada em {date}',
+  'files.export.error.list': 'A lista de exportações não carregou.',
+  'files.export.retry': 'Tentar de novo',
+  'files.export.error.missing':
+    'Essa exportação não está mais guardada. Exporte a viagem de novo.',
+  'files.export.error.missingViewer': 'Essa exportação não está mais guardada.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Envio cancelado.',
   'files.error.badAnswer':

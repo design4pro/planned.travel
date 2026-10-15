@@ -940,6 +940,33 @@ const messages = {
   'files.export.email.action': '{title} öğesini aç',
   'files.export.email.text': 'Gezi dışa aktarımı hazır: {url}',
 
+  /* --------------------------- files: the trip export list */
+  'files.export.label': 'Geziyi dışa aktar',
+  'files.export.description':
+    'Gezinin yazdırılabilir bir kopyası: günler, duraklar, rezervasyonlar, ulaşım ve konaklamalar. Hesabı olmayan birine verin.',
+  'files.export.kept': {
+    one: 'Her dışa aktarım {count} gün boyunca saklanır.',
+    other: 'Her dışa aktarım {count} gün boyunca saklanır.',
+  },
+  'files.export.empty.title': 'Henüz dışa aktarım yok',
+  'files.export.empty.body':
+    'Hesabı olmayan birine göndermek için gezinin yazdırılabilir bir kopyasını oluşturun.',
+  'files.export.empty.bodyViewer':
+    'Bunu gezinin sahibi veya düzenleyicisi oluşturabilir.',
+  'files.export.format.pdf': 'PDF dosyası',
+  'files.export.format.html': 'Yazdırılabilir sayfa',
+  'files.export.artifact': 'Gezi dışa aktarımı, {date}',
+  'files.export.download': 'İndir',
+  'files.export.downloadLabelPdf':
+    '{date} tarihinde oluşturulan PDF dosyasını indir',
+  'files.export.downloadLabelHtml':
+    '{date} tarihinde oluşturulan yazdırılabilir sayfayı indir',
+  'files.export.error.list': 'Dışa aktarımların listesi yüklenmedi.',
+  'files.export.retry': 'Tekrar dene',
+  'files.export.error.missing':
+    'Bu dışa aktarım artık saklanmıyor. Geziyi yeniden dışa aktarın.',
+  'files.export.error.missingViewer': 'Bu dışa aktarım artık saklanmıyor.',
+
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Yükleme iptal edildi.',
   'files.error.badAnswer':
