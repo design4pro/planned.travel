@@ -515,7 +515,7 @@ export function FileLibrary({
           {/*
             The drag-over fill. Only its opacity moves, so nothing repaints or reflows while a drag
             crosses the zone, and it sits behind the icon, the text and the button (each is
-            `relative`, which paints them after this positioned sibling) so "Drop to upload" keeps the
+            `relative`, the button by its base class, which paints them after this positioned sibling) so "Drop to upload" keeps the
             ink-on-brand-subtle pair in both themes. `-inset-px` lets its hairline cover the dashed
             border. The global reduced-motion rule already collapses the transition.
           */}
@@ -570,7 +570,6 @@ export function FileLibrary({
             variant="secondary"
             size="sm"
             shape="pill"
-            className="relative"
             onClick={() => inputRef.current?.click()}
           >
             {t('modules.files.action.choose')}
