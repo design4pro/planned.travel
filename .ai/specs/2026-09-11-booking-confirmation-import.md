@@ -607,3 +607,23 @@ disagreed with it and why. Each entry names what the tree forced.
     (`src/server/queue/ics.ts`); a document goes to Workers AI, which has no local simulator and
     proxies to the real service. A browser journey that reads a PDF would be a journey against
     production inference.
+
+## Amendment - atomic import markers (#929)
+
+The implementation PR for #929 supersedes the post-insert marker design above (including
+its original one-statement batch and the later chunked variant from #924). Each accepted row
+is now created through `createImportedReservation(scope, input, importedAt)`: the marker is
+part of the reservation INSERT, with one server-chosen instant shared by all rows of a confirm.
+Both creation paths use one helper for input parsing, tenant trip resolution, role and reference
+checks, then the tenant-scoped insert. Public create/update payloads are unchanged and cannot
+set or clear the marker. There is no `stamp` step or marker-error swallowing in confirm.
+
+The existing marker writer and clearing remain available and unchanged. Staging, the 500-row
+ceiling, retry rules and the confirm result shape are unchanged: a retry creates only pending
+rows and never re-marks rows already recorded as written. Regression coverage exercises
+7 and 101 rows, checks one shared instant and no separate marker
+UPDATE, and re-reads successful rows unchanged after a partial confirm and retry. Repository
+coverage refuses unmarked INSERTs and includes foreign tenants, viewer refusal and references
+from another trip.
+
+The frozen reservations plan retains its historical post-insert marker description.

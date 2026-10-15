@@ -45,13 +45,12 @@ import {
   assertBookingRole,
   createAccommodation,
   createPlace,
-  createReservation,
+  createImportedReservation,
   getFile,
   getOrganizationSettings,
   getSubscription,
   listTripDays,
   listTripPlaces,
-  markReservationsImported,
   requireTrip,
   updateFile,
   updatePlace,
@@ -657,7 +656,7 @@ function placeResolver(
 /**
  * Everything that follows a written booking, none of which may fail it.
  *
- * The row is written the moment `createReservation` returns, and a retry must never write it
+ * The row is written the moment `createImportedReservation` returns, and a retry must never write it
  * twice — so the ledger line and the file link are recorded here, after the id exists and outside
  * the decision about whether the row succeeded. `syncReservationExpense` already reports its own
  * failure rather than throwing; the file link is the one that needs the guard.
@@ -774,7 +773,7 @@ export async function confirmBookingImport(
   ports: ConfirmBookingImportPorts,
 ): Promise<ConfirmedBookingImport> {
   const trip = await requireTrip(scope, input.tripId)
-  // Before anything is read, created or spent. The rows below reach `createReservation`, which asks
+  // Before anything is read, created or spent. The rows below reach `createImportedReservation`, which asks
   // this same question — but an accommodation row first creates a place (a `places` quota unit) and
   // pins it through the geocoder (a metered monthly lookup), and the refusal at the reservation is
   // caught per row and counted as a failed one. Without this a trip `viewer` who opened an import
@@ -827,6 +826,7 @@ export async function confirmBookingImport(
   const written = [...already]
   let failed = 0
 
+  const importedAt = new Date()
   for (const index of pending) {
     const row = staged.reservations.at(index)
     if (row === undefined) continue
@@ -834,22 +834,26 @@ export async function confirmBookingImport(
     try {
       const placeId =
         draft.type === 'accommodation' ? await placeFor(row) : null
-      const reservation = await createReservation(scope, {
-        tripId: trip.id,
-        placeId,
-        type: draft.type,
-        status: 'confirmed',
-        title: draft.title.length > 0 ? draft.title : await untitledTitle(),
-        location: draft.location,
-        confirmationNumber: draft.reference,
-        notes: row.notes,
-        startDate: draft.startDate,
-        startTime: draft.startTime,
-        endDate: draft.endDate,
-        endTime: draft.endTime,
-        priceMinor: draft.priceMinor,
-        currency: draft.currency,
-      })
+      const reservation = await createImportedReservation(
+        scope,
+        {
+          tripId: trip.id,
+          placeId,
+          type: draft.type,
+          status: 'confirmed',
+          title: draft.title.length > 0 ? draft.title : await untitledTitle(),
+          location: draft.location,
+          confirmationNumber: draft.reference,
+          notes: row.notes,
+          startDate: draft.startDate,
+          startTime: draft.startTime,
+          endDate: draft.endDate,
+          endTime: draft.endTime,
+          priceMinor: draft.priceMinor,
+          currency: draft.currency,
+        },
+        importedAt,
+      )
       written.push({ index, reservationId: reservation.id })
       await settle(scope, trip, reservation, fileId)
       if (draft.type === 'accommodation') await stayFor(draft, reservation)
@@ -865,7 +869,6 @@ export async function confirmBookingImport(
   }
 
   const fresh = written.slice(already.length)
-  await stamp(scope, trip.id, fresh)
   await persist(store, staged, written, {
     asked: pending.length,
     remaining: pending.length - fresh.length,
@@ -885,42 +888,6 @@ export async function confirmBookingImport(
     written: fresh.length,
     failed,
     remaining: pending.length - fresh.length,
-  }
-}
-
-/**
- * The marker is written in chunks, so a failure part way leaves the earlier chunks marked, and a
- * shortfall is a bug rather than a refusal.
- *
- * `markReservationsImported` marks only the rows the caller owns and says how many it marked, so a
- * count below what was written means an id did not resolve inside the scope that just wrote it.
- * Nothing here may fail the confirm: the rows exist, and a missing marker costs a badge.
- */
-async function stamp(
-  scope: TenantScope,
-  owningTripId: string,
-  fresh: ReadonlyArray<{ readonly reservationId: string }>,
-): Promise<void> {
-  if (fresh.length === 0) return
-  try {
-    const marked = await markReservationsImported(
-      scope,
-      owningTripId,
-      fresh.map((row) => row.reservationId),
-    )
-    if (marked !== fresh.length) {
-      log().warn('booking import marker count short', {
-        organizationId: scope.ctx.organizationId,
-        written: fresh.length,
-        marked,
-      })
-    }
-  } catch (cause) {
-    log().warn('booking import rows not marked', {
-      organizationId: scope.ctx.organizationId,
-      written: fresh.length,
-      ...serializeError(cause),
-    })
   }
 }
 
