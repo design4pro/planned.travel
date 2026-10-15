@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -665,7 +666,7 @@ test.describe('06-S3b — Everyone on a trip sees its exports', () => {
 
   const isList = (url: URL) => callsServerFn(url, 'listTripExportsFn')
 
-  test('a trip with no exports reads its list once, as a plain GET, and says so with nothing to click', async ({
+  test('a trip with no exports reads once as a plain GET and offers one request', async ({
     context,
     page,
   }) => {
@@ -689,8 +690,10 @@ test.describe('06-S3b — Everyone on a trip sees its exports', () => {
       panel.getByRole('heading', { name: 'Export the trip' }),
     ).toBeVisible()
     await expect(panel.getByText('No exports yet')).toBeVisible()
-    await expect(panel.getByRole('button')).toHaveCount(0)
-    await expect(panel.getByRole('checkbox')).toHaveCount(0)
+    await expect(panel.locator('[data-part="export-request"]')).toHaveCount(1)
+    await expect(
+      panel.getByRole('checkbox', { name: 'Include confirmation codes' }),
+    ).not.toBeChecked()
     await expect(panel.locator('[role="status"]')).toHaveText('')
 
     expect(listed).toHaveLength(1)
@@ -780,5 +783,89 @@ test.describe('06-S3b — Everyone on a trip sees its exports', () => {
       await overflow(),
       'no horizontal scroll when mirrored',
     ).toBeLessThanOrEqual(0)
+  })
+})
+
+test.describe('06-S3b - Requesting a trip export', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      'The seeded demo session is unavailable',
+    )
+  })
+
+  test('sends only request flags, supports Space and keeps focus after a refused network request', async ({
+    context,
+    page,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+    const route: RouteCase = {
+      name: 'trip-files',
+      path: `/trips/${tripId}/files`,
+      ready: 'nav[aria-label="Trip sections"]',
+    }
+    const report = watchConsole(page, route)
+    const requests: Array<{ method: string; body: string }> = []
+    // Never forward this mutation: even a request whose queue cannot run spends the demo allowance.
+    await page.route(
+      (url) => callsServerFn(url, 'requestTripExportFn'),
+      async (intercepted) => {
+        requests.push({
+          method: intercepted.request().method(),
+          body: intercepted.request().postData() ?? '',
+        })
+        await intercepted.fulfill({ status: 500, body: '' })
+      },
+    )
+    const expectedNetworkFailures: Array<string> = []
+    page.on('console', (message) => {
+      const source = message.location().url
+      if (
+        message.type() === 'error' &&
+        source &&
+        callsServerFn(new URL(source), 'requestTripExportFn') &&
+        message.text().includes('500')
+      ) {
+        expectedNetworkFailures.push('error: ' + message.text())
+      }
+    })
+    await visit(page, route, 'light')
+    const panel = page.locator('[data-part="export-panel"]')
+    const request = panel.locator('[data-part="export-request"]')
+    await expect(request).toHaveCount(1)
+    await expect(request).toBeEnabled()
+    await expect(panel.getByRole('status')).toHaveCount(1)
+    await expect(panel.getByRole('status')).toHaveText('')
+    const checkbox = panel.getByRole('checkbox', {
+      name: 'Include confirmation codes',
+    })
+    await expect(checkbox).not.toBeChecked()
+    await checkbox.focus()
+    await page.keyboard.press('Space')
+    await expect(checkbox).toBeChecked()
+    await request.click()
+    await expect(page.getByText('The export was not started')).toBeVisible()
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.method).toBe('POST')
+    expect(requests[0]?.body).toContain(tripId)
+    // Decode the actual request with Start's installed serializer; never fabricate a wire frame.
+    const { fromJSON } = createRequire(
+      import.meta.resolve('@tanstack/react-start'),
+    )('seroval') as {
+      fromJSON: (value: unknown) => unknown
+    }
+    expect(fromJSON(JSON.parse(requests[0]?.body ?? 'null'))).toEqual({
+      data: { tripId, notify: false, includeReferences: true },
+    })
+    expect(requests[0]?.body).not.toMatch(/@|email|address/iu)
+    await expect(request).toBeEnabled()
+    await expect(request).toBeFocused()
+    await expect(panel.getByRole('status')).toHaveCount(1)
+    await expect(panel.getByRole('status')).toHaveText('')
+    await settleMutations(page)
+    // The intercepted HTTP 500 has one native resource diagnostic; no app error is allowed.
+    expect(expectedNetworkFailures).toHaveLength(1)
+    expect(report().fatal).toEqual(expectedNetworkFailures)
   })
 })

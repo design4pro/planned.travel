@@ -3,7 +3,7 @@
  *
  * The `pdf-export` job writes `exports/<org>/<trip>/<taskId>.pdf|html` into the `FILES` bucket
  * (`storage/export-artifacts.ts` owns that layout); these functions list what is there and stream
- * one object back. Nothing here renders anything or writes a byte.
+ * one object back. Requests enqueue a snapshot; downloads stream the finished artifact.
  *
  * **The key is never the browser's.** It is built from the caller's own organization id and the trip
  * the access check resolved, and a task id is only ever matched against what the listing of that
@@ -18,13 +18,33 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { serverNow } from '#/server/clock'
-import { requireTrip, tripRoleFor } from '#/server/repos'
+import { serverNow, serverToday } from '#/server/clock'
 import {
   exportObjectKey,
   listExportArtifacts,
 } from '#/server/storage/export-artifacts'
-import { appScope, filesBucket } from './context'
+import {
+  exportAllowance,
+  reserveExport,
+  releaseExport,
+} from '#/server/repos/exports'
+import {
+  requireTrip,
+  tripRoleFor,
+  getEffectiveSettings,
+  getTripItinerary,
+  listTripDayNotes,
+  listTripReservations,
+  listTripTransports,
+  QuotaExceededError,
+} from '#/server/repos'
+import { enqueueTask } from '#/server/queue/jobs'
+import { pdfExportPayloadSchema } from '#/server/queue/types'
+import { createTranslator, loadCatalogue } from '#/lib/i18n/catalogue'
+import { negotiate } from '#/lib/i18n/negotiate'
+import { buildExportDocument } from './export-document'
+import type { TaskQueue } from '#/server/queue/types'
+import { appScope, filesBucket, log } from './context'
 import { attachmentHeaders, sanitiseFilename } from './file-policy'
 
 import type { TenantScope } from '#/server/repos'
@@ -40,6 +60,12 @@ export interface TripExportList {
   readonly artifacts: ReadonlyArray<ExportArtifact>
   /** Whether the caller may ask for an export: a trip owner or editor. Draws the affordance only. */
   readonly canRequest: boolean
+  readonly allowance: {
+    used: number
+    limit: number | null
+    month: string
+    resetsOn: string
+  }
 }
 
 /** What a download needs from the bucket: the listing verbs, and `get` for the one object. */
@@ -85,6 +111,7 @@ export async function listTripExports(
 ): Promise<TripExportList> {
   const trip = await requireTrip(scope, input.tripId)
   const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
+  const month = new Date(now).toISOString().slice(0, 7)
   return {
     artifacts: await listExportArtifacts(
       bucket,
@@ -93,6 +120,11 @@ export async function listTripExports(
       { now },
     ),
     canRequest: role === 'owner' || role === 'editor',
+    allowance: {
+      ...(await exportAllowance(scope, { month })),
+      month,
+      resetsOn: exportResetsOn(month),
+    },
   }
 }
 
@@ -205,3 +237,112 @@ export const downloadTripExportFn = createServerFn({ method: 'GET' })
       serverNow().getTime(),
     ),
   )
+
+/** The restart date is derived from the reserved month, including at a year boundary. */
+export function exportResetsOn(month: string): string {
+  const date = new Date(month + '-01T00:00:00.000Z')
+  date.setUTCMonth(date.getUTCMonth() + 1)
+  return date.toISOString().slice(0, 10)
+}
+
+export const requestTripExportInputSchema = z.strictObject({
+  tripId,
+  notify: z.boolean(),
+  includeReferences: z.boolean(),
+})
+export type RequestTripExportInput = z.infer<
+  typeof requestTripExportInputSchema
+>
+export type RequestTripExportResult =
+  | { ok: true; taskId: string; queuedAt: number }
+  | {
+      ok: false
+      reason: 'quota'
+      used: number
+      limit: number
+      resetsOn: string
+    }
+
+/** Ports keep the request boundary testable against real repositories without Worker bindings. */
+export async function requestTripExport(
+  scope: TenantScope,
+  queue: TaskQueue,
+  input: RequestTripExportInput,
+  options: {
+    month: string
+    email: () => Promise<string>
+    warn: (cause: unknown) => void
+    now: () => number
+  },
+): Promise<RequestTripExportResult> {
+  const trip = await requireTrip(scope, input.tripId)
+  let reserved: { used: number; month: string }
+  try {
+    reserved = await reserveExport(scope, trip.id, { month: options.month })
+  } catch (cause) {
+    if (cause instanceof QuotaExceededError) {
+      return {
+        ok: false,
+        reason: 'quota',
+        used: cause.current,
+        limit: cause.limit,
+        resetsOn: exportResetsOn(options.month),
+      }
+    }
+    throw cause
+  }
+  try {
+    const [days, notes, reservations, transports, settings] = await Promise.all(
+      [
+        getTripItinerary(scope, trip.id),
+        listTripDayNotes(scope, trip.id),
+        listTripReservations(scope, { tripId: trip.id }),
+        listTripTransports(scope, trip.id),
+        getEffectiveSettings(scope),
+      ],
+    )
+    const locale = negotiate({ user: settings.locale })
+    const t = createTranslator(locale, await loadCatalogue(locale))
+    const payload = pdfExportPayloadSchema.parse({
+      tripId: trip.id,
+      requestedBy: scope.ctx.userId,
+      locale,
+      document: buildExportDocument(
+        { trip, days, notes, reservations, transports },
+        t,
+        locale,
+        input,
+      ),
+      ...(input.notify ? { notify: await options.email() } : {}),
+    })
+    const task = await enqueueTask(
+      queue,
+      { kind: 'pdf-export', orgId: scope.ctx.organizationId, payload },
+      options.now,
+    )
+    return { ok: true, taskId: task.id, queuedAt: options.now() }
+  } catch (cause) {
+    await releaseExport(scope, reserved).catch(options.warn)
+    throw cause
+  }
+}
+
+export const requestTripExportFn = createServerFn({ method: 'POST' })
+  .validator(requestTripExportInputSchema)
+  .handler(async ({ data }): Promise<RequestTripExportResult> => {
+    const scope = await appScope()
+    const { taskQueue } = await import('#/server/auth/env')
+    return requestTripExport(scope, taskQueue(), data, {
+      month: serverToday().slice(0, 7),
+      now: () => serverNow().getTime(),
+      email: async () => {
+        const { requireUser } = await import('#/server/auth/session')
+        return (await requireUser()).email
+      },
+      warn: () =>
+        log().warn('export allowance release failed', {
+          organizationId: scope.ctx.organizationId,
+          tripId: data.tripId,
+        }),
+    })
+  })

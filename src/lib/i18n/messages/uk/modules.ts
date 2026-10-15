@@ -1056,6 +1056,67 @@ const messages = {
     many: '{count} файлів не надіслалося',
     other: '{count} файлу не надіслалося',
   },
+
+  'files.export.request': 'Експортувати подорож',
+  'files.export.includeReferences': 'Додати коди підтвердження',
+  'files.export.includeReferencesHint':
+    'Не позначайте, якщо надішлете файл людині поза вашим простором.',
+  'files.export.pending':
+    'Готуємо експорт. Можна залишити сторінку; готовий файл з’явиться у списку.',
+  'files.export.slow':
+    'Це триває довше, ніж зазвичай. Готовий файл з’явиться тут. Якщо ні, повторіть експорт.',
+  'files.export.refresh': 'Оновити',
+  'files.export.ready': 'Експорт готовий',
+  'files.export.quota': {
+    one: 'Місячний ліміт експортів простору становить {count} і вичерпаний. Лічильник оновиться {date}.',
+    few: 'Місячний ліміт експортів простору становить {count} і вичерпаний. Лічильник оновиться {date}.',
+    many: 'Місячний ліміт експортів простору становить {count} і вичерпаний. Лічильник оновиться {date}.',
+    other:
+      'Місячний ліміт експортів простору становить {count} і вичерпаний. Лічильник оновиться {date}.',
+  },
+  'files.export.error.request': 'Експорт не розпочато',
+  'files.export.error.requestBody':
+    'Цю спробу не враховано. Спробуйте знову за мить.',
+  'files.export.doc.overview': 'Огляд',
+  'files.export.doc.timezone': 'Часовий пояс',
+  'files.export.doc.days': 'Дні',
+  'files.export.doc.day': {
+    one: 'День {count} - {date}',
+    few: 'День {count} - {date}',
+    many: 'День {count} - {date}',
+    other: 'День {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'День {count}',
+    few: 'День {count}',
+    many: 'День {count}',
+    other: 'День {count}',
+  },
+  'files.export.doc.dayEmpty': 'Поки нічого не заплановано.',
+  'files.export.doc.reservations': 'Бронювання',
+  'files.export.doc.transport': 'Транспорт',
+  'files.export.doc.reference': 'Код підтв. {code}',
+  'files.export.doc.route': '{from} до {to}',
+  'files.export.doc.stays': 'Де ми зупинимося',
+  'files.export.doc.nights': {
+    one: 'Кількість ночей: {count}',
+    few: 'Кількість ночей: {count}',
+    many: 'Кількість ночей: {count}',
+    other: 'Кількість ночей: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Усі дні не вміщуються в документі. Показано днів від початку: {count}.',
+    few: 'Усі дні не вміщуються в документі. Показано днів від початку: {count}.',
+    many: 'Усі дні не вміщуються в документі. Показано днів від початку: {count}.',
+    other:
+      'Усі дні не вміщуються в документі. Показано днів від початку: {count}.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Показано від початку: {count} із {total}.',
+    few: 'Показано від початку: {count} із {total}.',
+    many: 'Показано від початку: {count} із {total}.',
+    other: 'Показано від початку: {count} із {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1050,6 +1050,67 @@ const messages = {
     many: '{count} souboru se nenahrálo',
     other: '{count} souborů se nenahrálo',
   },
+
+  'files.export.request': 'Exportovat cestu',
+  'files.export.includeReferences': 'Zahrnout potvrzovací kódy',
+  'files.export.includeReferencesHint':
+    'Nezaškrtávejte, pokud soubor pošlete někomu mimo svůj prostor.',
+  'files.export.pending':
+    'Připravujeme export. Stránku můžete opustit; hotový soubor se objeví v seznamu.',
+  'files.export.slow':
+    'Trvá to déle než obvykle. Hotový soubor se zde objeví. Pokud ne, exportujte znovu.',
+  'files.export.refresh': 'Obnovit',
+  'files.export.ready': 'Export je připraven',
+  'files.export.quota': {
+    one: 'Měsíční limit exportů tohoto prostoru je {count} a byl vyčerpán. Počítadlo se obnoví {date}.',
+    few: 'Měsíční limit exportů tohoto prostoru je {count} a byl vyčerpán. Počítadlo se obnoví {date}.',
+    many: 'Měsíční limit exportů tohoto prostoru je {count} a byl vyčerpán. Počítadlo se obnoví {date}.',
+    other:
+      'Měsíční limit exportů tohoto prostoru je {count} a byl vyčerpán. Počítadlo se obnoví {date}.',
+  },
+  'files.export.error.request': 'Export nebyl spuštěn',
+  'files.export.error.requestBody':
+    'Tento pokus nebyl započítán. Zkuste to za chvíli znovu.',
+  'files.export.doc.overview': 'Přehled',
+  'files.export.doc.timezone': 'Časové pásmo',
+  'files.export.doc.days': 'Dny',
+  'files.export.doc.day': {
+    one: 'Den {count} - {date}',
+    few: 'Den {count} - {date}',
+    many: 'Den {count} - {date}',
+    other: 'Den {count} - {date}',
+  },
+  'files.export.doc.dayUndated': {
+    one: 'Den {count}',
+    few: 'Den {count}',
+    many: 'Den {count}',
+    other: 'Den {count}',
+  },
+  'files.export.doc.dayEmpty': 'Zatím nic naplánováno.',
+  'files.export.doc.reservations': 'Rezervace',
+  'files.export.doc.transport': 'Doprava',
+  'files.export.doc.reference': 'Č. potvrzení {code}',
+  'files.export.doc.route': '{from} do {to}',
+  'files.export.doc.stays': 'Kde bydlíme',
+  'files.export.doc.nights': {
+    one: 'Počet nocí: {count}',
+    few: 'Počet nocí: {count}',
+    many: 'Počet nocí: {count}',
+    other: 'Počet nocí: {count}',
+  },
+  'files.export.doc.truncatedDays': {
+    one: 'Všechny dny se nevejdou do dokumentu. Počet zobrazených dnů od začátku: {count}.',
+    few: 'Všechny dny se nevejdou do dokumentu. Počet zobrazených dnů od začátku: {count}.',
+    many: 'Všechny dny se nevejdou do dokumentu. Počet zobrazených dnů od začátku: {count}.',
+    other:
+      'Všechny dny se nevejdou do dokumentu. Počet zobrazených dnů od začátku: {count}.',
+  },
+  'files.export.doc.truncatedRows': {
+    one: 'Zobrazeno od začátku: {count} z {total}.',
+    few: 'Zobrazeno od začátku: {count} z {total}.',
+    many: 'Zobrazeno od začátku: {count} z {total}.',
+    other: 'Zobrazeno od začátku: {count} z {total}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

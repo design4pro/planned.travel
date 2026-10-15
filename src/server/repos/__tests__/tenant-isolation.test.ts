@@ -49,6 +49,7 @@ import {
   upsertSubscriptionUnscoped,
   usageRecordsRepository,
 } from '../billing'
+import { reserveExport, exportAllowance } from '../exports'
 import { readFeedSource } from '../calendar-feeds'
 import { categoriesRepository, createCategory } from '../categories'
 import {
@@ -6773,7 +6774,49 @@ describe('tenant isolation', () => {
    * nothing about tenancy. These are the functions a server function calls once it has the scope, and
    * the bucket is one fake that holds a real object of each workspace.
    */
-  describe('trip exports: the list and the download', () => {
+  describe('trip exports: the request, list and download', () => {
+    const month = '2027-02'
+    it('refuses a foreign trip before moving the caller’s counter', async () => {
+      await expect(
+        reserveExport(alpha.tenant.scope, beta.tripId, { month }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect((await exportAllowance(alpha.tenant.scope, { month })).used).toBe(
+        0,
+      )
+    })
+    it('counts only A when B has spent its month', async () => {
+      await setUsage(beta.tenant.scope, {
+        metric: 'exports',
+        period: month,
+        value: 3,
+      })
+      await reserveExport(alpha.tenant.scope, alpha.tripId, { month })
+      expect((await exportAllowance(alpha.tenant.scope, { month })).used).toBe(
+        1,
+      )
+      expect((await exportAllowance(beta.tenant.scope, { month })).used).toBe(3)
+    })
+    it('refuses a private-trip non-member and a viewer before counting', async () => {
+      await updateTrip(alpha.tenant.scope, alpha.tripId, {
+        visibility: 'private',
+      })
+      const userId = await alpha.tenant.addUser('Export viewer')
+      const scope = alpha.tenant.scopeFor(userId)
+      await expect(
+        reserveExport(scope, alpha.tripId, { month }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId,
+        role: 'viewer',
+      })
+      await expect(
+        reserveExport(scope, alpha.tripId, { month }),
+      ).rejects.toBeInstanceOf(TripRoleError)
+      expect((await exportAllowance(alpha.tenant.scope, { month })).used).toBe(
+        0,
+      )
+    })
     const NOW = Date.parse('2026-10-15T12:00:00.000Z')
     const taskA = 'task-of-alpha'
     const taskB = 'task-of-beta'
