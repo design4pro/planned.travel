@@ -5,7 +5,7 @@
 | **Status**         | in-progress                                        |
 | **Issue**          | none                                               |
 | **Spec PR**        | #904                                               |
-| **Implementation** | none                                               |
+| **Implementation** | #1293                                              |
 | **Plan**           | 07-S3 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
