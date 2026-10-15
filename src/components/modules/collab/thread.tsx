@@ -35,7 +35,7 @@ import {
   editMessageFn,
   postMessageFn,
   toggleReactionFn,
-} from '#/server/fns/collab'
+} from '#/server/fns/collab-thread'
 import { ConfirmDialog, RowMenu, useAction, useOptimistic } from '../shared'
 
 import type { ConfirmRequest } from '../shared'

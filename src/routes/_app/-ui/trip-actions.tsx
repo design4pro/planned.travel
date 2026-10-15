@@ -104,9 +104,9 @@ export interface TripEditSheetProps {
  * same questions — and this contributes the chrome, the patch and where the answer lands. Blank
  * clears and an untouched field is left alone, but the sheet shows every field and so sends every one:
  * "untouched" is a property of the *patch*, not of the form, and a sheet that omitted an empty field
- * could never clear a destination. The budget currency is the exception - it is sent only when the
- * reader picked another one, so a tab left open across somebody else's change of it cannot put the
- * old value back with an unrelated save.
+ * could never clear a destination. The budget currency is the exception - the form shows it as text
+ * and the sheet never sends it, so a tab left open across somebody else's change of it cannot put the
+ * old value back with an unrelated save. It is changed from the Costs tab.
  */
 export function TripEditSheet({
   trip,
@@ -196,7 +196,8 @@ export function TripEditSheet({
       if (coverFileId === 'failed') {
         return
       }
-      const { currency, ...fields } = tripFormPayload(form, {
+      // The budget currency is shown, not edited, here: it is left out of the patch.
+      const { currency: _currency, ...fields } = tripFormPayload(form, {
         creating: false,
         owner: isOwner,
       })
@@ -204,7 +205,6 @@ export function TripEditSheet({
         data: {
           tripId: trip.id,
           ...fields,
-          ...(currency === trip.currency ? {} : { currency }),
           ...(coverFileId === undefined ? {} : { coverFileId }),
         },
       })
@@ -324,6 +324,7 @@ export function TripEditSheet({
               form={form}
               undatedDays={false}
               owner={isOwner}
+              tripId={trip.id}
               currentCoverUrl={trip.coverImageUrl}
               coverProgress={coverProgress}
             />

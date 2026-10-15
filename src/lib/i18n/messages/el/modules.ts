@@ -542,6 +542,11 @@ const messages = {
   'book.ledger.refused.body':
     'Η κράτηση είναι στο ταξίδι. Η γραμμή εξόδου της δεν μπήκε στα έξοδα του ταξιδιού — δοκίμασε ξανά αυτό το μισό.',
   'book.action.ledgerRetry': 'Πρόσθεσέ το στα έξοδα',
+  'book.ledger.splitStale.title':
+    'Αποθηκεύτηκε, αλλά η διαίρεση δεν βγαίνει πια',
+  'book.ledger.splitStale.body':
+    'Η κράτηση και η νέα τιμή της αποθηκεύτηκαν, αλλά ο τρόπος διαίρεσης αυτού του εξόδου δεν μπόρεσε να ακολουθήσει το νέο σύνολο. Άνοιξε το έξοδο στα Έξοδα και διόρθωσε τη διαίρεση.',
+  'book.action.done': 'Τέλος',
   'book.copyConfirmation': 'ο κωδικός επιβεβαίωσης του {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -896,6 +901,9 @@ const messages = {
   'files.action.choose': 'Διάλεξε αρχεία',
   'files.action.upload': 'Ανέβασε αρχεία',
   'files.drop.active': 'Άφησέ το για μεταφόρτωση',
+  'files.drop.pasteHint': 'επικολλά μια αντιγραμμένη εικόνα ή στιγμιότυπο οθόνης',
+  'files.reject.blockedType':
+    'Το «{name}» δεν προστέθηκε: τα αρχεία XML και τα συμπιεσμένα SVG δεν αποθηκεύονται εδώ, για λόγους ασφαλείας. Αποθήκευσέ το ως PDF ή ως εικόνα και πρόσθεσε αυτό στη θέση του.',
   'files.drop.idle': 'Σύρε αρχεία εδώ',
   'files.empty.title': 'Κανένα αρχείο σε αυτό το ταξίδι',
   'files.empty.body':
@@ -944,6 +952,18 @@ const messages = {
     one: 'Μεταφόρτωση {count} αρχείου',
     other: 'Μεταφόρτωση {count} αρχείων',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - δημιουργήθηκε στις {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Έτοιμο: {title}',
+  'files.export.email.body': {
+    one: 'Η εξαγωγή του ταξιδιού είναι έτοιμη. Διατηρείται για {count} ημέρα.',
+    other:
+      'Η εξαγωγή του ταξιδιού είναι έτοιμη. Διατηρείται για {count} ημέρες.',
+  },
+  'files.export.email.action': 'Άνοιγμα: {title}',
+  'files.export.email.text': 'Η εξαγωγή του ταξιδιού είναι έτοιμη: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Η μεταφόρτωση ακυρώθηκε.',

@@ -560,7 +560,10 @@ const messages = {
     'Non è stato possibile caricare “{name}” come copertina. Non è stato ancora salvato nient’altro.',
   'editTrip.coverContinue': 'Salva senza la nuova copertina',
   'editTrip.currencyLocked':
-    'Questo viaggio ha già dei prezzi, quindi la valuta del budget non si può cambiare da qui. Rimetti {current} per salvare le altre modifiche.',
+    'Questo viaggio ha già dei prezzi, quindi la valuta del budget non si può cambiare da qui. Usa Cambia la valuta del budget nella scheda Spese, oppure rimetti {current} per salvare le altre modifiche.',
+  'editTrip.currencyReadonly':
+    'La valuta del budget si cambia dalla scheda Spese.',
+  'editTrip.currencyLink': 'Apri la scheda Spese',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Eliminare «{title}» per sempre?',
   'deleteTrip.description':

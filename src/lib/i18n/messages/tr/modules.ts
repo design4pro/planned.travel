@@ -526,6 +526,10 @@ const messages = {
   'book.ledger.refused.body':
     'Rezervasyon gezide. Masraf satırını gezinin masraflarına eklemek olmadı — o yarısını tekrar dene.',
   'book.action.ledgerRetry': 'Masraflara ekle',
+  'book.ledger.splitStale.title': 'Kaydedildi, ancak bölüşüm artık tutmuyor',
+  'book.ledger.splitStale.body':
+    'Rezervasyon ve yeni fiyatı kaydedildi, ancak bu masrafın bölüşümü yeni toplamı izleyemedi. Masraflar bölümünde kalemi açıp bölüşümü düzeltin.',
+  'book.action.done': 'Tamam',
   'book.copyConfirmation': '{title} için onay numarası',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -873,6 +877,9 @@ const messages = {
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
   'files.drop.active': 'Yüklemek için bırak',
+  'files.drop.pasteHint': 'kopyalanan bir görseli veya ekran görüntüsünü yapıştırır',
+  'files.reject.blockedType':
+    '“{name}” eklenmedi: XML ve sıkıştırılmış SVG dosyaları güvenlik nedeniyle burada saklanmaz. Onu PDF veya görsel olarak kaydet ve onun yerine onu ekle.',
   'files.drop.idle': 'Dosyaları buraya sürükle',
   'files.empty.title': 'Bu yolculukta dosya yok',
   'files.empty.body':
@@ -921,6 +928,17 @@ const messages = {
     one: '{count} dosya yükleniyor',
     other: '{count} dosya yükleniyor',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - oluşturulma: {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} hazır',
+  'files.export.email.body': {
+    one: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
+    other: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
+  },
+  'files.export.email.action': '{title} öğesini aç',
+  'files.export.email.text': 'Gezi dışa aktarımı hazır: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Yükleme iptal edildi.',

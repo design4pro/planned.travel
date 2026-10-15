@@ -548,6 +548,10 @@ const messages = {
   'book.ledger.refused.body':
     'La reserva és al viatge. Afegir-ne la línia de despesa a les despeses del viatge no ha funcionat — torna a provar aquesta meitat.',
   'book.action.ledgerRetry': 'Afegeix-ho a les despeses',
+  'book.ledger.splitStale.title': 'Desat, però el repartiment ja no quadra',
+  'book.ledger.splitStale.body':
+    'La reserva i el nou preu s’han desat, però el repartiment d’aquesta despesa no ha pogut seguir el nou total. Obre la despesa a Despeses i corregeix el repartiment.',
+  'book.action.done': 'Fet',
   'book.copyConfirmation': 'el número de confirmació de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -910,6 +914,9 @@ const messages = {
   'files.action.choose': 'Tria fitxers',
   'files.action.upload': 'Puja els fitxers',
   'files.drop.active': 'Deixa-ho anar per pujar',
+  'files.drop.pasteHint': 'enganxa una imatge o captura de pantalla copiada',
+  'files.reject.blockedType':
+    '«{name}» no s’ha afegit: aquí no es desen fitxers XML ni SVG comprimits, per seguretat. Desa’l com a PDF o com a imatge i afegeix això en lloc seu.',
   'files.drop.idle': 'Arrossega fitxers aquí',
   'files.empty.title': 'No hi ha fitxers en aquest viatge',
   'files.empty.body':
@@ -959,6 +966,19 @@ const messages = {
     many: 'S’estan pujant {count} fitxers',
     other: 'S’estan pujant {count} fitxers',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generat el {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'A punt: {title}',
+  'files.export.email.body': {
+    one: 'L’exportació del viatge és a punt. Es conserva durant {count} dia.',
+    many: 'L’exportació del viatge és a punt. Es conserva durant {count} dies.',
+    other:
+      'L’exportació del viatge és a punt. Es conserva durant {count} dies.',
+  },
+  'files.export.email.action': 'Obre {title}',
+  'files.export.email.text': 'L’exportació del viatge és a punt: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Pujada cancel·lada.',

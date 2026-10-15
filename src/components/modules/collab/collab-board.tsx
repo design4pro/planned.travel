@@ -26,13 +26,12 @@ import { paintFor } from '#/lib/swatches'
 import { useTranslate } from '#/lib/i18n'
 
 import type { Translate } from '#/lib/i18n'
+import { deleteNoteFn, updateNoteFn } from '#/server/fns/collab-notes'
 import {
   castVoteFn,
   closePollFn,
-  deleteNoteFn,
   deletePollFn,
-  updateNoteFn,
-} from '#/server/fns/collab'
+} from '#/server/fns/collab-polls'
 import {
   ConfirmDialog,
   FilterRow,

@@ -49,6 +49,9 @@ const messages = {
   'split.label': '分攤給',
   'split.everyone': '所有人',
   'split.nobody': '無人',
+  'split.departed': '已離開行程',
+  'split.departedHint': '取消勾選已離開行程的人，會永久刪除其份額。',
+  'split.includeFor': '將{name}納入此次分攤',
   'split.how': '這筆支出怎麼分',
   'split.method.equal': '平均',
   'split.method.equalHint':
@@ -195,6 +198,62 @@ const messages = {
   'display.alert.body':
     '這些貨幣對沒有已記錄的匯率，因此相關金額仍以預算貨幣顯示：',
   'display.alert.pair': '{date} 的 {from} 兌 {to}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': '變更預算貨幣',
+  'rebase.title': '變更預算貨幣',
+  'rebase.description':
+    '你輸入的金額維持不變。這趟行程的合計和餘額會換算成新的貨幣。',
+  'rebase.to': '新貨幣',
+  'rebase.toPlaceholder': '選擇貨幣',
+  'rebase.rateLabel': '匯率（1 {from} 兌 {to}）',
+  'rebase.rateInverse': '也就是 1 {to} = {inverse} {from}。',
+  'rebase.rateInvalid': '請輸入大於零的匯率。',
+  'rebase.rateOutOfRange': '這個匯率看起來過大或過小，請檢查兌換方向是否反了。',
+  'rebase.source.recent': '此工作區最近使用的匯率',
+  'rebase.source.manual': '你輸入的匯率',
+  'rebase.noRate': '沒有 {from} 兌 {to} 的匯率記錄。請輸入你想使用的匯率。',
+  'rebase.waitingForRate': '有了匯率就會顯示預覽。',
+  'rebase.loading': '正在計算換算結果',
+  'rebase.example': '{original} 維持你輸入的樣子，並按 {converted} 計算。',
+  'rebase.count.expenses': {
+    other: '{count} 筆支出將按 {to} 計算。',
+  },
+  'rebase.count.payments': {
+    other: '{count} 筆付款將按 {to} 計算。',
+  },
+  'rebase.count.planned': {
+    other: '{count} 個計劃項目將按 {to} 計算。',
+  },
+  'rebase.pinned': '地點、預訂、住宿和交通的價格仍以 {from} 計價。',
+  'rebase.target': '行程預算 {before} 將變為 {after}。',
+  'rebase.rounding': '每筆金額只四捨五入一次，因此餘額最多可能變動 {amount}。',
+  'rebase.leftover': '變更後，{name} 將欠 {other} {amount}。',
+  'rebase.someone': '某人',
+  'rebase.nothing': '這趟行程還沒有定價的內容，所以無需換算。',
+  'rebase.unconverted': {
+    other:
+      '有 {count} 筆記錄使用的不是 {from}，無法自動換算。它們通常是由以其他貨幣定價的預訂產生的支出：請編輯或刪除後再試。',
+  },
+  'rebase.unsplittable': {
+    other:
+      '有 {count} 筆支出的分攤無法沿用，因為其中每一份都是零。請編輯或刪除後再試。',
+  },
+  'rebase.outOfRange':
+    '依這個匯率，行程中有一筆金額會大到無法以 {to} 儲存。請檢查匯率和兌換方向。',
+  'rebase.tooLarge':
+    '這趟行程的記錄太多，無法一次改完：需要同時做 {changes} 處變更，而上限是 {limit}。預算暫時仍以 {from} 計。',
+  'rebase.copyPending': '這趟行程仍在複製中。請稍後再試。',
+  'rebase.error': '無法載入換算結果。沒有做任何變更。',
+  'rebase.commitError': '無法變更預算貨幣。沒有做任何變更。',
+  'rebase.stale':
+    '行程的預算貨幣現在是{current}，不再是{from}。請關閉此對話框後重新開啟。',
+  'rebase.sameCurrency': '預算已使用{to}。請選擇其他貨幣。',
+  'rebase.commitUnknown':
+    '無法確認預算貨幣是否已變更為{to}。請先重新整理頁面檢查，再重試。',
+  'rebase.retry': '重試',
+  'rebase.confirm': '改為 {to}',
+  'rebase.committing': '正在變更預算貨幣',
+  'rebase.done': '預算現在以 {to} 計。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

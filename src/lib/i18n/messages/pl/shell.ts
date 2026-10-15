@@ -592,7 +592,9 @@ const messages = {
     'Nie udało się przesłać pliku „{name}” jako okładki. Nic więcej nie zostało jeszcze zapisane.',
   'editTrip.coverContinue': 'Zapisz bez nowej okładki',
   'editTrip.currencyLocked':
-    'Ten wyjazd ma już ceny, więc nie można tu zmienić waluty budżetu. Ustaw z powrotem {current}, aby zapisać pozostałe zmiany.',
+    'Ten wyjazd ma już ceny, więc nie można tu zmienić waluty budżetu. Użyj przycisku Zmień walutę budżetu na karcie Koszty albo ustaw z powrotem {current}, aby zapisać pozostałe zmiany.',
+  'editTrip.currencyReadonly': 'Walutę budżetu zmienia się na karcie Koszty.',
+  'editTrip.currencyLink': 'Otwórz kartę Koszty',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Usunąć „{title}” na zawsze?',
   'deleteTrip.description':

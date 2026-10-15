@@ -543,7 +543,10 @@ const messages = {
     '‘{name}’ kon niet als omslag worden geüpload. Er is nog niets anders opgeslagen.',
   'editTrip.coverContinue': 'Opslaan zonder de nieuwe omslag',
   'editTrip.currencyLocked':
-    'Deze reis bevat al prijzen, dus de valuta van het budget kan hier niet worden gewijzigd. Zet het terug op {current} om je andere wijzigingen op te slaan.',
+    'Deze reis bevat al prijzen, dus de valuta van het budget kan hier niet worden gewijzigd. Gebruik Valuta van het budget wijzigen op het tabblad Kosten, of zet het terug op {current} om je andere wijzigingen op te slaan.',
+  'editTrip.currencyReadonly':
+    'De valuta van het budget wijzig je op het tabblad Kosten.',
+  'editTrip.currencyLink': 'Tabblad Kosten openen',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” voorgoed verwijderen?',
   'deleteTrip.description':

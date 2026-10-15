@@ -684,6 +684,10 @@ const messages = {
   'book.ledger.refused.body':
     'The booking is on the trip. Adding its cost line to the trip’s costs did not go through — try that half again.',
   'book.action.ledgerRetry': 'Add it to the ledger',
+  'book.ledger.splitStale.title': 'Saved, but the split no longer adds up',
+  'book.ledger.splitStale.body':
+    'The booking and its new price are saved, but the way this cost line was split could not follow the new total. Open the line on Costs and fix the split.',
+  'book.action.done': 'Done',
   'book.copyConfirmation': 'the confirmation number for {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -1064,6 +1068,15 @@ const messages = {
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
   'files.drop.active': 'Drop to upload',
+  /**
+   * Rendered after the `Ctrl`/`⌘` + `V` key caps (`KbdSequence`), so the line reads "[Ctrl][V] pastes
+   * a copied image or screenshot". Every locale keeps the key caps first: the text is the verb that
+   * follows them, not a sentence that can open with its own subject. It promises a copied image, not
+   * a copied file.
+   */
+  'files.drop.pasteHint': 'pastes a copied image or screenshot',
+  'files.reject.blockedType':
+    '“{name}” was not added: XML and compressed SVG files are not stored here, for safety. Save it as a PDF or an image and add that instead.',
   'files.drop.idle': 'Drag files here',
   'files.empty.title': 'No files on this trip',
   'files.empty.body':
@@ -1111,6 +1124,17 @@ const messages = {
     one: 'Uploading {count} file',
     other: 'Uploading {count} files',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generated {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} is ready',
+  'files.export.email.body': {
+    one: 'Your trip export is ready. It is kept for {count} day.',
+    other: 'Your trip export is ready. It is kept for {count} days.',
+  },
+  'files.export.email.action': 'Open {title}',
+  'files.export.email.text': 'Your trip export is ready: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Upload cancelled.',

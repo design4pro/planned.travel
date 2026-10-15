@@ -22,11 +22,11 @@ import {
   getTripItinerary,
   linkReservationExpense,
   listTripReservations,
+  repriceExpense,
   requireReservationOfTrip,
   requireTrip,
   setReservationStatus,
   totalTripReservationsMinor,
-  updateExpense,
   updateReservation,
 } from '#/server/repos'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
@@ -222,9 +222,20 @@ function categoryFor(type: string): (typeof EXPENSE_CATEGORIES)[number] {
  *
  * `failed` is the one the dialog acts on: the booking is saved and the ledger is not, which is a
  * partial success rather than an error, and the reader is told exactly which half did not happen.
+ *
+ * `split-stale` is the other half-done answer: the line's new amount is saved, but its shares could
+ * not follow it (an `exact` split, or weights the split arithmetic refuses), so they no longer add
+ * up to the total and the reader is told to fix the split on Costs.
  */
 export type LedgerOutcome =
-  'created' | 'updated' | 'unlinked' | 'undated' | 'kept' | 'none' | 'failed'
+  | 'created'
+  | 'updated'
+  | 'split-stale'
+  | 'unlinked'
+  | 'undated'
+  | 'kept'
+  | 'none'
+  | 'failed'
 
 export interface LedgerSubject {
   /** The row as it now stands — read back from the write, never from the request. */
@@ -312,12 +323,21 @@ export async function syncReservationExpense(
     const currency = reservation.currency ?? trip.currency
 
     if (reservation.expenseId !== null) {
-      await updateExpense(scope, reservation.tripId, reservation.expenseId, {
-        title: reservation.title,
-        amountMinor,
-        currency,
+      const { splitStale } = await repriceExpense(
+        scope,
+        reservation.tripId,
+        reservation.expenseId,
+        { title: reservation.title, amountMinor, currency },
+      )
+      if (!splitStale) {
+        return 'updated'
+      }
+      log().info('booking price change left its cost-line split stale', {
+        reservationId: reservation.id,
+        tripId: reservation.tripId,
+        organizationId: scope.ctx.organizationId,
       })
-      return 'updated'
+      return 'split-stale'
     }
 
     const spentOn = await spentOnFor(scope, reservation, trip)

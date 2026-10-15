@@ -11,7 +11,7 @@
  * than by typed dates, so choosing it swaps the date block for `StayFields` and saves through the
  * stay's own writes, which record the booking and its nights together.
  */
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   Bed,
   Landmark,
@@ -253,6 +253,17 @@ export function BookingDialog({
   /** The stay written with `savedId`, when the saved booking is a stay — its retry updates both. */
   const [savedStayId, setSavedStayId] = useState<string | null>(null)
   const [ledgerRefused, setLedgerRefused] = useState(false)
+  /** Saved, with its cost line's split no longer adding up: the one thing left is to say so. */
+  const [splitStale, setSplitStale] = useState(false)
+  const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
+
+  // The save button is disabled while it saves, which drops focus to the dialog itself; the notice
+  // is what the reader needs next, so it takes focus (and is read out) when it appears.
+  useEffect(() => {
+    if (splitStale) {
+      splitStaleNoticeRef.current?.focus()
+    }
+  }, [splitStale])
 
   useEffect(() => {
     if (!open) {
@@ -267,6 +278,7 @@ export function BookingDialog({
     setSavedId(null)
     setSavedStayId(null)
     setLedgerRefused(false)
+    setSplitStale(false)
   }, [open, booking, currency, initialStayDayId])
 
   const create = useAction(createBookingFn, {
@@ -395,6 +407,15 @@ export function BookingDialog({
       setLedgerRefused(true)
       return
     }
+    if (result.ledger === 'split-stale') {
+      // Also a partial success, and the other way round: the booking and the new amount are
+      // saved, the split of its cost line is not. Closing would leave the reader to find a split
+      // that no longer adds up, so the dialog says so and waits to be dismissed.
+      setSavedId(result.reservationId)
+      setLedgerRefused(false)
+      setSplitStale(true)
+      return
+    }
     onOpenChange(false)
   }
 
@@ -471,9 +492,23 @@ export function BookingDialog({
         </DialogHeader>
 
         <DialogBody>
+          {/* Outside the form: the form is inert once the booking is saved, the notice is not. */}
+          {splitStale ? (
+            <Alert
+              ref={splitStaleNoticeRef}
+              tabIndex={-1}
+              tone="warning"
+              title={t('modules.book.ledger.splitStale.title')}
+              className="mb-5"
+            >
+              {t('modules.book.ledger.splitStale.body')}
+            </Alert>
+          ) : null}
           <form
             id={formId}
-            className="flex flex-col gap-5"
+            // Saved already: "Done" only closes, so an edit typed now would be lost without a word.
+            inert={splitStale}
+            className={cn('flex flex-col gap-5', splitStale && 'opacity-60')}
             onSubmit={(event) => {
               event.preventDefault()
               void submit()
@@ -834,24 +869,32 @@ export function BookingDialog({
         </DialogBody>
 
         <DialogFooter>
+          {splitStale ? null : (
+            <Button
+              type="button"
+              variant="ghost"
+              shape="pill"
+              onClick={() => onOpenChange(false)}
+            >
+              {t('modules.action.cancel')}
+            </Button>
+          )}
+          {/* One element before and after the save, so the footer does not jump. */}
           <Button
-            type="button"
-            variant="ghost"
-            shape="pill"
-            onClick={() => onOpenChange(false)}
-          >
-            {t('modules.action.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            form={formId}
+            type={splitStale ? 'button' : 'submit'}
+            form={splitStale ? undefined : formId}
             variant="primary"
             shape="pill"
-            disabled={touched && invalid}
+            disabled={!splitStale && touched && invalid}
             loading={action.pending}
             loadingLabel={t('modules.book.action.saving')}
+            onClick={splitStale ? () => onOpenChange(false) : undefined}
           >
-            {t(saveLabel({ ledgerRefused, editing }))}
+            {t(
+              splitStale
+                ? 'modules.book.action.done'
+                : saveLabel({ ledgerRefused, editing }),
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

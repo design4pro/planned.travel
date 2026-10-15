@@ -40,6 +40,10 @@ vi.mock('#/server/fns/costs', () => ({
   recordPaymentFn: vi.fn(),
   setDisplayCurrencyFn: vi.fn(),
 }))
+vi.mock('#/server/fns/trip-currency', () => ({
+  previewCurrencyChangeFn: vi.fn(),
+  changeTripCurrencyFn: vi.fn(),
+}))
 vi.mock('@tanstack/react-router', () => ({
   useLoaderData: () => ({
     today: '2026-04-10',
@@ -131,6 +135,7 @@ function payload(overrides: Partial<CostsPayload>): CostsPayload {
       { ...OWNER, userId: 'u-ada', name: 'Ada Lovelace' },
       { ...OWNER, userId: 'u-grace', name: 'Grace Hopper', role: 'viewer' },
     ],
+    departedPeople: [],
     viewerUserId: 'u-grace',
     displayCurrency: { mode: 'per-trip', code: 'EUR' },
     displayChoices: { workspaceCode: 'EUR', rateCodes: [] },

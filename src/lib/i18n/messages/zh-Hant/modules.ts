@@ -490,6 +490,10 @@ const messages = {
   'book.ledger.refused.body':
     '預訂已在行程裡。把它的費用列加進行程費用沒有成功 — 請重試這一半。',
   'book.action.ledgerRetry': '加入費用',
+  'book.ledger.splitStale.title': '已儲存，但分攤已與總額不符',
+  'book.ledger.splitStale.body':
+    '預訂及其新價格已儲存，但這筆費用的分攤無法跟隨新的總額。請在「費用」中開啟這一項並修正分攤。',
+  'book.action.done': '完成',
   'book.copyConfirmation': '{title} 的確認號',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -810,6 +814,9 @@ const messages = {
   'files.action.choose': '選擇檔案',
   'files.action.upload': '上傳檔案',
   'files.drop.active': '放開即可上傳',
+  'files.drop.pasteHint': '貼上已複製的圖片或螢幕截圖',
+  'files.reject.blockedType':
+    '「{name}」未新增：基於安全考量，這裡不儲存 XML 檔案與壓縮的 SVG 檔案。請將其另存為 PDF 或圖片，再新增那個檔案。',
   'files.drop.idle': '把檔案拖到這裡',
   'files.empty.title': '這趟出行還沒有檔案',
   'files.empty.body':
@@ -854,6 +861,16 @@ const messages = {
   'files.status.uploadingCount': {
     other: '正在上傳 {count} 個檔案',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 產生於 {when}',
+  'files.export.madeAt': '{date} {time}',
+  'files.export.email.subject': '{title} 已準備好',
+  'files.export.email.body': {
+    other: '行程匯出已準備好。將保留 {count} 天。',
+  },
+  'files.export.email.action': '開啟 {title}',
+  'files.export.email.text': '行程匯出已準備好：{url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上傳。',

@@ -183,6 +183,7 @@ const PAYLOAD: CostsPayload = {
     { fromUserId: 'u-rafal', toUserId: 'u-mika', amountMinor: 174_960 },
   ],
   people: PEOPLE,
+  departedPeople: [],
   viewerUserId: 'u-rafal',
   canWrite: true,
   suggestedRate: null,

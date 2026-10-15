@@ -27,7 +27,8 @@ import {
 } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { SwatchPicker } from '../shared/swatch-picker'
-import { createNoteFn, createPollFn, updateNoteFn } from '#/server/fns/collab'
+import { createNoteFn, updateNoteFn } from '#/server/fns/collab-notes'
+import { createPollFn } from '#/server/fns/collab-polls'
 import { useAction } from '../shared'
 import { pollOptionsError } from './poll-options'
 

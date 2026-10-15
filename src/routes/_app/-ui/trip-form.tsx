@@ -13,10 +13,15 @@
  * the start keeps the duration (the end follows), moving the end changes it. The payload carries one
  * face, never both: the server refuses a day count beside a date.
  *
+ * **The budget currency is chosen once.** A create offers the select; an edit (given a `tripId`) shows
+ * it as text and points to the Costs tab, because changing it after a trip carries money is a re-basing
+ * that tab owns. The value stays in the payload, so the edit caller decides not to send it.
+ *
  * **The cover is not in the payload.** It is a file, chosen here and uploaded by the caller once the
  * trip exists, so the form holds it beside the values and the payload never carries it.
  */
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 
 import {
   Combobox,
@@ -243,6 +248,12 @@ export interface TripFormFieldsProps {
   undatedDays?: boolean
   /** Renders the owner-only fields. The sheet passes whether the payload's role says owner. */
   owner?: boolean
+  /**
+   * The trip being edited, absent on a create. With it the budget currency is text with a pointer to
+   * this trip's Costs tab, because changing it after a trip carries money is a re-basing that tab owns;
+   * without it the select stays, since a new trip has nothing to convert.
+   */
+  tripId?: string
   /** The cover the trip already has, shown in the cover region on edit. */
   currentCoverUrl?: string | null
   /** `0`-`1` while the chosen cover uploads, otherwise `null`. */
@@ -254,6 +265,7 @@ export function TripFormFields({
   placeholders,
   undatedDays = true,
   owner = true,
+  tripId,
   currentCoverUrl = null,
   coverProgress = null,
 }: TripFormFieldsProps) {
@@ -361,10 +373,14 @@ export function TripFormFields({
         </Field>
       ) : null}
 
-      <CurrencyField
-        value={values.currency}
-        onChange={(next) => set('currency', next)}
-      />
+      {tripId === undefined ? (
+        <CurrencyField
+          value={values.currency}
+          onChange={(next) => set('currency', next)}
+        />
+      ) : (
+        <CurrencyReadout value={values.currency} tripId={tripId} />
+      )}
 
       {owner ? <ReminderField form={form} /> : null}
     </fieldset>
@@ -417,6 +433,43 @@ function CurrencyField({
         ariaLabel={t('shell.newTrip.currency')}
       />
     </Field>
+  )
+}
+
+/**
+ * The budget currency of a trip being edited: what it is, and where it is changed.
+ *
+ * Not a disabled select: a control that cannot be used says nothing about why. The field is not the
+ * access control either - `updateTrip` still refuses a changed currency on a priced trip.
+ */
+function CurrencyReadout({ value, tripId }: { value: string; tripId: string }) {
+  const t = useTranslate()
+  const locale = useLocale()
+  const labelId = useId()
+
+  return (
+    <div
+      role="group"
+      aria-labelledby={labelId}
+      className="flex flex-col gap-1.5"
+    >
+      <span id={labelId} className="text-label font-medium text-ink-2">
+        {t('shell.newTrip.currency')}
+      </span>
+      <p className="text-body text-ink">
+        {openedCurrencyLabel(t, locale, value)}
+      </p>
+      <p className="text-caption text-ink-3">
+        {t('shell.editTrip.currencyReadonly')}{' '}
+        <Link
+          to="/trips/$tripId/costs"
+          params={{ tripId }}
+          className="rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
+        >
+          {t('shell.editTrip.currencyLink')}
+        </Link>
+      </p>
+    </div>
   )
 }
 

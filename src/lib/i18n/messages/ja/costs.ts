@@ -53,6 +53,10 @@ const messages = {
   'split.label': '分担する相手',
   'split.everyone': '全員',
   'split.nobody': 'なし',
+  'split.departed': '旅行から抜けました',
+  'split.departedHint':
+    '旅行から抜けた人のチェックを外すと、その人の負担分は完全に削除されます。',
+  'split.includeFor': '{name}をこの分割に含める',
   'split.how': 'この支出の分け方',
   'split.method.equal': '均等',
   'split.method.equalHint':
@@ -212,6 +216,69 @@ const messages = {
   'display.alert.body':
     '次の通貨ペアにはレートが記録されていないため、これらの金額は予算の通貨のままです：',
   'display.alert.pair': '{date} の {from} から {to}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': '予算の通貨を変更',
+  'rebase.title': '予算の通貨を変更する',
+  'rebase.description':
+    '入力した金額はそのまま残ります。この旅行の合計と残高は新しい通貨に換算されます。',
+  'rebase.to': '新しい通貨',
+  'rebase.toPlaceholder': '通貨を選択',
+  'rebase.rateLabel': '為替レート（1 {from} あたりの {to}）',
+  'rebase.rateInverse': 'つまり 1 {to} = {inverse} {from} です。',
+  'rebase.rateInvalid': '0 より大きいレートを入力してください。',
+  'rebase.rateOutOfRange':
+    'このレートは大きすぎる、または小さすぎるようです。通貨の向きを確認してください。',
+  'rebase.source.recent': 'このワークスペースで最後に使ったレート',
+  'rebase.source.manual': '入力したレート',
+  'rebase.noRate':
+    '{from} から {to} へのレートが記録されていません。使用するレートを入力してください。',
+  'rebase.waitingForRate': 'レートが決まるとプレビューが表示されます。',
+  'rebase.loading': '換算を計算しています',
+  'rebase.example':
+    '{original} は入力したまま残り、{converted} として集計されます。',
+  'rebase.count.expenses': {
+    other: '支出 {count} 件が {to} で集計されます。',
+  },
+  'rebase.count.payments': {
+    other: '支払い {count} 件が {to} で集計されます。',
+  },
+  'rebase.count.planned': {
+    other: '予定の項目 {count} 件が {to} で集計されます。',
+  },
+  'rebase.pinned': '場所、予約、宿泊、移動の価格は {from} のままです。',
+  'rebase.target': '旅行の予算 {before} は {after} になります。',
+  'rebase.rounding':
+    '金額ごとに1回ずつ丸めるため、残高が最大 {amount} ずれることがあります。',
+  'rebase.leftover': '変更後、{name} は {other} に {amount} の借りが残ります。',
+  'rebase.someone': '誰か',
+  'rebase.nothing':
+    'この旅行にはまだ金額の入った項目がないため、換算するものはありません。',
+  'rebase.unconverted': {
+    other:
+      '{count} 件が {from} 以外の通貨のため、自動で換算できません。多くは、別の通貨の価格が付いた予約から作られた支出です。編集または削除してから、もう一度お試しください。',
+  },
+  'rebase.unsplittable': {
+    other:
+      '{count} 件の支出は、すべての負担額が 0 のため、分担を引き継げません。編集または削除してから、もう一度お試しください。',
+  },
+  'rebase.outOfRange':
+    'このレートだと、旅行内の金額が {to} で保存できないほど大きくなります。レートと通貨の向きを確認してください。',
+  'rebase.tooLarge':
+    'この旅行は項目が多すぎて一度に変更できません。一度に {changes} 件の変更が必要ですが、上限は {limit} 件です。予算は当面 {from} のままです。',
+  'rebase.copyPending':
+    'この旅行はまだコピー中です。しばらくしてからもう一度お試しください。',
+  'rebase.error': '換算を読み込めませんでした。何も変更されていません。',
+  'rebase.commitError':
+    '予算の通貨を変更できませんでした。何も変更されていません。',
+  'rebase.stale':
+    '旅行の予算通貨は現在{from}ではなく{current}です。このダイアログを閉じて、開き直してください。',
+  'rebase.sameCurrency': '予算はすでに{to}です。別の通貨を選んでください。',
+  'rebase.commitUnknown':
+    '予算の通貨が{to}に変更されたか確認できませんでした。もう一度試す前に、ページを再読み込みして確認してください。',
+  'rebase.retry': 'もう一度試す',
+  'rebase.confirm': '{to} に変更',
+  'rebase.committing': '予算の通貨を変更しています',
+  'rebase.done': '予算は {to} になりました。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

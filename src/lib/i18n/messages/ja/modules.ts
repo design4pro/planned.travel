@@ -509,6 +509,11 @@ const messages = {
   'book.ledger.refused.body':
     '予約は旅程に入りました。費用の行を旅程の費用に追加できませんでした — その半分だけやり直してください。',
   'book.action.ledgerRetry': '費用に追加する',
+  'book.ledger.splitStale.title':
+    '保存しましたが、割り勘の合計が合わなくなりました',
+  'book.ledger.splitStale.body':
+    '予約と新しい料金は保存しましたが、この費用の分担は新しい合計に合わせられませんでした。「費用」でこの項目を開いて、分担を直してください。',
+  'book.action.done': '完了',
   'book.copyConfirmation': '{title} の確認番号',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -847,6 +852,9 @@ const messages = {
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
   'files.drop.active': 'ドロップしてアップロード',
+  'files.drop.pasteHint': 'コピーした画像やスクリーンショットを貼り付けます',
+  'files.reject.blockedType':
+    '「{name}」は追加されませんでした。XML ファイルと圧縮された SVG ファイルは、安全のためここには保存されません。PDF か画像として保存し、そちらを追加してください。',
   'files.drop.idle': 'ここにファイルをドラッグ',
   'files.empty.title': 'この旅行にファイルはありません',
   'files.empty.body':
@@ -891,6 +899,16 @@ const messages = {
   'files.status.uploadingCount': {
     other: '{count} 件のファイルをアップロード中',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 作成: {when}',
+  'files.export.madeAt': '{date} {time}',
+  'files.export.email.subject': '{title} の準備ができました',
+  'files.export.email.body': {
+    other: '旅行のエクスポートの準備ができました。{count}日間保存されます。',
+  },
+  'files.export.email.action': '{title} を開く',
+  'files.export.email.text': '旅行のエクスポートの準備ができました: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'アップロードを中止しました。',

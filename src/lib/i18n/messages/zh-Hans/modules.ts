@@ -490,6 +490,10 @@ const messages = {
   'book.ledger.refused.body':
     '预订已在行程里。把它的费用行加进行程费用没有成功 — 请重试这一半。',
   'book.action.ledgerRetry': '加入费用',
+  'book.ledger.splitStale.title': '已保存，但分摊已与总额不符',
+  'book.ledger.splitStale.body':
+    '预订及其新价格已保存，但这笔费用的分摊无法跟随新的总额。请在“费用”中打开这一项并修正分摊。',
+  'book.action.done': '完成',
   'book.copyConfirmation': '{title} 的确认号',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -810,6 +814,9 @@ const messages = {
   'files.action.choose': '选择文件',
   'files.action.upload': '上传文件',
   'files.drop.active': '松手即可上传',
+  'files.drop.pasteHint': '粘贴已复制的图片或截图',
+  'files.reject.blockedType':
+    '「{name}」未添加：出于安全考虑，这里不保存 XML 文件和压缩的 SVG 文件。请将其另存为 PDF 或图片，再添加那个文件。',
   'files.drop.idle': '把文件拖到这里',
   'files.empty.title': '这趟出行还没有文件',
   'files.empty.body':
@@ -854,6 +861,16 @@ const messages = {
   'files.status.uploadingCount': {
     other: '正在上传 {count} 个文件',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - 生成于 {when}',
+  'files.export.madeAt': '{date} {time}',
+  'files.export.email.subject': '{title} 已准备好',
+  'files.export.email.body': {
+    other: '行程导出已准备好。将保留 {count} 天。',
+  },
+  'files.export.email.action': '打开 {title}',
+  'files.export.email.text': '行程导出已准备好：{url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': '已取消上传。',

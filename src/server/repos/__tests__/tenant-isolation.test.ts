@@ -320,6 +320,12 @@ import {
 } from '../rates'
 import { changeTripCurrency, previewCurrencyChange } from '../trip-currency'
 import { editTransport } from './edit-transport'
+import {
+  collabRows,
+  creatingWriters,
+  rowWriters,
+  seedCollabRows,
+} from './collab-writers'
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
 import { classifyFailure } from '#/server/errors/public'
@@ -332,6 +338,7 @@ import type {
 import type { TaskBindings, TaskQueue } from '#/server/queue/types'
 import type { UserSettings } from '#/server/db/types'
 import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
+import type { CollabRowIds } from './collab-writers'
 import type { Harness, SeededTenant } from './harness'
 import type { StagedImport } from '#/server/queue/handlers/booking-import'
 
@@ -461,6 +468,23 @@ const POLL_OPTIONS = [
   { id: 'sunrise', label: 'Sunrise hike' },
   { id: 'market', label: 'Morning market' },
 ]
+
+/** Writes `count` bookings on a trip and returns their ids, the way a confirm leaves them. */
+async function bookingIds(
+  scope: TenantScope,
+  tripId: string,
+  count: number,
+): Promise<Array<string>> {
+  const ids: Array<string> = []
+  for (let index = 0; index < count; index += 1) {
+    const row = await reservationsRepository.insert(scope, {
+      tripId,
+      title: `Imported booking ${index}`,
+    })
+    ids.push(row.id)
+  }
+  return ids
+}
 
 /** Seeds one complete tenant through the public repository API. */
 async function seedWorld(tenant: SeededTenant): Promise<World> {
@@ -636,7 +660,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     tripId: trip.id,
     body: 'Landed, heading in.',
   })
-  await toggleReaction(scope, message.id, '🎉')
+  await toggleReaction(scope, trip.id, message.id, '🎉')
   const collabNote = await createCollabNote(scope, {
     tripId: trip.id,
     title: 'Ideas',
@@ -647,7 +671,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     question: 'Which morning?',
     options: POLL_OPTIONS,
   })
-  const votes = await castVote(scope, poll.id, 'sunrise')
+  const votes = await castVote(scope, trip.id, poll.id, 'sunrise')
   const vote = votes.at(0)
   if (vote === undefined) {
     throw new Error('Casting a vote must record it.')
@@ -1313,7 +1337,7 @@ describe('tenant isolation', () => {
 
     it('refuses to react to a foreign message', async () => {
       const error = await captureError(() =>
-        toggleReaction(alpha.tenant.scope, beta.messageId, '👍'),
+        toggleReaction(alpha.tenant.scope, alpha.tripId, beta.messageId, '👍'),
       )
       expect(error).toBeInstanceOf(NotFoundError)
     })
@@ -1608,12 +1632,14 @@ describe('tenant isolation', () => {
 
       expect(
         await captureError(() =>
-          editMessage(scope, beta.messageId, 'Rewritten'),
+          editMessage(scope, alpha.tripId, beta.messageId, 'Rewritten'),
         ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
-        await captureError(() => castVote(scope, beta.pollId, 'market')),
+        await captureError(() =>
+          castVote(scope, alpha.tripId, beta.pollId, 'market'),
+        ),
       ).toBeInstanceOf(NotFoundError)
 
       expect(
@@ -3678,6 +3704,54 @@ describe('tenant isolation', () => {
         (await getReservation(beta.tenant.scope, beta.reservationId))
           ?.importedAt,
       ).toBeNull()
+    })
+
+    /**
+     * The statement binds the import instant, the updated-at stamp, the organization and the trip
+     * next to one parameter per id, so one statement fits 96 ids and not 97 under D1's limit of
+     * 100. The harness refuses an over-limit statement too, so these sizes pin that arithmetic
+     * where the limit is enforced; 500 is the import engine's ceiling.
+     */
+    describe.each([96, 97, 98, 500])('a confirm of %i rows', (size) => {
+      it('marks every row it wrote, with one shared instant', async () => {
+        const scope = alpha.tenant.scope
+        const ids = await bookingIds(scope, alpha.tripId, size)
+
+        expect(await markReservationsImported(scope, alpha.tripId, ids)).toBe(
+          size,
+        )
+
+        const rows = await listTripReservations(scope, {
+          tripId: alpha.tripId,
+        })
+        const written = rows.filter((row) => ids.includes(row.id))
+        expect(written).toHaveLength(size)
+        expect(written.every((row) => row.importedAt instanceof Date)).toBe(
+          true,
+        )
+        expect(
+          new Set(written.map((row) => row.importedAt?.getTime())).size,
+        ).toBe(1)
+      })
+    })
+
+    it('skips a foreign id wherever it falls across the chunk boundary', async () => {
+      const scope = alpha.tenant.scope
+      const own = await bookingIds(scope, alpha.tripId, 200)
+
+      // 95 and 96 are the last id of the first chunk and the first of the second.
+      for (const position of [0, 95, 96, 199]) {
+        const ids = own.slice()
+        ids.splice(position, 0, beta.reservationId)
+
+        expect(await markReservationsImported(scope, alpha.tripId, ids)).toBe(
+          own.length,
+        )
+        expect(
+          (await getReservation(beta.tenant.scope, beta.reservationId))
+            ?.importedAt,
+        ).toBeNull()
+      }
     })
 
     it('answers NotFoundError for B\u2019s trip id, and leaves B\u2019s row unmarked', async () => {
@@ -6552,6 +6626,78 @@ describe('tenant isolation', () => {
           expect(await money()).toEqual(before)
         },
       )
+    })
+  })
+
+  describe('the collaboration writers', () => {
+    const rowsOf = (world: World): CollabRowIds => ({
+      messageId: world.messageId,
+      noteId: world.collabNoteId,
+      pollId: world.pollId,
+    })
+
+    it('refuse another workspace’s rows, paired with either workspace’s trip, and change nothing', async () => {
+      const scope = alpha.tenant.scope
+      const beforeBeta = await collabRows(beta.tenant.scope)
+      const beforeAlpha = await collabRows(scope)
+
+      for (const tripId of [alpha.tripId, beta.tripId]) {
+        for (const [label, write] of rowWriters(scope, tripId, rowsOf(beta))) {
+          expect(
+            await captureError(write),
+            `${label} on ${tripId}`,
+          ).toBeInstanceOf(NotFoundError)
+        }
+      }
+
+      expect(await collabRows(beta.tenant.scope)).toEqual(beforeBeta)
+      expect(await collabRows(scope)).toEqual(beforeAlpha)
+    })
+
+    it('refuse a row of another trip of the same workspace, in either direction', async () => {
+      const scope = alpha.tenant.scope
+      const second = await createTrip(scope, {
+        title: 'Faro, another time',
+        slug: 'faro-another-time',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+      })
+      const secondRows = await seedCollabRows(scope, second.id)
+      const before = await collabRows(scope)
+
+      for (const [label, write] of rowWriters(
+        scope,
+        alpha.tripId,
+        secondRows,
+      )) {
+        expect(
+          await captureError(write),
+          `${label}, second row on first trip`,
+        ).toBeInstanceOf(NotFoundError)
+      }
+      for (const [label, write] of rowWriters(
+        scope,
+        second.id,
+        rowsOf(alpha),
+      )) {
+        expect(
+          await captureError(write),
+          `${label}, first row on second trip`,
+        ).toBeInstanceOf(NotFoundError)
+      }
+      expect(await collabRows(scope)).toEqual(before)
+    })
+
+    it('refuse to create a row on another workspace’s trip', async () => {
+      const before = await collabRows(beta.tenant.scope)
+
+      for (const [label, write] of creatingWriters(
+        alpha.tenant.scope,
+        beta.tripId,
+      )) {
+        expect(await captureError(write), label).toBeInstanceOf(NotFoundError)
+      }
+      expect(await collabRows(beta.tenant.scope)).toEqual(before)
     })
   })
 

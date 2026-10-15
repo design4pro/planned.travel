@@ -528,6 +528,11 @@ const messages = {
   'book.ledger.refused.body':
     'Bokningen ligger på resan. Att lägga dess kostnadsrad till resans kostnader gick inte — försök med den halvan igen.',
   'book.action.ledgerRetry': 'Lägg till i kostnaderna',
+  'book.ledger.splitStale.title':
+    'Sparat, men uppdelningen stämmer inte längre',
+  'book.ledger.splitStale.body':
+    'Bokningen och dess nya pris är sparade, men uppdelningen av den här kostnaden kunde inte följa den nya summan. Öppna posten under Kostnader och rätta uppdelningen.',
+  'book.action.done': 'Klart',
   'book.copyConfirmation': 'bokningsnumret för {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -879,6 +884,9 @@ const messages = {
   'files.action.choose': 'Välj filer',
   'files.action.upload': 'Ladda upp filer',
   'files.drop.active': 'Släpp för att ladda upp',
+  'files.drop.pasteHint': 'klistrar in en kopierad bild eller skärmdump',
+  'files.reject.blockedType':
+    '”{name}” lades inte till: XML-filer och komprimerade SVG-filer sparas inte här, av säkerhetsskäl. Spara den som PDF eller bild och lägg till den i stället.',
   'files.drop.idle': 'Dra filer hit',
   'files.empty.title': 'Inga filer på den här resan',
   'files.empty.body':
@@ -926,6 +934,17 @@ const messages = {
     one: 'Laddar upp {count} fil',
     other: 'Laddar upp {count} filer',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - skapad {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} är klar',
+  'files.export.email.body': {
+    one: 'Reseexporten är klar. Den sparas i {count} dag.',
+    other: 'Reseexporten är klar. Den sparas i {count} dagar.',
+  },
+  'files.export.email.action': 'Öppna {title}',
+  'files.export.email.text': 'Reseexporten är klar: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uppladdningen avbruten.',

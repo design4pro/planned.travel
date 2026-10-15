@@ -549,6 +549,10 @@ const messages = {
   'book.ledger.refused.body':
     'Бронь уже в поездке. Добавить её строку в расходы поездки не удалось — повторите эту половину.',
   'book.action.ledgerRetry': 'Добавить в расходы',
+  'book.ledger.splitStale.title': 'Сохранено, но разделение больше не сходится',
+  'book.ledger.splitStale.body':
+    'Бронирование и его новая цена сохранены, но разделение этого расхода не смогло подстроиться под новую сумму. Откройте расход в разделе «Расходы» и исправьте разделение.',
+  'book.action.done': 'Готово',
   'book.copyConfirmation': 'номер подтверждения для {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -909,6 +913,9 @@ const messages = {
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
   'files.drop.active': 'Отпустите, чтобы отправить',
+  'files.drop.pasteHint': 'вставляет скопированное изображение или снимок экрана',
+  'files.reject.blockedType':
+    '«{name}» не добавлен: файлы XML и сжатые SVG здесь не хранятся, из соображений безопасности. Сохраните его как PDF или изображение и добавьте вместо него.',
   'files.drop.idle': 'Перетащите файлы сюда',
   'files.empty.title': 'В этой поездке нет файлов',
   'files.empty.body':
@@ -960,6 +967,19 @@ const messages = {
     many: 'Отправка {count} файлов',
     other: 'Отправка {count} файла',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - создано {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Готово: {title}',
+  'files.export.email.body': {
+    one: 'Экспорт поездки готов. Он хранится {count} день.',
+    few: 'Экспорт поездки готов. Он хранится {count} дня.',
+    many: 'Экспорт поездки готов. Он хранится {count} дней.',
+    other: 'Экспорт поездки готов. Он хранится {count} дня.',
+  },
+  'files.export.email.action': 'Открыть: {title}',
+  'files.export.email.text': 'Экспорт поездки готов: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Отправка отменена.',

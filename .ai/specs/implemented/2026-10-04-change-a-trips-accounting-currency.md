@@ -2,10 +2,10 @@
 
 | Field              | Value                                          |
 | ------------------ | ---------------------------------------------- |
-| **Status**         | in-progress                                    |
+| **Status**         | implemented                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #828                                           |
-| **Implementation** | #896                                           |
+| **Implementation** | #896, #1221, #1241, #1251, #1267               |
 | **Plan**           | 04-S5 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR
@@ -384,7 +384,11 @@ shareRows, pinnedPrices }, example: { original, converted } | null, budgetTarget
 statements, ceiling, refusal: null | { kind, … } }`. With no `rate` it asks `resolveRate` (manual
   absent); with a `rate` it uses it as `manual`. `leftovers` carries participant ids as `getMemberBalances` keys them, never names.
 - `changeTripCurrencyFn` (`POST`) input `z.strictObject({ tripId, to, rate: <the same bounded
-number>.optional() })`; `rate` is required unless `pricedRowsExist` is false. Output: the
+number>.optional(), from: <currency code>.optional() })`; `rate` is required unless `pricedRowsExist`
+  is false. `from` is the currency the owner previewed against (the Costs dialog always sends it): when
+  present and different from the trip's current currency the commit throws
+  `CurrencyRefusalError('costs.refusal.rebaseChanged')` before it reads or writes anything, so a stale
+  tab or a late commit can never apply a rate meant for another pair. Absent, behaviour is unchanged. Output: the
   counts it actually wrote. An extra key (say `expenseIds`) is a parse error.
 - Bounds: every converted amount must be a safe integer, else the commit throws
   `CurrencyRefusalError('costs.refusal.rebaseChanged')` after the preview would have refused it;
@@ -453,7 +457,9 @@ number>.optional() })`; `rate` is required unless `pricedRowsExist` is false. Ou
     any failure that is not a known refusal** (a dropped response, a timeout) the dialog first
     re-reads the trip: if its currency is already `to` the change went through and the success path
     runs; only otherwise does it say nothing was changed (`rebase.commitError`), which is then true
-    because the batch is atomic.
+    because the batch is atomic. When that re-read itself fails, or the commit timed out (it may still
+    land), the dialog says it could not confirm (`rebase.commitUnknown`) instead of claiming nothing
+    changed; a retry is safe because the commit carries `from`: the currency the dialog opened on. A preview that comes back for another currency (`rebase.stale`) holds confirm and asks to reopen the dialog.
   - Success: the dialog closes, `router.invalidate()`, a toast `rebase.done`.
 - **A stale tab keeps what the traveller typed.** When an expense, payment or planned-item save is
   refused with `costs.refusal.tripCurrencyChanged`, the existing dialog stays open with its input,
@@ -502,7 +508,7 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | `rebase.rateLabel`                  | `Exchange rate (1 {from} in {to})`                                                                                                                                                                                |
 | `rebase.rateInverse`                | `That is 1 {to} = {inverse} {from}.`                                                                                                                                                                              |
 | `rebase.rateInvalid`                | `Enter a rate greater than zero.`                                                                                                                                                                                 |
-| `rebase.source.recent`              | `The last rate used in this workspace, {date}`                                                                                                                                                                    |
+| `rebase.source.recent`              | `The last rate used in this workspace`                                                                                                                                                                            |
 | `rebase.source.manual`              | `The rate you entered`                                                                                                                                                                                            |
 | `rebase.noRate`                     | `There is no rate on record for {from} to {to}. Enter the rate you want to use.`                                                                                                                                  |
 | `rebase.example`                    | `{original} stays as you typed it and is counted as {converted}.`                                                                                                                                                 |
@@ -515,16 +521,27 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | `rebase.leftover`                   | `After the change, {name} would owe {other} {amount}.`                                                                                                                                                            |
 | `rebase.nothing`                    | `Nothing on this trip is priced yet, so nothing needs converting.`                                                                                                                                                |
 | `rebase.unconverted`                | `{count} entries are in a currency other than {from} and cannot be converted automatically. They are usually expenses created from reservations priced in another currency: edit or delete them, then try again.` |
-| `rebase.tooLarge`                   | `This trip has too many entries to change in one step ({count}; the limit is {limit}). The budget stays in {from} for now.`                                                                                       |
+| `rebase.tooLarge`                   | `This trip has too many entries to change in one step: it would need {changes} changes at once and the limit is {limit}. The budget stays in {from} for now.`                                                     |
 | `rebase.copyPending`                | `This trip is still being copied. Try again in a moment.`                                                                                                                                                         |
 | `rebase.error`                      | `The conversion could not be loaded. Nothing was changed.`                                                                                                                                                        |
 | `rebase.commitError`                | `We couldn't change the budget currency. Nothing was changed.`                                                                                                                                                    |
+| `rebase.stale`                      | `The trip's budget currency is now {current}, not {from}. Close this dialog and open it again.`                                                                                                                   |
+| `rebase.sameCurrency`               | `The budget is already in {to}. Pick a different currency.`                                                                                                                                                       |
+| `rebase.commitUnknown`              | `We couldn't confirm whether the budget currency changed to {to}. Reload the page to check before trying again.`                                                                                                  |
 | `rebase.retry`                      | `Try again`                                                                                                                                                                                                       |
 | `rebase.confirm`                    | `Change to {to}`                                                                                                                                                                                                  |
 | `rebase.done`                       | `The budget is now in {to}.`                                                                                                                                                                                      |
+| `rebase.toPlaceholder`              | `Choose a currency`                                                                                                                                                                                               |
+| `rebase.rateOutOfRange`             | `That rate looks far too large or too small. Check which way round it is.`                                                                                                                                        |
+| `rebase.waitingForRate`             | `The preview appears as soon as there is a rate.`                                                                                                                                                                 |
+| `rebase.loading`                    | `Working out the conversion`                                                                                                                                                                                      |
+| `rebase.someone`                    | `Someone`                                                                                                                                                                                                         |
+| `rebase.unsplittable`               | `{count} expenses have a split that cannot be carried over, because every share in them is zero. Edit or delete them, then try again.`                                                                            |
+| `rebase.outOfRange`                 | `With this rate an amount on the trip would be too large to store in {to}. Check the rate and which way round it is.`                                                                                             |
+| `rebase.committing`                 | `Changing the budget currency`                                                                                                                                                                                    |
 | `costs.refusal.rebaseChanged`       | `The trip changed while you were confirming, so nothing was changed. Check the new figures and confirm again.`                                                                                                    |
 | `costs.refusal.tripCurrencyChanged` | `The budget currency of this trip is now {to}, so this was not saved. The page has been refreshed: check the amount and save again.`                                                                              |
-| `shell.editTrip.currencyLocked`     | `This trip already has prices in it, so its budget currency can't be changed here. Set it back to {current} to save your other changes.`                                                                          |
+| `shell.editTrip.currencyLocked`     | `This trip already has prices in it, so its budget currency can’t be changed here. Use Change budget currency on the Costs tab, or set it back to {current} to save your other changes.`                          |
 | `shell.editTrip.currencyReadonly`   | `The budget currency is changed from the Costs tab.`                                                                                                                                                              |
 | `shell.editTrip.currencyLink`       | `Open the Costs tab`                                                                                                                                                                                              |
 

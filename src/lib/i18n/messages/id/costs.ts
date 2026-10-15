@@ -51,6 +51,10 @@ const messages = {
   'split.label': 'Dibagi di antara',
   'split.everyone': 'Semua',
   'split.nobody': 'Tidak ada',
+  'split.departed': 'Sudah keluar dari perjalanan',
+  'split.departedHint':
+    'Menghapus centang orang yang sudah keluar dari perjalanan akan menghapus bagiannya secara permanen.',
+  'split.includeFor': 'Sertakan {name} dalam pembagian ini',
   'split.how': 'Bagaimana pengeluaran ini dibagi',
   'split.method.equal': 'Rata',
   'split.method.equalHint':
@@ -213,6 +217,71 @@ const messages = {
   'display.alert.body':
     'Tidak ada kurs tercatat untuk pasangan mata uang ini, jadi angka tersebut tetap dalam mata uang anggaran:',
   'display.alert.pair': '{from} ke {to} pada {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Ubah mata uang anggaran',
+  'rebase.title': 'Ubah mata uang anggaran',
+  'rebase.description':
+    'Jumlah yang kamu ketik tetap seperti yang kamu ketik. Total dan saldo perjalanan ini dikonversi ke mata uang yang baru.',
+  'rebase.to': 'Mata uang baru',
+  'rebase.toPlaceholder': 'Pilih mata uang',
+  'rebase.rateLabel': 'Kurs (1 {from} dalam {to})',
+  'rebase.rateInverse': 'Artinya 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Masukkan kurs yang lebih dari nol.',
+  'rebase.rateOutOfRange':
+    'Kurs itu tampak jauh terlalu besar atau terlalu kecil. Periksa arah kursnya.',
+  'rebase.source.recent': 'Kurs terakhir yang dipakai di ruang kerja ini',
+  'rebase.source.manual': 'Kurs yang kamu masukkan',
+  'rebase.noRate':
+    'Tidak ada kurs tercatat untuk {from} ke {to}. Masukkan kurs yang ingin kamu pakai.',
+  'rebase.waitingForRate': 'Pratinjau muncul begitu ada kurs.',
+  'rebase.loading': 'Menghitung konversi',
+  'rebase.example':
+    '{original} tetap seperti yang kamu ketik dan dihitung sebagai {converted}.',
+  'rebase.count.expenses': {
+    other: '{count} pengeluaran akan dihitung dalam {to}.',
+  },
+  'rebase.count.payments': {
+    other: '{count} pembayaran akan dihitung dalam {to}.',
+  },
+  'rebase.count.planned': {
+    other: '{count} item yang direncanakan akan dihitung dalam {to}.',
+  },
+  'rebase.pinned':
+    'Harga tempat, reservasi, penginapan, dan transportasi tetap dalam {from}.',
+  'rebase.target': 'Anggaran perjalanan {before} menjadi {after}.',
+  'rebase.rounding':
+    'Setiap jumlah dibulatkan satu kali saja, jadi saldo bisa bergeser hingga {amount}.',
+  'rebase.leftover':
+    'Setelah perubahan, {name} akan berutang {amount} kepada {other}.',
+  'rebase.someone': 'Seseorang',
+  'rebase.nothing':
+    'Belum ada yang diberi harga di perjalanan ini, jadi tidak ada yang perlu dikonversi.',
+  'rebase.unconverted': {
+    other:
+      '{count} entri memakai mata uang selain {from} dan tidak bisa dikonversi otomatis. Biasanya ini pengeluaran yang dibuat dari reservasi dengan harga dalam mata uang lain: ubah atau hapus, lalu coba lagi.',
+  },
+  'rebase.unsplittable': {
+    other:
+      '{count} pengeluaran punya pembagian yang tidak bisa dipindahkan karena semua bagiannya nol. Ubah atau hapus, lalu coba lagi.',
+  },
+  'rebase.outOfRange':
+    'Dengan kurs ini, sebuah jumlah di perjalanan akan terlalu besar untuk disimpan dalam {to}. Periksa kurs dan arahnya.',
+  'rebase.tooLarge':
+    'Perjalanan ini punya terlalu banyak entri untuk diubah sekaligus: dibutuhkan {changes} perubahan sekaligus, sedangkan batasnya {limit}. Untuk sementara anggaran tetap dalam {from}.',
+  'rebase.copyPending':
+    'Perjalanan ini masih disalin. Coba lagi sebentar lagi.',
+  'rebase.error': 'Konversi tidak bisa dimuat. Tidak ada yang diubah.',
+  'rebase.commitError':
+    'Kami tidak bisa mengubah mata uang anggaran. Tidak ada yang diubah.',
+  'rebase.stale':
+    'Mata uang anggaran perjalanan sekarang {current}, bukan {from}. Tutup dialog ini lalu buka lagi.',
+  'rebase.sameCurrency': 'Anggaran sudah dalam {to}. Pilih mata uang lain.',
+  'rebase.commitUnknown':
+    'Kami tidak dapat memastikan apakah mata uang anggaran sudah berubah ke {to}. Muat ulang halaman untuk memeriksanya sebelum mencoba lagi.',
+  'rebase.retry': 'Coba lagi',
+  'rebase.confirm': 'Ubah ke {to}',
+  'rebase.committing': 'Mengubah mata uang anggaran',
+  'rebase.done': 'Anggaran sekarang dalam {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

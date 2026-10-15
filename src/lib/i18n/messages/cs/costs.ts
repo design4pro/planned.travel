@@ -56,6 +56,10 @@ const messages = {
   'split.label': 'Rozdělit mezi',
   'split.everyone': 'Všichni',
   'split.nobody': 'Nikdo',
+  'split.departed': 'Už na cestě není',
+  'split.departedHint':
+    'Odškrtnutím někoho, kdo cestu opustil, jeho podíl nadobro odstraníte.',
+  'split.includeFor': 'Zahrnout {name} do tohoto rozdělení',
   'split.how': 'Jak se tento výdaj dělí',
   'split.method.equal': 'Rovným dílem',
   'split.method.equalHint':
@@ -220,6 +224,84 @@ const messages = {
   'display.alert.body':
     'Pro tyto dvojice měn není uložený kurz, proto tyto částky zůstávají v měně rozpočtu:',
   'display.alert.pair': '{from} na {to} dne {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Změnit měnu rozpočtu',
+  'rebase.title': 'Změna měny rozpočtu',
+  'rebase.description':
+    'Zadané částky zůstanou tak, jak jste je zadali. Součty a zůstatky této cesty se přepočtou do nové měny.',
+  'rebase.to': 'Nová měna',
+  'rebase.toPlaceholder': 'Vyberte měnu',
+  'rebase.rateLabel': 'Směnný kurz (1 {from} v {to})',
+  'rebase.rateInverse': 'To je 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Zadejte kurz větší než nula.',
+  'rebase.rateOutOfRange':
+    'Ten kurz vypadá příliš velký nebo příliš malý. Zkontrolujte, jakým směrem platí.',
+  'rebase.source.recent': 'Kurz naposledy použitý v tomto prostoru',
+  'rebase.source.manual': 'Kurz, který jste zadali',
+  'rebase.noRate':
+    'Pro {from} na {to} není uložený žádný kurz. Zadejte kurz, který chcete použít.',
+  'rebase.waitingForRate': 'Náhled se objeví, jakmile bude k dispozici kurz.',
+  'rebase.loading': 'Probíhá přepočet',
+  'rebase.example':
+    '{original} zůstává tak, jak jste to zadali, a počítá se jako {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} výdaj se započítá v {to}.',
+    few: '{count} výdaje se započítají v {to}.',
+    many: '{count} výdaje se započítají v {to}.',
+    other: '{count} výdajů se započítá v {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} platba se započítá v {to}.',
+    few: '{count} platby se započítají v {to}.',
+    many: '{count} platby se započítají v {to}.',
+    other: '{count} plateb se započítá v {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} plánovaná položka se započítá v {to}.',
+    few: '{count} plánované položky se započítají v {to}.',
+    many: '{count} plánované položky se započítají v {to}.',
+    other: '{count} plánovaných položek se započítá v {to}.',
+  },
+  'rebase.pinned':
+    'Ceny míst, rezervací, noclehů a dopravy zůstávají v {from}.',
+  'rebase.target': 'Rozpočet cesty {before} se změní na {after}.',
+  'rebase.rounding':
+    'Každá částka se zaokrouhluje jen jednou, takže se zůstatek může posunout nejvýše o {amount}.',
+  'rebase.leftover':
+    'Po změně by dluh osoby {name} vůči {other} činil {amount}.',
+  'rebase.someone': 'Někdo',
+  'rebase.nothing':
+    'Na této cestě zatím nic nemá cenu, takže není co přepočítat.',
+  'rebase.unconverted': {
+    one: '{count} záznam je v jiné měně než {from} a nelze ho přepočítat automaticky. Obvykle jde o výdaj vytvořený z rezervace s cenou v jiné měně: upravte ho nebo smažte a zkuste to znovu.',
+    few: '{count} záznamy jsou v jiné měně než {from} a nelze je přepočítat automaticky. Obvykle jde o výdaje vytvořené z rezervací s cenou v jiné měně: upravte je nebo smažte a zkuste to znovu.',
+    many: '{count} záznamu je v jiné měně než {from} a nelze je přepočítat automaticky. Obvykle jde o výdaje vytvořené z rezervací s cenou v jiné měně: upravte je nebo smažte a zkuste to znovu.',
+    other:
+      '{count} záznamů je v jiné měně než {from} a nelze je přepočítat automaticky. Obvykle jde o výdaje vytvořené z rezervací s cenou v jiné měně: upravte je nebo smažte a zkuste to znovu.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} výdaj má rozdělení, které nelze převzít, protože všechny podíly v něm jsou nulové. Upravte ho nebo smažte a zkuste to znovu.',
+    few: '{count} výdaje mají rozdělení, která nelze převzít, protože všechny podíly v nich jsou nulové. Upravte je nebo smažte a zkuste to znovu.',
+    many: '{count} výdaje mají rozdělení, která nelze převzít, protože všechny podíly v nich jsou nulové. Upravte je nebo smažte a zkuste to znovu.',
+    other:
+      '{count} výdajů má rozdělení, která nelze převzít, protože všechny podíly v nich jsou nulové. Upravte je nebo smažte a zkuste to znovu.',
+  },
+  'rebase.outOfRange':
+    'S tímto kurzem by byla jedna částka na cestě příliš velká na uložení v {to}. Zkontrolujte kurz a jakým směrem platí.',
+  'rebase.tooLarge':
+    'Tato cesta má příliš mnoho záznamů na změnu najednou: bylo by potřeba {changes} změn naráz a limit je {limit}. Rozpočet zatím zůstává v {from}.',
+  'rebase.copyPending': 'Tato cesta se ještě kopíruje. Zkuste to za chvíli.',
+  'rebase.error': 'Přepočet se nepodařilo načíst. Nic se nezměnilo.',
+  'rebase.commitError': 'Měnu rozpočtu se nepodařilo změnit. Nic se nezměnilo.',
+  'rebase.stale':
+    'Měna rozpočtu výletu je nyní {current}, ne {from}. Zavřete toto okno a otevřete ho znovu.',
+  'rebase.sameCurrency': 'Rozpočet už je v měně {to}. Vyberte jinou měnu.',
+  'rebase.commitUnknown':
+    'Nepodařilo se potvrdit, zda se měna rozpočtu změnila na {to}. Než to zkusíte znovu, načtěte stránku znovu a ověřte to.',
+  'rebase.retry': 'Zkusit znovu',
+  'rebase.confirm': 'Změnit na {to}',
+  'rebase.committing': 'Měním měnu rozpočtu',
+  'rebase.done': 'Rozpočet je nyní v {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

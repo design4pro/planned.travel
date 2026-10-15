@@ -538,6 +538,11 @@ const messages = {
   'book.ledger.refused.body':
     'De boeking staat op de reis. De kostenregel bij de reiskosten zetten lukte niet — probeer die helft opnieuw.',
   'book.action.ledgerRetry': 'Bij de kosten zetten',
+  'book.ledger.splitStale.title':
+    'Opgeslagen, maar de verdeling klopt niet meer',
+  'book.ledger.splitStale.body':
+    'De boeking en de nieuwe prijs zijn opgeslagen, maar de verdeling van deze kostenpost kon het nieuwe totaal niet volgen. Open de post bij Kosten en corrigeer de verdeling.',
+  'book.action.done': 'Klaar',
   'book.copyConfirmation': 'het bevestigingsnummer van {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -892,6 +897,9 @@ const messages = {
   'files.action.choose': 'Bestanden kiezen',
   'files.action.upload': 'Bestanden uploaden',
   'files.drop.active': 'Loslaten om te uploaden',
+  'files.drop.pasteHint': 'plakt een gekopieerde afbeelding of schermafbeelding',
+  'files.reject.blockedType':
+    '„{name}” is niet toegevoegd: XML-bestanden en gecomprimeerde SVG-bestanden worden hier om veiligheidsredenen niet opgeslagen. Sla het op als pdf of afbeelding en voeg dat in plaats daarvan toe.',
   'files.drop.idle': 'Sleep bestanden hierheen',
   'files.empty.title': 'Geen bestanden op deze reis',
   'files.empty.body':
@@ -940,6 +948,17 @@ const messages = {
     one: '{count} bestand wordt geüpload',
     other: '{count} bestanden worden geüpload',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - gemaakt op {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} is klaar',
+  'files.export.email.body': {
+    one: 'De reisexport is klaar. Hij wordt {count} dag bewaard.',
+    other: 'De reisexport is klaar. Hij wordt {count} dagen bewaard.',
+  },
+  'files.export.email.action': '{title} openen',
+  'files.export.email.text': 'De reisexport is klaar: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Uploaden geannuleerd.',

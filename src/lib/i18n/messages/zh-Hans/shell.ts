@@ -419,7 +419,9 @@ const messages = {
   'editTrip.coverFailed': '“{name}”未能上传为封面。其他内容尚未保存。',
   'editTrip.coverContinue': '不使用新封面并保存',
   'editTrip.currencyLocked':
-    '这趟行程已经有价格，所以不能在这里更改预算货币。请改回 {current}，再保存其他修改。',
+    '这趟行程已经有价格，所以不能在这里更改预算货币。请使用“花费”标签页中的“更改预算货币”按钮，或改回 {current}，再保存其他修改。',
+  'editTrip.currencyReadonly': '预算货币在“花费”标签页中更改。',
+  'editTrip.currencyLink': '打开“花费”标签页',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '永久删除“{title}”？',
   'deleteTrip.description':

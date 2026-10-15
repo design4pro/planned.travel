@@ -577,7 +577,9 @@ const messages = {
     'Soubor „{name}“ se nepodařilo nahrát jako titulní obrázek. Zatím se neuložilo nic dalšího.',
   'editTrip.coverContinue': 'Uložit bez nového titulního obrázku',
   'editTrip.currencyLocked':
-    'Tato cesta už obsahuje ceny, proto tady nejde změnit měnu rozpočtu. Nastavte zpět {current} a uložte ostatní změny.',
+    'Tato cesta už obsahuje ceny, proto tady nejde změnit měnu rozpočtu. Použijte na záložce Náklady tlačítko „Změnit měnu rozpočtu“, nebo nastavte zpět {current} a uložte ostatní změny.',
+  'editTrip.currencyReadonly': 'Měna rozpočtu se mění na záložce Náklady.',
+  'editTrip.currencyLink': 'Otevřít záložku Náklady',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Smazat „{title}“ nadobro?',
   'deleteTrip.description':

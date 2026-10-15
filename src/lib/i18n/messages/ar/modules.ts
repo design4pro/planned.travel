@@ -556,6 +556,10 @@ const messages = {
   'book.ledger.refused.body':
     'الحجز على الرحلة. إضافة بند تكلفته إلى تكاليف الرحلة لم تنجح — أعد محاولة هذا النصف.',
   'book.action.ledgerRetry': 'أضفه إلى دفتر التكاليف',
+  'book.ledger.splitStale.title': 'حُفظ، لكن التقسيم لم يعد يطابق الإجمالي',
+  'book.ledger.splitStale.body':
+    'حُفظ الحجز وسعره الجديد، لكن طريقة تقسيم بند التكلفة هذا لم تتمكن من مواكبة الإجمالي الجديد. افتح البند في التكاليف وصحّح التقسيم.',
+  'book.action.done': 'تم',
   'book.copyConfirmation': 'رقم التأكيد الخاص بـ {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -917,6 +921,9 @@ const messages = {
   'files.action.choose': 'اختيار ملفات',
   'files.action.upload': 'رفع الملفات',
   'files.drop.active': 'أفلِت للرفع',
+  'files.drop.pasteHint': 'يلصق صورة منسوخة أو لقطة شاشة',
+  'files.reject.blockedType':
+    'لم تتم إضافة «{name}»: لا تُحفظ هنا ملفات XML وملفات SVG المضغوطة حفاظًا على الأمان. احفظه بصيغة PDF أو كصورة ثم أضف ذلك بدلًا منه.',
   'files.drop.idle': 'اسحب الملفات إلى هنا',
   'files.empty.title': 'لا ملفات في هذه الرحلة',
   'files.empty.body':
@@ -971,6 +978,21 @@ const messages = {
     many: 'جارٍ رفع {count} ملفًا',
     other: 'جارٍ رفع {count} ملف',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - أُنشئ في {when}',
+  'files.export.madeAt': '{date}، {time}',
+  'files.export.email.subject': '{title} جاهز',
+  'files.export.email.body': {
+    zero: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يوم.',
+    one: 'تصدير الرحلة جاهز. يُحفظ لمدة يوم واحد.',
+    two: 'تصدير الرحلة جاهز. يُحفظ لمدة يومين.',
+    few: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} أيام.',
+    many: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يومًا.',
+    other: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يوم.',
+  },
+  'files.export.email.action': 'افتح {title}',
+  'files.export.email.text': 'تصدير الرحلة جاهز: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'أُلغي الرفع.',

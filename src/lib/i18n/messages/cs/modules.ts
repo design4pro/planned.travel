@@ -546,6 +546,10 @@ const messages = {
   'book.ledger.refused.body':
     'Rezervace je na výletě. Přidat její položku do nákladů výletu se nepovedlo — zkus tuhle půlku znovu.',
   'book.action.ledgerRetry': 'Přidat do nákladů',
+  'book.ledger.splitStale.title': 'Uloženo, ale rozdělení už nesedí',
+  'book.ledger.splitStale.body':
+    'Rezervace i její nová cena jsou uloženy, ale rozdělení této položky mezi lidi nemohlo následovat nový součet. Otevřete položku v Nákladech a rozdělení opravte.',
+  'book.action.done': 'Hotovo',
   'book.copyConfirmation': 'potvrzovací číslo pro {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -904,6 +908,9 @@ const messages = {
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
   'files.drop.active': 'Pusť a nahraje se',
+  'files.drop.pasteHint': 'vloží zkopírovaný obrázek nebo snímek obrazovky',
+  'files.reject.blockedType':
+    'Soubor „{name}“ nebyl přidán: soubory XML a komprimované SVG se tu z bezpečnostních důvodů neukládají. Ulož ho jako PDF nebo obrázek a přidej místo něj to.',
   'files.drop.idle': 'Přetáhni soubory sem',
   'files.empty.title': 'Na téhle cestě nejsou soubory',
   'files.empty.body':
@@ -955,6 +962,19 @@ const messages = {
     many: 'Nahrávání {count} souboru',
     other: 'Nahrávání {count} souborů',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - vytvořeno {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Hotovo: {title}',
+  'files.export.email.body': {
+    one: 'Export cesty je hotový. Uchovává se {count} den.',
+    few: 'Export cesty je hotový. Uchovává se {count} dny.',
+    many: 'Export cesty je hotový. Uchovává se {count} dne.',
+    other: 'Export cesty je hotový. Uchovává se {count} dní.',
+  },
+  'files.export.email.action': 'Otevřít {title}',
+  'files.export.email.text': 'Export cesty je hotový: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Nahrávání zrušeno.',

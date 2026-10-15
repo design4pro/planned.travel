@@ -547,6 +547,11 @@ const messages = {
   'book.ledger.refused.body':
     'Die Buchung steht auf der Reise. Ihre Kostenzeile zu den Reisekosten hinzuzufügen hat nicht geklappt — versuche diese Hälfte noch einmal.',
   'book.action.ledgerRetry': 'Zu den Kosten hinzufügen',
+  'book.ledger.splitStale.title':
+    'Gespeichert, aber die Aufteilung stimmt nicht mehr',
+  'book.ledger.splitStale.body':
+    'Die Buchung und ihr neuer Preis sind gespeichert, doch die Aufteilung dieses Kostenpostens konnte dem neuen Gesamtbetrag nicht folgen. Öffne den Posten unter Kosten und korrigiere die Aufteilung.',
+  'book.action.done': 'Fertig',
   'book.copyConfirmation': 'die Bestätigungsnummer für {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -903,6 +908,9 @@ const messages = {
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
   'files.drop.active': 'Zum Hochladen loslassen',
+  'files.drop.pasteHint': 'fügt ein kopiertes Bild oder einen Screenshot ein',
+  'files.reject.blockedType':
+    '„{name}“ wurde nicht hinzugefügt: XML- und komprimierte SVG-Dateien werden hier aus Sicherheitsgründen nicht gespeichert. Speichere sie als PDF oder Bild und füge stattdessen das hinzu.',
   'files.drop.idle': 'Dateien hierher ziehen',
   'files.empty.title': 'Keine Dateien auf dieser Reise',
   'files.empty.body':
@@ -951,6 +959,17 @@ const messages = {
     one: '{count} Datei wird hochgeladen',
     other: '{count} Dateien werden hochgeladen',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - erstellt am {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} ist fertig',
+  'files.export.email.body': {
+    one: 'Der Reiseexport ist fertig. Er wird {count} Tag aufbewahrt.',
+    other: 'Der Reiseexport ist fertig. Er wird {count} Tage aufbewahrt.',
+  },
+  'files.export.email.action': '{title} öffnen',
+  'files.export.email.text': 'Der Reiseexport ist fertig: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Hochladen abgebrochen.',

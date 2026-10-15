@@ -520,6 +520,10 @@ const messages = {
   'book.ledger.refused.body':
     'Đặt chỗ đã nằm trong chuyến đi. Việc thêm dòng chi phí vào chi phí chuyến đi không thành — hãy thử lại nửa đó.',
   'book.action.ledgerRetry': 'Thêm vào chi phí',
+  'book.ledger.splitStale.title': 'Đã lưu, nhưng phần chia không còn khớp',
+  'book.ledger.splitStale.body':
+    'Đặt chỗ và giá mới đã được lưu, nhưng cách chia khoản chi phí này không theo kịp tổng mới. Hãy mở khoản đó trong Chi phí và sửa lại phần chia.',
+  'book.action.done': 'Xong',
   'book.copyConfirmation': 'mã xác nhận của {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -860,6 +864,9 @@ const messages = {
   'files.action.choose': 'Chọn tệp',
   'files.action.upload': 'Tải tệp lên',
   'files.drop.active': 'Thả ra để tải lên',
+  'files.drop.pasteHint': 'dán hình ảnh đã sao chép hoặc ảnh chụp màn hình',
+  'files.reject.blockedType':
+    '“{name}” chưa được thêm: tệp XML và tệp SVG nén không được lưu ở đây vì lý do an toàn. Hãy lưu nó thành PDF hoặc hình ảnh rồi thêm tệp đó thay thế.',
   'files.drop.idle': 'Kéo tệp vào đây',
   'files.empty.title': 'Chuyến này chưa có tệp nào',
   'files.empty.body':
@@ -905,6 +912,17 @@ const messages = {
   'files.status.uploadingCount': {
     other: 'Đang tải lên {count} tệp',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - tạo lúc {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} đã sẵn sàng',
+  'files.export.email.body': {
+    other:
+      'Bản xuất chuyến đi đã sẵn sàng. Bản này được lưu trong {count} ngày.',
+  },
+  'files.export.email.action': 'Mở {title}',
+  'files.export.email.text': 'Bản xuất chuyến đi đã sẵn sàng: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Đã hủy tải lên.',

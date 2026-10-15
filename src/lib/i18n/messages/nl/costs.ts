@@ -52,6 +52,10 @@ const messages = {
   'split.label': 'Verdelen tussen',
   'split.everyone': 'Iedereen',
   'split.nobody': 'Niemand',
+  'split.departed': 'Heeft de reis verlaten',
+  'split.departedHint':
+    'Als je iemand uitvinkt die de reis heeft verlaten, wordt het aandeel definitief verwijderd.',
+  'split.includeFor': '{name} opnemen in deze verdeling',
   'split.how': 'Hoe deze uitgave verdeeld wordt',
   'split.method.equal': 'Gelijk',
   'split.method.equalHint':
@@ -215,6 +219,77 @@ const messages = {
   'display.alert.body':
     'Voor deze valutaparen is geen koers vastgelegd, dus die bedragen blijven in de budgetvaluta:',
   'display.alert.pair': '{from} naar {to} op {date}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Valuta van het budget wijzigen',
+  'rebase.title': 'De valuta van het budget wijzigen',
+  'rebase.description':
+    'De bedragen die je hebt ingevoerd blijven zoals je ze hebt ingevoerd. De totalen en saldi van deze reis worden omgerekend naar de nieuwe valuta.',
+  'rebase.to': 'Nieuwe valuta',
+  'rebase.toPlaceholder': 'Kies een valuta',
+  'rebase.rateLabel': 'Wisselkoers (1 {from} in {to})',
+  'rebase.rateInverse': 'Dat is 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Vul een koers groter dan nul in.',
+  'rebase.rateOutOfRange':
+    'Die koers lijkt veel te groot of te klein. Controleer in welke richting hij geldt.',
+  'rebase.source.recent': 'De laatst gebruikte koers in deze werkruimte',
+  'rebase.source.manual': 'De koers die je hebt ingevuld',
+  'rebase.noRate':
+    'Er is geen koers vastgelegd voor {from} naar {to}. Vul de koers in die je wilt gebruiken.',
+  'rebase.waitingForRate': 'Het voorbeeld verschijnt zodra er een koers is.',
+  'rebase.loading': 'De omrekening wordt berekend',
+  'rebase.example':
+    '{original} blijft staan zoals je het hebt ingevoerd en telt mee als {converted}.',
+  'rebase.count.expenses': {
+    one: '{count} uitgave wordt meegeteld in {to}.',
+    other: '{count} uitgaven worden meegeteld in {to}.',
+  },
+  'rebase.count.payments': {
+    one: '{count} betaling wordt meegeteld in {to}.',
+    other: '{count} betalingen worden meegeteld in {to}.',
+  },
+  'rebase.count.planned': {
+    one: '{count} geplande post wordt meegeteld in {to}.',
+    other: '{count} geplande posten worden meegeteld in {to}.',
+  },
+  'rebase.pinned':
+    'De prijzen van plaatsen, reserveringen, verblijven en vervoer blijven in {from}.',
+  'rebase.target': 'Het reisbudget {before} wordt {after}.',
+  'rebase.rounding':
+    'Elk bedrag wordt maar één keer afgerond, dus een saldo kan met maximaal {amount} verschuiven.',
+  'rebase.leftover':
+    'Na de wijziging zou {name} {other} {amount} verschuldigd zijn.',
+  'rebase.someone': 'Iemand',
+  'rebase.nothing':
+    'Op deze reis heeft nog niets een prijs, dus er hoeft niets te worden omgerekend.',
+  'rebase.unconverted': {
+    one: '{count} post staat in een andere valuta dan {from} en kan niet automatisch worden omgerekend. Meestal is dit een uitgave die is aangemaakt vanuit een reservering met een prijs in een andere valuta: pas hem aan of verwijder hem en probeer het opnieuw.',
+    other:
+      '{count} posten staan in een andere valuta dan {from} en kunnen niet automatisch worden omgerekend. Meestal zijn dit uitgaven die zijn aangemaakt vanuit reserveringen met een prijs in een andere valuta: pas ze aan of verwijder ze en probeer het opnieuw.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} uitgave heeft een verdeling die niet kan worden overgenomen, omdat alle aandelen nul zijn. Pas hem aan of verwijder hem en probeer het opnieuw.',
+    other:
+      '{count} uitgaven hebben een verdeling die niet kan worden overgenomen, omdat alle aandelen nul zijn. Pas ze aan of verwijder ze en probeer het opnieuw.',
+  },
+  'rebase.outOfRange':
+    'Met deze koers zou een bedrag op de reis te groot zijn om in {to} op te slaan. Controleer de koers en de richting ervan.',
+  'rebase.tooLarge':
+    'Deze reis heeft te veel posten om in één keer te wijzigen: er zouden {changes} wijzigingen tegelijk nodig zijn en de limiet is {limit}. Het budget blijft voorlopig in {from}.',
+  'rebase.copyPending':
+    'Deze reis wordt nog gekopieerd. Probeer het zo meteen opnieuw.',
+  'rebase.error':
+    'De omrekening kon niet worden geladen. Er is niets gewijzigd.',
+  'rebase.commitError':
+    'We konden de valuta van het budget niet wijzigen. Er is niets gewijzigd.',
+  'rebase.stale':
+    'De budgetvaluta van de reis is nu {current}, niet {from}. Sluit dit venster en open het opnieuw.',
+  'rebase.sameCurrency': 'Het budget staat al in {to}. Kies een andere valuta.',
+  'rebase.commitUnknown':
+    'We konden niet bevestigen of de budgetvaluta is gewijzigd naar {to}. Laad de pagina opnieuw om het te controleren voordat je het nog eens probeert.',
+  'rebase.retry': 'Opnieuw proberen',
+  'rebase.confirm': 'Wijzigen naar {to}',
+  'rebase.committing': 'De valuta van het budget wordt gewijzigd',
+  'rebase.done': 'Het budget staat nu in {to}.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

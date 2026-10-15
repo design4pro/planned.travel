@@ -2,7 +2,7 @@
 // scroll stubs jsdom does not implement.
 import '#/components/ui/__tests__/test-env'
 
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -311,5 +311,144 @@ describe('BookingDialog — opened from a day', () => {
     openStay()
 
     expect(checkInDay()).toBe('Choose a day')
+  })
+})
+
+/* ------------------------------------------- a price change the split could not follow */
+
+describe('BookingDialog — a split that no longer adds up after the save', () => {
+  const DINNER: BookingRow = {
+    ...STAY,
+    id: 'booking-3',
+    type: 'restaurant',
+    title: 'Dinner at Den',
+    stay: null,
+    priceMinor: 24_000,
+    currency: 'JPY',
+    hasLedgerLine: true,
+  }
+
+  beforeEach(() => {
+    reservations.update.mockClear()
+    stays.update.mockClear()
+  })
+
+  function openEditing(booking: BookingRow, onOpenChange: () => void): void {
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <BookingDialog
+          tripId="trip-1"
+          booking={booking}
+          days={DAYS}
+          currency="JPY"
+          open
+          onOpenChange={onOpenChange}
+        />
+      </I18nProvider>,
+    )
+  }
+
+  it('says so and stays open instead of closing on a saved booking', async () => {
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-3',
+      ledger: 'split-stale',
+    })
+    const onOpenChange = vi.fn()
+    openEditing(DINNER, onOpenChange)
+    submitTheForm()
+
+    expect(
+      await screen.findByText('Saved, but the split no longer adds up'),
+    ).not.toBeNull()
+    expect(screen.getByText(/fix the split\./u)).not.toBeNull()
+    // Its own copy, not the refusal's: the line exists, it is the split that needs a person.
+    expect(screen.queryByText('Saved, but not added to the costs')).toBeNull()
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it('closes from the one button that is left, and offers no second save', async () => {
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-3',
+      ledger: 'split-stale',
+    })
+    const onOpenChange = vi.fn()
+    openEditing(DINNER, onOpenChange)
+    submitTheForm()
+
+    const done = await screen.findByRole('button', { name: 'Done' })
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
+    fireEvent.click(done)
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(reservations.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('locks the form and moves focus to the notice, so a late edit is not lost to "Done"', async () => {
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-3',
+      ledger: 'split-stale',
+    })
+    openEditing(DINNER, vi.fn())
+    submitTheForm()
+
+    const notice = (
+      await screen.findByText('Saved, but the split no longer adds up')
+    ).closest('[role="status"]')
+    // The form is inert (no edit can be typed, none is thrown away); the notice is outside it.
+    expect(document.querySelector('form')?.hasAttribute('inert')).toBe(true)
+    expect(notice?.closest('form')).toBeNull()
+    expect(document.activeElement).toBe(notice)
+  })
+
+  it('shows only the split notice when the retry of a refused ledger write comes back stale', async () => {
+    reservations.update
+      .mockResolvedValueOnce({ reservationId: 'booking-3', ledger: 'failed' })
+      .mockResolvedValueOnce({
+        reservationId: 'booking-3',
+        ledger: 'split-stale',
+      })
+    openEditing(DINNER, vi.fn())
+    submitTheForm()
+    expect(
+      await screen.findByText('Saved, but not added to the costs'),
+    ).not.toBeNull()
+
+    submitTheForm()
+
+    expect(
+      await screen.findByText('Saved, but the split no longer adds up'),
+    ).not.toBeNull()
+    expect(screen.queryByText('Saved, but not added to the costs')).toBeNull()
+  })
+
+  it('says the same after a stay is saved', async () => {
+    stays.update.mockResolvedValue({
+      reservationId: 'booking-1',
+      stayId: 'stay-1',
+      ledger: 'split-stale',
+    })
+    const onOpenChange = vi.fn()
+    openEditing(STAY, onOpenChange)
+    submitTheForm()
+
+    expect(
+      await screen.findByText('Saved, but the split no longer adds up'),
+    ).not.toBeNull()
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it('closes as before when the line was updated', async () => {
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-3',
+      ledger: 'updated',
+    })
+    const onOpenChange = vi.fn()
+    openEditing(DINNER, onOpenChange)
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(
+      screen.queryByText('Saved, but the split no longer adds up'),
+    ).toBeNull()
   })
 })

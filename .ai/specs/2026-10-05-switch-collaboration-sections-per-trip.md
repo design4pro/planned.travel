@@ -2,10 +2,10 @@
 
 | Field              | Value                                              |
 | ------------------ | -------------------------------------------------- |
-| **Status**         | ready                                              |
+| **Status**         | in-progress                                        |
 | **Issue**          | none                                               |
 | **Spec PR**        | #903                                               |
-| **Implementation** | none                                               |
+| **Implementation** | #1271                                              |
 | **Plan**           | 07-S2 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
@@ -450,11 +450,11 @@ like every other trip column write.
 
 ## 📝 API Contracts
 
-| Function                                                | Method | Input                                    | Output                                                              | Who                                    |
-| ------------------------------------------------------- | ------ | ---------------------------------------- | ------------------------------------------------------------------- | -------------------------------------- |
-| `loadTripCollab` (moved)                                | GET    | `{ tripId }`                             | the payload (all three sections) plus `sections`, `canConfigure`    | any reader of the trip                 |
-| `setCollabSectionFn` (new)                              | POST   | `{ tripId, section: <registry id>, on }` | `{ ok: true, sections }` or `{ ok: false, reason: 'last-section' }` | trip `owner` or `editor`, not archived |
-| `postMessageFn` … `deletePollFn` (moved, **unchanged**) | POST   | as today                                 | as today                                                            | as today                               |
+| Function                                                | Method | Input                                    | Output                                                              | Who                                           |
+| ------------------------------------------------------- | ------ | ---------------------------------------- | ------------------------------------------------------------------- | --------------------------------------------- |
+| `loadTripCollab` (moved)                                | GET    | `{ tripId }`                             | the payload (all three sections) plus `sections`, `canConfigure`    | any reader of the trip                        |
+| `setCollabSectionFn` (new)                              | POST   | `{ tripId, section: <registry id>, on }` | `{ ok: true, sections }` or `{ ok: false, reason: 'last-section' }` | trip `owner` or `editor`, not archived        |
+| `postMessageFn` … `deletePollFn` (moved, **unchanged**) | POST   | as today                                 | as today                                                            | trip `owner` or `editor`, not archived (#913) |
 
 ## 📝 UI/UX
 
@@ -540,7 +540,7 @@ Phase 3 lands nine keys (every row but `tabsLabel`); `tabsLabel` lands with Phas
 
 Each gap names where it goes:
 
-- **Authorisation of the moved writers.** A trip `viewer` can post messages, notes and polls today: no collab writer checks a trip role. Further, the writers that act on a `noteId`, `pollId` or `messageId` (`updateCollabNote`, `deleteCollabNote`, `closePoll`, `deletePoll`, `castVote`, `editMessage`, `deleteMessage`, `toggleReaction` in `src/server/repos/collab.ts`) check the workspace only: neither that the row belongs to `data.tripId` nor that the caller can see that trip (ADR 0007), so a workspace member holding an id from a private trip can change or delete that row. Phase 1 moves these writers verbatim, which does not make it worse (#682 already removed the unguarded duplicate `postMessageFn`). **Owner: a follow-up issue filed by the Phase 1 ticket** (acceptance criterion 1); no stage of plan 07 owns it today.
+- **Authorisation of the moved writers.** A trip `viewer` can post messages, notes and polls today: no collab writer checks a trip role. Further, the writers that act on a `noteId`, `pollId` or `messageId` (`updateCollabNote`, `deleteCollabNote`, `closePoll`, `deletePoll`, `castVote`, `editMessage`, `deleteMessage`, `toggleReaction` in `src/server/repos/collab.ts`) check the workspace only: neither that the row belongs to `data.tripId` nor that the caller can see that trip (ADR 0007), so a workspace member holding an id from a private trip can change or delete that row. Phase 1 moves these writers verbatim, which does not make it worse (#682 already removed the unguarded duplicate `postMessageFn`). **Owner: a follow-up issue filed by the Phase 1 ticket** (acceptance criterion 1); no stage of plan 07 owns it today. Closed by #913: the writers now take the trip id, check that the row is on it, and admit only an owner or an editor of a trip that is not archived.
 - The "What's next" section and its toggle: `07-S9`. The thread's paging and keys: `07-S3`. Notes categories and the notes board's per-board empty states and error `Alert`: `07-S4`. Poll deadlines and the polls board's empty state and error `Alert`: `07-S5`. (The plan's per-board empty-state copy and per-panel error `Alert` of this stage are re-owned by those three stages, plan 07 lines 812, 1016-1021 and 1197-1199.)
 - The route error title `trips.error.collab` ("The conversation did not load"): `07-S3`, which owns the thread. (The composer's hardcoded placeholder was localised by #682 as `collab.compose.placeholderText`.) The `cs` and `uk` wording of the polls heading as a menu/tab label is a locale-review note for `07-S5`.
 - The abbreviated-month formatting in the notes board (`07-S4`); any migration (none is needed).

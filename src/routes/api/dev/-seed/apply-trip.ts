@@ -12,6 +12,7 @@
 
 import {
   addTripMember,
+  collabMessageReactionsAccess,
   collabMessagesRepository,
   castVote,
   createAccommodation,
@@ -35,7 +36,6 @@ import {
   resolveTags,
   setAssignmentParticipants,
   setPlaceTags,
-  toggleReaction,
   updateDay,
   updateTripMember,
 } from '#/server/repos'
@@ -536,11 +536,14 @@ export async function applyTrip(
     messages += 1
 
     for (const reaction of message.reactions ?? []) {
-      await toggleReaction(
-        scopeFor(context, reaction.person),
-        row.id,
-        reaction.emoji,
-      )
+      // Direct, like the message above: the seed's Marrakech trip is archived before its chat is
+      // written, and `toggleReaction` refuses every write to an archived trip.
+      const reactor = scopeFor(context, reaction.person)
+      await collabMessageReactionsAccess.insert(reactor, {
+        messageId: row.id,
+        userId: reactor.ctx.userId,
+        emoji: reaction.emoji,
+      })
       reactions += 1
     }
   }
@@ -573,7 +576,12 @@ export async function applyTrip(
     })
     polls += 1
     for (const vote of poll.votes) {
-      await castVote(scopeFor(context, vote.person), pollRow.id, vote.optionId)
+      await castVote(
+        scopeFor(context, vote.person),
+        tripId,
+        pollRow.id,
+        vote.optionId,
+      )
       votes += 1
     }
   }

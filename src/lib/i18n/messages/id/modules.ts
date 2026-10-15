@@ -527,6 +527,11 @@ const messages = {
   'book.ledger.refused.body':
     'Pemesanan sudah ada di perjalanan. Menambahkan baris biayanya ke biaya perjalanan tidak berhasil — coba lagi bagian itu.',
   'book.action.ledgerRetry': 'Tambahkan ke biaya',
+  'book.ledger.splitStale.title':
+    'Tersimpan, tetapi pembagiannya tidak lagi pas',
+  'book.ledger.splitStale.body':
+    'Pemesanan dan harga barunya tersimpan, tetapi pembagian biaya ini tidak bisa mengikuti total yang baru. Buka baris itu di Biaya dan perbaiki pembagiannya.',
+  'book.action.done': 'Selesai',
   'book.copyConfirmation': 'nomor konfirmasi untuk {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -875,6 +880,9 @@ const messages = {
   'files.action.choose': 'Pilih berkas',
   'files.action.upload': 'Unggah berkas',
   'files.drop.active': 'Lepas untuk mengunggah',
+  'files.drop.pasteHint': 'menempel gambar atau tangkapan layar yang disalin',
+  'files.reject.blockedType':
+    '“{name}” tidak ditambahkan: berkas XML dan SVG terkompresi tidak disimpan di sini demi keamanan. Simpan sebagai PDF atau gambar, lalu tambahkan itu sebagai gantinya.',
   'files.drop.idle': 'Seret berkas ke sini',
   'files.empty.title': 'Belum ada berkas di perjalanan ini',
   'files.empty.body':
@@ -921,6 +929,16 @@ const messages = {
   'files.status.uploadingCount': {
     other: 'Mengunggah {count} berkas',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - dibuat pada {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': '{title} sudah siap',
+  'files.export.email.body': {
+    other: 'Ekspor perjalanan sudah siap. Disimpan selama {count} hari.',
+  },
+  'files.export.email.action': 'Buka {title}',
+  'files.export.email.text': 'Ekspor perjalanan sudah siap: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Unggahan dibatalkan.',

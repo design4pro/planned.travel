@@ -2222,7 +2222,7 @@ caller. It is right that only the email channel has any transport, and that one 
 `00-foundations.md`'s: `00-S2` mints `src/server/notifications/dispatch.ts`, resolves the recipient
 set from trip membership under the caller's scope, filters it through `filterEnabledRecipients`,
 writes with `notifyMany`, and hands one email envelope per recipient to `TASKS`. It lands in wave 0
-with two production callers, `src/server/fns/collab.ts` and `src/server/fns/costs.ts`. **This stage
+with two production callers, `src/server/fns/collab-thread-writes.ts` and `src/server/fns/costs.ts`. **This stage
 writes no dispatcher, adds no call site to it, and does not edit either of those files.** It is the
 reading and preference half; without `00-S2` its inbox shows seeded rows and its switches govern
 nothing, which is precisely why the two are in different waves.

@@ -42,7 +42,7 @@ Two new server modules, three server functions, three new client modules, and on
 1. **`src/server/extract/document.ts` (new) — bytes to text, and never a reservation.** `env.AI.toMarkdown()` for the formats it converts, a direct UTF-8 read for plain text, and the mail message read as text with its long base64 runs stripped by a bounded regex. It returns a string. Splitting here is what lets the thing that reads a file and the thing that understands a booking be tested apart.
 2. **`src/server/extract/booking.ts` (new) — text to `StagedReservation[]`.** `env.AI.run()` behind an **injected** model port, a Zod validator on the model's answer, and the field rules — including the one about money, which this module exists to enforce rather than to apply loosely.
 3. **`src/server/queue/handlers/booking-import.ts` (edit) — one branch in front of the parse.** When the format is not `ics` or `json`, the bytes become text and the text becomes staged rows. **The staged output is the same `StagedImport` either way**, so the KV staging, the 500-row cap, the TTL and the room notification are reused untouched and untested-again.
-4. **`src/server/fns/booking-import.ts` (new) — the three verbs.** `startBookingImportFn` enqueues through `enqueueTask(taskQueue(), …)`, the same pair `auth/email.ts:289` already ships; `getBookingImportFn` reads the staged record and re-checks its `orgId` and `tripId` against the caller's scope; `confirmBookingImportFn` writes the accepted rows, attaches the file, creates and pins the lodging place, stamps the marker in one statement, and deletes the staged entry **only** on full success.
+4. **`src/server/fns/booking-import.ts` (new) — the three verbs.** `startBookingImportFn` enqueues through `enqueueTask(taskQueue(), …)`, the same pair `auth/email.ts:289` already ships; `getBookingImportFn` reads the staged record and re-checks its `orgId` and `tripId` against the caller's scope; `confirmBookingImportFn` writes the accepted rows, attaches the file, creates and pins the lodging place, stamps the marker in chunks that fit D1's 100 bound parameters, and deletes the staged entry **only** on full success.
 5. **`src/components/modules/book/import-drafts.ts` (new) — the pure half of the client.** The staged-row-to-draft mapping, the total kind mapping, the floating-time resolution against the trip's zone, and the selection reducer. Testable without a DOM.
 6. **`src/components/modules/book/import-dialog.tsx` and `import-widget.tsx` (new).** The dialog is the entry point and the review list; the widget is global, mounted in the application shell, and outlives the dialog that started the job.
 
@@ -88,7 +88,7 @@ confirmBookingImportFn ────► createReservation × n
                               ├─ syncReservationExpense
                               ├─ updateFile({ reservationId })
                               ├─ createPlace + forwardGeocode (lodging only)
-                              ├─ markReservationsImported(scope, tripId, writtenIds) ← one statement
+                              ├─ markReservationsImported(scope, tripId, writtenIds) ← chunked statements
                               └─ KV.delete  ── only when every accepted row was written
 ```
 
@@ -110,11 +110,11 @@ All five are enqueued **at drop time**, staggered by `delaySeconds = index × EX
 
 Everything it writes already exists:
 
-| Column                      | Declared by       | Written here                                                   |
-| --------------------------- | ----------------- | -------------------------------------------------------------- |
-| `reservations.imported_at`  | `03-S4` (#176)    | `markReservationsImported(scope, tripId, ids)` — one statement |
-| `trip_files.reservation_id` | on disk (`:1653`) | `updateFile(scope, tripId, fileId, { reservationId })`         |
-| `places.*`                  | on disk           | `createPlace` — lodging only, and only when none matches       |
+| Column                      | Declared by       | Written here                                                        |
+| --------------------------- | ----------------- | ------------------------------------------------------------------- |
+| `reservations.imported_at`  | `03-S4` (#176)    | `markReservationsImported(scope, tripId, ids)` — chunked statements |
+| `trip_files.reservation_id` | on disk (`:1653`) | `updateFile(scope, tripId, fileId, { reservationId })`              |
+| `places.*`                  | on disk           | `createPlace` — lodging only, and only when none matches            |
 
 **The staged import stays in KV.** An unreviewed import is not durable state, and a table for it would be something a tenant has to clean up. `STAGED_IMPORT_TTL_SECONDS` (24 h) expires it whether it is confirmed or not.
 

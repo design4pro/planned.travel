@@ -14,6 +14,7 @@ import {
   minorUnitDigits,
   parseMoney,
   parsePercentage,
+  parseRate,
   parseWeight,
   resolveDisplayCurrency,
   splitPreview,
@@ -21,6 +22,8 @@ import {
   suggestTransfers,
   toAmountInput,
 } from '../money'
+
+import { formatInverseRate, formatRateInput } from '../format'
 
 import type { SplitInput } from '../money'
 
@@ -214,6 +217,72 @@ describe('parseMoney', () => {
     expect(toAmountInput(238_400, 'GBP')).toBe('2384.00')
     expect(toAmountInput(54_705, 'JPY')).toBe('54705')
     expect(parseMoney(toAmountInput(238_400, 'GBP'), 'GBP')).toBe(238_400)
+  })
+})
+
+describe('parseRate', () => {
+  it('takes the decimal point or the decimal comma', () => {
+    expect(parseRate('0.0060')).toBe(0.006)
+    expect(parseRate('0,0060')).toBe(0.006)
+    expect(parseRate('165,5')).toBe(165.5)
+    expect(parseRate(' 165.5 ')).toBe(165.5)
+  })
+
+  it('reads full-width and Arabic-Indic digits', () => {
+    expect(parseRate('１６５．５')).toBe(165.5)
+    expect(parseRate('٠٫٠٠٦')).toBe(0.006)
+    expect(parseRate('۱۶۵٫۵')).toBe(165.5)
+  })
+
+  it('reads the last separator as the decimal mark when both appear', () => {
+    expect(parseRate('1,234.5')).toBe(1234.5)
+    expect(parseRate('1.234,5')).toBe(1234.5)
+    expect(parseRate('1 234,5')).toBe(1234.5)
+  })
+
+  it('reads a separator that repeats as grouping', () => {
+    expect(parseRate('1,234,567')).toBe(1_234_567)
+    expect(parseRate('1.234.567')).toBe(1_234_567)
+  })
+
+  it('rejects what is not a positive number', () => {
+    for (const text of ['', ' ', 'abc', '0', '0,0', '-1', '−1', '1,2,3.4,5x']) {
+      expect(parseRate(text)).toBeNull()
+    }
+    expect(parseRate('1e3')).toBeNull()
+    expect(parseRate('Infinity')).toBeNull()
+  })
+
+  it('round-trips the text a field is prefilled with', () => {
+    for (const locale of ['en', 'pl', 'de', 'fr', 'ar'] as const) {
+      for (const rate of [0.006, 165.5, 0.0000115, 1234567.25, 1]) {
+        expect(parseRate(formatRateInput(rate, locale))).toBeCloseTo(rate, 9)
+      }
+    }
+  })
+})
+
+describe('formatRateInput', () => {
+  it('uses the locale’s decimal mark and no grouping', () => {
+    expect(formatRateInput(0.006, 'en')).toBe('0.006')
+    expect(formatRateInput(0.006, 'pl')).toBe('0,006')
+    expect(formatRateInput(1234.5, 'de')).toBe('1234,5')
+  })
+
+  it('keeps the digits a small rate needs', () => {
+    expect(formatRateInput(0.0000115, 'en')).toBe('0.0000115')
+    expect(formatRateInput(165.123456, 'en')).toBe('165.123456')
+  })
+})
+
+describe('formatInverseRate', () => {
+  it('keeps the digits of a small inverse instead of rounding it to zero', () => {
+    expect(formatInverseRate(1 / 52631, 'en')).toBe('0.0000190002')
+  })
+
+  it('groups a large one and reads the usual one plainly', () => {
+    expect(formatInverseRate(1 / 0.006, 'en')).toBe('166.667')
+    expect(formatInverseRate(1_234_567, 'en')).toBe('1,234,570')
   })
 })
 

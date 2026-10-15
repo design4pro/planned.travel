@@ -21,6 +21,7 @@ import {
   settlements,
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
+import { runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { requirePlaceOfTrip } from './places'
@@ -644,6 +645,155 @@ export async function updateExpense(
     patch.splitMethod ?? expense.splitMethod,
   )
   return { expense, shares }
+}
+
+/** What a booking's price change needs from its cost line: the three figures the booking owns. */
+const repriceExpenseInput = z.object({
+  title: titleSchema,
+  amountMinor: minorAmountSchema,
+  currency: currencySchema,
+})
+export type RepriceExpenseInput = z.infer<typeof repriceExpenseInput>
+
+export interface RepricedExpense extends ExpenseWithShares {
+  /**
+   * True when the line has shares that could not follow the new amount, so they were left as they
+   * were and no longer add up to the total. The amount is saved either way.
+   */
+  readonly splitStale: boolean
+}
+
+/**
+ * What the shares of a split line become at a new total, or `null` when they cannot be worked out
+ * from what is stored.
+ *
+ * The stored method and weights are the split: `equal` needs no weight, `shares` hands the weight
+ * back as a weight, and `percentage` hands it back as the percent it was stored as (passed as a
+ * weight it would be refused). `exact` is never recomputed - a price change is not an event that
+ * says how agreed figures scale - and weights {@link computeShares} refuses are not guessed at
+ * either. Shares come in ascending id order, which is what makes the leftover cents land on the same
+ * people every time.
+ */
+function recomputeShares(
+  expense: Expense,
+  shares: ReadonlyArray<ExpenseShare>,
+  amountMinor: number,
+): Array<ComputedShare> | null {
+  const method = splitMethodSchema.safeParse(expense.splitMethod)
+  if (!method.success || method.data === 'exact') {
+    return null
+  }
+  const participants = shares.map((share): SplitParticipantInput => {
+    if (method.data === 'percentage') {
+      return { userId: share.userId, percentage: share.weight }
+    }
+    if (method.data === 'shares') {
+      return { userId: share.userId, weight: share.weight }
+    }
+    return { userId: share.userId }
+  })
+  try {
+    return computeShares(amountMinor, method.data, participants)
+  } catch (cause) {
+    if (cause instanceof RepositoryError && cause.code === 'SPLIT_MISMATCH') {
+      return null
+    }
+    throw cause
+  }
+}
+
+/** The shares of a line add up to this, which is what its total is supposed to be. */
+function sumShares(shares: ReadonlyArray<ExpenseShare>): number {
+  return shares.reduce((total, share) => total + share.shareMinor, 0)
+}
+
+/**
+ * Moves an expense to a new title, amount and currency on a booking's behalf, and keeps its split
+ * adding up to the new amount.
+ *
+ * A line with shares that no longer add up to the new amount has them recomputed in place from the
+ * line's own method and weights: each share is updated by id, so ids, `is_settled`, `weight` and the
+ * set of people survive, and the new amount and every share go out in one {@link runBatch} - on D1
+ * one transaction, so a split cannot end up off its total because half of the writes landed. Each
+ * statement carries the tenant filter and the expense and trip it belongs to. Shares that already add
+ * up (a retitled booking, an unchanged price) are left alone: re-dividing them could move a leftover
+ * cent between people for no reason. A line whose shares cannot be recomputed keeps them, saves the
+ * amount and says so through `splitStale`; a line with none behaves as {@link updateExpense} did.
+ * `splitStale` is read from the shares as they stand after the write, so a split that is off its
+ * total is reported whichever way it got there.
+ */
+export async function repriceExpense(
+  scope: TenantScope,
+  tripId: string,
+  expenseId: string,
+  input: RepriceExpenseInput,
+): Promise<RepricedExpense> {
+  const patch = repriceExpenseInput.parse(input)
+  const existing = await requireTripExpense(scope, tripId, expenseId)
+  const shares = await expenseSharesRepository.findMany(scope, {
+    where: eq(expenseShares.expenseId, expenseId),
+    orderBy: [asc(expenseShares.id)],
+  })
+
+  const recomputed =
+    shares.length === 0 || sumShares(shares) === patch.amountMinor
+      ? null
+      : recomputeShares(existing, shares, patch.amountMinor)
+  if (recomputed === null) {
+    const expense = await expensesRepository.requireUpdate(
+      scope,
+      expenseId,
+      patch,
+    )
+    return {
+      expense,
+      shares,
+      splitStale:
+        sumShares(shares) !== expense.amountMinor && shares.length > 0,
+    }
+  }
+
+  const shareMinorOf = new Map(
+    recomputed.map((share) => [share.userId, share.shareMinor]),
+  )
+  await runBatch(scope, [
+    scope.db
+      .update(expenses)
+      .set(patch)
+      .where(
+        tenantFilter(
+          scope,
+          expenses,
+          eq(expenses.id, expenseId),
+          eq(expenses.tripId, tripId),
+        ),
+      ),
+    ...shares.map((share) =>
+      scope.db
+        .update(expenseShares)
+        .set({ shareMinor: shareMinorOf.get(share.userId) ?? share.shareMinor })
+        .where(
+          tenantFilter(
+            scope,
+            expenseShares,
+            eq(expenseShares.id, share.id),
+            eq(expenseShares.expenseId, expenseId),
+            eq(expenseShares.tripId, tripId),
+          ),
+        ),
+    ),
+  ])
+
+  const expense = await expensesRepository.requireById(scope, expenseId)
+  const written = await expenseSharesRepository.findMany(scope, {
+    where: eq(expenseShares.expenseId, expenseId),
+    orderBy: [asc(expenseShares.id)],
+  })
+  return {
+    expense,
+    shares: written,
+    splitStale: sumShares(written) !== expense.amountMinor,
+  }
 }
 
 /** Replaces an expense's split rows. Passing an empty participant list removes the split. */

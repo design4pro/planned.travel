@@ -554,6 +554,10 @@ const messages = {
   'book.ledger.refused.body':
     'La prenotazione è sul viaggio. Aggiungere la sua voce ai costi del viaggio non è andata a buon fine — riprova quella metà.',
   'book.action.ledgerRetry': 'Aggiungilo ai costi',
+  'book.ledger.splitStale.title': 'Salvato, ma la divisione non torna più',
+  'book.ledger.splitStale.body':
+    'La prenotazione e il suo nuovo prezzo sono salvati, ma la divisione di questa voce di costo non ha potuto seguire il nuovo totale. Apri la voce in Costi e correggi la divisione.',
+  'book.action.done': 'Fatto',
   'book.copyConfirmation': 'il numero di conferma di {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -914,6 +918,9 @@ const messages = {
   'files.action.choose': 'Scegli i file',
   'files.action.upload': 'Carica i file',
   'files.drop.active': 'Rilascia per caricare',
+  'files.drop.pasteHint': 'incolla un’immagine copiata o uno screenshot',
+  'files.reject.blockedType':
+    '«{name}» non è stato aggiunto: qui i file XML e SVG compressi non vengono conservati, per sicurezza. Salvalo come PDF o come immagine e aggiungi quello al suo posto.',
   'files.drop.idle': 'Trascina i file qui',
   'files.empty.title': 'Nessun file in questo viaggio',
   'files.empty.body':
@@ -963,6 +970,19 @@ const messages = {
     many: 'Caricamento di {count} file',
     other: 'Caricamento di {count} file',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - generato il {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Pronto: {title}',
+  'files.export.email.body': {
+    one: 'L’esportazione del viaggio è pronta. Viene conservata per {count} giorno.',
+    many: 'L’esportazione del viaggio è pronta. Viene conservata per {count} giorni.',
+    other:
+      'L’esportazione del viaggio è pronta. Viene conservata per {count} giorni.',
+  },
+  'files.export.email.action': 'Apri {title}',
+  'files.export.email.text': 'L’esportazione del viaggio è pronta: {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Caricamento annullato.',

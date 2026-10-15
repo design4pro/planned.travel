@@ -50,7 +50,11 @@ export type UploadQueueAction =
   | { readonly type: 'start'; readonly id: string }
   | { readonly type: 'progress'; readonly id: string; readonly value: number }
   | { readonly type: 'succeed'; readonly id: string }
-  | { readonly type: 'fail'; readonly id: string; readonly message: string }
+  | {
+      readonly type: 'fail'
+      readonly id: string
+      readonly message: DeferredMessage | string
+    }
   | { readonly type: 'cancel'; readonly id: string }
   | { readonly type: 'dismiss'; readonly id: string }
   /** Clears everything that has finished, whichever way it finished. */

@@ -555,6 +555,11 @@ const messages = {
   'book.ledger.refused.body':
     'La réservation est sur le voyage. L’ajout de sa ligne de dépense aux dépenses du voyage n’a pas abouti — réessayez cette moitié.',
   'book.action.ledgerRetry': 'Ajouter aux dépenses',
+  'book.ledger.splitStale.title':
+    'Enregistré, mais la répartition ne tombe plus juste',
+  'book.ledger.splitStale.body':
+    'La réservation et son nouveau prix sont enregistrés, mais la répartition de cette dépense n’a pas pu suivre le nouveau total. Ouvrez la dépense dans Dépenses et corrigez la répartition.',
+  'book.action.done': 'Terminé',
   'book.copyConfirmation': 'le numéro de confirmation de {title}',
 
   /* -------------------------- transports: modes, ends, refusals */
@@ -917,6 +922,9 @@ const messages = {
   'files.action.choose': 'Choisir des fichiers',
   'files.action.upload': 'Envoyer les fichiers',
   'files.drop.active': 'Lâche pour envoyer',
+  'files.drop.pasteHint': 'colle une image copiée ou une capture d’écran',
+  'files.reject.blockedType':
+    '« {name} » n’a pas été ajouté : les fichiers XML et SVG compressés ne sont pas conservés ici, par sécurité. Enregistre-le en PDF ou en image et ajoute plutôt cela.',
   'files.drop.idle': 'Fais glisser des fichiers ici',
   'files.empty.title': 'Aucun fichier sur ce voyage',
   'files.empty.body':
@@ -967,6 +975,19 @@ const messages = {
     many: 'Envoi de {count} fichiers',
     other: 'Envoi de {count} fichiers',
   },
+
+  /* --------------------------- files: the trip export document and its email */
+  'files.export.doc.footer': '{app} - généré le {when}',
+  'files.export.madeAt': '{date}, {time}',
+  'files.export.email.subject': 'Prêt : {title}',
+  'files.export.email.body': {
+    one: 'L’exportation du voyage est prête. Elle est conservée {count} jour.',
+    many: 'L’exportation du voyage est prête. Elle est conservée {count} jours.',
+    other:
+      'L’exportation du voyage est prête. Elle est conservée {count} jours.',
+  },
+  'files.export.email.action': 'Ouvrir {title}',
+  'files.export.email.text': 'L’exportation du voyage est prête : {url}',
 
   /* --------------------------- files: the upload and download chain */
   'files.error.cancelled': 'Envoi annulé.',

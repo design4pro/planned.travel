@@ -12,7 +12,8 @@
  * same instance in place, so its exit animation still runs.
  */
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { Coins, Download, Plus, Scale } from 'lucide-react'
+import { useRouter } from '@tanstack/react-router'
+import { ArrowLeftRight, Coins, Download, Plus, Scale } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
@@ -34,6 +35,11 @@ import {
 } from '#/components/costs'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
+import { loadCosts } from '#/server/fns/costs'
+import {
+  changeTripCurrencyFn,
+  previewCurrencyChangeFn,
+} from '#/server/fns/trip-currency'
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { pluralise } from '../../../-lib/format'
 import { CATEGORY_OPTIONS } from './categories'
@@ -41,6 +47,7 @@ import { ExpenseList } from './expense-list'
 import { CostsRail } from './rail'
 import { StatTiles } from './stat-tiles'
 import { useCostsActions } from './actions'
+import { CurrencyRebaseDialog } from './currency-rebase-dialog'
 
 import type {
   CostsFilters,
@@ -73,6 +80,11 @@ type Session =
       readonly seed: PaymentSeed | null
     }
   | { readonly kind: 'delete'; readonly id: number; readonly row: CostsExpense }
+  | {
+      readonly kind: 'currency'
+      readonly id: number
+      readonly currency: string
+    }
 
 export function CostsScreen({
   data,
@@ -82,6 +94,7 @@ export function CostsScreen({
   const locale = useLocale()
   const t = useTranslate()
   const { trip } = useTripHeader()
+  const router = useRouter()
   const {
     snapshot,
     addExpense,
@@ -124,6 +137,18 @@ export function CostsScreen({
     },
     [start],
   )
+
+  // The dialog previews against the currency it opened on; a refresh behind it must not move that base.
+  const budgetCurrency = data.currency
+  const openCurrency = useCallback((): void => {
+    start((id) => ({ kind: 'currency', id, currency: budgetCurrency }))
+  }, [start, budgetCurrency])
+
+  // Only the owner of a live trip is offered the change; the server refuses anyone else regardless.
+  const canChangeCurrency =
+    !trip.isArchived &&
+    data.people.find((person) => person.userId === data.viewerUserId)?.role ===
+      'owner'
 
   const totals = useMemo(
     () => totalsFor(snapshot, data.viewerUserId),
@@ -334,6 +359,20 @@ export function CostsScreen({
                   </Button>
                 </>
               ) : null}
+              {canChangeCurrency ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  shape="pill"
+                  data-part="trip-currency-change"
+                  icon={<ArrowLeftRight aria-hidden />}
+                  className="basis-full justify-center sm:basis-auto"
+                  onClick={openCurrency}
+                >
+                  {t('costs.rebase.open')}
+                </Button>
+              ) : null}
             </>
           }
         />
@@ -472,6 +511,7 @@ export function CostsScreen({
           onOpenChange={setOpen}
           expense={session.row}
           people={data.people}
+          departedPeople={data.departedPeople}
           viewerUserId={data.viewerUserId}
           tripCurrency={data.currency}
           categories={CATEGORY_OPTIONS}
@@ -497,6 +537,33 @@ export function CostsScreen({
           currency={data.currency}
           today={data.today}
           onSubmit={addPayment}
+        />
+      ) : null}
+
+      {session.kind === 'currency' ? (
+        <CurrencyRebaseDialog
+          key={`currency-${session.id}`}
+          open={open}
+          onOpenChange={setOpen}
+          currency={session.currency}
+          people={data.people}
+          loadPreview={(request) =>
+            previewCurrencyChangeFn({
+              data: { tripId: data.tripId, ...request },
+            })
+          }
+          commit={(request) =>
+            changeTripCurrencyFn({ data: { tripId: data.tripId, ...request } })
+          }
+          readCurrency={() =>
+            loadCosts({ data: { tripId: data.tripId } }).then(
+              (fresh) => fresh.currency,
+            )
+          }
+          onChanged={(to) => {
+            toast.success(t('costs.rebase.done', { to }))
+            void router.invalidate({ sync: true })
+          }}
         />
       ) : null}
 

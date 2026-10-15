@@ -52,6 +52,10 @@ const messages = {
   'split.label': 'Bölüşenler',
   'split.everyone': 'Herkes',
   'split.nobody': 'Kimse',
+  'split.departed': 'Geziden ayrıldı',
+  'split.departedHint':
+    'Geziden ayrılan birinin işaretini kaldırmak payını kalıcı olarak siler.',
+  'split.includeFor': '{name} bu bölüşüme dahil edilsin',
   'split.how': 'Bu masraf nasıl bölünüyor',
   'split.method.equal': 'Eşit olarak',
   'split.method.equalHint':
@@ -213,6 +217,76 @@ const messages = {
   'display.alert.body':
     'Bu para birimi çiftleri için kayıtlı kur yok, bu yüzden bu tutarlar bütçe para biriminde kalıyor:',
   'display.alert.pair': '{date} tarihinde {from} - {to}',
+  /* ----------------------- the budget currency dialog (#841) */
+  'rebase.open': 'Bütçe para birimini değiştir',
+  'rebase.title': 'Bütçe para birimini değiştir',
+  'rebase.description':
+    'Yazdığın tutarlar yazdığın gibi kalır. Gezinin toplamları ve bakiyeleri yeni para birimine çevrilir.',
+  'rebase.to': 'Yeni para birimi',
+  'rebase.toPlaceholder': 'Bir para birimi seç',
+  'rebase.rateLabel': 'Döviz kuru (1 {from} kaç {to})',
+  'rebase.rateInverse': 'Yani 1 {to} = {inverse} {from}.',
+  'rebase.rateInvalid': 'Sıfırdan büyük bir kur yaz.',
+  'rebase.rateOutOfRange':
+    'Bu kur çok büyük ya da çok küçük görünüyor. Hangi yönde olduğunu kontrol et.',
+  'rebase.source.recent': 'Bu çalışma alanında en son kullanılan kur',
+  'rebase.source.manual': 'Yazdığın kur',
+  'rebase.noRate':
+    '{from} - {to} için kayıtlı kur yok. Kullanmak istediğin kuru yaz.',
+  'rebase.waitingForRate': 'Kur olur olmaz önizleme görünür.',
+  'rebase.loading': 'Çevrim hesaplanıyor',
+  'rebase.example':
+    '{original} yazdığın gibi kalır ve {converted} olarak sayılır.',
+  'rebase.count.expenses': {
+    one: '{count} masraf {to} cinsinden sayılacak.',
+    other: '{count} masraf {to} cinsinden sayılacak.',
+  },
+  'rebase.count.payments': {
+    one: '{count} ödeme {to} cinsinden sayılacak.',
+    other: '{count} ödeme {to} cinsinden sayılacak.',
+  },
+  'rebase.count.planned': {
+    one: '{count} planlanan kalem {to} cinsinden sayılacak.',
+    other: '{count} planlanan kalem {to} cinsinden sayılacak.',
+  },
+  'rebase.pinned':
+    'Yerlerin, rezervasyonların, konaklamaların ve ulaşımın fiyatları {from} olarak kalır.',
+  'rebase.target': 'Gezi bütçesi {before} değerinden {after} değerine geçer.',
+  'rebase.rounding':
+    'Her tutar bir kez yuvarlanır, bu yüzden bir bakiye en fazla {amount} kayabilir.',
+  'rebase.leftover':
+    'Değişiklikten sonra {name}, {other} kişisine {amount} borçlu kalırdı.',
+  'rebase.someone': 'Biri',
+  'rebase.nothing':
+    'Bu gezide henüz fiyatlı bir şey yok, bu yüzden çevrilecek bir şey de yok.',
+  'rebase.unconverted': {
+    one: '{count} kayıt {from} dışında bir para biriminde olduğu için otomatik çevrilemiyor. Genellikle başka bir para biriminde fiyatlandırılmış bir rezervasyondan oluşturulan masraftır: düzenle ya da sil, sonra yeniden dene.',
+    other:
+      '{count} kayıt {from} dışında bir para biriminde olduğu için otomatik çevrilemiyor. Genellikle başka bir para biriminde fiyatlandırılmış rezervasyonlardan oluşturulan masraflardır: düzenle ya da sil, sonra yeniden dene.',
+  },
+  'rebase.unsplittable': {
+    one: '{count} masrafın bölüşümü taşınamıyor, çünkü içindeki tüm paylar sıfır. Düzenle ya da sil, sonra yeniden dene.',
+    other:
+      '{count} masrafın bölüşümü taşınamıyor, çünkü içlerindeki tüm paylar sıfır. Düzenle ya da sil, sonra yeniden dene.',
+  },
+  'rebase.outOfRange':
+    'Bu kurla gezideki bir tutar {to} cinsinden saklanamayacak kadar büyük olurdu. Kuru ve hangi yönde olduğunu kontrol et.',
+  'rebase.tooLarge':
+    'Bu gezide tek adımda değiştirilemeyecek kadar çok kayıt var: aynı anda {changes} değişiklik gerekir, sınır {limit}. Bütçe şimdilik {from} olarak kalıyor.',
+  'rebase.copyPending': 'Bu gezi hâlâ kopyalanıyor. Birazdan yeniden dene.',
+  'rebase.error': 'Çevrim yüklenemedi. Hiçbir şey değişmedi.',
+  'rebase.commitError':
+    'Bütçe para birimi değiştirilemedi. Hiçbir şey değişmedi.',
+  'rebase.stale':
+    'Gezinin bütçe para birimi artık {from} değil, {current}. Bu pencereyi kapatıp yeniden açın.',
+  'rebase.sameCurrency':
+    'Bütçe zaten {to} cinsinden. Başka bir para birimi seçin.',
+  'rebase.commitUnknown':
+    'Bütçe para biriminin {to} olarak değişip değişmediğini doğrulayamadık. Tekrar denemeden önce sayfayı yenileyip kontrol edin.',
+  'rebase.retry': 'Yeniden dene',
+  'rebase.confirm': '{to} olarak değiştir',
+  'rebase.committing': 'Bütçe para birimi değiştiriliyor',
+  'rebase.done': 'Bütçe artık {to} cinsinden.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
