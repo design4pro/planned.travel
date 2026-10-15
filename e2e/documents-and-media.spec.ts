@@ -1,8 +1,11 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import { SEEDED_TRIPS, tripIdByName } from './helpers/places-and-maps.ts'
-import type { RouteCase } from './helpers/routes.ts'
+import { THEMES, applyTheme } from './helpers/routes.ts'
+import type { RouteCase, Theme } from './helpers/routes.ts'
 import { callsServerFn } from './helpers/server-fn.ts'
 import { settleMutations } from './helpers/settle.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
@@ -100,6 +103,88 @@ async function dispatchPaste(
         }),
       )
     }, payload)
+}
+
+const DROP = '[data-part="file-drop"]'
+
+/** The Files screen of a seeded trip with no files, so the console stays silent (see above). */
+async function openEmptyLibrary(
+  context: BrowserContext,
+  page: Page,
+): Promise<() => ReturnType<ReturnType<typeof watchConsole>>> {
+  const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+  const route: RouteCase = {
+    name: 'trip-files',
+    path: `/trips/${tripId}/files`,
+    ready: 'nav[aria-label="Trip sections"]',
+  }
+  const report = watchConsole(page, route)
+  await visit(page, route, 'light')
+  return report
+}
+
+/**
+ * One drag event on `selector`, carrying either a file or selected text, the way a browser builds
+ * its `DataTransfer`: `types` holds `Files` for the first and `text/plain` for the second.
+ */
+async function drag(
+  page: Page,
+  selector: string,
+  type: 'dragenter' | 'dragover' | 'dragleave',
+  carrying: 'files' | 'text',
+): Promise<void> {
+  await page
+    .locator(selector)
+    .first()
+    .evaluate(
+      (target, input) => {
+        const data = new DataTransfer()
+        if (input.carrying === 'files') {
+          data.items.add(
+            new File(['x'], 'ticket.pdf', { type: 'application/pdf' }),
+          )
+        } else {
+          data.setData('text/plain', 'Gate 14')
+        }
+        target.dispatchEvent(
+          new DragEvent(input.type, {
+            dataTransfer: data,
+            bubbles: true,
+            cancelable: true,
+          }),
+        )
+      },
+      { type, carrying },
+    )
+}
+
+type ShiftWindow = { __shifts?: Array<number> }
+
+async function readShifts(page: Page): Promise<Array<number>> {
+  return page.evaluate(() => (window as unknown as ShiftWindow).__shifts ?? [])
+}
+
+async function shiftsLogged(page: Page): Promise<number> {
+  return (await readShifts(page)).length
+}
+
+/** Records every layout shift no input caused, from before the document exists. */
+async function recordShiftsFromTheStart(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const log = window as unknown as ShiftWindow
+    log.__shifts = []
+    if (!PerformanceObserver.supportedEntryTypes.includes('layout-shift'))
+      return
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries() as Array<
+        PerformanceEntry & { value: number; hadRecentInput: boolean }
+      >) {
+        if (!entry.hadRecentInput) {
+          log.__shifts?.push(entry.value)
+        }
+      }
+    }).observe({ type: 'layout-shift', buffered: true })
+  })
 }
 
 test.describe('06-S1 — Every way a file gets in', () => {
@@ -285,6 +370,164 @@ test.describe('06-S1 — Every way a file gets in', () => {
       )
     }
 
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+  test('the drop zone turns active for a drag carrying files only, and holds over its own children', async ({
+    context,
+    page,
+  }) => {
+    const report = await openEmptyLibrary(context, page)
+    expect(await page.locator(DROP).count(), 'the selector matches once').toBe(
+      1,
+    )
+    expect(
+      await page.locator(`${DROP} [data-part="file-drop-overlay"]`).count(),
+      'and so does its overlay',
+    ).toBe(1)
+    const zone = page.locator(DROP)
+    await expect(zone).toHaveAttribute('data-state', 'idle')
+
+    await drag(page, DROP, 'dragenter', 'text')
+    await drag(page, DROP, 'dragover', 'text')
+    await expect(zone, 'selected text leaves the zone idle').toHaveAttribute(
+      'data-state',
+      'idle',
+    )
+
+    await drag(page, DROP, 'dragenter', 'files')
+    await expect(zone).toHaveAttribute('data-state', 'active')
+    await expect(zone).toContainText('Drop to upload')
+
+    // The pointer moves onto the button: it is entered, then the zone is left.
+    await drag(page, `${DROP} button`, 'dragenter', 'files')
+    await drag(page, DROP, 'dragleave', 'files')
+    await expect(zone, 'a child crossing does not flicker').toHaveAttribute(
+      'data-state',
+      'active',
+    )
+
+    await drag(page, `${DROP} button`, 'dragleave', 'files')
+    await expect(zone).toHaveAttribute('data-state', 'idle')
+
+    await settleMutations(page)
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+
+  test('the drag-over fill moves opacity only and shifts nothing; a refusal adds one bounded row', async ({
+    context,
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name === 'mobile-safari',
+      'WebKit publishes no layout-shift entries to assert against',
+    )
+    await recordShiftsFromTheStart(page)
+    const report = await openEmptyLibrary(context, page)
+    const supported = await page.evaluate(() =>
+      PerformanceObserver.supportedEntryTypes.includes('layout-shift'),
+    )
+    test.skip(!supported, 'this browser reports no layout-shift entries')
+
+    const overlay = page.locator(`${DROP} [data-part="file-drop-overlay"]`)
+    await expect(overlay).toHaveCSS('transition-property', 'opacity')
+    await expect(overlay).toHaveCSS('pointer-events', 'none')
+    await expect(overlay).toHaveAttribute('aria-hidden', 'true')
+    await expect(page.locator(DROP)).toHaveCSS('transition-duration', '0s')
+
+    // Each mark is how many shifts the page has logged, not `performance.now()`: `visit()` pins the
+    // clock with `page.clock`, which fakes `performance.now()` while an entry's `startTime` stays on
+    // the real one, so a timestamp mark sits far from the entries and the check passes vacuously.
+    const filled = await shiftsLogged(page)
+    await drag(page, DROP, 'dragenter', 'files')
+    await expect(overlay).toHaveCSS('opacity', '1')
+    await settleMutations(page)
+    expect(
+      (await readShifts(page)).slice(filled),
+      'entering the active state shifts nothing',
+    ).toEqual([])
+
+    // A refusal inserts its row into the queue, below the zone, and pushes what follows down: that
+    // is the queue appearing, not the zone moving, so it is bounded rather than forbidden (the
+    // spec's Amendment). One entry, well under the 0.1 that reads as a good page.
+    const refused = await shiftsLogged(page)
+    await page.locator('input[type="file"]').setInputFiles({
+      name: 'notes.xml',
+      mimeType: 'application/xml',
+      buffer: Buffer.from('<notes/>'),
+    })
+    await expect(
+      page.getByRole('listitem').filter({ hasText: BLOCKED_XML }).first(),
+    ).toBeVisible()
+    await settleMutations(page)
+    const inserted = (await readShifts(page)).slice(refused)
+    expect(inserted.length, 'the row is one shift at most').toBeLessThanOrEqual(
+      1,
+    )
+    expect(
+      inserted.reduce((sum, value) => sum + value, 0),
+      'and a small one',
+    ).toBeLessThan(0.1)
+
+    expect(report().fatal, 'the console stays silent').toEqual([])
+  })
+
+  test('the zone filling and a refusal are framed at three widths in both themes', async ({
+    context,
+    page,
+  }, testInfo) => {
+    const report = await openEmptyLibrary(context, page)
+    const zone = page.locator(DROP)
+    const overlay = zone.locator('[data-part="file-drop-overlay"]')
+    const widths = [
+      { width: 360, height: 800 },
+      { width: 1280, height: 900 },
+      { width: 2560, height: 1440 },
+    ]
+
+    // Frames for a person to read, not for a pixel comparison (ADR 0016): attached to the run, and
+    // also written to `E2E_FRAMES_DIR` when it is set - a directory outside the repository, which
+    // never receives an image.
+    const frame = async (name: string): Promise<void> => {
+      const body = await page.screenshot({ fullPage: false })
+      await testInfo.attach(`${name}.png`, { body, contentType: 'image/png' })
+      const outside = process.env.E2E_FRAMES_DIR
+      if (outside !== undefined) {
+        await mkdir(outside, { recursive: true })
+        await writeFile(join(outside, `${name}.png`), body)
+      }
+    }
+
+    for (const theme of THEMES satisfies ReadonlyArray<Theme>) {
+      await applyTheme(page, theme)
+      for (const { width, height } of widths) {
+        await page.setViewportSize({ width, height })
+        const label = `${testInfo.project.name}-${width}-${theme}`
+        await zone.scrollIntoViewIfNeeded()
+
+        await drag(page, DROP, 'dragenter', 'files')
+        await expect(zone).toHaveAttribute('data-state', 'active')
+        await expect(overlay).toHaveCSS('opacity', '1')
+        await expect(zone).toContainText('Drop to upload')
+        await frame(`drop-active-${label}`)
+        await drag(page, DROP, 'dragleave', 'files')
+        await expect(zone).toHaveAttribute('data-state', 'idle')
+
+        await page.locator('input[type="file"]').setInputFiles({
+          name: 'notes.xml',
+          mimeType: 'application/xml',
+          buffer: Buffer.from('<notes/>'),
+        })
+        const row = page.getByRole('listitem').filter({
+          has: page.getByRole('button', { name: 'Dismiss notes.xml' }),
+        })
+        await expect(row).toContainText(BLOCKED_XML)
+        await frame(`upload-refused-${label}`)
+        await page.getByRole('button', { name: 'Clear finished' }).click()
+        await expect(row).toHaveCount(0)
+      }
+    }
+
+    await settleMutations(page)
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 })

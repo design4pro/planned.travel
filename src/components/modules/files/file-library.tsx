@@ -132,6 +132,11 @@ function nameFor(
 
 let taskSequence = 0
 
+/** True for a drag that carries files; selected text and links dragged over the page do not. */
+function carriesFiles(data: DataTransfer): boolean {
+  return Array.from(data.types).includes('Files')
+}
+
 /* ------------------------------------------------------------------ screen */
 
 export interface FileLibraryProps {
@@ -155,6 +160,12 @@ export function FileLibrary({
 }: FileLibraryProps) {
   const [queue, dispatch] = useReducer(uploadQueueReducer, emptyUploadQueue)
   const [dragging, setDragging] = useState(false)
+  /**
+   * Enters minus leaves. A browser fires `dragenter` on every element the pointer crosses onto and
+   * `dragleave` on the one it left, so a plain boolean flickers off each time the pointer reaches
+   * the button; the zone is left only when the count returns to zero. Zeroed by a drop.
+   */
+  const dragDepth = useRef(0)
   const [kindFilter, setKindFilter] = useState<string>('all')
   const [editing, setEditing] = useState<FileData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
@@ -467,40 +478,66 @@ export function FileLibrary({
         }
       >
         <div
+          data-part="file-drop"
+          data-state={dragging ? 'active' : 'idle'}
           onDragEnter={(event) => {
+            if (!carriesFiles(event.dataTransfer)) {
+              return
+            }
             event.preventDefault()
+            dragDepth.current += 1
             setDragging(true)
           }}
           onDragOver={(event) => {
+            if (!carriesFiles(event.dataTransfer)) {
+              return
+            }
             event.preventDefault()
             setDragging(true)
           }}
           onDragLeave={(event) => {
+            if (!carriesFiles(event.dataTransfer)) {
+              return
+            }
             event.preventDefault()
-            setDragging(false)
+            dragDepth.current = Math.max(0, dragDepth.current - 1)
+            if (dragDepth.current === 0) {
+              setDragging(false)
+            }
           }}
           onDrop={(event) => {
             event.preventDefault()
+            dragDepth.current = 0
             setDragging(false)
             add([...event.dataTransfer.files])
           }}
-          className={cn(
-            'flex flex-col items-center gap-3 rounded-lg border border-dashed px-6 py-9 text-center',
-            'transition-[background-color,border-color] duration-base ease-out-quint',
-            dragging
-              ? 'border-brand bg-brand-subtle'
-              : 'border-edge-strong/60 bg-surface-2/40',
-          )}
+          className="relative flex flex-col items-center gap-3 rounded-lg border border-dashed border-edge-strong/60 bg-surface-2/40 px-6 py-9 text-center"
         >
+          {/*
+            The drag-over fill. Only its opacity moves, so nothing repaints or reflows while a drag
+            crosses the zone, and it sits behind the icon, the text and the button (each is
+            `relative`, which paints them after this positioned sibling) so "Drop to upload" keeps the
+            ink-on-brand-subtle pair in both themes. `-inset-px` lets its hairline cover the dashed
+            border. The global reduced-motion rule already collapses the transition.
+          */}
+          <span
+            aria-hidden
+            data-part="file-drop-overlay"
+            className={cn(
+              'pointer-events-none absolute -inset-px rounded-lg border border-brand bg-brand-subtle',
+              'transition-opacity duration-base ease-out-quint',
+              dragging ? 'opacity-100' : 'opacity-0',
+            )}
+          />
           <span
             className={cn(
-              'grid size-12 place-items-center rounded-full',
+              'relative grid size-12 place-items-center rounded-full',
               dragging ? 'bg-brand text-brand-on' : 'bg-surface-2 text-ink-3',
             )}
           >
             <CloudUpload aria-hidden className="size-5" />
           </span>
-          <div>
+          <div className="relative">
             <p className="text-label font-semibold text-ink">
               {dragging
                 ? t('modules.files.drop.active')
@@ -534,6 +571,7 @@ export function FileLibrary({
             variant="secondary"
             size="sm"
             shape="pill"
+            className="relative"
             onClick={() => inputRef.current?.click()}
           >
             {t('modules.files.action.choose')}
