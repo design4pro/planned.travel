@@ -18,6 +18,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { providerRegistry, providerUsage } from '#/server/db/schema'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import { ProviderBlockedError, isProviderBlockedError } from '../errors'
+import { RateCeilingError } from '../rate'
 import { callProvider, resetProviderLimitMemo } from '../outbound'
 import type { PlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import type { OutboundRuntime } from '../outbound'
@@ -377,5 +378,55 @@ describe('the limit memo', () => {
       callProvider(runtimeOver(tables.db), LABEL, send),
     ).rejects.toBeInstanceOf(ProviderBlockedError)
     expect(send).not.toHaveBeenCalled()
+  })
+})
+
+describe('the step between the provider gate and send', () => {
+  it('does not run the step when the provider gate is closed', async () => {
+    await setLimit({ policy: 'block', callLimit: 0 })
+    const step = vi.fn(async () => undefined)
+    const send = vi.fn(async () => 'sent')
+    await expect(
+      callProvider(runtimeOver(tables.db), LABEL, send, undefined, step),
+    ).rejects.toBeInstanceOf(ProviderBlockedError)
+    expect(step).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
+    await settleDeferred()
+    expect(await tables.db.select().from(providerUsage)).toMatchObject([
+      { calls: 0, errors: 0, blocked: 1 },
+    ])
+  })
+
+  it('propagates an allowance refusal without sending or recording a provider attempt', async () => {
+    const refused = new RateCeilingError('geocode_lookups_per_month', 200, 200)
+    const send = vi.fn(async () => 'sent')
+    await expect(
+      callProvider(runtimeOver(tables.db), LABEL, send, undefined, async () => {
+        throw refused
+      }),
+    ).rejects.toBe(refused)
+    expect(send).not.toHaveBeenCalled()
+    await settleDeferred()
+    expect(await tables.db.select().from(providerUsage)).toEqual([])
+  })
+
+  it('awaits the step before sending, even without a database handle', async () => {
+    const order: Array<string> = []
+    await expect(
+      callProvider(
+        runtimeOver(null),
+        LABEL,
+        async () => {
+          order.push('send')
+          return 'sent'
+        },
+        undefined,
+        async () => {
+          await Promise.resolve()
+          order.push('spend')
+        },
+      ),
+    ).resolves.toBe('sent')
+    expect(order).toEqual(['spend', 'send'])
   })
 })
