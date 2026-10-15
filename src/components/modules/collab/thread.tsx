@@ -26,9 +26,10 @@ import {
   Tooltip,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { useTranslate } from '#/lib/i18n'
+import { formatWeekday } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 
-import type { Translate } from '#/lib/i18n'
+import type { Locale, Translate } from '#/lib/i18n'
 import { dayKeyIn, todayKeyIn } from '#/lib/time'
 import {
   deleteMessageFn,
@@ -37,6 +38,8 @@ import {
   toggleReactionFn,
 } from '#/server/fns/collab-thread'
 import { ConfirmDialog, RowMenu, useAction, useOptimistic } from '../shared'
+
+import { groupThread, isJumboGlyphs } from './thread-model'
 
 import type { ConfirmRequest } from '../shared'
 import type { CollabPerson, MessageData } from './types'
@@ -56,7 +59,7 @@ const REACTIONS: ReadonlyArray<{ emoji: string; label: string }> = [
 const LOCALE = 'en-GB'
 
 /**
- * Both formatters are pinned to the trip's zone rather than the machine's.
+ * The clock is pinned to the trip's zone rather than the machine's.
  *
  * Without an explicit `timeZone` the same message reads `14:00` in the server's
  * HTML and `23:00` after hydration, which React reports as a mismatch and
@@ -64,15 +67,6 @@ const LOCALE = 'en-GB'
  * transcript mean one thing: every time in it is destination wall-clock time, so
  * two travellers in two countries read the same number for the same plan.
  */
-function dayFormatter(timeZone: string): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(LOCALE, {
-    timeZone,
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-  })
-}
-
 function clockFormatter(timeZone: string): Intl.DateTimeFormat {
   return new Intl.DateTimeFormat(LOCALE, {
     timeZone,
@@ -81,20 +75,23 @@ function clockFormatter(timeZone: string): Intl.DateTimeFormat {
   })
 }
 
+/**
+ * The day divider's label, from the frozen locale tables. The zone-local day key
+ * is what gets formatted: the instant would be read in UTC by the tables and
+ * could land on the neighbouring day.
+ */
 function formatDayHeading(
   iso: string,
   todayKey: string,
   timeZone: string,
+  locale: Locale,
   t: Translate,
 ): string {
   const key = dayKeyIn(iso, timeZone)
   if (key === todayKey) {
     return t('modules.collab.thread.today')
   }
-  const parsed = new Date(iso)
-  return Number.isNaN(parsed.getTime())
-    ? key
-    : dayFormatter(timeZone).format(parsed)
+  return formatWeekday(key, locale) ?? key
 }
 
 function formatClock(iso: string, timeZone: string): string {
@@ -145,6 +142,7 @@ export function Thread({
 }: ThreadProps) {
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
   const t = useTranslate()
+  const locale = useLocale()
   const [editing, setEditing] = useState<MessageData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
@@ -172,6 +170,10 @@ export function Thread({
   })
 
   const todayKey = useMemo(() => todayKeyIn(timeZone), [timeZone])
+  const grouped = useMemo(
+    () => groupThread(messages, timeZone),
+    [messages, timeZone],
+  )
   const byId = useMemo(
     () => new Map(messages.map((message) => [message.id, message])),
     [messages],
@@ -203,22 +205,13 @@ export function Thread({
           />
         ) : (
           <ol className="flex flex-col gap-1 py-1">
-            {messages.map((message, index) => {
-              const previous = index === 0 ? null : messages[index - 1]
-              const newDay =
-                previous === null ||
-                dayKeyIn(previous.createdAt, timeZone) !==
-                  dayKeyIn(message.createdAt, timeZone)
-              const runs =
-                previous !== null &&
-                !newDay &&
-                previous.userId === message.userId
+            {grouped.map(({ message, startsRun, startsDay }) => {
               const mine = message.userId === viewerUserId
               const claimed = reactionOverlay.get(message.id)
 
               return (
                 <li key={message.id} className="min-w-0">
-                  {newDay ? (
+                  {startsDay ? (
                     <div className="flex items-center gap-3 py-3">
                       <span aria-hidden className="h-px flex-1 bg-edge-faint" />
                       <span className="shrink-0 text-micro font-semibold tracking-label text-ink-4 uppercase">
@@ -226,6 +219,7 @@ export function Thread({
                           message.createdAt,
                           todayKey,
                           timeZone,
+                          locale,
                           t,
                         )}
                       </span>
@@ -244,7 +238,7 @@ export function Thread({
                     people={people}
                     viewerUserId={viewerUserId}
                     mine={mine}
-                    runs={runs}
+                    runs={!startsRun}
                     myReactions={
                       claimed ??
                       message.reactions
@@ -333,6 +327,7 @@ function MessageRow({
 }) {
   const t = useTranslate()
   const name = nameFor(people, message.userId, t)
+  const jumbo = isJumboGlyphs(message.body)
 
   /**
    * The tallies, with the viewer's own claim folded in — so a tap changes the
@@ -408,10 +403,15 @@ function MessageRow({
         <div className={cn('flex items-end gap-1', mine && 'flex-row-reverse')}>
           <div
             className={cn(
-              'max-w-[18rem] rounded-lg px-3 py-2 text-label leading-relaxed break-words sm:max-w-[22rem]',
-              mine
-                ? 'rounded-ee-sm bg-brand text-brand-on'
-                : 'rounded-es-sm bg-surface-2 text-ink',
+              'max-w-[18rem] break-words sm:max-w-[22rem]',
+              jumbo
+                ? 'px-1 text-title'
+                : [
+                    'rounded-lg px-3 py-2 text-label leading-relaxed',
+                    mine
+                      ? 'rounded-ee-sm bg-brand text-brand-on'
+                      : 'rounded-es-sm bg-surface-2 text-ink',
+                  ],
             )}
           >
             {message.body}
