@@ -588,6 +588,8 @@ const messages = {
   'editTrip.coverContinue': 'Сохранить без новой обложки',
   'editTrip.currencyLocked':
     'В этой поездке уже есть цены, поэтому валюту бюджета здесь изменить нельзя. Воспользуйтесь кнопкой «Изменить валюту бюджета» на вкладке «Расходы» или верните {current}, чтобы сохранить остальные изменения.',
+  'editTrip.currencyReadonly': 'Валюту бюджета меняют на вкладке «Расходы».',
+  'editTrip.currencyLink': 'Открыть вкладку «Расходы»',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Удалить «{title}» навсегда?',
   'deleteTrip.description':

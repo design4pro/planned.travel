@@ -1810,8 +1810,15 @@ test.describe('01-S8a — One trip form for creating and editing', () => {
     await expect(sheet).toBeVisible()
     await expect(sheet.getByLabel('Summary')).toBeVisible()
     await expect(sheet.getByLabel('Departure', { exact: true })).toBeVisible()
+    // The budget currency is read-only here and points to the Costs tab; only creating offers the select.
+    await expect(
+      sheet.getByRole('group', { name: 'Budget currency' }),
+    ).toBeVisible()
     await expect(
       sheet.getByRole('button', { name: 'Budget currency' }),
+    ).toHaveCount(0)
+    await expect(
+      sheet.getByRole('link', { name: 'Open the Costs tab' }),
     ).toBeVisible()
     // Exactly one radio is checked: the trip's stored reminder, never an unseeded group.
     await expect(

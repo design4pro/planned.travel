@@ -615,6 +615,8 @@ const messages = {
   'editTrip.coverContinue': 'احفظ بلا الغلاف الجديد',
   'editTrip.currencyLocked':
     'لهذه الرحلة أسعار مسجَّلة بالفعل، لذا لا يمكن تغيير عملة الميزانية من هنا. استخدم «غيّر عملة الميزانية» في تبويب التكاليف، أو أعِد ضبطها على {current} لحفظ تغييراتك الأخرى.',
+  'editTrip.currencyReadonly': 'تُغيَّر عملة الميزانية من تبويب التكاليف.',
+  'editTrip.currencyLink': 'افتح تبويب التكاليف',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'حذف «{title}» نهائيًا؟',
   'deleteTrip.description':
