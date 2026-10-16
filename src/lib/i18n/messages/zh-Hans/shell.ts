@@ -51,6 +51,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': '工作区',
+  'workspace.switched': '已切换到{name}',
   'workspace.switchFailed': '没能切换工作区',
   'workspace.switchFailedBody': '请检查网络后再试一次。',
   'workspace.switchUnconfirmedBody': '无法确认当前工作区。请重新加载页面后再继续。',

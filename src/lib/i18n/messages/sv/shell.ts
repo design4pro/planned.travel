@@ -65,6 +65,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Arbetsyta',
+  'workspace.switched': 'Bytte till {name}',
   'workspace.switchFailed': 'Det gick inte att byta arbetsyta',
   'workspace.switchFailedBody': 'Kontrollera din uppkoppling och försök igen.',
   'workspace.switchUnconfirmedBody':

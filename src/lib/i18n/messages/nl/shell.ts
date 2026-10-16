@@ -68,6 +68,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Werkruimte',
+  'workspace.switched': 'Overgeschakeld naar {name}',
   'workspace.switchFailed': 'Wisselen van werkruimte is niet gelukt',
   'workspace.switchFailedBody':
     'Controleer je verbinding en probeer het opnieuw.',

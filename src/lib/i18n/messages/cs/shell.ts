@@ -71,6 +71,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Prostor',
+  'workspace.switched': 'Přepnuto na {name}',
   'workspace.switchFailed': 'Prostor se nepodařilo přepnout',
   'workspace.switchFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
   'workspace.switchUnconfirmedBody':

@@ -52,6 +52,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'ワークスペース',
+  'workspace.switched': '{name}に切り替えました',
   'workspace.switchFailed': 'ワークスペースを切り替えられませんでした',
   'workspace.switchFailedBody': '通信状況を確認して、もう一度お試しください。',
   'workspace.switchUnconfirmedBody':

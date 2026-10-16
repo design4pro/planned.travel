@@ -80,6 +80,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Ruang kerja',
+  'workspace.switched': 'Beralih ke {name}',
   'workspace.switchFailed': 'Tidak bisa berpindah ruang kerja',
   'workspace.switchFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
   'workspace.switchUnconfirmedBody':

@@ -60,6 +60,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
   const { user, organization, organizations } = session
   const { pendingId, switchTo } = useWorkspaceSwitch({
     activeId: organization?.id ?? null,
+    organizations,
     onSettled: () => setOpen(false),
   })
 

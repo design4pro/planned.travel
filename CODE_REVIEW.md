@@ -68,6 +68,17 @@ floor guard script; the review now does.
 - **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.
   See BACKWARD_COMPATIBILITY.md.
 
+## Mutation recovery (should fix)
+
+- **A failed response or follow-up does not prove the write failed.** Distinguish a committed write,
+  a refusal and an unknown outcome before offering a retry; review a lost-response or failed
+  activation/reload case to ensure the UI reconciles persisted state without inviting a duplicate
+  (#987, #1251, #1207).
+- **A server refusal must recover from the client state that caused it.** Review a stale opening
+  snapshot through the refusal, a current-state re-read (including its failure), a visible localised
+  explanation with usable focus, and the next permitted action; retry must not silently reuse intent
+  invalidated by the refusal (#1241, #1251, #1207).
+
 ## Localisation (blocker)
 
 User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
@@ -112,6 +123,11 @@ runner (font swap, badge counts), so a zero-tolerance assertion over the whole p
 and red in CI (#1185 failed three times). #1209 met the same 0.00073 shell shift locally and scoped
 its window to the weather request instead, on a test-engineer verdict; that is how docs/SPEC.md's
 "zero layout shift after paint" is measured.
+
+When a layout-shift test uses a fake clock, mark the observed entry count rather than comparing a
+virtual `performance.now()` with native `PerformanceEntry.startTime`.
+Prove the assertion detects an intentional shift inside its measured section and window; a green
+check without that failing probe is a should-fix (#1209, #1283).
 
 ## Docs and CI (should fix)
 

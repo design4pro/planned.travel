@@ -87,6 +87,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Không gian',
+  'workspace.switched': 'Đã chuyển sang {name}',
   'workspace.switchFailed': 'Chưa chuyển được không gian',
   'workspace.switchFailedBody': 'Kiểm tra kết nối rồi thử lại.',
   'workspace.switchUnconfirmedBody':

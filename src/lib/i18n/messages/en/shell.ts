@@ -113,6 +113,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Workspace',
+  'workspace.switched': 'Switched to {name}',
   'workspace.switchFailed': 'Could not switch workspace',
   'workspace.switchFailedBody': 'Check your connection and try again.',
   'workspace.switchUnconfirmedBody':

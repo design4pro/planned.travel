@@ -62,6 +62,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Χώρος εργασίας',
+  'workspace.switched': 'Έγινε μετάβαση στον χώρο {name}',
   'workspace.switchFailed': 'Δεν μπορέσαμε να αλλάξουμε χώρο εργασίας',
   'workspace.switchFailedBody': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
   'workspace.switchUnconfirmedBody':

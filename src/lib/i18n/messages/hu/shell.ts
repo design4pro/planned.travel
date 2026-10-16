@@ -68,6 +68,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Munkaterület',
+  'workspace.switched': 'Átváltottál ide: {name}',
   'workspace.switchFailed': 'Nem sikerült munkaterületet váltani',
   'workspace.switchFailedBody':
     'Ellenőrizze a kapcsolatot, majd próbálja újra.',

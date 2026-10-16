@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -10,6 +11,8 @@ import {
 import { Spinner } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem } from './menu'
+
+import { foldWorkspaceName } from './workspace-name'
 
 import type { ShellOrganization } from './session'
 
@@ -60,9 +63,11 @@ export function useWorkspaceResync() {
  */
 export function useWorkspaceSwitch({
   activeId,
+  organizations,
   onSettled,
 }: {
   activeId: string | null
+  organizations: ReadonlyArray<ShellOrganization>
   onSettled: () => void
 }): { pendingId: string | null; switchTo: (organizationId: string) => void } {
   const t = useTranslate()
@@ -72,6 +77,9 @@ export function useWorkspaceSwitch({
 
   async function run(organizationId: string): Promise<void> {
     if (organizationId === activeId || switching.current) return
+    const chosen = organizations.find((item) => item.id === organizationId)
+    if (!chosen) return
+    const chosenName = chosen.name
     switching.current = true
     setPendingId(organizationId)
     try {
@@ -102,12 +110,20 @@ export function useWorkspaceSwitch({
             description: t('shell.workspace.switchUnconfirmedBody'),
           })
         }
+        return
       }
+      if (failure) return
     } finally {
       switching.current = false
-      setPendingId(null)
-      onSettled()
+      // Commit the close, including Radix's modal cleanup, before announcing outside the menu.
+      flushSync(() => {
+        setPendingId(null)
+        onSettled()
+      })
     }
+    toast.success(
+      t('shell.workspace.switched', { name: `\u2068${chosenName}\u2069` }),
+    )
   }
 
   return {
@@ -143,6 +159,12 @@ export function WorkspaceSwitcher({
   const t = useTranslate()
   const labelId = useId()
 
+  const nameCounts = new Map<string, number>()
+  for (const organization of organizations) {
+    const name = foldWorkspaceName(organization.name)
+    nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1)
+  }
+
   if (organizations.length === 0) return null
 
   return (
@@ -159,14 +181,23 @@ export function WorkspaceSwitcher({
             <MenuRadioItem
               key={organization.id}
               value={organization.id}
+              className="min-h-11"
               disabled={pendingId !== null && pendingId !== organization.id}
               onSelect={(event) => {
                 // Choosing the active workspace changes nothing, so the menu may close as usual.
                 if (organization.id !== activeId) event.preventDefault()
               }}
             >
-              <span className="min-w-0 break-words" dir="auto">
-                {organization.name}
+              <span className="min-w-0 flex-1">
+                <span className="block break-words">
+                  <bdi>{organization.name}</bdi>
+                </span>
+                {(nameCounts.get(foldWorkspaceName(organization.name)) ?? 0) >
+                1 ? (
+                  <span className="block text-micro text-ink-3 [overflow-wrap:anywhere]">
+                    <span dir="ltr">{organization.slug}</span>
+                  </span>
+                ) : null}
               </span>
               {pendingId === organization.id ? (
                 <span className="absolute end-2.5 flex items-center">
