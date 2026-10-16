@@ -74,6 +74,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Przestrzeń',
+  'workspace.switched': 'Przełączono na {name}',
   'workspace.switchFailed': 'Nie udało się przełączyć przestrzeni',
   'workspace.switchFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
   'workspace.create': 'Utwórz przestrzeń',

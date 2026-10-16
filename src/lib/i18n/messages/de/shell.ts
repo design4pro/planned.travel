@@ -73,6 +73,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Arbeitsbereich',
+  'workspace.switched': 'Zu {name} gewechselt',
   'workspace.switchFailed': 'Der Arbeitsbereich konnte nicht gewechselt werden',
   'workspace.switchFailedBody':
     'Prüfe deine Verbindung und versuche es noch einmal.',
