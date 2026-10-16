@@ -473,7 +473,7 @@ function BillingPage() {
         onManageBilling={openPortal}
       />
 
-      <UsageMeters state={state} />
+      <UsageMeters state={state} places={data.places} />
 
       <SettingsSection
         title={t('settings.billing.plans.title')}
@@ -674,7 +674,13 @@ function PlanHero({
 
 /* --------------------------------------------------------------- usage meters */
 
-function UsageMeters({ state }: { state: Entitlements }) {
+function UsageMeters({
+  state,
+  places,
+}: {
+  state: Entitlements
+  places: { used: number; limit: number | null }
+}) {
   const t = useTranslate()
   return (
     <SettingsSection
@@ -735,8 +741,87 @@ function UsageMeters({ state }: { state: Entitlements }) {
             </div>
           )
         })}
+        <PlacesUsageMeter used={places.used} limit={places.limit} />
       </div>
     </SettingsSection>
+  )
+}
+
+function placesMeterTone(
+  used: number,
+  limit: number | null,
+): 'brand' | 'warning' | 'danger' {
+  if (limit === null) return 'brand'
+  if (used >= limit) return 'danger'
+  return used / limit >= 0.8 ? 'warning' : 'brand'
+}
+
+function PlacesUsageMeter({
+  used,
+  limit,
+}: {
+  used: number
+  limit: number | null
+}) {
+  const t = useTranslate()
+  const unlimited = limit === null
+  const exhausted = limit !== null && used >= limit
+  const ratio = limit === null ? 0 : used / Math.max(1, limit)
+  let hint = t('settings.billing.quota.noLimit')
+  if (limit !== null) {
+    if (used > limit)
+      hint = t('settings.billing.quota.over.places', {
+        value: String(used - limit),
+      })
+    else if (exhausted) hint = t('settings.billing.quota.exhausted.places')
+    else
+      hint = t('settings.billing.quota.left', { value: String(limit - used) })
+  }
+  return (
+    <div className="min-w-0" data-places-meter>
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-label font-medium text-ink">
+          {t('settings.billing.quota.places')}
+        </p>
+        <p className="flex items-baseline gap-1.5 text-caption tabular-nums text-ink-3">
+          <span className="font-semibold text-ink">{used}</span>
+          <span aria-hidden>/</span>
+          {unlimited ? (
+            <span className="inline-flex items-center gap-1">
+              <InfinityIcon aria-hidden className="size-3.5" />
+              {t('settings.billing.quota.unlimited')}
+            </span>
+          ) : (
+            <span>{limit}</span>
+          )}
+        </p>
+      </div>
+      {unlimited ? (
+        <div
+          aria-hidden="true"
+          className="h-2 w-full rounded-full bg-brand-subtle"
+        />
+      ) : (
+        <Progress
+          value={exhausted ? 100 : ratio * 100}
+          tone={placesMeterTone(used, limit)}
+          aria-label={t('settings.billing.quota.used', {
+            quota: t('settings.billing.quota.places'),
+          })}
+        />
+      )}
+      <p
+        className={cn(
+          'mt-1.5 text-caption',
+          exhausted ? 'text-danger' : 'text-ink-4',
+        )}
+      >
+        {hint}
+      </p>
+      <p className="mt-1 text-caption text-ink-4">
+        {t('settings.billing.quota.placesHint')}
+      </p>
+    </div>
   )
 }
 
@@ -1404,7 +1489,7 @@ function BillingPending() {
       </Card>
 
       <Card className="space-y-5">
-        {QUOTA_KEYS.map((key) => (
+        {[...QUOTA_KEYS, 'places'].map((key) => (
           <div key={key} className="space-y-2">
             <div className="flex items-center justify-between gap-4">
               <Bar className="h-3 w-24" />

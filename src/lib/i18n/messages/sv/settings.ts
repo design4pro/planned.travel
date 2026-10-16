@@ -399,6 +399,10 @@ const messages = {
   'billing.quota.trips': 'Resor',
   'billing.quota.storageBytes': 'Lagring',
   'billing.quota.unlimited': 'Obegränsat',
+  'billing.quota.places': 'Platser',
+  'billing.quota.placesHint': 'Över alla resor i den här arbetsytan',
+  'billing.quota.exhausted.places': 'Kvoten för platser är förbrukad',
+  'billing.quota.over.places': 'Gränsen för platser överskrids med {value}',
   'billing.quota.noLimit': 'Ingen gräns i det här abonnemanget',
   'billing.quota.used': '{quota} använt',
   'billing.quota.over.seats': {

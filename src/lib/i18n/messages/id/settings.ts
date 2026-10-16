@@ -398,6 +398,10 @@ const messages = {
   'billing.quota.trips': 'Perjalanan',
   'billing.quota.storageBytes': 'Penyimpanan',
   'billing.quota.unlimited': 'Tanpa batas',
+  'billing.quota.places': 'Tempat',
+  'billing.quota.placesHint': 'Di semua perjalanan dalam ruang kerja ini',
+  'billing.quota.exhausted.places': 'Kuota tempat telah habis',
+  'billing.quota.over.places': 'Batas tempat terlampaui sebanyak {value}',
   'billing.quota.noLimit': 'Tidak ada batas pada paket ini',
   'billing.quota.used': '{quota} terpakai',
   'billing.quota.over.seats': {

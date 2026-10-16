@@ -457,6 +457,10 @@ const messages = {
   'billing.quota.trips': 'Trips',
   'billing.quota.storageBytes': 'Storage',
   'billing.quota.unlimited': 'Unlimited',
+  'billing.quota.places': 'Places',
+  'billing.quota.placesHint': 'Across all trips in this workspace',
+  'billing.quota.exhausted.places': 'The places allowance is used up',
+  'billing.quota.over.places': 'Above the places limit by {value}',
   'billing.quota.noLimit': 'No limit on this plan',
   /** A meter's accessible name. `{quota}` is one of the three above. */
   'billing.quota.used': '{quota} used',

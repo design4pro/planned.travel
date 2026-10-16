@@ -104,6 +104,7 @@ function crewWorkspace(overrides: Partial<Entitlements> = {}): Entitlements {
 function payload(overrides: Partial<BillingPayload> = {}): BillingPayload {
   return {
     entitlements: crewWorkspace(),
+    places: { used: 0, limit: null },
     invoices: [],
     invoicesUnavailable: false,
     canManage: true,
@@ -233,5 +234,47 @@ describe('the billing page with a promotion code', () => {
     cleanup()
     renderPage(payload(), { plan: 'changed' })
     expect(screen.queryByText(/applies from your next renewal/)).toBeNull()
+  })
+})
+
+describe('places usage on the billing page', () => {
+  it.each([
+    [1, 2, '1 left'],
+    [2, 2, 'The places allowance is used up'],
+    [4, 2, 'Above the places limit by 2'],
+    [0, 0, 'The places allowance is used up'],
+  ])(
+    'renders finite places usage %s / %s even on Crew',
+    (used, limit, hint) => {
+      renderPage(
+        payload({
+          places: { used: Number(used), limit: Number(limit) },
+          canManage: false,
+        }),
+      )
+      const bar = screen.getByRole('progressbar', { name: 'Places used' })
+      expect(bar.getAttribute('aria-valuenow')).toBe(
+        Number(limit) === 0
+          ? '100'
+          : String(Math.min(100, (Number(used) / Number(limit)) * 100)),
+      )
+      expect(screen.getByText(hint)).toBeTruthy()
+      if (Number(used) >= Number(limit))
+        expect(bar.innerHTML).toContain('bg-danger')
+      expect(
+        screen.getByText('Across all trips in this workspace'),
+      ).toBeTruthy()
+    },
+  )
+
+  it('renders an unlimited places allowance as a filled track', () => {
+    renderPage(payload({ places: { used: 17, limit: null } }))
+    expect(screen.getByText('17')).toBeTruthy()
+    expect(
+      screen.queryByRole('progressbar', { name: 'Places used' }),
+    ).toBeNull()
+    expect(
+      screen.getByText('Places').closest('[data-places-meter]')?.textContent,
+    ).toContain('Unlimited')
   })
 })
