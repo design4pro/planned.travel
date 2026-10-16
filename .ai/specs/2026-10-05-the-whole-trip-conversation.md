@@ -202,8 +202,9 @@ All inside `Composer` in `thread.tsx`.
   and shares the send ref guard, so it cannot post twice. The `Alert`'s default `role="alert"` and
   `aria-live` are overridden to absent: the toast announces the failure once. The alert's id is added to the
   textarea's `aria-describedby`, so the failure is read when the field is focused. Focus: it stays where the
-  traveller left it; when "Try again" is activated and then disappears (the retry succeeded) or is natively
-  disabled by `loading`, focus returns to the textarea on settle. The alert clears on the next successful
+  traveller left it; when "Try again" is activated and then disappears (the retry succeeded), focus
+  returns to the textarea on settle. While `loading`, the button stays focusable and inert. The alert
+  clears on the next successful
   send, when the field is emptied, or when the failed send turns out to have **landed** (next bullet).
 - **A send whose answer was lost.** A post can reach the server and the response not come back. The composer
   records the newest message id in the window when a send starts. After a failure, when a later window holds
@@ -290,7 +291,7 @@ with `data-part="thread-load-older"`:
   no `role="alert"`; it is read through the shared status region (Phase 5);
 - **exhausted** — the button is replaced by a quiet line "This is where the conversation starts".
 
-**Focus** (the button is natively disabled while loading, so focus is moved on settle, always with
+**Focus** (the button remains focusable and inert while loading; apply the settled focus target with
 `focus({ preventScroll: true })` so the move cannot scroll the page): after a page the **control**; after the
 last page the exhausted line (`tabIndex={-1}`), which is **focused and not also announced**; after a failure
 the "Try again" button. The prepend does not animate.
@@ -442,7 +443,7 @@ locale, not only `en`; the parity test checks keys, so a reviewer checks the tex
 | Case                                                                   | Behaviour                                                                                                                                                                                         |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Trip with 0, 1, 49, 50, 51 messages                                    | 0: empty state. 1-49: no control. 50: control shown, first click may return an empty page and show "starts here". 51: control, one page.                                                          |
-| Two clicks on "Load older"                                             | The button is natively disabled while loading and a ref allows one request; the second never fires.                                                                                               |
+| Two clicks on "Load older"                                             | The button is focusable but inert while loading and a ref allows one request; the second never fires.                                                                                               |
 | The reader loads older pages and a peer posts                          | The window re-reads; `mergeThread` keeps held rows below `min(window)`; the new row is appended; no scroll unless the reader was within 48 px of the bottom; announced.                           |
 | More than a page arrives while disconnected                            | No overlap: held rows dropped, window stands alone, control shown again, no scroll jump.                                                                                                          |
 | A response arrives after a reset                                       | Discarded (its cursor is no longer the oldest displayed id).                                                                                                                                      |

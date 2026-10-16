@@ -57,6 +57,7 @@ import { formatCoordinate, parsePosition } from '#/lib/geo/position'
 import { useTranslate } from '#/lib/i18n'
 
 import type { PlannerCategory, PlannerRow } from '#/components/planner'
+import type { Translate, MessageKey } from '#/lib/i18n'
 import type { GeoPosition } from '#/lib/geo/position'
 import type {
   PlanBoardDay,
@@ -70,25 +71,25 @@ import type {
 
 const NO_CATEGORY = 'none'
 
-const DURATIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: '0', label: 'No fixed length' },
-  { value: '30', label: '30 minutes' },
-  { value: '45', label: '45 minutes' },
-  { value: '60', label: '1 hour' },
-  { value: '90', label: '1½ hours' },
-  { value: '120', label: '2 hours' },
-  { value: '180', label: '3 hours' },
-  { value: '240', label: 'Half a day' },
-  { value: '480', label: 'A full day' },
+const DURATIONS: ReadonlyArray<{ value: string; key: MessageKey }> = [
+  { value: '0', key: 'trips.plan.editor.duration0' },
+  { value: '30', key: 'trips.plan.editor.duration30' },
+  { value: '45', key: 'trips.plan.editor.duration45' },
+  { value: '60', key: 'trips.plan.editor.duration60' },
+  { value: '90', key: 'trips.plan.editor.duration90' },
+  { value: '120', key: 'trips.plan.editor.duration120' },
+  { value: '180', key: 'trips.plan.editor.duration180' },
+  { value: '240', key: 'trips.plan.editor.duration240' },
+  { value: '480', key: 'trips.plan.editor.duration480' },
 ]
 
-const RATINGS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: '0', label: 'Not rated' },
-  { value: '1', label: '★ 1 — skip it' },
-  { value: '2', label: '★ 2 — if there is time' },
-  { value: '3', label: '★ 3 — worth it' },
-  { value: '4', label: '★ 4 — really good' },
-  { value: '5', label: '★ 5 — do not miss' },
+const RATINGS: ReadonlyArray<{ value: string; key: MessageKey }> = [
+  { value: '0', key: 'trips.plan.editor.rating0' },
+  { value: '1', key: 'trips.plan.editor.rating1' },
+  { value: '2', key: 'trips.plan.editor.rating2' },
+  { value: '3', key: 'trips.plan.editor.rating3' },
+  { value: '4', key: 'trips.plan.editor.rating4' },
+  { value: '5', key: 'trips.plan.editor.rating5' },
 ]
 
 /** Every value `day_assignments.reservation_status` accepts, in the order a trip moves through them. */
@@ -102,13 +103,13 @@ const BOOKING_STATUSES = [
 
 const BOOKING: ReadonlyArray<{
   value: PlanReservationStatus
-  label: string
+  key: MessageKey
 }> = [
-  { value: 'none', label: 'No booking needed' },
-  { value: 'pending', label: 'Still to book' },
-  { value: 'confirmed', label: 'Booked and confirmed' },
-  { value: 'completed', label: 'Been and done' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'none', key: 'trips.plan.editor.bookingNone' },
+  { value: 'pending', key: 'trips.plan.editor.bookingPending' },
+  { value: 'confirmed', key: 'trips.plan.editor.bookingConfirmed' },
+  { value: 'completed', key: 'trips.plan.editor.bookingCompleted' },
+  { value: 'cancelled', key: 'trips.plan.editor.bookingCancelled' },
 ]
 
 /** Narrows the select's string back to the column's own vocabulary. */
@@ -145,9 +146,10 @@ export async function refreshOnFailure(
 
 function categoryOptions(
   categories: ReadonlyArray<PlannerCategory>,
+  t: Translate,
 ): Array<{ value: string; label: string }> {
   return [
-    { value: NO_CATEGORY, label: 'No category' },
+    { value: NO_CATEGORY, label: t('trips.plan.editor.noCategory') },
     ...categories.map((category) => ({
       value: category.id,
       label: category.name,
@@ -424,7 +426,12 @@ export function PlaceDialog({
     lng === null || (Number.isFinite(lng) && Math.abs(lng) <= 180)
   const paired = (lat === null) === (lng === null)
   const named = draft.name.trim().length > 0
-  const canSave = named && latValid && lngValid && paired && !saving
+  const canSave = named && latValid && lngValid && paired
+
+  let latitudeError: string | undefined
+  if (touched && !latValid) latitudeError = t('trips.plan.editor.latitudeError')
+  else if (touched && !paired)
+    latitudeError = t('trips.plan.editor.positionError')
 
   const formId = `place-form-${mode}`
 
@@ -447,12 +454,14 @@ export function PlaceDialog({
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Add a place to this trip' : 'Edit this place'}
+            {mode === 'create'
+              ? t('trips.plan.editor.createTitle')
+              : t('trips.plan.editor.editTitle')}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create'
-              ? 'Give it a name now and a position later — an unplanned place waits in the places panel until you drop it on a day.'
-              : 'Changes apply everywhere this place appears: the map, every day it is on, and the trip’s inventory.'}
+              ? t('trips.plan.editor.createDescription')
+              : t('trips.plan.editor.editDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -463,7 +472,7 @@ export function PlaceDialog({
             onSubmit={(event) => {
               event.preventDefault()
               setTouched(true)
-              if (!canSave) return
+              if (!canSave || saving) return
               onSubmit({
                 name: draft.name.trim(),
                 city: draft.city.trim(),
@@ -482,7 +491,7 @@ export function PlaceDialog({
             {error === null ? null : (
               <Alert
                 tone="danger"
-                title="That did not save"
+                title={t('modules.form.saveError')}
                 actions={
                   errorAction === null ? undefined : (
                     <Button asChild variant="secondary" size="sm">
@@ -502,16 +511,20 @@ export function PlaceDialog({
             )}
 
             <Field
-              label="Name"
+              label={t('modules.field.name')}
               required
-              error={touched && !named ? 'A place needs a name' : undefined}
+              error={
+                touched && !named
+                  ? t('trips.plan.editor.nameRequired')
+                  : undefined
+              }
             >
               <Input
                 value={draft.name}
                 onChange={(event) =>
                   setDraft({ ...draft, name: event.target.value })
                 }
-                placeholder="Fushimi Inari Taisha"
+                placeholder={t('trips.plan.editor.nameExample')}
                 leading={<MapPin />}
                 maxLength={160}
                 autoComplete="off"
@@ -520,45 +533,48 @@ export function PlaceDialog({
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="City">
+              <Field label={t('trips.plan.editor.city')}>
                 <Input
                   value={draft.city}
                   onChange={(event) =>
                     setDraft({ ...draft, city: event.target.value })
                   }
-                  placeholder="Kyoto"
+                  placeholder={t('trips.plan.editor.cityExample')}
                   maxLength={160}
                   autoComplete="off"
                 />
               </Field>
-              <Field label="Category">
+              <Field label={t('modules.field.category')}>
                 <SimpleSelect
-                  options={categoryOptions(categories)}
+                  options={categoryOptions(categories, t)}
                   value={draft.categoryId}
                   onValueChange={(value) =>
                     setDraft({ ...draft, categoryId: value })
                   }
-                  ariaLabel="Category"
+                  ariaLabel={t('modules.field.category')}
                 />
               </Field>
             </div>
 
-            <Field label="Address">
+            <Field label={t('modules.book.field.address')}>
               <Input
                 value={draft.address}
                 onChange={(event) =>
                   setDraft({ ...draft, address: event.target.value })
                 }
-                placeholder="68 Fukakusa Yabunouchicho"
+                placeholder={t('trips.plan.editor.addressExample')}
                 maxLength={240}
                 autoComplete="off"
               />
             </Field>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="How long there">
+              <Field label={t('trips.plan.editor.duration')}>
                 <SimpleSelect
-                  options={[...DURATIONS]}
+                  options={DURATIONS.map(({ value, key }) => ({
+                    value,
+                    label: t(key),
+                  }))}
                   value={String(draft.durationMinutes)}
                   onValueChange={(value) =>
                     setDraft({
@@ -566,17 +582,20 @@ export function PlaceDialog({
                       durationMinutes: Number.parseInt(value, 10),
                     })
                   }
-                  ariaLabel="How long there"
+                  ariaLabel={t('trips.plan.editor.duration')}
                 />
               </Field>
-              <Field label="Worth it?">
+              <Field label={t('trips.plan.editor.rating')}>
                 <SimpleSelect
-                  options={[...RATINGS]}
+                  options={RATINGS.map(({ value, key }) => ({
+                    value,
+                    label: t(key),
+                  }))}
                   value={String(draft.rating)}
                   onValueChange={(value) =>
                     setDraft({ ...draft, rating: Number.parseInt(value, 10) })
                   }
-                  ariaLabel="Rating"
+                  ariaLabel={t('trips.plan.editor.rating')}
                 />
               </Field>
             </div>
@@ -584,15 +603,9 @@ export function PlaceDialog({
             <div className="flex flex-col gap-1.5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
-                  label="Latitude"
-                  hint="Or close this and pick the spot on the map."
-                  error={
-                    touched && !latValid
-                      ? 'Between -90 and 90'
-                      : touched && !paired
-                        ? 'A position needs both numbers'
-                        : undefined
-                  }
+                  label={t('trips.plan.editor.latitude')}
+                  hint={t('trips.plan.editor.positionHint')}
+                  error={latitudeError}
                 >
                   <Input
                     value={draft.lat}
@@ -603,16 +616,18 @@ export function PlaceDialog({
                     onPaste={pastePosition}
                     aria-describedby={pastedHintId}
                     data-part="place-lat"
-                    placeholder="34.9671"
+                    placeholder={t('trips.plan.editor.latitudeExample')}
                     inputMode="decimal"
                     autoComplete="off"
                     className="tabular-nums"
                   />
                 </Field>
                 <Field
-                  label="Longitude"
+                  label={t('trips.plan.editor.longitude')}
                   error={
-                    touched && !lngValid ? 'Between -180 and 180' : undefined
+                    touched && !lngValid
+                      ? t('trips.plan.editor.longitudeError')
+                      : undefined
                   }
                 >
                   <Input
@@ -625,7 +640,7 @@ export function PlaceDialog({
                     onPaste={pastePosition}
                     aria-describedby={pastedHintId}
                     data-part="place-lng"
-                    placeholder="135.7727"
+                    placeholder={t('trips.plan.editor.longitudeExample')}
                     inputMode="decimal"
                     autoComplete="off"
                     className="tabular-nums"
@@ -649,33 +664,39 @@ export function PlaceDialog({
 
             {mode === 'create' && days.length > 0 ? (
               <Field
-                label="Put it on a day"
-                hint="Leave this unset to keep it in the places panel."
+                label={t('trips.plan.editor.day')}
+                hint={t('trips.plan.editor.dayHint')}
               >
                 <SimpleSelect
                   options={[
-                    { value: '', label: 'Leave it unplanned' },
+                    { value: '', label: t('trips.plan.editor.unplanned') },
                     ...days.map((day) => ({
                       value: day.dayId,
-                      label: `Day ${day.dayNumber}${
-                        day.title === null ? '' : ` · ${day.title}`
-                      }`,
+                      label:
+                        day.title === null
+                          ? t('trips.plan.editor.dayNumber', {
+                              day: day.dayNumber,
+                            })
+                          : t('trips.plan.editor.dayNamed', {
+                              day: day.dayNumber,
+                              title: day.title,
+                            }),
                     })),
                   ]}
                   value={draft.dayId}
                   onValueChange={(value) =>
                     setDraft({ ...draft, dayId: value })
                   }
-                  ariaLabel="Put it on a day"
+                  ariaLabel={t('trips.plan.editor.day')}
                 />
               </Field>
             ) : null}
 
             {mode === 'edit' ? (
               <Field
-                label="Already been"
+                label={t('trips.plan.editor.visited')}
                 orientation="horizontal"
-                hint="Marks the pin with a tick."
+                hint={t('trips.plan.editor.visitedHint')}
               >
                 <Switch
                   checked={draft.isVisited}
@@ -695,7 +716,7 @@ export function PlaceDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
@@ -704,9 +725,11 @@ export function PlaceDialog({
             shape="pill"
             disabled={!canSave}
             loading={saving}
-            loadingLabel="Saving the place"
+            loadingLabel={t('trips.plan.editor.saving')}
           >
-            {mode === 'create' ? 'Add place' : 'Save changes'}
+            {mode === 'create'
+              ? t('trips.plan.addPlace.label')
+              : t('trips.plan.editor.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -762,6 +785,7 @@ export function TimingDialog({
   error,
   onSubmit,
 }: TimingDialogProps) {
+  const t = useTranslate()
   const [draft, setDraft] = React.useState(initial)
 
   React.useEffect(() => {
@@ -791,13 +815,13 @@ export function TimingDialog({
             }}
           >
             {error === null ? null : (
-              <Alert tone="danger" title="That did not save">
+              <Alert tone="danger" title={t('modules.form.saveError')}>
                 {error}
               </Alert>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Arrive">
+              <Field label={t('trips.plan.editor.arrive')}>
                 <Input
                   type="time"
                   value={draft.startTime}
@@ -808,8 +832,8 @@ export function TimingDialog({
                 />
               </Field>
               <Field
-                label="Leave"
-                error={ordered ? undefined : 'Later than the arrival, please'}
+                label={t('trips.plan.editor.leave')}
+                error={ordered ? undefined : t('trips.plan.editor.timeError')}
               >
                 <Input
                   type="time"
@@ -822,9 +846,12 @@ export function TimingDialog({
               </Field>
             </div>
 
-            <Field label="How long there">
+            <Field label={t('trips.plan.editor.duration')}>
               <SimpleSelect
-                options={[...DURATIONS]}
+                options={DURATIONS.map(({ value, key }) => ({
+                  value,
+                  label: t(key),
+                }))}
                 value={String(draft.durationMinutes)}
                 onValueChange={(value) =>
                   setDraft({
@@ -832,13 +859,16 @@ export function TimingDialog({
                     durationMinutes: Number.parseInt(value, 10),
                   })
                 }
-                ariaLabel="How long there"
+                ariaLabel={t('trips.plan.editor.duration')}
               />
             </Field>
 
-            <Field label="Booking">
+            <Field label={t('trips.plan.editor.booking')}>
               <SimpleSelect
-                options={[...BOOKING]}
+                options={BOOKING.map(({ value, key }) => ({
+                  value,
+                  label: t(key),
+                }))}
                 value={draft.reservationStatus}
                 onValueChange={(value) =>
                   setDraft({
@@ -846,17 +876,17 @@ export function TimingDialog({
                     reservationStatus: asBookingStatus(value),
                   })
                 }
-                ariaLabel="Booking"
+                ariaLabel={t('trips.plan.editor.booking')}
               />
             </Field>
 
-            <Field label="Note for this stop">
+            <Field label={t('trips.plan.editor.note')}>
               <Textarea
                 value={draft.notes}
                 onChange={(event) =>
                   setDraft({ ...draft, notes: event.target.value })
                 }
-                placeholder="Go early — the queue past 9am is an hour."
+                placeholder={t('trips.plan.editor.noteExample')}
                 rows={3}
                 maxLength={2000}
                 autoResize
@@ -872,18 +902,18 @@ export function TimingDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            Cancel
+            {t('modules.action.cancel')}
           </Button>
           <Button
             type="submit"
             form="timing-form"
             variant="primary"
             shape="pill"
-            disabled={!ordered || saving}
+            disabled={!ordered}
             loading={saving}
-            loadingLabel="Saving the times"
+            loadingLabel={t('trips.plan.editor.savingTimes')}
           >
-            Save
+            {t('trips.plan.editor.saveTimes')}
           </Button>
         </DialogFooter>
       </DialogContent>

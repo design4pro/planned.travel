@@ -240,7 +240,7 @@ assumption 9). Nothing is added to the payload and `continentCells` is untouched
   offers a retry button in its `actions`, with its own loading label, that runs `router.invalidate()`; the old figures stay under
   it, and so does everything else the failed re-read left stale. Below `sm` the `Alert` is compact: its title and the retry
   button stay visible and the body is kept for screen readers (`sr-only`), so it costs the least height it can; the panel scrolls beneath it. Focus rules, each with a test:
-  - `Button`'s loading state sets the native `disabled`, which drops focus from the pressed button. When the retry **fails again**
+  - `Button`'s loading state keeps the pressed button focusable but inert. When the retry **fails again**
     the `Alert` is re-keyed (so `role="alert"` announces again) and focus goes back to the retry button.
   - When the re-read **succeeds**, focus moves to the period control, or to the Stats tab panel when there is none, **only if the
     retry was pressed from this `Alert`** (a flag set on press). A recovery started elsewhere (the country card's retry shares the

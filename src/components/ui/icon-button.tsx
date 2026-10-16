@@ -4,6 +4,11 @@ import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
 import { Spinner } from './spinner'
+import {
+  inactiveButtonChild,
+  suppressButtonActivation,
+  suppressButtonKey,
+} from './button-interaction'
 import { disabledState, focusRing, transitionBase } from './shared'
 
 import type { VariantProps } from 'class-variance-authority'
@@ -147,13 +152,22 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
             classes,
             isDisabled && 'pointer-events-none opacity-45 shadow-none',
           )}
-          aria-disabled={isDisabled || undefined}
-          aria-busy={loading || undefined}
           aria-label={label}
           data-loading={loading ? '' : undefined}
           {...props}
+          aria-busy={loading || props['aria-busy'] || undefined}
+          aria-disabled={isDisabled || props['aria-disabled'] || undefined}
+          onClickCapture={
+            isDisabled ? suppressButtonActivation : props.onClickCapture
+          }
+          onKeyDownCapture={
+            isDisabled ? suppressButtonKey : props.onKeyDownCapture
+          }
+          onKeyUpCapture={isDisabled ? suppressButtonKey : props.onKeyUpCapture}
         >
-          <Slot.Slottable>{children}</Slot.Slottable>
+          <Slot.Slottable>
+            {inactiveButtonChild(children, isDisabled, loading)}
+          </Slot.Slottable>
           {glyph}
         </IconButtonSlot>
       )
@@ -164,11 +178,19 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type={type ?? 'button'}
         className={classes}
-        disabled={isDisabled}
+        disabled={disabled}
         aria-label={label}
-        aria-busy={loading || undefined}
         data-loading={loading ? '' : undefined}
         {...props}
+        aria-busy={loading || props['aria-busy'] || undefined}
+        aria-disabled={isDisabled || props['aria-disabled'] || undefined}
+        onClickCapture={
+          isDisabled ? suppressButtonActivation : props.onClickCapture
+        }
+        onKeyDownCapture={
+          isDisabled ? suppressButtonKey : props.onKeyDownCapture
+        }
+        onKeyUpCapture={isDisabled ? suppressButtonKey : props.onKeyUpCapture}
       >
         {glyph}
       </button>

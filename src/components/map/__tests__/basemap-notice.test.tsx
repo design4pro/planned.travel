@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { BasemapNotice } from '../basemap-notice'
@@ -30,9 +30,13 @@ describe('BasemapNotice', () => {
   })
 
   it('reports that a retry is in flight', () => {
-    render(<BasemapNotice onRetry={vi.fn()} retrying />)
+    const onRetry = vi.fn()
+    render(<BasemapNotice onRetry={onRetry} retrying />)
     const button = screen.getByRole('button')
     expect(button.getAttribute('aria-busy')).toBe('true')
-    expect(button.hasAttribute('disabled')).toBe(true)
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(button.getAttribute('aria-disabled')).toBe('true')
+    fireEvent.click(button)
+    expect(onRetry).not.toHaveBeenCalled()
   })
 })
