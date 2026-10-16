@@ -8,10 +8,8 @@
 import { getRequest } from '@tanstack/react-start/server'
 import { authDb } from './db'
 import { getAuth } from './index'
-import {
-  membershipRoleFor,
-  resolveOrProvisionOrganization,
-} from './provisioning'
+import { resolveOrProvisionOrganization } from './provisioning'
+import { resolveActiveWorkspace } from './active-workspace'
 import {
   AuthRequirementError,
   normaliseSession,
@@ -110,10 +108,9 @@ export async function requireOrg(
     )
   }
 
-  const role = await membershipRoleFor(authDb(), {
-    userId: user.id,
-    organizationId,
-  })
+  const resolved = await resolveActiveWorkspace(authDb(), user.id, organizationId)
+  const role = resolved?.role ?? null
+  organizationId = resolved?.organizationId ?? organizationId
 
   // `requireOrgFrom` is deliberately pure and reads the active organization off
   // the session, so hand it the organization this request actually resolved.

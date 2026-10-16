@@ -334,10 +334,12 @@ read wrongly on the already-checked item.
   `NotFoundError` on a trip the reader can no longer see.
 - **The membership disappears between render and switch.** `setActive` refuses, the toast shows, and
   the stale entry is gone after the next load. Nothing local was mutated.
-- **The active workspace is removed while the user is in it.** Unchanged from today:
-  `activeOrganizationId` is `onDelete: 'set null'`, `loadShell` falls back to
-  `firstOrganizationIdFor`, and `shell.session.membershipRemoved` is thrown when no membership
-  survives.
+- **The active workspace or its membership is removed while the user is in it.**
+  Both `loadShell` and `requireOrg` resolve the oldest surviving membership through
+  `firstOrganizationIdFor`, re-reading that workspace's role. A removed membership with no
+  survivor still produces `shell.session.membershipRemoved` / `not-a-member`, without
+  provisioning or updating the session. A null active workspace retains the existing asymmetry:
+  `requireOrg` may provision a personal workspace; `loadShell` only reads memberships.
 - **A slug collision.** `reserveSlug` retries three times with a `nanoid(6)` suffix, then falls back
   to `nanoid(12)`. Unchanged logic, second caller.
 - **A name that slugifies to nothing** (`"日本"`, `"!!!"`). `slugify` returns `''`; the contract falls
