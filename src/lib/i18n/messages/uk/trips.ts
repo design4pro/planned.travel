@@ -380,6 +380,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'Змінити ширину маршруту',
   'plan.workspace.resizePlaces': 'Змінити ширину місць',
   'plan.workspace.toggleDay': 'Розгорнути або згорнути {day}',
+  'plan.workspace.days': 'Дні',
+  'plan.workspace.showPanel': 'Показати панель {label}',
+  'plan.workspace.hidePanel': 'Приховати панель {label}',
+  'plan.workspace.narrowPanel': 'Звузити {label}',
+  'plan.workspace.widenPanel': 'Розширити {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

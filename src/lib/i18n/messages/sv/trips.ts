@@ -357,6 +357,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'Ändra resplanens bredd',
   'plan.workspace.resizePlaces': 'Ändra platsernas bredd',
   'plan.workspace.toggleDay': 'Expandera eller fäll ihop {day}',
+  'plan.workspace.days': 'Dagar',
+  'plan.workspace.showPanel': 'Visa panelen {label}',
+  'plan.workspace.hidePanel': 'Dölj panelen {label}',
+  'plan.workspace.narrowPanel': 'Gör {label} smalare',
+  'plan.workspace.widenPanel': 'Gör {label} bredare',
 } satisfies TranslationOf<typeof En>
 
 export default messages

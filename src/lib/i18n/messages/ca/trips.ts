@@ -373,6 +373,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'Canvia l’amplada de l’itinerari',
   'plan.workspace.resizePlaces': 'Canvia l’amplada dels llocs',
   'plan.workspace.toggleDay': 'Desplega o plega {day}',
+  'plan.workspace.days': 'Dies',
+  'plan.workspace.showPanel': 'Mostra el tauler {label}',
+  'plan.workspace.hidePanel': 'Amaga el tauler {label}',
+  'plan.workspace.narrowPanel': 'Estreny {label}',
+  'plan.workspace.widenPanel': 'Eixampla {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

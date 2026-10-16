@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Minus, Plus } from 'lucide-react'
 
+import { useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import {
   GlassPanel,
@@ -76,6 +77,7 @@ export function PlannerRail({
   children,
   resize,
 }: PlannerRailProps) {
+  const t = useTranslate()
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose
 
   if (collapsed) {
@@ -89,7 +91,7 @@ export function PlannerRail({
           icon={
             <CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />
           }
-          label={`Show the ${label.toLowerCase()} panel`}
+          label={t('trips.plan.workspace.showPanel', { label })}
           size="sm"
           variant="ghost"
           onClick={() => onCollapsedChange(false)}
@@ -129,11 +131,39 @@ export function PlannerRail({
             {meta}
           </span>
         )}
+        {resize === undefined ? null : (
+          <>
+            <IconButton
+              icon={<Minus />}
+              size="sm"
+              variant="ghost"
+              label={t('trips.plan.workspace.narrowPanel', { label })}
+              disabled={resize.width <= resize.min}
+              onClick={() =>
+                resize.onChange(
+                  Math.max(resize.min, resize.width - resize.step),
+                )
+              }
+            />
+            <IconButton
+              icon={<Plus />}
+              size="sm"
+              variant="ghost"
+              label={t('trips.plan.workspace.widenPanel', { label })}
+              disabled={resize.width >= resize.max}
+              onClick={() =>
+                resize.onChange(
+                  Math.min(resize.max, resize.width + resize.step),
+                )
+              }
+            />
+          </>
+        )}
         <IconButton
           icon={
             <CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />
           }
-          label={`Hide the ${label.toLowerCase()} panel`}
+          label={t('trips.plan.workspace.hidePanel', { label })}
           size="sm"
           variant="ghost"
           onClick={() => onCollapsedChange(true)}

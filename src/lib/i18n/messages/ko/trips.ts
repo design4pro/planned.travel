@@ -344,6 +344,11 @@ const messages = {
   'plan.workspace.resizeItinerary': '일정 너비 조절',
   'plan.workspace.resizePlaces': '장소 너비 조절',
   'plan.workspace.toggleDay': '{day} 펼치기 또는 접기',
+  'plan.workspace.days': '일정',
+  'plan.workspace.showPanel': '{label} 패널 표시',
+  'plan.workspace.hidePanel': '{label} 패널 숨기기',
+  'plan.workspace.narrowPanel': '{label} 너비 줄이기',
+  'plan.workspace.widenPanel': '{label} 너비 늘리기',
 } satisfies TranslationOf<typeof En>
 
 export default messages

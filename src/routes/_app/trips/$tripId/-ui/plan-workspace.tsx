@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Layers, ListTree } from 'lucide-react'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { MEDIA_LG_UP } from '#/lib/breakpoints'
+import { useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { MAP_CONTROLS_WIDTH } from '#/components/map'
 import { PlannerRail } from '#/components/planner'
@@ -187,6 +188,7 @@ export function PlanWorkspace({
   readonly resizeRightLabel: string
   readonly children: React.ReactNode
 }) {
+  const t = useTranslate()
   const {
     wide,
     leftCollapsed,
@@ -238,7 +240,7 @@ export function PlanWorkspace({
                 label: resizeLeftLabel,
                 onChange: (left) => setWidths({ ...widths, left }),
               }}
-              label="Itinerary"
+              label={t('trips.plan.title')}
               meta={scheduledCount}
               collapsed={leftCollapsed}
               onCollapsedChange={setLeftCollapsed}
@@ -261,7 +263,7 @@ export function PlanWorkspace({
                 label: resizeRightLabel,
                 onChange: (right) => setWidths({ ...widths, right }),
               }}
-              label="Places"
+              label={t('trips.plan.places')}
               meta={placesCount}
               collapsed={rightCollapsed}
               onCollapsedChange={setRightCollapsed}
@@ -297,7 +299,7 @@ export function PlanWorkspace({
               icon={<ListTree />}
               onClick={() => setSheet('itinerary')}
             >
-              Days
+              {t('trips.plan.workspace.days')}
             </Button>
             <Button
               variant="primary"
@@ -306,7 +308,7 @@ export function PlanWorkspace({
               icon={<Layers />}
               onClick={() => setSheet('places')}
             >
-              Places
+              {t('trips.plan.places')}
             </Button>
           </GlassPanel>
         )}
@@ -320,7 +322,7 @@ export function PlanWorkspace({
       >
         <SheetContent side="bottom" className="max-h-[86dvh]">
           <SheetHeader className="pe-14">
-            <SheetTitle>Plan</SheetTitle>
+            <SheetTitle>{t('shell.trip.tab.plan')}</SheetTitle>
           </SheetHeader>
           <SheetBody className="px-3 py-3">
             <Tabs
@@ -331,10 +333,10 @@ export function PlanWorkspace({
             >
               <TabsList className="w-full">
                 <TabsTrigger value="itinerary" className="flex-1">
-                  Itinerary
+                  {t('trips.plan.title')}
                 </TabsTrigger>
                 <TabsTrigger value="places" className="flex-1">
-                  Places
+                  {t('trips.plan.places')}
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="itinerary">{itinerary}</TabsContent>

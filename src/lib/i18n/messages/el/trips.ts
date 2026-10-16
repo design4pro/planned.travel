@@ -371,6 +371,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'Αλλαγή πλάτους προγράμματος',
   'plan.workspace.resizePlaces': 'Αλλαγή πλάτους τοποθεσιών',
   'plan.workspace.toggleDay': 'Ανάπτυξη ή σύμπτυξη {day}',
+  'plan.workspace.days': 'Ημέρες',
+  'plan.workspace.showPanel': 'Εμφάνιση πίνακα {label}',
+  'plan.workspace.hidePanel': 'Απόκρυψη πίνακα {label}',
+  'plan.workspace.narrowPanel': 'Στένεμα {label}',
+  'plan.workspace.widenPanel': 'Διεύρυνση {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

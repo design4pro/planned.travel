@@ -351,6 +351,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'Đổi chiều rộng lịch trình',
   'plan.workspace.resizePlaces': 'Đổi chiều rộng địa điểm',
   'plan.workspace.toggleDay': 'Mở rộng hoặc thu gọn {day}',
+  'plan.workspace.days': 'Ngày',
+  'plan.workspace.showPanel': 'Hiện bảng {label}',
+  'plan.workspace.hidePanel': 'Ẩn bảng {label}',
+  'plan.workspace.narrowPanel': 'Thu hẹp {label}',
+  'plan.workspace.widenPanel': 'Mở rộng {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

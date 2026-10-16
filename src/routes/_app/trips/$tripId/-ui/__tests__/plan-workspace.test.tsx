@@ -1,3 +1,4 @@
+import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { PlanReadinessBoundary } from '../plan-readiness'
 import { renderToString } from 'react-dom/server'
 import { hydrateRoot } from 'react-dom/client'
@@ -10,6 +11,8 @@ import {
   isDayExpanded,
 } from '../plan-layout'
 
+const MESSAGES = await loadCatalogue('en')
+
 function Workspace({
   tripId = 'one',
   ready = false,
@@ -21,24 +24,26 @@ function Workspace({
 }) {
   const layout = usePlanWorkspace(tripId, direction)
   return (
-    <PlanReadinessBoundary entryKey={tripId} loaderReady title="Japan">
-      <PlanWorkspace
-        layout={layout}
-        tripTitle="Japan"
-        itinerary={<div>days</div>}
-        ideas={<div>ideas</div>}
-        addButton={null}
-        railFooter={null}
-        scheduledCount="1"
-        placesCount="2"
-        mobileSummary="summary"
-        resizeLeftLabel="Resize itinerary"
-        resizeRightLabel="Resize places"
-      >
-        <div data-map-ready={String(ready)} />
-        <output aria-label="padding">{layout.padding.left}</output>
-      </PlanWorkspace>
-    </PlanReadinessBoundary>
+    <I18nProvider locale="en" messages={MESSAGES}>
+      <PlanReadinessBoundary entryKey={tripId} loaderReady title="Japan">
+        <PlanWorkspace
+          layout={layout}
+          tripTitle="Japan"
+          itinerary={<div>days</div>}
+          ideas={<div>ideas</div>}
+          addButton={null}
+          railFooter={null}
+          scheduledCount="1"
+          placesCount="2"
+          mobileSummary="summary"
+          resizeLeftLabel="Resize itinerary"
+          resizeRightLabel="Resize places"
+        >
+          <div data-map-ready={String(ready)} />
+          <output aria-label="padding">{layout.padding.left}</output>
+        </PlanWorkspace>
+      </PlanReadinessBoundary>
+    </I18nProvider>
   )
 }
 

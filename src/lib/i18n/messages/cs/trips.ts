@@ -378,6 +378,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'Změnit šířku itineráře',
   'plan.workspace.resizePlaces': 'Změnit šířku míst',
   'plan.workspace.toggleDay': 'Rozbalit nebo sbalit {day}',
+  'plan.workspace.days': 'Dny',
+  'plan.workspace.showPanel': 'Zobrazit panel {label}',
+  'plan.workspace.hidePanel': 'Skrýt panel {label}',
+  'plan.workspace.narrowPanel': 'Zúžit {label}',
+  'plan.workspace.widenPanel': 'Rozšířit {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

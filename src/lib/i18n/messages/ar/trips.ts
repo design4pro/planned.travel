@@ -392,6 +392,11 @@ const messages = {
   'plan.workspace.resizeItinerary': 'تغيير عرض برنامج الرحلة',
   'plan.workspace.resizePlaces': 'تغيير عرض الأماكن',
   'plan.workspace.toggleDay': 'توسيع أو طي {day}',
+  'plan.workspace.days': 'الأيام',
+  'plan.workspace.showPanel': 'إظهار لوحة {label}',
+  'plan.workspace.hidePanel': 'إخفاء لوحة {label}',
+  'plan.workspace.narrowPanel': 'تضييق {label}',
+  'plan.workspace.widenPanel': 'توسيع {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

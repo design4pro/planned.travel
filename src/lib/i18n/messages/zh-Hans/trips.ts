@@ -324,6 +324,11 @@ const messages = {
   'plan.workspace.resizeItinerary': '调整行程宽度',
   'plan.workspace.resizePlaces': '调整地点宽度',
   'plan.workspace.toggleDay': '展开或收起{day}',
+  'plan.workspace.days': '天数',
+  'plan.workspace.showPanel': '显示{label}面板',
+  'plan.workspace.hidePanel': '隐藏{label}面板',
+  'plan.workspace.narrowPanel': '缩窄{label}',
+  'plan.workspace.widenPanel': '加宽{label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
