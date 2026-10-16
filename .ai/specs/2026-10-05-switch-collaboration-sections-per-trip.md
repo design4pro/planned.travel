@@ -5,7 +5,7 @@
 | **Status**         | in-progress                                        |
 | **Issue**          | none                                               |
 | **Spec PR**        | #903                                               |
-| **Implementation** | #1271, #1290, #1308                                |
+| **Implementation** | #1271, #1290, #1308, #1328                         |
 | **Plan**           | 07-S2 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
@@ -638,3 +638,10 @@ Round 2 (against the revised draft). Every specialist confirmed its round-1 cond
 | Security and tenancy reviewer | **approve** for unattended implementation (conditions applied) | high       | the refusal answered as data (no Sentry incident); the kept section's data (the loader returns all three); `security` label and the eight writers named; rollback edge-case row; the test drives `canWritePlan`, not the loader.                                                                             |
 | Accessibility specialist      | approve with conditions                                        | medium     | the active tab follows the visible set; a focusable wrapper as the focus target (not the heading); repair after a discard too; announce the stored record; scroll margin under the stacked bars; `aria-label` on the `TabsList`.                                                                             |
 | UX specialist (traveller)     | approve with conditions                                        | medium     | a correct sticky offset (derived class); a kept section keeps its content and shows its line inside a dialog; `savedHidden`; a `turnedOff` sentence that matches the controls; honest `failedBody`; the line's slot; focus target before tabs.                                                               |
+
+## Amendment - Phase 3 composition (#1328)
+
+The route delegates section layout and retained-draft composition to `CollabScreen`, which consumes
+`collabLayout` with the visible section ids. This keeps the same layout contract and provides a
+component seam for peer changes, dialog retention, announcements and focus repair. The route owns
+the loader, header counts and section write/refresh wiring.

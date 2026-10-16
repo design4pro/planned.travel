@@ -95,13 +95,15 @@ export function CollabSectionsMenu({
               onSelect={(event) => event.preventDefault()}
               onCheckedChange={() => void toggle(id)}
             >
-              <Icon aria-hidden className="size-4" />
-              {t(label)}
-              {pending === id ? (
-                <span aria-hidden className="ms-auto">
-                  <Spinner label={null} />
-                </span>
-              ) : null}
+              <span className="flex items-center gap-2">
+                <Icon aria-hidden className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{t(label)}</span>
+                {pending === id ? (
+                  <span aria-hidden className="ms-auto shrink-0">
+                    <Spinner label={null} />
+                  </span>
+                ) : null}
+              </span>
             </DropdownMenuCheckboxItem>
           )
         })}
