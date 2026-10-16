@@ -405,6 +405,10 @@ const messages = {
   'billing.quota.trips': 'Viagens',
   'billing.quota.storageBytes': 'Armazenamento',
   'billing.quota.unlimited': 'Ilimitado',
+  'billing.quota.places': 'Lugares',
+  'billing.quota.placesHint': 'Em todas as viagens deste espaço de trabalho',
+  'billing.quota.exhausted.places': 'A cota de lugares foi esgotada',
+  'billing.quota.over.places': 'Limite de lugares excedido em {value}',
   'billing.quota.noLimit': 'Este plano não põe limite',
   'billing.quota.used': '{quota} em uso',
   'billing.quota.over.seats': {

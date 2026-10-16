@@ -1553,26 +1553,23 @@ describe('CountryOverlay panel', () => {
     expect(panel.contains(document.activeElement)).toBe(true)
   })
 
-  /**
-   * The edge moves while a write is in flight, and the panel has to move with it.
-   *
-   * `Button` puts a real `disabled` attribute on itself while it loads, and
-   * `tabIndex` reflects the attribute rather than the state — a disabled button
-   * still reports `0`. A first stop worked out from the index alone would
-   * therefore keep naming the control the reader can no longer reach, and
-   * Shift+Tab from the one they *can* would be looped back inside.
-   */
-  it('finds its edge past a control a write has disabled', async () => {
+  /** Pending actions remain tab stops, so the panel must still let Shift+Tab leave them. */
+  it('finds its edge at a control while a write is pending', async () => {
     const user = userEvent.setup()
     const map = new FakeMap()
-    // A write that never settles, so the row it belongs to stays disabled.
+    // A write that never settles, so the action stays focusable but inert.
     atlas.mark.mockImplementation(() => new Promise(() => {}))
     mount(map, { selectedCode: 'DZ', selectionToken: 1 })
 
     const panel = screen.getByRole('dialog', { name: 'Algeria' })
     const mark = within(panel).getByRole('button', { name: /^Mark visited/ })
     await user.click(mark)
-    expect(tabStops(panel).at(0)).not.toBe(mark)
+    expect(tabStops(panel).at(0)).toBe(mark)
+    expect(mark.hasAttribute('disabled')).toBe(false)
+    expect(mark.getAttribute('aria-disabled')).toBe('true')
+    expect(mark.getAttribute('aria-busy')).toBe('true')
+    await user.keyboard('{Enter} ')
+    expect(atlas.mark).toHaveBeenCalledTimes(1)
 
     const first = tabStops(panel).at(0)
     expect(first).toBeDefined()

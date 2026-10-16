@@ -395,6 +395,10 @@ const messages = {
   'billing.quota.trips': 'Geziler',
   'billing.quota.storageBytes': 'Depolama',
   'billing.quota.unlimited': 'Sınırsız',
+  'billing.quota.places': 'Yerler',
+  'billing.quota.placesHint': 'Bu çalışma alanındaki tüm seyahatlerde',
+  'billing.quota.exhausted.places': 'Yer kotası tükendi',
+  'billing.quota.over.places': 'Yer sınırı {value} aşıldı',
   'billing.quota.noLimit': 'Bu pakette sınır yok',
   'billing.quota.used': 'kullanılan {quota}',
   'billing.quota.over.seats': {

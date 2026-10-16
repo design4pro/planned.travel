@@ -120,12 +120,18 @@ describe('CalendarPanel', () => {
     const action = screen.getByRole('button', { name: ACTION })
 
     await userEvent.click(action)
-    await waitFor(() => expect(action.hasAttribute('disabled')).toBe(true))
+    await waitFor(() =>
+      expect(action.getAttribute('aria-disabled')).toBe('true'),
+    )
+    expect(action.hasAttribute('disabled')).toBe(false)
+    expect(action.getAttribute('aria-busy')).toBe('true')
+    expect(document.activeElement).toBe(action)
     await userEvent.click(action)
 
     expect(stubs.download).toHaveBeenCalledTimes(1)
     finish({ filename: 'lisbon.ics' })
-    await waitFor(() => expect(action.hasAttribute('disabled')).toBe(false))
+    await waitFor(() => expect(action.getAttribute('aria-busy')).toBeNull())
+    expect(action.hasAttribute('disabled')).toBe(false)
   })
 
   it('tells the reader the file could not be prepared, and lets them try again', async () => {

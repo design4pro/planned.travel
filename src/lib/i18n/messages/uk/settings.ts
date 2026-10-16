@@ -413,6 +413,10 @@ const messages = {
   'billing.quota.trips': 'Поїздки',
   'billing.quota.storageBytes': 'Сховище',
   'billing.quota.unlimited': 'Без обмежень',
+  'billing.quota.places': 'Місця',
+  'billing.quota.placesHint': 'У всіх подорожах цього робочого простору',
+  'billing.quota.exhausted.places': 'Ліміт місць вичерпано',
+  'billing.quota.over.places': 'Ліміт місць перевищено на {value}',
   'billing.quota.noLimit': 'На цьому тарифі без обмежень',
   'billing.quota.used': 'Використано: {quota}',
   'billing.quota.over.seats': {

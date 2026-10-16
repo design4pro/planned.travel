@@ -179,7 +179,7 @@ export const WIDGETS_IN_SHEET_QUERY = MEDIA_MD_DOWN
  * Whether the widgets belong in the sheet rather than in the column.
  *
  * A real media-query read rather than two CSS-hidden copies, for the reason
- * `plan-screen.tsx` gives for the same shape: the column and the sheet draw the
+ * `plan-workspace.tsx` gives for the same shape: the column and the sheet draw the
  * *same* widgets, so mounting both would put two of every `data-part` in the
  * document and run the clock's timer twice.
  *

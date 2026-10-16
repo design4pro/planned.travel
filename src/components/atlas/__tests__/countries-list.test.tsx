@@ -4,7 +4,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import {
@@ -765,10 +765,15 @@ describe('CountriesListError', () => {
   })
 
   it('holds the retry button in its pending state while the read is in air', () => {
-    render(<CountriesListError onRetry={() => {}} retrying />)
+    const onRetry = vi.fn()
+    render(<CountriesListError onRetry={onRetry} retrying />)
     const button = screen.getByRole('button', {
       name: /Loading your countries/,
     })
-    expect(button.hasAttribute('disabled')).toBe(true)
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(button.getAttribute('aria-disabled')).toBe('true')
+    expect(button.getAttribute('aria-busy')).toBe('true')
+    fireEvent.click(button)
+    expect(onRetry).not.toHaveBeenCalled()
   })
 })

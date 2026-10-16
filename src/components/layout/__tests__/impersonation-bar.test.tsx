@@ -295,9 +295,11 @@ describe('the impersonation bar', () => {
     await user().click(button)
 
     await waitFor(() => {
-      expect(button.hasAttribute('disabled')).toBe(true)
+      expect(button.getAttribute('aria-disabled')).toBe('true')
     })
     expect(button.getAttribute('aria-busy')).toBe('true')
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(document.activeElement).toBe(button)
 
     await user().click(button)
     expect(exit.end).toHaveBeenCalledTimes(1)
@@ -316,6 +318,7 @@ describe('the impersonation bar', () => {
     await user().click(button)
 
     await waitFor(() => {
+      expect(button.getAttribute('aria-busy')).toBeNull()
       expect(button.hasAttribute('disabled')).toBe(false)
     })
     expect(router.navigate).not.toHaveBeenCalled()

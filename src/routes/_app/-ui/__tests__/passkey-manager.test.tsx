@@ -198,7 +198,7 @@ describe('adding a passkey', () => {
     await waitFor(() => expect(document.activeElement).toBe(renameInput()))
   })
 
-  it('holds the button disabled with a loading label for the whole ceremony', async () => {
+  it('keeps the button focusable but inert with a loading label for the whole ceremony', async () => {
     let finish: (value: unknown) => void = () => {}
     client.registerPasskey.mockReturnValue(
       new Promise((resolve) => {
@@ -210,12 +210,18 @@ describe('adding a passkey', () => {
 
     await userEvent.click(addButton())
 
-    expect(addButton()).toHaveProperty('disabled', true)
+    expect(addButton()).toHaveProperty('disabled', false)
+    expect(addButton().getAttribute('aria-disabled')).toBe('true')
+    expect(addButton().getAttribute('aria-busy')).toBe('true')
+    expect(document.activeElement).toBe(addButton())
+    await userEvent.keyboard('{Enter} ')
     expect(addButton().textContent).toContain('Waiting for')
     expect(client.registerPasskey).toHaveBeenCalledTimes(1)
 
     finish({ ok: false, aborted: true })
-    await waitFor(() => expect(addButton()).toHaveProperty('disabled', false))
+    await waitFor(() =>
+      expect(addButton().getAttribute('aria-busy')).toBeNull(),
+    )
   })
 
   it('says it quietly when the sheet was dismissed', async () => {
@@ -1376,7 +1382,9 @@ describe('removing a passkey', () => {
         within(dialog()).getByRole('button', { name: 'Cancel' }),
       ).toHaveProperty('disabled', true)
       expect(confirmButton().textContent).toContain('Removing the passkey')
-      expect(confirmButton()).toHaveProperty('disabled', true)
+      expect(confirmButton()).toHaveProperty('disabled', false)
+      expect(confirmButton().getAttribute('aria-disabled')).toBe('true')
+      expect(confirmButton().getAttribute('aria-busy')).toBe('true')
 
       await userEvent.keyboard('{Escape}')
       await userEvent.keyboard('{Enter}')

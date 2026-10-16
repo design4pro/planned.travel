@@ -723,7 +723,7 @@ describe('PlannerRail', () => {
     )
 
     await user.click(
-      screen.getByRole('button', { name: 'Hide the itinerary panel' }),
+      screen.getByRole('button', { name: 'Hide the Itinerary panel' }),
     )
     expect(onCollapsedChange).toHaveBeenCalledWith(true)
 
@@ -744,7 +744,7 @@ describe('PlannerRail', () => {
     expect(screen.getByText('38')).toBeDefined()
     expect(screen.queryByText('Day one')).toBeNull()
     expect(
-      screen.getByRole('button', { name: 'Show the itinerary panel' }),
+      screen.getByRole('button', { name: 'Show the Itinerary panel' }),
     ).toBeDefined()
   })
 })
@@ -868,5 +868,117 @@ describe('a day that carries a journey', () => {
     )
     expect(screen.getByText('Tokyo → Kyoto')).toBeDefined()
     expect(screen.getByText('09:00 – 12:30')).toBeDefined()
+  })
+})
+
+describe('resizable rails', () => {
+  it('exposes a named separator and clamps keyboard widths at either edge', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <PlannerRail
+        side="right"
+        label="Places"
+        collapsed={false}
+        onCollapsedChange={() => {}}
+        resize={{
+          width: 392,
+          min: 280,
+          max: 400,
+          step: 16,
+          label: 'Resize places',
+          onChange,
+        }}
+      >
+        body
+      </PlannerRail>,
+    )
+    const handle = screen.getByRole('separator', { name: 'Resize places' })
+    expect(handle.getAttribute('aria-valuenow')).toBe('392')
+    expect(handle.getAttribute('aria-valuemin')).toBe('280')
+    expect(handle.getAttribute('aria-valuemax')).toBe('400')
+    handle.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(onChange).toHaveBeenLastCalledWith(400)
+    await user.keyboard('{ArrowRight}')
+    expect(onChange).toHaveBeenLastCalledWith(376)
+    await user.keyboard('{Home}')
+    expect(onChange).toHaveBeenLastCalledWith(280)
+    await user.keyboard('{End}')
+    expect(onChange).toHaveBeenLastCalledWith(400)
+  })
+})
+
+describe('day folding', () => {
+  it('folds independently from focus and keeps a controlled accessible button', async () => {
+    const user = userEvent.setup()
+    const focus = vi.fn()
+    const expand = vi.fn()
+    const ui = (expanded: boolean) => (
+      <DndContext>
+        <DaySection
+          day={DAY}
+          categoryFor={categoryFor}
+          expanded={expanded}
+          onExpandedChange={expand}
+          onFocusDay={focus}
+        />
+      </DndContext>
+    )
+    const view = render(ui(true))
+    const toggle = screen.getByRole('button', {
+      name: `Expand or collapse ${DAY.title}`,
+    })
+    const id = toggle.getAttribute('aria-controls') ?? ''
+    expect(document.getElementById(id)?.hidden).toBe(false)
+    await user.click(toggle)
+    expect(expand).toHaveBeenCalledWith(false)
+    expect(focus).not.toHaveBeenCalled()
+    view.rerender(ui(false))
+    expect(document.getElementById(id)?.hidden).toBe(true)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  })
+})
+
+describe('single-pointer rail sizing', () => {
+  it('allows clicks to reach both width endpoints without dragging', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const ui = (width: number) => (
+      <PlannerRail
+        side="left"
+        label="Itinerary"
+        collapsed={false}
+        onCollapsedChange={() => {}}
+        resize={{
+          width,
+          min: 280,
+          max: 400,
+          step: 16,
+          label: 'Resize itinerary',
+          onChange,
+        }}
+      >
+        body
+      </PlannerRail>
+    )
+    const view = render(ui(392))
+    await user.click(screen.getByRole('button', { name: 'Widen Itinerary' }))
+    expect(onChange).toHaveBeenLastCalledWith(400)
+    view.rerender(ui(288))
+    await user.click(screen.getByRole('button', { name: 'Narrow Itinerary' }))
+    expect(onChange).toHaveBeenLastCalledWith(280)
+    view.rerender(ui(280))
+    expect(
+      screen
+        .getByRole('button', { name: 'Narrow Itinerary' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+    view.rerender(ui(400))
+    expect(
+      screen
+        .getByRole('button', { name: 'Widen Itinerary' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
   })
 })

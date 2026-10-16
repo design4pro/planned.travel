@@ -23,30 +23,17 @@
  */
 
 import * as React from 'react'
+import { useKeyedPreference } from '#/lib/local-preference'
+import { plannerDaysPreference, isDayExpanded } from './plan-layout'
+import { PlanWorkspace, usePlanWorkspace } from './plan-workspace'
 import { useRouter } from '@tanstack/react-router'
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core'
-import { Crosshair, Layers, ListTree, X } from 'lucide-react'
+import { Crosshair, X } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useLocale, useTranslate } from '#/lib/i18n'
-import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
-import { MEDIA_LG_UP } from '#/lib/breakpoints'
+import { directionOf, useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
-import {
-  Button,
-  GlassPanel,
-  IconButton,
-  SectionLabel,
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '#/components/ui'
+import { GlassPanel, IconButton, SectionLabel } from '#/components/ui'
 import {
   CategoryFilterBar,
   CoverageNotice,
@@ -56,7 +43,6 @@ import {
   FIT_MAX_ZOOM_UNMAPPED,
   MapAttribution,
   MapCanvas,
-  MAP_CONTROLS_WIDTH,
   MapControls,
   PlaceMarkers,
   useArchiveCoverage,
@@ -74,7 +60,6 @@ import {
   DragPreview,
   IDEAS_CONTAINER,
   IdeasList,
-  PlannerRail,
   initialSelection,
   isLegItemId,
   itemsIn,
@@ -157,34 +142,6 @@ import type { PlaceWriteReport } from './planner-add-place'
  * Layout constants
  * ---------------------------------------------------------------------------------------------- */
 
-/** Rail widths, in pixels, so the camera padding and the CSS cannot disagree. */
-const RAIL = { left: 344, right: 328, collapsed: 44, gutter: 16 } as const
-
-/** Room the floating chrome needs kept clear above and below the pins. */
-const CHROME = { top: 76, bottom: 76, mobileBottom: 132 } as const
-
-/**
- * Where the zoom/locate/compass column is pinned, in pixels from the right edge.
- *
- * Three cases, because the column has to step aside for the places rail: it sits in
- * the gutter to the left of an open rail, tucks back to the map's own gutter when
- * that rail is folded, and moves up to the top-right on a phone, where a 150px-tall
- * toolbar at the bottom would sit straight through the action bar.
- *
- * Numbers rather than classes, because the camera needs them as numbers and the CSS
- * gets the very same ones through `--plan-controls`. Their width comes from
- * `MAP_CONTROLS_WIDTH`, published by the component that draws the column. Without
- * both halves in the camera's padding the map happily parks the easternmost cluster
- * underneath the geolocate button, and on the flagship trip the easternmost cluster
- * is Tokyo, so it happened every time.
- */
-const CONTROLS = { mobile: 12, beside: 368, folded: 16 } as const
-
-/** How much of the right edge the control column occupies, in one layout. */
-function controlsInset(right: number): number {
-  return right + MAP_CONTROLS_WIDTH + RAIL.gutter
-}
-
 /** Zoom a "take me there" from the rail settles on, if the map is further out. */
 const FOCUS_ZOOM = 14.5
 
@@ -208,66 +165,6 @@ const UNPLANNED_WORLD_BOUNDS: MapBounds = {
   south: -56,
   east: 178,
   north: 72,
-}
-
-/**
- * The mobile bottom stack, declared once.
- *
- * On a phone three things share the bottom edge: the action bar, the data credit
- * above it, and the coverage note above that. Publishing the two offsets as custom
- * properties keeps them in one place rather than as matching magic numbers in three
- * class strings — and the credit is a legal obligation, so "it ended up behind the
- * bar on a phone" is exactly the drift a repeated literal produces.
- */
-type PlanVars = React.CSSProperties &
-  Record<'--plan-bar' | '--plan-note' | '--plan-controls', string>
-const PLAN_VARS: PlanVars = {
-  /** Clears the action bar: 12px inset plus its own height. */
-  '--plan-bar': 'calc(5.5rem + var(--safe-bottom))',
-  /** Clears the credit pill above it. */
-  '--plan-note': 'calc(7.75rem + var(--safe-bottom))',
-  /** Where the control column sits on a phone. Overridden per layout below. */
-  '--plan-controls': `${CONTROLS.mobile}px`,
-}
-
-/* -------------------------------------------------------------------------------------------------
- * Viewport
- * ---------------------------------------------------------------------------------------------- */
-
-/**
- * The complement of the rails' `lg:` variant, in the same unit.
- *
- * The two halves of this decision are this query and `hidden lg:flex` / `lg:hidden`
- * on the surfaces below. A `px` query would agree with `lg` only at a 16px root
- * font size, which is why the figure comes from `#/lib/breakpoints`.
- */
-const RAILS_VISIBLE_QUERY = MEDIA_LG_UP
-
-/**
- * True on a viewport wide enough for two floating rails.
- *
- * The rails and the mobile sheet render the *same* rows, and `@dnd-kit` keys its
- * draggables by row id, so mounting both at once would register every id twice.
- * Hence a real media-query read rather than two CSS-hidden copies.
- *
- * It starts `true` so a desktop first paint is already correct; the rails also carry
- * `hidden lg:flex`, which keeps them invisible during the single pre-effect frame on a
- * phone. Either way nothing reflows: the rails are absolute overlays.
- */
-function useIsWide(): boolean {
-  const [wide, setWide] = React.useState(true)
-
-  React.useEffect(() => {
-    const query = window.matchMedia(RAILS_VISIBLE_QUERY)
-    const read = (): void => setWide(query.matches)
-    read()
-    query.addEventListener('change', read)
-    return () => {
-      query.removeEventListener('change', read)
-    }
-  }, [])
-
-  return wide
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -395,7 +292,12 @@ export function PlanScreen({
   const locale = useLocale()
   const t = useTranslate()
   const router = useRouter()
-  const wide = useIsWide()
+  const workspace = usePlanWorkspace(payload.tripId, directionOf(locale))
+  const { wide, leftCollapsed, rightCollapsed, setSheet, padding } = workspace
+  const [unfolded, setUnfolded] = useKeyedPreference(
+    plannerDaysPreference,
+    payload.tripId,
+  )
   const editable = payload.editable
   /** Fetched once the board is on the page; the board never waits for it. */
   const weather = useTripWeather(payload.tripId, payload)
@@ -430,8 +332,6 @@ export function PlanScreen({
   const [categoryIds, setCategoryIds] = React.useState<ReadonlyArray<string>>(
     [],
   )
-  const [leftCollapsed, setLeftCollapsed] = React.useState(false)
-  const [rightCollapsed, setRightCollapsed] = React.useState(false)
   const [pending, setPending] = React.useState<ReadonlySet<string>>(new Set())
   const [dialog, setDialog] = React.useState<DialogState>(null)
   const [saving, setSaving] = React.useState(false)
@@ -463,7 +363,6 @@ export function PlanScreen({
     readonly name: string
     readonly time: string
   } | null>(null)
-  const [sheet, setSheet] = React.useState<'itinerary' | 'places' | null>(null)
   const [coverageHidden, setCoverageHidden] = React.useState(false)
   /**
    * Which slice the places rail lists.
@@ -606,45 +505,27 @@ export function PlanScreen({
     [model.rowsByItem],
   )
 
+  const selectedDay = model.days.find((day) =>
+    day.rows.some((row) => row.placeId === selection.placeId),
+  )?.dayId
+  const lastSelection = React.useRef<string | null>(null)
+  React.useEffect(() => {
+    if (lastSelection.current === selection.placeId) return
+    lastSelection.current = selection.placeId
+    if (selectedDay === undefined || isDayExpanded(unfolded, selectedDay))
+      return
+    setUnfolded({
+      known: model.days.map((day) => day.dayId),
+      open: model.days
+        .filter(
+          (day) =>
+            day.dayId === selectedDay || isDayExpanded(unfolded, day.dayId),
+        )
+        .map((day) => day.dayId),
+    })
+  }, [selection.placeId, selectedDay, unfolded, setUnfolded, model.days])
+
   /* ------------------------------------------------------------------ camera */
-
-  /** Where the control column is pinned in the current layout, in pixels. */
-  const controlsRight = wide
-    ? rightCollapsed
-      ? CONTROLS.folded
-      : CONTROLS.beside
-    : CONTROLS.mobile
-
-  /**
-   * The mobile stack plus this layout's control offset, in one style object — the
-   * offset is the only one of the three that changes as rails fold.
-   */
-  const planVars: PlanVars = {
-    ...PLAN_VARS,
-    '--plan-controls': `${controlsRight}px`,
-  }
-
-  const padding = React.useMemo(() => {
-    if (!wide) {
-      return {
-        top: CHROME.top,
-        bottom: CHROME.mobileBottom,
-        left: RAIL.gutter * 2,
-        right: controlsInset(controlsRight),
-      }
-    }
-    return {
-      top: CHROME.top,
-      bottom: CHROME.bottom,
-      left: (leftCollapsed ? RAIL.collapsed : RAIL.left) + RAIL.gutter * 2,
-      // Whichever reaches further into the map: the rail, or the control column
-      // parked in the gutter beside it.
-      right: Math.max(
-        (rightCollapsed ? RAIL.collapsed : RAIL.right) + RAIL.gutter * 2,
-        controlsInset(controlsRight),
-      ),
-    }
-  }, [controlsRight, leftCollapsed, rightCollapsed, wide])
 
   /* ------------------------------------------------------------------ writes */
 
@@ -1357,6 +1238,14 @@ export function PlanScreen({
       ) : (
         model.days.map((day) => (
           <DaySection
+            expanded={isDayExpanded(unfolded, day.dayId)}
+            onExpandedChange={(expanded) => {
+              const known = model.days.map((entry) => entry.dayId)
+              const open = known.filter((id) =>
+                id === day.dayId ? expanded : isDayExpanded(unfolded, id),
+              )
+              setUnfolded({ known, open })
+            }}
             key={day.dayId}
             day={day}
             categoryFor={categoryFor}
@@ -1485,26 +1374,22 @@ export function PlanScreen({
         screenReaderInstructions: dnd.screenReaderInstructions,
       }}
     >
-      <div
-        style={planVars}
-        className={cn(
-          'relative isolate w-full overflow-hidden',
-          // The map owns the whole viewport slice below the two navigation bars,
-          // minus the mobile tab bar and the device's own safe areas. Both
-          // hairlines are terms in that list, which is why it is derived from
-          // `src/lib/atlas/layout.ts` rather than written out here: the hand
-          // written expression omitted them and the planner overflowed the
-          // viewport by exactly two pixels.
-          TRIP_SLICE_HEIGHT_CLASS.base,
-          TRIP_SLICE_HEIGHT_CLASS.lg,
+      <PlanWorkspace
+        key={payload.tripId}
+        layout={workspace}
+        tripTitle={tripTitle}
+        itinerary={itinerary}
+        ideas={ideas}
+        addButton={addButton}
+        railFooter={railFooter}
+        scheduledCount={String(model.scheduledCount)}
+        placesCount={String(
+          placeScope === 'all' ? scopeCounts.all : scopeCounts.unplanned,
         )}
+        mobileSummary={`${pluralise(model.scheduledCount, 'stop')} · ${pluralise(model.days.length, 'day')} · ${pluralise(model.ideas.length, 'idea')}`}
+        resizeLeftLabel={t('trips.plan.workspace.resizeItinerary')}
+        resizeRightLabel={t('trips.plan.workspace.resizePlaces')}
       >
-        {/* The planner is a full-bleed map with no title bar, and the one place
-            the trip was named — the bottom bar at line 1189 — is `lg:hidden`, so
-            on a desktop the outline opened at `h2` and never said which trip this
-            is. The name belongs to the page in every composition; only its
-            visible expression is a phone's. */}
-        <h1 className="sr-only">{tripTitle}</h1>
         <MapCanvas
           label={`Map of ${tripTitle}`}
           bounds={initialBounds}
@@ -1558,7 +1443,7 @@ export function PlanScreen({
           <PlanCoverage
             points={allPoints}
             padding={padding}
-            fitKey={`${leftCollapsed}:${rightCollapsed}:${wide}`}
+            fitKey={`${leftCollapsed}:${rightCollapsed}:${wide}:${workspace.widths.left}:${workspace.widths.right}:${directionOf(locale)}`}
             hidden={coverageHidden}
             onDismiss={() => setCoverageHidden(true)}
           />
@@ -1570,81 +1455,6 @@ export function PlanScreen({
 
           <PlannerMapLayer drop={mapDrop} empty={allPoints.length === 0} />
         </MapCanvas>
-
-        {/* -------------------------------------------------------- desktop */}
-
-        {wide ? (
-          <>
-            <PlannerRail
-              side="left"
-              label="Itinerary"
-              meta={String(model.scheduledCount)}
-              collapsed={leftCollapsed}
-              onCollapsedChange={setLeftCollapsed}
-              footer={leftCollapsed ? undefined : railFooter}
-              className={cn(
-                'absolute top-4 bottom-4 start-4 hidden animate-overlay-in lg:flex',
-                leftCollapsed ? 'w-11' : 'w-86',
-              )}
-            >
-              {itinerary}
-            </PlannerRail>
-
-            <PlannerRail
-              side="right"
-              label="Places"
-              meta={String(
-                placeScope === 'all' ? scopeCounts.all : scopeCounts.unplanned,
-              )}
-              collapsed={rightCollapsed}
-              onCollapsedChange={setRightCollapsed}
-              toolbar={rightCollapsed ? undefined : addButton}
-              className={cn(
-                'absolute top-4 end-4 bottom-4 hidden animate-overlay-in lg:flex',
-                rightCollapsed ? 'w-11' : 'w-82',
-              )}
-            >
-              {ideas}
-            </PlannerRail>
-          </>
-        ) : (
-          /* --------------------------------------------------------- mobile */
-          <GlassPanel
-            radius="2xl"
-            padding="sm"
-            className="absolute inset-x-3 bottom-3 flex items-center gap-2 pb-safe lg:hidden"
-          >
-            <div className="min-w-0 flex-1">
-              {/* Not a heading: the page's `h1` above already carries this exact
-                  name, and on a phone — the only width this bar exists at — a
-                  second one would announce the trip twice. */}
-              <SectionLabel>{tripTitle}</SectionLabel>
-              <p className="mt-0.5 truncate text-caption tabular-nums text-ink-2">
-                {pluralise(model.scheduledCount, 'stop')} ·{' '}
-                {pluralise(model.days.length, 'day')} ·{' '}
-                {pluralise(model.ideas.length, 'idea')}
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              shape="pill"
-              size="sm"
-              icon={<ListTree />}
-              onClick={() => setSheet('itinerary')}
-            >
-              Days
-            </Button>
-            <Button
-              variant="primary"
-              shape="pill"
-              size="sm"
-              icon={<Layers />}
-              onClick={() => setSheet('places')}
-            >
-              Places
-            </Button>
-          </GlassPanel>
-        )}
 
         {/* ------------------------------------------------- picking banner */}
 
@@ -1675,47 +1485,9 @@ export function PlanScreen({
             />
           </GlassPanel>
         )}
-      </div>
+      </PlanWorkspace>
 
       {/* ------------------------------------------------------ mobile sheet */}
-
-      <Sheet
-        open={sheet !== null}
-        onOpenChange={(open) => setSheet(open ? (sheet ?? 'itinerary') : null)}
-        // Only the grab handle drags the sheet, so a row inside it can be dragged
-        // without the sheet running away with the gesture.
-        handleOnly
-      >
-        <SheetContent side="bottom" className="max-h-[86dvh]">
-          <SheetHeader className="pe-14">
-            <SheetTitle>Plan</SheetTitle>
-          </SheetHeader>
-          <SheetBody className="px-3 py-3">
-            <Tabs
-              value={sheet ?? 'itinerary'}
-              onValueChange={(value) =>
-                setSheet(value === 'places' ? 'places' : 'itinerary')
-              }
-            >
-              <TabsList className="w-full">
-                <TabsTrigger value="itinerary" className="flex-1">
-                  Itinerary
-                </TabsTrigger>
-                <TabsTrigger value="places" className="flex-1">
-                  Places
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="itinerary">{itinerary}</TabsContent>
-              <TabsContent value="places">
-                <div className="flex flex-col gap-3">
-                  {addButton}
-                  {ideas}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </SheetBody>
-        </SheetContent>
-      </Sheet>
 
       {/* ------------------------------------------------------- drag overlay */}
 
@@ -1752,12 +1524,15 @@ export function PlanScreen({
         }}
         placeName={
           dialog?.kind === 'timing'
-            ? (model.rowsByItem.get(dialog.itemId)?.name ?? 'This stop')
-            : 'This stop'
+            ? (model.rowsByItem.get(dialog.itemId)?.name ??
+              t('trips.plan.editor.stopFallback'))
+            : t('trips.plan.editor.stopFallback')
         }
         dayLabel={
           dialog?.kind === 'timing'
-            ? `Day ${model.rowsByItem.get(dialog.itemId)?.dayNumber ?? 1}`
+            ? t('trips.plan.editor.dayNumber', {
+                day: model.rowsByItem.get(dialog.itemId)?.dayNumber ?? 1,
+              })
             : ''
         }
         initial={
