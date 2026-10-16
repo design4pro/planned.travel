@@ -6,6 +6,8 @@ describe('calendar feed credential', () => {
     const secrets = Array.from({ length: 100 }, () => mintFeedSecret())
     expect(new Set(secrets).size).toBe(100)
     for (const secret of secrets) expect(secret).toMatch(/^[A-Za-z0-9_-]{32}$/)
-    expect(await hashFeedSecret('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+    expect(await hashFeedSecret('abc')).toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    )
   })
 })

@@ -8,9 +8,10 @@
  * - **Callers with no tenant context.** A billing webhook arrives with a provider customer or
  *   subscription id and has to *discover* which organization it belongs to; the platform console
  *   reads a workspace its operator is deliberately not a member of, which SPEC §5 forbids reaching
- *   through {@link TenantScope} at all rather than through a fabricated one. Those four functions
- *   take a plain {@link Database}, are named `…Unscoped`, and are the only functions in
- *   `src/server/repos/**` that may run without a {@link TenantScope}. They return billing rows only —
+ *   through {@link TenantScope} at all rather than through a fabricated one. These five functions
+ *   take a plain {@link Database} and follow SPEC §5’s `…Unscoped` shape: one stated caller per
+ *   function, a narrow projection, and no tenant content. The digest lookup in `calendar-feeds.ts`
+ *   follows the same family, rather than adding a third catalog exception. Billing functions return billing rows only —
  *   never trip, place or traveller data — so neither a mis-signed webhook nor a console screen can
  *   read a tenant's content through them.
  */

@@ -928,3 +928,166 @@ test.describe('06-S3b - Requesting a trip export', () => {
     expect(report().fatal).toEqual(expectedNetworkFailures)
   })
 })
+
+/** Phase 2: only Chromium mutates the shared fixture; both projects inspect the resting dialog. */
+test.describe('06-S5b — live calendar link', () => {
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page), 'the demo account is provisioned').toBe(true)
+  })
+
+  for (const theme of THEMES) {
+    test(`the warning and create control fit a 360px phone, ${theme}`, async ({
+      context,
+    }, testInfo) => {
+      const tripId = await tripIdByName(context, PORTO)
+      const route = filesRoute(tripId)
+      const page = await context.newPage()
+      try {
+        await page.setViewportSize({ width: 360, height: PHONE_HEIGHT })
+        const report = watchConsole(page, route)
+        await visit(page, route, theme)
+        await page.route(
+          (url) => callsServerFn(url, 'loadCalendarFeedsFn'),
+          async (request) => {
+            await new Promise((resolve) => setTimeout(resolve, 1000))
+            await request.continue()
+          },
+        )
+        await page.getByRole('button', { name: 'Live calendar link' }).click()
+        const dialog = page.getByRole('dialog', {
+          name: 'Live calendar link',
+          exact: true,
+        })
+        await expect(dialog).toBeVisible()
+        await expect(dialog.locator('[aria-busy]')).toHaveAttribute(
+          'aria-busy',
+          'true',
+        )
+        await dialog.evaluate(async (element) => {
+          await Promise.all(
+            element
+              .getAnimations({ subtree: true })
+              .map((animation) => animation.finished.catch(() => undefined)),
+          )
+        })
+        const pendingBox = await dialog.boundingBox()
+        await expect(dialog.getByText(/Anyone with this link/)).toBeVisible()
+        await expect(
+          dialog.getByRole('button', { name: 'Create a link' }),
+        ).toBeVisible()
+        const loadedBox = await dialog.boundingBox()
+        expect(loadedBox?.height).toBe(pendingBox?.height)
+        expect(loadedBox?.y).toBe(pendingBox?.y)
+        expect(await scrollsSideways(page)).toBe(false)
+        const controls = await dialog.getByRole('button').all()
+        for (const control of controls) {
+          const box = await control.boundingBox()
+          expect(box?.width).toBeGreaterThanOrEqual(24)
+          expect(box?.height).toBeGreaterThanOrEqual(24)
+        }
+        await page.screenshot({
+          path: testInfo.outputPath(`calendar-live-${theme}.png`),
+          fullPage: true,
+        })
+        await dialog.getByRole('button', { name: 'Done', exact: true }).click()
+        expect(report().fatal).toEqual([])
+      } finally {
+        await page.close()
+      }
+    })
+  }
+
+  test(
+    'a keyboard-created link serves without a session and ends revoked',
+    { tag: '@chromium-only' },
+    async ({ context, page, playwright }) => {
+      await context.grantPermissions(['clipboard-read', 'clipboard-write'])
+      await page.setViewportSize({ width: 320, height: PHONE_HEIGHT })
+      const tripId = await tripIdByName(context, PORTO)
+      await visit(page, filesRoute(tripId), 'light')
+      await page.getByRole('button', { name: 'Live calendar link' }).focus()
+      await page.keyboard.press('Enter')
+      const dialog = page.getByRole('dialog', {
+        name: 'Live calendar link',
+        exact: true,
+      })
+      const create = dialog.getByRole('button', { name: 'Create a link' })
+      await expect(create).toBeVisible()
+      await create.focus()
+      await page.keyboard.press('Enter')
+      const address = dialog.getByRole('region', { name: 'Link address' })
+      await expect(address).toBeFocused()
+      expect(await scrollsSideways(page)).toBe(false)
+      expect(
+        await address.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true)
+      const url = (await address.textContent())?.trim()
+      expect(url).toMatch(/\/api\/feed\/[A-Za-z0-9_-]{32}\.ics$/)
+      if (!url) throw new Error('No link address')
+      const unauthenticated = await playwright.request.newContext()
+      try {
+        const response = await unauthenticated.get(url)
+        expect(response.status()).toBe(200)
+        expect(response.headers()['cache-control']).toBe('private, no-store')
+        expect(await response.text()).toContain('BEGIN:VCALENDAR')
+        expect(await dialog.locator('a[href]').count()).toBe(0)
+        await page.keyboard.press('Escape')
+        const guard = page.getByRole('dialog', {
+          name: 'Close without copying the link?',
+        })
+        await expect(guard).toBeVisible()
+        await guard.getByRole('button', { name: 'Keep open' }).focus()
+        await page.keyboard.press('Enter')
+        await expect(guard).not.toBeVisible()
+        await expect(address).toBeFocused()
+        await dialog
+          .getByRole('button', { name: 'Copy link', exact: true })
+          .focus()
+        await page.keyboard.press('Enter')
+        await expect(dialog.getByRole('status')).toHaveText('Link copied')
+        await dialog.getByRole('button', { name: 'Done', exact: true }).focus()
+        await page.keyboard.press('Enter')
+        const trigger = page.getByRole('button', {
+          name: 'Live calendar link',
+          exact: true,
+        })
+        await expect(trigger).toBeFocused()
+        await page.keyboard.press('Enter')
+        await expect(dialog.getByText('Calendar link is on')).toBeVisible()
+        await expect(dialog.getByText(url, { exact: true })).toHaveCount(0)
+        await dialog
+          .getByRole('button', { name: 'Turn off', exact: true })
+          .focus()
+        await page.keyboard.press('Enter')
+        const off = page.getByRole('dialog', {
+          name: 'Turn off this calendar link?',
+        })
+        await off.getByRole('button', { name: 'Turn off', exact: true }).focus()
+        await page.keyboard.press('Enter')
+        await expect(create).toBeFocused()
+        expect((await unauthenticated.get(url)).status()).toBe(404)
+      } finally {
+        // Even a failed assertion leaves this live credential revoked through the actual UI.
+        if (
+          await dialog
+            .getByRole('button', { name: 'Turn off', exact: true })
+            .isVisible()
+            .catch(() => false)
+        ) {
+          await dialog
+            .getByRole('button', { name: 'Turn off', exact: true })
+            .click()
+          await page
+            .getByRole('dialog', { name: 'Turn off this calendar link?' })
+            .getByRole('button', { name: 'Turn off', exact: true })
+            .click()
+          await expect(create).toBeVisible()
+        }
+        await unauthenticated.dispose()
+      }
+    },
+  )
+})

@@ -188,7 +188,9 @@ export function ConfirmDialog({
   pending?: boolean
   busyLabel?: string
   cancelLabel?: string
-  onCloseAutoFocus?: React.ComponentProps<typeof DialogContent>['onCloseAutoFocus']
+  onCloseAutoFocus?: React.ComponentProps<
+    typeof DialogContent
+  >['onCloseAutoFocus']
 }) {
   // `useUiCopy` rather than `useTranslate`: the atlas and map suites render
   // this dialog with no provider above it, and `src/components/ui/copy.ts`

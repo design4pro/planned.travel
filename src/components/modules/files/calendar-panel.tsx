@@ -12,7 +12,11 @@ import { useTranslate } from '#/lib/i18n'
 import { ModulePanel, useAction } from '../shared'
 import { downloadTripCalendar } from './calendar-download'
 
-const LiveCalendar = lazy(() => import('./calendar-live').then((module) => ({ default: module.CalendarLive })))
+const LiveCalendar = lazy(() =>
+  import('./calendar-live').then((module) => ({
+    default: module.CalendarLive,
+  })),
+)
 
 export interface CalendarPanelProps {
   readonly tripId: string
@@ -55,7 +59,19 @@ export function CalendarPanel({ tripId, hasDates }: CalendarPanelProps) {
         {hasDates ? null : (
           <Alert tone="info">{t('modules.files.calendar.undated')}</Alert>
         )}
-        {liveMounted ? <Suspense fallback={null}><LiveCalendar tripId={tripId} initialOpen /></Suspense> : <Button variant="secondary" size="sm" onClick={() => setLiveMounted(true)}>{t('modules.files.calendar.live.action')}</Button>}
+        {liveMounted ? (
+          <Suspense fallback={null}>
+            <LiveCalendar key={tripId} tripId={tripId} initialOpen />
+          </Suspense>
+        ) : (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setLiveMounted(true)}
+          >
+            {t('modules.files.calendar.live.action')}
+          </Button>
+        )}
         <p className="text-caption text-ink-3">
           {t('modules.files.calendar.timesNote')}
         </p>

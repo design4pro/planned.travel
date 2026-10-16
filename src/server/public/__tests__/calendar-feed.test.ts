@@ -303,8 +303,14 @@ describe('session-less calendar feed', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect((await serveCalendarFeed(request(), runtime)).status).toBe(404)
     expect(log.mock.calls).toEqual([
-      ['served', { feedId, status: 200 }],
-      ['resolution-failed', { status: 404 }],
+      [
+        'served',
+        { feedId, scope: 'trip', status: 200, durationMs: expect.any(Number) },
+      ],
+      [
+        'not-found',
+        { status: 404, reason: 'unresolved', durationMs: expect.any(Number) },
+      ],
     ])
     const captured = JSON.stringify([
       log.mock.calls,

@@ -11,7 +11,11 @@ import { z } from 'zod'
 import { appUrl } from '#/server/auth/env'
 import { tripCalendarResponse } from '#/server/calendar/download'
 import { appScope } from './context'
-import { enableFeed, listFeeds, revokeFeed } from '#/server/repos/calendar-feeds'
+import {
+  enableFeed,
+  listFeeds,
+  revokeFeed,
+} from '#/server/repos/calendar-feeds'
 import { requireTrip } from '#/server/repos/trips'
 
 export const downloadTripIcsFn = createServerFn({ method: 'GET' })
@@ -34,9 +38,17 @@ export const loadCalendarFeedsFn = createServerFn({ method: 'GET' })
 export const enableCalendarFeedFn = createServerFn({ method: 'POST' })
   .validator(tripInput)
   .handler(async ({ data }) => {
-    const feed = await enableFeed(await appScope(), { scope: 'trip', tripId: data.tripId })
+    const feed = await enableFeed(await appScope(), {
+      scope: 'trip',
+      tripId: data.tripId,
+    })
     const url = `${appUrl()}/api/feed/${feed.secret}.ics`
-    return { url, webcalUrl: url.replace(/^https?:/, 'webcal:'), tripTitle: feed.tripTitle }
+    return {
+      feedId: feed.feedId,
+      url,
+      webcalUrl: url.replace(/^https?:/, 'webcal:'),
+      tripTitle: feed.tripTitle,
+    }
   })
 
 export const revokeCalendarFeedFn = createServerFn({ method: 'POST' })
