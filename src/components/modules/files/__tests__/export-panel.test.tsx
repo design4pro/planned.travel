@@ -18,6 +18,7 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
+import ArabicModules from '#/lib/i18n/messages/ar/modules'
 
 import type { Catalogue } from '#/lib/i18n'
 import type { TripExportList } from '#/server/fns/exports'
@@ -72,11 +73,11 @@ const TWO: TripExportList = {
   ],
 }
 
-function mount(onCommit: () => void = () => {}) {
+function mount(onCommit: () => void = () => {}, exportId?: string) {
   return render(
     <I18nProvider locale="en" messages={EN}>
       <Profiler id="export-panel" onRender={onCommit}>
-        <ExportPanel tripId="trip-1" />
+        <ExportPanel tripId="trip-1" exportId={exportId} />
       </Profiler>
     </I18nProvider>,
   )
@@ -93,6 +94,8 @@ function file(
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(NOW)
+  window.sessionStorage.clear()
+  Element.prototype.scrollIntoView = vi.fn()
   Object.assign(URL, {
     createObjectURL: vi.fn(() => 'blob:export'),
     revokeObjectURL: vi.fn(),
@@ -677,4 +680,175 @@ it('restores focus after a request rejects once the native button has re-enabled
   expect(button.hasAttribute('disabled')).toBe(false)
   expect(document.activeElement).toBe(button)
   document.body.removeAttribute('tabindex')
+})
+
+it('links the exhausted allowance to the disabled button without an alert', async () => {
+  listTripExportsFn.mockResolvedValue({
+    ...TWO,
+    allowance: { ...TWO.allowance, used: 3 },
+  })
+  mount()
+  const button = await screen.findByRole('button', { name: 'Export the trip' })
+  expect(button.hasAttribute('disabled')).toBe(true)
+  const description = document.getElementById(
+    button.getAttribute('aria-describedby') ?? '',
+  )
+  expect(description?.textContent).toContain('starts again')
+  expect(screen.queryByRole('alert')).toBeNull()
+  expect(screen.getByText('3 of 3 exports used this month')).toBeTruthy()
+})
+
+it('shows the viewer explanation only with artifacts and hides request options', async () => {
+  listTripExportsFn.mockResolvedValue({ ...TWO, canRequest: false })
+  mount()
+  expect(
+    await screen.findByText(/Only owners and editors can create an export/),
+  ).toBeTruthy()
+  expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+  expect(screen.queryByRole('button', { name: 'Export the trip' })).toBeNull()
+})
+
+it('marks and announces only the matching linked export', async () => {
+  listTripExportsFn.mockResolvedValue(TWO)
+  mount(() => {}, 'task-old')
+  const badge = await screen.findByText('From your link')
+  expect(badge.closest('[role="listitem"]')?.getAttribute('aria-current')).toBe(
+    'true',
+  )
+  expect(document.querySelectorAll('[aria-current="true"]')).toHaveLength(1)
+  expect(screen.getByRole('status').textContent).toContain('Trip export,')
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: 'instant',
+    block: 'start',
+  })
+})
+
+it('announces a missing link only after a successful load using viewer copy', async () => {
+  listTripExportsFn.mockRejectedValueOnce(new Error('offline'))
+  mount(() => {}, 'unknown')
+  await screen.findByRole('alert')
+  expect(screen.getByRole('status').textContent).toBe('')
+  listTripExportsFn.mockResolvedValue({ ...TWO, canRequest: false })
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: 'Try again' }))
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toBe(
+      'That export is no longer kept.',
+    ),
+  )
+})
+
+it('sends the notify checkbox value when toggled with Space', async () => {
+  listTripExportsFn.mockResolvedValue(TWO)
+  requestTripExportFn.mockResolvedValue({
+    ok: true,
+    taskId: 'queued',
+    queuedAt: NOW,
+  })
+  mount()
+  const checkbox = await screen.findByRole('checkbox', {
+    name: 'Email me when it is ready',
+  })
+  checkbox.focus()
+  const user = userEvent.setup()
+  await user.keyboard('[Space]')
+  await user.click(screen.getByRole('button', { name: 'Export the trip' }))
+  expect(requestTripExportFn).toHaveBeenCalledWith({
+    data: { tripId: 'trip-1', notify: true, includeReferences: false },
+  })
+})
+
+it('restores a pending request after remount and keeps the request disabled', async () => {
+  window.sessionStorage.setItem(
+    'trip-export-pending:trip-1',
+    JSON.stringify({ taskId: 'pending-1', queuedAt: NOW - 1000 }),
+  )
+  listTripExportsFn.mockResolvedValue(TWO)
+  mount()
+  const button = await screen.findByRole('button', { name: 'Export the trip' })
+  expect(button.hasAttribute('disabled')).toBe(true)
+  expect(document.querySelector('[data-state="pending"]')).toBeTruthy()
+})
+
+it('drops an expired persisted pending request on mount', async () => {
+  window.sessionStorage.setItem(
+    'trip-export-pending:trip-1',
+    JSON.stringify({ taskId: 'expired', queuedAt: NOW - 90_000 }),
+  )
+  listTripExportsFn.mockResolvedValue(TWO)
+  mount()
+  const button = await screen.findByRole('button', { name: 'Export the trip' })
+  expect(button.hasAttribute('disabled')).toBe(false)
+  expect(document.querySelector('[data-state="pending"]')).toBeNull()
+  expect(window.sessionStorage.getItem('trip-export-pending:trip-1')).toBeNull()
+})
+
+it('uses only the remaining polling window for a restored request', async () => {
+  window.sessionStorage.setItem(
+    'trip-export-pending:trip-1',
+    JSON.stringify({ taskId: 'restored', queuedAt: NOW - 89_000 }),
+  )
+  listTripExportsFn.mockResolvedValue(TWO)
+  vi.useFakeTimers()
+  await act(async () => {
+    mount()
+  })
+  const button = screen.getByRole('button', { name: 'Export the trip' })
+  expect(button.hasAttribute('disabled')).toBe(true)
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(button.hasAttribute('disabled')).toBe(false)
+})
+
+it('renders viewer copy from the Arabic catalogue', async () => {
+  listTripExportsFn.mockResolvedValue({
+    ...TWO,
+    canRequest: false,
+    allowance: { ...TWO.allowance, limit: null },
+  })
+  render(
+    <I18nProvider
+      locale="ar"
+      messages={namespaceCatalogue('modules', ArabicModules)}
+    >
+      <ExportPanel tripId="trip-ar" exportId="unknown" />
+    </I18nProvider>,
+  )
+  await screen.findAllByRole('listitem')
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toBe(
+      ArabicModules['files.export.linkGoneViewer'],
+    ),
+  )
+  expect(screen.getByText(ArabicModules['files.export.viewer'])).toBeTruthy()
+  expect(screen.queryAllByRole('checkbox')).toHaveLength(0)
+})
+
+it('shows exports used without a ceiling for an unlimited allowance', async () => {
+  listTripExportsFn.mockResolvedValue({
+    ...TWO,
+    allowance: { ...TWO.allowance, used: 1, limit: null },
+  })
+  mount()
+  expect(await screen.findByText('1 export this month')).toBeTruthy()
+  expect(
+    screen
+      .getByRole('button', { name: 'Export the trip' })
+      .hasAttribute('disabled'),
+  ).toBe(false)
+})
+
+it('does not show an earlier editing request after the traveller becomes a viewer', async () => {
+  window.sessionStorage.setItem(
+    'trip-export-pending:trip-1',
+    JSON.stringify({ taskId: 'old-request', queuedAt: NOW - 1000 }),
+  )
+  listTripExportsFn.mockResolvedValue({ ...TWO, canRequest: false })
+  mount()
+  await screen.findByText(
+    'Only owners and editors can create an export. You can download the ones that exist.',
+  )
+  expect(document.querySelector('[data-state="pending"]')).toBeNull()
 })

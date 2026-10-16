@@ -1057,6 +1057,22 @@ const messages = {
     one: 'Visar de första {count} av {total}.',
     other: 'Visar de första {count} av {total}.',
   },
+  'files.export.notify': 'Mejla mig när exporten är klar',
+  'files.export.viewer':
+    'Bara ägare och redigerare kan skapa en export. Du kan ladda ner dem som finns.',
+  'files.export.jump': 'Gå till exporter',
+  'files.export.fromLink': 'Från din länk',
+  'files.export.linkGone':
+    'Den här exporten sparas inte längre. Skapa en ny nedan.',
+  'files.export.allowance': {
+    one: '{used} av {count} export använd denna månad',
+    other: '{used} av {count} exporter använda denna månad',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} export denna månad',
+    other: '{count} exporter denna månad',
+  },
+  'files.export.linkGoneViewer': 'Den exporten sparas inte längre.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

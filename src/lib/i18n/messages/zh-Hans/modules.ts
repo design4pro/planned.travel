@@ -957,6 +957,17 @@ const messages = {
   'files.export.doc.truncatedRows': {
     other: '显示全部{total}项中的前{count}项。',
   },
+  'files.export.notify': '准备好后通过邮件通知我',
+  'files.export.viewer':
+    '只有所有者和编辑者可以创建导出。你可以下载已有的文件。',
+  'files.export.jump': '前往导出',
+  'files.export.fromLink': '来自你的链接',
+  'files.export.linkGone': '此导出已不再保留。请在下方创建新的导出。',
+  'files.export.allowance': {
+    other: '本月已使用 {used} 次导出，共 {count} 次',
+  },
+  'files.export.allowanceUnlimited': { other: '本月导出 {count} 次' },
+  'files.export.linkGoneViewer': '这份导出已不再保留。',
 } satisfies TranslationOf<typeof En>
 
 export default messages
