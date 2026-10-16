@@ -176,19 +176,13 @@ export function WorkspaceSwitcher({
               }}
             >
               <span className="min-w-0 flex-1">
-                <span
-                  className="block break-words [text-align:match-parent]"
-                  dir="auto"
-                >
-                  {organization.name}
+                <span className="block break-words">
+                  <bdi>{organization.name}</bdi>
                 </span>
                 {(nameCounts.get(foldWorkspaceName(organization.name)) ?? 0) >
                 1 ? (
-                  <span
-                    className="block text-micro text-ink-3 [overflow-wrap:anywhere] [text-align:match-parent]"
-                    dir="ltr"
-                  >
-                    {organization.slug}
+                  <span className="block text-micro text-ink-3 [overflow-wrap:anywhere]">
+                    <span dir="ltr">{organization.slug}</span>
                   </span>
                 ) : null}
               </span>
