@@ -141,6 +141,7 @@ beforeEach(() => {
   router.clearCache.mockReset()
   router.invalidate.mockReset()
   router.navigate.mockReset()
+  notify.success.mockReset()
   notify.error.mockReset()
   workspace.create.mockReset()
   auth.setActive.mockResolvedValue({ data: {}, error: null })
@@ -183,10 +184,120 @@ describe('the workspace switcher in the account menu', () => {
 
     expect(auth.setActive).not.toHaveBeenCalled()
     expect(router.navigate).not.toHaveBeenCalled()
+    expect(notify.success).not.toHaveBeenCalled()
+  })
+})
+
+describe('workspace names', () => {
+  it.each([
+    ['Straße', 'STRASSE'],
+    ['ος', 'ΟΣ'],
+    ['ﬃ', 'FFI'],
+  ])('folds %s and %s to the same name', async (first, second) => {
+    await mount(
+      sessionOf([
+        { ...ALPHA, name: first },
+        { ...BETA, name: second },
+      ]),
+    )
+    expect(
+      screen.getByRole('menuitemradio', { name: new RegExp(ALPHA.slug) }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('menuitemradio', { name: new RegExp(BETA.slug) }),
+    ).toBeTruthy()
+  })
+
+  it('does not fold a dotless i into i', async () => {
+    await mount(
+      sessionOf([
+        { ...ALPHA, name: 'I' },
+        { ...BETA, name: 'ı' },
+      ]),
+    )
+    expect(screen.queryByText(ALPHA.slug)).toBeNull()
+    expect(screen.queryByText(BETA.slug)).toBeNull()
+  })
+
+  it('adds the slug to the accessible name only for colliding names', async () => {
+    await mount(
+      sessionOf([
+        { ...ALPHA, name: ' Café ' },
+        { ...BETA, name: 'CAFE\u0301' },
+        GAMMA,
+      ]),
+    )
+
+    for (const slug of ['alpha', 'beta']) {
+      const row = screen.getByRole('menuitemradio', { name: new RegExp(slug) })
+      const line = within(row).getByText(slug)
+      expect(line.getAttribute('dir')).toBe('ltr')
+      expect(line.tagName).toBe('SPAN')
+      expect(line.className).toContain('[overflow-wrap:anywhere]')
+      expect(row.className).toContain('min-h-11')
+    }
+    expect(screen.queryByText('gamma')).toBeNull()
+  })
+
+  it('keeps diacritically different names distinct', async () => {
+    await mount(
+      sessionOf([
+        { ...ALPHA, name: 'Rafał' },
+        { ...BETA, name: 'Rafal' },
+      ]),
+    )
+    expect(workspaces()).toEqual([
+      ['Rafał', true],
+      ['Rafal', false],
+    ])
+    expect(screen.queryByText('alpha')).toBeNull()
+    expect(screen.queryByText('beta')).toBeNull()
+  })
+
+  it('shows no slug for a single workspace', async () => {
+    await mount(sessionOf([ALPHA]))
+    expect(screen.queryByText(ALPHA.slug)).toBeNull()
   })
 })
 
 describe('switching', () => {
+  it('announces the chosen name, isolated, after navigation, invalidation and menu closure', async () => {
+    const calls: Array<string> = []
+    const navigating = deferred<void>()
+    const invalidating = deferred<void>()
+    router.navigate.mockImplementation(() => {
+      calls.push('navigate')
+      return navigating.promise
+    })
+    router.invalidate.mockImplementation(() => {
+      calls.push('invalidate')
+      return invalidating.promise
+    })
+    notify.success.mockImplementation(() => {
+      expect(screen.queryByRole('menu', { hidden: true })).toBeNull()
+      expect(
+        screen
+          .getByRole('button', { name: 'Account menu' })
+          .closest('[aria-hidden="true"]'),
+      ).toBeNull()
+      calls.push('menu closed', 'toast')
+    })
+    const name = 'عائلة Beta'
+    const { user } = await mount(sessionOf([ALPHA, { ...BETA, name }]))
+    await user.click(screen.getByRole('menuitemradio', { name }))
+    expect(notify.success).not.toHaveBeenCalled()
+    navigating.resolve()
+    await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalledTimes(1))
+    expect(notify.success).not.toHaveBeenCalled()
+    invalidating.resolve()
+    await vi.waitFor(() => {
+      expect(notify.success).toHaveBeenCalledExactlyOnceWith(
+        'Switched to \u2068' + name + '\u2069',
+      )
+    })
+    expect(calls).toEqual(['navigate', 'invalidate', 'menu closed', 'toast'])
+  })
+
   it('activates the chosen id, then goes to the dashboard, then drops every cached loader', async () => {
     const calls: Array<string> = []
     auth.setActive.mockImplementation(async () => {
@@ -274,6 +385,7 @@ describe('switching', () => {
       expect(screen.queryByRole('menu')).toBeNull()
     })
     expect(auth.setActive).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(notify.success).toHaveBeenCalledTimes(1))
   })
 
   it('still refuses a second switch after the menu was closed and reopened mid-flight', async () => {
@@ -312,6 +424,24 @@ describe('switching', () => {
 })
 
 describe('a switch that fails', () => {
+  it.each([401, 403, 500, 'network'])(
+    'never announces success after %s',
+    async (status) => {
+      if (status === 'network')
+        auth.setActive.mockRejectedValue(new TypeError('Failed to fetch'))
+      else
+        auth.setActive.mockResolvedValue({
+          data: null,
+          error: { status, code: 'REFUSED', message: 'Refused' },
+        })
+      const { user } = await mount(sessionOf([ALPHA, BETA]))
+      await user.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+      await vi.waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+      expect(notify.error).toHaveBeenCalledTimes(1)
+      expect(notify.success).not.toHaveBeenCalled()
+    },
+  )
+
   it('tells the reader and stays where it is when the request never arrived', async () => {
     auth.setActive.mockRejectedValue(new TypeError('Failed to fetch'))
     const { user } = await mount(sessionOf([ALPHA, BETA]))

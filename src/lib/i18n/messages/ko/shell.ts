@@ -51,6 +51,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': '워크스페이스',
+  'workspace.switched': '{name}(으)로 전환했습니다',
   'workspace.switchFailed': '워크스페이스를 전환하지 못했어요',
   'workspace.switchFailedBody': '연결을 확인하고 다시 시도해 주세요.',
   'workspace.create': '워크스페이스 만들기',

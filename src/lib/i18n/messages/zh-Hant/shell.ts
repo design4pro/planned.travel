@@ -51,6 +51,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': '工作區',
+  'workspace.switched': '已切換至{name}',
   'workspace.switchFailed': '沒能切換工作區',
   'workspace.switchFailedBody': '請檢查網路後再試一次。',
   'workspace.create': '建立工作區',
