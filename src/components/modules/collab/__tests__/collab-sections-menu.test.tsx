@@ -6,6 +6,9 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Trips from '#/lib/i18n/messages/en/trips'
 import Modules from '#/lib/i18n/messages/en/modules'
+import PolishTrips from '#/lib/i18n/messages/pl/trips'
+import PolishModules from '#/lib/i18n/messages/pl/modules'
+import { encodePublicFailure } from '#/lib/errors'
 import { toast } from '#/components/ui'
 import { CollabSectionsMenu } from '../collab-sections-menu'
 
@@ -127,5 +130,53 @@ it.each(['data', 'throw'])(
         .getByRole('menuitemcheckbox', { name: 'Notes' })
         .getAttribute('aria-checked'),
     ).toBe('false')
+  },
+)
+
+it.each(['transport', 'refusal'] as const)(
+  'localizes an unknown %s failure while preserving authored refusals',
+  async (kind) => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => '')
+    const write = vi.fn(async () => {
+      if (kind === 'transport') throw new TypeError('Failed to fetch')
+      throw new Error(
+        encodePublicFailure({ kind: 'refusal', message: 'Authored refusal' }),
+      )
+    })
+    const refresh = vi.fn().mockResolvedValue(undefined)
+    render(
+      <I18nProvider
+        locale="pl"
+        messages={{
+          ...namespaceCatalogue('trips', PolishTrips),
+          ...namespaceCatalogue('modules', PolishModules),
+        }}
+      >
+        <CollabSectionsMenu
+          sections={{ conversation: true, notes: false, polls: false }}
+          write={write}
+          refresh={refresh}
+          onWritingChange={vi.fn()}
+        />
+      </I18nProvider>,
+    )
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', {
+        name: PolishTrips['collab.sections.trigger'],
+      }),
+    )
+    await user.click(
+      screen.getByRole('menuitemcheckbox', {
+        name: PolishModules['field.notes'],
+      }),
+    )
+    await waitFor(() => expect(refresh).toHaveBeenCalledOnce())
+    expect(error).toHaveBeenCalledWith(PolishTrips['collab.sections.failed'], {
+      description:
+        kind === 'transport'
+          ? PolishTrips['collab.sections.failedBody']
+          : 'Authored refusal',
+    })
   },
 )

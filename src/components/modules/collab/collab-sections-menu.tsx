@@ -13,7 +13,7 @@ import {
 import { COLLAB_SECTIONS, enabledCollabSections } from '#/lib/collab-sections'
 import type { CollabSectionId, CollabSections } from '#/lib/collab-sections'
 import { useTranslate } from '#/lib/i18n'
-import { messageOf } from '../shared/use-action'
+import { readPublicFailure } from '#/lib/errors'
 import { COLLAB_SECTION_PRESENTATION } from './sections'
 
 export function CollabSectionsMenu({
@@ -48,8 +48,12 @@ export function CollabSectionsMenu({
           description: t('trips.collab.sections.failedBody'),
         })
     } catch (cause) {
+      const failure = readPublicFailure(cause)
       toast.error(t('trips.collab.sections.failed'), {
-        description: messageOf(cause, t('trips.collab.sections.failedBody')),
+        description:
+          failure.kind === 'unexpected'
+            ? t('trips.collab.sections.failedBody')
+            : (failure.message ?? t('trips.collab.sections.failedBody')),
       })
     } finally {
       try {
