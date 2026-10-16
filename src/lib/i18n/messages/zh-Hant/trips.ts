@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': '留空即可保留在地點面板中。',
   'plan.editor.unplanned': '暫不安排',
   'plan.editor.dayNamed': '第{day}天 · {title}',
+  'plan.editor.stopFallback': '此停靠點',
   'plan.editor.dayNumber': '第{day}天',
   'plan.editor.visited': '已去過',
   'plan.editor.visitedHint': '為圖釘加上勾選標記。',

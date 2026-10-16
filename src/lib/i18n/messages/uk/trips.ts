@@ -42,6 +42,7 @@ const messages = {
     'Залиште порожнім, щоб зберегти місце на панелі місць.',
   'plan.editor.unplanned': 'Залишити без плану',
   'plan.editor.dayNamed': 'День {day} · {title}',
+  'plan.editor.stopFallback': 'Ця зупинка',
   'plan.editor.dayNumber': 'День {day}',
   'plan.editor.visited': 'Уже відвідано',
   'plan.editor.visitedHint': 'Позначає шпильку галочкою.',

@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': '비워 두면 장소 패널에 남습니다.',
   'plan.editor.unplanned': '계획하지 않은 상태로 두기',
   'plan.editor.dayNamed': '{day}일차 · {title}',
+  'plan.editor.stopFallback': '이 경유지',
   'plan.editor.dayNumber': '{day}일차',
   'plan.editor.visited': '방문함',
   'plan.editor.visitedHint': '핀에 체크 표시를 합니다.',

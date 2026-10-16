@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'اتركه فارغًا لإبقائه في لوحة الأماكن.',
   'plan.editor.unplanned': 'تركه دون جدولة',
   'plan.editor.dayNamed': 'اليوم {day} · {title}',
+  'plan.editor.stopFallback': 'هذه المحطة',
   'plan.editor.dayNumber': 'اليوم {day}',
   'plan.editor.visited': 'تمت الزيارة',
   'plan.editor.visitedHint': 'يضع علامة صح على الدبوس.',

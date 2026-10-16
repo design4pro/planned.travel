@@ -1752,12 +1752,15 @@ export function PlanScreen({
         }}
         placeName={
           dialog?.kind === 'timing'
-            ? (model.rowsByItem.get(dialog.itemId)?.name ?? 'This stop')
-            : 'This stop'
+            ? (model.rowsByItem.get(dialog.itemId)?.name ??
+              t('trips.plan.editor.stopFallback'))
+            : t('trips.plan.editor.stopFallback')
         }
         dayLabel={
           dialog?.kind === 'timing'
-            ? `Day ${model.rowsByItem.get(dialog.itemId)?.dayNumber ?? 1}`
+            ? t('trips.plan.editor.dayNumber', {
+                day: model.rowsByItem.get(dialog.itemId)?.dayNumber ?? 1,
+              })
             : ''
         }
         initial={

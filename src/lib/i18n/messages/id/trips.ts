@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Biarkan kosong agar tetap di panel tempat.',
   'plan.editor.unplanned': 'Biarkan belum dijadwalkan',
   'plan.editor.dayNamed': 'Hari {day} · {title}',
+  'plan.editor.stopFallback': 'Perhentian ini',
   'plan.editor.dayNumber': 'Hari {day}',
   'plan.editor.visited': 'Sudah dikunjungi',
   'plan.editor.visitedHint': 'Menandai pin dengan centang.',

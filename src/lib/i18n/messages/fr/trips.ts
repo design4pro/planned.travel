@@ -43,6 +43,7 @@ const messages = {
     'Laissez vide pour garder le lieu dans le panneau des lieux.',
   'plan.editor.unplanned': 'Laisser non planifié',
   'plan.editor.dayNamed': 'Jour {day} · {title}',
+  'plan.editor.stopFallback': 'Cet arrêt',
   'plan.editor.dayNumber': 'Jour {day}',
   'plan.editor.visited': 'Déjà visité',
   'plan.editor.visitedHint': 'Ajoute une coche au repère.',

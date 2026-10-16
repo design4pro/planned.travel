@@ -42,6 +42,7 @@ const messages = {
   'plan.editor.dayHint': 'Leer lassen, um den Ort im Ortebereich zu behalten.',
   'plan.editor.unplanned': 'Ungeplant lassen',
   'plan.editor.dayNamed': 'Tag {day} · {title}',
+  'plan.editor.stopFallback': 'Dieser Halt',
   'plan.editor.dayNumber': 'Tag {day}',
   'plan.editor.visited': 'Schon besucht',
   'plan.editor.visitedHint': 'Markiert die Stecknadel mit einem Häkchen.',
