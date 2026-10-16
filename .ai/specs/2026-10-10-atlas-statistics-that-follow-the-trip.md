@@ -137,15 +137,12 @@ Each caller already holds the trip: `requireEditablePlan` returns it in the thre
 three transport functions, and `confirmBookingImport` holds `trip`. Its "a place was created" flag is set **right after `createPlace` resolves**, inside the place resolver, and is not inferred from the resolver's return value: the resolver returns an existing place's id for a name match (nothing created, nothing enqueued) and returns `null` from its `catch` after a later failure in the same row (a place exists, so it enqueues once). Because `persist` and `stamp` can throw after places were created, the enqueue runs in a `finally` guarded by the flag, not as a last statement. `confirmBookingImport` is port-injected and its test mock deliberately throws in `taskQueue`; the ticket either names the mock change or injects the enqueue as a port. `updatePlanPlaceFn` compares the new city with the stored one,
 so `requirePlaceOfPlan` returns the place it already reads. The helper is called **after** the D1 write has succeeded.
 
-**`createPlaceFn` gains a role guard.** It holds no trip, and `createPlace` only checks that the caller can **read** the trip
-(`readableTrips`, `src/server/repos/places.ts`), never their role. No screen reaches it today (its only caller, `AddPlaceDialog`,
-is imported nowhere), so nobody loses a visible control, but a viewer who calls it directly can add a place, and the new recompute
-would run for every member behind that hole. It gains the guard the planner's other place writes use (`requireWritableTrip`, then
-`assertTripRole(['owner', 'editor'])`; `requireEditablePlan` in `plan.ts` is private to that module, so the guard is shared by
-moving it to the repository next to `assertTripRole`, or by repeating the two calls, whichever the slicer finds smaller) and passes
-the trip on. It is the **first commit** of 08-S6a and the ticket body names it as the tenancy change it is, so review reads it as
-one. The guard stays at the function, like every other planner write; moving it into `createPlace` would also cover the next
-caller and is the slicer's call if it is smaller.
+**`createPlaceFn` keeps the planner's archive check.** Issue #928 closes the role gap at the repository seam:
+all six place writers resolve a visible trip and enforce `PLACE_WRITE_ROLES` (`owner`, `editor`) before quota or mutation.
+The planner shares that role list. A viewer calling `createPlaceFn` directly is therefore refused by `createPlace` itself;
+08-S6a must preserve that guard rather than introduce a second role policy. `createPlaceFn` still needs
+`requireWritableTrip` before its write so an archived trip is refused as in the planner's other handlers, and the returned
+trip feeds recomputation. Archive behavior in the place repository remains outside #928's scope.
 
 **The previous departure date of a transport.** The recompute attributes distance to the year of a transport's own
 `departure_date`, which is a column of the `transports` row (a leg is one part of a transport and carries no date the recompute

@@ -504,7 +504,7 @@ The `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
 - **This is the first stage in this plan to baseline a trip tab, and it inherits
   `12-verification-protocol.md` §7.2.** Seven call sites still build their own `Intl.DateTimeFormat`
   with an abbreviated month, and two of them are on this screen —
-  `src/components/modules/collab/collab-board.tsx` and `.../thread.tsx`. The Worker runtime and
+  `src/components/modules/collab/notes-board.tsx` and `.../thread.tsx`. The Worker runtime and
   WebKit disagree about those strings, so a September date differs between the two projects for a
   reason that is not the design. The status there is deferred and this stage does not fix it; it
   records that its `mobile-safari` baselines carry the risk and reports any difference of that shape
