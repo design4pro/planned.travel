@@ -19,7 +19,7 @@
  *   later edit to the builder can emit them; the test captures the SQL to keep it that way.
  */
 
-import { asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { asc, eq, exists, inArray, isNull, sql } from 'drizzle-orm'
 import {
   calendarFeeds,
   newId,
@@ -312,6 +312,28 @@ function armedWithin(
   return sql`coalesce(${calendarFeeds.rotatedAt}, ${calendarFeeds.createdAt}) >= ${createdAt}`
 }
 
+/** Apply the same current owner/arming checks to reads and the final rotation write. */
+function activeOwnerFilter(scope: TenantScope, now: Date): SQL {
+  return allOf(
+    tenantFilter(scope, member, eq(member.userId, scope.ctx.userId)),
+    inArray(member.role, [...ORGANIZATION_ROLES]),
+    armedWithin(member.createdAt),
+    sql`not (coalesce(${user.banned}, 0) = 1 and (${user.banExpires} is null or ${user.banExpires} > ${now.getTime()}))`,
+  )
+}
+
+function armedTripMembershipFilter(scope: TenantScope, tripId: string): SQL {
+  return allOf(
+    tenantFilter(
+      scope,
+      tripMembers,
+      eq(tripMembers.tripId, tripId),
+      eq(tripMembers.userId, scope.ctx.userId),
+    ),
+    armedWithin(tripMembers.createdAt),
+  )
+}
+
 /** The single credential-to-tenant lookup; no tenant content or credential leaves it. */
 export async function findLiveFeedByDigestUnscoped(
   db: Database,
@@ -370,13 +392,7 @@ async function liveFeedScope(
         isNull(calendarFeeds.revokedAt),
       ),
     )
-    .where(
-      allOf(
-        tenantFilter(provisional, member, eq(member.userId, found.userId)),
-        armedWithin(member.createdAt),
-        sql`not (coalesce(${user.banned}, 0) = 1 and (${user.banExpires} is null or ${user.banExpires} > ${now.getTime()}))`,
-      ),
-    )
+    .where(activeOwnerFilter(provisional, now))
     .limit(1)
   if (!row || !ORGANIZATION_ROLES.some((role) => role === row.role)) return null
   return createScope(db, {
@@ -414,17 +430,7 @@ async function tripAccess(
         isNull(calendarFeeds.revokedAt),
       ),
     )
-    .where(
-      allOf(
-        tenantFilter(
-          scope,
-          tripMembers,
-          eq(tripMembers.tripId, found.tripId),
-          eq(tripMembers.userId, found.userId),
-        ),
-        armedWithin(tripMembers.createdAt),
-      ),
-    )
+    .where(armedTripMembershipFilter(scope, found.tripId))
     .limit(1)
   return rows.length !== 0
 }
@@ -564,6 +570,19 @@ export async function rotateFeed(scope: TenantScope, feedId: string) {
         eq(calendarFeeds.userId, scope.ctx.userId),
         isNull(calendarFeeds.revokedAt),
         eq(calendarFeeds.tokenDigest, row.tokenDigest),
+        exists(
+          scope.db
+            .select({ id: member.id })
+            .from(member)
+            .innerJoin(user, eq(user.id, member.userId))
+            .where(activeOwnerFilter(scope, now)),
+        ),
+        exists(
+          scope.db
+            .select({ id: tripMembers.id })
+            .from(tripMembers)
+            .where(armedTripMembershipFilter(scope, row.tripId)),
+        ),
       ),
     )
     .returning({ id: calendarFeeds.id })

@@ -41,6 +41,7 @@ export function CalendarLive({
   const [revealed, setRevealed] = useState<Revealed | null>(null)
   const [copied, setCopied] = useState(false)
   const [pending, setPending] = useState(false)
+  const [rotating, setRotating] = useState(false)
   const [error, setError] = useState('')
   const [announcement, setAnnouncement] = useState('')
   const [confirmation, setConfirmation] = useState<
@@ -149,13 +150,17 @@ export function CalendarLive({
       }
       return { ok: true, state } as const
     } catch {
-      if (request === lastLoad.current)
+      if (request === lastLoad.current) {
+        setFeed(null)
+        setLoaded(false)
         setError(t('modules.files.calendar.error.load'))
+      }
       return { ok: false } as const
     }
   }
   async function enable(action: 'enable' | 'rotate' = 'enable') {
     if (action === 'rotate' && !feed) return
+    setRotating(action === 'rotate')
     lastLoad.current++
     setPending(true)
     setError('')
@@ -173,17 +178,19 @@ export function CalendarLive({
       await reloadAfterChange()
     } catch {
       setRevealed(null)
-      await reloadAfterChange()
+      const actual = await reloadAfterChange()
       setConfirmation(null)
-      setError(
-        t(
-          action === 'rotate'
-            ? 'modules.files.calendar.error.rotate'
-            : 'modules.files.calendar.error.enable',
-        ),
-      )
+      if (actual.ok)
+        setError(
+          t(
+            action === 'rotate'
+              ? 'modules.files.calendar.error.rotate'
+              : 'modules.files.calendar.error.enable',
+          ),
+        )
     } finally {
       setPending(false)
+      setRotating(false)
     }
   }
   function requestRotation() {
@@ -212,8 +219,8 @@ export function CalendarLive({
       }
     } catch {
       const actual = await reloadAfterChange()
-      if (actual.ok && !actual.state?.on) setRevealed(null)
-      setError(t('modules.files.calendar.error.off'))
+      if (!actual.ok || !actual.state?.on) setRevealed(null)
+      if (actual.ok) setError(t('modules.files.calendar.error.off'))
       setConfirmation(null)
     } finally {
       setPending(false)
@@ -350,6 +357,8 @@ export function CalendarLive({
                         variant="secondary"
                         disabled={pending}
                         onClick={requestRotation}
+                        loading={rotating}
+                        loadingLabel={t('modules.files.calendar.rotate.busy')}
                       >
                         {t('modules.files.calendar.rotate.action')}
                       </Button>
@@ -394,6 +403,8 @@ export function CalendarLive({
                     variant="secondary"
                     disabled={pending}
                     onClick={requestRotation}
+                    loading={rotating}
+                    loadingLabel={t('modules.files.calendar.rotate.busy')}
                   >
                     {t('modules.files.calendar.rotate.action')}
                   </Button>

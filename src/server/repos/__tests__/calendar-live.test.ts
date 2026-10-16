@@ -107,6 +107,48 @@ describe('owner-bound live calendar feeds', () => {
     )
     expect(await h.db.select().from(calendarFeeds)).toEqual(before)
   })
+  it.each(['organization', 'trip', 'ban'])(
+    'refuses a %s access change during hashing without rearming the old feed',
+    async (kind) => {
+      const { trip, enabled } = await make()
+      const before = await h.db.select().from(calendarFeeds)
+      const hash = secrets.hashFeedSecret
+      const spy = vi
+        .spyOn(secrets, 'hashFeedSecret')
+        .mockImplementationOnce(async (secret) => {
+          const newer = new Date(Date.now() + 1)
+          if (kind === 'organization') {
+            const [row] = await h.db
+              .select()
+              .from(member)
+              .where(eq(member.userId, a.ownerUserId))
+            await h.db.delete(member).where(eq(member.id, row.id))
+            await h.db.insert(member).values({ ...row, createdAt: newer })
+          } else if (kind === 'trip') {
+            const [row] = await h.db
+              .select()
+              .from(tripMembers)
+              .where(eq(tripMembers.tripId, trip.id))
+            await h.db.delete(tripMembers).where(eq(tripMembers.id, row.id))
+            await h.db.insert(tripMembers).values({ ...row, createdAt: newer })
+          } else {
+            await h.db
+              .update(user)
+              .set({ banned: true, banExpires: null })
+              .where(eq(user.id, a.ownerUserId))
+          }
+          return hash(secret)
+        })
+      try {
+        await expect(
+          rotateFeed(a.scope, enabled.feedId),
+        ).rejects.toBeInstanceOf(NotFoundError)
+        expect(await h.db.select().from(calendarFeeds)).toEqual(before)
+      } finally {
+        spy.mockRestore()
+      }
+    },
+  )
   it('does not resurrect a feed revoked while the new secret is being hashed', async () => {
     const { enabled } = await make()
     const hash = secrets.hashFeedSecret

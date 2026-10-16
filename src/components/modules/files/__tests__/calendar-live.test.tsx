@@ -115,6 +115,54 @@ describe('live calendar link', () => {
     expect(screen.getByRole('button', { name: 'Turn off' })).toBeTruthy()
     await waitFor(() => expect(document.activeElement).toBe(error))
   })
+  it('announces a direct rotation while its response is pending', async () => {
+    stubs.load.mockResolvedValue(feed)
+    let finish: (value: typeof url) => void = () => {}
+    stubs.rotate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve({
+              feedId: feed.id,
+              tripTitle: 'Lisbon',
+              url,
+              webcalUrl: url.replace('https:', 'webcal:'),
+            })
+        }),
+    )
+    mount()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Live calendar link' }),
+    )
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make a new link' }),
+    )
+    expect(await screen.findByText('Making a new link…')).toBeTruthy()
+    await act(async () => {
+      finish(url)
+    })
+    expect(
+      await screen.findByRole('region', { name: 'Link address' }),
+    ).toBeTruthy()
+  })
+  it('keeps a load error when rotation and its recovery reload both fail', async () => {
+    stubs.load
+      .mockResolvedValueOnce(feed)
+      .mockRejectedValue(new Error('offline'))
+    stubs.rotate.mockRejectedValue(new Error('lost response'))
+    mount()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Live calendar link' }),
+    )
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make a new link' }),
+    )
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(
+      'We couldn’t check this trip’s calendar link. Try again.',
+    )
+    expect(alert.textContent).not.toContain('The current state is shown below')
+  })
   it('warns before enabling, reveals once without secret-bearing anchors, and guards Done until copied', async () => {
     const user = userEvent.setup()
     mount()
