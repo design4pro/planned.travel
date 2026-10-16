@@ -34,15 +34,13 @@ function ReadinessSession({
   const loader = React.useRef(loaderReady)
   loader.current = loaderReady
   const check = React.useRef<(() => void) | null>(null)
-  const [phase, setPhase] = React.useState<
-    'waiting' | 'visible' | 'exit' | 'done'
-  >('waiting')
+  const [phase, setPhase] = React.useState<'waiting' | 'visible' | 'done'>(
+    'waiting',
+  )
   React.useEffect(() => {
     const node = root.current
     if (node === null) return
-    let admitted = false
     let finished = false
-    let exitTimer: ReturnType<typeof setTimeout> | undefined
     const ready = () => {
       if (node.querySelector('[data-plan-error]') !== null) return true
       if (!loader.current) return false
@@ -59,15 +57,7 @@ function ReadinessSession({
       if (finished || !ready()) return
       finished = true
       clearTimeout(admission)
-      if (
-        !admitted ||
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ) {
-        setPhase('done')
-        return
-      }
-      setPhase('exit')
-      exitTimer = setTimeout(() => setPhase('done'), 150)
+      setPhase('done')
     }
     const admission = setTimeout(() => {
       if (ready()) {
@@ -75,7 +65,6 @@ function ReadinessSession({
         setPhase('done')
         return
       }
-      admitted = true
       setPhase('visible')
     }, 150)
     check.current = settle
@@ -95,7 +84,6 @@ function ReadinessSession({
       check.current = null
       observer.disconnect()
       clearTimeout(admission)
-      clearTimeout(exitTimer)
     }
   }, [])
   React.useEffect(() => {
@@ -107,7 +95,7 @@ function ReadinessSession({
       aria-busy={phase === 'waiting' || phase === 'visible'}
       className="relative w-full"
     >
-      <div className="contents" inert={phase === 'visible' || phase === 'exit'}>
+      <div className="contents" inert={phase === 'visible'}>
         {children}
       </div>
       {phase === 'done' ? null : (
@@ -117,8 +105,6 @@ function ReadinessSession({
           className={cn(
             'absolute inset-0 z-50 grid place-items-center bg-surface font-display text-title text-ink',
             phase === 'waiting' && 'invisible',
-            phase === 'exit' &&
-              'opacity-0 transition-opacity duration-150 motion-reduce:transition-none',
           )}
         >
           {title}

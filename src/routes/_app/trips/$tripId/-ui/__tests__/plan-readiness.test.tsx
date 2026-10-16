@@ -43,12 +43,6 @@ describe('combined planner readiness', () => {
         ?.getAttribute('data-workspace-splash'),
     ).toBe('visible')
     await act(async () => view.rerender(<View loaded ready />))
-    expect(
-      view.container
-        .querySelector('[data-workspace-splash]')
-        ?.getAttribute('data-workspace-splash'),
-    ).toBe('exit')
-    act(() => vi.advanceTimersByTime(150))
     expect(view.container.querySelector('[data-workspace-splash]')).toBeNull()
   })
   it('does not admit either fast readiness or an inactive/preloaded route', () => {
@@ -116,4 +110,14 @@ describe('combined planner readiness', () => {
     act(() => vi.advanceTimersByTime(150))
     expect(view.container.querySelector('[data-workspace-splash]')).toBeNull()
   })
+})
+
+it('removes the admitted splash and releases covered controls on readiness without a removal timer', async () => {
+  const view = render(<View />)
+  act(() => vi.advanceTimersByTime(150))
+  expect(view.container.querySelector('[inert]')).not.toBeNull()
+  await act(async () => view.rerender(<View loaded ready />))
+  expect(view.container.querySelector('[data-workspace-splash]')).toBeNull()
+  expect(view.container.querySelector('[inert]')).toBeNull()
+  expect(vi.getTimerCount()).toBe(0)
 })

@@ -158,7 +158,7 @@ describe('readiness splash', () => {
     act(() => vi.advanceTimersByTime(150))
     expect(view.container.querySelector('[data-workspace-splash]')).toBeNull()
   })
-  it('admits after 150ms and exits within 150ms of terminal map readiness', async () => {
+  it('admits after 150ms and clears on terminal map readiness without a visible hold', async () => {
     vi.useFakeTimers()
     const view = render(<Workspace />)
     act(() => vi.advanceTimersByTime(149))
@@ -176,15 +176,9 @@ describe('readiness splash', () => {
     await act(async () => {
       view.rerender(<Workspace ready />)
     })
-    expect(
-      view.container
-        .querySelector('[data-workspace-splash]')
-        ?.getAttribute('data-workspace-splash'),
-    ).toBe('exit')
-    act(() => vi.advanceTimersByTime(150))
     expect(view.container.querySelector('[data-workspace-splash]')).toBeNull()
   })
-  it('removes the exit animation for reduced motion', async () => {
+  it('preserves admission and immediate readiness dismissal with reduced motion', async () => {
     vi.useFakeTimers()
     vi.stubGlobal(
       'matchMedia',
