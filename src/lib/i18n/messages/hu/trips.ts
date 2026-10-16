@@ -362,6 +362,14 @@ const messages = {
     'Előrejelzési adatok: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Adatok: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Útiterv átméretezése',
+  'plan.workspace.resizePlaces': 'Helyek átméretezése',
+  'plan.workspace.toggleDay': '{day} kibontása vagy összecsukása',
+  'plan.workspace.days': 'Napok',
+  'plan.workspace.showPanel': '{label} panel megjelenítése',
+  'plan.workspace.hidePanel': '{label} panel elrejtése',
+  'plan.workspace.narrowPanel': '{label} szűkítése',
+  'plan.workspace.widenPanel': '{label} szélesítése',
 } satisfies TranslationOf<typeof En>
 
 export default messages

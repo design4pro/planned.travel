@@ -50,9 +50,9 @@ export function dayRegion(page: Page, title: string): Locator {
   return page.getByRole('region', { name: new RegExp(`^${escaped}, `) })
 }
 
-/** A day's header button: the first button in its section, ahead of the weather badge. */
+/** A day's map-focus toggle, independent of its separate disclosure control. */
 export function dayHeader(region: Locator): Locator {
-  return region.getByRole('button').first()
+  return region.getByRole('button').and(region.locator('[aria-pressed]'))
 }
 
 /**

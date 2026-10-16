@@ -560,6 +560,14 @@ const messages = {
   'plan.weather.attribution.metNorway': 'Forecast data: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Data: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Resize itinerary',
+  'plan.workspace.resizePlaces': 'Resize places',
+  'plan.workspace.toggleDay': 'Expand or collapse {day}',
+  'plan.workspace.days': 'Days',
+  'plan.workspace.showPanel': 'Show the {label} panel',
+  'plan.workspace.hidePanel': 'Hide the {label} panel',
+  'plan.workspace.narrowPanel': 'Narrow {label}',
+  'plan.workspace.widenPanel': 'Widen {label}',
 } as const satisfies NamespaceMessages
 
 export default messages
