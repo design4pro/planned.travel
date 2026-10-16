@@ -20,7 +20,7 @@ import { StartClient } from '@tanstack/react-start/client'
 import { StrictMode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
-import { scrubEvent } from '#/lib/sentry-scrub'
+import { scrubEvent, scrubTelemetry } from '#/lib/sentry-scrub'
 
 /**
  * A DSN is public by design - it ships in this bundle and is visible to anyone who reads it. It is
@@ -38,6 +38,9 @@ if (typeof dsn === 'string' && dsn.length > 0) {
     release: import.meta.env.VITE_SENTRY_RELEASE,
     sendDefaultPii: false,
     beforeSend: scrubEvent,
+    beforeSendTransaction: scrubTelemetry,
+    beforeSendSpan: scrubTelemetry,
+    beforeSendLog: scrubTelemetry,
     enableLogs: true,
     // A tenth of sessions, and every session that hit an error - the second is the one that pays
     // for itself, because it is the recording somebody will actually want to watch.

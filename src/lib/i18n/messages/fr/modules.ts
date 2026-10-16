@@ -923,6 +923,53 @@ const messages = {
   'files.action.add': 'Ajouter des fichiers',
   'files.action.choose': 'Choisir des fichiers',
   'files.action.upload': 'Envoyer les fichiers',
+  'files.calendar.live.action': 'Lien de calendrier actualisé',
+  'files.calendar.live.title': 'Lien de calendrier actualisé',
+  'files.calendar.warning':
+    'Toute personne disposant de ce lien peut lire les lieux, horaires, adresses et notes de ce voyage sans compte. Protégez-le comme un mot de passe.',
+  'files.calendar.enable.action': 'Créer un lien',
+  'files.calendar.link.once':
+    'Copiez-le maintenant - il ne sera affiché qu’une fois. Si vous le perdez, désactivez-le et créez-en un autre ; l’ancien cessera de fonctionner.',
+  'files.calendar.link.address': 'Adresse du lien',
+  'files.calendar.link.copy': 'Copier le lien',
+  'files.calendar.link.copied': 'Lien copié',
+  'files.calendar.link.copyFailed':
+    'La copie a échoué. Sélectionnez l’adresse et copiez-la vous-même.',
+  'files.calendar.link.open': 'Ouvrir dans votre application de calendrier',
+  'files.calendar.link.google': 'Ajouter à Google Agenda',
+  'files.calendar.link.outlook': 'Ajouter à Outlook',
+  'files.calendar.link.done': 'Terminé',
+  'files.calendar.link.stays':
+    'Les numéros de confirmation, les prix et les fichiers restent dans planned.travel.',
+  'files.calendar.freshness':
+    'Les applications de calendrier peuvent mettre plusieurs heures, parfois davantage, à afficher une modification.',
+  'files.calendar.state.on': 'Le lien de calendrier est actif',
+  'files.calendar.state.lastFetched':
+    'Un calendrier a consulté ce lien pour la dernière fois {when}',
+  'files.calendar.state.neverFetched': 'Pas encore consulté',
+  'files.calendar.off.action': 'Désactiver',
+  'files.calendar.off.confirmTitle': 'Désactiver ce lien de calendrier ?',
+  'files.calendar.off.confirmBody':
+    'Le lien cessera immédiatement de fonctionner. Les calendriers conserveront les événements déjà reçus, mais ne les actualiseront plus.',
+  'files.calendar.off.confirm': 'Désactiver',
+  'files.calendar.off.busy': 'Désactivation…',
+  'files.calendar.closeGuard.title': 'Fermer sans copier le lien ?',
+  'files.calendar.closeGuard.body':
+    'Nous ne pouvons pas l’afficher à nouveau. Vous devrez en créer un autre.',
+  'files.calendar.closeGuard.confirm': 'Fermer quand même',
+  'files.calendar.closeGuard.cancel': 'Garder ouvert',
+  'files.calendar.error.enable':
+    'La création du lien n’a pas pu être confirmée. Son état actuel figure ci-dessous. S’il est actif mais que vous ne l’avez jamais vu, désactivez-le et recréez-le.',
+  'files.calendar.error.off':
+    'La désactivation n’a pas pu être confirmée. Son état actuel figure ci-dessous ; réessayez si nécessaire.',
+  'files.calendar.error.load':
+    'Impossible de vérifier le lien de calendrier de ce voyage. Réessayez.',
+  'files.calendar.retry': 'Réessayer',
+  'files.calendar.off.confirmBodyUnused':
+    'Ce lien n’a pas encore été utilisé. Il cessera immédiatement de fonctionner.',
+  'files.calendar.link.fallback':
+    'Si votre téléphone ne permet pas de l’ajouter, ouvrez cette page sur un ordinateur.',
+  'files.calendar.link.newTab': 's’ouvre dans un nouvel onglet',
   'files.calendar.title': 'Calendrier',
   'files.calendar.description':
     'Ajoutez ce voyage à l’application de calendrier que vous utilisez déjà.',

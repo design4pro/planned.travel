@@ -40,7 +40,7 @@ floor guard script; the review now does.
 
 - **SQL only in `src/server/repos`**, through the tenant-scoped base repository; the tenant filter
   must not be removable. `src/server/catalog` is the single stated exception (global tables plus one
-  cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker.
+  cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
   must be invisible to the call. No test, blocker.
 - **A guard added to one writer reaches every sibling writer of that surface in the same PR.** A
@@ -61,7 +61,8 @@ floor guard script; the review now does.
   should-fix in a spec (#846).
 - **`src/components/ui` never fetches data and never imports from `src/server`.**
 - **`src/server/public` returns named, column-whitelisted, read-only projections**, with the tenant
-  scope derived from the resolved share record.
+  scope derived from the resolved share or feed record; feed scopes are built only by
+  `openFeedScope` from the repo-branded `ResolvedFeed`.
 - **`src/server/email` imports no Worker binding**; `src/server/auth/email.ts` owns the message
   union; `src/server/queue/handlers/email.ts` delivers.
 - **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.

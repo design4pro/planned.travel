@@ -35,7 +35,7 @@
  * | `audit`         | `audit_log` |
  * | `members`       | `organization`, `member`, `invitation` |
  * | `billing`       | `subscriptions`, `usage_records` |
- * | `calendar-feeds` | — reads `trips`, `days`, `places`, `day_assignments`, `day_notes`, `day_accommodations`, `transports`, `transport_legs`, `reservations` (narrowed columns) for the trip calendar |
+ * | `calendar-feeds` | `calendar_feeds`; reads `trips`, `days`, `places`, `day_assignments`, `day_notes`, `day_accommodations`, `transports`, `transport_legs`, `reservations` (narrowed columns) for the trip calendar |
  * | `dashboard`     | — composition over the modules above |
  */
 

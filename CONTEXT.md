@@ -53,3 +53,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Collaboration section** — one of the parts of a trip’s collaboration screen (the conversation, the notes, the polls). Switching one off hides it for everyone on the trip and deletes nothing; it is a display choice, not access control. Its data stays readable and writable elsewhere, and the section reappears after a rollback to a Worker that does not read the setting. Distinct from the shell’s Trip sections navigation (the trip’s tabs). _Avoid_: "module" (a **Product module**; the column `trips.collab_modules` is the one exception), "widget".
 - **Planner workspace** - the map and its floating rails; rail widths persist per trip locally, while unfolded days persist only for the browser session.
+
+- **Calendar feed** — a session-less, owner-bound, read-only calendar of the trips named by a link; revocable; distinct from a Share token, which names one trip resource. _Avoid_: subscription, which is a paid plan.

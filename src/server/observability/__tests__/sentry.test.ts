@@ -91,6 +91,38 @@ describe('sentryOptions', () => {
   })
 })
 
+it('redacts calendar credentials in each independently wired Sentry channel', async () => {
+  const options = sentryOptions({})
+  const secret = 'A'.repeat(32)
+  const url = `https://planned.travel/api/feed/${secret}.ics`
+  const event = await options.beforeSend?.(
+    { type: undefined, request: { url } },
+    {},
+  )
+  const transaction = await options.beforeSendTransaction?.(
+    { type: 'transaction', transaction: url },
+    {},
+  )
+  const span = options.beforeSendSpan?.({
+    trace_id: '1'.repeat(32),
+    span_id: '2'.repeat(16),
+    start_timestamp: 0,
+    timestamp: 1,
+    description: url,
+    data: { url },
+  })
+  const log = options.beforeSendLog?.({
+    level: 'info',
+    message: url,
+    attributes: { url },
+  })
+  for (const result of [event, transaction, span, log]) {
+    expect(result).toBeDefined()
+    expect(JSON.stringify(result)).not.toContain(secret)
+    expect(JSON.stringify(result)).toContain('[redacted]')
+  }
+})
+
 describe('sentrySink', () => {
   it('mirrors a record into Sentry at its own level', () => {
     sentryLogger.error.mockClear()

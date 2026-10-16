@@ -188,19 +188,24 @@ slices that matter.
 
 `src/server/repos/**` is the tenant-scoped path §2.1 and §2.2 take, and it remains the only
 place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
-entry rule. None exists on disk yet; each lands with its phase.
+entry rule. These are architectural paths; some surfaces remain planned. Bounded
+`…Unscoped` repo functions take a plain `Database` only under SPEC §5 FU-3; this does not add
+a third catalog member.
 
-- `src/server/catalog/**` (phase C) — the global catalogue tables. They carry no
-  `organization_id`, so they cannot pass through a tenant repository at all, which is why this
-  is the single stated exception to the SQL rule. Its SQL is guarded instead by an explicit
-  platform actor, `requirePermission`, and a `platform_audit_log` write in the same call.
+- `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
+  `organization_id`; `provider_usage` uses it only for attribution. Catalog is the single
+  exception outside repos, with exactly two members (these tables and the bounded cron discovery
+  read). Platform-content access uses an explicit
+  platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
+  the bounded shape-based exceptions stated in SPEC §5.
 - `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
   authorises through the same `requirePermission` the console uses and reaches data through
   `server/catalog`; it never grows a second authorisation path or a second query layer.
 - `src/server/public/**` (phase F) — the only session-less read path in the Worker, and it holds
   no SQL of its own. Every response is a named read-only projection with an explicit column
-  whitelist, executed through `server/repos` under the tenant scope derived from the share
-  record it resolved, or through `server/catalog` for published global rows.
+  whitelist, executed through `server/repos` under the tenant scope derived from the share or feed
+  record it resolved (the feed scope is built only by repo `openFeedScope` from its adjacent
+  branded `ResolvedFeed`), or through `server/catalog` for published global rows.
 
 ---
 
@@ -214,8 +219,8 @@ smaller (3 retries, concurrency 2) than production's 5 and 4.
 
 | Binding     | Type                                          | Holds                                                                           | Read by                            | Written by                             |
 | ----------- | --------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- | -------------------------------------- |
-| `DB`        | D1 `planned-travel-db`                        | 59 domain tables + 9 Better Auth tables, `migrations_dir: drizzle`              | every repository                   | server functions, queue handlers, cron |
-| `KV`        | KV namespace                                  | plan-state cache (60 s TTL), queue idempotency markers, reminder due-time index | entitlements, queue consumer, cron | mutations, webhook, queue              |
+| `DB`        | D1 `planned-travel-db`                        | 67 domain tables + 9 Better Auth tables, `migrations_dir: drizzle`              | every repository                   | server functions, queue handlers, cron |
+| `KV`        | KV namespace                                  | plan-state cache (60 s TTL), queue idempotency markers, reminder due-time index, approximate public rate-limit counters | entitlements, queue consumer, cron, public limiter | mutations, webhook, queue, public limiter |
 | `SESSIONS`  | KV namespace                                  | Better Auth session and rate-limit records, 60 s TTL floor                      | nearly every authenticated request | login, session refresh, logout         |
 | `FILES`     | R2 `planned-travel-files`                     | journal photos, imports, generated exports                                      | file routes, PDF/thumbnail jobs    | upload server fn, queue handlers       |
 | `TILES`     | R2 `planned-travel-tiles`                     | Protomaps `.pmtiles`, styles, sprites, glyphs                                   | `/api/tiles/*` only                | ops, out of band                       |
