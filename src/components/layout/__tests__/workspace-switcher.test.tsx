@@ -30,6 +30,7 @@ const router = vi.hoisted(() => ({
   clearCache: vi.fn(),
   invalidate: vi.fn(),
   navigate: vi.fn(),
+  state: { matches: [] as Array<{ status: 'success' | 'error' | 'notFound' }> },
 }))
 const notify = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 const workspace = vi.hoisted(() => ({ create: vi.fn() }))
@@ -141,6 +142,7 @@ beforeEach(() => {
   router.clearCache.mockReset()
   router.invalidate.mockReset()
   router.navigate.mockReset()
+  router.state.matches = []
   notify.success.mockReset()
   notify.error.mockReset()
   workspace.create.mockReset()
@@ -577,6 +579,56 @@ describe('a switch that fails', () => {
       }
     },
   )
+
+  it.each(['error', 'notFound'] as const)(
+    'does not announce success when the router stores %s without rejecting',
+    async (status) => {
+      router.invalidate.mockImplementation(async () => {
+        router.state.matches = [{ status }]
+      })
+      const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+      await user.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+
+      await vi.waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+      expect(notify.error).toHaveBeenCalledExactlyOnceWith(
+        'Could not switch workspace',
+        {
+          description:
+            'The active workspace could not be confirmed. Reload the page before continuing.',
+        },
+      )
+      expect(notify.success).not.toHaveBeenCalled()
+    },
+  )
+
+  it('waits for the foreground reload and keeps account actions locked until it settles', async () => {
+    const reload = deferred<void>()
+    router.invalidate.mockReturnValue(reload.promise)
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+
+    await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalledTimes(1))
+    expect(router.invalidate).toHaveBeenCalledExactlyOnceWith({ sync: true })
+    expect(
+      screen
+        .getByRole('menuitem', { name: 'Settings' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true')
+    expect(
+      screen
+        .getByRole('menuitem', { name: 'Sign out' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true')
+    await user.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+    expect(auth.setActive).toHaveBeenCalledTimes(1)
+    expect(notify.success).not.toHaveBeenCalled()
+
+    reload.resolve()
+    await vi.waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    expect(notify.success).toHaveBeenCalledTimes(1)
+  })
 
   it('reports an unconfirmed workspace if activation succeeds but re-sync fails', async () => {
     router.invalidate.mockRejectedValue(new TypeError('Offline'))

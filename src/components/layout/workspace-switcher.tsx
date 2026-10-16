@@ -40,7 +40,15 @@ export function useWorkspaceResync() {
     // belongs to the workspace just left.
     router.clearCache()
     await router.navigate({ to: '/dashboard', replace: true })
-    await router.invalidate()
+    await router.invalidate({ sync: true })
+    // Router loads can resolve after rendering an error boundary instead of rejecting.
+    if (
+      router.state.matches.some(
+        ({ status }) => status === 'error' || status === 'notFound',
+      )
+    ) {
+      throw new Error('Workspace reload failed')
+    }
   }
 }
 
