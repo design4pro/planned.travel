@@ -44,6 +44,10 @@ export function CollabScreen({
   const [withDraft, setWithDraft] = useState<ReadonlySet<CollabSectionId>>(
     () => new Set(),
   )
+  const drafts = useRef(withDraft)
+  useLayoutEffect(() => {
+    drafts.current = withDraft
+  }, [withDraft])
   const [newNoteOpen, setNewNoteOpen] = useState(false)
   const [newPollOpen, setNewPollOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
@@ -90,21 +94,23 @@ export function CollabScreen({
     setAnnouncement('')
     if (ownWrite.current) return
     const kept = COLLAB_SECTIONS.some(
-      ({ id }) => !data.sections[id] && withDraft.has(id),
+      ({ id }) => !data.sections[id] && drafts.current.has(id),
     )
-    const timer = setTimeout(
-      () =>
-        setAnnouncement(
-          t(
-            kept
-              ? 'trips.collab.sections.turnedOff'
-              : 'trips.collab.sections.changed',
-          ),
+    const timer = setTimeout(() => {
+      const stillKept = COLLAB_SECTIONS.some(
+        ({ id }) => !data.sections[id] && drafts.current.has(id),
+      )
+      if (kept && !stillKept) return
+      setAnnouncement(
+        t(
+          stillKept
+            ? 'trips.collab.sections.turnedOff'
+            : 'trips.collab.sections.changed',
         ),
-      50,
-    )
+      )
+    }, 50)
     return () => clearTimeout(timer)
-  }, [storedKey, ownWrite, t, withDraft])
+  }, [storedKey, ownWrite, t])
 
   useLayoutEffect(() => {
     const leaving = previousVisible.current.filter(

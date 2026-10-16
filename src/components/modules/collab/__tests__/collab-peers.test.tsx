@@ -311,3 +311,27 @@ it('retains text when typing and a peer record arrive in the same batch', () => 
   expect((field as HTMLTextAreaElement).value).toBe('Last-moment draft')
   expect(document.activeElement).toBe(field)
 })
+
+it('announces a peer change when an unrelated draft begins before delivery', async () => {
+  const { peer } = setup()
+  const field = screen.getByRole('textbox', { name: 'Message the trip' })
+  peer('notes')
+  fireEvent.change(field, { target: { value: 'Starting a draft' } })
+  await waitFor(() =>
+    expect(screen.getByRole('status').textContent).toBe(
+      Trips['collab.sections.changed'],
+    ),
+  )
+})
+
+it('stays silent when a retained draft is discarded before the announcement', async () => {
+  const { peer } = setup()
+  const field = screen.getByRole('textbox', { name: 'Message the trip' })
+  fireEvent.change(field, { target: { value: 'Unsent draft' } })
+  peer('conversation')
+  fireEvent.change(field, { target: { value: '' } })
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  })
+  expect(screen.getByRole('status').textContent).toBe('')
+})
