@@ -92,19 +92,21 @@ function CollabPage() {
                   })
                   .join(' · ')
           }
+          actions={
+            data.canConfigure ? (
+              <CollabSectionsMenu
+                sections={data.sections}
+                write={(section, on) =>
+                  setCollabSectionFn({ data: { tripId, section, on } })
+                }
+                refresh={() => router.invalidate()}
+                onWritingChange={(writing) => {
+                  ownWrite.current = writing
+                }}
+              />
+            ) : null
+          }
         >
-          {data.canConfigure ? (
-            <CollabSectionsMenu
-              sections={data.sections}
-              write={(section, on) =>
-                setCollabSectionFn({ data: { tripId, section, on } })
-              }
-              refresh={() => router.invalidate()}
-              onWritingChange={(writing) => {
-                ownWrite.current = writing
-              }}
-            />
-          ) : null}
           {live ? <PresenceBar tripId={tripId} /> : null}
         </TripModuleHeader>
 
