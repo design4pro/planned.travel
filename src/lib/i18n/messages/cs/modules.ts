@@ -1111,6 +1111,26 @@ const messages = {
     many: 'Zobrazeno od začátku: {count} z {total}.',
     other: 'Zobrazeno od začátku: {count} z {total}.',
   },
+  'files.export.notify': 'Pošlete mi e-mail, až bude připravený',
+  'files.export.viewer':
+    'Export mohou vytvořit pouze vlastníci a editoři. Existující si můžete stáhnout.',
+  'files.export.jump': 'Přejít na exporty',
+  'files.export.fromLink': 'Z vašeho odkazu',
+  'files.export.linkGone':
+    'Tento export se již neuchovává. Níže vytvořte nový.',
+  'files.export.allowance': {
+    one: 'Tento měsíc využito {used} z {count} exportu',
+    few: 'Tento měsíc využito {used} z {count} exportů',
+    many: 'Tento měsíc využito {used} z {count} exportů',
+    other: 'Tento měsíc využito {used} z {count} exportů',
+  },
+  'files.export.allowanceUnlimited': {
+    one: 'Tento měsíc {count} export',
+    few: 'Tento měsíc {count} exporty',
+    many: 'Tento měsíc {count} exportů',
+    other: 'Tento měsíc {count} exportů',
+  },
+  'files.export.linkGoneViewer': 'Tento export se už neuchovává.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

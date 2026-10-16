@@ -5,7 +5,7 @@
  * sees a skeleton, an empty state or an error of the panel's own. Requests reserve a unit and return before the artifact exists; polling follows its completion marker. Times are shown in the reader's own zone, in the same
  * `{date}, {time}` form the printable page's footer uses.
  */
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { FileDown } from 'lucide-react'
 
 import { formatStorageSize } from '#/components/layout/storage-size'
@@ -30,9 +30,17 @@ import { EXPORT_TTL_SECONDS } from '#/server/storage/export-artifacts'
 import { useAction } from '../shared/use-action'
 import { ModulePanel, ModuleRow } from '../shared/panel'
 import { downloadTripExport } from './export-download'
+import {
+  readPendingExport,
+  writePendingExport,
+  EXPORT_POLL_WINDOW_MS,
+} from './export-pending'
 
+import type { RefObject } from 'react'
 import type { Locale } from '#/lib/i18n'
 import type { TripExportList } from '#/server/fns/exports'
+
+export { EXPORT_POLL_WINDOW_MS } from './export-pending'
 
 type ListState =
   | { readonly status: 'loading' }
@@ -54,7 +62,16 @@ const ROW = 'h-32 sm:h-24 flex-col items-start sm:flex-row sm:items-center'
 const SKELETON_ROWS = 3
 // The artifact is ready only after the queue writes its completion marker.
 export const EXPORT_POLL_MS = 3000
-export const EXPORT_POLL_WINDOW_MS = 90_000
+const SCROLL_MARGIN =
+  'calc(var(--safe-top) + var(--impersonation-h) + var(--nav-h) + var(--subnav-h) + 4rem)'
+
+function pendingStorage(): Storage | null {
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
 
 function browserZone(): string {
   return resolveTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone)
@@ -89,13 +106,26 @@ function ExportSkeleton() {
   )
 }
 
-export function ExportPanel({ tripId }: { readonly tripId: string }) {
+export function ExportPanel({
+  tripId,
+  exportId,
+  headingRef: externalHeadingRef,
+}: {
+  readonly tripId: string
+  readonly exportId?: string
+  readonly headingRef?: RefObject<HTMLDivElement | null>
+}) {
   const t = useTranslate()
   const locale = useLocale()
   const [state, setState] = useState<ListState>({ status: 'loading' })
   const [downloading, setDownloading] = useState<string | null>(null)
   const [notice, setNotice] = useState('')
-  const headingRef = useRef<HTMLDivElement>(null)
+  const ownHeadingRef = useRef<HTMLDivElement>(null)
+  const headingRef = externalHeadingRef ?? ownHeadingRef
+  const quotaId = useId()
+  const linkedRow = useRef<HTMLDivElement>(null)
+  const announcedLink = useRef<string | null>(null)
+  const [notify, setNotify] = useState(false)
   const controls = useRef(new Map<string, HTMLButtonElement>())
   const focusAfter = useRef<string | null>(null)
   const noticeAfter = useRef('')
@@ -104,6 +134,7 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
   const [includeReferences, setIncludeReferences] = useState(false)
   const [pending, setPending] = useState<{
     taskId: string
+    queuedAt: number
     slow: boolean
   } | null>(null)
   const [quota, setQuota] = useState<{
@@ -129,6 +160,10 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
         throw new Error('The list did not come back in a form we can show.')
       }
       if (request === latest.current) {
+        if (!list.canRequest) {
+          writePendingExport(pendingStorage(), tripId, null)
+          setPending(null)
+        }
         setState({ status: 'ready', list, at: Date.now() })
       }
     } catch {
@@ -142,7 +177,10 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
   }, [tripId])
 
   useEffect(() => {
-    setPending(null)
+    const restored = readPendingExport(pendingStorage(), tripId, Date.now())
+    setPending(restored === null ? null : { ...restored, slow: false })
+    announcedLink.current = null
+    setNotice('')
     setQuota(null)
     setState({ status: 'loading' })
     void load()
@@ -209,10 +247,11 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
         requestRef.current?.focus()
         returnFocus.current = true
       }
+      writePendingExport(pendingStorage(), tripId, null)
       setPending(null)
       setNotice(t('modules.files.export.ready'))
     }
-  }, [state, pending, t])
+  }, [state, pending, t, tripId])
 
   useEffect(() => {
     if (pending === null || pending.slow) return
@@ -222,20 +261,27 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
       clearInterval(poll)
       clearTimeout(deadline)
     }
-    const start = () => {
+    const start = (event?: Event) => {
       stop()
       if (document.visibilityState === 'hidden') return
+      if (event !== undefined) void load()
       poll = setInterval(() => {
         void load()
       }, EXPORT_POLL_MS)
-      deadline = setTimeout(() => {
-        stop()
-        returnFocus.current = true
-        setPending((previous) =>
-          previous === null ? null : { ...previous, slow: true },
-        )
-        setNotice(t('modules.files.export.slow'))
-      }, EXPORT_POLL_WINDOW_MS)
+      deadline = setTimeout(
+        () => {
+          stop()
+          writePendingExport(pendingStorage(), tripId, null)
+          returnFocus.current = true
+          setPending((previous) =>
+            previous === null ? null : { ...previous, slow: true },
+          )
+          setNotice(t('modules.files.export.slow'))
+        },
+        event === undefined
+          ? Math.max(0, EXPORT_POLL_WINDOW_MS - (Date.now() - pending.queuedAt))
+          : EXPORT_POLL_WINDOW_MS,
+      )
     }
     document.addEventListener('visibilitychange', start)
     start()
@@ -243,13 +289,46 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
       stop()
       document.removeEventListener('visibilitychange', start)
     }
-  }, [pending?.taskId, pending?.slow, load, t])
+  }, [pending?.taskId, pending?.slow, pending?.queuedAt, load, t, tripId])
+
+  useEffect(() => {
+    if (
+      state.status !== 'ready' ||
+      exportId === undefined ||
+      announcedLink.current === exportId
+    )
+      return
+    announcedLink.current = exportId
+    const artifact = state.list.artifacts.find(
+      (item) => item.taskId === exportId,
+    )
+    if (artifact === undefined) {
+      setNotice(
+        t(
+          state.list.canRequest
+            ? 'modules.files.export.linkGone'
+            : 'modules.files.export.linkGoneViewer',
+        ),
+      )
+      return
+    }
+    setNotice(
+      `${t('modules.files.export.ready')}. ${t('modules.files.export.artifact', { date: madeAt(artifact.createdAt, locale, t) })}`,
+    )
+    linkedRow.current?.scrollIntoView({ behavior: 'instant', block: 'start' })
+  }, [state, exportId, locale, t])
+
+  const allowance = state.status === 'ready' ? state.list.allowance : undefined
+  const exhausted =
+    allowance !== undefined &&
+    allowance.limit !== null &&
+    allowance.used >= allowance.limit
 
   async function askForExport() {
     setQuota(null)
     const generation = requestGeneration.current
     const result = await exportRequest.run({
-      data: { tripId, notify: false, includeReferences },
+      data: { tripId, notify, includeReferences },
     })
     if (generation !== requestGeneration.current) return
     if (result === null) {
@@ -262,7 +341,15 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
       return
     }
     returnFocus.current = true
-    setPending({ taskId: result.taskId, slow: false })
+    writePendingExport(pendingStorage(), tripId, {
+      taskId: result.taskId,
+      queuedAt: result.queuedAt,
+    })
+    setPending({
+      taskId: result.taskId,
+      queuedAt: result.queuedAt,
+      slow: false,
+    })
   }
 
   function retry() {
@@ -325,7 +412,11 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
       <ModulePanel
         label={t('modules.files.export.label')}
         flush
-        headingProps={{ ref: headingRef, tabIndex: -1 }}
+        headingProps={{
+          ref: headingRef,
+          tabIndex: -1,
+          style: { scrollMarginTop: SCROLL_MARGIN },
+        }}
       >
         <p className="px-5 pt-4 text-caption text-ink-3">
           {t('modules.files.export.description')}{' '}
@@ -346,12 +437,45 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
               data-part="export-request"
               loading={exportRequest.pending}
               disabled={
-                exportRequest.pending || (pending !== null && !pending.slow)
+                exportRequest.pending ||
+                exhausted ||
+                (pending !== null && !pending.slow)
               }
+              aria-describedby={exhausted ? quotaId : undefined}
               onClick={() => void askForExport()}
             >
               {t('modules.files.export.request')}
             </Button>
+            {allowance === undefined ? null : (
+              <p className="text-caption text-ink-3">
+                {t(
+                  allowance.limit === null
+                    ? 'modules.files.export.allowanceUnlimited'
+                    : 'modules.files.export.allowance',
+                  {
+                    count: allowance.limit ?? allowance.used,
+                    used: allowance.used,
+                  },
+                )}
+              </p>
+            )}
+            {exhausted &&
+            allowance !== undefined &&
+            allowance.limit !== null ? (
+              <p id={quotaId} className="text-caption text-ink-2">
+                {t('modules.files.export.quota', {
+                  count: allowance.limit,
+                  date:
+                    formatDate(allowance.resetsOn, locale) ??
+                    allowance.resetsOn,
+                })}
+              </p>
+            ) : null}
+            <CheckboxField
+              checked={notify}
+              onCheckedChange={(checked) => setNotify(checked === true)}
+              label={t('modules.files.export.notify')}
+            />
             <CheckboxField
               checked={includeReferences}
               onCheckedChange={(checked) =>
@@ -369,6 +493,13 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
               </Alert>
             )}
           </div>
+        ) : null}
+        {state.status === 'ready' &&
+        !state.list.canRequest &&
+        state.list.artifacts.length > 0 ? (
+          <p className="px-5 py-4 text-caption text-ink-3">
+            {t('modules.files.export.viewer')}
+          </p>
         ) : null}
         {state.status === 'loading' ? <ExportSkeleton /> : null}
 
@@ -447,57 +578,69 @@ export function ExportPanel({ tripId }: { readonly tripId: string }) {
               )
               const { canRequest } = state.list
               return (
-                <ModuleRow
+                <div
                   key={artifact.taskId}
                   role="listitem"
-                  className={cn(ROW, 'justify-between')}
+                  ref={artifact.taskId === exportId ? linkedRow : undefined}
+                  aria-current={
+                    artifact.taskId === exportId ? 'true' : undefined
+                  }
+                  style={{ scrollMarginTop: SCROLL_MARGIN }}
+                  className="not-last:border-b not-last:border-edge-faint"
                 >
-                  <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:flex-1">
-                    <span className="text-caption font-medium text-ink">
-                      {t('modules.files.export.artifact', { date: when })}
-                    </span>
-                    <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption tabular-nums text-ink-3">
-                      <Badge tone="neutral" size="sm">
-                        {t(
-                          artifact.format === 'pdf'
-                            ? 'modules.files.export.format.pdf'
-                            : 'modules.files.export.format.html',
-                        )}
-                      </Badge>
-                      <span>
-                        {formatStorageSize(artifact.sizeBytes, locale)}
-                        {age === null ? '' : ` · ${age}`}
+                  <ModuleRow className={cn(ROW, 'justify-between')}>
+                    <div className="flex w-full min-w-0 flex-col gap-1 sm:w-auto sm:flex-1">
+                      <span className="text-caption font-medium text-ink">
+                        {t('modules.files.export.artifact', { date: when })}
                       </span>
-                    </span>
-                  </div>
-                  <Button
-                    ref={(node) => {
-                      if (node === null) {
-                        controls.current.delete(artifact.taskId)
-                      } else {
-                        controls.current.set(artifact.taskId, node)
+                      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption tabular-nums text-ink-3">
+                        <Badge tone="neutral" size="sm">
+                          {t(
+                            artifact.format === 'pdf'
+                              ? 'modules.files.export.format.pdf'
+                              : 'modules.files.export.format.html',
+                          )}
+                        </Badge>
+                        {artifact.taskId === exportId ? (
+                          <Badge tone="neutral" size="sm">
+                            {t('modules.files.export.fromLink')}
+                          </Badge>
+                        ) : null}
+                        <span>
+                          {formatStorageSize(artifact.sizeBytes, locale)}
+                          {age === null ? '' : ` · ${age}`}
+                        </span>
+                      </span>
+                    </div>
+                    <Button
+                      ref={(node) => {
+                        if (node === null) {
+                          controls.current.delete(artifact.taskId)
+                        } else {
+                          controls.current.set(artifact.taskId, node)
+                        }
+                      }}
+                      size="sm"
+                      loading={downloading === artifact.taskId}
+                      disabled={downloading !== null}
+                      aria-label={t(
+                        artifact.format === 'pdf'
+                          ? 'modules.files.export.downloadLabelPdf'
+                          : 'modules.files.export.downloadLabelHtml',
+                        { date: when },
+                      )}
+                      onClick={() =>
+                        void download(
+                          artifact,
+                          canRequest,
+                          t('modules.files.export.artifact', { date: when }),
+                        )
                       }
-                    }}
-                    size="sm"
-                    loading={downloading === artifact.taskId}
-                    disabled={downloading !== null}
-                    aria-label={t(
-                      artifact.format === 'pdf'
-                        ? 'modules.files.export.downloadLabelPdf'
-                        : 'modules.files.export.downloadLabelHtml',
-                      { date: when },
-                    )}
-                    onClick={() =>
-                      void download(
-                        artifact,
-                        canRequest,
-                        t('modules.files.export.artifact', { date: when }),
-                      )
-                    }
-                  >
-                    {t('modules.files.export.download')}
-                  </Button>
-                </ModuleRow>
+                    >
+                      {t('modules.files.export.download')}
+                    </Button>
+                  </ModuleRow>
+                </div>
               )
             })}
           </div>
