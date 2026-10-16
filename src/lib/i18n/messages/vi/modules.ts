@@ -1069,6 +1069,20 @@ const messages = {
   'files.export.doc.truncatedRows': {
     other: 'Hiển thị {count} mục đầu trong tổng số {total}.',
   },
+  'files.export.notify': 'Gửi email khi đã sẵn sàng',
+  'files.export.viewer':
+    'Chỉ chủ sở hữu và người chỉnh sửa có thể tạo bản xuất. Bạn có thể tải các bản hiện có.',
+  'files.export.jump': 'Đến các bản xuất',
+  'files.export.fromLink': 'Từ liên kết của bạn',
+  'files.export.linkGone':
+    'Bản xuất này không còn được lưu. Hãy tạo bản mới bên dưới.',
+  'files.export.allowance': {
+    other: 'Đã dùng {used} trong {count} bản xuất tháng này',
+  },
+  'files.export.allowanceUnlimited': {
+    other: '{count} bản xuất trong tháng này',
+  },
+  'files.export.linkGoneViewer': 'Bản xuất đó không còn được lưu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

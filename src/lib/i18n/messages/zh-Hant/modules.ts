@@ -1000,6 +1000,17 @@ const messages = {
   'files.export.doc.truncatedRows': {
     other: '顯示全部{total}項中的前{count}項。',
   },
+  'files.export.notify': '準備好後以郵件通知我',
+  'files.export.viewer':
+    '只有擁有者和編輯者可以建立匯出。你可以下載現有的檔案。',
+  'files.export.jump': '前往匯出',
+  'files.export.fromLink': '來自你的連結',
+  'files.export.linkGone': '此匯出已不再保留。請在下方建立新的匯出。',
+  'files.export.allowance': {
+    other: '本月已使用 {used} 次匯出，共 {count} 次',
+  },
+  'files.export.allowanceUnlimited': { other: '本月匯出 {count} 次' },
+  'files.export.linkGoneViewer': '這份匯出已不再保留。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

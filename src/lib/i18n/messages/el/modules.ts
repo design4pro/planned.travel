@@ -1129,6 +1129,22 @@ const messages = {
     one: 'Εμφανίζονται οι πρώτες {count} από {total}.',
     other: 'Εμφανίζονται οι πρώτες {count} από {total}.',
   },
+  'files.export.notify': 'Στείλτε μου email όταν είναι έτοιμη',
+  'files.export.viewer':
+    'Μόνο οι ιδιοκτήτες και οι συντάκτες μπορούν να δημιουργήσουν εξαγωγές. Μπορείτε να κατεβάσετε τις υπάρχουσες.',
+  'files.export.jump': 'Μετάβαση στις εξαγωγές',
+  'files.export.fromLink': 'Από τον σύνδεσμό σας',
+  'files.export.linkGone':
+    'Αυτή η εξαγωγή δεν διατηρείται πλέον. Δημιουργήστε μια νέα παρακάτω.',
+  'files.export.allowance': {
+    one: 'Χρησιμοποιήθηκαν {used} από {count} εξαγωγή αυτόν τον μήνα',
+    other: 'Χρησιμοποιήθηκαν {used} από {count} εξαγωγές αυτόν τον μήνα',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} εξαγωγή αυτόν τον μήνα',
+    other: '{count} εξαγωγές αυτόν τον μήνα',
+  },
+  'files.export.linkGoneViewer': 'Αυτή η εξαγωγή δεν διατηρείται πια.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1163,6 +1163,26 @@ const messages = {
     many: 'Показано с начала: {count} из {total}.',
     other: 'Показано с начала: {count} из {total}.',
   },
+  'files.export.notify': 'Сообщить по почте, когда будет готово',
+  'files.export.viewer':
+    'Создавать экспорт могут только владельцы и редакторы. Вы можете скачать существующие файлы.',
+  'files.export.jump': 'К экспортам',
+  'files.export.fromLink': 'По вашей ссылке',
+  'files.export.linkGone':
+    'Этот экспорт больше не хранится. Создайте новый ниже.',
+  'files.export.allowance': {
+    one: 'В этом месяце использовано {used} из {count} экспортов',
+    few: 'В этом месяце использовано {used} из {count} экспортов',
+    many: 'В этом месяце использовано {used} из {count} экспортов',
+    other: 'В этом месяце использовано {used} из {count} экспортов',
+  },
+  'files.export.allowanceUnlimited': {
+    one: 'Экспортов в этом месяце: {count}',
+    few: 'Экспортов в этом месяце: {count}',
+    many: 'Экспортов в этом месяце: {count}',
+    other: 'Экспортов в этом месяце: {count}',
+  },
+  'files.export.linkGoneViewer': 'Этот экспорт больше не хранится.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1113,6 +1113,22 @@ const messages = {
     one: 'Az első {count} elem látható az összesen {total} elemből.',
     other: 'Az első {count} elem látható az összesen {total} elemből.',
   },
+  'files.export.notify': 'Kérek e-mailt, ha elkészült',
+  'files.export.viewer':
+    'Csak a tulajdonosok és szerkesztők készíthetnek exportot. A meglévőket letöltheted.',
+  'files.export.jump': 'Ugrás az exportokhoz',
+  'files.export.fromLink': 'A hivatkozásodból',
+  'files.export.linkGone':
+    'Ezt az exportot már nem őrizzük. Készíts újat alább.',
+  'files.export.allowance': {
+    one: 'Ebben a hónapban {used} export felhasználva a(z) {count} keretből',
+    other: 'Ebben a hónapban {used} export felhasználva a(z) {count} keretből',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} export ebben a hónapban',
+    other: '{count} export ebben a hónapban',
+  },
+  'files.export.linkGoneViewer': 'Ezt az exportot már nem őrizzük.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1091,3 +1091,161 @@ test.describe('06-S5b — live calendar link', () => {
     },
   )
 })
+
+test.describe('06-S3c - Export links and remaining allowance', () => {
+  test.setTimeout(90_000)
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+  })
+
+  test('marks a linked row below the headers, announces it and focuses the jump destination', async ({
+    context,
+    page,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+    const { toCrossJSONAsync } = createRequire(
+      import.meta.resolve('@tanstack/react-start'),
+    )('seroval') as {
+      toCrossJSONAsync: (value: unknown) => Promise<unknown>
+    }
+    await page.route(
+      (url) => callsServerFn(url, 'listTripExportsFn'),
+      async (handled) => {
+        await handled.fulfill({
+          contentType: 'application/json',
+          headers: { 'x-tss-serialized': 'true' },
+          body: JSON.stringify(
+            await toCrossJSONAsync({
+              result: {
+                canRequest: true,
+                allowance: {
+                  used: 3,
+                  limit: 3,
+                  month: '2026-10',
+                  resetsOn: '2026-11-01',
+                },
+                artifacts: [
+                  {
+                    taskId: 'linked-export',
+                    format: 'pdf',
+                    sizeBytes: 2048,
+                    createdAt: Date.parse('2026-08-19T12:00:00Z'),
+                  },
+                ],
+              },
+              context: {},
+            }),
+          ),
+        })
+      },
+    )
+    const route: RouteCase = {
+      name: 'trip-files',
+      path: `/trips/${tripId}/files?export=linked-export`,
+      ready: '[data-part="export-panel"] [aria-current="true"]',
+    }
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const panel = page.locator('[data-part="export-panel"]')
+    const row = panel.locator('[aria-current="true"]')
+    await expect(row).toHaveCount(1)
+    await expect(row).toContainText('From your link')
+    await expect(panel.getByRole('status')).toContainText('Trip export,')
+    const headerBottom = await page
+      .locator('nav[aria-label="Trip sections"]')
+      .evaluate((node) => node.getBoundingClientRect().bottom)
+    expect((await row.boundingBox())?.y).toBeGreaterThanOrEqual(headerBottom)
+    const request = panel.locator('[data-part="export-request"]')
+    await expect(request).toBeDisabled()
+    const describedBy = await request.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    await expect(page.locator(`[id="${describedBy}"]`)).toContainText(
+      'starts again',
+    )
+    await expect(panel.getByRole('alert')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Go to exports' }).click()
+    const heading = panel.getByRole('heading', { name: 'Export the trip' })
+    await expect(heading).toBeFocused()
+    expect((await heading.boundingBox())?.y).toBeGreaterThanOrEqual(
+      headerBottom,
+    )
+    await page.setViewportSize({ width: 320, height: 800 })
+    for (const dir of ['ltr', 'rtl']) {
+      await page.evaluate((direction) => {
+        document.documentElement.dir = direction
+      }, dir)
+      expect(
+        await page.evaluate(
+          () =>
+            document.documentElement.scrollWidth -
+            document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(0)
+    }
+    expect(report().fatal).toEqual([])
+  })
+
+  test('handles missing and malformed email links and restores a pending row on reload', async ({
+    context,
+    page,
+  }) => {
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.single)
+    const { toCrossJSONAsync } = createRequire(
+      import.meta.resolve('@tanstack/react-start'),
+    )('seroval') as { toCrossJSONAsync: (value: unknown) => Promise<unknown> }
+    await page.route(
+      (url) => callsServerFn(url, 'listTripExportsFn'),
+      async (handled) => {
+        await handled.fulfill({
+          contentType: 'application/json',
+          headers: { 'x-tss-serialized': 'true' },
+          body: JSON.stringify(
+            await toCrossJSONAsync({
+              result: {
+                artifacts: [],
+                canRequest: true,
+                allowance: {
+                  used: 0,
+                  limit: 3,
+                  month: '2026-10',
+                  resetsOn: '2026-11-01',
+                },
+              },
+              context: {},
+            }),
+          ),
+        })
+      },
+    )
+    const route: RouteCase = {
+      name: 'trip-files',
+      path: `/trips/${tripId}/files?export=unknown-export`,
+      ready: '[data-part="export-panel"] [role="status"]',
+    }
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+    const panel = page.locator('[data-part="export-panel"]')
+    await expect(panel.getByRole('status')).toHaveText(
+      'That export is no longer kept. Make a new one below.',
+    )
+    await expect(panel.locator('[aria-current]')).toHaveCount(0)
+    await page.evaluate((id) => {
+      sessionStorage.setItem(
+        `trip-export-pending:${id}`,
+        JSON.stringify({ taskId: 'pending-reload', queuedAt: Date.now() }),
+      )
+    }, tripId)
+    await page.reload()
+    await expect(panel.locator('[data-state="pending"]')).toBeVisible({
+      timeout: 20_000,
+    })
+    await expect(panel.locator('[data-part="export-request"]')).toBeDisabled()
+    await page.goto(`/trips/${tripId}/files?export=%3Cdamaged%3E`)
+    await expect(panel).toBeVisible()
+    await expect(panel.getByRole('status')).toHaveText('')
+    await expect(panel.locator('[aria-current]')).toHaveCount(0)
+    expect(report().fatal).toEqual([])
+  })
+})
