@@ -42,7 +42,7 @@ it('opens the real timing form with the stop name and a Polish day description',
       />
     </I18nProvider>,
   )
-  await userEvent.click(screen.getByRole('button', { name: 'Days' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Dni' }))
   await userEvent.click(
     screen.getByRole('button', { name: 'Actions for Place p1' }),
   )
