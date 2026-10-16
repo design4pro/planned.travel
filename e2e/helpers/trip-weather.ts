@@ -52,9 +52,7 @@ export function dayRegion(page: Page, title: string): Locator {
 
 /** A day's map-focus toggle, independent of its separate disclosure control. */
 export function dayHeader(region: Locator): Locator {
-  return region
-    .getByRole('button', { pressed: true })
-    .or(region.getByRole('button', { pressed: false }))
+  return region.getByRole('button').and(region.locator('[aria-pressed]'))
 }
 
 /**
