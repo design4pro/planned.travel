@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Minus, Plus } from 'lucide-react'
 
+import { useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import {
   GlassPanel,
@@ -22,6 +23,14 @@ export interface PlannerRailProps {
   readonly footer?: React.ReactNode
   /** Positioning is the screen's job; the rail only knows how to look. */
   readonly className?: string
+  readonly resize?: {
+    readonly width: number
+    readonly min: number
+    readonly max: number
+    readonly step: number
+    readonly label: string
+    readonly onChange: (width: number) => void
+  }
   readonly children: React.ReactNode
 }
 
@@ -66,7 +75,9 @@ export function PlannerRail({
   footer,
   className,
   children,
+  resize,
 }: PlannerRailProps) {
+  const t = useTranslate()
   const CollapseIcon = collapsed ? PanelLeftOpen : PanelLeftClose
 
   if (collapsed) {
@@ -80,7 +91,7 @@ export function PlannerRail({
           icon={
             <CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />
           }
-          label={`Show the ${label.toLowerCase()} panel`}
+          label={t('trips.plan.workspace.showPanel', { label })}
           size="sm"
           variant="ghost"
           onClick={() => onCollapsedChange(false)}
@@ -110,6 +121,7 @@ export function PlannerRail({
       style={RAIL_VARS}
       className={cn('flex flex-col overflow-hidden', className)}
     >
+      {resize === undefined ? null : <RailResize side={side} resize={resize} />}
       <div className="flex shrink-0 items-center gap-2 border-b border-glass-edge px-3 py-2.5">
         <SectionLabel as="h2" className="min-w-0 flex-1">
           {label}
@@ -119,11 +131,39 @@ export function PlannerRail({
             {meta}
           </span>
         )}
+        {resize === undefined ? null : (
+          <>
+            <IconButton
+              icon={<Minus />}
+              size="sm"
+              variant="ghost"
+              label={t('trips.plan.workspace.narrowPanel', { label })}
+              disabled={resize.width <= resize.min}
+              onClick={() =>
+                resize.onChange(
+                  Math.max(resize.min, resize.width - resize.step),
+                )
+              }
+            />
+            <IconButton
+              icon={<Plus />}
+              size="sm"
+              variant="ghost"
+              label={t('trips.plan.workspace.widenPanel', { label })}
+              disabled={resize.width >= resize.max}
+              onClick={() =>
+                resize.onChange(
+                  Math.min(resize.max, resize.width + resize.step),
+                )
+              }
+            />
+          </>
+        )}
         <IconButton
           icon={
             <CollapseIcon className={side === 'right' ? 'rotate-180' : ''} />
           }
-          label={`Hide the ${label.toLowerCase()} panel`}
+          label={t('trips.plan.workspace.hidePanel', { label })}
           size="sm"
           variant="ghost"
           onClick={() => onCollapsedChange(true)}
@@ -174,5 +214,78 @@ export function PlannerRail({
         </div>
       )}
     </GlassPanel>
+  )
+}
+
+function RailResize({
+  side,
+  resize,
+}: {
+  readonly side: 'left' | 'right'
+  readonly resize: NonNullable<PlannerRailProps['resize']>
+}) {
+  const drag = React.useRef<{ x: number; width: number } | null>(null)
+  const change = (width: number) =>
+    resize.onChange(Math.max(resize.min, Math.min(resize.max, width)))
+  return (
+    <div
+      role="separator"
+      tabIndex={0}
+      aria-label={resize.label}
+      aria-orientation="vertical"
+      aria-valuenow={resize.width}
+      aria-valuemin={resize.min}
+      aria-valuemax={resize.max}
+      className={cn(
+        'absolute inset-y-0 z-10 flex w-2 touch-none cursor-col-resize items-center justify-center hover:bg-hover focus-visible:bg-brand/25 focus-visible:outline-2 focus-visible:outline-brand',
+        side === 'left' ? 'end-0' : 'start-0',
+      )}
+      onKeyDown={(event) => {
+        let next: number
+        if (event.key === 'Home') next = resize.min
+        else if (event.key === 'End') next = resize.max
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          const direction = event.key === 'ArrowRight' ? 1 : -1
+          const rtl =
+            getComputedStyle(event.currentTarget).direction === 'rtl' ? -1 : 1
+          next =
+            resize.width +
+            direction * rtl * (side === 'left' ? 1 : -1) * resize.step
+        } else return
+        event.preventDefault()
+        change(next)
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return
+        event.preventDefault()
+        event.currentTarget.focus()
+        event.currentTarget.setPointerCapture(event.pointerId)
+        drag.current = { x: event.clientX, width: resize.width }
+      }}
+      onPointerMove={(event) => {
+        if (drag.current === null) return
+        const rtl =
+          getComputedStyle(event.currentTarget).direction === 'rtl' ? -1 : 1
+        change(
+          drag.current.width +
+            (event.clientX - drag.current.x) * rtl * (side === 'left' ? 1 : -1),
+        )
+      }}
+      onPointerUp={(event) => {
+        drag.current = null
+        event.currentTarget.releasePointerCapture(event.pointerId)
+      }}
+      onPointerCancel={() => {
+        drag.current = null
+      }}
+      onLostPointerCapture={() => {
+        drag.current = null
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="h-10 w-1 rounded-full bg-edge-strong"
+      />
+    </div>
   )
 }

@@ -40,7 +40,7 @@ import {
   billingContext,
   canManageBilling,
 } from '#/server/billing/types'
-import { getOrganization } from '#/server/repos'
+import { getOrganization, placesMeter } from '#/server/repos'
 import { appScope } from './context'
 
 import type {
@@ -94,6 +94,7 @@ async function billingSession(): Promise<{
 /* --------------------------------------------------------------------- read */
 
 export interface BillingPayload {
+  readonly places: { readonly used: number; readonly limit: number | null }
   readonly entitlements: Entitlements
   readonly invoices: ReadonlyArray<InvoiceSummary>
   /**
@@ -108,11 +109,12 @@ export interface BillingPayload {
 
 export const loadBilling = createServerFn({ method: 'GET' }).handler(
   async (): Promise<BillingPayload> => {
-    const { runtime, identity } = await billingSession()
+    const { scope, runtime, identity } = await billingSession()
     const ctx = billingContext(runtime, identity.organizationId)
 
-    const [state, invoices] = await Promise.all([
+    const [state, places, invoices] = await Promise.all([
       entitlements(ctx),
+      placesMeter(scope),
       // Polar is a third party in the render path, so its failure must not take
       // the plan summary down with it.
       listRecentInvoices(runtime, identity.organizationId).catch(
@@ -128,6 +130,7 @@ export const loadBilling = createServerFn({ method: 'GET' }).handler(
 
     return {
       entitlements: state,
+      places,
       invoices: invoices ?? [],
       invoicesUnavailable: invoices === null,
       canManage: canManageBilling(identity),

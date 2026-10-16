@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { BedDouble, Plus } from 'lucide-react'
+import { BedDouble, Plus, ChevronDown } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { focusRing, transitionBase } from '#/components/ui'
@@ -27,6 +27,9 @@ export interface DaySectionProps {
   readonly categoryFor: (
     categoryId: string | null,
   ) => PlannerCategory | undefined
+  /** Folding is independent of the day selected on the map. */
+  readonly expanded?: boolean
+  readonly onExpandedChange?: (expanded: boolean) => void
   /** This is the day being read: its header lifts and its route line brightens. */
   readonly active?: boolean
   readonly selectedPlaceId?: string | null
@@ -88,6 +91,8 @@ export function DaySection({
   day,
   categoryFor,
   active = false,
+  expanded = true,
+  onExpandedChange,
   selectedPlaceId = null,
   hoveredPlaceId = null,
   pendingItemIds,
@@ -106,6 +111,7 @@ export function DaySection({
   weatherUnit = 'metric',
 }: DaySectionProps) {
   const t = useTranslate()
+  const contentId = React.useId()
   const itemIds = React.useMemo(
     () =>
       day.items.map((item) => {
@@ -140,6 +146,7 @@ export function DaySection({
 
   return (
     <section
+      ref={expanded ? undefined : setNodeRef}
       aria-label={`${day.title}${day.dateLabel === null ? '' : `, ${day.dateLabel}`}`}
       className={cn(
         'rounded-xl',
@@ -155,6 +162,25 @@ export function DaySection({
         button is invalid, and the badge is not a way to focus the day.
       */}
       <div className="flex items-center">
+        {onExpandedChange === undefined ? null : (
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={contentId}
+            aria-label={t('trips.plan.workspace.toggleDay', { day: day.title })}
+            onClick={() => onExpandedChange(!expanded)}
+            className={cn(
+              'rounded-md p-2 text-ink-3 hover:bg-hover',
+              focusRing,
+            )}
+          >
+            <ChevronDown
+              aria-hidden="true"
+              size={16}
+              className={cn(!expanded && '-rotate-90 rtl:rotate-90')}
+            />
+          </button>
+        )}
         <button
           type="button"
           onClick={onFocusDay}
@@ -202,142 +228,146 @@ export function DaySection({
         )}
       </div>
 
-      {/* A stay is a fact of the header, never a row: it sits outside the sortable list below. */}
-      {day.stays.length === 0 ? null : (
-        <ul className="flex flex-wrap gap-1.5 px-2 pb-1.5">
-          {day.stays.map((stay) => (
-            <li
-              key={stay.id}
-              data-part="day-stay"
-              // Wraps rather than overflowing: a one-day stay says both boundaries, which in a
-              // long locale is wider than a phone's rail (WCAG 1.4.10).
-              className="flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-lg bg-info-soft px-2 py-0.5 text-caption font-medium text-info"
-            >
-              <BedDouble size={11} strokeWidth={2} aria-hidden="true" />
-              {stayFactsOn(day.dayId, stay).map((fact) => (
-                <span key={fact.word} className="font-semibold">
-                  {t(fact.label)}
-                  {fact.time === null ? null : (
-                    <>
-                      {' '}
-                      <span className="font-medium tabular-nums">
-                        {fact.time}
-                      </span>
-                    </>
-                  )}
-                  {/* The dot is drawn for the eye; assistive technology reads a pause instead. */}
-                  <span aria-hidden="true" className="ms-1.5">
-                    ·
+      <div id={contentId} hidden={!expanded}>
+        {/* A stay is a fact of the header, never a row: it sits outside the sortable list below. */}
+        {day.stays.length === 0 ? null : (
+          <ul className="flex flex-wrap gap-1.5 px-2 pb-1.5">
+            {day.stays.map((stay) => (
+              <li
+                key={stay.id}
+                data-part="day-stay"
+                // Wraps rather than overflowing: a one-day stay says both boundaries, which in a
+                // long locale is wider than a phone's rail (WCAG 1.4.10).
+                className="flex max-w-full flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-lg bg-info-soft px-2 py-0.5 text-caption font-medium text-info"
+              >
+                <BedDouble size={11} strokeWidth={2} aria-hidden="true" />
+                {stayFactsOn(day.dayId, stay).map((fact) => (
+                  <span key={fact.word} className="font-semibold">
+                    {t(fact.label)}
+                    {fact.time === null ? null : (
+                      <>
+                        {' '}
+                        <span className="font-medium tabular-nums">
+                          {fact.time}
+                        </span>
+                      </>
+                    )}
+                    {/* The dot is drawn for the eye; assistive technology reads a pause instead. */}
+                    <span aria-hidden="true" className="ms-1.5">
+                      ·
+                    </span>
+                    <span className="sr-only">, </span>
                   </span>
-                  <span className="sr-only">, </span>
-                </span>
-              ))}
-              <span className="min-w-0 truncate">{stay.name}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+                ))}
+                <span className="min-w-0 truncate">{stay.name}</span>
+              </li>
+            ))}
+          </ul>
+        )}
 
-      <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-        <ul
-          ref={setNodeRef}
-          className={cn(
-            'flex flex-col gap-0.5 rounded-lg px-1 py-0.5',
-            transitionBase,
-            // A drop target has to be visible *before* the drop, and an outline
-            // rather than a fill so the rows underneath stay readable.
-            isOver && 'bg-brand-subtle/60 ring-1 ring-brand/40 ring-inset',
-          )}
-        >
-          {day.items.length === 0 ? (
-            <li
-              className={cn(
-                'rounded-md border border-dashed border-edge-strong/60 px-3 py-3',
-                'text-center text-caption text-ink-4',
-                transitionBase,
-                isOver && 'border-brand/50 text-brand',
-              )}
-            >
-              {t('trips.plan.day.empty')}
-            </li>
-          ) : (
-            day.items.map((item, index) => {
-              if (item.kind === 'note') {
-                const { note } = item
-                return (
-                  <NoteRow
-                    key={noteItemId(note.id)}
-                    note={note}
-                    position={index}
-                    count={day.items.length}
-                    canWrite={canWriteNotes}
-                    draggable={draggable && canWriteNotes}
-                    pending={pendingItemIds?.has(noteItemId(note.id)) ?? false}
-                    onMove={(direction) => onMoveNote?.(note, direction)}
-                    onEdit={() => onEditNote?.(note)}
-                    onDelete={() => onDeleteNote?.(note)}
-                  />
-                )
-              }
-
-              if (item.kind === 'transport') {
-                const { transport } = item
-                return (
-                  <TransportRow
-                    key={transport.itemId}
-                    transport={transport}
-                    position={index}
-                    draggable={draggable}
-                    pending={pendingItemIds?.has(transport.itemId) ?? false}
-                  />
-                )
-              }
-
-              const { row } = item
-              return (
-                <StopRow
-                  key={row.itemId}
-                  row={row}
-                  category={categoryFor(row.categoryId)}
-                  position={stopNumbers.get(row.itemId) ?? null}
-                  selected={row.placeId === selectedPlaceId}
-                  hovered={row.placeId === hoveredPlaceId}
-                  pending={pendingItemIds?.has(row.itemId) ?? false}
-                  draggable={draggable}
-                  onSelect={() => onSelectRow?.(row)}
-                  onHoverChange={(hovering) => onHoverRow?.(row, hovering)}
-                  actions={rowActions?.(row)}
-                />
-              )
-            })
-          )}
-        </ul>
-      </SortableContext>
-
-      {canWriteNotes ? (
-        <div className="px-2 pt-1.5 pb-2">
-          <button
-            type="button"
-            onClick={onAddNote}
-            // Ten days on one screen means ten of these, so the name a screen reader
-            // hears says *which* day it writes to while the visible label stays short.
-            aria-label={t('trips.plan.note.addForDay', { day: day.title })}
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <ul
+            ref={expanded ? setNodeRef : undefined}
             className={cn(
-              'flex w-full items-center justify-center gap-1.5 rounded-md',
-              'border border-dashed border-edge bg-surface-2 px-3 py-2',
-              'text-caption text-ink-3',
+              'flex flex-col gap-0.5 rounded-lg px-1 py-0.5',
               transitionBase,
-              focusRing,
-              'hover:border-edge-strong hover:bg-hover hover:text-ink-2',
+              // A drop target has to be visible *before* the drop, and an outline
+              // rather than a fill so the rows underneath stay readable.
+              isOver && 'bg-brand-subtle/60 ring-1 ring-brand/40 ring-inset',
             )}
           >
-            <Plus size={12} strokeWidth={2} aria-hidden="true" />
-            {t('trips.plan.note.add')}
-          </button>
-        </div>
-      ) : null}
+            {day.items.length === 0 ? (
+              <li
+                className={cn(
+                  'rounded-md border border-dashed border-edge-strong/60 px-3 py-3',
+                  'text-center text-caption text-ink-4',
+                  transitionBase,
+                  isOver && 'border-brand/50 text-brand',
+                )}
+              >
+                {t('trips.plan.day.empty')}
+              </li>
+            ) : (
+              day.items.map((item, index) => {
+                if (item.kind === 'note') {
+                  const { note } = item
+                  return (
+                    <NoteRow
+                      key={noteItemId(note.id)}
+                      note={note}
+                      position={index}
+                      count={day.items.length}
+                      canWrite={canWriteNotes}
+                      draggable={draggable && canWriteNotes}
+                      pending={
+                        pendingItemIds?.has(noteItemId(note.id)) ?? false
+                      }
+                      onMove={(direction) => onMoveNote?.(note, direction)}
+                      onEdit={() => onEditNote?.(note)}
+                      onDelete={() => onDeleteNote?.(note)}
+                    />
+                  )
+                }
 
-      {dayTools?.(day)}
+                if (item.kind === 'transport') {
+                  const { transport } = item
+                  return (
+                    <TransportRow
+                      key={transport.itemId}
+                      transport={transport}
+                      position={index}
+                      draggable={draggable}
+                      pending={pendingItemIds?.has(transport.itemId) ?? false}
+                    />
+                  )
+                }
+
+                const { row } = item
+                return (
+                  <StopRow
+                    key={row.itemId}
+                    row={row}
+                    category={categoryFor(row.categoryId)}
+                    position={stopNumbers.get(row.itemId) ?? null}
+                    selected={row.placeId === selectedPlaceId}
+                    hovered={row.placeId === hoveredPlaceId}
+                    pending={pendingItemIds?.has(row.itemId) ?? false}
+                    draggable={draggable}
+                    onSelect={() => onSelectRow?.(row)}
+                    onHoverChange={(hovering) => onHoverRow?.(row, hovering)}
+                    actions={rowActions?.(row)}
+                  />
+                )
+              })
+            )}
+          </ul>
+        </SortableContext>
+
+        {canWriteNotes ? (
+          <div className="px-2 pt-1.5 pb-2">
+            <button
+              type="button"
+              onClick={onAddNote}
+              // Ten days on one screen means ten of these, so the name a screen reader
+              // hears says *which* day it writes to while the visible label stays short.
+              aria-label={t('trips.plan.note.addForDay', { day: day.title })}
+              className={cn(
+                'flex w-full items-center justify-center gap-1.5 rounded-md',
+                'border border-dashed border-edge bg-surface-2 px-3 py-2',
+                'text-caption text-ink-3',
+                transitionBase,
+                focusRing,
+                'hover:border-edge-strong hover:bg-hover hover:text-ink-2',
+              )}
+            >
+              <Plus size={12} strokeWidth={2} aria-hidden="true" />
+              {t('trips.plan.note.add')}
+            </button>
+          </div>
+        ) : null}
+
+        {dayTools?.(day)}
+      </div>
     </section>
   )
 }

@@ -410,6 +410,10 @@ const messages = {
   'billing.quota.trips': 'Reisen',
   'billing.quota.storageBytes': 'Speicher',
   'billing.quota.unlimited': 'Unbegrenzt',
+  'billing.quota.places': 'Orte',
+  'billing.quota.placesHint': 'Über alle Reisen in diesem Arbeitsbereich',
+  'billing.quota.exhausted.places': 'Das Kontingent für Orte ist aufgebraucht',
+  'billing.quota.over.places': 'Limit für Orte um {value} überschritten',
   'billing.quota.noLimit': 'In diesem Tarif ohne Grenze',
   'billing.quota.used': '{quota} belegt',
   'billing.quota.over.seats': {

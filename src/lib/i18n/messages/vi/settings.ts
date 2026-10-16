@@ -398,6 +398,11 @@ const messages = {
   'billing.quota.trips': 'Chuyến đi',
   'billing.quota.storageBytes': 'Dung lượng',
   'billing.quota.unlimited': 'Không giới hạn',
+  'billing.quota.places': 'Địa điểm',
+  'billing.quota.placesHint':
+    'Trong tất cả chuyến đi của không gian làm việc này',
+  'billing.quota.exhausted.places': 'Đã dùng hết hạn mức địa điểm',
+  'billing.quota.over.places': 'Vượt giới hạn địa điểm thêm {value}',
   'billing.quota.noLimit': 'Gói này không có hạn mức',
   'billing.quota.used': 'Đã dùng {quota}',
   'billing.quota.over.seats': {

@@ -50,3 +50,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Former member** — the placeholder that stands for an erased person wherever their contribution to a shared record stays. One per workspace per erasure; it carries no name and cannot be traced back to the person. _Avoid_: "deleted user", "unknown user".
 - **Stranded trip** — a trip whose visibility is not _organization_ and whose every trip member has left the workspace: nobody can read or delete it, so it is kept but stops counting against the trips quota and the plan-usage figure; it counts again if one of its members returns. A trip with _organization_ visibility is never stranded. _Avoid_: "orphaned trip".
 - **Passkey** — a credential held by a person's device, password manager or security key that signs them in without a password. It is added and removed by the person themselves, never on their behalf by someone acting as them. _Avoid_: "security key" for the credential itself, "fingerprint".
+
+- **Planner workspace** - the map and its floating rails; rail widths persist per trip locally, while unfolded days persist only for the browser session.

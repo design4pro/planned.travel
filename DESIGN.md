@@ -487,7 +487,8 @@ with exact, small, fast movements.
   would dim the label along with the fill and land a disabled primary at about 2.9:1, which reads
   as a broken button rather than a waiting one.
 - **Loading:** the label is swapped for a centred spinner while the measured width is held, so a
-  pending action never reflows its row.
+  pending action never reflows its row. Loading keeps keyboard focus with `aria-disabled` and
+  `aria-busy`, blocking activation until it settles; explicit `disabled` remains native on buttons.
 
 ### Inputs / Fields
 
