@@ -77,7 +77,7 @@ values.userId)`, and inserts with `invitedBy: scope.ctx.userId`. In a joiner's o
   the real exit. The workspace invitation's `/register?redirect=` link
   (`accept-invitation.$invitationId.tsx:188`) has the same defect today.
 - **A joiner's active workspace is usually not the trip's.** `appScope()` (`src/server/fns/context.ts:26`) builds its scope
-  from `requireOrg()` (`src/server/auth/session.ts:90`), which uses `session.activeOrganizationId`; `requireOrg({ organizationId })` throws `not-a-member` on a mismatch instead
+  from `requireOrg()` (`src/server/auth/session.ts:90`), which resolves `session.activeOrganizationId` while its membership survives, otherwise the oldest surviving membership; `requireOrg({ organizationId })` throws `not-a-member` on a mismatch instead
   of switching (`tenant.ts:171-178`). A user in several workspaces (`#939`, `workspace-switcher.tsx`) therefore
   cannot be joined with `appScope()`, and after joining must switch workspace
   (`authClient.organization.setActive`) before the trip exists for them.

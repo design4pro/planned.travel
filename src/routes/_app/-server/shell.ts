@@ -5,9 +5,9 @@
  * `_app/route.tsx` calls this once in `beforeLoad`, which is what stops a child
  * loader from ever running for an anonymous visitor.
  *
- * The two states it cannot render around — a session with no workspace, and a
- * membership revoked while the tab was open — are thrown as message *keys*, not
- * as sentences. See {@link shellFailure}.
+ * The two states it cannot render around — a session with no workspace, and the
+ * last membership revoked while the tab was open — are thrown as message *keys*,
+ * not as sentences. See {@link shellFailure}.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
@@ -17,10 +17,7 @@ import { platformCapabilities } from '#/components/layout/session'
 import { getAuth } from '#/server/auth'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { authDb } from '#/server/auth/db'
-import {
-  firstOrganizationIdFor,
-  membershipRoleFor,
-} from '#/server/auth/provisioning'
+import { resolveActiveWorkspace } from '#/server/auth/active-workspace'
 import { getSession } from '#/server/auth/session'
 import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
@@ -252,20 +249,18 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
     }
 
     const auth = authDb()
-    // A session minted before the workspace existed still carries a null active
-    // organization; fall back to the oldest membership rather than failing.
-    const organizationId =
-      session.session.activeOrganizationId ??
-      (await firstOrganizationIdFor(auth, session.user.id))
-
-    if (organizationId === null) {
+    const resolved = await resolveActiveWorkspace(
+      auth,
+      session.user.id,
+      session.session.activeOrganizationId,
+    )
+    if (!resolved) {
+      if (session.session.activeOrganizationId) {
+        throw shellFailure('shell.session.membershipRemoved')
+      }
       throw shellFailure('shell.session.noWorkspace')
     }
-
-    const role = await membershipRoleFor(auth, {
-      userId: session.user.id,
-      organizationId,
-    })
+    const { organizationId, role } = resolved
     if (!isOrganizationRole(role)) {
       throw shellFailure('shell.session.membershipRemoved')
     }
