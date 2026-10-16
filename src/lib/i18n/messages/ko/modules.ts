@@ -855,7 +855,7 @@ const messages = {
     '이 링크가 있는 사람은 계정 없이 여행의 장소, 시간, 주소, 메모를 읽을 수 있습니다. 비밀번호처럼 보호하세요.',
   'files.calendar.enable.action': '링크 만들기',
   'files.calendar.link.once':
-    '지금 복사하세요. 한 번만 표시됩니다. 잃어버리면 링크를 끄고 새로 만드세요. 이전 링크는 작동하지 않습니다.',
+    '지금 복사하세요. 한 번만 표시됩니다. 잃어버리면 새 링크를 만드세요. 기존 링크는 작동하지 않게 됩니다.',
   'files.calendar.link.address': '링크 주소',
   'files.calendar.link.copy': '링크 복사',
   'files.calendar.link.copied': '링크가 복사되었습니다',
@@ -873,6 +873,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     '캘린더가 이 링크를 마지막으로 확인한 시간: {when}',
   'files.calendar.state.neverFetched': '아직 가져오지 않음',
+  'files.calendar.rotate.action': '새 링크 만들기',
+  'files.calendar.rotate.confirmTitle': '새 링크를 만들까요?',
+  'files.calendar.rotate.confirmBody':
+    '기존 링크는 지금부터 작동하지 않습니다. 이 링크를 사용하는 캘린더는 새 링크를 설정할 때까지 업데이트되지 않습니다.',
+  'files.calendar.rotate.busy': '새 링크 만드는 중…',
+  'files.calendar.error.rotate':
+    '새 링크가 만들어졌는지 확인하지 못했습니다. 현재 상태가 아래에 표시됩니다. 필요하면 다시 시도하세요.',
+  'files.calendar.rotate.confirm': '새 링크 만들기',
   'files.calendar.off.action': '끄기',
   'files.calendar.off.confirmTitle': '이 캘린더 링크를 끌까요?',
   'files.calendar.off.confirmBody':

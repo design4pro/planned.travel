@@ -887,7 +887,7 @@ const messages = {
     'Siapa pun dengan tautan ini dapat membaca tempat, waktu, alamat, dan catatan perjalanan tanpa akun. Lindungi seperti kata sandi.',
   'files.calendar.enable.action': 'Buat tautan',
   'files.calendar.link.once':
-    'Salin sekarang - tautan hanya ditampilkan sekali. Jika hilang, nonaktifkan dan buat yang baru; tautan lama berhenti berfungsi.',
+    'Salin sekarang - kami hanya menampilkannya sekali. Jika hilang, buat tautan baru; tautan lama akan berhenti berfungsi.',
   'files.calendar.link.address': 'Alamat tautan',
   'files.calendar.link.copy': 'Salin tautan',
   'files.calendar.link.copied': 'Tautan disalin',
@@ -905,6 +905,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Kalender terakhir memeriksa tautan ini {when}',
   'files.calendar.state.neverFetched': 'Belum diambil',
+  'files.calendar.rotate.action': 'Buat tautan baru',
+  'files.calendar.rotate.confirmTitle': 'Buat tautan baru?',
+  'files.calendar.rotate.confirmBody':
+    'Tautan lama berhenti berfungsi sekarang. Kalender yang menggunakannya berhenti diperbarui sampai kamu memberikan tautan baru.',
+  'files.calendar.rotate.busy': 'Membuat tautan baru…',
+  'files.calendar.error.rotate':
+    'Kami tidak dapat memastikan tautan baru telah dibuat. Status saat ini ditampilkan di bawah; coba lagi jika perlu.',
+  'files.calendar.rotate.confirm': 'Buat tautan baru',
   'files.calendar.off.action': 'Nonaktifkan',
   'files.calendar.off.confirmTitle': 'Nonaktifkan tautan kalender ini?',
   'files.calendar.off.confirmBody':

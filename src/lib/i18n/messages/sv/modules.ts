@@ -891,7 +891,7 @@ const messages = {
     'Alla med den här länken kan läsa resans platser, tider, adresser och anteckningar utan konto. Skydda den som ett lösenord.',
   'files.calendar.enable.action': 'Skapa en länk',
   'files.calendar.link.once':
-    'Kopiera den nu - vi visar den bara en gång. Om du tappar bort den, stäng av den och skapa en ny; den gamla slutar fungera.',
+    'Kopiera den nu - vi visar den bara en gång. Skapa en ny länk om du tappar bort den; den gamla slutar fungera.',
   'files.calendar.link.address': 'Länkadress',
   'files.calendar.link.copy': 'Kopiera länk',
   'files.calendar.link.copied': 'Länk kopierad',
@@ -909,6 +909,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'En kalender kontrollerade senast länken {when}',
   'files.calendar.state.neverFetched': 'Inte hämtad ännu',
+  'files.calendar.rotate.action': 'Skapa en ny länk',
+  'files.calendar.rotate.confirmTitle': 'Skapa en ny länk?',
+  'files.calendar.rotate.confirmBody':
+    'Den gamla länken slutar fungera nu. Kalendrar som använder den slutar uppdateras tills du ger dem den nya länken.',
+  'files.calendar.rotate.busy': 'Skapar en ny länk…',
+  'files.calendar.error.rotate':
+    'Vi kunde inte bekräfta att en ny länk skapades. Aktuell status visas nedan; försök igen vid behov.',
+  'files.calendar.rotate.confirm': 'Skapa en ny länk',
   'files.calendar.off.action': 'Stäng av',
   'files.calendar.off.confirmTitle': 'Stänga av den här kalenderlänken?',
   'files.calendar.off.confirmBody':

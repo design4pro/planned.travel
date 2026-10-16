@@ -921,7 +921,7 @@ const messages = {
     'Кожен із цим посиланням може без облікового запису читати місця, час, адреси й нотатки цієї подорожі. Бережіть його як пароль.',
   'files.calendar.enable.action': 'Створити посилання',
   'files.calendar.link.once':
-    'Скопіюйте зараз - ми показуємо його лише раз. Якщо загубите, вимкніть і створіть нове; старе перестане працювати.',
+    'Скопіюйте його зараз - ми показуємо його лише один раз. Якщо загубите, створіть нове посилання; старе перестане працювати.',
   'files.calendar.link.address': 'Адреса посилання',
   'files.calendar.link.copy': 'Копіювати посилання',
   'files.calendar.link.copied': 'Посилання скопійовано',
@@ -939,6 +939,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Календар востаннє перевірив це посилання {when}',
   'files.calendar.state.neverFetched': 'Ще не завантажувалось',
+  'files.calendar.rotate.action': 'Створити нове посилання',
+  'files.calendar.rotate.confirmTitle': 'Створити нове посилання?',
+  'files.calendar.rotate.confirmBody':
+    'Старе посилання одразу перестане працювати. Календарі, які його використовують, перестануть оновлюватися, доки ви не надасте їм нове посилання.',
+  'files.calendar.rotate.busy': 'Створення нового посилання…',
+  'files.calendar.error.rotate':
+    'Не вдалося підтвердити створення нового посилання. Поточний стан показано нижче; за потреби спробуйте ще раз.',
+  'files.calendar.rotate.confirm': 'Створити нове посилання',
   'files.calendar.off.action': 'Вимкнути',
   'files.calendar.off.confirmTitle': 'Вимкнути це посилання на календар?',
   'files.calendar.off.confirmBody':

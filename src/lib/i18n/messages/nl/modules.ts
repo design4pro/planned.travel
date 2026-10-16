@@ -904,7 +904,7 @@ const messages = {
     'Iedereen met deze link kan de plaatsen, tijden, adressen en notities van deze reis zonder account lezen. Bescherm hem als een wachtwoord.',
   'files.calendar.enable.action': 'Link maken',
   'files.calendar.link.once':
-    'Kopieer hem nu - we tonen hem maar één keer. Raak je hem kwijt, schakel hem dan uit en maak een nieuwe; de oude werkt dan niet meer.',
+    'Kopieer hem nu - we tonen hem maar één keer. Maak een nieuwe link als je hem kwijtraakt; de oude werkt dan niet meer.',
   'files.calendar.link.address': 'Linkadres',
   'files.calendar.link.copy': 'Link kopiëren',
   'files.calendar.link.copied': 'Link gekopieerd',
@@ -922,6 +922,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Een kalender heeft deze link voor het laatst {when} gecontroleerd',
   'files.calendar.state.neverFetched': 'Nog niet opgehaald',
+  'files.calendar.rotate.action': 'Nieuwe link maken',
+  'files.calendar.rotate.confirmTitle': 'Nieuwe link maken?',
+  'files.calendar.rotate.confirmBody':
+    'De oude link werkt vanaf nu niet meer. Kalenders die deze gebruiken worden pas weer bijgewerkt als je ze de nieuwe link geeft.',
+  'files.calendar.rotate.busy': 'Nieuwe link maken…',
+  'files.calendar.error.rotate':
+    'We konden niet bevestigen dat er een nieuwe link is gemaakt. De huidige status staat hieronder; probeer het zo nodig opnieuw.',
+  'files.calendar.rotate.confirm': 'Nieuwe link maken',
   'files.calendar.off.action': 'Uitschakelen',
   'files.calendar.off.confirmTitle': 'Deze kalenderlink uitschakelen?',
   'files.calendar.off.confirmBody':

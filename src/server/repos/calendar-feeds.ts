@@ -439,6 +439,7 @@ async function ownFeed(scope: TenantScope, feedId: string) {
       tripId: calendarFeeds.tripId,
       lastServedAt: calendarFeeds.lastServedAt,
       revokedAt: calendarFeeds.revokedAt,
+      tokenDigest: calendarFeeds.tokenDigest,
     })
     .from(calendarFeeds)
     .where(
@@ -535,6 +536,41 @@ export async function enableFeed(
   return { feedId: row.id, secret, tripTitle: trip.title }
 }
 
+/** Replace only a currently usable owner-bound credential; never rearm a refused feed. */
+export async function rotateFeed(scope: TenantScope, feedId: string) {
+  const row = await ownFeed(scope, feedId)
+  const liveScope =
+    row.revokedAt === null ? await liveFeedScope(scope.db, row) : null
+  if (
+    !liveScope ||
+    row.scope !== 'trip' ||
+    !row.tripId ||
+    !(await tripAccess(liveScope, row))
+  ) {
+    throw new NotFoundError('Calendar feed', feedId)
+  }
+  const trip = await requireTrip(liveScope, row.tripId)
+  const secret = mintFeedSecret()
+  const tokenDigest = await hashFeedSecret(secret)
+  const now = new Date()
+  const changed = await scope.db
+    .update(calendarFeeds)
+    .set({ tokenDigest, rotatedAt: now, updatedAt: now, lastServedAt: null })
+    .where(
+      tenantFilter(
+        scope,
+        calendarFeeds,
+        eq(calendarFeeds.id, feedId),
+        eq(calendarFeeds.userId, scope.ctx.userId),
+        isNull(calendarFeeds.revokedAt),
+        eq(calendarFeeds.tokenDigest, row.tokenDigest),
+      ),
+    )
+    .returning({ id: calendarFeeds.id })
+  if (changed.length === 0) throw new NotFoundError('Calendar feed', feedId)
+  return { feedId, secret, tripTitle: trip.title }
+}
+
 export async function revokeFeed(
   scope: TenantScope,
   feedId: string,
@@ -553,11 +589,12 @@ export async function revokeFeed(
     )
 }
 
-/** Stamped at most hourly by the handler, never a per-poll write. */
+/** Stamped at most hourly for the credential actually fetched, never a per-poll write. */
 export async function touchFeed(
   scope: TenantScope,
   feedId: string,
   now: Date,
+  tokenDigest: string,
 ): Promise<void> {
   const rows = await scope.db
     .update(calendarFeeds)
@@ -569,6 +606,7 @@ export async function touchFeed(
         eq(calendarFeeds.id, feedId),
         eq(calendarFeeds.userId, scope.ctx.userId),
         isNull(calendarFeeds.revokedAt),
+        eq(calendarFeeds.tokenDigest, tokenDigest),
         sql`coalesce(${calendarFeeds.rotatedAt}, ${calendarFeeds.createdAt}) <= ${now.getTime()}`,
       ),
     )
