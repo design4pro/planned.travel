@@ -434,6 +434,18 @@ const messages = {
   'plan.workspace.hidePanel': 'Paneel {label} verbergen',
   'plan.workspace.narrowPanel': '{label} versmallen',
   'plan.workspace.widenPanel': '{label} verbreden',
+  'collab.sections.trigger': 'Onderdelen kiezen',
+  'collab.sections.menuLabel': 'Tonen aan iedereen op deze reis',
+  'collab.sections.keepOne': 'Er blijft minstens één onderdeel aan.',
+  'collab.sections.failed': 'De wijziging is niet opgeslagen',
+  'collab.sections.failedBody': 'Het menu toont de momenteel opgeslagen stand.',
+  'collab.sections.someHidden':
+    'Sommige onderdelen zijn verborgen voor deze reis.',
+  'collab.sections.turnedOff':
+    'Dit onderdeel is uitgezet voor de reis. Het sluit zodra je je tekst verstuurt of wist.',
+  'collab.sections.changed': 'De onderdelen van deze reis zijn gewijzigd.',
+  'collab.sections.savedHidden':
+    'Opgeslagen. Dit onderdeel is verborgen voor de reis en sluit nu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -389,6 +389,11 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
       ledger: 'split-stale',
     })
     openEditing(DINNER, vi.fn())
+    await vi.waitFor(() =>
+      expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(
+        true,
+      ),
+    )
     submitTheForm()
 
     const notice = (
@@ -397,7 +402,7 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
     // The form is inert (no edit can be typed, none is thrown away); the notice is outside it.
     expect(document.querySelector('form')?.hasAttribute('inert')).toBe(true)
     expect(notice?.closest('form')).toBeNull()
-    expect(document.activeElement).toBe(notice)
+    await vi.waitFor(() => expect(document.activeElement).toBe(notice))
   })
 
   it('shows only the split notice when the retry of a refused ledger write comes back stale', async () => {

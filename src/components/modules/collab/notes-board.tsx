@@ -1,5 +1,5 @@
 /** The notes board: a shared note can be created, edited, pinned and removed. */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Pin, PinOff, Plus, StickyNote, Trash2 } from 'lucide-react'
 
 import { Badge, Button, Chip, EmptyState } from '#/components/ui'
@@ -50,15 +50,22 @@ export function NotesBoard({
   people,
   newNoteOpen,
   onNewNoteOpenChange,
+  onDirtyChange,
+  turnedOff = false,
 }: {
   tripId: string
   notes: ReadonlyArray<NoteData>
   people: ReadonlyArray<CollabPerson>
   newNoteOpen: boolean
   onNewNoteOpenChange: (open: boolean) => void
+  onDirtyChange?: (dirty: boolean) => void
+  turnedOff?: boolean
 }) {
   const t = useTranslate()
   const [editing, setEditing] = useState<NoteData | null>(null)
+  useEffect(() => {
+    onDirtyChange?.(newNoteOpen || editing !== null)
+  }, [newNoteOpen, editing, onDirtyChange])
   const [category, setCategory] = useState<string>('all')
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
@@ -276,6 +283,7 @@ export function NotesBoard({
       )}
 
       <NoteDialog
+        turnedOff={turnedOff}
         tripId={tripId}
         note={editing ?? undefined}
         categories={categories.map(([value]) => value)}

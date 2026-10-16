@@ -394,6 +394,17 @@ const messages = {
   'plan.workspace.hidePanel': '隱藏{label}面板',
   'plan.workspace.narrowPanel': '縮窄{label}',
   'plan.workspace.widenPanel': '加寬{label}',
+  'collab.sections.trigger': '選擇區塊',
+  'collab.sections.menuLabel': '向此行程的所有人顯示',
+  'collab.sections.keepOne': '至少保留一個開啟的區塊。',
+  'collab.sections.failed': '變更未能儲存',
+  'collab.sections.failedBody': '選單顯示目前已儲存的狀態。',
+  'collab.sections.someHidden': '此行程的部分區塊已隱藏。',
+  'collab.sections.turnedOff':
+    '此區塊已對此行程關閉。傳送或清除正在撰寫的內容後，它將關閉。',
+  'collab.sections.changed': '此行程的區塊已變更。',
+  'collab.sections.savedHidden':
+    '已儲存。此區塊已對此行程隱藏，因此現在將關閉。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

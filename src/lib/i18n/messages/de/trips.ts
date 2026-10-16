@@ -443,6 +443,19 @@ const messages = {
   'plan.workspace.hidePanel': 'Bereich {label} ausblenden',
   'plan.workspace.narrowPanel': '{label} schmaler machen',
   'plan.workspace.widenPanel': '{label} breiter machen',
+  'collab.sections.trigger': 'Bereiche auswählen',
+  'collab.sections.menuLabel': 'Für alle auf dieser Reise anzeigen',
+  'collab.sections.keepOne': 'Mindestens ein Bereich bleibt aktiviert.',
+  'collab.sections.failed': 'Die Änderung wurde nicht gespeichert',
+  'collab.sections.failedBody':
+    'Das Menü zeigt den aktuell gespeicherten Stand.',
+  'collab.sections.someHidden':
+    'Einige Bereiche sind auf dieser Reise ausgeblendet.',
+  'collab.sections.turnedOff':
+    'Dieser Bereich wurde für die Reise deaktiviert. Er schließt sich, sobald du deinen Entwurf sendest oder leerst.',
+  'collab.sections.changed': 'Die Bereiche dieser Reise wurden geändert.',
+  'collab.sections.savedHidden':
+    'Gespeichert. Dieser Bereich ist für die Reise ausgeblendet und wird jetzt geschlossen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -444,6 +444,18 @@ const messages = {
   'plan.workspace.hidePanel': 'Amaga el tauler {label}',
   'plan.workspace.narrowPanel': 'Estreny {label}',
   'plan.workspace.widenPanel': 'Eixampla {label}',
+  'collab.sections.trigger': 'Tria les seccions',
+  'collab.sections.menuLabel': 'Mostra a tothom d’aquest viatge',
+  'collab.sections.keepOne': 'Com a mínim una secció ha de continuar activa.',
+  'collab.sections.failed': 'El canvi no s’ha desat',
+  'collab.sections.failedBody': 'El menú mostra l’estat desat actualment.',
+  'collab.sections.someHidden':
+    'Algunes seccions estan ocultes en aquest viatge.',
+  'collab.sections.turnedOff':
+    'Aquesta secció s’ha desactivat per al viatge. Es tancarà quan enviïs o esborris el que estàs escrivint.',
+  'collab.sections.changed': 'Les seccions d’aquest viatge han canviat.',
+  'collab.sections.savedHidden':
+    'Desat. Aquesta secció està oculta per al viatge i ara es tancarà.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
