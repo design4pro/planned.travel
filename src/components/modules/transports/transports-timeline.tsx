@@ -125,6 +125,7 @@ export interface TransportsTimelineProps {
   readonly transports: ReadonlyArray<TransportData>
   /** The trip's days: what the two day selects offer, and what a day chip reads. */
   readonly days: ReadonlyArray<TransportDayData>
+  readonly canSearchConnections: boolean
   readonly currency: string
   /**
    * The reader's own display preference, read by the route beside the transport
@@ -148,6 +149,7 @@ export function TransportsTimeline({
   days,
   currency,
   maskCodes,
+  canSearchConnections,
   newTransportOpen,
   onNewTransportOpenChange,
 }: TransportsTimelineProps) {
@@ -252,6 +254,7 @@ export function TransportsTimeline({
           }
         />
         <TransportDialog
+          canSearchConnections={canSearchConnections}
           tripId={tripId}
           days={days}
           currency={currency}
@@ -379,6 +382,7 @@ export function TransportsTimeline({
       )}
 
       <TransportDialog
+        canSearchConnections={canSearchConnections}
         tripId={tripId}
         transport={editing ?? undefined}
         days={days}
