@@ -9,7 +9,6 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
-  createPlace,
   getMemberBalances,
   getStorageUsage,
   getTripItinerary,
@@ -572,34 +571,4 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
         createdAt: isoOfRequired(row.createdAt),
       })),
     }
-  })
-
-/* ------------------------------------------------------------- plan writes */
-
-/**
- * Adds a place to the trip's inventory. Coordinates and day assignment come
- * later, from the map: this is the keyboard-only path into an empty plan.
- */
-export const createPlaceFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      tripId: z.string().trim().min(1).max(64),
-      name: z.string().trim().min(1).max(160),
-      city: z.string().trim().max(160),
-      address: z.string().trim().max(240),
-      categoryId: z.string().trim().max(64),
-      durationMinutes: z.number().int().min(0).max(10_080),
-    }),
-  )
-  .handler(async ({ data }): Promise<{ readonly placeId: string }> => {
-    const scope = await appScope()
-    const place = await createPlace(scope, {
-      tripId: data.tripId,
-      name: data.name,
-      city: data.city === '' ? null : data.city,
-      address: data.address === '' ? null : data.address,
-      categoryId: data.categoryId === '' ? null : data.categoryId,
-      durationMinutes: data.durationMinutes,
-    })
-    return { placeId: place.id }
   })
