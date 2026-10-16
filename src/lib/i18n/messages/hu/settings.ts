@@ -403,6 +403,10 @@ const messages = {
   'billing.quota.trips': 'Utazások',
   'billing.quota.storageBytes': 'Tárhely',
   'billing.quota.unlimited': 'Korlátlan',
+  'billing.quota.places': 'Helyek',
+  'billing.quota.placesHint': 'A munkaterület összes utazásában',
+  'billing.quota.exhausted.places': 'A helyek kerete elfogyott',
+  'billing.quota.over.places': 'A helyek korlátja {value} értékkel túllépve',
   'billing.quota.noLimit': 'Ebben a csomagban nincs korlát',
   'billing.quota.used': 'felhasznált {quota}',
   'billing.quota.over.seats': {

@@ -104,6 +104,7 @@ function crewWorkspace(overrides: Partial<Entitlements> = {}): Entitlements {
 function payload(overrides: Partial<BillingPayload> = {}): BillingPayload {
   return {
     entitlements: crewWorkspace(),
+    places: { used: 0, limit: null },
     invoices: [],
     invoicesUnavailable: false,
     canManage: true,
@@ -233,5 +234,48 @@ describe('the billing page with a promotion code', () => {
     cleanup()
     renderPage(payload(), { plan: 'changed' })
     expect(screen.queryByText(/applies from your next renewal/)).toBeNull()
+  })
+})
+
+describe('places usage on the billing page', () => {
+  it.each([
+    [1, 2, '1 left', 'bg-brand'],
+    [119, 150, '31 left', 'bg-brand'],
+    [120, 150, '30 left', 'bg-warning'],
+    [2, 2, 'The places allowance is used up', 'bg-danger'],
+    [4, 2, 'Above the places limit by 2', 'bg-danger'],
+    [0, 0, 'The places allowance is used up', 'bg-danger'],
+  ])(
+    'renders finite places usage %s / %s even on Crew',
+    (used, limit, hint, tone) => {
+      renderPage(
+        payload({
+          places: { used: Number(used), limit: Number(limit) },
+          canManage: false,
+        }),
+      )
+      const bar = screen.getByRole('progressbar', { name: 'Places used' })
+      expect(bar.getAttribute('aria-valuenow')).toBe(
+        Number(limit) === 0
+          ? '100'
+          : String(Math.min(100, (Number(used) / Number(limit)) * 100)),
+      )
+      expect(screen.getByText(hint)).toBeTruthy()
+      expect(bar.innerHTML).toContain(String(tone))
+      expect(
+        screen.getByText('Across all trips in this workspace'),
+      ).toBeTruthy()
+    },
+  )
+
+  it('renders an unlimited places allowance as a filled track', () => {
+    renderPage(payload({ places: { used: 17, limit: null } }))
+    expect(screen.getByText('17')).toBeTruthy()
+    expect(
+      screen.queryByRole('progressbar', { name: 'Places used' }),
+    ).toBeNull()
+    expect(
+      screen.getByText('Places').closest('[data-places-meter]')?.textContent,
+    ).toContain('Unlimited')
   })
 })

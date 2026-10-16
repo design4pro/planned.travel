@@ -15,7 +15,8 @@ import {
   places,
   tags,
 } from '#/server/db/schema'
-import { assertQuota, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
+import { UNLIMITED } from '#/server/db/types'
+import { assertQuota, createTenantRepository, createTenantTableAccess, resolveQuotas, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { categoriesRepository } from './categories'
 import { NotFoundError } from './context'
@@ -58,6 +59,20 @@ async function requireEditablePlace(scope: TenantScope, placeId: string): Promis
 
 export const placesRepository = createTenantRepository(places, 'place')
 export const placeTagsAccess = createTenantTableAccess(placeTags, 'place tag')
+
+export interface PlacesMeter {
+  readonly used: number
+  readonly limit: number | null
+}
+
+/** Organisation-wide usage and the live ceiling read by the places write guard. */
+export async function placesMeter(scope: TenantScope): Promise<PlacesMeter> {
+  const [used, { limits }] = await Promise.all([
+    placesRepository.count(scope),
+    resolveQuotas(scope),
+  ])
+  return { used, limit: limits.places === UNLIMITED ? null : limits.places }
+}
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs

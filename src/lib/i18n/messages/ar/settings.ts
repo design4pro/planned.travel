@@ -398,6 +398,10 @@ const messages = {
   'billing.quota.trips': 'الرحلات',
   'billing.quota.storageBytes': 'المساحة',
   'billing.quota.unlimited': 'بلا حدود',
+  'billing.quota.places': 'الأماكن',
+  'billing.quota.placesHint': 'عبر جميع الرحلات في مساحة العمل هذه',
+  'billing.quota.exhausted.places': 'تم استنفاد الحصة المخصصة للأماكن',
+  'billing.quota.over.places': 'تم تجاوز حد الأماكن بمقدار {value}',
   'billing.quota.noLimit': 'لا حد على هذه الخطة',
   'billing.quota.used': '{quota} المستخدمة',
   'billing.quota.over.seats': {
