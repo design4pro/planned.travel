@@ -253,7 +253,7 @@ so a paste on any other screen never uploads to this trip. The handler:
 2. extracts files with `filesFromClipboard`; **calls `preventDefault` only when it found files**;
 3. names them, and feeds them to the existing `add()`, so each file shows as a queue row and the
    batch toast reports the outcome, exactly as a drop does;
-4. **brings the queue into view** — in an effect that runs after the render that shows the pasted rows (the queue list only renders once `queue.tasks.length > 0`, so the handler itself has no target on a first paste) with `scrollIntoView({ block: 'nearest' })` on the queue list — so that
+4. **brings the queue into view** — in an effect that runs after the render that shows the pasted rows (the queue list only renders once `queue.tasks.length > 0`, so the handler itself has no target on a first paste) with `scrollIntoView({ block: 'center', behavior: 'instant' })` on the queue list (see the amendment below) — so that
    on a long library the traveller sees the upload begin and does not paste a second time.
 
 The panel is **not** made focusable (a departure from the plan, which made it `tabIndex={0}` with an
@@ -689,8 +689,10 @@ behaviour (Implementation Plan).
 
 ## Amendment
 
-Implemented in #1283 (Phase 4). One thing shipped differently from the design above; the design is left as written.
+Implementation notes from #1283 (Phase 4), followed by later corrections.
 
 - **The layout-shift check is split, and the refusal is bounded rather than zero.** Verification and Phase 4 step 3 say the sum of layout shifts after the mark is `0` when the active state is entered _and a file refused_. Measured on a running server, entering the active state shifts nothing, but the refused file's row is inserted into the queue list below the zone and pushes the content under it down: one entry, 0.0275. That is the queue appearing, which Phase 3 designs (and scrolls into view), not the zone moving. `e2e/documents-and-media.spec.ts` therefore asserts `[]` after the zone fills, and for the refusal at most one entry and a sum below 0.1. The mark is the count of entries logged, not `performance.now()`: `visit()` pins the clock with `page.clock`, which fakes `performance.now()` while an entry's `startTime` stays on the real clock, so a timestamp mark made the check pass even when a 300 px block was injected after it.
 - **The two follow-up issues** are #1281 (the Files table at 360 px: the frames show the file name cut to about 70 px, the likely defect) and #1282 (the hardcoded English listed under Out of scope).
 - **WebKit.** The Phase 4 browser tests were run on `chromium` only in the implementing run, whose host lacks the libraries WebKit needs; `mobile-safari` is the nightly `e2e-webkit` run's to confirm. The layout-shift test is skipped there, stated in the test.
+
+- **Pasted queue visibility (#1308).** Scroll instantly to the center rather than smoothly to the nearest edge. Centering clears the sticky trip header; an instant scroll avoids targeting stale geometry when upload completion removes the progress bars. The E2E check keeps the viewport assertion and also checks that the queue owns the element at its midpoint, so a queue covered by sticky chrome cannot pass.

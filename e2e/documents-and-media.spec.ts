@@ -267,7 +267,22 @@ test.describe('06-S1 — Every way a file gets in', () => {
 
     await expect.poll(() => bodies.length).toBe(1)
     expect(bodies[0]).toMatch(PASTED_PNG)
-    await expect(page.locator('[data-part="file-queue"]')).toBeInViewport()
+    const queue = page.locator('[data-part="file-queue"]')
+    await expect(queue).toBeInViewport()
+    // Viewport intersection alone also accepts a queue hidden behind the sticky trip header.
+    await expect
+      .poll(() =>
+        queue.evaluate((node) => {
+          const rect = node.getBoundingClientRect()
+          return node.contains(
+            document.elementFromPoint(
+              rect.left + rect.width / 2,
+              rect.top + rect.height / 2,
+            ),
+          )
+        }),
+      )
+      .toBe(true)
 
     await settleMutations(page)
     expect(report().fatal, 'the console stays silent').toEqual([])
