@@ -407,6 +407,10 @@ const messages = {
   'billing.quota.trips': 'Reizen',
   'billing.quota.storageBytes': 'Opslag',
   'billing.quota.unlimited': 'Onbeperkt',
+  'billing.quota.places': 'Plaatsen',
+  'billing.quota.placesHint': 'In alle reizen in deze werkruimte',
+  'billing.quota.exhausted.places': 'Het quotum voor plaatsen is opgebruikt',
+  'billing.quota.over.places': 'Limiet voor plaatsen met {value} overschreden',
   'billing.quota.noLimit': 'Geen grens in dit abonnement',
   'billing.quota.used': '{quota} gebruikt',
   'billing.quota.over.seats': {

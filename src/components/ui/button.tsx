@@ -4,6 +4,11 @@ import { cva } from 'class-variance-authority'
 
 import { cn } from '#/lib/cn'
 import { Spinner } from './spinner'
+import {
+  inactiveButtonChild,
+  suppressButtonActivation,
+  suppressButtonKey,
+} from './button-interaction'
 import { useUiCopy } from './copy'
 import { disabledLabelled, focusRing, transitionBase } from './shared'
 
@@ -183,10 +188,17 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               disabledByVariant[variant ?? 'secondary'],
             ],
           )}
-          aria-disabled={isDisabled || undefined}
-          aria-busy={loading || undefined}
           data-loading={loading ? '' : undefined}
           {...props}
+          aria-busy={loading || props['aria-busy'] || undefined}
+          aria-disabled={isDisabled || props['aria-disabled'] || undefined}
+          onClickCapture={
+            isDisabled ? suppressButtonActivation : props.onClickCapture
+          }
+          onKeyDownCapture={
+            isDisabled ? suppressButtonKey : props.onKeyDownCapture
+          }
+          onKeyUpCapture={isDisabled ? suppressButtonKey : props.onKeyUpCapture}
         >
           {/* `Slottable` marks the element to clone, so the icons below are
               injected as that element's children instead of replacing it. */}
@@ -195,7 +207,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           ) : (
             icon
           )}
-          <Slot.Slottable>{children}</Slot.Slottable>
+          <Slot.Slottable>
+            {inactiveButtonChild(children, isDisabled, loading)}
+          </Slot.Slottable>
           {iconAfter}
         </ButtonSlot>
       )
@@ -206,10 +220,18 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={type ?? 'button'}
         className={classes}
-        disabled={isDisabled}
-        aria-busy={loading || undefined}
+        disabled={disabled}
         data-loading={loading ? '' : undefined}
         {...props}
+        aria-busy={loading || props['aria-busy'] || undefined}
+        aria-disabled={isDisabled || props['aria-disabled'] || undefined}
+        onClickCapture={
+          isDisabled ? suppressButtonActivation : props.onClickCapture
+        }
+        onKeyDownCapture={
+          isDisabled ? suppressButtonKey : props.onKeyDownCapture
+        }
+        onKeyUpCapture={isDisabled ? suppressButtonKey : props.onKeyUpCapture}
       >
         {loading ? (
           <span className="absolute inset-0 grid place-items-center">

@@ -267,8 +267,8 @@ report about syncing, not "the device in your hand", so the badge says what it k
   (`src/components/ui/button.tsx`), and `tooltip.tsx` says a tooltip is never the only place a fact appears. Until the support check (an
   effect) resolves the button is disabled with **no** explanation, so a supported browser never flashes the unsupported line.
 - **Enrolling** - the button carries `loading` and `loadingLabel` ("Waiting for your device") for the whole ceremony **and** the verify call,
-  so a second tap cannot start a second ceremony. `loading` makes the button natively disabled, which drops keyboard focus; every outcome
-  (success, dismissed, exists, limit, failed) therefore puts focus back on the Add button, and from 09-S1b a success puts it on the new row's
+  so a second tap cannot start a second ceremony. `loading` keeps the button focusable but inert; every outcome
+  (success, dismissed, exists, limit, failed) explicitly puts focus back on the Add button, and from 09-S1b a success puts it on the new row's
   rename input instead. When the Add button is disabled at that moment (the limit outcome, an unsupported browser after a removal), focus goes
   to the list heading (`tabIndex={-1}`), never to `<body>`. The stale outcome is the exception: it moves focus to **Sign in again** (below).
 - **Failed** - verify failures, an expired challenge or a dropped connection after the sheet closed: "The passkey was not added. Try again." in

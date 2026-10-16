@@ -409,6 +409,10 @@ const messages = {
   'billing.quota.trips': 'Viatges',
   'billing.quota.storageBytes': 'Emmagatzematge',
   'billing.quota.unlimited': 'Sense límit',
+  'billing.quota.places': 'Llocs',
+  'billing.quota.placesHint': 'A tots els viatges d’aquest espai de treball',
+  'billing.quota.exhausted.places': 'S’ha esgotat el límit de llocs',
+  'billing.quota.over.places': 'El límit de llocs s’ha superat en {value}',
   'billing.quota.noLimit': 'Aquest pla no posa límit',
   'billing.quota.used': '{quota} en ús',
   'billing.quota.over.seats': {

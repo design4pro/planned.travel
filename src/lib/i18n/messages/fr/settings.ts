@@ -410,6 +410,10 @@ const messages = {
   'billing.quota.trips': 'Voyages',
   'billing.quota.storageBytes': 'Stockage',
   'billing.quota.unlimited': 'Illimité',
+  'billing.quota.places': 'Lieux',
+  'billing.quota.placesHint': 'Sur tous les voyages de cet espace de travail',
+  'billing.quota.exhausted.places': 'Le quota de lieux est épuisé',
+  'billing.quota.over.places': 'Limite de lieux dépassée de {value}',
   'billing.quota.noLimit': 'Aucune limite sur cette formule',
   'billing.quota.used': '{quota} utilisés',
   'billing.quota.over.seats': {

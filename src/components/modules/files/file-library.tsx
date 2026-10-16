@@ -299,7 +299,11 @@ export function FileLibrary({
   // lets the traveller see the upload begin instead of pasting a second time.
   useEffect(() => {
     if (scrollRequest > 0) {
-      queueListRef.current?.scrollIntoView({ block: 'nearest' })
+      // Keep the queue clear of sticky chrome and progress rows that disappear on completion.
+      queueListRef.current?.scrollIntoView({
+        behavior: 'instant',
+        block: 'center',
+      })
     }
   }, [scrollRequest])
 

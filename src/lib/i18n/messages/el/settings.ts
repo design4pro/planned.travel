@@ -402,6 +402,10 @@ const messages = {
   'billing.quota.trips': 'Ταξίδια',
   'billing.quota.storageBytes': 'Αποθηκευτικός χώρος',
   'billing.quota.unlimited': 'Χωρίς όριο',
+  'billing.quota.places': 'Μέρη',
+  'billing.quota.placesHint': 'Σε όλα τα ταξίδια αυτού του χώρου εργασίας',
+  'billing.quota.exhausted.places': 'Το όριο μερών έχει εξαντληθεί',
+  'billing.quota.over.places': 'Υπέρβαση του ορίου μερών κατά {value}',
   'billing.quota.noLimit': 'Κανένα όριο σε αυτό το πλάνο',
   'billing.quota.used': '{quota} σε χρήση',
   'billing.quota.over.seats': {
