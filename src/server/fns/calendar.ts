@@ -1,9 +1,8 @@
 /**
- * The trip calendar download.
+ * Trip calendar downloads and owner-bound live feed management.
  *
- * Returns a `Response` rather than a value, like `downloadTripFileFn`: the bytes never enter the
- * serialisation layer and the media type and filename travel in the headers. The session decides
- * whose trip it is; nothing here takes a token, so there is no address to share.
+ * Downloads return a Response so calendar bytes bypass serialization. Management reads return
+ * status only; enabling returns the new credential once and every later read omits it.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -31,8 +30,8 @@ export const loadCalendarFeedsFn = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
-    const feeds = await listFeeds(scope)
-    return feeds.find((feed) => feed.tripId === data.tripId) ?? null
+    const feeds = await listFeeds(scope, { tripId: data.tripId })
+    return feeds.at(0) ?? null
   })
 
 export const enableCalendarFeedFn = createServerFn({ method: 'POST' })

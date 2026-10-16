@@ -179,9 +179,11 @@ export function CalendarLive({
       setRevealed(null)
       setCopied(false)
       setConfirmation(null)
-      await reloadAfterChange()
-      focusCreate.current = true
-      setFocusVersion((value) => value + 1)
+      const refreshed = await reloadAfterChange()
+      if (refreshed.ok) {
+        focusCreate.current = true
+        setFocusVersion((value) => value + 1)
+      }
     } catch {
       const actual = await reloadAfterChange()
       if (actual.ok && !actual.state?.on) setRevealed(null)
@@ -430,6 +432,7 @@ export function CalendarLive({
             onCloseAutoFocus={(event) => {
               event.preventDefault()
               if (!open) trigger.current?.focus()
+              else if (error) alert.current?.focus()
               else if (focusCreate.current) create.current?.focus()
               else beforeGuard.current?.focus()
             }}

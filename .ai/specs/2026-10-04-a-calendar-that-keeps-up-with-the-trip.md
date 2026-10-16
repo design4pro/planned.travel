@@ -1321,3 +1321,7 @@ platform telemetry decision. Before merge, the owner must explicitly cover both 
 logs and OTLP export and record zone protection for `/api/feed/*`; application-side Sentry scrubbing
 cannot protect these provider channels. The implementation PR retains `do-not-merge` until that
 prerequisite is recorded.
+
+Phase 2 management reads require a trip filter in `listFeeds`: the one-trip dialog resolves at most
+one owner row through the trip partial index, rather than loading and rechecking every lifetime
+feed before discarding unrelated trips. Broader management listings belong to a later phase.

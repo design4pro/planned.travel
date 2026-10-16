@@ -156,15 +156,29 @@ describe('owner-bound live calendar feeds', () => {
     expect(await getFeed(a.scope, found.id)).toMatchObject({ on: false })
   })
   it('lists only the acting owner in the current tenant and leaves foreign rows unchanged', async () => {
-    const { enabled } = await make()
+    const { trip, enabled } = await make()
     const before = await h.db.select().from(calendarFeeds)
     const other = a.scopeFor(await a.addUser('reader'))
-    expect(await listFeeds(other)).toEqual([])
-    expect(await listFeeds(b.scope)).toEqual([])
-    expect((await listFeeds(a.scope)).map((row) => row.id)).toEqual([
-      enabled.feedId,
-    ])
+    expect(await listFeeds(other, { tripId: trip.id })).toEqual([])
+    expect(await listFeeds(b.scope, { tripId: trip.id })).toEqual([])
+    expect(
+      (await listFeeds(a.scope, { tripId: trip.id })).map((row) => row.id),
+    ).toEqual([enabled.feedId])
     expect(await h.db.select().from(calendarFeeds)).toEqual(before)
+  })
+
+  it('loads one trip without inspecting the owner’s unrelated feeds', async () => {
+    const { trip, enabled } = await make()
+    const unrelated = await createTrip(a.scope, {
+      title: 'Unrelated trip',
+      currency: 'EUR',
+    })
+    await enableFeed(a.scope, { scope: 'trip', tripId: unrelated.id })
+    h.statements.length = 0
+    const rows = await listFeeds(a.scope, { tripId: trip.id })
+    expect(rows.map((row) => row.id)).toEqual([enabled.feedId])
+    expect(h.statements).toHaveLength(4)
+    expect(await listFeeds(b.scope, { tripId: trip.id })).toEqual([])
   })
 
   it('enforces both partial unique indexes, digest uniqueness and scope/trip constraints in SQLite', async () => {
@@ -200,14 +214,12 @@ describe('owner-bound live calendar feeds', () => {
         .values({ ...row, tokenDigest: 'e'.repeat(64), scope: 'bad' }),
     ).rejects.toThrow()
     await expect(
-      h.db
-        .insert(calendarFeeds)
-        .values({
-          ...row,
-          tokenDigest: 'f'.repeat(64),
-          scope: 'trip',
-          tripId: trip.id,
-        }),
+      h.db.insert(calendarFeeds).values({
+        ...row,
+        tokenDigest: 'f'.repeat(64),
+        scope: 'trip',
+        tripId: trip.id,
+      }),
     ).rejects.toThrow()
   })
 })

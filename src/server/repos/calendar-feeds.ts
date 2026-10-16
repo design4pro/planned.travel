@@ -466,7 +466,7 @@ export async function getFeed(scope: TenantScope, feedId: string) {
   return { id: row.id, tripId: row.tripId, on, lastServedAt: row.lastServedAt }
 }
 
-export async function listFeeds(scope: TenantScope) {
+export async function listFeeds(scope: TenantScope, input: { tripId: string }) {
   const rows = await scope.db
     .select({ id: calendarFeeds.id })
     .from(calendarFeeds)
@@ -475,8 +475,11 @@ export async function listFeeds(scope: TenantScope) {
         scope,
         calendarFeeds,
         eq(calendarFeeds.userId, scope.ctx.userId),
+        eq(calendarFeeds.scope, 'trip'),
+        eq(calendarFeeds.tripId, input.tripId),
       ),
     )
+    .limit(1)
   return Promise.all(rows.map((row) => getFeed(scope, row.id)))
 }
 

@@ -171,6 +171,26 @@ describe('live calendar link', () => {
     )
   })
 
+  it('focuses the error after revocation succeeds but reloading fails', async () => {
+    stubs.load
+      .mockResolvedValueOnce(feed)
+      .mockRejectedValue(new Error('offline'))
+    mount()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Live calendar link' }),
+    )
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Turn off' }),
+    )
+    await userEvent.click(
+      within(
+        screen.getByRole('dialog', { name: 'Turn off this calendar link?' }),
+      ).getByRole('button', { name: 'Turn off' }),
+    )
+    const error = await screen.findByRole('alert')
+    await waitFor(() => expect(document.activeElement).toBe(error))
+  })
+
   it('restores create focus after confirmed revocation', async () => {
     stubs.load.mockResolvedValueOnce(feed).mockResolvedValue(null)
     mount()
