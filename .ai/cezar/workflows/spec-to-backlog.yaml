@@ -1,0 +1,266 @@
+version: 2
+name: spec-to-backlog
+description: 'Accepted specification -> backlog tree (dry run) -> independent tree critic -> human consent gate -> filed issues (afk-to-tickets) -> Definition of Ready pass -> spec record PR (Issue row). Plan -> Build handover of the AI-native SDLC. Writes to the tracker only after the human gate approves the exact tree. Cezar owns git/PR; agents only edit the worktree. Every port is wired, every cycle is bounded.'
+nodes:
+  - id: start
+    type: start
+
+  # ---------- INTAKE ----------
+  # Task input: the repo-relative path of an ACCEPTED specification already merged on the base
+  # branch, directly in .ai/specs/ with Status ready (see idea-to-spec for how it gets there).
+  # This repository keeps no backlog.md: the backlog is the tracker, a parent issue whose body
+  # opens with `Spec: <path>` plus its sub-issues (.ai/skills/afk-to-tickets/SKILL.md).
+  - id: intake
+    name: 'Check accepted spec'
+    type: agent
+    skill: afk-to-tickets
+    verdicts: [ready, notready]
+    prompt: |-
+      Specification: {{task}}
+      Read-only. Do not edit files, do not write to the tracker.
+      1. The file exists on the current base branch (it is merged, not only in an open PR),
+         directly in .ai/specs/ (not implemented/ or archived/), its metadata table says Status
+         ready, and it has a Phasing or Implementation Plan section.
+      2. Apply the Definition of Ready in SDLC.md: no unanswered question blocks the scope, every
+         decision it relies on is active. HIGH-RISK questions (intent, scope, non-goals, auth,
+         sessions, money, data scoping, migrations, shared contracts) left open in the spec are a
+         stop: only a human answers them.
+      3. There is no backlog.md here. Search the tracker for an issue (open or closed) whose body
+         opens with `Spec: <path>` (gh issue list --state all --search): if one exists the spec is
+         already sliced, the verdict is notready and you name the parent. Run
+         `node .ai/scripts/backlog-status.mjs`; if it fails, the verdict is notready and you say
+         why, because without it readiness cannot be judged.
+      Summarize the verified facts and what is missing, if anything.
+      End with exactly one line: CEZ:VERDICT ready | notready
+
+  # ---------- TREE (dry run) ----------
+  - id: tree
+    name: 'Draft backlog tree'
+    type: agent
+    skill: afk-to-tickets
+    prompt: |-
+      Specification: {{task}}
+      Verified facts: {{nodes.intake.summary}}
+      Run steps 0 to 2 of afk-to-tickets for this spec as a dry run: draft the parent issue and
+      the tracer-bullet tickets (at most eight) with their Agent Brief sections (What to build,
+      Test seam, Acceptance criteria, Blocked by), category, inferred priority and risk per
+      SDLC.md, and the Resolved assumptions table. Only leaf tickets are executable.
+      Skip step 3 (Publish): write NOTHING: no files, no tracker, no labels. Print the complete
+      tree (with every acceptance criterion) as your summary; a human will read exactly that text.
+      Work in the current directory only. Do not commit or push. Do not invent validation commands.
+
+  # A fresh-context critic checks the tree before a human spends attention on it.
+  - id: treecrit
+    name: 'Tree critic'
+    type: agent
+    verdicts: [approve, revise]
+    prompt: |-
+      You did not draft this backlog tree. Specification: {{task}}
+      Tree:
+      {{nodes.tree.summary}}
+      Revised tree (empty on the first round): {{nodes.retree.summary}}
+      Read-only. Check: every phase and requirement of the specification maps to an item or is
+      listed under Held back; no item invents scope; ids are stable and source-qualified; the
+      dependency graph is acyclic and every ticket depends only on earlier tickets; each ticket is
+      a complete tracer-bullet slice and a leaf; each acceptance criterion is observable by
+      someone who did not write it; risk-high items (src/server/auth, src/server/repos/base.ts,
+      src/server/billing, src/server/db/schema.ts, drizzle/, src/server/public) are marked; the
+      parent carries the highest risk of its tickets.
+      End with CEZ:VERDICT approve if sound, otherwise CEZ:VERDICT revise with the exact changes
+
+  - id: treeloop
+    name: 'Tree revision rounds'
+    type: loop
+    max: 2
+
+  - id: retree
+    name: 'Revise tree'
+    type: agent
+    skill: om-backlog
+    session:
+      continue: tree
+    prompt: |-
+      The tree critic requested changes (round {{nodes.treeloop.iteration}}/{{nodes.treeloop.max}}):
+      {{nodes.treecrit.summary}}
+      Revise the tree accordingly. Still a dry run: write nothing, print the complete revised tree.
+
+  # ---------- HUMAN CONSENT ----------
+  # om-backlog has a hard stop: nothing is written to the tracker before a human has seen the
+  # whole tree and said yes. This gate is that yes.
+  - id: consent
+    name: 'Backlog consent'
+    type: gate.human
+    message: |-
+      Approve to file these issues in the tracker (creates the parent issue and its tickets,
+      writes labels):
+      {{nodes.tree.summary}}
+      {{nodes.retree.summary}}
+      Tree critic: {{nodes.treecrit.summary}}
+      Approve only if the scope matches the accepted specification.
+    timeoutMs: 604800000
+
+  # ---------- FILE ----------
+  - id: file
+    name: 'File issues'
+    type: agent
+    skill: afk-to-tickets
+    verdicts: [filed, drift]
+    prompt: |-
+      The operator approved the tree at the Cezar human gate; that approval replaces any
+      confirmation afk-to-tickets would otherwise skip. Specification: {{task}}
+      Approved tree: {{nodes.tree.summary}}
+      Revised tree (empty if no revision happened): {{nodes.retree.summary}}
+      Run afk-to-tickets step 3 (Publish) for this spec for real: dedupe against the tracker, file
+      the parent issue (its body opens with `Spec: <spec path>` on the first line) and the tickets
+      in dependency order, each with its Agent Brief, and link them as sub-issues. File nothing
+      that already exists. Then record the parent in the spec's metadata table: replace the
+      `Issue` value `none` with the parent issue number (a spec written from a plan stage keeps
+      its Plan row), run `pnpm generate-spec-index`, and edit no other file in the worktree. Do
+      not commit or push. Never apply pipeline labels, in-progress or qa labels.
+      If the real run needs a material change from the approved tree (a different dependency, a
+      missing ticket, an existing issue that changes scope), write NOTHING further and report the
+      difference.
+      End with CEZ:VERDICT filed if the filed tree matches the approved one, otherwise
+      CEZ:VERDICT drift
+
+  - id: manage
+    name: 'Definition of Ready pass'
+    type: agent
+    skill: om-auto-manage-issues
+    prompt: |-
+      Issues just filed by om-backlog: {{nodes.file.summary}}
+      Run om-auto-manage-issues on exactly these issues, relabel and readiness check only
+      (--relabel-only; no implementation prep, no spec authoring). Confirm with
+      `node .ai/scripts/backlog-status.mjs` which of them are ready. Report any issue that is
+      not-ready and what is missing. Mutate labels and comments only; do not edit files.
+
+  # ---------- RECORD PR ----------
+  - id: bgate
+    name: 'Spec record gate'
+    type: check
+    command: |-
+      spec="{{task}}" node -e '
+      const { execSync } = require("child_process"), fs = require("fs");
+      const spec = process.env.spec;
+      const files = execSync("git status --porcelain --untracked-files=all").toString()
+        .split("\n").filter(Boolean).map((l) => l.slice(3));
+      const bad = [];
+      for (const f of files) {
+        if (f !== spec && f !== ".ai/specs/README.md") bad.push("only the spec and its generated index may change, got: " + f);
+      }
+      const t = fs.existsSync(spec) ? fs.readFileSync(spec, "utf8") : "";
+      if (!/^\|\s*\*\*Issue\*\*\s*\|\s*#\d+/m.test(t))
+        bad.push(spec + ": the Issue row does not name the parent issue");
+      if (/\b(TBD|TODO|FIXME)\b/.test(t)) bad.push(spec + " contains TBD/TODO/FIXME");
+      if (bad.length) { console.log(bad.join("\n")); process.exit(1); }
+      console.log("ok");
+      '
+
+  - id: commit
+    name: 'Commit spec record'
+    type: git.commit
+    message: 'docs(spec): record the parent issue of the filed tickets'
+  - id: push
+    name: 'Push branch'
+    type: git.push
+  # Guards against push.default=upstream landing the commit on the wrong branch (AGENTS.md, Git).
+  - id: pushguard
+    name: 'Verify push target'
+    type: check
+    command: |-
+      b=$(git branch --show-current)
+      test "$(git rev-parse HEAD)" = "$(git ls-remote origin "refs/heads/$b" | cut -f1)"
+  - id: openpr
+    name: 'Open draft PR'
+    type: github.draft-pr
+
+  - id: prready
+    name: 'Mark PR ready'
+    type: github.pr-update
+    ready: true
+
+  - id: labels
+    name: 'Apply SDLC labels'
+    type: agent
+    prompt: |-
+      The spec-record PR for the current branch is ready (gh pr view). Apply the SDLC.md label
+      set using only labels from .ai/agentic.config.json: exactly one pipeline label (review),
+      category documentation, skip-qa, one priority and risk-low (only a spec and its generated
+      index changed).
+      Leave a short comment listing the filed issues: {{nodes.file.summary}}
+      Do not change files. Do not approve or merge.
+
+  # ---------- ESCALATION + ENDS ----------
+  - id: escalate
+    name: 'Escalate to human'
+    type: agent
+    prompt: |-
+      The autonomous run stopped. Specification: {{task}}
+      Last known outputs:
+      intake: {{nodes.intake.summary}}
+      tree critic: {{nodes.treecrit.summary}}
+      human consent: {{nodes.consent.comment}}
+      file: {{nodes.file.summary}}
+      readiness pass: {{nodes.manage.summary}}
+      record gate: {{nodes.bgate.output}}
+      Write ONE concise note (comment on the PR if one exists: gh pr view; otherwise print it)
+      saying where it stopped, why, and the next human action. If issues were already filed,
+      list them: the next run adopts them instead of duplicating. Do not edit files and do not
+      add labels beyond blocked when a PR exists and the stop is a real defect.
+
+  - id: done
+    name: 'Backlog filed'
+    type: end
+    status: success
+  - id: needshuman
+    name: 'Needs human'
+    type: end
+    status: failed
+
+edges:
+  - { from: start.next, to: intake }
+  - { from: intake.ready, to: tree }
+  - { from: intake.notready, to: needshuman }
+  - { from: intake.failed, to: escalate }
+
+  - { from: tree.done, to: treecrit }
+  - { from: tree.failed, to: escalate }
+  - { from: treecrit.approve, to: consent }
+  - { from: treecrit.revise, to: treeloop }
+  - { from: treecrit.failed, to: escalate }
+  - { from: treeloop.repeat, to: retree }
+  - { from: treeloop.exhausted, to: escalate }
+  - { from: retree.done, to: treecrit }
+  - { from: retree.failed, to: escalate }
+
+  - { from: consent.approve, to: file }
+  - { from: consent.reject, to: escalate }
+  - { from: consent.timeout, to: escalate }
+
+  - { from: file.filed, to: manage }
+  - { from: file.drift, to: escalate }
+  - { from: file.failed, to: escalate }
+  - { from: manage.done, to: bgate }
+  - { from: manage.failed, to: escalate }
+
+  - { from: bgate.pass, to: commit }
+  - { from: bgate.fail, to: escalate }
+  - { from: commit.done, to: push }
+  # Nothing to record is success here: the spec already named its parent (or a Plan row stands in
+  # for it) and the tickets are filed, so there is no record PR to open.
+  - { from: commit.nothing, to: done }
+  - { from: commit.failed, to: escalate }
+  - { from: push.done, to: pushguard }
+  - { from: push.failed, to: escalate }
+  - { from: pushguard.pass, to: openpr }
+  - { from: pushguard.fail, to: escalate }
+  - { from: openpr.created, to: prready }
+  - { from: openpr.failed, to: escalate }
+
+  - { from: prready.done, to: labels }
+  - { from: prready.failed, to: escalate }
+  - { from: labels.done, to: done }
+  - { from: labels.failed, to: escalate }
+
+  - { from: escalate.done, to: needshuman }
+  - { from: escalate.failed, to: needshuman }
