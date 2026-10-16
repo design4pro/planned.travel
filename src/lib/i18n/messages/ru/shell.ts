@@ -75,6 +75,10 @@ const messages = {
   'workspace.label': 'Пространство',
   'workspace.switchFailed': 'Не удалось переключить пространство',
   'workspace.switchFailedBody': 'Проверьте соединение и попробуйте снова.',
+  'workspace.switchUnconfirmedBody':
+    'Не удалось подтвердить активное рабочее пространство. Перезагрузите страницу перед продолжением.',
+  'workspace.switchRateLimitedBody':
+    'Слишком частое переключение рабочих пространств. Подождите немного и попробуйте снова.',
   'workspace.create': 'Создать пространство',
   'workspace.createTitle': 'Создание пространства',
   'workspace.createDescription':

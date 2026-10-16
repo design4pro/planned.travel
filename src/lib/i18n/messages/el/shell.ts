@@ -64,6 +64,10 @@ const messages = {
   'workspace.label': 'Χώρος εργασίας',
   'workspace.switchFailed': 'Δεν μπορέσαμε να αλλάξουμε χώρο εργασίας',
   'workspace.switchFailedBody': 'Ελέγξτε τη σύνδεσή σας και δοκιμάστε ξανά.',
+  'workspace.switchUnconfirmedBody':
+    'Δεν ήταν δυνατή η επιβεβαίωση του ενεργού χώρου εργασίας. Φορτώστε ξανά τη σελίδα πριν συνεχίσετε.',
+  'workspace.switchRateLimitedBody':
+    'Έγιναν πάρα πολλές αλλαγές χώρου εργασίας. Περιμένετε λίγο και δοκιμάστε ξανά.',
   'workspace.create': 'Δημιουργία χώρου εργασίας',
   'workspace.createTitle': 'Δημιουργία νέου χώρου εργασίας',
   'workspace.createDescription':

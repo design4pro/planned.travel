@@ -71,6 +71,10 @@ const messages = {
   'workspace.label': 'Çalışma alanı',
   'workspace.switchFailed': 'Çalışma alanı değiştirilemedi',
   'workspace.switchFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
+  'workspace.switchUnconfirmedBody':
+    'Etkin çalışma alanı doğrulanamadı. Devam etmeden önce sayfayı yeniden yükleyin.',
+  'workspace.switchRateLimitedBody':
+    'Çok fazla çalışma alanı değişikliği. Biraz bekleyip tekrar deneyin.',
   'workspace.create': 'Çalışma alanı oluştur',
   'workspace.createTitle': 'Çalışma alanı oluşturun',
   'workspace.createDescription':

@@ -17,12 +17,13 @@ import type { ShellOrganization } from './session'
 const FORBIDDEN = 403
 /** The session ended between opening the menu and choosing; the shell's guard sends the reader to sign in. */
 const UNAUTHORIZED = 401
+const TOO_MANY_REQUESTS = 429
 
 /**
  * Brings the screen in line with the session's active workspace, after it moved.
  *
  * The workspace is not in the URL: it is `session.activeOrganizationId`. Goes to `/dashboard`
- * first and only then drops every cached loader result. The order is the point: invalidating on
+ * after clearing the old cache, then invalidates the loaders. The order is the point: invalidating on
  * `/trips/abc` would re-run that loader against the new workspace and throw not-found for a trip
  * the reader can no longer see, while `/dashboard` means the same thing in every workspace.
  * Used by the switch and by creating a workspace, which activates the one it made.
@@ -50,6 +51,7 @@ export function useWorkspaceResync() {
  * not "nothing changed": the next request falls back to the oldest membership. The screen is
  * re-synced after the toast, exactly as for a success, rather than left showing the old workspace.
  * A 401 is re-synced too: the shell's `beforeLoad` then redirects to sign in.
+ * Every other failure also re-syncs: a lost response cannot tell us whether the switch applied.
  *
  * The guard and the pending id live here, not in the list: the menu's content unmounts whenever the
  * menu closes (Escape, an outside click), and a guard that went with it would let a reopened menu
@@ -79,19 +81,28 @@ export function useWorkspaceSwitch({
         .catch(thrownToAuthFailure)
 
       if (failure) {
-        // The session was moved or ended, which "check your connection" would misdescribe.
-        const mustResync =
+        const sessionRefused =
           failure.status === FORBIDDEN || failure.status === UNAUTHORIZED
+        const bodyKey =
+          failure.status === TOO_MANY_REQUESTS
+            ? 'shell.workspace.switchRateLimitedBody'
+            : 'shell.workspace.switchUnconfirmedBody'
         toast.error(
           t('shell.workspace.switchFailed'),
-          mustResync
-            ? undefined
-            : { description: t('shell.workspace.switchFailedBody') },
+          sessionRefused ? undefined : { description: t(bodyKey) },
         )
-        if (mustResync) await resync()
-        return
       }
-      await resync()
+      try {
+        await resync()
+      } catch {
+        // Offline navigation can fail too; release the menu without an unhandled rejection.
+        // A failed activation already told the reader that its outcome is unconfirmed.
+        if (!failure) {
+          toast.error(t('shell.workspace.switchFailed'), {
+            description: t('shell.workspace.switchUnconfirmedBody'),
+          })
+        }
+      }
     } finally {
       switching.current = false
       setPendingId(null)

@@ -115,6 +115,10 @@ const messages = {
   'workspace.label': 'Workspace',
   'workspace.switchFailed': 'Could not switch workspace',
   'workspace.switchFailedBody': 'Check your connection and try again.',
+  'workspace.switchUnconfirmedBody':
+    'The active workspace could not be confirmed. Reload the page before continuing.',
+  'workspace.switchRateLimitedBody':
+    'Too many workspace switches. Wait a moment and try again.',
   'workspace.create': 'Create workspace',
   'workspace.createTitle': 'Create a workspace',
   'workspace.createDescription':

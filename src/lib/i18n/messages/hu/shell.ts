@@ -71,6 +71,10 @@ const messages = {
   'workspace.switchFailed': 'Nem sikerült munkaterületet váltani',
   'workspace.switchFailedBody':
     'Ellenőrizze a kapcsolatot, majd próbálja újra.',
+  'workspace.switchUnconfirmedBody':
+    'Nem sikerült megerősíteni az aktív munkaterületet. A folytatás előtt töltsd újra az oldalt.',
+  'workspace.switchRateLimitedBody':
+    'Túl sok munkaterületváltás. Várj egy kicsit, majd próbáld újra.',
   'workspace.create': 'Munkaterület létrehozása',
   'workspace.createTitle': 'Új munkaterület létrehozása',
   'workspace.createDescription':

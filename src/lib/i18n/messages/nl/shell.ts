@@ -71,6 +71,10 @@ const messages = {
   'workspace.switchFailed': 'Wisselen van werkruimte is niet gelukt',
   'workspace.switchFailedBody':
     'Controleer je verbinding en probeer het opnieuw.',
+  'workspace.switchUnconfirmedBody':
+    'De actieve werkruimte kon niet worden bevestigd. Laad de pagina opnieuw voordat je doorgaat.',
+  'workspace.switchRateLimitedBody':
+    'Te vaak van werkruimte gewisseld. Wacht even en probeer het opnieuw.',
   'workspace.create': 'Werkruimte maken',
   'workspace.createTitle': 'Een werkruimte maken',
   'workspace.createDescription':

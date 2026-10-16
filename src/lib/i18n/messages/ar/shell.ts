@@ -74,6 +74,10 @@ const messages = {
   'workspace.label': 'مساحة العمل',
   'workspace.switchFailed': 'تعذّر تبديل مساحة العمل',
   'workspace.switchFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
+  'workspace.switchUnconfirmedBody':
+    'تعذر تأكيد مساحة العمل النشطة. أعد تحميل الصفحة قبل المتابعة.',
+  'workspace.switchRateLimitedBody':
+    'تم تبديل مساحة العمل مرات كثيرة. انتظر قليلاً ثم حاول مجدداً.',
   'workspace.create': 'إنشاء مساحة عمل',
   'workspace.createTitle': 'إنشاء مساحة عمل جديدة',
   'workspace.createDescription':

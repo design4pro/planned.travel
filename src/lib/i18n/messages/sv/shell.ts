@@ -67,6 +67,10 @@ const messages = {
   'workspace.label': 'Arbetsyta',
   'workspace.switchFailed': 'Det gick inte att byta arbetsyta',
   'workspace.switchFailedBody': 'Kontrollera din uppkoppling och försök igen.',
+  'workspace.switchUnconfirmedBody':
+    'Det gick inte att bekräfta den aktiva arbetsytan. Ladda om sidan innan du fortsätter.',
+  'workspace.switchRateLimitedBody':
+    'För många byten av arbetsyta. Vänta en stund och försök igen.',
   'workspace.create': 'Skapa arbetsyta',
   'workspace.createTitle': 'Skapa en arbetsyta',
   'workspace.createDescription':

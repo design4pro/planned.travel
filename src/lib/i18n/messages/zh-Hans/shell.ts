@@ -53,6 +53,8 @@ const messages = {
   'workspace.label': '工作区',
   'workspace.switchFailed': '没能切换工作区',
   'workspace.switchFailedBody': '请检查网络后再试一次。',
+  'workspace.switchUnconfirmedBody': '无法确认当前工作区。请重新加载页面后再继续。',
+  'workspace.switchRateLimitedBody': '切换工作区过于频繁。请稍等片刻后重试。',
   'workspace.create': '创建工作区',
   'workspace.createTitle': '创建一个工作区',
   'workspace.createDescription': '一个独立的空间，有自己的旅行、地点和成员。创建后从免费版开始。',
