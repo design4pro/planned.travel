@@ -17,6 +17,9 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'notFound.title': "We can't find this trip",
+  'notFound.body':
+    "It isn't among the trips you can open in the workspace you're in now. It may have been deleted, or you may not have access to it.",
   // Coordinate examples keep decimal points because the inputs accept that notation.
   'plan.editor.latitudeExample': '34.9671',
   'plan.editor.longitudeExample': '135.7727',
