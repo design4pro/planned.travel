@@ -207,6 +207,8 @@ stop it: under `E2E=1` `vite.config.ts` therefore has it watch for its own root 
 send itself `SIGTERM` when it does, which is what keeps a removed worktree from leaving a process
 holding one of the eleven ports for the life of the host (issue #327).
 
+Seven graph workflows (`version: 2`, `*.yaml`) sit beside the `.yml` ones: `issue-to-merge`, `pr-to-merge`, `idea-to-spec`, `spec-to-backlog`, `maintain-to-intent`, `scheduled-scan` and `housekeeping-graph`. Nothing starts them: neither the Reconciler nor `docs/agents/cezar-automations.json` names them, and each overlaps a `.yml` workflow. What is left open before first use is in `.ai/cezar/DEFERRED.md`.
+
 The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), the scripts in
 `scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).
 The automations that used to start them (`triage-opened`, `triage-relabel`, `implement`) had
