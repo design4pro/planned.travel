@@ -6,7 +6,7 @@
  * than any group needs. Duplicate wording is refused: a tie between two options
  * that say the same thing is not a result.
  */
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
 import {
@@ -35,14 +35,18 @@ export function PollDialog({
   tripId,
   open,
   onOpenChange,
+  turnedOff = false,
 }: {
   tripId: string
   open: boolean
   onOpenChange: (open: boolean) => void
+  turnedOff?: boolean
 }) {
   const formId = useId()
 
   const t = useTranslate()
+  const off = useRef(turnedOff)
+  off.current = turnedOff
 
   const [question, setQuestion] = useState('')
   const [options, setOptions] = useState<Array<string>>(['', ''])
@@ -60,8 +64,14 @@ export function PollDialog({
   }, [open])
 
   const create = useAction(createPollFn, {
-    success: t('modules.collab.poll.toast.opened'),
-    description: t('modules.collab.poll.toast.openedBody'),
+    success: () =>
+      t(
+        off.current
+          ? 'trips.collab.sections.savedHidden'
+          : 'modules.collab.poll.toast.opened',
+      ),
+    description: () =>
+      off.current ? '' : t('modules.collab.poll.toast.openedBody'),
     failure: t('modules.collab.poll.toast.openFailed'),
   })
 
@@ -110,6 +120,11 @@ export function PollDialog({
         </DialogHeader>
 
         <DialogBody>
+          {turnedOff ? (
+            <p className="mb-4 text-caption text-ink-3">
+              {t('trips.collab.sections.turnedOff')}
+            </p>
+          ) : null}
           <form
             id={formId}
             className="flex flex-col gap-4"

@@ -463,6 +463,17 @@ const messages = {
   'plan.workspace.hidePanel': 'إخفاء لوحة {label}',
   'plan.workspace.narrowPanel': 'تضييق {label}',
   'plan.workspace.widenPanel': 'توسيع {label}',
+  'collab.sections.trigger': 'اختيار الأقسام',
+  'collab.sections.menuLabel': 'إظهار للجميع في هذه الرحلة',
+  'collab.sections.keepOne': 'يجب أن يبقى قسم واحد على الأقل مفعّلاً.',
+  'collab.sections.failed': 'لم يُحفظ التغيير',
+  'collab.sections.failedBody': 'تعرض القائمة الحالة المحفوظة حاليًا.',
+  'collab.sections.someHidden': 'بعض الأقسام مخفية في هذه الرحلة.',
+  'collab.sections.turnedOff':
+    'تم إيقاف هذا القسم للرحلة. سيُغلق عند إرسال ما تكتبه أو مسحه.',
+  'collab.sections.changed': 'تغيّرت أقسام هذه الرحلة.',
+  'collab.sections.savedHidden':
+    'تم الحفظ. هذا القسم مخفي للرحلة، لذا سيُغلق الآن.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

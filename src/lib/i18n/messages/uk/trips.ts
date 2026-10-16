@@ -452,6 +452,17 @@ const messages = {
   'plan.workspace.hidePanel': 'Приховати панель {label}',
   'plan.workspace.narrowPanel': 'Звузити {label}',
   'plan.workspace.widenPanel': 'Розширити {label}',
+  'collab.sections.trigger': 'Вибрати розділи',
+  'collab.sections.menuLabel': 'Показувати всім учасникам подорожі',
+  'collab.sections.keepOne': 'Принаймні один розділ має залишатися ввімкненим.',
+  'collab.sections.failed': 'Зміну не збережено',
+  'collab.sections.failedBody': 'Меню показує поточний збережений стан.',
+  'collab.sections.someHidden': 'Деякі розділи приховані в цій подорожі.',
+  'collab.sections.turnedOff':
+    'Цей розділ вимкнено для подорожі. Він закриється, коли ви надішлете або очистите текст, який пишете.',
+  'collab.sections.changed': 'Розділи цієї подорожі змінилися.',
+  'collab.sections.savedHidden':
+    'Збережено. Цей розділ прихований для подорожі й зараз закриється.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

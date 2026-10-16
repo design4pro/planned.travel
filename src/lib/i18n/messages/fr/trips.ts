@@ -453,6 +453,19 @@ const messages = {
   'plan.workspace.hidePanel': 'Masquer le panneau {label}',
   'plan.workspace.narrowPanel': 'Réduire {label}',
   'plan.workspace.widenPanel': 'Élargir {label}',
+  'collab.sections.trigger': 'Choisir les sections',
+  'collab.sections.menuLabel': 'Afficher pour tous les participants du voyage',
+  'collab.sections.keepOne': 'Au moins une section reste activée.',
+  'collab.sections.failed': 'La modification n’a pas été enregistrée',
+  'collab.sections.failedBody':
+    'Le menu affiche l’état actuellement enregistré.',
+  'collab.sections.someHidden':
+    'Certaines sections sont masquées pour ce voyage.',
+  'collab.sections.turnedOff':
+    'Cette section a été désactivée pour le voyage. Elle se fermera quand vous enverrez ou effacerez votre brouillon.',
+  'collab.sections.changed': 'Les sections de ce voyage ont changé.',
+  'collab.sections.savedHidden':
+    'Enregistré. Cette section est masquée pour le voyage et se ferme maintenant.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

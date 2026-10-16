@@ -1,5 +1,5 @@
 /** The poll board: an option is a button that casts, moves or withdraws your vote, optimistically. */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Lock, Plus, Trash2, Vote } from 'lucide-react'
 
 import { Badge, Button, EmptyState } from '#/components/ui'
@@ -28,14 +28,21 @@ export function PollsBoard({
   viewerUserId,
   newPollOpen,
   onNewPollOpenChange,
+  onDirtyChange,
+  turnedOff = false,
 }: {
   tripId: string
   polls: ReadonlyArray<PollData>
   viewerUserId: string
   newPollOpen: boolean
   onNewPollOpenChange: (open: boolean) => void
+  onDirtyChange?: (dirty: boolean) => void
+  turnedOff?: boolean
 }) {
   const t = useTranslate()
+  useEffect(() => {
+    onDirtyChange?.(newPollOpen)
+  }, [newPollOpen, onDirtyChange])
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
   /** Keyed `pollId:optionId` — the viewer's own in-flight choice per option. */
@@ -273,6 +280,7 @@ export function PollsBoard({
       )}
 
       <PollDialog
+        turnedOff={turnedOff}
         tripId={tripId}
         open={newPollOpen}
         onOpenChange={onNewPollOpenChange}

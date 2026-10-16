@@ -446,6 +446,19 @@ const messages = {
   'plan.workspace.hidePanel': 'Ocultar el panel {label}',
   'plan.workspace.narrowPanel': 'Estrechar {label}',
   'plan.workspace.widenPanel': 'Ampliar {label}',
+  'collab.sections.trigger': 'Elegir secciones',
+  'collab.sections.menuLabel': 'Mostrar a todos los participantes del viaje',
+  'collab.sections.keepOne': 'Al menos una sección debe seguir activa.',
+  'collab.sections.failed': 'No se guardó el cambio',
+  'collab.sections.failedBody':
+    'El menú muestra el estado guardado actualmente.',
+  'collab.sections.someHidden':
+    'Algunas secciones están ocultas en este viaje.',
+  'collab.sections.turnedOff':
+    'Esta sección se desactivó para el viaje. Se cerrará cuando envíes o borres lo que estás escribiendo.',
+  'collab.sections.changed': 'Las secciones de este viaje han cambiado.',
+  'collab.sections.savedHidden':
+    'Guardado. Esta sección está oculta para el viaje y se cerrará ahora.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

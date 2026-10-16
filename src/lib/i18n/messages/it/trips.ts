@@ -449,6 +449,18 @@ const messages = {
   'plan.workspace.hidePanel': 'Nascondi il pannello {label}',
   'plan.workspace.narrowPanel': 'Restringi {label}',
   'plan.workspace.widenPanel': 'Allarga {label}',
+  'collab.sections.trigger': 'Scegli le sezioni',
+  'collab.sections.menuLabel': 'Mostra a tutti i partecipanti al viaggio',
+  'collab.sections.keepOne': 'Almeno una sezione deve restare attiva.',
+  'collab.sections.failed': 'La modifica non è stata salvata',
+  'collab.sections.failedBody': 'Il menu mostra lo stato attualmente salvato.',
+  'collab.sections.someHidden':
+    'Alcune sezioni sono nascoste per questo viaggio.',
+  'collab.sections.turnedOff':
+    'Questa sezione è stata disattivata per il viaggio. Si chiuderà quando invierai o cancellerai ciò che stai scrivendo.',
+  'collab.sections.changed': 'Le sezioni di questo viaggio sono cambiate.',
+  'collab.sections.savedHidden':
+    'Salvato. Questa sezione è nascosta per il viaggio e ora si chiuderà.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

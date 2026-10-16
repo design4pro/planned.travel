@@ -1,5 +1,5 @@
 /** The dialog behind the notes board: create or edit a shared note. */
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -36,6 +36,7 @@ export function NoteDialog({
   categories,
   open,
   onOpenChange,
+  turnedOff = false,
 }: {
   tripId: string
   /** Absent for a new note. */
@@ -44,8 +45,11 @@ export function NoteDialog({
   categories: ReadonlyArray<string>
   open: boolean
   onOpenChange: (open: boolean) => void
+  turnedOff?: boolean
 }) {
   const t = useTranslate()
+  const off = useRef(turnedOff)
+  off.current = turnedOff
   const editing = note !== undefined
   const formId = useId()
   const listId = useId()
@@ -56,24 +60,38 @@ export function NoteDialog({
   const [colour, setColour] = useState('')
   const [pinned, setPinned] = useState(false)
 
+  const initialNote = useRef(note)
+  initialNote.current = note
   useEffect(() => {
+    const snapshot = initialNote.current
     if (!open) {
       return
     }
-    setTitle(note?.title ?? '')
-    setBody(note?.body ?? '')
-    setCategory(note?.category ?? '')
-    setColour(note?.colour ?? '')
-    setPinned(note?.isPinned ?? false)
-  }, [open, note])
+    setTitle(snapshot?.title ?? '')
+    setBody(snapshot?.body ?? '')
+    setCategory(snapshot?.category ?? '')
+    setColour(snapshot?.colour ?? '')
+    setPinned(snapshot?.isPinned ?? false)
+  }, [open, note?.id])
 
   const create = useAction(createNoteFn, {
-    success: t('modules.collab.note.toast.shared'),
-    description: t('modules.collab.note.toast.sharedBody'),
+    success: () =>
+      t(
+        off.current
+          ? 'trips.collab.sections.savedHidden'
+          : 'modules.collab.note.toast.shared',
+      ),
+    description: () =>
+      off.current ? '' : t('modules.collab.note.toast.sharedBody'),
     failure: t('modules.collab.note.toast.shareFailed'),
   })
   const update = useAction(updateNoteFn, {
-    success: t('modules.collab.note.toast.updated'),
+    success: () =>
+      t(
+        off.current
+          ? 'trips.collab.sections.savedHidden'
+          : 'modules.collab.note.toast.updated',
+      ),
     failure: t('modules.collab.note.toast.updateFailed'),
   })
   const action = editing ? update : create
@@ -113,6 +131,11 @@ export function NoteDialog({
         </DialogHeader>
 
         <DialogBody>
+          {turnedOff ? (
+            <p className="mb-4 text-caption text-ink-3">
+              {t('trips.collab.sections.turnedOff')}
+            </p>
+          ) : null}
           <form
             id={formId}
             className="flex flex-col gap-4"
