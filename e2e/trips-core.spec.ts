@@ -1923,3 +1923,71 @@ test.describe('01-S8b — A cover image by drop, paste and picker', () => {
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
+
+test.describe('01-S9a - Adjustable planner workspace', () => {
+  test('resizes and restores a rail, then keeps narrow overlays usable at 360px', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+    const route: RouteCase = {
+      name: 'planner-workspace',
+      path: '/trips/demo-trip-01-tokyo-and-kyoto/plan',
+      ready: 'main',
+      map: true,
+    }
+    const consoleReport = watchConsole(page, route)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await visit(page, route, 'light')
+    const separator = page.getByRole('separator', { name: 'Resize itinerary' })
+    await expect(separator).toBeVisible()
+    await separator.focus()
+    await page.keyboard.press('Home')
+    await expect(separator).toHaveAttribute('aria-valuenow', '280')
+    await page.keyboard.press('ArrowRight')
+    await expect(separator).toHaveAttribute('aria-valuenow', '296')
+    const box = await separator.boundingBox()
+    expect(box).not.toBeNull()
+    if (box === null) throw new Error('Missing resize handle')
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 32, box.y + box.height / 2)
+    await page.mouse.up()
+    await expect(separator).toHaveAttribute('aria-valuenow', '328')
+    await expect
+      .poll(() =>
+        separator
+          .locator('..')
+          .evaluate((rail) => rail.getBoundingClientRect().width),
+      )
+      .toBe(328)
+    const savedLayout = await page.evaluate(() =>
+      localStorage.getItem('planned.planner-layout'),
+    )
+    expect(savedLayout).toContain('328')
+    await page.reload()
+    expect(
+      await page.evaluate(() => localStorage.getItem('planned.planner-layout')),
+    ).toBe(savedLayout)
+    await expect(separator).toBeVisible({ timeout: 20000 })
+    await expect(separator).toHaveAttribute('aria-valuenow', '328')
+    await page.setViewportSize({ width: 360, height: 800 })
+    await expect(separator).toHaveCount(0)
+    await page.getByRole('button', { name: 'Days', exact: true }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(
+      page.getByRole('tab', { name: 'Itinerary', exact: true }),
+    ).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Places', exact: true }).click()
+    await expect(
+      page.getByRole('tab', { name: 'Places', exact: true }),
+    ).toHaveAttribute('data-state', 'active')
+    await page.mouse.click(180, 40)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    expect(consoleReport().fatal).toEqual([])
+  })
+})

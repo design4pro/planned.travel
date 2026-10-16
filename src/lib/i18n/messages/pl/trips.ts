@@ -381,6 +381,9 @@ const messages = {
   'plan.weather.attribution.metNorway': 'Dane prognozy: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Dane: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Zmień szerokość planu',
+  'plan.workspace.resizePlaces': 'Zmień szerokość miejsc',
+  'plan.workspace.toggleDay': 'Rozwiń lub zwiń {day}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -348,6 +348,9 @@ const messages = {
   'plan.weather.attribution.metNorway': 'Dữ liệu dự báo: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Dữ liệu: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Đổi chiều rộng lịch trình',
+  'plan.workspace.resizePlaces': 'Đổi chiều rộng địa điểm',
+  'plan.workspace.toggleDay': 'Mở rộng hoặc thu gọn {day}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

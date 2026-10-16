@@ -341,6 +341,9 @@ const messages = {
   'plan.weather.attribution.metNorway': '예보 데이터: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     '데이터: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': '일정 너비 조절',
+  'plan.workspace.resizePlaces': '장소 너비 조절',
+  'plan.workspace.toggleDay': '{day} 펼치기 또는 접기',
 } satisfies TranslationOf<typeof En>
 
 export default messages

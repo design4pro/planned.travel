@@ -354,6 +354,9 @@ const messages = {
     'Tahmin verileri: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Veriler: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Gezi planını yeniden boyutlandır',
+  'plan.workspace.resizePlaces': 'Yerleri yeniden boyutlandır',
+  'plan.workspace.toggleDay': '{day} bölümünü genişlet veya daralt',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -368,6 +368,9 @@ const messages = {
     'Δεδομένα πρόγνωσης: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Δεδομένα: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Αλλαγή πλάτους προγράμματος',
+  'plan.workspace.resizePlaces': 'Αλλαγή πλάτους τοποθεσιών',
+  'plan.workspace.toggleDay': 'Ανάπτυξη ή σύμπτυξη {day}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

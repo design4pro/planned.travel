@@ -870,3 +870,72 @@ describe('a day that carries a journey', () => {
     expect(screen.getByText('09:00 – 12:30')).toBeDefined()
   })
 })
+
+describe('resizable rails', () => {
+  it('exposes a named separator and clamps keyboard widths at either edge', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <PlannerRail
+        side="right"
+        label="Places"
+        collapsed={false}
+        onCollapsedChange={() => {}}
+        resize={{
+          width: 392,
+          min: 280,
+          max: 400,
+          step: 16,
+          label: 'Resize places',
+          onChange,
+        }}
+      >
+        body
+      </PlannerRail>,
+    )
+    const handle = screen.getByRole('separator', { name: 'Resize places' })
+    expect(handle.getAttribute('aria-valuenow')).toBe('392')
+    expect(handle.getAttribute('aria-valuemin')).toBe('280')
+    expect(handle.getAttribute('aria-valuemax')).toBe('400')
+    handle.focus()
+    await user.keyboard('{ArrowLeft}')
+    expect(onChange).toHaveBeenLastCalledWith(400)
+    await user.keyboard('{ArrowRight}')
+    expect(onChange).toHaveBeenLastCalledWith(376)
+    await user.keyboard('{Home}')
+    expect(onChange).toHaveBeenLastCalledWith(280)
+    await user.keyboard('{End}')
+    expect(onChange).toHaveBeenLastCalledWith(400)
+  })
+})
+
+describe('day folding', () => {
+  it('folds independently from focus and keeps a controlled accessible button', async () => {
+    const user = userEvent.setup()
+    const focus = vi.fn()
+    const expand = vi.fn()
+    const ui = (expanded: boolean) => (
+      <DndContext>
+        <DaySection
+          day={DAY}
+          categoryFor={categoryFor}
+          expanded={expanded}
+          onExpandedChange={expand}
+          onFocusDay={focus}
+        />
+      </DndContext>
+    )
+    const view = render(ui(true))
+    const toggle = screen.getByRole('button', {
+      name: `Expand or collapse ${DAY.title}`,
+    })
+    const id = toggle.getAttribute('aria-controls') ?? ''
+    expect(document.getElementById(id)?.hidden).toBe(false)
+    await user.click(toggle)
+    expect(expand).toHaveBeenCalledWith(false)
+    expect(focus).not.toHaveBeenCalled()
+    view.rerender(ui(false))
+    expect(document.getElementById(id)?.hidden).toBe(true)
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  })
+})

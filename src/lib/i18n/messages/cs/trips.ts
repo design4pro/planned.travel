@@ -375,6 +375,9 @@ const messages = {
     'Data předpovědi: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Zdroj dat: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Změnit šířku itineráře',
+  'plan.workspace.resizePlaces': 'Změnit šířku míst',
+  'plan.workspace.toggleDay': 'Rozbalit nebo sbalit {day}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
