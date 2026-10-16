@@ -415,7 +415,7 @@ const messages = {
     'Liczone na żywo, więc licznik nigdy nie jest przedawniony. Limity idą za planem obowiązującym w tej chwili.',
   'billing.quota.seats': 'Członkowie',
   'billing.quota.trips': 'Wyjazdy',
-  'billing.quota.storageBytes': 'Miejsce',
+  'billing.quota.storageBytes': 'Przestrzeń dyskowa',
   'billing.quota.unlimited': 'Bez limitu',
   'billing.quota.places': 'Miejsca',
   'billing.quota.placesHint':

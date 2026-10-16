@@ -239,13 +239,15 @@ describe('the billing page with a promotion code', () => {
 
 describe('places usage on the billing page', () => {
   it.each([
-    [1, 2, '1 left'],
-    [2, 2, 'The places allowance is used up'],
-    [4, 2, 'Above the places limit by 2'],
-    [0, 0, 'The places allowance is used up'],
+    [1, 2, '1 left', 'bg-brand'],
+    [119, 150, '31 left', 'bg-brand'],
+    [120, 150, '30 left', 'bg-warning'],
+    [2, 2, 'The places allowance is used up', 'bg-danger'],
+    [4, 2, 'Above the places limit by 2', 'bg-danger'],
+    [0, 0, 'The places allowance is used up', 'bg-danger'],
   ])(
     'renders finite places usage %s / %s even on Crew',
-    (used, limit, hint) => {
+    (used, limit, hint, tone) => {
       renderPage(
         payload({
           places: { used: Number(used), limit: Number(limit) },
@@ -259,8 +261,7 @@ describe('places usage on the billing page', () => {
           : String(Math.min(100, (Number(used) / Number(limit)) * 100)),
       )
       expect(screen.getByText(hint)).toBeTruthy()
-      if (Number(used) >= Number(limit))
-        expect(bar.innerHTML).toContain('bg-danger')
+      expect(bar.innerHTML).toContain(String(tone))
       expect(
         screen.getByText('Across all trips in this workspace'),
       ).toBeTruthy()
