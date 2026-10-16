@@ -954,7 +954,36 @@ test.describe('06-S5b — live calendar link', () => {
             await request.continue()
           },
         )
-        await page.getByRole('button', { name: 'Live calendar link' }).click()
+        let finishModuleLoad = () => {}
+        const moduleReady = new Promise<void>((resolve) => {
+          finishModuleLoad = resolve
+        })
+        await page.route(
+          (url) => url.pathname.endsWith('/calendar-live.tsx'),
+          async (request) => {
+            await moduleReady
+            await request.continue()
+          },
+        )
+        const trigger = page.getByRole('button', {
+          name: 'Live calendar link',
+          exact: true,
+        })
+        const triggerBox = await trigger.boundingBox()
+        try {
+          await trigger.click()
+          await expect(trigger).toHaveAttribute('aria-busy', 'true')
+          await expect(trigger).toBeFocused()
+          const pendingTriggerBox = await trigger.boundingBox()
+          expect(pendingTriggerBox?.width).toBe(triggerBox?.width)
+          expect(pendingTriggerBox?.height).toBe(triggerBox?.height)
+          await page.screenshot({
+            path: testInfo.outputPath(`calendar-module-loading-${theme}.png`),
+            fullPage: true,
+          })
+        } finally {
+          finishModuleLoad()
+        }
         const dialog = page.getByRole('dialog', {
           name: 'Live calendar link',
           exact: true,

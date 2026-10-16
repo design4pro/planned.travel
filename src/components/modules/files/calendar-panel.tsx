@@ -60,7 +60,19 @@ export function CalendarPanel({ tripId, hasDates }: CalendarPanelProps) {
           <Alert tone="info">{t('modules.files.calendar.undated')}</Alert>
         )}
         {liveMounted ? (
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={
+              <Button
+                variant="secondary"
+                size="sm"
+                loading
+                aria-label={t('modules.files.calendar.live.action')}
+                autoFocus
+              >
+                {t('modules.files.calendar.live.action')}
+              </Button>
+            }
+          >
             <LiveCalendar key={tripId} tripId={tripId} initialOpen />
           </Suspense>
         ) : (
