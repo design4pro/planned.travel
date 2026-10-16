@@ -69,6 +69,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Çalışma alanı',
+  'workspace.switched': '{name} çalışma alanına geçildi',
   'workspace.switchFailed': 'Çalışma alanı değiştirilemedi',
   'workspace.switchFailedBody': 'Bağlantınızı kontrol edip yeniden deneyin.',
   'workspace.create': 'Çalışma alanı oluştur',
