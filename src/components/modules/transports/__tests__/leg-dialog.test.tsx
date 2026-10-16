@@ -62,13 +62,22 @@ const TRANSPORT: TransportData = {
   legs: [],
 }
 
-function openDialog(transport?: TransportData): void {
+function openDialog(
+  transport?: TransportData,
+  canSearchConnections = true,
+  dated = false,
+): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <TransportDialog
         tripId="trip-1"
         transport={transport}
-        days={[]}
+        days={
+          dated
+            ? [{ id: 'day-1', dayNumber: 1, date: '2026-10-09', title: null }]
+            : []
+        }
+        canSearchConnections={canSearchConnections}
         currency="EUR"
         open
         onOpenChange={() => {}}
@@ -121,3 +130,20 @@ describe('TransportDialog', () => {
     })
   })
 })
+
+it.each([
+  [false, true, false],
+  [true, true, true],
+  [true, false, false],
+])(
+  'search permission %s and dated day %s offer search: %s',
+  (allowed, dated, offered) => {
+    openDialog(undefined, allowed, dated)
+    expect(
+      screen.queryByRole('button', {
+        name: 'Search connections',
+      }) !== null,
+    ).toBe(offered)
+    expect(screen.getByLabelText(/^Name/u)).toBeTruthy()
+  },
+)
