@@ -1035,7 +1035,7 @@ from `newId()`. No migration, no backfill, no index.
   file that composes one route is route-local, a file that renders a module concept is a module
   component, and a file two modules import is neither — `cover-art.tsx` is the one instance of the
   third case and is treated as above. `trip-card.tsx`, `new-trip-dialog.tsx`, `trip-header.tsx`,
-  `trip-map.tsx`, `add-place-dialog.tsx` and `settings-nav.tsx` belong to
+  `trip-map.tsx` and `settings-nav.tsx` belong to
   other plans and are not touched by any stage of this plan.
 
 - **Components reused, not rebuilt** — `Dialog`, `DropdownMenu`, `Button`, `IconButton`, `Input`,

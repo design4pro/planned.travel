@@ -1117,6 +1117,26 @@ const messages = {
     many: 'Показано від початку: {count} із {total}.',
     other: 'Показано від початку: {count} із {total}.',
   },
+  'files.export.notify': 'Повідомити електронною поштою, коли буде готово',
+  'files.export.viewer':
+    'Створювати експорт можуть лише власники й редактори. Ви можете завантажити наявні файли.',
+  'files.export.jump': 'До експортів',
+  'files.export.fromLink': 'За вашим посиланням',
+  'files.export.linkGone':
+    'Цей експорт більше не зберігається. Створіть новий нижче.',
+  'files.export.allowance': {
+    one: 'Цього місяця використано {used} із {count} експортів',
+    few: 'Цього місяця використано {used} із {count} експортів',
+    many: 'Цього місяця використано {used} із {count} експортів',
+    other: 'Цього місяця використано {used} із {count} експортів',
+  },
+  'files.export.allowanceUnlimited': {
+    one: 'Експортів цього місяця: {count}',
+    few: 'Експортів цього місяця: {count}',
+    many: 'Експортів цього місяця: {count}',
+    other: 'Експортів цього місяця: {count}',
+  },
+  'files.export.linkGoneViewer': 'Цей експорт більше не зберігається.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

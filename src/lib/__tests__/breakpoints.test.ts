@@ -155,7 +155,7 @@ describe('the repo’s paired media queries', () => {
    * The other half of the pairing, and the one the `px` ban says nothing about:
    * a call site can name the right unit and still name the wrong boundary.
    *
-   * `plan-screen.tsx` switched to `MEDIA_MD_UP` would mount its rails from `48rem`
+   * `plan-workspace.tsx` switched to `MEDIA_MD_UP` would mount its rails from `48rem`
    * while `hidden lg:flex` keeps them invisible to `64rem` — no rails and no phone
    * bar across the whole band, which is the defect this ticket is about, reached
    * without a single `px` anywhere. So a file that reaches for a constant must

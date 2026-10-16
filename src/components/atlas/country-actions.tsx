@@ -909,15 +909,11 @@ export const CountryActions = React.forwardRef<
     /**
      * Hands focus back to the control that was pressed.
      *
-     * `Button` puts a real `disabled` attribute on itself while it loads, which
-     * is right — a control that is working must not be pressed twice — but the
-     * browser drops focus from a control the moment it is disabled, and it
-     * lands on `<body>`. A keyboard reader who pressed "Add to list" was left
-     * at the top of the document with no way back to the row, and no way to
-     * reach the sentence explaining why it did not save. So when the write
-     * settles the block takes focus back, and only in the case it caused:
-     * anything else holding focus — the confirmation dialog, a row the reader
-     * tabbed on to while the write ran — keeps it.
+     * Loading buttons retain focus and block activation. This is a defensive
+     * fallback for a write whose focused control nevertheless left focus on
+     * `<body>`: restore the pressed control when the write settles. Anything
+     * else holding focus, including a confirmation dialog or a row the reader
+     * tabbed to while the write ran, keeps it.
      */
     React.useEffect(() => {
       if (busy) return

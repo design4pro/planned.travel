@@ -377,6 +377,10 @@ const messages = {
   'billing.quota.trips': '旅',
   'billing.quota.storageBytes': 'ストレージ',
   'billing.quota.unlimited': '無制限',
+  'billing.quota.places': '場所',
+  'billing.quota.placesHint': 'このワークスペースのすべての旅行が対象です',
+  'billing.quota.exhausted.places': '場所の上限に達しました',
+  'billing.quota.over.places': '場所の上限を{value}件超えています',
   'billing.quota.noLimit': 'このプランに上限はありません',
   'billing.quota.used': '{quota}を使用',
   'billing.quota.over.seats': {

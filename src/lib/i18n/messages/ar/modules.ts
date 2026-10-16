@@ -1144,6 +1144,30 @@ const messages = {
     many: 'المعروض من البداية: {count} من {total}.',
     other: 'المعروض من البداية: {count} من {total}.',
   },
+  'files.export.notify': 'أرسل لي بريدًا عندما يصبح جاهزًا',
+  'files.export.viewer':
+    'يمكن للمالكين والمحررين فقط إنشاء تصدير. يمكنك تنزيل الملفات الموجودة.',
+  'files.export.jump': 'الانتقال إلى الصادرات',
+  'files.export.fromLink': 'من رابطك',
+  'files.export.linkGone':
+    'لم يعد هذا التصدير محفوظًا. أنشئ تصديرًا جديدًا أدناه.',
+  'files.export.allowance': {
+    zero: 'استُخدم {used} من {count} من الصادرات هذا الشهر',
+    one: 'استُخدم {used} من {count} من الصادرات هذا الشهر',
+    two: 'استُخدم {used} من {count} من الصادرات هذا الشهر',
+    few: 'استُخدم {used} من {count} من الصادرات هذا الشهر',
+    many: 'استُخدم {used} من {count} من الصادرات هذا الشهر',
+    other: 'استُخدم {used} من {count} من الصادرات هذا الشهر',
+  },
+  'files.export.allowanceUnlimited': {
+    zero: 'عدد الصادرات هذا الشهر: {count}',
+    one: 'عدد الصادرات هذا الشهر: {count}',
+    two: 'عدد الصادرات هذا الشهر: {count}',
+    few: 'عدد الصادرات هذا الشهر: {count}',
+    many: 'عدد الصادرات هذا الشهر: {count}',
+    other: 'عدد الصادرات هذا الشهر: {count}',
+  },
+  'files.export.linkGoneViewer': 'لم يعد هذا التصدير محفوظًا.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

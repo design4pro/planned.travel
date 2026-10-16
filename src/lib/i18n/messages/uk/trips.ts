@@ -14,6 +14,73 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'notFound.title': 'Не можемо знайти цю подорож',
+  'notFound.body':
+    'Її немає серед подорожей, які ви можете відкрити в поточному робочому просторі. Можливо, її видалено або ви не маєте до неї доступу.',
+  // Coordinate examples keep decimal points because the inputs accept that notation.
+  'plan.editor.latitudeExample': '34.9671',
+  'plan.editor.longitudeExample': '135.7727',
+  /* Place and timing editors; option labels are resolved at render time. */
+  'plan.editor.createTitle': 'Додати місце до цієї подорожі',
+  'plan.editor.editTitle': 'Змінити це місце',
+  'plan.editor.createDescription':
+    'Укажіть назву зараз, а розташування пізніше - незаплановане місце чекає на панелі місць, доки ви не додасте його до дня.',
+  'plan.editor.editDescription':
+    'Зміни діють усюди: на карті, у всіх призначених днях і в переліку місць подорожі.',
+  'plan.editor.nameRequired': 'Місцю потрібна назва',
+  'plan.editor.nameExample': 'наприклад, Фусімі Інарі Тайся',
+  'plan.editor.city': 'Місто',
+  'plan.editor.cityExample': 'наприклад, Кіото',
+  'plan.editor.addressExample': 'наприклад, Фукакуса Ябуноуті-тьо, 68',
+  'plan.editor.duration': 'Час на місці',
+  'plan.editor.rating': 'Варто відвідати?',
+  'plan.editor.latitude': 'Широта',
+  'plan.editor.longitude': 'Довгота',
+  'plan.editor.positionHint': 'Або закрийте вікно та виберіть точку на карті.',
+  'plan.editor.latitudeError': 'Від -90 до 90',
+  'plan.editor.longitudeError': 'Від -180 до 180',
+  'plan.editor.positionError': 'Для розташування потрібні обидва числа',
+  'plan.editor.day': 'Додати до дня',
+  'plan.editor.dayHint':
+    'Залиште порожнім, щоб зберегти місце на панелі місць.',
+  'plan.editor.unplanned': 'Залишити без плану',
+  'plan.editor.dayNamed': 'День {day} · {title}',
+  'plan.editor.stopFallback': 'Ця зупинка',
+  'plan.editor.dayNumber': 'День {day}',
+  'plan.editor.visited': 'Уже відвідано',
+  'plan.editor.visitedHint': 'Позначає шпильку галочкою.',
+  'plan.editor.saving': 'Збереження місця',
+  'plan.editor.save': 'Зберегти зміни',
+  'plan.editor.noCategory': 'Без категорії',
+  'plan.editor.arrive': 'Прибуття',
+  'plan.editor.leave': 'Від’їзд',
+  'plan.editor.timeError': 'Від’їзд має бути після прибуття',
+  'plan.editor.booking': 'Бронювання',
+  'plan.editor.note': 'Нотатка для цієї зупинки',
+  'plan.editor.noteExample':
+    'Приходьте рано - після 9 ранку черга триває годину.',
+  'plan.editor.savingTimes': 'Збереження часу',
+  'plan.editor.saveTimes': 'Зберегти',
+  'plan.editor.duration0': 'Без фіксованої тривалості',
+  'plan.editor.duration30': '30 хвилин',
+  'plan.editor.duration45': '45 хвилин',
+  'plan.editor.duration60': '1 година',
+  'plan.editor.duration90': '1½ години',
+  'plan.editor.duration120': '2 години',
+  'plan.editor.duration180': '3 години',
+  'plan.editor.duration240': 'Пів дня',
+  'plan.editor.duration480': 'Цілий день',
+  'plan.editor.rating0': 'Без оцінки',
+  'plan.editor.rating1': '★ 1 - пропустити',
+  'plan.editor.rating2': '★ 2 - якщо буде час',
+  'plan.editor.rating3': '★ 3 - варто відвідати',
+  'plan.editor.rating4': '★ 4 - дуже добре',
+  'plan.editor.rating5': '★ 5 - не пропустіть',
+  'plan.editor.bookingNone': 'Бронювання не потрібне',
+  'plan.editor.bookingPending': 'Ще треба забронювати',
+  'plan.editor.bookingConfirmed': 'Заброньовано й підтверджено',
+  'plan.editor.bookingCompleted': 'Відвідування завершено',
+  'plan.editor.bookingCancelled': 'Скасовано',
   /* ------------------------------------------ when a tab fails to load */
   'error.trip': 'Не вдалося завантажити цю подорож',
   'error.plan': 'Не вдалося завантажити маршрут',
@@ -377,6 +444,14 @@ const messages = {
   'plan.weather.attribution.metNorway': 'Дані прогнозу: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':
     'Дані: NASA Langley Research Center POWER Project',
+  'plan.workspace.resizeItinerary': 'Змінити ширину маршруту',
+  'plan.workspace.resizePlaces': 'Змінити ширину місць',
+  'plan.workspace.toggleDay': 'Розгорнути або згорнути {day}',
+  'plan.workspace.days': 'Дні',
+  'plan.workspace.showPanel': 'Показати панель {label}',
+  'plan.workspace.hidePanel': 'Приховати панель {label}',
+  'plan.workspace.narrowPanel': 'Звузити {label}',
+  'plan.workspace.widenPanel': 'Розширити {label}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

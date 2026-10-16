@@ -1052,6 +1052,22 @@ const messages = {
     one: 'İlk {count} / {total} gösteriliyor.',
     other: 'İlk {count} / {total} gösteriliyor.',
   },
+  'files.export.notify': 'Hazır olduğunda e-posta gönder',
+  'files.export.viewer':
+    'Yalnızca sahipler ve düzenleyiciler dışa aktarım oluşturabilir. Mevcut olanları indirebilirsiniz.',
+  'files.export.jump': 'Dışa aktarımlara git',
+  'files.export.fromLink': 'Bağlantınızdan',
+  'files.export.linkGone':
+    'Bu dışa aktarım artık saklanmıyor. Aşağıdan yenisini oluşturun.',
+  'files.export.allowance': {
+    one: 'Bu ay {count} dışa aktarımdan {used} kullanıldı',
+    other: 'Bu ay {count} dışa aktarımdan {used} kullanıldı',
+  },
+  'files.export.allowanceUnlimited': {
+    one: 'Bu ay {count} dışa aktarım',
+    other: 'Bu ay {count} dışa aktarım',
+  },
+  'files.export.linkGoneViewer': 'Bu dışa aktarım artık saklanmıyor.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

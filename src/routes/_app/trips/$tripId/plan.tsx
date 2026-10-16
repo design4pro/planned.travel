@@ -33,6 +33,8 @@ export const Route = createFileRoute('/_app/trips/$tripId/plan')({
     ])
     return { board, notes, transports }
   },
+  pendingMs: 0,
+  pendingMinMs: 0,
   pendingComponent: PlanPending,
   errorComponent: PlanError,
   component: PlanPage,
@@ -43,7 +45,9 @@ function PlanError({ error }: { error: Error }) {
 
   return (
     <AppFrame>
-      <ErrorPanel error={error} title={t('trips.error.plan')} />
+      <div data-plan-error="">
+        <ErrorPanel error={error} title={t('trips.error.plan')} />
+      </div>
     </AppFrame>
   )
 }
@@ -65,12 +69,9 @@ function PlanPage() {
 }
 
 /**
- * The loading state is the *layout*, not a spinner.
- *
- * A map screen that resolves into existence from a centred spinner reads as a page
- * that was not designed; two glass rails and a warm ground read as the planner
- * arriving. The proportions match the real thing exactly, so nothing moves when the
- * data lands.
+ * Placeholder geometry while the board reads are pending. The trip-level readiness
+ * boundary covers a slow read with the title; stored rail widths are restored by
+ * the workspace before its loaded view is revealed.
  */
 function PlanPending() {
   const t = useTranslate()

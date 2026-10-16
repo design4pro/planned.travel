@@ -1,4 +1,9 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
+import {
+  Outlet,
+  createFileRoute,
+  notFound,
+  useRouterState,
+} from '@tanstack/react-router'
 
 import { AppFrame } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -8,6 +13,7 @@ import { Card, Skeleton } from '#/components/ui'
 import { APP_HEADER_TOP_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
+import { PlanReadinessBoundary } from './-ui/plan-readiness'
 import { loadTripHeader } from '../../-server/trip'
 import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
 
@@ -19,11 +25,20 @@ import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
  * the sub-navigation stays put and only the panel below it changes.
  */
 export const Route = createFileRoute('/_app/trips/$tripId')({
-  loader: ({ params }) => loadTripHeader({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) => {
+    const result = await loadTripHeader({ data: { tripId: params.tripId } })
+    if (!result.found) throw notFound()
+    const { found: _found, ...payload } = result
+    return payload
+  },
   pendingComponent: TripPending,
   notFoundComponent: () => (
     <AppFrame>
-      <NotFoundPanel />
+      <NotFoundPanel
+        titleKey="trips.notFound.title"
+        bodyKey="trips.notFound.body"
+        tripsFirst
+      />
     </AppFrame>
   ),
   errorComponent: TripError,
@@ -42,11 +57,26 @@ function TripError({ error }: { error: Error }) {
 
 function TripLayout() {
   const { trip } = Route.useLoaderData()
+  const planLoading = useRouterState({
+    select: (state) => state.status === 'pending',
+  })
+  const planEntry = useRouterState({
+    select: (state) =>
+      state.location.pathname === `/trips/${trip.id}/plan`
+        ? `${state.location.href}:${state.location.state.__TSR_key}`
+        : null,
+  })
 
   return (
     <>
       <TripSubNav tripId={trip.id} tripName={trip.title} />
-      <Outlet />
+      <PlanReadinessBoundary
+        entryKey={planEntry}
+        loaderReady={!planLoading}
+        title={trip.title}
+      >
+        <Outlet />
+      </PlanReadinessBoundary>
     </>
   )
 }

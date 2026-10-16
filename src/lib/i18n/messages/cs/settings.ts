@@ -407,6 +407,10 @@ const messages = {
   'billing.quota.trips': 'Cesty',
   'billing.quota.storageBytes': 'Úložiště',
   'billing.quota.unlimited': 'Bez limitu',
+  'billing.quota.places': 'Místa',
+  'billing.quota.placesHint': 'Ve všech cestách tohoto pracovního prostoru',
+  'billing.quota.exhausted.places': 'Limit míst je vyčerpán',
+  'billing.quota.over.places': 'Limit míst je překročen o {value}',
   'billing.quota.noLimit': 'V tomto tarifu bez limitu',
   'billing.quota.used': 'Využito: {quota}',
   'billing.quota.over.seats': {

@@ -2,10 +2,10 @@
 
 | Field              | Value                                        |
 | ------------------ | -------------------------------------------- |
-| **Status**         | in-progress                                  |
+| **Status**         | implemented                                  |
 | **Issue**          | #885                                         |
 | **Spec PR**        | #875                                         |
-| **Implementation** | #1260, #1286, #1289, #1297                   |
+| **Implementation** | #1260, #1286, #1289, #1297, #1303                   |
 | **Plan**           | 06-S3 (docs/plans/06-documents-and-media.md) |
 
 ## 📝 TLDR
@@ -476,7 +476,7 @@ and `07-S1`, so a trigger there would be a same-wave claim on a file another sta
   pending row (`tabIndex={-1}`, with the same `scroll-mt-*` as the marked row) and returns to the button when it re-enables
   **only if focus is still on the pending row or on `body`**; otherwise it is left where it is. When Retry, Refresh or a `404`
   re-read unmounts the focused control, focus moves to the panel's heading (`tabIndex={-1}`, same `scroll-mt-*`). A Download
-  control loses focus while it is `loading` (`Button` sets native `disabled`); when its fetch ends and focus is on `body`, focus
+  control stays focusable and inert while `loading`; as a defensive fallback, when its fetch ends and focus is on `body`, focus
   goes back to that control, and the e2e checks `document.activeElement` after a download. The polling never moves focus.
   `ModulePanel` renders its `h2` with no way to give it `tabIndex={-1}` or a ref, so this ticket adds an **additive
   `headingProps` passthrough** to `ModulePanel` in `src/components/modules/shared/panel.tsx` (named under Owned).

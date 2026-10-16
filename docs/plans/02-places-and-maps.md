@@ -1162,7 +1162,7 @@ this is the stage that trips them first.
   between `chromium` and `mobile-safari` for a reason that is not the design. This stage records it,
   does not fix it (the files are `src/components/costs/data.ts`,
   `src/components/modules/transports/transports-timeline.tsx`,
-  `src/components/modules/collab/collab-board.tsx`, `src/components/modules/collab/thread.tsx`,
+  `src/components/modules/collab/notes-board.tsx`, `src/components/modules/collab/thread.tsx`,
   `src/components/modules/book/bookings-timeline.tsx` and
   `src/components/modules/files/file-library.tsx`, none of which it owns), and reports any
   `mobile-safari` difference it cannot attribute rather than widening a budget.

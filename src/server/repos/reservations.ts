@@ -340,11 +340,29 @@ export async function createReservation(
   scope: TenantScope,
   input: CreateReservationInput,
 ): Promise<Reservation> {
+  return insertReservation(scope, input, null)
+}
+
+/** Server-only import writer. The marker is never accepted through a booking payload. */
+export async function createImportedReservation(
+  scope: TenantScope,
+  input: CreateReservationInput,
+  importedAt: Date,
+): Promise<Reservation> {
+  return insertReservation(scope, input, importedAt)
+}
+
+/** Both creation paths share the tenant, role and reference guards in boundary order. */
+async function insertReservation(
+  scope: TenantScope,
+  input: CreateReservationInput,
+  importedAt: Date | null,
+): Promise<Reservation> {
   const values = createReservationInput.parse(input)
   await requireTrip(scope, values.tripId)
   await assertBookingRole(scope, values.tripId)
   await assertReferences(scope, values.tripId, values)
-  return reservationsRepository.insert(scope, values)
+  return reservationsRepository.insert(scope, { ...values, importedAt })
 }
 
 export async function updateReservation(

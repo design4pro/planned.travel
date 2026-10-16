@@ -89,6 +89,8 @@ const {
   updateStopFn,
 } = await import('../plan')
 
+const tripHandlers = await import('../../../../-server/trip')
+
 /** Runs a handler inside a request context, the way the runtime does. */
 async function inRequest<T>(run: () => Promise<T>): Promise<T> {
   return startStorage.run(startContext(), run)
@@ -119,6 +121,7 @@ interface Fixture {
   readonly cafeId: string
 }
 
+let seedOtherTenant: (label: string) => Promise<SeededTenant>
 let tenant: SeededTenant
 let owner: TenantScope
 let editor: TenantScope
@@ -128,6 +131,7 @@ let fixture: Fixture
 
 beforeEach(async () => {
   const harness = await createHarness()
+  seedOtherTenant = harness.seedTenant
   tenant = await harness.seedTenant('planner')
   owner = tenant.scope
   stubs.scope = owner
@@ -318,6 +322,93 @@ describe('who may write the plan', () => {
     lat: null,
     lng: null,
   }
+
+  it('exposes no inventory-only place writer alongside the guarded planner', () => {
+    expect(Object.keys(tripHandlers).sort()).toEqual([
+      'loadPeople',
+      'loadTripCosts',
+      'loadTripFiles',
+      'loadTripHeader',
+      'loadTripLists',
+      'loadTripPlan',
+      'tripInput',
+    ])
+  })
+
+  it.each(['editor', 'viewer'] as const)(
+    'refuses an archived-trip add by an %s before checking the role',
+    async (role) => {
+      await archiveTrip(owner, fixture.tripId)
+      const before = await planState()
+      stubs.scope = role === 'editor' ? editor : viewer
+
+      const error = await captureError(() =>
+        inRequest(() =>
+          createPlanPlaceFn({
+            data: {
+              tripId: fixture.tripId,
+              name: 'Archived add',
+              ...blankPlace,
+              dayId: '',
+            },
+          }),
+        ),
+      )
+
+      expect(error).toBeInstanceOf(RepositoryError)
+      expect((error as RepositoryError).code).toBe('TRIP_ARCHIVED')
+      expect(await planState()).toEqual(before)
+    },
+  )
+
+  it('refuses an add by a non-member of an organization-visible trip', async () => {
+    const trip = await createTrip(owner, {
+      title: 'Workspace trip',
+      visibility: 'organization',
+    })
+    const before = await listTripPlaces(owner, { tripId: trip.id })
+    stubs.scope = stranger
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        createPlanPlaceFn({
+          data: {
+            tripId: trip.id,
+            name: 'Non-member add',
+            ...blankPlace,
+            dayId: '',
+          },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(await listTripPlaces(owner, { tripId: trip.id })).toEqual(before)
+  })
+
+  it('reveals no trip to an add from another workspace and writes nothing', async () => {
+    const before = await planState()
+    const foreign = await seedOtherTenant('foreign-planner')
+    stubs.scope = foreign.scope
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        createPlanPlaceFn({
+          data: {
+            tripId: fixture.tripId,
+            name: 'Foreign add',
+            ...blankPlace,
+            dayId: '',
+          },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('NOT_FOUND')
+    expect(await planState()).toEqual(before)
+  })
 
   it('refuses every write from a viewer, and changes nothing', async () => {
     const before = await planState()

@@ -1007,6 +1007,20 @@ const messages = {
   'files.export.doc.truncatedRows': {
     other: '全{total}件のうち最初の{count}件を表示。',
   },
+  'files.export.notify': '準備ができたらメールで通知する',
+  'files.export.viewer':
+    'エクスポートを作成できるのは所有者と編集者のみです。既存のファイルはダウンロードできます。',
+  'files.export.jump': 'エクスポートへ移動',
+  'files.export.fromLink': 'リンクからのエクスポート',
+  'files.export.linkGone':
+    'このエクスポートは保存されていません。下で新しく作成してください。',
+  'files.export.allowance': {
+    other: '今月のエクスポート使用数：{used} / {count}',
+  },
+  'files.export.allowanceUnlimited': {
+    other: '今月のエクスポート：{count} 件',
+  },
+  'files.export.linkGoneViewer': 'このエクスポートはすでに保存されていません。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

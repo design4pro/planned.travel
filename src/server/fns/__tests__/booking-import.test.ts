@@ -694,43 +694,48 @@ describe('bookingImportView', () => {
 /* ------------------------------------------------------------------ confirm */
 
 describe('confirmBookingImport', () => {
-  /** How many times the marker statement was sent — one for the whole batch, never per row. */
+  /** Count separate marker updates; imported bookings must already be marked at insertion. */
   function markerStatements(): number {
     return harness.statements.filter((sql) =>
       /update "reservations" set "imported_at"/.test(sql),
     ).length
   }
 
-  it('writes every accepted row, marks them in one statement and deletes the record', async () => {
-    const rows = Array.from({ length: 7 }, (_unused, index) =>
-      stagedRow({ title: `Booking ${index}`, kind: 'activity' }),
-    )
-    await stage(alpha, { reservations: rows })
-    harness.statements.length = 0
+  it.each([7, 101])(
+    'creates all %i accepted rows already marked and deletes the record',
+    async (size) => {
+      const rows = Array.from({ length: size }, (_unused, index) =>
+        stagedRow({ title: `Booking ${index}`, kind: 'activity' }),
+      )
+      await stage(alpha, { reservations: rows })
+      harness.statements.length = 0
+      const result = await confirmBookingImport(
+        alpha.tenant.scope,
+        store,
+        {
+          tripId: alpha.tripId,
+          jobId: alpha.jobId,
+          accept: rows.map((_row, index) => index),
+        },
+        ports,
+      )
 
-    const result = await confirmBookingImport(
-      alpha.tenant.scope,
-      store,
-      {
+      expect(result).toEqual({ written: size, failed: 0, remaining: 0 })
+      const written = await listTripReservations(alpha.tenant.scope, {
         tripId: alpha.tripId,
-        jobId: alpha.jobId,
-        accept: [0, 1, 2, 3, 4, 5, 6],
-      },
-      ports,
-    )
-
-    expect(result).toEqual({ written: 7, failed: 0, remaining: 0 })
-    const written = await listTripReservations(alpha.tenant.scope, {
-      tripId: alpha.tripId,
-    })
-    expect(written).toHaveLength(7)
-    expect(markerStatements()).toBe(1)
-    // ADR 0012's load-bearing consequence: every row a machine wrote says so.
-    expect(written.every((row) => row.importedAt instanceof Date)).toBe(true)
-    expect(store.entries.has(stagedImportKey(alpha.jobId))).toBe(false)
-    // One patch for the batch, not one per row.
-    expect(stubs.mirrored).toHaveLength(1)
-  })
+      })
+      expect(written).toHaveLength(size)
+      expect(markerStatements()).toBe(0)
+      // ADR 0012's load-bearing consequence: every row a machine wrote says so.
+      expect(written.every((row) => row.importedAt instanceof Date)).toBe(true)
+      expect(
+        new Set(written.map((row) => row.importedAt?.getTime())).size,
+      ).toBe(1)
+      expect(store.entries.has(stagedImportKey(alpha.jobId))).toBe(false)
+      // One patch for the batch, not one per row.
+      expect(stubs.mirrored).toHaveLength(1)
+    },
+  )
 
   it('names an untitled row from the catalogue, in the workspace’s language', async () => {
     // `titleSchema` is `min(1)`, so an untitled row has to be named by somebody. Naming it in the
@@ -820,14 +825,18 @@ describe('confirmBookingImport', () => {
       written: [0, 1, 2, 4, 5, 6].map((index) => ({ index })),
     })
 
+    const beforeRetry = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(beforeRetry.every((row) => row.importedAt instanceof Date)).toBe(
+      true,
+    )
+    harness.statements.length = 0
     // The retry, with the same request the client already sent.
     rows[3] = stagedRow({ title: 'Four', kind: 'activity' })
     await stage(alpha, {
       reservations: rows,
-      written: [0, 1, 2, 4, 5, 6].map((index) => ({
-        index,
-        reservationId: `res_${index}`,
-      })),
+      written: JSON.parse(held ?? '{}').written,
     })
     const second = await confirmBookingImport(
       alpha.tenant.scope,
@@ -846,6 +855,14 @@ describe('confirmBookingImport', () => {
     ).map((row) => row.title)
     expect(titles).toHaveLength(7)
     expect(new Set(titles).size).toBe(7)
+    const afterRetry = await listTripReservations(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+    })
+    expect(afterRetry.every((row) => row.importedAt instanceof Date)).toBe(true)
+    for (const previous of beforeRetry) {
+      expect(afterRetry.find((row) => row.id === previous.id)).toEqual(previous)
+    }
+    expect(markerStatements()).toBe(0)
   })
 
   /*
