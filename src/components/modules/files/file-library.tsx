@@ -296,14 +296,13 @@ export function FileLibrary({
 
   // After the render that shows the pasted rows: the list only exists once the queue holds a task,
   // so the handler itself has nothing to scroll to on a first paste. On a long library this is what
-  // lets the traveller see the upload begin instead of pasting a second time. Center clears the
-  // sticky trip header; instant avoids a smooth scroll targeting geometry that changes when the
-  // upload finishes and its progress bars disappear.
+  // lets the traveller see the upload begin instead of pasting a second time.
   useEffect(() => {
     if (scrollRequest > 0) {
+      // Keep the queue clear of sticky chrome and progress rows that disappear on completion.
       queueListRef.current?.scrollIntoView({
-        block: 'center',
         behavior: 'instant',
+        block: 'center',
       })
     }
   }, [scrollRequest])

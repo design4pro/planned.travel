@@ -288,6 +288,66 @@ test.describe('06-S1 — Every way a file gets in', () => {
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 
+  test('a pasted queue stays below the sticky chrome through upload completion and refresh', async ({
+    context,
+    page,
+  }) => {
+    await openLibraryWithFiles(context, page)
+    let releaseUpload = (): void => {}
+    const heldUpload = new Promise<void>((resolve) => {
+      releaseUpload = resolve
+    })
+    await page.route(
+      (url) => callsServerFn(url, 'uploadTripFileFn'),
+      async (route) => {
+        await heldUpload
+        await route.fulfill({ json: { ok: true, file: {} } })
+      },
+    )
+    await page.setViewportSize({ width: 1440, height: 400 })
+    await page.evaluate(() =>
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' }),
+    )
+    const queue = page.locator('[data-part="file-queue"]')
+    const chrome = page.getByRole('navigation', { name: 'Trip sections' })
+    const assertRevealed = async (): Promise<void> => {
+      await expect(queue).toBeInViewport({ ratio: 1 })
+      await expect
+        .poll(async () => {
+          const queueBox = await queue.boundingBox()
+          const chromeBox = await chrome.boundingBox()
+          return (
+            queueBox !== null &&
+            chromeBox !== null &&
+            queueBox.y >= chromeBox.y + chromeBox.height
+          )
+        })
+        .toBe(true)
+    }
+    const uploading = page.waitForRequest((request) =>
+      callsServerFn(new URL(request.url()), 'uploadTripFileFn'),
+    )
+    try {
+      await dispatchPaste(page, 'body', {
+        files: [{ name: 'image.png', type: 'image/png' }],
+      })
+      await uploading
+      await assertRevealed()
+      const refreshed = page.waitForResponse((response) =>
+        callsServerFn(new URL(response.url()), 'loadTripFiles'),
+      )
+      releaseUpload()
+      await refreshed
+      await expect(
+        queue.getByRole('button', { name: /^Dismiss / }),
+      ).toBeVisible()
+      await settleMutations(page)
+      await assertRevealed()
+    } finally {
+      releaseUpload()
+    }
+  })
+
   test('a paste of text into the details dialog uploads nothing and is not cancelled', async ({
     context,
     page,

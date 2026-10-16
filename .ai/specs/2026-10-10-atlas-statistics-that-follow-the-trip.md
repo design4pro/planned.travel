@@ -18,7 +18,7 @@ describes what is **left** at HEAD (`4ed3a555`), as **two tickets that are each 
    roll-up, and the roll-up is rebuilt only when a trip is created, edited, copied, deleted or its people change, or a country is
    marked. Adding, editing or deleting a place, saving or deleting a transport, or confirming a booking import rebuilds
    nothing, so a traveller who plans a trip and then fills it sees "Your places: 0" until something unrelated happens to enqueue a
-   recompute. One helper in the existing fan-out module is called from the seven server functions and the one import routine that move
+   recompute. One helper in the existing fan-out module is called from the six server functions and the one import routine that move
    those figures.
 2. **08-S6b - read the roll-up by year.** The year rows are already in the `/atlas` payload and nothing reads them. The Stats tab
    gains a period control ("All time" and every year with a trip), the traveller's year streak with the years it spans, the
@@ -52,7 +52,7 @@ Verified against the repository at HEAD:
   visits and the continent row. A country mark therefore moves live figures only; the stored ones move on trip writes and nothing
   else that a traveller does to a trip.
 - **The writes that move the stored figures and enqueue nothing**: `createPlanPlaceFn`, `updatePlanPlaceFn`, `deletePlanPlaceFn`
-  (`src/routes/_app/trips/$tripId/-server/plan.ts`), `createPlaceFn` (`src/routes/_app/-server/trip.ts`), the places a confirmed
+  (`src/routes/_app/trips/$tripId/-server/plan.ts`), the places a confirmed
   booking import creates (`src/server/fns/booking-import.ts`, `confirmBookingImport`), and `saveTransportFn`, `deleteTransportFn`,
   `saveSearchedConnectionFn` (`src/server/fns/transports.ts`). Days follow the trip's dates, and those writes enqueue already.
 - **Years are attributed differently per figure.** Trips, days, places and cities of a year row are the trips whose `start_date`
@@ -90,7 +90,7 @@ Verified against the repository at HEAD:
 | Owned (this stage writes it)                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Not owned (read only, or left alone)                                                                                                                                                                                                                                               |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/server/queue/travel-stats-fanout.ts` - `enqueueTripRollup`; `affectedStatYears` takes any number of further dates (08-S6a)                                                                                                                                                                                                                                                                                                                                                             | `src/server/repos/atlas.ts` (`recomputeTravelStats`, `listTravelStats`): **not touched**; the recompute is correct, only its triggers are missing. `src/server/queue/handlers/travel-stats.ts` changes in one place (a former member's message is acknowledged, not dead-lettered) |
-| The call sites: `plan.ts` (three functions; `requirePlaceOfPlan` returns the place), `trip.ts` (`createPlaceFn`, which gains the planner-write guard), `transports.ts` (three functions), `booking-import.ts` (`confirmBookingImport`)                                                                                                                                                                                                                                                      | `src/server/queue/handlers/trip-copy.ts`: its private fan-out stays (Risks)                                                                                                                                                                                                        |
+| The call sites: `plan.ts` (three functions; `requirePlaceOfPlan` returns the place), `transports.ts` (three functions), `booking-import.ts` (`confirmBookingImport`)                                                                                                                                                                                                                                                      | `src/server/queue/handlers/trip-copy.ts`: its private fan-out stays (Risks)                                                                                                                                                                                                        |
 | `src/routes/_app/-server/library.ts`: **not touched**; the year rows already ship                                                                                                                                                                                                                                                                                                                                                                                                           | The `loadAtlas` payload, the seven reads, the 40-row bucket-list cap, the live figures                                                                                                                                                                                             |
 | `src/components/atlas/stats-model.ts` (+ test) - new, pure: which periods exist, which tiles a period shows, whose figure each is                                                                                                                                                                                                                                                                                                                                                           | `src/components/ui/*`: untouched; `StatCard`, `Select`, `Alert`, `EmptyState`, `Skeleton` reused as they are                                                                                                                                                                       |
 | `src/components/atlas/atlas-panel.tsx` - the Stats tab: the period control, the streak and countries tiles, the section states                                                                                                                                                                                                                                                                                                                                                              | The Country and Bucket list tabs, the headline, the map                                                                                                                                                                                                                            |
@@ -109,7 +109,7 @@ only once the producers have run), so it is `Blocked by` the first.
 
 | Ticket | Delivers                                                                                                                                                                                                                  | Rows                                        |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| 08-S6a | `enqueueTripRollup`; the eight call sites and the planner-write guard on `createPlaceFn`; the year attribution for transports; unit tests for the producer and for every site, including the writes that must not enqueue | the "stays current" half                    |
+| 08-S6a | `enqueueTripRollup`; the seven call sites; the year attribution for transports; unit tests for the producer and for every site, including the writes that must not enqueue | the "stays current" half                    |
 | 08-S6b | `stats-model.ts`; the period control; the streak and countries tiles; the empty and failed states; `formatYear`; the 23 locales; the `CONTEXT.md` entries                                                                 | the "read by year" half; `ADD-06` -> `done` |
 
 ### The producer (08-S6a)
@@ -137,12 +137,11 @@ Each caller already holds the trip: `requireEditablePlan` returns it in the thre
 three transport functions, and `confirmBookingImport` holds `trip`. Its "a place was created" flag is set **right after `createPlace` resolves**, inside the place resolver, and is not inferred from the resolver's return value: the resolver returns an existing place's id for a name match (nothing created, nothing enqueued) and returns `null` from its `catch` after a later failure in the same row (a place exists, so it enqueues once). Because `persist` and `stamp` can throw after places were created, the enqueue runs in a `finally` guarded by the flag, not as a last statement. `confirmBookingImport` is port-injected and its test mock deliberately throws in `taskQueue`; the ticket either names the mock change or injects the enqueue as a port. `updatePlanPlaceFn` compares the new city with the stored one,
 so `requirePlaceOfPlan` returns the place it already reads. The helper is called **after** the D1 write has succeeded.
 
-**`createPlaceFn` keeps the planner's archive check.** Issue #928 closes the role gap at the repository seam:
-all six place writers resolve a visible trip and enforce `PLACE_WRITE_ROLES` (`owner`, `editor`) before quota or mutation.
-The planner shares that role list. A viewer calling `createPlaceFn` directly is therefore refused by `createPlace` itself;
-08-S6a must preserve that guard rather than introduce a second role policy. `createPlaceFn` still needs
-`requireWritableTrip` before its write so an archived trip is refused as in the planner's other handlers, and the returned
-trip feeds recomputation. Archive behavior in the place repository remains outside #928's scope.
+**The planner owns place creation.** Issue #936 removes the unused inventory-only endpoint and its
+unmounted dialog. `createPlanPlaceFn` remains the only interactive add-place path and retains
+`requireEditablePlan` (archive before role). Issue #928 already enforces `PLACE_WRITE_ROLES`
+(`owner`, `editor`) inside all six repository writers. This stage adds recomputation to the
+remaining seven call sites; it must not restore the removed endpoint.
 
 **The previous departure date of a transport.** The recompute attributes distance to the year of a transport's own
 `departure_date`, which is a column of the `transports` row (a leg is one part of a transport and carries no date the recompute
@@ -155,7 +154,7 @@ missing row, or a row of another trip, means a create and contributes no previou
 
 | Function                                      | Enqueues when                                                                                                            | Years sent                                                                                                                                            |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createPlanPlaceFn`, `createPlaceFn`          | always, after the insert                                                                                                 | all-time + the trip's start year                                                                                                                      |
+| `createPlanPlaceFn`          | always, after the insert                                                                                                 | all-time + the trip's start year                                                                                                                      |
 | `updatePlanPlaceFn`                           | only when the stored `city` differs from the new one                                                                     | same. A place's name, rating, coordinates, visited flag never move a roll-up figure, so no recompute                                                  |
 | `deletePlanPlaceFn`                           | always, after the delete                                                                                                 | same                                                                                                                                                  |
 | `confirmBookingImport`                        | once, at the end, and only if a place was created (flag set right after `createPlace` resolves; enqueued in a `finally`) | same. One envelope set for the whole import, never one per row                                                                                        |
@@ -469,7 +468,7 @@ today. `src/components/atlas/__tests__/copy-rules.test.ts` stays green: no key i
 1. `enqueueTripRollup(scope, trip, otherDates?)` exists in `src/server/queue/travel-stats-fanout.ts`, wraps `enqueueTravelStats`,
    builds no envelope itself, never throws, and is not defined in a route module; `affectedStatYears(startDate, ...otherDates)`
    keeps every existing caller compiling and tested.
-2. `createPlanPlaceFn`, `createPlaceFn`, `deletePlanPlaceFn` call it after the write with the trip's start year; `updatePlanPlaceFn`
+2. `createPlanPlaceFn`, `deletePlanPlaceFn` call it after the write with the trip's start year; `updatePlanPlaceFn`
    calls it only when the city changed (`requirePlaceOfPlan` returns the place it reads); `confirmBookingImport` calls it once,
    only when a place was created (the flag is set when `createPlace` resolves, so a created place whose reservation or `persist` then fails still enqueues, and a reused place does not).
 3. `saveTransportFn`, `saveSearchedConnectionFn` and `deleteTransportFn` also send the transport's departure year, and on a save
@@ -479,8 +478,8 @@ today. `src/components/atlas/__tests__/copy-rules.test.ts` stays green: no key i
 4. `rankIdeasFn`, `reorderPlanFn`, `schedulePlaceFn`, `unschedulePlaceFn`, `updateStopFn`, `setTransportStatusFn`,
    `reorderDayTransportsFn`, day notes and the import `pin` step enqueue nothing (asserted).
 5. A queue binding that throws does not fail any of these writes (asserted for one site of each module).
-6. `createPlaceFn` refuses a caller who cannot write the trip (a viewer; a non-member of a workspace-visible trip; an archived
-   trip) before the insert, and enqueues nothing in that case.
+6. `createPlanPlaceFn` refuses a viewer, a non-member of an organization-visible trip, and an archived-trip write
+   before the insert, and enqueues nothing in those cases. Preserve the authorization tests added by #936.
 7. Isolation, for one site per module, with the queue binding **stubbed** (the fan-out module is not mocked): a trip id from
    another workspace and a private trip the caller is not on both fail as `NotFoundError` with zero envelopes, and every envelope
    that is enqueued carries the caller's `orgId`, the traveller's `userId` and the expected stat years.
@@ -527,7 +526,7 @@ today. `src/components/atlas/__tests__/copy-rules.test.ts` stays green: no key i
 | Queue and KV cost is members x years per write, with no module gate yet           | Low      | Envelopes are tiny and bounded; the collapse window bounds the recomputes; the gate belongs to the module-enforcement work                            |
 | A planned future trip ends the streak at the future year                          | Low      | The caption states the years; skipping future years is a rule about what a streak is and is not decided here                                          |
 | A transport's year row is missed when the departure date moves                    | Medium   | The previous date is read before the write and sent with the new one; a test moves a transport across a year boundary                                 |
-| `createPlaceFn` accepted a viewer's write, and the producer would amplify it      | Medium   | The planner-write guard (writable trip and owner or editor role) goes in before the insert; tested for a viewer and a non-member                      |
+| A refused planner write must not enqueue recomputation      | Medium   | Preserve the existing archive and role guards and test zero envelopes for refused writes                      |
 | The streak tile can print a wrong range for seconds after a new year's first trip | Low      | The all-time recompute can run before the new year's row exists; it heals on the next recompute and is accepted (Edge Cases)                          |
 | Copy in 22 non-English locales for 21 keys                                        | Low      | The parity test blocks a missing key; the `i18n-messages` procedure                                                                                   |
 
@@ -543,8 +542,7 @@ today. `src/components/atlas/__tests__/copy-rules.test.ts` stays green: no key i
   travel-stats export, a colleague's statistics.
 - Gating the panel by entitlement: the module-enforcement stage owns it, through `assertModule`, not a second check here.
 - Backfilling rows for places added before this ships: the next producer, or the next trip edit, rebuilds them; no migration.
-- Deleting `AddPlaceDialog` and `createPlaceFn`, which no screen reaches. The guard is the narrower change and keeps the write safe if a
-  screen adopts it; deleting dead code is a separate ticket if someone wants it.
+- Restoring the unused inventory-only endpoint or dialog removed by #936.
 - A button in the empty state that leads into the map's search, which needs a design for the phone shelf of its own.
 
 ### Blockers
@@ -553,8 +551,8 @@ None. The recompute stage this one depended on is merged; no decision waits on a
 
 ### Backward compatibility (`BACKWARD_COMPATIBILITY.md`)
 
-- **Server-function behaviour (§2).** `createPlaceFn` is tightened: a viewer's call is now refused. No screen calls it, so no client
-  loses a working flow.
+- **Server-function behaviour (§2).** Existing planner inputs and outputs are unchanged; recomputation runs after a successful write.
+  The unused endpoint removal is owned by #936, not this stage.
 - **Queue (§6).** The envelope shape and kind are unchanged. The handler's disposition for a former member's message changes from
   dead-letter to acknowledge; an old in-flight envelope is handled by the new handler, which only makes it quieter.
 - **Locale keys (§5).** 21 keys are added to all 23 locales; none is renamed or removed.
@@ -590,8 +588,8 @@ second ships the model, the screen, the copy and the browser spec.
 
 1. `affectedStatYears` widened to `(startDate, ...otherDates)`; `enqueueTripRollup` in `travel-stats-fanout.ts` and its test (years
    from the start date and from extra dates, the guard on an unusable year, never throws, no envelope when the trip has no members).
-2. `trip.ts` first: `createPlaceFn` gains the planner-write guard (its own commit, named in the ticket body), then `plan.ts` (three
-   functions; `requirePlaceOfPlan` returns the place so the city can be compared) and `booking-import.ts`.
+2. `plan.ts` (three functions; `requirePlaceOfPlan` returns the place so the city can be compared) and `booking-import.ts`: add
+   recomputation after successful writes, preserving the existing planner-write guards.
 3. `transports.ts`: read the previous row by id (`getTransport`, used only when it belongs to the trip) before a save, and the
    row `requireTransportOfTrip` returns before a delete; send both years.
 4. `handlers/travel-stats.ts`: acknowledge a former member's message; update its test.
@@ -622,7 +620,7 @@ Before the first PR of either phase, the "Docs and CI" grep (`AGENTS.md`) runs o
   - `src/server/queue/__tests__/travel-stats-fanout.test.ts` - `enqueueTripRollup` years, extra dates, never throws;
     `affectedStatYears` with zero, one and two further dates.
   - Producer side-effect and isolation tests next to each module (`src/routes/_app/trips/$tripId/-server/__tests__/` for the plan
-    writes, `src/routes/_app/-server/__tests__/` for `createPlaceFn`, `src/server/fns/__tests__/` for transports and the import),
+    writes, `src/server/fns/__tests__/` for transports and the import),
     with the queue binding stubbed and the real envelopes read: arguments per function, the not-enqueue list, a transport moved
     across a year boundary sends both years, a save with no `intent` still reads the previous date, a refusing queue does not fail
     the write, a viewer and a foreign or private trip are refused with zero envelopes and the caller's `orgId`. For
@@ -687,3 +685,11 @@ Before the first PR of either phase, the "Docs and CI" grep (`AGENTS.md`) runs o
 | 35  | Panel verdicts, round 2 (`afk-decide`)                                                        | Product owner, tenancy, accessibility and UX specialists each **ship with fixes** (approve with conditions), every condition applied                                                                                                                                                                                                                                                                                                                                        | Round 1 conditions were all found applied; the new findings were gaps in the design, none a blocker, none `ESCALATE: yes`                                                                      |
 | 36  | Panel verdict, round 2, software architect (`afk-decide`)                                     | **Approve with conditions** (confidence high, `ESCALATE: no`); every condition applied: stale rows 14 and 20 aligned, markdown repaired, the import "created" flag set right after `createPlace` resolves, the not-enqueue list names server functions, the envelope bound corrected to four, the streak window accepted, the handler's doc comments and test name updated                                                                                                  | Decided by software architect sub-agent (confidence high): the code claims hold at HEAD; the defects were stale or contradictory text and one under-specified call site                        |
 | 37  | Independent specification review of the PR (`om-auto-review-pr`)                              | Verdict **request changes** (two majors, no blocker), both resolved in the spec: the failed state is built only after a real-router reachability proof; the trip-level producers' start-year limit is declared as a known limit with a follow-up the slicer may file. Minors applied: Latin digits for years, the atlas journey in `journeys.spec.ts`, the import enqueue in a `finally`, a Backward compatibility section, softened phone-height claim, the docs grep step | Decided by an independent reviewer sub-agent (read-only); every finding checked against the code before it was applied                                                                         |
+
+## Amendment - issue #936: one place-creation endpoint
+
+Issue #936 removes the unmounted `AddPlaceDialog` and `createPlaceFn`. This supersedes the endpoint-retention
+choices in historical Resolved assumptions rows 19 and 23. The operational scope above now has seven producer
+call sites (three planner, three transport, one booking import), with no `trip.ts` producer or endpoint restoration.
+The planner keeps its archive-before-role guard; #928 already added owner/editor enforcement in the repository.
+The implementation PR for #936 records the intentional server-function removal and its compatibility exception.
