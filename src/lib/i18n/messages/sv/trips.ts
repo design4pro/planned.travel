@@ -427,6 +427,17 @@ const messages = {
   'plan.workspace.hidePanel': 'Dölj panelen {label}',
   'plan.workspace.narrowPanel': 'Gör {label} smalare',
   'plan.workspace.widenPanel': 'Gör {label} bredare',
+  'collab.sections.trigger': 'Välj avsnitt',
+  'collab.sections.menuLabel': 'Visa för alla på den här resan',
+  'collab.sections.keepOne': 'Minst ett avsnitt måste vara på.',
+  'collab.sections.failed': 'Ändringen sparades inte',
+  'collab.sections.failedBody': 'Menyn visar det som är sparat nu.',
+  'collab.sections.someHidden': 'Vissa avsnitt är dolda på den här resan.',
+  'collab.sections.turnedOff':
+    'Det här avsnittet stängdes av för resan. Det stängs när du skickar eller rensar det du skriver.',
+  'collab.sections.changed': 'Avsnitten på den här resan har ändrats.',
+  'collab.sections.savedHidden':
+    'Sparat. Det här avsnittet är dolt för resan och stängs nu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

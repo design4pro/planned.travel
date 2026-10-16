@@ -142,7 +142,7 @@ export type RequireOrgOptions = {
   role?: OrganizationRole
   /**
    * Pin the context to one organization. When given, it must match the
-   * session's active organization — a mismatch is a tenancy violation, never a
+   * request's resolved organization — a mismatch is a tenancy violation, never a
    * silent switch.
    */
   organizationId?: string
@@ -150,8 +150,8 @@ export type RequireOrgOptions = {
 
 /**
  * Builds the tenant context for the active organization, enforcing the minimum
- * role. The role comes from the session's membership claim, which Better Auth's
- * organization plugin keeps in step with the `member` table.
+ * role. The caller re-reads the role from `member` for the resolved workspace and
+ * supplies a session carrying that workspace for this request.
  */
 export function requireOrgFrom(
   session: AuthSession | null,

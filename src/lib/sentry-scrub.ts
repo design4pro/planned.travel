@@ -44,6 +44,7 @@ export interface ScrubbableEvent {
 export function scrubEvent<TEvent extends ScrubbableEvent>(
   event: TEvent,
 ): TEvent {
+  event = scrubTelemetry(event)
   const request = event.request
   if (request === undefined) {
     return event
@@ -70,4 +71,34 @@ export function scrubEvent<TEvent extends ScrubbableEvent>(
       data: undefined,
     },
   }
+}
+
+/** Every URL-bearing Sentry channel uses this scrub, including channels that bypass beforeSend. */
+export function scrubTelemetry<T>(value: T): T {
+  function walk(item: unknown): unknown {
+    if (typeof item === 'string')
+      return item
+        .replace(/\/api\/feed\/[^\s?#"'<>]+/g, '/api/feed/[redacted]')
+        .replace(/%2fapi%2ffeed%2f[^\s&"'<>]+/gi, '%2Fapi%2Ffeed%2F[redacted]')
+    if (Array.isArray(item)) {
+      const result = item.map(walk)
+      return result.some((entry, index) => entry !== item[index])
+        ? result
+        : item
+    }
+    if (
+      item !== null &&
+      typeof item === 'object' &&
+      Object.getPrototypeOf(item) === Object.prototype
+    ) {
+      const entries = Object.entries(item)
+      const result = entries.map(([key, entry]) => [key, walk(entry)] as const)
+      return result.some((entry, index) => entry[1] !== entries[index][1])
+        ? Object.fromEntries(result)
+        : item
+    }
+    return item
+  }
+  // This walk preserves the structure and types; only string values have their secret segment removed.
+  return walk(value) as T
 }

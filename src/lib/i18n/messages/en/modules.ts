@@ -946,6 +946,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, including you',
   'collab.thread.today': 'Today',
+  'collab.thread.emptyBody':
+    'Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats.',
   'collab.thread.empty': 'No messages yet',
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',
@@ -1067,6 +1069,53 @@ const messages = {
   'files.action.add': 'Add files',
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
+  'files.calendar.live.action': 'Live calendar link',
+  'files.calendar.live.title': 'Live calendar link',
+  'files.calendar.warning':
+    'Anyone with this link can read this trip’s places, times, addresses and notes, with no account. Treat it like a password.',
+  'files.calendar.enable.action': 'Create a link',
+  'files.calendar.link.once':
+    'Copy it now - we show it only once. If you lose it, turn this link off and create a new one; the old one stops working.',
+  'files.calendar.link.address': 'Link address',
+  'files.calendar.link.copy': 'Copy link',
+  'files.calendar.link.copied': 'Link copied',
+  'files.calendar.link.copyFailed':
+    'We couldn’t copy it. Select the address and copy it yourself.',
+  'files.calendar.link.open': 'Open in your calendar app',
+  'files.calendar.link.google': 'Add to Google Calendar',
+  'files.calendar.link.outlook': 'Add to Outlook',
+  'files.calendar.link.done': 'Done',
+  'files.calendar.link.stays':
+    'Confirmation numbers, prices and files stay in planned.travel.',
+  'files.calendar.freshness':
+    'Calendar apps can take several hours, sometimes longer, to show an edit.',
+  'files.calendar.state.on': 'Calendar link is on',
+  'files.calendar.state.lastFetched':
+    'A calendar last checked this link {when}',
+  'files.calendar.state.neverFetched': 'Not fetched yet',
+  'files.calendar.off.action': 'Turn off',
+  'files.calendar.off.confirmTitle': 'Turn off this calendar link?',
+  'files.calendar.off.confirmBody':
+    'The link stops working now. Calendars keep the events they already have but stop updating.',
+  'files.calendar.off.confirm': 'Turn off',
+  'files.calendar.off.busy': 'Turning off…',
+  'files.calendar.closeGuard.title': 'Close without copying the link?',
+  'files.calendar.closeGuard.body':
+    'We can’t show it again. You would have to make a new one.',
+  'files.calendar.closeGuard.confirm': 'Close anyway',
+  'files.calendar.closeGuard.cancel': 'Keep open',
+  'files.calendar.error.enable':
+    'We couldn’t confirm that the link was created. The current state is shown below. If a link is on but you never saw it, turn it off and create it again.',
+  'files.calendar.error.off':
+    'We couldn’t confirm that the link was turned off. The current state is shown below; try again if you need to.',
+  'files.calendar.error.load':
+    'We couldn’t check this trip’s calendar link. Try again.',
+  'files.calendar.retry': 'Try again',
+  'files.calendar.off.confirmBodyUnused':
+    'Nothing has used this link yet. It stops working now.',
+  'files.calendar.link.fallback':
+    'If your phone can’t add it, open this page on a computer.',
+  'files.calendar.link.newTab': 'opens in a new tab',
   'files.calendar.title': 'Calendar',
   'files.calendar.description':
     'Take this trip into the calendar app you already use.',

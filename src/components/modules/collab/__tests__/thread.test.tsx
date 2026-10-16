@@ -1,8 +1,10 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 
+import { TooltipProvider } from '#/components/ui'
 import { formatWeekday } from '#/lib/format'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -51,14 +53,16 @@ function mount(
 ): void {
   render(
     <I18nProvider locale={locale} messages={messages}>
-      <Thread
-        tripId="trip-1"
-        messages={thread}
-        people={PEOPLE}
-        viewerUserId="user-1"
-        canModerate={false}
-        timeZone="UTC"
-      />
+      <TooltipProvider>
+        <Thread
+          tripId="trip-1"
+          messages={thread}
+          people={PEOPLE}
+          viewerUserId="user-1"
+          canModerate={false}
+          timeZone="UTC"
+        />
+      </TooltipProvider>
     </I18nProvider>,
   )
 }
@@ -144,5 +148,74 @@ describe('the transcript', () => {
     expect(
       screen.getAllByText(formatWeekday('2026-06-24', 'en') ?? ''),
     ).toHaveLength(1)
+  })
+})
+
+describe('translated conversation controls', () => {
+  it('reads the English empty description from the catalogue', () => {
+    mount('en', namespaceCatalogue('modules', En))
+    expect(screen.getByText(En['collab.thread.emptyBody'])).toBeTruthy()
+  })
+  it('reads the empty description from the active catalogue', () => {
+    mount('pl', namespaceCatalogue('modules', Pl))
+    expect(screen.getByText(Pl['collab.thread.emptyBody'])).toBeTruthy()
+  })
+
+  it('translates every reaction name and tooltip', async () => {
+    const user = userEvent.setup()
+    mount('pl', namespaceCatalogue('modules', Pl), [
+      message('m1', 'user-1', '2026-06-23T09:00:00Z', 'Hello'),
+    ])
+    await user.click(
+      screen.getByRole('button', { name: Pl['collab.message.react'] }),
+    )
+    for (const key of [
+      'agree',
+      'love',
+      'funny',
+      'celebrate',
+      'thanks',
+      'looking',
+    ] as const) {
+      const label = Pl[`collab.reaction.${key}`]
+      const button = screen.getByRole('button', { name: label })
+      expect(button.getAttribute('aria-label')).not.toContain('modules.collab.')
+      act(() => button.focus())
+      await waitFor(() =>
+        expect(screen.getByRole('tooltip').textContent).toBe(label),
+      )
+      act(() => button.blur())
+    }
+  })
+
+  it('keeps actions reachable by touch and keyboard and translates Reply', async () => {
+    const user = userEvent.setup()
+    mount('pl', namespaceCatalogue('modules', Pl), [
+      message('m1', 'user-1', '2026-06-23T09:00:00Z', 'Hello'),
+    ])
+    const react = screen.getByRole('button', {
+      name: Pl['collab.message.react'],
+    })
+    const actions = react.parentElement
+    expect(actions?.classList.contains('group-hover/message:opacity-100')).toBe(
+      true,
+    )
+    expect(actions?.classList.contains('focus-within:opacity-100')).toBe(true)
+    expect(actions?.classList.contains('pointer-coarse:opacity-100')).toBe(true)
+    expect(react.tabIndex).toBe(0)
+    const menu = screen.getByRole('button', {
+      name: Pl['collab.message.actionsFor'].replace('{name}', 'Ada Viewer'),
+    })
+    expect(menu.tabIndex).toBe(0)
+    await user.click(menu)
+    expect(
+      screen.getByRole('menuitem', { name: Pl['collab.message.reply'] }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('menuitem', { name: Pl['collab.message.menuEdit'] }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('menuitem', { name: Pl['collab.message.delete'] }),
+    ).toBeTruthy()
   })
 })

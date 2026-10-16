@@ -801,6 +801,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, contigo incluido',
   'collab.thread.today': 'Hoy',
+  'collab.thread.emptyBody':
+    'Todas las personas de este viaje comparten una conversación. Las decisiones que se toman aquí se quedan con el viaje en lugar de dispersarse por chats de grupo.',
   'collab.thread.empty': 'Todavía no hay mensajes',
   'collab.toast.reactionFailed': 'La reacción no se guardó',
   'collab.toast.messageDeleted': 'Mensaje eliminado',
@@ -912,6 +914,53 @@ const messages = {
   'files.action.add': 'Añadir archivos',
   'files.action.choose': 'Elegir archivos',
   'files.action.upload': 'Subir archivos',
+  'files.calendar.live.action': 'Enlace de calendario actualizado',
+  'files.calendar.live.title': 'Enlace de calendario actualizado',
+  'files.calendar.warning':
+    'Cualquiera con este enlace puede leer los lugares, horarios, direcciones y notas del viaje sin una cuenta. Protégelo como una contraseña.',
+  'files.calendar.enable.action': 'Crear un enlace',
+  'files.calendar.link.once':
+    'Cópialo ahora - solo lo mostramos una vez. Si lo pierdes, desactívalo y crea otro; el anterior dejará de funcionar.',
+  'files.calendar.link.address': 'Dirección del enlace',
+  'files.calendar.link.copy': 'Copiar enlace',
+  'files.calendar.link.copied': 'Enlace copiado',
+  'files.calendar.link.copyFailed':
+    'No se pudo copiar. Selecciona la dirección y cópiala manualmente.',
+  'files.calendar.link.open': 'Abrir en tu aplicación de calendario',
+  'files.calendar.link.google': 'Añadir a Google Calendar',
+  'files.calendar.link.outlook': 'Añadir a Outlook',
+  'files.calendar.link.done': 'Listo',
+  'files.calendar.link.stays':
+    'Los números de confirmación, precios y archivos permanecen en planned.travel.',
+  'files.calendar.freshness':
+    'Las aplicaciones de calendario pueden tardar varias horas, a veces más, en mostrar un cambio.',
+  'files.calendar.state.on': 'El enlace de calendario está activo',
+  'files.calendar.state.lastFetched':
+    'Un calendario consultó este enlace por última vez {when}',
+  'files.calendar.state.neverFetched': 'Aún no se ha consultado',
+  'files.calendar.off.action': 'Desactivar',
+  'files.calendar.off.confirmTitle': '¿Desactivar este enlace de calendario?',
+  'files.calendar.off.confirmBody':
+    'El enlace deja de funcionar de inmediato. Los calendarios conservan los eventos que ya tienen, pero dejan de actualizarlos.',
+  'files.calendar.off.confirm': 'Desactivar',
+  'files.calendar.off.busy': 'Desactivando…',
+  'files.calendar.closeGuard.title': '¿Cerrar sin copiar el enlace?',
+  'files.calendar.closeGuard.body':
+    'No podemos volver a mostrarlo. Tendrás que crear otro.',
+  'files.calendar.closeGuard.confirm': 'Cerrar de todos modos',
+  'files.calendar.closeGuard.cancel': 'Mantener abierto',
+  'files.calendar.error.enable':
+    'No se pudo confirmar la creación del enlace. Abajo aparece su estado actual. Si está activo pero no lo has visto, desactívalo y vuelve a crearlo.',
+  'files.calendar.error.off':
+    'No se pudo confirmar la desactivación del enlace. Abajo aparece su estado actual; inténtalo de nuevo si hace falta.',
+  'files.calendar.error.load':
+    'No se pudo comprobar el enlace de calendario de este viaje. Inténtalo de nuevo.',
+  'files.calendar.retry': 'Reintentar',
+  'files.calendar.off.confirmBodyUnused':
+    'Nadie ha usado este enlace todavía. Deja de funcionar de inmediato.',
+  'files.calendar.link.fallback':
+    'Si no puedes añadirlo desde el teléfono, abre esta página en un ordenador.',
+  'files.calendar.link.newTab': 'se abre en una pestaña nueva',
   'files.calendar.title': 'Calendario',
   'files.calendar.description':
     'Lleva este viaje a la aplicación de calendario que ya usas.',

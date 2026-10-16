@@ -806,6 +806,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, te compreso',
   'collab.thread.today': 'Oggi',
+  'collab.thread.emptyBody':
+    'Tutti i partecipanti a questo viaggio condividono una conversazione. Le decisioni prese qui restano con il viaggio invece di disperdersi nelle chat di gruppo.',
   'collab.thread.empty': 'Ancora nessun messaggio',
   'collab.toast.reactionFailed': 'La reazione non è stata salvata',
   'collab.toast.messageDeleted': 'Messaggio eliminato',
@@ -917,6 +919,53 @@ const messages = {
   'files.action.add': 'Aggiungi file',
   'files.action.choose': 'Scegli i file',
   'files.action.upload': 'Carica i file',
+  'files.calendar.live.action': 'Link al calendario aggiornato',
+  'files.calendar.live.title': 'Link al calendario aggiornato',
+  'files.calendar.warning':
+    'Chiunque abbia questo link può leggere luoghi, orari, indirizzi e note del viaggio senza un account. Proteggilo come una password.',
+  'files.calendar.enable.action': 'Crea un link',
+  'files.calendar.link.once':
+    'Copialo ora - lo mostriamo una sola volta. Se lo perdi, disattivalo e creane uno nuovo; quello vecchio smetterà di funzionare.',
+  'files.calendar.link.address': 'Indirizzo del link',
+  'files.calendar.link.copy': 'Copia link',
+  'files.calendar.link.copied': 'Link copiato',
+  'files.calendar.link.copyFailed':
+    'Impossibile copiare. Seleziona l’indirizzo e copialo manualmente.',
+  'files.calendar.link.open': 'Apri nella tua app calendario',
+  'files.calendar.link.google': 'Aggiungi a Google Calendar',
+  'files.calendar.link.outlook': 'Aggiungi a Outlook',
+  'files.calendar.link.done': 'Fatto',
+  'files.calendar.link.stays':
+    'Numeri di conferma, prezzi e file rimangono in planned.travel.',
+  'files.calendar.freshness':
+    'Le app calendario possono impiegare diverse ore, a volte di più, per mostrare una modifica.',
+  'files.calendar.state.on': 'Il link al calendario è attivo',
+  'files.calendar.state.lastFetched':
+    'Un calendario ha controllato questo link l’ultima volta {when}',
+  'files.calendar.state.neverFetched': 'Non ancora consultato',
+  'files.calendar.off.action': 'Disattiva',
+  'files.calendar.off.confirmTitle': 'Disattivare questo link al calendario?',
+  'files.calendar.off.confirmBody':
+    'Il link smette subito di funzionare. I calendari conservano gli eventi già ricevuti, ma non li aggiornano più.',
+  'files.calendar.off.confirm': 'Disattiva',
+  'files.calendar.off.busy': 'Disattivazione…',
+  'files.calendar.closeGuard.title': 'Chiudere senza copiare il link?',
+  'files.calendar.closeGuard.body':
+    'Non possiamo mostrarlo di nuovo. Dovrai crearne uno nuovo.',
+  'files.calendar.closeGuard.confirm': 'Chiudi comunque',
+  'files.calendar.closeGuard.cancel': 'Mantieni aperto',
+  'files.calendar.error.enable':
+    'Impossibile confermare la creazione del link. Lo stato attuale è mostrato sotto. Se è attivo ma non l’hai mai visto, disattivalo e ricrealo.',
+  'files.calendar.error.off':
+    'Impossibile confermare la disattivazione del link. Lo stato attuale è mostrato sotto; riprova se necessario.',
+  'files.calendar.error.load':
+    'Impossibile verificare il link al calendario di questo viaggio. Riprova.',
+  'files.calendar.retry': 'Riprova',
+  'files.calendar.off.confirmBodyUnused':
+    'Questo link non è ancora stato usato. Smette subito di funzionare.',
+  'files.calendar.link.fallback':
+    'Se non riesci ad aggiungerlo dal telefono, apri questa pagina su un computer.',
+  'files.calendar.link.newTab': 'si apre in una nuova scheda',
   'files.calendar.title': 'Calendario',
   'files.calendar.description':
     'Porta questo viaggio nell’app di calendario che usi già.',

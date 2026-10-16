@@ -417,6 +417,18 @@ const messages = {
   'plan.workspace.hidePanel': '{label}パネルを非表示',
   'plan.workspace.narrowPanel': '{label}を狭める',
   'plan.workspace.widenPanel': '{label}を広げる',
+  'collab.sections.trigger': 'セクションを選択',
+  'collab.sections.menuLabel': 'この旅行の全員に表示',
+  'collab.sections.keepOne': '少なくとも1つのセクションは有効にしてください。',
+  'collab.sections.failed': '変更を保存できませんでした',
+  'collab.sections.failedBody':
+    'メニューには現在保存されている状態が表示されています。',
+  'collab.sections.someHidden': 'この旅行では一部のセクションが非表示です。',
+  'collab.sections.turnedOff':
+    'このセクションは旅行全体で無効になりました。入力中の内容を送信または消去すると閉じます。',
+  'collab.sections.changed': 'この旅行のセクションが変更されました。',
+  'collab.sections.savedHidden':
+    '保存しました。このセクションは旅行全体で非表示のため、閉じます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

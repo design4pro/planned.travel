@@ -442,6 +442,19 @@ const messages = {
   'plan.workspace.hidePanel': 'Απόκρυψη πίνακα {label}',
   'plan.workspace.narrowPanel': 'Στένεμα {label}',
   'plan.workspace.widenPanel': 'Διεύρυνση {label}',
+  'collab.sections.trigger': 'Επιλογή ενοτήτων',
+  'collab.sections.menuLabel': 'Εμφάνιση σε όλους σε αυτό το ταξίδι',
+  'collab.sections.keepOne': 'Τουλάχιστον μία ενότητα παραμένει ενεργή.',
+  'collab.sections.failed': 'Η αλλαγή δεν αποθηκεύτηκε',
+  'collab.sections.failedBody':
+    'Το μενού δείχνει την τρέχουσα αποθηκευμένη κατάσταση.',
+  'collab.sections.someHidden':
+    'Ορισμένες ενότητες είναι κρυφές σε αυτό το ταξίδι.',
+  'collab.sections.turnedOff':
+    'Αυτή η ενότητα απενεργοποιήθηκε για το ταξίδι. Θα κλείσει όταν στείλετε ή διαγράψετε όσα γράφετε.',
+  'collab.sections.changed': 'Οι ενότητες αυτού του ταξιδιού άλλαξαν.',
+  'collab.sections.savedHidden':
+    'Αποθηκεύτηκε. Αυτή η ενότητα είναι κρυφή για το ταξίδι και κλείνει τώρα.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -761,6 +761,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, có cả bạn',
   'collab.thread.today': 'Hôm nay',
+  'collab.thread.emptyBody':
+    'Mọi người trong chuyến đi này cùng dùng một cuộc trò chuyện. Các quyết định ở đây được lưu cùng chuyến đi thay vì rải rác trong các nhóm trò chuyện.',
   'collab.thread.empty': 'Chưa có tin nhắn nào',
   'collab.toast.reactionFailed': 'Chưa lưu được biểu cảm',
   'collab.toast.messageDeleted': 'Đã xóa tin nhắn',
@@ -863,6 +865,53 @@ const messages = {
   'files.action.add': 'Thêm tệp',
   'files.action.choose': 'Chọn tệp',
   'files.action.upload': 'Tải tệp lên',
+  'files.calendar.live.action': 'Liên kết lịch cập nhật',
+  'files.calendar.live.title': 'Liên kết lịch cập nhật',
+  'files.calendar.warning':
+    'Bất kỳ ai có liên kết này đều có thể đọc địa điểm, thời gian, địa chỉ và ghi chú của chuyến đi mà không cần tài khoản. Hãy bảo vệ như mật khẩu.',
+  'files.calendar.enable.action': 'Tạo liên kết',
+  'files.calendar.link.once':
+    'Sao chép ngay - chúng tôi chỉ hiển thị một lần. Nếu mất, hãy tắt và tạo liên kết mới; liên kết cũ sẽ ngừng hoạt động.',
+  'files.calendar.link.address': 'Địa chỉ liên kết',
+  'files.calendar.link.copy': 'Sao chép liên kết',
+  'files.calendar.link.copied': 'Đã sao chép liên kết',
+  'files.calendar.link.copyFailed':
+    'Không thể sao chép. Hãy chọn địa chỉ và tự sao chép.',
+  'files.calendar.link.open': 'Mở trong ứng dụng lịch',
+  'files.calendar.link.google': 'Thêm vào Google Lịch',
+  'files.calendar.link.outlook': 'Thêm vào Outlook',
+  'files.calendar.link.done': 'Xong',
+  'files.calendar.link.stays':
+    'Mã xác nhận, giá và tệp vẫn ở trong planned.travel.',
+  'files.calendar.freshness':
+    'Ứng dụng lịch có thể mất vài giờ, đôi khi lâu hơn, để hiển thị thay đổi.',
+  'files.calendar.state.on': 'Liên kết lịch đang bật',
+  'files.calendar.state.lastFetched':
+    'Một lịch đã kiểm tra liên kết này lần cuối {when}',
+  'files.calendar.state.neverFetched': 'Chưa được tải',
+  'files.calendar.off.action': 'Tắt',
+  'files.calendar.off.confirmTitle': 'Tắt liên kết lịch này?',
+  'files.calendar.off.confirmBody':
+    'Liên kết sẽ ngừng hoạt động ngay. Lịch giữ các sự kiện đã có nhưng không cập nhật nữa.',
+  'files.calendar.off.confirm': 'Tắt',
+  'files.calendar.off.busy': 'Đang tắt…',
+  'files.calendar.closeGuard.title': 'Đóng mà không sao chép liên kết?',
+  'files.calendar.closeGuard.body':
+    'Chúng tôi không thể hiển thị lại. Bạn sẽ phải tạo liên kết mới.',
+  'files.calendar.closeGuard.confirm': 'Vẫn đóng',
+  'files.calendar.closeGuard.cancel': 'Giữ mở',
+  'files.calendar.error.enable':
+    'Không thể xác nhận liên kết đã được tạo. Trạng thái hiện tại ở bên dưới. Nếu đang bật nhưng bạn chưa thấy liên kết, hãy tắt rồi tạo lại.',
+  'files.calendar.error.off':
+    'Không thể xác nhận liên kết đã được tắt. Trạng thái hiện tại ở bên dưới; hãy thử lại nếu cần.',
+  'files.calendar.error.load':
+    'Không thể kiểm tra liên kết lịch của chuyến đi này. Hãy thử lại.',
+  'files.calendar.retry': 'Thử lại',
+  'files.calendar.off.confirmBodyUnused':
+    'Liên kết này chưa được sử dụng. Nó sẽ ngừng hoạt động ngay.',
+  'files.calendar.link.fallback':
+    'Nếu không thêm được trên điện thoại, hãy mở trang này trên máy tính.',
+  'files.calendar.link.newTab': 'mở trong thẻ mới',
   'files.calendar.title': 'Lịch',
   'files.calendar.description':
     'Đưa chuyến đi này vào ứng dụng lịch bạn đang dùng.',

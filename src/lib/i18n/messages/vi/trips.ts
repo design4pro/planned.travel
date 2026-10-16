@@ -421,6 +421,17 @@ const messages = {
   'plan.workspace.hidePanel': 'Ẩn bảng {label}',
   'plan.workspace.narrowPanel': 'Thu hẹp {label}',
   'plan.workspace.widenPanel': 'Mở rộng {label}',
+  'collab.sections.trigger': 'Chọn các phần',
+  'collab.sections.menuLabel': 'Hiển thị cho mọi người trong chuyến đi',
+  'collab.sections.keepOne': 'Ít nhất một phần phải được bật.',
+  'collab.sections.failed': 'Thay đổi chưa được lưu',
+  'collab.sections.failedBody': 'Menu hiển thị trạng thái hiện đã lưu.',
+  'collab.sections.someHidden': 'Một số phần bị ẩn trong chuyến đi này.',
+  'collab.sections.turnedOff':
+    'Phần này đã bị tắt cho chuyến đi. Phần sẽ đóng khi bạn gửi hoặc xóa nội dung đang viết.',
+  'collab.sections.changed': 'Các phần của chuyến đi này đã thay đổi.',
+  'collab.sections.savedHidden':
+    'Đã lưu. Phần này bị ẩn cho chuyến đi nên sẽ đóng ngay bây giờ.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

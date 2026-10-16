@@ -24,12 +24,13 @@ import {
   PopoverTrigger,
   Textarea,
   Tooltip,
+  toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
-import type { Locale, Translate } from '#/lib/i18n'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import { dayKeyIn, todayKeyIn } from '#/lib/time'
 import {
   deleteMessageFn,
@@ -47,7 +48,7 @@ import type { CollabPerson, MessageData } from './types'
 const MAX_LENGTH = 4000
 
 /** The reactions a travel thread actually uses. Six, not an emoji keyboard. */
-const REACTIONS: ReadonlyArray<{ emoji: string; label: string }> = [
+const REACTIONS: ReadonlyArray<{ emoji: string; label: MessageKey }> = [
   { emoji: '👍', label: 'modules.collab.reaction.agree' },
   { emoji: '❤️', label: 'modules.collab.reaction.love' },
   { emoji: '😂', label: 'modules.collab.reaction.funny' },
@@ -130,6 +131,8 @@ export interface ThreadProps {
   readonly canModerate: boolean
   /** IANA zone every timestamp in the transcript is read in. */
   readonly timeZone: string
+  readonly onDirtyChange?: (dirty: boolean) => void
+  readonly turnedOff?: boolean
 }
 
 export function Thread({
@@ -139,6 +142,8 @@ export function Thread({
   viewerUserId,
   canModerate,
   timeZone,
+  onDirtyChange,
+  turnedOff = false,
 }: ThreadProps) {
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
   const t = useTranslate()
@@ -201,7 +206,7 @@ export function Thread({
             size="sm"
             icon={<SendHorizontal />}
             title={t('modules.collab.thread.empty')}
-            description="Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats."
+            description={t('modules.collab.thread.emptyBody')}
           />
         ) : (
           <ol className="flex flex-col gap-1 py-1">
@@ -272,6 +277,8 @@ export function Thread({
 
       <Composer
         tripId={tripId}
+        onDirtyChange={onDirtyChange}
+        turnedOff={turnedOff}
         replyTo={replyTo}
         editing={editing}
         people={people}
@@ -417,13 +424,12 @@ function MessageRow({
             {message.body}
           </div>
 
-          {/* The row's own actions. Hidden until the row is hovered or something
-              inside it has focus, so a long thread is quiet — but always in the tab
-              order, so the keyboard never loses them. */}
+          {/* Always visible on touch; hover and focus reveal actions for fine
+              pointers. Opacity keeps the controls in the keyboard tab order. */}
           <span
             className={cn(
               'flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-fast ease-out-quint',
-              'group-hover/message:opacity-100 focus-within:opacity-100',
+              'group-hover/message:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100',
             )}
           >
             <ReactionPicker onPick={onReact} mine={myReactions} />
@@ -432,7 +438,7 @@ function MessageRow({
               size="sm"
               items={[
                 {
-                  label: 'Reply',
+                  label: t('modules.collab.message.reply'),
                   icon: <SendHorizontal aria-hidden />,
                   onSelect: onReply,
                 },
@@ -529,11 +535,11 @@ function ReactionPicker({
       <PopoverContent align="center" className="w-auto p-1.5">
         <div className="flex items-center gap-0.5">
           {REACTIONS.map((reaction) => (
-            <Tooltip key={reaction.emoji} content={reaction.label}>
+            <Tooltip key={reaction.emoji} content={t(reaction.label)}>
               <button
                 type="button"
                 aria-pressed={mine.includes(reaction.emoji)}
-                aria-label={reaction.label}
+                aria-label={t(reaction.label)}
                 onClick={() => {
                   onPick(reaction.emoji)
                   setOpen(false)
@@ -564,6 +570,8 @@ function Composer({
   people,
   onClearReply,
   onClearEditing,
+  onDirtyChange,
+  turnedOff,
 }: {
   tripId: string
   replyTo: MessageData | null
@@ -571,17 +579,29 @@ function Composer({
   people: ReadonlyArray<CollabPerson>
   onClearReply: () => void
   onClearEditing: () => void
+  onDirtyChange?: (dirty: boolean) => void
+  turnedOff: boolean
 }) {
   const t = useTranslate()
   const [body, setBody] = useState('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const off = useRef(turnedOff)
+  off.current = turnedOff
+  useEffect(() => {
+    onDirtyChange?.(body.length > 0 || editing !== null)
+  }, [body, editing, onDirtyChange])
 
   const post = useAction(postMessageFn, {
     failure: t('modules.collab.toast.notSent'),
     fallback: t('modules.collab.toast.notSentBody'),
   })
   const edit = useAction(editMessageFn, {
-    success: t('modules.collab.toast.messageUpdated'),
+    success: () =>
+      t(
+        off.current
+          ? 'trips.collab.sections.savedHidden'
+          : 'modules.collab.toast.messageUpdated',
+      ),
     failure: t('modules.collab.toast.editFailed'),
   })
   const action = editing === null ? post : edit
@@ -622,6 +642,7 @@ function Composer({
       data: { tripId, body: trimmed, replyToId: replyTo?.id ?? '' },
     })
     if (result !== null) {
+      if (off.current) toast.success(t('trips.collab.sections.savedHidden'))
       setBody('')
       onClearReply()
     }

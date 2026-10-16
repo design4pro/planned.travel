@@ -448,6 +448,17 @@ const messages = {
   'plan.workspace.hidePanel': 'Skrýt panel {label}',
   'plan.workspace.narrowPanel': 'Zúžit {label}',
   'plan.workspace.widenPanel': 'Rozšířit {label}',
+  'collab.sections.trigger': 'Vybrat sekce',
+  'collab.sections.menuLabel': 'Zobrazit všem na této cestě',
+  'collab.sections.keepOne': 'Alespoň jedna sekce musí zůstat zapnutá.',
+  'collab.sections.failed': 'Změnu se nepodařilo uložit',
+  'collab.sections.failedBody': 'Nabídka ukazuje aktuálně uložený stav.',
+  'collab.sections.someHidden': 'Některé sekce jsou na této cestě skryté.',
+  'collab.sections.turnedOff':
+    'Tato sekce byla pro cestu vypnuta. Zavře se, až odešlete nebo vymažete rozepsaný text.',
+  'collab.sections.changed': 'Sekce této cesty se změnily.',
+  'collab.sections.savedHidden':
+    'Uloženo. Tato sekce je pro cestu skrytá, proto se nyní zavře.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
