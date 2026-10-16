@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Để trống để giữ trong bảng địa điểm.',
   'plan.editor.unplanned': 'Để chưa lên kế hoạch',
   'plan.editor.dayNamed': 'Ngày {day} · {title}',
+  'plan.editor.stopFallback': 'Điểm dừng này',
   'plan.editor.dayNumber': 'Ngày {day}',
   'plan.editor.visited': 'Đã ghé thăm',
   'plan.editor.visitedHint': 'Đánh dấu ghim bằng dấu tích.',

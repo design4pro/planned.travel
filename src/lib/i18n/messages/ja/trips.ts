@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': '空欄のままにすると場所パネルに残ります。',
   'plan.editor.unplanned': '未計画のままにする',
   'plan.editor.dayNamed': '{day}日目 · {title}',
+  'plan.editor.stopFallback': 'この立ち寄り先',
   'plan.editor.dayNumber': '{day}日目',
   'plan.editor.visited': '訪問済み',
   'plan.editor.visitedHint': 'ピンにチェックを付けます。',

@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Déjalo vacío para mantenerlo en el panel de lugares.',
   'plan.editor.unplanned': 'Dejar sin planificar',
   'plan.editor.dayNamed': 'Día {day} · {title}',
+  'plan.editor.stopFallback': 'Esta parada',
   'plan.editor.dayNumber': 'Día {day}',
   'plan.editor.visited': 'Ya visitado',
   'plan.editor.visitedHint': 'Marca el pin con una señal de verificación.',

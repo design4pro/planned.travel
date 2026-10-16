@@ -43,6 +43,7 @@ const messages = {
     'Pozostaw puste, aby zachować miejsce w panelu miejsc.',
   'plan.editor.unplanned': 'Pozostaw bez planu',
   'plan.editor.dayNamed': 'Dzień {day} · {title}',
+  'plan.editor.stopFallback': 'Ten przystanek',
   'plan.editor.dayNumber': 'Dzień {day}',
   'plan.editor.visited': 'Już odwiedzone',
   'plan.editor.visitedHint': 'Oznacza pinezkę znacznikiem wyboru.',

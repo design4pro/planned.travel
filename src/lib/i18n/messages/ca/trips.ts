@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Deixa-ho buit per mantenir-lo al tauler de llocs.',
   'plan.editor.unplanned': 'Deixa sense planificar',
   'plan.editor.dayNamed': 'Dia {day} · {title}',
+  'plan.editor.stopFallback': 'Aquesta parada',
   'plan.editor.dayNumber': 'Dia {day}',
   'plan.editor.visited': 'Ja visitat',
   'plan.editor.visitedHint': 'Marca el pin amb una marca de verificació.',

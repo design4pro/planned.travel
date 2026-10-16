@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Lascia vuoto per tenerlo nel pannello dei luoghi.',
   'plan.editor.unplanned': 'Lascia non pianificato',
   'plan.editor.dayNamed': 'Giorno {day} · {title}',
+  'plan.editor.stopFallback': 'Questa tappa',
   'plan.editor.dayNumber': 'Giorno {day}',
   'plan.editor.visited': 'Già visitato',
   'plan.editor.visitedHint': 'Segna il pin con una spunta.',

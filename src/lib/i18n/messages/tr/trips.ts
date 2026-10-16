@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Yerler panelinde tutmak için boş bırakın.',
   'plan.editor.unplanned': 'Planlamadan bırak',
   'plan.editor.dayNamed': '{day}. gün · {title}',
+  'plan.editor.stopFallback': 'Bu durak',
   'plan.editor.dayNumber': '{day}. gün',
   'plan.editor.visited': 'Zaten ziyaret edildi',
   'plan.editor.visitedHint': 'İğneyi bir onay işaretiyle işaretler.',

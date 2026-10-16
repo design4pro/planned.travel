@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Αφήστε κενό για να παραμείνει στον πίνακα μερών.',
   'plan.editor.unplanned': 'Χωρίς προγραμματισμό',
   'plan.editor.dayNamed': 'Ημέρα {day} · {title}',
+  'plan.editor.stopFallback': 'Αυτή η στάση',
   'plan.editor.dayNumber': 'Ημέρα {day}',
   'plan.editor.visited': 'Έχει ήδη γίνει επίσκεψη',
   'plan.editor.visitedHint': 'Σημειώνει την καρφίτσα με ένα τικ.',

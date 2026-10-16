@@ -42,6 +42,7 @@ const messages = {
     'Оставьте пустым, чтобы сохранить место в панели мест.',
   'plan.editor.unplanned': 'Оставить без плана',
   'plan.editor.dayNamed': 'День {day} · {title}',
+  'plan.editor.stopFallback': 'Эта остановка',
   'plan.editor.dayNumber': 'День {day}',
   'plan.editor.visited': 'Уже посещено',
   'plan.editor.visitedHint': 'Отмечает метку галочкой.',

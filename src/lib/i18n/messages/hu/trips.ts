@@ -42,6 +42,7 @@ const messages = {
   'plan.editor.dayHint': 'Hagyd üresen, hogy a helyek paneljén maradjon.',
   'plan.editor.unplanned': 'Maradjon tervezetlen',
   'plan.editor.dayNamed': '{day}. nap · {title}',
+  'plan.editor.stopFallback': 'Ez a megálló',
   'plan.editor.dayNumber': '{day}. nap',
   'plan.editor.visited': 'Már meglátogatva',
   'plan.editor.visitedHint': 'Pipával jelöli a térképtűt.',

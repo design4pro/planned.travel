@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Lämna tomt för att behålla platsen i platspanelen.',
   'plan.editor.unplanned': 'Lämna oplanerad',
   'plan.editor.dayNamed': 'Dag {day} · {title}',
+  'plan.editor.stopFallback': 'Det här stoppet',
   'plan.editor.dayNumber': 'Dag {day}',
   'plan.editor.visited': 'Redan besökt',
   'plan.editor.visitedHint': 'Markerar nålen med en bock.',

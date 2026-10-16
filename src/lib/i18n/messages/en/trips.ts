@@ -44,6 +44,7 @@ const messages = {
   'plan.editor.dayHint': 'Leave this unset to keep it in the places panel.',
   'plan.editor.unplanned': 'Leave it unplanned',
   'plan.editor.dayNamed': 'Day {day} · {title}',
+  'plan.editor.stopFallback': 'This stop',
   'plan.editor.dayNumber': 'Day {day}',
   'plan.editor.visited': 'Already been',
   'plan.editor.visitedHint': 'Marks the pin with a tick.',

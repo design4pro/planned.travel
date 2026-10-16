@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Laat leeg om de plek in het plekkenpaneel te houden.',
   'plan.editor.unplanned': 'Ongepland laten',
   'plan.editor.dayNamed': 'Dag {day} · {title}',
+  'plan.editor.stopFallback': 'Deze stop',
   'plan.editor.dayNumber': 'Dag {day}',
   'plan.editor.visited': 'Al bezocht',
   'plan.editor.visitedHint': 'Markeert de pin met een vinkje.',

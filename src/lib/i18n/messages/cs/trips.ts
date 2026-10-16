@@ -41,6 +41,7 @@ const messages = {
   'plan.editor.dayHint': 'Ponechte prázdné, aby místo zůstalo v panelu míst.',
   'plan.editor.unplanned': 'Ponechat nenaplánované',
   'plan.editor.dayNamed': 'Den {day} · {title}',
+  'plan.editor.stopFallback': 'Tato zastávka',
   'plan.editor.dayNumber': 'Den {day}',
   'plan.editor.visited': 'Již navštíveno',
   'plan.editor.visitedHint': 'Označí špendlík zaškrtnutím.',
