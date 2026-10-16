@@ -1,6 +1,8 @@
 /** The collaboration module's public surface. */
-export { NotesBoard, PollsBoard } from './collab-board'
-export { NoteDialog, PollDialog } from './collab-dialogs'
+export { NotesBoard } from './notes-board'
+export { NoteDialog } from './note-dialog'
+export { PollDialog } from './poll-dialog'
+export { PollsBoard } from './polls-board'
 export { pollOptionsError } from './poll-options'
 export { PresenceBar } from './presence-bar'
 export { Thread } from './thread'
