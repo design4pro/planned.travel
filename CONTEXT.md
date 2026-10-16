@@ -52,3 +52,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Passkey** — a credential held by a person's device, password manager or security key that signs them in without a password. It is added and removed by the person themselves, never on their behalf by someone acting as them. _Avoid_: "security key" for the credential itself, "fingerprint".
 
 - **Planner workspace** - the map and its floating rails; rail widths persist per trip locally, while unfolded days persist only for the browser session.
+
+- **Calendar feed** — a session-less, owner-bound, read-only calendar of the trips named by a link; revocable; distinct from a Share token, which names one trip resource. _Avoid_: subscription, which is a paid plan.
