@@ -179,10 +179,16 @@ export function ConfirmDialog({
   request,
   onOpenChange,
   pending = false,
+  busyLabel,
+  cancelLabel,
+  onCloseAutoFocus,
 }: {
   request: ConfirmRequest | null
   onOpenChange: (open: boolean) => void
   pending?: boolean
+  busyLabel?: string
+  cancelLabel?: string
+  onCloseAutoFocus?: React.ComponentProps<typeof DialogContent>['onCloseAutoFocus']
 }) {
   // `useUiCopy` rather than `useTranslate`: the atlas and map suites render
   // this dialog with no provider above it, and `src/components/ui/copy.ts`
@@ -192,7 +198,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={request !== null} onOpenChange={onOpenChange}>
-      <DialogContent size="sm">
+      <DialogContent size="sm" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{request?.title ?? ''}</DialogTitle>
           <DialogDescription>{request?.description ?? ''}</DialogDescription>
@@ -204,14 +210,14 @@ export function ConfirmDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            {t('ui.action.keep')}
+            {cancelLabel ?? t('ui.action.keep')}
           </Button>
           <Button
             type="button"
             variant="danger"
             shape="pill"
             loading={pending}
-            loadingLabel={t('ui.status.removing')}
+            loadingLabel={busyLabel ?? t('ui.status.removing')}
             onClick={() => {
               void request?.onConfirm()
             }}

@@ -48,6 +48,7 @@ import { Route as AppTripsIndexRouteImport } from './routes/_app/trips/index'
 import { Route as AppTripsTripIdRouteRouteImport } from './routes/_app/trips/$tripId/route'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiDevSeedRouteImport } from './routes/api/dev/seed'
+import { Route as ApiFeedSplatRouteImport } from './routes/api/feed/$'
 import { Route as ApiPolarWebhookRouteImport } from './routes/api/polar/webhook'
 import { Route as ApiSandcastleSplatRouteImport } from './routes/api/sandcastle/$'
 import { Route as ApiTilesSplatRouteImport } from './routes/api/tiles/$'
@@ -262,6 +263,11 @@ const ApiDevSeedRoute = ApiDevSeedRouteImport.update({
   path: '/api/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiFeedSplatRoute = ApiFeedSplatRouteImport.update({
+  id: '/api/feed/$',
+  path: '/api/feed/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPolarWebhookRoute = ApiPolarWebhookRouteImport.update({
   id: '/api/polar/webhook',
   path: '/api/polar/webhook',
@@ -378,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
+  '/api/feed/$': typeof ApiFeedSplatRoute
   '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
@@ -430,6 +437,7 @@ export interface FileRoutesByTo {
   '/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
+  '/api/feed/$': typeof ApiFeedSplatRoute
   '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
@@ -488,6 +496,7 @@ export interface FileRoutesById {
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
+  '/api/feed/$': typeof ApiFeedSplatRoute
   '/api/polar/webhook': typeof ApiPolarWebhookRoute
   '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
@@ -546,6 +555,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
+    | '/api/feed/$'
     | '/api/polar/webhook'
     | '/api/sandcastle/$'
     | '/api/tiles/$'
@@ -598,6 +608,7 @@ export interface FileRouteTypes {
     | '/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
+    | '/api/feed/$'
     | '/api/polar/webhook'
     | '/api/sandcastle/$'
     | '/api/tiles/$'
@@ -655,6 +666,7 @@ export interface FileRouteTypes {
     | '/_app/settings/security'
     | '/api/auth/$'
     | '/api/dev/seed'
+    | '/api/feed/$'
     | '/api/polar/webhook'
     | '/api/sandcastle/$'
     | '/api/tiles/$'
@@ -693,6 +705,7 @@ export interface RootRouteChildren {
   authAcceptInvitationInvitationIdRoute: typeof authAcceptInvitationInvitationIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiDevSeedRoute: typeof ApiDevSeedRoute
+  ApiFeedSplatRoute: typeof ApiFeedSplatRoute
   ApiPolarWebhookRoute: typeof ApiPolarWebhookRoute
   ApiSandcastleSplatRoute: typeof ApiSandcastleSplatRoute
   ApiTilesSplatRoute: typeof ApiTilesSplatRoute
@@ -975,6 +988,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/feed/$': {
+      id: '/api/feed/$'
+      path: '/api/feed/$'
+      fullPath: '/api/feed/$'
+      preLoaderRoute: typeof ApiFeedSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/polar/webhook': {
       id: '/api/polar/webhook'
       path: '/api/polar/webhook'
@@ -1225,6 +1245,7 @@ const rootRouteChildren: RootRouteChildren = {
   authAcceptInvitationInvitationIdRoute: authAcceptInvitationInvitationIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiDevSeedRoute: ApiDevSeedRoute,
+  ApiFeedSplatRoute: ApiFeedSplatRoute,
   ApiPolarWebhookRoute: ApiPolarWebhookRoute,
   ApiSandcastleSplatRoute: ApiSandcastleSplatRoute,
   ApiTilesSplatRoute: ApiTilesSplatRoute,

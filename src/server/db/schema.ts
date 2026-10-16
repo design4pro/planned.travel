@@ -3201,3 +3201,24 @@ export const airports = sqliteTable(
     ...latLngChecks('airports_lat_chk', t.lat, t.lng),
   ],
 )
+
+/** Owner-bound bearer links. Only a digest is persisted; enabling always replaces the secret. */
+export const calendarFeeds = sqliteTable('calendar_feeds', {
+  id: pk(),
+  organizationId: orgRef(),
+  userId: userRef('user_id').notNull(),
+  tripId: text('trip_id').references(() => trips.id, { onDelete: 'cascade' }),
+  scope: text('scope').notNull(),
+  tokenDigest: text('token_digest').notNull(),
+  revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
+  rotatedAt: integer('rotated_at', { mode: 'timestamp_ms' }),
+  lastServedAt: integer('last_served_at', { mode: 'timestamp_ms' }),
+  ...timestamps(),
+}, (t) => [
+  uniqueIndex('calendar_feeds_token_unq').on(t.tokenDigest),
+  uniqueIndex('calendar_feeds_workspace_unq').on(t.organizationId, t.userId).where(sql`${t.scope} = 'workspace'`),
+  uniqueIndex('calendar_feeds_trip_unq').on(t.organizationId, t.userId, t.tripId).where(sql`${t.scope} = 'trip'`),
+  index('calendar_feeds_trip_idx').on(t.tripId),
+  check('calendar_feeds_scope_chk', sql`${t.scope} IN ('trip', 'workspace')`),
+  check('calendar_feeds_scope_trip_chk', sql`(${t.scope} = 'trip' AND ${t.tripId} IS NOT NULL) OR (${t.scope} = 'workspace' AND ${t.tripId} IS NULL)`),
+])
