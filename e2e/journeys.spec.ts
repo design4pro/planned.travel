@@ -2500,14 +2500,20 @@ test.describe('switching workspace', () => {
     if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
 
     const firstTripId = await aTripToWalk(page, FIRST.trip)
-    await expect(page.getByText(FIRST.trip).first()).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: FIRST.trip, exact: true }),
+    ).toBeVisible()
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)
     await expectActive(page, FIRST.name)
 
     // Switch from a trip's own page: invalidating there, before the dashboard, would re-run the
-    // trip loader against the second workspace and show its error panel. Reached by clicking, not
+    // trip loader against the second workspace and show its not-found screen. Reached by clicking, not
     // `goto`: a press on the account menu before hydration opens nothing.
-    await page.locator(`a[href="/trips/${firstTripId}/plan"]`).first().click()
+    await page
+      .locator(`a[href="/trips/${firstTripId}/plan"]`)
+      .filter({ visible: true })
+      .first()
+      .click()
     await expect(page).toHaveURL(new RegExp(`/trips/${firstTripId}/plan$`))
     await switchTo(page, SECOND.name)
     await expect(
@@ -2515,29 +2521,50 @@ test.describe('switching workspace', () => {
       'the dashboard the switch lands on must not show the first workspace’s trips',
     ).toHaveCount(0)
     await expect(
-      page.getByRole('heading', { name: 'This trip did not load' }),
+      page.getByRole('heading', { name: "We can't find this trip" }),
     ).toHaveCount(0)
 
     await visit(page, TRIPS, 'light')
-    await expect(page.getByText(SECOND.trip).first()).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: SECOND.trip, exact: true }),
+    ).toBeVisible()
     await expect(
       page.getByText(FIRST.trip),
       'the first workspace’s trips must not follow the reader into the second',
     ).toHaveCount(0)
 
-    // The first workspace's trip, asked for by id while the second is active: the trip does not
-    // load, and none of its data is on screen.
-    await page.goto(`/trips/${firstTripId}/plan`)
-    await expect(
-      page.getByRole('heading', { name: 'This trip did not load' }),
-    ).toBeVisible()
-    await expect(page.getByText(FIRST.trip)).toHaveCount(0)
+    // Foreign and missing trips are indistinguishable, including on the child tab path.
+    let foreignScreen: string | undefined
+    for (const tripId of [firstTripId, 'missing-trip-940']) {
+      const response = await page.goto(`/trips/${tripId}/plan`)
+      expect(response?.status()).toBe(404)
+      const panel = page
+        .getByRole('heading', { name: "We can't find this trip" })
+        .locator('..')
+        .locator('..')
+      await expect(panel).toBeVisible()
+      await expect(page.getByText(FIRST.trip)).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
+        0,
+      )
+      await expect(
+        panel.getByRole('link', { name: 'All trips' }),
+      ).toHaveAttribute('href', '/trips')
+      await expect(
+        panel.getByRole('link', { name: 'Back to dashboard' }),
+      ).toHaveAttribute('href', '/dashboard')
+      const text = await panel.innerText()
+      if (foreignScreen === undefined) foreignScreen = text
+      else expect(text).toBe(foreignScreen)
+    }
 
     await visit(page, TRIPS, 'light')
     await switchTo(page, FIRST.name)
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)
     await visit(page, TRIPS, 'light')
-    await expect(page.getByText(FIRST.trip).first()).toBeVisible()
+    await expect(
+      page.getByRole('heading', { name: FIRST.trip, exact: true }),
+    ).toBeVisible()
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)
   })
 

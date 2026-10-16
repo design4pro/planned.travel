@@ -10,7 +10,17 @@ import { Panel, SectionLabel } from './kit'
  * In-app "nothing here" surface. Keeps the person inside the product with two
  * routes onward rather than dead-ending them on a apology.
  */
-export function NotFoundPanel({ className }: { className?: string }) {
+export function NotFoundPanel({
+  className,
+  titleKey = 'shell.notFound.title',
+  bodyKey = 'shell.notFound.body',
+  tripsFirst = false,
+}: {
+  className?: string
+  titleKey?: 'shell.notFound.title' | 'trips.notFound.title'
+  bodyKey?: 'shell.notFound.body' | 'trips.notFound.body'
+  tripsFirst?: boolean
+}) {
   const t = useTranslate()
 
   return (
@@ -25,20 +35,31 @@ export function NotFoundPanel({ className }: { className?: string }) {
       </span>
       <div className="space-y-2">
         <SectionLabel>{t('shell.notFound.eyebrow')}</SectionLabel>
-        <h2 className="font-display text-title text-ink">
-          {t('shell.notFound.title')}
-        </h2>
+        <h2 className="font-display text-title text-ink">{t(titleKey)}</h2>
         <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
-          {t('shell.notFound.body')}
+          {t(bodyKey)}
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button asChild shape="pill">
-          <Link to="/dashboard">{t('shell.error.dashboard')}</Link>
-        </Button>
-        <Button asChild variant="secondary" shape="pill">
-          <Link to="/trips">{t('shell.notFound.trips')}</Link>
-        </Button>
+        {(tripsFirst
+          ? (['trips', 'dashboard'] as const)
+          : (['dashboard', 'trips'] as const)
+        ).map((action, index) => (
+          <Button
+            key={action}
+            asChild
+            variant={tripsFirst && index === 0 ? 'primary' : 'secondary'}
+            shape="pill"
+          >
+            <Link to={action === 'trips' ? '/trips' : '/dashboard'}>
+              {t(
+                action === 'trips'
+                  ? 'shell.notFound.trips'
+                  : 'shell.error.dashboard',
+              )}
+            </Link>
+          </Button>
+        ))}
       </div>
     </Panel>
   )

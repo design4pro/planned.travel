@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'notFound.title': 'Non troviamo questo viaggio',
+  'notFound.body':
+    'Non è tra i viaggi che puoi aprire nello spazio di lavoro attuale. Potrebbe essere stato eliminato oppure potresti non avere accesso.',
   // Coordinate examples keep decimal points because the inputs accept that notation.
   'plan.editor.latitudeExample': '34.9671',
   'plan.editor.longitudeExample': '135.7727',
