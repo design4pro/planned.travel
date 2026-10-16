@@ -233,7 +233,9 @@ describe('workspace names', () => {
       const line = within(row).getByText(slug)
       expect(line.getAttribute('dir')).toBe('ltr')
       expect(line.tagName).toBe('SPAN')
-      expect(line.className).toContain('[overflow-wrap:anywhere]')
+      expect(line.parentElement?.className).toContain(
+        '[overflow-wrap:anywhere]',
+      )
       expect(row.className).toContain('min-h-11')
     }
     expect(screen.queryByText('gamma')).toBeNull()
