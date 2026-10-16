@@ -3,11 +3,23 @@
  *
  * It resolves the trip first - `requireTrip` turns an id from another tenant, or a private trip
  * the caller cannot see, into a 404 before any child row is read - and then composes the three
- * sub-features' payload builders and the trip's people in one round.
+ * sections' payload builders and the trip's people in one round.
  */
 import { createServerFn } from '@tanstack/react-start'
 
-import { requireTrip } from '#/server/repos'
+import {
+  CollabSectionsError,
+  canWritePlan,
+  requireTrip,
+  setTripCollabSections,
+  tripRoleFor,
+} from '#/server/repos'
+import {
+  collabSectionChangeSchema,
+  resolveCollabSections,
+} from '#/lib/collab-sections'
+import { mirrorToRoom, patch } from '#/server/fns/context'
+import type { CollabSections } from '#/lib/collab-sections'
 import { resolveTimeZone } from '#/lib/time'
 import {
   notesPayload,
@@ -21,6 +33,8 @@ import type { MessageRow, NoteRow, PollRow } from '#/server/fns/collab-payloads'
 import type { PersonChip } from '../../../-server/trip'
 
 export interface CollabPayload {
+  readonly sections: CollabSections
+  readonly canConfigure: boolean
   readonly messages: ReadonlyArray<MessageRow>
   readonly notes: ReadonlyArray<NoteRow>
   readonly polls: ReadonlyArray<PollRow>
@@ -45,6 +59,9 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
 
+    const sections = resolveCollabSections(trip.collabModules)
+    const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
+
     const [messages, notes, polls, people] = await Promise.all([
       threadPayload(scope, trip),
       notesPayload(scope, trip),
@@ -53,6 +70,8 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
     ])
 
     return {
+      sections,
+      canConfigure: canWritePlan(trip, role),
       people,
       viewerUserId: scope.ctx.userId,
       timeZone: resolveTimeZone(trip.timezone),
@@ -60,4 +79,30 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
       notes,
       polls,
     }
+  })
+
+export type CollabSectionWrite =
+  | { readonly ok: true; readonly sections: CollabSections }
+  | { readonly ok: false; readonly reason: 'last-section' }
+
+export const setCollabSectionFn = createServerFn({ method: 'POST' })
+  .validator(collabSectionChangeSchema)
+  .handler(async ({ data }): Promise<CollabSectionWrite> => {
+    const scope = await appScope()
+    let sections: CollabSections
+    try {
+      sections = await setTripCollabSections(scope, data.tripId, {
+        section: data.section,
+        on: data.on,
+      })
+    } catch (cause) {
+      if (cause instanceof CollabSectionsError) {
+        return { ok: false, reason: 'last-section' }
+      }
+      throw cause
+    }
+    await mirrorToRoom(scope, data.tripId, [
+      patch('trip', data.tripId, { collabSectionsChangedAt: Date.now() }),
+    ])
+    return { ok: true, sections }
   })

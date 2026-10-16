@@ -736,11 +736,11 @@ export const trips = sqliteTable(
      */
     copyPendingAt: integer('copy_pending_at', { mode: 'timestamp_ms' }),
     /**
-     * Which collaboration sub-features this trip shows, keyed by sub-feature id — the same JSON
-     * idiom as `share_links.scopes`. Null means nothing has been decided for this trip, which
-     * resolves to every sub-feature on, so a rolled-back Worker simply ignores the column. The key
-     * vocabulary is validated in `src/server/repos/collab.ts` rather than by a `CHECK` — that
-     * validation lands with `07-S2`, and until it does nothing reads or writes the column.
+     * Which collaboration sections this trip shows, keyed by section id. Null means every
+     * section defaults on. `src/lib/collab-sections.ts` resolves stored records and owns the
+     * vocabulary; `setTripCollabSections` in `src/server/repos/collab.ts` validates each switch
+     * and writes the whole resolved record with at least one section enabled. This is a display
+     * choice, not access control: switching a section off deletes nothing.
      */
     collabModules: text('collab_modules', { mode: 'json' }).$type<
       Record<string, boolean>
