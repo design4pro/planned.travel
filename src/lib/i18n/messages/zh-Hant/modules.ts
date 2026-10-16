@@ -713,6 +713,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}，含你',
   'collab.thread.today': '今天',
+  'collab.thread.emptyBody':
+    '這趟旅行的所有人共用一個對話。在這裡做出的決定會隨旅行保留，而不會散落在各個群組聊天中。',
   'collab.thread.empty': '還沒有訊息',
   'collab.toast.reactionFailed': '這個反應沒存上',
   'collab.toast.messageDeleted': '已刪除訊息',

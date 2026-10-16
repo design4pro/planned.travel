@@ -793,6 +793,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, μαζί κι εσύ',
   'collab.thread.today': 'Σήμερα',
+  'collab.thread.emptyBody':
+    'Όλοι σε αυτό το ταξίδι μοιράζονται μία συνομιλία. Οι αποφάσεις που παίρνετε εδώ μένουν μαζί με το ταξίδι αντί να χάνονται σε ομαδικές συνομιλίες.',
   'collab.thread.empty': 'Κανένα μήνυμα ακόμη',
   'collab.toast.reactionFailed': 'Η αντίδραση δεν αποθηκεύτηκε',
   'collab.toast.messageDeleted': 'Το μήνυμα διαγράφηκε',

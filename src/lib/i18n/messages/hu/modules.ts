@@ -786,6 +786,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, veled együtt',
   'collab.thread.today': 'Ma',
+  'collab.thread.emptyBody':
+    'Az utazás minden résztvevője egy közös beszélgetést használ. Az itt hozott döntések az utazásnál maradnak, nem szóródnak szét csoportos csevegésekben.',
   'collab.thread.empty': 'Még nincsenek üzenetek',
   'collab.toast.reactionFailed': 'A reakció nem lett elmentve',
   'collab.toast.messageDeleted': 'Üzenet törölve',

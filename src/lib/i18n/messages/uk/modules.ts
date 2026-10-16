@@ -799,6 +799,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, разом із вами',
   'collab.thread.today': 'Сьогодні',
+  'collab.thread.emptyBody':
+    'Усі учасники цієї подорожі спілкуються в одній гілці. Ухвалені тут рішення залишаються з подорожжю, а не губляться в групових чатах.',
   'collab.thread.empty': 'Повідомлень поки немає',
   'collab.toast.reactionFailed': 'Реакція не збереглася',
   'collab.toast.messageDeleted': 'Повідомлення видалено',

@@ -761,6 +761,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, có cả bạn',
   'collab.thread.today': 'Hôm nay',
+  'collab.thread.emptyBody':
+    'Mọi người trong chuyến đi này cùng dùng một cuộc trò chuyện. Các quyết định ở đây được lưu cùng chuyến đi thay vì rải rác trong các nhóm trò chuyện.',
   'collab.thread.empty': 'Chưa có tin nhắn nào',
   'collab.toast.reactionFailed': 'Chưa lưu được biểu cảm',
   'collab.toast.messageDeleted': 'Đã xóa tin nhắn',
