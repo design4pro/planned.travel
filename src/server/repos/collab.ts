@@ -9,6 +9,12 @@
 import { asc, count, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import {
+  collabSectionChangeSchema,
+  enabledCollabSections,
+  resolveCollabSections,
+} from '#/lib/collab-sections'
+import type { CollabSectionId, CollabSections } from '#/lib/collab-sections'
+import {
   CHECK_IN_SOURCES,
   checkIns,
   collabMessageReactions,
@@ -20,7 +26,12 @@ import {
 import { allOf, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { ForbiddenError, NotFoundError, RepositoryError } from './context'
-import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
+import {
+  assertTripRole,
+  requireTrip,
+  requireWritableTrip,
+  tripsRepository,
+} from './trips'
 import {
   colourSchema,
   countryCodeSchema,
@@ -80,6 +91,33 @@ async function requireCollabTrip(
 ): Promise<void> {
   await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, COLLAB_WRITE_ROLES)
+}
+
+/** A stale switch may not hide the final enabled section. Handlers return this refusal as data. */
+export class CollabSectionsError extends Error {
+  constructor() {
+    super('At least one collaboration section must remain enabled.')
+    this.name = 'CollabSectionsError'
+  }
+}
+
+export async function setTripCollabSections(
+  scope: TenantScope,
+  tripId: string,
+  change: { readonly section: CollabSectionId; readonly on: boolean },
+): Promise<CollabSections> {
+  const trip = await requireWritableTrip(scope, tripId)
+  await assertTripRole(scope, tripId, COLLAB_WRITE_ROLES)
+  const input = collabSectionChangeSchema.parse({ tripId, ...change })
+  const sections = {
+    ...resolveCollabSections(trip.collabModules),
+    [input.section]: input.on,
+  }
+  if (enabledCollabSections(sections).length === 0) {
+    throw new CollabSectionsError()
+  }
+  await tripsRepository.requireUpdate(scope, tripId, { collabModules: sections })
+  return sections
 }
 
 /*

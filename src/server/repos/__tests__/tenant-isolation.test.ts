@@ -53,6 +53,7 @@ import { reserveExport, exportAllowance } from '../exports'
 import { readFeedSource } from '../calendar-feeds'
 import { categoriesRepository, createCategory } from '../categories'
 import {
+  setTripCollabSections,
   castVote,
   checkInsRepository,
   collabMessageReactionsAccess,
@@ -6722,6 +6723,21 @@ describe('tenant isolation', () => {
           expect(await money()).toEqual(before)
         },
       )
+    })
+  })
+
+  describe('collaboration section configuration', () => {
+    it('hides a foreign trip and leaves its stored configuration and timestamps byte-identical', async () => {
+      const readForeignTrip = () =>
+        harness.sqlite.prepare('SELECT * FROM trips WHERE id = ?').get(beta.tripId)
+      const before = readForeignTrip()
+      await expect(
+        setTripCollabSections(alpha.tenant.scope, beta.tripId, {
+          section: 'polls',
+          on: false,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect(readForeignTrip()).toEqual(before)
     })
   })
 

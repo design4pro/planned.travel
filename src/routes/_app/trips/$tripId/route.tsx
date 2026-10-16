@@ -1,4 +1,9 @@
-import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
+import {
+  Outlet,
+  createFileRoute,
+  notFound,
+  useRouterState,
+} from '@tanstack/react-router'
 
 import { AppFrame } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -20,11 +25,20 @@ import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
  * the sub-navigation stays put and only the panel below it changes.
  */
 export const Route = createFileRoute('/_app/trips/$tripId')({
-  loader: ({ params }) => loadTripHeader({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) => {
+    const result = await loadTripHeader({ data: { tripId: params.tripId } })
+    if (!result.found) throw notFound()
+    const { found: _found, ...payload } = result
+    return payload
+  },
   pendingComponent: TripPending,
   notFoundComponent: () => (
     <AppFrame>
-      <NotFoundPanel />
+      <NotFoundPanel
+        titleKey="trips.notFound.title"
+        bodyKey="trips.notFound.body"
+        tripsFirst
+      />
     </AppFrame>
   ),
   errorComponent: TripError,

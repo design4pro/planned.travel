@@ -9,6 +9,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
+  NotFoundError,
   getMemberBalances,
   getStorageUsage,
   getTripItinerary,
@@ -76,6 +77,9 @@ export interface TripHeaderPayload {
   readonly dayCount: number
 }
 
+type TripHeaderResult =
+  { readonly found: false } | ({ readonly found: true } & TripHeaderPayload)
+
 /* ------------------------------------------------------------------ header */
 
 export async function loadPeople(
@@ -103,9 +107,15 @@ export async function loadPeople(
 
 export const loadTripHeader = createServerFn({ method: 'GET' })
   .validator(tripInput)
-  .handler(async ({ data }): Promise<TripHeaderPayload> => {
+  .handler(async ({ data }): Promise<TripHeaderResult> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    let trip
+    try {
+      trip = await requireTrip(scope, data.tripId)
+    } catch (error) {
+      if (error instanceof NotFoundError) return { found: false }
+      throw error
+    }
 
     const [people, days] = await Promise.all([
       loadPeople(trip.id, scope),
@@ -113,6 +123,7 @@ export const loadTripHeader = createServerFn({ method: 'GET' })
     ])
 
     return {
+      found: true,
       today: serverToday(),
       dayCount: days.length,
       people,
