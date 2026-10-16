@@ -798,6 +798,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, incluindo você',
   'collab.thread.today': 'Hoje',
+  'collab.thread.emptyBody':
+    'Todas as pessoas desta viagem compartilham uma conversa. As decisões tomadas aqui ficam com a viagem, em vez de se espalharem por conversas em grupo.',
   'collab.thread.empty': 'Ainda não há mensagens',
   'collab.toast.reactionFailed': 'A reação não foi salva',
   'collab.toast.messageDeleted': 'Mensagem excluída',

@@ -776,6 +776,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, du också',
   'collab.thread.today': 'I dag',
+  'collab.thread.emptyBody':
+    'Alla på den här resan delar en och samma tråd. Beslut som fattas här stannar med resan i stället för att spridas över gruppchattar.',
   'collab.thread.empty': 'Inga meddelanden än',
   'collab.toast.reactionFailed': 'Reaktionen sparades inte',
   'collab.toast.messageDeleted': 'Meddelandet borttaget',
