@@ -1248,6 +1248,22 @@ const messages = {
     one: 'Showing the first {count} of {total}.',
     other: 'Showing the first {count} of {total}.',
   },
+  'files.export.notify': 'Email me when it is ready',
+  'files.export.viewer':
+    'Only owners and editors can create an export. You can download the ones that exist.',
+  'files.export.jump': 'Go to exports',
+  'files.export.fromLink': 'From your link',
+  'files.export.linkGone':
+    'That export is no longer kept. Make a new one below.',
+  'files.export.allowance': {
+    one: '{used} of {count} export used this month',
+    other: '{used} of {count} exports used this month',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} export this month',
+    other: '{count} exports this month',
+  },
+  'files.export.linkGoneViewer': 'That export is no longer kept.',
 } as const satisfies NamespaceMessages
 
 export default messages

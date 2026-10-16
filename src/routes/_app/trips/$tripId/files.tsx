@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
+import { useTranslate } from '#/lib/i18n'
 import { FileImage, HardDrive, Ticket } from 'lucide-react'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
@@ -11,7 +13,7 @@ import {
   StorageMeter,
   UploadFilesAction,
 } from '#/components/modules/files'
-import { Card, Progress, StatCard } from '#/components/ui'
+import { Button, Card, Progress, StatCard } from '#/components/ui'
 import { formatStorage } from '#/lib/plans'
 import { loadTripFiles } from '../../-server/trip'
 import { pluralise } from '../../-lib/format'
@@ -19,6 +21,13 @@ import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/files')({
+  validateSearch: z.object({
+    export: z
+      .string()
+      .regex(/^[A-Za-z0-9-]{1,128}$/)
+      .optional()
+      .catch(undefined),
+  }),
   loader: ({ params }) => loadTripFiles({ data: { tripId: params.tripId } }),
   pendingComponent: FilesPending,
   errorComponent: ({ error }) => (
@@ -30,6 +39,9 @@ export const Route = createFileRoute('/_app/trips/$tripId/files')({
 })
 
 function FilesPage() {
+  const t = useTranslate()
+  const { export: exportId } = Route.useSearch()
+  const exportHeading = useRef<HTMLDivElement>(null)
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
   /**
@@ -57,7 +69,23 @@ function FilesPage() {
               : `${pluralise(data.files.length, 'file')} · ${formatStorage(data.tripBytes)} on this trip`
           }
           actions={
-            <UploadFilesAction onClick={() => setPickRequestedAt(Date.now())} />
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  exportHeading.current?.focus({ preventScroll: true })
+                  exportHeading.current?.scrollIntoView({
+                    behavior: 'instant',
+                    block: 'start',
+                  })
+                }}
+              >
+                {t('modules.files.export.jump')}
+              </Button>
+              <UploadFilesAction
+                onClick={() => setPickRequestedAt(Date.now())}
+              />
+            </>
           }
         >
           <StorageMeter
@@ -115,7 +143,12 @@ function FilesPage() {
           pickRequestedAt={pickRequestedAt}
         />
 
-        <ExportPanel key={tripId} tripId={tripId} />
+        <ExportPanel
+          key={tripId}
+          tripId={tripId}
+          exportId={exportId}
+          headingRef={exportHeading}
+        />
       </AppSections>
     </AppFrame>
   )

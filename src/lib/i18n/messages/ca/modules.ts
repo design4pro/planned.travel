@@ -1106,6 +1106,24 @@ const messages = {
     many: 'Es mostren els primers {count} de {total}.',
     other: 'Es mostren els primers {count} de {total}.',
   },
+  'files.export.notify': 'Envia’m un correu quan estigui llest',
+  'files.export.viewer':
+    'Només els propietaris i editors poden crear una exportació. Pots descarregar les existents.',
+  'files.export.jump': 'Ves a les exportacions',
+  'files.export.fromLink': 'Des del teu enllaç',
+  'files.export.linkGone':
+    'Aquesta exportació ja no es conserva. Crea’n una de nova a continuació.',
+  'files.export.allowance': {
+    one: '{used} de {count} exportació utilitzades aquest mes',
+    many: '{used} de {count} exportacions utilitzades aquest mes',
+    other: '{used} de {count} exportacions utilitzades aquest mes',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} exportació aquest mes',
+    many: '{count} exportacions aquest mes',
+    other: '{count} exportacions aquest mes',
+  },
+  'files.export.linkGoneViewer': 'Aquesta exportació ja no es conserva.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

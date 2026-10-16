@@ -1075,6 +1075,22 @@ const messages = {
     one: 'De eerste {count} van {total} worden getoond.',
     other: 'De eerste {count} van {total} worden getoond.',
   },
+  'files.export.notify': 'Mail mij zodra de export klaar is',
+  'files.export.viewer':
+    'Alleen eigenaren en bewerkers kunnen een export maken. Je kunt bestaande exports downloaden.',
+  'files.export.jump': 'Naar exports',
+  'files.export.fromLink': 'Via je link',
+  'files.export.linkGone':
+    'Deze export wordt niet meer bewaard. Maak hieronder een nieuwe.',
+  'files.export.allowance': {
+    one: 'Deze maand {used} van {count} export gebruikt',
+    other: 'Deze maand {used} van {count} exports gebruikt',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} export deze maand',
+    other: '{count} exports deze maand',
+  },
+  'files.export.linkGoneViewer': 'Die export wordt niet meer bewaard.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

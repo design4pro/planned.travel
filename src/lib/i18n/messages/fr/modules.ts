@@ -1117,6 +1117,24 @@ const messages = {
     many: 'Affichage des {count} premiers éléments sur {total}.',
     other: 'Affichage des {count} premiers éléments sur {total}.',
   },
+  'files.export.notify': 'M’envoyer un e-mail dès que l’export est prêt',
+  'files.export.viewer':
+    'Seuls les propriétaires et les éditeurs peuvent créer un export. Vous pouvez télécharger ceux qui existent.',
+  'files.export.jump': 'Aller aux exports',
+  'files.export.fromLink': 'Depuis votre lien',
+  'files.export.linkGone':
+    'Cet export n’est plus conservé. Créez-en un nouveau ci-dessous.',
+  'files.export.allowance': {
+    one: '{used} export utilisés sur {count} ce mois-ci',
+    many: '{used} exports utilisés sur {count} ce mois-ci',
+    other: '{used} exports utilisés sur {count} ce mois-ci',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} export ce mois-ci',
+    many: '{count} exports ce mois-ci',
+    other: '{count} exports ce mois-ci',
+  },
+  'files.export.linkGoneViewer': 'Cette exportation n’est plus conservée.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

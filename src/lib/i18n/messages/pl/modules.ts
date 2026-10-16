@@ -1126,6 +1126,26 @@ const messages = {
     many: 'Pokazano od początku: {count} z {total}.',
     other: 'Pokazano od początku: {count} z {total}.',
   },
+  'files.export.notify': 'Powiadom mnie e-mailem, gdy będzie gotowy',
+  'files.export.viewer':
+    'Tylko właściciele i edytorzy mogą tworzyć eksporty. Możesz pobrać istniejące.',
+  'files.export.jump': 'Przejdź do eksportów',
+  'files.export.fromLink': 'Z Twojego linku',
+  'files.export.linkGone':
+    'Ten eksport nie jest już przechowywany. Utwórz nowy poniżej.',
+  'files.export.allowance': {
+    one: 'Wykorzystano {used} z {count} eksportu w tym miesiącu',
+    few: 'Wykorzystano {used} z {count} eksportów w tym miesiącu',
+    many: 'Wykorzystano {used} z {count} eksportów w tym miesiącu',
+    other: 'Wykorzystano {used} z {count} eksportów w tym miesiącu',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} eksport w tym miesiącu',
+    few: '{count} eksporty w tym miesiącu',
+    many: '{count} eksportów w tym miesiącu',
+    other: '{count} eksportów w tym miesiącu',
+  },
+  'files.export.linkGoneViewer': 'Ten eksport nie jest już przechowywany.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

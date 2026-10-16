@@ -1087,6 +1087,23 @@ const messages = {
     one: 'Die ersten {count} von {total} werden angezeigt.',
     other: 'Die ersten {count} von {total} werden angezeigt.',
   },
+  'files.export.notify':
+    'Per E-Mail benachrichtigen, sobald der Export fertig ist',
+  'files.export.viewer':
+    'Nur Eigentümer und Bearbeiter können einen Export erstellen. Vorhandene Exporte kannst du herunterladen.',
+  'files.export.jump': 'Zu den Exporten',
+  'files.export.fromLink': 'Aus deinem Link',
+  'files.export.linkGone':
+    'Dieser Export wird nicht mehr aufbewahrt. Erstelle unten einen neuen.',
+  'files.export.allowance': {
+    one: 'Diesen Monat {used} von {count} Export genutzt',
+    other: 'Diesen Monat {used} von {count} Exporten genutzt',
+  },
+  'files.export.allowanceUnlimited': {
+    one: '{count} Export diesen Monat',
+    other: '{count} Exporte diesen Monat',
+  },
+  'files.export.linkGoneViewer': 'Dieser Export wird nicht mehr aufbewahrt.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

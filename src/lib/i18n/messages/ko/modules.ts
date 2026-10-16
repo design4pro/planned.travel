@@ -1003,6 +1003,18 @@ const messages = {
   'files.export.doc.truncatedRows': {
     other: '전체 {total}개 중 처음 {count}개를 표시합니다.',
   },
+  'files.export.notify': '준비되면 이메일로 알림 받기',
+  'files.export.viewer':
+    '소유자와 편집자만 내보내기를 만들 수 있습니다. 기존 파일은 다운로드할 수 있습니다.',
+  'files.export.jump': '내보내기로 이동',
+  'files.export.fromLink': '링크에서 열림',
+  'files.export.linkGone':
+    '이 내보내기는 더 이상 보관되지 않습니다. 아래에서 새로 만드세요.',
+  'files.export.allowance': {
+    other: '이번 달 내보내기 {count}개 중 {used}개 사용',
+  },
+  'files.export.allowanceUnlimited': { other: '이번 달 내보내기 {count}개' },
+  'files.export.linkGoneViewer': '이 내보내기는 더 이상 보관되지 않습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

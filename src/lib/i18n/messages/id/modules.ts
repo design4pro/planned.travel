@@ -1042,6 +1042,18 @@ const messages = {
   'files.export.doc.truncatedRows': {
     other: 'Menampilkan {count} pertama dari {total}.',
   },
+  'files.export.notify': 'Kirim email saat sudah siap',
+  'files.export.viewer':
+    'Hanya pemilik dan editor yang dapat membuat ekspor. Anda dapat mengunduh yang sudah ada.',
+  'files.export.jump': 'Ke daftar ekspor',
+  'files.export.fromLink': 'Dari tautan Anda',
+  'files.export.linkGone':
+    'Ekspor ini tidak lagi disimpan. Buat yang baru di bawah.',
+  'files.export.allowance': {
+    other: '{used} dari {count} ekspor digunakan bulan ini',
+  },
+  'files.export.allowanceUnlimited': { other: '{count} ekspor bulan ini' },
+  'files.export.linkGoneViewer': 'Ekspor itu tidak lagi disimpan.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
