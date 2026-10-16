@@ -452,6 +452,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Приховати панель {label}',
   'plan.workspace.narrowPanel': 'Звузити {label}',
   'plan.workspace.widenPanel': 'Розширити {label}',
+  'collab.sections.tabsLabel': 'Розділи співпраці',
   'collab.sections.trigger': 'Вибрати розділи',
   'collab.sections.menuLabel': 'Показувати всім учасникам подорожі',
   'collab.sections.keepOne': 'Принаймні один розділ має залишатися ввімкненим.',

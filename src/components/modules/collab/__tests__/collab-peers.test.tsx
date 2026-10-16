@@ -115,7 +115,7 @@ it('keeps a composer and its live messages until cleared, then repairs focus sil
   )
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByRole('region', { name: 'Notes' }),
+      screen.getByRole('tabpanel', { name: 'Notes' }),
     ),
   )
   expect(screen.getByRole('status').textContent).toBe('')
@@ -152,7 +152,7 @@ it.each(['notes', 'polls'] as const)(
     await user.keyboard('{Escape}')
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('region', { name: 'Conversation' }),
+        screen.getByRole('tabpanel', { name: 'Conversation' }),
       ),
     )
   },
@@ -191,7 +191,7 @@ it('keeps an edited message with its content until discard and then repairs focu
   await user.keyboard('{Escape}')
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByRole('region', { name: 'Notes' }),
+      screen.getByRole('tabpanel', { name: 'Notes' }),
     ),
   )
 })
@@ -250,7 +250,7 @@ it.each(['notes', 'polls'] as const)(
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        screen.getByRole('region', { name: 'Conversation' }),
+        screen.getByRole('tabpanel', { name: 'Conversation' }),
       ),
     )
   },
@@ -294,7 +294,7 @@ it('saves an edited message from a retained section and repairs focus', async ()
   )
   await waitFor(() =>
     expect(document.activeElement).toBe(
-      screen.getByRole('region', { name: 'Notes' }),
+      screen.getByRole('tabpanel', { name: 'Notes' }),
     ),
   )
 })
@@ -334,4 +334,17 @@ it('stays silent when a retained draft is discarded before the announcement', as
     await new Promise((resolve) => setTimeout(resolve, 100))
   })
   expect(screen.getByRole('status').textContent).toBe('')
+})
+
+it('repairs focus to the active tab when the tab is rendered by the DOM', async () => {
+  const { user, peer } = setup()
+  const tab = screen.getByRole('tab', { name: 'Notes' })
+  const rects = vi
+    .spyOn(tab, 'getClientRects')
+    .mockReturnValue([{ width: 100, height: 44 }] as unknown as DOMRectList)
+  const composer = screen.getByRole('textbox', { name: 'Message the trip' })
+  await user.click(composer)
+  peer('conversation')
+  await waitFor(() => expect(document.activeElement).toBe(tab))
+  rects.mockRestore()
 })

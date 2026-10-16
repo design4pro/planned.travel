@@ -442,6 +442,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Απόκρυψη πίνακα {label}',
   'plan.workspace.narrowPanel': 'Στένεμα {label}',
   'plan.workspace.widenPanel': 'Διεύρυνση {label}',
+  'collab.sections.tabsLabel': 'Ενότητες συνεργασίας',
   'collab.sections.trigger': 'Επιλογή ενοτήτων',
   'collab.sections.menuLabel': 'Εμφάνιση σε όλους σε αυτό το ταξίδι',
   'collab.sections.keepOne': 'Τουλάχιστον μία ενότητα παραμένει ενεργή.',

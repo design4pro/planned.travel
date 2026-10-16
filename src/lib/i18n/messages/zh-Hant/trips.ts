@@ -394,6 +394,7 @@ const messages = {
   'plan.workspace.hidePanel': '隱藏{label}面板',
   'plan.workspace.narrowPanel': '縮窄{label}',
   'plan.workspace.widenPanel': '加寬{label}',
+  'collab.sections.tabsLabel': '協作區塊',
   'collab.sections.trigger': '選擇區塊',
   'collab.sections.menuLabel': '向此行程的所有人顯示',
   'collab.sections.keepOne': '至少保留一個開啟的區塊。',

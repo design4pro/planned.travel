@@ -434,6 +434,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Paneel {label} verbergen',
   'plan.workspace.narrowPanel': '{label} versmallen',
   'plan.workspace.widenPanel': '{label} verbreden',
+  'collab.sections.tabsLabel': 'Samenwerkingssecties',
   'collab.sections.trigger': 'Onderdelen kiezen',
   'collab.sections.menuLabel': 'Tonen aan iedereen op deze reis',
   'collab.sections.keepOne': 'Er blijft minstens één onderdeel aan.',

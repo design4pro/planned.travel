@@ -417,6 +417,7 @@ const messages = {
   'plan.workspace.hidePanel': '{label}パネルを非表示',
   'plan.workspace.narrowPanel': '{label}を狭める',
   'plan.workspace.widenPanel': '{label}を広げる',
+  'collab.sections.tabsLabel': '共同作業のセクション',
   'collab.sections.trigger': 'セクションを選択',
   'collab.sections.menuLabel': 'この旅行の全員に表示',
   'collab.sections.keepOne': '少なくとも1つのセクションは有効にしてください。',

@@ -443,6 +443,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Ocultar o painel {label}',
   'plan.workspace.narrowPanel': 'Estreitar {label}',
   'plan.workspace.widenPanel': 'Alargar {label}',
+  'collab.sections.tabsLabel': 'Seções de colaboração',
   'collab.sections.trigger': 'Escolher seções',
   'collab.sections.menuLabel': 'Mostrar para todos nesta viagem',
   'collab.sections.keepOne': 'Pelo menos uma seção deve ficar ativa.',

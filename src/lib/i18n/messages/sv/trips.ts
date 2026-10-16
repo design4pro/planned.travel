@@ -427,6 +427,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Dölj panelen {label}',
   'plan.workspace.narrowPanel': 'Gör {label} smalare',
   'plan.workspace.widenPanel': 'Gör {label} bredare',
+  'collab.sections.tabsLabel': 'Samarbetssektioner',
   'collab.sections.trigger': 'Välj avsnitt',
   'collab.sections.menuLabel': 'Visa för alla på den här resan',
   'collab.sections.keepOne': 'Minst ett avsnitt måste vara på.',

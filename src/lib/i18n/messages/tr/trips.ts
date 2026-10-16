@@ -428,6 +428,7 @@ const messages = {
   'plan.workspace.hidePanel': '{label} panelini gizle',
   'plan.workspace.narrowPanel': '{label} daralt',
   'plan.workspace.widenPanel': '{label} genişlet',
+  'collab.sections.tabsLabel': 'İş birliği bölümleri',
   'collab.sections.trigger': 'Bölümleri seç',
   'collab.sections.menuLabel': 'Bu seyahatteki herkese göster',
   'collab.sections.keepOne': 'En az bir bölüm açık kalmalıdır.',

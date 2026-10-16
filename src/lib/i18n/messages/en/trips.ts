@@ -633,6 +633,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Hide the {label} panel',
   'plan.workspace.narrowPanel': 'Narrow {label}',
   'plan.workspace.widenPanel': 'Widen {label}',
+  'collab.sections.tabsLabel': 'Collaboration sections',
   'collab.sections.trigger': 'Choose sections',
   'collab.sections.menuLabel': 'Show for everyone on this trip',
   'collab.sections.keepOne': 'At least one section stays on.',

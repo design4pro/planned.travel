@@ -463,6 +463,7 @@ const messages = {
   'plan.workspace.hidePanel': 'إخفاء لوحة {label}',
   'plan.workspace.narrowPanel': 'تضييق {label}',
   'plan.workspace.widenPanel': 'توسيع {label}',
+  'collab.sections.tabsLabel': 'أقسام التعاون',
   'collab.sections.trigger': 'اختيار الأقسام',
   'collab.sections.menuLabel': 'إظهار للجميع في هذه الرحلة',
   'collab.sections.keepOne': 'يجب أن يبقى قسم واحد على الأقل مفعّلاً.',

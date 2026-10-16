@@ -444,6 +444,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Amaga el tauler {label}',
   'plan.workspace.narrowPanel': 'Estreny {label}',
   'plan.workspace.widenPanel': 'Eixampla {label}',
+  'collab.sections.tabsLabel': 'Seccions de col·laboració',
   'collab.sections.trigger': 'Tria les seccions',
   'collab.sections.menuLabel': 'Mostra a tothom d’aquest viatge',
   'collab.sections.keepOne': 'Com a mínim una secció ha de continuar activa.',

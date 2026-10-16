@@ -421,6 +421,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Ẩn bảng {label}',
   'plan.workspace.narrowPanel': 'Thu hẹp {label}',
   'plan.workspace.widenPanel': 'Mở rộng {label}',
+  'collab.sections.tabsLabel': 'Các phần cộng tác',
   'collab.sections.trigger': 'Chọn các phần',
   'collab.sections.menuLabel': 'Hiển thị cho mọi người trong chuyến đi',
   'collab.sections.keepOne': 'Ít nhất một phần phải được bật.',
