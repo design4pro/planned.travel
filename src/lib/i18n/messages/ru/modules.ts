@@ -914,6 +914,53 @@ const messages = {
   'files.action.add': 'Добавить файлы',
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
+  'files.calendar.live.action': 'Обновляемая ссылка на календарь',
+  'files.calendar.live.title': 'Обновляемая ссылка на календарь',
+  'files.calendar.warning':
+    'Любой обладатель ссылки может без аккаунта читать места, время, адреса и заметки этой поездки. Берегите её как пароль.',
+  'files.calendar.enable.action': 'Создать ссылку',
+  'files.calendar.link.once':
+    'Скопируйте сейчас - мы показываем её лишь раз. Если потеряете, отключите её и создайте новую; старая перестанет работать.',
+  'files.calendar.link.address': 'Адрес ссылки',
+  'files.calendar.link.copy': 'Копировать ссылку',
+  'files.calendar.link.copied': 'Ссылка скопирована',
+  'files.calendar.link.copyFailed':
+    'Не удалось скопировать. Выделите адрес и скопируйте его вручную.',
+  'files.calendar.link.open': 'Открыть в приложении календаря',
+  'files.calendar.link.google': 'Добавить в Google Календарь',
+  'files.calendar.link.outlook': 'Добавить в Outlook',
+  'files.calendar.link.done': 'Готово',
+  'files.calendar.link.stays':
+    'Номера подтверждений, цены и файлы остаются в planned.travel.',
+  'files.calendar.freshness':
+    'Приложениям календаря может понадобиться несколько часов, иногда больше, чтобы показать изменение.',
+  'files.calendar.state.on': 'Ссылка на календарь включена',
+  'files.calendar.state.lastFetched':
+    'Календарь последний раз проверил эту ссылку {when}',
+  'files.calendar.state.neverFetched': 'Ещё не загружалось',
+  'files.calendar.off.action': 'Отключить',
+  'files.calendar.off.confirmTitle': 'Отключить эту ссылку на календарь?',
+  'files.calendar.off.confirmBody':
+    'Ссылка сразу перестанет работать. Календари сохранят полученные события, но перестанут их обновлять.',
+  'files.calendar.off.confirm': 'Отключить',
+  'files.calendar.off.busy': 'Отключение…',
+  'files.calendar.closeGuard.title': 'Закрыть без копирования ссылки?',
+  'files.calendar.closeGuard.body':
+    'Мы не сможем показать её снова. Придётся создать новую.',
+  'files.calendar.closeGuard.confirm': 'Всё равно закрыть',
+  'files.calendar.closeGuard.cancel': 'Оставить открытым',
+  'files.calendar.error.enable':
+    'Не удалось подтвердить создание ссылки. Текущее состояние показано ниже. Если она включена, но вы её не видели, отключите и создайте заново.',
+  'files.calendar.error.off':
+    'Не удалось подтвердить отключение ссылки. Текущее состояние показано ниже; при необходимости повторите попытку.',
+  'files.calendar.error.load':
+    'Не удалось проверить ссылку на календарь этой поездки. Попробуйте снова.',
+  'files.calendar.retry': 'Попробовать снова',
+  'files.calendar.off.confirmBodyUnused':
+    'Этой ссылкой ещё не пользовались. Она сразу перестанет работать.',
+  'files.calendar.link.fallback':
+    'Если на телефоне не удаётся добавить её, откройте эту страницу на компьютере.',
+  'files.calendar.link.newTab': 'откроется в новой вкладке',
   'files.calendar.title': 'Календарь',
   'files.calendar.description':
     'Добавьте эту поездку в приложение календаря, которым вы уже пользуетесь.',

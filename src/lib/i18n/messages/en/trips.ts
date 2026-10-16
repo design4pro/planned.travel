@@ -633,6 +633,17 @@ const messages = {
   'plan.workspace.hidePanel': 'Hide the {label} panel',
   'plan.workspace.narrowPanel': 'Narrow {label}',
   'plan.workspace.widenPanel': 'Widen {label}',
+  'collab.sections.trigger': 'Choose sections',
+  'collab.sections.menuLabel': 'Show for everyone on this trip',
+  'collab.sections.keepOne': 'At least one section stays on.',
+  'collab.sections.failed': 'That change did not save',
+  'collab.sections.failedBody': 'The menu shows what is saved now.',
+  'collab.sections.someHidden': 'Some sections are hidden on this trip.',
+  'collab.sections.turnedOff':
+    'This section was turned off for the trip. It closes when you send or clear what you are writing.',
+  'collab.sections.changed': 'The sections on this trip changed.',
+  'collab.sections.savedHidden':
+    'Saved. This section is hidden for the trip, so it closes now.',
 } as const satisfies NamespaceMessages
 
 export default messages

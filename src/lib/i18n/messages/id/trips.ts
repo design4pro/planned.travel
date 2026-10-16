@@ -425,6 +425,19 @@ const messages = {
   'plan.workspace.hidePanel': 'Sembunyikan panel {label}',
   'plan.workspace.narrowPanel': 'Persempit {label}',
   'plan.workspace.widenPanel': 'Perlebar {label}',
+  'collab.sections.trigger': 'Pilih bagian',
+  'collab.sections.menuLabel': 'Tampilkan untuk semua peserta perjalanan ini',
+  'collab.sections.keepOne': 'Setidaknya satu bagian harus tetap aktif.',
+  'collab.sections.failed': 'Perubahan tidak tersimpan',
+  'collab.sections.failedBody':
+    'Menu menampilkan keadaan yang tersimpan saat ini.',
+  'collab.sections.someHidden':
+    'Beberapa bagian disembunyikan dalam perjalanan ini.',
+  'collab.sections.turnedOff':
+    'Bagian ini dinonaktifkan untuk perjalanan. Bagian akan ditutup setelah Anda mengirim atau menghapus tulisan Anda.',
+  'collab.sections.changed': 'Bagian perjalanan ini telah berubah.',
+  'collab.sections.savedHidden':
+    'Tersimpan. Bagian ini disembunyikan untuk perjalanan, jadi sekarang ditutup.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

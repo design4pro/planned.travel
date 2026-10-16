@@ -286,14 +286,14 @@ through `createTenantRepository()`, which ANDs `organization_id = ?` onto every 
 supplies. A curator moderating a stranger's link holds no tenant context for that stranger's
 workspace and may not invent one: §3.7 rule 2 and SPEC §5 both forbid exactly that, and it is the
 single thing `src/server/repos/base.ts` exists to make inexpressible. Nor is the table reachable
-through `src/server/catalog/repo.ts`: that door serves eight of the eleven global tables of SPEC §5's
+through `src/server/catalog/repo.ts`: that door serves eight of the twelve global tables of SPEC §5's
 carve-out, and `share_links` is not one of them. So the surface is built the way the one existing
 session-less path in this codebase is already built, and named the same way:
 
 - Two functions in `src/server/repos/shares.ts` - `listShareLinksForModerationUnscoped(db, …)` and
   `revokeShareLinkUnscoped(db, …)` - taking a plain `Database` rather than a `TenantScope`, exactly
-  as `findSubscriptionByOrganizationUnscoped` and its three siblings in
-  `src/server/repos/billing.ts` do for a webhook that has no session. SQL stays in
+  as `findSubscriptionByOrganizationUnscoped` and its four siblings in
+  `src/server/repos/billing.ts` do for session-less provider resolution or platform billing inspection. SQL stays in
   `src/server/repos` (SPEC §6); what changes is the scope argument, not the layer.
 - The `Unscoped` suffix carries the weight. It is grep-able, it reads as an alarm at every call
   site, and the file header states in one paragraph why the exception exists and what bounds it -
@@ -307,11 +307,8 @@ session-less path in this codebase is already built, and named the same way:
   `requirePermission(session, { share: ['read'] })` or `{ share: ['revoke'] }`. A test asserts no
   other module imports them, the way §2.6's drift test asserts its own list.
 
-This is an exception to SPEC §5's "**Every** query goes through a scoped repository in
-`src/server/repos/**` that takes an explicit tenant context", which carries no clause for it - the
-billing family is already outside that sentence in fact and the sentence was never amended.
-Recorded as **FU-3** in §7 rather than resolved here, because a document may not relax a clause in
-a contract it does not own.
+SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
+closed list of exactly two catalog members is unchanged (ADR 0041).
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
@@ -482,7 +479,7 @@ uses.
 
 ## 3. What an unauthenticated visitor may see
 
-Three surfaces are reachable without a session beyond the marketing landing, the pricing page and
+Four surfaces are reachable without a session beyond the marketing landing, the pricing page and
 the legal pages. Each one gets an explicit visible list and an explicit never-visible list. A field
 that appears in neither list is never-visible: the projections are whitelists, so silence is a
 denial.
@@ -556,6 +553,50 @@ It is read by `listShareLinksForModerationUnscoped` in `src/server/repos/shares.
 else; §2.4 states why that function is allowed to run without a tenant scope and what bounds it.
 `resource_kind` is the one field here that has no column behind it yet - see FU-4 in §7.
 
+### 3.4a Calendar feed — `/api/feed/<secret>.ics`
+
+A session-less, owner-bound, read-only calendar link is a bearer credential. The trip feed is
+available through GET and HEAD. It reaches its tenant through exactly one `…Unscoped` repository
+read: `findLiveFeedByDigestUnscoped` in `src/server/repos/calendar-feeds.ts`, called only by
+`src/server/public/calendar-feed.ts`. Its projection is coordinates only; `ResolvedFeed` is branded
+next to repo `openFeedScope`, which alone constructs the scope. The handler holds no SQL.
+
+| Visible | Never visible |
+| --- | --- |
+| Trip title and dates; stop names, addresses, times and notes; day titles and notes; stay names and addresses; reservation and transport titles; leg endpoints and service numbers; event ids and edit timestamps; the app address of the trip (login required) | Confirmation numbers, booking references, seats, prices, provider URLs, participants, emails, user ids, workspace identity, files, other trips' data |
+
+Only a person on the trip may create its feed, even when the trip is organization-visible.
+Only the feed's owner may manage, rotate or revoke it; a trip owner cannot see or revoke another
+person's feeds. Every live read checks the owner's current workspace membership and active ban,
+and the trip membership for a trip feed. `COALESCE(rotated_at, created_at)` must be at least the
+current workspace `member.created_at` and, for a trip feed, `trip_members.created_at`.
+A missing membership, active ban, revoked link or inaccessible trip returns the same byte-identical
+`404` as an unknown secret (subject to the refusal budget). Leaving and rejoining the workspace
+or trip keeps the old link dead: the person creates a fresh one. Equality is allowed; a lifted
+or expired ban restores a link because the membership row survives. No leave hook or offboarding
+revocation write is needed. Removing a member or taking them off the trip is the workspace owner's
+remedy for that member's leaked link. Already downloaded calendar data cannot be recalled.
+
+The revealed region is Replay-blocked and provider handoffs are built at click time, rather than
+stored in anchors. A handoff deliberately gives the secret to the selected calendar provider;
+the browser's history may retain and sync the opened URL. Rotation or revocation stops subsequent
+fetches, not copies already held by a provider or browser.
+
+**Residual platform telemetry and merge condition.** Application-controlled Sentry events,
+transactions, spans, breadcrumbs and logs must redact the secret; handler logs carry only the feed
+id and never use `requestFields`. Cloudflare invocation logs **and OTLP platform trace export**
+can still carry the request URL, outside repository redaction. Cloudflare log or Sentry trace
+readers can therefore read live secrets; production-derived Sentry triage can copy data to GitHub.
+Before merge, independently renewed security approval requires an explicit **OWNER** decision
+accepting that exposure with restricted access, disabling invocation logs in both production and
+staging while separately addressing OTLP exposure, or arranging account-side scrubbing for both
+channels. The owner must also arrange a Cloudflare zone rate limit on `/api/feed/*`, since refusal
+classification itself costs D1 reads. Panel `qa-approved` alone does not settle these conditions.
+The Phase 2 PR carries the telemetry decision and zone rule on explicit lines and retains
+`do-not-merge` unless that owner decision and zone protection are already recorded. Phase 4 must
+restate the decision for the wider workspace feed. This is this credential surface's explicit
+merge prerequisite, not a change to general workflow policy.
+
 ### 3.5 Indexing
 
 - `/share/$token` is **`noindex`**. It is delivered twice, because a token URL is fetchable as
@@ -568,15 +609,19 @@ else; §2.4 states why that function is allowed to run without a tenant scope an
   `published` are listed in the sitemap; retiring a pack removes it from the sitemap in the same
   write that changes its status.
 
+- `/api/feed/*` sends `X-Robots-Tag: noindex, nofollow` on every response, with
+  `Cache-Control: private, no-store` and `Referrer-Policy: no-referrer`; do not disallow it in
+  `robots.txt`, because a crawler must fetch the header.
+
 ### 3.6 Rate limiting, by token and by IP
 
-Counters live in KV with a 60 s TTL under versioned keys, one keyed by the hashed token and one by
+For share surfaces, counters live in KV with a 60 s TTL under versioned keys, one keyed by the hashed token and one by
 the client IP:
 
 | Budget                           | Limit                                    | Key                                 |
 | -------------------------------- | ---------------------------------------- | ----------------------------------- |
 | Per share token                  | 60 requests / minute                     | `public:rl:<v>:tok:<sha256(token)>` |
-| Per IP, all public routes        | 120 requests / minute                    | `public:rl:<v>:ip:<ip>`             |
+| Per IP, share public routes        | 120 requests / minute                    | `public:rl:<v>:ip:<ip>`             |
 | Per IP, failed token resolutions | 20 / minute, then the IP budget is spent | `public:rl:<v>:miss:<ip>`           |
 
 Over budget is `429` with `Retry-After`. An unknown, revoked or expired token returns exactly the
@@ -588,22 +633,41 @@ token is a `404`, whatever KV is doing. `view_count` and `last_viewed_at` are up
 asynchronously through the queue, never inline, so a crawler cannot make a public read cost a D1
 write per request.
 
+Calendar providers share IPs, so calendar feeds use separate approximate minute counters:
+60 requests/minute per live feed id (never digest), and 20/minute per IP for refusals only.
+A live feed never spends or is refused by the shared-IP budget, including the 120/minute share
+budget above. Unknown, revoked, rotated-away, owner-gone/banned and trip-unreadable resolutions
+spend the refusal budget identically; malformed-but-shaped credentials do too. Wrong-shape paths
+are rejected before resolution. Refusal timing is not claimed equal. Over budget is `429` with
+`Retry-After`. Keys are `public:rl:v1:feed:<id>:<minute>` and
+`public:rl:v1:miss:<ip>:<minute>` with 120 s TTL at HEAD. KV has no atomic increment, so these
+are approximate and fail open on KV failure; credential resolution never fails open.
+A counter spend costs one KV read and one write. The edge zone rule is required separately.
+
+The calendar route is the bounded exception to queue-only access stamps: `touchFeed` runs in
+`waitUntil` only when `last_served_at` is null or at least an hour old, at most one background
+stamp per feed per hour under ordinary polling, not a D1 write per fetch. Enable and rotation
+reset the stamp. `readFeedSource` is nine statements (one trip and eight content reads); a valid
+trip poll also has the digest lookup, membership/ban read and indexed trip-membership check.
+
 ### 3.7 `src/server/public/**` is the only sessionless read path
 
-Nothing else in the codebase reads data without a session. Three rules, all testable:
+Public share, published catalog and calendar projections use this path; the bounded billing,
+moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three rules, all testable:
 
 1. **Column whitelists only.** Every response is a named read-only projection that enumerates the
    columns a stranger may see. A field is not omitted by a `delete` after the fact and not hidden
    by a serializer - it is never selected, so leaking it is inexpressible rather than merely
    forbidden. Adding a field to a public surface means editing the projection, which means editing
-   the visible list in §3.1-§3.3 in the same commit.
+   the visible list in §3.1-§3.4a in the same commit.
 2. **No fabricated tenant context, ever.** A tenant repository must never be called from this path
    with an empty, placeholder or invented context. `src/server/repos/base.ts` exists so that
    forgetting the tenant filter is not expressible, and handing it a fake context to reach a row
    destroys the one guarantee it was built to give. The scope passed from this path is always the
-   one derived from the share record that was just resolved by token, and never constructed from a
+   one derived from the share or feed record that was just resolved by token, and never constructed from a
    request parameter. A lint-level test asserts that no module under `src/server/public/**`
-   constructs a tenant scope itself.
+   constructs a tenant scope itself. For feeds only repo `openFeedScope` accepts the
+   adjacent branded `ResolvedFeed` and constructs the owner-bound scope.
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
    `src/server/repos`; published global rows go through `src/server/catalog`. This module owns the
    whitelist and nothing else.
@@ -1104,18 +1168,11 @@ that owns `docs/SPEC.md` amended the closure sentence to nine names and carved o
 table's writer, exactly as this note asked, rather than this document relaxing a clause it does not
 own.
 
-**FU-3 - SPEC §5's "every query is scoped" sentence has exceptions in fact and none in text.** The
-sentence reads "**Every** query goes through a scoped repository in `src/server/repos/**` that
-takes an explicit tenant context". Two families of function in that directory already do not, and
-both are deliberate: the four `…Unscoped` billing functions, which exist because a payment
-webhook has no session and must discover its organization from a provider id, and the two share
-moderation functions §2.4 specifies, which exist because a platform moderator has no tenant
-context by construction. The sentence needs a clause naming the shape of the exception - a plain
-`Database`, an `Unscoped` suffix, a single stated caller, and a projection narrow enough that the
-function cannot return tenant content - so that the next one is written to a rule instead of to a
-precedent someone had to go looking for. The round that owns `docs/SPEC.md` makes that amendment.
-Until it does, §2.4's implementation note is the rule for `share_links` and the billing repository
-header is the rule for `subscriptions`, and no third case is added without amending SPEC first.
+**FU-3 — CLOSED by the calendar feed contract amendment (issue #900, ADR 0041).**
+SPEC §5/§6 now names the plain `Database`, `Unscoped` suffix, file-header justification,
+one stated production caller per function, and narrow projection without tenant content.
+Billing has five such functions at HEAD, not four; §2.4's moderation functions adopt the same
+shape when implemented. The calendar digest resolver adds no catalog member.
 
 **FU-4 - the moderation projection names a column that does not exist yet.** §3.2 and §3.4 both
 read `resource_kind` off `share_links`. That table is trip-only today: `trip_id` is `NOT NULL` with

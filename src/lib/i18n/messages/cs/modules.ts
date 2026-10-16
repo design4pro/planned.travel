@@ -909,6 +909,53 @@ const messages = {
   'files.action.add': 'Přidat soubory',
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
+  'files.calendar.live.action': 'Aktualizovaný odkaz na kalendář',
+  'files.calendar.live.title': 'Aktualizovaný odkaz na kalendář',
+  'files.calendar.warning':
+    'Kdokoli s tímto odkazem může bez účtu číst místa, časy, adresy a poznámky této cesty. Chraňte jej jako heslo.',
+  'files.calendar.enable.action': 'Vytvořit odkaz',
+  'files.calendar.link.once':
+    'Zkopírujte jej teď - zobrazíme jej jen jednou. Pokud jej ztratíte, vypněte jej a vytvořte nový; starý přestane fungovat.',
+  'files.calendar.link.address': 'Adresa odkazu',
+  'files.calendar.link.copy': 'Kopírovat odkaz',
+  'files.calendar.link.copied': 'Odkaz zkopírován',
+  'files.calendar.link.copyFailed':
+    'Kopírování se nezdařilo. Označte adresu a zkopírujte ji ručně.',
+  'files.calendar.link.open': 'Otevřít v aplikaci kalendáře',
+  'files.calendar.link.google': 'Přidat do Kalendáře Google',
+  'files.calendar.link.outlook': 'Přidat do Outlooku',
+  'files.calendar.link.done': 'Hotovo',
+  'files.calendar.link.stays':
+    'Čísla potvrzení, ceny a soubory zůstávají v planned.travel.',
+  'files.calendar.freshness':
+    'Aplikacím kalendáře může zobrazení změny trvat několik hodin, někdy i déle.',
+  'files.calendar.state.on': 'Odkaz na kalendář je zapnutý',
+  'files.calendar.state.lastFetched':
+    'Kalendář tento odkaz naposledy zkontroloval {when}',
+  'files.calendar.state.neverFetched': 'Dosud nenačteno',
+  'files.calendar.off.action': 'Vypnout',
+  'files.calendar.off.confirmTitle': 'Vypnout tento odkaz na kalendář?',
+  'files.calendar.off.confirmBody':
+    'Odkaz ihned přestane fungovat. Kalendáře si ponechají již přijaté události, ale přestanou je aktualizovat.',
+  'files.calendar.off.confirm': 'Vypnout',
+  'files.calendar.off.busy': 'Vypínání…',
+  'files.calendar.closeGuard.title': 'Zavřít bez zkopírování odkazu?',
+  'files.calendar.closeGuard.body':
+    'Nemůžeme jej zobrazit znovu. Budete muset vytvořit nový.',
+  'files.calendar.closeGuard.confirm': 'Přesto zavřít',
+  'files.calendar.closeGuard.cancel': 'Nechat otevřené',
+  'files.calendar.error.enable':
+    'Nepodařilo se potvrdit vytvoření odkazu. Aktuální stav je níže. Pokud je zapnutý, ale neviděli jste jej, vypněte jej a vytvořte znovu.',
+  'files.calendar.error.off':
+    'Nepodařilo se potvrdit vypnutí odkazu. Aktuální stav je níže; podle potřeby to zkuste znovu.',
+  'files.calendar.error.load':
+    'Odkaz na kalendář této cesty se nepodařilo ověřit. Zkuste to znovu.',
+  'files.calendar.retry': 'Zkusit znovu',
+  'files.calendar.off.confirmBodyUnused':
+    'Tento odkaz ještě nikdo nepoužil. Ihned přestane fungovat.',
+  'files.calendar.link.fallback':
+    'Pokud jej nelze přidat v telefonu, otevřete tuto stránku na počítači.',
+  'files.calendar.link.newTab': 'otevře se na nové kartě',
   'files.calendar.title': 'Kalendář',
   'files.calendar.description':
     'Přenes si tento výlet do aplikace kalendáře, kterou už používáš.',

@@ -24,6 +24,7 @@ import {
   PopoverTrigger,
   Textarea,
   Tooltip,
+  toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatWeekday } from '#/lib/format'
@@ -130,6 +131,8 @@ export interface ThreadProps {
   readonly canModerate: boolean
   /** IANA zone every timestamp in the transcript is read in. */
   readonly timeZone: string
+  readonly onDirtyChange?: (dirty: boolean) => void
+  readonly turnedOff?: boolean
 }
 
 export function Thread({
@@ -139,6 +142,8 @@ export function Thread({
   viewerUserId,
   canModerate,
   timeZone,
+  onDirtyChange,
+  turnedOff = false,
 }: ThreadProps) {
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
   const t = useTranslate()
@@ -272,6 +277,8 @@ export function Thread({
 
       <Composer
         tripId={tripId}
+        onDirtyChange={onDirtyChange}
+        turnedOff={turnedOff}
         replyTo={replyTo}
         editing={editing}
         people={people}
@@ -563,6 +570,8 @@ function Composer({
   people,
   onClearReply,
   onClearEditing,
+  onDirtyChange,
+  turnedOff,
 }: {
   tripId: string
   replyTo: MessageData | null
@@ -570,17 +579,29 @@ function Composer({
   people: ReadonlyArray<CollabPerson>
   onClearReply: () => void
   onClearEditing: () => void
+  onDirtyChange?: (dirty: boolean) => void
+  turnedOff: boolean
 }) {
   const t = useTranslate()
   const [body, setBody] = useState('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const off = useRef(turnedOff)
+  off.current = turnedOff
+  useEffect(() => {
+    onDirtyChange?.(body.length > 0 || editing !== null)
+  }, [body, editing, onDirtyChange])
 
   const post = useAction(postMessageFn, {
     failure: t('modules.collab.toast.notSent'),
     fallback: t('modules.collab.toast.notSentBody'),
   })
   const edit = useAction(editMessageFn, {
-    success: t('modules.collab.toast.messageUpdated'),
+    success: () =>
+      t(
+        off.current
+          ? 'trips.collab.sections.savedHidden'
+          : 'modules.collab.toast.messageUpdated',
+      ),
     failure: t('modules.collab.toast.editFailed'),
   })
   const action = editing === null ? post : edit
@@ -621,6 +642,7 @@ function Composer({
       data: { tripId, body: trimmed, replyToId: replyTo?.id ?? '' },
     })
     if (result !== null) {
+      if (off.current) toast.success(t('trips.collab.sections.savedHidden'))
       setBody('')
       onClearReply()
     }

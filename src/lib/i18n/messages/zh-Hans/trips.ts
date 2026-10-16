@@ -394,6 +394,17 @@ const messages = {
   'plan.workspace.hidePanel': '隐藏{label}面板',
   'plan.workspace.narrowPanel': '缩窄{label}',
   'plan.workspace.widenPanel': '加宽{label}',
+  'collab.sections.trigger': '选择版块',
+  'collab.sections.menuLabel': '向此行程的所有人显示',
+  'collab.sections.keepOne': '至少保留一个开启的版块。',
+  'collab.sections.failed': '更改未能保存',
+  'collab.sections.failedBody': '菜单显示当前已保存的状态。',
+  'collab.sections.someHidden': '此行程的部分版块已隐藏。',
+  'collab.sections.turnedOff':
+    '此版块已对此行程关闭。发送或清除正在编写的内容后，它将关闭。',
+  'collab.sections.changed': '此行程的版块已更改。',
+  'collab.sections.savedHidden':
+    '已保存。此版块已对此行程隐藏，因此现在将关闭。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

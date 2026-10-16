@@ -881,6 +881,53 @@ const messages = {
   'files.action.add': 'Tambah berkas',
   'files.action.choose': 'Pilih berkas',
   'files.action.upload': 'Unggah berkas',
+  'files.calendar.live.action': 'Tautan kalender yang diperbarui',
+  'files.calendar.live.title': 'Tautan kalender yang diperbarui',
+  'files.calendar.warning':
+    'Siapa pun dengan tautan ini dapat membaca tempat, waktu, alamat, dan catatan perjalanan tanpa akun. Lindungi seperti kata sandi.',
+  'files.calendar.enable.action': 'Buat tautan',
+  'files.calendar.link.once':
+    'Salin sekarang - tautan hanya ditampilkan sekali. Jika hilang, nonaktifkan dan buat yang baru; tautan lama berhenti berfungsi.',
+  'files.calendar.link.address': 'Alamat tautan',
+  'files.calendar.link.copy': 'Salin tautan',
+  'files.calendar.link.copied': 'Tautan disalin',
+  'files.calendar.link.copyFailed':
+    'Tidak dapat menyalin. Pilih alamat lalu salin secara manual.',
+  'files.calendar.link.open': 'Buka di aplikasi kalender',
+  'files.calendar.link.google': 'Tambahkan ke Google Kalender',
+  'files.calendar.link.outlook': 'Tambahkan ke Outlook',
+  'files.calendar.link.done': 'Selesai',
+  'files.calendar.link.stays':
+    'Nomor konfirmasi, harga, dan berkas tetap di planned.travel.',
+  'files.calendar.freshness':
+    'Aplikasi kalender mungkin perlu beberapa jam, terkadang lebih lama, untuk menampilkan perubahan.',
+  'files.calendar.state.on': 'Tautan kalender aktif',
+  'files.calendar.state.lastFetched':
+    'Kalender terakhir memeriksa tautan ini {when}',
+  'files.calendar.state.neverFetched': 'Belum diambil',
+  'files.calendar.off.action': 'Nonaktifkan',
+  'files.calendar.off.confirmTitle': 'Nonaktifkan tautan kalender ini?',
+  'files.calendar.off.confirmBody':
+    'Tautan langsung berhenti berfungsi. Kalender menyimpan acara yang sudah diambil, tetapi berhenti memperbaruinya.',
+  'files.calendar.off.confirm': 'Nonaktifkan',
+  'files.calendar.off.busy': 'Menonaktifkan…',
+  'files.calendar.closeGuard.title': 'Tutup tanpa menyalin tautan?',
+  'files.calendar.closeGuard.body':
+    'Kami tidak dapat menampilkannya lagi. Anda harus membuat yang baru.',
+  'files.calendar.closeGuard.confirm': 'Tetap tutup',
+  'files.calendar.closeGuard.cancel': 'Biarkan terbuka',
+  'files.calendar.error.enable':
+    'Pembuatan tautan tidak dapat dipastikan. Status terkini ada di bawah. Jika aktif tetapi Anda belum melihatnya, nonaktifkan lalu buat lagi.',
+  'files.calendar.error.off':
+    'Penonaktifan tautan tidak dapat dipastikan. Status terkini ada di bawah; coba lagi bila perlu.',
+  'files.calendar.error.load':
+    'Tidak dapat memeriksa tautan kalender perjalanan ini. Coba lagi.',
+  'files.calendar.retry': 'Coba lagi',
+  'files.calendar.off.confirmBodyUnused':
+    'Tautan ini belum digunakan. Tautan langsung berhenti berfungsi.',
+  'files.calendar.link.fallback':
+    'Jika tidak dapat menambahkannya di ponsel, buka halaman ini di komputer.',
+  'files.calendar.link.newTab': 'terbuka di tab baru',
   'files.calendar.title': 'Kalender',
   'files.calendar.description':
     'Bawa perjalanan ini ke aplikasi kalender yang sudah kamu pakai.',

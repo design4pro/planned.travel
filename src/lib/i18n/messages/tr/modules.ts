@@ -878,6 +878,53 @@ const messages = {
   'files.action.add': 'Dosya ekle',
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
+  'files.calendar.live.action': 'Güncellenen takvim bağlantısı',
+  'files.calendar.live.title': 'Güncellenen takvim bağlantısı',
+  'files.calendar.warning':
+    'Bu bağlantıya sahip herkes, hesap olmadan gezinin yerlerini, saatlerini, adreslerini ve notlarını okuyabilir. Onu parola gibi koruyun.',
+  'files.calendar.enable.action': 'Bağlantı oluştur',
+  'files.calendar.link.once':
+    'Şimdi kopyalayın - yalnızca bir kez gösteriyoruz. Kaybederseniz kapatıp yenisini oluşturun; eskisi çalışmayı bırakır.',
+  'files.calendar.link.address': 'Bağlantı adresi',
+  'files.calendar.link.copy': 'Bağlantıyı kopyala',
+  'files.calendar.link.copied': 'Bağlantı kopyalandı',
+  'files.calendar.link.copyFailed':
+    'Kopyalanamadı. Adresi seçip kendiniz kopyalayın.',
+  'files.calendar.link.open': 'Takvim uygulamanızda aç',
+  'files.calendar.link.google': 'Google Takvim’e ekle',
+  'files.calendar.link.outlook': 'Outlook’a ekle',
+  'files.calendar.link.done': 'Bitti',
+  'files.calendar.link.stays':
+    'Onay numaraları, fiyatlar ve dosyalar planned.travel’da kalır.',
+  'files.calendar.freshness':
+    'Takvim uygulamalarının değişikliği göstermesi birkaç saat, bazen daha uzun sürebilir.',
+  'files.calendar.state.on': 'Takvim bağlantısı açık',
+  'files.calendar.state.lastFetched':
+    'Bir takvim bu bağlantıyı en son {when} kontrol etti',
+  'files.calendar.state.neverFetched': 'Henüz alınmadı',
+  'files.calendar.off.action': 'Kapat',
+  'files.calendar.off.confirmTitle': 'Bu takvim bağlantısı kapatılsın mı?',
+  'files.calendar.off.confirmBody':
+    'Bağlantı hemen çalışmayı bırakır. Takvimler aldıkları etkinlikleri korur ancak güncellemeyi bırakır.',
+  'files.calendar.off.confirm': 'Kapat',
+  'files.calendar.off.busy': 'Kapatılıyor…',
+  'files.calendar.closeGuard.title': 'Bağlantı kopyalanmadan kapatılsın mı?',
+  'files.calendar.closeGuard.body':
+    'Tekrar gösteremeyiz. Yeni bir tane oluşturmanız gerekir.',
+  'files.calendar.closeGuard.confirm': 'Yine de kapat',
+  'files.calendar.closeGuard.cancel': 'Açık tut',
+  'files.calendar.error.enable':
+    'Bağlantının oluşturulduğu doğrulanamadı. Güncel durum aşağıdadır. Açıksa ama hiç görmediyseniz kapatıp yeniden oluşturun.',
+  'files.calendar.error.off':
+    'Bağlantının kapatıldığı doğrulanamadı. Güncel durum aşağıdadır; gerekirse yeniden deneyin.',
+  'files.calendar.error.load':
+    'Bu gezinin takvim bağlantısı kontrol edilemedi. Yeniden deneyin.',
+  'files.calendar.retry': 'Yeniden dene',
+  'files.calendar.off.confirmBodyUnused':
+    'Bu bağlantı henüz kullanılmadı. Hemen çalışmayı bırakır.',
+  'files.calendar.link.fallback':
+    'Telefonunuzda ekleyemiyorsanız bu sayfayı bilgisayarda açın.',
+  'files.calendar.link.newTab': 'yeni sekmede açılır',
   'files.calendar.title': 'Takvim',
   'files.calendar.description':
     'Bu geziyi zaten kullandığın takvim uygulamasına taşı.',
