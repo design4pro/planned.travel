@@ -446,13 +446,13 @@ number>.optional(), from: <currency code>.optional() })`; `rate` is required unl
   - Preview failure: `Alert` danger, a retry button (`rebase.retry`), confirm disabled.
   - Nothing to convert: "Nothing on this trip is priced yet, so nothing needs converting" and the
     confirm is enabled.
-  - Committing: confirm `loading` with a `loadingLabel` (the `Button` sets native `disabled`),
+  - Committing: confirm `loading` with a `loadingLabel` (the `Button` stays focusable but inert),
     `Select`, rate and Cancel `disabled`, the Dialog's close button hidden (`hideClose`), **Escape
     and outside-press ignored** so the outcome cannot be missed. The commit request has a 30-second
     timeout that lands in the commit-failure state, so a hung request cannot trap the traveller in a
     modal they cannot leave.
   - Commit failure: `Alert` danger with the retry button, and **focus moves to the retry button**
-    (the confirm is natively disabled while loading, so focus would otherwise drop to the body). If
+    (an explicit retry target, even though the loading confirm now retains focus). If
     the refusal is `rebaseChanged` the dialog re-runs the preview and shows the new figures. **After
     any failure that is not a known refusal** (a dropped response, a timeout) the dialog first
     re-reads the trip: if its currency is already `to` the change went through and the success path
