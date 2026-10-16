@@ -793,6 +793,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, i ty',
   'collab.thread.today': 'Dnes',
+  'collab.thread.emptyBody':
+    'Všichni účastníci této cesty sdílejí jedno vlákno. Zde přijatá rozhodnutí zůstávají u cesty, místo aby se ztrácela ve skupinových chatech.',
   'collab.thread.empty': 'Zatím žádné zprávy',
   'collab.toast.reactionFailed': 'Reakce se neuložila',
   'collab.toast.messageDeleted': 'Zpráva smazána',

@@ -809,6 +809,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, toi compris',
   'collab.thread.today': 'Aujourd’hui',
+  'collab.thread.emptyBody':
+    'Tout le monde partage une seule discussion pour ce voyage. Les décisions prises ici restent avec le voyage au lieu de se disperser dans les discussions de groupe.',
   'collab.thread.empty': 'Aucun message pour l’instant',
   'collab.toast.reactionFailed': 'La réaction n’a pas été enregistrée',
   'collab.toast.messageDeleted': 'Message supprimé',

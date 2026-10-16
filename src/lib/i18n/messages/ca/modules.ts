@@ -800,6 +800,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, tu inclòs',
   'collab.thread.today': 'Avui',
+  'collab.thread.emptyBody':
+    'Tothom d’aquest viatge comparteix un sol fil. Les decisions que es prenen aquí es queden amb el viatge en lloc de dispersar-se pels xats de grup.',
   'collab.thread.empty': 'Encara no hi ha missatges',
   'collab.toast.reactionFailed': 'La reacció no s’ha desat',
   'collab.toast.messageDeleted': 'Missatge eliminat',

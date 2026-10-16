@@ -799,6 +799,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, du dabei',
   'collab.thread.today': 'Heute',
+  'collab.thread.emptyBody':
+    'Alle auf dieser Reise teilen einen Gesprächsverlauf. Hier getroffene Entscheidungen bleiben bei der Reise, statt sich über Gruppenchats zu verteilen.',
   'collab.thread.empty': 'Noch keine Nachrichten',
   'collab.toast.reactionFailed': 'Die Reaktion wurde nicht gespeichert',
   'collab.toast.messageDeleted': 'Nachricht gelöscht',

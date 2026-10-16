@@ -771,6 +771,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, sen dahil',
   'collab.thread.today': 'Bugün',
+  'collab.thread.emptyBody':
+    'Bu yolculuktaki herkes tek bir konuşmayı paylaşır. Burada alınan kararlar grup sohbetlerine dağılmak yerine yolculukla birlikte kalır.',
   'collab.thread.empty': 'Henüz mesaj yok',
   'collab.toast.reactionFailed': 'Tepki kaydedilmedi',
   'collab.toast.messageDeleted': 'Mesaj silindi',

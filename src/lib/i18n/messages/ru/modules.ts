@@ -798,6 +798,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, включая вас',
   'collab.thread.today': 'Сегодня',
+  'collab.thread.emptyBody':
+    'Все участники этой поездки общаются в одной ветке. Принятые здесь решения остаются с поездкой, а не теряются в групповых чатах.',
   'collab.thread.empty': 'Сообщений пока нет',
   'collab.toast.reactionFailed': 'Реакция не сохранилась',
   'collab.toast.messageDeleted': 'Сообщение удалено',

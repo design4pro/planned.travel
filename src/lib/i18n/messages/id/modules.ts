@@ -777,6 +777,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, termasuk kamu',
   'collab.thread.today': 'Hari ini',
+  'collab.thread.emptyBody':
+    'Semua peserta perjalanan ini berbagi satu percakapan. Keputusan yang dibuat di sini tetap tersimpan bersama perjalanan, bukan tercecer di berbagai obrolan grup.',
   'collab.thread.empty': 'Belum ada pesan',
   'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
   'collab.toast.messageDeleted': 'Pesan dihapus',

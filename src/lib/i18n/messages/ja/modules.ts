@@ -749,6 +749,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}（あなたを含む）',
   'collab.thread.today': '今日',
+  'collab.thread.emptyBody':
+    'この旅行の参加者全員でひとつのスレッドを共有します。ここで決めたことはグループチャットに散らばらず、旅行と一緒に残ります。',
   'collab.thread.empty': 'まだメッセージはありません',
   'collab.toast.reactionFailed': 'リアクションを保存できませんでした',
   'collab.toast.messageDeleted': 'メッセージを削除しました',

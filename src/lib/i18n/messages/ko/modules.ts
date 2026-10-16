@@ -744,6 +744,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, 나 포함',
   'collab.thread.today': '오늘',
+  'collab.thread.emptyBody':
+    '이 여행의 모든 참여자가 하나의 대화를 공유합니다. 여기서 내린 결정은 여러 그룹 채팅에 흩어지지 않고 여행과 함께 남습니다.',
   'collab.thread.empty': '아직 메시지가 없습니다',
   'collab.toast.reactionFailed': '반응을 저장하지 못했습니다',
   'collab.toast.messageDeleted': '메시지를 삭제했습니다',

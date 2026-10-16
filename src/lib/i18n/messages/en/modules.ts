@@ -946,6 +946,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, including you',
   'collab.thread.today': 'Today',
+  'collab.thread.emptyBody':
+    'Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats.',
   'collab.thread.empty': 'No messages yet',
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',

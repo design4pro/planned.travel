@@ -789,6 +789,8 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, jij erbij',
   'collab.thread.today': 'Vandaag',
+  'collab.thread.emptyBody':
+    'Iedereen op deze reis deelt één gesprek. Beslissingen die je hier neemt, blijven bij de reis in plaats van verspreid te raken over groepschats.',
   'collab.thread.empty': 'Nog geen berichten',
   'collab.toast.reactionFailed': 'De reactie is niet opgeslagen',
   'collab.toast.messageDeleted': 'Bericht verwijderd',
