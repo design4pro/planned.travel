@@ -81,10 +81,10 @@ const messages = {
   'workspace.create': 'Vytvořit prostor',
   'workspace.createTitle': 'Vytvoření prostoru',
   'workspace.createDescription':
-    'Samostatný prostor s vlastními cestami, místy a lidmi. Začíná v tarifu Zdarma.',
+    'Samostatný prostor s vlastními cestami, místy a lidmi. Začíná v tarifu Zdarma a nesdílí tarif prostoru, ve kterém jste.',
   'workspace.createName': 'Název prostoru',
   'workspace.createUpgrade':
-    'Vytváření dalších prostorů je součástí placeného tarifu.',
+    '„{workspace}“ je v tarifu Zdarma a další prostor může vytvořit jen prostor s placeným tarifem. Pokud má některý z vašich dalších prostorů placený tarif, přepněte na něj a vytvořte prostor odtud. Jinak u prostoru „{workspace}“ přejděte na placený tarif.',
   'workspace.createLimitReached':
     'Dosáhli jste největšího počtu prostorů, do kterých může patřit jeden účet.',
   'workspace.createRoleRequired':

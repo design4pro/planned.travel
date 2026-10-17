@@ -73,10 +73,10 @@ const messages = {
   'workspace.create': 'Crea spazio',
   'workspace.createTitle': 'Crea uno spazio',
   'workspace.createDescription':
-    'Uno spazio separato con i suoi viaggi, luoghi e persone. Parte dal piano Gratuito.',
+    'Uno spazio separato con i suoi viaggi, luoghi e persone. Parte dal piano Gratuito e non condivide il piano dello spazio in cui ti trovi.',
   'workspace.createName': 'Nome dello spazio',
   'workspace.createUpgrade':
-    'Creare altri spazi fa parte di un piano a pagamento.',
+    '«{workspace}» è nel piano Gratuito e solo uno spazio con un piano a pagamento può crearne un altro. Se un altro dei tuoi spazi ha un piano a pagamento, passa a quello e crea da lì. Altrimenti, passa «{workspace}» a un piano a pagamento.',
   'workspace.createLimitReached':
     'Hai raggiunto il numero massimo di spazi a cui può appartenere un account.',
   'workspace.createRoleRequired':

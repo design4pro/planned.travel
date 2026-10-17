@@ -469,9 +469,11 @@ create one: Better Auth's own `POST /api/auth/organization/create` answers `403`
 and `401` to an anonymous one (`allowUserToCreateOrganization: false`), because the plugin's endpoint
 carries none of the rules below. `disabledPaths` is untouched, and `organization/set-active` still
 answers. In order, `createWorkspace` checks the role, then refuses an impersonated session (§6.4),
-then the plan (Free keeps the one workspace it was provisioned with), then the limit of
-twenty workspaces per account, which it reads from the same constant as the plugin's
-`organizationLimit` because the plugin enforces that limit only inside its own endpoint.
+then the limit of twenty workspaces per account, which it reads from the same constant as the
+plugin's `organizationLimit` because the plugin enforces that limit only inside its own endpoint,
+and then the plan (Free keeps the one workspace it was provisioned with). The limit runs before the
+plan so that an admin who already belongs to twenty workspaces is told so, not sent to pay for a
+create that would still be refused.
 `src/server/auth/__tests__/workspace-access.test.ts` pins this section to the constant the code
 uses.
 

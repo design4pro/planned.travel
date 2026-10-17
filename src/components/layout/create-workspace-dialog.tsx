@@ -56,10 +56,16 @@ type Notice =
 export function CreateWorkspaceDialog({
   open,
   onOpenChange,
+  workspaceName,
   onCloseAutoFocus,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /**
+   * The workspace the reader is in, which the upgrade refusal names: the plan gate reads that
+   * workspace's plan and no other, so it is the one workspace the dialog can truthfully say is on Free.
+   */
+  workspaceName: string
   /** Where focus goes when the dialog closes: the menu trigger the reader opened it from. */
   onCloseAutoFocus: () => void
 }) {
@@ -151,6 +157,7 @@ export function CreateWorkspaceDialog({
             {notice === null ? null : (
               <NoticeAlert
                 notice={notice}
+                workspaceName={workspaceName}
                 onNavigate={() => onOpenChange(false)}
               />
             )}
@@ -186,14 +193,16 @@ export function CreateWorkspaceDialog({
 
 /**
  * A refusal says what to do and carries no number. Only the upgrade links on, to the billing screen
- * the account menu already links to: a workspace admin can act on it, and the other two cannot be
- * fixed by paying.
+ * of the workspace it names: a workspace admin can act on it, and the other two cannot be fixed by
+ * paying.
  */
 function NoticeAlert({
   notice,
+  workspaceName,
   onNavigate,
 }: {
   notice: Notice
+  workspaceName: string
   onNavigate: () => void
 }) {
   const t = useTranslate()
@@ -220,7 +229,12 @@ function NoticeAlert({
     case 'upgrade-required':
       return (
         <Alert tone="warning" {...announce}>
-          <p>{t('shell.workspace.createUpgrade')}</p>
+          {/* A workspace name is up to 60 characters of free text, and it appears twice: it must wrap at 320px, and keep its own direction inside the sentence. */}
+          <p className="wrap-anywhere">
+            {t('shell.workspace.createUpgrade', {
+              workspace: `\u2068${workspaceName}\u2069`,
+            })}
+          </p>
           <Link
             to="/settings/billing"
             onClick={onNavigate}

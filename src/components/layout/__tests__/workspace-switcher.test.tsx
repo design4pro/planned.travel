@@ -881,11 +881,13 @@ describe('creating a workspace', () => {
     await user.click(screen.getByRole('button', { name: 'Create workspace' }))
   }
 
-  it('opens a labelled dialog beside the menu, which closes, and says it starts on Free', async () => {
+  it('opens a labelled dialog beside the menu, which closes, and says it starts on Free without the current plan', async () => {
     const { dialog } = await openDialog()
 
     expect(screen.queryByRole('menu')).toBeNull()
-    expect(dialog.textContent).toContain('It starts on the Free plan.')
+    expect(dialog.textContent).toContain(
+      'It starts on the Free plan and does not share the plan of the workspace you are in.',
+    )
     expect(document.activeElement).toBe(
       screen.getByRole('textbox', { name: /Workspace name/ }),
     )
@@ -958,18 +960,18 @@ describe('creating a workspace', () => {
     )
   })
 
-  it('explains an upgrade refusal with the link to billing, and keeps the name', async () => {
+  it('explains an upgrade refusal by naming the active workspace, with the link to billing, and keeps the name', async () => {
     workspace.create.mockResolvedValue({
       ok: false,
       reason: 'upgrade-required',
     })
-    const { user } = await openDialog()
+    const { user } = await openDialog(sessionOf([ALPHA, BETA], BETA))
 
     await submit(user, 'Lisbon')
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain(
-      'Creating more workspaces is part of a paid plan.',
+      '\u201C\u2068Beta Family\u2069\u201D is on the Free plan, and only a workspace on a paid plan can create another. If another of your workspaces is on a paid plan, switch to it and create from there. Otherwise, upgrade \u201C\u2068Beta Family\u2069\u201D.',
     )
     expect(
       within(alert)
@@ -984,6 +986,27 @@ describe('creating a workspace', () => {
       ).value,
     ).toBe('Lisbon')
     expect(router.navigate).not.toHaveBeenCalled()
+  })
+
+  it('shows the active workspace name as plain text, never as markup, isolated from the sentence direction', async () => {
+    workspace.create.mockResolvedValue({
+      ok: false,
+      reason: 'upgrade-required',
+    })
+    const hostile: ShellOrganization = {
+      id: 'org_h',
+      name: '<img src=x onerror=alert(1)>',
+      slug: 'hostile',
+    }
+    const { user } = await openDialog(sessionOf([hostile]))
+
+    await submit(user, 'Lisbon')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(
+      '\u2068<img src=x onerror=alert(1)>\u2069',
+    )
+    expect(alert.querySelector('img')).toBeNull()
   })
 
   it.each([

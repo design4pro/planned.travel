@@ -2734,7 +2734,9 @@ test.describe('switching workspace', () => {
     await expect(
       dialog.getByRole('alert'),
       'a refusal is explained in the dialog the reader is looking at',
-    ).toContainText('part of a paid plan')
+    ).toContainText(
+      `“\u2068${SECOND.name}\u2069” is on the Free plan, and only a workspace on a paid plan can create another`,
+    )
     await expect(
       dialog.getByRole('link', { name: 'Plan and billing' }),
     ).toBeVisible()
