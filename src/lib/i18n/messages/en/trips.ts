@@ -644,6 +644,19 @@ const messages = {
   'collab.sections.changed': 'The sections on this trip changed.',
   'collab.sections.savedHidden':
     'Saved. This section is hidden for the trip, so it closes now.',
+  'plan.place.error.save':
+    'The place could not be saved. Try it again in a moment.',
+  'plan.stop.error.saveTimes':
+    'The stop times could not be saved. Try it again in a moment.',
+  'plan.place.error.delete':
+    'The place could not be deleted. Try it again in a moment.',
+  'plan.pin.error.move':
+    'The pin could not be moved. Try it again in a moment.',
+  'plan.place.toast.created': 'Place added',
+  'plan.place.toast.updated': 'Place updated',
+  'plan.stop.toast.timesSaved': 'Stop times saved',
+  'plan.place.toast.deleted': 'Place deleted',
+  'plan.pin.toast.moved': '{name} pinned',
 } as const satisfies NamespaceMessages
 
 export default messages

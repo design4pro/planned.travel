@@ -456,6 +456,19 @@ const messages = {
   'collab.sections.changed': 'Les seccions d’aquest viatge han canviat.',
   'collab.sections.savedHidden':
     'Desat. Aquesta secció està oculta per al viatge i ara es tancarà.',
+  'plan.place.error.save':
+    'No s’ha pogut desar el lloc. Torneu-ho a provar d’aquí a un moment.',
+  'plan.stop.error.saveTimes':
+    'No s’han pogut desar els horaris de la parada. Torneu-ho a provar d’aquí a un moment.',
+  'plan.place.error.delete':
+    'No s’ha pogut eliminar el lloc. Torneu-ho a provar d’aquí a un moment.',
+  'plan.pin.error.move':
+    'No s’ha pogut moure el marcador. Torneu-ho a provar d’aquí a un moment.',
+  'plan.place.toast.created': 'Lloc afegit',
+  'plan.place.toast.updated': 'Lloc actualitzat',
+  'plan.stop.toast.timesSaved': 'Horaris de la parada desats',
+  'plan.place.toast.deleted': 'Lloc eliminat',
+  'plan.pin.toast.moved': 'S’ha fixat {name}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
