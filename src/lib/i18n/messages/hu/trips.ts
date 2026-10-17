@@ -436,6 +436,7 @@ const messages = {
   'plan.workspace.hidePanel': '{label} panel elrejtése',
   'plan.workspace.narrowPanel': '{label} szűkítése',
   'plan.workspace.widenPanel': '{label} szélesítése',
+  'collab.sections.tabsLabel': 'Együttműködési szakaszok',
   'collab.sections.trigger': 'Szakaszok kiválasztása',
   'collab.sections.menuLabel': 'Megjelenítés az út minden résztvevőjének',
   'collab.sections.keepOne':

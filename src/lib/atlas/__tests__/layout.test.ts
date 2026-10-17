@@ -12,6 +12,7 @@ import {
   SHELF_FALLBACK,
   SLICE_HEIGHT_CLASS,
   TRIP_RAIL_STICKY_CLASS,
+  COLLAB_TABS_STICKY_CLASS,
   TRIP_SLICE_HEIGHT_CLASS,
   TRIP_SUBNAV,
   TRIP_SUBNAV_WIDE,
@@ -399,4 +400,10 @@ describe('the static-to-live hand-off', () => {
     expect(WORLD_FRAME_CSS.lift).toContain(ratio)
     expect(WORLD_FRAME_CSS.edge).toBe('max(100cqw, 100cqh)')
   })
+})
+
+it('pins collaboration tabs below the complete stacked chrome at both breakpoints', () => {
+  expect(COLLAB_TABS_STICKY_CLASS).toBe(
+    `top-[${insetSumCss([...APP_HEADER, ...TRIP_SUBNAV])}] lg:top-[${insetSumCss([...APP_HEADER, ...TRIP_SUBNAV_WIDE])}]`,
+  )
 })

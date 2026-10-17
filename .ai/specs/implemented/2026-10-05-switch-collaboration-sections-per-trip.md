@@ -2,10 +2,10 @@
 
 | Field              | Value                                              |
 | ------------------ | -------------------------------------------------- |
-| **Status**         | in-progress                                        |
-| **Issue**          | none                                               |
+| **Status**         | implemented                                        |
+| **Issue**          | #906                                               |
 | **Spec PR**        | #903                                               |
-| **Implementation** | #1271, #1290, #1308, #1328                         |
+| **Implementation** | #1271, #1290, #1308, #1328, #1338                         |
 | **Plan**           | 07-S2 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
@@ -576,7 +576,7 @@ Phase 3 may be cut into a server slice and a UI slice (above), the UI slice **bl
 
 ### Phase 4 - On a phone the sections are tabs
 
-- [ ] Tests first (`collab-tabs.test.tsx`), then `collab-tabs.tsx`, the sticky bar (the derived class in `layout.ts`), the per-section skeletons, `tabsLabel` in 23 locales, the one journey in `e2e/collaboration-and-sharing.spec.ts`.
+- [x] Tests first (`collab-tabs.test.tsx`), then `collab-tabs.tsx`, the sticky bar (the derived class in `layout.ts`), the per-section skeletons, `tabsLabel` in 23 locales, the one journey in `e2e/collaboration-and-sharing.spec.ts`.
 
 ## Verification
 
@@ -645,3 +645,10 @@ The route delegates section layout and retained-draft composition to `CollabScre
 `collabLayout` with the visible section ids. This keeps the same layout contract and provides a
 component seam for peer changes, dialog retention, announcements and focus repair. The route owns
 the loader, header counts and section write/refresh wiring.
+
+## Amendment - Phase 4 responsive sections (#911)
+
+`CollabTabs` owns local selection and per-section page scroll positions; `CollabScreen` mounts each
+visible section once through `TabsContent`. CSS hides inactive panels below `xl` and shows every
+panel in the desktop grid. Focus repair chooses the active tab only when its DOM box is rendered.
+The pending route composes `CollabSkeletons` with all three section shapes. The final implementation is tracked by PR #1338 in the metadata.
