@@ -161,7 +161,7 @@ slices that matter.
   at `succeeded` enqueue nothing — the latter attaches the Polar customer so the billing screen
   works the instant the browser returns, and leaves the notification to the `subscription.created`
   already on its way with the whole subscription on it.
-- **Transactional email** → nine React Email templates in `src/server/email/templates/`, rendered
+- **Transactional email** → ten React Email templates in `src/server/email/templates/`, rendered
   by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
   `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by
   `src/server/queue/handlers/email.ts` with a provider-side idempotency key. The renderer is
@@ -172,7 +172,8 @@ slices that matter.
   awaits the render _before_ it enqueues, so React's streaming renderer runs inside the request
   that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
   follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — `queueAuthEmail()`
-  has three callers, all Better Auth hooks in `src/server/auth/index.ts`, so **six** of the nine
+  has five dispatch sites: three Better Auth hooks in `src/server/auth/index.ts` and successful
+  passkey registration and actual removal in `src/server/auth/passkey/plugin.ts`. **Six** of eleven
   kinds (`auth.email-changed`, `auth.delete-account` and the four `billing.*`) have no dispatch
   site and are exercised only by `src/server/email/__tests__/templates.test.tsx`.
 - **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder

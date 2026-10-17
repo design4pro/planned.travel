@@ -175,13 +175,30 @@ describe('the screens read correctly in Arabic', () => {
   })
 })
 
-describe('the catalogue and the screens agree', () => {
+describe('the catalogue and its screen and email consumers agree', () => {
+  const emailPath = join(process.cwd(), 'src', 'server', 'auth', 'email.ts')
+  const consumers = [
+    ...SOURCES,
+    { path: emailPath, text: readFileSync(emailPath, 'utf8') },
+  ]
   const used = new Set<string>()
-  for (const source of SOURCES) {
+  for (const source of consumers) {
     for (const match of source.text.matchAll(/'auth\.([\w.]+)'/g)) {
       used.add(match[1])
     }
   }
+
+  it('finds the passkey notice keys read by the email message descriptor', () => {
+    expect([...used]).toEqual(
+      expect.arrayContaining([
+        'passkeyNotice.added',
+        'passkeyNotice.removed',
+        'passkeyNotice.security',
+        'passkeyNotice.action',
+        'passkeyNotice.recovery',
+      ]),
+    )
+  })
 
   it('finds the keys the screens read', () => {
     // A floor rather than an exact count: the two assertions below are what
@@ -189,12 +206,12 @@ describe('the catalogue and the screens agree', () => {
     expect(used.size).toBeGreaterThan(100)
   })
 
-  it('has every key a screen reads', () => {
+  it('has every key a consumer reads', () => {
     const missing = [...used].filter((key) => !(key in auth))
     expect(missing).toEqual([])
   })
 
-  it('has no key no screen reads', () => {
+  it('has no key no consumer reads', () => {
     const unused = Object.keys(auth).filter((key) => !used.has(key))
     expect(unused).toEqual([])
   })

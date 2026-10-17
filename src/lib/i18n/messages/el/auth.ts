@@ -379,6 +379,14 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Επιβεβαιώστε πρώτα το email σας',
   'error.verifyBeforeJoin.detail':
     'Ανοίξτε τον σύνδεσμο επιβεβαίωσης που σας στείλαμε και γυρίστε σε αυτή την πρόσκληση.',
+
+  'passkeyNotice.added': 'Προστέθηκε ένα κλειδί πρόσβασης στον λογαριασμό σας',
+  'passkeyNotice.removed':
+    'Αφαιρέθηκε ένα κλειδί πρόσβασης από τον λογαριασμό σας',
+  'passkeyNotice.security': 'Ασφάλεια',
+  'passkeyNotice.action': 'Διαχείριση κλειδιών πρόσβασης',
+  'passkeyNotice.recovery':
+    'Αν δεν αναγνωρίζετε αυτή την αλλαγή, αλλάξτε τον κωδικό σας και τερματίστε τις άγνωστες συνεδρίες. Η επαναφορά κωδικού δεν αφαιρεί τα κλειδιά πρόσβασης. Ελέγξτε τα και αφαιρέστε όσα δεν αναγνωρίζετε.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

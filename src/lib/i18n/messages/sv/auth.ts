@@ -375,6 +375,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Bekräfta din mejladress först',
   'error.verifyBeforeJoin.detail':
     'Öppna bekräftelselänken vi mejlade och kom sedan tillbaka till den här inbjudan.',
+
+  'passkeyNotice.added': 'En passnyckel har lagts till på ditt konto',
+  'passkeyNotice.removed': 'En passnyckel har tagits bort från ditt konto',
+  'passkeyNotice.security': 'Säkerhet',
+  'passkeyNotice.action': 'Hantera passnycklar',
+  'passkeyNotice.recovery':
+    'Om du inte känner igen ändringen, byt lösenord och avsluta okända sessioner. En lösenordsåterställning tar inte bort passnycklar. Granska dem och ta bort dem du inte känner igen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

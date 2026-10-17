@@ -385,6 +385,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Confirma abans el teu correu',
   'error.verifyBeforeJoin.detail':
     'Obre l’enllaç de confirmació que et vam enviar i torna a aquesta invitació.',
+
+  'passkeyNotice.added': 'S’ha afegit una clau d’accés al teu compte',
+  'passkeyNotice.removed': 'S’ha eliminat una clau d’accés del teu compte',
+  'passkeyNotice.security': 'Seguretat',
+  'passkeyNotice.action': 'Gestiona les claus d’accés',
+  'passkeyNotice.recovery':
+    'Si no reconeixes aquest canvi, canvia la contrasenya i tanca les sessions desconegudes. Restablir la contrasenya no elimina les claus d’accés. Revisa-les i elimina les que no reconeguis.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

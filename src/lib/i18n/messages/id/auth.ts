@@ -368,6 +368,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Konfirmasi email Anda dulu',
   'error.verifyBeforeJoin.detail':
     'Buka tautan konfirmasi yang kami kirim, lalu kembali ke undangan ini.',
+
+  'passkeyNotice.added': 'Kunci sandi ditambahkan ke akun Anda',
+  'passkeyNotice.removed': 'Kunci sandi dihapus dari akun Anda',
+  'passkeyNotice.security': 'Keamanan',
+  'passkeyNotice.action': 'Kelola kunci sandi',
+  'passkeyNotice.recovery':
+    'Jika Anda tidak mengenali perubahan ini, ubah kata sandi dan akhiri sesi yang tidak dikenal. Pengaturan ulang kata sandi tidak menghapus kunci sandi. Tinjau kunci sandi Anda dan hapus yang tidak dikenali.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

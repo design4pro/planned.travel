@@ -382,6 +382,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'أكّد بريدك أولًا',
   'error.verifyBeforeJoin.detail':
     'افتح رابط التأكيد الذي أرسلناه إليك ثم عد إلى هذه الدعوة.',
+
+  'passkeyNotice.added': 'أُضيف مفتاح مرور إلى حسابك',
+  'passkeyNotice.removed': 'أُزيل مفتاح مرور من حسابك',
+  'passkeyNotice.security': 'الأمان',
+  'passkeyNotice.action': 'إدارة مفاتيح المرور',
+  'passkeyNotice.recovery':
+    'إذا لم تتعرف على هذا التغيير، فغيّر كلمة المرور وأنهِ الجلسات غير المعروفة. إعادة تعيين كلمة المرور لا تزيل مفاتيح المرور. راجع مفاتيح المرور وأزل أي مفتاح لا تتعرف عليه.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

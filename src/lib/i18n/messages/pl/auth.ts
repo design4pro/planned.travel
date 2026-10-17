@@ -380,6 +380,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Najpierw potwierdź e-mail',
   'error.verifyBeforeJoin.detail':
     'Otwórz link potwierdzający z naszego e-maila, a potem wróć do tego zaproszenia.',
+
+  'passkeyNotice.added': 'Dodano klucz dostępu do Twojego konta',
+  'passkeyNotice.removed': 'Usunięto klucz dostępu z Twojego konta',
+  'passkeyNotice.security': 'Bezpieczeństwo',
+  'passkeyNotice.action': 'Zarządzaj kluczami dostępu',
+  'passkeyNotice.recovery':
+    'Jeśli nie rozpoznajesz tej zmiany, zmień hasło i zakończ nieznane sesje. Reset hasła nie usuwa kluczy dostępu. Przejrzyj je i usuń te, których nie rozpoznajesz.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
