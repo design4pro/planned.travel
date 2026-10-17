@@ -66,6 +66,15 @@ async function membershipsOf(userId: string): Promise<number> {
   return row.n
 }
 
+/** Gives the caller the rest of the allowance: a membership in every other workspace up to the limit. */
+async function fillWorkspaceLimit(userId: string): Promise<void> {
+  for (let index = 1; index < WORKSPACE_LIMIT; index += 1) {
+    const other = await harness.seedTenant(`other-${index}`)
+    await other.addMembership(userId, 'member')
+  }
+  expect(await membershipsOf(userId)).toBe(WORKSPACE_LIMIT)
+}
+
 /** The caller of `role` inside the origin workspace, on `plan`. */
 async function ports(
   options: {
@@ -240,12 +249,14 @@ describe('a refusal writes nothing', () => {
     expect(await counts()).toEqual(before)
   })
 
-  it('checks the role before the impersonation, and the impersonation before the plan', async () => {
+  it('checks the role, then the impersonation, then the limit, then the plan', async () => {
+    // Every check below fails at once on a Free caller at the limit; the one that answers is the first.
     const memberOnFree = await ports({
       role: 'member',
       plan: 'free',
       impersonated: true,
     })
+    await fillWorkspaceLimit(memberOnFree.scope.ctx.userId)
     expect(await createWorkspace(memberOnFree, { name: 'x' })).toEqual({
       ok: false,
       reason: 'role-required',
@@ -256,10 +267,32 @@ describe('a refusal writes nothing', () => {
       plan: 'free',
       impersonated: true,
     })
+    await fillWorkspaceLimit(ownerOnFree.scope.ctx.userId)
     const error = await captureError(() =>
       createWorkspace(ownerOnFree, { name: 'x' }),
     )
     expect(error).toBeInstanceOf(AuthRequirementError)
+    if (!(error instanceof AuthRequirementError)) return
+    expect(error.reason).toBe('impersonated')
+
+    const adminOnFree = await ports({ role: 'admin', plan: 'free' })
+    await fillWorkspaceLimit(adminOnFree.scope.ctx.userId)
+    expect(await createWorkspace(adminOnFree, { name: 'x' })).toEqual({
+      ok: false,
+      reason: 'limit-reached',
+    })
+  })
+
+  it('refuses a free admin at the workspace limit with limit-reached, writes nothing and activates nothing', async () => {
+    const given = await ports({ role: 'admin', plan: 'free' })
+    await fillWorkspaceLimit(given.scope.ctx.userId)
+    const before = await counts()
+
+    const result = await createWorkspace(given, { name: 'Twenty-first' })
+
+    expect(result).toEqual({ ok: false, reason: 'limit-reached' })
+    expect(await counts()).toEqual(before)
+    expect(given.activate).not.toHaveBeenCalled()
   })
 
   it('refuses at the workspace limit with limit-reached, not the upgrade prompt', async () => {

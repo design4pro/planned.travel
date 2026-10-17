@@ -90,10 +90,10 @@ const messages = {
   'workspace.create': 'Buat ruang kerja',
   'workspace.createTitle': 'Buat ruang kerja baru',
   'workspace.createDescription':
-    'Ruang terpisah untuk perjalanan, tempat, dan orangnya sendiri. Dimulai dengan paket Gratis.',
+    'Ruang terpisah untuk perjalanan, tempat, dan orangnya sendiri. Dimulai dengan paket Gratis dan tidak berbagi paket dengan ruang kerja tempat Anda berada.',
   'workspace.createName': 'Nama ruang kerja',
   'workspace.createUpgrade':
-    'Membuat lebih banyak ruang kerja adalah bagian dari paket berbayar.',
+    '“{workspace}” ada di paket Gratis, dan hanya ruang kerja dengan paket berbayar yang bisa membuat ruang kerja lain. Jika salah satu ruang kerja Anda yang lain memakai paket berbayar, pindah ke sana dan buat dari sana. Jika tidak, tingkatkan paket “{workspace}”.',
   'workspace.createLimitReached':
     'Anda sudah mencapai jumlah ruang kerja terbanyak yang bisa diikuti satu akun.',
   'workspace.createRoleRequired':

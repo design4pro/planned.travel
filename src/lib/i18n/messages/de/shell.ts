@@ -84,10 +84,10 @@ const messages = {
   'workspace.create': 'Arbeitsbereich erstellen',
   'workspace.createTitle': 'Einen Arbeitsbereich erstellen',
   'workspace.createDescription':
-    'Ein eigener Bereich mit eigenen Reisen, Orten und Personen. Er startet im Tarif Gratis.',
+    'Ein eigener Bereich mit eigenen Reisen, Orten und Personen. Er startet im Tarif Gratis und teilt den Tarif des Arbeitsbereichs, in dem du bist, nicht.',
   'workspace.createName': 'Name des Arbeitsbereichs',
   'workspace.createUpgrade':
-    'Weitere Arbeitsbereiche zu erstellen gehört zu einem Bezahltarif.',
+    '„{workspace}“ ist im Tarif Gratis, und nur ein Arbeitsbereich mit Bezahltarif kann einen weiteren erstellen. Hat einer deiner anderen Arbeitsbereiche einen Bezahltarif, wechsle zu ihm und erstelle von dort aus. Andernfalls stelle „{workspace}“ auf einen Bezahltarif um.',
   'workspace.createLimitReached':
     'Du hast die höchste Anzahl an Arbeitsbereichen erreicht, denen ein Konto angehören kann.',
   'workspace.createRoleRequired':

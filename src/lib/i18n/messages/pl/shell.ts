@@ -84,10 +84,10 @@ const messages = {
   'workspace.create': 'Utwórz przestrzeń',
   'workspace.createTitle': 'Utwórz nową przestrzeń',
   'workspace.createDescription':
-    'Osobna przestrzeń z własnymi podróżami, miejscami i osobami. Zaczyna od planu Darmowy.',
+    'Osobna przestrzeń z własnymi podróżami, miejscami i osobami. Zaczyna od planu Darmowy i nie dzieli planu przestrzeni, w której jesteś.',
   'workspace.createName': 'Nazwa przestrzeni',
   'workspace.createUpgrade':
-    'Tworzenie kolejnych przestrzeni jest częścią planu płatnego.',
+    '„{workspace}” jest w planie Darmowy, a kolejną przestrzeń może utworzyć tylko przestrzeń z planem płatnym. Jeśli któraś z innych Twoich przestrzeni ma plan płatny, przełącz się na nią i utwórz stamtąd. W przeciwnym razie przejdź w „{workspace}” na plan płatny.',
   'workspace.createLimitReached':
     'Masz już największą liczbę przestrzeni, do których może należeć jedno konto.',
   'workspace.createRoleRequired':

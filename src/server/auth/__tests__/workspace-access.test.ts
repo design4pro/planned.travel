@@ -5,6 +5,7 @@
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { WORKSPACE_LIMIT } from '#/server/auth/provisioning'
 import { MIN_ROLE_TO_CREATE_WORKSPACE } from '#/server/fns/workspace-writes'
 
 const document = readFileSync('docs/ACCESS.md', 'utf8')
@@ -35,6 +36,26 @@ describe('docs/ACCESS.md §2.7', () => {
     ]) {
       expect(text).toContain(term)
     }
+  })
+
+  it('names the checks in the order the code runs them: role, impersonation, limit, plan', () => {
+    const text = section('2.7 Creating a workspace')
+    const order = [
+      'checks the role',
+      'refuses an impersonated session',
+      'then the limit of',
+      'then the plan',
+    ].map((phrase) => text.indexOf(phrase))
+
+    expect(order).not.toContain(-1)
+    expect(order).toEqual([...order].sort((a, b) => a - b))
+  })
+
+  it('states the workspace limit as the number the code enforces', () => {
+    expect(WORKSPACE_LIMIT).toBe(20)
+    expect(section('2.7 Creating a workspace')).toContain(
+      'limit of twenty workspaces per account',
+    )
   })
 })
 
