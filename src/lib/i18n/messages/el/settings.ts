@@ -433,7 +433,7 @@ const messages = {
   'billing.interval.yearly': 'Ετήσια',
   'billing.plan.free.name': 'Δωρεάν',
   'billing.plan.free.tagline': 'Σχεδιάστε τα δύο επόμενα ταξίδια σας',
-  'billing.plan.free.feature.trips': 'Δύο ταξίδια μαζί',
+  'billing.plan.free.feature.trips': 'Δύο ταξίδια μαζί και έως 150 μέρη',
   'billing.plan.free.feature.itinerary':
     'Πρόγραμμα ημέρα προς ημέρα και χάρτης',
   'billing.plan.free.feature.lists':
@@ -442,7 +442,7 @@ const messages = {
     'Ο παγκόσμιος χάρτης που κρατά πού έχετε πάει',
   'billing.plan.solo.name': 'Ατομικό',
   'billing.plan.solo.tagline': 'Για τον ταξιδιώτη που σχεδιάζει τα πάντα',
-  'billing.plan.solo.feature.trips': 'Απεριόριστα ταξίδια',
+  'billing.plan.solo.feature.trips': 'Απεριόριστα ταξίδια και μέρη',
   'billing.plan.solo.feature.modules':
     'Κάθε ενότητα σχεδιασμού — κρατήσεις, χρονικό, προϋπολογισμοί, αποσκευές',
   'billing.plan.solo.feature.offline':
@@ -454,7 +454,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Συνεργασία σε πραγματικό χρόνο με ζωντανούς δείκτες',
   'billing.plan.crew.feature.everything':
-    'Απεριόριστα ταξίδια και κάθε ενότητα',
+    'Απεριόριστα ταξίδια και μέρη και όλες οι ενότητες',
   'billing.plan.crew.feature.storage':
     'Κοινός χώρος για τις φωτογραφίες και τα έγγραφα όλων',
 
