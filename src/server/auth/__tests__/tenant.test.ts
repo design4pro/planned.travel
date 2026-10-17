@@ -46,6 +46,8 @@ function rawSession() {
       activeOrganizationId: 'org_1',
       expiresAt: EXPIRES_AT,
       impersonatedBy: 'usr_admin',
+      // An impersonated session is only usable inside its first 900 seconds (docs/ACCESS.md §6.2).
+      createdAt: new Date(),
       ipAddress: '203.0.113.7',
     },
   }

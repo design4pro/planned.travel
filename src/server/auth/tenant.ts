@@ -6,6 +6,7 @@
  * from the transport that supplies the session.
  */
 import { ORGANIZATION_ROLES } from '#/server/db/auth-schema'
+import { asDate, isImpersonationExpired } from './impersonation-expiry'
 import type { OrganizationRole } from '#/server/db/auth-schema'
 
 export type { OrganizationRole }
@@ -209,20 +210,14 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
-function asDate(value: unknown): Date | null {
-  if (value instanceof Date) return value
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value)
-    return Number.isFinite(date.getTime()) ? date : null
-  }
-  return null
-}
-
 /**
  * Normalises what Better Auth returns into the app's own session shape,
  * returning `null` for anything that is not a complete, usable session.
  */
-export function normaliseSession(raw: RawSession): AuthSession | null {
+export function normaliseSession(
+  raw: RawSession,
+  now: Date = new Date(),
+): AuthSession | null {
   if (!raw) return null
 
   const userId = asString(raw.user.id)
@@ -232,6 +227,18 @@ export function normaliseSession(raw: RawSession): AuthSession | null {
   const expiresAt = asDate(raw.session.expiresAt)
 
   if (!userId || !email || !sessionId || !token || !expiresAt) return null
+
+  // An impersonated session is bounded by its age, not only by its stored expiry: a row that was
+  // already pushed 30 days out by the sliding refresh must stop authorising (docs/ACCESS.md §6.2).
+  const impersonatedBy = asString(raw.session.impersonatedBy)
+  if (
+    isImpersonationExpired(
+      { impersonatedBy, createdAt: raw.session.createdAt },
+      now,
+    )
+  ) {
+    return null
+  }
 
   return {
     user: {
@@ -252,7 +259,7 @@ export function normaliseSession(raw: RawSession): AuthSession | null {
       userId: asString(raw.session.userId) ?? userId,
       activeOrganizationId: asString(raw.session.activeOrganizationId),
       expiresAt,
-      impersonatedBy: asString(raw.session.impersonatedBy),
+      impersonatedBy,
     },
   }
 }
