@@ -74,6 +74,7 @@ import {
   DropTimeDialog,
   PlaceDialog,
   StopMenu,
+  StopHandoffMenu,
   TimingDialog,
   draftFromPlace,
   emptyDraft,
@@ -111,7 +112,7 @@ import { PlannerAddPlace, reportPlaceWriteFailure } from './planner-add-place'
 import { useDialogOwnership } from './use-dialog-ownership'
 import { useTripWeather } from './use-trip-weather'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
-import { PlannerDayTools } from './planner-day-tools'
+import { PlannerDayHandoff, PlannerDayTools } from './planner-day-tools'
 import { BookingDialog } from '#/components/modules/book'
 import {
   NoteDeleteDialog,
@@ -1200,7 +1201,7 @@ export function PlanScreen({
 
   const rowActions = React.useCallback(
     (row: PlannerRow): React.ReactNode => {
-      if (!editable) return undefined
+      if (!editable) return <StopHandoffMenu row={row} />
       return (
         <StopMenu
           row={row}
@@ -1317,7 +1318,7 @@ export function PlanScreen({
                       onAddStay={(dayId) => setDialog({ kind: 'stay', dayId })}
                     />
                   )
-                : undefined
+                : (entry) => <PlannerDayHandoff day={entry} />
             }
           />
         ))

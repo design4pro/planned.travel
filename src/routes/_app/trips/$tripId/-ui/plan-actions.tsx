@@ -161,6 +161,49 @@ function categoryOptions(
  * Row menu
  * ---------------------------------------------------------------------------------------------- */
 
+/** Read-only by construction: no mutation callbacks or pending state. */
+export function StopHandoffMenu({ row }: { readonly row: PlannerRow }) {
+  const t = useTranslate()
+  if (positionOf(row) === null) return null
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconButton
+          icon={<MoreHorizontal />}
+          label={t('modules.actionsFor', { name: row.name })}
+          size="sm"
+          variant="ghost"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <StopHandoffItems row={row} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+/** The same map links in the editing menu and the read-only menu. */
+function StopHandoffItems({ row }: { readonly row: PlannerRow }) {
+  const t = useTranslate()
+  const position = positionOf(row)
+  if (position === null) return null
+
+  return POINT_SERVICES.map((service) => (
+    <DropdownMenuLinkItem
+      key={service}
+      href={pointLink(service, position)}
+      icon={<Navigation />}
+      aria-label={t('trips.plan.handoff.stop', {
+        place: row.name,
+        service: MAP_SERVICE_NAME[service],
+      })}
+    >
+      {MAP_SERVICE_NAME[service]}
+    </DropdownMenuLinkItem>
+  ))
+}
+
 export interface StopMenuProps {
   readonly row: PlannerRow
   readonly days: ReadonlyArray<PlanBoardDay>
@@ -193,9 +236,7 @@ export function StopMenu({
   onUnschedule,
   onDelete,
 }: StopMenuProps) {
-  const t = useTranslate()
   const elsewhere = days.filter((day) => day.dayNumber !== row.dayNumber)
-  const position = positionOf(row)
 
   return (
     <DropdownMenu>
@@ -223,21 +264,7 @@ export function StopMenu({
           {row.lat === null ? 'Place it on the map' : 'Move its pin'}
         </DropdownMenuItem>
 
-        {position === null
-          ? null
-          : POINT_SERVICES.map((service) => (
-              <DropdownMenuLinkItem
-                key={service}
-                href={pointLink(service, position)}
-                icon={<Navigation />}
-                aria-label={t('trips.plan.handoff.stop', {
-                  place: row.name,
-                  service: MAP_SERVICE_NAME[service],
-                })}
-              >
-                {MAP_SERVICE_NAME[service]}
-              </DropdownMenuLinkItem>
-            ))}
+        <StopHandoffItems row={row} />
 
         {elsewhere.length === 0 ? null : (
           <>
