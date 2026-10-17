@@ -179,7 +179,11 @@ beforeEach(() => {
 describe('planner write callers', () => {
   it.each(
     (['place', 'timing', 'delete', 'note', 'note-delete'] as const).flatMap(
-      (caller) => [false, true].map((replaced) => ({ caller, replaced })),
+      (caller) =>
+        (caller === 'delete' ? [false] : [false, true]).map((replaced) => ({
+          caller,
+          replaced,
+        })),
     ),
   )(
     'routes successful $caller writes (replaced=$replaced)',
@@ -334,7 +338,7 @@ describe('planner write callers', () => {
     },
   )
 
-  it('forgets a selected place after its delete dialog has closed', async () => {
+  it('keeps a delete modal until it lands, then closes it and forgets the selected place', async () => {
     const pending = deferred()
     mocks.write.mockReturnValue(pending.promise)
     await mount()
@@ -349,10 +353,35 @@ describe('planner write callers', () => {
       }),
     )
     await close()
-    await menu('Set a time', 'p2')
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: 'Actions for Place p2' }),
+    ).toBeNull()
     await act(async () => pending.resolve())
     expect(screen.getByTestId('selection').textContent).toBe('')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps the place and its error in the delete dialog after a refusal', async () => {
+    const pending = deferred()
+    mocks.write.mockReturnValue(pending.promise)
+    await mount()
+    await menu('Delete from trip')
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Delete place',
+      }),
+    )
+    await act(async () => pending.reject(new Error('Refused delete')))
+    expect(screen.getByRole('alert').textContent).toContain(
+      'The place could not be deleted. Try again in a moment.',
+    )
     expect(screen.getByRole('dialog')).toBeTruthy()
+    await close()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(
+      screen.getAllByRole('button', { name: 'Actions for Place p1' }).length,
+    ).toBeGreaterThan(0)
   })
 
   it('selects a landed pin without opening or closing a dialog', async () => {
