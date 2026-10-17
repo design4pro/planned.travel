@@ -243,7 +243,7 @@ it('does not scroll or take focus back when it changes before the close frame', 
   await user.keyboard('{Escape}')
   await waitFor(() => expect(document.activeElement).toBe(trigger))
   const other = document.createElement('button')
-  document.body.append(other)
+  document.body.appendChild(other)
   try {
     other.focus()
     act(() => frames.forEach((callback) => callback(performance.now())))

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { useSession, hasSession } from './helpers/session'
-import { visit, watchConsole } from './helpers/console'
+import { unblockCrossOriginFonts, visit, watchConsole } from './helpers/console'
 import { settle } from './helpers/settle'
 
 test.describe('07-S2 - Collaboration sections follow the viewport', () => {
@@ -9,6 +9,16 @@ test.describe('07-S2 - Collaboration sections follow the viewport', () => {
     page,
     baseURL,
   }) => {
+    await unblockCrossOriginFonts(page)
+    await page.route(
+      /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\//,
+      async (route) => {
+        const headers = await route.request().allHeaders()
+        for (const name of Object.keys(headers))
+          if (name.toLowerCase() === 'x-pt-server-today') delete headers[name]
+        await route.continue({ headers })
+      },
+    )
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
     await page.goto('/trips')
