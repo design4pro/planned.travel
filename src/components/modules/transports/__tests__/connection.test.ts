@@ -360,7 +360,7 @@ describe('startingDate', () => {
     expect(startingDate(days, anchored)).toBe('2026-10-10')
   })
 
-  it('does not fall back to the record when the first leg is unanchored', () => {
+  it('ignores the record anchor day when the first leg is unanchored', () => {
     const anchored = journey({
       departureDayId: 'd4',
       departureDate: '2026-10-11',

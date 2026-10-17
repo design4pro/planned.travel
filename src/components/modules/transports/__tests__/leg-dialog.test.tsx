@@ -164,7 +164,8 @@ describe('TransportDialog connection search date', () => {
       {
         ...TRANSPORT,
         departureDayId: DAY_2.id,
-        departureDate: DAY_2.date,
+        // Not the anchored day's date: only the anchor can put the field on day 2.
+        departureDate: DAY_1.date,
       },
       true,
       true,
