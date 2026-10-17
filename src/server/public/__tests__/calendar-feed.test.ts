@@ -399,4 +399,78 @@ describe('session-less calendar feed', () => {
     }
     expect([...store.keys()].every((key) => key.includes(':feed:'))).toBe(true)
   })
+  it('serves a workspace calendar of current memberships, including empty calendars, without workspace names', async () => {
+    const workspace = await enableFeed(a.scope, { scope: 'workspace' })
+    secret = workspace.secret
+    const foreign = await h.seedTenant('foreign-workspace')
+    await createTrip(foreign.scope, {
+      title: 'Foreign secret',
+      currency: 'EUR',
+    })
+    const outsider = await a.addUser('outsider')
+    await createTrip(a.scopeFor(outsider), {
+      title: 'Visible but not mine',
+      currency: 'EUR',
+      visibility: 'organization',
+    })
+    let response = await serveCalendarFeed(request(), runtime)
+    expect(response.status).toBe(200)
+    let calendar = await response.text()
+    expect(calendar).toContain('X-WR-CALNAME:planned.travel')
+    expect(calendar).toContain('Private Lisbon')
+    expect(calendar).not.toContain('Foreign secret')
+    expect(calendar).not.toContain('Visible but not mine')
+    await h.db.delete(tripMembers).where(eq(tripMembers.tripId, tripId))
+    response = await serveCalendarFeed(request(), runtime)
+    expect(response.status).toBe(200)
+    calendar = await response.text()
+    expect(calendar).not.toContain('Private Lisbon')
+    const joined = await createTrip(a.scope, {
+      title: 'Joined later',
+      currency: 'EUR',
+      startDate: '2026-11-01',
+      endDate: '2026-11-01',
+    })
+    expect(
+      await (await serveCalendarFeed(request(), runtime)).text(),
+    ).toContain('Joined later')
+    await h.db
+      .update(trips)
+      .set({ isArchived: true })
+      .where(eq(trips.id, joined.id))
+    expect(
+      await (await serveCalendarFeed(request(), runtime)).text(),
+    ).not.toContain('Joined later')
+  })
+
+  it.each(['revoked', 'banned', 'removed', 're-added'] as const)(
+    'refuses a %s workspace credential exactly like an unknown credential',
+    async (reason) => {
+      const workspace = await enableFeed(a.scope, { scope: 'workspace' })
+      secret = workspace.secret
+      if (reason === 'revoked') await revokeFeed(a.scope, workspace.feedId)
+      if (reason === 'banned')
+        await h.db
+          .update(user)
+          .set({ banned: true })
+          .where(eq(user.id, ownerId))
+      if (reason === 'removed' || reason === 're-added') {
+        await h.db.delete(member).where(eq(member.userId, ownerId))
+        if (reason === 're-added') {
+          await a.addMembership(ownerId)
+          await h.db
+            .update(member)
+            .set({ createdAt: new Date(Date.now() + 1000) })
+            .where(eq(member.userId, ownerId))
+        }
+      }
+      expect(
+        await signature(await serveCalendarFeed(request(), runtime)),
+      ).toEqual(
+        await signature(
+          await serveCalendarFeed(request('Z'.repeat(32)), runtime),
+        ),
+      )
+    },
+  )
 })

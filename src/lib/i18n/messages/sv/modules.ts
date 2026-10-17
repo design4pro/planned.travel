@@ -1144,6 +1144,12 @@ const messages = {
     other: '{count} exporter denna månad',
   },
   'files.export.linkGoneViewer': 'Den exporten sparas inte längre.',
+  'files.calendar.tab.trip': 'Den här resan',
+  'files.calendar.tab.workspace': 'Mina resor',
+  'files.calendar.workspace.warning':
+    'Alla med länken kan utan konto läsa dina icke arkiverade resor i den här arbetsytan: de {count} med de senaste startdatumen. Nya resor visas automatiskt. Skydda länken som ett lösenord.',
+  'files.calendar.workspace.nameNote':
+    'Länken visas i din kalender som ”planned.travel”. Byt namn om du har fler än en.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

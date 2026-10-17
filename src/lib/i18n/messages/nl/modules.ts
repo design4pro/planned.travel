@@ -1160,6 +1160,12 @@ const messages = {
     other: '{count} exports deze maand',
   },
   'files.export.linkGoneViewer': 'Die export wordt niet meer bewaard.',
+  'files.calendar.tab.trip': 'Deze reis',
+  'files.calendar.tab.workspace': 'Mijn reizen',
+  'files.calendar.workspace.warning':
+    'Iedereen met deze link kan zonder account je niet-gearchiveerde reizen in deze werkruimte lezen: de {count} met de nieuwste startdatums. Nieuwe reizen verschijnen vanzelf. Bescherm de link als een wachtwoord.',
+  'files.calendar.workspace.nameNote':
+    'Deze link verschijnt in je agenda als ‘planned.travel’. Hernoem hem als je er meer dan één hebt.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1068,6 +1068,28 @@ test.describe('06-S5b — live calendar link', () => {
           (element) => element.scrollWidth <= element.clientWidth,
         ),
       ).toBe(true)
+      const tripTab = dialog.getByRole('tab', {
+        name: 'This trip',
+        exact: true,
+      })
+      const workspaceTab = dialog.getByRole('tab', {
+        name: 'My trips',
+        exact: true,
+      })
+      await tripTab.focus()
+      await page.keyboard.press('ArrowRight')
+      await expect(workspaceTab).toBeFocused()
+      await expect(tripTab).toHaveAttribute('aria-selected', 'true')
+      const savedLink = await address.textContent()
+      await page.keyboard.press('Enter')
+      await expect(workspaceTab).toHaveAttribute('aria-selected', 'true')
+      await expect(
+        dialog.getByText(/50 with the latest start dates/),
+      ).toBeVisible()
+      await tripTab.focus()
+      await page.keyboard.press('Enter')
+      await expect(address).toHaveText(savedLink ?? '')
+      await address.focus()
       const url = (await address.textContent())?.trim()
       expect(url).toMatch(/\/api\/feed\/[A-Za-z0-9_-]{32}\.ics$/)
       if (!url) throw new Error('No link address')
@@ -1139,6 +1161,27 @@ test.describe('06-S5b — live calendar link', () => {
         await expect(create).toBeFocused()
         expect((await unauthenticated.get(url)).status()).toBe(404)
         expect((await unauthenticated.get(newUrl)).status()).toBe(404)
+        await workspaceTab.click()
+        await expect(create).toBeVisible()
+        await create.focus()
+        await page.keyboard.press('Enter')
+        await expect(address).toBeFocused()
+        const workspaceUrl = (await address.textContent())?.trim()
+        if (!workspaceUrl) throw new Error('No workspace link address')
+        const workspaceResponse = await unauthenticated.get(workspaceUrl)
+        expect(workspaceResponse.status()).toBe(200)
+        expect(await workspaceResponse.text()).toContain(
+          'X-WR-CALNAME:planned.travel',
+        )
+        await dialog
+          .getByRole('button', { name: 'Turn off', exact: true })
+          .click()
+        await page
+          .getByRole('dialog', { name: 'Turn off this calendar link?' })
+          .getByRole('button', { name: 'Turn off', exact: true })
+          .click()
+        await expect(create).toBeFocused()
+        expect((await unauthenticated.get(workspaceUrl)).status()).toBe(404)
       } finally {
         // Even a failed assertion leaves this live credential revoked through the actual UI.
         if (
