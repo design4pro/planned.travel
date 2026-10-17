@@ -1162,6 +1162,32 @@ describe('a workspace switch inside an impersonated session', () => {
     })
   })
 
+  it('logs at error, and writes no row, when an impersonated update reaches the hook with no request context', async () => {
+    // Better Auth passes `context = null` when its async-local request context is missing. Nothing
+    // pairs such an update with a previous workspace, so the gap must be named, never silent.
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const after = getAuth().options.databaseHooks?.session?.update?.after
+
+    await after?.(
+      {
+        userId: targetId,
+        impersonatedBy: operatorId,
+        activeOrganizationId: secondOrganizationId,
+      } as never,
+      null,
+    )
+    const lines = error.mock.calls.map(([line]) => String(line))
+    error.mockRestore()
+
+    expect(after).toBeTypeOf('function')
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
+    expect(
+      lines.some((line) =>
+        line.includes('audit.impersonation-workspace.no-context'),
+      ),
+    ).toBe(true)
+  })
+
   it('has no create-organization path to audit: the plugin refuses it, and so does createWorkspace', async () => {
     const cookie = await impersonate()
 
