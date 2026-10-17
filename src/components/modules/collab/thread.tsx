@@ -67,6 +67,11 @@ const MAX_LENGTH = 4000
 /** A viewer this close to the bottom is reading the live edge, so it follows. */
 const FOLLOW_THRESHOLD_PX = 48
 
+function rowOf(scroller: HTMLElement, id: string): HTMLElement | null {
+  const rows = scroller.querySelectorAll<HTMLElement>('li[data-message-id]')
+  return Array.from(rows).find((row) => row.dataset.messageId === id) ?? null
+}
+
 /** The reactions a travel thread actually uses. Six, not an emoji keyboard. */
 const REACTIONS: ReadonlyArray<{ emoji: string; label: MessageKey }> = [
   { emoji: '👍', label: 'modules.collab.reaction.agree' },
@@ -183,78 +188,92 @@ export function Thread({
   const [loadFailed, setLoadFailed] = useState(false)
   const loadBusy = useRef(false)
   const wasLoading = useRef(false)
-  const prepend = useRef<{
-    firstId: string | undefined
-    height: number
-    top: number
-  } | null>(null)
+  /** The first row in view and how far below the scroller's top it sits. */
+  const anchor = useRef<{ id: string; offset: number } | null>(null)
   const reading = useRef<{
     opened: boolean
+    firstId: string | undefined
     lastId: string | undefined
     nearBottom: boolean
-  }>({ opened: false, lastId: undefined, nearBottom: true })
+  }>({ opened: false, firstId: undefined, lastId: undefined, nearBottom: true })
   const paged =
     window.length >= THREAD_PAGE_SIZE || messages.length > window.length
 
   /**
    * The transcript scrolls its own box and never the page. It opens on the newest
-   * message, keeps the reader's place when an older page is put above them (WebKit
-   * has no scroll anchoring), and follows a live message only for a reader at the
-   * bottom or for the viewer's own message: a reader of history is not yanked.
+   * message and follows a live message only for a reader at the bottom or for the
+   * viewer's own message: a reader of history is not yanked. WebKit has no scroll
+   * anchoring, so whenever rows above the reader change (an older page put there,
+   * or the loader's window sliding past the oldest row) the first row in view is
+   * put back where it was.
    */
   useLayoutEffect(() => {
     const scroller = scrollerRef.current
     if (scroller === null) return
     const seen = reading.current
+    const firstId = messages[0]?.id
     const lastId = messages.at(-1)?.id
     const toBottom = () => {
       scroller.scrollTop = scroller.scrollHeight
       seen.nearBottom = true
     }
+    const arrived =
+      lastId !== undefined && lastId !== seen.lastId
+        ? messages.filter(
+            (message) => seen.lastId === undefined || message.id > seen.lastId,
+          )
+        : []
     if (!seen.opened) {
       seen.opened = true
       toBottom()
     } else if (
-      prepend.current !== null &&
-      messages[0]?.id !== prepend.current.firstId
+      arrived.length > 0 &&
+      (seen.nearBottom ||
+        arrived.some((message) => message.userId === viewerUserId))
     ) {
-      scroller.scrollTop =
-        prepend.current.top + (scroller.scrollHeight - prepend.current.height)
-      prepend.current = null
-    } else if (lastId !== undefined && lastId !== seen.lastId) {
-      const arrived = messages.filter(
-        (message) => seen.lastId === undefined || message.id > seen.lastId,
-      )
-      if (
-        seen.nearBottom ||
-        arrived.some((message) => message.userId === viewerUserId)
-      )
-        toBottom()
+      toBottom()
+    } else if (firstId !== seen.firstId && anchor.current !== null) {
+      const row = rowOf(scroller, anchor.current.id)
+      if (row !== null)
+        scroller.scrollTop +=
+          row.getBoundingClientRect().top -
+          scroller.getBoundingClientRect().top -
+          anchor.current.offset
     }
+    seen.firstId = firstId
     seen.lastId = lastId
+    trackAnchor(scroller)
   }, [messages, viewerUserId])
 
-  function trackBottom(scroller: HTMLDivElement): void {
+  function trackAnchor(scroller: HTMLDivElement): void {
+    const top = scroller.getBoundingClientRect().top
+    for (const row of scroller.querySelectorAll<HTMLElement>(
+      'li[data-message-id]',
+    )) {
+      const rect = row.getBoundingClientRect()
+      if (rect.bottom > top) {
+        anchor.current = {
+          id: row.dataset.messageId ?? '',
+          offset: rect.top - top,
+        }
+        return
+      }
+    }
+  }
+
+  function trackScroll(scroller: HTMLDivElement): void {
     reading.current.nearBottom =
       scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <=
       FOLLOW_THRESHOLD_PX
+    trackAnchor(scroller)
   }
 
   async function loadEarlier(): Promise<void> {
-    const scroller = scrollerRef.current
-    if (loadBusy.current || scroller === null) return
+    if (loadBusy.current) return
     loadBusy.current = true
     setLoadingOlder(true)
-    prepend.current = null
-    const firstId = messages[0]?.id
     try {
-      await loadOlder(() => {
-        prepend.current = {
-          firstId,
-          height: scroller.scrollHeight,
-          top: scroller.scrollTop,
-        }
-      })
+      await loadOlder()
       setLoadFailed(false)
     } catch {
       setLoadFailed(true)
@@ -328,7 +347,7 @@ export function Thread({
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       {paged ? (
-        <div className="flex shrink-0 flex-col items-center gap-1.5 pb-2">
+        <div className="flex shrink-0 flex-col items-center pb-2">
           {exhausted ? (
             <p
               ref={startRef}
@@ -339,11 +358,18 @@ export function Thread({
             </p>
           ) : (
             <>
-              {loadFailed ? (
-                <p id={loadFailedId} className="text-caption text-danger">
-                  {t('modules.collab.thread.loadOlderFailed')}
-                </p>
-              ) : null}
+              {/* Mounted before it fills, so the failure is announced politely: the
+                  button keeps focus while it loads, so no focus move can speak for it. */}
+              <div role="status">
+                {loadFailed ? (
+                  <p
+                    id={loadFailedId}
+                    className="pb-1.5 text-caption text-danger"
+                  >
+                    {t('modules.collab.thread.loadOlderFailed')}
+                  </p>
+                ) : null}
+              </div>
               <Button
                 ref={loadButtonRef}
                 data-part="thread-load-older"
@@ -367,7 +393,7 @@ export function Thread({
       <div
         ref={scrollerRef}
         data-part="thread-scroller"
-        onScroll={(event) => trackBottom(event.currentTarget)}
+        onScroll={(event) => trackScroll(event.currentTarget)}
         className="max-h-[70svh] min-h-0 flex-1 overflow-y-auto px-1 xl:max-h-none"
       >
         {messages.length === 0 ? (
@@ -384,7 +410,11 @@ export function Thread({
               const claimed = reactionOverlay.get(message.id)
 
               return (
-                <li key={message.id} className="min-w-0">
+                <li
+                  key={message.id}
+                  data-message-id={message.id}
+                  className="min-w-0"
+                >
                   {startsDay ? (
                     <div className="flex items-center gap-3 py-3">
                       <span aria-hidden className="h-px flex-1 bg-edge-faint" />

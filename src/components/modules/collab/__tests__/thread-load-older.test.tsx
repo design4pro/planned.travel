@@ -37,7 +37,7 @@ const PEOPLE: ReadonlyArray<CollabPerson> = [
   { userId: 'user-2', name: 'Bruno Peer', image: null },
 ]
 
-/** jsdom has no layout: every row is 100 px tall inside a 300 px box. */
+/** jsdom has no layout: every row is 100 px tall inside a 300 px box at the viewport's top. */
 const ROW_HEIGHT = 100
 const CLIENT_HEIGHT = 300
 
@@ -55,6 +55,7 @@ const original = {
   ),
   scrollTop: Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop'),
 }
+const originalRect = Element.prototype.getBoundingClientRect
 
 function isScroller(element: Element): boolean {
   return element.getAttribute('data-part') === 'thread-scroller'
@@ -93,7 +94,20 @@ function stubLayout(): void {
   })
 }
 
+/** A row's box follows from its index and the scroller's offset; everything else is empty. */
+function stubRects(): void {
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    if (!this.matches('li[data-message-id]')) return new DOMRect()
+    const items = document.querySelectorAll(
+      '[data-part="thread-scroller"] li[data-message-id]',
+    )
+    const index = Array.from(items).indexOf(this)
+    return new DOMRect(0, index * ROW_HEIGHT - layout.top, 0, ROW_HEIGHT)
+  }
+}
+
 function restoreLayout(): void {
+  Element.prototype.getBoundingClientRect = originalRect
   for (const key of ['scrollHeight', 'clientHeight', 'scrollTop'] as const) {
     const descriptor = original[key]
     if (descriptor) Object.defineProperty(Element.prototype, key, descriptor)
@@ -158,6 +172,7 @@ beforeEach(() => {
   layout.top = 0
   writes.length = 0
   stubLayout()
+  stubRects()
   vi.mocked(loadOlderMessagesFn).mockReset()
   focus = vi.spyOn(HTMLElement.prototype, 'focus')
 })
@@ -241,6 +256,7 @@ describe('the load-earlier control', () => {
     )
     expect(control()?.textContent).toBe(En['collab.thread.retry'])
     const failure = screen.getByText(En['collab.thread.loadOlderFailed'])
+    expect(failure.closest('[role="status"]')).not.toBeNull()
     expect(control()?.getAttribute('aria-describedby')).toBe(failure.id)
     expect(document.querySelector('[role="alert"]')).toBeNull()
     await waitFor(() => expect(document.activeElement).toBe(control()))
@@ -331,6 +347,15 @@ describe('where the transcript scrolls', () => {
       const { rerender } = readerAt(49)
       rerender(tree([...rows(1000, 5), peer]))
       expect(writes).toEqual([])
+    })
+
+    it('puts the first row in view back when the loader window slides past the oldest row', () => {
+      const { rerender } = render(tree(rows(1000, THREAD_PAGE_SIZE)))
+      layout.top = 20 * ROW_HEIGHT
+      fireEvent.scroll(scroller())
+      writes.length = 0
+      rerender(tree([...rows(1001, THREAD_PAGE_SIZE - 1), message('m1099')]))
+      expect(writes).toEqual([19 * ROW_HEIGHT])
     })
 
     it("always scrolls for the viewer's own message", () => {
