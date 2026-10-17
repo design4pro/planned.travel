@@ -146,7 +146,7 @@ export function CollabScreen({
     if (!visible.includes(id)) return null
     const heading = `${baseId}-${id}`
     return (
-      <TabsContent key={id} value={id} forceMount asChild>
+      <TabsContent key={id} value={id} forceMount asChild className="mt-0">
         <section
           data-collab-section={id}
           ref={(node) => {
@@ -156,7 +156,7 @@ export function CollabScreen({
           tabIndex={-1}
           aria-labelledby={heading}
           className={cn(
-            'min-w-0 focus-ring mt-0 data-[state=inactive]:hidden xl:data-[state=inactive]:block xl:data-[state=active]:animate-none scroll-mt-[var(--collab-clearance)] [&_*]:scroll-mt-[var(--collab-clearance)]',
+            'min-w-0 focus-ring data-[state=inactive]:hidden xl:data-[state=inactive]:block xl:data-[state=active]:animate-none scroll-mt-[var(--collab-clearance)] [&_*]:scroll-mt-[var(--collab-clearance)]',
             id === 'conversation' && [
               'xl:sticky xl:self-start xl:max-h-[calc(100svh-var(--impersonation-h)-var(--nav-h)-1px-var(--subnav-h)-1px-12rem)]',
               TRIP_RAIL_STICKY_CLASS,

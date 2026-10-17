@@ -348,3 +348,11 @@ it('repairs focus to the active tab when the tab is rendered by the DOM', async 
   await waitFor(() => expect(document.activeElement).toBe(tab))
   rects.mockRestore()
 })
+
+it('keeps loaded panel spacing aligned with the pending grid through the tab slot', () => {
+  setup()
+  for (const panel of screen.getAllByRole('tabpanel', { hidden: true })) {
+    expect(panel.classList.contains('mt-0')).toBe(true)
+    expect(panel.classList.contains('mt-5')).toBe(false)
+  }
+})
