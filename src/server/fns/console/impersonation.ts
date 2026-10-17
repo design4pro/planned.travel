@@ -199,7 +199,7 @@ export const startImpersonationFn = createServerFn({ method: 'POST' })
  * survives. Appending afterwards loses the entry for an exit that happened, and it loses it in the
  * exact circumstances an audit log is read afterwards; appending first can leave an entry for an
  * exit that then failed, which is a row a reader can reconcile against the impersonation that is
- * still live. §4.3 says these four verbs are audited without exception, and this order is what makes
+ * still live. §4.3 says these five verbs are audited without exception, and this order is what makes
  * that true of the half of the lifecycle nothing else can record.
  *
  * The residual risk is named rather than hidden: {@link openImpersonationExit} has already

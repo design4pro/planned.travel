@@ -2893,7 +2893,7 @@ describe('when the audit append is rejected', () => {
       actorRole: 'admin',
       actorKind: 'human',
       entityId: target.id,
-      // A ban is one of the four verbs docs/ACCESS.md §4.3 audits without exception, so it is
+      // A ban is one of the five verbs docs/ACCESS.md §4.3 audits without exception, so it is
       // attempted twice before the incident is raised.
       attempts: 2,
     })
