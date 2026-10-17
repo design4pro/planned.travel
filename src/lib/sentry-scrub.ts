@@ -22,7 +22,28 @@ const FORBIDDEN_HEADERS = new Set([
   'set-cookie',
   'authorization',
   'proxy-authorization',
+  // The previous page's URL: from a sign-in page it carries the `?redirect=` query.
+  'referer',
 ])
+
+/**
+ * A path segment after `/join/` is a credential, so it is replaced whatever its shape: a malformed
+ * one is still somebody's attempt at a link, and this needs nothing from the secret module.
+ */
+const JOIN_PATH = /\/join\/[^\s/?#&"'<>]+/gi
+
+/**
+ * The same path URL-encoded at any depth (`%2F`, `%252F`, ...), as it appears in a `redirect` or
+ * `callbackURL` value. The segment ends at a delimiter that is itself encoded at that depth.
+ */
+const ENCODED_JOIN_PATH =
+  /%(?:25)*2fjoin%(?:25)*2f(?:[^\s&"'<>?#%]|%(?!(?:25)*(?:2f|3f|23|26)))+/gi
+
+/**
+ * Span attributes the tracing integration fills from the matched route's parameters
+ * (`url.path.params.token`): the bare secret, without the `/join/` prefix the patterns look for.
+ */
+const ROUTE_TOKEN_KEY = /(?:^|\.)(?:params|parameter)\.token$/
 
 /** The part of a Sentry event this module has an opinion about. */
 export interface ScrubbableEvent {
@@ -80,6 +101,8 @@ export function scrubTelemetry<T>(value: T): T {
       return item
         .replace(/\/api\/feed\/[^\s?#"'<>]+/g, '/api/feed/[redacted]')
         .replace(/%2fapi%2ffeed%2f[^\s&"'<>]+/gi, '%2Fapi%2Ffeed%2F[redacted]')
+        .replace(JOIN_PATH, '/join/[redacted]')
+        .replace(ENCODED_JOIN_PATH, '%2Fjoin%2F[redacted]')
     if (Array.isArray(item)) {
       const result = item.map(walk)
       return result.some((entry, index) => entry !== item[index])
@@ -92,7 +115,10 @@ export function scrubTelemetry<T>(value: T): T {
       Object.getPrototypeOf(item) === Object.prototype
     ) {
       const entries = Object.entries(item)
-      const result = entries.map(([key, entry]) => [key, walk(entry)] as const)
+      const result = entries.map(
+        ([key, entry]) =>
+          [key, ROUTE_TOKEN_KEY.test(key) ? '[redacted]' : walk(entry)] as const,
+      )
       return result.some((entry, index) => entry[1] !== entries[index][1])
         ? Object.fromEntries(result)
         : item

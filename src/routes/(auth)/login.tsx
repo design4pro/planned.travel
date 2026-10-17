@@ -13,6 +13,7 @@ import {
 } from '#/lib/auth/client'
 import { useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
+import { signInHead } from './-lib/head'
 import { safeRedirect } from './-lib/redirect'
 import { loadAuthConfig } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
@@ -41,6 +42,7 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/(auth)/login')({
   validateSearch: searchSchema,
+  head: signInHead,
   beforeLoad: async ({ search }) => {
     const config = await loadAuthConfig()
     // Someone who is already signed in has no business on the sign-in screen.

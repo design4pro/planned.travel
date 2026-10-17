@@ -38,9 +38,10 @@ if (typeof dsn === 'string' && dsn.length > 0) {
     release: import.meta.env.VITE_SENTRY_RELEASE,
     sendDefaultPii: false,
     beforeSend: scrubEvent,
-    beforeSendTransaction: scrubTelemetry,
+    beforeSendTransaction: scrubEvent,
     beforeSendSpan: scrubTelemetry,
     beforeSendLog: scrubTelemetry,
+    beforeBreadcrumb: scrubTelemetry,
     enableLogs: true,
     // A tenth of sessions, and every session that hit an error - the second is the one that pays
     // for itself, because it is the recording somebody will actually want to watch.
