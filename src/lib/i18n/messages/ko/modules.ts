@@ -1082,6 +1082,12 @@ const messages = {
   },
   'files.export.allowanceUnlimited': { other: '이번 달 내보내기 {count}개' },
   'files.export.linkGoneViewer': '이 내보내기는 더 이상 보관되지 않습니다.',
+  'files.calendar.tab.trip': '이 여행',
+  'files.calendar.tab.workspace': '내 여행',
+  'files.calendar.workspace.warning':
+    '이 링크가 있는 사람은 계정 없이 이 워크스페이스에서 내가 참여하는 보관되지 않은 여행을 볼 수 있습니다. 시작일이 가장 최근인 {count}개가 포함되며 새 여행은 자동으로 표시됩니다. 비밀번호처럼 보호하세요.',
+  'files.calendar.workspace.nameNote':
+    '이 링크는 캘린더에 “planned.travel”로 표시됩니다. 여러 개라면 이름을 변경하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

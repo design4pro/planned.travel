@@ -1105,6 +1105,12 @@ const messages = {
     other: '{count} bản xuất trong tháng này',
   },
   'files.export.linkGoneViewer': 'Bản xuất đó không còn được lưu.',
+  'files.calendar.tab.trip': 'Chuyến đi này',
+  'files.calendar.tab.workspace': 'Chuyến đi của tôi',
+  'files.calendar.workspace.warning':
+    'Bất kỳ ai có liên kết này đều có thể đọc các chuyến đi chưa lưu trữ mà bạn tham gia trong không gian làm việc này mà không cần tài khoản: {count} chuyến có ngày bắt đầu mới nhất. Chuyến đi mới tự động xuất hiện. Hãy bảo vệ liên kết như mật khẩu.',
+  'files.calendar.workspace.nameNote':
+    'Liên kết này hiện trong lịch với tên “planned.travel”. Hãy đổi tên nếu bạn có nhiều liên kết.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

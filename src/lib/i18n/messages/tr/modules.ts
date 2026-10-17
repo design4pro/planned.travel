@@ -1139,6 +1139,12 @@ const messages = {
     other: 'Bu ay {count} dışa aktarım',
   },
   'files.export.linkGoneViewer': 'Bu dışa aktarım artık saklanmıyor.',
+  'files.calendar.tab.trip': 'Bu gezi',
+  'files.calendar.tab.workspace': 'Gezilerim',
+  'files.calendar.workspace.warning':
+    'Bu bağlantıya sahip herkes, bu çalışma alanında katıldığınız arşivlenmemiş gezileri hesapsız okuyabilir: başlangıç tarihi en yeni olan {count} gezi. Yeni geziler otomatik görünür. Bağlantıyı parola gibi koruyun.',
+  'files.calendar.workspace.nameNote':
+    'Bu bağlantı takviminizde “planned.travel” adıyla görünür. Birden fazla varsa adını değiştirin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

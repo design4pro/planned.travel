@@ -1169,6 +1169,12 @@ const messages = {
     other: '{count} εξαγωγές αυτόν τον μήνα',
   },
   'files.export.linkGoneViewer': 'Αυτή η εξαγωγή δεν διατηρείται πια.',
+  'files.calendar.tab.trip': 'Αυτό το ταξίδι',
+  'files.calendar.tab.workspace': 'Τα ταξίδια μου',
+  'files.calendar.workspace.warning':
+    'Όποιος έχει αυτόν τον σύνδεσμο μπορεί χωρίς λογαριασμό να διαβάσει τα μη αρχειοθετημένα ταξίδια αυτού του χώρου στα οποία συμμετέχετε: τα {count} με τις πιο πρόσφατες ημερομηνίες έναρξης. Τα νέα ταξίδια εμφανίζονται αυτόματα. Προστατέψτε τον σαν κωδικό.',
+  'files.calendar.workspace.nameNote':
+    'Αυτός ο σύνδεσμος εμφανίζεται στο ημερολόγιό σας ως «planned.travel». Μετονομάστε τον αν έχετε περισσότερους από έναν.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

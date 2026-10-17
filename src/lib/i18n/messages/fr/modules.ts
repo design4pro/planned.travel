@@ -1204,6 +1204,12 @@ const messages = {
     other: '{count} exports ce mois-ci',
   },
   'files.export.linkGoneViewer': 'Cette exportation n’est plus conservée.',
+  'files.calendar.tab.trip': 'Ce voyage',
+  'files.calendar.tab.workspace': 'Mes voyages',
+  'files.calendar.workspace.warning':
+    'Toute personne disposant de ce lien peut consulter sans compte les voyages non archivés auxquels vous participez dans cet espace : les {count} dont les dates de début sont les plus récentes. Les nouveaux voyages apparaissent automatiquement. Protégez-le comme un mot de passe.',
+  'files.calendar.workspace.nameNote':
+    'Ce lien apparaît dans votre calendrier sous le nom « planned.travel ». Renommez-le si vous en avez plusieurs.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

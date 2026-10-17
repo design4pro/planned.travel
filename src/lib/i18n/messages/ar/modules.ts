@@ -1235,6 +1235,12 @@ const messages = {
     other: 'عدد الصادرات هذا الشهر: {count}',
   },
   'files.export.linkGoneViewer': 'لم يعد هذا التصدير محفوظًا.',
+  'files.calendar.tab.trip': 'هذه الرحلة',
+  'files.calendar.tab.workspace': 'رحلاتي',
+  'files.calendar.workspace.warning':
+    'يمكن لأي شخص لديه هذا الرابط قراءة الرحلات غير المؤرشفة التي تشارك فيها في مساحة العمل هذه دون حساب: أحدث {count} رحلة حسب تاريخ البدء. تظهر الرحلات الجديدة تلقائيًا. احمه مثل كلمة المرور.',
+  'files.calendar.workspace.nameNote':
+    'يظهر هذا الرابط في تطبيق التقويم باسم «planned.travel». غيّر اسمه إذا كان لديك أكثر من رابط.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

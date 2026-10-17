@@ -1201,6 +1201,12 @@ const messages = {
     other: 'Tento měsíc {count} exportů',
   },
   'files.export.linkGoneViewer': 'Tento export se už neuchovává.',
+  'files.calendar.tab.trip': 'Tato cesta',
+  'files.calendar.tab.workspace': 'Moje cesty',
+  'files.calendar.workspace.warning':
+    'Kdokoli s tímto odkazem může bez účtu číst nearchivované cesty, kterých se v tomto prostoru účastníte: {count} s nejpozdějšími daty začátku. Nové cesty se objeví automaticky. Chraňte jej jako heslo.',
+  'files.calendar.workspace.nameNote':
+    'Tento odkaz se v kalendáři zobrazí jako „planned.travel“. Pokud jich máte více, přejmenujte jej.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

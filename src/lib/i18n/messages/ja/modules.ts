@@ -1090,6 +1090,12 @@ const messages = {
     other: '今月のエクスポート：{count} 件',
   },
   'files.export.linkGoneViewer': 'このエクスポートはすでに保存されていません。',
+  'files.calendar.tab.trip': 'この旅行',
+  'files.calendar.tab.workspace': '自分の旅行',
+  'files.calendar.workspace.warning':
+    'このリンクを持つ人は誰でも、アカウントなしで、このワークスペース内であなたが参加するアーカイブされていない旅行を閲覧できます。開始日が最も新しい{count}件が対象で、新しい旅行は自動的に表示されます。パスワードと同じように保護してください。',
+  'files.calendar.workspace.nameNote':
+    'このリンクはカレンダーに「planned.travel」と表示されます。複数ある場合は名前を変更してください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages
