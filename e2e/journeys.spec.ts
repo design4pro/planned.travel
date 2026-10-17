@@ -2568,6 +2568,92 @@ test.describe('switching workspace', () => {
     await expect(page.getByText(SECOND.trip)).toHaveCount(0)
   })
 
+  /**
+   * The open account menu, as a screen reader meets it: its roles and states, and the region that
+   * announces a switch. axe is not installed (docs/SPEC.md §3), so this asserts them directly.
+   *
+   * The region is read by role, which Playwright resolves only for an element that is not
+   * `aria-hidden`: the open menu is modal and hides everything outside it except an `aria-live`
+   * region mounted before it opened, so finding the region here is the proof it is still exposed.
+   * The set-active request is held so the in-flight state can be inspected; the session is this
+   * test's own, for the reason given above the block.
+   */
+  test('the open account menu keeps its roles, states and announcement through a switch', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await context.clearCookies()
+    expect(
+      await signIn(page, baseURL),
+      `${DEMO_EMAIL} could not sign in - run \`node scripts/seed/seed.mjs\``,
+    ).toBe(true)
+
+    let release: () => void = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await page.route('**/api/auth/organization/set-active', async (route) => {
+      await held
+      await route.continue()
+    })
+
+    // `networkidle`: a press on the account menu before hydration opens nothing.
+    await page.goto('/trips', { waitUntil: 'networkidle' })
+    const trigger = page.getByRole('button', { name: 'Account menu' })
+    const menu = page.getByRole('menu')
+    const group = menu.getByRole('group', { name: 'Workspace' })
+    const first = menu.getByRole('menuitemradio', { name: FIRST.name })
+    const second = menu.getByRole('menuitemradio', { name: SECOND.name })
+    const announcement = page.getByRole('banner').getByRole('status')
+
+    await trigger.click()
+    await expect(group).toHaveAttribute('aria-busy', 'false')
+    await expect(first).toHaveAttribute('aria-checked', 'true')
+    await expect(second).toHaveAttribute('aria-checked', 'false')
+    await expect(first).not.toHaveAttribute('aria-disabled')
+    await expect(second).not.toHaveAttribute('aria-disabled')
+    await expect(
+      menu.getByRole('status'),
+      'ARIA 1.2 lists no status region among a menu’s children',
+    ).toHaveCount(0)
+    await expect(announcement).toHaveAttribute('aria-live', 'polite')
+    await expect(announcement).toBeEmpty()
+
+    await second.click()
+    await expect(
+      menu,
+      'the menu stays open while the switch runs',
+    ).toBeVisible()
+    await expect(group).toHaveAttribute('aria-busy', 'true')
+    await expect(second).toHaveAttribute('aria-checked', 'false')
+    await expect(second).toHaveAccessibleDescription('Loading')
+    await expect(first).toHaveAttribute('aria-disabled', 'true')
+    await expect(menu.getByRole('status')).toHaveCount(0)
+    await expect(announcement).toHaveText('Loading')
+
+    await page.keyboard.press('Escape')
+    await expect(menu).toHaveCount(0)
+    await expect(trigger).toBeFocused()
+    await expect(
+      announcement,
+      'the region outlives the menu, so a reopened menu does not mount it already saying so',
+    ).toHaveText('Loading')
+
+    await trigger.click()
+    await expect(group).toHaveAttribute('aria-busy', 'true')
+    await expect(second).toHaveAccessibleDescription('Loading')
+    await expect(menu.getByRole('status')).toHaveCount(0)
+    await expect(announcement).toHaveText('Loading')
+
+    release()
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await expect(menu).toHaveCount(0)
+    await expect(announcement).toBeEmpty()
+    await expectActive(page, SECOND.name)
+  })
+
   async function openCreateDialog(page: Page): Promise<void> {
     await page.getByRole('button', { name: 'Account menu' }).click()
     await page.getByRole('menuitem', { name: 'Create workspace' }).click()

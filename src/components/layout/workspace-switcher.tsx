@@ -146,20 +146,23 @@ export function useWorkspaceSwitch({
  * The workspaces a reader belongs to, as a radio list inside the account menu.
  *
  * The menu stays open while a switch is in flight, as the sign-out item does: the chosen item shows
- * a spinner and the others are disabled. The pending state is announced by a status region inside
- * the menu: an item's own children are presentational to a screen reader, and the open menu is
- * modal, so a region outside it would be hidden from assistive technology.
+ * a spinner and the others are disabled. A spinner and an item's own children are presentational to
+ * a screen reader, so the pending state is announced by {@link WorkspaceSwitchStatus}, which the
+ * caller mounts beside the menu, and the pending item is described by it (`statusId`).
  */
 export function WorkspaceSwitcher({
   organizations,
   activeId,
   pendingId,
+  statusId,
   onSwitch,
   onCreate,
 }: {
   organizations: ReadonlyArray<ShellOrganization>
   activeId: string | null
   pendingId: string | null
+  /** The id of the {@link WorkspaceSwitchStatus} that describes the pending item. */
+  statusId: string
   onSwitch: (organizationId: string) => void
   /** Raised when "Create workspace" is chosen; the dialog it opens belongs to the caller. */
   onCreate: () => void
@@ -191,6 +194,9 @@ export function WorkspaceSwitcher({
               value={organization.id}
               className="min-h-11"
               disabled={pendingId !== null && pendingId !== organization.id}
+              aria-describedby={
+                pendingId === organization.id ? statusId : undefined
+              }
               onSelect={(event) => {
                 // Choosing the active workspace changes nothing, so the menu may close as usual.
                 if (organization.id !== activeId) event.preventDefault()
@@ -221,10 +227,33 @@ export function WorkspaceSwitcher({
         <Plus aria-hidden className="size-4 text-ink-4" />
         {t('shell.workspace.create')}
       </MenuItem>
-      {/* Always mounted, so the text change is what a screen reader announces. */}
-      <div role="status" className="sr-only">
-        {pendingId === null ? '' : t('ui.status.loading')}
-      </div>
     </>
+  )
+}
+
+/**
+ * Says that a workspace switch is running; empty when none is.
+ *
+ * It sits beside the account menu, not in it: ARIA 1.2 lists no status region among a menu's
+ * children. The open menu is modal, and Radix's `hideOthers` hides everything outside it from
+ * assistive technology except `[aria-live]` regions, so the explicit `aria-live` is what keeps this
+ * one exposed, and it only counts because the region is already in the page when the menu opens
+ * (the implicit live semantics of `role="status"` are not enough). It is always mounted, so the text
+ * change is what a screen reader announces and a menu reopened mid-switch does not mount it already
+ * saying so. The pending item is described by it, which is how that reopened menu says the same.
+ */
+export function WorkspaceSwitchStatus({
+  id,
+  pending,
+}: {
+  id: string
+  pending: boolean
+}) {
+  const t = useTranslate()
+
+  return (
+    <div id={id} role="status" aria-live="polite" className="sr-only">
+      {pending ? t('ui.status.loading') : ''}
+    </div>
   )
 }
