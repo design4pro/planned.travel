@@ -1,11 +1,11 @@
 # More than one workspace, and a way to move between them
 
-| Field              | Value       |
-| ------------------ | ----------- |
-| **Status**         | implemented |
-| **Issue**          | #640        |
-| **Spec PR**        | #643        |
-| **Implementation** | #939, #987  |
+| Field              | Value             |
+| ------------------ | ----------------- |
+| **Status**         | implemented       |
+| **Issue**          | #640              |
+| **Spec PR**        | #643              |
+| **Implementation** | #939, #987, #1366 |
 
 ## 📝 TLDR
 
