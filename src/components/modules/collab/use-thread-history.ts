@@ -1,4 +1,4 @@
-/** Component-owned snapshots; the next slice supplies the loading control. */
+/** Component-owned snapshots of the older pages a reader has loaded. */
 import { useRef, useState } from 'react'
 import { THREAD_PAGE_SIZE } from '#/lib/collab'
 import { loadOlderMessagesFn } from '#/server/fns/collab-thread'

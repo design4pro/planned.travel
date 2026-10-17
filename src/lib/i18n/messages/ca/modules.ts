@@ -804,6 +804,12 @@ const messages = {
     'Tothom d’aquest viatge comparteix un sol fil. Les decisions que es prenen aquí es queden amb el viatge en lloc de dispersar-se pels xats de grup.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Enceta la conversa',
+  'collab.thread.loadOlder': 'Carrega els missatges anteriors',
+  'collab.thread.loadingOlder': 'Carregant els missatges anteriors',
+  'collab.thread.loadOlderFailed':
+    "No s'han pogut carregar els missatges anteriors",
+  'collab.thread.retry': 'Torna-ho a provar',
+  'collab.thread.start': 'Aquí comença la conversa',
   'collab.toast.reactionFailed': 'La reacció no s’ha desat',
   'collab.toast.messageDeleted': 'Missatge eliminat',
   'collab.toast.deleteFailed': 'El missatge no s’ha eliminat',

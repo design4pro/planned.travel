@@ -803,6 +803,12 @@ const messages = {
     'Alle auf dieser Reise teilen einen Gesprächsverlauf. Hier getroffene Entscheidungen bleiben bei der Reise, statt sich über Gruppenchats zu verteilen.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Schreib die erste Nachricht',
+  'collab.thread.loadOlder': 'Frühere Nachrichten laden',
+  'collab.thread.loadingOlder': 'Frühere Nachrichten werden geladen',
+  'collab.thread.loadOlderFailed':
+    'Frühere Nachrichten konnten nicht geladen werden',
+  'collab.thread.retry': 'Erneut versuchen',
+  'collab.thread.start': 'Hier beginnt die Unterhaltung',
   'collab.toast.reactionFailed': 'Die Reaktion wurde nicht gespeichert',
   'collab.toast.messageDeleted': 'Nachricht gelöscht',
   'collab.toast.deleteFailed': 'Die Nachricht wurde nicht gelöscht',

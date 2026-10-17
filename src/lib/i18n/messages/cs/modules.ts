@@ -797,6 +797,11 @@ const messages = {
     'Všichni účastníci této cesty sdílejí jedno vlákno. Zde přijatá rozhodnutí zůstávají u cesty, místo aby se ztrácela ve skupinových chatech.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Začni konverzaci',
+  'collab.thread.loadOlder': 'Načíst starší zprávy',
+  'collab.thread.loadingOlder': 'Načítání starších zpráv',
+  'collab.thread.loadOlderFailed': 'Starší zprávy se nenačetly',
+  'collab.thread.retry': 'Zkusit znovu',
+  'collab.thread.start': 'Tady konverzace začíná',
   'collab.toast.reactionFailed': 'Reakce se neuložila',
   'collab.toast.messageDeleted': 'Zpráva smazána',
   'collab.toast.deleteFailed': 'Zpráva nebyla smazána',

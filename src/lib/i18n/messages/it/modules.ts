@@ -810,6 +810,12 @@ const messages = {
     'Tutti i partecipanti a questo viaggio condividono una conversazione. Le decisioni prese qui restano con il viaggio invece di disperdersi nelle chat di gruppo.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Inizia la conversazione',
+  'collab.thread.loadOlder': 'Carica i messaggi precedenti',
+  'collab.thread.loadingOlder': 'Caricamento dei messaggi precedenti',
+  'collab.thread.loadOlderFailed':
+    'I messaggi precedenti non sono stati caricati',
+  'collab.thread.retry': 'Riprova',
+  'collab.thread.start': 'Qui inizia la conversazione',
   'collab.toast.reactionFailed': 'La reazione non è stata salvata',
   'collab.toast.messageDeleted': 'Messaggio eliminato',
   'collab.toast.deleteFailed': 'Il messaggio non è stato eliminato',

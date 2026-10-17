@@ -950,6 +950,12 @@ const messages = {
     'Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Say the first thing',
+  'collab.thread.loadOlder': 'Load earlier messages',
+  'collab.thread.loadingOlder': 'Loading earlier messages',
+  'collab.thread.loadOlderFailed': 'Earlier messages did not load',
+  /** Button that repeats a failed page load; not the composer's retry. */
+  'collab.thread.retry': 'Try again',
+  'collab.thread.start': 'This is where the conversation starts',
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',
   'collab.toast.deleteFailed': 'The message was not deleted',

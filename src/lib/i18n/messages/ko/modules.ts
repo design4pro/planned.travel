@@ -748,6 +748,11 @@ const messages = {
     '이 여행의 모든 참여자가 하나의 대화를 공유합니다. 여기서 내린 결정은 여러 그룹 채팅에 흩어지지 않고 여행과 함께 남습니다.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': '첫 메시지를 남겨 보세요',
+  'collab.thread.loadOlder': '이전 메시지 불러오기',
+  'collab.thread.loadingOlder': '이전 메시지를 불러오는 중',
+  'collab.thread.loadOlderFailed': '이전 메시지를 불러오지 못했습니다',
+  'collab.thread.retry': '다시 시도',
+  'collab.thread.start': '여기서 대화가 시작됩니다',
   'collab.toast.reactionFailed': '반응을 저장하지 못했습니다',
   'collab.toast.messageDeleted': '메시지를 삭제했습니다',
   'collab.toast.deleteFailed': '메시지를 삭제하지 못했습니다',

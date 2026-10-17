@@ -790,6 +790,11 @@ const messages = {
     'Az utazás minden résztvevője egy közös beszélgetést használ. Az itt hozott döntések az utazásnál maradnak, nem szóródnak szét csoportos csevegésekben.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Kezdd el a beszélgetést',
+  'collab.thread.loadOlder': 'Korábbi üzenetek betöltése',
+  'collab.thread.loadingOlder': 'Korábbi üzenetek betöltése folyamatban',
+  'collab.thread.loadOlderFailed': 'A korábbi üzenetek nem töltődtek be',
+  'collab.thread.retry': 'Újrapróbálás',
+  'collab.thread.start': 'Itt kezdődik a beszélgetés',
   'collab.toast.reactionFailed': 'A reakció nem lett elmentve',
   'collab.toast.messageDeleted': 'Üzenet törölve',
   'collab.toast.deleteFailed': 'Az üzenet nem lett törölve',

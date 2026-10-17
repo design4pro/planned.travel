@@ -793,6 +793,11 @@ const messages = {
     'Iedereen op deze reis deelt één gesprek. Beslissingen die je hier neemt, blijven bij de reis in plaats van verspreid te raken over groepschats.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Begin het gesprek',
+  'collab.thread.loadOlder': 'Eerdere berichten laden',
+  'collab.thread.loadingOlder': 'Eerdere berichten worden geladen',
+  'collab.thread.loadOlderFailed': 'Eerdere berichten zijn niet geladen',
+  'collab.thread.retry': 'Opnieuw proberen',
+  'collab.thread.start': 'Hier begint het gesprek',
   'collab.toast.reactionFailed': 'De reactie is niet opgeslagen',
   'collab.toast.messageDeleted': 'Bericht verwijderd',
   'collab.toast.deleteFailed': 'Het bericht is niet verwijderd',

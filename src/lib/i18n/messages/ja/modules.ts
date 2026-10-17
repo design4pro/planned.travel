@@ -753,6 +753,11 @@ const messages = {
     'この旅行の参加者全員でひとつのスレッドを共有します。ここで決めたことはグループチャットに散らばらず、旅行と一緒に残ります。',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': '最初のメッセージを書こう',
+  'collab.thread.loadOlder': '以前のメッセージを読み込む',
+  'collab.thread.loadingOlder': '以前のメッセージを読み込み中',
+  'collab.thread.loadOlderFailed': '以前のメッセージを読み込めませんでした',
+  'collab.thread.retry': '再試行',
+  'collab.thread.start': 'ここから会話が始まります',
   'collab.toast.reactionFailed': 'リアクションを保存できませんでした',
   'collab.toast.messageDeleted': 'メッセージを削除しました',
   'collab.toast.deleteFailed': 'メッセージを削除できませんでした',
