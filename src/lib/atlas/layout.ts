@@ -282,6 +282,10 @@ export function tripDocumentHeight(
 export const TRIP_RAIL_STICKY_CLASS =
   'xl:top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+1.5rem)]'
 
+/** Collaboration tabs sit directly beneath the trip navigation, including its name row. */
+export const COLLAB_TABS_STICKY_CLASS =
+  'top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px)] lg:top-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px)]'
+
 /**
  * The trip planner's slice, as the two Tailwind utilities the screen ships.
  *

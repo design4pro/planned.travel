@@ -1,6 +1,13 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -12,11 +19,30 @@ import { encodePublicFailure } from '#/lib/errors'
 import { toast } from '#/components/ui'
 import { CollabSectionsMenu } from '../collab-sections-menu'
 
+const routerEvents = vi.hoisted(() => ({
+  rendered: null as (() => void) | null,
+}))
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({
+    subscribe: (_event: string, callback: () => void) => {
+      routerEvents.rendered = callback
+      return () => {
+        routerEvents.rendered = null
+      }
+    },
+  }),
+}))
+
 const messages = {
   ...namespaceCatalogue('trips', Trips),
   ...namespaceCatalogue('modules', Modules),
 }
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  Reflect.deleteProperty(document, 'elementFromPoint')
+})
 function deferred() {
   let resolve: () => void = () => {}
   const promise = new Promise<void>((done) => {
@@ -180,3 +206,182 @@ it.each(['transport', 'refusal'] as const)(
     })
   },
 )
+
+it.each(['top', 'bottom', 'none'] as const)(
+  'returns Escape focus and reveals it only when obscured (%s)',
+  async (obstruction) => {
+    const { user } = setup()
+    const trigger = screen.getByRole('button', { name: /Choose sections/ })
+    const reveal = vi.spyOn(trigger, 'scrollIntoView')
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      x: 37,
+      y: 0,
+      top: 0,
+      bottom: 44,
+      left: 37,
+      right: 216,
+      width: 179,
+      height: 44,
+      toJSON: () => ({}),
+    })
+    const blocker = document.createElement('header')
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn((_x: number, y: number) => {
+        const blocked =
+          (obstruction === 'top' && y < 22) ||
+          (obstruction === 'bottom' && y > 22)
+        return blocked ? blocker : trigger
+      }),
+    })
+    await user.click(trigger)
+    reveal.mockClear()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    if (obstruction !== 'none')
+      expect(reveal).toHaveBeenCalledWith({
+        block: 'center',
+        behavior: 'instant',
+      })
+    else expect(reveal).not.toHaveBeenCalled()
+  },
+)
+
+it('does not scroll or take focus back when it changes before the close frame', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  await user.click(trigger)
+  const frames: FrameRequestCallback[] = []
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    }),
+  )
+  const reveal = vi.spyOn(trigger, 'scrollIntoView')
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  const other = document.createElement('button')
+  document.body.appendChild(other)
+  try {
+    other.focus()
+    act(() => frames.forEach((callback) => callback(performance.now())))
+    expect(document.activeElement).toBe(other)
+    expect(reveal).not.toHaveBeenCalled()
+  } finally {
+    other.remove()
+  }
+})
+
+it('restores Escape focus without starting browser smooth scrolling on each opening', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  const focus = vi.spyOn(trigger, 'focus')
+  for (let cycle = 0; cycle < 2; cycle++) {
+    await user.click(trigger)
+    focus.mockClear()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(
+      focus.mock.calls.every(([options]) => options?.preventScroll === true),
+    ).toBe(true)
+  }
+})
+
+it('does not retain Escape focus ownership for a later outside dismissal', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  await user.click(trigger)
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  await user.click(trigger)
+  const focus = vi.spyOn(trigger, 'focus')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  fireEvent.pointerDown(document.body, { button: 2, pointerType: 'mouse' })
+  await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+  expect(focus).not.toHaveBeenCalledWith({ preventScroll: true })
+})
+
+it.each([false, true])(
+  'cancels the first late restoration (obscured %s)',
+  async (obscuredAfterClose) => {
+    const { user } = setup()
+    const trigger = screen.getByRole('button', { name: /Choose sections/ })
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      x: 37,
+      y: 0,
+      top: 0,
+      bottom: 44,
+      left: 37,
+      right: 216,
+      width: 179,
+      height: 44,
+      toJSON: () => ({}),
+    })
+    const reveal = vi.spyOn(trigger, 'scrollIntoView')
+    let obscured = false
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => (obscured ? document.body : trigger),
+    })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    reveal.mockClear()
+    const cancel = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    obscured = obscuredAfterClose
+    act(() => routerEvents.rendered?.())
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(cancel).toHaveBeenCalledWith({
+      top: window.scrollY,
+      left: window.scrollX,
+      behavior: 'instant',
+    })
+    if (obscuredAfterClose)
+      expect(reveal).toHaveBeenCalledWith({
+        block: 'center',
+        behavior: 'instant',
+      })
+    else expect(reveal).not.toHaveBeenCalled()
+  },
+)
+
+it.each(['wheel', 'touchstart', 'pointerdown', 'keydown'] as const)(
+  'leaves reading position alone after Escape followed by user %s',
+  async (type) => {
+    const { user } = setup()
+    const trigger = screen.getByRole('button', { name: /Choose sections/ })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const reveal = vi.spyOn(trigger, 'scrollIntoView')
+    fireEvent(window, new Event(type))
+    act(() => routerEvents.rendered?.())
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(scroll).not.toHaveBeenCalled()
+    expect(reveal).not.toHaveBeenCalled()
+  },
+)
+
+it('consumes the late restoration correction only once after Escape', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  await user.click(trigger)
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  act(() => routerEvents.rendered?.())
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  expect(scroll).toHaveBeenCalledOnce()
+  scroll.mockClear()
+  act(() => routerEvents.rendered?.())
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  expect(scroll).not.toHaveBeenCalled()
+})

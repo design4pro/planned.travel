@@ -449,6 +449,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Nascondi il pannello {label}',
   'plan.workspace.narrowPanel': 'Restringi {label}',
   'plan.workspace.widenPanel': 'Allarga {label}',
+  'collab.sections.tabsLabel': 'Sezioni di collaborazione',
   'collab.sections.trigger': 'Scegli le sezioni',
   'collab.sections.menuLabel': 'Mostra a tutti i partecipanti al viaggio',
   'collab.sections.keepOne': 'Almeno una sezione deve restare attiva.',
