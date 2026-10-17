@@ -72,6 +72,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'مساحة العمل',
+  'workspace.switched': 'تم التبديل إلى {name}',
   'workspace.switchFailed': 'تعذّر تبديل مساحة العمل',
   'workspace.switchFailedBody': 'تحقق من اتصالك ثم أعد المحاولة.',
   'workspace.create': 'إنشاء مساحة عمل',

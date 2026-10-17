@@ -68,6 +68,7 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Espai',
+  'workspace.switched': 'Has canviat a {name}',
   'workspace.switchFailed': 'No s’ha pogut canviar d’espai',
   'workspace.switchFailedBody': 'Comprova la connexió i torna-ho a provar.',
   'workspace.create': 'Crea un espai',
