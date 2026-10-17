@@ -28,6 +28,7 @@ import {
 import {
   clampSessionExpiry,
   impersonationCookieGuard,
+  impersonationExpiryGuard,
 } from './impersonation-expiry'
 import { logAuth } from './log'
 import { passkey } from './passkey/plugin'
@@ -447,8 +448,10 @@ function buildAuth() {
       // Reads the person a session-ending endpoint is about before it deletes the session (#1093).
       roomEvictionPrepare,
 
-      // Keeps the refresh from re-issuing an impersonated session's cookie for 30 days.
+      // Keeps the refresh from re-issuing an impersonated session's cookie for 30 days, and ends an
+      // expired impersonated session on the library's own endpoints (docs/ACCESS.md §6.2).
       impersonationCookieGuard,
+      impersonationExpiryGuard,
 
       twoFactor({
         issuer: APP_NAME,

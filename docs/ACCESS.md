@@ -1096,22 +1096,27 @@ before its owner is back with coffee. When it expires the session is simply gone
 on the login screen, the stale `admin_session` cookie is cleared on that same request rather than
 left to linger, and the admin signs in again as themselves.
 
-The 900 seconds is enforced server-side by two mechanisms, because setting the option alone does not
-hold it. Better Auth's sliding refresh (`updateAge`, one day) rewrites `expiresAt` to now plus the
-global 30-day `expiresIn` on the first read of any session older than that, and a 900-second session
-always is. The only thing that skips the refresh is the signed `dont_remember` cookie, which the
-client supplies: whoever holds the session token and leaves that cookie out would otherwise extend
-the impersonation to 30 days (#1358). So:
+The 900 seconds is enforced server-side by three mechanisms, because setting the option alone does
+not hold it. Better Auth's sliding refresh (`updateAge`, one day) rewrites `expiresAt` to now plus
+the global 30-day `expiresIn` on the first read of any session older than that, and a 900-second
+session always is. The only thing that skips the refresh is the signed `dont_remember` cookie, which
+the client supplies: whoever holds the session token and leaves that cookie out would otherwise
+extend the impersonation to 30 days (#1358). So:
 
 - **The update clamp.** The session `update.before` hook in `src/server/auth/index.ts` keeps an
   impersonated session's `expiresAt` at `min(stored expiry, createdAt + 900 s)` whenever a patch
   tries to move it, and drops `expiresAt` from a patch whose session it cannot resolve (fail
   closed). Patches that do not touch `expiresAt`, such as organisation set-active, pass through, and
-  ordinary sessions keep the 30-day sliding refresh. A plugin hook on `get-session` drops the
-  session-token `Set-Cookie` the refresh would have re-issued with a 30-day `Max-Age`.
-- **The read-side guard.** `normaliseSession` in `src/server/auth/tenant.ts` returns no session for
-  an impersonated one whose `createdAt` plus 900 s is in the past, whatever its row says, so a row
-  extended before the clamp shipped stops authorising at once.
+  ordinary sessions keep the 30-day sliding refresh. A plugin hook drops the session-token
+  `Set-Cookie` the refresh would have re-issued with a 30-day `Max-Age`.
+- **The read-side guard, server functions.** `normaliseSession` in `src/server/auth/tenant.ts`
+  returns no session for an impersonated one whose `createdAt` plus 900 s is in the past, whatever
+  its row says, so a row extended before the clamp shipped stops authorising at once.
+- **The read-side guard, Better Auth's own endpoints.** Every `/api/auth/*` endpoint resolves the
+  session inside the library and never reaches `normaliseSession`, so a plugin `before` hook
+  (`impersonationExpiryGuard`) deletes an impersonated session older than 900 s, row and KV blob,
+  before the endpoint reads it; the endpoint then answers as for a signed-out caller. The hook skips
+  `/sign-out`, and `/get-session` for in-process calls, where the server functions' guard applies.
 
 ### 6.3 Closing the tab does not end it
 

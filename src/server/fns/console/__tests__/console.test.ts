@@ -48,7 +48,10 @@ import {
 } from 'vitest'
 import type { z } from 'zod'
 
-import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
+import {
+  BANNED_USER_MESSAGE,
+  IMPERSONATION_SESSION_SECONDS,
+} from '#/server/auth/admin-options'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import { platformAuditLog } from '#/server/db/schema'
 import { createLogger, createMemorySink } from '#/server/observability'
@@ -2759,7 +2762,7 @@ describe('impersonation', () => {
 /* ------------------------------------------- impersonated session expiry (#1358) */
 
 describe('impersonated session expiry (docs/ACCESS.md §6.2)', () => {
-  const IMPERSONATION_MS = 900_000
+  const IMPERSONATION_MS = IMPERSONATION_SESSION_SECONDS * 1000
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
 
   /** Where the impersonated session lives, in both stores Better Auth reads it from. */
@@ -2858,10 +2861,7 @@ describe('impersonated session expiry (docs/ACCESS.md §6.2)', () => {
     expect(ttlAfter).toBeLessThanOrEqual(ttlBefore)
     expect(ttlAfter).toBeGreaterThan(ttlBefore - 10)
     // No `Set-Cookie` may hand the token a longer life than its row has.
-    for (const entry of sessionTokenCookies(response)) {
-      const maxAge = /Max-Age=(\d+)/.exec(entry)?.[1]
-      expect(Number(maxAge ?? 0)).toBeLessThanOrEqual(900)
-    }
+    expect(sessionTokenCookies(response)).toEqual([])
   })
 
   it('leaves the expiry alone on the cookie-present path a browser takes', async () => {
@@ -2923,6 +2923,37 @@ describe('impersonated session expiry (docs/ACCESS.md §6.2)', () => {
     })
 
     expect(storedSession(worn.id).expiresAt).toBe(before.expiresAt)
+  })
+
+  it('ends a row extended before the fix on the library’s own endpoints', async () => {
+    const worn = seedUser()
+    const organizationId = seedWorkspace('Second workspace')
+    seedMember(organizationId, worn.id, 'member')
+    const jar = await impersonationJar(worn.id)
+    const { token } = storedSession(worn.id)
+    rewriteSession(token, {
+      createdAt: Date.now() - IMPERSONATION_MS - 60_000,
+      expiresAt: Date.now() + THIRTY_DAYS_MS,
+    })
+
+    const read = await authGet('/get-session', jarHeader(withoutMarker(jar)))
+    expect(await read.json()).toBeNull()
+    expect(sessionCount(worn.id)).toBe(0)
+    expect(kv().store.has(token)).toBe(false)
+
+    const rewrittenAgain = await impersonationJar(worn.id)
+    const second = storedSession(worn.id)
+    rewriteSession(second.token, {
+      createdAt: Date.now() - IMPERSONATION_MS - 60_000,
+      expiresAt: Date.now() + THIRTY_DAYS_MS,
+    })
+    const switched = await authPost(
+      '/organization/set-active',
+      { organizationId },
+      jarHeader(rewrittenAgain),
+    )
+    expect(switched.status).toBe(401)
+    expect(sessionCount(worn.id)).toBe(0)
   })
 
   it('still slides an ordinary session to 30 days once it is past the update age', async () => {

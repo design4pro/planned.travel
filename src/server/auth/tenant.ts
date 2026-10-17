@@ -6,7 +6,7 @@
  * from the transport that supplies the session.
  */
 import { ORGANIZATION_ROLES } from '#/server/db/auth-schema'
-import { isImpersonationExpired } from './impersonation-expiry'
+import { asDate, isImpersonationExpired } from './impersonation-expiry'
 import type { OrganizationRole } from '#/server/db/auth-schema'
 
 export type { OrganizationRole }
@@ -208,15 +208,6 @@ type RawSession = {
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
-}
-
-function asDate(value: unknown): Date | null {
-  if (value instanceof Date) return value
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value)
-    return Number.isFinite(date.getTime()) ? date : null
-  }
-  return null
 }
 
 /**
