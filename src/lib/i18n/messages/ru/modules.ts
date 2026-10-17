@@ -802,6 +802,12 @@ const messages = {
     'Все участники этой поездки общаются в одной ветке. Принятые здесь решения остаются с поездкой, а не теряются в групповых чатах.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Начни разговор',
+  'collab.thread.loadOlder': 'Загрузить более ранние сообщения',
+  'collab.thread.loadingOlder': 'Загрузка более ранних сообщений',
+  'collab.thread.loadOlderFailed':
+    'Не удалось загрузить более ранние сообщения',
+  'collab.thread.retry': 'Попробовать снова',
+  'collab.thread.start': 'Здесь начинается переписка',
   'collab.toast.reactionFailed': 'Реакция не сохранилась',
   'collab.toast.messageDeleted': 'Сообщение удалено',
   'collab.toast.deleteFailed': 'Сообщение не удалено',

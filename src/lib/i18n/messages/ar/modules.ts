@@ -803,6 +803,11 @@ const messages = {
     'يشترك جميع المسافرين في هذه الرحلة في محادثة واحدة. تبقى القرارات المتخذة هنا مرتبطة بالرحلة بدلاً من التشتت بين المحادثات الجماعية.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'ابدأ الحديث',
+  'collab.thread.loadOlder': 'تحميل الرسائل الأقدم',
+  'collab.thread.loadingOlder': 'جارٍ تحميل الرسائل الأقدم',
+  'collab.thread.loadOlderFailed': 'تعذّر تحميل الرسائل الأقدم',
+  'collab.thread.retry': 'حاول مجددًا',
+  'collab.thread.start': 'هنا بدأت المحادثة',
   'collab.toast.reactionFailed': 'لم يُحفظ التفاعل',
   'collab.toast.messageDeleted': 'حُذفت الرسالة',
   'collab.toast.deleteFailed': 'لم تُحذف الرسالة',

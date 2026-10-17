@@ -803,6 +803,11 @@ const messages = {
     'Усі учасники цієї подорожі спілкуються в одній гілці. Ухвалені тут рішення залишаються з подорожжю, а не губляться в групових чатах.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Розпочни розмову',
+  'collab.thread.loadOlder': 'Завантажити раніші повідомлення',
+  'collab.thread.loadingOlder': 'Завантаження раніших повідомлень',
+  'collab.thread.loadOlderFailed': 'Не вдалося завантажити раніші повідомлення',
+  'collab.thread.retry': 'Спробувати знову',
+  'collab.thread.start': 'Тут починається розмова',
   'collab.toast.reactionFailed': 'Реакція не збереглася',
   'collab.toast.messageDeleted': 'Повідомлення видалено',
   'collab.toast.deleteFailed': 'Повідомлення не видалено',

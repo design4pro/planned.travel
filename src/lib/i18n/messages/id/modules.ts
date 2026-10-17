@@ -781,6 +781,11 @@ const messages = {
     'Semua peserta perjalanan ini berbagi satu percakapan. Keputusan yang dibuat di sini tetap tersimpan bersama perjalanan, bukan tercecer di berbagai obrolan grup.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Mulai percakapan',
+  'collab.thread.loadOlder': 'Muat pesan sebelumnya',
+  'collab.thread.loadingOlder': 'Memuat pesan sebelumnya',
+  'collab.thread.loadOlderFailed': 'Pesan sebelumnya gagal dimuat',
+  'collab.thread.retry': 'Coba lagi',
+  'collab.thread.start': 'Di sinilah percakapan dimulai',
   'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
   'collab.toast.messageDeleted': 'Pesan dihapus',
   'collab.toast.deleteFailed': 'Pesan tidak dihapus',
