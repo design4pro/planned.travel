@@ -24,12 +24,14 @@ import {
   rankConnections,
   refusalBody,
   refusalTitle,
+  startingDate,
 } from '../connection-search'
 
 import { modulesTranslate as t } from '#/lib/i18n/__tests__/modules-translate'
 
 import type { ConnectionRefusal } from '../connection-search'
 import type { StationMatch, TransitConnection } from '#/server/fns/transports'
+import type { TransportDayData } from '../types'
 
 /**
  * The server-function module is replaced wholesale, and it has to be.
@@ -298,6 +300,124 @@ describe('chainFor', () => {
       legs: [leg('bus', '', 'Town', null, null)],
     })
     expect(chainFor(unnamed, null, null, t).stations[0].name).toBe('Stop')
+  })
+})
+
+/**
+ * The date the dialog opens on.
+ *
+ * A re-search keeps the days the journey was anchored to (`carryAnchors`), so a field that starts
+ * on the trip's first day lets a save without touching it leave the legs showing one date and
+ * sitting on another day. These pin the order: the anchored day's date, then the journey's own
+ * recorded date, then the first dated day - and that the answer is never outside what the date
+ * input accepts.
+ */
+describe('startingDate', () => {
+  const day = (
+    id: string,
+    dayNumber: number,
+    date: string | null,
+  ): TransportDayData => ({ id, dayNumber, date, title: null })
+  const days = [
+    day('d1', 1, '2026-10-09'),
+    day('d2', 2, '2026-10-10'),
+    day('d3', 3, null),
+    day('d4', 4, '2026-10-12'),
+  ]
+  const journey = (
+    overrides: Partial<{
+      departureDayId: string | null
+      departureDate: string | null
+      legs: ReadonlyArray<{ departureDayId: string | null }>
+    }> = {},
+  ) => ({
+    departureDayId: null,
+    departureDate: null,
+    legs: [],
+    ...overrides,
+  })
+
+  it('starts a new journey on the first dated day', () => {
+    expect(startingDate(days, undefined)).toBe('2026-10-09')
+    expect(startingDate([day('x', 1, null), ...days], undefined)).toBe(
+      '2026-10-09',
+    )
+  })
+
+  it('starts an anchored, dated journey on its anchor day', () => {
+    const anchored = journey({
+      departureDate: '2026-10-09',
+      legs: [{ departureDayId: 'd4' }, { departureDayId: 'd1' }],
+    })
+    expect(startingDate(days, anchored)).toBe('2026-10-12')
+  })
+
+  it('reads the anchor from the first leg, never from the record, when there are legs', () => {
+    const anchored = journey({
+      departureDayId: 'd4',
+      legs: [{ departureDayId: 'd2' }],
+    })
+    expect(startingDate(days, anchored)).toBe('2026-10-10')
+  })
+
+  it('ignores the record anchor day when the first leg is unanchored', () => {
+    const anchored = journey({
+      departureDayId: 'd4',
+      departureDate: '2026-10-11',
+      legs: [{ departureDayId: null }],
+    })
+    expect(startingDate(days, anchored)).toBe('2026-10-11')
+  })
+
+  it('reads the anchor from the record when the journey has no legs', () => {
+    expect(startingDate(days, journey({ departureDayId: 'd2' }))).toBe(
+      '2026-10-10',
+    )
+  })
+
+  it('falls back to the journey own date when the anchor day has no date', () => {
+    const anchored = journey({
+      departureDate: '2026-10-11',
+      legs: [{ departureDayId: 'd3' }],
+    })
+    expect(startingDate(days, anchored)).toBe('2026-10-11')
+  })
+
+  it('falls back to the journey own date when the trip no longer has the anchor day', () => {
+    const anchored = journey({
+      departureDate: '2026-10-10',
+      legs: [{ departureDayId: 'gone' }],
+    })
+    expect(startingDate(days, anchored)).toBe('2026-10-10')
+  })
+
+  it('falls back to the journey own date when it has no anchor', () => {
+    expect(startingDate(days, journey({ departureDate: '2026-10-12' }))).toBe(
+      '2026-10-12',
+    )
+  })
+
+  it('starts on the first dated day when the journey own date is outside the trip', () => {
+    expect(startingDate(days, journey({ departureDate: '2026-10-08' }))).toBe(
+      '2026-10-09',
+    )
+    expect(startingDate(days, journey({ departureDate: '2026-10-13' }))).toBe(
+      '2026-10-09',
+    )
+  })
+
+  it('starts on the first dated day when the journey has neither anchor nor date', () => {
+    expect(startingDate(days, journey())).toBe('2026-10-09')
+  })
+
+  it('is empty only when the trip has no dated day at all', () => {
+    expect(startingDate([day('d1', 1, null)], journey())).toBe('')
+    expect(
+      startingDate(
+        [day('d1', 1, null)],
+        journey({ departureDate: '2026-10-09' }),
+      ),
+    ).toBe('')
   })
 })
 

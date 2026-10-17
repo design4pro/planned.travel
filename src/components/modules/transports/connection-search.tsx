@@ -224,6 +224,67 @@ export function placeOf(stop: StationMatch | null): {
   return { name: stop.name, lat: stop.lat, lng: stop.lng }
 }
 
+/**
+ * The dates of the trip's days that have one, in the trip's order.
+ *
+ * `flatMap` rather than a filter and a `?? ''`: the fallback would be a branch no day can reach,
+ * and an empty string is the one value the date field must never be handed.
+ */
+function datedDays(days: ReadonlyArray<TransportDayData>): Array<string> {
+  return days.flatMap((day) => (day.date === null ? [] : [day.date]))
+}
+
+/**
+ * The part of a saved journey {@link startingDate} reads: the day it is anchored to and its own
+ * recorded date. A `TransportData` satisfies it.
+ */
+export interface AnchoredJourney {
+  readonly departureDayId: string | null
+  readonly departureDate: string | null
+  readonly legs: ReadonlyArray<{ readonly departureDayId: string | null }>
+}
+
+/**
+ * The date the dialog opens on.
+ *
+ * A re-search keeps the days the journey was anchored to (`carryAnchors`), so a field that starts
+ * on the trip's first day lets a save without touching it leave the legs showing that date while
+ * they sit on the old anchor day. For a saved journey the field therefore starts, in this order, on:
+ *
+ * 1. the date of the day the journey is anchored to - the first leg's departure day, and the
+ *    record's own only when it has no legs, which is the rule `carryAnchors` applies; an id the trip
+ *    no longer has is no anchor;
+ * 2. the journey's own recorded departure date, when the anchor says nothing;
+ * 3. the first dated day, as for a journey that is not saved yet.
+ *
+ * Only a date between the first and the last dated day is offered, because that is all the date
+ * input accepts. This prefills a field and derives no day: a traveller who moves it is searching
+ * another date, and the journey keeps its anchor (#788, #685).
+ *
+ * `''` only when the trip has no dated day at all.
+ */
+export function startingDate(
+  days: ReadonlyArray<TransportDayData>,
+  journey: AnchoredJourney | undefined,
+): string {
+  const dated = datedDays(days)
+  const first = dated.at(0) ?? ''
+  const last = dated.at(-1) ?? ''
+  if (journey === undefined) {
+    return first
+  }
+  const anchorId =
+    journey.legs.length > 0
+      ? journey.legs[0].departureDayId
+      : journey.departureDayId
+  const anchored = days.find((day) => day.id === anchorId)?.date ?? null
+  return (
+    [anchored, journey.departureDate].find(
+      (date) => date !== null && date >= first && date <= last,
+    ) ?? first
+  )
+}
+
 /** One mode when every ride agrees, and `transit` when they do not. */
 export function connectionMode(
   connection: TransitConnection,
@@ -750,6 +811,8 @@ export interface ConnectionSearchProps {
   tripId: string
   /** The journey whose route is being replaced. Absent when this saves a new one. */
   transportId?: string
+  /** The journey being re-searched: the date field opens on the day it is anchored to. */
+  journey?: AnchoredJourney
   /** The trip's days, in order — the date field is bounded by the first and the last. */
   days: ReadonlyArray<TransportDayData>
   /** Called once a connection has been written, so the dialog can close. */
@@ -759,19 +822,15 @@ export interface ConnectionSearchProps {
 export function ConnectionSearch({
   tripId,
   transportId,
+  journey,
   days,
   onSaved,
 }: ConnectionSearchProps) {
   const t = useTranslate()
-  // `flatMap` rather than a filter and a `?? ''`: the fallback would be a branch no day can reach,
-  // and an empty string here is the one value the date field must never be handed.
-  const dated = useMemo(
-    () => days.flatMap((day) => (day.date === null ? [] : [day.date])),
-    [days],
-  )
+  const dated = useMemo(() => datedDays(days), [days])
   const [origin, setOrigin] = useState<StationMatch | null>(null)
   const [destination, setDestination] = useState<StationMatch | null>(null)
-  const [date, setDate] = useState(() => dated.at(0) ?? '')
+  const [date, setDate] = useState(() => startingDate(days, journey))
   const [time, setTime] = useState(DEFAULT_DEPARTURE_TIME)
   const [modes, setModes] = useState<ReadonlyArray<TransitMode>>([])
   const [ranking, setRanking] = useState<Ranking>('earliest')
