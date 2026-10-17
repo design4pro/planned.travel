@@ -778,7 +778,8 @@ const messages = {
   'collab.thread.today': 'I dag',
   'collab.thread.emptyBody':
     'Alla på den här resan delar en och samma tråd. Beslut som fattas här stannar med resan i stället för att spridas över gruppchattar.',
-  'collab.thread.empty': 'Inga meddelanden än',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Börja samtalet',
   'collab.toast.reactionFailed': 'Reaktionen sparades inte',
   'collab.toast.messageDeleted': 'Meddelandet borttaget',
   'collab.toast.deleteFailed': 'Meddelandet togs inte bort',
@@ -807,6 +808,19 @@ const messages = {
   'collab.compose.send': 'Skicka meddelandet',
   'collab.compose.savingEdit': 'Sparar ändringen',
   'collab.compose.save': 'Spara',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Tryck på Enter för att skicka, Shift och Enter för en ny rad.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Tryck på Escape för att avbryta.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Använd skicka-knappen för att skicka meddelandet.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Försök igen',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Dina ändringar finns kvar i textfältet. Kontrollera anslutningen och försök igen.',
   'collab.hint.sends': 'skickar',
   'collab.hint.addsLine': 'lägger till en rad',
   'collab.hint.cancels': 'avbryter',

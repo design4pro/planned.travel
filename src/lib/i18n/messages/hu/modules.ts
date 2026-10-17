@@ -788,7 +788,8 @@ const messages = {
   'collab.thread.today': 'Ma',
   'collab.thread.emptyBody':
     'Az utazás minden résztvevője egy közös beszélgetést használ. Az itt hozott döntések az utazásnál maradnak, nem szóródnak szét csoportos csevegésekben.',
-  'collab.thread.empty': 'Még nincsenek üzenetek',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Kezdd el a beszélgetést',
   'collab.toast.reactionFailed': 'A reakció nem lett elmentve',
   'collab.toast.messageDeleted': 'Üzenet törölve',
   'collab.toast.deleteFailed': 'Az üzenet nem lett törölve',
@@ -817,6 +818,18 @@ const messages = {
   'collab.compose.send': 'Üzenet küldése',
   'collab.compose.savingEdit': 'Módosítás mentése folyamatban',
   'collab.compose.save': 'Mentés',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Az Enter elküldi az üzenetet, a Shift és Enter új sort kezd.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Az Escape megnyomásával megszakíthatod.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Az üzenetet a küldés gombbal küldheted el.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Újrapróbálás',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'A módosításaid még a szövegmezőben vannak. Ellenőrizd a kapcsolatot, majd próbáld újra.',
   'collab.hint.sends': 'küld',
   'collab.hint.addsLine': 'új sort kezd',
   'collab.hint.cancels': 'megszakít',
