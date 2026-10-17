@@ -301,6 +301,11 @@ export function AllowancePanel({
               >
                 {t('modules.vacay.allowance.cancel')}
               </Button>
+              {pending ? (
+                <span className="text-caption text-ink-3">
+                  {t('modules.vacay.allowance.saving')}
+                </span>
+              ) : null}
             </div>
           </form>
         ) : null}

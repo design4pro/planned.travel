@@ -250,6 +250,7 @@ describe('committing', () => {
 
     expect(attr(field(), 'readonly')).not.toBeNull()
     expect(attr(field(), 'aria-busy')).toBe('true')
+    expect(screen.queryByText('Saving…')).not.toBeNull()
     const save = screen.getByRole('button', { name: 'Save' })
     expect((save as HTMLButtonElement).disabled).toBe(false)
     expect(attr(save, 'aria-busy')).toBeNull()
