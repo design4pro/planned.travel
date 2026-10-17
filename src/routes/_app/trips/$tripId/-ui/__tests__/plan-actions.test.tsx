@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import * as React from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { render as mount, screen } from '@testing-library/react'
+import { render as mount, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
-import { DropTimeDialog, refreshOnFailure } from '../plan-actions'
+import { DeleteDialog, DropTimeDialog, refreshOnFailure } from '../plan-actions'
 
 /**
  * The one question the drag policy ever asks a reader.
@@ -109,5 +109,87 @@ describe('refreshOnFailure', () => {
 
     await refreshOnFailure(async () => {}, refresh)
     expect(refresh).not.toHaveBeenCalled()
+  })
+})
+
+function deleteDialog(
+  overrides: Partial<React.ComponentProps<typeof DeleteDialog>> = {},
+) {
+  return (
+    <DeleteDialog
+      open
+      placeName="Senso-ji"
+      dayCount={1}
+      saving={false}
+      error={null}
+      onConfirm={() => {}}
+      onOpenChange={() => {}}
+      {...overrides}
+    />
+  )
+}
+
+describe('DeleteDialog', () => {
+  it.each(['keep', 'close', 'escape', 'outside'] as const)(
+    'allows %s dismissal only before and after saving',
+    async (path) => {
+      const onOpenChange = vi.fn()
+      const view = render(deleteDialog({ onOpenChange }))
+      const dismiss = async () => {
+        if (path === 'keep')
+          fireEvent.click(screen.getByRole('button', { name: 'Keep it' }))
+        if (path === 'close') {
+          const close = screen.queryByRole('button', { name: 'Close' })
+          if (close !== null) await userEvent.click(close)
+        }
+        if (path === 'escape') await userEvent.keyboard('{Escape}')
+        if (path === 'outside') {
+          // Radix listens after the opening pointer event has finished.
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          const overlay = document.querySelector(
+            '[data-state="open"][aria-hidden="true"]',
+          )
+          if (overlay === null) throw new Error('Missing dialog overlay')
+          fireEvent.pointerDown(overlay)
+          fireEvent.click(overlay)
+        }
+      }
+      await dismiss()
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+      onOpenChange.mockClear()
+      view.rerender(
+        <I18nProvider locale="en" messages={MESSAGES}>
+          {deleteDialog({ saving: true, onOpenChange })}
+        </I18nProvider>,
+      )
+      await dismiss()
+      expect(onOpenChange).not.toHaveBeenCalled()
+      expect(screen.getByRole('dialog')).toBeDefined()
+      view.rerender(
+        <I18nProvider locale="en" messages={MESSAGES}>
+          {deleteDialog({ onOpenChange, error: 'Delete refused' })}
+        </I18nProvider>,
+      )
+      expect(screen.getByRole('alert').textContent).toContain('Delete refused')
+      await dismiss()
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    },
+  )
+
+  it('keeps keyboard focus on Keep it when saving starts and exposes its disabled state', async () => {
+    const onOpenChange = vi.fn()
+    const view = render(deleteDialog({ onOpenChange }))
+    const keep = screen.getByRole('button', { name: 'Keep it' })
+    keep.focus()
+    view.rerender(
+      <I18nProvider locale="en" messages={MESSAGES}>
+        {deleteDialog({ saving: true, onOpenChange })}
+      </I18nProvider>,
+    )
+    expect(keep.getAttribute('aria-disabled')).toBe('true')
+    expect(document.activeElement).toBe(keep)
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+    await userEvent.keyboard('{Enter} ')
+    expect(onOpenChange).not.toHaveBeenCalled()
   })
 })

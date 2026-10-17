@@ -972,9 +972,14 @@ export function DeleteDialog({
   error,
   onConfirm,
 }: DeleteDialogProps) {
+  const changeOpen = (nextOpen: boolean) => {
+    if (!nextOpen && saving) return
+    onOpenChange(nextOpen)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm">
+    <Dialog open={open} onOpenChange={changeOpen}>
+      <DialogContent size="sm" hideClose={saving}>
         <DialogHeader>
           <DialogTitle>Delete {placeName}?</DialogTitle>
           <DialogDescription>
@@ -997,7 +1002,9 @@ export function DeleteDialog({
             type="button"
             variant="ghost"
             shape="pill"
-            onClick={() => onOpenChange(false)}
+            aria-disabled={saving || undefined}
+            className="aria-disabled:text-ink-4"
+            onClick={() => changeOpen(false)}
           >
             Keep it
           </Button>
