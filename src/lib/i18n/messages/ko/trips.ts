@@ -415,6 +415,7 @@ const messages = {
   'plan.workspace.hidePanel': '{label} 패널 숨기기',
   'plan.workspace.narrowPanel': '{label} 너비 줄이기',
   'plan.workspace.widenPanel': '{label} 너비 늘리기',
+  'collab.sections.tabsLabel': '협업 섹션',
   'collab.sections.trigger': '섹션 선택',
   'collab.sections.menuLabel': '이 여행의 모든 참여자에게 표시',
   'collab.sections.keepOne': '최소 하나의 섹션은 켜져 있어야 합니다.',

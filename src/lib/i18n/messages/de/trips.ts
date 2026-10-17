@@ -443,6 +443,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Bereich {label} ausblenden',
   'plan.workspace.narrowPanel': '{label} schmaler machen',
   'plan.workspace.widenPanel': '{label} breiter machen',
+  'collab.sections.tabsLabel': 'Bereiche der Zusammenarbeit',
   'collab.sections.trigger': 'Bereiche auswählen',
   'collab.sections.menuLabel': 'Für alle auf dieser Reise anzeigen',
   'collab.sections.keepOne': 'Mindestens ein Bereich bleibt aktiviert.',
