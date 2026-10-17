@@ -263,6 +263,8 @@ export const TRIP_STATUSES = [
 ] as const
 export const TRIP_VISIBILITIES = ['private', 'organization', 'public'] as const
 export const TRIP_MEMBER_ROLES = ['owner', 'editor', 'viewer'] as const
+/** The trip roles a trip invite link may grant: a joiner never becomes an `owner`. */
+export const TRIP_INVITE_ROLES = ['editor', 'viewer'] as const
 
 export const PLACE_SOURCES = [
   'manual',
@@ -1789,6 +1791,50 @@ export const shareLinks = sqliteTable(
     index('share_links_org_trip_idx').on(t.organizationId, t.tripId),
     index('share_links_expires_at_idx').on(t.expiresAt),
     nonNegativeCheck('share_links_view_count_chk', t.viewCount),
+  ],
+)
+
+/**
+ * The trip invite link: one rotating link per trip that puts members of the trip's workspace on the
+ * trip (`.ai/specs/2026-10-08-the-trip-invite-link.md`). A different object from `share_links` (a
+ * read-only public token) and from the workspace invitation (an email that makes someone a
+ * workspace member).
+ *
+ * `token` is the SHA-256 hex digest of the secret and never the secret: the secret is derived from
+ * the link id and `rotation` (`src/server/security/secret.ts`), so a new digest always comes with a
+ * new rotation. `role` has no `CHECK`: changing one later is a table rebuild, so the narrowed enum
+ * {@link TRIP_INVITE_ROLES} guards every write and the join parses the stored value again.
+ * `created_by` is the owner who last created, replaced or switched the link on, and `rotated_at`
+ * is when that happened: a link is honoured only while its creator is still an owner who joined the
+ * trip and the workspace before `rotated_at`, so removing and re-adding the creator never revives
+ * a copy that was already forwarded.
+ */
+export const tripInviteLinks = sqliteTable(
+  'trip_invite_links',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    token: text('token').notNull(),
+    rotation: integer('rotation').notNull().default(0),
+    role: text('role').notNull().default('viewer'),
+    createdBy: userRef('created_by').notNull(),
+    rotatedAt: integer('rotated_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .$defaultFn(rowInstant),
+    disabledAt: integer('disabled_at', { mode: 'timestamp_ms' }),
+    lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
+    useCount: integer('use_count').notNull().default(0),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('trip_invite_links_token_unq').on(t.token),
+    uniqueIndex('trip_invite_links_trip_unq').on(t.tripId),
+    index('trip_invite_links_org_trip_idx').on(t.organizationId, t.tripId),
+    nonNegativeCheck('trip_invite_links_rotation_chk', t.rotation),
+    nonNegativeCheck('trip_invite_links_use_count_chk', t.useCount),
   ],
 )
 

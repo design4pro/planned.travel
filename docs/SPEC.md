@@ -355,6 +355,14 @@ Subsequent content reads are scoped; `readFeedSource` issues nine statements (on
 eight content reads). This is an exception to the scope argument, not a third catalog member
 (ADR 0041).
 
+The trip invite link adds a second resolver of the same shape, `findLiveTripInviteByDigestUnscoped(db,
+digest)` in `src/server/repos/invites.ts`, with exactly one production caller,
+`src/server/public/trip-invite.ts`. Its unique digest point lookup returns only `{ id,
+organizationId, tripId, role, rotation, createdBy }`, never content, secret or digest, and returns
+null for a disabled, rotated-away or role-invalid link, an archived trip and a creator who is no
+longer a live owner of the trip (ADR 0042). The resolver builds no scope; the visitor slice
+reaches content only through scoped functions.
+
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" and "every query goes through a scoped
@@ -615,6 +623,7 @@ src/
     repos/           tenant-scoped data access (every tenant query and its SQL)
     catalog/         global catalogue access - the single stated exception to the SQL rule
     public/          session-less reads - read-only, column-whitelisted projections only
+    security/        pure secret derivation and digest leaf - no SQL, no binding; repos may import it
     mcp/             JSON-RPC 2.0 tool server - transport and tool schemas, no data layer
     billing/         Polar client, webhook handling, entitlements, quota resolution
     queue/           queue producer, envelopes and handlers
