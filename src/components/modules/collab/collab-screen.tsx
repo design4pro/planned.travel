@@ -190,7 +190,7 @@ export function CollabScreen({
   return (
     <div
       data-slot="collab-root"
-      className="[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px+3.5rem)] lg:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+3.5rem)] xl:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+var(--subnav-h)+2rem)]"
+      className="flex flex-col gap-6 lg:gap-8 [--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px+3.5rem)] lg:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+3.5rem)] xl:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+var(--subnav-h)+2rem)]"
     >
       {hidden ? (
         <p className="text-caption text-ink-3">

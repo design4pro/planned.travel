@@ -356,3 +356,15 @@ it('keeps loaded panel spacing aligned with the pending grid through the tab slo
     expect(panel.classList.contains('mt-5')).toBe(false)
   }
 })
+
+it('preserves the app section spacing around a hidden-section notice', () => {
+  const { container } = setup({
+    ...data,
+    sections: { conversation: false, notes: true, polls: true },
+  })
+  const root = container.querySelector('[data-slot="collab-root"]')
+  expect(root?.classList.contains('flex')).toBe(true)
+  expect(root?.classList.contains('flex-col')).toBe(true)
+  expect(root?.classList.contains('gap-6')).toBe(true)
+  expect(root?.classList.contains('lg:gap-8')).toBe(true)
+})
