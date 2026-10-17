@@ -939,7 +939,7 @@ machine status line. The Files screen around the card is already hard-coded Engl
 | Cancelled reservation or transport                                          | No event; the next poll removes it                                                                                                                                                                                                                      |
 | 51 or more trips on a workspace feed                                        | The 50 with the latest start dates; the dialog states the cap                                                                                                                                                                                           |
 | KV unavailable                                                              | The limiter fails open; resolution still answers or `404`s                                                                                                                                                                                              |
-| A shared calendar-provider IP polls many feeds                              | Live feeds are never refused on the IP's account; only that IP's refusals spend its miss budget                                                                                                                                                         |
+| A shared calendar-provider IP polls many feeds                              | Application refusals alone spend that IP's miss budget; the separate zone burst ceiling can block shared-IP live traffic                                                                                                                                                         |
 | Two taps on **Create a link** / a race with another tab                     | One statement per call; one row; the later secret wins and the earlier link stops                                                                                                                                                                       |
 | The response to a change is lost                                            | The panel reloads the real state and shows it; the messages claim nothing about the server                                                                                                                                                              |
 | The dialog is dismissed while a new link is uncopied                        | A confirmation first (Escape, overlay, X, **Done**); a completed copy dismisses freely; a browser back gesture or a refresh is not guarded                                                                                                              |
@@ -1014,8 +1014,9 @@ Each criterion belongs to the phase named, so every ticket has its own contract.
     owner's current `member` row (a person removed and re-added) or current `trip_members` row (removed from the
     trip and re-added) are each the same `404`; an expired temporary ban is not refused; `listFeeds` reports a
     refused link as off.
-16. The budgets are those of Phase 2 (per feed, per IP for refusals, a live feed never refused on an IP's
-    account); `429` carries `Retry-After`; every refusal kind spends the miss budget identically; a KV
+16. The application budgets are those of Phase 2 (per feed and per IP for refusals; live feeds do
+    not spend the application's IP miss budget). The separate zone burst ceiling can block live
+    shared-IP traffic; `429` carries `Retry-After`; every refusal kind spends the miss budget identically; a KV
     outage fails open without serving anything the resolver would refuse.
 17. The secret does not appear in any Sentry event the application emits (`request.url`, `transaction`,
     breadcrumb, span, log, Session Replay) or in an application log line; the platform channels it cannot reach are stated in
@@ -1194,7 +1195,7 @@ gate; their output travels in the diff and is never hand-edited.
 runtime)` against the test database and a map-backed KV: `200` headers, `HEAD`, `405`; **the `404` is
   byte-identical** for unknown, malformed, wrong-length, revoked, rotated, removed-owner, banned-owner,
   re-added-owner (a link armed before the new `member` row) and trip-removed; a wrong-length secret reaches neither a hash nor a query; the per-feed `429` with
-  `Retry-After`; **many live feeds fetched from one IP are never refused**; refusals of every kind spend
+  `Retry-After`; **many live feeds fetched from one IP are never refused by this application limiter**; refusals of every kind spend
   the miss budget identically; a KV outage fails open; a request carrying a session cookie gets the same
   bytes; the module constructs no scope (a source-level assertion, ACCESS §3.7).
 - `src/lib/__tests__/sentry-scrub.test.ts` — the `/api/feed/<segment>` path is redacted in `request.url`,
