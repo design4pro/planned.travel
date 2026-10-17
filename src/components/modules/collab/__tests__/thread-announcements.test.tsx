@@ -179,6 +179,26 @@ describe('the status region', () => {
     expect(document.querySelector('[role="alert"]')).toBeNull()
   })
 
+  it('says the page did not load when a peer moved the window while it was in flight', async () => {
+    let finish!: (page: { messages: MessageData[]; exhausted: boolean }) => void
+    vi.mocked(loadOlderMessagesFn).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const { rerender } = render(tree(fullWindow()))
+    fireEvent.click(control())
+    rerender(
+      tree([...rows(1001, THREAD_PAGE_SIZE - 1), message('m2000', 'user-1')]),
+    )
+    await act(async () => {
+      finish({ messages: rows(900, 3), exhausted: false })
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    await settle()
+    expect(region().textContent).toBe(En['collab.thread.loadOlderFailed'])
+  })
+
   it('announces a second identical failure again', async () => {
     vi.mocked(loadOlderMessagesFn).mockRejectedValue(new Error('offline'))
     render(tree(fullWindow()))
@@ -364,7 +384,7 @@ describe('the entrance of a live row', () => {
     expect(rowOf('m1002').className).not.toContain('starting:')
   })
 
-  it('drops the rise and keeps the fade under reduced motion', () => {
+  it('drops the rise under reduced motion, a backstop to the global reduced-motion rule', () => {
     const { rerender } = render(tree(rows(1000, 3)))
     rerender(tree([...rows(1000, 3), message('m1010', 'user-2')]))
     const live = rowOf('m1010').className

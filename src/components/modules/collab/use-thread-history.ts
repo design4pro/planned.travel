@@ -40,8 +40,11 @@ export function useThreadHistory(
   const flight = useRef(false)
   const exhausted = window.length < THREAD_PAGE_SIZE || current.exhausted
 
-  /** Resolves with how many older messages the page brought; 0 when nothing was applied. */
-  async function loadOlder(): Promise<number> {
+  /**
+   * Resolves with how many older messages the page brought: 0 when no request was made or the page
+   * was empty, `null` when the page arrived but the window had moved on and it was dropped.
+   */
+  async function loadOlder(): Promise<number | null> {
     const cursor = latest.current.messages[0]?.id
     if (
       flight.current ||
@@ -63,7 +66,7 @@ export function useThreadHistory(
         now.tripId !== requestedTrip ||
         now.messages[0]?.id !== cursor
       )
-        return 0
+        return null
       setState((previous) => {
         if (
           previous.tripId !== requestedTrip ||

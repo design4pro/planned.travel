@@ -503,10 +503,10 @@ function buildAuth() {
         // Every change of `activeOrganizationId` passes through `updateSession`: set-active,
         // accept-invitation, a leave, and the non-member refusals that clear it. Inside an
         // impersonated session each one is a row of the impersonation timeline (docs/ACCESS.md §6.4).
-        // A payload without that key (the `updateAge` refresh, every impersonated read) returns before
-        // anything is stored or read.
-        // The one `session.update` hook: a second key of that name silently replaced the first
-        // (both the expiry clamp and the workspace-switch audit are run from `before`).
+        // A payload without that key (the `updateAge` refresh, every impersonated read) stores and
+        // reads nothing for the audit; it only goes through the expiry clamp.
+        // The one `session.update` hook: a second key of that name silently replaced the first.
+        // `before` records the previous workspace and clamps the expiry, `after` writes the row.
         update: {
           before: async (data, context) => {
             if (context && Object.hasOwn(data, 'activeOrganizationId')) {

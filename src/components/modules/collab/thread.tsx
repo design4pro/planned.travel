@@ -211,7 +211,7 @@ export function Thread({
   const loadFailedId = useId()
   const scrollerId = useId()
   const [loadingOlder, setLoadingOlder] = useState(false)
-  /** Failed attempts since the last success; each one inserts the line anew, so it is announced again. */
+  /** Failed attempts since the last success; each one is announced again through the status region. */
   const [failures, setFailures] = useState(0)
   const loadFailed = failures > 0
   const loadBusy = useRef(false)
@@ -307,7 +307,9 @@ export function Thread({
     try {
       const loaded = await loadOlder()
       setFailures(0)
-      if (loaded > 0)
+      // A page dropped because a peer moved the window is not a success the reader can hear about.
+      if (loaded === null) announce(t('modules.collab.thread.loadOlderFailed'))
+      else if (loaded > 0)
         announce(
           t('modules.collab.thread.loadedEarlier', {
             count: loaded,
