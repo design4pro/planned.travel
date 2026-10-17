@@ -106,7 +106,7 @@ used. This resolves the `09-S3` / `10-S2` discrepancy: workspace deletion is out
 fixed floor, and the floor is `owner`. The caller never supplies a workspace id as the target: it is `scope.ctx.organizationId`, and the request only carries the
 id it believes it is in as a precondition (§ The confirmation).
 
-**Only when the owner is the only member** (decided by the panel, Resolved assumption 1). `deleteWorkspace` deletes with
+**Only when the owner is the only member** (decided by the panel, Resolved assumption 4). `deleteWorkspace` deletes with
 `DELETE FROM organization WHERE id = <scope> AND (SELECT count(*) FROM member WHERE organization_id = <scope>) <= 1`, so the
 guard is one atomic statement and not a read followed by a write, and `<= 1` admits the memberless workspaces #1062 lists.
 A workspace with other members is refused (`has-other-members`). Why:
@@ -121,7 +121,7 @@ A workspace with other members is refused (`has-other-members`). Why:
 
 Until #1008 lands, a team workspace cannot be deleted from the product and the owner has no product way to remove its members
 either (`removeMember` has no production caller; the members table is read-only), so the refusal copy states the fact and
-does not tell the owner to do something they cannot do yet; Phase 8 is blocked by #1008 for the link to the members list. A
+does not tell the owner to do something they cannot do yet; the members-list link in that refusal is added by #1008's own change, so Phase 8 is not blocked by it. A
 **notice window** that would let an owner delete a team workspace (every member told at once, any owner can cancel, the cron
 executes when due) is a follow-up this design leaves room for: the ledger's `requested` state is where a `due_at` would go,
 additively. The slicing run files it as a ticket (§ Follow-ups the slicing run files), so the part of #1000's promise this spec
@@ -171,7 +171,7 @@ order, writing nothing on a refusal until step 5:
    (`/passkey/authenticate/*` exists) is **not** required for a passkey-only account: that is a choice, made so that one step-up
    rule serves both deletions, and it is listed under Human decides. **Password guesses are rate limited per user, not per
    IP:** `/passkey/delete` gets 5 attempts per 300 seconds from Better Auth's `DELETE_RATE_LIMIT`, a server function has none,
-   so `verifyStepUp` keeps a KV counter keyed by user id with the same numbers and answers `rate-limited` past it (tested);
+   so `verifyStepUp` keeps a counter keyed by user id with the same numbers and answers `rate-limited` past it (tested). A KV counter is neither atomic nor immediately consistent, so it is a weaker limit than Better Auth's; the ticket may put it in D1 or a Durable Object instead, and states which it chose and why;
 6. the ledger row is inserted (idempotent: an existing live row for the organization is returned, § The sequence), which raises
    the fence, and **then**, with nothing able to join, the checks that read mutable state: another member (`has-other-members`,
    with the count, which the owner may know), a live subscription (`live-subscription`, § Billing) or an unreadable Polar answer
@@ -198,7 +198,7 @@ The button being hidden is not a control; every refusal above is reached by a te
   cancel at the period end can still be retried by Polar after the workspace is gone; that is a Human decides item.
 - **The race.** A checkout started before the gate can complete after it. From the moment a ledger row exists,
   `createCheckout` and `changePlan` refuse for that organization, and the webhook, for an organization that has a live ledger
-  row (not `refused`) or no row at all, writes nothing and answers 200; when a row moves to `refused` the webhook writes again,
+  row (not `refused`) or **no `organization` row at all**, writes nothing and answers 200; when a row moves to `refused` the webhook writes again,
   so the mirror is not left stale. If the payload carries a subscription that is not ending, the webhook
   enqueues `workspace-late-subscription` (the webhook itself makes no outbound call, `webhook.ts` property 3): its handler
   calls `PATCH /v1/subscriptions/{id}` with `{ cancel_at_period_end: true }` (an undoable write the `PolarClient` already
@@ -251,7 +251,7 @@ next run (the queue hop or the cron) continues.
 `…Unscoped` repo function, so SPEC §5 FU-3's one-caller shape does not apply) is true; `createCheckout`, `changePlan` and
 `addMember` in `src/server/repos/members.ts` (which writes a `member` row without going through the Better Auth hooks) do the
 same. Its callers are exactly: the three hooks, `addMember`, `createCheckout`, `changePlan` and the webhook, pinned by a test
-that fails on a seventh. The fence reads the ledger only on those rare paths; no per-request read is added.
+that fails on an eighth. The fence reads the ledger only on those rare paths; no per-request read is added.
 
 **Where the driver runs.** The request runs it inline for about ten seconds and enqueues `workspace-deletion` (payload: the
 deletion id only, never a user id, because dead letters keep bodies) before it answers. The queue consumer writes a
@@ -264,9 +264,13 @@ is the guarantee in production: a queue message can be swallowed by the done-mar
 and the cron depends on neither. (Staging's cron list is `0 3 * * *` only, so staging relies on the queue and on the next
 owner request.) A row older than seven days that is still not `done` is logged at `error` on every tick. The
 queue handler and the cron build a **reserved system owner scope** for the organization (minted by this spec's Phase 6, which is its one owner;
-the erasure spec's engine phases are blocked by it and import it, and a test lists the importers; this is a fabricated
-tenant context of the kind SPEC §5 forbids for a request, allowed here because it is built only inside the driver, as
-`scopeForWorkspace` is for the reminder sweep); the request passes the owner's own scope.
+the erasure spec's engine phases are blocked by it and import it, and a test lists the importers; this is a **fabricated**
+tenant context, the kind SPEC §5 forbids for a request, so it is a stated amendment to SPEC §5 and §6 made by Phase 1: it is
+built only inside the driver and no route or server function can import it. `scopeForWorkspace`
+(`src/server/queue/handlers/billing.ts`) is **not** a precedent: it reads a real owner from the `member` rows and throws
+`TaskPermanentError` when there is none. A real owner is not enough here because the erased person's `member` row is already
+gone when the erasure initiator runs, and the memberless workspaces of #1062 have no owner at all); the request passes the
+owner's own scope.
 
 ### What survives the cascade, and for how long
 
@@ -354,6 +358,11 @@ ships, mints `journeys/<org>/…` and adds the prefix; today there is nothing to
 - **Capturing trip ids and R2 keys before the cascade.** Needs an unbounded store for the owner's path; replaced by prefix keys
   that name the organization and by closing each chunk's rooms from a live read just before that chunk is deleted. (The erasure
   initiator, which owes a `deleteAll` per room, captures its own bounded list.)
+- **A smaller design: one guarded `DELETE`, a three-state ledger, the R2 sweep driven by the cron, and no table drain.**
+  The drain, the seven states, the lease and the fence are built for a very large workspace, and the spec cites no measurement
+  of where one cascading `DELETE` fails on D1. Kept, because a failure of that statement repeats on every retry and a person
+  would then have to finish the deletion, which this design forbids. The slicing run may split Phase 2 in two (the guarded
+  `DELETE` first, the drain in its own ticket) and ship the drain only behind a volume test that shows a D1 limit.
 - **Sweeping R2 before the cascade.** It would delete the files of a workspace that the next step may refuse to delete.
 
 ## 📝 Architecture
@@ -406,8 +415,8 @@ The owner's screen is a **Danger zone** card at the bottom of `/settings/organiz
 refuses everyone else regardless). It states what is deleted, that it cannot be undone, that there is no export, what happens
 to the owner's workspace list, and opens a dialog: the typed name (labelled, with the expected name shown), the password
 (only when the account has one; otherwise a line that a recent sign-in is required), a destructive button that stays disabled
-until the name matches, and a pending state. Refusals are inline and name the way out: another member (a link to the members
-list, once #1008 gives the owner a way to remove a member), a live subscription (a link to billing), a wrong password, an old session (sign in again). The dialog follows
+until the name matches, and a pending state. Refusals are inline and name the way out: another member (no link until #1008 gives the owner a way to remove a member;
+#1008's change adds it), a live subscription (a link to billing), a wrong password, an old session (sign in again). The dialog follows
 `passkey-delete-dialog.tsx` for focus and refusal handling. On success the person is taken to the dashboard with a toast; the
 workspace switcher no longer lists the workspace.
 
@@ -432,13 +441,15 @@ New keys in `src/lib/i18n/messages/en/settings.ts`, each added to all 22 other l
 | `settings.workspace.delete.confirmTitle`       | Delete {name}?                                                                                                                                          |
 | `settings.workspace.delete.nameLabel`          | Type the workspace name to confirm                                                                                                                      |
 | `settings.workspace.delete.passwordLabel`      | Password                                                                                                                                                |
-| `settings.workspace.delete.freshHint`          | You need to have signed in recently to do this.                                                                                                         |
+| `settings.workspace.delete.freshHint`          | You need to have signed in within the last day to do this.                                                                                              |
 | `settings.workspace.delete.confirm`            | Delete this workspace for good                                                                                                                          |
 | `settings.workspace.delete.pending`            | Deleting…                                                                                                                                               |
 | `settings.workspace.delete.done`               | Workspace deleted                                                                                                                                       |
 | `settings.workspace.delete.finishing`          | {name} is deleted. Its files are being removed in the background.                                                                                       |
 | `settings.workspace.delete.nameMismatch`       | That is not the workspace name.                                                                                                                         |
 | `settings.workspace.delete.passwordInvalid`    | That password is not right.                                                                                                                             |
+| `settings.workspace.delete.passwordRequired`   | Enter your password to confirm.                                                                                                                         |
+| `settings.workspace.delete.impersonated`       | You cannot delete a workspace while acting as someone else.                                                                                             |
 | `settings.workspace.delete.notFresh`           | Sign in again, then delete the workspace.                                                                                                               |
 | `settings.workspace.delete.hasMembers`         | Other people belong to this workspace, so it cannot be deleted from here.                                                                               |
 | `settings.workspace.delete.rateLimited`        | Too many attempts. Try again in a few minutes.                                                                                                          |
@@ -451,8 +462,9 @@ New keys in `src/lib/i18n/messages/en/settings.ts`, each added to all 22 other l
 
 The #989 warning ("no way to delete a workspace yet", next to `workspace.createDescription`) is removed from all 23 locales by
 Phase 8, which is blocked by the #989 change that adds it. The receipt email carries the workspace name and goes to the owner's
-address, both read from the ledger until the receipt is queued. (The email keys follow the existing `auth.passkeyNotice.*`
-pattern used by `src/server/auth/email.ts`.)
+address, both read from the ledger until the receipt is queued. (The two email keys are the exception to the file named above: they follow the existing `auth.passkeyNotice.*` pattern, which
+lives in `src/lib/i18n/messages/en/auth.ts` and is used by `src/server/auth/email.ts`; the email is sent in the owner's
+locale. `forbidden` has no copy because the card is not rendered for a non-owner.)
 
 ## 📝 Edge Cases & Failure Scenarios
 
@@ -535,16 +547,16 @@ cancelling or refunding a subscription on the owner's behalf; a notice window an
 
 ## 📋 Phasing
 
-| Phase | Slice                                                                                                                                                                                                                                          | Blocked by                     | Usable when it merges                                            |
-| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------- |
-| 1     | Contract: the ledger table and its catalog module, SPEC §5 and ACCESS §2.6 amendments, an ADR                                                                                                                                                  | none                           | A deletion can be recorded and resumed; nothing user-visible     |
-| 2     | `deleteWorkspace` and the drain in `repos`, with the isolation and slot tests                                                                                                                                                                  | none                           | A workspace row can be removed safely (no caller yet)            |
-| 3     | The shared resolve-or-provision (atomic, skips a banned user) used by `requireOrg` and `loadShell`                                                                                                                                             | none                           | Deleting a workspace can no longer strand a person               |
-| 4     | `deletePrefix` (the `ObjectStore` port gains `list`), `WORKSPACE_R2_PREFIXES` and the key-family drift test                                                                                                                                    | none                           | A workspace's objects can be swept and the list cannot drift     |
-| 5     | Billing: the webhook guard for an unknown organization (ships on its own, fixes a live bug), the gate, the Polar `GET`, the fence hooks, `addMember` and checkout refusal, the `workspace-late-subscription` handler and its Polar credentials | 1 (the fence reads the ledger) | A deleting workspace can no longer be billed or joined           |
-| 6     | The driver, the `workspace-deletion` handler, the cron branch, the system scope, the retention prune, the audit vocabulary and its ACCESS §4 amendments, tolerance of deleted workspaces                                                       | 1, 2, 4, 5                     | A recorded deletion completes by itself, from a test entry point |
-| 7     | `deleteWorkspaceFn`, `verifyStepUp` (extracted, rate limited, passkey delete unchanged), the receipt email, and the producers (the request's enqueue, the webhook's `workspace-late-subscription`)                                             | 3, 6                           | An owner can delete a workspace through the server function      |
-| 8     | The Danger zone card, the dialog, copy in 23 locales, the e2e journey, removal of the #989 warning key                                                                                                                                         | 7, #989, #1008                 | An owner can delete a workspace from the product                 |
+| Phase | Slice                                                                                                                                                                                                                                          | Blocked by                     | Usable when it merges                                                                          |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| 1     | Contract: the ledger table and its catalog module, SPEC §5 and ACCESS §2.6 amendments, an ADR                                                                                                                                                  | none                           | A deletion can be recorded and resumed; nothing user-visible                                   |
+| 2     | `deleteWorkspace` and the drain in `repos`, with the isolation and slot tests                                                                                                                                                                  | none                           | A workspace row can be removed safely (no caller yet)                                          |
+| 3     | The shared resolve-or-provision (atomic, skips a banned user) used by `requireOrg` and `loadShell`                                                                                                                                             | none                           | Deleting a workspace can no longer strand a person                                             |
+| 4     | `deletePrefix` (the `ObjectStore` port gains `list`), `WORKSPACE_R2_PREFIXES` and the key-family drift test                                                                                                                                    | none                           | A workspace's objects can be swept and the list cannot drift                                   |
+| 5     | Billing: the webhook guard for an unknown organization (ships on its own, fixes a live bug), the gate, the Polar `GET`, the fence hooks, `addMember` and checkout refusal, the `workspace-late-subscription` handler and its Polar credentials | 1 (the fence reads the ledger) | The fence, the gate and the webhook guard are tested against a ledger row inserted by the test |
+| 6     | The driver, the `workspace-deletion` handler, the cron branch, the system scope, the retention prune, the audit vocabulary and its ACCESS §4 amendments, tolerance of deleted workspaces                                                       | 1, 2, 4, 5                     | A recorded deletion completes by itself, from a test entry point                               |
+| 7     | `deleteWorkspaceFn`, `verifyStepUp` (extracted, rate limited, passkey delete unchanged), the receipt email, and the producers (the request's enqueue, the webhook's `workspace-late-subscription`)                                             | 3, 6                           | An owner can delete a workspace through the server function                                    |
+| 8     | The Danger zone card, the dialog, copy in 23 locales, the e2e journey, removal of the #989 warning key                                                                                                                                         | 7, #989                        | An owner can delete a workspace from the product                                               |
 
 Phases 1 to 4 can start at once (the webhook guard of Phase 5 can start at once too). The producers ship in Phase 7, a release
 after the handlers of Phases 5 and 6. The erasure spec's engine phases are blocked by Phase 6, which mints the system scope.
@@ -557,7 +569,7 @@ Each phase is its own ticket and carries its own `risk-high` verdict.
 
 `workspace_deletions` in `src/server/db/schema.ts` and its migration (`pnpm db:generate`), `src/server/catalog/workspace-deletions.ts`
 (insert-or-return, compare-and-set with a lease, list stale, `workspaceDeletionPending`, prune), the docs/ACCESS.md §2.6
-amendment, the SPEC §5 amendment (thirteenth global table, the inapplicable platform-actor clause and what guards the ledger), an ADR "One path to delete a workspace". **Test seam:** the catalog functions through their
+amendment, the SPEC §5 / §6 amendment (thirteenth global table, the inapplicable platform-actor clause and what guards the ledger, and the driver-only reserved system scope that SPEC §5's "never fabricate a tenant context" rule must name as an exception), an ADR "One path to delete a workspace". **Test seam:** the catalog functions through their
 interface (a second insert returns the first; a stale lease is takeable and a live one is not; `done` rows older than 30 days are
 pruned and others are not; a `refused` row is pruned after 30 days and a `swept` one never); the module-graph guard still passes and a
 test pins the importers of the catalog module.
@@ -568,7 +580,7 @@ In `src/server/repos/members.ts`: `deleteWorkspace(scope)` (owner assertion, the
 and the drain (§ The sequence): bounded steps selected by `LIMIT` subselect with the same sole-member predicate, trips first
 (the room closing is a callback the driver passes in, so `repos` stays free of the room client), then the table list. **Test seam:** through
 the repository interface: owner deletes, others (`admin`, `member`) are refused; a second member makes it refuse and delete
-nothing, including mid-drain; A's deletion leaves B's rows untouched and counts of both; a cascade-completeness test that
+nothing, including mid-drain; A's deletion leaves B's rows untouched and counts of both; a cascade-completeness test, run against the **migrated** DDL (`drizzle/`) and not only the harness built from `schema.ts`, because four `ADD COLUMN` foreign keys are `NO ACTION` in the deployed database (`.ai/specs/2026-09-19-deployed-on-delete-rules.md`), and the drain's table order names those dependencies, that
 enumerates every table with an `organization_id` column from the schema and asserts each is empty for A and unchanged for B (it
 fails when a future table forgets `orgRef()`); a volume case with more trips than one step, and one with more `audit_log` rows
 than one step.
@@ -634,7 +646,7 @@ Open items a person decides. This spec does not decide them and records the defa
    workspace name or email, for 400 days (the table's prune); the ledger holds no content, and the workspace name and owner's
    address only until the receipt is queued, and is pruned 30 days after completion.
 3. **A notice window and team workspaces.** Assumed: none; a workspace with other members is not deletable until they are
-   removed (#1008), which narrows the issue; the slicing run files the follow-up.
+   removed (#1008), which narrows the issue (#1008 adds the members-list link to the refusal; Phase 8 does not wait for it); the slicing run files the follow-up.
 4. **Whether the receipt email is wanted** (assumed yes: it is the owner's out-of-band warning if a borrowed session deleted the
    workspace).
 5. **Whether a passkey-only account must make a fresh passkey assertion** instead of a session younger than the library's
@@ -663,11 +675,12 @@ that lists and removes the memberless workspaces of #1062 through the same `dele
 
 ## Panel verdicts
 
-| Specialist                    | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Security and tenancy reviewer | Round 1 on the decision brief: approve under the sole-member rule, no automatic cancel or refund, and the listed conditions. Round 2 on this spec: changes (nine findings: password rate limit, ledger vs SPEC §5, erasure room reset, banned user and atomic provisioning, the fence and `addMember`, receipt name, the `organization` delete exception, audit append under a lease overrun, passkey and webhook-after-refusal); every one applied in this spec. Escalates the money terms and the retention to a person (Human decides 1, 2) |
-| Product owner                 | Round 1 on the decision brief: sole-member, name plus step-up, refuse while a subscription is live. Round 2 on this spec: changes (ten findings: Phase 3 before Phase 7, receipt name, #1008 and the refusal copy, billing copy, vocabulary landing phase, one owner of the system scope, Trip export, copy, the several-owners sentence); applied. Escalates the money terms and the narrowing to sole-member workspaces to a person (Human decides 1, 3)                                                                                     |
-| Software architect            | Round 1 on the decision brief: state machine sound with seven changes (applied). Round 2 on this spec: changes (ten findings: queue hop ids and the done-marker, `loadShell` and atomic provisioning, the precondition id, the drain's bounds and the 100-parameter ceiling, Polar credentials in the queue, the two-release split, the `organization` delete exception, the receipt payload, the SPEC §5 clauses, staging cron and `ObjectStore.list`); applied. No escalation                                                                |
+| Specialist                                                                     | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Security and tenancy reviewer                                                  | Round 1 on the decision brief: approve under the sole-member rule, no automatic cancel or refund, and the listed conditions. Round 2 on this spec: changes (nine findings: password rate limit, ledger vs SPEC §5, erasure room reset, banned user and atomic provisioning, the fence and `addMember`, receipt name, the `organization` delete exception, audit append under a lease overrun, passkey and webhook-after-refusal); every one applied in this spec. Escalates the money terms and the retention to a person (Human decides 1, 2) |
+| Product owner                                                                  | Round 1 on the decision brief: sole-member, name plus step-up, refuse while a subscription is live. Round 2 on this spec: changes (ten findings: Phase 3 before Phase 7, receipt name, #1008 and the refusal copy, billing copy, vocabulary landing phase, one owner of the system scope, Trip export, copy, the several-owners sentence); applied. Escalates the money terms and the narrowing to sole-member workspaces to a person (Human decides 1, 3)                                                                                     |
+| Software architect                                                             | Round 1 on the decision brief: state machine sound with seven changes (applied). Round 2 on this spec: changes (ten findings: queue hop ids and the done-marker, `loadShell` and atomic provisioning, the precondition id, the drain's bounds and the 100-parameter ceiling, Polar credentials in the queue, the two-release split, the `organization` delete exception, the receipt payload, the SPEC §5 clauses, staging cron and `ObjectStore.list`); applied. No escalation                                                                |
+| Independent specification review (`om-auto-review-pr`, PR #1378 at `eae928c2`) | Changes requested: three majors (the fabricated system scope has no SPEC §5 amendment and `scopeForWorkspace` is not a precedent; the plan 09 note did not reassign the delete button; Phase 8 was blocked by #1008 for one link) and seven minors; all applied, including a stated simplification the slicing run may take (Phase 2 split)                                                                                                                                                                                                    |
 
 Two rounds ran (the limit of `afk-plan-to-spec` §5); the round 2 changes were applied by the author and not re-reviewed by the
 same specialists, which the spec PR says plainly.

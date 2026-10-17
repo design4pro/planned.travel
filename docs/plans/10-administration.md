@@ -1376,6 +1376,7 @@ same three-line preamble.
   > through `assertRole`, not `assertCanAdminister` (which admits `admin`), and deletes only while the caller is the
   > sole member. It is still outside the catalogue, and the floor is fixed at `owner`. Read the paragraph below with
   > that correction; the cascade is 61 `orgRef()` tables, not fifty-seven.
+  > The workspace-level "delete this workspace" button belongs to that spec (Phase 8), not to `ADM-02`.
 
   **The eighth is `deleteWorkspace`, and it stays on `assertCanAdminister` for the same reason the
   audit reads do.** Destroying the workspace is not an administrable setting: a floor a workspace can

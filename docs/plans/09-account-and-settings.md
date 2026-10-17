@@ -1066,6 +1066,7 @@ configuration exactly as it stands (`organization()` carries `disableOrganizatio
 > only while the caller is the sole member through one guarded statement, and sits inside one driver
 > (`advanceWorkspaceDeletion`) that this stage's rules 1 to 3 reach through the erasure engine. The cascade covers 61
 > `orgRef()` tables, not fifty-seven. Rule 3's "not the sole member: only the `member` row goes" is unchanged.
+> The workspace-level "delete this workspace" button is no longer plan 10's (`ADM-02`): it is #1000's, in the spec above (Phase 8).
 
 1. The reader confirms by email — Better Auth's own verification round-trip — and then by typing
    their password. Both, not either.
