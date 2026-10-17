@@ -1,7 +1,7 @@
 /**
- * Write paths for the trip's conversation.
+ * Read and write paths for the trip's conversation.
  *
- * D1 stays the durable record and the `TripRoom` Durable Object is the fan-out - every handler
+ * D1 stays the durable record and the `TripRoom` Durable Object is the fan-out - every writer
  * here writes the row first and then mirrors a notification into the room, so a viewer who is not
  * the author sees the change without polling, and a room that is momentarily unreachable costs a
  * save nothing (see `mirrorToRoom`). Posting is the plain `postTripMessage`, which also tells the
@@ -13,7 +13,14 @@ import { z } from 'zod'
 import { deleteMessage, editMessage, toggleReaction } from '#/server/repos'
 import { postTripMessage } from './collab-thread-writes'
 import { appScope, mirrorToRoom, patch } from './context'
-import { body, postMessageSchema, rowId, tripId } from './collab-inputs'
+import { loadOlderMessages } from './collab-payloads'
+import {
+  olderMessagesSchema,
+  body,
+  postMessageSchema,
+  rowId,
+  tripId,
+} from './collab-inputs'
 
 export const postMessageFn = createServerFn({ method: 'POST' })
   .validator(postMessageSchema)
@@ -67,4 +74,11 @@ export const toggleReactionFn = createServerFn({ method: 'POST' })
       patch('trip', data.tripId, { chatChangedAt: Date.now() }),
     ])
     return { added }
+  })
+
+export const loadOlderMessagesFn = createServerFn({ method: 'GET' })
+  .validator(olderMessagesSchema)
+  .handler(async ({ data }) => {
+    const scope = await appScope()
+    return loadOlderMessages(scope, data)
   })

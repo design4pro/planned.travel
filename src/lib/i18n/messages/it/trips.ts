@@ -461,6 +461,19 @@ const messages = {
   'collab.sections.changed': 'Le sezioni di questo viaggio sono cambiate.',
   'collab.sections.savedHidden':
     'Salvato. Questa sezione è nascosta per il viaggio e ora si chiuderà.',
+  'plan.place.error.save':
+    'Impossibile salvare il luogo. Riprova tra un momento.',
+  'plan.stop.error.saveTimes':
+    'Impossibile salvare gli orari della tappa. Riprova tra un momento.',
+  'plan.place.error.delete':
+    'Impossibile eliminare il luogo. Riprova tra un momento.',
+  'plan.pin.error.move':
+    'Impossibile spostare il segnaposto. Riprova tra un momento.',
+  'plan.place.toast.created': 'Luogo aggiunto',
+  'plan.place.toast.updated': 'Luogo aggiornato',
+  'plan.stop.toast.timesSaved': 'Orari della tappa salvati',
+  'plan.place.toast.deleted': 'Luogo eliminato',
+  'plan.pin.toast.moved': '{name} fissato',
 } satisfies TranslationOf<typeof En>
 
 export default messages

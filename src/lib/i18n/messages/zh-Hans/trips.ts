@@ -405,6 +405,15 @@ const messages = {
   'collab.sections.changed': '此行程的版块已更改。',
   'collab.sections.savedHidden':
     '已保存。此版块已对此行程隐藏，因此现在将关闭。',
+  'plan.place.error.save': '无法保存地点。请稍后再试一次。',
+  'plan.stop.error.saveTimes': '无法保存停靠时间。请稍后再试一次。',
+  'plan.place.error.delete': '无法删除地点。请稍后再试一次。',
+  'plan.pin.error.move': '无法移动图钉。请稍后再试一次。',
+  'plan.place.toast.created': '已添加地点',
+  'plan.place.toast.updated': '已更新地点',
+  'plan.stop.toast.timesSaved': '已保存停靠时间',
+  'plan.place.toast.deleted': '已删除地点',
+  'plan.pin.toast.moved': '已标记{name}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -60,3 +60,6 @@ export const postMessageSchema = z.object({
 
 /** The input of the message writer, as the plain function takes it. */
 export type PostMessageData = z.infer<typeof postMessageSchema>
+
+/** The cursor narrows a scoped query; callers cannot choose its scan size. */
+export const olderMessagesSchema = z.strictObject({ tripId, cursor: rowId })
