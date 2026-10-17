@@ -254,6 +254,8 @@ const messages = {
   'audit.action.emailSet': 'E-Mail-Adresse geändert',
   'audit.action.impersonationStarted': 'Handeln in fremdem Namen begonnen',
   'audit.action.impersonationEnded': 'Handeln in fremdem Namen beendet',
+  'audit.action.impersonationWorkspaceChanged':
+    'Arbeitsbereich beim Handeln in fremdem Namen gewechselt',
   'audit.action.sessionRevoked': 'Eine Sitzung wurde beendet',
   'audit.action.sessionRevokedAll': 'Alle Sitzungen wurden beendet',
   'audit.actor.system': 'Die Plattform selbst',
@@ -275,6 +277,7 @@ const messages = {
   'audit.field.expiresAt': 'Sitzung läuft ab',
   'audit.field.targetRole': 'Deren Plattformrolle',
   'audit.field.sessionId': 'Sitzung',
+  'audit.field.organizationId': 'Arbeitsbereich',
   'audit.value.yes': 'ja',
   'audit.value.no': 'nein',
   'audit.value.cleared': 'geleert',

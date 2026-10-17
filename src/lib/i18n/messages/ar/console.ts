@@ -252,6 +252,8 @@ const messages = {
   'audit.action.emailSet': 'تغيّر عنوان البريد',
   'audit.action.impersonationStarted': 'بدأ العمل نيابةً عن الحساب',
   'audit.action.impersonationEnded': 'انتهى العمل نيابةً عن الحساب',
+  'audit.action.impersonationWorkspaceChanged':
+    'تغيّرت مساحة العمل أثناء العمل نيابةً عن الحساب',
   'audit.action.sessionRevoked': 'أُنهيت جلسة',
   'audit.action.sessionRevokedAll': 'أُنهيت كل الجلسات',
   'audit.actor.system': 'المنصّة نفسها',
@@ -273,6 +275,7 @@ const messages = {
   'audit.field.expiresAt': 'انقضاء الجلسة',
   'audit.field.targetRole': 'دوره على المنصّة',
   'audit.field.sessionId': 'الجلسة المعنيّة',
+  'audit.field.organizationId': 'مساحة العمل',
   'audit.value.yes': 'نعم',
   'audit.value.no': 'لا',
   'audit.value.cleared': 'أُفرغ',

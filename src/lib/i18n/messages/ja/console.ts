@@ -244,6 +244,8 @@ const messages = {
   'audit.action.emailSet': 'メールアドレスが変更されました',
   'audit.action.impersonationStarted': 'なり代わり操作が始まりました',
   'audit.action.impersonationEnded': 'なり代わり操作が終わりました',
+  'audit.action.impersonationWorkspaceChanged':
+    'なり代わり操作中にワークスペースが切り替わりました',
   'audit.action.sessionRevoked': 'セッションが終了されました',
   'audit.action.sessionRevokedAll': 'すべてのセッションが終了されました',
   'audit.actor.system': 'プラットフォーム自身',
@@ -265,6 +267,7 @@ const messages = {
   'audit.field.expiresAt': 'セッションの期限',
   'audit.field.targetRole': '相手のプラットフォームのロール',
   'audit.field.sessionId': '対象のセッション',
+  'audit.field.organizationId': 'ワークスペース',
   'audit.value.yes': 'はい',
   'audit.value.no': 'いいえ',
   'audit.value.cleared': '消去',

@@ -258,7 +258,7 @@ export async function openImpersonationExit(): Promise<ImpersonationExit> {
  * 400 days. Emitting them from a single function is what makes "exactly one row per action" a
  * property of the code rather than of every call site's diligence.
  *
- * `appendPlatformAudit` never throws: it retries once for the four verbs docs/ACCESS.md §4.3 audits
+ * `appendPlatformAudit` never throws: it retries once for the five verbs docs/ACCESS.md §4.3 audits
  * without exception and reports a rejected append through `src/server/observability` at `error`,
  * naming the action, the actor and the entity. A completed ban is never reversed because a log write
  * failed.

@@ -86,8 +86,8 @@ const userRoleSchema = z.object({ role: z.string().nullish() })
  * One `user` row's platform role, straight from D1.
  *
  * `auth.api.getUser` would be the obvious call and cannot be used here: it checks `user:get` for
- * itself, and the only caller is the impersonation exit, which runs on a session that holds no
- * statement at all (docs/ACCESS.md §6.4). This is a read of one column of a row the caller has
+ * itself, and both callers run where no session holds a statement: the impersonation exit and the
+ * auth hook that audits a workspace switch inside an impersonated session (docs/ACCESS.md §6.4). This is a read of one column of a row the caller has
  * already proved it is connected to, taken through the same adapter as
  * {@link createSessionPageReader}.
  *

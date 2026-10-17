@@ -255,6 +255,8 @@ const messages = {
   'audit.action.impersonationStarted':
     'Elkezdődött a fiók nevében való eljárás',
   'audit.action.impersonationEnded': 'Véget ért a fiók nevében való eljárás',
+  'audit.action.impersonationWorkspaceChanged':
+    'Munkaterületváltás a fiók nevében való eljárás közben',
   'audit.action.sessionRevoked': 'Egy munkamenetet visszavontak',
   'audit.action.sessionRevokedAll': 'Minden munkamenetet visszavontak',
   'audit.actor.system': 'Maga a platform',
@@ -276,6 +278,7 @@ const messages = {
   'audit.field.expiresAt': 'A munkamenet lejár',
   'audit.field.targetRole': 'Az ő platformszerepe',
   'audit.field.sessionId': 'Munkamenet',
+  'audit.field.organizationId': 'Munkaterület',
   'audit.value.yes': 'igen',
   'audit.value.no': 'nem',
   'audit.value.cleared': 'kiürítve',

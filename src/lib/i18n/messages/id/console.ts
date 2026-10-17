@@ -253,6 +253,8 @@ const messages = {
   'audit.action.emailSet': 'Alamat email berubah',
   'audit.action.impersonationStarted': 'Tindakan atas nama akun dimulai',
   'audit.action.impersonationEnded': 'Tindakan atas nama akun berakhir',
+  'audit.action.impersonationWorkspaceChanged':
+    'Ruang kerja berganti saat bertindak atas nama akun',
   'audit.action.sessionRevoked': 'Sebuah sesi diakhiri',
   'audit.action.sessionRevokedAll': 'Semua sesi diakhiri',
   'audit.actor.system': 'Platform itu sendiri',
@@ -274,6 +276,7 @@ const messages = {
   'audit.field.expiresAt': 'Sesi kedaluwarsa',
   'audit.field.targetRole': 'Peran platform mereka',
   'audit.field.sessionId': 'Sesi yang bersangkutan',
+  'audit.field.organizationId': 'Ruang kerja',
   'audit.value.yes': 'ya',
   'audit.value.no': 'tidak',
   'audit.value.cleared': 'dikosongkan',
