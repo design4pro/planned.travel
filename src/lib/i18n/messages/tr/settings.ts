@@ -423,14 +423,14 @@ const messages = {
   'billing.interval.yearly': 'Yıllık',
   'billing.plan.free.name': 'Ücretsiz',
   'billing.plan.free.tagline': 'Sıradaki iki gezinizi planlayın',
-  'billing.plan.free.feature.trips': 'Aynı anda iki gezi',
+  'billing.plan.free.feature.trips': 'Aynı anda iki gezi ve en fazla 150 yer',
   'billing.plan.free.feature.itinerary': 'Gün gün program ve harita',
   'billing.plan.free.feature.lists': 'Valiz listeleri ve basit bütçeler',
   'billing.plan.free.feature.atlas':
     'Nerelerde bulunduğunuzu izleyen dünya haritası',
   'billing.plan.solo.name': 'Bireysel',
   'billing.plan.solo.tagline': 'Her şeyi planlayan yolcu için',
-  'billing.plan.solo.feature.trips': 'Sınırsız gezi',
+  'billing.plan.solo.feature.trips': 'Sınırsız gezi ve yer',
   'billing.plan.solo.feature.modules':
     'Her planlama modülü — rezervasyonlar, günlük, bütçeler, valiz',
   'billing.plan.solo.feature.offline':
@@ -442,7 +442,8 @@ const messages = {
     'On üyeye kadar, kişi başı ücretlendirme',
   'billing.plan.crew.feature.realtime':
     'Canlı imleçlerle gerçek zamanlı ortak çalışma',
-  'billing.plan.crew.feature.everything': 'Sınırsız gezi ve her modül',
+  'billing.plan.crew.feature.everything':
+    'Sınırsız gezi ve yer ile tüm modüller',
   'billing.plan.crew.feature.storage':
     'Herkesin fotoğrafı ve belgesi için ortak alan',
 

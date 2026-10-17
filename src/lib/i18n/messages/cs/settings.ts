@@ -440,14 +440,14 @@ const messages = {
   'billing.interval.yearly': 'Ročně',
   'billing.plan.free.name': 'Zdarma',
   'billing.plan.free.tagline': 'Naplánujte si dvě nejbližší cesty',
-  'billing.plan.free.feature.trips': 'Dvě cesty naráz',
+  'billing.plan.free.feature.trips': 'Dvě cesty naráz a až 150 míst',
   'billing.plan.free.feature.itinerary': 'Itinerář den po dni a mapa',
   'billing.plan.free.feature.lists': 'Seznamy věcí a jednoduché rozpočty',
   'billing.plan.free.feature.atlas':
     'Mapa světa, která si pamatuje navštívené země',
   'billing.plan.solo.name': 'Sólo',
   'billing.plan.solo.tagline': 'Pro cestovatele, který plánuje všechno',
-  'billing.plan.solo.feature.trips': 'Cesty bez limitu',
+  'billing.plan.solo.feature.trips': 'Cesty a místa bez limitu',
   'billing.plan.solo.feature.modules':
     'Každý plánovací modul — rezervace, deník, rozpočty, balení',
   'billing.plan.solo.feature.offline':
@@ -458,7 +458,8 @@ const messages = {
   'billing.plan.crew.feature.members': 'Až deset lidí, účtováno po osobách',
   'billing.plan.crew.feature.realtime':
     'Spolupráce naživo s viditelnými kurzory',
-  'billing.plan.crew.feature.everything': 'Cesty bez limitu a všechny moduly',
+  'billing.plan.crew.feature.everything':
+    'Cesty a místa bez limitu a všechny moduly',
   'billing.plan.crew.feature.storage':
     'Společné místo na fotky a dokumenty celé skupiny',
 

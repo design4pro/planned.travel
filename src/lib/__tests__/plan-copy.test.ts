@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 import settings from '#/lib/i18n/messages/en/settings'
 import { PLANS, PLAN_IDS, PLAN_LIST } from '#/lib/plans'
 import { PLAN_ALLOWANCE_CLAIMS, PLAN_COPY } from '#/lib/plan-copy'
+import { TIER_FOR_PLAN } from '#/server/billing/limits'
+import { PLAN_QUOTAS, UNLIMITED } from '#/server/db/types'
 
 /**
  * The billing screen's plan copy, and the rule that put it in the catalogue.
@@ -93,13 +95,13 @@ describe('the screen no longer reads the English catalogue', () => {
 /**
  * The numbers the copy spells out, checked against the plans that own them.
  *
- * `plans.ts` is the single source of truth for what a subscription may do, and
- * the catalogue restates three of its numbers as words so a translator can put
- * the count in their own grammar. That is a duplicated fact, and the reasoning
+ * `plans.ts` and the mapped tier in `PLAN_QUOTAS` own the published allowances.
+ * The catalogue restates them as words or numerals so a translator can put the
+ * count in their own grammar. That is a duplicated fact, and the reasoning
  * in `../plan-copy.ts` used to admit the trade without guarding it: the two
  * agreed, and nothing kept them agreeing. This is the guard. It reads the limit
- * out of `plans.ts`, spells it, and requires the shipped English sentence to
- * contain that word — so the sentence fails here the moment either side moves.
+ * from its owner, spells it, and requires the shipped English sentence to
+ * contain that word or numeral — so the sentence fails here the moment either side moves.
  */
 const ALLOWANCE_WORDS = new Map<number, string>([
   [1, 'one'],
@@ -111,25 +113,63 @@ const ALLOWANCE_WORDS = new Map<number, string>([
 function spellAllowance(limit: number | null): string {
   if (limit === null) return 'unlimited'
   const word = ALLOWANCE_WORDS.get(limit)
-  // A ceiling with no word yet: the sentence cannot be spelling it, so the
-  // assertion below fails and names the number that needs one.
+  // Allowances with a known word use it; larger counts use numerals.
   return word ?? String(limit)
+}
+
+/** Match the places allowance itself, rather than an unlimited trips claim beside it. */
+function placesAllowancePattern(limit: number | null): RegExp {
+  const allowance = spellAllowance(limit)
+  return new RegExp(`\\b${allowance} (?:trips(?:,| and) )?places\\b`, 'u')
 }
 
 describe('the copy states the allowances the plans actually carry', () => {
   it.each(PLAN_ALLOWANCE_CLAIMS.map((claim) => [claim.key, claim]))(
     '%s spells the live limit',
     (_key, claim) => {
-      const limit = PLANS[claim.plan].limits[claim.quota]
+      let limit: number | null
+      if (claim.quota === 'places') {
+        const ceiling = PLAN_QUOTAS[TIER_FOR_PLAN[claim.plan]].places
+        limit = ceiling === UNLIMITED ? null : ceiling
+      } else {
+        limit = PLANS[claim.plan].limits[claim.quota]
+      }
       const word = spellAllowance(limit)
       const short = claim.key.replace(/^settings\./, '')
       const value = settings[short as keyof typeof settings]
       expect(typeof value).toBe('string')
+      if (claim.quota === 'places') {
+        expect(String(value).toLowerCase()).toMatch(
+          placesAllowancePattern(limit),
+        )
+        expect(String(value).toLowerCase()).not.toMatch(/\bper trip\b/u)
+      }
       expect(String(value).toLowerCase()).toMatch(
         new RegExp(`\\b${word}\\b`, 'u'),
       )
     },
   )
+
+  it('guards a places claim on the existing bullet for every plan', () => {
+    const places = PLAN_ALLOWANCE_CLAIMS.filter(
+      (claim) => claim.quota === 'places',
+    )
+    expect(places.map((claim) => claim.plan).sort()).toEqual(
+      [...PLAN_IDS].sort(),
+    )
+    for (const claim of places) {
+      expect(PLAN_COPY[claim.plan].features).toContain(claim.key)
+    }
+  })
+
+  it.each([
+    ['unlimited trips and 500 places', null],
+    ['unlimited trips', null],
+    ['two trips at a time and up to 151 places', 150],
+    ['two trips at a time and up to 1500 places', 150],
+  ] as const)('rejects a misleading places allowance: %s', (copy, limit) => {
+    expect(copy).not.toMatch(placesAllowancePattern(limit))
+  })
 
   it('names a key the catalogue carries in every claim', () => {
     for (const claim of PLAN_ALLOWANCE_CLAIMS) {
