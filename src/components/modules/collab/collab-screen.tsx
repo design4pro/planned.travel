@@ -9,6 +9,8 @@ import {
 import type { CollabSectionId, CollabSections } from '#/lib/collab-sections'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_RAIL_STICKY_CLASS } from '#/lib/atlas/layout'
+import { TabsContent } from '#/components/ui'
+import { CollabTabs } from './collab-tabs'
 import { ModulePanel } from '../shared'
 import { Thread } from './thread'
 import { NotesBoard } from './notes-board'
@@ -128,7 +130,14 @@ export function CollabScreen({
     // Run after portal close autofocus as well as after the leaving wrapper unmounts.
     const timer = setTimeout(() => {
       const target = visible[0]
-      if (target !== undefined) wrappers.current[target]?.focus()
+      if (target !== undefined) {
+        const wrapper = wrappers.current[target]
+        const tab = wrapper
+          ?.closest('[data-slot="collab-root"]')
+          ?.querySelector<HTMLElement>('[role="tab"][data-state="active"]')
+        if (tab?.getClientRects().length) tab.focus()
+        else wrapper?.focus()
+      }
     }, 0)
     return () => clearTimeout(timer)
   }, [visibleKey])
@@ -137,47 +146,52 @@ export function CollabScreen({
     if (!visible.includes(id)) return null
     const heading = `${baseId}-${id}`
     return (
-      <section
-        key={id}
-        ref={(node) => {
-          if (node) wrappers.current[id] = node
-          else delete wrappers.current[id]
-        }}
-        tabIndex={-1}
-        aria-labelledby={heading}
-        className={cn(
-          'min-w-0 focus-ring',
-          id === 'conversation' && [
-            'xl:sticky xl:self-start',
-            TRIP_RAIL_STICKY_CLASS,
-          ],
-        )}
-        onFocusCapture={() => {
-          focused.current = id
-        }}
-        onBlurCapture={(event) => {
-          if (
-            event.relatedTarget instanceof Node &&
-            !event.currentTarget.contains(event.relatedTarget)
-          )
-            focused.current = null
-        }}
-      >
-        {!data.sections[id] ? (
-          <p className="mb-3 text-caption text-ink-3">
-            {t('trips.collab.sections.turnedOff')}
-          </p>
-        ) : null}
-        <h2 id={heading} className="sr-only">
-          {t(COLLAB_SECTION_PRESENTATION[id].label)}
-        </h2>
-        {content}
-      </section>
+      <TabsContent key={id} value={id} forceMount asChild className="mt-0">
+        <section
+          data-collab-section={id}
+          ref={(node) => {
+            if (node) wrappers.current[id] = node
+            else delete wrappers.current[id]
+          }}
+          tabIndex={-1}
+          aria-labelledby={heading}
+          className={cn(
+            'min-w-0 focus-ring data-[state=inactive]:hidden xl:data-[state=inactive]:block xl:data-[state=active]:animate-none scroll-mt-[var(--collab-clearance)] [&_*]:scroll-mt-[var(--collab-clearance)]',
+            id === 'conversation' && [
+              'xl:sticky xl:self-start xl:max-h-[calc(100svh-var(--impersonation-h)-var(--nav-h)-1px-var(--subnav-h)-1px-12rem)]',
+              TRIP_RAIL_STICKY_CLASS,
+            ],
+          )}
+          onFocusCapture={() => {
+            focused.current = id
+          }}
+          onBlurCapture={(event) => {
+            if (
+              event.relatedTarget instanceof Node &&
+              !event.currentTarget.contains(event.relatedTarget)
+            )
+              focused.current = null
+          }}
+        >
+          {!data.sections[id] ? (
+            <p className="mb-3 text-caption text-ink-3">
+              {t('trips.collab.sections.turnedOff')}
+            </p>
+          ) : null}
+          <h2 id={heading} className="sr-only">
+            {t(COLLAB_SECTION_PRESENTATION[id].label)}
+          </h2>
+          {content}
+        </section>
+      </TabsContent>
     )
   }
 
   return (
-    <>
+    <div
+      data-slot="collab-root"
+      className="flex flex-col gap-6 lg:gap-8 [--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px+3.5rem)] lg:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+3.5rem)] xl:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+var(--subnav-h)+2rem)]"
+    >
       {hidden ? (
         <p className="text-caption text-ink-3">
           {t('trips.collab.sections.someHidden')}
@@ -191,70 +205,69 @@ export function CollabScreen({
       >
         {announcement}
       </div>
-      <div
-        className={cn(
-          'grid gap-6 xl:gap-8',
-          split ? 'xl:grid-cols-[24rem_minmax(0,1fr)]' : 'grid-cols-1',
-        )}
-      >
-        {section(
-          'conversation',
-          <ModulePanel
-            label={t('trips.collab.conversation')}
-            count={
-              data.messages.length === 0
-                ? undefined
-                : new Intl.NumberFormat(locale).format(data.messages.length)
-            }
-            className={cn(
-              'xl:sticky xl:max-h-[calc(100svh-var(--impersonation-h)-var(--nav-h)-1px-var(--subnav-h)-1px-12rem)]',
-              TRIP_RAIL_STICKY_CLASS,
-            )}
-            bodyClassName="flex min-h-0 flex-col px-5 py-3"
-          >
-            <Thread
-              key={tripId}
-              tripId={tripId}
-              messages={data.messages}
-              people={data.people}
-              viewerUserId={data.viewerUserId}
-              canModerate={canModerate}
-              timeZone={data.timeZone}
-              onDirtyChange={conversationDirty}
-              turnedOff={!data.sections.conversation}
-            />
-          </ModulePanel>,
-        )}
+      <CollabTabs visible={visible}>
         <div
-          hidden={!visible.includes('notes') && !visible.includes('polls')}
-          className="flex min-w-0 flex-col gap-6"
+          className={cn(
+            'grid gap-6 xl:gap-8',
+            split ? 'xl:grid-cols-[24rem_minmax(0,1fr)]' : 'grid-cols-1',
+          )}
         >
           {section(
-            'notes',
-            <NotesBoard
-              tripId={tripId}
-              notes={data.notes}
-              people={data.people}
-              newNoteOpen={newNoteOpen}
-              onNewNoteOpenChange={setNewNoteOpen}
-              onDirtyChange={notesDirty}
-              turnedOff={!data.sections.notes}
-            />,
+            'conversation',
+            <ModulePanel
+              label={t('trips.collab.conversation')}
+              count={
+                data.messages.length === 0
+                  ? undefined
+                  : new Intl.NumberFormat(locale).format(data.messages.length)
+              }
+              className="xl:max-h-[inherit]"
+              bodyClassName="flex min-h-0 flex-col px-5 py-3"
+            >
+              <Thread
+                key={tripId}
+                tripId={tripId}
+                messages={data.messages}
+                people={data.people}
+                viewerUserId={data.viewerUserId}
+                canModerate={canModerate}
+                timeZone={data.timeZone}
+                onDirtyChange={conversationDirty}
+                turnedOff={!data.sections.conversation}
+              />
+            </ModulePanel>,
           )}
-          {section(
-            'polls',
-            <PollsBoard
-              tripId={tripId}
-              polls={data.polls}
-              viewerUserId={data.viewerUserId}
-              newPollOpen={newPollOpen}
-              onNewPollOpenChange={setNewPollOpen}
-              onDirtyChange={pollsDirty}
-              turnedOff={!data.sections.polls}
-            />,
-          )}
+          <div
+            hidden={!visible.includes('notes') && !visible.includes('polls')}
+            className="flex min-w-0 flex-col gap-6"
+          >
+            {section(
+              'notes',
+              <NotesBoard
+                tripId={tripId}
+                notes={data.notes}
+                people={data.people}
+                newNoteOpen={newNoteOpen}
+                onNewNoteOpenChange={setNewNoteOpen}
+                onDirtyChange={notesDirty}
+                turnedOff={!data.sections.notes}
+              />,
+            )}
+            {section(
+              'polls',
+              <PollsBoard
+                tripId={tripId}
+                polls={data.polls}
+                viewerUserId={data.viewerUserId}
+                newPollOpen={newPollOpen}
+                onNewPollOpenChange={setNewPollOpen}
+                onDirtyChange={pollsDirty}
+                turnedOff={!data.sections.polls}
+              />,
+            )}
+          </div>
         </div>
-      </div>
-    </>
+      </CollabTabs>
+    </div>
   )
 }

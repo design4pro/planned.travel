@@ -425,6 +425,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Sembunyikan panel {label}',
   'plan.workspace.narrowPanel': 'Persempit {label}',
   'plan.workspace.widenPanel': 'Perlebar {label}',
+  'collab.sections.tabsLabel': 'Bagian kolaborasi',
   'collab.sections.trigger': 'Pilih bagian',
   'collab.sections.menuLabel': 'Tampilkan untuk semua peserta perjalanan ini',
   'collab.sections.keepOne': 'Setidaknya satu bagian harus tetap aktif.',

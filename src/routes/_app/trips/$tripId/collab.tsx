@@ -11,11 +11,11 @@ import { PresenceBar } from '#/components/modules/collab'
 import { CollabScreen } from '#/components/modules/collab/collab-screen'
 import { CollabSectionsMenu } from '#/components/modules/collab/collab-sections-menu'
 import { enabledCollabSections } from '#/lib/collab-sections'
-import { Card } from '#/components/ui'
+import { CollabSkeletons } from '#/components/modules/collab/collab-skeletons'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadTripCollab, setCollabSectionFn } from './-server/collab'
 import { formatNumber } from '../../-lib/format'
-import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
+import { HeaderSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/collab')({
@@ -126,14 +126,7 @@ function CollabPending() {
     <AppFrame>
       <AppSections>
         <HeaderSkeleton />
-        <div className="grid gap-6 xl:grid-cols-[24rem_minmax(0,1fr)] xl:gap-8">
-          <Card padding="none">
-            <RowsSkeleton rows={6} />
-          </Card>
-          <Card padding="none">
-            <RowsSkeleton rows={4} />
-          </Card>
-        </div>
+        <CollabSkeletons />
       </AppSections>
     </AppFrame>
   )
