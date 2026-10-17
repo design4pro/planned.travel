@@ -442,7 +442,7 @@ const messages = {
   'billing.interval.yearly': 'Anual',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Prepara tus dos próximos viajes',
-  'billing.plan.free.feature.trips': 'Dos viajes a la vez',
+  'billing.plan.free.feature.trips': 'Dos viajes a la vez y hasta 150 lugares',
   'billing.plan.free.feature.itinerary': 'Itinerario día a día y mapa',
   'billing.plan.free.feature.lists':
     'Listas de equipaje y presupuestos sencillos',
@@ -450,7 +450,7 @@ const messages = {
     'El mapa del mundo que marca dónde has estado',
   'billing.plan.solo.name': 'En solitario',
   'billing.plan.solo.tagline': 'Para quien lo planea todo',
-  'billing.plan.solo.feature.trips': 'Viajes sin límite',
+  'billing.plan.solo.feature.trips': 'Viajes y lugares sin límite',
   'billing.plan.solo.feature.modules':
     'Todos los módulos: reservas, diario, presupuestos y equipaje',
   'billing.plan.solo.feature.offline':
@@ -463,7 +463,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Colaboración en vivo, con los cursores de todos',
   'billing.plan.crew.feature.everything':
-    'Viajes sin límite y todos los módulos',
+    'Viajes y lugares sin límite y todos los módulos',
   'billing.plan.crew.feature.storage':
     'Sitio compartido para las fotos y los documentos de todos',
 

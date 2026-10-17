@@ -429,14 +429,15 @@ const messages = {
   'billing.interval.yearly': 'Årsvis',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Planera dina två nästa resor',
-  'billing.plan.free.feature.trips': 'Två resor åt gången',
+  'billing.plan.free.feature.trips':
+    'Två resor åt gången och upp till 150 platser',
   'billing.plan.free.feature.itinerary': 'Dagsplan och karta, dag för dag',
   'billing.plan.free.feature.lists': 'Packlistor och enkla budgetar',
   'billing.plan.free.feature.atlas':
     'Världskartan som håller reda på var du varit',
   'billing.plan.solo.name': 'Enskild',
   'billing.plan.solo.tagline': 'För resenären som planerar varje detalj själv',
-  'billing.plan.solo.feature.trips': 'Obegränsat med resor',
+  'billing.plan.solo.feature.trips': 'Obegränsat med resor och platser',
   'billing.plan.solo.feature.modules':
     'Alla planeringsmoduler — bokningar, dagbok, budgetar, packning',
   'billing.plan.solo.feature.offline':
@@ -449,7 +450,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Samarbete i realtid, varje hand syns på kartan',
   'billing.plan.crew.feature.everything':
-    'Obegränsat med resor och alla moduler',
+    'Obegränsat med resor och platser samt alla moduler',
   'billing.plan.crew.feature.storage':
     'Gemensamt utrymme för allas foton och dokument',
 

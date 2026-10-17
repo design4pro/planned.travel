@@ -425,7 +425,8 @@ const messages = {
   'billing.interval.yearly': 'Tahunan',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Rencanakan dua perjalanan berikutnya',
-  'billing.plan.free.feature.trips': 'Dua perjalanan sekaligus',
+  'billing.plan.free.feature.trips':
+    'Dua perjalanan sekaligus dan hingga 150 tempat',
   'billing.plan.free.feature.itinerary': 'Rencana harian dan peta',
   'billing.plan.free.feature.lists': 'Daftar bawaan dan anggaran sederhana',
   'billing.plan.free.feature.atlas':
@@ -433,7 +434,7 @@ const messages = {
   'billing.plan.solo.name': 'Perorangan',
   'billing.plan.solo.tagline':
     'Untuk pelancong yang merencanakan segala sesuatunya',
-  'billing.plan.solo.feature.trips': 'Perjalanan tanpa batas',
+  'billing.plan.solo.feature.trips': 'Perjalanan dan tempat tanpa batas',
   'billing.plan.solo.feature.modules':
     'Semua modul perencanaan — pemesanan, jurnal, anggaran, daftar bawaan',
   'billing.plan.solo.feature.offline':
@@ -446,7 +447,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Kolaborasi seketika dengan kursor yang hidup',
   'billing.plan.crew.feature.everything':
-    'Perjalanan tanpa batas dan semua modul',
+    'Perjalanan dan tempat tanpa batas serta semua modul',
   'billing.plan.crew.feature.storage':
     'Ruang bersama untuk foto dan dokumen semua orang',
 

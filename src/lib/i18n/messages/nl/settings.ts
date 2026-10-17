@@ -436,14 +436,15 @@ const messages = {
   'billing.interval.yearly': 'Jaarlijks',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Plan je volgende twee reizen',
-  'billing.plan.free.feature.trips': 'Twee reizen tegelijk',
+  'billing.plan.free.feature.trips':
+    'Twee reizen tegelijk en maximaal 150 plaatsen',
   'billing.plan.free.feature.itinerary': 'Dagplan en kaart, dag voor dag',
   'billing.plan.free.feature.lists': 'Paklijsten en eenvoudige budgetten',
   'billing.plan.free.feature.atlas':
     'De wereldkaart die bijhoudt waar je bent geweest',
   'billing.plan.solo.name': 'Alleen',
   'billing.plan.solo.tagline': 'Voor de reiziger die alles zelf uitzoekt',
-  'billing.plan.solo.feature.trips': 'Onbeperkt reizen',
+  'billing.plan.solo.feature.trips': 'Onbeperkt reizen en plaatsen',
   'billing.plan.solo.feature.modules':
     'Alle planningsmodules — boekingen, dagboek, budgetten, paklijsten',
   'billing.plan.solo.feature.offline':
@@ -454,7 +455,8 @@ const messages = {
   'billing.plan.crew.feature.members': 'Tot tien leden, per persoon afgerekend',
   'billing.plan.crew.feature.realtime':
     'Samenwerken in realtime, iedere hand zichtbaar op de kaart',
-  'billing.plan.crew.feature.everything': 'Onbeperkt reizen en alle modules',
+  'billing.plan.crew.feature.everything':
+    'Onbeperkt reizen en plaatsen en alle modules',
   'billing.plan.crew.feature.storage':
     "Gedeelde ruimte voor ieders foto's en documenten",
 

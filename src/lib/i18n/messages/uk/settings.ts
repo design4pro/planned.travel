@@ -446,14 +446,14 @@ const messages = {
   'billing.interval.yearly': 'Щороку',
   'billing.plan.free.name': 'Безкоштовний',
   'billing.plan.free.tagline': 'Сплануйте дві найближчі поїздки',
-  'billing.plan.free.feature.trips': 'Дві поїздки водночас',
+  'billing.plan.free.feature.trips': 'Дві поїздки водночас і до 150 місць',
   'billing.plan.free.feature.itinerary': 'Маршрут по днях і карта',
   'billing.plan.free.feature.lists': 'Списки речей і прості бюджети',
   'billing.plan.free.feature.atlas':
     'Карта світу, яка пам’ятає відвідані країни',
   'billing.plan.solo.name': 'Соло',
   'billing.plan.solo.tagline': 'Для того, хто планує все сам',
-  'billing.plan.solo.feature.trips': 'Поїздки без обмежень',
+  'billing.plan.solo.feature.trips': 'Поїздки та місця без обмежень',
   'billing.plan.solo.feature.modules':
     'Усі модулі планування — броні, щоденник, бюджети, збори',
   'billing.plan.solo.feature.offline':
@@ -464,7 +464,8 @@ const messages = {
   'billing.plan.crew.feature.members': 'До десяти людей, оплата за кожного',
   'billing.plan.crew.feature.realtime':
     'Спільна робота в реальному часі з живими курсорами',
-  'billing.plan.crew.feature.everything': 'Поїздки без обмежень і всі модулі',
+  'billing.plan.crew.feature.everything':
+    'Поїздки та місця без обмежень і всі модулі',
   'billing.plan.crew.feature.storage':
     'Спільне місце для фотографій і документів усієї групи',
 
