@@ -40,8 +40,10 @@ export function CollabTabs({
       )
       if (!panel) return
       const remembered = positions.current[next]
-      if (remembered !== undefined)
+      if (remembered !== undefined) {
         window.scrollTo({ top: remembered, behavior: 'instant' })
+        return
+      }
       if (
         panel.getBoundingClientRect().top <
         bar.current.getBoundingClientRect().bottom

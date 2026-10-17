@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { useSession, hasSession } from './helpers/session'
-import { watchConsole } from './helpers/console'
-import { settleMutations } from './helpers/settle'
+import { visit, watchConsole } from './helpers/console'
+import { settle } from './helpers/settle'
 
 test.describe('07-S2 - Collaboration sections follow the viewport', () => {
   test('keeps only enabled tabs on a phone and shows every panel at xl', async ({
@@ -19,13 +19,9 @@ test.describe('07-S2 - Collaboration sections follow the viewport', () => {
     const href = await trip.getAttribute('href')
     expect(href).toBeTruthy()
     const path = href?.replace(/\/plan$/, '/collab') ?? ''
-    const consoleReport = watchConsole(page, {
-      name: 'collaboration',
-      path,
-      ready: 'main',
-    })
-    await page.goto(path)
-    await settleMutations(page)
+    const route = { name: 'collaboration', path, ready: 'main' }
+    const consoleReport = watchConsole(page, route)
+    await visit(page, route, 'light')
     const menu = page.getByRole('button', {
       name: 'Choose sections',
       exact: true,
@@ -37,13 +33,29 @@ test.describe('07-S2 - Collaboration sections follow the viewport', () => {
       exact: true,
     })
     await expect(polls).toHaveCount(1)
-    const wasOn = (await polls.getAttribute('aria-checked')) === 'true'
+    const names = ['Conversation', 'Notes', 'Polls'] as const
+    const original = await Promise.all(
+      names.map(async (name) => ({
+        name,
+        on:
+          (await page
+            .getByRole('menuitemcheckbox', { name, exact: true })
+            .getAttribute('aria-checked')) === 'true',
+      })),
+    )
     try {
-      if (wasOn) await polls.click()
+      for (const name of ['Conversation', 'Notes']) {
+        const item = page.getByRole('menuitemcheckbox', { name, exact: true })
+        if ((await item.getAttribute('aria-checked')) !== 'true')
+          await item.click()
+        await expect(item).toHaveAttribute('aria-checked', 'true')
+      }
+      if ((await polls.getAttribute('aria-checked')) === 'true')
+        await polls.click()
       await expect(polls).toHaveAttribute('aria-checked', 'false')
       await page.keyboard.press('Escape')
       await page.reload()
-      await settleMutations(page)
+      await settle(page, route)
       await expect(page.locator('[data-collab-section="polls"]')).toHaveCount(0)
       await page.setViewportSize({ width: 360, height: 800 })
       await expect(
@@ -61,14 +73,27 @@ test.describe('07-S2 - Collaboration sections follow the viewport', () => {
         }),
       ).toBeHidden()
       await expect(page.locator('[data-collab-section]:visible')).toHaveCount(2)
-      expect(consoleReport().fatal).toEqual([])
     } finally {
       await page.keyboard.press('Escape')
       await menu.click()
-      if (((await polls.getAttribute('aria-checked')) === 'true') !== wasOn)
-        await polls.click()
-      await expect(polls).toHaveAttribute('aria-checked', String(wasOn))
+      // Restore enabled sections first so the last-section guard never blocks cleanup.
+      for (const setting of [
+        ...original.filter(({ on }) => on),
+        ...original.filter(({ on }) => !on),
+      ]) {
+        const item = page.getByRole('menuitemcheckbox', {
+          name: setting.name,
+          exact: true,
+        })
+        if (
+          ((await item.getAttribute('aria-checked')) === 'true') !==
+          setting.on
+        )
+          await item.click()
+        await expect(item).toHaveAttribute('aria-checked', String(setting.on))
+      }
       await page.keyboard.press('Escape')
     }
+    expect(consoleReport().fatal).toEqual([])
   })
 })

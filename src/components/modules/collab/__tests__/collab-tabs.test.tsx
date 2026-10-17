@@ -1,5 +1,5 @@
 import '#/components/ui/__tests__/test-env'
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
@@ -11,7 +11,11 @@ import type { CollabSectionId } from '#/lib/collab-sections'
 import { CollabTabs } from '../collab-tabs'
 import { CollabSkeletons } from '../collab-skeletons'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 const messages = {
   ...namespaceCatalogue('trips', Trips),
   ...namespaceCatalogue('modules', Modules),
@@ -21,7 +25,13 @@ function tree(visible: CollabSectionId[]) {
     <I18nProvider locale="en" messages={messages}>
       <CollabTabs visible={visible}>
         {visible.map((id) => (
-          <TabsContent key={id} value={id} forceMount tabIndex={-1}>
+          <TabsContent
+            key={id}
+            value={id}
+            forceMount
+            tabIndex={-1}
+            data-collab-section={id}
+          >
             {id} panel
           </TabsContent>
         ))}
@@ -73,4 +83,39 @@ it('keeps all three pending section shapes mounted under the same tabs', () => {
   expect(screen.getAllByRole('tab')).toHaveLength(3)
   expect(screen.getAllByRole('tabpanel', { hidden: true })).toHaveLength(3)
   expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+})
+
+it('restores a returning tab without then scrolling back to the panel heading', async () => {
+  const user = userEvent.setup()
+  const { container } = render(tree(['conversation', 'notes']))
+  const bar = container.querySelector('.sticky')
+  if (!(bar instanceof HTMLElement)) throw new Error('Missing tab bar')
+  vi.spyOn(bar, 'getClientRects').mockReturnValue([
+    new DOMRect(0, 0, 300, 52),
+  ] as unknown as DOMRectList)
+  vi.spyOn(bar, 'getBoundingClientRect').mockReturnValue(
+    new DOMRect(0, 100, 300, 52),
+  )
+  for (const panel of screen.getAllByRole('tabpanel', { hidden: true })) {
+    vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(0, -300, 300, 1000),
+    )
+  }
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    callback(0)
+    return 0
+  })
+  let position = 700
+  vi.spyOn(window, 'scrollY', 'get').mockImplementation(() => position)
+  const restore = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  const align = vi
+    .spyOn(HTMLElement.prototype, 'scrollIntoView')
+    .mockImplementation(() => {})
+  await user.click(screen.getByRole('tab', { name: 'Notes' }))
+  expect(align).toHaveBeenCalledOnce()
+  position = 200
+  align.mockClear()
+  await user.click(screen.getByRole('tab', { name: 'Conversation' }))
+  expect(restore).toHaveBeenCalledWith({ top: 700, behavior: 'instant' })
+  expect(align).not.toHaveBeenCalled()
 })
