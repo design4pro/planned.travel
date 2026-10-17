@@ -504,12 +504,12 @@ export const PLATFORM_AUDIT_ENTITY_TYPES = [
 ] as const
 
 /**
- * The thirty-three actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * The thirty-four actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
  * tables them. The list is closed there and closed here: a new action is an amendment to that
  * table, made in the commit that adds the code writing it.
  *
 
- * Eighteen take the two-segment `<entity_type>.<verb>` form, and fifteen take the three-segment
+ * Eighteen take the two-segment `<entity_type>.<verb>` form, and sixteen take the three-segment
  * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
  * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
  * view spanning both tables would be attributable to neither. The two `provider.*` actions take the
@@ -547,6 +547,7 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'platform.user.email_set',
   'platform.user.impersonation_started',
   'platform.user.impersonation_ended',
+  'platform.user.impersonation_workspace_changed',
   'platform.session.revoked',
   'platform.session.revoked_all',
   'platform.token.issued',

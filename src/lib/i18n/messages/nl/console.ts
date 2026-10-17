@@ -251,6 +251,8 @@ const messages = {
   'audit.action.emailSet': 'E-mailadres gewijzigd',
   'audit.action.impersonationStarted': 'Handelen namens het account begonnen',
   'audit.action.impersonationEnded': 'Handelen namens het account beëindigd',
+  'audit.action.impersonationWorkspaceChanged':
+    'Werkruimte gewisseld tijdens handelen namens het account',
   'audit.action.sessionRevoked': 'Er is een sessie ingetrokken',
   'audit.action.sessionRevokedAll': 'Alle sessies zijn ingetrokken',
   'audit.actor.system': 'Het platform zelf',
@@ -272,6 +274,7 @@ const messages = {
   'audit.field.expiresAt': 'Sessie verloopt',
   'audit.field.targetRole': 'Hun platformrol',
   'audit.field.sessionId': 'Sessie',
+  'audit.field.organizationId': 'Werkruimte',
   'audit.value.yes': 'ja',
   'audit.value.no': 'nee',
   'audit.value.cleared': 'geleegd',

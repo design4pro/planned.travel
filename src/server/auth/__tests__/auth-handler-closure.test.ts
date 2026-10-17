@@ -907,3 +907,340 @@ describe('organization/delete', () => {
     expect(response.status).toBe(200)
   })
 })
+
+/* -------------------------------------------------------------------------------------------------
+ * A workspace switch inside an impersonated session is audited (#959, docs/ACCESS.md §6.4)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * `databaseHooks.session.update` is the one place every change of `activeOrganizationId` passes
+ * through, so the tests drive the real handler and the real plugin endpoints and read the writer's
+ * spy, never a hook in isolation. The session is made the way the console makes it: `admin()`'s own
+ * `impersonateUser`, in process (its HTTP path answers `404`).
+ */
+describe('a workspace switch inside an impersonated session', () => {
+  const ACTION = 'platform.user.impersonation_workspace_changed'
+
+  let operatorId: string
+  let targetId: string
+  let targetEmail: string
+  let operatorCookie: string
+  let ownOrganizationId: string
+  let secondOrganizationId: string
+  let foreignOrganizationId: string
+  let inviterCookie: string
+  let inviterOrganizationId: string
+
+  function organizationOf(email: string): string {
+    const row = sqlite
+      .prepare(
+        'select m.organization_id as id from member m join user u on u.id = m.user_id where u.email = ?',
+      )
+      .get(email) as { id: string } | undefined
+    if (row === undefined) throw new Error(`no membership for ${email}`)
+    return row.id
+  }
+
+  function activeOrganizationOf(sessionCookieValue: string): string | null {
+    const token = decodeURIComponent(sessionCookieValue.split('=')[1]).split(
+      '.',
+    )[0]
+    const row = sqlite
+      .prepare(
+        'select active_organization_id as id from session where token = ?',
+      )
+      .get(token) as { id: string | null } | undefined
+    if (row === undefined) throw new Error('no session row for the cookie')
+    return row.id
+  }
+
+  /** A fresh impersonated session of the target, worn by the operator, as a `Cookie` header value. */
+  async function impersonate(): Promise<string> {
+    const result = await getAuth().api.impersonateUser({
+      body: { userId: targetId },
+      headers: new Headers({ cookie: operatorCookie }),
+      returnHeaders: true,
+    })
+    // `impersonateUser` first expires the operator's cookie and then sets the worn one, under the
+    // same name: the last `session_token` entry is the one that counts.
+    const worn = result.headers
+      .getSetCookie()
+      .filter((entry) => entry.startsWith('planned.session_token='))
+      .at(-1)
+    if (worn === undefined) throw new Error('no worn session cookie')
+    return worn.split(';')[0]
+  }
+
+  /** What the one expected row was written with. */
+  function onlyEntry(): {
+    actor: unknown
+    entry: unknown
+  } {
+    expect(shared.appendPlatformAudit).toHaveBeenCalledTimes(1)
+    const [, actor, entry] = shared.appendPlatformAudit.mock.calls[0] as [
+      unknown,
+      unknown,
+      unknown,
+    ]
+    return { actor, entry }
+  }
+
+  const OPERATOR_ACTOR = () => ({
+    userId: operatorId,
+    actorKind: 'human',
+    role: 'admin',
+    tokenId: null,
+  })
+
+  beforeAll(async () => {
+    operatorId = await createAccount('operator-959@planned.travel')
+    setRole(operatorId, 'admin')
+    targetEmail = 'target-959@planned.travel'
+    targetId = await createAccount(targetEmail)
+    // Accepting an invitation needs a verified address; the sign-up above does not send one here.
+    sqlite
+      .prepare('update user set email_verified = 1 where id = ?')
+      .run(targetId)
+    await createAccount('inviter-959@planned.travel')
+    await createAccount('stranger-959@planned.travel')
+    ownOrganizationId = organizationOf(targetEmail)
+    foreignOrganizationId = organizationOf('stranger-959@planned.travel')
+    inviterOrganizationId = organizationOf('inviter-959@planned.travel')
+
+    secondOrganizationId = 'org_959_second'
+    sqlite
+      .prepare(
+        'insert into organization (id, name, slug, created_at) values (?, ?, ?, ?)',
+      )
+      .run(secondOrganizationId, 'Second workspace', 'second-959', Date.now())
+    sqlite
+      .prepare(
+        'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+      )
+      .run(
+        'mem_959_second',
+        secondOrganizationId,
+        targetId,
+        'member',
+        Date.now(),
+      )
+
+    shared.kv.clear()
+    operatorCookie = sessionCookie(await signIn('operator-959@planned.travel'))
+    inviterCookie = sessionCookie(await signIn('inviter-959@planned.travel'))
+  })
+
+  it('writes one row for an impersonated set-active over HTTP, naming the operator and both ids', async () => {
+    const cookie = await impersonate()
+    expect(activeOrganizationOf(cookie)).toBe(ownOrganizationId)
+
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(activeOrganizationOf(cookie)).toBe(secondOrganizationId)
+    const { actor, entry } = onlyEntry()
+    // The operator's own role, read from the operator's own row: the worn session is the target's.
+    expect(actor).toEqual(OPERATOR_ACTOR())
+    expect(entry).toEqual({
+      action: ACTION,
+      entityId: targetId,
+      changes: {
+        before: { organizationId: ownOrganizationId },
+        after: { organizationId: secondOrganizationId },
+      },
+    })
+  })
+
+  it('writes the same row for the in-process call, which is what the server functions make', async () => {
+    const cookie = await impersonate()
+
+    await getAuth().api.setActiveOrganization({
+      headers: new Headers({ cookie }),
+      body: { organizationId: secondOrganizationId },
+    })
+
+    expect(onlyEntry().entry).toMatchObject({
+      action: ACTION,
+      entityId: targetId,
+      changes: {
+        before: { organizationId: ownOrganizationId },
+        after: { organizationId: secondOrganizationId },
+      },
+    })
+  })
+
+  it('carries ids and nothing else in changes', async () => {
+    const cookie = await impersonate()
+
+    await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+
+    const { entry } = onlyEntry()
+    const changes = (entry as { changes: { before: object; after: object } })
+      .changes
+    expect(Object.keys(changes)).toEqual(['before', 'after'])
+    expect(Object.keys(changes.before)).toEqual(['organizationId'])
+    expect(Object.keys(changes.after)).toEqual(['organizationId'])
+  })
+
+  it('writes the row for an accepted invitation, which activates the new workspace', async () => {
+    const invitation = await getAuth().api.createInvitation({
+      headers: new Headers({ cookie: inviterCookie }),
+      body: {
+        email: targetEmail,
+        role: 'member',
+        organizationId: inviterOrganizationId,
+      },
+    })
+    const cookie = await impersonate()
+
+    await getAuth().api.acceptInvitation({
+      headers: new Headers({ cookie }),
+      body: { invitationId: invitation.id },
+    })
+
+    expect(activeOrganizationOf(cookie)).toBe(inviterOrganizationId)
+    expect(onlyEntry().entry).toMatchObject({
+      action: ACTION,
+      entityId: targetId,
+      changes: {
+        before: { organizationId: ownOrganizationId },
+        after: { organizationId: inviterOrganizationId },
+      },
+    })
+  })
+
+  it('has no create-organization path to audit: the plugin refuses it, and so does createWorkspace', async () => {
+    const cookie = await impersonate()
+
+    const response = await post(
+      '/organization/create',
+      { name: 'Operator made', slug: 'operator-made-959' },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
+  })
+
+  it('writes the row, with a null after, when set-active refuses a workspace the target is not in', async () => {
+    // The plugin clears the active workspace *before* it refuses (`crud-org.mjs`), so the session
+    // did move: a refused request still changed `activeOrganizationId`, and the ledger says so.
+    const cookie = await impersonate()
+
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: foreignOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+    expect(activeOrganizationOf(cookie)).toBeNull()
+    expect(onlyEntry().entry).toEqual({
+      action: ACTION,
+      entityId: targetId,
+      changes: {
+        before: { organizationId: ownOrganizationId },
+        after: { organizationId: null },
+      },
+    })
+  })
+
+  it('writes the row, with a null after, when get-organization clears the workspace of a non-member', async () => {
+    const cookie = await impersonate()
+
+    const response = await get(
+      `${AUTH_BASE}/organization/get-organization?organizationId=${foreignOrganizationId}`,
+      cookie,
+    )
+
+    expect(response.status).toBe(403)
+    expect(onlyEntry().entry).toMatchObject({
+      action: ACTION,
+      changes: {
+        before: { organizationId: ownOrganizationId },
+        after: { organizationId: null },
+      },
+    })
+  })
+
+  it('writes nothing for a switch made by a session nobody is wearing', async () => {
+    shared.kv.clear()
+    const cookie = sessionCookie(await signIn(targetEmail))
+
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
+  })
+
+  it('writes nothing, and reads nothing, when an impersonated session is merely refreshed', async () => {
+    // An impersonated session lives 900 seconds against a 30-day `expiresIn`, so every read of it is
+    // past `updateAge` and rewrites `expiresAt`: the update that must stay free.
+    const cookie = await impersonate()
+    const { adapter } = await getAuth().$context
+    const findOne = vi.spyOn(adapter, 'findOne')
+
+    const response = await get(`${AUTH_BASE}/get-session`, cookie)
+
+    expect(response.status).toBe(200)
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
+    expect(
+      findOne.mock.calls.filter(([query]) => query.model === 'user'),
+    ).toEqual([])
+    findOne.mockRestore()
+  })
+
+  it('lets the switch succeed when the audit insert is rejected', async () => {
+    shared.appendPlatformAudit.mockRejectedValueOnce(
+      new Error('the audit sink is unreachable'),
+    )
+    const cookie = await impersonate()
+
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(activeOrganizationOf(cookie)).toBe(secondOrganizationId)
+    expect(shared.appendPlatformAudit).toHaveBeenCalledTimes(1)
+  })
+
+  it("writes no row, and still switches, when the operator's role cannot be read", async () => {
+    // Never `role: null`: that resolves to `user`, and a row with the wrong role is worse than none.
+    const cookie = await impersonate()
+    const { adapter } = await getAuth().$context
+    const original = adapter.findOne.bind(adapter)
+    const findOne = vi
+      .spyOn(adapter, 'findOne')
+      .mockImplementation((query) =>
+        query.model === 'user' && query.select?.[0] === 'role'
+          ? Promise.reject(new Error('the user table is unreachable'))
+          : original(query),
+      )
+
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+    findOne.mockRestore()
+
+    expect(response.status).toBe(200)
+    expect(activeOrganizationOf(cookie)).toBe(secondOrganizationId)
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
+  })
+})

@@ -59,10 +59,10 @@ import type { LogFields, Logger } from '#/server/observability'
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * The console's own actions of docs/ACCESS.md §4.2, frozen: the fifteen three-segment
+ * The console's own actions of docs/ACCESS.md §4.2, frozen: the sixteen three-segment
  * `platform.<entity>.<verb>` names, and the two `provider.*` names the metering screen writes.
  *
- * The list is closed: an eighteenth action here is an amendment to §4.2's table, made in the
+ * The list is closed: a nineteenth action here is an amendment to §4.2's table, made in the
  * commit that adds the code writing it. `platform.share.revoked` is here now even though the
  * moderation screen that writes it is Faza F, because the §1.1 statement dictionary is closed in
  * this phase and a name that arrives later cannot be added without amending the document.
@@ -81,6 +81,8 @@ export const PLATFORM_ACTIONS = Object.freeze({
   USER_EMAIL_SET: 'platform.user.email_set',
   USER_IMPERSONATION_STARTED: 'platform.user.impersonation_started',
   USER_IMPERSONATION_ENDED: 'platform.user.impersonation_ended',
+  USER_IMPERSONATION_WORKSPACE_CHANGED:
+    'platform.user.impersonation_workspace_changed',
   SESSION_REVOKED: 'platform.session.revoked',
   SESSION_REVOKED_ALL: 'platform.session.revoked_all',
   TOKEN_ISSUED: 'platform.token.issued',
@@ -90,7 +92,7 @@ export const PLATFORM_ACTIONS = Object.freeze({
   PROVIDER_POLICY_CHANGED: 'provider.policy_changed',
 } as const satisfies Readonly<Record<string, PlatformAuditAction>>)
 
-/** One of the seventeen names in {@link PLATFORM_ACTIONS}. */
+/** One of the eighteen names in {@link PLATFORM_ACTIONS}. */
 export type PlatformActionName =
   (typeof PLATFORM_ACTIONS)[keyof typeof PLATFORM_ACTIONS]
 
@@ -116,7 +118,7 @@ export const PLATFORM_AUDIT_ENTITY_BY_PREFIX = Object.freeze({
 } as const satisfies Readonly<Record<string, PlatformAuditEntityType>>)
 
 /**
- * The four verbs docs/ACCESS.md §4.3 audits "without exception".
+ * The five verbs docs/ACCESS.md §4.3 audits "without exception".
  *
  * They are the ones nobody would think to check afterwards, so a rejected append for one of them is
  * retried once and then raised at the highest severity the logger has. The action still stands:
@@ -127,6 +129,7 @@ export const ALWAYS_AUDITED_ACTIONS = Object.freeze([
   PLATFORM_ACTIONS.USER_UNBANNED,
   PLATFORM_ACTIONS.USER_IMPERSONATION_STARTED,
   PLATFORM_ACTIONS.USER_IMPERSONATION_ENDED,
+  PLATFORM_ACTIONS.USER_IMPERSONATION_WORKSPACE_CHANGED,
 ] as const)
 
 /**
@@ -233,7 +236,7 @@ const CHANGES_MAX_SERIALISED_LENGTH = 16_384
  *   log line records the measurement as well, but the row does not depend on it.
  *
  * Together those give one behaviour: keep as much of the evidence as the bound allows, mark what
- * was done to it, and report it. A bound never costs the entry — §4.3 says the four ban and
+ * was done to it, and report it. A bound never costs the entry — §4.3 says the five ban and
  * impersonation verbs are audited without exception, and an entry dropped because a `User-Agent`
  * was long is exactly the gap that sentence forbids.
  * ---------------------------------------------------------------------------------------------- */
@@ -587,7 +590,7 @@ const platformActorSchema = z.discriminatedUnion('actorKind', [
  * §4.1's column bound, and the enum is the *closed list*. A name that is well-shaped and undeclared
  * is exactly the failure the vocabulary exists to prevent.
  *
- * The enum is the whole table's vocabulary rather than this phase's fifteen, because this module is
+ * The enum is the whole table's vocabulary rather than this phase's eighteen, because this module is
  * `platform_audit_log`'s single writer for the life of the product and the runtime rule guards the
  * *table*. The narrower rule — which names this phase's callers may spell — is a property of the
  * boundary type below, where a compiler can enforce it.
@@ -602,7 +605,7 @@ const actionSchema = z
 
 /**
  * The entry, validated for *shape*. Size is bounded after this, not in here, and on purpose: a
- * `max()` on these three fields would reject the whole entry, and for the four verbs of §4.3 a lost
+ * `max()` on these three fields would reject the whole entry, and for the five verbs of §4.3 a lost
  * entry is precisely the gap that section says must not exist. The bounds act on the value and keep
  * the row — see {@link FieldRefusal}.
  */
@@ -624,7 +627,7 @@ const platformAuditEntrySchema = z.object({
  * What a caller hands {@link appendPlatformAudit}.
  *
  * Every field is derived from {@link platformAuditEntrySchema} so the two cannot drift — except
- * `action`, which is narrowed from the schema's `string` input to the fifteen frozen names. That
+ * `action`, which is narrowed from the schema's `string` input to the eighteen frozen names. That
  * narrowing is the point: a runtime enum is the wrong layer to catch a mistyped verb *here*, because
  * §4.3 requires this writer to swallow its own failures. Spell `platform.user.bannd` and the schema
  * rejects it, the rejection is reported to the logger, and the caller — whose ban has already
@@ -735,7 +738,7 @@ function failureFields(
  * transaction. The row change commits, then the entry is appended, and a rejected append is logged
  * rather than raised — a caller whose work already succeeded is never handed a failure for it.
  *
- * Two severities, because the four verbs in {@link ALWAYS_AUDITED_ACTIONS} are audited "without
+ * Two severities, because the five verbs in {@link ALWAYS_AUDITED_ACTIONS} are audited "without
  * exception": for those the insert is attempted twice and a second failure is reported at `error`,
  * the highest level `Logger` has (there is no `fatal`). Everything else is attempted once and
  * reported at `warn`.

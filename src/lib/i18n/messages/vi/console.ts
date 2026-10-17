@@ -252,6 +252,8 @@ const messages = {
   'audit.action.emailSet': 'Địa chỉ email thay đổi',
   'audit.action.impersonationStarted': 'Bắt đầu hành động thay tài khoản',
   'audit.action.impersonationEnded': 'Kết thúc hành động thay tài khoản',
+  'audit.action.impersonationWorkspaceChanged':
+    'Đổi không gian khi đang hành động thay tài khoản',
   'audit.action.sessionRevoked': 'Một phiên bị kết thúc',
   'audit.action.sessionRevokedAll': 'Mọi phiên đều bị kết thúc',
   'audit.actor.system': 'Chính nền tảng',
@@ -273,6 +275,7 @@ const messages = {
   'audit.field.expiresAt': 'Phiên hết hạn',
   'audit.field.targetRole': 'Vai trò của họ trên nền tảng',
   'audit.field.sessionId': 'Phiên liên quan',
+  'audit.field.organizationId': 'Không gian',
   'audit.value.yes': 'có',
   'audit.value.no': 'không',
   'audit.value.cleared': 'đã xoá trắng',

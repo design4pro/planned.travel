@@ -263,6 +263,8 @@ const messages = {
   'audit.action.impersonationStarted':
     'Inizio dell’agire per conto dell’account',
   'audit.action.impersonationEnded': 'Fine dell’agire per conto dell’account',
+  'audit.action.impersonationWorkspaceChanged':
+    'Cambio di spazio durante l’agire per conto dell’account',
   'audit.action.sessionRevoked': 'Una sessione è stata revocata',
   'audit.action.sessionRevokedAll': 'Tutte le sessioni sono state revocate',
   'audit.actor.system': 'La piattaforma stessa',
@@ -284,6 +286,7 @@ const messages = {
   'audit.field.expiresAt': 'La sessione scade',
   'audit.field.targetRole': 'Il loro ruolo di piattaforma',
   'audit.field.sessionId': 'Sessione',
+  'audit.field.organizationId': 'Spazio',
   'audit.value.yes': 'vero',
   'audit.value.no': 'falso',
   'audit.value.cleared': 'svuotato',

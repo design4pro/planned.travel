@@ -691,7 +691,7 @@ the retention rather than restating them, so there is one list and it is this on
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                   |
 | `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
 | `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                               |
-| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link`. The mapping to `action` is in §4.2 |
+| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
 | `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                       |
 | `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                             |
@@ -753,7 +753,7 @@ Two consequences worth stating, because both were found by measurement:
 above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
 distinction is the point: §4.2's entity list grows by amendment in the commit that adds the code
 writing it, and a `CHECK` would price each of those amendments at a table recreate. The narrowing
-that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the eight
+that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the nine
 fails `pnpm typecheck`. The same reasoning governs `action`, whose vocabulary in §4.2 is closed and
 grows the same way. A schema that drops the `CHECK` without adding the `$type` has narrowed the
 column nowhere at all, which is what the first attempt did.
@@ -839,7 +839,7 @@ prefix-equals-`entity_type` rule is declared by the table below rather than inhe
 An action on a user, a session, a credential or a share takes the three-segment
 `platform.<entity>.<verb>`, because those entities are named identically in the tenant log of §4.5
 and a bare `user.created` read out of an operational view spanning both tables would be
-attributable to neither. Eighteen of the thirty-three actions below take the first form and fifteen
+attributable to neither. Eighteen of the thirty-four actions below take the first form and sixteen
 take the second; no third form exists.
 
 Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
@@ -901,6 +901,7 @@ they are marked "here" in the last column.
 | `platform.user.email_set`             | An administrator changes an address                                                                                   | here (`user:set-email`)            |
 | `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                                                                       | here (§6)                          |
 | `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                                                                | here (§6)                          |
+| `platform.user.impersonation_workspace_changed` | An impersonated session changes its active workspace, from `databaseHooks.session.update` (§6.4); `entity_id` is the target, the actor is the operator | here (§6.4) |
 | `platform.session.revoked`            | One session of one account is revoked                                                                                 | here (`session:revoke`)            |
 | `platform.session.revoked_all`        | Every session of one account is revoked                                                                               | here (`session:revoke`)            |
 | `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`                                                        | here (§5)                          |
@@ -909,7 +910,7 @@ they are marked "here" in the last column.
 | `provider.limit_changed`              | A third-party call ceiling or its window is set; `changes` carries before and after                                   | here (`provider:configure`, §2.3b) |
 | `provider.policy_changed`             | A provider's over-ceiling policy moves between `allow` and `block`                                                    | here (`provider:configure`, §2.3b) |
 
-Thirty-three actions. Four notes so the list cannot be miscounted or misread:
+Thirty-four actions. Five notes so the list cannot be miscounted or misread:
 
 - `catalog.run.poll` appears in `docs/CATALOG.md` §2.4 and is **not** in this list on purpose. It is
   the name of a queue task on `TASKS`, not an audit action, and nothing writes a
@@ -928,6 +929,10 @@ Thirty-three actions. Four notes so the list cannot be miscounted or misread:
   read-only statements - `user:list`, `user:get`, `session:list` - have no action, per the previous
   note. `user:impersonate-admins` has none either, because §2.4 grants it to no role, so nothing can
   ever write under it.
+- `platform.user.impersonation_workspace_changed` belongs to no §1.1 statement. It is not a capability
+  somebody exercises: it is the trace of a session moving between workspaces while `user:impersonate`
+  is in use, written by the auth layer itself (§4.3, §6.4), so it has no entry in the previous note's
+  mapping and needs none.
 
 A unit test asserts the union of the action constants exported by `src/server/catalog` and
 `src/server/fns/console/*` equals this list exactly, that every one of them matches the imported
@@ -950,14 +955,15 @@ in code and not in this table fails it; so does a name in this table that nothin
   raised through `src/server/observability` - never a `500` handed to the caller, and never a
   rollback of work that already succeeded.
 - **Ban and impersonation are always audited.** `platform.user.banned`, `platform.user.unbanned`,
-  `platform.user.impersonation_started` and `platform.user.impersonation_ended` are appended
-  without exception. That
-  claim rests entirely on §2.6: `/admin/ban-user`, `/admin/unban-user`, `/admin/impersonate-user`
+  `platform.user.impersonation_started`, `platform.user.impersonation_ended` and
+  `platform.user.impersonation_workspace_changed` are appended without exception. For the first
+  four that claim rests entirely on §2.6 (the fifth rests on a different mechanism, described after
+  the two stated exceptions below): `/admin/ban-user`, `/admin/unban-user`, `/admin/impersonate-user`
   and `/admin/stop-impersonating` all answer `404` over HTTP, so `src/server/fns/console/*` is the
   only caller of the endpoints behind them, and the append sits on that one path. Without §2.6
-  "without exception" would mean "unless somebody opens a devtools console", and the four verbs
+  "without exception" would mean "unless somebody opens a devtools console", and the five verbs
   here are precisely the ones nobody would think to check afterwards. If
-  the append is rejected for one of these four, it is retried once and then raised at the highest
+  the append is rejected for one of these five, it is retried once and then raised at the highest
   severity the logger has - the action still stands, because reversing a completed ban because a
   log write failed is the worse of the two failures. **Two stated exceptions, both found in Faza B
   by reading the plugin rather than by trusting this sentence.** First, a _temporary_ ban lifts
@@ -970,7 +976,17 @@ in code and not in this table fails it; so does a name in this table that nothin
   next request, and under KV secondary storage it usually just TTLs away, so there is no moment at
   which anything could append. §4.2's entry was narrowed to the action accordingly. An impersonated
   session that simply lapses is visible as a `platform.user.impersonation_started` with no matching
-  `_ended` inside 900 seconds, and that is the only signal there is. Also always audited: `platform.user.role_changed`,
+  `_ended` inside 900 seconds, and that is the only signal there is. **The fifth verb is written by
+  the auth layer rather than by a console call.** `platform.user.impersonation_workspace_changed` is
+  appended from `databaseHooks.session.update` in `src/server/auth/index.ts`, after the session update
+  has committed, because every change of `activeOrganizationId` goes through Better Auth's
+  `updateSession` (set-active, accepting an invitation, leaving or being removed from a workspace, and
+  the refusals that clear it) and none of them goes through a server function: a hook on one URL
+  misses the others, and a wrapper misses a direct `POST /api/auth/organization/set-active`. It
+  appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
+  is set, so a session refresh costs nothing. It is retried once and raised at `error` like the other
+  four, and like the ban tripwire it swallows every error it can raise: a switch that succeeded is
+  never failed by its own audit row. Also always audited: `platform.user.role_changed`,
   `platform.user.deleted`, `platform.session.revoked`, `platform.session.revoked_all`,
   `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
@@ -1154,6 +1170,25 @@ remove passkeys; removing a passkey does not end sessions it already opened.
 
 Entering and leaving impersonation are both audited (§4.3), with the impersonator in
 `actor_user_id` and the target in `entity_id`.
+
+So is every workspace the operator moves into between the two. A change of the session's
+`activeOrganizationId` inside an impersonated session appends
+`platform.user.impersonation_workspace_changed` to `platform_audit_log`, in the same timeline as the
+start and the end, so §4.4's query on `(entity_type, entity_id)` reads start, switches and end in
+order. It is the platform log and not the tenant `audit_log`, for the reason §4.5 gives: a switch
+writes nothing inside a workspace. The actor is the operator - `actor_user_id` is `impersonatedBy` and
+`actor_role` is read from the operator's own `user` row at that moment, never from the worn
+session - and `entity_id` is the target. `changes` is `{ before: { organizationId }, after:
+{ organizationId } }` and holds ids only: no workspace name and nothing else from inside a tenant.
+`after.organizationId` is `null` when the update cleared the workspace, which is what leaving a
+workspace, a refused `organization/set-active` and a refused `organization/get-organization` on a
+workspace the target does not belong to all do; the plugin clears it before it refuses, so a refused
+request is still a switch of the session and is recorded as one. A `null` workspace means the next
+request falls back to the oldest membership (`src/server/auth/session.ts`), and that fallback is
+not itself recorded, nor is a per-request choice made by `requireOrg` without a session update. If
+the operator's role cannot be read, no row is written and an `error` line says so: a row naming an
+administrator as `user` is worse than a gap that is logged. Creating a workspace is not a path to
+this row: an impersonated session cannot reach it (§2.7).
 
 ---
 

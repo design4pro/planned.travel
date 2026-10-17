@@ -9,7 +9,9 @@ import {
   appendPlatformAudit,
 } from '#/server/catalog/audit'
 import { authSchema } from '#/server/db/auth-schema'
+import { readPlatformRole } from '#/server/fns/console/adapter-reads'
 import { createLogger } from '#/server/observability'
+import { resolvePlatformRole } from './access'
 import { DISABLED_ADMIN_PATHS, adminOptions } from './admin-options'
 import { authDb } from './db'
 import { queueAuthEmail } from './email'
@@ -41,6 +43,7 @@ import {
 import { createKvSecondaryStorage } from './secondary-storage'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
+import type { AuthReadAdapter } from '#/server/fns/console/adapter-reads'
 
 export { APP_NAME } from './env'
 
@@ -215,6 +218,84 @@ async function auditBanTransition(
     logAuth('error', 'audit.ban-tripwire.failed', {
       userId: user.id,
       action,
+      reason: cause instanceof Error ? cause.message : 'unknown',
+    })
+  }
+}
+
+/**
+ * The workspace an update that carries `activeOrganizationId` is moving the session away from,
+ * waiting in `session.update.before` for the commit that `after` follows.
+ *
+ * `before` is the only half that sees the payload and `after` the only half that sees the row, and
+ * the previous value is in neither: it is the one the request's own session carried when it was
+ * resolved, which is the session whose token every such update names. Keyed on the per-request
+ * endpoint context for the reason {@link pendingBanAudit} is, and weak for the same one.
+ */
+const pendingWorkspaceSwitch = new WeakMap<object, string | null>()
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+/**
+ * Appends the `platform.user.impersonation_workspace_changed` row for one committed session update
+ * (docs/ACCESS.md §4.3, §6.4), or nothing at all when the session is not an impersonated one.
+ *
+ * The actor is the operator, never the worn session: `actor_user_id` is `impersonatedBy` and
+ * `actor_role` is read from the operator's own `user` row at this moment, through the adapter
+ * `readPlatformRole` is written for. A role that cannot be read writes no row, because
+ * `resolvePlatformRole(null)` is `user` and a row that says an admin acted as `user` is worse than
+ * a gap the `error` line names. `changes` holds the two workspace ids and nothing else: no name, no
+ * slug, nothing from inside a tenant.
+ *
+ * It swallows every error it can raise, for the reason {@link auditBanTransition} gives: an `after`
+ * hook runs inline with no transaction open, so a rejection here would fail the very switch it
+ * describes.
+ */
+async function auditImpersonatedWorkspaceChange(
+  session: Record<string, unknown>,
+  before: string | null,
+  adapter: AuthReadAdapter,
+): Promise<void> {
+  const operatorId = nonEmptyString(session.impersonatedBy)
+  const targetUserId = nonEmptyString(session.userId)
+  if (operatorId === null || targetUserId === null) return
+
+  try {
+    const read = await readPlatformRole(async () => adapter, operatorId)
+    if (!read.ok) {
+      logAuth('error', 'audit.impersonation-workspace.role-unreadable', {
+        operatorId,
+        targetUserId,
+        reason: read.reason,
+      })
+      return
+    }
+    await appendPlatformAudit(
+      platformDb(),
+      {
+        userId: operatorId,
+        actorKind: 'human',
+        role: resolvePlatformRole(read.role),
+        tokenId: null,
+      },
+      {
+        action: PLATFORM_ACTIONS.USER_IMPERSONATION_WORKSPACE_CHANGED,
+        entityId: targetUserId,
+        changes: {
+          before: { organizationId: before },
+          after: {
+            organizationId: nonEmptyString(session.activeOrganizationId),
+          },
+        },
+      },
+      auditLogger(),
+    )
+  } catch (cause) {
+    logAuth('error', 'audit.impersonation-workspace.failed', {
+      operatorId,
+      targetUserId,
       reason: cause instanceof Error ? cause.message : 'unknown',
     })
   }
@@ -411,7 +492,36 @@ function buildAuth() {
               session.userId,
             )
             if (!organizationId) return
-            return { data: { ...session, activeOrganizationId: organizationId } }
+            return {
+              data: { ...session, activeOrganizationId: organizationId },
+            }
+          },
+        },
+        // Every change of `activeOrganizationId` passes through `updateSession`: set-active,
+        // accept-invitation, a leave or removal, and the non-member refusals that clear it. Inside an
+        // impersonated session each one is a row of the impersonation timeline (docs/ACCESS.md §6.4).
+        // A payload without that key (the `updateAge` refresh, every impersonated read) returns before
+        // anything is stored or read.
+        update: {
+          before: async (data, context) => {
+            if (!context || !Object.hasOwn(data, 'activeOrganizationId')) return
+            pendingWorkspaceSwitch.set(
+              context,
+              nonEmptyString(
+                context.context.session?.session.activeOrganizationId,
+              ),
+            )
+          },
+          after: async (session, context) => {
+            if (!context || !session) return
+            const before = pendingWorkspaceSwitch.get(context)
+            if (before === undefined) return
+            pendingWorkspaceSwitch.delete(context)
+            await auditImpersonatedWorkspaceChange(
+              session,
+              before,
+              context.context.adapter,
+            )
           },
         },
       },

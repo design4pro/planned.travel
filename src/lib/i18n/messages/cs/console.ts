@@ -251,6 +251,8 @@ const messages = {
   'audit.action.emailSet': 'E-mailová adresa změněna',
   'audit.action.impersonationStarted': 'Začalo jednání jménem účtu',
   'audit.action.impersonationEnded': 'Jednání jménem účtu skončilo',
+  'audit.action.impersonationWorkspaceChanged':
+    'Změna prostoru při jednání jménem účtu',
   'audit.action.sessionRevoked': 'Jedna relace byla zrušena',
   'audit.action.sessionRevokedAll': 'Všechny relace byly zrušeny',
   'audit.actor.system': 'Samotná platforma',
@@ -272,6 +274,7 @@ const messages = {
   'audit.field.expiresAt': 'Relace vyprší',
   'audit.field.targetRole': 'Jejich role na platformě',
   'audit.field.sessionId': 'Relace',
+  'audit.field.organizationId': 'Prostor',
   'audit.value.yes': 'ano',
   'audit.value.no': 'ne',
   'audit.value.cleared': 'vyprázdněno',

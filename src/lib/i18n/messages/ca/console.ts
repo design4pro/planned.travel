@@ -255,6 +255,8 @@ const messages = {
   'audit.action.emailSet': 'Adreça de correu canviada',
   'audit.action.impersonationStarted': 'Comença a actuar en nom del compte',
   'audit.action.impersonationEnded': 'Deixa d’actuar en nom del compte',
+  'audit.action.impersonationWorkspaceChanged':
+    'Canvi d’espai mentre s’actuava en nom del compte',
   'audit.action.sessionRevoked': 'S’ha revocat una sessió',
   'audit.action.sessionRevokedAll': 'S’han revocat totes les sessions',
   'audit.actor.system': 'La plataforma mateixa',
@@ -276,6 +278,7 @@ const messages = {
   'audit.field.expiresAt': 'La sessió caduca',
   'audit.field.targetRole': 'El seu rol de plataforma',
   'audit.field.sessionId': 'Sessió',
+  'audit.field.organizationId': 'Espai',
   'audit.value.yes': 'cert',
   'audit.value.no': 'fals',
   'audit.value.cleared': 'buidat',
