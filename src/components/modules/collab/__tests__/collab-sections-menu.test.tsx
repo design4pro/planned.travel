@@ -16,7 +16,11 @@ const messages = {
   ...namespaceCatalogue('trips', Trips),
   ...namespaceCatalogue('modules', Modules),
 }
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+  Reflect.deleteProperty(document, 'elementFromPoint')
+})
 function deferred() {
   let resolve: () => void = () => {}
   const promise = new Promise<void>((done) => {
@@ -178,5 +182,41 @@ it.each(['transport', 'refusal'] as const)(
           ? PolishTrips['collab.sections.failedBody']
           : 'Authored refusal',
     })
+  },
+)
+
+it.each([true, false])(
+  'returns Escape focus and reveals it only when obscured (%s)',
+  async (obscured) => {
+    const { user } = setup()
+    const trigger = screen.getByRole('button', { name: /Choose sections/ })
+    const reveal = vi.spyOn(trigger, 'scrollIntoView')
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      x: 37,
+      y: 0,
+      top: 0,
+      bottom: 44,
+      left: 37,
+      right: 216,
+      width: 179,
+      height: 44,
+      toJSON: () => ({}),
+    })
+    const blocker = document.createElement('header')
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: vi.fn(() => (obscured ? blocker : trigger)),
+    })
+    await user.click(trigger)
+    reveal.mockClear()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    if (obscured)
+      expect(reveal).toHaveBeenCalledWith({
+        block: 'center',
+        behavior: 'instant',
+      })
+    else expect(reveal).not.toHaveBeenCalled()
   },
 )

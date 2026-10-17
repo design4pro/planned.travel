@@ -33,6 +33,7 @@ export function CollabSectionsMenu({
   const t = useTranslate()
   const footer = useId()
   const locked = useRef(false)
+  const trigger = useRef<HTMLButtonElement>(null)
   const [pending, setPending] = useState<CollabSectionId | null>(null)
   const last = enabledCollabSections(sections).length === 1
 
@@ -74,6 +75,7 @@ export function CollabSectionsMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          ref={trigger}
           variant="secondary"
           className="min-h-11"
           data-part="collab-sections-trigger"
@@ -82,7 +84,23 @@ export function CollabSectionsMenu({
           <ChevronDown aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent loop>
+      <DropdownMenuContent
+        loop
+        onCloseAutoFocus={() => {
+          requestAnimationFrame(() => {
+            const button = trigger.current
+            if (!button || document.activeElement !== button) return
+            const rect = button.getBoundingClientRect()
+            if (!rect.width || !rect.height) return
+            const x = (rect.left + rect.right) / 2
+            const obscured = [rect.top + 1, rect.bottom - 1].some(
+              (y) => !button.contains(document.elementFromPoint(x, y)),
+            )
+            if (obscured)
+              button.scrollIntoView({ block: 'center', behavior: 'instant' })
+          })
+        }}
+      >
         <DropdownMenuLabel>
           {t('trips.collab.sections.menuLabel')}
         </DropdownMenuLabel>
