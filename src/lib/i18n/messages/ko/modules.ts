@@ -1088,6 +1088,35 @@ const messages = {
     '이 링크가 있는 사람은 계정 없이 이 워크스페이스에서 내가 참여하는 보관되지 않은 여행을 볼 수 있습니다. 시작일이 가장 최근인 {count}개가 포함되며 새 여행은 자동으로 표시됩니다. 비밀번호처럼 보호하세요.',
   'files.calendar.workspace.nameNote':
     '이 링크는 캘린더에 “planned.travel”로 표시됩니다. 여러 개라면 이름을 변경하세요.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': '휴가 일수 {year}',
+  'vacay.allowance.daysLeft': {
+    other: '{value}일 남음',
+  },
+  'vacay.allowance.daysOver': {
+    other: '{value}일 초과',
+  },
+  'vacay.allowance.progress': '사용한 일수: {used} / {total}',
+  'vacay.allowance.tile.days': '일수',
+  'vacay.allowance.tile.used': '사용',
+  'vacay.allowance.tile.carried': '이월',
+  'vacay.allowance.tile.edit.days': '일수 편집, 현재 {value}',
+  'vacay.allowance.input.days': '{year}년 휴가 일수',
+  'vacay.allowance.input.invalid': '0에서 365 사이의 정수를 입력하세요.',
+  'vacay.allowance.save': '저장',
+  'vacay.allowance.cancel': '취소',
+  'vacay.allowance.saving': '저장 중…',
+  'vacay.allowance.default.hint': '기본 일수입니다. 선택하여 직접 설정하세요.',
+  'vacay.allowance.saved': '휴가 일수를 저장했습니다.',
+  'vacay.allowance.error.days': {
+    other:
+      '휴가 일수를 저장하지 못했습니다. {year}년은 여전히 {value}일로 표시됩니다.',
+  },
+  'vacay.allowance.retry': '다시 시도',
+  'vacay.pending.loading': '불러오는 중',
+  'vacay.error.title': '휴가 플래너를 불러오지 못했습니다',
+  'vacay.year.previous': '이전 연도',
+  'vacay.year.next': '다음 연도',
 } satisfies TranslationOf<typeof En>
 
 export default messages

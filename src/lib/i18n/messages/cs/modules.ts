@@ -1207,6 +1207,45 @@ const messages = {
     'Kdokoli s tímto odkazem může bez účtu číst nearchivované cesty, kterých se v tomto prostoru účastníte: {count} s nejpozdějšími daty začátku. Nové cesty se objeví automaticky. Chraňte jej jako heslo.',
   'files.calendar.workspace.nameNote':
     'Tento odkaz se v kalendáři zobrazí jako „planned.travel“. Pokud jich máte více, přejmenujte jej.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Nárok {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Zbývá {value} den',
+    few: 'Zbývá {value} dny',
+    many: 'Zbývá {value} dne',
+    other: 'Zbývá {value} dní',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Překročeno o {value} den',
+    few: 'Překročeno o {value} dny',
+    many: 'Překročeno o {value} dne',
+    other: 'Překročeno o {value} dní',
+  },
+  'vacay.allowance.progress': 'Využité dny: {used} z {total}',
+  'vacay.allowance.tile.days': 'Dny',
+  'vacay.allowance.tile.used': 'Využito',
+  'vacay.allowance.tile.carried': 'Převedeno',
+  'vacay.allowance.tile.edit.days': 'Upravit dny, aktuálně {value}',
+  'vacay.allowance.input.days': 'Váš nárok na rok {year}',
+  'vacay.allowance.input.invalid': 'Zadejte celé číslo od 0 do 365.',
+  'vacay.allowance.save': 'Uložit',
+  'vacay.allowance.cancel': 'Zrušit',
+  'vacay.allowance.saving': 'Ukládání…',
+  'vacay.allowance.default.hint':
+    'Výchozí nárok. Vyberte pro nastavení vlastního.',
+  'vacay.allowance.saved': 'Nárok byl uložen.',
+  'vacay.allowance.error.days': {
+    one: 'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} den.',
+    few: 'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dny.',
+    many: 'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dne.',
+    other:
+      'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dní.',
+  },
+  'vacay.allowance.retry': 'Zkusit znovu',
+  'vacay.pending.loading': 'Načítání',
+  'vacay.error.title': 'Plánovač dovolené se nenačetl',
+  'vacay.year.previous': 'Předchozí rok',
+  'vacay.year.next': 'Další rok',
 } satisfies TranslationOf<typeof En>
 
 export default messages

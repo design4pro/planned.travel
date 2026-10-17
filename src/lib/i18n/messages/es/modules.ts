@@ -1200,6 +1200,42 @@ const messages = {
     'Cualquiera con este enlace puede leer sin cuenta los viajes no archivados en los que participas en este espacio: los {count} con las fechas de inicio más recientes. Los viajes nuevos aparecen automáticamente. Protégelo como una contraseña.',
   'files.calendar.workspace.nameNote':
     'Este enlace aparece en tu calendario como «planned.travel». Cámbiale el nombre si tienes más de uno.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Asignación {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Quedan {value} día',
+    many: 'Quedan {value} días',
+    other: 'Quedan {value} días',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Excedido en {value} día',
+    many: 'Excedido en {value} días',
+    other: 'Excedido en {value} días',
+  },
+  'vacay.allowance.progress': 'Días usados: {used} de {total}',
+  'vacay.allowance.tile.days': 'Días',
+  'vacay.allowance.tile.used': 'Usados',
+  'vacay.allowance.tile.carried': 'Arrastrados',
+  'vacay.allowance.tile.edit.days': 'Editar días, ahora {value}',
+  'vacay.allowance.input.days': 'Tu asignación para {year}',
+  'vacay.allowance.input.invalid': 'Introduce un número entero de 0 a 365.',
+  'vacay.allowance.save': 'Guardar',
+  'vacay.allowance.cancel': 'Cancelar',
+  'vacay.allowance.saving': 'Guardando…',
+  'vacay.allowance.default.hint':
+    'Asignación predeterminada. Selecciónala para fijar la tuya.',
+  'vacay.allowance.saved': 'Asignación guardada.',
+  'vacay.allowance.error.days': {
+    one: 'No se pudo guardar tu asignación. {year} sigue mostrando {value} día.',
+    many: 'No se pudo guardar tu asignación. {year} sigue mostrando {value} días.',
+    other:
+      'No se pudo guardar tu asignación. {year} sigue mostrando {value} días.',
+  },
+  'vacay.allowance.retry': 'Intentar de nuevo',
+  'vacay.pending.loading': 'Cargando',
+  'vacay.error.title': 'No se pudo cargar el planificador de vacaciones',
+  'vacay.year.previous': 'Año anterior',
+  'vacay.year.next': 'Año siguiente',
 } satisfies TranslationOf<typeof En>
 
 export default messages

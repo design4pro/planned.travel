@@ -1158,6 +1158,39 @@ const messages = {
     'A link birtokában bárki fiók nélkül olvashatja a munkaterület azon nem archivált utazásait, amelyeken részt veszel: a {count} legkésőbbi kezdési dátumút. Az új utazások automatikusan megjelennek. Védd úgy, mint egy jelszót.',
   'files.calendar.workspace.nameNote':
     'A link „planned.travel” néven jelenik meg a naptáradban. Nevezd át, ha több is van.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Szabadságkeret {year}',
+  'vacay.allowance.daysLeft': {
+    one: '{value} nap maradt',
+    other: '{value} nap maradt',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} nap túllépés',
+    other: '{value} nap túllépés',
+  },
+  'vacay.allowance.progress': 'Felhasznált napok: {used} / {total}',
+  'vacay.allowance.tile.days': 'Napok',
+  'vacay.allowance.tile.used': 'Felhasznált',
+  'vacay.allowance.tile.carried': 'Átvitt',
+  'vacay.allowance.tile.edit.days': 'Napok szerkesztése, jelenleg {value}',
+  'vacay.allowance.input.days': 'Szabadságkereted {year}-re',
+  'vacay.allowance.input.invalid': 'Adj meg egy egész számot 0 és 365 között.',
+  'vacay.allowance.save': 'Mentés',
+  'vacay.allowance.cancel': 'Mégse',
+  'vacay.allowance.saving': 'Mentés folyamatban…',
+  'vacay.allowance.default.hint':
+    'Alapértelmezett keret. Válaszd ki a saját megadásához.',
+  'vacay.allowance.saved': 'Szabadságkeret mentve.',
+  'vacay.allowance.error.days': {
+    one: 'Nem sikerült menteni a szabadságkeretet. {year} továbbra is {value} nap mutat.',
+    other:
+      'Nem sikerült menteni a szabadságkeretet. {year} továbbra is {value} nap mutat.',
+  },
+  'vacay.allowance.retry': 'Újrapróbálás',
+  'vacay.pending.loading': 'Betöltés',
+  'vacay.error.title': 'A szabadságtervező nem töltődött be',
+  'vacay.year.previous': 'Előző év',
+  'vacay.year.next': 'Következő év',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1175,6 +1175,40 @@ const messages = {
     'Όποιος έχει αυτόν τον σύνδεσμο μπορεί χωρίς λογαριασμό να διαβάσει τα μη αρχειοθετημένα ταξίδια αυτού του χώρου στα οποία συμμετέχετε: τα {count} με τις πιο πρόσφατες ημερομηνίες έναρξης. Τα νέα ταξίδια εμφανίζονται αυτόματα. Προστατέψτε τον σαν κωδικό.',
   'files.calendar.workspace.nameNote':
     'Αυτός ο σύνδεσμος εμφανίζεται στο ημερολόγιό σας ως «planned.travel». Μετονομάστε τον αν έχετε περισσότερους από έναν.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Άδεια {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Απομένουν {value} ημέρα',
+    other: 'Απομένουν {value} ημέρες',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Υπέρβαση κατά {value} ημέρα',
+    other: 'Υπέρβαση κατά {value} ημέρες',
+  },
+  'vacay.allowance.progress': 'Ημέρες που χρησιμοποιήθηκαν: {used} από {total}',
+  'vacay.allowance.tile.days': 'Ημέρες',
+  'vacay.allowance.tile.used': 'Χρήση',
+  'vacay.allowance.tile.carried': 'Μεταφέρθηκαν',
+  'vacay.allowance.tile.edit.days': 'Επεξεργασία: Ημέρες, τώρα {value}',
+  'vacay.allowance.input.days': 'Η άδειά σας για το {year}',
+  'vacay.allowance.input.invalid':
+    'Εισάγετε έναν ακέραιο αριθμό από 0 έως 365.',
+  'vacay.allowance.save': 'Αποθήκευση',
+  'vacay.allowance.cancel': 'Ακύρωση',
+  'vacay.allowance.saving': 'Γίνεται αποθήκευση…',
+  'vacay.allowance.default.hint':
+    'Προεπιλεγμένη άδεια. Επιλέξτε για να ορίσετε τη δική σας.',
+  'vacay.allowance.saved': 'Η άδεια αποθηκεύτηκε.',
+  'vacay.allowance.error.days': {
+    one: 'Δεν ήταν δυνατή η αποθήκευση της άδειάς σας. Το {year} εξακολουθεί να δείχνει {value} ημέρα.',
+    other:
+      'Δεν ήταν δυνατή η αποθήκευση της άδειάς σας. Το {year} εξακολουθεί να δείχνει {value} ημέρες.',
+  },
+  'vacay.allowance.retry': 'Δοκιμάστε ξανά',
+  'vacay.pending.loading': 'Φόρτωση',
+  'vacay.error.title': 'Ο προγραμματιστής αδειών δεν φορτώθηκε',
+  'vacay.year.previous': 'Προηγούμενο έτος',
+  'vacay.year.next': 'Επόμενο έτος',
 } satisfies TranslationOf<typeof En>
 
 export default messages

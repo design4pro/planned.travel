@@ -2,7 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
 import { z } from 'zod'
 
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
@@ -12,13 +12,14 @@ import {
   Button,
   Card,
   EmptyState,
-  Progress,
   Skeleton,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { loadVacay } from './-server/library'
+import { loadVacayAllowance } from './-server/vacay'
 import { formatNumber, humaniseToken, pluralise } from './-lib/format'
 import { VACAY_KIND_TONE, inkOn, toneFor } from './-lib/tone'
+import { AllowancePanel } from './-ui/allowance-panel'
 import { HeaderSkeleton, Panel } from './-ui/scaffold'
 
 import type { VacayPayload } from './-server/library'
@@ -54,21 +55,34 @@ export const Route = createFileRoute('/_app/vacay')({
     year: z.number().int().min(1970).max(2200).optional(),
   }),
   loaderDeps: ({ search }) => ({ year: search.year }),
-  loader: ({ deps }) => loadVacay({ data: { year: deps.year } }),
+  // One after the other: `loadVacay` ensures the plan, and the allowance read creates none, so the
+  // two must not race on the plan's owner index.
+  loader: async ({ deps }) => {
+    const overview = await loadVacay({ data: { year: deps.year } })
+    const allowance = await loadVacayAllowance({
+      data: { planId: overview.plan.id, year: overview.year },
+    })
+    return { ...overview, allowance }
+  },
   pendingComponent: VacayPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="Vacay did not load" />
-    </AppFrame>
-  ),
+  errorComponent: VacayError,
   component: VacayPage,
 })
 
+function VacayError({ error }: { error: Error }) {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('modules.vacay.error.title')} />
+    </AppFrame>
+  )
+}
+
 function VacayPage() {
+  const t = useTranslate()
   const locale = useLocale()
   const data = Route.useLoaderData()
 
-  const self = data.balances.find((row) => row.userId === data.viewerUserId)
   const colourByUser = new Map(
     data.colours.map((row) => [row.userId, row.colour]),
   )
@@ -106,7 +120,7 @@ function VacayPage() {
                 variant="secondary"
                 size="sm"
                 shape="pill"
-                aria-label="Previous year"
+                aria-label={t('modules.vacay.year.previous')}
               >
                 <Link to="/vacay" search={{ year: data.year - 1 }}>
                   <ChevronLeft aria-hidden />
@@ -120,7 +134,7 @@ function VacayPage() {
                 variant="secondary"
                 size="sm"
                 shape="pill"
-                aria-label="Next year"
+                aria-label={t('modules.vacay.year.next')}
               >
                 <Link to="/vacay" search={{ year: data.year + 1 }}>
                   <ChevronRight aria-hidden />
@@ -132,49 +146,12 @@ function VacayPage() {
 
         <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)] xl:gap-8">
           <aside className="flex min-w-0 flex-col gap-6">
-            <Panel label={`Entitlement ${data.year}`}>
-              {self === undefined ? (
-                <p className="text-label text-ink-3">
-                  Set an allowance for this year and your remaining days appear
-                  here.
-                </p>
-              ) : (
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-display leading-none font-bold tracking-tighter tabular-nums text-ink">
-                      {formatNumber(self.remainingDays, locale)}
-                    </span>
-                    <span className="text-subtitle font-medium text-ink-3">
-                      days left
-                    </span>
-                  </div>
-                  <Progress
-                    value={self.usedDays}
-                    max={Math.max(
-                      self.entitlementDays + self.carriedOverDays,
-                      1,
-                    )}
-                    size="sm"
-                    tone={self.remainingDays <= 0 ? 'danger' : 'brand'}
-                  />
-                  <dl className="grid grid-cols-3 gap-2">
-                    <Figure
-                      label="Days"
-                      value={formatNumber(self.entitlementDays, locale)}
-                    />
-                    <Figure
-                      label="Used"
-                      value={formatNumber(self.usedDays, locale)}
-                    />
-                    <Figure
-                      label="Carried"
-                      value={formatNumber(self.carriedOverDays, locale)}
-                      muted={!data.plan.carryOverEnabled}
-                    />
-                  </dl>
-                </div>
-              )}
-            </Panel>
+            <AllowancePanel
+              planId={data.plan.id}
+              year={data.year}
+              allowance={data.allowance}
+              carryOverEnabled={data.plan.carryOverEnabled}
+            />
 
             <Panel
               label="Travellers"
@@ -261,32 +238,6 @@ function VacayPage() {
         </div>
       </AppSections>
     </AppFrame>
-  )
-}
-
-function Figure({
-  label,
-  value,
-  muted = false,
-}: {
-  label: string
-  value: string
-  muted?: boolean
-}) {
-  return (
-    <div className="rounded-md bg-surface-2 px-2.5 py-2">
-      <dt className="text-micro font-semibold tracking-label uppercase text-ink-4">
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          'font-display text-subtitle font-bold tabular-nums',
-          muted ? 'text-ink-4' : 'text-ink',
-        )}
-      >
-        {value}
-      </dd>
-    </div>
   )
 }
 
@@ -442,6 +393,7 @@ function MonthGrid({
 }
 
 function VacayPending() {
+  const t = useTranslate()
   return (
     <AppFrame>
       <AppSections>
@@ -450,12 +402,17 @@ function VacayPending() {
           aria-busy="true"
           className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)] xl:gap-8"
         >
-          <span className="sr-only">Loading</span>
+          <span className="sr-only">{t('modules.vacay.pending.loading')}</span>
           <div className="flex flex-col gap-6">
             <Card className="space-y-4">
               <Skeleton className="h-3 w-28" radius="sm" />
               <Skeleton className="h-11 w-32" radius="sm" />
               <Skeleton className="h-1.5 w-full" radius="full" />
+              <div className="grid grid-cols-3 gap-2">
+                {Array.from({ length: 3 }, (_, index) => (
+                  <Skeleton key={index} className="h-12 w-full" radius="md" />
+                ))}
+              </div>
             </Card>
             <Card className="space-y-3">
               <Skeleton className="h-3 w-24" radius="sm" />

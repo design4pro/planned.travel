@@ -1,7 +1,7 @@
-import { modulesUnder } from '#/server/catalog/__tests__/module-graph'
 import { relative, resolve } from 'node:path'
+import { withProgram } from './compiler-program'
 import * as ts from 'typescript/unstable/ast'
-import { API, SignatureKind, SymbolFlags } from 'typescript/unstable/sync'
+import { SignatureKind, SymbolFlags } from 'typescript/unstable/sync'
 import type {
   Project,
   Symbol as CompilerSymbol,
@@ -138,48 +138,6 @@ function inspect(project: Project, allowed: Record<string, string>) {
     violations: [...new Set(violations)],
     discovered: [...discovered].sort(),
     imported: [...imported].sort(),
-  }
-}
-
-function withProgram<T>(
-  extra: Record<string, string>,
-  run: (project: Project) => T,
-): T {
-  const files = {
-    ...extra,
-    [resolve('tsconfig.json')]: JSON.stringify({
-      compilerOptions: {
-        target: 'es2022',
-        module: 'esnext',
-        moduleResolution: 'bundler',
-        jsx: 'react-jsx',
-        skipLibCheck: true,
-        paths: { '#/*': ['./src/*'], '@/*': ['./src/*'] },
-      },
-      files: [
-        ...modulesUnder(resolve('src'), { tests: false }),
-        ...Object.keys(extra),
-      ],
-      include: [],
-    }),
-  }
-  const api = new API({
-    fs: {
-      readFile: (path) => files[path],
-      fileExists: (path) => (path in files ? true : undefined),
-    },
-  })
-  const snapshot = api.updateSnapshot({
-    openProjects: [resolve('tsconfig.json')],
-    openFiles: Object.keys(extra),
-  })
-  try {
-    const project = snapshot.getProject(resolve('tsconfig.json'))
-    if (!project) throw new Error('Compiler did not load project')
-    return run(project)
-  } finally {
-    snapshot.dispose()
-    api.close()
   }
 }
 

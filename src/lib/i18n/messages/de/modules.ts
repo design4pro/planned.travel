@@ -1179,6 +1179,39 @@ const messages = {
     'Jeder mit diesem Link kann ohne Konto deine nicht archivierten Reisen in diesem Arbeitsbereich lesen: die {count} mit den spätesten Startdaten. Neue Reisen erscheinen automatisch. Schütze ihn wie ein Passwort.',
   'files.calendar.workspace.nameNote':
     'Dieser Link erscheint in deiner Kalender-App als „planned.travel“. Benenne ihn um, wenn du mehrere hast.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Urlaubsanspruch {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Noch {value} Tag',
+    other: 'Noch {value} Tage',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} Tag überzogen',
+    other: '{value} Tage überzogen',
+  },
+  'vacay.allowance.progress': 'Genommene Tage: {used} von {total}',
+  'vacay.allowance.tile.days': 'Tage',
+  'vacay.allowance.tile.used': 'Genommen',
+  'vacay.allowance.tile.carried': 'Übertragen',
+  'vacay.allowance.tile.edit.days': 'Tage bearbeiten, aktuell {value}',
+  'vacay.allowance.input.days': 'Dein Urlaubsanspruch für {year}',
+  'vacay.allowance.input.invalid': 'Gib eine ganze Zahl von 0 bis 365 ein.',
+  'vacay.allowance.save': 'Speichern',
+  'vacay.allowance.cancel': 'Abbrechen',
+  'vacay.allowance.saving': 'Wird gespeichert…',
+  'vacay.allowance.default.hint':
+    'Standardanspruch. Auswählen, um deinen eigenen festzulegen.',
+  'vacay.allowance.saved': 'Urlaubsanspruch gespeichert.',
+  'vacay.allowance.error.days': {
+    one: 'Dein Urlaubsanspruch konnte nicht gespeichert werden. {year} zeigt weiterhin {value} Tag.',
+    other:
+      'Dein Urlaubsanspruch konnte nicht gespeichert werden. {year} zeigt weiterhin {value} Tage.',
+  },
+  'vacay.allowance.retry': 'Erneut versuchen',
+  'vacay.pending.loading': 'Wird geladen',
+  'vacay.error.title': 'Der Urlaubsplaner konnte nicht geladen werden',
+  'vacay.year.previous': 'Vorheriges Jahr',
+  'vacay.year.next': 'Nächstes Jahr',
 } satisfies TranslationOf<typeof En>
 
 export default messages

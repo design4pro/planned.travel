@@ -1338,6 +1338,38 @@ const messages = {
     'Anyone with this link can read every trip you are on in this workspace that is not archived, with no account: the {count} with the latest start dates, and new trips appear on their own. Treat it like a password.',
   'files.calendar.workspace.nameNote':
     "This link shows up in your calendar app as 'planned.travel'. Rename it if you have more than one.",
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Allowance {year}',
+  'vacay.allowance.daysLeft': {
+    one: '{value} day left',
+    other: '{value} days left',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} day over',
+    other: '{value} days over',
+  },
+  'vacay.allowance.progress': 'Days used: {used} of {total}',
+  'vacay.allowance.tile.days': 'Days',
+  'vacay.allowance.tile.used': 'Used',
+  'vacay.allowance.tile.carried': 'Carried',
+  'vacay.allowance.tile.edit.days': 'Edit days, currently {value}',
+  'vacay.allowance.input.days': 'Your allowance for {year}',
+  'vacay.allowance.input.invalid': 'Enter a whole number from 0 to 365.',
+  'vacay.allowance.save': 'Save',
+  'vacay.allowance.cancel': 'Cancel',
+  'vacay.allowance.saving': 'Saving…',
+  'vacay.allowance.default.hint': 'Default allowance. Select to set your own.',
+  'vacay.allowance.saved': 'Allowance saved.',
+  'vacay.allowance.error.days': {
+    one: 'Your allowance could not be saved. {year} still shows {value} day.',
+    other:
+      'Your allowance could not be saved. {year} still shows {value} days.',
+  },
+  'vacay.allowance.retry': 'Try again',
+  'vacay.pending.loading': 'Loading',
+  'vacay.error.title': 'The leave planner did not load',
+  'vacay.year.previous': 'Previous year',
+  'vacay.year.next': 'Next year',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -1150,6 +1150,38 @@ const messages = {
     'Alla med länken kan utan konto läsa dina icke arkiverade resor i den här arbetsytan: de {count} med de senaste startdatumen. Nya resor visas automatiskt. Skydda länken som ett lösenord.',
   'files.calendar.workspace.nameNote':
     'Länken visas i din kalender som ”planned.travel”. Byt namn om du har fler än en.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Ledighetskvot {year}',
+  'vacay.allowance.daysLeft': {
+    one: '{value} dag kvar',
+    other: '{value} dagar kvar',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} dag över',
+    other: '{value} dagar över',
+  },
+  'vacay.allowance.progress': 'Använda dagar: {used} av {total}',
+  'vacay.allowance.tile.days': 'Dagar',
+  'vacay.allowance.tile.used': 'Använda',
+  'vacay.allowance.tile.carried': 'Överförda',
+  'vacay.allowance.tile.edit.days': 'Redigera dagar, just nu {value}',
+  'vacay.allowance.input.days': 'Din ledighetskvot för {year}',
+  'vacay.allowance.input.invalid': 'Ange ett heltal från 0 till 365.',
+  'vacay.allowance.save': 'Spara',
+  'vacay.allowance.cancel': 'Avbryt',
+  'vacay.allowance.saving': 'Sparar…',
+  'vacay.allowance.default.hint': 'Standardkvot. Välj för att ange din egen.',
+  'vacay.allowance.saved': 'Ledighetskvoten sparades.',
+  'vacay.allowance.error.days': {
+    one: 'Din ledighetskvot kunde inte sparas. {year} visar fortfarande {value} dag.',
+    other:
+      'Din ledighetskvot kunde inte sparas. {year} visar fortfarande {value} dagar.',
+  },
+  'vacay.allowance.retry': 'Försök igen',
+  'vacay.pending.loading': 'Läser in',
+  'vacay.error.title': 'Ledighetsplaneraren gick inte att läsa in',
+  'vacay.year.previous': 'Föregående år',
+  'vacay.year.next': 'Nästa år',
 } satisfies TranslationOf<typeof En>
 
 export default messages
