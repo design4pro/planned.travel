@@ -229,8 +229,11 @@ function NoticeAlert({
     case 'upgrade-required':
       return (
         <Alert tone="warning" {...announce}>
-          <p>
-            {t('shell.workspace.createUpgrade', { workspace: workspaceName })}
+          {/* A workspace name is up to 60 characters of free text, and it appears twice: it must wrap at 320px, and keep its own direction inside the sentence. */}
+          <p className="wrap-anywhere">
+            {t('shell.workspace.createUpgrade', {
+              workspace: `\u2068${workspaceName}\u2069`,
+            })}
           </p>
           <Link
             to="/settings/billing"

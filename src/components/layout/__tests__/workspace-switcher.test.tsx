@@ -971,7 +971,7 @@ describe('creating a workspace', () => {
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain(
-      '\u201CBeta Family\u201D is on the Free plan, and only a workspace on a paid plan can create another. If another of your workspaces is on a paid plan, switch to it and create from there. Otherwise, upgrade \u201CBeta Family\u201D.',
+      '\u201C\u2068Beta Family\u2069\u201D is on the Free plan, and only a workspace on a paid plan can create another. If another of your workspaces is on a paid plan, switch to it and create from there. Otherwise, upgrade \u201C\u2068Beta Family\u2069\u201D.',
     )
     expect(
       within(alert)
@@ -988,7 +988,7 @@ describe('creating a workspace', () => {
     expect(router.navigate).not.toHaveBeenCalled()
   })
 
-  it('shows the active workspace name as plain text, never as markup', async () => {
+  it('shows the active workspace name as plain text, never as markup, isolated from the sentence direction', async () => {
     workspace.create.mockResolvedValue({
       ok: false,
       reason: 'upgrade-required',
@@ -1003,7 +1003,9 @@ describe('creating a workspace', () => {
     await submit(user, 'Lisbon')
 
     const alert = await screen.findByRole('alert')
-    expect(alert.textContent).toContain('<img src=x onerror=alert(1)>')
+    expect(alert.textContent).toContain(
+      '\u2068<img src=x onerror=alert(1)>\u2069',
+    )
     expect(alert.querySelector('img')).toBeNull()
   })
 
