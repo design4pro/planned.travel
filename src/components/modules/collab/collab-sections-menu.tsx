@@ -1,4 +1,5 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
 import {
   Button,
@@ -31,9 +32,42 @@ export function CollabSectionsMenu({
   onWritingChange: (writing: boolean) => void
 }) {
   const t = useTranslate()
+  const router = useRouter()
   const footer = useId()
   const locked = useRef(false)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const escapeClose = useRef(false)
+  const restoreAfterRender = useRef(false)
   const [pending, setPending] = useState<CollabSectionId | null>(null)
+  useEffect(() => {
+    const cancel = () => {
+      restoreAfterRender.current = false
+    }
+    const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+    for (const event of events)
+      window.addEventListener(event, cancel, { capture: true, passive: true })
+    const unsubscribe = router.subscribe('onRendered', () => {
+      requestAnimationFrame(() => {
+        if (!restoreAfterRender.current) return
+        restoreAfterRender.current = false
+        const button = trigger.current
+        if (!button || document.activeElement !== button) return
+        // Route restoration may have started a smooth scroll before it moves.
+        window.scrollTo({
+          top: window.scrollY,
+          left: window.scrollX,
+          behavior: 'instant',
+        })
+        revealFocusedTrigger(button)
+      })
+    })
+    return () => {
+      cancel()
+      unsubscribe()
+      for (const event of events)
+        window.removeEventListener(event, cancel, true)
+    }
+  }, [router])
   const last = enabledCollabSections(sections).length === 1
 
   async function toggle(id: CollabSectionId): Promise<void> {
@@ -71,9 +105,20 @@ export function CollabSectionsMenu({
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) {
+          escapeClose.current = false
+          restoreAfterRender.current = false
+        }
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button
+          ref={trigger}
+          onBlur={() => {
+            restoreAfterRender.current = false
+          }}
           variant="secondary"
           className="min-h-11"
           data-part="collab-sections-trigger"
@@ -82,7 +127,26 @@ export function CollabSectionsMenu({
           <ChevronDown aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent loop>
+      <DropdownMenuContent
+        loop
+        onEscapeKeyDown={() => {
+          escapeClose.current = true
+        }}
+        onCloseAutoFocus={(event) => {
+          const returningFromEscape = escapeClose.current
+          if (returningFromEscape) {
+            restoreAfterRender.current = true
+            escapeClose.current = false
+            event.preventDefault()
+            if (trigger.current?.isConnected)
+              trigger.current.focus({ preventScroll: true })
+          }
+          requestAnimationFrame(() => {
+            if (returningFromEscape && !restoreAfterRender.current) return
+            revealFocusedTrigger(trigger.current)
+          })
+        }}
+      >
         <DropdownMenuLabel>
           {t('trips.collab.sections.menuLabel')}
         </DropdownMenuLabel>
@@ -117,4 +181,15 @@ export function CollabSectionsMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+function revealFocusedTrigger(button: HTMLButtonElement | null): void {
+  if (!button || document.activeElement !== button) return
+  const rect = button.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+  const x = (rect.left + rect.right) / 2
+  const obscured = [rect.top + 1, rect.bottom - 1].some(
+    (y) => !button.contains(document.elementFromPoint(x, y)),
+  )
+  if (obscured) button.scrollIntoView({ block: 'center', behavior: 'instant' })
 }

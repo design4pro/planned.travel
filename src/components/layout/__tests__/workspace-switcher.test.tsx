@@ -137,6 +137,24 @@ function workspaces(): Array<[string, boolean]> {
     ])
 }
 
+/**
+ * The switch's announcement region. Found by role while the menu is open: the open menu is modal
+ * and hides everything outside it from assistive technology except an `aria-live` region, so
+ * finding it here proves a screen reader still reaches it.
+ */
+function switchStatus(): HTMLElement {
+  return screen.getByRole('status')
+}
+
+/** What a screen reader reads as the description of `element`, following `aria-describedby`. */
+function descriptionOf(element: HTMLElement): string {
+  return (element.getAttribute('aria-describedby') ?? '')
+    .split(' ')
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ')
+    .trim()
+}
+
 beforeEach(() => {
   auth.setActive.mockReset()
   router.clearCache.mockReset()
@@ -369,7 +387,7 @@ describe('switching', () => {
         .getAttribute('aria-busy'),
     ).toBe('true')
     // A spinner is hidden from a screen reader, so a status region says the switch is running.
-    expect(screen.getByRole('status').textContent).toBe('Loading')
+    expect(switchStatus().textContent).toBe('Loading')
     // The other choices say they are unavailable instead of silently doing nothing.
     expect(
       screen
@@ -390,6 +408,78 @@ describe('switching', () => {
     })
     expect(auth.setActive).toHaveBeenCalledTimes(1)
     await vi.waitFor(() => expect(notify.success).toHaveBeenCalledTimes(1))
+  })
+
+  it('announces the switch from a region outside the menu, empty when idle', async () => {
+    const pending = deferred<{ data: object; error: null }>()
+    auth.setActive.mockReturnValue(pending.promise)
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    // ARIA 1.2 does not allow a status region among a menu's children.
+    expect(within(screen.getByRole('menu')).queryByRole('status')).toBeNull()
+    expect(switchStatus().getAttribute('aria-live')).toBe('polite')
+    expect(switchStatus().textContent).toBe('')
+    expect(switchStatus().closest('[aria-hidden="true"]')).toBeNull()
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    expect(within(screen.getByRole('menu')).queryByRole('status')).toBeNull()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(switchStatus().textContent).toBe('Loading')
+
+    pending.resolve({ data: {}, error: null })
+    await vi.waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    expect(switchStatus().textContent).toBe('')
+  })
+
+  it('describes only the pending workspace by that region', async () => {
+    const pending = deferred<{ data: object; error: null }>()
+    auth.setActive.mockReturnValue(pending.promise)
+    const { user } = await mount(sessionOf([ALPHA, BETA, GAMMA]))
+    const beta = screen.getByRole('menuitemradio', { name: 'Beta Family' })
+    const gamma = screen.getByRole('menuitemradio', { name: 'Gamma Clients' })
+    expect(descriptionOf(beta)).toBe('')
+
+    await user.click(beta)
+
+    expect(beta.getAttribute('aria-describedby')).toBe(switchStatus().id)
+    expect(descriptionOf(beta)).toBe('Loading')
+    expect(gamma.hasAttribute('aria-describedby')).toBe(false)
+    expect(
+      screen
+        .getByRole('menuitemradio', { name: 'Alpha Travel' })
+        .hasAttribute('aria-describedby'),
+    ).toBe(false)
+
+    pending.resolve({ data: {}, error: null })
+    await vi.waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+  })
+
+  it('keeps the announcement and the pending item description when the menu is reopened mid-switch', async () => {
+    const pending = deferred<{ data: object; error: null }>()
+    auth.setActive.mockReturnValue(pending.promise)
+    const { user, open } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+    // The region outlives the menu, so a reopened menu does not mount it already saying "Loading".
+    expect(switchStatus().textContent).toBe('Loading')
+
+    await open()
+
+    expect(
+      screen
+        .getByRole('group', { name: 'Workspace' })
+        .getAttribute('aria-busy'),
+    ).toBe('true')
+    expect(
+      descriptionOf(screen.getByRole('menuitemradio', { name: 'Beta Family' })),
+    ).toBe('Loading')
+    expect(within(screen.getByRole('menu')).queryByRole('status')).toBeNull()
+
+    pending.resolve({ data: {}, error: null })
+    await vi.waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   })
 
   it('ignores a second tap on the enabled pending workspace', async () => {
@@ -979,7 +1069,9 @@ describe('creating a workspace', () => {
     await user.keyboard('{Escape}')
 
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.getByRole('status').textContent).toBe('Loading')
+    expect(
+      within(screen.getByRole('dialog')).getByRole('status').textContent,
+    ).toBe('Loading')
 
     pending.resolve({ ok: true, organizationId: 'org_new', activated: true })
     await vi.waitFor(() => {

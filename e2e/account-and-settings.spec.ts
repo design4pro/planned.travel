@@ -35,6 +35,11 @@ function rows(page: Page) {
     .getByRole('listitem')
 }
 
+/** The page's own live region: the account menu in the banner mounts another one (the switch status). */
+function passkeyStatus(page: Page) {
+  return page.getByRole('main').getByRole('status')
+}
+
 /** The rows while a modal dialog is open: the page behind it is `aria-hidden`, so ask for hidden. */
 function rowsBehindDialog(page: Page) {
   return page
@@ -99,8 +104,8 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
       page.getByRole('heading', { level: 2, name: 'Your passkeys' }),
     ).toBeVisible()
     // The one live region exists whatever happens next, empty until something is announced.
-    await expect(page.getByRole('status')).toHaveCount(1)
-    await expect(page.getByRole('status')).toHaveText('')
+    await expect(passkeyStatus(page)).toHaveCount(1)
+    await expect(passkeyStatus(page)).toHaveText('')
 
     const output = watched()
     expect(
@@ -312,7 +317,7 @@ test.describe('ACC-03 - a member adds a passkey on this device, names it and tak
           : null
       expect(created, 'verify answers with the new passkey').not.toBeNull()
 
-      await expect(page.getByRole('status')).toHaveText('Passkey added')
+      await expect(passkeyStatus(page)).toHaveText('Passkey added')
       await expect(rows(page)).toHaveCount(before + 1)
       // The ceremony sent no name: the new row opens in rename mode, with focus in the field.
       const field = page.getByRole('textbox', { name: 'Name this passkey' })
@@ -330,7 +335,7 @@ test.describe('ACC-03 - a member adds a passkey on this device, names it and tak
       await expect(
         rows(page).getByText('Work phone', { exact: true }),
       ).toBeVisible()
-      await expect(page.getByRole('status')).toHaveText('Name saved')
+      await expect(passkeyStatus(page)).toHaveText('Name saved')
       const rename = page.getByRole('button', { name: 'Rename Work phone' })
       await expect(rename, 'focus returns to the Rename control').toBeFocused()
 
@@ -378,7 +383,7 @@ test.describe('ACC-03 - a member adds a passkey on this device, names it and tak
       )
       await expect(dialog).toBeHidden()
       await expect(rows(page)).toHaveCount(before)
-      await expect(page.getByRole('status')).toHaveText('Passkey removed')
+      await expect(passkeyStatus(page)).toHaveText('Passkey removed')
       await expect(
         page.getByRole('button', { name: 'Add a passkey' }).first(),
         'focus goes to the Add button',

@@ -455,6 +455,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Скрыть панель {label}',
   'plan.workspace.narrowPanel': 'Сузить {label}',
   'plan.workspace.widenPanel': 'Расширить {label}',
+  'collab.sections.tabsLabel': 'Разделы совместной работы',
   'collab.sections.trigger': 'Выбрать разделы',
   'collab.sections.menuLabel': 'Показывать всем участникам поездки',
   'collab.sections.keepOne':
