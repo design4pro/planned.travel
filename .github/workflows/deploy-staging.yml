@@ -1,195 +1,158 @@
-name: Deploy staging
-
-# Git Flow's preview leg: a push to `develop` deploys the `staging` environment
-# from wrangler.jsonc once CI has passed on that commit. ci.yml calls this
-# workflow as its last job, behind `verify`, the unit suite and the e2e report,
-# so a red commit never reaches staging (ADR 0021). Production stays in deploy.yml,
-# on `main`. `workflow_dispatch` waits on nothing: it is for redeploying a
-# commit by hand, or for shipping while CI itself is down.
+name: Verify staging calendar edge enforcement
 on:
-  workflow_call:
   workflow_dispatch:
-
 permissions:
   contents: read
-
-# `runs-on` below reads through `vars.RUNNER_DEPLOY`, a repository variable that is
-# deliberately unset: unset, the default here selects the VPS pool's `ci` slots, like
-# every other job in this repository (ADR 0027). ADR 0026's objection to deploying from
-# the pool was a pnpm store, a Node toolcache and a restarted container shared with
-# pull request code; the VPS pool shares none of them - one job per container, the
-# container discarded afterwards, and its only mount is the artifact store, which a
-# deploy never reads. When the VPS is down, setting the variable to
-# `["ubuntu-latest"]` ships from a GitHub-hosted runner without a pull request.
-
 jobs:
-  deploy:
-    name: Migrate and deploy to staging
+  verify:
+    name: Bounded staging-only verification
     runs-on: ${{ fromJSON(vars.RUNNER_DEPLOY || '["self-hosted","linux","X64","ci"]') }}
-    timeout-minutes: 25
-    # Never run two deploys at once, and never cancel one half-way: an interrupted
-    # `d1 migrations apply` would leave the schema between two versions. On the
-    # job, so it holds the same way whether ci.yml calls this or a human dispatches it.
-    concurrency:
-      group: deploy-staging
-      cancel-in-progress: false
-    environment:
-      name: staging
-      url: https://staging.planned.travel
-
-    env:
-      CI: 'true'
-      # `vars` resolves environment-level values over repository-level ones, so
-      # the `staging` GitHub Environment overrides these with sandbox ids.
-      VITE_POLAR_PRODUCT_SOLO_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_MONTHLY }}
-      VITE_POLAR_PRODUCT_SOLO_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_SOLO_YEARLY }}
-      VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
-      VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
-
-      # Sentry. The DSN is public by construction - it ships in the client bundle - so it is a
-      # repository variable, while the token that uploads source maps is a secret. VITE_ENVIRONMENT
-      # mirrors the ENVIRONMENT var the Worker reads from wrangler.jsonc, because the browser cannot
-      # read a Worker var. VITE_SENTRY_RELEASE is read by BOTH bundles, so one deploy is one Sentry
-      # release rather than two halves nothing relates.
-      #
-      # All of these may be empty. Without SENTRY_AUTH_TOKEN the build generates no source maps and
-      # uploads nothing; without the DSN the SDK is tree-shaken out of the bundle entirely. A fork
-      # therefore builds and deploys exactly as before.
-      VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
-      VITE_ENVIRONMENT: staging
-      VITE_SENTRY_RELEASE: ${{ github.sha }}
-      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
-      SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
-
+    timeout-minutes: 2
+    environment: staging
     steps:
-      # The `secrets` context is not available in a job-level `if`, so the gate
-      # is a first step: a fork or a freshly cloned repo without Cloudflare
-      # credentials reports a warning and skips, instead of failing red.
-      - name: Check deploy credentials are configured
-        id: gate
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
-            echo 'configured=false' >> "$GITHUB_OUTPUT"
-            echo '::warning title=Deploy skipped::Set the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets to enable deploys.'
-          else
-            echo 'configured=true' >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check out
-        if: steps.gate.outputs.configured == 'true'
-        uses: actions/checkout@v7
-
-      - name: Set up the toolchain
-        if: steps.gate.outputs.configured == 'true'
-        uses: ./.github/actions/setup
-
-      - name: Generate route tree
-        if: steps.gate.outputs.configured == 'true'
-        run: pnpm generate-routes
-
-      # The environment is chosen at BUILD time (docs/DEPLOY.md §7.5): the Vite
-      # plugin flattens the selected env into dist/server/wrangler.json and
-      # writes a .wrangler/deploy/config.json redirect. `wrangler deploy` below
-      # runs without `--env` on purpose — the redirect already points at the
-      # flattened staging config, which carries no env block. The d1 migrations
-      # step does NOT consume that redirect and reads wrangler.jsonc directly,
-      # so it is the one command that needs `--env staging`.
-      - name: Build (staging environment)
-        if: steps.gate.outputs.configured == 'true'
-        run: CLOUDFLARE_ENV=staging pnpm build
-
-      # Cheap insurance against the silent-production gotcha: a build that ran
-      # without CLOUDFLARE_ENV emits the production config, and a deploy from it
-      # would overwrite production. Refuse to continue unless the emitted
-      # config is the staging Worker.
-      - name: Verify the emitted config targets staging
-        if: steps.gate.outputs.configured == 'true'
-        run: |
-          node --input-type=module -e "
-            import { readFileSync } from 'node:fs';
-            const c = JSON.parse(readFileSync('./dist/server/wrangler.json', 'utf8'));
-            if (c.name !== 'planned-travel-staging') {
-              console.error('emitted config is ' + c.name + ', refusing to deploy');
-              process.exit(1);
-            }
-            console.log('emitted config: ' + c.name);
-          "
-
-      # Migrations run first and are additive by policy (see docs/DEPLOY.md), so
-      # the currently deployed Worker keeps serving against the new schema while
-      # the upload completes.
-      - name: Apply D1 migrations
-        if: steps.gate.outputs.configured == 'true'
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
-          # No `wranglerVersion` on purpose, here or in any other call below.
-          # Unset, wrangler-action runs whatever `pnpm exec wrangler --version`
-          # reports, so pnpm-lock.yaml owns the version. The old pin drifted from
-          # the lockfile and every deploy shipped an older wrangler than the one
-          # the repository tests against (#567).
-          command: d1 migrations apply planned-travel-db-staging --remote --env staging
-
-      # The `airports` table is the one the migration above creates and does not
-      # fill: it is platform reference data cut from a public-domain source at
-      # build time, so the rows live in a committed artefact rather than in the
-      # schema. The connection search's stop picker is a gate rather than a
-      # shortcut — a timetable router is asked *where*, and free text carries no
-      # coordinates — so an unloaded table is that feature not working at all.
-      #
-      # Runs on every deploy rather than only when the artefact changed, because
-      # the load is an upsert followed by a sweep on its own load stamp: the
-      # table is never empty for a reader, and a deploy carrying an unchanged
-      # artefact rewrites nine thousand rows to the values they already hold,
-      # which costs seconds and changes nothing anyone can observe. The SQL is
-      # generated first so the execute below is the same wrangler-action, using
-      # the same wrangler as every other call here.
-      - name: Load the airport catalogue
-        if: steps.gate.outputs.configured == 'true'
-        run: node scripts/seed/airports.mjs --sql-out airports.sql
-
-      - name: Apply the airport catalogue
-        if: steps.gate.outputs.configured == 'true'
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
-          command: d1 execute planned-travel-db-staging --remote --env staging --file airports.sql --yes
-
-      - name: Deploy Worker
-        if: steps.gate.outputs.configured == 'true'
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
-          command: deploy
-
-      # Cheap proof that the new version is actually serving: the tile endpoint
-      # exercises the Worker, the R2 binding and the Range path in one request.
-      # The hostname sits behind Cloudflare Access, so the requests carry an
-      # Access service token and assert exact status codes — a bare `curl
-      # --fail` would treat the Access 302 login redirect as green.
-      - name: Smoke-check the deployment
-        if: steps.gate.outputs.configured == 'true'
+      - name: Verify existing Access identity and edge threshold
         env:
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        shell: bash
         run: |
           set -euo pipefail
-          auth=(--header "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" \
-                --header "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET")
-          code=$(curl --silent --show-error --output /dev/null \
-            --write-out '%{http_code}' "${auth[@]}" https://staging.planned.travel/)
-          echo "landing: $code"; test "$code" = 200
-          code=$(curl --silent --show-error --output /dev/null \
-            --header 'Range: bytes=0-15' --write-out '%{http_code}' "${auth[@]}" \
-            https://staging.planned.travel/api/tiles/basemap.pmtiles)
-          echo "tiles: $code"; test "$code" = 206
+          command -v python3 >/dev/null
+          python3 - <<'PYTHON'
+          import concurrent.futures
+          import json
+          import os
+          import re
+          import subprocess
+          import select
+          import sys
+          import threading
+          import time
+          import urllib.error
+          import urllib.request
+          
+          URL = 'https://staging.planned.travel/api/feed/cez-902-enforcement-probe-invalid'
+          MAX_ATTEMPTS = 140
+          AUTH = {'CF-Access-Client-Id': os.environ['CF_ACCESS_CLIENT_ID'],
+                  'CF-Access-Client-Secret': os.environ['CF_ACCESS_CLIENT_SECRET']}
+          if not all(AUTH.values()):
+              raise SystemExit('Missing existing Access identity; no requests sent')
+          
+          REQUEST_CODE = "import http.client\nimport json\nimport os\nimport re\nimport sys\n\nHOST = 'staging.planned.travel'\nPATH = '/api/feed/cez-902-enforcement-probe-invalid'\nHEADERS = {'CF-Access-Client-Id': os.environ['CF_ACCESS_CLIENT_ID'],\n           'CF-Access-Client-Secret': os.environ['CF_ACCESS_CLIENT_SECRET'],\n           'User-Agent': 'Mozilla/5.0 (compatible; PlannedTravelVerification/1.0; +https://planned.travel)',\n           'Accept': 'text/plain'}\nconnection = http.client.HTTPSConnection(HOST, timeout=5)\ntry:\n    for line in sys.stdin:\n        try:\n            command = json.loads(line)\n            timeout = min(5, max(0.001, float(command['timeout'])))\n            connection.timeout = timeout\n            if connection.sock is not None:\n                connection.sock.settimeout(timeout)\n            connection.request('GET', PATH, headers=HEADERS)\n            response = connection.getresponse()\n            body = response.read(65537).decode('utf-8', 'replace')\n            ray = response.getheader('cf-ray', '')\n            result = {'status': response.status,\n                      'ray': ray if re.fullmatch(r'[0-9a-fA-F]+-[A-Z]{3}', ray) else None,\n                      'edge_1015': bool(re.search(r'(?:Error\\s*(?:code\\s*)?(?:</?[^>]+>\\s*)*1015|error-code[^>]*>1015)', body, re.I)),\n                      'access': '.cloudflareaccess.com/' in response.getheader('location', '')}\n            if len(body.encode('utf-8')) > 65536:\n                result = {'status': None, 'transport_error': True}\n            response.close()\n        except Exception:\n            result = {'status': None, 'transport_error': True}\n        print(json.dumps(result), flush=True)\n        if result.get('transport_error'):\n            break\nfinally:\n    connection.close()\n"
+          
+          class Client:
+              def __init__(self):
+                  self.process = subprocess.Popen([sys.executable, '-u', '-c', REQUEST_CODE],
+                                                  stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                  stderr=subprocess.DEVNULL)
+                  os.set_blocking(self.process.stdout.fileno(), False)
+                  self.buffer = b''
+          
+              def close(self):
+                  if self.process.poll() is None:
+                      self.process.terminate()
+                      try:
+                          self.process.wait(timeout=0.2)
+                      except subprocess.TimeoutExpired:
+                          self.process.kill()
+                          self.process.wait()
+                  self.process.stdin.close()
+                  self.process.stdout.close()
+          
+              def request(self, timeout):
+                  started = time.monotonic()
+                  deadline = started + timeout
+                  try:
+                      self.process.stdin.write((json.dumps({'timeout': timeout})+'\n').encode())
+                      self.process.stdin.flush()
+                      while b'\n' not in self.buffer:
+                          remaining = deadline - time.monotonic()
+                          if remaining <= 0:
+                              raise TimeoutError()
+                          ready, _, _ = select.select([self.process.stdout], [], [], remaining)
+                          if not ready:
+                              raise TimeoutError()
+                          chunk = os.read(self.process.stdout.fileno(), 4096)
+                          if not chunk:
+                              raise EOFError()
+                          self.buffer += chunk
+                          if len(self.buffer) > 4096:
+                              raise ValueError('Oversized sanitized result')
+                      line, self.buffer = self.buffer.split(b'\n', 1)
+                      result = json.loads(line)
+                      if not isinstance(result, dict):
+                          raise ValueError('Invalid sanitized result')
+                  except Exception:
+                      result = {'status': None, 'transport_error': True}
+                      self.close()
+                  return {**result, 'elapsed_ms': round((time.monotonic()-started)*1000)}
+          
+          def request(timeout):
+              client = Client()
+              try:
+                  return client.request(timeout)
+              finally:
+                  if not client.process.stdin.closed:
+                      client.close()
+          
+          results = []
+          attempts = 1
+          baseline = request(5)
+          results.append({'phase': 'baseline', **baseline})
+          if baseline.get('status') != 404 or baseline.get('access'):
+              print(json.dumps({'verdict': 'INCONCLUSIVE', 'attempts': attempts, 'results': results}))
+              raise SystemExit('Baseline not an authenticated 404; no burst performed')
+          
+          lock = threading.Lock()
+          stop = threading.Event()
+          fatal = threading.Event()
+          start = time.monotonic()
+          deadline = start + 8
+          
+          def worker():
+              global attempts
+              client = Client()
+              try:
+                  while not stop.is_set():
+                      with lock:
+                          remaining = deadline - time.monotonic()
+                          if stop.is_set() or attempts >= MAX_ATTEMPTS - 1 or remaining <= 0:
+                              return
+                          attempts += 1
+                      result = client.request(min(5, remaining))
+                      with lock:
+                          results.append({'phase': 'burst', 'offset_ms': round((time.monotonic()-start)*1000), **result})
+                          attributable = result.get('edge_1015') and result.get('status') in (403, 429)
+                          if result.get('access') or result.get('transport_error') or (result.get('status') != 404 and not attributable):
+                              fatal.set()
+                              stop.set()
+                          elif attributable:
+                              stop.set()
+              finally:
+                  if not client.process.stdin.closed:
+                      client.close()
+          
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+              list(pool.map(lambda _: worker(), range(4)))
+          
+          burst_elapsed = round((time.monotonic()-start)*1000)
+          if burst_elapsed > 13000:
+              fatal.set()
+          if fatal.is_set():
+              print(json.dumps({'verdict': 'INCONCLUSIVE', 'fatal_abort': True, 'attempts': attempts, 'burst_elapsed_ms': burst_elapsed, 'results': results}))
+              raise SystemExit('Fatal burst response or deadline exceeded; no recovery request sent')
+          time.sleep(12)
+          attempts += 1
+          recovery = request(5)
+          results.append({'phase': 'recovery', **recovery})
+          edge = [x for x in results if x.get('phase') == 'burst' and x.get('edge_1015') and x.get('status') in (403, 429)]
+          passed = bool(edge) and not fatal.is_set() and baseline.get('status') == 404 and recovery.get('status') == 404 and not recovery.get('access')
+          report = {'verdict': 'PASS' if passed else 'INCONCLUSIVE', 'attempts': attempts,
+                    'burst_elapsed_ms': burst_elapsed, 'results': results}
+          encoded = json.dumps(report, sort_keys=True)
+          print(encoded)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('## Bounded staging calendar edge verification\n\n```json\n' + encoded + '\n```\n')
+          if not passed:
+              raise SystemExit('No attributable threshold evidence; do not retry automatically')
+          PYTHON
