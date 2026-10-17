@@ -305,42 +305,83 @@ it('does not retain Escape focus ownership for a later outside dismissal', async
   expect(focus).not.toHaveBeenCalledWith({ preventScroll: true })
 })
 
-it('cancels a later router scroll restoration before it hides returned focus', async () => {
+it.each([false, true])(
+  'cancels the first late restoration (obscured %s)',
+  async (obscuredAfterClose) => {
+    const { user } = setup()
+    const trigger = screen.getByRole('button', { name: /Choose sections/ })
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      x: 37,
+      y: 0,
+      top: 0,
+      bottom: 44,
+      left: 37,
+      right: 216,
+      width: 179,
+      height: 44,
+      toJSON: () => ({}),
+    })
+    const reveal = vi.spyOn(trigger, 'scrollIntoView')
+    let obscured = false
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: () => (obscured ? document.body : trigger),
+    })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    reveal.mockClear()
+    const cancel = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    obscured = obscuredAfterClose
+    act(() => routerEvents.rendered?.())
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(cancel).toHaveBeenCalledWith({
+      top: window.scrollY,
+      left: window.scrollX,
+      behavior: 'instant',
+    })
+    if (obscuredAfterClose)
+      expect(reveal).toHaveBeenCalledWith({
+        block: 'center',
+        behavior: 'instant',
+      })
+    else expect(reveal).not.toHaveBeenCalled()
+  },
+)
+
+it.each(['wheel', 'touchstart', 'pointerdown', 'keydown'] as const)(
+  'leaves reading position alone after Escape followed by user %s',
+  async (type) => {
+    const { user } = setup()
+    const trigger = screen.getByRole('button', { name: /Choose sections/ })
+    await user.click(trigger)
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const reveal = vi.spyOn(trigger, 'scrollIntoView')
+    fireEvent(window, new Event(type))
+    act(() => routerEvents.rendered?.())
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    expect(scroll).not.toHaveBeenCalled()
+    expect(reveal).not.toHaveBeenCalled()
+  },
+)
+
+it('consumes the late restoration correction only once after Escape', async () => {
   const { user } = setup()
   const trigger = screen.getByRole('button', { name: /Choose sections/ })
-  vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
-    x: 37,
-    y: 0,
-    top: 0,
-    bottom: 44,
-    left: 37,
-    right: 216,
-    width: 179,
-    height: 44,
-    toJSON: () => ({}),
-  })
-  const reveal = vi.spyOn(trigger, 'scrollIntoView')
-  let obscured = false
-  Object.defineProperty(document, 'elementFromPoint', {
-    configurable: true,
-    value: () => (obscured ? document.body : trigger),
-  })
   await user.click(trigger)
   await user.keyboard('{Escape}')
   await waitFor(() => expect(document.activeElement).toBe(trigger))
   await new Promise((resolve) => requestAnimationFrame(resolve))
-  reveal.mockClear()
-  const cancel = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   act(() => routerEvents.rendered?.())
   await new Promise((resolve) => requestAnimationFrame(resolve))
-  expect(cancel).toHaveBeenCalledWith({
-    top: window.scrollY,
-    left: window.scrollX,
-    behavior: 'instant',
-  })
-  expect(reveal).not.toHaveBeenCalled()
-  obscured = true
+  expect(scroll).toHaveBeenCalledOnce()
+  scroll.mockClear()
   act(() => routerEvents.rendered?.())
   await new Promise((resolve) => requestAnimationFrame(resolve))
-  expect(reveal).toHaveBeenCalledWith({ block: 'center', behavior: 'instant' })
+  expect(scroll).not.toHaveBeenCalled()
 })

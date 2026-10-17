@@ -37,24 +37,37 @@ export function CollabSectionsMenu({
   const locked = useRef(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const escapeClose = useRef(false)
+  const restoreAfterRender = useRef(false)
   const [pending, setPending] = useState<CollabSectionId | null>(null)
-  useEffect(
-    () =>
-      router.subscribe('onRendered', () => {
-        requestAnimationFrame(() => {
-          const button = trigger.current
-          if (!button || document.activeElement !== button) return
-          // Route restoration may have started a smooth scroll before it moves.
-          window.scrollTo({
-            top: window.scrollY,
-            left: window.scrollX,
-            behavior: 'instant',
-          })
-          revealFocusedTrigger(button)
+  useEffect(() => {
+    const cancel = () => {
+      restoreAfterRender.current = false
+    }
+    const events = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const
+    for (const event of events)
+      window.addEventListener(event, cancel, { capture: true, passive: true })
+    const unsubscribe = router.subscribe('onRendered', () => {
+      requestAnimationFrame(() => {
+        if (!restoreAfterRender.current) return
+        restoreAfterRender.current = false
+        const button = trigger.current
+        if (!button || document.activeElement !== button) return
+        // Route restoration may have started a smooth scroll before it moves.
+        window.scrollTo({
+          top: window.scrollY,
+          left: window.scrollX,
+          behavior: 'instant',
         })
-      }),
-    [router],
-  )
+        revealFocusedTrigger(button)
+      })
+    })
+    return () => {
+      cancel()
+      unsubscribe()
+      for (const event of events)
+        window.removeEventListener(event, cancel, true)
+    }
+  }, [router])
   const last = enabledCollabSections(sections).length === 1
 
   async function toggle(id: CollabSectionId): Promise<void> {
@@ -94,12 +107,18 @@ export function CollabSectionsMenu({
   return (
     <DropdownMenu
       onOpenChange={(open) => {
-        if (open) escapeClose.current = false
+        if (open) {
+          escapeClose.current = false
+          restoreAfterRender.current = false
+        }
       }}
     >
       <DropdownMenuTrigger asChild>
         <Button
           ref={trigger}
+          onBlur={() => {
+            restoreAfterRender.current = false
+          }}
           variant="secondary"
           className="min-h-11"
           data-part="collab-sections-trigger"
@@ -114,13 +133,18 @@ export function CollabSectionsMenu({
           escapeClose.current = true
         }}
         onCloseAutoFocus={(event) => {
-          if (escapeClose.current) {
+          const returningFromEscape = escapeClose.current
+          if (returningFromEscape) {
+            restoreAfterRender.current = true
             escapeClose.current = false
             event.preventDefault()
             if (trigger.current?.isConnected)
               trigger.current.focus({ preventScroll: true })
           }
-          requestAnimationFrame(() => revealFocusedTrigger(trigger.current))
+          requestAnimationFrame(() => {
+            if (returningFromEscape && !restoreAfterRender.current) return
+            revealFocusedTrigger(trigger.current)
+          })
         }}
       >
         <DropdownMenuLabel>
