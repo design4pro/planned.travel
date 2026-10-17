@@ -12,7 +12,13 @@ import {
   tripIdByName,
 } from './helpers/places-and-maps.ts'
 import type { Camera } from './helpers/places-and-maps.ts'
-import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import {
+  DEMO_EMAIL,
+  DEMO_PASSWORD,
+  hasSession,
+  useSession,
+} from './helpers/session.ts'
+import { visit } from './helpers/console.ts'
 import { settleMutations } from './helpers/settle.ts'
 
 /**
@@ -438,6 +444,78 @@ test.describe('663 — the map hand-off', () => {
       !(await hasSession(page)),
       `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
     )
+  })
+
+  test('947 — a viewer gets map links without write controls', async ({
+    browser,
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(240_000)
+    context.setDefaultTimeout(30_000)
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.spanning)
+    const peopleRoute = {
+      name: 'trip-people',
+      path: `/trips/${tripId}/people`,
+      ready: 'main',
+    }
+    await visit(page, peopleRoute, 'light')
+    const role = page.getByRole('combobox', {
+      name: 'Role · Mika Tanaka',
+      exact: true,
+    })
+    await expect(role).toContainText('Editor')
+    const viewer = await browser.newContext({
+      baseURL,
+      extraHTTPHeaders: { 'x-pt-server-today': '2026-08-20' },
+    })
+    viewer.setDefaultTimeout(30_000)
+    try {
+      await role.click()
+      await page.getByRole('option', { name: 'Viewer', exact: true }).click()
+      await settleMutations(page)
+      await visit(page, peopleRoute, 'light')
+      await expect(role).toContainText('Viewer')
+      const signedIn = await viewer.request.post('/api/auth/sign-in/email', {
+        headers: { origin: baseURL ?? 'http://localhost:3030' },
+        data: { email: 'mika@planned.travel', password: DEMO_PASSWORD },
+        timeout: 90_000,
+      })
+      expect(signedIn.ok()).toBe(true)
+      await onRoute(viewer, planRoute(tripId), async (plan) => {
+        await expect(
+          plan
+            .getByRole('link', { name: /^Directions in Google Maps for / })
+            .first(),
+        ).toBeVisible()
+        await expect(
+          plan.getByRole('button', { name: /Add (a )?(place|stay)/i }),
+        ).toHaveCount(0)
+        await plan
+          .getByRole('button', { name: /^Actions for / })
+          .first()
+          .click()
+        const menu = plan.getByRole('menu')
+        await expect(menu.getByRole('menuitem')).toHaveCount(2)
+        for (const service of ['Google Maps', 'OpenStreetMap']) {
+          await expect(
+            menu.getByRole('menuitem', {
+              name: new RegExp(`^Open .+ in ${service}`),
+            }),
+          ).toHaveAttribute('target', '_blank')
+        }
+        await plan.keyboard.press('Escape')
+      })
+    } finally {
+      await viewer.close()
+      await visit(page, peopleRoute, 'light')
+      await role.click()
+      await page.getByRole('option', { name: 'Editor', exact: true }).click()
+      await settleMutations(page)
+      await visit(page, peopleRoute, 'light')
+      await expect(role).toContainText('Editor')
+    }
   })
 
   test('a day offers directions and a stop offers both services', async ({
