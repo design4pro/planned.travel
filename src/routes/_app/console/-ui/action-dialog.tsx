@@ -14,10 +14,15 @@
  * that produced it, and the dialog stays open. A toast that replaces the panel would take the
  * instruction away with it.
  *
- * What reaches the reader goes through `readConsoleFailure()` first, and that is a repair rather
- * than a formality: a Zod validator rejects with `JSON.stringify(issues)` as its message, so before
- * it existed an operator who typed a short password was shown a bracketed array of `origin`, `code`
- * and `minimum` fields with the sentence buried inside it. Measured on this screen, not guessed at.
+ * What reaches the reader goes through `readConsoleFailureDetail()` first, and that is a repair
+ * rather than a formality: a Zod validator rejects with `JSON.stringify(issues)` as its message, so
+ * before it existed an operator who typed a short password was shown a bracketed array of `origin`,
+ * `code` and `minimum` fields with the sentence buried inside it. Measured on this screen, not
+ * guessed at.
+ *
+ * It also says whether the server wrote the sentence. A refusal arrives in English in every locale
+ * (`docs/SPEC.md` §9 rule 10), so that span is marked `lang="en" dir="ltr"` for a screen reader and
+ * the translated fallback or a raw client-thrown message is not.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -33,10 +38,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui'
-import { readConsoleFailure } from '#/components/console'
+import { readConsoleFailureDetail } from '#/components/console'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 
+import type { ConsoleFailure } from '#/components/console'
 import type { ButtonVariant } from '#/components/ui'
 import type { ReactNode } from 'react'
 
@@ -70,7 +76,7 @@ export function ConsoleActionDialog({
 }: ConsoleActionDialogProps) {
   const t = useTranslate()
   const [busy, setBusy] = useState(false)
-  const [failure, setFailure] = useState<string | null>(null)
+  const [failure, setFailure] = useState<ConsoleFailure | null>(null)
 
   // A dialog reopened after a refusal opens on its own terms, not on the last one's error.
   useEffect(() => {
@@ -87,7 +93,7 @@ export function ConsoleActionDialog({
       await onConfirm()
       onOpenChange(false)
     } catch (cause) {
-      setFailure(readConsoleFailure(cause, t('console.failure.fallback')))
+      setFailure(readConsoleFailureDetail(cause, t('console.failure.fallback')))
     } finally {
       setBusy(false)
     }
@@ -120,8 +126,11 @@ export function ConsoleActionDialog({
               )}
             >
               <TriangleAlert aria-hidden className="mt-px size-4 shrink-0" />
-              <span className="min-w-0 [overflow-wrap:anywhere]">
-                {failure}
+              <span
+                className="min-w-0 [overflow-wrap:anywhere]"
+                {...(failure.authored ? { lang: 'en', dir: 'ltr' } : {})}
+              >
+                {failure.message}
               </span>
             </p>
           )}

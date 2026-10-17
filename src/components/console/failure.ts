@@ -56,6 +56,18 @@ function issueMessages(payload: unknown): ReadonlyArray<string> | null {
   return messages
 }
 
+/** What a console dialog shows for a rejection, and whether the server wrote it. */
+export interface ConsoleFailure {
+  readonly message: string
+  /**
+   * True only for a sentence the server wrote - an envelope `refusal` or `validation` message -
+   * which is English whatever the locale (`docs/SPEC.md` §9 rule 10), so a screen marks it
+   * `lang="en"`. False for the caller's translated fallback and for anything thrown on the client,
+   * whose language the code cannot know.
+   */
+  readonly authored: boolean
+}
+
 /**
  * The sentence a console dialog shows when its action was rejected.
  *
@@ -67,16 +79,18 @@ function issueMessages(payload: unknown): ReadonlyArray<string> | null {
  * Anything thrown on the client never passes that boundary, so the original reading below is still
  * the path for those and is left exactly as it was.
  */
-export function readConsoleFailure(
+export function readConsoleFailureDetail(
   cause: unknown,
   fallback: string = CONSOLE_ACTION_FALLBACK,
-): string {
+): ConsoleFailure {
   const failure = readPublicFailure(cause)
   if (failure.kind !== 'unexpected') {
-    return failure.message ?? fallback
+    return failure.message === undefined
+      ? { message: fallback, authored: false }
+      : { message: failure.message, authored: true }
   }
   if (failure.reference !== undefined) {
-    return fallback
+    return { message: fallback, authored: false }
   }
 
   const raw =
@@ -87,21 +101,32 @@ export function readConsoleFailure(
         : null
 
   if (raw === null) {
-    return fallback
+    return { message: fallback, authored: false }
   }
   // Cheap gate before the parse: a refusal sentence never starts with a bracket, and `JSON.parse`
   // on every error message would be a try/catch on the common path.
   if (!raw.startsWith('[')) {
-    return raw
+    return { message: raw, authored: false }
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(raw)
   } catch {
-    return raw
+    return { message: raw, authored: false }
   }
 
   const messages = issueMessages(parsed)
-  return messages === null ? raw : messages.join(' ')
+  return {
+    message: messages === null ? raw : messages.join(' '),
+    authored: false,
+  }
+}
+
+/** The sentence alone, for the screens that render it without marking its language. */
+export function readConsoleFailure(
+  cause: unknown,
+  fallback: string = CONSOLE_ACTION_FALLBACK,
+): string {
+  return readConsoleFailureDetail(cause, fallback).message
 }
