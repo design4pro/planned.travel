@@ -1,4 +1,6 @@
 import '#/components/ui/__tests__/test-env'
+import { useState } from 'react'
+import * as History from '../use-thread-history'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
@@ -11,7 +13,12 @@ import {
   waitFor,
 } from '@testing-library/react'
 
-import { editMessageFn, postMessageFn } from '#/server/fns/collab-thread'
+import {
+  deleteMessageFn,
+  toggleReactionFn,
+  editMessageFn,
+  postMessageFn,
+} from '#/server/fns/collab-thread'
 import { TooltipProvider, toast } from '#/components/ui'
 import { encodePublicFailure } from '#/lib/errors'
 import { formatWeekday } from '#/lib/format'
@@ -569,5 +576,108 @@ describe('safe composer sends', () => {
     render(composerTree())
     expect(screen.getByText('Say the first thing')).toBeTruthy()
     expect(document.activeElement).not.toBe(screen.getByRole('textbox'))
+  })
+})
+
+describe('the viewers own actions on held history', () => {
+  function heldThread() {
+    const old = message('m1', 'user-1', '2026-06-23T09:00:00Z', 'Held message')
+    const live = message('m2', 'user-2', '2026-06-23T09:01:00Z', 'Live message')
+    const tree = (messages: ReadonlyArray<MessageData>) => (
+      <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
+        <TooltipProvider>
+          <Thread
+            tripId="trip"
+            messages={messages}
+            people={PEOPLE}
+            viewerUserId="user-1"
+            canModerate={false}
+            timeZone="UTC"
+          />
+        </TooltipProvider>
+      </I18nProvider>
+    )
+    vi.spyOn(History, 'useThreadHistory').mockImplementation(
+      (_tripId, window) => {
+        const [held, setHeld] = useState<ReadonlyArray<MessageData>>([old])
+        return {
+          messages: [...held, ...window],
+          exhausted: true,
+          loadOlder: async () => {},
+          patchHeld: (patch) => setHeld(patch),
+        }
+      },
+    )
+    render(tree([live]))
+    expect(screen.getByText('Held message')).toBeTruthy()
+  }
+
+  it('edits a held row and displays edited', async () => {
+    heldThread()
+    const field = await chooseContext('edit')
+    fireEvent.change(field, { target: { value: 'Updated history' } })
+    fireEvent.submit(field.closest('form')!)
+    await waitFor(() =>
+      expect(screen.getByText('Updated history')).toBeTruthy(),
+    )
+    expect(screen.queryByText('Held message')).toBeNull()
+    expect(screen.getByText(En['collab.message.edited'])).toBeTruthy()
+  })
+
+  it('removes a held row only after a successful delete', async () => {
+    vi.mocked(deleteMessageFn).mockResolvedValue({ deleted: true })
+    heldThread()
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole('button', {
+        name: En['collab.message.actionsFor'].replace('{name}', 'Ada Viewer'),
+      }),
+    )
+    await user.click(
+      screen.getByRole('menuitem', { name: En['collab.message.delete'] }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: En['collab.message.delete'] }),
+    )
+    await waitFor(() => expect(screen.queryByText('Held message')).toBeNull())
+  })
+
+  it('settles a reaction on a held row without reverting its new count', async () => {
+    vi.mocked(toggleReactionFn).mockResolvedValue({ added: true })
+    heldThread()
+    const user = userEvent.setup()
+    await user.click(
+      screen.getAllByRole('button', { name: En['collab.message.react'] })[0]!,
+    )
+    await user.click(
+      screen.getByRole('button', { name: En['collab.reaction.agree'] }),
+    )
+    await waitFor(() => expect(toggleReactionFn).toHaveBeenCalled())
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', {
+            name: En['collab.reaction.tallyMine']
+              .replace('{emoji}', '👍')
+              .replace('{count}', '1'),
+          })
+          .getAttribute('aria-pressed'),
+      ).toBe('true'),
+    )
+  })
+
+  it('renders a reply without a quote when its target is absent', () => {
+    const reply = {
+      ...message('m2', 'user-2', '2026-06-23T09:01:00Z', 'Reply alone'),
+      replyToId: 'missing',
+    }
+    mount('en', namespaceCatalogue('modules', En), [reply])
+    expect(screen.getByText('Reply alone')).toBeTruthy()
+    expect(
+      screen
+        .getByText('Reply alone')
+        .closest('li')
+        ?.querySelector('p.border-s'),
+    ).toBeNull()
   })
 })
