@@ -19,7 +19,7 @@
  *   later edit to the builder can emit them; the test captures the SQL to keep it that way.
  */
 
-import { asc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { asc, eq, exists, inArray, isNull, sql } from 'drizzle-orm'
 import {
   calendarFeeds,
   newId,
@@ -312,6 +312,28 @@ function armedWithin(
   return sql`coalesce(${calendarFeeds.rotatedAt}, ${calendarFeeds.createdAt}) >= ${createdAt}`
 }
 
+/** Apply the same current owner/arming checks to reads and the final rotation write. */
+function activeOwnerFilter(scope: TenantScope, now: Date): SQL {
+  return allOf(
+    tenantFilter(scope, member, eq(member.userId, scope.ctx.userId)),
+    inArray(member.role, [...ORGANIZATION_ROLES]),
+    armedWithin(member.createdAt),
+    sql`not (coalesce(${user.banned}, 0) = 1 and (${user.banExpires} is null or ${user.banExpires} > ${now.getTime()}))`,
+  )
+}
+
+function armedTripMembershipFilter(scope: TenantScope, tripId: string): SQL {
+  return allOf(
+    tenantFilter(
+      scope,
+      tripMembers,
+      eq(tripMembers.tripId, tripId),
+      eq(tripMembers.userId, scope.ctx.userId),
+    ),
+    armedWithin(tripMembers.createdAt),
+  )
+}
+
 /** The single credential-to-tenant lookup; no tenant content or credential leaves it. */
 export async function findLiveFeedByDigestUnscoped(
   db: Database,
@@ -370,13 +392,7 @@ async function liveFeedScope(
         isNull(calendarFeeds.revokedAt),
       ),
     )
-    .where(
-      allOf(
-        tenantFilter(provisional, member, eq(member.userId, found.userId)),
-        armedWithin(member.createdAt),
-        sql`not (coalesce(${user.banned}, 0) = 1 and (${user.banExpires} is null or ${user.banExpires} > ${now.getTime()}))`,
-      ),
-    )
+    .where(activeOwnerFilter(provisional, now))
     .limit(1)
   if (!row || !ORGANIZATION_ROLES.some((role) => role === row.role)) return null
   return createScope(db, {
@@ -414,17 +430,7 @@ async function tripAccess(
         isNull(calendarFeeds.revokedAt),
       ),
     )
-    .where(
-      allOf(
-        tenantFilter(
-          scope,
-          tripMembers,
-          eq(tripMembers.tripId, found.tripId),
-          eq(tripMembers.userId, found.userId),
-        ),
-        armedWithin(tripMembers.createdAt),
-      ),
-    )
+    .where(armedTripMembershipFilter(scope, found.tripId))
     .limit(1)
   return rows.length !== 0
 }
@@ -439,6 +445,7 @@ async function ownFeed(scope: TenantScope, feedId: string) {
       tripId: calendarFeeds.tripId,
       lastServedAt: calendarFeeds.lastServedAt,
       revokedAt: calendarFeeds.revokedAt,
+      tokenDigest: calendarFeeds.tokenDigest,
     })
     .from(calendarFeeds)
     .where(
@@ -535,6 +542,54 @@ export async function enableFeed(
   return { feedId: row.id, secret, tripTitle: trip.title }
 }
 
+/** Replace only a currently usable owner-bound credential; never rearm a refused feed. */
+export async function rotateFeed(scope: TenantScope, feedId: string) {
+  const row = await ownFeed(scope, feedId)
+  const liveScope =
+    row.revokedAt === null ? await liveFeedScope(scope.db, row) : null
+  if (
+    !liveScope ||
+    row.scope !== 'trip' ||
+    !row.tripId ||
+    !(await tripAccess(liveScope, row))
+  ) {
+    throw new NotFoundError('Calendar feed', feedId)
+  }
+  const trip = await requireTrip(liveScope, row.tripId)
+  const secret = mintFeedSecret()
+  const tokenDigest = await hashFeedSecret(secret)
+  const now = new Date()
+  const changed = await scope.db
+    .update(calendarFeeds)
+    .set({ tokenDigest, rotatedAt: now, updatedAt: now, lastServedAt: null })
+    .where(
+      tenantFilter(
+        scope,
+        calendarFeeds,
+        eq(calendarFeeds.id, feedId),
+        eq(calendarFeeds.userId, scope.ctx.userId),
+        isNull(calendarFeeds.revokedAt),
+        eq(calendarFeeds.tokenDigest, row.tokenDigest),
+        exists(
+          scope.db
+            .select({ id: member.id })
+            .from(member)
+            .innerJoin(user, eq(user.id, member.userId))
+            .where(activeOwnerFilter(scope, now)),
+        ),
+        exists(
+          scope.db
+            .select({ id: tripMembers.id })
+            .from(tripMembers)
+            .where(armedTripMembershipFilter(scope, row.tripId)),
+        ),
+      ),
+    )
+    .returning({ id: calendarFeeds.id })
+  if (changed.length === 0) throw new NotFoundError('Calendar feed', feedId)
+  return { feedId, secret, tripTitle: trip.title }
+}
+
 export async function revokeFeed(
   scope: TenantScope,
   feedId: string,
@@ -553,11 +608,12 @@ export async function revokeFeed(
     )
 }
 
-/** Stamped at most hourly by the handler, never a per-poll write. */
+/** Stamped at most hourly for the credential actually fetched, never a per-poll write. */
 export async function touchFeed(
   scope: TenantScope,
   feedId: string,
   now: Date,
+  tokenDigest: string,
 ): Promise<void> {
   const rows = await scope.db
     .update(calendarFeeds)
@@ -569,6 +625,7 @@ export async function touchFeed(
         eq(calendarFeeds.id, feedId),
         eq(calendarFeeds.userId, scope.ctx.userId),
         isNull(calendarFeeds.revokedAt),
+        eq(calendarFeeds.tokenDigest, tokenDigest),
         sql`coalesce(${calendarFeeds.rotatedAt}, ${calendarFeeds.createdAt}) <= ${now.getTime()}`,
       ),
     )

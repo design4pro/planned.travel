@@ -585,8 +585,9 @@ fetches, not copies already held by a provider or browser.
 **Residual platform telemetry and merge condition.** Application-controlled Sentry events,
 transactions, spans, breadcrumbs and logs must redact the secret; handler logs carry only the feed
 id and never use `requestFields`. Cloudflare invocation logs **and OTLP platform trace export**
-can still carry the request URL, outside repository redaction. Cloudflare log or Sentry trace
-readers can therefore read live secrets; production-derived Sentry triage can copy data to GitHub.
+can carry the request URL outside repository redaction when enabled. The 2026-10-17 control
+record below disables both channels in production and staging. Previously retained telemetry
+may still contain live secrets; production-derived Sentry triage can copy retained data to GitHub.
 Before merge, independently renewed security approval requires an explicit **OWNER** decision
 accepting that exposure with restricted access, disabling invocation logs in both production and
 staging while separately addressing OTLP exposure, or arranging account-side scrubbing for both
@@ -1254,3 +1255,19 @@ An existing `admin` opens `/_app/console/users`, finds the account, and sets its
 The same screen is the only way a curator is demoted, and demotion revokes that account's MCP
 tokens in the same call (§5). A curator is never created by SQL, because a role that arrives
 without an audit entry is a role nobody can account for later.
+
+### 2026-10-17 platform-control execution record
+
+After the concrete package was presented on PR #1334, the owner instructed autonomous
+completion. The approved implementation disables invocation logs and platform traces/OTLP
+export for both production and staging, retaining custom logs and application instrumentation.
+Live readback confirmed both settings and unchanged bindings, annotations and deployed versions.
+The shared `sentry-traces` destination was retained. Free zone ruleset
+`699f480b7ba0468c919cbffaf18f42f2`, rule `297bfe6ddc154c41a05cc322ab333dea`,
+protects `/api/feed/*` on all zone hosts/methods: block, IP + colocation, 100 requests/10 seconds,
+10-second mitigation. Repository settings preserve this policy on subsequent deployments.
+This record does not itself grant security shipping approval: live enforcement verification and
+renewed independent security approval remain required.
+[Execution evidence](https://github.com/design4pro/planned.travel/pull/1334#issuecomment-6228009286)
+records configuration readback and matching pre-Worker request traces. Runtime threshold
+enforcement was not measured: staging probes were intercepted by unchanged Cloudflare Access.

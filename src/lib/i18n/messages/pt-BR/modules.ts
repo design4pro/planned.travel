@@ -916,7 +916,7 @@ const messages = {
     'Qualquer pessoa com este link pode ler lugares, horários, endereços e notas da viagem sem uma conta. Proteja-o como uma senha.',
   'files.calendar.enable.action': 'Criar um link',
   'files.calendar.link.once':
-    'Copie agora - ele só aparece uma vez. Se o perder, desative-o e crie outro; o antigo deixará de funcionar.',
+    'Copie agora - só mostramos uma vez. Se perder, crie um novo link; o antigo deixará de funcionar.',
   'files.calendar.link.address': 'Endereço do link',
   'files.calendar.link.copy': 'Copiar link',
   'files.calendar.link.copied': 'Link copiado',
@@ -934,6 +934,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Um calendário consultou este link pela última vez {when}',
   'files.calendar.state.neverFetched': 'Ainda não consultado',
+  'files.calendar.rotate.action': 'Criar um novo link',
+  'files.calendar.rotate.confirmTitle': 'Criar um novo link?',
+  'files.calendar.rotate.confirmBody':
+    'O link antigo para de funcionar agora. Os calendários que o usam deixam de ser atualizados até você fornecer o novo link.',
+  'files.calendar.rotate.busy': 'Criando um novo link…',
+  'files.calendar.error.rotate':
+    'Não foi possível confirmar a criação de um novo link. O estado atual está abaixo; tente novamente se precisar.',
+  'files.calendar.rotate.confirm': 'Criar um novo link',
   'files.calendar.off.action': 'Desativar',
   'files.calendar.off.confirmTitle': 'Desativar este link de calendário?',
   'files.calendar.off.confirmBody':

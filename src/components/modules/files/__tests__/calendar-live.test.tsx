@@ -12,11 +12,13 @@ const stubs = vi.hoisted(() => ({
   load: vi.fn(),
   enable: vi.fn(),
   revoke: vi.fn(),
+  rotate: vi.fn(),
 }))
 vi.mock('#/server/fns/calendar', () => ({
   loadCalendarFeedsFn: stubs.load,
   enableCalendarFeedFn: stubs.enable,
   revokeCalendarFeedFn: stubs.revoke,
+  rotateCalendarFeedFn: stubs.rotate,
 }))
 const url = `https://app.example/api/feed/${'A'.repeat(32)}.ics`
 const feed = { id: 'feed-1', tripId: 'trip-1', on: true, lastServedAt: null }
@@ -54,6 +56,113 @@ async function reveal() {
   return screen.findByRole('region', { name: 'Link address' })
 }
 describe('live calendar link', () => {
+  it.each([null, new Date()])(
+    'confirms rotation only for a fetched secret (%s) and guards the new reveal',
+    async (lastServedAt) => {
+      stubs.load.mockResolvedValue({ ...feed, lastServedAt })
+      stubs.rotate.mockResolvedValue({
+        feedId: 'feed-1',
+        tripTitle: 'Lisbon',
+        url,
+        webcalUrl: url.replace('https:', 'webcal:'),
+      })
+      mount()
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Live calendar link' }),
+      )
+      const action = await screen.findByRole('button', {
+        name: 'Make a new link',
+      })
+      await userEvent.click(action)
+      if (lastServedAt) {
+        const confirm = await screen.findByRole('dialog', {
+          name: 'Make a new link?',
+        })
+        expect(stubs.rotate).not.toHaveBeenCalled()
+        await userEvent.click(
+          within(confirm).getByRole('button', { name: 'Keep it' }),
+        )
+        await waitFor(() => expect(document.activeElement).toBe(action))
+        await userEvent.click(action)
+        await userEvent.click(
+          within(
+            await screen.findByRole('dialog', { name: 'Make a new link?' }),
+          ).getByRole('button', { name: 'Make a new link' }),
+        )
+      }
+      expect(stubs.rotate).toHaveBeenCalledWith({ data: { feedId: 'feed-1' } })
+      const region = await screen.findByRole('region', { name: 'Link address' })
+      await waitFor(() => expect(document.activeElement).toBe(region))
+      await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+      expect(
+        await screen.findByRole('dialog', {
+          name: 'Close without copying the link?',
+        }),
+      ).toBeTruthy()
+    },
+  )
+  it('reloads the actual state and drops the old reveal after a lost rotation response', async () => {
+    stubs.load.mockResolvedValueOnce(null).mockResolvedValue(feed)
+    stubs.rotate.mockRejectedValue(new Error('lost response'))
+    mount()
+    await reveal()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Make a new link' }),
+    )
+    const error = await screen.findByRole('alert')
+    expect(stubs.load).toHaveBeenCalledTimes(3)
+    expect(screen.queryByText(url)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Turn off' })).toBeTruthy()
+    await waitFor(() => expect(document.activeElement).toBe(error))
+  })
+  it('announces a direct rotation while its response is pending', async () => {
+    stubs.load.mockResolvedValue(feed)
+    let finish: (value: typeof url) => void = () => {}
+    stubs.rotate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve({
+              feedId: feed.id,
+              tripTitle: 'Lisbon',
+              url,
+              webcalUrl: url.replace('https:', 'webcal:'),
+            })
+        }),
+    )
+    mount()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Live calendar link' }),
+    )
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make a new link' }),
+    )
+    expect(await screen.findByText('Making a new link…')).toBeTruthy()
+    await act(async () => {
+      finish(url)
+    })
+    expect(
+      await screen.findByRole('region', { name: 'Link address' }),
+    ).toBeTruthy()
+  })
+  it('keeps a load error when rotation and its recovery reload both fail', async () => {
+    stubs.load
+      .mockResolvedValueOnce(feed)
+      .mockRejectedValue(new Error('offline'))
+    stubs.rotate.mockRejectedValue(new Error('lost response'))
+    mount()
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Live calendar link' }),
+    )
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make a new link' }),
+    )
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(
+      'We couldn’t check this trip’s calendar link. Try again.',
+    )
+    expect(alert.textContent).not.toContain('The current state is shown below')
+  })
   it('warns before enabling, reveals once without secret-bearing anchors, and guards Done until copied', async () => {
     const user = userEvent.setup()
     mount()

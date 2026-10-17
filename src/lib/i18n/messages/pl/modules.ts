@@ -929,7 +929,7 @@ const messages = {
     'Każdy z tym linkiem może bez konta odczytać miejsca, godziny, adresy i notatki tej podróży. Chroń go jak hasło.',
   'files.calendar.enable.action': 'Utwórz link',
   'files.calendar.link.once':
-    'Skopiuj go teraz - pokazujemy go tylko raz. Jeśli go zgubisz, wyłącz go i utwórz nowy; stary przestanie działać.',
+    'Skopiuj go teraz - pokazujemy go tylko raz. Jeśli go zgubisz, utwórz nowy link; stary przestanie działać.',
   'files.calendar.link.address': 'Adres linku',
   'files.calendar.link.copy': 'Kopiuj link',
   'files.calendar.link.copied': 'Link skopiowany',
@@ -947,6 +947,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Kalendarz ostatnio sprawdził ten link {when}',
   'files.calendar.state.neverFetched': 'Jeszcze nie pobrano',
+  'files.calendar.rotate.action': 'Utwórz nowy link',
+  'files.calendar.rotate.confirmTitle': 'Utworzyć nowy link?',
+  'files.calendar.rotate.confirmBody':
+    'Stary link przestanie teraz działać. Kalendarze, które go używają, przestaną się aktualizować, dopóki nie podasz im nowego linku.',
+  'files.calendar.rotate.busy': 'Tworzenie nowego linku…',
+  'files.calendar.error.rotate':
+    'Nie udało się potwierdzić utworzenia nowego linku. Poniżej widać aktualny stan; w razie potrzeby spróbuj ponownie.',
+  'files.calendar.rotate.confirm': 'Utwórz nowy link',
   'files.calendar.off.action': 'Wyłącz',
   'files.calendar.off.confirmTitle': 'Wyłączyć ten link kalendarza?',
   'files.calendar.off.confirmBody':

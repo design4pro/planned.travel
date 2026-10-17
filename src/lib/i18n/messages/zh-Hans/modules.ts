@@ -821,7 +821,7 @@ const messages = {
     '任何持有此链接的人都可以在无需账户的情况下读取本次旅行的地点、时间、地址和备注。请像保护密码一样保护它。',
   'files.calendar.enable.action': '创建链接',
   'files.calendar.link.once':
-    '请立即复制，链接仅显示一次。如果丢失，请停用后重新创建；旧链接将失效。',
+    '请立即复制，我们只显示一次。如果丢失，请创建新链接；旧链接将失效。',
   'files.calendar.link.address': '链接地址',
   'files.calendar.link.copy': '复制链接',
   'files.calendar.link.copied': '链接已复制',
@@ -837,6 +837,14 @@ const messages = {
   'files.calendar.state.on': '日历链接已启用',
   'files.calendar.state.lastFetched': '日历上次检查此链接的时间：{when}',
   'files.calendar.state.neverFetched': '尚未获取',
+  'files.calendar.rotate.action': '创建新链接',
+  'files.calendar.rotate.confirmTitle': '要创建新链接吗？',
+  'files.calendar.rotate.confirmBody':
+    '旧链接将立即失效。使用它的日历将停止更新，直到你为其提供新链接。',
+  'files.calendar.rotate.busy': '正在创建新链接…',
+  'files.calendar.error.rotate':
+    '无法确认是否已创建新链接。下方显示当前状态；如有需要，请重试。',
+  'files.calendar.rotate.confirm': '创建新链接',
   'files.calendar.off.action': '停用',
   'files.calendar.off.confirmTitle': '停用此日历链接？',
   'files.calendar.off.confirmBody':

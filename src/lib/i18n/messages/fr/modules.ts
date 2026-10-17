@@ -929,7 +929,7 @@ const messages = {
     'Toute personne disposant de ce lien peut lire les lieux, horaires, adresses et notes de ce voyage sans compte. Protégez-le comme un mot de passe.',
   'files.calendar.enable.action': 'Créer un lien',
   'files.calendar.link.once':
-    'Copiez-le maintenant - il ne sera affiché qu’une fois. Si vous le perdez, désactivez-le et créez-en un autre ; l’ancien cessera de fonctionner.',
+    'Copie-le maintenant - nous ne l’affichons qu’une fois. Si tu le perds, crée un nouveau lien ; l’ancien cessera de fonctionner.',
   'files.calendar.link.address': 'Adresse du lien',
   'files.calendar.link.copy': 'Copier le lien',
   'files.calendar.link.copied': 'Lien copié',
@@ -947,6 +947,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Un calendrier a consulté ce lien pour la dernière fois {when}',
   'files.calendar.state.neverFetched': 'Pas encore consulté',
+  'files.calendar.rotate.action': 'Créer un nouveau lien',
+  'files.calendar.rotate.confirmTitle': 'Créer un nouveau lien ?',
+  'files.calendar.rotate.confirmBody':
+    'L’ancien lien cesse de fonctionner maintenant. Les calendriers qui l’utilisent ne se mettent plus à jour tant que tu ne leur fournis pas le nouveau lien.',
+  'files.calendar.rotate.busy': 'Création d’un nouveau lien…',
+  'files.calendar.error.rotate':
+    'Nous n’avons pas pu confirmer la création d’un nouveau lien. L’état actuel est affiché ci-dessous ; réessaie si nécessaire.',
+  'files.calendar.rotate.confirm': 'Créer un nouveau lien',
   'files.calendar.off.action': 'Désactiver',
   'files.calendar.off.confirmTitle': 'Désactiver ce lien de calendrier ?',
   'files.calendar.off.confirmBody':

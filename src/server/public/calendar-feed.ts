@@ -105,10 +105,8 @@ export async function serveCalendarFeed(
     return response(404, 'Not found')
   }
   try {
-    const found = await findLiveFeedByDigestUnscoped(
-      runtime.db,
-      await hashFeedSecret(matched[1]),
-    )
+    const tokenDigest = await hashFeedSecret(matched[1])
+    const found = await findLiveFeedByDigestUnscoped(runtime.db, tokenDigest)
     if (!found) return refuse()
     const scope = await openFeedScope(runtime.db, found, now)
     if (
@@ -149,7 +147,9 @@ export async function serveCalendarFeed(
       found.lastServedAt === null ||
       now.getTime() - found.lastServedAt.getTime() >= 3600000
     ) {
-      runtime.waitUntil(touchFeed(scope, found.id, now).catch(() => undefined))
+      runtime.waitUntil(
+        touchFeed(scope, found.id, now, tokenDigest).catch(() => undefined),
+      )
     }
     emit('served', { feedId: found.id, scope: 'trip', status: 200 })
     return response(200, calendar, {
