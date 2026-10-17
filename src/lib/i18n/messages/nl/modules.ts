@@ -798,6 +798,15 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Eerdere berichten zijn niet geladen',
   'collab.thread.retry': 'Opnieuw proberen',
   'collab.thread.start': 'Hier begint het gesprek',
+  'collab.thread.loadedEarlier': {
+    one: '{earlier} eerder bericht geladen',
+    other: '{earlier} eerdere berichten geladen',
+  },
+  'collab.thread.newFrom': 'Nieuw bericht van {name}',
+  'collab.thread.newMany': {
+    one: '{new} nieuw bericht',
+    other: '{new} nieuwe berichten',
+  },
   'collab.toast.reactionFailed': 'De reactie is niet opgeslagen',
   'collab.toast.messageDeleted': 'Bericht verwijderd',
   'collab.toast.deleteFailed': 'Het bericht is niet verwijderd',

@@ -81,7 +81,7 @@ describe('the component history loading path', () => {
         },
       },
     )
-    let pending!: Promise<void>
+    let pending!: Promise<number>
     act(() => {
       pending = result.current.loadOlder()
       void result.current.loadOlder()
@@ -133,7 +133,7 @@ describe('history request lifecycle', () => {
       ({ trip }) => useThreadHistory(trip, messages),
       { initialProps: { trip: 'a' } },
     )
-    let pending!: Promise<void>
+    let pending!: Promise<number>
     act(() => {
       pending = result.current.loadOlder()
     })

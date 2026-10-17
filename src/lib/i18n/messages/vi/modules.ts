@@ -770,6 +770,13 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Không tải được tin nhắn cũ hơn',
   'collab.thread.retry': 'Thử lại',
   'collab.thread.start': 'Cuộc trò chuyện bắt đầu từ đây',
+  'collab.thread.loadedEarlier': {
+    other: 'Đã tải {earlier} tin nhắn cũ hơn',
+  },
+  'collab.thread.newFrom': 'Tin nhắn mới từ {name}',
+  'collab.thread.newMany': {
+    other: '{new} tin nhắn mới',
+  },
   'collab.toast.reactionFailed': 'Chưa lưu được biểu cảm',
   'collab.toast.messageDeleted': 'Đã xóa tin nhắn',
   'collab.toast.deleteFailed': 'Chưa xóa được tin nhắn',

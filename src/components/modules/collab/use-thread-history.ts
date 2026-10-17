@@ -40,7 +40,8 @@ export function useThreadHistory(
   const flight = useRef(false)
   const exhausted = window.length < THREAD_PAGE_SIZE || current.exhausted
 
-  async function loadOlder(): Promise<void> {
+  /** Resolves with how many older messages the page brought; 0 when nothing was applied. */
+  async function loadOlder(): Promise<number> {
     const cursor = latest.current.messages[0]?.id
     if (
       flight.current ||
@@ -48,7 +49,7 @@ export function useThreadHistory(
       latest.current.exhausted ||
       cursor === undefined
     )
-      return
+      return 0
     flight.current = true
     const requestedTrip = latest.current.tripId
     const generation = identity.current.generation
@@ -62,7 +63,7 @@ export function useThreadHistory(
         now.tripId !== requestedTrip ||
         now.messages[0]?.id !== cursor
       )
-        return
+        return 0
       setState((previous) => {
         if (
           previous.tripId !== requestedTrip ||
@@ -80,6 +81,7 @@ export function useThreadHistory(
           active: true,
         }
       })
+      return page.messages.length
     } finally {
       flight.current = false
     }

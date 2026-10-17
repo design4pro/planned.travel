@@ -603,7 +603,7 @@ describe('the viewers own actions on held history', () => {
         return {
           messages: [...held, ...window],
           exhausted: true,
-          loadOlder: async () => {},
+          loadOlder: async () => 0,
           patchHeld: (patch) => setHeld(patch),
         }
       },

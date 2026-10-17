@@ -1703,12 +1703,12 @@ database does not hold. Inventing a deleter for them would be a fabricated audit
   same formatter as every other timestamp in the thread and is `tabular-nums`. The row carries no
   action: no reaction control, no reply control, no row menu, and it is not a focus stop, because
   there is nothing to do with it. Its accessible text is the same sentence, so a screen reader hears
-  what a sighted reader sees rather than an empty list item. **No live region is added**, and that is
-  a decision rather than an omission: `grep -n "aria-live\|role=\"status\"" src/components/modules/collab/thread.tsx`
-  returns nothing today, the only live region in the module is the presence bar's
-  (`presence-bar.tsx:91`), and a transcript-wide region would announce every incoming message from
-  every peer, which is a worse experience than the one it fixes. The tombstone sits in reading order
-  where the message was, and is read there.
+  what a sighted reader sees rather than an empty list item. **The tombstone adds no live region and
+  is never announced**, and that is a decision rather than an omission: the one status region the
+  thread owns (`07-S3`, `data-part="thread-status"` in `thread.tsx`) speaks only about paging and
+  about a peer's new message by name or count, never a message's text, and a tombstone is not a new
+  message. The region is not put on the list: a transcript-wide live region would be read row by row.
+  The tombstone sits in reading order where the message was, and is read there.
 - **States.** The picker's search-less grid cannot be empty, so its only states are rest, hover,
   focus-visible and active per glyph; the reaction chip has rest, hover, focus-visible, active,
   a pending state while the toggle is in flight (the count holds its width so the row does not
