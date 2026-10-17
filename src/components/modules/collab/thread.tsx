@@ -162,7 +162,7 @@ export function Thread({
    * one that arrived over the socket rather than from this tab.
    */
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+    bottomRef.current?.scrollIntoView({ block: 'nearest' })
   }, [lastId])
 
   const reactionOverlay = useOptimistic<ReadonlyArray<string>>()

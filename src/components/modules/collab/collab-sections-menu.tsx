@@ -1,4 +1,5 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import { ChevronDown } from 'lucide-react'
 import {
   Button,
@@ -31,11 +32,19 @@ export function CollabSectionsMenu({
   onWritingChange: (writing: boolean) => void
 }) {
   const t = useTranslate()
+  const router = useRouter()
   const footer = useId()
   const locked = useRef(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const escapeClose = useRef(false)
   const [pending, setPending] = useState<CollabSectionId | null>(null)
+  useEffect(
+    () =>
+      router.subscribe('onRendered', () => {
+        requestAnimationFrame(() => revealFocusedTrigger(trigger.current))
+      }),
+    [router],
+  )
   const last = enabledCollabSections(sections).length === 1
 
   async function toggle(id: CollabSectionId): Promise<void> {
@@ -101,18 +110,7 @@ export function CollabSectionsMenu({
             if (trigger.current?.isConnected)
               trigger.current.focus({ preventScroll: true })
           }
-          requestAnimationFrame(() => {
-            const button = trigger.current
-            if (!button || document.activeElement !== button) return
-            const rect = button.getBoundingClientRect()
-            if (!rect.width || !rect.height) return
-            const x = (rect.left + rect.right) / 2
-            const obscured = [rect.top + 1, rect.bottom - 1].some(
-              (y) => !button.contains(document.elementFromPoint(x, y)),
-            )
-            if (obscured)
-              button.scrollIntoView({ block: 'center', behavior: 'instant' })
-          })
+          requestAnimationFrame(() => revealFocusedTrigger(trigger.current))
         }}
       >
         <DropdownMenuLabel>
@@ -149,4 +147,15 @@ export function CollabSectionsMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   )
+}
+
+function revealFocusedTrigger(button: HTMLButtonElement | null): void {
+  if (!button || document.activeElement !== button) return
+  const rect = button.getBoundingClientRect()
+  if (!rect.width || !rect.height) return
+  const x = (rect.left + rect.right) / 2
+  const obscured = [rect.top + 1, rect.bottom - 1].some(
+    (y) => !button.contains(document.elementFromPoint(x, y)),
+  )
+  if (obscured) button.scrollIntoView({ block: 'center', behavior: 'instant' })
 }

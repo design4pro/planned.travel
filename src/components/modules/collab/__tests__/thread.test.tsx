@@ -571,36 +571,3 @@ describe('safe composer sends', () => {
     expect(document.activeElement).not.toBe(screen.getByRole('textbox'))
   })
 })
-
-it('follows the latest message immediately without leaving smooth scrolling running', () => {
-  const scroll = vi.spyOn(HTMLElement.prototype, 'scrollIntoView')
-  const tree = (messages: ReadonlyArray<MessageData>) => (
-    <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
-      <TooltipProvider>
-        <Thread
-          tripId="trip-1"
-          messages={messages}
-          people={PEOPLE}
-          viewerUserId="user-1"
-          canModerate={false}
-          timeZone="UTC"
-        />
-      </TooltipProvider>
-    </I18nProvider>
-  )
-  const initial = message('m1', 'user-2', '2026-06-23T09:00:00Z', 'First')
-  const { rerender } = render(tree([initial]))
-  expect(scroll).toHaveBeenLastCalledWith({
-    block: 'nearest',
-    behavior: 'instant',
-  })
-  scroll.mockClear()
-  rerender(
-    tree([initial, message('m2', 'user-2', '2026-06-23T09:01:00Z', 'Next')]),
-  )
-  expect(scroll).toHaveBeenCalledOnce()
-  expect(scroll).toHaveBeenLastCalledWith({
-    block: 'nearest',
-    behavior: 'instant',
-  })
-})

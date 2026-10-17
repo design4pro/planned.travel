@@ -19,6 +19,20 @@ import { encodePublicFailure } from '#/lib/errors'
 import { toast } from '#/components/ui'
 import { CollabSectionsMenu } from '../collab-sections-menu'
 
+const routerEvents = vi.hoisted(() => ({
+  rendered: null as (() => void) | null,
+}))
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({
+    subscribe: (_event: string, callback: () => void) => {
+      routerEvents.rendered = callback
+      return () => {
+        routerEvents.rendered = null
+      }
+    },
+  }),
+}))
+
 const messages = {
   ...namespaceCatalogue('trips', Trips),
   ...namespaceCatalogue('modules', Modules),
@@ -287,8 +301,37 @@ it('does not retain Escape focus ownership for a later outside dismissal', async
   const focus = vi.spyOn(trigger, 'focus')
   await new Promise((resolve) => setTimeout(resolve, 0))
   fireEvent.pointerDown(document.body, { button: 2, pointerType: 'mouse' })
-  await waitFor(() =>
-    expect(screen.queryByRole('menu')).toBeNull(),
-  )
+  await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
   expect(focus).not.toHaveBeenCalledWith({ preventScroll: true })
+})
+
+it('reveals returned focus after a later router scroll restoration', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+    x: 37,
+    y: 0,
+    top: 0,
+    bottom: 44,
+    left: 37,
+    right: 216,
+    width: 179,
+    height: 44,
+    toJSON: () => ({}),
+  })
+  const reveal = vi.spyOn(trigger, 'scrollIntoView')
+  let obscured = false
+  Object.defineProperty(document, 'elementFromPoint', {
+    configurable: true,
+    value: () => (obscured ? document.body : trigger),
+  })
+  await user.click(trigger)
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  reveal.mockClear()
+  obscured = true
+  act(() => routerEvents.rendered?.())
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  expect(reveal).toHaveBeenCalledWith({ block: 'center', behavior: 'instant' })
 })
