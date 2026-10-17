@@ -75,10 +75,10 @@ const messages = {
   'workspace.create': 'Skapa arbetsyta',
   'workspace.createTitle': 'Skapa en arbetsyta',
   'workspace.createDescription':
-    'En separat yta med egna resor, platser och personer. Den startar i planen Gratis.',
+    'En separat yta med egna resor, platser och personer. Den startar i planen Gratis och delar inte plan med arbetsytan du är i.',
   'workspace.createName': 'Arbetsytans namn',
   'workspace.createUpgrade':
-    'Att skapa fler arbetsytor ingår i en betald plan.',
+    '”{workspace}” är på planen Gratis, och bara en arbetsyta med en betald plan kan skapa en till. Har någon av dina andra arbetsytor en betald plan, byt till den och skapa därifrån. Annars uppgraderar du ”{workspace}”.',
   'workspace.createLimitReached':
     'Du har nått det största antalet arbetsytor som ett konto kan tillhöra.',
   'workspace.createRoleRequired':

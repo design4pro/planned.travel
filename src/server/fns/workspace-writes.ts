@@ -12,8 +12,11 @@
  *
  * 1. the role - creating is a billing-adjacent act, so `admin` is the minimum, as `canManageBilling`;
  * 2. impersonation - an operator wearing an account does not create workspaces as it;
- * 3. the plan - Free has the one workspace it was provisioned with;
- * 4. the limit - the plugin counts only inside its own endpoint.
+ * 3. the limit - the plugin counts only inside its own endpoint;
+ * 4. the plan - Free has the one workspace it was provisioned with.
+ *
+ * The limit runs before the plan, so an account that already belongs to the most workspaces is told
+ * so rather than sent to pay for a create it would still be refused.
  *
  * A refusal is returned rather than thrown where the reader can act on it (`CreateWorkspaceResult`),
  * and thrown where nothing they can do changes the answer (impersonation). Every refusal arm writes
@@ -117,12 +120,12 @@ export async function createWorkspace(
     )
   }
 
-  if ((await resolveQuotas(scope)).planId === 'free') {
-    return { ok: false, reason: 'upgrade-required' }
-  }
-
   if ((await ports.countMemberships()) >= WORKSPACE_LIMIT) {
     return { ok: false, reason: 'limit-reached' }
+  }
+
+  if ((await resolveQuotas(scope)).planId === 'free') {
+    return { ok: false, reason: 'upgrade-required' }
   }
 
   const organizationId = await createOrganizationWithinLimit(

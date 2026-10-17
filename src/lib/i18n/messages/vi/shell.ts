@@ -97,9 +97,10 @@ const messages = {
   'workspace.create': 'Tạo không gian',
   'workspace.createTitle': 'Tạo một không gian',
   'workspace.createDescription':
-    'Một không gian riêng với chuyến đi, địa điểm và người của riêng nó. Bắt đầu ở gói Miễn phí.',
+    'Một không gian riêng với chuyến đi, địa điểm và người của riêng nó. Bắt đầu ở gói Miễn phí và không dùng chung gói với không gian bạn đang ở.',
   'workspace.createName': 'Tên không gian',
-  'workspace.createUpgrade': 'Tạo thêm không gian là một phần của gói trả phí.',
+  'workspace.createUpgrade':
+    '“{workspace}” đang ở gói Miễn phí, và chỉ không gian ở gói trả phí mới tạo được không gian khác. Nếu một không gian khác của bạn đang ở gói trả phí, hãy chuyển sang đó và tạo từ đó. Nếu không, hãy nâng cấp “{workspace}”.',
   'workspace.createLimitReached':
     'Bạn đã đạt số không gian tối đa mà một tài khoản có thể tham gia.',
   'workspace.createRoleRequired':

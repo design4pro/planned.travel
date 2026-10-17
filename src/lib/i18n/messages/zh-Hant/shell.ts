@@ -59,9 +59,11 @@ const messages = {
   'workspace.switchRateLimitedBody': '切換工作區過於頻繁。請稍候片刻再試。',
   'workspace.create': '建立工作區',
   'workspace.createTitle': '建立一個工作區',
-  'workspace.createDescription': '一個獨立的空間，有自己的旅程、地點和成員。建立後從免費版開始。',
+  'workspace.createDescription':
+    '一個獨立的空間，有自己的旅程、地點和成員。建立後從免費版開始，不會沿用你目前所在工作區的方案。',
   'workspace.createName': '工作區名稱',
-  'workspace.createUpgrade': '建立更多工作區屬於付費方案。',
+  'workspace.createUpgrade':
+    '「{workspace}」使用的是免費版，只有付費方案中的工作區才能再建立工作區。如果你的其他工作區屬於付費方案，請切換過去再建立；否則請升級「{workspace}」。',
   'workspace.createLimitReached': '你已達到一個帳號可加入的工作區數量上限。',
   'workspace.createRoleRequired': '只有工作區管理員可以建立工作區。請聯絡此工作區的管理員，或切換到你管理的工作區。',
   'workspace.createFailed': '沒能建立工作區',
