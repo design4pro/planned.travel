@@ -1191,7 +1191,9 @@ request is still a switch of the session and is recorded as one. A `null` worksp
 request falls back to the oldest membership (`src/server/auth/session.ts`), and that fallback is
 not itself recorded, nor is a per-request choice made by `requireOrg` without a session update. If
 the operator's role cannot be read, no row is written and an `error` line says so: a row naming an
-administrator as `user` is worse than a gap that is logged. Creating a workspace is not a path to
+administrator as `user` is worse than a gap that is logged. The same holds for an impersonated
+update that reaches the hook with no request context (`audit.impersonation-workspace.no-context`):
+nothing pairs it with a previous workspace, so it is logged and not recorded. Creating a workspace is not a path to
 this row: an impersonated session cannot reach it (§2.7).
 
 ---
