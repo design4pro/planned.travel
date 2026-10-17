@@ -409,10 +409,15 @@ export const loadTripWeather: ServerFn<
   logic. `recorded` and `estimate` days carry **no strip at all** - `slots` is `null` and the region
   is omitted, never filled with interpolated values.
 
-  **When #124 lands**, `DayWeatherPanel` moves into its declared weather region, the badge's
-  `Popover` is removed, and activating the badge opens the day detail with focus on that region. The
-  badge itself stays. Until then the Popover is the only place the fuller reading exists, and that
-  is why this spec ships it rather than waiting: #124 is open and labelled `blocked`, with no date.
+  **Day-detail integration is a separate slice.** The design for #124 in
+  [Day detail](2026-10-16-planner-day-detail.md) keeps the existing weather Popover when the Day
+  panel first ships: its brief excludes weather implementation. A later integration slice moves
+  `DayWeatherPanel` into the declared region, removes the badge's Popover, and makes badge activation
+  open Day detail with focus on that region. The badge, current data and reading states stay; the
+  integration adds no provider requests. Until that slice ships, the Popover remains the fuller
+  reading and the Day panel has no empty weather section or imitation loading state. This explicit
+  deferral replaces the former promise to migrate automatically when #124 lands; it was approved
+  by the independent product/UX specialist during #124's design review.
 
 - **Unavailable**: a muted "—" badge whose name and popover say "Weather unavailable for this day".
   It is never a zero and never a blank that looks like success.
