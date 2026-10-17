@@ -1,9 +1,11 @@
 import { createElement } from 'react'
+import { createTranslator, loadCatalogue } from '#/lib/i18n'
 import { planById } from '#/lib/plans'
 import { formatDate } from '#/lib/format'
 import { SYSTEM_ORG_ID, enqueueTask } from '#/server/queue/jobs'
 import {
   DeleteAccountEmail,
+  PasskeyChangedEmail,
   EmailChangedEmail,
   OrganizationInvitationEmail,
   PackPurchasedEmail,
@@ -31,6 +33,12 @@ import type { EmailBrand, PendingPlanChange } from '#/server/email'
  * tags; the bodies are React components under `src/server/email`.
  */
 export type AuthEmailMessage =
+  | {
+      kind: 'auth.passkey-added' | 'auth.passkey-removed'
+      to: string
+      /** Random identity of one committed mutation; never a credential identifier. */
+      eventId: string
+    }
   | {
       kind: 'auth.verify-email'
       to: string
@@ -206,8 +214,30 @@ function pendingForTemplate(
   }
 }
 
-function describe(message: TransactionalEmailMessage): EmailDescriptor {
+async function describe(
+  message: TransactionalEmailMessage,
+): Promise<EmailDescriptor> {
   switch (message.kind) {
+    case 'auth.passkey-added':
+    case 'auth.passkey-removed': {
+      // Transactional templates currently use English; copy still belongs to the catalogue.
+      const t = createTranslator('en', await loadCatalogue('en'))
+      const heading =
+        message.kind === 'auth.passkey-added'
+          ? t('auth.passkeyNotice.added')
+          : t('auth.passkeyNotice.removed')
+      return {
+        subject: heading,
+        tag: message.kind.replace('.', '-'),
+        element: createElement(PasskeyChangedEmail, {
+          brand: brand(),
+          heading,
+          security: t('auth.passkeyNotice.security'),
+          action: t('auth.passkeyNotice.action'),
+          recovery: t('auth.passkeyNotice.recovery'),
+        }),
+      }
+    }
     case 'auth.verify-email':
       return {
         subject: `Confirm your email for ${APP_NAME}`,
@@ -368,7 +398,7 @@ function describe(message: TransactionalEmailMessage): EmailDescriptor {
 export async function renderAuthEmail(
   message: TransactionalEmailMessage,
 ): Promise<RenderedAuthEmail> {
-  const { subject, tag, element } = describe(message)
+  const { subject, tag, element } = await describe(message)
   const { html, text } = await renderEmailBody(element)
   return { subject, html, text, tag }
 }
@@ -389,6 +419,7 @@ export async function queueAuthEmail(
       kind: 'email',
       orgId: SYSTEM_ORG_ID,
       payload: {
+        ...('eventId' in message ? { eventId: message.eventId } : {}),
         to: [message.to],
         subject: rendered.subject,
         html: rendered.html,
@@ -397,11 +428,11 @@ export async function queueAuthEmail(
       },
     })
     logAuth('info', 'email.queued', { kind: message.kind, to: message.to })
-  } catch (cause) {
+  } catch {
     logAuth('error', 'email.queue_failed', {
       kind: message.kind,
       to: message.to,
-      reason: cause instanceof Error ? cause.message : 'unknown',
+      reason: 'enqueue_failed',
     })
   }
 }

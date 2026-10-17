@@ -1,8 +1,8 @@
 /**
  * The shared shell every transactional template renders into.
  *
- * One masthead, one card, one footer, so nine messages read as one product
- * rather than nine. Everything is inline-styled from `./theme`, because a mail
+ * One masthead, one card, one footer, so every message reads as one product.
+ * Everything is inline-styled from `./theme`, because a mail
  * client that keeps a `<style>` block is the exception rather than the rule.
  */
 

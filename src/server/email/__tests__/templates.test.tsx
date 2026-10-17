@@ -32,12 +32,21 @@ vi.mock('#/server/auth/env', () => ({
 
 const BRAND = { appName: 'planned.travel', appUrl: 'https://planned.travel' }
 
-const PORTAL_URL = 'https://polar.sh/planned-travel/portal?customer_session=cs_9f3'
+const PORTAL_URL =
+  'https://polar.sh/planned-travel/portal?customer_session=cs_9f3'
 
 const messages: ReadonlyArray<{
   readonly title: string
   readonly message: TransactionalEmailMessage
 }> = [
+  ...(['auth.passkey-added', 'auth.passkey-removed'] as const).map((kind) => ({
+    title: kind,
+    message: {
+      kind,
+      to: 'ada@example.com',
+      eventId: '3b8b78a0-b913-461f-9347-f3f49cc50a71',
+    },
+  })),
   {
     title: 'auth.verify-email',
     message: {
@@ -240,6 +249,8 @@ describe('transactional email templates', () => {
       'auth.delete-account',
       'auth.email-changed',
       'auth.organization-invitation',
+      'auth.passkey-added',
+      'auth.passkey-removed',
       'auth.reset-password',
       'auth.verify-email',
       'billing.pack-purchased',
@@ -275,7 +286,9 @@ describe('transactional email templates', () => {
   it.each(messages)('$title ships no placeholder copy', async ({ message }) => {
     const rendered = await renderAuthEmail(message)
 
-    expect(rendered.subject).not.toMatch(/lorem|ipsum|TODO|placeholder|undefined/i)
+    expect(rendered.subject).not.toMatch(
+      /lorem|ipsum|TODO|placeholder|undefined/i,
+    )
     expect(rendered.text).not.toMatch(/lorem|ipsum|\bTODO\b|placeholder/i)
     expect(rendered.text).not.toContain('undefined')
     expect(rendered.text).not.toContain('NaN')
@@ -370,7 +383,9 @@ describe('worker bundle hygiene', () => {
   it('reaches React Email only through the components package', () => {
     const specifiers = sourceFiles(emailDir).flatMap((path) =>
       [
-        ...readFileSync(path, 'utf8').matchAll(/['"](@react-email\/[^'"]+)['"]/g),
+        ...readFileSync(path, 'utf8').matchAll(
+          /['"](@react-email\/[^'"]+)['"]/g,
+        ),
       ].map((match) => match[1]),
     )
 
@@ -384,4 +399,30 @@ describe('worker bundle hygiene', () => {
     expect(renderSource).toContain("await import('@react-email/components')")
     expect(renderSource).not.toMatch(/^import .*@react-email/m)
   })
+})
+
+describe('passkey security email copy', () => {
+  it.each(['auth.passkey-added', 'auth.passkey-removed'] as const)(
+    '%s names the event and explains retained-passkey recovery',
+    async (kind) => {
+      const rendered = await renderAuthEmail({
+        kind,
+        to: 'ada@example.com',
+        eventId: crypto.randomUUID(),
+      })
+      expect(rendered.subject).toContain(
+        kind === 'auth.passkey-added' ? 'added' : 'removed',
+      )
+      expect(rendered.html).toContain('https://planned.travel/passkeys')
+      expect(rendered.text).toContain('https://planned.travel/passkeys')
+      expect(rendered.text).toContain(
+        'change your password and end unfamiliar sessions',
+      )
+      expect(rendered.text).toContain(
+        'A password reset does not remove passkeys.',
+      )
+      expect(rendered.text).toContain('remove any you do not recognize')
+      expect(rendered.text).not.toContain('ada@example.com')
+    },
+  )
 })

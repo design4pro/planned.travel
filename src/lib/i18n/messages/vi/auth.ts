@@ -364,6 +364,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Xác nhận email trước đã',
   'error.verifyBeforeJoin.detail':
     'Mở liên kết xác nhận chúng tôi đã gửi, rồi quay lại lời mời này.',
+
+  'passkeyNotice.added': 'Một khóa truy cập đã được thêm vào tài khoản của bạn',
+  'passkeyNotice.removed': 'Một khóa truy cập đã bị xóa khỏi tài khoản của bạn',
+  'passkeyNotice.security': 'Bảo mật',
+  'passkeyNotice.action': 'Quản lý khóa truy cập',
+  'passkeyNotice.recovery':
+    'Nếu bạn không nhận ra thay đổi này, hãy đổi mật khẩu và kết thúc các phiên không quen thuộc. Đặt lại mật khẩu không xóa khóa truy cập. Hãy kiểm tra và xóa những khóa bạn không nhận ra.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

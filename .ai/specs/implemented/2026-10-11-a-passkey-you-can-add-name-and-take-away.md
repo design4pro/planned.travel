@@ -484,8 +484,9 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 - **Rate limits are per IP and path**, not per user; a determined attacker behind many addresses is bounded by the password check itself and by
   the 24-hour freshness window for passwordless accounts.
 - **Registration needs a fresh session but not a password.** A session cookie stolen within `freshAge` of sign-in can add a passkey that survives a
-  password reset, and the owner gets no email when a passkey is added or removed. Accepted for this stage; a notification email, or the
-  password on registration for accounts that have one, is a follow-up (filed when the stage ships), not part of it.
+  password reset. #1186 adds owner-only email notices for successful registration and actual removal,
+  with recovery guidance that explicitly preserves this retention policy. Delivery is not guaranteed.
+  Requiring a password on registration for accounts that have one remains outside this stage.
 - **Parallel sessions on a passwordless account** can remove passkeys within the freshness window; accepted, same rule as the library's own
   account deletion.
 - **Passkeys already used to open sessions.** Removing a passkey does not end those sessions (see Edge Cases); a person who lost a device ends them

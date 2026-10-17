@@ -113,7 +113,7 @@ Specifically:
 | Background work   | Queues + Cron Triggers                                                                                                                                                                                                                                                       |
 | Auth              | Better Auth on D1 (email+password, social, passkeys, TOTP)                                                                                                                                                                                                                   |
 | Billing           | Polar.sh (Checkout + Customer Portal + webhooks)                                                                                                                                                                                                                             |
-| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Nine React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                  |
+| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Ten React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                  |
 | Maps              | MapLibre GL + Protomaps `.pmtiles` from R2                                                                                                                                                                                                                                   |
 | Server state      | TanStack Query + Start server functions                                                                                                                                                                                                                                      |
 | Forms             | TanStack Form + Zod v4                                                                                                                                                                                                                                                       |
@@ -189,19 +189,19 @@ now reads `worker-configuration.d.ts` itself.
 Phase A rewrote the bodies as React components and left the transport untouched, so the pipeline
 now has three parts and one seam between each:
 
-1. **Nine templates** under `src/server/email/templates/`, one file each, all re-exported from
+1. **Ten templates** under `src/server/email/templates/`, one file each, all re-exported from
    `src/server/email/index.ts`. Five carry the account lifecycle - `verify-email`,
    `reset-password`, `email-changed`, `delete-account`, `organization-invitation` - and four are
    phase A's billing set: `subscription-confirmed`, `plan-changed`, `payment-failed`,
-   `pack-purchased`. Nothing in that directory touches a Worker binding; product identity arrives
-   as an `EmailBrand` prop, which is what lets every template render under plain Node in a test.
+   `pack-purchased`. `passkey-changed` serves both account passkey notices (#1186). Nothing in that
+   directory touches a Worker binding; product identity arrives as an `EmailBrand` prop, which is what lets every template render under plain Node in a test.
 2. **`renderEmailBody()`** in `src/server/email/render.ts` turns one element into
    `{ html, text }`. Both halves come from `@react-email/components`, which re-exports
    `@react-email/render`'s `render()` and `toPlainText()`; nothing imports the `react-email` CLI,
    which is a devDependency and has no business in a Worker bundle. The plain-text half is derived
    from the rendered HTML rather than authored a second time, so a URL cannot appear in one body
    and be missing from the other - which is how **every template ships a plain-text alternative**
-   rather than by nine separate promises. The queue payload carries `text`; a template without one
+   rather than by separate promises. The queue payload carries `text`; a template without one
    delivers an empty message to any client that does not render HTML.
    The renderer is reached through a dynamic `import()` on purpose: its workerd build statically
    pulls `prettier/standalone`, `prettier/plugins/html` and `html-to-text`, about 540 kB that would
@@ -225,24 +225,20 @@ whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
   `src/server/queue/handlers/email.ts`; the cost of the fix is that the handler then needs the
   brand and the catalogue the producer has today, which is why it is a follow-up and not a
   one-line move.
-- **F2 - six of the nine templates have no dispatch site.** `describe()` in
-  `src/server/auth/email.ts` maps all nine kinds of `TransactionalEmailMessage` onto a subject, an
-  analytics tag and a template element, and `renderAuthEmail()` renders whichever one it is handed.
-  `queueAuthEmail()` has exactly **three** callers in the product, all of them Better Auth hooks in
-  `src/server/auth/index.ts`: `sendResetPassword`, `sendVerificationEmail` and
-  `sendInvitationEmail`. Between them they send three kinds - `auth.reset-password`, `auth.verify-email`,
-  `auth.organization-invitation`. The other **six** are reached from no product path at all:
-  `auth.email-changed` and `auth.delete-account` are declared and rendered but never queued, and
-  so are the four billing kinds `billing.subscription-confirmed`, `billing.plan-changed`,
-  `billing.payment-failed` and `billing.pack-purchased`, because nothing in
-  `src/server/billing/**` sends mail. All six are exercised by
-  `src/server/email/__tests__/templates.test.tsx` and by nothing else. They are written and unsent.
-  An earlier revision of this bullet counted _four_ unsent templates and described the caller as
-  sending "the five auth kinds". Both numbers were recalled rather than counted. This one is the
-  recount, and both of its numbers are one command each:
-  `/usr/bin/grep -rn 'queueAuthEmail(' src/ | /usr/bin/grep -v 'auth/email.ts'` lists the **three**
-  dispatch sites, and `/usr/bin/grep -c "kind: 'auth\.\|kind: 'billing\." src/server/auth/email.ts`
-  counts the **nine** message kinds. Three of nine are sent; six are not.
+- **F2 - six of the eleven message kinds have no dispatch site.** `describe()` in
+  `src/server/auth/email.ts` maps eleven kinds of `TransactionalEmailMessage` onto a subject,
+  analytics tag and template element (the two passkey kinds share one template).
+  `queueAuthEmail()` has five dispatch sites: Better Auth's `sendResetPassword`,
+  `sendVerificationEmail` and `sendInvitationEmail` hooks in `src/server/auth/index.ts`, and
+  successful registration and actual removal in `src/server/auth/passkey/plugin.ts` (#1186).
+  These send `auth.reset-password`, `auth.verify-email`, `auth.organization-invitation`,
+  `auth.passkey-added` and `auth.passkey-removed`. The other six remain rendered but unsent:
+  `auth.email-changed`, `auth.delete-account`, `billing.subscription-confirmed`,
+  `billing.plan-changed`, `billing.payment-failed` and `billing.pack-purchased`.
+  Search `queueAuthEmail(` outside its definition and tests to recount dispatch sites.
+  Passkey notices carry a random per-mutation delivery identity so a subsequent notice is not
+  suppressed by matching recipient and subject; redelivery retains that identity. Old email
+  envelopes without it retain their previous deduplication behavior.
 
 **The `stripe` package is gone, and so is every line that imported it.** The phase-A dependency
 round ran `pnpm remove stripe` in the same edit that installed the two React Email packages, so
@@ -657,7 +653,7 @@ Rules:
   `requirePermission` the console uses and reaches data through `server/catalog`; it never grows
   a second authorisation path or a second query layer.
 - Transactional mail is three directories, not one, and §3 describes the seams between them.
-  `server/email` holds the nine templates and `renderEmailBody()`; it touches no Worker binding
+  `server/email` holds the ten templates and `renderEmailBody()`; it touches no Worker binding
   and takes product identity as a prop, which is what lets it render under plain Node in a test.
   `server/auth/email.ts` owns the message union, the subject lines and the analytics tags.
   `server/queue/handlers/email.ts` delivers. A template that imports a binding, or an `auth/`
