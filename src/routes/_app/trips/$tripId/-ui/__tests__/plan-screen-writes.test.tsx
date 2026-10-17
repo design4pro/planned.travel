@@ -399,7 +399,7 @@ describe('planner write callers', () => {
     )
     await act(async () => pending.reject(new Error('Refused delete')))
     expect(screen.getByRole('alert').textContent).toContain(
-      'The place could not be deleted. Try again in a moment.',
+      'The place could not be deleted. Try it again in a moment.',
     )
     expect(screen.getByRole('dialog')).toBeTruthy()
     await close()
