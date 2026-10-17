@@ -193,7 +193,11 @@ export interface LateFailureToast {
   ) => unknown
 }
 
-/** As long as `toast.undo`, so a keyboard or screen-reader user can reach the action (WCAG 2.2.1). */
+/**
+ * As long as `toast.undo`, so a keyboard or screen-reader user has time to reach the action. The
+ * duration alone does not meet WCAG 2.2.1; what backs it up is that "Add a place" shows the same
+ * refusal and link again.
+ */
 const ACTION_TOAST_DURATION_MS = 8000
 
 /**
