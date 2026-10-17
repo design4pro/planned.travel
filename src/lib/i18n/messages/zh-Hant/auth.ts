@@ -302,6 +302,13 @@ const messages = {
     '成員人數已到上限。請擁有者騰出一個席次，或者升級方案。',
   'error.verifyBeforeJoin.title': '請先確認電子郵件',
   'error.verifyBeforeJoin.detail': '打開我們寄給你的確認連結，再回到這封邀請。',
+
+  'passkeyNotice.added': '你的帳戶已新增通行密鑰',
+  'passkeyNotice.removed': '你的帳戶已移除通行密鑰',
+  'passkeyNotice.security': '安全性',
+  'passkeyNotice.action': '管理通行密鑰',
+  'passkeyNotice.recovery':
+    '如果你不認識此變更，請更改密碼並結束不熟悉的工作階段。重設密碼不會移除通行密鑰。請檢查通行密鑰並移除不認識的密鑰。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

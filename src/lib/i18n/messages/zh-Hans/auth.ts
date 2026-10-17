@@ -303,6 +303,13 @@ const messages = {
   'error.verifyBeforeJoin.title': '请先确认邮箱',
   'error.verifyBeforeJoin.detail':
     '打开我们发给你的确认链接，然后回到这封邀请。',
+
+  'passkeyNotice.added': '你的账户已添加通行密钥',
+  'passkeyNotice.removed': '你的账户已移除通行密钥',
+  'passkeyNotice.security': '安全',
+  'passkeyNotice.action': '管理通行密钥',
+  'passkeyNotice.recovery':
+    '如果你不认识此更改，请更改密码并结束不熟悉的会话。重置密码不会移除通行密钥。请检查通行密钥并移除不认识的密钥。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

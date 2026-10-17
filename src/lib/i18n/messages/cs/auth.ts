@@ -378,6 +378,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Nejprve potvrďte e-mail',
   'error.verifyBeforeJoin.detail':
     'Otevřete potvrzovací odkaz z našeho e-mailu a vraťte se k této pozvánce.',
+
+  'passkeyNotice.added': 'Do vašeho účtu byl přidán přístupový klíč',
+  'passkeyNotice.removed': 'Z vašeho účtu byl odebrán přístupový klíč',
+  'passkeyNotice.security': 'Zabezpečení',
+  'passkeyNotice.action': 'Spravovat přístupové klíče',
+  'passkeyNotice.recovery':
+    'Pokud tuto změnu nepoznáváte, změňte heslo a ukončete neznámé relace. Obnovení hesla neodebere přístupové klíče. Zkontrolujte je a odeberte ty, které nepoznáváte.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

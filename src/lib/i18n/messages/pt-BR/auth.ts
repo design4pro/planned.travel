@@ -382,6 +382,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Confirme seu e-mail primeiro',
   'error.verifyBeforeJoin.detail':
     'Abra o link de confirmação que mandamos e volte a este convite.',
+
+  'passkeyNotice.added': 'Uma chave de acesso foi adicionada à sua conta',
+  'passkeyNotice.removed': 'Uma chave de acesso foi removida da sua conta',
+  'passkeyNotice.security': 'Segurança',
+  'passkeyNotice.action': 'Gerenciar chaves de acesso',
+  'passkeyNotice.recovery':
+    'Se você não reconhece esta alteração, mude sua senha e encerre as sessões desconhecidas. Redefinir a senha não remove as chaves de acesso. Revise suas chaves e remova as que não reconhece.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

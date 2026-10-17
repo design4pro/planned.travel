@@ -394,6 +394,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Confirmez d’abord votre adresse',
   'error.verifyBeforeJoin.detail':
     'Ouvrez le lien de confirmation que nous vous avons envoyé, puis revenez à cette invitation.',
+
+  'passkeyNotice.added': 'Une clé d’accès a été ajoutée à votre compte',
+  'passkeyNotice.removed': 'Une clé d’accès a été supprimée de votre compte',
+  'passkeyNotice.security': 'Sécurité',
+  'passkeyNotice.action': 'Gérer les clés d’accès',
+  'passkeyNotice.recovery':
+    'Si vous ne reconnaissez pas ce changement, modifiez votre mot de passe et fermez les sessions inconnues. La réinitialisation du mot de passe ne supprime pas les clés d’accès. Vérifiez-les et supprimez celles que vous ne reconnaissez pas.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

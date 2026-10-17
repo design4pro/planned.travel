@@ -115,6 +115,80 @@ describe('email', () => {
     ])
   })
 
+  it('preserves one event identity on redelivery and distinguishes separate matching notices', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    const { context } = harness()
+    const first = {
+      to: ['owner@example.com'],
+      subject: 'Passkey added',
+      html: '<p>Added</p>',
+      tag: 'auth-passkey-added',
+      eventId: crypto.randomUUID(),
+    }
+    const second = { ...first, eventId: crypto.randomUUID() }
+    try {
+      await handleEmail(first, context)
+      await handleEmail(first, { ...context, attempt: 2 })
+      await handleEmail(second, context)
+      const identities = fetchSpy.mock.calls.map(([, init]) =>
+        new Headers(init?.headers).get('idempotency-key'),
+      )
+      expect(identities).toEqual([first.eventId, first.eventId, second.eventId])
+      expect(identities[0]).not.toBe(identities[2])
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('keeps the previous identity for old queued messages without an event id', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    const { context } = harness()
+    try {
+      await handleEmail(
+        {
+          to: ['owner@example.com'],
+          subject: 'Hi',
+          html: '<p>Hi</p>',
+          tag: 'auth',
+        },
+        context,
+      )
+      expect(
+        new Headers(fetchSpy.mock.calls[0]?.[1]?.headers).get(
+          'idempotency-key',
+        ),
+      ).toBe('auth:Hi:owner@example.com')
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it('propagates provider failure so the queue can retry the same event', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 503 }))
+    const { context } = harness()
+    try {
+      await expect(
+        handleEmail(
+          {
+            to: ['owner@example.com'],
+            subject: 'Hi',
+            html: '<p>Hi</p>',
+            eventId: crypto.randomUUID(),
+          },
+          context,
+        ),
+      ).rejects.toThrow()
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
   it('surfaces a refusal rather than swallowing it — there is no fallback delivery path', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
     const { context } = harness({ blockOn: 'resend' })
