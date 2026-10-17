@@ -5,8 +5,8 @@
  * refresh (`updateAge`) rewrites `expiresAt` to `now + expiresIn` (30 days) on the first read of a
  * session older than `updateAge` - and a 900-second session always is. The one thing that skips the
  * refresh is the signed `dont_remember` cookie, which the client supplies: a holder of the session
- * token who leaves that cookie out extends the impersonation to 30 days. Two halves close it, and
- * none of them replaces the others:
+ * token who leaves that cookie out extends the impersonation to 30 days. Four mechanisms close it,
+ * and none of them replaces the others:
  *
  * - {@link clampSessionExpiry} runs in the session `update.before` hook, so the refresh can never
  *   move an impersonated session's expiry later than it already is;
