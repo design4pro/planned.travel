@@ -164,8 +164,8 @@ export interface PlaceWriteReport {
  * focus and, on a phone, sits under a modal sheet, so a toast beside it cannot be reached until
  * both are gone. The caller opens it in a new tab,
  * so the draft the form holds survives the visit. A failure that settles after the form was closed
- * has no form to sit in: the caller shows the sentence as a toast, without the link. Any other
- * failure is `placeWriteMessage`, unchanged, with no action.
+ * has no form to sit in: `reportLateWriteFailure` shows it as a toast that carries the same action.
+ * Any other failure is `placeWriteMessage`, unchanged, with no action.
  */
 export function reportPlaceWriteFailure(
   cause: unknown,
@@ -180,4 +180,43 @@ export function reportPlaceWriteFailure(
     message: copy.quota,
     action: { label: copy.seePlans, href: PLANS_HREF },
   }
+}
+
+/** The part of the toast module a late failure needs; the real `toast` satisfies it. */
+export interface LateFailureToast {
+  readonly error: (
+    message: string,
+    options?: {
+      readonly duration: number
+      readonly action: { readonly label: string; readonly onClick: () => void }
+    },
+  ) => unknown
+}
+
+/** As long as `toast.undo`, so a keyboard or screen-reader user can reach the action (WCAG 2.2.1). */
+const ACTION_TOAST_DURATION_MS = 8000
+
+/**
+ * Shows a failed place write whose form is gone as a toast.
+ *
+ * A quota refusal keeps the way out the form's alert would have carried, as a toast button that
+ * `openTab` follows. The caller opens it in a new tab for the same reason the alert's link does,
+ * and must do so synchronously from the click, or the browser blocks the popup. Any other failure
+ * is a toast without an action and with the default duration.
+ */
+export function reportLateWriteFailure(
+  report: PlaceWriteReport,
+  toast: LateFailureToast,
+  openTab: (href: string) => void,
+): void {
+  if (report.action === null) {
+    toast.error(report.message)
+    return
+  }
+
+  const { label, href } = report.action
+  toast.error(report.message, {
+    duration: ACTION_TOAST_DURATION_MS,
+    action: { label, onClick: () => openTab(href) },
+  })
 }
