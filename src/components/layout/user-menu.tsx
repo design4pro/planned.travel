@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import {
   ChevronDown,
@@ -23,7 +23,11 @@ import {
   MenuTrigger,
 } from './menu'
 import { SIGN_OUT_ENDPOINT } from './session'
-import { useWorkspaceSwitch, WorkspaceSwitcher } from './workspace-switcher'
+import {
+  useWorkspaceSwitch,
+  WorkspaceSwitcher,
+  WorkspaceSwitchStatus,
+} from './workspace-switcher'
 
 import type { ReactNode } from 'react'
 import type { ShellSession } from './session'
@@ -65,6 +69,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
   })
 
   const switchingWorkspace = pendingId !== null
+  const switchStatusId = useId()
 
   async function signOut(): Promise<void> {
     setSigningOut(true)
@@ -123,6 +128,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
             organizations={organizations}
             activeId={organization?.id ?? null}
             pendingId={pendingId}
+            statusId={switchStatusId}
             onSwitch={switchTo}
             onCreate={() => setCreating(true)}
           />
@@ -193,6 +199,9 @@ export function UserMenu({ session }: { session: ShellSession }) {
           </MenuDangerItem>
         </MenuContent>
       </MenuRoot>
+
+      {/* Beside the menu, mounted before it opens: see the component for why it cannot be inside. */}
+      <WorkspaceSwitchStatus id={switchStatusId} pending={switchingWorkspace} />
 
       {/* A sibling of the menu, not a child: its content unmounts when an item is chosen. */}
       <CreateWorkspaceDialog
