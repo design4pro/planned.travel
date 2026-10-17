@@ -18,7 +18,7 @@ export function collabSummary(
   const enabled = enabledCollabSections(data.sections)
   if (
     enabled.length === 3 &&
-    data.messages.length === 0 &&
+    data.messageCount === 0 &&
     data.notes.length === 0 &&
     data.polls.length === 0
   ) {

@@ -7,6 +7,7 @@ import {
   visibleCollabSections,
 } from '#/lib/collab-sections'
 import type { CollabSectionId, CollabSections } from '#/lib/collab-sections'
+import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_RAIL_STICKY_CLASS } from '#/lib/atlas/layout'
 import { TabsContent } from '#/components/ui'
@@ -221,7 +222,7 @@ export function CollabScreen({
               count={
                 data.messageCount === null || data.messageCount === 0
                   ? undefined
-                  : new Intl.NumberFormat(locale).format(data.messageCount)
+                  : formatNumber(data.messageCount, locale)
               }
               className="xl:max-h-[inherit]"
               bodyClassName="flex min-h-0 flex-col px-5 py-3"

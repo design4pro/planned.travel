@@ -1,6 +1,6 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { I18nProvider } from '#/lib/i18n'
 import {
   namespaceCatalogue,
@@ -66,8 +66,8 @@ const base: CollabScreenData = {
   timeZone: 'UTC',
 }
 
-function panelCount(data: CollabScreenData) {
-  render(
+function screenOf(data: CollabScreenData) {
+  return (
     <I18nProvider locale="en" messages={catalogue}>
       <CollabScreen
         data={data}
@@ -75,8 +75,12 @@ function panelCount(data: CollabScreenData) {
         canModerate={false}
         ownWrite={{ current: false }}
       />
-    </I18nProvider>,
+    </I18nProvider>
   )
+}
+
+function panelCount(data: CollabScreenData) {
+  render(screenOf(data))
   return screen.queryByText('400')
 }
 
@@ -95,6 +99,17 @@ describe('the conversation count', () => {
   it('agrees between header and panel and keeps the singular form', () => {
     const one = { ...base, messages: window50.slice(0, 1), messageCount: 1 }
     expect(collabSummary(one, t, 'en')).toBe('1 message · 0 notes · 0 polls')
+    render(screenOf(one))
+    expect(screen.getByText('1')).toBeTruthy()
+  })
+
+  it('groups the panel count the way the header does', () => {
+    const long = { ...base, messageCount: 12_345 }
+    expect(collabSummary(long, t, 'en')).toBe(
+      '12,345 messages · 0 notes · 0 polls',
+    )
+    render(screenOf(long))
+    expect(screen.getByText('12,345')).toBeTruthy()
   })
 
   it('prints no conversation count while the conversation is off', () => {
@@ -105,6 +120,27 @@ describe('the conversation count', () => {
     }
     expect(collabSummary(off, t, 'en')).toBe('0 notes · 0 polls')
     expect(panelCount(off)).toBeNull()
+  })
+
+  it('prints no count in a panel a draft keeps open after the conversation is switched off', () => {
+    const { rerender } = render(screenOf(base))
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Message the trip' }),
+      {
+        target: { value: 'still typing' },
+      },
+    )
+    rerender(
+      screenOf({
+        ...base,
+        sections: { conversation: false, notes: true, polls: true },
+        messageCount: null,
+      }),
+    )
+    expect(
+      screen.getByRole('textbox', { name: 'Message the trip' }),
+    ).toBeTruthy()
+    expect(screen.queryByText('400')).toBeNull()
   })
 
   it('says nothing is shared only when nothing exists anywhere', () => {
