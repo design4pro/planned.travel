@@ -7,6 +7,7 @@
  * rule (a tombstone, an older page) is a further clause rather than a reshaped
  * render.
  */
+import type { MessageData } from './types'
 import { dayKeyIn } from '#/lib/time'
 
 /** A quick exchange stays one run; a longer silence starts a new one. */
@@ -128,4 +129,63 @@ export function isJumboGlyphs(body: string): boolean {
     glyphs.length <= MAX_JUMBO_GLYPHS &&
     glyphs.every((glyph) => EMOJI_GRAPHEME.test(glyph))
   )
+}
+
+/** The loader owns its whole id range, including rows a peer removed. */
+export function mergeThread(
+  held: ReadonlyArray<MessageData>,
+  window: ReadonlyArray<MessageData>,
+): ReadonlyArray<MessageData> {
+  const oldest = window[0]?.id
+  if (oldest === undefined) return []
+  const newestHeld = held.at(-1)?.id
+  const contiguous = newestHeld !== undefined && oldest <= newestHeld
+  const rows = new Map(
+    held
+      .filter((row) => contiguous && row.id < oldest)
+      .map((row) => [row.id, row]),
+  )
+  for (const row of window) rows.set(row.id, row)
+  return [...rows.values()].sort((a, b) =>
+    a.id < b.id ? -1 : Number(a.id > b.id),
+  )
+}
+
+export function removeMessage(
+  held: ReadonlyArray<MessageData>,
+  id: string,
+): ReadonlyArray<MessageData> {
+  return held.filter((row) => row.id !== id)
+}
+
+export function editMessage(
+  held: ReadonlyArray<MessageData>,
+  id: string,
+  body: string,
+  editedAt: string,
+): ReadonlyArray<MessageData> {
+  return held.map((row) => (row.id === id ? { ...row, body, editedAt } : row))
+}
+
+export function setViewerReaction(
+  held: ReadonlyArray<MessageData>,
+  id: string,
+  viewer: string,
+  emoji: string,
+  added: boolean,
+): ReadonlyArray<MessageData> {
+  return held.map((row) => {
+    if (row.id !== id) return row
+    const previous = row.reactions.find((entry) => entry.emoji === emoji)
+    const wasAdded = previous?.userIds.includes(viewer) ?? false
+    if (wasAdded === added) return row
+    const userIds = (previous?.userIds ?? []).filter(
+      (userId) => userId !== viewer,
+    )
+    if (added) userIds.push(viewer)
+    const count = (previous?.count ?? 0) + (added ? 1 : -1)
+    const reactions = row.reactions.filter((entry) => entry.emoji !== emoji)
+    if (count > 0) reactions.push({ emoji, count, userIds })
+    return { ...row, reactions }
+  })
 }
