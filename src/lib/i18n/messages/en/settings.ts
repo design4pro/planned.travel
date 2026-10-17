@@ -513,14 +513,14 @@ const messages = {
    */
   'billing.plan.free.name': 'Free',
   'billing.plan.free.tagline': 'Plan your next two trips',
-  'billing.plan.free.feature.trips': 'Two trips at a time',
+  'billing.plan.free.feature.trips': 'Two trips at a time and up to 150 places',
   'billing.plan.free.feature.itinerary': 'Day-by-day itinerary and map',
   'billing.plan.free.feature.lists': 'Packing lists and simple budgets',
   'billing.plan.free.feature.atlas':
     'The world map that tracks where you have been',
   'billing.plan.solo.name': 'Solo',
   'billing.plan.solo.tagline': 'For the traveller who plans everything',
-  'billing.plan.solo.feature.trips': 'Unlimited trips',
+  'billing.plan.solo.feature.trips': 'Unlimited trips and places',
   'billing.plan.solo.feature.modules':
     'Every planning module — reservations, journal, budgets, packing',
   'billing.plan.solo.feature.offline':
@@ -531,7 +531,8 @@ const messages = {
   'billing.plan.crew.feature.members': 'Up to ten members, billed per person',
   'billing.plan.crew.feature.realtime':
     'Real-time collaboration with live cursors',
-  'billing.plan.crew.feature.everything': 'Unlimited trips and every module',
+  'billing.plan.crew.feature.everything':
+    'Unlimited trips, places and every module',
   'billing.plan.crew.feature.storage':
     'Shared room for everyone’s photos and documents',
 

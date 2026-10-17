@@ -434,13 +434,14 @@ const messages = {
   'billing.interval.yearly': 'سنويًا',
   'billing.plan.free.name': 'مجانية',
   'billing.plan.free.tagline': 'خطّط لرحلتيك القادمتين',
-  'billing.plan.free.feature.trips': 'رحلتان في وقت واحد',
+  'billing.plan.free.feature.trips':
+    'رحلتان في وقت واحد وما يصل إلى 150 مكانًا',
   'billing.plan.free.feature.itinerary': 'برنامج يوم بيوم وخريطة',
   'billing.plan.free.feature.lists': 'قوائم حزم وميزانيات بسيطة',
   'billing.plan.free.feature.atlas': 'خريطة العالم التي تتابع أين كنت',
   'billing.plan.solo.name': 'فردية',
   'billing.plan.solo.tagline': 'للمسافر الذي يخطط لكل شيء',
-  'billing.plan.solo.feature.trips': 'رحلات بلا حدود',
+  'billing.plan.solo.feature.trips': 'رحلات وأماكن بلا حدود',
   'billing.plan.solo.feature.modules':
     'كل وحدات التخطيط — الحجوزات واليوميات والميزانيات والحزم',
   'billing.plan.solo.feature.offline': 'خرائط دون اتصال تنزّلها قبل الطيران',
@@ -449,7 +450,7 @@ const messages = {
   'billing.plan.crew.tagline': 'للعائلات والأصدقاء والفرق الصغيرة',
   'billing.plan.crew.feature.members': 'حتى عشرة أعضاء، بفاتورة لكل شخص',
   'billing.plan.crew.feature.realtime': 'تعاون فوري بمؤشرات حيّة',
-  'billing.plan.crew.feature.everything': 'رحلات بلا حدود وكل الوحدات',
+  'billing.plan.crew.feature.everything': 'رحلات وأماكن بلا حدود وكل الوحدات',
   'billing.plan.crew.feature.storage': 'مساحة مشتركة لصور الجميع ومستنداتهم',
 
   'billing.plan.current': 'الخطة الحالية',
