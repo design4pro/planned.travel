@@ -19,7 +19,7 @@
  *   later edit to the builder can emit them; the test captures the SQL to keep it that way.
  */
 
-import { asc, eq, exists, inArray, isNull, sql } from 'drizzle-orm'
+import { asc, desc, eq, exists, inArray, isNull, sql } from 'drizzle-orm'
 import {
   calendarFeeds,
   newId,
@@ -40,18 +40,25 @@ import { hashFeedSecret, mintFeedSecret } from '#/server/calendar/secret'
 import { NotFoundError } from './context'
 import type { Database } from '#/server/db/types'
 import type { SQL } from 'drizzle-orm'
-import { ID_FILTER_CHUNK, readableTripFilter, requireTrip } from './trips'
+import { FEED_TRIP_CAP } from '#/lib/calendar/feeds'
+import {
+  ID_FILTER_CHUNK,
+  memberTripIds,
+  readableTripFilter,
+  requireTrip,
+} from './trips'
 import type { FeedSource } from '#/server/calendar/feed'
 import type { TenantScope } from './base'
 
 /**
- * Which trips a calendar covers. One kind today — an explicit list; a later kind (every trip the
- * reader is on) is another variant, not another function.
+ * Explicit trips for a snapshot, or the current non-archived trips the owner is on.
  */
-export type FeedSelection = {
-  readonly kind: 'trips'
-  readonly tripIds: ReadonlyArray<string>
-}
+export type FeedSelection =
+  | {
+      readonly kind: 'trips'
+      readonly tripIds: ReadonlyArray<string>
+    }
+  | { readonly kind: 'member-trips' }
 
 const EMPTY_SOURCE: FeedSource = {
   trips: [],
@@ -76,12 +83,15 @@ export async function readFeedSource(
   scope: TenantScope,
   selection: FeedSelection,
 ): Promise<FeedSource> {
-  if (selection.tripIds.length > ID_FILTER_CHUNK) {
+  if (
+    selection.kind === 'trips' &&
+    selection.tripIds.length > ID_FILTER_CHUNK
+  ) {
     throw new RangeError(
       `A calendar covers at most ${ID_FILTER_CHUNK} trips, got ${selection.tripIds.length}`,
     )
   }
-  if (selection.tripIds.length === 0) {
+  if (selection.kind === 'trips' && selection.tripIds.length === 0) {
     return EMPTY_SOURCE
   }
 
@@ -97,11 +107,29 @@ export async function readFeedSource(
     .from(trips)
     .where(
       allOf(
-        tenantFilter(scope, trips, inArray(trips.id, [...selection.tripIds])),
+        tenantFilter(
+          scope,
+          trips,
+          selection.kind === 'trips'
+            ? inArray(trips.id, [...selection.tripIds])
+            : allOf(
+                inArray(trips.id, memberTripIds(scope, scope.ctx.userId)),
+                eq(trips.isArchived, false),
+              ),
+        ),
         readableTripFilter(scope),
       ),
     )
-    .orderBy(asc(trips.id))
+    .orderBy(
+      ...(selection.kind === 'trips'
+        ? [asc(trips.id)]
+        : [
+            asc(sql`${trips.startDate} is null`),
+            desc(trips.startDate),
+            asc(trips.id),
+          ]),
+    )
+    .limit(selection.kind === 'trips' ? ID_FILTER_CHUNK : FEED_TRIP_CAP)
   if (tripRows.length === 0) {
     return EMPTY_SOURCE
   }
@@ -468,12 +496,15 @@ export async function getFeed(scope: TenantScope, feedId: string) {
     row.revokedAt === null ? await liveFeedScope(scope.db, row) : null
   const on =
     liveScope !== null &&
-    row.scope === 'trip' &&
-    (await tripAccess(liveScope, row))
+    (row.scope === 'workspace' ||
+      (row.scope === 'trip' && (await tripAccess(liveScope, row))))
   return { id: row.id, tripId: row.tripId, on, lastServedAt: row.lastServedAt }
 }
 
-export async function listFeeds(scope: TenantScope, input: { tripId: string }) {
+export async function listFeeds(
+  scope: TenantScope,
+  input: { tripId: string; scope?: 'trip' } | { scope: 'workspace' },
+) {
   const rows = await scope.db
     .select({ id: calendarFeeds.id })
     .from(calendarFeeds)
@@ -482,8 +513,10 @@ export async function listFeeds(scope: TenantScope, input: { tripId: string }) {
         scope,
         calendarFeeds,
         eq(calendarFeeds.userId, scope.ctx.userId),
-        eq(calendarFeeds.scope, 'trip'),
-        eq(calendarFeeds.tripId, input.tripId),
+        eq(calendarFeeds.scope, input.scope ?? 'trip'),
+        input.scope === 'workspace'
+          ? isNull(calendarFeeds.tripId)
+          : eq(calendarFeeds.tripId, input.tripId),
       ),
     )
     .limit(1)
@@ -492,22 +525,26 @@ export async function listFeeds(scope: TenantScope, input: { tripId: string }) {
 
 export async function enableFeed(
   scope: TenantScope,
-  input: { scope: 'trip'; tripId: string },
+  input: { scope: 'trip'; tripId: string } | { scope: 'workspace' },
 ) {
-  const trip = await requireTrip(scope, input.tripId)
-  const [membership] = await scope.db
-    .select({ id: tripMembers.id })
-    .from(tripMembers)
-    .where(
-      tenantFilter(
-        scope,
-        tripMembers,
-        eq(tripMembers.tripId, input.tripId),
-        eq(tripMembers.userId, scope.ctx.userId),
-      ),
-    )
-    .limit(1)
-  if (!membership) throw new NotFoundError('Trip', input.tripId)
+  let tripTitle = 'planned.travel'
+  if (input.scope === 'trip') {
+    const trip = await requireTrip(scope, input.tripId)
+    tripTitle = trip.title
+    const [membership] = await scope.db
+      .select({ id: tripMembers.id })
+      .from(tripMembers)
+      .where(
+        tenantFilter(
+          scope,
+          tripMembers,
+          eq(tripMembers.tripId, input.tripId),
+          eq(tripMembers.userId, scope.ctx.userId),
+        ),
+      )
+      .limit(1)
+    if (!membership) throw new NotFoundError('Trip', input.tripId)
+  }
   const secret = mintFeedSecret()
   const now = new Date()
   const tokenDigest = await hashFeedSecret(secret)
@@ -517,18 +554,24 @@ export async function enableFeed(
       id: newId(),
       organizationId: scope.ctx.organizationId,
       userId: scope.ctx.userId,
-      tripId: input.tripId,
-      scope: 'trip',
+      tripId: input.scope === 'trip' ? input.tripId : null,
+      scope: input.scope,
       tokenDigest,
       rotatedAt: now,
     })
     .onConflictDoUpdate({
-      target: [
-        calendarFeeds.organizationId,
-        calendarFeeds.userId,
-        calendarFeeds.tripId,
-      ],
-      targetWhere: sql`${calendarFeeds.scope} = 'trip'`,
+      target:
+        input.scope === 'trip'
+          ? [
+              calendarFeeds.organizationId,
+              calendarFeeds.userId,
+              calendarFeeds.tripId,
+            ]
+          : [calendarFeeds.organizationId, calendarFeeds.userId],
+      targetWhere:
+        input.scope === 'trip'
+          ? sql`${calendarFeeds.scope} = 'trip'`
+          : sql`${calendarFeeds.scope} = 'workspace'`,
       set: {
         tokenDigest,
         revokedAt: null,
@@ -539,7 +582,7 @@ export async function enableFeed(
     })
     .returning({ id: calendarFeeds.id })
   if (!row) throw new Error('Feed insert returned no row')
-  return { feedId: row.id, secret, tripTitle: trip.title }
+  return { feedId: row.id, secret, tripTitle }
 }
 
 /** Replace only a currently usable owner-bound credential; never rearm a refused feed. */
@@ -549,13 +592,17 @@ export async function rotateFeed(scope: TenantScope, feedId: string) {
     row.revokedAt === null ? await liveFeedScope(scope.db, row) : null
   if (
     !liveScope ||
-    row.scope !== 'trip' ||
-    !row.tripId ||
-    !(await tripAccess(liveScope, row))
+    (row.scope !== 'workspace' &&
+      (row.scope !== 'trip' ||
+        !row.tripId ||
+        !(await tripAccess(liveScope, row))))
   ) {
     throw new NotFoundError('Calendar feed', feedId)
   }
-  const trip = await requireTrip(liveScope, row.tripId)
+  const tripTitle =
+    row.scope === 'workspace'
+      ? 'planned.travel'
+      : (await requireTrip(liveScope, row.tripId ?? '')).title
   const secret = mintFeedSecret()
   const tokenDigest = await hashFeedSecret(secret)
   const now = new Date()
@@ -577,17 +624,19 @@ export async function rotateFeed(scope: TenantScope, feedId: string) {
             .innerJoin(user, eq(user.id, member.userId))
             .where(activeOwnerFilter(scope, now)),
         ),
-        exists(
-          scope.db
-            .select({ id: tripMembers.id })
-            .from(tripMembers)
-            .where(armedTripMembershipFilter(scope, row.tripId)),
-        ),
+        row.scope === 'trip' && row.tripId
+          ? exists(
+              scope.db
+                .select({ id: tripMembers.id })
+                .from(tripMembers)
+                .where(armedTripMembershipFilter(scope, row.tripId)),
+            )
+          : undefined,
       ),
     )
     .returning({ id: calendarFeeds.id })
   if (changed.length === 0) throw new NotFoundError('Calendar feed', feedId)
-  return { feedId, secret, tripTitle: trip.title }
+  return { feedId, secret, tripTitle }
 }
 
 export async function revokeFeed(

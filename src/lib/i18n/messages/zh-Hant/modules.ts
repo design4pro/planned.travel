@@ -1032,6 +1032,12 @@ const messages = {
   },
   'files.export.allowanceUnlimited': { other: '本月匯出 {count} 次' },
   'files.export.linkGoneViewer': '這份匯出已不再保留。',
+  'files.calendar.tab.trip': '本次旅行',
+  'files.calendar.tab.workspace': '我的旅行',
+  'files.calendar.workspace.warning':
+    '任何持有此連結的人都無需帳戶即可查看你在此工作空間參與且未封存的旅行：開始日期最新的{count}次旅行，新旅行會自動出現。請像密碼一樣保護此連結。',
+  'files.calendar.workspace.nameNote':
+    '此連結在行事曆中顯示為「planned.travel」。若有多個連結，請重新命名。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

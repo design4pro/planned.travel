@@ -1332,6 +1332,12 @@ const messages = {
     other: '{count} exports this month',
   },
   'files.export.linkGoneViewer': 'That export is no longer kept.',
+  'files.calendar.tab.trip': 'This trip',
+  'files.calendar.tab.workspace': 'My trips',
+  'files.calendar.workspace.warning':
+    'Anyone with this link can read every trip you are on in this workspace that is not archived, with no account: the {count} with the latest start dates, and new trips appear on their own. Treat it like a password.',
+  'files.calendar.workspace.nameNote':
+    "This link shows up in your calendar app as 'planned.travel'. Rename it if you have more than one.",
 } as const satisfies NamespaceMessages
 
 export default messages

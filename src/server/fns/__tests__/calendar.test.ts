@@ -6,6 +6,7 @@ import { createTrip } from '#/server/repos/trips'
 import {
   enableFeed,
   findLiveFeedByDigestUnscoped,
+  listFeeds,
 } from '#/server/repos/calendar-feeds'
 import { hashFeedSecret } from '#/server/calendar/secret'
 import type { TenantScope } from '#/server/repos/base'
@@ -18,13 +19,14 @@ vi.mock('../context', () => ({
   },
 }))
 vi.mock('#/server/auth/env', () => ({ appUrl: () => 'https://app.example' }))
-const { rotateCalendarFeedFn } = await import('../calendar')
+const { rotateCalendarFeedFn, enableCalendarFeedFn } =
+  await import('../calendar')
 
 beforeEach(() => {
   runtime.scope = null
 })
 
-async function call(data: { feedId: string }) {
+async function inRequest(callback: () => Promise<unknown>) {
   const key = Symbol.for('tanstack-start:start-storage-context')
   const globals = globalThis as Record<symbol, unknown>
   globals[key] ??= new AsyncLocalStorage()
@@ -36,11 +38,13 @@ async function call(data: { feedId: string }) {
     method: 'POST',
   })
   return requestHandler(async () => {
-    await storage.run({ startOptions: {}, request }, () =>
-      rotateCalendarFeedFn({ data }),
-    )
+    await storage.run({ startOptions: {}, request }, () => callback())
     return new Response(null, { status: 204 })
   })(request, {})
+}
+
+function call(data: { feedId: string }) {
+  return inRequest(() => rotateCalendarFeedFn({ data }))
 }
 
 it('validates and authorizes the real rotation POST before changing the credential', async () => {
@@ -65,4 +69,34 @@ it('validates and authorizes the real rotation POST before changing the credenti
   expect(await findLiveFeedByDigestUnscoped(h.db, digest)).toBeNull()
   vi.restoreAllMocks()
   h.close()
+})
+
+it('accepts optional workspace scope while legacy calls still create trip credentials', async () => {
+  const h = await createHarness()
+  try {
+    const tenant = await h.seedTenant('workspace-fn')
+    runtime.scope = tenant.scope
+    const trip = await createTrip(tenant.scope, {
+      title: 'Trip feed',
+      currency: 'EUR',
+    })
+    // Outside a Start build the handler runs but its return is discarded; inspect persisted effects.
+    const legacy = await inRequest(() =>
+      enableCalendarFeedFn({ data: { tripId: trip.id } }),
+    )
+    expect(legacy.status).toBe(204)
+    const workspace = await inRequest(() =>
+      enableCalendarFeedFn({ data: { tripId: trip.id, scope: 'workspace' } }),
+    )
+    expect(workspace.status).toBe(204)
+    const tripFeeds = await listFeeds(tenant.scope, { tripId: trip.id })
+    const workspaceFeeds = await listFeeds(tenant.scope, { scope: 'workspace' })
+    expect(tripFeeds).toHaveLength(1)
+    expect(workspaceFeeds).toHaveLength(1)
+    expect(tripFeeds[0]).toMatchObject({ tripId: trip.id, on: true })
+    expect(workspaceFeeds[0]).toMatchObject({ tripId: null, on: true })
+    expect(workspaceFeeds[0].id).not.toBe(tripFeeds[0].id)
+  } finally {
+    h.close()
+  }
 })
