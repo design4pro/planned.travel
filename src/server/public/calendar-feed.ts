@@ -109,18 +109,21 @@ export async function serveCalendarFeed(
     const found = await findLiveFeedByDigestUnscoped(runtime.db, tokenDigest)
     if (!found) return refuse()
     const scope = await openFeedScope(runtime.db, found, now)
+    if (!scope || (found.scope !== 'trip' && found.scope !== 'workspace'))
+      return refuse('owner-gone', found.id)
     if (
-      !scope ||
-      found.scope !== 'trip' ||
-      !found.tripId ||
-      !(await feedTripAccess(scope, found))
+      found.scope === 'trip' &&
+      (!found.tripId || !(await feedTripAccess(scope, found)))
     )
       return refuse('owner-gone', found.id)
-    const source = await readFeedSource(scope, {
-      kind: 'trips',
-      tripIds: [found.tripId],
-    })
-    if (source.trips.length !== 1) return refuse('owner-gone', found.id)
+    const source = await readFeedSource(
+      scope,
+      found.scope === 'workspace'
+        ? { kind: 'member-trips' }
+        : { kind: 'trips', tripIds: [found.tripId ?? ''] },
+    )
+    if (found.scope === 'trip' && source.trips.length !== 1)
+      return refuse('owner-gone', found.id)
     const retry = await spendPublicBudget(
       runtime.store,
       'feed',
@@ -131,7 +134,7 @@ export async function serveCalendarFeed(
     if (retry !== null) {
       emit('limited', {
         feedId: found.id,
-        scope: 'trip',
+        scope: found.scope,
         status: 429,
         reason: 'rate-limited',
       })
@@ -141,7 +144,8 @@ export async function serveCalendarFeed(
     }
     const calendar = buildCalendar(source, {
       baseUrl: runtime.baseUrl,
-      name: source.trips[0].title,
+      name:
+        found.scope === 'workspace' ? 'planned.travel' : source.trips[0].title,
     })
     if (
       found.lastServedAt === null ||
@@ -151,7 +155,7 @@ export async function serveCalendarFeed(
         touchFeed(scope, found.id, now, tokenDigest).catch(() => undefined),
       )
     }
-    emit('served', { feedId: found.id, scope: 'trip', status: 200 })
+    emit('served', { feedId: found.id, scope: found.scope, status: 200 })
     return response(200, calendar, {
       'content-type': 'text/calendar; charset=utf-8',
     })

@@ -20,7 +20,8 @@
  * accept-invitation - plus their shell, their Zod validation messages, and every
  * failure the auth API can surface. Nothing in `src/routes/(auth)/**` may hold
  * an English literal, which is what `-lib/__tests__/copy-rules.test.ts` reads
- * off the shipped sources.
+ * off the shipped sources. Passkey security notice copy also lives here and is
+ * read by `src/server/auth/email.ts`; transactional email currently renders in English.
  *
  * **What is deliberately not here.**
  *
@@ -442,6 +443,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Confirm your email first',
   'error.verifyBeforeJoin.detail':
     'Open the confirmation link we emailed you, then return to this invitation.',
+
+  'passkeyNotice.added': 'A passkey was added to your account',
+  'passkeyNotice.removed': 'A passkey was removed from your account',
+  'passkeyNotice.security': 'Security',
+  'passkeyNotice.action': 'Manage passkeys',
+  'passkeyNotice.recovery':
+    'If you do not recognize this change, change your password and end unfamiliar sessions. A password reset does not remove passkeys. Review your passkeys and remove any you do not recognize.',
 } as const satisfies NamespaceMessages
 
 export default messages

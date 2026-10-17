@@ -10,6 +10,7 @@
 import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import * as z from 'zod'
+import { queueAuthEmail } from '../email'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import type { BetterAuthPlugin } from 'better-auth'
 import {
@@ -447,6 +448,11 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
             },
           })
 
+          await queueAuthEmail({
+            kind: 'auth.passkey-added',
+            to: user.email,
+            eventId: crypto.randomUUID(),
+          })
           return ctx.json({ passkey: toPublicPasskey(created) })
         },
       ),
@@ -712,13 +718,20 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
             })
           }
 
-          await ctx.context.adapter.delete({
+          const removed = await ctx.context.adapter.consumeOne<StoredPasskey>({
             model: 'passkey',
             where: [
               { field: 'id', value: record.id },
               { field: 'userId', value: user.id },
             ],
           })
+          if (removed) {
+            await queueAuthEmail({
+              kind: 'auth.passkey-removed',
+              to: user.email,
+              eventId: crypto.randomUUID(),
+            })
+          }
           return ctx.json({ deleted: true })
         },
       ),

@@ -439,6 +439,16 @@ const messages = {
   'collab.sections.changed': 'Bu seyahatin bölümleri değişti.',
   'collab.sections.savedHidden':
     'Kaydedildi. Bu bölüm seyahat için gizli olduğundan şimdi kapanıyor.',
+  'plan.place.error.save': 'Yer kaydedilemedi. Birazdan tekrar deneyin.',
+  'plan.stop.error.saveTimes':
+    'Durak saatleri kaydedilemedi. Birazdan tekrar deneyin.',
+  'plan.place.error.delete': 'Yer silinemedi. Birazdan tekrar deneyin.',
+  'plan.pin.error.move': 'İşaretçi taşınamadı. Birazdan tekrar deneyin.',
+  'plan.place.toast.created': 'Yer eklendi',
+  'plan.place.toast.updated': 'Yer güncellendi',
+  'plan.stop.toast.timesSaved': 'Durak saatleri kaydedildi',
+  'plan.place.toast.deleted': 'Yer silindi',
+  'plan.pin.toast.moved': '{name} işaretlendi',
 } satisfies TranslationOf<typeof En>
 
 export default messages

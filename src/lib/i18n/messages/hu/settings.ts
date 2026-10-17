@@ -432,14 +432,15 @@ const messages = {
   'billing.interval.yearly': 'Éves',
   'billing.plan.free.name': 'Ingyenes',
   'billing.plan.free.tagline': 'Tervezze meg a következő két utazását',
-  'billing.plan.free.feature.trips': 'Két utazás egyszerre',
+  'billing.plan.free.feature.trips':
+    'Két utazás egyszerre és legfeljebb 150 hely',
   'billing.plan.free.feature.itinerary': 'Napra bontott útiterv és térkép',
   'billing.plan.free.feature.lists': 'Csomaglisták és egyszerű költségvetések',
   'billing.plan.free.feature.atlas':
     'A világtérkép, amely számon tartja, hol járt',
   'billing.plan.solo.name': 'Egyéni',
   'billing.plan.solo.tagline': 'Az utazónak, aki mindent megtervez',
-  'billing.plan.solo.feature.trips': 'Korlátlan utazás',
+  'billing.plan.solo.feature.trips': 'Korlátlan utazás és hely',
   'billing.plan.solo.feature.modules':
     'Minden tervezőmodul — foglalások, napló, költségvetések, csomagolás',
   'billing.plan.solo.feature.offline':
@@ -451,7 +452,8 @@ const messages = {
     'Legfeljebb tíz tag, fejenkénti számlázással',
   'billing.plan.crew.feature.realtime':
     'Valós idejű együttműködés élő kurzorokkal',
-  'billing.plan.crew.feature.everything': 'Korlátlan utazás és minden modul',
+  'billing.plan.crew.feature.everything':
+    'Korlátlan utazás és hely, valamint minden modul',
   'billing.plan.crew.feature.storage':
     'Közös hely mindenki fotóinak és dokumentumainak',
 

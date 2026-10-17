@@ -38,6 +38,7 @@ export async function handleEmail(
           'content-type': 'application/json',
           // Provider-side idempotency: a queue redelivery cannot double-send.
           'idempotency-key':
+            payload.eventId ??
             `${payload.tag ?? 'email'}:${payload.subject}:${payload.to.join(',')}`.slice(
               0,
               256,

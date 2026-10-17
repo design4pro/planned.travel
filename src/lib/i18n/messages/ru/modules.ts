@@ -1207,6 +1207,12 @@ const messages = {
     other: 'Экспортов в этом месяце: {count}',
   },
   'files.export.linkGoneViewer': 'Этот экспорт больше не хранится.',
+  'files.calendar.tab.trip': 'Эта поездка',
+  'files.calendar.tab.workspace': 'Мои поездки',
+  'files.calendar.workspace.warning':
+    'Любой с этой ссылкой может без аккаунта читать неархивные поездки этого пространства, в которых вы участвуете: {count} с самыми поздними датами начала. Новые поездки появляются автоматически. Защищайте ссылку как пароль.',
+  'files.calendar.workspace.nameNote':
+    'В календаре эта ссылка называется «planned.travel». Переименуйте её, если у вас их несколько.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

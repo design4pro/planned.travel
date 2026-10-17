@@ -66,6 +66,7 @@ import {
   createPoll,
   editMessage,
   listMessages,
+  listReactions,
   postMessage,
   toggleReaction,
 } from '../collab'
@@ -6738,6 +6739,28 @@ describe('tenant isolation', () => {
         }),
       ).rejects.toBeInstanceOf(NotFoundError)
       expect(readForeignTrip()).toEqual(before)
+    })
+  })
+
+  describe('older conversation pages', () => {
+    it('scopes foreign and arbitrary cursors, message ids and reactions without changing B', async () => {
+      const scope = alpha.tenant.scope
+      await postMessage(scope, { tripId: alpha.tripId, body: 'another A message' })
+      const before = await collabRows(beta.tenant.scope)
+      expect((await listMessages(scope, beta.tripId)).items).toEqual([])
+      await expect(
+        collabMessagesRepository.requireById(scope, beta.messageId),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      for (const cursor of [beta.messageId, '~']) {
+        const page = await listMessages(scope, alpha.tripId, { cursor })
+        for (const message of page.items) {
+          expect(message.organizationId).toBe(scope.ctx.organizationId)
+          expect(message.tripId).toBe(alpha.tripId)
+          expect(message.id).not.toBe(beta.messageId)
+        }
+      }
+      expect(await listReactions(scope, [beta.messageId])).toEqual(new Map())
+      expect(await collabRows(beta.tenant.scope)).toEqual(before)
     })
   })
 

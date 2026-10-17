@@ -1122,6 +1122,12 @@ const messages = {
   },
   'files.export.allowanceUnlimited': { other: '{count} ekspor bulan ini' },
   'files.export.linkGoneViewer': 'Ekspor itu tidak lagi disimpan.',
+  'files.calendar.tab.trip': 'Perjalanan ini',
+  'files.calendar.tab.workspace': 'Perjalanan saya',
+  'files.calendar.workspace.warning':
+    'Siapa pun dengan tautan ini dapat membaca tanpa akun perjalanan yang Anda ikuti di ruang kerja ini yang tidak diarsipkan: {count} dengan tanggal mulai terbaru. Perjalanan baru muncul otomatis. Lindungi seperti kata sandi.',
+  'files.calendar.workspace.nameNote':
+    'Tautan ini muncul di kalender Anda sebagai “planned.travel”. Ubah namanya jika Anda memiliki lebih dari satu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -51,6 +51,8 @@ export type TaskKind = (typeof TASK_KINDS)[number]
 /* --------------------------------------------------------------- payloads -- */
 
 export const emailPayloadSchema = z.object({
+  /** Stable per-event delivery identity, retained on queue redelivery. */
+  eventId: z.string().uuid().optional(),
   to: z.array(z.string().email()).min(1).max(50),
   subject: z.string().min(1).max(200),
   html: z.string().min(1).max(200_000),

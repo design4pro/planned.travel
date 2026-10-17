@@ -455,14 +455,14 @@ const messages = {
   'billing.interval.yearly': 'В год',
   'billing.plan.free.name': 'Бесплатный',
   'billing.plan.free.tagline': 'Спланируйте две ближайшие поездки',
-  'billing.plan.free.feature.trips': 'Две поездки одновременно',
+  'billing.plan.free.feature.trips': 'Две поездки одновременно и до 150 мест',
   'billing.plan.free.feature.itinerary': 'Маршрут по дням и карта',
   'billing.plan.free.feature.lists': 'Списки вещей и простые бюджеты',
   'billing.plan.free.feature.atlas':
     'Карта мира, которая помнит посещённые страны',
   'billing.plan.solo.name': 'Соло',
   'billing.plan.solo.tagline': 'Для того, кто планирует всё сам',
-  'billing.plan.solo.feature.trips': 'Поездки без ограничений',
+  'billing.plan.solo.feature.trips': 'Поездки и места без ограничений',
   'billing.plan.solo.feature.modules':
     'Все модули планирования — брони, дневник, бюджеты, сборы',
   'billing.plan.solo.feature.offline': 'Карты офлайн, скачанные ещё до вылета',
@@ -473,7 +473,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Работа вместе в реальном времени с живыми курсорами',
   'billing.plan.crew.feature.everything':
-    'Поездки без ограничений и все модули',
+    'Поездки и места без ограничений и все модули',
   'billing.plan.crew.feature.storage':
     'Общее место для фотографий и документов всей группы',
 

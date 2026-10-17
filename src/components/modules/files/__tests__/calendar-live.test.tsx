@@ -344,3 +344,42 @@ it('gives shared confirmations optional action-specific busy, cancel and focus p
   expect(screen.getByRole('button', { name: 'Keep open' })).toBeTruthy()
   expect(screen.getByText('Turning off…')).toBeTruthy()
 })
+
+it('uses manual tabs and retains each once-revealed link with its own exposure warning', async () => {
+  mount()
+  await reveal()
+  const tripTab = screen.getByRole('tab', { name: 'This trip' })
+  const workspaceTab = screen.getByRole('tab', { name: 'My trips' })
+  tripTab.focus()
+  await userEvent.keyboard('{ArrowRight}')
+  expect(workspaceTab).toBe(document.activeElement)
+  expect(tripTab.getAttribute('aria-selected')).toBe('true')
+  expect(screen.getByRole('region', { name: 'Link address' }).textContent).toBe(
+    url,
+  )
+  await userEvent.keyboard('{Enter}')
+  const enable = await screen.findByRole('button', { name: 'Create a link' })
+  const warning = document.getElementById(
+    enable.getAttribute('aria-describedby') ?? '',
+  )
+  expect(warning?.textContent).toContain('50 with the latest start dates')
+  expect(screen.getByText(/Rename it if you have more than one/)).toBeTruthy()
+  await userEvent.click(enable)
+  expect(stubs.enable).toHaveBeenLastCalledWith({
+    data: { tripId: 'trip-1', scope: 'workspace' },
+  })
+  await userEvent.click(tripTab)
+  expect(
+    await screen.findByRole('region', { name: 'Link address' }),
+  ).toHaveProperty('textContent', url)
+  await userEvent.click(workspaceTab)
+  expect(
+    await screen.findByRole('region', { name: 'Link address' }),
+  ).toHaveProperty('textContent', url)
+  await userEvent.click(screen.getByRole('button', { name: 'Done' }))
+  expect(
+    await screen.findByRole('dialog', {
+      name: 'Close without copying the link?',
+    }),
+  ).toBeTruthy()
+})

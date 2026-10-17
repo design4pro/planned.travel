@@ -24,24 +24,37 @@ export const downloadTripIcsFn = createServerFn({ method: 'GET' })
     tripCalendarResponse(await appScope(), data.tripId, appUrl()),
   )
 
-const tripInput = z.strictObject({ tripId: z.string().trim().min(1).max(64) })
+const tripInput = z.strictObject({
+  tripId: z.string().trim().min(1).max(64),
+  scope: z.enum(['trip', 'workspace']).optional(),
+})
 
 export const loadCalendarFeedsFn = createServerFn({ method: 'GET' })
   .validator(tripInput)
   .handler(async ({ data }) => {
     const scope = await appScope()
     await requireTrip(scope, data.tripId)
-    const feeds = await listFeeds(scope, { tripId: data.tripId })
+    const feeds = await listFeeds(
+      scope,
+      data.scope === 'workspace'
+        ? { scope: 'workspace' }
+        : { tripId: data.tripId },
+    )
     return feeds.at(0) ?? null
   })
 
 export const enableCalendarFeedFn = createServerFn({ method: 'POST' })
   .validator(tripInput)
   .handler(async ({ data }) => {
-    const feed = await enableFeed(await appScope(), {
-      scope: 'trip',
-      tripId: data.tripId,
-    })
+    const feed = await enableFeed(
+      await appScope(),
+      data.scope === 'workspace'
+        ? { scope: 'workspace' }
+        : {
+            scope: 'trip',
+            tripId: data.tripId,
+          },
+    )
     const url = `${appUrl()}/api/feed/${feed.secret}.ics`
     return {
       feedId: feed.feedId,

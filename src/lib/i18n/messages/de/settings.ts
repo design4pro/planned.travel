@@ -438,14 +438,15 @@ const messages = {
   'billing.interval.yearly': 'Jährlich',
   'billing.plan.free.name': 'Gratis',
   'billing.plan.free.tagline': 'Plane deine nächsten zwei Reisen',
-  'billing.plan.free.feature.trips': 'Zwei Reisen gleichzeitig',
+  'billing.plan.free.feature.trips':
+    'Zwei Reisen gleichzeitig und bis zu 150 Orte',
   'billing.plan.free.feature.itinerary': 'Ablauf Tag für Tag, auf der Karte',
   'billing.plan.free.feature.lists': 'Packlisten und einfache Budgets',
   'billing.plan.free.feature.atlas':
     'Die Weltkarte, die festhält, wo du gewesen bist',
   'billing.plan.solo.name': 'Einzel',
   'billing.plan.solo.tagline': 'Für alle, die jede Kleinigkeit selbst planen',
-  'billing.plan.solo.feature.trips': 'Unbegrenzt viele Reisen',
+  'billing.plan.solo.feature.trips': 'Unbegrenzt viele Reisen und Orte',
   'billing.plan.solo.feature.modules':
     'Alle Planungsmodule — Buchungen, Tagebuch, Budgets, Packen',
   'billing.plan.solo.feature.offline':
@@ -458,7 +459,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Zusammenarbeit in Echtzeit, jede Hand sichtbar auf der Karte',
   'billing.plan.crew.feature.everything':
-    'Unbegrenzt viele Reisen und alle Module',
+    'Unbegrenzt viele Reisen und Orte sowie alle Module',
   'billing.plan.crew.feature.storage':
     'Gemeinsamer Platz für die Fotos und Dokumente aller',
 

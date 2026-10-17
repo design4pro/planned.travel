@@ -113,13 +113,17 @@ vi.mock('#/components/map', async (original) => {
 })
 const { PlanScreen } = await import('../plan-screen')
 const messages = await loadCatalogue('en')
+const polishMessages = await loadCatalogue('pl')
 const payload = board([
   day('d1', 1, [stop('s1', 'p1', 0), stop('s2', 'p2', 1)]),
 ])
 
-async function mount(boardPayload = payload) {
+async function mount(boardPayload = payload, locale: 'en' | 'pl' = 'en') {
   return render(
-    <I18nProvider locale="en" messages={messages}>
+    <I18nProvider
+      locale={locale}
+      messages={locale === 'pl' ? polishMessages : messages}
+    >
       <PlanScreen
         payload={boardPayload}
         notes={notes([note('n1', 'd1', 2)])}
@@ -177,9 +181,34 @@ beforeEach(() => {
 })
 
 describe('planner write callers', () => {
+  it('toasts a late place-save failure in Polish', async () => {
+    const pending = deferred()
+    mocks.write.mockReturnValue(pending.promise)
+    await mount(payload, 'pl')
+    await menu('Edit place')
+    submit()
+    await close()
+    await act(async () => pending.reject(new Error('Refused write')))
+    expect(mocks.error).toHaveBeenCalledWith(
+      'Nie udało się zapisać miejsca. Spróbuj ponownie za chwilę.',
+    )
+  })
+
+  it('toasts a pinned place name in Polish', async () => {
+    mocks.write.mockResolvedValue(undefined)
+    await mount(payload, 'pl')
+    await menu('Move its pin')
+    await act(async () => mocks.click?.({ lngLat: { lng: 10, lat: 20 } }))
+    expect(mocks.success).toHaveBeenCalledWith('Przypięto Place p1')
+  })
+
   it.each(
     (['place', 'timing', 'delete', 'note', 'note-delete'] as const).flatMap(
-      (caller) => [false, true].map((replaced) => ({ caller, replaced })),
+      (caller) =>
+        (caller === 'delete' ? [false] : [false, true]).map((replaced) => ({
+          caller,
+          replaced,
+        })),
     ),
   )(
     'routes successful $caller writes (replaced=$replaced)',
@@ -253,13 +282,13 @@ describe('planner write callers', () => {
       await act(async () => pending.reject(new Error('Refused write')))
       if (owner === 'open') {
         expect(screen.getByRole('alert').textContent).toContain(
-          'The place could not be saved. Try again in a moment.',
+          'The place could not be saved. Try it again in a moment.',
         )
         expect(mocks.error).not.toHaveBeenCalled()
       } else {
         expect(screen.queryByRole('alert')).toBeNull()
         expect(mocks.error).toHaveBeenCalledWith(
-          'The place could not be saved. Try again in a moment.',
+          'The place could not be saved. Try it again in a moment.',
         )
       }
     },
@@ -334,7 +363,7 @@ describe('planner write callers', () => {
     },
   )
 
-  it('forgets a selected place after its delete dialog has closed', async () => {
+  it('keeps a delete modal until it lands, then closes it and forgets the selected place', async () => {
     const pending = deferred()
     mocks.write.mockReturnValue(pending.promise)
     await mount()
@@ -349,10 +378,35 @@ describe('planner write callers', () => {
       }),
     )
     await close()
-    await menu('Set a time', 'p2')
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(
+      screen.queryByRole('button', { name: 'Actions for Place p2' }),
+    ).toBeNull()
     await act(async () => pending.resolve())
     expect(screen.getByTestId('selection').textContent).toBe('')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('keeps the place and its error in the delete dialog after a refusal', async () => {
+    const pending = deferred()
+    mocks.write.mockReturnValue(pending.promise)
+    await mount()
+    await menu('Delete from trip')
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Delete place',
+      }),
+    )
+    await act(async () => pending.reject(new Error('Refused delete')))
+    expect(screen.getByRole('alert').textContent).toContain(
+      'The place could not be deleted. Try again in a moment.',
+    )
     expect(screen.getByRole('dialog')).toBeTruthy()
+    await close()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(
+      screen.getAllByRole('button', { name: 'Actions for Place p1' }).length,
+    ).toBeGreaterThan(0)
   })
 
   it('selects a landed pin without opening or closing a dialog', async () => {

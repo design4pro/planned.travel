@@ -441,14 +441,14 @@ const messages = {
   'billing.interval.yearly': 'Anual',
   'billing.plan.free.name': 'Gratuït',
   'billing.plan.free.tagline': 'Prepara els teus dos pròxims viatges',
-  'billing.plan.free.feature.trips': 'Dos viatges alhora',
+  'billing.plan.free.feature.trips': 'Dos viatges alhora i fins a 150 llocs',
   'billing.plan.free.feature.itinerary': 'Itinerari dia a dia i mapa',
   'billing.plan.free.feature.lists':
     'Llistes d’equipatge i pressupostos senzills',
   'billing.plan.free.feature.atlas': 'El mapa del món que marca on has estat',
   'billing.plan.solo.name': 'En solitari',
   'billing.plan.solo.tagline': 'Per a qui s’ho prepara tot',
-  'billing.plan.solo.feature.trips': 'Viatges sense límit',
+  'billing.plan.solo.feature.trips': 'Viatges i llocs sense límit',
   'billing.plan.solo.feature.modules':
     'Tots els mòduls: reserves, diari, pressupostos i equipatge',
   'billing.plan.solo.feature.offline':
@@ -461,7 +461,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Col·laboració en directe, amb els cursors de tothom',
   'billing.plan.crew.feature.everything':
-    'Viatges sense límit i tots els mòduls',
+    'Viatges i llocs sense límit i tots els mòduls',
   'billing.plan.crew.feature.storage':
     'Lloc compartit per a les fotos i els documents de tothom',
 

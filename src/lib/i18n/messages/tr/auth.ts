@@ -374,6 +374,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Önce e-postanızı onaylayın',
   'error.verifyBeforeJoin.detail':
     'Size gönderdiğimiz onay bağlantısını açın, sonra bu davete dönün.',
+
+  'passkeyNotice.added': 'Hesabınıza bir geçiş anahtarı eklendi',
+  'passkeyNotice.removed': 'Hesabınızdan bir geçiş anahtarı kaldırıldı',
+  'passkeyNotice.security': 'Güvenlik',
+  'passkeyNotice.action': 'Geçiş anahtarlarını yönet',
+  'passkeyNotice.recovery':
+    'Bu değişikliği tanımıyorsanız parolanızı değiştirin ve tanımadığınız oturumları sonlandırın. Parolayı sıfırlamak geçiş anahtarlarını kaldırmaz. Geçiş anahtarlarınızı inceleyin ve tanımadıklarınızı kaldırın.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

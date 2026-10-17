@@ -3,13 +3,14 @@
  * board and the polls board.
  *
  * Plain functions in a module no client imports (a client build of a server-function module keeps
- * whatever it still exports). Each takes the already-resolved `Trip`, never a bare id: an exported
- * reader that could be called with an id that skipped `requireTrip` would read a private trip
- * through a tenant-only filter. The screen's loader resolves the trip, visibility included, and
- * hands it down.
+ * whatever it still exports). Payload builders take an already-resolved `Trip`; the older-page
+ * handler resolves it itself with `requireTrip` before reading children. A tenant-only filter
+ * would not protect a private trip from another member of the same workspace.
  */
+import { THREAD_PAGE_SIZE } from '#/lib/collab'
 import { isoOf, isoOfRequired } from '#/server/serialise'
 import {
+  requireTrip,
   listMessages,
   listNotes,
   listPolls,
@@ -18,7 +19,7 @@ import {
 } from '#/server/repos'
 
 import type { PollOption } from '#/server/db/schema'
-import type { Trip } from '#/server/db/types'
+import type { CollabMessage, Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 
 /* ------------------------------------------------------------------ shapes */
@@ -71,14 +72,22 @@ export async function threadPayload(
   scope: TenantScope,
   trip: Trip,
 ): Promise<Array<MessageRow>> {
-  const page = await listMessages(scope, trip.id, { limit: 50 })
+  const page = await listMessages(scope, trip.id, { limit: THREAD_PAGE_SIZE })
+  return messageRows(scope, page.items)
+}
+
+/** Shared wire mapping for the live window and each history page. */
+async function messageRows(
+  scope: TenantScope,
+  items: ReadonlyArray<CollabMessage>,
+): Promise<Array<MessageRow>> {
   const reactions = await listReactions(
     scope,
-    page.items.map((row) => row.id),
+    items.map((row) => row.id),
   )
 
   // The repository pages newest-first; a transcript reads oldest-first.
-  return [...page.items].reverse().map((row) => ({
+  return [...items].reverse().map((row) => ({
     id: row.id,
     userId: row.userId,
     body: row.body,
@@ -138,4 +147,20 @@ export async function pollsPayload(
       }),
     }
   })
+}
+
+/** Resolve visibility before a cursor can narrow any child read. */
+export async function loadOlderMessages(
+  scope: TenantScope,
+  data: { readonly tripId: string; readonly cursor: string },
+): Promise<{ messages: Array<MessageRow>; exhausted: boolean }> {
+  const trip = await requireTrip(scope, data.tripId)
+  const page = await listMessages(scope, trip.id, {
+    limit: THREAD_PAGE_SIZE,
+    cursor: data.cursor,
+  })
+  return {
+    messages: await messageRows(scope, page.items),
+    exhausted: page.nextCursor === null,
+  }
 }

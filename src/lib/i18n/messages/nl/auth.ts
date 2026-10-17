@@ -383,6 +383,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Bevestig eerst je e-mail',
   'error.verifyBeforeJoin.detail':
     'Open de bevestigingslink die we je mailden en kom dan terug naar deze uitnodiging.',
+
+  'passkeyNotice.added': 'Er is een passkey aan je account toegevoegd',
+  'passkeyNotice.removed': 'Er is een passkey uit je account verwijderd',
+  'passkeyNotice.security': 'Beveiliging',
+  'passkeyNotice.action': 'Passkeys beheren',
+  'passkeyNotice.recovery':
+    'Herken je deze wijziging niet, wijzig dan je wachtwoord en beëindig onbekende sessies. Een wachtwoordreset verwijdert geen passkeys. Controleer je passkeys en verwijder degene die je niet herkent.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
