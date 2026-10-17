@@ -4,6 +4,7 @@ import { visit, watchConsole } from './helpers/console.ts'
 import { PINNED_YEAR } from './helpers/routes.ts'
 import type { RouteCase } from './helpers/routes.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import { settle } from './helpers/settle.ts'
 
 /**
  * `08-S1` - a traveller sets their own allowance on the leave planner (plan stage 08-S1, ticket
@@ -135,7 +136,10 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       ).toHaveCount(1)
 
       // It is the server's figure, not a local one: a reload shows the same.
+      // Settled, not just loaded: the `finally` below clicks the tile, and a click on the server-
+      // rendered button before hydration opens nothing.
       await page.reload({ waitUntil: 'domcontentloaded' })
+      await settle(page, VACAY)
       await expect(tile(page)).toHaveAttribute(
         'aria-label',
         `Edit days, currently ${next}`,
