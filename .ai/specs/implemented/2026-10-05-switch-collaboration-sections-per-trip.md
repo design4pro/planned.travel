@@ -5,7 +5,7 @@
 | **Status**         | implemented                                        |
 | **Issue**          | #906                                               |
 | **Spec PR**        | #903                                               |
-| **Implementation** | #1271, #1290, #1308, #1328                         |
+| **Implementation** | #1271, #1290, #1308, #1328, #1338                         |
 | **Plan**           | 07-S2 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
@@ -651,5 +651,4 @@ the loader, header counts and section write/refresh wiring.
 `CollabTabs` owns local selection and per-section page scroll positions; `CollabScreen` mounts each
 visible section once through `TabsContent`. CSS hides inactive panels below `xl` and shows every
 panel in the desktop grid. Focus repair chooses the active tab only when its DOM box is rendered.
-The pending route composes `CollabSkeletons` with all three section shapes. The final implementation
-PR is appended to the metadata by the PR-opening step.
+The pending route composes `CollabSkeletons` with all three section shapes. The final implementation is tracked by PR #1338 in the metadata.
