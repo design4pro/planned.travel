@@ -436,6 +436,18 @@ const messages = {
   'plan.workspace.hidePanel': '{label} panel elrejtése',
   'plan.workspace.narrowPanel': '{label} szűkítése',
   'plan.workspace.widenPanel': '{label} szélesítése',
+  'collab.sections.trigger': 'Szakaszok kiválasztása',
+  'collab.sections.menuLabel': 'Megjelenítés az út minden résztvevőjének',
+  'collab.sections.keepOne':
+    'Legalább egy szakasznak bekapcsolva kell maradnia.',
+  'collab.sections.failed': 'A módosítást nem sikerült menteni',
+  'collab.sections.failedBody': 'A menü a jelenleg mentett állapotot mutatja.',
+  'collab.sections.someHidden': 'Egyes szakaszok rejtve vannak ezen az úton.',
+  'collab.sections.turnedOff':
+    'Ezt a szakaszt kikapcsolták az úton. Bezárul, ha elküldöd vagy törlöd a készülő szöveget.',
+  'collab.sections.changed': 'Az út szakaszai megváltoztak.',
+  'collab.sections.savedHidden':
+    'Mentve. Ez a szakasz rejtve van az úton, ezért most bezárul.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

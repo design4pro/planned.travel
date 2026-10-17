@@ -58,6 +58,18 @@ export function PlannerDayTools({
   )
 }
 
+/** The read-only footer shares the editor's link and its partial-day note. */
+export function PlannerDayHandoff({ day }: { readonly day: PlannerDay }) {
+  const handoff = dayHandoff(day.rows)
+  if (handoff === null) return null
+
+  return (
+    <div className="flex flex-col gap-1.5 px-2 pb-2">
+      <DayHandoffLink day={day} handoff={handoff} />
+    </div>
+  )
+}
+
 /**
  * The day's way out to a map application: directions through its placed stops in visiting
  * order, or a point link when only one is placed. A day over the link's waypoint limit says

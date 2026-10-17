@@ -786,7 +786,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, veled együtt',
   'collab.thread.today': 'Ma',
-  'collab.thread.empty': 'Még nincsenek üzenetek',
+  'collab.thread.emptyBody':
+    'Az utazás minden résztvevője egy közös beszélgetést használ. Az itt hozott döntések az utazásnál maradnak, nem szóródnak szét csoportos csevegésekben.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Kezdd el a beszélgetést',
   'collab.toast.reactionFailed': 'A reakció nem lett elmentve',
   'collab.toast.messageDeleted': 'Üzenet törölve',
   'collab.toast.deleteFailed': 'Az üzenet nem lett törölve',
@@ -815,6 +818,18 @@ const messages = {
   'collab.compose.send': 'Üzenet küldése',
   'collab.compose.savingEdit': 'Módosítás mentése folyamatban',
   'collab.compose.save': 'Mentés',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Az Enter elküldi az üzenetet, a Shift és Enter új sort kezd.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Az Escape megnyomásával megszakíthatod.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Az üzenetet a küldés gombbal küldheted el.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Újrapróbálás',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'A módosításaid még a szövegmezőben vannak. Ellenőrizd a kapcsolatot, majd próbáld újra.',
   'collab.hint.sends': 'küld',
   'collab.hint.addsLine': 'új sort kezd',
   'collab.hint.cancels': 'megszakít',
@@ -892,6 +907,61 @@ const messages = {
   'files.action.add': 'Fájlok hozzáadása',
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
+  'files.calendar.live.action': 'Frissülő naptárhivatkozás',
+  'files.calendar.live.title': 'Frissülő naptárhivatkozás',
+  'files.calendar.warning':
+    'A hivatkozás birtokában bárki fiók nélkül elolvashatja az utazás helyeit, időpontjait, címeit és jegyzeteit. Óvd úgy, mint egy jelszót.',
+  'files.calendar.enable.action': 'Hivatkozás létrehozása',
+  'files.calendar.link.once':
+    'Másold ki most - csak egyszer mutatjuk meg. Ha elveszíted, hozz létre új hivatkozást; a régi megszűnik működni.',
+  'files.calendar.link.address': 'A hivatkozás címe',
+  'files.calendar.link.copy': 'Hivatkozás másolása',
+  'files.calendar.link.copied': 'Hivatkozás másolva',
+  'files.calendar.link.copyFailed':
+    'Nem sikerült másolni. Jelöld ki a címet és másold le kézzel.',
+  'files.calendar.link.open': 'Megnyitás a naptáralkalmazásban',
+  'files.calendar.link.google': 'Hozzáadás a Google Naptárhoz',
+  'files.calendar.link.outlook': 'Hozzáadás az Outlookhoz',
+  'files.calendar.link.done': 'Kész',
+  'files.calendar.link.stays':
+    'A visszaigazolási számok, árak és fájlok a planned.travelben maradnak.',
+  'files.calendar.freshness':
+    'A naptáralkalmazásokban a módosítás több óra, néha hosszabb idő után jelenik meg.',
+  'files.calendar.state.on': 'A naptárhivatkozás be van kapcsolva',
+  'files.calendar.state.lastFetched':
+    'Egy naptár utoljára ekkor ellenőrizte a hivatkozást: {when}',
+  'files.calendar.state.neverFetched': 'Még nem töltötték le',
+  'files.calendar.rotate.action': 'Új hivatkozás létrehozása',
+  'files.calendar.rotate.confirmTitle': 'Létrehozol egy új hivatkozást?',
+  'files.calendar.rotate.confirmBody':
+    'A régi hivatkozás most megszűnik működni. Az azt használó naptárak nem frissülnek, amíg meg nem adod nekik az új hivatkozást.',
+  'files.calendar.rotate.busy': 'Új hivatkozás létrehozása…',
+  'files.calendar.error.rotate':
+    'Nem sikerült megerősíteni az új hivatkozás létrehozását. Az aktuális állapot alább látható; szükség esetén próbáld újra.',
+  'files.calendar.rotate.confirm': 'Új hivatkozás létrehozása',
+  'files.calendar.off.action': 'Kikapcsolás',
+  'files.calendar.off.confirmTitle': 'Kikapcsolod ezt a naptárhivatkozást?',
+  'files.calendar.off.confirmBody':
+    'A hivatkozás azonnal leáll. A naptárak megtartják a már letöltött eseményeket, de nem frissítik őket.',
+  'files.calendar.off.confirm': 'Kikapcsolás',
+  'files.calendar.off.busy': 'Kikapcsolás…',
+  'files.calendar.closeGuard.title': 'Bezárod a hivatkozás másolása nélkül?',
+  'files.calendar.closeGuard.body':
+    'Nem tudjuk újra megmutatni. Újat kell majd létrehoznod.',
+  'files.calendar.closeGuard.confirm': 'Bezárás így is',
+  'files.calendar.closeGuard.cancel': 'Maradjon nyitva',
+  'files.calendar.error.enable':
+    'Nem sikerült megerősíteni a hivatkozás létrehozását. Az aktuális állapot alább látható. Ha be van kapcsolva, de nem láttad, kapcsold ki és hozd létre újra.',
+  'files.calendar.error.off':
+    'Nem sikerült megerősíteni a kikapcsolást. Az aktuális állapot alább látható; szükség esetén próbáld újra.',
+  'files.calendar.error.load':
+    'Nem sikerült ellenőrizni az utazás naptárhivatkozását. Próbáld újra.',
+  'files.calendar.retry': 'Újrapróbálás',
+  'files.calendar.off.confirmBodyUnused':
+    'Ezt a hivatkozást még nem használták. Most azonnal leáll.',
+  'files.calendar.link.fallback':
+    'Ha telefonon nem tudod hozzáadni, nyisd meg ezt az oldalt számítógépen.',
+  'files.calendar.link.newTab': 'új lapon nyílik meg',
   'files.calendar.title': 'Naptár',
   'files.calendar.description':
     'Vidd át ezt az utazást a már használt naptáralkalmazásodba.',

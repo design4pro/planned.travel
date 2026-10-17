@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event'
 import { GOOGLE_DIRECTIONS_MAX_STOPS } from '#/lib/geo/handoff'
 import { I18nProvider, LOCALE_TAGS, loadCatalogue } from '#/lib/i18n'
 import { StopMenu } from '../plan-actions'
-import { PlannerDayTools } from '../planner-day-tools'
+import { PlannerDayHandoff, PlannerDayTools } from '../planner-day-tools'
 
 import type { PlannerDay, PlannerRow } from '#/components/planner'
 import type { Locale } from '#/lib/i18n'
@@ -219,5 +219,25 @@ describe('StopMenu — the stop hand-off', () => {
     expect(screen.getByRole('menuitem', { name: 'Edit place' })).toBeDefined()
     expect(screen.queryByRole('menuitem', { name: /Google Maps/ })).toBeNull()
     expect(screen.queryByRole('menuitem', { name: /OpenStreetMap/ })).toBeNull()
+  })
+})
+
+describe('PlannerDayHandoff — read-only day footer', () => {
+  it('keeps the partial-day note and offers no write controls', () => {
+    const total = GOOGLE_DIRECTIONS_MAX_STOPS + 2
+    render(<PlannerDayHandoff day={dayOf(placedRows(total))} />)
+    expect(
+      screen.getByRole('link', {
+        name: `Directions in Google Maps for Day 3, stops: first ${GOOGLE_DIRECTIONS_MAX_STOPS} of ${total} (opens in a new tab)`,
+      }).textContent,
+    ).toContain(`Stops: first ${GOOGLE_DIRECTIONS_MAX_STOPS} of ${total}`)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+  })
+
+  it('renders no footer when the day has no placed stop', () => {
+    const { container } = render(
+      <PlannerDayHandoff day={dayOf([row('1', UNPLACED)])} />,
+    )
+    expect(container.childElementCount).toBe(0)
   })
 })

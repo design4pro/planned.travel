@@ -777,7 +777,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, termasuk kamu',
   'collab.thread.today': 'Hari ini',
-  'collab.thread.empty': 'Belum ada pesan',
+  'collab.thread.emptyBody':
+    'Semua peserta perjalanan ini berbagi satu percakapan. Keputusan yang dibuat di sini tetap tersimpan bersama perjalanan, bukan tercecer di berbagai obrolan grup.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Mulai percakapan',
   'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
   'collab.toast.messageDeleted': 'Pesan dihapus',
   'collab.toast.deleteFailed': 'Pesan tidak dihapus',
@@ -805,6 +808,18 @@ const messages = {
   'collab.compose.send': 'Kirim pesan',
   'collab.compose.savingEdit': 'Menyimpan perubahan',
   'collab.compose.save': 'Simpan',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Tekan Enter untuk mengirim, Shift dan Enter untuk baris baru.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Tekan Escape untuk membatalkan.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Gunakan tombol kirim untuk mengirim pesan.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Coba lagi',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Perubahanmu masih ada di kotak teks. Periksa koneksimu, lalu coba lagi.',
   'collab.hint.sends': 'mengirim',
   'collab.hint.addsLine': 'menambah baris',
   'collab.hint.cancels': 'membatalkan',
@@ -879,6 +894,61 @@ const messages = {
   'files.action.add': 'Tambah berkas',
   'files.action.choose': 'Pilih berkas',
   'files.action.upload': 'Unggah berkas',
+  'files.calendar.live.action': 'Tautan kalender yang diperbarui',
+  'files.calendar.live.title': 'Tautan kalender yang diperbarui',
+  'files.calendar.warning':
+    'Siapa pun dengan tautan ini dapat membaca tempat, waktu, alamat, dan catatan perjalanan tanpa akun. Lindungi seperti kata sandi.',
+  'files.calendar.enable.action': 'Buat tautan',
+  'files.calendar.link.once':
+    'Salin sekarang - kami hanya menampilkannya sekali. Jika hilang, buat tautan baru; tautan lama akan berhenti berfungsi.',
+  'files.calendar.link.address': 'Alamat tautan',
+  'files.calendar.link.copy': 'Salin tautan',
+  'files.calendar.link.copied': 'Tautan disalin',
+  'files.calendar.link.copyFailed':
+    'Tidak dapat menyalin. Pilih alamat lalu salin secara manual.',
+  'files.calendar.link.open': 'Buka di aplikasi kalender',
+  'files.calendar.link.google': 'Tambahkan ke Google Kalender',
+  'files.calendar.link.outlook': 'Tambahkan ke Outlook',
+  'files.calendar.link.done': 'Selesai',
+  'files.calendar.link.stays':
+    'Nomor konfirmasi, harga, dan berkas tetap di planned.travel.',
+  'files.calendar.freshness':
+    'Aplikasi kalender mungkin perlu beberapa jam, terkadang lebih lama, untuk menampilkan perubahan.',
+  'files.calendar.state.on': 'Tautan kalender aktif',
+  'files.calendar.state.lastFetched':
+    'Kalender terakhir memeriksa tautan ini {when}',
+  'files.calendar.state.neverFetched': 'Belum diambil',
+  'files.calendar.rotate.action': 'Buat tautan baru',
+  'files.calendar.rotate.confirmTitle': 'Buat tautan baru?',
+  'files.calendar.rotate.confirmBody':
+    'Tautan lama berhenti berfungsi sekarang. Kalender yang menggunakannya berhenti diperbarui sampai kamu memberikan tautan baru.',
+  'files.calendar.rotate.busy': 'Membuat tautan baru…',
+  'files.calendar.error.rotate':
+    'Kami tidak dapat memastikan tautan baru telah dibuat. Status saat ini ditampilkan di bawah; coba lagi jika perlu.',
+  'files.calendar.rotate.confirm': 'Buat tautan baru',
+  'files.calendar.off.action': 'Nonaktifkan',
+  'files.calendar.off.confirmTitle': 'Nonaktifkan tautan kalender ini?',
+  'files.calendar.off.confirmBody':
+    'Tautan langsung berhenti berfungsi. Kalender menyimpan acara yang sudah diambil, tetapi berhenti memperbaruinya.',
+  'files.calendar.off.confirm': 'Nonaktifkan',
+  'files.calendar.off.busy': 'Menonaktifkan…',
+  'files.calendar.closeGuard.title': 'Tutup tanpa menyalin tautan?',
+  'files.calendar.closeGuard.body':
+    'Kami tidak dapat menampilkannya lagi. Anda harus membuat yang baru.',
+  'files.calendar.closeGuard.confirm': 'Tetap tutup',
+  'files.calendar.closeGuard.cancel': 'Biarkan terbuka',
+  'files.calendar.error.enable':
+    'Pembuatan tautan tidak dapat dipastikan. Status terkini ada di bawah. Jika aktif tetapi Anda belum melihatnya, nonaktifkan lalu buat lagi.',
+  'files.calendar.error.off':
+    'Penonaktifan tautan tidak dapat dipastikan. Status terkini ada di bawah; coba lagi bila perlu.',
+  'files.calendar.error.load':
+    'Tidak dapat memeriksa tautan kalender perjalanan ini. Coba lagi.',
+  'files.calendar.retry': 'Coba lagi',
+  'files.calendar.off.confirmBodyUnused':
+    'Tautan ini belum digunakan. Tautan langsung berhenti berfungsi.',
+  'files.calendar.link.fallback':
+    'Jika tidak dapat menambahkannya di ponsel, buka halaman ini di komputer.',
+  'files.calendar.link.newTab': 'terbuka di tab baru',
   'files.calendar.title': 'Kalender',
   'files.calendar.description':
     'Bawa perjalanan ini ke aplikasi kalender yang sudah kamu pakai.',

@@ -749,7 +749,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}（あなたを含む）',
   'collab.thread.today': '今日',
-  'collab.thread.empty': 'まだメッセージはありません',
+  'collab.thread.emptyBody':
+    'この旅行の参加者全員でひとつのスレッドを共有します。ここで決めたことはグループチャットに散らばらず、旅行と一緒に残ります。',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': '最初のメッセージを書こう',
   'collab.toast.reactionFailed': 'リアクションを保存できませんでした',
   'collab.toast.messageDeleted': 'メッセージを削除しました',
   'collab.toast.deleteFailed': 'メッセージを削除できませんでした',
@@ -778,6 +781,17 @@ const messages = {
   'collab.compose.send': 'メッセージを送信',
   'collab.compose.savingEdit': '編集を保存中',
   'collab.compose.save': '保存',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': 'Enterで送信、ShiftとEnterで改行します。',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Escapeでキャンセルします。',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': '送信ボタンでメッセージを送信します。',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': '再試行',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    '変更内容は入力欄に残っています。接続を確認してから、もう一度お試しください。',
   'collab.hint.sends': 'で送信',
   'collab.hint.addsLine': 'で改行',
   'collab.hint.cancels': 'で取り消し',
@@ -851,6 +865,61 @@ const messages = {
   'files.action.add': 'ファイルを追加',
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
+  'files.calendar.live.action': '自動更新されるカレンダーリンク',
+  'files.calendar.live.title': '自動更新されるカレンダーリンク',
+  'files.calendar.warning':
+    'このリンクを持つ人は、アカウントなしで旅行の場所、時刻、住所、メモを読めます。パスワードと同様に保護してください。',
+  'files.calendar.enable.action': 'リンクを作成',
+  'files.calendar.link.once':
+    '今すぐコピーしてください。表示は一度だけです。紛失した場合は新しいリンクを作成してください。古いリンクは使えなくなります。',
+  'files.calendar.link.address': 'リンクのアドレス',
+  'files.calendar.link.copy': 'リンクをコピー',
+  'files.calendar.link.copied': 'リンクをコピーしました',
+  'files.calendar.link.copyFailed':
+    'コピーできませんでした。アドレスを選択して手動でコピーしてください。',
+  'files.calendar.link.open': 'カレンダーアプリで開く',
+  'files.calendar.link.google': 'Google カレンダーに追加',
+  'files.calendar.link.outlook': 'Outlook に追加',
+  'files.calendar.link.done': '完了',
+  'files.calendar.link.stays':
+    '確認番号、料金、ファイルは planned.travel 内に保管されます。',
+  'files.calendar.freshness':
+    'カレンダーアプリに変更が表示されるまで、数時間またはそれ以上かかることがあります。',
+  'files.calendar.state.on': 'カレンダーリンクは有効です',
+  'files.calendar.state.lastFetched':
+    'カレンダーがこのリンクを最後に確認したのは{when}です',
+  'files.calendar.state.neverFetched': 'まだ取得されていません',
+  'files.calendar.rotate.action': '新しいリンクを作成',
+  'files.calendar.rotate.confirmTitle': '新しいリンクを作成しますか？',
+  'files.calendar.rotate.confirmBody':
+    '古いリンクはすぐに使えなくなります。そのリンクを使っているカレンダーは、新しいリンクを設定するまで更新されなくなります。',
+  'files.calendar.rotate.busy': '新しいリンクを作成中…',
+  'files.calendar.error.rotate':
+    '新しいリンクが作成されたか確認できませんでした。現在の状態は以下に表示されています。必要に応じてもう一度お試しください。',
+  'files.calendar.rotate.confirm': '新しいリンクを作成',
+  'files.calendar.off.action': '無効にする',
+  'files.calendar.off.confirmTitle': 'このカレンダーリンクを無効にしますか？',
+  'files.calendar.off.confirmBody':
+    'リンクはすぐに使えなくなります。取得済みの予定はカレンダーに残りますが、更新されなくなります。',
+  'files.calendar.off.confirm': '無効にする',
+  'files.calendar.off.busy': '無効にしています…',
+  'files.calendar.closeGuard.title': 'リンクをコピーせずに閉じますか？',
+  'files.calendar.closeGuard.body':
+    '再表示はできません。新しいリンクを作成する必要があります。',
+  'files.calendar.closeGuard.confirm': 'そのまま閉じる',
+  'files.calendar.closeGuard.cancel': '開いたままにする',
+  'files.calendar.error.enable':
+    'リンクの作成を確認できませんでした。現在の状態は以下のとおりです。有効なのにリンクを見ていない場合は、無効にして作成し直してください。',
+  'files.calendar.error.off':
+    'リンクの無効化を確認できませんでした。現在の状態は以下のとおりです。必要に応じて再試行してください。',
+  'files.calendar.error.load':
+    'この旅行のカレンダーリンクを確認できませんでした。再試行してください。',
+  'files.calendar.retry': '再試行',
+  'files.calendar.off.confirmBodyUnused':
+    'このリンクはまだ使われていません。すぐに使えなくなります。',
+  'files.calendar.link.fallback':
+    'スマートフォンで追加できない場合は、パソコンでこのページを開いてください。',
+  'files.calendar.link.newTab': '新しいタブで開きます',
   'files.calendar.title': 'カレンダー',
   'files.calendar.description':
     'この旅行を、いつも使っているカレンダーアプリに取り込めます。',

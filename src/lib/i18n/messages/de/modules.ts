@@ -799,7 +799,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, du dabei',
   'collab.thread.today': 'Heute',
-  'collab.thread.empty': 'Noch keine Nachrichten',
+  'collab.thread.emptyBody':
+    'Alle auf dieser Reise teilen einen Gesprächsverlauf. Hier getroffene Entscheidungen bleiben bei der Reise, statt sich über Gruppenchats zu verteilen.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Schreib die erste Nachricht',
   'collab.toast.reactionFailed': 'Die Reaktion wurde nicht gespeichert',
   'collab.toast.messageDeleted': 'Nachricht gelöscht',
   'collab.toast.deleteFailed': 'Die Nachricht wurde nicht gelöscht',
@@ -828,6 +831,19 @@ const messages = {
   'collab.compose.send': 'Nachricht senden',
   'collab.compose.savingEdit': 'Änderung wird gespeichert',
   'collab.compose.save': 'Speichern',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Drücke Enter zum Senden, Shift und Enter für eine neue Zeile.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Drücke Escape zum Abbrechen.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Verwende die Senden-Schaltfläche zum Senden.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Erneut versuchen',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Deine Änderungen stehen noch im Textfeld. Prüfe deine Verbindung und versuche es erneut.',
   'collab.hint.sends': 'sendet',
   'collab.hint.addsLine': 'fügt eine Zeile ein',
   'collab.hint.cancels': 'bricht ab',
@@ -907,6 +923,61 @@ const messages = {
   'files.action.add': 'Dateien hinzufügen',
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
+  'files.calendar.live.action': 'Aktueller Kalenderlink',
+  'files.calendar.live.title': 'Aktueller Kalenderlink',
+  'files.calendar.warning':
+    'Alle mit diesem Link können Orte, Zeiten, Adressen und Notizen dieser Reise ohne Konto lesen. Schütze ihn wie ein Passwort.',
+  'files.calendar.enable.action': 'Link erstellen',
+  'files.calendar.link.once':
+    'Kopiere ihn jetzt - wir zeigen ihn nur einmal. Falls du ihn verlierst, erstelle einen neuen Link; der alte funktioniert dann nicht mehr.',
+  'files.calendar.link.address': 'Linkadresse',
+  'files.calendar.link.copy': 'Link kopieren',
+  'files.calendar.link.copied': 'Link kopiert',
+  'files.calendar.link.copyFailed':
+    'Kopieren fehlgeschlagen. Markiere die Adresse und kopiere sie selbst.',
+  'files.calendar.link.open': 'In deiner Kalender-App öffnen',
+  'files.calendar.link.google': 'Zu Google Kalender hinzufügen',
+  'files.calendar.link.outlook': 'Zu Outlook hinzufügen',
+  'files.calendar.link.done': 'Fertig',
+  'files.calendar.link.stays':
+    'Bestätigungsnummern, Preise und Dateien bleiben in planned.travel.',
+  'files.calendar.freshness':
+    'Kalender-Apps zeigen Änderungen möglicherweise erst nach mehreren Stunden oder später.',
+  'files.calendar.state.on': 'Kalenderlink ist aktiv',
+  'files.calendar.state.lastFetched':
+    'Ein Kalender hat diesen Link zuletzt {when} abgerufen',
+  'files.calendar.state.neverFetched': 'Noch nicht abgerufen',
+  'files.calendar.rotate.action': 'Neuen Link erstellen',
+  'files.calendar.rotate.confirmTitle': 'Neuen Link erstellen?',
+  'files.calendar.rotate.confirmBody':
+    'Der alte Link funktioniert ab sofort nicht mehr. Kalender, die ihn verwenden, werden erst wieder aktualisiert, wenn du ihnen den neuen Link gibst.',
+  'files.calendar.rotate.busy': 'Neuer Link wird erstellt…',
+  'files.calendar.error.rotate':
+    'Wir konnten nicht bestätigen, dass ein neuer Link erstellt wurde. Der aktuelle Status steht unten; versuche es bei Bedarf erneut.',
+  'files.calendar.rotate.confirm': 'Neuen Link erstellen',
+  'files.calendar.off.action': 'Deaktivieren',
+  'files.calendar.off.confirmTitle': 'Diesen Kalenderlink deaktivieren?',
+  'files.calendar.off.confirmBody':
+    'Der Link funktioniert sofort nicht mehr. Kalender behalten vorhandene Termine, aktualisieren sie aber nicht mehr.',
+  'files.calendar.off.confirm': 'Deaktivieren',
+  'files.calendar.off.busy': 'Wird deaktiviert…',
+  'files.calendar.closeGuard.title': 'Ohne Kopieren des Links schließen?',
+  'files.calendar.closeGuard.body':
+    'Wir können ihn nicht erneut zeigen. Du müsstest einen neuen erstellen.',
+  'files.calendar.closeGuard.confirm': 'Trotzdem schließen',
+  'files.calendar.closeGuard.cancel': 'Geöffnet lassen',
+  'files.calendar.error.enable':
+    'Die Erstellung des Links konnte nicht bestätigt werden. Unten steht der aktuelle Status. Wenn ein Link aktiv ist, den du nie gesehen hast, deaktiviere ihn und erstelle ihn erneut.',
+  'files.calendar.error.off':
+    'Die Deaktivierung konnte nicht bestätigt werden. Unten steht der aktuelle Status; versuche es bei Bedarf erneut.',
+  'files.calendar.error.load':
+    'Der Kalenderlink dieser Reise konnte nicht geprüft werden. Versuche es erneut.',
+  'files.calendar.retry': 'Erneut versuchen',
+  'files.calendar.off.confirmBodyUnused':
+    'Dieser Link wurde noch nicht verwendet. Er funktioniert ab sofort nicht mehr.',
+  'files.calendar.link.fallback':
+    'Wenn du ihn am Handy nicht hinzufügen kannst, öffne diese Seite am Computer.',
+  'files.calendar.link.newTab': 'öffnet einen neuen Tab',
   'files.calendar.title': 'Kalender',
   'files.calendar.description':
     'Übernimm diese Reise in die Kalender-App, die du schon nutzt.',

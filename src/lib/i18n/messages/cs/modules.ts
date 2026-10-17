@@ -793,7 +793,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, i ty',
   'collab.thread.today': 'Dnes',
-  'collab.thread.empty': 'Zatím žádné zprávy',
+  'collab.thread.emptyBody':
+    'Všichni účastníci této cesty sdílejí jedno vlákno. Zde přijatá rozhodnutí zůstávají u cesty, místo aby se ztrácela ve skupinových chatech.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Začni konverzaci',
   'collab.toast.reactionFailed': 'Reakce se neuložila',
   'collab.toast.messageDeleted': 'Zpráva smazána',
   'collab.toast.deleteFailed': 'Zpráva nebyla smazána',
@@ -822,6 +825,18 @@ const messages = {
   'collab.compose.send': 'Odeslat zprávu',
   'collab.compose.savingEdit': 'Ukládání úpravy',
   'collab.compose.save': 'Uložit',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Stisknutím Enter zprávu odešleš, Shift a Enter vloží nový řádek.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Stisknutím Escape akci zrušíš.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Zprávu odešli tlačítkem pro odeslání.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Zkusit znovu',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Tvé změny jsou stále v textovém poli. Zkontroluj připojení a zkus to znovu.',
   'collab.hint.sends': 'odešle',
   'collab.hint.addsLine': 'přidá řádek',
   'collab.hint.cancels': 'zruší',
@@ -907,6 +922,61 @@ const messages = {
   'files.action.add': 'Přidat soubory',
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
+  'files.calendar.live.action': 'Aktualizovaný odkaz na kalendář',
+  'files.calendar.live.title': 'Aktualizovaný odkaz na kalendář',
+  'files.calendar.warning':
+    'Kdokoli s tímto odkazem může bez účtu číst místa, časy, adresy a poznámky této cesty. Chraňte jej jako heslo.',
+  'files.calendar.enable.action': 'Vytvořit odkaz',
+  'files.calendar.link.once':
+    'Zkopíruj ho teď - zobrazíme ho jen jednou. Pokud ho ztratíš, vytvoř nový odkaz; starý přestane fungovat.',
+  'files.calendar.link.address': 'Adresa odkazu',
+  'files.calendar.link.copy': 'Kopírovat odkaz',
+  'files.calendar.link.copied': 'Odkaz zkopírován',
+  'files.calendar.link.copyFailed':
+    'Kopírování se nezdařilo. Označte adresu a zkopírujte ji ručně.',
+  'files.calendar.link.open': 'Otevřít v aplikaci kalendáře',
+  'files.calendar.link.google': 'Přidat do Kalendáře Google',
+  'files.calendar.link.outlook': 'Přidat do Outlooku',
+  'files.calendar.link.done': 'Hotovo',
+  'files.calendar.link.stays':
+    'Čísla potvrzení, ceny a soubory zůstávají v planned.travel.',
+  'files.calendar.freshness':
+    'Aplikacím kalendáře může zobrazení změny trvat několik hodin, někdy i déle.',
+  'files.calendar.state.on': 'Odkaz na kalendář je zapnutý',
+  'files.calendar.state.lastFetched':
+    'Kalendář tento odkaz naposledy zkontroloval {when}',
+  'files.calendar.state.neverFetched': 'Dosud nenačteno',
+  'files.calendar.rotate.action': 'Vytvořit nový odkaz',
+  'files.calendar.rotate.confirmTitle': 'Vytvořit nový odkaz?',
+  'files.calendar.rotate.confirmBody':
+    'Starý odkaz nyní přestane fungovat. Kalendáře, které jej používají, se přestanou aktualizovat, dokud jim nezadáš nový odkaz.',
+  'files.calendar.rotate.busy': 'Vytváření nového odkazu…',
+  'files.calendar.error.rotate':
+    'Nepodařilo se potvrdit vytvoření nového odkazu. Aktuální stav je uveden níže; v případě potřeby to zkus znovu.',
+  'files.calendar.rotate.confirm': 'Vytvořit nový odkaz',
+  'files.calendar.off.action': 'Vypnout',
+  'files.calendar.off.confirmTitle': 'Vypnout tento odkaz na kalendář?',
+  'files.calendar.off.confirmBody':
+    'Odkaz ihned přestane fungovat. Kalendáře si ponechají již přijaté události, ale přestanou je aktualizovat.',
+  'files.calendar.off.confirm': 'Vypnout',
+  'files.calendar.off.busy': 'Vypínání…',
+  'files.calendar.closeGuard.title': 'Zavřít bez zkopírování odkazu?',
+  'files.calendar.closeGuard.body':
+    'Nemůžeme jej zobrazit znovu. Budete muset vytvořit nový.',
+  'files.calendar.closeGuard.confirm': 'Přesto zavřít',
+  'files.calendar.closeGuard.cancel': 'Nechat otevřené',
+  'files.calendar.error.enable':
+    'Nepodařilo se potvrdit vytvoření odkazu. Aktuální stav je níže. Pokud je zapnutý, ale neviděli jste jej, vypněte jej a vytvořte znovu.',
+  'files.calendar.error.off':
+    'Nepodařilo se potvrdit vypnutí odkazu. Aktuální stav je níže; podle potřeby to zkuste znovu.',
+  'files.calendar.error.load':
+    'Odkaz na kalendář této cesty se nepodařilo ověřit. Zkuste to znovu.',
+  'files.calendar.retry': 'Zkusit znovu',
+  'files.calendar.off.confirmBodyUnused':
+    'Tento odkaz ještě nikdo nepoužil. Ihned přestane fungovat.',
+  'files.calendar.link.fallback':
+    'Pokud jej nelze přidat v telefonu, otevřete tuto stránku na počítači.',
+  'files.calendar.link.newTab': 'otevře se na nové kartě',
   'files.calendar.title': 'Kalendář',
   'files.calendar.description':
     'Přenes si tento výlet do aplikace kalendáře, kterou už používáš.',

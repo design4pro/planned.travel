@@ -40,7 +40,7 @@ floor guard script; the review now does.
 
 - **SQL only in `src/server/repos`**, through the tenant-scoped base repository; the tenant filter
   must not be removable. `src/server/catalog` is the single stated exception (global tables plus one
-  cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker.
+  cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
   must be invisible to the call. No test, blocker.
 - **A guard added to one writer reaches every sibling writer of that surface in the same PR.** A
@@ -61,11 +61,23 @@ floor guard script; the review now does.
   should-fix in a spec (#846).
 - **`src/components/ui` never fetches data and never imports from `src/server`.**
 - **`src/server/public` returns named, column-whitelisted, read-only projections**, with the tenant
-  scope derived from the resolved share record.
+  scope derived from the resolved share or feed record; feed scopes are built only by
+  `openFeedScope` from the repo-branded `ResolvedFeed`.
 - **`src/server/email` imports no Worker binding**; `src/server/auth/email.ts` owns the message
   union; `src/server/queue/handlers/email.ts` delivers.
 - **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.
   See BACKWARD_COMPATIBILITY.md.
+
+## Mutation recovery (should fix)
+
+- **A failed response or follow-up does not prove the write failed.** Distinguish a committed write,
+  a refusal and an unknown outcome before offering a retry; review a lost-response or failed
+  activation/reload case to ensure the UI reconciles persisted state without inviting a duplicate
+  (#987, #1251, #1207).
+- **A server refusal must recover from the client state that caused it.** Review a stale opening
+  snapshot through the refusal, a current-state re-read (including its failure), a visible localised
+  explanation with usable focus, and the next permitted action; retry must not silently reuse intent
+  invalidated by the refusal (#1241, #1251, #1207).
 
 ## Localisation (blocker)
 
@@ -111,6 +123,11 @@ runner (font swap, badge counts), so a zero-tolerance assertion over the whole p
 and red in CI (#1185 failed three times). #1209 met the same 0.00073 shell shift locally and scoped
 its window to the weather request instead, on a test-engineer verdict; that is how docs/SPEC.md's
 "zero layout shift after paint" is measured.
+
+When a layout-shift test uses a fake clock, mark the observed entry count rather than comparing a
+virtual `performance.now()` with native `PerformanceEntry.startTime`.
+Prove the assertion detects an intentional shift inside its measured section and window; a green
+check without that failing probe is a should-fix (#1209, #1283).
 
 ## Docs and CI (should fix)
 

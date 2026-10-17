@@ -771,7 +771,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, sen dahil',
   'collab.thread.today': 'Bugün',
-  'collab.thread.empty': 'Henüz mesaj yok',
+  'collab.thread.emptyBody':
+    'Bu yolculuktaki herkes tek bir konuşmayı paylaşır. Burada alınan kararlar grup sohbetlerine dağılmak yerine yolculukla birlikte kalır.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Sohbeti başlat',
   'collab.toast.reactionFailed': 'Tepki kaydedilmedi',
   'collab.toast.messageDeleted': 'Mesaj silindi',
   'collab.toast.deleteFailed': 'Mesaj silinmedi',
@@ -799,6 +802,19 @@ const messages = {
   'collab.compose.send': 'Mesajı gönder',
   'collab.compose.savingEdit': 'Değişiklik kaydediliyor',
   'collab.compose.save': 'Kaydet',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Göndermek için Enter, yeni satır için Shift ve Enter tuşlarına bas.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'İptal etmek için Escape tuşuna bas.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Mesajı göndermek için gönder düğmesini kullan.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Tekrar dene',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Değişikliklerin hâlâ metin kutusunda. Bağlantını kontrol edip tekrar dene.',
   'collab.hint.sends': 'gönderir',
   'collab.hint.addsLine': 'satır ekler',
   'collab.hint.cancels': 'iptal eder',
@@ -876,6 +892,61 @@ const messages = {
   'files.action.add': 'Dosya ekle',
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
+  'files.calendar.live.action': 'Güncellenen takvim bağlantısı',
+  'files.calendar.live.title': 'Güncellenen takvim bağlantısı',
+  'files.calendar.warning':
+    'Bu bağlantıya sahip herkes, hesap olmadan gezinin yerlerini, saatlerini, adreslerini ve notlarını okuyabilir. Onu parola gibi koruyun.',
+  'files.calendar.enable.action': 'Bağlantı oluştur',
+  'files.calendar.link.once':
+    'Şimdi kopyalayın - yalnızca bir kez gösteriyoruz. Kaybederseniz yeni bağlantı oluşturun; eski bağlantı çalışmayı durdurur.',
+  'files.calendar.link.address': 'Bağlantı adresi',
+  'files.calendar.link.copy': 'Bağlantıyı kopyala',
+  'files.calendar.link.copied': 'Bağlantı kopyalandı',
+  'files.calendar.link.copyFailed':
+    'Kopyalanamadı. Adresi seçip kendiniz kopyalayın.',
+  'files.calendar.link.open': 'Takvim uygulamanızda aç',
+  'files.calendar.link.google': 'Google Takvim’e ekle',
+  'files.calendar.link.outlook': 'Outlook’a ekle',
+  'files.calendar.link.done': 'Bitti',
+  'files.calendar.link.stays':
+    'Onay numaraları, fiyatlar ve dosyalar planned.travel’da kalır.',
+  'files.calendar.freshness':
+    'Takvim uygulamalarının değişikliği göstermesi birkaç saat, bazen daha uzun sürebilir.',
+  'files.calendar.state.on': 'Takvim bağlantısı açık',
+  'files.calendar.state.lastFetched':
+    'Bir takvim bu bağlantıyı en son {when} kontrol etti',
+  'files.calendar.state.neverFetched': 'Henüz alınmadı',
+  'files.calendar.rotate.action': 'Yeni bağlantı oluştur',
+  'files.calendar.rotate.confirmTitle': 'Yeni bağlantı oluşturulsun mu?',
+  'files.calendar.rotate.confirmBody':
+    'Eski bağlantı artık çalışmaz. Bu bağlantıyı kullanan takvimler, yeni bağlantıyı verene kadar güncellenmez.',
+  'files.calendar.rotate.busy': 'Yeni bağlantı oluşturuluyor…',
+  'files.calendar.error.rotate':
+    'Yeni bağlantının oluşturulduğunu doğrulayamadık. Geçerli durum aşağıda gösteriliyor; gerekirse tekrar deneyin.',
+  'files.calendar.rotate.confirm': 'Yeni bağlantı oluştur',
+  'files.calendar.off.action': 'Kapat',
+  'files.calendar.off.confirmTitle': 'Bu takvim bağlantısı kapatılsın mı?',
+  'files.calendar.off.confirmBody':
+    'Bağlantı hemen çalışmayı bırakır. Takvimler aldıkları etkinlikleri korur ancak güncellemeyi bırakır.',
+  'files.calendar.off.confirm': 'Kapat',
+  'files.calendar.off.busy': 'Kapatılıyor…',
+  'files.calendar.closeGuard.title': 'Bağlantı kopyalanmadan kapatılsın mı?',
+  'files.calendar.closeGuard.body':
+    'Tekrar gösteremeyiz. Yeni bir tane oluşturmanız gerekir.',
+  'files.calendar.closeGuard.confirm': 'Yine de kapat',
+  'files.calendar.closeGuard.cancel': 'Açık tut',
+  'files.calendar.error.enable':
+    'Bağlantının oluşturulduğu doğrulanamadı. Güncel durum aşağıdadır. Açıksa ama hiç görmediyseniz kapatıp yeniden oluşturun.',
+  'files.calendar.error.off':
+    'Bağlantının kapatıldığı doğrulanamadı. Güncel durum aşağıdadır; gerekirse yeniden deneyin.',
+  'files.calendar.error.load':
+    'Bu gezinin takvim bağlantısı kontrol edilemedi. Yeniden deneyin.',
+  'files.calendar.retry': 'Yeniden dene',
+  'files.calendar.off.confirmBodyUnused':
+    'Bu bağlantı henüz kullanılmadı. Hemen çalışmayı bırakır.',
+  'files.calendar.link.fallback':
+    'Telefonunuzda ekleyemiyorsanız bu sayfayı bilgisayarda açın.',
+  'files.calendar.link.newTab': 'yeni sekmede açılır',
   'files.calendar.title': 'Takvim',
   'files.calendar.description':
     'Bu geziyi zaten kullandığın takvim uygulamasına taşı.',

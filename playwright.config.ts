@@ -255,6 +255,8 @@ export default defineConfig({
       ? [
           {
             name: 'mobile-safari',
+            // Write journeys with this tag run once, on Chromium, against the shared fixture.
+            grepInvert: /@chromium-only/,
             dependencies: ['setup'],
             use: {
               ...devices['iPhone 15'],

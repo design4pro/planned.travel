@@ -789,7 +789,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, jij erbij',
   'collab.thread.today': 'Vandaag',
-  'collab.thread.empty': 'Nog geen berichten',
+  'collab.thread.emptyBody':
+    'Iedereen op deze reis deelt één gesprek. Beslissingen die je hier neemt, blijven bij de reis in plaats van verspreid te raken over groepschats.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Begin het gesprek',
   'collab.toast.reactionFailed': 'De reactie is niet opgeslagen',
   'collab.toast.messageDeleted': 'Bericht verwijderd',
   'collab.toast.deleteFailed': 'Het bericht is niet verwijderd',
@@ -818,6 +821,19 @@ const messages = {
   'collab.compose.send': 'Bericht versturen',
   'collab.compose.savingEdit': 'Wijziging wordt opgeslagen',
   'collab.compose.save': 'Opslaan',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Druk op Enter om te verzenden, Shift en Enter voor een nieuwe regel.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Druk op Escape om te annuleren.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Gebruik de verzendknop om het bericht te verzenden.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Opnieuw proberen',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Je wijzigingen staan nog in het tekstvak. Controleer je verbinding en probeer het opnieuw.',
   'collab.hint.sends': 'verstuurt',
   'collab.hint.addsLine': 'voegt een regel toe',
   'collab.hint.cancels': 'annuleert',
@@ -896,6 +912,61 @@ const messages = {
   'files.action.add': 'Bestanden toevoegen',
   'files.action.choose': 'Bestanden kiezen',
   'files.action.upload': 'Bestanden uploaden',
+  'files.calendar.live.action': 'Actuele kalenderlink',
+  'files.calendar.live.title': 'Actuele kalenderlink',
+  'files.calendar.warning':
+    'Iedereen met deze link kan de plaatsen, tijden, adressen en notities van deze reis zonder account lezen. Bescherm hem als een wachtwoord.',
+  'files.calendar.enable.action': 'Link maken',
+  'files.calendar.link.once':
+    'Kopieer hem nu - we tonen hem maar één keer. Maak een nieuwe link als je hem kwijtraakt; de oude werkt dan niet meer.',
+  'files.calendar.link.address': 'Linkadres',
+  'files.calendar.link.copy': 'Link kopiëren',
+  'files.calendar.link.copied': 'Link gekopieerd',
+  'files.calendar.link.copyFailed':
+    'Kopiëren is niet gelukt. Selecteer het adres en kopieer het zelf.',
+  'files.calendar.link.open': 'Openen in je kalenderapp',
+  'files.calendar.link.google': 'Toevoegen aan Google Agenda',
+  'files.calendar.link.outlook': 'Toevoegen aan Outlook',
+  'files.calendar.link.done': 'Klaar',
+  'files.calendar.link.stays':
+    'Bevestigingsnummers, prijzen en bestanden blijven in planned.travel.',
+  'files.calendar.freshness':
+    'Kalenderapps kunnen enkele uren, soms langer, nodig hebben om een wijziging te tonen.',
+  'files.calendar.state.on': 'Kalenderlink is actief',
+  'files.calendar.state.lastFetched':
+    'Een kalender heeft deze link voor het laatst {when} gecontroleerd',
+  'files.calendar.state.neverFetched': 'Nog niet opgehaald',
+  'files.calendar.rotate.action': 'Nieuwe link maken',
+  'files.calendar.rotate.confirmTitle': 'Nieuwe link maken?',
+  'files.calendar.rotate.confirmBody':
+    'De oude link werkt vanaf nu niet meer. Kalenders die deze gebruiken worden pas weer bijgewerkt als je ze de nieuwe link geeft.',
+  'files.calendar.rotate.busy': 'Nieuwe link maken…',
+  'files.calendar.error.rotate':
+    'We konden niet bevestigen dat er een nieuwe link is gemaakt. De huidige status staat hieronder; probeer het zo nodig opnieuw.',
+  'files.calendar.rotate.confirm': 'Nieuwe link maken',
+  'files.calendar.off.action': 'Uitschakelen',
+  'files.calendar.off.confirmTitle': 'Deze kalenderlink uitschakelen?',
+  'files.calendar.off.confirmBody':
+    'De link werkt meteen niet meer. Kalenders behouden ontvangen afspraken, maar werken ze niet meer bij.',
+  'files.calendar.off.confirm': 'Uitschakelen',
+  'files.calendar.off.busy': 'Uitschakelen…',
+  'files.calendar.closeGuard.title': 'Sluiten zonder de link te kopiëren?',
+  'files.calendar.closeGuard.body':
+    'We kunnen hem niet opnieuw tonen. Je moet dan een nieuwe maken.',
+  'files.calendar.closeGuard.confirm': 'Toch sluiten',
+  'files.calendar.closeGuard.cancel': 'Openhouden',
+  'files.calendar.error.enable':
+    'We konden niet bevestigen dat de link is gemaakt. Hieronder staat de huidige status. Staat hij aan maar heb je hem nooit gezien, schakel hem dan uit en maak hem opnieuw.',
+  'files.calendar.error.off':
+    'We konden niet bevestigen dat de link is uitgeschakeld. Hieronder staat de huidige status; probeer het indien nodig opnieuw.',
+  'files.calendar.error.load':
+    'De kalenderlink voor deze reis kon niet worden gecontroleerd. Probeer het opnieuw.',
+  'files.calendar.retry': 'Opnieuw proberen',
+  'files.calendar.off.confirmBodyUnused':
+    'Deze link is nog niet gebruikt. Hij werkt meteen niet meer.',
+  'files.calendar.link.fallback':
+    'Lukt toevoegen niet op je telefoon, open deze pagina dan op een computer.',
+  'files.calendar.link.newTab': 'opent in een nieuw tabblad',
   'files.calendar.title': 'Agenda',
   'files.calendar.description':
     'Neem deze reis mee naar de agenda-app die je al gebruikt.',

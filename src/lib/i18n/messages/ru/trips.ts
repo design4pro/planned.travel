@@ -455,6 +455,19 @@ const messages = {
   'plan.workspace.hidePanel': 'Скрыть панель {label}',
   'plan.workspace.narrowPanel': 'Сузить {label}',
   'plan.workspace.widenPanel': 'Расширить {label}',
+  'collab.sections.trigger': 'Выбрать разделы',
+  'collab.sections.menuLabel': 'Показывать всем участникам поездки',
+  'collab.sections.keepOne':
+    'Хотя бы один раздел должен оставаться включённым.',
+  'collab.sections.failed': 'Изменение не сохранилось',
+  'collab.sections.failedBody':
+    'Меню показывает текущее сохранённое состояние.',
+  'collab.sections.someHidden': 'Некоторые разделы скрыты в этой поездке.',
+  'collab.sections.turnedOff':
+    'Этот раздел отключён для поездки. Он закроется, когда вы отправите или очистите набираемый текст.',
+  'collab.sections.changed': 'Разделы этой поездки изменились.',
+  'collab.sections.savedHidden':
+    'Сохранено. Этот раздел скрыт для поездки и сейчас закроется.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

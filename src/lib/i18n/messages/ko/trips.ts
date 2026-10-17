@@ -415,6 +415,17 @@ const messages = {
   'plan.workspace.hidePanel': '{label} 패널 숨기기',
   'plan.workspace.narrowPanel': '{label} 너비 줄이기',
   'plan.workspace.widenPanel': '{label} 너비 늘리기',
+  'collab.sections.trigger': '섹션 선택',
+  'collab.sections.menuLabel': '이 여행의 모든 참여자에게 표시',
+  'collab.sections.keepOne': '최소 하나의 섹션은 켜져 있어야 합니다.',
+  'collab.sections.failed': '변경 사항이 저장되지 않았습니다',
+  'collab.sections.failedBody': '메뉴에 현재 저장된 상태가 표시됩니다.',
+  'collab.sections.someHidden': '이 여행에서 일부 섹션이 숨겨져 있습니다.',
+  'collab.sections.turnedOff':
+    '이 섹션이 여행 전체에서 꺼졌습니다. 작성 중인 내용을 보내거나 지우면 닫힙니다.',
+  'collab.sections.changed': '이 여행의 섹션이 변경되었습니다.',
+  'collab.sections.savedHidden':
+    '저장되었습니다. 이 섹션은 여행 전체에서 숨겨져 있어 지금 닫힙니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

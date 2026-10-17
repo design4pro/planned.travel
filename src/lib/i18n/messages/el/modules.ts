@@ -793,7 +793,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, μαζί κι εσύ',
   'collab.thread.today': 'Σήμερα',
-  'collab.thread.empty': 'Κανένα μήνυμα ακόμη',
+  'collab.thread.emptyBody':
+    'Όλοι σε αυτό το ταξίδι μοιράζονται μία συνομιλία. Οι αποφάσεις που παίρνετε εδώ μένουν μαζί με το ταξίδι αντί να χάνονται σε ομαδικές συνομιλίες.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Ξεκίνα τη συζήτηση',
   'collab.toast.reactionFailed': 'Η αντίδραση δεν αποθηκεύτηκε',
   'collab.toast.messageDeleted': 'Το μήνυμα διαγράφηκε',
   'collab.toast.deleteFailed': 'Το μήνυμα δεν διαγράφηκε',
@@ -821,6 +824,19 @@ const messages = {
   'collab.compose.send': 'Αποστολή μηνύματος',
   'collab.compose.savingEdit': 'Αποθήκευση της αλλαγής',
   'collab.compose.save': 'Αποθήκευση',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Πάτησε Enter για αποστολή, Shift και Enter για νέα γραμμή.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Πάτησε Escape για ακύρωση.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Χρησιμοποίησε το κουμπί αποστολής για να στείλεις το μήνυμα.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Δοκίμασε ξανά',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Οι αλλαγές σου παραμένουν στο πεδίο κειμένου. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.',
   'collab.hint.sends': 'στέλνει',
   'collab.hint.addsLine': 'προσθέτει γραμμή',
   'collab.hint.cancels': 'ακυρώνει',
@@ -900,6 +916,62 @@ const messages = {
   'files.action.add': 'Πρόσθεσε αρχεία',
   'files.action.choose': 'Διάλεξε αρχεία',
   'files.action.upload': 'Ανέβασε αρχεία',
+  'files.calendar.live.action': 'Σύνδεσμος ενημερωμένου ημερολογίου',
+  'files.calendar.live.title': 'Σύνδεσμος ενημερωμένου ημερολογίου',
+  'files.calendar.warning':
+    'Όποιος έχει αυτόν τον σύνδεσμο μπορεί να διαβάσει τοποθεσίες, ώρες, διευθύνσεις και σημειώσεις του ταξιδιού χωρίς λογαριασμό. Προστατέψτε τον σαν κωδικό.',
+  'files.calendar.enable.action': 'Δημιουργία συνδέσμου',
+  'files.calendar.link.once':
+    'Αντέγραψέ τον τώρα - τον εμφανίζουμε μόνο μία φορά. Αν τον χάσεις, δημιούργησε νέο σύνδεσμο· ο παλιός θα πάψει να λειτουργεί.',
+  'files.calendar.link.address': 'Διεύθυνση συνδέσμου',
+  'files.calendar.link.copy': 'Αντιγραφή συνδέσμου',
+  'files.calendar.link.copied': 'Ο σύνδεσμος αντιγράφηκε',
+  'files.calendar.link.copyFailed':
+    'Η αντιγραφή απέτυχε. Επιλέξτε τη διεύθυνση και αντιγράψτε τη χειροκίνητα.',
+  'files.calendar.link.open': 'Άνοιγμα στην εφαρμογή ημερολογίου',
+  'files.calendar.link.google': 'Προσθήκη στο Ημερολόγιο Google',
+  'files.calendar.link.outlook': 'Προσθήκη στο Outlook',
+  'files.calendar.link.done': 'Τέλος',
+  'files.calendar.link.stays':
+    'Αριθμοί επιβεβαίωσης, τιμές και αρχεία παραμένουν στο planned.travel.',
+  'files.calendar.freshness':
+    'Οι εφαρμογές ημερολογίου μπορεί να χρειαστούν αρκετές ώρες, μερικές φορές περισσότερο, για να εμφανίσουν μια αλλαγή.',
+  'files.calendar.state.on': 'Ο σύνδεσμος ημερολογίου είναι ενεργός',
+  'files.calendar.state.lastFetched':
+    'Ένα ημερολόγιο έλεγξε τελευταία αυτόν τον σύνδεσμο {when}',
+  'files.calendar.state.neverFetched': 'Δεν έχει ανακτηθεί ακόμη',
+  'files.calendar.rotate.action': 'Δημιουργία νέου συνδέσμου',
+  'files.calendar.rotate.confirmTitle': 'Να δημιουργηθεί νέος σύνδεσμος;',
+  'files.calendar.rotate.confirmBody':
+    'Ο παλιός σύνδεσμος παύει να λειτουργεί τώρα. Τα ημερολόγια που τον χρησιμοποιούν σταματούν να ενημερώνονται μέχρι να τους δώσεις τον νέο σύνδεσμο.',
+  'files.calendar.rotate.busy': 'Δημιουργία νέου συνδέσμου…',
+  'files.calendar.error.rotate':
+    'Δεν μπορέσαμε να επιβεβαιώσουμε τη δημιουργία νέου συνδέσμου. Η τρέχουσα κατάσταση εμφανίζεται παρακάτω· δοκίμασε ξανά αν χρειάζεται.',
+  'files.calendar.rotate.confirm': 'Δημιουργία νέου συνδέσμου',
+  'files.calendar.off.action': 'Απενεργοποίηση',
+  'files.calendar.off.confirmTitle':
+    'Απενεργοποίηση αυτού του συνδέσμου ημερολογίου;',
+  'files.calendar.off.confirmBody':
+    'Ο σύνδεσμος παύει αμέσως να λειτουργεί. Τα ημερολόγια κρατούν τα υπάρχοντα συμβάντα αλλά δεν τα ενημερώνουν πλέον.',
+  'files.calendar.off.confirm': 'Απενεργοποίηση',
+  'files.calendar.off.busy': 'Απενεργοποίηση…',
+  'files.calendar.closeGuard.title': 'Κλείσιμο χωρίς αντιγραφή του συνδέσμου;',
+  'files.calendar.closeGuard.body':
+    'Δεν μπορούμε να τον εμφανίσουμε ξανά. Θα πρέπει να δημιουργήσετε νέο.',
+  'files.calendar.closeGuard.confirm': 'Κλείσιμο ούτως ή άλλως',
+  'files.calendar.closeGuard.cancel': 'Διατήρηση ανοιχτού',
+  'files.calendar.error.enable':
+    'Δεν επιβεβαιώθηκε η δημιουργία του συνδέσμου. Η τρέχουσα κατάσταση φαίνεται παρακάτω. Αν είναι ενεργός αλλά δεν τον είδατε, απενεργοποιήστε τον και δημιουργήστε τον ξανά.',
+  'files.calendar.error.off':
+    'Δεν επιβεβαιώθηκε η απενεργοποίηση. Η τρέχουσα κατάσταση φαίνεται παρακάτω· δοκιμάστε ξανά αν χρειάζεται.',
+  'files.calendar.error.load':
+    'Δεν ήταν δυνατός ο έλεγχος του συνδέσμου ημερολογίου του ταξιδιού. Δοκιμάστε ξανά.',
+  'files.calendar.retry': 'Δοκιμή ξανά',
+  'files.calendar.off.confirmBodyUnused':
+    'Αυτός ο σύνδεσμος δεν έχει χρησιμοποιηθεί ακόμη. Παύει αμέσως να λειτουργεί.',
+  'files.calendar.link.fallback':
+    'Αν δεν προστίθεται στο τηλέφωνο, ανοίξτε αυτήν τη σελίδα σε υπολογιστή.',
+  'files.calendar.link.newTab': 'ανοίγει σε νέα καρτέλα',
   'files.calendar.title': 'Ημερολόγιο',
   'files.calendar.description':
     'Πάρε αυτό το ταξίδι στην εφαρμογή ημερολογίου που ήδη χρησιμοποιείς.',

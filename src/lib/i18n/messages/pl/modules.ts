@@ -807,7 +807,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, w tym Ty',
   'collab.thread.today': 'Dzisiaj',
-  'collab.thread.empty': 'Jeszcze żadnych wiadomości',
+  'collab.thread.emptyBody':
+    'Wszyscy uczestnicy tej podróży mają wspólny wątek. Podjęte tu decyzje zostają przy podróży, zamiast ginąć w czatach grupowych.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Napisz jako pierwszy',
   'collab.toast.reactionFailed': 'Reakcja nie zapisała się',
   'collab.toast.messageDeleted': 'Wiadomość usunięta',
   'collab.toast.deleteFailed': 'Wiadomość nie została usunięta',
@@ -836,6 +839,19 @@ const messages = {
   'collab.compose.send': 'Wyślij wiadomość',
   'collab.compose.savingEdit': 'Zapisywanie zmiany',
   'collab.compose.save': 'Zapisz',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Naciśnij Enter, aby wysłać, lub Shift i Enter, aby dodać nowy wiersz.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Naciśnij Escape, aby anulować.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Użyj przycisku wysyłania, aby wysłać wiadomość.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Spróbuj ponownie',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Twoje zmiany nadal są w polu tekstowym. Sprawdź połączenie i spróbuj ponownie.',
   'collab.hint.sends': 'wysyła',
   'collab.hint.addsLine': 'dodaje wiersz',
   'collab.hint.cancels': 'anuluje',
@@ -921,6 +937,61 @@ const messages = {
   'files.action.add': 'Dodaj pliki',
   'files.action.choose': 'Wybierz pliki',
   'files.action.upload': 'Wyślij pliki',
+  'files.calendar.live.action': 'Aktualizowany link kalendarza',
+  'files.calendar.live.title': 'Aktualizowany link kalendarza',
+  'files.calendar.warning':
+    'Każdy z tym linkiem może bez konta odczytać miejsca, godziny, adresy i notatki tej podróży. Chroń go jak hasło.',
+  'files.calendar.enable.action': 'Utwórz link',
+  'files.calendar.link.once':
+    'Skopiuj go teraz - pokazujemy go tylko raz. Jeśli go zgubisz, utwórz nowy link; stary przestanie działać.',
+  'files.calendar.link.address': 'Adres linku',
+  'files.calendar.link.copy': 'Kopiuj link',
+  'files.calendar.link.copied': 'Link skopiowany',
+  'files.calendar.link.copyFailed':
+    'Nie udało się skopiować. Zaznacz adres i skopiuj go samodzielnie.',
+  'files.calendar.link.open': 'Otwórz w aplikacji kalendarza',
+  'files.calendar.link.google': 'Dodaj do Kalendarza Google',
+  'files.calendar.link.outlook': 'Dodaj do Outlooka',
+  'files.calendar.link.done': 'Gotowe',
+  'files.calendar.link.stays':
+    'Numery potwierdzeń, ceny i pliki pozostają w planned.travel.',
+  'files.calendar.freshness':
+    'Aplikacje kalendarza mogą pokazać zmianę po kilku godzinach, czasem później.',
+  'files.calendar.state.on': 'Link kalendarza jest włączony',
+  'files.calendar.state.lastFetched':
+    'Kalendarz ostatnio sprawdził ten link {when}',
+  'files.calendar.state.neverFetched': 'Jeszcze nie pobrano',
+  'files.calendar.rotate.action': 'Utwórz nowy link',
+  'files.calendar.rotate.confirmTitle': 'Utworzyć nowy link?',
+  'files.calendar.rotate.confirmBody':
+    'Stary link przestanie teraz działać. Kalendarze, które go używają, przestaną się aktualizować, dopóki nie podasz im nowego linku.',
+  'files.calendar.rotate.busy': 'Tworzenie nowego linku…',
+  'files.calendar.error.rotate':
+    'Nie udało się potwierdzić utworzenia nowego linku. Poniżej widać aktualny stan; w razie potrzeby spróbuj ponownie.',
+  'files.calendar.rotate.confirm': 'Utwórz nowy link',
+  'files.calendar.off.action': 'Wyłącz',
+  'files.calendar.off.confirmTitle': 'Wyłączyć ten link kalendarza?',
+  'files.calendar.off.confirmBody':
+    'Link przestanie działać od razu. Kalendarze zachowają pobrane wydarzenia, ale przestaną je aktualizować.',
+  'files.calendar.off.confirm': 'Wyłącz',
+  'files.calendar.off.busy': 'Wyłączanie…',
+  'files.calendar.closeGuard.title': 'Zamknąć bez kopiowania linku?',
+  'files.calendar.closeGuard.body':
+    'Nie możemy pokazać go ponownie. Trzeba będzie utworzyć nowy.',
+  'files.calendar.closeGuard.confirm': 'Zamknij mimo to',
+  'files.calendar.closeGuard.cancel': 'Pozostaw otwarte',
+  'files.calendar.error.enable':
+    'Nie udało się potwierdzić utworzenia linku. Poniżej jest aktualny stan. Jeśli link jest włączony, ale go nie widzisz, wyłącz go i utwórz ponownie.',
+  'files.calendar.error.off':
+    'Nie udało się potwierdzić wyłączenia linku. Poniżej jest aktualny stan; w razie potrzeby spróbuj ponownie.',
+  'files.calendar.error.load':
+    'Nie udało się sprawdzić linku kalendarza tej podróży. Spróbuj ponownie.',
+  'files.calendar.retry': 'Spróbuj ponownie',
+  'files.calendar.off.confirmBodyUnused':
+    'Nikt jeszcze nie użył tego linku. Przestanie działać od razu.',
+  'files.calendar.link.fallback':
+    'Jeśli nie możesz dodać go na telefonie, otwórz tę stronę na komputerze.',
+  'files.calendar.link.newTab': 'otwiera się w nowej karcie',
   'files.calendar.title': 'Kalendarz',
   'files.calendar.description':
     'Przenieś tę podróż do aplikacji kalendarza, której już używasz.',

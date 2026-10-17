@@ -456,6 +456,17 @@ const messages = {
   'plan.workspace.hidePanel': 'Ukryj panel {label}',
   'plan.workspace.narrowPanel': 'Zwęź {label}',
   'plan.workspace.widenPanel': 'Poszerz {label}',
+  'collab.sections.trigger': 'Wybierz sekcje',
+  'collab.sections.menuLabel': 'Pokaż wszystkim na tej podróży',
+  'collab.sections.keepOne': 'Co najmniej jedna sekcja musi pozostać włączona.',
+  'collab.sections.failed': 'Nie udało się zapisać zmiany',
+  'collab.sections.failedBody': 'Menu pokazuje aktualnie zapisany stan.',
+  'collab.sections.someHidden': 'Niektóre sekcje są ukryte na tej podróży.',
+  'collab.sections.turnedOff':
+    'Ta sekcja została wyłączona dla podróży. Zamknie się, gdy wyślesz lub wyczyścisz to, co piszesz.',
+  'collab.sections.changed': 'Sekcje tej podróży uległy zmianie.',
+  'collab.sections.savedHidden':
+    'Zapisano. Ta sekcja jest ukryta dla podróży, więc teraz się zamknie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -74,6 +74,7 @@ import {
   DropTimeDialog,
   PlaceDialog,
   StopMenu,
+  StopHandoffMenu,
   TimingDialog,
   draftFromPlace,
   emptyDraft,
@@ -111,7 +112,7 @@ import { PlannerAddPlace, reportPlaceWriteFailure } from './planner-add-place'
 import { useDialogOwnership } from './use-dialog-ownership'
 import { useTripWeather } from './use-trip-weather'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
-import { PlannerDayTools } from './planner-day-tools'
+import { PlannerDayHandoff, PlannerDayTools } from './planner-day-tools'
 import { BookingDialog } from '#/components/modules/book'
 import {
   NoteDeleteDialog,
@@ -263,8 +264,16 @@ function MapBehaviour({
 
 type DialogState =
   | { readonly kind: 'create'; readonly draft?: PlaceDraft }
-  | { readonly kind: 'edit'; readonly placeId: string }
-  | { readonly kind: 'timing'; readonly itemId: string }
+  | {
+      readonly kind: 'edit'
+      readonly placeId: string
+      readonly draft: PlaceDraft
+    }
+  | {
+      readonly kind: 'timing'
+      readonly itemId: string
+      readonly draft: TimingDraft
+    }
   | { readonly kind: 'delete'; readonly placeId: string }
   | { readonly kind: 'note-create'; readonly dayId: string }
   | { readonly kind: 'note-edit'; readonly noteId: string }
@@ -334,7 +343,11 @@ export function PlanScreen({
   )
   const [pending, setPending] = React.useState<ReadonlySet<string>>(new Set())
   const [dialog, setDialog] = React.useState<DialogState>(null)
-  const [saving, setSaving] = React.useState(false)
+  const [savingWrite, setSavingWrite] = React.useState<{
+    readonly token: symbol
+    readonly owner: DialogState
+  } | null>(null)
+  const saving = dialog !== null && savingWrite?.owner === dialog
   const [formError, setFormError] = React.useState<string | null>(null)
   const [formErrorAction, setFormErrorAction] =
     React.useState<PlaceWriteReport['action']>(null)
@@ -912,7 +925,8 @@ export function PlanScreen({
       },
     ): Promise<boolean> => {
       const stillOwned = claimWrite()
-      setSaving(true)
+      const token = Symbol()
+      setSavingWrite({ token, owner: dialog })
       setFormError(null)
       setFormErrorAction(null)
       try {
@@ -935,10 +949,13 @@ export function PlanScreen({
         }
         return false
       } finally {
-        setSaving(false)
+        // An older write must not release the newer form's pending state.
+        setSavingWrite((current) =>
+          current?.token === token ? null : current,
+        )
       }
     },
-    [claimWrite, closeDialog, router, t],
+    [claimWrite, closeDialog, dialog, router, t],
   )
 
   const submitPlace = React.useCallback(
@@ -1184,16 +1201,27 @@ export function PlanScreen({
 
   const rowActions = React.useCallback(
     (row: PlannerRow): React.ReactNode => {
-      if (!editable) return undefined
+      if (!editable) return <StopHandoffMenu row={row} />
       return (
         <StopMenu
           row={row}
           days={payload.days}
           disabled={pending.has(row.itemId)}
-          onEditPlace={() => setDialog({ kind: 'edit', placeId: row.placeId })}
+          onEditPlace={() => {
+            const place = placeById.get(row.placeId)
+            setDialog({
+              kind: 'edit',
+              placeId: row.placeId,
+              draft: place === undefined ? emptyDraft : draftFromPlace(place),
+            })
+          }}
           onEditTiming={() => {
             if (row.assignmentId !== null) {
-              setDialog({ kind: 'timing', itemId: row.assignmentId })
+              setDialog({
+                kind: 'timing',
+                itemId: row.assignmentId,
+                draft: timingFor(payload, row.assignmentId),
+              })
             }
           }}
           onPickPosition={() => {
@@ -1218,7 +1246,7 @@ export function PlanScreen({
         />
       )
     },
-    [commitMove, editable, order, payload.days, pending, placeOfItem],
+    [commitMove, editable, order, payload, pending, placeById, placeOfItem],
   )
 
   /* ------------------------------------------------------------------ panels */
@@ -1290,7 +1318,7 @@ export function PlanScreen({
                       onAddStay={(dayId) => setDialog({ kind: 'stay', dayId })}
                     />
                   )
-                : undefined
+                : (entry) => <PlannerDayHandoff day={entry} />
             }
           />
         ))
@@ -1320,6 +1348,10 @@ export function PlanScreen({
 
   /** What the create form opens on: a draft a gesture filled, or an empty one. */
   const createDraft = dialog?.kind === 'create' ? dialog.draft : undefined
+  // A dialog keeps the row's opening draft through saves and loader refreshes.
+  const placeDraft =
+    dialog?.kind === 'edit' ? dialog.draft : (createDraft ?? emptyDraft)
+  const timingDraft = dialog?.kind === 'timing' ? dialog.draft : emptyTiming
 
   const addButton = editable ? (
     <PlannerAddPlace
@@ -1503,14 +1535,7 @@ export function PlanScreen({
         mode={dialog?.kind === 'edit' ? 'edit' : 'create'}
         categories={model.categories}
         days={payload.days}
-        initial={
-          dialog?.kind === 'edit'
-            ? (() => {
-                const place = placeById.get(dialog.placeId)
-                return place === undefined ? emptyDraft : draftFromPlace(place)
-              })()
-            : (createDraft ?? emptyDraft)
-        }
+        initial={placeDraft}
         saving={saving}
         error={formError}
         errorAction={formErrorAction}
@@ -1535,11 +1560,7 @@ export function PlanScreen({
               })
             : ''
         }
-        initial={
-          dialog?.kind === 'timing'
-            ? timingFor(payload, dialog.itemId)
-            : emptyTiming
-        }
+        initial={timingDraft}
         saving={saving}
         error={formError}
         onSubmit={submitTiming}

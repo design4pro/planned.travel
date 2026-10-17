@@ -68,8 +68,13 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Espaço',
+  'workspace.switched': 'Você mudou para {name}',
   'workspace.switchFailed': 'Não foi possível trocar de espaço',
   'workspace.switchFailedBody': 'Confira sua conexão e tente de novo.',
+  'workspace.switchUnconfirmedBody':
+    'Não foi possível confirmar o espaço de trabalho ativo. Recarregue a página antes de continuar.',
+  'workspace.switchRateLimitedBody':
+    'Você trocou de espaço de trabalho muitas vezes. Aguarde um momento e tente de novo.',
   'workspace.create': 'Criar espaço',
   'workspace.createTitle': 'Criar um espaço',
   'workspace.createDescription':

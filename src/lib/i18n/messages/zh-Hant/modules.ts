@@ -713,7 +713,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}，含你',
   'collab.thread.today': '今天',
-  'collab.thread.empty': '還沒有訊息',
+  'collab.thread.emptyBody':
+    '這趟旅行的所有人共用一個對話。在這裡做出的決定會隨旅行保留，而不會散落在各個群組聊天中。',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': '說出第一句話',
   'collab.toast.reactionFailed': '這個反應沒存上',
   'collab.toast.messageDeleted': '已刪除訊息',
   'collab.toast.deleteFailed': '未能刪除該訊息',
@@ -740,6 +743,16 @@ const messages = {
   'collab.compose.send': '傳送訊息',
   'collab.compose.savingEdit': '正在儲存修改',
   'collab.compose.save': '儲存',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': '按 Enter 傳送，按 Shift 和 Enter 換行。',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': '按 Escape 取消。',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': '使用傳送按鈕傳送訊息。',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': '重試',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody': '你的修改仍在輸入框中。請檢查網路連線後重試。',
   'collab.hint.sends': '傳送',
   'collab.hint.addsLine': '換行',
   'collab.hint.cancels': '取消',
@@ -813,6 +826,57 @@ const messages = {
   'files.action.add': '新增檔案',
   'files.action.choose': '選擇檔案',
   'files.action.upload': '上傳檔案',
+  'files.calendar.live.action': '自動更新的日曆連結',
+  'files.calendar.live.title': '自動更新的日曆連結',
+  'files.calendar.warning':
+    '任何持有此連結的人都能在不需帳戶的情況下讀取本次旅行的地點、時間、地址和備註。請像保護密碼一樣保護它。',
+  'files.calendar.enable.action': '建立連結',
+  'files.calendar.link.once':
+    '請立即複製，我們只顯示一次。如果遺失，請建立新連結；舊連結將失效。',
+  'files.calendar.link.address': '連結網址',
+  'files.calendar.link.copy': '複製連結',
+  'files.calendar.link.copied': '已複製連結',
+  'files.calendar.link.copyFailed': '無法複製。請選取網址並手動複製。',
+  'files.calendar.link.open': '在日曆應用程式中開啟',
+  'files.calendar.link.google': '加入 Google 日曆',
+  'files.calendar.link.outlook': '加入 Outlook',
+  'files.calendar.link.done': '完成',
+  'files.calendar.link.stays':
+    '確認號碼、價格和檔案會保留在 planned.travel 中。',
+  'files.calendar.freshness':
+    '日曆應用程式可能需要數小時甚至更長時間才能顯示修改。',
+  'files.calendar.state.on': '日曆連結已啟用',
+  'files.calendar.state.lastFetched': '日曆上次檢查此連結的時間：{when}',
+  'files.calendar.state.neverFetched': '尚未擷取',
+  'files.calendar.rotate.action': '建立新連結',
+  'files.calendar.rotate.confirmTitle': '要建立新連結嗎？',
+  'files.calendar.rotate.confirmBody':
+    '舊連結將立即失效。使用它的行事曆將停止更新，直到你為其提供新連結。',
+  'files.calendar.rotate.busy': '正在建立新連結…',
+  'files.calendar.error.rotate':
+    '無法確認是否已建立新連結。下方顯示目前狀態；如有需要，請重試。',
+  'files.calendar.rotate.confirm': '建立新連結',
+  'files.calendar.off.action': '停用',
+  'files.calendar.off.confirmTitle': '停用此日曆連結？',
+  'files.calendar.off.confirmBody':
+    '連結會立即失效。日曆會保留已擷取的活動，但不再更新。',
+  'files.calendar.off.confirm': '停用',
+  'files.calendar.off.busy': '正在停用…',
+  'files.calendar.closeGuard.title': '不複製連結就關閉？',
+  'files.calendar.closeGuard.body':
+    '我們無法再次顯示此連結。你需要建立新連結。',
+  'files.calendar.closeGuard.confirm': '仍然關閉',
+  'files.calendar.closeGuard.cancel': '保持開啟',
+  'files.calendar.error.enable':
+    '無法確認連結是否已建立。目前狀態顯示於下方。如果已啟用但你沒有看到連結，請停用後重新建立。',
+  'files.calendar.error.off':
+    '無法確認連結是否已停用。目前狀態顯示於下方；請視需要重試。',
+  'files.calendar.error.load': '無法檢查本次旅行的日曆連結。請重試。',
+  'files.calendar.retry': '重試',
+  'files.calendar.off.confirmBodyUnused': '此連結尚未被使用。它會立即失效。',
+  'files.calendar.link.fallback':
+    '如果無法在手機上加入，請在電腦上開啟此頁面。',
+  'files.calendar.link.newTab': '在新分頁中開啟',
   'files.calendar.title': '行事曆',
   'files.calendar.description': '把這趟旅程帶到你已在使用的行事曆應用程式中。',
   'files.calendar.download.action': '下載行事曆檔案 (.ics)',

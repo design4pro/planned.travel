@@ -73,9 +73,14 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Arbeitsbereich',
+  'workspace.switched': 'Zu {name} gewechselt',
   'workspace.switchFailed': 'Der Arbeitsbereich konnte nicht gewechselt werden',
   'workspace.switchFailedBody':
     'Prüfe deine Verbindung und versuche es noch einmal.',
+  'workspace.switchUnconfirmedBody':
+    'Der aktive Arbeitsbereich konnte nicht bestätigt werden. Lade die Seite neu, bevor du fortfährst.',
+  'workspace.switchRateLimitedBody':
+    'Zu viele Arbeitsbereichswechsel. Warte einen Moment und versuche es erneut.',
   'workspace.create': 'Arbeitsbereich erstellen',
   'workspace.createTitle': 'Einen Arbeitsbereich erstellen',
   'workspace.createDescription':

@@ -71,8 +71,13 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Prostor',
+  'workspace.switched': 'Přepnuto na {name}',
   'workspace.switchFailed': 'Prostor se nepodařilo přepnout',
   'workspace.switchFailedBody': 'Zkontrolujte připojení a zkuste to znovu.',
+  'workspace.switchUnconfirmedBody':
+    'Aktivní pracovní prostor se nepodařilo ověřit. Před pokračováním znovu načtěte stránku.',
+  'workspace.switchRateLimitedBody':
+    'Příliš mnoho přepnutí pracovního prostoru. Chvíli počkejte a zkuste to znovu.',
   'workspace.create': 'Vytvořit prostor',
   'workspace.createTitle': 'Vytvoření prostoru',
   'workspace.createDescription':

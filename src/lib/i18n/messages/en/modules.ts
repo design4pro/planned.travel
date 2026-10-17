@@ -946,7 +946,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, including you',
   'collab.thread.today': 'Today',
-  'collab.thread.empty': 'No messages yet',
+  'collab.thread.emptyBody':
+    'Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Say the first thing',
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',
   'collab.toast.deleteFailed': 'The message was not deleted',
@@ -975,6 +978,18 @@ const messages = {
   'collab.compose.send': 'Send message',
   'collab.compose.savingEdit': 'Saving the edit',
   'collab.compose.save': 'Save',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Press Enter to send, Shift and Enter for a new line.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Press Escape to cancel.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Use the send button to send.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Try again',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Your changes are still in the box. Check your connection, then try again.',
   /**
    * The three keyboard hints under the composer. The key caps themselves stay
    * literal in the markup: `Enter`, `Shift` and `Esc` are printed on the
@@ -1067,6 +1082,61 @@ const messages = {
   'files.action.add': 'Add files',
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
+  'files.calendar.live.action': 'Live calendar link',
+  'files.calendar.live.title': 'Live calendar link',
+  'files.calendar.warning':
+    'Anyone with this link can read this trip’s places, times, addresses and notes, with no account. Treat it like a password.',
+  'files.calendar.enable.action': 'Create a link',
+  'files.calendar.link.once':
+    'Copy it now - we show it only once. If you lose it, make a new link; the old one stops working.',
+  'files.calendar.link.address': 'Link address',
+  'files.calendar.link.copy': 'Copy link',
+  'files.calendar.link.copied': 'Link copied',
+  'files.calendar.link.copyFailed':
+    'We couldn’t copy it. Select the address and copy it yourself.',
+  'files.calendar.link.open': 'Open in your calendar app',
+  'files.calendar.link.google': 'Add to Google Calendar',
+  'files.calendar.link.outlook': 'Add to Outlook',
+  'files.calendar.link.done': 'Done',
+  'files.calendar.link.stays':
+    'Confirmation numbers, prices and files stay in planned.travel.',
+  'files.calendar.freshness':
+    'Calendar apps can take several hours, sometimes longer, to show an edit.',
+  'files.calendar.state.on': 'Calendar link is on',
+  'files.calendar.state.lastFetched':
+    'A calendar last checked this link {when}',
+  'files.calendar.state.neverFetched': 'Not fetched yet',
+  'files.calendar.rotate.action': 'Make a new link',
+  'files.calendar.rotate.confirmTitle': 'Make a new link?',
+  'files.calendar.rotate.confirmBody':
+    'The old link stops working now. Calendars that use it stop updating until you give them the new link.',
+  'files.calendar.rotate.busy': 'Making a new link…',
+  'files.calendar.error.rotate':
+    'We couldn’t confirm that a new link was made. The current state is shown below; try again if you need to.',
+  'files.calendar.rotate.confirm': 'Make a new link',
+  'files.calendar.off.action': 'Turn off',
+  'files.calendar.off.confirmTitle': 'Turn off this calendar link?',
+  'files.calendar.off.confirmBody':
+    'The link stops working now. Calendars keep the events they already have but stop updating.',
+  'files.calendar.off.confirm': 'Turn off',
+  'files.calendar.off.busy': 'Turning off…',
+  'files.calendar.closeGuard.title': 'Close without copying the link?',
+  'files.calendar.closeGuard.body':
+    'We can’t show it again. You would have to make a new one.',
+  'files.calendar.closeGuard.confirm': 'Close anyway',
+  'files.calendar.closeGuard.cancel': 'Keep open',
+  'files.calendar.error.enable':
+    'We couldn’t confirm that the link was created. The current state is shown below. If a link is on but you never saw it, turn it off and create it again.',
+  'files.calendar.error.off':
+    'We couldn’t confirm that the link was turned off. The current state is shown below; try again if you need to.',
+  'files.calendar.error.load':
+    'We couldn’t check this trip’s calendar link. Try again.',
+  'files.calendar.retry': 'Try again',
+  'files.calendar.off.confirmBodyUnused':
+    'Nothing has used this link yet. It stops working now.',
+  'files.calendar.link.fallback':
+    'If your phone can’t add it, open this page on a computer.',
+  'files.calendar.link.newTab': 'opens in a new tab',
   'files.calendar.title': 'Calendar',
   'files.calendar.description':
     'Take this trip into the calendar app you already use.',

@@ -428,6 +428,17 @@ const messages = {
   'plan.workspace.hidePanel': '{label} panelini gizle',
   'plan.workspace.narrowPanel': '{label} daralt',
   'plan.workspace.widenPanel': '{label} genişlet',
+  'collab.sections.trigger': 'Bölümleri seç',
+  'collab.sections.menuLabel': 'Bu seyahatteki herkese göster',
+  'collab.sections.keepOne': 'En az bir bölüm açık kalmalıdır.',
+  'collab.sections.failed': 'Değişiklik kaydedilmedi',
+  'collab.sections.failedBody': 'Menü şu anda kayıtlı olan durumu gösterir.',
+  'collab.sections.someHidden': 'Bu seyahatte bazı bölümler gizlidir.',
+  'collab.sections.turnedOff':
+    'Bu bölüm seyahat için kapatıldı. Yazdıklarınızı gönderdiğinizde veya temizlediğinizde kapanır.',
+  'collab.sections.changed': 'Bu seyahatin bölümleri değişti.',
+  'collab.sections.savedHidden':
+    'Kaydedildi. Bu bölüm seyahat için gizli olduğundan şimdi kapanıyor.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

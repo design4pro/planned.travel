@@ -10,10 +10,11 @@
  * Reactions are optimistic — a tap on an emoji has to feel like nothing at all —
  * and roll back through the same claim/settle overlay every other tick uses.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Pencil, SendHorizontal, SmilePlus, Trash2, X } from 'lucide-react'
 
 import {
+  Alert,
   Avatar,
   Button,
   EmptyState,
@@ -24,12 +25,14 @@ import {
   PopoverTrigger,
   Textarea,
   Tooltip,
+  toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { readPublicFailure } from '#/lib/errors'
 import { formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
-import type { Locale, Translate } from '#/lib/i18n'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import { dayKeyIn, todayKeyIn } from '#/lib/time'
 import {
   deleteMessageFn,
@@ -47,7 +50,7 @@ import type { CollabPerson, MessageData } from './types'
 const MAX_LENGTH = 4000
 
 /** The reactions a travel thread actually uses. Six, not an emoji keyboard. */
-const REACTIONS: ReadonlyArray<{ emoji: string; label: string }> = [
+const REACTIONS: ReadonlyArray<{ emoji: string; label: MessageKey }> = [
   { emoji: '👍', label: 'modules.collab.reaction.agree' },
   { emoji: '❤️', label: 'modules.collab.reaction.love' },
   { emoji: '😂', label: 'modules.collab.reaction.funny' },
@@ -130,6 +133,8 @@ export interface ThreadProps {
   readonly canModerate: boolean
   /** IANA zone every timestamp in the transcript is read in. */
   readonly timeZone: string
+  readonly onDirtyChange?: (dirty: boolean) => void
+  readonly turnedOff?: boolean
 }
 
 export function Thread({
@@ -139,6 +144,8 @@ export function Thread({
   viewerUserId,
   canModerate,
   timeZone,
+  onDirtyChange,
+  turnedOff = false,
 }: ThreadProps) {
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
   const t = useTranslate()
@@ -201,7 +208,7 @@ export function Thread({
             size="sm"
             icon={<SendHorizontal />}
             title={t('modules.collab.thread.empty')}
-            description="Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats."
+            description={t('modules.collab.thread.emptyBody')}
           />
         ) : (
           <ol className="flex flex-col gap-1 py-1">
@@ -272,6 +279,10 @@ export function Thread({
 
       <Composer
         tripId={tripId}
+        messages={messages}
+        viewerUserId={viewerUserId}
+        onDirtyChange={onDirtyChange}
+        turnedOff={turnedOff}
         replyTo={replyTo}
         editing={editing}
         people={people}
@@ -417,13 +428,12 @@ function MessageRow({
             {message.body}
           </div>
 
-          {/* The row's own actions. Hidden until the row is hovered or something
-              inside it has focus, so a long thread is quiet — but always in the tab
-              order, so the keyboard never loses them. */}
+          {/* Always visible on touch; hover and focus reveal actions for fine
+              pointers. Opacity keeps the controls in the keyboard tab order. */}
           <span
             className={cn(
               'flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-fast ease-out-quint',
-              'group-hover/message:opacity-100 focus-within:opacity-100',
+              'group-hover/message:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100',
             )}
           >
             <ReactionPicker onPick={onReact} mine={myReactions} />
@@ -432,7 +442,7 @@ function MessageRow({
               size="sm"
               items={[
                 {
-                  label: 'Reply',
+                  label: t('modules.collab.message.reply'),
                   icon: <SendHorizontal aria-hidden />,
                   onSelect: onReply,
                 },
@@ -529,11 +539,11 @@ function ReactionPicker({
       <PopoverContent align="center" className="w-auto p-1.5">
         <div className="flex items-center gap-0.5">
           {REACTIONS.map((reaction) => (
-            <Tooltip key={reaction.emoji} content={reaction.label}>
+            <Tooltip key={reaction.emoji} content={t(reaction.label)}>
               <button
                 type="button"
                 aria-pressed={mine.includes(reaction.emoji)}
-                aria-label={reaction.label}
+                aria-label={t(reaction.label)}
                 onClick={() => {
                   onPick(reaction.emoji)
                   setOpen(false)
@@ -559,30 +569,97 @@ function ReactionPicker({
 
 function Composer({
   tripId,
+  messages,
+  viewerUserId,
   replyTo,
   editing,
   people,
   onClearReply,
   onClearEditing,
+  onDirtyChange,
+  turnedOff,
 }: {
   tripId: string
+  messages: ReadonlyArray<MessageData>
+  viewerUserId: string
   replyTo: MessageData | null
   editing: MessageData | null
   people: ReadonlyArray<CollabPerson>
   onClearReply: () => void
   onClearEditing: () => void
+  onDirtyChange?: (dirty: boolean) => void
+  turnedOff: boolean
 }) {
   const t = useTranslate()
   const [body, setBody] = useState('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const sending = useRef(false)
+  const [coarsePointer, setCoarsePointer] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const hintId = useId()
+  const failureId = useId()
+  const [failed, setFailed] = useState<{
+    kind: 'post' | 'edit'
+    draft: string
+    body: string
+    newestId: string
+  } | null>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(pointer: coarse)')
+    const update = () => setCoarsePointer(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  // A later loader window can prove a post landed despite a lost response.
+  useEffect(() => {
+    if (failed?.kind !== 'post') return
+    const landed = messages.some(
+      (message) =>
+        message.userId === viewerUserId &&
+        message.body === failed.body &&
+        message.id > failed.newestId,
+    )
+    if (landed) {
+      setFailed(null)
+      setBody((current) => (current === failed.draft ? '' : current))
+      onClearReply()
+    }
+  }, [failed, messages, viewerUserId, onClearReply])
+  const off = useRef(turnedOff)
+  off.current = turnedOff
+  useEffect(() => {
+    onDirtyChange?.(body.length > 0 || editing !== null || failed !== null)
+  }, [body, editing, failed, onDirtyChange])
 
   const post = useAction(postMessageFn, {
     failure: t('modules.collab.toast.notSent'),
     fallback: t('modules.collab.toast.notSentBody'),
   })
-  const edit = useAction(editMessageFn, {
-    success: t('modules.collab.toast.messageUpdated'),
+  // Transport errors are diagnostics; authored server failures keep their copy.
+  async function saveEdit(input: Parameters<typeof editMessageFn>[0]) {
+    try {
+      return await editMessageFn(input)
+    } catch (cause) {
+      const failure = readPublicFailure(cause)
+      if (failure.kind === 'unexpected' && failure.reference === undefined) {
+        throw new Error(t('modules.collab.toast.editFailedBody'))
+      }
+      throw cause
+    }
+  }
+
+  const edit = useAction(saveEdit, {
+    success: () =>
+      t(
+        off.current
+          ? 'trips.collab.sections.savedHidden'
+          : 'modules.collab.toast.messageUpdated',
+      ),
     failure: t('modules.collab.toast.editFailed'),
+    fallback: t('modules.collab.toast.editFailedBody'),
   })
   const action = editing === null ? post : edit
 
@@ -604,30 +681,45 @@ function Composer({
   const canSend =
     trimmed.length > 0 && trimmed.length <= MAX_LENGTH && !action.pending
 
-  async function send(): Promise<void> {
-    if (!canSend) {
-      return
+  async function send(retry = false): Promise<void> {
+    if (!canSend || sending.current) return
+    sending.current = true
+    const attempt = {
+      kind: editing === null ? ('post' as const) : ('edit' as const),
+      draft: body,
+      body: trimmed,
+      newestId: messages.reduce(
+        (latest, message) => (message.id > latest ? message.id : latest),
+        '',
+      ),
     }
-    if (editing !== null) {
-      const result = await edit.run({
-        data: { tripId, messageId: editing.id, body: trimmed },
-      })
+    try {
+      const result =
+        editing === null
+          ? await post.run({
+              data: { tripId, body: trimmed, replyToId: replyTo?.id ?? '' },
+            })
+          : await edit.run({
+              data: { tripId, messageId: editing.id, body: trimmed },
+            })
       if (result !== null) {
-        setBody('')
-        onClearEditing()
+        if (editing === null && off.current)
+          toast.success(t('trips.collab.sections.savedHidden'))
+        setFailed(null)
+        setBody((current) => (current === attempt.draft ? '' : current))
+        if (editing === null) onClearReply()
+        else onClearEditing()
+      } else if (fieldRef.current?.value.length) {
+        setFailed(attempt)
       }
-      return
-    }
-    const result = await post.run({
-      data: { tripId, body: trimmed, replyToId: replyTo?.id ?? '' },
-    })
-    if (result !== null) {
-      setBody('')
-      onClearReply()
+    } finally {
+      sending.current = false
+      if (retry) fieldRef.current?.focus()
     }
   }
 
   function cancel(): void {
+    setFailed(null)
     setBody('')
     onClearEditing()
     onClearReply()
@@ -635,6 +727,37 @@ function Composer({
 
   return (
     <div className="shrink-0 border-t border-edge-faint pt-3">
+      {failed === null ? null : (
+        <Alert
+          id={failureId}
+          tone="danger"
+          size="sm"
+          role={undefined}
+          aria-live={undefined}
+          className="mb-2"
+          title={t(
+            failed.kind === 'post'
+              ? 'modules.collab.toast.notSent'
+              : 'modules.collab.toast.editFailed',
+          )}
+          actions={
+            <Button
+              size="sm"
+              loading={action.pending}
+              disabled={!trimmed}
+              onClick={() => void send(true)}
+            >
+              {t('modules.collab.compose.retry')}
+            </Button>
+          }
+        >
+          {t(
+            failed.kind === 'post'
+              ? 'modules.collab.toast.notSentBody'
+              : 'modules.collab.toast.editFailedBody',
+          )}
+        </Alert>
+      )}
       {editing === null && replyTo === null ? null : (
         <div className="mb-2 flex min-w-0 items-center gap-2 rounded-md border-s border-brand bg-brand-subtle/60 px-2.5 py-1.5">
           <span className="min-w-0 flex-1 truncate text-caption text-ink-2">
@@ -673,11 +796,20 @@ function Composer({
           <Textarea
             ref={fieldRef}
             value={body}
-            onChange={(event) => setBody(event.target.value)}
-            // Enter sends and Shift+Enter breaks the line, which is what every
-            // reader's fingers already expect from a thread like this one.
+            onChange={(event) => {
+              setBody(event.target.value)
+              if (event.target.value.length === 0) setFailed(null)
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            aria-describedby={cn(hintId, failed !== null && failureId)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
+              if (
+                event.nativeEvent.isComposing ||
+                event.nativeEvent.keyCode === 229
+              )
+                return
+              if (event.key === 'Enter' && !event.shiftKey && !coarsePointer) {
                 event.preventDefault()
                 void send()
               }
@@ -731,7 +863,23 @@ function Composer({
             </Button>
           )}
         </div>
-        <p className="text-caption text-ink-4">
+        <p id={hintId} className="sr-only">
+          {t(
+            coarsePointer
+              ? 'modules.collab.compose.keysHintTouch'
+              : 'modules.collab.compose.keysHint',
+          )}
+          {editing === null && replyTo === null
+            ? null
+            : ` ${t('modules.collab.compose.keysHintEsc')}`}
+        </p>
+        <p
+          aria-hidden="true"
+          className={cn(
+            'min-h-5 text-caption text-ink-4',
+            (!focused || coarsePointer) && 'invisible',
+          )}
+        >
           <Kbd>Enter</Kbd> {t('modules.collab.hint.sends')} · <Kbd>Shift</Kbd>
           <Kbd>Enter</Kbd> {t('modules.collab.hint.addsLine')}
           {editing === null && replyTo === null ? null : (

@@ -87,8 +87,13 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'Không gian',
+  'workspace.switched': 'Đã chuyển sang {name}',
   'workspace.switchFailed': 'Chưa chuyển được không gian',
   'workspace.switchFailedBody': 'Kiểm tra kết nối rồi thử lại.',
+  'workspace.switchUnconfirmedBody':
+    'Không thể xác nhận không gian làm việc đang hoạt động. Hãy tải lại trang trước khi tiếp tục.',
+  'workspace.switchRateLimitedBody':
+    'Bạn đã chuyển không gian làm việc quá nhiều lần. Hãy đợi một lát rồi thử lại.',
   'workspace.create': 'Tạo không gian',
   'workspace.createTitle': 'Tạo một không gian',
   'workspace.createDescription':

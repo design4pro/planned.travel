@@ -800,7 +800,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, tu inclòs',
   'collab.thread.today': 'Avui',
-  'collab.thread.empty': 'Encara no hi ha missatges',
+  'collab.thread.emptyBody':
+    'Tothom d’aquest viatge comparteix un sol fil. Les decisions que es prenen aquí es queden amb el viatge en lloc de dispersar-se pels xats de grup.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Enceta la conversa',
   'collab.toast.reactionFailed': 'La reacció no s’ha desat',
   'collab.toast.messageDeleted': 'Missatge eliminat',
   'collab.toast.deleteFailed': 'El missatge no s’ha eliminat',
@@ -829,6 +832,19 @@ const messages = {
   'collab.compose.send': 'Envia el missatge',
   'collab.compose.savingEdit': 'S’està desant el canvi',
   'collab.compose.save': 'Desa',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Prem Enter per enviar, o Maj i Enter per afegir una línia nova.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Prem Escape per cancel·lar.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Fes servir el botó d’enviar per enviar el missatge.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Torna-ho a provar',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Els canvis continuen al quadre de text. Comprova la connexió i torna-ho a provar.',
   'collab.hint.sends': 'envia',
   'collab.hint.addsLine': 'afegeix una línia',
   'collab.hint.cancels': 'cancel·la',
@@ -913,6 +929,62 @@ const messages = {
   'files.action.add': 'Afegeix fitxers',
   'files.action.choose': 'Tria fitxers',
   'files.action.upload': 'Puja els fitxers',
+  'files.calendar.live.action': 'Enllaç de calendari actualitzat',
+  'files.calendar.live.title': 'Enllaç de calendari actualitzat',
+  'files.calendar.warning':
+    'Qualsevol persona amb aquest enllaç pot llegir els llocs, horaris, adreces i notes del viatge sense compte. Protegeix-lo com una contrasenya.',
+  'files.calendar.enable.action': 'Crea un enllaç',
+  'files.calendar.link.once':
+    'Copia’l ara - només el mostrem una vegada. Si el perds, crea un enllaç nou; l’antic deixarà de funcionar.',
+  'files.calendar.link.address': 'Adreça de l’enllaç',
+  'files.calendar.link.copy': 'Copia l’enllaç',
+  'files.calendar.link.copied': 'Enllaç copiat',
+  'files.calendar.link.copyFailed':
+    'No s’ha pogut copiar. Selecciona l’adreça i copia-la manualment.',
+  'files.calendar.link.open': 'Obre a l’aplicació de calendari',
+  'files.calendar.link.google': 'Afegeix a Google Calendar',
+  'files.calendar.link.outlook': 'Afegeix a l’Outlook',
+  'files.calendar.link.done': 'Fet',
+  'files.calendar.link.stays':
+    'Els números de confirmació, preus i fitxers es queden a planned.travel.',
+  'files.calendar.freshness':
+    'Les aplicacions de calendari poden trigar unes quantes hores, de vegades més, a mostrar un canvi.',
+  'files.calendar.state.on': 'L’enllaç de calendari està activat',
+  'files.calendar.state.lastFetched':
+    'Un calendari ha consultat aquest enllaç per darrera vegada {when}',
+  'files.calendar.state.neverFetched': 'Encara no s’ha consultat',
+  'files.calendar.rotate.action': 'Crea un enllaç nou',
+  'files.calendar.rotate.confirmTitle': 'Vols crear un enllaç nou?',
+  'files.calendar.rotate.confirmBody':
+    'L’enllaç antic deixa de funcionar ara. Els calendaris que el fan servir deixen d’actualitzar-se fins que els proporcionis l’enllaç nou.',
+  'files.calendar.rotate.busy': 'S’està creant un enllaç nou…',
+  'files.calendar.error.rotate':
+    'No hem pogut confirmar que s’hagi creat un enllaç nou. L’estat actual es mostra a continuació; torna-ho a provar si cal.',
+  'files.calendar.rotate.confirm': 'Crea un enllaç nou',
+  'files.calendar.off.action': 'Desactiva',
+  'files.calendar.off.confirmTitle':
+    'Vols desactivar aquest enllaç de calendari?',
+  'files.calendar.off.confirmBody':
+    'L’enllaç deixa de funcionar immediatament. Els calendaris conserven els esdeveniments rebuts, però deixen d’actualitzar-los.',
+  'files.calendar.off.confirm': 'Desactiva',
+  'files.calendar.off.busy': 'S’està desactivant…',
+  'files.calendar.closeGuard.title': 'Vols tancar sense copiar l’enllaç?',
+  'files.calendar.closeGuard.body':
+    'No el podem tornar a mostrar. Hauràs de crear-ne un altre.',
+  'files.calendar.closeGuard.confirm': 'Tanca igualment',
+  'files.calendar.closeGuard.cancel': 'Mantén obert',
+  'files.calendar.error.enable':
+    'No s’ha pogut confirmar la creació de l’enllaç. L’estat actual es mostra a sota. Si està activat però no l’has vist, desactiva’l i torna’l a crear.',
+  'files.calendar.error.off':
+    'No s’ha pogut confirmar la desactivació de l’enllaç. L’estat actual es mostra a sota; torna-ho a provar si cal.',
+  'files.calendar.error.load':
+    'No s’ha pogut comprovar l’enllaç de calendari d’aquest viatge. Torna-ho a provar.',
+  'files.calendar.retry': 'Torna-ho a provar',
+  'files.calendar.off.confirmBodyUnused':
+    'Aquest enllaç encara no s’ha fet servir. Deixa de funcionar immediatament.',
+  'files.calendar.link.fallback':
+    'Si no el pots afegir des del telèfon, obre aquesta pàgina en un ordinador.',
+  'files.calendar.link.newTab': 's’obre en una pestanya nova',
   'files.calendar.title': 'Calendari',
   'files.calendar.description':
     'Porta aquest viatge a l’aplicació de calendari que ja fas servir.',

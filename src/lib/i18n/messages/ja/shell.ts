@@ -52,8 +52,13 @@ const messages = {
 
   /* ------------------------------------------------------ workspace switcher */
   'workspace.label': 'ワークスペース',
+  'workspace.switched': '{name}に切り替えました',
   'workspace.switchFailed': 'ワークスペースを切り替えられませんでした',
   'workspace.switchFailedBody': '通信状況を確認して、もう一度お試しください。',
+  'workspace.switchUnconfirmedBody':
+    '現在のワークスペースを確認できませんでした。続行する前にページを再読み込みしてください。',
+  'workspace.switchRateLimitedBody':
+    'ワークスペースの切り替えが多すぎます。しばらく待ってからもう一度お試しください。',
   'workspace.create': 'ワークスペースを作成',
   'workspace.createTitle': 'ワークスペースを作成する',
   'workspace.createDescription': '旅行・場所・メンバーを分けて管理できる、独立したスペースです。フリープランで始まります。',

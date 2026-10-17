@@ -341,7 +341,23 @@ Browser → Cloudflare edge → Worker (TanStack Start SSR + server functions) �
 Every domain row is scoped by `organization_id`. A user belongs to one or more organizations
 through `member`. **Every** query goes through a scoped repository in `src/server/repos/**`
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
-Tenant isolation is enforced in the repository layer and covered by tests.
+Tenant isolation is enforced in the repository layer and covered by tests. The bounded
+`…Unscoped` shape below is the explicit exception to the tenant-context argument.
+
+#### FU-3: bounded Unscoped repository functions
+
+An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+
+Billing uses this shape for provider-to-organization resolution and billing rows only; share
+moderation uses the §2.4 ACCESS projection. The calendar resolver
+`findLiveFeedByDigestUnscoped(db, digest)` in `src/server/repos/calendar-feeds.ts` has exactly one
+production caller, `src/server/public/calendar-feed.ts`. Its unique digest point lookup returns only
+`{ id, organizationId, userId, scope, tripId, lastServedAt }`, never content, secret or digest, and
+returns null for revoked rows. `ResolvedFeed` is branded adjacent to `openFeedScope` in that repo;
+only the resolver produces it, and only `openFeedScope` builds the owner-bound tenant scope.
+Subsequent content reads are scoped; `readFeedSource` issues nine statements (one trip read and
+eight content reads). This is an exception to the scope argument, not a third catalog member
+(ADR 0041).
 
 #### Global-catalogue carve-out
 
@@ -476,7 +492,7 @@ in one module, reached only from the quarter-hourly cron.
 
 It satisfies neither clause the tables above are held to, and this paragraph says so rather than
 reading those clauses loosely. `trips` carries an `organization_id` and is tenant data: the scan
-adds no name to the list above, which is eleven names and still closed. There is no session
+adds no name to the list above, which is twelve names and still closed. There is no session
 behind a cron, so there is no platform actor to authorise with and `requirePermission` has no
 subject; the read mutates nothing, so there is no `platform_audit_log` row to write. Both clauses
 are _inapplicable_ to this read, which is a different statement from waived — every `server/catalog`
@@ -493,8 +509,9 @@ departing soon rather than to trips ever created. Session-less, projection-only,
 keyset-paged: those four properties are what stands in for the two clauses above, and changing any
 of them is a change to this contract rather than a refactor.
 
-Two members, and that list is closed as firmly as the eleven names are. A third exception — another
-cross-tenant read, another module handed a plain `Database` — is an amendment to this section, not
+Two members, and that list is closed as firmly as the twelve names are. A third exception — another
+cross-tenant read, another module handed a plain `Database`, other than an `…Unscoped` repos
+function of the FU-3 shape above — is an amendment to this section, not
 something a builder takes on the way past.
 
 ### Platform roles
@@ -618,9 +635,10 @@ Rules:
 
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
-- All SQL lives in `server/repos`. Routes call server functions; server functions call repos.
+- All SQL lives in `server/repos`, normally through the tenant-scoped base repository; FU-3
+  permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
 - The single stated exception is `server/catalog`, and §5 states it as a closed list of two. The
-  first member is the eleven global tables: ten carry no `organization_id` at all and the eleventh,
+  first member is the twelve global tables: eleven carry no `organization_id` at all and the twelfth,
   `provider_usage`, carries one only as attribution, so none of them can pass through the tenant
   repository, and every path that mutates or serves that platform content is guarded instead by an
   explicit platform actor, `requirePermission`, and a `platform_audit_log` write in the same call —
@@ -634,7 +652,7 @@ Rules:
   Every response is a named read-only projection - an explicit column whitelist of what a
   stranger may see, so leaking a field is unexpressible - executed through `server/repos` for
   token-resolved tenant resources and `server/catalog` for published global rows. The tenant
-  scope it passes is always the one derived from the share record it resolved, never fabricated.
+  scope it passes is always the one derived from the share or feed record it resolved, never fabricated.
 - `server/mcp` owns transport and tool schemas only. Every tool authorises through the same
   `requirePermission` the console uses and reaches data through `server/catalog`; it never grows
   a second authorisation path or a second query layer.

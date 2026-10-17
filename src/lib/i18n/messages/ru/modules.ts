@@ -798,7 +798,10 @@ const messages = {
   'collab.reaction.tally': '{emoji} — {count}',
   'collab.reaction.tallyMine': '{emoji} — {count}, включая вас',
   'collab.thread.today': 'Сегодня',
-  'collab.thread.empty': 'Сообщений пока нет',
+  'collab.thread.emptyBody':
+    'Все участники этой поездки общаются в одной ветке. Принятые здесь решения остаются с поездкой, а не теряются в групповых чатах.',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Начни разговор',
   'collab.toast.reactionFailed': 'Реакция не сохранилась',
   'collab.toast.messageDeleted': 'Сообщение удалено',
   'collab.toast.deleteFailed': 'Сообщение не удалено',
@@ -827,6 +830,19 @@ const messages = {
   'collab.compose.send': 'Отправить сообщение',
   'collab.compose.savingEdit': 'Сохранение правки',
   'collab.compose.save': 'Сохранить',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Нажми Enter для отправки, Shift и Enter для новой строки.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Нажми Escape для отмены.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Используй кнопку отправки, чтобы отправить сообщение.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Попробовать снова',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Твои изменения остались в поле ввода. Проверь соединение и попробуй снова.',
   'collab.hint.sends': 'отправляет',
   'collab.hint.addsLine': 'добавляет строку',
   'collab.hint.cancels': 'отменяет',
@@ -912,6 +928,61 @@ const messages = {
   'files.action.add': 'Добавить файлы',
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
+  'files.calendar.live.action': 'Обновляемая ссылка на календарь',
+  'files.calendar.live.title': 'Обновляемая ссылка на календарь',
+  'files.calendar.warning':
+    'Любой обладатель ссылки может без аккаунта читать места, время, адреса и заметки этой поездки. Берегите её как пароль.',
+  'files.calendar.enable.action': 'Создать ссылку',
+  'files.calendar.link.once':
+    'Скопируйте её сейчас - мы показываем её только один раз. Если потеряете, создайте новую ссылку; старая перестанет работать.',
+  'files.calendar.link.address': 'Адрес ссылки',
+  'files.calendar.link.copy': 'Копировать ссылку',
+  'files.calendar.link.copied': 'Ссылка скопирована',
+  'files.calendar.link.copyFailed':
+    'Не удалось скопировать. Выделите адрес и скопируйте его вручную.',
+  'files.calendar.link.open': 'Открыть в приложении календаря',
+  'files.calendar.link.google': 'Добавить в Google Календарь',
+  'files.calendar.link.outlook': 'Добавить в Outlook',
+  'files.calendar.link.done': 'Готово',
+  'files.calendar.link.stays':
+    'Номера подтверждений, цены и файлы остаются в planned.travel.',
+  'files.calendar.freshness':
+    'Приложениям календаря может понадобиться несколько часов, иногда больше, чтобы показать изменение.',
+  'files.calendar.state.on': 'Ссылка на календарь включена',
+  'files.calendar.state.lastFetched':
+    'Календарь последний раз проверил эту ссылку {when}',
+  'files.calendar.state.neverFetched': 'Ещё не загружалось',
+  'files.calendar.rotate.action': 'Создать новую ссылку',
+  'files.calendar.rotate.confirmTitle': 'Создать новую ссылку?',
+  'files.calendar.rotate.confirmBody':
+    'Старая ссылка сразу перестанет работать. Календари, которые её используют, перестанут обновляться, пока вы не укажете в них новую ссылку.',
+  'files.calendar.rotate.busy': 'Создание новой ссылки…',
+  'files.calendar.error.rotate':
+    'Не удалось подтвердить создание новой ссылки. Текущее состояние показано ниже; при необходимости попробуйте ещё раз.',
+  'files.calendar.rotate.confirm': 'Создать новую ссылку',
+  'files.calendar.off.action': 'Отключить',
+  'files.calendar.off.confirmTitle': 'Отключить эту ссылку на календарь?',
+  'files.calendar.off.confirmBody':
+    'Ссылка сразу перестанет работать. Календари сохранят полученные события, но перестанут их обновлять.',
+  'files.calendar.off.confirm': 'Отключить',
+  'files.calendar.off.busy': 'Отключение…',
+  'files.calendar.closeGuard.title': 'Закрыть без копирования ссылки?',
+  'files.calendar.closeGuard.body':
+    'Мы не сможем показать её снова. Придётся создать новую.',
+  'files.calendar.closeGuard.confirm': 'Всё равно закрыть',
+  'files.calendar.closeGuard.cancel': 'Оставить открытым',
+  'files.calendar.error.enable':
+    'Не удалось подтвердить создание ссылки. Текущее состояние показано ниже. Если она включена, но вы её не видели, отключите и создайте заново.',
+  'files.calendar.error.off':
+    'Не удалось подтвердить отключение ссылки. Текущее состояние показано ниже; при необходимости повторите попытку.',
+  'files.calendar.error.load':
+    'Не удалось проверить ссылку на календарь этой поездки. Попробуйте снова.',
+  'files.calendar.retry': 'Попробовать снова',
+  'files.calendar.off.confirmBodyUnused':
+    'Этой ссылкой ещё не пользовались. Она сразу перестанет работать.',
+  'files.calendar.link.fallback':
+    'Если на телефоне не удаётся добавить её, откройте эту страницу на компьютере.',
+  'files.calendar.link.newTab': 'откроется в новой вкладке',
   'files.calendar.title': 'Календарь',
   'files.calendar.description':
     'Добавьте эту поездку в приложение календаря, которым вы уже пользуетесь.',

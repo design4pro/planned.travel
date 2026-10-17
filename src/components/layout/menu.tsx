@@ -45,6 +45,7 @@ const itemClass = cn(
   'relative flex cursor-default select-none items-center gap-2.5 rounded-md px-2.5 py-2 text-label text-ink-2 outline-none',
   'transition-[background-color,color] duration-fast ease-out-quint',
   'data-[highlighted]:bg-hover data-[highlighted]:text-ink',
+  'data-[highlighted]:outline-2 data-[highlighted]:outline-solid data-[highlighted]:-outline-offset-2 data-[highlighted]:outline-ring',
   'data-[disabled]:pointer-events-none data-[disabled]:opacity-45',
 )
 
