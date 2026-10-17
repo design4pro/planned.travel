@@ -21,6 +21,8 @@ import type { CollabPerson, MessageData, NoteData, PollData } from './types'
 export interface CollabScreenData {
   readonly sections: CollabSections
   readonly messages: ReadonlyArray<MessageData>
+  /** The whole conversation's size; `messages` is only its newest window. Null: no count to print. */
+  readonly messageCount: number | null
   readonly notes: ReadonlyArray<NoteData>
   readonly polls: ReadonlyArray<PollData>
   readonly people: ReadonlyArray<CollabPerson>
@@ -217,9 +219,9 @@ export function CollabScreen({
             <ModulePanel
               label={t('trips.collab.conversation')}
               count={
-                data.messages.length === 0
+                data.messageCount === null || data.messageCount === 0
                   ? undefined
-                  : new Intl.NumberFormat(locale).format(data.messages.length)
+                  : new Intl.NumberFormat(locale).format(data.messageCount)
               }
               className="xl:max-h-[inherit]"
               bodyClassName="flex min-h-0 flex-col px-5 py-3"

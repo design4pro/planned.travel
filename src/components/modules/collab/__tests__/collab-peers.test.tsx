@@ -45,6 +45,7 @@ const messages = {
 const data: CollabScreenData = {
   sections: { conversation: true, notes: true, polls: true },
   messages: [],
+  messageCount: 0,
   notes: [],
   polls: [],
   people: [],

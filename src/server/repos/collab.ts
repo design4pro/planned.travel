@@ -217,6 +217,20 @@ export async function listMessages(
   })
 }
 
+/**
+ * How many messages the trip's conversation holds in all, soft-deleted ones excluded. The screen
+ * prints this number, so it is the whole thread and not the window {@link listMessages} returns.
+ */
+export async function countMessages(
+  scope: TenantScope,
+  tripId: string,
+): Promise<number> {
+  return collabMessagesRepository.count(
+    scope,
+    allOf(eq(collabMessages.tripId, tripId), isNull(collabMessages.deletedAt)),
+  )
+}
+
 export async function postMessage(
   scope: TenantScope,
   input: PostMessageInput,

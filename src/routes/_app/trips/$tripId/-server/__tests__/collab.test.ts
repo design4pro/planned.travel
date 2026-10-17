@@ -161,11 +161,31 @@ describe('collaboration handlers', () => {
     })
     expect(payload.canConfigure).toBe(true)
     expect(payload.messages).toHaveLength(1)
+    expect(payload.messageCount).toBe(1)
     expect(payload.notes).toHaveLength(1)
     expect(payload.polls).toHaveLength(1)
     expect(payload.people).toHaveLength(1)
     expect(payload.viewerUserId).toBe(tenant.scope.ctx.userId)
     expect(payload.timeZone).toBe('Europe/Lisbon')
+  })
+
+  it('counts the whole conversation, not the window the loader returns', async () => {
+    for (let index = 1; index <= 52; index += 1) {
+      await postMessage(tenant.scope, { tripId, body: `message ${index}` })
+    }
+    const payload = await loadTripCollab({ data: { tripId } })
+    expect(payload.messages).toHaveLength(50)
+    expect(payload.messageCount).toBe(52)
+  })
+
+  it('reads no conversation count while the conversation is switched off', async () => {
+    await postMessage(tenant.scope, { tripId, body: 'Hello' })
+    await tripsRepository.requireUpdate(tenant.scope, tripId, {
+      collabModules: { conversation: false, notes: true, polls: true },
+    })
+    const payload = await loadTripCollab({ data: { tripId } })
+    expect(payload.messageCount).toBeNull()
+    expect(payload.messages).toHaveLength(1)
   })
 
   it('offers configuration only to non-archived owners and editors', async () => {
