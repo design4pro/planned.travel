@@ -1096,6 +1096,23 @@ before its owner is back with coffee. When it expires the session is simply gone
 on the login screen, the stale `admin_session` cookie is cleared on that same request rather than
 left to linger, and the admin signs in again as themselves.
 
+The 900 seconds is enforced server-side by two mechanisms, because setting the option alone does not
+hold it. Better Auth's sliding refresh (`updateAge`, one day) rewrites `expiresAt` to now plus the
+global 30-day `expiresIn` on the first read of any session older than that, and a 900-second session
+always is. The only thing that skips the refresh is the signed `dont_remember` cookie, which the
+client supplies: whoever holds the session token and leaves that cookie out would otherwise extend
+the impersonation to 30 days (#1358). So:
+
+- **The update clamp.** The session `update.before` hook in `src/server/auth/index.ts` keeps an
+  impersonated session's `expiresAt` at `min(stored expiry, createdAt + 900 s)` whenever a patch
+  tries to move it, and drops `expiresAt` from a patch whose session it cannot resolve (fail
+  closed). Patches that do not touch `expiresAt`, such as organisation set-active, pass through, and
+  ordinary sessions keep the 30-day sliding refresh. A plugin hook on `get-session` drops the
+  session-token `Set-Cookie` the refresh would have re-issued with a 30-day `Max-Age`.
+- **The read-side guard.** `normaliseSession` in `src/server/auth/tenant.ts` returns no session for
+  an impersonated one whose `createdAt` plus 900 s is in the past, whatever its row says, so a row
+  extended before the clamp shipped stops authorising at once.
+
 ### 6.3 Closing the tab does not end it
 
 Stated plainly because the intuition runs the other way. Closing the tab, closing the window or
@@ -1103,7 +1120,8 @@ navigating away does **not** end impersonation. Better Auth creates the imperson
 "don't remember me" semantics, so the cookie carries no `Max-Age` and a full browser quit does drop
 it - but a closed tab in a still-running browser leaves the session live and reachable by reopening
 the URL. The only two things that reliably end it are the **End impersonation** action and the
-900-second server-side expiry in §6.2. This is exactly why §6.2 is short and why §6.1 is
+900-second server-side expiry in §6.2, which holds whether or not the client sends the
+`dont_remember` cookie. This is exactly why §6.2 is short and why §6.1 is
 non-dismissible.
 
 ### 6.4 May an impersonated session perform platform mutations? No.

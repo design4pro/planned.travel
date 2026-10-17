@@ -94,8 +94,14 @@ export interface SessionKv {
   readonly deleted: Array<string>
   /** Keys whose `delete` rejects, so a partial purge can be driven deliberately. */
   readonly failing: Set<string>
+  /** The `expirationTtl` each key was last written with, so a lifetime can be asserted on. */
+  readonly ttls: Map<string, number | undefined>
   get: (key: string, type?: string) => Promise<unknown>
-  put: (key: string, value: string) => Promise<void>
+  put: (
+    key: string,
+    value: string,
+    options?: { expirationTtl?: number },
+  ) => Promise<void>
   delete: (key: string) => Promise<void>
   clear: () => void
 }
@@ -104,18 +110,21 @@ export function createSessionKv(): SessionKv {
   const store = new Map<string, string>()
   const deleted: Array<string> = []
   const failing = new Set<string>()
+  const ttls = new Map<string, number | undefined>()
 
   return {
     store,
     deleted,
     failing,
+    ttls,
     async get(key, type) {
       const value = store.get(key)
       if (value === undefined) return null
       return type === 'json' ? JSON.parse(value) : value
     },
-    async put(key, value) {
+    async put(key, value, options) {
       store.set(key, value)
+      ttls.set(key, options?.expirationTtl)
     },
     async delete(key) {
       deleted.push(key)
@@ -128,6 +137,7 @@ export function createSessionKv(): SessionKv {
       store.clear()
       deleted.length = 0
       failing.clear()
+      ttls.clear()
     },
   }
 }

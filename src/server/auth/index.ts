@@ -25,6 +25,10 @@ import {
   sessionStore,
   trustedOrigins,
 } from './env'
+import {
+  clampSessionExpiry,
+  impersonationCookieGuard,
+} from './impersonation-expiry'
 import { logAuth } from './log'
 import { passkey } from './passkey/plugin'
 import {
@@ -402,6 +406,19 @@ function buildAuth() {
         },
       },
       session: {
+        // An impersonated session never lives past `impersonationSessionDuration`
+        // (docs/ACCESS.md §6.2). Better Auth's sliding refresh rewrites `expiresAt` to 30 days from
+        // now, and only a client-supplied cookie skips it, so the patch is clamped here. The
+        // hook sees the patch and not the row; the row is the one the endpoint resolved.
+        update: {
+          before: async (data, context) => {
+            const clamped = clampSessionExpiry(
+              data,
+              context?.context.session?.session ?? null,
+            )
+            return clamped && { data: clamped }
+          },
+        },
         create: {
           // Land every new session inside a tenant so no authenticated screen
           // ever has to cope with a null organization.
@@ -429,6 +446,9 @@ function buildAuth() {
 
       // Reads the person a session-ending endpoint is about before it deletes the session (#1093).
       roomEvictionPrepare,
+
+      // Keeps the refresh from re-issuing an impersonated session's cookie for 30 days.
+      impersonationCookieGuard,
 
       twoFactor({
         issuer: APP_NAME,
