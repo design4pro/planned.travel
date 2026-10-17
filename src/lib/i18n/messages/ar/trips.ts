@@ -474,6 +474,16 @@ const messages = {
   'collab.sections.changed': 'تغيّرت أقسام هذه الرحلة.',
   'collab.sections.savedHidden':
     'تم الحفظ. هذا القسم مخفي للرحلة، لذا سيُغلق الآن.',
+  'plan.place.error.save': 'تعذّر حفظ المكان. حاول مرة أخرى بعد قليل.',
+  'plan.stop.error.saveTimes':
+    'تعذّر حفظ أوقات التوقف. حاول مرة أخرى بعد قليل.',
+  'plan.place.error.delete': 'تعذّر حذف المكان. حاول مرة أخرى بعد قليل.',
+  'plan.pin.error.move': 'تعذّر نقل الدبوس. حاول مرة أخرى بعد قليل.',
+  'plan.place.toast.created': 'تمت إضافة المكان',
+  'plan.place.toast.updated': 'تم تحديث المكان',
+  'plan.stop.toast.timesSaved': 'تم حفظ أوقات التوقف',
+  'plan.place.toast.deleted': 'تم حذف المكان',
+  'plan.pin.toast.moved': 'تم تثبيت {name}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

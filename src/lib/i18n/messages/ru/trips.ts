@@ -468,6 +468,19 @@ const messages = {
   'collab.sections.changed': 'Разделы этой поездки изменились.',
   'collab.sections.savedHidden':
     'Сохранено. Этот раздел скрыт для поездки и сейчас закроется.',
+  'plan.place.error.save':
+    'Не удалось сохранить место. Попробуйте ещё раз через минуту.',
+  'plan.stop.error.saveTimes':
+    'Не удалось сохранить время остановки. Попробуйте ещё раз через минуту.',
+  'plan.place.error.delete':
+    'Не удалось удалить место. Попробуйте ещё раз через минуту.',
+  'plan.pin.error.move':
+    'Не удалось переместить метку. Попробуйте ещё раз через минуту.',
+  'plan.place.toast.created': 'Место добавлено',
+  'plan.place.toast.updated': 'Место обновлено',
+  'plan.stop.toast.timesSaved': 'Время остановки сохранено',
+  'plan.place.toast.deleted': 'Место удалено',
+  'plan.pin.toast.moved': '{name}: метка установлена',
 } satisfies TranslationOf<typeof En>
 
 export default messages

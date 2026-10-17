@@ -987,13 +987,16 @@ export function PlanScreen({
           })
         },
         {
-          fallback: 'The place could not be saved. Try again in a moment.',
-          success: editing === null ? 'Place added' : 'Place updated',
+          fallback: t('trips.plan.place.error.save'),
+          success:
+            editing === null
+              ? t('trips.plan.place.toast.created')
+              : t('trips.plan.place.toast.updated'),
           closeOnLanded: true,
         },
       )
     },
-    [dialog, payload.tripId, runWrite],
+    [dialog, payload.tripId, runWrite, t],
   )
 
   const submitTiming = React.useCallback(
@@ -1015,13 +1018,13 @@ export function PlanScreen({
             },
           }),
         {
-          fallback: 'The times could not be saved. Try again in a moment.',
-          success: 'Times saved',
+          fallback: t('trips.plan.stop.error.saveTimes'),
+          success: t('trips.plan.stop.toast.timesSaved'),
           closeOnLanded: true,
         },
       )
     },
-    [dialog, payload.tripId, runWrite],
+    [dialog, payload.tripId, runWrite, t],
   )
 
   const confirmDelete = React.useCallback((): void => {
@@ -1044,8 +1047,8 @@ export function PlanScreen({
         }
       },
       {
-        fallback: 'The place could not be deleted. Try again in a moment.',
-        success: 'Place deleted',
+        fallback: t('trips.plan.place.error.delete'),
+        success: t('trips.plan.place.toast.deleted'),
         closeOnLanded: true,
       },
     ).then((landed) => {
@@ -1060,6 +1063,7 @@ export function PlanScreen({
     restateJourneys,
     router,
     runWrite,
+    t,
   ])
 
   /* ------------------------------------------------------------------ notes */
@@ -1181,8 +1185,8 @@ export function PlanScreen({
             },
           }),
         {
-          fallback: 'The pin could not be moved. Try again in a moment.',
-          success: `${place.name} pinned`,
+          fallback: t('trips.plan.pin.error.move'),
+          success: t('trips.plan.pin.toast.moved', { name: place.name }),
         },
       ).then((landed) => {
         if (landed) {
@@ -1194,7 +1198,7 @@ export function PlanScreen({
         }
       })
     },
-    [dayIdByPlace, payload.tripId, picking, placeById, runWrite],
+    [dayIdByPlace, payload.tripId, picking, placeById, runWrite, t],
   )
 
   /* ------------------------------------------------------------- row actions */

@@ -463,6 +463,19 @@ const messages = {
   'collab.sections.changed': 'Розділи цієї подорожі змінилися.',
   'collab.sections.savedHidden':
     'Збережено. Цей розділ прихований для подорожі й зараз закриється.',
+  'plan.place.error.save':
+    'Не вдалося зберегти місце. Спробуйте ще раз за хвилину.',
+  'plan.stop.error.saveTimes':
+    'Не вдалося зберегти час зупинки. Спробуйте ще раз за хвилину.',
+  'plan.place.error.delete':
+    'Не вдалося видалити місце. Спробуйте ще раз за хвилину.',
+  'plan.pin.error.move':
+    'Не вдалося перемістити позначку. Спробуйте ще раз за хвилину.',
+  'plan.place.toast.created': 'Місце додано',
+  'plan.place.toast.updated': 'Місце оновлено',
+  'plan.stop.toast.timesSaved': 'Час зупинки збережено',
+  'plan.place.toast.deleted': 'Місце видалено',
+  'plan.pin.toast.moved': '{name}: позначку встановлено',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -448,6 +448,19 @@ const messages = {
   'collab.sections.changed': 'Az út szakaszai megváltoztak.',
   'collab.sections.savedHidden':
     'Mentve. Ez a szakasz rejtve van az úton, ezért most bezárul.',
+  'plan.place.error.save':
+    'Nem sikerült menteni a helyet. Próbálja meg újra egy pillanat múlva.',
+  'plan.stop.error.saveTimes':
+    'Nem sikerült menteni a megálló időpontjait. Próbálja meg újra egy pillanat múlva.',
+  'plan.place.error.delete':
+    'Nem sikerült törölni a helyet. Próbálja meg újra egy pillanat múlva.',
+  'plan.pin.error.move':
+    'Nem sikerült áthelyezni a jelölőt. Próbálja meg újra egy pillanat múlva.',
+  'plan.place.toast.created': 'Hely hozzáadva',
+  'plan.place.toast.updated': 'Hely frissítve',
+  'plan.stop.toast.timesSaved': 'Megálló időpontjai mentve',
+  'plan.place.toast.deleted': 'Hely törölve',
+  'plan.pin.toast.moved': '{name} megjelölve',
 } satisfies TranslationOf<typeof En>
 
 export default messages
