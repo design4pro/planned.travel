@@ -22,6 +22,14 @@ const VACAY: RouteCase = {
   ready: 'main',
 }
 
+/** A year the demo traveller has no allowance row for, so the tile shows the plan default. */
+const UNSET_YEAR = 2031
+const UNSET: RouteCase = {
+  name: 'vacay-unset-year',
+  path: `/vacay?year=${UNSET_YEAR}`,
+  ready: 'main',
+}
+
 const TILE = /^Edit days, currently \d+$/
 
 function tile(page: Page) {
@@ -29,7 +37,7 @@ function tile(page: Page) {
 }
 
 function field(page: Page) {
-  return page.getByRole('textbox', { name: 'Days' })
+  return page.getByRole('textbox', { name: /^Days/ })
 }
 
 /** The two widths the spec names: the phone column and the three-column planner. */
@@ -180,5 +188,53 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(field(page)).toHaveCount(0)
     await expect(tile(page)).toBeFocused()
     expect(await figure(page)).toBe(original)
+  })
+
+  test('shows the default caption full width, and a failed write keeps the value and offers a retry', async ({
+    page,
+  }) => {
+    await visit(page, UNSET, 'light')
+    const caption = page.getByText('Default allowance. Select to set your own.')
+    await expect(caption).toBeVisible()
+
+    // The first state a new traveller sees fits both widths, with and without the editor.
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 })
+      expect(
+        await overflowsHorizontally(page),
+        `the default state must not overflow at ${width}px`,
+      ).toBe(false)
+    }
+
+    // Failing only the write: the re-read that follows is a GET and still succeeds, so a retry is
+    // offered. Nothing reaches the database, so the fixture is untouched.
+    await page.route('**/_serverFn/**', (route) =>
+      route.request().method() === 'POST'
+        ? route.abort('failed')
+        : route.continue(),
+    )
+    await tile(page).click()
+    await field(page).fill('30')
+    await field(page).press('Enter')
+
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'could not be saved' }),
+    ).toBeVisible()
+    await expect(field(page)).toHaveValue('30')
+    await expect(field(page)).toBeFocused()
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Allowance saved.' }),
+    ).toHaveCount(0)
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 })
+      expect(
+        await overflowsHorizontally(page),
+        `the failed-write state must not overflow at ${width}px`,
+      ).toBe(false)
+    }
+
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(field(page)).toHaveCount(0)
   })
 })

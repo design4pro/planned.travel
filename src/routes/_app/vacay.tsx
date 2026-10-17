@@ -407,7 +407,10 @@ function VacayPending() {
           <div className="flex flex-col gap-6">
             <Card className="space-y-4">
               <Skeleton className="h-3 w-28" radius="sm" />
-              <Skeleton className="h-11 w-32" radius="sm" />
+              <Skeleton
+                className="h-[calc(var(--text-subtitle)*var(--text-subtitle--line-height))] w-32"
+                radius="sm"
+              />
               <Skeleton className="h-1.5 w-full" radius="full" />
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 3 }, (_, index) => (

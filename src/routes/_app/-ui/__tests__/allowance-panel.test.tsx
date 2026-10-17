@@ -27,14 +27,19 @@ const AR: Catalogue = {
 
 /** The server function reaches `cloudflare:workers`, and `useRouter` needs a router above it. */
 const setAllowance = vi.hoisted(() => vi.fn())
+const loadAllowance = vi.hoisted(() => vi.fn())
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
-vi.mock('../../-server/vacay', () => ({ setAllowanceFn: setAllowance }))
+vi.mock('../../-server/vacay', () => ({
+  setAllowanceFn: setAllowance,
+  loadVacayAllowance: loadAllowance,
+}))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
 
 afterEach(() => {
   cleanup()
   setAllowance.mockReset()
+  loadAllowance.mockReset()
   router.invalidate.mockReset()
 })
 
@@ -85,6 +90,15 @@ function descriptionOf(element: HTMLElement): string {
     .trim()
 }
 
+/** The words a screen reader says for a control's `aria-labelledby`, in order. */
+function nameOf(element: HTMLElement): string {
+  return (element.getAttribute('aria-labelledby') ?? '')
+    .split(' ')
+    .map((id) => document.getElementById(id)?.textContent ?? '')
+    .join(' ')
+    .trim()
+}
+
 const attr = (element: HTMLElement, name: string): string | null =>
   element.getAttribute(name)
 
@@ -92,7 +106,7 @@ const tile = (value = 25): HTMLElement =>
   screen.getByRole('button', { name: `Edit days, currently ${value}` })
 
 const field = (): HTMLInputElement =>
-  screen.getByRole('textbox', { name: 'Days' })
+  screen.getByRole('textbox', { name: /^Days/ })
 
 /** Opens the editor and replaces what the field holds. */
 async function type(
@@ -114,6 +128,27 @@ describe('the allowance tile', () => {
     )
   })
 
+  it('keeps the default caption out of the narrow tile and shows it full width under the tiles', () => {
+    mount(DEFAULT)
+
+    const caption = screen.getByText(
+      'Default allowance. Select to set your own.',
+    )
+    expect(caption.closest('dl')).toBeNull()
+    expect(caption.closest('dd')).toBeNull()
+  })
+
+  it('marks the tile as the control for the Days figure, with a pencil that is hidden from the tree', () => {
+    mount()
+
+    const button = tile()
+    expect(attr(button, 'data-part')).toBe('allowance-tile')
+    expect(attr(button, 'data-field')).toBe('entitlement')
+    expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    )
+  })
+
   it('has no default caption once the traveller has set their own', () => {
     mount()
 
@@ -127,7 +162,9 @@ describe('the allowance tile', () => {
     await user.click(tile())
 
     expect((field() as HTMLInputElement).value).toBe('25')
-    expect(descriptionOf(field())).toBe('Your allowance for 2026')
+    // The visible words beside the field are its name (WCAG 2.5.3), so nothing is left to describe.
+    expect(nameOf(field())).toBe('Days Your allowance for 2026')
+    expect(attr(field(), 'aria-describedby')).toBeNull()
     expect(attr(field(), 'aria-invalid')).not.toBe('true')
     expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
@@ -330,6 +367,18 @@ describe('an invalid value', () => {
     },
   )
 
+  it('announces the message again when the same invalid value is submitted twice', async () => {
+    const user = hand()
+    mount()
+
+    await type(user, '999')
+    await user.keyboard('{Enter}')
+    const first = screen.getByRole('alert')
+    await user.keyboard('{Enter}')
+
+    expect(screen.getByRole('alert')).not.toBe(first)
+  })
+
   it('announces the message when Enter keeps focus in the field', async () => {
     const user = hand()
     mount()
@@ -369,6 +418,7 @@ describe('a failed write', () => {
       const user = hand()
       setAllowance.mockRejectedValueOnce(failure)
       setAllowance.mockResolvedValueOnce({ row: {} })
+      loadAllowance.mockResolvedValue(SAVED)
       mount()
 
       await type(user, '30')
@@ -389,6 +439,95 @@ describe('a failed write', () => {
       expect(screen.queryByRole('alert')).toBeNull()
     },
   )
+
+  it('offers no retry when the re-read fails too, as after a refusal that arrives as unexpected', async () => {
+    const user = hand()
+    // `NotFoundError` and `PlanOwnerOnlyError` are not public failures, so they reach the client as
+    // `unexpected`, exactly like a server error; only the re-read tells them apart.
+    setAllowance.mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-2' }),
+      ),
+    )
+    loadAllowance.mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-3' }),
+      ),
+    )
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('could not be saved')
+    expect(loadAllowance).toHaveBeenCalledWith({
+      data: { planId: 'plan-1', year: 2026 },
+    })
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect((field() as HTMLInputElement).value).toBe('30')
+  })
+
+  it('does not re-read after a validation failure', async () => {
+    const user = hand()
+    setAllowance.mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'validation', message: 'Too many days.' }),
+      ),
+    )
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+
+    await screen.findByRole('alert')
+    expect(loadAllowance).not.toHaveBeenCalled()
+    expect(attr(field(), 'aria-invalid')).toBe('true')
+    await user.type(field(), '{Backspace}')
+    expect(attr(field(), 'aria-invalid')).not.toBe('true')
+  })
+
+  it('never says "Allowance saved." after a save that failed', async () => {
+    const user = hand()
+    setAllowance.mockResolvedValueOnce({ row: {} })
+    setAllowance.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    loadAllowance.mockResolvedValue(SAVED)
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe('Allowance saved.'),
+    )
+
+    await type(user, '31')
+    await user.keyboard('{Enter}')
+    await screen.findByRole('alert')
+
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('shows Cancel as unavailable while a save is pending', async () => {
+    const user = hand()
+    let finish: () => void = () => {}
+    setAllowance.mockReturnValue(
+      new Promise<{ row: object }>((resolve) => {
+        finish = () => resolve({ row: {} })
+      }),
+    )
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    expect(attr(cancel, 'aria-disabled')).toBe('true')
+    await user.click(cancel)
+    expect(screen.queryByRole('textbox')).not.toBeNull()
+
+    finish()
+    await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull())
+  })
 
   it('puts focus back in the field after a failed Save click', async () => {
     const user = hand()

@@ -13,15 +13,18 @@
  *   vanishes from the tab order mid-press drops the reader's focus to the page.
  * - **Focus goes back to the tile** after Enter, Escape, Cancel or a successful Save, and stays in
  *   the field after a refusal, an invalid value or a failed write.
- * - **A failed write keeps the typed value.** Retry is offered only when trying again can help - a
- *   transport failure or a server error (`unexpected`); a refusal or a rejected value says why and
- *   leaves the field to be edited.
+ * - **A failed write keeps the typed value.** Retry is offered only when trying again can help: the
+ *   failure is a transport failure or a server error (`unexpected`) *and* a re-read of the figure
+ *   still succeeds. A domain refusal (not found, owner only) also arrives as `unexpected`, so the
+ *   re-read, not the status, tells them apart; a refusal or a rejected value says why and leaves the
+ *   field to be edited.
  *
  * The figures come from the route loader and the write reloads it with `router.invalidate()`, so
  * there is no local copy of the allowance that could disagree with the screen.
  */
 import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { Pencil } from 'lucide-react'
 
 import { Alert, Button, Input, Progress } from '#/components/ui'
 import { cn } from '#/lib/cn'
@@ -29,7 +32,7 @@ import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { parseAllowanceDays } from '../-lib/allowance'
 import { formatNumber } from '../-lib/format'
-import { setAllowanceFn } from '../-server/vacay'
+import { loadVacayAllowance, setAllowanceFn } from '../-server/vacay'
 import { Panel } from './scaffold'
 
 import type { FormEvent, KeyboardEvent } from 'react'
@@ -49,6 +52,8 @@ type Problem =
       /** Authored sentence for a refusal or a rejected value; `null` for a diagnostic. */
       readonly message: string | null
       readonly retryable: boolean
+      /** The server rejected the value itself, so the field is marked invalid. */
+      readonly rejected: boolean
     }
 
 export function AllowancePanel({
@@ -71,7 +76,10 @@ export function AllowancePanel({
   const [draft, setDraft] = useState('')
   const [pending, setPending] = useState(false)
   const [problem, setProblem] = useState<Problem | null>(null)
-  const [saves, setSaves] = useState(0)
+  /** Whether the last write succeeded; cleared when the next one starts, so a failure never reads as a save. */
+  const [saved, setSaved] = useState(false)
+  /** Counts invalid submits, so a repeated one mounts the alert again and is announced again. */
+  const [attempts, setAttempts] = useState(0)
 
   const tileRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -110,12 +118,14 @@ export function AllowancePanel({
     const days = parseAllowanceDays(draft)
     if (days === null) {
       setProblem({ kind: 'invalid' })
+      setAttempts((count) => count + 1)
       inputRef.current?.focus()
       return
     }
 
     inflight.current = true
     setPending(true)
+    setSaved(false)
     setProblem(null)
     try {
       await setAllowanceFn({
@@ -123,11 +133,14 @@ export function AllowancePanel({
       })
     } catch (cause) {
       const failure = readPublicFailure(cause)
+      const unexpected = failure.kind === 'unexpected'
       setProblem({
         kind: 'failed',
-        message:
-          failure.kind === 'unexpected' ? null : (failure.message ?? null),
-        retryable: failure.kind === 'unexpected',
+        message: unexpected ? null : (failure.message ?? null),
+        // Not found and owner only arrive as `unexpected` too: only a figure that still reads
+        // can be written again.
+        retryable: unexpected && (await canStillRead()),
+        rejected: failure.kind === 'validation',
       })
       inflight.current = false
       setPending(false)
@@ -137,11 +150,20 @@ export function AllowancePanel({
 
     try {
       await router.invalidate()
-      setSaves((count) => count + 1)
+      setSaved(true)
       close()
     } finally {
       inflight.current = false
       setPending(false)
+    }
+  }
+
+  async function canStillRead(): Promise<boolean> {
+    try {
+      await loadVacayAllowance({ data: { planId, year } })
+      return true
+    } catch {
+      return false
     }
   }
 
@@ -165,6 +187,7 @@ export function AllowancePanel({
 
   const failed = problem?.kind === 'failed' ? problem : null
   const invalid = problem?.kind === 'invalid'
+  const rejected = invalid || failed?.rejected === true
 
   return (
     <Panel label={t('modules.vacay.allowance.label', { year })}>
@@ -191,7 +214,7 @@ export function AllowancePanel({
           <div className="rounded-md bg-surface-2 px-2.5 py-2">
             <dt
               id={labelId}
-              className="text-micro font-semibold tracking-label uppercase text-ink-4"
+              className="text-micro font-semibold tracking-label break-words uppercase text-ink-4"
             >
               {t('modules.vacay.allowance.tile.days')}
             </dt>
@@ -206,21 +229,17 @@ export function AllowancePanel({
                 aria-expanded={editing}
                 aria-controls={editing ? formId : undefined}
                 onClick={open}
+                data-part="allowance-tile"
+                data-field="entitlement"
                 className={cn(
-                  '-mx-1 rounded-sm px-1 text-start tabular-nums',
-                  'hover:bg-hover focus-visible:outline-2 focus-visible:outline-ring',
+                  '-mx-1 inline-flex items-center gap-1 rounded-sm px-1 text-start tabular-nums',
+                  'hover:bg-hover active:bg-active aria-expanded:bg-hover',
+                  'focus-visible:outline-2 focus-visible:outline-ring',
                 )}
               >
                 {number(allowance.entitlementDays)}
+                <Pencil aria-hidden className="size-3 shrink-0 text-ink-3" />
               </button>
-              {allowance.hasRow ? null : (
-                <span
-                  id={hintId}
-                  className="block text-micro font-medium text-ink-4"
-                >
-                  {t('modules.vacay.allowance.default.hint')}
-                </span>
-              )}
             </dd>
           </div>
           <Figure
@@ -233,6 +252,11 @@ export function AllowancePanel({
             muted={!carryOverEnabled}
           />
         </dl>
+        {allowance.hasRow ? null : (
+          <p id={hintId} className="text-caption text-ink-3">
+            {t('modules.vacay.allowance.default.hint')}
+          </p>
+        )}
 
         {editing ? (
           <form
@@ -252,18 +276,19 @@ export function AllowancePanel({
               value={draft}
               readOnly={pending}
               aria-busy={pending || undefined}
-              aria-labelledby={labelId}
-              aria-describedby={
-                invalid ? `${descriptionId} ${problemId}` : descriptionId
-              }
-              invalid={invalid}
+              // The visible words beside the field are the tile's label and the description, so
+              // the name carries both (WCAG 2.5.3 label in name).
+              aria-labelledby={`${labelId} ${descriptionId}`}
+              aria-describedby={invalid ? problemId : undefined}
+              invalid={rejected}
               onChange={(event) => {
                 setDraft(event.target.value)
-                if (invalid) setProblem(null)
+                if (rejected) setProblem(null)
               }}
             />
             {invalid ? (
               <p
+                key={attempts}
                 id={problemId}
                 role="alert"
                 className="text-caption text-danger"
@@ -297,13 +322,20 @@ export function AllowancePanel({
               </Alert>
             )}
             <div className="flex items-center gap-2">
-              <Button type="submit" variant="primary" size="sm">
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                className="pointer-coarse:h-11"
+              >
                 {t('modules.vacay.allowance.save')}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="pointer-coarse:h-11"
+                aria-disabled={pending || undefined}
                 onClick={() => {
                   if (!pending) close()
                 }}
@@ -322,9 +354,9 @@ export function AllowancePanel({
         <div role="status" aria-live="polite" className="sr-only">
           {pending ? (
             <span key="saving">{t('modules.vacay.allowance.saving')}</span>
-          ) : saves === 0 ? null : (
-            <span key={saves}>{t('modules.vacay.allowance.saved')}</span>
-          )}
+          ) : saved ? (
+            <span key="saved">{t('modules.vacay.allowance.saved')}</span>
+          ) : null}
         </div>
       </div>
     </Panel>
