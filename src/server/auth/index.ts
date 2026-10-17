@@ -488,19 +488,6 @@ function buildAuth() {
         },
       },
       session: {
-        // An impersonated session never lives past `impersonationSessionDuration`
-        // (docs/ACCESS.md §6.2). Better Auth's sliding refresh rewrites `expiresAt` to 30 days from
-        // now, and only a client-supplied cookie skips it, so the patch is clamped here. The
-        // hook sees the patch and not the row; the row is the one the endpoint resolved.
-        update: {
-          before: async (data, context) => {
-            const clamped = clampSessionExpiry(
-              data,
-              context?.context.session?.session ?? null,
-            )
-            return clamped && { data: clamped }
-          },
-        },
         create: {
           // Land every new session inside a tenant so no authenticated screen
           // ever has to cope with a null organization.
@@ -518,15 +505,27 @@ function buildAuth() {
         // impersonated session each one is a row of the impersonation timeline (docs/ACCESS.md §6.4).
         // A payload without that key (the `updateAge` refresh, every impersonated read) returns before
         // anything is stored or read.
+        //
+        // The same `before` also clamps the expiry: an impersonated session never lives past
+        // `impersonationSessionDuration` (docs/ACCESS.md §6.2). Better Auth's sliding refresh rewrites
+        // `expiresAt` to 30 days from now, and only a client-supplied cookie skips it, so the patch is
+        // clamped here. The hook sees the patch and not the row; the row is the one the endpoint
+        // resolved. One `update` key: a second one in this object literal replaces the first.
         update: {
           before: async (data, context) => {
-            if (!context || !Object.hasOwn(data, 'activeOrganizationId')) return
-            pendingWorkspaceSwitch.set(
-              context,
-              nonEmptyString(
-                context.context.session?.session.activeOrganizationId,
-              ),
+            if (context && Object.hasOwn(data, 'activeOrganizationId')) {
+              pendingWorkspaceSwitch.set(
+                context,
+                nonEmptyString(
+                  context.context.session?.session.activeOrganizationId,
+                ),
+              )
+            }
+            const clamped = clampSessionExpiry(
+              data,
+              context?.context.session?.session ?? null,
             )
+            return clamped && { data: clamped }
           },
           after: async (session, context) => {
             if (!session) return
