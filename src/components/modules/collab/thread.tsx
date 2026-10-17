@@ -28,6 +28,7 @@ import {
   toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { readPublicFailure } from '#/lib/errors'
 import { formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
@@ -637,7 +638,20 @@ function Composer({
     failure: t('modules.collab.toast.notSent'),
     fallback: t('modules.collab.toast.notSentBody'),
   })
-  const edit = useAction(editMessageFn, {
+  // Transport errors are diagnostics; authored server failures keep their copy.
+  async function saveEdit(input: Parameters<typeof editMessageFn>[0]) {
+    try {
+      return await editMessageFn(input)
+    } catch (cause) {
+      const failure = readPublicFailure(cause)
+      if (failure.kind === 'unexpected' && failure.reference === undefined) {
+        throw new Error(t('modules.collab.toast.editFailedBody'))
+      }
+      throw cause
+    }
+  }
+
+  const edit = useAction(saveEdit, {
     success: () =>
       t(
         off.current

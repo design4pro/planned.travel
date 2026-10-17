@@ -13,6 +13,7 @@ import {
 
 import { editMessageFn, postMessageFn } from '#/server/fns/collab-thread'
 import { TooltipProvider, toast } from '#/components/ui'
+import { encodePublicFailure } from '#/lib/errors'
 import { formatWeekday } from '#/lib/format'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -506,6 +507,62 @@ describe('safe composer sends', () => {
     expect(field.value).toBe('Another thought')
     expect(document.activeElement).toBe(field)
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+  })
+
+  it.each([
+    new TypeError('Failed to fetch'),
+    'untranslated transport diagnostic',
+  ])(
+    'uses Polish catalogue copy for an unclassified edit rejection: %s',
+    async (cause) => {
+      const errorToast = vi.spyOn(toast, 'error')
+      vi.mocked(editMessageFn).mockRejectedValueOnce(cause)
+      mount('pl', namespaceCatalogue('modules', Pl), [
+        message('m1', 'user-1', '2026-06-23T09:00:00Z', 'Original'),
+      ])
+      const user = userEvent.setup()
+      await user.click(
+        screen.getByRole('button', {
+          name: Pl['collab.message.actionsFor'].replace('{name}', 'Ada Viewer'),
+        }),
+      )
+      await user.click(
+        screen.getByRole('menuitem', { name: Pl['collab.message.menuEdit'] }),
+      )
+      const field = screen.getByRole('textbox') as HTMLTextAreaElement
+      fireEvent.change(field, { target: { value: 'Updated' } })
+      fireEvent.keyDown(field, { key: 'Enter' })
+      await screen.findByRole('button', { name: Pl['collab.compose.retry'] })
+      expect(errorToast).toHaveBeenCalledWith(Pl['collab.toast.editFailed'], {
+        description: Pl['collab.toast.editFailedBody'],
+      })
+      expect(field.value).toBe('Updated')
+      expect(screen.getByText(Pl['collab.toast.editFailedBody'])).toBeTruthy()
+    },
+  )
+
+  it('preserves an authored refusal in the edit toast', async () => {
+    const errorToast = vi.spyOn(toast, 'error')
+    vi.mocked(editMessageFn).mockRejectedValueOnce(
+      new Error(
+        encodePublicFailure({
+          kind: 'refusal',
+          message: 'This trip is archived.',
+        }),
+      ),
+    )
+    render(
+      composerTree([
+        message('m1', 'user-1', '2026-06-23T09:00:00Z', 'Original'),
+      ]),
+    )
+    const field = await chooseContext('edit')
+    fireEvent.change(field, { target: { value: 'Updated' } })
+    fireEvent.keyDown(field, { key: 'Enter' })
+    await screen.findByRole('button', { name: 'Try again' })
+    expect(errorToast).toHaveBeenCalledWith(En['collab.toast.editFailed'], {
+      description: 'This trip is archived.',
+    })
   })
 
   it('invites the first message without moving focus', () => {
