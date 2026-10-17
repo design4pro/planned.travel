@@ -77,6 +77,10 @@ const messages = {
   'workspace.switched': 'Przełączono na {name}',
   'workspace.switchFailed': 'Nie udało się przełączyć przestrzeni',
   'workspace.switchFailedBody': 'Sprawdź połączenie i spróbuj ponownie.',
+  'workspace.switchUnconfirmedBody':
+    'Nie udało się potwierdzić aktywnej przestrzeni. Odśwież stronę, zanim przejdziesz dalej.',
+  'workspace.switchRateLimitedBody':
+    'Zbyt wiele przełączeń przestrzeni. Poczekaj chwilę i spróbuj ponownie.',
   'workspace.create': 'Utwórz przestrzeń',
   'workspace.createTitle': 'Utwórz nową przestrzeń',
   'workspace.createDescription':

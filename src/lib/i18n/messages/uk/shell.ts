@@ -71,6 +71,10 @@ const messages = {
   'workspace.switched': 'Ви перейшли до {name}',
   'workspace.switchFailed': 'Не вдалося перемкнути простір',
   'workspace.switchFailedBody': 'Перевірте з’єднання і спробуйте ще раз.',
+  'workspace.switchUnconfirmedBody':
+    'Не вдалося підтвердити активний робочий простір. Перезавантажте сторінку, перш ніж продовжити.',
+  'workspace.switchRateLimitedBody':
+    'Занадто часте перемикання робочих просторів. Зачекайте трохи та спробуйте знову.',
   'workspace.create': 'Створити простір',
   'workspace.createTitle': 'Створення простору',
   'workspace.createDescription':
