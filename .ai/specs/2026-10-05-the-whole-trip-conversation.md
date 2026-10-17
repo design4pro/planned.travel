@@ -689,3 +689,12 @@ Two rounds, five independent specialists (`afk-decide`); round 1 was applied in 
 | Traveller (UX)                | revise                  | approve with conditions | Round 2: the opening position is the scroller's bottom with the composer possibly below the fold at 360 px, not "composer in view".                                              |
 
 After the PR opened, a fresh reviewer ran the specification review on head `9171c3c2` (request changes, three findings: read cost, F2 duplicate, IME guard on Escape; Resolved assumption 24). All three are applied.
+## Amendment
+
+#1362 (issue #918, phase 4, second part) shipped three things differently from the design above:
+
+- **The place is kept by an element, not by a height.** A prepend used to be restored as the old `scrollTop` plus the added height. The transcript now records the first row in view and its offset, and whenever its first row changes it puts that row back at the recorded offset. This also covers the loader's window sliding past the oldest row after a peer message, which the height formula cannot see (WebKit has no scroll anchoring), and a seam row that loses its name and day heading, which drifted the reader by about 20 px. A live message at the bottom still wins when the reader was within 48 px of it or sent it.
+- **Focus after a load moves only if the reader has not moved it.** "Always" became "unless focus is already on something other than the control or the page": a reader who started typing in the composer while the page loaded keeps the caret (on a phone the keyboard stays open). The exhausted line still takes focus after the last page.
+- **The failure line is in a polite `role="status"` that is mounted before it fills, and is inserted anew on every failure.** The loading control keeps focus (`aria-disabled`, not native `disabled`), so the focus move on settle fires nothing for a screen reader; the status region is what announces "Earlier messages did not load", and it is not an alert and not on the transcript list. The "Try again" button is described by that line.
+
+The scroller also carries a `data-scroll-restoration-id` that names its first and last row, so the router's own scroll restoration (it writes a pre-reload `scrollTop` back after a reload) finds no element once the rows have changed, and the thread is keyed by trip so nothing of one trip's reading position or failure state carries into another.
