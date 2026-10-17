@@ -2319,37 +2319,34 @@ by `pnpm sentry-triage` — see `docs/agents/triage-labels.md`. That routine nee
 read-only Sentry token from the one in §17.3: different scopes, different blast radius, rotated
 independently.
 
-### 17.6 Traces from the platform, through a Cloudflare drain
+### 17.6 Platform telemetry for calendar bearer paths
 
-The SDK already traces what runs inside the handler. What it cannot see is everything around it -
-the cold start, the platform's own view of the invocation, the hop into a bound service - and that
-is what Workers Observability exports. `observability.traces.destinations` in `wrangler.jsonc` names
-where those spans go; `sentry-traces` is a destination created by hand, once, in the Cloudflare
-dashboard.
+Invocation summaries and platform traces can contain calendar credentials in request paths.
+Both production and staging therefore set `observability.logs.invocation_logs: false` and
+`observability.traces: { enabled: false, head_sampling_rate: 0, destinations: [] }` in
+`wrangler.jsonc` (ACCESS §3.4a, ADR 0041). This disables automatic invocation summaries and
+platform cold-start, binding and RPC traces for every route on both Workers. Structured custom
+logs, application Sentry instrumentation, sampling and ordinary metrics remain enabled.
+Previously retained telemetry is not erased by this change.
 
-Before starting: the export needs **Workers Paid**, it is a **beta**, and from **2026-10-01** it is
-billed at 0.05 USD per million events above the 10 million a month included. None of that is
-implied by the config file, which is why it is written here.
+The shared account destination `sentry-traces` remains available to unrelated consumers. Do not
+delete it or reattach either Worker while bearer feed paths are served. A future telemetry change
+must separately address invocation logs and OTLP export; query-string redaction does not redact
+path credentials.
 
-1. In Sentry: **Settings → Projects → \<project\> → Client Keys (DSN) → OpenTelemetry (OTLP)**. It
-   gives the traces endpoint,
-   `https://o<orgId>.ingest.<region>.sentry.io/api/<projectId>/integration/otlp/v1/traces`, and the
-   public key already in the DSN. Copy it from that page rather than assembling it: the `<region>`
-   segment is part of the host our organisation is on (`us`) and the endpoint 404s without it.
-2. In Cloudflare: **Observability → Destinations → Add Destination**. Destination type _Traces_,
-   name **`sentry-traces`** - the name is what `wrangler.jsonc` refers to, in both environments, so
-   it has to match exactly. Endpoint as above, and one header:
-   `x-sentry-auth: sentry sentry_key=<public key>`. Nothing is created on the Sentry side; that
-   header is the whole of the authorisation.
-3. Deploy. A missing destination is not ignored - `wrangler deploy` fails on a name it cannot
-   resolve, so step 2 goes before the first deploy that carries this config, and before it is
-   merged if the branch deploys itself.
+On 2026-10-17, the owner authorized autonomous execution after presentation of the concrete
+platform-control package on PR #1334. The live settings were changed through the non-versioned
+`script-settings` endpoint, then read back with unchanged bindings, annotations and deployed
+versions. The matching repository settings prevent the next deployment from restoring exposure.
 
-Both environments send to the same destination, and their spans are told apart by the script name
-Cloudflare stamps on them (`planned-travel` against `planned-travel-staging`).
+The Free-plan zone ruleset `699f480b7ba0468c919cbffaf18f42f2`, rule
+`297bfe6ddc154c41a05cc322ab333dea`, blocks all hosts and methods whose path starts with
+`/api/feed/` after 100 requests per 10 seconds per IP and colocation, with a 10-second mitigation.
+This is a burst ceiling, not a global D1 budget: shared provider/NAT traffic may be blocked and
+distributed traffic remains a limitation. Never replace it with a browser challenge. Verify the
+live rule and pre-Worker enforcement before clearing the ACCESS merge prerequisite.
 
-**Logs deliberately have no `destinations`.** They are already in Sentry: `enableLogs` plus the
-`sentrySink` in `src/server/observability` mirrors every `LogRecord` the Worker writes, at its own
-level, from inside the isolate. Adding a log drain next to it "for symmetry" delivers each line a
-second time and is billed for both - which is the decision most likely to be quietly undone, so it
-is written down twice, here and in `wrangler.jsonc`.
+**Logs deliberately have no `destinations`.** `enableLogs` plus `sentrySink` in
+`src/server/observability` already mirrors application LogRecords to Sentry. A platform log drain
+would duplicate those records. Tail consumers and account/zone Logpush jobs were absent at the
+control readback; any newly added collector needs a separate bearer-path assessment.

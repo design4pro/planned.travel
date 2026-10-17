@@ -928,7 +928,7 @@ const messages = {
     'يمكن لأي شخص يملك هذا الرابط قراءة أماكن الرحلة وأوقاتها وعناوينها وملاحظاتها دون حساب. احمه مثل كلمة المرور.',
   'files.calendar.enable.action': 'إنشاء رابط',
   'files.calendar.link.once':
-    'انسخه الآن - نعرضه مرة واحدة فقط. إذا فقدته، عطّله وأنشئ رابطًا جديدًا؛ سيتوقف القديم عن العمل.',
+    'انسخه الآن - نعرضه مرة واحدة فقط. إذا فقدته، أنشئ رابطًا جديدًا؛ سيتوقف القديم عن العمل.',
   'files.calendar.link.address': 'عنوان الرابط',
   'files.calendar.link.copy': 'نسخ الرابط',
   'files.calendar.link.copied': 'تم نسخ الرابط',
@@ -944,6 +944,14 @@ const messages = {
   'files.calendar.state.on': 'رابط التقويم مفعّل',
   'files.calendar.state.lastFetched': 'تحقق تقويم من هذا الرابط آخر مرة {when}',
   'files.calendar.state.neverFetched': 'لم يُجلب بعد',
+  'files.calendar.rotate.action': 'إنشاء رابط جديد',
+  'files.calendar.rotate.confirmTitle': 'هل تريد إنشاء رابط جديد؟',
+  'files.calendar.rotate.confirmBody':
+    'يتوقف الرابط القديم عن العمل الآن. تتوقف التقويمات التي تستخدمه عن التحديث حتى تزودها بالرابط الجديد.',
+  'files.calendar.rotate.busy': 'جارٍ إنشاء رابط جديد…',
+  'files.calendar.error.rotate':
+    'لم نتمكن من تأكيد إنشاء رابط جديد. تظهر الحالة الحالية أدناه؛ حاول مجددًا عند الحاجة.',
+  'files.calendar.rotate.confirm': 'إنشاء رابط جديد',
   'files.calendar.off.action': 'تعطيل',
   'files.calendar.off.confirmTitle': 'هل تريد تعطيل رابط التقويم هذا؟',
   'files.calendar.off.confirmBody':

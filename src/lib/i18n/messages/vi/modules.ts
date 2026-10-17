@@ -871,7 +871,7 @@ const messages = {
     'Bất kỳ ai có liên kết này đều có thể đọc địa điểm, thời gian, địa chỉ và ghi chú của chuyến đi mà không cần tài khoản. Hãy bảo vệ như mật khẩu.',
   'files.calendar.enable.action': 'Tạo liên kết',
   'files.calendar.link.once':
-    'Sao chép ngay - chúng tôi chỉ hiển thị một lần. Nếu mất, hãy tắt và tạo liên kết mới; liên kết cũ sẽ ngừng hoạt động.',
+    'Sao chép ngay - chúng tôi chỉ hiển thị một lần. Nếu làm mất, hãy tạo liên kết mới; liên kết cũ sẽ ngừng hoạt động.',
   'files.calendar.link.address': 'Địa chỉ liên kết',
   'files.calendar.link.copy': 'Sao chép liên kết',
   'files.calendar.link.copied': 'Đã sao chép liên kết',
@@ -889,6 +889,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Một lịch đã kiểm tra liên kết này lần cuối {when}',
   'files.calendar.state.neverFetched': 'Chưa được tải',
+  'files.calendar.rotate.action': 'Tạo liên kết mới',
+  'files.calendar.rotate.confirmTitle': 'Tạo liên kết mới?',
+  'files.calendar.rotate.confirmBody':
+    'Liên kết cũ ngừng hoạt động ngay. Các lịch dùng liên kết đó sẽ ngừng cập nhật cho đến khi bạn cung cấp liên kết mới.',
+  'files.calendar.rotate.busy': 'Đang tạo liên kết mới…',
+  'files.calendar.error.rotate':
+    'Chúng tôi không thể xác nhận liên kết mới đã được tạo. Trạng thái hiện tại hiển thị bên dưới; hãy thử lại nếu cần.',
+  'files.calendar.rotate.confirm': 'Tạo liên kết mới',
   'files.calendar.off.action': 'Tắt',
   'files.calendar.off.confirmTitle': 'Tắt liên kết lịch này?',
   'files.calendar.off.confirmBody':

@@ -900,7 +900,7 @@ const messages = {
     'A hivatkozás birtokában bárki fiók nélkül elolvashatja az utazás helyeit, időpontjait, címeit és jegyzeteit. Óvd úgy, mint egy jelszót.',
   'files.calendar.enable.action': 'Hivatkozás létrehozása',
   'files.calendar.link.once':
-    'Másold le most - csak egyszer mutatjuk meg. Ha elveszíted, kapcsold ki és hozz létre újat; a régi nem működik tovább.',
+    'Másold ki most - csak egyszer mutatjuk meg. Ha elveszíted, hozz létre új hivatkozást; a régi megszűnik működni.',
   'files.calendar.link.address': 'A hivatkozás címe',
   'files.calendar.link.copy': 'Hivatkozás másolása',
   'files.calendar.link.copied': 'Hivatkozás másolva',
@@ -918,6 +918,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Egy naptár utoljára ekkor ellenőrizte a hivatkozást: {when}',
   'files.calendar.state.neverFetched': 'Még nem töltötték le',
+  'files.calendar.rotate.action': 'Új hivatkozás létrehozása',
+  'files.calendar.rotate.confirmTitle': 'Létrehozol egy új hivatkozást?',
+  'files.calendar.rotate.confirmBody':
+    'A régi hivatkozás most megszűnik működni. Az azt használó naptárak nem frissülnek, amíg meg nem adod nekik az új hivatkozást.',
+  'files.calendar.rotate.busy': 'Új hivatkozás létrehozása…',
+  'files.calendar.error.rotate':
+    'Nem sikerült megerősíteni az új hivatkozás létrehozását. Az aktuális állapot alább látható; szükség esetén próbáld újra.',
+  'files.calendar.rotate.confirm': 'Új hivatkozás létrehozása',
   'files.calendar.off.action': 'Kikapcsolás',
   'files.calendar.off.confirmTitle': 'Kikapcsolod ezt a naptárhivatkozást?',
   'files.calendar.off.confirmBody':

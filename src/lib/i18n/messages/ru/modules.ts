@@ -920,7 +920,7 @@ const messages = {
     'Любой обладатель ссылки может без аккаунта читать места, время, адреса и заметки этой поездки. Берегите её как пароль.',
   'files.calendar.enable.action': 'Создать ссылку',
   'files.calendar.link.once':
-    'Скопируйте сейчас - мы показываем её лишь раз. Если потеряете, отключите её и создайте новую; старая перестанет работать.',
+    'Скопируйте её сейчас - мы показываем её только один раз. Если потеряете, создайте новую ссылку; старая перестанет работать.',
   'files.calendar.link.address': 'Адрес ссылки',
   'files.calendar.link.copy': 'Копировать ссылку',
   'files.calendar.link.copied': 'Ссылка скопирована',
@@ -938,6 +938,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Календарь последний раз проверил эту ссылку {when}',
   'files.calendar.state.neverFetched': 'Ещё не загружалось',
+  'files.calendar.rotate.action': 'Создать новую ссылку',
+  'files.calendar.rotate.confirmTitle': 'Создать новую ссылку?',
+  'files.calendar.rotate.confirmBody':
+    'Старая ссылка сразу перестанет работать. Календари, которые её используют, перестанут обновляться, пока вы не укажете в них новую ссылку.',
+  'files.calendar.rotate.busy': 'Создание новой ссылки…',
+  'files.calendar.error.rotate':
+    'Не удалось подтвердить создание новой ссылки. Текущее состояние показано ниже; при необходимости попробуйте ещё раз.',
+  'files.calendar.rotate.confirm': 'Создать новую ссылку',
   'files.calendar.off.action': 'Отключить',
   'files.calendar.off.confirmTitle': 'Отключить эту ссылку на календарь?',
   'files.calendar.off.confirmBody':

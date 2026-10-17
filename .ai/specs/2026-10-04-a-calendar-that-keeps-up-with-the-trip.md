@@ -550,20 +550,13 @@ path (a calendar app cannot send a header), so every channel that records a requ
   `src/lib/sentry-replay.ts` already sets `maskAllText` and `maskAllInputs`, so the block class is the second
   layer and not the only one. The browser's own history keeps whatever URL a hand-off opens (and may sync it
   across devices); `docs/ACCESS.md` says so, and it is a reason the link is rotatable.
-- _Not controlled here._ `wrangler.jsonc` sets `observability` with `invocation_logs: true` and exports
-  platform traces to Sentry (OTLP); those records carry the request URL and are written by Cloudflare, so
-  no code in this repository can scrub them. The residual exposure is that anyone with Cloudflare log or
-  Sentry trace access can read live link secrets, and `pnpm sentry-triage` copies production data into
-  GitHub. It is stated in `docs/ACCESS.md` §3 and in the Risks table, and it is the one item of this stage
-  a person must settle: **the Phase 2 pull request carries it as an explicit line, and `risk-high`
-  already requires the owner's `qa-approved` before merge** (`SDLC.md`), so the decision is taken at the
-  gate the pipeline already has: accept it (with log and trace access restricted to the people who
-  already read production data), switch invocation logs off for this Worker (`wrangler.jsonc`, production
-  and the staging block, which exports to the same Sentry destination), or add scrubbing on the Sentry and
-  Cloudflare side, which are account settings. The same line asks the owner to put a Cloudflare zone rate
-  limit on `/api/feed/*`: the per-IP budget cannot limit work, because a request is known to be a refusal
-  only after its D1 read, and a live feed must never be refused on a shared provider IP's account. The
-  Phase 4 PR restates the decision, because a workspace link exposes more than a trip link. Rotation (Phase 3) and removal are the remedy after the fact.
+- _Platform controls._ Invocation summaries and OTLP platform traces can contain bearer paths;
+  application redaction cannot scrub those provider records. The 2026-10-17 owner-authorized
+  package disables invocation logs and platform trace/export in both Workers and protects
+  `/api/feed/*` with the Free zone edge rule recorded below. Custom application logs and Sentry
+  instrumentation remain enabled. Existing retained telemetry is not erased. The same owner
+  disposition and renewed security approval remain mandatory for Phase 4's wider workspace feed.
+  Application QA alone cannot approve platform exposure (ACCESS §3.4a, ADR 0041).
 
 **Server functions — `src/server/fns/calendar.ts`**, all starting `appScope()`; Zod v4 `z.strictObject`
 with trimmed, bounded ids:
@@ -946,7 +939,7 @@ machine status line. The Files screen around the card is already hard-coded Engl
 | Cancelled reservation or transport                                          | No event; the next poll removes it                                                                                                                                                                                                                      |
 | 51 or more trips on a workspace feed                                        | The 50 with the latest start dates; the dialog states the cap                                                                                                                                                                                           |
 | KV unavailable                                                              | The limiter fails open; resolution still answers or `404`s                                                                                                                                                                                              |
-| A shared calendar-provider IP polls many feeds                              | Live feeds are never refused on the IP's account; only that IP's refusals spend its miss budget                                                                                                                                                         |
+| A shared calendar-provider IP polls many feeds                              | Application refusals alone spend that IP's miss budget; the separate zone burst ceiling can block shared-IP live traffic                                                                                                                                                         |
 | Two taps on **Create a link** / a race with another tab                     | One statement per call; one row; the later secret wins and the earlier link stops                                                                                                                                                                       |
 | The response to a change is lost                                            | The panel reloads the real state and shows it; the messages claim nothing about the server                                                                                                                                                              |
 | The dialog is dismissed while a new link is uncopied                        | A confirmation first (Escape, overlay, X, **Done**); a completed copy dismisses freely; a browser back gesture or a refresh is not guarded                                                                                                              |
@@ -1021,8 +1014,9 @@ Each criterion belongs to the phase named, so every ticket has its own contract.
     owner's current `member` row (a person removed and re-added) or current `trip_members` row (removed from the
     trip and re-added) are each the same `404`; an expired temporary ban is not refused; `listFeeds` reports a
     refused link as off.
-16. The budgets are those of Phase 2 (per feed, per IP for refusals, a live feed never refused on an IP's
-    account); `429` carries `Retry-After`; every refusal kind spends the miss budget identically; a KV
+16. The application budgets are those of Phase 2 (per feed and per IP for refusals; live feeds do
+    not spend the application's IP miss budget). The separate zone burst ceiling can block live
+    shared-IP traffic; `429` carries `Retry-After`; every refusal kind spends the miss budget identically; a KV
     outage fails open without serving anything the resolver would refuse.
 17. The secret does not appear in any Sentry event the application emits (`request.url`, `transaction`,
     breadcrumb, span, log, Session Replay) or in an application log line; the platform channels it cannot reach are stated in
@@ -1062,9 +1056,9 @@ Each criterion belongs to the phase named, so every ticket has its own contract.
 | An offboarded or banned person keeps reading                                | High     | Membership and ban re-checked on every fetch; the arming rule refuses a link made before the current `member` or `trip_members` row, so a leaver's old link stays dead after a re-add with no hook to forget; an offboarding test through Better Auth's real paths where `trip_members` rows survive; a lifted ban brings the old link back (stated, deliberate) |
 | A token-to-tenant lookup becomes a general cross-tenant read                | High     | Projection-only point lookup in the `…Unscoped` shape (plain `Database`, one stated caller), branded `ResolvedFeed`, SPEC §5 names the shape, ADR 0035, and a test that asserts every `…Unscoped` function takes `Database` and is imported only from a named caller                                                                                             |
 | A booking reference reaches the no-session path through a bare `select()`   | High     | Explicit column selects; `FeedSource` typed as the projection; a test on the captured SQL                                                                                                                                                                                                                                                                        |
-| The secret is recorded by platform logging and trace export                 | Medium   | The app redacts every Sentry channel it controls and logs only the id; Cloudflare invocation logs and the OTLP trace export are written by the platform and **cannot** be scrubbed from this repository, so the Phase 2 PR states the exposure and the owner decides at `qa-approved`                                                                            |
+| The secret is recorded by platform logging and trace export                 | Medium   | Invocation logs and platform traces/export disabled in both Workers under the 2026-10-17 owner-authorized control record; retained historical telemetry remains sensitive. Zone rate limit and renewed security review required; QA alone does not authorize exposure. |
 | An unauthenticated endpoint is probed or flooded                            | Medium   | Shape check before hashing, refusal budget per IP, per-feed budget, fail-open limiter that never gates authorisation; the zone edge is outside the repo                                                                                                                                                                                                          |
-| Shared provider IPs turn a per-IP budget into a lever against other tenants | Medium   | Live feeds are never refused on an IP's account; only refusals spend the IP budget                                                                                                                                                                                                                                                                               |
+| Shared provider IPs turn a per-IP budget into a lever against other tenants | Medium   | The application limiter spends the IP budget only on refusals; the zone burst ceiling (100/10 seconds per IP + colo) can also block live feeds behind a shared provider/NAT address                                                                                                                                                                                                                                                                               |
 | A poll costs more than the feature is worth                                 | Medium   | Eight batched reads regardless of trip count, cap 50, at most one write per feed per hour                                                                                                                                                                                                                                                                        |
 | A wrong offset moves an event by an hour                                    | Medium   | No `VTIMEZONE`; legs in UTC from numeric offsets; stops floating; pinned DST gap and overlap tests                                                                                                                                                                                                                                                               |
 | The lost-link cost (a link cannot be shown again)                           | Low      | Said in the copy; close guard; Phase 3 replaces a link without turning it off                                                                                                                                                                                                                                                                                    |
@@ -1201,7 +1195,7 @@ gate; their output travels in the diff and is never hand-edited.
 runtime)` against the test database and a map-backed KV: `200` headers, `HEAD`, `405`; **the `404` is
   byte-identical** for unknown, malformed, wrong-length, revoked, rotated, removed-owner, banned-owner,
   re-added-owner (a link armed before the new `member` row) and trip-removed; a wrong-length secret reaches neither a hash nor a query; the per-feed `429` with
-  `Retry-After`; **many live feeds fetched from one IP are never refused**; refusals of every kind spend
+  `Retry-After`; **many live feeds fetched from one IP are never refused by this application limiter**; refusals of every kind spend
   the miss budget identically; a KV outage fails open; a request carrying a session cookie gets the same
   bytes; the module constructs no scope (a source-level assertion, ACCESS §3.7).
 - `src/lib/__tests__/sentry-scrub.test.ts` — the `/api/feed/<segment>` path is redacted in `request.url`,
@@ -1325,3 +1319,19 @@ prerequisite is recorded.
 Phase 2 management reads require a trip filter in `listFeeds`: the one-trip dialog resolves at most
 one owner row through the trip partial index, rather than loading and rechecking every lifetime
 feed before discarding unrelated trips. Broader management listings belong to a later phase.
+
+### 2026-10-17 platform-control execution record
+
+After the concrete package was presented on PR #1334, the owner instructed autonomous
+completion. The approved implementation disables invocation logs and platform traces/OTLP
+export for both production and staging, retaining custom logs and application instrumentation.
+Live readback confirmed both settings and unchanged bindings, annotations and deployed versions.
+The shared `sentry-traces` destination was retained. Free zone ruleset
+`699f480b7ba0468c919cbffaf18f42f2`, rule `297bfe6ddc154c41a05cc322ab333dea`,
+protects `/api/feed/*` on all zone hosts/methods: block, IP + colocation, 100 requests/10 seconds,
+10-second mitigation. Repository settings preserve this policy on subsequent deployments.
+This record does not itself grant security shipping approval: live enforcement verification and
+renewed independent security approval remain required.
+[Execution evidence](https://github.com/design4pro/planned.travel/pull/1334#issuecomment-6228009286)
+records configuration readback and matching pre-Worker request traces. Runtime threshold
+enforcement was not measured: staging probes were intercepted by unchanged Cloudflare Access.

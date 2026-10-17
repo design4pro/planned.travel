@@ -16,6 +16,7 @@ import {
   loadCalendarFeedsFn,
   enableCalendarFeedFn,
   revokeCalendarFeedFn,
+  rotateCalendarFeedFn,
 } from '#/server/fns/calendar'
 import { ConfirmDialog } from '../shared/controls'
 import type { ConfirmRequest } from '../shared/controls'
@@ -40,10 +41,14 @@ export function CalendarLive({
   const [revealed, setRevealed] = useState<Revealed | null>(null)
   const [copied, setCopied] = useState(false)
   const [pending, setPending] = useState(false)
+  const [rotating, setRotating] = useState(false)
   const [error, setError] = useState('')
   const [announcement, setAnnouncement] = useState('')
-  const [confirmation, setConfirmation] = useState<'close' | 'off' | null>(null)
+  const [confirmation, setConfirmation] = useState<
+    'close' | 'off' | 'rotate' | null
+  >(null)
   const [focusVersion, setFocusVersion] = useState(0)
+  const focusReveal = useRef(false)
   const focusCreate = useRef(false)
   const focusTarget = useRef<HTMLElement | null>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -145,29 +150,57 @@ export function CalendarLive({
       }
       return { ok: true, state } as const
     } catch {
-      if (request === lastLoad.current)
+      if (request === lastLoad.current) {
+        setFeed(null)
+        setLoaded(false)
         setError(t('modules.files.calendar.error.load'))
+      }
       return { ok: false } as const
     }
   }
-  async function enable() {
+  async function enable(action: 'enable' | 'rotate' = 'enable') {
+    if (action === 'rotate' && !feed) return
+    setRotating(action === 'rotate')
     lastLoad.current++
     setPending(true)
     setError('')
     setCopied(false)
     setAnnouncement('')
     try {
-      const link = await enableCalendarFeedFn({ data: { tripId } })
+      const link =
+        action === 'rotate' && feed
+          ? await rotateCalendarFeedFn({ data: { feedId: feed.id } })
+          : await enableCalendarFeedFn({ data: { tripId } })
+      focusReveal.current = action === 'rotate' && confirmation === 'rotate'
+      setConfirmation(null)
       setRevealed(link)
       setFeed({ id: link.feedId, tripId, on: true, lastServedAt: null })
       await reloadAfterChange()
     } catch {
       setRevealed(null)
-      await reloadAfterChange()
-      setError(t('modules.files.calendar.error.enable'))
+      const actual = await reloadAfterChange()
+      setConfirmation(null)
+      if (actual.ok)
+        setError(
+          t(
+            action === 'rotate'
+              ? 'modules.files.calendar.error.rotate'
+              : 'modules.files.calendar.error.enable',
+          ),
+        )
     } finally {
       setPending(false)
+      setRotating(false)
     }
+  }
+  function requestRotation() {
+    focusReveal.current = false
+    beforeGuard.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null
+    if (feed?.lastServedAt != null) setConfirmation('rotate')
+    else void enable('rotate')
   }
   async function revoke() {
     if (!feed) return
@@ -186,8 +219,8 @@ export function CalendarLive({
       }
     } catch {
       const actual = await reloadAfterChange()
-      if (actual.ok && !actual.state?.on) setRevealed(null)
-      setError(t('modules.files.calendar.error.off'))
+      if (!actual.ok || !actual.state?.on) setRevealed(null)
+      if (actual.ok) setError(t('modules.files.calendar.error.off'))
       setConfirmation(null)
     } finally {
       setPending(false)
@@ -225,6 +258,13 @@ export function CalendarLive({
       ),
       confirmLabel: t('modules.files.calendar.off.confirm'),
       onConfirm: revoke,
+    }
+  if (confirmation === 'rotate')
+    request = {
+      title: t('modules.files.calendar.rotate.confirmTitle'),
+      description: t('modules.files.calendar.rotate.confirmBody'),
+      confirmLabel: t('modules.files.calendar.rotate.confirm'),
+      onConfirm: () => enable('rotate'),
     }
   const on = feed?.on === true || revealed !== null
   const when = formatRelative(
@@ -312,17 +352,28 @@ export function CalendarLive({
                           })
                         : t('modules.files.calendar.state.neverFetched')}
                     </p>
-                    <Button
-                      variant="secondary"
-                      disabled={pending}
-                      onClick={() => {
-                        beforeGuard.current =
-                          document.activeElement as HTMLElement
-                        setConfirmation('off')
-                      }}
-                    >
-                      {t('modules.files.calendar.off.action')}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="secondary"
+                        disabled={pending}
+                        onClick={requestRotation}
+                        loading={rotating}
+                        loadingLabel={t('modules.files.calendar.rotate.busy')}
+                      >
+                        {t('modules.files.calendar.rotate.action')}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={pending}
+                        onClick={() => {
+                          beforeGuard.current =
+                            document.activeElement as HTMLElement
+                          setConfirmation('off')
+                        }}
+                      >
+                        {t('modules.files.calendar.off.action')}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -347,6 +398,15 @@ export function CalendarLive({
                 <div className="flex flex-wrap gap-2">
                   <Button disabled={pending} onClick={() => void copy()}>
                     {t('modules.files.calendar.link.copy')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={pending}
+                    onClick={requestRotation}
+                    loading={rotating}
+                    loadingLabel={t('modules.files.calendar.rotate.busy')}
+                  >
+                    {t('modules.files.calendar.rotate.action')}
                   </Button>
                   <Button
                     variant="secondary"
@@ -420,7 +480,11 @@ export function CalendarLive({
           <ConfirmDialog
             request={request}
             pending={pending}
-            busyLabel={t('modules.files.calendar.off.busy')}
+            busyLabel={t(
+              confirmation === 'rotate'
+                ? 'modules.files.calendar.rotate.busy'
+                : 'modules.files.calendar.off.busy',
+            )}
             cancelLabel={
               confirmation === 'close'
                 ? t('modules.files.calendar.closeGuard.cancel')
@@ -434,7 +498,9 @@ export function CalendarLive({
               if (!open) trigger.current?.focus()
               else if (error) alert.current?.focus()
               else if (focusCreate.current) create.current?.focus()
+              else if (focusReveal.current) address.current?.focus()
               else beforeGuard.current?.focus()
+              focusReveal.current = false
             }}
           />
         </DialogContent>

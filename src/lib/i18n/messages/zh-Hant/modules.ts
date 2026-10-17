@@ -821,7 +821,7 @@ const messages = {
     '任何持有此連結的人都能在不需帳戶的情況下讀取本次旅行的地點、時間、地址和備註。請像保護密碼一樣保護它。',
   'files.calendar.enable.action': '建立連結',
   'files.calendar.link.once':
-    '請立即複製，連結只顯示一次。如果遺失，請停用後重新建立；舊連結將失效。',
+    '請立即複製，我們只顯示一次。如果遺失，請建立新連結；舊連結將失效。',
   'files.calendar.link.address': '連結網址',
   'files.calendar.link.copy': '複製連結',
   'files.calendar.link.copied': '已複製連結',
@@ -837,6 +837,14 @@ const messages = {
   'files.calendar.state.on': '日曆連結已啟用',
   'files.calendar.state.lastFetched': '日曆上次檢查此連結的時間：{when}',
   'files.calendar.state.neverFetched': '尚未擷取',
+  'files.calendar.rotate.action': '建立新連結',
+  'files.calendar.rotate.confirmTitle': '要建立新連結嗎？',
+  'files.calendar.rotate.confirmBody':
+    '舊連結將立即失效。使用它的行事曆將停止更新，直到你為其提供新連結。',
+  'files.calendar.rotate.busy': '正在建立新連結…',
+  'files.calendar.error.rotate':
+    '無法確認是否已建立新連結。下方顯示目前狀態；如有需要，請重試。',
+  'files.calendar.rotate.confirm': '建立新連結',
   'files.calendar.off.action': '停用',
   'files.calendar.off.confirmTitle': '停用此日曆連結？',
   'files.calendar.off.confirmBody':

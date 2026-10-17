@@ -915,7 +915,7 @@ const messages = {
     'Kdokoli s tímto odkazem může bez účtu číst místa, časy, adresy a poznámky této cesty. Chraňte jej jako heslo.',
   'files.calendar.enable.action': 'Vytvořit odkaz',
   'files.calendar.link.once':
-    'Zkopírujte jej teď - zobrazíme jej jen jednou. Pokud jej ztratíte, vypněte jej a vytvořte nový; starý přestane fungovat.',
+    'Zkopíruj ho teď - zobrazíme ho jen jednou. Pokud ho ztratíš, vytvoř nový odkaz; starý přestane fungovat.',
   'files.calendar.link.address': 'Adresa odkazu',
   'files.calendar.link.copy': 'Kopírovat odkaz',
   'files.calendar.link.copied': 'Odkaz zkopírován',
@@ -933,6 +933,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Kalendář tento odkaz naposledy zkontroloval {when}',
   'files.calendar.state.neverFetched': 'Dosud nenačteno',
+  'files.calendar.rotate.action': 'Vytvořit nový odkaz',
+  'files.calendar.rotate.confirmTitle': 'Vytvořit nový odkaz?',
+  'files.calendar.rotate.confirmBody':
+    'Starý odkaz nyní přestane fungovat. Kalendáře, které jej používají, se přestanou aktualizovat, dokud jim nezadáš nový odkaz.',
+  'files.calendar.rotate.busy': 'Vytváření nového odkazu…',
+  'files.calendar.error.rotate':
+    'Nepodařilo se potvrdit vytvoření nového odkazu. Aktuální stav je uveden níže; v případě potřeby to zkus znovu.',
+  'files.calendar.rotate.confirm': 'Vytvořit nový odkaz',
   'files.calendar.off.action': 'Vypnout',
   'files.calendar.off.confirmTitle': 'Vypnout tento odkaz na kalendář?',
   'files.calendar.off.confirmBody':

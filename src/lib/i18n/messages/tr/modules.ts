@@ -884,7 +884,7 @@ const messages = {
     'Bu bağlantıya sahip herkes, hesap olmadan gezinin yerlerini, saatlerini, adreslerini ve notlarını okuyabilir. Onu parola gibi koruyun.',
   'files.calendar.enable.action': 'Bağlantı oluştur',
   'files.calendar.link.once':
-    'Şimdi kopyalayın - yalnızca bir kez gösteriyoruz. Kaybederseniz kapatıp yenisini oluşturun; eskisi çalışmayı bırakır.',
+    'Şimdi kopyalayın - yalnızca bir kez gösteriyoruz. Kaybederseniz yeni bağlantı oluşturun; eski bağlantı çalışmayı durdurur.',
   'files.calendar.link.address': 'Bağlantı adresi',
   'files.calendar.link.copy': 'Bağlantıyı kopyala',
   'files.calendar.link.copied': 'Bağlantı kopyalandı',
@@ -902,6 +902,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Bir takvim bu bağlantıyı en son {when} kontrol etti',
   'files.calendar.state.neverFetched': 'Henüz alınmadı',
+  'files.calendar.rotate.action': 'Yeni bağlantı oluştur',
+  'files.calendar.rotate.confirmTitle': 'Yeni bağlantı oluşturulsun mu?',
+  'files.calendar.rotate.confirmBody':
+    'Eski bağlantı artık çalışmaz. Bu bağlantıyı kullanan takvimler, yeni bağlantıyı verene kadar güncellenmez.',
+  'files.calendar.rotate.busy': 'Yeni bağlantı oluşturuluyor…',
+  'files.calendar.error.rotate':
+    'Yeni bağlantının oluşturulduğunu doğrulayamadık. Geçerli durum aşağıda gösteriliyor; gerekirse tekrar deneyin.',
+  'files.calendar.rotate.confirm': 'Yeni bağlantı oluştur',
   'files.calendar.off.action': 'Kapat',
   'files.calendar.off.confirmTitle': 'Bu takvim bağlantısı kapatılsın mı?',
   'files.calendar.off.confirmBody':

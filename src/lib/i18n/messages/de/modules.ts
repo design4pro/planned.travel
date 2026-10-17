@@ -915,7 +915,7 @@ const messages = {
     'Alle mit diesem Link können Orte, Zeiten, Adressen und Notizen dieser Reise ohne Konto lesen. Schütze ihn wie ein Passwort.',
   'files.calendar.enable.action': 'Link erstellen',
   'files.calendar.link.once':
-    'Kopiere ihn jetzt - wir zeigen ihn nur einmal. Falls du ihn verlierst, deaktiviere ihn und erstelle einen neuen; der alte funktioniert dann nicht mehr.',
+    'Kopiere ihn jetzt - wir zeigen ihn nur einmal. Falls du ihn verlierst, erstelle einen neuen Link; der alte funktioniert dann nicht mehr.',
   'files.calendar.link.address': 'Linkadresse',
   'files.calendar.link.copy': 'Link kopieren',
   'files.calendar.link.copied': 'Link kopiert',
@@ -933,6 +933,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Ein Kalender hat diesen Link zuletzt {when} abgerufen',
   'files.calendar.state.neverFetched': 'Noch nicht abgerufen',
+  'files.calendar.rotate.action': 'Neuen Link erstellen',
+  'files.calendar.rotate.confirmTitle': 'Neuen Link erstellen?',
+  'files.calendar.rotate.confirmBody':
+    'Der alte Link funktioniert ab sofort nicht mehr. Kalender, die ihn verwenden, werden erst wieder aktualisiert, wenn du ihnen den neuen Link gibst.',
+  'files.calendar.rotate.busy': 'Neuer Link wird erstellt…',
+  'files.calendar.error.rotate':
+    'Wir konnten nicht bestätigen, dass ein neuer Link erstellt wurde. Der aktuelle Status steht unten; versuche es bei Bedarf erneut.',
+  'files.calendar.rotate.confirm': 'Neuen Link erstellen',
   'files.calendar.off.action': 'Deaktivieren',
   'files.calendar.off.confirmTitle': 'Diesen Kalenderlink deaktivieren?',
   'files.calendar.off.confirmBody':
