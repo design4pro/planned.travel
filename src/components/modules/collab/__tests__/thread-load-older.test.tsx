@@ -298,6 +298,18 @@ describe('where the transcript scrolls', () => {
     render(tree(rows(1000, 3)))
     expect(scroller().className).toContain('max-h-[70svh]')
     expect(scroller().className).toContain('xl:max-h-none')
+    expect(scroller().className).toContain('scroll-mt-0')
+  })
+
+  it('names the scroller after its rows, so the router restores no stale position over them', () => {
+    const { rerender } = render(tree(rows(1000, 3)))
+    const before = scroller().getAttribute('data-scroll-restoration-id')
+    rerender(tree(rows(1000, 3)))
+    expect(scroller().getAttribute('data-scroll-restoration-id')).toBe(before)
+    rerender(tree(rows(1000, 4)))
+    expect(scroller().getAttribute('data-scroll-restoration-id')).not.toBe(
+      before,
+    )
   })
 
   it('writes the bottom once on mount and never scrolls the page', () => {

@@ -184,6 +184,7 @@ export function Thread({
   const loadButtonRef = useRef<HTMLButtonElement>(null)
   const startRef = useRef<HTMLParagraphElement>(null)
   const loadFailedId = useId()
+  const scrollerId = useId()
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const loadBusy = useRef(false)
@@ -393,8 +394,14 @@ export function Thread({
       <div
         ref={scrollerRef}
         data-part="thread-scroller"
+        // The router puts a scroller back to where it stood before a reload, after
+        // the rows changed and the effect above placed it. The id names the rows it
+        // was snapshotted with, so a snapshot of other rows finds no element.
+        data-scroll-restoration-id={`${scrollerId}:${messages[0]?.id}:${messages.at(-1)?.id}`}
         onScroll={(event) => trackScroll(event.currentTarget)}
-        className="max-h-[70svh] min-h-0 flex-1 overflow-y-auto px-1 xl:max-h-none"
+        // The screen sets a scroll margin for its sticky bars on every descendant;
+        // inside this box it would scroll a focused row away from the edge.
+        className="max-h-[70svh] min-h-0 flex-1 overflow-y-auto px-1 xl:max-h-none [&_*]:scroll-mt-0!"
       >
         {messages.length === 0 ? (
           <EmptyState
