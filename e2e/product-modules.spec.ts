@@ -31,6 +31,18 @@ function field(page: Page) {
   return page.getByRole('textbox', { name: 'Days' })
 }
 
+/** The two widths the spec names: the phone column and the three-column planner. */
+const WIDTHS = [360, 1280] as const
+
+/** True when something in the document is wider than the viewport. */
+async function overflowsHorizontally(page: Page): Promise<boolean> {
+  return page.evaluate(
+    () =>
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth,
+  )
+}
+
 /** The figure the tile shows, read from its accessible name. */
 async function figure(page: Page): Promise<number> {
   const name = (await tile(page).getAttribute('aria-label')) ?? ''
@@ -97,6 +109,15 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       await expect(
         page.getByText('Enter a whole number from 0 to 365.'),
       ).toBeVisible()
+
+      // The open editor with its message fits both widths.
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 900 })
+        expect(
+          await overflowsHorizontally(page),
+          `the open editor must not overflow at ${width}px`,
+        ).toBe(false)
+      }
       await field(page).press('Escape')
 
       // Enter saves, the screen reloads with the new figure and the live region says so.
@@ -134,5 +155,26 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
         description: `${VACAY.path}: ${output.tolerated.join('\n')}`,
       })
     }
+  })
+
+  test('opens and cancels in the dark theme without overflowing, and writes nothing', async ({
+    page,
+  }) => {
+    await visit(page, VACAY, 'dark')
+    const original = await figure(page)
+
+    await tile(page).click()
+    await expect(field(page)).toBeFocused()
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: 900 })
+      expect(
+        await overflowsHorizontally(page),
+        `the open editor must not overflow at ${width}px in the dark theme`,
+      ).toBe(false)
+    }
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(field(page)).toHaveCount(0)
+    await expect(tile(page)).toBeFocused()
+    expect(await figure(page)).toBe(original)
   })
 })

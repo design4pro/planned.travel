@@ -94,6 +94,7 @@ export function AllowancePanel({
   const remaining = Math.abs(allowance.remainingDays)
 
   function open(): void {
+    if (editing) return
     setDraft(String(allowance.entitlementDays))
     setProblem(null)
     setEditing(true)
@@ -130,14 +131,18 @@ export function AllowancePanel({
       })
       inflight.current = false
       setPending(false)
+      inputRef.current?.focus()
       return
     }
 
-    await router.invalidate()
-    setSaves((count) => count + 1)
-    close()
-    inflight.current = false
-    setPending(false)
+    try {
+      await router.invalidate()
+      setSaves((count) => count + 1)
+      close()
+    } finally {
+      inflight.current = false
+      setPending(false)
+    }
   }
 
   function submit(event: FormEvent): void {
@@ -258,7 +263,11 @@ export function AllowancePanel({
               }}
             />
             {invalid ? (
-              <p id={problemId} className="text-caption text-danger">
+              <p
+                id={problemId}
+                role="alert"
+                className="text-caption text-danger"
+              >
                 {t('modules.vacay.allowance.input.invalid')}
               </p>
             ) : null}
@@ -302,7 +311,7 @@ export function AllowancePanel({
                 {t('modules.vacay.allowance.cancel')}
               </Button>
               {pending ? (
-                <span className="text-caption text-ink-3">
+                <span aria-hidden="true" className="text-caption text-ink-3">
                   {t('modules.vacay.allowance.saving')}
                 </span>
               ) : null}
@@ -311,7 +320,9 @@ export function AllowancePanel({
         ) : null}
 
         <div role="status" aria-live="polite" className="sr-only">
-          {saves === 0 ? null : (
+          {pending ? (
+            <span key="saving">{t('modules.vacay.allowance.saving')}</span>
+          ) : saves === 0 ? null : (
             <span key={saves}>{t('modules.vacay.allowance.saved')}</span>
           )}
         </div>

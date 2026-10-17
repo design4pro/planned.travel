@@ -250,7 +250,14 @@ describe('committing', () => {
 
     expect(attr(field(), 'readonly')).not.toBeNull()
     expect(attr(field(), 'aria-busy')).toBe('true')
-    expect(screen.queryByText('Saving…')).not.toBeNull()
+    // The live region says it, so a screen reader hears the wait; the visible copy beside the
+    // buttons is hidden from the tree so it is not read twice.
+    expect(screen.getByRole('status').textContent).toBe('Saving…')
+    expect(
+      screen
+        .getAllByText('Saving…')
+        .filter((node) => node.getAttribute('aria-hidden') === 'true'),
+    ).toHaveLength(1)
     const save = screen.getByRole('button', { name: 'Save' })
     expect((save as HTMLButtonElement).disabled).toBe(false)
     expect(attr(save, 'aria-busy')).toBeNull()
@@ -323,6 +330,19 @@ describe('an invalid value', () => {
     },
   )
 
+  it('announces the message when Enter keeps focus in the field', async () => {
+    const user = hand()
+    mount()
+
+    await type(user, '999')
+    await user.keyboard('{Enter}')
+
+    // Focus never moves, so only an alert makes a screen reader say it.
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Enter a whole number from 0 to 365.',
+    )
+  })
+
   it('clears the message once the value is edited again', async () => {
     const user = hand()
     mount()
@@ -369,6 +389,37 @@ describe('a failed write', () => {
       expect(screen.queryByRole('alert')).toBeNull()
     },
   )
+
+  it('puts focus back in the field after a failed Save click', async () => {
+    const user = hand()
+    setAllowance.mockRejectedValue(new TypeError('Failed to fetch'))
+    mount()
+
+    await type(user, '30')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await screen.findByRole('alert')
+    expect(document.activeElement).toBe(field())
+  })
+
+  it('ignores the tile while the editor is open, so a pending draft is not reset', async () => {
+    const user = hand()
+    let fail: (cause: unknown) => void = () => {}
+    setAllowance.mockReturnValue(
+      new Promise((_resolve, reject) => {
+        fail = reject
+      }),
+    )
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+    await user.click(tile())
+
+    fail(new TypeError('Failed to fetch'))
+    await screen.findByRole('alert')
+    expect((field() as HTMLInputElement).value).toBe('30')
+  })
 
   it.each([
     [

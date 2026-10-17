@@ -147,6 +147,7 @@ function VacayPage() {
         <div className="grid gap-6 xl:grid-cols-[17rem_minmax(0,1fr)] xl:gap-8">
           <aside className="flex min-w-0 flex-col gap-6">
             <AllowancePanel
+              key={data.year}
               planId={data.plan.id}
               year={data.year}
               allowance={data.allowance}
