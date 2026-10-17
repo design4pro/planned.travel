@@ -21,7 +21,7 @@ test.describe('07-S2 - Collaboration sections follow the viewport', () => {
     )
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
-    await page.goto('/trips')
+    await visit(page, { name: 'trips', path: '/trips', ready: 'main' }, 'light')
     const trip = page
       .locator('a[href^="/trips/"][href$="/plan"]:visible')
       .first()
