@@ -108,7 +108,11 @@ import {
   updateDayNoteFn,
 } from '../-server/day-notes'
 import { reorderDayTransportsFn } from '../-server/plan-transports'
-import { PlannerAddPlace, reportPlaceWriteFailure } from './planner-add-place'
+import {
+  PlannerAddPlace,
+  reportLateWriteFailure,
+  reportPlaceWriteFailure,
+} from './planner-add-place'
 import { useDialogOwnership } from './use-dialog-ownership'
 import { useTripWeather } from './use-trip-weather'
 import { PlannerMapLayer, usePlannerDrop } from './planner-map-layer'
@@ -145,6 +149,11 @@ import type { PlaceWriteReport } from './planner-add-place'
 
 /** Zoom a "take me there" from the rail settles on, if the map is further out. */
 const FOCUS_ZOOM = 14.5
+
+/** Opens a link beside the planner, so what the screen holds survives the visit. */
+function openInNewTab(href: string): void {
+  window.open(href, '_blank', 'noopener,noreferrer')
+}
 
 /** Lowers the "drop its time?" dialog while leaving the question it asked readable. */
 function closed<T extends { readonly open: boolean }>(
@@ -945,7 +954,7 @@ export function PlanScreen({
           setFormError(report.message)
           setFormErrorAction(report.action)
         } else {
-          toast.error(report.message)
+          reportLateWriteFailure(report, toast, openInNewTab)
         }
         return false
       } finally {

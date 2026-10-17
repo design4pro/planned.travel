@@ -371,6 +371,7 @@ export function TransportDialog({
             <ConnectionSearch
               tripId={tripId}
               transportId={editing ? transport.id : undefined}
+              journey={editing ? transport : undefined}
               days={days}
               onSaved={() => onOpenChange(false)}
             />
