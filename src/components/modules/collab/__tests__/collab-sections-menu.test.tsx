@@ -1,6 +1,13 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -252,4 +259,36 @@ it('does not scroll or take focus back when it changes before the close frame', 
   } finally {
     other.remove()
   }
+})
+
+it('restores Escape focus without starting browser smooth scrolling on each opening', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  const focus = vi.spyOn(trigger, 'focus')
+  for (let cycle = 0; cycle < 2; cycle++) {
+    await user.click(trigger)
+    focus.mockClear()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(
+      focus.mock.calls.every(([options]) => options?.preventScroll === true),
+    ).toBe(true)
+  }
+})
+
+it('does not retain Escape focus ownership for a later outside dismissal', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  await user.click(trigger)
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  await user.click(trigger)
+  const focus = vi.spyOn(trigger, 'focus')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  fireEvent.pointerDown(document.body, { button: 2, pointerType: 'mouse' })
+  await waitFor(() =>
+    expect(screen.queryByRole('menu')).toBeNull(),
+  )
+  expect(focus).not.toHaveBeenCalledWith({ preventScroll: true })
 })

@@ -34,6 +34,7 @@ export function CollabSectionsMenu({
   const footer = useId()
   const locked = useRef(false)
   const trigger = useRef<HTMLButtonElement>(null)
+  const escapeClose = useRef(false)
   const [pending, setPending] = useState<CollabSectionId | null>(null)
   const last = enabledCollabSections(sections).length === 1
 
@@ -72,7 +73,11 @@ export function CollabSectionsMenu({
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) escapeClose.current = false
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           ref={trigger}
@@ -86,7 +91,16 @@ export function CollabSectionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         loop
-        onCloseAutoFocus={() => {
+        onEscapeKeyDown={() => {
+          escapeClose.current = true
+        }}
+        onCloseAutoFocus={(event) => {
+          if (escapeClose.current) {
+            escapeClose.current = false
+            event.preventDefault()
+            if (trigger.current?.isConnected)
+              trigger.current.focus({ preventScroll: true })
+          }
           requestAnimationFrame(() => {
             const button = trigger.current
             if (!button || document.activeElement !== button) return
