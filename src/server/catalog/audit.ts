@@ -100,7 +100,7 @@ export type PlatformActionName =
  * docs/ACCESS.md §4.2's prefix table: everything before the verb fixes the `entity_type` written
  * beside it, so §4.4's timeline query never has to guess which prefix belongs to which table.
  *
- * Nine rows, and the reason there are nine rather than thirty-three is that the mapping is a
+ * Nine rows, and the reason there are nine rather than thirty-four is that the mapping is a
  * property of the *prefix*: `catalog_place.published` and `catalog_place.retired` are the same
  * entity seen twice. Callers never pass an `entity_type` — {@link entityTypeForAction} derives it,
  * which is what makes "the prefix names the entity" true of the rows and not only of the document.

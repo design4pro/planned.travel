@@ -492,13 +492,11 @@ function buildAuth() {
               session.userId,
             )
             if (!organizationId) return
-            return {
-              data: { ...session, activeOrganizationId: organizationId },
-            }
+            return { data: { ...session, activeOrganizationId: organizationId } }
           },
         },
         // Every change of `activeOrganizationId` passes through `updateSession`: set-active,
-        // accept-invitation, a leave or removal, and the non-member refusals that clear it. Inside an
+        // accept-invitation, a leave, and the non-member refusals that clear it. Inside an
         // impersonated session each one is a row of the impersonation timeline (docs/ACCESS.md §6.4).
         // A payload without that key (the `updateAge` refresh, every impersonated read) returns before
         // anything is stored or read.
@@ -513,7 +511,19 @@ function buildAuth() {
             )
           },
           after: async (session, context) => {
-            if (!context || !session) return
+            if (!session) return
+            if (!context) {
+              // No request context means no `before` to pair with, so an impersonated update is
+              // unrecorded; say so instead of leaving the gap silent (docs/ACCESS.md §4.3).
+              const operatorId = nonEmptyString(session.impersonatedBy)
+              if (operatorId !== null) {
+                logAuth('error', 'audit.impersonation-workspace.no-context', {
+                  operatorId,
+                  targetUserId: nonEmptyString(session.userId),
+                })
+              }
+              return
+            }
             const before = pendingWorkspaceSwitch.get(context)
             if (before === undefined) return
             pendingWorkspaceSwitch.delete(context)

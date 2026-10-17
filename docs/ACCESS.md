@@ -980,13 +980,17 @@ in code and not in this table fails it; so does a name in this table that nothin
   the auth layer rather than by a console call.** `platform.user.impersonation_workspace_changed` is
   appended from `databaseHooks.session.update` in `src/server/auth/index.ts`, after the session update
   has committed, because every change of `activeOrganizationId` goes through Better Auth's
-  `updateSession` (set-active, accepting an invitation, leaving or being removed from a workspace, and
-  the refusals that clear it) and none of them goes through a server function: a hook on one URL
-  misses the others, and a wrapper misses a direct `POST /api/auth/organization/set-active`. It
+  `updateSession` (set-active, accepting an invitation, leaving a workspace, and the refusals that
+  clear it) and none of them goes through a server function: a hook on one URL misses the others, and
+  a wrapper misses a direct `POST /api/auth/organization/set-active`. Removing the target from a
+  workspace is not one of them: the plugin clears only the session of the member who makes the call,
+  so the worn session keeps its workspace and the §6.4 fallback applies on the next request. It
   appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
   is set, so a session refresh costs nothing. It is retried once and raised at `error` like the other
   four, and like the ban tripwire it swallows every error it can raise: a switch that succeeded is
-  never failed by its own audit row. Also always audited: `platform.user.role_changed`,
+  never failed by its own audit row. **Its two stated gaps are logged at `error`, never silent:** an
+  operator role that cannot be read writes no row (§6.4), and neither does an impersonated update that
+  reaches the hook without a request context (`audit.impersonation-workspace.no-context`). Also always audited: `platform.user.role_changed`,
   `platform.user.deleted`, `platform.session.revoked`, `platform.session.revoked_all`,
   `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's

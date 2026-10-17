@@ -1117,6 +1117,51 @@ describe('a workspace switch inside an impersonated session', () => {
     })
   })
 
+  it('writes the row, with a null after, when the impersonated session leaves its active workspace', async () => {
+    // A workspace of its own, so the membership this test deletes is not one the other tests use.
+    const leavingOrganizationId = 'org_959_leave'
+    sqlite
+      .prepare(
+        'insert into organization (id, name, slug, created_at) values (?, ?, ?, ?)',
+      )
+      .run(leavingOrganizationId, 'Leaving workspace', 'leave-959', Date.now())
+    sqlite
+      .prepare(
+        'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+      )
+      .run(
+        'mem_959_leave',
+        leavingOrganizationId,
+        targetId,
+        'member',
+        Date.now(),
+      )
+    const cookie = await impersonate()
+    await post(
+      '/organization/set-active',
+      { organizationId: leavingOrganizationId },
+      cookie,
+    )
+    shared.appendPlatformAudit.mockClear()
+
+    const response = await post(
+      '/organization/leave',
+      { organizationId: leavingOrganizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+    expect(activeOrganizationOf(cookie)).toBeNull()
+    expect(onlyEntry().entry).toEqual({
+      action: ACTION,
+      entityId: targetId,
+      changes: {
+        before: { organizationId: leavingOrganizationId },
+        after: { organizationId: null },
+      },
+    })
+  })
+
   it('has no create-organization path to audit: the plugin refuses it, and so does createWorkspace', async () => {
     const cookie = await impersonate()
 

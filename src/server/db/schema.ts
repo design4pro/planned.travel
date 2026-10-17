@@ -2896,7 +2896,7 @@ export const staffApiTokens = sqliteTable(
  *
  * **`entity_type` and `action` carry no `CHECK`, and are narrowed by `$type` instead.** §4.1's
  * type column marks `actor_kind` as `text, enumCheck()` and `entity_type` as plain `text`, with
- * the eight values in the Notes column; `action` is closed in §4.2 by the same kind of list and is
+ * the nine values in the Notes column; `action` is closed in §4.2 by the same kind of list and is
  * plain `text` too. Both vocabularies grow by amendment, in the commit that adds the code writing
  * the new name, and a `CHECK` would price each of those amendments at a recreate of a table that
  * may not be recreated.
