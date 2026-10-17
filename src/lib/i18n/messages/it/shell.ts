@@ -66,6 +66,10 @@ const messages = {
   'workspace.switched': 'Ora sei in {name}',
   'workspace.switchFailed': 'Non è stato possibile cambiare spazio',
   'workspace.switchFailedBody': 'Controlla la connessione e riprova.',
+  'workspace.switchUnconfirmedBody':
+    'Non è stato possibile confermare lo spazio di lavoro attivo. Ricarica la pagina prima di continuare.',
+  'workspace.switchRateLimitedBody':
+    'Hai cambiato spazio di lavoro troppe volte. Attendi un momento e riprova.',
   'workspace.create': 'Crea spazio',
   'workspace.createTitle': 'Crea uno spazio',
   'workspace.createDescription':

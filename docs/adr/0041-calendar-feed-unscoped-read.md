@@ -45,3 +45,19 @@ This decision does not approve platform exposure of bearer URLs. ACCESS §3.4a r
 security approval, an explicit owner decision covering invocation logs and OTLP traces, and a
 Cloudflare zone rate limit before merge. Panel QA alone cannot substitute for that decision;
 the eventual PR retains `do-not-merge` until the prerequisites are recorded.
+
+### 2026-10-17 platform-control execution record
+
+After the concrete package was presented on PR #1334, the owner instructed autonomous
+completion. The approved implementation disables invocation logs and platform traces/OTLP
+export for both production and staging, retaining custom logs and application instrumentation.
+Live readback confirmed both settings and unchanged bindings, annotations and deployed versions.
+The shared `sentry-traces` destination was retained. Free zone ruleset
+`699f480b7ba0468c919cbffaf18f42f2`, rule `297bfe6ddc154c41a05cc322ab333dea`,
+protects `/api/feed/*` on all zone hosts/methods: block, IP + colocation, 100 requests/10 seconds,
+10-second mitigation. Repository settings preserve this policy on subsequent deployments.
+This record does not itself grant security shipping approval: live enforcement verification and
+renewed independent security approval remain required.
+[Execution evidence](https://github.com/design4pro/planned.travel/pull/1334#issuecomment-6228009286)
+records configuration readback and matching pre-Worker request traces. Runtime threshold
+enforcement was not measured: staging probes were intercepted by unchanged Cloudflare Access.

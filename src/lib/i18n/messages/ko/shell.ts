@@ -54,6 +54,10 @@ const messages = {
   'workspace.switched': '{name}(으)로 전환했습니다',
   'workspace.switchFailed': '워크스페이스를 전환하지 못했어요',
   'workspace.switchFailedBody': '연결을 확인하고 다시 시도해 주세요.',
+  'workspace.switchUnconfirmedBody':
+    '활성 워크스페이스를 확인할 수 없습니다. 계속하기 전에 페이지를 새로고침해 주세요.',
+  'workspace.switchRateLimitedBody':
+    '워크스페이스를 너무 자주 전환했습니다. 잠시 후 다시 시도해 주세요.',
   'workspace.create': '워크스페이스 만들기',
   'workspace.createTitle': '새 워크스페이스 만들기',
   'workspace.createDescription':

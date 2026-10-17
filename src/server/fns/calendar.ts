@@ -2,7 +2,7 @@
  * Trip calendar downloads and owner-bound live feed management.
  *
  * Downloads return a Response so calendar bytes bypass serialization. Management reads return
- * status only; enabling returns the new credential once and every later read omits it.
+ * status only; enabling or rotating returns the new credential once and later reads omit it.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -14,6 +14,7 @@ import {
   enableFeed,
   listFeeds,
   revokeFeed,
+  rotateFeed,
 } from '#/server/repos/calendar-feeds'
 import { requireTrip } from '#/server/repos/trips'
 
@@ -41,6 +42,19 @@ export const enableCalendarFeedFn = createServerFn({ method: 'POST' })
       scope: 'trip',
       tripId: data.tripId,
     })
+    const url = `${appUrl()}/api/feed/${feed.secret}.ics`
+    return {
+      feedId: feed.feedId,
+      url,
+      webcalUrl: url.replace(/^https?:/, 'webcal:'),
+      tripTitle: feed.tripTitle,
+    }
+  })
+
+export const rotateCalendarFeedFn = createServerFn({ method: 'POST' })
+  .validator(z.strictObject({ feedId: z.string().trim().min(1).max(64) }))
+  .handler(async ({ data }) => {
+    const feed = await rotateFeed(await appScope(), data.feedId)
     const url = `${appUrl()}/api/feed/${feed.secret}.ics`
     return {
       feedId: feed.feedId,

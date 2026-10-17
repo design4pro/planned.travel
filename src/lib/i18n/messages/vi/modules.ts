@@ -763,7 +763,8 @@ const messages = {
   'collab.thread.today': 'Hôm nay',
   'collab.thread.emptyBody':
     'Mọi người trong chuyến đi này cùng dùng một cuộc trò chuyện. Các quyết định ở đây được lưu cùng chuyến đi thay vì rải rác trong các nhóm trò chuyện.',
-  'collab.thread.empty': 'Chưa có tin nhắn nào',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Bắt đầu cuộc trò chuyện',
   'collab.toast.reactionFailed': 'Chưa lưu được biểu cảm',
   'collab.toast.messageDeleted': 'Đã xóa tin nhắn',
   'collab.toast.deleteFailed': 'Chưa xóa được tin nhắn',
@@ -791,6 +792,17 @@ const messages = {
   'collab.compose.send': 'Gửi tin nhắn',
   'collab.compose.savingEdit': 'Đang lưu chỉnh sửa',
   'collab.compose.save': 'Lưu',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': 'Nhấn Enter để gửi, Shift và Enter để xuống dòng.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Nhấn Escape để hủy.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Dùng nút gửi để gửi tin nhắn.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Thử lại',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Các thay đổi vẫn còn trong ô nhập. Hãy kiểm tra kết nối rồi thử lại.',
   'collab.hint.sends': 'để gửi',
   'collab.hint.addsLine': 'để xuống dòng',
   'collab.hint.cancels': 'để hủy',
@@ -871,7 +883,7 @@ const messages = {
     'Bất kỳ ai có liên kết này đều có thể đọc địa điểm, thời gian, địa chỉ và ghi chú của chuyến đi mà không cần tài khoản. Hãy bảo vệ như mật khẩu.',
   'files.calendar.enable.action': 'Tạo liên kết',
   'files.calendar.link.once':
-    'Sao chép ngay - chúng tôi chỉ hiển thị một lần. Nếu mất, hãy tắt và tạo liên kết mới; liên kết cũ sẽ ngừng hoạt động.',
+    'Sao chép ngay - chúng tôi chỉ hiển thị một lần. Nếu làm mất, hãy tạo liên kết mới; liên kết cũ sẽ ngừng hoạt động.',
   'files.calendar.link.address': 'Địa chỉ liên kết',
   'files.calendar.link.copy': 'Sao chép liên kết',
   'files.calendar.link.copied': 'Đã sao chép liên kết',
@@ -889,6 +901,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Một lịch đã kiểm tra liên kết này lần cuối {when}',
   'files.calendar.state.neverFetched': 'Chưa được tải',
+  'files.calendar.rotate.action': 'Tạo liên kết mới',
+  'files.calendar.rotate.confirmTitle': 'Tạo liên kết mới?',
+  'files.calendar.rotate.confirmBody':
+    'Liên kết cũ ngừng hoạt động ngay. Các lịch dùng liên kết đó sẽ ngừng cập nhật cho đến khi bạn cung cấp liên kết mới.',
+  'files.calendar.rotate.busy': 'Đang tạo liên kết mới…',
+  'files.calendar.error.rotate':
+    'Chúng tôi không thể xác nhận liên kết mới đã được tạo. Trạng thái hiện tại hiển thị bên dưới; hãy thử lại nếu cần.',
+  'files.calendar.rotate.confirm': 'Tạo liên kết mới',
   'files.calendar.off.action': 'Tắt',
   'files.calendar.off.confirmTitle': 'Tắt liên kết lịch này?',
   'files.calendar.off.confirmBody':

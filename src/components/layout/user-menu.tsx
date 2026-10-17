@@ -25,7 +25,25 @@ import {
 import { SIGN_OUT_ENDPOINT } from './session'
 import { useWorkspaceSwitch, WorkspaceSwitcher } from './workspace-switcher'
 
+import type { ReactNode } from 'react'
 import type { ShellSession } from './session'
+
+/** Disabled destinations have no link to activate, even with a modified click. */
+function AccountDestination({
+  disabled,
+  to,
+  children,
+}: {
+  disabled: boolean
+  to: '/settings' | '/settings/billing' | '/admin' | '/console'
+  children: ReactNode
+}) {
+  return (
+    <MenuItem asChild disabled={disabled}>
+      {disabled ? <span>{children}</span> : <Link to={to}>{children}</Link>}
+    </MenuItem>
+  )
+}
 
 /**
  * Avatar entry point to account-level destinations. Sign out posts to the auth
@@ -45,6 +63,8 @@ export function UserMenu({ session }: { session: ShellSession }) {
     organizations,
     onSettled: () => setOpen(false),
   })
+
+  const switchingWorkspace = pendingId !== null
 
   async function signOut(): Promise<void> {
     setSigningOut(true)
@@ -109,25 +129,22 @@ export function UserMenu({ session }: { session: ShellSession }) {
 
           <MenuSeparator />
 
-          <MenuItem asChild>
-            <Link to="/settings">
-              <Settings aria-hidden className="size-4 text-ink-4" />
-              {t('shell.account.settings')}
-            </Link>
-          </MenuItem>
-          <MenuItem asChild>
-            <Link to="/settings/billing">
-              <CreditCard aria-hidden className="size-4 text-ink-4" />
-              {t('shell.account.billing')}
-            </Link>
-          </MenuItem>
+          <AccountDestination disabled={switchingWorkspace} to="/settings">
+            <Settings aria-hidden className="size-4 text-ink-4" />
+            {t('shell.account.settings')}
+          </AccountDestination>
+          <AccountDestination
+            disabled={switchingWorkspace}
+            to="/settings/billing"
+          >
+            <CreditCard aria-hidden className="size-4 text-ink-4" />
+            {t('shell.account.billing')}
+          </AccountDestination>
           {user.isAdmin ? (
-            <MenuItem asChild>
-              <Link to="/admin">
-                <ShieldCheck aria-hidden className="size-4 text-ink-4" />
-                {t('shell.account.admin')}
-              </Link>
-            </MenuItem>
+            <AccountDestination disabled={switchingWorkspace} to="/admin">
+              <ShieldCheck aria-hidden className="size-4 text-ink-4" />
+              {t('shell.account.admin')}
+            </AccountDestination>
           ) : null}
 
           {/*
@@ -147,22 +164,17 @@ export function UserMenu({ session }: { session: ShellSession }) {
           {user.isPlatformAdmin || user.isCurator ? (
             <>
               <MenuSeparator />
-              <MenuItem asChild>
-                <Link to="/console">
-                  <SlidersHorizontal
-                    aria-hidden
-                    className="size-4 text-brand"
-                  />
-                  Platform console
-                </Link>
-              </MenuItem>
+              <AccountDestination disabled={switchingWorkspace} to="/console">
+                <SlidersHorizontal aria-hidden className="size-4 text-brand" />
+                Platform console
+              </AccountDestination>
             </>
           ) : null}
 
           <MenuSeparator />
 
           <MenuDangerItem
-            disabled={signingOut}
+            disabled={signingOut || switchingWorkspace}
             onSelect={(event) => {
               // Keep the menu mounted while the request is in flight so the
               // spinner is visible instead of the menu vanishing mid-action.

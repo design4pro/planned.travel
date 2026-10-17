@@ -37,19 +37,16 @@
     "head_sampling_rate": 1,
     "logs": {
       "enabled": true,
-      "invocation_logs": true,
+      "invocation_logs": false,
       "head_sampling_rate": 1,
     },
-    // Traces are exported to Sentry as OTLP. `sentry-traces` is an account-level destination
-    // created by hand in the dashboard (docs/DEPLOY.md §17.6) - `wrangler deploy` fails while it
-    // is missing, so the destination goes in before this does. What it buys over the SDK's own
-    // spans is the part of a request the SDK cannot see: the cold start, the platform's view of
-    // the invocation, and the hops into bound services.
+    // Calendar bearer paths must not enter platform invocation summaries or OTLP traces.
+    // Keep the shared sentry-traces destination for unrelated consumers (ACCESS §3.4a).
     //
     // `logs` has no `destinations` on purpose. The Worker already mirrors every LogRecord to
     // Sentry through the SDK (`enableLogs` plus `sentrySink` in src/server/observability), so a
     // log drain would deliver each line a second time and be billed for both.
-    "traces": { "enabled": true, "destinations": ["sentry-traces"] },
+    "traces": { "enabled": false, "head_sampling_rate": 0, "destinations": [] },
   },
 
   // The deployed version's id, read by src/server/observability/sentry.ts as the Sentry `release`.
@@ -197,12 +194,15 @@
         "head_sampling_rate": 1,
         "logs": {
           "enabled": true,
-          "invocation_logs": true,
+          "invocation_logs": false,
           "head_sampling_rate": 1,
         },
-        // Same destination as production, and no log drain, for the reasons given there. Staging
-        // spans are told apart in Sentry by the script name the drain stamps on them.
-        "traces": { "enabled": true, "destinations": ["sentry-traces"] },
+        // Apply the same calendar-credential telemetry policy as production.
+        "traces": {
+          "enabled": false,
+          "head_sampling_rate": 0,
+          "destinations": [],
+        },
       },
       // Same reason as production: staging events need a release too, or the pre-production
       // signal cannot be told apart from the release it was supposed to gate.

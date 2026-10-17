@@ -802,7 +802,8 @@ const messages = {
   'collab.thread.today': 'Avui',
   'collab.thread.emptyBody':
     'Tothom d’aquest viatge comparteix un sol fil. Les decisions que es prenen aquí es queden amb el viatge en lloc de dispersar-se pels xats de grup.',
-  'collab.thread.empty': 'Encara no hi ha missatges',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Enceta la conversa',
   'collab.toast.reactionFailed': 'La reacció no s’ha desat',
   'collab.toast.messageDeleted': 'Missatge eliminat',
   'collab.toast.deleteFailed': 'El missatge no s’ha eliminat',
@@ -831,6 +832,19 @@ const messages = {
   'collab.compose.send': 'Envia el missatge',
   'collab.compose.savingEdit': 'S’està desant el canvi',
   'collab.compose.save': 'Desa',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Prem Enter per enviar, o Maj i Enter per afegir una línia nova.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Prem Escape per cancel·lar.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Fes servir el botó d’enviar per enviar el missatge.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Torna-ho a provar',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Els canvis continuen al quadre de text. Comprova la connexió i torna-ho a provar.',
   'collab.hint.sends': 'envia',
   'collab.hint.addsLine': 'afegeix una línia',
   'collab.hint.cancels': 'cancel·la',
@@ -921,7 +935,7 @@ const messages = {
     'Qualsevol persona amb aquest enllaç pot llegir els llocs, horaris, adreces i notes del viatge sense compte. Protegeix-lo com una contrasenya.',
   'files.calendar.enable.action': 'Crea un enllaç',
   'files.calendar.link.once':
-    'Copia’l ara - només el mostrem una vegada. Si el perds, desactiva’l i crea’n un altre; l’antic deixarà de funcionar.',
+    'Copia’l ara - només el mostrem una vegada. Si el perds, crea un enllaç nou; l’antic deixarà de funcionar.',
   'files.calendar.link.address': 'Adreça de l’enllaç',
   'files.calendar.link.copy': 'Copia l’enllaç',
   'files.calendar.link.copied': 'Enllaç copiat',
@@ -939,6 +953,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Un calendari ha consultat aquest enllaç per darrera vegada {when}',
   'files.calendar.state.neverFetched': 'Encara no s’ha consultat',
+  'files.calendar.rotate.action': 'Crea un enllaç nou',
+  'files.calendar.rotate.confirmTitle': 'Vols crear un enllaç nou?',
+  'files.calendar.rotate.confirmBody':
+    'L’enllaç antic deixa de funcionar ara. Els calendaris que el fan servir deixen d’actualitzar-se fins que els proporcionis l’enllaç nou.',
+  'files.calendar.rotate.busy': 'S’està creant un enllaç nou…',
+  'files.calendar.error.rotate':
+    'No hem pogut confirmar que s’hagi creat un enllaç nou. L’estat actual es mostra a continuació; torna-ho a provar si cal.',
+  'files.calendar.rotate.confirm': 'Crea un enllaç nou',
   'files.calendar.off.action': 'Desactiva',
   'files.calendar.off.confirmTitle':
     'Vols desactivar aquest enllaç de calendari?',

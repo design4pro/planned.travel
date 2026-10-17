@@ -1043,7 +1043,7 @@ test.describe('06-S5b — live calendar link', () => {
   }
 
   test(
-    'a keyboard-created link serves without a session and ends revoked',
+    'a keyboard-created link rotates, invalidates the old URL and ends revoked',
     { tag: '@chromium-only' },
     async ({ context, page, playwright }) => {
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
@@ -1103,6 +1103,31 @@ test.describe('06-S5b — live calendar link', () => {
         await expect(dialog.getByText('Calendar link is on')).toBeVisible()
         await expect(dialog.getByText(url, { exact: true })).toHaveCount(0)
         await dialog
+          .getByRole('button', { name: 'Make a new link', exact: true })
+          .click()
+        const rotate = page.getByRole('dialog', { name: 'Make a new link?' })
+        await expect(rotate).toBeVisible()
+        await rotate
+          .getByRole('button', { name: 'Make a new link', exact: true })
+          .click()
+        await expect(address).toBeFocused()
+        const newUrl = (await address.textContent())?.trim()
+        if (!newUrl) throw new Error('No rotated link address')
+        expect(newUrl).not.toBe(url)
+        const stale = await unauthenticated.get(url)
+        const unknown = await unauthenticated.get(
+          url.replace(/[^/]+\.ics$/, `${'Z'.repeat(32)}.ics`),
+        )
+        expect(stale.status()).toBe(404)
+        expect(await stale.text()).toBe(await unknown.text())
+        const updated = await unauthenticated.get(newUrl)
+        expect(updated.status()).toBe(200)
+        expect(await updated.text()).toContain('BEGIN:VCALENDAR')
+        await page.keyboard.press('Escape')
+        await expect(guard).toBeVisible()
+        await guard.getByRole('button', { name: 'Keep open' }).click()
+
+        await dialog
           .getByRole('button', { name: 'Turn off', exact: true })
           .focus()
         await page.keyboard.press('Enter')
@@ -1113,6 +1138,7 @@ test.describe('06-S5b — live calendar link', () => {
         await page.keyboard.press('Enter')
         await expect(create).toBeFocused()
         expect((await unauthenticated.get(url)).status()).toBe(404)
+        expect((await unauthenticated.get(newUrl)).status()).toBe(404)
       } finally {
         // Even a failed assertion leaves this live credential revoked through the actual UI.
         if (

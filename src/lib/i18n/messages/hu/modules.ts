@@ -788,7 +788,8 @@ const messages = {
   'collab.thread.today': 'Ma',
   'collab.thread.emptyBody':
     'Az utazás minden résztvevője egy közös beszélgetést használ. Az itt hozott döntések az utazásnál maradnak, nem szóródnak szét csoportos csevegésekben.',
-  'collab.thread.empty': 'Még nincsenek üzenetek',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Kezdd el a beszélgetést',
   'collab.toast.reactionFailed': 'A reakció nem lett elmentve',
   'collab.toast.messageDeleted': 'Üzenet törölve',
   'collab.toast.deleteFailed': 'Az üzenet nem lett törölve',
@@ -817,6 +818,18 @@ const messages = {
   'collab.compose.send': 'Üzenet küldése',
   'collab.compose.savingEdit': 'Módosítás mentése folyamatban',
   'collab.compose.save': 'Mentés',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Az Enter elküldi az üzenetet, a Shift és Enter új sort kezd.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Az Escape megnyomásával megszakíthatod.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Az üzenetet a küldés gombbal küldheted el.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Újrapróbálás',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'A módosításaid még a szövegmezőben vannak. Ellenőrizd a kapcsolatot, majd próbáld újra.',
   'collab.hint.sends': 'küld',
   'collab.hint.addsLine': 'új sort kezd',
   'collab.hint.cancels': 'megszakít',
@@ -900,7 +913,7 @@ const messages = {
     'A hivatkozás birtokában bárki fiók nélkül elolvashatja az utazás helyeit, időpontjait, címeit és jegyzeteit. Óvd úgy, mint egy jelszót.',
   'files.calendar.enable.action': 'Hivatkozás létrehozása',
   'files.calendar.link.once':
-    'Másold le most - csak egyszer mutatjuk meg. Ha elveszíted, kapcsold ki és hozz létre újat; a régi nem működik tovább.',
+    'Másold ki most - csak egyszer mutatjuk meg. Ha elveszíted, hozz létre új hivatkozást; a régi megszűnik működni.',
   'files.calendar.link.address': 'A hivatkozás címe',
   'files.calendar.link.copy': 'Hivatkozás másolása',
   'files.calendar.link.copied': 'Hivatkozás másolva',
@@ -918,6 +931,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Egy naptár utoljára ekkor ellenőrizte a hivatkozást: {when}',
   'files.calendar.state.neverFetched': 'Még nem töltötték le',
+  'files.calendar.rotate.action': 'Új hivatkozás létrehozása',
+  'files.calendar.rotate.confirmTitle': 'Létrehozol egy új hivatkozást?',
+  'files.calendar.rotate.confirmBody':
+    'A régi hivatkozás most megszűnik működni. Az azt használó naptárak nem frissülnek, amíg meg nem adod nekik az új hivatkozást.',
+  'files.calendar.rotate.busy': 'Új hivatkozás létrehozása…',
+  'files.calendar.error.rotate':
+    'Nem sikerült megerősíteni az új hivatkozás létrehozását. Az aktuális állapot alább látható; szükség esetén próbáld újra.',
+  'files.calendar.rotate.confirm': 'Új hivatkozás létrehozása',
   'files.calendar.off.action': 'Kikapcsolás',
   'files.calendar.off.confirmTitle': 'Kikapcsolod ezt a naptárhivatkozást?',
   'files.calendar.off.confirmBody':

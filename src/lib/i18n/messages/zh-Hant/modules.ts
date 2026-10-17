@@ -715,7 +715,8 @@ const messages = {
   'collab.thread.today': '今天',
   'collab.thread.emptyBody':
     '這趟旅行的所有人共用一個對話。在這裡做出的決定會隨旅行保留，而不會散落在各個群組聊天中。',
-  'collab.thread.empty': '還沒有訊息',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': '說出第一句話',
   'collab.toast.reactionFailed': '這個反應沒存上',
   'collab.toast.messageDeleted': '已刪除訊息',
   'collab.toast.deleteFailed': '未能刪除該訊息',
@@ -742,6 +743,16 @@ const messages = {
   'collab.compose.send': '傳送訊息',
   'collab.compose.savingEdit': '正在儲存修改',
   'collab.compose.save': '儲存',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': '按 Enter 傳送，按 Shift 和 Enter 換行。',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': '按 Escape 取消。',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': '使用傳送按鈕傳送訊息。',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': '重試',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody': '你的修改仍在輸入框中。請檢查網路連線後重試。',
   'collab.hint.sends': '傳送',
   'collab.hint.addsLine': '換行',
   'collab.hint.cancels': '取消',
@@ -821,7 +832,7 @@ const messages = {
     '任何持有此連結的人都能在不需帳戶的情況下讀取本次旅行的地點、時間、地址和備註。請像保護密碼一樣保護它。',
   'files.calendar.enable.action': '建立連結',
   'files.calendar.link.once':
-    '請立即複製，連結只顯示一次。如果遺失，請停用後重新建立；舊連結將失效。',
+    '請立即複製，我們只顯示一次。如果遺失，請建立新連結；舊連結將失效。',
   'files.calendar.link.address': '連結網址',
   'files.calendar.link.copy': '複製連結',
   'files.calendar.link.copied': '已複製連結',
@@ -837,6 +848,14 @@ const messages = {
   'files.calendar.state.on': '日曆連結已啟用',
   'files.calendar.state.lastFetched': '日曆上次檢查此連結的時間：{when}',
   'files.calendar.state.neverFetched': '尚未擷取',
+  'files.calendar.rotate.action': '建立新連結',
+  'files.calendar.rotate.confirmTitle': '要建立新連結嗎？',
+  'files.calendar.rotate.confirmBody':
+    '舊連結將立即失效。使用它的行事曆將停止更新，直到你為其提供新連結。',
+  'files.calendar.rotate.busy': '正在建立新連結…',
+  'files.calendar.error.rotate':
+    '無法確認是否已建立新連結。下方顯示目前狀態；如有需要，請重試。',
+  'files.calendar.rotate.confirm': '建立新連結',
   'files.calendar.off.action': '停用',
   'files.calendar.off.confirmTitle': '停用此日曆連結？',
   'files.calendar.off.confirmBody':

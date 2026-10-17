@@ -746,7 +746,8 @@ const messages = {
   'collab.thread.today': '오늘',
   'collab.thread.emptyBody':
     '이 여행의 모든 참여자가 하나의 대화를 공유합니다. 여기서 내린 결정은 여러 그룹 채팅에 흩어지지 않고 여행과 함께 남습니다.',
-  'collab.thread.empty': '아직 메시지가 없습니다',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': '첫 메시지를 남겨 보세요',
   'collab.toast.reactionFailed': '반응을 저장하지 못했습니다',
   'collab.toast.messageDeleted': '메시지를 삭제했습니다',
   'collab.toast.deleteFailed': '메시지를 삭제하지 못했습니다',
@@ -775,6 +776,17 @@ const messages = {
   'collab.compose.send': '메시지 보내기',
   'collab.compose.savingEdit': '수정 저장 중',
   'collab.compose.save': '저장',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': 'Enter로 전송하고 Shift와 Enter로 줄을 바꿉니다.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Escape로 취소합니다.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': '전송 버튼을 눌러 메시지를 보내세요.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': '다시 시도',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    '변경 내용은 입력란에 남아 있어요. 연결을 확인한 후 다시 시도하세요.',
   'collab.hint.sends': '보내기',
   'collab.hint.addsLine': '줄 바꾸기',
   'collab.hint.cancels': '취소',
@@ -855,7 +867,7 @@ const messages = {
     '이 링크가 있는 사람은 계정 없이 여행의 장소, 시간, 주소, 메모를 읽을 수 있습니다. 비밀번호처럼 보호하세요.',
   'files.calendar.enable.action': '링크 만들기',
   'files.calendar.link.once':
-    '지금 복사하세요. 한 번만 표시됩니다. 잃어버리면 링크를 끄고 새로 만드세요. 이전 링크는 작동하지 않습니다.',
+    '지금 복사하세요. 한 번만 표시됩니다. 잃어버리면 새 링크를 만드세요. 기존 링크는 작동하지 않게 됩니다.',
   'files.calendar.link.address': '링크 주소',
   'files.calendar.link.copy': '링크 복사',
   'files.calendar.link.copied': '링크가 복사되었습니다',
@@ -873,6 +885,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     '캘린더가 이 링크를 마지막으로 확인한 시간: {when}',
   'files.calendar.state.neverFetched': '아직 가져오지 않음',
+  'files.calendar.rotate.action': '새 링크 만들기',
+  'files.calendar.rotate.confirmTitle': '새 링크를 만들까요?',
+  'files.calendar.rotate.confirmBody':
+    '기존 링크는 지금부터 작동하지 않습니다. 이 링크를 사용하는 캘린더는 새 링크를 설정할 때까지 업데이트되지 않습니다.',
+  'files.calendar.rotate.busy': '새 링크 만드는 중…',
+  'files.calendar.error.rotate':
+    '새 링크가 만들어졌는지 확인하지 못했습니다. 현재 상태가 아래에 표시됩니다. 필요하면 다시 시도하세요.',
+  'files.calendar.rotate.confirm': '새 링크 만들기',
   'files.calendar.off.action': '끄기',
   'files.calendar.off.confirmTitle': '이 캘린더 링크를 끌까요?',
   'files.calendar.off.confirmBody':

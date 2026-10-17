@@ -778,7 +778,8 @@ const messages = {
   'collab.thread.today': 'I dag',
   'collab.thread.emptyBody':
     'Alla på den här resan delar en och samma tråd. Beslut som fattas här stannar med resan i stället för att spridas över gruppchattar.',
-  'collab.thread.empty': 'Inga meddelanden än',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Börja samtalet',
   'collab.toast.reactionFailed': 'Reaktionen sparades inte',
   'collab.toast.messageDeleted': 'Meddelandet borttaget',
   'collab.toast.deleteFailed': 'Meddelandet togs inte bort',
@@ -807,6 +808,19 @@ const messages = {
   'collab.compose.send': 'Skicka meddelandet',
   'collab.compose.savingEdit': 'Sparar ändringen',
   'collab.compose.save': 'Spara',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Tryck på Enter för att skicka, Shift och Enter för en ny rad.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Tryck på Escape för att avbryta.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Använd skicka-knappen för att skicka meddelandet.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Försök igen',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Dina ändringar finns kvar i textfältet. Kontrollera anslutningen och försök igen.',
   'collab.hint.sends': 'skickar',
   'collab.hint.addsLine': 'lägger till en rad',
   'collab.hint.cancels': 'avbryter',
@@ -891,7 +905,7 @@ const messages = {
     'Alla med den här länken kan läsa resans platser, tider, adresser och anteckningar utan konto. Skydda den som ett lösenord.',
   'files.calendar.enable.action': 'Skapa en länk',
   'files.calendar.link.once':
-    'Kopiera den nu - vi visar den bara en gång. Om du tappar bort den, stäng av den och skapa en ny; den gamla slutar fungera.',
+    'Kopiera den nu - vi visar den bara en gång. Skapa en ny länk om du tappar bort den; den gamla slutar fungera.',
   'files.calendar.link.address': 'Länkadress',
   'files.calendar.link.copy': 'Kopiera länk',
   'files.calendar.link.copied': 'Länk kopierad',
@@ -909,6 +923,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'En kalender kontrollerade senast länken {when}',
   'files.calendar.state.neverFetched': 'Inte hämtad ännu',
+  'files.calendar.rotate.action': 'Skapa en ny länk',
+  'files.calendar.rotate.confirmTitle': 'Skapa en ny länk?',
+  'files.calendar.rotate.confirmBody':
+    'Den gamla länken slutar fungera nu. Kalendrar som använder den slutar uppdateras tills du ger dem den nya länken.',
+  'files.calendar.rotate.busy': 'Skapar en ny länk…',
+  'files.calendar.error.rotate':
+    'Vi kunde inte bekräfta att en ny länk skapades. Aktuell status visas nedan; försök igen vid behov.',
+  'files.calendar.rotate.confirm': 'Skapa en ny länk',
   'files.calendar.off.action': 'Stäng av',
   'files.calendar.off.confirmTitle': 'Stänga av den här kalenderlänken?',
   'files.calendar.off.confirmBody':

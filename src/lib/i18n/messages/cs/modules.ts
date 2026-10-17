@@ -795,7 +795,8 @@ const messages = {
   'collab.thread.today': 'Dnes',
   'collab.thread.emptyBody':
     'Všichni účastníci této cesty sdílejí jedno vlákno. Zde přijatá rozhodnutí zůstávají u cesty, místo aby se ztrácela ve skupinových chatech.',
-  'collab.thread.empty': 'Zatím žádné zprávy',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Začni konverzaci',
   'collab.toast.reactionFailed': 'Reakce se neuložila',
   'collab.toast.messageDeleted': 'Zpráva smazána',
   'collab.toast.deleteFailed': 'Zpráva nebyla smazána',
@@ -824,6 +825,18 @@ const messages = {
   'collab.compose.send': 'Odeslat zprávu',
   'collab.compose.savingEdit': 'Ukládání úpravy',
   'collab.compose.save': 'Uložit',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Stisknutím Enter zprávu odešleš, Shift a Enter vloží nový řádek.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Stisknutím Escape akci zrušíš.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Zprávu odešli tlačítkem pro odeslání.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Zkusit znovu',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Tvé změny jsou stále v textovém poli. Zkontroluj připojení a zkus to znovu.',
   'collab.hint.sends': 'odešle',
   'collab.hint.addsLine': 'přidá řádek',
   'collab.hint.cancels': 'zruší',
@@ -915,7 +928,7 @@ const messages = {
     'Kdokoli s tímto odkazem může bez účtu číst místa, časy, adresy a poznámky této cesty. Chraňte jej jako heslo.',
   'files.calendar.enable.action': 'Vytvořit odkaz',
   'files.calendar.link.once':
-    'Zkopírujte jej teď - zobrazíme jej jen jednou. Pokud jej ztratíte, vypněte jej a vytvořte nový; starý přestane fungovat.',
+    'Zkopíruj ho teď - zobrazíme ho jen jednou. Pokud ho ztratíš, vytvoř nový odkaz; starý přestane fungovat.',
   'files.calendar.link.address': 'Adresa odkazu',
   'files.calendar.link.copy': 'Kopírovat odkaz',
   'files.calendar.link.copied': 'Odkaz zkopírován',
@@ -933,6 +946,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Kalendář tento odkaz naposledy zkontroloval {when}',
   'files.calendar.state.neverFetched': 'Dosud nenačteno',
+  'files.calendar.rotate.action': 'Vytvořit nový odkaz',
+  'files.calendar.rotate.confirmTitle': 'Vytvořit nový odkaz?',
+  'files.calendar.rotate.confirmBody':
+    'Starý odkaz nyní přestane fungovat. Kalendáře, které jej používají, se přestanou aktualizovat, dokud jim nezadáš nový odkaz.',
+  'files.calendar.rotate.busy': 'Vytváření nového odkazu…',
+  'files.calendar.error.rotate':
+    'Nepodařilo se potvrdit vytvoření nového odkazu. Aktuální stav je uveden níže; v případě potřeby to zkus znovu.',
+  'files.calendar.rotate.confirm': 'Vytvořit nový odkaz',
   'files.calendar.off.action': 'Vypnout',
   'files.calendar.off.confirmTitle': 'Vypnout tento odkaz na kalendář?',
   'files.calendar.off.confirmBody':

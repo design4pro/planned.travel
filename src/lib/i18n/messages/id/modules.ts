@@ -779,7 +779,8 @@ const messages = {
   'collab.thread.today': 'Hari ini',
   'collab.thread.emptyBody':
     'Semua peserta perjalanan ini berbagi satu percakapan. Keputusan yang dibuat di sini tetap tersimpan bersama perjalanan, bukan tercecer di berbagai obrolan grup.',
-  'collab.thread.empty': 'Belum ada pesan',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Mulai percakapan',
   'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
   'collab.toast.messageDeleted': 'Pesan dihapus',
   'collab.toast.deleteFailed': 'Pesan tidak dihapus',
@@ -807,6 +808,18 @@ const messages = {
   'collab.compose.send': 'Kirim pesan',
   'collab.compose.savingEdit': 'Menyimpan perubahan',
   'collab.compose.save': 'Simpan',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Tekan Enter untuk mengirim, Shift dan Enter untuk baris baru.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Tekan Escape untuk membatalkan.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Gunakan tombol kirim untuk mengirim pesan.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Coba lagi',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Perubahanmu masih ada di kotak teks. Periksa koneksimu, lalu coba lagi.',
   'collab.hint.sends': 'mengirim',
   'collab.hint.addsLine': 'menambah baris',
   'collab.hint.cancels': 'membatalkan',
@@ -887,7 +900,7 @@ const messages = {
     'Siapa pun dengan tautan ini dapat membaca tempat, waktu, alamat, dan catatan perjalanan tanpa akun. Lindungi seperti kata sandi.',
   'files.calendar.enable.action': 'Buat tautan',
   'files.calendar.link.once':
-    'Salin sekarang - tautan hanya ditampilkan sekali. Jika hilang, nonaktifkan dan buat yang baru; tautan lama berhenti berfungsi.',
+    'Salin sekarang - kami hanya menampilkannya sekali. Jika hilang, buat tautan baru; tautan lama akan berhenti berfungsi.',
   'files.calendar.link.address': 'Alamat tautan',
   'files.calendar.link.copy': 'Salin tautan',
   'files.calendar.link.copied': 'Tautan disalin',
@@ -905,6 +918,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Kalender terakhir memeriksa tautan ini {when}',
   'files.calendar.state.neverFetched': 'Belum diambil',
+  'files.calendar.rotate.action': 'Buat tautan baru',
+  'files.calendar.rotate.confirmTitle': 'Buat tautan baru?',
+  'files.calendar.rotate.confirmBody':
+    'Tautan lama berhenti berfungsi sekarang. Kalender yang menggunakannya berhenti diperbarui sampai kamu memberikan tautan baru.',
+  'files.calendar.rotate.busy': 'Membuat tautan baru…',
+  'files.calendar.error.rotate':
+    'Kami tidak dapat memastikan tautan baru telah dibuat. Status saat ini ditampilkan di bawah; coba lagi jika perlu.',
+  'files.calendar.rotate.confirm': 'Buat tautan baru',
   'files.calendar.off.action': 'Nonaktifkan',
   'files.calendar.off.confirmTitle': 'Nonaktifkan tautan kalender ini?',
   'files.calendar.off.confirmBody':

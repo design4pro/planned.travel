@@ -83,6 +83,10 @@ const messages = {
   'workspace.switched': 'Beralih ke {name}',
   'workspace.switchFailed': 'Tidak bisa berpindah ruang kerja',
   'workspace.switchFailedBody': 'Periksa koneksi Anda lalu coba lagi.',
+  'workspace.switchUnconfirmedBody':
+    'Ruang kerja aktif tidak dapat dikonfirmasi. Muat ulang halaman sebelum melanjutkan.',
+  'workspace.switchRateLimitedBody':
+    'Terlalu sering beralih ruang kerja. Tunggu sebentar lalu coba lagi.',
   'workspace.create': 'Buat ruang kerja',
   'workspace.createTitle': 'Buat ruang kerja baru',
   'workspace.createDescription':

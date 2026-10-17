@@ -4,7 +4,12 @@ import { member, user } from '#/server/db/auth-schema'
 import { createTrip } from '#/server/repos/trips'
 import { calendarFeeds, tripMembers, trips } from '#/server/db/schema'
 import * as secrets from '#/server/calendar/secret'
-import { enableFeed, revokeFeed } from '#/server/repos/calendar-feeds'
+import * as feeds from '#/server/repos/calendar-feeds'
+import {
+  enableFeed,
+  revokeFeed,
+  rotateFeed,
+} from '#/server/repos/calendar-feeds'
 import {
   createHarness,
   subscribeTenant,
@@ -65,6 +70,57 @@ describe('session-less calendar feed', () => {
   async function signature(response: Response) {
     return [response.status, [...response.headers], await response.text()]
   }
+  it('does not stamp the new secret from an old in-flight fetch, even in the same millisecond', async () => {
+    const instant = new Date()
+    vi.useFakeTimers()
+    vi.setSystemTime(instant)
+    const touch = feeds.touchFeed
+    let release = () => {}
+    const ready = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const pending: Promise<unknown>[] = []
+    runtime = {
+      ...runtime,
+      now: () => instant,
+      waitUntil: (promise) => {
+        pending.push(promise)
+      },
+    }
+    vi.spyOn(feeds, 'touchFeed').mockImplementationOnce(async (...args) => {
+      await ready
+      return touch(...args)
+    })
+    try {
+      expect((await serveCalendarFeed(request(), runtime)).status).toBe(200)
+      await rotateFeed(a.scope, feedId)
+      release()
+      await Promise.all(pending)
+      expect(await feeds.getFeed(a.scope, feedId)).toMatchObject({
+        lastServedAt: null,
+      })
+    } finally {
+      release()
+      vi.useRealTimers()
+    }
+  })
+  it('invalidates the old URL immediately while preserving every event UID', async () => {
+    const before = await serveCalendarFeed(request(), runtime)
+    const previous = await before.text()
+    const rotated = await rotateFeed(a.scope, feedId)
+    const stale = await serveCalendarFeed(request(), runtime)
+    expect(await signature(stale)).toEqual(
+      await signature(
+        await serveCalendarFeed(request('Z'.repeat(32)), runtime),
+      ),
+    )
+    expect(stale.status).toBe(404)
+    const after = await serveCalendarFeed(request(rotated.secret), runtime)
+    expect(after.status).toBe(200)
+    const uids = (text: string) => text.match(/^UID:.*$/gm)?.sort()
+    expect(uids(previous)?.length).toBeGreaterThan(0)
+    expect(uids(await after.text())).toEqual(uids(previous))
+  })
   it('serves no-session and session requests identically with private headers, and HEAD without body', async () => {
     const response = await serveCalendarFeed(request(), runtime)
     expect(response.status).toBe(200)

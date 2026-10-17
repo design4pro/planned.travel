@@ -803,7 +803,8 @@ const messages = {
   'collab.thread.today': 'Hoy',
   'collab.thread.emptyBody':
     'Todas las personas de este viaje comparten una conversación. Las decisiones que se toman aquí se quedan con el viaje en lugar de dispersarse por chats de grupo.',
-  'collab.thread.empty': 'Todavía no hay mensajes',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Inicia la conversación',
   'collab.toast.reactionFailed': 'La reacción no se guardó',
   'collab.toast.messageDeleted': 'Mensaje eliminado',
   'collab.toast.deleteFailed': 'El mensaje no se eliminó',
@@ -832,6 +833,19 @@ const messages = {
   'collab.compose.send': 'Enviar el mensaje',
   'collab.compose.savingEdit': 'Guardando el cambio',
   'collab.compose.save': 'Guardar',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Pulsa Enter para enviar, Mayús y Enter para una nueva línea.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Pulsa Escape para cancelar.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Usa el botón de enviar para enviar el mensaje.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Intentar de nuevo',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Tus cambios siguen en el cuadro de texto. Comprueba la conexión e inténtalo de nuevo.',
   'collab.hint.sends': 'envía',
   'collab.hint.addsLine': 'añade una línea',
   'collab.hint.cancels': 'cancela',
@@ -920,7 +934,7 @@ const messages = {
     'Cualquiera con este enlace puede leer los lugares, horarios, direcciones y notas del viaje sin una cuenta. Protégelo como una contraseña.',
   'files.calendar.enable.action': 'Crear un enlace',
   'files.calendar.link.once':
-    'Cópialo ahora - solo lo mostramos una vez. Si lo pierdes, desactívalo y crea otro; el anterior dejará de funcionar.',
+    'Cópialo ahora - solo lo mostramos una vez. Si lo pierdes, crea un enlace nuevo; el anterior dejará de funcionar.',
   'files.calendar.link.address': 'Dirección del enlace',
   'files.calendar.link.copy': 'Copiar enlace',
   'files.calendar.link.copied': 'Enlace copiado',
@@ -938,6 +952,14 @@ const messages = {
   'files.calendar.state.lastFetched':
     'Un calendario consultó este enlace por última vez {when}',
   'files.calendar.state.neverFetched': 'Aún no se ha consultado',
+  'files.calendar.rotate.action': 'Crear un enlace nuevo',
+  'files.calendar.rotate.confirmTitle': '¿Crear un enlace nuevo?',
+  'files.calendar.rotate.confirmBody':
+    'El enlace anterior deja de funcionar ahora. Los calendarios que lo usan dejan de actualizarse hasta que les proporciones el enlace nuevo.',
+  'files.calendar.rotate.busy': 'Creando un enlace nuevo…',
+  'files.calendar.error.rotate':
+    'No pudimos confirmar que se haya creado un enlace nuevo. El estado actual se muestra abajo; inténtalo de nuevo si lo necesitas.',
+  'files.calendar.rotate.confirm': 'Crear un enlace nuevo',
   'files.calendar.off.action': 'Desactivar',
   'files.calendar.off.confirmTitle': '¿Desactivar este enlace de calendario?',
   'files.calendar.off.confirmBody':
