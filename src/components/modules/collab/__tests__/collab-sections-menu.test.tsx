@@ -305,7 +305,7 @@ it('does not retain Escape focus ownership for a later outside dismissal', async
   expect(focus).not.toHaveBeenCalledWith({ preventScroll: true })
 })
 
-it('reveals returned focus after a later router scroll restoration', async () => {
+it('cancels a later router scroll restoration before it hides returned focus', async () => {
   const { user } = setup()
   const trigger = screen.getByRole('button', { name: /Choose sections/ })
   vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
@@ -330,6 +330,15 @@ it('reveals returned focus after a later router scroll restoration', async () =>
   await waitFor(() => expect(document.activeElement).toBe(trigger))
   await new Promise((resolve) => requestAnimationFrame(resolve))
   reveal.mockClear()
+  const cancel = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  act(() => routerEvents.rendered?.())
+  await new Promise((resolve) => requestAnimationFrame(resolve))
+  expect(cancel).toHaveBeenCalledWith({
+    top: window.scrollY,
+    left: window.scrollX,
+    behavior: 'instant',
+  })
+  expect(reveal).not.toHaveBeenCalled()
   obscured = true
   act(() => routerEvents.rendered?.())
   await new Promise((resolve) => requestAnimationFrame(resolve))

@@ -41,7 +41,17 @@ export function CollabSectionsMenu({
   useEffect(
     () =>
       router.subscribe('onRendered', () => {
-        requestAnimationFrame(() => revealFocusedTrigger(trigger.current))
+        requestAnimationFrame(() => {
+          const button = trigger.current
+          if (!button || document.activeElement !== button) return
+          // Route restoration may have started a smooth scroll before it moves.
+          window.scrollTo({
+            top: window.scrollY,
+            left: window.scrollX,
+            behavior: 'instant',
+          })
+          revealFocusedTrigger(button)
+        })
       }),
     [router],
   )
