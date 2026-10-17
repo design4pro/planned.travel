@@ -795,7 +795,8 @@ const messages = {
   'collab.thread.today': 'Σήμερα',
   'collab.thread.emptyBody':
     'Όλοι σε αυτό το ταξίδι μοιράζονται μία συνομιλία. Οι αποφάσεις που παίρνετε εδώ μένουν μαζί με το ταξίδι αντί να χάνονται σε ομαδικές συνομιλίες.',
-  'collab.thread.empty': 'Κανένα μήνυμα ακόμη',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Ξεκίνα τη συζήτηση',
   'collab.toast.reactionFailed': 'Η αντίδραση δεν αποθηκεύτηκε',
   'collab.toast.messageDeleted': 'Το μήνυμα διαγράφηκε',
   'collab.toast.deleteFailed': 'Το μήνυμα δεν διαγράφηκε',
@@ -823,6 +824,19 @@ const messages = {
   'collab.compose.send': 'Αποστολή μηνύματος',
   'collab.compose.savingEdit': 'Αποθήκευση της αλλαγής',
   'collab.compose.save': 'Αποθήκευση',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Πάτησε Enter για αποστολή, Shift και Enter για νέα γραμμή.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Πάτησε Escape για ακύρωση.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Χρησιμοποίησε το κουμπί αποστολής για να στείλεις το μήνυμα.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Δοκίμασε ξανά',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Οι αλλαγές σου παραμένουν στο πεδίο κειμένου. Έλεγξε τη σύνδεσή σου και δοκίμασε ξανά.',
   'collab.hint.sends': 'στέλνει',
   'collab.hint.addsLine': 'προσθέτει γραμμή',
   'collab.hint.cancels': 'ακυρώνει',

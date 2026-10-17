@@ -808,7 +808,8 @@ const messages = {
   'collab.thread.today': 'Oggi',
   'collab.thread.emptyBody':
     'Tutti i partecipanti a questo viaggio condividono una conversazione. Le decisioni prese qui restano con il viaggio invece di disperdersi nelle chat di gruppo.',
-  'collab.thread.empty': 'Ancora nessun messaggio',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Inizia la conversazione',
   'collab.toast.reactionFailed': 'La reazione non è stata salvata',
   'collab.toast.messageDeleted': 'Messaggio eliminato',
   'collab.toast.deleteFailed': 'Il messaggio non è stato eliminato',
@@ -837,6 +838,19 @@ const messages = {
   'collab.compose.send': 'Invia il messaggio',
   'collab.compose.savingEdit': 'Salvataggio della modifica',
   'collab.compose.save': 'Salva',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Premi Invio per inviare, Maiusc e Invio per una nuova riga.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Premi Esc per annullare.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Usa il pulsante di invio per inviare il messaggio.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Riprova',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Le modifiche sono ancora nel campo di testo. Controlla la connessione e riprova.',
   'collab.hint.sends': 'invia',
   'collab.hint.addsLine': 'va a capo',
   'collab.hint.cancels': 'annulla',

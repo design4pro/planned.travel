@@ -800,7 +800,8 @@ const messages = {
   'collab.thread.today': 'Hoje',
   'collab.thread.emptyBody':
     'Todas as pessoas desta viagem compartilham uma conversa. As decisões tomadas aqui ficam com a viagem, em vez de se espalharem por conversas em grupo.',
-  'collab.thread.empty': 'Ainda não há mensagens',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Comece a conversa',
   'collab.toast.reactionFailed': 'A reação não foi salva',
   'collab.toast.messageDeleted': 'Mensagem excluída',
   'collab.toast.deleteFailed': 'A mensagem não foi excluída',
@@ -829,6 +830,19 @@ const messages = {
   'collab.compose.send': 'Enviar a mensagem',
   'collab.compose.savingEdit': 'Salvando a alteração',
   'collab.compose.save': 'Salvar',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Pressione Enter para enviar, Shift e Enter para uma nova linha.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Pressione Escape para cancelar.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Use o botão de envio para enviar a mensagem.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Tentar novamente',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Suas alterações continuam na caixa de texto. Verifique a conexão e tente novamente.',
   'collab.hint.sends': 'envia',
   'collab.hint.addsLine': 'pula uma linha',
   'collab.hint.cancels': 'cancela',

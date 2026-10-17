@@ -948,7 +948,8 @@ const messages = {
   'collab.thread.today': 'Today',
   'collab.thread.emptyBody':
     'Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats.',
-  'collab.thread.empty': 'No messages yet',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Say the first thing',
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',
   'collab.toast.deleteFailed': 'The message was not deleted',
@@ -977,6 +978,18 @@ const messages = {
   'collab.compose.send': 'Send message',
   'collab.compose.savingEdit': 'Saving the edit',
   'collab.compose.save': 'Save',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Press Enter to send, Shift and Enter for a new line.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Press Escape to cancel.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Use the send button to send.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Try again',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Your changes are still in the box. Check your connection, then try again.',
   /**
    * The three keyboard hints under the composer. The key caps themselves stay
    * literal in the markup: `Enter`, `Shift` and `Esc` are printed on the

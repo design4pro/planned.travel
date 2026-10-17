@@ -10,10 +10,11 @@
  * Reactions are optimistic — a tap on an emoji has to feel like nothing at all —
  * and roll back through the same claim/settle overlay every other tick uses.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Pencil, SendHorizontal, SmilePlus, Trash2, X } from 'lucide-react'
 
 import {
+  Alert,
   Avatar,
   Button,
   EmptyState,
@@ -277,6 +278,8 @@ export function Thread({
 
       <Composer
         tripId={tripId}
+        messages={messages}
+        viewerUserId={viewerUserId}
         onDirtyChange={onDirtyChange}
         turnedOff={turnedOff}
         replyTo={replyTo}
@@ -565,6 +568,8 @@ function ReactionPicker({
 
 function Composer({
   tripId,
+  messages,
+  viewerUserId,
   replyTo,
   editing,
   people,
@@ -574,6 +579,8 @@ function Composer({
   turnedOff,
 }: {
   tripId: string
+  messages: ReadonlyArray<MessageData>
+  viewerUserId: string
   replyTo: MessageData | null
   editing: MessageData | null
   people: ReadonlyArray<CollabPerson>
@@ -585,11 +592,46 @@ function Composer({
   const t = useTranslate()
   const [body, setBody] = useState('')
   const fieldRef = useRef<HTMLTextAreaElement>(null)
+  const sending = useRef(false)
+  const [coarsePointer, setCoarsePointer] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const hintId = useId()
+  const failureId = useId()
+  const [failed, setFailed] = useState<{
+    kind: 'post' | 'edit'
+    draft: string
+    body: string
+    newestId: string
+  } | null>(null)
+
+  useEffect(() => {
+    const media = window.matchMedia('(pointer: coarse)')
+    const update = () => setCoarsePointer(media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [])
+
+  // A later loader window can prove a post landed despite a lost response.
+  useEffect(() => {
+    if (failed?.kind !== 'post') return
+    const landed = messages.some(
+      (message) =>
+        message.userId === viewerUserId &&
+        message.body === failed.body &&
+        message.id > failed.newestId,
+    )
+    if (landed) {
+      setFailed(null)
+      setBody((current) => (current === failed.draft ? '' : current))
+      onClearReply()
+    }
+  }, [failed, messages, viewerUserId, onClearReply])
   const off = useRef(turnedOff)
   off.current = turnedOff
   useEffect(() => {
-    onDirtyChange?.(body.length > 0 || editing !== null)
-  }, [body, editing, onDirtyChange])
+    onDirtyChange?.(body.length > 0 || editing !== null || failed !== null)
+  }, [body, editing, failed, onDirtyChange])
 
   const post = useAction(postMessageFn, {
     failure: t('modules.collab.toast.notSent'),
@@ -603,6 +645,7 @@ function Composer({
           : 'modules.collab.toast.messageUpdated',
       ),
     failure: t('modules.collab.toast.editFailed'),
+    fallback: t('modules.collab.toast.editFailedBody'),
   })
   const action = editing === null ? post : edit
 
@@ -624,31 +667,45 @@ function Composer({
   const canSend =
     trimmed.length > 0 && trimmed.length <= MAX_LENGTH && !action.pending
 
-  async function send(): Promise<void> {
-    if (!canSend) {
-      return
+  async function send(retry = false): Promise<void> {
+    if (!canSend || sending.current) return
+    sending.current = true
+    const attempt = {
+      kind: editing === null ? ('post' as const) : ('edit' as const),
+      draft: body,
+      body: trimmed,
+      newestId: messages.reduce(
+        (latest, message) => (message.id > latest ? message.id : latest),
+        '',
+      ),
     }
-    if (editing !== null) {
-      const result = await edit.run({
-        data: { tripId, messageId: editing.id, body: trimmed },
-      })
+    try {
+      const result =
+        editing === null
+          ? await post.run({
+              data: { tripId, body: trimmed, replyToId: replyTo?.id ?? '' },
+            })
+          : await edit.run({
+              data: { tripId, messageId: editing.id, body: trimmed },
+            })
       if (result !== null) {
-        setBody('')
-        onClearEditing()
+        if (editing === null && off.current)
+          toast.success(t('trips.collab.sections.savedHidden'))
+        setFailed(null)
+        setBody((current) => (current === attempt.draft ? '' : current))
+        if (editing === null) onClearReply()
+        else onClearEditing()
+      } else if (fieldRef.current?.value.length) {
+        setFailed(attempt)
       }
-      return
-    }
-    const result = await post.run({
-      data: { tripId, body: trimmed, replyToId: replyTo?.id ?? '' },
-    })
-    if (result !== null) {
-      if (off.current) toast.success(t('trips.collab.sections.savedHidden'))
-      setBody('')
-      onClearReply()
+    } finally {
+      sending.current = false
+      if (retry) fieldRef.current?.focus()
     }
   }
 
   function cancel(): void {
+    setFailed(null)
     setBody('')
     onClearEditing()
     onClearReply()
@@ -656,6 +713,37 @@ function Composer({
 
   return (
     <div className="shrink-0 border-t border-edge-faint pt-3">
+      {failed === null ? null : (
+        <Alert
+          id={failureId}
+          tone="danger"
+          size="sm"
+          role={undefined}
+          aria-live={undefined}
+          className="mb-2"
+          title={t(
+            failed.kind === 'post'
+              ? 'modules.collab.toast.notSent'
+              : 'modules.collab.toast.editFailed',
+          )}
+          actions={
+            <Button
+              size="sm"
+              loading={action.pending}
+              disabled={!trimmed}
+              onClick={() => void send(true)}
+            >
+              {t('modules.collab.compose.retry')}
+            </Button>
+          }
+        >
+          {t(
+            failed.kind === 'post'
+              ? 'modules.collab.toast.notSentBody'
+              : 'modules.collab.toast.editFailedBody',
+          )}
+        </Alert>
+      )}
       {editing === null && replyTo === null ? null : (
         <div className="mb-2 flex min-w-0 items-center gap-2 rounded-md border-s border-brand bg-brand-subtle/60 px-2.5 py-1.5">
           <span className="min-w-0 flex-1 truncate text-caption text-ink-2">
@@ -694,11 +782,20 @@ function Composer({
           <Textarea
             ref={fieldRef}
             value={body}
-            onChange={(event) => setBody(event.target.value)}
-            // Enter sends and Shift+Enter breaks the line, which is what every
-            // reader's fingers already expect from a thread like this one.
+            onChange={(event) => {
+              setBody(event.target.value)
+              if (event.target.value.length === 0) setFailed(null)
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            aria-describedby={cn(hintId, failed !== null && failureId)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
+              if (
+                event.nativeEvent.isComposing ||
+                event.nativeEvent.keyCode === 229
+              )
+                return
+              if (event.key === 'Enter' && !event.shiftKey && !coarsePointer) {
                 event.preventDefault()
                 void send()
               }
@@ -752,7 +849,23 @@ function Composer({
             </Button>
           )}
         </div>
-        <p className="text-caption text-ink-4">
+        <p id={hintId} className="sr-only">
+          {t(
+            coarsePointer
+              ? 'modules.collab.compose.keysHintTouch'
+              : 'modules.collab.compose.keysHint',
+          )}
+          {editing === null && replyTo === null
+            ? null
+            : ` ${t('modules.collab.compose.keysHintEsc')}`}
+        </p>
+        <p
+          aria-hidden="true"
+          className={cn(
+            'min-h-5 text-caption text-ink-4',
+            (!focused || coarsePointer) && 'invisible',
+          )}
+        >
           <Kbd>Enter</Kbd> {t('modules.collab.hint.sends')} · <Kbd>Shift</Kbd>
           <Kbd>Enter</Kbd> {t('modules.collab.hint.addsLine')}
           {editing === null && replyTo === null ? null : (

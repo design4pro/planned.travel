@@ -801,7 +801,8 @@ const messages = {
   'collab.thread.today': 'Сьогодні',
   'collab.thread.emptyBody':
     'Усі учасники цієї подорожі спілкуються в одній гілці. Ухвалені тут рішення залишаються з подорожжю, а не губляться в групових чатах.',
-  'collab.thread.empty': 'Повідомлень поки немає',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Розпочни розмову',
   'collab.toast.reactionFailed': 'Реакція не збереглася',
   'collab.toast.messageDeleted': 'Повідомлення видалено',
   'collab.toast.deleteFailed': 'Повідомлення не видалено',
@@ -830,6 +831,19 @@ const messages = {
   'collab.compose.send': 'Надіслати повідомлення',
   'collab.compose.savingEdit': 'Збереження правки',
   'collab.compose.save': 'Зберегти',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Натисни Enter для надсилання, Shift і Enter для нового рядка.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Натисни Escape для скасування.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Скористайся кнопкою надсилання, щоб надіслати повідомлення.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Спробувати знову',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Твої зміни залишилися в полі введення. Перевір з’єднання та спробуй знову.',
   'collab.hint.sends': 'надсилає',
   'collab.hint.addsLine': 'додає рядок',
   'collab.hint.cancels': 'скасовує',

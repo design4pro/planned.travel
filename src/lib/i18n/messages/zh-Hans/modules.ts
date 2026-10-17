@@ -715,7 +715,8 @@ const messages = {
   'collab.thread.today': '今天',
   'collab.thread.emptyBody':
     '这次旅行的所有人共用一个会话。在这里做出的决定会随旅行保留，而不会散落在各个群聊中。',
-  'collab.thread.empty': '还没有消息',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': '说出第一句话',
   'collab.toast.reactionFailed': '这个反应没保存上',
   'collab.toast.messageDeleted': '已删除消息',
   'collab.toast.deleteFailed': '未能删除该消息',
@@ -742,6 +743,16 @@ const messages = {
   'collab.compose.send': '发送消息',
   'collab.compose.savingEdit': '正在保存修改',
   'collab.compose.save': '保存',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': '按 Enter 发送，按 Shift 和 Enter 换行。',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': '按 Escape 取消。',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': '使用发送按钮发送消息。',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': '重试',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody': '你的修改仍在输入框中。请检查网络连接后重试。',
   'collab.hint.sends': '发送',
   'collab.hint.addsLine': '换行',
   'collab.hint.cancels': '取消',

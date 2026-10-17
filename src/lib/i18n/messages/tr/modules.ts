@@ -773,7 +773,8 @@ const messages = {
   'collab.thread.today': 'Bugün',
   'collab.thread.emptyBody':
     'Bu yolculuktaki herkes tek bir konuşmayı paylaşır. Burada alınan kararlar grup sohbetlerine dağılmak yerine yolculukla birlikte kalır.',
-  'collab.thread.empty': 'Henüz mesaj yok',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Sohbeti başlat',
   'collab.toast.reactionFailed': 'Tepki kaydedilmedi',
   'collab.toast.messageDeleted': 'Mesaj silindi',
   'collab.toast.deleteFailed': 'Mesaj silinmedi',
@@ -801,6 +802,19 @@ const messages = {
   'collab.compose.send': 'Mesajı gönder',
   'collab.compose.savingEdit': 'Değişiklik kaydediliyor',
   'collab.compose.save': 'Kaydet',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Göndermek için Enter, yeni satır için Shift ve Enter tuşlarına bas.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'İptal etmek için Escape tuşuna bas.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch':
+    'Mesajı göndermek için gönder düğmesini kullan.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Tekrar dene',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Değişikliklerin hâlâ metin kutusunda. Bağlantını kontrol edip tekrar dene.',
   'collab.hint.sends': 'gönderir',
   'collab.hint.addsLine': 'satır ekler',
   'collab.hint.cancels': 'iptal eder',
