@@ -1343,4 +1343,4 @@ feed in its existing nullable shape, rather than replacing that shape with a pai
 both feed states and once-revealed links independently. This preserves older browser bundles under
 BACKWARD_COMPATIBILITY.md §2. An independent architecture review approved this clarification with
 legacy-input, workspace-selection and bidirectional tab-retention tests; it is not a security shipping
-approval. The implementation PR number is recorded when the next pipeline step opens it.
+approval. Implementation PR: #1344.
