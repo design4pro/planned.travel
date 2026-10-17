@@ -797,6 +797,11 @@ const messages = {
     'Όλοι σε αυτό το ταξίδι μοιράζονται μία συνομιλία. Οι αποφάσεις που παίρνετε εδώ μένουν μαζί με το ταξίδι αντί να χάνονται σε ομαδικές συνομιλίες.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Ξεκίνα τη συζήτηση',
+  'collab.thread.loadOlder': 'Φόρτωση παλαιότερων μηνυμάτων',
+  'collab.thread.loadingOlder': 'Γίνεται φόρτωση παλαιότερων μηνυμάτων',
+  'collab.thread.loadOlderFailed': 'Τα παλαιότερα μηνύματα δεν φορτώθηκαν',
+  'collab.thread.retry': 'Δοκίμασε ξανά',
+  'collab.thread.start': 'Εδώ ξεκινά η συζήτηση',
   'collab.toast.reactionFailed': 'Η αντίδραση δεν αποθηκεύτηκε',
   'collab.toast.messageDeleted': 'Το μήνυμα διαγράφηκε',
   'collab.toast.deleteFailed': 'Το μήνυμα δεν διαγράφηκε',

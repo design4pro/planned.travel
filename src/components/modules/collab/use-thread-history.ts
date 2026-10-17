@@ -1,4 +1,4 @@
-/** Component-owned snapshots; the next slice supplies the loading control. */
+/** Component-owned snapshots of the older pages a reader has loaded. */
 import { useRef, useState } from 'react'
 import { THREAD_PAGE_SIZE } from '#/lib/collab'
 import { loadOlderMessagesFn } from '#/server/fns/collab-thread'
@@ -40,7 +40,8 @@ export function useThreadHistory(
   const flight = useRef(false)
   const exhausted = window.length < THREAD_PAGE_SIZE || current.exhausted
 
-  async function loadOlder(): Promise<void> {
+  /** `beforeApply` runs once an accepted page is about to join the rows, before the commit. */
+  async function loadOlder(beforeApply?: () => void): Promise<void> {
     const cursor = latest.current.messages[0]?.id
     if (
       flight.current ||
@@ -63,6 +64,7 @@ export function useThreadHistory(
         now.messages[0]?.id !== cursor
       )
         return
+      beforeApply?.()
       setState((previous) => {
         if (
           previous.tripId !== requestedTrip ||

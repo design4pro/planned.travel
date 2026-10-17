@@ -10,7 +10,14 @@
  * Reactions are optimistic — a tap on an emoji has to feel like nothing at all —
  * and roll back through the same claim/settle overlay every other tick uses.
  */
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Pencil, SendHorizontal, SmilePlus, Trash2, X } from 'lucide-react'
 
 import {
@@ -28,6 +35,7 @@ import {
   toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { THREAD_PAGE_SIZE } from '#/lib/collab'
 import { readPublicFailure } from '#/lib/errors'
 import { formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -55,6 +63,9 @@ import type { ConfirmRequest } from '../shared'
 import type { CollabPerson, MessageData } from './types'
 
 const MAX_LENGTH = 4000
+
+/** A viewer this close to the bottom is reading the live edge, so it follows. */
+const FOLLOW_THRESHOLD_PX = 48
 
 /** The reactions a travel thread actually uses. Six, not an emoji keyboard. */
 const REACTIONS: ReadonlyArray<{ emoji: string; label: MessageKey }> = [
@@ -154,24 +165,116 @@ export function Thread({
   onDirtyChange,
   turnedOff = false,
 }: ThreadProps) {
-  const { messages, patchHeld } = useThreadHistory(tripId, window)
+  const { messages, exhausted, loadOlder, patchHeld } = useThreadHistory(
+    tripId,
+    window,
+  )
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
   const t = useTranslate()
   const locale = useLocale()
   const [editing, setEditing] = useState<MessageData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const lastId = messages.at(-1)?.id ?? null
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const loadButtonRef = useRef<HTMLButtonElement>(null)
+  const startRef = useRef<HTMLParagraphElement>(null)
+  const [loadingOlder, setLoadingOlder] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const loadBusy = useRef(false)
+  const wasLoading = useRef(false)
+  const prepend = useRef<{
+    firstId: string | undefined
+    height: number
+    top: number
+  } | null>(null)
+  const reading = useRef<{
+    opened: boolean
+    lastId: string | undefined
+    nearBottom: boolean
+  }>({ opened: false, lastId: undefined, nearBottom: true })
+  const paged =
+    window.length >= THREAD_PAGE_SIZE || messages.length > window.length
 
   /**
-   * A transcript that does not follow the conversation is a transcript nobody
-   * reads. Scrolls the newest message into view whenever one arrives — including
-   * one that arrived over the socket rather than from this tab.
+   * The transcript scrolls its own box and never the page. It opens on the newest
+   * message, keeps the reader's place when an older page is put above them (WebKit
+   * has no scroll anchoring), and follows a live message only for a reader at the
+   * bottom or for the viewer's own message: a reader of history is not yanked.
    */
+  useLayoutEffect(() => {
+    const scroller = scrollerRef.current
+    if (scroller === null) return
+    const seen = reading.current
+    const lastId = messages.at(-1)?.id
+    const toBottom = () => {
+      scroller.scrollTop = scroller.scrollHeight
+      seen.nearBottom = true
+    }
+    if (!seen.opened) {
+      seen.opened = true
+      toBottom()
+    } else if (
+      prepend.current !== null &&
+      messages[0]?.id !== prepend.current.firstId
+    ) {
+      scroller.scrollTop =
+        prepend.current.top + (scroller.scrollHeight - prepend.current.height)
+      prepend.current = null
+    } else if (lastId !== undefined && lastId !== seen.lastId) {
+      const arrived = messages.filter(
+        (message) => seen.lastId === undefined || message.id > seen.lastId,
+      )
+      if (
+        seen.nearBottom ||
+        arrived.some((message) => message.userId === viewerUserId)
+      )
+        toBottom()
+    }
+    seen.lastId = lastId
+  }, [messages, viewerUserId])
+
+  function trackBottom(scroller: HTMLDivElement): void {
+    reading.current.nearBottom =
+      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <=
+      FOLLOW_THRESHOLD_PX
+  }
+
+  async function loadEarlier(): Promise<void> {
+    const scroller = scrollerRef.current
+    if (loadBusy.current || scroller === null) return
+    loadBusy.current = true
+    setLoadingOlder(true)
+    prepend.current = null
+    const firstId = messages[0]?.id
+    try {
+      await loadOlder(() => {
+        prepend.current = {
+          firstId,
+          height: scroller.scrollHeight,
+          top: scroller.scrollTop,
+        }
+      })
+      setLoadFailed(false)
+    } catch {
+      setLoadFailed(true)
+    } finally {
+      loadBusy.current = false
+      setLoadingOlder(false)
+    }
+  }
+
+  // The button stays inert while it loads, so on settle focus goes where the
+  // reader can act next: the control, or the line that replaced it.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'nearest' })
-  }, [lastId])
+    if (loadingOlder) {
+      wasLoading.current = true
+      return
+    }
+    if (!wasLoading.current) return
+    wasLoading.current = false
+    const target = exhausted ? startRef.current : loadButtonRef.current
+    target?.focus({ preventScroll: true })
+  }, [loadingOlder, exhausted])
 
   const reactionOverlay = useOptimistic<ReadonlyArray<string>>()
 
@@ -223,7 +326,48 @@ export function Thread({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="min-h-0 flex-1 overflow-y-auto px-1">
+      {paged ? (
+        <div className="flex shrink-0 flex-col items-center gap-1.5 pb-2">
+          {exhausted ? (
+            <p
+              ref={startRef}
+              tabIndex={-1}
+              className="text-caption text-ink-4 focus-ring"
+            >
+              {t('modules.collab.thread.start')}
+            </p>
+          ) : (
+            <>
+              {loadFailed ? (
+                <p className="text-caption text-danger">
+                  {t('modules.collab.thread.loadOlderFailed')}
+                </p>
+              ) : null}
+              <Button
+                ref={loadButtonRef}
+                data-part="thread-load-older"
+                variant="subtle"
+                size="sm"
+                loading={loadingOlder}
+                loadingLabel={t('modules.collab.thread.loadingOlder')}
+                onClick={() => void loadEarlier()}
+              >
+                {t(
+                  loadFailed
+                    ? 'modules.collab.thread.retry'
+                    : 'modules.collab.thread.loadOlder',
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      ) : null}
+      <div
+        ref={scrollerRef}
+        data-part="thread-scroller"
+        onScroll={(event) => trackBottom(event.currentTarget)}
+        className="max-h-[70svh] min-h-0 flex-1 overflow-y-auto px-1 xl:max-h-none"
+      >
         {messages.length === 0 ? (
           <EmptyState
             size="sm"
@@ -298,7 +442,6 @@ export function Thread({
             })}
           </ol>
         )}
-        <div ref={bottomRef} aria-hidden />
       </div>
 
       <Composer

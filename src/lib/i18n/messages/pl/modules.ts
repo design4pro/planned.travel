@@ -811,6 +811,12 @@ const messages = {
     'Wszyscy uczestnicy tej podróży mają wspólny wątek. Podjęte tu decyzje zostają przy podróży, zamiast ginąć w czatach grupowych.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Napisz jako pierwszy',
+  'collab.thread.loadOlder': 'Wczytaj wcześniejsze wiadomości',
+  'collab.thread.loadingOlder': 'Wczytywanie wcześniejszych wiadomości',
+  'collab.thread.loadOlderFailed':
+    'Nie udało się wczytać wcześniejszych wiadomości',
+  'collab.thread.retry': 'Spróbuj ponownie',
+  'collab.thread.start': 'Tu zaczyna się rozmowa',
   'collab.toast.reactionFailed': 'Reakcja nie zapisała się',
   'collab.toast.messageDeleted': 'Wiadomość usunięta',
   'collab.toast.deleteFailed': 'Wiadomość nie została usunięta',
