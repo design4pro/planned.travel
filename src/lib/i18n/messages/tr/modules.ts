@@ -775,6 +775,11 @@ const messages = {
     'Bu yolculuktaki herkes tek bir konuşmayı paylaşır. Burada alınan kararlar grup sohbetlerine dağılmak yerine yolculukla birlikte kalır.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Sohbeti başlat',
+  'collab.thread.loadOlder': 'Önceki mesajları yükle',
+  'collab.thread.loadingOlder': 'Önceki mesajlar yükleniyor',
+  'collab.thread.loadOlderFailed': 'Önceki mesajlar yüklenemedi',
+  'collab.thread.retry': 'Tekrar dene',
+  'collab.thread.start': 'Konuşma burada başlıyor',
   'collab.toast.reactionFailed': 'Tepki kaydedilmedi',
   'collab.toast.messageDeleted': 'Mesaj silindi',
   'collab.toast.deleteFailed': 'Mesaj silinmedi',

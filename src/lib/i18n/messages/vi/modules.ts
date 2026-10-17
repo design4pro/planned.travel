@@ -765,6 +765,11 @@ const messages = {
     'Mọi người trong chuyến đi này cùng dùng một cuộc trò chuyện. Các quyết định ở đây được lưu cùng chuyến đi thay vì rải rác trong các nhóm trò chuyện.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Bắt đầu cuộc trò chuyện',
+  'collab.thread.loadOlder': 'Tải tin nhắn cũ hơn',
+  'collab.thread.loadingOlder': 'Đang tải tin nhắn cũ hơn',
+  'collab.thread.loadOlderFailed': 'Không tải được tin nhắn cũ hơn',
+  'collab.thread.retry': 'Thử lại',
+  'collab.thread.start': 'Cuộc trò chuyện bắt đầu từ đây',
   'collab.toast.reactionFailed': 'Chưa lưu được biểu cảm',
   'collab.toast.messageDeleted': 'Đã xóa tin nhắn',
   'collab.toast.deleteFailed': 'Chưa xóa được tin nhắn',
