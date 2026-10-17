@@ -240,6 +240,23 @@ describe('the load-earlier control', () => {
     expect(screen.queryByText(En['collab.thread.start'])).toBeNull()
   })
 
+  it('leaves focus where the reader moved it while the page loaded', async () => {
+    const page = deferred<{ messages: MessageData[]; exhausted: boolean }>()
+    vi.mocked(loadOlderMessagesFn).mockReturnValue(page.promise)
+    render(tree(fullWindow()))
+    fireEvent.click(control()!)
+    const composer = screen.getAllByRole('textbox')[0]!
+    composer.focus()
+    focus.mockClear()
+    await act(async () => {
+      page.resolve({ messages: rows(900, 3), exhausted: false })
+      await page.promise
+    })
+    await waitFor(() => expect(screen.getByText('m0900')).toBeTruthy())
+    expect(document.activeElement).toBe(composer)
+    expect(focus).not.toHaveBeenCalled()
+  })
+
   it('says it failed, keeps the rows and focuses "Try again"', async () => {
     vi.mocked(loadOlderMessagesFn)
       .mockRejectedValueOnce(new Error('offline'))
@@ -271,6 +288,21 @@ describe('the load-earlier control', () => {
     expect(control()?.getAttribute('aria-describedby')).toBeNull()
   })
 
+  it('inserts the failure line anew on a second failure, so it is announced again', async () => {
+    vi.mocked(loadOlderMessagesFn).mockRejectedValue(new Error('offline'))
+    render(tree(fullWindow()))
+    fireEvent.click(control()!)
+    const first = await screen.findByText(En['collab.thread.loadOlderFailed'])
+    fireEvent.click(control()!)
+    await waitFor(() => expect(loadOlderMessagesFn).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(screen.getByText(En['collab.thread.loadOlderFailed'])).not.toBe(
+        first,
+      ),
+    )
+    expect(first.isConnected).toBe(false)
+  })
+
   it('replaces the control with a focused line after the last page', async () => {
     vi.mocked(loadOlderMessagesFn).mockResolvedValue({
       messages: rows(900, 2),
@@ -298,7 +330,6 @@ describe('where the transcript scrolls', () => {
     render(tree(rows(1000, 3)))
     expect(scroller().className).toContain('max-h-[70svh]')
     expect(scroller().className).toContain('xl:max-h-none')
-    expect(scroller().className).toContain('scroll-mt-0')
   })
 
   it('names the scroller after its rows, so the router restores no stale position over them', () => {

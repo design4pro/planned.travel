@@ -186,7 +186,9 @@ export function Thread({
   const loadFailedId = useId()
   const scrollerId = useId()
   const [loadingOlder, setLoadingOlder] = useState(false)
-  const [loadFailed, setLoadFailed] = useState(false)
+  /** Failed attempts since the last success; each one inserts the line anew, so it is announced again. */
+  const [failures, setFailures] = useState(0)
+  const loadFailed = failures > 0
   const loadBusy = useRef(false)
   const wasLoading = useRef(false)
   /** The first row in view and how far below the scroller's top it sits. */
@@ -275,9 +277,9 @@ export function Thread({
     setLoadingOlder(true)
     try {
       await loadOlder()
-      setLoadFailed(false)
+      setFailures(0)
     } catch {
-      setLoadFailed(true)
+      setFailures((count) => count + 1)
     } finally {
       loadBusy.current = false
       setLoadingOlder(false)
@@ -285,7 +287,8 @@ export function Thread({
   }
 
   // The button stays inert while it loads, so on settle focus goes where the
-  // reader can act next: the control, or the line that replaced it.
+  // reader can act next: the control, or the line that replaced it. A reader who
+  // has moved on (into the composer, say) keeps their focus.
   useEffect(() => {
     if (loadingOlder) {
       wasLoading.current = true
@@ -293,6 +296,13 @@ export function Thread({
     }
     if (!wasLoading.current) return
     wasLoading.current = false
+    const active = document.activeElement
+    if (
+      active !== null &&
+      active !== document.body &&
+      active !== loadButtonRef.current
+    )
+      return
     const target = exhausted ? startRef.current : loadButtonRef.current
     target?.focus({ preventScroll: true })
   }, [loadingOlder, exhausted])
@@ -364,6 +374,7 @@ export function Thread({
               <div role="status">
                 {loadFailed ? (
                   <p
+                    key={failures}
                     id={loadFailedId}
                     className="pb-1.5 text-caption text-danger"
                   >
@@ -399,9 +410,7 @@ export function Thread({
         // was snapshotted with, so a snapshot of other rows finds no element.
         data-scroll-restoration-id={`${scrollerId}:${messages[0]?.id}:${messages.at(-1)?.id}`}
         onScroll={(event) => trackScroll(event.currentTarget)}
-        // The screen sets a scroll margin for its sticky bars on every descendant;
-        // inside this box it would scroll a focused row away from the edge.
-        className="max-h-[70svh] min-h-0 flex-1 overflow-y-auto px-1 xl:max-h-none [&_*]:scroll-mt-0!"
+        className="max-h-[70svh] min-h-0 flex-1 overflow-y-auto px-1 xl:max-h-none"
       >
         {messages.length === 0 ? (
           <EmptyState
