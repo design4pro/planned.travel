@@ -42,7 +42,14 @@ import {
 } from '#/server/fns/collab-thread'
 import { ConfirmDialog, RowMenu, useAction, useOptimistic } from '../shared'
 
-import { groupThread, isJumboGlyphs } from './thread-model'
+import { useThreadHistory } from './use-thread-history'
+import {
+  editMessage,
+  removeMessage,
+  setViewerReaction,
+  groupThread,
+  isJumboGlyphs,
+} from './thread-model'
 
 import type { ConfirmRequest } from '../shared'
 import type { CollabPerson, MessageData } from './types'
@@ -139,7 +146,7 @@ export interface ThreadProps {
 
 export function Thread({
   tripId,
-  messages,
+  messages: window,
   people,
   viewerUserId,
   canModerate,
@@ -147,6 +154,7 @@ export function Thread({
   onDirtyChange,
   turnedOff = false,
 }: ThreadProps) {
+  const { messages, patchHeld } = useThreadHistory(tripId, window)
   const [replyTo, setReplyTo] = useState<MessageData | null>(null)
   const t = useTranslate()
   const locale = useLocale()
@@ -195,9 +203,22 @@ export function Thread({
       ? claimed.filter((entry) => entry !== emoji)
       : [...claimed, emoji]
 
-    void reactionOverlay.claim([[message.id, next]], () =>
-      toggle.run({ data: { tripId, messageId: message.id, emoji } }),
-    )
+    void reactionOverlay.claim([[message.id, next]], async () => {
+      const result = await toggle.run({
+        data: { tripId, messageId: message.id, emoji },
+      })
+      if (result !== null)
+        patchHeld((rows) =>
+          setViewerReaction(
+            rows,
+            message.id,
+            viewerUserId,
+            emoji,
+            result.added,
+          ),
+        )
+      return result
+    })
   }
 
   return (
@@ -262,10 +283,13 @@ export function Thread({
                         title: t('modules.collab.message.deleteTitle'),
                         description: t('modules.collab.message.deleteBody'),
                         confirmLabel: t('modules.collab.message.delete'),
-                        onConfirm: () =>
-                          remove.run({
+                        onConfirm: async () => {
+                          const result = await remove.run({
                             data: { tripId, messageId: message.id },
-                          }),
+                          })
+                          if (result !== null)
+                            patchHeld((rows) => removeMessage(rows, message.id))
+                        },
                       })
                     }
                   />
@@ -280,6 +304,11 @@ export function Thread({
       <Composer
         tripId={tripId}
         messages={messages}
+        onEdited={(id, body) =>
+          patchHeld((rows) =>
+            editMessage(rows, id, body, new Date().toISOString()),
+          )
+        }
         viewerUserId={viewerUserId}
         onDirtyChange={onDirtyChange}
         turnedOff={turnedOff}
@@ -575,6 +604,7 @@ function Composer({
   editing,
   people,
   onClearReply,
+  onEdited,
   onClearEditing,
   onDirtyChange,
   turnedOff,
@@ -586,6 +616,7 @@ function Composer({
   editing: MessageData | null
   people: ReadonlyArray<CollabPerson>
   onClearReply: () => void
+  onEdited: (id: string, body: string) => void
   onClearEditing: () => void
   onDirtyChange?: (dirty: boolean) => void
   turnedOff: boolean
@@ -708,7 +739,10 @@ function Composer({
         setFailed(null)
         setBody((current) => (current === attempt.draft ? '' : current))
         if (editing === null) onClearReply()
-        else onClearEditing()
+        else {
+          onEdited(editing.id, trimmed)
+          onClearEditing()
+        }
       } else if (fieldRef.current?.value.length) {
         setFailed(attempt)
       }
