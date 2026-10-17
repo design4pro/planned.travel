@@ -717,6 +717,11 @@ const messages = {
     '这次旅行的所有人共用一个会话。在这里做出的决定会随旅行保留，而不会散落在各个群聊中。',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': '说出第一句话',
+  'collab.thread.loadOlder': '加载更早的消息',
+  'collab.thread.loadingOlder': '正在加载更早的消息',
+  'collab.thread.loadOlderFailed': '更早的消息未能加载',
+  'collab.thread.retry': '重试',
+  'collab.thread.start': '对话从这里开始',
   'collab.toast.reactionFailed': '这个反应没保存上',
   'collab.toast.messageDeleted': '已删除消息',
   'collab.toast.deleteFailed': '未能删除该消息',

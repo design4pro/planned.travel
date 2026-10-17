@@ -717,6 +717,11 @@ const messages = {
     '這趟旅行的所有人共用一個對話。在這裡做出的決定會隨旅行保留，而不會散落在各個群組聊天中。',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': '說出第一句話',
+  'collab.thread.loadOlder': '載入更早的訊息',
+  'collab.thread.loadingOlder': '正在載入更早的訊息',
+  'collab.thread.loadOlderFailed': '更早的訊息未能載入',
+  'collab.thread.retry': '重試',
+  'collab.thread.start': '對話從這裡開始',
   'collab.toast.reactionFailed': '這個反應沒存上',
   'collab.toast.messageDeleted': '已刪除訊息',
   'collab.toast.deleteFailed': '未能刪除該訊息',

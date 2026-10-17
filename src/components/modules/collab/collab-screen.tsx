@@ -228,6 +228,7 @@ export function CollabScreen({
               bodyClassName="flex min-h-0 flex-col px-5 py-3"
             >
               <Thread
+                key={tripId}
                 tripId={tripId}
                 messages={data.messages}
                 people={data.people}

@@ -780,6 +780,11 @@ const messages = {
     'Alla på den här resan delar en och samma tråd. Beslut som fattas här stannar med resan i stället för att spridas över gruppchattar.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Börja samtalet',
+  'collab.thread.loadOlder': 'Ladda tidigare meddelanden',
+  'collab.thread.loadingOlder': 'Laddar tidigare meddelanden',
+  'collab.thread.loadOlderFailed': 'Tidigare meddelanden laddades inte',
+  'collab.thread.retry': 'Försök igen',
+  'collab.thread.start': 'Här börjar konversationen',
   'collab.toast.reactionFailed': 'Reaktionen sparades inte',
   'collab.toast.messageDeleted': 'Meddelandet borttaget',
   'collab.toast.deleteFailed': 'Meddelandet togs inte bort',
