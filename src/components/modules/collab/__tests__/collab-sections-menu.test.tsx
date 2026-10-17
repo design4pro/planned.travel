@@ -1,6 +1,6 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -19,6 +19,7 @@ const messages = {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   Reflect.deleteProperty(document, 'elementFromPoint')
 })
 function deferred() {
@@ -185,9 +186,9 @@ it.each(['transport', 'refusal'] as const)(
   },
 )
 
-it.each([true, false])(
+it.each(['top', 'bottom', 'none'] as const)(
   'returns Escape focus and reveals it only when obscured (%s)',
-  async (obscured) => {
+  async (obstruction) => {
     const { user } = setup()
     const trigger = screen.getByRole('button', { name: /Choose sections/ })
     const reveal = vi.spyOn(trigger, 'scrollIntoView')
@@ -205,14 +206,19 @@ it.each([true, false])(
     const blocker = document.createElement('header')
     Object.defineProperty(document, 'elementFromPoint', {
       configurable: true,
-      value: vi.fn(() => (obscured ? blocker : trigger)),
+      value: vi.fn((_x: number, y: number) => {
+        const blocked =
+          (obstruction === 'top' && y < 22) ||
+          (obstruction === 'bottom' && y > 22)
+        return blocked ? blocker : trigger
+      }),
     })
     await user.click(trigger)
     reveal.mockClear()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(document.activeElement).toBe(trigger))
     await new Promise((resolve) => requestAnimationFrame(resolve))
-    if (obscured)
+    if (obstruction !== 'none')
       expect(reveal).toHaveBeenCalledWith({
         block: 'center',
         behavior: 'instant',
@@ -220,3 +226,30 @@ it.each([true, false])(
     else expect(reveal).not.toHaveBeenCalled()
   },
 )
+
+it('does not scroll or take focus back when it changes before the close frame', async () => {
+  const { user } = setup()
+  const trigger = screen.getByRole('button', { name: /Choose sections/ })
+  await user.click(trigger)
+  const frames: FrameRequestCallback[] = []
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: FrameRequestCallback) => {
+      frames.push(callback)
+      return frames.length
+    }),
+  )
+  const reveal = vi.spyOn(trigger, 'scrollIntoView')
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+  const other = document.createElement('button')
+  document.body.append(other)
+  try {
+    other.focus()
+    act(() => frames.forEach((callback) => callback(performance.now())))
+    expect(document.activeElement).toBe(other)
+    expect(reveal).not.toHaveBeenCalled()
+  } finally {
+    other.remove()
+  }
+})
