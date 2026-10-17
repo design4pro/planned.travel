@@ -38,6 +38,7 @@ import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -47,7 +48,10 @@ import {
 } from 'vitest'
 import type { z } from 'zod'
 
-import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
+import {
+  BANNED_USER_MESSAGE,
+  IMPERSONATION_SESSION_SECONDS,
+} from '#/server/auth/admin-options'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import { platformAuditLog } from '#/server/db/schema'
 import { createLogger, createMemorySink } from '#/server/observability'
@@ -2752,6 +2756,241 @@ describe('impersonation', () => {
     expect(() =>
       endImpersonationInputSchema.parse({ userId: 'someone-else' }),
     ).toThrow()
+  })
+})
+
+/* ------------------------------------------- impersonated session expiry (#1358) */
+
+describe('impersonated session expiry (docs/ACCESS.md §6.2)', () => {
+  const IMPERSONATION_MS = IMPERSONATION_SESSION_SECONDS * 1000
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+
+  /** Where the impersonated session lives, in both stores Better Auth reads it from. */
+  function storedSession(userId: string): {
+    token: string
+    expiresAt: number
+    createdAt: number
+  } {
+    const row = authDatabase.sqlite
+      .prepare(
+        'select token, expires_at, created_at from session where user_id = ?',
+      )
+      .get(userId) as { token: string; expires_at: number; created_at: number }
+    return {
+      token: row.token,
+      expiresAt: row.expires_at,
+      createdAt: row.created_at,
+    }
+  }
+
+  function rewriteSession(
+    token: string,
+    patch: { expiresAt?: number; createdAt?: number },
+  ): void {
+    const columns: Array<string> = []
+    const values: Array<number> = []
+    if (patch.expiresAt !== undefined) {
+      columns.push('expires_at = ?')
+      values.push(patch.expiresAt)
+    }
+    if (patch.createdAt !== undefined) {
+      columns.push('created_at = ?')
+      values.push(patch.createdAt)
+    }
+    authDatabase.sqlite
+      .prepare(`update session set ${columns.join(', ')} where token = ?`)
+      .run(...values, token)
+
+    const blob = kv().store.get(token)
+    if (blob === undefined) return
+    const parsed = JSON.parse(blob) as { session: Record<string, unknown> }
+    if (patch.expiresAt !== undefined) {
+      parsed.session.expiresAt = new Date(patch.expiresAt).toISOString()
+    }
+    if (patch.createdAt !== undefined) {
+      parsed.session.createdAt = new Date(patch.createdAt).toISOString()
+    }
+    kv().store.set(token, JSON.stringify(parsed))
+  }
+
+  /** The cookies the operator's browser holds right after "Impersonate". */
+  async function impersonationJar(userId: string): Promise<CookieJar> {
+    return applyCookies(new Map(), await impersonate({ userId }))
+  }
+
+  /** The same token as a client that leaves out the `dont_remember` marker. */
+  function withoutMarker(jar: CookieJar): CookieJar {
+    const copy = new Map(jar)
+    copy.delete('planned.dont_remember')
+    return copy
+  }
+
+  function sessionTokenCookies(response: Response): Array<string> {
+    return response.headers
+      .getSetCookie()
+      .filter((entry) => entry.startsWith('planned.session_token='))
+  }
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('keeps the expiry put when the token is read without the don’t-remember cookie', async () => {
+    const worn = seedUser()
+    const jar = await impersonationJar(worn.id)
+    const before = storedSession(worn.id)
+    const ttlBefore = kv().ttls.get(before.token) ?? 0
+
+    const response = await authGet(
+      '/get-session',
+      jarHeader(withoutMarker(jar)),
+    )
+
+    const body: { session: { expiresAt: string } } | null =
+      await response.json()
+    expect(new Date(String(body?.session.expiresAt)).getTime()).toBe(
+      before.expiresAt,
+    )
+    expect(storedSession(worn.id).expiresAt).toBe(before.expiresAt)
+    const blob: { session: { expiresAt: string } } = JSON.parse(
+      kv().store.get(before.token) ?? '{}',
+    )
+    expect(new Date(blob.session.expiresAt).getTime()).toBe(before.expiresAt)
+    // The TTL counts down with the clock; the bug made it 30 days.
+    const ttlAfter = kv().ttls.get(before.token) ?? Infinity
+    expect(ttlAfter).toBeLessThanOrEqual(ttlBefore)
+    expect(ttlAfter).toBeGreaterThan(ttlBefore - 10)
+    // No `Set-Cookie` may hand the token a longer life than its row has.
+    expect(sessionTokenCookies(response)).toEqual([])
+  })
+
+  it('leaves the expiry alone on the cookie-present path a browser takes', async () => {
+    const worn = seedUser()
+    const jar = await impersonationJar(worn.id)
+    const before = storedSession(worn.id)
+
+    const response = await authGet('/get-session', jarHeader(jar))
+
+    expect(response.status).toBe(200)
+    expect(storedSession(worn.id).expiresAt).toBe(before.expiresAt)
+    expect(sessionTokenCookies(response)).toEqual([])
+  })
+
+  it('refuses the session on the server-side read once 900 seconds have passed', async () => {
+    const worn = seedUser()
+    const jar = await impersonationJar(worn.id)
+    // The probe: before the fix this read pushed the row 30 days out.
+    await authGet('/get-session', jarHeader(withoutMarker(jar)))
+
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(Date.now() + IMPERSONATION_MS + 1000)
+    callerJar = jar
+    let seen: unknown = 'unread'
+    await duringRequest(async () => {
+      seen = await getSession()
+    })
+
+    expect(seen).toBeNull()
+  })
+
+  it('refuses a row that was already extended before the fix shipped', async () => {
+    const worn = seedUser()
+    const jar = await impersonationJar(worn.id)
+    const { token } = storedSession(worn.id)
+    rewriteSession(token, {
+      createdAt: Date.now() - IMPERSONATION_MS - 60_000,
+      expiresAt: Date.now() + THIRTY_DAYS_MS,
+    })
+
+    callerJar = jar
+    let seen: unknown = 'unread'
+    await duringRequest(async () => {
+      seen = await getSession()
+    })
+
+    expect(seen).toBeNull()
+  })
+
+  it('drops an extension that arrives with no endpoint to resolve the session from', async () => {
+    const worn = seedUser()
+    await impersonationJar(worn.id)
+    const before = storedSession(worn.id)
+
+    await (
+      await getAuth().$context
+    ).internalAdapter.updateSession(before.token, {
+      expiresAt: new Date(Date.now() + THIRTY_DAYS_MS),
+    })
+
+    expect(storedSession(worn.id).expiresAt).toBe(before.expiresAt)
+  })
+
+  it('ends a row extended before the fix on the library’s own endpoints', async () => {
+    const worn = seedUser()
+    const organizationId = seedWorkspace('Second workspace')
+    seedMember(organizationId, worn.id, 'member')
+    const jar = await impersonationJar(worn.id)
+    const { token } = storedSession(worn.id)
+    rewriteSession(token, {
+      createdAt: Date.now() - IMPERSONATION_MS - 60_000,
+      expiresAt: Date.now() + THIRTY_DAYS_MS,
+    })
+
+    const read = await authGet('/get-session', jarHeader(withoutMarker(jar)))
+    expect(await read.json()).toBeNull()
+    expect(sessionCount(worn.id)).toBe(0)
+    expect(kv().store.has(token)).toBe(false)
+
+    const rewrittenAgain = await impersonationJar(worn.id)
+    const second = storedSession(worn.id)
+    rewriteSession(second.token, {
+      createdAt: Date.now() - IMPERSONATION_MS - 60_000,
+      expiresAt: Date.now() + THIRTY_DAYS_MS,
+    })
+    const switched = await authPost(
+      '/organization/set-active',
+      { organizationId },
+      jarHeader(rewrittenAgain),
+    )
+    expect(switched.status).toBe(401)
+    expect(sessionCount(worn.id)).toBe(0)
+  })
+
+  it('still slides an ordinary session to 30 days once it is past the update age', async () => {
+    await seedAccountWithPassword('ordinary@planned.travel')
+    const jar = await jarFromSignIn('ordinary@planned.travel')
+    const row = authDatabase.sqlite
+      .prepare('select token from session order by created_at desc limit 1')
+      .get() as { token: string }
+    rewriteSession(row.token, { expiresAt: Date.now() + 28 * 86_400_000 })
+
+    await authGet('/get-session', jarHeader(jar))
+
+    const refreshed = authDatabase.sqlite
+      .prepare('select expires_at from session where token = ?')
+      .get(row.token) as { expires_at: number }
+    expect(refreshed.expires_at).toBeGreaterThan(Date.now() + 29 * 86_400_000)
+  })
+
+  it('still lets an impersonated session switch workspace', async () => {
+    const worn = seedUser()
+    const organizationId = seedWorkspace('Second workspace')
+    seedMember(organizationId, worn.id, 'member')
+    const jar = await impersonationJar(worn.id)
+    const before = storedSession(worn.id)
+
+    const response = await authPost(
+      '/organization/set-active',
+      { organizationId },
+      jarHeader(withoutMarker(jar)),
+    )
+
+    expect(response.status).toBe(200)
+    const row = authDatabase.sqlite
+      .prepare('select active_organization_id from session where token = ?')
+      .get(before.token) as { active_organization_id: string }
+    expect(row.active_organization_id).toBe(organizationId)
+    expect(storedSession(worn.id).expiresAt).toBe(before.expiresAt)
   })
 })
 
