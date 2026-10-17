@@ -779,7 +779,8 @@ const messages = {
   'collab.thread.today': 'Hari ini',
   'collab.thread.emptyBody':
     'Semua peserta perjalanan ini berbagi satu percakapan. Keputusan yang dibuat di sini tetap tersimpan bersama perjalanan, bukan tercecer di berbagai obrolan grup.',
-  'collab.thread.empty': 'Belum ada pesan',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'Mulai percakapan',
   'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
   'collab.toast.messageDeleted': 'Pesan dihapus',
   'collab.toast.deleteFailed': 'Pesan tidak dihapus',
@@ -807,6 +808,18 @@ const messages = {
   'collab.compose.send': 'Kirim pesan',
   'collab.compose.savingEdit': 'Menyimpan perubahan',
   'collab.compose.save': 'Simpan',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint':
+    'Tekan Enter untuk mengirim, Shift dan Enter untuk baris baru.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Tekan Escape untuk membatalkan.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'Gunakan tombol kirim untuk mengirim pesan.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'Coba lagi',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'Perubahanmu masih ada di kotak teks. Periksa koneksimu, lalu coba lagi.',
   'collab.hint.sends': 'mengirim',
   'collab.hint.addsLine': 'menambah baris',
   'collab.hint.cancels': 'membatalkan',

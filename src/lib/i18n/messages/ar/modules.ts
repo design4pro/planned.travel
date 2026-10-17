@@ -801,7 +801,8 @@ const messages = {
   'collab.thread.today': 'اليوم',
   'collab.thread.emptyBody':
     'يشترك جميع المسافرين في هذه الرحلة في محادثة واحدة. تبقى القرارات المتخذة هنا مرتبطة بالرحلة بدلاً من التشتت بين المحادثات الجماعية.',
-  'collab.thread.empty': 'لا رسائل بعد',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': 'ابدأ الحديث',
   'collab.toast.reactionFailed': 'لم يُحفظ التفاعل',
   'collab.toast.messageDeleted': 'حُذفت الرسالة',
   'collab.toast.deleteFailed': 'لم تُحذف الرسالة',
@@ -829,6 +830,17 @@ const messages = {
   'collab.compose.send': 'إرسال الرسالة',
   'collab.compose.savingEdit': 'جارٍ حفظ التعديل',
   'collab.compose.save': 'حفظ',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': 'اضغط Enter للإرسال، أو Shift وEnter لسطر جديد.',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'اضغط Escape للإلغاء.',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': 'استخدم زر الإرسال لإرسال الرسالة.',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': 'حاول مجددًا',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    'تعديلاتك ما زالت في مربع النص. تحقق من اتصالك ثم حاول مجددًا.',
   'collab.hint.sends': 'يُرسل',
   'collab.hint.addsLine': 'يضيف سطرًا',
   'collab.hint.cancels': 'يُلغي',

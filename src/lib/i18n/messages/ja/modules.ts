@@ -751,7 +751,8 @@ const messages = {
   'collab.thread.today': '今日',
   'collab.thread.emptyBody':
     'この旅行の参加者全員でひとつのスレッドを共有します。ここで決めたことはグループチャットに散らばらず、旅行と一緒に残ります。',
-  'collab.thread.empty': 'まだメッセージはありません',
+  /** Invitation to write the first message of an empty conversation, not a command. */
+  'collab.thread.empty': '最初のメッセージを書こう',
   'collab.toast.reactionFailed': 'リアクションを保存できませんでした',
   'collab.toast.messageDeleted': 'メッセージを削除しました',
   'collab.toast.deleteFailed': 'メッセージを削除できませんでした',
@@ -780,6 +781,17 @@ const messages = {
   'collab.compose.send': 'メッセージを送信',
   'collab.compose.savingEdit': '編集を保存中',
   'collab.compose.save': '保存',
+  /** Textarea description for a fine pointer; input-method composition never sends. */
+  'collab.compose.keysHint': 'Enterで送信、ShiftとEnterで改行します。',
+  /** Added to the textarea description only while replying or editing. */
+  'collab.compose.keysHintEsc': 'Escapeでキャンセルします。',
+  /** Textarea description on a coarse pointer; Enter adds a line. */
+  'collab.compose.keysHintTouch': '送信ボタンでメッセージを送信します。',
+  /** Button retries the failed send or edit using the text currently in the field. */
+  'collab.compose.retry': '再試行',
+  /** Fixed failed-edit body, also used as the edit toast fallback; never server diagnostics. */
+  'collab.toast.editFailedBody':
+    '変更内容は入力欄に残っています。接続を確認してから、もう一度お試しください。',
   'collab.hint.sends': 'で送信',
   'collab.hint.addsLine': 'で改行',
   'collab.hint.cancels': 'で取り消し',
