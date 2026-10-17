@@ -178,6 +178,7 @@ export function Thread({
   const scrollerRef = useRef<HTMLDivElement>(null)
   const loadButtonRef = useRef<HTMLButtonElement>(null)
   const startRef = useRef<HTMLParagraphElement>(null)
+  const loadFailedId = useId()
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
   const loadBusy = useRef(false)
@@ -339,13 +340,14 @@ export function Thread({
           ) : (
             <>
               {loadFailed ? (
-                <p className="text-caption text-danger">
+                <p id={loadFailedId} className="text-caption text-danger">
                   {t('modules.collab.thread.loadOlderFailed')}
                 </p>
               ) : null}
               <Button
                 ref={loadButtonRef}
                 data-part="thread-load-older"
+                aria-describedby={loadFailed ? loadFailedId : undefined}
                 variant="subtle"
                 size="sm"
                 loading={loadingOlder}

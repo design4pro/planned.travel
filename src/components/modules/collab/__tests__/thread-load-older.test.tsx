@@ -240,6 +240,8 @@ describe('the load-earlier control', () => {
       ).toBeTruthy(),
     )
     expect(control()?.textContent).toBe(En['collab.thread.retry'])
+    const failure = screen.getByText(En['collab.thread.loadOlderFailed'])
+    expect(control()?.getAttribute('aria-describedby')).toBe(failure.id)
     expect(document.querySelector('[role="alert"]')).toBeNull()
     await waitFor(() => expect(document.activeElement).toBe(control()))
     expect(focus).toHaveBeenLastCalledWith({ preventScroll: true })
@@ -250,6 +252,7 @@ describe('the load-earlier control', () => {
     await waitFor(() => expect(screen.getByText('m0900')).toBeTruthy())
     expect(screen.queryByText(En['collab.thread.loadOlderFailed'])).toBeNull()
     expect(control()?.textContent).toBe(En['collab.thread.loadOlder'])
+    expect(control()?.getAttribute('aria-describedby')).toBeNull()
   })
 
   it('replaces the control with a focused line after the last page', async () => {
