@@ -456,6 +456,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Ukryj panel {label}',
   'plan.workspace.narrowPanel': 'Zwęź {label}',
   'plan.workspace.widenPanel': 'Poszerz {label}',
+  'collab.sections.tabsLabel': 'Sekcje współpracy',
   'collab.sections.trigger': 'Wybierz sekcje',
   'collab.sections.menuLabel': 'Pokaż wszystkim na tej podróży',
   'collab.sections.keepOne': 'Co najmniej jedna sekcja musi pozostać włączona.',

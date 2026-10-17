@@ -7,8 +7,10 @@ import userEvent from '@testing-library/user-event'
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider, LOCALE_TAGS, loadCatalogue } from '#/lib/i18n'
 import {
+  PLANS_HREF,
   PlannerAddPlace,
   placeWriteMessage,
+  reportLateWriteFailure,
   reportPlaceWriteFailure,
 } from '../planner-add-place'
 import { PlannerDayTools } from '../planner-day-tools'
@@ -242,5 +244,58 @@ describe('reportPlaceWriteFailure', () => {
       message: 'This trip is archived.',
       action: null,
     })
+  })
+})
+
+describe('reportLateWriteFailure', () => {
+  const copy = {
+    fallback: 'Try again.',
+    quota: 'Your plan’s places limit is reached.',
+    seePlans: 'See plans',
+  }
+
+  function late(cause: unknown) {
+    const error = vi.fn()
+    const openTab = vi.fn()
+    const report = reportPlaceWriteFailure(cause, copy)
+    reportLateWriteFailure(report, { error }, openTab)
+    return { error, openTab, report }
+  }
+
+  it('gives a quota refusal the form alert’s action, reachable from the toast', () => {
+    const { error, openTab, report } = late(
+      new Error(
+        encodePublicFailure({
+          kind: 'unexpected',
+          code: 'QUOTA_EXCEEDED',
+          reference: 'ref-1',
+        }),
+      ),
+    )
+
+    expect(error).toHaveBeenCalledTimes(1)
+    const [message, options] = error.mock.calls[0]
+    expect(message).toBe(copy.quota)
+    expect(options.action.label).toBe(report.action?.label)
+    expect(options.duration).toBeGreaterThanOrEqual(8000)
+
+    expect(openTab).not.toHaveBeenCalled()
+    options.action.onClick()
+    expect(openTab).toHaveBeenCalledExactlyOnceWith(PLANS_HREF)
+    expect(PLANS_HREF).toBe(report.action?.href)
+  })
+
+  it('keeps a toast without an action for every other failure', () => {
+    const { error, openTab } = late(
+      new Error(
+        encodePublicFailure({
+          kind: 'refusal',
+          message: 'This trip is archived.',
+        }),
+      ),
+    )
+
+    expect(error).toHaveBeenCalledExactlyOnceWith('This trip is archived.')
+    expect(openTab).not.toHaveBeenCalled()
   })
 })

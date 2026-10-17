@@ -448,6 +448,7 @@ const messages = {
   'plan.workspace.hidePanel': 'Skrýt panel {label}',
   'plan.workspace.narrowPanel': 'Zúžit {label}',
   'plan.workspace.widenPanel': 'Rozšířit {label}',
+  'collab.sections.tabsLabel': 'Sekce spolupráce',
   'collab.sections.trigger': 'Vybrat sekce',
   'collab.sections.menuLabel': 'Zobrazit všem na této cestě',
   'collab.sections.keepOne': 'Alespoň jedna sekce musí zůstat zapnutá.',
