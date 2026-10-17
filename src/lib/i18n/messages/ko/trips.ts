@@ -427,6 +427,18 @@ const messages = {
   'collab.sections.changed': '이 여행의 섹션이 변경되었습니다.',
   'collab.sections.savedHidden':
     '저장되었습니다. 이 섹션은 여행 전체에서 숨겨져 있어 지금 닫힙니다.',
+  'plan.place.error.save':
+    '장소를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'plan.stop.error.saveTimes':
+    '경유지 시간을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'plan.place.error.delete':
+    '장소를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'plan.pin.error.move': '핀을 옮기지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'plan.place.toast.created': '장소 추가됨',
+  'plan.place.toast.updated': '장소 업데이트됨',
+  'plan.stop.toast.timesSaved': '경유지 시간 저장됨',
+  'plan.place.toast.deleted': '장소 삭제됨',
+  'plan.pin.toast.moved': '{name}에 핀을 놓았습니다',
 } satisfies TranslationOf<typeof En>
 
 export default messages

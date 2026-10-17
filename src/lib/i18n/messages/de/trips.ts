@@ -457,6 +457,19 @@ const messages = {
   'collab.sections.changed': 'Die Bereiche dieser Reise wurden geändert.',
   'collab.sections.savedHidden':
     'Gespeichert. Dieser Bereich ist für die Reise ausgeblendet und wird jetzt geschlossen.',
+  'plan.place.error.save':
+    'Der Ort konnte nicht gespeichert werden. Versuch es gleich noch einmal.',
+  'plan.stop.error.saveTimes':
+    'Die Stoppzeiten konnten nicht gespeichert werden. Versuch es gleich noch einmal.',
+  'plan.place.error.delete':
+    'Der Ort konnte nicht gelöscht werden. Versuch es gleich noch einmal.',
+  'plan.pin.error.move':
+    'Die Stecknadel konnte nicht verschoben werden. Versuch es gleich noch einmal.',
+  'plan.place.toast.created': 'Ort hinzugefügt',
+  'plan.place.toast.updated': 'Ort aktualisiert',
+  'plan.stop.toast.timesSaved': 'Stoppzeiten gespeichert',
+  'plan.place.toast.deleted': 'Ort gelöscht',
+  'plan.pin.toast.moved': '{name} angepinnt',
 } satisfies TranslationOf<typeof En>
 
 export default messages

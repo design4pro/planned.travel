@@ -460,6 +460,19 @@ const messages = {
   'collab.sections.changed': 'Sekce této cesty se změnily.',
   'collab.sections.savedHidden':
     'Uloženo. Tato sekce je pro cestu skrytá, proto se nyní zavře.',
+  'plan.place.error.save':
+    'Místo se nepodařilo uložit. Zkuste to za chvíli znovu.',
+  'plan.stop.error.saveTimes':
+    'Časy zastávky se nepodařilo uložit. Zkuste to za chvíli znovu.',
+  'plan.place.error.delete':
+    'Místo se nepodařilo smazat. Zkuste to za chvíli znovu.',
+  'plan.pin.error.move':
+    'Špendlík se nepodařilo přesunout. Zkuste to za chvíli znovu.',
+  'plan.place.toast.created': 'Místo přidáno',
+  'plan.place.toast.updated': 'Místo aktualizováno',
+  'plan.stop.toast.timesSaved': 'Časy zastávky uloženy',
+  'plan.place.toast.deleted': 'Místo smazáno',
+  'plan.pin.toast.moved': '{name} připnuto',
 } satisfies TranslationOf<typeof En>
 
 export default messages

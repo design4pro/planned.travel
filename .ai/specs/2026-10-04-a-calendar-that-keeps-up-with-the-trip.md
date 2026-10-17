@@ -1318,7 +1318,7 @@ prerequisite is recorded.
 
 Phase 2 management reads require a trip filter in `listFeeds`: the one-trip dialog resolves at most
 one owner row through the trip partial index, rather than loading and rechecking every lifetime
-feed before discarding unrelated trips. Broader management listings belong to a later phase.
+feed before discarding unrelated trips. Phase 4 adds a selected workspace-feed lookup through its owner partial index; neither mode scans every lifetime feed.
 
 ### 2026-10-17 platform-control execution record
 
@@ -1335,3 +1335,12 @@ renewed independent security approval remain required.
 [Execution evidence](https://github.com/design4pro/planned.travel/pull/1334#issuecomment-6228009286)
 records configuration readback and matching pre-Worker request traces. Runtime threshold
 enforcement was not measured: staging probes were intercepted by unchanged Cloudflare Access.
+
+### Phase 4 compatibility clarification (issue #902)
+
+Both management functions accept optional `scope`, defaulting to `trip`. The load returns the selected
+feed in its existing nullable shape, rather than replacing that shape with a pair. The dialog retains
+both feed states and once-revealed links independently. This preserves older browser bundles under
+BACKWARD_COMPATIBILITY.md §2. An independent architecture review approved this clarification with
+legacy-input, workspace-selection and bidirectional tab-retention tests; it is not a security shipping
+approval. Implementation PR: #1344.

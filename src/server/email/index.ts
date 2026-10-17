@@ -42,3 +42,5 @@ export type { PaymentFailedEmailProps } from './templates/payment-failed'
 
 export { PackPurchasedEmail } from './templates/pack-purchased'
 export type { PackPurchasedEmailProps } from './templates/pack-purchased'
+
+export { PasskeyChangedEmail } from './templates/passkey-changed'

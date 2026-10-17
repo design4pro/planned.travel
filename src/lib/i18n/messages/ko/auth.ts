@@ -316,6 +316,13 @@ const messages = {
   'error.verifyBeforeJoin.title': '먼저 이메일을 확인해 주세요',
   'error.verifyBeforeJoin.detail':
     '보내 드린 확인 링크를 열고 이 초대로 돌아와 주세요.',
+
+  'passkeyNotice.added': '계정에 패스키가 추가되었습니다',
+  'passkeyNotice.removed': '계정에서 패스키가 삭제되었습니다',
+  'passkeyNotice.security': '보안',
+  'passkeyNotice.action': '패스키 관리',
+  'passkeyNotice.recovery':
+    '이 변경을 알지 못한다면 비밀번호를 변경하고 알 수 없는 세션을 종료하세요. 비밀번호를 재설정해도 패스키는 삭제되지 않습니다. 패스키를 검토하고 알 수 없는 패스키를 삭제하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

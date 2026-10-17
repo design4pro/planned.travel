@@ -389,6 +389,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Előbb erősítse meg a címét',
   'error.verifyBeforeJoin.detail':
     'Nyissa meg az e-mailben küldött megerősítő hivatkozást, majd térjen vissza ehhez a meghívóhoz.',
+
+  'passkeyNotice.added': 'Új hozzáférési kulcs került a fiókodhoz',
+  'passkeyNotice.removed': 'Egy hozzáférési kulcsot eltávolítottak a fiókodból',
+  'passkeyNotice.security': 'Biztonság',
+  'passkeyNotice.action': 'Hozzáférési kulcsok kezelése',
+  'passkeyNotice.recovery':
+    'Ha nem ismered fel ezt a módosítást, változtasd meg a jelszavad, és zárd be az ismeretlen munkameneteket. A jelszó visszaállítása nem távolítja el a hozzáférési kulcsokat. Ellenőrizd őket, és távolítsd el az ismeretleneket.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

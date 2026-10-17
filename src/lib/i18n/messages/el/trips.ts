@@ -456,6 +456,19 @@ const messages = {
   'collab.sections.changed': 'Οι ενότητες αυτού του ταξιδιού άλλαξαν.',
   'collab.sections.savedHidden':
     'Αποθηκεύτηκε. Αυτή η ενότητα είναι κρυφή για το ταξίδι και κλείνει τώρα.',
+  'plan.place.error.save':
+    'Δεν ήταν δυνατή η αποθήκευση του μέρους. Δοκιμάστε ξανά σε λίγο.',
+  'plan.stop.error.saveTimes':
+    'Δεν ήταν δυνατή η αποθήκευση των ωρών της στάσης. Δοκιμάστε ξανά σε λίγο.',
+  'plan.place.error.delete':
+    'Δεν ήταν δυνατή η διαγραφή του μέρους. Δοκιμάστε ξανά σε λίγο.',
+  'plan.pin.error.move':
+    'Δεν ήταν δυνατή η μετακίνηση της πινέζας. Δοκιμάστε ξανά σε λίγο.',
+  'plan.place.toast.created': 'Το μέρος προστέθηκε',
+  'plan.place.toast.updated': 'Το μέρος ενημερώθηκε',
+  'plan.stop.toast.timesSaved': 'Οι ώρες της στάσης αποθηκεύτηκαν',
+  'plan.place.toast.deleted': 'Το μέρος διαγράφηκε',
+  'plan.pin.toast.moved': 'Τοποθετήθηκε πινέζα στο {name}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

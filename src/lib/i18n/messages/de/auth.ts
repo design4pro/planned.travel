@@ -390,6 +390,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Bestätige zuerst deine E-Mail',
   'error.verifyBeforeJoin.detail':
     'Öffne den Bestätigungslink, den wir dir geschickt haben, und komm dann zu dieser Einladung zurück.',
+
+  'passkeyNotice.added': 'Ein Passkey wurde deinem Konto hinzugefügt',
+  'passkeyNotice.removed': 'Ein Passkey wurde aus deinem Konto entfernt',
+  'passkeyNotice.security': 'Sicherheit',
+  'passkeyNotice.action': 'Passkeys verwalten',
+  'passkeyNotice.recovery':
+    'Wenn du diese Änderung nicht erkennst, ändere dein Passwort und beende unbekannte Sitzungen. Ein Zurücksetzen des Passworts entfernt keine Passkeys. Prüfe deine Passkeys und entferne unbekannte.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

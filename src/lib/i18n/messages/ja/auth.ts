@@ -326,6 +326,13 @@ const messages = {
   'error.verifyBeforeJoin.title': '先にメールアドレスを確認してください',
   'error.verifyBeforeJoin.detail':
     'お送りした確認リンクを開いてから、この招待に戻ってきてください。',
+
+  'passkeyNotice.added': 'アカウントにパスキーが追加されました',
+  'passkeyNotice.removed': 'アカウントからパスキーが削除されました',
+  'passkeyNotice.security': 'セキュリティ',
+  'passkeyNotice.action': 'パスキーを管理',
+  'passkeyNotice.recovery':
+    'この変更に心当たりがない場合は、パスワードを変更し、見覚えのないセッションを終了してください。パスワードをリセットしてもパスキーは削除されません。パスキーを確認し、見覚えのないものを削除してください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -467,6 +467,19 @@ const messages = {
   'collab.sections.changed': 'Les sections de ce voyage ont changé.',
   'collab.sections.savedHidden':
     'Enregistré. Cette section est masquée pour le voyage et se ferme maintenant.',
+  'plan.place.error.save':
+    'Le lieu n’a pas pu être enregistré. Réessayez dans un instant.',
+  'plan.stop.error.saveTimes':
+    'Les horaires de l’étape n’ont pas pu être enregistrés. Réessayez dans un instant.',
+  'plan.place.error.delete':
+    'Le lieu n’a pas pu être supprimé. Réessayez dans un instant.',
+  'plan.pin.error.move':
+    'Le repère n’a pas pu être déplacé. Réessayez dans un instant.',
+  'plan.place.toast.created': 'Lieu ajouté',
+  'plan.place.toast.updated': 'Lieu mis à jour',
+  'plan.stop.toast.timesSaved': 'Horaires de l’étape enregistrés',
+  'plan.place.toast.deleted': 'Lieu supprimé',
+  'plan.pin.toast.moved': '{name} épinglé',
 } satisfies TranslationOf<typeof En>
 
 export default messages

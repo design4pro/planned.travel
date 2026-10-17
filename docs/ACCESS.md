@@ -1144,6 +1144,14 @@ needs a session younger than `session.freshAge` (24 hours), for every account, b
 thirty-day session that adds a passkey would keep its access after a password reset, which revokes
 sessions and not passkeys.
 
+Successful passkey registration and actual removal enqueue an email only to the affected person's
+server-resolved address (#1186). Refused operations, rename and requests that remove nothing send
+no notice. Each mutation has a distinct delivery identity, retained on queue redelivery. Enqueue
+or delivery failure cannot undo the credential change, and a notice is not guaranteed to arrive.
+For an unrecognized change, the person should change their password, end unfamiliar sessions,
+review `/passkeys` and remove unfamiliar passkeys. A password reset revokes sessions but does not
+remove passkeys; removing a passkey does not end sessions it already opened.
+
 Entering and leaving impersonation are both audited (§4.3), with the impersonator in
 `actor_user_id` and the target in `entity_id`.
 

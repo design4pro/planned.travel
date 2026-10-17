@@ -430,6 +430,19 @@ const messages = {
   'collab.sections.changed': 'この旅行のセクションが変更されました。',
   'collab.sections.savedHidden':
     '保存しました。このセクションは旅行全体で非表示のため、閉じます。',
+  'plan.place.error.save':
+    '場所を保存できませんでした。少し時間をおいてもう一度お試しください。',
+  'plan.stop.error.saveTimes':
+    '立ち寄り先の時刻を保存できませんでした。少し時間をおいてもう一度お試しください。',
+  'plan.place.error.delete':
+    '場所を削除できませんでした。少し時間をおいてもう一度お試しください。',
+  'plan.pin.error.move':
+    'ピンを移動できませんでした。少し時間をおいてもう一度お試しください。',
+  'plan.place.toast.created': '場所を追加しました',
+  'plan.place.toast.updated': '場所を更新しました',
+  'plan.stop.toast.timesSaved': '立ち寄り先の時刻を保存しました',
+  'plan.place.toast.deleted': '場所を削除しました',
+  'plan.pin.toast.moved': '{name}にピンを置きました',
 } satisfies TranslationOf<typeof En>
 
 export default messages

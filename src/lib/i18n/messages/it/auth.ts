@@ -384,6 +384,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Conferma prima la tua email',
   'error.verifyBeforeJoin.detail':
     'Apri il link di conferma che ti abbiamo mandato, poi torna a questo invito.',
+
+  'passkeyNotice.added': 'È stata aggiunta una passkey al tuo account',
+  'passkeyNotice.removed': 'È stata rimossa una passkey dal tuo account',
+  'passkeyNotice.security': 'Sicurezza',
+  'passkeyNotice.action': 'Gestisci le passkey',
+  'passkeyNotice.recovery':
+    'Se non riconosci questa modifica, cambia la password e termina le sessioni sconosciute. Reimpostare la password non rimuove le passkey. Controllale e rimuovi quelle che non riconosci.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

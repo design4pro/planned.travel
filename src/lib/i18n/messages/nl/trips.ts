@@ -447,6 +447,19 @@ const messages = {
   'collab.sections.changed': 'De onderdelen van deze reis zijn gewijzigd.',
   'collab.sections.savedHidden':
     'Opgeslagen. Dit onderdeel is verborgen voor de reis en sluit nu.',
+  'plan.place.error.save':
+    'De plek kon niet worden opgeslagen. Probeer het zo meteen opnieuw.',
+  'plan.stop.error.saveTimes':
+    'De tijden van de stop konden niet worden opgeslagen. Probeer het zo meteen opnieuw.',
+  'plan.place.error.delete':
+    'De plek kon niet worden verwijderd. Probeer het zo meteen opnieuw.',
+  'plan.pin.error.move':
+    'De pin kon niet worden verplaatst. Probeer het zo meteen opnieuw.',
+  'plan.place.toast.created': 'Plek toegevoegd',
+  'plan.place.toast.updated': 'Plek bijgewerkt',
+  'plan.stop.toast.timesSaved': 'Tijden van de stop opgeslagen',
+  'plan.place.toast.deleted': 'Plek verwijderd',
+  'plan.pin.toast.moved': '{name} vastgepind',
 } satisfies TranslationOf<typeof En>
 
 export default messages

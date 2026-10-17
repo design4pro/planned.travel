@@ -376,6 +376,13 @@ const messages = {
   'error.verifyBeforeJoin.title': 'Сначала подтвердите почту',
   'error.verifyBeforeJoin.detail':
     'Откройте ссылку подтверждения из нашего письма и вернитесь к этому приглашению.',
+
+  'passkeyNotice.added': 'В ваш аккаунт добавлен ключ доступа',
+  'passkeyNotice.removed': 'Из вашего аккаунта удалён ключ доступа',
+  'passkeyNotice.security': 'Безопасность',
+  'passkeyNotice.action': 'Управление ключами доступа',
+  'passkeyNotice.recovery':
+    'Если вы не узнаёте это изменение, смените пароль и завершите незнакомые сеансы. Сброс пароля не удаляет ключи доступа. Проверьте их и удалите те, которые не узнаёте.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

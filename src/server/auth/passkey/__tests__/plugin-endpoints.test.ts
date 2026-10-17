@@ -26,6 +26,9 @@ import {
   it,
   vi,
 } from 'vitest'
+import { createAuthenticator } from './authenticator'
+import type { TransactionalEmailMessage } from '../../email'
+import type * as AuthEmailModule from '../../email'
 import { MAX_PASSKEYS_PER_USER, passkey } from '../plugin'
 import { PASSWORD, createAuthHarness, openAuthDatabase } from './harness'
 import type { AuthHarness } from './harness'
@@ -35,7 +38,12 @@ const BASE_URL = 'http://localhost:3000'
 
 const shared = vi.hoisted(() => {
   const db: { current: unknown } = { current: null }
-  return { db, kv: new Map<string, string>() }
+  return {
+    db,
+    kv: new Map<string, string>(),
+    email: vi.fn<(message: TransactionalEmailMessage) => void>(),
+    queue: vi.fn(async (_body: unknown) => undefined),
+  }
 })
 
 vi.mock('#/server/auth/env', () => ({
@@ -60,9 +68,7 @@ vi.mock('#/server/auth/env', () => ({
       shared.kv.delete(key)
     },
   }),
-  taskQueue: () => {
-    throw new Error('The queue is not exercised by an HTTP-surface test.')
-  },
+  taskQueue: () => ({ send: shared.queue }),
   trustedOrigins: () => [BASE_URL],
 }))
 
@@ -70,9 +76,16 @@ vi.mock('#/server/auth/db', () => ({
   authDb: () => shared.db.current,
 }))
 
-vi.mock('#/server/auth/email', () => ({
-  queueAuthEmail: async () => undefined,
-}))
+vi.mock('#/server/auth/email', async (importOriginal) => {
+  const original = await importOriginal<typeof AuthEmailModule>()
+  return {
+    ...original,
+    queueAuthEmail: async (message: TransactionalEmailMessage) => {
+      shared.email(message)
+      await original.queueAuthEmail(message)
+    },
+  }
+})
 
 const { getAuth } = await import('../../index')
 
@@ -102,6 +115,8 @@ afterAll(() => {
 // with every session read going to the database, which is where the tests edit the session row.
 beforeEach(() => {
   shared.kv.clear()
+  shared.email.mockClear()
+  shared.queue.mockReset()
   sqlite.exec('delete from passkey')
   sqlite.exec("delete from verification where identifier like 'passkey-%'")
 })
@@ -914,5 +929,262 @@ describe('the delete rate limit', () => {
     // The right password past the budget is still refused: the limiter runs before the handler.
     expect((await attempt(PASSWORD)).status).toBe(429)
     expect(auth.passkeyCount(aliceId)).toBe(1)
+  })
+})
+
+describe('passkey owner notices', () => {
+  it('notifies only the owner after an actual removal, never a repeated request', async () => {
+    auth.seedPasskeys(aliceId, [{ id: 'alice-notice' }])
+    auth.seedPasskeys(bobId, [{ id: 'bob-notice' }])
+    const cookie = await auth.signIn('alice@planned.travel')
+    shared.email.mockClear()
+    const body = { id: 'alice-notice', password: PASSWORD }
+    const removed = await auth.post('/passkey/delete', body, { cookie })
+    expect(removed.status).toBe(200)
+    expect(shared.email).toHaveBeenCalledExactlyOnceWith({
+      kind: 'auth.passkey-removed',
+      to: 'alice@planned.travel',
+      eventId: expect.any(String),
+    })
+    const repeated = await auth.post('/passkey/delete', body, { cookie })
+    expect(repeated.status).toBe(404)
+    expect(shared.email).toHaveBeenCalledTimes(1)
+    expect(auth.passkeyCount(bobId)).toBe(1)
+  })
+})
+
+describe('passkey security notice delivery', () => {
+  async function register(cookie: string) {
+    const device = await createAuthenticator()
+    const options = await auth.post('/passkey/register/options', {}, { cookie })
+    expect(options.status).toBe(200)
+    const { challenge } = (await options.json()) as { challenge: string }
+    const body = device.registration(challenge)
+    const response = await auth.post('/passkey/register/verify', body, {
+      cookie,
+    })
+    return { device, body, response }
+  }
+
+  it('queues one owner-only notice per registration, with distinct event identities and no credential data', async () => {
+    const cookie = await auth.signIn('alice@planned.travel')
+    shared.email.mockClear()
+    shared.queue.mockClear()
+    const first = await register(cookie)
+    expect(first.response.status).toBe(200)
+    const second = await register(cookie)
+    expect(second.response.status).toBe(200)
+    const notices = shared.email.mock.calls.map(([message]) => message)
+    expect(notices).toHaveLength(2)
+    expect(notices[0]).toEqual({
+      kind: 'auth.passkey-added',
+      to: 'alice@planned.travel',
+      eventId: expect.any(String),
+    })
+    expect(notices[1]).toEqual({ ...notices[0], eventId: expect.any(String) })
+    expect(notices[0]).not.toEqual(notices[1])
+    const replay = await auth.post('/passkey/register/verify', first.body, {
+      cookie,
+    })
+    expect(replay.status).toBe(400)
+    expect(shared.email).toHaveBeenCalledTimes(2)
+    expect(shared.queue).toHaveBeenCalledTimes(2)
+    expect(shared.queue.mock.calls.map(([body]) => body)).toEqual(
+      notices.map((message) =>
+        expect.objectContaining({
+          kind: 'email',
+          orgId: 'system',
+          payload: expect.objectContaining({
+            to: ['alice@planned.travel'],
+            eventId: 'eventId' in message ? message.eventId : undefined,
+          }),
+        }),
+      ),
+    )
+    const serialized = JSON.stringify(shared.queue.mock.calls)
+    expect(serialized).not.toContain(first.body.credential.id)
+    expect(serialized).not.toContain('publicKey')
+    expect(serialized).not.toContain('bob@planned.travel')
+    expect(serialized).toContain('/passkeys')
+    expect(serialized).toContain('A password reset does not remove passkeys.')
+  })
+
+  it.each(['add', 'remove'])(
+    'preserves a committed %s when enqueue fails and logs no provider diagnostics',
+    async (operation) => {
+      const cookie = await auth.signIn('alice@planned.travel')
+      shared.queue.mockRejectedValueOnce(
+        new Error('secret-token-from-provider'),
+      )
+      const error = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => undefined)
+      try {
+        if (operation === 'add') {
+          expect((await register(cookie)).response.status).toBe(200)
+          expect(auth.passkeyCount(aliceId)).toBe(1)
+        } else {
+          auth.seedPasskeys(aliceId, [{ id: 'remove-failed-enqueue' }])
+          const response = await auth.post(
+            '/passkey/delete',
+            { id: 'remove-failed-enqueue', password: PASSWORD },
+            { cookie },
+          )
+          expect(response.status).toBe(200)
+          expect(auth.passkeyCount(aliceId)).toBe(0)
+        }
+        expect(error).toHaveBeenCalledWith(
+          expect.stringContaining('email.queue_failed'),
+        )
+        expect(JSON.stringify(error.mock.calls)).not.toContain(
+          'secret-token-from-provider',
+        )
+      } finally {
+        error.mockRestore()
+      }
+    },
+  )
+
+  it('does not notify for options, rename, invalid verification, unauthorized, foreign, missing or impersonated mutations', async () => {
+    const cookie = await auth.signIn('alice@planned.travel')
+    auth.seedPasskeys(aliceId, [{ id: 'alice-refused' }])
+    auth.seedPasskeys(bobId, [{ id: 'bob-refused' }])
+    shared.email.mockClear()
+    expect(
+      (await auth.post('/passkey/register/options', {}, { cookie })).status,
+    ).toBe(200)
+    expect(
+      (
+        await auth.post(
+          '/passkey/rename',
+          { id: 'alice-refused', name: '<script>untrusted</script>' },
+          { cookie },
+        )
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await auth.post('/passkey/register/verify', dummyCredential(), {
+          cookie,
+        })
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await auth.post('/passkey/delete', {
+          id: 'alice-refused',
+          password: PASSWORD,
+        })
+      ).status,
+    ).not.toBe(200)
+    for (const id of ['missing', 'bob-refused']) {
+      expect(
+        (
+          await auth.post(
+            '/passkey/delete',
+            { id, password: PASSWORD },
+            { cookie },
+          )
+        ).status,
+      ).toBe(404)
+    }
+    expect(
+      (
+        await auth.post(
+          '/passkey/delete',
+          { id: 'alice-refused', password: 'wrong-password' },
+          { cookie },
+        )
+      ).status,
+    ).toBe(400)
+    auth.editSession(aliceId, 'impersonated_by', bobId)
+    expect(
+      (
+        await auth.post(
+          '/passkey/delete',
+          { id: 'alice-refused', password: PASSWORD },
+          { cookie },
+        )
+      ).status,
+    ).toBe(403)
+    expect(
+      (await auth.post('/passkey/register/options', {}, { cookie })).status,
+    ).toBe(403)
+    expect(shared.email).not.toHaveBeenCalled()
+  })
+
+  it('retains working passkeys after password reset while revoking the old sessions', async () => {
+    const cookie = await auth.signIn('alice@planned.travel')
+    const { response, device } = await register(cookie)
+    expect(response.status).toBe(200)
+    shared.email.mockClear()
+    expect(
+      (
+        await auth.post('/request-password-reset', {
+          email: 'alice@planned.travel',
+          redirectTo: `${BASE_URL}/reset-password`,
+        })
+      ).status,
+    ).toBe(200)
+    const reset = shared.email.mock.calls
+      .map(([message]) => message)
+      .find((message) => message.kind === 'auth.reset-password')
+    if (!reset || reset.kind !== 'auth.reset-password')
+      throw new Error('missing reset email')
+    const token = reset.url.split('/').pop()?.split('?')[0]
+    expect(token).toBeTruthy()
+    expect(
+      (await auth.post('/reset-password', { token, newPassword: PASSWORD }))
+        .status,
+    ).toBe(200)
+    expect((await auth.get('/passkey/list', { cookie })).status).toBe(401)
+    expect(auth.passkeyCount(aliceId)).toBe(1)
+    const options = await auth.post('/passkey/authenticate/options', {
+      email: 'alice@planned.travel',
+    })
+    const { challenge } = (await options.json()) as { challenge: string }
+    const signedIn = await auth.post(
+      '/passkey/authenticate/verify',
+      await device.authentication(challenge),
+    )
+    expect(signedIn.status).toBe(200)
+    expect(
+      signedIn.headers
+        .getSetCookie()
+        .some((value) => value.startsWith('planned.session_token=')),
+    ).toBe(true)
+    expect(shared.email.mock.calls.map(([message]) => message.kind)).toEqual([
+      'auth.reset-password',
+    ])
+  })
+})
+
+describe('concurrent passkey removal notices', () => {
+  it('queues exactly once when two requests race to remove one credential', async () => {
+    const cookie = await auth.signIn('alice@planned.travel')
+    auth.seedPasskeys(aliceId, [{ id: 'racing-delete' }])
+    shared.email.mockClear()
+    shared.queue.mockClear()
+    const responses = await Promise.all([
+      auth.post(
+        '/passkey/delete',
+        { id: 'racing-delete', password: PASSWORD },
+        { cookie },
+      ),
+      auth.post(
+        '/passkey/delete',
+        { id: 'racing-delete', password: PASSWORD },
+        { cookie },
+      ),
+    ])
+    expect(responses.some((response) => response.status === 200)).toBe(true)
+    expect(
+      responses.every(
+        (response) => response.status === 200 || response.status === 404,
+      ),
+    ).toBe(true)
+    expect(auth.passkeyCount(aliceId)).toBe(0)
+    expect(shared.email).toHaveBeenCalledTimes(1)
+    expect(shared.queue).toHaveBeenCalledTimes(1)
   })
 })

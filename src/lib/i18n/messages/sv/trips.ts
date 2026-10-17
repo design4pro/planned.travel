@@ -439,6 +439,18 @@ const messages = {
   'collab.sections.changed': 'Avsnitten på den här resan har ändrats.',
   'collab.sections.savedHidden':
     'Sparat. Det här avsnittet är dolt för resan och stängs nu.',
+  'plan.place.error.save':
+    'Platsen kunde inte sparas. Försök igen om en stund.',
+  'plan.stop.error.saveTimes':
+    'Stoppets tider kunde inte sparas. Försök igen om en stund.',
+  'plan.place.error.delete':
+    'Platsen kunde inte tas bort. Försök igen om en stund.',
+  'plan.pin.error.move': 'Nålen kunde inte flyttas. Försök igen om en stund.',
+  'plan.place.toast.created': 'Plats tillagd',
+  'plan.place.toast.updated': 'Plats uppdaterad',
+  'plan.stop.toast.timesSaved': 'Stoppets tider sparade',
+  'plan.place.toast.deleted': 'Plats borttagen',
+  'plan.pin.toast.moved': '{name} fäst',
 } satisfies TranslationOf<typeof En>
 
 export default messages

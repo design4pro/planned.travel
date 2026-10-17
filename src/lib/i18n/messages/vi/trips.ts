@@ -433,6 +433,17 @@ const messages = {
   'collab.sections.changed': 'Các phần của chuyến đi này đã thay đổi.',
   'collab.sections.savedHidden':
     'Đã lưu. Phần này bị ẩn cho chuyến đi nên sẽ đóng ngay bây giờ.',
+  'plan.place.error.save': 'Không thể lưu địa điểm. Hãy thử lại sau giây lát.',
+  'plan.stop.error.saveTimes':
+    'Không thể lưu giờ dừng chân. Hãy thử lại sau giây lát.',
+  'plan.place.error.delete':
+    'Không thể xóa địa điểm. Hãy thử lại sau giây lát.',
+  'plan.pin.error.move': 'Không thể di chuyển ghim. Hãy thử lại sau giây lát.',
+  'plan.place.toast.created': 'Đã thêm địa điểm',
+  'plan.place.toast.updated': 'Đã cập nhật địa điểm',
+  'plan.stop.toast.timesSaved': 'Đã lưu giờ dừng chân',
+  'plan.place.toast.deleted': 'Đã xóa địa điểm',
+  'plan.pin.toast.moved': 'Đã ghim {name}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

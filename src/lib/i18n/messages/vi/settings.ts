@@ -426,14 +426,15 @@ const messages = {
   'billing.interval.yearly': 'Hằng năm',
   'billing.plan.free.name': 'Miễn phí',
   'billing.plan.free.tagline': 'Lên kế hoạch cho hai chuyến sắp tới',
-  'billing.plan.free.feature.trips': 'Hai chuyến cùng lúc',
+  'billing.plan.free.feature.trips':
+    'Hai chuyến cùng lúc và tối đa 150 địa điểm',
   'billing.plan.free.feature.itinerary': 'Lịch trình từng ngày và bản đồ',
   'billing.plan.free.feature.lists': 'Danh sách hành lý và ngân sách đơn giản',
   'billing.plan.free.feature.atlas':
     'Bản đồ thế giới ghi lại những nơi bạn từng tới',
   'billing.plan.solo.name': 'Cá nhân',
   'billing.plan.solo.tagline': 'Dành cho người đi tự lo mọi thứ',
-  'billing.plan.solo.feature.trips': 'Chuyến đi không giới hạn',
+  'billing.plan.solo.feature.trips': 'Chuyến đi và địa điểm không giới hạn',
   'billing.plan.solo.feature.modules':
     'Đủ mọi phần lên kế hoạch — đặt chỗ, nhật ký, ngân sách, hành lý',
   'billing.plan.solo.feature.offline':
@@ -446,7 +447,7 @@ const messages = {
   'billing.plan.crew.feature.realtime':
     'Cộng tác tức thời với con trỏ hiện sống',
   'billing.plan.crew.feature.everything':
-    'Chuyến đi không giới hạn và đủ mọi phần',
+    'Chuyến đi và địa điểm không giới hạn cùng mọi mô-đun',
   'billing.plan.crew.feature.storage':
     'Chỗ chung cho ảnh và giấy tờ của cả nhóm',
 

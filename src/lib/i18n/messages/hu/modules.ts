@@ -1152,6 +1152,12 @@ const messages = {
     other: '{count} export ebben a hónapban',
   },
   'files.export.linkGoneViewer': 'Ezt az exportot már nem őrizzük.',
+  'files.calendar.tab.trip': 'Ez az utazás',
+  'files.calendar.tab.workspace': 'Utazásaim',
+  'files.calendar.workspace.warning':
+    'A link birtokában bárki fiók nélkül olvashatja a munkaterület azon nem archivált utazásait, amelyeken részt veszel: a {count} legkésőbbi kezdési dátumút. Az új utazások automatikusan megjelennek. Védd úgy, mint egy jelszót.',
+  'files.calendar.workspace.nameNote':
+    'A link „planned.travel” néven jelenik meg a naptáradban. Nevezd át, ha több is van.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

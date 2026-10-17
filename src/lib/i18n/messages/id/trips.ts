@@ -439,6 +439,19 @@ const messages = {
   'collab.sections.changed': 'Bagian perjalanan ini telah berubah.',
   'collab.sections.savedHidden':
     'Tersimpan. Bagian ini disembunyikan untuk perjalanan, jadi sekarang ditutup.',
+  'plan.place.error.save':
+    'Tempat tidak dapat disimpan. Coba lagi sebentar lagi.',
+  'plan.stop.error.saveTimes':
+    'Waktu perhentian tidak dapat disimpan. Coba lagi sebentar lagi.',
+  'plan.place.error.delete':
+    'Tempat tidak dapat dihapus. Coba lagi sebentar lagi.',
+  'plan.pin.error.move':
+    'Pin tidak dapat dipindahkan. Coba lagi sebentar lagi.',
+  'plan.place.toast.created': 'Tempat ditambahkan',
+  'plan.place.toast.updated': 'Tempat diperbarui',
+  'plan.stop.toast.timesSaved': 'Waktu perhentian disimpan',
+  'plan.place.toast.deleted': 'Tempat dihapus',
+  'plan.pin.toast.moved': '{name} ditandai',
 } satisfies TranslationOf<typeof En>
 
 export default messages
