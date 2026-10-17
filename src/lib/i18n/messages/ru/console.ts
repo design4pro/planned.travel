@@ -255,6 +255,8 @@ const messages = {
   'audit.action.emailSet': 'Адрес эл. почты изменён',
   'audit.action.impersonationStarted': 'Работа от чужого имени начата',
   'audit.action.impersonationEnded': 'Работа от чужого имени завершена',
+  'audit.action.impersonationWorkspaceChanged':
+    'Пространство сменено во время работы от чужого имени',
   'audit.action.sessionRevoked': 'Сеанс прерван',
   'audit.action.sessionRevokedAll': 'Все сеансы прерваны',
   'audit.actor.system': 'Сама платформа',
@@ -276,6 +278,7 @@ const messages = {
   'audit.field.expiresAt': 'Сеанс истекает',
   'audit.field.targetRole': 'Их роль на платформе',
   'audit.field.sessionId': 'Затронутый сеанс',
+  'audit.field.organizationId': 'Пространство',
   'audit.value.yes': 'да',
   'audit.value.no': 'нет',
   'audit.value.cleared': 'очищено',

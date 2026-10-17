@@ -257,6 +257,8 @@ const messages = {
   'audit.action.emailSet': 'Zmieniono adres e-mail',
   'audit.action.impersonationStarted': 'Rozpoczęto wcielenie się',
   'audit.action.impersonationEnded': 'Zakończono wcielenie się',
+  'audit.action.impersonationWorkspaceChanged':
+    'Zmieniono przestrzeń podczas wcielenia się',
   'audit.action.sessionRevoked': 'Unieważniono sesję',
   'audit.action.sessionRevokedAll': 'Unieważniono wszystkie sesje',
   'audit.actor.system': 'Sama platforma',
@@ -278,6 +280,7 @@ const messages = {
   'audit.field.expiresAt': 'Sesja wygasa',
   'audit.field.targetRole': 'Ich rola platformy',
   'audit.field.sessionId': 'Sesja',
+  'audit.field.organizationId': 'Przestrzeń',
   'audit.value.yes': 'tak',
   'audit.value.no': 'nie',
   'audit.value.cleared': 'wyczyszczono',

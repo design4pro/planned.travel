@@ -17,7 +17,7 @@ import {
  * than an exception or a blank.
  */
 describe('describePlatformAction', () => {
-  /** The twelve `PLATFORM_AUDIT_ACTIONS` that can name an account as their entity. */
+  /** The thirteen `PLATFORM_AUDIT_ACTIONS` that can name an account as their entity. */
   const ACCOUNT_ACTIONS: ReadonlyArray<string> = [
     'platform.user.created',
     'platform.user.updated',
@@ -29,6 +29,7 @@ describe('describePlatformAction', () => {
     'platform.user.email_set',
     'platform.user.impersonation_started',
     'platform.user.impersonation_ended',
+    'platform.user.impersonation_workspace_changed',
     'platform.session.revoked',
     'platform.session.revoked_all',
   ]
@@ -85,6 +86,9 @@ describe('platformActionTone', () => {
     expect(platformActionTone('platform.user.impersonation_ended')).toBe(
       'warning',
     )
+    expect(
+      platformActionTone('platform.user.impersonation_workspace_changed'),
+    ).toBe('warning')
   })
 
   it('leaves everything else neutral', () => {
@@ -222,7 +226,7 @@ describe('auditChanges', () => {
 })
 
 /**
- * The impersonation verbs are the one pair whose payload is not `auditUserState`'s key set.
+ * The impersonation verbs are the ones whose payload is not `auditUserState`'s key set.
  *
  * `src/server/fns/console/impersonation.ts` records `{ impersonating }` on the way in, with the
  * session's expiry and the target's platform role beside it, and `{ impersonating: null }` on the
@@ -267,5 +271,17 @@ describe('an impersonation entry', () => {
     expect(changes).toEqual([
       { field: 'impersonating', before: 'acct_9', after: '\u2014' },
     ])
+  })
+
+  it('names the workspace a switch moved out of and into, and shows a cleared one as a dash', () => {
+    const changes = auditChanges(t, {
+      before: { organizationId: 'org_1' },
+      after: { organizationId: null },
+    })
+
+    expect(changes).toEqual([
+      { field: 'organizationId', before: 'org_1', after: '\u2014' },
+    ])
+    expect(describeAuditField(t, 'organizationId')).toBe('Workspace')
   })
 })

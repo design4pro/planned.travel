@@ -254,6 +254,8 @@ const messages = {
     'Ξεκίνησε η ενέργεια στο όνομα του λογαριασμού',
   'audit.action.impersonationEnded':
     'Τέλειωσε η ενέργεια στο όνομα του λογαριασμού',
+  'audit.action.impersonationWorkspaceChanged':
+    'Άλλαξε ο χώρος εργασίας κατά την ενέργεια στο όνομα του λογαριασμού',
   'audit.action.sessionRevoked': 'Μια συνεδρία ανακλήθηκε',
   'audit.action.sessionRevokedAll': 'Όλες οι συνεδρίες ανακλήθηκαν',
   'audit.actor.system': 'Η ίδια η πλατφόρμα',
@@ -275,6 +277,7 @@ const messages = {
   'audit.field.expiresAt': 'Η συνεδρία λήγει',
   'audit.field.targetRole': 'Ο ρόλος τους στην πλατφόρμα',
   'audit.field.sessionId': 'Συνεδρία',
+  'audit.field.organizationId': 'Χώρος εργασίας',
   'audit.value.yes': 'ναι',
   'audit.value.no': 'όχι',
   'audit.value.cleared': 'εκκαθαρίστηκε',

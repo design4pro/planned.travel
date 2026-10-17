@@ -248,6 +248,8 @@ const messages = {
   'audit.action.emailSet': 'E-posta adresi değişti',
   'audit.action.impersonationStarted': 'Hesap adına iş görme başladı',
   'audit.action.impersonationEnded': 'Hesap adına iş görme bitti',
+  'audit.action.impersonationWorkspaceChanged':
+    'Hesap adına iş görürken çalışma alanı değişti',
   'audit.action.sessionRevoked': 'Bir oturum iptal edildi',
   'audit.action.sessionRevokedAll': 'Tüm oturumlar iptal edildi',
   'audit.actor.system': 'Platformun kendisi',
@@ -269,6 +271,7 @@ const messages = {
   'audit.field.expiresAt': 'Oturum sona erer',
   'audit.field.targetRole': 'Onun platform rolü',
   'audit.field.sessionId': 'Oturum',
+  'audit.field.organizationId': 'Çalışma alanı',
   'audit.value.yes': 'evet',
   'audit.value.no': 'hayır',
   'audit.value.cleared': 'boşaltıldı',

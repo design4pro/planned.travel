@@ -12,7 +12,7 @@
  * 3. **An append never fails a caller.** §4.3: the mutation has already committed by the time the
  *    row is written, so a rejected append is a logging incident and never a `500` — including when
  *    the logging backend is what failed.
- * 4. **The four ban and impersonation verbs are audited without exception.** They are retried once
+ * 4. **The five ban and impersonation verbs are audited without exception.** They are retried once
  *    and then raised at the highest severity the logger has, and the line names the action and the
  *    actor so the gap in the ledger is identifiable afterwards.
  * 5. **Every field a caller does not control the size of is bounded, and the bound is recorded in
@@ -68,7 +68,7 @@ import type { PlatformActor } from '#/server/auth/guard'
 import type { LogRecord, LogSink, Logger } from '#/server/observability'
 
 /**
- * docs/ACCESS.md §4.2's fifteen `platform.*` rows, in the order the table lists them.
+ * docs/ACCESS.md §4.2's sixteen `platform.*` rows, in the order the table lists them.
  *
  * The sixteen two-segment catalogue names in the same table — `catalog_place.*`,
  * `catalog_ingest.*`, `place_pack.*`, `catalog_source.*` — belong to `src/server/catalog/repo.ts`
@@ -86,6 +86,7 @@ const ACCESS_PLATFORM_ACTIONS = [
   'platform.user.email_set',
   'platform.user.impersonation_started',
   'platform.user.impersonation_ended',
+  'platform.user.impersonation_workspace_changed',
   'platform.session.revoked',
   'platform.session.revoked_all',
   'platform.token.issued',
@@ -136,7 +137,7 @@ function throwingLogger(): { logger: Logger; calls: Array<string> } {
 }
 
 describe('the platform action vocabulary', () => {
-  it('exports exactly the seventeen console-written names docs/ACCESS.md §4.2 declares', () => {
+  it('exports exactly the eighteen console-written names docs/ACCESS.md §4.2 declares', () => {
     // Both halves of §4.2's union test, at the level this phase can close them. A name in code and
     // not in the table fails the first expectation; a name in the table that this module does not
     // export fails the second. The document's stronger form — "a name in this table that nothing
@@ -146,7 +147,7 @@ describe('the platform action vocabulary', () => {
     // docs/ACCESS.md. Widen this to call-site parity when the last of those writers lands.
     const exported = Object.values(PLATFORM_ACTIONS)
     expect([...exported].sort()).toEqual([...ACCESS_PLATFORM_ACTIONS].sort())
-    expect(exported).toHaveLength(17)
+    expect(exported).toHaveLength(18)
   })
 
   it('exports platform.share.revoked now, ahead of the Faza F writer', () => {
@@ -215,19 +216,20 @@ describe('the platform action vocabulary', () => {
     }
   })
 
-  it('freezes the constants and the four always-audited verbs', () => {
+  it('freezes the constants and the five always-audited verbs', () => {
     expect(Object.isFrozen(PLATFORM_ACTIONS)).toBe(true)
     expect(Object.isFrozen(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toBe(true)
     expect(Object.isFrozen(ALWAYS_AUDITED_ACTIONS)).toBe(true)
     expect(Object.isFrozen(PLATFORM_SYSTEM_ACTOR)).toBe(true)
   })
 
-  it('names the four verbs §4.3 audits without exception', () => {
+  it('names the five verbs §4.3 audits without exception', () => {
     expect([...ALWAYS_AUDITED_ACTIONS]).toEqual([
       'platform.user.banned',
       'platform.user.unbanned',
       'platform.user.impersonation_started',
       'platform.user.impersonation_ended',
+      'platform.user.impersonation_workspace_changed',
     ])
   })
 })
@@ -242,6 +244,11 @@ describe('the prefix table', () => {
 
   it('resolves each action to the entity_type its prefix names', () => {
     expect(entityTypeForAction(PLATFORM_ACTIONS.USER_ROLE_CHANGED)).toBe('user')
+    expect(
+      entityTypeForAction(
+        PLATFORM_ACTIONS.USER_IMPERSONATION_WORKSPACE_CHANGED,
+      ),
+    ).toBe('user')
     expect(entityTypeForAction(PLATFORM_ACTIONS.SESSION_REVOKED_ALL)).toBe(
       'session',
     )
@@ -268,7 +275,7 @@ describe('the prefix table', () => {
  * block, and they fail at build time rather than at run time.
  */
 describe('the writer boundary', () => {
-  it('narrows action to the fifteen frozen names rather than to the schema string input', () => {
+  it('narrows action to the eighteen frozen names rather than to the schema string input', () => {
     // §4.3 makes this writer swallow its own failures, so a mistyped verb cannot be caught at
     // runtime *by this module*: the schema rejects `platform.user.bannd`, the rejection goes to the
     // logger, and the caller — whose ban already committed — returns success with no row behind it.
@@ -828,7 +835,7 @@ describe('appendPlatformAudit', () => {
     expect(record.attempts).toBe(2)
   })
 
-  it('retries each of the four always-audited verbs and no others', async () => {
+  it('retries each of the five always-audited verbs and no others', async () => {
     const { logger } = memoryLogger()
     const insert = vi.spyOn(tables.db, 'insert')
     tables.sqlite.exec('drop table platform_audit_log')
