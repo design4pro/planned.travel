@@ -68,7 +68,7 @@ export function JoinFrame({ children }: { children: React.ReactNode }) {
         id="main"
         className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-10 sm:px-6"
       >
-        <div className="animate-rise">{children}</div>
+        <div className="animate-rise break-words">{children}</div>
       </main>
       <MarketingFooter minimal />
     </div>
@@ -134,7 +134,11 @@ function InvitedCard({ view, path }: { view: Invited; path: string }) {
       <p className="text-label text-ink-2">
         {t('trips.join.requirement', { inviter: view.inviterName })}
       </p>
-      {view.signedIn ? null : (
+      {view.signedIn ? (
+        <Button variant="secondary" size="lg" block asChild>
+          <a href="/trips">{t('trips.join.unavailable.trips')}</a>
+        </Button>
+      ) : (
         <>
           <p className="text-caption text-ink-3">
             {t('trips.join.newHere', { inviter: view.inviterName })}
@@ -146,7 +150,7 @@ function InvitedCard({ view, path }: { view: Invited; path: string }) {
   )
 }
 
-function MemberCard({ view }: { view: Member }) {
+function MemberCard({ view, path }: { view: Member; path: string }) {
   const { t } = useI18n()
   const [pending, setPending] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
@@ -159,6 +163,11 @@ function MemberCard({ view }: { view: Member }) {
       .setActive({ organizationId: view.organizationId })
       .then(({ error }) => error)
       .catch(() => new Error('switch'))
+    // The session ended while the card was open: trying again cannot work, signing in can.
+    if (outcome && 'status' in outcome && outcome.status === 401) {
+      window.location.assign(loginHrefFor(path))
+      return
+    }
     if (outcome) {
       setFailed(true)
       setPending(false)
@@ -386,7 +395,7 @@ function cardFor(
     case 'invited':
       return <InvitedCard view={view} path={path} />
     case 'member':
-      return <MemberCard view={view} />
+      return <MemberCard view={view} path={path} />
     case 'needs-workspace':
       return <NeedsWorkspaceCard view={view} path={path} />
     case 'unavailable':

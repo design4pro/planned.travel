@@ -100,6 +100,11 @@ describe('JoinCard', () => {
     expect(screen.getByText('Portugal')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull()
     expect(screen.queryByText(/New here/)).toBeNull()
+    expect(
+      screen
+        .getByRole('link', { name: 'Go to your trips' })
+        .getAttribute('href'),
+    ).toBe('/trips')
   })
 
   it('opens the trip for a member whose workspace is already active', () => {
@@ -118,6 +123,30 @@ describe('JoinCard', () => {
     expect(
       screen.getByRole('link', { name: 'Open the trip' }).getAttribute('href'),
     ).toBe('/trips/trip-1')
+  })
+
+  it('sends a member whose session ended to sign in again instead of offering a retry that cannot work', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    auth.setActive.mockResolvedValueOnce({ error: { status: 401 } })
+    renderView({
+      state: 'member',
+      tripId: 'trip-1',
+      organizationId: 'org-1',
+      switchWorkspace: true,
+    })
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Open the trip and switch workspace',
+      }),
+    )
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        `/login?redirect=${encodeURIComponent(PATH)}`,
+      ),
+    )
+    expect(screen.queryByText(/Could not switch workspace/)).toBeNull()
+    vi.unstubAllGlobals()
   })
 
   it('switches workspace before it opens the trip, and says so when that fails', async () => {
