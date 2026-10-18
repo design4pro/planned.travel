@@ -325,6 +325,7 @@ export async function readInvitePreviewUnscoped(
     organizationId: invite.organizationId,
     userId: invite.createdBy,
     role: 'member',
+    impersonatedBy: null,
   })
   const [row] = await db
     .select({
