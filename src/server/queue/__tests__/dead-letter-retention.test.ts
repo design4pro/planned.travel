@@ -156,7 +156,19 @@ describe('resolveDeadLetterRetentionDays', () => {
     expect(resolveDeadLetterRetentionDays('7')).toBe(7)
   })
 
-  it.each([undefined, '', 'soon', 0, -3, '0', '-1', Number.NaN])(
+  it.each([
+    undefined,
+    '',
+    'soon',
+    0,
+    -3,
+    '0',
+    '-1',
+    '1e2',
+    '7.5',
+    '30days',
+    Number.NaN,
+  ])(
     'falls back to the default for %s so a bad value never widens the deletion',
     (value) => {
       expect(resolveDeadLetterRetentionDays(value as never)).toBe(

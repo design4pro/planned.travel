@@ -89,8 +89,9 @@ function taskEnv(env: Cloudflare.Env): TaskBindings {
 /**
  * The three expressions `wrangler.jsonc` registers, and there are exactly three on production
  * (docs/DEPLOY.md §11). The weekly retention slot now carries the 400-day `platform_audit_log`
- * prune as well as the backup and export retention it was registered for; a fourth expression for
- * that prune would falsify that count, so it joins the existing one rather than adding one.
+ * prune, the usage rollup and the dead-letter retention as well as the backup and export retention
+ * it was registered for; a fourth expression for them would falsify that count, so they join the
+ * existing one rather than adding one.
  */
 const REMINDER_CRON = '*/15 * * * *'
 const BACKUP_CRON = '0 3 * * *'
@@ -180,6 +181,15 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
               ),
             }),
           ])
+          // Only the first rejection is rethrown, so each one is logged first: a second job that
+          // failed in the same slot would otherwise leave no trace.
+          outcomes.forEach((outcome, job) => {
+            if (outcome.status === 'rejected') {
+              logger.error('weekly retention job failed', outcome.reason, {
+                job,
+              })
+            }
+          })
           const failed = outcomes.find(
             (outcome) => outcome.status === 'rejected',
           )

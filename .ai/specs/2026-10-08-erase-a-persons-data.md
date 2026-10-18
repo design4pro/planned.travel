@@ -1,11 +1,11 @@
 # A person's data can be erased across workspaces on request
 
-| Field              | Value       |
-| ------------------ | ----------- |
-| **Status**         | in-progress |
-| **Issue**          | #811        |
-| **Spec PR**        | #1002       |
-| **Implementation** | #1410       |
+| Field              | Value        |
+| ------------------ | ------------ |
+| **Status**         | in-progress  |
+| **Issue**          | #811         |
+| **Spec PR**        | #1002        |
+| **Implementation** | #1410, #1416 |
 
 ## 📝 TLDR
 
@@ -59,15 +59,15 @@ Measured at HEAD (`86841140`), by reading the code.
   When its owner is deleted it keeps all its trips, files, journeys and its `subscriptions` row, with no member left.
   `deleteWorkspace` does not exist (plan 09 designs it). The console does not delete workspaces.
 - **No R2 sweep.** The only object deletion is per trip (`trip-purge`, keys captured before the rows go) and per file.
-  `exports/**` and `dead-letter/**` objects have no deleter; the weekly retention slot of `src/server/worker.ts` logs
+  `exports/**` objects have no deleter (`dead-letter/**` got one in phase 7, see the amendment); the weekly retention slot of `src/server/worker.ts` logs
   "cron half has no handler yet" for the R2 half. Journey deletion never touches R2.
 - **Departure is not deletion.** A person leaves a workspace through Better Auth's organization endpoints or the console;
   only their `member` row goes (`removeMember` has no production caller). Their rows in that workspace stay under a live
   id, and nothing records that they were ever there once the `member` row is gone.
 - **Audit.** The tenant `audit_log` has `pruneAuditLog`, which **nothing calls**: it has no retention. `platform_audit_log`
   is pruned at 400 days by the weekly cron and is append-only (`docs/ACCESS.md` §4.3).
-- **Soft deletes keep text.** `deleteMessage` in `src/server/repos/collab.ts` only sets `deleted_at`; the message body
-  stays in the row.
+- **Soft deletes keep text.** `deleteMessage` in `src/server/repos/collab.ts` only set `deleted_at`; the message body
+  stayed in the row (fixed in phase 7, see the amendment).
 - **Other people's inboxes.** `notifications.title_params` / `body_params` carry `actorName` (the sender's display name,
   `src/server/notifications/dispatch.ts`) and `preview` (the first characters of a chat message,
   `src/server/fns/collab-thread-writes.ts`). A deleted person's name and words therefore sit in rows other people own.
@@ -564,13 +564,13 @@ and any change made by this PR to code, schema or migrations.
 - **F1. Memberless workspaces already exist** from past console deletions; they keep rows, files and a subscription row.
   A listing and a cleanup through the same `deleteWorkspace`.
 - **F2. The privacy "Take it" promise** (PDF, calendar, GeoJSON export) has no product behind it.
-- **F3. `dead-letter/` and `exports/` have no deleter**; the weekly retention slot is a logged no-op
+- **F3. `dead-letter/` and `exports/` have no deleter** (`dead-letter/` fixed in phase 7, #1055); the weekly retention slot is a logged no-op
   (`BACKUP_RETENTION_DAYS` is read and unused).
-- **F4. `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
-- **F5. Soft-deleted chat messages keep their body** (`collab.ts` `deleteMessage`).
+- **F4. (fixed in phase 7, #1055) `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
+- **F5. (fixed in phase 7, #1055) Soft-deleted chat messages keep their body** (`collab.ts` `deleteMessage`).
 - **F6. Tenant `audit_log` has `pruneAuditLog` and no caller**; the period is owner confirms.
 - **F7. Presence falls back to the email as display name** when the name is empty (`api/trip-room/-lib/connect.ts`).
-- **F8. Trip-purge's `belongsTo` comment is wrong for `dead-letter/`** (no org segment).
+- **F8. (fixed in phase 7, #1055) Trip-purge's `belongsTo` comment is wrong for `dead-letter/`** (no org segment).
 
 ## 📋 Phasing
 
@@ -720,7 +720,7 @@ gated the ticket (`risk-high`):
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
   that builds their sweep.
 
-## Amendment - phase 7 (issue #1055)
+## Amendment - phase 7 (issue #1055, #1416)
 
 What shipped differently from the design above, recorded with the security and tenancy verdict that
 gated the ticket (`risk-high`):

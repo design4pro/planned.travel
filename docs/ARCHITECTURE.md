@@ -230,7 +230,7 @@ smaller (3 retries, concurrency 2) than production's 5 and 4.
 
 Non-secret configuration lives in `vars` (checked in): `ENVIRONMENT`, `APP_NAME`, `APP_URL`,
 `LOG_LEVEL`, `TILES_ARCHIVE_KEY`, `FILES_PUBLIC_BASE`, `EMAIL_FROM`, `EMAIL_API_URL`,
-`BACKUP_RETENTION_DAYS`, `TASK_MAX_ATTEMPTS`, and the optional `DEAD_LETTER_RETENTION_DAYS` (unset means 14). Secrets are never in `wrangler.jsonc`; the
+`BACKUP_RETENTION_DAYS`, `TASK_MAX_ATTEMPTS`, and `DEAD_LETTER_RETENTION_DAYS` (optional, unset means 14; add it to `vars` to change it). Secrets are never in `wrangler.jsonc`; the
 complete list, with what each one is for, is `.dev.vars.example`.
 
 ---

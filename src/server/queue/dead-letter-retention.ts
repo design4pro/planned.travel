@@ -5,8 +5,9 @@
  * (`taskDeadObjectKey`): the envelope body, which for an auth email carries the token link and for
  * other kinds the requester's id. The key has **no organization segment**, so no per-workspace purge
  * can find these objects, and nothing deleted them. The KV summary beside each one expires after
- * `TASK_DEAD_TTL_SECONDS` (14 days); this deleter gives the R2 body the same lifetime, which is the
- * window `docs/DEPLOY.md` already treats as the post-mortem window.
+ * `TASK_DEAD_TTL_SECONDS` (14 days); this deleter keeps the R2 body for at least that long (it is
+ * removed by the first weekly run after it turns 14 days old), the post-mortem window
+ * `docs/DEPLOY.md` already describes.
  *
  * Like `./../storage/objects`, the bucket is a **parameter** and a structural port, so this module
  * never reaches `cloudflare:workers` and the Node suite can drive it with a fake.
@@ -43,6 +44,11 @@ export const DEAD_LETTER_MAX_PAGES = 20
 export function resolveDeadLetterRetentionDays(
   value: number | string | undefined,
 ): number {
+  // `numberFromEnv` parses a string with `parseInt`, which reads "1e2" as 1 and "30days" as 30;
+  // a text value has to be plain digits before it is trusted to narrow the period.
+  if (typeof value === 'string' && !/^\d+$/.test(value)) {
+    return DEAD_LETTER_RETENTION_DAYS_DEFAULT
+  }
   const days = numberFromEnv(value, DEAD_LETTER_RETENTION_DAYS_DEFAULT)
   return days >= 1 ? Math.floor(days) : DEAD_LETTER_RETENTION_DAYS_DEFAULT
 }
@@ -73,31 +79,34 @@ export async function pruneDeadLetters(
   let deleted = 0
   let drained = false
 
-  while (pages < maxPages) {
-    const page = await store.list({ prefix: TASK_DEAD_OBJECT_PREFIX, cursor })
-    pages += 1
-    listed += page.objects.length
-    const expired = page.objects
-      .filter(
-        (object) =>
-          object.key.startsWith(TASK_DEAD_OBJECT_PREFIX) &&
-          object.uploaded.getTime() < cutoff,
-      )
-      .map((object) => object.key)
-    deleted += await deleteObjects(store, expired)
-    if (!page.truncated || page.cursor === undefined) {
-      drained = true
-      break
+  try {
+    while (pages < maxPages) {
+      const page = await store.list({ prefix: TASK_DEAD_OBJECT_PREFIX, cursor })
+      pages += 1
+      listed += page.objects.length
+      const expired = page.objects
+        .filter(
+          (object) =>
+            object.key.startsWith(TASK_DEAD_OBJECT_PREFIX) &&
+            object.uploaded.getTime() < cutoff,
+        )
+        .map((object) => object.key)
+      deleted += await deleteObjects(store, expired)
+      if (!page.truncated || page.cursor === undefined) {
+        drained = true
+        break
+      }
+      cursor = page.cursor
     }
-    cursor = page.cursor
+  } finally {
+    // Counts are logged even when a `delete` throws on page N, so what was already removed is not lost.
+    logger.info('dead-letter retention pruned', {
+      retentionDays: options.retentionDays,
+      listed,
+      deleted,
+      pages,
+      drained,
+    })
   }
-
-  logger.info('dead-letter retention pruned', {
-    retentionDays: options.retentionDays,
-    listed,
-    deleted,
-    pages,
-    drained,
-  })
   return { listed, deleted, drained }
 }

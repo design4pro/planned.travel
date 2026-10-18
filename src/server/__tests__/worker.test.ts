@@ -305,6 +305,24 @@ describe('the weekly retention slot', () => {
     expect(harness.rollUp).toHaveBeenCalledTimes(1)
   })
 
+  it('logs every failed job, not only the one it rethrows', async () => {
+    harness.records.length = 0
+    harness.prune.mockReset().mockRejectedValue(new Error('prune exploded'))
+    harness.rollUp.mockReset().mockResolvedValue(undefined)
+    harness.deadLetters
+      .mockReset()
+      .mockRejectedValue(new Error('R2 unavailable'))
+
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('prune exploded')
+
+    const failures = harness.records.filter(
+      (record) => record.msg === 'weekly retention job failed',
+    )
+    expect(failures).toHaveLength(2)
+  })
+
   it('leaves the other expressions alone', async () => {
     harness.records.length = 0
     harness.prune.mockReset()

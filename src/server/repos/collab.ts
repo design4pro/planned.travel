@@ -254,8 +254,7 @@ export async function editMessage(
   if (message.userId !== scope.ctx.userId) {
     throw new ForbiddenError('edit another traveller’s message', ['owner'])
   }
-  // A deleted message is gone for everyone who could edit it; refusing here, and again on the write
-  // below, is what stops an edit from putting text back into a row whose body was cleared.
+  // A deleted message is gone for everyone who could edit it; refused on the write below, which is what stops an edit from putting text back into a row whose body was cleared.
   const [edited] = await collabMessagesRepository.updateWhere(
     scope,
     allOf(eq(collabMessages.id, messageId), isNull(collabMessages.deletedAt)),
