@@ -197,4 +197,31 @@ describe('making someone an owner', () => {
 
     await waitFor(() => expect(document.activeElement).toBe(trigger()))
   })
+
+  // The dialog gives focus back to whatever held it when it opened, and that was the select option
+  // the promotion was picked from, which is gone by then: focus fell to the page.
+  it.each([
+    [
+      'Cancel',
+      async (user: ReturnType<typeof userEvent.setup>) =>
+        user.click(screen.getByRole('button', { name: 'Cancel' })),
+    ],
+    [
+      'Escape',
+      async (user: ReturnType<typeof userEvent.setup>) =>
+        user.keyboard('{Escape}'),
+    ],
+  ])(
+    'returns focus to the select when the promotion is dismissed with %s',
+    async (_name, dismiss) => {
+      const { user, onChange } = mount()
+      await choose(user, 'Owner')
+      await screen.findByRole('button', { name: 'Make owner' })
+
+      await dismiss(user)
+
+      await waitFor(() => expect(document.activeElement).toBe(trigger()))
+      expect(onChange).not.toHaveBeenCalled()
+    },
+  )
 })

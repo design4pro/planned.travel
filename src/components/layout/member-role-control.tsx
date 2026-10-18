@@ -153,6 +153,13 @@ export function MemberRoleControl({
             event.preventDefault()
             cancelRef.current?.focus()
           }}
+          onCloseAutoFocus={(event) => {
+            // The dialog would return focus to the select option the promotion was picked from, which
+            // is gone by now. The trigger is the next stop; while a request is pending it is disabled
+            // and the effect above hands focus back once it settles.
+            event.preventDefault()
+            triggerRef.current?.focus()
+          }}
         >
           <DialogHeader>
             <DialogTitle>
