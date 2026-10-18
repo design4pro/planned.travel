@@ -389,6 +389,22 @@ const messages = {
   'admin.members.person': 'Persona',
   'admin.members.role': 'Rol',
   'admin.members.joined': 'Se unió',
+  'admin.members.role.label': 'Rol de {name}',
+  'admin.members.role.saved': '{name} ahora es {role}.',
+  'admin.members.role.impersonated':
+    'No se puede cambiar un rol mientras actúas como otra cuenta.',
+  'admin.members.role.notPermitted':
+    'No puedes hacer ese cambio. Solo una persona propietaria puede conceder el rol de propietario o cambiar a un propietario.',
+  'admin.members.role.lastOwner':
+    'Es el único propietario del espacio de trabajo. Nombra antes a otra persona propietaria.',
+  'admin.members.role.notFound':
+    'Esta persona ya no está en el espacio de trabajo. La lista se ha actualizado.',
+  'admin.members.role.failed': 'No se pudo cambiar el rol. Inténtalo de nuevo.',
+  'admin.members.role.promote.title': '¿Hacer propietario a {name}?',
+  'admin.members.role.promote.body':
+    '{name} tendrá el mismo poder que tú: facturación, miembros y ajustes. Un propietario puede bajar de rol o quitar a cualquier otro propietario, incluido tú.',
+  'admin.members.role.promote.confirm': 'Hacer propietario',
+  'admin.members.role.promote.cancel': 'Cancelar',
 
   'admin.activity.label': 'Actividad reciente',
   'admin.activity.empty.title': 'Aún no hay nada registrado',

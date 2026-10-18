@@ -291,6 +291,18 @@ const messages = {
   'admin.members.person': '사람',
   'admin.members.role': '역할',
   'admin.members.joined': '참여',
+  'admin.members.role.label': '{name}의 역할',
+  'admin.members.role.saved': '{name}님의 역할이 {role}(으)로 바뀌었어요.',
+  'admin.members.role.impersonated': '다른 계정으로 활동하는 동안에는 역할을 바꿀 수 없어요.',
+  'admin.members.role.notPermitted': '이 변경은 할 수 없어요. 소유자 역할을 부여하거나 소유자를 바꿀 수 있는 사람은 소유자뿐이에요.',
+  'admin.members.role.lastOwner': '이 워크스페이스의 유일한 소유자예요. 먼저 다른 사람을 소유자로 지정하세요.',
+  'admin.members.role.notFound': '이 사람은 더 이상 워크스페이스에 없어요. 목록을 새로 불러왔어요.',
+  'admin.members.role.failed': '역할을 바꾸지 못했어요. 다시 시도해 주세요.',
+  'admin.members.role.promote.title': '{name}님을 소유자로 지정할까요?',
+  'admin.members.role.promote.body':
+    '{name}님도 결제, 멤버, 설정까지 당신과 같은 권한을 갖게 돼요. 소유자는 당신을 포함한 다른 소유자를 강등하거나 내보낼 수 있어요.',
+  'admin.members.role.promote.confirm': '소유자로 지정',
+  'admin.members.role.promote.cancel': '취소',
   'admin.activity.label': '최근 활동',
   'admin.activity.empty.title': '아직 기록이 없어요',
   'admin.activity.empty.body':

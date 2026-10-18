@@ -800,7 +800,7 @@ self-auditing endpoints, retention-pruned by the weekly cron), while the tenant 
 feeds also serves `listEntityHistory`, a per-entity capability the reference does not have. The
 tenant-security events still missing — member role change, invitation, removal — cannot be audited
 here because `changeMemberRole`, `createInvitation` and `removeMember` have no production caller
-yet, measured; each gains its `trail()` call in the stage that ships its write path (the ADM/ACC
+yet, measured (`changeMemberRole` gained one, and its `member.role_changed` entry, in #995); each gains its `trail()` call in the stage that ships its write path (the ADM/ACC
 rows), and trip lifecycle audits ride TRP-03. Of the three call sites below,
 `workspace.defaults_changed` has direct reference parity; the file and reservation events are the
 entity-history half.

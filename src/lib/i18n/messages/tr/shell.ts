@@ -361,6 +361,20 @@ const messages = {
   'admin.members.person': 'Kişi',
   'admin.members.role': 'Rol',
   'admin.members.joined': 'Katıldı',
+  'admin.members.role.label': '{name} rolü',
+  'admin.members.role.saved': '{name} artık {role}.',
+  'admin.members.role.impersonated': 'Başka bir hesap olarak işlem yaparken rol değiştirilemez.',
+  'admin.members.role.notPermitted':
+    'Bu değişikliği yapamazsınız. Sahip rolünü yalnızca bir sahip verebilir veya bir sahibi değiştirebilir.',
+  'admin.members.role.lastOwner':
+    'Bu, çalışma alanının tek sahibi. Önce başka birini sahip yapın.',
+  'admin.members.role.notFound': 'Bu kişi artık çalışma alanında değil. Liste yenilendi.',
+  'admin.members.role.failed': 'Rol değiştirilemedi. Yeniden deneyin.',
+  'admin.members.role.promote.title': '{name} sahip yapılsın mı?',
+  'admin.members.role.promote.body':
+    '{name} sizinle aynı yetkiye sahip olacak: faturalama, üyeler ve ayarlar. Bir sahip, sizin de aralarında olduğunuz diğer tüm sahiplerin rolünü düşürebilir veya onları çıkarabilir.',
+  'admin.members.role.promote.confirm': 'Sahip yap',
+  'admin.members.role.promote.cancel': 'İptal',
 
   'admin.activity.label': 'Son etkinlik',
   'admin.activity.empty.title': 'Henüz kayıt yok',

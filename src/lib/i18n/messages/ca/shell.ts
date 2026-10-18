@@ -390,6 +390,21 @@ const messages = {
   'admin.members.person': 'Persona',
   'admin.members.role': 'Rol',
   'admin.members.joined': 'S’hi va unir',
+  'admin.members.role.label': 'Rol de {name}',
+  'admin.members.role.saved': '{name} ara és {role}.',
+  'admin.members.role.impersonated': 'No es pot canviar un rol mentre actueu com un altre compte.',
+  'admin.members.role.notPermitted':
+    'No podeu fer aquest canvi. Només un propietari pot concedir el rol de propietari o canviar un propietari.',
+  'admin.members.role.lastOwner':
+    'Aquest és l’únic propietari de l’espai de treball. Nomeneu-ne primer un altre.',
+  'admin.members.role.notFound':
+    'Aquesta persona ja no és a l’espai de treball. La llista s’ha actualitzat.',
+  'admin.members.role.failed': 'No s’ha pogut canviar el rol. Torneu-ho a provar.',
+  'admin.members.role.promote.title': 'Voleu fer propietari {name}?',
+  'admin.members.role.promote.body':
+    '{name} tindrà el mateix poder que vós: facturació, membres i paràmetres. Un propietari pot rebaixar o treure qualsevol altre propietari, també a vós.',
+  'admin.members.role.promote.confirm': 'Fes propietari',
+  'admin.members.role.promote.cancel': 'Cancel·la',
 
   'admin.activity.label': 'Activitat recent',
   'admin.activity.empty.title': 'Encara no hi ha res registrat',

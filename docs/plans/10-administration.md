@@ -311,6 +311,28 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   an owner, which gains the admin nothing, and the last-owner guard (`:192-194`) already stops the
   only version of that with teeth — removing every owner. Self-removal stays permitted at every role.
   Stating the exclusion is the point; a guard whose edges are not written down grows one silently.
+- **Role change landed ahead of this stage (#995), with a stricter owner-row rule.** The
+  `changeMemberRole` ceiling and its server function shipped before wave 3, so a workspace owner can
+  promote a second owner from the Workspace console, which the platform console's delete refusal
+  tells the operator to expect. What is delivered differs from the sketch above in four ways this
+  stage reads rather than redoes:
+  - The ceiling is `assignableRoles(callerRole, currentRole)` in `src/server/repos/members.ts`, not a
+    `hasAtLeastRole` line: an `owner` may set any role, an `admin` may move a row that does not hold
+    `owner` between `admin` and `member`, a `member` may set none. So an admin can neither grant
+    `owner` **nor change an owner row** (the stricter rule: demoting an owner is an owner's act),
+    and the repository refuses before it writes. The last-owner guard is unchanged. The same helper
+    feeds each member row's `assignableRoles`, so the control and the repository cannot disagree.
+  - `changeMemberRoleFn` lives in `src/server/fns/members.ts` (logic in `member-role-writes.ts`), not
+    in `administration.ts`; this stage adds the other functions there and leaves it where it is. Its
+    input is a `z.strictObject({ memberId, role })` with one enum role, and it throws the
+    impersonation `AuthRequirementError` before any read (`docs/ACCESS.md` §6.4).
+  - It writes one `member.role_changed` audit entry on a change that alters the role, and none for a
+    no-op or a refusal.
+  - Better Auth's `organization/update-member-role` is closed over HTTP (`docs/ACCESS.md` §2.6);
+    the in-process call stays.
+    The control is `src/components/layout/member-role-control.tsx`, mounted on `/admin` in the members
+    table; this stage's `members-panel.tsx` takes that cell over unchanged. `addMember` and
+    `createInvitation` still need their own ceiling line.
 - **Email, never inline.** The invitation email is enqueued on `TASKS` through `queueAuthEmail`
   (`src/server/auth/email.ts:286`) with the existing `auth.organization-invitation` message kind
   (`:44`), whose subject, HTML and plain-text bodies already render. Nothing is sent from the

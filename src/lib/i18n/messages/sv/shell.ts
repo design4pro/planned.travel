@@ -363,6 +363,22 @@ const messages = {
   'admin.members.person': 'Namn',
   'admin.members.role': 'Roll',
   'admin.members.joined': 'Med sedan',
+  'admin.members.role.label': 'Roll för {name}',
+  'admin.members.role.saved': '{name} är nu {role}.',
+  'admin.members.role.impersonated':
+    'En roll kan inte ändras medan du agerar som ett annat konto.',
+  'admin.members.role.notPermitted':
+    'Du kan inte göra den ändringen. Bara en ägare kan ge ägarrollen eller ändra en ägare.',
+  'admin.members.role.lastOwner':
+    'Det här är arbetsytans enda ägare. Gör först någon annan till ägare.',
+  'admin.members.role.notFound':
+    'Personen finns inte längre i arbetsytan. Listan har uppdaterats.',
+  'admin.members.role.failed': 'Rollen kunde inte ändras. Försök igen.',
+  'admin.members.role.promote.title': 'Göra {name} till ägare?',
+  'admin.members.role.promote.body':
+    '{name} får samma makt som du: fakturering, medlemmar och inställningar. En ägare kan degradera eller ta bort alla andra ägare, även dig.',
+  'admin.members.role.promote.confirm': 'Gör till ägare',
+  'admin.members.role.promote.cancel': 'Avbryt',
 
   'admin.activity.label': 'Senaste aktivitet',
   'admin.activity.empty.title': 'Inget noterat än',

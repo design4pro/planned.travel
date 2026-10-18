@@ -386,6 +386,22 @@ const messages = {
   'admin.members.person': 'Pessoa',
   'admin.members.role': 'Papel',
   'admin.members.joined': 'Entrou em',
+  'admin.members.role.label': 'Função de {name}',
+  'admin.members.role.saved': '{name} agora é {role}.',
+  'admin.members.role.impersonated':
+    'Não é possível alterar uma função enquanto você age como outra conta.',
+  'admin.members.role.notPermitted':
+    'Você não pode fazer essa alteração. Só um proprietário pode conceder a função de proprietário ou alterar um proprietário.',
+  'admin.members.role.lastOwner':
+    'Este é o único proprietário do espaço de trabalho. Defina antes outra pessoa como proprietária.',
+  'admin.members.role.notFound':
+    'Esta pessoa não está mais no espaço de trabalho. A lista foi atualizada.',
+  'admin.members.role.failed': 'Não foi possível alterar a função. Tente de novo.',
+  'admin.members.role.promote.title': 'Tornar {name} proprietário?',
+  'admin.members.role.promote.body':
+    '{name} terá o mesmo poder que você: cobrança, membros e configurações. Um proprietário pode rebaixar ou remover qualquer outro proprietário, inclusive você.',
+  'admin.members.role.promote.confirm': 'Tornar proprietário',
+  'admin.members.role.promote.cancel': 'Cancelar',
 
   'admin.activity.label': 'Atividade recente',
   'admin.activity.empty.title': 'Ainda não há nada registrado',
