@@ -497,6 +497,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'De betaalprovider heeft dat verzoek geweigerd. Probeer het straks opnieuw.',
+  'billing.failure.reference': 'Referentie voor de ondersteuning: {reference}',
+  'billing.failure.forbidden':
+    'Je rol staat dit niet toe voor de facturering van deze werkruimte. Vraag het een eigenaar of beheerder.',
+  'billing.failure.providerRefused':
+    'Polar heeft die wijziging niet geaccepteerd. Vergelijk het aantal plekken met je leden en probeer het opnieuw, of gebruik het factureringsportaal.',
+  'billing.failure.rateLimited':
+    'Polar is op dit moment druk. Er is niets gewijzigd. Probeer het over een minuut opnieuw.',
+  'billing.failure.notConnected':
+    'Facturering is op deze implementatie nog niet gekoppeld, dus er is niets gewijzigd. Neem contact op met de ondersteuning.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar kan voor deze bestelling geen factuur uitgeven. Ontbreken de factuurnaam of het factuuradres, voeg ze dan toe in het factureringsportaal en probeer het opnieuw; neem anders contact op met de ondersteuning.',
   'billing.planChanged.title': 'Abonnement bijgewerkt',
   'billing.planChanged.body':
     'De wijziging geldt al bij Polar, dat het verschil factureert. Het overzicht hieronder loopt binnen een minuut bij.',

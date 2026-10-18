@@ -33,13 +33,8 @@ import type {
   PlanChangeResult,
 } from '#/server/billing/checkout'
 import { entitlements } from '#/server/billing/entitlements'
-import { PolarApiError } from '#/server/billing/polar'
 import { billingRuntime } from '#/server/billing/runtime.cloudflare'
-import {
-  BillingConfigError,
-  billingContext,
-  canManageBilling,
-} from '#/server/billing/types'
+import { billingContext, canManageBilling } from '#/server/billing/types'
 import { getOrganization, placesMeter } from '#/server/repos'
 import { appScope } from './context'
 
@@ -142,49 +137,17 @@ export const loadBilling = createServerFn({ method: 'GET' }).handler(
 /* ---------------------------------------------------------------- mutations */
 
 /**
- * What the browser is allowed to read when a provider call fails.
+ * Run one provider call and log the real failure before it is re-raised.
  *
- * TanStack serialises a thrown message straight through to the client, and the
- * two error types this path can raise are written for an operator, not for a
- * customer: `PolarApiError` carries the request path, the subscription id and a
- * slice of Polar's response body, and `BillingConfigError` carries the exact
- * `wrangler secret put` command to run. Neither belongs on a billing screen.
- * Errors we wrote as customer copy — the forbidden guard, "no billing profile
- * yet" — are already the right sentence and pass through untouched.
- */
-function customerFacing(cause: unknown): Error {
-  if (cause instanceof BillingConfigError) {
-    return new Error(
-      'Billing is not connected on this deployment yet, so nothing was changed. Contact support and we will sort it out.',
-    )
-  }
-
-  if (cause instanceof PolarApiError) {
-    if (cause.status === 422 || cause.status === 402) {
-      return new Error(
-        'Polar would not accept that change. Check the seat count against the members you have, then try again or make the change in the billing portal.',
-      )
-    }
-    if (cause.status === 429) {
-      return new Error(
-        'Polar is rate-limiting us at the moment. Nothing was changed — try again in a minute.',
-      )
-    }
-    return new Error(
-      'The billing provider did not complete that request, so nothing was changed. Try again in a moment.',
-    )
-  }
-
-  return cause instanceof Error
-    ? cause
-    : new Error('That request did not complete. Try again in a moment.')
-}
-
-/**
- * Run one provider call, log the real failure and re-raise a readable one.
- *
- * The original is never swallowed: it goes to the structured log with the
- * organization it belongs to, which is where an operator looks for it.
+ * The original is never swallowed or rewritten: the global redaction middleware
+ * (`src/server/errors/middleware.ts`) is the one place that decides what the
+ * browser may read. A `PolarApiError` carries the request path, the subscription
+ * id and a slice of Polar's response body, and a `BillingConfigError` the exact
+ * `wrangler secret put` command to run, so neither can be rewritten into a
+ * sentence here without losing its class: the classifier reads the class to
+ * attach a constant code, and the billing screen resolves that code to localised
+ * copy. The failure is logged here with the organization it belongs to, which is
+ * where an operator looks for it.
  */
 async function guarded<T>(
   runtime: BillingRuntime,
@@ -195,15 +158,12 @@ async function guarded<T>(
   try {
     return await run()
   } catch (cause) {
-    const readable = customerFacing(cause)
-    if (readable !== cause) {
-      runtime.logger.error('billing.action.failed', {
-        organizationId,
-        action,
-        message: cause instanceof Error ? cause.message : String(cause),
-      })
-    }
-    throw readable
+    runtime.logger.error('billing.action.failed', {
+      organizationId,
+      action,
+      message: cause instanceof Error ? cause.message : String(cause),
+    })
+    throw cause
   }
 }
 
@@ -220,7 +180,7 @@ async function guarded<T>(
  *
  * A promotion code travels on the same selection. A refused code is not an error: it comes
  * back as `{ surface: 'discount_rejected', reason }`, nothing in Polar has changed, and the
- * screen shows the reason under the field. `customerFacing()` is not involved.
+ * screen shows the reason under the field.
  */
 export const startPlanChange = createServerFn({ method: 'POST' })
   .validator(planSelectionInput)

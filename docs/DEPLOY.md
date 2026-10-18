@@ -1244,7 +1244,13 @@ The order matters, and so does the timing:
   immediately afterwards can _still_ `404`. Do not promise a URL on the next call. The reliable
   readiness signal is the order's `is_invoice_generated` boolean, delivered on `order.updated`;
   `invoice_number` is `null` until the invoice is finalised.
-- `POST` returns **`409`** when the order's status makes it ineligible.
+- `POST` returns **`409`** when the order's status makes it ineligible, and **`422`** when the
+  order has no billing name or address (Polar's OpenAPI spec documents both). `orderInvoiceUrl()`
+  reads either as `OrderNotInvoiceableError`, which `classifyFailure` sends to the browser as the
+  code `BILLING_ORDER_NOT_INVOICEABLE`; the billing screen then says the order has no invoice and
+  names the billing portal as the next step, with the support reference. No other status is read
+  that way, and the PDF action stays on every non-draft order: a `0,00 $` total alone is not a
+  documented reason for Polar to refuse.
 - The receipt is a different document at a different path: `GET /v1/orders/{id}/receipt`, which
   returns its own presigned URL. Invoice ≠ receipt; the billing list labels them separately.
 

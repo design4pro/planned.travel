@@ -52,7 +52,11 @@ import {
   subscriptionRecordFromPolar,
 } from './mapping'
 import { PolarApiError } from './polar'
-import { BillingForbiddenError, canManageBilling } from './types'
+import {
+  BillingForbiddenError,
+  OrderNotInvoiceableError,
+  canManageBilling,
+} from './types'
 
 import type { BillingInterval, Plan, PlanId, PlanPrice } from '#/lib/plans'
 import type { DiscountRejectionReason } from './discounts'
@@ -1252,6 +1256,41 @@ async function readInvoiceUrl(
 }
 
 /**
+ * Ask Polar to start rendering one order's PDF.
+ *
+ * Polar documents two refusals: 409, the order's status cannot be invoiced, and 422, the order has
+ * no billing name or address. Neither changes by asking again, so both become the one named error
+ * the screen explains, instead of a provider failure. Any other status propagates as itself.
+ */
+async function requestInvoiceRender(
+  runtime: BillingRuntime,
+  organizationId: string,
+  orderId: string,
+): Promise<void> {
+  try {
+    await runtime.polar.request({
+      method: 'POST',
+      path: `${ORDERS_PATH}${orderId}/invoice`,
+    })
+  } catch (error) {
+    if (
+      error instanceof PolarApiError &&
+      (error.status === 409 || error.status === 422)
+    ) {
+      runtime.logger.warn('billing.invoice.not_invoiceable', {
+        organizationId,
+        orderId,
+        status: error.status,
+      })
+      throw new OrderNotInvoiceableError(
+        `Polar refused to invoice order ${orderId} with ${error.status}.`,
+      )
+    }
+    throw error
+  }
+}
+
+/**
  * The PDF for one order, fetched only when a customer asks for it.
  *
  * The first thing that happens is the one that matters: the order is read back and
@@ -1285,10 +1324,7 @@ export async function orderInvoiceUrl(
   }
 
   if (!order.is_invoice_generated) {
-    await runtime.polar.request({
-      method: 'POST',
-      path: `${ORDERS_PATH}${orderId}/invoice`,
-    })
+    await requestInvoiceRender(runtime, organizationId, orderId)
   }
 
   for (const delay of INVOICE_POLL_DELAYS_MS) {

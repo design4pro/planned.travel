@@ -7,9 +7,10 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Settings from '#/lib/i18n/messages/en/settings'
@@ -17,9 +18,11 @@ import Ui from '#/lib/i18n/messages/en/ui'
 import { PLANS } from '#/lib/plans'
 import { Route } from '../../billing'
 
+import type { PublicFailure } from '#/lib/errors'
 import type { Catalogue } from '#/lib/i18n'
 import type { QuotaKey } from '#/lib/plans'
 import type { BillingPayload } from '../../../-server/billing'
+import type { InvoiceSummary } from '#/server/billing/checkout'
 import type { Entitlements, QuotaState } from '#/server/billing/types'
 import type { ComponentType } from 'react'
 
@@ -277,5 +280,152 @@ describe('places usage on the billing page', () => {
     expect(
       screen.getByText('Places').closest('[data-places-meter]')?.textContent,
     ).toContain('Unlimited')
+  })
+})
+
+const REFERENCE = 'e6d9e6f2af034cd89c4f6efc9d5af2e6'
+
+/** What the redaction middleware makes of a thrown value by the time it reaches the browser. */
+function arrived(failure: PublicFailure): Error {
+  return new Error(encodePublicFailure(failure))
+}
+
+const PAID_ORDER: InvoiceSummary = {
+  id: 'ord_1',
+  number: 'DESIGN4PRO-WOZUHKWCOF-0001',
+  status: 'paid',
+  createdAt: '2026-10-01T00:00:00.000Z',
+  total: 0,
+  currency: 'USD',
+  invoiceGenerated: false,
+}
+
+/** The envelope, a status code, a request path or an id: none of it may be on the screen. */
+const NEVER_SHOWN =
+  /planned-travel\/failure|\{|Polar (GET|POST|PATCH)|\/v1\/|wrangler|ord_1/
+
+async function openInvoiceFailing(cause: Error): Promise<HTMLElement> {
+  server.downloadInvoice.mockRejectedValue(cause)
+  renderPage(payload({ invoices: [PAID_ORDER] }))
+  const user = userEvent.setup()
+  const [pdf] = screen.getAllByRole('button', {
+    name: 'Invoice DESIGN4PRO-WOZUHKWCOF-0001 as PDF',
+  })
+  await user.click(pdf as HTMLElement)
+  return await screen.findByText('That invoice did not open')
+}
+
+describe('a failed billing action on the billing page', () => {
+  beforeEach(() => {
+    vi.spyOn(window, 'open').mockReturnValue(null)
+  })
+
+  it('explains an unexpected invoice failure in words and quotes the reference', async () => {
+    const title = await openInvoiceFailing(
+      arrived({ kind: 'unexpected', reference: REFERENCE }),
+    )
+    const alert = title.closest(
+      '[role="alert"], [role="status"]',
+    ) as HTMLElement
+
+    expect(
+      within(alert).getByText(
+        `The billing provider rejected that request. Try again in a moment. Reference for support: ${REFERENCE}`,
+      ),
+    ).not.toBeNull()
+    expect(alert.textContent).not.toMatch(NEVER_SHOWN)
+  })
+
+  it('says an order cannot be invoiced, with the next step, instead of a generic failure', async () => {
+    const title = await openInvoiceFailing(
+      arrived({
+        kind: 'unexpected',
+        code: 'BILLING_ORDER_NOT_INVOICEABLE',
+        reference: REFERENCE,
+      }),
+    )
+    const alert = title.closest(
+      '[role="alert"], [role="status"]',
+    ) as HTMLElement
+
+    expect(alert.textContent).toContain(
+      'Polar cannot issue an invoice for this order.',
+    )
+    expect(alert.textContent).toContain('add them in the billing portal')
+    expect(alert.textContent).toContain(REFERENCE)
+    expect(alert.textContent).not.toMatch(NEVER_SHOWN)
+  })
+
+  it('never prints a raw provider message that skipped the envelope', async () => {
+    const title = await openInvoiceFailing(
+      new Error('Polar GET /v1/orders/ord_1 failed with 500.'),
+    )
+    const alert = title.closest(
+      '[role="alert"], [role="status"]',
+    ) as HTMLElement
+
+    expect(alert.textContent).not.toMatch(NEVER_SHOWN)
+    expect(alert.textContent).toContain('The billing provider rejected')
+  })
+
+  it('shows the sentence of a refusal in English, marked as such', async () => {
+    const title = await openInvoiceFailing(
+      arrived({ kind: 'refusal', message: 'That invoice is not yours.' }),
+    )
+    const alert = title.closest(
+      '[role="alert"], [role="status"]',
+    ) as HTMLElement
+
+    expect(
+      within(alert).getByText('That invoice is not yours.').closest('[lang]'),
+    ).toHaveProperty('lang', 'en')
+  })
+
+  it('reads the failure of the portal button the same way', async () => {
+    server.openBillingPortal.mockRejectedValue(
+      arrived({
+        kind: 'unexpected',
+        code: 'BILLING_RATE_LIMITED',
+        reference: REFERENCE,
+      }),
+    )
+    renderPage()
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Manage billing' }))
+
+    const message = await screen.findByText(/Polar is busy right now\./)
+    expect(message.textContent).toContain(REFERENCE)
+    expect(message.textContent).not.toMatch(NEVER_SHOWN)
+  })
+
+  it('reads a plan change failure the same way', async () => {
+    server.startPlanChange.mockRejectedValue(
+      arrived({
+        kind: 'unexpected',
+        code: 'BILLING_PROVIDER_REFUSED',
+        reference: REFERENCE,
+      }),
+    )
+    renderPage(
+      payload({
+        entitlements: crewWorkspace({
+          planId: 'free',
+          status: 'none',
+          interval: null,
+          hasProviderCustomer: false,
+        }),
+      }),
+    )
+
+    const user = userEvent.setup()
+    const [choose] = screen.getAllByRole('button', { name: /^Upgrade to / })
+    await user.click(choose as HTMLElement)
+
+    const message = await screen.findByText(
+      /Polar would not accept that change\./,
+    )
+    expect(message.textContent).toContain(REFERENCE)
+    expect(message.textContent).not.toMatch(NEVER_SHOWN)
   })
 })
