@@ -395,7 +395,7 @@ caller's scope **and** `user_id = scope.ctx.userId`, so another member's feed (s
 
 **The one unscoped read — `findLiveFeedByDigestUnscoped(db, digest)` in `src/server/repos/calendar-feeds.ts`.**
 It takes a plain `Database`, because until the row is found there is no tenant: the row **is** the tenant
-resolution. It is **not a third `catalog/` member.** `docs/SPEC.md` §5/§6 keep their closed list of exactly two,
+resolution. It is **not a third `catalog/` member.** `docs/SPEC.md` §5/§6 keep their closed list (exactly two when this was written; ADR 0043 later admitted the erasure read as a third),
 and `catalog/reminders.ts` is not stretched a second time. The lookup joins the family that is already outside
 SPEC §5's "every query is scoped" sentence in fact: the `…Unscoped` functions of `src/server/repos/billing.ts`,
 which `docs/ACCESS.md` §2.4 extends and FU-3 asks SPEC to name. It has the shape FU-3 states: a plain
@@ -410,8 +410,8 @@ exception unstated or a path described wrongly:
 
 - `docs/SPEC.md` §5: the FU-3 clause, a sentence in the "every query goes through a scoped repository" rule
   naming the `…Unscoped` shape above (plain `Database`, the suffix, a single stated caller, a projection
-  narrow enough that it cannot return tenant content); the carve-out paragraphs keep "exactly two" catalog
-  members, unchanged, and the closing "A third exception - another cross-tenant read, another module handed a
+  narrow enough that it cannot return tenant content); the carve-out paragraphs keep their catalog members (two when this was written, three since ADR 0043),
+  unchanged, and the closing "A third exception - another cross-tenant read, another module handed a
   plain `Database` - is an amendment to this section" (~496) is amended to except "an `…Unscoped` repos function
   of the FU-3 shape". §6: the "all SQL lives in `server/repos`" bullet gains the same shape beside "the
   single stated exception is `server/catalog`", and the `server/public` bullet's "derived from the share

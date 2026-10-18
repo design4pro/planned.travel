@@ -1,6 +1,7 @@
 import { and, asc, count, eq } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { member, organization, user as userTable } from '#/server/db/auth-schema'
+import { recordParticipation } from './participation'
 import type { AuthDb } from './db'
 
 /** Every account gets a workspace, so nothing in the product is org-less. */
@@ -105,6 +106,7 @@ export async function createOrganizationFor(
       createdAt: now,
       updatedAt: now,
     }),
+    recordParticipation(db, organizationId, user.id),
     db.insert(member).values({
       id: nanoid(24),
       organizationId,

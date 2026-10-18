@@ -37,6 +37,7 @@ import {
   getAuth,
 } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
+import { recordParticipation } from '#/server/auth/participation'
 import {
   firstOrganizationIdFor,
   membershipRoleFor,
@@ -1002,6 +1003,7 @@ export async function ensureSecondWorkspace(
     organizationId,
   })
   if (membership === null) {
+    await recordParticipation(auth, organizationId, workspace.ownerUserId)
     await auth.insert(member).values({
       id: demoAuthId('member', `${slug}:${workspace.ownerUserId}`),
       organizationId,

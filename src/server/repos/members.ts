@@ -28,6 +28,7 @@ import {
   RepositoryError,
   assertCanAdminister,
 } from './context'
+import { recordParticipant } from './participants'
 import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
 import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
 import type { SQL } from 'drizzle-orm'
@@ -187,6 +188,9 @@ export async function addMember(scope: TenantScope, input: AddMemberInput): Prom
   }
   await assertQuota(scope, 'members', await countMembers(scope))
 
+  // The participation anchor first (ADR 0043): a failed anchor write leaves no membership, and an
+  // anchor left by a failed membership insert is harmless.
+  await recordParticipant(scope, values.userId)
   return membersRepository.insert(scope, {
     id: newId(),
     userId: values.userId,

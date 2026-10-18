@@ -33,6 +33,7 @@ import {
   impersonationExpiryGuard,
 } from './impersonation-expiry'
 import { logAuth } from './log'
+import { recordParticipation } from './participation'
 import { passkey } from './passkey/plugin'
 import {
   provisionPersonalOrganization,
@@ -598,6 +599,18 @@ function buildAuth() {
         invitationLimit: 50,
         invitationExpiresIn: INVITATION_TTL_SECONDS,
         cancelPendingInvitationsOnReInvite: true,
+        // The participation anchor (ADR 0043) is written before the library inserts the membership,
+        // so a person who joins and leaves is still found by a later erasure. A throw here aborts
+        // the join; an anchor left behind by a join that then fails is harmless. The organization
+        // id comes from what the library resolved or from the invitation row, never from a body.
+        organizationHooks: {
+          beforeAddMember: async ({ member, organization: workspace }) => {
+            await recordParticipation(authDb(), workspace.id, member.userId)
+          },
+          beforeAcceptInvitation: async ({ invitation, user }) => {
+            await recordParticipation(authDb(), invitation.organizationId, user.id)
+          },
+        },
         sendInvitationEmail: async (data) => {
           await queueAuthEmail({
             kind: 'auth.organization-invitation',
