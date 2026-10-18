@@ -817,6 +817,19 @@ const messages = {
     'Nie udało się wczytać wcześniejszych wiadomości',
   'collab.thread.retry': 'Spróbuj ponownie',
   'collab.thread.start': 'Tu zaczyna się rozmowa',
+  'collab.thread.loadedEarlier': {
+    one: 'Wczytano {earlier} wcześniejszą wiadomość',
+    few: 'Wczytano {earlier} wcześniejsze wiadomości',
+    many: 'Wczytano {earlier} wcześniejszych wiadomości',
+    other: 'Wczytano {earlier} wcześniejszej wiadomości',
+  },
+  'collab.thread.newFrom': 'Nowa wiadomość od {name}',
+  'collab.thread.newMany': {
+    one: '{new} nowa wiadomość',
+    few: '{new} nowe wiadomości',
+    many: '{new} nowych wiadomości',
+    other: '{new} nowej wiadomości',
+  },
   'collab.toast.reactionFailed': 'Reakcja nie zapisała się',
   'collab.toast.messageDeleted': 'Wiadomość usunięta',
   'collab.toast.deleteFailed': 'Wiadomość nie została usunięta',
@@ -1227,6 +1240,45 @@ const messages = {
     'Każdy, kto ma ten link, może bez konta odczytać niearchiwalne podróże, w których uczestniczysz w tej przestrzeni: {count} z najpóźniejszymi datami rozpoczęcia. Nowe podróże pojawiają się automatycznie. Chroń link jak hasło.',
   'files.calendar.workspace.nameNote':
     'Ten link pojawi się w kalendarzu jako „planned.travel”. Zmień nazwę, jeśli masz więcej niż jeden.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Limit urlopu {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Zostało {value} dzień',
+    few: 'Zostało {value} dni',
+    many: 'Zostało {value} dni',
+    other: 'Zostało {value} dnia',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Przekroczono o {value} dzień',
+    few: 'Przekroczono o {value} dni',
+    many: 'Przekroczono o {value} dni',
+    other: 'Przekroczono o {value} dnia',
+  },
+  'vacay.allowance.progress': 'Wykorzystane dni: {used} z {total}',
+  'vacay.allowance.tile.days': 'Dni',
+  'vacay.allowance.tile.used': 'Wykorzystane',
+  'vacay.allowance.tile.carried': 'Przeniesione',
+  'vacay.allowance.tile.edit.days': 'Edytuj dni, obecnie {value}',
+  'vacay.allowance.input.days': 'Twój limit na rok {year}',
+  'vacay.allowance.input.invalid': 'Wpisz liczbę całkowitą od 0 do 365.',
+  'vacay.allowance.save': 'Zapisz',
+  'vacay.allowance.cancel': 'Anuluj',
+  'vacay.allowance.saving': 'Zapisywanie…',
+  'vacay.allowance.default.hint':
+    'Domyślny limit. Wybierz, aby ustawić własny.',
+  'vacay.allowance.saved': 'Limit zapisany.',
+  'vacay.allowance.error.days': {
+    one: 'Nie udało się zapisać Twojego limitu. Rok {year} nadal pokazuje {value} dzień.',
+    few: 'Nie udało się zapisać Twojego limitu. Rok {year} nadal pokazuje {value} dni.',
+    many: 'Nie udało się zapisać Twojego limitu. Rok {year} nadal pokazuje {value} dni.',
+    other:
+      'Nie udało się zapisać Twojego limitu. Rok {year} nadal pokazuje {value} dnia.',
+  },
+  'vacay.allowance.retry': 'Spróbuj ponownie',
+  'vacay.pending.loading': 'Ładowanie',
+  'vacay.error.title': 'Nie udało się wczytać planera urlopów',
+  'vacay.year.previous': 'Poprzedni rok',
+  'vacay.year.next': 'Następny rok',
 } satisfies TranslationOf<typeof En>
 
 export default messages

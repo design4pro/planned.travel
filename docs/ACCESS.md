@@ -661,8 +661,8 @@ trip poll also has the digest lookup, membership/ban read and indexed trip-membe
 
 ### 3.7 `src/server/public/**` is the only sessionless read path
 
-Public share, published catalog and calendar projections use this path; the bounded billing,
-moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three rules, all testable:
+Public share, published catalog, calendar and trip invite link projections use this path; the
+bounded billing, moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three rules, all testable:
 
 1. **Column whitelists only.** Every response is a named read-only projection that enumerates the
    columns a stranger may see. A field is not omitted by a `delete` after the fact and not hidden
@@ -673,10 +673,15 @@ moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three
    with an empty, placeholder or invented context. `src/server/repos/base.ts` exists so that
    forgetting the tenant filter is not expressible, and handing it a fake context to reach a row
    destroys the one guarantee it was built to give. The scope passed from this path is always the
-   one derived from the share or feed record that was just resolved by token, and never constructed from a
+   one derived from the share, feed or trip invite link record that was just resolved by token, and never constructed from a
    request parameter. A lint-level test asserts that no module under `src/server/public/**`
    constructs a tenant scope itself. For feeds only repo `openFeedScope` accepts the
-   adjacent branded `ResolvedFeed` and constructs the owner-bound scope.
+   adjacent branded `ResolvedFeed` and constructs the owner-bound scope. A trip invite link reaches
+   its row through one `…Unscoped` read, `findLiveTripInviteByDigestUnscoped` in
+   `src/server/repos/invites.ts`, called only by `src/server/public/trip-invite.ts`, which returns
+   coordinates and constructs no scope (ADR 0042). Repositories may import the pure secret module
+   `src/server/security/secret.ts` (derive, digest, shape guard); they never import
+   `src/server/public/**`.
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
    `src/server/repos`; published global rows go through `src/server/catalog`. This module owns the
    whitelist and nothing else.

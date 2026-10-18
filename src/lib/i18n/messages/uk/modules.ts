@@ -808,6 +808,19 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Не вдалося завантажити раніші повідомлення',
   'collab.thread.retry': 'Спробувати знову',
   'collab.thread.start': 'Тут починається розмова',
+  'collab.thread.loadedEarlier': {
+    one: 'Завантажено {earlier} попереднє повідомлення',
+    few: 'Завантажено {earlier} попередні повідомлення',
+    many: 'Завантажено {earlier} попередніх повідомлень',
+    other: 'Завантажено {earlier} попереднього повідомлення',
+  },
+  'collab.thread.newFrom': 'Нове повідомлення від {name}',
+  'collab.thread.newMany': {
+    one: '{new} нове повідомлення',
+    few: '{new} нові повідомлення',
+    many: '{new} нових повідомлень',
+    other: '{new} нового повідомлення',
+  },
   'collab.toast.reactionFailed': 'Реакція не збереглася',
   'collab.toast.messageDeleted': 'Повідомлення видалено',
   'collab.toast.deleteFailed': 'Повідомлення не видалено',
@@ -1219,6 +1232,45 @@ const messages = {
     'Кожен із цим посиланням може без облікового запису читати неархівні подорожі цього простору, у яких ви берете участь: {count} із найпізнішими датами початку. Нові подорожі з’являються автоматично. Захищайте посилання як пароль.',
   'files.calendar.workspace.nameNote':
     'У календарі це посилання має назву «planned.travel». Перейменуйте його, якщо маєте кілька.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Ліміт відпустки {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Залишилося {value} день',
+    few: 'Залишилося {value} дні',
+    many: 'Залишилося {value} днів',
+    other: 'Залишилося {value} дня',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Перевищення на {value} день',
+    few: 'Перевищення на {value} дні',
+    many: 'Перевищення на {value} днів',
+    other: 'Перевищення на {value} дня',
+  },
+  'vacay.allowance.progress': 'Використано днів: {used} з {total}',
+  'vacay.allowance.tile.days': 'Дні',
+  'vacay.allowance.tile.used': 'Використано',
+  'vacay.allowance.tile.carried': 'Перенесено',
+  'vacay.allowance.tile.edit.days': 'Змінити дні, зараз {value}',
+  'vacay.allowance.input.days': 'Ваш ліміт на {year} рік',
+  'vacay.allowance.input.invalid': 'Введіть ціле число від 0 до 365.',
+  'vacay.allowance.save': 'Зберегти',
+  'vacay.allowance.cancel': 'Скасувати',
+  'vacay.allowance.saving': 'Збереження…',
+  'vacay.allowance.default.hint':
+    'Ліміт за замовчуванням. Виберіть, щоб задати свій.',
+  'vacay.allowance.saved': 'Ліміт збережено.',
+  'vacay.allowance.error.days': {
+    one: 'Не вдалося зберегти ваш ліміт. За {year} рік досі вказано: {value} день.',
+    few: 'Не вдалося зберегти ваш ліміт. За {year} рік досі вказано: {value} дні.',
+    many: 'Не вдалося зберегти ваш ліміт. За {year} рік досі вказано: {value} днів.',
+    other:
+      'Не вдалося зберегти ваш ліміт. За {year} рік досі вказано: {value} дня.',
+  },
+  'vacay.allowance.retry': 'Спробувати знову',
+  'vacay.pending.loading': 'Завантаження',
+  'vacay.error.title': 'Не вдалося завантажити планувальник відпусток',
+  'vacay.year.previous': 'Попередній рік',
+  'vacay.year.next': 'Наступний рік',
 } satisfies TranslationOf<typeof En>
 
 export default messages

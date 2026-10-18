@@ -810,6 +810,17 @@ const messages = {
     "No s'han pogut carregar els missatges anteriors",
   'collab.thread.retry': 'Torna-ho a provar',
   'collab.thread.start': 'Aquí comença la conversa',
+  'collab.thread.loadedEarlier': {
+    one: "S'ha carregat {earlier} missatge anterior",
+    many: "S'han carregat {earlier} missatges anteriors",
+    other: "S'han carregat {earlier} missatges anteriors",
+  },
+  'collab.thread.newFrom': 'Missatge nou de {name}',
+  'collab.thread.newMany': {
+    one: '{new} missatge nou',
+    many: '{new} missatges nous',
+    other: '{new} missatges nous',
+  },
   'collab.toast.reactionFailed': 'La reacció no s’ha desat',
   'collab.toast.messageDeleted': 'Missatge eliminat',
   'collab.toast.deleteFailed': 'El missatge no s’ha eliminat',
@@ -1206,6 +1217,42 @@ const messages = {
     'Qualsevol persona amb aquest enllaç pot llegir sense compte els viatges no arxivats en què participes en aquest espai: els {count} amb les dates d’inici més recents. Els viatges nous apareixen automàticament. Protegeix-lo com una contrasenya.',
   'files.calendar.workspace.nameNote':
     'Aquest enllaç apareix al calendari com a «planned.travel». Canvia-li el nom si en tens més d’un.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Assignació {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Queden {value} dia',
+    many: 'Queden {value} dies',
+    other: 'Queden {value} dies',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Excedit en {value} dia',
+    many: 'Excedit en {value} dies',
+    other: 'Excedit en {value} dies',
+  },
+  'vacay.allowance.progress': 'Dies usats: {used} de {total}',
+  'vacay.allowance.tile.days': 'Dies',
+  'vacay.allowance.tile.used': 'Usats',
+  'vacay.allowance.tile.carried': 'Transferits',
+  'vacay.allowance.tile.edit.days': 'Edita els dies, actualment {value}',
+  'vacay.allowance.input.days': 'La teva assignació del {year}',
+  'vacay.allowance.input.invalid': 'Introdueix un nombre enter del 0 al 365.',
+  'vacay.allowance.save': 'Desa',
+  'vacay.allowance.cancel': 'Cancel·la',
+  'vacay.allowance.saving': 'S’està desant…',
+  'vacay.allowance.default.hint':
+    'Assignació per defecte. Selecciona-la per definir la teva.',
+  'vacay.allowance.saved': 'S’ha desat l’assignació.',
+  'vacay.allowance.error.days': {
+    one: 'No s’ha pogut desar la teva assignació. El {year} encara mostra {value} dia.',
+    many: 'No s’ha pogut desar la teva assignació. El {year} encara mostra {value} dies.',
+    other:
+      'No s’ha pogut desar la teva assignació. El {year} encara mostra {value} dies.',
+  },
+  'vacay.allowance.retry': 'Torna-ho a provar',
+  'vacay.pending.loading': 'S’està carregant',
+  'vacay.error.title': 'No s’ha pogut carregar el planificador de vacances',
+  'vacay.year.previous': 'Any anterior',
+  'vacay.year.next': 'Any següent',
 } satisfies TranslationOf<typeof En>
 
 export default messages

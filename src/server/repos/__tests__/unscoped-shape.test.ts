@@ -1,7 +1,7 @@
-import { modulesUnder } from '#/server/catalog/__tests__/module-graph'
 import { relative, resolve } from 'node:path'
+import { withProgram } from './compiler-program'
 import * as ts from 'typescript/unstable/ast'
-import { API, SignatureKind, SymbolFlags } from 'typescript/unstable/sync'
+import { SignatureKind, SymbolFlags } from 'typescript/unstable/sync'
 import type {
   Project,
   Symbol as CompilerSymbol,
@@ -16,6 +16,7 @@ const callers: Record<string, string> = {
   listSubscriptionsByOrganizationsUnscoped:
     'src/routes/_app/console/-server/account-billing.ts',
   findLiveFeedByDigestUnscoped: 'src/server/public/calendar-feed.ts',
+  findLiveTripInviteByDigestUnscoped: 'src/server/public/trip-invite.ts',
 }
 
 /** Resolve symbols rather than spelling: an alias or a barrel must retain its provenance. */
@@ -141,50 +142,8 @@ function inspect(project: Project, allowed: Record<string, string>) {
   }
 }
 
-function withProgram<T>(
-  extra: Record<string, string>,
-  run: (project: Project) => T,
-): T {
-  const files = {
-    ...extra,
-    [resolve('tsconfig.json')]: JSON.stringify({
-      compilerOptions: {
-        target: 'es2022',
-        module: 'esnext',
-        moduleResolution: 'bundler',
-        jsx: 'react-jsx',
-        skipLibCheck: true,
-        paths: { '#/*': ['./src/*'], '@/*': ['./src/*'] },
-      },
-      files: [
-        ...modulesUnder(resolve('src'), { tests: false }),
-        ...Object.keys(extra),
-      ],
-      include: [],
-    }),
-  }
-  const api = new API({
-    fs: {
-      readFile: (path) => files[path],
-      fileExists: (path) => (path in files ? true : undefined),
-    },
-  })
-  const snapshot = api.updateSnapshot({
-    openProjects: [resolve('tsconfig.json')],
-    openFiles: Object.keys(extra),
-  })
-  try {
-    const project = snapshot.getProject(resolve('tsconfig.json'))
-    if (!project) throw new Error('Compiler did not load project')
-    return run(project)
-  } finally {
-    snapshot.dispose()
-    api.close()
-  }
-}
-
 describe('Unscoped repository contract', () => {
-  it('finds all six exceptions, their real callers and their plain Database parameters', () => {
+  it('finds all seven exceptions, their real callers and their plain Database parameters', () => {
     const result = withProgram({}, (project) => inspect(project, callers))
     expect(result.discovered).toEqual(Object.keys(callers).sort())
     expect(result.imported).toEqual(Object.keys(callers).sort())
@@ -247,5 +206,25 @@ describe('Unscoped repository contract', () => {
     })
     expect(identifiers).toContain('openFeedScope')
     expect(identifiers).not.toContain('createScope')
+  })
+
+  it('keeps scope construction and SQL out of the trip invite resolver', () => {
+    const identifiers = withProgram({}, (project) => {
+      const ast = project.program.getSourceFile(
+        resolve('src/server/public/trip-invite.ts'),
+      )
+      if (!ast) throw new Error('Resolver not loaded')
+      const found: Array<string> = []
+      function visit(node: ts.Node) {
+        if (ts.isIdentifier(node)) found.push(node.text)
+        node.forEachChild(visit)
+      }
+      visit(ast)
+      return found
+    })
+    expect(identifiers).toContain('findLiveTripInviteByDigestUnscoped')
+    for (const forbidden of ['createScope', 'openFeedScope', 'drizzle']) {
+      expect(identifiers).not.toContain(forbidden)
+    }
   })
 })

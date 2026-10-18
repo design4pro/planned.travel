@@ -51,6 +51,7 @@ import {
 } from '../billing'
 import { reserveExport, exportAllowance } from '../exports'
 import { readFeedSource } from '../calendar-feeds'
+import { createTripInvite, tripInviteLinksRepository } from '../invites'
 import { categoriesRepository, createCategory } from '../categories'
 import {
   setTripCollabSections,
@@ -300,9 +301,16 @@ import {
   addHolidayCalendar,
   ensurePlan,
   ensureYear,
+  getAllowance,
+  getPlanOverview,
+  listUserYears,
+  requirePlanActor,
+  requirePlanOwner,
+  saveAllowance,
   setEntitlement,
   setEntry,
   setUserColour,
+  updatePlan,
   vacayCompanyHolidaysRepository,
   vacayEntriesRepository,
   vacayHolidayCalendarsRepository,
@@ -435,6 +443,7 @@ interface World {
   readonly templateItemId: string
   readonly fileId: string
   readonly shareLinkId: string
+  readonly tripInviteId: string
   readonly tripMemberId: string
   readonly guestId: string
   readonly messageId: string
@@ -654,6 +663,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
       files: false,
     },
   })
+  const tripInvite = await createTripInvite(scope, trip.id, {
+    role: 'viewer',
+    key: 'isolation-test-key',
+  })
   const tripMembers = await tripMembersRepository.findMany(scope)
   const tripMember = tripMembers.at(0)
   if (tripMember === undefined) {
@@ -839,6 +852,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     templateItemId: templateItem.id,
     fileId: file.id,
     shareLinkId: shareLink.id,
+    tripInviteId: tripInvite.invite.id,
     tripMemberId: tripMember.id,
     guestId: guest.id,
     messageId: message.id,
@@ -926,6 +940,12 @@ const cases: ReadonlyArray<IsolationCase> = [
   isolationCase('share links', shareLinksRepository, (w) => w.shareLinkId, {
     viewCount: 99,
   }),
+  isolationCase(
+    'trip invite links',
+    tripInviteLinksRepository,
+    (w) => w.tripInviteId,
+    { useCount: 99 },
+  ),
   isolationCase('days', daysRepository, (w) => w.dayId, { title: 'hijacked' }),
   isolationCase('day notes', dayNotesRepository, (w) => w.dayNoteId, {
     body: 'hijacked',
@@ -7120,6 +7140,78 @@ describe('tenant isolation', () => {
       expect(listed.artifacts).toHaveLength(1)
       expect(response.status).toBe(200)
       expect(await response.text()).toBe('<p>alpha</p>')
+    })
+  })
+
+  describe('the leave planner allowance', () => {
+    const planRows = async (world: World) => ({
+      plans: await vacayPlansRepository.findMany(world.tenant.scope),
+      years: await vacayYearsRepository.findMany(world.tenant.scope),
+      userYears: await vacayUserYearsRepository.findMany(world.tenant.scope),
+    })
+
+    it('rejects every guarded call aimed at another workspace’s plan and leaves its rows byte-identical', async () => {
+      const scope = alpha.tenant.scope
+      const before = await planRows(beta)
+
+      for (const call of [
+        () =>
+          saveAllowance(scope, {
+            planId: beta.planId,
+            year: 2026,
+            entitlementDays: 1,
+          }),
+        () => updatePlan(scope, beta.planId, { carryOverEnabled: false }),
+        () => ensureYear(scope, beta.planId, 2031),
+        () => getAllowance(scope, beta.planId, alpha.tenant.ownerUserId, 2026),
+        () => requirePlanActor(scope, beta.planId),
+        () => requirePlanOwner(scope, beta.planId),
+      ]) {
+        expect(await captureError(call)).toBeInstanceOf(NotFoundError)
+      }
+
+      expect(await planRows(beta)).toEqual(before)
+    })
+
+    it('answers the overview in the other workspace’s scope as not found, and the year listing as empty', async () => {
+      expect(
+        await captureError(() =>
+          getPlanOverview(beta.tenant.scope, alpha.planId, 2026),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await listUserYears(beta.tenant.scope, alpha.planId, 2026),
+      ).toEqual([])
+    })
+
+    it('writes nothing for a user id that belongs to the other workspace, on the caller’s own plan', async () => {
+      const before = await vacayUserYearsRepository.count(beta.tenant.scope)
+
+      expect(
+        await captureError(() =>
+          saveAllowance(alpha.tenant.scope, {
+            planId: alpha.planId,
+            userId: beta.tenant.ownerUserId,
+            year: 2026,
+            entitlementDays: 1,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await vacayUserYearsRepository.count(beta.tenant.scope)).toBe(
+        before,
+      )
+      expect(await vacayUserYearsRepository.count(alpha.tenant.scope)).toBe(1)
+    })
+
+    it('does not let a user who belongs to both workspaces reach one workspace’s plan from the other’s scope', async () => {
+      const shared = await alpha.tenant.addUser('Both workspaces')
+      await beta.tenant.addMembership(shared)
+      const inBeta = beta.tenant.scopeFor(shared)
+
+      expect(
+        await captureError(() => requirePlanActor(inBeta, alpha.planId)),
+      ).toBeInstanceOf(NotFoundError)
     })
   })
 
