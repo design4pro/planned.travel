@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
@@ -388,5 +389,22 @@ describe('the payment dialog', () => {
         screen.getByRole('button', { name: 'Record payment' }),
       ).toHaveProperty('disabled', true)
     })
+  })
+})
+
+describe('the payment dialog when recording fails', () => {
+  it('says the catalogue line, never the failure envelope, for an unexpected failure', async () => {
+    const user = hand()
+    open(async () => {
+      throw new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'evt_1a2b3c' }),
+      )
+    })
+
+    await user.type(screen.getByLabelText(/Amount in EUR/), '40.00')
+    await user.click(screen.getByRole('button', { name: 'Record payment' }))
+
+    expect(await screen.findByText(Costs['payment.failed'])).toBeTruthy()
+    expect(screen.queryByText(/planned-travel\/failure/)).toBeNull()
   })
 })

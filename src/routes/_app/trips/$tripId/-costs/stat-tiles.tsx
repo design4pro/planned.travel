@@ -13,10 +13,10 @@
 import { ArrowDownLeft, ArrowUpRight, CircleAlert, Coins } from 'lucide-react'
 
 import { Avatar, StatCard } from '#/components/ui'
+import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { MemberBar, dailySeries, memberShares } from '#/components/costs'
-import { pluralise } from '../../../-lib/format'
 
 import type { CostsSnapshot, CostsTotals } from '#/components/costs'
 import type { CostsPerson } from '#/server/fns/costs'
@@ -64,17 +64,17 @@ export function StatTiles({
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         icon={<ArrowDownLeft />}
-        label="You owe"
+        label={t('costs.tile.owe.label')}
         value={formatMoney(totals.owesMinor, currency, locale)}
         valueTone={totals.owesMinor === 0 ? 'default' : 'danger'}
         caption={
           totals.owesMinor === 0
-            ? 'You are all settled up'
-            : 'Settle before you fly home'
+            ? t('costs.tile.owe.settled')
+            : t('costs.tile.owe.pending')
         }
         footer={
           <PeopleLine
-            prefix="To"
+            prefix={t('costs.tile.owe.to')}
             userIds={creditors.map((row) => row.toUserId)}
             nameOf={nameOf}
             people={people}
@@ -83,17 +83,17 @@ export function StatTiles({
       />
       <StatCard
         icon={<ArrowUpRight />}
-        label="You're owed"
+        label={t('costs.tile.owed.label')}
         value={formatMoney(totals.owedMinor, currency, locale)}
         valueTone={totals.owedMinor === 0 ? 'default' : 'success'}
         caption={
           totals.owedMinor === 0
-            ? 'Nothing owed to you'
-            : 'Still to come back to you'
+            ? t('costs.tile.owed.none')
+            : t('costs.tile.owed.pending')
         }
         footer={
           <PeopleLine
-            prefix="From"
+            prefix={t('costs.tile.owed.from')}
             userIds={debtors.map((row) => row.fromUserId)}
             nameOf={nameOf}
             people={people}
@@ -102,13 +102,16 @@ export function StatTiles({
       />
       <StatCard
         icon={<CircleAlert />}
-        label="Outstanding"
+        label={t('costs.tile.outstanding.label')}
         value={formatMoney(totals.unclaimedMinor, currency, locale)}
         valueTone={totals.unclaimedMinor === 0 ? 'default' : 'warning'}
         caption={
           totals.unclaimedCount === 0
-            ? 'Every expense has a payer'
-            : `${pluralise(totals.unclaimedCount, 'expense')} with no payer yet`
+            ? t('costs.tile.outstanding.none')
+            : t('costs.tile.outstanding.some', {
+                count: totals.unclaimedCount,
+                expenses: formatNumber(totals.unclaimedCount, locale),
+              })
         }
       />
       <StatCard

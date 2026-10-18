@@ -88,6 +88,7 @@ const PROPER_NOUNS: ReadonlyArray<string> = [
  */
 const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
   ca: [
+    'costs.category.transport',
     'modules.files.kind.document',
     'modules.transports.mode.metro',
     'modules.transports.mode.taxi',
@@ -97,6 +98,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
   ],
   cs: ['modules.transports.mode.metro', 'modules.transports.mode.taxi'],
   de: [
+    'costs.category.transport',
     'marketing.legal.badge.version',
     'modules.files.kind.ticket',
     'modules.transports.mode.bus',
@@ -110,6 +112,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'modules.transports.status.idea',
   ],
   fr: [
+    'costs.category.transport',
     'costs.field.date',
     'costs.payment.note',
     'costs.split.method.exact',
@@ -147,8 +150,12 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
     'settings.billing.orders.document',
     'trips.plan.weather.panel.wind',
   ],
-  pl: ['modules.transports.mode.metro'],
-  sv: ['marketing.legal.badge.version', 'modules.transports.mode.taxi'],
+  pl: ['costs.category.transport', 'modules.transports.mode.metro'],
+  sv: [
+    'costs.category.transport',
+    'marketing.legal.badge.version',
+    'modules.transports.mode.taxi',
+  ],
   tr: ['modules.transports.mode.metro'],
   vi: ['modules.transports.mode.taxi'],
 }
