@@ -23,8 +23,9 @@
  *
  * D1 has no interactive transaction. Create is insert-if-absent on the unique `trip_id` index, so a
  * double tap or a second owner gets the existing link back. Replace and update are compare-and-set on
- * `rotation` in the `UPDATE`'s own `WHERE`, so a concurrent change is reported (`changed`) and never
- * overwritten.
+ * `rotation` in the `UPDATE`'s own `WHERE`, so a concurrent replace or switch is reported
+ * (`changed`) and never overwritten. A role change keeps the rotation (the copies already sent stay
+ * valid), so two role changes made at once are last-write-wins.
  *
  * ## The takeover rule
  *
