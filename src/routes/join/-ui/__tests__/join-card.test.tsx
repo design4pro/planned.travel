@@ -245,18 +245,19 @@ describe('JoinCard', () => {
 })
 
 describe('the rest of the page', () => {
-  it('holds the retry button busy while the page reloads and moves focus to the new heading', async () => {
+  it('holds the retry button busy while the page reloads and focuses the new card heading', async () => {
     let finish: () => void = noop
     const retry = vi.fn(
       () => new Promise<void>((resolve) => (finish = () => resolve())),
     )
-    render(
+    const page = (view: InviteView) => (
       <I18nProvider locale="en" messages={EN}>
         <JoinFrame>
-          <RetryCard busy onRetry={retry} />
+          <JoinCard view={view} path={PATH} onRetry={retry} />
         </JoinFrame>
-      </I18nProvider>,
+      </I18nProvider>
     )
+    const { rerender } = render(page({ state: 'busy', retryAfter: 30 }))
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     expect(
       screen
@@ -264,18 +265,11 @@ describe('the rest of the page', () => {
         .getAttribute('aria-busy'),
     ).toBe('true')
     finish()
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy(),
+    // The same frame stays mounted: only the card in it changes, as it does after a real retry.
+    rerender(page(invited))
+    expect(document.activeElement?.textContent).toBe(
+      'Ada invited you to a trip',
     )
-    cleanup()
-    render(
-      <I18nProvider locale="en" messages={EN}>
-        <JoinFrame>
-          <h1>A new card</h1>
-        </JoinFrame>
-      </I18nProvider>,
-    )
-    expect(document.activeElement?.textContent).toBe('A new card')
   })
 
   it('offers a retry without the busy line when the read failed', () => {

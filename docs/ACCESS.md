@@ -745,7 +745,9 @@ a `Referer`.
 **Telemetry.** The secret is redacted from every Sentry channel (`docs/DEPLOY.md` §17.2), logs for
 this surface carry the link id and the outcome and never the path, and the session recorder does not
 run on a join location - the page itself and a sign-in page whose `redirect` or `callbackURL`
-carries the link, at any encoding depth (`src/lib/sentry-replay.ts`).
+carries the link, at any encoding depth (`src/lib/sentry-replay.ts`). The "Report a problem" button is
+not offered there either: a screenshot is an attachment no scrub can read
+(`src/components/layout/feedback-widget.tsx`).
 
 ---
 

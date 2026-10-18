@@ -2281,6 +2281,11 @@ structured log line (link id, outcome); the replay quota drops slightly. `reques
 `src/server/observability/logger.ts` logs `path` and `referrer` unredacted; nothing calls it today,
 so do not call it on a `/join/` request.
 
+**No feedback button on a join location.** A feedback screenshot is an attachment no scrub can read,
+and a window capture shows the address bar, so `FeedbackWidget` builds no button while the address
+holds a join path (the same test as the replay, on the router's location) and builds it again when
+the visitor navigates away.
+
 ### 17.3 The source-map token
 
 Without source maps every frame in a Sentry issue points at a bundled chunk offset instead of a

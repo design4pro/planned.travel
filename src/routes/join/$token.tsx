@@ -5,6 +5,7 @@ import { answerBusy } from './-lib/busy'
 import { JOIN_HEADERS, joinHead } from './-lib/head'
 import { loadInvite } from './-server/join'
 import {
+  Arrival,
   JoinCard,
   JoinFrame,
   JoinSkeleton,
@@ -79,7 +80,9 @@ function JoinUnavailable({ data }: { data?: unknown }) {
     data.signedIn === true
   return (
     <JoinFrame>
-      <UnavailableCard signedIn={signedIn} path={joinPath(token)} />
+      <Arrival>
+        <UnavailableCard signedIn={signedIn} path={joinPath(token)} />
+      </Arrival>
     </JoinFrame>
   )
 }

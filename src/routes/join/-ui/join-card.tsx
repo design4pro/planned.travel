@@ -41,26 +41,30 @@ const ROLE_KEYS: Record<Invited['role'], MessageKey> = {
 
 /**
  * A retry that works replaces the card, and the button that was focused goes with it. Set by the
- * retry, read once by the next frame to mount, which moves focus to the new heading.
+ * retry, read once by the next card to arrive, which moves focus to its heading.
  */
-let focusHeadingOnMount = false
+let focusHeadingOnArrival = false
 
-/** The frame every state shares: guest chrome, one `main`, the card in the middle. */
-export function JoinFrame({ children }: { children: React.ReactNode }) {
-  const main = React.useRef<HTMLElement>(null)
+/** What each card is wrapped in: on arrival after a retry, focus goes to the card's heading. */
+export function Arrival({ children }: { children: React.ReactNode }) {
+  const box = React.useRef<HTMLDivElement>(null)
   React.useEffect(() => {
-    if (!focusHeadingOnMount) return
-    focusHeadingOnMount = false
-    const heading = main.current?.querySelector('h1')
+    if (!focusHeadingOnArrival) return
+    focusHeadingOnArrival = false
+    const heading = box.current?.querySelector('h1')
     heading?.setAttribute('tabindex', '-1')
     heading?.focus()
   }, [])
+  return <div ref={box}>{children}</div>
+}
+
+/** The frame every state shares: guest chrome, one `main`, the card in the middle. */
+export function JoinFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
       <SkipToContent />
       <MarketingHeader minimal />
       <main
-        ref={main}
         id="main"
         className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-10 sm:px-6"
       >
@@ -309,7 +313,7 @@ export function RetryCard({
 
   async function retry(): Promise<void> {
     setPending(true)
-    focusHeadingOnMount = true
+    focusHeadingOnArrival = true
     await onRetry().catch(() => undefined)
     setAttempt((count) => count + 1)
     setPending(false)
@@ -370,6 +374,14 @@ export function JoinCard({
   path: string
   onRetry: () => Promise<void>
 }) {
+  return <Arrival key={view.state}>{cardFor(view, path, onRetry)}</Arrival>
+}
+
+function cardFor(
+  view: InviteView,
+  path: string,
+  onRetry: () => Promise<void>,
+): React.ReactNode {
   switch (view.state) {
     case 'invited':
       return <InvitedCard view={view} path={path} />
