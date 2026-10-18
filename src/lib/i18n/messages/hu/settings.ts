@@ -493,6 +493,18 @@ const messages = {
    */
   'billing.provider.rejected':
     'A fizetési szolgáltató elutasította a kérést. Próbáld újra egy pillanat múlva.',
+  'billing.failure.reference':
+    'Hivatkozási szám az ügyfélszolgálatnak: {reference}',
+  'billing.failure.forbidden':
+    'A szereped ezt nem engedi a munkaterület számlázásán. Kérd egy tulajdonost vagy adminisztrátort.',
+  'billing.failure.providerRefused':
+    'A Polar nem fogadta el a módosítást. Vesd össze a helyek számát a tagjaiddal, majd próbáld újra, vagy használd a számlázási portált.',
+  'billing.failure.rateLimited':
+    'A Polar most túlterhelt. Semmi sem változott. Próbáld újra egy perc múlva.',
+  'billing.failure.notConnected':
+    'A számlázás ezen a telepítésen még nincs összekötve, ezért semmi sem változott. Fordulj az ügyfélszolgálathoz.',
+  'billing.failure.orderNotInvoiceable':
+    'A Polar nem tud számlát kiállítani erre a rendelésre. Ha hiányzik a számlázási név vagy cím, add meg a számlázási portálon, és próbáld újra; egyébként fordulj az ügyfélszolgálathoz.',
   'billing.planChanged.title': 'Csomag frissítve',
   'billing.planChanged.body':
     'A változás a Polarnál már érvényes, a különbséget ő számlázza. Az alábbi összegzés egy percen belül utolér.',

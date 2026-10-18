@@ -230,8 +230,8 @@ be attributed to the code from the refusal alone, so `changePlan()` reads the di
 (`GET /v1/discounts/{id}`) and runs `fit()` on it against the selected product: a code that no
 longer fits, or is gone (`404`), is the cause, and the same `invalid` is returned and logged with
 nothing moved, since that PATCH was the first write. Otherwise, including a failed re-read, the
-`422` goes through `customerFacing()` unchanged as today's readable error. `customerFacing()`
-itself does not change.
+`422` is left to the failure classifier as today: `classifyFailure` sends it as the code
+`BILLING_PROVIDER_REFUSED` (#1368 replaced `customerFacing()`, which no longer exists).
 
 Which PATCH carries the code depends on whether the code also fits the product the subscription is
 on now, which `fit()` answers from the discount it already holds:
@@ -488,8 +488,8 @@ through the `i18n-messages` skill.
    `invalid`, logs it and makes no product PATCH; a restricted discount is cleared
    on a move to an excluded product; code-only returns `discount_applied`; and the idempotency key
    differs by discount.
-7. `-server/billing.ts`: `startPlanChange` returns `PlanChangeResult`. `customerFacing()` is
-   unchanged. Update what `scripts/check-server-fn-manifest.mjs` checks if it records shapes.
+7. `-server/billing.ts`: `startPlanChange` returns `PlanChangeResult`. error mapping is
+   unchanged (#1368 later moved it into `classifyFailure`). Update what `scripts/check-server-fn-manifest.mjs` checks if it records shapes.
 8. DEPLOY.md: add `discounts:read` to the §9.2 scope table, and the two lookup rows and the
    subscription read to §9.8.
 

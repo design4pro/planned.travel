@@ -502,6 +502,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'El proveïdor de pagament ha rebutjat la sol·licitud. Torna-ho a provar en un moment.',
+  'billing.failure.reference': 'Referència per al suport: {reference}',
+  'billing.failure.forbidden':
+    'El teu rol no permet això a la facturació d’aquest espai de treball. Demana-ho a un propietari o a un administrador.',
+  'billing.failure.providerRefused':
+    'Polar no ha acceptat aquest canvi. Compara el nombre de places amb els teus membres i torna-ho a provar, o fes servir el portal de facturació.',
+  'billing.failure.rateLimited':
+    'Polar està saturat ara mateix. No s’ha canviat res. Torna-ho a provar d’aquí a un minut.',
+  'billing.failure.notConnected':
+    'La facturació encara no està connectada en aquest desplegament, així que no s’ha canviat res. Contacta amb el suport.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar no pot emetre una factura per a aquesta comanda. Si no té nom o adreça de facturació, afegeix-los al portal de facturació i torna-ho a provar; si no, contacta amb el suport.',
   'billing.planChanged.title': 'Pla actualitzat',
   'billing.planChanged.body':
     'El canvi ja és vigent a Polar, que facturarà la diferència. El resum de sota s’hi posa al dia en un minut.',
