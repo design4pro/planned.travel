@@ -145,7 +145,8 @@ list stays. The per-row "planned" sub-line moves into the legend row and, being 
 today (`rail.tsx:385`), becomes a catalogue key. The category **names** are the caller's
 `categoryLabel`, which is hardcoded English today (`categories.tsx:19-38`); that is existing debt
 shared with the ledger and the expense dialog, owned by `04-S2`, and is not moved here (Resolved
-assumption 11).
+assumption 11). Since moved into the `costs`
+catalogue by #1031: `categoryLabel(category, t)` resolves through the translator.
 
 **The legend** is `<ul aria-label>`; every row is an `<li>`. In Phase 1 every row is plain text.
 In Phase 2 a row with spend gains a `<button type="button" aria-pressed>` inside its `<li>`,

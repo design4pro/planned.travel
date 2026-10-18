@@ -35,6 +35,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
@@ -48,20 +49,10 @@ import {
   toAmountInput,
 } from '#/lib/money'
 import { parseDay, toDayString } from './data'
+import { SETTLEMENT_METHOD_OPTIONS } from './payment-methods'
 import { useStaleTripCurrency } from './stale-trip-currency'
 
 import type { CostsPerson, SettlementMethod } from '#/server/fns/costs'
-
-const SETTLEMENT_METHOD_OPTIONS: ReadonlyArray<{
-  readonly value: SettlementMethod
-  readonly label: MessageKey
-}> = [
-  { value: 'bank_transfer', label: 'costs.payment.method.bankTransfer' },
-  { value: 'cash', label: 'costs.payment.method.cash' },
-  { value: 'card', label: 'costs.payment.method.card' },
-  { value: 'app', label: 'costs.payment.method.app' },
-  { value: 'other', label: 'costs.payment.method.other' },
-]
 
 /** Exactly the shape `recordPaymentFn` validates. */
 export interface PaymentFormValue {
@@ -228,7 +219,8 @@ export function PaymentDialog({
   }
 
   const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ?? 'Traveller'
+    people.find((person) => person.userId === userId)?.name ??
+    t('costs.rebase.someone')
 
   async function submit(): Promise<void> {
     // `canSave` already proves the amount parsed, so narrowing follows from it.
@@ -482,18 +474,4 @@ function asMethod(value: string): SettlementMethod {
     SETTLEMENT_METHOD_OPTIONS.find((entry) => entry.value === value)?.value ??
     'other'
   )
-}
-
-/**
- * A server message if there is one, otherwise the catalogue's fallback.
- *
- * The fallback arrives as an argument rather than being read here: this is a
- * plain function outside the component, and the translator belongs to the
- * component that has one.
- */
-function messageOf(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return fallback
 }
