@@ -1187,6 +1187,27 @@ const messages = {
     other: 'İzin hakkınız kaydedilemedi. {year} hâlâ {value} gün gösteriyor.',
   },
   'vacay.allowance.retry': 'Tekrar dene',
+  'vacay.allowance.tile.edit.carried':
+    'Devreden günleri düzenle, şu an {value}',
+  'vacay.allowance.input.carried': '{year} yılına devreden günler',
+  'vacay.allowance.carried.from': '{year} yılından devir',
+  'vacay.allowance.carried.opening':
+    '{year} öncesinden getirildi. Düzenlemek için seçin.',
+  'vacay.allowance.carried.off': 'Devir kapalı',
+  'vacay.allowance.carried.wholeDays':
+    'Gelecek yıla yalnızca tam günler devredilir; artan yarım gün devredilmez.',
+  'vacay.allowance.error.derived':
+    '{year} yılına devreden günler artık {previousYear} yılından hesaplanıyor, bu yüzden düzenlenemez.',
+  'vacay.allowance.error.carried': {
+    one: 'Devreden günleriniz kaydedilemedi. {year} hâlâ {value} gün gösteriyor.',
+    other:
+      'Devreden günleriniz kaydedilemedi. {year} hâlâ {value} gün gösteriyor.',
+  },
+  'vacay.allowance.superseded': {
+    one: '{year} yılına devreden günler artık {previousYear} yılından hesaplanıyor. Girdiğiniz değer {value} gün idi.',
+    other:
+      '{year} yılına devreden günler artık {previousYear} yılından hesaplanıyor. Girdiğiniz değer {value} gün idi.',
+  },
   'vacay.pending.loading': 'Yükleniyor',
   'vacay.error.title': 'İzin planlayıcı yüklenemedi',
   'vacay.year.previous': 'Önceki yıl',

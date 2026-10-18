@@ -1149,6 +1149,23 @@ const messages = {
       'Không thể lưu số ngày phép của bạn. {year} vẫn hiển thị {value} ngày.',
   },
   'vacay.allowance.retry': 'Thử lại',
+  'vacay.allowance.tile.edit.carried': 'Sửa ngày chuyển sang, hiện là {value}',
+  'vacay.allowance.input.carried': 'Số ngày chuyển sang {year}',
+  'vacay.allowance.carried.from': 'Chuyển từ {year}',
+  'vacay.allowance.carried.opening': 'Mang từ trước {year}. Chọn để sửa.',
+  'vacay.allowance.carried.off': 'Chuyển ngày phép đang tắt',
+  'vacay.allowance.carried.wholeDays':
+    'Chỉ những ngày trọn vẹn mới được chuyển sang năm sau; nửa ngày còn lại thì không.',
+  'vacay.allowance.error.derived':
+    'Số ngày chuyển sang {year} giờ được tính từ {previousYear}, nên không thể sửa.',
+  'vacay.allowance.error.carried': {
+    other:
+      'Không thể lưu số ngày chuyển sang của bạn. {year} vẫn hiển thị {value} ngày.',
+  },
+  'vacay.allowance.superseded': {
+    other:
+      'Số ngày chuyển sang {year} giờ được tính từ {previousYear}. Trước đó bạn đã nhập {value} ngày.',
+  },
   'vacay.pending.loading': 'Đang tải',
   'vacay.error.title': 'Không thể tải trình lập kế hoạch nghỉ phép',
   'vacay.year.previous': 'Năm trước',

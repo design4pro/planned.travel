@@ -15,6 +15,11 @@ import { settle } from './helpers/settle.ts'
  * serial, because it writes the demo member's allowance row for the pinned year; the walk puts the
  * figure back in its `finally`, so a failed run leaves the fixture as it found it.
  * `playwright.config.ts` names this describe among the fixture writers.
+ *
+ * `08-S1b` adds the carried-over tile to the same describe: the demo traveller has rows for the
+ * year before the pinned one and for the pinned one, so the pinned year's "Carried" is calculated
+ * and the earlier year's is an opening balance that can be typed. The walk edits that opening
+ * balance and puts it back in its `finally`.
  */
 const VACAY: RouteCase = {
   name: 'vacay',
@@ -30,6 +35,14 @@ const UNSET: RouteCase = {
   ready: 'main',
 }
 
+/** The demo traveller's first year in the planner: no row before it, so its carried figure is typed. */
+const OPENING_YEAR = PINNED_YEAR - 1
+const OPENING: RouteCase = {
+  name: 'vacay-opening-balance',
+  path: `/vacay?year=${OPENING_YEAR}`,
+  ready: 'main',
+}
+
 const TILE = /^Edit days, currently \d+$/
 
 function tile(page: Page) {
@@ -38,6 +51,36 @@ function tile(page: Page) {
 
 function field(page: Page) {
   return page.getByRole('textbox', { name: /^Days/ })
+}
+
+function carriedTile(page: Page) {
+  return page.getByRole('button', {
+    name: /^Edit carried days, currently \d+$/,
+  })
+}
+
+/** The figure under the "Carried" label, whether it is a button or plain text. */
+function carriedFigure(page: Page) {
+  return page
+    .locator('dt')
+    .filter({ hasText: /^Carried$/ })
+    .locator('xpath=following-sibling::dd')
+}
+
+/**
+ * Whether every tile label of the allowance panel sits on one line inside its tile. A label that
+ * breaks mid-word ("CARRIE" over "D") makes its tile taller than the others and reads as a typo.
+ */
+async function tileLabelsFit(page: Page): Promise<boolean> {
+  return page.locator('dl dt').evaluateAll((labels) =>
+    labels.slice(0, 3).every((label) => {
+      const { height } = label.getBoundingClientRect()
+      return (
+        label.scrollWidth <= label.clientWidth &&
+        height < 1.6 * Number.parseFloat(getComputedStyle(label).lineHeight)
+      )
+    }),
+  )
 }
 
 /** The two widths the spec names: the phone column and the three-column planner. */
@@ -236,5 +279,90 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
 
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(field(page)).toHaveCount(0)
+  })
+  test('shows the pinned year’s carried figure as the previous year’s leftover, in plain text', async ({
+    page,
+  }) => {
+    await visit(page, VACAY, 'light')
+
+    await expect(page.getByText(`Carried from ${OPENING_YEAR}`)).toBeVisible()
+    await expect(carriedTile(page)).toHaveCount(0)
+    // Nothing was used in the earlier year, so all 28 days of its allowance carry in.
+    await expect(carriedFigure(page)).toHaveText('28')
+    expect(await tileLabelsFit(page), 'the tile labels fit their tiles').toBe(
+      true,
+    )
+  })
+
+  test('edits the opening balance, sees the next year follow it, and puts it back', async ({
+    page,
+  }) => {
+    await visit(page, OPENING, 'light')
+    await expect(
+      page.getByText(`Brought in from before ${OPENING_YEAR}. Select to edit.`),
+    ).toBeVisible()
+    expect(await tileLabelsFit(page), 'the tile labels fit their tiles').toBe(
+      true,
+    )
+    const original = Number(
+      /(\d+)$/.exec(
+        (await carriedTile(page).getAttribute('aria-label')) ?? '',
+      )?.[1],
+    )
+    const next = original + 4
+
+    try {
+      await carriedTile(page).click()
+      const carriedField = page.getByRole('textbox', { name: /^Carried/ })
+      await expect(carriedField).toBeFocused()
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: 900 })
+        expect(
+          await overflowsHorizontally(page),
+          `the open carried editor must not overflow at ${width}px`,
+        ).toBe(false)
+      }
+      await carriedField.fill(String(next))
+      await carriedField.press('Enter')
+      await expect(carriedField).toHaveCount(0)
+      await expect(carriedTile(page)).toHaveAttribute(
+        'aria-label',
+        `Edit carried days, currently ${next}`,
+      )
+      await expect(carriedTile(page)).toBeFocused()
+
+      // The year after it was rewritten in the same request, not on the next visit.
+      await visit(page, VACAY, 'light')
+      await expect(carriedFigure(page)).toHaveText(String(28 + next))
+    } finally {
+      await visit(page, OPENING, 'light')
+      await carriedTile(page).click()
+      const carriedField = page.getByRole('textbox', { name: /^Carried/ })
+      await carriedField.fill(String(original))
+      await carriedField.press('Enter')
+      await expect(carriedTile(page)).toHaveAttribute(
+        'aria-label',
+        `Edit carried days, currently ${original}`,
+      )
+    }
+  })
+
+  test('shows a year without a row the leftover of the year before', async ({
+    page,
+  }) => {
+    // 2027 has no row; 2026 has one, so 2027 shows what 2026 leaves: a year the traveller never
+    // saved still carries into the next.
+    const next: RouteCase = {
+      name: 'vacay-row-less-year',
+      path: `/vacay?year=${PINNED_YEAR + 1}`,
+      ready: 'main',
+    }
+    await visit(page, next, 'light')
+
+    await expect(page.getByText(`Carried from ${PINNED_YEAR}`)).toBeVisible()
+    await expect(carriedTile(page)).toHaveCount(0)
+    await expect(
+      page.getByText('Default allowance. Select to set your own.'),
+    ).toBeVisible()
   })
 })

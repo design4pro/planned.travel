@@ -1267,6 +1267,31 @@ const messages = {
       'Не удалось сохранить ваш лимит. За {year} год по-прежнему указано: {value} дня.',
   },
   'vacay.allowance.retry': 'Повторить',
+  'vacay.allowance.tile.edit.carried':
+    'Изменить перенесённые дни, сейчас {value}',
+  'vacay.allowance.input.carried': 'Дни, перенесённые на {year} год',
+  'vacay.allowance.carried.from': 'Перенесено из {year} года',
+  'vacay.allowance.carried.opening':
+    'Перенесено с периода до {year} года. Выберите, чтобы изменить.',
+  'vacay.allowance.carried.off': 'Перенос отключён',
+  'vacay.allowance.carried.wholeDays':
+    'На следующий год переносятся только целые дни; оставшаяся половина дня не переносится.',
+  'vacay.allowance.error.derived':
+    'Перенесённые дни за {year} год теперь рассчитываются по {previousYear} году, поэтому их нельзя изменить.',
+  'vacay.allowance.error.carried': {
+    one: 'Не удалось сохранить перенесённые дни. За {year} год по-прежнему указано: {value} день.',
+    few: 'Не удалось сохранить перенесённые дни. За {year} год по-прежнему указано: {value} дня.',
+    many: 'Не удалось сохранить перенесённые дни. За {year} год по-прежнему указано: {value} дней.',
+    other:
+      'Не удалось сохранить перенесённые дни. За {year} год по-прежнему указано: {value} дня.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Перенесённые дни за {year} год теперь рассчитываются по {previousYear} году. Вы вводили: {value} день.',
+    few: 'Перенесённые дни за {year} год теперь рассчитываются по {previousYear} году. Вы вводили: {value} дня.',
+    many: 'Перенесённые дни за {year} год теперь рассчитываются по {previousYear} году. Вы вводили: {value} дней.',
+    other:
+      'Перенесённые дни за {year} год теперь рассчитываются по {previousYear} году. Вы вводили: {value} дня.',
+  },
   'vacay.pending.loading': 'Загрузка',
   'vacay.error.title': 'Не удалось загрузить планировщик отпусков',
   'vacay.year.previous': 'Предыдущий год',

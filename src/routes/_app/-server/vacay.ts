@@ -24,6 +24,9 @@ export interface VacayAllowance {
   readonly carriedOverDays: number
   readonly usedDays: number
   readonly remainingDays: number
+  /** The carried figure is entered, not calculated: no row exists for the year before. */
+  readonly openingBalance: boolean
+  readonly previousYear: number
 }
 
 export interface SavedAllowance {
@@ -31,6 +34,12 @@ export interface SavedAllowance {
   readonly year: number
   readonly entitlementDays: number
   readonly carriedOverDays: number
+}
+
+export interface AllowanceSaved {
+  readonly row: SavedAllowance
+  /** The typed opening balance this save replaced with a calculated one, and what it held. */
+  readonly superseded: { readonly year: number; readonly was: number } | null
 }
 
 /** The caller's own balance for one year; there is no way to ask for anyone else's here. */
@@ -43,9 +52,9 @@ export const loadVacayAllowance = createServerFn({ method: 'GET' })
 
 export const setAllowanceFn = createServerFn({ method: 'POST' })
   .validator(setEntitlementInput)
-  .handler(async ({ data }): Promise<{ readonly row: SavedAllowance }> => {
+  .handler(async ({ data }): Promise<AllowanceSaved> => {
     const scope = await appScope()
-    const row = await saveAllowance(scope, data)
+    const { row, superseded } = await saveAllowance(scope, data)
     return {
       row: {
         userId: row.userId,
@@ -53,5 +62,6 @@ export const setAllowanceFn = createServerFn({ method: 'POST' })
         entitlementDays: row.entitlementDays,
         carriedOverDays: row.carriedOverDays,
       },
+      superseded,
     }
   })

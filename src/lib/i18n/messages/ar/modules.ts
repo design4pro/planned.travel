@@ -1302,6 +1302,34 @@ const messages = {
     other: 'تعذّر حفظ رصيدك. ما زال عام {year} يعرض {value} يوم.',
   },
   'vacay.allowance.retry': 'حاول مرة أخرى',
+  'vacay.allowance.tile.edit.carried':
+    'تعديل الأيام المُرحَّلة، الحالي {value}',
+  'vacay.allowance.input.carried': 'الأيام المُرحَّلة إلى عام {year}',
+  'vacay.allowance.carried.from': 'مُرحَّل من عام {year}',
+  'vacay.allowance.carried.opening':
+    'مُرحَّل من قبل عام {year}. اختره للتعديل.',
+  'vacay.allowance.carried.off': 'الترحيل متوقف',
+  'vacay.allowance.carried.wholeDays':
+    'تُرحَّل الأيام الكاملة فقط إلى العام التالي؛ أما نصف اليوم المتبقي فلا يُرحَّل.',
+  'vacay.allowance.error.derived':
+    'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}، لذا لا يمكن تعديلها.',
+  'vacay.allowance.error.carried': {
+    zero: 'تعذّر حفظ الأيام المُرحَّلة. ما زال عام {year} يعرض {value} أيام.',
+    one: 'تعذّر حفظ الأيام المُرحَّلة. ما زال عام {year} يعرض {value} يوم.',
+    two: 'تعذّر حفظ الأيام المُرحَّلة. ما زال عام {year} يعرض {value} يوم.',
+    few: 'تعذّر حفظ الأيام المُرحَّلة. ما زال عام {year} يعرض {value} أيام.',
+    many: 'تعذّر حفظ الأيام المُرحَّلة. ما زال عام {year} يعرض {value} يومًا.',
+    other: 'تعذّر حفظ الأيام المُرحَّلة. ما زال عام {year} يعرض {value} يوم.',
+  },
+  'vacay.allowance.superseded': {
+    zero: 'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}. كنت قد أدخلت {value} أيام.',
+    one: 'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}. كنت قد أدخلت {value} يوم.',
+    two: 'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}. كنت قد أدخلت {value} يوم.',
+    few: 'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}. كنت قد أدخلت {value} أيام.',
+    many: 'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}. كنت قد أدخلت {value} يومًا.',
+    other:
+      'الأيام المُرحَّلة لعام {year} تُحتسب الآن من عام {previousYear}. كنت قد أدخلت {value} يوم.',
+  },
   'vacay.pending.loading': 'جارٍ التحميل',
   'vacay.error.title': 'تعذّر تحميل مخطّط الإجازات',
   'vacay.year.previous': 'العام السابق',
