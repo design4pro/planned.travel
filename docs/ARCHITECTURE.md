@@ -204,7 +204,7 @@ a third catalog member.
   `server/catalog`; it never grows a second authorisation path or a second query layer.
 - `src/server/public/**` (phase F) — the only session-less read path in the Worker, and it holds
   no SQL of its own. Every response is a named read-only projection with an explicit column
-  whitelist, executed through `server/repos` under the tenant scope derived from the share or feed
+  whitelist, executed through `server/repos` under the tenant scope derived from the share, feed or trip invite link
   record it resolved (the feed scope is built only by repo `openFeedScope` from its adjacent
   branded `ResolvedFeed`), or through `server/catalog` for published global rows.
 
