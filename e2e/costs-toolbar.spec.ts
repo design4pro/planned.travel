@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import { SEEDED_TRIPS, tripIdByName } from './helpers/places-and-maps.ts'
 import { THEMES } from './helpers/routes.ts'
@@ -50,6 +50,51 @@ async function overflowsSideways(page: Page): Promise<boolean> {
               bar.getBoundingClientRect().left - 0.5,
         ),
     )
+}
+
+/**
+ * The view tab labels of the catalogue's longest words, in the order of the three tabs (all, paid by
+ * me, owed to me): `nl`, `tr`, `el` and `de` as written in `src/lib/i18n/messages/<locale>/`, then
+ * the three longest single words together, so the active tab (semibold, two-digit count) carries one.
+ * The locale is a stored setting of the account, so the labels are put into the tabs here rather
+ * than switching the demo user's language for a layout check.
+ */
+const LONG_TAB_LABELS: ReadonlyArray<ReadonlyArray<string>> = [
+  ['Alle', 'Door mij betaald', 'Mij verschuldigd'],
+  ['Tümü', 'Benim ödediklerim', 'Bana borçlu olunan'],
+  ['Όλα', 'Πληρωμένα από εμένα', 'Μου οφείλουν'],
+  ['Alle', 'Von mir bezahlt', 'Mir geschuldet'],
+  ['Mij verschuldigd', 'Benim ödediklerim', 'Πληρωμένα από εμένα'],
+]
+
+/** The tabs whose content (label and count) reaches past the tab's own box. */
+async function spillingTabs(bar: Locator): Promise<Array<string>> {
+  return bar.getByRole('tab').evaluateAll((tabs) =>
+    tabs
+      .filter((tab) => {
+        const range = document.createRange()
+        range.selectNodeContents(tab)
+        const content = range.getBoundingClientRect()
+        const box = tab.getBoundingClientRect()
+        return content.left < box.left - 0.5 || content.right > box.right + 0.5
+      })
+      .map((tab) => tab.textContent ?? ''),
+  )
+}
+
+/** Replace the text of each tab's label, keeping the count that follows it. */
+async function relabelTabs(
+  bar: Locator,
+  labels: ReadonlyArray<string>,
+): Promise<void> {
+  await bar.getByRole('tab').evaluateAll((tabs, next) => {
+    tabs.forEach((tab, index) => {
+      const label = Array.from(tab.childNodes).find(
+        (node) => node.nodeType === Node.TEXT_NODE,
+      )
+      if (label !== undefined) label.textContent = next[index] ?? ''
+    })
+  }, labels)
 }
 
 test.describe('the costs filter bar on a phone', () => {
@@ -119,6 +164,22 @@ test.describe('the costs filter bar on a phone', () => {
           (barBox?.width ?? Infinity) - 1,
         )
 
+        // Each tab holds its own label and count, in English and in the longest labels there are.
+        expect(await spillingTabs(bar), 'no tab may spill its content').toEqual(
+          [],
+        )
+        for (const labels of LONG_TAB_LABELS) {
+          await relabelTabs(bar, labels)
+          expect(
+            await spillingTabs(bar),
+            `no tab may spill its content with ${labels.join(' / ')}`,
+          ).toEqual([])
+          expect(
+            await overflowsSideways(page),
+            `the bar may not widen with ${labels.join(' / ')}`,
+          ).toBe(false)
+        }
+
         // Keyboard order is the reading order: search, then the selects, then the tabs.
         await controls[0].focus()
         for (const next of controls.slice(1, 4)) {
@@ -128,7 +189,14 @@ test.describe('the costs filter bar on a phone', () => {
         await page.keyboard.press('Tab')
         await expect(list.getByRole('tab', { selected: true })).toBeFocused()
 
-        expect(watched().fatal, 'the console must be clean').toEqual([])
+        const output = watched()
+        expect(output.fatal, 'the console must be clean').toEqual([])
+        if (output.tolerated.length > 0) {
+          test.info().annotations.push({
+            type: 'tolerated console output',
+            description: `${route.path}: ${output.tolerated.join('\n')}`,
+          })
+        }
       } finally {
         await page.close()
       }

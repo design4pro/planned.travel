@@ -224,8 +224,10 @@ export function CostsToolbar({
                   key={view}
                   value={view}
                   // Below `sm` the three triggers split the width and a long
-                  // label wraps rather than widening the row or being clipped.
-                  className="h-auto min-h-7 min-w-0 gap-1.5 px-2 py-1 text-center whitespace-normal sm:h-7 sm:gap-2 sm:px-3 sm:py-0 sm:whitespace-nowrap"
+                  // label wraps rather than widening the row or being clipped;
+                  // `wrap-anywhere` lets a word longer than the segment break
+                  // instead of spilling into its neighbour.
+                  className="h-auto min-h-7 min-w-0 gap-1.5 px-2 py-1 text-center wrap-anywhere whitespace-normal sm:h-7 sm:gap-2 sm:px-3 sm:py-0 sm:wrap-normal sm:whitespace-nowrap"
                   badge={
                     // `outline` rather than `neutral` for the resting chip: the
                     // segmented track and `surface-2` are within a shade of each

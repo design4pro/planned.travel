@@ -97,9 +97,7 @@ export function DisplayCurrencyMenu({
       <SimpleSelect
         size="sm"
         className={
-          stacked
-            ? 'min-w-0 flex-1 sm:w-44 sm:flex-none sm:shrink-0'
-            : 'w-44 shrink-0'
+          stacked ? 'min-w-0 flex-1 sm:w-44 sm:flex-none' : 'w-44 shrink-0'
         }
         options={options}
         value={display.mode === 'fixed' ? display.code : PER_TRIP}
