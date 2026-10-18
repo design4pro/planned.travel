@@ -753,6 +753,18 @@ const messages = {
     'この旅行の参加者全員でひとつのスレッドを共有します。ここで決めたことはグループチャットに散らばらず、旅行と一緒に残ります。',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': '最初のメッセージを書こう',
+  'collab.thread.loadOlder': '以前のメッセージを読み込む',
+  'collab.thread.loadingOlder': '以前のメッセージを読み込み中',
+  'collab.thread.loadOlderFailed': '以前のメッセージを読み込めませんでした',
+  'collab.thread.retry': '再試行',
+  'collab.thread.start': 'ここから会話が始まります',
+  'collab.thread.loadedEarlier': {
+    other: '以前のメッセージを{earlier}件読み込みました',
+  },
+  'collab.thread.newFrom': '{name}さんからの新着メッセージ',
+  'collab.thread.newMany': {
+    other: '新着メッセージ{new}件',
+  },
   'collab.toast.reactionFailed': 'リアクションを保存できませんでした',
   'collab.toast.messageDeleted': 'メッセージを削除しました',
   'collab.toast.deleteFailed': 'メッセージを削除できませんでした',
@@ -1096,6 +1108,36 @@ const messages = {
     'このリンクを持つ人は誰でも、アカウントなしで、このワークスペース内であなたが参加するアーカイブされていない旅行を閲覧できます。開始日が最も新しい{count}件が対象で、新しい旅行は自動的に表示されます。パスワードと同じように保護してください。',
   'files.calendar.workspace.nameNote':
     'このリンクはカレンダーに「planned.travel」と表示されます。複数ある場合は名前を変更してください。',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': '休暇日数 {year}',
+  'vacay.allowance.daysLeft': {
+    other: '残り{value}日',
+  },
+  'vacay.allowance.daysOver': {
+    other: '{value}日超過',
+  },
+  'vacay.allowance.progress': '使用日数: {used} / {total}',
+  'vacay.allowance.tile.days': '日数',
+  'vacay.allowance.tile.used': '使用済み',
+  'vacay.allowance.tile.carried': '繰り越し',
+  'vacay.allowance.tile.edit.days': '日数を編集、現在 {value}',
+  'vacay.allowance.input.days': '{year}年の休暇日数',
+  'vacay.allowance.input.invalid': '0〜365の整数を入力してください。',
+  'vacay.allowance.save': '保存',
+  'vacay.allowance.cancel': 'キャンセル',
+  'vacay.allowance.saving': '保存中…',
+  'vacay.allowance.default.hint':
+    '既定の日数です。選択して自分の日数を設定できます。',
+  'vacay.allowance.saved': '休暇日数を保存しました。',
+  'vacay.allowance.error.days': {
+    other:
+      '休暇日数を保存できませんでした。{year}年の表示は{value}日のままです。',
+  },
+  'vacay.allowance.retry': '再試行',
+  'vacay.pending.loading': '読み込み中',
+  'vacay.error.title': '休暇プランナーを読み込めませんでした',
+  'vacay.year.previous': '前の年',
+  'vacay.year.next': '次の年',
 } satisfies TranslationOf<typeof En>
 
 export default messages

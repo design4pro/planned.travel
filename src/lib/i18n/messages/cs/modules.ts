@@ -797,6 +797,24 @@ const messages = {
     'Všichni účastníci této cesty sdílejí jedno vlákno. Zde přijatá rozhodnutí zůstávají u cesty, místo aby se ztrácela ve skupinových chatech.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Začni konverzaci',
+  'collab.thread.loadOlder': 'Načíst starší zprávy',
+  'collab.thread.loadingOlder': 'Načítání starších zpráv',
+  'collab.thread.loadOlderFailed': 'Starší zprávy se nenačetly',
+  'collab.thread.retry': 'Zkusit znovu',
+  'collab.thread.start': 'Tady konverzace začíná',
+  'collab.thread.loadedEarlier': {
+    one: 'Načtena {earlier} dřívější zpráva',
+    few: 'Načteny {earlier} dřívější zprávy',
+    many: 'Načteno {earlier} dřívější zprávy',
+    other: 'Načteno {earlier} dřívějších zpráv',
+  },
+  'collab.thread.newFrom': 'Nová zpráva od {name}',
+  'collab.thread.newMany': {
+    one: '{new} nová zpráva',
+    few: '{new} nové zprávy',
+    many: '{new} nové zprávy',
+    other: '{new} nových zpráv',
+  },
   'collab.toast.reactionFailed': 'Reakce se neuložila',
   'collab.toast.messageDeleted': 'Zpráva smazána',
   'collab.toast.deleteFailed': 'Zpráva nebyla smazána',
@@ -1207,6 +1225,45 @@ const messages = {
     'Kdokoli s tímto odkazem může bez účtu číst nearchivované cesty, kterých se v tomto prostoru účastníte: {count} s nejpozdějšími daty začátku. Nové cesty se objeví automaticky. Chraňte jej jako heslo.',
   'files.calendar.workspace.nameNote':
     'Tento odkaz se v kalendáři zobrazí jako „planned.travel“. Pokud jich máte více, přejmenujte jej.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Nárok {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Zbývá {value} den',
+    few: 'Zbývá {value} dny',
+    many: 'Zbývá {value} dne',
+    other: 'Zbývá {value} dní',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Překročeno o {value} den',
+    few: 'Překročeno o {value} dny',
+    many: 'Překročeno o {value} dne',
+    other: 'Překročeno o {value} dní',
+  },
+  'vacay.allowance.progress': 'Využité dny: {used} z {total}',
+  'vacay.allowance.tile.days': 'Dny',
+  'vacay.allowance.tile.used': 'Využito',
+  'vacay.allowance.tile.carried': 'Převedeno',
+  'vacay.allowance.tile.edit.days': 'Upravit dny, aktuálně {value}',
+  'vacay.allowance.input.days': 'Váš nárok na rok {year}',
+  'vacay.allowance.input.invalid': 'Zadejte celé číslo od 0 do 365.',
+  'vacay.allowance.save': 'Uložit',
+  'vacay.allowance.cancel': 'Zrušit',
+  'vacay.allowance.saving': 'Ukládání…',
+  'vacay.allowance.default.hint':
+    'Výchozí nárok. Vyberte pro nastavení vlastního.',
+  'vacay.allowance.saved': 'Nárok byl uložen.',
+  'vacay.allowance.error.days': {
+    one: 'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} den.',
+    few: 'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dny.',
+    many: 'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dne.',
+    other:
+      'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dní.',
+  },
+  'vacay.allowance.retry': 'Zkusit znovu',
+  'vacay.pending.loading': 'Načítání',
+  'vacay.error.title': 'Plánovač dovolené se nenačetl',
+  'vacay.year.previous': 'Předchozí rok',
+  'vacay.year.next': 'Další rok',
 } satisfies TranslationOf<typeof En>
 
 export default messages

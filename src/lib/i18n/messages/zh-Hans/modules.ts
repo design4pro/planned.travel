@@ -717,6 +717,18 @@ const messages = {
     '这次旅行的所有人共用一个会话。在这里做出的决定会随旅行保留，而不会散落在各个群聊中。',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': '说出第一句话',
+  'collab.thread.loadOlder': '加载更早的消息',
+  'collab.thread.loadingOlder': '正在加载更早的消息',
+  'collab.thread.loadOlderFailed': '更早的消息未能加载',
+  'collab.thread.retry': '重试',
+  'collab.thread.start': '对话从这里开始',
+  'collab.thread.loadedEarlier': {
+    other: '已加载 {earlier} 条更早的消息',
+  },
+  'collab.thread.newFrom': '来自 {name} 的新消息',
+  'collab.thread.newMany': {
+    other: '{new} 条新消息',
+  },
   'collab.toast.reactionFailed': '这个反应没保存上',
   'collab.toast.messageDeleted': '已删除消息',
   'collab.toast.deleteFailed': '未能删除该消息',
@@ -1038,6 +1050,34 @@ const messages = {
     '任何持有此链接的人都无需账户即可查看你在此工作空间参与且未归档的旅行：开始日期最新的{count}次旅行，新旅行会自动出现。请像密码一样保护此链接。',
   'files.calendar.workspace.nameNote':
     '此链接在日历中显示为“planned.travel”。如果有多个链接，请重命名。',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': '假期额度 {year}',
+  'vacay.allowance.daysLeft': {
+    other: '剩余{value}天',
+  },
+  'vacay.allowance.daysOver': {
+    other: '超出{value}天',
+  },
+  'vacay.allowance.progress': '已用天数：{used} / {total}',
+  'vacay.allowance.tile.days': '天数',
+  'vacay.allowance.tile.used': '已用',
+  'vacay.allowance.tile.carried': '结转',
+  'vacay.allowance.tile.edit.days': '编辑天数，当前 {value}',
+  'vacay.allowance.input.days': '你{year}年的假期额度',
+  'vacay.allowance.input.invalid': '请输入 0 到 365 之间的整数。',
+  'vacay.allowance.save': '保存',
+  'vacay.allowance.cancel': '取消',
+  'vacay.allowance.saving': '正在保存…',
+  'vacay.allowance.default.hint': '默认额度。选择即可设置你自己的额度。',
+  'vacay.allowance.saved': '已保存假期额度。',
+  'vacay.allowance.error.days': {
+    other: '无法保存你的假期额度。{year}年仍显示{value}天。',
+  },
+  'vacay.allowance.retry': '重试',
+  'vacay.pending.loading': '正在加载',
+  'vacay.error.title': '无法加载休假规划器',
+  'vacay.year.previous': '上一年',
+  'vacay.year.next': '下一年',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -207,6 +207,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
       <CreateWorkspaceDialog
         open={creating}
         onOpenChange={setCreating}
+        workspaceName={organization?.name ?? ''}
         onCloseAutoFocus={() => trigger.current?.focus()}
       />
     </>

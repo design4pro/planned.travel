@@ -258,6 +258,8 @@ const messages = {
   'audit.action.emailSet': 'Email address changed',
   'audit.action.impersonationStarted': 'Impersonation started',
   'audit.action.impersonationEnded': 'Impersonation ended',
+  'audit.action.impersonationWorkspaceChanged':
+    'Workspace changed while impersonating',
   'audit.action.sessionRevoked': 'A session was revoked',
   'audit.action.sessionRevokedAll': 'Every session was revoked',
   'audit.actor.system': 'The platform itself',
@@ -279,6 +281,7 @@ const messages = {
   'audit.field.expiresAt': 'Session expires',
   'audit.field.targetRole': 'Their platform role',
   'audit.field.sessionId': 'Session',
+  'audit.field.organizationId': 'Workspace',
   'audit.value.yes': 'yes',
   'audit.value.no': 'no',
   'audit.value.cleared': 'cleared',

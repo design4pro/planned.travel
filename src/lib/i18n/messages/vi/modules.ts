@@ -765,6 +765,18 @@ const messages = {
     'Mọi người trong chuyến đi này cùng dùng một cuộc trò chuyện. Các quyết định ở đây được lưu cùng chuyến đi thay vì rải rác trong các nhóm trò chuyện.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Bắt đầu cuộc trò chuyện',
+  'collab.thread.loadOlder': 'Tải tin nhắn cũ hơn',
+  'collab.thread.loadingOlder': 'Đang tải tin nhắn cũ hơn',
+  'collab.thread.loadOlderFailed': 'Không tải được tin nhắn cũ hơn',
+  'collab.thread.retry': 'Thử lại',
+  'collab.thread.start': 'Cuộc trò chuyện bắt đầu từ đây',
+  'collab.thread.loadedEarlier': {
+    other: 'Đã tải {earlier} tin nhắn cũ hơn',
+  },
+  'collab.thread.newFrom': 'Tin nhắn mới từ {name}',
+  'collab.thread.newMany': {
+    other: '{new} tin nhắn mới',
+  },
   'collab.toast.reactionFailed': 'Chưa lưu được biểu cảm',
   'collab.toast.messageDeleted': 'Đã xóa tin nhắn',
   'collab.toast.deleteFailed': 'Chưa xóa được tin nhắn',
@@ -1111,6 +1123,36 @@ const messages = {
     'Bất kỳ ai có liên kết này đều có thể đọc các chuyến đi chưa lưu trữ mà bạn tham gia trong không gian làm việc này mà không cần tài khoản: {count} chuyến có ngày bắt đầu mới nhất. Chuyến đi mới tự động xuất hiện. Hãy bảo vệ liên kết như mật khẩu.',
   'files.calendar.workspace.nameNote':
     'Liên kết này hiện trong lịch với tên “planned.travel”. Hãy đổi tên nếu bạn có nhiều liên kết.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Số ngày phép {year}',
+  'vacay.allowance.daysLeft': {
+    other: 'Còn {value} ngày',
+  },
+  'vacay.allowance.daysOver': {
+    other: 'Vượt {value} ngày',
+  },
+  'vacay.allowance.progress': 'Số ngày đã dùng: {used}/{total}',
+  'vacay.allowance.tile.days': 'Ngày',
+  'vacay.allowance.tile.used': 'Đã dùng',
+  'vacay.allowance.tile.carried': 'Chuyển sang',
+  'vacay.allowance.tile.edit.days': 'Sửa ngày, hiện là {value}',
+  'vacay.allowance.input.days': 'Số ngày phép của bạn cho {year}',
+  'vacay.allowance.input.invalid': 'Nhập một số nguyên từ 0 đến 365.',
+  'vacay.allowance.save': 'Lưu',
+  'vacay.allowance.cancel': 'Hủy',
+  'vacay.allowance.saving': 'Đang lưu…',
+  'vacay.allowance.default.hint':
+    'Số ngày phép mặc định. Chọn để đặt số ngày của riêng bạn.',
+  'vacay.allowance.saved': 'Đã lưu số ngày phép.',
+  'vacay.allowance.error.days': {
+    other:
+      'Không thể lưu số ngày phép của bạn. {year} vẫn hiển thị {value} ngày.',
+  },
+  'vacay.allowance.retry': 'Thử lại',
+  'vacay.pending.loading': 'Đang tải',
+  'vacay.error.title': 'Không thể tải trình lập kế hoạch nghỉ phép',
+  'vacay.year.previous': 'Năm trước',
+  'vacay.year.next': 'Năm sau',
 } satisfies TranslationOf<typeof En>
 
 export default messages

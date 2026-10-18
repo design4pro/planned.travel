@@ -227,7 +227,7 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     expectTypeOf<'trip'>().not.toExtend<PlatformAuditEntityType>()
   })
 
-  it('types action as the thirty-three actions of docs/ACCESS.md §4.2', () => {
+  it('types action as the thirty-four actions of docs/ACCESS.md §4.2', () => {
     expectTypeOf<
       NewPlatformAuditLogEntry['action']
     >().toEqualTypeOf<PlatformAuditAction>()
@@ -237,12 +237,12 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     expectTypeOf<'NOT A DOTTED ACTION'>().not.toExtend<PlatformAuditAction>()
     expectTypeOf<'trip.hijacked'>().not.toExtend<PlatformAuditAction>()
 
-    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(33)
-    // §4.2: eighteen two-segment actions and fifteen three-segment platform ones.
+    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(34)
+    // §4.2: eighteen two-segment actions and sixteen three-segment platform ones.
     const platform = PLATFORM_AUDIT_ACTIONS.filter((action) =>
       action.startsWith('platform.'),
     )
-    expect(platform).toHaveLength(15)
+    expect(platform).toHaveLength(16)
     expect(platform.every((action) => action.split('.').length === 3)).toBe(
       true,
     )

@@ -29,7 +29,7 @@ import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 /**
  * What each platform action is called.
  *
- * The keys are `PLATFORM_AUDIT_ACTIONS` from `src/server/db/schema.ts`, and only the twelve that can
+ * The keys are `PLATFORM_AUDIT_ACTIONS` from `src/server/db/schema.ts`, and only the thirteen that can
  * name an account as their entity are here: the sixteen catalogue actions belong to screens that
  * land in Faza C and the two `platform.token.*` names to one that lands in Faza E.
  */
@@ -46,6 +46,8 @@ const ACTION_KEYS: Readonly<Record<string, MessageKey | undefined>> = {
     'console.audit.action.impersonationStarted',
   'platform.user.impersonation_ended':
     'console.audit.action.impersonationEnded',
+  'platform.user.impersonation_workspace_changed':
+    'console.audit.action.impersonationWorkspaceChanged',
   'platform.session.revoked': 'console.audit.action.sessionRevoked',
   'platform.session.revoked_all': 'console.audit.action.sessionRevokedAll',
 }
@@ -57,6 +59,7 @@ const ACTION_TONES: Readonly<Record<string, 'danger' | 'warning'>> = {
   'platform.session.revoked_all': 'danger',
   'platform.user.impersonation_started': 'warning',
   'platform.user.impersonation_ended': 'warning',
+  'platform.user.impersonation_workspace_changed': 'warning',
 }
 
 export type AuditTone = 'danger' | 'warning' | 'neutral'
@@ -103,7 +106,7 @@ export function describeAuditActor(
  * The fields a platform action's `changes` payload can move, named the way the screens name them.
  *
  * The first seven are `auditUserState`'s fixed key set. The rest are what the impersonation and
- * session verbs record, and they are here because an unlabelled key is printed as the column stored
+ * session verbs record (`organizationId` is the workspace id a switch inside an impersonated session moves), and they are here because an unlabelled key is printed as the column stored
  * it — `EXPIRESAT` in tracked capitals, which is a variable name where a reader expected English.
  */
 const FIELD_KEYS: Readonly<Record<string, MessageKey | undefined>> = {
@@ -120,6 +123,7 @@ const FIELD_KEYS: Readonly<Record<string, MessageKey | undefined>> = {
   expiresAt: 'console.audit.field.expiresAt',
   targetRole: 'console.audit.field.targetRole',
   sessionId: 'console.audit.field.sessionId',
+  organizationId: 'console.audit.field.organizationId',
 }
 
 /** A ledger field's label. An unknown key is printed as it was stored. */

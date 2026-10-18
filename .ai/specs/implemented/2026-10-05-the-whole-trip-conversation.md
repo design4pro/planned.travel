@@ -2,10 +2,10 @@
 
 | Field              | Value                                              |
 | ------------------ | -------------------------------------------------- |
-| **Status**         | in-progress                                        |
+| **Status**         | implemented                                        |
 | **Issue**          | none                                               |
 | **Spec PR**        | #904                                               |
-| **Implementation** | #1293, #1314, #1339, #1348                                |
+| **Implementation** | #1293, #1314, #1339, #1348, #1362, #1385                          |
 | **Plan**           | 07-S3 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
@@ -689,3 +689,21 @@ Two rounds, five independent specialists (`afk-decide`); round 1 was applied in 
 | Traveller (UX)                | revise                  | approve with conditions | Round 2: the opening position is the scroller's bottom with the composer possibly below the fold at 360 px, not "composer in view".                                              |
 
 After the PR opened, a fresh reviewer ran the specification review on head `9171c3c2` (request changes, three findings: read cost, F2 duplicate, IME guard on Escape; Resolved assumption 24). All three are applied.
+## Amendment
+
+#1362 (issue #918, phase 4, second part) shipped three things differently from the design above:
+
+- **The place is kept by an element, not by a height.** A prepend used to be restored as the old `scrollTop` plus the added height. The transcript now records the first row in view and its offset, and whenever its first row changes it puts that row back at the recorded offset. This also covers the loader's window sliding past the oldest row after a peer message, which the height formula cannot see (WebKit has no scroll anchoring), and a seam row that loses its name and day heading, which drifted the reader by about 20 px. A live message at the bottom still wins when the reader was within 48 px of it or sent it.
+- **Focus after a load moves only if the reader has not moved it.** "Always" became "unless focus is already on something other than the control or the page": a reader who started typing in the composer while the page loaded keeps the caret (on a phone the keyboard stays open). The exhausted line still takes focus after the last page.
+- **The failure line is in a polite `role="status"` that is mounted before it fills, and is inserted anew on every failure.** The loading control keeps focus (`aria-disabled`, not native `disabled`), so the focus move on settle fires nothing for a screen reader; the status region is what announces "Earlier messages did not load", and it is not an alert and not on the transcript list. The "Try again" button is described by that line.
+
+The scroller also carries a `data-scroll-restoration-id` that names its first and last row, so the router's own scroll restoration (it writes a pre-reload `scrollTop` back after a reload) finds no element once the rows have changed, and the thread is keyed by trip so nothing of one trip's reading position or failure state carries into another.
+
+#1385 (issue #919, phase 5) shipped as designed, with these differences:
+
+- **The failure line is no longer its own status region.** The amendment above had the load control carry a `role="status"` that filled on failure; the thread now owns the single region (`data-part="thread-status"`, always mounted, empty on the server) and the failure text goes through it with the paging and live-message texts. The visible line stays beside the button, without a role, and still describes "Try again".
+- **The region is emptied, and the text goes in 100 ms later.** Clearing and writing in the same task can leave the accessibility tree seeing no change, so the same text twice would be read once. Texts are queued, each held for one second, so a count followed by "This is where the conversation starts" (reader's focus elsewhere) is not cut off.
+- **A row is a live arrival when its id is newer than the newest one on the first render.** That also covers the viewer's own message, which enters with the same motion but is not announced, and the first message of an empty conversation. The announcement counts peers only, grouped over 1000 ms from the first.
+- **A page the window dropped is announced as not loaded.** `loadOlder` resolves with the number of rows the page brought, and with `null` when the page arrived but a peer's message had moved the window, so the discard (Phase 4) is no longer silent to a screen reader: the reader hears "Earlier messages did not load" and the control is at rest to press again.
+- **Under reduced motion the entrance is collapsed by the global rule.** `styles.css` sets `transition-duration: 0.01ms` under `prefers-reduced-motion: reduce`, so the row appears at once; `motion-reduce:starting:translate-y-0` is the backstop that leaves no rise if that rule is ever narrowed.
+- **Announcements are made only while the conversation panel is shown.** Below `xl` the thread stays mounted inside a hidden panel while Notes or Polls is open; its region is out of the accessibility tree there, and nothing is announced on returning to it.

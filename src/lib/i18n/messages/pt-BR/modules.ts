@@ -802,6 +802,23 @@ const messages = {
     'Todas as pessoas desta viagem compartilham uma conversa. As decisões tomadas aqui ficam com a viagem, em vez de se espalharem por conversas em grupo.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Comece a conversa',
+  'collab.thread.loadOlder': 'Carregar mensagens anteriores',
+  'collab.thread.loadingOlder': 'Carregando mensagens anteriores',
+  'collab.thread.loadOlderFailed':
+    'Não foi possível carregar as mensagens anteriores',
+  'collab.thread.retry': 'Tentar novamente',
+  'collab.thread.start': 'É aqui que a conversa começa',
+  'collab.thread.loadedEarlier': {
+    one: '{earlier} mensagem anterior carregada',
+    many: '{earlier} mensagens anteriores carregadas',
+    other: '{earlier} mensagens anteriores carregadas',
+  },
+  'collab.thread.newFrom': 'Nova mensagem de {name}',
+  'collab.thread.newMany': {
+    one: '{new} nova mensagem',
+    many: '{new} novas mensagens',
+    other: '{new} novas mensagens',
+  },
   'collab.toast.reactionFailed': 'A reação não foi salva',
   'collab.toast.messageDeleted': 'Mensagem excluída',
   'collab.toast.deleteFailed': 'A mensagem não foi excluída',
@@ -1196,6 +1213,41 @@ const messages = {
     'Qualquer pessoa com este link pode ler sem conta as viagens não arquivadas de que você participa neste espaço: as {count} com as datas de início mais recentes. Novas viagens aparecem automaticamente. Proteja-o como uma senha.',
   'files.calendar.workspace.nameNote':
     'Este link aparece no calendário como “planned.travel”. Renomeie-o se você tiver mais de um.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Cota de dias {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Restam {value} dia',
+    many: 'Restam {value} dias',
+    other: 'Restam {value} dias',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Excedido em {value} dia',
+    many: 'Excedido em {value} dias',
+    other: 'Excedido em {value} dias',
+  },
+  'vacay.allowance.progress': 'Dias usados: {used} de {total}',
+  'vacay.allowance.tile.days': 'Dias',
+  'vacay.allowance.tile.used': 'Usados',
+  'vacay.allowance.tile.carried': 'Transferidos',
+  'vacay.allowance.tile.edit.days': 'Editar dias, atualmente {value}',
+  'vacay.allowance.input.days': 'Sua cota para {year}',
+  'vacay.allowance.input.invalid': 'Digite um número inteiro de 0 a 365.',
+  'vacay.allowance.save': 'Salvar',
+  'vacay.allowance.cancel': 'Cancelar',
+  'vacay.allowance.saving': 'Salvando…',
+  'vacay.allowance.default.hint': 'Cota padrão. Selecione para definir a sua.',
+  'vacay.allowance.saved': 'Cota salva.',
+  'vacay.allowance.error.days': {
+    one: 'Não foi possível salvar sua cota. {year} ainda mostra {value} dia.',
+    many: 'Não foi possível salvar sua cota. {year} ainda mostra {value} dias.',
+    other:
+      'Não foi possível salvar sua cota. {year} ainda mostra {value} dias.',
+  },
+  'vacay.allowance.retry': 'Tentar novamente',
+  'vacay.pending.loading': 'Carregando',
+  'vacay.error.title': 'Não foi possível carregar o planejador de férias',
+  'vacay.year.previous': 'Ano anterior',
+  'vacay.year.next': 'Próximo ano',
 } satisfies TranslationOf<typeof En>
 
 export default messages

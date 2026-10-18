@@ -802,6 +802,25 @@ const messages = {
     'Все участники этой поездки общаются в одной ветке. Принятые здесь решения остаются с поездкой, а не теряются в групповых чатах.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Начни разговор',
+  'collab.thread.loadOlder': 'Загрузить более ранние сообщения',
+  'collab.thread.loadingOlder': 'Загрузка более ранних сообщений',
+  'collab.thread.loadOlderFailed':
+    'Не удалось загрузить более ранние сообщения',
+  'collab.thread.retry': 'Попробовать снова',
+  'collab.thread.start': 'Здесь начинается переписка',
+  'collab.thread.loadedEarlier': {
+    one: 'Загружено {earlier} предыдущее сообщение',
+    few: 'Загружено {earlier} предыдущих сообщения',
+    many: 'Загружено {earlier} предыдущих сообщений',
+    other: 'Загружено {earlier} предыдущего сообщения',
+  },
+  'collab.thread.newFrom': 'Новое сообщение от {name}',
+  'collab.thread.newMany': {
+    one: '{new} новое сообщение',
+    few: '{new} новых сообщения',
+    many: '{new} новых сообщений',
+    other: '{new} нового сообщения',
+  },
   'collab.toast.reactionFailed': 'Реакция не сохранилась',
   'collab.toast.messageDeleted': 'Сообщение удалено',
   'collab.toast.deleteFailed': 'Сообщение не удалено',
@@ -1213,6 +1232,45 @@ const messages = {
     'Любой с этой ссылкой может без аккаунта читать неархивные поездки этого пространства, в которых вы участвуете: {count} с самыми поздними датами начала. Новые поездки появляются автоматически. Защищайте ссылку как пароль.',
   'files.calendar.workspace.nameNote':
     'В календаре эта ссылка называется «planned.travel». Переименуйте её, если у вас их несколько.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Лимит отпуска {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Осталось {value} день',
+    few: 'Осталось {value} дня',
+    many: 'Осталось {value} дней',
+    other: 'Осталось {value} дня',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Превышение на {value} день',
+    few: 'Превышение на {value} дня',
+    many: 'Превышение на {value} дней',
+    other: 'Превышение на {value} дня',
+  },
+  'vacay.allowance.progress': 'Использовано дней: {used} из {total}',
+  'vacay.allowance.tile.days': 'Дни',
+  'vacay.allowance.tile.used': 'Использовано',
+  'vacay.allowance.tile.carried': 'Перенесено',
+  'vacay.allowance.tile.edit.days': 'Изменить дни, сейчас {value}',
+  'vacay.allowance.input.days': 'Ваш лимит на {year} год',
+  'vacay.allowance.input.invalid': 'Введите целое число от 0 до 365.',
+  'vacay.allowance.save': 'Сохранить',
+  'vacay.allowance.cancel': 'Отмена',
+  'vacay.allowance.saving': 'Сохранение…',
+  'vacay.allowance.default.hint':
+    'Лимит по умолчанию. Выберите, чтобы задать свой.',
+  'vacay.allowance.saved': 'Лимит сохранён.',
+  'vacay.allowance.error.days': {
+    one: 'Не удалось сохранить ваш лимит. За {year} год по-прежнему указано: {value} день.',
+    few: 'Не удалось сохранить ваш лимит. За {year} год по-прежнему указано: {value} дня.',
+    many: 'Не удалось сохранить ваш лимит. За {year} год по-прежнему указано: {value} дней.',
+    other:
+      'Не удалось сохранить ваш лимит. За {year} год по-прежнему указано: {value} дня.',
+  },
+  'vacay.allowance.retry': 'Повторить',
+  'vacay.pending.loading': 'Загрузка',
+  'vacay.error.title': 'Не удалось загрузить планировщик отпусков',
+  'vacay.year.previous': 'Предыдущий год',
+  'vacay.year.next': 'Следующий год',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -240,6 +240,8 @@ const messages = {
   'audit.action.emailSet': '이메일 주소가 바뀜',
   'audit.action.impersonationStarted': '대리 접속이 시작됨',
   'audit.action.impersonationEnded': '대리 접속이 끝남',
+  'audit.action.impersonationWorkspaceChanged':
+    '대리 접속 중 워크스페이스가 바뀜',
   'audit.action.sessionRevoked': '세션이 끝남',
   'audit.action.sessionRevokedAll': '모든 세션이 끝남',
   'audit.actor.system': '플랫폼 자신',
@@ -261,6 +263,7 @@ const messages = {
   'audit.field.expiresAt': '세션 만료',
   'audit.field.targetRole': '그 사람의 플랫폼 역할',
   'audit.field.sessionId': '해당 세션',
+  'audit.field.organizationId': '워크스페이스',
   'audit.value.yes': '예',
   'audit.value.no': '아니요',
   'audit.value.cleared': '지워짐',

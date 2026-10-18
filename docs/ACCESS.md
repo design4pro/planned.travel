@@ -469,9 +469,11 @@ create one: Better Auth's own `POST /api/auth/organization/create` answers `403`
 and `401` to an anonymous one (`allowUserToCreateOrganization: false`), because the plugin's endpoint
 carries none of the rules below. `disabledPaths` is untouched, and `organization/set-active` still
 answers. In order, `createWorkspace` checks the role, then refuses an impersonated session (§6.4),
-then the plan (Free keeps the one workspace it was provisioned with), then the limit of
-twenty workspaces per account, which it reads from the same constant as the plugin's
-`organizationLimit` because the plugin enforces that limit only inside its own endpoint.
+then the limit of twenty workspaces per account, which it reads from the same constant as the
+plugin's `organizationLimit` because the plugin enforces that limit only inside its own endpoint,
+and then the plan (Free keeps the one workspace it was provisioned with). The limit runs before the
+plan so that an admin who already belongs to twenty workspaces is told so, not sent to pay for a
+create that would still be refused.
 `src/server/auth/__tests__/workspace-access.test.ts` pins this section to the constant the code
 uses.
 
@@ -653,8 +655,8 @@ trip poll also has the digest lookup, membership/ban read and indexed trip-membe
 
 ### 3.7 `src/server/public/**` is the only sessionless read path
 
-Public share, published catalog and calendar projections use this path; the bounded billing,
-moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three rules, all testable:
+Public share, published catalog, calendar and trip invite link projections use this path; the
+bounded billing, moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three rules, all testable:
 
 1. **Column whitelists only.** Every response is a named read-only projection that enumerates the
    columns a stranger may see. A field is not omitted by a `delete` after the fact and not hidden
@@ -665,10 +667,15 @@ moderation and cron discovery exceptions remain as stated in SPEC §5/§6. Three
    with an empty, placeholder or invented context. `src/server/repos/base.ts` exists so that
    forgetting the tenant filter is not expressible, and handing it a fake context to reach a row
    destroys the one guarantee it was built to give. The scope passed from this path is always the
-   one derived from the share or feed record that was just resolved by token, and never constructed from a
+   one derived from the share, feed or trip invite link record that was just resolved by token, and never constructed from a
    request parameter. A lint-level test asserts that no module under `src/server/public/**`
    constructs a tenant scope itself. For feeds only repo `openFeedScope` accepts the
-   adjacent branded `ResolvedFeed` and constructs the owner-bound scope.
+   adjacent branded `ResolvedFeed` and constructs the owner-bound scope. A trip invite link reaches
+   its row through one `…Unscoped` read, `findLiveTripInviteByDigestUnscoped` in
+   `src/server/repos/invites.ts`, called only by `src/server/public/trip-invite.ts`, which returns
+   coordinates and constructs no scope (ADR 0042). Repositories may import the pure secret module
+   `src/server/security/secret.ts` (derive, digest, shape guard); they never import
+   `src/server/public/**`.
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
    `src/server/repos`; published global rows go through `src/server/catalog`. This module owns the
    whitelist and nothing else.
@@ -691,7 +698,7 @@ the retention rather than restating them, so there is one list and it is this on
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                   |
 | `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
 | `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                               |
-| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link`. The mapping to `action` is in §4.2 |
+| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
 | `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                       |
 | `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                             |
@@ -753,7 +760,7 @@ Two consequences worth stating, because both were found by measurement:
 above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
 distinction is the point: §4.2's entity list grows by amendment in the commit that adds the code
 writing it, and a `CHECK` would price each of those amendments at a table recreate. The narrowing
-that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the eight
+that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the nine
 fails `pnpm typecheck`. The same reasoning governs `action`, whose vocabulary in §4.2 is closed and
 grows the same way. A schema that drops the `CHECK` without adding the `$type` has narrowed the
 column nowhere at all, which is what the first attempt did.
@@ -839,7 +846,7 @@ prefix-equals-`entity_type` rule is declared by the table below rather than inhe
 An action on a user, a session, a credential or a share takes the three-segment
 `platform.<entity>.<verb>`, because those entities are named identically in the tenant log of §4.5
 and a bare `user.created` read out of an operational view spanning both tables would be
-attributable to neither. Eighteen of the thirty-three actions below take the first form and fifteen
+attributable to neither. Eighteen of the thirty-four actions below take the first form and sixteen
 take the second; no third form exists.
 
 Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
@@ -901,6 +908,7 @@ they are marked "here" in the last column.
 | `platform.user.email_set`             | An administrator changes an address                                                                                   | here (`user:set-email`)            |
 | `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                                                                       | here (§6)                          |
 | `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                                                                | here (§6)                          |
+| `platform.user.impersonation_workspace_changed` | An impersonated session changes its active workspace, from `databaseHooks.session.update` (§6.4); `entity_id` is the target, the actor is the operator | here (§6.4) |
 | `platform.session.revoked`            | One session of one account is revoked                                                                                 | here (`session:revoke`)            |
 | `platform.session.revoked_all`        | Every session of one account is revoked                                                                               | here (`session:revoke`)            |
 | `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`                                                        | here (§5)                          |
@@ -909,7 +917,7 @@ they are marked "here" in the last column.
 | `provider.limit_changed`              | A third-party call ceiling or its window is set; `changes` carries before and after                                   | here (`provider:configure`, §2.3b) |
 | `provider.policy_changed`             | A provider's over-ceiling policy moves between `allow` and `block`                                                    | here (`provider:configure`, §2.3b) |
 
-Thirty-three actions. Four notes so the list cannot be miscounted or misread:
+Thirty-four actions. Five notes so the list cannot be miscounted or misread:
 
 - `catalog.run.poll` appears in `docs/CATALOG.md` §2.4 and is **not** in this list on purpose. It is
   the name of a queue task on `TASKS`, not an audit action, and nothing writes a
@@ -928,6 +936,10 @@ Thirty-three actions. Four notes so the list cannot be miscounted or misread:
   read-only statements - `user:list`, `user:get`, `session:list` - have no action, per the previous
   note. `user:impersonate-admins` has none either, because §2.4 grants it to no role, so nothing can
   ever write under it.
+- `platform.user.impersonation_workspace_changed` belongs to no §1.1 statement. It is not a capability
+  somebody exercises: it is the trace of a session moving between workspaces while `user:impersonate`
+  is in use, written by the auth layer itself (§4.3, §6.4), so it has no entry in the previous note's
+  mapping and needs none.
 
 A unit test asserts the union of the action constants exported by `src/server/catalog` and
 `src/server/fns/console/*` equals this list exactly, that every one of them matches the imported
@@ -950,14 +962,15 @@ in code and not in this table fails it; so does a name in this table that nothin
   raised through `src/server/observability` - never a `500` handed to the caller, and never a
   rollback of work that already succeeded.
 - **Ban and impersonation are always audited.** `platform.user.banned`, `platform.user.unbanned`,
-  `platform.user.impersonation_started` and `platform.user.impersonation_ended` are appended
-  without exception. That
-  claim rests entirely on §2.6: `/admin/ban-user`, `/admin/unban-user`, `/admin/impersonate-user`
+  `platform.user.impersonation_started`, `platform.user.impersonation_ended` and
+  `platform.user.impersonation_workspace_changed` are appended without exception. For the first
+  four that claim rests entirely on §2.6 (the fifth rests on a different mechanism, described after
+  the two stated exceptions below): `/admin/ban-user`, `/admin/unban-user`, `/admin/impersonate-user`
   and `/admin/stop-impersonating` all answer `404` over HTTP, so `src/server/fns/console/*` is the
   only caller of the endpoints behind them, and the append sits on that one path. Without §2.6
-  "without exception" would mean "unless somebody opens a devtools console", and the four verbs
+  "without exception" would mean "unless somebody opens a devtools console", and the five verbs
   here are precisely the ones nobody would think to check afterwards. If
-  the append is rejected for one of these four, it is retried once and then raised at the highest
+  the append is rejected for one of these five, it is retried once and then raised at the highest
   severity the logger has - the action still stands, because reversing a completed ban because a
   log write failed is the worse of the two failures. **Two stated exceptions, both found in Faza B
   by reading the plugin rather than by trusting this sentence.** First, a _temporary_ ban lifts
@@ -970,7 +983,21 @@ in code and not in this table fails it; so does a name in this table that nothin
   next request, and under KV secondary storage it usually just TTLs away, so there is no moment at
   which anything could append. §4.2's entry was narrowed to the action accordingly. An impersonated
   session that simply lapses is visible as a `platform.user.impersonation_started` with no matching
-  `_ended` inside 900 seconds, and that is the only signal there is. Also always audited: `platform.user.role_changed`,
+  `_ended` inside 900 seconds, and that is the only signal there is. **The fifth verb is written by
+  the auth layer rather than by a console call.** `platform.user.impersonation_workspace_changed` is
+  appended from `databaseHooks.session.update` in `src/server/auth/index.ts`, after the session update
+  has committed, because every change of `activeOrganizationId` goes through Better Auth's
+  `updateSession` (set-active, accepting an invitation, leaving a workspace, and the refusals that
+  clear it) and none of them goes through a server function: a hook on one URL misses the others, and
+  a wrapper misses a direct `POST /api/auth/organization/set-active`. Removing the target from a
+  workspace is not one of them: the plugin clears only the session of the member who makes the call,
+  so the worn session keeps its workspace and the §6.4 fallback applies on the next request. It
+  appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
+  is set, so a session refresh costs nothing. It is retried once and raised at `error` like the other
+  four, and like the ban tripwire it swallows every error it can raise: a switch that succeeded is
+  never failed by its own audit row. **Its two stated gaps are logged at `error`, never silent:** an
+  operator role that cannot be read writes no row (§6.4), and neither does an impersonated update that
+  reaches the hook without a request context (`audit.impersonation-workspace.no-context`). Also always audited: `platform.user.role_changed`,
   `platform.user.deleted`, `platform.session.revoked`, `platform.session.revoked_all`,
   `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
@@ -1096,6 +1123,32 @@ before its owner is back with coffee. When it expires the session is simply gone
 on the login screen, the stale `admin_session` cookie is cleared on that same request rather than
 left to linger, and the admin signs in again as themselves.
 
+The 900 seconds is enforced server-side by four mechanisms, because setting the option alone does
+not hold it. Better Auth's sliding refresh (`updateAge`, one day) rewrites `expiresAt` to now plus
+the global 30-day `expiresIn` on the first read of any session older than that, and a 900-second
+session always is. The only thing that skips the refresh is the signed `dont_remember` cookie, which
+the client supplies: whoever holds the session token and leaves that cookie out would otherwise
+extend the impersonation to 30 days (#1358). So:
+
+- **The update clamp.** The session `update.before` hook in `src/server/auth/index.ts` keeps an
+  impersonated session's `expiresAt` at `min(stored expiry, createdAt + 900 s)` whenever a patch
+  tries to move it, and drops `expiresAt` from a patch whose session it cannot resolve (fail
+  closed). Patches that do not touch `expiresAt`, such as organisation set-active, pass through, and
+  ordinary sessions keep the 30-day sliding refresh.
+- **The cookie guard.** A plugin `after` hook (`impersonationCookieGuard`) drops the session-token
+  `Set-Cookie` the refresh would have re-issued with a 30-day `Max-Age` for an impersonated session.
+- **The read-side guard, server functions.** `normaliseSession` in `src/server/auth/tenant.ts`
+  returns no session for an impersonated one whose `createdAt` plus 900 s is in the past, whatever
+  its row says, so a row extended before the clamp shipped stops authorising at once.
+- **The read-side guard, Better Auth's own endpoints.** Every `/api/auth/*` endpoint resolves the
+  session inside the library and never reaches `normaliseSession`, so a plugin `before` hook
+  (`impersonationExpiryGuard`) deletes an impersonated session older than 900 s, row and KV blob,
+  before the endpoint reads it; the endpoint then answers as for a signed-out caller. The hook skips
+  `/sign-out`, and `/get-session` for in-process calls, where the server functions' guard applies.
+
+One exception stays open: the trip-room WebSocket checks the session once, when the socket opens, so
+a socket opened inside the 900 seconds keeps its role after them (#1374).
+
 ### 6.3 Closing the tab does not end it
 
 Stated plainly because the intuition runs the other way. Closing the tab, closing the window or
@@ -1103,7 +1156,8 @@ navigating away does **not** end impersonation. Better Auth creates the imperson
 "don't remember me" semantics, so the cookie carries no `Max-Age` and a full browser quit does drop
 it - but a closed tab in a still-running browser leaves the session live and reachable by reopening
 the URL. The only two things that reliably end it are the **End impersonation** action and the
-900-second server-side expiry in §6.2. This is exactly why §6.2 is short and why §6.1 is
+900-second server-side expiry in §6.2, which holds whether or not the client sends the
+`dont_remember` cookie. This is exactly why §6.2 is short and why §6.1 is
 non-dismissible.
 
 ### 6.4 May an impersonated session perform platform mutations? No.
@@ -1154,6 +1208,27 @@ remove passkeys; removing a passkey does not end sessions it already opened.
 
 Entering and leaving impersonation are both audited (§4.3), with the impersonator in
 `actor_user_id` and the target in `entity_id`.
+
+So is every workspace the operator moves into between the two. A change of the session's
+`activeOrganizationId` inside an impersonated session appends
+`platform.user.impersonation_workspace_changed` to `platform_audit_log`, in the same timeline as the
+start and the end, so §4.4's query on `(entity_type, entity_id)` reads start, switches and end in
+order. It is the platform log and not the tenant `audit_log`, for the reason §4.5 gives: a switch
+writes nothing inside a workspace. The actor is the operator - `actor_user_id` is `impersonatedBy` and
+`actor_role` is read from the operator's own `user` row at that moment, never from the worn
+session - and `entity_id` is the target. `changes` is `{ before: { organizationId }, after:
+{ organizationId } }` and holds ids only: no workspace name and nothing else from inside a tenant.
+`after.organizationId` is `null` when the update cleared the workspace, which is what leaving a
+workspace, a refused `organization/set-active` and a refused `organization/get-organization` on a
+workspace the target does not belong to all do; the plugin clears it before it refuses, so a refused
+request is still a switch of the session and is recorded as one. A `null` workspace means the next
+request falls back to the oldest membership (`src/server/auth/session.ts`), and that fallback is
+not itself recorded, nor is a per-request choice made by `requireOrg` without a session update. If
+the operator's role cannot be read, no row is written and an `error` line says so: a row naming an
+administrator as `user` is worse than a gap that is logged. The same holds for an impersonated
+update that reaches the hook with no request context (`audit.impersonation-workspace.no-context`):
+nothing pairs it with a previous workspace, so it is logged and not recorded. Creating a workspace is not a path to
+this row: an impersonated session cannot reach it (§2.7).
 
 ---
 

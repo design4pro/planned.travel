@@ -8,7 +8,7 @@ import { Button, Field, Input } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
 import { useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
-import { DEFAULT_REDIRECT } from './-lib/redirect'
+import { safeRedirect } from './-lib/redirect'
 import { loadVerificationState } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
 import {
@@ -27,6 +27,8 @@ import type { ResendVerificationValues } from './-lib/schemas'
 const VERIFY_LANDING = '/verify-email'
 
 const searchSchema = z.object({
+  /** Where "Continue anyway" goes; carried by the in-app hand-off from `/register`. */
+  redirect: z.string().optional(),
   /** Set by `/api/auth/verify-email` when the token was stale or already spent. */
   error: z.string().optional(),
 })
@@ -72,7 +74,7 @@ const DEFAULTS: ResendVerificationValues = { email: '' }
 
 function VerifyEmailPage() {
   const state = Route.useLoaderData()
-  const { error } = Route.useSearch()
+  const { error, redirect } = Route.useSearch()
   const t = useTranslate()
   const schemas = useAuthSchemas()
 
@@ -206,9 +208,9 @@ function VerifyEmailPage() {
               iconAfter={<ArrowRight data-mirror-rtl />}
               asChild
             >
-              <Link to={DEFAULT_REDIRECT}>
+              <a href={safeRedirect(redirect)}>
                 {t('auth.verify.pending.continue')}
-              </Link>
+              </a>
             </Button>
           </div>
         </AuthPanel>

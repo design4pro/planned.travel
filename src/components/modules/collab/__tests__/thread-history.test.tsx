@@ -81,17 +81,19 @@ describe('the component history loading path', () => {
         },
       },
     )
-    let pending!: Promise<void>
+    let pending!: Promise<number | null>
     act(() => {
       pending = result.current.loadOlder()
       void result.current.loadOlder()
     })
     expect(loadOlderMessagesFn).toHaveBeenCalledTimes(1)
     rerender({ messages: [row('200')] })
+    let outcome: number | null = 0
     await act(async () => {
       finish({ messages: [row('001')], exhausted: true })
-      await pending
+      outcome = await pending
     })
+    expect(outcome).toBeNull()
     expect(result.current.messages.map((m) => m.id)).toEqual(['200'])
     expect(result.current.exhausted).toBe(true)
   })
@@ -105,9 +107,11 @@ describe('the component history loading path', () => {
       ({ trip, messages }) => useThreadHistory(trip, messages),
       { initialProps: { trip: 'a', messages: window } },
     )
+    let added: number | null = null
     await act(async () => {
-      await result.current.loadOlder()
+      added = await result.current.loadOlder()
     })
+    expect(added).toBe(1)
     expect(result.current.messages[0]?.id).toBe('01')
     rerender({ trip: 'a', messages: [...window.slice(1), row('zz')] })
     expect(result.current.messages.map((m) => m.id)).toContain('50')
@@ -133,7 +137,7 @@ describe('history request lifecycle', () => {
       ({ trip }) => useThreadHistory(trip, messages),
       { initialProps: { trip: 'a' } },
     )
-    let pending!: Promise<void>
+    let pending!: Promise<number | null>
     act(() => {
       pending = result.current.loadOlder()
     })

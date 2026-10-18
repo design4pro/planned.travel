@@ -249,6 +249,8 @@ const messages = {
   'audit.action.emailSet': 'E-postadressen ändrades',
   'audit.action.impersonationStarted': 'Började handla i kontots namn',
   'audit.action.impersonationEnded': 'Slutade handla i kontots namn',
+  'audit.action.impersonationWorkspaceChanged':
+    'Bytte arbetsyta medan kontots namn användes',
   'audit.action.sessionRevoked': 'En session återkallades',
   'audit.action.sessionRevokedAll': 'Alla sessioner återkallades',
   'audit.actor.system': 'Plattformen själv',
@@ -270,6 +272,7 @@ const messages = {
   'audit.field.expiresAt': 'Sessionen går ut',
   'audit.field.targetRole': 'Deras plattformsroll',
   'audit.field.sessionId': 'Berörd session',
+  'audit.field.organizationId': 'Arbetsyta',
   'audit.value.yes': 'ja',
   'audit.value.no': 'nej',
   'audit.value.cleared': 'tömdes',

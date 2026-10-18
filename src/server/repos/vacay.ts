@@ -23,6 +23,8 @@ import {
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { runBatch } from './batch'
+import { NotFoundError, RepositoryError } from './context'
+import { getMembership } from './members'
 import {
   colourSchema,
   dateSchema,
@@ -72,6 +74,17 @@ const ENTRY_KIND_COST: Record<(typeof VACAY_ENTRY_KINDS)[number], number> = {
   remote: 0,
   holiday: 0,
   other: 0,
+}
+
+/**
+ * Thrown when someone who may see a leave plan asks for something only its owner may do: another
+ * traveller's allowance. A diagnostic, not authored copy: the reader sees the caller's localised
+ * fallback, and the authored-error set stays closed (`docs/SPEC.md` §9 rule 10).
+ */
+export class PlanOwnerOnlyError extends RepositoryError {
+  constructor(planId: string) {
+    super(`Only the owner of vacay plan ${planId} may do this.`, 'PLAN_OWNER_ONLY')
+  }
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -155,6 +168,76 @@ export async function ensurePlan(scope: TenantScope, ownerUserId?: string): Prom
     status: 'accepted',
   })
   return plan
+}
+
+export interface PlanActor {
+  readonly plan: VacayPlan
+  readonly isOwner: boolean
+}
+
+/**
+ * The one rule every leave-planner writer and reader answers to: the caller owns the plan or is an
+ * accepted member of it. Anyone else in the workspace, a pending or declined member included, gets
+ * the error a plan that does not exist gets. No workspace role overrides it: a leave plan is personal.
+ */
+export async function requirePlanActor(scope: TenantScope, planId: string): Promise<PlanActor> {
+  const plan = await vacayPlansRepository.requireById(scope, planId)
+  const isOwner = plan.ownerUserId === scope.ctx.userId
+  if (!isOwner && !(await isAcceptedPlanMember(scope, plan.id, scope.ctx.userId))) {
+    throw new NotFoundError('vacay plan', planId)
+  }
+  return { plan, isOwner }
+}
+
+/** {@link requirePlanActor}, and the caller must own the plan. */
+export async function requirePlanOwner(scope: TenantScope, planId: string): Promise<PlanActor> {
+  const actor = await requirePlanActor(scope, planId)
+  if (!actor.isOwner) {
+    throw new PlanOwnerOnlyError(planId)
+  }
+  return actor
+}
+
+async function isAcceptedPlanMember(
+  scope: TenantScope,
+  planId: string,
+  userId: string,
+): Promise<boolean> {
+  const row = await vacayPlanMembersRepository.findOne(
+    scope,
+    allOf(
+      eq(vacayPlanMembers.planId, planId),
+      eq(vacayPlanMembers.userId, userId),
+      eq(vacayPlanMembers.status, 'accepted'),
+    ),
+  )
+  return row !== null
+}
+
+/**
+ * Whose figures a call is about, once the caller has passed {@link requirePlanActor}: their own, or
+ * - for the plan's owner only - an accepted plan member's who is still a member of the workspace.
+ * A plan-member row outlives `removeMember`, so it alone proves nothing about who is here now.
+ */
+async function resolveAllowanceTarget(
+  scope: TenantScope,
+  actor: PlanActor,
+  userId: string | undefined,
+): Promise<string> {
+  const target = userId === undefined ? scope.ctx.userId : idSchema.parse(userId)
+  if (target === scope.ctx.userId) {
+    return target
+  }
+  if (!actor.isOwner) {
+    throw new PlanOwnerOnlyError(actor.plan.id)
+  }
+  const stillHere =
+    (await isAcceptedPlanMember(scope, actor.plan.id, target)) &&
+    (await getMembership(scope, target)) !== null
+  if (!stillHere) {
+    throw new NotFoundError('vacay plan member', target)
+  }
+  return target
 }
 
 /** Plans the traveller can see: their own, plus the ones they have joined. */
@@ -339,6 +422,62 @@ export async function setEntitlement(
     entitlementDays: values.entitlementDays ?? plan.defaultEntitlementDays,
     carriedOverDays: values.carriedOverDays ?? 0,
   })
+}
+
+/**
+ * Saves one traveller's allowance for a year behind {@link requirePlanActor}: your own as an owner or
+ * accepted member, someone else's as the owner only. Nothing is read or written for the target
+ * before every check has passed.
+ */
+export async function saveAllowance(
+  scope: TenantScope,
+  input: SetEntitlementInput,
+): Promise<VacayUserYear> {
+  const values = setEntitlementInput.parse(input)
+  const actor = await requirePlanActor(scope, values.planId)
+  const userId = await resolveAllowanceTarget(scope, actor, values.userId)
+  return setEntitlement(scope, { ...values, userId })
+}
+
+export interface Allowance {
+  /** False while the figures are the plan's default and nothing has been saved. */
+  readonly hasRow: boolean
+  readonly entitlementDays: number
+  readonly carriedOverDays: number
+  /** Days consumed by the traveller alone, counting a half day as 0.5. */
+  readonly usedDays: number
+  readonly remainingDays: number
+}
+
+/** One traveller's balance for one year, behind the same rule as {@link saveAllowance}. */
+export async function getAllowance(
+  scope: TenantScope,
+  planId: string,
+  userId: string,
+  year: number,
+): Promise<Allowance> {
+  const actor = await requirePlanActor(scope, planId)
+  const target = await resolveAllowanceTarget(scope, actor, userId)
+  const statYear = yearSchema.parse(year)
+
+  const row = await vacayUserYearsRepository.findOne(
+    scope,
+    allOf(
+      eq(vacayUserYears.planId, actor.plan.id),
+      eq(vacayUserYears.userId, target),
+      eq(vacayUserYears.year, statYear),
+    ),
+  )
+  const usedDays = await countUsedDays(scope, actor.plan.id, target, statYear)
+  const entitlementDays = row?.entitlementDays ?? actor.plan.defaultEntitlementDays
+  const carriedOverDays = actor.plan.carryOverEnabled ? (row?.carriedOverDays ?? 0) : 0
+  return {
+    hasRow: row !== null,
+    entitlementDays,
+    carriedOverDays,
+    usedDays,
+    remainingDays: entitlementDays + carriedOverDays - usedDays,
+  }
 }
 
 /* -------------------------------------------------------------------------------------------------

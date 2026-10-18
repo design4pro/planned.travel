@@ -950,6 +950,27 @@ const messages = {
     'Everyone on this trip shares one thread. Decisions made here stay with the trip rather than scattering across group chats.',
   /** Invitation to write the first message of an empty conversation, not a command. */
   'collab.thread.empty': 'Say the first thing',
+  'collab.thread.loadOlder': 'Load earlier messages',
+  'collab.thread.loadingOlder': 'Loading earlier messages',
+  'collab.thread.loadOlderFailed': 'Earlier messages did not load',
+  /** Button that repeats a failed page load; not the composer's retry. */
+  'collab.thread.retry': 'Try again',
+  'collab.thread.start': 'This is where the conversation starts',
+  /**
+   * Read aloud by a screen reader after a page of older messages loaded; `{earlier}`
+   * is the number printed, `count` picks the plural form.
+   */
+  'collab.thread.loadedEarlier': {
+    one: 'Loaded {earlier} earlier message',
+    other: 'Loaded {earlier} earlier messages',
+  },
+  /** Read aloud when one peer's message arrives; never carries the message text. */
+  'collab.thread.newFrom': 'New message from {name}',
+  /** Read aloud when several peer messages arrive within one second; `{new}` is the number printed. */
+  'collab.thread.newMany': {
+    one: '{new} new message',
+    other: '{new} new messages',
+  },
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',
   'collab.toast.deleteFailed': 'The message was not deleted',
@@ -1338,6 +1359,38 @@ const messages = {
     'Anyone with this link can read every trip you are on in this workspace that is not archived, with no account: the {count} with the latest start dates, and new trips appear on their own. Treat it like a password.',
   'files.calendar.workspace.nameNote':
     "This link shows up in your calendar app as 'planned.travel'. Rename it if you have more than one.",
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Allowance {year}',
+  'vacay.allowance.daysLeft': {
+    one: '{value} day left',
+    other: '{value} days left',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} day over',
+    other: '{value} days over',
+  },
+  'vacay.allowance.progress': 'Days used: {used} of {total}',
+  'vacay.allowance.tile.days': 'Days',
+  'vacay.allowance.tile.used': 'Used',
+  'vacay.allowance.tile.carried': 'Carried',
+  'vacay.allowance.tile.edit.days': 'Edit days, currently {value}',
+  'vacay.allowance.input.days': 'Your allowance for {year}',
+  'vacay.allowance.input.invalid': 'Enter a whole number from 0 to 365.',
+  'vacay.allowance.save': 'Save',
+  'vacay.allowance.cancel': 'Cancel',
+  'vacay.allowance.saving': 'Saving…',
+  'vacay.allowance.default.hint': 'Default allowance. Select to set your own.',
+  'vacay.allowance.saved': 'Allowance saved.',
+  'vacay.allowance.error.days': {
+    one: 'Your allowance could not be saved. {year} still shows {value} day.',
+    other:
+      'Your allowance could not be saved. {year} still shows {value} days.',
+  },
+  'vacay.allowance.retry': 'Try again',
+  'vacay.pending.loading': 'Loading',
+  'vacay.error.title': 'The leave planner did not load',
+  'vacay.year.previous': 'Previous year',
+  'vacay.year.next': 'Next year',
 } as const satisfies NamespaceMessages
 
 export default messages

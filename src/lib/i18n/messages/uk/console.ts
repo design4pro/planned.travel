@@ -256,6 +256,8 @@ const messages = {
   'audit.action.emailSet': 'Адресу ел. пошти змінено',
   'audit.action.impersonationStarted': 'Роботу від чужого імені розпочато',
   'audit.action.impersonationEnded': 'Роботу від чужого імені завершено',
+  'audit.action.impersonationWorkspaceChanged':
+    'Простір змінено під час роботи від чужого імені',
   'audit.action.sessionRevoked': 'Сеанс перервано',
   'audit.action.sessionRevokedAll': 'Усі сеанси перервано',
   'audit.actor.system': 'Сама платформа',
@@ -277,6 +279,7 @@ const messages = {
   'audit.field.expiresAt': 'Сеанс спливає',
   'audit.field.targetRole': 'Їхня роль на платформі',
   'audit.field.sessionId': 'Причетний сеанс',
+  'audit.field.organizationId': 'Простір',
   'audit.value.yes': 'так',
   'audit.value.no': 'ні',
   'audit.value.cleared': 'очищено',

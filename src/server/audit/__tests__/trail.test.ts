@@ -276,6 +276,9 @@ describe('trail', () => {
       'reservation.deleted',
       'workspace.defaults_changed',
       'trip.currency_changed',
+      'trip_invite.rotated',
+      'trip_invite.updated',
+      'trip.member_joined',
     ])
     // The rule is imported, never re-declared — docs/ACCESS.md §4.2, and the guard in
     // `src/server/catalog/__tests__/audit.test.ts` fails this file for spelling it out again.
