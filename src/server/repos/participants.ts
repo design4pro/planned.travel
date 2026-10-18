@@ -69,16 +69,22 @@ function participantSources(): Array<{
     ) {
       continue
     }
+    // The drift test keeps the registry and the schema in step, so a registered place that cannot
+    // be resolved is a bug to surface, not a source to skip: a skipped one would leave people out.
     const table = tables.get(entry.table)
     if (table === undefined) {
-      continue
+      throw new Error(
+        `The erasure registry names an unknown table ${entry.table}`,
+      )
     }
     const columns = getTableConfig(table).columns
     const column = columns.find((candidate) => candidate.name === entry.column)
-    const hasTenantColumn = columns.some(
-      (candidate) => candidate.name === 'organization_id',
-    )
-    if (column !== undefined && hasTenantColumn) {
+    if (column === undefined) {
+      throw new Error(
+        `The erasure registry names an unknown column ${entry.table}.${entry.column}`,
+      )
+    }
+    if (columns.some((candidate) => candidate.name === 'organization_id')) {
       sources.push({ table: table as TenantTable, column })
     }
   }

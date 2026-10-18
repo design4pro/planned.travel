@@ -1,11 +1,11 @@
 # A person's data can be erased across workspaces on request
 
-| Field              | Value |
-| ------------------ | ----- |
+| Field              | Value       |
+| ------------------ | ----------- |
 | **Status**         | in-progress |
-| **Issue**          | #811  |
-| **Spec PR**        | #1002 |
-| **Implementation** | #1410 |
+| **Issue**          | #811        |
+| **Spec PR**        | #1002       |
+| **Implementation** | #1410       |
 
 ## 📝 TLDR
 

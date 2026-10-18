@@ -30,6 +30,30 @@ export async function writeParticipantBackfillMarker(
   await kv.put(PARTICIPANT_BACKFILL_MARKER_KEY, JSON.stringify(marker))
 }
 
+/**
+ * Where one run has got to: the last organization id it visited, `''` once the run has started and
+ * visited none. The completion marker is written only by a message whose cursor equals this value,
+ * so a message that starts past the end, or skips part of the id range, cannot finish a run.
+ */
+export function participantBackfillRunKey(runId: string): string {
+  return `erasure:participants-backfill-run:${runId}`
+}
+
+export async function readParticipantBackfillRunCursor(
+  kv: Pick<MarkerStore, 'get'>,
+  runId: string,
+): Promise<string | null> {
+  return kv.get(participantBackfillRunKey(runId))
+}
+
+export async function writeParticipantBackfillRunCursor(
+  kv: Pick<MarkerStore, 'put'>,
+  runId: string,
+  cursor: string,
+): Promise<void> {
+  await kv.put(participantBackfillRunKey(runId), cursor)
+}
+
 export async function readParticipantBackfillMarker(
   kv: MarkerStore,
 ): Promise<ParticipantBackfillMarker | null> {

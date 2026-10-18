@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   PARTICIPANT_BACKFILL_MARKER_KEY,
+  participantBackfillRunKey,
   readParticipantBackfillMarker,
 } from '#/server/erasure/participant-backfill-marker'
 import { createHarness } from '#/server/repos/__tests__/harness'
@@ -166,7 +167,8 @@ describe('the chain', () => {
       kind: 'participant-backfill',
       payload: { runId: 'run-1', after: ordered[0] },
     })
-    expect(kv.size).toBe(0)
+    expect(kv.has(PARTICIPANT_BACKFILL_MARKER_KEY)).toBe(false)
+    expect(kv.get(participantBackfillRunKey('run-1'))).toBe(ordered[0])
   })
 
   it('writes the marker only from the message that finds no workspace left', async () => {
@@ -202,7 +204,7 @@ describe('the chain', () => {
     expect(kv.has(PARTICIPANT_BACKFILL_MARKER_KEY)).toBe(false)
   })
 
-  it('is idempotent on redelivery and on a full rerun', async () => {
+  it('is idempotent on redelivery and on a full rerun under a new run id', async () => {
     const { env } = fakes()
     await run(env, null)
     await run(env, ordered[0])
@@ -211,8 +213,66 @@ describe('the chain', () => {
     await run(env, null)
     await run(env, ordered[0])
     await run(env, ordered[1])
-
     expect(anchors().sort()).toEqual(first)
+
+    const again = (after: string | null) =>
+      createParticipantBackfillHandler(() => harness.db)(
+        { runId: 'run-2', after },
+        context(env),
+      )
+    await again(null)
+    await again(ordered[0])
+    await again(ordered[1])
+    expect(anchors().sort()).toEqual(first)
+    expect((await readParticipantBackfillMarker(env.KV))?.runId).toBe('run-2')
+  })
+
+  it('lets a retried message through after an earlier attempt got as far as recording its workspace', async () => {
+    const { env, sent } = fakes()
+    await run(env, null)
+    await run(env, null)
+
+    expect(sent).toHaveLength(2)
+    expect(sent[1]).toMatchObject({
+      id: sent[0].id,
+      payload: sent[0].payload,
+    })
+  })
+
+  it('writes no marker for a message that starts past the end of a run that never began', async () => {
+    const { env, sent, kv } = fakes()
+
+    const metrics = await run(env, ordered[1])
+
+    expect(metrics).toEqual({ organizations: 0, participants: 0, complete: 0 })
+    expect(kv.size).toBe(0)
+    expect(sent).toHaveLength(0)
+    expect(anchors()).toHaveLength(0)
+  })
+
+  it('writes no marker when a run is told it has reached the end without having visited the workspaces', async () => {
+    const { env, sent, kv } = fakes()
+    await run(env, null)
+
+    await run(env, ordered[1])
+
+    expect(kv.has(PARTICIPANT_BACKFILL_MARKER_KEY)).toBe(false)
+    expect(sent).toHaveLength(1)
+  })
+
+  it('does nothing for a message that skips part of the id range', async () => {
+    const { env, sent, kv } = fakes()
+    const gamma = await harness.seedTenant('gamma')
+    const all = [
+      alpha.organizationId,
+      beta.organizationId,
+      gamma.organizationId,
+    ].sort()
+    await run(env, null)
+    await run(env, all[1])
+
+    expect(sent).toHaveLength(1)
+    expect(kv.get(participantBackfillRunKey('run-1'))).toBe(all[0])
   })
 
   it('refuses to run without the D1 binding', async () => {

@@ -48,7 +48,8 @@ export type ErasureOrigin = (typeof ERASURE_ORIGINS)[number]
  * When in the engine's order the place is handled.
  *
  * - `scrub`: per workspace, through a `TenantScope` bound to it (engine step 4), or for the global
- *   tables through `src/server/catalog/erasure.ts`.
+ *   tables through `src/server/catalog/erasure.ts` (phase 3: that module is read-only until an
+ *   amendment to SPEC §5 admits the writes).
  * - `account`: removed with the `user` row (engine step 6), by Better Auth's own cascade or by the
  *   auth-table cleanup that precedes it.
  * - `finish`: removed after the verification sweep (engine step 8). The sweep runs first and would
@@ -87,7 +88,10 @@ const VACAY = 'src/server/repos/vacay.ts'
 const NOTIFICATIONS = 'src/server/repos/notifications.ts'
 const AUDIT = 'src/server/repos/audit.ts'
 const PARTICIPANTS = 'src/server/repos/participants.ts'
-/** The global tables and the auth-table cleanup (spec phase 3): the stated third catalog exception. */
+/**
+ * The global tables and the auth-table cleanup (spec phase 3). The module is the third catalog
+ * member and read-only today; the pull request that adds these writes amends SPEC §5 first.
+ */
 const CATALOG_ERASURE = 'src/server/catalog/erasure.ts'
 
 function userRef(

@@ -10,7 +10,12 @@ import {
   listWorkspacesHoldingUser,
 } from '#/server/catalog/erasure'
 import { workspaceParticipants } from '#/server/db/schema'
-import { addMember, backfillParticipants, createTrip } from '#/server/repos'
+import {
+  addMember,
+  backfillParticipants,
+  createTrip,
+  removeMember,
+} from '#/server/repos'
 import {
   createHarness,
   subscribeTenant,
@@ -41,6 +46,14 @@ const anchorsOf = async () =>
 const newUser = async (label: string) => {
   const stray = await harness.seedTenant(label)
   return stray.ownerUserId
+}
+
+/** Leaves through the real path, `removeMember`, which must not take the anchor with it. */
+const leave = async (tenant: SeededTenant, userId: string) => {
+  const row = harness.sqlite
+    .prepare('select id from member where organization_id = ? and user_id = ?')
+    .get(tenant.organizationId, userId) as { id: string }
+  await removeMember(tenant.scope, row.id)
 }
 
 describe('addMember', () => {
@@ -75,26 +88,20 @@ describe('addMember', () => {
     const person = await newUser('person')
     await addMember(alpha.scope, { userId: person, role: 'member' })
 
-    harness.sqlite
-      .prepare('delete from member where organization_id = ? and user_id = ?')
-      .run(alpha.organizationId, person)
+    await leave(alpha, person)
 
     expect(await anchorsOf()).toEqual([`${alpha.organizationId}/${person}`])
   })
 })
 
 describe('backfillParticipants', () => {
-  it('records the people a workspace names, departed ones included, and writes nothing for another workspace', async () => {
+  it('records the people a workspace names and writes nothing for another workspace', async () => {
     const stayer = await alpha.addUser('Stayer')
-    const leaver = await alpha.addUser('Leaver')
     const trip = await createTrip(alpha.scope, {
       title: 'Trip',
       currency: 'EUR',
     })
     expect(trip.id).toBeTruthy()
-    harness.sqlite
-      .prepare('delete from member where organization_id = ? and user_id = ?')
-      .run(alpha.organizationId, leaver)
     const betaOnly = await beta.addUser('Beta only')
 
     await backfillParticipants(alpha.scope)
@@ -117,13 +124,25 @@ describe('backfillParticipants', () => {
     harness.sqlite
       .prepare('update trips set created_by = ? where id = ?')
       .run(leaver, trip.id)
-    harness.sqlite
-      .prepare('delete from member where organization_id = ? and user_id = ?')
-      .run(alpha.organizationId, leaver)
+    await leave(alpha, leaver)
 
     await backfillParticipants(alpha.scope)
 
     expect(await anchorsOf()).toContain(`${alpha.organizationId}/${leaver}`)
+  })
+
+  it('records more people than one insert statement can bind', async () => {
+    const people: Array<string> = []
+    for (let index = 0; index < 40; index += 1) {
+      people.push(await alpha.addUser(`Person ${index}`))
+    }
+
+    await backfillParticipants(alpha.scope)
+
+    const anchors = await anchorsOf()
+    for (const person of people) {
+      expect(anchors).toContain(`${alpha.organizationId}/${person}`)
+    }
   })
 
   it('is idempotent: a second run changes nothing', async () => {
@@ -158,9 +177,7 @@ describe('the catalog read', () => {
   it('finds the workspaces a person left, and none they never joined', async () => {
     const person = await newUser('person')
     await addMember(alpha.scope, { userId: person, role: 'member' })
-    harness.sqlite
-      .prepare('delete from member where organization_id = ? and user_id = ?')
-      .run(alpha.organizationId, person)
+    await leave(alpha, person)
 
     const page = await listWorkspacesHoldingUser(harness.db, person)
 

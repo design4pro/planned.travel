@@ -63,7 +63,9 @@ that module, `repos/participants.ts`, the catalog read and the registry.
 `listOrganizationIds`. Both take a plain `Database` and have four properties that stand in for the
 repository rule: ids only (an organization id, and the erasure id for the first), keyset-paged with a
 fixed maximum page size, read-only, and reached only from the backfill handler in this change (a test
-pins the importers). SPEC §5/§6 and every document that stated "two catalog members" are amended. Every
+pins the importers; `listWorkspacesHoldingUser` has no production caller until the engine). The registry
+names this module as the owner of the global-table and auth-row scrubs (phase 3), which are writes: the
+pull request that ships them amends SPEC §5 again first. SPEC §5/§6 and every document that stated "two catalog members" are amended. Every
 scrub runs afterwards through a `TenantScope` bound to one workspace. ADR 0041 and ADR 0042 keep their
 "closed list of two" sentences as the record of their own day.
 
@@ -74,9 +76,11 @@ cursor, which the catalog read finds, then enqueues the next message with the id
 `participant-backfill:<runId>:<cursor>`; the message that finds no workspace left writes the KV
 marker `erasure:participants-backfilled` (run id and time). The payload carries a run id and a cursor
 and no user or organization id; the envelope's `orgId` is `system`, and the work runs under a scope
-whose user id is reserved (`system:participant-backfill`). A forged envelope can therefore start or
-continue the chain but cannot aim it at a person or a workspace, and the scope reads only the
-registered user columns of the workspace the catalog named. A chain that fails part-way leaves no
+whose user id is reserved (`system:participant-backfill`). The run keeps its progress in KV (the
+last workspace visited), and a message that does not continue it does nothing, so the marker is
+written only by a chain that visited every workspace from the start. A forged envelope can therefore
+start a chain but cannot aim it at a person or a workspace, nor finish a run early, and the scope
+reads only the registered user columns of the workspace the catalog named. A chain that fails part-way leaves no
 marker, and the engine refuses to run until the marker exists. The kind and its handler ship in this
 release and nothing enqueues it; the producer comes in a later one (`BACKWARD_COMPATIBILITY.md` §6).
 

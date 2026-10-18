@@ -376,8 +376,8 @@ passed in as data (`{ id, banned }`); `src/server/public/**` reads no session.
 repository" have a carve-out with exactly three members, and this section states all three. The
 first is a set of tables, excepted from both rules and stated immediately below. The second is a
 single query over rows that do carry an `organization_id`, excepted from the repository rule alone
-and admitted by amendment at the end of this section. The third is a pair of ids-only reads over the
-participation anchor, admitted by a second amendment after the second.
+and admitted by amendment at the end of this section. The third is a pair of ids-only reads, one over the
+participation anchor and one over the organization list, admitted by a second amendment after the second.
 
 Twelve tables are platform content rather than tenant data:
 
@@ -531,8 +531,11 @@ each taking a plain `Database`, and four properties stand in for the repository 
 for the second member: **ids only** (an organization id, plus the erasure id for the first; no
 content table is joined), **keyset-paged** with a fixed maximum page size, **read-only**, and
 **reached only from `queue/handlers/participant-backfill*` in this change** (a test pins the
-importers; the erasure engine adds its own caller by amending the pin). The scrub itself runs
-afterwards through a `TenantScope` bound to one organization.
+importers: `listOrganizationIds` is the one the handler calls, and `listWorkspacesHoldingUser` has no
+production caller until the erasure engine adds its own by amending the pin). The scrub itself runs
+afterwards through a `TenantScope` bound to one organization. The erasure registry names this module
+as the owner of the scrubs of the global tables and the auth rows (spec phase 3); those are writes,
+and this member stays read-only until the pull request that ships them amends this section again.
 
 The auth layer cannot import `src/server/repos` (the Workspace console graph reaches
 `#/server/auth` and must not reach the tenant layer), yet it creates memberships. It therefore

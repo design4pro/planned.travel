@@ -13,8 +13,11 @@
  * The payload is a run id and a cursor and nothing else. The workspace to visit is found by
  * `catalog/erasure.ts` (organization ids only, keyset-paged), and the work runs under a
  * `TenantScope` bound to that one workspace with a reserved id that is not a user, so a forged
- * envelope can start or continue the chain but cannot aim it at a person or a workspace, and the
- * scope it builds reads only the registered user columns of the workspace the catalog named.
+ * envelope can start a chain but cannot aim it at a person or a workspace, and the scope it builds
+ * reads only the registered user columns of the workspace the catalog named. A run's progress is
+ * kept in KV (`participant-backfill-marker.ts`), and a message that does not continue it does
+ * nothing, so a stray or forged message cannot write the completion marker for a chain that did
+ * not visit every workspace.
  *
  * Shipped inert: nothing enqueues this kind in this release (`BACKWARD_COMPATIBILITY.md` section 6);
  * the producer comes in a later one, once every Worker can decode the kind.
@@ -22,7 +25,11 @@
 
 import { drizzle } from 'drizzle-orm/d1'
 import { listOrganizationIds } from '#/server/catalog/erasure'
-import { writeParticipantBackfillMarker } from '#/server/erasure/participant-backfill-marker'
+import {
+  readParticipantBackfillRunCursor,
+  writeParticipantBackfillMarker,
+  writeParticipantBackfillRunCursor,
+} from '#/server/erasure/participant-backfill-marker'
 import { backfillParticipants, createScope } from '#/server/repos'
 import { SYSTEM_ORG_ID, enqueueTask } from '../jobs'
 import { TaskConfigurationError } from '../types'
@@ -74,6 +81,29 @@ export function createParticipantBackfillHandler(
     })
     const organizationId = page.items.at(0)
 
+    // The run's own record decides whether this message continues it. `''` is "started, nothing
+    // visited"; the cursor of a retried message is either its own `after` or the workspace it
+    // handles (an earlier attempt got that far). Anything else is a message that did not follow
+    // the chain, and it does nothing, so only a chain that visited every workspace can end in the
+    // marker.
+    const expected = payload.after ?? ''
+    let cursor = await readParticipantBackfillRunCursor(
+      context.env.KV,
+      payload.runId,
+    )
+    if (cursor === null && payload.after === null) {
+      await writeParticipantBackfillRunCursor(context.env.KV, payload.runId, '')
+      cursor = ''
+    }
+    const retriedAfterProgress =
+      organizationId !== undefined && cursor === organizationId
+    if (cursor !== expected && !retriedAfterProgress) {
+      context.logger.warn('participation backfill message out of sequence', {
+        runId: payload.runId,
+      })
+      return { organizations: 0, participants: 0, complete: 0 }
+    }
+
     if (organizationId === undefined) {
       await writeParticipantBackfillMarker(
         context.env.KV,
@@ -93,6 +123,13 @@ export function createParticipantBackfillHandler(
     })
     const participants = await backfillParticipants(scope)
 
+    // Recorded before the hand-on: a failed enqueue retries this message, which the check above
+    // lets through because the cursor already names this workspace.
+    await writeParticipantBackfillRunCursor(
+      context.env.KV,
+      payload.runId,
+      organizationId,
+    )
     await enqueueTask(context.env.TASKS, {
       kind: 'participant-backfill',
       orgId: SYSTEM_ORG_ID,

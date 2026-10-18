@@ -1183,6 +1183,13 @@ describe('a workspace switch inside an impersonated session', () => {
     })
 
     expect(activeOrganizationOf(cookie)).toBe(inviterOrganizationId)
+    expect(
+      sqlite
+        .prepare(
+          'select count(*) as n from workspace_participants where organization_id = ? and user_id = ?',
+        )
+        .get(inviterOrganizationId, targetId),
+    ).toEqual({ n: 1 })
     expect(onlyEntry().entry).toMatchObject({
       action: ACTION,
       entityId: targetId,
