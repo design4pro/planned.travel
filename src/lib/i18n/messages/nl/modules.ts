@@ -1180,6 +1180,39 @@ const messages = {
     'Iedereen met deze link kan zonder account je niet-gearchiveerde reizen in deze werkruimte lezen: de {count} met de nieuwste startdatums. Nieuwe reizen verschijnen vanzelf. Bescherm de link als een wachtwoord.',
   'files.calendar.workspace.nameNote':
     'Deze link verschijnt in je agenda als ‘planned.travel’. Hernoem hem als je er meer dan één hebt.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Verlofbudget {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Nog {value} dag',
+    other: 'Nog {value} dagen',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} dag te veel',
+    other: '{value} dagen te veel',
+  },
+  'vacay.allowance.progress': 'Gebruikte dagen: {used} van {total}',
+  'vacay.allowance.tile.days': 'Dagen',
+  'vacay.allowance.tile.used': 'Gebruikt',
+  'vacay.allowance.tile.carried': 'Overgedragen',
+  'vacay.allowance.tile.edit.days': 'Dagen bewerken, nu {value}',
+  'vacay.allowance.input.days': 'Je verlofbudget voor {year}',
+  'vacay.allowance.input.invalid': 'Voer een geheel getal van 0 tot 365 in.',
+  'vacay.allowance.save': 'Opslaan',
+  'vacay.allowance.cancel': 'Annuleren',
+  'vacay.allowance.saving': 'Opslaan…',
+  'vacay.allowance.default.hint':
+    'Standaardbudget. Selecteer om je eigen budget in te stellen.',
+  'vacay.allowance.saved': 'Verlofbudget opgeslagen.',
+  'vacay.allowance.error.days': {
+    one: 'Je verlofbudget kon niet worden opgeslagen. {year} toont nog steeds {value} dag.',
+    other:
+      'Je verlofbudget kon niet worden opgeslagen. {year} toont nog steeds {value} dagen.',
+  },
+  'vacay.allowance.retry': 'Opnieuw proberen',
+  'vacay.pending.loading': 'Laden',
+  'vacay.error.title': 'De verlofplanner kon niet worden geladen',
+  'vacay.year.previous': 'Vorig jaar',
+  'vacay.year.next': 'Volgend jaar',
 } satisfies TranslationOf<typeof En>
 
 export default messages
