@@ -1,0 +1,150 @@
+/**
+ * The leave planner's server functions, called the way the screen calls them: with an app scope and
+ * nothing else. The guard is the repository's; what is asserted here is that the functions forward
+ * to it without a way round it, whoever the caller is.
+ */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import {
+  NotFoundError,
+  PlanOwnerOnlyError,
+  ensurePlan,
+  invitePlanMember,
+  setPlanMemberStatus,
+  vacayUserYearsRepository,
+} from '#/server/repos'
+import { createHarness } from '#/server/repos/__tests__/harness'
+
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
+import type { TenantScope } from '#/server/repos'
+
+const stubs = vi.hoisted(() => ({ scope: null as TenantScope | null }))
+
+vi.mock('../context', () => ({
+  appScope: async (): Promise<TenantScope> => {
+    if (stubs.scope === null) {
+      throw new Error('This case has no acting scope.')
+    }
+    return stubs.scope
+  },
+}))
+
+// Outside the Start build the wrapper discards return values. Keep the registered handler callable
+// so the assertions cover its result, with real repositories and an authenticated scope.
+vi.mock('@tanstack/react-start', () => ({
+  createServerFn: () => ({
+    validator: () => ({
+      handler: (handler: (options: { data: unknown }) => unknown) => handler,
+    }),
+  }),
+}))
+
+const { loadVacayAllowance, setAllowanceFn } = await import('../vacay')
+
+describe('the leave planner server functions', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let planId: string
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('allowance-fns')
+    stubs.scope = tenant.scope
+    planId = (await ensurePlan(tenant.scope)).id
+  })
+
+  afterEach(() => {
+    harness.close()
+    stubs.scope = null
+  })
+
+  const save = (data: Record<string, unknown>) =>
+    setAllowanceFn({ data } as never) as Promise<{
+      row: { userId: string; entitlementDays: number }
+    }>
+  const load = (data: { planId: string; year: number }) =>
+    loadVacayAllowance({ data } as never) as Promise<{
+      hasRow: boolean
+      entitlementDays: number
+    }>
+
+  it('saves the caller’s allowance and reads it back as theirs', async () => {
+    const saved = await save({ planId, year: 2026, entitlementDays: 21 })
+
+    expect(saved.row.userId).toBe(tenant.ownerUserId)
+    expect(await load({ planId, year: 2026 })).toMatchObject({
+      hasRow: true,
+      entitlementDays: 21,
+    })
+  })
+
+  it('reads the caller’s balance whatever else a caller sends', async () => {
+    const colleague = await tenant.addUser('Colleague')
+    const invited = await invitePlanMember(tenant.scope, planId, colleague)
+    await setPlanMemberStatus(tenant.scope, invited.id, 'accepted')
+    await save({ planId, userId: colleague, year: 2026, entitlementDays: 9 })
+
+    const result = await loadVacayAllowance({
+      data: { planId, year: 2026, userId: colleague },
+    } as never)
+
+    expect(result).toMatchObject({ hasRow: false })
+  })
+
+  describe.each([
+    ['a workspace member who never joined', undefined],
+    ['a pending member', 'pending'],
+    ['a declined member', 'declined'],
+  ] as const)('as %s', (_label, status) => {
+    let outsider: string
+
+    beforeEach(async () => {
+      outsider = await tenant.addUser('Outsider')
+      if (status !== undefined) {
+        const invited = await invitePlanMember(tenant.scope, planId, outsider)
+        await setPlanMemberStatus(tenant.scope, invited.id, status)
+      }
+      stubs.scope = tenant.scopeFor(outsider)
+    })
+
+    it('finds no plan to write or read, and writes nothing', async () => {
+      await expect(
+        save({ planId, year: 2026, entitlementDays: 3 }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      await expect(load({ planId, year: 2026 })).rejects.toBeInstanceOf(
+        NotFoundError,
+      )
+      expect(await vacayUserYearsRepository.count(tenant.scope)).toBe(0)
+    })
+  })
+
+  it('refuses an accepted member who aims the write at a colleague', async () => {
+    const colleague = await tenant.addUser('Colleague')
+    const invited = await invitePlanMember(tenant.scope, planId, colleague)
+    await setPlanMemberStatus(tenant.scope, invited.id, 'accepted')
+    stubs.scope = tenant.scopeFor(colleague)
+
+    await expect(
+      save({
+        planId,
+        userId: tenant.ownerUserId,
+        year: 2026,
+        entitlementDays: 1,
+      }),
+    ).rejects.toBeInstanceOf(PlanOwnerOnlyError)
+    expect(await vacayUserYearsRepository.count(tenant.scope)).toBe(0)
+  })
+
+  it('finds no plan from a second workspace', async () => {
+    const other = await harness.seedTenant('allowance-fns-other')
+    stubs.scope = other.scope
+
+    await expect(
+      save({ planId, year: 2026, entitlementDays: 3 }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expect(load({ planId, year: 2026 })).rejects.toBeInstanceOf(
+      NotFoundError,
+    )
+    expect(await vacayUserYearsRepository.count(tenant.scope)).toBe(0)
+  })
+})

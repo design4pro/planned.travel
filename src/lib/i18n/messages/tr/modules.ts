@@ -1159,6 +1159,38 @@ const messages = {
     'Bu bağlantıya sahip herkes, bu çalışma alanında katıldığınız arşivlenmemiş gezileri hesapsız okuyabilir: başlangıç tarihi en yeni olan {count} gezi. Yeni geziler otomatik görünür. Bağlantıyı parola gibi koruyun.',
   'files.calendar.workspace.nameNote':
     'Bu bağlantı takviminizde “planned.travel” adıyla görünür. Birden fazla varsa adını değiştirin.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'İzin hakkı {year}',
+  'vacay.allowance.daysLeft': {
+    one: '{value} gün kaldı',
+    other: '{value} gün kaldı',
+  },
+  'vacay.allowance.daysOver': {
+    one: '{value} gün fazla',
+    other: '{value} gün fazla',
+  },
+  'vacay.allowance.progress': 'Kullanılan gün: {used} / {total}',
+  'vacay.allowance.tile.days': 'Günler',
+  'vacay.allowance.tile.used': 'Kullanılan',
+  'vacay.allowance.tile.carried': 'Devreden',
+  'vacay.allowance.tile.edit.days': 'Günler: düzenle, şu an {value}',
+  'vacay.allowance.input.days': '{year} için izin hakkınız',
+  'vacay.allowance.input.invalid': '0 ile 365 arasında bir tam sayı girin.',
+  'vacay.allowance.save': 'Kaydet',
+  'vacay.allowance.cancel': 'İptal',
+  'vacay.allowance.saving': 'Kaydediliyor…',
+  'vacay.allowance.default.hint':
+    'Varsayılan hak. Kendinizinkini ayarlamak için seçin.',
+  'vacay.allowance.saved': 'İzin hakkı kaydedildi.',
+  'vacay.allowance.error.days': {
+    one: 'İzin hakkınız kaydedilemedi. {year} hâlâ {value} gün gösteriyor.',
+    other: 'İzin hakkınız kaydedilemedi. {year} hâlâ {value} gün gösteriyor.',
+  },
+  'vacay.allowance.retry': 'Tekrar dene',
+  'vacay.pending.loading': 'Yükleniyor',
+  'vacay.error.title': 'İzin planlayıcı yüklenemedi',
+  'vacay.year.previous': 'Önceki yıl',
+  'vacay.year.next': 'Sonraki yıl',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1222,6 +1222,42 @@ const messages = {
     'Chiunque abbia questo link può leggere senza account i viaggi non archiviati a cui partecipi in questo spazio: i {count} con le date di inizio più recenti. I nuovi viaggi appaiono automaticamente. Proteggilo come una password.',
   'files.calendar.workspace.nameNote':
     'Questo link appare nel calendario come «planned.travel». Rinominalo se ne hai più di uno.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Monte giorni {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Restano {value} giorno',
+    many: 'Restano {value} giorni',
+    other: 'Restano {value} giorni',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'In eccesso di {value} giorno',
+    many: 'In eccesso di {value} giorni',
+    other: 'In eccesso di {value} giorni',
+  },
+  'vacay.allowance.progress': 'Giorni usati: {used} su {total}',
+  'vacay.allowance.tile.days': 'Giorni',
+  'vacay.allowance.tile.used': 'Usati',
+  'vacay.allowance.tile.carried': 'Riportati',
+  'vacay.allowance.tile.edit.days': 'Modifica i giorni, attualmente {value}',
+  'vacay.allowance.input.days': 'Il tuo monte giorni per il {year}',
+  'vacay.allowance.input.invalid': 'Inserisci un numero intero da 0 a 365.',
+  'vacay.allowance.save': 'Salva',
+  'vacay.allowance.cancel': 'Annulla',
+  'vacay.allowance.saving': 'Salvataggio…',
+  'vacay.allowance.default.hint':
+    'Monte giorni predefinito. Seleziona per impostare il tuo.',
+  'vacay.allowance.saved': 'Monte giorni salvato.',
+  'vacay.allowance.error.days': {
+    one: 'Impossibile salvare il tuo monte giorni. {year} mostra ancora {value} giorno.',
+    many: 'Impossibile salvare il tuo monte giorni. {year} mostra ancora {value} giorni.',
+    other:
+      'Impossibile salvare il tuo monte giorni. {year} mostra ancora {value} giorni.',
+  },
+  'vacay.allowance.retry': 'Riprova',
+  'vacay.pending.loading': 'Caricamento',
+  'vacay.error.title': 'Impossibile caricare il pianificatore delle ferie',
+  'vacay.year.previous': 'Anno precedente',
+  'vacay.year.next': 'Anno successivo',
 } satisfies TranslationOf<typeof En>
 
 export default messages

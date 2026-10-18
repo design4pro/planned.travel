@@ -1227,6 +1227,42 @@ const messages = {
     'Toute personne disposant de ce lien peut consulter sans compte les voyages non archivés auxquels vous participez dans cet espace : les {count} dont les dates de début sont les plus récentes. Les nouveaux voyages apparaissent automatiquement. Protégez-le comme un mot de passe.',
   'files.calendar.workspace.nameNote':
     'Ce lien apparaît dans votre calendrier sous le nom « planned.travel ». Renommez-le si vous en avez plusieurs.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Droits {year}',
+  'vacay.allowance.daysLeft': {
+    one: 'Restant : {value} jour',
+    many: 'Restant : {value} jours',
+    other: 'Restant : {value} jours',
+  },
+  'vacay.allowance.daysOver': {
+    one: 'Dépassement de {value} jour',
+    many: 'Dépassement de {value} jours',
+    other: 'Dépassement de {value} jours',
+  },
+  'vacay.allowance.progress': 'Jours utilisés : {used} sur {total}',
+  'vacay.allowance.tile.days': 'Jours',
+  'vacay.allowance.tile.used': 'Utilisés',
+  'vacay.allowance.tile.carried': 'Reportés',
+  'vacay.allowance.tile.edit.days': 'Modifier les jours, actuellement {value}',
+  'vacay.allowance.input.days': 'Vos droits pour {year}',
+  'vacay.allowance.input.invalid': 'Saisissez un nombre entier de 0 à 365.',
+  'vacay.allowance.save': 'Enregistrer',
+  'vacay.allowance.cancel': 'Annuler',
+  'vacay.allowance.saving': 'Enregistrement…',
+  'vacay.allowance.default.hint':
+    'Droits par défaut. Sélectionnez pour définir les vôtres.',
+  'vacay.allowance.saved': 'Droits enregistrés.',
+  'vacay.allowance.error.days': {
+    one: 'Impossible d’enregistrer vos droits. {year} affiche toujours {value} jour.',
+    many: 'Impossible d’enregistrer vos droits. {year} affiche toujours {value} jours.',
+    other:
+      'Impossible d’enregistrer vos droits. {year} affiche toujours {value} jours.',
+  },
+  'vacay.allowance.retry': 'Réessayer',
+  'vacay.pending.loading': 'Chargement',
+  'vacay.error.title': 'Le planificateur de congés n’a pas pu se charger',
+  'vacay.year.previous': 'Année précédente',
+  'vacay.year.next': 'Année suivante',
 } satisfies TranslationOf<typeof En>
 
 export default messages
