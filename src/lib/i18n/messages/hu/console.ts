@@ -407,7 +407,7 @@ const messages = {
   'action.delete.note':
     'A munkaterületi tartalom, amelyet ez a személy létrehozott, annál a munkaterületnél marad, amelyik birtokolja. Ha törlés helyett felfüggeszti a fiókot, a nyom megmarad, a hozzáférés viszont elvész.',
   'action.delete.owners':
-    'Nem törölhető az a fiók, amely egyetlen tulajdonosa egy olyan munkaterületnek, amelyhez más személyek is tartoznak. Előbb jelöljön ki ott másik tulajdonost, vagy törlés helyett függessze fel a fiókot.',
+    'Nem törölhető az a fiók, amely egyetlen tulajdonosa egy olyan munkaterületnek, amelyhez más személyek is tartoznak. A munkaterület egy tulajdonosa előbb kijelölhet másik tulajdonost a munkaterület konzoljában, vagy a fiók helyette felfüggeszthető.',
   'action.delete.done': 'A fiók törölve',
   'action.delete.done.body':
     '{name} és minden, ami a fiókhoz kapcsolódott, eltűnt.',

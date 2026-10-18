@@ -124,3 +124,27 @@ export const DISABLED_ADMIN_PATHS: string[] = [
   '/admin/unban-user',
   '/admin/update-user',
 ]
+
+/**
+ * The organization plugin's one HTTP path closed besides `organization/create` and
+ * `organization/delete` (docs/ACCESS.md §2.6), and kept out of {@link DISABLED_ADMIN_PATHS}, whose
+ * drift test requires it to equal the `/admin/*` set exactly.
+ *
+ * `organization/update-member-role` writes `member.role` with no audit entry and accepts a
+ * comma-joined role string. A role change is audited, ceilinged and refused during impersonation in
+ * `changeRole` (`src/server/fns/member-role-writes.ts`); a veto in one function with the same action
+ * on a public URL is not a veto. Nothing in `src/` calls the endpoint, and `auth.api.updateMemberRole`
+ * stays usable in process, which the last-owner plugin tests drive.
+ */
+export const DISABLED_ORGANIZATION_PATHS: string[] = [
+  '/organization/update-member-role',
+]
+
+/**
+ * What `disabledPaths` receives: both lists, merged once here so the drift tests and the running
+ * Worker read the same array.
+ */
+export const DISABLED_PATHS: string[] = [
+  ...DISABLED_ADMIN_PATHS,
+  ...DISABLED_ORGANIZATION_PATHS,
+]

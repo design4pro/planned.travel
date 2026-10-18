@@ -386,6 +386,22 @@ const messages = {
   'admin.members.person': 'Personne',
   'admin.members.role': 'Rôle',
   'admin.members.joined': 'Arrivée',
+  'admin.members.role.label': 'Rôle de {name}',
+  'admin.members.role.saved': '{name} est maintenant {role}.',
+  'admin.members.role.impersonated':
+    'Un rôle ne peut pas être modifié pendant que vous agissez au nom d’un autre compte.',
+  'admin.members.role.notPermitted':
+    'Vous ne pouvez pas faire ce changement. Seul un propriétaire peut accorder le rôle de propriétaire ou modifier un propriétaire.',
+  'admin.members.role.lastOwner':
+    'C’est le seul propriétaire de l’espace de travail. Nommez d’abord un autre propriétaire.',
+  'admin.members.role.notFound':
+    'Cette personne n’est plus dans l’espace de travail. La liste a été actualisée.',
+  'admin.members.role.failed': 'Le rôle n’a pas pu être modifié. Réessayez.',
+  'admin.members.role.promote.title': 'Faire de {name} un propriétaire ?',
+  'admin.members.role.promote.body':
+    '{name} aura le même pouvoir que vous : facturation, membres et réglages. Un propriétaire peut rétrograder ou retirer tout autre propriétaire, vous compris.',
+  'admin.members.role.promote.confirm': 'Nommer propriétaire',
+  'admin.members.role.promote.cancel': 'Annuler',
 
   'admin.activity.label': 'Activité récente',
   'admin.activity.empty.title': 'Rien d’enregistré pour l’instant',

@@ -3,7 +3,7 @@
  * docs/ACCESS.md §1.4 and §2.6 ask for.
  *
  * Both are asserted against `../admin-options`, which is the module `src/server/auth/index.ts`
- * imports and passes **verbatim** — `admin(adminOptions)` and `disabledPaths: DISABLED_ADMIN_PATHS`,
+ * imports and passes **verbatim** — `admin(adminOptions)` and `disabledPaths: DISABLED_PATHS`,
  * both checked against the source text below. That indirection is the whole point of the file
  * existing. A test that built its own `admin({})` would report `adminUserIds` absent vacuously,
  * because it would be describing an object the Worker never sees; and a test that imported
@@ -16,13 +16,15 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { admin } from 'better-auth/plugins'
+import { admin, organization } from 'better-auth/plugins'
 import { defaultRoles } from 'better-auth/plugins/admin/access'
 import { describe, expect, it } from 'vitest'
 import { ac, roles } from '../access'
 import {
   BANNED_USER_MESSAGE,
   DISABLED_ADMIN_PATHS,
+  DISABLED_ORGANIZATION_PATHS,
+  DISABLED_PATHS,
   IMPERSONATION_SESSION_SECONDS,
   adminOptions,
 } from '../admin-options'
@@ -51,17 +53,15 @@ describe('adminOptions is the literal the production betterAuth() call receives'
   it('is passed to admin() and disabledPaths without being rebuilt or spread', () => {
     expect(indexSource).toContain("from './admin-options'")
     expect(indexSource).toContain('admin(adminOptions)')
-    expect(indexSource).toContain('disabledPaths: DISABLED_ADMIN_PATHS')
+    expect(indexSource).toContain('disabledPaths: DISABLED_PATHS')
     // A spread would make every assertion below describe a different object from the Worker's.
     expect(indexSource).not.toContain('admin({')
     expect(indexSource).not.toContain('...adminOptions')
-    expect(indexSource).not.toContain('...DISABLED_ADMIN_PATHS')
+    expect(indexSource).not.toContain('...DISABLED_PATHS')
   })
 
   it('registers disabledPaths as a top-level option, a sibling of plugins', () => {
-    const disabledAt = indexSource.indexOf(
-      'disabledPaths: DISABLED_ADMIN_PATHS',
-    )
+    const disabledAt = indexSource.indexOf('disabledPaths: DISABLED_PATHS')
     const pluginsAt = indexSource.indexOf('plugins: [')
     const optionsAt = indexSource.indexOf('betterAuth({')
     expect(optionsAt).toBeGreaterThan(-1)
@@ -176,6 +176,25 @@ describe('every admin endpoint is in disabledPaths (docs/ACCESS.md §2.6)', () =
       expect(path.startsWith('/api/')).toBe(false)
     }
     expect(new Set(DISABLED_ADMIN_PATHS).size).toBe(DISABLED_ADMIN_PATHS.length)
+  })
+})
+
+describe('the organization role-change path is closed beside the admin list (#995)', () => {
+  it('names the path the organization plugin actually publishes', () => {
+    const path = organization().endpoints.updateMemberRole.path
+    expect(DISABLED_ORGANIZATION_PATHS).toEqual([path])
+    expect(path).toBe('/organization/update-member-role')
+  })
+
+  it('merges both lists into the one array disabledPaths receives, without touching the admin list', () => {
+    expect(DISABLED_PATHS).toEqual([
+      ...DISABLED_ADMIN_PATHS,
+      ...DISABLED_ORGANIZATION_PATHS,
+    ])
+    expect(DISABLED_ADMIN_PATHS).toHaveLength(15)
+    for (const path of DISABLED_ORGANIZATION_PATHS) {
+      expect(path.startsWith('/organization/')).toBe(true)
+    }
   })
 })
 
