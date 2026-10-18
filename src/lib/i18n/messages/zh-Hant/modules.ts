@@ -1050,6 +1050,34 @@ const messages = {
     '任何持有此連結的人都無需帳戶即可查看你在此工作空間參與且未封存的旅行：開始日期最新的{count}次旅行，新旅行會自動出現。請像密碼一樣保護此連結。',
   'files.calendar.workspace.nameNote':
     '此連結在行事曆中顯示為「planned.travel」。若有多個連結，請重新命名。',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': '假期額度 {year}',
+  'vacay.allowance.daysLeft': {
+    other: '剩餘{value}天',
+  },
+  'vacay.allowance.daysOver': {
+    other: '超出{value}天',
+  },
+  'vacay.allowance.progress': '已用天數：{used} / {total}',
+  'vacay.allowance.tile.days': '天數',
+  'vacay.allowance.tile.used': '已用',
+  'vacay.allowance.tile.carried': '結轉',
+  'vacay.allowance.tile.edit.days': '編輯天數，目前 {value}',
+  'vacay.allowance.input.days': '你{year}年的假期額度',
+  'vacay.allowance.input.invalid': '請輸入 0 到 365 之間的整數。',
+  'vacay.allowance.save': '儲存',
+  'vacay.allowance.cancel': '取消',
+  'vacay.allowance.saving': '正在儲存…',
+  'vacay.allowance.default.hint': '預設額度。選取即可設定你自己的額度。',
+  'vacay.allowance.saved': '已儲存假期額度。',
+  'vacay.allowance.error.days': {
+    other: '無法儲存你的假期額度。{year}年仍顯示{value}天。',
+  },
+  'vacay.allowance.retry': '重試',
+  'vacay.pending.loading': '正在載入',
+  'vacay.error.title': '無法載入休假規劃器',
+  'vacay.year.previous': '上一年',
+  'vacay.year.next': '下一年',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1140,6 +1140,36 @@ const messages = {
     'Siapa pun dengan tautan ini dapat membaca tanpa akun perjalanan yang Anda ikuti di ruang kerja ini yang tidak diarsipkan: {count} dengan tanggal mulai terbaru. Perjalanan baru muncul otomatis. Lindungi seperti kata sandi.',
   'files.calendar.workspace.nameNote':
     'Tautan ini muncul di kalender Anda sebagai “planned.travel”. Ubah namanya jika Anda memiliki lebih dari satu.',
+  /* ----------------------------------- the leave planner's allowance */
+  'vacay.allowance.label': 'Jatah cuti {year}',
+  'vacay.allowance.daysLeft': {
+    other: 'Sisa {value} hari',
+  },
+  'vacay.allowance.daysOver': {
+    other: 'Lebih {value} hari',
+  },
+  'vacay.allowance.progress': 'Hari terpakai: {used} dari {total}',
+  'vacay.allowance.tile.days': 'Hari',
+  'vacay.allowance.tile.used': 'Terpakai',
+  'vacay.allowance.tile.carried': 'Dibawa',
+  'vacay.allowance.tile.edit.days': 'Ubah hari, saat ini {value}',
+  'vacay.allowance.input.days': 'Jatah cuti Anda untuk {year}',
+  'vacay.allowance.input.invalid': 'Masukkan bilangan bulat dari 0 sampai 365.',
+  'vacay.allowance.save': 'Simpan',
+  'vacay.allowance.cancel': 'Batal',
+  'vacay.allowance.saving': 'Menyimpan…',
+  'vacay.allowance.default.hint':
+    'Jatah bawaan. Pilih untuk menetapkan jatah Anda sendiri.',
+  'vacay.allowance.saved': 'Jatah cuti disimpan.',
+  'vacay.allowance.error.days': {
+    other:
+      'Jatah cuti Anda tidak dapat disimpan. {year} masih menampilkan {value} hari.',
+  },
+  'vacay.allowance.retry': 'Coba lagi',
+  'vacay.pending.loading': 'Memuat',
+  'vacay.error.title': 'Perencana cuti tidak dapat dimuat',
+  'vacay.year.previous': 'Tahun sebelumnya',
+  'vacay.year.next': 'Tahun berikutnya',
 } satisfies TranslationOf<typeof En>
 
 export default messages

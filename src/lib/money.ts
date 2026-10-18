@@ -376,7 +376,7 @@ export const MIN_EXCHANGE_RATE = 1e-7
 export const MAX_EXCHANGE_RATE = 1e7
 
 /** Full-width, Arabic-Indic and Persian digits and the Arabic decimal mark, as ASCII. */
-function toAsciiDigits(text: string): string {
+export function toAsciiDigits(text: string): string {
   return text
     .replace(/[\uff10-\uff19]/g, (ch) => String(ch.charCodeAt(0) - 0xff10))
     .replace(/[\u0660-\u0669]/g, (ch) => String(ch.charCodeAt(0) - 0x0660))
