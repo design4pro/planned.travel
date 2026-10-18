@@ -383,6 +383,22 @@ const messages = {
   'admin.members.person': 'Name',
   'admin.members.role': 'Rolle',
   'admin.members.joined': 'Dabei seit',
+  'admin.members.role.label': 'Rolle von {name}',
+  'admin.members.role.saved': '{name} ist jetzt {role}.',
+  'admin.members.role.impersonated':
+    'Eine Rolle lässt sich nicht ändern, solange du als ein anderes Konto handelst.',
+  'admin.members.role.notPermitted':
+    'Diese Änderung ist dir nicht erlaubt. Nur Inhaber können die Inhaber-Rolle vergeben oder einen Inhaber ändern.',
+  'admin.members.role.lastOwner':
+    'Das ist der einzige Inhaber des Arbeitsbereichs. Mach zuerst jemand anderen zum Inhaber.',
+  'admin.members.role.notFound':
+    'Diese Person gehört nicht mehr zum Arbeitsbereich. Die Liste wurde aktualisiert.',
+  'admin.members.role.failed': 'Die Rolle konnte nicht geändert werden. Versuche es noch einmal.',
+  'admin.members.role.promote.title': '{name} zum Inhaber machen?',
+  'admin.members.role.promote.body':
+    '{name} hat dann dieselbe Macht wie du: Abrechnung, Mitglieder und Einstellungen. Ein Inhaber kann jeden anderen Inhaber herabstufen oder entfernen, auch dich.',
+  'admin.members.role.promote.confirm': 'Zum Inhaber machen',
+  'admin.members.role.promote.cancel': 'Abbrechen',
 
   'admin.activity.label': 'Letzte Vorgänge',
   'admin.activity.empty.title': 'Noch nichts aufgezeichnet',

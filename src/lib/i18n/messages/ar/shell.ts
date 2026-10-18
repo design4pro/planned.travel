@@ -435,6 +435,19 @@ const messages = {
   'admin.members.person': 'الشخص',
   'admin.members.role': 'الدور',
   'admin.members.joined': 'تاريخ الانضمام',
+  'admin.members.role.label': 'دور {name}',
+  'admin.members.role.saved': '{name} أصبح الآن: {role}.',
+  'admin.members.role.impersonated': 'لا يمكن تغيير الدور أثناء تصرفك بصفة حساب آخر.',
+  'admin.members.role.notPermitted':
+    'لا يمكنك إجراء هذا التغيير. وحده المالك يستطيع منح دور المالك أو تغيير دور مالك.',
+  'admin.members.role.lastOwner': 'هذا هو المالك الوحيد لمساحة العمل. عيّن مالكًا آخر أولًا.',
+  'admin.members.role.notFound': 'لم يعد هذا الشخص في مساحة العمل. جرى تحديث القائمة.',
+  'admin.members.role.failed': 'تعذّر تغيير الدور. حاول مرة أخرى.',
+  'admin.members.role.promote.title': 'هل تريد جعل {name} مالكًا؟',
+  'admin.members.role.promote.body':
+    'سيملك {name} القدر نفسه من الصلاحيات الذي تملكه: الفوترة والأعضاء والإعدادات. يستطيع المالك خفض دور أي مالك آخر أو إزالته، بمن فيهم أنت.',
+  'admin.members.role.promote.confirm': 'اجعله مالكًا',
+  'admin.members.role.promote.cancel': 'إلغاء',
 
   'admin.activity.label': 'النشاط الأخير',
   'admin.activity.empty.title': 'لا شيء مسجّل بعد',

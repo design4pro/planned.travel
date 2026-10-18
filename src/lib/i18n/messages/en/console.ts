@@ -411,7 +411,7 @@ const messages = {
   'action.delete.note':
     'Workspace content this person created stays with the workspace that owns it. Suspending the account instead keeps the record and takes away the access.',
   'action.delete.owners':
-    'An account that is the only owner of a workspace other people belong to cannot be deleted. Make someone else an owner there first, or suspend the account instead.',
+    'An account that is the only owner of a workspace other people belong to cannot be deleted. An owner of that workspace can promote another owner from its Workspace console first, or the account can be suspended instead.',
   'action.delete.done': 'Account deleted',
   'action.delete.done.body':
     '{name} and everything attached to the account are gone.',

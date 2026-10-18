@@ -7289,4 +7289,27 @@ describe('tenant isolation', () => {
       }
     })
   })
+
+  describe('changing a member role (#995)', () => {
+    it('does not find another workspace’s member, and leaves its role as it was', async () => {
+      const before = await membersRepository.requireById(
+        beta.tenant.scope,
+        beta.memberId,
+      )
+
+      for (const role of ['member', 'admin', 'owner'] as const) {
+        expect(
+          await captureError(() =>
+            changeMemberRole(alpha.tenant.scope, beta.memberId, role),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      const after = await membersRepository.requireById(
+        beta.tenant.scope,
+        beta.memberId,
+      )
+      expect(after.role).toBe(before.role)
+    })
+  })
 })

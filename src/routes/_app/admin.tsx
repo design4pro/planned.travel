@@ -1,4 +1,5 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { useCallback } from 'react'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   Activity,
   Building2,
@@ -10,13 +11,13 @@ import {
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
+import { MemberRoleControl } from '#/components/layout/member-role-control'
 import { PageHeader } from '#/components/layout/page-header'
 import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Alert,
   Avatar,
   AvatarStack,
-  Badge,
   Button,
   Card,
   EmptyState,
@@ -29,7 +30,9 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui'
+import { isMemberRoleImpersonation } from '#/lib/member-role-refusals'
 import { useI18n, useTranslate } from '#/lib/i18n'
+import { changeMemberRoleFn } from '#/server/fns/members'
 import { loadAdmin } from './-server/overview'
 import { formatDate, formatNumber, formatRelative } from './-lib/format'
 import {
@@ -41,13 +44,11 @@ import {
 } from './-ui/scaffold'
 
 import type { AdminPayload } from './-server/overview'
+import type {
+  MemberRole,
+  MemberRoleOutcome,
+} from '#/components/layout/member-role-control'
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
-
-const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
-  owner: 'accent',
-  admin: 'brand',
-  member: 'neutral',
-}
 
 /**
  * The workspace roles and the quota metrics, as message keys.
@@ -166,6 +167,32 @@ function AdminConsole({ data }: { data: AdminPayload }) {
   const { t, locale } = useI18n()
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
   const planName = labelFor(PLAN_NAME, data.plan, t)
+  const router = useRouter()
+
+  /*
+   * The server function answers a refusal the reader can act on as a value and throws the one it
+   * cannot (an impersonated session). Either way the list is read again: a refusal may mean the
+   * roster this tab holds is stale, and a failure leaves the outcome unknown.
+   */
+  const changeRole = useCallback(
+    async (memberId: string, role: MemberRole): Promise<MemberRoleOutcome> => {
+      let outcome: MemberRoleOutcome
+      try {
+        const result = await changeMemberRoleFn({ data: { memberId, role } })
+        outcome = result.ok
+          ? { ok: true }
+          : { ok: false, reason: result.reason }
+      } catch (cause) {
+        outcome = {
+          ok: false,
+          reason: isMemberRoleImpersonation(cause) ? 'impersonated' : 'failed',
+        }
+      }
+      await router.invalidate().catch(() => undefined)
+      return outcome
+    },
+    [router],
+  )
 
   return (
     <AppFrame>
@@ -358,7 +385,7 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('shell.admin.members.person')}</TableHead>
-                    <TableHead className="w-28">
+                    <TableHead className="w-36">
                       {t('shell.admin.members.role')}
                     </TableHead>
                     {/* At 360px a fixed 128px date column left the person
@@ -391,12 +418,13 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Badge
-                          tone={ROLE_TONE[member.role] ?? 'neutral'}
-                          size="sm"
-                        >
-                          {labelFor(ROLE_LABEL, member.role, t)}
-                        </Badge>
+                        <MemberRoleControl
+                          memberName={member.name}
+                          role={member.role}
+                          assignable={member.assignableRoles}
+                          roleLabel={(role) => labelFor(ROLE_LABEL, role, t)}
+                          onChange={(role) => changeRole(member.memberId, role)}
+                        />
                       </TableCell>
                       <TableCell muted className="hidden sm:table-cell">
                         {formatDate(member.joinedAt, locale)}

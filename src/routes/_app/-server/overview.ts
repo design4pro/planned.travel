@@ -11,6 +11,7 @@ import { z } from 'zod'
 
 import {
   RepositoryError,
+  assignableRoles,
   countAuditActions,
   countFavourites,
   countUnread,
@@ -36,7 +37,11 @@ import { elapsedFraction } from '../-lib/view-mode'
 import { appScope } from './context'
 import { isoOfRequired } from '#/server/serialise'
 
-import type { TenantScope, TripCardFacts } from '#/server/repos'
+import type {
+  OrganizationRole,
+  TenantScope,
+  TripCardFacts,
+} from '#/server/repos'
 import type { JsonRecord } from '#/server/db/schema'
 import type {
   Notification,
@@ -540,6 +545,11 @@ export interface AdminMemberRow {
   readonly email: string
   readonly image: string | null
   readonly joinedAt: string
+  /**
+   * The roles the viewer may set on this row, decided by the repository (`assignableRoles`) from
+   * the viewer's role as re-read for this request. Empty for a row that is not theirs to change.
+   */
+  readonly assignableRoles: ReadonlyArray<OrganizationRole>
 }
 
 export interface AdminAuditRow {
@@ -682,6 +692,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
         email: row.email,
         image: row.image,
         joinedAt: isoOfRequired(row.joinedAt),
+        assignableRoles: assignableRoles(scope.ctx.role, row.role),
       })),
       pendingInvitations: invitations.length,
       audit: audit.items.map((row) => ({

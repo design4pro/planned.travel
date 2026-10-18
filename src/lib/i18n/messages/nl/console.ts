@@ -405,7 +405,7 @@ const messages = {
   'action.delete.note':
     'Inhoud van een werkruimte die deze persoon maakte blijft bij de werkruimte die er eigenaar van is. Het account schorsen in plaats van verwijderen houdt het spoor en neemt de toegang weg.',
   'action.delete.owners':
-    'Een account dat de enige eigenaar is van een werkruimte waar anderen bij horen, kan niet worden verwijderd. Maak daar eerst iemand anders eigenaar, of schors het account in plaats daarvan.',
+    'Een account dat de enige eigenaar is van een werkruimte waar anderen bij horen, kan niet worden verwijderd. Een eigenaar van die werkruimte kan eerst in de werkruimteconsole een andere eigenaar aanwijzen, of het account wordt in plaats daarvan geschorst.',
   'action.delete.done': 'Account verwijderd',
   'action.delete.done.body':
     '{name} en alles wat aan het account hing zijn weg.',

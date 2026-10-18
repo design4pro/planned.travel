@@ -358,6 +358,22 @@ const messages = {
   'admin.members.person': 'Πρόσωπο',
   'admin.members.role': 'Ρόλος',
   'admin.members.joined': 'Εντάχθηκε',
+  'admin.members.role.label': 'Ρόλος: {name}',
+  'admin.members.role.saved': 'Ο/Η {name} έχει τώρα τον ρόλο: {role}.',
+  'admin.members.role.impersonated':
+    'Ο ρόλος δεν μπορεί να αλλάξει όσο ενεργείτε ως άλλος λογαριασμός.',
+  'admin.members.role.notPermitted':
+    'Δεν μπορείτε να κάνετε αυτή την αλλαγή. Μόνο ένας κάτοχος μπορεί να δώσει τον ρόλο του κατόχου ή να αλλάξει έναν κάτοχο.',
+  'admin.members.role.lastOwner':
+    'Αυτός είναι ο μόνος κάτοχος του χώρου εργασίας. Ορίστε πρώτα άλλον κάτοχο.',
+  'admin.members.role.notFound':
+    'Αυτό το άτομο δεν ανήκει πια στον χώρο εργασίας. Η λίστα ανανεώθηκε.',
+  'admin.members.role.failed': 'Ο ρόλος δεν άλλαξε. Δοκιμάστε ξανά.',
+  'admin.members.role.promote.title': 'Να γίνει ο/η {name} κάτοχος;',
+  'admin.members.role.promote.body':
+    'Ο/Η {name} θα έχει την ίδια εξουσία με εσάς: χρέωση, μέλη και ρυθμίσεις. Ένας κάτοχος μπορεί να υποβιβάσει ή να αφαιρέσει οποιονδήποτε άλλον κάτοχο, και εσάς.',
+  'admin.members.role.promote.confirm': 'Ορισμός κατόχου',
+  'admin.members.role.promote.cancel': 'Ακύρωση',
 
   'admin.activity.label': 'Πρόσφατη δραστηριότητα',
   'admin.activity.empty.title': 'Τίποτα καταγεγραμμένο ακόμη',

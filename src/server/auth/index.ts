@@ -12,7 +12,7 @@ import { authSchema } from '#/server/db/auth-schema'
 import { readPlatformRole } from '#/server/fns/console/adapter-reads'
 import { createLogger } from '#/server/observability'
 import { resolvePlatformRole } from './access'
-import { DISABLED_ADMIN_PATHS, adminOptions } from './admin-options'
+import { DISABLED_PATHS, adminOptions } from './admin-options'
 import { authDb } from './db'
 import { queueAuthEmail } from './email'
 import {
@@ -340,10 +340,11 @@ function buildAuth() {
       storeSessionInDatabase: true,
     },
 
-    // The `admin` plugin's fifteen HTTP paths, closed (docs/ACCESS.md §2.6).
+    // The `admin` plugin's fifteen HTTP paths and the organization plugin's role-change path, closed
+    // (docs/ACCESS.md §2.6).
     // Top-level and a sibling of `plugins`: inside `admin({ … })` this is an
     // ignored extra property that closes nothing.
-    disabledPaths: DISABLED_ADMIN_PATHS,
+    disabledPaths: DISABLED_PATHS,
 
     // Single-use tokens are consumed transactionally in D1: KV's eventual
     // consistency is not a safe substrate for one-shot credentials.
