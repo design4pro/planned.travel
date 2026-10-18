@@ -16,9 +16,9 @@
  * nothing in this codebase does it.
  */
 
-import { addIntegration, getClient, replayIntegration } from '@sentry/react'
+import { addIntegration, replayIntegration } from '@sentry/react'
 
-import { scrubEvent, scrubTelemetry } from '#/lib/sentry-scrub'
+import { scrubTelemetry } from '#/lib/sentry-scrub'
 
 /**
  * Nothing about a join URL is recorded beyond its (redacted) address. No request detail is captured
@@ -42,13 +42,5 @@ export function startSessionReplay(): void {
        */
       beforeAddRecordingEvent: scrubTelemetry,
     }),
-  )
-
-  /**
-   * The replay's own envelope (`urls`, `segment_names`, the page address and the referrer the
-   * browser integration adds) bypasses `beforeSend`: its type is `replay_event`, not an error.
-   */
-  getClient()?.addEventProcessor((event) =>
-    event.type === 'replay_event' ? scrubEvent(event) : event,
   )
 }

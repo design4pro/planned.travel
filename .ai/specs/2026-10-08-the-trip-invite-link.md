@@ -307,6 +307,7 @@ SDK's custom events: the DOM recorder's Meta `href` and link attributes cannot b
 residual is closed by `/join/$token` (#1022) not being recorded, on the join path and on the sign-in pages that
 carry a join `redirect`, rather than by the scrub. The route parameter the TanStack Router integration copies
 into span attributes (`url.path.params.token`) is redacted by key.
+The placeholder is one fixed `/join/[redacted]` (and `%2Fjoin%2F[redacted]`) on every channel, transaction and span names included, rather than the route template: Sentry groups them the same way and the secret never survives in any shape. Feedback and `replay_event` events bypass every `beforeSend*` hook, so the browser entry routes them through the scrub with a client event processor.
 
 **i18n of the surface.** `/join` needs no new locale work: the root loader already negotiates it (`__root.tsx:86`) server-side, before
 first paint, from `Accept-Language` for an anonymous visitor and the stored preference for a signed-in one, with

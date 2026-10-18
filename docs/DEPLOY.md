@@ -2258,8 +2258,10 @@ form and the screenshot editor are ~20 kB that only matters to somebody who clic
 link) is replaced by `/join/[redacted]` by `src/lib/sentry-scrub.ts` in every channel both runtimes
 send: the event, transaction and span names, span attributes keyed `params.token`, breadcrumbs and
 logs, plus the URL-encoded form (at any depth) inside `redirect` and `callbackURL` values. The
-`referer` header is dropped like the session headers, and replay is covered through
-`beforeAddRecordingEvent` and an event processor over the `replay_event`. One residual is not
+`referer` header is dropped like the session headers. Feedback and the replay's own event
+(`urls`, `segment_names`, the page address) bypass every `beforeSend*` hook, so a client event
+processor routes them through the same scrub, and the replay integration's recording events pass
+through `beforeAddRecordingEvent`. One residual is not
 reachable by any SDK hook: the DOM recorder's own events (the page `href` in its Meta event, link
 attributes in a snapshot). It is closed by #1022, which stops recording on a location that holds a
 join path, the sign-in pages carrying a join `redirect` included. `requestFields` in

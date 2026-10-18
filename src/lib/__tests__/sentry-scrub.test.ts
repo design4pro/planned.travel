@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { scrubEvent, scrubTelemetry } from '../sentry-scrub'
+import { scrubEvent, scrubOtherEvent, scrubTelemetry } from '../sentry-scrub'
 
 describe('scrubEvent', () => {
   it('drops the headers that carry a session, whatever case they arrive in', () => {
@@ -145,6 +145,11 @@ describe('join-link secret redaction', () => {
     )
   })
 
+  it('redacts a path whose slashes are encoded differently', () => {
+    expect(scrubTelemetry(`/join%2F${secret}`)).toBe('%2Fjoin%2F[redacted]')
+    expect(scrubTelemetry(`%2Fjoin/${secret}`)).not.toContain(secret)
+  })
+
   it('redacts it at every encoding depth', () => {
     const inner = encodeURIComponent(`/join/${secret}`)
     const nested = encodeURIComponent(`/login?redirect=${inner}`)
@@ -192,5 +197,31 @@ describe('join-link secret redaction', () => {
     })
     const untouched = { request: { url: 'https://planned.travel/app' } }
     expect(scrubTelemetry(untouched)).toBe(untouched)
+  })
+})
+
+describe('scrubOtherEvent', () => {
+  const secret = 'Zk3-Join_Secret42'
+  const url = `https://planned.travel/join/${secret}`
+
+  it('scrubs the event types no beforeSend hook sees', () => {
+    const feedback = {
+      type: 'feedback',
+      contexts: { feedback: { url } },
+      request: { url, headers: { Referer: url } },
+    }
+
+    const scrubbed = scrubOtherEvent(feedback)
+
+    expect(JSON.stringify(scrubbed)).not.toContain(secret)
+    expect(JSON.stringify(scrubbed)).not.toContain('eferer')
+  })
+
+  it('leaves errors and transactions to their own hooks', () => {
+    const error = { request: { url } }
+    const transaction = { type: 'transaction', request: { url } }
+
+    expect(scrubOtherEvent(error)).toBe(error)
+    expect(scrubOtherEvent(transaction)).toBe(transaction)
   })
 })

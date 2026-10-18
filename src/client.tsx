@@ -20,7 +20,7 @@ import { StartClient } from '@tanstack/react-start/client'
 import { StrictMode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
-import { scrubEvent, scrubTelemetry } from '#/lib/sentry-scrub'
+import { scrubEvent, scrubOtherEvent, scrubTelemetry } from '#/lib/sentry-scrub'
 
 /**
  * A DSN is public by design - it ships in this bundle and is visible to anyone who reads it. It is
@@ -51,6 +51,8 @@ if (typeof dsn === 'string' && dsn.length > 0) {
     tracesSampleRate:
       import.meta.env.VITE_ENVIRONMENT === 'production' ? 0.1 : 1,
   })
+  // Feedback and the replay's own envelope bypass every `beforeSend*` hook above.
+  Sentry.getClient()?.addEventProcessor(scrubOtherEvent)
 }
 
 /**

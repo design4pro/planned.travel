@@ -11,6 +11,9 @@
  * pulling in the Cloudflare SDK. The event is described structurally and the function is generic in
  * it, so each SDK's `beforeSend` still gets its own event type back.
  *
+ * It also redacts the one secret that lives in a URL path, the trip invite link (`/join/<segment>`),
+ * which a rule about query strings would keep.
+ *
  * `sendDefaultPii: false` is set on both clients as well. This is not a duplicate of that: the flag
  * is a request to the SDK, and this is the part that does not depend on the SDK's interpretation of
  * it, or on that interpretation staying the same across a major version.
@@ -37,7 +40,7 @@ const JOIN_PATH = /\/join\/[^\s/?#&"'<>]+/gi
  * `callbackURL` value. The segment ends at a delimiter that is itself encoded at that depth.
  */
 const ENCODED_JOIN_PATH =
-  /%(?:25)*2fjoin%(?:25)*2f(?:[^\s&"'<>?#%]|%(?!(?:25)*(?:2f|3f|23|26)))+/gi
+  /(?:%(?:25)*2fjoin(?:%(?:25)*2f|\/)|\/join%(?:25)*2f)(?:[^\s&"'<>?#%]|%(?!(?:25)*(?:2f|3f|23|26)))+/gi
 
 /**
  * Span attributes the tracing integration fills from the matched route's parameters
@@ -54,6 +57,19 @@ export interface ScrubbableEvent {
     cookies?: unknown
     data?: unknown
   }
+}
+
+/**
+ * `beforeSend` and `beforeSendTransaction` see only errors and transactions. The other event types
+ * (`feedback`, `replay_event`) carry the page address and the referrer too, and reach Sentry past
+ * both hooks, so a client event processor routes them through {@link scrubEvent} instead.
+ */
+export function scrubOtherEvent<
+  TEvent extends ScrubbableEvent & { type?: string },
+>(event: TEvent): TEvent {
+  return event.type === undefined || event.type === 'transaction'
+    ? event
+    : scrubEvent(event)
 }
 
 /**

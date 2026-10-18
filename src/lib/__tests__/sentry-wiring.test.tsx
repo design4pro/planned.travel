@@ -59,6 +59,49 @@ describe('the browser entry', () => {
   })
 })
 
+describe('the browser entry, for the events no beforeSend hook sees', () => {
+  async function processor() {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://k@o.ingest.sentry.io/1')
+    vi.doMock('#/lib/sentry-replay', () => ({ startSessionReplay: vi.fn() }))
+    await import('../../client')
+    return sentry.addEventProcessor.mock.calls[0][0] as (event: Event) => Event
+  }
+
+  it.each([
+    [
+      'feedback',
+      {
+        type: 'feedback',
+        contexts: { feedback: { url } },
+        request: { url, headers: { Referer: url } },
+      },
+    ],
+    [
+      'replay_event',
+      {
+        type: 'replay_event',
+        urls: [url],
+        segment_names: [`/join/${secret}`],
+        request: { url, headers: { Referer: url } },
+      },
+    ],
+  ])('redacts a %s event', async (_type, event) => {
+    const scrubbed = (await processor())(event as unknown as Event)
+
+    expect(JSON.stringify(scrubbed)).not.toContain(secret)
+    expect(JSON.stringify(scrubbed)).not.toContain('eferer')
+  })
+
+  it('leaves errors and transactions to their own hooks', async () => {
+    const run = await processor()
+    const error = { message: 'boom' } as Event
+    const transaction = { type: 'transaction' } as Event
+
+    expect(run(error)).toBe(error)
+    expect(run(transaction)).toBe(transaction)
+  })
+})
+
 describe('session replay', () => {
   async function start() {
     const replay = await import('../sentry-replay')
@@ -68,9 +111,6 @@ describe('session replay', () => {
         beforeAddRecordingEvent: (event: unknown) => unknown
         networkDetailDenyUrls: Array<RegExp>
       },
-      processor: sentry.addEventProcessor.mock.calls[0][0] as (
-        event: Event,
-      ) => Event,
     }
   }
 
@@ -89,26 +129,6 @@ describe('session replay', () => {
 
     expect(JSON.stringify(scrubbed)).not.toContain(secret)
     expect(JSON.stringify(scrubbed)).toContain('/join/[redacted]')
-  })
-
-  it('redacts the replay event envelope the SDK builds around a recording', async () => {
-    const { processor } = await start()
-
-    const scrubbed = processor({
-      type: 'replay_event',
-      urls: [url],
-      request: { url, headers: { Referer: url } },
-    } as unknown as Event)
-
-    expect(JSON.stringify(scrubbed)).not.toContain(secret)
-    expect(JSON.stringify(scrubbed)).not.toContain('eferer')
-  })
-
-  it('leaves every other event type to its own hooks', async () => {
-    const { processor } = await start()
-    const event = { type: undefined, message: 'boom' } as Event
-
-    expect(processor(event)).toBe(event)
   })
 
   it('never captures network details for a join url', async () => {
