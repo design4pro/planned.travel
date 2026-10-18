@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import {
@@ -80,6 +80,17 @@ export function MemberRoleControl({
   const [pending, setPending] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
+
+  // The trigger is disabled while a request is in flight, and a disabled element cannot hold focus:
+  // the keyboard user would land on the page and start again from the top. Hand focus back once the
+  // control is enabled again.
+  useEffect(() => {
+    if (pending || !restoreFocus.current) return
+    restoreFocus.current = false
+    triggerRef.current?.focus()
+  }, [pending])
 
   if (assignable.length === 0) {
     return (
@@ -90,6 +101,7 @@ export function MemberRoleControl({
   }
 
   async function commit(next: MemberRole): Promise<void> {
+    restoreFocus.current = true
     setPending(true)
     try {
       const outcome = await onChange(next)
@@ -122,6 +134,7 @@ export function MemberRoleControl({
   return (
     <>
       <SimpleSelect
+        ref={triggerRef}
         size="sm"
         value={role}
         onValueChange={choose}

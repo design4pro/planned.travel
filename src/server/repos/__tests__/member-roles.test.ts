@@ -153,4 +153,30 @@ describe('changeMemberRole', () => {
 
     expect(await storedRole(targetMemberId)).toBe('member')
   })
+
+  // The count and the write are separate statements, so two owners demoting each other at the same
+  // moment each see the other as a remaining owner. Whatever order they land in, the workspace must
+  // still have an owner at the end.
+  it('never leaves the workspace without an owner when two owners demote each other at once', async () => {
+    const second = await tenant.addUser('Second owner', 'owner')
+    const members = await listMembers(tenant.scope)
+    const idOf = (userId: string): string => {
+      const row = members.find((candidate) => candidate.userId === userId)
+      if (row === undefined) throw new Error('member was not seeded')
+      return row.id
+    }
+    const first = tenant.ownerUserId
+    const firstScope = tenant.scopeFor(first, 'owner')
+    const secondScope = tenant.scopeFor(second, 'owner')
+
+    await Promise.allSettled([
+      changeMemberRole(firstScope, idOf(second), 'member'),
+      changeMemberRole(secondScope, idOf(first), 'member'),
+    ])
+
+    const owners = (await listMembers(tenant.scope)).filter(
+      (row) => row.role === 'owner',
+    )
+    expect(owners.length).toBeGreaterThan(0)
+  })
 })

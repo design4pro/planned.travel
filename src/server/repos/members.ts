@@ -253,6 +253,13 @@ export async function changeMemberRole(
     throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
   }
   const updated = await membersRepository.requireUpdate(scope, memberId, { role: next })
+  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope)) === 0) {
+    // The count above and this write are separate statements, so two owners demoting each other at
+    // once each saw the other as the remaining owner. The loser puts the role back rather than leave
+    // a workspace nobody can administer or pay for.
+    await membersRepository.requireUpdate(scope, memberId, { role: row.role })
+    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  }
   return { member: updated, previousRole: row.role }
 }
 

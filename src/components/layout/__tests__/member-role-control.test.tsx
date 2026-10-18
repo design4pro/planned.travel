@@ -182,4 +182,19 @@ describe('making someone an owner', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith('owner'))
     expect(onChange).toHaveBeenCalledTimes(1)
   })
+
+  // The trigger is disabled while a request is in flight; a disabled element cannot hold focus, so
+  // without a restore the keyboard user is dropped onto the page and starts again from the top.
+  it.each([
+    ['a direct change', 'Admin', null],
+    ['a confirmed promotion', 'Owner', 'Make owner'],
+  ])('returns focus to the select after %s', async (_name, role, confirm) => {
+    const { user } = mount()
+    await choose(user, role)
+    if (confirm !== null) {
+      await user.click(await screen.findByRole('button', { name: confirm }))
+    }
+
+    await waitFor(() => expect(document.activeElement).toBe(trigger()))
+  })
 })

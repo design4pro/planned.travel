@@ -418,9 +418,9 @@ const messages = {
     'To jedyny właściciel przestrzeni. Najpierw ustanów kogoś innego właścicielem.',
   'admin.members.role.notFound': 'Tej osoby nie ma już w przestrzeni. Lista została odświeżona.',
   'admin.members.role.failed': 'Nie udało się zmienić roli. Spróbuj ponownie.',
-  'admin.members.role.promote.title': 'Ustanowić {name} właścicielem?',
+  'admin.members.role.promote.title': 'Nadać osobie {name} rolę właściciela?',
   'admin.members.role.promote.body':
-    '{name} dostanie taką samą władzę jak Ty: rozliczenia, członków i ustawienia. Właściciel może obniżyć rolę lub usunąć każdego innego właściciela, także Ciebie.',
+    '{name} dostanie takie same uprawnienia jak Ty: rozliczenia, członkowie i ustawienia. Właściciel może obniżyć rolę lub usunąć każdego innego właściciela, także Ciebie.',
   'admin.members.role.promote.confirm': 'Ustanów właścicielem',
   'admin.members.role.promote.cancel': 'Anuluj',
 
