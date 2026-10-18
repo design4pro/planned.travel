@@ -342,7 +342,7 @@ Tenant isolation is enforced in the repository layer and covered by tests. The b
 
 #### FU-3: bounded Unscoped repository functions
 
-An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. The one exception is `readInvitePreviewUnscoped`, whose closed per-visitor projection returns the invite card's content (docs/ACCESS.md §3.8). Grep `Unscoped` callers; any caller outside the named one is a blocker.
 
 Billing uses this shape for provider-to-organization resolution and billing rows only; share
 moderation uses the §2.4 ACCESS projection. The calendar resolver
@@ -362,6 +362,13 @@ organizationId, tripId, role, rotation, createdBy }`, never content, secret or d
 null for a disabled, rotated-away or role-invalid link, an archived trip, a creator who is no
 longer a live owner of the trip and a digest the current key no longer derives (ADR 0042). The resolver builds no scope; the visitor slice
 reaches content only through scoped functions.
+
+The page behind it, `/join/$token`, adds a third function of the same kind, `readInvitePreviewUnscoped(db,
+digest, key, viewer)` in the same file, with the same single caller. It re-resolves the link in the
+same module, reads the trip through a scope built from the resolved coordinates by the repository
+itself (the public module builds none), and returns one closed projection per visitor: `invited`,
+`member`, `needs-workspace` or `unavailable` (docs/ACCESS.md §3.8). It writes nothing. The viewer is
+passed in as data (`{ id, banned }`); `src/server/public/**` reads no session.
 
 #### Global-catalogue carve-out
 
@@ -838,11 +845,13 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
     not an edit. A new refusal class travels as a message key the client resolves in the reader's
     locale, the shape `SHELL_STATE_KEYS` (`src/components/layout/session.ts`) already has, or stays
     a diagnostic whose screen shows the localised fallback. The failure envelope's `code` field
-    (`PublicFailure.code`, `src/lib/errors.ts`) is another instance of that route: today its one
-    value is the literal `QUOTA_EXCEEDED`, which `classifyFailure` attaches to an `unexpected`
-    failure for either `QuotaExceededError` class, so a screen can say "your plan's limit is
-    reached" in the reader's locale. It is a constant, never an error's own `code`, and
-    `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
+    (`PublicFailure.code`, `src/lib/errors.ts`) is another instance of that route: its values are
+    the literals in `PUBLIC_FAILURE_CODES` - `QUOTA_EXCEEDED`, which `classifyFailure` attaches to
+    an `unexpected` failure for either `QuotaExceededError` class, so a screen can say "your
+    plan's limit is reached" in the reader's locale, and five `BILLING_*` codes (forbidden, not
+    connected, rate-limited, refused by Polar, order not invoiceable) that the billing screen
+    resolves through `src/routes/_app/settings/-lib/billing-failure.ts`. It is a constant, never
+    an error's own `code`, and `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
     `refusal` channel, with the existing sentences moved into the catalogue, is the work that
     retires this exception.
 

@@ -504,6 +504,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'El proveedor de pagos rechazó esa solicitud. Inténtalo de nuevo en un momento.',
+  'billing.failure.reference': 'Referencia para el soporte: {reference}',
+  'billing.failure.forbidden':
+    'Tu rol no permite eso en la facturación de este espacio de trabajo. Pídeselo a un propietario o a un administrador.',
+  'billing.failure.providerRefused':
+    'Polar no aceptó ese cambio. Compara el número de plazas con tus miembros y vuelve a intentarlo, o usa el portal de facturación.',
+  'billing.failure.rateLimited':
+    'Polar está saturado ahora mismo. No se cambió nada. Vuelve a intentarlo en un minuto.',
+  'billing.failure.notConnected':
+    'La facturación aún no está conectada en este despliegue, así que no se cambió nada. Contacta con el soporte.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar no puede emitir una factura para este pedido. Si no tiene nombre o dirección de facturación, añádelos en el portal de facturación y vuelve a intentarlo; si no, contacta con el soporte.',
   'billing.planChanged.title': 'Plan actualizado',
   'billing.planChanged.body':
     'El cambio ya está en vigor en Polar, que facturará la diferencia. El resumen de abajo se pone al día en un minuto.',

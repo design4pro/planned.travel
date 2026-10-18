@@ -62,8 +62,10 @@ import {
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
 import { PromotionCodeField, usePromotionCode } from './-ui/promotion-code'
+import { readBillingFailure } from './-lib/billing-failure'
 
 import type { BadgeTone } from '#/components/ui'
+import type { BillingFailure } from './-lib/billing-failure'
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { BillingInterval, BillingState, Plan, QuotaKey } from '#/lib/plans'
 import type {
@@ -133,26 +135,9 @@ function rankOf(planId: Plan['id']): number {
   return PLAN_LIST.findIndex((plan) => plan.id === planId)
 }
 
-/** Longest provider sentence the screen will repeat verbatim. */
-const MAX_FAILURE_MESSAGE = 200
-
-/**
- * What a rejected call says on screen.
- *
- * The server functions already replace an operator-facing provider error with a
- * customer sentence, so what usually arrives here is prose worth showing. A
- * rejection from the Zod validator is the exception: it serialises as JSON and
- * is a diagnostic, not a sentence, so anything that opens like a structure or
- * runs past a readable length is replaced rather than pasted into the alert.
- */
-function messageOf(t: Translate, cause: unknown): string {
-  const message = cause instanceof Error ? cause.message.trim() : ''
-  const readable =
-    message !== '' &&
-    message.length <= MAX_FAILURE_MESSAGE &&
-    !message.startsWith('[') &&
-    !message.startsWith('{')
-  return readable ? message : t('settings.billing.provider.rejected')
+/** A sentence the server wrote is English whatever the locale (`docs/SPEC.md` §9 rule 10). */
+function authoredLang(failure: { readonly authored: boolean }) {
+  return failure.authored ? ({ lang: 'en', dir: 'ltr' } as const) : {}
 }
 
 const STATUS_BADGES: {
@@ -305,9 +290,8 @@ function quotaHint(t: Translate, key: QuotaKey, quota: QuotaState): string {
 /** Which section a failed provider call belongs to, so it is shown in place. */
 type FailureScope = 'plan' | 'portal'
 
-interface Failure {
+interface Failure extends BillingFailure {
   readonly scope: FailureScope
-  readonly message: string
 }
 
 /** The single portal action's pending key. Polar mints one URL, so there is one. */
@@ -364,7 +348,7 @@ function BillingPage() {
       promotionCode.reject(result.reason)
     } catch (cause) {
       setPending(null)
-      setFailure({ scope, message: messageOf(t, cause) })
+      setFailure({ scope, ...readBillingFailure(t, cause) })
     }
   }
 
@@ -469,7 +453,7 @@ function BillingPage() {
         plan={plan}
         canManage={data.canManage}
         pending={pending}
-        failure={failure?.scope === 'portal' ? failure.message : null}
+        failure={failure?.scope === 'portal' ? failure : null}
         onManageBilling={openPortal}
       />
 
@@ -487,7 +471,7 @@ function BillingPage() {
               title={t('settings.billing.plan.notApplied')}
               size="sm"
             >
-              {failure.message}
+              <span {...authoredLang(failure)}>{failure.message}</span>
             </Alert>
           ) : null}
 
@@ -555,7 +539,7 @@ function PlanHero({
   plan: Plan
   canManage: boolean
   pending: string | null
-  failure: string | null
+  failure: BillingFailure | null
   onManageBilling: () => void
 }) {
   const t = useTranslate()
@@ -661,7 +645,7 @@ function PlanHero({
                   role="alert"
                   className="max-w-[40ch] rounded-lg bg-danger-soft px-2.5 py-1.5 text-caption leading-relaxed text-danger lg:text-end"
                 >
-                  {failure}
+                  <span {...authoredLang(failure)}>{failure.message}</span>
                 </p>
               )}
             </div>
@@ -1205,6 +1189,8 @@ interface InvoiceNotice {
   readonly tone: 'info' | 'danger'
   readonly title: string
   readonly body: string
+  /** True when `body` is a sentence the server wrote, which is English whatever the locale. */
+  readonly authored?: boolean
 }
 
 function InvoiceHistory({
@@ -1275,10 +1261,12 @@ function InvoiceHistory({
       }, result.retryAfterMs)
     } catch (cause) {
       tab?.close()
+      const failure = readBillingFailure(t, cause)
       setNotice({
         tone: 'danger',
         title: t('settings.billing.order.openFailed'),
-        body: messageOf(t, cause),
+        body: failure.message,
+        authored: failure.authored,
       })
     } finally {
       setPendingId(null)
@@ -1353,7 +1341,9 @@ function InvoiceHistory({
       <div className="flex flex-col gap-4">
         {notice === null ? null : (
           <Alert tone={notice.tone} title={notice.title} size="sm">
-            {notice.body}
+            <span {...authoredLang({ authored: notice.authored === true })}>
+              {notice.body}
+            </span>
           </Alert>
         )}
 

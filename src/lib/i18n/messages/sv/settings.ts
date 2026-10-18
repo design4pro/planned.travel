@@ -491,6 +491,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Betalleverantören avvisade begäran. Försök igen om en stund.',
+  'billing.failure.reference': 'Referens till supporten: {reference}',
+  'billing.failure.forbidden':
+    'Din roll tillåter inte det för den här arbetsytans fakturering. Be en ägare eller administratör.',
+  'billing.failure.providerRefused':
+    'Polar godtog inte ändringen. Jämför antalet platser med dina medlemmar och försök igen, eller använd faktureringsportalen.',
+  'billing.failure.rateLimited':
+    'Polar är upptaget just nu. Inget ändrades. Försök igen om en minut.',
+  'billing.failure.notConnected':
+    'Faktureringen är inte ansluten i den här driftsättningen ännu, så inget ändrades. Kontakta supporten.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar kan inte utfärda en faktura för den här beställningen. Saknas faktureringsnamn eller adress, lägg till dem i faktureringsportalen och försök igen; kontakta annars supporten.',
   'billing.planChanged.title': 'Planen uppdaterad',
   'billing.planChanged.body':
     'Ändringen gäller redan hos Polar, som fakturerar mellanskillnaden. Sammanställningen nedan hinner upp inom en minut.',

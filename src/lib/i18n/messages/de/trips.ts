@@ -472,6 +472,44 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Stoppzeiten gespeichert',
   'plan.place.toast.deleted': 'Ort gelöscht',
   'plan.pin.toast.moved': '{name} angepinnt',
+  'join.page.title': 'Einladungslink zur Reise',
+  'join.page.description':
+    'Öffne diesen Link, um einer geteilten Reise auf planned.travel beizutreten.',
+  'join.title.invited': '{inviter} hat dich zu einer Reise eingeladen',
+  'join.requirement':
+    'Dieser Link funktioniert für Personen, die bereits im Arbeitsbereich von {inviter} sind.',
+  'join.newHere':
+    'Neu hier? Bitte {inviter}, dich zuerst zum Arbeitsbereich hinzuzufügen.',
+  'join.trip.label': 'Reise',
+  'join.role.label': 'Du würdest beitreten als',
+  'join.dates.label': 'Zeitraum',
+  'join.destination.label': 'Reiseziel',
+  'join.action.signIn': 'Anmelden',
+  'join.action.open': 'Reise öffnen',
+  'join.action.openIn': 'Reise öffnen und Arbeitsbereich wechseln',
+  'join.action.openIn.pending': 'Arbeitsbereich wird gewechselt',
+  'join.loading': 'Einladung wird geladen',
+  'join.member.title': 'Du bist schon bei dieser Reise dabei',
+  'join.needsWorkspace.title':
+    'Diese Reise gehört zu einem Arbeitsbereich, in dem du nicht bist',
+  'join.needsWorkspace.body':
+    'Bitte {inviter}, dich zuerst zum Arbeitsbereich hinzuzufügen, und öffne diesen Link dann erneut.',
+  'join.needsWorkspace.signedInAs':
+    'Du bist als {email} angemeldet. Sag {inviter}, dass diese Adresse verwendet werden soll.',
+  'join.needsWorkspace.acceptFirst':
+    'Falls du schon eine E-Mail mit einer Einladung in einen Arbeitsbereich hast, nimm sie zuerst an und öffne diesen Link dann erneut.',
+  'join.needsWorkspace.otherAccount': 'Mit einem anderen Konto anmelden',
+  'join.unavailable.title': 'Dieser Einladungslink ist nicht verfügbar',
+  'join.unavailable.body':
+    'Der Link wurde möglicherweise ersetzt oder deaktiviert. Frag bei der Person nach, die ihn geschickt hat, und bitte um einen neuen.',
+  'join.unavailable.signIn': 'Anmelden',
+  'join.unavailable.trips': 'Zu deinen Reisen',
+  'join.error.title': 'Wir konnten diesen Einladungslink nicht laden',
+  'join.error.retry': 'Erneut versuchen',
+  'join.error.busy':
+    'Diese Seite ist gerade ausgelastet. Versuche es in einer Minute erneut.',
+  'join.error.switch':
+    'Der Arbeitsbereich konnte nicht gewechselt werden. Versuche es erneut.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

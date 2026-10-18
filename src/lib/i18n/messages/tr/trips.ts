@@ -452,6 +452,42 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Durak saatleri kaydedildi',
   'plan.place.toast.deleted': 'Yer silindi',
   'plan.pin.toast.moved': '{name} işaretlendi',
+  'join.page.title': 'Gezi davet bağlantısı',
+  'join.page.description':
+    'planned.travel üzerindeki ortak bir geziye katılmak için bu bağlantıyı açın.',
+  'join.title.invited': '{inviter} sizi bir geziye davet etti',
+  'join.requirement':
+    'Bu bağlantı, {inviter} adlı kişinin çalışma alanında zaten bulunan kişiler için çalışır.',
+  'join.newHere':
+    'Burada yeni misiniz? Önce {inviter} adlı kişiden sizi çalışma alanına eklemesini isteyin.',
+  'join.trip.label': 'Gezi',
+  'join.role.label': 'Katılacağınız rol',
+  'join.dates.label': 'Tarihler',
+  'join.destination.label': 'Varış noktası',
+  'join.action.signIn': 'Giriş yap',
+  'join.action.open': 'Geziyi aç',
+  'join.action.openIn': 'Geziyi aç ve çalışma alanını değiştir',
+  'join.action.openIn.pending': 'Çalışma alanı değiştiriliyor',
+  'join.loading': 'Davet yükleniyor',
+  'join.member.title': 'Bu gezide zaten varsınız',
+  'join.needsWorkspace.title':
+    'Bu gezi, üyesi olmadığınız bir çalışma alanında',
+  'join.needsWorkspace.body':
+    'Önce {inviter} adlı kişiden sizi çalışma alanına eklemesini isteyin, ardından bu bağlantıyı yeniden açın.',
+  'join.needsWorkspace.signedInAs':
+    '{email} olarak giriş yaptınız. {inviter} adlı kişiye bu adresi kullanmasını söyleyin.',
+  'join.needsWorkspace.acceptFirst':
+    'Zaten bir çalışma alanı davet e-postanız varsa önce onu kabul edin, ardından bu bağlantıyı yeniden açın.',
+  'join.needsWorkspace.otherAccount': 'Başka bir hesapla giriş yap',
+  'join.unavailable.title': 'Bu davet bağlantısı kullanılamıyor',
+  'join.unavailable.body':
+    'Bağlantı değiştirilmiş ya da kapatılmış olabilir. Bağlantıyı gönderen kişiden yenisini isteyin.',
+  'join.unavailable.signIn': 'Giriş yap',
+  'join.unavailable.trips': 'Gezilerinize git',
+  'join.error.title': 'Bu davet bağlantısı yüklenemedi',
+  'join.error.retry': 'Tekrar dene',
+  'join.error.busy': 'Bu sayfa şu anda yoğun. Bir dakika sonra tekrar deneyin.',
+  'join.error.switch': 'Çalışma alanı değiştirilemedi. Tekrar deneyin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

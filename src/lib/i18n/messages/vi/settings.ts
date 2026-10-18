@@ -484,6 +484,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Nhà cung cấp thanh toán đã từ chối yêu cầu đó. Thử lại sau một lát.',
+  'billing.failure.reference': 'Mã tham chiếu cho bộ phận hỗ trợ: {reference}',
+  'billing.failure.forbidden':
+    'Vai trò của bạn không cho phép thao tác này với thanh toán của không gian làm việc. Hãy nhờ chủ sở hữu hoặc quản trị viên.',
+  'billing.failure.providerRefused':
+    'Polar không chấp nhận thay đổi đó. Hãy so sánh số chỗ với số thành viên, rồi thử lại hoặc dùng cổng thanh toán.',
+  'billing.failure.rateLimited':
+    'Polar đang bận. Không có gì thay đổi. Hãy thử lại sau một phút.',
+  'billing.failure.notConnected':
+    'Thanh toán chưa được kết nối trên bản triển khai này nên không có gì thay đổi. Hãy liên hệ bộ phận hỗ trợ.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar không thể xuất hóa đơn cho đơn hàng này. Nếu thiếu tên hoặc địa chỉ thanh toán, hãy thêm ở cổng thanh toán rồi thử lại; nếu không, hãy liên hệ bộ phận hỗ trợ.',
   'billing.planChanged.title': 'Đã cập nhật gói',
   'billing.planChanged.body':
     'Thay đổi đã có hiệu lực ở Polar, nơi sẽ xuất hoá đơn phần chênh lệch. Bản tóm tắt bên dưới theo kịp trong vòng một phút.',

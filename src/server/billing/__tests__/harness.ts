@@ -521,6 +521,8 @@ export interface PolarStubSeed {
    * out — which is what lets a test hold the endpoint at 404 forever.
    */
   readonly orderInvoiceSequence?: ReadonlyArray<unknown>
+  /** Thrown by `POST /v1/orders/{id}/invoice`: Polar refusing to start the render. */
+  readonly generateInvoiceError?: Error
   /** Thrown by every request, for the paths that must degrade rather than fail. */
   readonly error?: Error
   /**
@@ -635,7 +637,12 @@ export function createPolarStub(seed: PolarStubSeed = {}): {
       }
       if (path.startsWith('/v1/orders/') && path.endsWith('/invoice')) {
         // The generate call answers 202 with no body at all.
-        if (method === 'POST') return null
+        if (method === 'POST') {
+          if (seed.generateInvoiceError !== undefined) {
+            throw seed.generateInvoiceError
+          }
+          return null
+        }
 
         const sequence = seed.orderInvoiceSequence
         if (sequence !== undefined && sequence.length > 0) {

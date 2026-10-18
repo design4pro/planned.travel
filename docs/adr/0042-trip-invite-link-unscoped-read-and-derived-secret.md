@@ -71,8 +71,9 @@ and calls it.
 
 `unscoped-shape.test.ts` maps the new function to its one caller and a second check keeps SQL and
 scope construction out of `public/trip-invite.ts`. Review greps every `Unscoped` caller; an
-additional caller is a blocker. The finder has no production caller until the visitor slice
-(`/join/$token`) lands. Rotating `BETTER_AUTH_SECRET` now also invalidates every invite link, which
+additional caller is a blocker. `/join/$token` is the finder's production caller (through
+`src/server/public/trip-invite.ts`); the same module also calls `readInvitePreviewUnscoped`, a
+read-only projection that the same map pins to the same single caller. Rotating `BETTER_AUTH_SECRET` now also invalidates every invite link, which
 `docs/DEPLOY.md` says beside the existing rotation warning. Moving to a dedicated binding later
 would invalidate the links once, and the purpose list is what keeps a later credential kind from
 sharing a sub-key with an invite.

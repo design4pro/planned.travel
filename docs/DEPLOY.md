@@ -1244,7 +1244,13 @@ The order matters, and so does the timing:
   immediately afterwards can _still_ `404`. Do not promise a URL on the next call. The reliable
   readiness signal is the order's `is_invoice_generated` boolean, delivered on `order.updated`;
   `invoice_number` is `null` until the invoice is finalised.
-- `POST` returns **`409`** when the order's status makes it ineligible.
+- `POST` returns **`409`** when the order's status makes it ineligible, and **`422`** when the
+  order has no billing name or address (Polar's OpenAPI spec documents both). `orderInvoiceUrl()`
+  reads either as `OrderNotInvoiceableError`, which `classifyFailure` sends to the browser as the
+  code `BILLING_ORDER_NOT_INVOICEABLE`; the billing screen then says the order has no invoice and
+  names the billing portal as the next step, with the support reference. No other status is read
+  that way, and the PDF action stays on every non-draft order: a `0,00 $` total alone is not a
+  documented reason for Polar to refuse.
 - The receipt is a different document at a different path: `GET /v1/orders/{id}/receipt`, which
   returns its own presigned URL. Invoice ≠ receipt; the billing list labels them separately.
 
@@ -2268,12 +2274,23 @@ logs, plus the URL-encoded form (at any depth) inside `redirect` and `callbackUR
 `referer` header is dropped like the session headers. Feedback and the replay's own event
 (`urls`, `segment_names`, the page address) bypass every `beforeSend*` hook, so a client event
 processor routes them through the same scrub, and the replay integration's recording events pass
-through `beforeAddRecordingEvent`. One residual is not
-reachable by any SDK hook: the DOM recorder's own events (the page `href` in its Meta event, link
-attributes in a snapshot). It is closed by #1022, which stops recording on a location that holds a
-join path, the sign-in pages carrying a join `redirect` included. `requestFields` in
+through `beforeAddRecordingEvent`. The DOM recorder's own events (the
+page `href` in its Meta event, link attributes in a snapshot) are not reachable by any SDK hook, so
+the recorder does not run on a join location: `src/lib/sentry-replay.ts` never starts it on the
+page, or on a sign-in page whose `redirect` or `callbackURL` carries the link (at any encoding
+depth, buffering for an error included), and a navigation onto one stops it with `flush: false`,
+which drops what was buffered. Once off for a join location it stays off until the next document
+load, and `beforeAddRecordingEvent` drops every event while the address holds a join path.
+**Replay quota:** a session that opens a join link is not replayed for the rest of that page
+load, and a join page that errors yields no replay, only the redacted error event and the
+structured log line (link id, outcome); the replay quota drops slightly. `requestFields` in
 `src/server/observability/logger.ts` logs `path` and `referrer` unredacted; nothing calls it today,
 so do not call it on a `/join/` request.
+
+**No feedback button on a join location.** A feedback screenshot is an attachment no scrub can read,
+and a window capture shows the address bar, so `FeedbackWidget` builds no button while the address
+holds a join path (the same test as the replay, on the router's location) and builds it again when
+the visitor navigates away.
 
 ### 17.3 The source-map token
 

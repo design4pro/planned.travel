@@ -499,6 +499,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Der Zahlungsanbieter hat die Anfrage abgelehnt. Versuche es in einem Moment erneut.',
+  'billing.failure.reference': 'Referenz für den Support: {reference}',
+  'billing.failure.forbidden':
+    'Deine Rolle erlaubt das für die Abrechnung dieses Arbeitsbereichs nicht. Bitte eine Inhaberin, einen Inhaber oder eine Administration darum.',
+  'billing.failure.providerRefused':
+    'Polar hat diese Änderung nicht angenommen. Prüfe die Platzanzahl gegen deine Mitglieder und versuche es dann erneut oder nutze das Abrechnungsportal.',
+  'billing.failure.rateLimited':
+    'Polar ist gerade ausgelastet. Es wurde nichts geändert. Versuche es in einer Minute erneut.',
+  'billing.failure.notConnected':
+    'Die Abrechnung ist in dieser Bereitstellung noch nicht verbunden, daher wurde nichts geändert. Wende dich an den Support.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar kann für diese Bestellung keine Rechnung ausstellen. Fehlen Rechnungsname oder -adresse, trage sie im Abrechnungsportal nach und versuche es erneut; andernfalls wende dich an den Support.',
   'billing.planChanged.title': 'Tarif aktualisiert',
   'billing.planChanged.body':
     'Die Änderung gilt bereits bei Polar, das die Differenz abrechnet. Die Übersicht unten zieht innerhalb einer Minute nach.',

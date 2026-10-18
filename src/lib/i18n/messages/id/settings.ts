@@ -484,6 +484,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Penyedia pembayaran menolak permintaan itu. Coba lagi sebentar.',
+  'billing.failure.reference': 'Referensi untuk dukungan: {reference}',
+  'billing.failure.forbidden':
+    'Peran Anda tidak mengizinkan hal itu pada penagihan ruang kerja ini. Minta pemilik atau admin.',
+  'billing.failure.providerRefused':
+    'Polar tidak menerima perubahan itu. Bandingkan jumlah kursi dengan anggota Anda, lalu coba lagi atau gunakan portal penagihan.',
+  'billing.failure.rateLimited':
+    'Polar sedang sibuk. Tidak ada yang berubah. Coba lagi dalam semenit.',
+  'billing.failure.notConnected':
+    'Penagihan belum terhubung pada penerapan ini, jadi tidak ada yang berubah. Hubungi dukungan.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar tidak dapat menerbitkan faktur untuk pesanan ini. Jika nama atau alamat penagihan belum ada, tambahkan di portal penagihan lalu coba lagi; jika tidak, hubungi dukungan.',
   'billing.planChanged.title': 'Paket diperbarui',
   'billing.planChanged.body':
     'Perubahannya sudah berlaku di Polar, yang akan menagih selisihnya. Ringkasan di bawah menyusul dalam satu menit.',

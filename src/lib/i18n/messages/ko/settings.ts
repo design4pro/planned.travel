@@ -429,6 +429,17 @@ const messages = {
    */
   'billing.provider.rejected':
     '결제 제공업체가 그 요청을 거부했습니다. 잠시 후 다시 시도해 주세요.',
+  'billing.failure.reference': '지원팀에 알려 줄 참조 번호: {reference}',
+  'billing.failure.forbidden':
+    '이 워크스페이스의 결제에 대해서는 현재 역할로 할 수 없습니다. 소유자나 관리자에게 요청하세요.',
+  'billing.failure.providerRefused':
+    'Polar가 해당 변경을 받아들이지 않았습니다. 좌석 수와 멤버 수를 비교해 본 뒤 다시 시도하거나 결제 포털을 이용하세요.',
+  'billing.failure.rateLimited':
+    'Polar가 지금 혼잡합니다. 변경된 내용은 없습니다. 1분 후에 다시 시도하세요.',
+  'billing.failure.notConnected':
+    '이 배포에는 아직 결제가 연결되어 있지 않아 변경된 내용이 없습니다. 지원팀에 문의하세요.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar가 이 주문의 청구서를 발급할 수 없습니다. 청구 이름이나 주소가 없다면 결제 포털에서 추가한 뒤 다시 시도하고, 그렇지 않으면 지원팀에 문의하세요.',
   'billing.planChanged.title': '플랜이 업데이트되었습니다',
   'billing.planChanged.body':
     '변경은 이미 Polar에서 적용되었고 차액은 Polar가 청구합니다. 아래 요약은 1분 안에 따라잡습니다.',

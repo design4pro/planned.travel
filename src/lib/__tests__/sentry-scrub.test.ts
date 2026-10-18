@@ -9,7 +9,12 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { scrubEvent, scrubOtherEvent, scrubTelemetry } from '../sentry-scrub'
+import {
+  holdsJoinPath,
+  scrubEvent,
+  scrubOtherEvent,
+  scrubTelemetry,
+} from '../sentry-scrub'
 
 describe('scrubEvent', () => {
   it('drops the headers that carry a session, whatever case they arrive in', () => {
@@ -223,5 +228,28 @@ describe('scrubOtherEvent', () => {
 
     expect(scrubOtherEvent(error)).toBe(error)
     expect(scrubOtherEvent(transaction)).toBe(transaction)
+  })
+})
+
+describe('holdsJoinPath', () => {
+  it('sees the path and the encoded path at any depth, and nothing else', () => {
+    const path = '/join/Zk3-Join_Secret42'
+    expect(holdsJoinPath(`https://planned.travel${path}`)).toBe(true)
+    expect(holdsJoinPath(`/login?redirect=${encodeURIComponent(path)}`)).toBe(
+      true,
+    )
+    expect(
+      holdsJoinPath(
+        `/login?redirect=${encodeURIComponent(encodeURIComponent(path))}`,
+      ),
+    ).toBe(true)
+    expect(holdsJoinPath('/trips/42?tab=people')).toBe(false)
+    expect(holdsJoinPath('/join')).toBe(false)
+  })
+
+  it('answers the same on a second call: the shared patterns keep no state', () => {
+    const address = '/join/Zk3-Join_Secret42'
+    expect(holdsJoinPath(address)).toBe(true)
+    expect(holdsJoinPath(address)).toBe(true)
   })
 })
