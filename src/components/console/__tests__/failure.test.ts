@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
-import { CONSOLE_ACTION_FALLBACK, readConsoleFailure } from '../failure'
+import { encodePublicFailure } from '#/lib/errors'
+import {
+  CONSOLE_ACTION_FALLBACK,
+  readConsoleFailure,
+  readConsoleFailureDetail,
+} from '../failure'
 
 /**
  * The regression test for a console dialog printing `ZodError`'s serialized issue array at an
@@ -76,5 +81,84 @@ describe('readConsoleFailure', () => {
     expect(readConsoleFailure('That session has already ended.')).toBe(
       'That session has already ended.',
     )
+  })
+})
+
+/**
+ * Which of the three things `readConsoleFailure` returns a reader is looking at. Only a sentence the
+ * server wrote is English whatever the locale (SPEC §9 rule 10), so only that one may be marked
+ * `lang="en"`; the translated fallback and a raw client-thrown message may not.
+ */
+describe('readConsoleFailureDetail', () => {
+  const envelope = (failure: Parameters<typeof encodePublicFailure>[0]) =>
+    new Error(encodePublicFailure(failure))
+
+  it('marks an envelope refusal as authored', () => {
+    expect(
+      readConsoleFailureDetail(
+        envelope({ kind: 'refusal', message: 'That account is banned.' }),
+      ),
+    ).toEqual({ message: 'That account is banned.', authored: true })
+  })
+
+  it('marks an envelope validation message as authored', () => {
+    expect(
+      readConsoleFailureDetail(
+        envelope({
+          kind: 'validation',
+          message: 'Use at least 10 characters.',
+        }),
+      ),
+    ).toEqual({ message: 'Use at least 10 characters.', authored: true })
+  })
+
+  it("returns the caller's fallback, not authored, for an unexpected envelope", () => {
+    expect(
+      readConsoleFailureDetail(
+        envelope({ kind: 'unexpected', reference: 'ref-1' }),
+        'Translated fallback.',
+      ),
+    ).toEqual({ message: 'Translated fallback.', authored: false })
+  })
+
+  it('does not attribute a raw client-thrown message to the server', () => {
+    expect(
+      readConsoleFailureDetail(new Error('Network request failed')),
+    ).toEqual({ message: 'Network request failed', authored: false })
+    expect(readConsoleFailureDetail('That session has already ended.')).toEqual(
+      {
+        message: 'That session has already ended.',
+        authored: false,
+      },
+    )
+  })
+
+  it('does not attribute a repaired client-side validation array either', () => {
+    const issues = JSON.stringify([{ message: 'Use at least 10 characters.' }])
+    expect(readConsoleFailureDetail(new Error(issues))).toEqual({
+      message: 'Use at least 10 characters.',
+      authored: false,
+    })
+  })
+
+  it('falls back, not authored, when there is nothing readable', () => {
+    expect(readConsoleFailureDetail(null)).toEqual({
+      message: CONSOLE_ACTION_FALLBACK,
+      authored: false,
+    })
+  })
+
+  it('is what readConsoleFailure returns, message for message', () => {
+    for (const cause of [
+      envelope({ kind: 'refusal', message: 'Nope.' }),
+      envelope({ kind: 'unexpected' }),
+      new Error('[{"message":"A."},{"message":"B."}]'),
+      new Error('raw'),
+      null,
+    ]) {
+      expect(readConsoleFailure(cause, 'F')).toBe(
+        readConsoleFailureDetail(cause, 'F').message,
+      )
+    }
   })
 })

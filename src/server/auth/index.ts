@@ -503,14 +503,12 @@ function buildAuth() {
         // Every change of `activeOrganizationId` passes through `updateSession`: set-active,
         // accept-invitation, a leave, and the non-member refusals that clear it. Inside an
         // impersonated session each one is a row of the impersonation timeline (docs/ACCESS.md §6.4).
-        // A payload without that key (the `updateAge` refresh, every impersonated read) returns before
-        // anything is stored or read.
+        // A payload without that key (the `updateAge` refresh, every impersonated read) records nothing.
         //
-        // The same `before` also clamps the expiry: an impersonated session never lives past
-        // `impersonationSessionDuration` (docs/ACCESS.md §6.2). Better Auth's sliding refresh rewrites
-        // `expiresAt` to 30 days from now, and only a client-supplied cookie skips it, so the patch is
-        // clamped here. The hook sees the patch and not the row; the row is the one the endpoint
-        // resolved. One `update` key: a second one in this object literal replaces the first.
+        // An impersonated session never lives past `impersonationSessionDuration`
+        // (docs/ACCESS.md §6.2). Better Auth's sliding refresh rewrites `expiresAt` to 30 days from
+        // now, and only a client-supplied cookie skips it, so the patch is clamped here. The
+        // hook sees the patch and not the row; the row is the one the endpoint resolved.
         update: {
           before: async (data, context) => {
             if (context && Object.hasOwn(data, 'activeOrganizationId')) {
