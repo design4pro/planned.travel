@@ -9,6 +9,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ZodError } from 'zod'
 import { eq } from 'drizzle-orm'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
@@ -68,6 +69,7 @@ import {
   editMessage,
   listMessages,
   listReactions,
+  listTripCheckIns,
   postMessage,
   toggleReaction,
 } from '../collab'
@@ -111,6 +113,7 @@ import {
   listSettlements,
   listTripExpenses,
   markShareSettled,
+  requireExpenseOfTrip,
   setExpenseShares,
   settlementsRepository,
   updateBudgetItem,
@@ -5036,6 +5039,147 @@ describe('tenant isolation', () => {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
       }
       expect(await getFile(beta.tenant.scope, beta.fileId)).toEqual(before)
+    })
+  })
+
+  /**
+   * A file or a check-in names a place, booking, transport or expense by id (#1035). The tenant
+   * filter hides a row of another workspace from the lookup, so the writer answers it as an id that
+   * is not there, and nothing is written in either workspace.
+   */
+  describe('the ids a file or a check-in links to', () => {
+    const INPUT = {
+      storageKey: 'files/linked.pdf',
+      filename: 'linked.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 10,
+    }
+
+    /** One id of workspace B per link a file can carry. */
+    const foreignLinks = (): ReadonlyArray<
+      readonly [string, Record<string, string>]
+    > => [
+      ['placeId', { placeId: beta.placeId }],
+      ['reservationId', { reservationId: beta.reservationId }],
+      ['transportId', { transportId: beta.transportId }],
+      ['expenseId', { expenseId: beta.expenseId }],
+    ]
+
+    async function filesOfBoth(): Promise<unknown> {
+      return {
+        alpha: await listTripFiles(alpha.tenant.scope, alpha.tripId),
+        beta: await listTripFiles(beta.tenant.scope, beta.tripId),
+      }
+    }
+
+    async function checkInsOfBoth(): Promise<unknown> {
+      return {
+        alpha: await listTripCheckIns(alpha.tenant.scope, alpha.tripId),
+        beta: await listTripCheckIns(beta.tenant.scope, beta.tripId),
+      }
+    }
+
+    it.each(['placeId', 'reservationId', 'transportId', 'expenseId'])(
+      'refuses to record a file linked to the %s of another workspace',
+      async (key) => {
+        const link = foreignLinks().find(([name]) => name === key)?.[1]
+        const before = await filesOfBoth()
+
+        const error = await captureError(() =>
+          recordFile(alpha.tenant.scope, {
+            ...INPUT,
+            tripId: alpha.tripId,
+            ...link,
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await filesOfBoth()).toEqual(before)
+      },
+    )
+
+    it.each(['placeId', 'reservationId', 'transportId', 'expenseId'])(
+      'refuses to link a file to the %s of another workspace, leaving the row as it was',
+      async (key) => {
+        const link = foreignLinks().find(([name]) => name === key)?.[1]
+        const before = await getFile(alpha.tenant.scope, alpha.fileId)
+        const beforeBoth = await filesOfBoth()
+
+        const error = await captureError(() =>
+          updateFile(alpha.tenant.scope, alpha.tripId, alpha.fileId, {
+            filename: 'renamed.pdf',
+            ...link,
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await getFile(alpha.tenant.scope, alpha.fileId)).toEqual(before)
+        expect(await filesOfBoth()).toEqual(beforeBoth)
+      },
+    )
+
+    it('refuses an expense of another workspace under either trip', async () => {
+      for (const tripId of [alpha.tripId, beta.tripId]) {
+        expect(
+          await captureError(() =>
+            requireExpenseOfTrip(alpha.tenant.scope, tripId, beta.expenseId),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+    })
+
+    it('refuses to update a file of another workspace even when the links are its own', async () => {
+      const before = await filesOfBoth()
+
+      const error = await captureError(() =>
+        updateFile(alpha.tenant.scope, alpha.tripId, beta.fileId, {
+          placeId: alpha.placeId,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await filesOfBoth()).toEqual(before)
+    })
+
+    it('refuses a check-in at a place of another workspace, with or without a trip of its own', async () => {
+      const before = await checkInsOfBoth()
+
+      const onOwnTrip = await captureError(() =>
+        createCheckIn(alpha.tenant.scope, {
+          tripId: alpha.tripId,
+          placeId: beta.placeId,
+          name: 'Stolen check-in',
+        }),
+      )
+      const withoutTrip = await captureError(() =>
+        createCheckIn(alpha.tenant.scope, {
+          placeId: beta.placeId,
+          name: 'Stolen check-in',
+        }),
+      )
+
+      expect(onOwnTrip).toBeInstanceOf(NotFoundError)
+      expect(withoutTrip).toBeInstanceOf(ZodError)
+      expect(await checkInsOfBoth()).toEqual(before)
+    })
+
+    it('still accepts the links of its own trip and a check-in with neither trip nor place', async () => {
+      const file = await recordFile(alpha.tenant.scope, {
+        ...INPUT,
+        tripId: alpha.tripId,
+        placeId: alpha.placeId,
+        reservationId: alpha.reservationId,
+        transportId: alpha.transportId,
+        expenseId: alpha.expenseId,
+      })
+      expect(file.expenseId).toBe(alpha.expenseId)
+
+      await createCheckIn(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        placeId: alpha.placeId,
+        name: 'Miradouro',
+      })
+      await createCheckIn(alpha.tenant.scope, { name: 'Somewhere' })
     })
   })
 
