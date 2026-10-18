@@ -308,6 +308,7 @@ import {
   getAllowance,
   getPlanOverview,
   listUserYears,
+  recomputeCarryOver,
   requirePlanActor,
   requirePlanOwner,
   saveAllowance,
@@ -7358,6 +7359,30 @@ describe('tenant isolation', () => {
       ]) {
         expect(await captureError(call)).toBeInstanceOf(NotFoundError)
       }
+
+      expect(await planRows(beta)).toEqual(before)
+    })
+
+    it('rejects a carry-over recompute aimed at another workspace’s plan and changes none of its rows', async () => {
+      const owner = beta.tenant.ownerUserId
+      await setEntitlement(beta.tenant.scope, {
+        planId: beta.planId,
+        year: 2025,
+        entitlementDays: 20,
+      })
+      await setEntitlement(beta.tenant.scope, {
+        planId: beta.planId,
+        year: 2026,
+        entitlementDays: 20,
+        carriedOverDays: 99,
+      })
+      const before = await planRows(beta)
+
+      expect(
+        await captureError(() =>
+          recomputeCarryOver(alpha.tenant.scope, beta.planId, owner),
+        ),
+      ).toBeInstanceOf(NotFoundError)
 
       expect(await planRows(beta)).toEqual(before)
     })

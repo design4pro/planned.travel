@@ -6,6 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  CarriedOverDerivedError,
   NotFoundError,
   PlanOwnerOnlyError,
   ensurePlan,
@@ -60,12 +61,16 @@ describe('the leave planner server functions', () => {
 
   const save = (data: Record<string, unknown>) =>
     setAllowanceFn({ data } as never) as Promise<{
-      row: { userId: string; entitlementDays: number }
+      row: { userId: string; entitlementDays: number; carriedOverDays: number }
+      superseded: { year: number; was: number } | null
     }>
   const load = (data: { planId: string; year: number }) =>
     loadVacayAllowance({ data } as never) as Promise<{
       hasRow: boolean
       entitlementDays: number
+      carriedOverDays: number
+      openingBalance: boolean
+      previousYear: number
     }>
 
   it('saves the caller’s allowance and reads it back as theirs', async () => {
@@ -76,6 +81,37 @@ describe('the leave planner server functions', () => {
       hasRow: true,
       entitlementDays: 21,
     })
+  })
+
+  it('reports the typed opening balance a save replaced, and the calculated figure the next year now shows', async () => {
+    await save({ planId, year: 2026, entitlementDays: 20, carriedOverDays: 6 })
+
+    const saved = await save({ planId, year: 2025, entitlementDays: 20 })
+
+    expect(saved.superseded).toEqual({ year: 2026, was: 6 })
+    expect(await load({ planId, year: 2026 })).toMatchObject({
+      carriedOverDays: 20,
+      openingBalance: false,
+      previousYear: 2025,
+    })
+  })
+
+  it('shows a year without a row the carry from the year before, and writes nothing for it', async () => {
+    await save({ planId, year: 2025, entitlementDays: 20 })
+
+    expect(await load({ planId, year: 2026 })).toMatchObject({
+      hasRow: false,
+      carriedOverDays: 20,
+    })
+    expect(await vacayUserYearsRepository.count(tenant.scope)).toBe(1)
+  })
+
+  it('refuses a carried figure for a calculated year', async () => {
+    await save({ planId, year: 2025, entitlementDays: 20 })
+
+    await expect(
+      save({ planId, year: 2026, carriedOverDays: 4 }),
+    ).rejects.toBeInstanceOf(CarriedOverDerivedError)
   })
 
   it('reads the caller’s balance whatever else a caller sends', async () => {

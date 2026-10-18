@@ -1074,6 +1074,22 @@ const messages = {
     other: '無法儲存你的假期額度。{year}年仍顯示{value}天。',
   },
   'vacay.allowance.retry': '重試',
+  'vacay.allowance.tile.edit.carried': '編輯結轉天數，目前 {value}',
+  'vacay.allowance.input.carried': '結轉到{year}年的天數',
+  'vacay.allowance.carried.from': '從{year}年結轉',
+  'vacay.allowance.carried.opening': '承接自{year}年之前。選取即可編輯。',
+  'vacay.allowance.carried.off': '結轉已關閉',
+  'vacay.allowance.carried.wholeDays':
+    '只有整天會結轉到下一年；剩餘的半天不會結轉。',
+  'vacay.allowance.error.derived':
+    '{year}年的結轉天數現在由{previousYear}年計算得出，因此無法編輯。',
+  'vacay.allowance.error.carried': {
+    other: '無法儲存你的結轉天數。{year}年仍顯示{value}天。',
+  },
+  'vacay.allowance.superseded': {
+    other:
+      '{year}年的結轉天數現在由{previousYear}年計算得出。你之前輸入的是{value}天。',
+  },
   'vacay.pending.loading': '正在載入',
   'vacay.error.title': '無法載入休假規劃器',
   'vacay.year.previous': '上一年',

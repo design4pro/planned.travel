@@ -1166,6 +1166,25 @@ const messages = {
       'Jatah cuti Anda tidak dapat disimpan. {year} masih menampilkan {value} hari.',
   },
   'vacay.allowance.retry': 'Coba lagi',
+  'vacay.allowance.tile.edit.carried':
+    'Ubah hari yang dibawa, saat ini {value}',
+  'vacay.allowance.input.carried': 'Hari yang dibawa ke {year}',
+  'vacay.allowance.carried.from': 'Dibawa dari {year}',
+  'vacay.allowance.carried.opening':
+    'Dibawa dari sebelum {year}. Pilih untuk mengubah.',
+  'vacay.allowance.carried.off': 'Pembawaan sisa cuti nonaktif',
+  'vacay.allowance.carried.wholeDays':
+    'Hanya hari utuh yang dibawa ke tahun berikutnya; sisa setengah hari tidak.',
+  'vacay.allowance.error.derived':
+    'Hari yang dibawa untuk {year} kini dihitung dari {previousYear}, sehingga tidak dapat diubah.',
+  'vacay.allowance.error.carried': {
+    other:
+      'Hari yang dibawa tidak dapat disimpan. {year} masih menampilkan {value} hari.',
+  },
+  'vacay.allowance.superseded': {
+    other:
+      'Hari yang dibawa untuk {year} kini dihitung dari {previousYear}. Sebelumnya Anda memasukkan {value} hari.',
+  },
   'vacay.pending.loading': 'Memuat',
   'vacay.error.title': 'Perencana cuti tidak dapat dimuat',
   'vacay.year.previous': 'Tahun sebelumnya',

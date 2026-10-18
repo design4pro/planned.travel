@@ -1254,6 +1254,29 @@ const messages = {
       'Impossibile salvare il tuo monte giorni. {year} mostra ancora {value} giorni.',
   },
   'vacay.allowance.retry': 'Riprova',
+  'vacay.allowance.tile.edit.carried':
+    'Modifica i giorni riportati, attualmente {value}',
+  'vacay.allowance.input.carried': 'Giorni riportati al {year}',
+  'vacay.allowance.carried.from': 'Riportati dal {year}',
+  'vacay.allowance.carried.opening':
+    'Portati da prima del {year}. Seleziona per modificare.',
+  'vacay.allowance.carried.off': 'Il riporto è disattivato',
+  'vacay.allowance.carried.wholeDays':
+    'Al nuovo anno si riportano solo giorni interi; la mezza giornata residua no.',
+  'vacay.allowance.error.derived':
+    'I giorni riportati del {year} ora sono calcolati a partire dal {previousYear}, quindi non si possono modificare.',
+  'vacay.allowance.error.carried': {
+    one: 'Impossibile salvare i tuoi giorni riportati. {year} mostra ancora {value} giorno.',
+    many: 'Impossibile salvare i tuoi giorni riportati. {year} mostra ancora {value} giorni.',
+    other:
+      'Impossibile salvare i tuoi giorni riportati. {year} mostra ancora {value} giorni.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'I giorni riportati del {year} ora sono calcolati a partire dal {previousYear}. Avevi inserito {value} giorno.',
+    many: 'I giorni riportati del {year} ora sono calcolati a partire dal {previousYear}. Avevi inserito {value} giorni.',
+    other:
+      'I giorni riportati del {year} ora sono calcolati a partire dal {previousYear}. Avevi inserito {value} giorni.',
+  },
   'vacay.pending.loading': 'Caricamento',
   'vacay.error.title': 'Impossibile caricare il pianificatore delle ferie',
   'vacay.year.previous': 'Anno precedente',

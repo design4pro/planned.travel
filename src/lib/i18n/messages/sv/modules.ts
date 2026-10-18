@@ -1192,6 +1192,27 @@ const messages = {
       'Din ledighetskvot kunde inte sparas. {year} visar fortfarande {value} dagar.',
   },
   'vacay.allowance.retry': 'Försök igen',
+  'vacay.allowance.tile.edit.carried':
+    'Redigera överförda dagar, just nu {value}',
+  'vacay.allowance.input.carried': 'Dagar överförda till {year}',
+  'vacay.allowance.carried.from': 'Överförda från {year}',
+  'vacay.allowance.carried.opening':
+    'Tagna med från före {year}. Välj för att redigera.',
+  'vacay.allowance.carried.off': 'Överföring är avstängd',
+  'vacay.allowance.carried.wholeDays':
+    'Bara hela dagar förs över till nästa år; den återstående halva dagen gör det inte.',
+  'vacay.allowance.error.derived':
+    'Överförda dagar för {year} beräknas nu från {previousYear} och kan därför inte redigeras.',
+  'vacay.allowance.error.carried': {
+    one: 'Dina överförda dagar kunde inte sparas. {year} visar fortfarande {value} dag.',
+    other:
+      'Dina överförda dagar kunde inte sparas. {year} visar fortfarande {value} dagar.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Överförda dagar för {year} beräknas nu från {previousYear}. Du hade angett {value} dag.',
+    other:
+      'Överförda dagar för {year} beräknas nu från {previousYear}. Du hade angett {value} dagar.',
+  },
   'vacay.pending.loading': 'Läser in',
   'vacay.error.title': 'Ledighetsplaneraren gick inte att läsa in',
   'vacay.year.previous': 'Föregående år',

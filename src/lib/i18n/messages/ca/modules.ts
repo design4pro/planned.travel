@@ -1249,6 +1249,29 @@ const messages = {
       'No s’ha pogut desar la teva assignació. El {year} encara mostra {value} dies.',
   },
   'vacay.allowance.retry': 'Torna-ho a provar',
+  'vacay.allowance.tile.edit.carried':
+    'Edita els dies transferits, actualment {value}',
+  'vacay.allowance.input.carried': 'Dies transferits al {year}',
+  'vacay.allowance.carried.from': 'Transferits del {year}',
+  'vacay.allowance.carried.opening':
+    'Procedents d’abans del {year}. Selecciona per editar.',
+  'vacay.allowance.carried.off': 'El trasllat està desactivat',
+  'vacay.allowance.carried.wholeDays':
+    'Només es transfereixen dies sencers a l’any següent; el mig dia sobrant no.',
+  'vacay.allowance.error.derived':
+    'Els dies transferits del {year} ara es calculen a partir del {previousYear}, així que no es poden editar.',
+  'vacay.allowance.error.carried': {
+    one: 'No s’han pogut desar els dies transferits. El {year} encara mostra {value} dia.',
+    many: 'No s’han pogut desar els dies transferits. El {year} encara mostra {value} dies.',
+    other:
+      'No s’han pogut desar els dies transferits. El {year} encara mostra {value} dies.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Els dies transferits del {year} ara es calculen a partir del {previousYear}. Havies introduït {value} dia.',
+    many: 'Els dies transferits del {year} ara es calculen a partir del {previousYear}. Havies introduït {value} dies.',
+    other:
+      'Els dies transferits del {year} ara es calculen a partir del {previousYear}. Havies introduït {value} dies.',
+  },
   'vacay.pending.loading': 'S’està carregant',
   'vacay.error.title': 'No s’ha pogut carregar el planificador de vacances',
   'vacay.year.previous': 'Any anterior',

@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
 import { z } from 'zod'
 
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -23,6 +24,7 @@ import { AllowancePanel } from './-ui/allowance-panel'
 import { HeaderSkeleton, Panel } from './-ui/scaffold'
 
 import type { VacayPayload } from './-server/library'
+import type { AllowanceSaved } from './-server/vacay'
 
 const MONTH_NAMES: ReadonlyArray<string> = [
   'January',
@@ -82,6 +84,9 @@ function VacayPage() {
   const t = useTranslate()
   const locale = useLocale()
   const data = Route.useLoaderData()
+  /** Outlives the allowance panel, which is keyed by year: the replaced year is where they go next. */
+  const [superseded, setSuperseded] =
+    useState<AllowanceSaved['superseded']>(null)
 
   const colourByUser = new Map(
     data.colours.map((row) => [row.userId, row.colour]),
@@ -152,6 +157,8 @@ function VacayPage() {
               year={data.year}
               allowance={data.allowance}
               carryOverEnabled={data.plan.carryOverEnabled}
+              superseded={superseded}
+              onSupersededChange={setSuperseded}
             />
 
             <Panel
