@@ -785,6 +785,15 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Tidigare meddelanden laddades inte',
   'collab.thread.retry': 'Försök igen',
   'collab.thread.start': 'Här börjar konversationen',
+  'collab.thread.loadedEarlier': {
+    one: '{earlier} tidigare meddelande laddat',
+    other: '{earlier} tidigare meddelanden laddade',
+  },
+  'collab.thread.newFrom': 'Nytt meddelande från {name}',
+  'collab.thread.newMany': {
+    one: '{new} nytt meddelande',
+    other: '{new} nya meddelanden',
+  },
   'collab.toast.reactionFailed': 'Reaktionen sparades inte',
   'collab.toast.messageDeleted': 'Meddelandet borttaget',
   'collab.toast.deleteFailed': 'Meddelandet togs inte bort',

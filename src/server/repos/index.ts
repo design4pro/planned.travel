@@ -13,6 +13,7 @@
  * | `trips`         | `trips`, `trip_members`, `share_links` |
  * | `trip-favourites` | `trip_favourites` |
  * | `trip-guests`   | `trip_guests` |
+ * | `invites`       | `trip_invite_links`; reads `trips`, `trip_members`, `member`, `user` for liveness |
  * | `days`          | `days`, `day_notes` |
  * | `itinerary`     | `day_assignments`, `assignment_participants`, `day_accommodations` |
  * | `places`        | `places`, `place_tags` |
@@ -55,6 +56,7 @@ export * from './dashboard'
 export * from './days'
 export * from './expenses'
 export * from './files'
+export * from './invites'
 export * from './itinerary'
 export * from './journey'
 export * from './lists'

@@ -956,6 +956,21 @@ const messages = {
   /** Button that repeats a failed page load; not the composer's retry. */
   'collab.thread.retry': 'Try again',
   'collab.thread.start': 'This is where the conversation starts',
+  /**
+   * Read aloud by a screen reader after a page of older messages loaded; `{earlier}`
+   * is the number printed, `count` picks the plural form.
+   */
+  'collab.thread.loadedEarlier': {
+    one: 'Loaded {earlier} earlier message',
+    other: 'Loaded {earlier} earlier messages',
+  },
+  /** Read aloud when one peer's message arrives; never carries the message text. */
+  'collab.thread.newFrom': 'New message from {name}',
+  /** Read aloud when several peer messages arrive within one second; `{new}` is the number printed. */
+  'collab.thread.newMany': {
+    one: '{new} new message',
+    other: '{new} new messages',
+  },
   'collab.toast.reactionFailed': 'That reaction did not save',
   'collab.toast.messageDeleted': 'Message deleted',
   'collab.toast.deleteFailed': 'The message was not deleted',

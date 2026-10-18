@@ -786,6 +786,13 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Pesan sebelumnya gagal dimuat',
   'collab.thread.retry': 'Coba lagi',
   'collab.thread.start': 'Di sinilah percakapan dimulai',
+  'collab.thread.loadedEarlier': {
+    other: '{earlier} pesan sebelumnya dimuat',
+  },
+  'collab.thread.newFrom': 'Pesan baru dari {name}',
+  'collab.thread.newMany': {
+    other: '{new} pesan baru',
+  },
   'collab.toast.reactionFailed': 'Reaksi tidak tersimpan',
   'collab.toast.messageDeleted': 'Pesan dihapus',
   'collab.toast.deleteFailed': 'Pesan tidak dihapus',

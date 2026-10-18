@@ -722,6 +722,13 @@ const messages = {
   'collab.thread.loadOlderFailed': '更早的訊息未能載入',
   'collab.thread.retry': '重試',
   'collab.thread.start': '對話從這裡開始',
+  'collab.thread.loadedEarlier': {
+    other: '已載入 {earlier} 則較早的訊息',
+  },
+  'collab.thread.newFrom': '來自 {name} 的新訊息',
+  'collab.thread.newMany': {
+    other: '{new} 則新訊息',
+  },
   'collab.toast.reactionFailed': '這個反應沒存上',
   'collab.toast.messageDeleted': '已刪除訊息',
   'collab.toast.deleteFailed': '未能刪除該訊息',

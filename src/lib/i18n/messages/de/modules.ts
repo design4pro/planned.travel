@@ -809,6 +809,15 @@ const messages = {
     'Frühere Nachrichten konnten nicht geladen werden',
   'collab.thread.retry': 'Erneut versuchen',
   'collab.thread.start': 'Hier beginnt die Unterhaltung',
+  'collab.thread.loadedEarlier': {
+    one: '{earlier} frühere Nachricht geladen',
+    other: '{earlier} frühere Nachrichten geladen',
+  },
+  'collab.thread.newFrom': 'Neue Nachricht von {name}',
+  'collab.thread.newMany': {
+    one: '{new} neue Nachricht',
+    other: '{new} neue Nachrichten',
+  },
   'collab.toast.reactionFailed': 'Die Reaktion wurde nicht gespeichert',
   'collab.toast.messageDeleted': 'Nachricht gelöscht',
   'collab.toast.deleteFailed': 'Die Nachricht wurde nicht gelöscht',

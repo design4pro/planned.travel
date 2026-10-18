@@ -780,6 +780,15 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Önceki mesajlar yüklenemedi',
   'collab.thread.retry': 'Tekrar dene',
   'collab.thread.start': 'Konuşma burada başlıyor',
+  'collab.thread.loadedEarlier': {
+    one: '{earlier} önceki mesaj yüklendi',
+    other: '{earlier} önceki mesaj yüklendi',
+  },
+  'collab.thread.newFrom': '{name} yeni bir mesaj gönderdi',
+  'collab.thread.newMany': {
+    one: '{new} yeni mesaj',
+    other: '{new} yeni mesaj',
+  },
   'collab.toast.reactionFailed': 'Tepki kaydedilmedi',
   'collab.toast.messageDeleted': 'Mesaj silindi',
   'collab.toast.deleteFailed': 'Mesaj silinmedi',

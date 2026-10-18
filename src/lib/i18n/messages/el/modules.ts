@@ -802,6 +802,15 @@ const messages = {
   'collab.thread.loadOlderFailed': 'Τα παλαιότερα μηνύματα δεν φορτώθηκαν',
   'collab.thread.retry': 'Δοκίμασε ξανά',
   'collab.thread.start': 'Εδώ ξεκινά η συζήτηση',
+  'collab.thread.loadedEarlier': {
+    one: 'Φορτώθηκε {earlier} προηγούμενο μήνυμα',
+    other: 'Φορτώθηκαν {earlier} προηγούμενα μηνύματα',
+  },
+  'collab.thread.newFrom': 'Νέο μήνυμα από {name}',
+  'collab.thread.newMany': {
+    one: '{new} νέο μήνυμα',
+    other: '{new} νέα μηνύματα',
+  },
   'collab.toast.reactionFailed': 'Η αντίδραση δεν αποθηκεύτηκε',
   'collab.toast.messageDeleted': 'Το μήνυμα διαγράφηκε',
   'collab.toast.deleteFailed': 'Το μήνυμα δεν διαγράφηκε',

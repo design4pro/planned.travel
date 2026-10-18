@@ -795,6 +795,15 @@ const messages = {
   'collab.thread.loadOlderFailed': 'A korábbi üzenetek nem töltődtek be',
   'collab.thread.retry': 'Újrapróbálás',
   'collab.thread.start': 'Itt kezdődik a beszélgetés',
+  'collab.thread.loadedEarlier': {
+    one: '{earlier} korábbi üzenet betöltve',
+    other: '{earlier} korábbi üzenet betöltve',
+  },
+  'collab.thread.newFrom': '{name} új üzenetet küldött',
+  'collab.thread.newMany': {
+    one: '{new} új üzenet',
+    other: '{new} új üzenet',
+  },
   'collab.toast.reactionFailed': 'A reakció nem lett elmentve',
   'collab.toast.messageDeleted': 'Üzenet törölve',
   'collab.toast.deleteFailed': 'Az üzenet nem lett törölve',

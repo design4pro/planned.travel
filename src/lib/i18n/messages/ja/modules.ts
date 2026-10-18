@@ -758,6 +758,13 @@ const messages = {
   'collab.thread.loadOlderFailed': '以前のメッセージを読み込めませんでした',
   'collab.thread.retry': '再試行',
   'collab.thread.start': 'ここから会話が始まります',
+  'collab.thread.loadedEarlier': {
+    other: '以前のメッセージを{earlier}件読み込みました',
+  },
+  'collab.thread.newFrom': '{name}さんからの新着メッセージ',
+  'collab.thread.newMany': {
+    other: '新着メッセージ{new}件',
+  },
   'collab.toast.reactionFailed': 'リアクションを保存できませんでした',
   'collab.toast.messageDeleted': 'メッセージを削除しました',
   'collab.toast.deleteFailed': 'メッセージを削除できませんでした',

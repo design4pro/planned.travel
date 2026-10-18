@@ -722,6 +722,13 @@ const messages = {
   'collab.thread.loadOlderFailed': '更早的消息未能加载',
   'collab.thread.retry': '重试',
   'collab.thread.start': '对话从这里开始',
+  'collab.thread.loadedEarlier': {
+    other: '已加载 {earlier} 条更早的消息',
+  },
+  'collab.thread.newFrom': '来自 {name} 的新消息',
+  'collab.thread.newMany': {
+    other: '{new} 条新消息',
+  },
   'collab.toast.reactionFailed': '这个反应没保存上',
   'collab.toast.messageDeleted': '已删除消息',
   'collab.toast.deleteFailed': '未能删除该消息',

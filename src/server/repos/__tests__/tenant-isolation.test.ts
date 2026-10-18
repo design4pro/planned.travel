@@ -51,6 +51,7 @@ import {
 } from '../billing'
 import { reserveExport, exportAllowance } from '../exports'
 import { readFeedSource } from '../calendar-feeds'
+import { createTripInvite, tripInviteLinksRepository } from '../invites'
 import { categoriesRepository, createCategory } from '../categories'
 import {
   setTripCollabSections,
@@ -442,6 +443,7 @@ interface World {
   readonly templateItemId: string
   readonly fileId: string
   readonly shareLinkId: string
+  readonly tripInviteId: string
   readonly tripMemberId: string
   readonly guestId: string
   readonly messageId: string
@@ -661,6 +663,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
       files: false,
     },
   })
+  const tripInvite = await createTripInvite(scope, trip.id, {
+    role: 'viewer',
+    key: 'isolation-test-key',
+  })
   const tripMembers = await tripMembersRepository.findMany(scope)
   const tripMember = tripMembers.at(0)
   if (tripMember === undefined) {
@@ -846,6 +852,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     templateItemId: templateItem.id,
     fileId: file.id,
     shareLinkId: shareLink.id,
+    tripInviteId: tripInvite.invite.id,
     tripMemberId: tripMember.id,
     guestId: guest.id,
     messageId: message.id,
@@ -933,6 +940,12 @@ const cases: ReadonlyArray<IsolationCase> = [
   isolationCase('share links', shareLinksRepository, (w) => w.shareLinkId, {
     viewCount: 99,
   }),
+  isolationCase(
+    'trip invite links',
+    tripInviteLinksRepository,
+    (w) => w.tripInviteId,
+    { useCount: 99 },
+  ),
   isolationCase('days', daysRepository, (w) => w.dayId, { title: 'hijacked' }),
   isolationCase('day notes', dayNotesRepository, (w) => w.dayNoteId, {
     body: 'hijacked',
