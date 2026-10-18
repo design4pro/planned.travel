@@ -67,7 +67,10 @@ const LONG_TAB_LABELS: ReadonlyArray<ReadonlyArray<string>> = [
   ['Mij verschuldigd', 'Benim ödediklerim', 'Πληρωμένα από εμένα'],
 ]
 
-/** The tabs whose content (label and count) reaches past the tab's own box. */
+/**
+ * The tabs whose content (label and count) reaches past the tab's own content box, the border box
+ * less its horizontal padding: a word that only runs into the padding already crowds the next tab.
+ */
 async function spillingTabs(bar: Locator): Promise<Array<string>> {
   return bar.getByRole('tab').evaluateAll((tabs) =>
     tabs
@@ -76,13 +79,19 @@ async function spillingTabs(bar: Locator): Promise<Array<string>> {
         range.selectNodeContents(tab)
         const content = range.getBoundingClientRect()
         const box = tab.getBoundingClientRect()
-        return content.left < box.left - 0.5 || content.right > box.right + 0.5
+        const style = getComputedStyle(tab)
+        const left = box.left + Number.parseFloat(style.paddingLeft)
+        const right = box.right - Number.parseFloat(style.paddingRight)
+        return content.left < left - 0.5 || content.right > right + 0.5
       })
       .map((tab) => tab.textContent ?? ''),
   )
 }
 
-/** Replace the text of each tab's label, keeping the count that follows it. */
+/**
+ * Replace the text of each tab's label, keeping the count that follows it, and check that it took:
+ * a tab whose label is not a bare text node would otherwise keep its English text and pass.
+ */
 async function relabelTabs(
   bar: Locator,
   labels: ReadonlyArray<string>,
@@ -95,6 +104,9 @@ async function relabelTabs(
       if (label !== undefined) label.textContent = next[index] ?? ''
     })
   }, labels)
+  for (const [index, label] of labels.entries()) {
+    await expect(bar.getByRole('tab').nth(index)).toContainText(label)
+  }
 }
 
 test.describe('the costs filter bar on a phone', () => {
