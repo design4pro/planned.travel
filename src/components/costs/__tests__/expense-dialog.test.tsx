@@ -81,10 +81,12 @@ function open(
     onSubmit = async () => {},
     expense = null,
     departedPeople,
+    people = PEOPLE,
   }: {
     onSubmit?: (value: ExpenseFormValue) => Promise<void>
     expense?: CostsExpense | null
     departedPeople?: ReadonlyArray<CostsDepartedPerson>
+    people?: ReadonlyArray<CostsPerson>
   } = {},
 ): void {
   render(
@@ -93,7 +95,7 @@ function open(
         open
         onOpenChange={() => {}}
         expense={expense}
-        people={PEOPLE}
+        people={people}
         departedPeople={departedPeople}
         viewerUserId="u1"
         tripCurrency="EUR"
@@ -673,6 +675,89 @@ describe('the split of an expense that names someone who has left the trip', () 
 
     expect(screen.queryByRole('checkbox', { name: /Cy/ })).toBeNull()
     expect(screen.queryByText('Left the trip')).toBeNull()
+  })
+})
+
+describe('the people a new line of money may name, once someone has left the workspace (#1034)', () => {
+  // Dee is still on the trip but no longer in the workspace: the server refuses her on new money.
+  const WITH_LEAVER: ReadonlyArray<CostsPerson> = [
+    ...PEOPLE,
+    {
+      userId: 'u3',
+      name: 'Dee',
+      email: '',
+      image: null,
+      role: 'editor',
+      leftWorkspace: true,
+    },
+  ]
+  const deeBox = (): HTMLElement | null =>
+    screen.queryByRole('checkbox', { name: 'Include Dee in this split' })
+
+  async function payerNames(
+    user: ReturnType<typeof userEvent.setup>,
+  ): Promise<Array<string>> {
+    await user.click(screen.getByRole('combobox', { name: 'Who paid' }))
+    return (await screen.findAllByRole('option')).map(
+      (option) => option.textContent,
+    )
+  }
+
+  it('offers her neither as payer nor in the split of a new expense, and never sends her', async () => {
+    const onSubmit = vi.fn(async (_value: ExpenseFormValue) => {})
+    const user = hand()
+    open(undefined, { people: WITH_LEAVER, onSubmit })
+
+    expect(deeBox()).toBeNull()
+    expect(screen.getByRole('checkbox', { name: /Include Bo/ })).toBeTruthy()
+    const names = await payerNames(user)
+    expect(names.some((name) => name?.includes('Bo'))).toBe(true)
+    expect(names.some((name) => name?.includes('Dee'))).toBe(false)
+
+    await user.keyboard('{Escape}')
+    await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+    await user.type(amountField(), '9.00')
+    await user.click(screen.getByRole('button', { name: 'Add expense' }))
+
+    expect(
+      onSubmit.mock.calls[0]?.[0].participants.map((row) => row.userId),
+    ).toEqual(['u1', 'u2'])
+  })
+
+  it('keeps her where the expense being edited already names her', async () => {
+    const user = hand()
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        paidBy: 'u3',
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u3', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(deeBox()?.getAttribute('aria-checked')).toBe('true')
+    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+      true,
+    )
+  })
+
+  it('does not offer her on an edited expense that does not carry her', async () => {
+    const user = hand()
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 6_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(deeBox()).toBeNull()
+    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+      false,
+    )
   })
 })
 

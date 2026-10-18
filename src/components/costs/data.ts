@@ -114,6 +114,21 @@ export function shareOf(row: CostsExpense, userId: string): number {
 }
 
 /**
+ * The people a picker may offer for a money write: every trip member still in the workspace, and a
+ * member who has left it only when the expense or payment being edited already carries them (#1034).
+ * The repository refuses the rest as a new name on money, so the screen must not offer them.
+ */
+export function offeredPeople(
+  people: ReadonlyArray<CostsPerson>,
+  carried: ReadonlyArray<string | null>,
+): Array<CostsPerson> {
+  return people.filter(
+    (person) =>
+      person.leftWorkspace !== true || carried.includes(person.userId),
+  )
+}
+
+/**
  * The rows the reader asked to see.
  *
  * `paid` and `owed` are deliberately not complements: an expense the viewer paid

@@ -48,7 +48,7 @@ import {
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
-import { parseDay, toDayString } from './data'
+import { offeredPeople, parseDay, toDayString } from './data'
 import { SETTLEMENT_METHOD_OPTIONS } from './payment-methods'
 import { useStaleTripCurrency } from './stale-trip-currency'
 
@@ -102,10 +102,15 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const t = useTranslate()
   const locale = useLocale()
+  // A member who left the workspace is not offered for new money, only on a payment that carries them.
+  const offered = offeredPeople(people, [
+    seed?.fromUserId ?? null,
+    seed?.toUserId ?? null,
+  ])
   const fallbackFrom = seed?.fromUserId ?? viewerUserId
   const fallbackTo =
     seed?.toUserId ??
-    people.find((person) => person.userId !== fallbackFrom)?.userId ??
+    offered.find((person) => person.userId !== fallbackFrom)?.userId ??
     ''
 
   const [fromUserId, setFromUserId] = useState(fallbackFrom)
@@ -253,7 +258,7 @@ export function PaymentDialog({
     }
   }
 
-  const options = people.map((person) => ({
+  const options = offered.map((person) => ({
     value: person.userId,
     label:
       person.userId === viewerUserId
