@@ -34,6 +34,9 @@ export const TASK_KINDS = [
   // the next connect re-runs the session and tenancy checks. A fan-out over every room they could open, so it is queued rather
   // than run on the request that caused it.
   'trip-room-evict',
+  // One-off catch-up of the participation anchor (ADR 0043): a chain of messages, one workspace each.
+  // Ships inert - nothing enqueues it in this release (BACKWARD_COMPATIBILITY.md section 6).
+  'participant-backfill',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   //
@@ -269,6 +272,21 @@ export const tripRoomEvictPayloadSchema = z.strictObject({
 export type TripRoomEvictPayload = z.infer<typeof tripRoomEvictPayloadSchema>
 
 /**
+ * Where the participation backfill chain stands (ADR 0043). `after` is the last organization id the
+ * chain has handled, `null` at the start; the message handles the next one, found by the catalog
+ * read, never named here. The payload carries no user id and no organization id, so a forged
+ * message can only start a chain, never aim it at a person or a workspace.
+ */
+export const participantBackfillPayloadSchema = z.strictObject({
+  runId: z.string().min(1).max(36),
+  after: z.string().min(1).max(64).nullable(),
+})
+
+export type ParticipantBackfillPayload = z.infer<
+  typeof participantBackfillPayloadSchema
+>
+
+/**
  * Billing payloads mirror the `BillingTask` union in `../billing/types`. They
  * repeat their own `kind` because the webhook adapter enqueues the whole task
  * object as the payload, and `providerEventId` is what makes the envelope id
@@ -312,6 +330,7 @@ export interface TaskPayloadMap {
   'trip-purge': TripPurgePayload
   'trip-copy': TripCopyPayload
   'trip-room-evict': TripRoomEvictPayload
+  'participant-backfill': ParticipantBackfillPayload
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
 }
@@ -379,6 +398,11 @@ export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
     ...envelopeBase,
     kind: z.literal('trip-room-evict'),
     payload: tripRoomEvictPayloadSchema,
+  }),
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('participant-backfill'),
+    payload: participantBackfillPayloadSchema,
   }),
   z.object({
     ...envelopeBase,
