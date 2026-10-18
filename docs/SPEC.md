@@ -342,7 +342,7 @@ Tenant isolation is enforced in the repository layer and covered by tests. The b
 
 #### FU-3: bounded Unscoped repository functions
 
-An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. The one exception is `readInvitePreviewUnscoped`, whose closed per-visitor projection returns the invite card's content (docs/ACCESS.md §3.8). Grep `Unscoped` callers; any caller outside the named one is a blocker.
+An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Two exceptions return or write tenant content: `readInvitePreviewUnscoped`, whose closed per-visitor projection returns the invite card's content, and `joinTripByInviteUnscoped`, the one authenticated write on the invite surface, which acts as the joiner in the link's workspace (docs/ACCESS.md §3.8). Grep `Unscoped` callers; any caller outside the named one is a blocker.
 
 Billing uses this shape for provider-to-organization resolution and billing rows only; share
 moderation uses the §2.4 ACCESS projection. The calendar resolver
@@ -369,6 +369,13 @@ same module, reads the trip through a scope built from the resolved coordinates 
 itself (the public module builds none), and returns one closed projection per visitor: `invited`,
 `member`, `needs-workspace` or `unavailable` (docs/ACCESS.md §3.8). It writes nothing. The viewer is
 passed in as data (`{ id, banned }`); `src/server/public/**` reads no session.
+
+The join adds a fourth, `joinTripByInviteUnscoped(db, digest, key, joiner)` in the same file, the
+single write on the surface, with exactly one production caller, `src/routes/join/-lib/join.ts`
+(for `joinTripFn`, which requires a session). It resolves the link again, reads the joiner's role in
+the **link's** workspace from `member`, builds the joiner's scope itself and writes through the
+shared `insertTripMember`; it refuses a banned joiner and an impersonated session (docs/ACCESS.md
+§3.8, §6.4).
 
 #### Global-catalogue carve-out
 

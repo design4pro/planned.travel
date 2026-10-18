@@ -488,10 +488,14 @@ const messages = {
   'join.dates.label': 'Termín',
   'join.destination.label': 'Cíl cesty',
   'join.action.signIn': 'Přihlásit se',
+  'join.action.join': 'Připojit se k cestě',
+  'join.action.joining': 'Připojuji se k cestě',
   'join.action.open': 'Otevřít cestu',
   'join.action.openIn': 'Otevřít cestu a přepnout prostor',
   'join.action.openIn.pending': 'Přepínám prostor',
   'join.loading': 'Načítám pozvánku',
+  'join.joined.title': 'Jste na cestě',
+  'join.joined.body': 'Otevřete ji a podívejte se na plán.',
   'join.member.title': 'Na této cestě už jste',
   'join.needsWorkspace.title': 'Tato cesta je v prostoru, ve kterém nejste',
   'join.needsWorkspace.body':
@@ -509,6 +513,8 @@ const messages = {
   'join.error.title': 'Tento odkaz s pozvánkou se nepodařilo načíst',
   'join.error.retry': 'Zkusit znovu',
   'join.error.busy': 'Stránka je teď vytížená. Zkuste to znovu za minutu.',
+  'join.error.join':
+    'Připojení se nepodařilo. Odkaz stále funguje, zkuste to znovu.',
   'join.error.switch': 'Prostor se nepodařilo přepnout. Zkuste to znovu.',
 } satisfies TranslationOf<typeof En>
 

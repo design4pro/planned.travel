@@ -28,6 +28,7 @@ import { useI18n } from '#/lib/i18n'
 import { loginHrefFor } from '../../(auth)/-lib/redirect'
 
 import type { MessageKey } from '#/lib/i18n'
+import type { JoinAnswer } from '../-lib/join'
 import type { InviteView } from '../-lib/view'
 
 type Invited = Extract<InviteView, { state: 'invited' }>
@@ -105,7 +106,103 @@ function SignInAction({ path, label }: { path: string; label: MessageKey }) {
   )
 }
 
-function InvitedCard({ view, path }: { view: Invited; path: string }) {
+type Failure = 'join' | 'busy'
+
+const FAILURE_KEYS: Record<Failure, MessageKey> = {
+  join: 'trips.join.error.join',
+  busy: 'trips.join.error.busy',
+}
+
+function JoinAction({
+  onJoin,
+  onRetry,
+  onJoined,
+}: {
+  onJoin: () => Promise<JoinAnswer>
+  onRetry: () => Promise<void>
+  onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
+}) {
+  const { t } = useI18n()
+  const button = React.useRef<HTMLButtonElement>(null)
+  const noteId = React.useId()
+  const [pending, setPending] = React.useState(false)
+  const [failure, setFailure] = React.useState<Failure | null>(null)
+  // Counted so a second failure moves focus again, not only the first.
+  const [attempt, setAttempt] = React.useState(0)
+
+  // The focus move is the announcement for a failure: the note is described-by, not a live region.
+  React.useEffect(() => {
+    if (failure) button.current?.focus()
+  }, [failure, attempt])
+
+  function fail(next: Failure): void {
+    setFailure(next)
+    setAttempt((count) => count + 1)
+    setPending(false)
+  }
+
+  async function join(): Promise<void> {
+    setFailure(null)
+    setPending(true)
+    let answer: JoinAnswer
+    try {
+      answer = await onJoin()
+    } catch {
+      fail('join')
+      return
+    }
+    if (answer.outcome === 'busy') {
+      fail('busy')
+      return
+    }
+    focusHeadingOnArrival = true
+    if (answer.outcome === 'joined' || answer.outcome === 'member') {
+      onJoined(answer)
+      return
+    }
+    // A link replaced or switched off while the tab was open, or a workspace left since: the page
+    // reads again and the card it gets takes this one's place.
+    await onRetry().catch(() => undefined)
+    focusHeadingOnArrival = false
+    setPending(false)
+  }
+
+  return (
+    <>
+      {failure ? (
+        <Alert id={noteId} tone="danger" role="presentation" aria-live="off">
+          {t(FAILURE_KEYS[failure])}
+        </Alert>
+      ) : null}
+      <Button
+        ref={button}
+        variant="primary"
+        size="lg"
+        block
+        loading={pending}
+        loadingLabel={t('trips.join.action.joining')}
+        aria-describedby={failure ? noteId : undefined}
+        onClick={() => void join()}
+      >
+        {t('trips.join.action.join')}
+      </Button>
+    </>
+  )
+}
+
+function InvitedCard({
+  view,
+  path,
+  onJoin,
+  onRetry,
+  onJoined,
+}: {
+  view: Invited
+  path: string
+  onJoin: () => Promise<JoinAnswer>
+  onRetry: () => Promise<void>
+  onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
+}) {
   const { t, locale } = useI18n()
   const dates = formatDateRange(view.startDate, view.endDate, locale)
   const rows: Array<[string, string]> = [
@@ -135,9 +232,7 @@ function InvitedCard({ view, path }: { view: Invited; path: string }) {
         {t('trips.join.requirement', { inviter: view.inviterName })}
       </p>
       {view.signedIn ? (
-        <Button variant="secondary" size="lg" block asChild>
-          <a href="/trips">{t('trips.join.unavailable.trips')}</a>
-        </Button>
+        <JoinAction onJoin={onJoin} onRetry={onRetry} onJoined={onJoined} />
       ) : (
         <>
           <p className="text-caption text-ink-3">
@@ -150,17 +245,28 @@ function InvitedCard({ view, path }: { view: Invited; path: string }) {
   )
 }
 
-function MemberCard({ view, path }: { view: Member; path: string }) {
+/** Opens the trip, switching to its workspace first when the active one is not it. */
+function OpenTripAction({
+  tripId,
+  organizationId,
+  switchWorkspace,
+  path,
+}: {
+  tripId: string
+  organizationId: string
+  switchWorkspace: boolean
+  path: string
+}) {
   const { t } = useI18n()
   const [pending, setPending] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
-  const tripPath = `/trips/${view.tripId}`
+  const tripPath = `/trips/${tripId}`
 
   async function openInWorkspace(): Promise<void> {
     setFailed(false)
     setPending(true)
     const outcome = await authClient.organization
-      .setActive({ organizationId: view.organizationId })
+      .setActive({ organizationId })
       .then(({ error }) => error)
       .catch(() => new Error('switch'))
     // The session ended while the card was open: trying again cannot work, signing in can.
@@ -178,14 +284,11 @@ function MemberCard({ view, path }: { view: Member; path: string }) {
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <h1 className="font-display text-title font-bold tracking-tight text-ink">
-        {t('trips.join.member.title')}
-      </h1>
+    <>
       {failed ? (
         <Alert tone="danger">{t('trips.join.error.switch')}</Alert>
       ) : null}
-      {view.switchWorkspace ? (
+      {switchWorkspace ? (
         <Button
           variant="primary"
           size="lg"
@@ -201,6 +304,48 @@ function MemberCard({ view, path }: { view: Member; path: string }) {
           <a href={tripPath}>{t('trips.join.action.open')}</a>
         </Button>
       )}
+    </>
+  )
+}
+
+function MemberCard({ view, path }: { view: Member; path: string }) {
+  const { t } = useI18n()
+  return (
+    <Card padding="lg" className="flex flex-col gap-5">
+      <h1 className="font-display text-title font-bold tracking-tight text-ink">
+        {t('trips.join.member.title')}
+      </h1>
+      <OpenTripAction
+        tripId={view.tripId}
+        organizationId={view.organizationId}
+        switchWorkspace={view.switchWorkspace}
+        path={path}
+      />
+    </Card>
+  )
+}
+
+/** What the traveller sees after their own tap, whether the answer was joined or member. */
+function JoinedCard({
+  answer,
+  path,
+}: {
+  answer: Extract<JoinAnswer, { tripId: string }>
+  path: string
+}) {
+  const { t } = useI18n()
+  return (
+    <Card padding="lg" className="flex flex-col gap-5">
+      <h1 className="font-display text-title font-bold tracking-tight text-ink">
+        {t('trips.join.joined.title')}
+      </h1>
+      <p className="text-label text-ink-2">{t('trips.join.joined.body')}</p>
+      <OpenTripAction
+        tripId={answer.tripId}
+        organizationId={answer.organizationId}
+        switchWorkspace={answer.switchWorkspace}
+        path={path}
+      />
     </Card>
   )
 }
@@ -377,23 +522,50 @@ export function JoinCard({
   view,
   path,
   onRetry,
+  onJoin,
 }: {
   view: InviteView
   /** This page's own path, so a sign-in comes back to it. */
   path: string
   onRetry: () => Promise<void>
+  /** Submits the join for this page's link. */
+  onJoin: () => Promise<JoinAnswer>
 }) {
-  return <Arrival key={view.state}>{cardFor(view, path, onRetry)}</Arrival>
+  const [joined, setJoined] = React.useState<Extract<
+    JoinAnswer,
+    { tripId: string }
+  > | null>(null)
+  if (joined)
+    return (
+      <Arrival key="joined">
+        <JoinedCard answer={joined} path={path} />
+      </Arrival>
+    )
+  return (
+    <Arrival key={view.state}>
+      {cardFor(view, path, onRetry, onJoin, setJoined)}
+    </Arrival>
+  )
 }
 
 function cardFor(
   view: InviteView,
   path: string,
   onRetry: () => Promise<void>,
+  onJoin: () => Promise<JoinAnswer>,
+  onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void,
 ): React.ReactNode {
   switch (view.state) {
     case 'invited':
-      return <InvitedCard view={view} path={path} />
+      return (
+        <InvitedCard
+          view={view}
+          path={path}
+          onJoin={onJoin}
+          onRetry={onRetry}
+          onJoined={onJoined}
+        />
+      )
     case 'member':
       return <MemberCard view={view} path={path} />
     case 'needs-workspace':

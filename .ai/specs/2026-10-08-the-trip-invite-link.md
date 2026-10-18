@@ -380,6 +380,17 @@ shared insert** and **extracts the part that must not exist twice**:
   `banned` check above is the second guard. **Email verification is not required** and adds no protection here,
   because the joiner must already be a workspace member.
 
+**Amendment (#1023).** The join landed with three differences from the text above, none of which
+changes what a visitor or an attacker can do. The named caller of `joinTripByInviteUnscoped` is
+`src/routes/join/-lib/join.ts` (the handler that takes its bindings as arguments, as `-lib/view.ts`
+does), and `-server/join.ts` is the wiring around it; the audit write takes the joiner's
+`TenantContext` from the repository result and turns it into a scope with `scopeFor(context)`. The
+answer gains `switchWorkspace`, computed on the server from the session's active workspace, so the
+card needs no extra read to choose between "Open the trip" and "Open the trip and switch
+workspace", and a fourth outcome `busy` for the per-user and per-address budgets. And a submit that
+comes back `unavailable` or `needs-workspace` reloads the page (`router.invalidate`), so the card
+that replaces the invited one is the loader's own, with the same focus move to its heading.
+
 ### The sign-in round trip (Phases 1 and 3)
 
 - The anonymous card has **one** action: **Sign in** (`loginHrefFor('/join/<secret>')`, the `?redirect=` contract

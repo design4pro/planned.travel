@@ -3,7 +3,7 @@ import { createMiddleware } from '@tanstack/react-start'
 
 import { answerBusy } from './-lib/busy'
 import { JOIN_HEADERS, joinHead } from './-lib/head'
-import { loadInvite } from './-server/join'
+import { joinTripFn, loadInvite } from './-server/join'
 import {
   Arrival,
   JoinCard,
@@ -66,6 +66,7 @@ function JoinPage() {
         view={view}
         path={joinPath(token)}
         onRetry={() => router.invalidate()}
+        onJoin={() => joinTripFn({ data: { secret: token } })}
       />
     </JoinFrame>
   )

@@ -666,16 +666,21 @@ const messages = {
   'join.title.invited': '{inviter} invited you to a trip',
   'join.requirement':
     "This link works for people who are already in {inviter}'s workspace.",
-  'join.newHere': 'New here? Ask {inviter} to add you to their workspace first.',
+  'join.newHere':
+    'New here? Ask {inviter} to add you to their workspace first.',
   'join.trip.label': 'Trip',
   'join.role.label': 'You would join as',
   'join.dates.label': 'Dates',
   'join.destination.label': 'Destination',
   'join.action.signIn': 'Sign in',
+  'join.action.join': 'Join this trip',
+  'join.action.joining': 'Joining the trip',
   'join.action.open': 'Open the trip',
   'join.action.openIn': 'Open the trip and switch workspace',
   'join.action.openIn.pending': 'Switching workspace',
   'join.loading': 'Loading the invite',
+  'join.joined.title': 'You are on the trip',
+  'join.joined.body': 'Open it to see the plan.',
   'join.member.title': 'You are already on this trip',
   'join.needsWorkspace.title':
     'This trip is in a workspace you are not part of',
@@ -694,6 +699,7 @@ const messages = {
   'join.error.title': 'We could not load this invite link',
   'join.error.retry': 'Try again',
   'join.error.busy': 'This page is busy. Try again in a minute.',
+  'join.error.join': 'Could not join. The link still works - try again.',
   'join.error.switch': 'Could not switch workspace. Try again.',
 } as const satisfies NamespaceMessages
 
