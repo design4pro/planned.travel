@@ -18,12 +18,12 @@ import { z } from 'zod'
 
 import { trail } from '#/server/audit/trail'
 import { authSecret } from '#/server/auth/env'
-import { AuthRequirementError, getSession } from '#/server/auth/session'
+import { getSession } from '#/server/auth/session'
 import { getDb } from '#/server/db/client'
 import { scopeFor } from '#/server/fns/context'
 import { workerLogger } from '#/server/observability/sentry'
 import { noteBusy } from '../-lib/busy'
-import { joinInvite } from '../-lib/join'
+import { joinInvite, joinerOf } from '../-lib/join'
 import { viewInvite } from '../-lib/view'
 
 import type { JoinAnswer } from '../-lib/join'
@@ -80,12 +80,6 @@ export const joinTripFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<JoinAnswer> => {
     setResponseHeader('cache-control', 'private, no-store')
     const session = await getSession()
-    if (!session) {
-      throw new AuthRequirementError(
-        'unauthenticated',
-        'You need to sign in to continue.',
-      )
-    }
     return joinInvite(
       {
         db: getDb(),
@@ -93,12 +87,7 @@ export const joinTripFn = createServerFn({ method: 'POST' })
         key: authSecret(),
         // The IP the platform saw, and nothing the caller can set.
         ip: getRequestHeader('cf-connecting-ip') ?? 'unknown',
-        user: {
-          id: session.user.id,
-          banned: session.user.banned,
-          impersonated: session.session.impersonatedBy !== null,
-          activeOrganizationId: session.session.activeOrganizationId,
-        },
+        user: joinerOf(session),
         audit: (context, input) => trail(scopeFor(context), input),
         log: (event, fields) => {
           const log = workerLogger(env, {

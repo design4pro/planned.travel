@@ -391,7 +391,9 @@ workspace", and a fourth outcome `busy` for the per-user and per-address budgets
 comes back `needs-workspace` reloads the page (`router.invalidate`), so the card that replaces the
 invited one is the loader's own, with the same focus move to its heading; one that comes back
 `unavailable` shows the unavailable card in place with that focus move, because the loader cannot
-see an impersonated session and a reload would hand the invited card back. `busy` is a 200 answer
+see an impersonated session and a reload would hand the invited card back. A session that ended while the card was open is a fifth answer, `signed-out`, not a
+thrown `requireUser` 401: the card redirects to sign-in and back, as the workspace switch already
+does. `busy` is a 200 answer
 of the server function, not a 429 (only the document carries a status), and the join counts its
 misses against the per-user and per-address submit budgets, not the page's miss budget.
 

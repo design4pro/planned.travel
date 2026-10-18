@@ -756,7 +756,9 @@ pages carry a `strict-origin` referrer meta so a `redirect` carrying the link is
 a `Referer`.
 
 **The join - the single write.** `joinTripFn` (`src/routes/join/-server/join.ts`, a POST) reads the
-session and refuses a missing one (`requireUser`'s rule: a 401), then hands the user to
+session and answers `signed-out` to a missing one, before any budget is spent and without a thrown
+401 (the card needs to tell a session that ended from a failure, and sends the person to sign in
+and back; the answer names nothing), then hands the user to
 `joinTripByInviteUnscoped` as `{ id, banned, impersonated }`. It acts as the joiner, with their
 role in the **link's** workspace read from `member`; the session's active workspace and anything
 the request carries are never used, so a member of two workspaces joins the right one. The order

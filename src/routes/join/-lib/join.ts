@@ -29,7 +29,37 @@ export type JoinAnswer =
     }
   | { readonly outcome: 'needs-workspace' }
   | { readonly outcome: 'unavailable' }
+  /** The session ended while the card was open: only signing in again can help. */
+  | { readonly outcome: 'signed-out' }
   | { readonly outcome: 'busy'; readonly retryAfter: number }
+
+/** The signed-in person as the join needs them. */
+export interface Joiner {
+  readonly id: string
+  readonly banned: boolean
+  readonly impersonated: boolean
+  readonly activeOrganizationId: string | null
+}
+
+/** The part of a Better Auth session the join reads. */
+interface SessionLike {
+  readonly user: { readonly id: string; readonly banned: boolean }
+  readonly session: {
+    readonly impersonatedBy: string | null
+    readonly activeOrganizationId: string | null
+  }
+}
+
+/** `null` when nobody is signed in. An impersonated session is refused by the repository. */
+export function joinerOf(session: SessionLike | null): Joiner | null {
+  if (!session) return null
+  return {
+    id: session.user.id,
+    banned: session.user.banned,
+    impersonated: session.session.impersonatedBy !== null,
+    activeOrganizationId: session.session.activeOrganizationId,
+  }
+}
 
 export interface JoinDeps {
   readonly db: Database
@@ -38,13 +68,8 @@ export interface JoinDeps {
   readonly key: string
   /** The address from `cf-connecting-ip`, or `unknown`. */
   readonly ip: string
-  /** The signed-in session as data: the server function read it and required it. */
-  readonly user: {
-    readonly id: string
-    readonly banned: boolean
-    readonly impersonated: boolean
-    readonly activeOrganizationId: string | null
-  }
+  /** The signed-in person, or `null` when the session ended: answered before any budget is spent. */
+  readonly user: Joiner | null
   /** Appends a tenant audit row for the joiner's context in the link's workspace. */
   readonly audit: (context: TenantContext, input: TrailInput) => Promise<void>
   readonly now?: () => Date
@@ -59,9 +84,11 @@ export async function joinInvite(
   deps: JoinDeps,
   secret: string,
 ): Promise<JoinAnswer> {
+  const { user } = deps
+  if (!user) return { outcome: 'signed-out' }
   const now = deps.now?.() ?? new Date()
   for (const [kind, id, ceiling] of [
-    ['join-user', deps.user.id, PER_USER],
+    ['join-user', user.id, PER_USER],
     ['join-ip', deps.ip, PER_IP],
   ] as const) {
     const retryAfter = await spendPublicBudget(
@@ -82,7 +109,7 @@ export async function joinInvite(
     deps.db,
     await hashSecret(secret),
     deps.key,
-    deps.user,
+    user,
     now,
   )
   if (
@@ -97,7 +124,7 @@ export async function joinInvite(
     outcome: result.outcome,
     tripId: result.tripId,
     organizationId: result.organizationId,
-    switchWorkspace: deps.user.activeOrganizationId !== result.organizationId,
+    switchWorkspace: user.activeOrganizationId !== result.organizationId,
   }
   if (result.outcome === 'member') {
     deps.log?.('member', {})

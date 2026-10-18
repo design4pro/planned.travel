@@ -384,6 +384,63 @@ describe('joining from the card', () => {
     expect(retry).not.toHaveBeenCalled()
   })
 
+  it('sends someone whose session ended to sign in again instead of offering a retry that cannot work', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    renderView(signedIn, noop, () => Promise.resolve({ outcome: 'signed-out' }))
+    await join()
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        `/login?redirect=${encodeURIComponent(PATH)}`,
+      ),
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+    vi.unstubAllGlobals()
+  })
+
+  it('submits once for a double click', async () => {
+    const onJoin = vi.fn(
+      () =>
+        new Promise<JoinAnswer>((resolve) =>
+          setTimeout(resolve, 20, joinedAnswer),
+        ),
+    )
+    renderView(signedIn, noop, onJoin)
+    await userEvent.dblClick(
+      screen.getByRole('button', { name: 'Join this trip' }),
+    )
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+    expect(onJoin).toHaveBeenCalledOnce()
+  })
+
+  it('joins from the keyboard like a click', async () => {
+    const onJoin = vi.fn(() => Promise.resolve(joinedAnswer))
+    renderView(signedIn, noop, onJoin)
+    screen.getByRole('button', { name: 'Join this trip' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+    expect(onJoin).toHaveBeenCalledOnce()
+  })
+
+  it('leaves the button usable when the reload brings back the same invited card', async () => {
+    const retry = vi.fn(() => Promise.resolve())
+    renderView(signedIn, retry, () =>
+      Promise.resolve({ outcome: 'needs-workspace' }),
+    )
+    await join()
+    await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    const button = await screen.findByRole('button', { name: 'Join this trip' })
+    await waitFor(() =>
+      expect(button.getAttribute('aria-busy')).not.toBe('true'),
+    )
+  })
+
   it('reloads the card when the traveller turns out not to be in the workspace', async () => {
     const retry = vi.fn(() => Promise.resolve())
     renderView(signedIn, retry, () =>

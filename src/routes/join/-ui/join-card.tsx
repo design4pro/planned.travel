@@ -106,6 +106,9 @@ function SignInAction({ path, label }: { path: string; label: MessageKey }) {
   )
 }
 
+/** A long label wraps inside a 360px card instead of running past its edge (WCAG 1.4.10). */
+const WRAPPING_LABEL = 'h-auto min-h-12 whitespace-normal py-2 text-center'
+
 type Failure = 'join' | 'busy'
 
 const FAILURE_KEYS: Record<Failure, MessageKey> = {
@@ -114,11 +117,13 @@ const FAILURE_KEYS: Record<Failure, MessageKey> = {
 }
 
 function JoinAction({
+  path,
   onJoin,
   onRetry,
   onJoined,
   onRefused,
 }: {
+  path: string
   onJoin: () => Promise<JoinAnswer>
   onRetry: () => Promise<void>
   onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
@@ -146,6 +151,11 @@ function JoinAction({
     }
     if (answer.outcome === 'busy') {
       fail('busy')
+      return
+    }
+    // The session ended while the card was open: trying again cannot work, signing in can.
+    if (answer.outcome === 'signed-out') {
+      window.location.assign(loginHrefFor(path))
       return
     }
     focusHeadingOnArrival = true
@@ -235,6 +245,7 @@ function InvitedCard({
       </p>
       {view.signedIn ? (
         <JoinAction
+          path={path}
           onJoin={onJoin}
           onRetry={onRetry}
           onJoined={onJoined}
@@ -300,6 +311,7 @@ function OpenTripAction({
           variant="primary"
           size="lg"
           block
+          className={WRAPPING_LABEL}
           loading={pending}
           loadingLabel={t('trips.join.action.openIn.pending')}
           onClick={() => void openInWorkspace()}
@@ -307,7 +319,13 @@ function OpenTripAction({
           {t('trips.join.action.openIn')}
         </Button>
       ) : (
-        <Button variant="primary" size="lg" block asChild>
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          className={WRAPPING_LABEL}
+          asChild
+        >
           <a href={tripPath}>{t('trips.join.action.open')}</a>
         </Button>
       )}

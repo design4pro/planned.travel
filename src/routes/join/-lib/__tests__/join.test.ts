@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { createTripInvite, replaceTripInvite } from '#/server/repos/invites'
 import { createTrip, listTripMembers } from '#/server/repos/trips'
-import { joinInvite } from '../join'
+import { joinInvite, joinerOf } from '../join'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { JoinDeps } from '../join'
 
@@ -180,5 +180,50 @@ describe('joinInvite', () => {
     expect(
       await joinInvite({ ...deps({ id: last }, '198.51.100.1'), now }, secret),
     ).toMatchObject({ outcome: 'busy' })
+  })
+  it('answers signed-out when the session ended, before any budget is spent or any query runs', async () => {
+    h.statements.length = 0
+    expect(
+      await joinInvite({ ...deps({ id: 'x' }), user: null }, secret),
+    ).toEqual({ outcome: 'signed-out' })
+    expect(h.statements).toHaveLength(0)
+    expect(counters.size).toBe(0)
+  })
+
+  it('gives one row and one use to two submits that race', async () => {
+    const friend = await a.addUser('Friend')
+    const answers = await Promise.all([
+      joinInvite(deps({ id: friend }), secret),
+      joinInvite(deps({ id: friend }), secret),
+    ])
+    expect(answers.map((answer) => answer.outcome).sort()).toEqual([
+      'joined',
+      'member',
+    ])
+    expect(
+      (await members()).filter((member) => member.userId === friend),
+    ).toHaveLength(1)
+    expect(audit).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('joinerOf', () => {
+  const session = (impersonatedBy: string | null) => ({
+    user: { id: 'u1', banned: false },
+    session: { impersonatedBy, activeOrganizationId: 'org-1' },
+  })
+
+  it('reads nobody from no session', () => {
+    expect(joinerOf(null)).toBeNull()
+  })
+
+  it('maps the session to the joiner, with impersonation as a flag', () => {
+    expect(joinerOf(session(null))).toEqual({
+      id: 'u1',
+      banned: false,
+      impersonated: false,
+      activeOrganizationId: 'org-1',
+    })
+    expect(joinerOf(session('admin-1'))?.impersonated).toBe(true)
   })
 })
