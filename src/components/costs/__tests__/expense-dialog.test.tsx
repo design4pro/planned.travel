@@ -743,6 +743,38 @@ describe('the people a new line of money may name, once someone has left the wor
     )
   })
 
+  it('keeps her in the split of an edited expense she shares but did not pay', () => {
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        paidBy: 'u1',
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u3', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(deeBox()?.getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('keeps her as the payer of an edited expense she has no share in', async () => {
+    const user = hand()
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        paidBy: 'u3',
+        shares: [
+          { userId: 'u1', shareMinor: 6_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+      true,
+    )
+  })
+
   it('does not offer her on an edited expense that does not carry her', async () => {
     const user = hand()
     open(undefined, {

@@ -40,6 +40,7 @@ function open(
   onOpenChange: (open: boolean) => void = () => {},
   seed: PaymentSeed | null = null,
   people: ReadonlyArray<CostsPerson> = PEOPLE,
+  withBalance?: ReadonlyArray<string>,
 ): void {
   render(
     <I18nProvider locale="en" messages={EN}>
@@ -48,6 +49,7 @@ function open(
         onOpenChange={onOpenChange}
         seed={seed}
         people={people}
+        withBalance={withBalance}
         viewerUserId="u1"
         currency="EUR"
         today="2026-10-12"
@@ -454,5 +456,28 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
     )
 
     expect((await optionsOf(user, 'Who is paying')).join('|')).toContain('Dee')
+  })
+
+  it('still offers her on the receiving side of a payment that carries her', async () => {
+    const user = hand()
+    open(
+      undefined,
+      undefined,
+      { fromUserId: 'u1', toUserId: 'u3', amountMinor: 500 },
+      WITH_LEAVER,
+    )
+
+    expect((await optionsOf(user, 'Who is being paid')).join('|')).toContain(
+      'Dee',
+    )
+  })
+
+  it('offers her on a blank payment while she still has a balance', async () => {
+    const user = hand()
+    open(undefined, undefined, null, WITH_LEAVER, ['u3'])
+
+    for (const name of ['Who is paying', 'Who is being paid']) {
+      expect((await optionsOf(user, name)).join('|')).toContain('Dee')
+    }
   })
 })

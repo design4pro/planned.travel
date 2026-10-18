@@ -80,6 +80,11 @@ export interface PaymentDialogProps {
   /** Pre-fills the form from a suggested transfer. `null` opens it blank. */
   readonly seed: PaymentSeed | null
   readonly people: ReadonlyArray<CostsPerson>
+  /**
+   * Who still has a balance on the trip. A member who left the workspace is offered for a payment
+   * only while they appear here (or on the seed): the repository accepts exactly those.
+   */
+  readonly withBalance?: ReadonlyArray<string>
   readonly viewerUserId: string
   readonly currency: string
   readonly today: string
@@ -95,6 +100,7 @@ export function PaymentDialog({
   onOpenChange,
   seed,
   people,
+  withBalance = [],
   viewerUserId,
   currency,
   today,
@@ -102,10 +108,12 @@ export function PaymentDialog({
 }: PaymentDialogProps) {
   const t = useTranslate()
   const locale = useLocale()
-  // A member who left the workspace is not offered for new money, only on a payment that carries them.
+  // A member who left the workspace is not offered for new money, only on a payment that carries
+  // them or while they still have a balance to clear.
   const offered = offeredPeople(people, [
     seed?.fromUserId ?? null,
     seed?.toUserId ?? null,
+    ...withBalance,
   ])
   const fallbackFrom = seed?.fromUserId ?? viewerUserId
   const fallbackTo =

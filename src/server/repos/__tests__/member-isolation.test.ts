@@ -2053,6 +2053,27 @@ describe('member isolation', () => {
         expect(paid.fromUserId).toBe(leaverId)
       })
 
+      it('keeps a credit they are owed payable', async () => {
+        await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const repaid = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: ownerId,
+          toUserId: leaverId,
+          amountMinor: 500,
+          settledOn: '2026-04-12',
+        })
+        expect(repaid.toUserId).toBe(leaverId)
+      })
+
       it('accepts them again once they are back in the workspace', async () => {
         await leaveWorkspace(leaverId)
         await expectRefusedWithoutNaming(

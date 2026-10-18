@@ -563,6 +563,9 @@ export function CostsScreen({
           onOpenChange={setOpen}
           seed={session.seed}
           people={data.people}
+          withBalance={data.balances
+            .filter((row) => row.balanceMinor !== 0)
+            .map((row) => row.userId)}
           viewerUserId={data.viewerUserId}
           currency={data.currency}
           today={data.today}
