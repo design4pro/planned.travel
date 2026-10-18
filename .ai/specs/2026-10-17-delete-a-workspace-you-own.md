@@ -186,9 +186,12 @@ The button being hidden is not a control; every refusal above is reached by a te
 **The product never cancels or refunds.** A workspace whose subscription would keep billing cannot be deleted:
 
 - `subscriptionBlocksWorkspaceDeletion(row)` (one pure function; the erasure spec's rule written once): blocks when the row
-  has a `provider_subscription_id`, a status of `trialing`, `active`, `past_due`, `unpaid` or `paused`, and no cancel at
-  period end. A Free row (`plan = 'free'`, no provider id), `canceled`, `incomplete`, `incomplete_expired` and a
-  subscription already set to end at the period end do not block.
+  has a `provider_subscription_id`, a status of `trialing`, `active`, `past_due` or `paused`, and no cancel at
+  period end. A Free row (`plan = 'free'`, no provider id), `canceled`, `unpaid`, `incomplete`, `incomplete_expired` and a
+  subscription already set to end at the period end do not block. `unpaid` does not block because Polar sets it when access has
+  ended: the webhook (`recordForSubscription` in `src/server/billing/webhook.ts`) already writes the Free row for it, as for
+  `canceled`, so the owner has nothing to cancel in billing, and a gate that refused on it would hold the owner with no action
+  that lifts it. (The erasure spec listed `unpaid` as blocking; its Amendment follows this rule.)
 - The mirror in D1 is fed by webhooks and can lag, so the gate also reads Polar: `GET /v1/subscriptions/` with
   `external_customer_id=<organizationId>` through the existing `PolarClient` (GET is allowed), applying the same predicate to
   what Polar returns. A Polar failure refuses with `billing-unavailable`: the row moves to `refused` like any other post-fence refusal (the ledger insert comes first, § The sequence), the fence is lifted, nothing is deleted, and the owner's retry inserts a new row.
@@ -203,8 +206,8 @@ The button being hidden is not a control; every refusal above is reached by a te
   workspace, and a refusal leaves it current); for an organization with **no `organization` row** it writes nothing and answers 200.
   A subscription that exists at Polar while the deletion is in flight is caught by the driver, not by a queue message that
   waits: the driver's `rows_deleted` step (§ The sequence) lists the organization's subscriptions at Polar
-  (`external_customer_id=<organizationId>`, so it needs no D1 row) and sets every live one that is not already ending to end at
-  the period end, with a Polar failure leaving the state where it is so the cron retries it. A subscription whose payload
+  (`external_customer_id=<organizationId>`, so it needs no D1 row) and sets every one that `subscriptionBlocksWorkspaceDeletion`
+  would block on (live and not already ending) to end at the period end, with a Polar failure leaving the state where it is so the cron retries it. A subscription whose payload
   arrives after the `organization` row is gone (the deletion finished, or the checkout completed late) is caught by the webhook:
   when the payload carries a subscription that is not ending and there is **no `organization` row**, it enqueues
   `workspace-late-subscription` (the webhook itself makes no outbound call, `webhook.ts` property 3). That handler never waits
@@ -230,14 +233,14 @@ the next state with a compare-and-set that also takes a **lease** (`lease_until`
 transition, so the request, the queue handler and the cron never run the same step together. A run that outlasts its lease
 cannot corrupt anything: every step is safe to run twice and the audit append is one `INSERT … WHERE NOT EXISTS`.
 
-| State          | Work, in order                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Next state     |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `requested`    | The row is inserted with a snapshot (plan, subscription status, trip and file-row counts) and the receipt address and name; the post-fence checks pass; delete the pending invitations; **drain** (below), in bounded runs                                                                                                                                                                                                                                      | `drained`      |
-| `drained`      | `deleteWorkspace(scope)`: the guarded statement. Then delete `billing:plan:v5:<org>` from KV                                                                                                                                                                                                                                                                                                                                                                    | `rows_deleted` |
-| `rows_deleted` | Append `platform.workspace.deleted` (`INSERT … WHERE NOT EXISTS` on the deletion id; the state advances only when the row is there); queue the receipt email (`eventId` = the deletion id) and clear the receipt address and name from the ledger; last, list the organization's subscriptions at Polar and set every live one that is not already ending to end at the period end (§ Billing, the race: a Polar failure leaves the state, so the cron retries) | `audited`      |
-| `audited`      | Sweep `WORKSPACE_R2_PREFIXES` for `<org>/`: list, delete 1,000 keys, repeat (at most 20 batches a run); when a pass finds nothing, record `swept_at`                                                                                                                                                                                                                                                                                                            | `swept`        |
-| `swept`        | Only when `swept_at` is at least 15 minutes old, sweep again and confirm nothing is left (an upload that raced the cascade, put before its row, is caught here); a run before that returns without work. Then `done_at`                                                                                                                                                                                                                                         | `done`         |
-| `refused`      | Terminal. Another member, a live subscription or an unreadable Polar answer found after the fence went up, or (a window of a few milliseconds, between a hook's ledger read and the library's member write) a member who joined during the drain. Fence lifted, logged at `error`; the owner is emailed and `platform.workspace.deletion_refused` is appended when anything had been drained                                                                    | none           |
+| State          | Work, in order                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Next state     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `requested`    | The row is inserted with a snapshot (plan, subscription status, trip and file-row counts) and the receipt address and name; the post-fence checks pass; delete the pending invitations; **drain** (below), in bounded runs                                                                                                                                                                                                                                                                                                                        | `drained`      |
+| `drained`      | `deleteWorkspace(scope)`: the guarded statement. Then delete `billing:plan:v5:<org>` from KV                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `rows_deleted` |
+| `rows_deleted` | Append `platform.workspace.deleted` (`INSERT … WHERE NOT EXISTS` on the deletion id; the state advances only when the row is there); queue the receipt email (`eventId` = the deletion id) and clear the receipt address and name from the ledger; for an `erasure` row, enqueue the `person-erasure` resume (§ The erasure resume); last, list the organization's subscriptions at Polar and set every live one that is not already ending to end at the period end (§ Billing, the race: a Polar failure leaves the state, so the cron retries) | `audited`      |
+| `audited`      | Sweep `WORKSPACE_R2_PREFIXES` for `<org>/`: list, delete 1,000 keys, repeat (at most 20 batches a run); when a pass finds nothing, record `swept_at`                                                                                                                                                                                                                                                                                                                                                                                              | `swept`        |
+| `swept`        | Only when `swept_at` is at least 15 minutes old, sweep again and confirm nothing is left (an upload that raced the cascade, put before its row, is caught here); a run before that returns without work. Then `done_at`                                                                                                                                                                                                                                                                                                                           | `done`         |
+| `refused`      | Terminal. Another member, a live subscription or an unreadable Polar answer found after the fence went up, or (a window of a few milliseconds, between a hook's ledger read and the library's member write) a member who joined during the drain. Fence lifted, logged at `error`; the owner is emailed and `platform.workspace.deletion_refused` is appended when anything had been drained                                                                                                                                                      | none           |
 
 Why **this order**: the guard and the cascade are one statement, so nothing is deleted outside the checks; the audit row is
 written after the cascade (docs/ACCESS.md §4.3: "after the mutation commits") but the ledger holds every fact it needs until
@@ -288,6 +291,17 @@ built only inside the driver and no route or server function can import it. `sco
 `TaskPermanentError` when there is none. A real owner is not enough here because the erased person's `member` row is already
 gone when the erasure initiator runs, and the memberless workspaces of #1062 have no owner at all); the request passes the
 owner's own scope.
+
+**The erasure resume.** The `person-erasure` job has five queue deliveries and no cron of its own (erasure spec, "The
+engine"), so it must never wait for a drain inside a delivery: a drain longer than those deliveries would dead-letter a banned,
+half-erased account although this driver's cron would finish the workspace. The job instead calls the driver for each
+workspace it owns and, when a ledger row has not reached `rows_deleted`, **parks**: it returns success, leaving the account
+banned and the anchor rows with their `erasure_id` (the erasure spec's incomplete-erasure state). The driver's `rows_deleted`
+step is what wakes it: for a row with `initiator = 'erasure'` it enqueues `person-erasure` with the row's `erasure_id` as a
+new envelope (`person-erasure:<erasureId>:<deletionId>`, so the 24-hour done-marker of an earlier delivery does not swallow
+it), before it advances the state. A failed enqueue leaves the state where it is, so the cron retries it, as it does the
+receipt email. The resumed job is idempotent and finds every ledger row at `rows_deleted` or later (its verification), or
+parks again for the next workspace; the console's `resumeErasureFn` remains the operator's path if a message is lost anyway.
 
 ### What survives the cascade, and for how long
 
@@ -397,7 +411,7 @@ One new global table, additive (one `CREATE TABLE`; no existing table changes; `
 
 `workspace_deletions` - `id` (pk), `organization_id` (text, not null, **no foreign key**: attribution only, as
 `provider_usage.organization_id` is, so the cascade cannot reach it), `requested_by` (`userRef`, nullable: null for an
-erasure), `initiator` (`owner` or `erasure`, `enumCheck`), `state` (`requested`, `drained`, `rows_deleted`, `audited`,
+erasure), `initiator` (`owner` or `erasure`, `enumCheck`), `erasure_id` (nullable, set only for an erasure: the erasure spec's opaque id, no person data, so the driver can resume the erasure job), `state` (`requested`, `drained`, `rows_deleted`, `audited`,
 `swept`, `done`, `refused`, `enumCheck`), `lease_until`, `attempts`, `last_error` (a short code), `snapshot` (JSON: plan,
 subscription status, counts, objects deleted), `receipt_to` and `receipt_name` (nullable, cleared when the receipt is queued),
 `requested_at`, `updated_at`, `swept_at`, `done_at`. Indexes: a **partial
@@ -632,7 +646,8 @@ prune, the audit actions and entity type with their ACCESS §4.1 / §4.2 amendme
 kind, and the `rows_deleted` step's Polar reconciliation (a live subscription that is not ending is set to end at the period end;
 a Polar failure leaves the state). **Test seam:** the driver
 through `advanceWorkspaceDeletion` with in-memory ports, killed and resumed at every state; two drivers at once; the cron path
-without a queue; a subscription that appears during the drain cancelled by the `rows_deleted` step with no queue message; a hop chain longer than the 24-hour done-marker would allow with a reused id; the `swept` second pass not
+without a queue; a subscription that appears during the drain cancelled by the `rows_deleted` step with no queue message; a hop chain longer than the 24-hour done-marker would allow with a reused id; an erasure row whose drain outlasts the
+job's five deliveries (the job parks, the `rows_deleted` step enqueues the resume, a failed enqueue is retried by the cron); the `swept` second pass not
 running before 15 minutes; the audit append written once under a lease overrun.
 
 ### Phase 7 - Request entry
@@ -661,8 +676,8 @@ Open items a person decides. This spec does not decide them and records the defa
 1. **Cancellation and refund.** Assumed: the product cancels and refunds nothing; the owner cancels in the billing portal before
    deleting; a late subscription is set to end at the period end. The owner forfeits the rest of a paid period. A `past_due`
    subscription already set to cancel at the period end can still be retried by Polar after the workspace is gone.
-   Alternatives: cancel at the period end for the owner as part of the deletion, or revoke at once for `past_due` and
-   `unpaid`; any refund or proration.
+   Alternatives: cancel at the period end for the owner as part of the deletion, or revoke at once for `past_due`;
+   any refund or proration.
 2. **What the deletion record holds and for how long.** Assumed: the audit row holds ids, the actor, counts and the plan, no
    workspace name or email, for 400 days (the table's prune); the ledger holds no content, and the workspace name and owner's
    address only until the receipt is queued, and is pruned 30 days after completion.

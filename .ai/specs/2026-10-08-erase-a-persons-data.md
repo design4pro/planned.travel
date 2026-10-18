@@ -679,9 +679,15 @@ rule). Phase 4 above builds **its slices**, not a second function: the erasure e
 `initiator: 'erasure'` for a workspace whose last member is the erased person, and the reserved system-owner scope is
 minted by #1000's driver phase, which the engine phases here are blocked by. The erasure keeps its own obligations on top of
 the driver: it captures the workspace's trip ids first (a bounded list) and resets every room with `deleteAll` (§ 7: waiting
-for the seven-day idle erase is not enough), and its verification step waits until the ledger row has reached `rows_deleted`
-(the workspace row is gone) before it counts the workspace as deleted. The subscription gate in § 7 is the same pure function
-(`subscriptionBlocksWorkspaceDeletion`). Where the two disagree, #1000 wins.
+for the seven-day idle erase is not enough), and its verification step counts a workspace as deleted only once the ledger row
+has reached `rows_deleted` (the workspace row is gone). It **does not wait for that inside a delivery**: the job has five
+deliveries and no cron of its own, so a drain that outlasts them would dead-letter a banned, half-erased account although the
+deletion cron finishes the workspace. When a row has not reached `rows_deleted` the job parks (returns success; the account
+stays banned and the anchor rows keep their `erasure_id`, the incomplete state above), and the driver's `rows_deleted` step
+enqueues the resume for the row's `erasure_id` (#1000, "The erasure resume"). The subscription gate in § 7 is the same pure
+function (`subscriptionBlocksWorkspaceDeletion`), and `unpaid` does **not** block under it: Polar sets that status when access
+has ended and the webhook already writes the Free row, so the status list in § 7 is read without `unpaid`. Where the two
+disagree, #1000 wins.
 
 ## Resolved assumptions (autonomous defaults)
 
