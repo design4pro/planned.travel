@@ -1,5 +1,6 @@
 import '#/components/ui/__tests__/test-env'
 
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -14,7 +15,7 @@ import EnUi from '#/lib/i18n/messages/en/ui'
 import { AllowancePanel } from '../allowance-panel'
 
 import type { Catalogue, Locale } from '#/lib/i18n'
-import type { VacayAllowance } from '../../-server/vacay'
+import type { AllowanceSaved, VacayAllowance } from '../../-server/vacay'
 
 const EN: Catalogue = {
   ...namespaceCatalogue('modules', EnModules),
@@ -63,6 +64,28 @@ const DEFAULT: VacayAllowance = {
   previousYear: 2025,
 }
 
+/** The route owns the replaced-balance notice; this stands in for it. */
+function Host({
+  allowance,
+  carryOverEnabled,
+}: {
+  allowance: VacayAllowance
+  carryOverEnabled: boolean
+}) {
+  const [superseded, setSuperseded] =
+    useState<AllowanceSaved['superseded']>(null)
+  return (
+    <AllowancePanel
+      planId="plan-1"
+      year={2026}
+      allowance={allowance}
+      carryOverEnabled={carryOverEnabled}
+      superseded={superseded}
+      onSupersededChange={setSuperseded}
+    />
+  )
+}
+
 function mount(
   allowance: VacayAllowance = SAVED,
   {
@@ -77,12 +100,7 @@ function mount(
 ): void {
   render(
     <I18nProvider locale={locale} messages={messages}>
-      <AllowancePanel
-        planId="plan-1"
-        year={2026}
-        allowance={allowance}
-        carryOverEnabled={carryOverEnabled}
-      />
+      <Host allowance={allowance} carryOverEnabled={carryOverEnabled} />
     </I18nProvider>,
   )
 }
@@ -449,6 +467,23 @@ describe('a failed write', () => {
     },
   )
 
+  it('reconciles instead of failing when the re-read already holds the days that was sent', async () => {
+    const user = hand()
+    // The write committed and its response was lost.
+    setAllowance.mockRejectedValue(new TypeError('Failed to fetch'))
+    loadAllowance.mockResolvedValue({ ...SAVED, entitlementDays: 30 })
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalledTimes(1))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: /^Days/ })).toBeNull()
+    expect(setAllowance).toHaveBeenCalledTimes(1)
+  })
+
   it('offers no retry when the re-read fails too, as after a refusal that arrives as unexpected', async () => {
     const user = hand()
     // `NotFoundError` and `PlanOwnerOnlyError` are not public failures, so they reach the client as
@@ -541,6 +576,7 @@ describe('a failed write', () => {
   it('puts focus back in the field after a failed Save click', async () => {
     const user = hand()
     setAllowance.mockRejectedValue(new TypeError('Failed to fetch'))
+    loadAllowance.mockResolvedValue(SAVED)
     mount()
 
     await type(user, '30')
@@ -558,6 +594,7 @@ describe('a failed write', () => {
         fail = reject
       }),
     )
+    loadAllowance.mockResolvedValue(SAVED)
     mount()
 
     await type(user, '30')
@@ -682,7 +719,8 @@ describe('the carried tile', () => {
     mount()
 
     await user.click(carriedTile())
-    await user.keyboard('{Enter}')
+    await user.clear(carriedField())
+    await user.type(carriedField(), '5{Enter}')
 
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain(
@@ -715,6 +753,22 @@ describe('the carried tile', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
   })
 
+  it('reconciles a lost response when the re-read already holds the carried figure that was sent', async () => {
+    const user = hand()
+    setAllowance.mockRejectedValue(new TypeError('Failed to fetch'))
+    loadAllowance.mockResolvedValue({ ...SAVED, carriedOverDays: 5 })
+    mount()
+
+    await user.click(carriedTile())
+    await user.clear(carriedField())
+    await user.type(carriedField(), '5{Enter}')
+
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalledTimes(1))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(setAllowance).toHaveBeenCalledTimes(1)
+  })
+
   it('does not call a failure derived when the re-read still shows an opening balance', async () => {
     const user = hand()
     setAllowance.mockRejectedValue(
@@ -726,7 +780,8 @@ describe('the carried tile', () => {
     mount()
 
     await user.click(carriedTile())
-    await user.keyboard('{Enter}')
+    await user.clear(carriedField())
+    await user.type(carriedField(), '5{Enter}')
 
     await screen.findByRole('alert')
     expect(screen.queryByText(/now calculated from/)).toBeNull()
@@ -794,6 +849,8 @@ describe('a replaced opening balance', () => {
     await user.click(screen.getByRole('button', { name: 'Dismiss' }))
 
     expect(screen.queryByText(NOTICE)).toBeNull()
+    // The dismiss button went with the notice; focus must land on a control that stays.
+    expect(document.activeElement).toBe(tile())
   })
 
   it('goes away with the next save', async () => {

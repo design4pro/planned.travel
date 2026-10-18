@@ -54,6 +54,12 @@ export interface AllowancePanelProps {
   year: number
   allowance: VacayAllowance
   carryOverEnabled: boolean
+  /**
+   * The typed opening balance the last save replaced. The route owns it, because the panel is keyed
+   * by year and the replaced year is usually the one the traveller switches to next.
+   */
+  superseded: AllowanceSaved['superseded']
+  onSupersededChange: (superseded: AllowanceSaved['superseded']) => void
 }
 
 /** The tile whose editor is open. */
@@ -76,6 +82,8 @@ export function AllowancePanel({
   year,
   allowance,
   carryOverEnabled,
+  superseded,
+  onSupersededChange,
 }: AllowancePanelProps) {
   const t = useTranslate()
   const locale = useLocale()
@@ -100,9 +108,6 @@ export function AllowancePanel({
   const [attempts, setAttempts] = useState(0)
   /** Set when a carried figure turned out to be calculated; the message is where focus goes. */
   const [derivedFrom, setDerivedFrom] = useState<number | null>(null)
-  /** The typed opening balance the last save replaced, until dismissed or the next save. */
-  const [superseded, setSuperseded] =
-    useState<AllowanceSaved['superseded']>(null)
 
   const tileRefs = {
     entitlement: useRef<HTMLButtonElement>(null),
@@ -121,7 +126,9 @@ export function AllowancePanel({
     } else if (restoreFocus.current !== null) {
       const field = restoreFocus.current
       restoreFocus.current = null
-      tileRefs[field].current?.focus()
+      // The carried tile is gone when another tab switched carry-over off while its editor was open.
+      const target = tileRefs[field].current ?? tileRefs.entitlement.current
+      target?.focus()
     }
     // The refs are stable objects; only the open editor decides where focus goes.
   }, [editing])
@@ -157,6 +164,12 @@ export function AllowancePanel({
     setEditing(null)
   }
 
+  /** The button that dismissed the notice goes with it, so focus returns to a tile that stays. */
+  function dismissSuperseded(): void {
+    onSupersededChange(null)
+    tileRefs.entitlement.current?.focus()
+  }
+
   function release(): void {
     inflight.current = false
     setPending(false)
@@ -177,7 +190,7 @@ export function AllowancePanel({
     setPending(true)
     setSaved(false)
     setProblem(null)
-    setSuperseded(null)
+    onSupersededChange(null)
     let result: AllowanceSaved | undefined
     try {
       result = await setAllowanceFn({
@@ -190,13 +203,13 @@ export function AllowancePanel({
         },
       })
     } catch (cause) {
-      await fail(cause, field)
+      await fail(cause, field, days)
       return
     }
 
     try {
       await router.invalidate()
-      setSuperseded(result?.superseded ?? null)
+      onSupersededChange(result?.superseded ?? null)
       setSaved(true)
       close()
     } finally {
@@ -204,12 +217,29 @@ export function AllowancePanel({
     }
   }
 
-  async function fail(cause: unknown, field: Field): Promise<void> {
+  async function fail(
+    cause: unknown,
+    field: Field,
+    days: number,
+  ): Promise<void> {
     const failure = readPublicFailure(cause)
     const unexpected = failure.kind === 'unexpected'
     // Not found, owner only and "this year is calculated" all arrive as `unexpected` too: only a
     // figure that still reads can be written again, and only a re-read tells the refusals apart.
     const fresh = unexpected ? await reread() : null
+
+    // A lost response does not prove the write failed: when the re-read already holds the figure
+    // that was sent, the save landed, so reconcile to it instead of calling it a failure.
+    if (fresh !== null && landed(fresh, field, days)) {
+      try {
+        await router.invalidate()
+        setSaved(true)
+        close()
+      } finally {
+        release()
+      }
+      return
+    }
 
     if (field === 'carried' && fresh !== null && !fresh.openingBalance) {
       // The tile is no longer a button, so the editor closes without taking focus back to it.
@@ -233,6 +263,12 @@ export function AllowancePanel({
     })
     release()
     inputRef.current?.focus()
+  }
+
+  function landed(fresh: VacayAllowance, field: Field, days: number): boolean {
+    return field === 'carried'
+      ? fresh.openingBalance && fresh.carriedOverDays === days
+      : fresh.hasRow && fresh.entitlementDays === days
   }
 
   async function reread(): Promise<VacayAllowance | null> {
@@ -361,7 +397,7 @@ export function AllowancePanel({
           </Alert>
         )}
         {superseded === null ? null : (
-          <Alert tone="info" size="sm" onDismiss={() => setSuperseded(null)}>
+          <Alert tone="info" size="sm" onDismiss={dismissSuperseded}>
             {t('modules.vacay.allowance.superseded', {
               count: superseded.was,
               year: superseded.year,
