@@ -475,6 +475,41 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Časy zastávky uloženy',
   'plan.place.toast.deleted': 'Místo smazáno',
   'plan.pin.toast.moved': '{name} připnuto',
+  'join.page.title': 'Odkaz s pozvánkou na cestu',
+  'join.page.description':
+    'Otevřete tento odkaz a připojte se ke sdílené cestě v planned.travel.',
+  'join.title.invited': '{inviter} vás zve na cestu',
+  'join.requirement':
+    'Tento odkaz funguje pro lidi, kteří už jsou v prostoru uživatele {inviter}.',
+  'join.newHere':
+    'Jste tu poprvé? Nejdřív požádejte {inviter}, ať vás přidá do prostoru.',
+  'join.trip.label': 'Cesta',
+  'join.role.label': 'Připojíte se jako',
+  'join.dates.label': 'Termín',
+  'join.destination.label': 'Cíl cesty',
+  'join.action.signIn': 'Přihlásit se',
+  'join.action.open': 'Otevřít cestu',
+  'join.action.openIn': 'Otevřít cestu a přepnout prostor',
+  'join.action.openIn.pending': 'Přepínám prostor',
+  'join.loading': 'Načítám pozvánku',
+  'join.member.title': 'Na této cestě už jste',
+  'join.needsWorkspace.title': 'Tato cesta je v prostoru, ve kterém nejste',
+  'join.needsWorkspace.body':
+    'Nejdřív požádejte {inviter}, ať vás přidá do prostoru, a pak tento odkaz otevřete znovu.',
+  'join.needsWorkspace.signedInAs':
+    'Jste přihlášeni jako {email}. Řekněte {inviter}, ať použije tuto adresu.',
+  'join.needsWorkspace.acceptFirst':
+    'Pokud už máte e-mail s pozvánkou do prostoru, nejdřív ji přijměte a pak tento odkaz otevřete znovu.',
+  'join.needsWorkspace.otherAccount': 'Přihlásit se jiným účtem',
+  'join.unavailable.title': 'Tento odkaz s pozvánkou není dostupný',
+  'join.unavailable.body':
+    'Odkaz mohl být nahrazen nebo vypnut. Požádejte toho, kdo vám ho poslal, o nový.',
+  'join.unavailable.signIn': 'Přihlásit se',
+  'join.unavailable.trips': 'Přejít na vaše cesty',
+  'join.error.title': 'Tento odkaz s pozvánkou se nepodařilo načíst',
+  'join.error.retry': 'Zkusit znovu',
+  'join.error.busy': 'Stránka je teď vytížená. Zkuste to znovu za minutu.',
+  'join.error.switch': 'Prostor se nepodařilo přepnout. Zkuste to znovu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

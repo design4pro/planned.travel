@@ -17,6 +17,7 @@ const callers: Record<string, string> = {
     'src/routes/_app/console/-server/account-billing.ts',
   findLiveFeedByDigestUnscoped: 'src/server/public/calendar-feed.ts',
   findLiveTripInviteByDigestUnscoped: 'src/server/public/trip-invite.ts',
+  readInvitePreviewUnscoped: 'src/server/public/trip-invite.ts',
 }
 
 /** Resolve symbols rather than spelling: an alias or a barrel must retain its provenance. */
@@ -143,7 +144,7 @@ function inspect(project: Project, allowed: Record<string, string>) {
 }
 
 describe('Unscoped repository contract', () => {
-  it('finds all seven exceptions, their real callers and their plain Database parameters', () => {
+  it('finds all eight exceptions, their real callers and their plain Database parameters', () => {
     const result = withProgram({}, (project) => inspect(project, callers))
     expect(result.discovered).toEqual(Object.keys(callers).sort())
     expect(result.imported).toEqual(Object.keys(callers).sort())

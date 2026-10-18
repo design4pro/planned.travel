@@ -1,8 +1,10 @@
 /**
- * Unscoped exception: findLiveTripInviteByDigestUnscoped takes Database for a digest point lookup.
- * Its sole production caller is src/server/public/trip-invite.ts. It returns coordinates only
- * (link id, workspace, trip, granted role, rotation, creator), never tenant content, the secret or
- * the digest. Everything after it reads through a scope built from a verified workspace membership.
+ * Unscoped exceptions: findLiveTripInviteByDigestUnscoped and readInvitePreviewUnscoped take Database
+ * for a digest point lookup. Their sole production caller is src/server/public/trip-invite.ts. They
+ * return coordinates and a column-whitelisted preview only (never the secret, the digest, the
+ * workspace's name or an email), and the preview reads through a scope built inside this module from
+ * the resolved link. A signed-in viewer is passed in as data by the server function that owns the
+ * session; nothing under src/server/public reads one.
  */
 /**
  * The trip invite link: one rotating link per trip that puts members of the trip's workspace on the
@@ -59,7 +61,12 @@ import {
   deriveSecret,
   hashSecret,
 } from '#/server/security/secret'
-import { allOf, createTenantRepository, tenantFilter } from './base'
+import {
+  allOf,
+  createScope,
+  createTenantRepository,
+  tenantFilter,
+} from './base'
 import { NotFoundError } from './context'
 import { TripArchivedError, assertTripRole, requireTrip } from './trips'
 import { idSchema } from './validation'
@@ -251,6 +258,150 @@ export async function findLiveTripInviteByDigestUnscoped(
   )
   if ((await hashSecret(derived)) !== digest) return null
   return { ...row, role: role.data }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The preview a visitor sees
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Who is looking: the id and ban flag of a signed-in session, or `null` for a stranger. */
+export interface InviteViewer {
+  readonly id: string
+  readonly banned: boolean
+}
+
+/**
+ * What a visitor may learn from an invite link, by who they are. The anonymous `invited` answer is a
+ * whitelist of five fields; dates and destination travel only to a member of the link's workspace.
+ * Nothing here names the workspace, the inviter's email or any id except `member`'s coordinates.
+ */
+export type InvitePreview =
+  | {
+      readonly state: 'invited'
+      readonly tripTitle: string
+      readonly inviterName: string
+      readonly inviterImage: string | null
+      readonly role: TripInviteRole
+      readonly startDate?: string | null
+      readonly endDate?: string | null
+      readonly destination?: string | null
+    }
+  | {
+      readonly state: 'member'
+      readonly tripId: string
+      readonly organizationId: string
+    }
+  | {
+      readonly state: 'needs-workspace'
+      readonly tripTitle: string
+      readonly inviterName: string
+    }
+  | { readonly state: 'unavailable' }
+
+const UNAVAILABLE: InvitePreview = Object.freeze({ state: 'unavailable' })
+
+/**
+ * Reads a live link's preview for one visitor. It is a read: nothing is written, not even
+ * `use_count`. The link is resolved again here from its digest and the current key, so the answer
+ * never rests on anything a caller remembers, and a dead link of any kind - or a banned viewer - is
+ * the same `unavailable`.
+ *
+ * The trip is read through the creator's scope rather than the viewer's: a private trip is invisible
+ * to a workspace member who is not on it yet (ADR 0007), and the invite is exactly what lets them
+ * see its title. The scope is built here, inside the repository, and never leaves it.
+ */
+export async function readInvitePreviewUnscoped(
+  db: Database,
+  digest: string,
+  key: string,
+  viewer: InviteViewer | null,
+  now = new Date(),
+): Promise<InvitePreview> {
+  if (viewer?.banned) return UNAVAILABLE
+  const invite = await findLiveTripInviteByDigestUnscoped(db, digest, key, now)
+  if (!invite) return UNAVAILABLE
+
+  const scope = createScope(db, {
+    organizationId: invite.organizationId,
+    userId: invite.createdBy,
+    role: 'member',
+  })
+  const [row] = await db
+    .select({
+      tripTitle: trips.title,
+      startDate: trips.startDate,
+      endDate: trips.endDate,
+      destination: trips.destination,
+      inviterName: user.name,
+      inviterImage: user.image,
+    })
+    .from(trips)
+    .innerJoin(user, eq(user.id, invite.createdBy))
+    .where(tenantFilter(scope, trips, eq(trips.id, invite.tripId)))
+    .limit(1)
+  if (!row) return UNAVAILABLE
+
+  if (viewer === null) {
+    return {
+      state: 'invited',
+      tripTitle: row.tripTitle,
+      inviterName: row.inviterName,
+      inviterImage: row.inviterImage,
+      role: invite.role,
+    }
+  }
+
+  // The viewer's standing in the link's workspace, read from `member` for that workspace and no
+  // other: the session's active workspace has nothing to say about this link.
+  const [membership] = await db
+    .select({ present: sql`1` })
+    .from(member)
+    .where(
+      and(
+        eq(member.organizationId, invite.organizationId),
+        eq(member.userId, viewer.id),
+        inArray(member.role, [...ORGANIZATION_ROLES]),
+      ),
+    )
+    .limit(1)
+  if (!membership) {
+    return {
+      state: 'needs-workspace',
+      tripTitle: row.tripTitle,
+      inviterName: row.inviterName,
+    }
+  }
+
+  const [onTrip] = await db
+    .select({ present: sql`1` })
+    .from(tripMembers)
+    .where(
+      tenantFilter(
+        scope,
+        tripMembers,
+        eq(tripMembers.tripId, invite.tripId),
+        eq(tripMembers.userId, viewer.id),
+      ),
+    )
+    .limit(1)
+  if (onTrip) {
+    return {
+      state: 'member',
+      tripId: invite.tripId,
+      organizationId: invite.organizationId,
+    }
+  }
+
+  return {
+    state: 'invited',
+    tripTitle: row.tripTitle,
+    inviterName: row.inviterName,
+    inviterImage: row.inviterImage,
+    role: invite.role,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    destination: row.destination,
+  }
 }
 
 /* -------------------------------------------------------------------------------------------------

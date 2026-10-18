@@ -477,6 +477,43 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Orari della tappa salvati',
   'plan.place.toast.deleted': 'Luogo eliminato',
   'plan.pin.toast.moved': '{name} fissato',
+  'join.page.title': 'Link di invito al viaggio',
+  'join.page.description':
+    'Apri questo link per unirti a un viaggio condiviso su planned.travel.',
+  'join.title.invited': '{inviter} ti invita a un viaggio',
+  'join.requirement':
+    'Questo link funziona per chi è già nello spazio di lavoro di {inviter}.',
+  'join.newHere':
+    'Prima volta qui? Chiedi a {inviter} di aggiungerti prima al suo spazio di lavoro.',
+  'join.trip.label': 'Viaggio',
+  'join.role.label': 'Ti uniresti come',
+  'join.dates.label': 'Date',
+  'join.destination.label': 'Destinazione',
+  'join.action.signIn': 'Entra',
+  'join.action.open': 'Apri il viaggio',
+  'join.action.openIn': 'Apri il viaggio e cambia spazio di lavoro',
+  'join.action.openIn.pending': 'Cambio di spazio di lavoro',
+  'join.loading': 'Caricamento dell’invito',
+  'join.member.title': 'Fai già parte di questo viaggio',
+  'join.needsWorkspace.title':
+    'Questo viaggio è in uno spazio di lavoro di cui non fai parte',
+  'join.needsWorkspace.body':
+    'Chiedi a {inviter} di aggiungerti prima al suo spazio di lavoro, poi riapri questo link.',
+  'join.needsWorkspace.signedInAs':
+    'Hai effettuato l’accesso come {email}. Di’ a {inviter} di usare questo indirizzo.',
+  'join.needsWorkspace.acceptFirst':
+    'Se hai già un’email di invito a uno spazio di lavoro, accettala prima, poi riapri questo link.',
+  'join.needsWorkspace.otherAccount': 'Entra con un altro account',
+  'join.unavailable.title': 'Questo link di invito non è disponibile',
+  'join.unavailable.body':
+    'Il link potrebbe essere stato sostituito o disattivato. Chiedine uno nuovo a chi te lo ha inviato.',
+  'join.unavailable.signIn': 'Entra',
+  'join.unavailable.trips': 'Vai ai tuoi viaggi',
+  'join.error.title': 'Non siamo riusciti a caricare questo link di invito',
+  'join.error.retry': 'Riprova',
+  'join.error.busy': 'Questa pagina è occupata. Riprova tra un minuto.',
+  'join.error.switch':
+    'Non è stato possibile cambiare spazio di lavoro. Riprova.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
