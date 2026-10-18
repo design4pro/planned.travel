@@ -300,6 +300,16 @@ link id and the outcome, never the path or the secret (a test pins it). The thre
 `<meta name="referrer" content="strict-origin">` so same-origin requests from them do not carry the query string.
 A test pins each redaction in `src/lib/__tests__/sentry-scrub.test.ts`.
 
+**Amendment (#1021).** The Phase 3 ticket found two premises out of date. `beforeSend`, `beforeSendTransaction`,
+`beforeSendSpan` and `beforeSendLog` were already wired in both setups (`scrubTelemetry` redacted the calendar
+feed path); only `beforeBreadcrumb` and the replay hooks were missing. And `beforeAddRecordingEvent` sees only the
+SDK's custom events: the DOM recorder's Meta `href` and link attributes cannot be redacted, so the replay
+residual is closed by `/join/$token` (#1022) not being recorded, on the join path and on the sign-in pages that
+carry a join `redirect`, rather than by the scrub. The route parameter the TanStack Router integration copies
+into span attributes (`url.path.params.token`) is redacted by key.
+The placeholder is one fixed `/join/[redacted]` (and `%2Fjoin%2F[redacted]`) on every channel, transaction and span names included, rather than the route template: Sentry groups them the same way and the secret never survives in any shape. Feedback and `replay_event` events bypass every `beforeSend*` hook, so the browser entry routes them through the scrub with a client event processor.
+`/two-factor` also receives the `redirect` (login hands over to it after a password sign-in), so it carries the `strict-origin` referrer meta with the other three sign-in pages.
+
 **i18n of the surface.** `/join` needs no new locale work: the root loader already negotiates it (`__root.tsx:86`) server-side, before
 first paint, from `Accept-Language` for an anonymous visitor and the stored preference for a signed-in one, with
 `<html lang dir>` set. The `ar` card is designed in RTL (only the URL element is forced `dir="ltr"`).
