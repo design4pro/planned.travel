@@ -1650,10 +1650,10 @@ pnpm exec wrangler queues info planned-travel-tasks-dlq
 pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<id>"
 
 # …and the full body the handler choked on. Its key carries the failure date, which is the
-# `failedAt` from the summary above. Only the KV summary expires after 14 days; the R2 body
-# outlives it and nothing prunes `dead-letter/`. Past that window the summary is gone and there
-# is no `wrangler r2 object list`, so the body is reachable only by an operator who kept the
-# <id> — copy it out of the listing while investigating, or the object is effectively orphaned.
+# `failedAt` from the summary above. The KV summary expires after 14 days, and the weekly
+# retention slot (`17 4 * * 1`) deletes the R2 body once it is older than
+# `DEAD_LETTER_RETENTION_DAYS` (14 when unset; a value that is not a positive whole number is
+# ignored). Past that window both are gone, so copy the body out while investigating.
 pnpm exec wrangler r2 object get \
   "planned-travel-files/dead-letter/<YYYY-MM-DD>/<id>.json" --file ./dead-task.json --remote
 

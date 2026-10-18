@@ -658,7 +658,8 @@ Open items a person decides. This spec does not decide them and records the defa
 
 1. The **deletion window** placeholder on the privacy page, and whether a **grace window** is wanted before the job runs
    (assumed: none; the job starts at once).
-2. The **backup window** and the **log retention period** (including Sentry and dead letters).
+2. The **backup window** and the **log retention period** (including Sentry and dead letters). Dead letters ship with
+   a default of **14 days** (`DEAD_LETTER_RETENTION_DAYS`, the lifetime of their KV summary); the owner confirms or changes it.
 3. How long **tenant audit rows** and their personal fields are kept (the prune has no caller), and whether the 400-day
    `platform_audit_log` may keep **name and email** in `platform.user.*` rows after an erasure (assumed: yes, until the prune).
 4. The **legal basis** for keeping anything: settlements and expenses as shared records, the platform ledger, invoices and tax records.
@@ -718,3 +719,24 @@ gated the ticket (`risk-high`):
   the marker written by the message that finds no workspace left.
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
   that builds their sweep.
+
+## Amendment - phase 7 (issue #1055)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`):
+
+- **Dead letters: 14 days by default.** The weekly retention slot deletes `dead-letter/` objects older
+  than `DEAD_LETTER_RETENTION_DAYS` (unset or invalid means 14, the lifetime of the KV summary), by the
+  object's `uploaded` time, at most 20 listing pages per run. It does not touch `exports/` or backups:
+  that half of the slot still logs "cron half has no handler yet".
+- **Existing soft-deleted messages are cleared by migration `0020_clear_deleted_message_bodies`**
+  (authored data SQL in a drizzle-kit custom file, like 0002 and 0010), and `deleteMessage` now clears
+  the body in the same write. `body` is `NOT NULL`, so the cleared value is the empty string. An edit
+  of a deleted message is refused.
+- **A deploy-window gap remains.** A message the previous Worker soft-deletes between the migration and
+  the new deploy keeps its body; `clearDeletedMessageBodies(scope)` is the per-workspace pass for it and
+  has no production caller yet. The Phase 3 collaboration scrub clears such a row only for an erased person.
+- **Remaining copy, not changed here:** a chat preview already copied into `notifications.body_params.preview`
+  survives a message delete; it belongs to the erasure phases.
+- **`logAuth` no longer writes `to`** on `email.queued` and `email.queue_failed`; no hash, domain or
+  masked form replaces it.

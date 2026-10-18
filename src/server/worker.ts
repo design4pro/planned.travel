@@ -23,6 +23,10 @@ import { rollUpProviderUsage } from './catalog/provider-usage'
 import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
 import {
+  pruneDeadLetters,
+  resolveDeadLetterRetentionDays,
+} from './queue/dead-letter-retention'
+import {
   SandcastleRegistry as UninstrumentedSandcastleRegistry,
   TripRoom as UninstrumentedTripRoom,
 } from './do'
@@ -132,13 +136,14 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         await sweepReminders(bindings, logger, controller.scheduledTime)
         return
       case RETENTION_CRON:
-        // This slot has three jobs, and one of them is still not written.
+        // This slot has four jobs, and one half of it is still not written.
         //
-        // Not written: the R2 half this expression was registered for. `wrangler.jsonc` documents
-        // `17 4 * * 1` as the weekly retention prune of expired backups and export artifacts, and
-        // `BACKUP_RETENTION_DAYS` is a declared var nothing acts on. Adding the audit prune beside it
-        // must not make that gap invisible in Workers Observability, so the warn the branch carried
-        // before this handler existed stays — one line per week, naming the half that is missing.
+        // Not written: the backup and export artifact half this expression was registered for.
+        // `wrangler.jsonc` documents `17 4 * * 1` as the weekly retention prune of expired backups
+        // and export artifacts, and `BACKUP_RETENTION_DAYS` is a declared var nothing acts on.
+        // Adding the jobs beside it must not make that gap invisible in Workers Observability, so
+        // the warn the branch carried before this handler existed stays — one line per week, naming
+        // the half that is missing.
         //
         // It is emitted *first* for a reason that is not stylistic: the prune is the one function in
         // that module documented as able to reject, so a warn sequenced after it would go missing in
@@ -148,16 +153,16 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
           pending: 'backup and export artifact retention',
           retentionDays: env.BACKUP_RETENTION_DAYS,
         })
-        // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3), and the weekly
-        // fold of hourly `provider_usage` rows into their month rows. Each acts as an explicit
-        // `system` actor and logs its own row count and `drained` flag, so there is nothing to
-        // report here that the two writers have not already emitted.
+        // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3), the weekly fold
+        // of hourly `provider_usage` rows into their month rows, and the retention of `dead-letter/`
+        // objects (`DEAD_LETTER_RETENTION_DAYS`, 14 by default). Each logs its own counts, so there
+        // is nothing to report here that the writers have not already emitted.
         //
         // They run together rather than in sequence, and that is not a micro-optimisation. The
         // audit prune is documented as able to reject, so an `await` chain would silently skip
         // whatever followed it in exactly the week this slot is unhealthy — the same argument the
-        // warn above is emitted first for. `allSettled` runs both and then rethrows the first
-        // rejection, so neither job can hide the other and a failure is still the slot's failure.
+        // warn above is emitted first for. `allSettled` runs all of them and then rethrows the first
+        // rejection, so no job can hide another and a failure is still the slot's failure.
         //
         // A fourth cron expression for the rollup was available and refused: this file and
         // `wrangler.jsonc` both state there are exactly three on production, and a new one would
@@ -168,6 +173,12 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
           const outcomes = await Promise.allSettled([
             prunePlatformAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
             rollUpProviderUsage(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
+            pruneDeadLetters(bindings.FILES, logger, {
+              now,
+              retentionDays: resolveDeadLetterRetentionDays(
+                bindings.DEAD_LETTER_RETENTION_DAYS,
+              ),
+            }),
           ])
           const failed = outcomes.find(
             (outcome) => outcome.status === 'rejected',
