@@ -200,17 +200,22 @@ The button being hidden is not a control; every refusal above is reached by a te
   `createCheckout` and `changePlan` refuse for that organization. The webhook never holds an event back: Polar does not resend an
   event it got a 200 for, so a mirror write skipped during the window would be lost for good after a refusal. For an organization
   whose `organization` row exists it writes the mirror as usual, ledgered or not (the cascade removes the mirror with the
-  workspace, and a refusal leaves it current); for an organization with **no `organization` row** it writes nothing and answers 200. When the payload carries a subscription that is not ending and the organization has a live ledger row or no
-  `organization` row, the webhook enqueues `workspace-late-subscription` (the webhook itself makes no outbound call, `webhook.ts`
-  property 3). Before the write its handler reads the ledger: a live row with the `organization` row still present means the
-  deletion has not resolved, so it throws `TaskRetryableError`; a `refused` row or no row with the `organization` row present
-  means the owner kept the workspace and the subscription, so it drops the task; the `organization` row absent means the
-  workspace is gone, so it calls `PATCH /v1/subscriptions/{id}` with `{ cancel_at_period_end: true }` (an undoable write the `PolarClient` already
+  workspace, and a refusal leaves it current); for an organization with **no `organization` row** it writes nothing and answers 200.
+  A subscription that exists at Polar while the deletion is in flight is caught by the driver, not by a queue message that
+  waits: the driver's `rows_deleted` step (§ The sequence) lists the organization's subscriptions at Polar
+  (`external_customer_id=<organizationId>`, so it needs no D1 row) and sets every live one that is not already ending to end at
+  the period end, with a Polar failure leaving the state where it is so the cron retries it. A subscription whose payload
+  arrives after the `organization` row is gone (the deletion finished, or the checkout completed late) is caught by the webhook:
+  when the payload carries a subscription that is not ending and there is **no `organization` row**, it enqueues
+  `workspace-late-subscription` (the webhook itself makes no outbound call, `webhook.ts` property 3). That handler never waits
+  for a deletion: it re-reads the `organization` row, drops the task when the row exists (the workspace is kept, or the
+  deletion is still in flight and its `rows_deleted` step will see the subscription), and when the row is absent calls
+  `PATCH /v1/subscriptions/{id}` with `{ cancel_at_period_end: true }` (an undoable write the `PolarClient` already
   allows; never `DELETE`, never a refund), treats 403 and 404 as done, retries 409, 429 and 5xx, and logs at `error` so a
-  person sees it. This is the single Polar write this spec adds. The handler needs Polar credentials, which the queue
-  consumer does not carry today: `TaskBindings` and `TaskSecrets` (`src/server/queue/types.ts`) gain the `POLAR_*` fields, the
-  billing task union that the webhook enqueues through gains the new member and its envelope mapping, and the call goes
-  through `context.callProvider` like every outbound provider call. The guard that makes the webhook answer 200 for an
+  person sees it. Both paths make the same single Polar write, which this spec adds. The handler needs Polar credentials, which
+  the queue consumer does not carry today: `TaskBindings` and `TaskSecrets` (`src/server/queue/types.ts`) gain the `POLAR_*`
+  fields, the billing task union that the webhook enqueues through gains the new member and its envelope mapping, and the call
+  goes through `context.callProvider` like every outbound provider call. The guard that makes the webhook answer 200 for an
   organization that does not exist fixes a bug that exists today and ships on its own, before any of this.
 - The Polar customer record and its email are kept (the erasure spec's decision; tax records).
 
@@ -225,14 +230,14 @@ the next state with a compare-and-set that also takes a **lease** (`lease_until`
 transition, so the request, the queue handler and the cron never run the same step together. A run that outlasts its lease
 cannot corrupt anything: every step is safe to run twice and the audit append is one `INSERT … WHERE NOT EXISTS`.
 
-| State          | Work, in order                                                                                                                                                                                                                                                                                                                                                                               | Next state     |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| `requested`    | The row is inserted with a snapshot (plan, subscription status, trip and file-row counts) and the receipt address and name; the post-fence checks pass; delete the pending invitations; **drain** (below), in bounded runs                                                                                                                                                                   | `drained`      |
-| `drained`      | `deleteWorkspace(scope)`: the guarded statement. Then delete `billing:plan:v5:<org>` from KV                                                                                                                                                                                                                                                                                                 | `rows_deleted` |
-| `rows_deleted` | Append `platform.workspace.deleted` (`INSERT … WHERE NOT EXISTS` on the deletion id; the state advances only when the row is there); queue the receipt email (`eventId` = the deletion id) and clear the receipt address and name from the ledger                                                                                                                                            | `audited`      |
-| `audited`      | Sweep `WORKSPACE_R2_PREFIXES` for `<org>/`: list, delete 1,000 keys, repeat (at most 20 batches a run); when a pass finds nothing, record `swept_at`                                                                                                                                                                                                                                         | `swept`        |
-| `swept`        | Only when `swept_at` is at least 15 minutes old, sweep again and confirm nothing is left (an upload that raced the cascade, put before its row, is caught here); a run before that returns without work. Then `done_at`                                                                                                                                                                      | `done`         |
-| `refused`      | Terminal. Another member, a live subscription or an unreadable Polar answer found after the fence went up, or (a window of a few milliseconds, between a hook's ledger read and the library's member write) a member who joined during the drain. Fence lifted, logged at `error`; the owner is emailed and `platform.workspace.deletion_refused` is appended when anything had been drained | none           |
+| State          | Work, in order                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Next state     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `requested`    | The row is inserted with a snapshot (plan, subscription status, trip and file-row counts) and the receipt address and name; the post-fence checks pass; delete the pending invitations; **drain** (below), in bounded runs                                                                                                                                                                                                                                      | `drained`      |
+| `drained`      | `deleteWorkspace(scope)`: the guarded statement. Then delete `billing:plan:v5:<org>` from KV                                                                                                                                                                                                                                                                                                                                                                    | `rows_deleted` |
+| `rows_deleted` | Append `platform.workspace.deleted` (`INSERT … WHERE NOT EXISTS` on the deletion id; the state advances only when the row is there); queue the receipt email (`eventId` = the deletion id) and clear the receipt address and name from the ledger; last, list the organization's subscriptions at Polar and set every live one that is not already ending to end at the period end (§ Billing, the race: a Polar failure leaves the state, so the cron retries) | `audited`      |
+| `audited`      | Sweep `WORKSPACE_R2_PREFIXES` for `<org>/`: list, delete 1,000 keys, repeat (at most 20 batches a run); when a pass finds nothing, record `swept_at`                                                                                                                                                                                                                                                                                                            | `swept`        |
+| `swept`        | Only when `swept_at` is at least 15 minutes old, sweep again and confirm nothing is left (an upload that raced the cascade, put before its row, is caught here); a run before that returns without work. Then `done_at`                                                                                                                                                                                                                                         | `done`         |
+| `refused`      | Terminal. Another member, a live subscription or an unreadable Polar answer found after the fence went up, or (a window of a few milliseconds, between a hook's ledger read and the library's member write) a member who joined during the drain. Fence lifted, logged at `error`; the owner is emailed and `platform.workspace.deletion_refused` is appended when anything had been drained                                                                    | none           |
 
 Why **this order**: the guard and the cascade are one statement, so nothing is deleted outside the checks; the audit row is
 written after the cascade (docs/ACCESS.md §4.3: "after the mutation commits") but the ledger holds every fact it needs until
@@ -487,7 +492,7 @@ Each failure point has an automatic recovery and a test case; no row of this tab
 | Queue message lost, swallowed or dead-lettered         | Nothing drives the row                                                                              | The cron drives it directly                                                                                       |
 | Two drivers at once (request, queue, cron)             | Both try the same step                                                                              | The lease and compare-and-set: one runs, the other returns                                                        |
 | Owner double-clicks, or two tabs                       | Second request                                                                                      | The partial unique index returns the existing ledger row; same answer, no second deletion                         |
-| Late Polar webhook for the deleted workspace           | Acknowledged, nothing written; a subscription not ending is set to end at the period end            | `workspace-late-subscription` retries; an `error` log reaches a person                                            |
+| Late Polar webhook for the deleted workspace           | Acknowledged, nothing written; a subscription not ending is set to end at the period end            | The `workspace-late-subscription` handler cancels at once (it never waits); an `error` log reaches a person       |
 | Receipt email fails                                    | The email queue retries it (its own idempotency key)                                                | None needed; the deletion does not wait for it                                                                    |
 
 ## 📝 Observability
@@ -537,7 +542,7 @@ subscription), a schema addition, shared contracts (the queue envelope, the Bett
 - **Backward compatibility** (BACKWARD_COMPATIBILITY.md): the migration is one new table; the queue union only gains kinds,
   producers ship a release after the handlers, and the one new server function is new, so its required fields break no old tab; the `requireOrg` change widens what a request survives; no D1 table is recreated.
 - **Data loss is the feature**, so every slice's refusals are tested before its happy path, and the guard is one statement.
-- **Cost:** one Polar `GET` per deletion attempt, R2 list and delete calls proportional to the workspace's objects, two cron
+- **Cost:** one Polar `GET` per deletion attempt and one at the `rows_deleted` step, R2 list and delete calls proportional to the workspace's objects, two cron
   reads a tick (an indexed `state, updated_at` query that returns nothing in the steady state).
 - **Residuals stated:** trip-room storage up to seven days (idle alarm); Workers logs and Sentry keep ids until their own
   retention; the Polar customer and tax records are kept; a refund is a person's decision.
@@ -558,7 +563,7 @@ cancelling or refunding a subscription on the owner's behalf; a notice window an
 | 3     | The shared resolve-or-provision (atomic, skips a banned user) used by `requireOrg` and `loadShell`                                                                                                                                             | none                           | Deleting a workspace can no longer strand a person                                             |
 | 4     | `deletePrefix` (the `ObjectStore` port gains `list`), `WORKSPACE_R2_PREFIXES` and the key-family drift test                                                                                                                                    | none                           | A workspace's objects can be swept and the list cannot drift                                   |
 | 5     | Billing: the webhook guard for an unknown organization (ships on its own, fixes a live bug), the gate, the Polar `GET`, the fence hooks, `addMember` and checkout refusal, the `workspace-late-subscription` handler and its Polar credentials | 1 (the fence reads the ledger) | The fence, the gate and the webhook guard are tested against a ledger row inserted by the test |
-| 6     | The driver, the `workspace-deletion` handler, the cron branch, the system scope, the retention prune, the audit vocabulary and its ACCESS §4 amendments, tolerance of deleted workspaces                                                       | 1, 2, 4, 5                     | A recorded deletion completes by itself, from a test entry point                               |
+| 6     | The driver, the `workspace-deletion` handler, the cron branch, the system scope, the `rows_deleted` Polar reconciliation, the retention prune, the audit vocabulary and its ACCESS §4 amendments, tolerance of deleted workspaces              | 1, 2, 4, 5                     | A recorded deletion completes by itself, from a test entry point                               |
 | 7     | `deleteWorkspaceFn`, `verifyStepUp` (extracted, rate limited, passkey delete unchanged), the receipt email, and the producers (the request's enqueue, the webhook's `workspace-late-subscription`)                                             | 3, 6                           | An owner can delete a workspace through the server function                                    |
 | 8     | The Danger zone card, the dialog, copy in 23 locales, the e2e journey, removal of the #989 warning key                                                                                                                                         | 7, #989                        | An owner can delete a workspace from the product                                               |
 
@@ -603,7 +608,7 @@ resumability, another workspace's prefix untouched (a prefix ends in `/`, so `<o
 ### Phase 5 - Billing and the fence
 
 `subscriptionBlocksWorkspaceDeletion`, the Polar list read, the webhook guard (an unknown organization: 200, nothing written; a
-ledgered one still writes the mirror), the `workspace-late-subscription` handler with `POLAR_*` in `TaskBindings` / `TaskSecrets` and the billing task union
+ledgered one still writes the mirror), the `workspace-late-subscription` handler (it never waits for a deletion) with `POLAR_*` in `TaskBindings` / `TaskSecrets` and the billing task union
 member, `organizationHooks`, `addMember` and the checkout refusal (no producer yet). **Test seam:** the pure gate per status;
 the webhook for a deleted organization (no 500, no row); the late subscription cancelled at period end and never revoked; a member
 add, an invitation create and an accept refused while a ledger row exists.
@@ -613,9 +618,10 @@ add, an invitation create and an accept refused while a ledger row exists.
 `src/server/workspace-deletion/`, the `workspace-deletion` handler (a new envelope id per hop, `delaySeconds`, `TaskRetryableError`
 on a held lease), the cron branch, the system scope (and a test that no route or server function imports it), the retention
 prune, the audit actions and entity type with their ACCESS §4.1 / §4.2 amendments, and a deleted-workspace test for every task
-kind. **Test seam:** the driver
+kind, and the `rows_deleted` step's Polar reconciliation (a live subscription that is not ending is set to end at the period end;
+a Polar failure leaves the state). **Test seam:** the driver
 through `advanceWorkspaceDeletion` with in-memory ports, killed and resumed at every state; two drivers at once; the cron path
-without a queue; a hop chain longer than the 24-hour done-marker would allow with a reused id; the `swept` second pass not
+without a queue; a subscription that appears during the drain cancelled by the `rows_deleted` step with no queue message; a hop chain longer than the 24-hour done-marker would allow with a reused id; the `swept` second pass not
 running before 15 minutes; the audit append written once under a lease overrun.
 
 ### Phase 7 - Request entry
