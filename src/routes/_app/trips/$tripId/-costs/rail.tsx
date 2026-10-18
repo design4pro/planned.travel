@@ -18,9 +18,9 @@ import {
   CategoryDonut,
   formatDayLabel,
   isOptimisticId,
+  paymentMethodLabel,
 } from '#/components/costs'
 import { Panel, PanelRow } from '../../../-ui/scaffold'
-import { humaniseToken } from '../../../-lib/format'
 import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
 import { categoryColour } from './chart-colours'
 import { ConvertedFigure } from './converted-figure'
@@ -342,7 +342,7 @@ function ByCategory({
     .sort((left, right) => categoryRank(left) - categoryRank(right))
     .map((row): DonutRow => ({
       key: row.category,
-      label: categoryLabel(row.category),
+      label: categoryLabel(row.category, t),
       spentMinor: row.spentMinor,
       plannedMinor: row.plannedMinor,
       colour: categoryColour(row.category),
@@ -429,7 +429,7 @@ function Payments({
                   </p>
                   <p className="truncate text-caption text-ink-3">
                     {formatDayLabel(row.settledOn, locale)} ·{' '}
-                    {humaniseToken(row.method)}
+                    {paymentMethodLabel(row.method, t)}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">

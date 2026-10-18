@@ -38,6 +38,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -424,7 +425,7 @@ export function ExpenseDialog({
       if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
         stale.refuse(currencyCode(tripCurrency))
       } else {
-        setError(messageOf(cause))
+        setError(messageOf(cause, t('costs.expense.saveFallback')))
       }
     } finally {
       setSaving(false)
@@ -585,7 +586,7 @@ export function ExpenseDialog({
                     value: person.userId,
                     label:
                       person.userId === viewerUserId
-                        ? `${person.name} (you)`
+                        ? t('costs.payment.youSuffix', { name: person.name })
                         : person.name,
                     description: person.email === '' ? undefined : person.email,
                   })),
@@ -695,11 +696,4 @@ function sharesOf(
     shareMinor: row.shareMinor,
     weight: weights.get(row.userId) ?? 1,
   }))
-}
-
-function messageOf(error: unknown): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return 'The expense could not be saved. Try again in a moment.'
 }

@@ -470,7 +470,8 @@ number>.optional(), from: <currency code>.optional() })`; `rate` is required unl
   refusal text until the traveller edits it; in the expense dialog the currency control is reset to
   the trip's new currency (never left on the old one), and in the payment dialog the digits are not
   re-labelled by the reload; either way the traveller must touch the amount before it can be saved. The shared `run()` in `-costs/actions.ts` (whose
-  failure toast is a hardcoded English fallback today) resolves a refusal key through
+  failure toast was a hardcoded English fallback when this was written; #1031 has since moved the
+  others into the catalogue) resolves a refusal key through
   `currencyRefusalOf` and `t()`; its other fallbacks are not this stage's.
 - **Edit sheet** (Phase 5, after PR #779 merges and Phase 4 ships): the currency renders as read-only
   text with `shell.editTrip.currencyReadonly` and a link to the Costs tab (`shell.editTrip.currencyLink`
@@ -654,7 +655,8 @@ with amounts.
 - Moving the five money writers to a guarded batch to close the named stale-write window.
 - The Costs screen around the new button (`Costs`, `Export CSV`, `Settle up`, the toasts in
   `-costs/actions.ts`) is hardcoded English today, so a non-English reader sees one translated
-  button among English ones. Not this stage's to fix.
+  button among English ones. Not this stage's to fix. (Since moved into the `costs` catalogue in
+  all 23 locales by #1031.)
 
 ## 📋 Phasing
 
