@@ -406,6 +406,22 @@ const messages = {
   'admin.members.person': 'Человек',
   'admin.members.role': 'Роль',
   'admin.members.joined': 'В команде с',
+  'admin.members.role.label': 'Роль: {name}',
+  'admin.members.role.saved': 'Теперь у {name} роль: {role}.',
+  'admin.members.role.impersonated':
+    'Роль нельзя изменить, пока вы действуете от имени другого аккаунта.',
+  'admin.members.role.notPermitted':
+    'Вы не можете внести это изменение. Роль владельца может выдать или изменить только владелец.',
+  'admin.members.role.lastOwner':
+    'Это единственный владелец рабочего пространства. Сначала назначьте другого владельца.',
+  'admin.members.role.notFound':
+    'Этого человека больше нет в рабочем пространстве. Список обновлён.',
+  'admin.members.role.failed': 'Не удалось изменить роль. Попробуйте ещё раз.',
+  'admin.members.role.promote.title': 'Сделать {name} владельцем?',
+  'admin.members.role.promote.body':
+    'У {name} будет столько же власти, сколько у вас: оплата, участники и настройки. Владелец может понизить или удалить любого другого владельца, включая вас.',
+  'admin.members.role.promote.confirm': 'Сделать владельцем',
+  'admin.members.role.promote.cancel': 'Отмена',
 
   'admin.activity.label': 'Недавняя активность',
   'admin.activity.empty.title': 'Пока ничего не записано',

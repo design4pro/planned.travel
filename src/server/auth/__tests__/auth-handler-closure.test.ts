@@ -909,6 +909,81 @@ describe('organization/delete', () => {
 })
 
 /* -------------------------------------------------------------------------------------------------
+ * Changing a member's role is server-side only (#995)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * `changeRole` audits a role change, holds the owner ceiling and refuses an impersonated session;
+ * the plugin's `organization/update-member-role` does none of those and accepts a comma-joined role
+ * string, so a hand-made `POST` would be a way round all three. It is closed over HTTP by
+ * `DISABLED_ORGANIZATION_PATHS`, a list of its own beside the admin list (docs/ACCESS.md §2.6), and
+ * stays usable in process, which `last-owner-plugin.test.ts` drives.
+ */
+describe('organization/update-member-role', () => {
+  let cookie: string
+  let organizationId: string
+  let memberId: string
+
+  function roleOf(id: string): string {
+    return (
+      sqlite.prepare('select role from member where id = ?').get(id) as {
+        role: string
+      }
+    ).role
+  }
+
+  beforeAll(async () => {
+    const ownerId = await createAccount('role-owner@planned.travel')
+    const colleagueId = await createAccount('role-colleague@planned.travel')
+    organizationId = (
+      sqlite
+        .prepare('select organization_id as id from member where user_id = ?')
+        .get(ownerId) as { id: string }
+    ).id
+    memberId = 'mem_role_colleague'
+    sqlite
+      .prepare(
+        'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+      )
+      .run(memberId, organizationId, colleagueId, 'member', Date.now())
+    shared.kv.clear()
+    cookie = sessionCookie(await signIn('role-owner@planned.travel'))
+  })
+
+  it('answers a real owner session with 404 and changes nothing', async () => {
+    for (const role of ['admin', 'owner', 'admin,owner']) {
+      const response = await post(
+        '/organization/update-member-role',
+        { memberId, role, organizationId },
+        cookie,
+      )
+
+      expect(response.status).toBe(404)
+      expect(roleOf(memberId)).toBe('member')
+    }
+  })
+
+  it('leaves organization/set-active answering for the same session (positive control)', async () => {
+    const response = await post(
+      '/organization/set-active',
+      { organizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+  })
+
+  it('stays usable in process, which is the audited path’s own building block', async () => {
+    await getAuth().api.updateMemberRole({
+      body: { memberId, role: 'admin', organizationId },
+      headers: new Headers({ cookie }),
+    })
+
+    expect(roleOf(memberId)).toBe('admin')
+  })
+})
+
+/* -------------------------------------------------------------------------------------------------
  * A workspace switch inside an impersonated session is audited (#959, docs/ACCESS.md §6.4)
  * ---------------------------------------------------------------------------------------------- */
 

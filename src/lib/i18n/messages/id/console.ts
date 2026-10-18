@@ -406,7 +406,7 @@ const messages = {
   'action.delete.note':
     'Isi yang dibuat orang ini di dalam sebuah ruang kerja tetap menjadi milik ruang kerja itu. Menangguhkan alih-alih menghapus menjaga catatannya dan hanya mencabut aksesnya.',
   'action.delete.owners':
-    'Akun yang menjadi satu-satunya pemilik sebuah ruang kerja yang juga dimasuki orang lain tidak bisa dihapus. Jadikan orang lain pemilik di sana lebih dulu, atau tangguhkan akunnya sebagai gantinya.',
+    'Akun yang menjadi satu-satunya pemilik sebuah ruang kerja yang juga dimasuki orang lain tidak bisa dihapus. Pemilik ruang kerja itu dapat lebih dulu menjadikan orang lain pemilik dari konsol ruang kerja, atau akunnya dapat ditangguhkan sebagai gantinya.',
   'action.delete.done': 'Akun dihapus',
   'action.delete.done.body':
     '{name} dan segala yang terikat pada akun itu sudah lenyap.',
