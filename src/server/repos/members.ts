@@ -230,7 +230,8 @@ export interface MemberRoleChange {
 
 /**
  * Changes a role within the caller's ceiling ({@link assignableRoles}). The workspace must keep at
- * least one owner. Every refusal happens before the write.
+ * least one owner. Every refusal happens before the write, except `LAST_OWNER` after a concurrent
+ * demotion, which puts the role back first.
  */
 export async function changeMemberRole(
   scope: TenantScope,
