@@ -244,8 +244,9 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   - `resendInvitationFn` — `POST`. Refreshes the expiry and re-enqueues the email.
   - `revokeInvitationFn` — `POST`. Delegates to `cancelInvitation`.
   - `changeMemberRoleFn` — `POST`. Delegates to `changeMemberRole`.
-  - `removeMemberFn` — `POST`. Delegates to `removeMember`; the same function is what "leave this
-    workspace" calls, because the repository already permits self-removal (`:189-191`).
+  - `removeMemberFn` — `POST`. Removes through `auth.api.removeMember`, not the repository
+    `removeMember`, so the after-hook that queues room eviction runs (`docs/ACCESS.md` §2.6, #1010).
+    "Leave this workspace" is `organization/leave`, which stays open over HTTP.
 - **Zod v4.** Every input is a `z.strictObject`, so an unknown key is a rejection rather than a
   silently ignored field:
   - `inviteMemberFn`: `{ email: z.email({ error: 'Enter the address to invite.' }), role: z.enum(ORGANIZATION_ROLES) }`.
@@ -273,6 +274,9 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   `memberId` from the client is not an authorised one, and a server function is reachable without
   the route that renders its UI. The two last-owner guards (`:180-182`, `:192-194`) are the
   repository's, and the UI only mirrors them by disabling a control it knows will be refused.
+  The one exception is removal: `removeMemberFn` calls `auth.api.removeMember` so room eviction runs,
+  and the repository `removeMember` has no eviction hook, no owner ceiling for an admin and no audit
+  entry (#1010).
 - **A granted role may never outrank the granter. This is the third guard, and it is the one thing
   in this stage that has to be written rather than reused.** Measured at HEAD, nothing enforces it:
   `addMember` stamps `values.role ?? 'member'` (`src/server/repos/members.ts:165`),

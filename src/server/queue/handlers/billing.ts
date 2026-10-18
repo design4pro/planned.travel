@@ -93,9 +93,9 @@ const FAILED_PAYMENT_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
  *
  * A workspace that other people belong to keeps at least one owner. The Better Auth `organization()`
  * calls (remove member, leave) refuse to take the last one (remove member only in process: its HTTP
- * route is closed, like update-member-role's), the product's own `changeMemberRoleFn`
- * refuses to demote it, and console
- * account deletion (`deletePlatformUser`) refuses the only owner of a workspace with other members.
+ * route is closed, like update-member-role's), the product's own `changeMemberRoleFn` refuses to
+ * demote it, and console account deletion (`deletePlatformUser`) refuses the only owner of a
+ * workspace with other members.
  * The repository's `removeMember` guards nothing here: it has no production caller. An organization
  * without an owner is therefore a row-level breakage (or a workspace whose only member was deleted)
  * that will not resolve itself: a permanent failure with a named

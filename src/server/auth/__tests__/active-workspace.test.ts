@@ -143,6 +143,25 @@ describe('requireOrg request resolution', () => {
     expect(shared.session.session?.activeOrganizationId).toBe(b.organizationId)
   })
 
+  it('carries the operator of an impersonated session onto the context', async () => {
+    const { a } = await fixture()
+    requestSession(a.ownerUserId, a.organizationId)
+    shared.session = {
+      ...shared.session,
+      session: {
+        ...shared.session.session,
+        impersonatedBy: 'usr_operator',
+        // An impersonated session only authorises inside its first 900 seconds (docs/ACCESS.md §6.2).
+        createdAt: new Date(),
+      },
+    }
+
+    await expect(requireOrg()).resolves.toMatchObject({
+      userId: a.ownerUserId,
+      impersonatedBy: 'usr_operator',
+    })
+  })
+
   it('refuses a removed only membership without provisioning, but still provisions for null active workspace', async () => {
     const { b } = await fixture()
     await db.delete(member).where(eq(member.userId, b.ownerUserId))
