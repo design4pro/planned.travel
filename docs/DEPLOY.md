@@ -2254,6 +2254,18 @@ button actually produces.
 The widget is loaded from its own chunk, after hydration, for the same reason the recorder is - the
 form and the screenshot editor are ~20 kB that only matters to somebody who clicks the button.
 
+**A secret in a URL path is redacted before it leaves the app.** `/join/<segment>` (the trip invite
+link) is replaced by `/join/[redacted]` by `src/lib/sentry-scrub.ts` in every channel both runtimes
+send: the event, transaction and span names, span attributes keyed `params.token`, breadcrumbs and
+logs, plus the URL-encoded form (at any depth) inside `redirect` and `callbackURL` values. The
+`referer` header is dropped like the session headers, and replay is covered through
+`beforeAddRecordingEvent` and an event processor over the `replay_event`. One residual is not
+reachable by any SDK hook: the DOM recorder's own events (the page `href` in its Meta event, link
+attributes in a snapshot). It is closed by #1022, which stops recording on a location that holds a
+join path, the sign-in pages carrying a join `redirect` included. `requestFields` in
+`src/server/observability/logger.ts` logs `path` and `referrer` unredacted; nothing calls it today,
+so do not call it on a `/join/` request.
+
 ### 17.3 The source-map token
 
 Without source maps every frame in a Sentry issue points at a bundled chunk offset instead of a

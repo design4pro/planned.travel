@@ -6,6 +6,8 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
+import { signInHead } from '../head'
+
 // The loaders reach the Worker's bindings, which a jsdom test cannot load; the head never calls them.
 vi.mock('../../-server/config', () => ({
   loadAuthConfig: vi.fn(),
@@ -22,19 +24,14 @@ const routes = {
 }
 
 describe('sign-in pages referrer policy', () => {
-  it.each(Object.entries(routes))(
-    '%s sends the strict-origin referrer meta',
-    (_name, route) => {
-      const head = route.options.head
-      if (head === undefined) throw new Error('Missing route head')
+  it('is the strict-origin referrer meta', () => {
+    expect(signInHead().meta).toContainEqual({
+      name: 'referrer',
+      content: 'strict-origin',
+    })
+  })
 
-      // The head option reads only the route's own context; none of it is used by these routes.
-      const { meta } = head({} as Parameters<typeof head>[0]) ?? {}
-
-      expect(meta).toContainEqual({
-        name: 'referrer',
-        content: 'strict-origin',
-      })
-    },
-  )
+  it.each(Object.entries(routes))('%s uses it', (_name, route) => {
+    expect(route.options.head).toBe(signInHead)
+  })
 })

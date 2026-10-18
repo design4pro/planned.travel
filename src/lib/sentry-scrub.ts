@@ -117,7 +117,10 @@ export function scrubTelemetry<T>(value: T): T {
       const entries = Object.entries(item)
       const result = entries.map(
         ([key, entry]) =>
-          [key, ROUTE_TOKEN_KEY.test(key) ? '[redacted]' : walk(entry)] as const,
+          [
+            key,
+            ROUTE_TOKEN_KEY.test(key) ? '[redacted]' : walk(entry),
+          ] as const,
       )
       return result.some((entry, index) => entry[1] !== entries[index][1])
         ? Object.fromEntries(result)
