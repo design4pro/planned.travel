@@ -553,10 +553,10 @@ function EditableTile({
   onOpen: () => void
 }) {
   return (
-    <div className="rounded-md bg-surface-2 px-2.5 py-2">
+    <div className="rounded-md bg-surface-2 px-1.5 py-2">
       <dt
         id={labelId}
-        className="text-micro font-semibold tracking-label break-words uppercase text-ink-4"
+        className="text-micro font-semibold tracking-label uppercase text-ink-4"
       >
         {label}
       </dt>
@@ -595,7 +595,7 @@ function Figure({
   muted?: boolean
 }) {
   return (
-    <div className="rounded-md bg-surface-2 px-2.5 py-2">
+    <div className="rounded-md bg-surface-2 px-1.5 py-2">
       <dt className="text-micro font-semibold tracking-label uppercase text-ink-4">
         {label}
       </dt>

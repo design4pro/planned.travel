@@ -67,6 +67,22 @@ function carriedFigure(page: Page) {
     .locator('xpath=following-sibling::dd')
 }
 
+/**
+ * Whether every tile label of the allowance panel sits on one line inside its tile. A label that
+ * breaks mid-word ("CARRIE" over "D") makes its tile taller than the others and reads as a typo.
+ */
+async function tileLabelsFit(page: Page): Promise<boolean> {
+  return page.locator('dl dt').evaluateAll((labels) =>
+    labels.slice(0, 3).every((label) => {
+      const { height } = label.getBoundingClientRect()
+      return (
+        label.scrollWidth <= label.clientWidth &&
+        height < 1.6 * Number.parseFloat(getComputedStyle(label).lineHeight)
+      )
+    }),
+  )
+}
+
 /** The two widths the spec names: the phone column and the three-column planner. */
 const WIDTHS = [360, 1280] as const
 
@@ -273,6 +289,9 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(carriedTile(page)).toHaveCount(0)
     // Nothing was used in the earlier year, so all 28 days of its allowance carry in.
     await expect(carriedFigure(page)).toHaveText('28')
+    expect(await tileLabelsFit(page), 'the tile labels fit their tiles').toBe(
+      true,
+    )
   })
 
   test('edits the opening balance, sees the next year follow it, and puts it back', async ({
@@ -282,6 +301,9 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(
       page.getByText(`Brought in from before ${OPENING_YEAR}. Select to edit.`),
     ).toBeVisible()
+    expect(await tileLabelsFit(page), 'the tile labels fit their tiles').toBe(
+      true,
+    )
     const original = Number(
       /(\d+)$/.exec(
         (await carriedTile(page).getAttribute('aria-label')) ?? '',
