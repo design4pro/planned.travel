@@ -135,6 +135,7 @@ describe('requireOrg request resolution', () => {
       userId: a.ownerUserId,
       organizationId: a.organizationId,
       role: 'member',
+      impersonatedBy: null,
     })
     await expect(
       requireOrg({ organizationId: b.organizationId }),

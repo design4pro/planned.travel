@@ -4408,6 +4408,7 @@ describe('tenant isolation', () => {
           userId: alpha.tenant.ownerUserId,
           organizationId: alpha.tenant.organizationId,
           role: 'owner',
+          impersonatedBy: null,
         })
       }
 

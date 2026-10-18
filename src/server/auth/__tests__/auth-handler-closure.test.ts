@@ -984,6 +984,92 @@ describe('organization/update-member-role', () => {
 })
 
 /* -------------------------------------------------------------------------------------------------
+ * Removing a member is server-side only (#1010)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The plugin's `organization/remove-member` deletes the `member` row for an owner or an admin with
+ * none of the product's guards (no owner ceiling for an admin, no audit entry, nothing refused during
+ * impersonation). It is closed over HTTP by `DISABLED_ORGANIZATION_PATHS`, beside
+ * `organization/update-member-role`, and stays usable in process: `auth.api.removeMember` is what
+ * the product-owned removal (#1008) must call, because the after-hook that queues the removed
+ * person's room eviction hangs off it (`room-eviction.test.ts` pins that). `organization/leave`
+ * stays open for the leave screen.
+ */
+describe('organization/remove-member', () => {
+  let cookie: string
+  let organizationId: string
+  let memberId: string
+
+  function memberCount(id: string): number {
+    return (
+      sqlite.prepare('select count(*) as n from member where id = ?').get(id) as {
+        n: number
+      }
+    ).n
+  }
+
+  beforeAll(async () => {
+    const ownerId = await createAccount('remove-owner@planned.travel')
+    const colleagueId = await createAccount('remove-colleague@planned.travel')
+    organizationId = (
+      sqlite
+        .prepare('select organization_id as id from member where user_id = ?')
+        .get(ownerId) as { id: string }
+    ).id
+    memberId = 'mem_remove_colleague'
+    sqlite
+      .prepare(
+        'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+      )
+      .run(memberId, organizationId, colleagueId, 'member', Date.now())
+    shared.kv.clear()
+    cookie = sessionCookie(await signIn('remove-owner@planned.travel'))
+  })
+
+  it('answers a real owner session with 404 and removes nobody', async () => {
+    const response = await post(
+      '/organization/remove-member',
+      { memberIdOrEmail: memberId, organizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(404)
+    expect(memberCount(memberId)).toBe(1)
+  })
+
+  it('answers a GET with 404 too', async () => {
+    const response = await getAuth().handler(
+      new Request(`${AUTH_BASE}/organization/remove-member`, {
+        headers: { cookie },
+      }),
+    )
+
+    expect(response.status).toBe(404)
+    expect(memberCount(memberId)).toBe(1)
+  })
+
+  it('leaves organization/set-active answering for the same session (positive control)', async () => {
+    const response = await post(
+      '/organization/set-active',
+      { organizationId },
+      cookie,
+    )
+
+    expect(response.status).toBe(200)
+  })
+
+  it('stays usable in process, which is where the product-owned removal will call it', async () => {
+    await getAuth().api.removeMember({
+      body: { memberIdOrEmail: memberId, organizationId },
+      headers: new Headers({ cookie }),
+    })
+
+    expect(memberCount(memberId)).toBe(0)
+  })
+})
+
+/* -------------------------------------------------------------------------------------------------
  * A workspace switch inside an impersonated session is audited (#959, docs/ACCESS.md §6.4)
  * ---------------------------------------------------------------------------------------------- */
 

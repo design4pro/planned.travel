@@ -16,6 +16,7 @@ import {
   normaliseSession,
   requireOrgFrom,
 } from '#/server/auth/tenant'
+import { requireTenantContext } from '#/server/repos/context'
 import type { AuthFailureReason } from '#/server/auth/tenant'
 
 const EXPIRES_AT = new Date('2026-09-01T10:00:00.000Z')
@@ -174,6 +175,28 @@ describe('requireOrgFrom after a workspace switch', () => {
       organizationId: 'org_b',
       userId: 'usr_1',
       role: 'member',
+      impersonatedBy: null,
     })
+  })
+
+  it('carries the operator of an impersonated session onto the context', () => {
+    const impersonated = normaliseSession(rawSession())
+    if (!impersonated) throw new Error('the fixture session did not normalise')
+
+    const context = requireOrgFrom(impersonated, 'owner')
+
+    expect(context.impersonatedBy).toBe('usr_admin')
+    // And it survives the repository boundary, which rebuilds the context field by field.
+    expect(requireTenantContext(context).impersonatedBy).toBe('usr_admin')
+  })
+
+  it('leaves impersonatedBy null for an ordinary session', () => {
+    const ordinary = normaliseSession({
+      ...rawSession(),
+      session: { ...rawSession().session, impersonatedBy: null },
+    })
+    if (!ordinary) throw new Error('the fixture session did not normalise')
+
+    expect(requireOrgFrom(ordinary, 'owner').impersonatedBy).toBeNull()
   })
 })

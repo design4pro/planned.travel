@@ -475,6 +475,7 @@ export async function resolveWorkspace(
       userId: owner.userId,
       organizationId: owner.organizationId,
       role: ownerRole,
+      impersonatedBy: null,
     }),
   }
 }
@@ -941,6 +942,7 @@ export async function ensureWorkspacePeople(
             userId,
             organizationId: workspace.organizationId,
             role: person.role,
+            impersonatedBy: null,
           }),
     )
   }
@@ -1013,6 +1015,7 @@ export async function ensureSecondWorkspace(
     userId: workspace.ownerUserId,
     organizationId,
     role: 'owner',
+    impersonatedBy: null,
   })
   const stale = await getTripBySlug(scope, trip.slug)
   if (stale !== null) {

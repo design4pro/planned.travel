@@ -107,6 +107,7 @@ function scopeFor(
     // An unrecognised value in the column resolves to the least privilege, never to "unset,
     // therefore permissive".
     role: isOrganizationRole(role) ? role : 'member',
+    impersonatedBy: null,
   })
 }
 

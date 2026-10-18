@@ -179,11 +179,23 @@ describe('every admin endpoint is in disabledPaths (docs/ACCESS.md §2.6)', () =
   })
 })
 
-describe('the organization role-change path is closed beside the admin list (#995)', () => {
-  it('names the path the organization plugin actually publishes', () => {
-    const path = organization().endpoints.updateMemberRole.path
-    expect(DISABLED_ORGANIZATION_PATHS).toEqual([path])
-    expect(path).toBe('/organization/update-member-role')
+describe('the organization member-write paths are closed beside the admin list (#995, #1010)', () => {
+  it('names the paths the organization plugin actually publishes', () => {
+    const { endpoints } = organization()
+    expect(DISABLED_ORGANIZATION_PATHS).toEqual([
+      endpoints.updateMemberRole.path,
+      endpoints.removeMember.path,
+    ])
+    expect(endpoints.updateMemberRole.path).toBe(
+      '/organization/update-member-role',
+    )
+    expect(endpoints.removeMember.path).toBe('/organization/remove-member')
+  })
+
+  it('leaves organization/leave open, which the leave screen needs', () => {
+    expect(DISABLED_PATHS).not.toContain(
+      organization().endpoints.leaveOrganization.path,
+    )
   })
 
   it('merges both lists into the one array disabledPaths receives, without touching the admin list', () => {

@@ -93,6 +93,7 @@ export function createTripRoomEvictHandler(
       userId,
       organizationId,
       role: 'member',
+      impersonatedBy: null,
     })
     const tripIds = await reachable(scope)
 

@@ -328,8 +328,9 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
     impersonation `AuthRequirementError` before any read (`docs/ACCESS.md` §6.4).
   - It writes one `member.role_changed` audit entry on a change that alters the role, and none for a
     no-op or a refusal.
-  - Better Auth's `organization/update-member-role` is closed over HTTP (`docs/ACCESS.md` §2.6);
-    the in-process call stays.
+  - Better Auth's `organization/update-member-role` and `organization/remove-member` are closed over
+    HTTP (`docs/ACCESS.md` §2.6); the in-process calls stay. `removeMemberFn` (#1008) removes through
+    `auth.api.removeMember` so room eviction runs.
     The control is `src/components/layout/member-role-control.tsx`, mounted on `/admin` in the members
     table; this stage's `members-panel.tsx` takes that cell over unchanged. `addMember` and
     `createInvitation` still need their own ceiling line.
