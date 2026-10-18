@@ -274,6 +274,8 @@ const messages = {
   'book.committedCaption': 'この旅行のすべての予約',
   'book.onItinerary': '旅程に登録',
   'book.pinnedCaption': '旅程の日に紐づけ済み',
+  'book.readOnly.archived':
+    'この旅行はアーカイブ済みのため、予約と宿泊は閲覧専用です。変更するには旅行を元に戻してください。',
   /* ---------------------------------------------- the transports tab */
   'transports.title': '移動',
   'transports.empty': 'まだ何も記録されていません',

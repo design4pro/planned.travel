@@ -272,6 +272,8 @@ const messages = {
   'book.committedCaption': '이 여행의 모든 예약 기준',
   'book.onItinerary': '일정에 등록',
   'book.pinnedCaption': '일정의 특정 날짜에 고정됨',
+  'book.readOnly.archived':
+    '이 여행은 보관되어 있어 예약과 숙박은 읽기 전용입니다. 변경하려면 여행을 복원하세요.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': '이동',
   'transports.empty': '아직 기록된 것이 없습니다',

@@ -14,12 +14,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  TripArchivedError,
+  addTripMember,
+  archiveTrip,
   createTrip,
   deleteReservation,
   listTripAccommodations,
   listTripDays,
   listTripExpenses,
   listTripReservations,
+  restoreTrip,
 } from '#/server/repos'
 import { NotFoundError } from '#/server/repos/context'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
@@ -262,6 +266,84 @@ describe('a stay and the booking that pays for it', () => {
       name: 'Two nights fewer',
       endDayId: day(2).id,
     })
+  })
+
+  it('refuses all three writes on an archived trip, before a booking exists, and writes again once it is restored', async () => {
+    const written = await createStay(scope, stayPayload())
+    await archiveTrip(scope, trip.id)
+    const ids = {
+      tripId: trip.id,
+      reservationId: written.reservationId,
+      stayId: written.stayId,
+    }
+    const before = {
+      bookings: await listTripReservations(scope, { tripId: trip.id }),
+      stays: await listTripAccommodations(scope, trip.id),
+      lines: await listTripExpenses(scope, trip.id),
+    }
+
+    const refused = [
+      await captureError(() =>
+        createStay(
+          scope,
+          stayPayload({ title: 'Late hostel', priceMinor: 9_000 }),
+        ),
+      ),
+      await captureError(() => updateStay(scope, { ...stayPayload(), ...ids })),
+      await captureError(() => deleteStay(scope, ids)),
+    ]
+
+    for (const error of refused) {
+      expect(error).toBeInstanceOf(TripArchivedError)
+    }
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual(
+      before.bookings,
+    )
+    expect(await listTripAccommodations(scope, trip.id)).toEqual(before.stays)
+    expect(await listTripExpenses(scope, trip.id)).toEqual(before.lines)
+
+    await restoreTrip(scope, trip.id)
+    await expect(
+      updateStay(scope, { ...stayPayload({ title: 'Back again' }), ...ids }),
+    ).resolves.toMatchObject({ stayId: written.stayId })
+  })
+
+  it('refuses an editor on an archived trip the same way, and a viewer too', async () => {
+    const harness = await createHarness()
+    const tenant = await harness.seedTenant('stays-roles')
+    const owner = tenant.scope
+    const shared = await createTrip(owner, {
+      title: 'Osaka',
+      startDate: '2026-04-10',
+      endDate: '2026-04-14',
+      currency: 'JPY',
+    })
+    const [first, , , last] = await listTripDays(owner, shared.id)
+    const editorId = await tenant.addUser('An editor')
+    const viewerId = await tenant.addUser('A viewer')
+    for (const [userId, role] of [
+      [editorId, 'editor'],
+      [viewerId, 'viewer'],
+    ] as const) {
+      await addTripMember(owner, { tripId: shared.id, userId, role })
+    }
+    await archiveTrip(owner, shared.id)
+    const payload = {
+      ...stayPayload(),
+      tripId: shared.id,
+      startDayId: first?.id ?? '',
+      endDayId: last?.id ?? '',
+    }
+
+    for (const actor of [
+      tenant.scopeFor(editorId),
+      tenant.scopeFor(viewerId),
+    ]) {
+      expect(
+        await captureError(() => createStay(actor, payload)),
+      ).toBeInstanceOf(TripArchivedError)
+    }
+    expect(await listTripReservations(owner, { tripId: shared.id })).toEqual([])
   })
 
   it('refuses to write a stay of one trip under another trip’s name', async () => {

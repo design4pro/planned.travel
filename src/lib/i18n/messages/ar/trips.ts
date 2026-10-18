@@ -305,6 +305,8 @@ const messages = {
   'book.committedCaption': 'عبر كل حجوزات هذه الرحلة',
   'book.onItinerary': 'في البرنامج',
   'book.pinnedCaption': 'مثبَّت على يوم من البرنامج',
+  'book.readOnly.archived':
+    'هذه الرحلة مؤرشفة، لذا الحجوزات والإقامات للقراءة فقط. استعد الرحلة من الأرشيف لتغييرها.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'التنقلات',
   'transports.empty': 'لا شيء مسجَّل بعد',

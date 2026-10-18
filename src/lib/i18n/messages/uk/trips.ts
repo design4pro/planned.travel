@@ -298,6 +298,8 @@ const messages = {
   'book.committedCaption': 'З усіх бронювань цієї подорожі',
   'book.onItinerary': 'У маршруті',
   'book.pinnedCaption': 'Закріплено за днем маршруту',
+  'book.readOnly.archived':
+    'Ця подорож в архіві, тому бронювання та проживання доступні лише для читання. Відновіть подорож, щоб їх змінити.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Переїзди',
   'transports.empty': 'Поки нічого не записано',

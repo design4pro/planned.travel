@@ -12,6 +12,7 @@
 
 import {
   addTripMember,
+  archiveTrip,
   collabMessageReactionsAccess,
   collabMessagesRepository,
   castVote,
@@ -140,7 +141,8 @@ export async function applyTrip(
       ? {}
       : { reminderDays: trip.reminderDays }),
     isFavourite: trip.isFavourite ?? false,
-    isArchived: trip.isArchived ?? false,
+    // Never created archived: an archived trip refuses the writers below, so the shelf is the last
+    // step of this function, through the archive function and not around it.
   })
   const tripId = created.id
 
@@ -618,6 +620,10 @@ export async function applyTrip(
       height: file.height ?? null,
     })
     files += 1
+  }
+
+  if (trip.isArchived === true) {
+    await archiveTrip(owner, tripId)
   }
 
   return {

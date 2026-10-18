@@ -261,6 +261,8 @@ const messages = {
   'book.committedCaption': '涵蓋這次旅行的所有訂房',
   'book.onItinerary': '已排入行程',
   'book.pinnedCaption': '已固定到行程中的某一天',
+  'book.readOnly.archived':
+    '此行程已封存，因此預訂和住宿為唯讀。還原該行程後才能變更。',
   /* ---------------------------------------------- the transports tab */
   'transports.title': '交通',
   'transports.empty': '尚未紀錄',

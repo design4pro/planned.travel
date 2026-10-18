@@ -292,6 +292,8 @@ const messages = {
   'book.committedCaption': 'Sur toutes les réservations de ce voyage',
   'book.onItinerary': 'Dans l’itinéraire',
   'book.pinnedCaption': 'Épinglé à un jour du plan',
+  'book.readOnly.archived':
+    'Ce voyage est archivé, les réservations et les séjours sont donc en lecture seule. Restaurez le voyage pour les modifier.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Trajets',
   'transports.empty': 'Rien de noté pour l’instant',
