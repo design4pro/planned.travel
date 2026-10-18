@@ -295,6 +295,8 @@ const messages = {
   'book.committedCaption': 'Ze všech rezervací této cesty',
   'book.onItinerary': 'V programu',
   'book.pinnedCaption': 'Připnuto ke dni programu',
+  'book.readOnly.archived':
+    'Tato cesta je archivovaná, takže rezervace a pobyty jsou jen pro čtení. Chcete-li je změnit, cestu obnovte.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Přesuny',
   'transports.empty': 'Zatím nic zaznamenáno',

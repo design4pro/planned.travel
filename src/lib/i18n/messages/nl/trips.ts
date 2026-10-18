@@ -284,6 +284,8 @@ const messages = {
   'book.committedCaption': 'Over alle boekingen van deze reis',
   'book.onItinerary': 'In de reisroute',
   'book.pinnedCaption': 'Vastgezet op een dag van de route',
+  'book.readOnly.archived':
+    'Deze reis is gearchiveerd, dus de boekingen en verblijven zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Trajecten',
   'transports.empty': 'Nog niets vastgelegd',

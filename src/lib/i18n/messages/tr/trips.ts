@@ -278,6 +278,8 @@ const messages = {
   'book.committedCaption': 'Bu gezinin tüm rezervasyonlarında',
   'book.onItinerary': 'Programda',
   'book.pinnedCaption': 'Programın bir gününe sabitlendi',
+  'book.readOnly.archived':
+    'Bu seyahat arşivlendi, bu yüzden rezervasyonlar ve konaklamalar salt okunur. Değiştirmek için seyahati geri yükleyin.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Yolculuklar',
   'transports.empty': 'Henüz bir kayıt yok',

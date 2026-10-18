@@ -433,6 +433,8 @@ const messages = {
   'book.committedCaption': 'Across every booking on this trip',
   'book.onItinerary': 'On the itinerary',
   'book.pinnedCaption': 'Pinned to a day of the plan',
+  'book.readOnly.archived':
+    'This trip is archived, so its bookings and stays are read-only. Restore the trip to change them.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Transports',
   'transports.empty': 'Nothing recorded yet',
