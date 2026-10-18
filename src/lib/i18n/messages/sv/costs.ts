@@ -18,6 +18,7 @@ const messages = {
   'person.you': 'Du',
   'person.youTarget': 'dig',
   'person.removed': 'Borttagen resenär',
+  'person.removedTarget': 'en borttagen resenär',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Ta bort den här utgiften?',
   'delete.description':
@@ -352,7 +353,6 @@ const messages = {
   'write.rolledBack': 'Ändringen ångrades.',
   'expense.saveFallback':
     'Utgiften kunde inte sparas. Försök igen om en stund.',
-  'delete.removedTraveller': 'en borttagen resenär',
 } satisfies TranslationOf<typeof En>
 
 export default messages

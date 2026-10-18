@@ -169,7 +169,7 @@ function ExpenseRow({
                   {row.paidBy === viewerUserId
                     ? t('costs.row.youPaid')
                     : t('costs.row.paid', {
-                        name: payer?.name ?? t('costs.rebase.someone'),
+                        name: payer?.name ?? t('costs.person.removed'),
                       })}
                 </span>
               </span>

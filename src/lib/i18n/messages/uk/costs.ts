@@ -20,6 +20,7 @@ const messages = {
   'person.you': 'Ви',
   'person.youTarget': 'вам',
   'person.removed': 'Вилучений мандрівник',
+  'person.removedTarget': 'вилучений мандрівник',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Видалити цю витрату?',
   'delete.description':
@@ -375,7 +376,6 @@ const messages = {
   'write.rolledBack': 'Зміну скасовано.',
   'expense.saveFallback':
     'Не вдалося зберегти витрату. Спробуйте ще раз за хвилину.',
-  'delete.removedTraveller': 'вилучений мандрівник',
 } satisfies TranslationOf<typeof En>
 
 export default messages

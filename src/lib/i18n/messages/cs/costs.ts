@@ -20,6 +20,7 @@ const messages = {
   'person.you': 'Ty',
   'person.youTarget': 'tobě',
   'person.removed': 'Odebraný cestovatel',
+  'person.removedTarget': 'odebraný cestovatel',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Smazat tento výdaj?',
   'delete.description':
@@ -378,7 +379,6 @@ const messages = {
   'write.rolledBack': 'Změna byla vrácena zpět.',
   'expense.saveFallback':
     'Výdaj se nepodařilo uložit. Zkus to za chvíli znovu.',
-  'delete.removedTraveller': 'odebraný cestovatel',
 } satisfies TranslationOf<typeof En>
 
 export default messages

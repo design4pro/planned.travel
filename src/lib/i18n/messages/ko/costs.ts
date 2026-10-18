@@ -18,6 +18,7 @@ const messages = {
   'person.you': '나',
   'person.youTarget': '나에게',
   'person.removed': '삭제된 여행자',
+  'person.removedTarget': '삭제된 여행자',
   /* ------------------------------------------------ delete an expense */
   'delete.title': '이 지출을 삭제할까요?',
   'delete.description':
@@ -343,7 +344,6 @@ const messages = {
   'write.rolledBack': '변경을 되돌렸습니다.',
   'expense.saveFallback':
     '지출을 저장하지 못했습니다. 잠시 후 다시 시도하세요.',
-  'delete.removedTraveller': '삭제된 여행자',
 } satisfies TranslationOf<typeof En>
 
 export default messages

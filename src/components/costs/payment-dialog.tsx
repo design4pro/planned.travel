@@ -220,7 +220,7 @@ export function PaymentDialog({
 
   const nameOf = (userId: string): string =>
     people.find((person) => person.userId === userId)?.name ??
-    t('costs.person.removed')
+    t('costs.rebase.someone')
 
   async function submit(): Promise<void> {
     // `canSave` already proves the amount parsed, so narrowing follows from it.

@@ -184,19 +184,28 @@ export function CostsScreen({
             (row) => row.category === option.value,
           ).length,
         }))
-        .filter((option) => option.count > 0),
-    [categories, snapshot.expenses],
+        // The active category stays listed when its last expense is gone, so the filter summary
+        // can name it in the reader's language instead of printing the stored token.
+        .filter(
+          (option) => option.count > 0 || option.value === filters.category,
+        ),
+    [categories, filters.category, snapshot.expenses],
   )
 
-  const dayFilters = useMemo<Array<ToolbarOption>>(
-    () =>
-      dayOptions(snapshot.expenses).map((day) => ({
-        value: day,
-        label: formatDayShort(day, locale),
-        count: snapshot.expenses.filter((row) => row.spentOn === day).length,
-      })),
-    [snapshot.expenses],
-  )
+  const dayFilters = useMemo<Array<ToolbarOption>>(() => {
+    const days = dayOptions(snapshot.expenses)
+    // As with the category: the active day stays listed once its last expense is gone, so the
+    // filter summary shows a day in the reader's format rather than the stored date.
+    if (filters.day !== undefined && !days.includes(filters.day)) {
+      days.push(filters.day)
+      days.sort((left, right) => right.localeCompare(left))
+    }
+    return days.map((day) => ({
+      value: day,
+      label: formatDayShort(day, locale),
+      count: snapshot.expenses.filter((row) => row.spentOn === day).length,
+    }))
+  }, [snapshot.expenses, filters.day])
 
   const viewCounts = useMemo(
     () => ({
@@ -599,7 +608,7 @@ export function CostsScreen({
           affects={session.row.shares.map(
             (share) =>
               data.people.find((person) => person.userId === share.userId)
-                ?.name ?? t('costs.delete.removedTraveller'),
+                ?.name ?? t('costs.person.removedTarget'),
           )}
           onConfirm={() => removeExpense(session.row)}
         />

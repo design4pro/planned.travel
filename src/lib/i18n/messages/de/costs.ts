@@ -19,6 +19,7 @@ const messages = {
   'person.you': 'Du',
   'person.youTarget': 'dich',
   'person.removed': 'Entfernte Reisende',
+  'person.removedTarget': 'eine entfernte Person',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Diese Ausgabe löschen?',
   'delete.description':
@@ -362,7 +363,6 @@ const messages = {
   'write.rolledBack': 'Die Änderung wurde zurückgenommen.',
   'expense.saveFallback':
     'Die Ausgabe konnte nicht gespeichert werden. Versuche es gleich noch einmal.',
-  'delete.removedTraveller': 'eine entfernte Reisende',
 } satisfies TranslationOf<typeof En>
 
 export default messages

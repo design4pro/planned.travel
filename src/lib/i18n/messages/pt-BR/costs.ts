@@ -19,6 +19,7 @@ const messages = {
   'person.you': 'Você',
   'person.youTarget': 'você',
   'person.removed': 'Viajante removido',
+  'person.removedTarget': 'um viajante removido',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Excluir esta despesa?',
   'delete.description':
@@ -370,7 +371,6 @@ const messages = {
   'write.rolledBack': 'A alteração foi desfeita.',
   'expense.saveFallback':
     'Não foi possível salvar a despesa. Tente de novo em instantes.',
-  'delete.removedTraveller': 'um viajante removido',
 } satisfies TranslationOf<typeof En>
 
 export default messages

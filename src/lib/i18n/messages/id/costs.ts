@@ -18,6 +18,7 @@ const messages = {
   'person.you': 'Kamu',
   'person.youTarget': 'kamu',
   'person.removed': 'Pelancong yang dihapus',
+  'person.removedTarget': 'pelancong yang dihapus',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Hapus pengeluaran ini?',
   'delete.description':
@@ -350,7 +351,6 @@ const messages = {
   'write.rolledBack': 'Perubahan dibatalkan.',
   'expense.saveFallback':
     'Pengeluaran tidak bisa disimpan. Coba lagi sebentar lagi.',
-  'delete.removedTraveller': 'pelancong yang dihapus',
 } satisfies TranslationOf<typeof En>
 
 export default messages

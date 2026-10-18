@@ -19,6 +19,7 @@ const messages = {
   'person.you': 'Te',
   'person.youTarget': 'neked',
   'person.removed': 'Eltávolított utazó',
+  'person.removedTarget': 'egy eltávolított utazó',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Törlöd ezt a kiadást?',
   'delete.description':
@@ -363,7 +364,6 @@ const messages = {
   'write.rolledBack': 'A módosítás vissza lett vonva.',
   'expense.saveFallback':
     'A kiadást nem sikerült elmenteni. Próbáld újra egy pillanat múlva.',
-  'delete.removedTraveller': 'egy eltávolított utazó',
 } satisfies TranslationOf<typeof En>
 
 export default messages

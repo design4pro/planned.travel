@@ -18,6 +18,7 @@ const messages = {
   'person.you': '你',
   'person.youTarget': '你',
   'person.removed': '已移除的旅行者',
+  'person.removedTarget': '一位已移除的旅行者',
   /* ------------------------------------------------ delete an expense */
   'delete.title': '要删除这笔支出吗？',
   'delete.description': '“{title}”及其分摊将从结算中移除。此操作无法撤销。',
@@ -320,7 +321,6 @@ const messages = {
   'write.paymentFailed': '付款未能记录',
   'write.rolledBack': '更改已撤回。',
   'expense.saveFallback': '无法保存这笔支出。请稍后再试。',
-  'delete.removedTraveller': '一位已移除的旅行者',
 } satisfies TranslationOf<typeof En>
 
 export default messages

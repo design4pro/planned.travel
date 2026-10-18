@@ -18,6 +18,7 @@ const messages = {
   'person.you': 'Εσύ',
   'person.youTarget': 'εσένα',
   'person.removed': 'Ταξιδιώτης που αφαιρέθηκε',
+  'person.removedTarget': 'ένας ταξιδιώτης που αφαιρέθηκε',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Να διαγραφεί αυτό το έξοδο;',
   'delete.description':
@@ -364,7 +365,6 @@ const messages = {
   'write.paymentFailed': 'Η πληρωμή δεν καταγράφηκε',
   'write.rolledBack': 'Η αλλαγή αναιρέθηκε.',
   'expense.saveFallback': 'Το έξοδο δεν αποθηκεύτηκε. Δοκίμασε ξανά σε λίγο.',
-  'delete.removedTraveller': 'ένας ταξιδιώτης που αφαιρέθηκε',
 } satisfies TranslationOf<typeof En>
 
 export default messages

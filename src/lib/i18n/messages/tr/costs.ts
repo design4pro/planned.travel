@@ -18,6 +18,7 @@ const messages = {
   'person.you': 'Sen',
   'person.youTarget': 'sana',
   'person.removed': 'Kaldırılan gezgin',
+  'person.removedTarget': 'kaldırılan bir gezgin',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Bu masraf silinsin mi?',
   'delete.description':
@@ -356,7 +357,6 @@ const messages = {
   'write.paymentFailed': 'Ödeme kaydedilemedi',
   'write.rolledBack': 'Değişiklik geri alındı.',
   'expense.saveFallback': 'Masraf kaydedilemedi. Birazdan tekrar dene.',
-  'delete.removedTraveller': 'kaldırılan bir gezgin',
 } satisfies TranslationOf<typeof En>
 
 export default messages

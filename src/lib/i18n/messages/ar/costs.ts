@@ -22,6 +22,7 @@ const messages = {
   'person.you': 'أنت',
   'person.youTarget': 'إليك',
   'person.removed': 'مسافر مُزال',
+  'person.removedTarget': 'مسافر مُزال',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'أتحذف هذا المصروف؟',
   'delete.description': '«{title}» وتقسيمه يخرجان من الحساب. ولا رجعة في ذلك.',
@@ -392,7 +393,6 @@ const messages = {
   'write.paymentFailed': 'لم تُسجَّل الدفعة',
   'write.rolledBack': 'جرى التراجع عن التغيير.',
   'expense.saveFallback': 'تعذّر حفظ المصروف. حاول مجددًا بعد قليل.',
-  'delete.removedTraveller': 'مسافر مُزال',
 } satisfies TranslationOf<typeof En>
 
 export default messages

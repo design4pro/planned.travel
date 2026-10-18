@@ -36,6 +36,8 @@ const messages = {
    * settlements survive them, so a name is still needed where they appear.
    */
   'person.removed': 'Removed traveller',
+  /** The same traveller mid-sentence, where English lower-cases it: "Balances change for a removed traveller". */
+  'person.removedTarget': 'a removed traveller',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Delete this expense?',
   'delete.description':
@@ -423,8 +425,6 @@ const messages = {
   /** The expense dialog's inline reason when the server gave no sentence to show. */
   'expense.saveFallback':
     'The expense could not be saved. Try again in a moment.',
-  /** Mid-sentence in "Balances change for {names}": a traveller who has left the trip. */
-  'delete.removedTraveller': 'a removed traveller',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -18,6 +18,7 @@ const messages = {
   'person.you': 'Bạn',
   'person.youTarget': 'bạn',
   'person.removed': 'Người đi đã bị xoá',
+  'person.removedTarget': 'một người đi đã bị xoá',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Xóa khoản chi này?',
   'delete.description':
@@ -348,7 +349,6 @@ const messages = {
   'write.paymentFailed': 'Chưa ghi nhận được khoản thanh toán',
   'write.rolledBack': 'Thay đổi đã được hoàn lại.',
   'expense.saveFallback': 'Không lưu được khoản chi. Hãy thử lại sau một lát.',
-  'delete.removedTraveller': 'một người đi đã bị xoá',
 } satisfies TranslationOf<typeof En>
 
 export default messages

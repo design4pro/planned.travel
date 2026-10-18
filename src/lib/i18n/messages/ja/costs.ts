@@ -19,6 +19,7 @@ const messages = {
   'person.you': 'あなた',
   'person.youTarget': 'あなた',
   'person.removed': '削除された旅行者',
+  'person.removedTarget': '削除された旅行者',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'この支出を削除しますか？',
   'delete.description':
@@ -281,7 +282,7 @@ const messages = {
   'rebase.done': '予算は {to} になりました。',
   // The costs screen (#1031)
   'screen.nothingSpent': 'まだ支出はありません',
-  'screen.summary': '{expenses} · {spent} 支出',
+  'screen.summary': '{expenses} · 支出 {spent}',
   'count.expenses': {
     other: '{expenses} 件',
   },
@@ -310,7 +311,7 @@ const messages = {
   'row.edit': '{title} を編集',
   'row.delete': '{title} を削除',
   'row.saving': '保存中',
-  'tile.owe.label': 'あなたの支払い額',
+  'tile.owe.label': '支払うべき額',
   'tile.owe.settled': 'すべて精算済みです',
   'tile.owe.pending': '帰国前に精算しましょう',
   'tile.owe.to': '支払先',
@@ -346,7 +347,6 @@ const messages = {
   'write.rolledBack': '変更を元に戻しました。',
   'expense.saveFallback':
     '支出を保存できませんでした。しばらくしてからもう一度お試しください。',
-  'delete.removedTraveller': '削除された旅行者',
 } satisfies TranslationOf<typeof En>
 
 export default messages

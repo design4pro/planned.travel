@@ -23,6 +23,7 @@ const messages = {
   'person.you': 'Ty',
   'person.youTarget': 'Tobie',
   'person.removed': 'Usunięty podróżnik',
+  'person.removedTarget': 'usunięty podróżnik',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Usunąć ten wydatek?',
   'delete.description':
@@ -338,21 +339,21 @@ const messages = {
   'skeleton.loading': 'Wczytywanie wydatków',
   'row.noPayer': 'Brak płatnika',
   'row.youPaid': 'Zapłacone przez Ciebie',
-  'row.paid': 'Zapłacone przez {name}',
+  'row.paid': '{name} zapłacił(a)',
   'row.notYourShare': 'to nie Twoja część',
-  'row.yourShare': '{amount} Twoje',
+  'row.yourShare': 'Twoja część: {amount}',
   'row.noteOn': 'Notatka do: {title}',
   'row.edit': 'Edytuj: {title}',
   'row.delete': 'Usuń: {title}',
   'row.saving': 'Zapisywanie',
-  'tile.owe.label': 'Wisisz',
+  'tile.owe.label': 'Twój dług',
   'tile.owe.settled': 'Wszystko rozliczone',
   'tile.owe.pending': 'Rozlicz się przed powrotem do domu',
-  'tile.owe.to': 'Dla',
+  'tile.owe.to': 'Komu',
   'tile.owed.label': 'Należy Ci się',
   'tile.owed.none': 'Nikt nie jest Ci nic winien',
   'tile.owed.pending': 'Jeszcze do Ciebie wróci',
-  'tile.owed.from': 'Od',
+  'tile.owed.from': 'Od kogo',
   'tile.outstanding.label': 'Do rozliczenia',
   'tile.outstanding.none': 'Każdy wydatek ma płatnika',
   'tile.outstanding.some': {
@@ -383,7 +384,6 @@ const messages = {
   'write.paymentFailed': 'Nie zapisano płatności',
   'write.rolledBack': 'Zmiana została cofnięta.',
   'expense.saveFallback': 'Nie udało się zapisać wydatku. Spróbuj za chwilę.',
-  'delete.removedTraveller': 'usunięty podróżnik',
 } satisfies TranslationOf<typeof En>
 
 export default messages

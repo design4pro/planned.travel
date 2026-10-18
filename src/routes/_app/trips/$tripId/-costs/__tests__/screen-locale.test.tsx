@@ -320,6 +320,40 @@ describe('the costs screen in a locale that is not English', () => {
     expect(heard).not.toContain('Filtered')
   })
 
+  it('names a filtered category with no rows left in the reader’s language, never as its stored token', () => {
+    const { container } = mount(payload(), {
+      ...NO_FILTERS,
+      category: 'insurance',
+    })
+    const heard = spoken(container)
+
+    expect(heard).toContain(CostsPl['category.insurance'])
+    expect(heard).not.toMatch(/insurance/i)
+  })
+
+  it('names a filtered day with no rows left as a formatted date, not the stored one', () => {
+    const { container } = mount(payload(), { ...NO_FILTERS, day: '2026-04-20' })
+
+    expect(spoken(container)).not.toContain('2026-04-20')
+  })
+
+  it('picks the plural branch the locale needs for the expense count', () => {
+    const one = mount(payload({ expenseCount: 1 }))
+    expect(spoken(one.container)).toContain('1 wydatek')
+    cleanup()
+
+    const many = mount(payload({ expenseCount: 5 }))
+    expect(spoken(many.container)).toContain('5 wydatków')
+  })
+
+  it('leaks no message key on the whole screen', () => {
+    const { container } = mount(payload())
+
+    expect(spoken(container)).not.toMatch(
+      /\b(costs|shell|ui|trips|modules)\.[a-z]/,
+    )
+  })
+
   it('answers an empty ledger and an empty filter result in the reader’s language', () => {
     const empty = mount(
       payload({

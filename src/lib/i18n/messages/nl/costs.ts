@@ -18,6 +18,7 @@ const messages = {
   'person.you': 'Jij',
   'person.youTarget': 'jou',
   'person.removed': 'Verwijderde reiziger',
+  'person.removedTarget': 'een verwijderde reiziger',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Deze uitgave verwijderen?',
   'delete.description':
@@ -360,7 +361,6 @@ const messages = {
   'write.rolledBack': 'De wijziging is teruggedraaid.',
   'expense.saveFallback':
     'De uitgave kon niet worden opgeslagen. Probeer het zo meteen opnieuw.',
-  'delete.removedTraveller': 'een verwijderde reiziger',
 } satisfies TranslationOf<typeof En>
 
 export default messages
