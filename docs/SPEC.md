@@ -373,10 +373,11 @@ passed in as data (`{ id, banned }`); `src/server/public/**` reads no session.
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" and "every query goes through a scoped
-repository" have a carve-out with exactly two members, and this section states both. The first is a
-set of tables, excepted from both rules and stated immediately below. The second is a single query
-over rows that do carry an `organization_id`, excepted from the repository rule alone and admitted
-by amendment at the end of this section.
+repository" have a carve-out with exactly three members, and this section states all three. The
+first is a set of tables, excepted from both rules and stated immediately below. The second is a
+single query over rows that do carry an `organization_id`, excepted from the repository rule alone
+and admitted by amendment at the end of this section. The third is a pair of ids-only reads over the
+participation anchor, admitted by a second amendment after the second.
 
 Twelve tables are platform content rather than tenant data:
 
@@ -520,10 +521,31 @@ departing soon rather than to trips ever created. Session-less, projection-only,
 keyset-paged: those four properties are what stands in for the two clauses above, and changing any
 of them is a change to this contract rather than a refactor.
 
-Two members, and that list is closed as firmly as the twelve names are. A third exception — another
-cross-tenant read, another module handed a plain `Database`, other than an `…Unscoped` repos
-function of the FU-3 shape above — is an amendment to this section, not
-something a builder takes on the way past.
+The third member is the erasure catalog read, `src/server/catalog/erasure.ts` (ADR 0043,
+`.ai/specs/2026-10-08-erase-a-persons-data.md`). Erasing a person is a job with no workspace behind
+it, and the person may already have left the workspaces that matter, so `member` cannot say where
+they took part. `workspace_participants` (the participation anchor, a tenant table written wherever
+a `member` row is created and never removed by departure) can. The module holds exactly two
+functions, `listWorkspacesHoldingUser` and `listOrganizationIds` (the backfill's workspace listing),
+each taking a plain `Database`, and four properties stand in for the repository rule, as they do
+for the second member: **ids only** (an organization id, plus the erasure id for the first; no
+content table is joined), **keyset-paged** with a fixed maximum page size, **read-only**, and
+**reached only from `queue/handlers/participant-backfill*` in this change** (a test pins the
+importers; the erasure engine adds its own caller by amending the pin). The scrub itself runs
+afterwards through a `TenantScope` bound to one organization.
+
+The auth layer cannot import `src/server/repos` (the Workspace console graph reaches
+`#/server/auth` and must not reach the tenant layer), yet it creates memberships. It therefore
+holds one write-only exception, `src/server/auth/participation.ts`: a single `INSERT OR IGNORE` of
+`organization_id` and `user_id` into the anchor, with no select, update or delete, whose
+organization id comes from the id minted in the same batch or from hook data and never from a
+request body. A source test pins that the anchor's table is named only by the schema, that module,
+`repos/participants.ts`, the catalog read and the erasure registry.
+
+Three members, and that list is closed as firmly as the twelve names are. A fourth exception —
+another cross-tenant read, another module handed a plain `Database`, other than an `…Unscoped`
+repos function of the FU-3 shape above — is an amendment to this section, not something a builder
+takes on the way past.
 
 ### Platform roles
 
@@ -649,7 +671,7 @@ Rules:
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`, normally through the tenant-scoped base repository; FU-3
   permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
-- The single stated exception is `server/catalog`, and §5 states it as a closed list of two. The
+- The single stated exception is `server/catalog`, and §5 states it as a closed list of three. The
   first member is the twelve global tables: eleven carry no `organization_id` at all and the twelfth,
   `provider_usage`, carries one only as attribution, so none of them can pass through the tenant
   repository, and every path that mutates or serves that platform content is guarded instead by an
@@ -659,7 +681,11 @@ Rules:
   behind it to authorise and no mutation to audit and is guarded by its shape instead:
   session-less, projection-only (scheduling coordinates, no tenant-readable field), windowed on
   `start_date`, keyset-paged, with every readable field fetched afterwards through a `TenantScope`
-  (ADR 0005, amended into §5). Two, and closed; a third one is a change to this contract.
+  (ADR 0005, amended into §5). The third is the erasure catalog read, `catalog/erasure.ts`: two
+  ids-only, keyset-paged, read-only functions over the participation anchor, reached from the
+  backfill handler alone (ADR 0043, amended into §5; the auth layer's write-only anchor insert,
+  `auth/participation.ts`, is named there too). Three, and closed; a fourth one is a change to this
+  contract.
 - `server/public` is the only path that reads without a session, and it holds no SQL of its own.
   Every response is a named read-only projection - an explicit column whitelist of what a
   stranger may see, so leaking a field is unexpressible - executed through `server/repos` for

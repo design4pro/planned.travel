@@ -2,7 +2,7 @@
 
 | Field              | Value |
 | ------------------ | ----- |
-| **Status**         | ready |
+| **Status**         | in-progress |
 | **Issue**          | #811  |
 | **Spec PR**        | #1002 |
 | **Implementation** | none  |
@@ -697,3 +697,24 @@ Open items a person decides. This spec does not decide them and records the defa
 | ----------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Security and tenancy reviewer | conditions met in spec | The anchor and the third catalog exception stated openly; share links revoked; chat bodies cleared; tokens revoked not deleted; balance and isolation tests required per slice. |
 | Product owner                 | conditions met in spec | Immediate workspace deletion with a subscription gate; self-service stays with `09-S3` behind one engine; export mentioned only; memberless workspaces filed as a finding.      |
+
+## Amendment - phases 1 and 2 (issue #1054)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`):
+
+- **49 columns, not 47.** `trip_invite_links.created_by` (ADR 0042) and `calendar_feeds.user_id` were
+  added after this spec. Outcomes: `trip_invite_links.created_by` revoke and anonymise,
+  `calendar_feeds.user_id` remove. The registry also holds the anchor's own `user_id` (remove, last, as
+  the `finish` step) and the auth and embedded places.
+- **`staff_api_tokens.created_by` is anonymise only**; `staff_api_tokens.user_id` is revoke.
+- **The audit actions are deferred.** `platform.user.erased` and `platform.user.erase_refused` are named
+  in ADR 0043 and not added to `docs/ACCESS.md` §4.2 or `PLATFORM_AUDIT_ACTIONS` until the engine
+  writes them.
+- **The anchor write is `beforeAddMember` and `beforeAcceptInvitation`**, not the `after*` hooks, and
+  the auth layer writes it through `src/server/auth/participation.ts`, a write-only module, because it
+  cannot import repos.
+- **The backfill is a chain**, not a fan-out: one message per workspace, payload a run id and a cursor,
+  the marker written by the message that finds no workspace left.
+- **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
+  that builds their sweep.
