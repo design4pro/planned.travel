@@ -811,6 +811,17 @@ const messages = {
     'No se pudieron cargar los mensajes anteriores',
   'collab.thread.retry': 'Intentar de nuevo',
   'collab.thread.start': 'Aquí empieza la conversación',
+  'collab.thread.loadedEarlier': {
+    one: 'Se cargó {earlier} mensaje anterior',
+    many: 'Se cargaron {earlier} mensajes anteriores',
+    other: 'Se cargaron {earlier} mensajes anteriores',
+  },
+  'collab.thread.newFrom': 'Mensaje nuevo de {name}',
+  'collab.thread.newMany': {
+    one: '{new} mensaje nuevo',
+    many: '{new} mensajes nuevos',
+    other: '{new} mensajes nuevos',
+  },
   'collab.toast.reactionFailed': 'La reacción no se guardó',
   'collab.toast.messageDeleted': 'Mensaje eliminado',
   'collab.toast.deleteFailed': 'El mensaje no se eliminó',

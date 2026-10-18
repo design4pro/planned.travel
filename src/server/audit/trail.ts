@@ -53,6 +53,9 @@ export const AUDIT_ACTIONS = {
   RESERVATION_DELETED: 'reservation.deleted',
   WORKSPACE_DEFAULTS_CHANGED: 'workspace.defaults_changed',
   TRIP_CURRENCY_CHANGED: 'trip.currency_changed',
+  TRIP_INVITE_ROTATED: 'trip_invite.rotated',
+  TRIP_INVITE_UPDATED: 'trip_invite.updated',
+  TRIP_MEMBER_JOINED: 'trip.member_joined',
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS]
