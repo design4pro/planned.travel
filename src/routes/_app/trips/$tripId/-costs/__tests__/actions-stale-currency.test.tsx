@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { toast } from 'sonner'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
@@ -173,6 +174,47 @@ describe('the costs write runner on a stale trip currency', () => {
     await act(async () => {
       answer({ ...PAYLOAD, currency: 'JPY' })
       await pending
+    })
+  })
+})
+
+describe('the costs write runner when a save fails', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    refresh.invalidate.mockResolvedValue(undefined)
+  })
+
+  it('shows the catalogue line, never the failure envelope, for an unexpected failure', async () => {
+    vi.mocked(createExpenseFn).mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'evt_1a2b3c' }),
+      ),
+    )
+
+    await refusedAdd()
+
+    expect(toast.error).toHaveBeenCalledWith(Costs['write.addFailed'], {
+      description: Costs['write.rolledBack'],
+    })
+    expect(JSON.stringify(vi.mocked(toast.error).mock.calls)).not.toContain(
+      'planned-travel/failure',
+    )
+  })
+
+  it('shows the sentence a validation failure names the field with', async () => {
+    vi.mocked(createExpenseFn).mockRejectedValue(
+      new Error(
+        encodePublicFailure({
+          kind: 'validation',
+          message: 'The amount must be more than zero.',
+        }),
+      ),
+    )
+
+    await refusedAdd()
+
+    expect(toast.error).toHaveBeenCalledWith(Costs['write.addFailed'], {
+      description: 'The amount must be more than zero.',
     })
   })
 })

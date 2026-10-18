@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
@@ -672,5 +673,45 @@ describe('the split of an expense that names someone who has left the trip', () 
 
     expect(screen.queryByRole('checkbox', { name: /Cy/ })).toBeNull()
     expect(screen.queryByText('Left the trip')).toBeNull()
+  })
+})
+
+describe('the expense dialog when the save fails', () => {
+  async function failWith(cause: Error): Promise<void> {
+    const user = hand()
+    open(undefined, {
+      onSubmit: async () => {
+        throw cause
+      },
+    })
+    await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+    await user.type(amountField(), '10.00')
+    await user.click(screen.getByRole('button', { name: 'Add expense' }))
+  }
+
+  it('says the catalogue line, never the failure envelope, for an unexpected failure', async () => {
+    await failWith(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'evt_1a2b3c' }),
+      ),
+    )
+
+    expect(await screen.findByText(Costs['expense.saveFallback'])).toBeTruthy()
+    expect(screen.queryByText(/planned-travel\/failure/)).toBeNull()
+  })
+
+  it('says the sentence a validation failure names the field with', async () => {
+    await failWith(
+      new Error(
+        encodePublicFailure({
+          kind: 'validation',
+          message: 'The amount must be more than zero.',
+        }),
+      ),
+    )
+
+    expect(
+      await screen.findByText('The amount must be more than zero.'),
+    ).toBeTruthy()
   })
 })

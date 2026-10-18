@@ -33,6 +33,7 @@ import {
   isFiltered,
   totalsFor,
 } from '#/components/costs'
+import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 import { loadCosts } from '#/server/fns/costs'
@@ -41,8 +42,7 @@ import {
   previewCurrencyChangeFn,
 } from '#/server/fns/trip-currency'
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
-import { pluralise } from '../../../-lib/format'
-import { CATEGORY_OPTIONS } from './categories'
+import { categoryOptions } from './categories'
 import { ExpenseList } from './expense-list'
 import { CostsRail } from './rail'
 import { StatTiles } from './stat-tiles'
@@ -171,26 +171,41 @@ export function CostsScreen({
     0,
   )
 
+  // Resolved at render, per reader: a label computed once would serve one locale to everyone.
+  const categories = useMemo(() => categoryOptions(t), [t])
+
   const categoryFilters = useMemo<Array<ToolbarOption<ExpenseCategory>>>(
     () =>
-      CATEGORY_OPTIONS.map((option) => ({
-        value: option.value,
-        label: option.label,
-        count: snapshot.expenses.filter((row) => row.category === option.value)
-          .length,
-      })).filter((option) => option.count > 0),
-    [snapshot.expenses],
+      categories
+        .map((option) => ({
+          value: option.value,
+          label: option.label,
+          count: snapshot.expenses.filter(
+            (row) => row.category === option.value,
+          ).length,
+        }))
+        // The active category stays listed when its last expense is gone, so the filter summary
+        // can name it in the reader's language instead of printing the stored token.
+        .filter(
+          (option) => option.count > 0 || option.value === filters.category,
+        ),
+    [categories, filters.category, snapshot.expenses],
   )
 
-  const dayFilters = useMemo<Array<ToolbarOption>>(
-    () =>
-      dayOptions(snapshot.expenses).map((day) => ({
-        value: day,
-        label: formatDayShort(day, locale),
-        count: snapshot.expenses.filter((row) => row.spentOn === day).length,
-      })),
-    [snapshot.expenses],
-  )
+  const dayFilters = useMemo<Array<ToolbarOption>>(() => {
+    const days = dayOptions(snapshot.expenses)
+    // As with the category: the active day stays listed once its last expense is gone, so the
+    // filter summary shows a day in the reader's format rather than the stored date.
+    if (filters.day !== undefined && !days.includes(filters.day)) {
+      days.push(filters.day)
+      days.sort((left, right) => right.localeCompare(left))
+    }
+    return days.map((day) => ({
+      value: day,
+      label: formatDayShort(day, locale),
+      count: snapshot.expenses.filter((row) => row.spentOn === day).length,
+    }))
+  }, [snapshot.expenses, filters.day])
 
   const viewCounts = useMemo(
     () => ({
@@ -232,16 +247,16 @@ export function CostsScreen({
       .filter((row) => row.expenseCount > 0)
       .sort((left, right) => right.expenseCount - left.expenseCount)
       .at(0)
-    const known = CATEGORY_OPTIONS.find(
+    const known = categories.find(
       (option) => option.value === busiest?.category,
     )
     return known?.value ?? 'other'
-  }, [snapshot.byCategory])
+  }, [categories, snapshot.byCategory])
 
   const exportRows = useCallback((): void => {
     if (visible.length === 0) {
-      toast.error('Nothing to export', {
-        description: 'No expenses match the filters you have on.',
+      toast.error(t('costs.export.empty.title'), {
+        description: t('costs.export.empty.body'),
       })
       return
     }
@@ -254,14 +269,19 @@ export function CostsScreen({
         display: data.displayCurrency,
       }),
     )
-    toast.success('Export ready', {
-      description: `${pluralise(visible.length, 'expense')} written to CSV.`,
+    toast.success(t('costs.export.ready.title'), {
+      description: t('costs.export.ready.body', {
+        count: visible.length,
+        expenses: formatNumber(visible.length, locale),
+      }),
     })
   }, [
     data.displayCurrency,
     data.people,
     data.today,
     data.viewerUserId,
+    locale,
+    t,
     trip.title,
     visible,
   ])
@@ -280,7 +300,7 @@ export function CostsScreen({
   // A reader has no expense to add, so an empty ledger offers them no call to action and says
   // whose move it is instead.
   const emptyLedgerHint = data.canWrite
-    ? `Log what you spend as you go. planned.travel splits it between everyone travelling and keeps the running total in ${data.currency}.`
+    ? t('costs.screen.empty.body', { currency: data.currency })
     : t('costs.readOnly.empty')
 
   const addFirstExpense = data.canWrite ? (
@@ -291,7 +311,7 @@ export function CostsScreen({
       icon={<Plus aria-hidden strokeWidth={2.5} />}
       onClick={() => openExpense(null)}
     >
-      Add the first expense
+      {t('costs.screen.addFirst')}
     </Button>
   ) : null
 
@@ -309,7 +329,7 @@ export function CostsScreen({
         })
       }
     >
-      Clear the filters
+      {t('ui.action.clearFilters')}
     </Button>
   )
 
@@ -317,11 +337,21 @@ export function CostsScreen({
     <AppFrame>
       <AppSections>
         <TripModuleHeader
-          title="Costs"
+          title={t('shell.trip.tab.costs')}
           description={
             snapshot.expenseCount === 0
-              ? 'Nothing spent yet'
-              : `${pluralise(snapshot.expenseCount, 'expense')} · ${formatMoney(snapshot.spentMinor, data.currency, locale)} spent`
+              ? t('costs.screen.nothingSpent')
+              : t('costs.screen.summary', {
+                  expenses: t('costs.count.expenses', {
+                    count: snapshot.expenseCount,
+                    expenses: formatNumber(snapshot.expenseCount, locale),
+                  }),
+                  spent: formatMoney(
+                    snapshot.spentMinor,
+                    data.currency,
+                    locale,
+                  ),
+                })
           }
           actions={
             <>
@@ -333,7 +363,7 @@ export function CostsScreen({
                 icon={<Download aria-hidden />}
                 onClick={exportRows}
               >
-                Export CSV
+                {t('costs.screen.exportCsv')}
               </Button>
               {data.canWrite ? (
                 <>
@@ -345,7 +375,7 @@ export function CostsScreen({
                     icon={<Scale aria-hidden />}
                     onClick={() => openPayment(null)}
                   >
-                    Settle up
+                    {t('costs.settle.label')}
                   </Button>
                   <Button
                     type="button"
@@ -355,7 +385,7 @@ export function CostsScreen({
                     icon={<Plus aria-hidden strokeWidth={2.5} />}
                     onClick={() => openExpense(null)}
                   >
-                    Add expense
+                    {t('costs.expense.add')}
                   </Button>
                 </>
               ) : null}
@@ -460,13 +490,13 @@ export function CostsScreen({
                   icon={<Coins />}
                   title={
                     snapshot.expenses.length === 0
-                      ? 'No expenses yet'
-                      : 'Nothing matches those filters'
+                      ? t('costs.screen.empty.title')
+                      : t('costs.screen.filtered.title')
                   }
                   description={
                     snapshot.expenses.length === 0
                       ? emptyLedgerHint
-                      : 'Widen the search, pick another day, or clear the filters to see the whole trip again.'
+                      : t('costs.screen.filtered.body')
                   }
                   action={
                     snapshot.expenses.length === 0
@@ -514,7 +544,7 @@ export function CostsScreen({
           departedPeople={data.departedPeople}
           viewerUserId={data.viewerUserId}
           tripCurrency={data.currency}
-          categories={CATEGORY_OPTIONS}
+          categories={categories}
           defaultCategory={defaultCategory}
           today={data.today}
           suggestedRate={data.suggestedRate}
@@ -578,7 +608,7 @@ export function CostsScreen({
           affects={session.row.shares.map(
             (share) =>
               data.people.find((person) => person.userId === share.userId)
-                ?.name ?? 'a removed traveller',
+                ?.name ?? t('costs.person.removedTarget'),
           )}
           onConfirm={() => removeExpense(session.row)}
         />

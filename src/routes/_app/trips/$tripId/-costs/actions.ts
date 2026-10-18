@@ -15,6 +15,7 @@ import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
 import { applyOps, optimisticId } from '#/components/costs'
+import { messageOf } from '#/components/modules/shared'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useTranslate } from '#/lib/i18n'
 import { impliedRate } from '#/lib/money'
@@ -98,12 +99,6 @@ function optimisticConverted(
 
 const COSTS_ROUTE_ID = '/_app/trips/$tripId/costs'
 
-function reasonOf(error: unknown, fallback: string): string {
-  return error instanceof Error && error.message.length > 0
-    ? error.message
-    : fallback
-}
-
 export function useCostsActions(payload: CostsPayload): CostsActions {
   const router = useRouter()
   const t = useTranslate()
@@ -159,7 +154,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           )
         } else {
           toast.error(failure, {
-            description: reasonOf(cause, 'The change was rolled back.'),
+            description: messageOf(cause, t('costs.write.rolledBack')),
           })
         }
         throw cause
@@ -188,11 +183,11 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           createExpenseFn({
             data: { tripId: payload.tripId, expense: toServerExpense(value) },
           }),
-        'The expense was not added',
+        t('costs.write.addFailed'),
       )
-      toast.success('Expense added', { description: value.title })
+      toast.success(t('costs.write.added'), { description: value.title })
     },
-    [payload.currency, payload.displayCurrency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
   const editExpense = useCallback(
@@ -218,11 +213,11 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
               expense: toServerExpense(value),
             },
           }),
-        'The expense was not saved',
+        t('costs.write.editFailed'),
       )
-      toast.success('Expense updated', { description: value.title })
+      toast.success(t('costs.write.updated'), { description: value.title })
     },
-    [payload.currency, payload.displayCurrency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
   const removeExpense = useCallback(
@@ -234,11 +229,11 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           deleteExpenseFn({
             data: { tripId: payload.tripId, expenseId: expense.id },
           }),
-        'The expense was not deleted',
+        t('costs.write.deleteFailed'),
       )
-      toast.success('Expense deleted', { description: expense.title })
+      toast.success(t('costs.write.deleted'), { description: expense.title })
     },
-    [payload.tripId, run],
+    [payload.tripId, run, t],
   )
 
   const addPayment = useCallback(
@@ -278,13 +273,13 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
               note: value.note,
             },
           }),
-        'The payment was not recorded',
+        t('costs.write.paymentFailed'),
       )
-      toast.success('Payment recorded', {
-        description: 'Both balances are updated.',
+      toast.success(t('costs.write.paymentRecorded'), {
+        description: t('costs.write.paymentRecordedBody'),
       })
     },
-    [payload.currency, payload.displayCurrency, payload.tripId, run],
+    [payload.currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
   const setDisplay = useCallback(
