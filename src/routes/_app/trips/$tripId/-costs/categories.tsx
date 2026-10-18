@@ -1,40 +1,43 @@
 /**
  * The expense categories, in the order the module presents them.
  *
- * The labels live in a `Record<ExpenseCategory, string>`, so adding a category to
- * the database schema fails to compile here until it has a name and a place in the
- * order. The glyphs and tints come from `-lib/tone`, which is the one place in the
- * product where a domain value becomes a colour.
+ * The labels are catalogue keys in a `Record<ExpenseCategory, MessageKey>`, so adding a
+ * category to the database schema fails to compile here until it has a name and a place in
+ * the order. A label is resolved where a translator is at hand - never at module scope,
+ * where one evaluation would serve a single locale to every reader of the isolate. The
+ * glyphs and tints come from `-lib/tone`, which is the one place in the product where a
+ * domain value becomes a colour.
  */
 import { cn } from '#/lib/cn'
 import { expenseIcon, expenseTint } from '../../../-lib/tone'
 
 import type { CategoryOption } from '#/components/costs'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { ExpenseCategory } from '#/server/fns/costs'
 
 /**
  * Exhaustive by construction: a `Record` over the schema's own union, so adding a
  * category to the database and forgetting to name it here is a compile error.
  */
-const CATEGORY_LABELS: Record<ExpenseCategory, string> = {
-  accommodation: 'Accommodation',
-  transport: 'Transport',
-  food: 'Food & drink',
-  activities: 'Activities',
-  shopping: 'Shopping',
-  fees: 'Fees & charges',
-  insurance: 'Insurance',
-  other: 'Other',
+const CATEGORY_LABEL_KEYS: Record<ExpenseCategory, MessageKey> = {
+  accommodation: 'costs.category.accommodation',
+  transport: 'costs.category.transport',
+  food: 'costs.category.food',
+  activities: 'costs.category.activities',
+  shopping: 'costs.category.shopping',
+  fees: 'costs.category.fees',
+  insurance: 'costs.category.insurance',
+  other: 'costs.category.other',
 }
 
 /**
- * The same labels, widened for lookup by an arbitrary string. A category retired
+ * The same keys, widened for lookup by an arbitrary string. A category retired
  * from the schema can still appear on an old row, and that row has to render.
  */
-const CATEGORY_LOOKUP: Record<string, string> = CATEGORY_LABELS
+const CATEGORY_LOOKUP: Record<string, MessageKey> = CATEGORY_LABEL_KEYS
 
-export function categoryLabel(category: string): string {
-  return CATEGORY_LOOKUP[category] ?? 'Other'
+export function categoryLabel(category: string, t: Translate): string {
+  return t(CATEGORY_LOOKUP[category] ?? CATEGORY_LABEL_KEYS.other)
 }
 
 /**
@@ -55,13 +58,14 @@ export const EXPENSE_CATEGORY_ORDER: readonly [
   'other',
 ]
 
-/** The category list the expense dialog's select is built from. */
-export const CATEGORY_OPTIONS: ReadonlyArray<CategoryOption> =
-  EXPENSE_CATEGORY_ORDER.map((category) => ({
+/** The category list the expense dialog's select and the screen's filter are built from. */
+export function categoryOptions(t: Translate): ReadonlyArray<CategoryOption> {
+  return EXPENSE_CATEGORY_ORDER.map((category) => ({
     value: category,
-    label: CATEGORY_LABELS[category],
+    label: categoryLabel(category, t),
     icon: <CategoryGlyph category={category} bare />,
   }))
+}
 
 /**
  * The leading chip on an expense row.

@@ -453,7 +453,9 @@ export function SplitEditor({
               />
               <Avatar name={person.name} src={person.image} size="xs" />
               <span className="min-w-0 flex-1 basis-32 truncate text-caption font-medium text-ink">
-                {person.userId === viewerUserId ? 'You' : person.name}
+                {person.userId === viewerUserId
+                  ? t('costs.person.you')
+                  : person.name}
               </span>
               {person.departed ? (
                 <Badge tone="outline" size="md">
