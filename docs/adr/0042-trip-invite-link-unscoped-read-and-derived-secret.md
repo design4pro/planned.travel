@@ -19,8 +19,8 @@ Two questions needed a decision before the table could ship.
 ## Decision
 
 **The lookup is the second function of the FU-3 shape.** `findLiveTripInviteByDigestUnscoped(db,
-digest)` lives in `src/server/repos/invites.ts`, takes a plain `Database`, performs a unique point
-lookup on the digest and returns only `{ id, organizationId, tripId, role, rotation, createdBy }`
+digest, key)` lives in `src/server/repos/invites.ts`, takes a plain `Database`, performs a unique
+point lookup on the digest and returns only `{ id, organizationId, tripId, role, rotation, createdBy }`
 for a live link, never content, secret or digest. Its sole production caller is
 `src/server/public/trip-invite.ts` (`resolveTripInvite`), which holds no SQL and builds no scope.
 Every other function in `invites.ts` takes a `TenantScope` through the tenant-scoped base
@@ -36,10 +36,12 @@ and may never import the session-less path. The key is `BETTER_AUTH_SECRET`; a d
 would be one more secret to deploy and rotate, and a leaked `BETTER_AUTH_SECRET` together with D1
 already forges sessions, so coupling exposes nothing new.
 
-**A key rotation fails closed in the resolver, not in the digest.** After the key is rotated the
-stored digest still matches a copy that was already sent. `resolveTripInvite` therefore derives the
-secret again from the link id, its rotation and the current key and honours the link only if the
-result equals the presented secret. The owner's panel reports the same condition as `stale`.
+**A key rotation fails closed in the finder, not in the digest.** After the key is rotated the
+stored digest still matches a copy that was already sent. `findLiveTripInviteByDigestUnscoped(db,
+digest, key)` therefore derives the secret again from the link id, its rotation and the current key
+and returns the link only if its hash equals the presented digest. The check lives in the finder,
+not in the resolver, so the visitor slice's join, which reaches the finder without the loader,
+fails closed too. The owner's panel reports the same condition as `stale`.
 
 **Liveness is re-checked on every read, with no revocation write.** A link is live only while its
 creator is still an owner of the trip, still a workspace member and not banned, the trip is not
@@ -54,8 +56,10 @@ creator is gone only by issuing a new secret.
 trip, revives copies of their own link, because nothing records the demotion.
 
 **Writes are compare-and-set.** D1 has no interactive transactions, so `replace` and `update`
-carry the rotation the caller read in the `UPDATE`'s `WHERE` and report `changed` when it moved;
-creation is insert-if-absent on the unique `trip_id`.
+carry the rotation the caller read in the `UPDATE`'s `WHERE` and report `changed`, with the state
+that won, when it moved; creation is insert-if-absent on the unique `trip_id`. A switch-off also
+moves the rotation (it issues no secret), so a panel loaded before it cannot replace the link and
+quietly switch it on again.
 
 **`insertTripMember` is extracted from `addTripMember`.** The join in a later phase writes a
 membership as the joiner, in the link's workspace, where the three guards of `addTripMember` (an

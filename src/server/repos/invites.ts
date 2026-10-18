@@ -200,11 +200,13 @@ export interface LiveTripInvite {
 /**
  * The single credential-to-tenant lookup for a trip invite link. A dead link of any kind - unknown
  * digest, switched off, role outside the allowed set, archived trip, creator no longer an owner of
- * the trip, no longer a member of the workspace, or banned - is the same `null`, from one statement.
+ * the trip, no longer a member of the workspace, banned, or no longer the secret the current key
+ * derives - is the same `null`, from one statement and one derivation.
  */
 export async function findLiveTripInviteByDigestUnscoped(
   db: Database,
   digest: string,
+  key: string,
   now = new Date(),
 ): Promise<LiveTripInvite | null> {
   const [row] = await db
@@ -236,7 +238,18 @@ export async function findLiveTripInviteByDigestUnscoped(
     .limit(1)
   if (!row) return null
   const role = tripInviteRoleSchema.safeParse(row.role)
-  return role.success ? { ...row, role: role.data } : null
+  if (!role.success) return null
+  // The digest alone still matches a copy sent before the derivation key was rotated. Deriving the
+  // secret again from the link and the current key is what makes a key rotation fail closed for
+  // every caller of this lookup, not only for one that remembers to check.
+  const derived = await deriveSecret(
+    TRIP_INVITE_PURPOSE,
+    key,
+    row.id,
+    row.rotation,
+  )
+  if ((await hashSecret(derived)) !== digest) return null
+  return { ...row, role: role.data }
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -306,7 +319,12 @@ async function present(
   key: string,
 ): Promise<TripInviteWritten> {
   const { row } = loaded
-  const secret = await deriveSecret(TRIP_INVITE_PURPOSE, key, row.id, row.rotation)
+  const secret = await deriveSecret(
+    TRIP_INVITE_PURPOSE,
+    key,
+    row.id,
+    row.rotation,
+  )
   const role = tripInviteRoleSchema.safeParse(row.role)
   // A stored role outside the narrowed set can only be a hand-made row: it is dead, and shown as
   // the least privileged role until a replace writes a valid one.
@@ -404,7 +422,12 @@ async function rotate(
 ): Promise<TripInviteReplaced> {
   const { row } = loaded
   const rotation = row.rotation + 1
-  const secret = await deriveSecret(TRIP_INVITE_PURPOSE, input.key, row.id, rotation)
+  const secret = await deriveSecret(
+    TRIP_INVITE_PURPOSE,
+    input.key,
+    row.id,
+    rotation,
+  )
   const [changed] = await scope.db
     .update(tripInviteLinks)
     .set({
@@ -425,10 +448,11 @@ async function rotate(
     )
     .returning()
   if (!changed) {
+    const current = await loadLink(scope, row.tripId, false)
     return {
       ok: false,
       reason: 'changed',
-      invite: (await present(loaded, input.key)).invite,
+      invite: (await present(current ?? loaded, input.key)).invite,
     }
   }
   // The actor is an owner who just wrote it, so the rewritten link is live.
@@ -473,8 +497,8 @@ export async function replaceTripInvite(
 }
 
 /**
- * Changes the role or switches the link off or on. A role change and a switch-off touch neither the
- * creator nor the rotation; a switch-on is a replace, so a switched-off link cannot revive copies
+ * Changes the role or switches the link off or on. A role change touches neither the creator nor the
+ * rotation, and a switch-off moves only the rotation (no secret is issued); a switch-on is a replace, so a switched-off link cannot revive copies
  * already sent. A role change on a link whose creator is gone is refused: it has to be replaced.
  */
 export async function updateTripInvite(
@@ -504,7 +528,8 @@ export async function updateTripInvite(
     })
   }
 
-  const patch: { role?: TripInviteRole; disabledAt?: Date } = {}
+  const patch: { role?: TripInviteRole; disabledAt?: Date; rotation?: number } =
+    {}
   if (values.role !== undefined && values.role !== row.role) {
     if (!loaded.live) {
       return {
@@ -517,6 +542,9 @@ export async function updateTripInvite(
   }
   if (values.enabled === false && row.disabledAt === null) {
     patch.disabledAt = new Date()
+    // Moves the rotation so a panel that loaded before the switch-off cannot replace the link
+    // and quietly switch it on again; the digest and the creator stay as they were.
+    patch.rotation = row.rotation + 1
   }
   if (Object.keys(patch).length === 0) {
     return { ok: true, ...(await present(loaded, values.key)) }

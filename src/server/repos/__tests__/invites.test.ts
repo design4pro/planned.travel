@@ -21,6 +21,7 @@ import {
   TripArchivedError,
   TripRoleError,
   addTripMember,
+  insertTripMember,
   archiveTrip,
   createTrip,
   removeTripMember,
@@ -51,6 +52,7 @@ describe('trip invite links', () => {
     return findLiveTripInviteByDigestUnscoped(
       h.db,
       await hashSecret(secret ?? ''),
+      KEY,
     )
   }
 
@@ -126,8 +128,10 @@ describe('trip invite links', () => {
 
     it('refuses a role that is not editor or viewer', async () => {
       await expect(
-        // @ts-expect-error a link never grants owner
-        createTripInvite(a.scope, tripId, { role: 'owner', key: KEY }),
+        createTripInvite(a.scope, tripId, {
+          role: 'owner' as never,
+          key: KEY,
+        }),
       ).rejects.toThrow()
       expect(await rows()).toHaveLength(0)
     })
@@ -283,14 +287,20 @@ describe('trip invite links', () => {
       ])
       expect(results.filter((result) => result.ok)).toHaveLength(1)
       expect((await rows())[0]?.rotation).toBe(1)
+      // The loser is told the state that won, not the one it read before the write.
+      const lost = results.find((result) => !result.ok)
+      const won = results.find((result) => result.ok)
+      expect(lost).toMatchObject({
+        reason: 'changed',
+        invite: { rotation: 1, createdBy: won?.invite.createdBy },
+      })
     })
 
     it('cannot grant owner', async () => {
       await mint()
       await expect(
         replaceTripInvite(a.scope, tripId, {
-          // @ts-expect-error a link never grants owner
-          role: 'owner',
+          role: 'owner' as never,
           expectedRotation: 0,
           key: KEY,
         }),
@@ -337,21 +347,44 @@ describe('trip invite links', () => {
       expect(off).toMatchObject({
         ok: true,
         secret: null,
-        invite: { state: 'off', rotation: 0 },
+        invite: { state: 'off', rotation: 1 },
       })
       expect(await live(first.secret)).toBeNull()
 
       const on = await updateTripInvite(a.scope, tripId, {
         enabled: true,
-        expectedRotation: 0,
+        expectedRotation: 1,
         key: KEY,
       })
       expect(on.ok).toBe(true)
       if (!on.ok) return
-      expect(on.invite).toMatchObject({ state: 'active', rotation: 1 })
+      expect(on.invite).toMatchObject({ state: 'active', rotation: 2 })
       expect(on.secret).not.toBe(first.secret)
       expect(await live(first.secret)).toBeNull()
       expect(await live(on.secret)).not.toBeNull()
+    })
+
+    it('does not let a stale panel replace a link that was switched off', async () => {
+      await mint()
+      const co = await addOnTrip('co-owner', 'owner')
+      await updateTripInvite(a.scope, tripId, {
+        enabled: false,
+        expectedRotation: 0,
+        key: KEY,
+      })
+      const before = await rows()
+      expect(
+        await replaceTripInvite(co.scope, tripId, {
+          role: 'viewer',
+          expectedRotation: 0,
+          key: KEY,
+        }),
+      ).toMatchObject({
+        ok: false,
+        reason: 'changed',
+        invite: { state: 'off' },
+      })
+      expect(await rows()).toEqual(before)
     })
 
     it('does nothing when asked for the state it is already in', async () => {
@@ -520,6 +553,7 @@ describe('trip invite links', () => {
         await findLiveTripInviteByDigestUnscoped(
           h.db,
           await hashSecret('nope'),
+          KEY,
         ),
       ).toBeNull()
     })
@@ -635,8 +669,15 @@ describe('trip invite links', () => {
       expect(
         await revealTripInviteSecret(a.scope, tripId, `${KEY}-rotated`),
       ).toBeNull()
-      // The digest still matches the copy that was sent, which is why the public resolver
-      // re-derives the secret before it honours a link.
+      // The digest still matches the copy that was sent; the finder derives the secret again from
+      // the current key, so a rotated key fails closed for every caller.
+      expect(
+        await findLiveTripInviteByDigestUnscoped(
+          h.db,
+          await hashSecret(secret),
+          `${KEY}-rotated`,
+        ),
+      ).toBeNull()
       expect(await live(secret)).not.toBeNull()
     })
 
@@ -679,6 +720,39 @@ describe('trip invite links', () => {
       await readTripInvite(a.scope, tripId, KEY)
       await revealTripInviteSecret(a.scope, tripId, KEY)
       expect((await rows())[0]?.useCount).toBe(0)
+    })
+  })
+
+  describe('insertTripMember', () => {
+    it('seats a person of this workspace on its own trip and refuses a trip of another workspace', async () => {
+      const userId = await a.addUser('joiner')
+      const seat = await insertTripMember(a.scope, {
+        tripId,
+        userId,
+        role: 'viewer',
+        invitedBy: a.ownerUserId,
+      })
+      expect(seat).toMatchObject({ tripId, userId, role: 'viewer' })
+
+      const other = (
+        await createTrip(b.scope, { title: 'Oslo', currency: 'NOK' })
+      ).id
+      expect(
+        await captureError(() =>
+          insertTripMember(a.scope, {
+            tripId: other,
+            userId,
+            role: 'viewer',
+            invitedBy: a.ownerUserId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await h.db
+          .select()
+          .from(tripMembers)
+          .where(eq(tripMembers.tripId, other)),
+      ).toHaveLength(1)
     })
   })
 

@@ -5,13 +5,7 @@ import type { RateCounterStore } from '#/server/metering/rate'
  * keeps its refusal count in `invite-miss` so a prober of one surface cannot spend the other's.
  */
 export type PublicBudgetKind =
-  | 'feed'
-  | 'miss'
-  | 'ip'
-  | 'invite'
-  | 'invite-miss'
-  | 'join-user'
-  | 'join-ip'
+  'feed' | 'miss' | 'ip' | 'invite' | 'invite-miss' | 'join-user' | 'join-ip'
 
 /** Approximate minute budgets: KV has no atomic increment. Outages fail open. */
 export async function spendPublicBudget(

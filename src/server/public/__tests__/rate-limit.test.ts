@@ -76,9 +76,7 @@ describe('spendPublicBudget', () => {
     const { store, entries } = memoryStore()
     await spendPublicBudget(store, 'join-ip', 'ip-1', 5, NOON)
     const minute = Math.floor(NOON.getTime() / 60000)
-    expect([...entries.keys()]).toEqual([
-      `public:rl:v1:join-ip:ip-1:${minute}`,
-    ])
+    expect([...entries.keys()]).toEqual([`public:rl:v1:join-ip:ip-1:${minute}`])
     expect([...entries.values()][0]).toEqual({ value: '1', ttl: 120 })
   })
 

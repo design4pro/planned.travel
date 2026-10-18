@@ -31,8 +31,7 @@ describe('derived secrets', () => {
 
   it('gives distinct sub-keys to distinct purposes', async () => {
     const own = await deriveSubkey(PURPOSE, KEY)
-    // @ts-expect-error the purpose list is closed: a stranger purpose is refused by the type
-    const other = await deriveSubkey('calendar-feed/v1', KEY)
+    const other = await deriveSubkey('calendar-feed/v1' as never, KEY)
     expect(Buffer.from(own).toString('hex')).not.toBe(
       Buffer.from(other).toString('hex'),
     )
@@ -74,9 +73,9 @@ describe('the shape guard', () => {
 
   it('accepts exactly 43 URL-safe characters', () => {
     expect(isSecretShape('trip-invite', ok)).toBe(true)
-    expect(isSecretShape('trip-invite', `${'a-_9'.repeat(10)}${'B'.repeat(3)}`)).toBe(
-      true,
-    )
+    expect(
+      isSecretShape('trip-invite', `${'a-_9'.repeat(10)}${'B'.repeat(3)}`),
+    ).toBe(true)
   })
 
   it('rejects 42 and 44 characters', () => {

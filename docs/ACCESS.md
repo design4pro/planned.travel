@@ -673,7 +673,9 @@ bounded billing, moderation and cron discovery exceptions remain as stated in SP
    adjacent branded `ResolvedFeed` and constructs the owner-bound scope. A trip invite link reaches
    its row through one `…Unscoped` read, `findLiveTripInviteByDigestUnscoped` in
    `src/server/repos/invites.ts`, called only by `src/server/public/trip-invite.ts`, which returns
-   coordinates and constructs no scope (ADR 0042).
+   coordinates and constructs no scope (ADR 0042). Repositories may import the pure secret module
+   `src/server/security/secret.ts` (derive, digest, shape guard); they never import
+   `src/server/public/**`.
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
    `src/server/repos`; published global rows go through `src/server/catalog`. This module owns the
    whitelist and nothing else.
