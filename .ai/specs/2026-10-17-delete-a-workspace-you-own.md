@@ -191,17 +191,21 @@ The button being hidden is not a control; every refusal above is reached by a te
   subscription already set to end at the period end do not block.
 - The mirror in D1 is fed by webhooks and can lag, so the gate also reads Polar: `GET /v1/subscriptions/` with
   `external_customer_id=<organizationId>` through the existing `PolarClient` (GET is allowed), applying the same predicate to
-  what Polar returns. A Polar failure refuses with `billing-unavailable`; nothing is deleted and the owner tries again.
+  what Polar returns. A Polar failure refuses with `billing-unavailable`: the row moves to `refused` like any other post-fence refusal (the ledger insert comes first, § The sequence), the fence is lifted, nothing is deleted, and the owner's retry inserts a new row.
 - The refusal names the action: manage billing (`/settings/billing`) and cancel there. A subscription cancelled at period
   end stops renewing and never bills again, so the deletion may then proceed; what remains of the paid period is lost and is not
   refunded by the product, and the screen says so before the owner cancels (§ Copy). A `past_due` subscription already set to
   cancel at the period end can still be retried by Polar after the workspace is gone; that is a Human decides item.
-- **The race.** A checkout started before the gate can complete after it. From the moment a ledger row exists,
-  `createCheckout` and `changePlan` refuse for that organization, and the webhook, for an organization that has a live ledger
-  row (not `refused`) or **no `organization` row at all**, writes nothing and answers 200; when a row moves to `refused` the webhook writes again,
-  so the mirror is not left stale. If the payload carries a subscription that is not ending, the webhook
-  enqueues `workspace-late-subscription` (the webhook itself makes no outbound call, `webhook.ts` property 3): its handler
-  calls `PATCH /v1/subscriptions/{id}` with `{ cancel_at_period_end: true }` (an undoable write the `PolarClient` already
+- **The race.** A checkout started before the gate can complete after it. From the moment a live ledger row exists,
+  `createCheckout` and `changePlan` refuse for that organization. The webhook never holds an event back: Polar does not resend an
+  event it got a 200 for, so a mirror write skipped during the window would be lost for good after a refusal. For an organization
+  whose `organization` row exists it writes the mirror as usual, ledgered or not (the cascade removes the mirror with the
+  workspace, and a refusal leaves it current); for an organization with **no `organization` row** it writes nothing and answers 200. When the payload carries a subscription that is not ending and the organization has a live ledger row or no
+  `organization` row, the webhook enqueues `workspace-late-subscription` (the webhook itself makes no outbound call, `webhook.ts`
+  property 3). Before the write its handler reads the ledger: a live row with the `organization` row still present means the
+  deletion has not resolved, so it throws `TaskRetryableError`; a `refused` row or no row with the `organization` row present
+  means the owner kept the workspace and the subscription, so it drops the task; the `organization` row absent means the
+  workspace is gone, so it calls `PATCH /v1/subscriptions/{id}` with `{ cancel_at_period_end: true }` (an undoable write the `PolarClient` already
   allows; never `DELETE`, never a refund), treats 403 and 404 as done, retries 409, 429 and 5xx, and logs at `error` so a
   person sees it. This is the single Polar write this spec adds. The handler needs Polar credentials, which the queue
   consumer does not carry today: `TaskBindings` and `TaskSecrets` (`src/server/queue/types.ts`) gain the `POLAR_*` fields, the
@@ -245,9 +249,9 @@ other large organization tables (the tenant `audit_log` first, which is unbounde
 cascade-completeness test, so a table that grows large is added deliberately. A run does at most 20 steps and returns; the
 next run (the queue hop or the cron) continues.
 
-**The fence.** From the moment a ledger row exists for an organization, no one can join it: the Better Auth `organizationHooks`
+**The fence.** From the moment a live ledger row exists for an organization (any state but `refused`, the predicate the partial unique index uses), no one can join it: the Better Auth `organizationHooks`
 (`beforeAddMember`, `beforeCreateInvitation`, `beforeAcceptInvitation`, present in the pinned 1.7.1) throw when
-`workspaceDeletionPending(db, organizationId)` (a read in `catalog/workspace-deletions.ts`, a catalog function and not an
+`workspaceDeletionPending(db, organizationId)` (true for a row whose `state <> 'refused'`, so a refused deletion leaves no fence behind; a read in `catalog/workspace-deletions.ts`, a catalog function and not an
 `…Unscoped` repo function, so SPEC §5 FU-3's one-caller shape does not apply) is true; `createCheckout`, `changePlan` and
 `addMember` in `src/server/repos/members.ts` (which writes a `member` row without going through the Better Auth hooks) do the
 same. Its callers are exactly: the three hooks, `addMember`, `createCheckout`, `changePlan` and the webhook, pinned by a test
@@ -326,7 +330,7 @@ Each is a D1 row that cascades or a consumer that must tolerate the missing work
 | The plan-state cache            | `billing:plan:v5:<org>` deleted at `rows_deleted`; it would expire in 60 s anyway.                                                                                                                                                                                                                                                                                                                 |
 | Trip rooms                      | Sockets closed per drain step, with the trips; a reconnect fails the connect handler (the trip and the membership are gone). Room storage is erased by the room's own idle alarm, at most seven days after the last socket drops (a stated residual). The erasure initiator additionally resets every room (`deleteAll`) from trip ids it captured before the drain, as the erasure spec requires. |
 | Queue messages in flight        | Every handler tolerates an organization that no longer exists as a no-op, not a dead letter. Phase 6 runs each task kind against a deleted organization and fixes the ones that do not.                                                                                                                                                                                                            |
-| Polar customer and subscription | Customer kept. A subscription that appears late is set to end at the period end (§ Billing). Webhooks for the organization are acknowledged and write nothing.                                                                                                                                                                                                                                     |
+| Polar customer and subscription | Customer kept. A subscription that appears late is set to end at the period end (§ Billing). A webhook for an organization that no longer exists is acknowledged and writes nothing.                                                                                                                                                                                                               |
 | Other members                   | None by construction (sole-member rule). A person who left earlier lost access when they left.                                                                                                                                                                                                                                                                                                     |
 | Their trips' files in R2        | The prefix sweep. `trip-purge` is not used: the sweep covers `trips/<org>/` whole, and the drain deletes trip rows without that side effect.                                                                                                                                                                                                                                                       |
 
@@ -472,7 +476,7 @@ Each failure point has an automatic recovery and a test case; no row of this tab
 
 | Point                                                  | What happens                                                                                        | Recovery                                                                                                          |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Polar unreadable at the gate                           | `billing-unavailable`; nothing written                                                              | The owner retries                                                                                                 |
+| Polar unreadable at the gate                           | `billing-unavailable`; the row moves to `refused`, fence lifted, nothing deleted                    | The owner retries                                                                                                 |
 | Worker dies after the ledger insert                    | Ledger row at `requested`, workspace intact                                                         | The cron resumes it within 15 minutes; the owner sees it complete                                                 |
 | Dies or errors mid-drain                               | Some trips gone, rest remain                                                                        | The next run lists what is left and continues                                                                     |
 | `deleteWorkspace` times out or errors                  | Row may or may not be deleted                                                                       | The step re-checks existence: absent means done, present means retry                                              |
@@ -598,8 +602,8 @@ resumability, another workspace's prefix untouched (a prefix ends in `/`, so `<o
 
 ### Phase 5 - Billing and the fence
 
-`subscriptionBlocksWorkspaceDeletion`, the Polar list read, the webhook guard (unknown or ledgered organization: 200, nothing
-written), the `workspace-late-subscription` handler with `POLAR_*` in `TaskBindings` / `TaskSecrets` and the billing task union
+`subscriptionBlocksWorkspaceDeletion`, the Polar list read, the webhook guard (an unknown organization: 200, nothing written; a
+ledgered one still writes the mirror), the `workspace-late-subscription` handler with `POLAR_*` in `TaskBindings` / `TaskSecrets` and the billing task union
 member, `organizationHooks`, `addMember` and the checkout refusal (no producer yet). **Test seam:** the pure gate per status;
 the webhook for a deleted organization (no 500, no row); the late subscription cancelled at period end and never revoked; a member
 add, an invitation create and an accept refused while a ledger row exists.
