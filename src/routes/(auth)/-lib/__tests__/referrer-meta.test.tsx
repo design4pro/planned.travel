@@ -1,5 +1,5 @@
 /**
- * The three sign-in pages carry a `?redirect=` query that can hold a join-link secret. A same-origin
+ * The sign-in pages carry a `?redirect=` query that can hold a join-link secret. A same-origin
  * request made from one of them sends the whole URL as `Referer`, query included, unless the page
  * says otherwise - and `strict-origin` is the one value that still sends the origin.
  */
@@ -16,11 +16,13 @@ vi.mock('../../-server/config', () => ({
 const { Route: LoginRoute } = await import('../../login')
 const { Route: RegisterRoute } = await import('../../register')
 const { Route: VerifyEmailRoute } = await import('../../verify-email')
+const { Route: TwoFactorRoute } = await import('../../two-factor')
 
 const routes = {
   login: LoginRoute,
   register: RegisterRoute,
   'verify-email': VerifyEmailRoute,
+  'two-factor': TwoFactorRoute,
 }
 
 describe('sign-in pages referrer policy', () => {
