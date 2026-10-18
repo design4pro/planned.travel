@@ -22,7 +22,6 @@ import {
   RESERVATION_TYPES,
   dayAssignments,
   reservations,
-  transports,
 } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { MAX_BOUND_PARAMETERS } from './batch'
@@ -30,7 +29,8 @@ import { NotFoundError } from './context'
 import { requireTripDay } from './days'
 import { getExpense } from './expenses'
 import { unlinkAccommodationsFromReservation } from './itinerary'
-import { placesRepository } from './places'
+import { requirePlaceOfTrip } from './places'
+import { requireTransportOfTrip } from './transports'
 import { assertTripRole, requireWritableTrip } from './trips'
 import {
   currencySchema,
@@ -311,10 +311,7 @@ async function assertReferences(
     await requireTripDay(scope, tripId, values.endDayId)
   }
   if (values.placeId) {
-    const place = await placesRepository.requireById(scope, values.placeId)
-    if (place.tripId !== tripId) {
-      throw new NotFoundError('place', values.placeId)
-    }
+    await requirePlaceOfTrip(scope, tripId, values.placeId)
   }
   if (values.assignmentId) {
     const rows = await scope.db
@@ -333,16 +330,7 @@ async function assertReferences(
     }
   }
   if (values.transportId) {
-    const rows = await scope.db
-      .select({ tripId: transports.tripId })
-      .from(transports)
-      .where(
-        tenantFilter(scope, transports, eq(transports.id, values.transportId)),
-      )
-      .limit(1)
-    if (rows[0]?.tripId !== tripId) {
-      throw new NotFoundError('transport', values.transportId)
-    }
+    await requireTransportOfTrip(scope, tripId, values.transportId)
   }
 }
 

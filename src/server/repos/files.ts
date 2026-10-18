@@ -11,6 +11,10 @@ import { z } from 'zod'
 import { FILE_KINDS, tripFiles } from '#/server/db/schema'
 import { assertQuota, createTenantRepository, tenantFilter } from './base'
 import { NotFoundError } from './context'
+import { requireExpenseOfTrip } from './expenses'
+import { requirePlaceOfTrip } from './places'
+import { requireReservationOfTrip } from './reservations'
+import { requireTransportOfTrip } from './transports'
 import { assertTripRole, requireWritableTrip } from './trips'
 import {
   definedOnly,
@@ -204,12 +208,42 @@ export async function requireFileForWrite(
 }
 
 /**
+ * Refuses a place, booking, transport or expense that is not on `tripId`, with the `NotFoundError`
+ * a missing id gets, so a file cannot be linked to another trip's or another workspace's row. A
+ * link that is absent or being cleared (`null`) names nothing and is not checked.
+ */
+async function requireLinksOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  links: {
+    readonly placeId?: string | null
+    readonly reservationId?: string | null
+    readonly transportId?: string | null
+    readonly expenseId?: string | null
+  },
+): Promise<void> {
+  if (links.placeId) {
+    await requirePlaceOfTrip(scope, tripId, links.placeId)
+  }
+  if (links.reservationId) {
+    await requireReservationOfTrip(scope, tripId, links.reservationId)
+  }
+  if (links.transportId) {
+    await requireTransportOfTrip(scope, tripId, links.transportId)
+  }
+  if (links.expenseId) {
+    await requireExpenseOfTrip(scope, tripId, links.expenseId)
+  }
+}
+
+/**
  * Records an uploaded object. Call it **after** the bytes are in R2 and **before** the response is
  * returned; if the quota check throws, the caller deletes the object it just wrote.
  */
 export async function recordFile(scope: TenantScope, input: RecordFileInput): Promise<TripFile> {
   const values = recordFileInput.parse(input)
   await requireTripForFileWrite(scope, values.tripId)
+  await requireLinksOfTrip(scope, values.tripId, values)
 
   const usage = await getStorageUsage(scope)
   await assertQuota(scope, 'files', usage.fileCount)
@@ -226,6 +260,7 @@ export async function updateFile(
 ): Promise<TripFile> {
   const changes = definedOnly(updateFileInput.parse(input))
   await requireFileForWrite(scope, tripId, fileId)
+  await requireLinksOfTrip(scope, tripId, changes)
   return tripFilesRepository.requireUpdate(scope, fileId, changes)
 }
 
