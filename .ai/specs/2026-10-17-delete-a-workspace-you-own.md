@@ -248,7 +248,15 @@ for a very large workspace and then fail the same way on every retry, so the fin
 **The drain** is a loop of bounded steps, each guarded by the sole-member predicate (a step never runs once the guard is false)
 and each selecting its rows with a `LIMIT` subselect, never a list of bound ids (D1 accepts 100 bound parameters,
 `MAX_BOUND_PARAMETERS` in `repos/batch.ts`): per step, the next 100 trips are selected, their rooms are closed and the trips
-are deleted (the room closing is therefore as bounded as the delete, and stays under the Workers subrequest limit); then the
+are deleted (the room closing is therefore as bounded as the delete, and stays under the Workers subrequest limit). The four
+`NO ACTION` foreign keys of `.ai/specs/2026-09-19-deployed-on-delete-rules.md` (`transports.arrival_day_id`,
+`reservations.expense_id`, `day_accommodations.reservation_id`, `expenses.cost_category_id`) do not make a trip delete fail:
+each one points at a row of the same trip (the repositories verify that before they store the first three; nothing writes
+`expenses.cost_category_id` yet, and `04-S2`, the stage that does, owes the same check), so the parent and every row that names
+it cascade away in the one statement, and SQLite checks `NO ACTION` at the end of the statement, not per row; production
+`deleteTrip` is the same raw `DELETE` of the trip. The rule the drain keeps is the converse: it never deletes a parent of those
+four columns alone (a trip's `days`, `expenses`, `reservations` or `trip_cost_categories` in a step of their own), and a table
+added to its list later must not be the target of a `NO ACTION` key from a row that outlives the step. Then the
 other large organization tables (the tenant `audit_log` first, which is unbounded, then `notifications`, `usage_records`,
 `places`, `collections`, `journeys`) are emptied the same way. The list of tables is a constant in `repos` pinned by the
 cascade-completeness test, so a table that grows large is added deliberately. A run does at most 20 steps and returns; the
@@ -589,9 +597,12 @@ In `src/server/repos/members.ts`: `deleteWorkspace(scope)` (owner assertion, the
 and the drain (§ The sequence): bounded steps selected by `LIMIT` subselect with the same sole-member predicate, trips first
 (the room closing is a callback the driver passes in, so `repos` stays free of the room client), then the table list. **Test seam:** through
 the repository interface: owner deletes, others (`admin`, `member`) are refused; a second member makes it refuse and delete
-nothing, including mid-drain; A's deletion leaves B's rows untouched and counts of both; a cascade-completeness test, run against the **migrated** DDL (`drizzle/`) and not only the harness built from `schema.ts`, because four `ADD COLUMN` foreign keys are `NO ACTION` in the deployed database (`.ai/specs/2026-09-19-deployed-on-delete-rules.md`), and the drain's table order names those dependencies, that
+nothing, including mid-drain; A's deletion leaves B's rows untouched and counts of both; a cascade-completeness test that
 enumerates every table with an `organization_id` column from the schema and asserts each is empty for A and unchanged for B (it
-fails when a future table forgets `orgRef()`); a volume case with more trips than one step, and one with more `audit_log` rows
+fails when a future table forgets `orgRef()`); both it and a case that drains a trip carrying all four `NO ACTION` pointers (a leg
+landing on another day, a booking paid by an expense, a night reserved by a booking, an expense in a cost category) and expects no
+foreign-key failure run against the **migrated** DDL (`drizzle/`) and not only the harness built from `schema.ts`, because those four
+`ADD COLUMN` foreign keys are `NO ACTION` in the deployed database (`.ai/specs/2026-09-19-deployed-on-delete-rules.md`); a volume case with more trips than one step, and one with more `audit_log` rows
 than one step.
 
 ### Phase 3 - Stale session recovery
