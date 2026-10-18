@@ -412,6 +412,13 @@ partial rotation and no grace period — every agent integration breaks in the s
 every token has to be reissued and redistributed by hand. Rotate it only in response to a
 suspected compromise of the token table, and tell the token holders first.
 
+⚠️ **Rotating `BETTER_AUTH_SECRET` also kills every trip invite link.** A link's secret is derived
+from `BETTER_AUTH_SECRET`, the link id and its rotation (ADR 0042), so a new value yields different
+secrets. The public resolver derives the secret again and refuses a copy that does not match, which
+fails closed; each owner's panel shows the link as stale until they replace it and send the new
+address. No data is lost and nobody joins through an old copy, but every copy already sent stops
+working in the same second.
+
 **Historical note, so a rollback is not walked blind.** Releases before phase A read a
 `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` pair and mounted a `/api/stripe/webhook` route.
 Both secrets and that route are gone from the code, and §12's register says what a rollback onto

@@ -1933,11 +1933,26 @@ export async function addTripMember(
   if ((await getMembership(scope, values.userId)) === null) {
     throw new TripMemberNotInWorkspaceError(values.userId)
   }
+  return insertTripMember(scope, { ...values, invitedBy: scope.ctx.userId })
+}
+
+/**
+ * The one insert into `trip_members`, and the refusal of a second row for the same person.
+ *
+ * It checks nothing about who is asking and does not narrow the role: {@link addTripMember} puts
+ * the owner's three guards in front of it, and the trip invite link's join puts the link's own
+ * authority in front of it, passing a role it has already parsed to editor or viewer
+ * (`src/server/repos/invites.ts`). It stays the single insert path so a future quota placed here
+ * covers both. `invitedBy` is recorded exactly as the caller passes it. The trip must belong to the
+ * scope's workspace, because `trip_members.trip_id` is not a composite foreign key.
+ */
+export async function insertTripMember(
+  scope: TenantScope,
+  values: AddTripMemberInput & { readonly invitedBy: string },
+): Promise<TripMember> {
+  await tripsRepository.requireById(scope, values.tripId)
   try {
-    return await tripMembersRepository.insert(scope, {
-      ...values,
-      invitedBy: scope.ctx.userId,
-    })
+    return await tripMembersRepository.insert(scope, values)
   } catch (cause) {
     if (isUniqueConstraintViolation(cause)) {
       throw new TripMemberExistsError(values.userId)

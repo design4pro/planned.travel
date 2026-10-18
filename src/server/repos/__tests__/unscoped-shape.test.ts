@@ -16,6 +16,7 @@ const callers: Record<string, string> = {
   listSubscriptionsByOrganizationsUnscoped:
     'src/routes/_app/console/-server/account-billing.ts',
   findLiveFeedByDigestUnscoped: 'src/server/public/calendar-feed.ts',
+  findLiveTripInviteByDigestUnscoped: 'src/server/public/trip-invite.ts',
 }
 
 /** Resolve symbols rather than spelling: an alias or a barrel must retain its provenance. */
@@ -184,7 +185,7 @@ function withProgram<T>(
 }
 
 describe('Unscoped repository contract', () => {
-  it('finds all six exceptions, their real callers and their plain Database parameters', () => {
+  it('finds all seven exceptions, their real callers and their plain Database parameters', () => {
     const result = withProgram({}, (project) => inspect(project, callers))
     expect(result.discovered).toEqual(Object.keys(callers).sort())
     expect(result.imported).toEqual(Object.keys(callers).sort())
@@ -247,5 +248,25 @@ describe('Unscoped repository contract', () => {
     })
     expect(identifiers).toContain('openFeedScope')
     expect(identifiers).not.toContain('createScope')
+  })
+
+  it('keeps scope construction and SQL out of the trip invite resolver', () => {
+    const identifiers = withProgram({}, (project) => {
+      const ast = project.program.getSourceFile(
+        resolve('src/server/public/trip-invite.ts'),
+      )
+      if (!ast) throw new Error('Resolver not loaded')
+      const found: Array<string> = []
+      function visit(node: ts.Node) {
+        if (ts.isIdentifier(node)) found.push(node.text)
+        node.forEachChild(visit)
+      }
+      visit(ast)
+      return found
+    })
+    expect(identifiers).toContain('findLiveTripInviteByDigestUnscoped')
+    for (const forbidden of ['createScope', 'openFeedScope', 'drizzle']) {
+      expect(identifiers).not.toContain(forbidden)
+    }
   })
 })

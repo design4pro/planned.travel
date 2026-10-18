@@ -35,6 +35,8 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Product module** — an optional, separately-toggled product area: Atlas (world-map tracker), Journal, Leave planner, Collections.
 - **Atlas** — the world-map tracker module: countries and regions a user has visited.
 - **Share token** — an unguessable token granting session-less, read-only access to a named projection of one trip resource.
+- **Trip invite link** — the single secret address a trip's owner can hand out to put members of the workspace on that trip. A trip has at most one; the owner can copy the same address again, replace it (which kills every copy already sent) or switch it off. It grants an editor or viewer seat, never ownership, and it works only while the person who made it is still an owner of the trip. _Avoid_: "invitation" (that is the workspace invitation), "share link" (that is read-only and needs no account).
+- **Workspace invitation** — the emailed invitation that makes a person a member of a workspace. It is not a way onto a trip, and a trip invite link is not a way into a workspace.
 - **Entitlement** — a capability granted by the organization's billing plan.
 - **Quota** — a numeric ceiling on an entitlement, enforced at the data-access boundary.
 - **Platform actor** — a privileged operator acting across organizations; every such action is audited.

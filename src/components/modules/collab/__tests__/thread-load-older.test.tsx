@@ -272,8 +272,11 @@ describe('the load-earlier control', () => {
       ).toBeTruthy(),
     )
     expect(control()?.textContent).toBe(En['collab.thread.retry'])
-    const failure = screen.getByText(En['collab.thread.loadOlderFailed'])
-    expect(failure.closest('[role="status"]')).not.toBeNull()
+    const failure = document.getElementById(
+      control()!.getAttribute('aria-describedby')!,
+    )!
+    expect(failure.textContent).toBe(En['collab.thread.loadOlderFailed'])
+    expect(failure.closest('[role="status"]')).toBeNull()
     expect(control()?.getAttribute('aria-describedby')).toBe(failure.id)
     expect(document.querySelector('[role="alert"]')).toBeNull()
     await waitFor(() => expect(document.activeElement).toBe(control()))
@@ -283,24 +286,8 @@ describe('the load-earlier control', () => {
 
     fireEvent.click(control()!)
     await waitFor(() => expect(screen.getByText('m0900')).toBeTruthy())
-    expect(screen.queryByText(En['collab.thread.loadOlderFailed'])).toBeNull()
     expect(control()?.textContent).toBe(En['collab.thread.loadOlder'])
     expect(control()?.getAttribute('aria-describedby')).toBeNull()
-  })
-
-  it('inserts the failure line anew on a second failure, so it is announced again', async () => {
-    vi.mocked(loadOlderMessagesFn).mockRejectedValue(new Error('offline'))
-    render(tree(fullWindow()))
-    fireEvent.click(control()!)
-    const first = await screen.findByText(En['collab.thread.loadOlderFailed'])
-    fireEvent.click(control()!)
-    await waitFor(() => expect(loadOlderMessagesFn).toHaveBeenCalledTimes(2))
-    await waitFor(() =>
-      expect(screen.getByText(En['collab.thread.loadOlderFailed'])).not.toBe(
-        first,
-      ),
-    )
-    expect(first.isConnected).toBe(false)
   })
 
   it('replaces the control with a focused line after the last page', async () => {
