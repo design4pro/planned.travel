@@ -2,10 +2,10 @@
 
 | Field              | Value                                    |
 | ------------------ | ---------------------------------------- |
-| **Status**         | ready                                    |
+| **Status**         | in-progress                              |
 | **Issue**          | none                                     |
 | **Spec PR**        | #985                                     |
-| **Implementation** | none                                     |
+| **Implementation** | #1381, #1412                             |
 | **Plan**           | 08-S1 (docs/plans/08-product-modules.md) |
 
 ## 📝 TLDR

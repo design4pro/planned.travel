@@ -1134,6 +1134,24 @@ const messages = {
       '休暇日数を保存できませんでした。{year}年の表示は{value}日のままです。',
   },
   'vacay.allowance.retry': '再試行',
+  'vacay.allowance.tile.edit.carried': '繰り越し日数を編集、現在 {value}',
+  'vacay.allowance.input.carried': '{year}年に繰り越す日数',
+  'vacay.allowance.carried.from': '{year}年からの繰り越し',
+  'vacay.allowance.carried.opening':
+    '{year}年より前から持ち越し。選択して編集できます。',
+  'vacay.allowance.carried.off': '繰り越しはオフです',
+  'vacay.allowance.carried.wholeDays':
+    '翌年に繰り越せるのは丸1日単位のみです。端数の半日は繰り越されません。',
+  'vacay.allowance.error.derived':
+    '{year}年の繰り越し日数は{previousYear}年から自動計算されるため、編集できません。',
+  'vacay.allowance.error.carried': {
+    other:
+      '繰り越し日数を保存できませんでした。{year}年の表示は{value}日のままです。',
+  },
+  'vacay.allowance.superseded': {
+    other:
+      '{year}年の繰り越し日数は{previousYear}年から自動計算されるようになりました。入力済みの値は{value}日でした。',
+  },
   'vacay.pending.loading': '読み込み中',
   'vacay.error.title': '休暇プランナーを読み込めませんでした',
   'vacay.year.previous': '前の年',

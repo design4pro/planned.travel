@@ -1223,6 +1223,27 @@ const messages = {
       'Dein Urlaubsanspruch konnte nicht gespeichert werden. {year} zeigt weiterhin {value} Tage.',
   },
   'vacay.allowance.retry': 'Erneut versuchen',
+  'vacay.allowance.tile.edit.carried':
+    'Übertragene Tage bearbeiten, aktuell {value}',
+  'vacay.allowance.input.carried': 'Nach {year} übertragene Tage',
+  'vacay.allowance.carried.from': 'Übertragen aus {year}',
+  'vacay.allowance.carried.opening':
+    'Mitgebracht von vor {year}. Auswählen zum Bearbeiten.',
+  'vacay.allowance.carried.off': 'Übertrag ist aus',
+  'vacay.allowance.carried.wholeDays':
+    'Nur ganze Tage werden ins nächste Jahr übertragen; der übrige halbe Tag nicht.',
+  'vacay.allowance.error.derived':
+    'Die übertragenen Tage für {year} werden jetzt aus {previousYear} berechnet und lassen sich daher nicht bearbeiten.',
+  'vacay.allowance.error.carried': {
+    one: 'Deine übertragenen Tage konnten nicht gespeichert werden. {year} zeigt weiterhin {value} Tag.',
+    other:
+      'Deine übertragenen Tage konnten nicht gespeichert werden. {year} zeigt weiterhin {value} Tage.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Die übertragenen Tage für {year} werden jetzt aus {previousYear} berechnet. Du hattest {value} Tag eingegeben.',
+    other:
+      'Die übertragenen Tage für {year} werden jetzt aus {previousYear} berechnet. Du hattest {value} Tage eingegeben.',
+  },
   'vacay.pending.loading': 'Wird geladen',
   'vacay.error.title': 'Der Urlaubsplaner konnte nicht geladen werden',
   'vacay.year.previous': 'Vorheriges Jahr',

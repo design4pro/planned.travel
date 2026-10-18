@@ -700,7 +700,7 @@ export const vacay: SeedVacay = {
   defaultEntitlementDays: 28,
   years: [2025, 2026],
   entitlements: [
-    { person: 'rafal', year: 2026, entitlementDays: 28, carriedOverDays: 3 },
+    { person: 'rafal', year: 2026, entitlementDays: 28, carriedOverDays: 28 },
     { person: 'mika', year: 2026, entitlementDays: 25, carriedOverDays: 0 },
     { person: 'jonas', year: 2026, entitlementDays: 30, carriedOverDays: 2 },
     { person: 'priya', year: 2026, entitlementDays: 26, carriedOverDays: 1 },
