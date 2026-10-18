@@ -496,6 +496,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'O provedor de pagamento recusou essa solicitação. Tente de novo em um instante.',
+  'billing.failure.reference': 'Referência para o suporte: {reference}',
+  'billing.failure.forbidden':
+    'Sua função não permite isso na cobrança deste espaço de trabalho. Peça a um proprietário ou administrador.',
+  'billing.failure.providerRefused':
+    'O Polar não aceitou essa alteração. Compare o número de assentos com seus membros e tente de novo, ou use o portal de cobrança.',
+  'billing.failure.rateLimited':
+    'O Polar está ocupado agora. Nada foi alterado. Tente de novo em um minuto.',
+  'billing.failure.notConnected':
+    'A cobrança ainda não está conectada nesta implantação, então nada foi alterado. Fale com o suporte.',
+  'billing.failure.orderNotInvoiceable':
+    'O Polar não consegue emitir uma fatura para este pedido. Se faltar o nome ou o endereço de cobrança, adicione-os no portal de cobrança e tente de novo; caso contrário, fale com o suporte.',
   'billing.planChanged.title': 'Plano atualizado',
   'billing.planChanged.body':
     'A mudança já vale na Polar, que vai faturar a diferença. O resumo abaixo se atualiza em até um minuto.',

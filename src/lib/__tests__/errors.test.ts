@@ -93,6 +93,26 @@ describe('readPublicFailure', () => {
     })
   })
 
+  it.each([
+    'BILLING_FORBIDDEN',
+    'BILLING_PROVIDER_REFUSED',
+    'BILLING_RATE_LIMITED',
+    'BILLING_NOT_CONNECTED',
+    'BILLING_ORDER_NOT_INVOICEABLE',
+  ] as const)('round-trips the %s code alongside the reference', (code) => {
+    const encoded = encodePublicFailure({
+      kind: 'unexpected',
+      code,
+      reference: 'abc123',
+    })
+
+    expect(readPublicFailure(new Error(encoded))).toEqual({
+      kind: 'unexpected',
+      code,
+      reference: 'abc123',
+    })
+  })
+
   it('drops a code that is not the allow-listed literal, however the envelope is dressed', () => {
     // The code is the one thing besides a message the UI branches on, so a hostile or newer-server
     // value must not reach a screen: every other repository code, a near-miss and a wrong type.
@@ -102,6 +122,9 @@ describe('readPublicFailure', () => {
       'TENANT_ISOLATION',
       'quota_exceeded',
       'QUOTA_EXCEEDED ',
+      'BILLING_FORBIDDEN ',
+      'billing_rate_limited',
+      'BILLING_STATUS_422',
       42,
       null,
       { QUOTA_EXCEEDED: true },

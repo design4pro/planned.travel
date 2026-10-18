@@ -519,6 +519,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Dostawca płatności odrzucił to żądanie. Spróbuj ponownie za chwilę.',
+  'billing.failure.reference': 'Numer referencyjny dla wsparcia: {reference}',
+  'billing.failure.forbidden':
+    'Twoja rola nie pozwala na to w rozliczeniach tego obszaru roboczego. Poproś właściciela lub administratora.',
+  'billing.failure.providerRefused':
+    'Polar nie przyjął tej zmiany. Porównaj liczbę miejsc z liczbą członków, potem spróbuj ponownie albo skorzystaj z portalu rozliczeń.',
+  'billing.failure.rateLimited':
+    'Polar jest teraz przeciążony. Nic się nie zmieniło. Spróbuj ponownie za minutę.',
+  'billing.failure.notConnected':
+    'Rozliczenia nie są jeszcze podłączone w tym wdrożeniu, więc nic się nie zmieniło. Skontaktuj się z pomocą techniczną.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar nie może wystawić faktury do tego zamówienia. Jeśli brakuje na nim nazwy lub adresu rozliczeniowego, dodaj je w portalu rozliczeń i spróbuj ponownie; w przeciwnym razie skontaktuj się z pomocą techniczną.',
   'billing.planChanged.title': 'Plan zaktualizowany',
   'billing.planChanged.body':
     'Zmiana już obowiązuje w Polarze, który rozliczy różnicę. Podsumowanie poniżej dogoni ją w ciągu minuty.',

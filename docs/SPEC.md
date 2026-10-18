@@ -838,11 +838,13 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
     not an edit. A new refusal class travels as a message key the client resolves in the reader's
     locale, the shape `SHELL_STATE_KEYS` (`src/components/layout/session.ts`) already has, or stays
     a diagnostic whose screen shows the localised fallback. The failure envelope's `code` field
-    (`PublicFailure.code`, `src/lib/errors.ts`) is another instance of that route: today its one
-    value is the literal `QUOTA_EXCEEDED`, which `classifyFailure` attaches to an `unexpected`
-    failure for either `QuotaExceededError` class, so a screen can say "your plan's limit is
-    reached" in the reader's locale. It is a constant, never an error's own `code`, and
-    `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
+    (`PublicFailure.code`, `src/lib/errors.ts`) is another instance of that route: its values are
+    the literals in `PUBLIC_FAILURE_CODES` - `QUOTA_EXCEEDED`, which `classifyFailure` attaches to
+    an `unexpected` failure for either `QuotaExceededError` class, so a screen can say "your
+    plan's limit is reached" in the reader's locale, and five `BILLING_*` codes (forbidden, not
+    connected, rate-limited, refused by Polar, order not invoiceable) that the billing screen
+    resolves through `src/routes/_app/settings/-lib/billing-failure.ts`. It is a constant, never
+    an error's own `code`, and `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
     `refusal` channel, with the existing sentences moved into the catalogue, is the work that
     retires this exception.
 

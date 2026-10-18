@@ -483,6 +483,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Ödeme sağlayıcısı bu isteği reddetti. Birazdan yeniden dene.',
+  'billing.failure.reference': 'Destek için referans: {reference}',
+  'billing.failure.forbidden':
+    'Rolünüz bu çalışma alanının faturalandırmasında buna izin vermiyor. Bir sahipten veya yöneticiden isteyin.',
+  'billing.failure.providerRefused':
+    'Polar bu değişikliği kabul etmedi. Koltuk sayısını üyelerinizle karşılaştırın, sonra tekrar deneyin veya faturalandırma portalını kullanın.',
+  'billing.failure.rateLimited':
+    'Polar şu anda yoğun. Hiçbir şey değişmedi. Bir dakika sonra tekrar deneyin.',
+  'billing.failure.notConnected':
+    'Faturalandırma bu dağıtımda henüz bağlı değil, bu yüzden hiçbir şey değişmedi. Destekle iletişime geçin.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar bu sipariş için fatura düzenleyemiyor. Fatura adı veya adresi eksikse bunları faturalandırma portalında ekleyip tekrar deneyin; aksi halde destekle iletişime geçin.',
   'billing.planChanged.title': 'Plan güncellendi',
   'billing.planChanged.body':
     'Değişiklik Polar tarafında zaten geçerli; farkı o faturalandıracak. Aşağıdaki özet bir dakika içinde yetişir.',
