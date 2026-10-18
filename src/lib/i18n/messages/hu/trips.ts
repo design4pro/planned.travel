@@ -284,6 +284,8 @@ const messages = {
   'book.committedCaption': 'Az utazás összes foglalására',
   'book.onItinerary': 'Az útitervben',
   'book.pinnedCaption': 'Az útiterv egy napjához rögzítve',
+  'book.readOnly.archived':
+    'Ez az utazás archiválva van, ezért a foglalások és a szállások csak olvashatók. Állítsd vissza az utazást a módosításukhoz.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Utak',
   'transports.empty': 'Még nincs rögzítve semmi',

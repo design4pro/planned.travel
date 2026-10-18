@@ -274,6 +274,8 @@ const messages = {
   'book.committedCaption': 'Dari seluruh pemesanan perjalanan ini',
   'book.onItinerary': 'Di rencana perjalanan',
   'book.pinnedCaption': 'Disematkan pada satu hari rencana',
+  'book.readOnly.archived':
+    'Perjalanan ini diarsipkan, jadi pemesanan dan penginapannya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Transportasi',
   'transports.empty': 'Belum ada yang dicatat',

@@ -12,7 +12,7 @@ import {
   NewBookingAction,
   bookImportsOwner,
 } from '#/components/modules/book'
-import { Card, ProgressRing, StatCard } from '#/components/ui'
+import { Alert, Card, ProgressRing, StatCard } from '#/components/ui'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadBookingDeskFn } from '#/server/fns/reservations'
 import { loadDisplayPreferences } from '../../-server/settings'
@@ -70,7 +70,9 @@ function BookPage() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const [newBookingOpen, setNewBookingOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(search.import !== undefined)
+  const [importOpen, setImportOpen] = useState(
+    search.import !== undefined && data.canWrite,
+  )
 
   // The parameter is an instruction, not state: it opens the dialog once and is then dropped, so
   // closing the dialog and reopening it is not fought by a URL that still says "open".
@@ -78,9 +80,10 @@ function BookPage() {
     if (search.import === undefined) {
       return
     }
-    setImportOpen(true)
+    // A reader who may not write is refused at the server; the dialog is simply not offered.
+    setImportOpen(data.canWrite)
     void navigate({ search: {}, replace: true })
-  }, [navigate, search.import])
+  }, [data.canWrite, navigate, search.import])
 
   const countFor = (status: string): number =>
     data.byStatus.find((row) => row.status === status)?.value ?? 0
@@ -109,22 +112,32 @@ function BookPage() {
                 ].join(' · ')
           }
           actions={
-            <>
-              <ImportBookingsAction onClick={() => setImportOpen(true)} />
-              <NewBookingAction onClick={() => setNewBookingOpen(true)} />
-            </>
+            data.canWrite ? (
+              <>
+                <ImportBookingsAction onClick={() => setImportOpen(true)} />
+                <NewBookingAction onClick={() => setNewBookingOpen(true)} />
+              </>
+            ) : null
           }
         />
 
-        <ImportBookingsDialog
-          tripId={tripId}
-          userId={bookImportsOwner(
-            shell.session.user.id,
-            shell.session.organization?.id ?? null,
-          )}
-          open={importOpen}
-          onOpenChange={setImportOpen}
-        />
+        {data.archived ? (
+          <Alert tone="info" size="sm">
+            {t('trips.book.readOnly.archived')}
+          </Alert>
+        ) : null}
+
+        {data.canWrite ? (
+          <ImportBookingsDialog
+            tripId={tripId}
+            userId={bookImportsOwner(
+              shell.session.user.id,
+              shell.session.organization?.id ?? null,
+            )}
+            open={importOpen}
+            onOpenChange={setImportOpen}
+          />
+        ) : null}
 
         {total === 0 ? null : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -195,6 +208,7 @@ function BookPage() {
           bookings={data.bookings}
           days={data.days}
           currency={data.currency}
+          canWrite={data.canWrite}
           maskCodes={data.maskCodes}
           newBookingOpen={newBookingOpen}
           onNewBookingOpenChange={setNewBookingOpen}

@@ -290,6 +290,8 @@ const messages = {
   'book.committedCaption': 'Su tutte le prenotazioni di questo viaggio',
   'book.onItinerary': 'Nell’itinerario',
   'book.pinnedCaption': 'Fissato a un giorno del piano',
+  'book.readOnly.archived':
+    'Questo viaggio è archiviato, quindi le prenotazioni e i soggiorni sono di sola lettura. Ripristina il viaggio per modificarli.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Spostamenti',
   'transports.empty': 'Ancora nulla registrato',

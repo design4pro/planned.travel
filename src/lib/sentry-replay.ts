@@ -18,12 +18,29 @@
 
 import { addIntegration, replayIntegration } from '@sentry/react'
 
+import { scrubTelemetry } from '#/lib/sentry-scrub'
+
+/**
+ * Nothing about a join URL is recorded beyond its (redacted) address. No request detail is captured
+ * unless `networkDetailAllowUrls` lists it, and it lists nothing; the deny entry keeps that true if
+ * somebody ever adds a broad allow pattern.
+ */
+const JOIN_URL = /\/join\//i
+
 export function startSessionReplay(): void {
   addIntegration(
     replayIntegration({
       maskAllText: true,
       maskAllInputs: true,
       blockAllMedia: true,
+      networkDetailDenyUrls: [JOIN_URL],
+      /**
+       * Applies to the custom events the SDK writes itself - navigations, requests, breadcrumbs,
+       * performance spans. The DOM recorder's own events (the page's `href` in a Meta event, link
+       * attributes in a snapshot) are not reachable by any hook; the join page closes that gap by
+       * not being recorded (see `docs/DEPLOY.md` section 17).
+       */
+      beforeAddRecordingEvent: scrubTelemetry,
     }),
   )
 }

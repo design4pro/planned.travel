@@ -31,7 +31,7 @@ import { requireTripDay } from './days'
 import { getExpense } from './expenses'
 import { unlinkAccommodationsFromReservation } from './itinerary'
 import { placesRepository } from './places'
-import { assertTripRole, requireTrip } from './trips'
+import { assertTripRole, requireWritableTrip } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -46,7 +46,7 @@ import {
   titleSchema,
   urlSchema,
 } from './validation'
-import type { Reservation } from '#/server/db/types'
+import type { Reservation, Trip } from '#/server/db/types'
 import type { TenantScope } from './base'
 import type { TripRole } from './trips'
 
@@ -229,30 +229,41 @@ export async function totalTripReservationsMinor(
 const BOOKING_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
 
 /**
- * The third layer, after the tenant filter and after `requireTrip`: {@link assertTripRole} with the
- * booking writers' role list.
+ * The trip a booking writer may change, or a refusal: the layers every booking write shares, in the
+ * boundary's order (ADR 0007).
+ *
+ * {@link requireWritableTrip} first - `NotFoundError` for a trip the caller may not see, then
+ * `TripArchivedError` for an archived one, so a record the archive says is finished cannot be
+ * rewritten and a reader who may not see the trip is never told it is archived - and only then
+ * {@link assertTripRole} with the booking writers' role list. The archive answers before the role
+ * for the reason `requireWritableTrip` gives: it is a property of the trip, and the instruction it
+ * carries (ask the owner to restore it) holds for a viewer too.
  *
  * Exported because the confirmation import, which writes this trip's bookings from outside this
  * file, spends before `createReservation` is reached: `startBookingImport` spends a metered
  * extraction unit the moment it enqueues, and `confirmBookingImport` creates a place and calls the
- * geocoder for an accommodation row before its reservation write. Both ask the same question this
- * early, through this function, so the role list stays declared once.
+ * geocoder for an accommodation row before its reservation write. Both ask the same questions this
+ * early, through this function, so the archive rule and the role list stay declared once.
  */
-export async function assertBookingRole(
+export async function requireWritableBookingTrip(
   scope: TenantScope,
   tripId: string,
-): Promise<void> {
+): Promise<Trip> {
+  const trip = await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, BOOKING_WRITE_ROLES)
+  return trip
 }
 
 /**
  * The booking a writer is about to change, once the caller has been shown to be allowed to change
  * it: `NotFoundError` when the row is not theirs or sits on a private trip they are not on,
- * `TripRoleError` when it is theirs to read and not to edit. Every writer below that starts from a
- * booking id starts here, so the two refusals cannot drift apart between them.
+ * `TripArchivedError` when the row's own trip is archived, `TripRoleError` when it is theirs to read
+ * and not to edit. Every writer below that starts from a booking id starts here, so the refusals
+ * cannot drift apart between them, and the archive is read off the row's trip, not off a trip id
+ * the request names.
  *
- * The order is the boundary's (ADR 0007): the row, then `requireTrip` on its trip, then the role.
- * Asked the other way round, someone who may not see the trip and holds a booking id is told
+ * The order is the boundary's (ADR 0007): the row, then the trip (seen, then writable) and then the
+ * role. Asked the other way round, someone who may not see the trip and holds a booking id is told
  * `FORBIDDEN` for a row that, from where they stand, does not exist.
  */
 async function requireWritableReservation(
@@ -263,8 +274,7 @@ async function requireWritableReservation(
     scope,
     reservationId,
   )
-  await requireTrip(scope, existing.tripId)
-  await assertBookingRole(scope, existing.tripId)
+  await requireWritableBookingTrip(scope, existing.tripId)
   return existing
 }
 
@@ -359,8 +369,7 @@ async function insertReservation(
   importedAt: Date | null,
 ): Promise<Reservation> {
   const values = createReservationInput.parse(input)
-  await requireTrip(scope, values.tripId)
-  await assertBookingRole(scope, values.tripId)
+  await requireWritableBookingTrip(scope, values.tripId)
   await assertReferences(scope, values.tripId, values)
   return reservationsRepository.insert(scope, { ...values, importedAt })
 }
@@ -488,8 +497,9 @@ const importedIdsSchema = z.array(idSchema).min(1).max(IMPORT_BATCH_LIMIT)
  * Marks a batch of one trip's bookings as machine-written and unchecked, returning how many rows it
  * marked.
  *
- * A booking write like any other, so it runs the same three layers in the same order: the trip
- * resolved inside the tenant (`NotFoundError` for a trip that is not the caller's), the trip role
+ * A booking write like any other, so it runs the same layers in the same order
+ * ({@link requireWritableBookingTrip}): the trip resolved inside the tenant (`NotFoundError` for a
+ * trip that is not the caller's), the archive (`TripArchivedError`), the trip role
  * (`TripRoleError` for a viewer), and only then the write. The batch is bounded to that one trip, so
  * no row of a trip the caller may not write can be marked by being named.
  *
@@ -510,8 +520,7 @@ export async function markReservationsImported(
   reservationIds: ReadonlyArray<string>,
 ): Promise<number> {
   const ids = importedIdsSchema.parse([...reservationIds])
-  const trip = await requireTrip(scope, tripId)
-  await assertBookingRole(scope, trip.id)
+  const trip = await requireWritableBookingTrip(scope, tripId)
   const markedAt = new Date()
   let marked = 0
   for (let start = 0; start < ids.length; start += IMPORT_MARKER_CHUNK) {

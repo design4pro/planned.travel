@@ -14,6 +14,7 @@ import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
+import { signInHead } from './-lib/head'
 import { MIN_PASSWORD_LENGTH } from './-lib/schemas'
 import { DEFAULT_REDIRECT, safeRedirect } from './-lib/redirect'
 import { loadAuthConfig } from './-server/config'
@@ -41,6 +42,7 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/(auth)/register')({
   validateSearch: searchSchema,
+  head: signInHead,
   beforeLoad: async ({ search }) => {
     const config = await loadAuthConfig()
     if (config.signedIn) {

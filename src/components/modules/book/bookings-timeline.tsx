@@ -284,6 +284,8 @@ interface Desk {
   readonly tripId: string
   readonly currency: string
   readonly maskCodes: boolean
+  /** False on a trip the reader may not change: the card then draws no control. */
+  readonly canWrite: boolean
   readonly dayById: ReadonlyMap<string, BookingDayOption>
   readonly onEdit: (booking: BookingRow) => void
   readonly onStatus: (booking: BookingRow, next: string) => void
@@ -303,6 +305,12 @@ export interface BookingsTimelineProps {
    * forgotten at a call site is a masking flag that leaks a code.
    */
   readonly maskCodes: boolean
+  /**
+   * Whether the reader may change the desk (`canWritePlan`, off the desk payload). Required rather
+   * than defaulted for the reason `maskCodes` is: a flag that can be forgotten at a call site
+   * draws write controls on a trip that refuses them.
+   */
+  readonly canWrite: boolean
   readonly newBookingOpen: boolean
   readonly onNewBookingOpenChange: (open: boolean) => void
 }
@@ -313,6 +321,7 @@ export function BookingsTimeline({
   days,
   currency,
   maskCodes,
+  canWrite,
   newBookingOpen,
   onNewBookingOpenChange,
 }: BookingsTimelineProps) {
@@ -421,6 +430,7 @@ export function BookingsTimeline({
     tripId,
     currency,
     maskCodes,
+    canWrite,
     dayById,
     onEdit: setEditing,
     onStatus: changeStatus,
@@ -439,22 +449,26 @@ export function BookingsTimeline({
           title={t('modules.book.empty.title')}
           description={t('modules.book.empty.body')}
           action={
-            <Button
-              variant="primary"
-              shape="pill"
-              onClick={() => onNewBookingOpenChange(true)}
-            >
-              {t('modules.book.empty.action')}
-            </Button>
+            canWrite ? (
+              <Button
+                variant="primary"
+                shape="pill"
+                onClick={() => onNewBookingOpenChange(true)}
+              >
+                {t('modules.book.empty.action')}
+              </Button>
+            ) : undefined
           }
         />
-        <BookingDialog
-          tripId={tripId}
-          days={days}
-          currency={currency}
-          open={newBookingOpen}
-          onOpenChange={onNewBookingOpenChange}
-        />
+        {canWrite ? (
+          <BookingDialog
+            tripId={tripId}
+            days={days}
+            currency={currency}
+            open={newBookingOpen}
+            onOpenChange={onNewBookingOpenChange}
+          />
+        ) : null}
       </>
     )
   }
@@ -523,19 +537,21 @@ export function BookingsTimeline({
         </div>
       )}
 
-      <BookingDialog
-        tripId={tripId}
-        booking={editing ?? undefined}
-        days={days}
-        currency={currency}
-        open={newBookingOpen || editing !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setEditing(null)
-            onNewBookingOpenChange(false)
-          }
-        }}
-      />
+      {canWrite ? (
+        <BookingDialog
+          tripId={tripId}
+          booking={editing ?? undefined}
+          days={days}
+          currency={currency}
+          open={newBookingOpen || editing !== null}
+          onOpenChange={(next) => {
+            if (!next) {
+              setEditing(null)
+              onNewBookingOpenChange(false)
+            }
+          }}
+        />
+      ) : null}
 
       <ConfirmDialog
         request={confirm}
@@ -906,53 +922,60 @@ function BookingCard({ booking, desk }: { booking: BookingRow; desk: Desk }) {
             {t('modules.book.import.badge')}
           </Badge>
         )}
-        <StatusPill
-          status={booking.status}
-          title={booking.title}
-          onSelect={(next) => desk.onStatus(booking, next)}
-        />
-        <RowMenu
-          label={t('modules.actionsFor', { name: booking.title })}
-          items={[
-            {
-              label: t('modules.book.menu.edit'),
-              icon: <Pencil aria-hidden />,
-              onSelect: () => desk.onEdit(booking),
-            },
-            ...(booking.url === null
-              ? []
-              : [
-                  {
-                    label: t('modules.book.menu.open'),
-                    icon: <ExternalLink aria-hidden />,
-                    onSelect: () => {
-                      window.open(
-                        booking.url ?? '',
-                        '_blank',
-                        'noopener,noreferrer',
-                      )
-                    },
-                  },
-                ]),
-            {
-              label: t('modules.book.remove.confirm'),
-              icon: <Trash2 aria-hidden />,
-              tone: 'danger' as const,
-              separated: true,
-              onSelect: () => desk.onDelete(booking),
-            },
-            ...(booking.stay === null
-              ? []
-              : [
-                  {
-                    label: t('modules.book.menu.removeWithStay'),
-                    icon: <Trash2 aria-hidden />,
-                    tone: 'danger' as const,
-                    onSelect: () => desk.onDeleteWithStay(booking),
-                  },
-                ]),
-          ]}
-        />
+        {desk.canWrite ? (
+          <>
+            <StatusPill
+              status={booking.status}
+              title={booking.title}
+              onSelect={(next) => desk.onStatus(booking, next)}
+            />
+            <RowMenu
+              label={t('modules.actionsFor', { name: booking.title })}
+              items={[
+                {
+                  label: t('modules.book.menu.edit'),
+                  icon: <Pencil aria-hidden />,
+                  onSelect: () => desk.onEdit(booking),
+                },
+                ...(booking.url === null
+                  ? []
+                  : [
+                      {
+                        label: t('modules.book.menu.open'),
+                        icon: <ExternalLink aria-hidden />,
+                        onSelect: () => {
+                          window.open(
+                            booking.url ?? '',
+                            '_blank',
+                            'noopener,noreferrer',
+                          )
+                        },
+                      },
+                    ]),
+                {
+                  label: t('modules.book.remove.confirm'),
+                  icon: <Trash2 aria-hidden />,
+                  tone: 'danger' as const,
+                  separated: true,
+                  onSelect: () => desk.onDelete(booking),
+                },
+                ...(booking.stay === null
+                  ? []
+                  : [
+                      {
+                        label: t('modules.book.menu.removeWithStay'),
+                        icon: <Trash2 aria-hidden />,
+                        tone: 'danger' as const,
+                        onSelect: () => desk.onDeleteWithStay(booking),
+                      },
+                    ]),
+              ]}
+            />
+          </>
+        ) : (
+          // The same pill, with nothing behind it: the status is still a fact the reader needs.
+          <StatusReadout status={booking.status} />
+        )}
       </div>
 
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">
@@ -1027,5 +1050,16 @@ function StatusPill({
       label={t('modules.statusOf', { title })}
       onSelect={onSelect}
     />
+  )
+}
+
+function StatusReadout({ status }: { status: string }) {
+  const t = useTranslate()
+  const option = statusOption(status, t)
+
+  return (
+    <Badge tone={option.tone} size="sm" data-part="status-readout">
+      {option.label}
+    </Badge>
   )
 }

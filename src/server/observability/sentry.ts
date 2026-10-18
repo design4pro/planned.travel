@@ -92,9 +92,10 @@ export function sentryOptions(env: SentryEnvLike): CloudflareOptions {
     tracesSampleRate:
       environment === 'production' ? PRODUCTION_TRACES_SAMPLE_RATE : 1,
     beforeSend: scrubEvent,
-    beforeSendTransaction: scrubTelemetry,
+    beforeSendTransaction: scrubEvent,
     beforeSendSpan: scrubTelemetry,
     beforeSendLog: scrubTelemetry,
+    beforeBreadcrumb: scrubTelemetry,
     // Which Cloudflare version actually served the request. A tag rather than the release, because
     // it answers a different question - "which rollout" as opposed to "which code" - and only the
     // Worker has one, so promoting it to the release would reintroduce the split it avoids.

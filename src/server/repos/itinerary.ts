@@ -28,7 +28,7 @@ import { NotFoundError } from './context'
 import { listTripDayNotes, listTripDays, requireTripDay } from './days'
 import { placesRepository, requirePlaceOfTrip } from './places'
 import { requireReservationOfTrip } from './reservations'
-import { assertTripRole, requireTrip } from './trips'
+import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
 import {
   currencySchema,
   definedOnly,
@@ -724,7 +724,7 @@ export async function createAccommodation(
   input: CreateAccommodationInput,
 ): Promise<DayAccommodation> {
   const values = createAccommodationInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, ['owner', 'editor'])
   const start = await requireTripDay(scope, values.tripId, values.startDayId)
   const end = await requireTripDay(scope, values.tripId, values.endDayId)
@@ -750,7 +750,7 @@ export async function updateAccommodation(
     scope,
     accommodationId,
   )
-  await requireTrip(scope, existing.tripId)
+  await requireWritableTrip(scope, existing.tripId)
   await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
   if (values.startDayId) {
     await requireTripDay(scope, existing.tripId, values.startDayId)
@@ -779,7 +779,7 @@ export async function deleteAccommodation(
     scope,
     accommodationId,
   )
-  await requireTrip(scope, existing.tripId)
+  await requireWritableTrip(scope, existing.tripId)
   await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
   await dayAccommodationsRepository.requireRemove(scope, accommodationId)
 }

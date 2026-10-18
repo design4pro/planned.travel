@@ -288,6 +288,8 @@ const messages = {
   'book.committedCaption': 'De totes les reserves d’aquest viatge',
   'book.onItinerary': 'A l’itinerari',
   'book.pinnedCaption': 'Fixat a un dia del pla',
+  'book.readOnly.archived':
+    'Aquest viatge està arxivat, així que les reserves i les estades són només de lectura. Restaura el viatge per canviar-les.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Trajectes',
   'transports.empty': 'Encara no s’ha registrat res',
