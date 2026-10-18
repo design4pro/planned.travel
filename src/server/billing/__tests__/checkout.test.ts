@@ -2024,6 +2024,8 @@ describe('orderInvoiceUrl', () => {
     const harness = createHarness({
       polar: {
         order: polarOrder({
+          // Not yet rendered, so a check that ran late would send the render request.
+          is_invoice_generated: false,
           customer: { id: TEST_CUSTOMER_ID, external_id: 'org_someone_else' },
           metadata: {},
         }),
