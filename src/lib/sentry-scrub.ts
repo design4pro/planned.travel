@@ -110,6 +110,17 @@ export function scrubEvent<TEvent extends ScrubbableEvent>(
   }
 }
 
+/**
+ * Whether an address is, or carries, a trip invite link: the path itself, or the URL-encoded path
+ * (at any depth) inside a `redirect` or `callbackURL`. The session recorder stops on these.
+ * `String.search` ignores `lastIndex`, so the shared global patterns stay stateless.
+ */
+export function holdsJoinPath(address: string): boolean {
+  return (
+    address.search(JOIN_PATH) !== -1 || address.search(ENCODED_JOIN_PATH) !== -1
+  )
+}
+
 /** Every URL-bearing Sentry channel uses this scrub, including channels that bypass beforeSend. */
 export function scrubTelemetry<T>(value: T): T {
   function walk(item: unknown): unknown {

@@ -446,6 +446,42 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Đã lưu giờ dừng chân',
   'plan.place.toast.deleted': 'Đã xóa địa điểm',
   'plan.pin.toast.moved': 'Đã ghim {name}',
+  'join.page.title': 'Liên kết mời vào chuyến đi',
+  'join.page.description':
+    'Mở liên kết này để tham gia một chuyến đi chung trên planned.travel.',
+  'join.title.invited': '{inviter} đã mời bạn tham gia một chuyến đi',
+  'join.requirement':
+    'Liên kết này dành cho những người đã ở trong không gian làm việc của {inviter}.',
+  'join.newHere':
+    'Bạn mới đến? Hãy nhờ {inviter} thêm bạn vào không gian làm việc của họ trước.',
+  'join.trip.label': 'Chuyến đi',
+  'join.role.label': 'Bạn sẽ tham gia với vai trò',
+  'join.dates.label': 'Ngày',
+  'join.destination.label': 'Điểm đến',
+  'join.action.signIn': 'Đăng nhập',
+  'join.action.open': 'Mở chuyến đi',
+  'join.action.openIn': 'Mở chuyến đi và đổi không gian làm việc',
+  'join.action.openIn.pending': 'Đang đổi không gian làm việc',
+  'join.loading': 'Đang tải lời mời',
+  'join.member.title': 'Bạn đã ở trong chuyến đi này',
+  'join.needsWorkspace.title':
+    'Chuyến đi này nằm trong một không gian làm việc mà bạn chưa tham gia',
+  'join.needsWorkspace.body':
+    'Hãy nhờ {inviter} thêm bạn vào không gian làm việc trước, rồi mở lại liên kết này.',
+  'join.needsWorkspace.signedInAs':
+    'Bạn đang đăng nhập bằng {email}. Hãy nói {inviter} dùng địa chỉ này.',
+  'join.needsWorkspace.acceptFirst':
+    'Nếu bạn đã có email mời vào một không gian làm việc, hãy nhận lời mời đó trước, rồi mở lại liên kết này.',
+  'join.needsWorkspace.otherAccount': 'Đăng nhập bằng tài khoản khác',
+  'join.unavailable.title': 'Liên kết mời này không khả dụng',
+  'join.unavailable.body':
+    'Liên kết có thể đã bị thay thế hoặc tắt. Hãy nhờ người gửi cấp liên kết mới.',
+  'join.unavailable.signIn': 'Đăng nhập',
+  'join.unavailable.trips': 'Đến các chuyến đi của bạn',
+  'join.error.title': 'Chúng tôi không tải được liên kết mời này',
+  'join.error.retry': 'Thử lại',
+  'join.error.busy': 'Trang này đang bận. Hãy thử lại sau một phút.',
+  'join.error.switch': 'Không đổi được không gian làm việc. Hãy thử lại.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
