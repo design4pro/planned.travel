@@ -616,6 +616,13 @@ merge prerequisite, not a change to general workflow policy.
   `Cache-Control: private, no-store` and `Referrer-Policy: no-referrer`; do not disallow it in
   `robots.txt`, because a crawler must fetch the header.
 
+- `/join/$token` (§3.8) is **`noindex`** the same two ways as `/share/$token`: `<meta name="robots"
+  content="noindex, nofollow">` from the route's `head`, and `X-Robots-Tag: noindex, nofollow` from
+  its `headers`, together with `Cache-Control: private, no-store` and `Referrer-Policy:
+  no-referrer`, on every response, found or not. Its title and description are generic (no trip, no
+  inviter) and the route writes no trip-specific Open Graph or Twitter tag. Do not disallow it in
+  `robots.txt`.
+
 ### 3.6 Rate limiting, by token and by IP
 
 For share surfaces, counters live in KV with a 60 s TTL under versioned keys, one keyed by the hashed token and one by
@@ -635,6 +642,22 @@ authorisation boundary. Token resolution is the boundary and it never fails open
 token is a `404`, whatever KV is doing. `view_count` and `last_viewed_at` are updated
 asynchronously through the queue, never inline, so a crawler cannot make a public read cost a D1
 write per request.
+
+The trip invite link (§3.8) spends three of these, in this order, and a dead link of any kind
+spends the miss budget:
+
+| Budget                                      | Limit          | Key                                           |
+| ------------------------------------------- | -------------- | --------------------------------------------- |
+| Per IP, all public routes                   | 120 / minute   | `public:rl:v1:ip:<ip>:<minute>`               |
+| Per IP, failed resolutions ("misses")       | 20 / minute    | `public:rl:v1:invite-miss:<ip>:<minute>`      |
+| Per resolved link                           | 60 / minute    | `public:rl:v1:invite:<sha256(secret)>:<minute>` |
+
+Over budget is `429` with `Retry-After` on the **document** (the page renders the neutral
+`join.error.busy` card: a shared NAT or hotel wifi can spend the miss budget, and the copy blames
+nobody). The router derives a document's status only from its own state, so the loader answers
+`busy` with a 200 view and the route's middleware turns the response into the 429 once the page
+has rendered (`src/routes/join/-lib/busy.ts`). Every `/join` request costs one to three KV writes.
+The authenticated join submit has its own two rows (`join-user`, `join-ip`) when that write lands.
 
 Calendar providers share IPs, so calendar feeds use separate approximate minute counters:
 60 requests/minute per live feed id (never digest), and 20/minute per IP for refusals only.
@@ -679,6 +702,44 @@ bounded billing, moderation and cron discovery exceptions remain as stated in SP
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
    `src/server/repos`; published global rows go through `src/server/catalog`. This module owns the
    whitelist and nothing else.
+
+### 3.8 Trip invite link - `/join/$token`
+
+A session-less **read** of a bearer credential, with a session read only to decide what the page
+shows. The route lives outside `_app`, so no auth guard runs and an anonymous visitor is never
+bounced. It reaches its tenant through two `…Unscoped` repository reads, both in
+`src/server/repos/invites.ts` and called only by `src/server/public/trip-invite.ts`:
+`findLiveTripInviteByDigestUnscoped` (coordinates only) and `readInvitePreviewUnscoped` (the
+projection below). The handler holds no SQL, builds no scope and calls no auth helper: the
+visitor's session is read by the route's server function (`src/routes/join/-server/join.ts`) and
+handed in as data (`{ id, banned }`). **`src/server/public/**` stays read-only here, and a
+`GET` of `/join/<secret>` writes nothing**: no `use_count`, no `trip_members` row, no stamp. The
+write that puts a person on a trip is a separate authenticated server function.
+
+| Visitor                                             | Visible                                                                                              | Never visible                                                                                                             |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Anonymous                                           | Trip title, the inviter's display name and avatar, the role the link offers                          | Dates, destination, cover, the workspace's name, slug, id or logo, the inviter's email or user id, every id               |
+| Signed in, member of the link's workspace           | The above, plus the trip's dates and destination; or "already on this trip" with a link to the trip  | `use_count`, `created_by`, the digest, the secret; the trip and workspace ids unless the viewer is already on the trip    |
+| Signed in, **not** a member of the link's workspace | Trip title, the inviter's display name, and the visitor's own signed-in email                        | Dates, destination, the workspace in any form                                                                             |
+| Anything else (all dead links, a banned viewer)     | One identical 404 page                                                                               | Which of unknown, switched off, replaced, archived or creator-gone killed it                                              |
+
+The projections are whitelists: a field in neither column is never selected. A signed-in visitor
+who is a member of the link's workspace is the only one shown dates and destination, because a
+forwarded URL reaches people the owner never picked and name plus dates plus destination plus a
+real name is the most sensitive combination on the page. A dead link throws `notFound()` from the
+loader, so the document is a 404 with the same body whoever asks; its `Cache-Control`,
+`X-Robots-Tag` and `Referrer-Policy` are those of a live link (§3.5). Rate limits are §3.6.
+
+The guest chrome is the marketing frame with its `minimal` variant (logo and theme toggle; no
+"Sign in", "Start free" or "See pricing"): those links would drop the `?redirect=` that brings the
+visitor back to the link. The sign-in action is `/login?redirect=/join/<secret>`, and the sign-in
+pages send `Referrer-Policy: strict-origin` so a `redirect` carrying the link is not sent onward in
+a `Referer`.
+
+**Telemetry.** The secret is redacted from every Sentry channel (`docs/DEPLOY.md` §17.2), logs for
+this surface carry the link id and the outcome and never the path, and the session recorder does not
+run on a join location - the page itself and a sign-in page whose `redirect` or `callbackURL`
+carries the link, at any encoding depth (`src/lib/sentry-replay.ts`).
 
 ---
 

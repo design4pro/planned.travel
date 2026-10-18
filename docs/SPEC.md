@@ -363,6 +363,13 @@ null for a disabled, rotated-away or role-invalid link, an archived trip, a crea
 longer a live owner of the trip and a digest the current key no longer derives (ADR 0042). The resolver builds no scope; the visitor slice
 reaches content only through scoped functions.
 
+The page behind it, `/join/$token`, adds a third function of the same kind, `readInvitePreviewUnscoped(db,
+digest, key, viewer)` in the same file, with the same single caller. It re-resolves the link in the
+same module, reads the trip through a scope built from the resolved coordinates by the repository
+itself (the public module builds none), and returns one closed projection per visitor: `invited`,
+`member`, `needs-workspace` or `unavailable` (docs/ACCESS.md §3.8). It writes nothing. The viewer is
+passed in as data (`{ id, banned }`); `src/server/public/**` reads no session.
+
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" and "every query goes through a scoped

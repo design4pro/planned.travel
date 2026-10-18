@@ -454,6 +454,42 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Waktu perhentian disimpan',
   'plan.place.toast.deleted': 'Tempat dihapus',
   'plan.pin.toast.moved': '{name} ditandai',
+  'join.page.title': 'Tautan undangan perjalanan',
+  'join.page.description':
+    'Buka tautan ini untuk bergabung dengan perjalanan bersama di planned.travel.',
+  'join.title.invited': '{inviter} mengundang Anda ke sebuah perjalanan',
+  'join.requirement':
+    'Tautan ini berlaku untuk orang yang sudah ada di ruang kerja {inviter}.',
+  'join.newHere':
+    'Baru di sini? Minta {inviter} menambahkan Anda ke ruang kerjanya terlebih dahulu.',
+  'join.trip.label': 'Perjalanan',
+  'join.role.label': 'Anda akan bergabung sebagai',
+  'join.dates.label': 'Tanggal',
+  'join.destination.label': 'Tujuan',
+  'join.action.signIn': 'Masuk',
+  'join.action.open': 'Buka perjalanan',
+  'join.action.openIn': 'Buka perjalanan dan ganti ruang kerja',
+  'join.action.openIn.pending': 'Mengganti ruang kerja',
+  'join.loading': 'Memuat undangan',
+  'join.member.title': 'Anda sudah ada di perjalanan ini',
+  'join.needsWorkspace.title':
+    'Perjalanan ini ada di ruang kerja yang belum Anda ikuti',
+  'join.needsWorkspace.body':
+    'Minta {inviter} menambahkan Anda ke ruang kerjanya terlebih dahulu, lalu buka tautan ini lagi.',
+  'join.needsWorkspace.signedInAs':
+    'Anda masuk sebagai {email}. Beri tahu {inviter} untuk memakai alamat ini.',
+  'join.needsWorkspace.acceptFirst':
+    'Jika Anda sudah punya email undangan ruang kerja, terima undangan itu terlebih dahulu, lalu buka tautan ini lagi.',
+  'join.needsWorkspace.otherAccount': 'Masuk dengan akun lain',
+  'join.unavailable.title': 'Tautan undangan ini tidak tersedia',
+  'join.unavailable.body':
+    'Tautan mungkin sudah diganti atau dinonaktifkan. Minta tautan baru kepada pengirimnya.',
+  'join.unavailable.signIn': 'Masuk',
+  'join.unavailable.trips': 'Buka perjalanan Anda',
+  'join.error.title': 'Kami tidak dapat memuat tautan undangan ini',
+  'join.error.retry': 'Coba lagi',
+  'join.error.busy': 'Halaman ini sedang sibuk. Coba lagi dalam semenit.',
+  'join.error.switch': 'Tidak dapat mengganti ruang kerja. Coba lagi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

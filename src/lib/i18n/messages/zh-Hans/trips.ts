@@ -417,6 +417,38 @@ const messages = {
   'plan.stop.toast.timesSaved': '已保存停靠时间',
   'plan.place.toast.deleted': '已删除地点',
   'plan.pin.toast.moved': '已标记{name}',
+  'join.page.title': '行程邀请链接',
+  'join.page.description': '打开此链接，加入 planned.travel 上的共享行程。',
+  'join.title.invited': '{inviter}邀请你加入一个行程',
+  'join.requirement': '此链接适用于已在{inviter}的工作区中的人。',
+  'join.newHere': '初来乍到？请先让{inviter}把你添加到工作区。',
+  'join.trip.label': '行程',
+  'join.role.label': '你将以此身份加入',
+  'join.dates.label': '日期',
+  'join.destination.label': '目的地',
+  'join.action.signIn': '登录',
+  'join.action.open': '打开行程',
+  'join.action.openIn': '打开行程并切换工作区',
+  'join.action.openIn.pending': '正在切换工作区',
+  'join.loading': '正在加载邀请',
+  'join.member.title': '你已经在这个行程中了',
+  'join.needsWorkspace.title': '这个行程在你不属于的工作区里',
+  'join.needsWorkspace.body':
+    '请先让{inviter}把你添加到工作区，然后再次打开此链接。',
+  'join.needsWorkspace.signedInAs':
+    '你当前以{email}登录。请告诉{inviter}使用这个地址。',
+  'join.needsWorkspace.acceptFirst':
+    '如果你已收到工作区邀请邮件，请先接受邀请，然后再次打开此链接。',
+  'join.needsWorkspace.otherAccount': '使用其他账号登录',
+  'join.unavailable.title': '此邀请链接不可用',
+  'join.unavailable.body':
+    '链接可能已被替换或关闭。请向发送链接的人索取新链接。',
+  'join.unavailable.signIn': '登录',
+  'join.unavailable.trips': '前往你的行程',
+  'join.error.title': '无法加载此邀请链接',
+  'join.error.retry': '重试',
+  'join.error.busy': '此页面当前繁忙，请一分钟后重试。',
+  'join.error.switch': '无法切换工作区，请重试。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

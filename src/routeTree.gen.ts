@@ -26,6 +26,7 @@ import { Route as AppNotificationsRouteImport } from './routes/_app/notification
 import { Route as AppPasskeysRouteImport } from './routes/_app/passkeys'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
 import { Route as AppVacayRouteImport } from './routes/_app/vacay'
+import { Route as JoinTokenRouteImport } from './routes/join/$token'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as authAcceptInvitationInvitationIdRouteImport } from './routes/(auth)/accept-invitation.$invitationId'
@@ -149,6 +150,11 @@ const AppVacayRoute = AppVacayRouteImport.update({
   id: '/vacay',
   path: '/vacay',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   id: '/legal/privacy',
@@ -367,6 +373,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AppNotificationsRoute
   '/passkeys': typeof AppPasskeysRoute
   '/vacay': typeof AppVacayRoute
+  '/join/$token': typeof JoinTokenRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
@@ -422,6 +429,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AppNotificationsRoute
   '/passkeys': typeof AppPasskeysRoute
   '/vacay': typeof AppVacayRoute
+  '/join/$token': typeof JoinTokenRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
@@ -479,6 +487,7 @@ export interface FileRoutesById {
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/passkeys': typeof AppPasskeysRoute
   '/_app/vacay': typeof AppVacayRoute
+  '/join/$token': typeof JoinTokenRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/_app/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
@@ -538,6 +547,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/passkeys'
     | '/vacay'
+    | '/join/$token'
     | '/legal/privacy'
     | '/legal/terms'
     | '/trips/$tripId'
@@ -593,6 +603,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/passkeys'
     | '/vacay'
+    | '/join/$token'
     | '/legal/privacy'
     | '/legal/terms'
     | '/accept-invitation/$invitationId'
@@ -649,6 +660,7 @@ export interface FileRouteTypes {
     | '/_app/notifications'
     | '/_app/passkeys'
     | '/_app/vacay'
+    | '/join/$token'
     | '/legal/privacy'
     | '/legal/terms'
     | '/_app/trips/$tripId'
@@ -700,6 +712,7 @@ export interface RootRouteChildren {
   authResetPasswordRoute: typeof authResetPasswordRoute
   authTwoFactorRoute: typeof authTwoFactorRoute
   authVerifyEmailRoute: typeof authVerifyEmailRoute
+  JoinTokenRoute: typeof JoinTokenRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   authAcceptInvitationInvitationIdRoute: typeof authAcceptInvitationInvitationIdRoute
@@ -833,6 +846,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/vacay'
       preLoaderRoute: typeof AppVacayRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/legal/privacy': {
       id: '/legal/privacy'
@@ -1240,6 +1260,7 @@ const rootRouteChildren: RootRouteChildren = {
   authResetPasswordRoute: authResetPasswordRoute,
   authTwoFactorRoute: authTwoFactorRoute,
   authVerifyEmailRoute: authVerifyEmailRoute,
+  JoinTokenRoute: JoinTokenRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   authAcceptInvitationInvitationIdRoute: authAcceptInvitationInvitationIdRoute,

@@ -38,8 +38,15 @@ export const LANDING_ANCHORS: ReadonlyArray<MarketingAnchor> = [
  */
 export function MarketingHeader({
   anchors = [],
+  minimal = false,
 }: {
   anchors?: ReadonlyArray<MarketingAnchor>
+  /**
+   * The wordmark and the theme toggle only. A page that carries its own sign-in (a trip invite
+   * link keeps its `?redirect=`) must not offer links that drop it, or "Sign in" to someone who
+   * already is.
+   */
+  minimal?: boolean
 }) {
   const t = useTranslate()
 
@@ -75,30 +82,36 @@ export function MarketingHeader({
         )}
 
         <div className="ms-auto flex items-center gap-1">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            shape="pill"
-            className="hidden sm:inline-flex"
-          >
-            <Link to="/pricing" activeProps={{ 'aria-current': 'page' }}>
-              {t('marketing.action.pricing')}
-            </Link>
-          </Button>
-          <ThemeToggle />
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            shape="pill"
-            className="hidden sm:inline-flex"
-          >
-            <Link to="/login">{t('marketing.action.signIn')}</Link>
-          </Button>
-          <Button asChild variant="primary" size="sm" shape="pill">
-            <Link to="/register">{t('marketing.action.startFree')}</Link>
-          </Button>
+          {minimal ? (
+            <ThemeToggle />
+          ) : (
+            <>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                shape="pill"
+                className="hidden sm:inline-flex"
+              >
+                <Link to="/pricing" activeProps={{ 'aria-current': 'page' }}>
+                  {t('marketing.action.pricing')}
+                </Link>
+              </Button>
+              <ThemeToggle />
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                shape="pill"
+                className="hidden sm:inline-flex"
+              >
+                <Link to="/login">{t('marketing.action.signIn')}</Link>
+              </Button>
+              <Button asChild variant="primary" size="sm" shape="pill">
+                <Link to="/register">{t('marketing.action.startFree')}</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -224,10 +237,22 @@ const footerLinkClasses = cn(
 
 /**
  * The real footer: what the product is, where to go next, and the attributions
- * we are obliged to carry for the map data and the platform underneath.
+ * we are obliged to carry for the map data and the platform underneath. `minimal` drops the two
+ * sign-up calls to action, for the same reason as the header's.
  */
-export function MarketingFooter() {
+export function MarketingFooter({ minimal = false }: { minimal?: boolean }) {
   const t = useTranslate()
+  // Sign-in and sign-up links are dead ends here for the same reason; terms and privacy stay.
+  const columns = minimal
+    ? FOOTER_COLUMNS.map((column) => ({
+        ...column,
+        links: column.links.filter(
+          (link) =>
+            link.kind !== 'route' ||
+            (link.to !== '/login' && link.to !== '/register'),
+        ),
+      }))
+    : FOOTER_COLUMNS
 
   return (
     <footer className="border-t border-edge-faint bg-surface-2/40">
@@ -238,17 +263,19 @@ export function MarketingFooter() {
             <p className="mt-4 max-w-xs text-label leading-relaxed text-ink-3">
               {t('marketing.footer.blurb')}
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button asChild variant="primary" size="sm" shape="pill">
-                <Link to="/register">{t('marketing.action.startFree')}</Link>
-              </Button>
-              <Button asChild variant="secondary" size="sm" shape="pill">
-                <Link to="/pricing">{t('marketing.action.seePricing')}</Link>
-              </Button>
-            </div>
+            {minimal ? null : (
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button asChild variant="primary" size="sm" shape="pill">
+                  <Link to="/register">{t('marketing.action.startFree')}</Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm" shape="pill">
+                  <Link to="/pricing">{t('marketing.action.seePricing')}</Link>
+                </Button>
+              </div>
+            )}
           </div>
 
-          {FOOTER_COLUMNS.map((column) => (
+          {columns.map((column) => (
             <nav
               key={column.headingKey}
               aria-label={t(column.headingKey)}

@@ -417,6 +417,38 @@ const messages = {
   'plan.stop.toast.timesSaved': '已儲存停靠時間',
   'plan.place.toast.deleted': '已刪除地點',
   'plan.pin.toast.moved': '已標記{name}',
+  'join.page.title': '行程邀請連結',
+  'join.page.description': '開啟此連結，加入 planned.travel 上的共享行程。',
+  'join.title.invited': '{inviter}邀請你加入一個行程',
+  'join.requirement': '此連結適用於已在{inviter}的工作區中的人。',
+  'join.newHere': '剛來嗎？請先請{inviter}把你加入工作區。',
+  'join.trip.label': '行程',
+  'join.role.label': '你將以此身分加入',
+  'join.dates.label': '日期',
+  'join.destination.label': '目的地',
+  'join.action.signIn': '登入',
+  'join.action.open': '開啟行程',
+  'join.action.openIn': '開啟行程並切換工作區',
+  'join.action.openIn.pending': '正在切換工作區',
+  'join.loading': '正在載入邀請',
+  'join.member.title': '你已經在這個行程中了',
+  'join.needsWorkspace.title': '這個行程位於你不屬於的工作區',
+  'join.needsWorkspace.body':
+    '請先請{inviter}把你加入工作區，然後再次開啟此連結。',
+  'join.needsWorkspace.signedInAs':
+    '你目前以{email}登入。請告訴{inviter}使用這個地址。',
+  'join.needsWorkspace.acceptFirst':
+    '如果你已收到工作區邀請郵件，請先接受邀請，然後再次開啟此連結。',
+  'join.needsWorkspace.otherAccount': '使用其他帳號登入',
+  'join.unavailable.title': '此邀請連結無法使用',
+  'join.unavailable.body':
+    '連結可能已被取代或關閉。請向傳送連結的人索取新連結。',
+  'join.unavailable.signIn': '登入',
+  'join.unavailable.trips': '前往你的行程',
+  'join.error.title': '無法載入此邀請連結',
+  'join.error.retry': '重試',
+  'join.error.busy': '此頁面目前忙碌中，請一分鐘後再試。',
+  'join.error.switch': '無法切換工作區，請重試。',
 } satisfies TranslationOf<typeof En>
 
 export default messages
