@@ -285,6 +285,8 @@ const messages = {
   'book.committedCaption': 'Über alle Buchungen dieser Reise',
   'book.onItinerary': 'Im Reiseverlauf',
   'book.pinnedCaption': 'An einen Tag des Plans geheftet',
+  'book.readOnly.archived':
+    'Diese Reise ist archiviert, Buchungen und Unterkünfte sind daher schreibgeschützt. Stelle die Reise wieder her, um sie zu ändern.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Transfers',
   'transports.empty': 'Noch nichts erfasst',

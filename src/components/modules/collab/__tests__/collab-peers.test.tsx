@@ -79,9 +79,17 @@ function setup(initial = data) {
     ...view,
   }
 }
+/** The screen's own status region, not the one the conversation owns. */
+function screenStatus(): HTMLElement {
+  const own = screen
+    .getAllByRole('status')
+    .filter((region) => region.getAttribute('data-part') !== 'thread-status')
+  expect(own).toHaveLength(1)
+  return own[0]!
+}
 it('keeps a composer and its live messages until cleared, then repairs focus silently', async () => {
   const { user, peer, update } = setup()
-  expect(screen.getByRole('status').textContent).toBe('')
+  expect(screenStatus().textContent).toBe('')
   const composer = screen.getByRole('textbox', { name: 'Message the trip' })
   await user.type(composer, 'Unsent plan')
   peer('conversation')
@@ -104,9 +112,7 @@ it('keeps a composer and its live messages until cleared, then repairs focus sil
   expect((composer as HTMLTextAreaElement).value).toBe('Unsent plan')
   expect(document.activeElement).toBe(composer)
   await waitFor(() =>
-    expect(screen.getByRole('status').textContent).toContain(
-      'This section was turned off',
-    ),
+    expect(screenStatus().textContent).toContain('This section was turned off'),
   )
   await user.clear(composer)
   await waitFor(() =>
@@ -119,7 +125,7 @@ it('keeps a composer and its live messages until cleared, then repairs focus sil
       screen.getByRole('tabpanel', { name: 'Notes' }),
     ),
   )
-  expect(screen.getByRole('status').textContent).toBe('')
+  expect(screenStatus().textContent).toBe('')
 })
 it('shows the saved-hidden toast when sending a retained composer', async () => {
   const success = vi.spyOn(toast, 'success').mockImplementation(() => '')
@@ -204,21 +210,17 @@ it('announces each peer record change again, but keeps own writes silent', async
   }
   update(changed)
   await waitFor(() =>
-    expect(screen.getByRole('status').textContent).toBe(
-      Trips['collab.sections.changed'],
-    ),
+    expect(screenStatus().textContent).toBe(Trips['collab.sections.changed']),
   )
   update(data)
-  expect(screen.getByRole('status').textContent).toBe('')
+  expect(screenStatus().textContent).toBe('')
   await waitFor(() =>
-    expect(screen.getByRole('status').textContent).toBe(
-      Trips['collab.sections.changed'],
-    ),
+    expect(screenStatus().textContent).toBe(Trips['collab.sections.changed']),
   )
   ownWrite.current = true
   update(changed)
   await new Promise((resolve) => setTimeout(resolve, 80))
-  expect(screen.getByRole('status').textContent).toBe('')
+  expect(screenStatus().textContent).toBe('')
 })
 it.each(['notes', 'polls'] as const)(
   'saves an open %s dialog with the hidden-section toast',
@@ -319,9 +321,7 @@ it('announces a peer change when an unrelated draft begins before delivery', asy
   peer('notes')
   fireEvent.change(field, { target: { value: 'Starting a draft' } })
   await waitFor(() =>
-    expect(screen.getByRole('status').textContent).toBe(
-      Trips['collab.sections.changed'],
-    ),
+    expect(screenStatus().textContent).toBe(Trips['collab.sections.changed']),
   )
 })
 
@@ -334,7 +334,7 @@ it('stays silent when a retained draft is discarded before the announcement', as
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 100))
   })
-  expect(screen.getByRole('status').textContent).toBe('')
+  expect(screenStatus().textContent).toBe('')
 })
 
 it('repairs focus to the active tab when the tab is rendered by the DOM', async () => {

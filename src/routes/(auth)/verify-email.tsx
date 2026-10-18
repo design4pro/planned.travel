@@ -8,6 +8,7 @@ import { Button, Field, Input } from '#/components/ui'
 import { authClient, toAuthFailure } from '#/lib/auth/client'
 import { useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
+import { signInHead } from './-lib/head'
 import { safeRedirect } from './-lib/redirect'
 import { loadVerificationState } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
@@ -35,6 +36,7 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/(auth)/verify-email')({
   validateSearch: searchSchema,
+  head: signInHead,
   loader: () => loadVerificationState(),
   component: VerifyEmailPage,
 })

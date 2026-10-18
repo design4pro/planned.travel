@@ -271,6 +271,8 @@ const messages = {
   'book.committedCaption': 'Trên toàn bộ chỗ đã đặt của chuyến này',
   'book.onItinerary': 'Trong lịch trình',
   'book.pinnedCaption': 'Đã ghim vào một ngày của lịch trình',
+  'book.readOnly.archived':
+    'Chuyến đi này đã được lưu trữ nên các đặt chỗ và nơi lưu trú chỉ có thể xem. Hãy khôi phục chuyến đi để thay đổi.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Di chuyển',
   'transports.empty': 'Chưa ghi gì',

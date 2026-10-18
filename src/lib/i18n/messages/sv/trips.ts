@@ -279,6 +279,8 @@ const messages = {
   'book.committedCaption': 'Över alla bokningar på den här resan',
   'book.onItinerary': 'I resplanen',
   'book.pinnedCaption': 'Fäst vid en dag i planen',
+  'book.readOnly.archived':
+    'Den här resan är arkiverad, så bokningarna och boendena är skrivskyddade. Återställ resan för att ändra dem.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Färder',
   'transports.empty': 'Inget noterat än',

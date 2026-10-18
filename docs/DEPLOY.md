@@ -412,6 +412,13 @@ partial rotation and no grace period — every agent integration breaks in the s
 every token has to be reissued and redistributed by hand. Rotate it only in response to a
 suspected compromise of the token table, and tell the token holders first.
 
+⚠️ **Rotating `BETTER_AUTH_SECRET` also kills every trip invite link.** A link's secret is derived
+from `BETTER_AUTH_SECRET`, the link id and its rotation (ADR 0042), so a new value yields different
+secrets. The public resolver derives the secret again and refuses a copy that does not match, which
+fails closed; each owner's panel shows the link as stale until they replace it and send the new
+address. No data is lost and nobody joins through an old copy, but every copy already sent stops
+working in the same second.
+
 **Historical note, so a rollback is not walked blind.** Releases before phase A read a
 `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` pair and mounted a `/api/stripe/webhook` route.
 Both secrets and that route are gone from the code, and §12's register says what a rollback onto
@@ -2253,6 +2260,20 @@ button actually produces.
 
 The widget is loaded from its own chunk, after hydration, for the same reason the recorder is - the
 form and the screenshot editor are ~20 kB that only matters to somebody who clicks the button.
+
+**A secret in a URL path is redacted before it leaves the app.** `/join/<segment>` (the trip invite
+link) is replaced by `/join/[redacted]` by `src/lib/sentry-scrub.ts` in every channel both runtimes
+send: the event, transaction and span names, span attributes keyed `params.token`, breadcrumbs and
+logs, plus the URL-encoded form (at any depth) inside `redirect` and `callbackURL` values. The
+`referer` header is dropped like the session headers. Feedback and the replay's own event
+(`urls`, `segment_names`, the page address) bypass every `beforeSend*` hook, so a client event
+processor routes them through the same scrub, and the replay integration's recording events pass
+through `beforeAddRecordingEvent`. One residual is not
+reachable by any SDK hook: the DOM recorder's own events (the page `href` in its Meta event, link
+attributes in a snapshot). It is closed by #1022, which stops recording on a location that holds a
+join path, the sign-in pages carrying a join `redirect` included. `requestFields` in
+`src/server/observability/logger.ts` logs `path` and `referrer` unredacted; nothing calls it today,
+so do not call it on a `/join/` request.
 
 ### 17.3 The source-map token
 

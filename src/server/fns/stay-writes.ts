@@ -16,8 +16,8 @@ import {
   dayAccommodationsRepository,
   deleteAccommodation,
   deleteReservation,
-  requireTrip,
   requireTripDay,
+  requireWritableTrip,
   updateAccommodation,
   updateReservation,
 } from '#/server/repos'
@@ -172,7 +172,7 @@ export async function createStay(
   scope: TenantScope,
   data: StayInput,
 ): Promise<StayWriteResult> {
-  const trip = await requireTrip(scope, data.tripId)
+  const trip = await requireWritableTrip(scope, data.tripId)
   const { start, end } = await stayDays(scope, data)
 
   const reservation = await createReservation(scope, {
@@ -226,7 +226,7 @@ export async function updateStay(
   scope: TenantScope,
   data: StayUpdate,
 ): Promise<StayWriteResult> {
-  const trip = await requireTrip(scope, data.tripId)
+  const trip = await requireWritableTrip(scope, data.tripId)
   const stay = await requireStayOfBooking(scope, data)
   const { start, end } = await stayDays(scope, data)
 
@@ -266,7 +266,7 @@ export async function deleteStay(
   scope: TenantScope,
   data: StayDelete,
 ): Promise<{ readonly deleted: true }> {
-  await requireTrip(scope, data.tripId)
+  await requireWritableTrip(scope, data.tripId)
   const stay = await requireStayOfBooking(scope, data)
 
   await deleteReservation(scope, data.reservationId)

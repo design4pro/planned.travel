@@ -298,6 +298,8 @@ const messages = {
   'book.committedCaption': 'Ze wszystkich rezerwacji tej wycieczki',
   'book.onItinerary': 'W planie dnia',
   'book.pinnedCaption': 'Przypięte do dnia planu',
+  'book.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc rezerwacje i noclegi są tylko do odczytu. Przywróć podróż, aby je zmienić.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Przejazdy',
   'transports.empty': 'Nic jeszcze nie zapisano',

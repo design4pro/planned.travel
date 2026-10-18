@@ -17,6 +17,7 @@ import {
 import { authClient, toAuthFailure } from '#/lib/auth/client'
 import { useTranslate } from '#/lib/i18n'
 import { describeFailure } from './-lib/errors'
+import { signInHead } from './-lib/head'
 import { safeRedirect } from './-lib/redirect'
 import { AuthShell } from './-ui/auth-shell'
 import {
@@ -37,6 +38,7 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/(auth)/two-factor')({
   validateSearch: searchSchema,
+  head: signInHead,
   component: TwoFactorPage,
 })
 

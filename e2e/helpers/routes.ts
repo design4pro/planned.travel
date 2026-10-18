@@ -77,7 +77,7 @@ export const PUBLIC_ROUTES: ReadonlyArray<RouteCase> = [
  * The year `/vacay` is walked in.
  *
  * The route defaults its year to the server's `currentYear()`, which makes every
- * numeral, every month grid and the entitlement label on that screen change on 1
+ * numeral, every month grid and the allowance label on that screen change on 1
  * January — the same rot as the countdown, one year apart. It is also the one
  * clock-derived input the product already accepts from the URL
  * (`validateSearch` in `src/routes/_app/vacay.tsx`), so the table pins it there

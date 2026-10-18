@@ -17,8 +17,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   NotFoundError,
+  TripArchivedError,
   TripRoleError,
   addTripMember,
+  archiveTrip,
   countTripPlaces,
   createPlace,
   createTrip,
@@ -31,6 +33,7 @@ import {
   listTripReservations,
   recordFile,
   requireTrip,
+  restoreTrip,
   updateOrganizationSettings,
 } from '#/server/repos'
 import { geocodeRuntime } from '#/server/geo/bindings'
@@ -534,6 +537,37 @@ describe('startBookingImport', () => {
     expect(error).toBeInstanceOf(TripRoleError)
     expect((error as RepositoryError).code).toBe('FORBIDDEN')
     expect(queue.sent).toEqual([])
+  })
+
+  it('refuses an archived trip to an owner and an editor, and enqueues nothing', async () => {
+    const queue = queueDouble()
+    const editorId = await alpha.tenant.addUser('editor')
+    await addTripMember(alpha.tenant.scope, {
+      tripId: alpha.tripId,
+      userId: editorId,
+      role: 'editor',
+    })
+    await archiveTrip(alpha.tenant.scope, alpha.tripId)
+
+    for (const scope of [alpha.tenant.scope, alpha.tenant.scopeFor(editorId)]) {
+      const error = await captureError(() =>
+        startBookingImport(scope, queue, {
+          tripId: alpha.tripId,
+          fileId: alpha.fileId,
+          index: 0,
+        }),
+      )
+      expect(error).toBeInstanceOf(TripArchivedError)
+    }
+    expect(queue.sent).toEqual([])
+
+    await restoreTrip(alpha.tenant.scope, alpha.tripId)
+    await startBookingImport(alpha.tenant.scope, queue, {
+      tripId: alpha.tripId,
+      fileId: alpha.fileId,
+      index: 0,
+    })
+    expect(queue.sent).toHaveLength(1)
   })
 
   it('lets a trip editor start one, so the refusal is about the role and nothing else', async () => {
@@ -1084,6 +1118,36 @@ describe('confirmBookingImport', () => {
 
     expect(error).toBeInstanceOf(TripRoleError)
     expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(
+      placesBefore,
+    )
+    expect(stubs.vendorCalls).toBe(0)
+    expect(
+      await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
+    ).toEqual([])
+    expect(store.entries.get(stagedImportKey(alpha.jobId))).toBe(
+      JSON.stringify(staged),
+    )
+    expect(stubs.mirrored).toEqual([])
+  })
+
+  it('refuses an archived trip before any place is created or the geocoder is called', async () => {
+    const staged = await stage(alpha, {
+      reservations: [stagedRow({ kind: 'lodging' })],
+    })
+    await archiveTrip(alpha.tenant.scope, alpha.tripId)
+    const placesBefore = await countTripPlaces(alpha.tenant.scope, alpha.tripId)
+
+    const error = await captureError(() =>
+      confirmBookingImport(
+        alpha.tenant.scope,
+        store,
+        { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0] },
+        ports,
+      ),
+    )
+
+    expect(error).toBeInstanceOf(TripArchivedError)
     expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(
       placesBefore,
     )

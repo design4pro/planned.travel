@@ -96,6 +96,9 @@ Departures from the plan's owned paths (Resolved assumptions 5, 11, 12, 13): the
 `src/components/vacay/carry-over.ts`; `modules.ts` in all 23 locales and `CONTEXT.md` join the list; `e2e/product-modules.spec.ts`
 replaces `product-modules.visual.spec.ts` and the four re-recorded `vacay-*` PNGs, because ADR 0016 removed the baselines; and
 `vacay.tsx` gets its allowance context from a new GET function instead of an edit to `loadVacay`.
+08-S1a built the allowance panel at `src/routes/_app/-ui/allowance-panel.tsx` (test beside it), not under `src/components/vacay/`: it calls
+`setAllowanceFn` and a module component would have to import a route's `-server` file, which `components/` does not do; the route's
+`-ui/` already holds the screens that call server functions (`trip-copy-dialog.tsx`). The later stages' components go beside it.
 
 ### The allowance, in the traveller's terms
 

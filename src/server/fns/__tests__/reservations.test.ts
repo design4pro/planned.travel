@@ -21,7 +21,9 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  TripArchivedError,
   addTripMember,
+  archiveTrip,
   createAssignment,
   createExpense,
   createPlace,
@@ -37,6 +39,7 @@ import {
   listTripExpenses,
   listTripReservations,
   markShareSettled,
+  restoreTrip,
   updateExpense,
 } from '#/server/repos'
 import { NotFoundError } from '#/server/repos/context'
@@ -940,6 +943,134 @@ describe('a priced booking saved by an editor', () => {
         trip,
       }),
     ).toBe('updated')
+  })
+})
+
+/**
+ * An archived trip is a record (#1026): the four booking writers refuse it for an owner and an
+ * editor alike, before the booking exists, so no cost line and no room patch can follow a refused
+ * write. The desk tells the screen the same thing, so it draws no write control.
+ */
+describe('a booking write on an archived trip', () => {
+  let editorId: string
+
+  beforeEach(async () => {
+    editorId = await tenant.addUser('An editor')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: editorId,
+      role: 'editor',
+    })
+  })
+
+  async function bookedThenArchived() {
+    await createBooking(
+      bookingPayload({
+        tripId: trip.id,
+        startDate: '2026-04-11',
+        priceMinor: 24_000,
+        currency: 'JPY',
+      }),
+    )
+    const booking = await onlyBooking()
+    await archiveTrip(scope, trip.id)
+    stubs.mirrorToRoom.mockClear()
+    return booking
+  }
+
+  it('refuses all four writers, for an owner and for an editor, and writes nothing', async () => {
+    const booking = await bookedThenArchived()
+    const before = {
+      bookings: await listTripReservations(scope, { tripId: trip.id }),
+      lines: await listTripExpenses(scope, trip.id),
+    }
+
+    for (const actor of [scope, tenant.scopeFor(editorId)]) {
+      stubs.scope = actor
+      const attempts = [
+        () =>
+          createBooking(
+            bookingPayload({
+              tripId: trip.id,
+              title: 'Late taxi',
+              priceMinor: 3_000,
+              currency: 'JPY',
+            }),
+          ),
+        () =>
+          updateBooking(
+            bookingPayload({
+              tripId: trip.id,
+              reservationId: booking.id,
+              title: 'Rewritten',
+              priceMinor: 1,
+              currency: 'JPY',
+            }),
+          ),
+        () =>
+          setBookingStatus({
+            tripId: trip.id,
+            reservationId: booking.id,
+            status: 'cancelled',
+          }),
+        () => deleteBooking({ tripId: trip.id, reservationId: booking.id }),
+      ]
+      for (const attempt of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(TripArchivedError)
+      }
+    }
+
+    // No booking, no cost line - so no `ledger: 'failed'` outcome can reach a reader - and no patch.
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual(
+      before.bookings,
+    )
+    expect(await listTripExpenses(scope, trip.id)).toEqual(before.lines)
+    expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+  })
+
+  it('writes again once the owner restores the trip', async () => {
+    const booking = await bookedThenArchived()
+    await restoreTrip(scope, trip.id)
+    stubs.scope = tenant.scopeFor(editorId)
+
+    await setBookingStatus({
+      tripId: trip.id,
+      reservationId: booking.id,
+      status: 'confirmed',
+    })
+
+    expect((await getReservation(scope, booking.id))?.status).toBe('confirmed')
+  })
+
+  it('tells the desk the trip is archived and that nobody may write it', async () => {
+    await bookedThenArchived()
+
+    for (const actor of [scope, tenant.scopeFor(editorId)]) {
+      expect(await bookingDeskPayload(actor, trip.id)).toMatchObject({
+        canWrite: false,
+        archived: true,
+      })
+    }
+  })
+
+  it('lets an owner and an editor write the desk of a trip that is not archived, and a viewer not', async () => {
+    const viewerId = await tenant.addUser('A viewer')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: viewerId,
+      role: 'viewer',
+    })
+
+    expect(await bookingDeskPayload(scope, trip.id)).toMatchObject({
+      canWrite: true,
+      archived: false,
+    })
+    expect(
+      await bookingDeskPayload(tenant.scopeFor(editorId), trip.id),
+    ).toMatchObject({ canWrite: true, archived: false })
+    expect(
+      await bookingDeskPayload(tenant.scopeFor(viewerId), trip.id),
+    ).toMatchObject({ canWrite: false, archived: false })
   })
 })
 
