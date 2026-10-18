@@ -2033,6 +2033,27 @@ describe('orderInvoiceUrl', () => {
     await expect(
       orderInvoiceUrl(harness.runtime, TEST_ORG_ID, { orderId: TEST_ORDER_ID }),
     ).rejects.toBeInstanceOf(BillingForbiddenError)
+    // Only the read-back of the order went out: no render was requested for it.
+    expect(harness.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET /v1/orders/${TEST_ORDER_ID}`,
+    ])
+  })
+
+  it('refuses an order whose workspace cannot be determined, with no write to Polar', async () => {
+    const harness = createHarness({
+      polar: {
+        order: polarOrder({
+          is_invoice_generated: false,
+          customer: { id: TEST_CUSTOMER_ID, external_id: null },
+          metadata: {},
+        }),
+      },
+    })
+
+    await expect(
+      orderInvoiceUrl(harness.runtime, TEST_ORG_ID, { orderId: TEST_ORDER_ID }),
+    ).rejects.toBeInstanceOf(BillingForbiddenError)
+    expect(harness.calls.map((call) => call.method)).toEqual(['GET'])
   })
 
   it('refuses an order id that is not a Polar id at all', async () => {

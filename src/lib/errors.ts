@@ -22,8 +22,9 @@
  * A third thing travels beside the kind: a **code**, for the diagnostics whose cause the reader
  * is owed a way out of - a workspace that has reached its plan's quota, or a billing action Polar
  * would not carry out. It is a constant, never
- * data: the literal below says "this workspace is out of room" and nothing else, so what the
- * server knows (the metric, the ceiling, the plan, the message) stays on the server. It is the
+ * data: a literal below says "this workspace is out of room" or "Polar is rate-limiting us" and
+ * nothing else, so what the server knows (the metric, the ceiling, the plan, the request path, the
+ * message) stays on the server. It is the
  * "message key the client resolves" route of `docs/SPEC.md` §9 rule 10, carried as a code rather
  * than as a sentence, so the kind stays `unexpected` and no English text is added to the envelope.
  *
