@@ -155,7 +155,7 @@ export function CostsToolbar({
             select and the tabs with nothing to say it scrolled. */}
         <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:ms-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
           <DisplayCurrencyMenu
-            className="col-span-2"
+            stacked
             display={display}
             choices={displayChoices}
             budgetCurrency={currency}
