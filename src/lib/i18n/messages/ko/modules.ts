@@ -753,6 +753,13 @@ const messages = {
   'collab.thread.loadOlderFailed': '이전 메시지를 불러오지 못했습니다',
   'collab.thread.retry': '다시 시도',
   'collab.thread.start': '여기서 대화가 시작됩니다',
+  'collab.thread.loadedEarlier': {
+    other: '이전 메시지 {earlier}개를 불러왔습니다',
+  },
+  'collab.thread.newFrom': '{name}님의 새 메시지',
+  'collab.thread.newMany': {
+    other: '새 메시지 {new}개',
+  },
   'collab.toast.reactionFailed': '반응을 저장하지 못했습니다',
   'collab.toast.messageDeleted': '메시지를 삭제했습니다',
   'collab.toast.deleteFailed': '메시지를 삭제하지 못했습니다',

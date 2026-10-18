@@ -810,6 +810,17 @@ const messages = {
     "No s'han pogut carregar els missatges anteriors",
   'collab.thread.retry': 'Torna-ho a provar',
   'collab.thread.start': 'Aquí comença la conversa',
+  'collab.thread.loadedEarlier': {
+    one: "S'ha carregat {earlier} missatge anterior",
+    many: "S'han carregat {earlier} missatges anteriors",
+    other: "S'han carregat {earlier} missatges anteriors",
+  },
+  'collab.thread.newFrom': 'Missatge nou de {name}',
+  'collab.thread.newMany': {
+    one: '{new} missatge nou',
+    many: '{new} missatges nous',
+    other: '{new} missatges nous',
+  },
   'collab.toast.reactionFailed': 'La reacció no s’ha desat',
   'collab.toast.messageDeleted': 'Missatge eliminat',
   'collab.toast.deleteFailed': 'El missatge no s’ha eliminat',

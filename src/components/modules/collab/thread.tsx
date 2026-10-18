@@ -37,7 +37,7 @@ import {
 import { cn } from '#/lib/cn'
 import { THREAD_PAGE_SIZE } from '#/lib/collab'
 import { readPublicFailure } from '#/lib/errors'
-import { formatWeekday } from '#/lib/format'
+import { formatNumber, formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
@@ -51,6 +51,7 @@ import {
 import { ConfirmDialog, RowMenu, useAction, useOptimistic } from '../shared'
 
 import { useThreadHistory } from './use-thread-history'
+import { useArrivalGroup, useStatusRegion } from './use-thread-status'
 import {
   editMessage,
   removeMessage,
@@ -71,6 +72,17 @@ function rowOf(scroller: HTMLElement, id: string): HTMLElement | null {
   const rows = scroller.querySelectorAll<HTMLElement>('li[data-message-id]')
   return Array.from(rows).find((row) => row.dataset.messageId === id) ?? null
 }
+
+/**
+ * How a row that arrived live comes in: a 6 px rise and a fade over the
+ * `--duration` token. Only live rows get it, so rows rendered on load never
+ * animate; where `@starting-style` is unsupported the row simply appears.
+ */
+const ARRIVAL_ENTRANCE = cn(
+  'transition-[opacity,translate] duration-base ease-out-quint',
+  'starting:translate-y-1.5 starting:opacity-0',
+  'motion-reduce:starting:translate-y-0',
+)
 
 /** The reactions a travel thread actually uses. Six, not an emoji keyboard. */
 const REACTIONS: ReadonlyArray<{ emoji: string; label: MessageKey }> = [
@@ -179,6 +191,19 @@ export function Thread({
   const locale = useLocale()
   const [editing, setEditing] = useState<MessageData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
+  const { text: status, announce } = useStatusRegion()
+  const arrive = useArrivalGroup((names) =>
+    announce(
+      names.length === 1
+        ? t('modules.collab.thread.newFrom', { name: names[0] ?? '' })
+        : t('modules.collab.thread.newMany', {
+            count: names.length,
+            new: formatNumber(names.length, locale),
+          }),
+    ),
+  )
+  /** Rows newer than the newest one on the first render arrived live; older ones never animate. */
+  const [openedAtId] = useState(() => messages.at(-1)?.id ?? '')
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const loadButtonRef = useRef<HTMLButtonElement>(null)
@@ -186,7 +211,7 @@ export function Thread({
   const loadFailedId = useId()
   const scrollerId = useId()
   const [loadingOlder, setLoadingOlder] = useState(false)
-  /** Failed attempts since the last success; each one inserts the line anew, so it is announced again. */
+  /** Failed attempts since the last success; each one is announced again through the status region. */
   const [failures, setFailures] = useState(0)
   const loadFailed = failures > 0
   const loadBusy = useRef(false)
@@ -226,6 +251,10 @@ export function Thread({
             (message) => seen.lastId === undefined || message.id > seen.lastId,
           )
         : []
+    if (seen.opened)
+      for (const message of arrived)
+        if (message.userId !== viewerUserId)
+          arrive(nameFor(people, message.userId, t))
     if (!seen.opened) {
       seen.opened = true
       toBottom()
@@ -276,10 +305,20 @@ export function Thread({
     loadBusy.current = true
     setLoadingOlder(true)
     try {
-      await loadOlder()
+      const loaded = await loadOlder()
       setFailures(0)
+      // A page dropped because a peer moved the window is not a success the reader can hear about.
+      if (loaded === null) announce(t('modules.collab.thread.loadOlderFailed'))
+      else if (loaded > 0)
+        announce(
+          t('modules.collab.thread.loadedEarlier', {
+            count: loaded,
+            earlier: formatNumber(loaded, locale),
+          }),
+        )
     } catch {
       setFailures((count) => count + 1)
+      announce(t('modules.collab.thread.loadOlderFailed'))
     } finally {
       loadBusy.current = false
       setLoadingOlder(false)
@@ -288,7 +327,9 @@ export function Thread({
 
   // The button stays inert while it loads, so on settle focus goes where the
   // reader can act next: the control, or the line that replaced it. A reader who
-  // has moved on (into the composer, say) keeps their focus.
+  // has moved on (into the composer, say) keeps their focus, and is then told
+  // the conversation starts here; a reader whose focus lands on that line hears
+  // it from the focus move.
   useEffect(() => {
     if (loadingOlder) {
       wasLoading.current = true
@@ -301,8 +342,10 @@ export function Thread({
       active !== null &&
       active !== document.body &&
       active !== loadButtonRef.current
-    )
+    ) {
+      if (exhausted) announce(t('modules.collab.thread.start'))
       return
+    }
     const target = exhausted ? startRef.current : loadButtonRef.current
     target?.focus({ preventScroll: true })
   }, [loadingOlder, exhausted])
@@ -357,6 +400,10 @@ export function Thread({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      {/* Never on the list: a prepend would be read row by row. */}
+      <div role="status" data-part="thread-status" className="sr-only">
+        {status}
+      </div>
       {paged ? (
         <div className="flex shrink-0 flex-col items-center pb-2">
           {exhausted ? (
@@ -369,19 +416,16 @@ export function Thread({
             </p>
           ) : (
             <>
-              {/* Mounted before it fills, so the failure is announced politely: the
-                  button keeps focus while it loads, so no focus move can speak for it. */}
-              <div role="status">
-                {loadFailed ? (
-                  <p
-                    key={failures}
-                    id={loadFailedId}
-                    className="pb-1.5 text-caption text-danger"
-                  >
-                    {t('modules.collab.thread.loadOlderFailed')}
-                  </p>
-                ) : null}
-              </div>
+              {/* Spoken through the thread's status region: the button keeps focus
+                  while it loads, so no focus move can speak for it. */}
+              {loadFailed ? (
+                <p
+                  id={loadFailedId}
+                  className="pb-1.5 text-caption text-danger"
+                >
+                  {t('modules.collab.thread.loadOlderFailed')}
+                </p>
+              ) : null}
               <Button
                 ref={loadButtonRef}
                 data-part="thread-load-older"
@@ -429,7 +473,10 @@ export function Thread({
                 <li
                   key={message.id}
                   data-message-id={message.id}
-                  className="min-w-0"
+                  className={cn(
+                    'min-w-0',
+                    message.id > openedAtId && ARRIVAL_ENTRANCE,
+                  )}
                 >
                   {startsDay ? (
                     <div className="flex items-center gap-3 py-3">
