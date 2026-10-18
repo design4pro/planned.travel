@@ -267,7 +267,7 @@ per-link budget is applied once.
 `use_count`, `created_by`, the digest, the secret; the trip's id and organization id (except in `member`, and in a
 successful join's answer, to a verified workspace member); dates, destination and cover before sign-in as a
 workspace member. The lists are written into `docs/ACCESS.md` §3.8 (new) with the code, which also states that
-`src/server/public/**` stays read-only and that the **only write** is `joinTripFn`, behind `requireUser`.
+`src/server/public/**` stays read-only and that the **only write** is `joinTripFn`, which writes only for a signed-in session (a missing one is answered `signed-out`).
 §3 intro's "Three surfaces" becomes "Four".
 
 Why the anonymous card is reduced: ADR 0007 keeps a private trip invisible to non-members, and a forwarded URL
@@ -365,7 +365,7 @@ shared insert** and **extracts the part that must not exist twice**:
 - **Impersonation.** `/join` sits outside `_app`, so the impersonation warning bar (ACCESS §6.1) never renders there,
   yet a join is a lasting access grant. An impersonated session (`session.impersonatedBy`) is therefore **refused**
   (`unavailable`), and ACCESS §6.4 is amended to name it.
-- `joinTripFn({ secret })` in `join/-server/join.ts` (POST): session required (`requireUser`), rate limited, hashes the
+- `joinTripFn({ secret })` in `join/-server/join.ts` (POST): writes only with a session (none is answered `signed-out`, see the amendment), rate limited, hashes the
   secret with `hashSecret` and calls the repository, which returns the `TenantContext` (`{ organizationId, userId, role }`) it
   already built beside the outcome; the function turns it into a scope with `scopeFor(context)` (a new export of
   `src/server/fns/context.ts`, beside `appScope`; routes do not call `createScope` themselves, and the repository cannot
@@ -529,14 +529,14 @@ and records the link's creator.
 
 ## 📝 API Contracts
 
-| Function                                                                                                             | Method | Auth            | Input (Zod v4 `strictObject`)                   | Answer                                                                                                       |
-| -------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `loadInvite` (join loader, session-less; the **client re-fetch** path - the first render reads the param in-process) | POST   | none (optional) | `{ secret: string(43) }`                        | one of the closed projections above; 404 for `unavailable`; 429 over budget                                  |
-| `joinTripFn`                                                                                                         | POST   | session         | `{ secret: string(43) }`                        | `{ outcome: 'joined'\|'member', tripId, organizationId }` or `{ outcome: 'needs-workspace'\|'unavailable' }` |
-| `revealInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId }`                                    | `{ url }`, `no-store`                                                                                        |
-| `createInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId, role: 'editor'\|'viewer' }`          | `{ ok: true, url }` (the existing link if one exists) or `{ ok: false, reason }`                             |
-| `replaceInviteLinkFn`                                                                                                | POST   | trip owner      | `{ tripId, role, expectedRotation }`            | `{ ok: true, url }` or `{ ok: false, reason: 'changed'\|'archived'\|'notOwner' }`                            |
-| `updateInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId, role?, enabled?, expectedRotation }` | `{ ok: true, url? }` (a new url on switch-on) or `{ ok: false, reason }`                                     |
+| Function                                                                                                             | Method | Auth            | Input (Zod v4 `strictObject`)                   | Answer                                                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------- | ------ | --------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `loadInvite` (join loader, session-less; the **client re-fetch** path - the first render reads the param in-process) | POST   | none (optional) | `{ secret: string(43) }`                        | one of the closed projections above; 404 for `unavailable`; 429 over budget                                                                                                      |
+| `joinTripFn`                                                                                                         | POST   | session         | `{ secret: string(43) }`                        | `{ outcome: 'joined'\|'member', tripId, organizationId, switchWorkspace }` or `{ outcome: 'needs-workspace'\|'unavailable'\|'signed-out' }` or `{ outcome: 'busy', retryAfter }` |
+| `revealInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId }`                                    | `{ url }`, `no-store`                                                                                                                                                            |
+| `createInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId, role: 'editor'\|'viewer' }`          | `{ ok: true, url }` (the existing link if one exists) or `{ ok: false, reason }`                                                                                                 |
+| `replaceInviteLinkFn`                                                                                                | POST   | trip owner      | `{ tripId, role, expectedRotation }`            | `{ ok: true, url }` or `{ ok: false, reason: 'changed'\|'archived'\|'notOwner' }`                                                                                                |
+| `updateInviteLinkFn`                                                                                                 | POST   | trip owner      | `{ tripId, role?, enabled?, expectedRotation }` | `{ ok: true, url? }` (a new url on switch-on) or `{ ok: false, reason }`                                                                                                         |
 
 ## 📝 UI/UX
 

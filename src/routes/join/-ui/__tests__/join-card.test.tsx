@@ -398,6 +398,16 @@ describe('joining from the card', () => {
     vi.unstubAllGlobals()
   })
 
+  it('lets the join and open-in labels wrap instead of running past a 360px card', async () => {
+    renderView(signedIn)
+    const button = screen.getByRole('button', { name: 'Join this trip' })
+    // The class merge must drop the Button's fixed height and nowrap, or a long label overflows.
+    expect(button.className).toContain('whitespace-normal')
+    expect(button.className).toContain('h-auto')
+    expect(button.className).not.toContain('whitespace-nowrap')
+    expect(button.className.split(' ')).not.toContain('h-12')
+  })
+
   it('submits once for a double click', async () => {
     const onJoin = vi.fn(
       () =>

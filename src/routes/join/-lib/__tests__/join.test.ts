@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { tripInviteLinks } from '#/server/db/schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { createTripInvite, replaceTripInvite } from '#/server/repos/invites'
 import { createTrip, listTripMembers } from '#/server/repos/trips'
@@ -204,6 +205,8 @@ describe('joinInvite', () => {
       (await members()).filter((member) => member.userId === friend),
     ).toHaveLength(1)
     expect(audit).toHaveBeenCalledTimes(1)
+    const [link] = await h.db.select().from(tripInviteLinks)
+    expect(link?.useCount).toBe(1)
   })
 })
 

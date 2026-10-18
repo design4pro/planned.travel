@@ -189,6 +189,7 @@ function JoinAction({
         variant="primary"
         size="lg"
         block
+        className={WRAPPING_LABEL}
         loading={pending}
         loadingLabel={t('trips.join.action.joining')}
         aria-describedby={failure ? noteId : undefined}
@@ -433,6 +434,7 @@ function NeedsWorkspaceCard({
         variant="secondary"
         size="lg"
         block
+        className={WRAPPING_LABEL}
         loading={pending}
         loadingLabel={t('shell.account.signingOut')}
         onClick={() => void signInAsSomeoneElse()}
