@@ -14,7 +14,13 @@ import { z } from 'zod'
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 import { AuthRequirementError } from '#/server/auth/tenant'
-import { QuotaExceededError as BillingQuotaExceededError } from '#/server/billing/types'
+import { PolarApiError } from '#/server/billing/polar'
+import {
+  BillingConfigError,
+  BillingForbiddenError,
+  OrderNotInvoiceableError,
+  QuotaExceededError as BillingQuotaExceededError,
+} from '#/server/billing/types'
 import {
   ConsoleActionError,
   ConsoleUnattributableError,
@@ -286,5 +292,88 @@ describe('a quota refusal carries one constant code', () => {
     ]) {
       expect(classifyFailure(cause)).toEqual({ kind: 'unexpected' })
     }
+  })
+})
+
+describe('a billing failure carries one constant code', () => {
+  /**
+   * The billing screen resolves these to localised sentences, so what crosses is a code from a
+   * closed list and never the message: `PolarApiError` quotes a request path and a slice of
+   * Polar's body, and `BillingConfigError` quotes the `wrangler secret put` command to run. The
+   * real classes are constructed, so renaming one is a failing test.
+   */
+  it.each([
+    [
+      'a forbidden guard',
+      new BillingForbiddenError('Only an owner or an admin can change this.'),
+      'BILLING_FORBIDDEN',
+    ],
+    [
+      'a deployment without billing secrets',
+      new BillingConfigError('Run: wrangler secret put POLAR_ACCESS_TOKEN'),
+      'BILLING_NOT_CONNECTED',
+    ],
+    [
+      'Polar rate-limiting',
+      new PolarApiError(
+        429,
+        'slow down',
+        'Polar PATCH /v1/subscriptions/sub_1 failed with 429.',
+      ),
+      'BILLING_RATE_LIMITED',
+    ],
+    [
+      'Polar refusing a change with a 422',
+      new PolarApiError(
+        422,
+        '{"detail":"seats"}',
+        'Polar PATCH /v1/subscriptions/sub_1 failed with 422.',
+      ),
+      'BILLING_PROVIDER_REFUSED',
+    ],
+    [
+      'Polar refusing a change with a 402',
+      new PolarApiError(
+        402,
+        'pay',
+        'Polar PATCH /v1/subscriptions/sub_1 failed with 402.',
+      ),
+      'BILLING_PROVIDER_REFUSED',
+    ],
+    [
+      'an order that cannot be invoiced',
+      new OrderNotInvoiceableError('order ord_1 refused with 422'),
+      'BILLING_ORDER_NOT_INVOICEABLE',
+    ],
+  ] as const)(
+    'classifies %s as unexpected with its code',
+    (_label, cause, code) => {
+      expect(classifyFailure(cause)).toEqual({ kind: 'unexpected', code })
+    },
+  )
+
+  it('leaves any other Polar failure a plain diagnostic, with no code', () => {
+    for (const status of [400, 401, 404, 500, 502]) {
+      expect(
+        classifyFailure(new PolarApiError(status, 'x', 'Polar failed.')),
+      ).toEqual({ kind: 'unexpected' })
+    }
+  })
+
+  it('does not widen the authored set: none of these is a sentence', () => {
+    for (const name of [
+      'BillingForbiddenError',
+      'BillingConfigError',
+      'PolarApiError',
+      'OrderNotInvoiceableError',
+    ]) {
+      expect(AUTHORED_ERROR_NAMES.has(name)).toBe(false)
+    }
+  })
+
+  it('reads a Polar status only when it is a number', () => {
+    expect(classifyFailure({ name: 'PolarApiError', status: '429' })).toEqual({
+      kind: 'unexpected',
+    })
   })
 })

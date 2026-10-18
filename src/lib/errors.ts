@@ -19,8 +19,9 @@
  * the classification travels *inside* that message, as the envelope below, rather than as a
  * property that would not survive.
  *
- * A third thing travels beside the kind: a **code**, for the one diagnostic whose cause the reader
- * is owed a way out of - a workspace that has reached its plan's quota. It is a constant, never
+ * A third thing travels beside the kind: a **code**, for the diagnostics whose cause the reader
+ * is owed a way out of - a workspace that has reached its plan's quota, or a billing action Polar
+ * would not carry out. It is a constant, never
  * data: the literal below says "this workspace is out of room" and nothing else, so what the
  * server knows (the metric, the ceiling, the plan, the message) stays on the server. It is the
  * "message key the client resolves" route of `docs/SPEC.md` §9 rule 10, carried as a code rather
@@ -46,7 +47,16 @@ export type PublicFailureKind =
  * `FORBIDDEN`, `TENANT_ISOLATION`) and never crosses. A code is added here with a reader that
  * resolves it to localised copy, in the same change.
  */
-export type PublicFailureCode = 'QUOTA_EXCEEDED'
+export const PUBLIC_FAILURE_CODES = [
+  'QUOTA_EXCEEDED',
+  'BILLING_FORBIDDEN',
+  'BILLING_PROVIDER_REFUSED',
+  'BILLING_RATE_LIMITED',
+  'BILLING_NOT_CONNECTED',
+  'BILLING_ORDER_NOT_INVOICEABLE',
+] as const
+
+export type PublicFailureCode = (typeof PUBLIC_FAILURE_CODES)[number]
 
 export interface PublicFailure {
   readonly kind: PublicFailureKind
@@ -86,7 +96,7 @@ function messageOf(cause: unknown): string | null {
 }
 
 function isCode(value: unknown): value is PublicFailureCode {
-  return value === 'QUOTA_EXCEEDED'
+  return PUBLIC_FAILURE_CODES.some((code) => code === value)
 }
 
 function isKind(value: unknown): value is PublicFailureKind {

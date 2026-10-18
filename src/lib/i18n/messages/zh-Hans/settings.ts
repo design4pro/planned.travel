@@ -402,6 +402,17 @@ const messages = {
    * an order live here rather than being bent into that group.
    */
   'billing.provider.rejected': '支付服务商拒绝了该请求。请稍后再试。',
+  'billing.failure.reference': '提供给支持团队的参考编号：{reference}',
+  'billing.failure.forbidden':
+    '你的角色无法对此工作区的账单执行该操作。请联系所有者或管理员。',
+  'billing.failure.providerRefused':
+    'Polar 未接受该更改。请对照成员数检查席位数，然后重试，或使用账单门户。',
+  'billing.failure.rateLimited':
+    'Polar 目前繁忙，未做任何更改。请一分钟后重试。',
+  'billing.failure.notConnected':
+    '此部署尚未连接账单服务，因此未做任何更改。请联系支持团队。',
+  'billing.failure.orderNotInvoiceable':
+    'Polar 无法为此订单开具发票。如果缺少账单姓名或地址，请在账单门户中补充后重试；否则请联系支持团队。',
   'billing.planChanged.title': '套餐已更新',
   'billing.planChanged.body':
     '变更已在 Polar 生效，差额由 Polar 开票。下面的摘要会在一分钟内跟上。',

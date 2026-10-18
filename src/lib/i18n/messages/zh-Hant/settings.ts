@@ -406,6 +406,17 @@ const messages = {
    * an order live here rather than being bent into that group.
    */
   'billing.provider.rejected': '支付服務商拒絕了該請求。請稍後再試。',
+  'billing.failure.reference': '提供給支援團隊的參考編號：{reference}',
+  'billing.failure.forbidden':
+    '你的角色無法對此工作區的帳單執行該操作。請聯絡擁有者或管理員。',
+  'billing.failure.providerRefused':
+    'Polar 未接受該變更。請對照成員數檢查席位數，然後重試，或使用帳單入口網站。',
+  'billing.failure.rateLimited':
+    'Polar 目前忙碌，未做任何變更。請一分鐘後重試。',
+  'billing.failure.notConnected':
+    '此部署尚未連接帳單服務，因此未做任何變更。請聯絡支援團隊。',
+  'billing.failure.orderNotInvoiceable':
+    'Polar 無法為此訂單開立發票。如果缺少帳單姓名或地址，請在帳單入口網站補上後重試；否則請聯絡支援團隊。',
   'billing.planChanged.title': '方案已更新',
   'billing.planChanged.body':
     '變更已在 Polar 生效，差額由 Polar 開立。下方摘要會在一分鐘內跟上。',
