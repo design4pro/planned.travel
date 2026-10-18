@@ -371,13 +371,17 @@ describe('joining from the card', () => {
     })
   })
 
-  it('swaps to the reloaded card in place when the link died while the tab was open', async () => {
+  it('shows the unavailable card in place, with focus on its heading, when the link is refused', async () => {
     const retry = vi.fn(() => Promise.resolve())
     renderView(signedIn, retry, () =>
       Promise.resolve({ outcome: 'unavailable' }),
     )
     await join()
-    await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    const heading = await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('button', { name: 'Join this trip' })).toBeNull()
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    // A reload could hand back the invited card; the answer already said enough.
+    expect(retry).not.toHaveBeenCalled()
   })
 
   it('reloads the card when the traveller turns out not to be in the workspace', async () => {
@@ -389,7 +393,7 @@ describe('joining from the card', () => {
     await waitFor(() => expect(retry).toHaveBeenCalledOnce())
   })
 
-  it('says the page is busy without blame and puts focus back on the button, without a live announcement', async () => {
+  it('says the page is busy without blame, announced by an alert, with the button described by it', async () => {
     renderView(signedIn, noop, () =>
       Promise.resolve({ outcome: 'busy', retryAfter: 30 }),
     )
@@ -398,23 +402,23 @@ describe('joining from the card', () => {
     expect(
       screen.getByText('This page is busy. Try again in a minute.'),
     ).toBeTruthy()
-    await waitFor(() => expect(document.activeElement).toBe(button))
-    expect(screen.queryByRole('alert')).toBeNull()
-    expect(button.getAttribute('aria-describedby')).toBeTruthy()
+    // Focus never left the button, so no focus move can announce this: the alert does.
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toBe('This page is busy. Try again in a minute.')
+    expect(button.getAttribute('aria-describedby')).toBe(alert.id)
   })
 
-  it('keeps the link usable after a failed join and returns focus to the button', async () => {
+  it('keeps the link usable after a failed join, announces it and lets the traveller try again', async () => {
     const onJoin = vi
       .fn<() => Promise<JoinAnswer>>()
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce(joinedAnswer)
     renderView(signedIn, noop, onJoin)
     await join()
-    const button = await screen.findByRole('button', { name: 'Join this trip' })
-    expect(
-      screen.getByText('Could not join. The link still works - try again.'),
-    ).toBeTruthy()
-    await waitFor(() => expect(document.activeElement).toBe(button))
+    await screen.findByRole('button', { name: 'Join this trip' })
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Could not join. The link still works - try again.',
+    )
     await join()
     await screen.findByRole('heading', {
       level: 1,

@@ -671,8 +671,9 @@ looked at, so a user or an address guessing secrets through the submit is bounde
 | Join submit, per user               | 10 / minute  | `public:rl:v1:join-user:<id>:<minute>` |
 | Join submit, per IP                 | 30 / minute  | `public:rl:v1:join-ip:<ip>:<minute>`   |
 
-Over either budget the submit answers `busy` and the card shows the neutral `join.error.busy` line
-beside the Join button; nothing is written.
+Over either budget the submit answers `busy` (a 200 answer of the server function, not a 429) and the
+card shows the neutral `join.error.busy` line beside the Join button; nothing is written. A dead
+secret submitted here spends only these two budgets, not the page's miss budget.
 
 Calendar providers share IPs, so calendar feeds use separate approximate minute counters:
 60 requests/minute per live feed id (never digest), and 20/minute per IP for refusals only.

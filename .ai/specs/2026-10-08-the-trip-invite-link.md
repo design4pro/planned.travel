@@ -387,9 +387,13 @@ does), and `-server/join.ts` is the wiring around it; the audit write takes the 
 `TenantContext` from the repository result and turns it into a scope with `scopeFor(context)`. The
 answer gains `switchWorkspace`, computed on the server from the session's active workspace, so the
 card needs no extra read to choose between "Open the trip" and "Open the trip and switch
-workspace", and a fourth outcome `busy` for the per-user and per-address budgets. And a submit that
-comes back `unavailable` or `needs-workspace` reloads the page (`router.invalidate`), so the card
-that replaces the invited one is the loader's own, with the same focus move to its heading.
+workspace", and a fourth outcome `busy` for the per-user and per-address budgets. A submit that
+comes back `needs-workspace` reloads the page (`router.invalidate`), so the card that replaces the
+invited one is the loader's own, with the same focus move to its heading; one that comes back
+`unavailable` shows the unavailable card in place with that focus move, because the loader cannot
+see an impersonated session and a reload would hand the invited card back. `busy` is a 200 answer
+of the server function, not a 429 (only the document carries a status), and the join counts its
+misses against the per-user and per-address submit budgets, not the page's miss budget.
 
 ### The sign-in round trip (Phases 1 and 3)
 

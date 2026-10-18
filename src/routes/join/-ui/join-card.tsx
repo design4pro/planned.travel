@@ -117,27 +117,20 @@ function JoinAction({
   onJoin,
   onRetry,
   onJoined,
+  onRefused,
 }: {
   onJoin: () => Promise<JoinAnswer>
   onRetry: () => Promise<void>
   onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
+  onRefused: () => void
 }) {
   const { t } = useI18n()
-  const button = React.useRef<HTMLButtonElement>(null)
   const noteId = React.useId()
   const [pending, setPending] = React.useState(false)
   const [failure, setFailure] = React.useState<Failure | null>(null)
-  // Counted so a second failure moves focus again, not only the first.
-  const [attempt, setAttempt] = React.useState(0)
-
-  // The focus move is the announcement for a failure: the note is described-by, not a live region.
-  React.useEffect(() => {
-    if (failure) button.current?.focus()
-  }, [failure, attempt])
 
   function fail(next: Failure): void {
     setFailure(next)
-    setAttempt((count) => count + 1)
     setPending(false)
   }
 
@@ -160,8 +153,14 @@ function JoinAction({
       onJoined(answer)
       return
     }
-    // A link replaced or switched off while the tab was open, or a workspace left since: the page
-    // reads again and the card it gets takes this one's place.
+    // The link is gone for this person (replaced, switched off, or a session that may not join):
+    // the page cannot say more than the answer did, and a reload could bring this card back.
+    if (answer.outcome === 'unavailable') {
+      onRefused()
+      return
+    }
+    // A workspace left since the page loaded: the page reads again and the card it gets takes this
+    // one's place.
     await onRetry().catch(() => undefined)
     focusHeadingOnArrival = false
     setPending(false)
@@ -170,12 +169,13 @@ function JoinAction({
   return (
     <>
       {failure ? (
-        <Alert id={noteId} tone="danger" role="presentation" aria-live="off">
+        // Focus stays on the button while the request runs, so there is no focus move to carry the
+        // failure: the alert is the announcement, and describing the button keeps it findable.
+        <Alert id={noteId} tone="danger">
           {t(FAILURE_KEYS[failure])}
         </Alert>
       ) : null}
       <Button
-        ref={button}
         variant="primary"
         size="lg"
         block
@@ -196,12 +196,14 @@ function InvitedCard({
   onJoin,
   onRetry,
   onJoined,
+  onRefused,
 }: {
   view: Invited
   path: string
   onJoin: () => Promise<JoinAnswer>
   onRetry: () => Promise<void>
   onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
+  onRefused: () => void
 }) {
   const { t, locale } = useI18n()
   const dates = formatDateRange(view.startDate, view.endDate, locale)
@@ -232,7 +234,12 @@ function InvitedCard({
         {t('trips.join.requirement', { inviter: view.inviterName })}
       </p>
       {view.signedIn ? (
-        <JoinAction onJoin={onJoin} onRetry={onRetry} onJoined={onJoined} />
+        <JoinAction
+          onJoin={onJoin}
+          onRetry={onRetry}
+          onJoined={onJoined}
+          onRefused={onRefused}
+        />
       ) : (
         <>
           <p className="text-caption text-ink-3">
@@ -535,15 +542,22 @@ export function JoinCard({
     JoinAnswer,
     { tripId: string }
   > | null>(null)
+  const [refused, setRefused] = React.useState(false)
   if (joined)
     return (
       <Arrival key="joined">
         <JoinedCard answer={joined} path={path} />
       </Arrival>
     )
+  if (refused)
+    return (
+      <Arrival key="refused">
+        <UnavailableCard signedIn path={path} />
+      </Arrival>
+    )
   return (
     <Arrival key={view.state}>
-      {cardFor(view, path, onRetry, onJoin, setJoined)}
+      {cardFor(view, path, onRetry, onJoin, setJoined, () => setRefused(true))}
     </Arrival>
   )
 }
@@ -554,6 +568,7 @@ function cardFor(
   onRetry: () => Promise<void>,
   onJoin: () => Promise<JoinAnswer>,
   onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void,
+  onRefused: () => void,
 ): React.ReactNode {
   switch (view.state) {
     case 'invited':
@@ -564,6 +579,7 @@ function cardFor(
           onJoin={onJoin}
           onRetry={onRetry}
           onJoined={onJoined}
+          onRefused={onRefused}
         />
       )
     case 'member':
