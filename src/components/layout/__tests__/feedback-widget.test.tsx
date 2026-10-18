@@ -189,8 +189,27 @@ describe('FeedbackWidget', () => {
       route.href = href
       await mount()
 
-      await Promise.resolve()
+      // The theme effect still loads the SDK, so once it has run the build step has had its turn.
+      await waitFor(() => {
+        expect(setTheme).toHaveBeenCalled()
+      })
       expect(createWidget).not.toHaveBeenCalled()
     },
   )
+
+  it('builds the button again once the visitor leaves the join location', async () => {
+    route.href = '/join/the-secret'
+    const { speak } = await mount()
+    await waitFor(() => {
+      expect(setTheme).toHaveBeenCalled()
+    })
+    expect(createWidget).not.toHaveBeenCalled()
+
+    route.href = '/trips'
+    await speak('pl')
+
+    await waitFor(() => {
+      expect(createWidget).toHaveBeenCalledTimes(1)
+    })
+  })
 })
