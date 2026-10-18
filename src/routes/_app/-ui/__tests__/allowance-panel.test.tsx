@@ -49,6 +49,8 @@ const SAVED: VacayAllowance = {
   carriedOverDays: 2,
   usedDays: 3,
   remainingDays: 24,
+  openingBalance: true,
+  previousYear: 2025,
 }
 
 const DEFAULT: VacayAllowance = {
@@ -57,6 +59,8 @@ const DEFAULT: VacayAllowance = {
   carriedOverDays: 0,
   usedDays: 0,
   remainingDays: 25,
+  openingBalance: true,
+  previousYear: 2025,
 }
 
 function mount(
@@ -64,7 +68,12 @@ function mount(
   {
     locale = 'en',
     messages = EN,
-  }: { locale?: Locale; messages?: Catalogue } = {},
+    carryOverEnabled = true,
+  }: {
+    locale?: Locale
+    messages?: Catalogue
+    carryOverEnabled?: boolean
+  } = {},
 ): void {
   render(
     <I18nProvider locale={locale} messages={messages}>
@@ -72,7 +81,7 @@ function mount(
         planId="plan-1"
         year={2026}
         allowance={allowance}
-        carryOverEnabled
+        carryOverEnabled={carryOverEnabled}
       />
     </I18nProvider>,
   )
@@ -582,4 +591,236 @@ describe('a failed write', () => {
       expect((field() as HTMLInputElement).value).toBe('30')
     },
   )
+})
+
+describe('the carried tile', () => {
+  /** A year calculated from the one before, with a half day left over. */
+  const DERIVED: VacayAllowance = {
+    ...SAVED,
+    carriedOverDays: 8,
+    remainingDays: 30,
+    openingBalance: false,
+  }
+
+  const carriedTile = (value = 2): HTMLElement =>
+    screen.getByRole('button', {
+      name: `Edit carried days, currently ${value}`,
+    })
+
+  const carriedField = (): HTMLInputElement =>
+    screen.getByRole('textbox', { name: /^Carried/ })
+
+  it('is a second editable tile for an opening balance, with its hint linked to it', () => {
+    mount()
+
+    const button = carriedTile()
+    expect(attr(button, 'data-part')).toBe('allowance-tile')
+    expect(attr(button, 'data-field')).toBe('carried')
+    expect(descriptionOf(button)).toBe(
+      'Brought in from before 2026. Select to edit.',
+    )
+  })
+
+  it('is plain text captioned with the year it comes from when it is calculated', () => {
+    mount(DERIVED)
+
+    expect(
+      screen.queryByRole('button', { name: /Edit carried days/ }),
+    ).toBeNull()
+    expect(screen.getByText('Carried from 2025')).toBeTruthy()
+    expect(
+      screen.getByText('8').closest('dd')?.querySelector('button'),
+    ).toBeNull()
+  })
+
+  it('is plain text that says carry-over is off, whatever kind of year it is', () => {
+    mount(SAVED, { carryOverEnabled: false })
+
+    expect(
+      screen.queryByRole('button', { name: /Edit carried days/ }),
+    ).toBeNull()
+    expect(screen.getByText('Carry-over is off')).toBeTruthy()
+    expect(screen.queryByText(/Brought in from before/)).toBeNull()
+  })
+
+  it('names its field by the visible words and sends only the carried figure', async () => {
+    const user = hand()
+    setAllowance.mockResolvedValue({ row: {}, superseded: null })
+    mount()
+
+    await user.click(carriedTile())
+
+    expect(document.activeElement).toBe(carriedField())
+    expect(nameOf(carriedField())).toBe(
+      'Carried Carried days brought into 2026',
+    )
+    await user.clear(carriedField())
+    await user.type(carriedField(), '5{Enter}')
+
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+    expect(setAllowance).toHaveBeenCalledWith({
+      data: { planId: 'plan-1', year: 2026, carriedOverDays: 5 },
+    })
+    expect(document.activeElement).toBe(carriedTile())
+  })
+
+  it('opens the other editor in place of the first when its tile is pressed, discarding the draft', async () => {
+    const user = hand()
+    mount()
+
+    await type(user, '30')
+    await user.click(carriedTile())
+
+    expect(carriedField().value).toBe('2')
+    expect(screen.queryByRole('textbox', { name: /^Days/ })).toBeNull()
+  })
+
+  it('says the carried figure could not be saved, with the carried figure it still shows', async () => {
+    const user = hand()
+    setAllowance.mockRejectedValue(new TypeError('Failed to fetch'))
+    loadAllowance.mockResolvedValue(SAVED)
+    mount()
+
+    await user.click(carriedTile())
+    await user.keyboard('{Enter}')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(
+      'Your carried days could not be saved. 2026 still shows 2 days.',
+    )
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+  })
+
+  it('explains that the year is now calculated, moves focus to the message and offers no retry', async () => {
+    const user = hand()
+    setAllowance.mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-9' }),
+      ),
+    )
+    loadAllowance.mockResolvedValue(DERIVED)
+    mount()
+
+    await user.click(carriedTile())
+    await user.clear(carriedField())
+    await user.type(carriedField(), '9{Enter}')
+
+    const message = await screen.findByText(
+      'Carried days for 2026 are now calculated from 2025, so they cannot be edited.',
+    )
+    const alert = message.closest('[tabindex="-1"]')
+    await waitFor(() => expect(document.activeElement).toBe(alert))
+    expect(router.invalidate).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+  })
+
+  it('does not call a failure derived when the re-read still shows an opening balance', async () => {
+    const user = hand()
+    setAllowance.mockRejectedValue(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-9' }),
+      ),
+    )
+    loadAllowance.mockResolvedValue(SAVED)
+    mount()
+
+    await user.click(carriedTile())
+    await user.keyboard('{Enter}')
+
+    await screen.findByRole('alert')
+    expect(screen.queryByText(/now calculated from/)).toBeNull()
+    expect(carriedField()).toBeTruthy()
+  })
+})
+
+describe('the whole-days line', () => {
+  const HALF: VacayAllowance = {
+    ...SAVED,
+    usedDays: 2.5,
+    remainingDays: 24.5,
+  }
+  const LINE =
+    'Only whole days carry into the next year; the leftover half day does not.'
+
+  it('shows when carry-over is on and the leftover is positive with a fractional part', () => {
+    mount(HALF)
+
+    expect(screen.getByText(LINE)).toBeTruthy()
+  })
+
+  it.each([
+    ['a whole-number leftover', SAVED, true],
+    ['a debt with a fraction', { ...HALF, remainingDays: -0.5 }, true],
+    ['a fractional leftover while carry-over is off', HALF, false],
+  ] as const)('is absent for %s', (_label, allowance, carryOverEnabled) => {
+    mount(allowance, { carryOverEnabled })
+
+    expect(screen.queryByText(LINE)).toBeNull()
+  })
+})
+
+describe('a replaced opening balance', () => {
+  const REPLACED = { row: {}, superseded: { year: 2027, was: 6 } }
+  const NOTICE =
+    'Carried days for 2027 are now calculated from 2026. You had entered 6 days.'
+
+  it('is shown as visible text in an info alert, once, and the live region does not repeat it', async () => {
+    const user = hand()
+    setAllowance.mockResolvedValue(REPLACED)
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+
+    const notice = await screen.findByText(NOTICE)
+    expect(notice.closest('[role="status"]')).not.toBeNull()
+    expect(screen.getAllByText(NOTICE)).toHaveLength(1)
+    expect(
+      screen
+        .getAllByRole('status')
+        .filter((node) => node.textContent?.includes('2027')),
+    ).toHaveLength(1)
+  })
+
+  it('stays until it is dismissed', async () => {
+    const user = hand()
+    setAllowance.mockResolvedValue(REPLACED)
+    mount()
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+    await screen.findByText(NOTICE)
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(screen.queryByText(NOTICE)).toBeNull()
+  })
+
+  it('goes away with the next save', async () => {
+    const user = hand()
+    setAllowance.mockResolvedValueOnce(REPLACED)
+    setAllowance.mockResolvedValueOnce({ row: {}, superseded: null })
+    mount()
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+    await screen.findByText(NOTICE)
+
+    await type(user, '31')
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(setAllowance).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByText(NOTICE)).toBeNull())
+  })
+
+  it('is not made up when a save replaced nothing', async () => {
+    const user = hand()
+    setAllowance.mockResolvedValue({ row: {}, superseded: null })
+    mount()
+
+    await type(user, '30')
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+    expect(screen.queryByText(/You had entered/)).toBeNull()
+  })
 })

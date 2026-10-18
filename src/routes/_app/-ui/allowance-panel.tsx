@@ -19,6 +19,16 @@
  *   re-read, not the status, tells them apart; a refusal or a rejected value says why and leaves the
  *   field to be edited.
  *
+ * - **"Carried" is a second editable tile only as an opening balance**: the traveller has no row for
+ *   the year before. Everywhere else it is plain text the walk calculates, and the repository
+ *   refuses a typed figure. Another tab can make a year calculated while this one still shows an
+ *   editor, so a failed carried write re-reads the figure: if it is no longer an opening balance the
+ *   panel says why, with no retry, and moves focus to that message because the tile is no longer a
+ *   button. It never reads the error's class (a refusal arrives as `unexpected`).
+ * - **A save that replaces a typed opening balance says so** in an info alert that stays until it is
+ *   dismissed or the next save: the replaced year is usually not the one on screen. The alert is the
+ *   only announcer for it, so the live region never repeats it.
+ *
  * The figures come from the route loader and the write reloads it with `router.invalidate()`, so
  * there is no local copy of the allowance that could disagree with the screen.
  */
@@ -30,13 +40,14 @@ import { Alert, Button, Input, Progress } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { hasFractionalLeftover } from '#/lib/vacay/carry-over'
 import { parseAllowanceDays } from '../-lib/allowance'
 import { formatNumber } from '../-lib/format'
 import { loadVacayAllowance, setAllowanceFn } from '../-server/vacay'
 import { Panel } from './scaffold'
 
-import type { FormEvent, KeyboardEvent } from 'react'
-import type { VacayAllowance } from '../-server/vacay'
+import type { FormEvent, KeyboardEvent, Ref } from 'react'
+import type { AllowanceSaved, VacayAllowance } from '../-server/vacay'
 
 export interface AllowancePanelProps {
   planId: string
@@ -45,10 +56,14 @@ export interface AllowancePanelProps {
   carryOverEnabled: boolean
 }
 
+/** The tile whose editor is open. */
+type Field = 'entitlement' | 'carried'
+
 type Problem =
   | { readonly kind: 'invalid' }
   | {
       readonly kind: 'failed'
+      readonly field: Field
       /** Authored sentence for a refusal or a rejected value; `null` for a diagnostic. */
       readonly message: string | null
       readonly retryable: boolean
@@ -66,13 +81,16 @@ export function AllowancePanel({
   const locale = useLocale()
   const router = useRouter()
   const ids = useId()
-  const labelId = `${ids}-label`
+  const daysLabelId = `${ids}-days-label`
+  const carriedLabelId = `${ids}-carried-label`
   const hintId = `${ids}-hint`
+  const carriedCaptionId = `${ids}-carried-caption`
+  const wholeDaysId = `${ids}-whole-days`
   const descriptionId = `${ids}-description`
   const problemId = `${ids}-problem`
   const formId = `${ids}-form`
 
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState<Field | null>(null)
   const [draft, setDraft] = useState('')
   const [pending, setPending] = useState(false)
   const [problem, setProblem] = useState<Problem | null>(null)
@@ -80,41 +98,73 @@ export function AllowancePanel({
   const [saved, setSaved] = useState(false)
   /** Counts invalid submits, so a repeated one mounts the alert again and is announced again. */
   const [attempts, setAttempts] = useState(0)
+  /** Set when a carried figure turned out to be calculated; the message is where focus goes. */
+  const [derivedFrom, setDerivedFrom] = useState<number | null>(null)
+  /** The typed opening balance the last save replaced, until dismissed or the next save. */
+  const [superseded, setSuperseded] =
+    useState<AllowanceSaved['superseded']>(null)
 
-  const tileRef = useRef<HTMLButtonElement>(null)
+  const tileRefs = {
+    entitlement: useRef<HTMLButtonElement>(null),
+    carried: useRef<HTMLButtonElement>(null),
+  }
   const inputRef = useRef<HTMLInputElement>(null)
+  const derivedRef = useRef<HTMLDivElement>(null)
   const inflight = useRef(false)
-  const restoreFocus = useRef(false)
+  /** The tile focus returns to once the editor has closed, or `null` when it must not return. */
+  const restoreFocus = useRef<Field | null>(null)
 
   useEffect(() => {
-    if (editing) {
+    if (editing !== null) {
       inputRef.current?.focus()
       inputRef.current?.select()
-    } else if (restoreFocus.current) {
-      restoreFocus.current = false
-      tileRef.current?.focus()
+    } else if (restoreFocus.current !== null) {
+      const field = restoreFocus.current
+      restoreFocus.current = null
+      tileRefs[field].current?.focus()
     }
+    // The refs are stable objects; only the open editor decides where focus goes.
   }, [editing])
+
+  useEffect(() => {
+    if (derivedFrom !== null) derivedRef.current?.focus()
+  }, [derivedFrom])
 
   const number = (value: number) => formatNumber(value, locale)
   const total = allowance.entitlementDays + allowance.carriedOverDays
   const over = allowance.remainingDays < 0
   const remaining = Math.abs(allowance.remainingDays)
+  const carriedEditable = carryOverEnabled && allowance.openingBalance
+  const wholeDaysOnly =
+    carryOverEnabled && hasFractionalLeftover(allowance.remainingDays)
 
-  function open(): void {
-    if (editing) return
-    setDraft(String(allowance.entitlementDays))
+  function open(field: Field): void {
+    if (pending || editing === field) return
+    setDraft(
+      String(
+        field === 'carried'
+          ? allowance.carriedOverDays
+          : allowance.entitlementDays,
+      ),
+    )
     setProblem(null)
-    setEditing(true)
+    setDerivedFrom(null)
+    setEditing(field)
   }
 
   function close(): void {
-    restoreFocus.current = true
-    setEditing(false)
+    restoreFocus.current = editing
+    setEditing(null)
+  }
+
+  function release(): void {
+    inflight.current = false
+    setPending(false)
   }
 
   async function commit(): Promise<void> {
-    if (inflight.current) return
+    if (inflight.current || editing === null) return
+    const field = editing
     const days = parseAllowanceDays(draft)
     if (days === null) {
       setProblem({ kind: 'invalid' })
@@ -127,43 +177,69 @@ export function AllowancePanel({
     setPending(true)
     setSaved(false)
     setProblem(null)
+    setSuperseded(null)
+    let result: AllowanceSaved | undefined
     try {
-      await setAllowanceFn({
-        data: { planId, year, entitlementDays: days },
+      result = await setAllowanceFn({
+        data: {
+          planId,
+          year,
+          ...(field === 'carried'
+            ? { carriedOverDays: days }
+            : { entitlementDays: days }),
+        },
       })
     } catch (cause) {
-      const failure = readPublicFailure(cause)
-      const unexpected = failure.kind === 'unexpected'
-      setProblem({
-        kind: 'failed',
-        message: unexpected ? null : (failure.message ?? null),
-        // Not found and owner only arrive as `unexpected` too: only a figure that still reads
-        // can be written again.
-        retryable: unexpected && (await canStillRead()),
-        rejected: failure.kind === 'validation',
-      })
-      inflight.current = false
-      setPending(false)
-      inputRef.current?.focus()
+      await fail(cause, field)
       return
     }
 
     try {
       await router.invalidate()
+      setSuperseded(result?.superseded ?? null)
       setSaved(true)
       close()
     } finally {
-      inflight.current = false
-      setPending(false)
+      release()
     }
   }
 
-  async function canStillRead(): Promise<boolean> {
+  async function fail(cause: unknown, field: Field): Promise<void> {
+    const failure = readPublicFailure(cause)
+    const unexpected = failure.kind === 'unexpected'
+    // Not found, owner only and "this year is calculated" all arrive as `unexpected` too: only a
+    // figure that still reads can be written again, and only a re-read tells the refusals apart.
+    const fresh = unexpected ? await reread() : null
+
+    if (field === 'carried' && fresh !== null && !fresh.openingBalance) {
+      // The tile is no longer a button, so the editor closes without taking focus back to it.
+      restoreFocus.current = null
+      setEditing(null)
+      setDerivedFrom(fresh.previousYear)
+      try {
+        await router.invalidate()
+      } finally {
+        release()
+      }
+      return
+    }
+
+    setProblem({
+      kind: 'failed',
+      field,
+      message: unexpected ? null : (failure.message ?? null),
+      retryable: fresh !== null,
+      rejected: failure.kind === 'validation',
+    })
+    release()
+    inputRef.current?.focus()
+  }
+
+  async function reread(): Promise<VacayAllowance | null> {
     try {
-      await loadVacayAllowance({ data: { planId, year } })
-      return true
+      return await loadVacayAllowance({ data: { planId, year } })
     } catch {
-      return false
+      return null
     }
   }
 
@@ -192,7 +268,10 @@ export function AllowancePanel({
   return (
     <Panel label={t('modules.vacay.allowance.label', { year })}>
       <div className="flex flex-col gap-4">
-        <p className="font-display text-subtitle font-bold tabular-nums text-ink">
+        <p
+          aria-describedby={wholeDaysOnly ? wholeDaysId : undefined}
+          className="font-display text-subtitle font-bold tabular-nums text-ink"
+        >
           {t(
             over
               ? 'modules.vacay.allowance.daysOver'
@@ -211,54 +290,88 @@ export function AllowancePanel({
           })}
         />
         <dl className="grid grid-cols-3 gap-2">
-          <div className="rounded-md bg-surface-2 px-2.5 py-2">
-            <dt
-              id={labelId}
-              className="text-micro font-semibold tracking-label break-words uppercase text-ink-4"
-            >
-              {t('modules.vacay.allowance.tile.days')}
-            </dt>
-            <dd className="font-display text-subtitle font-bold tabular-nums text-ink">
-              <button
-                ref={tileRef}
-                type="button"
-                aria-label={t('modules.vacay.allowance.tile.edit.days', {
-                  value: number(allowance.entitlementDays),
-                })}
-                aria-describedby={allowance.hasRow ? undefined : hintId}
-                aria-expanded={editing}
-                aria-controls={editing ? formId : undefined}
-                onClick={open}
-                data-part="allowance-tile"
-                data-field="entitlement"
-                className={cn(
-                  '-mx-1 inline-flex items-center gap-1 rounded-sm px-1 text-start tabular-nums',
-                  'hover:bg-hover active:bg-active aria-expanded:bg-hover',
-                  'focus-visible:outline-2 focus-visible:outline-ring',
-                )}
-              >
-                {number(allowance.entitlementDays)}
-                <Pencil aria-hidden className="size-3 shrink-0 text-ink-3" />
-              </button>
-            </dd>
-          </div>
+          <EditableTile
+            labelId={daysLabelId}
+            label={t('modules.vacay.allowance.tile.days')}
+            field="entitlement"
+            figure={number(allowance.entitlementDays)}
+            name={t('modules.vacay.allowance.tile.edit.days', {
+              value: number(allowance.entitlementDays),
+            })}
+            describedBy={allowance.hasRow ? undefined : hintId}
+            expanded={editing === 'entitlement'}
+            formId={formId}
+            tileRef={tileRefs.entitlement}
+            onOpen={() => open('entitlement')}
+          />
           <Figure
             label={t('modules.vacay.allowance.tile.used')}
             value={number(allowance.usedDays)}
           />
-          <Figure
-            label={t('modules.vacay.allowance.tile.carried')}
-            value={number(allowance.carriedOverDays)}
-            muted={!carryOverEnabled}
-          />
+          {carriedEditable ? (
+            <EditableTile
+              labelId={carriedLabelId}
+              label={t('modules.vacay.allowance.tile.carried')}
+              field="carried"
+              figure={number(allowance.carriedOverDays)}
+              name={t('modules.vacay.allowance.tile.edit.carried', {
+                value: number(allowance.carriedOverDays),
+              })}
+              describedBy={carriedCaptionId}
+              expanded={editing === 'carried'}
+              formId={formId}
+              tileRef={tileRefs.carried}
+              onOpen={() => open('carried')}
+            />
+          ) : (
+            <Figure
+              label={t('modules.vacay.allowance.tile.carried')}
+              value={number(allowance.carriedOverDays)}
+              muted={!carryOverEnabled}
+            />
+          )}
         </dl>
         {allowance.hasRow ? null : (
           <p id={hintId} className="text-caption text-ink-3">
             {t('modules.vacay.allowance.default.hint')}
           </p>
         )}
+        <p id={carriedCaptionId} className="text-caption text-ink-3">
+          {t(
+            !carryOverEnabled
+              ? 'modules.vacay.allowance.carried.off'
+              : allowance.openingBalance
+                ? 'modules.vacay.allowance.carried.opening'
+                : 'modules.vacay.allowance.carried.from',
+            { year: allowance.openingBalance ? year : allowance.previousYear },
+          )}
+        </p>
+        {wholeDaysOnly ? (
+          <p id={wholeDaysId} className="text-caption text-ink-3">
+            {t('modules.vacay.allowance.carried.wholeDays')}
+          </p>
+        ) : null}
 
-        {editing ? (
+        {derivedFrom === null ? null : (
+          <Alert ref={derivedRef} tabIndex={-1} tone="warning" size="sm">
+            {t('modules.vacay.allowance.error.derived', {
+              year,
+              previousYear: derivedFrom,
+            })}
+          </Alert>
+        )}
+        {superseded === null ? null : (
+          <Alert tone="info" size="sm" onDismiss={() => setSuperseded(null)}>
+            {t('modules.vacay.allowance.superseded', {
+              count: superseded.was,
+              year: superseded.year,
+              previousYear: superseded.year - 1,
+              value: number(superseded.was),
+            })}
+          </Alert>
+        )}
+
+        {editing === null ? null : (
           <form
             id={formId}
             onSubmit={submit}
@@ -267,7 +380,12 @@ export function AllowancePanel({
             className="flex animate-rise flex-col gap-3 rounded-md border border-edge bg-surface-2 p-3"
           >
             <span id={descriptionId} className="text-caption text-ink-3">
-              {t('modules.vacay.allowance.input.days', { year })}
+              {t(
+                editing === 'carried'
+                  ? 'modules.vacay.allowance.input.carried'
+                  : 'modules.vacay.allowance.input.days',
+                { year },
+              )}
             </span>
             <Input
               ref={inputRef}
@@ -278,7 +396,7 @@ export function AllowancePanel({
               aria-busy={pending || undefined}
               // The visible words beside the field are the tile's label and the description, so
               // the name carries both (WCAG 2.5.3 label in name).
-              aria-labelledby={`${labelId} ${descriptionId}`}
+              aria-labelledby={`${editing === 'carried' ? carriedLabelId : daysLabelId} ${descriptionId}`}
               aria-describedby={invalid ? problemId : undefined}
               invalid={rejected}
               onChange={(event) => {
@@ -314,11 +432,22 @@ export function AllowancePanel({
                 }
               >
                 {failed.message ??
-                  t('modules.vacay.allowance.error.days', {
-                    count: allowance.entitlementDays,
-                    year,
-                    value: number(allowance.entitlementDays),
-                  })}
+                  t(
+                    failed.field === 'carried'
+                      ? 'modules.vacay.allowance.error.carried'
+                      : 'modules.vacay.allowance.error.days',
+                    failed.field === 'carried'
+                      ? {
+                          count: allowance.carriedOverDays,
+                          year,
+                          value: number(allowance.carriedOverDays),
+                        }
+                      : {
+                          count: allowance.entitlementDays,
+                          year,
+                          value: number(allowance.entitlementDays),
+                        },
+                  )}
               </Alert>
             )}
             <div className="flex items-center gap-2">
@@ -349,7 +478,7 @@ export function AllowancePanel({
               ) : null}
             </div>
           </form>
-        ) : null}
+        )}
 
         <div role="status" aria-live="polite" className="sr-only">
           {pending ? (
@@ -360,6 +489,63 @@ export function AllowancePanel({
         </div>
       </div>
     </Panel>
+  )
+}
+
+/** A figure tile whose number is a button that opens the editor row. */
+function EditableTile({
+  labelId,
+  label,
+  field,
+  figure,
+  name,
+  describedBy,
+  expanded,
+  formId,
+  tileRef,
+  onOpen,
+}: {
+  labelId: string
+  label: string
+  field: Field
+  figure: string
+  name: string
+  describedBy: string | undefined
+  expanded: boolean
+  formId: string
+  tileRef: Ref<HTMLButtonElement>
+  onOpen: () => void
+}) {
+  return (
+    <div className="rounded-md bg-surface-2 px-2.5 py-2">
+      <dt
+        id={labelId}
+        className="text-micro font-semibold tracking-label break-words uppercase text-ink-4"
+      >
+        {label}
+      </dt>
+      <dd className="font-display text-subtitle font-bold tabular-nums text-ink">
+        <button
+          ref={tileRef}
+          type="button"
+          aria-label={name}
+          aria-describedby={describedBy}
+          aria-expanded={expanded}
+          aria-controls={expanded ? formId : undefined}
+          onClick={onOpen}
+          data-part="allowance-tile"
+          data-field={field}
+          className={cn(
+            '-mx-1 inline-flex items-center gap-1 rounded-sm px-1 text-start tabular-nums',
+            'hover:bg-hover active:bg-active aria-expanded:bg-hover',
+            'focus-visible:outline-2 focus-visible:outline-ring',
+          )}
+        >
+          {figure}
+          <Pencil aria-hidden className="size-3 shrink-0 text-ink-3" />
+        </button>
+      </dd>
+    </div>
   )
 }
 

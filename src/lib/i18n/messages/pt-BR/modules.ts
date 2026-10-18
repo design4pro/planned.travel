@@ -1244,6 +1244,29 @@ const messages = {
       'Não foi possível salvar sua cota. {year} ainda mostra {value} dias.',
   },
   'vacay.allowance.retry': 'Tentar novamente',
+  'vacay.allowance.tile.edit.carried':
+    'Editar dias transferidos, atualmente {value}',
+  'vacay.allowance.input.carried': 'Dias transferidos para {year}',
+  'vacay.allowance.carried.from': 'Transferidos de {year}',
+  'vacay.allowance.carried.opening':
+    'Trazidos de antes de {year}. Selecione para editar.',
+  'vacay.allowance.carried.off': 'A transferência está desativada',
+  'vacay.allowance.carried.wholeDays':
+    'Só dias inteiros são transferidos para o ano seguinte; o meio dia que sobra não é.',
+  'vacay.allowance.error.derived':
+    'Os dias transferidos para {year} agora são calculados a partir de {previousYear}, então não podem ser editados.',
+  'vacay.allowance.error.carried': {
+    one: 'Não foi possível salvar seus dias transferidos. {year} ainda mostra {value} dia.',
+    many: 'Não foi possível salvar seus dias transferidos. {year} ainda mostra {value} dias.',
+    other:
+      'Não foi possível salvar seus dias transferidos. {year} ainda mostra {value} dias.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Os dias transferidos para {year} agora são calculados a partir de {previousYear}. Você havia informado {value} dia.',
+    many: 'Os dias transferidos para {year} agora são calculados a partir de {previousYear}. Você havia informado {value} dias.',
+    other:
+      'Os dias transferidos para {year} agora são calculados a partir de {previousYear}. Você havia informado {value} dias.',
+  },
   'vacay.pending.loading': 'Carregando',
   'vacay.error.title': 'Não foi possível carregar o planejador de férias',
   'vacay.year.previous': 'Ano anterior',

@@ -1260,6 +1260,31 @@ const messages = {
       'Váš nárok se nepodařilo uložit. Rok {year} stále ukazuje {value} dní.',
   },
   'vacay.allowance.retry': 'Zkusit znovu',
+  'vacay.allowance.tile.edit.carried':
+    'Upravit převedené dny, aktuálně {value}',
+  'vacay.allowance.input.carried': 'Dny převedené do roku {year}',
+  'vacay.allowance.carried.from': 'Převedeno z roku {year}',
+  'vacay.allowance.carried.opening':
+    'Přeneseno z doby před rokem {year}. Vyberte pro úpravu.',
+  'vacay.allowance.carried.off': 'Převod dnů je vypnutý',
+  'vacay.allowance.carried.wholeDays':
+    'Do dalšího roku se převádějí jen celé dny; zbývající půlden se nepřevádí.',
+  'vacay.allowance.error.derived':
+    'Převedené dny pro rok {year} se nyní počítají z roku {previousYear}, takže je nelze upravit.',
+  'vacay.allowance.error.carried': {
+    one: 'Převedené dny se nepodařilo uložit. Rok {year} stále ukazuje {value} den.',
+    few: 'Převedené dny se nepodařilo uložit. Rok {year} stále ukazuje {value} dny.',
+    many: 'Převedené dny se nepodařilo uložit. Rok {year} stále ukazuje {value} dne.',
+    other:
+      'Převedené dny se nepodařilo uložit. Rok {year} stále ukazuje {value} dní.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Převedené dny pro rok {year} se nyní počítají z roku {previousYear}. Zadali jste {value} den.',
+    few: 'Převedené dny pro rok {year} se nyní počítají z roku {previousYear}. Zadali jste {value} dny.',
+    many: 'Převedené dny pro rok {year} se nyní počítají z roku {previousYear}. Zadali jste {value} dne.',
+    other:
+      'Převedené dny pro rok {year} se nyní počítají z roku {previousYear}. Zadali jste {value} dní.',
+  },
   'vacay.pending.loading': 'Načítání',
   'vacay.error.title': 'Plánovač dovolené se nenačetl',
   'vacay.year.previous': 'Předchozí rok',

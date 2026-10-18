@@ -1209,6 +1209,27 @@ const messages = {
       'Je verlofbudget kon niet worden opgeslagen. {year} toont nog steeds {value} dagen.',
   },
   'vacay.allowance.retry': 'Opnieuw proberen',
+  'vacay.allowance.tile.edit.carried':
+    'Overgedragen dagen bewerken, nu {value}',
+  'vacay.allowance.input.carried': 'Naar {year} overgedragen dagen',
+  'vacay.allowance.carried.from': 'Overgedragen uit {year}',
+  'vacay.allowance.carried.opening':
+    'Meegenomen van vóór {year}. Selecteer om te bewerken.',
+  'vacay.allowance.carried.off': 'Overdracht staat uit',
+  'vacay.allowance.carried.wholeDays':
+    'Alleen hele dagen gaan mee naar het volgende jaar; de resterende halve dag niet.',
+  'vacay.allowance.error.derived':
+    'De overgedragen dagen voor {year} worden nu berekend uit {previousYear} en kunnen dus niet worden bewerkt.',
+  'vacay.allowance.error.carried': {
+    one: 'Je overgedragen dagen konden niet worden opgeslagen. {year} toont nog steeds {value} dag.',
+    other:
+      'Je overgedragen dagen konden niet worden opgeslagen. {year} toont nog steeds {value} dagen.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'De overgedragen dagen voor {year} worden nu berekend uit {previousYear}. Je had {value} dag ingevoerd.',
+    other:
+      'De overgedragen dagen voor {year} worden nu berekend uit {previousYear}. Je had {value} dagen ingevoerd.',
+  },
   'vacay.pending.loading': 'Laden',
   'vacay.error.title': 'De verlofplanner kon niet worden geladen',
   'vacay.year.previous': 'Vorig jaar',

@@ -1387,6 +1387,26 @@ const messages = {
       'Your allowance could not be saved. {year} still shows {value} days.',
   },
   'vacay.allowance.retry': 'Try again',
+  'vacay.allowance.tile.edit.carried': 'Edit carried days, currently {value}',
+  'vacay.allowance.input.carried': 'Carried days brought into {year}',
+  'vacay.allowance.carried.from': 'Carried from {year}',
+  'vacay.allowance.carried.opening':
+    'Brought in from before {year}. Select to edit.',
+  'vacay.allowance.carried.off': 'Carry-over is off',
+  'vacay.allowance.carried.wholeDays':
+    'Only whole days carry into the next year; the leftover half day does not.',
+  'vacay.allowance.error.derived':
+    'Carried days for {year} are now calculated from {previousYear}, so they cannot be edited.',
+  'vacay.allowance.error.carried': {
+    one: 'Your carried days could not be saved. {year} still shows {value} day.',
+    other:
+      'Your carried days could not be saved. {year} still shows {value} days.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Carried days for {year} are now calculated from {previousYear}. You had entered {value} day.',
+    other:
+      'Carried days for {year} are now calculated from {previousYear}. You had entered {value} days.',
+  },
   'vacay.pending.loading': 'Loading',
   'vacay.error.title': 'The leave planner did not load',
   'vacay.year.previous': 'Previous year',

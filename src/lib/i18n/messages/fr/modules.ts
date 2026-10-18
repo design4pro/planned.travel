@@ -1259,6 +1259,29 @@ const messages = {
       'Impossible d’enregistrer vos droits. {year} affiche toujours {value} jours.',
   },
   'vacay.allowance.retry': 'Réessayer',
+  'vacay.allowance.tile.edit.carried':
+    'Modifier les jours reportés, actuellement {value}',
+  'vacay.allowance.input.carried': 'Jours reportés sur {year}',
+  'vacay.allowance.carried.from': 'Reportés de {year}',
+  'vacay.allowance.carried.opening':
+    'Repris d’avant {year}. Sélectionnez pour modifier.',
+  'vacay.allowance.carried.off': 'Le report est désactivé',
+  'vacay.allowance.carried.wholeDays':
+    'Seuls les jours entiers sont reportés sur l’année suivante ; le demi-jour restant ne l’est pas.',
+  'vacay.allowance.error.derived':
+    'Les jours reportés de {year} sont désormais calculés à partir de {previousYear} ; ils ne peuvent donc plus être modifiés.',
+  'vacay.allowance.error.carried': {
+    one: 'Impossible d’enregistrer vos jours reportés. {year} affiche toujours {value} jour.',
+    many: 'Impossible d’enregistrer vos jours reportés. {year} affiche toujours {value} jours.',
+    other:
+      'Impossible d’enregistrer vos jours reportés. {year} affiche toujours {value} jours.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Les jours reportés de {year} sont désormais calculés à partir de {previousYear}. Vous aviez saisi {value} jour.',
+    many: 'Les jours reportés de {year} sont désormais calculés à partir de {previousYear}. Vous aviez saisi {value} jours.',
+    other:
+      'Les jours reportés de {year} sont désormais calculés à partir de {previousYear}. Vous aviez saisi {value} jours.',
+  },
   'vacay.pending.loading': 'Chargement',
   'vacay.error.title': 'Le planificateur de congés n’a pas pu se charger',
   'vacay.year.previous': 'Année précédente',

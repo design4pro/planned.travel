@@ -1267,6 +1267,30 @@ const messages = {
       'Не вдалося зберегти ваш ліміт. За {year} рік досі вказано: {value} дня.',
   },
   'vacay.allowance.retry': 'Спробувати знову',
+  'vacay.allowance.tile.edit.carried': 'Змінити перенесені дні, зараз {value}',
+  'vacay.allowance.input.carried': 'Дні, перенесені на {year} рік',
+  'vacay.allowance.carried.from': 'Перенесено з {year} року',
+  'vacay.allowance.carried.opening':
+    'Перенесено з періоду до {year} року. Виберіть, щоб змінити.',
+  'vacay.allowance.carried.off': 'Перенесення вимкнено',
+  'vacay.allowance.carried.wholeDays':
+    'На наступний рік переносяться лише цілі дні; залишок у півдня не переноситься.',
+  'vacay.allowance.error.derived':
+    'Перенесені дні за {year} рік тепер розраховуються за {previousYear} роком, тому їх не можна змінити.',
+  'vacay.allowance.error.carried': {
+    one: 'Не вдалося зберегти перенесені дні. За {year} рік досі вказано: {value} день.',
+    few: 'Не вдалося зберегти перенесені дні. За {year} рік досі вказано: {value} дні.',
+    many: 'Не вдалося зберегти перенесені дні. За {year} рік досі вказано: {value} днів.',
+    other:
+      'Не вдалося зберегти перенесені дні. За {year} рік досі вказано: {value} дня.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Перенесені дні за {year} рік тепер розраховуються за {previousYear} роком. Ви вводили: {value} день.',
+    few: 'Перенесені дні за {year} рік тепер розраховуються за {previousYear} роком. Ви вводили: {value} дні.',
+    many: 'Перенесені дні за {year} рік тепер розраховуються за {previousYear} роком. Ви вводили: {value} днів.',
+    other:
+      'Перенесені дні за {year} рік тепер розраховуються за {previousYear} роком. Ви вводили: {value} дня.',
+  },
   'vacay.pending.loading': 'Завантаження',
   'vacay.error.title': 'Не вдалося завантажити планувальник відпусток',
   'vacay.year.previous': 'Попередній рік',
