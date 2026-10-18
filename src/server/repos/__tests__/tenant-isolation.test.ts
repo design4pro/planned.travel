@@ -113,6 +113,7 @@ import {
   listSettlements,
   listTripExpenses,
   markShareSettled,
+  requireExpenseOfTrip,
   setExpenseShares,
   settlementsRepository,
   updateBudgetItem,
@@ -5116,6 +5117,16 @@ describe('tenant isolation', () => {
         expect(await filesOfBoth()).toEqual(beforeBoth)
       },
     )
+
+    it('refuses an expense of another workspace under either trip', async () => {
+      for (const tripId of [alpha.tripId, beta.tripId]) {
+        expect(
+          await captureError(() =>
+            requireExpenseOfTrip(alpha.tenant.scope, tripId, beta.expenseId),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+    })
 
     it('refuses to update a file of another workspace even when the links are its own', async () => {
       const before = await filesOfBoth()

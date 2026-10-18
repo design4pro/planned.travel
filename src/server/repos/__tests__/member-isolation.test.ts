@@ -106,6 +106,7 @@ import {
   requireTrip,
   restoreTrip,
   startTripCopy,
+  TripArchivedError,
   TripRoleError,
   tripMemberUserIds,
   updateTrip,
@@ -2287,6 +2288,63 @@ describe('member isolation', () => {
       expect(await getFile(alpha.scope, onOther.id)).toEqual(before)
     })
 
+    it('refuses a reader and an archived trip before it reads a link, so an id cannot be probed', async () => {
+      const viewerId = await alpha.addUser('Alpha the reader')
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const viewer = alpha.scopeFor(viewerId)
+      const file = await recordFile(alpha.scope, {
+        ...FILE,
+        tripId: fixture.tripId,
+      })
+
+      for (const links of [elsewhere, { placeId: 'no-such-place' }]) {
+        expect(
+          await captureError(() =>
+            recordFile(viewer, { ...FILE, tripId: fixture.tripId, ...links }),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+        expect(
+          await captureError(() =>
+            updateFile(viewer, fixture.tripId, file.id, links),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+      }
+
+      await archiveTrip(alpha.scope, fixture.tripId)
+      expect(
+        await captureError(() =>
+          recordFile(alpha.scope, {
+            ...FILE,
+            tripId: fixture.tripId,
+            ...elsewhere,
+          }),
+        ),
+      ).toBeInstanceOf(TripArchivedError)
+    })
+
+    it('refuses a patch that clears one link and names a foreign one, writing neither', async () => {
+      const file = await recordFile(alpha.scope, {
+        ...FILE,
+        tripId: fixture.tripId,
+        placeId: own.placeId,
+      })
+      const before = await getFile(alpha.scope, file.id)
+
+      const error = await captureError(() =>
+        updateFile(alpha.scope, fixture.tripId, file.id, {
+          placeId: null,
+          expenseId: elsewhere.expenseId,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await getFile(alpha.scope, file.id)).toEqual(before)
+    })
+
     it('binds an expense to its trip without asking for a money role', async () => {
       const viewerId = await alpha.addUser('Alpha the reader')
       await addTripMember(alpha.scope, {
@@ -2323,12 +2381,14 @@ describe('member isolation', () => {
         const before = await checkInsOf()
 
         for (const placeId of [fixture.placeId, elsewhere.placeId, 'no-such']) {
-          const error = await captureError(() =>
-            createCheckIn(alpha.scope, { ...CHECK_IN, placeId }),
-          )
-          expect(error).toBeInstanceOf(ZodError)
-          expect(error).not.toBeInstanceOf(NotFoundError)
-          expect((error as ZodError).message).not.toContain(placeId)
+          for (const tripId of [undefined, null]) {
+            const error = await captureError(() =>
+              createCheckIn(alpha.scope, { ...CHECK_IN, tripId, placeId }),
+            )
+            expect(error).toBeInstanceOf(ZodError)
+            expect(error).not.toBeInstanceOf(NotFoundError)
+            expect((error as ZodError).message).not.toContain(placeId)
+          }
         }
 
         expect(await checkInsOf()).toEqual(before)

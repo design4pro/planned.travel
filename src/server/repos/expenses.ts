@@ -124,6 +124,16 @@ async function requireMoneyTrip(
  * trip check and precedes the row lookup, so a viewer is refused whether or not the id exists.
  */
 
+async function requireTripExpense(
+  scope: TenantScope,
+  tripId: string,
+  expenseId: string,
+  expectedTripCurrency?: string,
+): Promise<Expense> {
+  await requireMoneyTrip(scope, tripId, expectedTripCurrency)
+  return requireExpenseOfTrip(scope, tripId, expenseId)
+}
+
 /**
  * The expense, when it is an expense of `tripId`: `NotFoundError` otherwise, the same answer a
  * missing id gets, so naming another trip's expense reveals nothing about it. The trip binding and
@@ -134,23 +144,6 @@ export async function requireExpenseOfTrip(
   tripId: string,
   expenseId: string,
 ): Promise<Expense> {
-  const expense = await expensesRepository.findOne(
-    scope,
-    allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
-  )
-  if (expense === null) {
-    throw new NotFoundError(expensesRepository.entityName, expenseId)
-  }
-  return expense
-}
-
-async function requireTripExpense(
-  scope: TenantScope,
-  tripId: string,
-  expenseId: string,
-  expectedTripCurrency?: string,
-): Promise<Expense> {
-  await requireMoneyTrip(scope, tripId, expectedTripCurrency)
   const expense = await expensesRepository.findOne(
     scope,
     allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
