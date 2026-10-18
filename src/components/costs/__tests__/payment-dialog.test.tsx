@@ -39,6 +39,8 @@ function open(
   onSubmit: (value: PaymentFormValue) => Promise<void> = async () => {},
   onOpenChange: (open: boolean) => void = () => {},
   seed: PaymentSeed | null = null,
+  people: ReadonlyArray<CostsPerson> = PEOPLE,
+  withBalance?: ReadonlyArray<string>,
 ): void {
   render(
     <I18nProvider locale="en" messages={EN}>
@@ -46,7 +48,8 @@ function open(
         open
         onOpenChange={onOpenChange}
         seed={seed}
-        people={PEOPLE}
+        people={people}
+        withBalance={withBalance}
         viewerUserId="u1"
         currency="EUR"
         today="2026-10-12"
@@ -406,5 +409,75 @@ describe('the payment dialog when recording fails', () => {
 
     expect(await screen.findByText(Costs['payment.failed'])).toBeTruthy()
     expect(screen.queryByText(/planned-travel\/failure/)).toBeNull()
+  })
+})
+
+describe('the payment dialog once someone has left the workspace (#1034)', () => {
+  const WITH_LEAVER: ReadonlyArray<CostsPerson> = [
+    ...PEOPLE,
+    {
+      userId: 'u3',
+      name: 'Dee',
+      email: '',
+      image: null,
+      role: 'editor',
+      leftWorkspace: true,
+    },
+  ]
+
+  async function optionsOf(
+    user: ReturnType<typeof userEvent.setup>,
+    name: string,
+  ): Promise<Array<string>> {
+    await user.click(screen.getByRole('combobox', { name }))
+    const names = (await screen.findAllByRole('option')).map(
+      (option) => option.textContent ?? '',
+    )
+    await user.keyboard('{Escape}')
+    return names
+  }
+
+  it('offers her on neither side of a blank payment', async () => {
+    const user = hand()
+    open(undefined, undefined, null, WITH_LEAVER)
+
+    for (const name of ['Who is paying', 'Who is being paid']) {
+      expect((await optionsOf(user, name)).join('|')).not.toContain('Dee')
+    }
+  })
+
+  it('still offers her on a payment that already carries her', async () => {
+    const user = hand()
+    open(
+      undefined,
+      undefined,
+      { fromUserId: 'u3', toUserId: 'u1', amountMinor: 500 },
+      WITH_LEAVER,
+    )
+
+    expect((await optionsOf(user, 'Who is paying')).join('|')).toContain('Dee')
+  })
+
+  it('still offers her on the receiving side of a payment that carries her', async () => {
+    const user = hand()
+    open(
+      undefined,
+      undefined,
+      { fromUserId: 'u1', toUserId: 'u3', amountMinor: 500 },
+      WITH_LEAVER,
+    )
+
+    expect((await optionsOf(user, 'Who is being paid')).join('|')).toContain(
+      'Dee',
+    )
+  })
+
+  it('offers her on a blank payment while she still has a balance', async () => {
+    const user = hand()
+    open(undefined, undefined, null, WITH_LEAVER, ['u3'])
+
+    for (const name of ['Who is paying', 'Who is being paid']) {
+      expect((await optionsOf(user, name)).join('|')).toContain('Dee')
+    }
   })
 })

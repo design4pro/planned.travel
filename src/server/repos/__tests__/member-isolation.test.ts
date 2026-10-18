@@ -13,7 +13,9 @@
  * rule the tenant file follows.
  */
 
+import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { member } from '#/server/db/auth-schema'
 import { ZodError } from 'zod'
 import {
   createCheckIn,
@@ -1896,6 +1898,215 @@ describe('member isolation', () => {
             }),
           gone,
         )
+      })
+    })
+
+    /**
+     * Leaving the workspace deletes no `trip_members` row, so the trip still lists the person; the
+     * money writers ask the `member` table too (#1034). Worked out when the write happens: nothing
+     * is deleted, and a person who comes back is accepted again.
+     */
+    describe('keep a person who left the workspace off new money (#1034)', () => {
+      let leaverId: string
+
+      async function leaveWorkspace(userId: string): Promise<void> {
+        await harness.db
+          .delete(member)
+          .where(
+            and(
+              eq(member.organizationId, alpha.organizationId),
+              eq(member.userId, userId),
+            ),
+          )
+      }
+
+      beforeEach(async () => {
+        leaverId = await alpha.addUser('Alpha who left the workspace')
+        await addTripMember(alpha.scope, {
+          tripId,
+          userId: leaverId,
+          role: 'editor',
+        })
+      })
+
+      it('refuses them as payer or sharer of a new expense, writing nothing', async () => {
+        await leaveWorkspace(leaverId)
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              paidBy: leaverId,
+            }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              participants: [{ userId: ownerId }, { userId: leaverId }],
+            }),
+          leaverId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('refuses adding them to an expense that does not carry them', async () => {
+        const expenseId = await dinner()
+        await leaveWorkspace(leaverId)
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, {
+              participants: [{ userId: ownerId }, { userId: leaverId }],
+            }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, { paidBy: leaverId }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            setExpenseShares(alpha.scope, tripId, expenseId, [
+              { userId: ownerId },
+              { userId: leaverId },
+            ]),
+          leaverId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('refuses a payment from or to them when they have no balance', async () => {
+        await leaveWorkspace(leaverId)
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: leaverId,
+              toUserId: ownerId,
+              amountMinor: 500,
+              settledOn: '2026-04-12',
+            }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: ownerId,
+              toUserId: leaverId,
+              amountMinor: 500,
+              settledOn: '2026-04-12',
+            }),
+          leaverId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('keeps an expense they are already on editable and re-splittable with them unchanged', async () => {
+        const { expense } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const edited = await updateExpense(alpha.scope, tripId, expense.id, {
+          title: 'Boat trip, corrected',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        expect(edited.expense.title).toBe('Boat trip, corrected')
+        expect(edited.shares.map((row) => row.userId).sort()).toEqual(
+          [leaverId, ownerId].sort(),
+        )
+        const resplit = await setExpenseShares(
+          alpha.scope,
+          tripId,
+          expense.id,
+          [{ userId: leaverId }],
+        )
+        expect(resplit).toHaveLength(1)
+      })
+
+      it('keeps their balance payable and receivable', async () => {
+        await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: ownerId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const paid = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: leaverId,
+          toUserId: ownerId,
+          amountMinor: 500,
+          settledOn: '2026-04-12',
+        })
+        expect(paid.fromUserId).toBe(leaverId)
+      })
+
+      it('keeps a credit they are owed payable', async () => {
+        await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const repaid = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: ownerId,
+          toUserId: leaverId,
+          amountMinor: 500,
+          settledOn: '2026-04-12',
+        })
+        expect(repaid.toUserId).toBe(leaverId)
+      })
+
+      it('accepts them again once they are back in the workspace', async () => {
+        await leaveWorkspace(leaverId)
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              paidBy: leaverId,
+            }),
+          leaverId,
+        )
+
+        await alpha.addMembership(leaverId)
+        const { expense } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Taxi',
+          amountMinor: 1_000,
+          spentOn: '2026-04-12',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }],
+        })
+        expect(expense.paidBy).toBe(leaverId)
       })
     })
 

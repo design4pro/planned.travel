@@ -10,7 +10,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ZodError } from 'zod'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
+import { member } from '#/server/db/auth-schema'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import {
   assignmentParticipants,
@@ -6123,6 +6124,49 @@ describe('tenant isolation', () => {
       expect(
         await captureError(() =>
           tripsRepository.requireById(inBeta, alpha.tripId),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('keeps someone who left A but belongs to B off A’s new money (#1034)', async () => {
+      // "Still in the workspace" is the caller's workspace, not any workspace: a `member` row in B
+      // must not stand in for the one A lost.
+      const leaverId = await alpha.tenant.addUser('Left alpha, still in beta')
+      await addTripMember(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        userId: leaverId,
+        role: 'editor',
+      })
+      await beta.tenant.addMembership(leaverId)
+      await harness.db
+        .delete(member)
+        .where(
+          and(
+            eq(member.organizationId, alpha.tenant.organizationId),
+            eq(member.userId, leaverId),
+          ),
+        )
+
+      expect(
+        await captureError(() =>
+          createExpense(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            title: 'Taxi',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+            paidBy: leaverId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          createSettlement(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            fromUserId: leaverId,
+            toUserId: alpha.tenant.ownerUserId,
+            amountMinor: 500,
+            settledOn: '2026-04-10',
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
     })

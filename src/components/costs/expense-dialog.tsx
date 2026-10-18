@@ -52,7 +52,7 @@ import {
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
-import { parseDay, toDayString } from './data'
+import { offeredPeople, parseDay, toDayString } from './data'
 import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
@@ -261,6 +261,14 @@ export function ExpenseDialog({
   const t = useTranslate()
   const locale = useLocale()
   const editing = expense !== null
+  // Fixed when the dialog opens, like the draft: a member who left the workspace is not offered for
+  // new money, but stays on an expense that already carries them.
+  const [offered] = useState(() =>
+    offeredPeople(people, [
+      expense?.paidBy ?? null,
+      ...(expense?.shares.map((share) => share.userId) ?? []),
+    ]),
+  )
   const [form, setForm] = useState<FormState>(() =>
     initialState(expense, tripCurrency, today, categories, defaultCategory),
   )
@@ -273,9 +281,9 @@ export function ExpenseDialog({
   )
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
-      ? emptyDraft(people)
+      ? emptyDraft(offered)
       : draftForDeparted(
-          people,
+          offered,
           departed,
           expense.amountMinor,
           expense.currency,
@@ -582,7 +590,7 @@ export function ExpenseDialog({
               <SimpleSelect
                 options={[
                   { value: NO_PAYER, label: t('costs.expense.nobodyYet') },
-                  ...people.map((person) => ({
+                  ...offered.map((person) => ({
                     value: person.userId,
                     label:
                       person.userId === viewerUserId
@@ -598,7 +606,7 @@ export function ExpenseDialog({
             </Field>
 
             <SplitEditor
-              people={people}
+              people={offered}
               departedPeople={departed}
               viewerUserId={viewerUserId}
               draft={draft}

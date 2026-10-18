@@ -79,6 +79,13 @@ export interface CostsPerson {
   readonly email: string
   readonly image: string | null
   readonly role: string
+  /**
+   * Whether this trip member no longer holds a `member` row in the workspace (#1034). They stay in
+   * the list so their existing expenses and balances keep a name, and the pickers stop offering them
+   * for new money - the repository refuses them there. Always set by the server; absent reads as
+   * "still in the workspace".
+   */
+  readonly leftWorkspace?: boolean
 }
 
 /**
@@ -366,6 +373,8 @@ async function loadPeople(
       email: profile?.email ?? '',
       image: profile?.image ?? null,
       role: row.role,
+      // Profiles are read from the workspace's `member` rows, so no profile means no membership.
+      leftWorkspace: profile === undefined,
     }
   })
 }
