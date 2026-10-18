@@ -44,6 +44,7 @@ import { handlePdfExport } from './handlers/pdf-export'
 import { handleTravelStats } from './handlers/travel-stats'
 import { handleTripCopy } from './handlers/trip-copy'
 import { handleTripPurge } from './handlers/trip-purge'
+import { handleParticipantBackfill } from './handlers/participant-backfill'
 import { handleTripRoomEvict } from './handlers/trip-room-evict'
 import { callProvider } from '#/server/metering/outbound'
 import { serializeError } from '../observability/logger'
@@ -93,6 +94,7 @@ export const taskHandlers: TaskHandlerRegistry = {
   'trip-purge': handleTripPurge,
   'trip-copy': handleTripCopy,
   'trip-room-evict': handleTripRoomEvict,
+  'participant-backfill': handleParticipantBackfill,
   'billing.subscription.changed': handleSubscriptionChanged,
   'billing.invoice.paid': handleInvoicePaid,
 }
@@ -156,6 +158,11 @@ function runHandler(
       )
     case 'trip-room-evict':
       return (registry['trip-room-evict'] ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
+    case 'participant-backfill':
+      return (registry['participant-backfill'] ?? unhandled(envelope.kind))(
         envelope.payload,
         context,
       )

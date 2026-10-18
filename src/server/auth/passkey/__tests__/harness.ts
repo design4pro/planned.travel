@@ -17,6 +17,7 @@ import {
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { expect } from 'vitest'
 import { authSchema } from '#/server/db/auth-schema'
+import { workspaceParticipants } from '#/server/db/schema'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
 
 export const BASE_URL = 'http://localhost:3000'
@@ -72,7 +73,7 @@ export async function openAuthDatabase(): Promise<{
 }> {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson(authSchema),
+    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants }),
   )
   const sqlite = new DatabaseSync(':memory:')
   for (const statement of statements) sqlite.exec(statement)
