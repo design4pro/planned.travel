@@ -26,7 +26,7 @@ import { formatMoney } from '#/lib/money'
 import { EXPENSE_VIEWS, isExpenseView, isFiltered } from './data'
 import { DisplayCurrencyMenu } from './display-currency-menu'
 
-import type { MessageKey } from '#/lib/i18n'
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { DisplayCurrency } from '#/lib/money'
 import type { CostsDisplayChoices, ExpenseCategory } from '#/server/fns/costs'
 import type { CostsFilters, ExpenseView } from './data'
@@ -241,7 +241,7 @@ export function CostsToolbar({
           className="text-ink-4"
           aria-live="polite"
         >
-          {describe(filters, categories, days)}
+          {describe(filters, categories, days, t)}
         </SectionLabel>
       ) : null}
     </div>
@@ -253,10 +253,11 @@ function describe(
   filters: CostsFilters,
   categories: ReadonlyArray<ToolbarOption<ExpenseCategory>>,
   days: ReadonlyArray<ToolbarOption>,
+  t: Translate,
 ): string {
   const parts: Array<string> = []
   if (filters.view !== 'all') {
-    parts.push(VIEW_LABELS[filters.view].toLowerCase())
+    parts.push(t(VIEW_LABELS[filters.view]))
   }
   if (filters.category !== undefined) {
     parts.push(
@@ -271,9 +272,9 @@ function describe(
   }
   const needle = (filters.q ?? '').trim()
   if (needle !== '') {
-    parts.push(`matching “${needle}”`)
+    parts.push(t('costs.toolbar.summary.search', { term: needle }))
   }
   return parts.length === 0
-    ? 'Showing everything'
-    : `Filtered: ${parts.join(' · ')}`
+    ? t('costs.toolbar.summary.everything')
+    : t('costs.toolbar.summary.filtered', { filters: parts.join(' · ') })
 }
