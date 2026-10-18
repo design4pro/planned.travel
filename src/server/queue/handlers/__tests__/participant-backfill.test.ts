@@ -20,6 +20,7 @@ import { taskHandlers } from '../../consumer'
 import { buildTaskEnvelope } from '../../jobs'
 import {
   TaskConfigurationError,
+  TaskRetryableError,
   participantBackfillPayloadSchema,
 } from '../../types'
 import {
@@ -239,12 +240,13 @@ describe('the chain', () => {
     })
   })
 
-  it('writes no marker for a message that starts past the end of a run that never began', async () => {
+  it('writes no marker for a message that starts past the end of a run that never began, and fails it so it retries', async () => {
     const { env, sent, kv } = fakes()
 
-    const metrics = await run(env, ordered[1])
+    await expect(run(env, ordered[1])).rejects.toBeInstanceOf(
+      TaskRetryableError,
+    )
 
-    expect(metrics).toEqual({ organizations: 0, participants: 0, complete: 0 })
     expect(kv.size).toBe(0)
     expect(sent).toHaveLength(0)
     expect(anchors()).toHaveLength(0)
@@ -254,13 +256,15 @@ describe('the chain', () => {
     const { env, sent, kv } = fakes()
     await run(env, null)
 
-    await run(env, ordered[1])
+    await expect(run(env, ordered[1])).rejects.toBeInstanceOf(
+      TaskRetryableError,
+    )
 
     expect(kv.has(PARTICIPANT_BACKFILL_MARKER_KEY)).toBe(false)
     expect(sent).toHaveLength(1)
   })
 
-  it('does nothing for a message that skips part of the id range', async () => {
+  it('fails a message that skips part of the id range', async () => {
     const { env, sent, kv } = fakes()
     const gamma = await harness.seedTenant('gamma')
     const all = [
@@ -269,10 +273,37 @@ describe('the chain', () => {
       gamma.organizationId,
     ].sort()
     await run(env, null)
-    await run(env, all[1])
+    await expect(run(env, all[1])).rejects.toBeInstanceOf(TaskRetryableError)
 
     expect(sent).toHaveLength(1)
     expect(kv.get(participantBackfillRunKey('run-1'))).toBe(all[0])
+  })
+
+  it('does not strand a run on a stale read of its cursor: the message fails and the retry goes through', async () => {
+    const { env, sent, kv } = fakes()
+    await run(env, null)
+    const current = kv.get(participantBackfillRunKey('run-1'))
+    kv.delete(participantBackfillRunKey('run-1'))
+
+    await expect(run(env, ordered[0])).rejects.toBeInstanceOf(
+      TaskRetryableError,
+    )
+
+    kv.set(participantBackfillRunKey('run-1'), current ?? '')
+    await run(env, ordered[0])
+    expect(sent).toHaveLength(2)
+  })
+
+  it('does nothing for a duplicate of a message the run has moved past', async () => {
+    const { env, sent } = fakes()
+    await run(env, null)
+    await run(env, ordered[0])
+    const before = [...sent]
+
+    const metrics = await run(env, null)
+
+    expect(metrics).toEqual({ organizations: 0, participants: 0, complete: 0 })
+    expect(sent).toEqual(before)
   })
 
   it('refuses to run without the D1 binding', async () => {

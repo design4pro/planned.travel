@@ -275,7 +275,7 @@ export type TripRoomEvictPayload = z.infer<typeof tripRoomEvictPayloadSchema>
  * Where the participation backfill chain stands (ADR 0043). `after` is the last organization id the
  * chain has handled, `null` at the start; the message handles the next one, found by the catalog
  * read, never named here. The payload carries no user id and no organization id, so a forged
- * message can only start or continue the chain, never aim it at a person or a workspace.
+ * message can only start a chain, never aim it at a person or a workspace.
  */
 export const participantBackfillPayloadSchema = z.strictObject({
   runId: z.string().min(1).max(36),

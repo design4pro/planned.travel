@@ -78,7 +78,7 @@ marker `erasure:participants-backfilled` (run id and time). The payload carries 
 and no user or organization id; the envelope's `orgId` is `system`, and the work runs under a scope
 whose user id is reserved (`system:participant-backfill`). The run keeps its progress in KV (the
 last workspace visited), and a message that does not continue it does nothing, so the marker is
-written only by a chain that visited every workspace from the start. A forged envelope can therefore
+written only by a chain that visited every workspace from the start. A message that arrives ahead of its run fails and retries (KV is not read-after-write consistent), and a run that stalls or is dead-lettered is recovered by starting a new run id. A forged envelope can therefore
 start a chain but cannot aim it at a person or a workspace, nor finish a run early, and the scope
 reads only the registered user columns of the workspace the catalog named. A chain that fails part-way leaves no
 marker, and the engine refuses to run until the marker exists. The kind and its handler ship in this

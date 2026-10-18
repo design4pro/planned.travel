@@ -32,7 +32,7 @@ import {
 } from '#/server/erasure/participant-backfill-marker'
 import { backfillParticipants, createScope } from '#/server/repos'
 import { SYSTEM_ORG_ID, enqueueTask } from '../jobs'
-import { TaskConfigurationError } from '../types'
+import { TaskConfigurationError, TaskRetryableError } from '../types'
 
 import type { Database } from '#/server/db/types'
 import type {
@@ -48,6 +48,9 @@ type D1Handle = NonNullable<TaskBindings['DB']>
 
 /** How a D1 binding becomes a Drizzle handle: injectable, as `trip-room-evict` does. */
 export type DatabaseFor = (binding: D1Handle) => Database
+
+/** How long a message that arrived ahead of its run waits before it is tried again. */
+const OUT_OF_SEQUENCE_RETRY_SECONDS = 60
 
 /** The user id of the backfill's scope. Reserved: no account is ever given this id. */
 export const BACKFILL_SCOPE_USER_ID = 'system:participant-backfill'
@@ -83,9 +86,12 @@ export function createParticipantBackfillHandler(
 
     // The run's own record decides whether this message continues it. `''` is "started, nothing
     // visited"; the cursor of a retried message is either its own `after` or the workspace it
-    // handles (an earlier attempt got that far). Anything else is a message that did not follow
-    // the chain, and it does nothing, so only a chain that visited every workspace can end in the
-    // marker.
+    // handles (an earlier attempt got that far). A cursor past this message's position means it is
+    // a duplicate of work already done, and it does nothing. A cursor that is missing or behind is
+    // either a stale KV read (KV is not read-after-write consistent) or a message that did not
+    // follow the chain: it fails and retries instead of completing, so a legitimate run is never
+    // stranded by a stale read and a stray message ends in the dead-letter queue. Either way only a
+    // chain that visited every workspace in order can end in the marker.
     const expected = payload.after ?? ''
     let cursor = await readParticipantBackfillRunCursor(
       context.env.KV,
@@ -98,7 +104,13 @@ export function createParticipantBackfillHandler(
     const retriedAfterProgress =
       organizationId !== undefined && cursor === organizationId
     if (cursor !== expected && !retriedAfterProgress) {
-      context.logger.warn('participation backfill message out of sequence', {
+      if (cursor === null || cursor < expected) {
+        throw new TaskRetryableError(
+          'The participation backfill message arrived ahead of its run',
+          { retryAfterSeconds: OUT_OF_SEQUENCE_RETRY_SECONDS },
+        )
+      }
+      context.logger.info('participation backfill message already handled', {
         runId: payload.runId,
       })
       return { organizations: 0, participants: 0, complete: 0 }
