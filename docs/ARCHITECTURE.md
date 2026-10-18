@@ -195,8 +195,8 @@ a third catalog member.
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
   `organization_id`; `provider_usage` uses it only for attribution. Catalog is the single
-  exception outside repos, with exactly two members (these tables and the bounded cron discovery
-  read). Platform-content access uses an explicit
+  exception outside repos, with exactly three members (these tables, the bounded cron discovery
+  read and the ids-only erasure catalog read). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
   the bounded shape-based exceptions stated in SPEC §5.
 - `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool

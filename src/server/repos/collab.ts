@@ -26,6 +26,7 @@ import {
 import { allOf, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { ForbiddenError, NotFoundError, RepositoryError } from './context'
+import { requirePlaceOfTrip } from './places'
 import {
   assertTripRole,
   requireTrip,
@@ -186,18 +187,25 @@ export const createPollInput = z.object({
 })
 export type CreatePollInput = z.infer<typeof createPollInput>
 
-export const createCheckInInput = z.object({
-  tripId: idSchema.nullish(),
-  placeId: idSchema.nullish(),
-  name: titleSchema,
-  lat: latitudeSchema.nullish(),
-  lng: longitudeSchema.nullish(),
-  address: shortTextSchema.nullish(),
-  countryCode: countryCodeSchema.nullish(),
-  note: longTextSchema.nullish(),
-  source: z.enum(CHECK_IN_SOURCES).optional(),
-  checkedInAt: instantSchema.optional(),
-})
+export const createCheckInInput = z
+  .object({
+    tripId: idSchema.nullish(),
+    placeId: idSchema.nullish(),
+    name: titleSchema,
+    lat: latitudeSchema.nullish(),
+    lng: longitudeSchema.nullish(),
+    address: shortTextSchema.nullish(),
+    countryCode: countryCodeSchema.nullish(),
+    note: longTextSchema.nullish(),
+    source: z.enum(CHECK_IN_SOURCES).optional(),
+    checkedInAt: instantSchema.optional(),
+  })
+  // A place belongs to a trip, so a check-in at one names the trip; the message does not say
+  // whether the place exists, because nothing has been read when it is raised.
+  .refine((value) => !value.placeId || Boolean(value.tripId), {
+    message: 'A check-in at a place must name its trip.',
+    path: ['tripId'],
+  })
 export type CreateCheckInInput = z.infer<typeof createCheckInInput>
 
 /* -------------------------------------------------------------------------------------------------
@@ -528,6 +536,9 @@ export async function createCheckIn(
   const values = createCheckInInput.parse(input)
   if (values.tripId) {
     await requireTrip(scope, values.tripId)
+    if (values.placeId) {
+      await requirePlaceOfTrip(scope, values.tripId, values.placeId)
+    }
   }
   return checkInsRepository.insert(scope, {
     ...values,

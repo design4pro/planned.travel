@@ -35,6 +35,7 @@
  * | `settings`      | `organization_settings`, `user_settings`, `app_settings` |
  * | `audit`         | `audit_log` |
  * | `members`       | `organization`, `member`, `invitation` |
+ * | `participants`  | `workspace_participants`; reads the registered user columns to backfill it |
  * | `billing`       | `subscriptions`, `usage_records` |
  * | `calendar-feeds` | `calendar_feeds`; reads `trips`, `days`, `places`, `day_assignments`, `day_notes`, `day_accommodations`, `transports`, `transport_legs`, `reservations` (narrowed columns) for the trip calendar |
  * | `dashboard`     | — composition over the modules above |
@@ -62,6 +63,7 @@ export * from './journey'
 export * from './lists'
 export * from './members'
 export * from './notifications'
+export * from './participants'
 export * from './places'
 export * from './rates'
 export * from './reservations'
