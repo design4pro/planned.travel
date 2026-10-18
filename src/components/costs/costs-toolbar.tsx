@@ -128,7 +128,10 @@ export function CostsToolbar({
           selects and the segmented control want more room than the main column
           has once the rail is subtracted, and a wrapped second line reads better
           than a control that has been squeezed narrower than its own label. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+      <div
+        data-part="costs-filters"
+        className="flex flex-wrap items-center gap-x-3 gap-y-3"
+      >
         <Input
           size="sm"
           type="search"
@@ -145,8 +148,14 @@ export function CostsToolbar({
           wrapperClassName="sm:w-64 lg:w-72"
         />
 
-        <div className="scrollbar-none -mx-1 flex min-w-0 items-center gap-2 overflow-x-auto px-1 sm:mx-0 sm:ms-auto sm:flex-wrap sm:justify-end sm:overflow-visible sm:px-0">
+        {/* Below `sm` this is a stack, not a strip that scrolls sideways: the
+            display currency on its own line, the two selects sharing one at
+            equal width and the view tabs across the full width. A fixed-width
+            row of five controls is wider than a 360px phone and hid the day
+            select and the tabs with nothing to say it scrolled. */}
+        <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:ms-auto sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
           <DisplayCurrencyMenu
+            className="col-span-2"
             display={display}
             choices={displayChoices}
             budgetCurrency={currency}
@@ -155,7 +164,7 @@ export function CostsToolbar({
           />
           <SimpleSelect
             size="sm"
-            className="w-40 shrink-0"
+            className="w-full min-w-0 sm:w-40 sm:shrink-0"
             options={[
               { value: ALL, label: t('costs.toolbar.allCategories') },
               ...categories.map((option) => ({
@@ -180,7 +189,7 @@ export function CostsToolbar({
           />
           <SimpleSelect
             size="sm"
-            className="w-36 shrink-0"
+            className="w-full min-w-0 sm:w-36 sm:shrink-0"
             options={[
               { value: ALL, label: t('costs.toolbar.allDays') },
               ...days.map((option) => ({
@@ -207,13 +216,16 @@ export function CostsToolbar({
             }}
             variant="segmented"
             size="sm"
-            className="shrink-0"
+            className="col-span-2 min-w-0 sm:col-span-1 sm:shrink-0"
           >
             <TabsList aria-label={t('costs.toolbar.whose')}>
               {EXPENSE_VIEWS.map((view) => (
                 <TabsTrigger
                   key={view}
                   value={view}
+                  // Below `sm` the three triggers split the width and a long
+                  // label wraps rather than widening the row or being clipped.
+                  className="h-auto min-h-7 min-w-0 gap-1.5 px-2 py-1 text-center whitespace-normal sm:h-7 sm:gap-2 sm:px-3 sm:py-0 sm:whitespace-nowrap"
                   badge={
                     // `outline` rather than `neutral` for the resting chip: the
                     // segmented track and `surface-2` are within a shade of each

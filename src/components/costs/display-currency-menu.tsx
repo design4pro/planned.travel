@@ -8,6 +8,7 @@
  * secondary figures are in; the large figures and the totals stay in the budget currency.
  */
 import { Badge, SimpleSelect } from '#/components/ui'
+import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { displayCurrencyChoices } from './data'
 
@@ -26,6 +27,8 @@ export interface DisplayCurrencyMenuProps {
   readonly saving: boolean
   /** `null` is "each trip in its own currency". */
   readonly onChange: (code: string | null) => void
+  /** Where the toolbar places it: a line of its own below `sm`. */
+  readonly className?: string
 }
 
 export function DisplayCurrencyMenu({
@@ -34,6 +37,7 @@ export function DisplayCurrencyMenu({
   budgetCurrency,
   saving,
   onChange,
+  className,
 }: DisplayCurrencyMenuProps) {
   const t = useTranslate()
   const { enabled, disabled } = displayCurrencyChoices({
@@ -74,7 +78,7 @@ export function DisplayCurrencyMenu({
   return (
     <div
       data-part="display-currency"
-      className="flex shrink-0 items-center gap-2"
+      className={cn('flex items-center gap-2 sm:shrink-0', className)}
     >
       {/* The visible saving state is a dot before the label: the trigger stays enabled (focus), so the badge
           says a write is in flight without changing its text or its width by more than the dot. */}
@@ -89,7 +93,7 @@ export function DisplayCurrencyMenu({
       </Badge>
       <SimpleSelect
         size="sm"
-        className="w-44 shrink-0"
+        className="min-w-0 flex-1 sm:w-44 sm:flex-none sm:shrink-0"
         options={options}
         value={display.mode === 'fixed' ? display.code : PER_TRIP}
         // Not `disabled`: a disabled trigger cannot take the focus Radix hands back when the list
