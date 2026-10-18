@@ -40,8 +40,8 @@ import type { RecordAuditInput, TenantScope } from '#/server/repos'
 /**
  * The tenant trail's action names: dotted, lowercase, entity-first.
  *
- * Deliberately not the whole product's vocabulary. Tenant-security events (a role change, an
- * invitation, a removal) gain their names in the stage that ships their write paths, and trip
+ * Deliberately not the whole product's vocabulary. Tenant-security events (an invitation, a
+ * removal; a role change already has its name) gain their names in the stage that ships their write paths, and trip
  * lifecycle rides its own; platform-security events are not here at all, because they land in
  * `platform_audit_log` through `src/server/catalog/audit.ts`.
  */
@@ -53,6 +53,7 @@ export const AUDIT_ACTIONS = {
   RESERVATION_DELETED: 'reservation.deleted',
   WORKSPACE_DEFAULTS_CHANGED: 'workspace.defaults_changed',
   TRIP_CURRENCY_CHANGED: 'trip.currency_changed',
+  MEMBER_ROLE_CHANGED: 'member.role_changed',
 } as const
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS]

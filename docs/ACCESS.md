@@ -444,9 +444,15 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with two exceptions, both closed by the plugin's own options and not by
-`disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The flag is checked before
+document does not govern - with three exceptions. Two are closed by the plugin's own options and not
+by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The third is
+`organization/update-member-role`, closed by `disabledPaths` through its own list
+(`DISABLED_ORGANIZATION_PATHS` in `src/server/auth/admin-options.ts`, merged with the fifteen admin
+paths into `DISABLED_PATHS`, which is what `src/server/auth/index.ts` passes): the endpoint writes a
+role without an audit row, accepts a comma-joined role such as `admin,owner`, and lets an admin grant
+`owner`, none of which the product-owned `changeMemberRoleFn` (§6.4, #995) allows. The in-process
+`auth.api.updateMemberRole` is not an HTTP path and stays callable. The deletion flag is checked before
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
 an owner delete the `organization` row, cascade over every tenant table - other members' private
@@ -467,7 +473,7 @@ in the workspace they are currently in, re-read from `member` on every request l
 The rule lives in `createWorkspace` (`src/server/fns/workspace-writes.ts`), which is the only way to
 create one: Better Auth's own `POST /api/auth/organization/create` answers `403` to a signed-in caller
 and `401` to an anonymous one (`allowUserToCreateOrganization: false`), because the plugin's endpoint
-carries none of the rules below. `disabledPaths` is untouched, and `organization/set-active` still
+carries none of the rules below. `disabledPaths` gains no entry for it, and `organization/set-active` still
 answers. In order, `createWorkspace` checks the role, then refuses an impersonated session (§6.4),
 then the limit of twenty workspaces per account, which it reads from the same constant as the
 plugin's `organizationLimit` because the plugin enforces that limit only inside its own endpoint,
@@ -1173,13 +1179,24 @@ call the guard before they touch a row. A veto that lives in one function while 
 also has a public URL is not a veto.
 
 Tenant actions of the impersonated user **are** permitted, because reproducing a report often means
-saving the thing that fails to save. One is refused by name: **creating a workspace** (§2.7). It
+saving the thing that fails to save. Two are refused by name: **changing a member's role** (below) and **creating a workspace** (§2.7). The second
 mints a new tenant owned by the account being worn, which is not a write to something that already
 exists, and the owner's audit trail could only ever show that an operator created a workspace they
 now cannot leave. `createWorkspace` throws `AuthRequirementError('impersonated')` before it reads the
 plan or writes a row. Every such write appends the impersonator's user id to the
 existing `metadata` column of the tenant `audit_log`, so a workspace owner reading their own audit
 trail can see that an operator, not they, made the change.
+
+**Changing a member's role is refused by name too.** `changeMemberRoleFn` (`src/server/fns/members.ts`)
+reads the session, and a missing session counts as impersonated (`isImpersonated`), so it throws
+`AuthRequirementError('impersonated', <message key>)` before any repository read or write: a role an
+operator sets outlives the 900-second session and could promote an account to `owner`. The error
+carries a message key and not English prose because `AuthRequirementError` text reaches the browser
+verbatim. The authorisation ceiling is the repository's, not the function's: `changeMemberRole`
+refuses a `member` caller, an `admin` granting `owner` and an `admin` changing a row that holds
+`owner`; only an `owner` may set any role, and the last-owner guard stays. A successful change that
+alters the role writes one `member.role_changed` tenant audit entry; the change is not undone when
+that write fails.
 
 **Registering, renaming and removing a passkey are refused by name as well.** A passkey is a sign-in factor, and one an
 operator registers outlives the 900-second impersonation with no audit row to show for it, which

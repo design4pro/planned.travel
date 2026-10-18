@@ -405,6 +405,20 @@ const messages = {
   'admin.members.person': 'Osoba',
   'admin.members.role': 'Funkce',
   'admin.members.joined': 'Členem od',
+  'admin.members.role.label': 'Role uživatele {name}',
+  'admin.members.role.saved': '{name} má nyní roli: {role}.',
+  'admin.members.role.impersonated': 'Roli nelze změnit, dokud jednáte jako jiný účet.',
+  'admin.members.role.notPermitted':
+    'Tuto změnu provést nemůžete. Roli vlastníka může udělit nebo změnit jen vlastník.',
+  'admin.members.role.lastOwner':
+    'Toto je jediný vlastník pracovního prostoru. Nejdřív jmenujte jiného vlastníka.',
+  'admin.members.role.notFound': 'Tato osoba už v pracovním prostoru není. Seznam byl obnoven.',
+  'admin.members.role.failed': 'Roli se nepodařilo změnit. Zkuste to znovu.',
+  'admin.members.role.promote.title': 'Udělat z {name} vlastníka?',
+  'admin.members.role.promote.body':
+    '{name} bude mít stejnou moc jako vy: fakturaci, členy a nastavení. Vlastník může snížit roli nebo odebrat kteréhokoli jiného vlastníka, i vás.',
+  'admin.members.role.promote.confirm': 'Udělat vlastníkem',
+  'admin.members.role.promote.cancel': 'Zrušit',
 
   'admin.activity.label': 'Nedávná aktivita',
   'admin.activity.empty.title': 'Zatím nic zaznamenáno',
