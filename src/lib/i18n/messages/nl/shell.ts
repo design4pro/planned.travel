@@ -375,6 +375,22 @@ const messages = {
   'admin.members.person': 'Persoon',
   'admin.members.role': 'Rol',
   'admin.members.joined': 'Lid sinds',
+  'admin.members.role.label': 'Rol van {name}',
+  'admin.members.role.saved': '{name} is nu {role}.',
+  'admin.members.role.impersonated':
+    'Een rol kan niet worden gewijzigd terwijl je als een ander account handelt.',
+  'admin.members.role.notPermitted':
+    'Je kunt deze wijziging niet doorvoeren. Alleen een eigenaar kan de rol van eigenaar geven of een eigenaar wijzigen.',
+  'admin.members.role.lastOwner':
+    'Dit is de enige eigenaar van de werkruimte. Maak eerst iemand anders eigenaar.',
+  'admin.members.role.notFound':
+    'Deze persoon zit niet meer in de werkruimte. De lijst is vernieuwd.',
+  'admin.members.role.failed': 'De rol kon niet worden gewijzigd. Probeer het opnieuw.',
+  'admin.members.role.promote.title': '{name} eigenaar maken?',
+  'admin.members.role.promote.body':
+    '{name} krijgt dezelfde macht als jij: facturering, leden en instellingen. Een eigenaar kan elke andere eigenaar degraderen of verwijderen, ook jou.',
+  'admin.members.role.promote.confirm': 'Eigenaar maken',
+  'admin.members.role.promote.cancel': 'Annuleren',
 
   'admin.activity.label': 'Recente activiteit',
   'admin.activity.empty.title': 'Nog niets vastgelegd',

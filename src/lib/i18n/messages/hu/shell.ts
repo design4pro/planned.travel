@@ -374,6 +374,20 @@ const messages = {
   'admin.members.person': 'Személy',
   'admin.members.role': 'Szerepkör',
   'admin.members.joined': 'Csatlakozott',
+  'admin.members.role.label': '{name} szerepköre',
+  'admin.members.role.saved': '{name} mostantól: {role}.',
+  'admin.members.role.impersonated': 'A szerepkör nem módosítható, amíg másik fiókként jár el.',
+  'admin.members.role.notPermitted':
+    'Ezt a módosítást nem végezheti el. A tulajdonosi szerepkört csak tulajdonos adhatja, és csak tulajdonos módosíthatja.',
+  'admin.members.role.lastOwner':
+    'Ez a munkaterület egyetlen tulajdonosa. Előbb jelöljön ki másik tulajdonost.',
+  'admin.members.role.notFound': 'Ez a személy már nincs a munkaterületen. A lista frissült.',
+  'admin.members.role.failed': 'A szerepkört nem sikerült módosítani. Próbálja újra.',
+  'admin.members.role.promote.title': '{name} legyen tulajdonos?',
+  'admin.members.role.promote.body':
+    '{name} ugyanakkora hatalmat kap, mint Ön: számlázás, tagok és beállítások. Egy tulajdonos lefokozhat vagy eltávolíthat bármely másik tulajdonost, Önt is.',
+  'admin.members.role.promote.confirm': 'Legyen tulajdonos',
+  'admin.members.role.promote.cancel': 'Mégse',
 
   'admin.activity.label': 'Legutóbbi tevékenység',
   'admin.activity.empty.title': 'Még nincs rögzítve semmi',

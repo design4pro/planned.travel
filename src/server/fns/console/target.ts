@@ -71,7 +71,10 @@ export function refuseSelfTarget(
  * personal workspace, and it is deleted exactly as before. See `./last-owner` for the counting.
  *
  * The sentence names the target's own workspaces - which the console shows beside the account - and
- * the two exits. It names nobody else, and neither does anything this function logs.
+ * the two exits: an owner of the workspace promoting another owner from its Workspace console, and
+ * suspending the account. It speaks of the first as somebody else's act, because the operator reading
+ * it is in the platform console and has no role action of their own. It names nobody else, and
+ * neither does anything this function logs.
  *
  * A read that could not be completed refuses too, under `target-beyond-cap`, rather than deciding on
  * what it saw.
@@ -90,7 +93,7 @@ export async function refuseSoleOwner(
     )
     throw new ConsoleActionError(
       'target-beyond-cap',
-      'The console could not confirm that this account is not the only owner of a workspace other people belong to. Promote another owner in each of its workspaces first, or suspend the account instead of deleting it.',
+      'The console could not confirm that this account is not the only owner of a workspace other people belong to. An owner of each of those workspaces can promote another owner from its Workspace console first, or the account can be suspended instead of deleting it.',
     )
   }
 
@@ -103,6 +106,6 @@ export async function refuseSoleOwner(
 
   throw new ConsoleActionError(
     'target-sole-owner',
-    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. Promote another owner there first, or suspend the account instead of deleting it.`,
+    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. An owner of ${stranded.length === 1 ? 'that workspace' : 'those workspaces'} can promote another owner from ${stranded.length === 1 ? 'its' : 'their'} Workspace console first, or the account can be suspended instead of deleting it.`,
   )
 }

@@ -253,6 +253,7 @@ describe('trail', () => {
     ],
     ['src/routes/_app/-server/settings.ts', ['WORKSPACE_DEFAULTS_CHANGED']],
     ['src/server/fns/trip-currency.ts', ['TRIP_CURRENCY_CHANGED']],
+    ['src/server/fns/member-role-writes.ts', ['MEMBER_ROLE_CHANGED']],
   ]
 
   it.each(callSites)('%s records through trail()', (path, actions) => {
@@ -276,6 +277,7 @@ describe('trail', () => {
       'reservation.deleted',
       'workspace.defaults_changed',
       'trip.currency_changed',
+      'member.role_changed',
       'trip_invite.rotated',
       'trip_invite.updated',
       'trip.member_joined',
