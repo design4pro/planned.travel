@@ -296,16 +296,24 @@ owner's own scope.
 engine"), so it must never wait for a drain inside a delivery: a drain longer than those deliveries would dead-letter a banned,
 half-erased account although this driver's cron would finish the workspace. The job instead calls the driver for each
 workspace it owns and, when a ledger row has not reached `rows_deleted`, **parks**: it returns success, leaving the account
-banned and the anchor rows with their `erasure_id` (the erasure spec's incomplete-erasure state). Parking is a handshake, so
-the resume never overlaps a job that is still running (an empty personal workspace finishes the drain inside the job's own
-call, and then nothing parks): the job sets `erasure_parked_at` on the ledger row with a compare-and-set that requires a
-state before `rows_deleted`, **then re-reads the row**, and when it has meanwhile reached `rows_deleted` (or `refused`) it
-clears the flag and carries on instead of parking; a job that did park does nothing after the flag is written but return. The
-driver wakes it from two places, both only for a row with `initiator = 'erasure'` **and** `erasure_parked_at` set: its
-`rows_deleted` step and its `refused` transition. Each enqueues `person-erasure` with the row's `erasure_id` as a new envelope
-(`person-erasure:<erasureId>:<deletionId>`, so the 24-hour done-marker of an earlier delivery does not swallow it) with a
-`delaySeconds` of 30, before the state moves (a failed enqueue leaves the state where it is, so the cron retries the step, as it
-does the receipt email; this holds for `refused` too, which the cron skips only once it is reached). The resumed job is idempotent and finds every ledger row at
+banned and the anchor rows with their `erasure_id` (the erasure spec's incomplete-erasure state). Parking is a handshake
+that lets **exactly one** job act on a ledger row, so the resume never overlaps a job that is still running (an empty
+personal workspace finishes the drain inside the job's own call, and then nothing parks). `erasure_parked_at` is a token
+that one job consumes: the job sets it with a compare-and-set that requires a state before `rows_deleted`, **then re-reads
+the row**. A row still before `rows_deleted` means the job returns and has parked. A row that has meanwhile reached
+`rows_deleted` (or `refused`) means the job tries to **consume** the token: `SET erasure_consumer = <envelope id> WHERE
+erasure_parked_at IS NOT NULL AND (erasure_consumer IS NULL OR erasure_consumer = <envelope id>)`, where the envelope id is
+the one of the delivery it runs in. When that statement changes the row the job carries on with the verification; when it
+changes nothing another envelope consumed the token first, so the job returns. The resumed job starts with the same consume
+and returns when it changes nothing. Recording the consumer is what makes a crash safe: a redelivery of the winning
+envelope matches its own id, wins again and finishes, while a stale resume (another envelope id) finds the token taken and
+does nothing. So whoever wins the consume is the only job past that point, whatever the timing, and the 30 seconds below
+are a courtesy to the live job, not what keeps the two apart. A redelivery after a crash between the flag write and the
+re-read runs the same two steps. The driver wakes the job from two places, both only for a row with `initiator = 'erasure'` **and** `erasure_parked_at`
+set: its `rows_deleted` step and its `refused` transition. Each enqueues `person-erasure` with the row's `erasure_id` as a
+new envelope (`person-erasure:<erasureId>:<deletionId>`, so the 24-hour done-marker of an earlier delivery does not swallow
+it) with a `delaySeconds` of 30, before the state moves (a failed enqueue leaves the state where it is, so the cron retries
+the step, as it does the receipt email; this holds for `refused` too, which the cron skips only once it is reached). The resumed job is idempotent and finds every ledger row at
 `rows_deleted` or later (its verification), parks again for the next workspace, or finds a `refused` row.
 
 **An erasure row never waits for a person.** The owner's retry (§ The confirmation) is how the other initiator recovers from
@@ -428,7 +436,7 @@ One new global table, additive (one `CREATE TABLE`; no existing table changes; `
 `workspace_deletions` - `id` (pk), `organization_id` (text, not null, **no foreign key**: attribution only, as
 `provider_usage.organization_id` is, so the cascade cannot reach it), `requested_by` (`userRef`, nullable: null for an
 erasure), `initiator` (`owner` or `erasure`, `enumCheck`), `erasure_id` (nullable, set only for an erasure: the erasure spec's opaque id, no person data, so the driver can resume the erasure job), `state` (`requested`, `drained`, `rows_deleted`, `audited`,
-`swept`, `done`, `refused`, `enumCheck`), `lease_until`, `attempts`, `last_error` (a short code), `erasure_parked_at` (nullable, set only for an erasure: the parking handshake of § The erasure resume), `snapshot` (JSON: plan,
+`swept`, `done`, `refused`, `enumCheck`), `lease_until`, `attempts`, `last_error` (a short code), `erasure_parked_at` and `erasure_consumer` (nullable, set only for an erasure: the token of the parking handshake of § The erasure resume and the envelope id of the one job that consumed it), `snapshot` (JSON: plan,
 subscription status, counts, objects deleted), `receipt_to` and `receipt_name` (nullable, cleared when the receipt is queued),
 `requested_at`, `updated_at`, `swept_at`, `done_at`. Indexes: a **partial
 unique index** on `organization_id` where `state <> 'refused'` (one live deletion per workspace, and an idempotent re-request
@@ -663,7 +671,7 @@ kind, and the `rows_deleted` step's Polar reconciliation (a live subscription th
 a Polar failure leaves the state). **Test seam:** the driver
 through `advanceWorkspaceDeletion` with in-memory ports, killed and resumed at every state; two drivers at once; the cron path
 without a queue; a subscription that appears during the drain cancelled by the `rows_deleted` step with no queue message; a hop chain longer than the 24-hour done-marker would allow with a reused id; an erasure row whose drain outlasts the
-job's five deliveries (the job parks, the `rows_deleted` step enqueues the resume, a failed enqueue is retried by the cron); an erasure row that reaches `rows_deleted` inside the job's own call (no park, no resume enqueued) and one that reaches it between the job's check and its flag write (the re-read carries on, no resume); an erasure row that is `refused` after the ban (the parked job is woken once, stops with `workspace-refused`, the erasure is listed as incomplete) and a Polar read that fails for an erasure row (stays `requested`, retried by the cron); the `swept` second pass not
+job's five deliveries (the job parks, the `rows_deleted` step enqueues the resume, a failed enqueue is retried by the cron); an erasure row that reaches `rows_deleted` inside the job's own call (no park, no resume enqueued) and one that reaches it between the job's check and its flag write (the re-read wins the consume and carries on; a resume that arrives anyway finds the token taken and returns, so one job runs); a redelivery after a crash between the flag write and the re-read, and one after the winning job crashed (it wins the consume again, the stale resume does not); an erasure row that is `refused` after the ban (the parked job is woken once, stops with `workspace-refused`, the erasure is listed as incomplete) and a Polar read that fails for an erasure row (stays `requested`, retried by the cron); the `swept` second pass not
 running before 15 minutes; the audit append written once under a lease overrun.
 
 ### Phase 7 - Request entry

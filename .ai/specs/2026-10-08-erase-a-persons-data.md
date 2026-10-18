@@ -684,7 +684,7 @@ has reached `rows_deleted` (the workspace row is gone). It **does not wait for t
 deliveries and no cron of its own, so a drain that outlasts them would dead-letter a banned, half-erased account although the
 deletion cron finishes the workspace. When a row has not reached `rows_deleted` the job parks (returns success; the account
 stays banned and the anchor rows keep their `erasure_id`, the incomplete state above) through a handshake on the ledger row
-that keeps the resume from overlapping a running job, and the driver's `rows_deleted` step (or its `refused` transition)
+(a token that exactly one job consumes, so the resume never overlaps a running job), and the driver's `rows_deleted` step (or its `refused` transition)
 enqueues the resume for the row's `erasure_id` (#1000, "The erasure resume"). A workspace the driver refuses after the ban
 (new members, a live subscription) ends the job with the step `workspace-refused:<deletionId>` on the anchor rows, which the
 console lists as an incomplete erasure for the operator; a Polar read that fails is retried by the deletion cron and is never
