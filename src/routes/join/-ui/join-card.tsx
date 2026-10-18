@@ -8,6 +8,7 @@
 import * as React from 'react'
 import { ArrowRight, LinkIcon, TriangleAlert, UserRoundX } from 'lucide-react'
 
+import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
 import {
   MarketingFooter,
   MarketingHeader,
@@ -38,17 +39,32 @@ const ROLE_KEYS: Record<Invited['role'], MessageKey> = {
   viewer: 'trips.people.role.viewer',
 }
 
+/**
+ * A retry that works replaces the card, and the button that was focused goes with it. Set by the
+ * retry, read once by the next frame to mount, which moves focus to the new heading.
+ */
+let focusHeadingOnMount = false
+
 /** The frame every state shares: guest chrome, one `main`, the card in the middle. */
 export function JoinFrame({ children }: { children: React.ReactNode }) {
+  const main = React.useRef<HTMLElement>(null)
+  React.useEffect(() => {
+    if (!focusHeadingOnMount) return
+    focusHeadingOnMount = false
+    const heading = main.current?.querySelector('h1')
+    heading?.setAttribute('tabindex', '-1')
+    heading?.focus()
+  }, [])
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
       <SkipToContent />
       <MarketingHeader minimal />
       <main
+        ref={main}
         id="main"
         className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-10 sm:px-6"
       >
-        {children}
+        <div className="animate-rise">{children}</div>
       </main>
       <MarketingFooter minimal />
     </div>
@@ -184,6 +200,29 @@ function NeedsWorkspaceCard({
   path: string
 }) {
   const { t } = useI18n()
+  const [pending, setPending] = React.useState(false)
+  const [failed, setFailed] = React.useState(false)
+
+  // The sign-in page sends a signed-in visitor straight back here, so the session has to end first.
+  async function signInAsSomeoneElse(): Promise<void> {
+    setFailed(false)
+    setPending(true)
+    const ended = await fetch(SIGN_OUT_ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    })
+      .then((response) => response.ok)
+      .catch(() => false)
+    if (!ended) {
+      setFailed(true)
+      setPending(false)
+      return
+    }
+    // A document load, so nothing of the old session survives in the client.
+    window.location.assign(loginHrefFor(path))
+  }
+
   return (
     <Card padding="lg" className="flex flex-col gap-4">
       <span className="grid size-10 place-items-center rounded-md bg-warning-soft text-warning">
@@ -204,10 +243,21 @@ function NeedsWorkspaceCard({
       <p className="text-caption text-ink-3">
         {t('trips.join.needsWorkspace.acceptFirst')}
       </p>
-      <Button variant="secondary" size="lg" block asChild>
-        <a href={loginHrefFor(path)}>
-          {t('trips.join.needsWorkspace.otherAccount')}
-        </a>
+      {failed ? (
+        <Alert tone="danger">{t('shell.account.signOutFailed')}</Alert>
+      ) : null}
+      <Button
+        variant="secondary"
+        size="lg"
+        block
+        loading={pending}
+        loadingLabel={t('shell.account.signingOut')}
+        onClick={() => void signInAsSomeoneElse()}
+      >
+        {t('trips.join.needsWorkspace.otherAccount')}
+      </Button>
+      <Button variant="ghost" size="lg" block asChild>
+        <a href="/trips">{t('trips.join.unavailable.trips')}</a>
       </Button>
     </Card>
   )
@@ -250,9 +300,21 @@ export function RetryCard({
   onRetry,
 }: {
   busy: boolean
-  onRetry: () => void
+  onRetry: () => Promise<void>
 }) {
   const { t } = useI18n()
+  const [pending, setPending] = React.useState(false)
+  // Counted so a second busy answer is announced again, not swallowed as the same message.
+  const [attempt, setAttempt] = React.useState(0)
+
+  async function retry(): Promise<void> {
+    setPending(true)
+    focusHeadingOnMount = true
+    await onRetry().catch(() => undefined)
+    setAttempt((count) => count + 1)
+    setPending(false)
+  }
+
   return (
     <Card padding="lg" className="flex flex-col gap-4">
       <span className="grid size-10 place-items-center rounded-md bg-warning-soft text-warning">
@@ -261,8 +323,19 @@ export function RetryCard({
       <h1 className="font-display text-title font-bold tracking-tight text-ink">
         {t('trips.join.error.title')}
       </h1>
-      {busy ? <Alert tone="warning">{t('trips.join.error.busy')}</Alert> : null}
-      <Button variant="secondary" size="lg" block onClick={onRetry}>
+      {busy ? (
+        <Alert key={attempt} tone="warning">
+          {t('trips.join.error.busy')}
+        </Alert>
+      ) : null}
+      <Button
+        variant="secondary"
+        size="lg"
+        block
+        loading={pending}
+        loadingLabel={t('trips.join.loading')}
+        onClick={() => void retry()}
+      >
         {t('trips.join.error.retry')}
       </Button>
     </Card>
@@ -273,14 +346,17 @@ export function RetryCard({
 export function JoinSkeleton() {
   const { t } = useI18n()
   return (
-    <Card padding="lg" className="flex flex-col gap-5" aria-busy="true">
+    <>
+      <h1 className="sr-only">{t('trips.join.page.title')}</h1>
       <p role="status" className="sr-only">
         {t('trips.join.loading')}
       </p>
-      <Skeleton className="h-7 w-3/4" />
-      <Skeleton className="h-16 w-full" />
-      <Skeleton className="h-11 w-full" />
-    </Card>
+      <Card padding="lg" className="flex flex-col gap-5">
+        <Skeleton className="h-7 w-3/4" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-11 w-full" />
+      </Card>
+    </>
   )
 }
 
@@ -292,7 +368,7 @@ export function JoinCard({
   view: InviteView
   /** This page's own path, so a sign-in comes back to it. */
   path: string
-  onRetry: () => void
+  onRetry: () => Promise<void>
 }) {
   switch (view.state) {
     case 'invited':

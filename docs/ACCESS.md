@@ -733,7 +733,7 @@ loader, so the document is a 404 with the same body whoever asks; its `Cache-Con
 The guest chrome is the marketing frame with its `minimal` variant (logo and theme toggle; no
 "Sign in", "Start free" or "See pricing"): those links would drop the `?redirect=` that brings the
 visitor back to the link. The sign-in action is `/login?redirect=/join/<secret>`, and the sign-in
-pages send `Referrer-Policy: strict-origin` so a `redirect` carrying the link is not sent onward in
+pages carry a `strict-origin` referrer meta so a `redirect` carrying the link is not sent onward in
 a `Referer`.
 
 **Telemetry.** The secret is redacted from every Sentry channel (`docs/DEPLOY.md` §17.2), logs for

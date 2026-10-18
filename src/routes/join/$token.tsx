@@ -52,7 +52,7 @@ export const Route = createFileRoute('/join/$token')({
 })
 
 function joinPath(token: string): string {
-  return `/join/${token}`
+  return `/join/${encodeURIComponent(token)}`
 }
 
 function JoinPage() {
@@ -64,7 +64,7 @@ function JoinPage() {
       <JoinCard
         view={view}
         path={joinPath(token)}
-        onRetry={() => void router.invalidate()}
+        onRetry={() => router.invalidate()}
       />
     </JoinFrame>
   )
@@ -88,7 +88,7 @@ function JoinFailed() {
   const router = useRouter()
   return (
     <JoinFrame>
-      <RetryCard busy={false} onRetry={() => void router.invalidate()} />
+      <RetryCard busy={false} onRetry={() => router.invalidate()} />
     </JoinFrame>
   )
 }

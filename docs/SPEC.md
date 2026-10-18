@@ -342,7 +342,7 @@ Tenant isolation is enforced in the repository layer and covered by tests. The b
 
 #### FU-3: bounded Unscoped repository functions
 
-An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. The one exception is `readInvitePreviewUnscoped`, whose closed per-visitor projection returns the invite card's content (docs/ACCESS.md §3.8). Grep `Unscoped` callers; any caller outside the named one is a blocker.
 
 Billing uses this shape for provider-to-organization resolution and billing rows only; share
 moderation uses the §2.4 ACCESS projection. The calendar resolver

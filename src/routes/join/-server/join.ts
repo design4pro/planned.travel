@@ -25,10 +25,15 @@ import { viewInvite } from '../-lib/view'
 import type { InviteView } from '../-lib/view'
 
 /**
- * Longer than any secret, so a malformed one is answered as a miss and counted, rather than
- * refused before the budgets run.
+ * Cut to a length no secret reaches, so a longer one is answered as a miss and counted, rather
+ * than refused before the budgets run.
  */
-const inviteInput = z.strictObject({ secret: z.string().min(1).max(256) })
+const inviteInput = z.strictObject({
+  secret: z
+    .string()
+    .min(1)
+    .transform((secret) => secret.slice(0, 256)),
+})
 
 export const loadInvite = createServerFn({ method: 'POST' })
   .validator(inviteInput)

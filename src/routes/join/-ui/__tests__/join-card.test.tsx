@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Marketing from '#/lib/i18n/messages/en/marketing'
@@ -38,9 +39,9 @@ const EN: Catalogue = {
 }
 
 const PATH = '/join/the-secret'
-const noop = () => {}
+const noop = () => Promise.resolve()
 
-function renderView(view: InviteView, onRetry: () => void = noop) {
+function renderView(view: InviteView, onRetry: () => Promise<void> = noop) {
   return render(
     <I18nProvider locale="en" messages={EN}>
       <JoinCard view={view} path={PATH} onRetry={onRetry} />
@@ -163,12 +164,54 @@ describe('JoinCard', () => {
         'You are signed in as out@example.test. Tell Ada to use this address.',
       ),
     ).toBeTruthy()
-    expect(
-      screen
-        .getByRole('link', { name: 'Sign in with another account' })
-        .getAttribute('href'),
-    ).toBe(`/login?redirect=${encodeURIComponent(PATH)}`)
+    expect(screen.getByRole('link', { name: 'Go to your trips' })).toBeTruthy()
     expect(screen.queryByText('Lisbon')).toBeNull()
+  })
+
+  it('ends the session before it goes to sign in as someone else', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    const fetched = vi.fn(() => Promise.resolve({ ok: true }))
+    vi.stubGlobal('fetch', fetched)
+    renderView({
+      state: 'needs-workspace',
+      tripTitle: 'Lisbon',
+      inviterName: 'Ada',
+      email: 'out@example.test',
+    })
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sign in with another account' }),
+    )
+    await waitFor(() => expect(assign).toHaveBeenCalledOnce())
+    expect(fetched).toHaveBeenCalledWith(
+      SIGN_OUT_ENDPOINT,
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(assign).toHaveBeenCalledWith(
+      `/login?redirect=${encodeURIComponent(PATH)}`,
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('stays on the card and says so when the session cannot be ended', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new Error('offline'))),
+    )
+    renderView({
+      state: 'needs-workspace',
+      tripTitle: 'Lisbon',
+      inviterName: 'Ada',
+      email: 'out@example.test',
+    })
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Sign in with another account' }),
+    )
+    expect(await screen.findByText('Could not sign you out')).toBeTruthy()
+    expect(assign).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
   })
 
   it('sends an anonymous visitor to sign in and a signed-in one to their trips from a dead link', () => {
@@ -191,7 +234,7 @@ describe('JoinCard', () => {
   })
 
   it('says the page is busy, without blame, and lets the visitor try again', async () => {
-    const retry = vi.fn()
+    const retry = vi.fn(() => Promise.resolve())
     renderView({ state: 'busy', retryAfter: 30 }, retry)
     expect(
       screen.getByText('This page is busy. Try again in a minute.'),
@@ -202,6 +245,39 @@ describe('JoinCard', () => {
 })
 
 describe('the rest of the page', () => {
+  it('holds the retry button busy while the page reloads and moves focus to the new heading', async () => {
+    let finish: () => void = noop
+    const retry = vi.fn(
+      () => new Promise<void>((resolve) => (finish = () => resolve())),
+    )
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <JoinFrame>
+          <RetryCard busy onRetry={retry} />
+        </JoinFrame>
+      </I18nProvider>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(
+      screen
+        .getByRole('button', { name: /Try again/ })
+        .getAttribute('aria-busy'),
+    ).toBe('true')
+    finish()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy(),
+    )
+    cleanup()
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <JoinFrame>
+          <h1>A new card</h1>
+        </JoinFrame>
+      </I18nProvider>,
+    )
+    expect(document.activeElement?.textContent).toBe('A new card')
+  })
+
   it('offers a retry without the busy line when the read failed', () => {
     render(
       <I18nProvider locale="en" messages={EN}>
@@ -219,6 +295,7 @@ describe('the rest of the page', () => {
       </I18nProvider>,
     )
     expect(screen.getByRole('status').textContent).toBe('Loading the invite')
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
   })
 
   it('wears guest chrome that keeps no sign-up link, with one main landmark', () => {
