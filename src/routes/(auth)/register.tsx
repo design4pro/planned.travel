@@ -16,7 +16,7 @@ import { useI18n, useTranslate } from '#/lib/i18n'
 import { describeCallbackError, describeFailure } from './-lib/errors'
 import { signInHead } from './-lib/head'
 import { MIN_PASSWORD_LENGTH } from './-lib/schemas'
-import { safeRedirect } from './-lib/redirect'
+import { DEFAULT_REDIRECT, safeRedirect } from './-lib/redirect'
 import { loadAuthConfig } from './-server/config'
 import { AuthShell } from './-ui/auth-shell'
 import {
@@ -176,8 +176,15 @@ function RegisterPage() {
         return
       }
       // `autoSignIn` is on, so they are already in. The confirmation screen tells
-      // them what is waiting in their inbox before they get on with planning.
-      handOff('/verify-email')
+      // them what is waiting in their inbox before they get on with planning, and
+      // its "Continue anyway" exit returns to the page they came for. Only this
+      // in-app hand-off carries the target: the emailed link's `callbackURL`
+      // above must stay a bare path.
+      handOff(
+        target === DEFAULT_REDIRECT
+          ? '/verify-email'
+          : `/verify-email?redirect=${encodeURIComponent(target)}`,
+      )
     },
   })
 
