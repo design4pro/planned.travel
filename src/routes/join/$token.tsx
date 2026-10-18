@@ -91,7 +91,9 @@ function JoinFailed() {
   const router = useRouter()
   return (
     <JoinFrame>
-      <RetryCard busy={false} onRetry={() => router.invalidate()} />
+      <Arrival>
+        <RetryCard busy={false} onRetry={() => router.invalidate()} />
+      </Arrival>
     </JoinFrame>
   )
 }
