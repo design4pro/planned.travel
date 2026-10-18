@@ -484,6 +484,43 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Время остановки сохранено',
   'plan.place.toast.deleted': 'Место удалено',
   'plan.pin.toast.moved': '{name}: метка установлена',
+  'join.page.title': 'Ссылка-приглашение в поездку',
+  'join.page.description':
+    'Откройте эту ссылку, чтобы присоединиться к общей поездке в planned.travel.',
+  'join.title.invited': '{inviter} приглашает вас в поездку',
+  'join.requirement':
+    'Эта ссылка работает для тех, кто уже состоит в пространстве пользователя {inviter}.',
+  'join.newHere':
+    'Впервые здесь? Сначала попросите {inviter} добавить вас в пространство.',
+  'join.trip.label': 'Поездка',
+  'join.role.label': 'Ваша роль после присоединения',
+  'join.dates.label': 'Даты',
+  'join.destination.label': 'Пункт назначения',
+  'join.action.signIn': 'Войти',
+  'join.action.open': 'Открыть поездку',
+  'join.action.openIn': 'Открыть поездку и сменить пространство',
+  'join.action.openIn.pending': 'Меняем пространство',
+  'join.loading': 'Загружаем приглашение',
+  'join.member.title': 'Вы уже участвуете в этой поездке',
+  'join.needsWorkspace.title':
+    'Эта поездка находится в пространстве, в котором вы не состоите',
+  'join.needsWorkspace.body':
+    'Сначала попросите {inviter} добавить вас в пространство, затем откройте эту ссылку снова.',
+  'join.needsWorkspace.signedInAs':
+    'Вы вошли как {email}. Попросите {inviter} использовать этот адрес.',
+  'join.needsWorkspace.acceptFirst':
+    'Если у вас уже есть письмо с приглашением в пространство, сначала примите его, затем откройте эту ссылку снова.',
+  'join.needsWorkspace.otherAccount': 'Войти с другим аккаунтом',
+  'join.unavailable.title': 'Эта ссылка-приглашение недоступна',
+  'join.unavailable.body':
+    'Возможно, ссылку заменили или отключили. Попросите новую у того, кто её отправил.',
+  'join.unavailable.signIn': 'Войти',
+  'join.unavailable.trips': 'Перейти к вашим поездкам',
+  'join.error.title': 'Не удалось загрузить эту ссылку-приглашение',
+  'join.error.retry': 'Повторить',
+  'join.error.busy':
+    'Страница сейчас перегружена. Повторите попытку через минуту.',
+  'join.error.switch': 'Не удалось сменить пространство. Повторите попытку.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
