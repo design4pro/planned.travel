@@ -406,6 +406,7 @@ async function liveFeedScope(
     organizationId: found.organizationId,
     userId: found.userId,
     role: 'member',
+    impersonatedBy: null,
   })
   const [row] = await db
     .select({ role: member.role })
@@ -427,6 +428,7 @@ async function liveFeedScope(
     organizationId: found.organizationId,
     userId: found.userId,
     role: row.role,
+    impersonatedBy: null,
   })
 }
 

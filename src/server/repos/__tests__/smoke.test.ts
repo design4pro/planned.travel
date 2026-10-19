@@ -83,6 +83,7 @@ describe('smoke', () => {
           userId: 'u1',
           organizationId: 'o1',
           role: 'superuser',
+          impersonatedBy: null,
         }),
       ).toThrow(MissingTenantContextError)
 
@@ -90,6 +91,7 @@ describe('smoke', () => {
         userId: 'u1',
         organizationId: 'o1',
         role: 'owner',
+        impersonatedBy: null,
       })
       expect(scope.ctx.organizationId).toBe('o1')
       expect(Object.isFrozen(scope)).toBe(true)

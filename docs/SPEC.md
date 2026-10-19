@@ -377,6 +377,17 @@ the **link's** workspace from `member`, builds the joiner's scope itself and wri
 shared `insertTripMember`; it refuses a banned joiner and an impersonated session (docs/ACCESS.md
 §3.8, §6.4).
 
+The erasure verification sweep adds a fifth, `countAccountPlacesUnscoped(db, who)` in
+`src/server/repos/erasure-sweep.ts`, with exactly one production caller,
+`src/server/erasure/verify.ts`. It counts, across every workspace, the Better Auth places that can
+still hold the erased person (`invitation.email`, `member.user_id`, the `verification` and
+impersonation columns) and returns one number per place and the names of the places it cannot
+answer for, never a row, a tenant's content or another person's id. The tenant places of the same
+sweep go through the caller's `TenantScope`; the three platform tables stay unverified until the
+phase that amends this section for `src/server/catalog/erasure.ts`. This is an exception to the
+scope argument, not a fourth catalog member (`.ai/specs/2026-10-08-erase-a-persons-data.md`,
+Amendment - phase 5).
+
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" and "every query goes through a scoped

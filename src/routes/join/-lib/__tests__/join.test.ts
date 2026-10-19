@@ -76,6 +76,7 @@ describe('joinInvite', () => {
       organizationId: a.organizationId,
       userId: friend,
       role: 'member',
+      impersonatedBy: null,
     })
     expect(input).toMatchObject({
       action: 'trip.member_joined',

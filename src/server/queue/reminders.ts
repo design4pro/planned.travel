@@ -241,6 +241,7 @@ async function scopeForTrip(
     userId: PROBE_USER_ID,
     organizationId: due.organizationId,
     role: 'member',
+    impersonatedBy: null,
   })
 
   const members = await listTripMembers(probe, due.tripId)
@@ -258,6 +259,7 @@ async function scopeForTrip(
       // An unrecognised value in the column resolves to the least privilege, never to
       // "unset, therefore permissive".
       role: isOrganizationRole(membership.role) ? membership.role : 'member',
+      impersonatedBy: null,
     })
   }
   return null

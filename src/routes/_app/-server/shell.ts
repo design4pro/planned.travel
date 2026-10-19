@@ -269,6 +269,7 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
       userId: session.user.id,
       organizationId,
       role,
+      impersonatedBy: session.session.impersonatedBy,
     })
 
     const [organization, unreadCount, settings] = await Promise.all([

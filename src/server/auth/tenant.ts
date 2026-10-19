@@ -65,6 +65,12 @@ export type TenantContext = {
   organizationId: string
   userId: string
   role: OrganizationRole
+  /**
+   * The operator behind an impersonated session, `null` for an ordinary one. Read off the session
+   * here and nowhere else, so `trail()` can name the operator in the tenant audit entry
+   * (docs/ACCESS.md §6.4) without a caller being able to state it.
+   */
+  impersonatedBy: string | null
 }
 
 /** Ordered most privileged first; index doubles as the privilege rank. */
@@ -198,6 +204,7 @@ export function requireOrgFrom(
     organizationId: activeOrganizationId,
     userId: user.id,
     role: membershipRole,
+    impersonatedBy: session?.session.impersonatedBy ?? null,
   }
 }
 
