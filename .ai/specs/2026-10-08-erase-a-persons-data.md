@@ -751,6 +751,15 @@ gated the ticket (`risk-high`, confidence medium, approved unattended):
 - **Open for #1060:** the sweep needs the person's email after the `user` row is deleted. The engine
   must capture it before step 6 and decide where it lives across a resume; it never goes in a queue
   envelope.
+- **Wiring conditions for #1060** (security and tenancy verdict on #1058, head 60a838c1):
+  `rewriteUploaderMetadata` takes its organization id from the workspace's `TenantScope`, never from
+  a request or a queue payload; `RewriteFailure.key` carries a file name and is neither logged nor
+  stored; the entry point is platform-staff only, behind `requirePermission` with a
+  `platform_audit_log` write; the engine catches what `purgeUserKeys` throws (the D1 page read,
+  `SessionWalkLimitError`) and routes it to its retry, because only a failure per key is reported
+  rather than thrown. Before the rewrite is wired, check against real R2 (not the test fakes) that
+  `put` accepts the body stream `get` returned; if it does not, every rewrite fails safely as
+  `failed` and the slice does not work.
 
 ## Amendment - phase 7 (issue #1055, #1416)
 

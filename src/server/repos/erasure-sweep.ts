@@ -31,8 +31,9 @@
  *
  * ## Matching an id inside text
  *
- * `verification.identifier` and `.value` hold the id (or the email) inside a longer string. A user
- * id can contain `_`, which `LIKE` reads as a wildcard, so the match is `instr()`, never `LIKE`.
+ * `verification.identifier` and `.value` hold the id inside a longer string. A user id can contain
+ * `_`, which `LIKE` reads as a wildcard, so the match is `instr()`, never `LIKE`. The email is not
+ * an id: it is matched whole (equal, or the tail of an `...-otp-<email>` identifier).
  */
 
 import { count, eq, gt, sql } from 'drizzle-orm'
@@ -171,10 +172,13 @@ function accountPredicate(
     return email === '' ? 'needs-email' : sql`lower(${column}) = ${email}`
   }
   if (name === 'verification.identifier') {
-    // Keyed by the email (reset-password and OTP rows) or holding the id (passkey challenges).
-    return email === ''
-      ? 'needs-email'
-      : sql`(instr(${column}, ${who.userId}) > 0 or instr(lower(${column}), ${email}) > 0)`
+    // Keyed by the email (an OTP row is `<type>-otp-<email>`) or holding the id (passkey
+    // challenges). The email is matched whole, never as a substring: `xjohn@mail.com` is not
+    // `john@mail.com`.
+    if (email === '') return 'needs-email'
+    const otpSuffix = `-otp-${email}`
+    const lowered = sql`lower(${column})`
+    return sql`(instr(${column}, ${who.userId}) > 0 or ${lowered} = ${email} or substr(${lowered}, -${otpSuffix.length}) = ${otpSuffix})`
   }
   if (name === 'verification.value') {
     return sql`instr(${column}, ${who.userId}) > 0`
