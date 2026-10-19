@@ -660,6 +660,7 @@ const messages = {
     'Beende die Identitätsübernahme, bevor du die Mitgliedschaft im Arbeitsbereich änderst.',
   'workspace.departure.failed':
     'Das Ergebnis konnte nicht bestätigt werden. Lade den Arbeitsbereich neu und versuche es erneut.',
+  'workspace.departure.removed': 'Mitglied entfernt',
   'workspace.departure.reload': 'Arbeitsbereich neu laden',
   'workspace.departure.activationFailed':
     'Du hast diesen Arbeitsbereich verlassen. Öffne den nächsten, um fortzufahren.',

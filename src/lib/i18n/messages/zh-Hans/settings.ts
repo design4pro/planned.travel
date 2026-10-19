@@ -542,6 +542,7 @@ const messages = {
   'workspace.departure.impersonated':
     '更改工作区成员资格之前，请先停止模拟其他用户。',
   'workspace.departure.failed': '无法确认结果。请重新加载工作区后重试。',
+  'workspace.departure.removed': '已移除成员',
   'workspace.departure.reload': '重新加载工作区',
   'workspace.departure.activationFailed':
     '你已退出此工作空间。打开下一个工作空间以继续。',

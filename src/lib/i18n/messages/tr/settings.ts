@@ -640,6 +640,7 @@ const messages = {
     'Çalışma alanı üyeliğini değiştirmeden önce başka bir kullanıcı olarak işlem yapmayı durdurun.',
   'workspace.departure.failed':
     'Sonuç doğrulanamadı. Tekrar denemeden önce çalışma alanını yeniden yükleyin.',
+  'workspace.departure.removed': 'Üye kaldırıldı',
   'workspace.departure.reload': 'Çalışma alanını yeniden yükle',
   'workspace.departure.activationFailed':
     'Bu çalışma alanından ayrıldınız. Devam etmek için sonraki çalışma alanını açın.',

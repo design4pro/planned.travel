@@ -139,7 +139,7 @@ function WorkspaceLanguageSelect({
 
 function OrganizationPage() {
   const data = Route.useLoaderData()
-  const { depart, recover } = useMemberDeparture()
+  const { depart, recover, membersRef } = useMemberDeparture()
   const router = useRouter()
   const t = useTranslate()
   const locale = useLocale()
@@ -271,7 +271,12 @@ function OrganizationPage() {
           </Badge>
         }
       >
-        <Table label={t('settings.workspace.members.tableLabel')} fixed>
+        <Table
+          ref={membersRef}
+          tabIndex={-1}
+          label={t('settings.workspace.members.tableLabel')}
+          fixed
+        >
           <TableHeader>
             <TableRow>
               <TableHead>{t('settings.workspace.members.person')}</TableHead>
@@ -306,9 +311,7 @@ function OrganizationPage() {
                           name={member.name}
                           workspace={data.organization.name}
                           self={member.userId === data.viewerUserId}
-                          onConfirm={() =>
-                            depart(member.memberId)
-                          }
+                          onConfirm={() => depart(member.memberId)}
                           onRecover={recover}
                         />
                       ) : null}

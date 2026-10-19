@@ -638,6 +638,7 @@ const messages = {
     'Dừng mạo danh trước khi thay đổi tư cách thành viên của không gian làm việc.',
   'workspace.departure.failed':
     'Không thể xác nhận kết quả. Hãy tải lại không gian làm việc trước khi thử lại.',
+  'workspace.departure.removed': 'Đã xóa thành viên',
   'workspace.departure.reload': 'Tải lại không gian làm việc',
   'workspace.departure.activationFailed':
     'Bạn đã rời không gian làm việc này. Mở không gian tiếp theo để tiếp tục.',

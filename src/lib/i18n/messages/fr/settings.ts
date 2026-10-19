@@ -665,6 +665,7 @@ const messages = {
     'Arrêtez l’usurpation d’identité avant de modifier l’adhésion à l’espace de travail.',
   'workspace.departure.failed':
     'Le résultat n’a pas pu être confirmé. Rechargez l’espace de travail avant de réessayer.',
+  'workspace.departure.removed': 'Membre supprimé',
   'workspace.departure.reload': 'Recharger l’espace de travail',
   'workspace.departure.activationFailed':
     'Vous avez quitté cet espace de travail. Ouvrez le suivant pour continuer.',

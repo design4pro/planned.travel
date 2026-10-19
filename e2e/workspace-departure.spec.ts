@@ -111,6 +111,36 @@ for (const provision of [false, true])
       await post(leaver, '/organization/accept-invitation', {
         invitationId: invitation.id,
       })
+      if (!provision) {
+        const management = await owner.newPage()
+        await management.goto('/settings/organization', {
+          waitUntil: 'networkidle',
+        })
+        await settle(management, WORKSPACE)
+        const targetRow = management.getByRole('row').filter({ hasText: email })
+        await targetRow
+          .getByRole('button', { name: 'Remove member', exact: true })
+          .click()
+        await management
+          .getByRole('dialog')
+          .getByRole('button', { name: 'Remove member', exact: true })
+          .click()
+        await expect(
+          management.getByText('Member removed', { exact: true }),
+        ).toBeVisible()
+        await expect(
+          management.getByRole('table', { name: 'Members of this workspace' }),
+        ).toBeFocused()
+        await expect(targetRow).toHaveCount(0)
+        const replacement = await post(owner, '/organization/invite-member', {
+          email,
+          role: 'member',
+        })
+        await post(leaver, '/organization/accept-invitation', {
+          invitationId: replacement.id,
+        })
+        await management.close()
+      }
       if (provision) {
         // Fixture only: the fresh account starts with only its invited membership. No product record is erased.
         const db = localFixtureDb()

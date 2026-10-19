@@ -658,6 +658,7 @@ const messages = {
     'Interrompi la rappresentazione di un altro utente prima di modificare l’appartenenza allo spazio di lavoro.',
   'workspace.departure.failed':
     'Non è stato possibile confermare il risultato. Ricarica lo spazio di lavoro prima di riprovare.',
+  'workspace.departure.removed': 'Membro rimosso',
   'workspace.departure.reload': 'Ricarica spazio di lavoro',
   'workspace.departure.activationFailed':
     'Hai lasciato questo spazio di lavoro. Apri il prossimo per continuare.',

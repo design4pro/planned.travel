@@ -650,6 +650,7 @@ const messages = {
     'A munkaterületi tagság módosítása előtt fejezze be a másik felhasználó megszemélyesítését.',
   'workspace.departure.failed':
     'Az eredmény nem erősíthető meg. Újabb próbálkozás előtt töltse újra a munkaterületet.',
+  'workspace.departure.removed': 'Tag eltávolítva',
   'workspace.departure.reload': 'Munkaterület újratöltése',
   'workspace.departure.activationFailed':
     'Kiléptél ebből a munkaterületből. A folytatáshoz nyisd meg a következőt.',

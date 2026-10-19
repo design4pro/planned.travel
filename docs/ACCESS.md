@@ -463,6 +463,8 @@ itself, including composite roles; role demotion uses the same owner predicate. 
 conditional `member.removed` or `member.left` audit entry share one D1 batch. Auth still runs the
 session cleanup and offboarding hooks; it never deletes the row a second time. Public HTTP
 `organization/leave` is closed too, so it cannot bypass these guards (overlapping #1402).
+After removing another member, the client announces success and focuses the stable members table
+after refreshing the list, so removal of the row and its dialog does not lose keyboard focus.
 After self-departure the existing resolver chooses a remaining workspace or provisions a personal
 one and activates it. An uncertain departure response stays an error and never activates a workspace
 as a success; the reader can reload to reconcile it. If activation fails after confirmed deletion,

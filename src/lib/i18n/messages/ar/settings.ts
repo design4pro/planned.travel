@@ -646,6 +646,7 @@ const messages = {
     'أوقف انتحال هوية المستخدم قبل تغيير العضوية في مساحة العمل.',
   'workspace.departure.failed':
     'تعذّر تأكيد النتيجة. أعد تحميل مساحة العمل قبل المحاولة مجددًا.',
+  'workspace.departure.removed': 'تمت إزالة العضو',
   'workspace.departure.reload': 'إعادة تحميل مساحة العمل',
   'workspace.departure.activationFailed':
     'لقد غادرت مساحة العمل هذه. افتح مساحة العمل التالية للمتابعة.',

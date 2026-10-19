@@ -725,6 +725,7 @@ const messages = {
     'Stop impersonating before changing workspace membership.',
   'workspace.departure.failed':
     'The result could not be confirmed. Reload the workspace before trying again.',
+  'workspace.departure.removed': 'Member removed',
   'workspace.departure.reload': 'Reload workspace',
   'workspace.departure.activationFailed':
     'You left this workspace. Open your next workspace to continue.',

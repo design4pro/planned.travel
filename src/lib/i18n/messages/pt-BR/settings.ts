@@ -656,6 +656,7 @@ const messages = {
     'Pare de representar outro usuário antes de alterar a participação no espaço de trabalho.',
   'workspace.departure.failed':
     'Não foi possível confirmar o resultado. Recarregue o espaço de trabalho antes de tentar novamente.',
+  'workspace.departure.removed': 'Membro removido',
   'workspace.departure.reload': 'Recarregar espaço de trabalho',
   'workspace.departure.activationFailed':
     'Você saiu deste espaço de trabalho. Abra o próximo para continuar.',

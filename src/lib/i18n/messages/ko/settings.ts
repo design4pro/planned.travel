@@ -581,6 +581,7 @@ const messages = {
     '워크스페이스 멤버십을 변경하기 전에 다른 사용자로 활동하는 모드를 종료하세요.',
   'workspace.departure.failed':
     '결과를 확인할 수 없습니다. 워크스페이스를 새로고침한 후 다시 시도하세요.',
+  'workspace.departure.removed': '멤버를 삭제했습니다',
   'workspace.departure.reload': '워크스페이스 새로고침',
   'workspace.departure.activationFailed':
     '이 워크스페이스를 나갔습니다. 계속하려면 다음 워크스페이스를 여세요.',

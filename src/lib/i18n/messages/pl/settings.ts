@@ -676,6 +676,7 @@ const messages = {
     'Zakończ podszywanie się przed zmianą członkostwa w przestrzeni roboczej.',
   'workspace.departure.failed':
     'Nie udało się potwierdzić wyniku. Przeładuj przestrzeń roboczą przed ponowną próbą.',
+  'workspace.departure.removed': 'Usunięto członka',
   'workspace.departure.reload': 'Przeładuj przestrzeń roboczą',
   'workspace.departure.activationFailed':
     'Opuszczono tę przestrzeń roboczą. Otwórz następną, aby kontynuować.',

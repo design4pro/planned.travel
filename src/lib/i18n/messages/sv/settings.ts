@@ -646,6 +646,7 @@ const messages = {
     'Sluta utge dig för att vara en annan användare innan du ändrar medlemskapet i arbetsytan.',
   'workspace.departure.failed':
     'Resultatet kunde inte bekräftas. Läs in arbetsytan igen innan du försöker igen.',
+  'workspace.departure.removed': 'Medlem borttagen',
   'workspace.departure.reload': 'Läs in arbetsytan igen',
   'workspace.departure.activationFailed':
     'Du har lämnat den här arbetsytan. Öppna nästa för att fortsätta.',

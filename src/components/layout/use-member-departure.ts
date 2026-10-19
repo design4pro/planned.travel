@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+import { toast } from 'sonner'
+import { useTranslate } from '#/lib/i18n'
 import { useRouter } from '@tanstack/react-router'
 import { finishDeparture } from '#/lib/member-departure-recovery'
 import {
@@ -8,6 +11,8 @@ import type { DepartureOutcome } from './member-departure-control'
 
 export function useMemberDeparture() {
   const router = useRouter()
+  const t = useTranslate()
+  const membersRef = useRef<HTMLTableElement>(null)
   const navigate = () => {
     router.clearCache()
     window.location.replace('/dashboard')
@@ -24,9 +29,7 @@ export function useMemberDeparture() {
     }
     return { ok: false, reason: 'failed' }
   }
-  const depart = async (
-    memberId: string,
-  ): Promise<DepartureOutcome> => {
+  const depart = async (memberId: string): Promise<DepartureOutcome> => {
     try {
       const result = await departMemberFn({ data: { memberId } })
       if (result.ok && result.left) {
@@ -42,11 +45,16 @@ export function useMemberDeparture() {
       await router.invalidate({ sync: true })
       if (router.state.matches.some(({ status }) => status === 'error'))
         return { ok: false, reason: 'failed' }
-      return result.ok ? { ok: true } : result
+      if (result.ok) {
+        toast.success(t('settings.workspace.departure.removed'))
+        requestAnimationFrame(() => membersRef.current?.focus())
+        return { ok: true }
+      }
+      return result
     } catch {
       await router.invalidate({ sync: true }).catch(() => undefined)
       return { ok: false, reason: 'failed' }
     }
   }
-  return { depart, recover }
+  return { depart, recover, membersRef }
 }

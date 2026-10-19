@@ -609,6 +609,7 @@ const messages = {
     'ワークスペースのメンバーシップを変更する前に、代理操作を終了してください。',
   'workspace.departure.failed':
     '結果を確認できませんでした。ワークスペースを再読み込みしてから、もう一度お試しください。',
+  'workspace.departure.removed': 'メンバーを削除しました',
   'workspace.departure.reload': 'ワークスペースを再読み込み',
   'workspace.departure.activationFailed':
     'このワークスペースから退出しました。次のワークスペースを開いて続行してください。',

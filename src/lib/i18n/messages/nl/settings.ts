@@ -656,6 +656,7 @@ const messages = {
     'Stop met het overnemen van een identiteit voordat je het werkruimtelidmaatschap wijzigt.',
   'workspace.departure.failed':
     'Het resultaat kon niet worden bevestigd. Laad de werkruimte opnieuw voordat je het opnieuw probeert.',
+  'workspace.departure.removed': 'Lid verwijderd',
   'workspace.departure.reload': 'Werkruimte opnieuw laden',
   'workspace.departure.activationFailed':
     'Je hebt deze werkruimte verlaten. Open de volgende om verder te gaan.',

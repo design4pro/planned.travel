@@ -663,6 +663,7 @@ const messages = {
     'Deixa de suplantar la identitat abans de canviar la pertinença a l’espai de treball.',
   'workspace.departure.failed':
     'No s’ha pogut confirmar el resultat. Torna a carregar l’espai de treball abans de tornar-ho a provar.',
+  'workspace.departure.removed': 'S’ha eliminat el membre',
   'workspace.departure.reload': 'Torna a carregar l’espai de treball',
   'workspace.departure.activationFailed':
     'Has deixat aquest espai de treball. Obre el següent per continuar.',

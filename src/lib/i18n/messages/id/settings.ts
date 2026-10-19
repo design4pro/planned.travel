@@ -639,6 +639,7 @@ const messages = {
     'Hentikan penyamaran sebagai pengguna lain sebelum mengubah keanggotaan ruang kerja.',
   'workspace.departure.failed':
     'Hasilnya tidak dapat dikonfirmasi. Muat ulang ruang kerja sebelum mencoba lagi.',
+  'workspace.departure.removed': 'Anggota dihapus',
   'workspace.departure.reload': 'Muat ulang ruang kerja',
   'workspace.departure.activationFailed':
     'Anda telah keluar dari ruang kerja ini. Buka ruang kerja berikutnya untuk melanjutkan.',

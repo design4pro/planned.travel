@@ -166,7 +166,7 @@ function AdminDenied() {
 }
 
 function AdminConsole({ data }: { data: AdminPayload }) {
-  const { depart, recover } = useMemberDeparture()
+  const { depart, recover, membersRef } = useMemberDeparture()
   const { t, locale } = useI18n()
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
   const planName = labelFor(PLAN_NAME, data.plan, t)
@@ -384,7 +384,12 @@ function AdminConsole({ data }: { data: AdminPayload }) {
               flush
               bodyClassName="p-0"
             >
-              <Table label={t('shell.admin.members.table')} fixed>
+              <Table
+                ref={membersRef}
+                tabIndex={-1}
+                label={t('shell.admin.members.table')}
+                fixed
+              >
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('shell.admin.members.person')}</TableHead>
@@ -423,9 +428,7 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                                 name={member.name}
                                 workspace={data.organization.name}
                                 self={member.userId === data.viewerUserId}
-                                onConfirm={() =>
-                                  depart(member.memberId)
-                                }
+                                onConfirm={() => depart(member.memberId)}
                                 onRecover={recover}
                               />
                             ) : null}

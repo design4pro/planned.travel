@@ -664,6 +664,7 @@ const messages = {
     'Deja de suplantar la identidad antes de cambiar la pertenencia al espacio de trabajo.',
   'workspace.departure.failed':
     'No se pudo confirmar el resultado. Recarga el espacio de trabajo antes de volver a intentarlo.',
+  'workspace.departure.removed': 'Miembro eliminado',
   'workspace.departure.reload': 'Recargar espacio de trabajo',
   'workspace.departure.activationFailed':
     'Has salido de este espacio de trabajo. Abre el siguiente para continuar.',
