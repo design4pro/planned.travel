@@ -563,13 +563,26 @@ afterwards through a `TenantScope` bound to one organization. The erasure regist
 as the owner of the scrubs of the global tables and the auth rows (spec phase 3); those are writes,
 and this member stays read-only until the pull request that ships them amends this section again.
 
-The auth layer cannot import `src/server/repos` (the Workspace console graph reaches
-`#/server/auth` and must not reach the tenant layer), yet it creates memberships. It therefore
-holds one write-only exception, `src/server/auth/participation.ts`: a single `INSERT OR IGNORE` of
-`organization_id` and `user_id` into the anchor, with no select, update or delete, whose
-organization id comes from the id minted in the same batch or from hook data and never from a
-request body. A source test pins that the anchor's table is named only by the schema, that module,
-`repos/participants.ts`, the catalog read and the erasure registry.
+The auth layer cannot reach the tenant repository graph except for recipient invitation consumption
+(issue #1009): `auth/organization-invitations.ts` imports the auth-runtime-free
+`repos/workspace-invitation-acceptance.ts` and its `base`, `batch` and `context` primitives. The
+console graph pins this closed set; no tenant server-function bootstrap or repository barrel is
+reachable. `resolveWorkspaceInvitationScopeUnscoped` has that one production caller and returns only
+an organization id by matching the invitation with the authenticated user's current email (FU-3).
+The recipient scope carries the authenticated user, least-privilege member role and impersonator.
+Only the recipient operations use its delegated authority: they recheck the current verified email,
+pending state and tenant in SQL. Acceptance additionally rechecks expiry, role and the 100-member
+ceiling. One required atomic driver batch inserts a fresh membership, its participation anchor and
+the accepted state, tied to the same minted member id. It transfers an existing reservation even
+above a downgraded plan's quota; it never releases a seat between statements. Rejection is pending-only.
+Session activation still uses Better Auth's internal adapter after commit, preserving KV and audit
+hooks. Activation failure never restores pending or removes durable membership; the existing workspace
+switcher recovers activation. Repeating acceptance remains a refusal and never restores removed access.
+
+Other auth membership paths retain `src/server/auth/participation.ts`: a write-only `INSERT OR IGNORE`
+of `organization_id` and `user_id`, with no select, update or delete, whose organization id comes from
+the id minted in the same batch or hook data, never a request body. A source test pins the anchor's
+writers, schema, catalog read and erasure registry.
 
 Three members, and that list is closed as firmly as the twelve names are. A fourth exception —
 another cross-tenant read, another module handed a plain `Database`, other than an `…Unscoped`

@@ -366,6 +366,13 @@ function AcceptInvitationPage() {
     >
       <AuthPanel>
         <FormAlert message={failure} onDismiss={() => setFailure(null)} />
+        {failure ? (
+          <Button variant="secondary" block asChild className="mb-4">
+            <Link to={DEFAULT_REDIRECT}>
+              {t('auth.invitation.unavailable.dashboard')}
+            </Link>
+          </Button>
+        ) : null}
         <InvitationDetails invitation={view.invitation} />
 
         <div className="mt-6 flex flex-col gap-3">
