@@ -950,6 +950,14 @@ const messages = {
   'files.action.add': 'Aggiungi file',
   'files.action.choose': 'Scegli i file',
   'files.action.upload': 'Carica i file',
+  'files.places.title': 'File dei luoghi',
+  'files.places.description':
+    'Scarica i luoghi di questo viaggio in formato GeoJSON, anche quelli senza coordinate.',
+  'files.places.action': 'Scarica i luoghi (.geojson)',
+  'files.places.empty': 'Aggiungi luoghi a questo viaggio per scaricarli.',
+  'files.places.error': 'Impossibile preparare il file dei luoghi. Riprova.',
+  'files.places.pending': 'Preparazione del file dei luoghi…',
+  'files.places.done': 'File dei luoghi scaricato.',
   'files.calendar.live.action': 'Link al calendario aggiornato',
   'files.calendar.live.title': 'Link al calendario aggiornato',
   'files.calendar.warning':
@@ -1281,6 +1289,22 @@ const messages = {
   'vacay.error.title': 'Impossibile caricare il pianificatore delle ferie',
   'vacay.year.previous': 'Anno precedente',
   'vacay.year.next': 'Anno successivo',
+  'vacay.settings.open': 'Impostazioni del piano ferie',
+  'vacay.settings.title': 'Impostazioni del piano ferie',
+  'vacay.settings.description':
+    'Come vengono riportati i giorni non usati e quanti giorni hai per impostazione predefinita.',
+  'vacay.settings.carryOver': 'Riporta i giorni non usati all’anno successivo',
+  'vacay.settings.carryOver.hint':
+    'Disattivandolo, i giorni riportati vengono nascosti, ma non cancellati.',
+  'vacay.settings.defaultAllowance':
+    'Monte giorni predefinito (giorni all’anno)',
+  'vacay.settings.defaultAllowance.hint':
+    'Vale per gli anni in cui non hai impostato un tuo monte giorni.',
+  'vacay.settings.save': 'Salva impostazioni',
+  'vacay.settings.cancel': 'Annulla',
+  'vacay.settings.saved': 'Impostazioni del piano ferie salvate.',
+  'vacay.settings.error':
+    'Impossibile salvare le impostazioni del piano ferie. Non è stato modificato nulla.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

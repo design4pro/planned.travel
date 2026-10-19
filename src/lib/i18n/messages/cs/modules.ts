@@ -940,6 +940,15 @@ const messages = {
   'files.action.add': 'Přidat soubory',
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
+  'files.places.title': 'Soubor míst',
+  'files.places.description':
+    'Stáhněte místa této cesty jako GeoJSON, včetně míst bez souřadnic.',
+  'files.places.action': 'Stáhnout místa (.geojson)',
+  'files.places.empty':
+    'Přidejte do této cesty místa, abyste je mohli stáhnout.',
+  'files.places.error': 'Soubor míst se nepodařilo připravit. Zkuste to znovu.',
+  'files.places.pending': 'Příprava souboru míst…',
+  'files.places.done': 'Soubor míst byl stažen.',
   'files.calendar.live.action': 'Aktualizovaný odkaz na kalendář',
   'files.calendar.live.title': 'Aktualizovaný odkaz na kalendář',
   'files.calendar.warning':
@@ -1289,6 +1298,21 @@ const messages = {
   'vacay.error.title': 'Plánovač dovolené se nenačetl',
   'vacay.year.previous': 'Předchozí rok',
   'vacay.year.next': 'Další rok',
+  'vacay.settings.open': 'Nastavení plánu dovolené',
+  'vacay.settings.title': 'Nastavení plánu dovolené',
+  'vacay.settings.description':
+    'Jak se převádějí nevyčerpané dny a kolik dnů máte ve výchozím stavu.',
+  'vacay.settings.carryOver': 'Převádět nevyčerpané dny do dalšího roku',
+  'vacay.settings.carryOver.hint':
+    'Po vypnutí se převedené dny skryjí, ale nesmažou.',
+  'vacay.settings.defaultAllowance': 'Výchozí nárok (dnů za rok)',
+  'vacay.settings.defaultAllowance.hint':
+    'Platí pro roky, ve kterých jste si nenastavili vlastní nárok.',
+  'vacay.settings.save': 'Uložit nastavení',
+  'vacay.settings.cancel': 'Zrušit',
+  'vacay.settings.saved': 'Nastavení plánu dovolené bylo uloženo.',
+  'vacay.settings.error':
+    'Nastavení plánu dovolené se nepodařilo uložit. Nic se nezměnilo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

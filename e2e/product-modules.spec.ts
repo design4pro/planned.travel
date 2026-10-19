@@ -20,6 +20,11 @@ import { settle } from './helpers/settle.ts'
  * year before the pinned one and for the pinned one, so the pinned year's "Carried" is calculated
  * and the earlier year's is an opening balance that can be typed. The walk edits that opening
  * balance and puts it back in its `finally`.
+ *
+ * `08-S1c` adds the plan's own settings dialog to it: the walk switches carry-over off and on and
+ * compares the pinned year's "Carried" figure before and after (no seeded literal), changes the
+ * default allowance and reads it on a year the traveller has no row for, and puts both back in its
+ * `finally`.
  */
 const VACAY: RouteCase = {
   name: 'vacay',
@@ -42,6 +47,8 @@ const OPENING: RouteCase = {
   path: `/vacay?year=${OPENING_YEAR}`,
   ready: 'main',
 }
+
+const WIDE = 2560
 
 const TILE = /^Edit days, currently \d+$/
 
@@ -81,6 +88,57 @@ async function tileLabelsFit(page: Page): Promise<boolean> {
       )
     }),
   )
+}
+
+function settingsButton(page: Page) {
+  return page.getByRole('button', { name: 'Leave plan settings' })
+}
+
+function settingsDialog(page: Page) {
+  return page.getByRole('dialog', { name: 'Leave plan settings' })
+}
+
+function carryOverBox(page: Page) {
+  return settingsDialog(page).getByRole('checkbox', {
+    name: 'Carry unused days into the next year',
+  })
+}
+
+function defaultField(page: Page) {
+  return settingsDialog(page).getByRole('textbox', {
+    name: 'Default allowance (days per year)',
+  })
+}
+
+function saveSettings(page: Page) {
+  return settingsDialog(page).getByRole('button', { name: 'Save settings' })
+}
+
+/**
+ * Changes the plan settings the way a reader does and waits for the dialog to close onto its
+ * button. Used to put them back, so it names no figure of its own.
+ */
+async function changeSettings(
+  page: Page,
+  settings: { carryOver?: boolean; defaultDays?: number },
+): Promise<void> {
+  await settingsButton(page).click()
+  if (settings.carryOver !== undefined) {
+    const box = carryOverBox(page)
+    if ((await box.isChecked()) !== settings.carryOver) await box.click()
+  }
+  if (settings.defaultDays !== undefined) {
+    await defaultField(page).fill(String(settings.defaultDays))
+  }
+  await defaultField(page).press('Enter')
+  await expect(settingsDialog(page)).toHaveCount(0)
+  await expect(settingsButton(page)).toBeFocused()
+}
+
+/** The plan's default allowance, read from the tile of a year the traveller has no row for. */
+async function planDefault(page: Page): Promise<number> {
+  await visit(page, UNSET, 'light')
+  return figure(page)
 }
 
 /** The two widths the spec names: the phone column and the three-column planner. */
@@ -364,5 +422,185 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(
       page.getByText('Default allowance. Select to set your own.'),
     ).toBeVisible()
+  })
+
+  test('switches carry-over off and on without losing the carried figure, and puts the settings back', async ({
+    page,
+  }) => {
+    const watched = watchConsole(page, VACAY)
+    await visit(page, VACAY, 'light')
+    const carried = await carriedFigure(page).innerText()
+    expect(
+      Number(carried),
+      'the pinned year carries something',
+    ).toBeGreaterThan(0)
+
+    try {
+      // The dialog opens on the plan's values, named by its title, with the hints linked to it.
+      await settingsButton(page).click()
+      await expect(settingsDialog(page)).toBeVisible()
+      await expect(carryOverBox(page)).toBeChecked()
+      await expect(defaultField(page)).toHaveValue(/^\d+$/)
+
+      // Saving with nothing changed closes without a request and returns focus to the button.
+      let writes = 0
+      await page.route('**/_serverFn/**', (route) => {
+        if (route.request().method() === 'POST') writes += 1
+        return route.continue()
+      })
+      await saveSettings(page).click()
+      await expect(settingsDialog(page)).toHaveCount(0)
+      await expect(settingsButton(page)).toBeFocused()
+      expect(writes, 'an empty change makes no call').toBe(0)
+      await page.unroute('**/_serverFn/**')
+
+      // Off: the figure is hidden, not erased; on: it comes back, with no recompute in between.
+      await changeSettings(page, { carryOver: false })
+      await expect(carriedFigure(page)).toHaveText('0')
+      await expect(page.getByText('Carry-over is off')).toBeVisible()
+      await expect(
+        page
+          .getByRole('status')
+          .filter({ hasText: 'Leave plan settings saved.' }),
+      ).toHaveCount(1)
+
+      await changeSettings(page, { carryOver: true })
+      await expect(carriedFigure(page)).toHaveText(carried)
+    } finally {
+      await changeSettings(page, { carryOver: true })
+    }
+
+    expect(watched().fatal, 'the console must be clean').toEqual([])
+  })
+
+  test('changes the default allowance for a year without a row, and puts it back', async ({
+    page,
+  }) => {
+    // Four cold page loads against the dev server: more than the default budget.
+    test.slow()
+    const original = await planDefault(page)
+    const next = original === 30 ? 31 : 30
+
+    try {
+      await visit(page, VACAY, 'light')
+      await changeSettings(page, { defaultDays: next })
+
+      await visit(page, UNSET, 'light')
+      await expect(tile(page)).toHaveAttribute(
+        'aria-label',
+        `Edit days, currently ${next}`,
+      )
+      await expect(
+        page.getByText('Default allowance. Select to set your own.'),
+      ).toBeVisible()
+    } finally {
+      await visit(page, VACAY, 'light')
+      await changeSettings(page, { defaultDays: original })
+    }
+  })
+
+  test('refuses an invalid default, keeps the dialog open and lands on the field', async ({
+    page,
+  }) => {
+    await visit(page, VACAY, 'light')
+    await settingsButton(page).click()
+
+    await defaultField(page).fill('400')
+    await defaultField(page).press('Enter')
+
+    await expect(settingsDialog(page)).toBeVisible()
+    await expect(defaultField(page)).toHaveAttribute('aria-invalid', 'true')
+    await expect(defaultField(page)).toBeFocused()
+    // The field's own message and the hidden alert that announces it say the same words.
+    await expect(
+      settingsDialog(page)
+        .getByText('Enter a whole number from 0 to 365.')
+        .first(),
+    ).toBeVisible()
+    await expect(settingsDialog(page).getByRole('alert')).toHaveText(
+      'Enter a whole number from 0 to 365.',
+    )
+
+    await page.keyboard.press('Escape')
+    await expect(settingsDialog(page)).toHaveCount(0)
+    await expect(settingsButton(page)).toBeFocused()
+  })
+
+  test('keeps the settings button tall enough to touch at 360px, and Save in view with the keyboard up', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 800 })
+    await visit(page, VACAY, 'light')
+
+    const box = await settingsButton(page).boundingBox()
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
+
+    // The header wraps at this width; the year switcher must move as one group, never split.
+    const previous = await page
+      .getByRole('link', { name: 'Previous year' })
+      .boundingBox()
+    const next = await page
+      .getByRole('link', { name: 'Next year' })
+      .boundingBox()
+    expect(previous && next && Math.abs(previous.y - next.y) < 2).toBe(true)
+
+    // 360x500 stands in for a phone with its keyboard up: the visible area is short.
+    await page.setViewportSize({ width: 360, height: 500 })
+    await settingsButton(page).click()
+    await defaultField(page).focus()
+    const inView = await saveSettings(page).evaluate((button) => {
+      const { top, bottom } = button.getBoundingClientRect()
+      const height = window.visualViewport?.height ?? window.innerHeight
+      return top >= 0 && bottom <= height
+    })
+    expect(inView, 'Save stays inside the visual viewport').toBe(true)
+    expect(await overflowsHorizontally(page)).toBe(false)
+    await page.keyboard.press('Escape')
+    await expect(settingsDialog(page)).toHaveCount(0)
+  })
+
+  test('opens the dialog in both themes at 360, 1280 and 2560 without overflowing, and writes nothing', async ({
+    page,
+  }) => {
+    for (const theme of ['light', 'dark'] as const) {
+      await visit(page, VACAY, theme)
+      for (const width of [...WIDTHS, WIDE]) {
+        await page.setViewportSize({ width, height: 900 })
+        await settingsButton(page).click()
+        await expect(settingsDialog(page)).toBeVisible()
+        expect(
+          await overflowsHorizontally(page),
+          `the open dialog must not overflow at ${width}px in the ${theme} theme`,
+        ).toBe(false)
+        await page.keyboard.press('Escape')
+        await expect(settingsDialog(page)).toHaveCount(0)
+        await expect(settingsButton(page)).toBeFocused()
+      }
+    }
+  })
+
+  test('keeps the dialog open with the values on a failed save and moves focus to the alert', async ({
+    page,
+  }) => {
+    await visit(page, VACAY, 'light')
+    await settingsButton(page).click()
+    await carryOverBox(page).click()
+
+    // Failing only the write: nothing reaches the database, so the fixture is untouched.
+    await page.route('**/_serverFn/**', (route) =>
+      route.request().method() === 'POST'
+        ? route.abort('failed')
+        : route.continue(),
+    )
+    await saveSettings(page).click()
+
+    const alert = settingsDialog(page).getByRole('alert')
+    await expect(alert).toContainText('could not be saved')
+    await expect(alert).toBeFocused()
+    await expect(settingsDialog(page)).toBeVisible()
+    await expect(carryOverBox(page)).not.toBeChecked()
+    await page.unroute('**/_serverFn/**')
+    await page.keyboard.press('Escape')
+    await expect(settingsDialog(page)).toHaveCount(0)
   })
 })

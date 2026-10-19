@@ -104,13 +104,29 @@ for (const provision of [false, true])
         await leaver.request.get('/api/auth/get-session')
       ).json()
       const personalId = personalSession.session.activeOrganizationId
-      const invitation = await post(owner, '/organization/invite-member', {
-        email,
-        role: 'member',
-      })
-      await post(leaver, '/organization/accept-invitation', {
-        invitationId: invitation.id,
-      })
+      const ownerSession = await (
+        await owner.request.get('/api/auth/get-session')
+      ).json()
+      const workspaceId = ownerSession.session.activeOrganizationId
+      let fixtureMembership = 0
+      const joinFixtureWorkspace = async () => {
+        // Arrange only this fresh test workspace; invitation writes have their own guarded journey.
+        const db = localFixtureDb()
+        db.prepare(
+          'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+        ).run(
+          `departure-fixture-${suffix}-${fixtureMembership++}`,
+          workspaceId,
+          personalSession.user.id,
+          'member',
+          Date.now(),
+        )
+        db.close()
+        await post(leaver, '/organization/set-active', {
+          organizationId: workspaceId,
+        })
+      }
+      await joinFixtureWorkspace()
       if (!provision) {
         const management = await owner.newPage()
         await management.goto('/settings/organization', {
@@ -132,13 +148,7 @@ for (const provision of [false, true])
           management.getByRole('table', { name: 'Members of this workspace' }),
         ).toBeFocused()
         await expect(targetRow).toHaveCount(0)
-        const replacement = await post(owner, '/organization/invite-member', {
-          email,
-          role: 'member',
-        })
-        await post(leaver, '/organization/accept-invitation', {
-          invitationId: replacement.id,
-        })
+        await joinFixtureWorkspace()
         await management.close()
       }
       if (provision) {

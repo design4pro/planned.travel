@@ -494,6 +494,60 @@ const messages = {
   'join.error.join':
     'Det gick inte att gå med. Länken fungerar fortfarande, försök igen.',
   'join.error.switch': 'Det gick inte att byta arbetsyta. Försök igen.',
+
+  'invite.title': 'Inbjudningslänk',
+  'invite.description':
+    'Alla i denna arbetsyta som öppnar länken går med i resan.',
+  'invite.empty.title': 'Ingen inbjudningslänk ännu',
+  'invite.empty.body':
+    'Skapa en länk och dela den i gruppchatten så att personer i arbetsytan kan gå med.',
+  'invite.action.create': 'Skapa länk',
+  'invite.link.label': 'Inbjudningslänk',
+  'invite.copy': 'Kopiera länk',
+  'invite.copied': 'Länken kopierad',
+  'invite.copyFailed':
+    'Kunde inte kopiera. Markera länken och kopiera den själv.',
+  'invite.switch.label': 'Alla i arbetsytan med länken kan gå med',
+  'invite.switch.onHint':
+    'Avstängning gör länken ogiltig för alla, även redan skickade kopior.',
+  'invite.switch.offHint':
+    'När den slås på skapas en ny länk. Tidigare länkar förblir ogiltiga.',
+  'invite.off.body': 'Länken är avstängd. Ingen kan gå med via den.',
+  'invite.uses': {
+    one: 'Antal som gått med via länken: {count}',
+    other: 'Antal som gått med via länken: {count}',
+  },
+  'invite.uses.never': 'Ingen har gått med via länken ännu.',
+  'invite.lastUsed': 'Senast ansluten: {when}',
+  'invite.role.upgrade.title': 'Ge redigeringsrättigheter?',
+  'invite.role.upgrade.body':
+    'Det gäller alla redan skickade kopior och alla som går med från och med nu.',
+  'invite.role.upgrade.confirm': 'Ge redigeringsrättigheter',
+  'invite.replace.action': 'Ersätt länk',
+  'invite.replace.title': 'Ersätt denna länk?',
+  'invite.replace.body':
+    'Den gamla länken slutar fungera direkt för alla. De som redan gått med stannar i resan; ta bort dem från listan nedan vid behov.',
+  'invite.replace.deadBody':
+    'Den gamla länken fungerar inte längre. De som redan gått med stannar i resan.',
+  'invite.replace.confirm': 'Ersätt länk',
+  'invite.replace.pending': 'Ersätter länken',
+  'invite.stale': 'Denna länk fungerar inte längre. Ersätt den.',
+  'invite.creatorGone':
+    'Länken fungerar inte eftersom skaparen inte längre är ägare. Ersätt den.',
+  'invite.archived':
+    'Resan är arkiverad. Länken fungerar igen när resan återställs.',
+  'invite.announce.created': 'Inbjudningslänk skapad',
+  'invite.announce.roleEditor': 'Nya deltagare får redigera',
+  'invite.announce.off': 'Inbjudningslänk avstängd',
+  'invite.announce.newLink': 'Ny länk klar. Kopiera och skicka den igen.',
+  'invite.announce.roleViewer': 'Nya deltagare får läsbehörighet',
+  'invite.error.title': 'Inbjudningslänken kunde inte laddas',
+  'invite.error.retry': 'Försök igen',
+  'invite.refusal.archived': 'Resan är arkiverad.',
+  'invite.refusal.notOwner': 'Bara en reseägare kan ändra länken.',
+  'invite.refusal.changed': 'Någon ändrade länken. Den aktuella visas.',
+  'invite.announce.recovered':
+    'De aktuella länkinställningarna visas. Kontrollera dem innan du ändrar igen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

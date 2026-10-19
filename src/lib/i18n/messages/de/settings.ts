@@ -33,6 +33,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Einladen',
+  'workspace.invite.resend': 'Erneut senden',
+  'workspace.invite.revoke': 'Widerrufen',
+  'workspace.invite.confirm': 'Einladung widerrufen',
+  'workspace.invite.expired': 'Abgelaufen',
+  'workspace.invite.by': 'Eingeladen von {name}',
+  'workspace.invite.sent': 'Einladung gesendet',
+  'workspace.invite.revoked': 'Einladung widerrufen',
+  'workspace.invite.delivery':
+    'Einladung gespeichert, aber der E-Mail-Versand ist fehlgeschlagen. Bitte erneut senden.',
+  'workspace.invite.duplicate':
+    'Eine Einladung steht bereits aus. Bitte erneut senden.',
+  'workspace.invite.existing':
+    'Diese Person ist bereits Mitglied des Arbeitsbereichs.',
+  'workspace.invite.failed':
+    'Einladung nicht verfügbar. Liste aktualisieren und erneut versuchen.',
+  'workspace.invite.reload': 'Einladungen aktualisieren',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Konto',
   'page.title': 'Einstellungen',

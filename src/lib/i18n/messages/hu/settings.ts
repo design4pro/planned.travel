@@ -24,6 +24,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Meghívás',
+  'workspace.invite.resend': 'Újraküldés',
+  'workspace.invite.revoke': 'Visszavonás',
+  'workspace.invite.confirm': 'Meghívás visszavonása',
+  'workspace.invite.expired': 'Lejárt',
+  'workspace.invite.by': 'Meghívó: {name}',
+  'workspace.invite.sent': 'Meghívó elküldve',
+  'workspace.invite.revoked': 'Meghívó visszavonva',
+  'workspace.invite.delivery':
+    'A meghívó mentve, de az e-mail küldése sikertelen. Küldje el újra.',
+  'workspace.invite.duplicate':
+    'Már van függőben lévő meghívó. Küldje el újra.',
+  'workspace.invite.existing': 'Ez a személy már a munkaterület tagja.',
+  'workspace.invite.failed':
+    'A meghívó nem érhető el. Frissítse a listát és próbálja újra.',
+  'workspace.invite.reload': 'Meghívók frissítése',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Fiók',
   'page.title': 'Beállítások',

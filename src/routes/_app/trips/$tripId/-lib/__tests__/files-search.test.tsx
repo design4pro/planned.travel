@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../../../-server/trip', () => ({ loadTripFiles: vi.fn() }))
 vi.mock('#/components/modules/files', () => ({}))
+vi.mock('#/components/modules/files/places-panel', () => ({}))
 vi.mock('../../../../-ui/trip-header', () => ({}))
 const { Route } = await import('../../files')
 

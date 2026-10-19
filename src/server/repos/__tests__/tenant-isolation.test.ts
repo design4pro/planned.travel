@@ -316,6 +316,7 @@ import {
   setEntry,
   setUserColour,
   updatePlan,
+  updatePlanSettings,
   vacayCompanyHolidaysRepository,
   vacayEntriesRepository,
   vacayHolidayCalendarsRepository,
@@ -7352,6 +7353,12 @@ describe('tenant isolation', () => {
             entitlementDays: 1,
           }),
         () => updatePlan(scope, beta.planId, { carryOverEnabled: false }),
+        () =>
+          updatePlanSettings(scope, beta.planId, {
+            carryOverEnabled: false,
+            defaultEntitlementDays: 1,
+          }),
+        () => updatePlanSettings(scope, beta.planId, {}),
         () => ensureYear(scope, beta.planId, 2031),
         () => getAllowance(scope, beta.planId, alpha.tenant.ownerUserId, 2026),
         () => requirePlanActor(scope, beta.planId),

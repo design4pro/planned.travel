@@ -516,6 +516,65 @@ const messages = {
     'Beitritt nicht möglich. Der Link funktioniert noch, versuche es erneut.',
   'join.error.switch':
     'Der Arbeitsbereich konnte nicht gewechselt werden. Versuche es erneut.',
+
+  'invite.title': 'Einladungslink',
+  'invite.description':
+    'Wer in diesem Workspace den Link öffnet, tritt der Reise bei.',
+  'invite.empty.title': 'Noch kein Einladungslink',
+  'invite.empty.body':
+    'Erstelle einen Link und teile ihn im Gruppenchat. Personen in diesem Workspace können damit beitreten.',
+  'invite.action.create': 'Link erstellen',
+  'invite.link.label': 'Einladungslink',
+  'invite.copy': 'Link kopieren',
+  'invite.copied': 'Link kopiert',
+  'invite.copyFailed':
+    'Kopieren fehlgeschlagen. Markiere den Link und kopiere ihn selbst.',
+  'invite.switch.label':
+    'Alle in diesem Workspace können mit dem Link beitreten',
+  'invite.switch.onHint':
+    'Ausschalten macht den Link für alle ungültig, auch bereits versendete Kopien.',
+  'invite.switch.offHint':
+    'Beim Einschalten entsteht ein neuer Link. Frühere Links bleiben ungültig.',
+  'invite.off.body':
+    'Der Link ist ausgeschaltet. Niemand kann damit beitreten.',
+  'invite.uses': {
+    one: 'Über diesen Link beigetreten: {count}',
+    other: 'Über diesen Link beigetreten: {count}',
+  },
+  'invite.uses.never': 'Über diesen Link ist noch niemand beigetreten.',
+  'invite.lastUsed': 'Zuletzt beigetreten: {when}',
+  'invite.role.upgrade.title': 'Bearbeitungsrechte vergeben?',
+  'invite.role.upgrade.body':
+    'Das gilt für alle bereits versendeten Kopien und alle, die ab jetzt beitreten.',
+  'invite.role.upgrade.confirm': 'Bearbeitungsrechte vergeben',
+  'invite.replace.action': 'Link ersetzen',
+  'invite.replace.title': 'Diesen Link ersetzen?',
+  'invite.replace.body':
+    'Der alte Link wird sofort für alle ungültig. Bereits beigetretene Personen bleiben auf der Reise; entferne sie bei Bedarf aus der Liste unten.',
+  'invite.replace.deadBody':
+    'Der alte Link funktioniert nicht mehr. Bereits beigetretene Personen bleiben auf der Reise.',
+  'invite.replace.confirm': 'Link ersetzen',
+  'invite.replace.pending': 'Link wird ersetzt',
+  'invite.stale': 'Dieser Link funktioniert nicht mehr. Ersetze ihn.',
+  'invite.creatorGone':
+    'Der Link funktioniert nicht mehr, weil die erstellende Person kein Eigentümer mehr ist. Ersetze ihn.',
+  'invite.archived':
+    'Diese Reise ist archiviert. Der Link funktioniert erst wieder, wenn sie wiederhergestellt wird.',
+  'invite.announce.created': 'Einladungslink erstellt',
+  'invite.announce.roleEditor': 'Neue Mitglieder erhalten Bearbeitungsrechte',
+  'invite.announce.off': 'Einladungslink ausgeschaltet',
+  'invite.announce.newLink':
+    'Neuer Einladungslink bereit. Kopiere und versende ihn erneut.',
+  'invite.announce.roleViewer': 'Neue Mitglieder erhalten Leserechte',
+  'invite.error.title': 'Der Einladungslink wurde nicht geladen',
+  'invite.error.retry': 'Erneut versuchen',
+  'invite.refusal.archived': 'Diese Reise ist archiviert.',
+  'invite.refusal.notOwner':
+    'Nur ein Reiseeigentümer kann den Einladungslink ändern.',
+  'invite.refusal.changed':
+    'Jemand hat den Link geändert. Der aktuelle wird angezeigt.',
+  'invite.announce.recovered':
+    'Die aktuellen Linkeinstellungen werden angezeigt. Prüfe sie vor einer weiteren Änderung.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

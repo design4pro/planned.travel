@@ -29,6 +29,22 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Bjud in',
+  'workspace.invite.resend': 'Skicka igen',
+  'workspace.invite.revoke': 'Återkalla',
+  'workspace.invite.confirm': 'Återkalla inbjudan',
+  'workspace.invite.expired': 'Utgången',
+  'workspace.invite.by': 'Inbjuden av {name}',
+  'workspace.invite.sent': 'Inbjudan skickad',
+  'workspace.invite.revoked': 'Inbjudan återkallad',
+  'workspace.invite.delivery':
+    'Inbjudan sparad, men mejlet kunde inte skickas. Skicka igen.',
+  'workspace.invite.duplicate': 'En inbjudan väntar redan. Skicka igen.',
+  'workspace.invite.existing': 'Personen är redan medlem i arbetsytan.',
+  'workspace.invite.failed':
+    'Inbjudan är inte tillgänglig. Uppdatera listan och försök igen.',
+  'workspace.invite.reload': 'Uppdatera inbjudningar',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Konto',
   'page.title': 'Inställningar',

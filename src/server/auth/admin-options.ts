@@ -142,10 +142,13 @@ export const DISABLED_ADMIN_PATHS: string[] = [
  * room eviction still runs. `organization/leave` is closed too: the guarded product action calls the in-process
  * API, so HTTP cannot bypass impersonation, audit or atomic owner protection (#1008).
  */
+/** Invitation mutations use the tenant repository lifecycle; recipient reads/accept/reject stay open. */
 export const DISABLED_ORGANIZATION_PATHS: string[] = [
   '/organization/update-member-role',
   '/organization/remove-member',
   '/organization/leave',
+  '/organization/invite-member',
+  '/organization/cancel-invitation',
 ]
 
 /**

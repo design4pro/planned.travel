@@ -838,6 +838,14 @@ const messages = {
   'files.action.add': '新增檔案',
   'files.action.choose': '選擇檔案',
   'files.action.upload': '上傳檔案',
+  'files.places.title': '地點檔案',
+  'files.places.description':
+    '將此次旅行的地點下載為 GeoJSON，包括沒有座標的地點。',
+  'files.places.action': '下載地點 (.geojson)',
+  'files.places.empty': '請先為此次旅行新增地點，再下載。',
+  'files.places.error': '無法準備地點檔案。請重試。',
+  'files.places.pending': '正在準備地點檔案…',
+  'files.places.done': '地點檔案已下載。',
   'files.calendar.live.action': '自動更新的日曆連結',
   'files.calendar.live.title': '自動更新的日曆連結',
   'files.calendar.warning':
@@ -1094,6 +1102,17 @@ const messages = {
   'vacay.error.title': '無法載入休假規劃器',
   'vacay.year.previous': '上一年',
   'vacay.year.next': '下一年',
+  'vacay.settings.open': '休假計畫設定',
+  'vacay.settings.title': '休假計畫設定',
+  'vacay.settings.description': '設定未用完的天數如何結轉，以及預設有多少天。',
+  'vacay.settings.carryOver': '將未用完的天數結轉到下一年',
+  'vacay.settings.carryOver.hint': '關閉後，結轉的天數只會被隱藏，不會被刪除。',
+  'vacay.settings.defaultAllowance': '預設額度（每年天數）',
+  'vacay.settings.defaultAllowance.hint': '適用於你沒有設定自己額度的年份。',
+  'vacay.settings.save': '儲存設定',
+  'vacay.settings.cancel': '取消',
+  'vacay.settings.saved': '已儲存休假計畫設定。',
+  'vacay.settings.error': '無法儲存休假計畫設定。未做任何變更。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

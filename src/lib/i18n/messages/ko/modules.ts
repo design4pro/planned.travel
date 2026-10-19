@@ -873,6 +873,14 @@ const messages = {
   'files.action.add': '파일 추가',
   'files.action.choose': '파일 고르기',
   'files.action.upload': '파일 올리기',
+  'files.places.title': '장소 파일',
+  'files.places.description':
+    '좌표가 없는 장소를 포함하여 이 여행의 장소를 GeoJSON으로 다운로드하세요.',
+  'files.places.action': '장소 다운로드 (.geojson)',
+  'files.places.empty': '다운로드하려면 이 여행에 장소를 추가하세요.',
+  'files.places.error': '장소 파일을 준비하지 못했습니다. 다시 시도하세요.',
+  'files.places.pending': '장소 파일 준비 중…',
+  'files.places.done': '장소 파일을 다운로드했습니다.',
   'files.calendar.live.action': '자동 갱신 캘린더 링크',
   'files.calendar.live.title': '자동 갱신 캘린더 링크',
   'files.calendar.warning':
@@ -1147,6 +1155,21 @@ const messages = {
   'vacay.error.title': '휴가 플래너를 불러오지 못했습니다',
   'vacay.year.previous': '이전 연도',
   'vacay.year.next': '다음 연도',
+  'vacay.settings.open': '휴가 계획 설정',
+  'vacay.settings.title': '휴가 계획 설정',
+  'vacay.settings.description':
+    '사용하지 않은 일수를 이월하는 방식과 기본 일수를 설정합니다.',
+  'vacay.settings.carryOver': '사용하지 않은 일수를 다음 해로 이월',
+  'vacay.settings.carryOver.hint':
+    '끄면 이월된 일수가 숨겨질 뿐 삭제되지는 않습니다.',
+  'vacay.settings.defaultAllowance': '기본 일수(연간)',
+  'vacay.settings.defaultAllowance.hint':
+    '직접 일수를 설정하지 않은 해에 적용됩니다.',
+  'vacay.settings.save': '설정 저장',
+  'vacay.settings.cancel': '취소',
+  'vacay.settings.saved': '휴가 계획 설정을 저장했습니다.',
+  'vacay.settings.error':
+    '휴가 계획 설정을 저장하지 못했습니다. 변경된 내용은 없습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

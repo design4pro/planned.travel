@@ -921,6 +921,15 @@ const messages = {
   'files.action.add': 'Fájlok hozzáadása',
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
+  'files.places.title': 'Helyek fájlja',
+  'files.places.description':
+    'Töltsd le az utazás helyeit GeoJSON formátumban, a koordináták nélküli helyekkel együtt.',
+  'files.places.action': 'Helyek letöltése (.geojson)',
+  'files.places.empty': 'Adj helyeket az utazáshoz a letöltéshez.',
+  'files.places.error':
+    'Nem sikerült előkészíteni a helyek fájlját. Próbáld újra.',
+  'files.places.pending': 'Helyek fájljának előkészítése…',
+  'files.places.done': 'Helyek fájlja letöltve.',
   'files.calendar.live.action': 'Frissülő naptárhivatkozás',
   'files.calendar.live.title': 'Frissülő naptárhivatkozás',
   'files.calendar.warning':
@@ -1226,6 +1235,22 @@ const messages = {
   'vacay.error.title': 'A szabadságtervező nem töltődött be',
   'vacay.year.previous': 'Előző év',
   'vacay.year.next': 'Következő év',
+  'vacay.settings.open': 'Szabadságterv beállításai',
+  'vacay.settings.title': 'Szabadságterv beállításai',
+  'vacay.settings.description':
+    'Hogyan viszik át a fel nem használt napokat, és alapból hány napod van.',
+  'vacay.settings.carryOver':
+    'A fel nem használt napok átvitele a következő évre',
+  'vacay.settings.carryOver.hint':
+    'Ha kikapcsolod, az átvitt napok el lesznek rejtve, de nem törlődnek.',
+  'vacay.settings.defaultAllowance': 'Alapértelmezett keret (nap évente)',
+  'vacay.settings.defaultAllowance.hint':
+    'Azokra az évekre vonatkozik, amelyekhez nem adtál meg saját keretet.',
+  'vacay.settings.save': 'Beállítások mentése',
+  'vacay.settings.cancel': 'Mégse',
+  'vacay.settings.saved': 'A szabadságterv beállításai mentve.',
+  'vacay.settings.error':
+    'A szabadságterv beállításait nem sikerült menteni. Semmi sem változott.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

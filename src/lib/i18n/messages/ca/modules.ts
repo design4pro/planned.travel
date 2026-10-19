@@ -946,6 +946,15 @@ const messages = {
   'files.action.add': 'Afegeix fitxers',
   'files.action.choose': 'Tria fitxers',
   'files.action.upload': 'Puja els fitxers',
+  'files.places.title': 'Fitxer de llocs',
+  'files.places.description':
+    'Descarrega els llocs d’aquest viatge en format GeoJSON, inclosos els que no tenen coordenades.',
+  'files.places.action': 'Descarrega els llocs (.geojson)',
+  'files.places.empty': 'Afegeix llocs a aquest viatge per descarregar-los.',
+  'files.places.error':
+    'No hem pogut preparar el fitxer de llocs. Torna-ho a provar.',
+  'files.places.pending': 'S’està preparant el fitxer de llocs…',
+  'files.places.done': 'S’ha descarregat el fitxer de llocs.',
   'files.calendar.live.action': 'Enllaç de calendari actualitzat',
   'files.calendar.live.title': 'Enllaç de calendari actualitzat',
   'files.calendar.warning':
@@ -1276,6 +1285,22 @@ const messages = {
   'vacay.error.title': 'No s’ha pogut carregar el planificador de vacances',
   'vacay.year.previous': 'Any anterior',
   'vacay.year.next': 'Any següent',
+  'vacay.settings.open': 'Configuració del pla de vacances',
+  'vacay.settings.title': 'Configuració del pla de vacances',
+  'vacay.settings.description':
+    'Com es traslladen els dies no utilitzats i quants dies tens per defecte.',
+  'vacay.settings.carryOver':
+    'Trasllada els dies no utilitzats a l’any següent',
+  'vacay.settings.carryOver.hint':
+    'Si ho desactives, s’amaguen els dies traslladats, però no s’esborren.',
+  'vacay.settings.defaultAllowance': 'Assignació per defecte (dies per any)',
+  'vacay.settings.defaultAllowance.hint':
+    'S’aplica als anys en què no has definit la teva pròpia assignació.',
+  'vacay.settings.save': 'Desa la configuració',
+  'vacay.settings.cancel': 'Cancel·la',
+  'vacay.settings.saved': 'S’ha desat la configuració del pla de vacances.',
+  'vacay.settings.error':
+    'No s’ha pogut desar la configuració del pla de vacances. No s’ha canviat res.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

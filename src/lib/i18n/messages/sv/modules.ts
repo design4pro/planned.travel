@@ -913,6 +913,14 @@ const messages = {
   'files.action.add': 'Lägg till filer',
   'files.action.choose': 'Välj filer',
   'files.action.upload': 'Ladda upp filer',
+  'files.places.title': 'Platsfil',
+  'files.places.description':
+    'Ladda ner resans platser som GeoJSON, även platser utan koordinater.',
+  'files.places.action': 'Ladda ner platser (.geojson)',
+  'files.places.empty': 'Lägg till platser i resan för att ladda ner dem.',
+  'files.places.error': 'Det gick inte att förbereda platsfilen. Försök igen.',
+  'files.places.pending': 'Förbereder platsfilen…',
+  'files.places.done': 'Platsfilen har laddats ner.',
   'files.calendar.live.action': 'Uppdaterad kalenderlänk',
   'files.calendar.live.title': 'Uppdaterad kalenderlänk',
   'files.calendar.warning':
@@ -1217,6 +1225,21 @@ const messages = {
   'vacay.error.title': 'Ledighetsplaneraren gick inte att läsa in',
   'vacay.year.previous': 'Föregående år',
   'vacay.year.next': 'Nästa år',
+  'vacay.settings.open': 'Inställningar för ledighetsplanen',
+  'vacay.settings.title': 'Inställningar för ledighetsplanen',
+  'vacay.settings.description':
+    'Hur oanvända dagar förs över och hur många dagar du har som standard.',
+  'vacay.settings.carryOver': 'För över oanvända dagar till nästa år',
+  'vacay.settings.carryOver.hint':
+    'Om du stänger av det döljs överförda dagar, men de raderas inte.',
+  'vacay.settings.defaultAllowance': 'Standardkvot (dagar per år)',
+  'vacay.settings.defaultAllowance.hint':
+    'Gäller för år där du inte har angett en egen kvot.',
+  'vacay.settings.save': 'Spara inställningar',
+  'vacay.settings.cancel': 'Avbryt',
+  'vacay.settings.saved': 'Inställningarna för ledighetsplanen sparades.',
+  'vacay.settings.error':
+    'Inställningarna för ledighetsplanen kunde inte sparas. Inget ändrades.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

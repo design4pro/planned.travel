@@ -9,6 +9,12 @@ import {
   Users,
 } from 'lucide-react'
 
+import { WorkspaceInvitations } from '#/components/layout/workspace-invitations'
+import {
+  inviteWorkspaceFn,
+  resendWorkspaceInvitationFn,
+  revokeWorkspaceInvitationFn,
+} from '#/server/fns/workspace-invitations'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { MemberDepartureControl } from '#/components/layout/member-departure-control'
@@ -359,6 +365,25 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                 })}
               </ul>
             </Panel>
+
+            <WorkspaceInvitations
+              invitations={data.invitations}
+              roles={data.invitationRoles}
+              now={data.now}
+              reload={async () => {
+                await router.invalidate()
+              }}
+              onAction={async (action, input) => {
+                if (action === 'invite' && 'email' in input)
+                  return inviteWorkspaceFn({ data: input })
+                if ('invitationId' in input) {
+                  if (action === 'resend')
+                    return resendWorkspaceInvitationFn({ data: input })
+                  return revokeWorkspaceInvitationFn({ data: input })
+                }
+                return { ok: false, reason: 'not-permitted' }
+              }}
+            />
 
             <Panel
               label={t('shell.admin.members.label')}

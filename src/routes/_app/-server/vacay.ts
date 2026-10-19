@@ -14,6 +14,8 @@ import {
   idSchema,
   saveAllowance,
   setEntitlementInput,
+  updatePlanSettings,
+  updatePlanSettingsInput,
   yearSchema,
 } from '#/server/repos'
 import { appScope } from './context'
@@ -42,6 +44,12 @@ export interface AllowanceSaved {
   readonly superseded: { readonly year: number; readonly was: number } | null
 }
 
+export interface VacayPlanSettings {
+  readonly id: string
+  readonly carryOverEnabled: boolean
+  readonly defaultEntitlementDays: number
+}
+
 /** The caller's own balance for one year; there is no way to ask for anyone else's here. */
 export const loadVacayAllowance = createServerFn({ method: 'GET' })
   .validator(z.object({ planId: idSchema, year: yearSchema }))
@@ -63,5 +71,19 @@ export const setAllowanceFn = createServerFn({ method: 'POST' })
         carriedOverDays: row.carriedOverDays,
       },
       superseded,
+    }
+  })
+
+/** The plan settings the dialog owns; only the plan's owner gets past the repository. */
+export const updateVacayPlanFn = createServerFn({ method: 'POST' })
+  .validator(updatePlanSettingsInput.extend({ planId: idSchema }))
+  .handler(async ({ data }): Promise<VacayPlanSettings> => {
+    const { planId, ...patch } = data
+    const scope = await appScope()
+    const plan = await updatePlanSettings(scope, planId, patch)
+    return {
+      id: plan.id,
+      carryOverEnabled: plan.carryOverEnabled,
+      defaultEntitlementDays: plan.defaultEntitlementDays,
     }
   })

@@ -25,6 +25,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Davet et',
+  'workspace.invite.resend': 'Yeniden gönder',
+  'workspace.invite.revoke': 'İptal et',
+  'workspace.invite.confirm': 'Daveti iptal et',
+  'workspace.invite.expired': 'Süresi doldu',
+  'workspace.invite.by': 'Davet eden: {name}',
+  'workspace.invite.sent': 'Davet gönderildi',
+  'workspace.invite.revoked': 'Davet iptal edildi',
+  'workspace.invite.delivery':
+    'Davet kaydedildi ancak e-posta gönderilemedi. Yeniden gönderin.',
+  'workspace.invite.duplicate':
+    'Bekleyen bir davet zaten var. Yeniden gönderin.',
+  'workspace.invite.existing': 'Bu kişi zaten çalışma alanının üyesi.',
+  'workspace.invite.failed':
+    'Davet kullanılamıyor. Listeyi yenileyip tekrar deneyin.',
+  'workspace.invite.reload': 'Davetleri yenile',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Hesap',
   'page.title': 'Ayarlar',

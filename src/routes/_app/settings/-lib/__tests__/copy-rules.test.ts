@@ -52,6 +52,14 @@ const NAV_FILE = join(
  * it, the same way it reaches out for the nav.
  */
 const PLAN_COPY_FILE = join(process.cwd(), 'src', 'lib', 'plan-copy.ts')
+/** Workspace invitation copy is also consumed by the shared console panel. */
+const WORKSPACE_INVITATIONS_FILE = join(
+  process.cwd(),
+  'src',
+  'components',
+  'layout',
+  'workspace-invitations.tsx',
+)
 /**
  * The basemap picker, which sits beside the nav in `_app/-ui/` for the same
  * reason the nav does: it is mounted by a settings screen but is not a route.
@@ -111,6 +119,10 @@ function shippedSources(): ReadonlyArray<Source> {
   }
 
   walk(SETTINGS_DIR)
+  files.push({
+    path: WORKSPACE_INVITATIONS_FILE,
+    text: readFileSync(WORKSPACE_INVITATIONS_FILE, 'utf8'),
+  })
   files.push({ path: NAV_FILE, text: readFileSync(NAV_FILE, 'utf8') })
   files.push({
     path: BASEMAP_PICKER_FILE,

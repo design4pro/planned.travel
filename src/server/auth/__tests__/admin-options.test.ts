@@ -186,6 +186,8 @@ describe('the organization member-write paths are closed beside the admin list (
       endpoints.updateMemberRole.path,
       endpoints.removeMember.path,
       endpoints.leaveOrganization.path,
+      endpoints.createInvitation.path,
+      endpoints.cancelInvitation.path,
     ])
     expect(endpoints.updateMemberRole.path).toBe(
       '/organization/update-member-role',

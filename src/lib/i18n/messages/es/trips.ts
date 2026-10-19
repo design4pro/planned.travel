@@ -519,6 +519,64 @@ const messages = {
     'No se pudo unir al viaje. El enlace sigue funcionando; inténtalo de nuevo.',
   'join.error.switch':
     'No se pudo cambiar de espacio de trabajo. Inténtalo de nuevo.',
+
+  'invite.title': 'Enlace de invitación',
+  'invite.description':
+    'Cualquier persona de este espacio que abra el enlace se une al viaje.',
+  'invite.empty.title': 'Aún no hay enlace',
+  'invite.empty.body':
+    'Crea un enlace y compártelo en el chat del grupo para que las personas de este espacio puedan unirse.',
+  'invite.action.create': 'Crear enlace',
+  'invite.link.label': 'Enlace de invitación',
+  'invite.copy': 'Copiar enlace',
+  'invite.copied': 'Enlace copiado',
+  'invite.copyFailed':
+    'No se pudo copiar. Selecciona el enlace y cópialo manualmente.',
+  'invite.switch.label':
+    'Cualquiera de este espacio con el enlace puede unirse',
+  'invite.switch.onHint':
+    'Desactivarlo invalida el enlace para todos, incluidas las copias ya enviadas.',
+  'invite.switch.offHint':
+    'Al reactivarlo se crea un enlace nuevo. Los anteriores siguen sin funcionar.',
+  'invite.off.body': 'El enlace está desactivado. Nadie puede unirse con él.',
+  'invite.uses': {
+    one: 'Personas que se unieron con este enlace: {count}',
+    many: 'Personas que se unieron con este enlace: {count}',
+    other: 'Personas que se unieron con este enlace: {count}',
+  },
+  'invite.uses.never': 'Nadie se ha unido con este enlace todavía.',
+  'invite.lastUsed': 'Última incorporación: {when}',
+  'invite.role.upgrade.title': '¿Dar permiso de edición?',
+  'invite.role.upgrade.body':
+    'Se aplica a todas las copias ya enviadas y a quienes se unan a partir de ahora.',
+  'invite.role.upgrade.confirm': 'Dar permiso de edición',
+  'invite.replace.action': 'Reemplazar enlace',
+  'invite.replace.title': '¿Reemplazar este enlace?',
+  'invite.replace.body':
+    'El enlace anterior dejará de funcionar de inmediato para todos. Quienes ya se unieron seguirán en el viaje; elimínalos de la lista inferior si es necesario.',
+  'invite.replace.deadBody':
+    'El enlace anterior ya no funciona. Quienes ya se unieron siguen en el viaje.',
+  'invite.replace.confirm': 'Reemplazar enlace',
+  'invite.replace.pending': 'Reemplazando el enlace',
+  'invite.stale': 'Este enlace ya no funciona. Reemplázalo.',
+  'invite.creatorGone':
+    'El enlace dejó de funcionar porque su creador ya no es propietario. Reemplázalo.',
+  'invite.archived':
+    'Este viaje está archivado. El enlace volverá a funcionar al restaurarlo.',
+  'invite.announce.created': 'Enlace de invitación creado',
+  'invite.announce.roleEditor': 'Quienes se unan podrán editar',
+  'invite.announce.off': 'Enlace de invitación desactivado',
+  'invite.announce.newLink':
+    'El nuevo enlace está listo. Cópialo y envíalo de nuevo.',
+  'invite.announce.roleViewer': 'Quienes se unan podrán ver el viaje',
+  'invite.error.title': 'No se pudo cargar el enlace',
+  'invite.error.retry': 'Reintentar',
+  'invite.refusal.archived': 'Este viaje está archivado.',
+  'invite.refusal.notOwner':
+    'Solo un propietario del viaje puede cambiar el enlace.',
+  'invite.refusal.changed': 'Alguien cambió el enlace. Se muestra el actual.',
+  'invite.announce.recovered':
+    'Se muestran los ajustes actuales del enlace. Revísalos antes de hacer otro cambio.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

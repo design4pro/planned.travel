@@ -33,6 +33,23 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Запросити',
+  'workspace.invite.resend': 'Надіслати повторно',
+  'workspace.invite.revoke': 'Відкликати',
+  'workspace.invite.confirm': 'Відкликати запрошення',
+  'workspace.invite.expired': 'Термін минув',
+  'workspace.invite.by': 'Запрошує {name}',
+  'workspace.invite.sent': 'Запрошення надіслано',
+  'workspace.invite.revoked': 'Запрошення відкликано',
+  'workspace.invite.delivery':
+    'Запрошення збережено, але лист не надіслано. Надішліть повторно.',
+  'workspace.invite.duplicate':
+    'Запрошення вже очікує відповіді. Надішліть повторно.',
+  'workspace.invite.existing': 'Ця людина вже є учасником робочого простору.',
+  'workspace.invite.failed':
+    'Запрошення недоступне. Оновіть список і спробуйте знову.',
+  'workspace.invite.reload': 'Оновити запрошення',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Акаунт',
   'page.title': 'Налаштування',

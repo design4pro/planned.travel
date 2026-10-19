@@ -516,6 +516,64 @@ const messages = {
     'No s’ha pogut entrar al viatge. L’enllaç encara funciona; torna-ho a provar.',
   'join.error.switch':
     'No s’ha pogut canviar d’espai de treball. Torna-ho a provar.',
+
+  'invite.title': 'Enllaç d’invitació',
+  'invite.description':
+    'Qualsevol persona d’aquest espai que obri l’enllaç s’uneix al viatge.',
+  'invite.empty.title': 'Encara no hi ha cap enllaç',
+  'invite.empty.body':
+    'Crea un enllaç i comparteix-lo al xat del grup perquè les persones d’aquest espai s’hi puguin unir.',
+  'invite.action.create': 'Crea l’enllaç',
+  'invite.link.label': 'Enllaç d’invitació',
+  'invite.copy': 'Copia l’enllaç',
+  'invite.copied': 'Enllaç copiat',
+  'invite.copyFailed':
+    'No s’ha pogut copiar. Selecciona l’enllaç i copia’l manualment.',
+  'invite.switch.label':
+    'Qualsevol persona d’aquest espai amb l’enllaç s’hi pot unir',
+  'invite.switch.onHint':
+    'Desactivar-lo invalida l’enllaç per a tothom, incloses les còpies ja enviades.',
+  'invite.switch.offHint':
+    'Reactivar-lo crea un enllaç nou. Els anteriors continuen sense funcionar.',
+  'invite.off.body': 'L’enllaç està desactivat. Ningú no s’hi pot unir.',
+  'invite.uses': {
+    one: 'Persones que s’han unit amb aquest enllaç: {count}',
+    many: 'Persones que s’han unit amb aquest enllaç: {count}',
+    other: 'Persones que s’han unit amb aquest enllaç: {count}',
+  },
+  'invite.uses.never': 'Encara ningú no s’ha unit amb aquest enllaç.',
+  'invite.lastUsed': 'Última incorporació: {when}',
+  'invite.role.upgrade.title': 'Voleu donar permís d’edició?',
+  'invite.role.upgrade.body':
+    'S’aplica a totes les còpies ja enviades i a qui s’uneixi a partir d’ara.',
+  'invite.role.upgrade.confirm': 'Dona permís d’edició',
+  'invite.replace.action': 'Substitueix l’enllaç',
+  'invite.replace.title': 'Voleu substituir aquest enllaç?',
+  'invite.replace.body':
+    'L’enllaç anterior deixarà de funcionar immediatament per a tothom. Qui ja s’ha unit continuarà al viatge; elimina’l de la llista inferior si cal.',
+  'invite.replace.deadBody':
+    'L’enllaç anterior ja no funciona. Qui ja s’ha unit continua al viatge.',
+  'invite.replace.confirm': 'Substitueix l’enllaç',
+  'invite.replace.pending': 'S’està substituint l’enllaç',
+  'invite.stale': 'Aquest enllaç ja no funciona. Substitueix-lo.',
+  'invite.creatorGone':
+    'L’enllaç ja no funciona perquè qui el va crear ja no és propietari. Substitueix-lo.',
+  'invite.archived':
+    'Aquest viatge està arxivat. L’enllaç tornarà a funcionar quan es restauri.',
+  'invite.announce.created': 'Enllaç d’invitació creat',
+  'invite.announce.roleEditor': 'Qui s’uneixi podrà editar',
+  'invite.announce.off': 'Enllaç d’invitació desactivat',
+  'invite.announce.newLink':
+    'El nou enllaç ja està llest. Copia’l i envia’l de nou.',
+  'invite.announce.roleViewer': 'Qui s’uneixi podrà veure el viatge',
+  'invite.error.title': 'No s’ha pogut carregar l’enllaç',
+  'invite.error.retry': 'Torna-ho a provar',
+  'invite.refusal.archived': 'Aquest viatge està arxivat.',
+  'invite.refusal.notOwner':
+    'Només un propietari del viatge pot canviar l’enllaç.',
+  'invite.refusal.changed': 'Algú ha canviat l’enllaç. Es mostra l’actual.',
+  'invite.announce.recovered':
+    'Es mostren els ajustos actuals de l’enllaç. Revisa’ls abans de fer un altre canvi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

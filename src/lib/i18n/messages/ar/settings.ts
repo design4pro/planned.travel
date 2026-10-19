@@ -29,6 +29,21 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'دعوة',
+  'workspace.invite.resend': 'إعادة الإرسال',
+  'workspace.invite.revoke': 'إلغاء',
+  'workspace.invite.confirm': 'إلغاء الدعوة',
+  'workspace.invite.expired': 'منتهية الصلاحية',
+  'workspace.invite.by': 'دعوة من {name}',
+  'workspace.invite.sent': 'تم إرسال الدعوة',
+  'workspace.invite.revoked': 'تم إلغاء الدعوة',
+  'workspace.invite.delivery':
+    'تم حفظ الدعوة، لكن تعذر إرسال البريد. أعد الإرسال للمحاولة مجددًا.',
+  'workspace.invite.duplicate': 'توجد دعوة معلقة بالفعل. أعد إرسالها.',
+  'workspace.invite.existing': 'هذا الشخص عضو بالفعل في مساحة العمل.',
+  'workspace.invite.failed': 'الدعوة غير متاحة. حدّث القائمة وحاول مجددًا.',
+  'workspace.invite.reload': 'تحديث الدعوات',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'الحساب',
   'page.title': 'الإعدادات',

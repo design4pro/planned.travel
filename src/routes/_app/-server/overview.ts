@@ -23,7 +23,7 @@ import {
   listJourneysWithCounts,
   listMemberProfiles,
   listNotifications,
-  listPendingInvitations,
+  listPendingInvitationProfiles,
   listTrips,
   markAllRead,
   markRead,
@@ -585,6 +585,15 @@ export interface AdminPayload {
     readonly limit: number | null
   }>
   readonly members: ReadonlyArray<AdminMemberRow>
+  readonly invitationRoles: ReadonlyArray<OrganizationRole>
+  readonly invitations: ReadonlyArray<{
+    id: string
+    email: string
+    role: string | null
+    expiresAt: string
+    inviterName: string | null
+    inviterEmail: string | null
+  }>
   readonly pendingInvitations: number
   readonly audit: ReadonlyArray<AdminAuditRow>
   readonly actionCounts: ReadonlyArray<{
@@ -632,7 +641,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
       getDashboardSummary(scope, { today: serverToday() }),
       resolveQuotas(scope),
       listMemberProfiles(scope),
-      listPendingInvitations(scope),
+      listPendingInvitationProfiles(scope),
       listAuditLog(scope, { limit: 25 }),
       countAuditActions(scope, { limit: 8 }),
       listCollectionsWithCounts(scope),
@@ -695,6 +704,11 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
         image: row.image,
         joinedAt: isoOfRequired(row.joinedAt),
         assignableRoles: assignableRoles(scope.ctx.role, row.role),
+      })),
+      invitationRoles: assignableRoles(scope.ctx.role, 'member'),
+      invitations: invitations.map((row) => ({
+        ...row,
+        expiresAt: isoOfRequired(row.expiresAt),
       })),
       pendingInvitations: invitations.length,
       audit: audit.items.map((row) => ({

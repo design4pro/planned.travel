@@ -956,6 +956,15 @@ const messages = {
   'files.action.add': 'Dodaj pliki',
   'files.action.choose': 'Wybierz pliki',
   'files.action.upload': 'Wyślij pliki',
+  'files.places.title': 'Plik miejsc',
+  'files.places.description':
+    'Pobierz miejsca z tej podróży jako GeoJSON, również te bez współrzędnych.',
+  'files.places.action': 'Pobierz miejsca (.geojson)',
+  'files.places.empty': 'Dodaj miejsca do tej podróży, aby je pobrać.',
+  'files.places.error':
+    'Nie udało się przygotować pliku miejsc. Spróbuj ponownie.',
+  'files.places.pending': 'Przygotowywanie pliku miejsc…',
+  'files.places.done': 'Pobrano plik miejsc.',
   'files.calendar.live.action': 'Aktualizowany link kalendarza',
   'files.calendar.live.title': 'Aktualizowany link kalendarza',
   'files.calendar.warning':
@@ -1304,6 +1313,21 @@ const messages = {
   'vacay.error.title': 'Nie udało się wczytać planera urlopów',
   'vacay.year.previous': 'Poprzedni rok',
   'vacay.year.next': 'Następny rok',
+  'vacay.settings.open': 'Ustawienia planu urlopów',
+  'vacay.settings.title': 'Ustawienia planu urlopów',
+  'vacay.settings.description':
+    'Jak przenoszone są niewykorzystane dni i ile dni masz domyślnie.',
+  'vacay.settings.carryOver': 'Przenoś niewykorzystane dni na następny rok',
+  'vacay.settings.carryOver.hint':
+    'Wyłączenie ukrywa przeniesione dni, ale ich nie usuwa.',
+  'vacay.settings.defaultAllowance': 'Domyślny limit (dni w roku)',
+  'vacay.settings.defaultAllowance.hint':
+    'Dotyczy lat, w których nie ustawiono własnego limitu.',
+  'vacay.settings.save': 'Zapisz ustawienia',
+  'vacay.settings.cancel': 'Anuluj',
+  'vacay.settings.saved': 'Zapisano ustawienia planu urlopów.',
+  'vacay.settings.error':
+    'Nie udało się zapisać ustawień planu urlopów. Nic nie zostało zmienione.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

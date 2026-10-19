@@ -889,6 +889,14 @@ const messages = {
   'files.action.add': 'Thêm tệp',
   'files.action.choose': 'Chọn tệp',
   'files.action.upload': 'Tải tệp lên',
+  'files.places.title': 'Tệp địa điểm',
+  'files.places.description':
+    'Tải các địa điểm của chuyến đi này dưới dạng GeoJSON, bao gồm cả những địa điểm không có tọa độ.',
+  'files.places.action': 'Tải địa điểm (.geojson)',
+  'files.places.empty': 'Thêm địa điểm vào chuyến đi này để tải xuống.',
+  'files.places.error': 'Không thể chuẩn bị tệp địa điểm. Hãy thử lại.',
+  'files.places.pending': 'Đang chuẩn bị tệp địa điểm…',
+  'files.places.done': 'Đã tải tệp địa điểm.',
   'files.calendar.live.action': 'Liên kết lịch cập nhật',
   'files.calendar.live.title': 'Liên kết lịch cập nhật',
   'files.calendar.warning':
@@ -1170,6 +1178,21 @@ const messages = {
   'vacay.error.title': 'Không thể tải trình lập kế hoạch nghỉ phép',
   'vacay.year.previous': 'Năm trước',
   'vacay.year.next': 'Năm sau',
+  'vacay.settings.open': 'Cài đặt kế hoạch nghỉ phép',
+  'vacay.settings.title': 'Cài đặt kế hoạch nghỉ phép',
+  'vacay.settings.description':
+    'Cách chuyển ngày phép chưa dùng sang năm sau và số ngày bạn có theo mặc định.',
+  'vacay.settings.carryOver': 'Chuyển ngày phép chưa dùng sang năm sau',
+  'vacay.settings.carryOver.hint':
+    'Tắt tùy chọn này sẽ ẩn các ngày đã chuyển, chứ không xóa chúng.',
+  'vacay.settings.defaultAllowance': 'Số ngày phép mặc định (ngày mỗi năm)',
+  'vacay.settings.defaultAllowance.hint':
+    'Áp dụng cho những năm bạn chưa tự đặt số ngày phép.',
+  'vacay.settings.save': 'Lưu cài đặt',
+  'vacay.settings.cancel': 'Hủy',
+  'vacay.settings.saved': 'Đã lưu cài đặt kế hoạch nghỉ phép.',
+  'vacay.settings.error':
+    'Không thể lưu cài đặt kế hoạch nghỉ phép. Chưa có gì thay đổi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

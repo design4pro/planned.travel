@@ -906,6 +906,14 @@ const messages = {
   'files.action.add': 'Dosya ekle',
   'files.action.choose': 'Dosya seç',
   'files.action.upload': 'Dosyaları yükle',
+  'files.places.title': 'Yerler dosyası',
+  'files.places.description':
+    'Koordinatı olmayan yerler dahil bu gezinin yerlerini GeoJSON olarak indirin.',
+  'files.places.action': 'Yerleri indir (.geojson)',
+  'files.places.empty': 'İndirmek için bu geziye yer ekleyin.',
+  'files.places.error': 'Yerler dosyası hazırlanamadı. Tekrar deneyin.',
+  'files.places.pending': 'Yerler dosyası hazırlanıyor…',
+  'files.places.done': 'Yerler dosyası indirildi.',
   'files.calendar.live.action': 'Güncellenen takvim bağlantısı',
   'files.calendar.live.title': 'Güncellenen takvim bağlantısı',
   'files.calendar.warning':
@@ -1212,6 +1220,21 @@ const messages = {
   'vacay.error.title': 'İzin planlayıcı yüklenemedi',
   'vacay.year.previous': 'Önceki yıl',
   'vacay.year.next': 'Sonraki yıl',
+  'vacay.settings.open': 'İzin planı ayarları',
+  'vacay.settings.title': 'İzin planı ayarları',
+  'vacay.settings.description':
+    'Kullanılmayan günlerin nasıl devredildiği ve varsayılan olarak kaç gününüz olduğu.',
+  'vacay.settings.carryOver': 'Kullanılmayan günleri sonraki yıla devret',
+  'vacay.settings.carryOver.hint':
+    'Kapatırsanız devredilen günler gizlenir, ancak silinmez.',
+  'vacay.settings.defaultAllowance': 'Varsayılan hak (yıllık gün sayısı)',
+  'vacay.settings.defaultAllowance.hint':
+    'Kendi hakkınızı belirlemediğiniz yıllar için geçerlidir.',
+  'vacay.settings.save': 'Ayarları kaydet',
+  'vacay.settings.cancel': 'İptal',
+  'vacay.settings.saved': 'İzin planı ayarları kaydedildi.',
+  'vacay.settings.error':
+    'İzin planı ayarları kaydedilemedi. Hiçbir şey değişmedi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

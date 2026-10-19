@@ -11,6 +11,7 @@ import { z } from 'zod'
 import {
   NotFoundError,
   getMemberBalances,
+  countTripPlaces,
   getStorageUsage,
   getTripItinerary,
   getTripSpendSummary,
@@ -536,6 +537,7 @@ export interface FileRow {
 }
 
 export interface FilesPayload {
+  readonly hasPlaces: boolean
   readonly files: ReadonlyArray<FileRow>
   readonly tripBytes: number
   readonly workspaceBytes: number
@@ -556,15 +558,18 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
 
-    const [files, tripBytes, usage, quotas, people] = await Promise.all([
-      listTripFiles(scope, trip.id),
-      getTripStorageBytes(scope, trip.id),
-      getStorageUsage(scope),
-      resolveQuotas(scope),
-      loadPeople(trip.id, scope),
-    ])
+    const [files, tripBytes, usage, quotas, people, placeCount] =
+      await Promise.all([
+        listTripFiles(scope, trip.id),
+        getTripStorageBytes(scope, trip.id),
+        getStorageUsage(scope),
+        resolveQuotas(scope),
+        loadPeople(trip.id, scope),
+        countTripPlaces(scope, trip.id),
+      ])
 
     return {
+      hasPlaces: placeCount > 0,
       tripBytes,
       people,
       hasDates: trip.startDate !== null,
