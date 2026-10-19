@@ -338,4 +338,107 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
       await expect(deletion).toBeHidden()
     }
   })
+  test('keeps recovery headings visible below sticky navigation', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await unblockCrossOriginFonts(page)
+    await useSession(context, page, baseURL)
+    await visit(page, { name: 'trips', path: '/trips', ready: 'main' }, 'light')
+    const title = `Invite focus proof ${Date.now()}`
+    await page
+      .getByRole('button', { name: 'New trip', exact: true })
+      .first()
+      .click()
+    const creation = page.getByRole('dialog')
+    await creation.getByLabel('Trip name').fill(title)
+    await creation
+      .getByRole('button', { name: 'Create trip', exact: true })
+      .click()
+    await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
+    const path = new URL(page.url()).pathname.replace(/\/plan$/, '/people')
+    try {
+      await visit(page, { name: 'people', path, ready: 'main' }, 'light')
+      const panel = page.getByRole('region', {
+        name: 'Invite link',
+        exact: true,
+      })
+      await panel
+        .getByRole('button', { name: 'Create link', exact: true })
+        .click()
+      await expect(
+        panel.getByRole('button', { name: 'Copy link', exact: true }),
+      ).toBeVisible()
+      const heading = panel.getByRole('heading', {
+        name: 'Invite link',
+        exact: true,
+      })
+      const assertVisibleFocus = async () => {
+        await expect(heading).toBeFocused()
+        await expect
+          .poll(() =>
+            heading.evaluate((node) => {
+              const rect = node.getBoundingClientRect()
+              if (rect.top < 0 || rect.bottom > window.innerHeight) return false
+              return [
+                rect.top + 1,
+                rect.top + rect.height / 2,
+                rect.bottom - 1,
+              ].every((y) => {
+                const hit = document.elementFromPoint(
+                  rect.left + rect.width / 2,
+                  y,
+                )
+                return hit !== null && node.contains(hit)
+              })
+            }),
+          )
+          .toBe(true)
+      }
+      for (const viewport of [
+        { width: 360, height: 800 },
+        { width: 1440, height: 900 },
+      ]) {
+        await page.setViewportSize(viewport)
+        try {
+          await context.setOffline(true)
+          await panel.getByRole('switch').click()
+          await expect(panel.getByRole('alert')).toBeVisible()
+          await assertVisibleFocus()
+          await test.info().attach(`recovery-error-${viewport.width}`, {
+            body: await page.screenshot(),
+            contentType: 'image/png',
+          })
+        } finally {
+          await context.setOffline(false)
+        }
+        await panel
+          .getByRole('button', { name: 'Try again', exact: true })
+          .click()
+        await expect(
+          panel.getByRole('button', { name: 'Copy link', exact: true }),
+        ).toBeVisible()
+        await assertVisibleFocus()
+        await test.info().attach(`recovery-retry-${viewport.width}`, {
+          body: await page.screenshot({ mask: [panel.getByRole('textbox')] }),
+          contentType: 'image/png',
+        })
+      }
+    } finally {
+      await context.setOffline(false)
+      await page.goto(`${baseURL}/trips`)
+      await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
+      await page
+        .getByRole('button', { name: `Actions for ${title}`, exact: true })
+        .click()
+      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+      const deletion = page.getByRole('dialog')
+      await deletion
+        .getByRole('button', { name: 'Delete permanently', exact: true })
+        .click()
+      await expect(deletion).toBeHidden()
+    }
+  })
 })

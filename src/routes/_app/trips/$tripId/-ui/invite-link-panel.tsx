@@ -120,6 +120,15 @@ export function InviteLinkPanel({
     return apply(answer)
   }
 
+  function focusControl(control: HTMLButtonElement | null) {
+    if (control) {
+      control.focus()
+      return
+    }
+    heading.current?.focus({ preventScroll: true })
+    heading.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
+  }
+
   async function run(
     work: () => Promise<InviteAnswer<{ secret?: string | null }>>,
     success: MessageKey,
@@ -174,10 +183,9 @@ export function InviteLinkPanel({
       if (mounted.current) {
         setBusy(false)
         requestAnimationFrame(() => {
-          if (focus === 'copy') (copy.current ?? heading.current)?.focus()
-          else if (focus === 'replace')
-            (replace.current ?? heading.current)?.focus()
-          else if (!previousFocus?.isConnected) heading.current?.focus()
+          if (focus === 'copy') focusControl(copy.current)
+          else if (focus === 'replace') focusControl(replace.current)
+          else if (!previousFocus?.isConnected) focusControl(null)
         })
       }
     }
@@ -195,7 +203,7 @@ export function InviteLinkPanel({
     } finally {
       lock.current = false
       setBusy(false)
-      requestAnimationFrame(() => heading.current?.focus())
+      requestAnimationFrame(() => focusControl(null))
     }
   }
 
@@ -267,7 +275,7 @@ export function InviteLinkPanel({
         id={`${id}-title`}
         tabIndex={-1}
         ref={heading}
-        className="text-title-sm font-semibold text-ink"
+        className="scroll-mt-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px+1rem)] text-title-sm font-semibold text-ink lg:scroll-mt-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+1rem)]"
       >
         {t('trips.invite.title')}
       </h2>
@@ -481,7 +489,7 @@ export function InviteLinkPanel({
           if (returnToCopy.current) {
             event.preventDefault()
             requestAnimationFrame(() =>
-              (copy.current ?? replace.current ?? heading.current)?.focus(),
+              focusControl(copy.current ?? replace.current),
             )
             returnToCopy.current = false
           }
