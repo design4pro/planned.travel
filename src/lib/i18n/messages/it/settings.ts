@@ -641,6 +641,24 @@ const messages = {
   'passkeys.delete.removing': 'Rimozione della chiave d’accesso',
   'passkeys.delete.passwordRequired':
     'Inserisci la tua password per rimuovere questa chiave d’accesso.',
+  'workspace.departure.leave': 'Lascia lo spazio di lavoro',
+  'workspace.departure.remove': 'Rimuovi membro',
+  'workspace.departure.title': 'Terminare l’appartenenza a {workspace}?',
+  'workspace.departure.body':
+    '{name} perderà l’accesso a {workspace}. Il suo account e i viaggi e i registri dei costi conservati rimarranno.',
+  'workspace.departure.cancel': 'Annulla',
+  'workspace.departure.pending': 'Chiusura dell’appartenenza…',
+  'workspace.departure.lastOwner':
+    'Assegna il ruolo di proprietario a un altro membro prima di uscire o rimuovere questo proprietario.',
+  'workspace.departure.notPermitted':
+    'Il tuo ruolo attuale non consente di rimuovere questo membro. Aggiorna l’elenco dei membri prima di riprovare.',
+  'workspace.departure.notFound':
+    'Questa persona non è più membro di questo spazio di lavoro.',
+  'workspace.departure.impersonated':
+    'Interrompi la rappresentazione di un altro utente prima di modificare l’appartenenza allo spazio di lavoro.',
+  'workspace.departure.failed':
+    'Non è stato possibile confermare il risultato. Ricarica lo spazio di lavoro prima di riprovare.',
+  'workspace.departure.reload': 'Ricarica spazio di lavoro',
 } satisfies TranslationOf<typeof En>
 
 export default messages

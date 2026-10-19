@@ -8,6 +8,12 @@
  */
 import { createServerFn } from '@tanstack/react-start'
 
+import { getRequest } from '@tanstack/react-start/server'
+import { getAuth } from '#/server/auth'
+import { queueRoomEviction } from '#/server/auth/room-eviction'
+import { authDb } from '#/server/auth/db'
+import { resolveOrProvisionOrganization } from '#/server/auth/provisioning'
+import { departMember, memberDepartureInput } from './member-departure-writes'
 import { getSession } from '#/server/auth/session'
 import { appScope } from './context'
 import { changeMemberRoleInput, changeRole } from './member-role-writes'
@@ -20,6 +26,45 @@ export const changeMemberRoleFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<ChangeMemberRoleResult> => {
     return changeRole(
       { impersonated: isImpersonated(await getSession()), scope: appScope },
+      data,
+    )
+  })
+
+export const departMemberFn = createServerFn({ method: 'POST' })
+  .validator(memberDepartureInput)
+  .handler(async ({ data }) => {
+    const { headers } = getRequest()
+    const auth = getAuth()
+    return departMember(
+      {
+        impersonated: isImpersonated(await getSession()),
+        scope: appScope,
+        remove: (organizationId, memberId, self) =>
+          self
+            ? auth.api.leaveOrganization({ headers, body: { organizationId } })
+            : auth.api.removeMember({
+                headers,
+                body: { organizationId, memberIdOrEmail: memberId },
+              }),
+        repairOffboarding: (userId, organizationId) =>
+          queueRoomEviction(
+            userId,
+            [organizationId],
+            'product-departure-recovery',
+          ),
+        activateRemaining: async (userId) => {
+          const organizationId = await resolveOrProvisionOrganization(
+            authDb(),
+            userId,
+          )
+          if (!organizationId)
+            throw new Error('No remaining workspace for signed-in user.')
+          await auth.api.setActiveOrganization({
+            headers,
+            body: { organizationId },
+          })
+        },
+      },
       data,
     )
   })

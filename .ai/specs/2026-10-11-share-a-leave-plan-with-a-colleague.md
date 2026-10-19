@@ -68,7 +68,7 @@ Verified against the repository at HEAD:
   (`vacay.ts:152-156`), so "a traveller's accepted rows" cannot be a plain count, and the owner's row is "the viewer's own row" on
   their plan.
 - **Leaving a workspace takes only the membership.** People leave through Better Auth's endpoints (`src/server/auth/index.ts`), not
-  through `removeMember` in `members.ts` (which only tests call): every `vacay_*` row stays behind. The precedent for such rows
+  through `removeMember` in `members.ts` (the product auth adapter now calls it, #1008): every `vacay_*` row stays behind. The precedent for such rows
   (an orphaned journey, a stranded trip) is "kept, resolved at read time, comes back if the person returns".
 - **`notify()` writes one in-app row and consults nothing.** `src/server/repos/notifications.ts:129` stamps `senderUserId` and inserts
   (its params are `titleParams` / `bodyParams`); it never reads the preference matrix and queues no email. The composition layer

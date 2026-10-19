@@ -623,6 +623,24 @@ const messages = {
   'passkeys.delete.removing': 'Geçiş anahtarı kaldırılıyor',
   'passkeys.delete.passwordRequired':
     'Bu geçiş anahtarını kaldırmak için şifrenizi girin.',
+  'workspace.departure.leave': 'Çalışma alanından ayrıl',
+  'workspace.departure.remove': 'Üyeyi kaldır',
+  'workspace.departure.title': '{workspace} üyeliği sonlandırılsın mı?',
+  'workspace.departure.body':
+    '{name}, {workspace} erişimini kaybedecek. Hesabı, saklanan gezileri ve maliyet kayıtları kalacak.',
+  'workspace.departure.cancel': 'İptal',
+  'workspace.departure.pending': 'Üyelik sonlandırılıyor…',
+  'workspace.departure.lastOwner':
+    'Ayrılmadan veya bu sahibi kaldırmadan önce başka bir üyeyi sahip yapın.',
+  'workspace.departure.notPermitted':
+    'Mevcut rolünüz bu üyeyi kaldıramaz. Tekrar denemeden önce üye listesini yenileyin.',
+  'workspace.departure.notFound':
+    'Bu kişi artık bu çalışma alanının üyesi değil.',
+  'workspace.departure.impersonated':
+    'Çalışma alanı üyeliğini değiştirmeden önce başka bir kullanıcı olarak işlem yapmayı durdurun.',
+  'workspace.departure.failed':
+    'Sonuç doğrulanamadı. Tekrar denemeden önce çalışma alanını yeniden yükleyin.',
+  'workspace.departure.reload': 'Çalışma alanını yeniden yükle',
 } satisfies TranslationOf<typeof En>
 
 export default messages

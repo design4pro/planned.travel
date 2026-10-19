@@ -11,6 +11,8 @@ import {
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
+import { MemberDepartureControl } from '#/components/layout/member-departure-control'
+import { useMemberDeparture } from '#/components/layout/use-member-departure'
 import { MemberRoleControl } from '#/components/layout/member-role-control'
 import { PageHeader } from '#/components/layout/page-header'
 import { formatStorageSize } from '#/components/layout/storage-size'
@@ -164,6 +166,7 @@ function AdminDenied() {
 }
 
 function AdminConsole({ data }: { data: AdminPayload }) {
+  const depart = useMemberDeparture()
   const { t, locale } = useI18n()
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
   const planName = labelFor(PLAN_NAME, data.plan, t)
@@ -414,6 +417,15 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                             <span className="block truncate text-caption text-ink-3">
                               {member.email}
                             </span>
+                            {member.userId === data.viewerUserId ||
+                            member.assignableRoles.length > 0 ? (
+                              <MemberDepartureControl
+                                name={member.name}
+                                workspace={data.organization.name}
+                                self={member.userId === data.viewerUserId}
+                                onConfirm={() => depart(member.memberId)}
+                              />
+                            ) : null}
                           </span>
                         </span>
                       </TableCell>

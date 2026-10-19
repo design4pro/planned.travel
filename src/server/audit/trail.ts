@@ -60,6 +60,8 @@ export const AUDIT_ACTIONS = {
   WORKSPACE_DEFAULTS_CHANGED: 'workspace.defaults_changed',
   TRIP_CURRENCY_CHANGED: 'trip.currency_changed',
   MEMBER_ROLE_CHANGED: 'member.role_changed',
+  MEMBER_REMOVED: 'member.removed',
+  MEMBER_LEFT: 'member.left',
   TRIP_INVITE_ROTATED: 'trip_invite.rotated',
   TRIP_INVITE_UPDATED: 'trip_invite.updated',
   TRIP_MEMBER_JOINED: 'trip.member_joined',

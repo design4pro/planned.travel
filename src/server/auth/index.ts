@@ -32,6 +32,7 @@ import {
   impersonationCookieGuard,
   impersonationExpiryGuard,
 } from './impersonation-expiry'
+import { guardMemberDeletion } from './member-deletion'
 import { logAuth } from './log'
 import { recordParticipation } from './participation'
 import { passkey } from './passkey/plugin'
@@ -318,11 +319,11 @@ function buildAuth() {
     secret: authSecret(),
     trustedOrigins: trustedOrigins(),
 
-    database: drizzleAdapter(db, {
+    database: (options: Parameters<ReturnType<typeof drizzleAdapter>>[0]) => guardMemberDeletion(drizzleAdapter(db, {
       provider: 'sqlite',
       schema: authSchema,
       usePlural: false,
-    }),
+    })(options)),
 
     // Sessions, OAuth state and rate-limit counters live at the edge in KV;
     // D1 remains the durable record so a KV miss degrades to a slower read

@@ -639,6 +639,24 @@ const messages = {
   'passkeys.delete.removing': 'Odebíráme přístupový klíč',
   'passkeys.delete.passwordRequired':
     'Pro odebrání tohoto přístupového klíče zadejte své heslo.',
+  'workspace.departure.leave': 'Opustit pracovní prostor',
+  'workspace.departure.remove': 'Odebrat člena',
+  'workspace.departure.title': 'Ukončit členství v {workspace}?',
+  'workspace.departure.body':
+    '{name} ztratí přístup k {workspace}. Účet této osoby i uchované cesty a záznamy nákladů zůstanou zachovány.',
+  'workspace.departure.cancel': 'Zrušit',
+  'workspace.departure.pending': 'Ukončování členství…',
+  'workspace.departure.lastOwner':
+    'Před odchodem nebo odebráním tohoto vlastníka nastavte jiného člena jako vlastníka.',
+  'workspace.departure.notPermitted':
+    'Vaše aktuální role neumožňuje odebrat tohoto člena. Před dalším pokusem obnovte seznam členů.',
+  'workspace.departure.notFound':
+    'Tato osoba již není členem tohoto pracovního prostoru.',
+  'workspace.departure.impersonated':
+    'Před změnou členství v pracovním prostoru ukončete vydávání se za jiného uživatele.',
+  'workspace.departure.failed':
+    'Výsledek se nepodařilo potvrdit. Před dalším pokusem znovu načtěte pracovní prostor.',
+  'workspace.departure.reload': 'Znovu načíst pracovní prostor',
 } satisfies TranslationOf<typeof En>
 
 export default messages

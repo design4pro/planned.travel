@@ -646,6 +646,24 @@ const messages = {
   'passkeys.delete.removing': 'Eliminant la clau d’accés',
   'passkeys.delete.passwordRequired':
     'Introdueix la contrasenya per eliminar aquesta clau d’accés.',
+  'workspace.departure.leave': 'Surt de l’espai de treball',
+  'workspace.departure.remove': 'Elimina el membre',
+  'workspace.departure.title': 'Vols finalitzar la pertinença a {workspace}?',
+  'workspace.departure.body':
+    '{name} perdrà l’accés a {workspace}. El seu compte i els viatges i registres de despeses conservats es mantindran.',
+  'workspace.departure.cancel': 'Cancel·la',
+  'workspace.departure.pending': 'S’està finalitzant la pertinença…',
+  'workspace.departure.lastOwner':
+    'Fes propietari un altre membre abans de sortir o d’eliminar aquest propietari.',
+  'workspace.departure.notPermitted':
+    'El teu rol actual no permet eliminar aquest membre. Actualitza la llista de membres abans de tornar-ho a provar.',
+  'workspace.departure.notFound':
+    'Aquesta persona ja no és membre d’aquest espai de treball.',
+  'workspace.departure.impersonated':
+    'Deixa de suplantar la identitat abans de canviar la pertinença a l’espai de treball.',
+  'workspace.departure.failed':
+    'No s’ha pogut confirmar el resultat. Torna a carregar l’espai de treball abans de tornar-ho a provar.',
+  'workspace.departure.reload': 'Torna a carregar l’espai de treball',
 } satisfies TranslationOf<typeof En>
 
 export default messages

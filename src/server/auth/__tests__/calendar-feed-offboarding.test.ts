@@ -1,3 +1,6 @@
+import type { AuthDb } from '#/server/auth/db'
+import { departMember } from '#/server/fns/member-departure-writes'
+import { resolveOrProvisionOrganization } from '#/server/auth/provisioning'
 import {
   afterAll,
   afterEach,
@@ -154,11 +157,12 @@ async function signedInPerson(
 }
 
 describe('real BetterAuth offboarding invalidates calendar credentials', () => {
-  it.each(['remove', 'leave'] as const)(
-    'reads current membership after %s and never revives an old link after re-addition',
-    async (action) => {
+  it.each([['remove', false], ['leave', false], ['leave', true]] as const)(
+    'reads current membership after %s (provision=%s) and never revives an old link after re-addition',
+    async (action, provision) => {
       const owner = await signedInPerson('owner')
       const leaver = await signedInPerson('leaver')
+      if (provision) authDatabase.sqlite.prepare('delete from member where user_id = ?').run(leaver.userId)
       const organizationId = `feed_org_${action}`
       const initial = Date.now() - 1000
       authDatabase.sqlite
@@ -233,16 +237,34 @@ describe('real BetterAuth offboarding invalidates calendar credentials', () => {
       expect((await serveCalendarFeed(request(), runtime)).status).toBe(200)
       await Promise.all(pending)
 
-      if (action === 'remove')
-        await getAuth().api.removeMember({
-          body: { memberIdOrEmail: leaver.email, organizationId },
-          headers: owner.headers,
-        })
-      else
-        await getAuth().api.leaveOrganization({
-          body: { organizationId },
-          headers: leaver.headers,
-        })
+      const caller = action === 'remove' ? owner : leaver
+      await getAuth().api.setActiveOrganization({ headers: caller.headers, body: { organizationId } })
+      const outcome = await departMember({
+        impersonated: false,
+        scope: async () => action === 'remove' ? ownerScope : scope,
+        remove: (orgId, memberId, self) => self
+          ? getAuth().api.leaveOrganization({ headers: caller.headers, body: { organizationId: orgId } })
+          : getAuth().api.removeMember({ headers: caller.headers, body: { organizationId: orgId, memberIdOrEmail: memberId } }),
+        repairOffboarding: async () => {}, activateRemaining: async (userId) => {
+          const next = await resolveOrProvisionOrganization(shared.authDb.current as AuthDb, userId)
+          await getAuth().api.setActiveOrganization({ headers: caller.headers, body: { organizationId: next } })
+        },
+      }, { memberId: `${organizationId}_member` })
+      expect(outcome).toEqual({ ok: true, left: action === 'leave', activationFailed: false })
+      const session = await getAuth().api.getSession({ headers: caller.headers })
+      if (action === 'leave') {
+        expect(session?.session.activeOrganizationId).toBeTruthy()
+        expect(session?.session.activeOrganizationId).not.toBe(organizationId)
+        const active = authDatabase.sqlite.prepare('select role from member where user_id = ? and organization_id = ?').get(caller.userId, session?.session.activeOrganizationId ?? '')
+        expect(active).toEqual({ role: 'owner' })
+      }
+
+      expect(authDatabase.sqlite.prepare('select action, actor_user_id, entity_id from audit_log where organization_id = ?').all(organizationId)).toEqual([
+        { action: action === 'leave' ? 'member.left' : 'member.removed', actor_user_id: caller.userId, entity_id: `${organizationId}_member` },
+      ])
+      expect(shared.queued).toContainEqual(expect.objectContaining({ kind: 'trip-room-evict', orgId: organizationId, payload: { userId: leaver.userId } }))
+      const retry = await departMember({ impersonated: false, scope: async () => ownerScope, remove: async () => { throw new Error('must not call auth on stale target') }, repairOffboarding: async () => {}, activateRemaining: async () => {} }, { memberId: `${organizationId}_member` })
+      expect(retry).toEqual({ ok: false, reason: 'not-found' })
 
       expect(
         await authDatabase.db

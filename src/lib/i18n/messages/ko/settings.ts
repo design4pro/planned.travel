@@ -564,6 +564,24 @@ const messages = {
   'passkeys.delete.removing': '패스키를 삭제하는 중',
   'passkeys.delete.passwordRequired':
     '이 패스키를 삭제하려면 비밀번호를 입력해 주세요.',
+  'workspace.departure.leave': '워크스페이스 나가기',
+  'workspace.departure.remove': '멤버 제거',
+  'workspace.departure.title': '{workspace} 멤버십을 종료할까요?',
+  'workspace.departure.body':
+    '{name} 님이 {workspace}에 접근할 수 없게 됩니다. 계정과 보관된 여행 및 비용 기록은 유지됩니다.',
+  'workspace.departure.cancel': '취소',
+  'workspace.departure.pending': '멤버십 종료 중…',
+  'workspace.departure.lastOwner':
+    '나가거나 이 소유자를 제거하기 전에 다른 멤버를 소유자로 지정하세요.',
+  'workspace.departure.notPermitted':
+    '현재 역할로는 이 멤버를 제거할 수 없습니다. 멤버 목록을 새로고침한 후 다시 시도하세요.',
+  'workspace.departure.notFound':
+    '이 사람은 더 이상 이 워크스페이스의 멤버가 아닙니다.',
+  'workspace.departure.impersonated':
+    '워크스페이스 멤버십을 변경하기 전에 다른 사용자로 활동하는 모드를 종료하세요.',
+  'workspace.departure.failed':
+    '결과를 확인할 수 없습니다. 워크스페이스를 새로고침한 후 다시 시도하세요.',
+  'workspace.departure.reload': '워크스페이스 새로고침',
 } satisfies TranslationOf<typeof En>
 
 export default messages

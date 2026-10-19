@@ -10,7 +10,7 @@
  * reads it without that predicate.
  */
 
-import { and, asc, count, eq, exists, inArray, ne, notExists, sql } from 'drizzle-orm'
+import { and, asc, count, eq, exists, inArray, ne, notExists, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   INVITATION_STATUSES,
@@ -20,7 +20,7 @@ import {
   organization,
   user,
 } from '#/server/db/auth-schema'
-import { newId, subscriptions } from '#/server/db/schema'
+import { auditLog, newId, subscriptions } from '#/server/db/schema'
 import { findLivePaidSubscription, livePaidSubscription } from './billing'
 import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base'
 import {
@@ -29,6 +29,9 @@ import {
   RepositoryError,
   assertCanAdminister,
 } from './context'
+import { anotherOwner, hasStoredRole, memberAuthority, removalPredicate } from './member-guards'
+import { runBatch } from './batch'
+import { auditLogRepository } from './audit'
 import { recordParticipant } from './participants'
 import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
 import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
@@ -214,7 +217,7 @@ export async function listMembers(scope: TenantScope): Promise<Array<Member>> {
 export interface MemberProfile {
   readonly memberId: string
   readonly userId: string
-  readonly role: OrganizationRole
+  readonly role: string
   readonly name: string
   readonly email: string
   readonly image: string | null
@@ -242,10 +245,7 @@ export async function listMemberProfiles(scope: TenantScope): Promise<Array<Memb
     .where(tenantFilter(scope, member))
     .orderBy(asc(member.createdAt))
 
-  return rows.map((row) => ({
-    ...row,
-    role: roleSchema.catch('member').parse(row.role),
-  }))
+  return rows
 }
 
 export async function countMembers(scope: TenantScope): Promise<number> {
@@ -337,8 +337,8 @@ export interface MemberRoleChange {
 
 /**
  * Changes a role within the caller's ceiling ({@link assignableRoles}). The workspace must keep at
- * least one owner. Every refusal happens before the write, except `LAST_OWNER` after a concurrent
- * demotion, which puts the role back first.
+ * least one owner. Every refusal happens before the write, including concurrent
+ * demotions: authority and owner survival are conditions of the update itself.
  */
 export async function changeMemberRole(
   scope: TenantScope,
@@ -357,38 +357,129 @@ export async function changeMemberRole(
       ['owner'],
     )
   }
-  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope, memberId)) === 0) {
-    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
-  }
-  const updated = await membersRepository.requireUpdate(scope, memberId, { role: next })
-  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope)) === 0) {
-    // The count above and this write are separate statements, so two owners demoting each other at
-    // once each saw the other as the remaining owner. The loser puts the role back rather than leave
-    // a workspace nobody can administer or pay for.
-    await membersRepository.requireUpdate(scope, memberId, { role: row.role })
-    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  const updated = (
+    await scope.db
+      .update(member)
+      .set({ role: next })
+      .where(
+        tenantFilter(
+          scope,
+          member,
+          and(
+            eq(member.id, memberId),
+            eq(member.role, row.role),
+            memberAuthority(scope, false, next === 'owner'),
+            next === 'owner'
+              ? undefined
+              : or(
+                  sql`not (${hasStoredRole(member.role, 'owner')})`,
+                  anotherOwner(scope),
+                ),
+          ),
+        ),
+      )
+      .returning()
+  ).at(0)
+  if (!updated) {
+    const current = await membersRepository.requireById(scope, memberId)
+    if (
+      holdsOwnerRole(current.role) &&
+      next !== 'owner' &&
+      (await countOwners(scope, memberId)) === 0
+    ) {
+      throw new RepositoryError(
+        'A workspace needs at least one owner.',
+        'LAST_OWNER',
+      )
+    }
+    throw new ForbiddenError('change a member role', ['owner', 'admin'])
   }
   return { member: updated, previousRole: row.role }
 }
 
-/** Removes a member. The last owner cannot be removed. */
-export async function removeMember(scope: TenantScope, memberId: string): Promise<void> {
+/**
+ * One conditional deletion. In product mode the same guarded row writes the audit entry first,
+ * inside the same D1 batch. The auth adapter invokes this instead of its ordinary member delete,
+ * so Better Auth still owns the surrounding session and offboarding lifecycle.
+ */
+export async function removeMember(
+  scope: TenantScope,
+  memberId: string,
+  audited = false,
+): Promise<void> {
+  idSchema.parse(memberId)
   const row = await membersRepository.requireById(scope, memberId)
-  if (row.userId !== scope.ctx.userId) {
-    assertCanAdminister(scope.ctx, 'remove a member')
+  const actor = await getMembership(scope, scope.ctx.userId)
+  let actorRole: OrganizationRole = 'member'
+  if (actor && holdsOwnerRole(actor.role)) actorRole = 'owner'
+  else if (actor?.role === 'admin') actorRole = 'admin'
+  if (
+    !actor ||
+    (row.userId !== scope.ctx.userId &&
+      !assignableRoles(actorRole, row.role).length)
+  ) {
+    throw new ForbiddenError('remove a member', ['owner', 'admin'])
   }
-  if (row.role === 'owner' && (await countOwners(scope, memberId)) === 0) {
-    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  const predicate = removalPredicate(scope, memberId)
+  if (!audited) {
+    const deleted = await scope.db
+      .delete(member)
+      .where(predicate)
+      .returning({ id: member.id })
+    if (deleted.length) return
+  } else {
+    if (!('batch' in scope.db) || typeof scope.db.batch !== 'function') {
+      throw new RepositoryError(
+        'Membership audit requires an atomic database batch.',
+        'ATOMIC_BATCH_REQUIRED',
+      )
+    }
+    const auditId = newId()
+    const audit = scope.db.insert(auditLog).select(
+      scope.db
+        .select({
+          id: sql<string>`${auditId}`.as('id'),
+          organizationId: member.organizationId,
+          actorUserId: sql<string>`${scope.ctx.userId}`.as('actor_user_id'),
+          action:
+            sql<string>`case when ${member.userId} = ${scope.ctx.userId} then 'member.left' else 'member.removed' end`.as(
+              'action',
+            ),
+          entityType: sql<string>`'member'`.as('entity_type'),
+          entityId: member.id,
+          metadata:
+            sql`json_object('targetUserId', ${member.userId}, 'role', ${member.role})`.as(
+              'metadata',
+            ),
+          ip: sql`null`.as('ip'),
+          userAgent: sql`null`.as('user_agent'),
+          createdAt: sql<number>`${Date.now()}`.as('created_at'),
+        })
+        .from(member)
+        .where(predicate),
+    )
+    await runBatch(scope, [audit, scope.db.delete(member).where(predicate)])
+    if (await auditLogRepository.findById(scope, auditId)) return
   }
-  await membersRepository.requireRemove(scope, memberId)
+  await membersRepository.requireById(scope, memberId)
+  if (holdsOwnerRole(row.role) && (await countOwners(scope, memberId)) === 0) {
+    throw new RepositoryError(
+      'A workspace needs at least one owner.',
+      'LAST_OWNER',
+    )
+  }
+  throw new ForbiddenError('remove a member', ['owner', 'admin'])
 }
 
 /** Owners other than `exceptMemberId`. */
-async function countOwners(scope: TenantScope, exceptMemberId?: string): Promise<number> {
+async function countOwners(
+  scope: TenantScope,
+  exceptMemberId?: string,
+): Promise<number> {
   return membersRepository.count(
     scope,
     and(
-      eq(member.role, 'owner'),
+      hasStoredRole(member.role, 'owner'),
       exceptMemberId ? ne(member.id, exceptMemberId) : undefined,
     ),
   )

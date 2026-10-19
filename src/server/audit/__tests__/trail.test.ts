@@ -372,6 +372,8 @@ describe('trail', () => {
       'workspace.defaults_changed',
       'trip.currency_changed',
       'member.role_changed',
+      'member.removed',
+      'member.left',
       'trip_invite.rotated',
       'trip_invite.updated',
       'trip.member_joined',

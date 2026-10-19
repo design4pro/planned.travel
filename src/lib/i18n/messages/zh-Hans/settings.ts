@@ -527,6 +527,22 @@ const messages = {
   'passkeys.delete.failed': '通行密钥未能删除。请重试。',
   'passkeys.delete.removing': '正在删除通行密钥',
   'passkeys.delete.passwordRequired': '请输入你的密码以删除这个通行密钥。',
+  'workspace.departure.leave': '退出工作区',
+  'workspace.departure.remove': '移除成员',
+  'workspace.departure.title': '结束在 {workspace} 的成员资格？',
+  'workspace.departure.body':
+    '{name} 将失去对 {workspace} 的访问权限。其账户以及保留的行程和费用记录将继续保留。',
+  'workspace.departure.cancel': '取消',
+  'workspace.departure.pending': '正在结束成员资格…',
+  'workspace.departure.lastOwner':
+    '退出或移除此所有者之前，请先将另一位成员设为所有者。',
+  'workspace.departure.notPermitted':
+    '您当前的角色无法移除此成员。请刷新成员列表后重试。',
+  'workspace.departure.notFound': '此人已不再是此工作区的成员。',
+  'workspace.departure.impersonated':
+    '更改工作区成员资格之前，请先停止模拟其他用户。',
+  'workspace.departure.failed': '无法确认结果。请重新加载工作区后重试。',
+  'workspace.departure.reload': '重新加载工作区',
 } satisfies TranslationOf<typeof En>
 
 export default messages

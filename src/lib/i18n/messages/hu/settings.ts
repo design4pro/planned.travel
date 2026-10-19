@@ -633,6 +633,24 @@ const messages = {
   'passkeys.delete.removing': 'A belépési kulcs eltávolítása folyamatban',
   'passkeys.delete.passwordRequired':
     'A belépési kulcs eltávolításához adja meg a jelszavát.',
+  'workspace.departure.leave': 'Munkaterület elhagyása',
+  'workspace.departure.remove': 'Tag eltávolítása',
+  'workspace.departure.title': 'Megszünteti a tagságot itt: {workspace}?',
+  'workspace.departure.body':
+    '{name} elveszíti a hozzáférést ehhez: {workspace}. A fiókja, valamint a megőrzött utak és költségnyilvántartások megmaradnak.',
+  'workspace.departure.cancel': 'Mégse',
+  'workspace.departure.pending': 'Tagság megszüntetése…',
+  'workspace.departure.lastOwner':
+    'Távozás vagy a tulajdonos eltávolítása előtt nevezzen ki egy másik tagot tulajdonosnak.',
+  'workspace.departure.notPermitted':
+    'Jelenlegi szerepköre nem teszi lehetővé a tag eltávolítását. Újabb próbálkozás előtt frissítse a tagok listáját.',
+  'workspace.departure.notFound':
+    'Ez a személy már nem tagja ennek a munkaterületnek.',
+  'workspace.departure.impersonated':
+    'A munkaterületi tagság módosítása előtt fejezze be a másik felhasználó megszemélyesítését.',
+  'workspace.departure.failed':
+    'Az eredmény nem erősíthető meg. Újabb próbálkozás előtt töltse újra a munkaterületet.',
+  'workspace.departure.reload': 'Munkaterület újratöltése',
 } satisfies TranslationOf<typeof En>
 
 export default messages

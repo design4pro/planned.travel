@@ -443,6 +443,7 @@ export const saveNotificationPreference = createServerFn({ method: 'POST' })
 /* ------------------------------------------------------------ organization */
 
 export interface OrganizationPayload {
+  readonly viewerUserId: string
   readonly organization: {
     readonly id: string
     readonly name: string
@@ -490,6 +491,7 @@ export const loadOrganizationSettings = createServerFn({
   return {
     plan: quotas.planId,
     viewerRole: scope.ctx.role,
+    viewerUserId: scope.ctx.userId,
     canAdminister: scope.ctx.role === 'owner' || scope.ctx.role === 'admin',
     seats: { used: seatsUsed, limit: quotas.limits.members },
     organization: {

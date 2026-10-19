@@ -62,7 +62,7 @@ Measured at HEAD (`86841140`), by reading the code.
   `exports/**` objects have no deleter (`dead-letter/**` got one in phase 7, see the amendment); the weekly retention slot of `src/server/worker.ts` logs
   "cron half has no handler yet" for the R2 half. Journey deletion never touches R2.
 - **Departure is not deletion.** A person leaves a workspace through Better Auth's organization endpoints or the console;
-  only their `member` row goes (`removeMember` has no production caller). Their rows in that workspace stay under a live
+  only their `member` row goes (`removeMember` now runs through the product auth adapter, #1008). Their rows in that workspace stay under a live
   id, and nothing records that they were ever there once the `member` row is gone.
 - **Audit.** The tenant `audit_log` has `pruneAuditLog`, which **nothing calls**: it has no retention. `platform_audit_log`
   is pruned at 400 days by the weekly cron and is append-only (`docs/ACCESS.md` §4.3).

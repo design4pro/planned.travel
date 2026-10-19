@@ -96,7 +96,7 @@ const FAILED_PAYMENT_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
  * route is closed, like update-member-role's), the product's own `changeMemberRoleFn` refuses to
  * demote it, and console account deletion (`deletePlatformUser`) refuses the only owner of a
  * workspace with other members.
- * The repository's `removeMember` guards nothing here: it has no production caller. An organization
+ * The repository's `removeMember` guards product departures through the auth adapter, not role updates. An organization
  * without an owner is therefore a row-level breakage (or a workspace whose only member was deleted)
  * that will not resolve itself: a permanent failure with a named
  * reason, never five retries.

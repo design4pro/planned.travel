@@ -622,6 +622,24 @@ const messages = {
   'passkeys.delete.removing': 'Menghapus kunci sandi',
   'passkeys.delete.passwordRequired':
     'Masukkan kata sandi Anda untuk menghapus kunci sandi ini.',
+  'workspace.departure.leave': 'Keluar dari ruang kerja',
+  'workspace.departure.remove': 'Hapus anggota',
+  'workspace.departure.title': 'Akhiri keanggotaan di {workspace}?',
+  'workspace.departure.body':
+    '{name} akan kehilangan akses ke {workspace}. Akun serta perjalanan dan catatan biaya yang disimpan akan tetap ada.',
+  'workspace.departure.cancel': 'Batal',
+  'workspace.departure.pending': 'Mengakhiri keanggotaan…',
+  'workspace.departure.lastOwner':
+    'Jadikan anggota lain sebagai pemilik sebelum keluar atau menghapus pemilik ini.',
+  'workspace.departure.notPermitted':
+    'Peran Anda saat ini tidak dapat menghapus anggota ini. Segarkan daftar anggota sebelum mencoba lagi.',
+  'workspace.departure.notFound':
+    'Orang ini bukan lagi anggota ruang kerja ini.',
+  'workspace.departure.impersonated':
+    'Hentikan penyamaran sebagai pengguna lain sebelum mengubah keanggotaan ruang kerja.',
+  'workspace.departure.failed':
+    'Hasilnya tidak dapat dikonfirmasi. Muat ulang ruang kerja sebelum mencoba lagi.',
+  'workspace.departure.reload': 'Muat ulang ruang kerja',
 } satisfies TranslationOf<typeof En>
 
 export default messages
