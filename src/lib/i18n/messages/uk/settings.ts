@@ -663,6 +663,9 @@ const messages = {
   'workspace.departure.failed':
     'Не вдалося підтвердити результат. Перезавантажте робочий простір перед повторною спробою.',
   'workspace.departure.reload': 'Перезавантажити робочий простір',
+  'workspace.departure.activationFailed':
+    'Ви залишили цей робочий простір. Відкрийте наступний, щоб продовжити.',
+  'workspace.departure.recover': 'Відкрити наступний простір',
 } satisfies TranslationOf<typeof En>
 
 export default messages

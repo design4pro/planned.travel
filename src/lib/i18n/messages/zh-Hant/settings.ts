@@ -547,6 +547,9 @@ const messages = {
     '變更工作區成員資格之前，請先停止模擬其他使用者。',
   'workspace.departure.failed': '無法確認結果。請重新載入工作區後再試。',
   'workspace.departure.reload': '重新載入工作區',
+  'workspace.departure.activationFailed':
+    '你已退出此工作空間。開啟下一個工作空間以繼續。',
+  'workspace.departure.recover': '開啟下一個工作空間',
 } satisfies TranslationOf<typeof En>
 
 export default messages

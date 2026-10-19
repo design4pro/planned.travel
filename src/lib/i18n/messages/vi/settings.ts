@@ -639,6 +639,9 @@ const messages = {
   'workspace.departure.failed':
     'Không thể xác nhận kết quả. Hãy tải lại không gian làm việc trước khi thử lại.',
   'workspace.departure.reload': 'Tải lại không gian làm việc',
+  'workspace.departure.activationFailed':
+    'Bạn đã rời không gian làm việc này. Mở không gian tiếp theo để tiếp tục.',
+  'workspace.departure.recover': 'Mở không gian tiếp theo',
 } satisfies TranslationOf<typeof En>
 
 export default messages

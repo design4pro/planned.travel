@@ -657,6 +657,9 @@ const messages = {
   'workspace.departure.failed':
     'Výsledek se nepodařilo potvrdit. Před dalším pokusem znovu načtěte pracovní prostor.',
   'workspace.departure.reload': 'Znovu načíst pracovní prostor',
+  'workspace.departure.activationFailed':
+    'Tento pracovní prostor jste opustili. Pokračujte otevřením dalšího.',
+  'workspace.departure.recover': 'Otevřít další prostor',
 } satisfies TranslationOf<typeof En>
 
 export default messages

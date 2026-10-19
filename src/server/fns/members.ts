@@ -7,6 +7,8 @@
  * comes from the scope, re-read from `member`, never from the payload.
  */
 import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
+import { requireUserFrom } from '#/server/auth/tenant'
 
 import { getRequest } from '@tanstack/react-start/server'
 import { getAuth } from '#/server/auth'
@@ -67,4 +69,23 @@ export const departMemberFn = createServerFn({ method: 'POST' })
       },
       data,
     )
+  })
+
+/** Recovery after a committed self-departure: no tenant scope or deleted membership is required. */
+export const recoverDepartureWorkspaceFn = createServerFn({ method: 'POST' })
+  .validator(z.strictObject({}))
+  .handler(async () => {
+    const session = await getSession()
+    if (isImpersonated(session)) return { ok: false } as const
+    const user = requireUserFrom(session)
+    const organizationId = await resolveOrProvisionOrganization(
+      authDb(),
+      user.id,
+    )
+    if (!organizationId) return { ok: false } as const
+    await getAuth().api.setActiveOrganization({
+      headers: getRequest().headers,
+      body: { organizationId },
+    })
+    return { ok: true } as const
   })

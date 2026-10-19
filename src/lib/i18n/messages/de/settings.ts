@@ -661,6 +661,9 @@ const messages = {
   'workspace.departure.failed':
     'Das Ergebnis konnte nicht bestätigt werden. Lade den Arbeitsbereich neu und versuche es erneut.',
   'workspace.departure.reload': 'Arbeitsbereich neu laden',
+  'workspace.departure.activationFailed':
+    'Du hast diesen Arbeitsbereich verlassen. Öffne den nächsten, um fortzufahren.',
+  'workspace.departure.recover': 'Nächsten Arbeitsbereich öffnen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -36,6 +36,28 @@ export function guardMemberDeletion(adapter: DBAdapter): DBAdapter {
 function guardDelete<T extends DBTransactionAdapter>(adapter: T): T {
   return {
     ...adapter,
+    findMany: async (input) => {
+      const rows = await adapter.findMany(input)
+      if (!deletion.getStore() || input.model !== 'member') return rows
+      // The plugin counts owner tokens without trimming them. Only its preflight view is
+      // normalized; the bound repository mutation still checks the original stored role atomically.
+      return rows.map((row) => {
+        if (
+          typeof row !== 'object' ||
+          row === null ||
+          !('role' in row) ||
+          typeof row.role !== 'string'
+        )
+          return row
+        return {
+          ...row,
+          role: row.role
+            .split(',')
+            .map((role) => role.trim())
+            .join(','),
+        }
+      })
+    },
     deleteMany: async (input) => {
       if (deletion.getStore()) throw new Error('Unexpected bulk auth deletion.')
       return adapter.deleteMany(input)

@@ -464,7 +464,9 @@ conditional `member.removed` or `member.left` audit entry share one D1 batch. Au
 session cleanup and offboarding hooks; it never deletes the row a second time. Public HTTP
 `organization/leave` is closed too, so it cannot bypass these guards (overlapping #1402).
 After self-departure the existing resolver chooses a remaining workspace or provisions a personal
-one and activates it; a full dashboard navigation discards the departed workspace's client state.
+one and activates it. If activation fails after deletion, the confirmation offers a recovery-only
+server function, deriving the signed-in user without requiring the departed tenant; it never repeats
+the deletion. Client caches are cleared, and dashboard navigation waits for successful activation.
 The deletion flag is checked before
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let

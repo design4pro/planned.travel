@@ -657,6 +657,9 @@ const messages = {
   'workspace.departure.failed':
     'Het resultaat kon niet worden bevestigd. Laad de werkruimte opnieuw voordat je het opnieuw probeert.',
   'workspace.departure.reload': 'Werkruimte opnieuw laden',
+  'workspace.departure.activationFailed':
+    'Je hebt deze werkruimte verlaten. Open de volgende om verder te gaan.',
+  'workspace.departure.recover': 'Volgende werkruimte openen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

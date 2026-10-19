@@ -13,6 +13,7 @@ afterEach(cleanup)
 function mount(
   onConfirm = vi.fn(async (): Promise<DepartureOutcome> => ({ ok: true })),
   self = false,
+  onRecover = vi.fn(async (): Promise<DepartureOutcome> => ({ ok: true })),
 ) {
   const user = userEvent.setup()
   render(
@@ -28,6 +29,7 @@ function mount(
         workspace="Alpine friends"
         self={self}
         onConfirm={onConfirm}
+        onRecover={onRecover}
       />
     </I18nProvider>,
   )
@@ -101,3 +103,36 @@ it.each([
     expect(onConfirm).toHaveBeenCalledTimes(1)
   },
 )
+
+it('recovers a committed departure without retrying removal or navigating before activation', async () => {
+  const onConfirm = vi.fn(async (): Promise<DepartureOutcome> => ({
+    ok: false,
+    reason: 'activation-failed',
+  }))
+  const onRecover = vi.fn(async (): Promise<DepartureOutcome> => ({
+    ok: false,
+    reason: 'failed',
+  }))
+  const { user } = mount(onConfirm, true, onRecover)
+  await user.click(screen.getByRole('button', { name: 'Leave workspace' }))
+  await user.click(
+    screen
+      .getAllByRole('button', { name: 'Leave workspace' })
+      .at(-1) as HTMLElement,
+  )
+  expect(screen.getByRole('dialog').textContent).toContain(
+    'You left this workspace',
+  )
+  expect(
+    screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled'),
+  ).toBe(true)
+  await user.keyboard('{Escape}')
+  await user.click(screen.getByRole('button', { name: 'Open next workspace' }))
+  expect(screen.getByRole('dialog')).toBeTruthy()
+  expect(onConfirm).toHaveBeenCalledTimes(1)
+  onRecover.mockResolvedValue({ ok: true })
+  await user.click(screen.getByRole('button', { name: 'Open next workspace' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(onConfirm).toHaveBeenCalledTimes(1)
+  expect(onRecover).toHaveBeenCalledTimes(2)
+})

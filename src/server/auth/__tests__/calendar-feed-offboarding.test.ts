@@ -157,9 +157,9 @@ async function signedInPerson(
 }
 
 describe('real BetterAuth offboarding invalidates calendar credentials', () => {
-  it.each([['remove', false], ['leave', false], ['leave', true]] as const)(
+  it.each([['remove', false, false], ['leave', false, false], ['leave', true, false], ['leave', false, true]] as const)(
     'reads current membership after %s (provision=%s) and never revives an old link after re-addition',
-    async (action, provision) => {
+    async (action, provision, compositeOwner) => {
       const owner = await signedInPerson('owner')
       const leaver = await signedInPerson('leaver')
       if (provision) authDatabase.sqlite.prepare('delete from member where user_id = ?').run(leaver.userId)
@@ -185,6 +185,10 @@ describe('real BetterAuth offboarding invalidates calendar credentials', () => {
             role,
             initial,
           )
+      }
+      if (compositeOwner) {
+        authDatabase.sqlite.prepare('update member set role = ? where id = ?').run('admin, \towner ', `${organizationId}_owner`)
+        authDatabase.sqlite.prepare('update member set role = ? where id = ?').run('owner', `${organizationId}_member`)
       }
       const ownerScope = createScope(authDatabase.db, {
         organizationId,

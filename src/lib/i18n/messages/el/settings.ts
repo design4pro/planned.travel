@@ -656,6 +656,9 @@ const messages = {
   'workspace.departure.failed':
     'Δεν ήταν δυνατή η επιβεβαίωση του αποτελέσματος. Φορτώστε ξανά τον χώρο εργασίας πριν προσπαθήσετε ξανά.',
   'workspace.departure.reload': 'Επαναφόρτωση χώρου εργασίας',
+  'workspace.departure.activationFailed':
+    'Αποχωρήσατε από αυτόν τον χώρο εργασίας. Ανοίξτε τον επόμενο για να συνεχίσετε.',
+  'workspace.departure.recover': 'Άνοιγμα επόμενου χώρου',
 } satisfies TranslationOf<typeof En>
 
 export default messages

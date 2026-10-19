@@ -139,7 +139,7 @@ function WorkspaceLanguageSelect({
 
 function OrganizationPage() {
   const data = Route.useLoaderData()
-  const depart = useMemberDeparture()
+  const { depart, recover } = useMemberDeparture()
   const router = useRouter()
   const t = useTranslate()
   const locale = useLocale()
@@ -306,7 +306,13 @@ function OrganizationPage() {
                           name={member.name}
                           workspace={data.organization.name}
                           self={member.userId === data.viewerUserId}
-                          onConfirm={() => depart(member.memberId)}
+                          onConfirm={() =>
+                            depart(
+                              member.memberId,
+                              member.userId === data.viewerUserId,
+                            )
+                          }
+                          onRecover={recover}
                         />
                       ) : null}
                     </span>

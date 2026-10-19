@@ -610,6 +610,9 @@ const messages = {
   'workspace.departure.failed':
     '結果を確認できませんでした。ワークスペースを再読み込みしてから、もう一度お試しください。',
   'workspace.departure.reload': 'ワークスペースを再読み込み',
+  'workspace.departure.activationFailed':
+    'このワークスペースから退出しました。次のワークスペースを開いて続行してください。',
+  'workspace.departure.recover': '次のワークスペースを開く',
 } satisfies TranslationOf<typeof En>
 
 export default messages

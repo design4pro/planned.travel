@@ -647,6 +647,9 @@ const messages = {
   'workspace.departure.failed':
     'تعذّر تأكيد النتيجة. أعد تحميل مساحة العمل قبل المحاولة مجددًا.',
   'workspace.departure.reload': 'إعادة تحميل مساحة العمل',
+  'workspace.departure.activationFailed':
+    'لقد غادرت مساحة العمل هذه. افتح مساحة العمل التالية للمتابعة.',
+  'workspace.departure.recover': 'افتح مساحة العمل التالية',
 } satisfies TranslationOf<typeof En>
 
 export default messages

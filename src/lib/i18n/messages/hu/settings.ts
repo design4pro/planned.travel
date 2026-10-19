@@ -651,6 +651,9 @@ const messages = {
   'workspace.departure.failed':
     'Az eredmény nem erősíthető meg. Újabb próbálkozás előtt töltse újra a munkaterületet.',
   'workspace.departure.reload': 'Munkaterület újratöltése',
+  'workspace.departure.activationFailed':
+    'Kiléptél ebből a munkaterületből. A folytatáshoz nyisd meg a következőt.',
+  'workspace.departure.recover': 'Következő munkaterület megnyitása',
 } satisfies TranslationOf<typeof En>
 
 export default messages

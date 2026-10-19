@@ -641,6 +641,9 @@ const messages = {
   'workspace.departure.failed':
     'Sonuç doğrulanamadı. Tekrar denemeden önce çalışma alanını yeniden yükleyin.',
   'workspace.departure.reload': 'Çalışma alanını yeniden yükle',
+  'workspace.departure.activationFailed':
+    'Bu çalışma alanından ayrıldınız. Devam etmek için sonraki çalışma alanını açın.',
+  'workspace.departure.recover': 'Sonraki çalışma alanını aç',
 } satisfies TranslationOf<typeof En>
 
 export default messages

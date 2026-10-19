@@ -726,6 +726,9 @@ const messages = {
   'workspace.departure.failed':
     'The result could not be confirmed. Reload the workspace before trying again.',
   'workspace.departure.reload': 'Reload workspace',
+  'workspace.departure.activationFailed':
+    'You left this workspace. Open your next workspace to continue.',
+  'workspace.departure.recover': 'Open next workspace',
 } as const satisfies NamespaceMessages
 
 export default messages

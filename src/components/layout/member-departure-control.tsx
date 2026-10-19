@@ -17,7 +17,12 @@ export type DepartureOutcome =
   | {
       readonly ok: false
       readonly reason:
-        'last-owner' | 'not-permitted' | 'not-found' | 'impersonated' | 'failed'
+        | 'last-owner'
+        | 'not-permitted'
+        | 'not-found'
+        | 'impersonated'
+        | 'failed'
+        | 'activation-failed'
     }
 export const DEPARTURE_COPY: Record<
   Extract<DepartureOutcome, { ok: false }>['reason'],
@@ -28,6 +33,11 @@ export const DEPARTURE_COPY: Record<
   'not-found': 'settings.workspace.departure.notFound',
   impersonated: 'settings.workspace.departure.impersonated',
   failed: 'settings.workspace.departure.failed',
+  'activation-failed': 'settings.workspace.departure.activationFailed',
+}
+
+interface DepartureAction {
+  (): Promise<DepartureOutcome>
 }
 
 /** A deliberate confirmation; an uncertain response requires reconciliation before another write. */
@@ -36,11 +46,13 @@ export function MemberDepartureControl({
   workspace,
   self,
   onConfirm,
+  onRecover,
 }: {
   readonly name: string
   readonly workspace: string
   readonly self: boolean
-  readonly onConfirm: () => Promise<DepartureOutcome>
+  readonly onConfirm: DepartureAction
+  readonly onRecover: DepartureAction
 }) {
   const t = useTranslate()
   const [open, setOpen] = useState(false)
@@ -55,9 +67,16 @@ export function MemberDepartureControl({
   async function confirm() {
     setPending(true)
     try {
-      const outcome = await onConfirm()
+      const recovering =
+        refusal === 'activation-failed' || (self && refusal === 'failed')
+      const outcome = await (recovering ? onRecover() : onConfirm())
       if (outcome.ok) setOpen(false)
-      else setRefusal(outcome.reason)
+      else
+        setRefusal(
+          recovering && refusal === 'activation-failed'
+            ? 'activation-failed'
+            : outcome.reason,
+        )
     } catch {
       setRefusal('failed')
     } finally {
@@ -69,6 +88,7 @@ export function MemberDepartureControl({
       <Button
         variant="ghost"
         size="sm"
+        className="h-auto min-h-8 max-w-full whitespace-normal text-start"
         onClick={() => {
           setOpen(true)
         }}
@@ -78,7 +98,7 @@ export function MemberDepartureControl({
       <Dialog
         open={open}
         onOpenChange={(next) => {
-          if (!pending) setOpen(next)
+          if (!pending && refusal !== 'activation-failed') setOpen(next)
         }}
       >
         <DialogContent
@@ -88,10 +108,12 @@ export function MemberDepartureControl({
             cancel.current?.focus()
           }}
           onEscapeKeyDown={(event) => {
-            if (pending) event.preventDefault()
+            if (pending || refusal === 'activation-failed')
+              event.preventDefault()
           }}
           onInteractOutside={(event) => {
-            if (pending) event.preventDefault()
+            if (pending || refusal === 'activation-failed')
+              event.preventDefault()
           }}
         >
           <DialogHeader>
@@ -111,7 +133,7 @@ export function MemberDepartureControl({
             <Button
               ref={cancel}
               variant="secondary"
-              disabled={pending}
+              disabled={pending || refusal === 'activation-failed'}
               onClick={() => setOpen(false)}
             >
               {t('settings.workspace.departure.cancel')}
@@ -119,9 +141,21 @@ export function MemberDepartureControl({
             {refusal ? (
               <Button
                 variant="primary"
-                onClick={() => window.location.reload()}
+                disabled={pending}
+                onClick={() => {
+                  if (
+                    refusal === 'activation-failed' ||
+                    (self && refusal === 'failed')
+                  )
+                    void confirm()
+                  else window.location.reload()
+                }}
               >
-                {t('settings.workspace.departure.reload')}
+                {t(
+                  refusal === 'activation-failed'
+                    ? 'settings.workspace.departure.recover'
+                    : 'settings.workspace.departure.reload',
+                )}
               </Button>
             ) : (
               <Button

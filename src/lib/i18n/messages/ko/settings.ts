@@ -582,6 +582,9 @@ const messages = {
   'workspace.departure.failed':
     '결과를 확인할 수 없습니다. 워크스페이스를 새로고침한 후 다시 시도하세요.',
   'workspace.departure.reload': '워크스페이스 새로고침',
+  'workspace.departure.activationFailed':
+    '이 워크스페이스를 나갔습니다. 계속하려면 다음 워크스페이스를 여세요.',
+  'workspace.departure.recover': '다음 워크스페이스 열기',
 } satisfies TranslationOf<typeof En>
 
 export default messages

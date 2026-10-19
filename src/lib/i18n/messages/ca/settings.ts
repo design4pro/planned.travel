@@ -664,6 +664,9 @@ const messages = {
   'workspace.departure.failed':
     'No s’ha pogut confirmar el resultat. Torna a carregar l’espai de treball abans de tornar-ho a provar.',
   'workspace.departure.reload': 'Torna a carregar l’espai de treball',
+  'workspace.departure.activationFailed':
+    'Has deixat aquest espai de treball. Obre el següent per continuar.',
+  'workspace.departure.recover': 'Obre el següent espai',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -166,7 +166,7 @@ function AdminDenied() {
 }
 
 function AdminConsole({ data }: { data: AdminPayload }) {
-  const depart = useMemberDeparture()
+  const { depart, recover } = useMemberDeparture()
   const { t, locale } = useI18n()
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
   const planName = labelFor(PLAN_NAME, data.plan, t)
@@ -423,7 +423,13 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                                 name={member.name}
                                 workspace={data.organization.name}
                                 self={member.userId === data.viewerUserId}
-                                onConfirm={() => depart(member.memberId)}
+                                onConfirm={() =>
+                                  depart(
+                                    member.memberId,
+                                    member.userId === data.viewerUserId,
+                                  )
+                                }
+                                onRecover={recover}
                               />
                             ) : null}
                           </span>

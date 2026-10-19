@@ -647,6 +647,9 @@ const messages = {
   'workspace.departure.failed':
     'Resultatet kunde inte bekräftas. Läs in arbetsytan igen innan du försöker igen.',
   'workspace.departure.reload': 'Läs in arbetsytan igen',
+  'workspace.departure.activationFailed':
+    'Du har lämnat den här arbetsytan. Öppna nästa för att fortsätta.',
+  'workspace.departure.recover': 'Öppna nästa arbetsyta',
 } satisfies TranslationOf<typeof En>
 
 export default messages
