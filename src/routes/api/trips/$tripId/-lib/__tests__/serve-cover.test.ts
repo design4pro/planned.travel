@@ -87,7 +87,12 @@ describe('the trip cover route', () => {
       ? 'owner'
       : 'member',
   ): void {
-    stubs.ctx = { userId, organizationId: tenant.organizationId, role }
+    stubs.ctx = {
+      userId,
+      organizationId: tenant.organizationId,
+      role,
+      impersonatedBy: null,
+    }
   }
 
   beforeEach(async () => {

@@ -290,7 +290,12 @@ async function extractionCeiling(
   organizationId: string,
   userId: string,
 ): Promise<number> {
-  const scope = createScope(db, { userId, organizationId, role: 'member' })
+  const scope = createScope(db, {
+    userId,
+    organizationId,
+    role: 'member',
+    impersonatedBy: null,
+  })
   const row = await getSubscription(scope)
   return resolveLimitsFromRow(row).rates.extraction_calls_per_month
 }

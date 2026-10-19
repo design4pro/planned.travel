@@ -445,15 +445,22 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with three exceptions. Two are closed by the plugin's own options and not
+document does not govern - with four exceptions. Two are closed by the plugin's own options and not
 by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The third is
-`organization/update-member-role`, closed by `disabledPaths` through its own list
-(`DISABLED_ORGANIZATION_PATHS` in `src/server/auth/admin-options.ts`, merged with the fifteen admin
-paths into `DISABLED_PATHS`, which is what `src/server/auth/index.ts` passes): the endpoint writes a
-role without an audit row, accepts a comma-joined role such as `admin,owner`, and lets an admin grant
-`owner`, none of which the product-owned `changeMemberRoleFn` (§6.4, #995) allows. The in-process
-`auth.api.updateMemberRole` is not an HTTP path and stays callable. The deletion flag is checked before
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other two are closed by
+`disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
+`src/server/auth/admin-options.ts`, merged with the fifteen admin paths into `DISABLED_PATHS`, which is
+what `src/server/auth/index.ts` passes). `organization/update-member-role` writes a role without an
+audit row, accepts a comma-joined role such as `admin,owner`, and lets an admin grant `owner`, none of
+which the product-owned `changeMemberRoleFn` (§6.4, #995) allows. `organization/remove-member` deletes
+the `member` row for an owner or an admin with no audit entry and no refusal during impersonation
+(#1010). The in-process `auth.api.updateMemberRole` and `auth.api.removeMember` are not HTTP paths and
+stay callable; the product-owned removal (#1008) must remove members through `auth.api.removeMember`
+and not through the repository's `removeMember`, because the plugin's after-hook is what queues the
+removed person's room eviction, and the repository function has neither that hook, an owner ceiling
+for an admin nor an audit entry. `organization/leave` stays open, because the leave screen needs it
+(closing it to an impersonated session is #1402), so until #1008 ships a workspace has no way to
+remove a member over HTTP. The deletion flag is checked before
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
 an owner delete the `organization` row, cascade over every tenant table - other members' private
@@ -1133,8 +1140,10 @@ through `src/server/repos/audit.ts` on `createTenantRepository()`, with its `met
 and no `actor_kind`. It records what happened inside a workspace. `platform_audit_log` records what
 happened to the platform. They are never merged, never joined, and never read through each other's
 repository. The one place they meet is §6.4: a tenant write performed during an impersonated
-session stamps the impersonator into the existing `metadata` column, which is a value change and
-not a schema change.
+session stamps the impersonator into the existing `metadata` column as `impersonatedBy: <operator
+user id>`, which is a value change and not a schema change. `trail()` (`src/server/audit/trail.ts`)
+does it, from the tenant context's `impersonatedBy`, which `requireOrgFrom` reads off the session; it
+is implemented (#1010).
 
 ---
 
@@ -1292,8 +1301,11 @@ mints a new tenant owned by the account being worn, which is not a write to some
 exists, and the owner's audit trail could only ever show that an operator created a workspace they
 now cannot leave. `createWorkspace` throws `AuthRequirementError('impersonated')` before it reads the
 plan or writes a row. Every such write appends the impersonator's user id to the
-existing `metadata` column of the tenant `audit_log`, so a workspace owner reading their own audit
-trail can see that an operator, not they, made the change.
+existing `metadata` column of the tenant `audit_log` as `impersonatedBy`, so a workspace owner reading
+their own audit trail can see that an operator, not they, made the change. `trail()` writes it after
+the caller's own keys and from the scope alone: a call site can neither forget it nor state it, a
+caller-supplied `impersonatedBy` never wins, and an ordinary session's entry carries no such key
+(implemented, #1010).
 
 **Changing a member's role is refused by name too.** `changeMemberRoleFn` (`src/server/fns/members.ts`)
 reads the session, and a missing session counts as impersonated (`isImpersonated`), so it throws

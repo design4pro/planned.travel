@@ -157,7 +157,12 @@ async function scopeForTraveller(
   organizationId: string,
   userId: string,
 ): Promise<TenantScope> {
-  const probe = createScope(db, { userId, organizationId, role: 'member' })
+  const probe = createScope(db, {
+    userId,
+    organizationId,
+    role: 'member',
+    impersonatedBy: null,
+  })
   const membership = await getMembership(probe, userId)
   if (membership === null) {
     throw new TaskPermanentError(
@@ -171,6 +176,7 @@ async function scopeForTraveller(
     // An unrecognised value in the column resolves to the least privilege,
     // never to "unset, therefore permissive".
     role: isOrganizationRole(membership.role) ? membership.role : 'member',
+    impersonatedBy: null,
   })
 }
 
