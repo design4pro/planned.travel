@@ -36,7 +36,7 @@
  * | `audit`         | `audit_log` |
  * | `members`       | `organization`, `member`, `invitation`; reads `subscriptions` to refuse deleting a workspace that is still billed |
  * | `participants`  | `workspace_participants`; reads the registered user columns to backfill it |
- * | `billing`       | `subscriptions`, `usage_records` |
+ * | `billing`       | `subscriptions`, `usage_records`; reads `organization` for an existence check |
  * | `calendar-feeds` | `calendar_feeds`; reads `trips`, `days`, `places`, `day_assignments`, `day_notes`, `day_accommodations`, `transports`, `transport_legs`, `reservations` (narrowed columns) for the trip calendar |
  * | `dashboard`     | — composition over the modules above |
  */

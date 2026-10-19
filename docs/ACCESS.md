@@ -461,6 +461,7 @@ trips included - and leave the provider subscription billing, the R2 objects orp
 log silent. A workspace therefore has no HTTP deletion path until the product-owned one (#1000)
 exists, and that change must decide the flag explicitly: a deletion done through repository SQL keeps
 it, one that moved to the plugin's endpoint would have to remove it.
+`deleteWorkspace` (`src/server/repos/members.ts`, #1057) is that repository-SQL deletion. It stays on `assertCanAdminister`, so a workspace `admin` may delete the workspace as well as the `owner`; narrowing the interactive caller to the owner is the screen's decision.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
 ### 2.7 Creating a workspace

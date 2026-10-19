@@ -619,13 +619,17 @@ async function onCheckoutUpdated(
  * non-2xx answer would be retried and, repeated, disable the endpoint for every workspace; writing a
  * row would violate the `organization_id` foreign key. So it answers 2xx, writes no row, drops no
  * cache entry and enqueues no follow-up, and the next delivery is answered the same way.
+ *
+ * It logs at `warn`, not `info`: an event for a deleted workspace means the provider may still be charging
+ * for it (a cancellation undone, a renewal paid), and the log is the only trace of that. Whether to cancel or
+ * refund is a person's decision (see the erasure spec, phase 4 amendment).
  */
 function ignoredForDeletedOrganization(
   runtime: BillingRuntime,
   delivery: HandledDelivery,
   organizationId: string,
 ): PolarWebhookOutcome {
-  runtime.logger.info('billing.webhook.organization_gone', {
+  runtime.logger.warn('billing.webhook.organization_gone', {
     eventType: delivery.type,
     organizationId,
   })

@@ -1,11 +1,11 @@
 # A person's data can be erased across workspaces on request
 
-| Field              | Value       |
-| ------------------ | ----------- |
-| **Status**         | in-progress |
-| **Issue**          | #811        |
-| **Spec PR**        | #1002       |
-| **Implementation** | #1410       |
+| Field              | Value        |
+| ------------------ | ------------ |
+| **Status**         | in-progress  |
+| **Issue**          | #811         |
+| **Spec PR**        | #1002        |
+| **Implementation** | #1410, #1418 |
 
 ## 📝 TLDR
 
@@ -747,3 +747,16 @@ gated the ticket (`risk-high`, approved, confidence high):
 - **No orchestrator ships here.** The engine composes the pieces in a later phase. It must keep its
   resume state somewhere that survives the workspace: `workspace_participants` carries the
   `erasure_id`, is an `orgRef()` table, and goes with the workspace in step 4.
+- **An administrator may delete the workspace, not only the owner.** `deleteWorkspace` stays on
+  `assertCanAdminister`, as plan 09 and plan 10 (`deleteWorkspace` "stays on `assertCanAdminister`") say. The
+  erasure engine calls it with the reserved system user, role `owner`. Narrowing the interactive caller to the
+  owner is a product decision for the phase that adds the screen.
+- **Open for a person before the engine phase merges (money):** a workspace whose subscription is set to cancel
+  at the end of the period can be deleted, and Polar goes on sending events for it. They are acknowledged and
+  ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a
+  renewal is paid, nothing in the product notices. Whether the engine cancels or refunds at the provider, or
+  alerts on that log, is for a person.
+- **Journey photo keys are swept as given.** `listWorkspaceJourneyPhotoKeys` returns free-form `storageKey` and
+  `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
+  path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
+  it; until then the engine phase must not pass keys from any other source.
