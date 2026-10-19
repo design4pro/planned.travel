@@ -492,10 +492,14 @@ const messages = {
   'join.dates.label': 'Дати',
   'join.destination.label': 'Пункт призначення',
   'join.action.signIn': 'Увійти',
+  'join.action.join': 'Приєднатися до поїздки',
+  'join.action.joining': 'Приєднуємося до поїздки',
   'join.action.open': 'Відкрити поїздку',
   'join.action.openIn': 'Відкрити поїздку й змінити простір',
   'join.action.openIn.pending': 'Змінюємо простір',
   'join.loading': 'Завантажуємо запрошення',
+  'join.joined.title': 'Ви в поїздці',
+  'join.joined.body': 'Відкрийте її, щоб побачити план.',
   'join.member.title': 'Ви вже берете участь у цій поїздці',
   'join.needsWorkspace.title': 'Ця поїздка в просторі, до якого ви не належите',
   'join.needsWorkspace.body':
@@ -514,6 +518,8 @@ const messages = {
   'join.error.retry': 'Повторити',
   'join.error.busy':
     'Сторінка зараз перевантажена. Спробуйте ще раз за хвилину.',
+  'join.error.join':
+    'Не вдалося приєднатися. Посилання досі працює, спробуйте ще раз.',
   'join.error.switch': 'Не вдалося змінити простір. Спробуйте ще раз.',
 } satisfies TranslationOf<typeof En>
 

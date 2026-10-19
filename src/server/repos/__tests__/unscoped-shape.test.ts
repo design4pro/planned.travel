@@ -19,6 +19,7 @@ const callers: Record<string, string> = {
   findLiveTripInviteByDigestUnscoped: 'src/server/public/trip-invite.ts',
   readInvitePreviewUnscoped: 'src/server/public/trip-invite.ts',
   countAccountPlacesUnscoped: 'src/server/erasure/verify.ts',
+  joinTripByInviteUnscoped: 'src/routes/join/-lib/join.ts',
 }
 
 /** Resolve symbols rather than spelling: an alias or a barrel must retain its provenance. */

@@ -459,10 +459,14 @@ const messages = {
   'join.dates.label': 'Ngày',
   'join.destination.label': 'Điểm đến',
   'join.action.signIn': 'Đăng nhập',
+  'join.action.join': 'Tham gia chuyến đi',
+  'join.action.joining': 'Đang tham gia chuyến đi',
   'join.action.open': 'Mở chuyến đi',
   'join.action.openIn': 'Mở chuyến đi và đổi không gian làm việc',
   'join.action.openIn.pending': 'Đang đổi không gian làm việc',
   'join.loading': 'Đang tải lời mời',
+  'join.joined.title': 'Bạn đã tham gia chuyến đi',
+  'join.joined.body': 'Hãy mở chuyến đi để xem kế hoạch.',
   'join.member.title': 'Bạn đã ở trong chuyến đi này',
   'join.needsWorkspace.title':
     'Chuyến đi này nằm trong một không gian làm việc mà bạn chưa tham gia',
@@ -481,6 +485,8 @@ const messages = {
   'join.error.title': 'Chúng tôi không tải được liên kết mời này',
   'join.error.retry': 'Thử lại',
   'join.error.busy': 'Trang này đang bận. Hãy thử lại sau một phút.',
+  'join.error.join':
+    'Không tham gia được. Liên kết vẫn dùng được, hãy thử lại.',
   'join.error.switch': 'Không đổi được không gian làm việc. Hãy thử lại.',
 } satisfies TranslationOf<typeof En>
 
