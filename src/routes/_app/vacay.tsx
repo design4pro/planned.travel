@@ -21,6 +21,7 @@ import { loadVacayAllowance } from './-server/vacay'
 import { formatNumber, humaniseToken, pluralise } from './-lib/format'
 import { VACAY_KIND_TONE, inkOn, toneFor } from './-lib/tone'
 import { AllowancePanel } from './-ui/allowance-panel'
+import { PlanSettingsDialog } from './-ui/plan-settings-dialog'
 import { HeaderSkeleton, Panel } from './-ui/scaffold'
 
 import type { VacayPayload } from './-server/library'
@@ -119,7 +120,12 @@ function VacayPage() {
           title="Vacay"
           description="Plan the days you are away and see them against everyone else's"
           actions={
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <PlanSettingsDialog
+                planId={data.plan.id}
+                carryOverEnabled={data.plan.carryOverEnabled}
+                defaultEntitlementDays={data.plan.defaultEntitlementDays}
+              />
               <Button
                 asChild
                 variant="secondary"

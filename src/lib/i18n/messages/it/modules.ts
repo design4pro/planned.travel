@@ -1281,6 +1281,22 @@ const messages = {
   'vacay.error.title': 'Impossibile caricare il pianificatore delle ferie',
   'vacay.year.previous': 'Anno precedente',
   'vacay.year.next': 'Anno successivo',
+  'vacay.settings.open': 'Impostazioni del piano ferie',
+  'vacay.settings.title': 'Impostazioni del piano ferie',
+  'vacay.settings.description':
+    'Come vengono riportati i giorni non usati e quanti giorni hai per impostazione predefinita.',
+  'vacay.settings.carryOver': 'Riporta i giorni non usati all’anno successivo',
+  'vacay.settings.carryOver.hint':
+    'Disattivandolo, i giorni riportati vengono nascosti, ma non cancellati.',
+  'vacay.settings.defaultAllowance':
+    'Monte giorni predefinito (giorni all’anno)',
+  'vacay.settings.defaultAllowance.hint':
+    'Vale per gli anni in cui non hai impostato un tuo monte giorni.',
+  'vacay.settings.save': 'Salva impostazioni',
+  'vacay.settings.cancel': 'Annulla',
+  'vacay.settings.saved': 'Impostazioni del piano ferie salvate.',
+  'vacay.settings.error':
+    'Impossibile salvare le impostazioni del piano ferie. Non è stato modificato nulla.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

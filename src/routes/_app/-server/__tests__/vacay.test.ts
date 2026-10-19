@@ -12,6 +12,7 @@ import {
   ensurePlan,
   invitePlanMember,
   setPlanMemberStatus,
+  vacayPlansRepository,
   vacayUserYearsRepository,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
@@ -40,7 +41,8 @@ vi.mock('@tanstack/react-start', () => ({
   }),
 }))
 
-const { loadVacayAllowance, setAllowanceFn } = await import('../vacay')
+const { loadVacayAllowance, setAllowanceFn, updateVacayPlanFn } =
+  await import('../vacay')
 
 describe('the leave planner server functions', () => {
   let harness: Harness
@@ -182,5 +184,88 @@ describe('the leave planner server functions', () => {
       NotFoundError,
     )
     expect(await vacayUserYearsRepository.count(tenant.scope)).toBe(0)
+  })
+
+  describe('updateVacayPlanFn', () => {
+    const update = (data: Record<string, unknown>) =>
+      updateVacayPlanFn({ data } as never) as Promise<{
+        id: string
+        carryOverEnabled: boolean
+        defaultEntitlementDays: number
+      }>
+
+    it('changes the carry-over setting and the default allowance and returns the plan', async () => {
+      const plan = await update({
+        planId,
+        carryOverEnabled: false,
+        defaultEntitlementDays: 30,
+      })
+
+      expect(plan).toMatchObject({
+        id: planId,
+        carryOverEnabled: false,
+        defaultEntitlementDays: 30,
+      })
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toMatchObject({ carryOverEnabled: false, defaultEntitlementDays: 30 })
+    })
+
+    it('treats a call with nothing to change as a no-op', async () => {
+      const before = await vacayPlansRepository.requireById(
+        tenant.scope,
+        planId,
+      )
+
+      expect(await update({ planId })).toMatchObject({ id: planId })
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toEqual(before)
+    })
+
+    it('refuses an accepted member who is not the owner, and changes nothing', async () => {
+      const colleague = await tenant.addUser('Colleague')
+      const invited = await invitePlanMember(tenant.scope, planId, colleague)
+      await setPlanMemberStatus(tenant.scope, invited.id, 'accepted')
+      const before = await vacayPlansRepository.requireById(
+        tenant.scope,
+        planId,
+      )
+      stubs.scope = tenant.scopeFor(colleague)
+
+      await expect(
+        update({ planId, defaultEntitlementDays: 1 }),
+      ).rejects.toBeInstanceOf(PlanOwnerOnlyError)
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toEqual(before)
+    })
+
+    it('finds no plan from a workspace member who never joined, or from a second workspace', async () => {
+      const outsider = await tenant.addUser('Outsider')
+      stubs.scope = tenant.scopeFor(outsider)
+      await expect(
+        update({ planId, carryOverEnabled: false }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+
+      const other = await harness.seedTenant('plan-fn-other')
+      stubs.scope = other.scope
+      await expect(
+        update({ planId, carryOverEnabled: false }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+    })
+
+    it('ignores a switch the dialog does not own', async () => {
+      const before = await vacayPlansRepository.requireById(
+        tenant.scope,
+        planId,
+      )
+
+      await update({ planId, blockWeekends: !before.blockWeekends })
+
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toEqual(before)
+    })
   })
 })

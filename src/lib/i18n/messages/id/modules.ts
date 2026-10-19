@@ -1189,6 +1189,22 @@ const messages = {
   'vacay.error.title': 'Perencana cuti tidak dapat dimuat',
   'vacay.year.previous': 'Tahun sebelumnya',
   'vacay.year.next': 'Tahun berikutnya',
+  'vacay.settings.open': 'Pengaturan rencana cuti',
+  'vacay.settings.title': 'Pengaturan rencana cuti',
+  'vacay.settings.description':
+    'Bagaimana sisa hari dibawa ke tahun berikutnya dan berapa hari yang Anda dapatkan secara bawaan.',
+  'vacay.settings.carryOver':
+    'Bawa sisa hari yang tidak terpakai ke tahun berikutnya',
+  'vacay.settings.carryOver.hint':
+    'Jika dimatikan, hari yang dibawa disembunyikan, tetapi tidak dihapus.',
+  'vacay.settings.defaultAllowance': 'Jatah bawaan (hari per tahun)',
+  'vacay.settings.defaultAllowance.hint':
+    'Berlaku untuk tahun yang jatah cutinya belum Anda tetapkan sendiri.',
+  'vacay.settings.save': 'Simpan pengaturan',
+  'vacay.settings.cancel': 'Batal',
+  'vacay.settings.saved': 'Pengaturan rencana cuti disimpan.',
+  'vacay.settings.error':
+    'Pengaturan rencana cuti tidak dapat disimpan. Tidak ada yang berubah.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

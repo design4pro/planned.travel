@@ -1094,6 +1094,17 @@ const messages = {
   'vacay.error.title': '无法加载休假规划器',
   'vacay.year.previous': '上一年',
   'vacay.year.next': '下一年',
+  'vacay.settings.open': '休假计划设置',
+  'vacay.settings.title': '休假计划设置',
+  'vacay.settings.description': '设置未用完的天数如何结转，以及默认有多少天。',
+  'vacay.settings.carryOver': '将未用完的天数结转到下一年',
+  'vacay.settings.carryOver.hint': '关闭后，结转的天数只会被隐藏，不会被删除。',
+  'vacay.settings.defaultAllowance': '默认额度（每年天数）',
+  'vacay.settings.defaultAllowance.hint': '适用于你没有设置自己额度的年份。',
+  'vacay.settings.save': '保存设置',
+  'vacay.settings.cancel': '取消',
+  'vacay.settings.saved': '已保存休假计划设置。',
+  'vacay.settings.error': '无法保存休假计划设置。未做任何更改。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

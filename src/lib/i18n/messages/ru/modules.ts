@@ -1296,6 +1296,22 @@ const messages = {
   'vacay.error.title': 'Не удалось загрузить планировщик отпусков',
   'vacay.year.previous': 'Предыдущий год',
   'vacay.year.next': 'Следующий год',
+  'vacay.settings.open': 'Настройки плана отпусков',
+  'vacay.settings.title': 'Настройки плана отпусков',
+  'vacay.settings.description':
+    'Как переносятся неиспользованные дни и сколько дней у вас по умолчанию.',
+  'vacay.settings.carryOver':
+    'Переносить неиспользованные дни на следующий год',
+  'vacay.settings.carryOver.hint':
+    'Если отключить, перенесённые дни будут скрыты, но не удалены.',
+  'vacay.settings.defaultAllowance': 'Лимит по умолчанию (дней в год)',
+  'vacay.settings.defaultAllowance.hint':
+    'Действует для лет, в которых вы не задали свой лимит.',
+  'vacay.settings.save': 'Сохранить настройки',
+  'vacay.settings.cancel': 'Отмена',
+  'vacay.settings.saved': 'Настройки плана отпусков сохранены.',
+  'vacay.settings.error':
+    'Не удалось сохранить настройки плана отпусков. Ничего не изменилось.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

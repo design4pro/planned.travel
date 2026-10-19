@@ -18,8 +18,9 @@ import type {
  * list below is the whole surface a screen or a queue consumer may reach: the stage that needs
  * another function guards it, then edits this list, which is what makes review see it.
  *
- * `setEntitlementInput` is on the list because `setAllowanceFn` validates with it; it is a schema,
- * not a way into a row.
+ * `setEntitlementInput` and `updatePlanSettingsInput` are on the list because the server functions
+ * validate with them; each is a schema, not a way into a row, and the second keeps the dialog's two
+ * bounds in one place instead of copying them into the route.
  *
  * Symbols are resolved through the compiler, not read from import text, so an alias, the
  * `#/server/repos` barrel, a re-export, a namespace import and a dynamic `import()` all keep their
@@ -33,7 +34,9 @@ const ALLOWED = new Set([
   'getAllowance',
   'requirePlanActor',
   'requirePlanOwner',
+  'updatePlanSettings',
   'setEntitlementInput',
+  'updatePlanSettingsInput',
 ])
 
 const VACAY_REPOSITORY = '/src/server/repos/vacay.ts'

@@ -22,6 +22,8 @@ import {
   setEntry,
   setPlanMemberStatus,
   updatePlan,
+  updatePlanSettings,
+  vacayPlansRepository,
   vacayUserYearsRepository,
 } from '../vacay'
 import { captureError, createHarness } from './harness'
@@ -447,5 +449,171 @@ describe('the leave planner allowance guard', () => {
         ),
       ).toBeInstanceOf(NotFoundError)
     })
+  })
+
+  describe('updatePlanSettings', () => {
+    it('lets the owner switch carry-over and set the default allowance', async () => {
+      const plan = await updatePlanSettings(tenant.scope, planId, {
+        carryOverEnabled: false,
+        defaultEntitlementDays: 30,
+      })
+
+      expect(plan.carryOverEnabled).toBe(false)
+      expect(plan.defaultEntitlementDays).toBe(30)
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toMatchObject({
+        carryOverEnabled: false,
+        defaultEntitlementDays: 30,
+      })
+    })
+
+    it('treats an empty patch as a no-op that returns the plan', async () => {
+      const before = await vacayPlansRepository.requireById(
+        tenant.scope,
+        planId,
+      )
+
+      const plan = await updatePlanSettings(tenant.scope, planId, {})
+
+      expect(plan).toEqual(before)
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toEqual(before)
+    })
+
+    it('still asks who the caller is for an empty patch', async () => {
+      expect(
+        await captureError(() =>
+          updatePlanSettings(colleagueScope, planId, {}),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('changes what a traveller without a row sees and rewrites no stored row', async () => {
+      await saveAllowance(tenant.scope, {
+        planId,
+        year: 2025,
+        entitlementDays: 12,
+      })
+      const before = await rowsFor(tenant.ownerUserId)
+
+      await updatePlanSettings(tenant.scope, planId, {
+        defaultEntitlementDays: 33,
+      })
+
+      expect(await rowsFor(tenant.ownerUserId)).toEqual(before)
+      expect(
+        await getAllowance(tenant.scope, planId, tenant.ownerUserId, 2030),
+      ).toMatchObject({ hasRow: false, entitlementDays: 33 })
+      expect(
+        await getAllowance(tenant.scope, planId, tenant.ownerUserId, 2025),
+      ).toMatchObject({ hasRow: true, entitlementDays: 12 })
+    })
+
+    it('hides the carried figure when carry-over is off and restores it when it is on, without a recompute', async () => {
+      await saveAllowance(tenant.scope, {
+        planId,
+        year: 2025,
+        entitlementDays: 20,
+      })
+      await saveAllowance(tenant.scope, {
+        planId,
+        year: 2026,
+        entitlementDays: 20,
+      })
+      const stored = await rowsFor(tenant.ownerUserId)
+      const carried = () =>
+        getAllowance(tenant.scope, planId, tenant.ownerUserId, 2026).then(
+          (balance) => balance.carriedOverDays,
+        )
+      const withCarryOver = await carried()
+      expect(withCarryOver).toBe(20)
+
+      await updatePlanSettings(tenant.scope, planId, {
+        carryOverEnabled: false,
+      })
+      expect(await carried()).toBe(0)
+      await updatePlanSettings(tenant.scope, planId, { carryOverEnabled: true })
+
+      expect(await carried()).toBe(withCarryOver)
+      expect(await rowsFor(tenant.ownerUserId)).toEqual(stored)
+    })
+
+    it('refuses an accepted member as owner-only and changes nothing', async () => {
+      await joinPlan(tenant.scope, planId, colleague, 'accepted')
+      const before = await vacayPlansRepository.requireById(
+        tenant.scope,
+        planId,
+      )
+
+      expect(
+        await captureError(() =>
+          updatePlanSettings(colleagueScope, planId, {
+            defaultEntitlementDays: 1,
+          }),
+        ),
+      ).toBeInstanceOf(PlanOwnerOnlyError)
+
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toEqual(before)
+    })
+
+    it.each(['pending', 'declined'] as const)(
+      'answers a %s member as if the plan did not exist',
+      async (status) => {
+        await joinPlan(tenant.scope, planId, colleague, status)
+
+        expect(
+          await captureError(() =>
+            updatePlanSettings(colleagueScope, planId, {
+              carryOverEnabled: false,
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      },
+    )
+
+    it('gives a workspace admin who never joined the plan no say over it', async () => {
+      const admin = await tenant.addUser('Admin', 'admin')
+
+      expect(
+        await captureError(() =>
+          updatePlanSettings(tenant.scopeFor(admin, 'admin'), planId, {
+            carryOverEnabled: false,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+    })
+
+    it('ignores the switches the dialog does not own', async () => {
+      const before = await vacayPlansRepository.requireById(
+        tenant.scope,
+        planId,
+      )
+
+      await updatePlanSettings(tenant.scope, planId, {
+        blockWeekends: !before.blockWeekends,
+        name: 'Renamed',
+      } as never)
+
+      expect(
+        await vacayPlansRepository.requireById(tenant.scope, planId),
+      ).toEqual(before)
+    })
+
+    it.each([-1, 366, 1.5])(
+      'rejects a default allowance of %s',
+      async (days) => {
+        expect(
+          await captureError(() =>
+            updatePlanSettings(tenant.scope, planId, {
+              defaultEntitlementDays: days,
+            }),
+          ),
+        ).toBeInstanceOf(Error)
+      },
+    )
   })
 })

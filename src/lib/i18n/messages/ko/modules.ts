@@ -1147,6 +1147,21 @@ const messages = {
   'vacay.error.title': '휴가 플래너를 불러오지 못했습니다',
   'vacay.year.previous': '이전 연도',
   'vacay.year.next': '다음 연도',
+  'vacay.settings.open': '휴가 계획 설정',
+  'vacay.settings.title': '휴가 계획 설정',
+  'vacay.settings.description':
+    '사용하지 않은 일수를 이월하는 방식과 기본 일수를 설정합니다.',
+  'vacay.settings.carryOver': '사용하지 않은 일수를 다음 해로 이월',
+  'vacay.settings.carryOver.hint':
+    '끄면 이월된 일수가 숨겨질 뿐 삭제되지는 않습니다.',
+  'vacay.settings.defaultAllowance': '기본 일수(연간)',
+  'vacay.settings.defaultAllowance.hint':
+    '직접 일수를 설정하지 않은 해에 적용됩니다.',
+  'vacay.settings.save': '설정 저장',
+  'vacay.settings.cancel': '취소',
+  'vacay.settings.saved': '휴가 계획 설정을 저장했습니다.',
+  'vacay.settings.error':
+    '휴가 계획 설정을 저장하지 못했습니다. 변경된 내용은 없습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

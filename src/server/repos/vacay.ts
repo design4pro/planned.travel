@@ -118,6 +118,13 @@ export const updatePlanInput = z.object({
 })
 export type UpdatePlanInput = z.infer<typeof updatePlanInput>
 
+/** The plan settings the leave planner's dialog owns; the display switches join with the month grid. */
+export const updatePlanSettingsInput = updatePlanInput.pick({
+  carryOverEnabled: true,
+  defaultEntitlementDays: true,
+})
+export type UpdatePlanSettingsInput = z.infer<typeof updatePlanSettingsInput>
+
 export const setEntryInput = z.object({
   planId: idSchema,
   userId: idSchema.optional(),
@@ -282,6 +289,25 @@ export async function updatePlan(
   input: UpdatePlanInput,
 ): Promise<VacayPlan> {
   return vacayPlansRepository.requireUpdate(scope, planId, definedOnly(updatePlanInput.parse(input)))
+}
+
+/**
+ * Changes how a leave plan counts, for its owner only: whether unused days carry into the next year
+ * and the allowance a traveller without a row of their own sees. Both are read, never copied: a
+ * stored row is rewritten by neither, and stored carried-over figures are kept while carry-over is
+ * off, so switching it back on needs no recompute. An empty patch changes nothing and returns the plan.
+ */
+export async function updatePlanSettings(
+  scope: TenantScope,
+  planId: string,
+  input: UpdatePlanSettingsInput,
+): Promise<VacayPlan> {
+  const { plan } = await requirePlanOwner(scope, planId)
+  const patch = definedOnly(updatePlanSettingsInput.parse(input))
+  if (Object.keys(patch).length === 0) {
+    return plan
+  }
+  return updatePlan(scope, plan.id, patch)
 }
 
 export async function deletePlan(scope: TenantScope, planId: string): Promise<void> {

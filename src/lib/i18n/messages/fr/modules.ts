@@ -1286,6 +1286,23 @@ const messages = {
   'vacay.error.title': 'Le planificateur de congés n’a pas pu se charger',
   'vacay.year.previous': 'Année précédente',
   'vacay.year.next': 'Année suivante',
+  'vacay.settings.open': 'Paramètres du planning de congés',
+  'vacay.settings.title': 'Paramètres du planning de congés',
+  'vacay.settings.description':
+    'Comment les jours non utilisés sont reportés et combien de jours vous avez par défaut.',
+  'vacay.settings.carryOver':
+    'Reporter les jours non utilisés sur l’année suivante',
+  'vacay.settings.carryOver.hint':
+    'En désactivant cette option, les jours reportés sont masqués, mais pas effacés.',
+  'vacay.settings.defaultAllowance': 'Droits par défaut (jours par an)',
+  'vacay.settings.defaultAllowance.hint':
+    'S’applique aux années pour lesquelles vous n’avez pas défini vos propres droits.',
+  'vacay.settings.save': 'Enregistrer les paramètres',
+  'vacay.settings.cancel': 'Annuler',
+  'vacay.settings.saved':
+    'Les paramètres du planning de congés ont été enregistrés.',
+  'vacay.settings.error':
+    'Impossible d’enregistrer les paramètres du planning de congés. Rien n’a été modifié.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

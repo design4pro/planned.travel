@@ -1156,6 +1156,21 @@ const messages = {
   'vacay.error.title': '休暇プランナーを読み込めませんでした',
   'vacay.year.previous': '前の年',
   'vacay.year.next': '次の年',
+  'vacay.settings.open': '休暇プランの設定',
+  'vacay.settings.title': '休暇プランの設定',
+  'vacay.settings.description':
+    '使わなかった日数の繰り越し方法と、既定の日数を設定します。',
+  'vacay.settings.carryOver': '使わなかった日数を翌年に繰り越す',
+  'vacay.settings.carryOver.hint':
+    'オフにすると繰り越し日数は非表示になりますが、削除はされません。',
+  'vacay.settings.defaultAllowance': '既定の日数（年あたり）',
+  'vacay.settings.defaultAllowance.hint':
+    '自分の日数を設定していない年に適用されます。',
+  'vacay.settings.save': '設定を保存',
+  'vacay.settings.cancel': 'キャンセル',
+  'vacay.settings.saved': '休暇プランの設定を保存しました。',
+  'vacay.settings.error':
+    '休暇プランの設定を保存できませんでした。変更は反映されていません。',
 } satisfies TranslationOf<typeof En>
 
 export default messages
