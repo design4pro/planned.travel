@@ -13,6 +13,7 @@ const callers: Record<string, string> = {
   findSubscriptionByProviderCustomerUnscoped: 'src/server/billing/store.ts',
   findSubscriptionByProviderSubscriptionUnscoped: 'src/server/billing/store.ts',
   upsertSubscriptionUnscoped: 'src/server/billing/store.ts',
+  organizationExistsUnscoped: 'src/server/billing/store.ts',
   listSubscriptionsByOrganizationsUnscoped:
     'src/routes/_app/console/-server/account-billing.ts',
   findLiveFeedByDigestUnscoped: 'src/server/public/calendar-feed.ts',
@@ -146,7 +147,7 @@ function inspect(project: Project, allowed: Record<string, string>) {
 }
 
 describe('Unscoped repository contract', () => {
-  it('finds all ten exceptions, their real callers and their plain Database parameters', () => {
+  it('finds all eleven exceptions, their real callers and their plain Database parameters', () => {
     const result = withProgram({}, (project) => inspect(project, callers))
     expect(result.discovered).toEqual(Object.keys(callers).sort())
     expect(result.imported).toEqual(Object.keys(callers).sort())

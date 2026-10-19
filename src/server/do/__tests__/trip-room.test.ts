@@ -27,11 +27,15 @@ const TRIP_ID = 'trip-1'
 /** In-memory `TripRoomStorage` that also counts what was written, so "wrote nothing" is checkable. */
 function fakeStorage(): TripRoomStorage & {
   writes: number
+  alarmDeleted: number
+  alarmSet: number
   data: Map<string, unknown>
 } {
   const data = new Map<string, unknown>()
   const storage = {
     writes: 0,
+    alarmDeleted: 0,
+    alarmSet: 0,
     data,
     get: async <T>(key: string) => data.get(key) as T | undefined,
     put: async <T>(entries: Record<string, T>) => {
@@ -58,7 +62,12 @@ function fakeStorage(): TripRoomStorage & {
       data.clear()
     },
     getAlarm: async () => null,
-    setAlarm: async () => undefined,
+    setAlarm: async () => {
+      storage.alarmSet += 1
+    },
+    deleteAlarm: async () => {
+      storage.alarmDeleted += 1
+    },
   }
   return storage
 }
@@ -376,5 +385,66 @@ describe('closing the whole room', () => {
     expect(ben.sent).toEqual([])
     // Only the sockets are gone: a server commit is still taken, for the next person to connect.
     expect(storage.writes).toBeGreaterThan(0)
+  })
+})
+
+function resetRequest(method = 'POST'): Request {
+  return new Request('https://room/reset', { method })
+}
+
+describe('resetting the room', () => {
+  it('closes every socket and erases the stored state, entity fields and commit log alike', async () => {
+    const { room, storage, sockets } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+      { role: 'viewer', userId: 'ben' },
+    ])
+    await room.fetch(commitRequest())
+    expect(storage.data.size).toBeGreaterThan(0)
+
+    const response = await room.fetch(resetRequest())
+
+    expect(response.status).toBe(200)
+    for (const socket of sockets) {
+      expect(socket.closedWith).toBe(CLOSE_ROOM_CLOSED)
+      expect(socket.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
+    }
+    // Nothing stamped with a user id survives: D1 is the record and the room rebuilds from it.
+    expect(storage.data.size).toBe(0)
+    expect(storage.alarmDeleted).toBe(1)
+    const snapshot = await (
+      await room.fetch(new Request('https://room/snapshot'))
+    ).json()
+    expect(snapshot).toMatchObject({ version: 0, entities: [] })
+  })
+
+  it('does not arm a new alarm when the evicted sockets close afterwards', async () => {
+    const { room, storage, sockets } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+    ])
+    await room.fetch(resetRequest())
+    const armedBefore = storage.alarmSet
+
+    for (const socket of sockets) await room.webSocketClose(socket, CLOSE_ROOM_CLOSED, '', true)
+
+    expect(storage.alarmSet).toBe(armedBefore)
+  })
+
+  it('takes only a POST', async () => {
+    const { room, storage } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+    ])
+    await room.fetch(commitRequest())
+
+    const response = await room.fetch(resetRequest('GET'))
+
+    expect(response.status).toBe(405)
+    expect(storage.data.size).toBeGreaterThan(0)
+  })
+
+  it('succeeds on a room that never held anything', async () => {
+    const { room, storage } = await joinedRoomOf([])
+
+    expect((await room.fetch(resetRequest())).status).toBe(200)
+    expect(storage.data.size).toBe(0)
   })
 })

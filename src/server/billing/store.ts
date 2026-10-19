@@ -24,6 +24,7 @@ import {
   findSubscriptionByOrganizationUnscoped,
   findSubscriptionByProviderCustomerUnscoped,
   findSubscriptionByProviderSubscriptionUnscoped,
+  organizationExistsUnscoped,
   upsertSubscriptionUnscoped,
 } from '#/server/repos'
 import { ceilingsForPlan, planIdFromRow, storedCeilingsFromRow } from './limits'
@@ -158,6 +159,9 @@ export function createSubscriptionStore(db: Database): SubscriptionStore {
         providerSubscriptionId,
       )
       return row === null ? null : recordFromRow(row)
+    },
+    organizationExists(organizationId) {
+      return organizationExistsUnscoped(db, organizationId)
     },
     async upsert(record) {
       await upsertSubscriptionUnscoped(

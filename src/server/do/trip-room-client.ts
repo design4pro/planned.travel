@@ -25,7 +25,7 @@ export interface TripRoomNamespace {
  */
 const ROOM_ORIGIN = 'https://trip-room.internal'
 
-export function tripRoomUrl(tripId: string, route: 'connect' | 'snapshot' | 'commit' | 'close'): string {
+export function tripRoomUrl(tripId: string, route: 'connect' | 'snapshot' | 'commit' | 'close' | 'reset'): string {
   return `${ROOM_ORIGIN}/${encodeURIComponent(tripId)}/${route}`
 }
 
@@ -119,4 +119,41 @@ export function closeTripRoom(namespace: TripRoomNamespace, tripId: string): Pro
  */
 export function closeTripRoomFor(namespace: TripRoomNamespace, tripId: string, userId: string): Promise<void> {
   return postClose(namespace, tripId, JSON.stringify({ userId }))
+}
+
+/**
+ * Closes a room's sockets and erases its stored state (see `TripRoom.handleReset`). For a trip that
+ * is gone or whose people are being erased: a live room never clears itself. Call it **after** the
+ * trip's rows are gone, so a socket that reconnects is refused at the connect handler instead of
+ * rebuilding the room from rows that are about to be deleted.
+ */
+export async function resetTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
+  const response = await stubFor(namespace, tripId).fetch(
+    new Request(tripRoomUrl(tripId, 'reset'), { method: 'POST' }),
+  )
+  if (!response.ok) {
+    throw new Error(`Trip room reset failed with ${response.status}`)
+  }
+}
+
+/**
+ * Resets the room of every trip given, each once. Every room is tried even when one refuses - a
+ * room left holding a person's id is exactly what this exists to prevent - and the call then fails
+ * naming the trips that did, so a retry can finish them. Resetting an empty room is harmless.
+ */
+export async function resetTripRooms(
+  namespace: TripRoomNamespace,
+  tripIds: ReadonlyArray<string>,
+): Promise<void> {
+  const failed: Array<string> = []
+  for (const tripId of new Set(tripIds)) {
+    try {
+      await resetTripRoom(namespace, tripId)
+    } catch {
+      failed.push(tripId)
+    }
+  }
+  if (failed.length > 0) {
+    throw new Error(`Trip room reset failed for ${failed.length} trip(s): ${failed.join(', ')}`)
+  }
 }
