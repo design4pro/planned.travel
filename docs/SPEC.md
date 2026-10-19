@@ -340,6 +340,13 @@ that takes an explicit tenant context — never a raw `db.select()` from a route
 Tenant isolation is enforced in the repository layer and covered by tests. The bounded
 `…Unscoped` shape below is the explicit exception to the tenant-context argument.
 
+Erasure repository primitives use `createErasureScope` (`server/erasure/scope.ts`), the single
+factory for the reserved `system:erasure` owner actor. It binds one organization and no session;
+a transitive import-graph test forbids routes and server functions from obtaining the factory.
+The trip scrub may delete a departed, banned person's trip without that person's membership,
+while ordinary `deleteTrip` retains its role check. These primitives have no production caller
+until the erasure engine ships (#1056, ADR 0043).
+
 #### FU-3: bounded Unscoped repository functions
 
 An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Two exceptions return or write tenant content: `readInvitePreviewUnscoped`, whose closed per-visitor projection returns the invite card's content, and `joinTripByInviteUnscoped`, the one authenticated write on the invite surface, which acts as the joiner in the link's workspace (docs/ACCESS.md §3.8). Grep `Unscoped` callers; any caller outside the named one is a blocker.
@@ -707,7 +714,8 @@ Rules:
   backfill handler alone (ADR 0043, amended into §5; the auth layer's write-only anchor insert,
   `auth/participation.ts`, is named there too). Three, and closed; a fourth one is a change to this
   contract.
-- `server/public` is the only path that reads without a session, and it holds no SQL of its own.
+- `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
+  Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a
   stranger may see, so leaking a field is unexpressible - executed through `server/repos` for
   token-resolved tenant resources and `server/catalog` for published global rows. The tenant

@@ -60,6 +60,7 @@ import {
   tenantFilter,
 } from './base'
 import {
+  assertCanAdminister,
   isUniqueConstraintViolation,
   NotFoundError,
   RepositoryError,
@@ -382,6 +383,23 @@ export async function reachableTripIds(
     .select({ id: trips.id })
     .from(trips)
     .where(tenantFilter(scope, trips, readableTripFilter(scope)))
+  return rows.map((row) => row.id)
+}
+
+/**
+ * The id of every trip in the workspace, whoever may read it - archived ones included. Collected
+ * before the workspace is deleted, because the rows that name the rooms go with it, and each trip
+ * has a room (`TripRoom`) whose stored state outlives them. Ids only; administrators only, since
+ * unlike {@link reachableTripIds} it ignores who may open a trip.
+ */
+export async function listWorkspaceTripIds(
+  scope: TenantScope,
+): Promise<Array<string>> {
+  assertCanAdminister(scope.ctx, 'list every trip of the workspace')
+  const rows = await scope.db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(tenantFilter(scope, trips))
   return rows.map((row) => row.id)
 }
 
@@ -2004,9 +2022,8 @@ export async function updateTripMember(
   await assertTripRole(scope, row.tripId, ['owner'])
 
   const patch = definedOnly(updateTripMemberInput.parse(input))
-  const demotesAnOwner =
-    row.role === 'owner' && patch.role !== undefined && patch.role !== 'owner'
-  if (!demotesAnOwner) {
+  const changesToNonOwner = patch.role !== undefined && patch.role !== 'owner'
+  if (!changesToNonOwner) {
     return tripMembersRepository.requireUpdate(scope, memberId, patch)
   }
 
@@ -2016,7 +2033,10 @@ export async function updateTripMember(
     scope,
     allOf(
       eq(tripMembers.id, memberId),
-      anotherOwnerExists(scope, row.tripId, row.id),
+      anyOf(
+        ne(tripMembers.role, 'owner'),
+        anotherOwnerExists(scope, row.tripId, row.id),
+      ),
     ),
     patch,
   )
@@ -2046,18 +2066,16 @@ export async function removeTripMember(
   if (row.userId !== scope.ctx.userId) {
     await assertTripRole(scope, row.tripId, ['owner'])
   }
-  if (row.role !== 'owner') {
-    await tripMembersRepository.requireRemove(scope, memberId)
-    return
-  }
-
-  // As in `updateTripMember`: the condition is part of the delete, so the last owner cannot be
-  // removed by two requests that each saw the other.
+  // Read the role again inside the delete: an editor may have become the last owner
+  // since requireById returned. The sibling role update uses the same current-row condition.
   const removed = await tripMembersRepository.removeWhere(
     scope,
     allOf(
       eq(tripMembers.id, memberId),
-      anotherOwnerExists(scope, row.tripId, row.id),
+      anyOf(
+        ne(tripMembers.role, 'owner'),
+        anotherOwnerExists(scope, row.tripId, row.id),
+      ),
     ),
   )
   if (removed === 0) {

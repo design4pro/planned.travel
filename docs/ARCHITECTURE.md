@@ -161,6 +161,11 @@ slices that matter.
   at `succeeded` enqueue nothing — the latter attaches the Polar customer so the billing screen
   works the instant the browser returns, and leaves the notification to the `subscription.created`
   already on its way with the whole subscription on it.
+  A delivery that names an organization which no longer exists (a workspace deleted with
+  `deleteWorkspace` while its provider subscription ran out its paid period) is answered 2xx as
+  `ignored`: `subscription.*` and `checkout.updated` ask `organizationExists()` before they write, so no
+  row is created, no cache entry is dropped and nothing is enqueued, and Polar does not retry into a
+  foreign-key failure. Order events find no row to move, so they already end the same way.
 - **Transactional email** → ten React Email templates in `src/server/email/templates/`, rendered
   by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
   `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by
@@ -202,11 +207,27 @@ a third catalog member.
 - `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
   authorises through the same `requirePermission` the console uses and reaches data through
   `server/catalog`; it never grows a second authorisation path or a second query layer.
-- `src/server/public/**` (phase F) — the only session-less read path in the Worker, and it holds
+- `src/server/public/**` (phase F) — bearer-resolved public reads without a session; it holds
   no SQL of its own. Every response is a named read-only projection with an explicit column
   whitelist, executed through `server/repos` under the tenant scope derived from the share, feed or trip invite link
   record it resolved (the feed scope is built only by repo `openFeedScope` from its adjacent
   branded `ResolvedFeed`), or through `server/catalog` for published global rows.
+
+Erasure primitives (`repos/trips-erasure.ts`, `expenses-erasure.ts`, `collab-erasure.ts`) take a
+workspace-bound reserved owner scope from `erasure/scope.ts`. No request entry point can reach
+that factory, including through imports. Writes run in bounded chunks through the tenant base;
+`prepareTenantInsert` stamps the workspace for a conditional batch insert, preserving column
+defaults and encoders. Promotion, its PII-free notice, departing membership removal and creator
+anonymisation commit together. Selection is repeated in that batch; no surviving successor means
+no notice or finalisation, retaining the original retry anchors. Both ordinary membership writers
+also test the current database role, preserving the new sole owner against stale leave/demotion. No production caller or engine is connected in #1056.
+
+Trip removal requires an awaited `prepareTripRemoval` callback that durably saves the complete,
+idempotent cleanup plan before D1 cascades: attachment and cover keys, export-prefix discovery,
+and room reset. Cleanup executes only after confirmed deletion; queue acceptance is not completion.
+A failure to prepare leaves the rows available for retry. The cascade atomically rechecks solo
+classification; a collaborator joining during preparation causes a refusal and reclassification on retry. The engine owns that integration (#1060).
+Surviving upload keys are returned for metadata rewrite, including already-anonymised rows on retry.
 
 ---
 

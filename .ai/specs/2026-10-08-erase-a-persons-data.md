@@ -1,11 +1,11 @@
 # A person's data can be erased across workspaces on request
 
-| Field              | Value               |
-| ------------------ | ------------------- |
-| **Status**         | in-progress         |
-| **Issue**          | #811                |
-| **Spec PR**        | #1002               |
-| **Implementation** | #1410, #1416, #1420 |
+| Field              | Value                      |
+| ------------------ | -------------------------- |
+| **Status**         | in-progress                |
+| **Issue**          | #811                       |
+| **Spec PR**        | #1002                      |
+| **Implementation** | #1410, #1416, #1418, #1420 |
 
 ## 📝 TLDR
 
@@ -720,6 +720,48 @@ gated the ticket (`risk-high`):
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
   that builds their sweep.
 
+## Amendment - phase 4 (issue #1057)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`, approved, confidence high):
+
+- **`deleteWorkspace(scope, { departingUserId? })` names the one member who may still be in the
+  workspace**, instead of "one member". A count of "at most one member" never asks who that member
+  is, so a call into a workspace whose remaining member is somebody else would have deleted it. With
+  no name the workspace must have no member at all.
+- **The refusals are enforced inside the one `DELETE`.** They are read first, for an error that
+  names the workspace and the reason, and repeated as `NOT EXISTS` predicates in the statement
+  (D1 has no interactive transaction), so a member who joins or a webhook that revives the
+  subscription in between is not deleted along with the workspace. "Live paid" is defined once,
+  `livePaidSubscription()` in `repos/billing.ts`, and read by both.
+- **The webhook guard sits on `subscription.*` and `checkout.updated` only.** Order events find their
+  row through the subscription, and that row is deleted with the organization, so they already end as
+  `ignored`. The guard is `organizationExistsUnscoped` (a boolean, one named caller, `billing/store.ts`).
+  Without it the insert violates the `organization_id` foreign key and answers 500; Polar retries, and
+  repeated failures disable the endpoint for every workspace.
+- **`deletePrefix` and the sweep live in `storage/objects.ts` and `storage/workspace-objects.ts`**,
+  refusing any prefix that is not a whole directory. `avatars/<org>/` is swept although no portrait is
+  written yet. Collectors the caller runs before the rows go: `listWorkspaceTripIds` (`repos/trips.ts`)
+  and `listWorkspaceJourneyPhotoKeys` (`repos/journey.ts`), both administrators only.
+- **The room reset is a `POST` `reset` route** that closes every socket, runs `deleteAll()` and
+  removes the alarm; `resetTripRooms` tries every trip and then fails naming the ones that did.
+- **No orchestrator ships here.** The engine composes the pieces in a later phase. It must keep its
+  resume state somewhere that survives the workspace: `workspace_participants` carries the
+  `erasure_id`, is an `orgRef()` table, and goes with the workspace in step 4.
+- **An administrator may delete the workspace, not only the owner.** `deleteWorkspace` stays on
+  `assertCanAdminister`, as plan 09 and plan 10 (`deleteWorkspace` "stays on `assertCanAdminister`") say. The
+  erasure engine calls it with the reserved system user, role `owner`. Narrowing the interactive caller to the
+  owner is a product decision for the phase that adds the screen.
+- **Open for a person before the engine phase merges (money):** a workspace whose subscription is set to cancel
+  at the end of the period can be deleted, and Polar goes on sending events for it. They are acknowledged and
+  ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a
+  renewal is paid, nothing in the product notices. Whether the engine cancels or refunds at the provider, or
+  alerts on that log, is for a person.
+- **Journey photo keys are swept as given (#1419).** `listWorkspaceJourneyPhotoKeys` returns free-form `storageKey` and
+  `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
+  path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
+  it; until then the engine phase must not pass keys from any other source.
+
 ## Amendment - phase 5 (issue #1058)
 
 What shipped differently from the design above, recorded with the security and tenancy verdict that
@@ -781,3 +823,27 @@ gated the ticket (`risk-high`):
   survives a message delete; it belongs to the erasure phases.
 - **`logAuth` no longer writes `to`** on `email.queued` and `email.queue_failed`; no hash, domain or
   masked form replaces it.
+
+
+## Amendment - Phase 3a primitives (#1056)
+
+The trip, money and collaboration scrubs are grouped by domain in `repos/trips-erasure.ts`,
+`expenses-erasure.ts` and `collab-erasure.ts`. They are repository interfaces with no production
+caller. The current registry also includes trip invite links (disabled and anonymised) and calendar
+feeds (removed); phase 3a covers both. Promotion orders by `coalesce(joined_at, created_at)`, then
+`created_at`, then id: a missing joined date uses the known creation date instead of sorting first.
+
+Trip deletion requires `prepareTripRemoval`, an awaited, mandatory callback that durably and
+idempotently saves all cleanup work before the D1 cascade. That work includes every attachment and
+cover key, export-prefix discovery and room reset; execution waits for confirmed deletion. Rejection
+leaves D1 rows intact. The phase 6 engine (#1060) supplies the callback and tracks cleanup completion;
+these primitives do not import a Worker binding or enqueue a task themselves. Metadata rewrite keys
+include the same erasure's Former member uploads on retry, so a D1 success followed by R2 failure does
+not lose the keys.
+
+
+Phase 3a ownership handoff is one atomic per-trip batch: select the surviving successor, conditionally
+record its PII-free promotion, promote, remove the departing membership, and anonymise the creator.
+If every successor has left, no notice or finalisation is written and the original retry anchors
+remain. The ordinary leave and demotion writers check the current database role in their write,
+including when they read an editor before erasure promoted that person to the sole owner.

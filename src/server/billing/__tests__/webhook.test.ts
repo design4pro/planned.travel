@@ -124,6 +124,10 @@ class CountingStore implements SubscriptionStore {
 
   constructor(private readonly inner: SubscriptionStore) {}
 
+  async organizationExists(id: string): Promise<boolean> {
+    return await this.inner.organizationExists(id)
+  }
+
   async findByOrganization(id: string): Promise<SubscriptionRecord | null> {
     return await this.inner.findByOrganization(id)
   }

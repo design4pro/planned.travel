@@ -10,7 +10,7 @@
  * reads it without that predicate.
  */
 
-import { and, asc, count, eq, exists, inArray, ne, sql } from 'drizzle-orm'
+import { and, asc, count, eq, exists, inArray, ne, notExists, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   INVITATION_STATUSES,
@@ -20,7 +20,8 @@ import {
   organization,
   user,
 } from '#/server/db/auth-schema'
-import { newId } from '#/server/db/schema'
+import { newId, subscriptions } from '#/server/db/schema'
+import { findLivePaidSubscription, livePaidSubscription } from './billing'
 import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base'
 import {
   ForbiddenError,
@@ -98,6 +99,108 @@ export async function updateOrganization(
     throw new NotFoundError('organization', scope.ctx.organizationId)
   }
   return row
+}
+
+/**
+ * Thrown by {@link deleteWorkspace} when somebody other than the person leaving still belongs to
+ * the workspace. Like every repository error it is a maintainer's sentence, not copy: the caller
+ * reads `code` and `organizationName` and words the refusal itself.
+ */
+export class WorkspaceNotEmptyError extends RepositoryError {
+  constructor(readonly organizationName: string) {
+    super(
+      `Workspace "${organizationName}" still has members, so it cannot be deleted.`,
+      'WORKSPACE_NOT_EMPTY',
+    )
+  }
+}
+
+/** Thrown by {@link deleteWorkspace} while the workspace has a live paid subscription (see `livePaidSubscription`). */
+export class WorkspaceHasLiveSubscriptionError extends RepositoryError {
+  constructor(readonly organizationName: string) {
+    super(
+      `Workspace "${organizationName}" has a live paid subscription. Cancel it in the billing portal, or at the payment provider, before deleting the workspace. Deleting a workspace never cancels or refunds anything.`,
+      'WORKSPACE_HAS_LIVE_SUBSCRIPTION',
+    )
+  }
+}
+
+export const deleteWorkspaceInput = z.object({
+  /**
+   * The one member who may still be in the workspace: the person being erased, whose `member` row
+   * goes with their account afterwards. Absent, the workspace must have no member at all. Naming
+   * them is what stops a call into a workspace whose remaining member is somebody else.
+   */
+  departingUserId: idSchema.optional(),
+})
+export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceInput>
+
+/**
+ * Deletes the workspace the scope is bound to, with everything that belongs to it. Only the
+ * `organization` row is deleted here: every tenant table follows through its `ON DELETE CASCADE`
+ * (`orgRef()`). It touches no object store, trip room or provider - those are the caller's, which
+ * collects their keys and trip ids first, because the rows that name them go with this call.
+ *
+ * Refuses, and changes nothing, when the caller cannot administer the workspace, when anyone but
+ * `departingUserId` is still a member, or while the workspace has a live paid subscription.
+ * Nothing here cancels a subscription or refunds money.
+ *
+ * The refusals are read first, so the error names the workspace and the reason, and are then
+ * enforced again inside the one `DELETE` statement: D1 has no interactive transaction, and a member
+ * who joins, or a webhook that revives the subscription, between the read and the write must not
+ * be deleted along with the workspace.
+ */
+export async function deleteWorkspace(
+  scope: TenantScope,
+  input: DeleteWorkspaceInput = {},
+): Promise<void> {
+  assertCanAdminister(scope.ctx, 'delete the workspace')
+  const { departingUserId } = deleteWorkspaceInput.parse(input)
+  const organizationName = (await getOrganization(scope)).name
+
+  const refuseIfBlocked = async (): Promise<void> => {
+    const others = await membersRepository.count(scope, anyoneBut(departingUserId))
+    if (others > 0) {
+      throw new WorkspaceNotEmptyError(organizationName)
+    }
+    if ((await findLivePaidSubscription(scope)) !== null) {
+      throw new WorkspaceHasLiveSubscriptionError(organizationName)
+    }
+  }
+  await refuseIfBlocked()
+
+  const deleted = await scope.db
+    .delete(organization)
+    .where(
+      and(
+        // The tenant discriminator of this table is its primary key.
+        eq(organization.id, scope.ctx.organizationId),
+        notExists(
+          scope.db
+            .select({ present: sql`1` })
+            .from(member)
+            .where(tenantFilter(scope, member, anyoneBut(departingUserId))),
+        ),
+        notExists(
+          scope.db
+            .select({ present: sql`1` })
+            .from(subscriptions)
+            .where(tenantFilter(scope, subscriptions, livePaidSubscription())),
+        ),
+      ),
+    )
+    .returning({ id: organization.id })
+
+  if (deleted.length === 0) {
+    // Either the check lost a race (re-read: it throws the reason) or the workspace is already gone.
+    await refuseIfBlocked()
+    throw new NotFoundError('organization', scope.ctx.organizationId)
+  }
+}
+
+/** Every member, or every member but one. */
+function anyoneBut(userId: string | undefined): SQL | undefined {
+  return userId === undefined ? undefined : ne(member.userId, userId)
 }
 
 /* -------------------------------------------------------------------------------------------------
