@@ -268,17 +268,13 @@ export function WorkspaceInvitations({
           if (!open) setRevoke(null)
         }}
       >
-        <DialogContent>
+        <DialogContent hideClose>
           <DialogHeader>
             <DialogTitle>{t('settings.workspace.invite.confirm')}</DialogTitle>
             <DialogDescription>{revoke?.email}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="secondary"
-              autoFocus
-              onClick={() => setRevoke(null)}
-            >
+            <Button variant="secondary" onClick={() => setRevoke(null)}>
               {t('shell.admin.members.role.promote.cancel')}
             </Button>
             <Button

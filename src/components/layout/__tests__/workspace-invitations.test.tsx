@@ -1,6 +1,6 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -82,6 +82,16 @@ it('asks for confirmation before revoking', async () => {
   )
   await user.click(screen.getByRole('button', { name: 'Revoke' }))
   expect(act).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBe(
+    document.activeElement,
+  )
+  await user.keyboard('{Escape}')
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Revoke' })).toBe(
+      document.activeElement,
+    ),
+  )
+  await user.click(screen.getByRole('button', { name: 'Revoke' }))
   await user.click(screen.getByRole('button', { name: 'Revoke invitation' }))
   expect(act).toHaveBeenCalledWith('revoke', { invitationId: 'pending' })
 })
