@@ -1145,6 +1145,15 @@ user id>`, which is a value change and not a schema change. `trail()` (`src/serv
 does it, from the tenant context's `impersonatedBy`, which `requireOrgFrom` reads off the session; it
 is implemented (#1010).
 
+Erasure trip promotion (#1056) adds `trip.owner_promoted` under the reserved tenant actor
+`system:erasure`. Its audit row carries only the trip id, with no personal metadata, IP or user
+agent, and commits in the same batch as the role update, departing membership removal and creator
+anonymisation. The successor is selected inside that batch; if none survives, the original retry
+anchors remain and the scrub refuses. Ordinary leave and demotion also test the current database
+role in their write, so a request that read an editor before promotion cannot remove the new sole owner. `createErasureScope` is worker-only;
+request routes and server functions cannot import it, even indirectly. It grants no platform role.
+The ordinary trip deletion path still requires its caller's trip-owner membership.
+
 ---
 
 ## 5. MCP token blast radius
