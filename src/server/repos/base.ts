@@ -13,7 +13,20 @@
  * through a generic*, they are confined to this file, and each one is annotated.
  */
 
-import { and, asc, count, desc, eq, inArray, lt, or, sum } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  lt,
+  or,
+  sql,
+  sum,
+  SQL,
+} from 'drizzle-orm'
 import { subscriptions } from '#/server/db/schema'
 import { UNLIMITED } from '#/server/db/types'
 import { resolveLimitsFromRow } from '#/server/billing/limits'
@@ -23,7 +36,6 @@ import {
   RepositoryError,
   requireTenantContext,
 } from './context'
-import type { SQL } from 'drizzle-orm'
 import type {
   SQLiteColumn,
   SQLiteInsertValue,
@@ -116,6 +128,40 @@ export function anyOf(
   ...rest: ReadonlyArray<SQL | undefined>
 ): SQL {
   return or(first, ...rest) ?? first
+}
+
+/** A tenant-stamped insert, optionally conditional, for an atomic batch with scoped writes. */
+export function prepareTenantInsert<TTable extends TenantTable>(
+  scope: TenantScope,
+  table: TTable,
+  values: Omit<TTable['$inferInsert'], 'organizationId'>,
+  where?: SQL,
+) {
+  if (where === undefined) {
+    // The caller supplies this table's insert shape; stamping its tenant preserves that shape.
+    return scope.db.insert(table).values({
+      ...values,
+      organizationId: scope.ctx.organizationId,
+    } as SQLiteInsertValue<TTable>)
+  }
+  // Widen only to enumerate the table's insert fields; the tenant always comes from the scope.
+  const stamped: Record<string, unknown> = {
+    ...values,
+    organizationId: scope.ctx.organizationId,
+  }
+  const fields = Object.entries(getTableColumns(table)).map(([key, column]) => {
+    const supplied = stamped[key]
+    const value =
+      supplied === undefined
+        ? (column.defaultFn?.() ?? column.default ?? null)
+        : supplied
+    return value instanceof SQL ? value : sql.param(value, column)
+  })
+  // INSERT SELECT needs every column in schema order. Preserve defaults and the column encoders
+  // (timestamps/JSON included), rather than treating their application values as raw SQL bindings.
+  return scope.db
+    .insert(table)
+    .select(sql`select ${sql.join(fields, sql`, `)} where ${where}`)
 }
 
 /* -------------------------------------------------------------------------------------------------

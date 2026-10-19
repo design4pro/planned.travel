@@ -823,3 +823,27 @@ gated the ticket (`risk-high`):
   survives a message delete; it belongs to the erasure phases.
 - **`logAuth` no longer writes `to`** on `email.queued` and `email.queue_failed`; no hash, domain or
   masked form replaces it.
+
+
+## Amendment - Phase 3a primitives (#1056)
+
+The trip, money and collaboration scrubs are grouped by domain in `repos/trips-erasure.ts`,
+`expenses-erasure.ts` and `collab-erasure.ts`. They are repository interfaces with no production
+caller. The current registry also includes trip invite links (disabled and anonymised) and calendar
+feeds (removed); phase 3a covers both. Promotion orders by `coalesce(joined_at, created_at)`, then
+`created_at`, then id: a missing joined date uses the known creation date instead of sorting first.
+
+Trip deletion requires `prepareTripRemoval`, an awaited, mandatory callback that durably and
+idempotently saves all cleanup work before the D1 cascade. That work includes every attachment and
+cover key, export-prefix discovery and room reset; execution waits for confirmed deletion. Rejection
+leaves D1 rows intact. The phase 6 engine (#1060) supplies the callback and tracks cleanup completion;
+these primitives do not import a Worker binding or enqueue a task themselves. Metadata rewrite keys
+include the same erasure's Former member uploads on retry, so a D1 success followed by R2 failure does
+not lose the keys.
+
+
+Phase 3a ownership handoff is one atomic per-trip batch: select the surviving successor, conditionally
+record its PII-free promotion, promote, remove the departing membership, and anonymise the creator.
+If every successor has left, no notice or finalisation is written and the original retry anchors
+remain. The ordinary leave and demotion writers check the current database role in their write,
+including when they read an editor before erasure promoted that person to the sole owner.
