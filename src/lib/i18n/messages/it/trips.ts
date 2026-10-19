@@ -520,6 +520,64 @@ const messages = {
     'Non è stato possibile unirsi. Il link funziona ancora, riprova.',
   'join.error.switch':
     'Non è stato possibile cambiare spazio di lavoro. Riprova.',
+
+  'invite.title': 'Link d’invito',
+  'invite.description':
+    'Chiunque in questo spazio apra il link si unisce al viaggio.',
+  'invite.empty.title': 'Nessun link d’invito',
+  'invite.empty.body':
+    'Crea un link e condividilo nella chat del gruppo: le persone di questo spazio potranno unirsi.',
+  'invite.action.create': 'Crea link',
+  'invite.link.label': 'Link d’invito',
+  'invite.copy': 'Copia link',
+  'invite.copied': 'Link copiato',
+  'invite.copyFailed':
+    'Copia non riuscita. Seleziona il link e copialo manualmente.',
+  'invite.switch.label': 'Chiunque in questo spazio abbia il link può unirsi',
+  'invite.switch.onHint':
+    'Disattivandolo, il link smette di funzionare per tutti, anche le copie già inviate.',
+  'invite.switch.offHint':
+    'Riattivandolo si crea un nuovo link. I precedenti restano inutilizzabili.',
+  'invite.off.body': 'Il link è disattivato. Nessuno può usarlo per unirsi.',
+  'invite.uses': {
+    one: 'Persone unite tramite questo link: {count}',
+    many: 'Persone unite tramite questo link: {count}',
+    other: 'Persone unite tramite questo link: {count}',
+  },
+  'invite.uses.never': 'Nessuno si è ancora unito tramite questo link.',
+  'invite.lastUsed': 'Ultimo accesso: {when}',
+  'invite.role.upgrade.title': 'Assegnare il ruolo di editor?',
+  'invite.role.upgrade.body':
+    'Vale per tutte le copie già inviate e per chi si unirà da ora in poi.',
+  'invite.role.upgrade.confirm': 'Assegna ruolo di editor',
+  'invite.replace.action': 'Sostituisci link',
+  'invite.replace.title': 'Sostituire questo link?',
+  'invite.replace.body':
+    'Il vecchio link smetterà subito di funzionare per tutti. Chi si è già unito resta nel viaggio; rimuovilo dall’elenco sottostante se necessario.',
+  'invite.replace.deadBody':
+    'Il vecchio link non funziona più. Chi si è già unito resta nel viaggio.',
+  'invite.replace.confirm': 'Sostituisci link',
+  'invite.replace.pending': 'Sostituzione del link',
+  'invite.stale': 'Questo link non funziona più. Sostituiscilo.',
+  'invite.creatorGone':
+    'Il link non funziona più perché chi l’ha creato non è più proprietario. Sostituiscilo.',
+  'invite.archived':
+    'Il viaggio è archiviato. Il link tornerà a funzionare quando il viaggio verrà ripristinato.',
+  'invite.announce.created': 'Link d’invito creato',
+  'invite.announce.roleEditor': 'Chi si unisce avrà il ruolo di editor',
+  'invite.announce.off': 'Link d’invito disattivato',
+  'invite.announce.newLink':
+    'Il nuovo link è pronto. Copialo e invialo di nuovo.',
+  'invite.announce.roleViewer': 'Chi si unisce potrà visualizzare il viaggio',
+  'invite.error.title': 'Impossibile caricare il link',
+  'invite.error.retry': 'Riprova',
+  'invite.refusal.archived': 'Questo viaggio è archiviato.',
+  'invite.refusal.notOwner':
+    'Solo un proprietario del viaggio può modificare il link.',
+  'invite.refusal.changed':
+    'Qualcuno ha modificato il link. Viene mostrato quello attuale.',
+  'invite.announce.recovered':
+    'Sono mostrate le impostazioni attuali del link. Controllale prima di un’altra modifica.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

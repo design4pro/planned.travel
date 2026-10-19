@@ -526,6 +526,64 @@ const messages = {
     'Nie udało się dołączyć. Link nadal działa, spróbuj ponownie.',
   'join.error.switch':
     'Nie udało się przełączyć przestrzeni. Spróbuj ponownie.',
+
+  'invite.title': 'Link do podróży',
+  'invite.description':
+    'Każdy w tym workspace, kto otworzy link, dołączy do podróży.',
+  'invite.empty.title': 'Nie ma jeszcze linku',
+  'invite.empty.body':
+    'Utwórz link i wklej go do czatu grupowego. Osoby z tego workspace będą mogły dołączyć.',
+  'invite.action.create': 'Utwórz link',
+  'invite.link.label': 'Link do podróży',
+  'invite.copy': 'Kopiuj link',
+  'invite.copied': 'Link skopiowany',
+  'invite.copyFailed':
+    'Nie udało się skopiować. Zaznacz link i skopiuj go ręcznie.',
+  'invite.switch.label': 'Każdy w tym workspace z linkiem może dołączyć',
+  'invite.switch.onHint':
+    'Wyłączenie unieważni link dla wszystkich, również wysłane już kopie.',
+  'invite.switch.offHint':
+    'Ponowne włączenie utworzy nowy link. Wcześniejsze linki pozostaną nieważne.',
+  'invite.off.body': 'Link jest wyłączony. Nikt nie może przez niego dołączyć.',
+  'invite.uses': {
+    one: 'Liczba osób, które dołączyły przez link: {count}',
+    few: 'Liczba osób, które dołączyły przez link: {count}',
+    many: 'Liczba osób, które dołączyły przez link: {count}',
+    other: 'Liczba osób, które dołączyły przez link: {count}',
+  },
+  'invite.uses.never': 'Nikt jeszcze nie dołączył przez ten link.',
+  'invite.lastUsed': 'Ostatnie dołączenie: {when}',
+  'invite.role.upgrade.title': 'Nadać rolę edytora?',
+  'invite.role.upgrade.body':
+    'Dotyczy to wszystkich wysłanych kopii linku i osób, które dołączą od teraz.',
+  'invite.role.upgrade.confirm': 'Nadaj rolę edytora',
+  'invite.replace.action': 'Zastąp link',
+  'invite.replace.title': 'Zastąpić ten link?',
+  'invite.replace.body':
+    'Stary link natychmiast przestanie działać dla wszystkich. Osoby, które już dołączyły, pozostaną w podróży; w razie potrzeby usuń je z listy poniżej.',
+  'invite.replace.deadBody':
+    'Stary link już nie działa. Osoby, które dołączyły, pozostają w podróży.',
+  'invite.replace.confirm': 'Zastąp link',
+  'invite.replace.pending': 'Zastępowanie linku',
+  'invite.stale': 'Ten link już nie działa. Zastąp go.',
+  'invite.creatorGone':
+    'Link nie działa, bo jego twórca nie jest już właścicielem. Zastąp go.',
+  'invite.archived':
+    'Podróż jest zarchiwizowana. Link nie działa do czasu jej przywrócenia.',
+  'invite.announce.created': 'Link do podróży utworzony',
+  'invite.announce.roleEditor': 'Dołączające osoby otrzymają rolę edytora',
+  'invite.announce.off': 'Link do podróży wyłączony',
+  'invite.announce.newLink':
+    'Nowy link jest gotowy. Skopiuj go i wyślij ponownie.',
+  'invite.announce.roleViewer':
+    'Dołączające osoby otrzymają rolę przeglądającego',
+  'invite.error.title': 'Nie udało się wczytać linku',
+  'invite.error.retry': 'Spróbuj ponownie',
+  'invite.refusal.archived': 'Podróż jest zarchiwizowana.',
+  'invite.refusal.notOwner': 'Tylko właściciel podróży może zmienić link.',
+  'invite.refusal.changed': 'Ktoś inny zmienił link. Wyświetlamy aktualny.',
+  'invite.announce.recovered':
+    'Wyświetlamy aktualne ustawienia linku. Sprawdź je przed kolejną zmianą.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -525,6 +525,67 @@ const messages = {
   'join.error.join':
     'Impossible de rejoindre le voyage. Le lien fonctionne toujours, réessayez.',
   'join.error.switch': 'Impossible de changer d’espace de travail. Réessayez.',
+
+  'invite.title': 'Lien d’invitation',
+  'invite.description':
+    'Toute personne de cet espace qui ouvre le lien rejoint le voyage.',
+  'invite.empty.title': 'Aucun lien d’invitation',
+  'invite.empty.body':
+    'Créez un lien et partagez-le dans votre discussion de groupe pour permettre aux membres de cet espace de vous rejoindre.',
+  'invite.action.create': 'Créer un lien',
+  'invite.link.label': 'Lien d’invitation',
+  'invite.copy': 'Copier le lien',
+  'invite.copied': 'Lien copié',
+  'invite.copyFailed':
+    'Copie impossible. Sélectionnez le lien et copiez-le vous-même.',
+  'invite.switch.label':
+    'Toute personne de cet espace ayant le lien peut rejoindre le voyage',
+  'invite.switch.onHint':
+    'Désactiver le lien l’invalide pour tout le monde, y compris les copies déjà envoyées.',
+  'invite.switch.offHint':
+    'La réactivation crée un nouveau lien. Les anciens restent invalides.',
+  'invite.off.body':
+    'Le lien est désactivé. Personne ne peut l’utiliser pour rejoindre le voyage.',
+  'invite.uses': {
+    one: 'Personnes ayant rejoint via ce lien : {count}',
+    many: 'Personnes ayant rejoint via ce lien : {count}',
+    other: 'Personnes ayant rejoint via ce lien : {count}',
+  },
+  'invite.uses.never': 'Personne n’a encore rejoint le voyage via ce lien.',
+  'invite.lastUsed': 'Dernière arrivée : {when}',
+  'invite.role.upgrade.title': 'Accorder le rôle d’éditeur ?',
+  'invite.role.upgrade.body':
+    'Cela concerne toutes les copies déjà envoyées et toute personne qui rejoint le voyage à partir de maintenant.',
+  'invite.role.upgrade.confirm': 'Accorder le rôle d’éditeur',
+  'invite.replace.action': 'Remplacer le lien',
+  'invite.replace.title': 'Remplacer ce lien ?',
+  'invite.replace.body':
+    'L’ancien lien sera immédiatement invalidé pour tous. Les personnes déjà inscrites restent dans le voyage ; retirez-les de la liste ci-dessous si nécessaire.',
+  'invite.replace.deadBody':
+    'L’ancien lien ne fonctionne plus. Les personnes déjà inscrites restent dans le voyage.',
+  'invite.replace.confirm': 'Remplacer le lien',
+  'invite.replace.pending': 'Remplacement du lien',
+  'invite.stale': 'Ce lien ne fonctionne plus. Remplacez-le.',
+  'invite.creatorGone':
+    'Ce lien ne fonctionne plus car son créateur n’est plus propriétaire. Remplacez-le.',
+  'invite.archived':
+    'Ce voyage est archivé. Le lien fonctionnera à nouveau lorsque le voyage sera restauré.',
+  'invite.announce.created': 'Lien d’invitation créé',
+  'invite.announce.roleEditor':
+    'Les prochaines personnes auront le rôle d’éditeur',
+  'invite.announce.off': 'Lien d’invitation désactivé',
+  'invite.announce.newLink': 'Nouveau lien prêt. Copiez-le et renvoyez-le.',
+  'invite.announce.roleViewer':
+    'Les prochaines personnes auront le rôle de lecteur',
+  'invite.error.title': 'Le lien d’invitation n’a pas pu être chargé',
+  'invite.error.retry': 'Réessayer',
+  'invite.refusal.archived': 'Ce voyage est archivé.',
+  'invite.refusal.notOwner':
+    'Seul un propriétaire du voyage peut modifier le lien.',
+  'invite.refusal.changed':
+    'Quelqu’un a modifié le lien. Le lien actuel est affiché.',
+  'invite.announce.recovered':
+    'Les paramètres actuels du lien sont affichés. Vérifiez-les avant toute autre modification.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -18,6 +18,7 @@ import type { Catalogue } from '#/lib/i18n'
 // The screen's module imports the server functions, which reach `cloudflare:workers`; the pieces
 // under test call none of them.
 vi.mock('../../-server/people', () => ({}))
+vi.mock('../../-server/invite', () => ({}))
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => () => {},
   useRouter: () => ({}),

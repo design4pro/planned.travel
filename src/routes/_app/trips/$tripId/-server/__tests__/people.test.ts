@@ -246,7 +246,7 @@ describe('readTripPeople', () => {
     // `[created_at, id]`, the fixture writes both memberships inside one millisecond, and the tie
     // then falls to the random tail of `newId()` — which decided this assertion at random until
     // #472. Owner-first *is* promised, so that half stays an ordered claim.
-    const payload = await readTripPeople(owner, fixture.tripId)
+    const payload = await readTripPeople(owner, fixture.tripId, 'test-key')
     const participants = memberUserIds(payload.participants)
 
     expect(participants).toHaveLength(3)
@@ -265,6 +265,7 @@ describe('readTripPeople', () => {
     const payload = await readTripPeople(
       tenant.scopeFor(fixture.editorId),
       fixture.tripId,
+      'test-key',
     )
 
     expect(payload.viewerRole).toBe('editor')
@@ -279,7 +280,7 @@ describe('readTripPeople', () => {
     const workspaceRow = await getMembership(owner, fixture.viewerId)
     await removeMember(owner, workspaceRow?.id ?? '')
 
-    const payload = await readTripPeople(owner, fixture.tripId)
+    const payload = await readTripPeople(owner, fixture.tripId, 'test-key')
 
     expect(memberUserIds(payload.participants)).toEqual([
       tenant.ownerUserId,
@@ -294,7 +295,7 @@ describe('readTripPeople', () => {
     // The harness gives every seeded user `<id>@example.test`, so the whole class is one substring.
     // Asserted on the serialised payload rather than field by field, because what matters is that
     // no projection anywhere in it kept the address.
-    const payload = await readTripPeople(owner, fixture.tripId)
+    const payload = await readTripPeople(owner, fixture.tripId, 'test-key')
 
     expect(JSON.stringify(payload)).not.toContain('@example.test')
   })
@@ -307,9 +308,9 @@ describe('readTripPeople', () => {
     // first flip would then write the downgrade the validator exists to refuse.
     await updateTrip(owner, fixture.tripId, { visibility: 'public' })
 
-    expect((await readTripPeople(owner, fixture.tripId)).visibility).toBe(
-      'public',
-    )
+    expect(
+      (await readTripPeople(owner, fixture.tripId, 'test-key')).visibility,
+    ).toBe('public')
   })
 
   it('answers a non-member of an organization-visible trip with a null role', async () => {
@@ -318,6 +319,7 @@ describe('readTripPeople', () => {
     const payload = await readTripPeople(
       tenant.scopeFor(fixture.outsiderId),
       fixture.tripId,
+      'test-key',
     )
 
     expect(payload.viewerRole).toBeNull()
@@ -554,9 +556,9 @@ describe('setTripVisibilityFn', () => {
       }),
     )
 
-    expect((await readTripPeople(owner, fixture.tripId)).visibility).toBe(
-      'organization',
-    )
+    expect(
+      (await readTripPeople(owner, fixture.tripId, 'test-key')).visibility,
+    ).toBe('organization')
   })
 
   it('refuses `public` at the validator, before any repository call', async () => {
@@ -566,15 +568,15 @@ describe('setTripVisibilityFn', () => {
     })
 
     expect(parsed.success).toBe(false)
-    expect((await readTripPeople(owner, fixture.tripId)).visibility).toBe(
-      'private',
-    )
+    expect(
+      (await readTripPeople(owner, fixture.tripId, 'test-key')).visibility,
+    ).toBe('private')
   })
 })
 
 /** The fixture trip's participants, as the screen would receive them. */
 async function readPeople(): Promise<ReadonlyArray<TripParticipant>> {
-  return (await readTripPeople(owner, fixture.tripId)).participants
+  return (await readTripPeople(owner, fixture.tripId, 'test-key')).participants
 }
 
 /* ------------------------------------------------------------------- guests */
@@ -592,7 +594,7 @@ describe('guests', () => {
       displayName: 'Anna',
     })
 
-    const payload = await readTripPeople(owner, fixture.tripId)
+    const payload = await readTripPeople(owner, fixture.tripId, 'test-key')
 
     expect(payload.participants.at(-1)).toMatchObject({
       kind: 'guest',

@@ -267,6 +267,7 @@ export type SimpleSelectProps = Omit<
   invalid?: boolean
   className?: string
   triggerId?: string
+  'aria-disabled'?: boolean
   /** Accessible name when no visible label sits next to the control. */
   ariaLabel?: string
 }
@@ -284,6 +285,7 @@ export const SimpleSelect = React.forwardRef<
       className,
       triggerId,
       ariaLabel,
+      'aria-disabled': ariaDisabled,
       value,
       defaultValue,
       onValueChange,
@@ -380,6 +382,7 @@ export const SimpleSelect = React.forwardRef<
           invalid={invalid}
           className={className}
           aria-label={ariaLabel}
+          aria-disabled={ariaDisabled}
           aria-describedby={orphaned ? notice : undefined}
           data-placeholder={placeholderFlag}
           data-orphaned={orphaned ? '' : undefined}
