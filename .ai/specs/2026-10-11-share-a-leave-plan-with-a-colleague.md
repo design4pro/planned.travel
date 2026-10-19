@@ -39,7 +39,7 @@ colleague see another person's sick days (a legal question about health data tha
 
 This spec describes the work that is **left** at HEAD (`ec5182b2`). It departs from the plan's stage block wherever the code the plan
 cites has changed or a specialist found the plan incomplete; every departure is a row of the Resolved assumptions table. It builds on
-two merged specs that are **not implemented at HEAD**: the allowance spec (`.ai/specs/2026-10-08-leave-planner-allowances-and-carry-over.md`,
+two merged specs that are **not implemented at HEAD**: the allowance spec (`.ai/specs/implemented/2026-10-08-leave-planner-allowances-and-carry-over.md`,
 tickets 08-S1a to 08-S1c: `requirePlanActor`, `requirePlanOwner`, `recomputeCarryOver` (08-S1b), `src/routes/_app/-server/vacay.ts`,
 `src/components/vacay/`) and the year-grid spec (`.ai/specs/2026-10-10-log-your-leave-days-on-the-year-grid.md`, tickets 08-S5a to
 08-S5f: the grid, `loadVacayGridFn`, `setVacayEntryFn`, `clearVacayEntriesFn`, `day-rules.ts`). Each ticket here is therefore blocked by

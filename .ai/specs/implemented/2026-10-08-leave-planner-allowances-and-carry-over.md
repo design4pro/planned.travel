@@ -2,10 +2,10 @@
 
 | Field              | Value                                    |
 | ------------------ | ---------------------------------------- |
-| **Status**         | in-progress                              |
+| **Status**         | implemented                              |
 | **Issue**          | none                                     |
 | **Spec PR**        | #985                                     |
-| **Implementation** | #1381, #1412                             |
+| **Implementation** | #1381, #1412, #1421                      |
 | **Plan**           | 08-S1 (docs/plans/08-product-modules.md) |
 
 ## 📝 TLDR
@@ -652,3 +652,14 @@ security and tenancy **approve with conditions** (confidence high; rows 20 and 2
 `updatePlanSettings` are applied); accessibility **approve with conditions** (confidence high; row 24 applied); UX **approve with
 conditions** (confidence medium; row 19, the plural keys, the localised literals and the dialog sizing are applied). Nobody
 answered **revise**, and the security and tenancy reviewer approved, so the spec is mergeable by this pipeline.
+
+## Amendment
+
+Implemented in #1381 (08-S1a), #1412 (08-S1b) and #1421 (08-S1c). Three things shipped differently from the design above.
+
+- **The dialog lives in `src/routes/_app/-ui/plan-settings-dialog.tsx`, not `src/components/vacay/`.** Same reason as the allowance
+  panel: it calls `updateVacayPlanFn`, and a module component would have to import a route's `-server` file.
+- **`updatePlanSettingsInput` is on the import allowlist.** `updateVacayPlanFn` validates with the repository's two-field `pick`, so the
+  0-365 rule has one owner; a schema is not a way into a row, the same as `setEntitlementInput`.
+- **`updateVacayPlanFn` returns `{ id, carryOverEnabled, defaultEntitlementDays }`, not the whole plan row.** Those are the fields the
+  dialog reads back; the screen reloads through `router.invalidate()`.

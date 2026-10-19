@@ -43,7 +43,7 @@ body, carries it; choosing a feed is a licence and cost decision, so it is a per
 
 This spec describes the work that is **left** at HEAD (`4ed3a555`). It departs from the plan's stage block wherever the code the
 plan cites has changed or a specialist found the plan wrong; every departure is a row of the Resolved assumptions table. It builds on
-the merged allowance spec (`.ai/specs/2026-10-08-leave-planner-allowances-and-carry-over.md`, tickets 08-S1a, 08-S1b and 08-S1c),
+the merged allowance spec (`.ai/specs/implemented/2026-10-08-leave-planner-allowances-and-carry-over.md`, tickets 08-S1a, 08-S1b and 08-S1c),
 **which is not implemented at HEAD**: the guards, `src/routes/_app/-server/vacay.ts`, `src/components/vacay/` and the carry-over
 recompute do not exist yet, so each ticket here is blocked by the allowance ticket it needs (Phasing). Later stages are named here by
 what they ship (the shared-plan stage, the journal stage), never by id: the backlog reads any mention of a stage id in a spec as that
