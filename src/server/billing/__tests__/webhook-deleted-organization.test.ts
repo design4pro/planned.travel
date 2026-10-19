@@ -45,6 +45,7 @@ let live: SeededTenant
 let runtime: BillingRuntime
 let tasks: Harness['tasks']
 let cache: Harness['cache']
+let logs: Harness['logs']
 
 beforeEach(async () => {
   db = await createDbHarness({ ddl: 'migrations' })
@@ -55,6 +56,7 @@ beforeEach(async () => {
   runtime = { ...h.runtime, subscriptions: createSubscriptionStore(db.db) }
   tasks = h.tasks
   cache = h.cache
+  logs = h.logs
 })
 afterEach(() => db.close())
 
@@ -103,6 +105,23 @@ describe('a billing webhook for a deleted organization', () => {
     expect(await subscriptionRows()).toEqual([])
     expect(tasks.sent).toEqual([])
     expect(cache.entries.has(`plan-state:${gone.organizationId}`)).toBe(false)
+  })
+
+  it('leaves a warning, the only trace that the provider may still be charging for it', async () => {
+    await deliver(
+      'subscription.active',
+      polarSubscription(forOrganization(gone.organizationId)),
+      'msg_warn',
+    )
+
+    expect(logs).toContainEqual({
+      level: 'warn',
+      message: 'billing.webhook.organization_gone',
+      fields: {
+        eventType: 'subscription.active',
+        organizationId: gone.organizationId,
+      },
+    })
   })
 
   it('accepts a successful checkout and attaches no customer', async () => {
