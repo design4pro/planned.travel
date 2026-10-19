@@ -53,6 +53,15 @@
         ],
         "createdAt": "2026-09-19T23:07:09.130Z",
         "reason": "agent decided (om-auto-fix-pr on PR #636): illustrative spec mockup reproducing the product's own type steps from src/styles/tokens.css - --text-micro 11px, --text-caption 12px, --text-label 13px, --text-body 15px. Those steps are ~1.08-1.15 apart, deliberately below the rule's 1.25 target, and the planner rail carries hierarchy with weight and the --ink/--ink-3/--ink-4 ramp instead: src/components/planner/day-section.tsx renders the title as 'text-label font-bold text-ink' beside 'text-caption text-ink-3' for the date. Widening the scale would misrepresent the screen being specified. Fifth instance of the same sanctioned exception, after basemap-catalogue, writable-day-note and the two drop-a-pin mockups. The off-token 14px base this file had was fixed to the 15px body token in the same pass rather than suppressed."
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/routes/_app/trips/$tripId/-lib/__tests__/files-search.test.tsx"
+        ],
+        "createdAt": "2026-10-19T15:33:16.250Z",
+        "reason": "Agent review: the literal <img> is an intentional malformed search-input fixture, not rendered markup."
       }
     ]
   }
