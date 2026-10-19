@@ -3,6 +3,13 @@ import { DatabaseSync } from 'node:sqlite'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { DEMO_PASSWORD } from './helpers/session'
+import { settle } from './helpers/settle'
+
+const WORKSPACE = {
+  name: 'workspace',
+  path: '/settings/organization',
+  ready: 'table',
+} as const
 
 test.use({ storageState: 'e2e/.auth/demo.json' })
 
@@ -11,6 +18,7 @@ test('workspace membership confirmation cancels and explains the last-owner refu
   page,
 }) => {
   await page.goto('/settings/organization', { waitUntil: 'networkidle' })
+  await settle(page, WORKSPACE)
   const leave = page.getByRole('button', {
     name: 'Leave workspace',
     exact: true,
@@ -116,6 +124,7 @@ for (const provision of [false, true])
       }
       const page = await leaver.newPage()
       await page.goto('/settings/organization', { waitUntil: 'networkidle' })
+      await settle(page, WORKSPACE)
       await page
         .getByRole('button', { name: 'Leave workspace', exact: true })
         .click()
@@ -144,6 +153,7 @@ for (const provision of [false, true])
         expect(active.session.activeOrganizationId).not.toBe(personalId)
       else expect(active.session.activeOrganizationId).toBe(personalId)
       await page.goto('/settings/organization', { waitUntil: 'networkidle' })
+      await settle(page, WORKSPACE)
       await expect(
         page.getByText(
           provision ? `${leaverName}'s Travel` : "Rafal's Travel",
