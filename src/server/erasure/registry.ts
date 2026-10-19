@@ -21,9 +21,10 @@
  *   impersonated session.
  *
  * **The registry covers D1 only.** The stores outside D1 (R2 key families, KV keys, the trip-room
- * Durable Object, logs, Resend, Polar) are inventoried in the spec's section 6; their sweep functions
- * land with the phase that builds them, and several of them are residuals, not outcomes. This is what
- * keeps `keep` honest: the platform audit ledger is the only entry that has it.
+ * Durable Object, logs, Resend, Polar) are inventoried in the spec's section 6, and several of them
+ * are residuals, not outcomes. Their purges and the metadata rewrite are `./stores`, and the sweep
+ * that checks both and every place below is `./verify`. This is what keeps `keep` honest: the
+ * platform audit ledger is the only entry that has it.
  *
  * `Former member` ids: an `anonymise` replaces the person's id with the workspace's Former member id
  * (`erased_<nanoid>`, one per workspace per erasure, `workspace_participants.tombstone_id`).

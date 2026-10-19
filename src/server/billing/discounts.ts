@@ -128,9 +128,14 @@ export function discountMissKey(code: string): string {
   return `billing:discount-miss:${code}`
 }
 
+/** The per-user attempt counter; an erasure purges it by this name. */
+export function discountAttemptsUserKey(userId: string): string {
+  return `billing:discount-attempts:u:${userId}`
+}
+
 function attemptKeys(identity: BillingIdentity): ReadonlyArray<string> {
   const keys = [
-    `billing:discount-attempts:u:${identity.userId}`,
+    discountAttemptsUserKey(identity.userId),
     `billing:discount-attempts:o:${identity.organizationId}`,
   ]
   const ip = identity.clientIp ?? null
