@@ -1170,6 +1170,21 @@ const messages = {
   'vacay.error.title': 'Không thể tải trình lập kế hoạch nghỉ phép',
   'vacay.year.previous': 'Năm trước',
   'vacay.year.next': 'Năm sau',
+  'vacay.settings.open': 'Cài đặt kế hoạch nghỉ phép',
+  'vacay.settings.title': 'Cài đặt kế hoạch nghỉ phép',
+  'vacay.settings.description':
+    'Cách chuyển ngày phép chưa dùng sang năm sau và số ngày bạn có theo mặc định.',
+  'vacay.settings.carryOver': 'Chuyển ngày phép chưa dùng sang năm sau',
+  'vacay.settings.carryOver.hint':
+    'Tắt tùy chọn này sẽ ẩn các ngày đã chuyển, chứ không xóa chúng.',
+  'vacay.settings.defaultAllowance': 'Số ngày phép mặc định (ngày mỗi năm)',
+  'vacay.settings.defaultAllowance.hint':
+    'Áp dụng cho những năm bạn chưa tự đặt số ngày phép.',
+  'vacay.settings.save': 'Lưu cài đặt',
+  'vacay.settings.cancel': 'Hủy',
+  'vacay.settings.saved': 'Đã lưu cài đặt kế hoạch nghỉ phép.',
+  'vacay.settings.error':
+    'Không thể lưu cài đặt kế hoạch nghỉ phép. Chưa có gì thay đổi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

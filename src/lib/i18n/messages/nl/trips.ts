@@ -505,6 +505,63 @@ const messages = {
   'join.error.join':
     'Meedoen is niet gelukt. De link werkt nog, probeer het opnieuw.',
   'join.error.switch': 'Kon niet van werkruimte wisselen. Probeer het opnieuw.',
+
+  'invite.title': 'Uitnodigingslink',
+  'invite.description':
+    'Iedereen in deze werkruimte die de link opent, neemt deel aan de reis.',
+  'invite.empty.title': 'Nog geen uitnodigingslink',
+  'invite.empty.body':
+    'Maak een link en deel die in je groepschat zodat mensen in deze werkruimte kunnen deelnemen.',
+  'invite.action.create': 'Link maken',
+  'invite.link.label': 'Uitnodigingslink',
+  'invite.copy': 'Link kopiëren',
+  'invite.copied': 'Link gekopieerd',
+  'invite.copyFailed':
+    'Kopiëren mislukt. Selecteer de link en kopieer deze zelf.',
+  'invite.switch.label':
+    'Iedereen in deze werkruimte met de link kan deelnemen',
+  'invite.switch.onHint':
+    'Uitschakelen maakt de link voor iedereen ongeldig, ook reeds verstuurde kopieën.',
+  'invite.switch.offHint':
+    'Inschakelen maakt een nieuwe link. Eerdere links blijven ongeldig.',
+  'invite.off.body': 'De link is uitgeschakeld. Niemand kan ermee deelnemen.',
+  'invite.uses': {
+    one: 'Deelnemers via deze link: {count}',
+    other: 'Deelnemers via deze link: {count}',
+  },
+  'invite.uses.never': 'Nog niemand heeft via deze link deelgenomen.',
+  'invite.lastUsed': 'Laatst deelgenomen: {when}',
+  'invite.role.upgrade.title': 'Bewerkrechten geven?',
+  'invite.role.upgrade.body':
+    'Dit geldt voor alle verstuurde kopieën en iedereen die vanaf nu deelneemt.',
+  'invite.role.upgrade.confirm': 'Bewerkrechten geven',
+  'invite.replace.action': 'Link vervangen',
+  'invite.replace.title': 'Deze link vervangen?',
+  'invite.replace.body':
+    'De oude link wordt direct voor iedereen ongeldig. Wie al deelnam, blijft op de reis; verwijder die personen zo nodig uit de lijst hieronder.',
+  'invite.replace.deadBody':
+    'De oude link werkt niet meer. Wie al deelnam, blijft op de reis.',
+  'invite.replace.confirm': 'Link vervangen',
+  'invite.replace.pending': 'Link wordt vervangen',
+  'invite.stale': 'Deze link werkt niet meer. Vervang deze.',
+  'invite.creatorGone':
+    'De link werkt niet meer omdat de maker geen eigenaar meer is. Vervang deze.',
+  'invite.archived':
+    'Deze reis is gearchiveerd. De link werkt weer zodra de reis is hersteld.',
+  'invite.announce.created': 'Uitnodigingslink gemaakt',
+  'invite.announce.roleEditor': 'Nieuwe deelnemers krijgen bewerkrechten',
+  'invite.announce.off': 'Uitnodigingslink uitgeschakeld',
+  'invite.announce.newLink':
+    'Nieuwe link gereed. Kopieer en verstuur deze opnieuw.',
+  'invite.announce.roleViewer': 'Nieuwe deelnemers krijgen leesrechten',
+  'invite.error.title': 'De uitnodigingslink is niet geladen',
+  'invite.error.retry': 'Opnieuw proberen',
+  'invite.refusal.archived': 'Deze reis is gearchiveerd.',
+  'invite.refusal.notOwner': 'Alleen een reiseigenaar kan de link wijzigen.',
+  'invite.refusal.changed':
+    'Iemand heeft de link gewijzigd. De huidige wordt getoond.',
+  'invite.announce.recovered':
+    'De huidige linkinstellingen worden getoond. Controleer ze voordat je nog iets wijzigt.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

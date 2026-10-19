@@ -1271,6 +1271,22 @@ const messages = {
   'vacay.error.title': 'Não foi possível carregar o planejador de férias',
   'vacay.year.previous': 'Ano anterior',
   'vacay.year.next': 'Próximo ano',
+  'vacay.settings.open': 'Configurações do plano de férias',
+  'vacay.settings.title': 'Configurações do plano de férias',
+  'vacay.settings.description':
+    'Como os dias não usados são transferidos e quantos dias você tem por padrão.',
+  'vacay.settings.carryOver':
+    'Transferir os dias não usados para o ano seguinte',
+  'vacay.settings.carryOver.hint':
+    'Ao desativar, os dias transferidos ficam ocultos, mas não são apagados.',
+  'vacay.settings.defaultAllowance': 'Cota padrão (dias por ano)',
+  'vacay.settings.defaultAllowance.hint':
+    'Vale para os anos em que você não definiu a sua própria cota.',
+  'vacay.settings.save': 'Salvar configurações',
+  'vacay.settings.cancel': 'Cancelar',
+  'vacay.settings.saved': 'Configurações do plano de férias salvas.',
+  'vacay.settings.error':
+    'Não foi possível salvar as configurações do plano de férias. Nada foi alterado.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

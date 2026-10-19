@@ -496,6 +496,61 @@ const messages = {
   'join.error.join':
     'Tidak dapat bergabung. Tautan masih berfungsi, coba lagi.',
   'join.error.switch': 'Tidak dapat mengganti ruang kerja. Coba lagi.',
+
+  'invite.title': 'Tautan undangan',
+  'invite.description':
+    'Siapa pun di ruang kerja ini yang membuka tautan akan bergabung ke perjalanan.',
+  'invite.empty.title': 'Belum ada tautan undangan',
+  'invite.empty.body':
+    'Buat tautan dan bagikan ke obrolan grup agar orang di ruang kerja ini dapat bergabung.',
+  'invite.action.create': 'Buat tautan',
+  'invite.link.label': 'Tautan undangan',
+  'invite.copy': 'Salin tautan',
+  'invite.copied': 'Tautan disalin',
+  'invite.copyFailed':
+    'Tidak dapat menyalin. Pilih tautan lalu salin secara manual.',
+  'invite.switch.label':
+    'Siapa pun di ruang kerja ini yang memiliki tautan dapat bergabung',
+  'invite.switch.onHint':
+    'Menonaktifkan membuat tautan tidak berlaku untuk semua orang, termasuk salinan yang sudah dikirim.',
+  'invite.switch.offHint':
+    'Mengaktifkan kembali membuat tautan baru. Tautan lama tetap tidak berlaku.',
+  'invite.off.body':
+    'Tautan dinonaktifkan. Tidak ada yang dapat bergabung dengannya.',
+  'invite.uses': { other: 'Orang yang bergabung lewat tautan ini: {count}' },
+  'invite.uses.never': 'Belum ada yang bergabung lewat tautan ini.',
+  'invite.lastUsed': 'Terakhir bergabung: {when}',
+  'invite.role.upgrade.title': 'Beri peran editor?',
+  'invite.role.upgrade.body':
+    'Berlaku untuk semua salinan yang sudah dikirim dan siapa pun yang bergabung mulai sekarang.',
+  'invite.role.upgrade.confirm': 'Beri peran editor',
+  'invite.replace.action': 'Ganti tautan',
+  'invite.replace.title': 'Ganti tautan ini?',
+  'invite.replace.body':
+    'Tautan lama langsung tidak berlaku untuk semua orang. Orang yang sudah bergabung tetap dalam perjalanan; hapus dari daftar di bawah jika perlu.',
+  'invite.replace.deadBody':
+    'Tautan lama tidak lagi berfungsi. Orang yang sudah bergabung tetap dalam perjalanan.',
+  'invite.replace.confirm': 'Ganti tautan',
+  'invite.replace.pending': 'Mengganti tautan',
+  'invite.stale': 'Tautan ini tidak lagi berfungsi. Ganti tautannya.',
+  'invite.creatorGone':
+    'Tautan tidak berfungsi karena pembuatnya bukan lagi pemilik. Ganti tautannya.',
+  'invite.archived':
+    'Perjalanan ini diarsipkan. Tautan akan berfungsi kembali setelah perjalanan dipulihkan.',
+  'invite.announce.created': 'Tautan undangan dibuat',
+  'invite.announce.roleEditor': 'Orang yang bergabung akan menjadi editor',
+  'invite.announce.off': 'Tautan undangan dinonaktifkan',
+  'invite.announce.newLink': 'Tautan baru siap. Salin dan kirim ulang.',
+  'invite.announce.roleViewer': 'Orang yang bergabung akan menjadi penonton',
+  'invite.error.title': 'Tautan undangan gagal dimuat',
+  'invite.error.retry': 'Coba lagi',
+  'invite.refusal.archived': 'Perjalanan ini diarsipkan.',
+  'invite.refusal.notOwner':
+    'Hanya pemilik perjalanan yang dapat mengubah tautan.',
+  'invite.refusal.changed':
+    'Orang lain mengubah tautan. Tautan terbaru ditampilkan.',
+  'invite.announce.recovered':
+    'Pengaturan tautan saat ini ditampilkan. Periksa sebelum mengubah lagi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

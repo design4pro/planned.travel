@@ -701,6 +701,61 @@ const messages = {
   'join.error.busy': 'This page is busy. Try again in a minute.',
   'join.error.join': 'Could not join. The link still works - try again.',
   'join.error.switch': 'Could not switch workspace. Try again.',
+
+  'invite.title': 'Invite link',
+  'invite.description':
+    'Anyone in this workspace who opens the link joins the trip.',
+  'invite.empty.title': 'No invite link yet',
+  'invite.empty.body':
+    'Make one link, paste it into your group chat, and people in this workspace who open it can join.',
+  'invite.action.create': 'Create link',
+  'invite.link.label': 'Invite link',
+  'invite.copy': 'Copy link',
+  'invite.copied': 'Link copied',
+  'invite.copyFailed': 'Could not copy. Select the link and copy it yourself.',
+  'invite.switch.label': 'Anyone in this workspace with the link can join',
+  'invite.switch.onHint':
+    'Switching off stops the link working for everyone, including copies already sent.',
+  'invite.switch.offHint':
+    'Switching it back on makes a new link. Links you sent earlier stay dead.',
+  'invite.off.body': 'The link is switched off. Nobody can join with it.',
+  'invite.uses': {
+    one: '{count} joined through this link',
+    other: '{count} joined through this link',
+  },
+  'invite.uses.never': 'Nobody has joined through this link yet.',
+  'invite.lastUsed': 'Last joined {when}',
+  'invite.role.upgrade.title': 'Make people editors?',
+  'invite.role.upgrade.body':
+    'This applies to every copy of the link already sent, for anyone who joins from now on.',
+  'invite.role.upgrade.confirm': 'Make editors',
+  'invite.replace.action': 'Replace link',
+  'invite.replace.title': 'Replace this link?',
+  'invite.replace.body':
+    'Everyone holding the old link loses it immediately. People who already joined stay on the trip; remove them from the list below if you need to.',
+  'invite.replace.deadBody':
+    'The old link no longer works. People who already joined stay on the trip.',
+  'invite.replace.confirm': 'Replace link',
+  'invite.replace.pending': 'Replacing the link',
+  'invite.stale': 'This link no longer works. Replace it.',
+  'invite.creatorGone':
+    'This link stopped working because the person who created it is no longer an owner. Replace it.',
+  'invite.archived':
+    'This trip is archived. The link does not work while it is, and works again when the trip is restored.',
+  'invite.announce.created': 'Invite link created',
+  'invite.announce.roleEditor': 'People who join will become editors',
+  'invite.announce.off': 'Invite link switched off',
+  'invite.announce.newLink':
+    'New invite link ready. Copy it and send it again.',
+  'invite.announce.roleViewer': 'People who join will become viewers',
+  'invite.error.title': 'The invite link did not load',
+  'invite.error.retry': 'Try again',
+  'invite.refusal.archived': 'This trip is archived.',
+  'invite.refusal.notOwner': 'Only a trip owner can change the invite link.',
+  'invite.refusal.changed':
+    'Someone else changed the link. Showing the current one.',
+  'invite.announce.recovered':
+    'Showing the current link settings. Check them before making another change.',
 } as const satisfies NamespaceMessages
 
 export default messages

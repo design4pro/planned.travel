@@ -507,6 +507,65 @@ const messages = {
   'join.error.join':
     'Nem sikerült csatlakozni. A hivatkozás továbbra is működik, próbálja újra.',
   'join.error.switch': 'Nem sikerült munkaterületet váltani. Próbálja újra.',
+
+  'invite.title': 'Meghívóhivatkozás',
+  'invite.description':
+    'A munkaterület bármely tagja csatlakozik az utazáshoz a hivatkozás megnyitásával.',
+  'invite.empty.title': 'Még nincs meghívóhivatkozás',
+  'invite.empty.body':
+    'Hozz létre egy hivatkozást, és oszd meg a csoportos csevegésben, hogy a munkaterület tagjai csatlakozhassanak.',
+  'invite.action.create': 'Hivatkozás létrehozása',
+  'invite.link.label': 'Meghívóhivatkozás',
+  'invite.copy': 'Hivatkozás másolása',
+  'invite.copied': 'Hivatkozás másolva',
+  'invite.copyFailed':
+    'Nem sikerült másolni. Jelöld ki a hivatkozást, és másold ki kézzel.',
+  'invite.switch.label':
+    'A munkaterület bármely tagja csatlakozhat a hivatkozással',
+  'invite.switch.onHint':
+    'A kikapcsolás minden másolatot érvénytelenít, a már elküldötteket is.',
+  'invite.switch.offHint':
+    'A bekapcsolás új hivatkozást hoz létre. A korábbiak érvénytelenek maradnak.',
+  'invite.off.body':
+    'A hivatkozás ki van kapcsolva. Senki sem csatlakozhat vele.',
+  'invite.uses': {
+    one: 'A hivatkozással csatlakozók száma: {count}',
+    other: 'A hivatkozással csatlakozók száma: {count}',
+  },
+  'invite.uses.never': 'Még senki sem csatlakozott ezzel a hivatkozással.',
+  'invite.lastUsed': 'Utolsó csatlakozás: {when}',
+  'invite.role.upgrade.title': 'Legyenek szerkesztők?',
+  'invite.role.upgrade.body':
+    'Ez minden elküldött másolatra és minden mostantól csatlakozó személyre érvényes.',
+  'invite.role.upgrade.confirm': 'Szerkesztői jog megadása',
+  'invite.replace.action': 'Hivatkozás cseréje',
+  'invite.replace.title': 'Lecseréled ezt a hivatkozást?',
+  'invite.replace.body':
+    'A régi hivatkozás azonnal érvénytelenné válik mindenkinél. A már csatlakozók az utazásban maradnak; szükség esetén távolítsd el őket az alábbi listából.',
+  'invite.replace.deadBody':
+    'A régi hivatkozás már nem működik. A már csatlakozók az utazásban maradnak.',
+  'invite.replace.confirm': 'Hivatkozás cseréje',
+  'invite.replace.pending': 'Hivatkozás cseréje folyamatban',
+  'invite.stale': 'Ez a hivatkozás már nem működik. Cseréld le.',
+  'invite.creatorGone':
+    'A hivatkozás létrehozója már nem tulajdonos, ezért a hivatkozás nem működik. Cseréld le.',
+  'invite.archived':
+    'Az utazás archiválva van. A hivatkozás az utazás visszaállításakor újra működik.',
+  'invite.announce.created': 'Meghívóhivatkozás létrehozva',
+  'invite.announce.roleEditor': 'Az új csatlakozók szerkesztők lesznek',
+  'invite.announce.off': 'Meghívóhivatkozás kikapcsolva',
+  'invite.announce.newLink':
+    'Az új hivatkozás kész. Másold ki és küldd el újra.',
+  'invite.announce.roleViewer': 'Az új csatlakozók megtekintők lesznek',
+  'invite.error.title': 'A meghívóhivatkozás nem töltődött be',
+  'invite.error.retry': 'Újrapróbálás',
+  'invite.refusal.archived': 'Az utazás archiválva van.',
+  'invite.refusal.notOwner':
+    'Csak az utazás tulajdonosa módosíthatja a hivatkozást.',
+  'invite.refusal.changed':
+    'Valaki módosította a hivatkozást. Az aktuális látható.',
+  'invite.announce.recovered':
+    'A hivatkozás aktuális beállításai láthatók. Ellenőrizd őket a következő módosítás előtt.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

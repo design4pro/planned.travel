@@ -52,6 +52,8 @@ import {
   updateTrip,
   updateTripMember,
 } from '#/server/repos'
+import { readTripInvite } from '#/server/repos/invites'
+import type { TripInviteView } from '#/server/repos/invites'
 import { appScope } from '../../../-server/context'
 
 import type { Trip, TripMember } from '#/server/db/types'
@@ -96,6 +98,8 @@ export interface TripPeoplePayload {
   readonly invitable: ReadonlyArray<InvitablePerson>
   /** How many guests a trip holds, so the refusal can name the bound without importing it. */
   readonly guestLimit: number
+  readonly invite: TripInviteView | null
+  readonly inviteArchived: boolean
 }
 
 /**
@@ -233,6 +237,7 @@ function viewerRoleOf(stored: string | null): TripRole | null {
 export async function readTripPeople(
   scope: TenantScope,
   tripId: string,
+  inviteKey: string,
 ): Promise<TripPeoplePayload> {
   const trip = await requireTrip(scope, tripId)
   const [stored, participants] = await Promise.all([
@@ -265,13 +270,19 @@ export async function readTripPeople(
     participants,
     invitable,
     guestLimit: MAX_TRIP_GUESTS,
+    inviteArchived: viewerRole === 'owner' && trip.isArchived,
+    invite:
+      viewerRole === 'owner'
+        ? await readTripInvite(scope, trip.id, inviteKey)
+        : null,
   }
 }
 
 export const loadTripPeople = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: id }))
   .handler(async ({ data }): Promise<TripPeoplePayload> => {
-    return readTripPeople(await appScope(), data.tripId)
+    const { authSecret } = await import('#/server/auth/env')
+    return readTripPeople(await appScope(), data.tripId, authSecret())
   })
 
 /* -------------------------------------------------------------------------------------------------

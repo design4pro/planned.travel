@@ -488,6 +488,62 @@ const messages = {
   'join.error.join':
     'Không tham gia được. Liên kết vẫn dùng được, hãy thử lại.',
   'join.error.switch': 'Không đổi được không gian làm việc. Hãy thử lại.',
+
+  'invite.title': 'Liên kết mời',
+  'invite.description':
+    'Bất kỳ ai trong không gian làm việc này mở liên kết đều sẽ tham gia chuyến đi.',
+  'invite.empty.title': 'Chưa có liên kết mời',
+  'invite.empty.body':
+    'Tạo liên kết và chia sẻ trong nhóm trò chuyện để mọi người trong không gian này có thể tham gia.',
+  'invite.action.create': 'Tạo liên kết',
+  'invite.link.label': 'Liên kết mời',
+  'invite.copy': 'Sao chép liên kết',
+  'invite.copied': 'Đã sao chép liên kết',
+  'invite.copyFailed':
+    'Không thể sao chép. Hãy chọn liên kết và sao chép thủ công.',
+  'invite.switch.label':
+    'Bất kỳ ai trong không gian này có liên kết đều có thể tham gia',
+  'invite.switch.onHint':
+    'Tắt sẽ vô hiệu hóa liên kết cho tất cả mọi người, kể cả các bản đã gửi.',
+  'invite.switch.offHint':
+    'Bật lại sẽ tạo liên kết mới. Các liên kết cũ vẫn vô hiệu.',
+  'invite.off.body':
+    'Liên kết đã tắt. Không ai có thể tham gia qua liên kết này.',
+  'invite.uses': { other: 'Số người tham gia qua liên kết: {count}' },
+  'invite.uses.never': 'Chưa ai tham gia qua liên kết này.',
+  'invite.lastUsed': 'Lần tham gia gần nhất: {when}',
+  'invite.role.upgrade.title': 'Cấp quyền chỉnh sửa?',
+  'invite.role.upgrade.body':
+    'Áp dụng cho mọi bản đã gửi và bất kỳ ai tham gia từ bây giờ.',
+  'invite.role.upgrade.confirm': 'Cấp quyền chỉnh sửa',
+  'invite.replace.action': 'Thay liên kết',
+  'invite.replace.title': 'Thay liên kết này?',
+  'invite.replace.body':
+    'Liên kết cũ sẽ vô hiệu ngay với tất cả mọi người. Những người đã tham gia vẫn ở trong chuyến đi; hãy xóa họ khỏi danh sách bên dưới nếu cần.',
+  'invite.replace.deadBody':
+    'Liên kết cũ không còn hoạt động. Những người đã tham gia vẫn ở trong chuyến đi.',
+  'invite.replace.confirm': 'Thay liên kết',
+  'invite.replace.pending': 'Đang thay liên kết',
+  'invite.stale': 'Liên kết này không còn hoạt động. Hãy thay liên kết.',
+  'invite.creatorGone':
+    'Liên kết không hoạt động vì người tạo không còn là chủ sở hữu. Hãy thay liên kết.',
+  'invite.archived':
+    'Chuyến đi đã lưu trữ. Liên kết sẽ hoạt động lại khi chuyến đi được khôi phục.',
+  'invite.announce.created': 'Đã tạo liên kết mời',
+  'invite.announce.roleEditor': 'Người tham gia mới sẽ có quyền chỉnh sửa',
+  'invite.announce.off': 'Đã tắt liên kết mời',
+  'invite.announce.newLink':
+    'Liên kết mới đã sẵn sàng. Hãy sao chép và gửi lại.',
+  'invite.announce.roleViewer': 'Người tham gia mới sẽ có quyền xem',
+  'invite.error.title': 'Không tải được liên kết mời',
+  'invite.error.retry': 'Thử lại',
+  'invite.refusal.archived': 'Chuyến đi đã lưu trữ.',
+  'invite.refusal.notOwner':
+    'Chỉ chủ sở hữu chuyến đi mới có thể đổi liên kết.',
+  'invite.refusal.changed':
+    'Người khác đã đổi liên kết. Đang hiển thị liên kết hiện tại.',
+  'invite.announce.recovered':
+    'Đang hiển thị cài đặt liên kết hiện tại. Hãy kiểm tra trước khi thay đổi tiếp.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -2226,6 +2226,10 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 
 ## Stage 07-S10 — The trip invite link
 
+**Delivered:** #1024 completes the owner panel and end-to-end proof after #1020, #1022 and #1023.
+`COL-11` is delivered as narrowed in `.ai/specs/2026-10-08-the-trip-invite-link.md`: the link grants
+trip membership only to existing members of the trip’s workspace, never workspace membership.
+
 ### Stage id
 
 `07-S10` · Wave 5 · effort **M**. The second and last unauthenticated surface in the product.

@@ -1334,6 +1334,20 @@ const messages = {
   'vacay.error.title': 'تعذّر تحميل مخطّط الإجازات',
   'vacay.year.previous': 'العام السابق',
   'vacay.year.next': 'العام التالي',
+  'vacay.settings.open': 'إعدادات خطة الإجازات',
+  'vacay.settings.title': 'إعدادات خطة الإجازات',
+  'vacay.settings.description':
+    'كيف تُرحَّل الأيام غير المستخدمة وكم يوماً تحصل عليه افتراضياً.',
+  'vacay.settings.carryOver': 'ترحيل الأيام غير المستخدمة إلى العام التالي',
+  'vacay.settings.carryOver.hint':
+    'إيقاف هذا الخيار يخفي الأيام المرحَّلة ولا يمحوها.',
+  'vacay.settings.defaultAllowance': 'الرصيد الافتراضي (أيام في السنة)',
+  'vacay.settings.defaultAllowance.hint':
+    'يُطبَّق على السنوات التي لم تحدد فيها رصيدك الخاص.',
+  'vacay.settings.save': 'حفظ الإعدادات',
+  'vacay.settings.cancel': 'إلغاء',
+  'vacay.settings.saved': 'تم حفظ إعدادات خطة الإجازات.',
+  'vacay.settings.error': 'تعذّر حفظ إعدادات خطة الإجازات. لم يتغيّر شيء.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

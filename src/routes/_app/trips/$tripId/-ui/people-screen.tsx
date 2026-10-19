@@ -23,6 +23,7 @@
  * rename, merge and remove. Nobody is notified of any of it; a guest has no account.
  */
 
+import { InviteLinkPanel } from './invite-link-panel'
 import { useRef, useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import {
@@ -515,6 +516,14 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
         <aside className="flex flex-col gap-6 lg:col-start-2 lg:row-start-1">
           {isOwner ? (
+            <InviteLinkPanel
+              key={data.tripId}
+              tripId={data.tripId}
+              initial={data.invite}
+              archived={data.inviteArchived}
+            />
+          ) : null}
+          {isOwner ? (
             <Card>
               <CardHeader>
                 <CardTitle>{t('trips.people.invite.title')}</CardTitle>
@@ -999,10 +1008,12 @@ interface ConfirmDialogProps {
   readonly onConfirm: () => void
   /** Overrides where focus lands on close. Left out, the dialog restores it to whatever opened it. */
   readonly onCloseAutoFocus?: (event: Event) => void
+  readonly pendingLabel?: string
+  readonly confirmVariant?: 'danger' | 'primary'
 }
 
 /** Both destructive confirmations, which differ only in their words and in where they leave you. */
-function ConfirmDialog({
+export function ConfirmDialog({
   open,
   onOpenChange,
   title,
@@ -1013,6 +1024,8 @@ function ConfirmDialog({
   failure,
   onConfirm,
   onCloseAutoFocus,
+  pendingLabel,
+  confirmVariant = 'danger',
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1035,10 +1048,10 @@ function ConfirmDialog({
           </Button>
           <Button
             type="button"
-            variant="danger"
+            variant={confirmVariant}
             shape="pill"
             loading={busy}
-            loadingLabel={confirm}
+            loadingLabel={pendingLabel ?? confirm}
             onClick={onConfirm}
           >
             {confirm}
