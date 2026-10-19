@@ -485,10 +485,14 @@ const messages = {
   'join.dates.label': 'Zeitraum',
   'join.destination.label': 'Reiseziel',
   'join.action.signIn': 'Anmelden',
+  'join.action.join': 'Der Reise beitreten',
+  'join.action.joining': 'Du trittst der Reise bei',
   'join.action.open': 'Reise öffnen',
   'join.action.openIn': 'Reise öffnen und Arbeitsbereich wechseln',
   'join.action.openIn.pending': 'Arbeitsbereich wird gewechselt',
   'join.loading': 'Einladung wird geladen',
+  'join.joined.title': 'Du bist bei der Reise dabei',
+  'join.joined.body': 'Öffne sie, um den Plan zu sehen.',
   'join.member.title': 'Du bist schon bei dieser Reise dabei',
   'join.needsWorkspace.title':
     'Diese Reise gehört zu einem Arbeitsbereich, in dem du nicht bist',
@@ -508,6 +512,8 @@ const messages = {
   'join.error.retry': 'Erneut versuchen',
   'join.error.busy':
     'Diese Seite ist gerade ausgelastet. Versuche es in einer Minute erneut.',
+  'join.error.join':
+    'Beitritt nicht möglich. Der Link funktioniert noch, versuche es erneut.',
   'join.error.switch':
     'Der Arbeitsbereich konnte nicht gewechselt werden. Versuche es erneut.',
 } satisfies TranslationOf<typeof En>

@@ -427,11 +427,10 @@ export async function queueAuthEmail(
         tag: rendered.tag,
       },
     })
-    logAuth('info', 'email.queued', { kind: message.kind, to: message.to })
+    logAuth('info', 'email.queued', { kind: message.kind })
   } catch {
     logAuth('error', 'email.queue_failed', {
       kind: message.kind,
-      to: message.to,
       reason: 'enqueue_failed',
     })
   }

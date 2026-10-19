@@ -483,10 +483,14 @@ const messages = {
   'join.dates.label': 'Datas',
   'join.destination.label': 'Destino',
   'join.action.signIn': 'Entrar',
+  'join.action.join': 'Entrar na viagem',
+  'join.action.joining': 'Entrando na viagem',
   'join.action.open': 'Abrir a viagem',
   'join.action.openIn': 'Abrir a viagem e trocar de espaço de trabalho',
   'join.action.openIn.pending': 'Trocando de espaço de trabalho',
   'join.loading': 'Carregando o convite',
+  'join.joined.title': 'Você entrou na viagem',
+  'join.joined.body': 'Abra para ver o roteiro.',
   'join.member.title': 'Você já está nesta viagem',
   'join.needsWorkspace.title':
     'Esta viagem está em um espaço de trabalho do qual você não faz parte',
@@ -505,6 +509,8 @@ const messages = {
   'join.error.title': 'Não foi possível carregar este link de convite',
   'join.error.retry': 'Tentar de novo',
   'join.error.busy': 'Esta página está ocupada. Tente de novo em um minuto.',
+  'join.error.join':
+    'Não foi possível entrar. O link continua funcionando; tente de novo.',
   'join.error.switch':
     'Não foi possível trocar de espaço de trabalho. Tente de novo.',
 } satisfies TranslationOf<typeof En>

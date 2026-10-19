@@ -665,7 +665,17 @@ Over budget is `429` with `Retry-After` on the **document** (the page renders th
 nobody). The router derives a document's status only from its own state, so the loader answers
 `busy` with a 200 view and the route's middleware turns the response into the 429 once the page
 has rendered (`src/routes/join/-lib/busy.ts`). Every `/join` request costs one to three KV writes.
-The authenticated join submit has its own two rows (`join-user`, `join-ip`) when that write lands.
+The authenticated join submit (`joinTripFn`) has its own two rows, spent before the secret is
+looked at, so a user or an address guessing secrets through the submit is bounded the same way:
+
+| Budget                              | Limit        | Key                                |
+| ----------------------------------- | ------------ | ---------------------------------- |
+| Join submit, per user               | 10 / minute  | `public:rl:v1:join-user:<id>:<minute>` |
+| Join submit, per IP                 | 30 / minute  | `public:rl:v1:join-ip:<ip>:<minute>`   |
+
+Over either budget the submit answers `busy` (a 200 answer of the server function, not a 429) and the
+card shows the neutral `join.error.busy` line beside the Join button; nothing is written. A dead
+secret submitted here spends only these two budgets, not the page's miss budget.
 
 Calendar providers share IPs, so calendar feeds use separate approximate minute counters:
 60 requests/minute per live feed id (never digest), and 20/minute per IP for refusals only.
@@ -704,7 +714,9 @@ bounded billing, moderation and cron discovery exceptions remain as stated in SP
    adjacent branded `ResolvedFeed` and constructs the owner-bound scope. A trip invite link reaches
    its row through one `…Unscoped` read, `findLiveTripInviteByDigestUnscoped` in
    `src/server/repos/invites.ts`, called only by `src/server/public/trip-invite.ts`, which returns
-   coordinates and constructs no scope (ADR 0042). Repositories may import the pure secret module
+   coordinates and constructs no scope (ADR 0042). The one write on the surface, the join, is the
+   authenticated `joinTripByInviteUnscoped` in the same file, called only by
+   `src/routes/join/-lib/join.ts` for `joinTripFn`; it is not part of `public/**`. Repositories may import the pure secret module
    `src/server/security/secret.ts` (derive, digest, shape guard); they never import
    `src/server/public/**`.
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
@@ -722,7 +734,8 @@ projection below). The handler holds no SQL, builds no scope and calls no auth h
 visitor's session is read by the route's server function (`src/routes/join/-server/join.ts`) and
 handed in as data (`{ id, banned }`). **`src/server/public/**` stays read-only here, and a
 `GET` of `/join/<secret>` writes nothing**: no `use_count`, no `trip_members` row, no stamp. The
-write that puts a person on a trip is a separate authenticated server function.
+write that puts a person on a trip is a separate authenticated server function, `joinTripFn`,
+and it is the **single write** on this surface (below).
 
 | Visitor                                             | Visible                                                                                              | Never visible                                                                                                             |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -743,6 +756,32 @@ The guest chrome is the marketing frame with its `minimal` variant (logo and the
 visitor back to the link. The sign-in action is `/login?redirect=/join/<secret>`, and the sign-in
 pages carry a `strict-origin` referrer meta so a `redirect` carrying the link is not sent onward in
 a `Referer`.
+
+**The join - the single write.** `joinTripFn` (`src/routes/join/-server/join.ts`, a POST) reads the
+session and answers `signed-out` to a missing one, before any budget is spent and without a thrown
+401 (the card needs to tell a session that ended from a failure, and sends the person to sign in
+and back; the answer names nothing), then hands the user to
+`joinTripByInviteUnscoped` as `{ id, banned, impersonated }`. It acts as the joiner, with their
+role in the **link's** workspace read from `member`; the session's active workspace and anything
+the request carries are never used, so a member of two workspaces joins the right one. The order
+is fixed:
+
+1. a banned joiner or an impersonated session (§6.4) is `unavailable`, and nothing is read or written;
+2. the link is resolved again by digest, so a replaced, switched-off, orphaned or archived link, or
+   one the current key no longer derives, is `unavailable`;
+3. a viewer who is not a member of the link's workspace gets `needs-workspace`, with no ids and no
+   write;
+4. the trip is read under the tenant filter and an archived one is `unavailable`;
+5. the one shared insert, `insertTripMember`, writes the row with the **link's** role (re-parsed to
+   `editor` or `viewer`, so a hand-edited `owner` is a dead link and the request's role does not
+   exist) and `invited_by` = the link's creator; a unique violation is `member`;
+6. `use_count` and `last_used_at` move only on a real join, never on `member`.
+
+The answer carries `tripId` and `organizationId` only for `joined` and `member`, after step 3. It
+writes the tenant audit row `trip.member_joined` with the link id and the role, never the secret or
+the digest, and mirrors nothing to a live room (a join shows on the next load). A link replaced
+while a tab was open fails the submit and the card swaps to the unavailable card in place; nobody
+already on the trip is removed.
 
 **Telemetry.** The secret is redacted from every Sentry channel (`docs/DEPLOY.md` §17.2), logs for
 this surface carry the link id and the outcome and never the path, and the session recorder does not
@@ -1267,6 +1306,12 @@ refuses a `member` caller, an `admin` granting `owner` and an `admin` changing a
 `owner`; only an `owner` may set any role, and the last-owner guard stays. A successful change that
 alters the role writes one `member.role_changed` tenant audit entry; the change is not undone when
 that write fails.
+
+**Joining a trip from an invite link is refused by name as well.** `/join/$token` sits outside `_app`,
+so the warning bar of §6.1 never renders there, yet a join is a lasting access grant that outlives
+the 900-second session. `joinTripByInviteUnscoped` is given `impersonated` (true when
+`session.impersonatedBy` is set) and answers `unavailable` before it reads or writes anything, the
+same answer a dead link gets, so the refusal tells an operator nothing about the link (§3.8).
 
 **Registering, renaming and removing a passkey are refused by name as well.** A passkey is a sign-in factor, and one an
 operator registers outlives the 900-second impersonation with no audit row to show for it, which

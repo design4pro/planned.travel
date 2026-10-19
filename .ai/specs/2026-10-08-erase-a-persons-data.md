@@ -1,11 +1,11 @@
 # A person's data can be erased across workspaces on request
 
-| Field              | Value        |
-| ------------------ | ------------ |
-| **Status**         | in-progress  |
-| **Issue**          | #811         |
-| **Spec PR**        | #1002        |
-| **Implementation** | #1410, #1418 |
+| Field              | Value               |
+| ------------------ | ------------------- |
+| **Status**         | in-progress         |
+| **Issue**          | #811                |
+| **Spec PR**        | #1002               |
+| **Implementation** | #1410, #1416, #1418 |
 
 ## 📝 TLDR
 
@@ -59,15 +59,15 @@ Measured at HEAD (`86841140`), by reading the code.
   When its owner is deleted it keeps all its trips, files, journeys and its `subscriptions` row, with no member left.
   `deleteWorkspace` does not exist (plan 09 designs it). The console does not delete workspaces.
 - **No R2 sweep.** The only object deletion is per trip (`trip-purge`, keys captured before the rows go) and per file.
-  `exports/**` and `dead-letter/**` objects have no deleter; the weekly retention slot of `src/server/worker.ts` logs
+  `exports/**` objects have no deleter (`dead-letter/**` got one in phase 7, see the amendment); the weekly retention slot of `src/server/worker.ts` logs
   "cron half has no handler yet" for the R2 half. Journey deletion never touches R2.
 - **Departure is not deletion.** A person leaves a workspace through Better Auth's organization endpoints or the console;
   only their `member` row goes (`removeMember` has no production caller). Their rows in that workspace stay under a live
   id, and nothing records that they were ever there once the `member` row is gone.
 - **Audit.** The tenant `audit_log` has `pruneAuditLog`, which **nothing calls**: it has no retention. `platform_audit_log`
   is pruned at 400 days by the weekly cron and is append-only (`docs/ACCESS.md` §4.3).
-- **Soft deletes keep text.** `deleteMessage` in `src/server/repos/collab.ts` only sets `deleted_at`; the message body
-  stays in the row.
+- **Soft deletes keep text.** `deleteMessage` in `src/server/repos/collab.ts` only set `deleted_at`; the message body
+  stayed in the row (fixed in phase 7, see the amendment).
 - **Other people's inboxes.** `notifications.title_params` / `body_params` carry `actorName` (the sender's display name,
   `src/server/notifications/dispatch.ts`) and `preview` (the first characters of a chat message,
   `src/server/fns/collab-thread-writes.ts`). A deleted person's name and words therefore sit in rows other people own.
@@ -564,13 +564,13 @@ and any change made by this PR to code, schema or migrations.
 - **F1. Memberless workspaces already exist** from past console deletions; they keep rows, files and a subscription row.
   A listing and a cleanup through the same `deleteWorkspace`.
 - **F2. The privacy "Take it" promise** (PDF, calendar, GeoJSON export) has no product behind it.
-- **F3. `dead-letter/` and `exports/` have no deleter**; the weekly retention slot is a logged no-op
+- **F3. `dead-letter/` and `exports/` have no deleter** (`dead-letter/` fixed in phase 7, #1055); the weekly retention slot is a logged no-op
   (`BACKUP_RETENTION_DAYS` is read and unused).
-- **F4. `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
-- **F5. Soft-deleted chat messages keep their body** (`collab.ts` `deleteMessage`).
+- **F4. (fixed in phase 7, #1055) `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
+- **F5. (fixed in phase 7, #1055) Soft-deleted chat messages keep their body** (`collab.ts` `deleteMessage`).
 - **F6. Tenant `audit_log` has `pruneAuditLog` and no caller**; the period is owner confirms.
 - **F7. Presence falls back to the email as display name** when the name is empty (`api/trip-room/-lib/connect.ts`).
-- **F8. Trip-purge's `belongsTo` comment is wrong for `dead-letter/`** (no org segment).
+- **F8. (fixed in phase 7, #1055) Trip-purge's `belongsTo` comment is wrong for `dead-letter/`** (no org segment).
 
 ## 📋 Phasing
 
@@ -658,7 +658,8 @@ Open items a person decides. This spec does not decide them and records the defa
 
 1. The **deletion window** placeholder on the privacy page, and whether a **grace window** is wanted before the job runs
    (assumed: none; the job starts at once).
-2. The **backup window** and the **log retention period** (including Sentry and dead letters).
+2. The **backup window** and the **log retention period** (including Sentry and dead letters). Dead letters ship with
+   a default of **14 days** (`DEAD_LETTER_RETENTION_DAYS`, the lifetime of their KV summary); the owner confirms or changes it.
 3. How long **tenant audit rows** and their personal fields are kept (the prune has no caller), and whether the 400-day
    `platform_audit_log` may keep **name and email** in `platform.user.*` rows after an erasure (assumed: yes, until the prune).
 4. The **legal basis** for keeping anything: settlements and expenses as shared records, the platform ledger, invoices and tax records.
@@ -760,3 +761,24 @@ gated the ticket (`risk-high`, approved, confidence high):
   `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
   path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
   it; until then the engine phase must not pass keys from any other source.
+
+## Amendment - phase 7 (issue #1055, #1416)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`):
+
+- **Dead letters: 14 days by default.** The weekly retention slot deletes `dead-letter/` objects older
+  than `DEAD_LETTER_RETENTION_DAYS` (unset or invalid means 14, the lifetime of the KV summary), by the
+  object's `uploaded` time, at most 20 listing pages per run. It does not touch `exports/` or backups:
+  that half of the slot still logs "cron half has no handler yet".
+- **Existing soft-deleted messages are cleared by migration `0020_clear_deleted_message_bodies`**
+  (authored data SQL in a drizzle-kit custom file, like 0002 and 0010), and `deleteMessage` now clears
+  the body in the same write. `body` is `NOT NULL`, so the cleared value is the empty string. An edit
+  of a deleted message is refused.
+- **A deploy-window gap remains.** A message the previous Worker soft-deletes between the migration and
+  the new deploy keeps its body; `clearDeletedMessageBodies(scope)` is the per-workspace pass for it and
+  has no production caller yet. The Phase 3 collaboration scrub clears such a row only for an erased person.
+- **Remaining copy, not changed here:** a chat preview already copied into `notifications.body_params.preview`
+  survives a message delete; it belongs to the erasure phases.
+- **`logAuth` no longer writes `to`** on `email.queued` and `email.queue_failed`; no hash, domain or
+  masked form replaces it.
