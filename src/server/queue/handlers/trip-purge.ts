@@ -51,9 +51,12 @@ export function tripPurgeTaskId(tripId: string, chunk: number): string {
 /**
  * Whether a key lies inside this organization's own object namespace.
  *
- * Every key family in this product is `<prefix>/<organizationId>/…` — `storageKeyFor` mints
- * `trips/<org>/<trip>/<file>-<name>`, and any new family must keep the organization in the same
- * position for this guard to keep meaning what it says.
+ * The families a trip owns are `<prefix>/<organizationId>/…` — `storageKeyFor` mints
+ * `trips/<org>/<trip>/<file>-<name>`, and any new family a trip purge may delete must keep the
+ * organization in the same position for this guard to keep meaning what it says. **Not every family
+ * in the bucket has that shape:** `dead-letter/<YYYY-MM-DD>/<id>.json` has no organization segment,
+ * so this guard never matches one (the second segment is a date) and a purge cannot reach it. Those
+ * objects are removed by the weekly retention slot (`dead-letter-retention.ts`), not by a purge.
  */
 function belongsTo(orgId: string, key: string): boolean {
   return key.split('/')[1] === orgId
