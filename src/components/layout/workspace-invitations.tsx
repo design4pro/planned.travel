@@ -87,6 +87,7 @@ export function WorkspaceInvitations({
     }
   }
   async function act(action: InvitationAction, input: InvitationActionInput) {
+    if (action === 'revoke') focusAfterReload.current = true
     setBusy(true)
     setFieldError(null)
     setMessage(null)
@@ -210,7 +211,7 @@ export function WorkspaceInvitations({
                 key={row.id}
                 className="flex flex-wrap items-center gap-3 py-3"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 basis-full sm:flex-1 sm:basis-0">
                   <p className="break-all text-label">{row.email}</p>
                   <p className="text-caption text-ink-3">
                     {t('settings.workspace.invite.by', {

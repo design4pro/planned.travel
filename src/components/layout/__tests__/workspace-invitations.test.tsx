@@ -94,6 +94,9 @@ it('asks for confirmation before revoking', async () => {
   await user.click(screen.getByRole('button', { name: 'Revoke' }))
   await user.click(screen.getByRole('button', { name: 'Revoke invitation' }))
   expect(act).toHaveBeenCalledWith('revoke', { invitationId: 'pending' })
+  await waitFor(() =>
+    expect(screen.getByLabelText('Email address')).toBe(document.activeElement),
+  )
 })
 
 it('focuses an inline refusal after reloading and blocks unknown outcomes until refresh succeeds', async () => {
