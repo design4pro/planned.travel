@@ -947,6 +947,14 @@ const messages = {
   'files.action.add': 'Додати файли',
   'files.action.choose': 'Вибрати файли',
   'files.action.upload': 'Надіслати файли',
+  'files.places.title': 'Файл місць',
+  'files.places.description':
+    'Завантажте місця цієї подорожі у форматі GeoJSON, зокрема місця без координат.',
+  'files.places.action': 'Завантажити місця (.geojson)',
+  'files.places.empty': 'Додайте місця до цієї подорожі, щоб завантажити їх.',
+  'files.places.error': 'Не вдалося підготувати файл місць. Спробуйте ще раз.',
+  'files.places.pending': 'Підготовка файлу місць…',
+  'files.places.done': 'Файл місць завантажено.',
   'files.calendar.live.action': 'Оновлюване посилання на календар',
   'files.calendar.live.title': 'Оновлюване посилання на календар',
   'files.calendar.warning':

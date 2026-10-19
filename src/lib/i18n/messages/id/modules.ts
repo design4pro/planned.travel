@@ -906,6 +906,15 @@ const messages = {
   'files.action.add': 'Tambah berkas',
   'files.action.choose': 'Pilih berkas',
   'files.action.upload': 'Unggah berkas',
+  'files.places.title': 'Berkas tempat',
+  'files.places.description':
+    'Unduh tempat dalam perjalanan ini sebagai GeoJSON, termasuk tempat tanpa koordinat.',
+  'files.places.action': 'Unduh tempat (.geojson)',
+  'files.places.empty':
+    'Tambahkan tempat ke perjalanan ini untuk mengunduhnya.',
+  'files.places.error': 'Berkas tempat tidak dapat disiapkan. Coba lagi.',
+  'files.places.pending': 'Menyiapkan berkas tempat…',
+  'files.places.done': 'Berkas tempat telah diunduh.',
   'files.calendar.live.action': 'Tautan kalender yang diperbarui',
   'files.calendar.live.title': 'Tautan kalender yang diperbarui',
   'files.calendar.warning':

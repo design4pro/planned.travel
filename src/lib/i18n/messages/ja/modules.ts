@@ -877,6 +877,16 @@ const messages = {
   'files.action.add': 'ファイルを追加',
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
+  'files.places.title': '場所のファイル',
+  'files.places.description':
+    'この旅行の場所を、座標のない場所も含めてGeoJSON形式でダウンロードします。',
+  'files.places.action': '場所をダウンロード (.geojson)',
+  'files.places.empty':
+    'ダウンロードするには、この旅行に場所を追加してください。',
+  'files.places.error':
+    '場所のファイルを準備できませんでした。もう一度お試しください。',
+  'files.places.pending': '場所のファイルを準備中…',
+  'files.places.done': '場所のファイルをダウンロードしました。',
   'files.calendar.live.action': '自動更新されるカレンダーリンク',
   'files.calendar.live.title': '自動更新されるカレンダーリンク',
   'files.calendar.warning':

@@ -940,6 +940,15 @@ const messages = {
   'files.action.add': 'Přidat soubory',
   'files.action.choose': 'Vybrat soubory',
   'files.action.upload': 'Nahrát soubory',
+  'files.places.title': 'Soubor míst',
+  'files.places.description':
+    'Stáhněte místa této cesty jako GeoJSON, včetně míst bez souřadnic.',
+  'files.places.action': 'Stáhnout místa (.geojson)',
+  'files.places.empty':
+    'Přidejte do této cesty místa, abyste je mohli stáhnout.',
+  'files.places.error': 'Soubor míst se nepodařilo připravit. Zkuste to znovu.',
+  'files.places.pending': 'Příprava souboru míst…',
+  'files.places.done': 'Soubor míst byl stažen.',
   'files.calendar.live.action': 'Aktualizovaný odkaz na kalendář',
   'files.calendar.live.title': 'Aktualizovaný odkaz na kalendář',
   'files.calendar.warning':

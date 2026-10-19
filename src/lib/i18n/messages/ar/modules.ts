@@ -956,6 +956,14 @@ const messages = {
   'files.action.add': 'إضافة ملفات',
   'files.action.choose': 'اختيار ملفات',
   'files.action.upload': 'رفع الملفات',
+  'files.places.title': 'ملف الأماكن',
+  'files.places.description':
+    'نزّل أماكن هذه الرحلة بصيغة GeoJSON، بما فيها الأماكن التي لا تتوفر لها إحداثيات.',
+  'files.places.action': 'تنزيل الأماكن (.geojson)',
+  'files.places.empty': 'أضف أماكن إلى هذه الرحلة لتنزيلها.',
+  'files.places.error': 'تعذّر إعداد ملف الأماكن. حاول مجددًا.',
+  'files.places.pending': 'جارٍ إعداد ملف الأماكن…',
+  'files.places.done': 'تم تنزيل ملف الأماكن.',
   'files.calendar.live.action': 'رابط تقويم محدّث',
   'files.calendar.live.title': 'رابط تقويم محدّث',
   'files.calendar.warning':
