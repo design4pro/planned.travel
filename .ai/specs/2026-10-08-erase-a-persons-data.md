@@ -718,3 +718,35 @@ gated the ticket (`risk-high`):
   the marker written by the message that finds no workspace left.
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
   that builds their sweep.
+
+## Amendment - phase 5 (issue #1058)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`, confidence medium, approved unattended):
+
+- **The sweep reads the auth tables through one `...Unscoped` function**, `countAccountPlacesUnscoped`
+  in `src/server/repos/erasure-sweep.ts` (SPEC §5 FU-3: plain `Database`, a count per place, one named
+  caller, `src/server/erasure/verify.ts`). `invitation.email`, `member.user_id` and the `verification`
+  and impersonation places are counted across every workspace, because an invitation to a workspace
+  the person never joined has no anchor row. Ids inside text are matched with `instr()`, never `LIKE`
+  (a user id can contain `_`).
+- **Three places are deferred and fail the sweep as "unverified"**: `staff_api_tokens.user_id`,
+  `staff_api_tokens.created_by` and `provider_registry.updated_by`. SPEC §5 routes the platform tables
+  through `src/server/catalog`, and `catalog/erasure.ts` is closed at two read-only functions. The
+  change that ships their scrubs (phase 3b, #1059) amends SPEC §5 and passes their counts to
+  `verifyErasure({ platform })`. `platform_audit_log` stays the one registered exception.
+- **Room resets cover every trip of the workspace**, not "trips the person touched": a room stamps
+  `by` on every change it commits, departure removes the `trip_members` row and child tables carry no
+  `trip_id`, so no query over the person's rows can name every room. `listTripIdsForRoomReset` pages
+  the workspace's trips; the cost is one reset per trip (owner confirms, item 6).
+- **The rewrite touches only the erased person's uploads.** A key is accepted only under
+  `trips/<scope organization id>/` (trailing slash) and only when the object's own
+  `organizationId` metadata names that workspace; the write is conditional on the etag it read, and a
+  missing, oversized (over `MAX_FILE_BYTES`) or changed object is returned as a failure to retry.
+- **Any gap fails the sweep.** A missing email, an unverified place, an object that is missing, refused
+  or still names the person, and a KV key that survives each produce a finding; a missing email is never
+  read as zero. The report and the log line carry place names, opaque organization ids and counts, never
+  a user id, email, object key (it carries a file name) or session token.
+- **Open for #1060:** the sweep needs the person's email after the `user` row is deleted. The engine
+  must capture it before step 6 and decide where it lives across a resume; it never goes in a queue
+  envelope.
