@@ -83,9 +83,11 @@ function FilesPage() {
               >
                 {t('modules.files.export.jump')}
               </Button>
-              <UploadFilesAction
-                onClick={() => setPickRequestedAt(Date.now())}
-              />
+              {data.canWrite ? (
+                <UploadFilesAction
+                  onClick={() => setPickRequestedAt(Date.now())}
+                />
+              ) : null}
             </>
           }
         >
@@ -142,6 +144,7 @@ function FilesPage() {
         />
 
         <FileLibrary
+          canWrite={data.canWrite}
           tripId={tripId}
           files={data.files}
           people={data.people}

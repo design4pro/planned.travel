@@ -10,6 +10,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
+import type { FileData } from '../types'
 import { FileLibrary } from '../file-library'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -43,12 +44,16 @@ vi.mock('@tanstack/react-router', () => ({
 const FILES_DRAG = { dataTransfer: { types: ['Files'], files: [] } }
 const TEXT_DRAG = { dataTransfer: { types: ['text/plain'], files: [] } }
 
-function open(): HTMLElement {
+function renderLibrary(
+  canWrite = true,
+  files: ReadonlyArray<FileData> = [],
+): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <FileLibrary
+        canWrite={canWrite}
         tripId="trip-1"
-        files={[]}
+        files={files}
         people={[]}
         workspaceBytes={0}
         limitBytes={1_000_000_000}
@@ -56,6 +61,10 @@ function open(): HTMLElement {
       />
     </I18nProvider>,
   )
+}
+
+function open(): HTMLElement {
+  renderLibrary()
   const zone = document.querySelector('[data-part="file-drop"]')
   if (!(zone instanceof HTMLElement)) {
     throw new Error('the files screen rendered no drop zone')
@@ -156,3 +165,61 @@ describe('the drop zone', () => {
     expect(stateOf(zone)).toBe('idle')
   })
 })
+
+it('a reader has no upload surface or paste listener', () => {
+  renderLibrary(false)
+  expect(document.querySelector('[data-part="file-drop"]')).toBeNull()
+  expect(document.querySelector('input[type="file"]')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'Choose files' })).toBeNull()
+  expect(
+    screen.getByText(
+      'Only trip owners and editors can upload, rename or delete files. You can still download them.',
+    ),
+  ).toBeTruthy()
+  const event = new Event('paste', { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'clipboardData', {
+    value: {
+      items: [
+        {
+          kind: 'file',
+          getAsFile: () =>
+            new File(['bytes'], 'ticket.pdf', { type: 'application/pdf' }),
+        },
+      ],
+    },
+  })
+  fireEvent(document, event)
+  expect(event.defaultPrevented).toBe(false)
+  expect(stubs.upload).not.toHaveBeenCalled()
+})
+
+it.each([false, true])(
+  'file actions follow write permission %s and retain download',
+  async (canWrite) => {
+    renderLibrary(canWrite, [
+      {
+        id: 'file-1',
+        filename: 'ticket.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 5,
+        kind: 'ticket',
+        description: null,
+        uploadedBy: 'owner',
+        createdAt: '2026-10-19T00:00:00Z',
+      },
+    ])
+    fireEvent.pointerDown(
+      screen.getByRole('button', { name: 'Actions for ticket.pdf' }),
+      { button: 0, ctrlKey: false, pointerType: 'mouse' },
+    )
+    expect(
+      await screen.findByRole('menuitem', { name: /Download/ }),
+    ).toBeTruthy()
+    expect(screen.queryByRole('menuitem', { name: /Rename/ }) !== null).toBe(
+      canWrite,
+    )
+    expect(screen.queryByRole('menuitem', { name: /Remove/ }) !== null).toBe(
+      canWrite,
+    )
+  },
+)

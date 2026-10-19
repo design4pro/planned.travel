@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createTrip,
+  addTripMember,
   listTripDays,
   listTripMembers,
   requireTrip,
@@ -12,7 +13,7 @@ import { createHarness } from '#/server/repos/__tests__/harness'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
 import type * as Repos from '#/server/repos'
-import { loadTripHeader } from '../trip'
+import { loadTripHeader, loadTripFiles } from '../trip'
 import { AuthRequirementError } from '#/server/auth/tenant'
 
 const stubs = vi.hoisted(() => ({
@@ -84,6 +85,28 @@ describe('trip header read result', () => {
     expect(listTripDays).not.toHaveBeenCalled()
     expect(listTripMembers).not.toHaveBeenCalled()
   })
+
+  it.each(['owner', 'editor', 'viewer', 'non-member'] as const)(
+    'the files loader exposes write permission for %s',
+    async (role) => {
+      const trip = await createTrip(tenant.scope, {
+        title: 'Shared files',
+        visibility: 'organization',
+      })
+      if (role !== 'owner') {
+        const userId = await tenant.addUser(role)
+        if (role !== 'non-member') {
+          await addTripMember(tenant.scope, { tripId: trip.id, userId, role })
+        }
+        stubs.scope = tenant.scopeFor(userId)
+      }
+      await expect(
+        loadTripFiles({ data: { tripId: trip.id } }),
+      ).resolves.toMatchObject({
+        canWrite: role === 'owner' || role === 'editor',
+      })
+    },
+  )
 
   it('retains the existing header payload for a readable trip', async () => {
     const trip = await createTrip(tenant.scope, {

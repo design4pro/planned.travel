@@ -1305,6 +1305,9 @@ const messages = {
   'vacay.settings.saved': 'Impostazioni del piano ferie salvate.',
   'vacay.settings.error':
     'Impossibile salvare le impostazioni del piano ferie. Non è stato modificato nulla.',
+  'files.readOnly.title': 'File in sola lettura',
+  'files.readOnly.role':
+    'Solo i proprietari e gli editor del viaggio possono caricare, rinominare o eliminare file. Puoi comunque scaricarli.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -169,7 +169,7 @@ export async function getTripStorageBytes(scope: TenantScope, tripId: string): P
  * Declared once: whether a caller holds one of them is {@link assertTripRole}'s answer, so a refusal
  * here is the `TripRoleError` every other trip writer raises.
  */
-const FILE_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+export const FILE_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
 
 /**
  * Resolves a trip whose files the caller may change, or throws: {@link requireWritableTrip} first

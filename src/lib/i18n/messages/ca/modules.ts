@@ -1301,6 +1301,9 @@ const messages = {
   'vacay.settings.saved': 'S’ha desat la configuració del pla de vacances.',
   'vacay.settings.error':
     'No s’ha pogut desar la configuració del pla de vacances. No s’ha canviat res.',
+  'files.readOnly.title': 'Fitxers de només lectura',
+  'files.readOnly.role':
+    'Només els propietaris i editors del viatge poden pujar, reanomenar o suprimir fitxers. Encara els pots baixar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1259,6 +1259,9 @@ const messages = {
   'vacay.settings.saved': 'De instellingen van het verlofplan zijn opgeslagen.',
   'vacay.settings.error':
     'De instellingen van het verlofplan konden niet worden opgeslagen. Er is niets gewijzigd.',
+  'files.readOnly.title': 'Alleen-lezenbestanden',
+  'files.readOnly.role':
+    'Alleen eigenaren en bewerkers van de reis kunnen bestanden uploaden, hernoemen of verwijderen. Je kunt ze nog steeds downloaden.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

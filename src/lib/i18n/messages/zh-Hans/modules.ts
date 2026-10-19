@@ -1113,6 +1113,9 @@ const messages = {
   'vacay.settings.cancel': '取消',
   'vacay.settings.saved': '已保存休假计划设置。',
   'vacay.settings.error': '无法保存休假计划设置。未做任何更改。',
+  'files.readOnly.title': '只读文件',
+  'files.readOnly.role':
+    '只有旅行所有者和编辑者可以上传、重命名或删除文件。你仍然可以下载文件。',
 } satisfies TranslationOf<typeof En>
 
 export default messages
