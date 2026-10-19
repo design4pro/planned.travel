@@ -249,6 +249,31 @@ describe('the sweep over registered places', () => {
     expect(report.passed).toBe(true)
   })
 
+  it('matches the email in a verification identifier whole, not as a substring', async () => {
+    plantRow('verification', 'identifier', `x${EMAIL.toLowerCase()}`, null)
+    plantRow('verification', 'identifier', `${EMAIL.toLowerCase()}x`, null)
+    plantRow(
+      'verification',
+      'identifier',
+      `sign-in-otp-x${EMAIL.toLowerCase()}`,
+      null,
+    )
+
+    expect((await sweep()).passed).toBe(true)
+
+    plantRow('verification', 'identifier', EMAIL.toUpperCase(), null)
+    expect(placesIn(await sweep())).toEqual(['verification.identifier'])
+
+    harness.sqlite.exec('delete from verification')
+    plantRow(
+      'verification',
+      'identifier',
+      `sign-in-otp-${EMAIL.toUpperCase()}`,
+      null,
+    )
+    expect(placesIn(await sweep())).toEqual(['verification.identifier'])
+  })
+
   it('counts the email places case-insensitively and across every workspace', async () => {
     plantRow('invitation', 'email', EMAIL.toUpperCase(), beta.organizationId)
     plantRow('member', 'user_id', USER, beta.organizationId)
