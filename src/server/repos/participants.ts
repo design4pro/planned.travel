@@ -37,7 +37,7 @@ export function recordParticipant(scope: TenantScope, userId: string) {
 }
 
 /** Every Drizzle table the erasure registry can name, by SQL table name. */
-function tablesByName(): Map<string, SQLiteTable> {
+export function tablesByName(): Map<string, SQLiteTable> {
   const byName = new Map<string, SQLiteTable>()
   for (const value of [
     ...Object.values(authTables),
