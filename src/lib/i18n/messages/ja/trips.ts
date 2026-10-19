@@ -489,6 +489,60 @@ const messages = {
     '参加できませんでした。リンクはまだ使えます。もう一度お試しください。',
   'join.error.switch':
     'ワークスペースを切り替えられませんでした。もう一度お試しください。',
+
+  'invite.title': '招待リンク',
+  'invite.description':
+    'このワークスペースのメンバーがリンクを開くと旅行に参加します。',
+  'invite.empty.title': '招待リンクはまだありません',
+  'invite.empty.body':
+    'リンクを作成してグループチャットで共有すると、このワークスペースのメンバーが参加できます。',
+  'invite.action.create': 'リンクを作成',
+  'invite.link.label': '招待リンク',
+  'invite.copy': 'リンクをコピー',
+  'invite.copied': 'リンクをコピーしました',
+  'invite.copyFailed':
+    'コピーできませんでした。リンクを選択して手動でコピーしてください。',
+  'invite.switch.label':
+    'リンクを持つこのワークスペースのメンバーは誰でも参加できます',
+  'invite.switch.onHint':
+    '無効にすると、送信済みのコピーを含め、全員がリンクを使えなくなります。',
+  'invite.switch.offHint':
+    '再度有効にすると新しいリンクが作成されます。以前のリンクは無効のままです。',
+  'invite.off.body': 'リンクは無効です。このリンクからは参加できません。',
+  'invite.uses': { other: 'このリンクからの参加者数：{count}' },
+  'invite.uses.never': 'このリンクからの参加者はまだいません。',
+  'invite.lastUsed': '最後の参加：{when}',
+  'invite.role.upgrade.title': '編集権限を付与しますか？',
+  'invite.role.upgrade.body':
+    '送信済みのすべてのコピーと、今後参加する人に適用されます。',
+  'invite.role.upgrade.confirm': '編集権限を付与',
+  'invite.replace.action': 'リンクを置き換え',
+  'invite.replace.title': 'このリンクを置き換えますか？',
+  'invite.replace.body':
+    '古いリンクは直ちに全員が使えなくなります。参加済みのメンバーは旅行に残ります。必要であれば下の一覧から削除してください。',
+  'invite.replace.deadBody':
+    '古いリンクは使えなくなりました。参加済みのメンバーは旅行に残ります。',
+  'invite.replace.confirm': 'リンクを置き換え',
+  'invite.replace.pending': 'リンクを置き換え中',
+  'invite.stale': 'このリンクは使えなくなりました。置き換えてください。',
+  'invite.creatorGone':
+    '作成者が所有者ではなくなったため、このリンクは使えません。置き換えてください。',
+  'invite.archived':
+    'この旅行はアーカイブされています。旅行を復元するとリンクは再び使えるようになります。',
+  'invite.announce.created': '招待リンクを作成しました',
+  'invite.announce.roleEditor': '今後の参加者には編集権限が付与されます',
+  'invite.announce.off': '招待リンクを無効にしました',
+  'invite.announce.newLink':
+    '新しい招待リンクができました。コピーして再送してください。',
+  'invite.announce.roleViewer': '今後の参加者には閲覧権限が付与されます',
+  'invite.error.title': '招待リンクを読み込めませんでした',
+  'invite.error.retry': '再試行',
+  'invite.refusal.archived': 'この旅行はアーカイブされています。',
+  'invite.refusal.notOwner': '招待リンクを変更できるのは旅行の所有者のみです。',
+  'invite.refusal.changed':
+    '別の人がリンクを変更しました。現在のリンクを表示しています。',
+  'invite.announce.recovered':
+    '現在のリンク設定を表示しています。次の変更を行う前に確認してください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

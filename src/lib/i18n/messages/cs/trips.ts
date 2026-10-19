@@ -516,6 +516,63 @@ const messages = {
   'join.error.join':
     'Připojení se nepodařilo. Odkaz stále funguje, zkuste to znovu.',
   'join.error.switch': 'Prostor se nepodařilo přepnout. Zkuste to znovu.',
+
+  'invite.title': 'Odkaz na pozvání',
+  'invite.description':
+    'Kdokoli v tomto pracovním prostoru otevře odkaz, připojí se k cestě.',
+  'invite.empty.title': 'Zatím žádný odkaz',
+  'invite.empty.body':
+    'Vytvořte odkaz a sdílejte ho ve skupinovém chatu, aby se lidé z tohoto prostoru mohli připojit.',
+  'invite.action.create': 'Vytvořit odkaz',
+  'invite.link.label': 'Odkaz na pozvání',
+  'invite.copy': 'Kopírovat odkaz',
+  'invite.copied': 'Odkaz zkopírován',
+  'invite.copyFailed':
+    'Kopírování se nezdařilo. Označte odkaz a zkopírujte ho ručně.',
+  'invite.switch.label': 'Kdokoli z tohoto prostoru s odkazem se může připojit',
+  'invite.switch.onHint':
+    'Vypnutí zneplatní odkaz pro všechny, včetně již odeslaných kopií.',
+  'invite.switch.offHint':
+    'Zapnutí vytvoří nový odkaz. Dřívější odkazy zůstanou neplatné.',
+  'invite.off.body': 'Odkaz je vypnutý. Nikdo se přes něj nemůže připojit.',
+  'invite.uses': {
+    one: 'Počet připojených přes odkaz: {count}',
+    few: 'Počet připojených přes odkaz: {count}',
+    many: 'Počet připojených přes odkaz: {count}',
+    other: 'Počet připojených přes odkaz: {count}',
+  },
+  'invite.uses.never': 'Přes tento odkaz se zatím nikdo nepřipojil.',
+  'invite.lastUsed': 'Poslední připojení: {when}',
+  'invite.role.upgrade.title': 'Udělit práva editora?',
+  'invite.role.upgrade.body':
+    'Platí to pro všechny odeslané kopie a každého, kdo se připojí od této chvíle.',
+  'invite.role.upgrade.confirm': 'Udělit práva editora',
+  'invite.replace.action': 'Nahradit odkaz',
+  'invite.replace.title': 'Nahradit tento odkaz?',
+  'invite.replace.body':
+    'Starý odkaz okamžitě přestane fungovat všem. Již připojení lidé zůstanou na cestě; podle potřeby je odeberte ze seznamu níže.',
+  'invite.replace.deadBody':
+    'Starý odkaz už nefunguje. Již připojení lidé zůstávají na cestě.',
+  'invite.replace.confirm': 'Nahradit odkaz',
+  'invite.replace.pending': 'Nahrazování odkazu',
+  'invite.stale': 'Tento odkaz už nefunguje. Nahraďte ho.',
+  'invite.creatorGone':
+    'Odkaz nefunguje, protože jeho tvůrce už není vlastníkem. Nahraďte ho.',
+  'invite.archived':
+    'Cesta je archivovaná. Odkaz začne znovu fungovat po obnovení cesty.',
+  'invite.announce.created': 'Odkaz na pozvání vytvořen',
+  'invite.announce.roleEditor': 'Nově připojení budou moci upravovat',
+  'invite.announce.off': 'Odkaz na pozvání vypnut',
+  'invite.announce.newLink':
+    'Nový odkaz je připraven. Zkopírujte ho a znovu odešlete.',
+  'invite.announce.roleViewer': 'Nově připojení budou moci prohlížet',
+  'invite.error.title': 'Odkaz se nepodařilo načíst',
+  'invite.error.retry': 'Zkusit znovu',
+  'invite.refusal.archived': 'Tato cesta je archivovaná.',
+  'invite.refusal.notOwner': 'Odkaz může změnit pouze vlastník cesty.',
+  'invite.refusal.changed': 'Někdo odkaz změnil. Zobrazuje se aktuální.',
+  'invite.announce.recovered':
+    'Zobrazují se aktuální nastavení odkazu. Před další změnou je zkontrolujte.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
