@@ -10,6 +10,8 @@ import EnModules from '#/lib/i18n/messages/en/modules'
 import EnUi from '#/lib/i18n/messages/en/ui'
 import { PlanSettingsDialog } from '../plan-settings-dialog'
 
+import type { ReactElement } from 'react'
+
 import type { Catalogue } from '#/lib/i18n'
 
 const EN: Catalogue = {
@@ -30,18 +32,24 @@ afterEach(() => {
   router.invalidate.mockReset()
 })
 
-function mount(
+function element(
   props: { carryOverEnabled?: boolean; defaultEntitlementDays?: number } = {},
-): void {
-  render(
+): ReactElement {
+  return (
     <I18nProvider locale="en" messages={EN}>
       <PlanSettingsDialog
         planId="plan-1"
         carryOverEnabled={props.carryOverEnabled ?? true}
         defaultEntitlementDays={props.defaultEntitlementDays ?? 25}
       />
-    </I18nProvider>,
+    </I18nProvider>
   )
+}
+
+function mount(
+  props: { carryOverEnabled?: boolean; defaultEntitlementDays?: number } = {},
+): ReturnType<typeof render> {
+  return render(element(props))
 }
 
 const hand = (): ReturnType<typeof userEvent.setup> =>
@@ -207,7 +215,7 @@ describe('saving', () => {
     })
   })
 
-  it('announces a second save again after the dialog is opened and saved a second time', async () => {
+  it('clears the saved message when the dialog is opened again and writes it again after the next save', async () => {
     const user = hand()
     updatePlan.mockResolvedValue({})
     mount()
@@ -215,13 +223,77 @@ describe('saving', () => {
     await user.click(opener())
     await user.click(carryOver())
     await user.click(save())
-    await waitFor(() => expect(queryDialog()).toBeNull())
-    expect(screen.getByRole('status').textContent).toBe(
-      'Leave plan settings saved.',
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Leave plan settings saved.',
+      ),
     )
 
     await user.click(opener())
     expect(screen.getByRole('status').textContent).toBe('')
+    await user.click(save())
+    await waitFor(() => expect(queryDialog()).toBeNull())
+    expect(screen.getByRole('status').textContent).toBe('')
+
+    await user.click(opener())
+    await replace(user, '26')
+    await user.click(save())
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Leave plan settings saved.',
+      ),
+    )
+  })
+
+  it('writes the saved message only once the dialog has closed', async () => {
+    const user = hand()
+    updatePlan.mockResolvedValue({})
+    mount()
+
+    await user.click(opener())
+    await user.click(carryOver())
+    await user.click(save())
+
+    await waitFor(() => expect(queryDialog()).toBeNull())
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).not.toBe(''),
+    )
+  })
+
+  it('makes the fields read-only and removes the close button while a save is in flight', async () => {
+    const user = hand()
+    let finish: (value: unknown) => void = () => undefined
+    updatePlan.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    mount()
+
+    await user.click(opener())
+    await user.click(carryOver())
+    await user.click(save())
+
+    expect(field().readOnly).toBe(true)
+    expect(field().getAttribute('aria-busy')).toBe('true')
+    await user.click(carryOver())
+    expect(carryOver().getAttribute('aria-checked')).toBe('false')
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+
+    finish({})
+    await waitFor(() => expect(queryDialog()).toBeNull())
+    expect(updatePlan).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends one request for a double click on Save', async () => {
+    const user = hand()
+    let finish: (value: unknown) => void = () => undefined
+    updatePlan.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    mount()
+
+    await user.click(opener())
+    await user.click(carryOver())
+    await user.dblClick(save())
+
+    expect(updatePlan).toHaveBeenCalledTimes(1)
+    finish({})
+    await waitFor(() => expect(queryDialog()).toBeNull())
   })
 
   it('ignores Escape and the Cancel button while a save is in flight', async () => {
@@ -267,6 +339,23 @@ describe('an invalid default allowance', () => {
     },
   )
 
+  it('announces the problem again on every submit, also when focus is already in the field', async () => {
+    const user = hand()
+    mount()
+
+    await user.click(opener())
+    await replace(user, '999')
+    await user.keyboard('{Enter}')
+    const first = screen.getByRole('alert')
+    expect(first.textContent).toBe('Enter a whole number from 0 to 365.')
+
+    await user.keyboard('{Enter}')
+
+    const second = screen.getByRole('alert')
+    expect(second.textContent).toBe('Enter a whole number from 0 to 365.')
+    expect(second).not.toBe(first)
+  })
+
   it('is cleared as soon as the value is edited', async () => {
     const user = hand()
     mount()
@@ -301,8 +390,44 @@ describe('a failed save', () => {
     expect(queryDialog()).not.toBeNull()
     expect(field().value).toBe('33')
     expect(carryOver().getAttribute('aria-checked')).toBe('false')
-    expect(router.invalidate).not.toHaveBeenCalled()
     expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('counts a write whose response was lost as saved when the plan read again holds the typed values', async () => {
+    const user = hand()
+    updatePlan.mockRejectedValue(new Error('response lost'))
+    const view = mount()
+    router.invalidate.mockImplementation(() => {
+      view.rerender(element({ defaultEntitlementDays: 33 }))
+      return Promise.resolve()
+    })
+
+    await user.click(opener())
+    await replace(user, '33')
+    await user.click(save())
+
+    await waitFor(() => expect(queryDialog()).toBeNull())
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(router.invalidate).toHaveBeenCalledTimes(1)
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Leave plan settings saved.',
+      ),
+    )
+  })
+
+  it('counts a save as done when the write landed and the reload failed', async () => {
+    const user = hand()
+    updatePlan.mockResolvedValue({})
+    router.invalidate.mockRejectedValue(new Error('reload failed'))
+    mount()
+
+    await user.click(opener())
+    await replace(user, '33')
+    await user.click(save())
+
+    await waitFor(() => expect(queryDialog()).toBeNull())
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('moves focus to the alert again when the retry fails too, and saves when the retry succeeds', async () => {

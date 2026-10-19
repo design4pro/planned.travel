@@ -655,7 +655,7 @@ answered **revise**, and the security and tenancy reviewer approved, so the spec
 
 ## Amendment
 
-Implemented in #1381 (08-S1a), #1412 (08-S1b) and #1421 (08-S1c). Three things shipped differently from the design above.
+Implemented in #1381 (08-S1a), #1412 (08-S1b) and #1421 (08-S1c). Four things shipped differently from the design above.
 
 - **The dialog lives in `src/routes/_app/-ui/plan-settings-dialog.tsx`, not `src/components/vacay/`.** Same reason as the allowance
   panel: it calls `updateVacayPlanFn`, and a module component would have to import a route's `-server` file.
@@ -663,3 +663,6 @@ Implemented in #1381 (08-S1a), #1412 (08-S1b) and #1421 (08-S1c). Three things s
   0-365 rule has one owner; a schema is not a way into a row, the same as `setEntitlementInput`.
 - **`updateVacayPlanFn` returns `{ id, carryOverEnabled, defaultEntitlementDays }`, not the whole plan row.** Those are the fields the
   dialog reads back; the screen reloads through `router.invalidate()`.
+- **The dialog has its own polite live region**, outside its portal, instead of sharing the allowance panel's single one. Sharing
+  would have meant reaching into #1016's panel. The message is written once the dialog has closed, because Radix hides everything
+  outside an open dialog from assistive technology.

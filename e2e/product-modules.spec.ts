@@ -511,9 +511,15 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(settingsDialog(page)).toBeVisible()
     await expect(defaultField(page)).toHaveAttribute('aria-invalid', 'true')
     await expect(defaultField(page)).toBeFocused()
+    // The field's own message and the hidden alert that announces it say the same words.
     await expect(
-      settingsDialog(page).getByText('Enter a whole number from 0 to 365.'),
+      settingsDialog(page)
+        .getByText('Enter a whole number from 0 to 365.')
+        .first(),
     ).toBeVisible()
+    await expect(settingsDialog(page).getByRole('alert')).toHaveText(
+      'Enter a whole number from 0 to 365.',
+    )
 
     await page.keyboard.press('Escape')
     await expect(settingsDialog(page)).toHaveCount(0)

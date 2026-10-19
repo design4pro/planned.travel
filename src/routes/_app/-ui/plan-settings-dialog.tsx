@@ -12,11 +12,19 @@
  *   a request.
  * - **An invalid default moves focus to the field**, whose `Field` links the message to it. Enter in
  *   that field submits the form, so the keyboard path is the same as the button's.
- * - **A failed save keeps the dialog open with the values as typed** and moves focus to the alert:
- *   the loading Save button has just stopped being focusable, which would drop focus to the page.
+ * - **An invalid default is announced on every submit**, including Enter in the field, where focus
+ *   does not move: a visually hidden alert, keyed by the attempt, says it again.
+ * - **A failed save keeps the dialog open with the values as typed** and moves focus to the alert,
+ *   so the failure is heard and focus has a stable place to land. A rejected write does not prove
+ *   nothing was stored, so the plan is read again first: when it now holds what was typed, the
+ *   save counts as done. A write that landed and a reload that failed count as done too.
+ * - **While a save is in flight the fields are read-only and the close button is gone**, so an edit
+ *   made during the wait is not silently dropped when the request that carried the old value lands.
  * - **A saved dialog closes onto the button that opened it**, on purpose rather than through
  *   Radix's restore, because a button pressed in Safari is not focused and so is not remembered.
- *   The saved message goes to a polite live region beside the button, outside the dialog's portal.
+ *   The saved message goes to a polite live region beside the button, outside the dialog's portal,
+ *   and is written once the dialog has closed: while the dialog is open Radix hides everything
+ *   outside it from assistive technology, and text inserted into a hidden region is not announced.
  */
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
@@ -60,6 +68,8 @@ export function PlanSettingsDialog({
   const [draft, setDraft] = useState(String(defaultEntitlementDays))
   const [pending, setPending] = useState(false)
   const [invalid, setInvalid] = useState(false)
+  /** Counts invalid submits, so each one is announced again. */
+  const [attempts, setAttempts] = useState(0)
   /** Counts failed saves, so each one moves focus to the alert again. */
   const [failures, setFailures] = useState(0)
   const [failed, setFailed] = useState(false)
@@ -70,6 +80,11 @@ export function PlanSettingsDialog({
   const inputRef = useRef<HTMLInputElement>(null)
   const alertRef = useRef<HTMLDivElement>(null)
   const inflight = useRef(false)
+  /** Set by a save that landed; the live region is written when the dialog has closed. */
+  const announce = useRef(false)
+  /** The plan as last rendered, so a save can be judged against a re-read made after it. */
+  const current = useRef({ carryOverEnabled, defaultEntitlementDays })
+  current.current = { carryOverEnabled, defaultEntitlementDays }
 
   useEffect(() => {
     if (failures > 0) alertRef.current?.focus()
@@ -91,6 +106,7 @@ export function PlanSettingsDialog({
     const days = parseAllowanceDays(draft)
     if (days === null) {
       setInvalid(true)
+      setAttempts((count) => count + 1)
       inputRef.current?.focus()
       return
     }
@@ -111,18 +127,31 @@ export function PlanSettingsDialog({
     inflight.current = true
     setPending(true)
     setFailed(false)
+    let landed = false
     try {
       await updateVacayPlanFn({ data: { planId, ...patch } })
+      landed = true
+    } catch {
+      // The response may have been lost after the write: read the plan again and compare.
+    }
+    try {
       await router.invalidate()
     } catch {
+      // The write already landed or the screen could not be refreshed; neither is reported twice.
+    }
+    const stored = current.current
+    landed ||=
+      stored.carryOverEnabled === carryOver &&
+      stored.defaultEntitlementDays === days
+    inflight.current = false
+    setPending(false)
+
+    if (!landed) {
       setFailed(true)
       setFailures((count) => count + 1)
       return
-    } finally {
-      inflight.current = false
-      setPending(false)
     }
-    setSaved(true)
+    announce.current = true
     setOpen(false)
   }
 
@@ -151,10 +180,14 @@ export function PlanSettingsDialog({
       >
         <DialogContent
           size="sm"
-          data-part="vacay-settings-dialog"
+          hideClose={pending}
           onCloseAutoFocus={(event) => {
             event.preventDefault()
             openerRef.current?.focus({ preventScroll: true })
+            if (announce.current) {
+              announce.current = false
+              setSaved(true)
+            }
           }}
         >
           <DialogHeader>
@@ -179,7 +212,9 @@ export function PlanSettingsDialog({
 
                 <CheckboxField
                   checked={carryOver}
-                  onCheckedChange={(next) => setCarryOver(next === true)}
+                  onCheckedChange={(next) => {
+                    if (!pending) setCarryOver(next === true)
+                  }}
                   label={t('modules.vacay.settings.carryOver')}
                   description={t('modules.vacay.settings.carryOver.hint')}
                 />
@@ -198,6 +233,8 @@ export function PlanSettingsDialog({
                     inputMode="numeric"
                     autoComplete="off"
                     value={draft}
+                    readOnly={pending}
+                    aria-busy={pending || undefined}
                     onChange={(event) => {
                       setDraft(event.target.value)
                       setInvalid(false)
@@ -206,6 +243,12 @@ export function PlanSettingsDialog({
                 </Field>
               </div>
             </DialogBody>
+
+            {invalid ? (
+              <div key={attempts} role="alert" className="sr-only">
+                {t('modules.vacay.allowance.input.invalid')}
+              </div>
+            ) : null}
 
             <DialogFooter>
               <Button
