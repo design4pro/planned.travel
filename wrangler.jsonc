@@ -172,7 +172,8 @@
       "*/15 * * * *",
       // Nightly D1 export to R2.
       "0 3 * * *",
-      // Weekly retention prune of expired backups and export artifacts.
+      // Weekly retention slot: backup and export retention (handler not written yet), audit prune,
+      // usage rollup and dead-letter retention.
       "17 4 * * 1",
     ],
   },

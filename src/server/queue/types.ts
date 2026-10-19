@@ -534,6 +534,8 @@ export interface TaskBindings extends TaskSecrets {
   EMAIL_API_URL?: string
   FILES_PUBLIC_BASE?: string
   BACKUP_RETENTION_DAYS?: number | string
+  /** Days a dead letter's R2 body is kept; unset or invalid means the default of 14. */
+  DEAD_LETTER_RETENTION_DAYS?: number | string
   TASK_MAX_ATTEMPTS?: number | string
 }
 
