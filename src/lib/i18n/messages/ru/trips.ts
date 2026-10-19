@@ -497,10 +497,14 @@ const messages = {
   'join.dates.label': 'Даты',
   'join.destination.label': 'Пункт назначения',
   'join.action.signIn': 'Войти',
+  'join.action.join': 'Присоединиться к поездке',
+  'join.action.joining': 'Присоединяемся к поездке',
   'join.action.open': 'Открыть поездку',
   'join.action.openIn': 'Открыть поездку и сменить пространство',
   'join.action.openIn.pending': 'Меняем пространство',
   'join.loading': 'Загружаем приглашение',
+  'join.joined.title': 'Вы в поездке',
+  'join.joined.body': 'Откройте её, чтобы увидеть план.',
   'join.member.title': 'Вы уже участвуете в этой поездке',
   'join.needsWorkspace.title':
     'Эта поездка находится в пространстве, в котором вы не состоите',
@@ -520,6 +524,8 @@ const messages = {
   'join.error.retry': 'Повторить',
   'join.error.busy':
     'Страница сейчас перегружена. Повторите попытку через минуту.',
+  'join.error.join':
+    'Не удалось присоединиться. Ссылка по-прежнему работает, повторите попытку.',
   'join.error.switch': 'Не удалось сменить пространство. Повторите попытку.',
 } satisfies TranslationOf<typeof En>
 

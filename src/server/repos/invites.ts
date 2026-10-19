@@ -5,6 +5,11 @@
  * workspace's name or an email), and the preview reads through a scope built inside this module from
  * the resolved link. A signed-in viewer is passed in as data by the server function that owns the
  * session; nothing under src/server/public reads one.
+ *
+ * joinTripByInviteUnscoped also takes Database: the joiner is not an owner and cannot read a private
+ * trip yet, so the scope it writes under is built here, for the joiner in the link's workspace, from
+ * their row in `member`. Its sole production caller is src/routes/join/-lib/join.ts. It returns ids
+ * only after the workspace-membership check, and never the secret or the digest.
  */
 /**
  * The trip invite link: one rotating link per trip that puts members of the trip's workspace on the
@@ -19,7 +24,8 @@
  *
  * Every verb is a trip owner's: {@link requireTrip}, then the owner assert, then the archived check,
  * inside the repository so it holds for a route, a seed script and a queue consumer alike. The one
- * exception is {@link touchTripInvite}, which a successful join calls under the joiner's own scope.
+ * exceptions are {@link joinTripByInviteUnscoped}, the join, and {@link touchTripInvite}, which a
+ * successful join calls under the joiner's own scope.
  *
  * ## Concurrency
  *
@@ -68,11 +74,18 @@ import {
   tenantFilter,
 } from './base'
 import { NotFoundError } from './context'
-import { TripArchivedError, assertTripRole, requireTrip } from './trips'
+import {
+  TripArchivedError,
+  TripMemberExistsError,
+  assertTripRole,
+  insertTripMember,
+  requireTrip,
+} from './trips'
 import { idSchema } from './validation'
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TenantContext } from './context'
 
 export const tripInviteLinksRepository = createTenantRepository(
   tripInviteLinks,
@@ -401,6 +414,130 @@ export async function readInvitePreviewUnscoped(
     startDate: row.startDate,
     endDate: row.endDate,
     destination: row.destination,
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The join
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Who is joining: a signed-in session as data, read by the server function that owns it. */
+export interface InviteJoiner {
+  readonly id: string
+  readonly banned: boolean
+  /** The session was minted by an operator impersonating the user. */
+  readonly impersonated: boolean
+}
+
+/**
+ * What a submitted join came to. `joined` and `member` are the only answers that carry ids, and they
+ * are returned after the workspace-membership check. The extra fields of `joined` (`inviteId`,
+ * `role`, `context`) are for the server function's audit row and never reach the client.
+ */
+export type TripJoinOutcome =
+  | {
+      readonly outcome: 'joined'
+      readonly tripId: string
+      readonly organizationId: string
+      readonly inviteId: string
+      readonly role: TripInviteRole
+      /** The joiner's tenant context in the link's workspace, for the audit write. */
+      readonly context: TenantContext
+    }
+  | {
+      readonly outcome: 'member'
+      readonly tripId: string
+      readonly organizationId: string
+    }
+  | { readonly outcome: 'needs-workspace' }
+  | { readonly outcome: 'unavailable' }
+
+const UNAVAILABLE_JOIN: TripJoinOutcome = Object.freeze({
+  outcome: 'unavailable',
+})
+
+/**
+ * Puts a signed-in member of the link's workspace on the link's trip. This is the only write on the
+ * whole invite-link surface, and the invite row is its authority: the joiner is not an owner and
+ * cannot read a private trip yet, so `addTripMember` cannot serve (ADR 0007).
+ *
+ * It acts as the joiner, with their role in the **link's** workspace read from `member`. The
+ * session's active workspace and anything the request carries are never consulted, so a member of
+ * two workspaces joins the right one. The role granted is the row's, re-parsed against the narrowed
+ * enum, so a hand-edited `owner` is a dead link. Nothing from the page is trusted: only the digest.
+ *
+ * The order is fixed: a banned or impersonated joiner is refused before anything is read; the link
+ * is resolved again (rotated, switched off, orphaned, archived, a rotated key: unavailable); a
+ * non-member of the workspace is told so and nothing is written; the trip is read under the tenant
+ * filter; the shared insert runs, and a unique violation is `member`; the use is counted only on a
+ * real join. Between the resolve and the insert a rotation can land. The membership written is the
+ * one the link's holder legitimately held a moment earlier and escalates nothing.
+ */
+export async function joinTripByInviteUnscoped(
+  db: Database,
+  digest: string,
+  key: string,
+  joiner: InviteJoiner,
+  now = new Date(),
+): Promise<TripJoinOutcome> {
+  if (joiner.banned || joiner.impersonated) return UNAVAILABLE_JOIN
+  const invite = await findLiveTripInviteByDigestUnscoped(db, digest, key, now)
+  if (!invite) return UNAVAILABLE_JOIN
+
+  const [membership] = await db
+    .select({ role: member.role })
+    .from(member)
+    .where(
+      and(
+        eq(member.organizationId, invite.organizationId),
+        eq(member.userId, joiner.id),
+        inArray(member.role, [...ORGANIZATION_ROLES]),
+      ),
+    )
+    .limit(1)
+  const role = ORGANIZATION_ROLES.find((known) => known === membership?.role)
+  if (!role) return { outcome: 'needs-workspace' }
+  const context: TenantContext = {
+    organizationId: invite.organizationId,
+    userId: joiner.id,
+    role,
+  }
+  const scope = createScope(db, context)
+
+  // The tenant filter, not the readability predicate: a joiner cannot read a private trip yet.
+  const [trip] = await db
+    .select({ isArchived: trips.isArchived })
+    .from(trips)
+    .where(tenantFilter(scope, trips, eq(trips.id, invite.tripId)))
+    .limit(1)
+  if (!trip || trip.isArchived) return UNAVAILABLE_JOIN
+
+  try {
+    await insertTripMember(scope, {
+      tripId: invite.tripId,
+      userId: joiner.id,
+      role: invite.role,
+      joinedAt: now,
+      invitedBy: invite.createdBy,
+    })
+  } catch (cause) {
+    if (cause instanceof TripMemberExistsError) {
+      return {
+        outcome: 'member',
+        tripId: invite.tripId,
+        organizationId: invite.organizationId,
+      }
+    }
+    throw cause
+  }
+  await touchTripInvite(scope, invite.id)
+  return {
+    outcome: 'joined',
+    tripId: invite.tripId,
+    organizationId: invite.organizationId,
+    inviteId: invite.id,
+    role: invite.role,
+    context,
   }
 }
 

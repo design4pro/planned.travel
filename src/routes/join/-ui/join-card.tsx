@@ -28,6 +28,7 @@ import { useI18n } from '#/lib/i18n'
 import { loginHrefFor } from '../../(auth)/-lib/redirect'
 
 import type { MessageKey } from '#/lib/i18n'
+import type { JoinAnswer } from '../-lib/join'
 import type { InviteView } from '../-lib/view'
 
 type Invited = Extract<InviteView, { state: 'invited' }>
@@ -105,7 +106,116 @@ function SignInAction({ path, label }: { path: string; label: MessageKey }) {
   )
 }
 
-function InvitedCard({ view, path }: { view: Invited; path: string }) {
+/** A long label wraps inside a 360px card instead of running past its edge (WCAG 1.4.10). */
+const WRAPPING_LABEL = 'h-auto min-h-12 whitespace-normal py-2 text-center'
+
+type Failure = 'join' | 'busy'
+
+const FAILURE_KEYS: Record<Failure, MessageKey> = {
+  join: 'trips.join.error.join',
+  busy: 'trips.join.error.busy',
+}
+
+function JoinAction({
+  path,
+  onJoin,
+  onRetry,
+  onJoined,
+  onRefused,
+}: {
+  path: string
+  onJoin: () => Promise<JoinAnswer>
+  onRetry: () => Promise<void>
+  onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
+  onRefused: () => void
+}) {
+  const { t } = useI18n()
+  const noteId = React.useId()
+  const [pending, setPending] = React.useState(false)
+  const [failure, setFailure] = React.useState<Failure | null>(null)
+
+  function fail(next: Failure): void {
+    setFailure(next)
+    setPending(false)
+  }
+
+  async function join(): Promise<void> {
+    setFailure(null)
+    setPending(true)
+    let answer: JoinAnswer
+    try {
+      answer = await onJoin()
+    } catch {
+      fail('join')
+      return
+    }
+    if (answer.outcome === 'busy') {
+      fail('busy')
+      return
+    }
+    // The session ended while the card was open: trying again cannot work, signing in can.
+    if (answer.outcome === 'signed-out') {
+      window.location.assign(loginHrefFor(path))
+      return
+    }
+    focusHeadingOnArrival = true
+    if (answer.outcome === 'joined' || answer.outcome === 'member') {
+      onJoined(answer)
+      return
+    }
+    // The link is gone for this person (replaced, switched off, or a session that may not join):
+    // the page cannot say more than the answer did, and a reload could bring this card back.
+    if (answer.outcome === 'unavailable') {
+      onRefused()
+      return
+    }
+    // A workspace left since the page loaded: the page reads again and the card it gets takes this
+    // one's place.
+    await onRetry().catch(() => undefined)
+    focusHeadingOnArrival = false
+    setPending(false)
+  }
+
+  return (
+    <>
+      {failure ? (
+        // Focus stays on the button while the request runs, so there is no focus move to carry the
+        // failure: the alert is the announcement, and describing the button keeps it findable.
+        <Alert id={noteId} tone="danger">
+          {t(FAILURE_KEYS[failure])}
+        </Alert>
+      ) : null}
+      <Button
+        variant="primary"
+        size="lg"
+        block
+        className={WRAPPING_LABEL}
+        loading={pending}
+        loadingLabel={t('trips.join.action.joining')}
+        aria-describedby={failure ? noteId : undefined}
+        onClick={() => void join()}
+      >
+        {t('trips.join.action.join')}
+      </Button>
+    </>
+  )
+}
+
+function InvitedCard({
+  view,
+  path,
+  onJoin,
+  onRetry,
+  onJoined,
+  onRefused,
+}: {
+  view: Invited
+  path: string
+  onJoin: () => Promise<JoinAnswer>
+  onRetry: () => Promise<void>
+  onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void
+  onRefused: () => void
+}) {
   const { t, locale } = useI18n()
   const dates = formatDateRange(view.startDate, view.endDate, locale)
   const rows: Array<[string, string]> = [
@@ -135,9 +245,13 @@ function InvitedCard({ view, path }: { view: Invited; path: string }) {
         {t('trips.join.requirement', { inviter: view.inviterName })}
       </p>
       {view.signedIn ? (
-        <Button variant="secondary" size="lg" block asChild>
-          <a href="/trips">{t('trips.join.unavailable.trips')}</a>
-        </Button>
+        <JoinAction
+          path={path}
+          onJoin={onJoin}
+          onRetry={onRetry}
+          onJoined={onJoined}
+          onRefused={onRefused}
+        />
       ) : (
         <>
           <p className="text-caption text-ink-3">
@@ -150,17 +264,28 @@ function InvitedCard({ view, path }: { view: Invited; path: string }) {
   )
 }
 
-function MemberCard({ view, path }: { view: Member; path: string }) {
+/** Opens the trip, switching to its workspace first when the active one is not it. */
+function OpenTripAction({
+  tripId,
+  organizationId,
+  switchWorkspace,
+  path,
+}: {
+  tripId: string
+  organizationId: string
+  switchWorkspace: boolean
+  path: string
+}) {
   const { t } = useI18n()
   const [pending, setPending] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
-  const tripPath = `/trips/${view.tripId}`
+  const tripPath = `/trips/${tripId}`
 
   async function openInWorkspace(): Promise<void> {
     setFailed(false)
     setPending(true)
     const outcome = await authClient.organization
-      .setActive({ organizationId: view.organizationId })
+      .setActive({ organizationId })
       .then(({ error }) => error)
       .catch(() => new Error('switch'))
     // The session ended while the card was open: trying again cannot work, signing in can.
@@ -178,18 +303,16 @@ function MemberCard({ view, path }: { view: Member; path: string }) {
   }
 
   return (
-    <Card padding="lg" className="flex flex-col gap-5">
-      <h1 className="font-display text-title font-bold tracking-tight text-ink">
-        {t('trips.join.member.title')}
-      </h1>
+    <>
       {failed ? (
         <Alert tone="danger">{t('trips.join.error.switch')}</Alert>
       ) : null}
-      {view.switchWorkspace ? (
+      {switchWorkspace ? (
         <Button
           variant="primary"
           size="lg"
           block
+          className={WRAPPING_LABEL}
           loading={pending}
           loadingLabel={t('trips.join.action.openIn.pending')}
           onClick={() => void openInWorkspace()}
@@ -197,10 +320,58 @@ function MemberCard({ view, path }: { view: Member; path: string }) {
           {t('trips.join.action.openIn')}
         </Button>
       ) : (
-        <Button variant="primary" size="lg" block asChild>
+        <Button
+          variant="primary"
+          size="lg"
+          block
+          className={WRAPPING_LABEL}
+          asChild
+        >
           <a href={tripPath}>{t('trips.join.action.open')}</a>
         </Button>
       )}
+    </>
+  )
+}
+
+function MemberCard({ view, path }: { view: Member; path: string }) {
+  const { t } = useI18n()
+  return (
+    <Card padding="lg" className="flex flex-col gap-5">
+      <h1 className="font-display text-title font-bold tracking-tight text-ink">
+        {t('trips.join.member.title')}
+      </h1>
+      <OpenTripAction
+        tripId={view.tripId}
+        organizationId={view.organizationId}
+        switchWorkspace={view.switchWorkspace}
+        path={path}
+      />
+    </Card>
+  )
+}
+
+/** What the traveller sees after their own tap, whether the answer was joined or member. */
+function JoinedCard({
+  answer,
+  path,
+}: {
+  answer: Extract<JoinAnswer, { tripId: string }>
+  path: string
+}) {
+  const { t } = useI18n()
+  return (
+    <Card padding="lg" className="flex flex-col gap-5">
+      <h1 className="font-display text-title font-bold tracking-tight text-ink">
+        {t('trips.join.joined.title')}
+      </h1>
+      <p className="text-label text-ink-2">{t('trips.join.joined.body')}</p>
+      <OpenTripAction
+        tripId={answer.tripId}
+        organizationId={answer.organizationId}
+        switchWorkspace={answer.switchWorkspace}
+        path={path}
+      />
     </Card>
   )
 }
@@ -263,6 +434,7 @@ function NeedsWorkspaceCard({
         variant="secondary"
         size="lg"
         block
+        className={WRAPPING_LABEL}
         loading={pending}
         loadingLabel={t('shell.account.signingOut')}
         onClick={() => void signInAsSomeoneElse()}
@@ -377,23 +549,59 @@ export function JoinCard({
   view,
   path,
   onRetry,
+  onJoin,
 }: {
   view: InviteView
   /** This page's own path, so a sign-in comes back to it. */
   path: string
   onRetry: () => Promise<void>
+  /** Submits the join for this page's link. */
+  onJoin: () => Promise<JoinAnswer>
 }) {
-  return <Arrival key={view.state}>{cardFor(view, path, onRetry)}</Arrival>
+  const [joined, setJoined] = React.useState<Extract<
+    JoinAnswer,
+    { tripId: string }
+  > | null>(null)
+  const [refused, setRefused] = React.useState(false)
+  if (joined)
+    return (
+      <Arrival key="joined">
+        <JoinedCard answer={joined} path={path} />
+      </Arrival>
+    )
+  if (refused)
+    return (
+      <Arrival key="refused">
+        <UnavailableCard signedIn path={path} />
+      </Arrival>
+    )
+  return (
+    <Arrival key={view.state}>
+      {cardFor(view, path, onRetry, onJoin, setJoined, () => setRefused(true))}
+    </Arrival>
+  )
 }
 
 function cardFor(
   view: InviteView,
   path: string,
   onRetry: () => Promise<void>,
+  onJoin: () => Promise<JoinAnswer>,
+  onJoined: (answer: Extract<JoinAnswer, { tripId: string }>) => void,
+  onRefused: () => void,
 ): React.ReactNode {
   switch (view.state) {
     case 'invited':
-      return <InvitedCard view={view} path={path} />
+      return (
+        <InvitedCard
+          view={view}
+          path={path}
+          onJoin={onJoin}
+          onRetry={onRetry}
+          onJoined={onJoined}
+          onRefused={onRefused}
+        />
+      )
     case 'member':
       return <MemberCard view={view} path={path} />
     case 'needs-workspace':

@@ -496,10 +496,14 @@ const messages = {
   'join.dates.label': 'Termin',
   'join.destination.label': 'Cel wyjazdu',
   'join.action.signIn': 'Zaloguj się',
+  'join.action.join': 'Dołącz do wyjazdu',
+  'join.action.joining': 'Dołączanie do wyjazdu',
   'join.action.open': 'Otwórz wyjazd',
   'join.action.openIn': 'Otwórz wyjazd i przełącz przestrzeń',
   'join.action.openIn.pending': 'Przełączanie przestrzeni',
   'join.loading': 'Wczytywanie zaproszenia',
+  'join.joined.title': 'Jesteś na wyjeździe',
+  'join.joined.body': 'Otwórz go, aby zobaczyć plan.',
   'join.member.title': 'Już jesteś na tym wyjeździe',
   'join.needsWorkspace.title':
     'Ten wyjazd jest w przestrzeni, do której nie należysz',
@@ -518,6 +522,8 @@ const messages = {
   'join.error.title': 'Nie udało się wczytać tego linku z zaproszeniem',
   'join.error.retry': 'Spróbuj ponownie',
   'join.error.busy': 'Ta strona jest zajęta. Spróbuj ponownie za minutę.',
+  'join.error.join':
+    'Nie udało się dołączyć. Link nadal działa, spróbuj ponownie.',
   'join.error.switch':
     'Nie udało się przełączyć przestrzeni. Spróbuj ponownie.',
 } satisfies TranslationOf<typeof En>

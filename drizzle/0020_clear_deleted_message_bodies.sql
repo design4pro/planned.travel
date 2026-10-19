@@ -1,0 +1,12 @@
+-- Custom SQL migration file, put your code below! --
+--
+-- Everything above this line is `pnpm db:generate --custom --name=clear_deleted_message_bodies`
+-- output, unedited; the statement below is authored data SQL (no schema change), as in 0002 and 0010.
+--
+-- A deleted chat message used to keep its text: `deleteMessage` only set `deleted_at`. It now also
+-- clears the body, and this clears the rows that were deleted before that change. The row stays, so a
+-- reply that points at it still resolves (`reply_to_id` is untouched). `body` is NOT NULL, so the
+-- cleared value is the empty string. The statement is idempotent: a second run finds no row with a
+-- body left to clear. It deliberately spans every organisation: it is a one-off repair of data that
+-- should never have been kept, run by the migration runner, not a request.
+UPDATE `collab_messages` SET `body` = '' WHERE `deleted_at` IS NOT NULL AND `body` <> '';

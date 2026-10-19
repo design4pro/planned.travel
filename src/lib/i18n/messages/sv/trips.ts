@@ -465,10 +465,14 @@ const messages = {
   'join.dates.label': 'Datum',
   'join.destination.label': 'Resmål',
   'join.action.signIn': 'Logga in',
+  'join.action.join': 'Följ med på resan',
+  'join.action.joining': 'Går med i resan',
   'join.action.open': 'Öppna resan',
   'join.action.openIn': 'Öppna resan och byt arbetsyta',
   'join.action.openIn.pending': 'Byter arbetsyta',
   'join.loading': 'Läser in inbjudan',
+  'join.joined.title': 'Du är med på resan',
+  'join.joined.body': 'Öppna den för att se planen.',
   'join.member.title': 'Du är redan med på den här resan',
   'join.needsWorkspace.title':
     'Den här resan finns i en arbetsyta som du inte är med i',
@@ -487,6 +491,8 @@ const messages = {
   'join.error.title': 'Vi kunde inte läsa in den här inbjudningslänken',
   'join.error.retry': 'Försök igen',
   'join.error.busy': 'Sidan är upptagen. Försök igen om en minut.',
+  'join.error.join':
+    'Det gick inte att gå med. Länken fungerar fortfarande, försök igen.',
   'join.error.switch': 'Det gick inte att byta arbetsyta. Försök igen.',
 } satisfies TranslationOf<typeof En>
 

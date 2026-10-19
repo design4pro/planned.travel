@@ -499,10 +499,14 @@ const messages = {
   'join.dates.label': 'التواريخ',
   'join.destination.label': 'الوجهة',
   'join.action.signIn': 'دخول',
+  'join.action.join': 'انضم إلى الرحلة',
+  'join.action.joining': 'جارٍ الانضمام إلى الرحلة',
   'join.action.open': 'افتح الرحلة',
   'join.action.openIn': 'افتح الرحلة وبدّل مساحة العمل',
   'join.action.openIn.pending': 'جارٍ تبديل مساحة العمل',
   'join.loading': 'جارٍ تحميل الدعوة',
+  'join.joined.title': 'أنت الآن في الرحلة',
+  'join.joined.body': 'افتحها لترى الخطة.',
   'join.member.title': 'أنت مشارك في هذه الرحلة بالفعل',
   'join.needsWorkspace.title': 'هذه الرحلة في مساحة عمل لست عضواً فيها',
   'join.needsWorkspace.body':
@@ -520,6 +524,7 @@ const messages = {
   'join.error.title': 'تعذّر تحميل رابط الدعوة هذا',
   'join.error.retry': 'حاول مرة أخرى',
   'join.error.busy': 'هذه الصفحة مشغولة. حاول مرة أخرى بعد دقيقة.',
+  'join.error.join': 'تعذّر الانضمام. الرابط ما زال يعمل، حاول مرة أخرى.',
   'join.error.switch': 'تعذّر تبديل مساحة العمل. حاول مرة أخرى.',
 } satisfies TranslationOf<typeof En>
 

@@ -485,10 +485,14 @@ const messages = {
   'join.dates.label': 'Dates del viatge',
   'join.destination.label': 'Destinació',
   'join.action.signIn': 'Entra',
+  'join.action.join': 'Uneix-te al viatge',
+  'join.action.joining': 'Unint-te al viatge',
   'join.action.open': 'Obre el viatge',
   'join.action.openIn': 'Obre el viatge i canvia d’espai de treball',
   'join.action.openIn.pending': 'S’està canviant d’espai de treball',
   'join.loading': 'S’està carregant la invitació',
+  'join.joined.title': 'Ja ets al viatge',
+  'join.joined.body': 'Obre’l per veure el pla.',
   'join.member.title': 'Ja formes part d’aquest viatge',
   'join.needsWorkspace.title':
     'Aquest viatge és en un espai de treball del qual no formes part',
@@ -508,6 +512,8 @@ const messages = {
   'join.error.retry': 'Torna-ho a provar',
   'join.error.busy':
     'Aquesta pàgina està saturada. Torna-ho a provar d’aquí a un minut.',
+  'join.error.join':
+    'No s’ha pogut entrar al viatge. L’enllaç encara funciona; torna-ho a provar.',
   'join.error.switch':
     'No s’ha pogut canviar d’espai de treball. Torna-ho a provar.',
 } satisfies TranslationOf<typeof En>

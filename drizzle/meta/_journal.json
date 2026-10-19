@@ -141,6 +141,13 @@
       "when": 1792340618759,
       "tag": "0019_absent_shiva",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792361370923,
+      "tag": "0020_clear_deleted_message_bodies",
+      "breakpoints": true
     }
   ]
 }
