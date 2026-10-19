@@ -433,6 +433,8 @@ const messages = {
   'book.committedCaption': 'Across every booking on this trip',
   'book.onItinerary': 'On the itinerary',
   'book.pinnedCaption': 'Pinned to a day of the plan',
+  'book.readOnly.archived':
+    'This trip is archived, so its bookings and stays are read-only. Restore the trip to change them.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Transports',
   'transports.empty': 'Nothing recorded yet',
@@ -658,6 +660,47 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Stop times saved',
   'plan.place.toast.deleted': 'Place deleted',
   'plan.pin.toast.moved': '{name} pinned',
+  'join.page.title': 'Trip invite link',
+  'join.page.description':
+    'Open this link to join a shared trip on planned.travel.',
+  'join.title.invited': '{inviter} invited you to a trip',
+  'join.requirement':
+    "This link works for people who are already in {inviter}'s workspace.",
+  'join.newHere':
+    'New here? Ask {inviter} to add you to their workspace first.',
+  'join.trip.label': 'Trip',
+  'join.role.label': 'You would join as',
+  'join.dates.label': 'Dates',
+  'join.destination.label': 'Destination',
+  'join.action.signIn': 'Sign in',
+  'join.action.join': 'Join this trip',
+  'join.action.joining': 'Joining the trip',
+  'join.action.open': 'Open the trip',
+  'join.action.openIn': 'Open the trip and switch workspace',
+  'join.action.openIn.pending': 'Switching workspace',
+  'join.loading': 'Loading the invite',
+  'join.joined.title': 'You are on the trip',
+  'join.joined.body': 'Open it to see the plan.',
+  'join.member.title': 'You are already on this trip',
+  'join.needsWorkspace.title':
+    'This trip is in a workspace you are not part of',
+  'join.needsWorkspace.body':
+    'Ask {inviter} to add you to their workspace first, then open this link again.',
+  'join.needsWorkspace.signedInAs':
+    'You are signed in as {email}. Tell {inviter} to use this address.',
+  'join.needsWorkspace.acceptFirst':
+    'If you already have a workspace invitation email, accept it first, then open this link again.',
+  'join.needsWorkspace.otherAccount': 'Sign in with another account',
+  'join.unavailable.title': 'This invite link is not available',
+  'join.unavailable.body':
+    'The link may have been replaced or switched off. Ask whoever sent it for a new one.',
+  'join.unavailable.signIn': 'Sign in',
+  'join.unavailable.trips': 'Go to your trips',
+  'join.error.title': 'We could not load this invite link',
+  'join.error.retry': 'Try again',
+  'join.error.busy': 'This page is busy. Try again in a minute.',
+  'join.error.join': 'Could not join. The link still works - try again.',
+  'join.error.switch': 'Could not switch workspace. Try again.',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -30,7 +30,7 @@ import {
   assertExpectedTripCurrency,
   assertTripRole,
   requireTrip,
-  tripMemberUserIds,
+  tripMemberUserIdsInWorkspace,
 } from './trips'
 import {
   currencySchema,
@@ -131,6 +131,19 @@ async function requireTripExpense(
   expectedTripCurrency?: string,
 ): Promise<Expense> {
   await requireMoneyTrip(scope, tripId, expectedTripCurrency)
+  return requireExpenseOfTrip(scope, tripId, expenseId)
+}
+
+/**
+ * The expense, when it is an expense of `tripId`: `NotFoundError` otherwise, the same answer a
+ * missing id gets, so naming another trip's expense reveals nothing about it. The trip binding and
+ * nothing else - no money role - for a repository that only links to an expense, like a file.
+ */
+export async function requireExpenseOfTrip(
+  scope: TenantScope,
+  tripId: string,
+  expenseId: string,
+): Promise<Expense> {
   const expense = await expensesRepository.findOne(
     scope,
     allOf(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)),
@@ -197,11 +210,14 @@ async function requireTripSettlement(
 /*
  * A split, a payer and both sides of a payment are plain user ids, and `getMemberBalances` groups by
  * them without asking who is on the trip, so an id nobody checked would surface as a balance row of
- * a stranger. The people a money write may name are the trip's members (`trip_members`, not
- * everyone who may read the trip: an organization-visible trip is readable by the whole workspace)
- * and whoever the trip's money already carries. The second half is what lets a person who has since
- * left the trip keep their expense editable and their debt payable; a person the money has never
- * seen is always refused.
+ * a stranger. The people a money write may name are the trip's members who are still in the
+ * workspace (`trip_members` narrowed by the `member` table, not everyone who may read the trip: an
+ * organization-visible trip is readable by the whole workspace) and whoever the trip's money
+ * already carries. A person who has left the workspace keeps their `trip_members` row, so without
+ * the narrowing they would still count as a full member; with it they can no longer be put on new
+ * money, and they are accepted again if they return (#1034). The second half is what lets a person
+ * who has since left the trip or the workspace keep their expense editable and their debt payable;
+ * a person the money has never seen is always refused.
  *
  * One refusal for the whole submitted set: {@link NotFoundError} prints the id it is given, so the
  * message names the request rather than any id in it, and the caller cannot tell which id was wrong.
@@ -217,7 +233,7 @@ async function requireTripPeople(
   if (named.size === 0) {
     return
   }
-  const members = new Set(await tripMemberUserIds(scope, tripId))
+  const members = new Set(await tripMemberUserIdsInWorkspace(scope, tripId))
   const outsiders = [...named].filter((id) => !members.has(id))
   if (outsiders.length === 0) {
     return

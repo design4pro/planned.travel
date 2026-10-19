@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
@@ -80,10 +81,12 @@ function open(
     onSubmit = async () => {},
     expense = null,
     departedPeople,
+    people = PEOPLE,
   }: {
     onSubmit?: (value: ExpenseFormValue) => Promise<void>
     expense?: CostsExpense | null
     departedPeople?: ReadonlyArray<CostsDepartedPerson>
+    people?: ReadonlyArray<CostsPerson>
   } = {},
 ): void {
   render(
@@ -92,7 +95,7 @@ function open(
         open
         onOpenChange={() => {}}
         expense={expense}
-        people={PEOPLE}
+        people={people}
         departedPeople={departedPeople}
         viewerUserId="u1"
         tripCurrency="EUR"
@@ -672,5 +675,160 @@ describe('the split of an expense that names someone who has left the trip', () 
 
     expect(screen.queryByRole('checkbox', { name: /Cy/ })).toBeNull()
     expect(screen.queryByText('Left the trip')).toBeNull()
+  })
+})
+
+describe('the people a new line of money may name, once someone has left the workspace (#1034)', () => {
+  // Dee is still on the trip but no longer in the workspace: the server refuses her on new money.
+  const WITH_LEAVER: ReadonlyArray<CostsPerson> = [
+    ...PEOPLE,
+    {
+      userId: 'u3',
+      name: 'Dee',
+      email: '',
+      image: null,
+      role: 'editor',
+      leftWorkspace: true,
+    },
+  ]
+  const deeBox = (): HTMLElement | null =>
+    screen.queryByRole('checkbox', { name: 'Include Dee in this split' })
+
+  async function payerNames(
+    user: ReturnType<typeof userEvent.setup>,
+  ): Promise<Array<string>> {
+    await user.click(screen.getByRole('combobox', { name: 'Who paid' }))
+    return (await screen.findAllByRole('option')).map(
+      (option) => option.textContent,
+    )
+  }
+
+  it('offers her neither as payer nor in the split of a new expense, and never sends her', async () => {
+    const onSubmit = vi.fn(async (_value: ExpenseFormValue) => {})
+    const user = hand()
+    open(undefined, { people: WITH_LEAVER, onSubmit })
+
+    expect(deeBox()).toBeNull()
+    expect(screen.getByRole('checkbox', { name: /Include Bo/ })).toBeTruthy()
+    const names = await payerNames(user)
+    expect(names.some((name) => name?.includes('Bo'))).toBe(true)
+    expect(names.some((name) => name?.includes('Dee'))).toBe(false)
+
+    await user.keyboard('{Escape}')
+    await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+    await user.type(amountField(), '9.00')
+    await user.click(screen.getByRole('button', { name: 'Add expense' }))
+
+    expect(
+      onSubmit.mock.calls[0]?.[0].participants.map((row) => row.userId),
+    ).toEqual(['u1', 'u2'])
+  })
+
+  it('keeps her where the expense being edited already names her', async () => {
+    const user = hand()
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        paidBy: 'u3',
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u3', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(deeBox()?.getAttribute('aria-checked')).toBe('true')
+    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+      true,
+    )
+  })
+
+  it('keeps her in the split of an edited expense she shares but did not pay', () => {
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        paidBy: 'u1',
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u3', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(deeBox()?.getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('keeps her as the payer of an edited expense she has no share in', async () => {
+    const user = hand()
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        paidBy: 'u3',
+        shares: [
+          { userId: 'u1', shareMinor: 6_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+      true,
+    )
+  })
+
+  it('does not offer her on an edited expense that does not carry her', async () => {
+    const user = hand()
+    open(undefined, {
+      people: WITH_LEAVER,
+      expense: expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 6_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(deeBox()).toBeNull()
+    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+      false,
+    )
+  })
+})
+
+describe('the expense dialog when the save fails', () => {
+  async function failWith(cause: Error): Promise<void> {
+    const user = hand()
+    open(undefined, {
+      onSubmit: async () => {
+        throw cause
+      },
+    })
+    await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
+    await user.type(amountField(), '10.00')
+    await user.click(screen.getByRole('button', { name: 'Add expense' }))
+  }
+
+  it('says the catalogue line, never the failure envelope, for an unexpected failure', async () => {
+    await failWith(
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'evt_1a2b3c' }),
+      ),
+    )
+
+    expect(await screen.findByText(Costs['expense.saveFallback'])).toBeTruthy()
+    expect(screen.queryByText(/planned-travel\/failure/)).toBeNull()
+  })
+
+  it('says the sentence a validation failure names the field with', async () => {
+    await failWith(
+      new Error(
+        encodePublicFailure({
+          kind: 'validation',
+          message: 'The amount must be more than zero.',
+        }),
+      ),
+    )
+
+    expect(
+      await screen.findByText('The amount must be more than zero.'),
+    ).toBeTruthy()
   })
 })

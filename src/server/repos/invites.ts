@@ -1,8 +1,15 @@
 /**
- * Unscoped exception: findLiveTripInviteByDigestUnscoped takes Database for a digest point lookup.
- * Its sole production caller is src/server/public/trip-invite.ts. It returns coordinates only
- * (link id, workspace, trip, granted role, rotation, creator), never tenant content, the secret or
- * the digest. Everything after it reads through a scope built from a verified workspace membership.
+ * Unscoped exceptions: findLiveTripInviteByDigestUnscoped and readInvitePreviewUnscoped take Database
+ * for a digest point lookup. Their sole production caller is src/server/public/trip-invite.ts. They
+ * return coordinates and a column-whitelisted preview only (never the secret, the digest, the
+ * workspace's name or an email), and the preview reads through a scope built inside this module from
+ * the resolved link. A signed-in viewer is passed in as data by the server function that owns the
+ * session; nothing under src/server/public reads one.
+ *
+ * joinTripByInviteUnscoped also takes Database: the joiner is not an owner and cannot read a private
+ * trip yet, so the scope it writes under is built here, for the joiner in the link's workspace, from
+ * their row in `member`. Its sole production caller is src/routes/join/-lib/join.ts. It returns ids
+ * only after the workspace-membership check, and never the secret or the digest.
  */
 /**
  * The trip invite link: one rotating link per trip that puts members of the trip's workspace on the
@@ -17,7 +24,8 @@
  *
  * Every verb is a trip owner's: {@link requireTrip}, then the owner assert, then the archived check,
  * inside the repository so it holds for a route, a seed script and a queue consumer alike. The one
- * exception is {@link touchTripInvite}, which a successful join calls under the joiner's own scope.
+ * exceptions are {@link joinTripByInviteUnscoped}, the join, and {@link touchTripInvite}, which a
+ * successful join calls under the joiner's own scope.
  *
  * ## Concurrency
  *
@@ -59,13 +67,25 @@ import {
   deriveSecret,
   hashSecret,
 } from '#/server/security/secret'
-import { allOf, createTenantRepository, tenantFilter } from './base'
+import {
+  allOf,
+  createScope,
+  createTenantRepository,
+  tenantFilter,
+} from './base'
 import { NotFoundError } from './context'
-import { TripArchivedError, assertTripRole, requireTrip } from './trips'
+import {
+  TripArchivedError,
+  TripMemberExistsError,
+  assertTripRole,
+  insertTripMember,
+  requireTrip,
+} from './trips'
 import { idSchema } from './validation'
 import type { SQL } from 'drizzle-orm'
 import type { Database } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { TenantContext } from './context'
 
 export const tripInviteLinksRepository = createTenantRepository(
   tripInviteLinks,
@@ -251,6 +271,277 @@ export async function findLiveTripInviteByDigestUnscoped(
   )
   if ((await hashSecret(derived)) !== digest) return null
   return { ...row, role: role.data }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The preview a visitor sees
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Who is looking: the id and ban flag of a signed-in session, or `null` for a stranger. */
+export interface InviteViewer {
+  readonly id: string
+  readonly banned: boolean
+}
+
+/**
+ * What a visitor may learn from an invite link, by who they are. The anonymous `invited` answer is a
+ * whitelist of five fields; dates and destination travel only to a member of the link's workspace.
+ * Nothing here names the workspace, the inviter's email or any id except `member`'s coordinates.
+ */
+export type InvitePreview =
+  | {
+      readonly state: 'invited'
+      readonly tripTitle: string
+      readonly inviterName: string
+      readonly inviterImage: string | null
+      readonly role: TripInviteRole
+      readonly startDate?: string | null
+      readonly endDate?: string | null
+      readonly destination?: string | null
+    }
+  | {
+      readonly state: 'member'
+      readonly tripId: string
+      readonly organizationId: string
+    }
+  | {
+      readonly state: 'needs-workspace'
+      readonly tripTitle: string
+      readonly inviterName: string
+    }
+  | { readonly state: 'unavailable' }
+
+const UNAVAILABLE: InvitePreview = Object.freeze({ state: 'unavailable' })
+
+/**
+ * Reads a live link's preview for one visitor. It is a read: nothing is written, not even
+ * `use_count`. The link is resolved again here from its digest and the current key, so the answer
+ * never rests on anything a caller remembers, and a dead link of any kind - or a banned viewer - is
+ * the same `unavailable`.
+ *
+ * The trip is read through the creator's scope rather than the viewer's: a private trip is invisible
+ * to a workspace member who is not on it yet (ADR 0007), and the invite is exactly what lets them
+ * see its title. The scope is built here, inside the repository, and never leaves it.
+ */
+export async function readInvitePreviewUnscoped(
+  db: Database,
+  digest: string,
+  key: string,
+  viewer: InviteViewer | null,
+  now = new Date(),
+): Promise<InvitePreview> {
+  if (viewer?.banned) return UNAVAILABLE
+  const invite = await findLiveTripInviteByDigestUnscoped(db, digest, key, now)
+  if (!invite) return UNAVAILABLE
+
+  const scope = createScope(db, {
+    organizationId: invite.organizationId,
+    userId: invite.createdBy,
+    role: 'member',
+    impersonatedBy: null,
+  })
+  const [row] = await db
+    .select({
+      tripTitle: trips.title,
+      startDate: trips.startDate,
+      endDate: trips.endDate,
+      destination: trips.destination,
+      inviterName: user.name,
+      inviterImage: user.image,
+    })
+    .from(trips)
+    .innerJoin(user, eq(user.id, invite.createdBy))
+    .where(tenantFilter(scope, trips, eq(trips.id, invite.tripId)))
+    .limit(1)
+  if (!row) return UNAVAILABLE
+
+  if (viewer === null) {
+    return {
+      state: 'invited',
+      tripTitle: row.tripTitle,
+      inviterName: row.inviterName,
+      inviterImage: row.inviterImage,
+      role: invite.role,
+    }
+  }
+
+  // The viewer's standing in the link's workspace, read from `member` for that workspace and no
+  // other: the session's active workspace has nothing to say about this link.
+  const [membership] = await db
+    .select({ present: sql`1` })
+    .from(member)
+    .where(
+      and(
+        eq(member.organizationId, invite.organizationId),
+        eq(member.userId, viewer.id),
+        inArray(member.role, [...ORGANIZATION_ROLES]),
+      ),
+    )
+    .limit(1)
+  if (!membership) {
+    return {
+      state: 'needs-workspace',
+      tripTitle: row.tripTitle,
+      inviterName: row.inviterName,
+    }
+  }
+
+  const [onTrip] = await db
+    .select({ present: sql`1` })
+    .from(tripMembers)
+    .where(
+      tenantFilter(
+        scope,
+        tripMembers,
+        eq(tripMembers.tripId, invite.tripId),
+        eq(tripMembers.userId, viewer.id),
+      ),
+    )
+    .limit(1)
+  if (onTrip) {
+    return {
+      state: 'member',
+      tripId: invite.tripId,
+      organizationId: invite.organizationId,
+    }
+  }
+
+  return {
+    state: 'invited',
+    tripTitle: row.tripTitle,
+    inviterName: row.inviterName,
+    inviterImage: row.inviterImage,
+    role: invite.role,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    destination: row.destination,
+  }
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The join
+ * ---------------------------------------------------------------------------------------------- */
+
+/** Who is joining: a signed-in session as data, read by the server function that owns it. */
+export interface InviteJoiner {
+  readonly id: string
+  readonly banned: boolean
+  /** The session was minted by an operator impersonating the user. */
+  readonly impersonated: boolean
+}
+
+/**
+ * What a submitted join came to. `joined` and `member` are the only answers that carry ids, and they
+ * are returned after the workspace-membership check. The extra fields of `joined` (`inviteId`,
+ * `role`, `context`) are for the server function's audit row and never reach the client.
+ */
+export type TripJoinOutcome =
+  | {
+      readonly outcome: 'joined'
+      readonly tripId: string
+      readonly organizationId: string
+      readonly inviteId: string
+      readonly role: TripInviteRole
+      /** The joiner's tenant context in the link's workspace, for the audit write. */
+      readonly context: TenantContext
+    }
+  | {
+      readonly outcome: 'member'
+      readonly tripId: string
+      readonly organizationId: string
+    }
+  | { readonly outcome: 'needs-workspace' }
+  | { readonly outcome: 'unavailable' }
+
+const UNAVAILABLE_JOIN: TripJoinOutcome = Object.freeze({
+  outcome: 'unavailable',
+})
+
+/**
+ * Puts a signed-in member of the link's workspace on the link's trip. This is the only write on the
+ * whole invite-link surface, and the invite row is its authority: the joiner is not an owner and
+ * cannot read a private trip yet, so `addTripMember` cannot serve (ADR 0007).
+ *
+ * It acts as the joiner, with their role in the **link's** workspace read from `member`. The
+ * session's active workspace and anything the request carries are never consulted, so a member of
+ * two workspaces joins the right one. The role granted is the row's, re-parsed against the narrowed
+ * enum, so a hand-edited `owner` is a dead link. Nothing from the page is trusted: only the digest.
+ *
+ * The order is fixed: a banned or impersonated joiner is refused before anything is read; the link
+ * is resolved again (rotated, switched off, orphaned, archived, a rotated key: unavailable); a
+ * non-member of the workspace is told so and nothing is written; the trip is read under the tenant
+ * filter; the shared insert runs, and a unique violation is `member`; the use is counted only on a
+ * real join. Between the resolve and the insert a rotation can land. The membership written is the
+ * one the link's holder legitimately held a moment earlier and escalates nothing.
+ */
+export async function joinTripByInviteUnscoped(
+  db: Database,
+  digest: string,
+  key: string,
+  joiner: InviteJoiner,
+  now = new Date(),
+): Promise<TripJoinOutcome> {
+  if (joiner.banned || joiner.impersonated) return UNAVAILABLE_JOIN
+  const invite = await findLiveTripInviteByDigestUnscoped(db, digest, key, now)
+  if (!invite) return UNAVAILABLE_JOIN
+
+  const [membership] = await db
+    .select({ role: member.role })
+    .from(member)
+    .where(
+      and(
+        eq(member.organizationId, invite.organizationId),
+        eq(member.userId, joiner.id),
+        inArray(member.role, [...ORGANIZATION_ROLES]),
+      ),
+    )
+    .limit(1)
+  const role = ORGANIZATION_ROLES.find((known) => known === membership?.role)
+  if (!role) return { outcome: 'needs-workspace' }
+  const context: TenantContext = {
+    organizationId: invite.organizationId,
+    userId: joiner.id,
+    role,
+    // An impersonated joiner is refused above, so this is always the person's own session.
+    impersonatedBy: null,
+  }
+  const scope = createScope(db, context)
+
+  // The tenant filter, not the readability predicate: a joiner cannot read a private trip yet.
+  const [trip] = await db
+    .select({ isArchived: trips.isArchived })
+    .from(trips)
+    .where(tenantFilter(scope, trips, eq(trips.id, invite.tripId)))
+    .limit(1)
+  if (!trip || trip.isArchived) return UNAVAILABLE_JOIN
+
+  try {
+    await insertTripMember(scope, {
+      tripId: invite.tripId,
+      userId: joiner.id,
+      role: invite.role,
+      joinedAt: now,
+      invitedBy: invite.createdBy,
+    })
+  } catch (cause) {
+    if (cause instanceof TripMemberExistsError) {
+      return {
+        outcome: 'member',
+        tripId: invite.tripId,
+        organizationId: invite.organizationId,
+      }
+    }
+    throw cause
+  }
+  await touchTripInvite(scope, invite.id)
+  return {
+    outcome: 'joined',
+    tripId: invite.tripId,
+    organizationId: invite.organizationId,
+    inviteId: invite.id,
+    role: invite.role,
+    context,
+  }
 }
 
 /* -------------------------------------------------------------------------------------------------

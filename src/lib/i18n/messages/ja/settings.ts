@@ -452,6 +452,17 @@ const messages = {
    */
   'billing.provider.rejected':
     '決済プロバイダがそのリクエストを拒否しました。少し経ってからもう一度お試しください。',
+  'billing.failure.reference': 'サポートへの参照番号: {reference}',
+  'billing.failure.forbidden':
+    'このワークスペースの請求については、あなたのロールでは実行できません。オーナーまたは管理者に依頼してください。',
+  'billing.failure.providerRefused':
+    'Polar がその変更を受け付けませんでした。席数とメンバー数を確認してから、もう一度お試しいただくか、請求ポータルをご利用ください。',
+  'billing.failure.rateLimited':
+    'Polar は現在混み合っています。何も変更されていません。1 分後にもう一度お試しください。',
+  'billing.failure.notConnected':
+    'この環境ではまだ請求が接続されていないため、何も変更されていません。サポートにお問い合わせください。',
+  'billing.failure.orderNotInvoiceable':
+    'Polar はこの注文の請求書を発行できません。請求先の名前や住所が未入力の場合は、請求ポータルで追加してからもう一度お試しください。それ以外の場合はサポートにお問い合わせください。',
   'billing.planChanged.title': 'プランを更新しました',
   'billing.planChanged.body':
     '変更はすでに Polar 側で有効です。差額は Polar が請求します。下の概要は1分以内に追いつきます。',

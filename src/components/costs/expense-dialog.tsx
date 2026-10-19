@@ -38,6 +38,7 @@ import {
   SimpleSelect,
   Textarea,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -51,7 +52,7 @@ import {
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
-import { parseDay, toDayString } from './data'
+import { offeredPeople, parseDay, toDayString } from './data'
 import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
@@ -260,6 +261,14 @@ export function ExpenseDialog({
   const t = useTranslate()
   const locale = useLocale()
   const editing = expense !== null
+  // Fixed when the dialog opens, like the draft: a member who left the workspace is not offered for
+  // new money, but stays on an expense that already carries them.
+  const [offered] = useState(() =>
+    offeredPeople(people, [
+      expense?.paidBy ?? null,
+      ...(expense?.shares.map((share) => share.userId) ?? []),
+    ]),
+  )
   const [form, setForm] = useState<FormState>(() =>
     initialState(expense, tripCurrency, today, categories, defaultCategory),
   )
@@ -272,9 +281,9 @@ export function ExpenseDialog({
   )
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
-      ? emptyDraft(people)
+      ? emptyDraft(offered)
       : draftForDeparted(
-          people,
+          offered,
           departed,
           expense.amountMinor,
           expense.currency,
@@ -424,7 +433,7 @@ export function ExpenseDialog({
       if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
         stale.refuse(currencyCode(tripCurrency))
       } else {
-        setError(messageOf(cause))
+        setError(messageOf(cause, t('costs.expense.saveFallback')))
       }
     } finally {
       setSaving(false)
@@ -581,11 +590,11 @@ export function ExpenseDialog({
               <SimpleSelect
                 options={[
                   { value: NO_PAYER, label: t('costs.expense.nobodyYet') },
-                  ...people.map((person) => ({
+                  ...offered.map((person) => ({
                     value: person.userId,
                     label:
                       person.userId === viewerUserId
-                        ? `${person.name} (you)`
+                        ? t('costs.payment.youSuffix', { name: person.name })
                         : person.name,
                     description: person.email === '' ? undefined : person.email,
                   })),
@@ -597,7 +606,7 @@ export function ExpenseDialog({
             </Field>
 
             <SplitEditor
-              people={people}
+              people={offered}
               departedPeople={departed}
               viewerUserId={viewerUserId}
               draft={draft}
@@ -695,11 +704,4 @@ function sharesOf(
     shareMinor: row.shareMinor,
     weight: weights.get(row.userId) ?? 1,
   }))
-}
-
-function messageOf(error: unknown): string {
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  return 'The expense could not be saved. Try again in a moment.'
 }

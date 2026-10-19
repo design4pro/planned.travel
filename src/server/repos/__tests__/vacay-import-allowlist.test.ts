@@ -132,7 +132,25 @@ function inspect(project: Project): {
   return { violations: [...violations].sort(), exported: [...exported].sort() }
 }
 
+/**
+ * Functions that production code must never reach even though they are exported: they take a
+ * traveller's id from the caller and answer to no actor rule of their own, because the repository
+ * calls them only after one has passed.
+ */
+const REPOSITORY_ONLY = ['recomputeCarryOver']
+
 describe('the leave planner repository import allowlist', () => {
+  it.each(REPOSITORY_ONLY)(
+    'keeps %s exported for the repository’s tests and off the allowlist',
+    (name) => {
+      const result = withProgram({}, inspect)
+
+      expect(result.exported).toContain(name)
+      expect(ALLOWED.has(name)).toBe(false)
+    },
+    30000,
+  )
+
   it('lets production code reach only the guarded surface, and every entry names a real export', () => {
     const result = withProgram({}, inspect)
 
@@ -147,7 +165,7 @@ describe('the leave planner repository import allowlist', () => {
     const result = withProgram(
       {
         [probe('vacay-probe-direct')]:
-          "import { setEntry, vacayPlansRepository } from '#/server/repos'; void setEntry; void vacayPlansRepository",
+          "import { setEntry, vacayPlansRepository, recomputeCarryOver } from '#/server/repos'; void setEntry; void vacayPlansRepository; void recomputeCarryOver",
         [probe('vacay-probe-deep')]:
           "import { updatePlan } from '#/server/repos/vacay'; void updatePlan",
         [probe('vacay-probe-barrel')]:
@@ -169,6 +187,7 @@ describe('the leave planner repository import allowlist', () => {
       expect.arrayContaining([
         'setEntry: src/vacay-probe-direct.ts',
         'vacayPlansRepository: src/vacay-probe-direct.ts',
+        'recomputeCarryOver: src/vacay-probe-direct.ts',
         'updatePlan: src/vacay-probe-deep.ts',
         'removeEntry: src/vacay-probe-barrel.ts',
         'removeEntry: src/vacay-probe-alias.ts',

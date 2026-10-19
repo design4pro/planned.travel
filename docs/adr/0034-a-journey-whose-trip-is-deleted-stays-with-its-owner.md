@@ -3,6 +3,7 @@
 Status: accepted
 Date: 2026-10-03
 Amends: ADR 0020 (who may read a journey that names no trip)
+Amended by: ADR 0043 (the owner of a journey that stays may be a Former member)
 
 ## Context
 
@@ -64,3 +65,11 @@ integer`. Rolling back means no longer reading the column.
   a copy target has no journeys, so the marker update touches none and the path is unchanged.
 - `member-isolation.test.ts` pins the rule for every journal reader and writer, and
   `tenant-isolation.test.ts` pins that a deletion in one workspace marks nothing in another.
+
+## Amendment (ADR 0043)
+
+When the owner of a journey is erased, the journey stays and its `owner_user_id` becomes the
+workspace's Former member id (`erased_<nanoid>`). The read rule is unchanged: only the owner id
+reads the journey, and no session can hold a Former member id, so the journey is kept for the
+record and read by nobody until the workspace deletes it. Entries and photographs written by other
+members are never taken by an erasure.

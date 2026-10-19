@@ -489,7 +489,12 @@ describe('dispatch', () => {
           bound.push(params.length)
           return { rows: [] }
         }),
-        { userId: alpha.ownerId, organizationId: 'org_probe', role: 'owner' },
+        {
+          userId: alpha.ownerId,
+          organizationId: 'org_probe',
+          role: 'owner',
+          impersonatedBy: null,
+        },
       )
 
       await notifyMany(

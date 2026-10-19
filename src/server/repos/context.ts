@@ -27,6 +27,14 @@ export interface TenantContext {
   readonly organizationId: string
   /** The principal's role inside that organization. */
   readonly role: OrganizationRole
+  /**
+   * The operator acting as `userId`, when the session behind this context was minted by
+   * impersonation; `null` for an ordinary session and for every context no session stands behind
+   * (a queue handler, a seed, a probe). Required rather than optional so a construction that forgets
+   * it is refused by {@link requireTenantContext} instead of silently stamping nothing. `trail()`
+   * writes it into `audit_log.metadata` (docs/ACCESS.md §6.4).
+   */
+  readonly impersonatedBy: string | null
 }
 
 /** Base class for every error the repository layer raises, so callers can map them to HTTP codes. */
@@ -107,6 +115,7 @@ export const tenantContextSchema: z.ZodType<TenantContext> = z.object({
   userId: identifier,
   organizationId: identifier,
   role: z.enum(ORGANIZATION_ROLES),
+  impersonatedBy: identifier.nullable(),
 })
 
 /**
@@ -134,6 +143,7 @@ export function requireTenantContext(context: unknown): TenantContext {
     userId: parsed.data.userId,
     organizationId: parsed.data.organizationId,
     role: parsed.data.role,
+    impersonatedBy: parsed.data.impersonatedBy,
   })
 }
 

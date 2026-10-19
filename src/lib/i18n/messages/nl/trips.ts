@@ -284,6 +284,8 @@ const messages = {
   'book.committedCaption': 'Over alle boekingen van deze reis',
   'book.onItinerary': 'In de reisroute',
   'book.pinnedCaption': 'Vastgezet op een dag van de route',
+  'book.readOnly.archived':
+    'Deze reis is gearchiveerd, dus de boekingen en verblijven zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Trajecten',
   'transports.empty': 'Nog niets vastgelegd',
@@ -460,6 +462,49 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Tijden van de stop opgeslagen',
   'plan.place.toast.deleted': 'Plek verwijderd',
   'plan.pin.toast.moved': '{name} vastgepind',
+  'join.page.title': 'Uitnodigingslink voor de reis',
+  'join.page.description':
+    'Open deze link om mee te doen met een gedeelde reis op planned.travel.',
+  'join.title.invited': '{inviter} heeft je uitgenodigd voor een reis',
+  'join.requirement':
+    'Deze link werkt voor mensen die al in de werkruimte van {inviter} zitten.',
+  'join.newHere':
+    'Nieuw hier? Vraag {inviter} eerst om je toe te voegen aan de werkruimte.',
+  'join.trip.label': 'Reis',
+  'join.role.label': 'Je zou meedoen als',
+  'join.dates.label': 'Data',
+  'join.destination.label': 'Bestemming',
+  'join.action.signIn': 'Inloggen',
+  'join.action.join': 'Meedoen aan de reis',
+  'join.action.joining': 'Je sluit aan bij de reis',
+  'join.action.open': 'Reis openen',
+  'join.action.openIn': 'Reis openen en van werkruimte wisselen',
+  'join.action.openIn.pending': 'Van werkruimte wisselen',
+  'join.loading': 'Uitnodiging laden',
+  'join.joined.title': 'Je doet mee aan de reis',
+  'join.joined.body': 'Open de reis om het plan te zien.',
+  'join.member.title': 'Je doet al mee aan deze reis',
+  'join.needsWorkspace.title':
+    'Deze reis staat in een werkruimte waar je geen deel van uitmaakt',
+  'join.needsWorkspace.body':
+    'Vraag {inviter} eerst om je toe te voegen aan de werkruimte en open deze link daarna opnieuw.',
+  'join.needsWorkspace.signedInAs':
+    'Je bent ingelogd als {email}. Zeg tegen {inviter} dat dit adres gebruikt moet worden.',
+  'join.needsWorkspace.acceptFirst':
+    'Heb je al een e-mail met een uitnodiging voor een werkruimte? Accepteer die eerst en open deze link daarna opnieuw.',
+  'join.needsWorkspace.otherAccount': 'Inloggen met een ander account',
+  'join.unavailable.title': 'Deze uitnodigingslink is niet beschikbaar',
+  'join.unavailable.body':
+    'De link is mogelijk vervangen of uitgeschakeld. Vraag degene die hem stuurde om een nieuwe.',
+  'join.unavailable.signIn': 'Inloggen',
+  'join.unavailable.trips': 'Naar je reizen',
+  'join.error.title': 'We konden deze uitnodigingslink niet laden',
+  'join.error.retry': 'Opnieuw proberen',
+  'join.error.busy':
+    'Deze pagina is druk bezet. Probeer het over een minuut opnieuw.',
+  'join.error.join':
+    'Meedoen is niet gelukt. De link werkt nog, probeer het opnieuw.',
+  'join.error.switch': 'Kon niet van werkruimte wisselen. Probeer het opnieuw.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -493,6 +493,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'رفض مزوّد الدفع هذا الطلب. أعد المحاولة بعد لحظة.',
+  'billing.failure.reference': 'رقم مرجعي للدعم: {reference}',
+  'billing.failure.forbidden':
+    'دورك لا يسمح بذلك في فوترة مساحة العمل هذه. اطلب من مالك أو مسؤول.',
+  'billing.failure.providerRefused':
+    'لم يقبل Polar هذا التغيير. قارن عدد المقاعد بأعضائك ثم أعد المحاولة أو استخدم بوابة الفوترة.',
+  'billing.failure.rateLimited':
+    'Polar مشغول الآن. لم يتغير شيء. أعد المحاولة بعد دقيقة.',
+  'billing.failure.notConnected':
+    'الفوترة غير متصلة بعد في هذا النشر، لذا لم يتغير شيء. تواصل مع الدعم.',
+  'billing.failure.orderNotInvoiceable':
+    'لا يستطيع Polar إصدار فاتورة لهذا الطلب. إن كان اسم الفوترة أو عنوانها مفقودًا فأضفهما في بوابة الفوترة وأعد المحاولة، وإلا فتواصل مع الدعم.',
   'billing.planChanged.title': 'تم تحديث الخطة',
   'billing.planChanged.body':
     'التغيير سارٍ بالفعل عند Polar، وهي من ستفوتر الفرق. الملخّص أدناه يلحق خلال دقيقة.',

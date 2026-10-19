@@ -1,8 +1,9 @@
 /**
  * The cron switch, and one property of it that is easy to get right once and lose in a refactor.
  *
- * `17 4 * * 1` carries two jobs. The one that is written is the 400-day `platform_audit_log` prune
- * (docs/ACCESS.md §4.3); the one that is not is the R2 retention sweep of expired backups and export
+ * `17 4 * * 1` carries several jobs. The ones that are written are the 400-day `platform_audit_log`
+ * prune (docs/ACCESS.md §4.3), the provider usage rollup and the `dead-letter/` retention; the one
+ * that is not is the R2 retention sweep of expired backups and export
  * artifacts that `wrangler.jsonc` registered the slot for. Only three cron expressions exist on
  * production (docs/DEPLOY.md §11), so the prune joined that slot rather than adding a fourth — and
  * the warning naming the missing half has to survive the prune failing, because the week this slot
@@ -16,6 +17,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type * as CatalogAudit from '../catalog/audit'
 import type * as CatalogProviderUsage from '../catalog/provider-usage'
+import type * as DeadLetterRetention from '../queue/dead-letter-retention'
 import type * as Observability from '../observability/logger'
 import type { LogContext, LogFields, LogRecord } from '#/server/observability'
 
@@ -30,6 +32,9 @@ const harness = vi.hoisted(() => {
     },
     prune: vi.fn(),
     rollUp: vi.fn(),
+    deadLetters: vi
+      .fn()
+      .mockResolvedValue({ listed: 0, deleted: 0, drained: true }),
     sweep: vi.fn(),
   }
 })
@@ -55,6 +60,11 @@ vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
 vi.mock('../catalog/audit', async (importOriginal) => {
   const actual = await importOriginal<typeof CatalogAudit>()
   return { ...actual, prunePlatformAuditLog: harness.prune }
+})
+
+vi.mock('../queue/dead-letter-retention', async (importOriginal) => {
+  const actual = await importOriginal<typeof DeadLetterRetention>()
+  return { ...actual, pruneDeadLetters: harness.deadLetters }
 })
 
 vi.mock('../catalog/provider-usage', async (importOriginal) => {
@@ -87,6 +97,7 @@ const SCHEDULED_AT = Date.UTC(2026, 7, 24, 4, 17)
 const env = {
   DB: { binding: 'DB' },
   BACKUP_RETENTION_DAYS: 30,
+  FILES: { binding: 'FILES' },
 } as unknown as Cloudflare.Env
 
 function controller(cron: string): ScheduledController {
@@ -227,6 +238,89 @@ describe('the weekly retention slot', () => {
     ).rejects.toThrow('rollup exploded')
 
     expect(harness.prune).toHaveBeenCalledTimes(1)
+  })
+
+  it('prunes dead letters from the files bucket, at the tick it was scheduled for', async () => {
+    harness.records.length = 0
+    harness.prune.mockReset().mockResolvedValue(undefined)
+    harness.rollUp.mockReset().mockResolvedValue(undefined)
+    harness.deadLetters
+      .mockReset()
+      .mockResolvedValue({ listed: 0, deleted: 0, drained: true })
+
+    await worker.scheduled(controller(RETENTION_CRON), env, executionContext())
+
+    expect(harness.deadLetters).toHaveBeenCalledTimes(1)
+    const [store, logger, options] = harness.deadLetters.mock.calls[0]
+    expect(store).toEqual({ binding: 'FILES' })
+    expect(logger).toBeDefined()
+    // `DEAD_LETTER_RETENTION_DAYS` is not set in this env, so the stated default applies.
+    expect(options).toEqual({ now: new Date(SCHEDULED_AT), retentionDays: 14 })
+  })
+
+  it('reads the dead-letter period from the environment', async () => {
+    harness.prune.mockReset().mockResolvedValue(undefined)
+    harness.rollUp.mockReset().mockResolvedValue(undefined)
+    harness.deadLetters
+      .mockReset()
+      .mockResolvedValue({ listed: 0, deleted: 0, drained: true })
+
+    await worker.scheduled(
+      controller(RETENTION_CRON),
+      { ...env, DEAD_LETTER_RETENTION_DAYS: '30' } as unknown as Cloudflare.Env,
+      executionContext(),
+    )
+
+    expect(harness.deadLetters.mock.calls[0]?.[2]).toMatchObject({
+      retentionDays: 30,
+    })
+  })
+
+  it('still prunes dead letters when the audit prune rejects, which is the week it matters', async () => {
+    harness.prune.mockReset().mockRejectedValue(new Error('D1 unavailable'))
+    harness.rollUp.mockReset().mockResolvedValue(undefined)
+    harness.deadLetters
+      .mockReset()
+      .mockResolvedValue({ listed: 0, deleted: 0, drained: true })
+
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('D1 unavailable')
+
+    expect(harness.deadLetters).toHaveBeenCalledTimes(1)
+  })
+
+  it('rethrows a dead-letter failure even when the other jobs succeeded', async () => {
+    harness.prune.mockReset().mockResolvedValue(undefined)
+    harness.rollUp.mockReset().mockResolvedValue(undefined)
+    harness.deadLetters
+      .mockReset()
+      .mockRejectedValue(new Error('R2 unavailable'))
+
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('R2 unavailable')
+
+    expect(harness.prune).toHaveBeenCalledTimes(1)
+    expect(harness.rollUp).toHaveBeenCalledTimes(1)
+  })
+
+  it('logs every failed job, not only the one it rethrows', async () => {
+    harness.records.length = 0
+    harness.prune.mockReset().mockRejectedValue(new Error('prune exploded'))
+    harness.rollUp.mockReset().mockResolvedValue(undefined)
+    harness.deadLetters
+      .mockReset()
+      .mockRejectedValue(new Error('R2 unavailable'))
+
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('prune exploded')
+
+    const failures = harness.records.filter(
+      (record) => record.msg === 'weekly retention job failed',
+    )
+    expect(failures).toHaveLength(2)
   })
 
   it('leaves the other expressions alone', async () => {

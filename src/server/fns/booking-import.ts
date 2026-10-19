@@ -42,7 +42,6 @@ import {
 import { enqueueTask } from '#/server/queue/jobs'
 import {
   NotFoundError,
-  assertBookingRole,
   createAccommodation,
   createPlace,
   createImportedReservation,
@@ -52,6 +51,7 @@ import {
   listTripDays,
   listTripPlaces,
   requireTrip,
+  requireWritableBookingTrip,
   updateFile,
   updatePlace,
 } from '#/server/repos'
@@ -469,13 +469,12 @@ export async function startBookingImport(
   queue: TaskQueue,
   input: StartBookingImportInput,
 ): Promise<StartedBookingImport> {
-  const trip = await requireTrip(scope, input.tripId)
   // Here as well as at the confirm, and for a different spend: starting a job spends a metered
   // `extraction_calls_per_month` unit and sends a document to Workers AI as soon as the queue
   // handler runs, with nothing between the enqueue and the spend. Without this a trip `viewer` — who
   // may see the desk and may never write to it — could drain the workspace's whole monthly
   // allowance a file at a time, and be refused only at the confirm they were never going to reach.
-  await assertBookingRole(scope, trip.id)
+  const trip = await requireWritableBookingTrip(scope, input.tripId)
   const file = await getFile(scope, input.fileId)
   if (file === null || file.tripId !== trip.id) {
     throw new NotFoundError('file', input.fileId)
@@ -772,13 +771,12 @@ export async function confirmBookingImport(
   input: ConfirmBookingImportInput,
   ports: ConfirmBookingImportPorts,
 ): Promise<ConfirmedBookingImport> {
-  const trip = await requireTrip(scope, input.tripId)
   // Before anything is read, created or spent. The rows below reach `createImportedReservation`, which asks
   // this same question — but an accommodation row first creates a place (a `places` quota unit) and
   // pins it through the geocoder (a metered monthly lookup), and the refusal at the reservation is
   // caught per row and counted as a failed one. Without this a trip `viewer` who opened an import
   // an editor staged would spend both and be handed a result, not a refusal.
-  await assertBookingRole(scope, trip.id)
+  const trip = await requireWritableBookingTrip(scope, input.tripId)
   const staged = await readStaged(scope, store, input)
   if (staged === null) {
     throw new NotFoundError('staged import', input.jobId)

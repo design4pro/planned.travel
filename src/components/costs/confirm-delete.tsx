@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '#/components/ui'
+import { messageOf } from '#/components/modules/shared'
 import { formatList } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
@@ -59,11 +60,7 @@ export function ConfirmDeleteDialog({
       await onConfirm()
       onOpenChange(false)
     } catch (cause) {
-      setError(
-        cause instanceof Error && cause.message.length > 0
-          ? cause.message
-          : t('costs.delete.failedBody'),
-      )
+      setError(messageOf(cause, t('costs.delete.failedBody')))
     } finally {
       setWorking(false)
     }

@@ -22,7 +22,13 @@ import {
 } from '#/server/db/auth-schema'
 import { newId } from '#/server/db/schema'
 import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base'
-import { NotFoundError, RepositoryError, assertCanAdminister } from './context'
+import {
+  ForbiddenError,
+  NotFoundError,
+  RepositoryError,
+  assertCanAdminister,
+} from './context'
+import { recordParticipant } from './participants'
 import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
 import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
 import type { SQL } from 'drizzle-orm'
@@ -182,6 +188,9 @@ export async function addMember(scope: TenantScope, input: AddMemberInput): Prom
   }
   await assertQuota(scope, 'members', await countMembers(scope))
 
+  // The participation anchor first (ADR 0043): a failed anchor write leaves no membership, and an
+  // anchor left by a failed membership insert is harmless.
+  await recordParticipant(scope, values.userId)
   return membersRepository.insert(scope, {
     id: newId(),
     userId: values.userId,
@@ -190,20 +199,73 @@ export async function addMember(scope: TenantScope, input: AddMemberInput): Prom
   })
 }
 
-/** Changes a role. The workspace must keep at least one owner. */
+/**
+ * Whether a stored role string names an owner. Better Auth's own endpoint accepts a comma-joined
+ * list, so a row written through it can hold `admin,owner`; the ceiling reads that as an owner row
+ * rather than let an admin treat it as a lesser one.
+ */
+function holdsOwnerRole(stored: string): boolean {
+  return stored.split(',').some((part) => part.trim() === 'owner')
+}
+
+/**
+ * The roles a caller may set on a row that currently holds `current`: the one place that decides who
+ * may grant which role, read by `changeMemberRole` to refuse and by the Workspace console to decide
+ * which control a row gets, so the two cannot disagree.
+ *
+ * An owner may set any role. An admin may move a member or another admin between `admin` and
+ * `member`, and may neither grant `owner` nor touch a row that is one - an owner's authority is
+ * not an admin's to give or take. A member may set nothing.
+ */
+export function assignableRoles(
+  caller: OrganizationRole,
+  current: string,
+): ReadonlyArray<OrganizationRole> {
+  if (caller === 'owner') return ['owner', 'admin', 'member']
+  if (caller === 'admin' && !holdsOwnerRole(current)) return ['admin', 'member']
+  return []
+}
+
+export interface MemberRoleChange {
+  readonly member: Member
+  /** The role the row held before this call, for the audit entry. */
+  readonly previousRole: string
+}
+
+/**
+ * Changes a role within the caller's ceiling ({@link assignableRoles}). The workspace must keep at
+ * least one owner. Every refusal happens before the write, except `LAST_OWNER` after a concurrent
+ * demotion, which puts the role back first.
+ */
 export async function changeMemberRole(
   scope: TenantScope,
   memberId: string,
   role: OrganizationRole,
-): Promise<Member> {
+): Promise<MemberRoleChange> {
   assertCanAdminister(scope.ctx, 'change a member role')
   const next = roleSchema.parse(role)
   const row = await membersRepository.requireById(scope, memberId)
 
+  if (!assignableRoles(scope.ctx.role, row.role).includes(next)) {
+    throw new ForbiddenError(
+      holdsOwnerRole(row.role)
+        ? "change an owner's role"
+        : `grant the ${next} role`,
+      ['owner'],
+    )
+  }
   if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope, memberId)) === 0) {
     throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
   }
-  return membersRepository.requireUpdate(scope, memberId, { role: next })
+  const updated = await membersRepository.requireUpdate(scope, memberId, { role: next })
+  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope)) === 0) {
+    // The count above and this write are separate statements, so two owners demoting each other at
+    // once each saw the other as the remaining owner. The loser puts the role back rather than leave
+    // a workspace nobody can administer or pay for.
+    await membersRepository.requireUpdate(scope, memberId, { role: row.role })
+    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  }
+  return { member: updated, previousRole: row.role }
 }
 
 /** Removes a member. The last owner cannot be removed. */

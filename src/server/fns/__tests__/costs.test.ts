@@ -474,6 +474,22 @@ describe('the costs boundary', () => {
       expect((await costsPayload(who(), tripId)).canWrite).toBe(true)
     })
 
+    it('keeps a person who left the workspace in the list, marked, and nobody else', async () => {
+      await harness.db.delete(member).where(eq(member.userId, payerId))
+
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      expect(
+        payload.people.map((person) => [person.userId, person.leftWorkspace]),
+      ).toContainEqual([payerId, true])
+      expect(
+        payload.people
+          .filter((person) => person.userId !== payerId)
+          .every((person) => !person.leftWorkspace),
+      ).toBe(true)
+      expect(payload.people).toHaveLength(4)
+    })
+
     describe('the suggested rate', () => {
       async function pounds(
         trip: string,

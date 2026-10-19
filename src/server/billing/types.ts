@@ -381,6 +381,15 @@ export class BillingForbiddenError extends Error {
   override readonly name = 'BillingForbiddenError'
 }
 
+/**
+ * Polar will not render an invoice for this order: it answered the generate call with a 409 (the
+ * order's status cannot be invoiced) or a 422 (the order has no billing name or address), both of
+ * which Polar documents on `POST /v1/orders/{id}/invoice`. The message is for the log.
+ */
+export class OrderNotInvoiceableError extends Error {
+  override readonly name = 'OrderNotInvoiceableError'
+}
+
 export interface QuotaViolation {
   readonly key: QuotaKey
   readonly planId: PlanId

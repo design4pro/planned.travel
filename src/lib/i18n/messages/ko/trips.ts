@@ -272,6 +272,8 @@ const messages = {
   'book.committedCaption': '이 여행의 모든 예약 기준',
   'book.onItinerary': '일정에 등록',
   'book.pinnedCaption': '일정의 특정 날짜에 고정됨',
+  'book.readOnly.archived':
+    '이 여행은 보관되어 있어 예약과 숙박은 읽기 전용입니다. 변경하려면 여행을 복원하세요.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': '이동',
   'transports.empty': '아직 기록된 것이 없습니다',
@@ -439,6 +441,48 @@ const messages = {
   'plan.stop.toast.timesSaved': '경유지 시간 저장됨',
   'plan.place.toast.deleted': '장소 삭제됨',
   'plan.pin.toast.moved': '{name}에 핀을 놓았습니다',
+  'join.page.title': '여행 초대 링크',
+  'join.page.description':
+    '이 링크를 열어 planned.travel의 공유 여행에 참여하세요.',
+  'join.title.invited': '{inviter}님이 여행에 초대했어요',
+  'join.requirement':
+    '이 링크는 이미 {inviter}님의 워크스페이스에 있는 사람에게 사용할 수 있어요.',
+  'join.newHere':
+    '처음이신가요? 먼저 {inviter}님에게 워크스페이스에 추가해 달라고 요청하세요.',
+  'join.trip.label': '여행',
+  'join.role.label': '참여하게 될 역할',
+  'join.dates.label': '일정',
+  'join.destination.label': '목적지',
+  'join.action.signIn': '로그인',
+  'join.action.join': '여행에 참여하기',
+  'join.action.joining': '여행에 참여하는 중',
+  'join.action.open': '여행 열기',
+  'join.action.openIn': '여행을 열고 워크스페이스 전환',
+  'join.action.openIn.pending': '워크스페이스를 전환하는 중',
+  'join.loading': '초대를 불러오는 중',
+  'join.joined.title': '여행에 참여했어요',
+  'join.joined.body': '열어서 계획을 확인해 보세요.',
+  'join.member.title': '이미 이 여행에 참여하고 있어요',
+  'join.needsWorkspace.title':
+    '이 여행은 내가 속해 있지 않은 워크스페이스에 있어요',
+  'join.needsWorkspace.body':
+    '먼저 {inviter}님에게 워크스페이스에 추가해 달라고 요청한 다음, 이 링크를 다시 열어 주세요.',
+  'join.needsWorkspace.signedInAs':
+    '{email} 계정으로 로그인했어요. {inviter}님에게 이 주소를 사용하라고 알려 주세요.',
+  'join.needsWorkspace.acceptFirst':
+    '이미 워크스페이스 초대 이메일이 있다면 먼저 수락한 다음, 이 링크를 다시 열어 주세요.',
+  'join.needsWorkspace.otherAccount': '다른 계정으로 로그인',
+  'join.unavailable.title': '이 초대 링크를 사용할 수 없어요',
+  'join.unavailable.body':
+    '링크가 교체되었거나 꺼졌을 수 있어요. 링크를 보낸 사람에게 새 링크를 요청하세요.',
+  'join.unavailable.signIn': '로그인',
+  'join.unavailable.trips': '내 여행으로 이동',
+  'join.error.title': '이 초대 링크를 불러오지 못했어요',
+  'join.error.retry': '다시 시도',
+  'join.error.busy': '지금 이 페이지가 바빠요. 1분 뒤에 다시 시도해 주세요.',
+  'join.error.join':
+    '참여하지 못했어요. 링크는 계속 사용할 수 있으니 다시 시도해 주세요.',
+  'join.error.switch': '워크스페이스를 전환하지 못했어요. 다시 시도해 주세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

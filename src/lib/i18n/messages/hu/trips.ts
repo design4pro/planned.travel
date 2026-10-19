@@ -284,6 +284,8 @@ const messages = {
   'book.committedCaption': 'Az utazás összes foglalására',
   'book.onItinerary': 'Az útitervben',
   'book.pinnedCaption': 'Az útiterv egy napjához rögzítve',
+  'book.readOnly.archived':
+    'Ez az utazás archiválva van, ezért a foglalások és a szállások csak olvashatók. Állítsd vissza az utazást a módosításukhoz.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Utak',
   'transports.empty': 'Még nincs rögzítve semmi',
@@ -462,6 +464,49 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Megálló időpontjai mentve',
   'plan.place.toast.deleted': 'Hely törölve',
   'plan.pin.toast.moved': '{name} megjelölve',
+  'join.page.title': 'Utazási meghívólink',
+  'join.page.description':
+    'Nyissa meg ezt a linket, hogy csatlakozzon egy megosztott utazáshoz a planned.travel oldalon.',
+  'join.title.invited': '{inviter} meghívta Önt egy utazásra',
+  'join.requirement':
+    'Ez a link azoknak működik, akik már tagjai {inviter} munkaterületének.',
+  'join.newHere':
+    'Új itt? Először kérje meg {inviter} felhasználót, hogy adja hozzá Önt a munkaterületéhez.',
+  'join.trip.label': 'Utazás',
+  'join.role.label': 'Ebben a szerepben csatlakozna',
+  'join.dates.label': 'Dátumok',
+  'join.destination.label': 'Úti cél',
+  'join.action.signIn': 'Bejelentkezés',
+  'join.action.join': 'Csatlakozás az utazáshoz',
+  'join.action.joining': 'Csatlakozás az utazáshoz folyamatban',
+  'join.action.open': 'Utazás megnyitása',
+  'join.action.openIn': 'Utazás megnyitása és munkaterület váltása',
+  'join.action.openIn.pending': 'Munkaterület váltása folyamatban',
+  'join.loading': 'Meghívó betöltése',
+  'join.joined.title': 'Csatlakozott az utazáshoz',
+  'join.joined.body': 'Nyissa meg a terv megtekintéséhez.',
+  'join.member.title': 'Már részt vesz ezen az utazáson',
+  'join.needsWorkspace.title':
+    'Ez az utazás olyan munkaterületen van, amelynek Ön nem tagja',
+  'join.needsWorkspace.body':
+    'Kérje meg {inviter} felhasználót, hogy előbb adja hozzá Önt a munkaterületéhez, majd nyissa meg újra ezt a linket.',
+  'join.needsWorkspace.signedInAs':
+    'Ezzel a címmel van bejelentkezve: {email}. Mondja meg {inviter} felhasználónak, hogy ezt a címet használja.',
+  'join.needsWorkspace.acceptFirst':
+    'Ha már kapott e-mailben meghívót egy munkaterületre, először fogadja el azt, majd nyissa meg újra ezt a linket.',
+  'join.needsWorkspace.otherAccount': 'Bejelentkezés másik fiókkal',
+  'join.unavailable.title': 'Ez a meghívólink nem érhető el',
+  'join.unavailable.body':
+    'Lehet, hogy a linket lecserélték vagy kikapcsolták. Kérjen újat attól, aki küldte.',
+  'join.unavailable.signIn': 'Bejelentkezés',
+  'join.unavailable.trips': 'Ugrás az utazásaihoz',
+  'join.error.title': 'Nem sikerült betölteni ezt a meghívólinket',
+  'join.error.retry': 'Újrapróbálás',
+  'join.error.busy':
+    'Ez az oldal most túlterhelt. Próbálja újra egy perc múlva.',
+  'join.error.join':
+    'Nem sikerült csatlakozni. A hivatkozás továbbra is működik, próbálja újra.',
+  'join.error.switch': 'Nem sikerült munkaterületet váltani. Próbálja újra.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

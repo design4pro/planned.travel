@@ -36,6 +36,8 @@ const messages = {
    * settlements survive them, so a name is still needed where they appear.
    */
   'person.removed': 'Removed traveller',
+  /** The same traveller mid-sentence, where English lower-cases it: "Balances change for a removed traveller". */
+  'person.removedTarget': 'a removed traveller',
   /* ------------------------------------------------ delete an expense */
   'delete.title': 'Delete this expense?',
   'delete.description':
@@ -340,6 +342,89 @@ const messages = {
   'rebase.confirm': 'Change to {to}',
   'rebase.committing': 'Changing the budget currency',
   'rebase.done': 'The budget is now in {to}.',
+  /* ------------------------------------------- the screen (#1031) */
+  'screen.nothingSpent': 'Nothing spent yet',
+  /** The header line: the expense count, then what they came to. `{expenses}` is `count.expenses`. */
+  'screen.summary': '{expenses} · {spent} spent',
+  /** `{expenses}` is already grouped for the locale; `count` selects the plural branch and stops there. */
+  'count.expenses': {
+    one: '{expenses} expense',
+    other: '{expenses} expenses',
+  },
+  'screen.exportCsv': 'Export CSV',
+  'screen.addFirst': 'Add the first expense',
+  'screen.empty.title': 'No expenses yet',
+  'screen.empty.body':
+    'Log what you spend as you go. planned.travel splits it between everyone travelling and keeps the running total in {currency}.',
+  'screen.filtered.title': 'Nothing matches those filters',
+  'screen.filtered.body':
+    'Widen the search, pick another day, or clear the filters to see the whole trip again.',
+  'export.empty.title': 'Nothing to export',
+  'export.empty.body': 'No expenses match the filters you have on.',
+  'export.ready.title': 'Export ready',
+  'export.ready.body': {
+    one: '{expenses} expense written to CSV.',
+    other: '{expenses} expenses written to CSV.',
+  },
+  /** A day's heading in the list: what the day's expenses came to. */
+  'list.daySpent': '{amount} spent',
+  'skeleton.loading': 'Loading the expenses',
+  /* --------------------------------------------- an expense row */
+  'row.noPayer': 'No payer yet',
+  'row.youPaid': 'You paid',
+  'row.paid': '{name} paid',
+  'row.notYourShare': 'not your share',
+  'row.yourShare': '{amount} yours',
+  'row.noteOn': 'Note on {title}',
+  'row.edit': 'Edit {title}',
+  'row.delete': 'Delete {title}',
+  'row.saving': 'Saving',
+  /* ------------------------------------------------ the four tiles */
+  'tile.owe.label': 'You owe',
+  'tile.owe.settled': 'You are all settled up',
+  'tile.owe.pending': 'Settle before you fly home',
+  /** Leads the people you owe: "To [A] Anna". */
+  'tile.owe.to': 'To',
+  'tile.owed.label': "You're owed",
+  'tile.owed.none': 'Nothing owed to you',
+  'tile.owed.pending': 'Still to come back to you',
+  /** Leads the people who owe you: "From [A] Anna". */
+  'tile.owed.from': 'From',
+  'tile.outstanding.label': 'Outstanding',
+  'tile.outstanding.none': 'Every expense has a payer',
+  'tile.outstanding.some': {
+    one: '{expenses} expense with no payer yet',
+    other: '{expenses} expenses with no payer yet',
+  },
+  /* -------------------------------------------------- categories */
+  'category.accommodation': 'Accommodation',
+  'category.transport': 'Transport',
+  'category.food': 'Food & drink',
+  'category.activities': 'Activities',
+  'category.shopping': 'Shopping',
+  'category.fees': 'Fees & charges',
+  'category.insurance': 'Insurance',
+  'category.other': 'Other',
+  /* ----------------------------------------- the filter summary */
+  'toolbar.summary.everything': 'Showing everything',
+  /** `{filters}` is the active filters, already translated and joined with " · ". */
+  'toolbar.summary.filtered': 'Filtered: {filters}',
+  'toolbar.summary.search': 'matching “{term}”',
+  /* ---------------------------------------- the write path's toasts */
+  'write.added': 'Expense added',
+  'write.updated': 'Expense updated',
+  'write.deleted': 'Expense deleted',
+  'write.addFailed': 'The expense was not added',
+  'write.editFailed': 'The expense was not saved',
+  'write.deleteFailed': 'The expense was not deleted',
+  'write.paymentRecorded': 'Payment recorded',
+  'write.paymentRecordedBody': 'Both balances are updated.',
+  'write.paymentFailed': 'The payment was not recorded',
+  /** The failure toast's second line when the server gave no sentence to show. */
+  'write.rolledBack': 'The change was rolled back.',
+  /** The expense dialog's inline reason when the server gave no sentence to show. */
+  'expense.saveFallback':
+    'The expense could not be saved. Try again in a moment.',
 } as const satisfies NamespaceMessages
 
 export default messages

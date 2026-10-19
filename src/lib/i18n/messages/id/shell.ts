@@ -334,6 +334,22 @@ const messages = {
   'admin.members.person': 'Orang',
   'admin.members.role': 'Peran',
   'admin.members.joined': 'Bergabung',
+  'admin.members.role.label': 'Peran {name}',
+  'admin.members.role.saved': '{name} sekarang menjadi {role}.',
+  'admin.members.role.impersonated':
+    'Peran tidak bisa diubah saat Anda bertindak sebagai akun lain.',
+  'admin.members.role.notPermitted':
+    'Anda tidak bisa membuat perubahan itu. Hanya pemilik yang dapat memberikan peran pemilik atau mengubah seorang pemilik.',
+  'admin.members.role.lastOwner':
+    'Ini satu-satunya pemilik ruang kerja. Jadikan orang lain pemilik lebih dulu.',
+  'admin.members.role.notFound':
+    'Orang ini tidak lagi berada di ruang kerja. Daftar telah dimuat ulang.',
+  'admin.members.role.failed': 'Peran tidak bisa diubah. Coba lagi.',
+  'admin.members.role.promote.title': 'Jadikan {name} pemilik?',
+  'admin.members.role.promote.body':
+    '{name} akan memiliki kekuasaan yang sama dengan Anda: penagihan, anggota, dan pengaturan. Seorang pemilik dapat menurunkan peran atau mengeluarkan pemilik lain, termasuk Anda.',
+  'admin.members.role.promote.confirm': 'Jadikan pemilik',
+  'admin.members.role.promote.cancel': 'Batal',
 
   'admin.activity.label': 'Aktivitas terbaru',
   'admin.activity.empty.title': 'Belum ada yang tercatat',

@@ -1801,6 +1801,30 @@ export async function tripMemberUserIds(
 }
 
 /**
+ * The trip's members who still hold a `member` row in this workspace, deduplicated — the user ids
+ * alone. The one question the money writers ask (`requireTripPeople`): leaving the workspace deletes
+ * no `trip_members` row, so {@link tripMemberUserIds} still lists someone who has gone, and a person
+ * who has gone must not be put on new money (#1034).
+ *
+ * Narrowed in the query by {@link stillInWorkspace}, so it is worked out when the write happens and
+ * reverses when the person returns. A separate projection rather than a flag on the shared list,
+ * because that list is also the recipient set of the `travel-stats` fan-out and the lifecycle
+ * notifications, which must keep reaching a person who has gone.
+ */
+export async function tripMemberUserIdsInWorkspace(
+  scope: TenantScope,
+  tripId: string,
+): Promise<Array<string>> {
+  const members = await tripMembersRepository.findMany(scope, {
+    where: allOf(
+      eq(tripMembers.tripId, tripId),
+      stillInWorkspace(scope, tripMembers.userId),
+    ),
+  })
+  return [...new Set(members.map((row) => row.userId))]
+}
+
+/**
  * The trips on a user's own dashboard, newest first — since ADR 0007 a thin alias for
  * {@link listTrips}.
  *

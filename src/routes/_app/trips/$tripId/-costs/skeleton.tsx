@@ -7,6 +7,7 @@
  * skeleton and a placeholder.
  */
 import { Card, Skeleton } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import {
   HeaderSkeleton,
@@ -15,6 +16,8 @@ import {
 } from '../../../-ui/scaffold'
 
 export function CostsSkeleton() {
+  const t = useTranslate()
+
   return (
     <AppFrame>
       <AppSections>
@@ -23,7 +26,7 @@ export function CostsSkeleton() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
           <div className="flex min-w-0 flex-col gap-6">
             <Card aria-busy="true" className="flex flex-col gap-3.5">
-              <span className="sr-only">Loading the expenses</span>
+              <span className="sr-only">{t('costs.skeleton.loading')}</span>
               <div className="flex items-baseline gap-3">
                 <Skeleton className="h-5 w-28" radius="sm" />
                 <Skeleton className="h-3 w-24" radius="sm" />

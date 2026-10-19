@@ -6,7 +6,7 @@
  * the other way round.
  */
 
-import { asc, count, desc, eq, inArray, isNull } from 'drizzle-orm'
+import { asc, count, desc, eq, inArray, isNotNull, isNull, ne } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   collabSectionChangeSchema,
@@ -26,6 +26,7 @@ import {
 import { allOf, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { ForbiddenError, NotFoundError, RepositoryError } from './context'
+import { requirePlaceOfTrip } from './places'
 import {
   assertTripRole,
   requireTrip,
@@ -186,18 +187,25 @@ export const createPollInput = z.object({
 })
 export type CreatePollInput = z.infer<typeof createPollInput>
 
-export const createCheckInInput = z.object({
-  tripId: idSchema.nullish(),
-  placeId: idSchema.nullish(),
-  name: titleSchema,
-  lat: latitudeSchema.nullish(),
-  lng: longitudeSchema.nullish(),
-  address: shortTextSchema.nullish(),
-  countryCode: countryCodeSchema.nullish(),
-  note: longTextSchema.nullish(),
-  source: z.enum(CHECK_IN_SOURCES).optional(),
-  checkedInAt: instantSchema.optional(),
-})
+export const createCheckInInput = z
+  .object({
+    tripId: idSchema.nullish(),
+    placeId: idSchema.nullish(),
+    name: titleSchema,
+    lat: latitudeSchema.nullish(),
+    lng: longitudeSchema.nullish(),
+    address: shortTextSchema.nullish(),
+    countryCode: countryCodeSchema.nullish(),
+    note: longTextSchema.nullish(),
+    source: z.enum(CHECK_IN_SOURCES).optional(),
+    checkedInAt: instantSchema.optional(),
+  })
+  // A place belongs to a trip, so a check-in at one names the trip; the message does not say
+  // whether the place exists, because nothing has been read when it is raised.
+  .refine((value) => !value.placeId || Boolean(value.tripId), {
+    message: 'A check-in at a place must name its trip.',
+    path: ['tripId'],
+  })
 export type CreateCheckInInput = z.infer<typeof createCheckInInput>
 
 /* -------------------------------------------------------------------------------------------------
@@ -246,15 +254,22 @@ export async function editMessage(
   if (message.userId !== scope.ctx.userId) {
     throw new ForbiddenError('edit another traveller’s message', ['owner'])
   }
-  return collabMessagesRepository.requireUpdate(scope, messageId, {
-    body: longTextSchema.min(1).parse(body),
-    editedAt: new Date(),
-  })
+  // A deleted message is gone for everyone who could edit it; refused on the write below, which is what stops an edit from putting text back into a row whose body was cleared.
+  const [edited] = await collabMessagesRepository.updateWhere(
+    scope,
+    allOf(eq(collabMessages.id, messageId), isNull(collabMessages.deletedAt)),
+    { body: longTextSchema.min(1).parse(body), editedAt: new Date() },
+  )
+  if (!edited) {
+    throw new NotFoundError(collabMessagesRepository.entityName, messageId)
+  }
+  return edited
 }
 
 /**
- * Soft-deletes a message: the row stays so replies keep their thread, but the body is no longer
- * listed. Authors delete their own; admins delete anyone's.
+ * Soft-deletes a message: the row stays so replies keep their thread, but the text is gone - the body
+ * is cleared in the same write that sets `deleted_at`, so a deleted message holds no words. Authors
+ * delete their own; admins delete anyone's.
  */
 export async function deleteMessage(
   scope: TenantScope,
@@ -267,7 +282,22 @@ export async function deleteMessage(
   if (message.userId !== scope.ctx.userId && scope.ctx.role === 'member') {
     throw new ForbiddenError('delete another traveller’s message', ['owner', 'admin'])
   }
-  return collabMessagesRepository.requireUpdate(scope, messageId, { deletedAt: new Date() })
+  return collabMessagesRepository.requireUpdate(scope, messageId, { deletedAt: new Date(), body: '' })
+}
+
+/**
+ * Clears the body of every soft-deleted message of this workspace that still has one, and returns how
+ * many it cleared. Idempotent: a second call finds nothing left. The per-workspace form of what
+ * migration `0020_clear_deleted_message_bodies` did once for all of D1, kept for a caller that acts
+ * on one workspace (rows the previous Worker deleted while the migration was running).
+ */
+export async function clearDeletedMessageBodies(scope: TenantScope): Promise<number> {
+  const cleared = await collabMessagesRepository.updateWhere(
+    scope,
+    allOf(isNotNull(collabMessages.deletedAt), ne(collabMessages.body, '')),
+    { body: '' },
+  )
+  return cleared.length
 }
 
 export interface ReactionTally {
@@ -528,6 +558,9 @@ export async function createCheckIn(
   const values = createCheckInInput.parse(input)
   if (values.tripId) {
     await requireTrip(scope, values.tripId)
+    if (values.placeId) {
+      await requirePlaceOfTrip(scope, values.tripId, values.placeId)
+    }
   }
   return checkInsRepository.insert(scope, {
     ...values,

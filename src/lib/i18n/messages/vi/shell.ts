@@ -338,6 +338,22 @@ const messages = {
   'admin.members.person': 'Người',
   'admin.members.role': 'Vai trò',
   'admin.members.joined': 'Tham gia',
+  'admin.members.role.label': 'Vai trò của {name}',
+  'admin.members.role.saved': '{name} hiện là {role}.',
+  'admin.members.role.impersonated':
+    'Không thể đổi vai trò khi bạn đang thao tác với tư cách một tài khoản khác.',
+  'admin.members.role.notPermitted':
+    'Bạn không thể thực hiện thay đổi này. Chỉ chủ sở hữu mới có thể cấp vai trò chủ sở hữu hoặc thay đổi một chủ sở hữu.',
+  'admin.members.role.lastOwner':
+    'Đây là chủ sở hữu duy nhất của không gian làm việc. Hãy chỉ định người khác làm chủ sở hữu trước.',
+  'admin.members.role.notFound':
+    'Người này không còn trong không gian làm việc. Danh sách đã được làm mới.',
+  'admin.members.role.failed': 'Không thể đổi vai trò. Hãy thử lại.',
+  'admin.members.role.promote.title': 'Đặt {name} làm chủ sở hữu?',
+  'admin.members.role.promote.body':
+    '{name} sẽ có quyền lực ngang bạn: thanh toán, thành viên và cài đặt. Một chủ sở hữu có thể hạ vai trò hoặc xoá bất kỳ chủ sở hữu nào khác, kể cả bạn.',
+  'admin.members.role.promote.confirm': 'Đặt làm chủ sở hữu',
+  'admin.members.role.promote.cancel': 'Huỷ',
 
   'admin.activity.label': 'Hoạt động gần đây',
   'admin.activity.empty.title': 'Chưa ghi nhận gì',

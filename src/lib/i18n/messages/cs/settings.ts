@@ -501,6 +501,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'Poskytovatel platby žádost odmítl. Zkuste to za chvíli znovu.',
+  'billing.failure.reference': 'Referenční číslo pro podporu: {reference}',
+  'billing.failure.forbidden':
+    'Vaše role to u fakturace tohoto pracovního prostoru nedovoluje. Požádejte vlastníka nebo správce.',
+  'billing.failure.providerRefused':
+    'Polar tuto změnu nepřijal. Porovnejte počet míst s počtem členů a zkuste to znovu, nebo použijte fakturační portál.',
+  'billing.failure.rateLimited':
+    'Polar je teď vytížený. Nic se nezměnilo. Zkuste to znovu za minutu.',
+  'billing.failure.notConnected':
+    'Fakturace v tomto nasazení ještě není propojená, takže se nic nezměnilo. Obraťte se na podporu.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar nemůže k této objednávce vystavit fakturu. Chybí-li fakturační jméno nebo adresa, doplňte je ve fakturačním portálu a zkuste to znovu; jinak se obraťte na podporu.',
   'billing.planChanged.title': 'Tarif aktualizován',
   'billing.planChanged.body':
     'Změna už u Polaru platí a rozdíl vyfakturuje. Přehled níže se doplní do minuty.',

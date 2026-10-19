@@ -292,6 +292,8 @@ const messages = {
   'book.committedCaption': 'Sur toutes les réservations de ce voyage',
   'book.onItinerary': 'Dans l’itinéraire',
   'book.pinnedCaption': 'Épinglé à un jour du plan',
+  'book.readOnly.archived':
+    'Ce voyage est archivé, les réservations et les séjours sont donc en lecture seule. Restaurez le voyage pour les modifier.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Trajets',
   'transports.empty': 'Rien de noté pour l’instant',
@@ -480,6 +482,49 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Horaires de l’étape enregistrés',
   'plan.place.toast.deleted': 'Lieu supprimé',
   'plan.pin.toast.moved': '{name} épinglé',
+  'join.page.title': 'Lien d’invitation au voyage',
+  'join.page.description':
+    'Ouvrez ce lien pour rejoindre un voyage partagé sur planned.travel.',
+  'join.title.invited': '{inviter} vous invite à un voyage',
+  'join.requirement':
+    'Ce lien fonctionne pour les personnes déjà présentes dans l’espace de travail de {inviter}.',
+  'join.newHere':
+    'Première visite ? Demandez d’abord à {inviter} de vous ajouter à son espace de travail.',
+  'join.trip.label': 'Voyage',
+  'join.role.label': 'Vous rejoindriez en tant que',
+  'join.dates.label': 'Dates du voyage',
+  'join.destination.label': 'Destination du voyage',
+  'join.action.signIn': 'Se connecter',
+  'join.action.join': 'Rejoindre le voyage',
+  'join.action.joining': 'Vous rejoignez le voyage',
+  'join.action.open': 'Ouvrir le voyage',
+  'join.action.openIn': 'Ouvrir le voyage et changer d’espace de travail',
+  'join.action.openIn.pending': 'Changement d’espace de travail',
+  'join.loading': 'Chargement de l’invitation',
+  'join.joined.title': 'Vous avez rejoint le voyage',
+  'join.joined.body': 'Ouvrez-le pour voir le programme.',
+  'join.member.title': 'Vous participez déjà à ce voyage',
+  'join.needsWorkspace.title':
+    'Ce voyage se trouve dans un espace de travail dont vous ne faites pas partie',
+  'join.needsWorkspace.body':
+    'Demandez d’abord à {inviter} de vous ajouter à son espace de travail, puis rouvrez ce lien.',
+  'join.needsWorkspace.signedInAs':
+    'Vous êtes connecté avec l’adresse {email}. Dites à {inviter} d’utiliser cette adresse.',
+  'join.needsWorkspace.acceptFirst':
+    'Si vous avez déjà reçu un e-mail d’invitation à un espace de travail, acceptez-le d’abord, puis rouvrez ce lien.',
+  'join.needsWorkspace.otherAccount': 'Se connecter avec un autre compte',
+  'join.unavailable.title': 'Ce lien d’invitation n’est pas disponible',
+  'join.unavailable.body':
+    'Le lien a peut-être été remplacé ou désactivé. Demandez-en un nouveau à la personne qui vous l’a envoyé.',
+  'join.unavailable.signIn': 'Se connecter',
+  'join.unavailable.trips': 'Aller à vos voyages',
+  'join.error.title': 'Nous n’avons pas pu charger ce lien d’invitation',
+  'join.error.retry': 'Réessayer',
+  'join.error.busy':
+    'Cette page est très sollicitée. Réessayez dans une minute.',
+  'join.error.join':
+    'Impossible de rejoindre le voyage. Le lien fonctionne toujours, réessayez.',
+  'join.error.switch': 'Impossible de changer d’espace de travail. Réessayez.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

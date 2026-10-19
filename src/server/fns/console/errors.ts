@@ -59,8 +59,9 @@ export type ConsoleRefusalCode =
    * `removeUser` cascades the `member` rows without running any organization hook, so nothing but
    * this refusal stands between a deletion and a workspace nobody can administer, bill or delete.
    * The message names the account's own workspaces - which the console already shows beside it - and
-   * offers the two exits: promote another owner there first, or suspend the account instead. It names
-   * nobody else.
+   * offers the two exits: an owner of that workspace promotes another owner from its Workspace console
+   * first, or the account is suspended instead. It does not tell the operator to promote anyone, because
+   * the platform console has no such action. It names nobody else.
    */
   | 'target-sole-owner'
   /**

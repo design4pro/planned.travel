@@ -2,7 +2,7 @@
  * Audit recording — the one way a request path appends to the workspace's trail.
  *
  * `recordAudit` in `src/server/repos/audit.ts` writes the row; this module is what makes calling it
- * from a server function safe. Three things sit between the two, and each of them is a property no
+ * from a server function safe. Four things sit between the two, and each of them is a property no
  * call site should have to remember:
  *
  * - **The request.** `audit_log.ip` and `audit_log.user_agent` are request facts, not arguments, so
@@ -18,6 +18,12 @@
  *   reported once with `serializeError`, and swallowed; the save the user just made still succeeds.
  *   This is the contract `mirrorToRoom` holds in `src/server/fns/context.ts` and the one
  *   `appendPlatformAudit` holds for the platform log.
+ *
+ * - **The operator.** A tenant write made during an impersonated session is attributed to the account
+ *   being worn, which is what its owner reads. The operator is therefore stamped into `metadata` as
+ *   `impersonatedBy` (docs/ACCESS.md §4.5, §6.4), derived from the scope's context and written after
+ *   the caller's own keys, so a call site can neither forget it nor name it. An ordinary session adds
+ *   no key.
  *
  * Swallowing is what makes {@link AuditAction} load-bearing rather than decorative, and the argument
  * is `src/server/catalog/audit.ts`'s verbatim: with the runtime failure path silent, the compiler is
@@ -40,8 +46,8 @@ import type { RecordAuditInput, TenantScope } from '#/server/repos'
 /**
  * The tenant trail's action names: dotted, lowercase, entity-first.
  *
- * Deliberately not the whole product's vocabulary. Tenant-security events (a role change, an
- * invitation, a removal) gain their names in the stage that ships their write paths, and trip
+ * Deliberately not the whole product's vocabulary. Tenant-security events (an invitation, a
+ * removal; a role change already has its name) gain their names in the stage that ships their write paths, and trip
  * lifecycle rides its own; platform-security events are not here at all, because they land in
  * `platform_audit_log` through `src/server/catalog/audit.ts`.
  */
@@ -53,6 +59,7 @@ export const AUDIT_ACTIONS = {
   RESERVATION_DELETED: 'reservation.deleted',
   WORKSPACE_DEFAULTS_CHANGED: 'workspace.defaults_changed',
   TRIP_CURRENCY_CHANGED: 'trip.currency_changed',
+  MEMBER_ROLE_CHANGED: 'member.role_changed',
   TRIP_INVITE_ROTATED: 'trip_invite.rotated',
   TRIP_INVITE_UPDATED: 'trip_invite.updated',
   TRIP_MEMBER_JOINED: 'trip.member_joined',
@@ -126,6 +133,36 @@ function requestOrigin(): RequestOrigin {
 }
 
 /* -------------------------------------------------------------------------------------------------
+ * The operator
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The metadata key that names the operator behind an impersonated session (docs/ACCESS.md §6.4).
+ *
+ * Camel-cased like the other tenant metadata keys and the session field it comes from. The value is
+ * `scope.ctx.impersonatedBy`, which `requireOrgFrom` reads off the session, so a call site neither
+ * has to remember it nor can state it.
+ */
+const IMPERSONATED_BY_KEY = 'impersonatedBy'
+
+/**
+ * The caller's metadata with the operator stamped over it.
+ *
+ * Written last so a caller-supplied `impersonatedBy` never wins, and dropped from an ordinary
+ * session's entry for the same reason: the key exists only when the scope derives it. An entry the
+ * caller gave no metadata stays `null` unless an operator has to be recorded.
+ */
+function stampOperator(
+  scope: TenantScope,
+  metadata: TrailInput['metadata'],
+): TrailInput['metadata'] {
+  const operator = scope.ctx.impersonatedBy
+  if (operator === null && !metadata) return metadata
+  const { [IMPERSONATED_BY_KEY]: _stated, ...rest } = metadata ?? {}
+  return operator === null ? rest : { ...rest, [IMPERSONATED_BY_KEY]: operator }
+}
+
+/* -------------------------------------------------------------------------------------------------
  * The append
  * ---------------------------------------------------------------------------------------------- */
 
@@ -155,6 +192,7 @@ export async function trail(
     const origin = requestOrigin()
     await recordAudit(scope, {
       ...input,
+      metadata: stampOperator(scope, input.metadata),
       ip: origin.ip,
       userAgent: origin.userAgent,
     })

@@ -13,6 +13,7 @@ import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { RESERVATION_STATUSES, RESERVATION_TYPES } from '#/server/db/schema'
 import { createLogger, serializeError } from '#/server/observability'
 import {
+  canWritePlan,
   clearReservationImported,
   countTripReservationsByStatus,
   createExpense,
@@ -25,8 +26,10 @@ import {
   repriceExpense,
   requireReservationOfTrip,
   requireTrip,
+  requireWritableTrip,
   setReservationStatus,
   totalTripReservationsMinor,
+  tripRoleFor,
   updateReservation,
 } from '#/server/repos'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
@@ -421,7 +424,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
   .validator(bookingInputSchema)
   .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await requireWritableTrip(scope, data.tripId)
     assertOrder(data)
 
     const reservation = await createReservation(scope, {
@@ -451,7 +454,7 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(bookingUpdateSchema)
   .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await requireWritableTrip(scope, data.tripId)
     // Everything below acts on `data.tripId` — the room, the trail, the ledger — so the booking
     // must be one of that trip's, not merely one the caller may edit.
     await requireReservationOfTrip(scope, data.tripId, data.reservationId)
@@ -497,7 +500,7 @@ export const setBookingStatusFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }): Promise<{ readonly status: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+    await requireWritableTrip(scope, data.tripId)
     await requireReservationOfTrip(scope, data.tripId, data.reservationId)
     await setReservationStatus(scope, data.reservationId, data.status)
 
@@ -521,7 +524,7 @@ export const deleteBookingFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, reservationId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await requireWritableTrip(scope, data.tripId)
 
     // Read before the delete, because the row is what says whether it had a cost line — and the
     // decision about that line belongs in one function, not in an `if` here.
@@ -643,6 +646,13 @@ export interface BookingDayOption {
 
 export interface BookingDeskPayload {
   readonly currency: string
+  /**
+   * Whether this reader may change the desk: `canWritePlan`, the one answer the plan and its notes
+   * give, so an archived trip draws no write control for an owner or an editor either.
+   */
+  readonly canWrite: boolean
+  /** The reason a writer is refused, for the notice: an archived trip says to restore it. */
+  readonly archived: boolean
   readonly bookings: ReadonlyArray<BookingRow>
   readonly days: ReadonlyArray<BookingDayOption>
   readonly byStatus: ReadonlyArray<{
@@ -679,7 +689,8 @@ export async function bookingDeskPayload(
 ): Promise<BookingDeskPayload> {
   const trip = await requireTrip(scope, requestedTripId)
 
-  const [rows, itinerary, byStatus, committedMinor] = await Promise.all([
+  const [role, rows, itinerary, byStatus, committedMinor] = await Promise.all([
+    tripRoleFor(scope, trip.id, scope.ctx.userId),
     listTripReservations(scope, { tripId: trip.id }),
     // The itinerary rather than the day list: an editable screen needs the stops as well as the
     // days, and this read already assembles both in one pass. No repository function is added to
@@ -708,6 +719,8 @@ export async function bookingDeskPayload(
 
   return {
     currency: trip.currency,
+    canWrite: canWritePlan(trip, role),
+    archived: trip.isArchived,
     byStatus,
     committedMinor,
     days: itinerary.map(({ day, stops }) => ({

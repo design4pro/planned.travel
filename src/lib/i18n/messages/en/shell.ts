@@ -441,6 +441,22 @@ const messages = {
   'admin.members.person': 'Person',
   'admin.members.role': 'Role',
   'admin.members.joined': 'Joined',
+  'admin.members.role.label': 'Role of {name}',
+  'admin.members.role.saved': '{name} is now {role}.',
+  'admin.members.role.impersonated':
+    'A role cannot be changed while you are acting as another account.',
+  'admin.members.role.notPermitted':
+    'You cannot make that change. Only an owner can grant the owner role or change an owner.',
+  'admin.members.role.lastOwner':
+    'This is the only owner of the workspace. Make someone else an owner first.',
+  'admin.members.role.notFound':
+    'This person is no longer in the workspace. The list has been refreshed.',
+  'admin.members.role.failed': 'The role could not be changed. Try again.',
+  'admin.members.role.promote.title': 'Make {name} an owner?',
+  'admin.members.role.promote.body':
+    '{name} will have the same power as you: billing, members and settings. An owner can demote or remove any other owner, including you.',
+  'admin.members.role.promote.confirm': 'Make owner',
+  'admin.members.role.promote.cancel': 'Cancel',
 
   'admin.activity.label': 'Recent activity',
   'admin.activity.empty.title': 'Nothing recorded yet',

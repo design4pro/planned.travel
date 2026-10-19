@@ -225,7 +225,8 @@ export async function createHarness(
     const scopeFor = (
       userId: string,
       role: OrganizationRole = 'member',
-    ): TenantScope => createScope(db, { userId, organizationId, role })
+    ): TenantScope =>
+      createScope(db, { userId, organizationId, role, impersonatedBy: null })
 
     return {
       organizationId,
@@ -234,6 +235,7 @@ export async function createHarness(
         userId: ownerUserId,
         organizationId,
         role: 'owner',
+        impersonatedBy: null,
       }),
       scopeFor,
       async addUser(name, role = 'member') {

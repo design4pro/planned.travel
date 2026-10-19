@@ -986,7 +986,8 @@ shape of every audit action name any code path in this repository writes today: 
 `expense.created`, `journey.published`, `reservation.confirmed`. Nine is what a grep of the
 `action:` literals demonstrates and the claim is no wider than the grep: `member.role_changed`, the
 second example in the JSDoc at `src/server/repos/audit.ts:30`, is a tenth name this codebase
-mentions and nothing writes, and it is two segments as well. None of the nine is written by a
+mentions, and it is two segments as well; `changeMemberRoleFn` (#995) is the first production path
+to write it, so the count of names nothing writes is nine, not ten. None of the nine is written by a
 production path - seven are seed rows in `src/routes/api/dev/-seed/dataset/workspace.ts`, the
 other two live only under
 `src/server/repos/__tests__/` - and one of them, `billing.plan_changed`, is recorded against

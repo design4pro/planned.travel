@@ -298,6 +298,8 @@ const messages = {
   'book.committedCaption': 'Ze wszystkich rezerwacji tej wycieczki',
   'book.onItinerary': 'W planie dnia',
   'book.pinnedCaption': 'Przypięte do dnia planu',
+  'book.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc rezerwacje i noclegi są tylko do odczytu. Przywróć podróż, aby je zmienić.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Przejazdy',
   'transports.empty': 'Nic jeszcze nie zapisano',
@@ -481,6 +483,49 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Godziny przystanku zapisane',
   'plan.place.toast.deleted': 'Miejsce usunięte',
   'plan.pin.toast.moved': 'Przypięto {name}',
+  'join.page.title': 'Link z zaproszeniem na wyjazd',
+  'join.page.description':
+    'Otwórz ten link, aby dołączyć do wspólnego wyjazdu w planned.travel.',
+  'join.title.invited': '{inviter} zaprasza cię na wyjazd',
+  'join.requirement':
+    'Ten link działa dla osób, które są już w przestrzeni osoby {inviter}.',
+  'join.newHere':
+    'Pierwszy raz tutaj? Poproś osobę {inviter}, aby najpierw dodała cię do swojej przestrzeni.',
+  'join.trip.label': 'Wyjazd',
+  'join.role.label': 'Dołączysz w roli',
+  'join.dates.label': 'Termin',
+  'join.destination.label': 'Cel wyjazdu',
+  'join.action.signIn': 'Zaloguj się',
+  'join.action.join': 'Dołącz do wyjazdu',
+  'join.action.joining': 'Dołączanie do wyjazdu',
+  'join.action.open': 'Otwórz wyjazd',
+  'join.action.openIn': 'Otwórz wyjazd i przełącz przestrzeń',
+  'join.action.openIn.pending': 'Przełączanie przestrzeni',
+  'join.loading': 'Wczytywanie zaproszenia',
+  'join.joined.title': 'Jesteś na wyjeździe',
+  'join.joined.body': 'Otwórz go, aby zobaczyć plan.',
+  'join.member.title': 'Już jesteś na tym wyjeździe',
+  'join.needsWorkspace.title':
+    'Ten wyjazd jest w przestrzeni, do której nie należysz',
+  'join.needsWorkspace.body':
+    'Poproś osobę {inviter}, aby najpierw dodała cię do swojej przestrzeni, a potem otwórz ten link jeszcze raz.',
+  'join.needsWorkspace.signedInAs':
+    'Zalogowano jako {email}. Powiedz osobie {inviter}, żeby użyła tego adresu.',
+  'join.needsWorkspace.acceptFirst':
+    'Jeśli masz już e-mail z zaproszeniem do przestrzeni, najpierw je przyjmij, a potem otwórz ten link jeszcze raz.',
+  'join.needsWorkspace.otherAccount': 'Zaloguj się na inne konto',
+  'join.unavailable.title': 'Ten link z zaproszeniem jest niedostępny',
+  'join.unavailable.body':
+    'Link mógł zostać zastąpiony lub wyłączony. Poproś osobę, która go wysłała, o nowy.',
+  'join.unavailable.signIn': 'Zaloguj się',
+  'join.unavailable.trips': 'Przejdź do swoich wyjazdów',
+  'join.error.title': 'Nie udało się wczytać tego linku z zaproszeniem',
+  'join.error.retry': 'Spróbuj ponownie',
+  'join.error.busy': 'Ta strona jest zajęta. Spróbuj ponownie za minutę.',
+  'join.error.join':
+    'Nie udało się dołączyć. Link nadal działa, spróbuj ponownie.',
+  'join.error.switch':
+    'Nie udało się przełączyć przestrzeni. Spróbuj ponownie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

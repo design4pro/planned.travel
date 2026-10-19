@@ -12,7 +12,7 @@ import { authSchema } from '#/server/db/auth-schema'
 import { readPlatformRole } from '#/server/fns/console/adapter-reads'
 import { createLogger } from '#/server/observability'
 import { resolvePlatformRole } from './access'
-import { DISABLED_ADMIN_PATHS, adminOptions } from './admin-options'
+import { DISABLED_PATHS, adminOptions } from './admin-options'
 import { authDb } from './db'
 import { queueAuthEmail } from './email'
 import {
@@ -33,6 +33,7 @@ import {
   impersonationExpiryGuard,
 } from './impersonation-expiry'
 import { logAuth } from './log'
+import { recordParticipation } from './participation'
 import { passkey } from './passkey/plugin'
 import {
   provisionPersonalOrganization,
@@ -340,10 +341,11 @@ function buildAuth() {
       storeSessionInDatabase: true,
     },
 
-    // The `admin` plugin's fifteen HTTP paths, closed (docs/ACCESS.md §2.6).
+    // The `admin` plugin's fifteen HTTP paths and the organization plugin's role-change path, closed
+    // (docs/ACCESS.md §2.6).
     // Top-level and a sibling of `plugins`: inside `admin({ … })` this is an
     // ignored extra property that closes nothing.
-    disabledPaths: DISABLED_ADMIN_PATHS,
+    disabledPaths: DISABLED_PATHS,
 
     // Single-use tokens are consumed transactionally in D1: KV's eventual
     // consistency is not a safe substrate for one-shot credentials.
@@ -597,6 +599,18 @@ function buildAuth() {
         invitationLimit: 50,
         invitationExpiresIn: INVITATION_TTL_SECONDS,
         cancelPendingInvitationsOnReInvite: true,
+        // The participation anchor (ADR 0043) is written before the library inserts the membership,
+        // so a person who joins and leaves is still found by a later erasure. A throw here aborts
+        // the join; an anchor left behind by a join that then fails is harmless. The organization
+        // id comes from what the library resolved or from the invitation row, never from a body.
+        organizationHooks: {
+          beforeAddMember: async ({ member, organization: workspace }) => {
+            await recordParticipation(authDb(), workspace.id, member.userId)
+          },
+          beforeAcceptInvitation: async ({ invitation, user }) => {
+            await recordParticipation(authDb(), invitation.organizationId, user.id)
+          },
+        },
         sendInvitationEmail: async (data) => {
           await queueAuthEmail({
             kind: 'auth.organization-invitation',

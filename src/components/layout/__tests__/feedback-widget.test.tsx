@@ -35,6 +35,16 @@ const { createWidget, removeFromDom, setTheme, startFeedback } = vi.hoisted(
 
 vi.mock('#/lib/sentry-feedback', () => ({ startFeedback }))
 
+/** Where the router says the visitor is; the widget reads nothing else from it. */
+const route = vi.hoisted(() => ({ href: '/trips' }))
+vi.mock('@tanstack/react-router', () => ({
+  useRouterState: ({
+    select,
+  }: {
+    select: (state: { location: { href: string } }) => unknown
+  }) => select({ location: { href: route.href } }),
+}))
+
 /** Shape only - nothing here reaches Sentry, and no key is validated. */
 const DSN = 'https://public@o0.ingest.sentry.io/1'
 
@@ -84,6 +94,7 @@ beforeEach(() => {
   // The doubles are created once, outside every case, so both their history and their behaviour
   // have to be re-established here - `restoreMocks` does neither for a bare `vi.fn()`.
   vi.clearAllMocks()
+  route.href = '/trips'
   createWidget.mockReturnValue({ removeFromDom })
   startFeedback.mockReturnValue({ createWidget, setTheme })
 })
@@ -166,5 +177,39 @@ describe('FeedbackWidget', () => {
     await Promise.resolve()
     expect(startFeedback).not.toHaveBeenCalled()
     expect(container.innerHTML).toBe('')
+  })
+
+  it.each([
+    '/join/the-secret',
+    '/login?redirect=%2Fjoin%2Fthe-secret',
+    '/login?callbackURL=%252Fjoin%252Fthe-secret',
+  ])(
+    'offers no button on %s, where a screenshot could carry the link',
+    async (href) => {
+      route.href = href
+      await mount()
+
+      // The theme effect still loads the SDK, so once it has run the build step has had its turn.
+      await waitFor(() => {
+        expect(setTheme).toHaveBeenCalled()
+      })
+      expect(createWidget).not.toHaveBeenCalled()
+    },
+  )
+
+  it('builds the button again once the visitor leaves the join location', async () => {
+    route.href = '/join/the-secret'
+    const { speak } = await mount()
+    await waitFor(() => {
+      expect(setTheme).toHaveBeenCalled()
+    })
+    expect(createWidget).not.toHaveBeenCalled()
+
+    route.href = '/trips'
+    await speak('pl')
+
+    await waitFor(() => {
+      expect(createWidget).toHaveBeenCalledTimes(1)
+    })
   })
 })

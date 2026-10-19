@@ -279,6 +279,8 @@ const messages = {
   'book.committedCaption': 'Över alla bokningar på den här resan',
   'book.onItinerary': 'I resplanen',
   'book.pinnedCaption': 'Fäst vid en dag i planen',
+  'book.readOnly.archived':
+    'Den här resan är arkiverad, så bokningarna och boendena är skrivskyddade. Återställ resan för att ändra dem.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Färder',
   'transports.empty': 'Inget noterat än',
@@ -451,6 +453,47 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Stoppets tider sparade',
   'plan.place.toast.deleted': 'Plats borttagen',
   'plan.pin.toast.moved': '{name} fäst',
+  'join.page.title': 'Inbjudningslänk till resan',
+  'join.page.description':
+    'Öppna den här länken för att gå med i en delad resa på planned.travel.',
+  'join.title.invited': '{inviter} har bjudit in dig till en resa',
+  'join.requirement':
+    'Länken fungerar för personer som redan finns i {inviter}s arbetsyta.',
+  'join.newHere': 'Ny här? Be {inviter} lägga till dig i arbetsytan först.',
+  'join.trip.label': 'Resa',
+  'join.role.label': 'Du skulle gå med som',
+  'join.dates.label': 'Datum',
+  'join.destination.label': 'Resmål',
+  'join.action.signIn': 'Logga in',
+  'join.action.join': 'Följ med på resan',
+  'join.action.joining': 'Går med i resan',
+  'join.action.open': 'Öppna resan',
+  'join.action.openIn': 'Öppna resan och byt arbetsyta',
+  'join.action.openIn.pending': 'Byter arbetsyta',
+  'join.loading': 'Läser in inbjudan',
+  'join.joined.title': 'Du är med på resan',
+  'join.joined.body': 'Öppna den för att se planen.',
+  'join.member.title': 'Du är redan med på den här resan',
+  'join.needsWorkspace.title':
+    'Den här resan finns i en arbetsyta som du inte är med i',
+  'join.needsWorkspace.body':
+    'Be {inviter} lägga till dig i arbetsytan först och öppna sedan länken igen.',
+  'join.needsWorkspace.signedInAs':
+    'Du är inloggad som {email}. Be {inviter} använda den här adressen.',
+  'join.needsWorkspace.acceptFirst':
+    'Om du redan har fått ett mejl med en inbjudan till en arbetsyta ska du tacka ja till den först och sedan öppna länken igen.',
+  'join.needsWorkspace.otherAccount': 'Logga in med ett annat konto',
+  'join.unavailable.title': 'Den här inbjudningslänken är inte tillgänglig',
+  'join.unavailable.body':
+    'Länken kan ha ersatts eller stängts av. Be den som skickade den om en ny.',
+  'join.unavailable.signIn': 'Logga in',
+  'join.unavailable.trips': 'Gå till dina resor',
+  'join.error.title': 'Vi kunde inte läsa in den här inbjudningslänken',
+  'join.error.retry': 'Försök igen',
+  'join.error.busy': 'Sidan är upptagen. Försök igen om en minut.',
+  'join.error.join':
+    'Det gick inte att gå med. Länken fungerar fortfarande, försök igen.',
+  'join.error.switch': 'Det gick inte att byta arbetsyta. Försök igen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -308,7 +308,8 @@ session-less path in this codebase is already built, and named the same way:
   other module imports them, the way §2.6's drift test asserts its own list.
 
 SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
-closed list of exactly two catalog members is unchanged (ADR 0041).
+closed list of exactly three catalog members is unchanged by it (ADR 0041; the third is the
+erasure catalog read, ADR 0043).
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
@@ -444,9 +445,22 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with two exceptions, both closed by the plugin's own options and not by
-`disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The flag is checked before
+document does not govern - with four exceptions. Two are closed by the plugin's own options and not
+by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other two are closed by
+`disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
+`src/server/auth/admin-options.ts`, merged with the fifteen admin paths into `DISABLED_PATHS`, which is
+what `src/server/auth/index.ts` passes). `organization/update-member-role` writes a role without an
+audit row, accepts a comma-joined role such as `admin,owner`, and lets an admin grant `owner`, none of
+which the product-owned `changeMemberRoleFn` (§6.4, #995) allows. `organization/remove-member` deletes
+the `member` row for an owner or an admin with no audit entry and no refusal during impersonation
+(#1010). The in-process `auth.api.updateMemberRole` and `auth.api.removeMember` are not HTTP paths and
+stay callable; the product-owned removal (#1008) must remove members through `auth.api.removeMember`
+and not through the repository's `removeMember`, because the plugin's after-hook is what queues the
+removed person's room eviction, and the repository function has neither that hook, an owner ceiling
+for an admin nor an audit entry. `organization/leave` stays open, because the leave screen needs it
+(closing it to an impersonated session is #1402), so until #1008 ships a workspace has no way to
+remove a member over HTTP. The deletion flag is checked before
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
 an owner delete the `organization` row, cascade over every tenant table - other members' private
@@ -467,7 +481,7 @@ in the workspace they are currently in, re-read from `member` on every request l
 The rule lives in `createWorkspace` (`src/server/fns/workspace-writes.ts`), which is the only way to
 create one: Better Auth's own `POST /api/auth/organization/create` answers `403` to a signed-in caller
 and `401` to an anonymous one (`allowUserToCreateOrganization: false`), because the plugin's endpoint
-carries none of the rules below. `disabledPaths` is untouched, and `organization/set-active` still
+carries none of the rules below. `disabledPaths` gains no entry for it, and `organization/set-active` still
 answers. In order, `createWorkspace` checks the role, then refuses an impersonated session (§6.4),
 then the limit of twenty workspaces per account, which it reads from the same constant as the
 plugin's `organizationLimit` because the plugin enforces that limit only inside its own endpoint,
@@ -616,6 +630,13 @@ merge prerequisite, not a change to general workflow policy.
   `Cache-Control: private, no-store` and `Referrer-Policy: no-referrer`; do not disallow it in
   `robots.txt`, because a crawler must fetch the header.
 
+- `/join/$token` (§3.8) is **`noindex`** the same two ways as `/share/$token`: `<meta name="robots"
+  content="noindex, nofollow">` from the route's `head`, and `X-Robots-Tag: noindex, nofollow` from
+  its `headers`, together with `Cache-Control: private, no-store` and `Referrer-Policy:
+  no-referrer`, on every response, found or not. Its title and description are generic (no trip, no
+  inviter) and the route writes no trip-specific Open Graph or Twitter tag. Do not disallow it in
+  `robots.txt`.
+
 ### 3.6 Rate limiting, by token and by IP
 
 For share surfaces, counters live in KV with a 60 s TTL under versioned keys, one keyed by the hashed token and one by
@@ -635,6 +656,32 @@ authorisation boundary. Token resolution is the boundary and it never fails open
 token is a `404`, whatever KV is doing. `view_count` and `last_viewed_at` are updated
 asynchronously through the queue, never inline, so a crawler cannot make a public read cost a D1
 write per request.
+
+The trip invite link (§3.8) spends three of these, in this order, and a dead link of any kind
+spends the miss budget:
+
+| Budget                                      | Limit          | Key                                           |
+| ------------------------------------------- | -------------- | --------------------------------------------- |
+| Per IP, all public routes                   | 120 / minute   | `public:rl:v1:ip:<ip>:<minute>`               |
+| Per IP, failed resolutions ("misses")       | 20 / minute    | `public:rl:v1:invite-miss:<ip>:<minute>`      |
+| Per resolved link                           | 60 / minute    | `public:rl:v1:invite:<sha256(secret)>:<minute>` |
+
+Over budget is `429` with `Retry-After` on the **document** (the page renders the neutral
+`join.error.busy` card: a shared NAT or hotel wifi can spend the miss budget, and the copy blames
+nobody). The router derives a document's status only from its own state, so the loader answers
+`busy` with a 200 view and the route's middleware turns the response into the 429 once the page
+has rendered (`src/routes/join/-lib/busy.ts`). Every `/join` request costs one to three KV writes.
+The authenticated join submit (`joinTripFn`) has its own two rows, spent before the secret is
+looked at, so a user or an address guessing secrets through the submit is bounded the same way:
+
+| Budget                              | Limit        | Key                                |
+| ----------------------------------- | ------------ | ---------------------------------- |
+| Join submit, per user               | 10 / minute  | `public:rl:v1:join-user:<id>:<minute>` |
+| Join submit, per IP                 | 30 / minute  | `public:rl:v1:join-ip:<ip>:<minute>`   |
+
+Over either budget the submit answers `busy` (a 200 answer of the server function, not a 429) and the
+card shows the neutral `join.error.busy` line beside the Join button; nothing is written. A dead
+secret submitted here spends only these two budgets, not the page's miss budget.
 
 Calendar providers share IPs, so calendar feeds use separate approximate minute counters:
 60 requests/minute per live feed id (never digest), and 20/minute per IP for refusals only.
@@ -673,12 +720,81 @@ bounded billing, moderation and cron discovery exceptions remain as stated in SP
    adjacent branded `ResolvedFeed` and constructs the owner-bound scope. A trip invite link reaches
    its row through one `…Unscoped` read, `findLiveTripInviteByDigestUnscoped` in
    `src/server/repos/invites.ts`, called only by `src/server/public/trip-invite.ts`, which returns
-   coordinates and constructs no scope (ADR 0042). Repositories may import the pure secret module
+   coordinates and constructs no scope (ADR 0042). The one write on the surface, the join, is the
+   authenticated `joinTripByInviteUnscoped` in the same file, called only by
+   `src/routes/join/-lib/join.ts` for `joinTripFn`; it is not part of `public/**`. Repositories may import the pure secret module
    `src/server/security/secret.ts` (derive, digest, shape guard); they never import
    `src/server/public/**`.
 3. **It holds no SQL of its own** (SPEC §6). Token-resolved tenant resources go through
    `src/server/repos`; published global rows go through `src/server/catalog`. This module owns the
    whitelist and nothing else.
+
+### 3.8 Trip invite link - `/join/$token`
+
+A session-less **read** of a bearer credential, with a session read only to decide what the page
+shows. The route lives outside `_app`, so no auth guard runs and an anonymous visitor is never
+bounced. It reaches its tenant through two `…Unscoped` repository reads, both in
+`src/server/repos/invites.ts` and called only by `src/server/public/trip-invite.ts`:
+`findLiveTripInviteByDigestUnscoped` (coordinates only) and `readInvitePreviewUnscoped` (the
+projection below). The handler holds no SQL, builds no scope and calls no auth helper: the
+visitor's session is read by the route's server function (`src/routes/join/-server/join.ts`) and
+handed in as data (`{ id, banned }`). **`src/server/public/**` stays read-only here, and a
+`GET` of `/join/<secret>` writes nothing**: no `use_count`, no `trip_members` row, no stamp. The
+write that puts a person on a trip is a separate authenticated server function, `joinTripFn`,
+and it is the **single write** on this surface (below).
+
+| Visitor                                             | Visible                                                                                              | Never visible                                                                                                             |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Anonymous                                           | Trip title, the inviter's display name and avatar, the role the link offers                          | Dates, destination, cover, the workspace's name, slug, id or logo, the inviter's email or user id, every id               |
+| Signed in, member of the link's workspace           | The above, plus the trip's dates and destination; or "already on this trip" with a link to the trip  | `use_count`, `created_by`, the digest, the secret; the trip and workspace ids unless the viewer is already on the trip    |
+| Signed in, **not** a member of the link's workspace | Trip title, the inviter's display name, and the visitor's own signed-in email                        | Dates, destination, the workspace in any form                                                                             |
+| Anything else (all dead links, a banned viewer)     | One identical 404 page                                                                               | Which of unknown, switched off, replaced, archived or creator-gone killed it                                              |
+
+The projections are whitelists: a field in neither column is never selected. A signed-in visitor
+who is a member of the link's workspace is the only one shown dates and destination, because a
+forwarded URL reaches people the owner never picked and name plus dates plus destination plus a
+real name is the most sensitive combination on the page. A dead link throws `notFound()` from the
+loader, so the document is a 404 with the same body whoever asks; its `Cache-Control`,
+`X-Robots-Tag` and `Referrer-Policy` are those of a live link (§3.5). Rate limits are §3.6.
+
+The guest chrome is the marketing frame with its `minimal` variant (logo and theme toggle; no
+"Sign in", "Start free" or "See pricing"): those links would drop the `?redirect=` that brings the
+visitor back to the link. The sign-in action is `/login?redirect=/join/<secret>`, and the sign-in
+pages carry a `strict-origin` referrer meta so a `redirect` carrying the link is not sent onward in
+a `Referer`.
+
+**The join - the single write.** `joinTripFn` (`src/routes/join/-server/join.ts`, a POST) reads the
+session and answers `signed-out` to a missing one, before any budget is spent and without a thrown
+401 (the card needs to tell a session that ended from a failure, and sends the person to sign in
+and back; the answer names nothing), then hands the user to
+`joinTripByInviteUnscoped` as `{ id, banned, impersonated }`. It acts as the joiner, with their
+role in the **link's** workspace read from `member`; the session's active workspace and anything
+the request carries are never used, so a member of two workspaces joins the right one. The order
+is fixed:
+
+1. a banned joiner or an impersonated session (§6.4) is `unavailable`, and nothing is read or written;
+2. the link is resolved again by digest, so a replaced, switched-off, orphaned or archived link, or
+   one the current key no longer derives, is `unavailable`;
+3. a viewer who is not a member of the link's workspace gets `needs-workspace`, with no ids and no
+   write;
+4. the trip is read under the tenant filter and an archived one is `unavailable`;
+5. the one shared insert, `insertTripMember`, writes the row with the **link's** role (re-parsed to
+   `editor` or `viewer`, so a hand-edited `owner` is a dead link and the request's role does not
+   exist) and `invited_by` = the link's creator; a unique violation is `member`;
+6. `use_count` and `last_used_at` move only on a real join, never on `member`.
+
+The answer carries `tripId` and `organizationId` only for `joined` and `member`, after step 3. It
+writes the tenant audit row `trip.member_joined` with the link id and the role, never the secret or
+the digest, and mirrors nothing to a live room (a join shows on the next load). A link replaced
+while a tab was open fails the submit and the card swaps to the unavailable card in place; nobody
+already on the trip is removed.
+
+**Telemetry.** The secret is redacted from every Sentry channel (`docs/DEPLOY.md` §17.2), logs for
+this surface carry the link id and the outcome and never the path, and the session recorder does not
+run on a join location - the page itself and a sign-in page whose `redirect` or `callbackURL`
+carries the link, at any encoding depth (`src/lib/sentry-replay.ts`). The "Report a problem" button is
+not offered there either: a screenshot is an attachment no scrub can read
+(`src/components/layout/feedback-widget.tsx`).
 
 ---
 
@@ -1024,8 +1140,10 @@ through `src/server/repos/audit.ts` on `createTenantRepository()`, with its `met
 and no `actor_kind`. It records what happened inside a workspace. `platform_audit_log` records what
 happened to the platform. They are never merged, never joined, and never read through each other's
 repository. The one place they meet is §6.4: a tenant write performed during an impersonated
-session stamps the impersonator into the existing `metadata` column, which is a value change and
-not a schema change.
+session stamps the impersonator into the existing `metadata` column as `impersonatedBy: <operator
+user id>`, which is a value change and not a schema change. `trail()` (`src/server/audit/trail.ts`)
+does it, from the tenant context's `impersonatedBy`, which `requireOrgFrom` reads off the session; it
+is implemented (#1010).
 
 ---
 
@@ -1178,13 +1296,33 @@ call the guard before they touch a row. A veto that lives in one function while 
 also has a public URL is not a veto.
 
 Tenant actions of the impersonated user **are** permitted, because reproducing a report often means
-saving the thing that fails to save. One is refused by name: **creating a workspace** (§2.7). It
+saving the thing that fails to save. Two are refused by name: **changing a member's role** (below) and **creating a workspace** (§2.7). The second
 mints a new tenant owned by the account being worn, which is not a write to something that already
 exists, and the owner's audit trail could only ever show that an operator created a workspace they
 now cannot leave. `createWorkspace` throws `AuthRequirementError('impersonated')` before it reads the
 plan or writes a row. Every such write appends the impersonator's user id to the
-existing `metadata` column of the tenant `audit_log`, so a workspace owner reading their own audit
-trail can see that an operator, not they, made the change.
+existing `metadata` column of the tenant `audit_log` as `impersonatedBy`, so a workspace owner reading
+their own audit trail can see that an operator, not they, made the change. `trail()` writes it after
+the caller's own keys and from the scope alone: a call site can neither forget it nor state it, a
+caller-supplied `impersonatedBy` never wins, and an ordinary session's entry carries no such key
+(implemented, #1010).
+
+**Changing a member's role is refused by name too.** `changeMemberRoleFn` (`src/server/fns/members.ts`)
+reads the session, and a missing session counts as impersonated (`isImpersonated`), so it throws
+`AuthRequirementError('impersonated', <message key>)` before any repository read or write: a role an
+operator sets outlives the 900-second session and could promote an account to `owner`. The error
+carries a message key and not English prose because `AuthRequirementError` text reaches the browser
+verbatim. The authorisation ceiling is the repository's, not the function's: `changeMemberRole`
+refuses a `member` caller, an `admin` granting `owner` and an `admin` changing a row that holds
+`owner`; only an `owner` may set any role, and the last-owner guard stays. A successful change that
+alters the role writes one `member.role_changed` tenant audit entry; the change is not undone when
+that write fails.
+
+**Joining a trip from an invite link is refused by name as well.** `/join/$token` sits outside `_app`,
+so the warning bar of §6.1 never renders there, yet a join is a lasting access grant that outlives
+the 900-second session. `joinTripByInviteUnscoped` is given `impersonated` (true when
+`session.impersonatedBy` is set) and answers `unavailable` before it reads or writes anything, the
+same answer a dead link gets, so the refusal tells an operator nothing about the link (§3.8).
 
 **Registering, renaming and removing a passkey are refused by name as well.** A passkey is a sign-in factor, and one an
 operator registers outlives the 900-second impersonation with no audit row to show for it, which

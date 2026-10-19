@@ -288,6 +288,8 @@ const messages = {
   'book.committedCaption': 'De totes les reserves d’aquest viatge',
   'book.onItinerary': 'A l’itinerari',
   'book.pinnedCaption': 'Fixat a un dia del pla',
+  'book.readOnly.archived':
+    'Aquest viatge està arxivat, així que les reserves i les estades són només de lectura. Restaura el viatge per canviar-les.',
   /* ---------------------------------------------- the transports tab */
   'transports.title': 'Trajectes',
   'transports.empty': 'Encara no s’ha registrat res',
@@ -470,6 +472,50 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Horaris de la parada desats',
   'plan.place.toast.deleted': 'Lloc eliminat',
   'plan.pin.toast.moved': 'S’ha fixat {name}',
+  'join.page.title': 'Enllaç d’invitació al viatge',
+  'join.page.description':
+    'Obre aquest enllaç per unir-te a un viatge compartit a planned.travel.',
+  'join.title.invited': '{inviter} t’ha convidat a un viatge',
+  'join.requirement':
+    'Aquest enllaç funciona per a les persones que ja són a l’espai de treball de {inviter}.',
+  'join.newHere':
+    'Primera vegada aquí? Demana a {inviter} que primer t’afegeixi al seu espai de treball.',
+  'join.trip.label': 'Viatge',
+  'join.role.label': 'Hi entraries com a',
+  'join.dates.label': 'Dates del viatge',
+  'join.destination.label': 'Destinació',
+  'join.action.signIn': 'Entra',
+  'join.action.join': 'Uneix-te al viatge',
+  'join.action.joining': 'Unint-te al viatge',
+  'join.action.open': 'Obre el viatge',
+  'join.action.openIn': 'Obre el viatge i canvia d’espai de treball',
+  'join.action.openIn.pending': 'S’està canviant d’espai de treball',
+  'join.loading': 'S’està carregant la invitació',
+  'join.joined.title': 'Ja ets al viatge',
+  'join.joined.body': 'Obre’l per veure el pla.',
+  'join.member.title': 'Ja formes part d’aquest viatge',
+  'join.needsWorkspace.title':
+    'Aquest viatge és en un espai de treball del qual no formes part',
+  'join.needsWorkspace.body':
+    'Demana a {inviter} que primer t’afegeixi al seu espai de treball i torna a obrir aquest enllaç.',
+  'join.needsWorkspace.signedInAs':
+    'Has iniciat la sessió com a {email}. Digues a {inviter} que faci servir aquesta adreça.',
+  'join.needsWorkspace.acceptFirst':
+    'Si ja tens un correu d’invitació a un espai de treball, accepta’l primer i torna a obrir aquest enllaç.',
+  'join.needsWorkspace.otherAccount': 'Entra amb un altre compte',
+  'join.unavailable.title': 'Aquest enllaç d’invitació no està disponible',
+  'join.unavailable.body':
+    'És possible que l’enllaç s’hagi substituït o desactivat. Demana’n un de nou a qui te’l va enviar.',
+  'join.unavailable.signIn': 'Entra',
+  'join.unavailable.trips': 'Ves als teus viatges',
+  'join.error.title': 'No hem pogut carregar aquest enllaç d’invitació',
+  'join.error.retry': 'Torna-ho a provar',
+  'join.error.busy':
+    'Aquesta pàgina està saturada. Torna-ho a provar d’aquí a un minut.',
+  'join.error.join':
+    'No s’ha pogut entrar al viatge. L’enllaç encara funciona; torna-ho a provar.',
+  'join.error.switch':
+    'No s’ha pogut canviar d’espai de treball. Torna-ho a provar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

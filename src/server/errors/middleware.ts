@@ -81,7 +81,7 @@ export const failureRedactionMiddleware = createMiddleware({
     }
 
     // A diagnostic stays withheld: what crosses is the reference, plus the constant code the
-    // classifier attached when the reader is owed a way out (a quota refusal), and nothing else.
+    // classifier attached when the reader is owed a way out (a quota or billing refusal), and nothing else.
     throw new Error(
       encodePublicFailure({
         kind: 'unexpected',

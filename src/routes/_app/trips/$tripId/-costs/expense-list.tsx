@@ -23,7 +23,7 @@ import {
   Tooltip,
   TooltipProvider,
 } from '#/components/ui'
-import { useLocale } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { formatConversion, formatMoney } from '#/lib/money'
 import { groupByDay, isOptimisticId, shareOf } from '#/components/costs'
@@ -59,6 +59,7 @@ export function ExpenseList({
   onDelete,
 }: ExpenseListProps) {
   const locale = useLocale()
+  const t = useTranslate()
   const groups = groupByDay(rows, locale)
 
   return (
@@ -68,7 +69,9 @@ export function ExpenseList({
           <Panel
             key={group.day}
             label={group.label}
-            count={`${formatMoney(group.totalMinor, currency, locale)} spent`}
+            count={t('costs.list.daySpent', {
+              amount: formatMoney(group.totalMinor, currency, locale),
+            })}
             flush
           >
             <ul>
@@ -117,6 +120,7 @@ function ExpenseRow({
   onDelete: (row: CostsExpense) => void
 }) {
   const locale = useLocale()
+  const t = useTranslate()
   const payer = people.find((person) => person.userId === row.paidBy)
   const conversion = formatConversion(row, locale)
   const mine = shareOf(row, viewerUserId)
@@ -152,24 +156,26 @@ function ExpenseRow({
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption text-ink-3">
             {row.paidBy === null ? (
               <Badge tone="warning" size="sm">
-                No payer yet
+                {t('costs.row.noPayer')}
               </Badge>
             ) : (
               <span className="flex min-w-0 items-center gap-1.5">
                 <Avatar
-                  name={payer?.name ?? 'Removed traveller'}
+                  name={payer?.name ?? t('costs.person.removed')}
                   src={payer?.image}
                   size="xs"
                 />
                 <span className="truncate font-medium text-ink-2">
                   {row.paidBy === viewerUserId
-                    ? 'You paid'
-                    : `${payer?.name ?? 'Someone'} paid`}
+                    ? t('costs.row.youPaid')
+                    : t('costs.row.paid', {
+                        name: payer?.name ?? t('costs.person.removed'),
+                      })}
                 </span>
               </span>
             )}
             <Dot />
-            <span className="truncate">{categoryLabel(row.category)}</span>
+            <span className="truncate">{categoryLabel(row.category, t)}</span>
             {conversion === null ? null : (
               <>
                 <Dot />
@@ -182,7 +188,7 @@ function ExpenseRow({
               <Tooltip content={row.notes} side="top">
                 <button
                   type="button"
-                  aria-label={`Note on ${row.title}`}
+                  aria-label={t('costs.row.noteOn', { title: row.title })}
                   className="focus-ring grid size-5 shrink-0 place-items-center rounded-full text-ink-4 transition-colors duration-fast ease-out-quint hover:bg-hover hover:text-ink-2"
                 >
                   <StickyNote aria-hidden className="size-3.5" />
@@ -193,8 +199,10 @@ function ExpenseRow({
 
           <span className="shrink-0 text-caption tabular-nums text-ink-4">
             {mine === 0
-              ? 'not your share'
-              : `${formatMoney(mine, currency, locale)} yours`}
+              ? t('costs.row.notYourShare')
+              : t('costs.row.yourShare', {
+                  amount: formatMoney(mine, currency, locale),
+                })}
           </span>
         </div>
 
@@ -214,7 +222,7 @@ function ExpenseRow({
         <div className="flex shrink-0 items-center gap-0.5">
           {locked ? (
             <span className="grid size-8 place-items-center text-ink-4">
-              <Spinner size="xs" label="Saving" />
+              <Spinner size="xs" label={t('costs.row.saving')} />
             </span>
           ) : (
             <>
@@ -222,14 +230,14 @@ function ExpenseRow({
                 size="sm"
                 variant="ghost"
                 icon={<Pencil aria-hidden />}
-                label={`Edit ${row.title}`}
+                label={t('costs.row.edit', { title: row.title })}
                 onClick={() => onEdit(row)}
               />
               <IconButton
                 size="sm"
                 variant="danger"
                 icon={<Trash2 aria-hidden />}
-                label={`Delete ${row.title}`}
+                label={t('costs.row.delete', { title: row.title })}
                 onClick={() => onDelete(row)}
               />
             </>

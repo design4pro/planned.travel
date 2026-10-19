@@ -1219,6 +1219,27 @@ const messages = {
       'Δεν ήταν δυνατή η αποθήκευση της άδειάς σας. Το {year} εξακολουθεί να δείχνει {value} ημέρες.',
   },
   'vacay.allowance.retry': 'Δοκιμάστε ξανά',
+  'vacay.allowance.tile.edit.carried':
+    'Επεξεργασία: Μεταφερθείσες ημέρες, τώρα {value}',
+  'vacay.allowance.input.carried': 'Ημέρες που μεταφέρθηκαν στο {year}',
+  'vacay.allowance.carried.from': 'Μεταφέρθηκαν από το {year}',
+  'vacay.allowance.carried.opening':
+    'Προέρχονται από πριν το {year}. Επιλέξτε για επεξεργασία.',
+  'vacay.allowance.carried.off': 'Η μεταφορά είναι απενεργοποιημένη',
+  'vacay.allowance.carried.wholeDays':
+    'Στο επόμενο έτος μεταφέρονται μόνο ολόκληρες ημέρες· η μισή ημέρα που περισσεύει δεν μεταφέρεται.',
+  'vacay.allowance.error.derived':
+    'Οι ημέρες που μεταφέρθηκαν για το {year} υπολογίζονται πλέον από το {previousYear}, γι’ αυτό δεν μπορούν να επεξεργαστούν.',
+  'vacay.allowance.error.carried': {
+    one: 'Δεν ήταν δυνατή η αποθήκευση των ημερών που μεταφέρθηκαν. Το {year} εξακολουθεί να δείχνει {value} ημέρα.',
+    other:
+      'Δεν ήταν δυνατή η αποθήκευση των ημερών που μεταφέρθηκαν. Το {year} εξακολουθεί να δείχνει {value} ημέρες.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Οι ημέρες που μεταφέρθηκαν για το {year} υπολογίζονται πλέον από το {previousYear}. Είχατε εισαγάγει {value} ημέρα.',
+    other:
+      'Οι ημέρες που μεταφέρθηκαν για το {year} υπολογίζονται πλέον από το {previousYear}. Είχατε εισαγάγει {value} ημέρες.',
+  },
   'vacay.pending.loading': 'Φόρτωση',
   'vacay.error.title': 'Ο προγραμματιστής αδειών δεν φορτώθηκε',
   'vacay.year.previous': 'Προηγούμενο έτος',

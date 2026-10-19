@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
+import { useRouterState } from '@tanstack/react-router'
 
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { holdsJoinPath } from '#/lib/sentry-scrub'
 import { useTheme } from '#/lib/theme'
 
 import type { Feedback } from '#/lib/sentry-feedback'
@@ -12,6 +14,10 @@ import type { Feedback } from '#/lib/sentry-feedback'
  * Most of what is worth hearing about never throws: a price that reads wrong, a button that does
  * nothing, a sentence that means the opposite in Polish. None of that reaches Sentry on its own,
  * and none of it has an error panel to hang a report off.
+ *
+ * Not on a join location (`/join/<secret>`, or a sign-in page carrying one): a screenshot is an
+ * attachment no scrub can read, and a window capture shows the address bar. The same rule as the
+ * session replay (`src/lib/sentry-replay.ts`), and the button comes back when the visitor leaves.
  *
  * What the widget adds over a textarea is the screenshot. The capture is a real `getDisplayMedia`
  * screen share - the browser asks first, and the SDK hides the button on mobile, where the API is
@@ -59,6 +65,9 @@ export function FeedbackWidget() {
   const t = useTranslate()
   const locale = useLocale()
   const { resolved } = useTheme()
+  const offered = !useRouterState({
+    select: ({ location }) => holdsJoinPath(location.href),
+  })
 
   /**
    * `t` is memoised on the locale, so this runs once per language and not once per render. A
@@ -66,7 +75,7 @@ export function FeedbackWidget() {
    * change: the SDK reads them when the widget is constructed and never again.
    */
   useEffect(() => {
-    if (!REPORTING_ENABLED) return
+    if (!REPORTING_ENABLED || !offered) return
 
     let widget: ReturnType<Feedback['createWidget']> | undefined
     let cancelled = false
@@ -114,7 +123,7 @@ export function FeedbackWidget() {
       cancelled = true
       widget?.removeFromDom()
     }
-  }, [locale, t])
+  }, [locale, t, offered])
 
   /**
    * Colour comes from our tokens through the custom properties in `styles.css`, which flip with the

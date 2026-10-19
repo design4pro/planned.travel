@@ -37,6 +37,7 @@ import {
   getAuth,
 } from '#/server/auth'
 import { authDb } from '#/server/auth/db'
+import { recordParticipation } from '#/server/auth/participation'
 import {
   firstOrganizationIdFor,
   membershipRoleFor,
@@ -475,6 +476,7 @@ export async function resolveWorkspace(
       userId: owner.userId,
       organizationId: owner.organizationId,
       role: ownerRole,
+      impersonatedBy: null,
     }),
   }
 }
@@ -941,6 +943,7 @@ export async function ensureWorkspacePeople(
             userId,
             organizationId: workspace.organizationId,
             role: person.role,
+            impersonatedBy: null,
           }),
     )
   }
@@ -1000,6 +1003,7 @@ export async function ensureSecondWorkspace(
     organizationId,
   })
   if (membership === null) {
+    await recordParticipation(auth, organizationId, workspace.ownerUserId)
     await auth.insert(member).values({
       id: demoAuthId('member', `${slug}:${workspace.ownerUserId}`),
       organizationId,
@@ -1013,6 +1017,7 @@ export async function ensureSecondWorkspace(
     userId: workspace.ownerUserId,
     organizationId,
     role: 'owner',
+    impersonatedBy: null,
   })
   const stale = await getTripBySlug(scope, trip.slug)
   if (stale !== null) {

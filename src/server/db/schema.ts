@@ -3280,3 +3280,36 @@ export const calendarFeeds = sqliteTable(
     ),
   ],
 )
+
+/**
+ * The participation anchor: "this person took part in this workspace" (`.ai/specs/2026-10-08-erase-a-persons-data.md`,
+ * docs/adr/0043-erasure-outcomes.md).
+ *
+ * A person's rows survive their departure under a live id, and `member` forgets them the moment they
+ * leave, so an erasure that found workspaces through `member` would miss every workspace the person
+ * already left. This row is written wherever a `member` row is created (`src/server/auth/participation.ts`,
+ * `src/server/repos/participants.ts`) and is **not** removed when the person leaves. It holds a user
+ * id until an erasure finishes, and the engine removes the rows at its very end; this table is
+ * registered in `src/server/erasure/registry.ts` like any other column that names a user.
+ *
+ * Keyless, on the composite `primaryKey()` of `(organization_id, user_id)`: the pair *is* the identity
+ * of a participation, and `INSERT OR IGNORE` on it is what makes every writer, and the backfill,
+ * idempotent. The three nullable columns are the erasure job's state: the opaque id of the erasure
+ * that claimed the row, the Former member id the job reuses on a resume, and the instant the
+ * workspace was scrubbed. They are empty until the engine (a later change) writes them.
+ */
+export const workspaceParticipants = sqliteTable(
+  'workspace_participants',
+  {
+    organizationId: orgRef(),
+    userId: userRef('user_id').notNull(),
+    erasureId: text('erasure_id'),
+    tombstoneId: text('tombstone_id'),
+    scrubbedAt: integer('scrubbed_at', { mode: 'timestamp_ms' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.organizationId, t.userId] }),
+    index('workspace_participants_user_idx').on(t.userId),
+  ],
+)
