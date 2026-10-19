@@ -1289,6 +1289,21 @@ const messages = {
   'vacay.error.title': 'Plánovač dovolené se nenačetl',
   'vacay.year.previous': 'Předchozí rok',
   'vacay.year.next': 'Další rok',
+  'vacay.settings.open': 'Nastavení plánu dovolené',
+  'vacay.settings.title': 'Nastavení plánu dovolené',
+  'vacay.settings.description':
+    'Jak se převádějí nevyčerpané dny a kolik dnů máte ve výchozím stavu.',
+  'vacay.settings.carryOver': 'Převádět nevyčerpané dny do dalšího roku',
+  'vacay.settings.carryOver.hint':
+    'Po vypnutí se převedené dny skryjí, ale nesmažou.',
+  'vacay.settings.defaultAllowance': 'Výchozí nárok (dnů za rok)',
+  'vacay.settings.defaultAllowance.hint':
+    'Platí pro roky, ve kterých jste si nenastavili vlastní nárok.',
+  'vacay.settings.save': 'Uložit nastavení',
+  'vacay.settings.cancel': 'Zrušit',
+  'vacay.settings.saved': 'Nastavení plánu dovolené bylo uloženo.',
+  'vacay.settings.error':
+    'Nastavení plánu dovolené se nepodařilo uložit. Nic se nezměnilo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1411,6 +1411,21 @@ const messages = {
   'vacay.error.title': 'The leave planner did not load',
   'vacay.year.previous': 'Previous year',
   'vacay.year.next': 'Next year',
+  'vacay.settings.open': 'Leave plan settings',
+  'vacay.settings.title': 'Leave plan settings',
+  'vacay.settings.description':
+    'How unused days carry over and how many days you get by default.',
+  'vacay.settings.carryOver': 'Carry unused days into the next year',
+  'vacay.settings.carryOver.hint':
+    'Turning this off hides carried days; it does not erase them.',
+  'vacay.settings.defaultAllowance': 'Default allowance (days per year)',
+  'vacay.settings.defaultAllowance.hint':
+    'Applies to years where you have not set your own allowance.',
+  'vacay.settings.save': 'Save settings',
+  'vacay.settings.cancel': 'Cancel',
+  'vacay.settings.saved': 'Leave plan settings saved.',
+  'vacay.settings.error':
+    'The leave plan settings could not be saved. Nothing was changed.',
 } as const satisfies NamespaceMessages
 
 export default messages

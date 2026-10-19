@@ -1295,6 +1295,21 @@ const messages = {
   'vacay.error.title': 'Не вдалося завантажити планувальник відпусток',
   'vacay.year.previous': 'Попередній рік',
   'vacay.year.next': 'Наступний рік',
+  'vacay.settings.open': 'Налаштування плану відпусток',
+  'vacay.settings.title': 'Налаштування плану відпусток',
+  'vacay.settings.description':
+    'Як переносяться невикористані дні та скільки днів у вас за замовчуванням.',
+  'vacay.settings.carryOver': 'Переносити невикористані дні на наступний рік',
+  'vacay.settings.carryOver.hint':
+    'Якщо вимкнути, перенесені дні буде приховано, але не видалено.',
+  'vacay.settings.defaultAllowance': 'Ліміт за замовчуванням (днів на рік)',
+  'vacay.settings.defaultAllowance.hint':
+    'Діє для років, у яких ви не задали власний ліміт.',
+  'vacay.settings.save': 'Зберегти налаштування',
+  'vacay.settings.cancel': 'Скасувати',
+  'vacay.settings.saved': 'Налаштування плану відпусток збережено.',
+  'vacay.settings.error':
+    'Не вдалося зберегти налаштування плану відпусток. Нічого не змінилося.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1226,6 +1226,22 @@ const messages = {
   'vacay.error.title': 'A szabadságtervező nem töltődött be',
   'vacay.year.previous': 'Előző év',
   'vacay.year.next': 'Következő év',
+  'vacay.settings.open': 'Szabadságterv beállításai',
+  'vacay.settings.title': 'Szabadságterv beállításai',
+  'vacay.settings.description':
+    'Hogyan viszik át a fel nem használt napokat, és alapból hány napod van.',
+  'vacay.settings.carryOver':
+    'A fel nem használt napok átvitele a következő évre',
+  'vacay.settings.carryOver.hint':
+    'Ha kikapcsolod, az átvitt napok el lesznek rejtve, de nem törlődnek.',
+  'vacay.settings.defaultAllowance': 'Alapértelmezett keret (nap évente)',
+  'vacay.settings.defaultAllowance.hint':
+    'Azokra az évekre vonatkozik, amelyekhez nem adtál meg saját keretet.',
+  'vacay.settings.save': 'Beállítások mentése',
+  'vacay.settings.cancel': 'Mégse',
+  'vacay.settings.saved': 'A szabadságterv beállításai mentve.',
+  'vacay.settings.error':
+    'A szabadságterv beállításait nem sikerült menteni. Semmi sem változott.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

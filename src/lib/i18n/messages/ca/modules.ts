@@ -1276,6 +1276,22 @@ const messages = {
   'vacay.error.title': 'No s’ha pogut carregar el planificador de vacances',
   'vacay.year.previous': 'Any anterior',
   'vacay.year.next': 'Any següent',
+  'vacay.settings.open': 'Configuració del pla de vacances',
+  'vacay.settings.title': 'Configuració del pla de vacances',
+  'vacay.settings.description':
+    'Com es traslladen els dies no utilitzats i quants dies tens per defecte.',
+  'vacay.settings.carryOver':
+    'Trasllada els dies no utilitzats a l’any següent',
+  'vacay.settings.carryOver.hint':
+    'Si ho desactives, s’amaguen els dies traslladats, però no s’esborren.',
+  'vacay.settings.defaultAllowance': 'Assignació per defecte (dies per any)',
+  'vacay.settings.defaultAllowance.hint':
+    'S’aplica als anys en què no has definit la teva pròpia assignació.',
+  'vacay.settings.save': 'Desa la configuració',
+  'vacay.settings.cancel': 'Cancel·la',
+  'vacay.settings.saved': 'S’ha desat la configuració del pla de vacances.',
+  'vacay.settings.error':
+    'No s’ha pogut desar la configuració del pla de vacances. No s’ha canviat res.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

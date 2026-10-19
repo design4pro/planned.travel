@@ -1234,6 +1234,22 @@ const messages = {
   'vacay.error.title': 'De verlofplanner kon niet worden geladen',
   'vacay.year.previous': 'Vorig jaar',
   'vacay.year.next': 'Volgend jaar',
+  'vacay.settings.open': 'Instellingen van het verlofplan',
+  'vacay.settings.title': 'Instellingen van het verlofplan',
+  'vacay.settings.description':
+    'Hoe ongebruikte dagen worden overgedragen en hoeveel dagen je standaard hebt.',
+  'vacay.settings.carryOver':
+    'Ongebruikte dagen overdragen naar het volgende jaar',
+  'vacay.settings.carryOver.hint':
+    'Als je dit uitzet, worden overgedragen dagen verborgen, maar niet gewist.',
+  'vacay.settings.defaultAllowance': 'Standaardbudget (dagen per jaar)',
+  'vacay.settings.defaultAllowance.hint':
+    'Geldt voor jaren waarin je geen eigen budget hebt ingesteld.',
+  'vacay.settings.save': 'Instellingen opslaan',
+  'vacay.settings.cancel': 'Annuleren',
+  'vacay.settings.saved': 'De instellingen van het verlofplan zijn opgeslagen.',
+  'vacay.settings.error':
+    'De instellingen van het verlofplan konden niet worden opgeslagen. Er is niets gewijzigd.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

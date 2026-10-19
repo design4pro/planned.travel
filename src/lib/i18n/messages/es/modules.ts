@@ -1275,6 +1275,21 @@ const messages = {
   'vacay.error.title': 'No se pudo cargar el planificador de vacaciones',
   'vacay.year.previous': 'Año anterior',
   'vacay.year.next': 'Año siguiente',
+  'vacay.settings.open': 'Ajustes del plan de vacaciones',
+  'vacay.settings.title': 'Ajustes del plan de vacaciones',
+  'vacay.settings.description':
+    'Cómo se arrastran los días sin usar y cuántos días tienes por defecto.',
+  'vacay.settings.carryOver': 'Arrastrar los días sin usar al año siguiente',
+  'vacay.settings.carryOver.hint':
+    'Si lo desactivas, los días arrastrados se ocultan, pero no se borran.',
+  'vacay.settings.defaultAllowance': 'Asignación predeterminada (días por año)',
+  'vacay.settings.defaultAllowance.hint':
+    'Se aplica a los años en los que no has fijado tu propia asignación.',
+  'vacay.settings.save': 'Guardar ajustes',
+  'vacay.settings.cancel': 'Cancelar',
+  'vacay.settings.saved': 'Se han guardado los ajustes del plan de vacaciones.',
+  'vacay.settings.error':
+    'No se pudieron guardar los ajustes del plan de vacaciones. No se ha cambiado nada.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
