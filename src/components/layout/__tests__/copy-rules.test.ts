@@ -212,8 +212,21 @@ describe('the app shell ships no English literal', () => {
    * inside braces, which this cannot match. The single-word form is checked too,
    * because the chrome's copy is mostly single words — `Trips`, `Admin`, `Share`.
    */
-  const JSX_PHRASE = />\s*([A-Z][A-Za-z'’]*(?:[ ,.'’-]+[A-Za-z'’]+)+)\s*</g
-  const JSX_WORD = />\s*([A-Z][a-z]{2,})\s*</g
+  const JSX_PHRASE =
+    /(?<!=)>\s*([A-Z][A-Za-z'’]*(?:[ ,.'’-]+[A-Za-z'’]+)+)\s*</g
+  const JSX_WORD = /(?<!=)>\s*([A-Z][a-z]{2,})\s*</g
+
+  it('distinguishes callback return types from real JSX prose', () => {
+    expect([...'onAction: () => Promise<void>'.matchAll(JSX_WORD)]).toEqual([])
+    expect(
+      [...'<p>Promise</p>'.matchAll(JSX_WORD)].map((match) => match[1]),
+    ).toEqual(['Promise'])
+    expect(
+      [...'<p>Invite a member</p>'.matchAll(JSX_PHRASE)].map(
+        (match) => match[1],
+      ),
+    ).toEqual(['Invite a member'])
+  })
 
   it.each(COPY_CASES)(
     '%s renders no English in a JSX text node',

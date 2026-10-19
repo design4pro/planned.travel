@@ -70,11 +70,20 @@ describe('the console directory reaches no tenant layer', () => {
     expect(graph.unresolved.filter((entry) => !pending.test(entry))).toEqual([])
   })
 
-  it('reaches no module under src/server/repos, at any depth', () => {
+  it('reaches only the closed recipient-consumption repository and primitives', () => {
     const reached = graph.modules.filter((file) =>
       file.startsWith(`${TENANT_REPOS}/`),
     )
-    expect(reached).toEqual([])
+    expect(reached.sort()).toEqual(
+      [
+        'base.ts',
+        'batch.ts',
+        'context.ts',
+        'workspace-invitation-acceptance.ts',
+      ]
+        .map((name) => join(TENANT_REPOS, name))
+        .sort(),
+    )
   })
 
   it('reaches the tenant server-function bootstrap not at all', () => {

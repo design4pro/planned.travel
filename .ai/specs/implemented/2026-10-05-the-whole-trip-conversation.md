@@ -5,7 +5,7 @@
 | **Status**         | implemented                                        |
 | **Issue**          | none                                               |
 | **Spec PR**        | #904                                               |
-| **Implementation** | #1293, #1314, #1339, #1348, #1362, #1385                          |
+| **Implementation** | #1293, #1314, #1339, #1348, #1362, #1385, #1375    |
 | **Plan**           | 07-S3 (docs/plans/07-collaboration-and-sharing.md) |
 
 ## 📝 TLDR
@@ -550,7 +550,8 @@ migration, no event or route renamed.
 - **F1. The header count and the panel count read the loaded window** (`collab.tsx`), so a long thread says "50
   messages". The route file is `07-S2`'s. The slicing run files this as an issue **blocked by** the `07-S2`
   ticket that owns that file; it must either count the whole thread or stop printing a number that is only the
-  window.
+  window. Done in #920: the loader returns `messageCount` (`countMessages`, null while the conversation is off)
+  and both the header and the panel print it.
 - **F2. Reaction, edit and delete do not check that the message belongs to the trip sent.** `toggleReaction`,
   `editMessage` and `deleteMessage` call `requireById` on the message id only; a member could react to, and an
   admin delete, a message of a private trip they are not a member of, by pairing its id with a trip they can

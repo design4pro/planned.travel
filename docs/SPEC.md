@@ -228,9 +228,10 @@ whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
 - **F2 - six of the eleven message kinds have no dispatch site.** `describe()` in
   `src/server/auth/email.ts` maps eleven kinds of `TransactionalEmailMessage` onto a subject,
   analytics tag and template element (the two passkey kinds share one template).
-  `queueAuthEmail()` has five dispatch sites: Better Auth's `sendResetPassword`,
+  `queueAuthEmail()` has six dispatch sites: Better Auth's `sendResetPassword`,
   `sendVerificationEmail` and `sendInvitationEmail` hooks in `src/server/auth/index.ts`, and
-  successful registration and actual removal in `src/server/auth/passkey/plugin.ts` (#1186).
+  successful registration and actual removal in `src/server/auth/passkey/plugin.ts` (#1186), and
+  workspace invitation creation/resend in `src/server/fns/workspace-invitations.ts` (#1009).
   These send `auth.reset-password`, `auth.verify-email`, `auth.organization-invitation`,
   `auth.passkey-added` and `auth.passkey-removed`. The other six remain rendered but unsent:
   `auth.email-changed`, `auth.delete-account`, `billing.subscription-confirmed`,
@@ -338,7 +339,7 @@ Every domain row is scoped by `organization_id`. A user belongs to one or more o
 through `member`. **Every** query goes through a scoped repository in `src/server/repos/**`
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
 Tenant isolation is enforced in the repository layer and covered by tests. The bounded
-`…Unscoped` shape below is the explicit exception to the tenant-context argument.
+`…Unscoped` shape below and the four closed catalog exceptions are the explicit exceptions to the tenant-context argument.
 
 Erasure repository primitives use `createErasureScope` (`server/erasure/scope.ts`), the single
 factory for the reserved `system:erasure` owner actor. It binds one organization and no session;
@@ -398,11 +399,12 @@ Amendment - phase 5).
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" and "every query goes through a scoped
-repository" have a carve-out with exactly three members, and this section states all three. The
+repository" have a carve-out with exactly four members, and this section states all four. The
 first is a set of tables, excepted from both rules and stated immediately below. The second is a
 single query over rows that do carry an `organization_id`, excepted from the repository rule alone
 and admitted by amendment at the end of this section. The third is the erasure catalog: ids-only discovery and narrowly named system-actor cleanup
 primitives, admitted by amendments below.
+The fourth discovers only organisation ids for the weekly tenant audit retention sweep.
 
 Twelve tables are platform content rather than tenant data:
 
@@ -574,15 +576,38 @@ be erased in only one workspace. No tenant content table is read or written in t
 per-workspace domain scrubs still require the reserved owner `TenantScope` and tenant repository.
 The catalog graph remains forbidden from importing tenant repositories.
 
-The auth layer cannot import `src/server/repos` (the Workspace console graph reaches
-`#/server/auth` and must not reach the tenant layer), yet it creates memberships. It therefore
-holds one write-only exception, `src/server/auth/participation.ts`: a single `INSERT OR IGNORE` of
-`organization_id` and `user_id` into the anchor, with no select, update or delete, whose
-organization id comes from the id minted in the same batch or from hook data and never from a
-request body. A source test pins that the anchor's table is named only by the schema, that module,
-`repos/participants.ts`, the catalog read and the erasure registry.
+The auth layer cannot reach the tenant repository graph except for recipient invitation consumption
+(issue #1009): `auth/organization-invitations.ts` imports the auth-runtime-free
+`repos/workspace-invitation-acceptance.ts` and its `base`, `batch` and `context` primitives. The
+console graph pins this closed set; no tenant server-function bootstrap or repository barrel is
+reachable. `resolveWorkspaceInvitationScopeUnscoped` has that one production caller and returns only
+an organization id by matching the invitation with the authenticated user's current email (FU-3).
+The recipient scope carries the authenticated user, least-privilege member role and impersonator.
+Only the recipient operations use its delegated authority: they recheck the current verified email,
+pending state and tenant in SQL. Acceptance additionally rechecks expiry, role and the 100-member
+ceiling. One required atomic driver batch inserts a fresh membership, its participation anchor and
+the accepted state, tied to the same minted member id. It transfers an existing reservation even
+above a downgraded plan's quota; it never releases a seat between statements. Rejection is pending-only.
+Session activation still uses Better Auth's internal adapter after commit, preserving KV and audit
+hooks. Activation failure never restores pending or removes durable membership; the existing workspace
+switcher recovers activation. Repeating acceptance remains a refusal and never restores removed access.
 
-Three members, and that list is closed as firmly as the twelve names are. A fourth exception —
+Other auth membership paths retain `src/server/auth/participation.ts`: a write-only `INSERT OR IGNORE`
+of `organization_id` and `user_id`, with no select, update or delete, whose organization id comes from
+the id minted in the same batch or hook data, never a request body. A source test pins the anchor's
+writers, schema, catalog read and erasure registry.
+
+The fourth member is `catalog/tenant-audit-retention.ts`, reached only from
+`audit/retention.ts` in the existing weekly cron. Its discovery query returns organisation ids
+only, filters on the derived 400-day cutoff, is read-only and keyset-paged (100 ids per page).
+No tenant-readable content leaves discovery. All deletes then use `repos/audit.ts` through a
+`TenantScope` with role `member` and reserved placeholder `system:tenant-audit-retention`, never
+a real member. Each statement deletes at most 200 ids; one 250-batch budget covers every
+workspace together. `created_at` is the only retention criterion, no audit of the prune is
+written, and `drained: false` is logged at error level. The catalog module-graph guard forbids
+reaching repositories from discovery. `TENANT_AUDIT_RETENTION_DAYS = 400` is owner confirms.
+
+Four members, and that list is closed as firmly as the twelve names are. A fifth exception —
 another cross-tenant read, another module handed a plain `Database`, other than an `…Unscoped`
 repos function of the FU-3 shape above — is an amendment to this section, not something a builder
 takes on the way past.
@@ -711,7 +736,7 @@ Rules:
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`, normally through the tenant-scoped base repository; FU-3
   permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
-- The single stated exception is `server/catalog`, and §5 states it as a closed list of three. The
+- The single stated exception is `server/catalog`, and §5 states it as a closed list of four. The
   first member is the twelve global tables: eleven carry no `organization_id` at all and the twelfth,
   `provider_usage`, carries one only as attribution, so none of them can pass through the tenant
   repository, and every path that mutates or serves that platform content is guarded instead by an
@@ -724,8 +749,12 @@ Rules:
   (ADR 0005, amended into §5). The third is the erasure catalog, `catalog/erasure.ts`: two
   ids-only, keyset-paged discovery reads plus the four system-actor cleanup/count primitives
   stated in §5, reached from the backfill handler alone until the engine lands (ADR 0043; the auth layer's write-only anchor insert,
-  `auth/participation.ts`, is named there too). Three, and closed; a fourth one is a change to this
-  contract.
+  `auth/participation.ts`, is named there too). The fourth is `catalog/tenant-audit-retention.ts`: a session-less, ids-only,
+  cutoff-filtered, read-only, keyset-paged discovery read called only by `audit/retention.ts`.
+  Deletes use a member `TenantScope` with the reserved `system:tenant-audit-retention` placeholder,
+  through `repos/audit.ts`, by `created_at` alone: 400 days, 200 ids per batch, 250 batches shared
+  across the run, no self-audit, error on `drained: false`. Four, and closed; a fifth one changes
+  this contract.
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
   Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a

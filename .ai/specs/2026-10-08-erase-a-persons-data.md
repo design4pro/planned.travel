@@ -672,6 +672,28 @@ Open items a person decides. This spec does not decide them and records the defa
    reviewer is ever required.
 9. Whether the **privacy wording** changes ("deleting your account deletes your content" versus contributions kept as Former member).
 
+## Amendment (#1000)
+
+`.ai/specs/2026-10-17-delete-a-workspace-you-own.md` owns the one `deleteWorkspace` and its driver
+(`advanceWorkspaceDeletion`, the `workspace_deletions` ledger, the R2 prefix sweep, the fence, the late-subscription
+rule). Phase 4 above builds **its slices**, not a second function: the erasure engine calls the driver with
+`initiator: 'erasure'` for a workspace whose last member is the erased person, and the reserved system-owner scope is
+minted by #1000's driver phase, which the engine phases here are blocked by. The erasure keeps its own obligations on top of
+the driver: it captures the workspace's trip ids first (a bounded list) and resets every room with `deleteAll` (§ 7: waiting
+for the seven-day idle erase is not enough), and its verification step counts a workspace as deleted only once the ledger row
+has reached `rows_deleted` (the workspace row is gone). It **does not wait for that inside a delivery**: the job has five
+deliveries and no cron of its own, so a drain that outlasts them would dead-letter a banned, half-erased account although the
+deletion cron finishes the workspace. When a row has not reached `rows_deleted` the job parks (returns success; the account
+stays banned and the anchor rows keep their `erasure_id`, the incomplete state above) and the driver's `rows_deleted` step (or its `refused` transition)
+always enqueues the resume for the row's `erasure_id` (#1000, "The erasure resume"); exactly one job consumes the ledger row
+(a compare-and-set that records the envelope id, so the resume never overlaps a running job and nothing needs a park flag). A workspace the driver refuses after the ban
+(new members, a live subscription) ends the job with the step `workspace-refused:<deletionId>` on the anchor rows, which the
+console lists as an incomplete erasure for the operator; a Polar read that fails is retried by the deletion cron and is never
+a refusal for an erasure. The subscription gate in § 7 is the same pure
+function (`subscriptionBlocksWorkspaceDeletion`), and `unpaid` does **not** block under it: Polar sets that status when access
+has ended and the webhook already writes the Free row, so the status list in § 7 is read without `unpaid`. Where the two
+disagree, #1000 wins.
+
 ## Resolved assumptions (autonomous defaults)
 
 | #   | Question                                     | Applied default                                                                                                                                                                                                                                                     | Why                                                                                                                                                                                                                                                                         |
@@ -712,9 +734,10 @@ gated the ticket (`risk-high`):
 - **The audit actions are deferred.** `platform.user.erased` and `platform.user.erase_refused` are named
   in ADR 0043 and not added to `docs/ACCESS.md` §4.2 or `PLATFORM_AUDIT_ACTIONS` until the engine
   writes them.
-- **The anchor write is `beforeAddMember` and `beforeAcceptInvitation`**, not the `after*` hooks, and
-  the auth layer writes it through `src/server/auth/participation.ts`, a write-only module, because it
-  cannot import repos.
+- **The original anchor writes used `beforeAddMember` and `beforeAcceptInvitation`**. Issue #1009
+  replaces recipient acceptance with one atomic repository batch for membership, anchor and accepted
+  state, through the closed auth-to-repository exception in SPEC §5. Direct add retains the write-only
+  `src/server/auth/participation.ts` hook.
 - **The backfill is a chain**, not a fan-out: one message per workspace, payload a run id and a cursor,
   the marker written by the message that finds no workspace left.
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
@@ -868,3 +891,15 @@ saved by a required callback before D1 deletion so the engine can purge their KV
 The catalog supplies the three platform counts to `verifyErasure({ platform })`; it never changes
 the platform ledger. Tenant audit erasure is the one updater, touching actor/entity-related rows
 only and retaining filenames. No new user-facing concept, queue producer, or engine wiring ships.
+
+## Amendment - tenant audit retention (issue #1064)
+
+This supersedes the Audit paragraph's no-retention observation, finding F6 and the corresponding
+owner-confirms premise above. The existing weekly retention slot now calls `audit/retention.ts`:
+session-less, keyset-paged organisation-id discovery, then tenant-scoped `pruneAuditLog` batches.
+`TENANT_AUDIT_RETENTION_DAYS = 400` is the stated owner-confirms default, matching the platform
+ledger. The cutoff itself is kept; only `created_at` selects rows for deletion. Each delete names
+at most 200 ids and one 250-batch cap covers the whole run. Structured logs record `deleted`,
+`batches`, `organizations`, `drained`; remaining work is an error, with no audit row about the prune.
+The trip history panel, overview activity list and action-count chart stop showing activity older
+than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.

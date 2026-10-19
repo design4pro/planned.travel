@@ -10,6 +10,7 @@ import { createServerFn } from '@tanstack/react-start'
 import {
   CollabSectionsError,
   canWritePlan,
+  countMessages,
   requireTrip,
   setTripCollabSections,
   tripRoleFor,
@@ -36,6 +37,11 @@ export interface CollabPayload {
   readonly sections: CollabSections
   readonly canConfigure: boolean
   readonly messages: ReadonlyArray<MessageRow>
+  /**
+   * Every message of the conversation, not only the window in `messages`; null while the
+   * conversation section is switched off, when no count is read.
+   */
+  readonly messageCount: number | null
   readonly notes: ReadonlyArray<NoteRow>
   readonly polls: ReadonlyArray<PollRow>
   readonly people: ReadonlyArray<PersonChip>
@@ -62,8 +68,9 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
     const sections = resolveCollabSections(trip.collabModules)
     const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
 
-    const [messages, notes, polls, people] = await Promise.all([
+    const [messages, messageCount, notes, polls, people] = await Promise.all([
       threadPayload(scope, trip),
+      sections.conversation ? countMessages(scope, trip.id) : null,
       notesPayload(scope, trip),
       pollsPayload(scope, trip),
       loadPeople(trip.id, scope),
@@ -76,6 +83,7 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
       viewerUserId: scope.ctx.userId,
       timeZone: resolveTimeZone(trip.timezone),
       messages,
+      messageCount,
       notes,
       polls,
     }

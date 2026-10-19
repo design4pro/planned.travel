@@ -21,6 +21,24 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Πρόσκληση',
+  'workspace.invite.resend': 'Επαναποστολή',
+  'workspace.invite.revoke': 'Ανάκληση',
+  'workspace.invite.confirm': 'Ανάκληση πρόσκλησης',
+  'workspace.invite.expired': 'Έληξε',
+  'workspace.invite.by': 'Πρόσκληση από {name}',
+  'workspace.invite.sent': 'Η πρόσκληση στάλθηκε',
+  'workspace.invite.revoked': 'Η πρόσκληση ανακλήθηκε',
+  'workspace.invite.delivery':
+    'Η πρόσκληση αποθηκεύτηκε, αλλά η αποστολή email απέτυχε. Στείλτε την ξανά.',
+  'workspace.invite.duplicate':
+    'Υπάρχει ήδη εκκρεμής πρόσκληση. Στείλτε την ξανά.',
+  'workspace.invite.existing':
+    'Αυτό το άτομο είναι ήδη μέλος του χώρου εργασίας.',
+  'workspace.invite.failed':
+    'Η πρόσκληση δεν είναι διαθέσιμη. Ανανεώστε τη λίστα και δοκιμάστε ξανά.',
+  'workspace.invite.reload': 'Ανανέωση προσκλήσεων',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Λογαριασμός',
   'page.title': 'Ρυθμίσεις',

@@ -2,7 +2,9 @@
  * Platform audit log — an append-only record of what happened *to the platform*, as opposed to what
  * happened inside a workspace.
  *
- * This module is the single writer of `platform_audit_log` (SPEC §5, docs/ACCESS.md §4). Rows are
+ * This module is the single writer of `platform_audit_log` (SPEC §5, docs/ACCESS.md §4).
+ * Tenant audit retention is a separate tenant-scoped sweep sharing this weekly 400-day slot;
+ * discovery lives in catalog/tenant-audit-retention.ts, orchestration outside catalog. Rows are
  * never updated, and the only delete path is {@link prunePlatformAuditLog} for the retention cron.
  * An audit write must never be the reason a user's action fails, so callers append *after* the
  * mutation has committed and {@link appendPlatformAudit} swallows every failure it can raise — the

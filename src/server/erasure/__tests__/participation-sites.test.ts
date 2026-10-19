@@ -62,11 +62,17 @@ describe('every place that inserts a membership writes the anchor', () => {
     const index = codeOf(
       readFileSync(`${SOURCE_ROOT}/server/auth/index.ts`, 'utf8'),
     )
-    // Each hook is cut at the next one, so one hook's call cannot satisfy the other's check.
-    expect(index).toMatch(
-      /beforeAddMember[\s\S]*?recordParticipation\([\s\S]*?beforeAcceptInvitation/,
+    expect(index).toMatch(/beforeAddMember[\s\S]*?recordParticipation\(/)
+    expect(index).toContain('organizationWithAtomicInvitations')
+    const acceptance = codeOf(
+      readFileSync(
+        `${SOURCE_ROOT}/server/repos/workspace-invitation-acceptance.ts`,
+        'utf8',
+      ),
     )
-    expect(index).toMatch(/beforeAcceptInvitation[\s\S]*?recordParticipation\(/)
+    expect(acceptance).toMatch(
+      /runAtomicBatch[\s\S]*?prepareTenantInsert[\s\S]*?workspaceParticipants/,
+    )
   })
 
   it('notices an insert with no anchor write (fixture)', () => {
@@ -93,6 +99,7 @@ describe('the anchor table is named only where it may be', () => {
     'server/db/schema.ts',
     'server/erasure/registry.ts',
     'server/repos/participants.ts',
+    'server/repos/workspace-invitation-acceptance.ts',
   ]
   const NAME = /workspace_participants|workspaceParticipants/
 

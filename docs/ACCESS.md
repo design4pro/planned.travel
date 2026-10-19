@@ -308,8 +308,9 @@ session-less path in this codebase is already built, and named the same way:
   other module imports them, the way §2.6's drift test asserts its own list.
 
 SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
-closed list of exactly three catalog members is unchanged by it (ADR 0041; the third is the
-erasure catalog, ADR 0043).
+closed catalog list was unchanged by FU-3 (ADR 0041). It now has exactly four members:
+global tables, reminder discovery, the erasure catalog (ids-only discovery and system-actor cleanup, ADR 0043) and tenant audit retention
+discovery (§4.5); both discovery reads return ids only.
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
@@ -445,9 +446,9 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with four exceptions. Two are closed by the plugin's own options and not
+document does not govern - with six exceptions. Two are closed by the plugin's own options and not
 by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other two are closed by
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other four are closed by
 `disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
 `src/server/auth/admin-options.ts`, merged with the fifteen admin paths into `DISABLED_PATHS`, which is
 what `src/server/auth/index.ts` passes). `organization/update-member-role` writes a role without an
@@ -468,6 +469,16 @@ trips included - and leave the provider subscription billing, the R2 objects orp
 log silent. A workspace therefore has no HTTP deletion path until the product-owned one (#1000)
 exists, and that change must decide the flag explicitly: a deletion done through repository SQL keeps
 it, one that moved to the plugin's endpoint would have to remove it.
+`organization/invite-member` (including its resend option) and `organization/cancel-invitation`
+are also closed by `DISABLED_ORGANIZATION_PATHS` (#1009). The Workspace console calls the tenant-scoped
+invitation lifecycle instead: owners and admins may invite within their role ceiling, duplicates
+require explicit same-row resend, and members plus all pending invitations reserve seats. The quota
+and duplicate predicates execute in the insert statement; state changes require a still-pending row.
+Expiry comes from the server's shared seven-day policy. Create/resend queue one invitation email and
+report queue failure as recoverable delivery failure; real transitions write the tenant trail. Recipient
+lookup, acceptance and rejection stay open, retaining recipient, verification, expiry and status checks
+and the participation anchor. This tenant action keeps central impersonator attribution (§6.4).
+
 `deleteWorkspace` (`src/server/repos/members.ts`, #1057) is that repository-SQL deletion. It stays on `assertCanAdminister`, so a workspace `admin` may delete the workspace as well as the `owner`; narrowing the interactive caller to the owner is the screen's decision.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
@@ -1066,7 +1077,9 @@ in code and not in this table fails it; so does a name in this table that nothin
 
 ### 4.3 Append-only, and never a reason to fail
 
-- **Append-only.** Rows are never updated. The only delete path is the retention cron
+The tenant log now shares the 400-day weekly window, with tenant-scoped bounded writes (§4.5).
+
+- **Append-only.** Only `eraseUserAudit` in `repos/audit-erasure.ts` updates rows for personal-data erasure. The only delete path is the retention cron
   (`17 4 * * 1`) pruning by `created_at`, on a retention window of **400 days** - thirteen months,
   so a full financial year plus a month is always readable. No other code path deletes from this
   table; a console action that "removes an entry" does not exist. The prune runs on the platform
@@ -1134,9 +1147,19 @@ would store the same data a second time, and the moment the two disagree there i
 answer to which one is true. One append-only log, one index, one range scan - and the curator
 detail screen renders the timeline from it directly.
 
-### 4.5 The tenant log is unchanged
+### 4.5 The tenant log and its retention
 
-`audit_log` (`src/server/db/schema.ts`) stays exactly as it is: `organization_id`-scoped, written
+The weekly `17 4 * * 1` slot also removes tenant rows strictly older than **400 days**
+(`TENANT_AUDIT_RETENTION_DAYS`, owner confirms), keeping the cutoff itself. Session-less,
+keyset-paged organisation-id discovery precedes tenant-scoped deletes by `created_at` alone.
+The system uses reserved placeholder `system:tenant-audit-retention` with role `member`, never
+an actual member's identity. Statements name at most 200 ids, with one 250-batch cap for the
+whole run. Counts (`deleted`, `batches`, `organizations`, `drained`) are structured logs;
+`drained: false` is an error. No audit entry is written about retention itself.
+The trip history panel, overview activity list and action-count chart consequently stop showing
+activity older than 400 days once pruned. No UI setting changes this constant.
+
+`audit_log` (`src/server/db/schema.ts`) keeps its schema: `organization_id`-scoped, written
 through `src/server/repos/audit.ts` on `createTenantRepository()`, with its `metadata` JSON column
 and no `actor_kind`. It records what happened inside a workspace. `platform_audit_log` records what
 happened to the platform. They are never merged, never joined, and never read through each other's

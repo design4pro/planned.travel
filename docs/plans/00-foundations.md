@@ -844,8 +844,9 @@ new token, no new primitive.
 
 **Creates no quota-bearing row, explicitly.** Audit entries are a compliance record, not a sold
 resource; metering them would give a tenant an incentive to act in ways that produce fewer of them,
-which is precisely backwards. Growth is bounded instead by `pruneAuditLog(scope, before)`, which
-already exists in the repository and is the retention lever. Nothing is added to `resolveLimits()`,
+which is precisely backwards. Growth is bounded instead by `pruneAuditLog(scope, now)`, which
+derives the 400-day retention cutoff internally and runs in bounded tenant-scoped batches from
+the weekly retention slot (#1064). Nothing is added to `resolveLimits()`,
 nothing to `PLAN_QUOTAS`, no case to `src/server/billing/__tests__/limits.test.ts`.
 
 ### Tenant isolation test

@@ -44,6 +44,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Mời',
+  'workspace.invite.resend': 'Gửi lại',
+  'workspace.invite.revoke': 'Thu hồi',
+  'workspace.invite.confirm': 'Thu hồi lời mời',
+  'workspace.invite.expired': 'Đã hết hạn',
+  'workspace.invite.by': 'Được mời bởi {name}',
+  'workspace.invite.sent': 'Đã gửi lời mời',
+  'workspace.invite.revoked': 'Đã thu hồi lời mời',
+  'workspace.invite.delivery':
+    'Đã lưu lời mời nhưng không gửi được email. Hãy gửi lại.',
+  'workspace.invite.duplicate': 'Đã có lời mời đang chờ. Hãy gửi lại.',
+  'workspace.invite.existing':
+    'Người này đã là thành viên không gian làm việc.',
+  'workspace.invite.failed':
+    'Lời mời không khả dụng. Làm mới danh sách và thử lại.',
+  'workspace.invite.reload': 'Làm mới lời mời',
+
   'page.eyebrow': 'Tài khoản',
   'page.title': 'Cài đặt',
   'page.description':

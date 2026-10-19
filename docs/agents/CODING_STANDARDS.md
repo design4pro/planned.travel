@@ -4,7 +4,7 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 
 ## Layering (contract, not style)
 
-- All SQL lives in `src/server/repos` and passes through the tenant-scoped base repository — the tenant filter must not be removable. `server/catalog` is the single stated exception (exactly three members: global tables, the bounded cron discovery read and the erasure catalog, SPEC §5). An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- All SQL lives in `src/server/repos` and passes through the tenant-scoped base repository — the tenant filter must not be removable. `server/catalog` is the single stated exception (exactly four members: global tables, the bounded reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and the ids-only tenant audit retention discovery read, SPEC §5). An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - Routes call server functions (`server/fns`); server functions call repos. No SQL anywhere else.
 - `components/ui` never fetches data and never imports from `server/`.
 - `server/public` returns only named, column-whitelisted read-only projections.

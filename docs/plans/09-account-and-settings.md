@@ -1061,6 +1061,13 @@ configuration exactly as it stands (`organization()` carries `disableOrganizatio
 > slice, which puts it in `src/server/repos/members.ts` where this stage and plan 10 expect it; whichever lands first adds
 > it and the other consumes it. The rest of this stage (the dialog, the two confirmations) stands.
 
+> **Superseded in part by `.ai/specs/2026-10-17-delete-a-workspace-you-own.md` (#1000).** That spec owns
+> `deleteWorkspace`: it asserts `owner` through `assertRole` (not `assertCanAdminister`, which admits `admin`), deletes
+> only while the caller is the sole member through one guarded statement, and sits inside one driver
+> (`advanceWorkspaceDeletion`) that this stage's rules 1 to 3 reach through the erasure engine. The cascade covers 61
+> `orgRef()` tables, not fifty-seven. Rule 3's "not the sole member: only the `member` row goes" is unchanged.
+> The workspace-level "delete this workspace" button is no longer plan 10's (`ADM-02`): it is #1000's, in the spec above (Phase 8).
+
 1. The reader confirms by email — Better Auth's own verification round-trip — and then by typing
    their password. Both, not either.
 2. `beforeDelete` enumerates the caller's memberships. For every workspace where they are the sole

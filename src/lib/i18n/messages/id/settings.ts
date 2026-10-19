@@ -41,6 +41,22 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Undang',
+  'workspace.invite.resend': 'Kirim ulang',
+  'workspace.invite.revoke': 'Batalkan',
+  'workspace.invite.confirm': 'Batalkan undangan',
+  'workspace.invite.expired': 'Kedaluwarsa',
+  'workspace.invite.by': 'Diundang oleh {name}',
+  'workspace.invite.sent': 'Undangan terkirim',
+  'workspace.invite.revoked': 'Undangan dibatalkan',
+  'workspace.invite.delivery':
+    'Undangan tersimpan, tetapi email gagal dikirim. Kirim ulang untuk mencoba lagi.',
+  'workspace.invite.duplicate': 'Undangan tertunda sudah ada. Kirim ulang.',
+  'workspace.invite.existing': 'Orang ini sudah menjadi anggota ruang kerja.',
+  'workspace.invite.failed':
+    'Undangan tidak tersedia. Muat ulang daftar dan coba lagi.',
+  'workspace.invite.reload': 'Muat ulang undangan',
+
   'page.eyebrow': 'Akun',
   'page.title': 'Pengaturan',
   'page.description':

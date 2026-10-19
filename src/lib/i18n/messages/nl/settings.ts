@@ -31,6 +31,23 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Uitnodigen',
+  'workspace.invite.resend': 'Opnieuw versturen',
+  'workspace.invite.revoke': 'Intrekken',
+  'workspace.invite.confirm': 'Uitnodiging intrekken',
+  'workspace.invite.expired': 'Verlopen',
+  'workspace.invite.by': 'Uitgenodigd door {name}',
+  'workspace.invite.sent': 'Uitnodiging verstuurd',
+  'workspace.invite.revoked': 'Uitnodiging ingetrokken',
+  'workspace.invite.delivery':
+    'Uitnodiging opgeslagen, maar de e-mail is niet verstuurd. Verstuur opnieuw.',
+  'workspace.invite.duplicate':
+    'Er staat al een uitnodiging open. Verstuur opnieuw.',
+  'workspace.invite.existing': 'Deze persoon is al lid van de werkruimte.',
+  'workspace.invite.failed':
+    'Uitnodiging niet beschikbaar. Vernieuw de lijst en probeer opnieuw.',
+  'workspace.invite.reload': 'Uitnodigingen vernieuwen',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Mijn account',
   'page.title': 'Instellingen',

@@ -16,6 +16,20 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': '邀请',
+  'workspace.invite.resend': '重新发送',
+  'workspace.invite.revoke': '撤销',
+  'workspace.invite.confirm': '撤销邀请',
+  'workspace.invite.expired': '已过期',
+  'workspace.invite.by': '邀请人：{name}',
+  'workspace.invite.sent': '邀请已发送',
+  'workspace.invite.revoked': '邀请已撤销',
+  'workspace.invite.delivery': '邀请已保存，但邮件发送失败。请重新发送。',
+  'workspace.invite.duplicate': '已有待处理的邀请。请重新发送。',
+  'workspace.invite.existing': '此人已是工作空间成员。',
+  'workspace.invite.failed': '邀请不可用。请刷新列表后重试。',
+  'workspace.invite.reload': '刷新邀请',
+
   'page.eyebrow': '账号',
   'page.title': '设置',
   'page.description':

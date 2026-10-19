@@ -14,3 +14,8 @@ export function authDb() {
 }
 
 export type AuthDb = ReturnType<typeof authDb>
+
+/** Schema-free handle for the bounded recipient invitation repository. */
+export function authRepositoryDb() {
+  return drizzle(d1())
+}

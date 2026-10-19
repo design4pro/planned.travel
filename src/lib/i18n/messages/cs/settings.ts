@@ -33,6 +33,23 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Pozvat',
+  'workspace.invite.resend': 'Odeslat znovu',
+  'workspace.invite.revoke': 'Odvolat',
+  'workspace.invite.confirm': 'Odvolat pozvánku',
+  'workspace.invite.expired': 'Platnost vypršela',
+  'workspace.invite.by': 'Pozval(a) {name}',
+  'workspace.invite.sent': 'Pozvánka odeslána',
+  'workspace.invite.revoked': 'Pozvánka odvolána',
+  'workspace.invite.delivery':
+    'Pozvánka uložena, ale odeslání e-mailu selhalo. Odešlete ji znovu.',
+  'workspace.invite.duplicate':
+    'Pozvánka již čeká na vyřízení. Odešlete ji znovu.',
+  'workspace.invite.existing': 'Tato osoba je již členem pracovního prostoru.',
+  'workspace.invite.failed':
+    'Pozvánka není dostupná. Obnovte seznam a zkuste to znovu.',
+  'workspace.invite.reload': 'Obnovit pozvánky',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Účet',
   'page.title': 'Nastavení',
