@@ -630,16 +630,16 @@ adds a consequential write records it with a key of the same shape, and this scr
 no code change, because the action column reads the stored string rather than a closed enumeration.
 This stage does not reach into another plan's files to add a call site.
 
-**Pruning policy.** Audit entries are kept for **180 days** and then dropped. `pruneAuditLog(scope,
-before)` (`src/server/repos/audit.ts:141`) is the only deletion path and it already exists; nothing
-in the product deletes a single entry, and the console offers no delete control at all, because a
-trail an administrator can edit is not evidence of anything. The retention window is stated on the
-panel itself, so the horizon of the table is never a surprise to the person reading it. The sweep
-runs from the weekly retention cron already declared in `wrangler.jsonc` — the trigger exists and its
-handler currently only logs, so wiring `pruneAuditLog` into it is a requirement on
-`00-foundations.md`, which owns `src/server/worker.ts`. It is recorded under **Blockers** below and
-is not a thing this stage writes. Until it lands, retention is a stated policy that no job enforces,
-which is worth knowing rather than assuming.
+**Pruning policy.** Audit entries are kept for **400 days** (`TENANT_AUDIT_RETENTION_DAYS`,
+owner confirms), then removed by the wired weekly retention slot in `src/server/worker.ts`.
+`audit/retention.ts` discovers organisation ids without a session and calls `pruneAuditLog(scope,
+now)` through a tenant scope with the reserved member placeholder `system:tenant-audit-retention`.
+The prune derives the cutoff internally; the boundary itself is kept. Deletes name at most 200
+ids each with one 250-batch cap across every workspace. Counts and `drained` are logged, with
+error severity when work remains. No entry about the prune is written. There is no delete control
+for individual audit entries. The trip history, overview activity list and action-count chart
+stop showing activity older than 400 days once pruned. Showing the window on the administration
+panel remains this stage's UI work; the retention job is already wired by #1064.
 
 Rows unblocked: none directly. `ADM-01` and `ADM-03` both read this table and inherit a trail with
 real rows in it.
@@ -785,7 +785,7 @@ no backfill.
   keyset cursor with no page number to address. Saying so here is cheaper than a reviewer asking.
 - **States.**
   - _Empty, unfiltered:_ "Nothing has been recorded yet" on `--color-surface-2` with a `ScrollText`
-    glyph and one line naming the 180-day retention window — an empty trail reads as new, not
+    glyph and one line naming the 400-day retention window — an empty trail reads as new, not
     broken.
   - _Empty, filtered:_ a distinct state, "No entries match these filters", on `--color-surface-2`,
     whose action is "Clear filters" rather than a link away.
@@ -812,7 +812,7 @@ no backfill.
 **This stage creates no countable row, and audit entries are deliberately unmetered.** Metering a
 compliance record would give a tenant a reason to act in ways that produce fewer entries, which is
 precisely backwards. Nothing is added to `resolveLimits()`, nothing to `PLAN_QUOTAS`, and no case to
-`src/server/billing/__tests__/limits.test.ts`. Growth is bounded by the 180-day retention above,
+`src/server/billing/__tests__/limits.test.ts`. Growth is bounded by the 400-day retention above,
 enforced through `pruneAuditLog`.
 
 ### Tenant isolation test
@@ -956,11 +956,7 @@ harness precondition:
 
 - `00-S3` (`00-foundations.md`, wave 0) supplies `trail()` and the first production call sites. Wave
   0 closes before wave 1 opens.
-- The 180-day sweep needs `pruneAuditLog` called from the weekly retention cron. The cron trigger is
-  already declared, but its handler lives in `src/server/worker.ts`, one of the six shared paths, so
-  this is a **foundations requirement** on `00-foundations.md` and not a file this stage touches.
-  Until it lands the retention window is policy without enforcement, which is a stated gap rather
-  than a hidden one.
+- The 400-day sweep is wired by #1064 in the existing weekly retention slot; no cron work remains for this stage.
 - **Inherited harness precondition — `12-verification-protocol.md` §7.1, and it is blocking for this
   stage's baselines rather than for its code.** That section names `/admin` explicitly: it is one of
   two screens printing a `formatRelative` string, and the instants those strings are derived from are

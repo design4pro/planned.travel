@@ -308,8 +308,9 @@ session-less path in this codebase is already built, and named the same way:
   other module imports them, the way §2.6's drift test asserts its own list.
 
 SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
-closed list of exactly three catalog members is unchanged by it (ADR 0041; the third is the
-erasure catalog read, ADR 0043).
+closed catalog list was unchanged by FU-3 (ADR 0041). It now has exactly four members:
+global tables, reminder discovery, the erasure catalog read (ADR 0043) and tenant audit retention
+discovery (§4.5); the last two return ids only.
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
@@ -1066,6 +1067,8 @@ in code and not in this table fails it; so does a name in this table that nothin
 
 ### 4.3 Append-only, and never a reason to fail
 
+The tenant log now shares the 400-day weekly window, with tenant-scoped bounded writes (§4.5).
+
 - **Append-only.** Rows are never updated. The only delete path is the retention cron
   (`17 4 * * 1`) pruning by `created_at`, on a retention window of **400 days** - thirteen months,
   so a full financial year plus a month is always readable. No other code path deletes from this
@@ -1134,9 +1137,19 @@ would store the same data a second time, and the moment the two disagree there i
 answer to which one is true. One append-only log, one index, one range scan - and the curator
 detail screen renders the timeline from it directly.
 
-### 4.5 The tenant log is unchanged
+### 4.5 The tenant log and its retention
 
-`audit_log` (`src/server/db/schema.ts`) stays exactly as it is: `organization_id`-scoped, written
+The weekly `17 4 * * 1` slot also removes tenant rows strictly older than **400 days**
+(`TENANT_AUDIT_RETENTION_DAYS`, owner confirms), keeping the cutoff itself. Session-less,
+keyset-paged organisation-id discovery precedes tenant-scoped deletes by `created_at` alone.
+The system uses reserved placeholder `system:tenant-audit-retention` with role `member`, never
+an actual member's identity. Statements name at most 200 ids, with one 250-batch cap for the
+whole run. Counts (`deleted`, `batches`, `organizations`, `drained`) are structured logs;
+`drained: false` is an error. No audit entry is written about retention itself.
+The trip history panel, overview activity list and action-count chart consequently stop showing
+activity older than 400 days once pruned. No UI setting changes this constant.
+
+`audit_log` (`src/server/db/schema.ts`) keeps its schema: `organization_id`-scoped, written
 through `src/server/repos/audit.ts` on `createTenantRepository()`, with its `metadata` JSON column
 and no `actor_kind`. It records what happened inside a workspace. `platform_audit_log` records what
 happened to the platform. They are never merged, never joined, and never read through each other's
