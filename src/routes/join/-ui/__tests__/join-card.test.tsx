@@ -15,6 +15,7 @@ import Ui from '#/lib/i18n/messages/en/ui'
 import { JoinCard, JoinFrame, JoinSkeleton, RetryCard } from '../join-card'
 
 import type { Catalogue } from '#/lib/i18n'
+import type { JoinAnswer } from '../../-lib/join'
 import type { InviteView } from '../../-lib/view'
 import type { ReactNode } from 'react'
 
@@ -41,10 +42,21 @@ const EN: Catalogue = {
 const PATH = '/join/the-secret'
 const noop = () => Promise.resolve()
 
-function renderView(view: InviteView, onRetry: () => Promise<void> = noop) {
+const joinedAnswer: JoinAnswer = {
+  outcome: 'joined',
+  tripId: 'trip-1',
+  organizationId: 'org-1',
+  switchWorkspace: false,
+}
+
+function renderView(
+  view: InviteView,
+  onRetry: () => Promise<void> = noop,
+  onJoin: () => Promise<JoinAnswer> = () => Promise.resolve(joinedAnswer),
+) {
   return render(
     <I18nProvider locale="en" messages={EN}>
-      <JoinCard view={view} path={PATH} onRetry={onRetry} />
+      <JoinCard view={view} path={PATH} onRetry={onRetry} onJoin={onJoin} />
     </I18nProvider>,
   )
 }
@@ -56,6 +68,14 @@ const invited = {
   inviterName: 'Ada',
   inviterImage: null,
   role: 'editor',
+} as const
+
+const signedIn = {
+  ...invited,
+  signedIn: true,
+  startDate: '2027-05-01',
+  endDate: '2027-05-09',
+  destination: 'Portugal',
 } as const
 
 beforeEach(() => auth.setActive.mockReset())
@@ -88,23 +108,13 @@ describe('JoinCard', () => {
     expect(screen.queryByText('Dates')).toBeNull()
   })
 
-  it('shows a signed-in visitor the dates and destination and no sign-in', () => {
-    renderView({
-      ...invited,
-      signedIn: true,
-      startDate: '2027-05-01',
-      endDate: '2027-05-09',
-      destination: 'Portugal',
-    })
+  it('shows a signed-in visitor the dates and destination and one action to join', () => {
+    renderView(signedIn)
     expect(screen.getByText('Dates')).toBeTruthy()
     expect(screen.getByText('Portugal')).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Sign in' })).toBeNull()
     expect(screen.queryByText(/New here/)).toBeNull()
-    expect(
-      screen
-        .getByRole('link', { name: 'Go to your trips' })
-        .getAttribute('href'),
-    ).toBe('/trips')
+    expect(screen.getByRole('button', { name: 'Join this trip' })).toBeTruthy()
   })
 
   it('opens the trip for a member whose workspace is already active', () => {
@@ -273,6 +283,218 @@ describe('JoinCard', () => {
   })
 })
 
+describe('joining from the card', () => {
+  const join = () =>
+    userEvent.click(screen.getByRole('button', { name: 'Join this trip' }))
+
+  it('puts the traveller on the trip, says so and moves focus to the new heading', async () => {
+    const onJoin = vi.fn(() => Promise.resolve(joinedAnswer))
+    renderView(signedIn, noop, onJoin)
+    await join()
+    const heading = await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+    expect(onJoin).toHaveBeenCalledOnce()
+    expect(screen.getByText('Open it to see the plan.')).toBeTruthy()
+    expect(
+      screen.getByRole('link', { name: 'Open the trip' }).getAttribute('href'),
+    ).toBe('/trips/trip-1')
+    expect(document.activeElement).toBe(heading)
+    // The focus move is the announcement: no live region speaks as well.
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it("offers to switch workspace first when the active one is not the trip's", async () => {
+    renderView(signedIn, noop, () =>
+      Promise.resolve({ ...joinedAnswer, switchWorkspace: true }),
+    )
+    await join()
+    expect(
+      await screen.findByRole('button', {
+        name: 'Open the trip and switch workspace',
+      }),
+    ).toBeTruthy()
+  })
+
+  it('keeps the button and says so when the switch after joining fails', async () => {
+    auth.setActive.mockResolvedValueOnce({ error: { status: 500 } })
+    renderView(signedIn, noop, () =>
+      Promise.resolve({ ...joinedAnswer, switchWorkspace: true }),
+    )
+    await join()
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: 'Open the trip and switch workspace',
+      }),
+    )
+    expect(auth.setActive).toHaveBeenCalledWith({ organizationId: 'org-1' })
+    expect(
+      await screen.findByText('Could not switch workspace. Try again.'),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('button', {
+        name: 'Open the trip and switch workspace',
+      }),
+    ).toBeTruthy()
+  })
+
+  it('shows joined, not already a member, when a retry comes back as member straight after the tap', async () => {
+    renderView(signedIn, noop, () =>
+      Promise.resolve({ ...joinedAnswer, outcome: 'member' }),
+    )
+    await join()
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'You are on the trip',
+      }),
+    ).toBeTruthy()
+    expect(screen.queryByText('You are already on this trip')).toBeNull()
+  })
+
+  it('holds the button busy and named for the joining while the request runs', async () => {
+    let finish: (answer: JoinAnswer) => void = () => undefined
+    renderView(
+      signedIn,
+      noop,
+      () => new Promise<JoinAnswer>((resolve) => (finish = resolve)),
+    )
+    await join()
+    const busy = screen.getByRole('button', { name: /Joining the trip/ })
+    expect(busy.getAttribute('aria-busy')).toBe('true')
+    finish(joinedAnswer)
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+  })
+
+  it('shows the unavailable card in place, with focus on its heading, when the link is refused', async () => {
+    const retry = vi.fn(() => Promise.resolve())
+    renderView(signedIn, retry, () =>
+      Promise.resolve({ outcome: 'unavailable' }),
+    )
+    await join()
+    const heading = await screen.findByRole('heading', { level: 1 })
+    expect(screen.queryByRole('button', { name: 'Join this trip' })).toBeNull()
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    // A reload could hand back the invited card; the answer already said enough.
+    expect(retry).not.toHaveBeenCalled()
+  })
+
+  it('sends someone whose session ended to sign in again instead of offering a retry that cannot work', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign })
+    renderView(signedIn, noop, () => Promise.resolve({ outcome: 'signed-out' }))
+    await join()
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(
+        `/login?redirect=${encodeURIComponent(PATH)}`,
+      ),
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+    vi.unstubAllGlobals()
+  })
+
+  it('lets the join and open-in labels wrap instead of running past a 360px card', async () => {
+    renderView(signedIn)
+    const button = screen.getByRole('button', { name: 'Join this trip' })
+    // The class merge must drop the Button's fixed height and nowrap, or a long label overflows.
+    expect(button.className).toContain('whitespace-normal')
+    expect(button.className).toContain('h-auto')
+    expect(button.className).not.toContain('whitespace-nowrap')
+    expect(button.className.split(' ')).not.toContain('h-12')
+  })
+
+  it('submits once for a double click', async () => {
+    const onJoin = vi.fn(
+      () =>
+        new Promise<JoinAnswer>((resolve) =>
+          setTimeout(resolve, 20, joinedAnswer),
+        ),
+    )
+    renderView(signedIn, noop, onJoin)
+    await userEvent.dblClick(
+      screen.getByRole('button', { name: 'Join this trip' }),
+    )
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+    expect(onJoin).toHaveBeenCalledOnce()
+  })
+
+  it('joins from the keyboard like a click', async () => {
+    const onJoin = vi.fn(() => Promise.resolve(joinedAnswer))
+    renderView(signedIn, noop, onJoin)
+    screen.getByRole('button', { name: 'Join this trip' }).focus()
+    await userEvent.keyboard('{Enter}')
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+    expect(onJoin).toHaveBeenCalledOnce()
+  })
+
+  it('leaves the button usable when the reload brings back the same invited card', async () => {
+    const retry = vi.fn(() => Promise.resolve())
+    renderView(signedIn, retry, () =>
+      Promise.resolve({ outcome: 'needs-workspace' }),
+    )
+    await join()
+    await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+    const button = await screen.findByRole('button', { name: 'Join this trip' })
+    await waitFor(() =>
+      expect(button.getAttribute('aria-busy')).not.toBe('true'),
+    )
+  })
+
+  it('reloads the card when the traveller turns out not to be in the workspace', async () => {
+    const retry = vi.fn(() => Promise.resolve())
+    renderView(signedIn, retry, () =>
+      Promise.resolve({ outcome: 'needs-workspace' }),
+    )
+    await join()
+    await waitFor(() => expect(retry).toHaveBeenCalledOnce())
+  })
+
+  it('says the page is busy without blame, announced by an alert, with the button described by it', async () => {
+    renderView(signedIn, noop, () =>
+      Promise.resolve({ outcome: 'busy', retryAfter: 30 }),
+    )
+    await join()
+    const button = await screen.findByRole('button', { name: 'Join this trip' })
+    expect(
+      screen.getByText('This page is busy. Try again in a minute.'),
+    ).toBeTruthy()
+    // Focus never left the button, so no focus move can announce this: the alert does.
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toBe('This page is busy. Try again in a minute.')
+    expect(button.getAttribute('aria-describedby')).toBe(alert.id)
+  })
+
+  it('keeps the link usable after a failed join, announces it and lets the traveller try again', async () => {
+    const onJoin = vi
+      .fn<() => Promise<JoinAnswer>>()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce(joinedAnswer)
+    renderView(signedIn, noop, onJoin)
+    await join()
+    await screen.findByRole('button', { name: 'Join this trip' })
+    expect(screen.getByRole('alert').textContent).toBe(
+      'Could not join. The link still works - try again.',
+    )
+    await join()
+    await screen.findByRole('heading', {
+      level: 1,
+      name: 'You are on the trip',
+    })
+    expect(onJoin).toHaveBeenCalledTimes(2)
+  })
+})
+
 describe('the rest of the page', () => {
   it('holds the retry button busy while the page reloads and focuses the new card heading', async () => {
     let finish: () => void = noop
@@ -282,7 +504,12 @@ describe('the rest of the page', () => {
     const page = (view: InviteView) => (
       <I18nProvider locale="en" messages={EN}>
         <JoinFrame>
-          <JoinCard view={view} path={PATH} onRetry={retry} />
+          <JoinCard
+            view={view}
+            path={PATH}
+            onRetry={retry}
+            onJoin={() => Promise.resolve(joinedAnswer)}
+          />
         </JoinFrame>
       </I18nProvider>
     )

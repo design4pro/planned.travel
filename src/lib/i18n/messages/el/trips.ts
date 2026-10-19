@@ -484,10 +484,14 @@ const messages = {
   'join.dates.label': 'Ημερομηνίες',
   'join.destination.label': 'Προορισμός',
   'join.action.signIn': 'Σύνδεση',
+  'join.action.join': 'Συμμετοχή στο ταξίδι',
+  'join.action.joining': 'Γίνεται συμμετοχή στο ταξίδι',
   'join.action.open': 'Άνοιγμα ταξιδιού',
   'join.action.openIn': 'Άνοιγμα ταξιδιού και αλλαγή χώρου εργασίας',
   'join.action.openIn.pending': 'Αλλαγή χώρου εργασίας',
   'join.loading': 'Φόρτωση της πρόσκλησης',
+  'join.joined.title': 'Συμμετέχετε στο ταξίδι',
+  'join.joined.body': 'Ανοίξτε το για να δείτε το πλάνο.',
   'join.member.title': 'Συμμετέχετε ήδη σε αυτό το ταξίδι',
   'join.needsWorkspace.title':
     'Αυτό το ταξίδι ανήκει σε χώρο εργασίας στον οποίο δεν συμμετέχετε',
@@ -508,6 +512,8 @@ const messages = {
   'join.error.retry': 'Δοκιμάστε ξανά',
   'join.error.busy':
     'Η σελίδα είναι απασχολημένη. Δοκιμάστε ξανά σε ένα λεπτό.',
+  'join.error.join':
+    'Δεν ήταν δυνατή η συμμετοχή. Ο σύνδεσμος εξακολουθεί να λειτουργεί, δοκιμάστε ξανά.',
   'join.error.switch':
     'Δεν ήταν δυνατή η αλλαγή χώρου εργασίας. Δοκιμάστε ξανά.',
 } satisfies TranslationOf<typeof En>

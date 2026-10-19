@@ -488,10 +488,14 @@ const messages = {
   'join.dates.label': 'Fechas',
   'join.destination.label': 'Destino',
   'join.action.signIn': 'Entrar',
+  'join.action.join': 'Unirse al viaje',
+  'join.action.joining': 'Uniéndote al viaje',
   'join.action.open': 'Abrir el viaje',
   'join.action.openIn': 'Abrir el viaje y cambiar de espacio de trabajo',
   'join.action.openIn.pending': 'Cambiando de espacio de trabajo',
   'join.loading': 'Cargando la invitación',
+  'join.joined.title': 'Ya estás en el viaje',
+  'join.joined.body': 'Ábrelo para ver el plan.',
   'join.member.title': 'Ya formas parte de este viaje',
   'join.needsWorkspace.title':
     'Este viaje está en un espacio de trabajo al que no perteneces',
@@ -511,6 +515,8 @@ const messages = {
   'join.error.retry': 'Reintentar',
   'join.error.busy':
     'Esta página está ocupada. Vuelve a intentarlo en un minuto.',
+  'join.error.join':
+    'No se pudo unir al viaje. El enlace sigue funcionando; inténtalo de nuevo.',
   'join.error.switch':
     'No se pudo cambiar de espacio de trabajo. Inténtalo de nuevo.',
 } satisfies TranslationOf<typeof En>

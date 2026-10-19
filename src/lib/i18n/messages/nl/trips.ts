@@ -475,10 +475,14 @@ const messages = {
   'join.dates.label': 'Data',
   'join.destination.label': 'Bestemming',
   'join.action.signIn': 'Inloggen',
+  'join.action.join': 'Meedoen aan de reis',
+  'join.action.joining': 'Je sluit aan bij de reis',
   'join.action.open': 'Reis openen',
   'join.action.openIn': 'Reis openen en van werkruimte wisselen',
   'join.action.openIn.pending': 'Van werkruimte wisselen',
   'join.loading': 'Uitnodiging laden',
+  'join.joined.title': 'Je doet mee aan de reis',
+  'join.joined.body': 'Open de reis om het plan te zien.',
   'join.member.title': 'Je doet al mee aan deze reis',
   'join.needsWorkspace.title':
     'Deze reis staat in een werkruimte waar je geen deel van uitmaakt',
@@ -498,6 +502,8 @@ const messages = {
   'join.error.retry': 'Opnieuw proberen',
   'join.error.busy':
     'Deze pagina is druk bezet. Probeer het over een minuut opnieuw.',
+  'join.error.join':
+    'Meedoen is niet gelukt. De link werkt nog, probeer het opnieuw.',
   'join.error.switch': 'Kon niet van werkruimte wisselen. Probeer het opnieuw.',
 } satisfies TranslationOf<typeof En>
 
