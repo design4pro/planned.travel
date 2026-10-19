@@ -123,8 +123,13 @@ function shippedSources(): ReadonlyArray<Source> {
     path: PLAN_COPY_FILE,
     text: readFileSync(PLAN_COPY_FILE, 'utf8'),
   })
-  const departureControl = join(process.cwd(), 'src/components/layout/member-departure-control.tsx')
-  files.push({ path: departureControl, text: readFileSync(departureControl, 'utf8') })
+  for (const name of [
+    'member-departure-control.tsx',
+    'use-member-departure.ts',
+  ]) {
+    const path = join(process.cwd(), 'src/components/layout', name)
+    files.push({ path, text: readFileSync(path, 'utf8') })
+  }
   return files
 }
 
