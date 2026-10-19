@@ -4981,11 +4981,13 @@ describe('tenant isolation', () => {
       const strangerId = await alpha.tenant.addUser('Stranger')
       const stranger = alpha.tenant.scopeFor(strangerId)
 
+      const before = await filesOf(alpha.tenant.scope, alpha.tripId)
       for (const attempt of writersAs(stranger)) {
         const error = await captureError(attempt)
         expect(error).toBeInstanceOf(NotFoundError)
         expect(error).not.toBeInstanceOf(TripRoleError)
       }
+      expect(await filesOf(alpha.tenant.scope, alpha.tripId)).toEqual(before)
     })
 
     it('refuses a workspace member who can read an organization-visible trip but is not on it', async () => {
@@ -5002,6 +5004,7 @@ describe('tenant isolation', () => {
         await alpha.tenant.addUser('Reader of A'),
       )
 
+      const before = await filesOf(alpha.tenant.scope, open.id)
       for (const attempt of [
         () => recordFile(outsider, { ...INPUT, tripId: open.id }),
         () => updateFile(outsider, open.id, onOpen.id, { filename: 'new.pdf' }),
@@ -5009,6 +5012,30 @@ describe('tenant isolation', () => {
       ]) {
         expect(await captureError(attempt)).toBeInstanceOf(TripRoleError)
       }
+      expect(await filesOf(alpha.tenant.scope, open.id)).toEqual(before)
+    })
+
+    it('gives missing, other-trip and other-workspace deletes the identical file refusal', async () => {
+      const other = await createTrip(alpha.tenant.scope, {
+        title: 'Other trip',
+      })
+      const otherFile = await recordFile(alpha.tenant.scope, {
+        ...INPUT,
+        tripId: other.id,
+      })
+      const beforeOther = await getFile(alpha.tenant.scope, otherFile.id)
+      const beforeBeta = await getFile(beta.tenant.scope, beta.fileId)
+      for (const fileId of ['missing-file', otherFile.id, beta.fileId]) {
+        expect(
+          await captureError(() =>
+            deleteFile(alpha.tenant.scope, alpha.tripId, fileId),
+          ),
+        ).toEqual(new NotFoundError('file', fileId))
+      }
+      expect(await getFile(alpha.tenant.scope, otherFile.id)).toEqual(
+        beforeOther,
+      )
+      expect(await getFile(beta.tenant.scope, beta.fileId)).toEqual(beforeBeta)
     })
 
     it('binds a file id to the trip it names', async () => {
