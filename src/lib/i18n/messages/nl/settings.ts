@@ -656,6 +656,28 @@ const messages = {
   'passkeys.delete.removing': 'Toegangssleutel wordt verwijderd',
   'passkeys.delete.passwordRequired':
     'Voer je wachtwoord in om deze toegangssleutel te verwijderen.',
+  'workspace.departure.leave': 'Werkruimte verlaten',
+  'workspace.departure.remove': 'Lid verwijderen',
+  'workspace.departure.title': 'Lidmaatschap van {workspace} beëindigen?',
+  'workspace.departure.body':
+    '{name} verliest toegang tot {workspace}. Het account en de bewaarde reizen en kostenregistraties blijven bestaan.',
+  'workspace.departure.cancel': 'Annuleren',
+  'workspace.departure.pending': 'Lidmaatschap beëindigen…',
+  'workspace.departure.lastOwner':
+    'Maak een ander lid eigenaar voordat je vertrekt of deze eigenaar verwijdert.',
+  'workspace.departure.notPermitted':
+    'Je huidige rol staat niet toe dit lid te verwijderen. Vernieuw de ledenlijst voordat je het opnieuw probeert.',
+  'workspace.departure.notFound':
+    'Deze persoon is geen lid meer van deze werkruimte.',
+  'workspace.departure.impersonated':
+    'Stop met het overnemen van een identiteit voordat je het werkruimtelidmaatschap wijzigt.',
+  'workspace.departure.failed':
+    'Het resultaat kon niet worden bevestigd. Laad de werkruimte opnieuw voordat je het opnieuw probeert.',
+  'workspace.departure.removed': 'Lid verwijderd',
+  'workspace.departure.reload': 'Werkruimte opnieuw laden',
+  'workspace.departure.activationFailed':
+    'Je hebt deze werkruimte verlaten. Open de volgende om verder te gaan.',
+  'workspace.departure.recover': 'Volgende werkruimte openen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

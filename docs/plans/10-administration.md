@@ -246,7 +246,8 @@ No column, no index, no migration, nothing to backfill. Instants stay epoch mill
   - `changeMemberRoleFn` — `POST`. Delegates to `changeMemberRole`.
   - `removeMemberFn` — `POST`. Removes through `auth.api.removeMember`, not the repository
     `removeMember`, so the after-hook that queues room eviction runs (`docs/ACCESS.md` §2.6, #1010).
-    "Leave this workspace" is `organization/leave`, which stays open over HTTP.
+    #1008 supersedes this planned route: `departMemberFn` guards removal and self-departure,
+    while public HTTP `organization/leave` is disabled; the in-process auth lifecycle remains active.
 - **Zod v4.** Every input is a `z.strictObject`, so an unknown key is a rejection rather than a
   silently ignored field:
   - `inviteMemberFn`: `{ email: z.email({ error: 'Enter the address to invite.' }), role: z.enum(ORGANIZATION_ROLES) }`.

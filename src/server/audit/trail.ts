@@ -63,6 +63,8 @@ export const AUDIT_ACTIONS = {
   MEMBER_INVITATION_RESENT: 'member.invitation_resent',
   MEMBER_INVITATION_REVOKED: 'member.invitation_revoked',
   MEMBER_ROLE_CHANGED: 'member.role_changed',
+  MEMBER_REMOVED: 'member.removed',
+  MEMBER_LEFT: 'member.left',
   TRIP_INVITE_ROTATED: 'trip_invite.rotated',
   TRIP_INVITE_UPDATED: 'trip_invite.updated',
   TRIP_MEMBER_JOINED: 'trip.member_joined',

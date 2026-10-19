@@ -610,6 +610,28 @@ const messages = {
   'passkeys.delete.removing': 'パスキーを削除しています',
   'passkeys.delete.passwordRequired':
     'このパスキーを削除するには、パスワードを入力してください。',
+  'workspace.departure.leave': 'ワークスペースから退出',
+  'workspace.departure.remove': 'メンバーを削除',
+  'workspace.departure.title': '{workspace} のメンバーシップを終了しますか？',
+  'workspace.departure.body':
+    '{name} は {workspace} にアクセスできなくなります。アカウントと保存されている旅行や費用の記録は残ります。',
+  'workspace.departure.cancel': 'キャンセル',
+  'workspace.departure.pending': 'メンバーシップを終了中…',
+  'workspace.departure.lastOwner':
+    '退出する前、またはこのオーナーを削除する前に、別のメンバーをオーナーにしてください。',
+  'workspace.departure.notPermitted':
+    '現在の役割ではこのメンバーを削除できません。メンバー一覧を更新してから、もう一度お試しください。',
+  'workspace.departure.notFound':
+    'このユーザーはすでにこのワークスペースのメンバーではありません。',
+  'workspace.departure.impersonated':
+    'ワークスペースのメンバーシップを変更する前に、代理操作を終了してください。',
+  'workspace.departure.failed':
+    '結果を確認できませんでした。ワークスペースを再読み込みしてから、もう一度お試しください。',
+  'workspace.departure.removed': 'メンバーを削除しました',
+  'workspace.departure.reload': 'ワークスペースを再読み込み',
+  'workspace.departure.activationFailed':
+    'このワークスペースから退出しました。次のワークスペースを開いて続行してください。',
+  'workspace.departure.recover': '次のワークスペースを開く',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1098,7 +1098,7 @@ describe('organization/update-member-role', () => {
  * `organization/update-member-role`, and stays usable in process: `auth.api.removeMember` is what
  * the product-owned removal (#1008) must call, because the after-hook that queues the removed
  * person's room eviction hangs off it (`room-eviction.test.ts` pins that). `organization/leave`
- * stays open for the leave screen.
+ * is closed too; the guarded product departure uses its in-process API.
  */
 describe('organization/remove-member', () => {
   let cookie: string
@@ -1389,7 +1389,7 @@ describe('a workspace switch inside an impersonated session', () => {
     })
   })
 
-  it('writes the row, with a null after, when the impersonated session leaves its active workspace', async () => {
+  it('refuses impersonated HTTP leave without deleting membership or recording a workspace change', async () => {
     // A workspace of its own, so the membership this test deletes is not one the other tests use.
     const leavingOrganizationId = 'org_959_leave'
     sqlite
@@ -1422,16 +1422,9 @@ describe('a workspace switch inside an impersonated session', () => {
       cookie,
     )
 
-    expect(response.status).toBe(200)
-    expect(activeOrganizationOf(cookie)).toBeNull()
-    expect(onlyEntry().entry).toEqual({
-      action: ACTION,
-      entityId: targetId,
-      changes: {
-        before: { organizationId: leavingOrganizationId },
-        after: { organizationId: null },
-      },
-    })
+    expect(response.status).toBe(404)
+    expect(activeOrganizationOf(cookie)).toBe(leavingOrganizationId)
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
   })
 
   it('logs at error, and writes no row, when an impersonated update reaches the hook with no request context', async () => {

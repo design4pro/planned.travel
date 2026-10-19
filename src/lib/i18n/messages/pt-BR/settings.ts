@@ -656,6 +656,28 @@ const messages = {
   'passkeys.delete.removing': 'Removendo a chave de acesso',
   'passkeys.delete.passwordRequired':
     'Digite a sua senha para remover esta chave de acesso.',
+  'workspace.departure.leave': 'Sair do espaço de trabalho',
+  'workspace.departure.remove': 'Remover membro',
+  'workspace.departure.title': 'Encerrar a participação em {workspace}?',
+  'workspace.departure.body':
+    '{name} perderá o acesso a {workspace}. A conta e as viagens e os registros de custos mantidos permanecerão.',
+  'workspace.departure.cancel': 'Cancelar',
+  'workspace.departure.pending': 'Encerrando participação…',
+  'workspace.departure.lastOwner':
+    'Torne outro membro proprietário antes de sair ou remover este proprietário.',
+  'workspace.departure.notPermitted':
+    'Sua função atual não permite remover este membro. Atualize a lista de membros antes de tentar novamente.',
+  'workspace.departure.notFound':
+    'Esta pessoa não é mais membro deste espaço de trabalho.',
+  'workspace.departure.impersonated':
+    'Pare de representar outro usuário antes de alterar a participação no espaço de trabalho.',
+  'workspace.departure.failed':
+    'Não foi possível confirmar o resultado. Recarregue o espaço de trabalho antes de tentar novamente.',
+  'workspace.departure.removed': 'Membro removido',
+  'workspace.departure.reload': 'Recarregar espaço de trabalho',
+  'workspace.departure.activationFailed':
+    'Você saiu deste espaço de trabalho. Abra o próximo para continuar.',
+  'workspace.departure.recover': 'Abrir o próximo espaço',
 } satisfies TranslationOf<typeof En>
 
 export default messages

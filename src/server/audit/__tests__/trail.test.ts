@@ -383,6 +383,8 @@ describe('trail', () => {
       'member.invitation_resent',
       'member.invitation_revoked',
       'member.role_changed',
+      'member.removed',
+      'member.left',
       'trip_invite.rotated',
       'trip_invite.updated',
       'trip.member_joined',

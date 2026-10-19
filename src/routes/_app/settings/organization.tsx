@@ -26,6 +26,8 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui'
+import { MemberDepartureControl } from '#/components/layout/member-departure-control'
+import { useMemberDeparture } from '#/components/layout/use-member-departure'
 import { planFromUnknown } from '#/lib/plans'
 import {
   DEFAULT_LOCALE,
@@ -137,6 +139,7 @@ function WorkspaceLanguageSelect({
 
 function OrganizationPage() {
   const data = Route.useLoaderData()
+  const { depart, recover, membersRef } = useMemberDeparture()
   const router = useRouter()
   const t = useTranslate()
   const locale = useLocale()
@@ -268,14 +271,19 @@ function OrganizationPage() {
           </Badge>
         }
       >
-        <Table label={t('settings.workspace.members.tableLabel')} fixed>
+        <Table
+          ref={membersRef}
+          tabIndex={-1}
+          label={t('settings.workspace.members.tableLabel')}
+          fixed
+        >
           <TableHeader>
             <TableRow>
               <TableHead>{t('settings.workspace.members.person')}</TableHead>
               <TableHead className="w-28">
                 {t('settings.workspace.members.role')}
               </TableHead>
-              <TableHead className="w-32">
+              <TableHead className="hidden w-32 sm:table-cell">
                 {t('settings.workspace.members.joined')}
               </TableHead>
             </TableRow>
@@ -293,6 +301,20 @@ function OrganizationPage() {
                       <span className="block truncate text-caption text-ink-3">
                         {member.email}
                       </span>
+                      {member.userId === data.viewerUserId ||
+                      (data.canAdminister &&
+                        (data.viewerRole === 'owner' ||
+                          !member.role
+                            .split(',')
+                            .some((role) => role.trim() === 'owner'))) ? (
+                        <MemberDepartureControl
+                          name={member.name}
+                          workspace={data.organization.name}
+                          self={member.userId === data.viewerUserId}
+                          onConfirm={() => depart(member.memberId)}
+                          onRecover={recover}
+                        />
+                      ) : null}
                     </span>
                   </span>
                 </TableCell>
@@ -301,7 +323,7 @@ function OrganizationPage() {
                     {roleLabel(t, member.role)}
                   </Badge>
                 </TableCell>
-                <TableCell muted>
+                <TableCell muted className="hidden sm:table-cell">
                   {formatDate(member.joinedAt, locale)}
                 </TableCell>
               </TableRow>

@@ -638,6 +638,28 @@ const messages = {
   'passkeys.delete.removing': 'Đang xóa khóa truy cập',
   'passkeys.delete.passwordRequired':
     'Hãy nhập mật khẩu của bạn để xóa khóa truy cập này.',
+  'workspace.departure.leave': 'Rời không gian làm việc',
+  'workspace.departure.remove': 'Xóa thành viên',
+  'workspace.departure.title': 'Chấm dứt tư cách thành viên tại {workspace}?',
+  'workspace.departure.body':
+    '{name} sẽ mất quyền truy cập vào {workspace}. Tài khoản cùng các chuyến đi và hồ sơ chi phí được lưu giữ vẫn sẽ còn.',
+  'workspace.departure.cancel': 'Hủy',
+  'workspace.departure.pending': 'Đang chấm dứt tư cách thành viên…',
+  'workspace.departure.lastOwner':
+    'Chỉ định một thành viên khác làm chủ sở hữu trước khi rời đi hoặc xóa chủ sở hữu này.',
+  'workspace.departure.notPermitted':
+    'Vai trò hiện tại của bạn không thể xóa thành viên này. Hãy làm mới danh sách thành viên trước khi thử lại.',
+  'workspace.departure.notFound':
+    'Người này không còn là thành viên của không gian làm việc này.',
+  'workspace.departure.impersonated':
+    'Dừng mạo danh trước khi thay đổi tư cách thành viên của không gian làm việc.',
+  'workspace.departure.failed':
+    'Không thể xác nhận kết quả. Hãy tải lại không gian làm việc trước khi thử lại.',
+  'workspace.departure.removed': 'Đã xóa thành viên',
+  'workspace.departure.reload': 'Tải lại không gian làm việc',
+  'workspace.departure.activationFailed':
+    'Bạn đã rời không gian làm việc này. Mở không gian tiếp theo để tiếp tục.',
+  'workspace.departure.recover': 'Mở không gian tiếp theo',
 } satisfies TranslationOf<typeof En>
 
 export default messages

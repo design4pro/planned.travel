@@ -446,9 +446,9 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with six exceptions. Two are closed by the plugin's own options and not
+document does not govern - with seven exceptions. Two are closed by the plugin's own options and not
 by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other four are closed by
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other five are closed by
 `disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
 `src/server/auth/admin-options.ts`, merged with the fifteen admin paths into `DISABLED_PATHS`, which is
 what `src/server/auth/index.ts` passes). `organization/update-member-role` writes a role without an
@@ -456,12 +456,27 @@ audit row, accepts a comma-joined role such as `admin,owner`, and lets an admin 
 which the product-owned `changeMemberRoleFn` (§6.4, #995) allows. `organization/remove-member` deletes
 the `member` row for an owner or an admin with no audit entry and no refusal during impersonation
 (#1010). The in-process `auth.api.updateMemberRole` and `auth.api.removeMember` are not HTTP paths and
-stay callable; the product-owned removal (#1008) must remove members through `auth.api.removeMember`
-and not through the repository's `removeMember`, because the plugin's after-hook is what queues the
-removed person's room eviction, and the repository function has neither that hook, an owner ceiling
-for an admin nor an audit entry. `organization/leave` stays open, because the leave screen needs it
-(closing it to an impersonated session is #1402), so until #1008 ships a workspace has no way to
-remove a member over HTTP. The deletion flag is checked before
+stay callable. Product removal and departure use `departMemberFn` (#1008), refuse impersonation
+before resolving the tenant, and call `auth.api.removeMember` or `auth.api.leaveOrganization` once.
+A request-local adapter intercept binds the single member deletion to the authenticated tenant,
+actor and target. The repository checks current stored authority and another owner in the mutation
+itself, including composite roles; role demotion uses the same owner predicate. Deletion and its
+conditional `member.removed` or `member.left` audit entry share one D1 batch. Auth still runs the
+session cleanup and offboarding hooks; it never deletes the row a second time. Public HTTP
+`organization/leave` is closed too, so it cannot bypass these guards (overlapping #1402).
+Pending workspace invitations issued by a departed member remain pending and can still be accepted;
+an owner or admin must revoke them from Invitations when they should no longer be usable.
+After removing another member, the client announces success and focuses the stable members table
+after refreshing the list, so removal of the row and its dialog does not lose keyboard focus.
+Closing a definite refusal resets its confirmation for a new intent; an uncertain result still
+requires reconciliation, and a confirmed departure keeps its recovery-only state.
+After self-departure the existing resolver chooses a remaining workspace or provisions a personal
+one and activates it. An uncertain departure response stays an error and never activates a workspace
+as a success; the reader can reload to reconcile it. If activation fails after confirmed deletion,
+the confirmation offers a recovery-only
+server function, deriving the signed-in user without requiring the departed tenant; it never repeats
+the deletion. Client caches are cleared, and dashboard navigation waits for successful activation.
+The deletion flag is checked before
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
 an owner delete the `organization` row, cascade over every tenant table - other members' private

@@ -661,6 +661,28 @@ const messages = {
   'passkeys.delete.removing': 'Zugangsschlüssel wird entfernt',
   'passkeys.delete.passwordRequired':
     'Gib dein Passwort ein, um diesen Zugangsschlüssel zu entfernen.',
+  'workspace.departure.leave': 'Arbeitsbereich verlassen',
+  'workspace.departure.remove': 'Mitglied entfernen',
+  'workspace.departure.title': 'Mitgliedschaft in {workspace} beenden?',
+  'workspace.departure.body':
+    '{name} verliert den Zugriff auf {workspace}. Das Konto sowie aufbewahrte Reisen und Kostenaufzeichnungen bleiben erhalten.',
+  'workspace.departure.cancel': 'Abbrechen',
+  'workspace.departure.pending': 'Mitgliedschaft wird beendet…',
+  'workspace.departure.lastOwner':
+    'Ernenne ein anderes Mitglied zum Eigentümer, bevor du den Arbeitsbereich verlässt oder diesen Eigentümer entfernst.',
+  'workspace.departure.notPermitted':
+    'Deine aktuelle Rolle erlaubt es nicht, dieses Mitglied zu entfernen. Aktualisiere die Mitgliederliste und versuche es erneut.',
+  'workspace.departure.notFound':
+    'Diese Person ist kein Mitglied dieses Arbeitsbereichs mehr.',
+  'workspace.departure.impersonated':
+    'Beende die Identitätsübernahme, bevor du die Mitgliedschaft im Arbeitsbereich änderst.',
+  'workspace.departure.failed':
+    'Das Ergebnis konnte nicht bestätigt werden. Lade den Arbeitsbereich neu und versuche es erneut.',
+  'workspace.departure.removed': 'Mitglied entfernt',
+  'workspace.departure.reload': 'Arbeitsbereich neu laden',
+  'workspace.departure.activationFailed':
+    'Du hast diesen Arbeitsbereich verlassen. Öffne den nächsten, um fortzufahren.',
+  'workspace.departure.recover': 'Nächsten Arbeitsbereich öffnen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

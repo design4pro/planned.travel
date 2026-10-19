@@ -562,6 +562,7 @@ export interface AdminAuditRow {
 }
 
 export interface AdminPayload {
+  readonly viewerUserId: string
   /** One clock for the audit trail's relative times; see {@link NotificationsPayload.now}. */
   readonly now: number
   readonly organization: {
@@ -693,6 +694,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
           limit: overTheWire(quotas.limits.journeys),
         },
       ],
+      viewerUserId: scope.ctx.userId,
       members: members.map((row) => ({
         memberId: row.memberId,
         userId: row.userId,

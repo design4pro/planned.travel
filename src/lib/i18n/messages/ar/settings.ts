@@ -645,6 +645,27 @@ const messages = {
   'passkeys.delete.removing': 'جارٍ إزالة مفتاح المرور',
   'passkeys.delete.passwordRequired':
     'أدخل كلمة المرور لإزالة مفتاح المرور هذا.',
+  'workspace.departure.leave': 'مغادرة مساحة العمل',
+  'workspace.departure.remove': 'إزالة العضو',
+  'workspace.departure.title': 'إنهاء العضوية في {workspace}؟',
+  'workspace.departure.body':
+    'سيفقد {name} إمكانية الوصول إلى {workspace}. سيبقى حسابه والرحلات وسجلات التكاليف المحتفظ بها.',
+  'workspace.departure.cancel': 'إلغاء',
+  'workspace.departure.pending': 'جارٍ إنهاء العضوية…',
+  'workspace.departure.lastOwner':
+    'عيّن عضوًا آخر مالكًا قبل المغادرة أو إزالة هذا المالك.',
+  'workspace.departure.notPermitted':
+    'لا يسمح دورك الحالي بإزالة هذا العضو. حدّث قائمة الأعضاء قبل المحاولة مجددًا.',
+  'workspace.departure.notFound': 'لم يعد هذا الشخص عضوًا في مساحة العمل هذه.',
+  'workspace.departure.impersonated':
+    'أوقف انتحال هوية المستخدم قبل تغيير العضوية في مساحة العمل.',
+  'workspace.departure.failed':
+    'تعذّر تأكيد النتيجة. أعد تحميل مساحة العمل قبل المحاولة مجددًا.',
+  'workspace.departure.removed': 'تمت إزالة العضو',
+  'workspace.departure.reload': 'إعادة تحميل مساحة العمل',
+  'workspace.departure.activationFailed':
+    'لقد غادرت مساحة العمل هذه. افتح مساحة العمل التالية للمتابعة.',
+  'workspace.departure.recover': 'افتح مساحة العمل التالية',
 } satisfies TranslationOf<typeof En>
 
 export default messages
