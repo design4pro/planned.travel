@@ -77,3 +77,14 @@ read-only projection that the same map pins to the same single caller. Rotating 
 `docs/DEPLOY.md` says beside the existing rotation warning. Moving to a dedicated binding later
 would invalidate the links once, and the purpose list is what keeps a later credential kind from
 sharing a sub-key with an invite.
+
+## Amendment (#1023)
+
+The join lands as a fourth function of the same kind, `joinTripByInviteUnscoped(db, digest, key,
+joiner)`, and it is the one **write**. It takes a plain `Database` because the joiner is not an owner
+of the trip and cannot read a private trip yet, so no tenant scope exists until the function has
+resolved the link and read the joiner's role in the link's workspace from `member`. Its single
+production caller is `src/routes/join/-lib/join.ts`, for `joinTripFn` (POST, session required, rate
+limited per user and per address); `unscoped-shape.test.ts` pins that. It refuses a banned joiner and
+an impersonated session before it reads or writes anything, writes only through `insertTripMember`,
+and counts a use only on a real join.

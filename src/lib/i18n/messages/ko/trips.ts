@@ -454,10 +454,14 @@ const messages = {
   'join.dates.label': '일정',
   'join.destination.label': '목적지',
   'join.action.signIn': '로그인',
+  'join.action.join': '여행에 참여하기',
+  'join.action.joining': '여행에 참여하는 중',
   'join.action.open': '여행 열기',
   'join.action.openIn': '여행을 열고 워크스페이스 전환',
   'join.action.openIn.pending': '워크스페이스를 전환하는 중',
   'join.loading': '초대를 불러오는 중',
+  'join.joined.title': '여행에 참여했어요',
+  'join.joined.body': '열어서 계획을 확인해 보세요.',
   'join.member.title': '이미 이 여행에 참여하고 있어요',
   'join.needsWorkspace.title':
     '이 여행은 내가 속해 있지 않은 워크스페이스에 있어요',
@@ -476,6 +480,8 @@ const messages = {
   'join.error.title': '이 초대 링크를 불러오지 못했어요',
   'join.error.retry': '다시 시도',
   'join.error.busy': '지금 이 페이지가 바빠요. 1분 뒤에 다시 시도해 주세요.',
+  'join.error.join':
+    '참여하지 못했어요. 링크는 계속 사용할 수 있으니 다시 시도해 주세요.',
   'join.error.switch': '워크스페이스를 전환하지 못했어요. 다시 시도해 주세요.',
 } satisfies TranslationOf<typeof En>
 

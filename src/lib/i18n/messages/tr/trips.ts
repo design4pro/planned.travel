@@ -465,10 +465,14 @@ const messages = {
   'join.dates.label': 'Tarihler',
   'join.destination.label': 'Varış noktası',
   'join.action.signIn': 'Giriş yap',
+  'join.action.join': 'Geziye katıl',
+  'join.action.joining': 'Geziye katılıyorsunuz',
   'join.action.open': 'Geziyi aç',
   'join.action.openIn': 'Geziyi aç ve çalışma alanını değiştir',
   'join.action.openIn.pending': 'Çalışma alanı değiştiriliyor',
   'join.loading': 'Davet yükleniyor',
+  'join.joined.title': 'Gezidesiniz',
+  'join.joined.body': 'Planı görmek için açın.',
   'join.member.title': 'Bu gezide zaten varsınız',
   'join.needsWorkspace.title':
     'Bu gezi, üyesi olmadığınız bir çalışma alanında',
@@ -487,6 +491,8 @@ const messages = {
   'join.error.title': 'Bu davet bağlantısı yüklenemedi',
   'join.error.retry': 'Tekrar dene',
   'join.error.busy': 'Bu sayfa şu anda yoğun. Bir dakika sonra tekrar deneyin.',
+  'join.error.join':
+    'Katılım sağlanamadı. Bağlantı hâlâ çalışıyor, tekrar deneyin.',
   'join.error.switch': 'Çalışma alanı değiştirilemedi. Tekrar deneyin.',
 } satisfies TranslationOf<typeof En>
 
