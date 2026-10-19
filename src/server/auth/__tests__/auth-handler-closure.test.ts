@@ -40,6 +40,7 @@ import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { authSchema } from '#/server/db/auth-schema'
+import { workspaceParticipants } from '#/server/db/schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'
 import type { AuthDb } from '../db'
@@ -175,7 +176,7 @@ let authDatabase: SqliteRemoteDatabase<typeof authSchema>
 beforeAll(async () => {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson(authSchema),
+    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants }),
   )
   sqlite = new DatabaseSync(':memory:')
   for (const statement of statements) sqlite.exec(statement)
@@ -1182,6 +1183,13 @@ describe('a workspace switch inside an impersonated session', () => {
     })
 
     expect(activeOrganizationOf(cookie)).toBe(inviterOrganizationId)
+    expect(
+      sqlite
+        .prepare(
+          'select count(*) as n from workspace_participants where organization_id = ? and user_id = ?',
+        )
+        .get(inviterOrganizationId, targetId),
+    ).toEqual({ n: 1 })
     expect(onlyEntry().entry).toMatchObject({
       action: ACTION,
       entityId: targetId,

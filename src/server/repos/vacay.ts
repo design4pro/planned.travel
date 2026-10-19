@@ -9,6 +9,7 @@
 
 import { and, asc, count, desc, eq, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
+import { walkCarryOver } from '#/lib/vacay/carry-over'
 import {
   VACAY_ENTRY_KINDS,
   VACAY_MEMBER_STATUSES,
@@ -84,6 +85,20 @@ const ENTRY_KIND_COST: Record<(typeof VACAY_ENTRY_KINDS)[number], number> = {
 export class PlanOwnerOnlyError extends RepositoryError {
   constructor(planId: string) {
     super(`Only the owner of vacay plan ${planId} may do this.`, 'PLAN_OWNER_ONLY')
+  }
+}
+
+/**
+ * Thrown when a carried-over figure is sent for a year that has a year before it: that figure is
+ * calculated from the year before, and a typed one would be overwritten by the next edit of an
+ * earlier year. A diagnostic, not authored copy, like {@link PlanOwnerOnlyError}.
+ */
+export class CarriedOverDerivedError extends RepositoryError {
+  constructor(planId: string, year: number) {
+    super(
+      `Carried days for ${year} on vacay plan ${planId} are calculated from ${year - 1}.`,
+      'CARRIED_OVER_DERIVED',
+    )
   }
 }
 
@@ -424,32 +439,189 @@ export async function setEntitlement(
   })
 }
 
+/** The traveller's rows on a plan, ascending by year: the chain the carry-over walks. */
+async function listUserYearsForUser(
+  scope: TenantScope,
+  planId: string,
+  userId: string,
+): Promise<Array<VacayUserYear>> {
+  return vacayUserYearsRepository.findMany(scope, {
+    where: allOf(
+      eq(vacayUserYears.planId, planId),
+      eq(vacayUserYears.userId, userId),
+    ),
+    orderBy: [asc(vacayUserYears.year)],
+  })
+}
+
+/** Days consumed per calendar year, counting a half day as 0.5. */
+function usedDaysByYear(
+  entries: ReadonlyArray<VacayEntry>,
+): Map<number, number> {
+  const used = new Map<number, number>()
+  for (const entry of entries) {
+    const year = Number(entry.date.slice(0, 4))
+    const cost =
+      ENTRY_KIND_COST[entryKindSchema.catch('other').parse(entry.kind)]
+    used.set(year, (used.get(year) ?? 0) + cost)
+  }
+  return used
+}
+
+/** The traveller's chain as the walk reads it, with the days each year used. */
+function chainOf(
+  rows: ReadonlyArray<VacayUserYear>,
+  used: ReadonlyMap<number, number>,
+) {
+  return rows.map((row) => ({
+    year: row.year,
+    entitlementDays: row.entitlementDays,
+    carriedOverDays: row.carriedOverDays,
+    usedDays: used.get(row.year) ?? 0,
+  }))
+}
+
+/** A typed opening balance that an earlier year has just made a calculated one. */
+export interface SupersededBalance {
+  readonly year: number
+  /** What the traveller had entered. */
+  readonly was: number
+}
+
+export interface CarryOverRecompute {
+  /** The years whose stored figure the walk changed, ascending. */
+  readonly changedYears: ReadonlyArray<number>
+  readonly superseded: ReadonlyArray<SupersededBalance>
+}
+
+/**
+ * Brings one traveller's stored carried-over figures in line with the walk, down the whole chain of
+ * their consecutive years, in one atomic batch: only rows whose figure changed are written and none
+ * is inserted, so it is idempotent. Stored figures are maintained whatever the plan's carry-over
+ * setting says; the setting only hides them.
+ *
+ * **Not a way in from a screen.** It resolves the plan, takes no figure from a client and is called
+ * only by {@link saveAllowance} once its guard has passed (and, later, by the entry writers of this
+ * repository). It is exported for the repository's own tests and stays off the import allowlist.
+ *
+ * `yearsBeforeWrite` is the traveller's years before the write that triggered this call. A row that
+ * had no year before it then, has one now and held a typed non-zero figure is reported as
+ * superseded; without it nothing is.
+ */
+export async function recomputeCarryOver(
+  scope: TenantScope,
+  planId: string,
+  userId: string,
+  yearsBeforeWrite?: ReadonlySet<number>,
+): Promise<CarryOverRecompute> {
+  await vacayPlansRepository.requireById(scope, planId)
+  const [rows, entries] = await Promise.all([
+    listUserYearsForUser(scope, planId, userId),
+    listVacayEntries(scope, planId, { userId }),
+  ])
+  const walked = walkCarryOver(chainOf(rows, usedDaysByYear(entries)))
+  const years = new Set(rows.map((row) => row.year))
+
+  const changed = rows.flatMap((row, index) => {
+    const carriedOverDays = walked[index]
+    return carriedOverDays === undefined ||
+      carriedOverDays === row.carriedOverDays
+      ? []
+      : [{ row, carriedOverDays }]
+  })
+  await runBatch(
+    scope,
+    changed.map(({ row, carriedOverDays }) =>
+      scope.db
+        .update(vacayUserYears)
+        .set({ carriedOverDays })
+        .where(
+          tenantFilter(scope, vacayUserYears, eq(vacayUserYears.id, row.id)),
+        ),
+    ),
+  )
+
+  const superseded = rows.flatMap((row) =>
+    yearsBeforeWrite !== undefined &&
+    !yearsBeforeWrite.has(row.year - 1) &&
+    years.has(row.year - 1) &&
+    row.carriedOverDays !== 0
+      ? [{ year: row.year, was: row.carriedOverDays }]
+      : [],
+  )
+  return { changedYears: changed.map(({ row }) => row.year), superseded }
+}
+
+export interface SaveAllowanceResult {
+  readonly row: VacayUserYear
+  /** The one typed opening balance this save replaced with a calculated one, if any. */
+  readonly superseded: SupersededBalance | null
+}
+
 /**
  * Saves one traveller's allowance for a year behind {@link requirePlanActor}: your own as an owner or
  * accepted member, someone else's as the owner only. Nothing is read or written for the target
  * before every check has passed.
+ *
+ * A carried-over figure is accepted only for an opening balance, a year with no row for the year
+ * before; anywhere else it is {@link CarriedOverDerivedError}. The write is followed, in the same
+ * request, by {@link recomputeCarryOver}, which also seeds a newly inserted year from the one before.
  */
 export async function saveAllowance(
   scope: TenantScope,
   input: SetEntitlementInput,
-): Promise<VacayUserYear> {
+): Promise<SaveAllowanceResult> {
   const values = setEntitlementInput.parse(input)
   const actor = await requirePlanActor(scope, values.planId)
   const userId = await resolveAllowanceTarget(scope, actor, values.userId)
-  return setEntitlement(scope, { ...values, userId })
+
+  const yearsBeforeWrite = new Set(
+    (await listUserYearsForUser(scope, actor.plan.id, userId)).map(
+      (row) => row.year,
+    ),
+  )
+  if (
+    values.carriedOverDays !== undefined &&
+    yearsBeforeWrite.has(values.year - 1)
+  ) {
+    throw new CarriedOverDerivedError(actor.plan.id, values.year)
+  }
+
+  const written = await setEntitlement(scope, { ...values, userId })
+  const { changedYears, superseded } = await recomputeCarryOver(
+    scope,
+    actor.plan.id,
+    userId,
+    yearsBeforeWrite,
+  )
+  return {
+    row: changedYears.includes(written.year)
+      ? await vacayUserYearsRepository.requireById(scope, written.id)
+      : written,
+    // The year written has at most one successor, so at most one balance is replaced.
+    superseded: superseded[0] ?? null,
+  }
 }
 
 export interface Allowance {
   /** False while the figures are the plan's default and nothing has been saved. */
   readonly hasRow: boolean
   readonly entitlementDays: number
+  /** What the walk gives the year, `0` while the plan has carry-over switched off. */
   readonly carriedOverDays: number
   /** Days consumed by the traveller alone, counting a half day as 0.5. */
   readonly usedDays: number
   readonly remainingDays: number
+  /** True when no row exists for the year before: the carried figure is entered, not calculated. */
+  readonly openingBalance: boolean
+  readonly previousYear: number
 }
 
-/** One traveller's balance for one year, behind the same rule as {@link saveAllowance}. */
+/**
+ * One traveller's balance for one year, behind the same rule as {@link saveAllowance}. A year the
+ * traveller has no row for yet shows the carry from the year before, through a virtual row at the
+ * plan's default allowance; nothing is written by a read.
+ */
 export async function getAllowance(
   scope: TenantScope,
   planId: string,
@@ -460,23 +632,42 @@ export async function getAllowance(
   const target = await resolveAllowanceTarget(scope, actor, userId)
   const statYear = yearSchema.parse(year)
 
-  const row = await vacayUserYearsRepository.findOne(
-    scope,
-    allOf(
-      eq(vacayUserYears.planId, actor.plan.id),
-      eq(vacayUserYears.userId, target),
-      eq(vacayUserYears.year, statYear),
-    ),
+  const [rows, entries] = await Promise.all([
+    listUserYearsForUser(scope, actor.plan.id, target),
+    listVacayEntries(scope, actor.plan.id, { userId: target }),
+  ])
+  const used = usedDaysByYear(entries)
+  const row = rows.find((candidate) => candidate.year === statYear)
+  const openingBalance = !rows.some(
+    (candidate) => candidate.year === statYear - 1,
   )
-  const usedDays = await countUsedDays(scope, actor.plan.id, target, statYear)
-  const entitlementDays = row?.entitlementDays ?? actor.plan.defaultEntitlementDays
-  const carriedOverDays = actor.plan.carryOverEnabled ? (row?.carriedOverDays ?? 0) : 0
+
+  const chain = chainOf(rows, used)
+  if (row === undefined && !openingBalance) {
+    chain.push({
+      year: statYear,
+      entitlementDays: actor.plan.defaultEntitlementDays,
+      carriedOverDays: 0,
+      usedDays: used.get(statYear) ?? 0,
+    })
+    chain.sort((a, b) => a.year - b.year)
+  }
+  const walked = walkCarryOver(chain)
+  const walkedCarried =
+    walked[chain.findIndex((entry) => entry.year === statYear)] ?? 0
+
+  const usedDays = used.get(statYear) ?? 0
+  const entitlementDays =
+    row?.entitlementDays ?? actor.plan.defaultEntitlementDays
+  const carriedOverDays = actor.plan.carryOverEnabled ? walkedCarried : 0
   return {
-    hasRow: row !== null,
+    hasRow: row !== undefined,
     entitlementDays,
     carriedOverDays,
     usedDays,
     remainingDays: entitlementDays + carriedOverDays - usedDays,
+    openingBalance,
+    previousYear: statYear - 1,
   }
 }
 

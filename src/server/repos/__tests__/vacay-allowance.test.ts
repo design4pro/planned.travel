@@ -137,17 +137,17 @@ describe('the leave planner allowance guard', () => {
         entitlementDays: 31,
       })
 
-      expect(first.userId).toBe(tenant.ownerUserId)
-      expect(first.entitlementDays).toBe(plan.plan.defaultEntitlementDays)
-      expect(second.id).toBe(first.id)
-      expect(second.entitlementDays).toBe(31)
+      expect(first.row.userId).toBe(tenant.ownerUserId)
+      expect(first.row.entitlementDays).toBe(plan.plan.defaultEntitlementDays)
+      expect(second.row.id).toBe(first.row.id)
+      expect(second.row.entitlementDays).toBe(31)
       expect(await rowsFor(tenant.ownerUserId)).toHaveLength(1)
     })
 
     it('lets an accepted member set their own allowance', async () => {
       await joinPlan(tenant.scope, planId, colleague, 'accepted')
 
-      const row = await saveAllowance(colleagueScope, {
+      const { row } = await saveAllowance(colleagueScope, {
         planId,
         year: 2026,
         entitlementDays: 20,
@@ -171,7 +171,7 @@ describe('the leave planner allowance guard', () => {
       ).toBeInstanceOf(PlanOwnerOnlyError)
       expect(await rowsFor(tenant.ownerUserId)).toEqual([])
 
-      const row = await saveAllowance(tenant.scope, {
+      const { row } = await saveAllowance(tenant.scope, {
         planId,
         userId: colleague,
         year: 2026,
@@ -282,7 +282,7 @@ describe('the leave planner allowance guard', () => {
     })
 
     it('writes for the owner as the explicit target the same as for the caller', async () => {
-      const row = await saveAllowance(tenant.scope, {
+      const { row } = await saveAllowance(tenant.scope, {
         planId,
         userId: tenant.ownerUserId,
         year: 2026,
@@ -310,6 +310,8 @@ describe('the leave planner allowance guard', () => {
         carriedOverDays: 0,
         usedDays: 0,
         remainingDays: plan.defaultEntitlementDays,
+        openingBalance: true,
+        previousYear: 2025,
       })
     })
 
@@ -339,6 +341,8 @@ describe('the leave planner allowance guard', () => {
         carriedOverDays: 4,
         usedDays: 1.5,
         remainingDays: 27.5,
+        openingBalance: true,
+        previousYear: 2025,
       })
 
       await updatePlan(tenant.scope, planId, { carryOverEnabled: false })

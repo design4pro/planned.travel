@@ -572,6 +572,17 @@ const messages = {
    */
   'billing.provider.rejected':
     'The billing provider rejected that request. Try again in a moment.',
+  'billing.failure.reference': 'Reference for support: {reference}',
+  'billing.failure.forbidden':
+    'Your role does not allow that for this workspace’s billing. Ask an owner or an admin.',
+  'billing.failure.providerRefused':
+    'Polar would not accept that change. Check the seat count against your members, then try again or use the billing portal.',
+  'billing.failure.rateLimited':
+    'Polar is busy right now. Nothing was changed. Try again in a minute.',
+  'billing.failure.notConnected':
+    'Billing is not connected on this deployment yet, so nothing was changed. Contact support.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar cannot issue an invoice for this order. If it has no billing name or address, add them in the billing portal and try again; otherwise contact support.',
   'billing.planChanged.title': 'Plan updated',
   'billing.planChanged.body':
     'The change is already in force with Polar, who will invoice the difference. The summary below catches up within a minute.',

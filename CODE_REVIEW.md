@@ -39,8 +39,8 @@ floor guard script; the review now does.
 ## Layering contract (blockers)
 
 - **SQL only in `src/server/repos`**, through the tenant-scoped base repository; the tenant filter
-  must not be removable. `src/server/catalog` is the single stated exception (global tables plus one
-  cron discovery read, docs/SPEC.md §5 and §6). SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+  must not be removable. `src/server/catalog` is the single stated exception (global tables, one
+  cron discovery read and one ids-only erasure read, docs/SPEC.md §5 and §6). The one other writer is `src/server/auth/participation.ts`, the auth layer's write-only `INSERT OR IGNORE` into `workspace_participants` (SPEC §5, ADR 0043): it is no precedent for any other table. SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
   must be invisible to the call. No test, blocker.
 - **A guard added to one writer reaches every sibling writer of that surface in the same PR.** A

@@ -1249,6 +1249,28 @@ const messages = {
       'No se pudo guardar tu asignación. {year} sigue mostrando {value} días.',
   },
   'vacay.allowance.retry': 'Intentar de nuevo',
+  'vacay.allowance.tile.edit.carried': 'Editar días arrastrados, ahora {value}',
+  'vacay.allowance.input.carried': 'Días arrastrados a {year}',
+  'vacay.allowance.carried.from': 'Arrastrados de {year}',
+  'vacay.allowance.carried.opening':
+    'Traídos de antes de {year}. Selecciónalo para editarlo.',
+  'vacay.allowance.carried.off': 'El arrastre está desactivado',
+  'vacay.allowance.carried.wholeDays':
+    'Solo se arrastran días completos al año siguiente; el medio día sobrante no.',
+  'vacay.allowance.error.derived':
+    'Los días arrastrados de {year} ahora se calculan a partir de {previousYear}, así que no se pueden editar.',
+  'vacay.allowance.error.carried': {
+    one: 'No se pudieron guardar tus días arrastrados. {year} sigue mostrando {value} día.',
+    many: 'No se pudieron guardar tus días arrastrados. {year} sigue mostrando {value} días.',
+    other:
+      'No se pudieron guardar tus días arrastrados. {year} sigue mostrando {value} días.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Los días arrastrados de {year} ahora se calculan a partir de {previousYear}. Habías introducido {value} día.',
+    many: 'Los días arrastrados de {year} ahora se calculan a partir de {previousYear}. Habías introducido {value} días.',
+    other:
+      'Los días arrastrados de {year} ahora se calculan a partir de {previousYear}. Habías introducido {value} días.',
+  },
   'vacay.pending.loading': 'Cargando',
   'vacay.error.title': 'No se pudo cargar el planificador de vacaciones',
   'vacay.year.previous': 'Año anterior',

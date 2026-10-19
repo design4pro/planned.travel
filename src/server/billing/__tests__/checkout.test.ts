@@ -52,6 +52,7 @@ import {
 import { PolarApiError } from '../polar'
 import {
   BillingForbiddenError,
+  OrderNotInvoiceableError,
   QuotaExceededError,
   billingContext,
 } from '../types'
@@ -1957,10 +1958,74 @@ describe('orderInvoiceUrl', () => {
     expect(waits).toEqual([])
   })
 
+  /**
+   * Polar documents two refusals of `POST /v1/orders/{id}/invoice`: 409, the order is not in a
+   * status that can be invoiced, and 422, it has no billing name or address. Both mean the same
+   * thing to the reader - this order has no invoice to open - so both become one named error,
+   * and neither is polled or retried.
+   */
+  it.each([409, 422])(
+    'reads a %i from the generate call as an order that cannot be invoiced',
+    async (status) => {
+      const harness = createHarness({
+        polar: {
+          order: polarOrder({ is_invoice_generated: false }),
+          generateInvoiceError: new PolarApiError(
+            status,
+            '{"detail":"x"}',
+            `Polar POST /v1/orders/{id}/invoice failed with ${status}.`,
+          ),
+        },
+      })
+      const { sleep, waits } = recordingSleep()
+
+      await expect(
+        orderInvoiceUrl(
+          harness.runtime,
+          TEST_ORG_ID,
+          { orderId: TEST_ORDER_ID },
+          { sleep },
+        ),
+      ).rejects.toBeInstanceOf(OrderNotInvoiceableError)
+
+      expect(waits).toEqual([])
+      expect(
+        harness.calls.filter(
+          (call) => call.method === 'GET' && call.path.endsWith('/invoice'),
+        ),
+      ).toHaveLength(0)
+      expect(harness.logs).toContainEqual({
+        level: 'warn',
+        message: 'billing.invoice.not_invoiceable',
+        fields: { organizationId: TEST_ORG_ID, orderId: TEST_ORDER_ID, status },
+      })
+    },
+  )
+
+  it.each([403, 429, 500])(
+    'lets a %i from the generate call through as the provider failure it is',
+    async (status) => {
+      const harness = createHarness({
+        polar: {
+          order: polarOrder({ is_invoice_generated: false }),
+          generateInvoiceError: new PolarApiError(status, 'x', 'Polar failed.'),
+        },
+      })
+
+      await expect(
+        orderInvoiceUrl(harness.runtime, TEST_ORG_ID, {
+          orderId: TEST_ORDER_ID,
+        }),
+      ).rejects.toBeInstanceOf(PolarApiError)
+    },
+  )
+
   it('refuses an order that belongs to another workspace', async () => {
     const harness = createHarness({
       polar: {
         order: polarOrder({
+          // Not yet rendered, so a check that ran late would send the render request.
+          is_invoice_generated: false,
           customer: { id: TEST_CUSTOMER_ID, external_id: 'org_someone_else' },
           metadata: {},
         }),
@@ -1970,6 +2035,27 @@ describe('orderInvoiceUrl', () => {
     await expect(
       orderInvoiceUrl(harness.runtime, TEST_ORG_ID, { orderId: TEST_ORDER_ID }),
     ).rejects.toBeInstanceOf(BillingForbiddenError)
+    // Only the read-back of the order went out: no render was requested for it.
+    expect(harness.calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `GET /v1/orders/${TEST_ORDER_ID}`,
+    ])
+  })
+
+  it('refuses an order whose workspace cannot be determined, with no write to Polar', async () => {
+    const harness = createHarness({
+      polar: {
+        order: polarOrder({
+          is_invoice_generated: false,
+          customer: { id: TEST_CUSTOMER_ID, external_id: null },
+          metadata: {},
+        }),
+      },
+    })
+
+    await expect(
+      orderInvoiceUrl(harness.runtime, TEST_ORG_ID, { orderId: TEST_ORDER_ID }),
+    ).rejects.toBeInstanceOf(BillingForbiddenError)
+    expect(harness.calls.map((call) => call.method)).toEqual(['GET'])
   })
 
   it('refuses an order id that is not a Polar id at all', async () => {

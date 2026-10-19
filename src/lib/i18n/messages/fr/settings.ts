@@ -505,6 +505,18 @@ const messages = {
    */
   'billing.provider.rejected':
     'Le prestataire de paiement a refusé cette demande. Réessayez dans un instant.',
+  'billing.failure.reference':
+    'Référence à communiquer au support : {reference}',
+  'billing.failure.forbidden':
+    'Votre rôle ne permet pas cela pour la facturation de cet espace de travail. Demandez à un propriétaire ou à un administrateur.',
+  'billing.failure.providerRefused':
+    'Polar n’a pas accepté cette modification. Comparez le nombre de places à vos membres, puis réessayez ou utilisez le portail de facturation.',
+  'billing.failure.rateLimited':
+    'Polar est très sollicité en ce moment. Rien n’a été modifié. Réessayez dans une minute.',
+  'billing.failure.notConnected':
+    'La facturation n’est pas encore connectée sur ce déploiement, donc rien n’a été modifié. Contactez le support.',
+  'billing.failure.orderNotInvoiceable':
+    'Polar ne peut pas émettre de facture pour cette commande. S’il manque le nom ou l’adresse de facturation, ajoutez-les dans le portail de facturation et réessayez ; sinon, contactez le support.',
   'billing.planChanged.title': 'Formule mise à jour',
   'billing.planChanged.body':
     "Le changement est déjà effectif chez Polar, qui facturera la différence. Le récapitulatif ci-dessous se met à jour en moins d'une minute.",

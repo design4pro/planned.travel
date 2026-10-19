@@ -13,8 +13,16 @@
  * rule the tenant file follows.
  */
 
+import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { postMessage } from '../collab'
+import { member } from '#/server/db/auth-schema'
+import { ZodError } from 'zod'
+import {
+  createCheckIn,
+  listTripCheckIns,
+  listUserCheckIns,
+  postMessage,
+} from '../collab'
 import { NotFoundError, RepositoryError } from '../context'
 import { readFeedSource } from '../calendar-feeds'
 import { createDayNote, listDayNotes, listTripDays } from '../days'
@@ -67,10 +75,12 @@ import {
   listSettlements,
   listTripExpenses,
   markShareSettled,
+  requireExpenseOfTrip,
   setExpenseShares,
   updateBudgetItem,
   updateExpense,
 } from '../expenses'
+import { getFile, listTripFiles, recordFile, updateFile } from '../files'
 import { createPlace } from '../places'
 import {
   clearReservationImported,
@@ -98,6 +108,7 @@ import {
   requireTrip,
   restoreTrip,
   startTripCopy,
+  TripArchivedError,
   TripRoleError,
   tripMemberUserIds,
   updateTrip,
@@ -1890,6 +1901,215 @@ describe('member isolation', () => {
       })
     })
 
+    /**
+     * Leaving the workspace deletes no `trip_members` row, so the trip still lists the person; the
+     * money writers ask the `member` table too (#1034). Worked out when the write happens: nothing
+     * is deleted, and a person who comes back is accepted again.
+     */
+    describe('keep a person who left the workspace off new money (#1034)', () => {
+      let leaverId: string
+
+      async function leaveWorkspace(userId: string): Promise<void> {
+        await harness.db
+          .delete(member)
+          .where(
+            and(
+              eq(member.organizationId, alpha.organizationId),
+              eq(member.userId, userId),
+            ),
+          )
+      }
+
+      beforeEach(async () => {
+        leaverId = await alpha.addUser('Alpha who left the workspace')
+        await addTripMember(alpha.scope, {
+          tripId,
+          userId: leaverId,
+          role: 'editor',
+        })
+      })
+
+      it('refuses them as payer or sharer of a new expense, writing nothing', async () => {
+        await leaveWorkspace(leaverId)
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              paidBy: leaverId,
+            }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              participants: [{ userId: ownerId }, { userId: leaverId }],
+            }),
+          leaverId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('refuses adding them to an expense that does not carry them', async () => {
+        const expenseId = await dinner()
+        await leaveWorkspace(leaverId)
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, {
+              participants: [{ userId: ownerId }, { userId: leaverId }],
+            }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            updateExpense(alpha.scope, tripId, expenseId, { paidBy: leaverId }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            setExpenseShares(alpha.scope, tripId, expenseId, [
+              { userId: ownerId },
+              { userId: leaverId },
+            ]),
+          leaverId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('refuses a payment from or to them when they have no balance', async () => {
+        await leaveWorkspace(leaverId)
+        const before = await ledger()
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: leaverId,
+              toUserId: ownerId,
+              amountMinor: 500,
+              settledOn: '2026-04-12',
+            }),
+          leaverId,
+        )
+        await expectRefusedWithoutNaming(
+          () =>
+            createSettlement(alpha.scope, {
+              tripId,
+              fromUserId: ownerId,
+              toUserId: leaverId,
+              amountMinor: 500,
+              settledOn: '2026-04-12',
+            }),
+          leaverId,
+        )
+        expect(await ledger()).toEqual(before)
+      })
+
+      it('keeps an expense they are already on editable and re-splittable with them unchanged', async () => {
+        const { expense } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const edited = await updateExpense(alpha.scope, tripId, expense.id, {
+          title: 'Boat trip, corrected',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        expect(edited.expense.title).toBe('Boat trip, corrected')
+        expect(edited.shares.map((row) => row.userId).sort()).toEqual(
+          [leaverId, ownerId].sort(),
+        )
+        const resplit = await setExpenseShares(
+          alpha.scope,
+          tripId,
+          expense.id,
+          [{ userId: leaverId }],
+        )
+        expect(resplit).toHaveLength(1)
+      })
+
+      it('keeps their balance payable and receivable', async () => {
+        await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: ownerId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const paid = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: leaverId,
+          toUserId: ownerId,
+          amountMinor: 500,
+          settledOn: '2026-04-12',
+        })
+        expect(paid.fromUserId).toBe(leaverId)
+      })
+
+      it('keeps a credit they are owed payable', async () => {
+        await createExpense(alpha.scope, {
+          tripId,
+          title: 'Boat trip',
+          amountMinor: 9_000,
+          spentOn: '2026-04-11',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }, { userId: ownerId }],
+        })
+        await leaveWorkspace(leaverId)
+
+        const repaid = await createSettlement(alpha.scope, {
+          tripId,
+          fromUserId: ownerId,
+          toUserId: leaverId,
+          amountMinor: 500,
+          settledOn: '2026-04-12',
+        })
+        expect(repaid.toUserId).toBe(leaverId)
+      })
+
+      it('accepts them again once they are back in the workspace', async () => {
+        await leaveWorkspace(leaverId)
+        await expectRefusedWithoutNaming(
+          () =>
+            createExpense(alpha.scope, {
+              tripId,
+              title: 'Taxi',
+              amountMinor: 1_000,
+              spentOn: '2026-04-12',
+              paidBy: leaverId,
+            }),
+          leaverId,
+        )
+
+        await alpha.addMembership(leaverId)
+        const { expense } = await createExpense(alpha.scope, {
+          tripId,
+          title: 'Taxi',
+          amountMinor: 1_000,
+          spentOn: '2026-04-12',
+          paidBy: leaverId,
+          participants: [{ userId: leaverId }],
+        })
+        expect(expense.paidBy).toBe(leaverId)
+      })
+    })
+
     it('leaves an expense with no people, as booking sync writes it, unchanged', async () => {
       const { expense, shares } = await createExpense(alpha.scope, {
         tripId,
@@ -2095,6 +2315,326 @@ describe('member isolation', () => {
           requireTransportOfTrip(alpha.scope, other.id, transportId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  describe('the ids a file or a check-in links to (#1035)', () => {
+    type LinkKey = 'placeId' | 'reservationId' | 'transportId' | 'expenseId'
+    type Links = Record<LinkKey, string>
+
+    const LINK_KEYS: ReadonlyArray<LinkKey> = [
+      'placeId',
+      'reservationId',
+      'transportId',
+      'expenseId',
+    ]
+    const FILE = {
+      storageKey: 'files/linked.pdf',
+      filename: 'linked.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 10,
+    }
+
+    let otherTripId: string
+    let own: Links
+    let elsewhere: Links
+
+    /** One of each linkable row on `tripId`, written by the owner. */
+    async function rowsOn(
+      tripId: string,
+      placeId: string,
+      spentOn: string,
+    ): Promise<Links> {
+      return {
+        placeId,
+        reservationId: (
+          await createReservation(alpha.scope, { tripId, title: 'Table' })
+        ).id,
+        transportId: (
+          await createTransport(alpha.scope, {
+            tripId,
+            title: 'Lisbon to Porto',
+            mode: 'train',
+          })
+        ).id,
+        expenseId: (
+          await createExpense(alpha.scope, {
+            tripId,
+            title: 'Taxi',
+            amountMinor: 1_000,
+            spentOn,
+          })
+        ).expense.id,
+      }
+    }
+
+    async function filesOf(): Promise<unknown> {
+      return {
+        here: await listTripFiles(alpha.scope, fixture.tripId),
+        there: await listTripFiles(alpha.scope, otherTripId),
+      }
+    }
+
+    beforeEach(async () => {
+      const other = await createTrip(alpha.scope, {
+        title: 'Faro, another time',
+        slug: 'faro-another-time',
+        startDate: '2026-06-01',
+        endDate: '2026-06-02',
+        currency: 'EUR',
+      })
+      otherTripId = other.id
+      own = await rowsOn(fixture.tripId, fixture.placeId, '2026-04-10')
+      const place = await createPlace(alpha.scope, {
+        tripId: other.id,
+        name: 'Ponta da Piedade',
+      })
+      elsewhere = await rowsOn(other.id, place.id, '2026-06-01')
+    })
+
+    it('records and updates a file that links the rows of its own trip', async () => {
+      const file = await recordFile(alpha.scope, {
+        ...FILE,
+        tripId: fixture.tripId,
+        ...own,
+      })
+      expect(file).toMatchObject(own)
+
+      const bare = await recordFile(alpha.scope, {
+        ...FILE,
+        storageKey: 'files/bare.pdf',
+        tripId: fixture.tripId,
+      })
+      const linked = await updateFile(alpha.scope, fixture.tripId, bare.id, own)
+      expect(linked).toMatchObject(own)
+      const cleared = await updateFile(alpha.scope, fixture.tripId, bare.id, {
+        placeId: null,
+        reservationId: null,
+      })
+      expect(cleared.placeId).toBeNull()
+      expect(cleared.reservationId).toBeNull()
+    })
+
+    it.each(LINK_KEYS)(
+      'refuses to record a file linked to a %s of another trip, writing no row',
+      async (key) => {
+        const before = await filesOf()
+
+        const error = await captureError(() =>
+          recordFile(alpha.scope, {
+            ...FILE,
+            tripId: fixture.tripId,
+            [key]: elsewhere[key],
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await filesOf()).toEqual(before)
+      },
+    )
+
+    it.each(LINK_KEYS)(
+      'refuses to link an existing file to a %s of another trip, leaving the row as it was',
+      async (key) => {
+        const file = await recordFile(alpha.scope, {
+          ...FILE,
+          tripId: fixture.tripId,
+        })
+        const before = await getFile(alpha.scope, file.id)
+
+        const error = await captureError(() =>
+          updateFile(alpha.scope, fixture.tripId, file.id, {
+            filename: 'renamed.pdf',
+            [key]: elsewhere[key],
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await getFile(alpha.scope, file.id)).toEqual(before)
+      },
+    )
+
+    it.each(LINK_KEYS)(
+      'answers a missing %s exactly as it answers one of another trip',
+      async (key) => {
+        const attempt = (id: string) =>
+          captureError(() =>
+            recordFile(alpha.scope, {
+              ...FILE,
+              tripId: fixture.tripId,
+              [key]: id,
+            }),
+          )
+        const missingId = 'no-such-row'
+
+        const missing = await attempt(missingId)
+        const foreign = await attempt(elsewhere[key])
+
+        expect(missing).toBeInstanceOf(NotFoundError)
+        expect(foreign).toBeInstanceOf(NotFoundError)
+        expect((foreign as NotFoundError).code).toBe(
+          (missing as NotFoundError).code,
+        )
+        expect((foreign as NotFoundError).message).toBe(
+          (missing as NotFoundError).message.replace(missingId, elsewhere[key]),
+        )
+      },
+    )
+
+    it('refuses to update a file that sits on another trip', async () => {
+      const onOther = await recordFile(alpha.scope, {
+        ...FILE,
+        tripId: otherTripId,
+      })
+      const before = await getFile(alpha.scope, onOther.id)
+
+      const error = await captureError(() =>
+        updateFile(alpha.scope, fixture.tripId, onOther.id, {
+          filename: 'x.pdf',
+          ...own,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await getFile(alpha.scope, onOther.id)).toEqual(before)
+    })
+
+    it('refuses a reader and an archived trip before it reads a link, so an id cannot be probed', async () => {
+      const viewerId = await alpha.addUser('Alpha the reader')
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const viewer = alpha.scopeFor(viewerId)
+      const file = await recordFile(alpha.scope, {
+        ...FILE,
+        tripId: fixture.tripId,
+      })
+
+      for (const links of [elsewhere, { placeId: 'no-such-place' }]) {
+        expect(
+          await captureError(() =>
+            recordFile(viewer, { ...FILE, tripId: fixture.tripId, ...links }),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+        expect(
+          await captureError(() =>
+            updateFile(viewer, fixture.tripId, file.id, links),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+      }
+
+      await archiveTrip(alpha.scope, fixture.tripId)
+      expect(
+        await captureError(() =>
+          recordFile(alpha.scope, {
+            ...FILE,
+            tripId: fixture.tripId,
+            ...elsewhere,
+          }),
+        ),
+      ).toBeInstanceOf(TripArchivedError)
+    })
+
+    it('refuses a patch that clears one link and names a foreign one, writing neither', async () => {
+      const file = await recordFile(alpha.scope, {
+        ...FILE,
+        tripId: fixture.tripId,
+        placeId: own.placeId,
+      })
+      const before = await getFile(alpha.scope, file.id)
+
+      const error = await captureError(() =>
+        updateFile(alpha.scope, fixture.tripId, file.id, {
+          placeId: null,
+          expenseId: elsewhere.expenseId,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(await getFile(alpha.scope, file.id)).toEqual(before)
+    })
+
+    it('binds an expense to its trip without asking for a money role', async () => {
+      const viewerId = await alpha.addUser('Alpha the reader')
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: viewerId,
+        role: 'viewer',
+      })
+      const viewer = alpha.scopeFor(viewerId)
+
+      expect(
+        (await requireExpenseOfTrip(viewer, fixture.tripId, own.expenseId)).id,
+      ).toBe(own.expenseId)
+      for (const expenseId of [elsewhere.expenseId, 'no-such-expense']) {
+        const error = await captureError(() =>
+          requireExpenseOfTrip(alpha.scope, fixture.tripId, expenseId),
+        )
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((error as NotFoundError).message).toContain('expense')
+      }
+    })
+
+    describe('a check-in', () => {
+      const CHECK_IN = { name: 'Miradouro', countryCode: 'PT' }
+
+      async function checkInsOf(): Promise<unknown> {
+        return {
+          here: await listTripCheckIns(alpha.scope, fixture.tripId),
+          there: await listTripCheckIns(alpha.scope, otherTripId),
+          mine: await listUserCheckIns(alpha.scope, alpha.ownerUserId),
+        }
+      }
+
+      it('refuses a place given without a trip before reading anything, and does not say whether the place exists', async () => {
+        const before = await checkInsOf()
+
+        for (const placeId of [fixture.placeId, elsewhere.placeId, 'no-such']) {
+          for (const tripId of [undefined, null]) {
+            const error = await captureError(() =>
+              createCheckIn(alpha.scope, { ...CHECK_IN, tripId, placeId }),
+            )
+            expect(error).toBeInstanceOf(ZodError)
+            expect(error).not.toBeInstanceOf(NotFoundError)
+            expect((error as ZodError).message).not.toContain(placeId)
+          }
+        }
+
+        expect(await checkInsOf()).toEqual(before)
+      })
+
+      it('refuses a place of another trip, writing no row', async () => {
+        const before = await checkInsOf()
+
+        const error = await captureError(() =>
+          createCheckIn(alpha.scope, {
+            ...CHECK_IN,
+            tripId: fixture.tripId,
+            placeId: elsewhere.placeId,
+          }),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await checkInsOf()).toEqual(before)
+      })
+
+      it('accepts a place of its own trip, and a check-in with neither trip nor place', async () => {
+        const atPlace = await createCheckIn(alpha.scope, {
+          ...CHECK_IN,
+          tripId: fixture.tripId,
+          placeId: fixture.placeId,
+        })
+        const loose = await createCheckIn(alpha.scope, CHECK_IN)
+
+        expect(atPlace).toMatchObject({
+          tripId: fixture.tripId,
+          placeId: fixture.placeId,
+        })
+        expect(loose.tripId).toBeNull()
+        expect(loose.placeId).toBeNull()
+      })
     })
   })
 

@@ -20,7 +20,7 @@
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 
-import type { PublicFailure } from '#/lib/errors'
+import type { PublicFailure, PublicFailureCode } from '#/lib/errors'
 
 /**
  * Errors whose `message` is written for the person reading the screen.
@@ -50,7 +50,8 @@ import type { PublicFailure } from '#/lib/errors'
  * message key the client resolves, the shape `SHELL_STATE_KEYS` already has, or it stays a
  * diagnostic and the caller's localised fallback is what the reader sees. `ForbiddenError` is the
  * standing example of the second. A quota refusal is the third shape, below: still a diagnostic,
- * with a constant code beside its reference.
+ * with a constant code beside its reference - and so is a billing failure the reader is owed a
+ * sentence for (forbidden, not connected, rate-limited, refused by Polar, order not invoiceable).
  */
 export const AUTHORED_ERROR_NAMES: ReadonlySet<string> = new Set([
   'AuthRequirementError',
@@ -101,6 +102,38 @@ function validationIssues(cause: unknown): ReadonlyArray<IssueLike> | null {
  * `__tests__/public.test.ts` constructs both.
  */
 const QUOTA_ERROR_NAME = 'QuotaExceededError'
+
+/**
+ * Billing diagnostics the reader is owed a sentence for, by class name. The message of every one of
+ * these is for an operator - `PolarApiError` quotes a request path and a slice of Polar's body,
+ * `BillingConfigError` the `wrangler secret put` command to run - so only the code crosses and the
+ * billing screen resolves it to localised copy. `PolarApiError` is read further down, by status.
+ */
+const BILLING_CODES_BY_NAME: ReadonlyMap<string, PublicFailureCode> = new Map([
+  ['BillingForbiddenError', 'BILLING_FORBIDDEN'],
+  ['BillingConfigError', 'BILLING_NOT_CONNECTED'],
+  ['OrderNotInvoiceableError', 'BILLING_ORDER_NOT_INVOICEABLE'],
+])
+
+/** The code for a Polar failure the reader can act on: a rate limit, or a refusal of the change. */
+function polarFailureCode(cause: unknown): PublicFailureCode | null {
+  const status =
+    typeof cause === 'object' && cause !== null && 'status' in cause
+      ? cause.status
+      : null
+  if (status === 429) return 'BILLING_RATE_LIMITED'
+  if (status === 402 || status === 422) return 'BILLING_PROVIDER_REFUSED'
+  return null
+}
+
+function billingCodeOf(
+  name: string | null,
+  cause: unknown,
+): PublicFailureCode | null {
+  if (name === null) return null
+  if (name === 'PolarApiError') return polarFailureCode(cause)
+  return BILLING_CODES_BY_NAME.get(name) ?? null
+}
 
 function nameOf(cause: unknown): string | null {
   if (typeof cause !== 'object' || cause === null || !('name' in cause)) {
@@ -157,6 +190,11 @@ export function classifyFailure(cause: unknown): PublicFailure {
   // `TENANT_ISOLATION` to the browser. The caller attaches the reference, as for any diagnostic.
   if (name === QUOTA_ERROR_NAME) {
     return { kind: 'unexpected', code: 'QUOTA_EXCEEDED' }
+  }
+
+  const billingCode = billingCodeOf(name, cause)
+  if (billingCode !== null) {
+    return { kind: 'unexpected', code: billingCode }
   }
 
   return { kind: 'unexpected' }

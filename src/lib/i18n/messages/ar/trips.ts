@@ -487,6 +487,45 @@ const messages = {
   'plan.stop.toast.timesSaved': 'تم حفظ أوقات التوقف',
   'plan.place.toast.deleted': 'تم حذف المكان',
   'plan.pin.toast.moved': 'تم تثبيت {name}',
+  'join.page.title': 'رابط دعوة إلى الرحلة',
+  'join.page.description':
+    'افتح هذا الرابط للانضمام إلى رحلة مشتركة على planned.travel.',
+  'join.title.invited': 'دعاك {inviter} إلى رحلة',
+  'join.requirement':
+    'يعمل هذا الرابط مع الأشخاص الموجودين بالفعل في مساحة عمل {inviter}.',
+  'join.newHere': 'جديد هنا؟ اطلب من {inviter} إضافتك إلى مساحة العمل أولاً.',
+  'join.trip.label': 'الرحلة',
+  'join.role.label': 'ستنضم بصفتك',
+  'join.dates.label': 'التواريخ',
+  'join.destination.label': 'الوجهة',
+  'join.action.signIn': 'دخول',
+  'join.action.join': 'انضم إلى الرحلة',
+  'join.action.joining': 'جارٍ الانضمام إلى الرحلة',
+  'join.action.open': 'افتح الرحلة',
+  'join.action.openIn': 'افتح الرحلة وبدّل مساحة العمل',
+  'join.action.openIn.pending': 'جارٍ تبديل مساحة العمل',
+  'join.loading': 'جارٍ تحميل الدعوة',
+  'join.joined.title': 'أنت الآن في الرحلة',
+  'join.joined.body': 'افتحها لترى الخطة.',
+  'join.member.title': 'أنت مشارك في هذه الرحلة بالفعل',
+  'join.needsWorkspace.title': 'هذه الرحلة في مساحة عمل لست عضواً فيها',
+  'join.needsWorkspace.body':
+    'اطلب من {inviter} إضافتك إلى مساحة العمل أولاً، ثم افتح هذا الرابط مرة أخرى.',
+  'join.needsWorkspace.signedInAs':
+    'أنت مسجّل الدخول بالعنوان {email}. اطلب من {inviter} استخدام هذا العنوان.',
+  'join.needsWorkspace.acceptFirst':
+    'إذا كانت لديك رسالة بريد بدعوة إلى مساحة عمل، فاقبلها أولاً ثم افتح هذا الرابط مرة أخرى.',
+  'join.needsWorkspace.otherAccount': 'الدخول بحساب آخر',
+  'join.unavailable.title': 'رابط الدعوة هذا غير متاح',
+  'join.unavailable.body':
+    'ربما استُبدل الرابط أو أُوقف. اطلب رابطاً جديداً ممن أرسله.',
+  'join.unavailable.signIn': 'دخول',
+  'join.unavailable.trips': 'اذهب إلى رحلاتك',
+  'join.error.title': 'تعذّر تحميل رابط الدعوة هذا',
+  'join.error.retry': 'حاول مرة أخرى',
+  'join.error.busy': 'هذه الصفحة مشغولة. حاول مرة أخرى بعد دقيقة.',
+  'join.error.join': 'تعذّر الانضمام. الرابط ما زال يعمل، حاول مرة أخرى.',
+  'join.error.switch': 'تعذّر تبديل مساحة العمل. حاول مرة أخرى.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

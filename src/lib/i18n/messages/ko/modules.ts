@@ -1125,6 +1125,24 @@ const messages = {
       '휴가 일수를 저장하지 못했습니다. {year}년은 여전히 {value}일로 표시됩니다.',
   },
   'vacay.allowance.retry': '다시 시도',
+  'vacay.allowance.tile.edit.carried': '이월 일수 편집, 현재 {value}',
+  'vacay.allowance.input.carried': '{year}년으로 이월된 일수',
+  'vacay.allowance.carried.from': '{year}년에서 이월',
+  'vacay.allowance.carried.opening':
+    '{year}년 이전에서 가져왔습니다. 선택하여 편집하세요.',
+  'vacay.allowance.carried.off': '이월이 꺼져 있습니다',
+  'vacay.allowance.carried.wholeDays':
+    '다음 해로는 온전한 일수만 이월되며, 남은 반일은 이월되지 않습니다.',
+  'vacay.allowance.error.derived':
+    '{year}년의 이월 일수는 이제 {previousYear}년에서 계산되므로 편집할 수 없습니다.',
+  'vacay.allowance.error.carried': {
+    other:
+      '이월 일수를 저장하지 못했습니다. {year}년은 여전히 {value}일로 표시됩니다.',
+  },
+  'vacay.allowance.superseded': {
+    other:
+      '{year}년의 이월 일수는 이제 {previousYear}년에서 계산됩니다. 직접 입력했던 값은 {value}일였습니다.',
+  },
   'vacay.pending.loading': '불러오는 중',
   'vacay.error.title': '휴가 플래너를 불러오지 못했습니다',
   'vacay.year.previous': '이전 연도',

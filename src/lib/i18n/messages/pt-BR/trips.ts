@@ -470,6 +470,49 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Horários da parada salvos',
   'plan.place.toast.deleted': 'Lugar excluído',
   'plan.pin.toast.moved': '{name} fixado',
+  'join.page.title': 'Link de convite para a viagem',
+  'join.page.description':
+    'Abra este link para entrar em uma viagem compartilhada no planned.travel.',
+  'join.title.invited': '{inviter} convidou você para uma viagem',
+  'join.requirement':
+    'Este link funciona para quem já está no espaço de trabalho de {inviter}.',
+  'join.newHere':
+    'Primeira vez aqui? Peça a {inviter} que adicione você primeiro ao espaço de trabalho.',
+  'join.trip.label': 'Viagem',
+  'join.role.label': 'Você entraria como',
+  'join.dates.label': 'Datas',
+  'join.destination.label': 'Destino',
+  'join.action.signIn': 'Entrar',
+  'join.action.join': 'Entrar na viagem',
+  'join.action.joining': 'Entrando na viagem',
+  'join.action.open': 'Abrir a viagem',
+  'join.action.openIn': 'Abrir a viagem e trocar de espaço de trabalho',
+  'join.action.openIn.pending': 'Trocando de espaço de trabalho',
+  'join.loading': 'Carregando o convite',
+  'join.joined.title': 'Você entrou na viagem',
+  'join.joined.body': 'Abra para ver o roteiro.',
+  'join.member.title': 'Você já está nesta viagem',
+  'join.needsWorkspace.title':
+    'Esta viagem está em um espaço de trabalho do qual você não faz parte',
+  'join.needsWorkspace.body':
+    'Peça a {inviter} que adicione você primeiro ao espaço de trabalho e depois abra este link de novo.',
+  'join.needsWorkspace.signedInAs':
+    'Você entrou como {email}. Peça a {inviter} que use este endereço.',
+  'join.needsWorkspace.acceptFirst':
+    'Se você já tem um e-mail de convite para um espaço de trabalho, aceite-o primeiro e depois abra este link de novo.',
+  'join.needsWorkspace.otherAccount': 'Entrar com outra conta',
+  'join.unavailable.title': 'Este link de convite não está disponível',
+  'join.unavailable.body':
+    'O link pode ter sido substituído ou desativado. Peça um novo a quem enviou.',
+  'join.unavailable.signIn': 'Entrar',
+  'join.unavailable.trips': 'Ir para suas viagens',
+  'join.error.title': 'Não foi possível carregar este link de convite',
+  'join.error.retry': 'Tentar de novo',
+  'join.error.busy': 'Esta página está ocupada. Tente de novo em um minuto.',
+  'join.error.join':
+    'Não foi possível entrar. O link continua funcionando; tente de novo.',
+  'join.error.switch':
+    'Não foi possível trocar de espaço de trabalho. Tente de novo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

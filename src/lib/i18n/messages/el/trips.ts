@@ -471,6 +471,51 @@ const messages = {
   'plan.stop.toast.timesSaved': 'Οι ώρες της στάσης αποθηκεύτηκαν',
   'plan.place.toast.deleted': 'Το μέρος διαγράφηκε',
   'plan.pin.toast.moved': 'Τοποθετήθηκε πινέζα στο {name}',
+  'join.page.title': 'Σύνδεσμος πρόσκλησης στο ταξίδι',
+  'join.page.description':
+    'Ανοίξτε αυτόν τον σύνδεσμο για να συμμετάσχετε σε ένα κοινό ταξίδι στο planned.travel.',
+  'join.title.invited': 'Πρόσκληση σε ταξίδι από {inviter}',
+  'join.requirement':
+    'Ο σύνδεσμος ισχύει για όσους είναι ήδη στον χώρο εργασίας του χρήστη {inviter}.',
+  'join.newHere':
+    'Πρώτη φορά εδώ; Ζητήστε πρώτα από τον χρήστη {inviter} να σας προσθέσει στον χώρο εργασίας του.',
+  'join.trip.label': 'Ταξίδι',
+  'join.role.label': 'Θα συμμετέχετε ως',
+  'join.dates.label': 'Ημερομηνίες',
+  'join.destination.label': 'Προορισμός',
+  'join.action.signIn': 'Σύνδεση',
+  'join.action.join': 'Συμμετοχή στο ταξίδι',
+  'join.action.joining': 'Γίνεται συμμετοχή στο ταξίδι',
+  'join.action.open': 'Άνοιγμα ταξιδιού',
+  'join.action.openIn': 'Άνοιγμα ταξιδιού και αλλαγή χώρου εργασίας',
+  'join.action.openIn.pending': 'Αλλαγή χώρου εργασίας',
+  'join.loading': 'Φόρτωση της πρόσκλησης',
+  'join.joined.title': 'Συμμετέχετε στο ταξίδι',
+  'join.joined.body': 'Ανοίξτε το για να δείτε το πλάνο.',
+  'join.member.title': 'Συμμετέχετε ήδη σε αυτό το ταξίδι',
+  'join.needsWorkspace.title':
+    'Αυτό το ταξίδι ανήκει σε χώρο εργασίας στον οποίο δεν συμμετέχετε',
+  'join.needsWorkspace.body':
+    'Ζητήστε πρώτα από τον χρήστη {inviter} να σας προσθέσει στον χώρο εργασίας και μετά ανοίξτε ξανά αυτόν τον σύνδεσμο.',
+  'join.needsWorkspace.signedInAs':
+    'Έχετε συνδεθεί ως {email}. Πείτε στον χρήστη {inviter} να χρησιμοποιήσει αυτή τη διεύθυνση.',
+  'join.needsWorkspace.acceptFirst':
+    'Αν έχετε ήδη email με πρόσκληση σε χώρο εργασίας, αποδεχτείτε την πρώτα και μετά ανοίξτε ξανά αυτόν τον σύνδεσμο.',
+  'join.needsWorkspace.otherAccount': 'Σύνδεση με άλλον λογαριασμό',
+  'join.unavailable.title': 'Αυτός ο σύνδεσμος πρόσκλησης δεν είναι διαθέσιμος',
+  'join.unavailable.body':
+    'Ο σύνδεσμος μπορεί να έχει αντικατασταθεί ή απενεργοποιηθεί. Ζητήστε νέο από όποιον σας τον έστειλε.',
+  'join.unavailable.signIn': 'Σύνδεση',
+  'join.unavailable.trips': 'Μετάβαση στα ταξίδια σας',
+  'join.error.title':
+    'Δεν ήταν δυνατή η φόρτωση αυτού του συνδέσμου πρόσκλησης',
+  'join.error.retry': 'Δοκιμάστε ξανά',
+  'join.error.busy':
+    'Η σελίδα είναι απασχολημένη. Δοκιμάστε ξανά σε ένα λεπτό.',
+  'join.error.join':
+    'Δεν ήταν δυνατή η συμμετοχή. Ο σύνδεσμος εξακολουθεί να λειτουργεί, δοκιμάστε ξανά.',
+  'join.error.switch':
+    'Δεν ήταν δυνατή η αλλαγή χώρου εργασίας. Δοκιμάστε ξανά.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

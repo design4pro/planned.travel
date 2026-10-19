@@ -445,6 +445,50 @@ const messages = {
   'plan.stop.toast.timesSaved': '立ち寄り先の時刻を保存しました',
   'plan.place.toast.deleted': '場所を削除しました',
   'plan.pin.toast.moved': '{name}にピンを置きました',
+  'join.page.title': '旅行の招待リンク',
+  'join.page.description':
+    'このリンクを開いて、planned.travel の共有された旅行に参加しましょう。',
+  'join.title.invited': '{inviter}さんがあなたを旅行に招待しました',
+  'join.requirement':
+    'このリンクは、すでに{inviter}さんのワークスペースにいる人のためのものです。',
+  'join.newHere':
+    '初めての方は、まず{inviter}さんにワークスペースへの追加を依頼してください。',
+  'join.trip.label': '旅行',
+  'join.role.label': '参加時の役割',
+  'join.dates.label': '日程',
+  'join.destination.label': '目的地',
+  'join.action.signIn': 'サインイン',
+  'join.action.join': '旅行に参加する',
+  'join.action.joining': '旅行に参加しています',
+  'join.action.open': '旅行を開く',
+  'join.action.openIn': '旅行を開いてワークスペースを切り替える',
+  'join.action.openIn.pending': 'ワークスペースを切り替えています',
+  'join.loading': '招待を読み込んでいます',
+  'join.joined.title': '旅行に参加しました',
+  'join.joined.body': '開いて計画を確認しましょう。',
+  'join.member.title': 'すでにこの旅行に参加しています',
+  'join.needsWorkspace.title':
+    'この旅行は、あなたが参加していないワークスペースにあります',
+  'join.needsWorkspace.body':
+    'まず{inviter}さんにワークスペースへの追加を依頼し、そのあとでこのリンクをもう一度開いてください。',
+  'join.needsWorkspace.signedInAs':
+    '{email}でサインインしています。このアドレスを使うよう{inviter}さんに伝えてください。',
+  'join.needsWorkspace.acceptFirst':
+    'ワークスペースへの招待メールをすでに受け取っている場合は、先にそれを承諾してから、このリンクをもう一度開いてください。',
+  'join.needsWorkspace.otherAccount': '別のアカウントでサインイン',
+  'join.unavailable.title': 'この招待リンクは利用できません',
+  'join.unavailable.body':
+    'リンクが差し替えられたか、無効になっている可能性があります。送ってくれた人に新しいリンクを頼んでください。',
+  'join.unavailable.signIn': 'サインイン',
+  'join.unavailable.trips': '自分の旅行へ移動',
+  'join.error.title': 'この招待リンクを読み込めませんでした',
+  'join.error.retry': 'もう一度試す',
+  'join.error.busy':
+    'このページは混み合っています。1分ほど待ってからもう一度お試しください。',
+  'join.error.join':
+    '参加できませんでした。リンクはまだ使えます。もう一度お試しください。',
+  'join.error.switch':
+    'ワークスペースを切り替えられませんでした。もう一度お試しください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

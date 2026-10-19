@@ -71,8 +71,20 @@ and calls it.
 
 `unscoped-shape.test.ts` maps the new function to its one caller and a second check keeps SQL and
 scope construction out of `public/trip-invite.ts`. Review greps every `Unscoped` caller; an
-additional caller is a blocker. The finder has no production caller until the visitor slice
-(`/join/$token`) lands. Rotating `BETTER_AUTH_SECRET` now also invalidates every invite link, which
+additional caller is a blocker. `/join/$token` is the finder's production caller (through
+`src/server/public/trip-invite.ts`); the same module also calls `readInvitePreviewUnscoped`, a
+read-only projection that the same map pins to the same single caller. Rotating `BETTER_AUTH_SECRET` now also invalidates every invite link, which
 `docs/DEPLOY.md` says beside the existing rotation warning. Moving to a dedicated binding later
 would invalidate the links once, and the purpose list is what keeps a later credential kind from
 sharing a sub-key with an invite.
+
+## Amendment (#1023)
+
+The join lands as a fourth function of the same kind, `joinTripByInviteUnscoped(db, digest, key,
+joiner)`, and it is the one **write**. It takes a plain `Database` because the joiner is not an owner
+of the trip and cannot read a private trip yet, so no tenant scope exists until the function has
+resolved the link and read the joiner's role in the link's workspace from `member`. Its single
+production caller is `src/routes/join/-lib/join.ts`, for `joinTripFn` (POST, session required, rate
+limited per user and per address); `unscoped-shape.test.ts` pins that. It refuses a banned joiner and
+an impersonated session before it reads or writes anything, writes only through `insertTripMember`,
+and counts a use only on a real join.

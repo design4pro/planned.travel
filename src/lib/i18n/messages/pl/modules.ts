@@ -1275,6 +1275,31 @@ const messages = {
       'Nie udało się zapisać Twojego limitu. Rok {year} nadal pokazuje {value} dnia.',
   },
   'vacay.allowance.retry': 'Spróbuj ponownie',
+  'vacay.allowance.tile.edit.carried':
+    'Edytuj przeniesione dni, obecnie {value}',
+  'vacay.allowance.input.carried': 'Dni przeniesione na rok {year}',
+  'vacay.allowance.carried.from': 'Przeniesione z roku {year}',
+  'vacay.allowance.carried.opening':
+    'Przeniesione sprzed roku {year}. Wybierz, aby edytować.',
+  'vacay.allowance.carried.off': 'Przenoszenie jest wyłączone',
+  'vacay.allowance.carried.wholeDays':
+    'Na kolejny rok przechodzą tylko pełne dni; pozostałe pół dnia nie jest przenoszone.',
+  'vacay.allowance.error.derived':
+    'Dni przeniesione na rok {year} są teraz liczone na podstawie roku {previousYear}, więc nie można ich edytować.',
+  'vacay.allowance.error.carried': {
+    one: 'Nie udało się zapisać przeniesionych dni. Rok {year} nadal pokazuje {value} dzień.',
+    few: 'Nie udało się zapisać przeniesionych dni. Rok {year} nadal pokazuje {value} dni.',
+    many: 'Nie udało się zapisać przeniesionych dni. Rok {year} nadal pokazuje {value} dni.',
+    other:
+      'Nie udało się zapisać przeniesionych dni. Rok {year} nadal pokazuje {value} dnia.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'Dni przeniesione na rok {year} są teraz liczone na podstawie roku {previousYear}. Wpisana wcześniej wartość: {value} dzień.',
+    few: 'Dni przeniesione na rok {year} są teraz liczone na podstawie roku {previousYear}. Wpisana wcześniej wartość: {value} dni.',
+    many: 'Dni przeniesione na rok {year} są teraz liczone na podstawie roku {previousYear}. Wpisana wcześniej wartość: {value} dni.',
+    other:
+      'Dni przeniesione na rok {year} są teraz liczone na podstawie roku {previousYear}. Wpisana wcześniej wartość: {value} dnia.',
+  },
   'vacay.pending.loading': 'Ładowanie',
   'vacay.error.title': 'Nie udało się wczytać planera urlopów',
   'vacay.year.previous': 'Poprzedni rok',
