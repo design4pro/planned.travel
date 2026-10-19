@@ -7,6 +7,7 @@ import {
   departMemberFn,
   recoverDepartureWorkspaceFn,
 } from '#/server/fns/members'
+import { DEPARTURE_COPY } from './member-departure-control'
 import type { DepartureOutcome } from './member-departure-control'
 
 export function useMemberDeparture() {
@@ -30,6 +31,7 @@ export function useMemberDeparture() {
     return { ok: false, reason: 'failed' }
   }
   const depart = async (memberId: string): Promise<DepartureOutcome> => {
+    const confirmation = document.querySelector('[role="dialog"]')
     try {
       const result = await departMemberFn({ data: { memberId } })
       if (result.ok && result.left) {
@@ -49,6 +51,14 @@ export function useMemberDeparture() {
         toast.success(t('settings.workspace.departure.removed'))
         requestAnimationFrame(() => membersRef.current?.focus())
         return { ok: true }
+      }
+      if (result.reason === 'not-found' || result.reason === 'not-permitted') {
+        requestAnimationFrame(() => {
+          if (!confirmation?.isConnected) {
+            toast.error(t(DEPARTURE_COPY[result.reason]))
+            membersRef.current?.focus()
+          }
+        })
       }
       return result
     } catch {

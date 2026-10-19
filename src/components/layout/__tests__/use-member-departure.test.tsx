@@ -22,13 +22,16 @@ const ports = vi.hoisted(() => ({
   depart: vi.fn(),
   recover: vi.fn(),
   announce: vi.fn(),
+  refuse: vi.fn(),
   router: {
     clearCache: vi.fn(),
     invalidate: vi.fn(async () => {}),
     state: { matches: [] },
   },
 }))
-vi.mock('sonner', () => ({ toast: { success: ports.announce } }))
+vi.mock('sonner', () => ({
+  toast: { success: ports.announce, error: ports.refuse },
+}))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => ports.router }))
 vi.mock('#/server/fns/members', () => ({
   departMemberFn: ports.depart,
@@ -119,3 +122,75 @@ it('announces removal and focuses the stable members table after its dialog and 
   )
   expect(ports.announce).toHaveBeenCalledExactlyOnceWith('Member removed')
 })
+
+it.each([
+  ['not-found', 'row'],
+  ['not-permitted', 'control'],
+  ['not-permitted', 'retained'],
+] as const)(
+  'preserves %s feedback when refresh leaves the %s',
+  async (reason, mode) => {
+    ports.depart.mockResolvedValue({ ok: false, reason })
+    function Harness() {
+      const [refreshed, setRefreshed] = useState(false)
+      const { depart, recover, membersRef } = useMemberDeparture()
+      ports.router.invalidate.mockImplementation(async () => {
+        setRefreshed(true)
+      })
+      const control = (
+        <MemberDepartureControl
+          name="Kasia"
+          workspace="Alpine friends"
+          self={false}
+          onConfirm={() => depart('target-member')}
+          onRecover={recover}
+        />
+      )
+      return (
+        <table aria-label="Members" tabIndex={-1} ref={membersRef}>
+          <tbody>
+            {refreshed && mode === 'row' ? null : (
+              <tr>
+                <td>{refreshed && mode === 'control' ? 'Kasia' : control}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )
+    }
+    const user = userEvent.setup()
+    render(
+      <Wrapper>
+        <Harness />
+      </Wrapper>,
+    )
+    await user.click(screen.getByRole('button', { name: 'Remove member' }))
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Remove member',
+      }),
+    )
+    if (mode === 'retained') {
+      await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      expect(ports.refuse).not.toHaveBeenCalled()
+      expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(
+        true,
+      )
+    } else {
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await waitFor(() => expect(ports.refuse).toHaveBeenCalledOnce())
+      expect(ports.refuse.mock.calls[0][0]).toBe(
+        Settings[
+          reason === 'not-found'
+            ? 'workspace.departure.notFound'
+            : 'workspace.departure.notPermitted'
+        ],
+      )
+      expect(document.activeElement).toBe(
+        screen.getByRole('table', { name: 'Members' }),
+      )
+    }
+    expect(ports.depart).toHaveBeenCalledOnce()
+  },
+)

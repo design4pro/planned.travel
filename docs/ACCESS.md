@@ -463,6 +463,8 @@ itself, including composite roles; role demotion uses the same owner predicate. 
 conditional `member.removed` or `member.left` audit entry share one D1 batch. Auth still runs the
 session cleanup and offboarding hooks; it never deletes the row a second time. Public HTTP
 `organization/leave` is closed too, so it cannot bypass these guards (overlapping #1402).
+Pending workspace invitations issued by a departed member remain pending and can still be accepted;
+an owner or admin must revoke them from Invitations when they should no longer be usable.
 After removing another member, the client announces success and focuses the stable members table
 after refreshing the list, so removal of the row and its dialog does not lose keyboard focus.
 Closing a definite refusal resets its confirmation for a new intent; an uncertain result still
