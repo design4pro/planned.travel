@@ -1,7 +1,8 @@
 /**
  * Audit log — an append-only record of who changed what inside a workspace.
  *
- * Rows are never updated, and the only delete path is {@link pruneAuditLog} for the retention cron.
+ * Rows are updated only by `eraseUserAudit` in `audit-erasure.ts` for personal-data erasure.
+ * The only delete path is {@link pruneAuditLog} for the retention cron.
  * An audit write must never be the reason a user's action fails, so callers append after the work has
  * succeeded and treat a rejected append as a logging problem, not a request failure.
  */

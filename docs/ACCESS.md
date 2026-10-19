@@ -309,7 +309,7 @@ session-less path in this codebase is already built, and named the same way:
 
 SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
 closed list of exactly three catalog members is unchanged by it (ADR 0041; the third is the
-erasure catalog read, ADR 0043).
+erasure catalog, ADR 0043).
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:

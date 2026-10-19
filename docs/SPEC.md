@@ -390,8 +390,8 @@ The erasure verification sweep adds a fifth, `countAccountPlacesUnscoped(db, who
 still hold the erased person (`invitation.email`, `member.user_id`, the `verification` and
 impersonation columns) and returns one number per place and the names of the places it cannot
 answer for, never a row, a tenant's content or another person's id. The tenant places of the same
-sweep go through the caller's `TenantScope`; the three platform tables stay unverified until the
-phase that amends this section for `src/server/catalog/erasure.ts`. This is an exception to the
+sweep go through the caller's `TenantScope`; the three platform references are counted by
+`countPlatformUserReferences` in `src/server/catalog/erasure.ts`, supplied as `platform` to the sweep. This is an exception to the
 scope argument, not a fourth catalog member (`.ai/specs/2026-10-08-erase-a-persons-data.md`,
 Amendment - phase 5).
 
@@ -401,8 +401,8 @@ Amendment - phase 5).
 repository" have a carve-out with exactly three members, and this section states all three. The
 first is a set of tables, excepted from both rules and stated immediately below. The second is a
 single query over rows that do carry an `organization_id`, excepted from the repository rule alone
-and admitted by amendment at the end of this section. The third is a pair of ids-only reads, one over the
-participation anchor and one over the organization list, admitted by a second amendment after the second.
+and admitted by amendment at the end of this section. The third is the erasure catalog: ids-only discovery and narrowly named system-actor cleanup
+primitives, admitted by amendments below.
 
 Twelve tables are platform content rather than tenant data:
 
@@ -461,7 +461,8 @@ request-rate stream into a 400-day ledger, making that log a second and worse co
 What guards it instead is the shape of what it writes, stated as four properties the way the
 reminder scan's four are, and changing any of them is a change to this contract rather than a
 refactor: **single-writer** — `src/server/catalog/provider-usage.ts` is the only module that writes
-either table; **system-actor-only** — `recordProviderCall` refuses any actor that is not
+either table, except `erasure.ts` anonymises only `provider_registry.updated_by` under the
+system-actor erasure exception below; **system-actor-only** — `recordProviderCall` refuses any actor that is not
 `actor_kind: 'system'`, as `prunePlatformAuditLog` does on its own delete path;
 **monotonic** — the only write is a clamped SQL increment, and no path lowers a counter or changes
 a bucket's identity once written; and **unattributable by construction** — a row is a provider
@@ -546,21 +547,32 @@ departing soon rather than to trips ever created. Session-less, projection-only,
 keyset-paged: those four properties are what stands in for the two clauses above, and changing any
 of them is a change to this contract rather than a refactor.
 
-The third member is the erasure catalog read, `src/server/catalog/erasure.ts` (ADR 0043,
-`.ai/specs/2026-10-08-erase-a-persons-data.md`). Erasing a person is a job with no workspace behind
-it, and the person may already have left the workspaces that matter, so `member` cannot say where
-they took part. `workspace_participants` (the participation anchor, a tenant table written wherever
-a `member` row is created and never removed by departure) can. The module holds exactly two
-functions, `listWorkspacesHoldingUser` and `listOrganizationIds` (the backfill's workspace listing),
-each taking a plain `Database`, and four properties stand in for the repository rule, as they do
-for the second member: **ids only** (an organization id, plus the erasure id for the first; no
-content table is joined), **keyset-paged** with a fixed maximum page size, **read-only**, and
-**reached only from `queue/handlers/participant-backfill*` in this change** (a test pins the
-importers: `listOrganizationIds` is the one the handler calls, and `listWorkspacesHoldingUser` has no
-production caller until the erasure engine adds its own by amending the pin). The scrub itself runs
-afterwards through a `TenantScope` bound to one organization. The erasure registry names this module
-as the owner of the scrubs of the global tables and the auth rows (spec phase 3); those are writes,
-and this member stays read-only until the pull request that ships them amends this section again.
+The third member is the erasure catalog, `src/server/catalog/erasure.ts` (ADR 0043,
+`.ai/specs/2026-10-08-erase-a-persons-data.md`, phase 3b amendment #1059).
+`listWorkspacesHoldingUser` and `listOrganizationIds` remain ids-only, read-only, keyset-paged
+with a fixed maximum page size. The participation backfill remains the sole production importer;
+the engine must explicitly amend the importer pin when it wires these primitives.
+
+Four additional primitives take a plain `Database` and validate an explicit system `PlatformActor`
+(`actorKind: system`, user/role/token null) before any query. `eraseWorkspaceInvitations` deletes
+invitations to the exact email with a required organization predicate; invitations they sent wait
+for the user cascade. `eraseAccountAuthLeftovers` deletes verification rows by exact identities,
+known Better Auth key shapes or a valid JSON userId, and ends sessions impersonated by that person
+across all workspaces, after a mandatory durable session-token cleanup callback succeeds.
+`erasePlatformUserReferences` revokes and anonymises tokens held by the person, anonymises issuer
+attribution without revoking another holder's token, and anonymises provider updated-by.
+`countPlatformUserReferences` returns only place names and counts for the three global columns,
+for `verifyErasure({ platform })`. The platform audit ledger, user, member and participation anchor
+are untouched. These primitives have no production caller yet.
+
+This is an explicit exception for a session-less erasure worker: there is no session for
+`requirePermission` at this layer. The engine's future entry must enforce platform permission and
+write its platform audit event; its verified job supplies identity, organization and distinct
+Former member ids, and durably saves session cache cleanup before D1 deletion. Global auth and
+credential isolation protects other identities, since the same person's global credential cannot
+be erased in only one workspace. No tenant content table is read or written in the catalog;
+per-workspace domain scrubs still require the reserved owner `TenantScope` and tenant repository.
+The catalog graph remains forbidden from importing tenant repositories.
 
 The auth layer cannot import `src/server/repos` (the Workspace console graph reaches
 `#/server/auth` and must not reach the tenant layer), yet it creates memberships. It therefore
@@ -709,9 +721,9 @@ Rules:
   behind it to authorise and no mutation to audit and is guarded by its shape instead:
   session-less, projection-only (scheduling coordinates, no tenant-readable field), windowed on
   `start_date`, keyset-paged, with every readable field fetched afterwards through a `TenantScope`
-  (ADR 0005, amended into §5). The third is the erasure catalog read, `catalog/erasure.ts`: two
-  ids-only, keyset-paged, read-only functions over the participation anchor, reached from the
-  backfill handler alone (ADR 0043, amended into §5; the auth layer's write-only anchor insert,
+  (ADR 0005, amended into §5). The third is the erasure catalog, `catalog/erasure.ts`: two
+  ids-only, keyset-paged discovery reads plus the four system-actor cleanup/count primitives
+  stated in §5, reached from the backfill handler alone until the engine lands (ADR 0043; the auth layer's write-only anchor insert,
   `auth/participation.ts`, is named there too). Three, and closed; a fourth one is a change to this
   contract.
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.

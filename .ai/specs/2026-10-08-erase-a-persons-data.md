@@ -847,3 +847,24 @@ record its PII-free promotion, promote, remove the departing membership, and ano
 If every successor has left, no notice or finalisation is written and the original retry anchors
 remain. The ordinary leave and demotion writers check the current database role in their write,
 including when they read an editor before erasure promoted that person to the sole owner.
+
+
+## Amendment - phase 3b primitives (#1059)
+
+The domain scrub leaves are `personal-erasure.ts`, `collections-erasure.ts`, `journey-erasure.ts`,
+`vacay-erasure.ts` and `audit-erasure.ts` under repositories; the registry names these owners.
+Every scrub requires the reserved erasure owner scope. Journey photo cleanup includes photos lost
+through entry/journey cascades, even when uploaded by somebody else. A required idempotent durable
+manifest callback saves all keys before any D1 deletion; the function also returns those keys.
+The engine must finish that manifest on retry even when the next scrub returns no keys.
+
+SPEC §5/§6 explicitly admits four system-actor erasure catalog primitives, with no production
+caller yet. Incoming invitations are erased per organization; verification rows and impersonated
+sessions are global and preserve other identities. Installed Better Auth stores reset-password,
+2fa and trust-device user ids as exact values, revoke-unproven-account-access in the identifier,
+and OTP identities as `<type>-otp-<email>`; the app stores passkey userId in valid JSON. Malformed
+JSON and substring lookalikes are not interpreted as the person. Session tokens must be durably
+saved by a required callback before D1 deletion so the engine can purge their KV caches.
+The catalog supplies the three platform counts to `verifyErasure({ platform })`; it never changes
+the platform ledger. Tenant audit erasure is the one updater, touching actor/entity-related rows
+only and retaining filenames. No new user-facing concept, queue producer, or engine wiring ships.
