@@ -34,7 +34,7 @@
  * | `notifications` | `notifications`, `notification_preferences` |
  * | `settings`      | `organization_settings`, `user_settings`, `app_settings` |
  * | `audit`         | `audit_log` |
- * | `members`       | `organization`, `member`, `invitation` |
+ * | `members`       | `organization`, `member`, `invitation`; reads `subscriptions` to refuse deleting a workspace that is still billed |
  * | `participants`  | `workspace_participants`; reads the registered user columns to backfill it |
  * | `billing`       | `subscriptions`, `usage_records` |
  * | `calendar-feeds` | `calendar_feeds`; reads `trips`, `days`, `places`, `day_assignments`, `day_notes`, `day_accommodations`, `transports`, `transport_legs`, `reservations` (narrowed columns) for the trip calendar |

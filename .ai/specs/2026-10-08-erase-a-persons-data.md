@@ -718,3 +718,32 @@ gated the ticket (`risk-high`):
   the marker written by the message that finds no workspace left.
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
   that builds their sweep.
+
+## Amendment - phase 4 (issue #1057)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`, approved, confidence high):
+
+- **`deleteWorkspace(scope, { departingUserId? })` names the one member who may still be in the
+  workspace**, instead of "one member". A count of "at most one member" never asks who that member
+  is, so a call into a workspace whose remaining member is somebody else would have deleted it. With
+  no name the workspace must have no member at all.
+- **The refusals are enforced inside the one `DELETE`.** They are read first, for an error that
+  names the workspace and the reason, and repeated as `NOT EXISTS` predicates in the statement
+  (D1 has no interactive transaction), so a member who joins or a webhook that revives the
+  subscription in between is not deleted along with the workspace. "Live paid" is defined once,
+  `livePaidSubscription()` in `repos/billing.ts`, and read by both.
+- **The webhook guard sits on `subscription.*` and `checkout.updated` only.** Order events find their
+  row through the subscription, and that row is deleted with the organization, so they already end as
+  `ignored`. The guard is `organizationExistsUnscoped` (a boolean, one named caller, `billing/store.ts`).
+  Without it the insert violates the `organization_id` foreign key and answers 500; Polar retries, and
+  repeated failures disable the endpoint for every workspace.
+- **`deletePrefix` and the sweep live in `storage/objects.ts` and `storage/workspace-objects.ts`**,
+  refusing any prefix that is not a whole directory. `avatars/<org>/` is swept although no portrait is
+  written yet. Collectors the caller runs before the rows go: `listWorkspaceTripIds` (`repos/trips.ts`)
+  and `listWorkspaceJourneyPhotoKeys` (`repos/journey.ts`), both administrators only.
+- **The room reset is a `POST` `reset` route** that closes every socket, runs `deleteAll()` and
+  removes the alarm; `resetTripRooms` tries every trip and then fails naming the ones that did.
+- **No orchestrator ships here.** The engine composes the pieces in a later phase. It must keep its
+  resume state somewhere that survives the workspace: `workspace_participants` carries the
+  `erasure_id`, is an `orgRef()` table, and goes with the workspace in step 4.

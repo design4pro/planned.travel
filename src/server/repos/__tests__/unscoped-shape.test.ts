@@ -13,6 +13,7 @@ const callers: Record<string, string> = {
   findSubscriptionByProviderCustomerUnscoped: 'src/server/billing/store.ts',
   findSubscriptionByProviderSubscriptionUnscoped: 'src/server/billing/store.ts',
   upsertSubscriptionUnscoped: 'src/server/billing/store.ts',
+  organizationExistsUnscoped: 'src/server/billing/store.ts',
   listSubscriptionsByOrganizationsUnscoped:
     'src/routes/_app/console/-server/account-billing.ts',
   findLiveFeedByDigestUnscoped: 'src/server/public/calendar-feed.ts',

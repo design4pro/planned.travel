@@ -211,6 +211,8 @@ export class FakeSubscriptionStore implements SubscriptionStore {
   readonly rows = new Map<string, Subscription>()
   /** Every write, in order, as the row reads back — the idempotency assertion surface. */
   readonly writes: Array<SubscriptionRecord> = []
+  /** Organizations that were deleted: writing a row for one fails like the foreign key does. */
+  readonly deletedOrganizations = new Set<string>()
 
   constructor(seed?: SubscriptionRecord) {
     if (seed !== undefined) this.seed(seed)
@@ -222,10 +224,17 @@ export class FakeSubscriptionStore implements SubscriptionStore {
   }
 
   #write(organizationId: string, patch: UpsertSubscriptionInput): Subscription {
+    if (this.deletedOrganizations.has(organizationId)) {
+      throw new Error('FOREIGN KEY constraint failed')
+    }
     const base = this.rows.get(organizationId) ?? blankRow(organizationId)
     const row = applyPatch(base, upsertSubscriptionInput.parse(patch))
     this.rows.set(organizationId, row)
     return row
+  }
+
+  async organizationExists(organizationId: string): Promise<boolean> {
+    return !this.deletedOrganizations.has(organizationId)
   }
 
   async findByOrganization(

@@ -75,6 +75,7 @@ export interface TripRoomStorage {
   deleteAll: () => Promise<void>
   getAlarm: () => Promise<number | null>
   setAlarm: (scheduledTime: number) => Promise<void>
+  deleteAlarm: () => Promise<void>
 }
 
 export interface TripRoomSocket {
@@ -207,6 +208,8 @@ export class TripRoom implements DurableObject {
         return this.handleServerCommit(request)
       case 'close':
         return this.handleClose(request)
+      case 'reset':
+        return this.handleReset(request)
       default:
         return json({ error: `Unknown trip room route: ${route}` }, 404)
     }
@@ -314,6 +317,27 @@ export class TripRoom implements DurableObject {
     }
     this.evict(this.state.getWebSockets(userId))
     return json({ closed: true })
+  }
+
+  /**
+   * Closes every socket and erases everything the room stored: entity fields and the commit log,
+   * each stamped with the id of whoever wrote it (`by`). D1 is the record, so nothing is lost that
+   * a rebuild cannot restore; an active room never clears itself, which is why waiting for the idle
+   * erase in {@link alarm} is not an answer to a deletion. Queued behind in-flight commits, so none
+   * of them writes into the room after it was emptied.
+   */
+  private async handleReset(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return json({ error: 'Use POST to reset a room' }, 405)
+    }
+    this.evict(this.state.getWebSockets())
+    await this.withLock(async () => {
+      await this.state.storage.deleteAll()
+      // `deleteAll` leaves a scheduled alarm in place; a reset room has nothing left to look after.
+      await this.state.storage.deleteAlarm()
+      this.meta = null
+    })
+    return json({ reset: true })
   }
 
   private evict(sockets: ReadonlyArray<TripRoomSocket>): void {

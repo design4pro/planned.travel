@@ -375,6 +375,9 @@ async function onSubscriptionEvent(
   if (organizationId === null) {
     return outcomeOf(delivery, 'ignored', null)
   }
+  if (!(await runtime.subscriptions.organizationExists(organizationId))) {
+    return ignoredForDeletedOrganization(runtime, delivery, organizationId)
+  }
 
   const previous = await runtime.subscriptions.findByOrganization(organizationId)
   const record = recordForSubscription(runtime, subscription, organizationId, previous)
@@ -593,6 +596,10 @@ async function onCheckoutUpdated(
     return outcomeOf(delivery, 'ignored', null)
   }
 
+  if (!(await runtime.subscriptions.organizationExists(organizationId))) {
+    return ignoredForDeletedOrganization(runtime, delivery, organizationId)
+  }
+
   const customerId = nonEmpty(checkout.customer_id)
   if (customerId !== null) {
     await runtime.subscriptions.attachCustomer(organizationId, customerId)
@@ -603,6 +610,27 @@ async function onCheckoutUpdated(
 }
 
 /* ----------------------------------------------------------------- helpers */
+
+/**
+ * A delivery for a workspace that has been deleted: accepted, and nothing else.
+ *
+ * Deleting a workspace does not cancel its provider subscription (it refuses while one is live, but
+ * a cancellation set for the end of the period passes), so Polar goes on sending events for it. A
+ * non-2xx answer would be retried and, repeated, disable the endpoint for every workspace; writing a
+ * row would violate the `organization_id` foreign key. So it answers 2xx, writes no row, drops no
+ * cache entry and enqueues no follow-up, and the next delivery is answered the same way.
+ */
+function ignoredForDeletedOrganization(
+  runtime: BillingRuntime,
+  delivery: HandledDelivery,
+  organizationId: string,
+): PolarWebhookOutcome {
+  runtime.logger.info('billing.webhook.organization_gone', {
+    eventType: delivery.type,
+    organizationId,
+  })
+  return outcomeOf(delivery, 'ignored', organizationId)
+}
 
 function outcomeOf(
   delivery: PolarDelivery,

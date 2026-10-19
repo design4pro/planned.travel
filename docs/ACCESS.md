@@ -292,7 +292,7 @@ session-less path in this codebase is already built, and named the same way:
 
 - Two functions in `src/server/repos/shares.ts` - `listShareLinksForModerationUnscoped(db, …)` and
   `revokeShareLinkUnscoped(db, …)` - taking a plain `Database` rather than a `TenantScope`, exactly
-  as `findSubscriptionByOrganizationUnscoped` and its four siblings in
+  as `findSubscriptionByOrganizationUnscoped` and its five siblings in
   `src/server/repos/billing.ts` do for session-less provider resolution or platform billing inspection. SQL stays in
   `src/server/repos` (SPEC §6); what changes is the scope argument, not the layer.
 - The `Unscoped` suffix carries the weight. It is grep-able, it reads as an alarm at every call

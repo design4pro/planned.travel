@@ -161,6 +161,11 @@ slices that matter.
   at `succeeded` enqueue nothing — the latter attaches the Polar customer so the billing screen
   works the instant the browser returns, and leaves the notification to the `subscription.created`
   already on its way with the whole subscription on it.
+  A delivery that names an organization which no longer exists (a workspace deleted with
+  `deleteWorkspace` while its provider subscription ran out its paid period) is answered 2xx as
+  `ignored`: `subscription.*` and `checkout.updated` ask `organizationExists()` before they write, so no
+  row is created, no cache entry is dropped and nothing is enqueued, and Polar does not retry into a
+  foreign-key failure. Order events find no row to move, so they already end the same way.
 - **Transactional email** → ten React Email templates in `src/server/email/templates/`, rendered
   by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
   `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by

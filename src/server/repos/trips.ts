@@ -60,6 +60,7 @@ import {
   tenantFilter,
 } from './base'
 import {
+  assertCanAdminister,
   isUniqueConstraintViolation,
   NotFoundError,
   RepositoryError,
@@ -382,6 +383,23 @@ export async function reachableTripIds(
     .select({ id: trips.id })
     .from(trips)
     .where(tenantFilter(scope, trips, readableTripFilter(scope)))
+  return rows.map((row) => row.id)
+}
+
+/**
+ * The id of every trip in the workspace, whoever may read it - archived ones included. Collected
+ * before the workspace is deleted, because the rows that name the rooms go with it, and each trip
+ * has a room (`TripRoom`) whose stored state outlives them. Ids only; administrators only, since
+ * unlike {@link reachableTripIds} it ignores who may open a trip.
+ */
+export async function listWorkspaceTripIds(
+  scope: TenantScope,
+): Promise<Array<string>> {
+  assertCanAdminister(scope.ctx, 'list every trip of the workspace')
+  const rows = await scope.db
+    .select({ id: trips.id })
+    .from(trips)
+    .where(tenantFilter(scope, trips))
   return rows.map((row) => row.id)
 }
 

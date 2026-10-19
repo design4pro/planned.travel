@@ -5,7 +5,12 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { closeTripRoom, closeTripRoomFor } from '../trip-room-client'
+import {
+  closeTripRoom,
+  closeTripRoomFor,
+  resetTripRoom,
+  resetTripRooms,
+} from '../trip-room-client'
 
 import type { TripRoomNamespace } from '../trip-room-client'
 
@@ -72,6 +77,63 @@ describe('closing a trip room from the app Worker', () => {
     ).rejects.toThrow('Trip room close failed with 500')
     await expect(closeTripRoom(namespace, 'trip-1')).rejects.toThrow(
       'Trip room close failed with 500',
+    )
+  })
+})
+
+describe('resetting trip rooms from the app Worker', () => {
+  it('posts to the reset route of the trip’s own object', async () => {
+    const { namespace, requests } = stubNamespace()
+
+    await resetTripRoom(namespace, 'trip-1')
+
+    expect(requests).toEqual([
+      {
+        room: 'trip-1',
+        url: 'https://trip-room.internal/trip-1/reset',
+        method: 'POST',
+        body: '',
+      },
+    ])
+  })
+
+  it('resets every trip it is given, once each', async () => {
+    const { namespace, requests } = stubNamespace()
+
+    await resetTripRooms(namespace, ['trip-1', 'trip-2', 'trip-1', 'trip-3'])
+
+    expect(requests.map((request) => request.room).sort()).toEqual([
+      'trip-1',
+      'trip-2',
+      'trip-3',
+    ])
+  })
+
+  it('tries every room even when one refuses, then fails naming the trips that did', async () => {
+    const reached: Array<string> = []
+    const namespace: TripRoomNamespace = {
+      idFromName: (name) => name as unknown as DurableObjectId,
+      get: (id) => ({
+        fetch: async () => {
+          reached.push(id as unknown as string)
+          return new Response(null, {
+            status: (id as unknown as string) === 'trip-2' ? 500 : 200,
+          })
+        },
+      }),
+    }
+
+    await expect(
+      resetTripRooms(namespace, ['trip-1', 'trip-2', 'trip-3']),
+    ).rejects.toThrow(/trip-2/)
+    expect(reached.sort()).toEqual(['trip-1', 'trip-2', 'trip-3'])
+  })
+
+  it('throws when the room refuses a single reset', async () => {
+    const { namespace } = stubNamespace(500)
+
+    await expect(resetTripRoom(namespace, 'trip-1')).rejects.toThrow(
+      'Trip room reset failed with 500',
     )
   })
 })
