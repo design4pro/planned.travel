@@ -1,6 +1,12 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -72,6 +78,7 @@ it('requires confirmation, locks pending and calls departure exactly once', asyn
       .getByRole('button', { name: 'Ending membership…' })
       .hasAttribute('disabled'),
   ).toBe(true)
+  expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
   await user.keyboard('{Escape}')
   expect(screen.getByRole('dialog')).toBeTruthy()
   finish?.({ ok: true })
@@ -126,6 +133,7 @@ it('recovers a committed departure without retrying removal or navigating before
   expect(
     screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled'),
   ).toBe(true)
+  expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
   await user.keyboard('{Escape}')
   await user.click(screen.getByRole('button', { name: 'Open next workspace' }))
   expect(screen.getByRole('dialog')).toBeTruthy()
@@ -136,3 +144,83 @@ it('recovers a committed departure without retrying removal or navigating before
   expect(onConfirm).toHaveBeenCalledTimes(1)
   expect(onRecover).toHaveBeenCalledTimes(2)
 })
+
+it.each(['last-owner', 'not-permitted', 'not-found', 'impersonated'] as const)(
+  'allows a new confirmation after closing a definite %s refusal',
+  async (reason) => {
+    const confirm = vi
+      .fn<() => Promise<DepartureOutcome>>()
+      .mockResolvedValueOnce({ ok: false, reason })
+      .mockResolvedValueOnce({ ok: true })
+    const { user } = mount(confirm, true)
+    await user.click(screen.getByRole('button', { name: 'Leave workspace' }))
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Leave workspace',
+      }),
+    )
+    expect(screen.getByRole('alert')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Leave workspace' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Leave workspace',
+      }),
+    )
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(confirm).toHaveBeenCalledTimes(2)
+  },
+)
+
+it('keeps an uncertain result on reopen instead of allowing a second removal', async () => {
+  const { user, onConfirm } = mount(
+    vi.fn(async () => ({ ok: false, reason: 'failed' }) as const),
+  )
+  await user.click(screen.getByRole('button', { name: 'Remove member' }))
+  await user.click(
+    within(screen.getByRole('dialog')).getByRole('button', {
+      name: 'Remove member',
+    }),
+  )
+  await user.click(screen.getByRole('button', { name: 'Cancel' }))
+  await user.click(screen.getByRole('button', { name: 'Remove member' }))
+  expect(screen.getByRole('alert')).toBeTruthy()
+  expect(
+    within(screen.getByRole('dialog')).queryByRole('button', {
+      name: 'Remove member',
+    }),
+  ).toBeNull()
+  expect(onConfirm).toHaveBeenCalledOnce()
+})
+
+it('identifies the target person in the departure trigger description', () => {
+  mount()
+  expect(
+    screen.getByRole('button', { name: 'Remove member', description: 'Kasia' }),
+  ).toBeTruthy()
+})
+
+it.each(['Escape', 'Close'] as const)(
+  'clears a definite refusal when dismissed through %s',
+  async (dismissal) => {
+    const { user } = mount(
+      vi.fn(async () => ({ ok: false, reason: 'last-owner' }) as const),
+    )
+    await user.click(screen.getByRole('button', { name: 'Remove member' }))
+    await user.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Remove member',
+      }),
+    )
+    if (dismissal === 'Escape') await user.keyboard('{Escape}')
+    else await user.click(screen.getByRole('button', { name: 'Close' }))
+    await user.click(screen.getByRole('button', { name: 'Remove member' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Remove member',
+      }),
+    ).toBeTruthy()
+  },
+)

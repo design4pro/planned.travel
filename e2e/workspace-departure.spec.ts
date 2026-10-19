@@ -24,6 +24,7 @@ test('workspace membership confirmation cancels and explains the last-owner refu
     exact: true,
   })
   await expect(leave).toBeVisible()
+  await expect(leave).toHaveAccessibleDescription('Rafal Wolak')
   await leave.click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toContainText("Rafal's Travel")
@@ -41,6 +42,12 @@ test('workspace membership confirmation cancels and explains the last-owner refu
   ).toBeVisible()
   await dialog.getByRole('button', { name: 'Cancel' }).click()
   await expect(leave).toBeVisible()
+  await leave.click()
+  await expect(dialog.getByRole('alert')).toHaveCount(0)
+  await expect(
+    dialog.getByRole('button', { name: 'Leave workspace' }),
+  ).toBeVisible()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
   const removal = page
     .getByRole('button', { name: 'Remove member', exact: true })
     .first()
@@ -178,6 +185,9 @@ for (const provision of [false, true])
           timeout: 20_000,
         })
         await expect(page).toHaveURL(/\/settings\/organization$/)
+        await expect(
+          dialog.getByRole('button', { name: 'Close', exact: true }),
+        ).toHaveCount(0)
         const db = localFixtureDb()
         db.exec(`drop trigger ${recoveryTrigger}`)
         db.close()

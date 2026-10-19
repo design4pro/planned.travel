@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -61,6 +61,16 @@ export function MemberDepartureControl({
     null,
   )
   const cancel = useRef<HTMLButtonElement>(null)
+  const refusalAlert = useRef<HTMLDivElement>(null)
+  const targetDescription = useId()
+  useEffect(() => {
+    if (open && refusal) refusalAlert.current?.focus()
+  }, [open, refusal])
+  function changeOpen(next: boolean) {
+    if (pending || refusal === 'activation-failed') return
+    if (!next && refusal !== 'failed') setRefusal(null)
+    setOpen(next)
+  }
   const action = self
     ? 'settings.workspace.departure.leave'
     : 'settings.workspace.departure.remove'
@@ -88,20 +98,18 @@ export function MemberDepartureControl({
         variant="ghost"
         size="sm"
         className="h-auto min-h-8 max-w-full whitespace-normal text-start"
-        onClick={() => {
-          setOpen(true)
-        }}
+        aria-describedby={targetDescription}
+        onClick={() => changeOpen(true)}
       >
         {t(action)}
       </Button>
-      <Dialog
-        open={open}
-        onOpenChange={(next) => {
-          if (!pending && refusal !== 'activation-failed') setOpen(next)
-        }}
-      >
+      <span id={targetDescription} className="sr-only">
+        {name}
+      </span>
+      <Dialog open={open} onOpenChange={changeOpen}>
         <DialogContent
           size="sm"
+          hideClose={pending || refusal === 'activation-failed'}
           onOpenAutoFocus={(event) => {
             event.preventDefault()
             cancel.current?.focus()
@@ -124,7 +132,7 @@ export function MemberDepartureControl({
             </DialogDescription>
           </DialogHeader>
           {refusal ? (
-            <div role="alert" tabIndex={-1} ref={(node) => node?.focus()}>
+            <div role="alert" tabIndex={-1} ref={refusalAlert}>
               <Alert tone="warning" title={t(DEPARTURE_COPY[refusal])} />
             </div>
           ) : null}
@@ -133,7 +141,7 @@ export function MemberDepartureControl({
               ref={cancel}
               variant="secondary"
               disabled={pending || refusal === 'activation-failed'}
-              onClick={() => setOpen(false)}
+              onClick={() => changeOpen(false)}
             >
               {t('settings.workspace.departure.cancel')}
             </Button>
