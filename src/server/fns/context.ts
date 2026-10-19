@@ -20,11 +20,20 @@ import { createScope } from '#/server/repos'
 import type { TripPatch, TripRoomNamespace } from '#/server/do'
 import type { DispatchDeps } from '#/server/notifications/dispatch'
 import type { Logger } from '#/server/observability'
-import type { TenantScope } from '#/server/repos'
+import type { TenantContext, TenantScope } from '#/server/repos'
 
 /** The caller's tenant scope, or a thrown `AuthRequirementError`. */
 export async function appScope(): Promise<TenantScope> {
   return createScope(getDb(), await requireOrg())
+}
+
+/**
+ * A scope for a context a repository already resolved, such as the joiner's in the workspace of the
+ * link they used. `appScope` binds to the session's active workspace; this binds to the context it
+ * is given, which the caller must have taken from a repository result and never from a request.
+ */
+export function scopeFor(context: TenantContext): TenantScope {
+  return createScope(getDb(), context)
 }
 
 /** The `FILES` R2 bucket. Only ever reached from inside a handler. */

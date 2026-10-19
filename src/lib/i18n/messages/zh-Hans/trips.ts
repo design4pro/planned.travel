@@ -427,10 +427,14 @@ const messages = {
   'join.dates.label': '日期',
   'join.destination.label': '目的地',
   'join.action.signIn': '登录',
+  'join.action.join': '加入行程',
+  'join.action.joining': '正在加入行程',
   'join.action.open': '打开行程',
   'join.action.openIn': '打开行程并切换工作区',
   'join.action.openIn.pending': '正在切换工作区',
   'join.loading': '正在加载邀请',
+  'join.joined.title': '你已加入行程',
+  'join.joined.body': '打开即可查看计划。',
   'join.member.title': '你已经在这个行程中了',
   'join.needsWorkspace.title': '这个行程在你不属于的工作区里',
   'join.needsWorkspace.body':
@@ -448,6 +452,7 @@ const messages = {
   'join.error.title': '无法加载此邀请链接',
   'join.error.retry': '重试',
   'join.error.busy': '此页面当前繁忙，请一分钟后重试。',
+  'join.error.join': '无法加入。链接仍然有效，请重试。',
   'join.error.switch': '无法切换工作区，请重试。',
 } satisfies TranslationOf<typeof En>
 
