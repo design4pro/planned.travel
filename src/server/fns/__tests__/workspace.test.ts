@@ -95,6 +95,7 @@ async function ports(
       userId,
       organizationId: origin.organizationId,
       role,
+      impersonatedBy: null,
     }),
     db: asAuthDb(),
     impersonated,
@@ -188,6 +189,7 @@ describe.each(['solo', 'crew'] as const)('on the %s plan', (plan) => {
       userId: origin.ownerUserId,
       organizationId: result.organizationId,
       role: 'owner',
+      impersonatedBy: null,
     })
     // The original's subscription row is invisible from the new scope: planFor(null) is Free.
     expect((await resolveQuotas(scope)).planId).toBe('free')

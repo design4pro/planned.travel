@@ -190,6 +190,7 @@ function scopeFor(
     organizationId,
     // An unrecognised value resolves to the least privilege, never to "unset, therefore permissive".
     role: isOrganizationRole(role) ? role : 'member',
+    impersonatedBy: null,
   })
 }
 

@@ -114,6 +114,7 @@ describe('the trip room connection role', () => {
       userId,
       organizationId: alpha.organizationId,
       role: workspaceRole,
+      impersonatedBy: null,
     }
   }
 
@@ -248,6 +249,7 @@ describe('the trip room connection role', () => {
       userId: beta.ownerUserId,
       organizationId: beta.organizationId,
       role: 'owner',
+      impersonatedBy: null,
     }
     const { namespace, identities } = recordingNamespace()
     const get = vi.spyOn(namespace, 'get')

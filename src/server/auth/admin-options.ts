@@ -126,8 +126,8 @@ export const DISABLED_ADMIN_PATHS: string[] = [
 ]
 
 /**
- * The organization plugin's one HTTP path closed besides `organization/create` and
- * `organization/delete` (docs/ACCESS.md §2.6), and kept out of {@link DISABLED_ADMIN_PATHS}, whose
+ * The organization plugin's HTTP paths closed besides `organization/create` and
+ * `organization/delete` (docs/ACCESS.md §2.6), kept out of {@link DISABLED_ADMIN_PATHS}, whose
  * drift test requires it to equal the `/admin/*` set exactly.
  *
  * `organization/update-member-role` writes `member.role` with no audit entry and accepts a
@@ -135,9 +135,16 @@ export const DISABLED_ADMIN_PATHS: string[] = [
  * `changeRole` (`src/server/fns/member-role-writes.ts`); a veto in one function with the same action
  * on a public URL is not a veto. Nothing in `src/` calls the endpoint, and `auth.api.updateMemberRole`
  * stays usable in process, which the last-owner plugin tests drive.
+ *
+ * `organization/remove-member` deletes the `member` row for an owner or an admin with the same gaps:
+ * no audit entry and no refusal during impersonation (#1010). The product-owned removal is #1008,
+ * which calls `auth.api.removeMember` in process so the after-hook that queues the removed person's
+ * room eviction still runs. `organization/leave` is deliberately not here: the leave screen needs it,
+ * and until #1008 ships a workspace has no way to remove a member over HTTP.
  */
 export const DISABLED_ORGANIZATION_PATHS: string[] = [
   '/organization/update-member-role',
+  '/organization/remove-member',
 ]
 
 /**
