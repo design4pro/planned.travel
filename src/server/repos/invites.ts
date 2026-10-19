@@ -502,6 +502,8 @@ export async function joinTripByInviteUnscoped(
     organizationId: invite.organizationId,
     userId: joiner.id,
     role,
+    // An impersonated joiner is refused above, so this is always the person's own session.
+    impersonatedBy: null,
   }
   const scope = createScope(db, context)
 
