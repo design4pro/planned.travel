@@ -913,6 +913,14 @@ const messages = {
   'files.action.add': 'Lägg till filer',
   'files.action.choose': 'Välj filer',
   'files.action.upload': 'Ladda upp filer',
+  'files.places.title': 'Platsfil',
+  'files.places.description':
+    'Ladda ner resans platser som GeoJSON, även platser utan koordinater.',
+  'files.places.action': 'Ladda ner platser (.geojson)',
+  'files.places.empty': 'Lägg till platser i resan för att ladda ner dem.',
+  'files.places.error': 'Det gick inte att förbereda platsfilen. Försök igen.',
+  'files.places.pending': 'Förbereder platsfilen…',
+  'files.places.done': 'Platsfilen har laddats ner.',
   'files.calendar.live.action': 'Uppdaterad kalenderlänk',
   'files.calendar.live.title': 'Uppdaterad kalenderlänk',
   'files.calendar.warning':

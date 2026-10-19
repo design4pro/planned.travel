@@ -930,6 +930,16 @@ const messages = {
   'files.action.add': 'Πρόσθεσε αρχεία',
   'files.action.choose': 'Διάλεξε αρχεία',
   'files.action.upload': 'Ανέβασε αρχεία',
+  'files.places.title': 'Αρχείο τοποθεσιών',
+  'files.places.description':
+    'Κατεβάστε τις τοποθεσίες αυτού του ταξιδιού ως GeoJSON, μαζί με όσες δεν έχουν συντεταγμένες.',
+  'files.places.action': 'Λήψη τοποθεσιών (.geojson)',
+  'files.places.empty':
+    'Προσθέστε τοποθεσίες σε αυτό το ταξίδι για να τις κατεβάσετε.',
+  'files.places.error':
+    'Δεν ήταν δυνατή η προετοιμασία του αρχείου τοποθεσιών. Δοκιμάστε ξανά.',
+  'files.places.pending': 'Προετοιμασία αρχείου τοποθεσιών…',
+  'files.places.done': 'Το αρχείο τοποθεσιών λήφθηκε.',
   'files.calendar.live.action': 'Σύνδεσμος ενημερωμένου ημερολογίου',
   'files.calendar.live.title': 'Σύνδεσμος ενημερωμένου ημερολογίου',
   'files.calendar.warning':

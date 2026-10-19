@@ -954,6 +954,15 @@ const messages = {
   'files.action.add': 'Ajouter des fichiers',
   'files.action.choose': 'Choisir des fichiers',
   'files.action.upload': 'Envoyer les fichiers',
+  'files.places.title': 'Fichier des lieux',
+  'files.places.description':
+    'Téléchargez les lieux de ce voyage au format GeoJSON, y compris ceux sans coordonnées.',
+  'files.places.action': 'Télécharger les lieux (.geojson)',
+  'files.places.empty': 'Ajoutez des lieux à ce voyage pour les télécharger.',
+  'files.places.error':
+    'Impossible de préparer le fichier des lieux. Réessayez.',
+  'files.places.pending': 'Préparation du fichier des lieux…',
+  'files.places.done': 'Fichier des lieux téléchargé.',
   'files.calendar.live.action': 'Lien de calendrier actualisé',
   'files.calendar.live.title': 'Lien de calendrier actualisé',
   'files.calendar.warning':

@@ -938,6 +938,15 @@ const messages = {
   'files.action.add': 'Dateien hinzufügen',
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
+  'files.places.title': 'Ortedatei',
+  'files.places.description':
+    'Lade die Orte dieser Reise als GeoJSON herunter, auch Orte ohne Koordinaten.',
+  'files.places.action': 'Orte herunterladen (.geojson)',
+  'files.places.empty': 'Füge dieser Reise Orte hinzu, um sie herunterzuladen.',
+  'files.places.error':
+    'Die Ortedatei konnte nicht vorbereitet werden. Versuche es erneut.',
+  'files.places.pending': 'Ortedatei wird vorbereitet…',
+  'files.places.done': 'Ortedatei heruntergeladen.',
   'files.calendar.live.action': 'Aktueller Kalenderlink',
   'files.calendar.live.title': 'Aktueller Kalenderlink',
   'files.calendar.warning':

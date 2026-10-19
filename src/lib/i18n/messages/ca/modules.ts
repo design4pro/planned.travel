@@ -946,6 +946,15 @@ const messages = {
   'files.action.add': 'Afegeix fitxers',
   'files.action.choose': 'Tria fitxers',
   'files.action.upload': 'Puja els fitxers',
+  'files.places.title': 'Fitxer de llocs',
+  'files.places.description':
+    'Descarrega els llocs d’aquest viatge en format GeoJSON, inclosos els que no tenen coordenades.',
+  'files.places.action': 'Descarrega els llocs (.geojson)',
+  'files.places.empty': 'Afegeix llocs a aquest viatge per descarregar-los.',
+  'files.places.error':
+    'No hem pogut preparar el fitxer de llocs. Torna-ho a provar.',
+  'files.places.pending': 'S’està preparant el fitxer de llocs…',
+  'files.places.done': 'S’ha descarregat el fitxer de llocs.',
   'files.calendar.live.action': 'Enllaç de calendari actualitzat',
   'files.calendar.live.title': 'Enllaç de calendari actualitzat',
   'files.calendar.warning':

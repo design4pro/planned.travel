@@ -956,6 +956,15 @@ const messages = {
   'files.action.add': 'Dodaj pliki',
   'files.action.choose': 'Wybierz pliki',
   'files.action.upload': 'Wyślij pliki',
+  'files.places.title': 'Plik miejsc',
+  'files.places.description':
+    'Pobierz miejsca z tej podróży jako GeoJSON, również te bez współrzędnych.',
+  'files.places.action': 'Pobierz miejsca (.geojson)',
+  'files.places.empty': 'Dodaj miejsca do tej podróży, aby je pobrać.',
+  'files.places.error':
+    'Nie udało się przygotować pliku miejsc. Spróbuj ponownie.',
+  'files.places.pending': 'Przygotowywanie pliku miejsc…',
+  'files.places.done': 'Pobrano plik miejsc.',
   'files.calendar.live.action': 'Aktualizowany link kalendarza',
   'files.calendar.live.title': 'Aktualizowany link kalendarza',
   'files.calendar.warning':

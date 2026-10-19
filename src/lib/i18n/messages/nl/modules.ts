@@ -926,6 +926,15 @@ const messages = {
   'files.action.add': 'Bestanden toevoegen',
   'files.action.choose': 'Bestanden kiezen',
   'files.action.upload': 'Bestanden uploaden',
+  'files.places.title': 'Plaatsenbestand',
+  'files.places.description':
+    'Download de plaatsen van deze reis als GeoJSON, ook plaatsen zonder coördinaten.',
+  'files.places.action': 'Plaatsen downloaden (.geojson)',
+  'files.places.empty': 'Voeg plaatsen toe aan deze reis om ze te downloaden.',
+  'files.places.error':
+    'Het plaatsenbestand kon niet worden voorbereid. Probeer het opnieuw.',
+  'files.places.pending': 'Plaatsenbestand voorbereiden…',
+  'files.places.done': 'Plaatsenbestand gedownload.',
   'files.calendar.live.action': 'Actuele kalenderlink',
   'files.calendar.live.title': 'Actuele kalenderlink',
   'files.calendar.warning':

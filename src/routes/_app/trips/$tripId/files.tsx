@@ -13,6 +13,7 @@ import {
   StorageMeter,
   UploadFilesAction,
 } from '#/components/modules/files'
+import { PlacesPanel } from '#/components/modules/files/places-panel'
 import { Button, Card, Progress, StatCard } from '#/components/ui'
 import { formatStorage } from '#/lib/plans'
 import { loadTripFiles } from '../../-server/trip'
@@ -133,6 +134,12 @@ function FilesPage() {
         </div>
 
         <CalendarPanel tripId={tripId} hasDates={data.hasDates} />
+
+        <PlacesPanel
+          key={`places-${tripId}`}
+          tripId={tripId}
+          hasPlaces={data.hasPlaces}
+        />
 
         <FileLibrary
           tripId={tripId}
