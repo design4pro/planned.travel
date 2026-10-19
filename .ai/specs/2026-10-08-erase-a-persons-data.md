@@ -672,6 +672,28 @@ Open items a person decides. This spec does not decide them and records the defa
    reviewer is ever required.
 9. Whether the **privacy wording** changes ("deleting your account deletes your content" versus contributions kept as Former member).
 
+## Amendment (#1000)
+
+`.ai/specs/2026-10-17-delete-a-workspace-you-own.md` owns the one `deleteWorkspace` and its driver
+(`advanceWorkspaceDeletion`, the `workspace_deletions` ledger, the R2 prefix sweep, the fence, the late-subscription
+rule). Phase 4 above builds **its slices**, not a second function: the erasure engine calls the driver with
+`initiator: 'erasure'` for a workspace whose last member is the erased person, and the reserved system-owner scope is
+minted by #1000's driver phase, which the engine phases here are blocked by. The erasure keeps its own obligations on top of
+the driver: it captures the workspace's trip ids first (a bounded list) and resets every room with `deleteAll` (§ 7: waiting
+for the seven-day idle erase is not enough), and its verification step counts a workspace as deleted only once the ledger row
+has reached `rows_deleted` (the workspace row is gone). It **does not wait for that inside a delivery**: the job has five
+deliveries and no cron of its own, so a drain that outlasts them would dead-letter a banned, half-erased account although the
+deletion cron finishes the workspace. When a row has not reached `rows_deleted` the job parks (returns success; the account
+stays banned and the anchor rows keep their `erasure_id`, the incomplete state above) and the driver's `rows_deleted` step (or its `refused` transition)
+always enqueues the resume for the row's `erasure_id` (#1000, "The erasure resume"); exactly one job consumes the ledger row
+(a compare-and-set that records the envelope id, so the resume never overlaps a running job and nothing needs a park flag). A workspace the driver refuses after the ban
+(new members, a live subscription) ends the job with the step `workspace-refused:<deletionId>` on the anchor rows, which the
+console lists as an incomplete erasure for the operator; a Polar read that fails is retried by the deletion cron and is never
+a refusal for an erasure. The subscription gate in § 7 is the same pure
+function (`subscriptionBlocksWorkspaceDeletion`), and `unpaid` does **not** block under it: Polar sets that status when access
+has ended and the webhook already writes the Free row, so the status list in § 7 is read without `unpaid`. Where the two
+disagree, #1000 wins.
+
 ## Resolved assumptions (autonomous defaults)
 
 | #   | Question                                     | Applied default                                                                                                                                                                                                                                                     | Why                                                                                                                                                                                                                                                                         |

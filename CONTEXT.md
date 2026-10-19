@@ -61,3 +61,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Planner workspace** - the map and its floating rails; rail widths persist per trip locally, while unfolded days persist only for the browser session.
 
 - **Calendar feed** — a session-less, owner-bound, read-only calendar of one trip or the current non-archived trips its owner is on in one workspace; revocable; distinct from a Share token, which names one trip resource. _Avoid_: subscription, which is a paid plan.
+
+- **Workspace deletion** — the removal of a workspace and everything in it, on its owner's request, when the owner is its only member; complete (tenant rows, stored files, the record of it). It is neither leaving a workspace (only the membership goes) nor _Erasure_ (a person's data across workspaces). _Avoid_: "closing", "archiving" a workspace.
+- **Deletion ledger** — the platform's own record that a workspace deletion was requested and how far it got; it outlives the workspace it names and carries no workspace content. Distinct from the audit trail, which is evidence and is kept longer.

@@ -1399,6 +1399,12 @@ same three-line preamble.
   `await assertAction(scope, '<key>')` — that is this stage's whole edit to `members.ts`, listed in
   **Owned paths** and mapped key by key under **Server**.
 
+  > **Settled by `.ai/specs/2026-10-17-delete-a-workspace-you-own.md` (#1000):** `deleteWorkspace` asserts `owner`
+  > through `assertRole`, not `assertCanAdminister` (which admits `admin`), and deletes only while the caller is the
+  > sole member. It is still outside the catalogue, and the floor is fixed at `owner`. Read the paragraph below with
+  > that correction; the cascade is 61 `orgRef()` tables, not fifty-seven.
+  > The workspace-level "delete this workspace" button belongs to that spec (Phase 8), not to `ADM-02`.
+
   **The eighth is `deleteWorkspace`, and it stays on `assertCanAdminister` for the same reason the
   audit reads do.** Destroying the workspace is not an administrable setting: a floor a workspace can
   lower is a floor an attacker inside the workspace can lower, and there is no undo behind this one —
