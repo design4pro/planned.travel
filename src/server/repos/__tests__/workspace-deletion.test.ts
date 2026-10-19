@@ -367,6 +367,7 @@ describe('a change between the refusal check and the delete', () => {
       userId: tenant.ownerUserId,
       organizationId: tenant.organizationId,
       role: 'owner',
+      impersonatedBy: null,
     })
   }
 
