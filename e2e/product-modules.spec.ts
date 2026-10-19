@@ -535,6 +535,15 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     const box = await settingsButton(page).boundingBox()
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(44)
 
+    // The header wraps at this width; the year switcher must move as one group, never split.
+    const previous = await page
+      .getByRole('link', { name: 'Previous year' })
+      .boundingBox()
+    const next = await page
+      .getByRole('link', { name: 'Next year' })
+      .boundingBox()
+    expect(previous && next && Math.abs(previous.y - next.y) < 2).toBe(true)
+
     // 360x500 stands in for a phone with its keyboard up: the visible area is short.
     await page.setViewportSize({ width: 360, height: 500 })
     await settingsButton(page).click()

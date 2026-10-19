@@ -126,31 +126,34 @@ function VacayPage() {
                 carryOverEnabled={data.plan.carryOverEnabled}
                 defaultEntitlementDays={data.plan.defaultEntitlementDays}
               />
-              <Button
-                asChild
-                variant="secondary"
-                size="sm"
-                shape="pill"
-                aria-label={t('modules.vacay.year.previous')}
-              >
-                <Link to="/vacay" search={{ year: data.year - 1 }}>
-                  <ChevronLeft aria-hidden />
-                </Link>
-              </Button>
-              <span className="min-w-16 text-center font-display text-subtitle font-bold tabular-nums text-ink">
-                {data.year}
-              </span>
-              <Button
-                asChild
-                variant="secondary"
-                size="sm"
-                shape="pill"
-                aria-label={t('modules.vacay.year.next')}
-              >
-                <Link to="/vacay" search={{ year: data.year + 1 }}>
-                  <ChevronRight aria-hidden />
-                </Link>
-              </Button>
+              {/* One group, so a wrapping header moves the whole switcher and never splits the year from its arrows. */}
+              <div className="flex items-center gap-1.5">
+                <Button
+                  asChild
+                  variant="secondary"
+                  size="sm"
+                  shape="pill"
+                  aria-label={t('modules.vacay.year.previous')}
+                >
+                  <Link to="/vacay" search={{ year: data.year - 1 }}>
+                    <ChevronLeft aria-hidden />
+                  </Link>
+                </Button>
+                <span className="min-w-16 text-center font-display text-subtitle font-bold tabular-nums text-ink">
+                  {data.year}
+                </span>
+                <Button
+                  asChild
+                  variant="secondary"
+                  size="sm"
+                  shape="pill"
+                  aria-label={t('modules.vacay.year.next')}
+                >
+                  <Link to="/vacay" search={{ year: data.year + 1 }}>
+                    <ChevronRight aria-hidden />
+                  </Link>
+                </Button>
+              </div>
             </div>
           }
         />
