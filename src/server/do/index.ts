@@ -13,6 +13,8 @@ export {
   commitToTripRoom,
   connectToTripRoom,
   readTripRoomSnapshot,
+  resetTripRoom,
+  resetTripRooms,
   tripRoomUrl,
 } from './trip-room-client'
 export type {

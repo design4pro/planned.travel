@@ -8,7 +8,7 @@
  * - **Callers with no tenant context.** A billing webhook arrives with a provider customer or
  *   subscription id and has to *discover* which organization it belongs to; the platform console
  *   reads a workspace its operator is deliberately not a member of, which SPEC §5 forbids reaching
- *   through {@link TenantScope} at all rather than through a fabricated one. These five functions
+ *   through {@link TenantScope} at all rather than through a fabricated one. These six functions
  *   take a plain {@link Database} and follow SPEC §5’s `…Unscoped` shape: one stated caller per
  *   function, a narrow projection, and no tenant content. The digest lookup in `calendar-feeds.ts`
  *   follows the same family, rather than adding a third catalog exception. Billing functions return billing rows only —
@@ -16,8 +16,9 @@
  *   read a tenant's content through them.
  */
 
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { organization } from '#/server/db/auth-schema'
 import {
   BILLING_INTERVALS,
   ORGANIZATION_PLANS,
@@ -31,6 +32,7 @@ import { allOf, createTenantRepository, resolveQuotas, tenantFilter } from './ba
 import { NotFoundError } from './context'
 import { currencySchema, definedOnly, idSchema, instantSchema, nonNegativeIntSchema } from './validation'
 import type { PlanId } from '#/lib/plans'
+import type { SQL } from 'drizzle-orm'
 import type { QuotaOverrides } from '#/server/db/schema'
 import type { Database, Subscription, UsageMetric, UsageRecord } from '#/server/db/types'
 import type { TenantScope } from './base'
@@ -123,6 +125,40 @@ export async function upsertSubscription(
     return subscriptionsRepository.requireUpdate(scope, existing.id, values)
   }
   return subscriptionsRepository.insert(scope, values)
+}
+
+/**
+ * The statuses of a subscription that is still being billed or can resume billing. `incomplete`,
+ * `incomplete_expired` and `canceled` are not here: no charge is running and none can be taken
+ * without a new checkout.
+ */
+const LIVE_PAID_STATUSES = [
+  'trialing',
+  'active',
+  'past_due',
+  'unpaid',
+  'paused',
+] as const satisfies ReadonlyArray<(typeof SUBSCRIPTION_STATUSES)[number]>
+
+/**
+ * A subscription a customer is paying for, as a predicate over `subscriptions`: the provider knows
+ * it (a free row never has a `provider_subscription_id`), it is in a {@link LIVE_PAID_STATUSES}
+ * status, and it is not already set to end with the period. The one definition of "live paid", read
+ * by the refusal in {@link findLivePaidSubscription} and by the conditional `DELETE` in
+ * `deleteWorkspace`, so what is reported and what is enforced cannot drift apart. Compose it with
+ * {@link tenantFilter}; on its own it matches every tenant.
+ */
+export function livePaidSubscription(): SQL {
+  return allOf(
+    isNotNull(subscriptions.providerSubscriptionId),
+    inArray(subscriptions.status, LIVE_PAID_STATUSES),
+    eq(subscriptions.cancelAtPeriodEnd, false),
+  )
+}
+
+/** The workspace's live paid subscription, or `null` when it has none (free, cancelled or ending). */
+export async function findLivePaidSubscription(scope: TenantScope): Promise<Subscription | null> {
+  return subscriptionsRepository.findOne(scope, livePaidSubscription())
 }
 
 export interface PlanSummary {
@@ -264,6 +300,25 @@ export async function findSubscriptionByOrganizationUnscoped(
     .where(eq(subscriptions.organizationId, idSchema.parse(organizationId)))
     .limit(1)
   return rows[0] ?? null
+}
+
+/**
+ * Whether an organization still exists. Only `createSubscriptionStore` (`src/server/billing/store.ts`)
+ * may call this, for the billing webhook: Polar keeps sending events for a workspace that has been
+ * deleted (a cancellation scheduled for the end of the period arrives after it), and writing a row
+ * for it would violate the `organization_id` foreign key and answer 500. It returns a boolean and
+ * nothing else, so it cannot read a tenant's content.
+ */
+export async function organizationExistsUnscoped(
+  db: Database,
+  organizationId: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: organization.id })
+    .from(organization)
+    .where(eq(organization.id, idSchema.parse(organizationId)))
+    .limit(1)
+  return rows.length > 0
 }
 
 /** How many organizations one unscoped billing lookup may name. */

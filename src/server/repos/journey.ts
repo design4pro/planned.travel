@@ -39,7 +39,7 @@ import {
   createTenantRepository,
   tenantFilter,
 } from './base'
-import { NotFoundError } from './context'
+import { NotFoundError, assertCanAdminister } from './context'
 import { checkInsRepository } from './collab'
 import { stillInWorkspace } from './members'
 import { placesRepository } from './places'
@@ -894,6 +894,29 @@ export async function deletePhoto(
   const photo = await requirePhoto(scope, photoId)
   await journeyPhotosRepository.requireRemove(scope, photoId)
   return { storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey }
+}
+
+/**
+ * Every R2 key the workspace's journey photos name, thumbnails included. Collected before the
+ * workspace is deleted: the keys live only in the rows that go with it, and are not under any
+ * prefix of the workspace, so `sweepWorkspaceObjects` is handed them. Keys only; administrators only.
+ */
+export async function listWorkspaceJourneyPhotoKeys(
+  scope: TenantScope,
+): Promise<Array<string>> {
+  assertCanAdminister(scope.ctx, 'list the journey photo keys of the workspace')
+  const rows = await scope.db
+    .select({
+      storageKey: journeyPhotos.storageKey,
+      thumbnailKey: journeyPhotos.thumbnailKey,
+    })
+    .from(journeyPhotos)
+    .where(tenantFilter(scope, journeyPhotos))
+  return rows.flatMap((row) =>
+    row.thumbnailKey === null
+      ? [row.storageKey]
+      : [row.storageKey, row.thumbnailKey],
+  )
 }
 
 export async function createMood(

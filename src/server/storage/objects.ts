@@ -88,6 +88,67 @@ export async function deleteObjects(
 }
 
 /**
+ * The verbs {@link deletePrefix} needs: a listing and a delete.
+ *
+ * Structural, as {@link ObjectStore} is, so `R2Bucket`, the queue consumer's `TaskBindings['FILES']`
+ * and the shared test fake all satisfy it as they are. It is `ExportStore` in `export-artifacts.ts`
+ * seen from this side; that module imports this one, so the shape is spelled out here.
+ */
+export interface PrefixStore {
+  list: (options: { prefix: string; cursor?: string | undefined }) => Promise<{
+    objects: ReadonlyArray<{ key: string }>
+    truncated: boolean
+    cursor?: string | undefined
+  }>
+  delete: (keys: string | Array<string>) => Promise<void>
+}
+
+/**
+ * At least two directories deep and closed by a slash: `trips/<org>/`, `exports/<org>/<trip>/`.
+ * What it refuses is the point - `''`, a bare family such as `trips/`, and a prefix with no trailing
+ * slash, which also matches a sibling whose name starts with the same characters.
+ */
+const DELETABLE_PREFIX = /^[^/]+\/[^/]+\/(?:[^/]+\/)*$/
+
+/**
+ * Deletes every object under `prefix`, a page at a time, and returns how many it deleted.
+ *
+ * **Resumable by being repeatable.** Each page is deleted before the next is asked for, so a run
+ * that stops part-way (a thrown error, a Worker that ran out of time) has already removed what it
+ * listed, and the same call afterwards lists only what is left. Nothing is carried between calls.
+ * An empty prefix is a success: that is what the repeat after a finished run sees.
+ *
+ * **A prefix that is not a whole directory is refused** ({@link DELETABLE_PREFIX}): the caller
+ * builds it from an id, and an empty id must not turn `trips/<id>/` into every workspace's files.
+ */
+export async function deletePrefix(
+  store: PrefixStore,
+  prefix: string,
+): Promise<number> {
+  if (!DELETABLE_PREFIX.test(prefix)) {
+    throw new Error(
+      `Refusing to delete the prefix "${prefix}": it is not a whole directory.`,
+    )
+  }
+  let deleted = 0
+  let cursor: string | undefined
+  for (;;) {
+    const page = await store.list(
+      cursor === undefined ? { prefix } : { prefix, cursor },
+    )
+    deleted += await deleteObjects(
+      store,
+      page.objects.map((object) => object.key),
+    )
+    // A page that claims more but names no way to ask for it ends the loop rather than spinning.
+    if (!page.truncated || page.cursor === undefined) {
+      return deleted
+    }
+    cursor = page.cursor
+  }
+}
+
+/**
  * Streams `sourceKey` to `targetKey` — a new object, not a second name for the old bytes.
  *
  * That distinction is the whole reason a trip copy calls this: the copy has to survive the source's

@@ -81,6 +81,12 @@ export interface SubscriptionStore {
   findByProviderSubscriptionId: (
     providerSubscriptionId: string,
   ) => Promise<SubscriptionRecord | null>
+  /**
+   * Whether the organization still exists. A workspace can be deleted while its provider
+   * subscription lives on, so events keep arriving for an organization that is gone; writing a row
+   * for it would violate the foreign key. The webhook asks before it writes.
+   */
+  organizationExists: (organizationId: string) => Promise<boolean>
   /** Insert or replace the organization's row wholesale. */
   upsert: (record: SubscriptionRecord) => Promise<void>
   /** Attach a provider customer to an organization before any subscription exists. */
