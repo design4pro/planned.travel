@@ -445,7 +445,7 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with four exceptions. Two are closed by the plugin's own options and not
+document does not govern - with five exceptions. Two are closed by the plugin's own options and not
 by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
 and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other three are closed by
 `disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
