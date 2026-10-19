@@ -1674,6 +1674,14 @@ Expect exactly three on production today — `*/15 * * * *` reminder sweep, `0 3
 export, `17 4 * * 1` weekly prune — and exactly one on staging, `0 3 * * *`. The `0 4 * * 1`
 catalogue scrape joins both in phase D and must **not** appear before then (§15.3).
 
+The existing weekly slot also runs tenant `audit_log` retention alongside the platform audit
+prune, provider usage rollup and dead-letter retention, using `Promise.allSettled`: each job
+runs even if another rejects, and the first rejection is rethrown. Tenant retention is the named
+constant `TENANT_AUDIT_RETENTION_DAYS = 400` (owner confirms), with 200 ids per delete and one
+250-batch cap across workspaces. Watch `deleted`, `batches`, `organizations`, `drained`;
+`drained: false` is an error requiring investigation. Backup/export artifact retention remains
+unimplemented and still emits its warning. Production still has exactly three cron expressions.
+
 **Use this read-back, not `wrangler deployments list`.** That command lists Worker _versions_ —
 id, author, source, deployment time — and never prints a cron expression, so it cannot tell you
 whether a schedule is registered, missing or stale. There is no `wrangler` subcommand that

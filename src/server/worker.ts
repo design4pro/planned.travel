@@ -19,6 +19,7 @@ import {
   defaultStreamHandler,
 } from '@tanstack/react-start/server'
 import { PLATFORM_SYSTEM_ACTOR, prunePlatformAuditLog } from './catalog/audit'
+import { pruneTenantAuditLog } from './audit/retention'
 import { rollUpProviderUsage } from './catalog/provider-usage'
 import { createDb } from './db/client'
 import { consumeTaskBatch } from './queue/consumer'
@@ -89,8 +90,8 @@ function taskEnv(env: Cloudflare.Env): TaskBindings {
 /**
  * The three expressions `wrangler.jsonc` registers, and there are exactly three on production
  * (docs/DEPLOY.md §11). The weekly retention slot now carries the 400-day `platform_audit_log`
- * prune, the usage rollup and the dead-letter retention as well as the backup and export retention
- * it was registered for; a fourth expression for them would falsify that count, so they join the
+ * and tenant `audit_log` prunes, the usage rollup and dead-letter retention alongside the backup
+ * and export retention it was registered for; a fourth expression for them would falsify that count, so they join the
  * existing one rather than adding one.
  */
 const REMINDER_CRON = '*/15 * * * *'
@@ -137,7 +138,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         await sweepReminders(bindings, logger, controller.scheduledTime)
         return
       case RETENTION_CRON:
-        // This slot has four jobs, and one half of it is still not written.
+        // This slot has five jobs, and one half of it is still not written.
         //
         // Not written: the backup and export artifact half this expression was registered for.
         // `wrangler.jsonc` documents `17 4 * * 1` as the weekly retention prune of expired backups
@@ -154,7 +155,8 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
           pending: 'backup and export artifact retention',
           retentionDays: env.BACKUP_RETENTION_DAYS,
         })
-        // Written: the 400-day prune of `platform_audit_log` (docs/ACCESS.md §4.3), the weekly fold
+        // Written: the 400-day prunes of `platform_audit_log` and tenant `audit_log`
+        // (docs/ACCESS.md §4.3/§4.5), the weekly fold
         // of hourly `provider_usage` rows into their month rows, and the retention of `dead-letter/`
         // objects (`DEAD_LETTER_RETENTION_DAYS`, 14 by default). Each logs its own counts, so there
         // is nothing to report here that the writers have not already emitted.
@@ -174,6 +176,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
           const outcomes = await Promise.allSettled([
             prunePlatformAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
             rollUpProviderUsage(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
+            pruneTenantAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
             pruneDeadLetters(bindings.FILES, logger, {
               now,
               retentionDays: resolveDeadLetterRetentionDays(
