@@ -21,19 +21,38 @@ import {
   getFile,
   getStorageUsage,
   getTrip,
+  listAuditLog,
+  listTripFiles,
   recordFile,
+  resolveQuotas,
   updateTrip,
+  updateTripMember,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
+import type * as Repositories from '#/server/repos'
 import type { TenantScope } from '#/server/repos'
-import type { SeededTenant } from '#/server/repos/__tests__/harness'
+import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 
 const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
   deletedKeys: [] as Array<string>,
   putKeys: [] as Array<string>,
+  objects: new Set<string>(),
+  afterPut: null as (() => Promise<void>) | null,
+  room: vi.fn(async () => undefined),
+  bucket: vi.fn(),
 }))
+
+// Observe the boundary calls while retaining their real repository implementations.
+vi.mock('#/server/repos', async (importOriginal) => {
+  const actual = await importOriginal<typeof Repositories>()
+  return {
+    ...actual,
+    getStorageUsage: vi.fn(actual.getStorageUsage),
+    resolveQuotas: vi.fn(actual.resolveQuotas),
+  }
+})
 
 /** `./context` imports `cloudflare:workers` at module scope, which plain Node cannot resolve. */
 vi.mock('../context', () => ({
@@ -43,15 +62,21 @@ vi.mock('../context', () => ({
     }
     return stubs.scope
   },
-  filesBucket: () => ({
-    put: async (key: string): Promise<void> => {
-      stubs.putKeys.push(key)
-    },
-    delete: async (key: string): Promise<void> => {
-      stubs.deletedKeys.push(key)
-    },
-  }),
-  mirrorToRoom: async (): Promise<void> => undefined,
+  filesBucket: () => {
+    stubs.bucket()
+    return {
+      put: async (key: string): Promise<void> => {
+        stubs.putKeys.push(key)
+        stubs.objects.add(key)
+        await stubs.afterPut?.()
+      },
+      delete: async (key: string): Promise<void> => {
+        stubs.deletedKeys.push(key)
+        stubs.objects.delete(key)
+      },
+    }
+  },
+  mirrorToRoom: stubs.room,
   orNull: (value: string): string | null => (value === '' ? null : value),
   patch: (kind: string, id: string, fields: unknown) => ({
     entity: { kind, id },
@@ -121,13 +146,17 @@ async function uploadFile(tripId: string): Promise<Response> {
 }
 
 let tenant: SeededTenant
+let harness: Harness
 
 beforeEach(async () => {
-  const harness = await createHarness()
+  harness = await createHarness()
   tenant = await harness.seedTenant('files-cover')
   stubs.scope = tenant.scope
   stubs.deletedKeys = []
   stubs.putKeys = []
+  stubs.objects.clear()
+  stubs.afterPut = null
+  vi.clearAllMocks()
 })
 
 async function tripWithCover(): Promise<{
@@ -144,6 +173,7 @@ async function tripWithCover(): Promise<{
     contentType: 'image/jpeg',
     sizeBytes: 2048,
   })
+  stubs.objects.add(storageKey)
   await updateTrip(tenant.scope, trip.id, {
     coverImageKey: storageKey,
     coverImageUrl: `https://planned.travel/api/trips/${trip.id}/cover?v=${file.id}`,
@@ -162,6 +192,21 @@ describe('deleteTripFileFn and the cover', () => {
     expect(trip?.coverImageUrl).toBeNull()
     expect(await getFile(tenant.scope, fileId)).toBeNull()
     expect(stubs.deletedKeys).toEqual([storageKey])
+    expect(stubs.objects.has(storageKey)).toBe(false)
+    expect(stubs.room).toHaveBeenCalledExactlyOnceWith(tenant.scope, tripId, [
+      expect.objectContaining({
+        entity: { kind: 'trip', id: tripId },
+        op: 'upsert',
+      }),
+    ])
+    expect(
+      (await listAuditLog(tenant.scope, { action: 'file.deleted' })).items,
+    ).toEqual([
+      expect.objectContaining({
+        entityId: fileId,
+        metadata: expect.objectContaining({ tripId }),
+      }),
+    ])
   })
 
   it('leaves the cover when another file is deleted', async () => {
@@ -230,6 +275,11 @@ describe('file writes and the trip guards', () => {
     storageKey: string,
     bytes: number,
   ): Promise<void> {
+    expect(stubs.room).not.toHaveBeenCalled()
+    expect(
+      (await listAuditLog(tenant.scope, { action: 'file.deleted' })).items,
+    ).toEqual([])
+    expect(stubs.objects.has(storageKey)).toBe(true)
     expect(stubs.putKeys).toEqual([])
     expect(stubs.deletedKeys).toEqual([])
     expect((await getTrip(tenant.scope, tripId))?.coverImageKey).toBe(
@@ -244,6 +294,10 @@ describe('file writes and the trip guards', () => {
     await member(tripId, 'viewer')
 
     const upload = await uploadFile(tripId)
+    expect(getStorageUsage).not.toHaveBeenCalled()
+    expect(resolveQuotas).not.toHaveBeenCalled()
+    expect(stubs.bucket).not.toHaveBeenCalled()
+    expect(upload.status).toBe(200)
     expect(await upload.json()).toEqual({
       ok: false,
       code: 'FORBIDDEN',
@@ -259,11 +313,129 @@ describe('file writes and the trip guards', () => {
     await expectUntouched(tripId, fileId, storageKey, 2048)
   })
 
+  it('refuses a visible nonmember before usage, quotas or storage, including stale rename and delete', async () => {
+    const { tripId, fileId, storageKey } = await tripWithCover()
+    await updateTrip(tenant.scope, tripId, { visibility: 'organization' })
+    stubs.scope = tenant.scopeFor(await tenant.addUser('Visible nonmember'))
+
+    const upload = await uploadFile(tripId)
+    expect(upload.status).toBe(200)
+    expect(await upload.json()).toEqual({
+      ok: false,
+      code: 'FORBIDDEN',
+      message: new TripRoleError(['owner', 'editor'], null).message,
+    })
+    expect(getStorageUsage).not.toHaveBeenCalled()
+    expect(resolveQuotas).not.toHaveBeenCalled()
+    expect(stubs.bucket).not.toHaveBeenCalled()
+    await expect(renameFile({ tripId, fileId })).rejects.toBeInstanceOf(
+      TripRoleError,
+    )
+    await expect(deleteFile({ tripId, fileId })).rejects.toBeInstanceOf(
+      TripRoleError,
+    )
+    await expectUntouched(tripId, fileId, storageKey, 2048)
+  })
+
+  it.each(['missing', 'other trip', 'other workspace'] as const)(
+    'refuses a delete of a %s file before bucket, room or audit effects',
+    async (kind) => {
+      const { tripId, fileId, storageKey } = await tripWithCover()
+      const before = await getFile(tenant.scope, fileId)
+      let requestedFileId = 'missing-file'
+      let foreign: {
+        tenant: SeededTenant
+        fileId: string
+        storageKey: string
+        row: Awaited<ReturnType<typeof getFile>>
+      } | null = null
+      if (kind === 'other trip') {
+        const decoy = await createTrip(tenant.scope, { title: 'Decoy' })
+        await expect(deleteFile({ tripId: decoy.id, fileId })).rejects.toEqual(
+          new NotFoundError('file', fileId),
+        )
+      } else {
+        if (kind === 'other workspace') {
+          const beta = await harness.seedTenant('foreign-files')
+          const trip = await createTrip(beta.scope, { title: 'Foreign' })
+          const row = await recordFile(beta.scope, {
+            tripId: trip.id,
+            storageKey: 'foreign/ticket.pdf',
+            filename: 'ticket.pdf',
+            contentType: 'application/pdf',
+            sizeBytes: 10,
+          })
+          foreign = {
+            tenant: beta,
+            fileId: row.id,
+            storageKey: row.storageKey,
+            row,
+          }
+          stubs.objects.add(row.storageKey)
+          requestedFileId = row.id
+        }
+        await expect(
+          deleteFile({ tripId, fileId: requestedFileId }),
+        ).rejects.toEqual(new NotFoundError('file', requestedFileId))
+      }
+      expect(stubs.bucket).not.toHaveBeenCalled()
+      await expectUntouched(tripId, fileId, storageKey, 2048)
+      expect(await getFile(tenant.scope, fileId)).toEqual(before)
+      if (foreign !== null) {
+        expect(await getFile(foreign.tenant.scope, foreign.fileId)).toEqual(
+          foreign.row,
+        )
+        expect(stubs.objects.has(foreign.storageKey)).toBe(true)
+        expect(
+          (await listAuditLog(foreign.tenant.scope, { action: 'file.deleted' }))
+            .items,
+        ).toEqual([])
+      }
+    },
+  )
+
+  it('cleans the stored object when recordFile refuses a role revoked after put', async () => {
+    const { tripId, storageKey } = await tripWithCover()
+    const editorId = await tenant.addUser('Editor losing access')
+    const membership = await addTripMember(tenant.scope, {
+      tripId,
+      userId: editorId,
+      role: 'editor',
+    })
+    stubs.scope = tenant.scopeFor(editorId)
+    const before = await listTripFiles(tenant.scope, tripId)
+    stubs.afterPut = async () => {
+      await updateTripMember(tenant.scope, membership.id, { role: 'viewer' })
+    }
+
+    const response = await uploadFile(tripId)
+
+    expect(await response.json()).toEqual({
+      ok: false,
+      code: 'rejected',
+      message: new TripRoleError(['owner', 'editor'], 'viewer').message,
+    })
+    expect(getStorageUsage).toHaveBeenCalledOnce()
+    expect(resolveQuotas).toHaveBeenCalled()
+    expect(stubs.putKeys).toHaveLength(1)
+    expect(stubs.deletedKeys).toEqual(stubs.putKeys)
+    expect([...stubs.objects]).toEqual([storageKey])
+    expect(await listTripFiles(tenant.scope, tripId)).toEqual(before)
+    expect(stubs.room).not.toHaveBeenCalled()
+    expect(
+      (await listAuditLog(tenant.scope, { action: 'file.uploaded' })).items,
+    ).toEqual([])
+  })
+
   it('refuses every write on an archived trip, owner included', async () => {
     const { tripId, fileId, storageKey } = await tripWithCover()
     await archiveTrip(tenant.scope, tripId)
 
     const upload = await uploadFile(tripId)
+    expect(getStorageUsage).not.toHaveBeenCalled()
+    expect(resolveQuotas).not.toHaveBeenCalled()
+    expect(stubs.bucket).not.toHaveBeenCalled()
+    expect(upload.status).toBe(200)
     expect(await upload.json()).toEqual({
       ok: false,
       code: 'TRIP_ARCHIVED',
@@ -284,6 +456,9 @@ describe('file writes and the trip guards', () => {
     stubs.scope = tenant.scopeFor(await tenant.addUser('Stranger'))
 
     await expect(uploadFile(tripId)).rejects.toBeInstanceOf(NotFoundError)
+    expect(getStorageUsage).not.toHaveBeenCalled()
+    expect(resolveQuotas).not.toHaveBeenCalled()
+    expect(stubs.bucket).not.toHaveBeenCalled()
     await expect(renameFile({ tripId, fileId })).rejects.toBeInstanceOf(
       NotFoundError,
     )
