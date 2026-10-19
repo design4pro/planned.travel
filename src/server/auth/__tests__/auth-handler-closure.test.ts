@@ -1837,14 +1837,16 @@ it('review: acceptance must not release a reserved seat before membership insert
     (await countMembers(scope)) + (await listPendingInvitations(scope)).length,
   ).toBe(10)
   const cookie = sessionCookie(await signIn(email))
-  interleave = async () => {
+  const competingClaim = vi.fn(async () => {
+    await expect(createInvitation(scope, { email, expiresAt: new Date(Date.now() + 86400000) })).rejects.toMatchObject({ code: 'ALREADY_MEMBER' })
     await expect(
       createInvitation(scope, {
         email: 'stolen-seat@example.com',
         expiresAt: new Date(Date.now() + 86400000),
       }),
     ).rejects.toThrow()
-  }
+  })
+  interleave = competingClaim
   expect(
     (
       await post(
@@ -1854,6 +1856,8 @@ it('review: acceptance must not release a reserved seat before membership insert
       )
     ).status,
   ).toBe(200)
+  expect(competingClaim).toHaveBeenCalledTimes(1)
+  expect(interleave).toBeUndefined()
   expect(
     (await countMembers(scope)) + (await listPendingInvitations(scope)).length,
   ).toBe(10)
@@ -1896,7 +1900,7 @@ it('keeps the in-process acceptance contract and durable membership after activa
         body: { invitationId: invitation.id },
         headers,
       }),
-    ).rejects.toThrow()
+    ).rejects.toMatchObject({ body: { code: 'USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION' } })
   } finally {
     activation.mockRestore()
   }

@@ -82,9 +82,16 @@ export function organizationWithAtomicInvitations(
       if (!result) throw notFound()
       // Durable membership is never compensated on a session/KV failure. The existing workspace
       // switcher can recover activation, and a repeated acceptance cannot recreate removed access.
-      await ctx.context.internalAdapter.updateSession(session.session.token, {
-        activeOrganizationId: workspace.id,
-      })
+      try {
+        await ctx.context.internalAdapter.updateSession(session.session.token, {
+          activeOrganizationId: workspace.id,
+        })
+      } catch {
+        throw APIError.from(
+          'BAD_REQUEST',
+          plugin.$ERROR_CODES.USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION,
+        )
+      }
       await options.organizationHooks?.afterAcceptInvitation?.({
         ...result,
         user: session.user,

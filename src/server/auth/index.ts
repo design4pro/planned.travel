@@ -624,7 +624,7 @@ function buildAuth() {
             })
           },
         },
-        authRepositoryDb,
+        () => authRepositoryDb(),
       ),
 
       passkey({
