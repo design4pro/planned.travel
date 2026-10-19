@@ -107,7 +107,7 @@ const changedPassword = z.object({
   user: z.object({ id: z.string().min(1) }),
 })
 
-/** `/organization/remove-member` answers `{ member }`, `/organization/leave` answers the member. */
+/** `/organization/remove-member` (in process: its HTTP path is closed, #1010) answers `{ member }`, `/organization/leave` answers the member. */
 const memberRow = z.object({
   userId: z.string().min(1),
   organizationId: z.string().min(1),

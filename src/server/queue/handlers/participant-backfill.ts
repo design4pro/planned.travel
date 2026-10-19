@@ -132,6 +132,7 @@ export function createParticipantBackfillHandler(
       userId: BACKFILL_SCOPE_USER_ID,
       organizationId,
       role: 'member',
+      impersonatedBy: null,
     })
     const participants = await backfillParticipants(scope)
 

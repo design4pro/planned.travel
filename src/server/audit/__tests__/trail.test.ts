@@ -172,6 +172,100 @@ describe('trail', () => {
     expect(rows[0]?.userAgent).toBe(userAgent.slice(0, 200))
   })
 
+  /* ----------------------------------------------------------- impersonation */
+
+  it('stamps the operator into metadata when the scope is an impersonated session', async () => {
+    const operator = await tenant.addUser('Operator')
+    const scope = createScope(harness.db, {
+      ...tenant.scope.ctx,
+      impersonatedBy: operator,
+    })
+
+    await underRequest({ 'cf-connecting-ip': '203.0.113.9' }, () =>
+      trail(scope, {
+        action: AUDIT_ACTIONS.FILE_UPLOADED,
+        entityType: 'file',
+        entityId: 'file_imp',
+        metadata: { filename: 'itinerary.pdf' },
+      }),
+    )
+
+    const rows = await entries(tenant.scope)
+    expect(rows).toHaveLength(1)
+    // Attributed to the account owner as ever; the operator rides in metadata beside what the
+    // caller recorded, and reads back through the entity history as well.
+    expect(rows[0]?.actorUserId).toBe(tenant.ownerUserId)
+    expect(rows[0]?.metadata).toEqual({
+      filename: 'itinerary.pdf',
+      impersonatedBy: operator,
+    })
+    const history = await listEntityHistory(tenant.scope, 'file', 'file_imp')
+    expect(history[0]?.metadata).toMatchObject({ impersonatedBy: operator })
+  })
+
+  it('records an impersonated entry when no request is in scope', async () => {
+    const scope = createScope(harness.db, {
+      ...tenant.scope.ctx,
+      impersonatedBy: 'usr_operator',
+    })
+
+    await trail(scope, {
+      action: AUDIT_ACTIONS.FILE_DELETED,
+      entityType: 'file',
+      entityId: 'file_imp_2',
+    })
+
+    const rows = await entries(tenant.scope)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.ip).toBeNull()
+    expect(rows[0]?.metadata).toEqual({ impersonatedBy: 'usr_operator' })
+  })
+
+  it('never lets a caller-supplied impersonatedBy win over the derived one', async () => {
+    const scope = createScope(harness.db, {
+      ...tenant.scope.ctx,
+      impersonatedBy: 'usr_operator',
+    })
+
+    await trail(scope, {
+      action: AUDIT_ACTIONS.FILE_UPLOADED,
+      entityType: 'file',
+      entityId: 'file_imp_3',
+      metadata: { impersonatedBy: 'usr_someone_else' },
+    })
+
+    const rows = await entries(tenant.scope)
+    expect(rows[0]?.metadata).toEqual({ impersonatedBy: 'usr_operator' })
+  })
+
+  it('adds no impersonatedBy key for an ordinary session, and keeps a null-metadata entry null', async () => {
+    await trail(tenant.scope, {
+      action: AUDIT_ACTIONS.FILE_UPLOADED,
+      entityType: 'file',
+      entityId: 'file_plain',
+      metadata: { filename: 'a.pdf' },
+    })
+    await trail(tenant.scope, {
+      action: AUDIT_ACTIONS.FILE_DELETED,
+      entityType: 'file',
+      entityId: 'file_plain_2',
+    })
+    // A caller cannot manufacture the stamp on an ordinary session by naming the key either.
+    await trail(tenant.scope, {
+      action: AUDIT_ACTIONS.FILE_DELETED,
+      entityType: 'file',
+      entityId: 'file_plain_3',
+      metadata: { impersonatedBy: 'usr_forged' },
+    })
+
+    const byEntity = new Map(
+      (await entries(tenant.scope)).map((row) => [row.entityId, row.metadata]),
+    )
+    expect(byEntity.get('file_plain')).toEqual({ filename: 'a.pdf' })
+    expect(byEntity.get('file_plain_2') ?? null).toBeNull()
+    expect(byEntity.get('file_plain_3') ?? null).toEqual({})
+  })
+
   /* ------------------------------------------------------------- swallowing */
 
   it('does not propagate a refused append, and reports it once', async () => {

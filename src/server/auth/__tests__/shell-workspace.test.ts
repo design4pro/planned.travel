@@ -61,6 +61,7 @@ it('the shell uses the surviving membership and its role', async () => {
     userId: a.ownerUserId,
     organizationId: a.organizationId,
     role: 'member',
+    impersonatedBy: null,
   })
 })
 

@@ -186,11 +186,13 @@ describe('real BetterAuth offboarding invalidates calendar credentials', () => {
         organizationId,
         userId: owner.userId,
         role: 'owner',
+        impersonatedBy: null,
       })
       const scope = createScope(authDatabase.db, {
         organizationId,
         userId: leaver.userId,
         role: 'member',
+        impersonatedBy: null,
       })
       const trip = await createTrip(ownerScope, {
         title: 'Visible before offboarding',
