@@ -1201,6 +1201,27 @@ const messages = {
       'Nem sikerült menteni a szabadságkeretet. {year} továbbra is {value} nap mutat.',
   },
   'vacay.allowance.retry': 'Újrapróbálás',
+  'vacay.allowance.tile.edit.carried':
+    'Átvitt napok szerkesztése, jelenleg {value}',
+  'vacay.allowance.input.carried': '{year} évre átvitt napok',
+  'vacay.allowance.carried.from': 'Átvitt {year}-ből',
+  'vacay.allowance.carried.opening':
+    'Átvitel {year} előttről. Válaszd ki a szerkesztéshez.',
+  'vacay.allowance.carried.off': 'Az átvitel ki van kapcsolva',
+  'vacay.allowance.carried.wholeDays':
+    'Csak egész napok vihetők át a következő évre; a megmaradt fél nap nem.',
+  'vacay.allowance.error.derived':
+    'A(z) {year} évre átvitt napok mostantól a(z) {previousYear} évből számolódnak, ezért nem szerkeszthetők.',
+  'vacay.allowance.error.carried': {
+    one: 'Nem sikerült menteni az átvitt napokat. {year} továbbra is {value} nap mutat.',
+    other:
+      'Nem sikerült menteni az átvitt napokat. {year} továbbra is {value} nap mutat.',
+  },
+  'vacay.allowance.superseded': {
+    one: 'A(z) {year} évre átvitt napok mostantól a(z) {previousYear} évből számolódnak. A megadott érték {value} nap volt.',
+    other:
+      'A(z) {year} évre átvitt napok mostantól a(z) {previousYear} évből számolódnak. A megadott érték {value} nap volt.',
+  },
   'vacay.pending.loading': 'Betöltés',
   'vacay.error.title': 'A szabadságtervező nem töltődött be',
   'vacay.year.previous': 'Előző év',
