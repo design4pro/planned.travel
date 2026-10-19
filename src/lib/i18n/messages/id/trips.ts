@@ -467,10 +467,14 @@ const messages = {
   'join.dates.label': 'Tanggal',
   'join.destination.label': 'Tujuan',
   'join.action.signIn': 'Masuk',
+  'join.action.join': 'Gabung ke perjalanan',
+  'join.action.joining': 'Bergabung ke perjalanan',
   'join.action.open': 'Buka perjalanan',
   'join.action.openIn': 'Buka perjalanan dan ganti ruang kerja',
   'join.action.openIn.pending': 'Mengganti ruang kerja',
   'join.loading': 'Memuat undangan',
+  'join.joined.title': 'Anda sudah bergabung di perjalanan',
+  'join.joined.body': 'Buka untuk melihat rencananya.',
   'join.member.title': 'Anda sudah ada di perjalanan ini',
   'join.needsWorkspace.title':
     'Perjalanan ini ada di ruang kerja yang belum Anda ikuti',
@@ -489,6 +493,8 @@ const messages = {
   'join.error.title': 'Kami tidak dapat memuat tautan undangan ini',
   'join.error.retry': 'Coba lagi',
   'join.error.busy': 'Halaman ini sedang sibuk. Coba lagi dalam semenit.',
+  'join.error.join':
+    'Tidak dapat bergabung. Tautan masih berfungsi, coba lagi.',
   'join.error.switch': 'Tidak dapat mengganti ruang kerja. Coba lagi.',
 } satisfies TranslationOf<typeof En>
 

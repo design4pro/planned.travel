@@ -495,10 +495,14 @@ const messages = {
   'join.dates.label': 'Dates du voyage',
   'join.destination.label': 'Destination du voyage',
   'join.action.signIn': 'Se connecter',
+  'join.action.join': 'Rejoindre le voyage',
+  'join.action.joining': 'Vous rejoignez le voyage',
   'join.action.open': 'Ouvrir le voyage',
   'join.action.openIn': 'Ouvrir le voyage et changer d’espace de travail',
   'join.action.openIn.pending': 'Changement d’espace de travail',
   'join.loading': 'Chargement de l’invitation',
+  'join.joined.title': 'Vous avez rejoint le voyage',
+  'join.joined.body': 'Ouvrez-le pour voir le programme.',
   'join.member.title': 'Vous participez déjà à ce voyage',
   'join.needsWorkspace.title':
     'Ce voyage se trouve dans un espace de travail dont vous ne faites pas partie',
@@ -518,6 +522,8 @@ const messages = {
   'join.error.retry': 'Réessayer',
   'join.error.busy':
     'Cette page est très sollicitée. Réessayez dans une minute.',
+  'join.error.join':
+    'Impossible de rejoindre le voyage. Le lien fonctionne toujours, réessayez.',
   'join.error.switch': 'Impossible de changer d’espace de travail. Réessayez.',
 } satisfies TranslationOf<typeof En>
 

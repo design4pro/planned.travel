@@ -458,10 +458,14 @@ const messages = {
   'join.dates.label': '日程',
   'join.destination.label': '目的地',
   'join.action.signIn': 'サインイン',
+  'join.action.join': '旅行に参加する',
+  'join.action.joining': '旅行に参加しています',
   'join.action.open': '旅行を開く',
   'join.action.openIn': '旅行を開いてワークスペースを切り替える',
   'join.action.openIn.pending': 'ワークスペースを切り替えています',
   'join.loading': '招待を読み込んでいます',
+  'join.joined.title': '旅行に参加しました',
+  'join.joined.body': '開いて計画を確認しましょう。',
   'join.member.title': 'すでにこの旅行に参加しています',
   'join.needsWorkspace.title':
     'この旅行は、あなたが参加していないワークスペースにあります',
@@ -481,6 +485,8 @@ const messages = {
   'join.error.retry': 'もう一度試す',
   'join.error.busy':
     'このページは混み合っています。1分ほど待ってからもう一度お試しください。',
+  'join.error.join':
+    '参加できませんでした。リンクはまだ使えます。もう一度お試しください。',
   'join.error.switch':
     'ワークスペースを切り替えられませんでした。もう一度お試しください。',
 } satisfies TranslationOf<typeof En>

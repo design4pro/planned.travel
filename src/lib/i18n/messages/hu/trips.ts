@@ -477,10 +477,14 @@ const messages = {
   'join.dates.label': 'Dátumok',
   'join.destination.label': 'Úti cél',
   'join.action.signIn': 'Bejelentkezés',
+  'join.action.join': 'Csatlakozás az utazáshoz',
+  'join.action.joining': 'Csatlakozás az utazáshoz folyamatban',
   'join.action.open': 'Utazás megnyitása',
   'join.action.openIn': 'Utazás megnyitása és munkaterület váltása',
   'join.action.openIn.pending': 'Munkaterület váltása folyamatban',
   'join.loading': 'Meghívó betöltése',
+  'join.joined.title': 'Csatlakozott az utazáshoz',
+  'join.joined.body': 'Nyissa meg a terv megtekintéséhez.',
   'join.member.title': 'Már részt vesz ezen az utazáson',
   'join.needsWorkspace.title':
     'Ez az utazás olyan munkaterületen van, amelynek Ön nem tagja',
@@ -500,6 +504,8 @@ const messages = {
   'join.error.retry': 'Újrapróbálás',
   'join.error.busy':
     'Ez az oldal most túlterhelt. Próbálja újra egy perc múlva.',
+  'join.error.join':
+    'Nem sikerült csatlakozni. A hivatkozás továbbra is működik, próbálja újra.',
   'join.error.switch': 'Nem sikerült munkaterületet váltani. Próbálja újra.',
 } satisfies TranslationOf<typeof En>
 
