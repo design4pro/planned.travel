@@ -873,6 +873,14 @@ const messages = {
   'files.action.add': '파일 추가',
   'files.action.choose': '파일 고르기',
   'files.action.upload': '파일 올리기',
+  'files.places.title': '장소 파일',
+  'files.places.description':
+    '좌표가 없는 장소를 포함하여 이 여행의 장소를 GeoJSON으로 다운로드하세요.',
+  'files.places.action': '장소 다운로드 (.geojson)',
+  'files.places.empty': '다운로드하려면 이 여행에 장소를 추가하세요.',
+  'files.places.error': '장소 파일을 준비하지 못했습니다. 다시 시도하세요.',
+  'files.places.pending': '장소 파일 준비 중…',
+  'files.places.done': '장소 파일을 다운로드했습니다.',
   'files.calendar.live.action': '자동 갱신 캘린더 링크',
   'files.calendar.live.title': '자동 갱신 캘린더 링크',
   'files.calendar.warning':

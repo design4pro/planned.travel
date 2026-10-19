@@ -838,6 +838,14 @@ const messages = {
   'files.action.add': '新增檔案',
   'files.action.choose': '選擇檔案',
   'files.action.upload': '上傳檔案',
+  'files.places.title': '地點檔案',
+  'files.places.description':
+    '將此次旅行的地點下載為 GeoJSON，包括沒有座標的地點。',
+  'files.places.action': '下載地點 (.geojson)',
+  'files.places.empty': '請先為此次旅行新增地點，再下載。',
+  'files.places.error': '無法準備地點檔案。請重試。',
+  'files.places.pending': '正在準備地點檔案…',
+  'files.places.done': '地點檔案已下載。',
   'files.calendar.live.action': '自動更新的日曆連結',
   'files.calendar.live.title': '自動更新的日曆連結',
   'files.calendar.warning':

@@ -373,10 +373,10 @@ adds its registry entry in the same change; the drift test fails otherwise.
 
 ### Export before deletion
 
-Mentioned, neither offered nor enforced. The "Take it" promise on the privacy page (PDF itinerary, calendar file, GeoJSON)
-is not backed by the product today, and enforcing an export would block a legitimate request on a feature that does not
-exist. The deletion warning says the data cannot be recovered and does not link to an export. The gap is filed as a
-finding, below.
+Mentioned, neither offered nor enforced by the deletion flow. The trip Files screen offers PDF itineraries, calendar
+files and, since #1063, a GeoJSON places file. These are per-trip snapshots, not a complete personal-data export, and
+enforcing one would block a legitimate deletion request. The deletion warning says the data cannot be recovered and
+does not link to a download. The remaining plan-gating conflict in the public promise is tracked by #1079.
 
 ### Alternatives considered
 
@@ -563,7 +563,7 @@ and any change made by this PR to code, schema or migrations.
 
 - **F1. Memberless workspaces already exist** from past console deletions; they keep rows, files and a subscription row.
   A listing and a cleanup through the same `deleteWorkspace`.
-- **F2. The privacy "Take it" promise** (PDF, calendar, GeoJSON export) has no product behind it.
+- **F2. The privacy "Take it" promise** now has per-trip PDF, calendar and GeoJSON downloads (#1063). The PDF plan-gating conflict remains a person’s decision in #1079.
 - **F3. `dead-letter/` and `exports/` have no deleter** (`dead-letter/` fixed in phase 7, #1055); the weekly retention slot is a logged no-op
   (`BACKUP_RETENTION_DAYS` is read and unused).
 - **F4. (fixed in phase 7, #1055) `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".

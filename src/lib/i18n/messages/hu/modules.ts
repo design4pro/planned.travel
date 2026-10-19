@@ -921,6 +921,15 @@ const messages = {
   'files.action.add': 'Fájlok hozzáadása',
   'files.action.choose': 'Fájlok kiválasztása',
   'files.action.upload': 'Fájlok feltöltése',
+  'files.places.title': 'Helyek fájlja',
+  'files.places.description':
+    'Töltsd le az utazás helyeit GeoJSON formátumban, a koordináták nélküli helyekkel együtt.',
+  'files.places.action': 'Helyek letöltése (.geojson)',
+  'files.places.empty': 'Adj helyeket az utazáshoz a letöltéshez.',
+  'files.places.error':
+    'Nem sikerült előkészíteni a helyek fájlját. Próbáld újra.',
+  'files.places.pending': 'Helyek fájljának előkészítése…',
+  'files.places.done': 'Helyek fájlja letöltve.',
   'files.calendar.live.action': 'Frissülő naptárhivatkozás',
   'files.calendar.live.title': 'Frissülő naptárhivatkozás',
   'files.calendar.warning':

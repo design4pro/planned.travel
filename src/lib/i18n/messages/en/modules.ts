@@ -1103,6 +1103,14 @@ const messages = {
   'files.action.add': 'Add files',
   'files.action.choose': 'Choose files',
   'files.action.upload': 'Upload files',
+  'files.places.title': 'Places file',
+  'files.places.description':
+    'Download this trip’s places as GeoJSON, including places without coordinates.',
+  'files.places.action': 'Download places (.geojson)',
+  'files.places.empty': 'Add places to this trip to download them.',
+  'files.places.error': 'We couldn’t prepare the places file. Try again.',
+  'files.places.pending': 'Preparing places file…',
+  'files.places.done': 'Places file downloaded.',
   'files.calendar.live.action': 'Live calendar link',
   'files.calendar.live.title': 'Live calendar link',
   'files.calendar.warning':
