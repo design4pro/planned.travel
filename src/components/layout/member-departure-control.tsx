@@ -67,8 +67,7 @@ export function MemberDepartureControl({
   async function confirm() {
     setPending(true)
     try {
-      const recovering =
-        refusal === 'activation-failed' || (self && refusal === 'failed')
+      const recovering = refusal === 'activation-failed'
       const outcome = await (recovering ? onRecover() : onConfirm())
       if (outcome.ok) setOpen(false)
       else
@@ -143,11 +142,7 @@ export function MemberDepartureControl({
                 variant="primary"
                 disabled={pending}
                 onClick={() => {
-                  if (
-                    refusal === 'activation-failed' ||
-                    (self && refusal === 'failed')
-                  )
-                    void confirm()
+                  if (refusal === 'activation-failed') void confirm()
                   else window.location.reload()
                 }}
               >

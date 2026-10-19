@@ -307,10 +307,7 @@ function OrganizationPage() {
                           workspace={data.organization.name}
                           self={member.userId === data.viewerUserId}
                           onConfirm={() =>
-                            depart(
-                              member.memberId,
-                              member.userId === data.viewerUserId,
-                            )
+                            depart(member.memberId)
                           }
                           onRecover={recover}
                         />

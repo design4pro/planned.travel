@@ -1,7 +1,4 @@
 import { useRouter } from '@tanstack/react-router'
-import { toast } from 'sonner'
-import { useTranslate } from '#/lib/i18n'
-import { DEPARTURE_COPY } from './member-departure-control'
 import { finishDeparture } from '#/lib/member-departure-recovery'
 import {
   departMemberFn,
@@ -11,7 +8,6 @@ import type { DepartureOutcome } from './member-departure-control'
 
 export function useMemberDeparture() {
   const router = useRouter()
-  const t = useTranslate()
   const navigate = () => {
     router.clearCache()
     window.location.replace('/dashboard')
@@ -30,7 +26,6 @@ export function useMemberDeparture() {
   }
   const depart = async (
     memberId: string,
-    self = false,
   ): Promise<DepartureOutcome> => {
     try {
       const result = await departMemberFn({ data: { memberId } })
@@ -44,13 +39,11 @@ export function useMemberDeparture() {
         })
         return ready ? { ok: true } : { ok: false, reason: 'activation-failed' }
       }
-      if (!result.ok) toast.error(t(DEPARTURE_COPY[result.reason]))
       await router.invalidate({ sync: true })
       if (router.state.matches.some(({ status }) => status === 'error'))
         return { ok: false, reason: 'failed' }
       return result.ok ? { ok: true } : result
     } catch {
-      if (self) return recover()
       await router.invalidate({ sync: true }).catch(() => undefined)
       return { ok: false, reason: 'failed' }
     }
