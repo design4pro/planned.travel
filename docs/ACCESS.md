@@ -445,9 +445,9 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with four exceptions. Two are closed by the plugin's own options and not
+document does not govern - with six exceptions. Two are closed by the plugin's own options and not
 by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other two are closed by
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other four are closed by
 `disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
 `src/server/auth/admin-options.ts`, merged with the fifteen admin paths into `DISABLED_PATHS`, which is
 what `src/server/auth/index.ts` passes). `organization/update-member-role` writes a role without an
@@ -468,6 +468,16 @@ trips included - and leave the provider subscription billing, the R2 objects orp
 log silent. A workspace therefore has no HTTP deletion path until the product-owned one (#1000)
 exists, and that change must decide the flag explicitly: a deletion done through repository SQL keeps
 it, one that moved to the plugin's endpoint would have to remove it.
+`organization/invite-member` (including its resend option) and `organization/cancel-invitation`
+are also closed by `DISABLED_ORGANIZATION_PATHS` (#1009). The Workspace console calls the tenant-scoped
+invitation lifecycle instead: owners and admins may invite within their role ceiling, duplicates
+require explicit same-row resend, and members plus all pending invitations reserve seats. The quota
+and duplicate predicates execute in the insert statement; state changes require a still-pending row.
+Expiry comes from the server's shared seven-day policy. Create/resend queue one invitation email and
+report queue failure as recoverable delivery failure; real transitions write the tenant trail. Recipient
+lookup, acceptance and rejection stay open, retaining recipient, verification, expiry and status checks
+and the participation anchor. This tenant action keeps central impersonator attribution (§6.4).
+
 `deleteWorkspace` (`src/server/repos/members.ts`, #1057) is that repository-SQL deletion. It stays on `assertCanAdminister`, so a workspace `admin` may delete the workspace as well as the `owner`; narrowing the interactive caller to the owner is the screen's decision.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 

@@ -177,8 +177,10 @@ slices that matter.
   awaits the render _before_ it enqueues, so React's streaming renderer runs inside the request
   that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
   follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — `queueAuthEmail()`
-  has five dispatch sites: three Better Auth hooks in `src/server/auth/index.ts` and successful
-  passkey registration and actual removal in `src/server/auth/passkey/plugin.ts`. **Six** of eleven
+  has six dispatch sites: three Better Auth hooks in `src/server/auth/index.ts`, successful
+  passkey registration and actual removal in `src/server/auth/passkey/plugin.ts`, and the workspace
+  invitation lifecycle in `src/server/fns/workspace-invitations.ts`. The latter opts into propagated
+  queue failures so the console distinguishes a saved invitation from a delivered email. **Six** of eleven
   kinds (`auth.email-changed`, `auth.delete-account` and the four `billing.*`) have no dispatch
   site and are exercised only by `src/server/email/__tests__/templates.test.tsx`.
 - **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder

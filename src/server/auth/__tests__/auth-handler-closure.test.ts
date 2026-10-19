@@ -40,7 +40,7 @@ import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { authSchema } from '#/server/db/auth-schema'
-import { workspaceParticipants } from '#/server/db/schema'
+import { subscriptions, workspaceParticipants } from '#/server/db/schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'
 import type { AuthDb } from '../db'
@@ -176,7 +176,7 @@ let authDatabase: SqliteRemoteDatabase<typeof authSchema>
 beforeAll(async () => {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants }),
+    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants, subscriptions }),
   )
   sqlite = new DatabaseSync(':memory:')
   for (const statement of statements) sqlite.exec(statement)
@@ -964,6 +964,17 @@ describe('organization/update-member-role', () => {
     }
   })
 
+  it('closes invitation creation, resend and cancellation over HTTP', async () => {
+    for (const [path, body] of [
+      ['/organization/invite-member', { email: 'closed@example.com', role: 'member', organizationId }],
+      ['/organization/invite-member', { email: 'closed@example.com', role: 'owner', organizationId, resend: true }],
+      ['/organization/cancel-invitation', { invitationId: 'pending' }],
+    ] as const) {
+      expect((await post(path, body, cookie)).status).toBe(404)
+    }
+    expect(sqlite.prepare('select count(*) as n from invitation where email = ?').get('closed@example.com')).toEqual({ n: 0 })
+  })
+
   it('leaves organization/set-active answering for the same session (positive control)', async () => {
     const response = await post(
       '/organization/set-active',
@@ -1483,4 +1494,217 @@ describe('a workspace switch inside an impersonated session', () => {
     expect(activeOrganizationOf(cookie)).toBe(secondOrganizationId)
     expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
   })
+})
+
+/** Product-created invitations retain the real recipient checks and participation anchor. */
+describe('product workspace invitations and the recipient HTTP endpoints', () => {
+  it('accepts once, rejects expired/revoked invitations, and preserves the participation anchor', async () => {
+    const { createScope } = await import('#/server/repos/base')
+    const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
+    const {
+      inviteToWorkspace,
+      resendWorkspaceInvitation,
+      revokeWorkspaceInvitation,
+    } = await import('#/server/fns/workspace-invitation-writes')
+    const inviterId = await createAccount('lifecycle-owner@planned.travel')
+    const recipientEmail = 'lifecycle-recipient@planned.travel'
+    const recipientId = await createAccount(recipientEmail)
+    sqlite
+      .prepare('update user set email_verified = 1 where id = ?')
+      .run(recipientId)
+    const org = sqlite
+      .prepare('select organization_id as id from member where user_id = ?')
+      .get(inviterId) as { id: string }
+    const scope = createScope(
+      drizzle(async (query, params, method) =>
+        runStatement(sqlite, query, params, method),
+      ),
+      {
+        userId: inviterId,
+        organizationId: org.id,
+        role: 'owner',
+        impersonatedBy: null,
+      },
+    )
+    await subscribeTenant(scope, 'crew', 10)
+    const send = vi.fn().mockResolvedValue(undefined)
+    const audit = vi.fn().mockResolvedValue(undefined)
+    const ports = {
+      scope,
+      baseUrl: BASE_URL,
+      now: () => new Date(),
+      send,
+      audit,
+    }
+    const invited = await inviteToWorkspace(ports, {
+      email: recipientEmail,
+      role: 'member',
+    })
+    if (!invited.ok) throw new Error('invitation was refused')
+    const recipientCookie = sessionCookie(await signIn(recipientEmail))
+    const ownerCookie = sessionCookie(
+      await signIn('lifecycle-owner@planned.travel'),
+    )
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          ownerCookie,
+        )
+      ).status,
+    ).toBe(403)
+    sqlite
+      .prepare('update invitation set expires_at = ? where id = ?')
+      .run(Date.now() - 10000, invited.invitationId)
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      await resendWorkspaceInvitation(ports, {
+        invitationId: invited.invitationId,
+      }),
+    ).toMatchObject({ ok: true, delivered: true })
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      sqlite
+        .prepare(
+          'select count(*) as n from workspace_participants where organization_id = ? and user_id = ?',
+        )
+        .get(org.id, recipientId),
+    ).toEqual({ n: 1 })
+    expect(
+      await revokeWorkspaceInvitation(ports, {
+        invitationId: invited.invitationId,
+      }),
+    ).toMatchObject({ ok: false, reason: 'not-found' })
+    const withdrawn = await inviteToWorkspace(ports, {
+      email: 'withdrawn@example.com',
+      role: 'member',
+    })
+    if (!withdrawn.ok) throw new Error('invitation was refused')
+    await revokeWorkspaceInvitation(ports, {
+      invitationId: withdrawn.invitationId,
+    })
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: withdrawn.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(send).toHaveBeenCalledTimes(3)
+  })
+})
+
+it('keeps recipient rejection open and lets only one of acceptance or revocation win', async () => {
+  const { createScope } = await import('#/server/repos/base')
+  const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
+  const {
+    inviteToWorkspace,
+    resendWorkspaceInvitation,
+    revokeWorkspaceInvitation,
+  } = await import('#/server/fns/workspace-invitation-writes')
+  const inviterId = await createAccount('race-owner@planned.travel')
+  const recipientEmail = 'race-recipient@planned.travel'
+  const recipientId = await createAccount(recipientEmail)
+  sqlite
+    .prepare('update user set email_verified = 1 where id = ?')
+    .run(recipientId)
+  const org = sqlite
+    .prepare('select organization_id as id from member where user_id = ?')
+    .get(inviterId) as { id: string }
+  const db = drizzle(async (query, params, method) =>
+    runStatement(sqlite, query, params, method),
+  )
+  const scope = createScope(db, {
+    userId: inviterId,
+    organizationId: org.id,
+    role: 'owner',
+    impersonatedBy: null,
+  })
+  await subscribeTenant(scope, 'crew', 10)
+  const ports = {
+    scope,
+    baseUrl: BASE_URL,
+    now: () => new Date(),
+    send: vi.fn().mockResolvedValue(undefined),
+    audit: vi.fn().mockResolvedValue(undefined),
+  }
+  const cookie = sessionCookie(await signIn(recipientEmail))
+  const declined = await inviteToWorkspace(ports, {
+    email: recipientEmail,
+    role: 'member',
+  })
+  if (!declined.ok) throw new Error('invitation was refused')
+  expect(
+    (
+      await post(
+        '/organization/reject-invitation',
+        { invitationId: declined.invitationId },
+        cookie,
+      )
+    ).status,
+  ).toBe(200)
+  expect(
+    await resendWorkspaceInvitation(ports, {
+      invitationId: declined.invitationId,
+    }),
+  ).toMatchObject({ ok: false, reason: 'not-found' })
+  const raced = await inviteToWorkspace(ports, {
+    email: recipientEmail,
+    role: 'member',
+  })
+  if (!raced.ok) throw new Error('invitation was refused')
+  const [acceptance, revocation] = await Promise.all([
+    post(
+      '/organization/accept-invitation',
+      { invitationId: raced.invitationId },
+      cookie,
+    ),
+    revokeWorkspaceInvitation(ports, { invitationId: raced.invitationId }),
+  ])
+  const state = sqlite
+    .prepare('select status from invitation where id = ?')
+    .get(raced.invitationId) as { status: string }
+  const membership = sqlite
+    .prepare(
+      'select count(*) as n from member where organization_id = ? and user_id = ?',
+    )
+    .get(org.id, recipientId)
+  if (state.status === 'accepted') {
+    expect(acceptance.status).toBe(200)
+    expect(revocation).toMatchObject({ ok: false, reason: 'not-found' })
+    expect(membership).toEqual({ n: 1 })
+  } else {
+    expect(state.status).toBe('canceled')
+    expect(acceptance.status).toBe(400)
+    expect(revocation).toMatchObject({ ok: true })
+    expect(membership).toEqual({ n: 0 })
+  }
 })

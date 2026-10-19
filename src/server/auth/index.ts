@@ -15,6 +15,7 @@ import { resolvePlatformRole } from './access'
 import { DISABLED_PATHS, adminOptions } from './admin-options'
 import { authDb } from './db'
 import { queueAuthEmail } from './email'
+import { INVITATION_TTL_SECONDS } from './invitation-policy'
 import {
   APP_NAME,
   appUrl,
@@ -59,7 +60,6 @@ const SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24
 
 const VERIFICATION_TOKEN_TTL_SECONDS = 60 * 60 * 24
 const RESET_TOKEN_TTL_SECONDS = 60 * 60
-const INVITATION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 /** Passwords: long enough to matter, short enough to be a real passphrase. */
 export const MIN_PASSWORD_LENGTH = 10

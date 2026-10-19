@@ -228,9 +228,10 @@ whichever round next owns `src/server/auth/**` and `src/server/billing/**`.
 - **F2 - six of the eleven message kinds have no dispatch site.** `describe()` in
   `src/server/auth/email.ts` maps eleven kinds of `TransactionalEmailMessage` onto a subject,
   analytics tag and template element (the two passkey kinds share one template).
-  `queueAuthEmail()` has five dispatch sites: Better Auth's `sendResetPassword`,
+  `queueAuthEmail()` has six dispatch sites: Better Auth's `sendResetPassword`,
   `sendVerificationEmail` and `sendInvitationEmail` hooks in `src/server/auth/index.ts`, and
-  successful registration and actual removal in `src/server/auth/passkey/plugin.ts` (#1186).
+  successful registration and actual removal in `src/server/auth/passkey/plugin.ts` (#1186), and
+  workspace invitation creation/resend in `src/server/fns/workspace-invitations.ts` (#1009).
   These send `auth.reset-password`, `auth.verify-email`, `auth.organization-invitation`,
   `auth.passkey-added` and `auth.passkey-removed`. The other six remain rendered but unsent:
   `auth.email-changed`, `auth.delete-account`, `billing.subscription-confirmed`,

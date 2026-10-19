@@ -142,9 +142,12 @@ export const DISABLED_ADMIN_PATHS: string[] = [
  * room eviction still runs. `organization/leave` is deliberately not here: the leave screen needs it,
  * and until #1008 ships a workspace has no way to remove a member over HTTP.
  */
+/** Invitation mutations use the tenant repository lifecycle; recipient reads/accept/reject stay open. */
 export const DISABLED_ORGANIZATION_PATHS: string[] = [
   '/organization/update-member-role',
   '/organization/remove-member',
+  '/organization/invite-member',
+  '/organization/cancel-invitation',
 ]
 
 /**
