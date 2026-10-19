@@ -30,6 +30,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Convida',
+  'workspace.invite.resend': 'Torna a enviar',
+  'workspace.invite.revoke': 'Revoca',
+  'workspace.invite.confirm': 'Revoca la invitació',
+  'workspace.invite.expired': 'Caducada',
+  'workspace.invite.by': 'Invitació de {name}',
+  'workspace.invite.sent': 'Invitació enviada',
+  'workspace.invite.revoked': 'Invitació revocada',
+  'workspace.invite.delivery':
+    'Invitació desada, però l’enviament ha fallat. Torna a enviar-la.',
+  'workspace.invite.duplicate':
+    'Ja hi ha una invitació pendent. Torna a enviar-la.',
+  'workspace.invite.existing':
+    'Aquesta persona ja pertany a l’espai de treball.',
+  'workspace.invite.failed':
+    'Invitació no disponible. Actualitza la llista i torna-ho a provar.',
+  'workspace.invite.reload': 'Actualitza les invitacions',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Compte',
   'page.title': 'Configuració',

@@ -9,6 +9,8 @@ import type {
 import { describe, expect, it } from 'vitest'
 
 const callers: Record<string, string> = {
+  resolveWorkspaceInvitationScopeUnscoped:
+    'src/server/auth/organization-invitations.ts',
   findSubscriptionByOrganizationUnscoped: 'src/server/billing/store.ts',
   findSubscriptionByProviderCustomerUnscoped: 'src/server/billing/store.ts',
   findSubscriptionByProviderSubscriptionUnscoped: 'src/server/billing/store.ts',

@@ -1,6 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { admin, organization, twoFactor } from 'better-auth/plugins'
+import { admin, twoFactor } from 'better-auth/plugins'
 import { drizzle } from 'drizzle-orm/d1'
 import { nanoid } from 'nanoid'
 import {
@@ -13,8 +13,10 @@ import { readPlatformRole } from '#/server/fns/console/adapter-reads'
 import { createLogger } from '#/server/observability'
 import { resolvePlatformRole } from './access'
 import { DISABLED_PATHS, adminOptions } from './admin-options'
-import { authDb } from './db'
+import { authDb, authRepositoryDb } from './db'
+import { organizationWithAtomicInvitations } from './organization-invitations'
 import { queueAuthEmail } from './email'
+import { INVITATION_TTL_SECONDS } from './invitation-policy'
 import {
   APP_NAME,
   appUrl,
@@ -59,7 +61,6 @@ const SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24
 
 const VERIFICATION_TOKEN_TTL_SECONDS = 60 * 60 * 24
 const RESET_TOKEN_TTL_SECONDS = 60 * 60
-const INVITATION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 /** Passwords: long enough to matter, short enough to be a real passphrase. */
 export const MIN_PASSWORD_LENGTH = 10
@@ -583,47 +584,48 @@ function buildAuth() {
         },
       }),
 
-      organization({
-        // Creation is deliberately server-side only: the plan gate, the role rule, the workspace
-        // limit and the impersonation veto live in `createWorkspace`, and `organization/create` over
-        // HTTP would skip every one of them. `organization/set-active` is unaffected.
-        allowUserToCreateOrganization: false,
-        // Deletion is closed for the same reason, and until the product owns it (#1000) there is no
-        // path at all: `organization/delete` removes the row and cascades over every tenant table
-        // while billing, storage and the audit log are never told. The flag is checked before the
-        // session lookup, so it refuses an owner and an anonymous caller alike, in process too.
-        disableOrganizationDeletion: true,
-        organizationLimit: WORKSPACE_LIMIT,
-        membershipLimit: 100,
-        creatorRole: 'owner',
-        invitationLimit: 50,
-        invitationExpiresIn: INVITATION_TTL_SECONDS,
-        cancelPendingInvitationsOnReInvite: true,
-        // The participation anchor (ADR 0043) is written before the library inserts the membership,
-        // so a person who joins and leaves is still found by a later erasure. A throw here aborts
-        // the join; an anchor left behind by a join that then fails is harmless. The organization
-        // id comes from what the library resolved or from the invitation row, never from a body.
-        organizationHooks: {
-          beforeAddMember: async ({ member, organization: workspace }) => {
-            await recordParticipation(authDb(), workspace.id, member.userId)
+      organizationWithAtomicInvitations(
+        {
+          // Creation is deliberately server-side only: the plan gate, the role rule, the workspace
+          // limit and the impersonation veto live in `createWorkspace`, and `organization/create` over
+          // HTTP would skip every one of them. `organization/set-active` is unaffected.
+          allowUserToCreateOrganization: false,
+          // Deletion is closed for the same reason, and until the product owns it (#1000) there is no
+          // path at all: `organization/delete` removes the row and cascades over every tenant table
+          // while billing, storage and the audit log are never told. The flag is checked before the
+          // session lookup, so it refuses an owner and an anonymous caller alike, in process too.
+          disableOrganizationDeletion: true,
+          organizationLimit: WORKSPACE_LIMIT,
+          membershipLimit: 100,
+          requireEmailVerificationOnInvitation: true,
+          creatorRole: 'owner',
+          invitationLimit: 50,
+          invitationExpiresIn: INVITATION_TTL_SECONDS,
+          cancelPendingInvitationsOnReInvite: true,
+          // The participation anchor (ADR 0043) is written before the library inserts the membership,
+          // so a person who joins and leaves is still found by a later erasure. A throw here aborts
+          // the join; an anchor left behind by a join that then fails is harmless. The organization
+          // id comes from what the library resolved or from the invitation row, never from a body.
+          organizationHooks: {
+            beforeAddMember: async ({ member, organization: workspace }) => {
+              await recordParticipation(authDb(), workspace.id, member.userId)
+            },
           },
-          beforeAcceptInvitation: async ({ invitation, user }) => {
-            await recordParticipation(authDb(), invitation.organizationId, user.id)
+          sendInvitationEmail: async (data) => {
+            await queueAuthEmail({
+              kind: 'auth.organization-invitation',
+              to: data.email,
+              invitedByName: data.inviter.user.name,
+              invitedByEmail: data.inviter.user.email,
+              organizationName: data.organization.name,
+              role: data.role,
+              url: `${baseUrl}/accept-invitation/${data.id}`,
+              expiresInHours: INVITATION_TTL_SECONDS / 3600,
+            })
           },
         },
-        sendInvitationEmail: async (data) => {
-          await queueAuthEmail({
-            kind: 'auth.organization-invitation',
-            to: data.email,
-            invitedByName: data.inviter.user.name,
-            invitedByEmail: data.inviter.user.email,
-            organizationName: data.organization.name,
-            role: data.role,
-            url: `${baseUrl}/accept-invitation/${data.id}`,
-            expiresInHours: INVITATION_TTL_SECONDS / 3600,
-          })
-        },
-      }),
+        () => authRepositoryDb(),
+      ),
 
       passkey({
         relyingPartyId: relyingPartyId(),

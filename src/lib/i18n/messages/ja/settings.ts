@@ -17,6 +17,24 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': '招待',
+  'workspace.invite.resend': '再送信',
+  'workspace.invite.revoke': '取り消す',
+  'workspace.invite.confirm': '招待を取り消す',
+  'workspace.invite.expired': '期限切れ',
+  'workspace.invite.by': '招待者: {name}',
+  'workspace.invite.sent': '招待を送信しました',
+  'workspace.invite.revoked': '招待を取り消しました',
+  'workspace.invite.delivery':
+    '招待は保存されましたが、メールを送信できませんでした。再送信してください。',
+  'workspace.invite.duplicate':
+    '保留中の招待が既にあります。再送信してください。',
+  'workspace.invite.existing':
+    'このユーザーは既にワークスペースのメンバーです。',
+  'workspace.invite.failed':
+    '招待を利用できません。一覧を更新して再試行してください。',
+  'workspace.invite.reload': '招待を更新',
+
   'page.eyebrow': 'アカウント',
   'page.title': '設定',
   'page.description':

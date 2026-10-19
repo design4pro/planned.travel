@@ -31,6 +31,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Inviter',
+  'workspace.invite.resend': 'Renvoyer',
+  'workspace.invite.revoke': 'Révoquer',
+  'workspace.invite.confirm': 'Révoquer l’invitation',
+  'workspace.invite.expired': 'Expirée',
+  'workspace.invite.by': 'Invitation de {name}',
+  'workspace.invite.sent': 'Invitation envoyée',
+  'workspace.invite.revoked': 'Invitation révoquée',
+  'workspace.invite.delivery':
+    'Invitation enregistrée, mais l’envoi a échoué. Renvoyez-la.',
+  'workspace.invite.duplicate':
+    'Une invitation est déjà en attente. Renvoyez-la.',
+  'workspace.invite.existing':
+    'Cette personne est déjà membre de l’espace de travail.',
+  'workspace.invite.failed':
+    'Invitation indisponible. Actualisez la liste et réessayez.',
+  'workspace.invite.reload': 'Actualiser les invitations',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Compte',
   'page.title': 'Réglages',
