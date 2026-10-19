@@ -16,6 +16,20 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': '邀請',
+  'workspace.invite.resend': '重新傳送',
+  'workspace.invite.revoke': '撤銷',
+  'workspace.invite.confirm': '撤銷邀請',
+  'workspace.invite.expired': '已過期',
+  'workspace.invite.by': '邀請人：{name}',
+  'workspace.invite.sent': '邀請已傳送',
+  'workspace.invite.revoked': '邀請已撤銷',
+  'workspace.invite.delivery': '邀請已儲存，但郵件傳送失敗。請重新傳送。',
+  'workspace.invite.duplicate': '已有待處理的邀請。請重新傳送。',
+  'workspace.invite.existing': '此人已是工作空間成員。',
+  'workspace.invite.failed': '邀請無法使用。請重新整理清單後重試。',
+  'workspace.invite.reload': '重新整理邀請',
+
   'page.eyebrow': '帳號',
   'page.title': '設定',
   'page.description':

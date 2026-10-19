@@ -712,9 +712,10 @@ gated the ticket (`risk-high`):
 - **The audit actions are deferred.** `platform.user.erased` and `platform.user.erase_refused` are named
   in ADR 0043 and not added to `docs/ACCESS.md` §4.2 or `PLATFORM_AUDIT_ACTIONS` until the engine
   writes them.
-- **The anchor write is `beforeAddMember` and `beforeAcceptInvitation`**, not the `after*` hooks, and
-  the auth layer writes it through `src/server/auth/participation.ts`, a write-only module, because it
-  cannot import repos.
+- **The original anchor writes used `beforeAddMember` and `beforeAcceptInvitation`**. Issue #1009
+  replaces recipient acceptance with one atomic repository batch for membership, anchor and accepted
+  state, through the closed auth-to-repository exception in SPEC §5. Direct add retains the write-only
+  `src/server/auth/participation.ts` hook.
 - **The backfill is a chain**, not a fan-out: one message per workspace, payload a run id and a cursor,
   the marker written by the message that finds no workspace left.
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase

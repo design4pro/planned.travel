@@ -16,6 +16,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': '초대',
+  'workspace.invite.resend': '다시 보내기',
+  'workspace.invite.revoke': '취소',
+  'workspace.invite.confirm': '초대 취소',
+  'workspace.invite.expired': '만료됨',
+  'workspace.invite.by': '초대한 사람: {name}',
+  'workspace.invite.sent': '초대를 보냈습니다',
+  'workspace.invite.revoked': '초대를 취소했습니다',
+  'workspace.invite.delivery':
+    '초대가 저장되었지만 이메일을 보내지 못했습니다. 다시 보내세요.',
+  'workspace.invite.duplicate':
+    '대기 중인 초대가 이미 있습니다. 다시 보내세요.',
+  'workspace.invite.existing': '이 사람은 이미 워크스페이스 멤버입니다.',
+  'workspace.invite.failed':
+    '초대를 사용할 수 없습니다. 목록을 새로 고치고 다시 시도하세요.',
+  'workspace.invite.reload': '초대 새로 고침',
+
   'page.eyebrow': '계정',
   'page.title': '설정',
   'page.description':

@@ -16,7 +16,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
-import { renderAuthEmail } from '#/server/auth/email'
+import { renderAuthEmail, queueAuthEmail } from '#/server/auth/email'
 import { renderEmailBody } from '../render'
 import { VerifyEmail } from '../templates/verify-email'
 
@@ -425,4 +425,21 @@ describe('passkey security email copy', () => {
       expect(rendered.text).not.toContain('ada@example.com')
     },
   )
+})
+
+it('propagates a queue failure only for a delivery-aware caller', async () => {
+  const message = {
+    kind: 'auth.organization-invitation',
+    to: 'ada@example.com',
+    invitedByName: 'Grace',
+    invitedByEmail: 'grace@example.com',
+    organizationName: 'Journeys',
+    role: 'member',
+    url: 'https://planned.travel/accept-invitation/example',
+    expiresInHours: 168,
+  } as const
+  await expect(queueAuthEmail(message)).resolves.toBeUndefined()
+  await expect(
+    queueAuthEmail(message, { throwOnFailure: true }),
+  ).rejects.toThrow('The queue is not exercised by a rendering test.')
 })

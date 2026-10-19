@@ -22,11 +22,19 @@ import {
 } from '#/server/db/auth-schema'
 import { newId, subscriptions } from '#/server/db/schema'
 import { findLivePaidSubscription, livePaidSubscription } from './billing'
-import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base'
+import {
+  allOf,
+  assertQuota,
+  createTenantRepository,
+  tenantFilter,
+  prepareTenantInsert,
+  resolveQuotas,
+} from './base'
 import {
   ForbiddenError,
   NotFoundError,
   RepositoryError,
+  QuotaExceededError,
   assertCanAdminister,
 } from './context'
 import { recordParticipant } from './participants'
@@ -59,7 +67,7 @@ export const addMemberInput = z.object({
 export type AddMemberInput = z.infer<typeof addMemberInput>
 
 export const createInvitationInput = z.object({
-  email: z.string().trim().min(3).max(320).toLowerCase(),
+  email: z.string().trim().min(3).max(320).toLowerCase().email(),
   role: roleSchema.optional(),
   expiresAt: instantSchema,
 })
@@ -284,6 +292,7 @@ export async function getMembership(
 export async function addMember(scope: TenantScope, input: AddMemberInput): Promise<Member> {
   assertCanAdminister(scope.ctx, 'add a member')
   const values = addMemberInput.parse(input)
+  assertGrantRole(scope, values.role ?? 'member')
 
   const existing = await getMembership(scope, values.userId)
   if (existing) {
@@ -449,29 +458,141 @@ export async function createInvitation(
   assertCanAdminister(scope.ctx, 'invite a member')
   const values = createInvitationInput.parse(input)
 
-  const existing = await invitationsRepository.findOne(
+  assertGrantRole(scope, values.role ?? 'member')
+  await refuseInvitationDuplicate(scope, values.email)
+  const { limits } = await resolveQuotas(scope)
+  const usage = sql`((select count(*) from ${member} where ${tenantFilter(scope, member)}) +
+    (select count(*) from ${invitation} where ${tenantFilter(scope, invitation, eq(invitation.status, 'pending'))}))`
+  // The predicate and insert execute as one SQLite statement, including concurrent requests.
+  const rows = await prepareTenantInsert(
     scope,
-    allOf(eq(invitation.email, values.email), eq(invitation.status, 'pending')),
-  )
-  if (existing) {
-    return existing
+    invitation,
+    {
+      id: newId(),
+      email: values.email,
+      role: values.role ?? 'member',
+      status: 'pending',
+      inviterId: scope.ctx.userId,
+      expiresAt: values.expiresAt,
+      createdAt: new Date(),
+    },
+    and(
+      Number.isFinite(limits.members)
+        ? sql`${usage} < ${limits.members}`
+        : sql`1`,
+      notExists(
+        scope.db
+          .select({ present: sql`1` })
+          .from(invitation)
+          .where(
+            tenantFilter(
+              scope,
+              invitation,
+              and(
+                eq(invitation.email, values.email),
+                eq(invitation.status, 'pending'),
+              ),
+            ),
+          ),
+      ),
+      notExists(memberWithEmail(scope, values.email)),
+    ),
+  ).returning()
+  const row = rows.at(0)
+  if (row) return row
+  await refuseInvitationDuplicate(scope, values.email)
+  throw new QuotaExceededError('members', limits.members, limits.members)
+}
+
+function assertGrantRole(scope: TenantScope, role: string): void {
+  if (!assignableRoles(scope.ctx.role, role).includes(roleSchema.parse(role))) {
+    throw new ForbiddenError('grant this organization role', ['owner'])
   }
+}
 
-  const [members, pending] = await Promise.all([
-    countMembers(scope),
-    invitationsRepository.count(scope, eq(invitation.status, 'pending')),
-  ])
-  await assertQuota(scope, 'members', members + pending)
+function memberWithEmail(scope: TenantScope, email: string) {
+  return scope.db
+    .select({ present: sql`1` })
+    .from(member)
+    .innerJoin(user, eq(user.id, member.userId))
+    .where(tenantFilter(scope, member, sql`lower(${user.email}) = ${email}`))
+}
 
-  return invitationsRepository.insert(scope, {
-    id: newId(),
-    email: values.email,
-    role: values.role ?? 'member',
-    status: 'pending',
-    inviterId: scope.ctx.userId,
-    expiresAt: values.expiresAt,
-    createdAt: new Date(),
-  })
+async function refuseInvitationDuplicate(
+  scope: TenantScope,
+  email: string,
+): Promise<void> {
+  if ((await memberWithEmail(scope, email).limit(1)).length) {
+    throw new RepositoryError(
+      'Address already belongs to this workspace.',
+      'ALREADY_MEMBER',
+    )
+  }
+  if (
+    await invitationsRepository.findOne(
+      scope,
+      allOf(eq(invitation.email, email), eq(invitation.status, 'pending')),
+    )
+  ) {
+    throw new RepositoryError(
+      'A pending invitation already reserves this address.',
+      'INVITATION_EXISTS',
+    )
+  }
+}
+
+/** Pending rows, including expired ones; inviter profiles are joined only through this tenant. */
+export async function listPendingInvitationProfiles(scope: TenantScope) {
+  const rows = await scope.db
+    .select({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      expiresAt: invitation.expiresAt,
+      inviterId: invitation.inviterId,
+      inviterName: user.name,
+      inviterEmail: user.email,
+    })
+    .from(invitation)
+    .leftJoin(
+      member,
+      and(
+        eq(member.organizationId, invitation.organizationId),
+        eq(member.userId, invitation.inviterId),
+      ),
+    )
+    .leftJoin(user, eq(user.id, member.userId))
+    .where(tenantFilter(scope, invitation, eq(invitation.status, 'pending')))
+    .orderBy(asc(invitation.createdAt))
+  return rows
+}
+
+/** Renew only a still-pending row; acceptance/revocation wins without resurrection. */
+export async function renewInvitation(
+  scope: TenantScope,
+  invitationId: string,
+  expiresAt: Date,
+): Promise<Invitation> {
+  assertCanAdminister(scope.ctx, 'resend an invitation')
+  const row = await invitationsRepository.requireById(
+    scope,
+    idSchema.parse(invitationId),
+  )
+  assertGrantRole(scope, row.role ?? 'member')
+  const rows = await scope.db
+    .update(invitation)
+    .set({ expiresAt: instantSchema.parse(expiresAt) })
+    .where(
+      tenantFilter(
+        scope,
+        invitation,
+        and(eq(invitation.id, row.id), eq(invitation.status, 'pending')),
+      ),
+    )
+    .returning()
+  const renewed = rows.at(0)
+  if (!renewed) throw new NotFoundError('pending invitation', invitationId)
+  return renewed
 }
 
 export async function setInvitationStatus(
@@ -479,16 +600,30 @@ export async function setInvitationStatus(
   invitationId: string,
   status: (typeof INVITATION_STATUSES)[number],
 ): Promise<Invitation> {
-  return invitationsRepository.requireUpdate(scope, invitationId, {
-    status: z.enum(INVITATION_STATUSES).parse(status),
-  })
+  assertCanAdminister(scope.ctx, 'change an invitation status')
+  const id = idSchema.parse(invitationId)
+  const next = z.enum(INVITATION_STATUSES).parse(status)
+  if (next === 'pending') throw new NotFoundError('actionable invitation', id)
+  const rows = await scope.db
+    .update(invitation)
+    .set({ status: next })
+    .where(
+      tenantFilter(
+        scope,
+        invitation,
+        and(eq(invitation.id, id), eq(invitation.status, 'pending')),
+      ),
+    )
+    .returning()
+  const row = rows.at(0)
+  if (!row) throw new NotFoundError('pending invitation', id)
+  return row
 }
 
 export async function cancelInvitation(
   scope: TenantScope,
   invitationId: string,
 ): Promise<Invitation> {
-  assertCanAdminister(scope.ctx, 'cancel an invitation')
   return setInvitationStatus(scope, invitationId, 'canceled')
 }
 
