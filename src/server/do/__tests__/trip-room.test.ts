@@ -28,12 +28,14 @@ const TRIP_ID = 'trip-1'
 function fakeStorage(): TripRoomStorage & {
   writes: number
   alarmDeleted: number
+  alarmSet: number
   data: Map<string, unknown>
 } {
   const data = new Map<string, unknown>()
   const storage = {
     writes: 0,
     alarmDeleted: 0,
+    alarmSet: 0,
     data,
     get: async <T>(key: string) => data.get(key) as T | undefined,
     put: async <T>(entries: Record<string, T>) => {
@@ -60,7 +62,9 @@ function fakeStorage(): TripRoomStorage & {
       data.clear()
     },
     getAlarm: async () => null,
-    setAlarm: async () => undefined,
+    setAlarm: async () => {
+      storage.alarmSet += 1
+    },
     deleteAlarm: async () => {
       storage.alarmDeleted += 1
     },
@@ -411,6 +415,18 @@ describe('resetting the room', () => {
       await room.fetch(new Request('https://room/snapshot'))
     ).json()
     expect(snapshot).toMatchObject({ version: 0, entities: [] })
+  })
+
+  it('does not arm a new alarm when the evicted sockets close afterwards', async () => {
+    const { room, storage, sockets } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+    ])
+    await room.fetch(resetRequest())
+    const armedBefore = storage.alarmSet
+
+    for (const socket of sockets) await room.webSocketClose(socket, CLOSE_ROOM_CLOSED, '', true)
+
+    expect(storage.alarmSet).toBe(armedBefore)
   })
 
   it('takes only a POST', async () => {

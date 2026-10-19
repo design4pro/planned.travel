@@ -168,6 +168,12 @@ export class TripRoom implements DurableObject {
   private tail: Promise<unknown> = Promise.resolve()
   private meta: RoomMeta | null = null
   private tripId = 'unknown'
+  /**
+   * Set by a reset. The close of each evicted socket is delivered after the reset's `fetch` has
+   * returned, and its handler would arm a fresh alarm on a room that has nothing left to look after.
+   * A new connection means the room is in use again.
+   */
+  private erased = false
 
   constructor(state: TripRoomState, env: TripRoomEnv, options: TripRoomOptions = {}) {
     this.state = state
@@ -229,6 +235,7 @@ export class TripRoom implements DurableObject {
       return json({ error: identity.message, code: identity.code }, 401)
     }
     this.tripId = identity.value.tripId
+    this.erased = false
 
     const pair = new WebSocketPair()
     const client = pair[0]
@@ -331,6 +338,7 @@ export class TripRoom implements DurableObject {
       return json({ error: 'Use POST to reset a room' }, 405)
     }
     this.evict(this.state.getWebSockets())
+    this.erased = true
     await this.withLock(async () => {
       await this.state.storage.deleteAll()
       // `deleteAll` leaves a scheduled alarm in place; a reset room has nothing left to look after.
@@ -455,7 +463,7 @@ export class TripRoom implements DurableObject {
       { t: 'presence', peers: this.presence(ws), left: session?.connectionId },
       session?.connectionId,
     )
-    await this.ensureAlarm()
+    if (!this.erased) await this.ensureAlarm()
   }
 
   async webSocketError(ws: TripRoomSocket, error: unknown): Promise<void> {
