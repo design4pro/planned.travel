@@ -30,7 +30,7 @@ import {
   assertCanAdminister,
 } from './context'
 import { anotherOwner, hasStoredRole, memberAuthority, removalPredicate } from './member-guards'
-import { runBatch } from './batch'
+import type { BatchStatement } from './batch'
 import { auditLogRepository } from './audit'
 import { recordParticipant } from './participants'
 import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
@@ -458,8 +458,27 @@ export async function removeMember(
         .from(member)
         .where(predicate),
     )
-    await runBatch(scope, [audit, scope.db.delete(member).where(predicate)])
-    if (await auditLogRepository.findById(scope, auditId)) return
+    const batch = scope.db.batch as (
+      statements: readonly [BatchStatement, ...Array<BatchStatement>],
+    ) => Promise<Array<unknown>>
+    try {
+      const [, deleted] = await batch.call(scope.db, [
+        audit,
+        scope.db.delete(member).where(predicate).returning({ id: member.id }),
+      ])
+      if (Array.isArray(deleted) && deleted.length > 0) return
+    } catch (error) {
+      // A lost batch response is ambiguous. Reconcile by this operation's tenant-scoped audit id.
+      try {
+        if (await auditLogRepository.findById(scope, auditId)) return
+      } catch {
+        throw new RepositoryError(
+          'Membership commit could not be reconciled.',
+          'MEMBERSHIP_COMMIT_UNKNOWN',
+        )
+      }
+      throw error
+    }
   }
   await membersRepository.requireById(scope, memberId)
   if (holdsOwnerRole(row.role) && (await countOwners(scope, memberId)) === 0) {

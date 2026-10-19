@@ -70,6 +70,12 @@ export async function departMember(
   if (!result.committed) {
     const cause = result.error
     if (cause instanceof RepositoryError) {
+      if (cause.code === 'MEMBERSHIP_COMMIT_UNKNOWN') {
+        // A lost write response plus unavailable reconciliation must still revoke live room access.
+        // Eviction is safe if the batch rolled back: current members can reconnect after auth checks.
+        await ports.repairOffboarding(target.userId, scope.ctx.organizationId)
+        throw cause
+      }
       if (cause.code === 'LAST_OWNER')
         return { ok: false, reason: 'last-owner' }
       if (cause.code === 'NOT_FOUND') return { ok: false, reason: 'not-found' }

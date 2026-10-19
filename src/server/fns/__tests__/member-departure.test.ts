@@ -4,7 +4,9 @@ import { guardMemberDeletion } from '#/server/auth/member-deletion'
 import { departMember, memberDepartureInput } from '../member-departure-writes'
 import type { DeparturePorts } from '../member-departure-writes'
 import type { TenantScope } from '#/server/repos'
-import { beforeEach, expect, it } from 'vitest'
+import { beforeEach, expect, it, vi } from 'vitest'
+import { auditLogRepository } from '#/server/repos/audit'
+import type { BatchStatement } from '#/server/repos/batch'
 import {
   changeMemberRole,
   listAuditLog,
@@ -272,3 +274,89 @@ it('never counts a malformed owner token as a surviving owner', async () => {
     removeMember(tenant.scope, await memberId(tenant.ownerUserId)),
   ).rejects.toMatchObject({ code: 'LAST_OWNER' })
 })
+
+it('runs offboarding repair after commit even when a separate audit lookup would fail', async () => {
+  const target = await tenant.addUser('Target', 'member')
+  const id = await memberId(target)
+  const foreign = await harness.seedTenant('unrelated')
+  const repair = vi.fn(async () => {})
+  const lookup = vi
+    .spyOn(auditLogRepository, 'findById')
+    .mockRejectedValue(new Error('audit read unavailable'))
+  try {
+    const result = await departMember(
+      {
+        ...ports(tenant.scope),
+        remove: async () => {
+          await deletionAdapter().delete({
+            model: 'member',
+            where: [{ field: 'id', value: id }],
+          })
+          throw new Error('auth lifecycle failed')
+        },
+        repairOffboarding: repair,
+      },
+      { memberId: id },
+    )
+    expect(result.ok).toBe(true)
+    expect(repair).toHaveBeenCalledExactlyOnceWith(
+      target,
+      tenant.organizationId,
+    )
+    expect(lookup).not.toHaveBeenCalled()
+    expect((await listMembers(tenant.scope)).some((row) => row.id === id)).toBe(
+      false,
+    )
+    expect((await listAuditLog(tenant.scope)).items).toHaveLength(1)
+    expect(await listMembers(foreign.scope)).toHaveLength(1)
+    expect((await listAuditLog(foreign.scope)).items).toHaveLength(0)
+  } finally {
+    lookup.mockRestore()
+  }
+})
+
+it.each([false, true])(
+  'reconciles a lost batch response, unavailable audit read=%s',
+  async (unavailable) => {
+    const target = await tenant.addUser('Target', 'member')
+    const id = await memberId(target)
+    const db = tenant.scope.db as typeof tenant.scope.db & {
+    batch: (statements: readonly [BatchStatement, ...Array<BatchStatement>]) => Promise<Array<unknown>>
+  }
+    if (!('batch' in db) || typeof db.batch !== 'function')
+      throw new Error('missing batch')
+    const original = db.batch.bind(db)
+    const batch = vi.spyOn(db, 'batch').mockImplementation(async (...args) => {
+      await original(...args)
+      throw new Error('batch response lost after commit')
+    })
+    const lookup = unavailable
+      ? vi
+          .spyOn(auditLogRepository, 'findById')
+          .mockRejectedValue(new Error('read unavailable'))
+      : undefined
+    const repair = vi.fn(async () => {})
+    try {
+      const result = departMember(
+        { ...ports(tenant.scope), repairOffboarding: repair },
+        { memberId: id },
+      )
+      if (unavailable) {
+        await expect(result).rejects.toMatchObject({
+          code: 'MEMBERSHIP_COMMIT_UNKNOWN',
+        })
+        expect(repair).toHaveBeenCalledExactlyOnceWith(
+          target,
+          tenant.organizationId,
+        )
+      } else expect((await result).ok).toBe(true)
+      expect(
+        (await listMembers(tenant.scope)).some((row) => row.id === id),
+      ).toBe(false)
+      expect((await listAuditLog(tenant.scope)).items).toHaveLength(1)
+    } finally {
+      batch.mockRestore()
+      lookup?.mockRestore()
+    }
+  },
+)
