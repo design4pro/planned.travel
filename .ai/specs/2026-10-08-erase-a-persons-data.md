@@ -870,3 +870,16 @@ record its PII-free promotion, promote, remove the departing membership, and ano
 If every successor has left, no notice or finalisation is written and the original retry anchors
 remain. The ordinary leave and demotion writers check the current database role in their write,
 including when they read an editor before erasure promoted that person to the sole owner.
+
+
+## Amendment - tenant audit retention (issue #1064)
+
+This supersedes the Audit paragraph's no-retention observation, finding F6 and the corresponding
+owner-confirms premise above. The existing weekly retention slot now calls `audit/retention.ts`:
+session-less, keyset-paged organisation-id discovery, then tenant-scoped `pruneAuditLog` batches.
+`TENANT_AUDIT_RETENTION_DAYS = 400` is the stated owner-confirms default, matching the platform
+ledger. The cutoff itself is kept; only `created_at` selects rows for deletion. Each delete names
+at most 200 ids and one 250-batch cap covers the whole run. Structured logs record `deleted`,
+`batches`, `organizations`, `drained`; remaining work is an error, with no audit row about the prune.
+The trip history panel, overview activity list and action-count chart stop showing activity older
+than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.

@@ -198,12 +198,12 @@ slices that matter.
 place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
 entry rule. These are architectural paths; some surfaces remain planned. Bounded
 `…Unscoped` repo functions take a plain `Database` only under SPEC §5 FU-3; this does not add
-a third catalog member.
+another catalog member.
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
   `organization_id`; `provider_usage` uses it only for attribution. Catalog is the single
-  exception outside repos, with exactly three members (these tables, the bounded cron discovery
-  read and the ids-only erasure catalog read). Platform-content access uses an explicit
+  exception outside repos, with exactly four members (these tables, bounded reminder discovery,
+  the ids-only erasure catalog read and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
   the bounded shape-based exceptions stated in SPEC §5.
 - `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
@@ -704,6 +704,11 @@ is still not a green row.
   has the commands that read both.
 - D1 write p95 > 200 ms, or `rows_written` > 20 M/month (lever 7 territory).
 - D1 database size > 8 GB (lever 7/8 territory).
+- Tenant `audit_log` weekly prune reporting `drained: false` at error level. Its 400-day window
+  (`TENANT_AUDIT_RETENTION_DAYS`, owner confirms) shares one 250-batch cap across all workspaces,
+  with 200 ids per delete. Alert on this signal and inspect `deleted`, `batches`, `organizations`
+  before raising the bound; the trip history, overview activity and action-count chart lose
+  activity older than this window once the prune runs.
 - `platform_audit_log` weekly prune reporting `drained: false`. The prune is deliberately bounded
   so one cron tick cannot become an isolate-killing statement, which means a platform writing more
   audit rows per week than the ceiling removes never catches up and the table grows past its
