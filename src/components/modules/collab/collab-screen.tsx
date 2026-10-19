@@ -7,6 +7,7 @@ import {
   visibleCollabSections,
 } from '#/lib/collab-sections'
 import type { CollabSectionId, CollabSections } from '#/lib/collab-sections'
+import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_RAIL_STICKY_CLASS } from '#/lib/atlas/layout'
 import { TabsContent } from '#/components/ui'
@@ -21,6 +22,8 @@ import type { CollabPerson, MessageData, NoteData, PollData } from './types'
 export interface CollabScreenData {
   readonly sections: CollabSections
   readonly messages: ReadonlyArray<MessageData>
+  /** The whole conversation's size; `messages` is only its newest window. Null: no count to print. */
+  readonly messageCount: number | null
   readonly notes: ReadonlyArray<NoteData>
   readonly polls: ReadonlyArray<PollData>
   readonly people: ReadonlyArray<CollabPerson>
@@ -217,9 +220,9 @@ export function CollabScreen({
             <ModulePanel
               label={t('trips.collab.conversation')}
               count={
-                data.messages.length === 0
+                data.messageCount === null || data.messageCount === 0
                   ? undefined
-                  : new Intl.NumberFormat(locale).format(data.messages.length)
+                  : formatNumber(data.messageCount, locale)
               }
               className="xl:max-h-[inherit]"
               bodyClassName="flex min-h-0 flex-col px-5 py-3"

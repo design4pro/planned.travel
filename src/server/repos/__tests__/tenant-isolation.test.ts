@@ -65,8 +65,10 @@ import {
   collabPollVotesRepository,
   collabPollsRepository,
   createCheckIn,
+  countMessages,
   createCollabNote,
   createPoll,
+  deleteMessage,
   editMessage,
   listMessages,
   listReactions,
@@ -6972,6 +6974,21 @@ describe('tenant isolation', () => {
       }
       expect(await listReactions(scope, [beta.messageId])).toEqual(new Map())
       expect(await collabRows(beta.tenant.scope)).toEqual(before)
+    })
+  })
+
+  describe('the conversation count', () => {
+    it('counts the whole non-deleted thread of one trip, inside the tenant', async () => {
+      const scope = alpha.tenant.scope
+      const own = await countMessages(scope, alpha.tripId)
+      const kept = await postMessage(scope, { tripId: alpha.tripId, body: 'kept' })
+      const gone = await postMessage(scope, { tripId: alpha.tripId, body: 'gone' })
+      await deleteMessage(scope, alpha.tripId, gone.id)
+
+      expect(kept.id).not.toBe(gone.id)
+      expect(await countMessages(scope, alpha.tripId)).toBe(own + 1)
+      expect(await countMessages(scope, beta.tripId)).toBe(0)
+      expect(await countMessages(beta.tenant.scope, beta.tripId)).toBe(1)
     })
   })
 

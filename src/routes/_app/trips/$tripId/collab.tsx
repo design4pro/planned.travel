@@ -10,11 +10,10 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import { PresenceBar } from '#/components/modules/collab'
 import { CollabScreen } from '#/components/modules/collab/collab-screen'
 import { CollabSectionsMenu } from '#/components/modules/collab/collab-sections-menu'
-import { enabledCollabSections } from '#/lib/collab-sections'
+import { collabSummary } from '#/components/modules/collab/collab-summary'
 import { CollabSkeletons } from '#/components/modules/collab/collab-skeletons'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadTripCollab, setCollabSectionFn } from './-server/collab'
-import { formatNumber } from '../../-lib/format'
 import { HeaderSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
@@ -55,43 +54,12 @@ function CollabPage() {
   const [live, setLive] = useState(false)
   useEffect(() => setLive(true), [])
 
-  const enabled = enabledCollabSections(data.sections)
-  const empty =
-    enabled.length === 3 &&
-    data.messages.length === 0 &&
-    data.notes.length === 0 &&
-    data.polls.length === 0
-
   return (
     <AppFrame>
       <AppSections>
         <TripModuleHeader
           title={t('trips.collab.title')}
-          description={
-            empty
-              ? t('trips.collab.empty')
-              : // A list, not a sentence: each tally agrees on its own count and
-                // the middle dot does the joining.
-                enabled
-                  .map((id) => {
-                    const counts = {
-                      conversation: t('trips.collab.count.messages', {
-                        count: data.messages.length,
-                        messages: formatNumber(data.messages.length, locale),
-                      }),
-                      notes: t('trips.collab.count.notes', {
-                        count: data.notes.length,
-                        notes: formatNumber(data.notes.length, locale),
-                      }),
-                      polls: t('trips.collab.count.polls', {
-                        count: data.polls.length,
-                        polls: formatNumber(data.polls.length, locale),
-                      }),
-                    }
-                    return counts[id]
-                  })
-                  .join(' · ')
-          }
+          description={collabSummary(data, t, locale)}
           actions={
             data.canConfigure ? (
               <CollabSectionsMenu
