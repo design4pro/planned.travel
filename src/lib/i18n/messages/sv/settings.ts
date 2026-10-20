@@ -400,7 +400,7 @@ const messages = {
   'billing.renewal.paused':
     'Det här abonnemanget är pausat. Återuppta det när du vill ge dig ut igen.',
   'billing.renewal.lapsed':
-    'Välj ett abonnemang nedan för att låsa upp bokningar, dagboken och offlinekartor igen.',
+    'Välj ett abonnemang nedan för att låsa upp bokningar och dagboken igen.',
   'billing.renewal.incomplete':
     'Polar väntar fortfarande på att den här betalningen ska bekräftas.',
   'billing.renewal.free':
@@ -456,8 +456,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Obegränsat med resor och platser',
   'billing.plan.solo.feature.modules':
     'Alla planeringsmoduler — bokningar, dagbok, budgetar, packning',
-  'billing.plan.solo.feature.offline':
-    'Offlinekartor som du laddar ned före avfärd',
+  'billing.plan.solo.feature.storage': '5 GB för foton och dokument',
   'billing.plan.solo.feature.export': 'Export till pdf och kalender',
   'billing.plan.crew.name': 'Grupp',
   'billing.plan.crew.tagline': 'För familjer, vänner och små lag',

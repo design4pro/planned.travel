@@ -409,7 +409,7 @@ const messages = {
   'billing.renewal.paused':
     'Dit abonnement is gepauzeerd. Hervat het wanneer je weer op pad gaat.',
   'billing.renewal.lapsed':
-    'Kies hieronder een abonnement om boekingen, het dagboek en offline kaarten weer te openen.',
+    'Kies hieronder een abonnement om boekingen en het dagboek weer te openen.',
   'billing.renewal.incomplete':
     'Polar wacht nog op de bevestiging van deze betaling.',
   'billing.renewal.free':
@@ -464,8 +464,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Onbeperkt reizen en plaatsen',
   'billing.plan.solo.feature.modules':
     'Alle planningsmodules — boekingen, dagboek, budgetten, paklijsten',
-  'billing.plan.solo.feature.offline':
-    'Offline kaarten die je voor vertrek downloadt',
+  'billing.plan.solo.feature.storage': '5 GB voor foto’s en documenten',
   'billing.plan.solo.feature.export': 'Export naar pdf en agenda',
   'billing.plan.crew.name': 'Samen',
   'billing.plan.crew.tagline': 'Voor gezinnen, vriendengroepen en kleine teams',

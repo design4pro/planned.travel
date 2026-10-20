@@ -405,7 +405,7 @@ const messages = {
   'billing.renewal.paused':
     'Ez az előfizetés szünetel. Folytassa, amint újra útra készen áll.',
   'billing.renewal.lapsed':
-    'Válasszon lentebb csomagot, és újra megnyílnak a foglalások, a napló és az offline térképek.',
+    'Válasszon lentebb csomagot, és újra megnyílnak a foglalások és a napló.',
   'billing.renewal.incomplete':
     'A Polar még várja ennek a fizetésnek a visszaigazolását.',
   'billing.renewal.free':
@@ -460,8 +460,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Korlátlan utazás és hely',
   'billing.plan.solo.feature.modules':
     'Minden tervezőmodul — foglalások, napló, költségvetések, csomagolás',
-  'billing.plan.solo.feature.offline':
-    'Offline térképek, amelyeket indulás előtt letölt',
+  'billing.plan.solo.feature.storage': '5 GB fényképekhez és dokumentumokhoz',
   'billing.plan.solo.feature.export': 'PDF- és naptárexport',
   'billing.plan.crew.name': 'Csapat',
   'billing.plan.crew.tagline': 'Családoknak, barátoknak és kis csapatoknak',

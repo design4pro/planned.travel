@@ -82,9 +82,9 @@ const messages = {
 
   'landing.plans.title': 'Začněte bezplatně. Zaplaťte, až si to zaslouží.',
   'landing.plans.lede':
-    'Každý plán obsahuje denní plánovač, mapu, rozpočty a seznamy na balení. Placené plány - od {price} měsíčně - odemykají neomezené cesty, rezervace, deník, offline mapy a exporty.',
+    'Každý plán obsahuje denní plánovač, mapu, rozpočty a seznamy na balení. Placené plány - od {price} měsíčně - odemykají neomezené cesty, rezervace, deník a exporty.',
   'landing.plans.ledeFree':
-    'Každý plán obsahuje denní plánovač, mapu, rozpočty a seznamy na balení. Placené plány odemykají neomezené cesty, rezervace, deník, offline mapy a exporty.',
+    'Každý plán obsahuje denní plánovač, mapu, rozpočty a seznamy na balení. Placené plány odemykají neomezené cesty, rezervace, deník a exporty.',
   'landing.plans.compare': 'Porovnejte každý limit, řádek po řádku',
   'landing.questions.title': 'Otázky, odpovědi bez okolků',
   'landing.questions.lede':
@@ -98,9 +98,6 @@ const messages = {
   'landing.faq.phone.q': 'Funguje to na telefonu poctivě?',
   'landing.faq.phone.a':
     'Ano. Mobilní rozvržení jsou kreslená zvlášť, ne zmáčknutá z desktopových, a je to webová stránka - není co instalovat a není co udržovat aktuální.',
-  'landing.faq.offline.q': 'Můžu mapu používat bez signálu?',
-  'landing.faq.offline.a':
-    'S plány {solo} a {crew} si můžete před odletem stáhnout region, takže mapa se kreslí i po přistání bez dat. Úpravy samotné cesty vyžadují připojení.',
   'landing.faq.privacy.q': 'Kdo vidí moji cestu?',
   'landing.faq.privacy.a':
     'Cesta patří jednomu pracovnímu prostoru a otevřou ji jen lidé pozvaní do toho prostoru. Nic není veřejné, žádný objevovací kanál neexistuje a ve výchozím stavu se nic s nikým nesdílí.',
@@ -263,7 +260,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': 'Jednu archivujte a začněte další',
   'pricing.feature.solo.modules': 'Všechny moduly plánování',
   'pricing.feature.solo.modulesDetail': 'Rezervace, deník, rozpočty, balení',
-  'pricing.feature.solo.offlineDetail': 'Stáhněte si regiony před odletem',
   'pricing.feature.crew.membersDetail': 'Účtuje se za člena, změníte kdykoli',
   'pricing.feature.crew.realtimeDetail':
     'Živé kurzory a okamžitá synchronizace',

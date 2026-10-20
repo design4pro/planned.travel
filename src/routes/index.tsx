@@ -85,7 +85,7 @@ export const Route = createFileRoute('/')({
 })
 
 /**
- * The six questions, as catalogue keys.
+ * The five questions, as catalogue keys.
  *
  * The last pair is the pricing page's own. Both pages asked whether you can get
  * your data out, and the answer was the same sentence in both files — one
@@ -103,10 +103,6 @@ const FAQ_KEYS: ReadonlyArray<{
   {
     question: 'marketing.landing.faq.phone.q',
     answer: 'marketing.landing.faq.phone.a',
-  },
-  {
-    question: 'marketing.landing.faq.offline.q',
-    answer: 'marketing.landing.faq.offline.a',
   },
   {
     question: 'marketing.landing.faq.privacy.q',

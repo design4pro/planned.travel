@@ -73,9 +73,9 @@ const messages = {
 
   'landing.plans.title': 'Börja gratis. Betala först när det förtjänar det.',
   'landing.plans.lede':
-    'Alla planer innehåller dagsplaneraren, kartan, budgetarna och packlistorna. Betalplaner - från {price} i månaden - öppnar obegränsat med resor, bokningar, dagboken, offlinekartor och exporter.',
+    'Alla planer innehåller dagsplaneraren, kartan, budgetarna och packlistorna. Betalplaner - från {price} i månaden - öppnar obegränsat med resor, bokningar, dagboken och exporter.',
   'landing.plans.ledeFree':
-    'Alla planer innehåller dagsplaneraren, kartan, budgetarna och packlistorna. Betalplaner öppnar obegränsat med resor, bokningar, dagboken, offlinekartor och exporter.',
+    'Alla planer innehåller dagsplaneraren, kartan, budgetarna och packlistorna. Betalplaner öppnar obegränsat med resor, bokningar, dagboken och exporter.',
   'landing.plans.compare': 'Jämför varje gräns, rad för rad',
   'landing.questions.title': 'Frågor, rakt besvarade',
   'landing.questions.lede':
@@ -89,9 +89,6 @@ const messages = {
   'landing.faq.phone.q': 'Fungerar det ordentligt i telefonen?',
   'landing.faq.phone.a':
     'Ja. De mobila layouterna är ritade separat i stället för klämda ner från skrivbordsversionerna, och det är en webbplats - det finns inget att installera och inget att hålla uppdaterat.',
-  'landing.faq.offline.q': 'Kan jag använda kartan utan täckning?',
-  'landing.faq.offline.a':
-    'Med {solo} och {crew} kan du ladda ner en region innan du flyger, så kartan ritas ändå när du landar utan data. Att redigera själva resan kräver uppkoppling.',
   'landing.faq.privacy.q': 'Vem kan se min resa?',
   'landing.faq.privacy.a':
     'En resa hör till en arbetsyta, och bara de som bjudits in dit kan öppna den. Inget är offentligt, det finns inget upptäcktsflöde, och som standard delas inget med någon.',
@@ -248,7 +245,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': 'Arkivera en för att börja nästa',
   'pricing.feature.solo.modules': 'Alla planeringsmoduler',
   'pricing.feature.solo.modulesDetail': 'Bokningar, dagbok, budgetar, packning',
-  'pricing.feature.solo.offlineDetail': 'Ladda ner regioner innan du flyger',
   'pricing.feature.crew.membersDetail':
     'Faktureras per medlem, ändra när du vill',
   'pricing.feature.crew.realtimeDetail':

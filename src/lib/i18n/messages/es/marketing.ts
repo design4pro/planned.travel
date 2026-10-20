@@ -78,9 +78,9 @@ const messages = {
 
   'landing.plans.title': 'Empieza gratis. Paga solo cuando se lo gane.',
   'landing.plans.lede':
-    'Todos los planes incluyen el planificador diario, el mapa, los presupuestos y las listas de equipaje. Los planes de pago - desde {price} al mes - desbloquean viajes ilimitados, reservas, el diario, mapas sin conexión y exportaciones.',
+    'Todos los planes incluyen el planificador diario, el mapa, los presupuestos y las listas de equipaje. Los planes de pago - desde {price} al mes - desbloquean viajes ilimitados, reservas, el diario y exportaciones.',
   'landing.plans.ledeFree':
-    'Todos los planes incluyen el planificador diario, el mapa, los presupuestos y las listas de equipaje. Los planes de pago desbloquean viajes ilimitados, reservas, el diario, mapas sin conexión y exportaciones.',
+    'Todos los planes incluyen el planificador diario, el mapa, los presupuestos y las listas de equipaje. Los planes de pago desbloquean viajes ilimitados, reservas, el diario y exportaciones.',
   'landing.plans.compare': 'Compara cada límite, línea por línea',
   'landing.questions.title': 'Preguntas, respondidas sin rodeos',
   'landing.questions.lede':
@@ -94,9 +94,6 @@ const messages = {
   'landing.faq.phone.q': '¿Funciona bien en el móvil?',
   'landing.faq.phone.a':
     'Sí. Los diseños móviles se dibujan aparte en lugar de comprimirse desde los de escritorio, y es una web, así que no hay nada que instalar ni que mantener actualizado.',
-  'landing.faq.offline.q': '¿Puedo usar el mapa sin cobertura?',
-  'landing.faq.offline.a':
-    'Con {solo} y {crew} puedes descargar una región antes de volar, así que el mapa se dibuja igual cuando aterrizas sin datos. Editar el viaje sí necesita conexión.',
   'landing.faq.privacy.q': '¿Quién puede ver mi viaje?',
   'landing.faq.privacy.a':
     'Un viaje pertenece a un espacio de trabajo, y solo las personas invitadas a ese espacio pueden abrirlo. Nada es público, no hay ningún feed de descubrimiento y por defecto no se comparte nada con nadie.',
@@ -261,7 +258,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Todos los módulos de planificación',
   'pricing.feature.solo.modulesDetail':
     'Reservas, diario, presupuestos, equipaje',
-  'pricing.feature.solo.offlineDetail': 'Descarga regiones antes de volar',
   'pricing.feature.crew.membersDetail':
     'Se factura por miembro, cámbialo cuando quieras',
   'pricing.feature.crew.realtimeDetail':

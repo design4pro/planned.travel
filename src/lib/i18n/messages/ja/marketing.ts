@@ -68,9 +68,9 @@ const messages = {
 
   'landing.plans.title': '無料で始めて、価値が出てから払う。',
   'landing.plans.lede':
-    'どのプランにも日程プランナー、地図、予算、荷造りリストが入っています。有料プラン（月額 {price} から）では、旅行数無制限、予約、日記、オフライン地図、書き出しが使えます。',
+    'どのプランにも日程プランナー、地図、予算、荷造りリストが入っています。有料プラン（月額 {price} から）では、旅行数無制限、予約、日記、書き出しが使えます。',
   'landing.plans.ledeFree':
-    'どのプランにも日程プランナー、地図、予算、荷造りリストが入っています。有料プランでは、旅行数無制限、予約、日記、オフライン地図、書き出しが使えます。',
+    'どのプランにも日程プランナー、地図、予算、荷造りリストが入っています。有料プランでは、旅行数無制限、予約、日記、書き出しが使えます。',
   'landing.plans.compare': 'すべての上限を一行ずつ比べる',
   'landing.questions.title': '質問に、まっすぐ答えます',
   'landing.questions.lede': '始める前にみなさんが本当に知りたい6つのこと。',
@@ -83,9 +83,6 @@ const messages = {
   'landing.faq.phone.q': 'スマートフォンでもきちんと動きますか？',
   'landing.faq.phone.a':
     '動きます。モバイル用のレイアウトはデスクトップ版を押し縮めたものではなく、別に設計しています。ウェブサイトなので、インストールも更新も必要ありません。',
-  'landing.faq.offline.q': '電波がなくても地図は使えますか？',
-  'landing.faq.offline.a':
-    '{solo} と {crew} は出発前に地域をダウンロードできるので、通信のない土地に着いても地図は描かれます。旅程そのものの編集には接続が必要です。',
   'landing.faq.privacy.q': '私の旅行は誰が見られますか？',
   'landing.faq.privacy.a':
     '旅行はひとつのワークスペースに属し、開けるのはそのワークスペースに招かれた人だけです。公開されるものはなく、発見用のフィードもなく、初期状態では誰とも共有されません。',
@@ -238,7 +235,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': '1つをアーカイブすれば次を始められます',
   'pricing.feature.solo.modules': 'すべての計画モジュール',
   'pricing.feature.solo.modulesDetail': '予約、日記、予算、荷造り',
-  'pricing.feature.solo.offlineDetail': '出発前に地域をダウンロード',
   'pricing.feature.crew.membersDetail': 'メンバー単位の請求、いつでも変更可能',
   'pricing.feature.crew.realtimeDetail': 'リアルタイムのカーソルと即時同期',
   'pricing.feature.crew.supportDetail': '営業日1日以内に担当者が回答',

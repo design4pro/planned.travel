@@ -74,9 +74,9 @@ const messages = {
   'landing.plans.title':
     'Kostenlos anfangen. Zahlen, wenn es sich verdient hat.',
   'landing.plans.lede':
-    'Jeder Plan enthält den Tagesplaner, die Karte, Budgets und Packlisten. Bezahlte Pläne - ab {price} im Monat - schalten unbegrenzt viele Reisen, Reservierungen, das Tagebuch, Offline-Karten und Exporte frei.',
+    'Jeder Plan enthält den Tagesplaner, die Karte, Budgets und Packlisten. Bezahlte Pläne - ab {price} im Monat - schalten unbegrenzt viele Reisen, Reservierungen, das Tagebuch und Exporte frei.',
   'landing.plans.ledeFree':
-    'Jeder Plan enthält den Tagesplaner, die Karte, Budgets und Packlisten. Bezahlte Pläne schalten unbegrenzt viele Reisen, Reservierungen, das Tagebuch, Offline-Karten und Exporte frei.',
+    'Jeder Plan enthält den Tagesplaner, die Karte, Budgets und Packlisten. Bezahlte Pläne schalten unbegrenzt viele Reisen, Reservierungen, das Tagebuch und Exporte frei.',
   'landing.plans.compare': 'Jedes Limit vergleichen, Zeile für Zeile',
   'landing.questions.title': 'Fragen, klar beantwortet',
   'landing.questions.lede':
@@ -91,9 +91,6 @@ const messages = {
   'landing.faq.phone.q': 'Funktioniert es auf dem Handy richtig?',
   'landing.faq.phone.a':
     'Ja. Die mobilen Layouts sind eigens gezeichnet und nicht aus den Desktop-Layouts zusammengedrückt, und es ist eine Website - es gibt also nichts zu installieren und nichts aktuell zu halten.',
-  'landing.faq.offline.q': 'Kann ich die Karte ohne Empfang nutzen?',
-  'landing.faq.offline.a':
-    'Mit {solo} und {crew} lädst du eine Region vor dem Abflug herunter, sodass die Karte auch ohne Daten noch zeichnet. Die Reise selbst zu bearbeiten braucht eine Verbindung.',
   'landing.faq.privacy.q': 'Wer kann meine Reise sehen?',
   'landing.faq.privacy.a':
     'Eine Reise gehört zu einem Arbeitsbereich, und nur die dort eingeladenen Leute können sie öffnen. Nichts ist öffentlich, es gibt keinen Entdeckungs-Feed, und standardmäßig wird nichts mit anderen geteilt.',
@@ -257,7 +254,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Jedes Planungsmodul',
   'pricing.feature.solo.modulesDetail':
     'Reservierungen, Tagebuch, Budgets, Packen',
-  'pricing.feature.solo.offlineDetail': 'Regionen vor dem Abflug herunterladen',
   'pricing.feature.crew.membersDetail':
     'Abrechnung pro Mitglied, jederzeit änderbar',
   'pricing.feature.crew.realtimeDetail':

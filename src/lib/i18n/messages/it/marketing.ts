@@ -78,9 +78,9 @@ const messages = {
 
   'landing.plans.title': 'Inizia gratis. Paga solo quando se lo merita.',
   'landing.plans.lede':
-    'Ogni piano include il programma giornaliero, la mappa, i budget e le liste per la valigia. I piani a pagamento - da {price} al mese - sbloccano viaggi illimitati, prenotazioni, il diario, le mappe offline e gli export.',
+    'Ogni piano include il programma giornaliero, la mappa, i budget e le liste per la valigia. I piani a pagamento - da {price} al mese - sbloccano viaggi illimitati, prenotazioni, il diario e gli export.',
   'landing.plans.ledeFree':
-    'Ogni piano include il programma giornaliero, la mappa, i budget e le liste per la valigia. I piani a pagamento sbloccano viaggi illimitati, prenotazioni, il diario, le mappe offline e gli export.',
+    'Ogni piano include il programma giornaliero, la mappa, i budget e le liste per la valigia. I piani a pagamento sbloccano viaggi illimitati, prenotazioni, il diario e gli export.',
   'landing.plans.compare': 'Confronta ogni limite, riga per riga',
   'landing.questions.title': 'Domande, risposte senza giri',
   'landing.questions.lede':
@@ -95,9 +95,6 @@ const messages = {
   'landing.faq.phone.q': 'Funziona bene sul telefono?',
   'landing.faq.phone.a':
     'Sì. I layout per telefono sono disegnati a parte, non compressi da quelli per desktop, ed è un sito web: non c’è niente da installare né da tenere aggiornato.',
-  'landing.faq.offline.q': 'Posso usare la mappa senza segnale?',
-  'landing.faq.offline.a':
-    'Con {solo} e {crew} puoi scaricare una regione prima di partire, così la mappa si disegna anche quando atterri senza dati. Modificare il viaggio richiede una connessione.',
   'landing.faq.privacy.q': 'Chi può vedere il mio viaggio?',
   'landing.faq.privacy.a':
     'Un viaggio appartiene a un solo spazio di lavoro, e solo le persone invitate in quello spazio possono aprirlo. Niente è pubblico, non esiste alcun feed di scoperta e per impostazione predefinita niente viene condiviso con nessuno.',
@@ -266,7 +263,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': 'Archivia uno per iniziarne un altro',
   'pricing.feature.solo.modules': 'Tutti i moduli di pianificazione',
   'pricing.feature.solo.modulesDetail': 'Prenotazioni, diario, budget, valigia',
-  'pricing.feature.solo.offlineDetail': 'Scarica le regioni prima di partire',
   'pricing.feature.crew.membersDetail':
     'Fatturato per membro, modificabile quando vuoi',
   'pricing.feature.crew.realtimeDetail':

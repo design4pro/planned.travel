@@ -68,9 +68,9 @@ const messages = {
 
   'landing.plans.title': '무료로 시작하고, 값을 할 때 결제하세요.',
   'landing.plans.lede':
-    '모든 요금제에 날짜별 플래너, 지도, 예산, 준비물 목록이 들어 있습니다. 유료 요금제는 월 {price}부터 무제한 여행, 예약, 일지, 오프라인 지도, 내보내기를 열어 줍니다.',
+    '모든 요금제에 날짜별 플래너, 지도, 예산, 준비물 목록이 들어 있습니다. 유료 요금제는 월 {price}부터 무제한 여행, 예약, 일지, 내보내기를 열어 줍니다.',
   'landing.plans.ledeFree':
-    '모든 요금제에 날짜별 플래너, 지도, 예산, 준비물 목록이 들어 있습니다. 유료 요금제는 무제한 여행, 예약, 일지, 오프라인 지도, 내보내기를 열어 줍니다.',
+    '모든 요금제에 날짜별 플래너, 지도, 예산, 준비물 목록이 들어 있습니다. 유료 요금제는 무제한 여행, 예약, 일지, 내보내기를 열어 줍니다.',
   'landing.plans.compare': '모든 한도를 한 줄씩 비교하기',
   'landing.questions.title': '질문에 똑바로 답합니다',
   'landing.questions.lede':
@@ -84,9 +84,6 @@ const messages = {
   'landing.faq.phone.q': '휴대폰에서도 제대로 되나요?',
   'landing.faq.phone.a':
     '됩니다. 모바일 레이아웃은 데스크톱을 눌러 줄인 것이 아니라 따로 그렸고, 웹사이트이므로 설치할 것도 업데이트할 것도 없습니다.',
-  'landing.faq.offline.q': '신호가 없어도 지도를 쓸 수 있나요?',
-  'landing.faq.offline.a':
-    '{solo}와 {crew}는 떠나기 전에 지역을 내려받을 수 있어, 데이터 없이 도착해도 지도가 그려집니다. 여행 자체를 편집하려면 연결이 필요합니다.',
   'landing.faq.privacy.q': '제 여행은 누가 볼 수 있나요?',
   'landing.faq.privacy.a':
     '여행은 하나의 워크스페이스에 속하고, 그 워크스페이스로 초대된 사람만 열 수 있습니다. 공개되는 것은 없고, 탐색 피드도 없고, 기본적으로 누구와도 공유되지 않습니다.',
@@ -240,7 +237,6 @@ const messages = {
     '하나를 보관하면 다음 여행을 시작할 수 있어요',
   'pricing.feature.solo.modules': '모든 계획 모듈',
   'pricing.feature.solo.modulesDetail': '예약, 일지, 예산, 준비물',
-  'pricing.feature.solo.offlineDetail': '떠나기 전에 지역을 내려받기',
   'pricing.feature.crew.membersDetail': '멤버 단위로 청구, 언제든 변경',
   'pricing.feature.crew.realtimeDetail': '실시간 커서와 즉시 동기화',
   'pricing.feature.crew.supportDetail': '영업일 하루 안에 사람이 답변',

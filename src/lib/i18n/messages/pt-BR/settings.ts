@@ -407,7 +407,7 @@ const messages = {
   'billing.renewal.paused':
     'Esta assinatura está pausada. Retome quando estiver pronto para viajar de novo.',
   'billing.renewal.lapsed':
-    'Escolha um plano abaixo para destravar de novo as reservas, o diário e os mapas offline.',
+    'Escolha um plano abaixo para destravar de novo as reservas e o diário.',
   'billing.renewal.incomplete':
     'A Polar ainda espera a confirmação deste pagamento.',
   'billing.renewal.free':
@@ -463,8 +463,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Viagens e lugares sem limite',
   'billing.plan.solo.feature.modules':
     'Todos os módulos — reservas, diário, orçamentos, bagagem',
-  'billing.plan.solo.feature.offline':
-    'Mapas offline para baixar antes de embarcar',
+  'billing.plan.solo.feature.storage': '5 GB para fotos e documentos',
   'billing.plan.solo.feature.export': 'Exportação em PDF e para o calendário',
   'billing.plan.crew.name': 'Em grupo',
   'billing.plan.crew.tagline': 'Para famílias, amigos e times pequenos',

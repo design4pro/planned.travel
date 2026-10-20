@@ -78,9 +78,9 @@ const messages = {
 
   'landing.plans.title': 'Comece de graça. Pague só quando merecer.',
   'landing.plans.lede':
-    'Todo plano inclui o planejador diário, o mapa, os orçamentos e as listas de bagagem. Os planos pagos - a partir de {price} por mês - liberam viagens ilimitadas, reservas, o diário, mapas offline e exportações.',
+    'Todo plano inclui o planejador diário, o mapa, os orçamentos e as listas de bagagem. Os planos pagos - a partir de {price} por mês - liberam viagens ilimitadas, reservas, o diário e exportações.',
   'landing.plans.ledeFree':
-    'Todo plano inclui o planejador diário, o mapa, os orçamentos e as listas de bagagem. Os planos pagos liberam viagens ilimitadas, reservas, o diário, mapas offline e exportações.',
+    'Todo plano inclui o planejador diário, o mapa, os orçamentos e as listas de bagagem. Os planos pagos liberam viagens ilimitadas, reservas, o diário e exportações.',
   'landing.plans.compare': 'Compare cada limite, linha por linha',
   'landing.questions.title': 'Perguntas, respondidas sem rodeios',
   'landing.questions.lede':
@@ -94,9 +94,6 @@ const messages = {
   'landing.faq.phone.q': 'Funciona bem no celular?',
   'landing.faq.phone.a':
     'Sim. Os layouts de celular são desenhados separadamente, não comprimidos a partir dos de desktop, e é um site: não tem nada para instalar nem para manter atualizado.',
-  'landing.faq.offline.q': 'Consigo usar o mapa sem sinal?',
-  'landing.faq.offline.a':
-    'Com {solo} e {crew} você pode baixar uma região antes de voar, então o mapa continua desenhando quando você aterrissa sem dados. Editar a viagem em si precisa de conexão.',
   'landing.faq.privacy.q': 'Quem pode ver a minha viagem?',
   'landing.faq.privacy.a':
     'Uma viagem pertence a um espaço de trabalho, e só as pessoas convidadas para aquele espaço podem abri-la. Nada é público, não existe feed de descoberta e, por padrão, nada é compartilhado com ninguém.',
@@ -260,7 +257,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': 'Arquive uma para começar outra',
   'pricing.feature.solo.modules': 'Todos os módulos de planejamento',
   'pricing.feature.solo.modulesDetail': 'Reservas, diário, orçamentos, bagagem',
-  'pricing.feature.solo.offlineDetail': 'Baixe as regiões antes de voar',
   'pricing.feature.crew.membersDetail':
     'Cobrado por membro, mude quando quiser',
   'pricing.feature.crew.realtimeDetail':

@@ -73,9 +73,9 @@ const messages = {
 
   'landing.plans.title': 'Kezdj ingyen. Fizess, amikor kiérdemelte.',
   'landing.plans.lede':
-    'Minden csomagban ott van a napi tervező, a térkép, a költségvetések és a csomaglisták. A fizetős csomagok - {price} / hó-tól - feloldják a korlátlan utazást, a foglalásokat, a naplót, az offline térképeket és az exportot.',
+    'Minden csomagban ott van a napi tervező, a térkép, a költségvetések és a csomaglisták. A fizetős csomagok - {price} / hó-tól - feloldják a korlátlan utazást, a foglalásokat, a naplót és az exportot.',
   'landing.plans.ledeFree':
-    'Minden csomagban ott van a napi tervező, a térkép, a költségvetések és a csomaglisták. A fizetős csomagok feloldják a korlátlan utazást, a foglalásokat, a naplót, az offline térképeket és az exportot.',
+    'Minden csomagban ott van a napi tervező, a térkép, a költségvetések és a csomaglisták. A fizetős csomagok feloldják a korlátlan utazást, a foglalásokat, a naplót és az exportot.',
   'landing.plans.compare': 'Vesd össze minden korlátot, soronként',
   'landing.questions.title': 'Kérdések, kerek válaszok',
   'landing.questions.lede':
@@ -89,9 +89,6 @@ const messages = {
   'landing.faq.phone.q': 'Rendesen működik telefonon?',
   'landing.faq.phone.a':
     'Igen. A mobil elrendezések külön vannak megrajzolva, nem az asztaliakból összenyomva, és ez egy weboldal - nincs mit telepíteni és nincs mit frissen tartani.',
-  'landing.faq.offline.q': 'Használhatom a térképet térerő nélkül?',
-  'landing.faq.offline.a':
-    'A {solo} és a {crew} le tud tölteni egy régiót indulás előtt, így a térkép akkor is kirajzolódik, ha adat nélkül szállsz le. Magát az utazást szerkeszteni kapcsolatot igényel.',
   'landing.faq.privacy.q': 'Ki láthatja az utazásomat?',
   'landing.faq.privacy.a':
     'Egy utazás egyetlen munkaterülethez tartozik, és csak az oda meghívottak nyithatják meg. Semmi nem nyilvános, nincs semmiféle felfedező folyam, és alapból semmit nem osztunk meg senkivel.',
@@ -253,7 +250,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Minden tervezőmodul',
   'pricing.feature.solo.modulesDetail':
     'Szállások, napló, költségek, csomagolás',
-  'pricing.feature.solo.offlineDetail': 'Töltsd le a régiókat indulás előtt',
   'pricing.feature.crew.membersDetail':
     'Tagonkénti számlázás, bármikor módosítható',
   'pricing.feature.crew.realtimeDetail':

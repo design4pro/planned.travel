@@ -103,10 +103,6 @@ function cardFeatures(t: Translate, plan: Plan): ReadonlyArray<CardFeature> {
           'marketing.pricing.feature.solo.modules',
           'marketing.pricing.feature.solo.modulesDetail',
         ),
-        line(
-          'marketing.pricing.module.offlineMaps',
-          'marketing.pricing.feature.solo.offlineDetail',
-        ),
         line('marketing.pricing.module.pdfExport'),
         storage(false),
       ]

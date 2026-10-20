@@ -361,7 +361,7 @@ const messages = {
   'billing.renewal.paused':
     '이 구독은 일시 중지 상태예요. 다시 떠날 준비가 되면 재개해 주세요.',
   'billing.renewal.lapsed':
-    '예약과 여행 일지, 오프라인 지도를 다시 쓰려면 아래에서 플랜을 골라 주세요.',
+    '예약과 여행 일지를 다시 쓰려면 아래에서 플랜을 골라 주세요.',
   'billing.renewal.incomplete':
     'Polar가 아직 이 결제의 확인을 기다리고 있어요.',
   'billing.renewal.free':
@@ -406,7 +406,7 @@ const messages = {
   'billing.plan.solo.tagline': '모든 것을 직접 계획하는 여행자에게',
   'billing.plan.solo.feature.trips': '여행과 장소 무제한',
   'billing.plan.solo.feature.modules': '예약과 일지, 예산, 준비물 — 모든 모듈',
-  'billing.plan.solo.feature.offline': '떠나기 전에 내려받는 오프라인 지도',
+  'billing.plan.solo.feature.storage': '사진과 문서용 5 GB',
   'billing.plan.solo.feature.export': 'PDF와 캘린더 내보내기',
   'billing.plan.crew.name': '크루',
   'billing.plan.crew.tagline': '가족과 친구, 작은 팀에게',

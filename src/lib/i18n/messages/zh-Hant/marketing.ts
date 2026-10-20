@@ -67,9 +67,9 @@ const messages = {
 
   'landing.plans.title': '免費開始。等它值得了再付錢。',
   'landing.plans.lede':
-    '每個方案都含逐日規劃、地圖、預算和行李清單。付費方案 - 每月 {price} 起 - 解鎖不限次數的行程、訂位、日誌、離線地圖和匯出。',
+    '每個方案都含逐日規劃、地圖、預算和行李清單。付費方案 - 每月 {price} 起 - 解鎖不限次數的行程、訂位、日誌和匯出。',
   'landing.plans.ledeFree':
-    '每個方案都含逐日規劃、地圖、預算和行李清單。付費方案解鎖不限次數的行程、訂位、日誌、離線地圖和匯出。',
+    '每個方案都含逐日規劃、地圖、預算和行李清單。付費方案解鎖不限次數的行程、訂位、日誌和匯出。',
   'landing.plans.compare': '逐行比較每一項上限',
   'landing.questions.title': '問題，直接回答',
   'landing.questions.lede': '大家在動手之前真正想知道的六件事。',
@@ -82,9 +82,6 @@ const messages = {
   'landing.faq.phone.q': '在手機上能好好用嗎？',
   'landing.faq.phone.a':
     '能。手機版面是單獨畫的，不是從桌面版擠下來的；而且這是一個網站，沒有東西要裝，也沒有東西要更新。',
-  'landing.faq.offline.q': '沒有訊號能用地圖嗎？',
-  'landing.faq.offline.a':
-    '{solo}和{crew}可以在起飛前下載一片區域，所以落地沒網時地圖照樣能畫。編輯行程本身需要連線。',
   'landing.faq.privacy.q': '誰能看到我的行程？',
   'landing.faq.privacy.a':
     '一趟行程屬於一個工作區，只有被邀請進那個工作區的人才能打開。沒有任何內容是公開的，沒有探索動態，預設也不會分享給任何人。',
@@ -228,7 +225,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': '封存一次行程即可開始下一次',
   'pricing.feature.solo.modules': '全部規劃模組',
   'pricing.feature.solo.modulesDetail': '訂房、日誌、預算、行李',
-  'pricing.feature.solo.offlineDetail': '出發前下載區域地圖',
   'pricing.feature.crew.membersDetail': '按成員計費，隨時調整',
   'pricing.feature.crew.realtimeDetail': '即時游標與即時同步',
   'pricing.feature.crew.supportDetail': '一個工作日內由真人回覆',

@@ -68,9 +68,9 @@ const messages = {
 
   'landing.plans.title': 'Mulai gratis. Bayar setelah pantas dibayar.',
   'landing.plans.lede':
-    'Semua paket sudah termasuk perencana harian, peta, anggaran, dan daftar bawaan. Paket berbayar - mulai {price} per bulan - membuka perjalanan tanpa batas, reservasi, jurnal, peta offline, dan ekspor.',
+    'Semua paket sudah termasuk perencana harian, peta, anggaran, dan daftar bawaan. Paket berbayar - mulai {price} per bulan - membuka perjalanan tanpa batas, reservasi, jurnal, dan ekspor.',
   'landing.plans.ledeFree':
-    'Semua paket sudah termasuk perencana harian, peta, anggaran, dan daftar bawaan. Paket berbayar membuka perjalanan tanpa batas, reservasi, jurnal, peta offline, dan ekspor.',
+    'Semua paket sudah termasuk perencana harian, peta, anggaran, dan daftar bawaan. Paket berbayar membuka perjalanan tanpa batas, reservasi, jurnal, dan ekspor.',
   'landing.plans.compare': 'Bandingkan tiap batasan, baris demi baris',
   'landing.questions.title': 'Pertanyaan, dijawab lugas',
   'landing.questions.lede':
@@ -84,9 +84,6 @@ const messages = {
   'landing.faq.phone.q': 'Apakah jalan dengan baik di ponsel?',
   'landing.faq.phone.a':
     'Ya. Tata letak ponsel digambar terpisah, bukan diperas dari versi desktop, dan ini situs web: tidak ada yang perlu dipasang dan tidak ada yang perlu diperbarui.',
-  'landing.faq.offline.q': 'Bisakah aku pakai petanya tanpa sinyal?',
-  'landing.faq.offline.a':
-    'Paket {solo} dan {crew} bisa mengunduh satu wilayah sebelum terbang, jadi petanya tetap tergambar ketika kamu mendarat tanpa data. Mengubah perjalanannya sendiri butuh koneksi.',
   'landing.faq.privacy.q': 'Siapa yang bisa melihat perjalananku?',
   'landing.faq.privacy.a':
     'Sebuah perjalanan milik satu ruang kerja, dan hanya orang yang diundang ke ruang kerja itu yang bisa membukanya. Tidak ada yang publik, tidak ada beranda penemuan, dan secara bawaan tidak ada yang dibagikan ke siapa pun.',
@@ -247,7 +244,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': 'Arsipkan satu untuk mulai yang lain',
   'pricing.feature.solo.modules': 'Semua modul perencanaan',
   'pricing.feature.solo.modulesDetail': 'Reservasi, jurnal, anggaran, bawaan',
-  'pricing.feature.solo.offlineDetail': 'Unduh wilayah sebelum terbang',
   'pricing.feature.crew.membersDetail': 'Ditagih per anggota, ubah kapan saja',
   'pricing.feature.crew.realtimeDetail':
     'Kursor langsung dan sinkronisasi seketika',
