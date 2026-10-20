@@ -67,6 +67,7 @@ const stubs = vi.hoisted(() => ({
   queueRejects: false,
   /** Every whole-room eviction asked for, as the trip it was asked for. */
   evicted: [] as Array<string>,
+  reset: [] as Array<string>,
   /** The `FILES` bucket `filesBucket()` answers with: the export listing a delete reads. */
   bucket: null as ExportStore | null,
   /** Every record the module's logger wrote at `warn`. */
@@ -81,6 +82,10 @@ const stubs = vi.hoisted(() => ({
 vi.mock('#/server/fns/context', () => ({
   closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
     stubs.evicted.push(tripId)
+  },
+  resetRoom: async (scope: TenantScope, tripId: string): Promise<void> => {
+    expect(await canReadTrip(scope, tripId)).toBe(false)
+    stubs.reset.push(tripId)
   },
   filesBucket: (): ExportStore => {
     if (stubs.bucket === null) {
@@ -298,6 +303,7 @@ beforeEach(async () => {
   stubs.batches = []
   stubs.queueRejects = false
   stubs.evicted = []
+  stubs.reset = []
   stubs.bucket = fakeBucket()
   stubs.warnings = []
 })
@@ -1112,7 +1118,7 @@ describe('the trip room after a lifecycle write', () => {
     return newestTripId()
   }
 
-  it('evicts the whole room when the trip is archived, restored and deleted', async () => {
+  it('evicts archived and restored rooms, then resets only the deleted trip room', async () => {
     const tripId = await sketchTrip()
 
     await archiveTrip({ tripId })
@@ -1121,8 +1127,34 @@ describe('the trip room after a lifecycle write', () => {
     await restoreTrip({ tripId })
     expect(stubs.evicted).toEqual([tripId, tripId])
 
+    const otherTripId = await sketchTrip()
     await deleteTrip({ tripId })
-    expect(stubs.evicted).toEqual([tripId, tripId, tripId])
+    expect(stubs.evicted).toEqual([tripId, tripId])
+    expect(stubs.reset).toEqual([tripId])
+    expect(await canReadTrip(tenant.scope, otherTripId)).toBe(true)
+  })
+
+  it('does not reset a room when D1 refuses the deletion', async () => {
+    const tripId = await sketchTrip()
+    harness.sqlite.exec(`CREATE TRIGGER refuse_trip_delete BEFORE DELETE ON trips
+      BEGIN SELECT RAISE(ABORT, 'Deletion refused'); END`)
+
+    await expect(deleteTrip({ tripId })).rejects.toThrow()
+
+    expect(stubs.reset).toEqual([])
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
+  })
+
+  it('does not reset a room when confirmation is refused', async () => {
+    const tripId = await sketchTrip()
+    await addTripMember(tenant.scope, {
+      tripId,
+      userId: await tenant.addUser('Companion'),
+      role: 'editor',
+    })
+    await expect(deleteTrip({ tripId, confirmTitle: 'wrong' })).rejects.toThrow()
+    expect(stubs.reset).toEqual([])
+    expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
   })
 
   it('stays out of the room for an edit and a star', async () => {
@@ -1132,6 +1164,7 @@ describe('the trip room after a lifecycle write', () => {
     await setTripFavourite({ tripId, isFavourite: true })
 
     expect(stubs.evicted).toEqual([])
+    expect(stubs.reset).toEqual([])
   })
 
   it('asks for nothing when the caller is a member who may not shelve or delete the trip', async () => {
@@ -1149,6 +1182,7 @@ describe('the trip room after a lifecycle write', () => {
     await expect(deleteTrip({ tripId })).rejects.toThrow()
 
     expect(stubs.evicted).toEqual([])
+    expect(stubs.reset).toEqual([])
   })
 
   it('asks for nothing for a private trip the caller cannot read, or one in another workspace', async () => {
@@ -1166,6 +1200,7 @@ describe('the trip room after a lifecycle write', () => {
     }
 
     expect(stubs.evicted).toEqual([])
+    expect(stubs.reset).toEqual([])
     stubs.scope = tenant.scope
     expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
   })

@@ -1356,6 +1356,9 @@ const messages = {
   'vacay.settings.cancel': 'إلغاء',
   'vacay.settings.saved': 'تم حفظ إعدادات خطة الإجازات.',
   'vacay.settings.error': 'تعذّر حفظ إعدادات خطة الإجازات. لم يتغيّر شيء.',
+  'files.readOnly.title': 'ملفات للقراءة فقط',
+  'files.readOnly.role':
+    'يمكن لمالكي الرحلة ومحرريها فقط رفع الملفات أو إعادة تسميتها أو حذفها. لا يزال بإمكانك تنزيلها.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

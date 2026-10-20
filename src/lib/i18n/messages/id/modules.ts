@@ -1214,6 +1214,9 @@ const messages = {
   'vacay.settings.saved': 'Pengaturan rencana cuti disimpan.',
   'vacay.settings.error':
     'Pengaturan rencana cuti tidak dapat disimpan. Tidak ada yang berubah.',
+  'files.readOnly.title': 'Berkas hanya baca',
+  'files.readOnly.role':
+    'Hanya pemilik dan editor perjalanan yang dapat mengunggah, mengganti nama, atau menghapus berkas. Kamu tetap dapat mengunduhnya.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

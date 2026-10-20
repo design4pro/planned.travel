@@ -1313,6 +1313,9 @@ const messages = {
   'vacay.settings.saved': 'Nastavení plánu dovolené bylo uloženo.',
   'vacay.settings.error':
     'Nastavení plánu dovolené se nepodařilo uložit. Nic se nezměnilo.',
+  'files.readOnly.title': 'Soubory pouze pro čtení',
+  'files.readOnly.role':
+    'Pouze vlastníci a editoři cesty mohou soubory nahrávat, přejmenovávat nebo mazat. Stále je můžete stahovat.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

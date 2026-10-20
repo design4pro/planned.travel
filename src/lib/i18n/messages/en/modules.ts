@@ -1434,6 +1434,9 @@ const messages = {
   'vacay.settings.saved': 'Leave plan settings saved.',
   'vacay.settings.error':
     'The leave plan settings could not be saved. Nothing was changed.',
+  'files.readOnly.title': 'Read-only files',
+  'files.readOnly.role':
+    'Only trip owners and editors can upload, rename or delete files. You can still download them.',
 } as const satisfies NamespaceMessages
 
 export default messages

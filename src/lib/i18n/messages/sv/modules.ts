@@ -1240,6 +1240,9 @@ const messages = {
   'vacay.settings.saved': 'Inställningarna för ledighetsplanen sparades.',
   'vacay.settings.error':
     'Inställningarna för ledighetsplanen kunde inte sparas. Inget ändrades.',
+  'files.readOnly.title': 'Skrivskyddade filer',
+  'files.readOnly.role':
+    'Bara resans ägare och redigerare kan ladda upp, byta namn på eller ta bort filer. Du kan fortfarande ladda ner dem.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

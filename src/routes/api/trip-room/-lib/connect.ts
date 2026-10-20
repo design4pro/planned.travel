@@ -35,8 +35,9 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  *
  * The role is read once, at connect, and an open socket keeps it - so the writes
  * that change it close the sockets they affect: a new role, a removal or a leave
- * closes that person's sockets (`closeRoomFor`), and an archive, a restore, a delete
- * or a visibility narrowed to private closes the whole room (`closeRoom`), both in
+ * closes that person's sockets (`closeRoomFor`). An archive, a restore or a visibility
+ * narrowed to private closes the whole room (`closeRoom`); deletion closes its sockets
+ * and erases stored room state (`resetRoom`). All three helpers live in
  * `src/server/fns/context.ts`. A person who stops belonging to the workspace
  * (removed, leaving, or banned, signed out or deleted by the platform console) has
  * the sockets they hold in every room of it closed by the `trip-room-evict` task, and
