@@ -189,6 +189,8 @@ const messages = {
   'payments.empty.body':
     'Amint valaki visszafizet egy egyenleget, az átutalás ide kerül.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Ez az utazás archiválva van. A költségek módosítása előtt állítsd vissza.',
   'readOnly.title': 'A költségeket megtekintheted, de nem módosíthatod',
   'readOnly.body':
     'Kiadást hozzáadni, módosítani vagy törölni, illetve befizetést rögzíteni csak az utazás tulajdonosai és a szerkesztési joggal rendelkezők tudnak. Ha valamit módosítani kell, kérj meg egy tulajdonost.',

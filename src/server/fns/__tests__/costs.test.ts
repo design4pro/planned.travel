@@ -16,6 +16,9 @@ import { member } from '#/server/db/auth-schema'
 import { expenseShares } from '#/server/db/schema'
 import {
   CurrencyRefusalError,
+  TripArchivedError,
+  archiveTrip,
+  restoreTrip,
   NotFoundError,
   TripRoleError,
   addTripMember,
@@ -39,6 +42,7 @@ import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 
 const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
+  notificationDeps: vi.fn(() => ({})),
   mirrorToRoom: vi.fn(async (): Promise<void> => undefined),
 }))
 
@@ -55,7 +59,7 @@ vi.mock('../context', () => ({
     return stubs.scope
   },
   mirrorToRoom: stubs.mirrorToRoom,
-  notificationDeps: () => ({}),
+  notificationDeps: stubs.notificationDeps,
   patch: (kind: string, id: string, fields: unknown) => ({
     entity: { kind, id },
     op: 'upsert',
@@ -116,6 +120,7 @@ describe('the costs boundary', () => {
 
   beforeEach(async () => {
     stubs.mirrorToRoom.mockClear()
+    stubs.notificationDeps.mockClear()
     harness = await createHarness()
     tenant = await harness.seedTenant('costs-boundary')
     ownerId = tenant.ownerUserId
@@ -404,6 +409,7 @@ describe('the costs boundary', () => {
       beforeEach(async () => {
         await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: 160 })
         stubs.mirrorToRoom.mockClear()
+        stubs.notificationDeps.mockClear()
       })
 
       it.each([
@@ -450,6 +456,58 @@ describe('the costs boundary', () => {
         expect(await listTripExpenses(tenant.scope, tripId)).toHaveLength(2)
       })
     })
+  })
+
+  it.each([
+    ['owner', () => tenant.scope],
+    ['editor', () => editor],
+  ])(
+    'refuses stale %s writes without notifications or collaboration updates',
+    async (_role, who) => {
+      stubs.scope = who()
+      await archiveTrip(tenant.scope, tripId)
+      const before = await costsPayload(who(), tripId)
+      const writes: ReadonlyArray<() => Promise<unknown>> = [
+        () =>
+          createExpenseFn({
+            data: {
+              tripId,
+              expense: {
+                ...body,
+                participants: [{ userId: payerId }],
+              },
+            },
+          }),
+        () =>
+          updateExpenseFn({
+            data: { tripId, expenseId, expense: { ...body, title: 'Changed' } },
+          }),
+        () => deleteExpenseFn({ data: { tripId, expenseId } }),
+        () => recordPaymentFn({ data: payment() }),
+      ]
+      for (const write of writes) {
+        expect(await captureError(() => inStart(write))).toBeInstanceOf(
+          TripArchivedError,
+        )
+      }
+      expect(await costsPayload(who(), tripId)).toEqual(before)
+      expect(stubs.notificationDeps).not.toHaveBeenCalled()
+      expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+      expect(before.canWrite).toBe(false)
+      await restoreTrip(tenant.scope, tripId)
+      expect((await costsPayload(who(), tripId)).canWrite).toBe(true)
+    },
+  )
+
+  it('keeps display currency preferences writable on an archived trip', async () => {
+    await archiveTrip(tenant.scope, tripId)
+    stubs.scope = viewer
+    await inStart(() => setDisplayCurrencyFn({ data: { code: 'GBP' } }))
+    expect(await getDisplayCurrency(viewer, viewer.ctx.userId)).toBe('GBP')
+    const payload = await costsPayload(viewer, tripId)
+    expect(payload.canWrite).toBe(false)
+    expect(payload.displayCurrency).toMatchObject({ code: 'GBP' })
+    expect(payload.expenses.map((row) => row.title)).toEqual(['Dinner'])
   })
 
   describe('the costs payload', () => {
