@@ -110,6 +110,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'description', content: DESCRIPTION },
       { name: 'application-name', content: SITE_NAME },
       { name: 'apple-mobile-web-app-title', content: 'planned' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'format-detection', content: 'telephone=no' },
       { name: 'color-scheme', content: 'light dark' },
       {
@@ -149,6 +150,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: 'stylesheet', href: FONT_STYLESHEET_HREF },
       { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: FAVICON_HREF, type: 'image/svg+xml' },
+      {
+        rel: 'manifest',
+        href: '/manifest.webmanifest',
+        crossOrigin: 'use-credentials',
+      },
+      { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon-180.png' },
       { rel: 'canonical', href: SITE_URL },
     ],
   }),
