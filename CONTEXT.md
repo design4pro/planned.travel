@@ -2,6 +2,7 @@
 
 A glossary and nothing else. No implementation details, no file paths, no commands. Terms are added lazily, during grilling sessions, when they earn their place. Decisions with rationale belong in docs/adr/, not here.
 
+- **Installed app** - planned.travel opened from a home-screen or dock icon in its own window. Installation is optional and does not make trips available offline.
 - **Organization (tenant)** — the unit of isolation and billing. Every product row belongs to exactly one organization; a user acts inside one organization at a time.
 - **Workspace console** — the administrative surface where an organization manages members, billing and settings.
 - **Trip** — the central planning object: a titled journey owned by an organization, with members and guests. It may be dated (a start and an end) or not yet: an undated trip still has a run of numbered days.
@@ -75,6 +76,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
 
-- **Installed app** - planned.travel opened from a home-screen or dock icon in its own window. Installation is optional and does not make trips available offline.
+- **Backup code** - a one-use code for signing in when the authenticator app is unavailable. A set is shown once when two-factor authentication is enabled or the codes are replaced. Replacing a set invalidates the previous set. Use “backup code”; avoid “recovery code”.
 - **Travel statistics** — a traveller’s stored roll-up of trips they are on, shown in the Atlas Stats tab. The all-time view also reads their live visited regions, visits and continents; a year view counts countries on that year’s trips instead of their visited-country list.
 - **Stat year** — the calendar year of a travel-statistics row; `0` means all time. Trips, places, cities, days and trip countries follow the trip’s start year; distance follows each transport’s departure year. Only a year with a trip is a selectable period.

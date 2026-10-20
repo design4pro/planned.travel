@@ -108,6 +108,11 @@ export const APP_ROUTES: ReadonlyArray<RouteCase> = [
   { name: 'journey', path: '/journey', ready: 'main' },
   { name: 'vacay', path: `/vacay?year=${PINNED_YEAR}`, ready: 'main' },
   { name: 'settings', path: '/settings', ready: 'main' },
+  {
+    name: 'settings-two-factor',
+    path: '/settings/two-factor',
+    ready: 'main',
+  },
   { name: 'settings-language', path: '/settings/language', ready: 'main' },
 ]
 

@@ -221,7 +221,7 @@ const messages = {
   'security.password.action': 'Zmień hasło',
   'security.twoFactor.label': 'Uwierzytelnianie dwuskładnikowe',
   'security.twoFactor.onHint':
-    'Przy każdym nowym logowaniu wymagany jest kod z aplikacji uwierzytelniającej.',
+    'Kod z aplikacji uwierzytelniającej jest wymagany przy logowaniu adresem e-mail i hasłem, chyba że przeglądarka jest zaufana.',
   'security.twoFactor.offHint':
     'Dodaj do hasła sześciocyfrowy kod z aplikacji uwierzytelniającej.',
   'security.twoFactor.on': 'Wł.',
@@ -697,6 +697,81 @@ const messages = {
   'workspace.departure.activationFailed':
     'Opuszczono tę przestrzeń roboczą. Otwórz następną, aby kontynuować.',
   'workspace.departure.recover': 'Otwórz następną przestrzeń',
+  'twoFactor.back': 'Wróć do zabezpieczeń',
+  'twoFactor.title': 'Uwierzytelnianie dwuskładnikowe',
+  'twoFactor.description':
+    'Dodaj drugi krok przy logowaniu adresem e-mail i hasłem.',
+  'twoFactor.error':
+    'Nie udało się wczytać ustawień uwierzytelniania dwuskładnikowego.',
+  'twoFactor.steps.label': 'Skonfiguruj uwierzytelnianie dwuskładnikowe',
+  'twoFactor.steps.password': 'Potwierdź swoją tożsamość',
+  'twoFactor.steps.key': 'Dodaj klucz do aplikacji uwierzytelniającej',
+  'twoFactor.steps.confirm': 'Wpisz kod',
+  'twoFactor.steps.state.done': 'Gotowe',
+  'twoFactor.steps.state.current': 'Bieżący krok',
+  'twoFactor.steps.state.todo': 'Nie rozpoczęto',
+  'twoFactor.password.label': 'Twoje hasło',
+  'twoFactor.password.hint': 'Pytamy ponownie przed zmianą sposobu logowania.',
+  'twoFactor.password.submit': 'Dalej',
+  'twoFactor.password.pending': 'Konfigurowanie',
+  'twoFactor.password.invalid': 'To hasło jest nieprawidłowe.',
+  'twoFactor.key.intro':
+    'Potrzebujesz aplikacji uwierzytelniającej w telefonie. Dodaj do niej ten klucz i wróć tutaj. Uwierzytelnianie dwuskładnikowe nie jest jeszcze włączone.',
+  'twoFactor.key.label': 'Klucz konfiguracji',
+  'twoFactor.key.copy': 'Kopiuj klucz',
+  'twoFactor.key.copied': 'Skopiowano klucz',
+  'twoFactor.key.copyFailed':
+    'Przeglądarka nie skopiowała klucza. Zaznacz go i skopiuj ręcznie.',
+  'twoFactor.key.open': 'Otwórz w aplikacji uwierzytelniającej',
+  'twoFactor.key.startOver': 'Zacznij od nowa',
+  'twoFactor.key.startOverHint':
+    'Rozpoczęcie od nowa tworzy nowy klucz. Klucz dodany wcześniej do aplikacji przestanie działać.',
+  'twoFactor.key.next': 'Klucz został dodany',
+  'twoFactor.code.label': 'Kod z aplikacji',
+  'twoFactor.code.hint': 'Sześć cyfr widocznych teraz w aplikacji.',
+  'twoFactor.code.submit': 'Włącz uwierzytelnianie dwuskładnikowe',
+  'twoFactor.code.pending': 'Sprawdzanie',
+  'twoFactor.code.invalid':
+    'Kod jest nieprawidłowy. Sprawdź godzinę w telefonie i wpisz najnowszy kod z aplikacji.',
+  'twoFactor.code.unclear':
+    'Nie możemy ustalić, czy operacja się powiodła. Wpisz najnowszy kod, aby spróbować ponownie.',
+  'twoFactor.rateLimited.title': 'Zbyt wiele prób w krótkim czasie',
+  'twoFactor.rateLimited.password':
+    'Odczekaj około dziesięciu sekund i spróbuj ponownie. Wpisane dane zostały zachowane.',
+  'twoFactor.rateLimited.code':
+    'Odczekaj do minuty i spróbuj ponownie. Wpisane dane zostały zachowane.',
+  'twoFactor.codes.title': 'Twoje kody zapasowe',
+  'twoFactor.codes.body':
+    'Każdy kod działa raz, jeśli stracisz telefon. Pokazujemy je tylko teraz, więc przechowuj je w bezpiecznym miejscu.',
+  'twoFactor.codes.copyAll': 'Kopiuj wszystkie',
+  'twoFactor.codes.copied': 'Skopiowano kody zapasowe',
+  'twoFactor.codes.download': 'Pobierz jako plik tekstowy',
+  'twoFactor.codes.copyFailed':
+    'Przeglądarka nie skopiowała kodów. Zaznacz je i skopiuj ręcznie.',
+  'twoFactor.codes.stored': 'Mam zapisane te kody zapasowe',
+  'twoFactor.codes.done': 'Gotowe',
+  'twoFactor.codes.gate': 'Zaznacz pole, aby kontynuować.',
+  'twoFactor.codes.lost':
+    'Jeśli najpierw opuścisz tę stronę, możesz tutaj utworzyć nowy zestaw. Stary przestanie działać.',
+  'twoFactor.codes.leave.title': 'Opuścić stronę bez zapisania kodów?',
+  'twoFactor.codes.leave.body':
+    'Kody zapasowe pokazujemy tylko raz. Jeśli teraz wyjdziesz, możesz tutaj utworzyć nowy zestaw. Stary przestanie działać.',
+  'twoFactor.codes.leave.stay': 'Zostań tutaj',
+  'twoFactor.codes.leave.go': 'Opuść stronę',
+  'twoFactor.on.title': 'Uwierzytelnianie dwuskładnikowe jest włączone',
+  'twoFactor.on.badge': 'Włączone',
+  'twoFactor.on.body':
+    'Pytamy o kod z aplikacji przy logowaniu adresem e-mail i hasłem, chyba że ta przeglądarka jest zaufana. Logowanie przez Google, Apple lub klucz dostępu nie wymaga kodu.',
+  'twoFactor.replace.action': 'Wymień kody zapasowe',
+  'twoFactor.replace.title': 'Wymienić kody zapasowe?',
+  'twoFactor.replace.body':
+    'Otrzymasz nowy zestaw. Obecny przestanie działać natychmiast po kontynuowaniu.',
+  'twoFactor.replace.confirm': 'Wymień',
+  'twoFactor.replace.pending': 'Wymienianie',
+  'twoFactor.nopassword.title': 'Najpierw ustaw hasło',
+  'twoFactor.nopassword.body':
+    'Uwierzytelnianie dwuskładnikowe wymaga hasła do tego konta. Następna strona poprosi o e-mail i wyśle link do ustawienia hasła. Ustawienie hasła wyloguje Cię wszędzie. Zaloguj się ponownie i wróć tutaj.',
+  'twoFactor.nopassword.action': 'Ustaw hasło',
 } satisfies TranslationOf<typeof En>
 
 export default messages

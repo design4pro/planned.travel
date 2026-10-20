@@ -220,7 +220,7 @@ const messages = {
   'security.password.action': 'Canvia la contrasenya',
   'security.twoFactor.label': 'Verificació en dos passos',
   'security.twoFactor.onHint':
-    'A cada accés nou cal un codi de la teva aplicació d’autenticació.',
+    'Es demana un codi de l’aplicació quan entres amb correu i contrasenya, tret que aquest navegador sigui de confiança.',
   'security.twoFactor.offHint':
     'Afegeix un codi de sis xifres d’una aplicació d’autenticació per sobre de la contrasenya.',
   'security.twoFactor.on': 'Activada',
@@ -686,6 +686,81 @@ const messages = {
   'workspace.departure.activationFailed':
     'Has deixat aquest espai de treball. Obre el següent per continuar.',
   'workspace.departure.recover': 'Obre el següent espai',
+  'twoFactor.back': 'Torna a seguretat',
+  'twoFactor.title': 'Autenticació de dos factors',
+  'twoFactor.description':
+    'Afegeix un segon pas quan entris amb correu i contrasenya.',
+  'twoFactor.error': 'No hem pogut carregar els ajustos de dos factors.',
+  'twoFactor.steps.label': 'Configura els dos factors',
+  'twoFactor.steps.password': 'Confirma la teva identitat',
+  'twoFactor.steps.key': 'Afegeix-la a l’aplicació d’autenticació',
+  'twoFactor.steps.confirm': 'Introdueix un codi',
+  'twoFactor.steps.state.done': 'Completat',
+  'twoFactor.steps.state.current': 'Pas actual',
+  'twoFactor.steps.state.todo': 'No iniciat',
+  'twoFactor.password.label': 'La teva contrasenya',
+  'twoFactor.password.hint':
+    'La tornem a demanar abans de canviar com inicies sessió.',
+  'twoFactor.password.submit': 'Continua',
+  'twoFactor.password.pending': 'S’està configurant',
+  'twoFactor.password.invalid': 'Aquesta contrasenya no és correcta.',
+  'twoFactor.key.intro':
+    'Necessites una aplicació d’autenticació al mòbil. Afegeix-hi aquesta clau i torna aquí. Els dos factors encara no estan activats.',
+  'twoFactor.key.label': 'Clau de configuració',
+  'twoFactor.key.copy': 'Copia la clau',
+  'twoFactor.key.copied': 'Clau copiada',
+  'twoFactor.key.copyFailed':
+    'El navegador no ha copiat la clau. Selecciona-la i copia-la manualment.',
+  'twoFactor.key.open': 'Obre a l’aplicació d’autenticació',
+  'twoFactor.key.startOver': 'Torna a començar',
+  'twoFactor.key.startOverHint':
+    'Tornar a començar crea una clau nova. La que ja hagis afegit a una aplicació deixarà de funcionar.',
+  'twoFactor.key.next': 'Ja l’he afegida',
+  'twoFactor.code.label': 'Codi de l’aplicació',
+  'twoFactor.code.hint': 'Els sis dígits que mostra ara l’aplicació.',
+  'twoFactor.code.submit': 'Activa els dos factors',
+  'twoFactor.code.pending': 'S’està comprovant',
+  'twoFactor.code.invalid':
+    'El codi no coincideix. Comprova l’hora del mòbil i introdueix el codi més recent de l’aplicació.',
+  'twoFactor.code.unclear':
+    'No hem pogut saber si ha funcionat. Introdueix el codi més recent per tornar-ho a provar.',
+  'twoFactor.rateLimited.title': 'Massa intents seguits',
+  'twoFactor.rateLimited.password':
+    'Espera uns deu segons i torna-ho a provar. Es conserva tot el que has escrit.',
+  'twoFactor.rateLimited.code':
+    'Espera fins a un minut i torna-ho a provar. Es conserva tot el que has escrit.',
+  'twoFactor.codes.title': 'Els teus codis de reserva',
+  'twoFactor.codes.body':
+    'Cada codi funciona una vegada si perds el mòbil. Només es mostren ara: desa’ls en un lloc segur.',
+  'twoFactor.codes.copyAll': 'Copia’ls tots',
+  'twoFactor.codes.copied': 'Codis de reserva copiats',
+  'twoFactor.codes.download': 'Baixa com a fitxer de text',
+  'twoFactor.codes.copyFailed':
+    'El navegador no ha copiat els codis. Selecciona’ls i copia’ls manualment.',
+  'twoFactor.codes.stored': 'He desat aquests codis de reserva',
+  'twoFactor.codes.done': 'Fet',
+  'twoFactor.codes.gate': 'Marca la casella per continuar.',
+  'twoFactor.codes.lost':
+    'Si surts abans d’aquesta pàgina, pots crear un conjunt nou aquí. L’antic deixarà de funcionar.',
+  'twoFactor.codes.leave.title': 'Vols sortir sense desar els codis?',
+  'twoFactor.codes.leave.body':
+    'Els codis de reserva només es mostren una vegada. Si surts ara, pots crear un conjunt nou aquí. L’antic deixarà de funcionar.',
+  'twoFactor.codes.leave.stay': 'Queda’m aquí',
+  'twoFactor.codes.leave.go': 'Surt',
+  'twoFactor.on.title': 'Els dos factors estan activats',
+  'twoFactor.on.badge': 'Activats',
+  'twoFactor.on.body':
+    'Demanem un codi de l’aplicació quan entres amb correu i contrasenya, tret que aquest navegador sigui de confiança. Entrar amb Google, Apple o una clau d’accés no demana cap codi.',
+  'twoFactor.replace.action': 'Substitueix els codis de reserva',
+  'twoFactor.replace.title': 'Vols substituir els codis de reserva?',
+  'twoFactor.replace.body':
+    'Rebràs un conjunt nou. L’actual deixarà de funcionar tan bon punt continuïs.',
+  'twoFactor.replace.confirm': 'Substitueix',
+  'twoFactor.replace.pending': 'S’està substituint',
+  'twoFactor.nopassword.title': 'Primer estableix una contrasenya',
+  'twoFactor.nopassword.body':
+    'Els dos factors requereixen una contrasenya en aquest compte. La pàgina següent demana el correu i envia un enllaç per establir-la. Això tanca totes les sessions. Torna a entrar i torna aquí.',
+  'twoFactor.nopassword.action': 'Estableix una contrasenya',
 } satisfies TranslationOf<typeof En>
 
 export default messages
