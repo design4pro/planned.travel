@@ -220,7 +220,7 @@ const messages = {
   'security.password.action': 'Сменить пароль',
   'security.twoFactor.label': 'Двухфакторная аутентификация',
   'security.twoFactor.onHint':
-    'При каждом новом входе нужен код из приложения-аутентификатора.',
+    'При входе по электронной почте и паролю запрашивается код из приложения, если браузер не отмечен как доверенный.',
   'security.twoFactor.offHint':
     'Добавьте к паролю шестизначный код из приложения-аутентификатора.',
   'security.twoFactor.on': 'Вкл.',
@@ -695,6 +695,82 @@ const messages = {
   'workspace.departure.activationFailed':
     'Вы покинули это рабочее пространство. Откройте следующее, чтобы продолжить.',
   'workspace.departure.recover': 'Открыть следующее пространство',
+  'twoFactor.back': 'Назад к безопасности',
+  'twoFactor.title': 'Двухфакторная аутентификация',
+  'twoFactor.description':
+    'Добавьте второй шаг при входе по электронной почте и паролю.',
+  'twoFactor.error':
+    'Не удалось загрузить настройки двухфакторной аутентификации.',
+  'twoFactor.steps.label': 'Настроить двухфакторную аутентификацию',
+  'twoFactor.steps.password': 'Подтвердите свою личность',
+  'twoFactor.steps.key': 'Добавьте ключ в приложение-аутентификатор',
+  'twoFactor.steps.confirm': 'Введите код',
+  'twoFactor.steps.state.done': 'Готово',
+  'twoFactor.steps.state.current': 'Текущий шаг',
+  'twoFactor.steps.state.todo': 'Не начато',
+  'twoFactor.password.label': 'Ваш пароль',
+  'twoFactor.password.hint':
+    'Мы запрашиваем его повторно перед изменением способа входа.',
+  'twoFactor.password.submit': 'Продолжить',
+  'twoFactor.password.pending': 'Настройка',
+  'twoFactor.password.invalid': 'Неверный пароль.',
+  'twoFactor.key.intro':
+    'Вам нужно приложение-аутентификатор на телефоне. Добавьте в него этот ключ и вернитесь сюда. Двухфакторная аутентификация пока не включена.',
+  'twoFactor.key.label': 'Ключ настройки',
+  'twoFactor.key.copy': 'Скопировать ключ',
+  'twoFactor.key.copied': 'Ключ скопирован',
+  'twoFactor.key.copyFailed':
+    'Браузер не смог скопировать ключ. Выделите его и скопируйте вручную.',
+  'twoFactor.key.open': 'Открыть в приложении-аутентификаторе',
+  'twoFactor.key.startOver': 'Начать заново',
+  'twoFactor.key.startOverHint':
+    'При повторной настройке создаётся новый ключ. Ключ, уже добавленный в приложение, перестанет работать.',
+  'twoFactor.key.next': 'Ключ добавлен',
+  'twoFactor.code.label': 'Код из приложения',
+  'twoFactor.code.hint': 'Шесть цифр, которые приложение показывает сейчас.',
+  'twoFactor.code.submit': 'Включить двухфакторную аутентификацию',
+  'twoFactor.code.pending': 'Проверка',
+  'twoFactor.code.invalid':
+    'Код не совпал. Проверьте время на телефоне и введите самый свежий код из приложения.',
+  'twoFactor.code.unclear':
+    'Не удалось определить, сработало ли это. Введите самый свежий код, чтобы попробовать снова.',
+  'twoFactor.rateLimited.title': 'Слишком много попыток за короткое время',
+  'twoFactor.rateLimited.password':
+    'Подождите около десяти секунд и повторите попытку. Введённые данные сохранены.',
+  'twoFactor.rateLimited.code':
+    'Подождите до минуты и повторите попытку. Введённые данные сохранены.',
+  'twoFactor.codes.title': 'Ваши резервные коды',
+  'twoFactor.codes.body':
+    'Каждый код работает один раз, если вы потеряете телефон. Они показываются только сейчас, поэтому сохраните их в безопасном месте.',
+  'twoFactor.codes.copyAll': 'Скопировать все',
+  'twoFactor.codes.copied': 'Резервные коды скопированы',
+  'twoFactor.codes.download': 'Скачать текстовым файлом',
+  'twoFactor.codes.copyFailed':
+    'Браузер не смог скопировать коды. Выделите их и скопируйте вручную.',
+  'twoFactor.codes.stored': 'Я сохранил эти резервные коды',
+  'twoFactor.codes.done': 'Завершить',
+  'twoFactor.codes.gate': 'Отметьте поле, чтобы продолжить.',
+  'twoFactor.codes.lost':
+    'Если вы уйдёте с этой страницы раньше, здесь можно создать новый набор. Старый перестанет работать.',
+  'twoFactor.codes.leave.title': 'Уйти, не сохранив коды?',
+  'twoFactor.codes.leave.body':
+    'Резервные коды показываются только один раз. Если вы уйдёте сейчас, здесь можно создать новый набор. Старый перестанет работать.',
+  'twoFactor.codes.leave.stay': 'Остаться здесь',
+  'twoFactor.codes.leave.go': 'Уйти',
+  'twoFactor.on.title': 'Двухфакторная аутентификация включена',
+  'twoFactor.on.badge': 'Включена',
+  'twoFactor.on.body':
+    'При входе по электронной почте и паролю мы запрашиваем код из приложения, если браузер не отмечен как доверенный. При входе через Google, Apple или ключ доступа код не нужен.',
+  'twoFactor.replace.action': 'Заменить резервные коды',
+  'twoFactor.replace.title': 'Заменить ваши резервные коды?',
+  'twoFactor.replace.body':
+    'Вы получите новый набор. Текущий перестанет работать сразу после продолжения.',
+  'twoFactor.replace.confirm': 'Заменить',
+  'twoFactor.replace.pending': 'Замена',
+  'twoFactor.nopassword.title': 'Сначала задайте пароль',
+  'twoFactor.nopassword.body':
+    'Для двухфакторной аутентификации у этого аккаунта должен быть пароль. Следующая страница запросит электронную почту и отправит ссылку для его настройки. Это завершит сеансы на всех устройствах. Войдите снова и вернитесь сюда.',
+  'twoFactor.nopassword.action': 'Задать пароль',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -214,7 +214,7 @@ const messages = {
   'security.password.action': 'Αλλαγή κωδικού',
   'security.twoFactor.label': 'Ταυτοποίηση δύο παραγόντων',
   'security.twoFactor.onHint':
-    'Σε κάθε νέα σύνδεση χρειάζεται κωδικός από την εφαρμογή ταυτοποίησης.',
+    'Ζητείται κωδικός από την εφαρμογή όταν συνδέεστε με email και κωδικό πρόσβασης, εκτός αν εμπιστεύεστε αυτό το πρόγραμμα περιήγησης.',
   'security.twoFactor.offHint':
     'Προσθέστε έναν εξαψήφιο κωδικό από εφαρμογή ταυτοποίησης πάνω από τον κωδικό σας.',
   'security.twoFactor.on': 'Ενεργό',
@@ -678,6 +678,81 @@ const messages = {
   'workspace.departure.activationFailed':
     'Αποχωρήσατε από αυτόν τον χώρο εργασίας. Ανοίξτε τον επόμενο για να συνεχίσετε.',
   'workspace.departure.recover': 'Άνοιγμα επόμενου χώρου',
+  'twoFactor.back': 'Επιστροφή στην ασφάλεια',
+  'twoFactor.title': 'Έλεγχος ταυτότητας δύο παραγόντων',
+  'twoFactor.description':
+    'Προσθέστε ένα δεύτερο βήμα όταν συνδέεστε με email και κωδικό πρόσβασης.',
+  'twoFactor.error': 'Δεν φορτώθηκαν οι ρυθμίσεις δύο παραγόντων.',
+  'twoFactor.steps.label': 'Ρύθμιση δύο παραγόντων',
+  'twoFactor.steps.password': 'Επιβεβαιώστε την ταυτότητά σας',
+  'twoFactor.steps.key': 'Προσθέστε το στην εφαρμογή ελέγχου ταυτότητας',
+  'twoFactor.steps.confirm': 'Εισαγάγετε έναν κωδικό',
+  'twoFactor.steps.state.done': 'Ολοκληρώθηκε',
+  'twoFactor.steps.state.current': 'Τρέχον βήμα',
+  'twoFactor.steps.state.todo': 'Δεν ξεκίνησε',
+  'twoFactor.password.label': 'Ο κωδικός πρόσβασής σας',
+  'twoFactor.password.hint':
+    'Τον ζητάμε ξανά πριν αλλάξουμε τον τρόπο σύνδεσης.',
+  'twoFactor.password.submit': 'Συνέχεια',
+  'twoFactor.password.pending': 'Γίνεται ρύθμιση',
+  'twoFactor.password.invalid': 'Αυτός ο κωδικός πρόσβασης δεν είναι σωστός.',
+  'twoFactor.key.intro':
+    'Χρειάζεστε εφαρμογή ελέγχου ταυτότητας στο κινητό. Προσθέστε αυτό το κλειδί και επιστρέψτε εδώ. Οι δύο παράγοντες δεν έχουν ενεργοποιηθεί ακόμη.',
+  'twoFactor.key.label': 'Κλειδί ρύθμισης',
+  'twoFactor.key.copy': 'Αντιγραφή κλειδιού',
+  'twoFactor.key.copied': 'Το κλειδί αντιγράφηκε',
+  'twoFactor.key.copyFailed':
+    'Το πρόγραμμα περιήγησης δεν αντέγραψε το κλειδί. Επιλέξτε το και αντιγράψτε το μη αυτόματα.',
+  'twoFactor.key.open': 'Άνοιγμα στην εφαρμογή ελέγχου ταυτότητας',
+  'twoFactor.key.startOver': 'Έναρξη από την αρχή',
+  'twoFactor.key.startOverHint':
+    'Η νέα αρχή δημιουργεί νέο κλειδί. Ένα κλειδί που έχετε ήδη προσθέσει σε εφαρμογή θα πάψει να λειτουργεί.',
+  'twoFactor.key.next': 'Το πρόσθεσα',
+  'twoFactor.code.label': 'Κωδικός από την εφαρμογή',
+  'twoFactor.code.hint': 'Τα έξι ψηφία που δείχνει τώρα η εφαρμογή.',
+  'twoFactor.code.submit': 'Ενεργοποίηση δύο παραγόντων',
+  'twoFactor.code.pending': 'Γίνεται έλεγχος',
+  'twoFactor.code.invalid':
+    'Ο κωδικός δεν ταιριάζει. Ελέγξτε την ώρα του κινητού και εισαγάγετε τον πιο πρόσφατο κωδικό της εφαρμογής.',
+  'twoFactor.code.unclear':
+    'Δεν γνωρίζουμε αν πέτυχε. Εισαγάγετε τον πιο πρόσφατο κωδικό για νέα προσπάθεια.',
+  'twoFactor.rateLimited.title': 'Πάρα πολλές προσπάθειες σε λίγο χρόνο',
+  'twoFactor.rateLimited.password':
+    'Περιμένετε περίπου δέκα δευτερόλεπτα και δοκιμάστε ξανά. Όσα πληκτρολογήσατε διατηρήθηκαν.',
+  'twoFactor.rateLimited.code':
+    'Περιμένετε έως ένα λεπτό και δοκιμάστε ξανά. Όσα πληκτρολογήσατε διατηρήθηκαν.',
+  'twoFactor.codes.title': 'Οι εφεδρικοί κωδικοί σας',
+  'twoFactor.codes.body':
+    'Κάθε κωδικός λειτουργεί μία φορά αν χάσετε το κινητό. Εμφανίζονται μόνο τώρα, οπότε φυλάξτε τους με ασφάλεια.',
+  'twoFactor.codes.copyAll': 'Αντιγραφή όλων',
+  'twoFactor.codes.copied': 'Οι εφεδρικοί κωδικοί αντιγράφηκαν',
+  'twoFactor.codes.download': 'Λήψη ως αρχείο κειμένου',
+  'twoFactor.codes.copyFailed':
+    'Το πρόγραμμα περιήγησης δεν αντέγραψε τους κωδικούς. Επιλέξτε τους και αντιγράψτε τους μη αυτόματα.',
+  'twoFactor.codes.stored': 'Αποθήκευσα αυτούς τους εφεδρικούς κωδικούς',
+  'twoFactor.codes.done': 'Τέλος',
+  'twoFactor.codes.gate': 'Επιλέξτε το πλαίσιο για συνέχεια.',
+  'twoFactor.codes.lost':
+    'Αν φύγετε πρώτα από αυτή τη σελίδα, μπορείτε να δημιουργήσετε νέο σύνολο εδώ. Το παλιό θα πάψει να λειτουργεί.',
+  'twoFactor.codes.leave.title': 'Έξοδος χωρίς αποθήκευση των κωδικών;',
+  'twoFactor.codes.leave.body':
+    'Οι εφεδρικοί κωδικοί εμφανίζονται μόνο μία φορά. Αν φύγετε τώρα, μπορείτε να δημιουργήσετε νέο σύνολο εδώ. Το παλιό θα πάψει να λειτουργεί.',
+  'twoFactor.codes.leave.stay': 'Παραμονή εδώ',
+  'twoFactor.codes.leave.go': 'Έξοδος',
+  'twoFactor.on.title': 'Οι δύο παράγοντες είναι ενεργοί',
+  'twoFactor.on.badge': 'Ενεργοί',
+  'twoFactor.on.body':
+    'Ζητάμε κωδικό από την εφαρμογή όταν συνδέεστε με email και κωδικό πρόσβασης, εκτός αν εμπιστεύεστε αυτό το πρόγραμμα περιήγησης. Η σύνδεση με Google, Apple ή κλειδί πρόσβασης δεν ζητά κωδικό.',
+  'twoFactor.replace.action': 'Αντικατάσταση εφεδρικών κωδικών',
+  'twoFactor.replace.title': 'Αντικατάσταση των εφεδρικών κωδικών σας;',
+  'twoFactor.replace.body':
+    'Θα λάβετε νέο σύνολο. Το τρέχον παύει να λειτουργεί μόλις συνεχίσετε.',
+  'twoFactor.replace.confirm': 'Αντικατάσταση',
+  'twoFactor.replace.pending': 'Γίνεται αντικατάσταση',
+  'twoFactor.nopassword.title': 'Ορίστε πρώτα κωδικό πρόσβασης',
+  'twoFactor.nopassword.body':
+    'Οι δύο παράγοντες απαιτούν κωδικό πρόσβασης σε αυτόν τον λογαριασμό. Η επόμενη σελίδα ζητά το email σας και στέλνει σύνδεσμο για να τον ορίσετε. Αυτό σας αποσυνδέει παντού. Συνδεθείτε ξανά και επιστρέψτε εδώ.',
+  'twoFactor.nopassword.action': 'Ορισμός κωδικού πρόσβασης',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -10,7 +10,11 @@ import {
   endImpersonationFixture,
   hasPlatformConsole,
 } from './helpers/admin.ts'
-import { visit, watchConsole } from './helpers/console.ts'
+import {
+  unblockCrossOriginFonts,
+  visit,
+  watchConsole,
+} from './helpers/console.ts'
 import { restingCamera } from './helpers/places-and-maps.ts'
 import { callsServerFn } from './helpers/server-fn.ts'
 import {
@@ -2788,4 +2792,52 @@ test.describe('switching workspace', () => {
     ).toHaveCount(0)
     await page.keyboard.press('Escape')
   })
+})
+
+/** Only sessions and routing: enrolment behavior is covered at the auth-client seam. */
+test('two-factor separates signed-in settings from the sign-in challenge', async ({
+  page,
+  context,
+  baseURL,
+  browser,
+}) => {
+  await useSession(context, page, baseURL)
+  expect(await hasSession(page)).toBe(true)
+  const settings = {
+    name: 'two-factor-settings',
+    path: '/settings/two-factor',
+    ready: 'main',
+  }
+  const readConsole = watchConsole(page, settings)
+  await unblockCrossOriginFonts(page)
+  await page.goto('/two-factor')
+  await expect(page).toHaveURL(/\/settings\/two-factor$/)
+  await expect(
+    page.getByRole('heading', { name: 'Two-factor authentication', level: 2 }),
+  ).toBeVisible()
+  await settle(page, settings)
+  expect(readConsole().fatal).toEqual([])
+  const anonymous = await browser.newContext({ baseURL })
+  try {
+    const guest = await anonymous.newPage()
+    const challenge = {
+      name: 'two-factor-guest',
+      path: '/two-factor',
+      ready: 'main',
+    }
+    const guestConsole = watchConsole(guest, challenge)
+    await unblockCrossOriginFonts(guest)
+    await guest.goto('/two-factor')
+    await expect(guest).toHaveURL(/\/two-factor$/)
+    await expect(
+      guest.locator('input[autocomplete="one-time-code"]'),
+    ).toBeVisible()
+    await settle(guest, challenge)
+    await guest.goto('/settings/two-factor')
+    await expect(guest).toHaveURL(/\/login(?:\?|$)/)
+    await settle(guest, { name: 'login', path: '/login', ready: 'main' })
+    expect(guestConsole().fatal).toEqual([])
+  } finally {
+    await anonymous.close()
+  }
 })

@@ -180,7 +180,7 @@ const messages = {
   'security.password.action': '變更密碼',
   'security.twoFactor.label': '兩步驗證',
   'security.twoFactor.onHint':
-    '每次在新的地方登入，都要輸入一次驗證器上的驗證碼。',
+    '使用電子郵件和密碼登入時，需要身分驗證應用程式的驗證碼，除非你選擇信任此瀏覽器。',
   'security.twoFactor.offHint':
     '在密碼之外，再加上驗證器應用程式的六位數驗證碼。',
   'security.twoFactor.on': '已開啟',
@@ -565,6 +565,74 @@ const messages = {
   'workspace.departure.activationFailed':
     '你已退出此工作空間。開啟下一個工作空間以繼續。',
   'workspace.departure.recover': '開啟下一個工作空間',
+  'twoFactor.back': '返回安全設定',
+  'twoFactor.title': '雙重身分驗證',
+  'twoFactor.description': '使用電子郵件和密碼登入時增加第二個步驟。',
+  'twoFactor.error': '無法載入雙重身分驗證設定。',
+  'twoFactor.steps.label': '設定雙重身分驗證',
+  'twoFactor.steps.password': '確認是你本人',
+  'twoFactor.steps.key': '加入身分驗證應用程式',
+  'twoFactor.steps.confirm': '輸入驗證碼',
+  'twoFactor.steps.state.done': '已完成',
+  'twoFactor.steps.state.current': '目前步驟',
+  'twoFactor.steps.state.todo': '尚未開始',
+  'twoFactor.password.label': '你的密碼',
+  'twoFactor.password.hint': '變更登入方式前，我們會再次確認。',
+  'twoFactor.password.submit': '繼續',
+  'twoFactor.password.pending': '正在設定',
+  'twoFactor.password.invalid': '密碼不正確。',
+  'twoFactor.key.intro':
+    '你需要在手機上安裝身分驗證應用程式。加入此金鑰後，回到本頁。雙重身分驗證尚未啟用。',
+  'twoFactor.key.label': '設定金鑰',
+  'twoFactor.key.copy': '複製金鑰',
+  'twoFactor.key.copied': '已複製金鑰',
+  'twoFactor.key.copyFailed': '瀏覽器無法複製金鑰。請選取並手動複製。',
+  'twoFactor.key.open': '在身分驗證應用程式中開啟',
+  'twoFactor.key.startOver': '重新開始',
+  'twoFactor.key.startOverHint':
+    '重新開始會產生新金鑰。你已加入應用程式的金鑰將失效。',
+  'twoFactor.key.next': '我已加入',
+  'twoFactor.code.label': '應用程式的驗證碼',
+  'twoFactor.code.hint': '應用程式目前顯示的六位數字。',
+  'twoFactor.code.submit': '啟用雙重身分驗證',
+  'twoFactor.code.pending': '正在檢查',
+  'twoFactor.code.invalid':
+    '驗證碼不符。請檢查手機時間，然後輸入應用程式顯示的最新驗證碼。',
+  'twoFactor.code.unclear': '無法確定是否成功。請輸入最新驗證碼再試一次。',
+  'twoFactor.rateLimited.title': '短時間內嘗試次數過多',
+  'twoFactor.rateLimited.password': '請等待約十秒後再試。你輸入的內容已保留。',
+  'twoFactor.rateLimited.code': '請等待最多一分鐘後再試。你輸入的內容已保留。',
+  'twoFactor.codes.title': '你的備用碼',
+  'twoFactor.codes.body':
+    '遺失手機時，每個備用碼可使用一次。它們只在此時顯示，請妥善保存。',
+  'twoFactor.codes.copyAll': '全部複製',
+  'twoFactor.codes.copied': '已複製備用碼',
+  'twoFactor.codes.download': '下載為文字檔',
+  'twoFactor.codes.copyFailed': '瀏覽器無法複製備用碼。請選取並手動複製。',
+  'twoFactor.codes.stored': '我已保存這些備用碼',
+  'twoFactor.codes.done': '完成',
+  'twoFactor.codes.gate': '請勾選此方框以繼續。',
+  'twoFactor.codes.lost':
+    '如果先離開本頁，你可以在此產生一組新備用碼，舊備用碼將失效。',
+  'twoFactor.codes.leave.title': '不保存備用碼就離開？',
+  'twoFactor.codes.leave.body':
+    '備用碼僅顯示一次。如果現在離開，你可以在此產生新的一組，舊備用碼將失效。',
+  'twoFactor.codes.leave.stay': '留在此頁',
+  'twoFactor.codes.leave.go': '離開',
+  'twoFactor.on.title': '雙重身分驗證已啟用',
+  'twoFactor.on.badge': '已啟用',
+  'twoFactor.on.body':
+    '使用電子郵件和密碼登入時，我們會要求輸入身分驗證應用程式的驗證碼，除非你選擇信任此瀏覽器。透過 Google、Apple 或通行金鑰登入不需要驗證碼。',
+  'twoFactor.replace.action': '更換備用碼',
+  'twoFactor.replace.title': '更換你的備用碼？',
+  'twoFactor.replace.body':
+    '你將獲得一組新備用碼。繼續後，目前的備用碼立即失效。',
+  'twoFactor.replace.confirm': '更換',
+  'twoFactor.replace.pending': '正在更換',
+  'twoFactor.nopassword.title': '請先設定密碼',
+  'twoFactor.nopassword.body':
+    '此帳號需要密碼才能使用雙重身分驗證。下一頁會要求填寫電子郵件並傳送設定密碼的連結。設定密碼會登出所有裝置。請重新登入後回到這裡。',
+  'twoFactor.nopassword.action': '設定密碼',
 } satisfies TranslationOf<typeof En>
 
 export default messages

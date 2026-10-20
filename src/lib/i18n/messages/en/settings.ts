@@ -260,7 +260,7 @@ const messages = {
   'security.password.action': 'Change password',
   'security.twoFactor.label': 'Two-factor authentication',
   'security.twoFactor.onHint':
-    'A code from your authenticator app is required on every new sign-in.',
+    'A code from your authenticator app is asked when you sign in with your email and password, unless you trusted that browser.',
   'security.twoFactor.offHint':
     'Add a six-digit code from an authenticator app on top of your password.',
   'security.twoFactor.on': 'On',
@@ -747,6 +747,80 @@ const messages = {
   'workspace.departure.activationFailed':
     'You left this workspace. Open your next workspace to continue.',
   'workspace.departure.recover': 'Open next workspace',
+  'twoFactor.back': 'Back to security',
+  'twoFactor.title': 'Two-factor authentication',
+  'twoFactor.description':
+    'Add a second step when you sign in with your email and password.',
+  'twoFactor.error': 'We could not load your two-factor settings.',
+  'twoFactor.steps.label': 'Set up two-factor',
+  'twoFactor.steps.password': 'Confirm it is you',
+  'twoFactor.steps.key': 'Add it to your authenticator',
+  'twoFactor.steps.confirm': 'Enter a code',
+  'twoFactor.steps.state.done': 'Done',
+  'twoFactor.steps.state.current': 'Current step',
+  'twoFactor.steps.state.todo': 'Not started',
+  'twoFactor.password.label': 'Your password',
+  'twoFactor.password.hint': 'We ask again before changing how you sign in.',
+  'twoFactor.password.submit': 'Continue',
+  'twoFactor.password.pending': 'Setting up',
+  'twoFactor.password.invalid': 'That password is not right.',
+  'twoFactor.key.intro':
+    'You need an authenticator app on your phone. Add this key to it, then come back to this page. Two-factor is not on yet.',
+  'twoFactor.key.label': 'Setup key',
+  'twoFactor.key.copy': 'Copy key',
+  'twoFactor.key.copied': 'Key copied',
+  'twoFactor.key.copyFailed':
+    'Your browser would not copy the key. Select it and copy it by hand.',
+  'twoFactor.key.open': 'Open in your authenticator app',
+  'twoFactor.key.startOver': 'Start over',
+  'twoFactor.key.startOverHint':
+    'Starting over makes a new key. A key you already added to an app will stop working.',
+  'twoFactor.key.next': 'I have added it',
+  'twoFactor.code.label': 'Code from the app',
+  'twoFactor.code.hint': 'The six digits the app shows now.',
+  'twoFactor.code.submit': 'Turn on two-factor',
+  'twoFactor.code.pending': 'Checking',
+  'twoFactor.code.invalid':
+    'That code did not match. Check the time on your phone and enter the newest code the app shows.',
+  'twoFactor.code.unclear':
+    'We could not tell whether that worked. Enter the newest code to try again.',
+  'twoFactor.rateLimited.title': 'Too many tries in a short time',
+  'twoFactor.rateLimited.password':
+    'Wait about ten seconds, then try again. Nothing you typed was lost.',
+  'twoFactor.rateLimited.code':
+    'Wait up to a minute, then try again. Nothing you typed was lost.',
+  'twoFactor.codes.title': 'Your backup codes',
+  'twoFactor.codes.body':
+    'Each code works once if you lose your phone. They are shown only now, so keep them somewhere safe.',
+  'twoFactor.codes.copyAll': 'Copy all',
+  'twoFactor.codes.copied': 'Backup codes copied',
+  'twoFactor.codes.download': 'Download as a text file',
+  'twoFactor.codes.copyFailed':
+    'Your browser would not copy them. Select the codes and copy them by hand.',
+  'twoFactor.codes.stored': 'I have stored these backup codes',
+  'twoFactor.codes.done': 'Done',
+  'twoFactor.codes.gate': 'Tick the box to continue.',
+  'twoFactor.codes.lost':
+    'If you leave this page first you can make a new set from this screen, and the old one will stop working.',
+  'twoFactor.codes.leave.title': 'Leave without keeping your codes?',
+  'twoFactor.codes.leave.body':
+    'Your backup codes are shown only once. If you leave now you can make a new set from this screen, and the old one will stop working.',
+  'twoFactor.codes.leave.stay': 'Stay here',
+  'twoFactor.codes.leave.go': 'Leave',
+  'twoFactor.on.title': 'Two-factor is on',
+  'twoFactor.on.badge': 'On',
+  'twoFactor.on.body':
+    'We ask for a code from your authenticator app when you sign in with your email and password, unless you chose to trust that browser. Signing in with Google, Apple or a passkey does not ask for one.',
+  'twoFactor.replace.action': 'Replace backup codes',
+  'twoFactor.replace.title': 'Replace your backup codes?',
+  'twoFactor.replace.body':
+    'You will get a new set. The set you have now stops working as soon as you continue.',
+  'twoFactor.replace.confirm': 'Replace',
+  'twoFactor.replace.pending': 'Replacing',
+  'twoFactor.nopassword.title': 'Set a password first',
+  'twoFactor.nopassword.body':
+    'Two-factor needs a password on this account. The next page asks for your email and sends a link to set one. Setting a password signs you out everywhere, so sign in again and come back here.',
+  'twoFactor.nopassword.action': 'Set a password',
 } as const satisfies NamespaceMessages
 
 export default messages

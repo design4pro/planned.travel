@@ -700,3 +700,7 @@ reusing its in-memory database and production auth instance. Each new request su
 `cf-connecting-ip`; production rate limits remain unchanged. The check-then-act race described above
 remains: this guard does not serialize enable against a concurrent verification. The implementation PR
 number will be recorded by the PR-opening step.
+
+## Amendment - enrolment and backup-code replacement (#1151)
+
+The first screen slice implements enrolment, the On view and replacement of backup codes. Turning the factor off is a separate slice (#1152), so this screen does not yet offer that action. The existing challenge redirects a full signed-in session to `/settings/two-factor`; a sessionless visitor still sees the challenge. `CodeInput` now lives in `src/components/ui/code-input.tsx` and the sign-in form kit no longer exports it. The shared key display and password-confirm dialog are owned by `settings/-ui/two-factor-key.tsx` and `settings/-ui/two-factor-password-dialog.tsx`. Setup secrets stay in component state and Replay-blocked subtrees, and the backup-code panel takes precedence over loader updates.
