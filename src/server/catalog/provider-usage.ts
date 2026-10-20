@@ -1,5 +1,5 @@
 /**
- * Provider metering — the single writer of `provider_usage` and `provider_registry`.
+ * Provider metering — the metering/configuration writer of `provider_usage` and `provider_registry`.
  *
  * Every outbound call this Worker makes to a third party is counted here, so that the platform
  * console can show what each vendor is owed, what ceiling was agreed, and what the month is on
@@ -32,7 +32,8 @@
  * stream into a 400-day ledger, making the audit log a second and worse copy of this table. What
  * guards it instead is the shape of what it writes, and these four properties are the contract:
  *
- * 1. **Single writer.** This module is the only one that writes either table.
+ * 1. **Single writer.** This module owns both tables; `erasure.ts` alone may anonymise
+ *    `provider_registry.updated_by` under SPEC §5's system-actor erasure exception.
  * 2. **System actor only.** {@link recordProviderCall} refuses any actor that is not
  *    `actor_kind: 'system'`, the way {@link prunePlatformAuditLog} does on its own delete path.
  * 3. **Monotonic.** The only write is a clamped SQL increment. No path lowers a counter, and none

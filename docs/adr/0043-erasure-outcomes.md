@@ -95,3 +95,13 @@ writes an action, so neither the table nor `PLATFORM_AUDIT_ACTIONS` changes in t
 - The migration is additive (`CREATE TABLE`, `CREATE INDEX`); the queue kind is inert until a producer
   lands, so a Worker that predates it never receives one.
 - `workspace_participants` has no tenant-facing read.
+
+
+## Amendment - phase 3b (#1059)
+
+The two discovery reads retain their four original properties. SPEC §5/§6 now explicitly admits
+four additional system-actor-only cleanup/count primitives in the same catalog module: scoped
+incoming invitations, global verification/impersonation cleanup, platform credential/provider
+anonymisation, and counts for the sweep. They have no production caller. The engine must amend
+the importer pin and provide its permission/audit boundary and durable session-cache cleanup.
+The platform ledger is untouched; a token issuer's erasure never revokes another holder's token.

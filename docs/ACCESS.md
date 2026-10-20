@@ -309,8 +309,8 @@ session-less path in this codebase is already built, and named the same way:
 
 SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
 closed catalog list was unchanged by FU-3 (ADR 0041). It now has exactly four members:
-global tables, reminder discovery, the erasure catalog read (ADR 0043) and tenant audit retention
-discovery (§4.5); the last two return ids only.
+global tables, reminder discovery, the erasure catalog (ids-only discovery and system-actor cleanup, ADR 0043) and tenant audit retention
+discovery (§4.5); both discovery reads return ids only.
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
@@ -1094,7 +1094,7 @@ in code and not in this table fails it; so does a name in this table that nothin
 
 The tenant log now shares the 400-day weekly window, with tenant-scoped bounded writes (§4.5).
 
-- **Append-only.** Rows are never updated. The only delete path is the retention cron
+- **Append-only.** Only `eraseUserAudit` in `repos/audit-erasure.ts` updates rows for personal-data erasure. The only delete path is the retention cron
   (`17 4 * * 1`) pruning by `created_at`, on a retention window of **400 days** - thirteen months,
   so a full financial year plus a month is always readable. No other code path deletes from this
   table; a console action that "removes an entry" does not exist. The prune runs on the platform

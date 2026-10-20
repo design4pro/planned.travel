@@ -3037,8 +3037,9 @@ export const platformAuditLog = sqliteTable(
  * The per-provider ceiling and what happens when it is reached (the plan's `provider_registry`).
  *
  * Configuration, not measurement: the counters live in {@link providerUsage} and nothing here is
- * derived from them. Its single writer is `src/server/catalog/provider-usage.ts`, where every
- * mutation takes an explicit platform actor, passes `requirePermission({ provider: ['configure'] })`
+ * derived from them. Its configuration/metering writer is `src/server/catalog/provider-usage.ts`;
+ * `catalog/erasure.ts` alone may anonymise `provider_registry.updated_by` (SPEC §5). Every
+ * configuration mutation takes an explicit platform actor, passes `requirePermission({ provider: ['configure'] })`
  * and appends a `platform_audit_log` row in the same call — the full clause set docs/SPEC.md §5
  * holds a global table to.
  *
