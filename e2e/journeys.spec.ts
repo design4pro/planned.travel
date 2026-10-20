@@ -335,6 +335,36 @@ test.describe('authenticated routes', () => {
    */
   const ATLAS_JOURNEY_TIMEOUT_MS = 90_000
 
+  test('the atlas figures follow the selected year', async ({ page }) => {
+    if (ATLAS === undefined) throw new Error('Atlas route missing')
+    test.setTimeout(ATLAS_JOURNEY_TIMEOUT_MS)
+    const watched = watchConsole(page, ATLAS)
+    await visit(page, ATLAS, 'light')
+    await page.getByRole('tab', { name: 'Stats', exact: true }).click()
+    const group = page.getByRole('group', {
+      name: 'Figures for all time',
+      exact: true,
+    })
+    await expect(group.locator('[data-stat="trips"] .text-display')).toHaveText(
+      '6',
+    )
+    const control = page.getByRole('combobox', { name: 'Show figures for' })
+    await control.focus()
+    await page.keyboard.press('Space')
+    await page.getByRole('option', { name: '2026', exact: true }).click()
+    const year = page.getByRole('group', {
+      name: 'Figures for 2026',
+      exact: true,
+    })
+    await expect(year.locator('[data-stat="trips"] .text-display')).toHaveText(
+      '3',
+    )
+    await expect(year.locator('[data-stat="countries"]')).toBeVisible()
+    await expect(year.locator('[data-stat="regions"]')).toHaveCount(0)
+    await expect(page.locator('[data-continent]')).toHaveCount(0)
+    expect(watched().fatal).toEqual([])
+  })
+
   /** Chooses a country by name, the way a reader with no mouse would. */
   async function chooseCountry(page: Page, name: string): Promise<void> {
     await page.getByRole('button', { name: 'Find a country' }).click()

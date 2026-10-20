@@ -74,3 +74,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
+
+- **Travel statistics** — a traveller’s stored roll-up of trips they are on, shown in the Atlas Stats tab. The all-time view also reads their live visited regions, visits and continents; a year view counts countries on that year’s trips instead of their visited-country list.
+- **Stat year** — the calendar year of a travel-statistics row; `0` means all time. Trips, places, cities, days and trip countries follow the trip’s start year; distance follows each transport’s departure year. Only a year with a trip is a selectable period.

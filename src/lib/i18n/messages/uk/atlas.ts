@@ -145,16 +145,16 @@ const messages = {
   'panel.stat.places': 'Ваші місця',
   'panel.stat.placesNone': 'У поїздках ще нічого не позначено',
   'panel.stat.placesCaption': 'Збережені краєвиди, ночівлі та зупинки',
-  'panel.stat.regions': 'Регіони',
+  'panel.stat.regions': 'Ваші регіони',
   'panel.stat.regionsNone': 'Регіони ще не позначені',
   'panel.stat.regionsCaption': 'Області, штати, префектури',
-  'panel.stat.visits': 'Візити',
+  'panel.stat.visits': 'Ваші відвідування',
   'panel.stat.visitsCaption': 'Кожне записане прибуття',
   'panel.stat.trips': 'Ваші поїздки',
   'panel.stat.tripsCaption': 'Усі поїздки, у яких ви берете участь',
-  'panel.stat.cities': 'Міста',
+  'panel.stat.cities': 'Ваші міста',
   'panel.stat.citiesCaption': 'Міста, де ви ночували або зупинялися',
-  'panel.stat.days': 'Дні в дорозі',
+  'panel.stat.days': 'Ваші дні в подорожах',
   'panel.stat.daysCaption': 'За всіма поїздками у вашій історії',
   'panel.continents.label': 'Країни за континентами',
 
@@ -430,6 +430,27 @@ const messages = {
     'Не вдалося підтвердити зміну. Завантажте регіони знову, щоб перевірити збережені дані.',
   'regions.status.refreshFailed':
     '{result} Не вдалося оновити атлас. Завантажте його знову, щоб оновити карту.',
+
+  'panel.stat.periodLabel': 'Показати дані за',
+  'panel.stat.allTime': 'Увесь час',
+  'panel.stat.groupAll': 'Дані за увесь час',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Дані за {year} рік',
+  'panel.stat.announceAll': 'Показано дані за увесь час.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Показано дані за {year} рік.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Подорожі з початком у {year} році',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'У подорожах з початком у {year} році',
+  'panel.stat.countries': 'Країни у ваших подорожах',
+  'panel.stat.countriesCaption': 'Різні країни в цих подорожах',
+  'panel.stat.streak': 'Ваша серія років',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Подорожі щороку, від {first} до {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Подорож у {last} році',
+  'panel.stat.streakNone': 'Додайте подорож із датами, щоб почати серію',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -129,16 +129,16 @@ const messages = {
   'panel.stat.placesNone': 'Belum ada yang disematkan di perjalanan',
   'panel.stat.placesCaption':
     'Objek wisata, penginapan, dan persinggahan tersimpan',
-  'panel.stat.regions': 'Wilayah',
+  'panel.stat.regions': 'Wilayahmu',
   'panel.stat.regionsNone': 'Belum ada wilayah yang ditandai',
   'panel.stat.regionsCaption': 'Negara bagian, provinsi, prefektur',
-  'panel.stat.visits': 'Kunjungan',
+  'panel.stat.visits': 'Kunjunganmu',
   'panel.stat.visitsCaption': 'Setiap kedatangan yang tercatat',
   'panel.stat.trips': 'Perjalanan Anda',
   'panel.stat.tripsCaption': 'Semua perjalanan yang Anda ikuti',
-  'panel.stat.cities': 'Kota',
+  'panel.stat.cities': 'Kotamu',
   'panel.stat.citiesCaption': 'Kota tempat Anda menginap atau singgah',
-  'panel.stat.days': 'Hari bepergian',
+  'panel.stat.days': 'Hari perjalananmu',
   'panel.stat.daysCaption': 'Di seluruh perjalanan dalam catatan Anda',
   'panel.continents.label': 'Negara menurut benua',
 
@@ -360,6 +360,29 @@ const messages = {
     'Perubahan tidak dapat dikonfirmasi. Muat ulang wilayah Anda untuk memeriksa apa yang tersimpan.',
   'regions.status.refreshFailed':
     '{result} Atlas tidak dapat diperbarui. Muat ulang untuk memperbarui peta.',
+
+  'panel.stat.periodLabel': 'Tampilkan angka untuk',
+  'panel.stat.allTime': 'Sepanjang waktu',
+  'panel.stat.groupAll': 'Angka sepanjang waktu',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Angka tahun {year}',
+  'panel.stat.announceAll': 'Menampilkan angka sepanjang waktu.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Menampilkan angka tahun {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Perjalanan yang dimulai pada tahun {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Dalam perjalanan yang dimulai pada tahun {year}',
+  'panel.stat.countries': 'Negara dalam perjalananmu',
+  'panel.stat.countriesCaption': 'Negara berbeda dalam perjalanan ini',
+  'panel.stat.streak': 'Rangkaian tahun perjalananmu',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange':
+    'Perjalanan setiap tahun, dari {first} hingga {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Satu perjalanan pada tahun {last}',
+  'panel.stat.streakNone':
+    'Tambahkan perjalanan bertanggal untuk memulai rangkaian',
 } satisfies TranslationOf<typeof En>
 
 export default messages
