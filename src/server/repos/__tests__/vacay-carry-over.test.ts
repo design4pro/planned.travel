@@ -34,6 +34,7 @@ describe('carry-over in the leave planner repository', () => {
     harness = await createHarness()
     tenant = await harness.seedTenant('alpha')
     planId = (await ensurePlan(tenant.scope)).id
+    await updatePlan(tenant.scope, planId, { blockWeekends: false })
   })
 
   const save = (
@@ -139,7 +140,9 @@ describe('carry-over in the leave planner repository', () => {
         planId,
         tenant.ownerUserId,
       )
-      expect(second.changedYears).toEqual([2026, 2027])
+      // Entry writes now maintain the chain before returning; another walk is a no-op.
+      expect(await storedCarried()).toEqual({ 2025: 0, 2026: 18, 2027: 38 })
+      expect(second.changedYears).toEqual([])
     })
 
     it('inserts no row', async () => {

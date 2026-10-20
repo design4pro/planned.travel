@@ -1273,9 +1273,129 @@ const messages = {
     'Die Einstellungen des Urlaubsplans wurden gespeichert.',
   'vacay.settings.error':
     'Die Einstellungen des Urlaubsplans konnten nicht gespeichert werden. Es wurde nichts geändert.',
+  'collections.page.eyebrow': 'Sammlung',
+  'collections.page.all': 'Alle',
+  'collections.page.back': 'Alle Sammlungen',
+  'collections.page.savedPlaces': {
+    one: 'Gespeicherte Orte: {count}',
+    other: 'Gespeicherte Orte: {count}',
+  },
+  'collections.page.loadErrorTitle':
+    'Diese Sammlung konnte nicht geladen werden',
+  'collections.status.idea': 'Idee',
+  'collections.status.shortlisted': 'In der engeren Auswahl',
+  'collections.status.planned': 'Geplant',
+  'collections.status.visited': 'Besucht',
+  'collections.status.rejected': 'Verworfen',
+  'collections.empty.title': 'Hier sind noch keine Orte gespeichert',
+  'collections.empty.body':
+    'Speichere einen Ort von der Karte, aus einer anderen Reise oder aus einer Empfehlung in dieser Sammlung.',
+  'collections.filtered.title': 'Zu diesem Filter passt nichts',
+  'collections.filtered.body':
+    'Wähle einen anderen Status oder entferne den Etikettenfilter.',
+  'collections.filtered.reset': 'Filter zurücksetzen',
+  'collections.filtered.showing': {
+    one: 'Angezeigte gespeicherte Orte: {count}',
+    other: 'Angezeigte gespeicherte Orte: {count}',
+  },
+  'collections.filters.statusGroup': 'Nach Status filtern',
+  'collections.labels.filterGroup': 'Nach Etikett filtern',
+  'collections.labels.panel': 'Etiketten in dieser Sammlung',
+  'collections.card.noLocation': 'Standort nicht erfasst',
+  'collections.card.noPrice': 'Kein Preis angegeben',
+  'collections.card.website': 'Webseite',
+  'collections.actions.trigger': 'Aktionen für {name}',
+  'collections.actions.edit': 'Details bearbeiten',
+  'collections.actions.delete': 'Sammlung löschen…',
+  'collections.edit.title': 'Sammlung bearbeiten',
+  'collections.edit.name': 'Anzeigename',
+  'collections.edit.description': 'Beschreibung',
+  'collections.edit.colour': 'Farbe',
+  'collections.edit.submit': 'Änderungen speichern',
+  'collections.edit.saving': 'Wird gespeichert',
+  'collections.edit.cancel': 'Abbrechen',
+  'collections.edit.saved': 'Sammlung aktualisiert',
+  'collections.edit.errorTitle': 'Speichern fehlgeschlagen',
+  'collections.edit.error':
+    'Das Speichern konnte nicht bestätigt werden. Prüfe die Sammlung vor einem erneuten Versuch.',
+  'collections.edit.nameRequired': 'Gib der Sammlung einen Namen.',
+  'collections.edit.nameTooLong': {
+    one: 'Maximale Namenslänge in Zeichen: {count}',
+    other: 'Maximale Namenslänge in Zeichen: {count}',
+  },
+  'collections.edit.currentColour': 'Aktuelle Farbe',
+  'collections.delete.title': '{name} löschen?',
+  'collections.delete.loading': 'Inhalt der Sammlung wird geladen',
+  'collections.delete.loadErrorTitle': 'Sammlung konnte nicht geprüft werden',
+  'collections.delete.loadError':
+    'Die aktuelle Sammlung konnte nicht gelesen werden. Versuche es erneut.',
+  'collections.delete.retry': 'Noch einmal versuchen',
+  'collections.delete.places': {
+    one: 'Gespeicherte Orte: {count}',
+    other: 'Gespeicherte Orte: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etiketten: {count}',
+    other: 'Etiketten: {count}',
+  },
+  'collections.delete.irreversible':
+    'Dies kann nicht rückgängig gemacht werden. Gespeicherte Orte und Etiketten werden mit der Sammlung gelöscht. Orte in deinen Reisen bleiben erhalten.',
+  'collections.delete.typeName': 'Gib zum Löschen den Namen der Sammlung ein.',
+  'collections.delete.nameLabel': 'Name der Sammlung',
+  'collections.delete.nameNeeded':
+    'Diese Sammlung enthält jetzt gespeicherte Orte. Gib zum Löschen ihren Namen ein.',
+  'collections.delete.confirm': 'Sammlung löschen',
+  'collections.delete.deleting': 'Wird gelöscht',
+  'collections.delete.cancel': 'Abbrechen',
+  'collections.delete.deleted': 'Sammlung gelöscht',
+  'collections.delete.error':
+    'Das Löschen konnte nicht bestätigt werden. Prüfe die Sammlung und versuche es erneut.',
+  'collections.statusPicker.trigger': '{place}: Status {status}. Status ändern',
+  'collections.statusPicker.legend': 'Status von {place}',
+  'collections.statusPicker.saved': '{place}: Status auf {status} gesetzt',
+  'collections.statusPicker.hiddenNow':
+    '{place} hat jetzt den Status {status} und wird durch den Filter ausgeblendet',
+  'collections.statusPicker.error':
+    'Der Status von {place} konnte nicht bestätigt werden. Prüfe ihn vor einem erneuten Versuch.',
+  'collections.statusPicker.retry': 'Noch einmal versuchen',
+
+  'collections.edit.retry': 'Noch einmal versuchen',
   'files.readOnly.title': 'Dateien nur zum Lesen',
   'files.readOnly.role':
     'Nur Eigentümer und Bearbeiter der Reise können Dateien hochladen, umbenennen oder löschen. Du kannst sie weiterhin herunterladen.',
+  'vacay.kind.vacation': 'Urlaub',
+  'vacay.kind.half_day': 'Halber Urlaubstag',
+  'vacay.kind.sick': 'Krankheitstag',
+  'vacay.kind.remote': 'Mobiles Arbeiten',
+  'vacay.kind.holiday': 'Gesetzlicher Feiertag',
+  'vacay.kind.other': 'Sonstiges',
+  'vacay.kind.cost.full': 'Verbraucht 1 Tag Ihres Kontingents',
+  'vacay.kind.cost.half': 'Verbraucht einen halben Tag Ihres Kontingents',
+  'vacay.kind.cost.none': 'Verbraucht kein Kontingent',
+  'vacay.day.clear': 'Diesen Tag löschen',
+  'vacay.day.choose': 'Art der Abwesenheit wählen',
+  'vacay.day.retry': 'Erneut versuchen',
+  'vacay.day.title': '{date} markieren',
+  'vacay.day.cleared': '{date} gelöscht.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Meine Auszeit: Wochenenden sind in diesem Plan gesperrt.',
+  'vacay.day.blocked.company':
+    'Meine Auszeit: Betriebsfeiertage sind in diesem Plan gesperrt.',
+  'vacay.day.failed':
+    '{date} konnte nicht gespeichert werden. Der zuletzt gespeicherte Eintrag wird angezeigt.',
+  'vacay.grid.empty': 'Keine Markierungen im Jahr {year}',
+  'vacay.grid.gesture':
+    'Wählen Sie einen Tag, um eine Abwesenheit einzutragen.',
+  'vacay.grid.today': 'Zu heute',
+  'vacay.grid.start': 'Zum Jahresanfang',
+  'vacay.grid.help':
+    'Pfeile wechseln Tag oder Woche, Bild auf und Bild ab den Monat, Pos1 und Ende die Wochengrenzen. Wählen Sie einen Tag zum Markieren.',
+  'vacay.grid.others': 'Andere abwesende Reisende: {value}',
+  'vacay.legend.title': 'Legende',
+  'vacay.legend.company': 'Betriebsfeiertag',
+  'vacay.legend.other': 'Andere Person abwesend',
+  'vacay.legend.weekend': 'Wochenende',
 } satisfies TranslationOf<typeof En>
 
 export default messages

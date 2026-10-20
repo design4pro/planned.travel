@@ -1270,9 +1270,130 @@ const messages = {
   'vacay.settings.saved': 'Οι ρυθμίσεις του προγράμματος αδειών αποθηκεύτηκαν.',
   'vacay.settings.error':
     'Δεν ήταν δυνατή η αποθήκευση των ρυθμίσεων του προγράμματος αδειών. Δεν άλλαξε τίποτα.',
+  'collections.page.eyebrow': 'Συλλογή',
+  'collections.page.all': 'Όλα',
+  'collections.page.back': 'Όλες οι συλλογές',
+  'collections.page.savedPlaces': {
+    one: 'Αποθηκευμένα μέρη: {count}',
+    other: 'Αποθηκευμένα μέρη: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Δεν ήταν δυνατή η φόρτωση της συλλογής',
+  'collections.status.idea': 'Ιδέα',
+  'collections.status.shortlisted': 'Στην τελική λίστα',
+  'collections.status.planned': 'Προγραμματισμένο',
+  'collections.status.visited': 'Επισκεφθήκατε',
+  'collections.status.rejected': 'Απορρίφθηκε',
+  'collections.empty.title': 'Δεν υπάρχουν αποθηκευμένα μέρη ακόμη',
+  'collections.empty.body':
+    'Αποθηκεύστε ένα μέρος από τον χάρτη, άλλο ταξίδι ή μια πρόταση για να προστεθεί στη συλλογή.',
+  'collections.filtered.title': 'Τίποτα δεν ταιριάζει σε αυτό το φίλτρο',
+  'collections.filtered.body':
+    'Επιλέξτε άλλη κατάσταση ή καταργήστε το φίλτρο ετικέτας.',
+  'collections.filtered.reset': 'Επαναφορά φίλτρων',
+  'collections.filtered.showing': {
+    one: 'Εμφανιζόμενα αποθηκευμένα μέρη: {count}',
+    other: 'Εμφανιζόμενα αποθηκευμένα μέρη: {count}',
+  },
+  'collections.filters.statusGroup': 'Φιλτράρισμα κατά κατάσταση',
+  'collections.labels.filterGroup': 'Φιλτράρισμα κατά ετικέτα',
+  'collections.labels.panel': 'Ετικέτες αυτής της συλλογής',
+  'collections.card.noLocation': 'Δεν καταγράφηκε τοποθεσία',
+  'collections.card.noPrice': 'Δεν αναφέρεται τιμή',
+  'collections.card.website': 'Ιστότοπος',
+  'collections.actions.trigger': 'Ενέργειες για {name}',
+  'collections.actions.edit': 'Επεξεργασία λεπτομερειών',
+  'collections.actions.delete': 'Διαγραφή συλλογής…',
+  'collections.edit.title': 'Επεξεργασία συλλογής',
+  'collections.edit.name': 'Όνομα',
+  'collections.edit.description': 'Περιγραφή',
+  'collections.edit.colour': 'Χρώμα',
+  'collections.edit.submit': 'Αποθήκευση αλλαγών',
+  'collections.edit.saving': 'Αποθήκευση',
+  'collections.edit.cancel': 'Άκυρο',
+  'collections.edit.saved': 'Η συλλογή ενημερώθηκε',
+  'collections.edit.errorTitle': 'Δεν ήταν δυνατή η αποθήκευση',
+  'collections.edit.error':
+    'Η αποθήκευση δεν επιβεβαιώθηκε. Ελέγξτε τη συλλογή πριν δοκιμάσετε ξανά.',
+  'collections.edit.nameRequired': 'Δώστε ένα όνομα στη συλλογή.',
+  'collections.edit.nameTooLong': {
+    one: 'Μέγιστο μήκος ονόματος σε χαρακτήρες: {count}',
+    other: 'Μέγιστο μήκος ονόματος σε χαρακτήρες: {count}',
+  },
+  'collections.edit.currentColour': 'Τρέχον χρώμα',
+  'collections.delete.title': 'Διαγραφή του {name};',
+  'collections.delete.loading': 'Φόρτωση περιεχομένου συλλογής',
+  'collections.delete.loadErrorTitle':
+    'Δεν ήταν δυνατός ο έλεγχος της συλλογής',
+  'collections.delete.loadError':
+    'Δεν ήταν δυνατή η ανάγνωση της τρέχουσας συλλογής. Δοκιμάστε ξανά.',
+  'collections.delete.retry': 'Δοκιμάστε ξανά',
+  'collections.delete.places': {
+    one: 'Αποθηκευμένα μέρη: {count}',
+    other: 'Αποθηκευμένα μέρη: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Ετικέτες: {count}',
+    other: 'Ετικέτες: {count}',
+  },
+  'collections.delete.irreversible':
+    'Αυτό δεν αναιρείται. Τα αποθηκευμένα μέρη και οι ετικέτες διαγράφονται μαζί με τη συλλογή. Τα μέρη στα ταξίδια σας δεν επηρεάζονται.',
+  'collections.delete.typeName':
+    'Πληκτρολογήστε το όνομα της συλλογής για διαγραφή.',
+  'collections.delete.nameLabel': 'Όνομα συλλογής',
+  'collections.delete.nameNeeded':
+    'Αυτή η συλλογή περιέχει πλέον αποθηκευμένα μέρη. Πληκτρολογήστε το όνομά της για διαγραφή.',
+  'collections.delete.confirm': 'Διαγραφή συλλογής',
+  'collections.delete.deleting': 'Γίνεται διαγραφή',
+  'collections.delete.cancel': 'Άκυρο',
+  'collections.delete.deleted': 'Η συλλογή διαγράφηκε',
+  'collections.delete.error':
+    'Η διαγραφή δεν επιβεβαιώθηκε. Ελέγξτε τη συλλογή και δοκιμάστε ξανά.',
+  'collections.statusPicker.trigger':
+    '{place}: κατάσταση {status}. Αλλαγή κατάστασης',
+  'collections.statusPicker.legend': 'Κατάσταση του {place}',
+  'collections.statusPicker.saved': '{place}: η κατάσταση ορίστηκε σε {status}',
+  'collections.statusPicker.hiddenNow':
+    'Το {place} έχει πλέον κατάσταση {status} και κρύβεται από το φίλτρο',
+  'collections.statusPicker.error':
+    'Η κατάσταση του {place} δεν επιβεβαιώθηκε. Ελέγξτε την πριν δοκιμάσετε ξανά.',
+  'collections.statusPicker.retry': 'Δοκιμάστε ξανά',
+
+  'collections.edit.retry': 'Δοκιμάστε ξανά',
   'files.readOnly.title': 'Αρχεία μόνο για ανάγνωση',
   'files.readOnly.role':
     'Μόνο οι ιδιοκτήτες και οι συντάκτες του ταξιδιού μπορούν να ανεβάζουν, να μετονομάζουν ή να διαγράφουν αρχεία. Μπορείς ακόμα να τα κατεβάζεις.',
+  'vacay.kind.vacation': 'Άδεια',
+  'vacay.kind.half_day': 'Μισή ημέρα άδειας',
+  'vacay.kind.sick': 'Αναρρωτική άδεια',
+  'vacay.kind.remote': 'Εργασία εξ αποστάσεως',
+  'vacay.kind.holiday': 'Επίσημη αργία',
+  'vacay.kind.other': 'Άλλο',
+  'vacay.kind.cost.full': 'Χρησιμοποιεί 1 ημέρα από το υπόλοιπό σας',
+  'vacay.kind.cost.half': 'Χρησιμοποιεί μισή ημέρα από το υπόλοιπό σας',
+  'vacay.kind.cost.none': 'Δεν χρησιμοποιεί το υπόλοιπό σας',
+  'vacay.day.clear': 'Καθαρισμός ημέρας',
+  'vacay.day.choose': 'Επιλέξτε είδος απουσίας',
+  'vacay.day.retry': 'Δοκιμάστε ξανά',
+  'vacay.day.title': 'Σήμανση {date}',
+  'vacay.day.cleared': 'Η {date} καθαρίστηκε.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Ο ελεύθερος χρόνος μου: τα Σαββατοκύριακα είναι αποκλεισμένα σε αυτό το πλάνο.',
+  'vacay.day.blocked.company':
+    'Ο ελεύθερος χρόνος μου: οι εταιρικές αργίες είναι αποκλεισμένες σε αυτό το πλάνο.',
+  'vacay.day.failed':
+    'Δεν αποθηκεύτηκε η {date}. Εμφανίζεται η τελευταία αποθηκευμένη καταχώριση.',
+  'vacay.grid.empty': 'Καμία σήμανση το {year}',
+  'vacay.grid.gesture': 'Επιλέξτε μια ημέρα για να σημειώσετε απουσία.',
+  'vacay.grid.today': 'Μετάβαση στο σήμερα',
+  'vacay.grid.start': 'Μετάβαση στην αρχή του έτους',
+  'vacay.grid.help':
+    'Τα βέλη αλλάζουν ημέρα ή εβδομάδα, τα Page Up και Page Down μήνα, τα Home και End οδηγούν στα άκρα της εβδομάδας. Επιλέξτε ημέρα.',
+  'vacay.grid.others': 'Άλλοι απόντες ταξιδιώτες: {value}',
+  'vacay.legend.title': 'Υπόμνημα',
+  'vacay.legend.company': 'Εταιρική αργία',
+  'vacay.legend.other': 'Κάποιος άλλος απουσιάζει',
+  'vacay.legend.weekend': 'Σαββατοκύριακο',
 } satisfies TranslationOf<typeof En>
 
 export default messages

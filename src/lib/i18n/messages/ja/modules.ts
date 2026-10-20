@@ -1181,9 +1181,115 @@ const messages = {
   'vacay.settings.saved': '休暇プランの設定を保存しました。',
   'vacay.settings.error':
     '休暇プランの設定を保存できませんでした。変更は反映されていません。',
+  'collections.page.eyebrow': 'コレクション',
+  'collections.page.all': 'すべて',
+  'collections.page.back': 'すべてのコレクション',
+  'collections.page.savedPlaces': { other: '保存した場所：{count}件' },
+  'collections.page.loadErrorTitle': 'このコレクションを読み込めませんでした',
+  'collections.status.idea': '検討中',
+  'collections.status.shortlisted': '候補',
+  'collections.status.planned': '計画済み',
+  'collections.status.visited': '訪問済み',
+  'collections.status.rejected': '見送り',
+  'collections.empty.title': 'まだ場所が保存されていません',
+  'collections.empty.body':
+    '地図、別の旅行、おすすめから場所を保存すると、このコレクションに追加されます。',
+  'collections.filtered.title': 'このフィルターに合うものはありません',
+  'collections.filtered.body':
+    '別のステータスを選ぶか、ラベルの絞り込みを解除してください。',
+  'collections.filtered.reset': 'フィルターをリセット',
+  'collections.filtered.showing': { other: '表示中の保存した場所：{count}件' },
+  'collections.filters.statusGroup': 'ステータスで絞り込む',
+  'collections.labels.filterGroup': 'ラベルで絞り込む',
+  'collections.labels.panel': 'このコレクションのラベル',
+  'collections.card.noLocation': '場所の情報なし',
+  'collections.card.noPrice': '価格の記録なし',
+  'collections.card.website': 'ウェブサイト',
+  'collections.actions.trigger': '{name} への操作',
+  'collections.actions.edit': '詳細を編集',
+  'collections.actions.delete': 'コレクションを削除…',
+  'collections.edit.title': 'コレクションを編集',
+  'collections.edit.name': '名前',
+  'collections.edit.description': '説明',
+  'collections.edit.colour': '色',
+  'collections.edit.submit': '変更を保存',
+  'collections.edit.saving': '保存中',
+  'collections.edit.cancel': 'キャンセル',
+  'collections.edit.saved': 'コレクションを更新しました',
+  'collections.edit.errorTitle': '保存できませんでした',
+  'collections.edit.error':
+    '保存を確認できませんでした。再試行する前にコレクションを確認してください。',
+  'collections.edit.nameRequired': 'コレクションに名前を付けてください。',
+  'collections.edit.nameTooLong': { other: '名前の最大文字数：{count}' },
+  'collections.edit.currentColour': '現在の色',
+  'collections.delete.title': '{name}を削除しますか？',
+  'collections.delete.loading': 'コレクションの内容を読み込み中',
+  'collections.delete.loadErrorTitle': 'コレクションを確認できませんでした',
+  'collections.delete.loadError':
+    '現在のコレクションを読み取れませんでした。もう一度お試しください。',
+  'collections.delete.retry': 'もう一度試す',
+  'collections.delete.places': { other: '保存した場所：{count}件' },
+  'collections.delete.labels': { other: 'ラベル：{count}件' },
+  'collections.delete.irreversible':
+    'この操作は取り消せません。保存した場所とラベルはコレクションとともに削除されます。旅行内の場所には影響しません。',
+  'collections.delete.typeName':
+    '削除するにはコレクションの名前を入力してください。',
+  'collections.delete.nameLabel': 'コレクション名',
+  'collections.delete.nameNeeded':
+    'このコレクションに保存した場所が追加されました。削除するには名前を入力してください。',
+  'collections.delete.confirm': 'コレクションを削除',
+  'collections.delete.deleting': '削除中',
+  'collections.delete.cancel': 'キャンセル',
+  'collections.delete.deleted': 'コレクションを削除しました',
+  'collections.delete.error':
+    '削除を確認できませんでした。コレクションを確認して再試行してください。',
+  'collections.statusPicker.trigger':
+    '{place}：ステータスは{status}。ステータスを変更',
+  'collections.statusPicker.legend': '{place}のステータス',
+  'collections.statusPicker.saved':
+    '{place}：ステータスを{status}に変更しました',
+  'collections.statusPicker.hiddenNow':
+    '{place}は{status}になり、絞り込みにより非表示になりました',
+  'collections.statusPicker.error':
+    '{place}のステータスを確認できませんでした。再試行する前に現在のステータスを確認してください。',
+  'collections.statusPicker.retry': 'もう一度試す',
+
+  'collections.edit.retry': 'もう一度試す',
   'files.readOnly.title': '読み取り専用のファイル',
   'files.readOnly.role':
     'ファイルのアップロード、名前の変更、削除ができるのは旅行のオーナーと編集者のみです。ダウンロードは引き続き利用できます。',
+  'vacay.kind.vacation': '休暇',
+  'vacay.kind.half_day': '半日休暇',
+  'vacay.kind.sick': '病気休暇',
+  'vacay.kind.remote': 'リモート勤務',
+  'vacay.kind.holiday': '祝日',
+  'vacay.kind.other': 'その他',
+  'vacay.kind.cost.full': '休暇残日数を1日使用',
+  'vacay.kind.cost.half': '休暇残日数を半日使用',
+  'vacay.kind.cost.none': '休暇残日数を使用しません',
+  'vacay.day.clear': 'この日をクリア',
+  'vacay.day.choose': '不在の種類を選択',
+  'vacay.day.retry': '再試行',
+  'vacay.day.title': '{date}を記録',
+  'vacay.day.cleared': '{date}をクリアしました。',
+  'vacay.day.saved': '{date}：{kind}。',
+  'vacay.day.blocked.weekend':
+    '自分の休暇：このプランでは週末は記録できません。',
+  'vacay.day.blocked.company':
+    '自分の休暇：このプランでは会社休日は記録できません。',
+  'vacay.day.failed':
+    '{date}を保存できませんでした。最後に保存した記録を表示しています。',
+  'vacay.grid.empty': '{year}年の記録はありません',
+  'vacay.grid.gesture': '日付を選択して不在を記録してください。',
+  'vacay.grid.today': '今日へ移動',
+  'vacay.grid.start': '年の初めへ移動',
+  'vacay.grid.help':
+    '矢印で日または週、Page UpとPage Downで月、HomeとEndで週の端へ移動します。日付を選択して記録します。',
+  'vacay.grid.others': '他の不在の旅行者：{value}',
+  'vacay.legend.title': '凡例',
+  'vacay.legend.company': '会社休日',
+  'vacay.legend.other': '他の人が不在',
+  'vacay.legend.weekend': '週末',
 } satisfies TranslationOf<typeof En>
 
 export default messages

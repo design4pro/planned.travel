@@ -1301,9 +1301,135 @@ const messages = {
   'vacay.settings.saved': 'S’ha desat la configuració del pla de vacances.',
   'vacay.settings.error':
     'No s’ha pogut desar la configuració del pla de vacances. No s’ha canviat res.',
+  'collections.page.eyebrow': 'Col·lecció',
+  'collections.page.all': 'Tots',
+  'collections.page.back': 'Totes les col·leccions',
+  'collections.page.savedPlaces': {
+    one: 'Llocs desats: {count}',
+    many: 'Llocs desats: {count}',
+    other: 'Llocs desats: {count}',
+  },
+  'collections.page.loadErrorTitle':
+    'No s’ha pogut carregar aquesta col·lecció',
+  'collections.status.idea': 'Una idea',
+  'collections.status.shortlisted': 'Preseleccionat',
+  'collections.status.planned': 'Planificat',
+  'collections.status.visited': 'Visitat',
+  'collections.status.rejected': 'Descartat',
+  'collections.empty.title': 'Encara no hi ha llocs desats',
+  'collections.empty.body':
+    'Desa un lloc del mapa, d’un altre viatge o d’una recomanació per afegir-lo a aquesta col·lecció.',
+  'collections.filtered.title': 'Res no coincideix amb aquest filtre',
+  'collections.filtered.body':
+    'Prova un altre estat o treu el filtre d’etiqueta.',
+  'collections.filtered.reset': 'Reinicia els filtres',
+  'collections.filtered.showing': {
+    one: 'Llocs desats visibles: {count}',
+    many: 'Llocs desats visibles: {count}',
+    other: 'Llocs desats visibles: {count}',
+  },
+  'collections.filters.statusGroup': 'Filtra per estat',
+  'collections.labels.filterGroup': 'Filtra per etiqueta',
+  'collections.labels.panel': 'Etiquetes d’aquesta col·lecció',
+  'collections.card.noLocation': 'Ubicació no registrada',
+  'collections.card.noPrice': 'Sense preu indicat',
+  'collections.card.website': 'Lloc web',
+  'collections.actions.trigger': 'Accions per a {name}',
+  'collections.actions.edit': 'Edita els detalls',
+  'collections.actions.delete': 'Suprimeix la col·lecció…',
+  'collections.edit.title': 'Edita la col·lecció',
+  'collections.edit.name': 'Nom',
+  'collections.edit.description': 'Descripció',
+  'collections.edit.colour': 'Color',
+  'collections.edit.submit': 'Desa els canvis',
+  'collections.edit.saving': 'Desant',
+  'collections.edit.cancel': 'Cancel·la',
+  'collections.edit.saved': 'Col·lecció actualitzada',
+  'collections.edit.errorTitle': 'No s’ha pogut desar',
+  'collections.edit.error':
+    'No s’ha pogut confirmar el desament. Revisa la col·lecció abans de tornar-ho a provar.',
+  'collections.edit.nameRequired': 'Dona un nom a la col·lecció.',
+  'collections.edit.nameTooLong': {
+    one: 'Longitud màxima del nom en caràcters: {count}',
+    many: 'Longitud màxima del nom en caràcters: {count}',
+    other: 'Longitud màxima del nom en caràcters: {count}',
+  },
+  'collections.edit.currentColour': 'Color actual',
+  'collections.delete.title': 'Vols suprimir {name}?',
+  'collections.delete.loading':
+    'S’està carregant el contingut de la col·lecció',
+  'collections.delete.loadErrorTitle': 'No s’ha pogut comprovar la col·lecció',
+  'collections.delete.loadError':
+    'No s’ha pogut llegir la col·lecció actual. Torna-ho a provar.',
+  'collections.delete.retry': 'Torna-ho a provar',
+  'collections.delete.places': {
+    one: 'Llocs desats: {count}',
+    many: 'Llocs desats: {count}',
+    other: 'Llocs desats: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etiquetes: {count}',
+    many: 'Etiquetes: {count}',
+    other: 'Etiquetes: {count}',
+  },
+  'collections.delete.irreversible':
+    'Aquesta acció no es pot desfer. Els llocs desats i les etiquetes se suprimiran amb la col·lecció. Els llocs dels teus viatges es mantindran.',
+  'collections.delete.typeName':
+    'Escriu el nom de la col·lecció per suprimir-la.',
+  'collections.delete.nameLabel': 'Nom de la col·lecció',
+  'collections.delete.nameNeeded':
+    'Aquesta col·lecció ara conté llocs desats. Escriu-ne el nom per suprimir-la.',
+  'collections.delete.confirm': 'Suprimeix la col·lecció',
+  'collections.delete.deleting': 'S’està suprimint',
+  'collections.delete.cancel': 'Cancel·la',
+  'collections.delete.deleted': 'Col·lecció suprimida',
+  'collections.delete.error':
+    'No s’ha pogut confirmar la supressió. Revisa la col·lecció i torna-ho a provar.',
+  'collections.statusPicker.trigger': '{place}: estat {status}. Canvia l’estat',
+  'collections.statusPicker.legend': 'Estat de {place}',
+  'collections.statusPicker.saved': '{place}: estat establert a {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} ara té l’estat {status} i el filtre l’amaga',
+  'collections.statusPicker.error':
+    'No s’ha pogut confirmar l’estat de {place}. Comprova’l abans de tornar-ho a provar.',
+  'collections.statusPicker.retry': 'Torna-ho a provar',
+
+  'collections.edit.retry': 'Torna-ho a provar',
   'files.readOnly.title': 'Fitxers de només lectura',
   'files.readOnly.role':
     'Només els propietaris i editors del viatge poden pujar, reanomenar o suprimir fitxers. Encara els pots baixar.',
+  'vacay.kind.vacation': 'Vacances',
+  'vacay.kind.half_day': 'Mig dia de vacances',
+  'vacay.kind.sick': 'Baixa mèdica',
+  'vacay.kind.remote': 'Teletreball',
+  'vacay.kind.holiday': 'Dia festiu',
+  'vacay.kind.other': 'Altres',
+  'vacay.kind.cost.full': 'Utilitza 1 dia del teu saldo',
+  'vacay.kind.cost.half': 'Utilitza mig dia del teu saldo',
+  'vacay.kind.cost.none': 'No utilitza el teu saldo',
+  'vacay.day.clear': 'Esborra aquest dia',
+  'vacay.day.choose': "Tria el tipus d'absència",
+  'vacay.day.retry': 'Torna-ho a provar',
+  'vacay.day.title': 'Marca {date}',
+  'vacay.day.cleared': "S'ha esborrat {date}.",
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'El meu temps lliure: els caps de setmana estan bloquejats en aquest pla.',
+  'vacay.day.blocked.company':
+    "El meu temps lliure: els dies lliures d'empresa estan bloquejats en aquest pla.",
+  'vacay.day.failed':
+    "No s'ha pogut desar {date}. Es mostra l'última entrada desada.",
+  'vacay.grid.empty': 'Cap dia marcat el {year}',
+  'vacay.grid.gesture': 'Selecciona un dia per marcar una absència.',
+  'vacay.grid.today': 'Ves a avui',
+  'vacay.grid.start': "Ves a l'inici de l'any",
+  'vacay.grid.help':
+    'Les fletxes canvien el dia o la setmana, Re Pàg i Av Pàg el mes, Inici i Fi els límits de la setmana. Selecciona un dia per marcar-lo.',
+  'vacay.grid.others': 'Altres viatgers absents: {value}',
+  'vacay.legend.title': 'Llegenda',
+  'vacay.legend.company': "Dia lliure d'empresa",
+  'vacay.legend.other': 'Una altra persona absent',
+  'vacay.legend.weekend': 'Cap de setmana',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -7,7 +7,7 @@
  * something for later.
  */
 
-import { and, asc, count, desc, eq, inArray, like, ne, or } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, like, ne, notExists, or } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   COLLECTION_PLACE_STATUSES,
@@ -18,8 +18,9 @@ import {
   collectionPlaces,
   collections,
 } from '#/server/db/schema'
-import { assertQuota, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
+import { allOf, assertQuota, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { categoriesRepository } from './categories'
+import { ForbiddenError, hasAtLeastRole } from './context'
 import { placesRepository } from './places'
 import {
   colourSchema,
@@ -306,13 +307,55 @@ export async function createCollection(
   })
 }
 
+export function canManageCollection(
+  scope: TenantScope,
+  collection: Collection,
+): boolean {
+  return (
+    collection.ownerUserId === scope.ctx.userId ||
+    hasAtLeastRole(scope.ctx, 'admin')
+  )
+}
+
+export async function requireOwnedCollection(
+  scope: TenantScope,
+  collectionId: string,
+): Promise<Collection> {
+  const collection = await collectionsRepository.requireById(
+    scope,
+    collectionId,
+  )
+  if (!canManageCollection(scope, collection)) {
+    throw new ForbiddenError('manage this collection', ['owner', 'admin'])
+  }
+  return collection
+}
+
+export async function collectionDeleteSummary(
+  scope: TenantScope,
+  collectionId: string,
+) {
+  const collection = await requireOwnedCollection(scope, collectionId)
+  const [places, labels] = await Promise.all([
+    collectionPlacesRepository.count(
+      scope,
+      eq(collectionPlaces.collectionId, collectionId),
+    ),
+    collectionLabelsRepository.count(
+      scope,
+      eq(collectionLabels.collectionId, collectionId),
+    ),
+  ])
+  return { name: collection.name, places, labels, requiresName: places > 0 }
+}
+
 export async function updateCollection(
   scope: TenantScope,
   collectionId: string,
   input: UpdateCollectionInput,
 ): Promise<Collection> {
   const values = definedOnly(updateCollectionInput.parse(input))
-  const existing = await collectionsRepository.requireById(scope, collectionId)
+  const existing = await requireOwnedCollection(scope, collectionId)
   const slug =
     values.slug === undefined || values.slug === existing.slug
       ? undefined
@@ -324,7 +367,40 @@ export async function updateCollection(
 }
 
 export async function deleteCollection(scope: TenantScope, collectionId: string): Promise<void> {
+  await requireOwnedCollection(scope, collectionId)
   await collectionsRepository.requireRemove(scope, collectionId)
+}
+
+export async function deleteCollectionConfirmed(
+  scope: TenantScope,
+  collectionId: string,
+  confirmName?: string,
+): Promise<void> {
+  await requireOwnedCollection(scope, collectionId)
+  const savedPlace = scope.db
+    .select({ id: collectionPlaces.id })
+    .from(collectionPlaces)
+    .where(
+      tenantFilter(
+        scope,
+        collectionPlaces,
+        eq(collectionPlaces.collectionId, collectionId),
+      ),
+    )
+    .limit(1)
+  const removed = await collectionsRepository.removeWhere(
+    scope,
+    allOf(
+      eq(collections.id, collectionId),
+      or(
+        confirmName === undefined
+          ? undefined
+          : eq(collections.name, confirmName),
+        notExists(savedPlace),
+      ),
+    ),
+  )
+  z.literal(true).parse(removed > 0)
 }
 
 export async function addCollectionPlace(

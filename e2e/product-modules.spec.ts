@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { visit, watchConsole } from './helpers/console.ts'
+import {
+  visit,
+  watchConsole,
+  unblockCrossOriginFonts,
+} from './helpers/console.ts'
 import { PINNED_YEAR } from './helpers/routes.ts'
 import type { RouteCase } from './helpers/routes.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
@@ -187,6 +191,128 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       `${DEMO_EMAIL} has no session - run \`node scripts/seed/seed.mjs\` to provision the demo account`,
     )
   })
+
+  test('08-S5a logs and clears a day with the keyboard @chromium-only', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    const watched = watchConsole(page, UNSET)
+    await unblockCrossOriginFonts(page)
+    await page.emulateMedia({ colorScheme: 'light' })
+    await page.goto(UNSET.path, { waitUntil: 'networkidle' })
+    const grid = page.locator('[data-part="vacay-year"]')
+    const cell = grid.getByRole('button', { name: /^4 Dec 2031/ })
+    await expect(grid.locator('table button[tabindex="0"]')).toHaveCount(1)
+    const jan31 = grid.getByRole('button', { name: /^31 Jan 2031/ })
+    await jan31.focus()
+    await jan31.press('ArrowRight')
+    await expect(
+      grid.getByRole('button', { name: /^1 Feb 2031/ }),
+    ).toBeFocused()
+    await cell.focus()
+    await cell.press('Enter')
+    await expect(
+      page.getByRole('dialog', { name: 'Mark 4 Dec 2031' }),
+    ).toBeVisible()
+    await page
+      .getByRole('button', { name: /^Half day of leave/ })
+      .press('Enter')
+    await expect(cell).toBeFocused()
+    await expect(cell).toHaveAttribute('aria-label', /Half day of leave/)
+    await expect(
+      page.locator('[data-part="vacay-bottom-region"]').getByRole('status'),
+    ).toContainText('days left')
+    await page.reload({ waitUntil: 'networkidle' })
+    await expect(cell).toHaveAttribute('aria-label', /Half day of leave/)
+    expect(watched().fatal).toEqual([])
+    await cell.click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    const clear = page.getByRole('button', { name: 'Clear this day' })
+    await clear.click()
+    await expect(cell).not.toHaveAttribute('aria-label', /Half day of leave/)
+  })
+
+  for (const width of WIDTHS) {
+    test(`08-S5a failure recovery at ${width}px @chromium-only`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await unblockCrossOriginFonts(page)
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await page.goto(UNSET.path, { waitUntil: 'networkidle' })
+      const cell = page
+        .locator('[data-part="vacay-year"]')
+        .getByRole('button', { name: /^4 Dec 2031/ })
+      await page.route('**/_serverFn/**', (route) =>
+        route.request().method() === 'POST'
+          ? route.abort('failed')
+          : route.continue(),
+      )
+      try {
+        await cell.click()
+        await page.getByRole('button', { name: /^Leave\s*Uses/ }).click()
+        await expect(page.getByRole('alert')).toContainText('4 Dec 2031')
+        await expect(cell).toBeFocused()
+        const retry = page.getByRole('button', { name: 'Try again' })
+        await expect(retry).toBeVisible()
+        const box = await retry.boundingBox()
+        expect(box).not.toBeNull()
+        expect((box?.y ?? 800) + (box?.height ?? 0)).toBeLessThan(800 - 100)
+        await expect(cell).not.toHaveAttribute('aria-label', /Leave/)
+      } finally {
+        await page.unroute('**/_serverFn/**')
+      }
+    })
+  }
+
+  for (const locale of ['ar', 'pl', 'vi', 'zh-Hans']) {
+    test(`08-S5a month headings fit in ${locale} @chromium-only`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000)
+      await unblockCrossOriginFonts(page)
+      await page.setViewportSize({ width: 1280, height: 900 })
+      try {
+        await page.goto('/settings/language', { waitUntil: 'networkidle' })
+        const chip = page.getByTestId(`locale-chip-${locale}`)
+        await chip.scrollIntoViewIfNeeded()
+        if ((await chip.getAttribute('data-selected')) === null) {
+          const saved = page.waitForResponse(
+            (response) =>
+              response.request().method() === 'POST' &&
+              response.url().includes('/_serverFn/'),
+          )
+          await chip.click()
+          await saved
+        }
+        await expect(page.locator('html')).toHaveAttribute('lang', locale)
+        await page.goto(UNSET.path, { waitUntil: 'networkidle' })
+        const headings = page.locator('[id^="vacay-month-"]')
+        await expect(headings).toHaveCount(12)
+        expect(
+          await headings.evaluateAll((nodes) =>
+            nodes
+              .filter((node) => node.scrollWidth > node.clientWidth + 1)
+              .map((node) => node.textContent),
+          ),
+        ).toEqual([])
+      } finally {
+        await page.goto('/settings/language', { waitUntil: 'networkidle' })
+        const reset = page.getByTestId('locale-chip-workspace')
+        await reset.scrollIntoViewIfNeeded()
+        if ((await reset.getAttribute('data-selected')) === null) {
+          const saved = page.waitForResponse(
+            (response) =>
+              response.request().method() === 'POST' &&
+              response.url().includes('/_serverFn/'),
+          )
+          await reset.click()
+          await saved
+        }
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+      }
+    })
+  }
 
   test('opens the editor, refuses a bad value, cancels, saves with Enter and puts the figure back', async ({
     page,
@@ -602,6 +728,119 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await page.unroute('**/_serverFn/**')
     await page.keyboard.press('Escape')
     await expect(settingsDialog(page)).toHaveCount(0)
+  })
+  // Reuses the Chromium-only serial fixture harness above.
+  test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    const routeCase: RouteCase = {
+      name: 'collection-management',
+      path: '/collections',
+      ready: 'main',
+    }
+    const watched = watchConsole(page, routeCase)
+    await visit(page, routeCase, 'light')
+    await page.locator('main a[href^="/collections/"]').first().click()
+    await expect(
+      page.getByRole('button', { name: /^Actions for / }),
+    ).toBeVisible()
+    const heading = page.getByRole('heading', { level: 1 })
+    const originalName = await heading.innerText()
+    const nextName = originalName + ' - edited'
+    const firstCard = page
+      .locator('main li')
+      .filter({
+        has: page.getByRole('button', { name: /: status .*Change status/ }),
+      })
+      .first()
+    const statusTrigger = firstCard.getByRole('button', {
+      name: /: status .*Change status/,
+    })
+    const originalStatus = (await statusTrigger.innerText()).trim()
+    const nextStatus = originalStatus === 'Visited' ? 'Idea' : 'Visited'
+    const detailPath = new URL(page.url()).pathname
+    async function rename(name: string) {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+      const dialog = page.getByRole('dialog')
+      await dialog
+        .getByRole('textbox', { name: 'Name', exact: true })
+        .fill(name)
+      await dialog.getByRole('button', { name: 'Save changes' }).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(heading).toHaveText(name)
+    }
+    async function status(name: string) {
+      await statusTrigger.click()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
+      await expect(statusTrigger).toHaveText(name)
+    }
+    try {
+      await rename(nextName)
+      await status(nextStatus)
+      await rename(originalName)
+      await status(originalStatus)
+      await page
+        .getByRole('link', { name: new RegExp('^' + originalStatus) })
+        .click()
+      const filteredTriggers = page.getByRole('button', {
+        name: /: status .*Change status/,
+      })
+      await expect
+        .poll(async () => {
+          const statuses = await filteredTriggers.allTextContents()
+          return (
+            statuses.length > 0 &&
+            statuses.every((value) => value.trim() === originalStatus)
+          )
+        })
+        .toBe(true)
+      const nextTriggerName =
+        (await filteredTriggers.count()) > 1
+          ? await filteredTriggers.nth(1).getAttribute('aria-label')
+          : null
+      const changedPlace = await statusTrigger.getAttribute('aria-label')
+      await statusTrigger.click()
+      await page
+        .getByRole('menuitemradio', { name: nextStatus, exact: true })
+        .click()
+      await expect(
+        page.getByRole('button', { name: changedPlace ?? '', exact: true }),
+      ).toHaveCount(0)
+      if (nextTriggerName) {
+        await expect(
+          page.getByRole('button', { name: nextTriggerName, exact: true }),
+        ).toBeFocused()
+      } else {
+        await expect(
+          page.getByRole('heading', { name: 'Nothing matches that filter' }),
+        ).toBeFocused()
+      }
+      await expect(
+        page.getByRole('status').filter({ hasText: 'hidden by the filter' }),
+      ).toContainText(nextStatus)
+      await page.goto(detailPath)
+      await settle(page, {
+        name: 'collection-detail',
+        path: detailPath,
+        ready: 'main',
+      })
+      await status(originalStatus)
+    } finally {
+      await page.keyboard.press('Escape')
+      await page.goto(detailPath)
+      await settle(page, {
+        name: 'collection-detail',
+        path: detailPath,
+        ready: 'main',
+      })
+      if ((await heading.innerText()) !== originalName)
+        await rename(originalName)
+      if ((await statusTrigger.innerText()).trim() !== originalStatus)
+        await status(originalStatus)
+    }
+    expect(watched().fatal).toEqual([])
   })
 })
 

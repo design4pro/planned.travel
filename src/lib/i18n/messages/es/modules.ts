@@ -1299,9 +1299,134 @@ const messages = {
   'vacay.settings.saved': 'Se han guardado los ajustes del plan de vacaciones.',
   'vacay.settings.error':
     'No se pudieron guardar los ajustes del plan de vacaciones. No se ha cambiado nada.',
+  'collections.page.eyebrow': 'Colección',
+  'collections.page.all': 'Todos',
+  'collections.page.back': 'Todas las colecciones',
+  'collections.page.savedPlaces': {
+    one: 'Lugares guardados: {count}',
+    many: 'Lugares guardados: {count}',
+    other: 'Lugares guardados: {count}',
+  },
+  'collections.page.loadErrorTitle': 'No se pudo cargar esta colección',
+  'collections.status.idea': 'Una idea',
+  'collections.status.shortlisted': 'Preseleccionado',
+  'collections.status.planned': 'Planificado',
+  'collections.status.visited': 'Visitado',
+  'collections.status.rejected': 'Descartado',
+  'collections.empty.title': 'Todavía no hay lugares guardados',
+  'collections.empty.body':
+    'Guarda un lugar del mapa, de otro viaje o de una recomendación para añadirlo a esta colección.',
+  'collections.filtered.title': 'Nada coincide con ese filtro',
+  'collections.filtered.body':
+    'Prueba otro estado o quita el filtro de etiqueta.',
+  'collections.filtered.reset': 'Restablecer filtros',
+  'collections.filtered.showing': {
+    one: 'Lugares guardados visibles: {count}',
+    many: 'Lugares guardados visibles: {count}',
+    other: 'Lugares guardados visibles: {count}',
+  },
+  'collections.filters.statusGroup': 'Filtrar por estado',
+  'collections.labels.filterGroup': 'Filtrar por etiqueta',
+  'collections.labels.panel': 'Etiquetas de esta colección',
+  'collections.card.noLocation': 'Ubicación no registrada',
+  'collections.card.noPrice': 'Sin precio indicado',
+  'collections.card.website': 'Sitio web',
+  'collections.actions.trigger': 'Acciones para {name}',
+  'collections.actions.edit': 'Editar detalles',
+  'collections.actions.delete': 'Eliminar colección…',
+  'collections.edit.title': 'Editar colección',
+  'collections.edit.name': 'Nombre',
+  'collections.edit.description': 'Descripción',
+  'collections.edit.colour': 'Color',
+  'collections.edit.submit': 'Guardar cambios',
+  'collections.edit.saving': 'Guardando',
+  'collections.edit.cancel': 'Cancelar',
+  'collections.edit.saved': 'Colección actualizada',
+  'collections.edit.errorTitle': 'No se pudo guardar',
+  'collections.edit.error':
+    'No se pudo confirmar el guardado. Revisa la colección antes de volver a intentarlo.',
+  'collections.edit.nameRequired': 'Dale un nombre a la colección.',
+  'collections.edit.nameTooLong': {
+    one: 'Longitud máxima del nombre en caracteres: {count}',
+    many: 'Longitud máxima del nombre en caracteres: {count}',
+    other: 'Longitud máxima del nombre en caracteres: {count}',
+  },
+  'collections.edit.currentColour': 'Color actual',
+  'collections.delete.title': '¿Eliminar {name}?',
+  'collections.delete.loading': 'Cargando el contenido de la colección',
+  'collections.delete.loadErrorTitle': 'No se pudo comprobar la colección',
+  'collections.delete.loadError':
+    'No se pudo leer la colección actual. Inténtalo de nuevo.',
+  'collections.delete.retry': 'Reintentar',
+  'collections.delete.places': {
+    one: 'Lugares guardados: {count}',
+    many: 'Lugares guardados: {count}',
+    other: 'Lugares guardados: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etiquetas: {count}',
+    many: 'Etiquetas: {count}',
+    other: 'Etiquetas: {count}',
+  },
+  'collections.delete.irreversible':
+    'Esta acción no se puede deshacer. Los lugares guardados y las etiquetas se eliminarán con la colección. Los lugares de tus viajes no se modificarán.',
+  'collections.delete.typeName':
+    'Escribe el nombre de la colección para eliminarla.',
+  'collections.delete.nameLabel': 'Nombre de la colección',
+  'collections.delete.nameNeeded':
+    'Esta colección ahora contiene lugares guardados. Escribe su nombre para eliminarla.',
+  'collections.delete.confirm': 'Eliminar colección',
+  'collections.delete.deleting': 'Eliminando',
+  'collections.delete.cancel': 'Cancelar',
+  'collections.delete.deleted': 'Colección eliminada',
+  'collections.delete.error':
+    'No se pudo confirmar la eliminación. Revisa la colección e inténtalo de nuevo.',
+  'collections.statusPicker.trigger':
+    '{place}: estado {status}. Cambiar estado',
+  'collections.statusPicker.legend': 'Estado de {place}',
+  'collections.statusPicker.saved': '{place}: estado establecido en {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} ahora tiene el estado {status} y está oculto por el filtro',
+  'collections.statusPicker.error':
+    'No se pudo confirmar el estado de {place}. Compruébalo antes de volver a intentarlo.',
+  'collections.statusPicker.retry': 'Reintentar',
+
+  'collections.edit.retry': 'Reintentar',
   'files.readOnly.title': 'Archivos de solo lectura',
   'files.readOnly.role':
     'Solo los propietarios y editores del viaje pueden subir, renombrar o eliminar archivos. Puedes seguir descargándolos.',
+  'vacay.kind.vacation': 'Vacaciones',
+  'vacay.kind.half_day': 'Medio día de vacaciones',
+  'vacay.kind.sick': 'Baja por enfermedad',
+  'vacay.kind.remote': 'Trabajo remoto',
+  'vacay.kind.holiday': 'Festivo',
+  'vacay.kind.other': 'Otro',
+  'vacay.kind.cost.full': 'Consume 1 día de tu saldo',
+  'vacay.kind.cost.half': 'Consume medio día de tu saldo',
+  'vacay.kind.cost.none': 'No consume tu saldo',
+  'vacay.day.clear': 'Borrar este día',
+  'vacay.day.choose': 'Elige el tipo de ausencia',
+  'vacay.day.retry': 'Reintentar',
+  'vacay.day.title': 'Marcar {date}',
+  'vacay.day.cleared': 'Se borró {date}.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Mi tiempo libre: los fines de semana están bloqueados en este plan.',
+  'vacay.day.blocked.company':
+    'Mi tiempo libre: los días libres de empresa están bloqueados en este plan.',
+  'vacay.day.failed':
+    'No se pudo guardar {date}. Se muestra la última entrada guardada.',
+  'vacay.grid.empty': 'Sin días marcados en {year}',
+  'vacay.grid.gesture': 'Selecciona un día para marcar una ausencia.',
+  'vacay.grid.today': 'Ir a hoy',
+  'vacay.grid.start': 'Ir al inicio del año',
+  'vacay.grid.help':
+    'Las flechas cambian el día o la semana, Re Pág y Av Pág el mes, Inicio y Fin los límites de la semana. Selecciona un día para marcarlo.',
+  'vacay.grid.others': 'Otros viajeros ausentes: {value}',
+  'vacay.legend.title': 'Leyenda',
+  'vacay.legend.company': 'Día libre de empresa',
+  'vacay.legend.other': 'Otra persona ausente',
+  'vacay.legend.weekend': 'Fin de semana',
 } satisfies TranslationOf<typeof En>
 
 export default messages

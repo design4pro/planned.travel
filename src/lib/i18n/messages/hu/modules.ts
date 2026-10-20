@@ -1251,9 +1251,128 @@ const messages = {
   'vacay.settings.saved': 'A szabadságterv beállításai mentve.',
   'vacay.settings.error':
     'A szabadságterv beállításait nem sikerült menteni. Semmi sem változott.',
+  'collections.page.eyebrow': 'Gyűjtemény',
+  'collections.page.all': 'Mind',
+  'collections.page.back': 'Összes gyűjtemény',
+  'collections.page.savedPlaces': {
+    one: 'Mentett helyek: {count}',
+    other: 'Mentett helyek: {count}',
+  },
+  'collections.page.loadErrorTitle': 'A gyűjtemény nem tölthető be',
+  'collections.status.idea': 'Ötlet',
+  'collections.status.shortlisted': 'Kiválasztva',
+  'collections.status.planned': 'Tervezett',
+  'collections.status.visited': 'Meglátogatva',
+  'collections.status.rejected': 'Elvetett',
+  'collections.empty.title': 'Még nincsenek mentett helyek',
+  'collections.empty.body':
+    'Ments el egy helyet a térképről, egy másik utazásból vagy egy ajánlásból a gyűjteményhez.',
+  'collections.filtered.title': 'Erre a szűrőre semmi nem illik',
+  'collections.filtered.body':
+    'Válassz másik állapotot, vagy töröld a címkeszűrőt.',
+  'collections.filtered.reset': 'Szűrők törlése',
+  'collections.filtered.showing': {
+    one: 'Megjelenített mentett helyek: {count}',
+    other: 'Megjelenített mentett helyek: {count}',
+  },
+  'collections.filters.statusGroup': 'Szűrés állapot szerint',
+  'collections.labels.filterGroup': 'Szűrés címke szerint',
+  'collections.labels.panel': 'A gyűjtemény címkéi',
+  'collections.card.noLocation': 'Nincs megadott hely',
+  'collections.card.noPrice': 'Nincs megadott ár',
+  'collections.card.website': 'Weboldal',
+  'collections.actions.trigger': 'Műveletek: {name}',
+  'collections.actions.edit': 'Részletek szerkesztése',
+  'collections.actions.delete': 'Gyűjtemény törlése…',
+  'collections.edit.title': 'Gyűjtemény szerkesztése',
+  'collections.edit.name': 'Név',
+  'collections.edit.description': 'Leírás',
+  'collections.edit.colour': 'Szín',
+  'collections.edit.submit': 'Módosítások mentése',
+  'collections.edit.saving': 'Mentés',
+  'collections.edit.cancel': 'Mégse',
+  'collections.edit.saved': 'Gyűjtemény frissítve',
+  'collections.edit.errorTitle': 'Nem sikerült menteni',
+  'collections.edit.error':
+    'A mentés nem erősíthető meg. Újrapróbálkozás előtt ellenőrizd a gyűjteményt.',
+  'collections.edit.nameRequired': 'Adj nevet a gyűjteménynek.',
+  'collections.edit.nameTooLong': {
+    one: 'A név maximális hossza karakterben: {count}',
+    other: 'A név maximális hossza karakterben: {count}',
+  },
+  'collections.edit.currentColour': 'Jelenlegi szín',
+  'collections.delete.title': 'Törlöd ezt: {name}?',
+  'collections.delete.loading': 'A gyűjtemény tartalmának betöltése',
+  'collections.delete.loadErrorTitle': 'A gyűjtemény nem ellenőrizhető',
+  'collections.delete.loadError':
+    'A jelenlegi gyűjtemény nem olvasható. Próbáld újra.',
+  'collections.delete.retry': 'Újrapróbálkozás',
+  'collections.delete.places': {
+    one: 'Mentett helyek: {count}',
+    other: 'Mentett helyek: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Címkék: {count}',
+    other: 'Címkék: {count}',
+  },
+  'collections.delete.irreversible':
+    'Ez nem vonható vissza. A mentett helyek és címkék a gyűjteménnyel együtt törlődnek. Az utazásaid helyei változatlanok maradnak.',
+  'collections.delete.typeName': 'A törléshez írd be a gyűjtemény nevét.',
+  'collections.delete.nameLabel': 'Gyűjtemény neve',
+  'collections.delete.nameNeeded':
+    'A gyűjtemény most már mentett helyeket tartalmaz. A törléshez írd be a nevét.',
+  'collections.delete.confirm': 'Gyűjtemény törlése',
+  'collections.delete.deleting': 'Törlés folyamatban',
+  'collections.delete.cancel': 'Mégse',
+  'collections.delete.deleted': 'Gyűjtemény törölve',
+  'collections.delete.error':
+    'A törlés nem erősíthető meg. Ellenőrizd a gyűjteményt, és próbáld újra.',
+  'collections.statusPicker.trigger':
+    '{place}: {status} állapot. Állapot módosítása',
+  'collections.statusPicker.legend': '{place} állapota',
+  'collections.statusPicker.saved': '{place}: az állapot {status} lett',
+  'collections.statusPicker.hiddenNow':
+    '{place} most {status} állapotú, és a szűrő elrejti',
+  'collections.statusPicker.error':
+    '{place} állapota nem erősíthető meg. Újrapróbálkozás előtt ellenőrizd.',
+  'collections.statusPicker.retry': 'Újrapróbálkozás',
+
+  'collections.edit.retry': 'Újrapróbálkozás',
   'files.readOnly.title': 'Csak olvasható fájlok',
   'files.readOnly.role':
     'Csak az utazás tulajdonosai és szerkesztői tölthetnek fel, nevezhetnek át vagy törölhetnek fájlokat. Továbbra is letöltheted őket.',
+  'vacay.kind.vacation': 'Szabadság',
+  'vacay.kind.half_day': 'Fél nap szabadság',
+  'vacay.kind.sick': 'Betegnap',
+  'vacay.kind.remote': 'Távmunka',
+  'vacay.kind.holiday': 'Munkaszüneti nap',
+  'vacay.kind.other': 'Egyéb',
+  'vacay.kind.cost.full': '1 napot használ fel a keretből',
+  'vacay.kind.cost.half': 'Fél napot használ fel a keretből',
+  'vacay.kind.cost.none': 'Nem használ fel a keretből',
+  'vacay.day.clear': 'Nap törlése',
+  'vacay.day.choose': 'Válassza ki a távollét típusát',
+  'vacay.day.retry': 'Újrapróbálás',
+  'vacay.day.title': '{date} megjelölése',
+  'vacay.day.cleared': '{date} törölve.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Szabadidőm: a hétvégék le vannak tiltva ebben a tervben.',
+  'vacay.day.blocked.company':
+    'Szabadidőm: a céges szünnapok le vannak tiltva ebben a tervben.',
+  'vacay.day.failed':
+    '{date} mentése sikertelen. Az utolsó mentett bejegyzés látható.',
+  'vacay.grid.empty': 'Nincs jelölés {year} évben',
+  'vacay.grid.gesture': 'Válasszon egy napot a távollét jelöléséhez.',
+  'vacay.grid.today': 'Ugrás a mai napra',
+  'vacay.grid.start': 'Ugrás az év elejére',
+  'vacay.grid.help':
+    'A nyilak napot vagy hetet, a Page Up és Page Down hónapot vált, a Home és End a hét határaira lép. Válasszon egy napot.',
+  'vacay.grid.others': 'Más távol lévő utazók: {value}',
+  'vacay.legend.title': 'Jelmagyarázat',
+  'vacay.legend.company': 'Céges szünnap',
+  'vacay.legend.other': 'Más is távol van',
+  'vacay.legend.weekend': 'Hétvége',
 } satisfies TranslationOf<typeof En>
 
 export default messages
