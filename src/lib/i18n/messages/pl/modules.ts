@@ -1328,6 +1328,9 @@ const messages = {
   'vacay.settings.saved': 'Zapisano ustawienia planu urlopów.',
   'vacay.settings.error':
     'Nie udało się zapisać ustawień planu urlopów. Nic nie zostało zmienione.',
+  'files.readOnly.title': 'Pliki tylko do odczytu',
+  'files.readOnly.role':
+    'Tylko właściciele i edytorzy wyjazdu mogą przesyłać pliki, zmieniać ich nazwy lub je usuwać. Nadal możesz je pobierać.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

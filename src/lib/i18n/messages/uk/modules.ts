@@ -1318,6 +1318,9 @@ const messages = {
   'vacay.settings.saved': 'Налаштування плану відпусток збережено.',
   'vacay.settings.error':
     'Не вдалося зберегти налаштування плану відпусток. Нічого не змінилося.',
+  'files.readOnly.title': 'Файли лише для читання',
+  'files.readOnly.role':
+    'Лише власники та редактори подорожі можуть завантажувати, перейменовувати або видаляти файли. Ви й надалі можете їх скачувати.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

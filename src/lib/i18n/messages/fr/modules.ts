@@ -1312,6 +1312,9 @@ const messages = {
     'Les paramètres du planning de congés ont été enregistrés.',
   'vacay.settings.error':
     'Impossible d’enregistrer les paramètres du planning de congés. Rien n’a été modifié.',
+  'files.readOnly.title': 'Fichiers en lecture seule',
+  'files.readOnly.role':
+    'Seuls les propriétaires et les éditeurs du voyage peuvent ajouter, renommer ou supprimer des fichiers. Vous pouvez toujours les télécharger.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

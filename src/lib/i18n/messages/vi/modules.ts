@@ -1193,6 +1193,9 @@ const messages = {
   'vacay.settings.saved': 'Đã lưu cài đặt kế hoạch nghỉ phép.',
   'vacay.settings.error':
     'Không thể lưu cài đặt kế hoạch nghỉ phép. Chưa có gì thay đổi.',
+  'files.readOnly.title': 'Tệp chỉ đọc',
+  'files.readOnly.role':
+    'Chỉ chủ sở hữu và người chỉnh sửa chuyến đi mới có thể tải lên, đổi tên hoặc xóa tệp. Bạn vẫn có thể tải tệp xuống.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

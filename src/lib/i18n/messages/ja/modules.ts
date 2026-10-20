@@ -1181,6 +1181,9 @@ const messages = {
   'vacay.settings.saved': '休暇プランの設定を保存しました。',
   'vacay.settings.error':
     '休暇プランの設定を保存できませんでした。変更は反映されていません。',
+  'files.readOnly.title': '読み取り専用のファイル',
+  'files.readOnly.role':
+    'ファイルのアップロード、名前の変更、削除ができるのは旅行のオーナーと編集者のみです。ダウンロードは引き続き利用できます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

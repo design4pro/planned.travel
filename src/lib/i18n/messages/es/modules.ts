@@ -1299,6 +1299,9 @@ const messages = {
   'vacay.settings.saved': 'Se han guardado los ajustes del plan de vacaciones.',
   'vacay.settings.error':
     'No se pudieron guardar los ajustes del plan de vacaciones. No se ha cambiado nada.',
+  'files.readOnly.title': 'Archivos de solo lectura',
+  'files.readOnly.role':
+    'Solo los propietarios y editores del viaje pueden subir, renombrar o eliminar archivos. Puedes seguir descargándolos.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

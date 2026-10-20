@@ -1273,6 +1273,9 @@ const messages = {
     'Die Einstellungen des Urlaubsplans wurden gespeichert.',
   'vacay.settings.error':
     'Die Einstellungen des Urlaubsplans konnten nicht gespeichert werden. Es wurde nichts geändert.',
+  'files.readOnly.title': 'Dateien nur zum Lesen',
+  'files.readOnly.role':
+    'Nur Eigentümer und Bearbeiter der Reise können Dateien hochladen, umbenennen oder löschen. Du kannst sie weiterhin herunterladen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

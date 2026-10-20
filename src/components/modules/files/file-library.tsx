@@ -140,6 +140,7 @@ function carriesFiles(data: DataTransfer): boolean {
 /* ------------------------------------------------------------------ screen */
 
 export interface FileLibraryProps {
+  readonly canWrite: boolean
   readonly tripId: string
   readonly files: ReadonlyArray<FileData>
   readonly people: ReadonlyArray<FilePerson>
@@ -151,6 +152,7 @@ export interface FileLibraryProps {
 }
 
 export function FileLibrary({
+  canWrite,
   tripId,
   files,
   people,
@@ -229,14 +231,14 @@ export function FileLibrary({
   // The header's primary action lives outside this component, so it asks for the
   // picker by bumping a counter rather than by reaching for a ref.
   useEffect(() => {
-    if (pickRequestedAt > 0) {
+    if (canWrite && pickRequestedAt > 0) {
       inputRef.current?.click()
     }
-  }, [pickRequestedAt])
+  }, [canWrite, pickRequestedAt])
 
   const add = useCallback(
     (incoming: ReadonlyArray<File>): void => {
-      if (incoming.length === 0) {
+      if (!canWrite || incoming.length === 0) {
         return
       }
       const { accepted, rejected } = screenFiles(incoming, {
@@ -264,7 +266,7 @@ export function FileLibrary({
       })
       dispatch({ type: 'enqueue', tasks })
     },
-    [workspaceBytes, limitBytes, queue],
+    [canWrite, workspaceBytes, limitBytes, queue],
   )
 
   /**
@@ -275,7 +277,7 @@ export function FileLibrary({
    * the browser's default only when it found files, so pasting text behaves as it always did.
    */
   useEffect(() => {
-    if (editing !== null || confirm !== null) {
+    if (!canWrite || editing !== null || confirm !== null) {
       return
     }
     const onPaste = (event: ClipboardEvent): void => {
@@ -292,7 +294,7 @@ export function FileLibrary({
     }
     document.addEventListener('paste', onPaste)
     return () => document.removeEventListener('paste', onPaste)
-  }, [add, editing, confirm])
+  }, [canWrite, add, editing, confirm])
 
   // After the render that shows the pasted rows: the list only exists once the queue holds a task,
   // so the handler itself has nothing to scroll to on a first paste. On a long library this is what
@@ -312,7 +314,7 @@ export function FileLibrary({
    * so two renders cannot start the same task twice.
    */
   useEffect(() => {
-    if (pumping.current) {
+    if (!canWrite || pumping.current) {
       return
     }
     const task = nextQueued(queue)
@@ -389,7 +391,7 @@ export function FileLibrary({
           message: messageOf(cause, t('modules.files.toast.uploadFailed')),
         })
       })
-  }, [queue, tripId, scheduleRefresh])
+  }, [canWrite, queue, tripId, scheduleRefresh])
 
   /**
    * The confirmation an upload owes the reader.
@@ -439,20 +441,22 @@ export function FileLibrary({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        accept={ACCEPT_ATTRIBUTE}
-        className="sr-only"
-        aria-hidden
-        tabIndex={-1}
-        onChange={(event) => {
-          add([...(event.target.files ?? [])])
-          // Cleared so choosing the same file twice in a row still fires.
-          event.target.value = ''
-        }}
-      />
+      {canWrite ? (
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={ACCEPT_ATTRIBUTE}
+          className="sr-only"
+          aria-hidden
+          tabIndex={-1}
+          onChange={(event) => {
+            add([...(event.target.files ?? [])])
+            // Cleared so choosing the same file twice in a row still fires.
+            event.target.value = ''
+          }}
+        />
+      ) : null}
 
       {full ? (
         <Alert tone="danger" title={t('modules.files.storage.full')}>
@@ -463,213 +467,221 @@ export function FileLibrary({
         </Alert>
       ) : null}
 
-      <ModulePanel
-        label={t('modules.files.action.add')}
-        count={t('modules.files.storage.perFile', {
-          size: formatStorage(MAX_FILE_BYTES),
-        })}
-        action={
-          queue.tasks.length === 0 ? undefined : (
-            <Button
-              variant="ghost"
-              size="sm"
-              shape="pill"
-              onClick={() => dispatch({ type: 'clearSettled' })}
-            >
-              {t('modules.files.queue.clear')}
-            </Button>
-          )
-        }
-      >
-        <div
-          data-part="file-drop"
-          data-state={dragging ? 'active' : 'idle'}
-          onDragEnter={(event) => {
-            if (!carriesFiles(event.dataTransfer)) {
-              return
-            }
-            event.preventDefault()
-            dragDepth.current += 1
-            setDragging(true)
-          }}
-          onDragOver={(event) => {
-            if (!carriesFiles(event.dataTransfer)) {
-              return
-            }
-            event.preventDefault()
-            setDragging(true)
-          }}
-          onDragLeave={(event) => {
-            // No files check: the count only rises under a files drag, and some browsers report
-            // other types on a leave, which would otherwise strand the zone active.
-            event.preventDefault()
-            dragDepth.current = Math.max(0, dragDepth.current - 1)
-            if (dragDepth.current === 0) {
-              setDragging(false)
-            }
-          }}
-          onDrop={(event) => {
-            event.preventDefault()
-            dragDepth.current = 0
-            setDragging(false)
-            add([...event.dataTransfer.files])
-          }}
-          className="relative flex flex-col items-center gap-3 rounded-lg border border-dashed border-edge-strong/60 bg-surface-2/40 px-6 py-9 text-center"
+      {canWrite ? (
+        <ModulePanel
+          label={t('modules.files.action.add')}
+          count={t('modules.files.storage.perFile', {
+            size: formatStorage(MAX_FILE_BYTES),
+          })}
+          action={
+            queue.tasks.length === 0 ? undefined : (
+              <Button
+                variant="ghost"
+                size="sm"
+                shape="pill"
+                onClick={() => dispatch({ type: 'clearSettled' })}
+              >
+                {t('modules.files.queue.clear')}
+              </Button>
+            )
+          }
         >
-          {/*
+          <div
+            data-part="file-drop"
+            data-state={dragging ? 'active' : 'idle'}
+            onDragEnter={(event) => {
+              if (!carriesFiles(event.dataTransfer)) {
+                return
+              }
+              event.preventDefault()
+              dragDepth.current += 1
+              setDragging(true)
+            }}
+            onDragOver={(event) => {
+              if (!carriesFiles(event.dataTransfer)) {
+                return
+              }
+              event.preventDefault()
+              setDragging(true)
+            }}
+            onDragLeave={(event) => {
+              // No files check: the count only rises under a files drag, and some browsers report
+              // other types on a leave, which would otherwise strand the zone active.
+              event.preventDefault()
+              dragDepth.current = Math.max(0, dragDepth.current - 1)
+              if (dragDepth.current === 0) {
+                setDragging(false)
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              dragDepth.current = 0
+              setDragging(false)
+              add([...event.dataTransfer.files])
+            }}
+            className="relative flex flex-col items-center gap-3 rounded-lg border border-dashed border-edge-strong/60 bg-surface-2/40 px-6 py-9 text-center"
+          >
+            {/*
             The drag-over fill. Only its opacity moves, so nothing repaints or reflows while a drag
             crosses the zone, and it sits behind the icon, the text and the button (each is
             `relative`, the button by its base class, which paints them after this positioned sibling) so "Drop to upload" keeps the
             ink-on-brand-subtle pair in both themes. `-inset-px` lets its hairline cover the dashed
             border. The global reduced-motion rule already collapses the transition.
           */}
-          <span
-            aria-hidden
-            data-part="file-drop-overlay"
-            className={cn(
-              'pointer-events-none absolute -inset-px rounded-lg border border-brand bg-brand-subtle',
-              'transition-opacity duration-base ease-out-quint',
-              dragging ? 'opacity-100' : 'opacity-0',
-            )}
-          />
-          <span
-            className={cn(
-              'relative grid size-12 place-items-center rounded-full',
-              dragging ? 'bg-brand text-brand-on' : 'bg-surface-2 text-ink-3',
-            )}
-          >
-            <CloudUpload aria-hidden className="size-5" />
-          </span>
-          <div className="relative">
-            <p className="text-label font-semibold text-ink">
-              {dragging
-                ? t('modules.files.drop.active')
-                : t('modules.files.drop.idle')}
-            </p>
-            <p className="mt-1 text-caption text-ink-3">
-              {t('modules.files.empty.hint')}
-            </p>
-            {/*
+            <span
+              aria-hidden
+              data-part="file-drop-overlay"
+              className={cn(
+                'pointer-events-none absolute -inset-px rounded-lg border border-brand bg-brand-subtle',
+                'transition-opacity duration-base ease-out-quint',
+                dragging ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+            <span
+              className={cn(
+                'relative grid size-12 place-items-center rounded-full',
+                dragging ? 'bg-brand text-brand-on' : 'bg-surface-2 text-ink-3',
+              )}
+            >
+              <CloudUpload aria-hidden className="size-5" />
+            </span>
+            <div className="relative">
+              <p className="text-label font-semibold text-ink">
+                {dragging
+                  ? t('modules.files.drop.active')
+                  : t('modules.files.drop.idle')}
+              </p>
+              <p className="mt-1 text-caption text-ink-3">
+                {t('modules.files.empty.hint')}
+              </p>
+              {/*
               Key caps first, then the verb, in every locale. The line is absent on touch, where a
               screen reader would otherwise read a shortcut nobody can press. Its height is reserved
               from the first paint (`min-h-5`, the cap's own height) and it fades in by opacity once
               mounted, so the Ctrl-to-⌘ swap moves nothing.
             */}
-            <p
-              className={cn(
-                'mt-2 flex min-h-5 items-center justify-center gap-1.5 text-caption text-ink-3',
-                'transition-opacity duration-base ease-out-quint',
-                '[@media(hover:none)]:hidden pointer-coarse:hidden',
-                hintMounted ? 'opacity-100' : 'opacity-0',
-              )}
-              data-part="file-paste-hint"
+              <p
+                className={cn(
+                  'mt-2 flex min-h-5 items-center justify-center gap-1.5 text-caption text-ink-3',
+                  'transition-opacity duration-base ease-out-quint',
+                  '[@media(hover:none)]:hidden pointer-coarse:hidden',
+                  hintMounted ? 'opacity-100' : 'opacity-0',
+                )}
+                data-part="file-paste-hint"
+              >
+                <KbdSequence keys={['Mod', 'V']} size="sm" />
+                <span className="text-center">
+                  {t('modules.files.drop.pasteHint')}
+                </span>
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              shape="pill"
+              onClick={() => inputRef.current?.click()}
             >
-              <KbdSequence keys={['Mod', 'V']} size="sm" />
-              <span className="text-center">
-                {t('modules.files.drop.pasteHint')}
-              </span>
-            </p>
+              {t('modules.files.action.choose')}
+            </Button>
           </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            shape="pill"
-            onClick={() => inputRef.current?.click()}
-          >
-            {t('modules.files.action.choose')}
-          </Button>
-        </div>
 
-        {queue.tasks.length === 0 ? null : (
-          <div className="mt-4 flex flex-col gap-3">
-            {running.length === 0 ? null : (
-              <Progress
-                value={overallProgress(queue)}
-                max={1}
-                size="sm"
-                tone="brand"
-                label={t('modules.files.status.uploadingCount', {
-                  count: running.length,
-                })}
-                valueText={`${Math.round(overallProgress(queue) * 100)}%`}
-              />
-            )}
-            <ul
-              ref={queueListRef}
-              className="flex flex-col gap-2"
-              data-part="file-queue"
-            >
-              {queue.tasks.map((task) => (
-                <li
-                  key={task.id}
-                  className="flex min-w-0 items-center gap-3 rounded-md border border-edge-faint bg-surface px-3 py-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="flex min-w-0 items-baseline gap-2">
-                      <span className="min-w-0 truncate text-caption font-medium text-ink">
-                        {task.filename}
-                      </span>
-                      <span className="shrink-0 text-caption tabular-nums text-ink-4">
-                        {formatStorage(task.sizeBytes)}
-                      </span>
-                    </p>
-                    {task.status === 'uploading' ? (
-                      <Progress
-                        value={task.progress}
-                        max={1}
-                        size="xs"
-                        tone="brand"
-                        className="mt-1.5"
-                        aria-label={t('modules.files.status.uploadingOf', {
+          {queue.tasks.length === 0 ? null : (
+            <div className="mt-4 flex flex-col gap-3">
+              {running.length === 0 ? null : (
+                <Progress
+                  value={overallProgress(queue)}
+                  max={1}
+                  size="sm"
+                  tone="brand"
+                  label={t('modules.files.status.uploadingCount', {
+                    count: running.length,
+                  })}
+                  valueText={`${Math.round(overallProgress(queue) * 100)}%`}
+                />
+              )}
+              <ul
+                ref={queueListRef}
+                className="flex flex-col gap-2"
+                data-part="file-queue"
+              >
+                {queue.tasks.map((task) => (
+                  <li
+                    key={task.id}
+                    className="flex min-w-0 items-center gap-3 rounded-md border border-edge-faint bg-surface px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="flex min-w-0 items-baseline gap-2">
+                        <span className="min-w-0 truncate text-caption font-medium text-ink">
+                          {task.filename}
+                        </span>
+                        <span className="shrink-0 text-caption tabular-nums text-ink-4">
+                          {formatStorage(task.sizeBytes)}
+                        </span>
+                      </p>
+                      {task.status === 'uploading' ? (
+                        <Progress
+                          value={task.progress}
+                          max={1}
+                          size="xs"
+                          tone="brand"
+                          className="mt-1.5"
+                          aria-label={t('modules.files.status.uploadingOf', {
+                            name: task.filename,
+                          })}
+                        />
+                      ) : task.message === null ? null : (
+                        <p className="mt-0.5 text-caption text-danger">
+                          {typeof task.message === 'string'
+                            ? task.message
+                            : resolve(task.message, t)}
+                        </p>
+                      )}
+                    </div>
+                    <TaskBadge status={task.status} />
+                    {task.status === 'uploading' || task.status === 'queued' ? (
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
+                        label={t('modules.files.action.cancelUploadOf', {
                           name: task.filename,
                         })}
+                        icon={<X aria-hidden />}
+                        onClick={() => {
+                          controllers.current.get(task.id)?.abort()
+                          dispatch({ type: 'cancel', id: task.id })
+                        }}
                       />
-                    ) : task.message === null ? null : (
-                      <p className="mt-0.5 text-caption text-danger">
-                        {typeof task.message === 'string'
-                          ? task.message
-                          : resolve(task.message, t)}
-                      </p>
+                    ) : (
+                      <IconButton
+                        variant="ghost"
+                        size="sm"
+                        label={t('modules.files.action.dismissOf', {
+                          name: task.filename,
+                        })}
+                        icon={<X aria-hidden />}
+                        onClick={() =>
+                          dispatch({ type: 'dismiss', id: task.id })
+                        }
+                      />
                     )}
-                  </div>
-                  <TaskBadge status={task.status} />
-                  {task.status === 'uploading' || task.status === 'queued' ? (
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      label={t('modules.files.action.cancelUploadOf', {
-                        name: task.filename,
-                      })}
-                      icon={<X aria-hidden />}
-                      onClick={() => {
-                        controllers.current.get(task.id)?.abort()
-                        dispatch({ type: 'cancel', id: task.id })
-                      }}
-                    />
-                  ) : (
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      label={t('modules.files.action.dismissOf', {
-                        name: task.filename,
-                      })}
-                      icon={<X aria-hidden />}
-                      onClick={() => dispatch({ type: 'dismiss', id: task.id })}
-                    />
-                  )}
-                </li>
-              ))}
-            </ul>
-            {failed.length === 0 ? null : (
-              <p className="text-caption text-ink-3">
-                {t('modules.files.queue.someFailed', {
-                  count: failed.length,
-                })}
-              </p>
-            )}
-          </div>
-        )}
-      </ModulePanel>
+                  </li>
+                ))}
+              </ul>
+              {failed.length === 0 ? null : (
+                <p className="text-caption text-ink-3">
+                  {t('modules.files.queue.someFailed', {
+                    count: failed.length,
+                  })}
+                </p>
+              )}
+            </div>
+          )}
+        </ModulePanel>
+      ) : (
+        <Alert title={t('modules.files.readOnly.title')}>
+          {t('modules.files.readOnly.role')}
+        </Alert>
+      )}
 
       {files.length === 0 ? (
         <EmptyState
@@ -793,31 +805,40 @@ export function FileLibrary({
                               })
                             },
                           },
-                          {
-                            label: t('modules.files.menu.rename'),
-                            icon: <Pencil aria-hidden />,
-                            onSelect: () => setEditing(file),
-                          },
-                          {
-                            label: t('modules.files.menu.remove'),
-                            icon: <Trash2 aria-hidden />,
-                            tone: 'danger',
-                            separated: true,
-                            onSelect: () =>
-                              setConfirm({
-                                title: t('modules.remove.confirmTitle', {
-                                  name: file.filename,
-                                }),
-                                description: t('modules.files.remove.body', {
-                                  size: formatStorage(file.sizeBytes),
-                                }),
-                                confirmLabel: t('modules.files.menu.remove'),
-                                onConfirm: () =>
-                                  remove.run({
-                                    data: { tripId, fileId: file.id },
-                                  }),
-                              }),
-                          },
+                          ...(canWrite
+                            ? [
+                                {
+                                  label: t('modules.files.menu.rename'),
+                                  icon: <Pencil aria-hidden />,
+                                  onSelect: () => setEditing(file),
+                                },
+                                {
+                                  label: t('modules.files.menu.remove'),
+                                  icon: <Trash2 aria-hidden />,
+                                  tone: 'danger' as const,
+                                  separated: true,
+                                  onSelect: () =>
+                                    setConfirm({
+                                      title: t('modules.remove.confirmTitle', {
+                                        name: file.filename,
+                                      }),
+                                      description: t(
+                                        'modules.files.remove.body',
+                                        {
+                                          size: formatStorage(file.sizeBytes),
+                                        },
+                                      ),
+                                      confirmLabel: t(
+                                        'modules.files.menu.remove',
+                                      ),
+                                      onConfirm: () =>
+                                        remove.run({
+                                          data: { tripId, fileId: file.id },
+                                        }),
+                                    }),
+                                },
+                              ]
+                            : []),
                         ]}
                       />
                     </TableCell>
@@ -829,7 +850,7 @@ export function FileLibrary({
         </ModulePanel>
       )}
 
-      {editing === null ? null : (
+      {!canWrite || editing === null ? null : (
         <FileDetailsDialog
           tripId={tripId}
           file={editing}

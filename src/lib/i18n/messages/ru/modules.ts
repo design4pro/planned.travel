@@ -1320,6 +1320,9 @@ const messages = {
   'vacay.settings.saved': 'Настройки плана отпусков сохранены.',
   'vacay.settings.error':
     'Не удалось сохранить настройки плана отпусков. Ничего не изменилось.',
+  'files.readOnly.title': 'Файлы только для чтения',
+  'files.readOnly.role':
+    'Только владельцы и редакторы поездки могут загружать, переименовывать или удалять файлы. Вы по-прежнему можете их скачивать.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -80,7 +80,13 @@ import {
   updateBudgetItem,
   updateExpense,
 } from '../expenses'
-import { getFile, listTripFiles, recordFile, updateFile } from '../files'
+import {
+  deleteFile,
+  getFile,
+  listTripFiles,
+  recordFile,
+  updateFile,
+} from '../files'
 import { createPlace } from '../places'
 import {
   clearReservationImported,
@@ -2315,6 +2321,77 @@ describe('member isolation', () => {
           requireTransportOfTrip(alpha.scope, other.id, transportId),
         ),
       ).toBeInstanceOf(NotFoundError)
+    })
+  })
+
+  describe('trip file write refusals (#1072)', () => {
+    const input = {
+      storageKey: 'files/permission.pdf',
+      filename: 'permission.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 10,
+    }
+
+    it.each(['viewer', 'nonmember', 'private nonmember'] as const)(
+      'refuses record, rename and delete for a %s without changing files',
+      async (role) => {
+        const trip = await createTrip(alpha.scope, {
+          title: 'File permissions',
+          visibility: role === 'nonmember' ? 'organization' : 'private',
+        })
+        const file = await recordFile(alpha.scope, {
+          ...input,
+          tripId: trip.id,
+        })
+        if (role === 'viewer') {
+          await addTripMember(alpha.scope, {
+            tripId: trip.id,
+            userId: strangerId,
+            role,
+          })
+        }
+        const before = await listTripFiles(alpha.scope, trip.id)
+        for (const attempt of [
+          () => recordFile(stranger, { ...input, tripId: trip.id }),
+          () =>
+            updateFile(stranger, trip.id, file.id, { filename: 'changed.pdf' }),
+          () => deleteFile(stranger, trip.id, file.id),
+        ]) {
+          const error = await captureError(attempt)
+          expect(error).toBeInstanceOf(
+            role === 'private nonmember' ? NotFoundError : TripRoleError,
+          )
+          expect(await listTripFiles(alpha.scope, trip.id)).toEqual(before)
+        }
+      },
+    )
+
+    it('gives missing, other-trip and other-workspace deletes the identical file refusal', async () => {
+      const other = await createTrip(alpha.scope, { title: 'Another trip' })
+      const beta = await harness.seedTenant('file-beta')
+      const foreignTrip = await createTrip(beta.scope, {
+        title: 'Foreign trip',
+      })
+      const foreign = await recordFile(beta.scope, {
+        ...input,
+        tripId: foreignTrip.id,
+        storageKey: 'files/foreign-permission.pdf',
+      })
+      const otherFile = await recordFile(alpha.scope, {
+        ...input,
+        tripId: other.id,
+      })
+      const beforeOther = await getFile(alpha.scope, otherFile.id)
+      const beforeForeign = await getFile(beta.scope, foreign.id)
+      for (const fileId of ['missing-file', otherFile.id, foreign.id]) {
+        expect(
+          await captureError(() =>
+            deleteFile(alpha.scope, fixture.tripId, fileId),
+          ),
+        ).toEqual(new NotFoundError('file', fileId))
+      }
+      expect(await getFile(alpha.scope, otherFile.id)).toEqual(beforeOther)
+      expect(await getFile(beta.scope, foreign.id)).toEqual(beforeForeign)
     })
   })
 

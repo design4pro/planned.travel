@@ -1251,6 +1251,9 @@ const messages = {
   'vacay.settings.saved': 'A szabadságterv beállításai mentve.',
   'vacay.settings.error':
     'A szabadságterv beállításait nem sikerült menteni. Semmi sem változott.',
+  'files.readOnly.title': 'Csak olvasható fájlok',
+  'files.readOnly.role':
+    'Csak az utazás tulajdonosai és szerkesztői tölthetnek fel, nevezhetnek át vagy törölhetnek fájlokat. Továbbra is letöltheted őket.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
