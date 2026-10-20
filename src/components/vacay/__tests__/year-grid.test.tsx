@@ -116,8 +116,16 @@ describe('year grid', () => {
     const cell = byDay(7, 1)
     await hand.click(cell)
     expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: /Sick day/ })).toBeNull()
-    await hand.click(screen.getByRole('button', { name: 'Clear this day' }))
+    expect(
+      within(screen.getByRole('dialog')).queryByRole('button', {
+        name: /Sick day/,
+      }),
+    ).toBeNull()
+    await hand.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Clear this day',
+      }),
+    )
     await waitFor(() =>
       expect(props.write).toHaveBeenCalledWith('2026-08-01', null),
     )
@@ -180,7 +188,11 @@ describe('year grid', () => {
     await waitFor(() =>
       expect(screen.getByRole('alert').textContent).toContain('3 Aug 2026'),
     )
-    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    expect(
+      within(screen.getByRole('alert')).getByRole('button', {
+        name: 'Try again',
+      }),
+    ).toBeTruthy()
     expect(cell.getAttribute('aria-label')).not.toContain('Leave')
     expect(document.activeElement).toBe(cell)
   })
@@ -218,7 +230,11 @@ describe('year grid', () => {
         }),
       )
       await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
-      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      fireEvent.click(
+        within(screen.getByRole('alert')).getByRole('button', {
+          name: 'Try again',
+        }),
+      )
       await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
       expect(write).toHaveBeenCalledTimes(committed ? 1 : 2)
       expect(reread).toHaveBeenCalledTimes(committed ? 2 : 3)
