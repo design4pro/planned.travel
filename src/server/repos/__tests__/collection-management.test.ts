@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createHarness } from './harness'
+import { createTrip } from '../trips'
+import { createPlace, getPlace } from '../places'
 import {
   addCollectionPlace,
   collectionDeleteSummary,
@@ -8,7 +10,9 @@ import {
   deleteCollection,
   getCollection,
   listCollectionPlaces,
+  listLabels,
   setCollectionPlaceStatus,
+  saveTripPlaceToCollection,
   updateCollection,
 } from '../collections'
 import type { Harness, SeededTenant } from './harness'
@@ -98,5 +102,27 @@ describe('collection management', () => {
     expect(
       await listCollectionPlaces(other.scope, { collectionId: collection.id }),
     ).toEqual(before)
+  })
+  it('deletes saved copies and labels while preserving the trip place', async () => {
+    const trip = await createTrip(tenant.scope, { title: 'Weekend' })
+    const place = await createPlace(tenant.scope, {
+      tripId: trip.id,
+      name: 'Cafe',
+    })
+    const collection = await createCollection(tenant.scope, { name: 'Someday' })
+    await saveTripPlaceToCollection(tenant.scope, {
+      collectionId: collection.id,
+      placeId: place.id,
+    })
+    await createLabel(tenant.scope, {
+      collectionId: collection.id,
+      name: 'Food',
+    })
+    await deleteCollection(tenant.scope, collection.id)
+    expect(
+      await listCollectionPlaces(tenant.scope, { collectionId: collection.id }),
+    ).toEqual([])
+    expect(await listLabels(tenant.scope, collection.id)).toEqual([])
+    expect(await getPlace(tenant.scope, place.id)).toEqual(place)
   })
 })

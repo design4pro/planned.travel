@@ -1322,6 +1322,9 @@ const messages = {
   'collections.statusPicker.retry': 'Yeniden dene',
 
   'collections.edit.retry': 'Yeniden dene',
+  'files.readOnly.title': 'Salt okunur dosyalar',
+  'files.readOnly.role':
+    'Yalnızca seyahat sahipleri ve düzenleyicileri dosya yükleyebilir, yeniden adlandırabilir veya silebilir. Dosyaları indirmeye devam edebilirsin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

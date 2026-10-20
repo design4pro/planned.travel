@@ -1405,6 +1405,9 @@ const messages = {
   'collections.statusPicker.retry': 'Réessayer',
 
   'collections.edit.retry': 'Réessayer',
+  'files.readOnly.title': 'Fichiers en lecture seule',
+  'files.readOnly.role':
+    'Seuls les propriétaires et les éditeurs du voyage peuvent ajouter, renommer ou supprimer des fichiers. Vous pouvez toujours les télécharger.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

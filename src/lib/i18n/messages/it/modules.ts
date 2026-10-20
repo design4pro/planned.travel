@@ -1397,6 +1397,9 @@ const messages = {
   'collections.statusPicker.retry': 'Riprova',
 
   'collections.edit.retry': 'Riprova',
+  'files.readOnly.title': 'File in sola lettura',
+  'files.readOnly.role':
+    'Solo i proprietari e gli editor del viaggio possono caricare, rinominare o eliminare file. Puoi comunque scaricarli.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

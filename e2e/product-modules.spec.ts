@@ -603,9 +603,11 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await page.keyboard.press('Escape')
     await expect(settingsDialog(page)).toHaveCount(0)
   })
+  // Reuses the Chromium-only serial fixture harness above.
   test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
     page,
   }) => {
+    test.setTimeout(60_000)
     const routeCase: RouteCase = {
       name: 'collection-management',
       path: '/collections',
@@ -614,7 +616,9 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     const watched = watchConsole(page, routeCase)
     await visit(page, routeCase, 'light')
     await page.locator('main a[href^="/collections/"]').first().click()
-    await expect(page.getByRole('button', { name: /^Actions for / })).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: /^Actions for / }),
+    ).toBeVisible()
     const heading = page.getByRole('heading', { level: 1 })
     const originalName = await heading.innerText()
     const nextName = originalName + ' - edited'
@@ -666,10 +670,20 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
         .poll(() => page.evaluate(() => document.activeElement?.tagName))
         .toMatch(/BUTTON|H2/)
       await page.goto(detailPath)
+      await settle(page, {
+        name: 'collection-detail',
+        path: detailPath,
+        ready: 'main',
+      })
       await status(originalStatus)
     } finally {
       await page.keyboard.press('Escape')
       await page.goto(detailPath)
+      await settle(page, {
+        name: 'collection-detail',
+        path: detailPath,
+        ready: 'main',
+      })
       if ((await heading.innerText()) !== originalName)
         await rename(originalName)
       if ((await statusTrigger.innerText()).trim() !== originalStatus)

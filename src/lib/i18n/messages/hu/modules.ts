@@ -1338,6 +1338,9 @@ const messages = {
   'collections.statusPicker.retry': 'Újrapróbálkozás',
 
   'collections.edit.retry': 'Újrapróbálkozás',
+  'files.readOnly.title': 'Csak olvasható fájlok',
+  'files.readOnly.role':
+    'Csak az utazás tulajdonosai és szerkesztői tölthetnek fel, nevezhetnek át vagy törölhetnek fájlokat. Továbbra is letöltheted őket.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1520,6 +1520,9 @@ const messages = {
   'collections.statusPicker.retry': 'Try again',
 
   'collections.edit.retry': 'Try again',
+  'files.readOnly.title': 'Read-only files',
+  'files.readOnly.role':
+    'Only trip owners and editors can upload, rename or delete files. You can still download them.',
 } as const satisfies NamespaceMessages
 
 export default messages

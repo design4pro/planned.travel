@@ -1460,6 +1460,9 @@ const messages = {
   'collections.statusPicker.retry': 'حاول مجددًا',
 
   'collections.edit.retry': 'حاول مجددًا',
+  'files.readOnly.title': 'ملفات للقراءة فقط',
+  'files.readOnly.role':
+    'يمكن لمالكي الرحلة ومحرريها فقط رفع الملفات أو إعادة تسميتها أو حذفها. لا يزال بإمكانك تنزيلها.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

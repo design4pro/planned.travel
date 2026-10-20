@@ -1395,6 +1395,9 @@ const messages = {
   'collections.statusPicker.retry': 'Torna-ho a provar',
 
   'collections.edit.retry': 'Torna-ho a provar',
+  'files.readOnly.title': 'Fitxers de només lectura',
+  'files.readOnly.role':
+    'Només els propietaris i editors del viatge poden pujar, reanomenar o suprimir fitxers. Encara els pots baixar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1241,6 +1241,9 @@ const messages = {
   'collections.statusPicker.retry': '다시 시도',
 
   'collections.edit.retry': '다시 시도',
+  'files.readOnly.title': '읽기 전용 파일',
+  'files.readOnly.role':
+    '여행 소유자와 편집자만 파일을 업로드하거나 이름을 변경하거나 삭제할 수 있습니다. 다운로드는 계속할 수 있습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

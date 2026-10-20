@@ -1423,6 +1423,9 @@ const messages = {
   'collections.statusPicker.retry': 'Spróbuj ponownie',
 
   'collections.edit.retry': 'Spróbuj ponownie',
+  'files.readOnly.title': 'Pliki tylko do odczytu',
+  'files.readOnly.role':
+    'Tylko właściciele i edytorzy wyjazdu mogą przesyłać pliki, zmieniać ich nazwy lub je usuwać. Nadal możesz je pobierać.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

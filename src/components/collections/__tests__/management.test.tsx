@@ -1,6 +1,12 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -223,5 +229,47 @@ describe('collection controls', () => {
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
     await user.click(screen.getByRole('button', { name: 'Delete collection' }))
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
+  })
+  it.each(['{Enter}', ' '])('commits a chosen status with %s', async (key) => {
+    const user = userEvent.setup()
+    const setStatus = vi.fn().mockResolvedValue(undefined)
+    mount(
+      <StatusPicker
+        place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
+        setStatus={setStatus}
+        onSaved={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Cafe: status Idea/ }))
+    screen.getByRole('menuitemradio', { name: 'Visited' }).focus()
+    await user.keyboard(key)
+    await waitFor(() =>
+      expect(setStatus).toHaveBeenCalledWith({
+        collectionPlaceId: 'cafe',
+        status: 'visited',
+      }),
+    )
+  })
+  it('refuses a name longer than 200 characters before sending', async () => {
+    const user = userEvent.setup()
+    const update = vi.fn()
+    mount(
+      <CollectionEditDialog
+        collection={collection}
+        update={update}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        returnFocus={vi.fn()}
+      />,
+    )
+    const name = screen.getByRole('textbox', { name: 'Name' })
+    fireEvent.change(name, { target: { value: 'a'.repeat(201) } })
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(update).not.toHaveBeenCalled()
+    expect(name.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(name)
+    expect(
+      screen.getByText('A collection name can have at most 200 characters.'),
+    ).toBeTruthy()
   })
 })

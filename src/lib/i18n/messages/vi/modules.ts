@@ -1268,6 +1268,9 @@ const messages = {
   'collections.statusPicker.retry': 'Thử lại',
 
   'collections.edit.retry': 'Thử lại',
+  'files.readOnly.title': 'Tệp chỉ đọc',
+  'files.readOnly.role':
+    'Chỉ chủ sở hữu và người chỉnh sửa chuyến đi mới có thể tải lên, đổi tên hoặc xóa tệp. Bạn vẫn có thể tải tệp xuống.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

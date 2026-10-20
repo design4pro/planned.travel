@@ -1255,6 +1255,9 @@ const messages = {
   'collections.statusPicker.retry': 'もう一度試す',
 
   'collections.edit.retry': 'もう一度試す',
+  'files.readOnly.title': '読み取り専用のファイル',
+  'files.readOnly.role':
+    'ファイルのアップロード、名前の変更、削除ができるのは旅行のオーナーと編集者のみです。ダウンロードは引き続き利用できます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

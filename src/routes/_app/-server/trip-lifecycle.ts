@@ -607,7 +607,7 @@ export const createTripFn = createServerFn({ method: 'POST' })
   })
 
 /**
- * Closes every socket in the trip's room after the trip was archived, restored or deleted, so an
+ * Closes every socket in the trip's room after the trip was archived or restored, so an
  * open tab goes back through the connect handler instead of keeping the role it connected with.
  *
  * The bridge is reached at call time for the reason `taskQueue` is above: `#/server/fns/context`
@@ -798,8 +798,8 @@ export const tripDeleteSummaryFn = createServerFn({ method: 'GET' })
  *    queue failure never surfaces.
  * 5. **Fan the statistics out** to the members read in step 1 — after the cascade there is nobody
  *    left to read.
- * 6. **Close the trip's room.** Last, because it awaits a Durable Object round trip that has no
- *    timeout and must not hold up the durable steps above; it logs and never fails the request.
+ * 6. **Reset the trip's room.** Erase its stored state and close sockets. Last, because the Durable
+ *    Object round trip must not hold up the durable steps above; it logs and never fails the request.
  */
 export const deleteTripFn = createServerFn({ method: 'POST' })
   .validator(deleteTripInputSchema)
@@ -824,7 +824,8 @@ export const deleteTripFn = createServerFn({ method: 'POST' })
       affectedStatYears(trip.startDate),
       memberIds,
     )
-    await evictRoom(scope, trip.id)
+    const { resetRoom } = await import('#/server/fns/context')
+    await resetRoom(scope, trip.id)
 
     return { deleted: true }
   })

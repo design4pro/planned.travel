@@ -1360,6 +1360,9 @@ const messages = {
   'collections.statusPicker.retry': 'Noch einmal versuchen',
 
   'collections.edit.retry': 'Noch einmal versuchen',
+  'files.readOnly.title': 'Dateien nur zum Lesen',
+  'files.readOnly.role':
+    'Nur Eigentümer und Bearbeiter der Reise können Dateien hochladen, umbenennen oder löschen. Du kannst sie weiterhin herunterladen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

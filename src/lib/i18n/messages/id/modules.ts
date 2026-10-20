@@ -1288,6 +1288,9 @@ const messages = {
   'collections.statusPicker.retry': 'Coba lagi',
 
   'collections.edit.retry': 'Coba lagi',
+  'files.readOnly.title': 'Berkas hanya baca',
+  'files.readOnly.role':
+    'Hanya pemilik dan editor perjalanan yang dapat mengunggah, mengganti nama, atau menghapus berkas. Kamu tetap dapat mengunduhnya.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

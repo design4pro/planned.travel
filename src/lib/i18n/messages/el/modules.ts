@@ -1359,6 +1359,9 @@ const messages = {
   'collections.statusPicker.retry': 'Δοκιμάστε ξανά',
 
   'collections.edit.retry': 'Δοκιμάστε ξανά',
+  'files.readOnly.title': 'Αρχεία μόνο για ανάγνωση',
+  'files.readOnly.role':
+    'Μόνο οι ιδιοκτήτες και οι συντάκτες του ταξιδιού μπορούν να ανεβάζουν, να μετονομάζουν ή να διαγράφουν αρχεία. Μπορείς ακόμα να τα κατεβάζεις.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

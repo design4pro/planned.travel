@@ -1418,6 +1418,9 @@ const messages = {
   'collections.statusPicker.retry': 'Попробовать ещё раз',
 
   'collections.edit.retry': 'Попробовать ещё раз',
+  'files.readOnly.title': 'Файлы только для чтения',
+  'files.readOnly.role':
+    'Только владельцы и редакторы поездки могут загружать, переименовывать или удалять файлы. Вы по-прежнему можете их скачивать.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

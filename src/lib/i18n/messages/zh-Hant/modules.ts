@@ -1179,6 +1179,9 @@ const messages = {
   'collections.statusPicker.retry': '再試一次',
 
   'collections.edit.retry': '再試一次',
+  'files.readOnly.title': '唯讀檔案',
+  'files.readOnly.role':
+    '只有旅行擁有者和編輯者可以上傳、重新命名或刪除檔案。你仍然可以下載檔案。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

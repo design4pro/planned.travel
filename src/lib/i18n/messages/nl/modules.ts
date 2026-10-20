@@ -1348,6 +1348,9 @@ const messages = {
   'collections.statusPicker.retry': 'Opnieuw proberen',
 
   'collections.edit.retry': 'Opnieuw proberen',
+  'files.readOnly.title': 'Alleen-lezenbestanden',
+  'files.readOnly.role':
+    'Alleen eigenaren en bewerkers van de reis kunnen bestanden uploaden, hernoemen of verwijderen. Je kunt ze nog steeds downloaden.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -60,6 +60,7 @@ function CollectionPage() {
   const router = useRouter()
   const [announcement, setAnnouncement] = useState('')
   const cards = useRef<HTMLUListElement>(null)
+  const empty = useRef<HTMLDivElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const data = Route.useLoaderData()
   const search = Route.useSearch()
@@ -185,16 +186,26 @@ function CollectionPage() {
         <div role="status" aria-live="polite" className="sr-only">
           {announcement}
         </div>
-        <h2 ref={heading} tabIndex={-1} className="sr-only">
-          {visible.length === 0
-            ? t('modules.collections.filtered.title')
-            : t('modules.collections.filtered.showing', {
-                count: visible.length,
-              })}
-        </h2>
+        {visible.length > 0 ? (
+          <h2
+            ref={heading}
+            tabIndex={-1}
+            className="text-caption text-ink-3 focus-ring"
+          >
+            {t('modules.collections.filtered.showing', {
+              count: visible.length,
+            })}
+          </h2>
+        ) : null}
         {visible.length === 0 ? (
-          <Card variant="dashed" padding="none">
+          <Card
+            ref={empty}
+            variant="dashed"
+            padding="none"
+            className="[&_h2]:focus-ring"
+          >
             <EmptyState
+              titleAs="h2"
               size="lg"
               tone="brand"
               icon={<Bookmark />}
@@ -275,7 +286,14 @@ function CollectionPage() {
                               .item(index)
                               ?.querySelector('button')
                             if (next instanceof HTMLElement) next.focus()
-                            else heading.current?.focus()
+                            else {
+                              const emptyHeading =
+                                empty.current?.querySelector('h2')
+                              if (emptyHeading) {
+                                emptyHeading.tabIndex = -1
+                                emptyHeading.focus()
+                              } else heading.current?.focus()
+                            }
                           }
                         }}
                       />

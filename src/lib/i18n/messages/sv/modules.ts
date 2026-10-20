@@ -1327,6 +1327,9 @@ const messages = {
   'collections.statusPicker.retry': 'Försök igen',
 
   'collections.edit.retry': 'Försök igen',
+  'files.readOnly.title': 'Skrivskyddade filer',
+  'files.readOnly.role':
+    'Bara resans ägare och redigerare kan ladda upp, byta namn på eller ta bort filer. Du kan fortfarande ladda ner dem.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

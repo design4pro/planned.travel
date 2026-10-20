@@ -1408,6 +1408,9 @@ const messages = {
   'collections.statusPicker.retry': 'Zkusit znovu',
 
   'collections.edit.retry': 'Zkusit znovu',
+  'files.readOnly.title': 'Soubory pouze pro čtení',
+  'files.readOnly.role':
+    'Pouze vlastníci a editoři cesty mohou soubory nahrávat, přejmenovávat nebo mazat. Stále je můžete stahovat.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
