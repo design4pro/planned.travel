@@ -24,6 +24,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Meghívás',
+  'workspace.invite.resend': 'Újraküldés',
+  'workspace.invite.revoke': 'Visszavonás',
+  'workspace.invite.confirm': 'Meghívás visszavonása',
+  'workspace.invite.expired': 'Lejárt',
+  'workspace.invite.by': 'Meghívó: {name}',
+  'workspace.invite.sent': 'Meghívó elküldve',
+  'workspace.invite.revoked': 'Meghívó visszavonva',
+  'workspace.invite.delivery':
+    'A meghívó mentve, de az e-mail küldése sikertelen. Küldje el újra.',
+  'workspace.invite.duplicate':
+    'Már van függőben lévő meghívó. Küldje el újra.',
+  'workspace.invite.existing': 'Ez a személy már a munkaterület tagja.',
+  'workspace.invite.failed':
+    'A meghívó nem érhető el. Frissítse a listát és próbálja újra.',
+  'workspace.invite.reload': 'Meghívók frissítése',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Fiók',
   'page.title': 'Beállítások',
@@ -633,6 +650,28 @@ const messages = {
   'passkeys.delete.removing': 'A belépési kulcs eltávolítása folyamatban',
   'passkeys.delete.passwordRequired':
     'A belépési kulcs eltávolításához adja meg a jelszavát.',
+  'workspace.departure.leave': 'Munkaterület elhagyása',
+  'workspace.departure.remove': 'Tag eltávolítása',
+  'workspace.departure.title': 'Megszünteti a tagságot itt: {workspace}?',
+  'workspace.departure.body':
+    '{name} elveszíti a hozzáférést ehhez: {workspace}. A fiókja, valamint a megőrzött utak és költségnyilvántartások megmaradnak.',
+  'workspace.departure.cancel': 'Mégse',
+  'workspace.departure.pending': 'Tagság megszüntetése…',
+  'workspace.departure.lastOwner':
+    'Távozás vagy a tulajdonos eltávolítása előtt nevezzen ki egy másik tagot tulajdonosnak.',
+  'workspace.departure.notPermitted':
+    'Jelenlegi szerepköre nem teszi lehetővé a tag eltávolítását. Újabb próbálkozás előtt frissítse a tagok listáját.',
+  'workspace.departure.notFound':
+    'Ez a személy már nem tagja ennek a munkaterületnek.',
+  'workspace.departure.impersonated':
+    'A munkaterületi tagság módosítása előtt fejezze be a másik felhasználó megszemélyesítését.',
+  'workspace.departure.failed':
+    'Az eredmény nem erősíthető meg. Újabb próbálkozás előtt töltse újra a munkaterületet.',
+  'workspace.departure.removed': 'Tag eltávolítva',
+  'workspace.departure.reload': 'Munkaterület újratöltése',
+  'workspace.departure.activationFailed':
+    'Kiléptél ebből a munkaterületből. A folytatáshoz nyisd meg a következőt.',
+  'workspace.departure.recover': 'Következő munkaterület megnyitása',
 } satisfies TranslationOf<typeof En>
 
 export default messages

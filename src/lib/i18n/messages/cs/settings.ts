@@ -33,6 +33,23 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Pozvat',
+  'workspace.invite.resend': 'Odeslat znovu',
+  'workspace.invite.revoke': 'Odvolat',
+  'workspace.invite.confirm': 'Odvolat pozvánku',
+  'workspace.invite.expired': 'Platnost vypršela',
+  'workspace.invite.by': 'Pozval(a) {name}',
+  'workspace.invite.sent': 'Pozvánka odeslána',
+  'workspace.invite.revoked': 'Pozvánka odvolána',
+  'workspace.invite.delivery':
+    'Pozvánka uložena, ale odeslání e-mailu selhalo. Odešlete ji znovu.',
+  'workspace.invite.duplicate':
+    'Pozvánka již čeká na vyřízení. Odešlete ji znovu.',
+  'workspace.invite.existing': 'Tato osoba je již členem pracovního prostoru.',
+  'workspace.invite.failed':
+    'Pozvánka není dostupná. Obnovte seznam a zkuste to znovu.',
+  'workspace.invite.reload': 'Obnovit pozvánky',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Účet',
   'page.title': 'Nastavení',
@@ -639,6 +656,28 @@ const messages = {
   'passkeys.delete.removing': 'Odebíráme přístupový klíč',
   'passkeys.delete.passwordRequired':
     'Pro odebrání tohoto přístupového klíče zadejte své heslo.',
+  'workspace.departure.leave': 'Opustit pracovní prostor',
+  'workspace.departure.remove': 'Odebrat člena',
+  'workspace.departure.title': 'Ukončit členství v {workspace}?',
+  'workspace.departure.body':
+    '{name} ztratí přístup k {workspace}. Účet této osoby i uchované cesty a záznamy nákladů zůstanou zachovány.',
+  'workspace.departure.cancel': 'Zrušit',
+  'workspace.departure.pending': 'Ukončování členství…',
+  'workspace.departure.lastOwner':
+    'Před odchodem nebo odebráním tohoto vlastníka nastavte jiného člena jako vlastníka.',
+  'workspace.departure.notPermitted':
+    'Vaše aktuální role neumožňuje odebrat tohoto člena. Před dalším pokusem obnovte seznam členů.',
+  'workspace.departure.notFound':
+    'Tato osoba již není členem tohoto pracovního prostoru.',
+  'workspace.departure.impersonated':
+    'Před změnou členství v pracovním prostoru ukončete vydávání se za jiného uživatele.',
+  'workspace.departure.failed':
+    'Výsledek se nepodařilo potvrdit. Před dalším pokusem znovu načtěte pracovní prostor.',
+  'workspace.departure.removed': 'Člen byl odebrán',
+  'workspace.departure.reload': 'Znovu načíst pracovní prostor',
+  'workspace.departure.activationFailed':
+    'Tento pracovní prostor jste opustili. Pokračujte otevřením dalšího.',
+  'workspace.departure.recover': 'Otevřít další prostor',
 } satisfies TranslationOf<typeof En>
 
 export default messages

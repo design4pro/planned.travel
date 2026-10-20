@@ -1,14 +1,20 @@
 /**
  * Audit log — an append-only record of who changed what inside a workspace.
  *
- * Rows are never updated, and the only delete path is {@link pruneAuditLog} for the retention cron.
+ * Rows are updated only by `eraseUserAudit` in `audit-erasure.ts` for personal-data erasure.
+ * The only delete path is {@link pruneAuditLog} for the weekly 400-day retention cron,
+ * in bounded tenant-scoped batches.
  * An audit write must never be the reason a user's action fails, so callers append after the work has
  * succeeded and treat a rejected append as a logging problem, not a request failure.
  */
 
-import { and, asc, count, desc, eq, lt } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
+import {
+  TENANT_AUDIT_PRUNE_BATCH_SIZE,
+  tenantAuditCutoff,
+} from '#/server/db/audit-retention'
 import { auditLog } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { idSchema, shortTextSchema } from './validation'
@@ -138,7 +144,33 @@ export async function countAuditActions(
   return rows
 }
 
-/** Drops entries older than `before`. Retention only — never call this from a request path. */
-export async function pruneAuditLog(scope: TenantScope, before: Date): Promise<number> {
-  return auditLogRepository.removeWhere(scope, lt(auditLog.createdAt, before))
+/**
+ * One bounded retention batch, derived from the fixed 400-day window and now.
+ * Only audit/retention.ts calls this in production; every predicate retains the tenant scope.
+ * No audit row is written about retention itself.
+ */
+export async function pruneAuditLog(
+  scope: TenantScope,
+  now: Date = new Date(),
+): Promise<number> {
+  const cutoff = tenantAuditCutoff(z.date().parse(now))
+  const due = tenantFilter(scope, auditLog, lt(auditLog.createdAt, cutoff))
+  const removed = await scope.db
+    .delete(auditLog)
+    .where(
+      tenantFilter(
+        scope,
+        auditLog,
+        inArray(
+          auditLog.id,
+          scope.db
+            .select({ id: auditLog.id })
+            .from(auditLog)
+            .where(due)
+            .limit(TENANT_AUDIT_PRUNE_BATCH_SIZE),
+        ),
+      ),
+    )
+    .returning({ id: auditLog.id })
+  return removed.length
 }

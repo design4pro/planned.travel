@@ -1,11 +1,11 @@
 # A person's data can be erased across workspaces on request
 
-| Field              | Value               |
-| ------------------ | ------------------- |
-| **Status**         | in-progress         |
-| **Issue**          | #811                |
-| **Spec PR**        | #1002               |
-| **Implementation** | #1410, #1416, #1420 |
+| Field              | Value                      |
+| ------------------ | -------------------------- |
+| **Status**         | in-progress                |
+| **Issue**          | #811                       |
+| **Spec PR**        | #1002                      |
+| **Implementation** | #1410, #1416, #1418, #1420 |
 
 ## 📝 TLDR
 
@@ -62,7 +62,7 @@ Measured at HEAD (`86841140`), by reading the code.
   `exports/**` objects have no deleter (`dead-letter/**` got one in phase 7, see the amendment); the weekly retention slot of `src/server/worker.ts` logs
   "cron half has no handler yet" for the R2 half. Journey deletion never touches R2.
 - **Departure is not deletion.** A person leaves a workspace through Better Auth's organization endpoints or the console;
-  only their `member` row goes (`removeMember` has no production caller). Their rows in that workspace stay under a live
+  only their `member` row goes (`removeMember` now runs through the product auth adapter, #1008). Their rows in that workspace stay under a live
   id, and nothing records that they were ever there once the `member` row is gone.
 - **Audit.** The tenant `audit_log` has `pruneAuditLog`, which **nothing calls**: it has no retention. `platform_audit_log`
   is pruned at 400 days by the weekly cron and is append-only (`docs/ACCESS.md` §4.3).
@@ -373,10 +373,10 @@ adds its registry entry in the same change; the drift test fails otherwise.
 
 ### Export before deletion
 
-Mentioned, neither offered nor enforced. The "Take it" promise on the privacy page (PDF itinerary, calendar file, GeoJSON)
-is not backed by the product today, and enforcing an export would block a legitimate request on a feature that does not
-exist. The deletion warning says the data cannot be recovered and does not link to an export. The gap is filed as a
-finding, below.
+Mentioned, neither offered nor enforced by the deletion flow. The trip Files screen offers PDF itineraries, calendar
+files and, since #1063, a GeoJSON places file. These are per-trip snapshots, not a complete personal-data export, and
+enforcing one would block a legitimate deletion request. The deletion warning says the data cannot be recovered and
+does not link to a download. The remaining plan-gating conflict in the public promise is tracked by #1079.
 
 ### Alternatives considered
 
@@ -563,7 +563,7 @@ and any change made by this PR to code, schema or migrations.
 
 - **F1. Memberless workspaces already exist** from past console deletions; they keep rows, files and a subscription row.
   A listing and a cleanup through the same `deleteWorkspace`.
-- **F2. The privacy "Take it" promise** (PDF, calendar, GeoJSON export) has no product behind it.
+- **F2. The privacy "Take it" promise** now has per-trip PDF, calendar and GeoJSON downloads (#1063). The PDF plan-gating conflict remains a person’s decision in #1079.
 - **F3. `dead-letter/` and `exports/` have no deleter** (`dead-letter/` fixed in phase 7, #1055); the weekly retention slot is a logged no-op
   (`BACKUP_RETENTION_DAYS` is read and unused).
 - **F4. (fixed in phase 7, #1055) `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
@@ -672,6 +672,28 @@ Open items a person decides. This spec does not decide them and records the defa
    reviewer is ever required.
 9. Whether the **privacy wording** changes ("deleting your account deletes your content" versus contributions kept as Former member).
 
+## Amendment (#1000)
+
+`.ai/specs/2026-10-17-delete-a-workspace-you-own.md` owns the one `deleteWorkspace` and its driver
+(`advanceWorkspaceDeletion`, the `workspace_deletions` ledger, the R2 prefix sweep, the fence, the late-subscription
+rule). Phase 4 above builds **its slices**, not a second function: the erasure engine calls the driver with
+`initiator: 'erasure'` for a workspace whose last member is the erased person, and the reserved system-owner scope is
+minted by #1000's driver phase, which the engine phases here are blocked by. The erasure keeps its own obligations on top of
+the driver: it captures the workspace's trip ids first (a bounded list) and resets every room with `deleteAll` (§ 7: waiting
+for the seven-day idle erase is not enough), and its verification step counts a workspace as deleted only once the ledger row
+has reached `rows_deleted` (the workspace row is gone). It **does not wait for that inside a delivery**: the job has five
+deliveries and no cron of its own, so a drain that outlasts them would dead-letter a banned, half-erased account although the
+deletion cron finishes the workspace. When a row has not reached `rows_deleted` the job parks (returns success; the account
+stays banned and the anchor rows keep their `erasure_id`, the incomplete state above) and the driver's `rows_deleted` step (or its `refused` transition)
+always enqueues the resume for the row's `erasure_id` (#1000, "The erasure resume"); exactly one job consumes the ledger row
+(a compare-and-set that records the envelope id, so the resume never overlaps a running job and nothing needs a park flag). A workspace the driver refuses after the ban
+(new members, a live subscription) ends the job with the step `workspace-refused:<deletionId>` on the anchor rows, which the
+console lists as an incomplete erasure for the operator; a Polar read that fails is retried by the deletion cron and is never
+a refusal for an erasure. The subscription gate in § 7 is the same pure
+function (`subscriptionBlocksWorkspaceDeletion`), and `unpaid` does **not** block under it: Polar sets that status when access
+has ended and the webhook already writes the Free row, so the status list in § 7 is read without `unpaid`. Where the two
+disagree, #1000 wins.
+
 ## Resolved assumptions (autonomous defaults)
 
 | #   | Question                                     | Applied default                                                                                                                                                                                                                                                     | Why                                                                                                                                                                                                                                                                         |
@@ -712,13 +734,56 @@ gated the ticket (`risk-high`):
 - **The audit actions are deferred.** `platform.user.erased` and `platform.user.erase_refused` are named
   in ADR 0043 and not added to `docs/ACCESS.md` §4.2 or `PLATFORM_AUDIT_ACTIONS` until the engine
   writes them.
-- **The anchor write is `beforeAddMember` and `beforeAcceptInvitation`**, not the `after*` hooks, and
-  the auth layer writes it through `src/server/auth/participation.ts`, a write-only module, because it
-  cannot import repos.
+- **The original anchor writes used `beforeAddMember` and `beforeAcceptInvitation`**. Issue #1009
+  replaces recipient acceptance with one atomic repository batch for membership, anchor and accepted
+  state, through the closed auth-to-repository exception in SPEC §5. Direct add retains the write-only
+  `src/server/auth/participation.ts` hook.
 - **The backfill is a chain**, not a fan-out: one message per workspace, payload a run id and a cursor,
   the marker written by the message that finds no workspace left.
 - **Scope of the registry** is D1 places only; the stores outside D1 stay in this spec until the phase
   that builds their sweep.
+
+## Amendment - phase 4 (issue #1057)
+
+What shipped differently from the design above, recorded with the security and tenancy verdict that
+gated the ticket (`risk-high`, approved, confidence high):
+
+- **`deleteWorkspace(scope, { departingUserId? })` names the one member who may still be in the
+  workspace**, instead of "one member". A count of "at most one member" never asks who that member
+  is, so a call into a workspace whose remaining member is somebody else would have deleted it. With
+  no name the workspace must have no member at all.
+- **The refusals are enforced inside the one `DELETE`.** They are read first, for an error that
+  names the workspace and the reason, and repeated as `NOT EXISTS` predicates in the statement
+  (D1 has no interactive transaction), so a member who joins or a webhook that revives the
+  subscription in between is not deleted along with the workspace. "Live paid" is defined once,
+  `livePaidSubscription()` in `repos/billing.ts`, and read by both.
+- **The webhook guard sits on `subscription.*` and `checkout.updated` only.** Order events find their
+  row through the subscription, and that row is deleted with the organization, so they already end as
+  `ignored`. The guard is `organizationExistsUnscoped` (a boolean, one named caller, `billing/store.ts`).
+  Without it the insert violates the `organization_id` foreign key and answers 500; Polar retries, and
+  repeated failures disable the endpoint for every workspace.
+- **`deletePrefix` and the sweep live in `storage/objects.ts` and `storage/workspace-objects.ts`**,
+  refusing any prefix that is not a whole directory. `avatars/<org>/` is swept although no portrait is
+  written yet. Collectors the caller runs before the rows go: `listWorkspaceTripIds` (`repos/trips.ts`)
+  and `listWorkspaceJourneyPhotoKeys` (`repos/journey.ts`), both administrators only.
+- **The room reset is a `POST` `reset` route** that closes every socket, runs `deleteAll()` and
+  removes the alarm; `resetTripRooms` tries every trip and then fails naming the ones that did.
+- **No orchestrator ships here.** The engine composes the pieces in a later phase. It must keep its
+  resume state somewhere that survives the workspace: `workspace_participants` carries the
+  `erasure_id`, is an `orgRef()` table, and goes with the workspace in step 4.
+- **An administrator may delete the workspace, not only the owner.** `deleteWorkspace` stays on
+  `assertCanAdminister`, as plan 09 and plan 10 (`deleteWorkspace` "stays on `assertCanAdminister`") say. The
+  erasure engine calls it with the reserved system user, role `owner`. Narrowing the interactive caller to the
+  owner is a product decision for the phase that adds the screen.
+- **Open for a person before the engine phase merges (money):** a workspace whose subscription is set to cancel
+  at the end of the period can be deleted, and Polar goes on sending events for it. They are acknowledged and
+  ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a
+  renewal is paid, nothing in the product notices. Whether the engine cancels or refunds at the provider, or
+  alerts on that log, is for a person.
+- **Journey photo keys are swept as given (#1419).** `listWorkspaceJourneyPhotoKeys` returns free-form `storageKey` and
+  `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
+  path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
+  it; until then the engine phase must not pass keys from any other source.
 
 ## Amendment - phase 5 (issue #1058)
 
@@ -781,3 +846,60 @@ gated the ticket (`risk-high`):
   survives a message delete; it belongs to the erasure phases.
 - **`logAuth` no longer writes `to`** on `email.queued` and `email.queue_failed`; no hash, domain or
   masked form replaces it.
+
+
+## Amendment - Phase 3a primitives (#1056)
+
+The trip, money and collaboration scrubs are grouped by domain in `repos/trips-erasure.ts`,
+`expenses-erasure.ts` and `collab-erasure.ts`. They are repository interfaces with no production
+caller. The current registry also includes trip invite links (disabled and anonymised) and calendar
+feeds (removed); phase 3a covers both. Promotion orders by `coalesce(joined_at, created_at)`, then
+`created_at`, then id: a missing joined date uses the known creation date instead of sorting first.
+
+Trip deletion requires `prepareTripRemoval`, an awaited, mandatory callback that durably and
+idempotently saves all cleanup work before the D1 cascade. That work includes every attachment and
+cover key, export-prefix discovery and room reset; execution waits for confirmed deletion. Rejection
+leaves D1 rows intact. The phase 6 engine (#1060) supplies the callback and tracks cleanup completion;
+these primitives do not import a Worker binding or enqueue a task themselves. Metadata rewrite keys
+include the same erasure's Former member uploads on retry, so a D1 success followed by R2 failure does
+not lose the keys.
+
+
+Phase 3a ownership handoff is one atomic per-trip batch: select the surviving successor, conditionally
+record its PII-free promotion, promote, remove the departing membership, and anonymise the creator.
+If every successor has left, no notice or finalisation is written and the original retry anchors
+remain. The ordinary leave and demotion writers check the current database role in their write,
+including when they read an editor before erasure promoted that person to the sole owner.
+
+
+## Amendment - phase 3b primitives (#1059)
+
+The domain scrub leaves are `personal-erasure.ts`, `collections-erasure.ts`, `journey-erasure.ts`,
+`vacay-erasure.ts` and `audit-erasure.ts` under repositories; the registry names these owners.
+Every scrub requires the reserved erasure owner scope. Journey photo cleanup includes photos lost
+through entry/journey cascades, even when uploaded by somebody else. A required idempotent durable
+manifest callback saves all keys before any D1 deletion; the function also returns those keys.
+The engine must finish that manifest on retry even when the next scrub returns no keys.
+
+SPEC §5/§6 explicitly admits four system-actor erasure catalog primitives, with no production
+caller yet. Incoming invitations are erased per organization; verification rows and impersonated
+sessions are global and preserve other identities. Installed Better Auth stores reset-password,
+2fa and trust-device user ids as exact values, revoke-unproven-account-access in the identifier,
+and OTP identities as `<type>-otp-<email>`; the app stores passkey userId in valid JSON. Malformed
+JSON and substring lookalikes are not interpreted as the person. Session tokens must be durably
+saved by a required callback before D1 deletion so the engine can purge their KV caches.
+The catalog supplies the three platform counts to `verifyErasure({ platform })`; it never changes
+the platform ledger. Tenant audit erasure is the one updater, touching actor/entity-related rows
+only and retaining filenames. No new user-facing concept, queue producer, or engine wiring ships.
+
+## Amendment - tenant audit retention (issue #1064)
+
+This supersedes the Audit paragraph's no-retention observation, finding F6 and the corresponding
+owner-confirms premise above. The existing weekly retention slot now calls `audit/retention.ts`:
+session-less, keyset-paged organisation-id discovery, then tenant-scoped `pruneAuditLog` batches.
+`TENANT_AUDIT_RETENTION_DAYS = 400` is the stated owner-confirms default, matching the platform
+ledger. The cutoff itself is kept; only `created_at` selects rows for deletion. Each delete names
+at most 200 ids and one 250-batch cap covers the whole run. Structured logs record `deleted`,
+`batches`, `organizations`, `drained`; remaining work is an error, with no audit row about the prune.
+The trip history panel, overview activity list and action-count chart stop showing activity older
+than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.

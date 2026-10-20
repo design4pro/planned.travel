@@ -838,6 +838,14 @@ const messages = {
   'files.action.add': '添加文件',
   'files.action.choose': '选择文件',
   'files.action.upload': '上传文件',
+  'files.places.title': '地点文件',
+  'files.places.description':
+    '将此次旅行的地点下载为 GeoJSON，包括没有坐标的地点。',
+  'files.places.action': '下载地点 (.geojson)',
+  'files.places.empty': '请先为此次旅行添加地点，再下载。',
+  'files.places.error': '无法准备地点文件。请重试。',
+  'files.places.pending': '正在准备地点文件…',
+  'files.places.done': '地点文件已下载。',
   'files.calendar.live.action': '自动更新的日历链接',
   'files.calendar.live.title': '自动更新的日历链接',
   'files.calendar.warning':
@@ -1094,6 +1102,20 @@ const messages = {
   'vacay.error.title': '无法加载休假规划器',
   'vacay.year.previous': '上一年',
   'vacay.year.next': '下一年',
+  'vacay.settings.open': '休假计划设置',
+  'vacay.settings.title': '休假计划设置',
+  'vacay.settings.description': '设置未用完的天数如何结转，以及默认有多少天。',
+  'vacay.settings.carryOver': '将未用完的天数结转到下一年',
+  'vacay.settings.carryOver.hint': '关闭后，结转的天数只会被隐藏，不会被删除。',
+  'vacay.settings.defaultAllowance': '默认额度（每年天数）',
+  'vacay.settings.defaultAllowance.hint': '适用于你没有设置自己额度的年份。',
+  'vacay.settings.save': '保存设置',
+  'vacay.settings.cancel': '取消',
+  'vacay.settings.saved': '已保存休假计划设置。',
+  'vacay.settings.error': '无法保存休假计划设置。未做任何更改。',
+  'files.readOnly.title': '只读文件',
+  'files.readOnly.role':
+    '只有旅行所有者和编辑者可以上传、重命名或删除文件。你仍然可以下载文件。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

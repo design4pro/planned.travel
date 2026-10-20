@@ -30,6 +30,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Invita',
+  'workspace.invite.resend': 'Invia di nuovo',
+  'workspace.invite.revoke': 'Revoca',
+  'workspace.invite.confirm': 'Revoca l’invito',
+  'workspace.invite.expired': 'Scaduto',
+  'workspace.invite.by': 'Invito da {name}',
+  'workspace.invite.sent': 'Invito inviato',
+  'workspace.invite.revoked': 'Invito revocato',
+  'workspace.invite.delivery':
+    'Invito salvato, ma l’invio non è riuscito. Invialo di nuovo.',
+  'workspace.invite.duplicate':
+    'Esiste già un invito in sospeso. Invialo di nuovo.',
+  'workspace.invite.existing':
+    'Questa persona fa già parte dello spazio di lavoro.',
+  'workspace.invite.failed':
+    'Invito non disponibile. Aggiorna la lista e riprova.',
+  'workspace.invite.reload': 'Aggiorna gli inviti',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Account personale',
   'page.title': 'Impostazioni',
@@ -641,6 +659,28 @@ const messages = {
   'passkeys.delete.removing': 'Rimozione della chiave d’accesso',
   'passkeys.delete.passwordRequired':
     'Inserisci la tua password per rimuovere questa chiave d’accesso.',
+  'workspace.departure.leave': 'Lascia lo spazio di lavoro',
+  'workspace.departure.remove': 'Rimuovi membro',
+  'workspace.departure.title': 'Terminare l’appartenenza a {workspace}?',
+  'workspace.departure.body':
+    '{name} perderà l’accesso a {workspace}. Il suo account e i viaggi e i registri dei costi conservati rimarranno.',
+  'workspace.departure.cancel': 'Annulla',
+  'workspace.departure.pending': 'Chiusura dell’appartenenza…',
+  'workspace.departure.lastOwner':
+    'Assegna il ruolo di proprietario a un altro membro prima di uscire o rimuovere questo proprietario.',
+  'workspace.departure.notPermitted':
+    'Il tuo ruolo attuale non consente di rimuovere questo membro. Aggiorna l’elenco dei membri prima di riprovare.',
+  'workspace.departure.notFound':
+    'Questa persona non è più membro di questo spazio di lavoro.',
+  'workspace.departure.impersonated':
+    'Interrompi la rappresentazione di un altro utente prima di modificare l’appartenenza allo spazio di lavoro.',
+  'workspace.departure.failed':
+    'Non è stato possibile confermare il risultato. Ricarica lo spazio di lavoro prima di riprovare.',
+  'workspace.departure.removed': 'Membro rimosso',
+  'workspace.departure.reload': 'Ricarica spazio di lavoro',
+  'workspace.departure.activationFailed':
+    'Hai lasciato questo spazio di lavoro. Apri il prossimo per continuare.',
+  'workspace.departure.recover': 'Apri il prossimo spazio',
 } satisfies TranslationOf<typeof En>
 
 export default messages

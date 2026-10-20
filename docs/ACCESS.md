@@ -292,7 +292,7 @@ session-less path in this codebase is already built, and named the same way:
 
 - Two functions in `src/server/repos/shares.ts` - `listShareLinksForModerationUnscoped(db, …)` and
   `revokeShareLinkUnscoped(db, …)` - taking a plain `Database` rather than a `TenantScope`, exactly
-  as `findSubscriptionByOrganizationUnscoped` and its four siblings in
+  as `findSubscriptionByOrganizationUnscoped` and its five siblings in
   `src/server/repos/billing.ts` do for session-less provider resolution or platform billing inspection. SQL stays in
   `src/server/repos` (SPEC §6); what changes is the scope argument, not the layer.
 - The `Unscoped` suffix carries the weight. It is grep-able, it reads as an alarm at every call
@@ -308,8 +308,9 @@ session-less path in this codebase is already built, and named the same way:
   other module imports them, the way §2.6's drift test asserts its own list.
 
 SPEC §5 FU-3 now names this bounded `…Unscoped` shape; SQL remains in repos, and the
-closed list of exactly three catalog members is unchanged by it (ADR 0041; the third is the
-erasure catalog read, ADR 0043).
+closed catalog list was unchanged by FU-3 (ADR 0041). It now has exactly four members:
+global tables, reminder discovery, the erasure catalog (ids-only discovery and system-actor cleanup, ADR 0043) and tenant audit retention
+discovery (§4.5); both discovery reads return ids only.
 
 **A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
 resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
@@ -445,9 +446,9 @@ Four consequences that are part of this contract, not implementation taste:
 `disabledPaths` closes the fifteen paths the `admin` plugin adds. It is not a licence to close
 others: the `organization`, `twoFactor` and `passkey` endpoints already in use stay open, because
 they are organization-level and user-level surfaces that Better Auth authorises correctly and this
-document does not govern - with four exceptions. Two are closed by the plugin's own options and not
+document does not govern - with seven exceptions. Two are closed by the plugin's own options and not
 by `disabledPaths`: `organization/create`, which §2.7 closes with `allowUserToCreateOrganization: false`,
-and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other two are closed by
+and `organization/delete`, closed with `disableOrganizationDeletion: true`. The other five are closed by
 `disabledPaths` through its own list (`DISABLED_ORGANIZATION_PATHS` in
 `src/server/auth/admin-options.ts`, merged with the fifteen admin paths into `DISABLED_PATHS`, which is
 what `src/server/auth/index.ts` passes). `organization/update-member-role` writes a role without an
@@ -455,12 +456,27 @@ audit row, accepts a comma-joined role such as `admin,owner`, and lets an admin 
 which the product-owned `changeMemberRoleFn` (§6.4, #995) allows. `organization/remove-member` deletes
 the `member` row for an owner or an admin with no audit entry and no refusal during impersonation
 (#1010). The in-process `auth.api.updateMemberRole` and `auth.api.removeMember` are not HTTP paths and
-stay callable; the product-owned removal (#1008) must remove members through `auth.api.removeMember`
-and not through the repository's `removeMember`, because the plugin's after-hook is what queues the
-removed person's room eviction, and the repository function has neither that hook, an owner ceiling
-for an admin nor an audit entry. `organization/leave` stays open, because the leave screen needs it
-(closing it to an impersonated session is #1402), so until #1008 ships a workspace has no way to
-remove a member over HTTP. The deletion flag is checked before
+stay callable. Product removal and departure use `departMemberFn` (#1008), refuse impersonation
+before resolving the tenant, and call `auth.api.removeMember` or `auth.api.leaveOrganization` once.
+A request-local adapter intercept binds the single member deletion to the authenticated tenant,
+actor and target. The repository checks current stored authority and another owner in the mutation
+itself, including composite roles; role demotion uses the same owner predicate. Deletion and its
+conditional `member.removed` or `member.left` audit entry share one D1 batch. Auth still runs the
+session cleanup and offboarding hooks; it never deletes the row a second time. Public HTTP
+`organization/leave` is closed too, so it cannot bypass these guards (overlapping #1402).
+Pending workspace invitations issued by a departed member remain pending and can still be accepted;
+an owner or admin must revoke them from Invitations when they should no longer be usable.
+After removing another member, the client announces success and focuses the stable members table
+after refreshing the list, so removal of the row and its dialog does not lose keyboard focus.
+Closing a definite refusal resets its confirmation for a new intent; an uncertain result still
+requires reconciliation, and a confirmed departure keeps its recovery-only state.
+After self-departure the existing resolver chooses a remaining workspace or provisions a personal
+one and activates it. An uncertain departure response stays an error and never activates a workspace
+as a success; the reader can reload to reconcile it. If activation fails after confirmed deletion,
+the confirmation offers a recovery-only
+server function, deriving the signed-in user without requiring the departed tenant; it never repeats
+the deletion. Client caches are cleared, and dashboard navigation waits for successful activation.
+The deletion flag is checked before
 the session is looked up, so the endpoint answers `404` with `ORGANIZATION_DELETION_DISABLED` to an
 owner and to an anonymous caller alike (and refuses the in-process call too). Left open it would let
 an owner delete the `organization` row, cascade over every tenant table - other members' private
@@ -468,6 +484,17 @@ trips included - and leave the provider subscription billing, the R2 objects orp
 log silent. A workspace therefore has no HTTP deletion path until the product-owned one (#1000)
 exists, and that change must decide the flag explicitly: a deletion done through repository SQL keeps
 it, one that moved to the plugin's endpoint would have to remove it.
+`organization/invite-member` (including its resend option) and `organization/cancel-invitation`
+are also closed by `DISABLED_ORGANIZATION_PATHS` (#1009). The Workspace console calls the tenant-scoped
+invitation lifecycle instead: owners and admins may invite within their role ceiling, duplicates
+require explicit same-row resend, and members plus all pending invitations reserve seats. The quota
+and duplicate predicates execute in the insert statement; state changes require a still-pending row.
+Expiry comes from the server's shared seven-day policy. Create/resend queue one invitation email and
+report queue failure as recoverable delivery failure; real transitions write the tenant trail. Recipient
+lookup, acceptance and rejection stay open, retaining recipient, verification, expiry and status checks
+and the participation anchor. This tenant action keeps central impersonator attribution (§6.4).
+
+`deleteWorkspace` (`src/server/repos/members.ts`, #1057) is that repository-SQL deletion. It stays on `assertCanAdminister`, so a workspace `admin` may delete the workspace as well as the `owner`; narrowing the interactive caller to the owner is the screen's decision.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
 ### 2.7 Creating a workspace
@@ -1065,7 +1092,9 @@ in code and not in this table fails it; so does a name in this table that nothin
 
 ### 4.3 Append-only, and never a reason to fail
 
-- **Append-only.** Rows are never updated. The only delete path is the retention cron
+The tenant log now shares the 400-day weekly window, with tenant-scoped bounded writes (§4.5).
+
+- **Append-only.** Only `eraseUserAudit` in `repos/audit-erasure.ts` updates rows for personal-data erasure. The only delete path is the retention cron
   (`17 4 * * 1`) pruning by `created_at`, on a retention window of **400 days** - thirteen months,
   so a full financial year plus a month is always readable. No other code path deletes from this
   table; a console action that "removes an entry" does not exist. The prune runs on the platform
@@ -1133,9 +1162,19 @@ would store the same data a second time, and the moment the two disagree there i
 answer to which one is true. One append-only log, one index, one range scan - and the curator
 detail screen renders the timeline from it directly.
 
-### 4.5 The tenant log is unchanged
+### 4.5 The tenant log and its retention
 
-`audit_log` (`src/server/db/schema.ts`) stays exactly as it is: `organization_id`-scoped, written
+The weekly `17 4 * * 1` slot also removes tenant rows strictly older than **400 days**
+(`TENANT_AUDIT_RETENTION_DAYS`, owner confirms), keeping the cutoff itself. Session-less,
+keyset-paged organisation-id discovery precedes tenant-scoped deletes by `created_at` alone.
+The system uses reserved placeholder `system:tenant-audit-retention` with role `member`, never
+an actual member's identity. Statements name at most 200 ids, with one 250-batch cap for the
+whole run. Counts (`deleted`, `batches`, `organizations`, `drained`) are structured logs;
+`drained: false` is an error. No audit entry is written about retention itself.
+The trip history panel, overview activity list and action-count chart consequently stop showing
+activity older than 400 days once pruned. No UI setting changes this constant.
+
+`audit_log` (`src/server/db/schema.ts`) keeps its schema: `organization_id`-scoped, written
 through `src/server/repos/audit.ts` on `createTenantRepository()`, with its `metadata` JSON column
 and no `actor_kind`. It records what happened inside a workspace. `platform_audit_log` records what
 happened to the platform. They are never merged, never joined, and never read through each other's
@@ -1144,6 +1183,15 @@ session stamps the impersonator into the existing `metadata` column as `imperson
 user id>`, which is a value change and not a schema change. `trail()` (`src/server/audit/trail.ts`)
 does it, from the tenant context's `impersonatedBy`, which `requireOrgFrom` reads off the session; it
 is implemented (#1010).
+
+Erasure trip promotion (#1056) adds `trip.owner_promoted` under the reserved tenant actor
+`system:erasure`. Its audit row carries only the trip id, with no personal metadata, IP or user
+agent, and commits in the same batch as the role update, departing membership removal and creator
+anonymisation. The successor is selected inside that batch; if none survives, the original retry
+anchors remain and the scrub refuses. Ordinary leave and demotion also test the current database
+role in their write, so a request that read an editor before promotion cannot remove the new sole owner. `createErasureScope` is worker-only;
+request routes and server functions cannot import it, even indirectly. It grants no platform role.
+The ordinary trip deletion path still requires its caller's trip-owner membership.
 
 ---
 

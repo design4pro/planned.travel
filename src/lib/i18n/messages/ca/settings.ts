@@ -30,6 +30,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Convida',
+  'workspace.invite.resend': 'Torna a enviar',
+  'workspace.invite.revoke': 'Revoca',
+  'workspace.invite.confirm': 'Revoca la invitació',
+  'workspace.invite.expired': 'Caducada',
+  'workspace.invite.by': 'Invitació de {name}',
+  'workspace.invite.sent': 'Invitació enviada',
+  'workspace.invite.revoked': 'Invitació revocada',
+  'workspace.invite.delivery':
+    'Invitació desada, però l’enviament ha fallat. Torna a enviar-la.',
+  'workspace.invite.duplicate':
+    'Ja hi ha una invitació pendent. Torna a enviar-la.',
+  'workspace.invite.existing':
+    'Aquesta persona ja pertany a l’espai de treball.',
+  'workspace.invite.failed':
+    'Invitació no disponible. Actualitza la llista i torna-ho a provar.',
+  'workspace.invite.reload': 'Actualitza les invitacions',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Compte',
   'page.title': 'Configuració',
@@ -646,6 +664,28 @@ const messages = {
   'passkeys.delete.removing': 'Eliminant la clau d’accés',
   'passkeys.delete.passwordRequired':
     'Introdueix la contrasenya per eliminar aquesta clau d’accés.',
+  'workspace.departure.leave': 'Surt de l’espai de treball',
+  'workspace.departure.remove': 'Elimina el membre',
+  'workspace.departure.title': 'Vols finalitzar la pertinença a {workspace}?',
+  'workspace.departure.body':
+    '{name} perdrà l’accés a {workspace}. El seu compte i els viatges i registres de despeses conservats es mantindran.',
+  'workspace.departure.cancel': 'Cancel·la',
+  'workspace.departure.pending': 'S’està finalitzant la pertinença…',
+  'workspace.departure.lastOwner':
+    'Fes propietari un altre membre abans de sortir o d’eliminar aquest propietari.',
+  'workspace.departure.notPermitted':
+    'El teu rol actual no permet eliminar aquest membre. Actualitza la llista de membres abans de tornar-ho a provar.',
+  'workspace.departure.notFound':
+    'Aquesta persona ja no és membre d’aquest espai de treball.',
+  'workspace.departure.impersonated':
+    'Deixa de suplantar la identitat abans de canviar la pertinença a l’espai de treball.',
+  'workspace.departure.failed':
+    'No s’ha pogut confirmar el resultat. Torna a carregar l’espai de treball abans de tornar-ho a provar.',
+  'workspace.departure.removed': 'S’ha eliminat el membre',
+  'workspace.departure.reload': 'Torna a carregar l’espai de treball',
+  'workspace.departure.activationFailed':
+    'Has deixat aquest espai de treball. Obre el següent per continuar.',
+  'workspace.departure.recover': 'Obre el següent espai',
 } satisfies TranslationOf<typeof En>
 
 export default messages

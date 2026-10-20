@@ -561,9 +561,11 @@ and records the link's creator.
   `Input`, `SwitchField`, `SimpleSelect` from `#/components/ui`; the people screen's `ConfirmDialog` (exported, with
   `onCloseAutoFocus` and an optional `pendingLabel`, so `invite.replace.pending` is shown and announced). **`CopyValue` is not used**: it builds English strings in code, upper-cases the value, is
   about 16px tall and cannot select the URL. No primitive and no token is added.
-- **Motion.** The card enters at 220 ms on `--ease-out-quint` with a 6px rise; a state change cross-fades at 150 ms
-  with the outgoing state `inert`; transform and opacity only; `prefers-reduced-motion: reduce` collapses both to
-  opacity.
+- **Motion.** The join card enters at 220 ms on `--ease-out-quint` with a 6px rise; a join state change cross-fades
+  at 150 ms with the outgoing state `inert`; transform and opacity only. The owner panel uses the existing house
+  `animate-rise` entrance (220 ms, 0.5rem rise) and replaces state content immediately, without an outgoing DOM
+  tree. Shared reduced-motion rules collapse its animation duration and remove movement. The owner-panel
+  exception is recorded in the amendment below; join-page motion is unchanged.
 - **Focus map.**
 
   | Moment                                | Focus goes to                                                         |
@@ -886,8 +888,9 @@ The six items of `docs/SPEC.md` §7 apply unchanged, and:
       button, the role select, the switch and the replace confirmation.
 - [ ] Empty, skeleton and error states designed on `--color-surface-2`, including the never-minted owner state and the
       unavailable landing.
-- [ ] Motion 150-260 ms on `--ease-out-quint`, transform and opacity only, `prefers-reduced-motion` honoured, the
-      outgoing state `inert` during a cross-fade.
+- [ ] Join motion 150-260 ms on `--ease-out-quint`, transform and opacity only, `prefers-reduced-motion` honoured,
+      the outgoing join state `inert` during a cross-fade. Owner panel: house entrance and shared reduced-motion
+      behavior, immediate state replacement with no outgoing DOM tree (see amendment).
 - [ ] Light and dark parity with dark shadows re-declared; the landing is designed in dark, not inherited; one `ar`
       (RTL) frame.
 - [ ] 360px, 1280px and 2560px; at 360 the landing card is the whole screen with the action above the fold; focus is
@@ -956,3 +959,15 @@ revival), `aria-disabled` limited to the select and switch with `loading` button
 footer, whole-sentence role announcements, the generic meta description key and the placement of `join.newHere`.
 No specialist asked for a third round and none escalated (ESCALATE: no from all five). Not checked by any reviewer:
 anything that needs the running app, a real screen reader or computed colours - those are Phase 3 and 4 evidence.
+
+## Amendment
+
+### Owner-panel state motion - #1425
+
+The independent UX decision for #1024 accepts immediate owner-panel state replacement instead of the proposed
+150ms crossfade. A traveller receives the current credential state, pending feedback, announcements and keyboard
+focus without retaining an outgoing credential/control tree. The panel retains the house `animate-rise` entrance
+(220ms, 0.5rem) and shared reduced-motion behavior. This reversible adjustment applies only to the owner panel;
+join-page motion, functional states, immediate credential clearing and the focus map are unchanged. No animation
+follow-up is required without a demonstrated usability problem. The decision is recorded in PR #1425's Resolved
+assumptions; final validation and QA remain required.

@@ -322,6 +322,44 @@ const messages = {
   'card.error.body': 'Angka-angka ini gagal dimuat. Tidak ada yang hilang.',
   'card.error.retry': 'Coba lagi',
   'overlay.close': 'Tutup {name}',
+  'regions.label': 'Wilayah',
+  'regions.hint':
+    'Menambahkan wilayah juga menandai {country} sebagai pernah dikunjungi.',
+  'regions.keeps':
+    'Menghapus wilayah tidak menghapus {country} dari atlas Anda.',
+  'regions.keeps.unvisited':
+    'Wilayah ini tetap tercatat. Tandai {country} sebagai pernah dikunjungi atau tambahkan wilayah untuk mengembalikannya ke peta.',
+  'regions.empty.title': 'Belum ada wilayah yang tercatat di sini',
+  'regions.empty.body':
+    'Tambahkan negara bagian, provinsi, atau area yang pernah Anda kunjungi di {country}.',
+  'regions.input.label': 'Tambahkan wilayah di {country}',
+  'regions.input.placeholder': 'Misalnya, Bavaria',
+  'regions.add': 'Tambah wilayah',
+  'regions.adding': 'Menambahkan {region}',
+  'regions.remove': 'Hapus {region}',
+  'regions.loading': 'Memuat wilayah Anda',
+  'regions.status.added': '{region} ditambahkan',
+  'regions.status.exists': '{region} sudah tercatat',
+  'regions.status.removed': '{region} dihapus',
+  'regions.status.addedCountry':
+    '{region} ditambahkan. {country} kini ditandai sebagai pernah dikunjungi.',
+  'regions.error.invalid': 'Masukkan nama wilayah.',
+  'regions.error.hidden':
+    'Nama berisi karakter yang tidak diizinkan. Hapus karakter tersebut dan coba lagi.',
+  'regions.error.load': 'Wilayah Anda di {country} tidak dapat dimuat.',
+  'regions.error.add': '{region} tidak dapat ditambahkan. Coba lagi.',
+  'regions.error.remove': '{region} tidak dapat dihapus. Coba lagi.',
+  'regions.error.full':
+    'Anda telah mencatat {limit} wilayah. Hapus satu untuk menambahkan wilayah lain.',
+  'regions.reload': 'Muat ulang wilayah',
+  'actions.confirm.visitRegions.body': {
+    other:
+      '{history}Wilayah yang Anda catat di {country} tetap tersimpan: {count}.',
+  },
+  'regions.error.uncertain':
+    'Perubahan tidak dapat dikonfirmasi. Muat ulang wilayah Anda untuk memeriksa apa yang tersimpan.',
+  'regions.status.refreshFailed':
+    '{result} Atlas tidak dapat diperbarui. Muat ulang untuk memperbarui peta.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

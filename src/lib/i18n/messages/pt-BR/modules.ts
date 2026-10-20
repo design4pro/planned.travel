@@ -941,6 +941,15 @@ const messages = {
   'files.action.add': 'Adicionar arquivos',
   'files.action.choose': 'Escolher arquivos',
   'files.action.upload': 'Enviar arquivos',
+  'files.places.title': 'Arquivo de lugares',
+  'files.places.description':
+    'Baixe os lugares desta viagem como GeoJSON, incluindo os que não têm coordenadas.',
+  'files.places.action': 'Baixar lugares (.geojson)',
+  'files.places.empty': 'Adicione lugares a esta viagem para baixá-los.',
+  'files.places.error':
+    'Não foi possível preparar o arquivo de lugares. Tente novamente.',
+  'files.places.pending': 'Preparando o arquivo de lugares…',
+  'files.places.done': 'Arquivo de lugares baixado.',
   'files.calendar.live.action': 'Link de calendário atualizado',
   'files.calendar.live.title': 'Link de calendário atualizado',
   'files.calendar.warning':
@@ -1271,6 +1280,25 @@ const messages = {
   'vacay.error.title': 'Não foi possível carregar o planejador de férias',
   'vacay.year.previous': 'Ano anterior',
   'vacay.year.next': 'Próximo ano',
+  'vacay.settings.open': 'Configurações do plano de férias',
+  'vacay.settings.title': 'Configurações do plano de férias',
+  'vacay.settings.description':
+    'Como os dias não usados são transferidos e quantos dias você tem por padrão.',
+  'vacay.settings.carryOver':
+    'Transferir os dias não usados para o ano seguinte',
+  'vacay.settings.carryOver.hint':
+    'Ao desativar, os dias transferidos ficam ocultos, mas não são apagados.',
+  'vacay.settings.defaultAllowance': 'Cota padrão (dias por ano)',
+  'vacay.settings.defaultAllowance.hint':
+    'Vale para os anos em que você não definiu a sua própria cota.',
+  'vacay.settings.save': 'Salvar configurações',
+  'vacay.settings.cancel': 'Cancelar',
+  'vacay.settings.saved': 'Configurações do plano de férias salvas.',
+  'vacay.settings.error':
+    'Não foi possível salvar as configurações do plano de férias. Nada foi alterado.',
+  'files.readOnly.title': 'Arquivos somente para leitura',
+  'files.readOnly.role':
+    'Somente proprietários e editores da viagem podem enviar, renomear ou excluir arquivos. Você ainda pode baixá-los.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -44,20 +44,18 @@ the same D1 batch as, every membership insert, never after:
 
 - `createOrganizationFor` puts the anchor insert in its batch between the organization and the owner;
 - `addMember` writes the anchor first, so a failed anchor write leaves no membership;
-- Better Auth's `organizationHooks.beforeAddMember` and `beforeAcceptInvitation` write it before the
-  library inserts the member (the `after*` hooks would leave a window in which a member exists
-  without an anchor);
+- Better Auth's `organizationHooks.beforeAddMember` writes it before direct member creation;
+  recipient acceptance instead includes the anchor in its atomic membership transfer (#1009);
 - the dev seed writes it before its direct membership insert.
 
 An anchor left behind by a join that then fails is harmless: erasure finds the workspace and scrubs
 nothing. A test lists every membership insert in the source and fails on one with no anchor write.
 
-The auth layer cannot import `src/server/repos` (the Workspace console graph reaches `#/server/auth`
-and `src/server/fns/console/__tests__/isolation.test.ts` forbids the tenant layer from being
-reachable from it), so it has `src/server/auth/participation.ts`: a write-only `INSERT OR IGNORE` of
-`organization_id` and `user_id`. The organization id comes from the id minted in the same batch or from
-hook data, never from a request body. A source test pins that the table is named only by the schema,
-that module, `repos/participants.ts`, the catalog read and the registry.
+Issue #1009 amends the original auth-layer restriction: recipient invitation consumption reaches only
+`repos/workspace-invitation-acceptance.ts` and its base/batch/context primitives (SPEC §5). Acceptance
+writes membership, anchor and accepted invitation in one required atomic batch. Other auth writes
+retain the write-only `auth/participation.ts`; their organization id comes from minted ids or resolved
+hook data, never a request body. The source and console graph tests pin these closed exceptions.
 
 **4. A third catalog member.** `src/server/catalog/erasure.ts` holds `listWorkspacesHoldingUser` and
 `listOrganizationIds`. Both take a plain `Database` and have four properties that stand in for the
@@ -97,3 +95,13 @@ writes an action, so neither the table nor `PLATFORM_AUDIT_ACTIONS` changes in t
 - The migration is additive (`CREATE TABLE`, `CREATE INDEX`); the queue kind is inert until a producer
   lands, so a Worker that predates it never receives one.
 - `workspace_participants` has no tenant-facing read.
+
+
+## Amendment - phase 3b (#1059)
+
+The two discovery reads retain their four original properties. SPEC §5/§6 now explicitly admits
+four additional system-actor-only cleanup/count primitives in the same catalog module: scoped
+incoming invitations, global verification/impersonation cleanup, platform credential/provider
+anonymisation, and counts for the sweep. They have no production caller. The engine must amend
+the importer pin and provide its permission/audit boundary and durable session-cache cleanup.
+The platform ledger is untouched; a token issuer's erasure never revokes another holder's token.

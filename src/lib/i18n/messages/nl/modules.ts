@@ -926,6 +926,15 @@ const messages = {
   'files.action.add': 'Bestanden toevoegen',
   'files.action.choose': 'Bestanden kiezen',
   'files.action.upload': 'Bestanden uploaden',
+  'files.places.title': 'Plaatsenbestand',
+  'files.places.description':
+    'Download de plaatsen van deze reis als GeoJSON, ook plaatsen zonder coördinaten.',
+  'files.places.action': 'Plaatsen downloaden (.geojson)',
+  'files.places.empty': 'Voeg plaatsen toe aan deze reis om ze te downloaden.',
+  'files.places.error':
+    'Het plaatsenbestand kon niet worden voorbereid. Probeer het opnieuw.',
+  'files.places.pending': 'Plaatsenbestand voorbereiden…',
+  'files.places.done': 'Plaatsenbestand gedownload.',
   'files.calendar.live.action': 'Actuele kalenderlink',
   'files.calendar.live.title': 'Actuele kalenderlink',
   'files.calendar.warning':
@@ -1234,6 +1243,25 @@ const messages = {
   'vacay.error.title': 'De verlofplanner kon niet worden geladen',
   'vacay.year.previous': 'Vorig jaar',
   'vacay.year.next': 'Volgend jaar',
+  'vacay.settings.open': 'Instellingen van het verlofplan',
+  'vacay.settings.title': 'Instellingen van het verlofplan',
+  'vacay.settings.description':
+    'Hoe ongebruikte dagen worden overgedragen en hoeveel dagen je standaard hebt.',
+  'vacay.settings.carryOver':
+    'Ongebruikte dagen overdragen naar het volgende jaar',
+  'vacay.settings.carryOver.hint':
+    'Als je dit uitzet, worden overgedragen dagen verborgen, maar niet gewist.',
+  'vacay.settings.defaultAllowance': 'Standaardbudget (dagen per jaar)',
+  'vacay.settings.defaultAllowance.hint':
+    'Geldt voor jaren waarin je geen eigen budget hebt ingesteld.',
+  'vacay.settings.save': 'Instellingen opslaan',
+  'vacay.settings.cancel': 'Annuleren',
+  'vacay.settings.saved': 'De instellingen van het verlofplan zijn opgeslagen.',
+  'vacay.settings.error':
+    'De instellingen van het verlofplan konden niet worden opgeslagen. Er is niets gewijzigd.',
+  'files.readOnly.title': 'Alleen-lezenbestanden',
+  'files.readOnly.role':
+    'Alleen eigenaren en bewerkers van de reis kunnen bestanden uploaden, hernoemen of verwijderen. Je kunt ze nog steeds downloaden.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

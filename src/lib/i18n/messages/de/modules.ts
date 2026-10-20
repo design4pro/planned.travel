@@ -938,6 +938,15 @@ const messages = {
   'files.action.add': 'Dateien hinzufügen',
   'files.action.choose': 'Dateien auswählen',
   'files.action.upload': 'Dateien hochladen',
+  'files.places.title': 'Ortedatei',
+  'files.places.description':
+    'Lade die Orte dieser Reise als GeoJSON herunter, auch Orte ohne Koordinaten.',
+  'files.places.action': 'Orte herunterladen (.geojson)',
+  'files.places.empty': 'Füge dieser Reise Orte hinzu, um sie herunterzuladen.',
+  'files.places.error':
+    'Die Ortedatei konnte nicht vorbereitet werden. Versuche es erneut.',
+  'files.places.pending': 'Ortedatei wird vorbereitet…',
+  'files.places.done': 'Ortedatei heruntergeladen.',
   'files.calendar.live.action': 'Aktueller Kalenderlink',
   'files.calendar.live.title': 'Aktueller Kalenderlink',
   'files.calendar.warning':
@@ -1248,6 +1257,25 @@ const messages = {
   'vacay.error.title': 'Der Urlaubsplaner konnte nicht geladen werden',
   'vacay.year.previous': 'Vorheriges Jahr',
   'vacay.year.next': 'Nächstes Jahr',
+  'vacay.settings.open': 'Einstellungen des Urlaubsplans',
+  'vacay.settings.title': 'Einstellungen des Urlaubsplans',
+  'vacay.settings.description':
+    'Wie ungenutzte Tage übertragen werden und wie viele Tage du standardmäßig hast.',
+  'vacay.settings.carryOver': 'Ungenutzte Tage ins nächste Jahr übertragen',
+  'vacay.settings.carryOver.hint':
+    'Wenn du das ausschaltest, werden übertragene Tage ausgeblendet, aber nicht gelöscht.',
+  'vacay.settings.defaultAllowance': 'Standardanspruch (Tage pro Jahr)',
+  'vacay.settings.defaultAllowance.hint':
+    'Gilt für Jahre, in denen du keinen eigenen Anspruch festgelegt hast.',
+  'vacay.settings.save': 'Einstellungen speichern',
+  'vacay.settings.cancel': 'Abbrechen',
+  'vacay.settings.saved':
+    'Die Einstellungen des Urlaubsplans wurden gespeichert.',
+  'vacay.settings.error':
+    'Die Einstellungen des Urlaubsplans konnten nicht gespeichert werden. Es wurde nichts geändert.',
+  'files.readOnly.title': 'Dateien nur zum Lesen',
+  'files.readOnly.role':
+    'Nur Eigentümer und Bearbeiter der Reise können Dateien hochladen, umbenennen oder löschen. Du kannst sie weiterhin herunterladen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

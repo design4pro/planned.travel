@@ -10,7 +10,7 @@
  * Sockets use the **WebSocket Hibernation API**: the object accepts the socket
  * with `state.acceptWebSocket()` and then goes away. It is only billed and only
  * resident while a frame is actually being handled, and a room can hold idle
- * collaborators overnight for free. Connection state that must survive
+ * collaborators between periodic access checks. Connection state that must survive
  * hibernation lives in the socket's attachment; room state lives in storage.
  *
  * The Durable Object is a coordination and fan-out layer, not the system of
@@ -27,6 +27,7 @@ import {
   TRIP_ROOM_IDLE_TTL_MS,
   TRIP_ROOM_LOG_CAPACITY,
   TRIP_ROOM_MAX_SNAPSHOT_ENTITIES,
+  TRIP_ROOM_MAX_SOCKET_AGE_MS,
   TRIP_ROOM_PING_FRAME,
   TRIP_ROOM_PONG_FRAME,
   TRIP_ROOM_PROTOCOL_VERSION,
@@ -75,6 +76,7 @@ export interface TripRoomStorage {
   deleteAll: () => Promise<void>
   getAlarm: () => Promise<number | null>
   setAlarm: (scheduledTime: number) => Promise<void>
+  deleteAlarm: () => Promise<void>
 }
 
 export interface TripRoomSocket {
@@ -167,6 +169,12 @@ export class TripRoom implements DurableObject {
   private tail: Promise<unknown> = Promise.resolve()
   private meta: RoomMeta | null = null
   private tripId = 'unknown'
+  /**
+   * Set by a reset. The close of each evicted socket is delivered after the reset's `fetch` has
+   * returned, and its handler would arm a fresh alarm on a room that has nothing left to look after.
+   * A new connection means the room is in use again.
+   */
+  private erased = false
 
   constructor(state: TripRoomState, env: TripRoomEnv, options: TripRoomOptions = {}) {
     this.state = state
@@ -207,6 +215,8 @@ export class TripRoom implements DurableObject {
         return this.handleServerCommit(request)
       case 'close':
         return this.handleClose(request)
+      case 'reset':
+        return this.handleReset(request)
       default:
         return json({ error: `Unknown trip room route: ${route}` }, 404)
     }
@@ -226,6 +236,7 @@ export class TripRoom implements DurableObject {
       return json({ error: identity.message, code: identity.code }, 401)
     }
     this.tripId = identity.value.tripId
+    this.erased = false
 
     const pair = new WebSocketPair()
     const client = pair[0]
@@ -246,6 +257,7 @@ export class TripRoom implements DurableObject {
     // sockets without deserialising every attachment.
     this.state.acceptWebSocket(server, [identity.value.user.id])
     server.serializeAttachment(attachment)
+    await this.ensureAlarm()
 
     this.logger.debug('trip room socket accepted', {
       tripId: identity.value.tripId,
@@ -314,6 +326,28 @@ export class TripRoom implements DurableObject {
     }
     this.evict(this.state.getWebSockets(userId))
     return json({ closed: true })
+  }
+
+  /**
+   * Closes every socket and erases everything the room stored: entity fields and the commit log,
+   * each stamped with the id of whoever wrote it (`by`). D1 is the record, so nothing is lost that
+   * a rebuild cannot restore; an active room never clears itself, which is why waiting for the idle
+   * erase in {@link alarm} is not an answer to a deletion. Queued behind in-flight commits, so none
+   * of them writes into the room after it was emptied.
+   */
+  private async handleReset(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return json({ error: 'Use POST to reset a room' }, 405)
+    }
+    this.evict(this.state.getWebSockets())
+    this.erased = true
+    await this.withLock(async () => {
+      await this.state.storage.deleteAll()
+      // `deleteAll` leaves a scheduled alarm in place; a reset room has nothing left to look after.
+      await this.state.storage.deleteAlarm()
+      this.meta = null
+    })
+    return json({ reset: true })
   }
 
   private evict(sockets: ReadonlyArray<TripRoomSocket>): void {
@@ -431,7 +465,7 @@ export class TripRoom implements DurableObject {
       { t: 'presence', peers: this.presence(ws), left: session?.connectionId },
       session?.connectionId,
     )
-    await this.ensureAlarm()
+    if (!this.erased) await this.ensureAlarm()
   }
 
   async webSocketError(ws: TripRoomSocket, error: unknown): Promise<void> {
@@ -451,12 +485,22 @@ export class TripRoom implements DurableObject {
 
   /**
    * Periodic maintenance: trim the commit log to its capacity, drop expired
-   * tombstones, and erase a room nobody has touched for a week. Reschedules
-   * itself only while there is something left to look after.
+   * tombstones, evict over-age sockets, and erase a room nobody has touched for a week.
+   * Reschedules itself only while there is something left to look after.
    */
   async alarm(): Promise<void> {
     const meta = await this.loadMeta()
     const now = this.now()
+    this.evict(
+      this.state.getWebSockets().filter((socket) => {
+        const session = readAttachment(socket)
+        return (
+          session !== null &&
+          !session.evicted &&
+          now - session.joinedAt > TRIP_ROOM_MAX_SOCKET_AGE_MS
+        )
+      }),
+    )
     const sockets = this.state.getWebSockets().length
 
     const removed = await this.pruneLog(meta)

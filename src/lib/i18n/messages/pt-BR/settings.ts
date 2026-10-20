@@ -30,6 +30,23 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Convidar',
+  'workspace.invite.resend': 'Reenviar',
+  'workspace.invite.revoke': 'Revogar',
+  'workspace.invite.confirm': 'Revogar convite',
+  'workspace.invite.expired': 'Expirado',
+  'workspace.invite.by': 'Convite de {name}',
+  'workspace.invite.sent': 'Convite enviado',
+  'workspace.invite.revoked': 'Convite revogado',
+  'workspace.invite.delivery':
+    'Convite salvo, mas o envio falhou. Use Reenviar para tentar novamente.',
+  'workspace.invite.duplicate': 'Já existe um convite pendente. Use Reenviar.',
+  'workspace.invite.existing':
+    'Esta pessoa já faz parte do espaço de trabalho.',
+  'workspace.invite.failed':
+    'Convite indisponível. Atualize a lista e tente novamente.',
+  'workspace.invite.reload': 'Atualizar convites',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Conta',
   'page.title': 'Configurações',
@@ -639,6 +656,28 @@ const messages = {
   'passkeys.delete.removing': 'Removendo a chave de acesso',
   'passkeys.delete.passwordRequired':
     'Digite a sua senha para remover esta chave de acesso.',
+  'workspace.departure.leave': 'Sair do espaço de trabalho',
+  'workspace.departure.remove': 'Remover membro',
+  'workspace.departure.title': 'Encerrar a participação em {workspace}?',
+  'workspace.departure.body':
+    '{name} perderá o acesso a {workspace}. A conta e as viagens e os registros de custos mantidos permanecerão.',
+  'workspace.departure.cancel': 'Cancelar',
+  'workspace.departure.pending': 'Encerrando participação…',
+  'workspace.departure.lastOwner':
+    'Torne outro membro proprietário antes de sair ou remover este proprietário.',
+  'workspace.departure.notPermitted':
+    'Sua função atual não permite remover este membro. Atualize a lista de membros antes de tentar novamente.',
+  'workspace.departure.notFound':
+    'Esta pessoa não é mais membro deste espaço de trabalho.',
+  'workspace.departure.impersonated':
+    'Pare de representar outro usuário antes de alterar a participação no espaço de trabalho.',
+  'workspace.departure.failed':
+    'Não foi possível confirmar o resultado. Recarregue o espaço de trabalho antes de tentar novamente.',
+  'workspace.departure.removed': 'Membro removido',
+  'workspace.departure.reload': 'Recarregar espaço de trabalho',
+  'workspace.departure.activationFailed':
+    'Você saiu deste espaço de trabalho. Abra o próximo para continuar.',
+  'workspace.departure.recover': 'Abrir o próximo espaço',
 } satisfies TranslationOf<typeof En>
 
 export default messages

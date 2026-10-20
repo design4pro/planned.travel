@@ -494,6 +494,63 @@ const messages = {
   'join.error.join':
     'Katılım sağlanamadı. Bağlantı hâlâ çalışıyor, tekrar deneyin.',
   'join.error.switch': 'Çalışma alanı değiştirilemedi. Tekrar deneyin.',
+
+  'invite.title': 'Davet bağlantısı',
+  'invite.description':
+    'Bu çalışma alanında bağlantıyı açan herkes geziye katılır.',
+  'invite.empty.title': 'Henüz davet bağlantısı yok',
+  'invite.empty.body':
+    'Bir bağlantı oluşturup grup sohbetinde paylaşın; bu çalışma alanındaki kişiler katılabilsin.',
+  'invite.action.create': 'Bağlantı oluştur',
+  'invite.link.label': 'Davet bağlantısı',
+  'invite.copy': 'Bağlantıyı kopyala',
+  'invite.copied': 'Bağlantı kopyalandı',
+  'invite.copyFailed': 'Kopyalanamadı. Bağlantıyı seçip kendiniz kopyalayın.',
+  'invite.switch.label':
+    'Bu çalışma alanında bağlantısı olan herkes katılabilir',
+  'invite.switch.onHint':
+    'Kapatmak, gönderilmiş kopyalar dahil bağlantıyı herkes için geçersiz kılar.',
+  'invite.switch.offHint':
+    'Açmak yeni bir bağlantı oluşturur. Önceki bağlantılar geçersiz kalır.',
+  'invite.off.body': 'Bağlantı kapalı. Kimse bununla katılamaz.',
+  'invite.uses': {
+    one: 'Bu bağlantıyla katılan kişi sayısı: {count}',
+    other: 'Bu bağlantıyla katılan kişi sayısı: {count}',
+  },
+  'invite.uses.never': 'Bu bağlantıyla henüz kimse katılmadı.',
+  'invite.lastUsed': 'Son katılım: {when}',
+  'invite.role.upgrade.title': 'Düzenleme yetkisi verilsin mi?',
+  'invite.role.upgrade.body':
+    'Bu, gönderilen tüm kopyalar ve bundan sonra katılacak herkes için geçerlidir.',
+  'invite.role.upgrade.confirm': 'Düzenleme yetkisi ver',
+  'invite.replace.action': 'Bağlantıyı değiştir',
+  'invite.replace.title': 'Bu bağlantı değiştirilsin mi?',
+  'invite.replace.body':
+    'Eski bağlantı hemen herkes için geçersiz olur. Önceden katılanlar gezide kalır; gerekirse aşağıdaki listeden çıkarın.',
+  'invite.replace.deadBody':
+    'Eski bağlantı artık çalışmıyor. Önceden katılanlar gezide kalır.',
+  'invite.replace.confirm': 'Bağlantıyı değiştir',
+  'invite.replace.pending': 'Bağlantı değiştiriliyor',
+  'invite.stale': 'Bu bağlantı artık çalışmıyor. Değiştirin.',
+  'invite.creatorGone':
+    'Bağlantıyı oluşturan kişi artık gezi sahibi olmadığı için bağlantı çalışmıyor. Değiştirin.',
+  'invite.archived':
+    'Bu gezi arşivlenmiş. Gezi geri yüklendiğinde bağlantı yeniden çalışır.',
+  'invite.announce.created': 'Davet bağlantısı oluşturuldu',
+  'invite.announce.roleEditor': 'Yeni katılanlar düzenleme yetkisi alacak',
+  'invite.announce.off': 'Davet bağlantısı kapatıldı',
+  'invite.announce.newLink':
+    'Yeni bağlantı hazır. Kopyalayıp yeniden gönderin.',
+  'invite.announce.roleViewer': 'Yeni katılanlar görüntüleme yetkisi alacak',
+  'invite.error.title': 'Davet bağlantısı yüklenemedi',
+  'invite.error.retry': 'Yeniden dene',
+  'invite.refusal.archived': 'Bu gezi arşivlenmiş.',
+  'invite.refusal.notOwner':
+    'Davet bağlantısını yalnızca gezi sahibi değiştirebilir.',
+  'invite.refusal.changed':
+    'Başka biri bağlantıyı değiştirdi. Güncel bağlantı gösteriliyor.',
+  'invite.announce.recovered':
+    'Güncel bağlantı ayarları gösteriliyor. Yeni bir değişiklikten önce kontrol edin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -11,6 +11,7 @@ import { z } from 'zod'
 import {
   NotFoundError,
   getMemberBalances,
+  countTripPlaces,
   getStorageUsage,
   getTripItinerary,
   getTripSpendSummary,
@@ -24,6 +25,7 @@ import {
   listTripFiles,
   listTripListsWithProgress,
   listTripMembers,
+  tripRoleFor,
   listTripPlacesWithTags,
   listUnscheduledPlaces,
   listUserProfiles,
@@ -31,6 +33,7 @@ import {
   resolveQuotas,
   listItems,
 } from '#/server/repos'
+import { FILE_WRITE_ROLES } from '#/server/repos/files'
 import { serverToday } from '#/server/clock'
 import { appScope } from './context'
 import { isoOfRequired } from '#/server/serialise'
@@ -536,6 +539,8 @@ export interface FileRow {
 }
 
 export interface FilesPayload {
+  readonly canWrite: boolean
+  readonly hasPlaces: boolean
   readonly files: ReadonlyArray<FileRow>
   readonly tripBytes: number
   readonly workspaceBytes: number
@@ -556,15 +561,20 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
 
-    const [files, tripBytes, usage, quotas, people] = await Promise.all([
-      listTripFiles(scope, trip.id),
-      getTripStorageBytes(scope, trip.id),
-      getStorageUsage(scope),
-      resolveQuotas(scope),
-      loadPeople(trip.id, scope),
-    ])
+    const [files, tripBytes, usage, quotas, people, placeCount, role] =
+      await Promise.all([
+        listTripFiles(scope, trip.id),
+        getTripStorageBytes(scope, trip.id),
+        getStorageUsage(scope),
+        resolveQuotas(scope),
+        loadPeople(trip.id, scope),
+        countTripPlaces(scope, trip.id),
+        tripRoleFor(scope, trip.id, scope.ctx.userId),
+      ])
 
     return {
+      canWrite: FILE_WRITE_ROLES.some((allowed) => allowed === role),
+      hasPlaces: placeCount > 0,
       tripBytes,
       people,
       hasDates: trip.startDate !== null,

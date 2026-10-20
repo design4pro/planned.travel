@@ -33,6 +33,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Einladen',
+  'workspace.invite.resend': 'Erneut senden',
+  'workspace.invite.revoke': 'Widerrufen',
+  'workspace.invite.confirm': 'Einladung widerrufen',
+  'workspace.invite.expired': 'Abgelaufen',
+  'workspace.invite.by': 'Eingeladen von {name}',
+  'workspace.invite.sent': 'Einladung gesendet',
+  'workspace.invite.revoked': 'Einladung widerrufen',
+  'workspace.invite.delivery':
+    'Einladung gespeichert, aber der E-Mail-Versand ist fehlgeschlagen. Bitte erneut senden.',
+  'workspace.invite.duplicate':
+    'Eine Einladung steht bereits aus. Bitte erneut senden.',
+  'workspace.invite.existing':
+    'Diese Person ist bereits Mitglied des Arbeitsbereichs.',
+  'workspace.invite.failed':
+    'Einladung nicht verfügbar. Liste aktualisieren und erneut versuchen.',
+  'workspace.invite.reload': 'Einladungen aktualisieren',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Konto',
   'page.title': 'Einstellungen',
@@ -643,6 +661,28 @@ const messages = {
   'passkeys.delete.removing': 'Zugangsschlüssel wird entfernt',
   'passkeys.delete.passwordRequired':
     'Gib dein Passwort ein, um diesen Zugangsschlüssel zu entfernen.',
+  'workspace.departure.leave': 'Arbeitsbereich verlassen',
+  'workspace.departure.remove': 'Mitglied entfernen',
+  'workspace.departure.title': 'Mitgliedschaft in {workspace} beenden?',
+  'workspace.departure.body':
+    '{name} verliert den Zugriff auf {workspace}. Das Konto sowie aufbewahrte Reisen und Kostenaufzeichnungen bleiben erhalten.',
+  'workspace.departure.cancel': 'Abbrechen',
+  'workspace.departure.pending': 'Mitgliedschaft wird beendet…',
+  'workspace.departure.lastOwner':
+    'Ernenne ein anderes Mitglied zum Eigentümer, bevor du den Arbeitsbereich verlässt oder diesen Eigentümer entfernst.',
+  'workspace.departure.notPermitted':
+    'Deine aktuelle Rolle erlaubt es nicht, dieses Mitglied zu entfernen. Aktualisiere die Mitgliederliste und versuche es erneut.',
+  'workspace.departure.notFound':
+    'Diese Person ist kein Mitglied dieses Arbeitsbereichs mehr.',
+  'workspace.departure.impersonated':
+    'Beende die Identitätsübernahme, bevor du die Mitgliedschaft im Arbeitsbereich änderst.',
+  'workspace.departure.failed':
+    'Das Ergebnis konnte nicht bestätigt werden. Lade den Arbeitsbereich neu und versuche es erneut.',
+  'workspace.departure.removed': 'Mitglied entfernt',
+  'workspace.departure.reload': 'Arbeitsbereich neu laden',
+  'workspace.departure.activationFailed':
+    'Du hast diesen Arbeitsbereich verlassen. Öffne den nächsten, um fortzufahren.',
+  'workspace.departure.recover': 'Nächsten Arbeitsbereich öffnen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

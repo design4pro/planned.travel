@@ -408,10 +408,11 @@ export async function renderAuthEmail(
  *
  * A send failure is logged and swallowed rather than propagated: a courier that
  * cannot take the letter must not turn a successful sign-up into a 500. The
- * caller therefore always resolves.
+ * caller therefore always resolves unless `throwOnFailure` is requested by a delivery-aware flow.
  */
 export async function queueAuthEmail(
   message: TransactionalEmailMessage,
+  options: { readonly throwOnFailure?: boolean } = {},
 ): Promise<void> {
   try {
     const rendered = await renderAuthEmail(message)
@@ -428,10 +429,11 @@ export async function queueAuthEmail(
       },
     })
     logAuth('info', 'email.queued', { kind: message.kind })
-  } catch {
+  } catch (cause) {
     logAuth('error', 'email.queue_failed', {
       kind: message.kind,
       reason: 'enqueue_failed',
     })
+    if (options.throwOnFailure) throw cause
   }
 }

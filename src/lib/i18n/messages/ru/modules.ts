@@ -947,6 +947,14 @@ const messages = {
   'files.action.add': 'Добавить файлы',
   'files.action.choose': 'Выбрать файлы',
   'files.action.upload': 'Отправить файлы',
+  'files.places.title': 'Файл мест',
+  'files.places.description':
+    'Скачайте места этой поездки в формате GeoJSON, включая места без координат.',
+  'files.places.action': 'Скачать места (.geojson)',
+  'files.places.empty': 'Добавьте места в эту поездку, чтобы скачать их.',
+  'files.places.error': 'Не удалось подготовить файл мест. Попробуйте ещё раз.',
+  'files.places.pending': 'Подготовка файла мест…',
+  'files.places.done': 'Файл мест скачан.',
   'files.calendar.live.action': 'Обновляемая ссылка на календарь',
   'files.calendar.live.title': 'Обновляемая ссылка на календарь',
   'files.calendar.warning':
@@ -1296,6 +1304,25 @@ const messages = {
   'vacay.error.title': 'Не удалось загрузить планировщик отпусков',
   'vacay.year.previous': 'Предыдущий год',
   'vacay.year.next': 'Следующий год',
+  'vacay.settings.open': 'Настройки плана отпусков',
+  'vacay.settings.title': 'Настройки плана отпусков',
+  'vacay.settings.description':
+    'Как переносятся неиспользованные дни и сколько дней у вас по умолчанию.',
+  'vacay.settings.carryOver':
+    'Переносить неиспользованные дни на следующий год',
+  'vacay.settings.carryOver.hint':
+    'Если отключить, перенесённые дни будут скрыты, но не удалены.',
+  'vacay.settings.defaultAllowance': 'Лимит по умолчанию (дней в год)',
+  'vacay.settings.defaultAllowance.hint':
+    'Действует для лет, в которых вы не задали свой лимит.',
+  'vacay.settings.save': 'Сохранить настройки',
+  'vacay.settings.cancel': 'Отмена',
+  'vacay.settings.saved': 'Настройки плана отпусков сохранены.',
+  'vacay.settings.error':
+    'Не удалось сохранить настройки плана отпусков. Ничего не изменилось.',
+  'files.readOnly.title': 'Файлы только для чтения',
+  'files.readOnly.role':
+    'Только владельцы и редакторы поездки могут загружать, переименовывать или удалять файлы. Вы по-прежнему можете их скачивать.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

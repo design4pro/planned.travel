@@ -354,6 +354,48 @@ const messages = {
   'card.error.body': 'Diese Zahlen wurden nicht geladen. Nichts ist verloren.',
   'card.error.retry': 'Noch einmal versuchen',
   'overlay.close': '{name} schließen',
+  'regions.label': 'Regionen',
+  'regions.hint':
+    'Eine Region hinzuzufügen markiert auch {country} als besucht.',
+  'regions.keeps':
+    'Das Entfernen einer Region entfernt {country} nicht aus deinem Atlas.',
+  'regions.keeps.unvisited':
+    'Diese Regionen bleiben gespeichert. Markiere {country} als besucht oder füge eine Region hinzu, um das Land wieder auf der Karte zu sehen.',
+  'regions.empty.title': 'Noch keine Regionen erfasst',
+  'regions.empty.body':
+    'Füge ein Bundesland, eine Provinz oder ein Gebiet hinzu, das du in {country} besucht hast.',
+  'regions.input.label': 'Region in {country} hinzufügen',
+  'regions.input.placeholder': 'Zum Beispiel Bayern',
+  'regions.add': 'Region hinzufügen',
+  'regions.adding': '{region} wird hinzugefügt',
+  'regions.remove': '{region} entfernen',
+  'regions.loading': 'Deine Regionen werden geladen',
+  'regions.status.added': '{region} hinzugefügt',
+  'regions.status.exists': '{region} ist bereits erfasst',
+  'regions.status.removed': '{region} entfernt',
+  'regions.status.addedCountry':
+    '{region} hinzugefügt. {country} ist jetzt als besucht markiert.',
+  'regions.error.invalid': 'Gib einen Regionsnamen ein.',
+  'regions.error.hidden':
+    'Der Name enthält unzulässige Zeichen. Entferne sie und versuche es erneut.',
+  'regions.error.load':
+    'Deine Regionen für {country} konnten nicht geladen werden.',
+  'regions.error.add':
+    '{region} konnte nicht hinzugefügt werden. Versuche es erneut.',
+  'regions.error.remove':
+    '{region} konnte nicht entfernt werden. Versuche es erneut.',
+  'regions.error.full':
+    'Du hast {limit} Regionen erfasst. Entferne eine, um eine weitere hinzuzufügen.',
+  'regions.reload': 'Regionen neu laden',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Deine erfassten Regionen in {country} bleiben gespeichert: {count}.',
+    other:
+      '{history}Deine erfassten Regionen in {country} bleiben gespeichert: {count}.',
+  },
+  'regions.error.uncertain':
+    'Die Änderung konnte nicht bestätigt werden. Lade deine Regionen neu, um den gespeicherten Stand zu prüfen.',
+  'regions.status.refreshFailed':
+    '{result} Der Atlas konnte nicht aktualisiert werden. Lade ihn neu, um die Karte zu aktualisieren.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

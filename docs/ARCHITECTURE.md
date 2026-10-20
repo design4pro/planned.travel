@@ -161,6 +161,11 @@ slices that matter.
   at `succeeded` enqueue nothing — the latter attaches the Polar customer so the billing screen
   works the instant the browser returns, and leaves the notification to the `subscription.created`
   already on its way with the whole subscription on it.
+  A delivery that names an organization which no longer exists (a workspace deleted with
+  `deleteWorkspace` while its provider subscription ran out its paid period) is answered 2xx as
+  `ignored`: `subscription.*` and `checkout.updated` ask `organizationExists()` before they write, so no
+  row is created, no cache entry is dropped and nothing is enqueued, and Polar does not retry into a
+  foreign-key failure. Order events find no row to move, so they already end the same way.
 - **Transactional email** → ten React Email templates in `src/server/email/templates/`, rendered
   by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
   `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by
@@ -172,8 +177,10 @@ slices that matter.
   awaits the render _before_ it enqueues, so React's streaming renderer runs inside the request
   that triggered the mail. Only delivery is queued today. `docs/SPEC.md` §3 carries this as
   follow-up **F1**, with the reason it is not a one-line move, alongside **F2** — `queueAuthEmail()`
-  has five dispatch sites: three Better Auth hooks in `src/server/auth/index.ts` and successful
-  passkey registration and actual removal in `src/server/auth/passkey/plugin.ts`. **Six** of eleven
+  has six dispatch sites: three Better Auth hooks in `src/server/auth/index.ts`, successful
+  passkey registration and actual removal in `src/server/auth/passkey/plugin.ts`, and the workspace
+  invitation lifecycle in `src/server/fns/workspace-invitations.ts`. The latter opts into propagated
+  queue failures so the console distinguishes a saved invitation from a delivered email. **Six** of eleven
   kinds (`auth.email-changed`, `auth.delete-account` and the four `billing.*`) have no dispatch
   site and are exercised only by `src/server/email/__tests__/templates.test.tsx`.
 - **Cron** → three triggers are registered in `wrangler.jsonc` today: `*/15 * * * *` reminder
@@ -191,22 +198,38 @@ slices that matter.
 place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
 entry rule. These are architectural paths; some surfaces remain planned. Bounded
 `…Unscoped` repo functions take a plain `Database` only under SPEC §5 FU-3; this does not add
-a third catalog member.
+another catalog member.
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
   `organization_id`; `provider_usage` uses it only for attribution. Catalog is the single
-  exception outside repos, with exactly three members (these tables, the bounded cron discovery
-  read and the ids-only erasure catalog read). Platform-content access uses an explicit
+  exception outside repos, with exactly four members (these tables, bounded reminder discovery,
+  the erasure catalog (ids-only discovery and system-actor cleanup) and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
   the bounded shape-based exceptions stated in SPEC §5.
 - `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
   authorises through the same `requirePermission` the console uses and reaches data through
   `server/catalog`; it never grows a second authorisation path or a second query layer.
-- `src/server/public/**` (phase F) — the only session-less read path in the Worker, and it holds
+- `src/server/public/**` (phase F) — bearer-resolved public reads without a session; it holds
   no SQL of its own. Every response is a named read-only projection with an explicit column
   whitelist, executed through `server/repos` under the tenant scope derived from the share, feed or trip invite link
   record it resolved (the feed scope is built only by repo `openFeedScope` from its adjacent
   branded `ResolvedFeed`), or through `server/catalog` for published global rows.
+
+Erasure primitives (`repos/trips-erasure.ts`, `expenses-erasure.ts`, `collab-erasure.ts`) take a
+workspace-bound reserved owner scope from `erasure/scope.ts`. No request entry point can reach
+that factory, including through imports. Writes run in bounded chunks through the tenant base;
+`prepareTenantInsert` stamps the workspace for a conditional batch insert, preserving column
+defaults and encoders. Promotion, its PII-free notice, departing membership removal and creator
+anonymisation commit together. Selection is repeated in that batch; no surviving successor means
+no notice or finalisation, retaining the original retry anchors. Both ordinary membership writers
+also test the current database role, preserving the new sole owner against stale leave/demotion. No production caller or engine is connected in #1056.
+
+Trip removal requires an awaited `prepareTripRemoval` callback that durably saves the complete,
+idempotent cleanup plan before D1 cascades: attachment and cover keys, export-prefix discovery,
+and room reset. Cleanup executes only after confirmed deletion; queue acceptance is not completion.
+A failure to prepare leaves the rows available for retry. The cascade atomically rechecks solo
+classification; a collaborator joining during preparation causes a refusal and reclassification on retry. The engine owns that integration (#1060).
+Surviving upload keys are returned for metadata rewrite, including already-anonymised rows on retry.
 
 ---
 
@@ -313,6 +336,9 @@ own SQLite storage and its own WebSocket set. Concretely, from `src/server/do/pr
 
 - 32 KiB maximum frame; 40 messages per second per connection rate limit.
 - 5-minute alarm interval for housekeeping; a room idles out after 7 days.
+- Deleting a trip resets its room after the D1 deletion commits: sockets close and stored entity,
+  commit-log and presence state is erased. A room failure is logged without failing deletion;
+  idle expiry remains the backstop.
 - Patch log capacity and tombstone TTL are bounded, so an object's storage cannot grow without
   limit from edit history alone.
 
@@ -681,6 +707,11 @@ is still not a green row.
   has the commands that read both.
 - D1 write p95 > 200 ms, or `rows_written` > 20 M/month (lever 7 territory).
 - D1 database size > 8 GB (lever 7/8 territory).
+- Tenant `audit_log` weekly prune reporting `drained: false` at error level. Its 400-day window
+  (`TENANT_AUDIT_RETENTION_DAYS`, owner confirms) shares one 250-batch cap across all workspaces,
+  with 200 ids per delete. Alert on this signal and inspect `deleted`, `batches`, `organizations`
+  before raising the bound; the trip history, overview activity and action-count chart lose
+  activity older than this window once the prune runs.
 - `platform_audit_log` weekly prune reporting `drained: false`. The prune is deliberately bounded
   so one cron tick cannot become an isolate-killing statement, which means a platform writing more
   audit rows per week than the ceiling removes never catches up and the table grows past its

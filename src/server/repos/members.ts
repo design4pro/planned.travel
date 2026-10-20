@@ -10,7 +10,7 @@
  * reads it without that predicate.
  */
 
-import { and, asc, count, eq, exists, inArray, ne, sql } from 'drizzle-orm'
+import { and, asc, count, eq, exists, inArray, ne, notExists, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   INVITATION_STATUSES,
@@ -20,14 +20,26 @@ import {
   organization,
   user,
 } from '#/server/db/auth-schema'
-import { newId } from '#/server/db/schema'
-import { allOf, assertQuota, createTenantRepository, tenantFilter } from './base'
+import { auditLog, newId, subscriptions } from '#/server/db/schema'
+import { findLivePaidSubscription, livePaidSubscription } from './billing'
+import {
+  allOf,
+  assertQuota,
+  createTenantRepository,
+  tenantFilter,
+  prepareTenantInsert,
+  resolveQuotas,
+} from './base'
 import {
   ForbiddenError,
   NotFoundError,
   RepositoryError,
+  QuotaExceededError,
   assertCanAdminister,
 } from './context'
+import { anotherOwner, hasStoredRole, memberAuthority, removalPredicate } from './member-guards'
+import type { BatchStatement } from './batch'
+import { auditLogRepository } from './audit'
 import { recordParticipant } from './participants'
 import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
 import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
@@ -58,7 +70,7 @@ export const addMemberInput = z.object({
 export type AddMemberInput = z.infer<typeof addMemberInput>
 
 export const createInvitationInput = z.object({
-  email: z.string().trim().min(3).max(320).toLowerCase(),
+  email: z.string().trim().min(3).max(320).toLowerCase().email(),
   role: roleSchema.optional(),
   expiresAt: instantSchema,
 })
@@ -100,6 +112,108 @@ export async function updateOrganization(
   return row
 }
 
+/**
+ * Thrown by {@link deleteWorkspace} when somebody other than the person leaving still belongs to
+ * the workspace. Like every repository error it is a maintainer's sentence, not copy: the caller
+ * reads `code` and `organizationName` and words the refusal itself.
+ */
+export class WorkspaceNotEmptyError extends RepositoryError {
+  constructor(readonly organizationName: string) {
+    super(
+      `Workspace "${organizationName}" still has members, so it cannot be deleted.`,
+      'WORKSPACE_NOT_EMPTY',
+    )
+  }
+}
+
+/** Thrown by {@link deleteWorkspace} while the workspace has a live paid subscription (see `livePaidSubscription`). */
+export class WorkspaceHasLiveSubscriptionError extends RepositoryError {
+  constructor(readonly organizationName: string) {
+    super(
+      `Workspace "${organizationName}" has a live paid subscription. Cancel it in the billing portal, or at the payment provider, before deleting the workspace. Deleting a workspace never cancels or refunds anything.`,
+      'WORKSPACE_HAS_LIVE_SUBSCRIPTION',
+    )
+  }
+}
+
+export const deleteWorkspaceInput = z.object({
+  /**
+   * The one member who may still be in the workspace: the person being erased, whose `member` row
+   * goes with their account afterwards. Absent, the workspace must have no member at all. Naming
+   * them is what stops a call into a workspace whose remaining member is somebody else.
+   */
+  departingUserId: idSchema.optional(),
+})
+export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceInput>
+
+/**
+ * Deletes the workspace the scope is bound to, with everything that belongs to it. Only the
+ * `organization` row is deleted here: every tenant table follows through its `ON DELETE CASCADE`
+ * (`orgRef()`). It touches no object store, trip room or provider - those are the caller's, which
+ * collects their keys and trip ids first, because the rows that name them go with this call.
+ *
+ * Refuses, and changes nothing, when the caller cannot administer the workspace, when anyone but
+ * `departingUserId` is still a member, or while the workspace has a live paid subscription.
+ * Nothing here cancels a subscription or refunds money.
+ *
+ * The refusals are read first, so the error names the workspace and the reason, and are then
+ * enforced again inside the one `DELETE` statement: D1 has no interactive transaction, and a member
+ * who joins, or a webhook that revives the subscription, between the read and the write must not
+ * be deleted along with the workspace.
+ */
+export async function deleteWorkspace(
+  scope: TenantScope,
+  input: DeleteWorkspaceInput = {},
+): Promise<void> {
+  assertCanAdminister(scope.ctx, 'delete the workspace')
+  const { departingUserId } = deleteWorkspaceInput.parse(input)
+  const organizationName = (await getOrganization(scope)).name
+
+  const refuseIfBlocked = async (): Promise<void> => {
+    const others = await membersRepository.count(scope, anyoneBut(departingUserId))
+    if (others > 0) {
+      throw new WorkspaceNotEmptyError(organizationName)
+    }
+    if ((await findLivePaidSubscription(scope)) !== null) {
+      throw new WorkspaceHasLiveSubscriptionError(organizationName)
+    }
+  }
+  await refuseIfBlocked()
+
+  const deleted = await scope.db
+    .delete(organization)
+    .where(
+      and(
+        // The tenant discriminator of this table is its primary key.
+        eq(organization.id, scope.ctx.organizationId),
+        notExists(
+          scope.db
+            .select({ present: sql`1` })
+            .from(member)
+            .where(tenantFilter(scope, member, anyoneBut(departingUserId))),
+        ),
+        notExists(
+          scope.db
+            .select({ present: sql`1` })
+            .from(subscriptions)
+            .where(tenantFilter(scope, subscriptions, livePaidSubscription())),
+        ),
+      ),
+    )
+    .returning({ id: organization.id })
+
+  if (deleted.length === 0) {
+    // Either the check lost a race (re-read: it throws the reason) or the workspace is already gone.
+    await refuseIfBlocked()
+    throw new NotFoundError('organization', scope.ctx.organizationId)
+  }
+}
+
+/** Every member, or every member but one. */
+function anyoneBut(userId: string | undefined): SQL | undefined {
+  return userId === undefined ? undefined : ne(member.userId, userId)
+}
+
 /* -------------------------------------------------------------------------------------------------
  * Members
  * ---------------------------------------------------------------------------------------------- */
@@ -111,7 +225,7 @@ export async function listMembers(scope: TenantScope): Promise<Array<Member>> {
 export interface MemberProfile {
   readonly memberId: string
   readonly userId: string
-  readonly role: OrganizationRole
+  readonly role: string
   readonly name: string
   readonly email: string
   readonly image: string | null
@@ -139,10 +253,7 @@ export async function listMemberProfiles(scope: TenantScope): Promise<Array<Memb
     .where(tenantFilter(scope, member))
     .orderBy(asc(member.createdAt))
 
-  return rows.map((row) => ({
-    ...row,
-    role: roleSchema.catch('member').parse(row.role),
-  }))
+  return rows
 }
 
 export async function countMembers(scope: TenantScope): Promise<number> {
@@ -181,6 +292,7 @@ export async function getMembership(
 export async function addMember(scope: TenantScope, input: AddMemberInput): Promise<Member> {
   assertCanAdminister(scope.ctx, 'add a member')
   const values = addMemberInput.parse(input)
+  assertGrantRole(scope, values.role ?? 'member')
 
   const existing = await getMembership(scope, values.userId)
   if (existing) {
@@ -234,8 +346,8 @@ export interface MemberRoleChange {
 
 /**
  * Changes a role within the caller's ceiling ({@link assignableRoles}). The workspace must keep at
- * least one owner. Every refusal happens before the write, except `LAST_OWNER` after a concurrent
- * demotion, which puts the role back first.
+ * least one owner. Every refusal happens before the write, including concurrent
+ * demotions: authority and owner survival are conditions of the update itself.
  */
 export async function changeMemberRole(
   scope: TenantScope,
@@ -254,38 +366,148 @@ export async function changeMemberRole(
       ['owner'],
     )
   }
-  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope, memberId)) === 0) {
-    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
-  }
-  const updated = await membersRepository.requireUpdate(scope, memberId, { role: next })
-  if (row.role === 'owner' && next !== 'owner' && (await countOwners(scope)) === 0) {
-    // The count above and this write are separate statements, so two owners demoting each other at
-    // once each saw the other as the remaining owner. The loser puts the role back rather than leave
-    // a workspace nobody can administer or pay for.
-    await membersRepository.requireUpdate(scope, memberId, { role: row.role })
-    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  const updated = (
+    await scope.db
+      .update(member)
+      .set({ role: next })
+      .where(
+        tenantFilter(
+          scope,
+          member,
+          and(
+            eq(member.id, memberId),
+            eq(member.role, row.role),
+            memberAuthority(scope, false, next === 'owner'),
+            next === 'owner'
+              ? undefined
+              : or(
+                  sql`not (${hasStoredRole(member.role, 'owner')})`,
+                  anotherOwner(scope),
+                ),
+          ),
+        ),
+      )
+      .returning()
+  ).at(0)
+  if (!updated) {
+    const current = await membersRepository.requireById(scope, memberId)
+    if (
+      holdsOwnerRole(current.role) &&
+      next !== 'owner' &&
+      (await countOwners(scope, memberId)) === 0
+    ) {
+      throw new RepositoryError(
+        'A workspace needs at least one owner.',
+        'LAST_OWNER',
+      )
+    }
+    throw new ForbiddenError('change a member role', ['owner', 'admin'])
   }
   return { member: updated, previousRole: row.role }
 }
 
-/** Removes a member. The last owner cannot be removed. */
-export async function removeMember(scope: TenantScope, memberId: string): Promise<void> {
+/**
+ * One conditional deletion. In product mode the same guarded row writes the audit entry first,
+ * inside the same D1 batch. The auth adapter invokes this instead of its ordinary member delete,
+ * so Better Auth still owns the surrounding session and offboarding lifecycle.
+ */
+export async function removeMember(
+  scope: TenantScope,
+  memberId: string,
+  audited = false,
+): Promise<void> {
+  idSchema.parse(memberId)
   const row = await membersRepository.requireById(scope, memberId)
-  if (row.userId !== scope.ctx.userId) {
-    assertCanAdminister(scope.ctx, 'remove a member')
+  const actor = await getMembership(scope, scope.ctx.userId)
+  let actorRole: OrganizationRole = 'member'
+  if (actor && holdsOwnerRole(actor.role)) actorRole = 'owner'
+  else if (actor?.role === 'admin') actorRole = 'admin'
+  if (
+    !actor ||
+    (row.userId !== scope.ctx.userId &&
+      !assignableRoles(actorRole, row.role).length)
+  ) {
+    throw new ForbiddenError('remove a member', ['owner', 'admin'])
   }
-  if (row.role === 'owner' && (await countOwners(scope, memberId)) === 0) {
-    throw new RepositoryError('A workspace needs at least one owner.', 'LAST_OWNER')
+  const predicate = removalPredicate(scope, memberId)
+  if (!audited) {
+    const deleted = await scope.db
+      .delete(member)
+      .where(predicate)
+      .returning({ id: member.id })
+    if (deleted.length) return
+  } else {
+    if (!('batch' in scope.db) || typeof scope.db.batch !== 'function') {
+      throw new RepositoryError(
+        'Membership audit requires an atomic database batch.',
+        'ATOMIC_BATCH_REQUIRED',
+      )
+    }
+    const auditId = newId()
+    const audit = scope.db.insert(auditLog).select(
+      scope.db
+        .select({
+          id: sql<string>`${auditId}`.as('id'),
+          organizationId: member.organizationId,
+          actorUserId: sql<string>`${scope.ctx.userId}`.as('actor_user_id'),
+          action:
+            sql<string>`case when ${member.userId} = ${scope.ctx.userId} then 'member.left' else 'member.removed' end`.as(
+              'action',
+            ),
+          entityType: sql<string>`'member'`.as('entity_type'),
+          entityId: member.id,
+          metadata:
+            sql`json_object('targetUserId', ${member.userId}, 'role', ${member.role})`.as(
+              'metadata',
+            ),
+          ip: sql`null`.as('ip'),
+          userAgent: sql`null`.as('user_agent'),
+          createdAt: sql<number>`${Date.now()}`.as('created_at'),
+        })
+        .from(member)
+        .where(predicate),
+    )
+    const batch = scope.db.batch as (
+      statements: readonly [BatchStatement, ...Array<BatchStatement>],
+    ) => Promise<Array<unknown>>
+    try {
+      const [, deleted] = await batch.call(scope.db, [
+        audit,
+        scope.db.delete(member).where(predicate).returning({ id: member.id }),
+      ])
+      if (Array.isArray(deleted) && deleted.length > 0) return
+    } catch (error) {
+      // A lost batch response is ambiguous. Reconcile by this operation's tenant-scoped audit id.
+      try {
+        if (await auditLogRepository.findById(scope, auditId)) return
+      } catch {
+        throw new RepositoryError(
+          'Membership commit could not be reconciled.',
+          'MEMBERSHIP_COMMIT_UNKNOWN',
+        )
+      }
+      throw error
+    }
   }
-  await membersRepository.requireRemove(scope, memberId)
+  await membersRepository.requireById(scope, memberId)
+  if (holdsOwnerRole(row.role) && (await countOwners(scope, memberId)) === 0) {
+    throw new RepositoryError(
+      'A workspace needs at least one owner.',
+      'LAST_OWNER',
+    )
+  }
+  throw new ForbiddenError('remove a member', ['owner', 'admin'])
 }
 
 /** Owners other than `exceptMemberId`. */
-async function countOwners(scope: TenantScope, exceptMemberId?: string): Promise<number> {
+async function countOwners(
+  scope: TenantScope,
+  exceptMemberId?: string,
+): Promise<number> {
   return membersRepository.count(
     scope,
     and(
-      eq(member.role, 'owner'),
+      hasStoredRole(member.role, 'owner'),
       exceptMemberId ? ne(member.id, exceptMemberId) : undefined,
     ),
   )
@@ -346,29 +568,141 @@ export async function createInvitation(
   assertCanAdminister(scope.ctx, 'invite a member')
   const values = createInvitationInput.parse(input)
 
-  const existing = await invitationsRepository.findOne(
+  assertGrantRole(scope, values.role ?? 'member')
+  await refuseInvitationDuplicate(scope, values.email)
+  const { limits } = await resolveQuotas(scope)
+  const usage = sql`((select count(*) from ${member} where ${tenantFilter(scope, member)}) +
+    (select count(*) from ${invitation} where ${tenantFilter(scope, invitation, eq(invitation.status, 'pending'))}))`
+  // The predicate and insert execute as one SQLite statement, including concurrent requests.
+  const rows = await prepareTenantInsert(
     scope,
-    allOf(eq(invitation.email, values.email), eq(invitation.status, 'pending')),
-  )
-  if (existing) {
-    return existing
+    invitation,
+    {
+      id: newId(),
+      email: values.email,
+      role: values.role ?? 'member',
+      status: 'pending',
+      inviterId: scope.ctx.userId,
+      expiresAt: values.expiresAt,
+      createdAt: new Date(),
+    },
+    and(
+      Number.isFinite(limits.members)
+        ? sql`${usage} < ${limits.members}`
+        : sql`1`,
+      notExists(
+        scope.db
+          .select({ present: sql`1` })
+          .from(invitation)
+          .where(
+            tenantFilter(
+              scope,
+              invitation,
+              and(
+                eq(invitation.email, values.email),
+                eq(invitation.status, 'pending'),
+              ),
+            ),
+          ),
+      ),
+      notExists(memberWithEmail(scope, values.email)),
+    ),
+  ).returning()
+  const row = rows.at(0)
+  if (row) return row
+  await refuseInvitationDuplicate(scope, values.email)
+  throw new QuotaExceededError('members', limits.members, limits.members)
+}
+
+function assertGrantRole(scope: TenantScope, role: string): void {
+  if (!assignableRoles(scope.ctx.role, role).includes(roleSchema.parse(role))) {
+    throw new ForbiddenError('grant this organization role', ['owner'])
   }
+}
 
-  const [members, pending] = await Promise.all([
-    countMembers(scope),
-    invitationsRepository.count(scope, eq(invitation.status, 'pending')),
-  ])
-  await assertQuota(scope, 'members', members + pending)
+function memberWithEmail(scope: TenantScope, email: string) {
+  return scope.db
+    .select({ present: sql`1` })
+    .from(member)
+    .innerJoin(user, eq(user.id, member.userId))
+    .where(tenantFilter(scope, member, sql`lower(${user.email}) = ${email}`))
+}
 
-  return invitationsRepository.insert(scope, {
-    id: newId(),
-    email: values.email,
-    role: values.role ?? 'member',
-    status: 'pending',
-    inviterId: scope.ctx.userId,
-    expiresAt: values.expiresAt,
-    createdAt: new Date(),
-  })
+async function refuseInvitationDuplicate(
+  scope: TenantScope,
+  email: string,
+): Promise<void> {
+  if ((await memberWithEmail(scope, email).limit(1)).length) {
+    throw new RepositoryError(
+      'Address already belongs to this workspace.',
+      'ALREADY_MEMBER',
+    )
+  }
+  if (
+    await invitationsRepository.findOne(
+      scope,
+      allOf(eq(invitation.email, email), eq(invitation.status, 'pending')),
+    )
+  ) {
+    throw new RepositoryError(
+      'A pending invitation already reserves this address.',
+      'INVITATION_EXISTS',
+    )
+  }
+}
+
+/** Pending rows, including expired ones; inviter profiles are joined only through this tenant. */
+export async function listPendingInvitationProfiles(scope: TenantScope) {
+  const rows = await scope.db
+    .select({
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      expiresAt: invitation.expiresAt,
+      inviterId: invitation.inviterId,
+      inviterName: user.name,
+      inviterEmail: user.email,
+    })
+    .from(invitation)
+    .leftJoin(
+      member,
+      and(
+        eq(member.organizationId, invitation.organizationId),
+        eq(member.userId, invitation.inviterId),
+      ),
+    )
+    .leftJoin(user, eq(user.id, member.userId))
+    .where(tenantFilter(scope, invitation, eq(invitation.status, 'pending')))
+    .orderBy(asc(invitation.createdAt))
+  return rows
+}
+
+/** Renew only a still-pending row; acceptance/revocation wins without resurrection. */
+export async function renewInvitation(
+  scope: TenantScope,
+  invitationId: string,
+  expiresAt: Date,
+): Promise<Invitation> {
+  assertCanAdminister(scope.ctx, 'resend an invitation')
+  const row = await invitationsRepository.requireById(
+    scope,
+    idSchema.parse(invitationId),
+  )
+  assertGrantRole(scope, row.role ?? 'member')
+  const rows = await scope.db
+    .update(invitation)
+    .set({ expiresAt: instantSchema.parse(expiresAt) })
+    .where(
+      tenantFilter(
+        scope,
+        invitation,
+        and(eq(invitation.id, row.id), eq(invitation.status, 'pending')),
+      ),
+    )
+    .returning()
+  const renewed = rows.at(0)
+  if (!renewed) throw new NotFoundError('pending invitation', invitationId)
+  return renewed
 }
 
 export async function setInvitationStatus(
@@ -376,16 +710,30 @@ export async function setInvitationStatus(
   invitationId: string,
   status: (typeof INVITATION_STATUSES)[number],
 ): Promise<Invitation> {
-  return invitationsRepository.requireUpdate(scope, invitationId, {
-    status: z.enum(INVITATION_STATUSES).parse(status),
-  })
+  assertCanAdminister(scope.ctx, 'change an invitation status')
+  const id = idSchema.parse(invitationId)
+  const next = z.enum(INVITATION_STATUSES).parse(status)
+  if (next === 'pending') throw new NotFoundError('actionable invitation', id)
+  const rows = await scope.db
+    .update(invitation)
+    .set({ status: next })
+    .where(
+      tenantFilter(
+        scope,
+        invitation,
+        and(eq(invitation.id, id), eq(invitation.status, 'pending')),
+      ),
+    )
+    .returning()
+  const row = rows.at(0)
+  if (!row) throw new NotFoundError('pending invitation', id)
+  return row
 }
 
 export async function cancelInvitation(
   scope: TenantScope,
   invitationId: string,
 ): Promise<Invitation> {
-  assertCanAdminister(scope.ctx, 'cancel an invitation')
   return setInvitationStatus(scope, invitationId, 'canceled')
 }
 

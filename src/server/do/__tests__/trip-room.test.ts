@@ -7,11 +7,13 @@
  * an error to the sender. The room is driven through its own `TripRoomState` / `TripRoomSocket`
  * ports, with no Worker and no `WebSocketPair`.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { TripRoom } from '../trip-room'
 import {
   TRIP_ROOM_CLOSED_REASON,
+  TRIP_ROOM_ALARM_INTERVAL_MS,
+  TRIP_ROOM_MAX_SOCKET_AGE_MS,
   TRIP_ROOM_PROTOCOL_VERSION,
 } from '../protocol'
 
@@ -27,11 +29,17 @@ const TRIP_ID = 'trip-1'
 /** In-memory `TripRoomStorage` that also counts what was written, so "wrote nothing" is checkable. */
 function fakeStorage(): TripRoomStorage & {
   writes: number
+  alarmDeleted: number
+  alarmSet: number
+  alarmAt: number | null
   data: Map<string, unknown>
 } {
   const data = new Map<string, unknown>()
   const storage = {
     writes: 0,
+    alarmDeleted: 0,
+    alarmSet: 0,
+    alarmAt: null as number | null,
     data,
     get: async <T>(key: string) => data.get(key) as T | undefined,
     put: async <T>(entries: Record<string, T>) => {
@@ -58,7 +66,13 @@ function fakeStorage(): TripRoomStorage & {
       data.clear()
     },
     getAlarm: async () => null,
-    setAlarm: async () => undefined,
+    setAlarm: async (scheduledTime: number) => {
+      storage.alarmAt = scheduledTime
+      storage.alarmSet += 1
+    },
+    deleteAlarm: async () => {
+      storage.alarmDeleted += 1
+    },
   }
   return storage
 }
@@ -376,5 +390,179 @@ describe('closing the whole room', () => {
     expect(ben.sent).toEqual([])
     // Only the sockets are gone: a server commit is still taken, for the next person to connect.
     expect(storage.writes).toBeGreaterThan(0)
+  })
+})
+
+function resetRequest(method = 'POST'): Request {
+  return new Request('https://room/reset', { method })
+}
+
+describe('resetting the room', () => {
+  it('closes every socket and erases the stored state, entity fields and commit log alike', async () => {
+    const { room, storage, sockets } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+      { role: 'viewer', userId: 'ben' },
+    ])
+    await room.fetch(commitRequest())
+    expect(storage.data.size).toBeGreaterThan(0)
+
+    const response = await room.fetch(resetRequest())
+
+    expect(response.status).toBe(200)
+    for (const socket of sockets) {
+      expect(socket.closedWith).toBe(CLOSE_ROOM_CLOSED)
+      expect(socket.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
+    }
+    // Nothing stamped with a user id survives: D1 is the record and the room rebuilds from it.
+    expect(storage.data.size).toBe(0)
+    expect(storage.alarmDeleted).toBe(1)
+    const snapshot = await (
+      await room.fetch(new Request('https://room/snapshot'))
+    ).json()
+    expect(snapshot).toMatchObject({ version: 0, entities: [] })
+  })
+
+  it('does not arm a new alarm when the evicted sockets close afterwards', async () => {
+    const { room, storage, sockets } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+    ])
+    await room.fetch(resetRequest())
+    const armedBefore = storage.alarmSet
+
+    for (const socket of sockets) await room.webSocketClose(socket, CLOSE_ROOM_CLOSED, '', true)
+
+    expect(storage.alarmSet).toBe(armedBefore)
+  })
+
+  it('takes only a POST', async () => {
+    const { room, storage } = await joinedRoomOf([
+      { role: 'editor', userId: 'ana' },
+    ])
+    await room.fetch(commitRequest())
+
+    const response = await room.fetch(resetRequest('GET'))
+
+    expect(response.status).toBe(405)
+    expect(storage.data.size).toBeGreaterThan(0)
+  })
+
+  it('succeeds on a room that never held anything', async () => {
+    const { room, storage } = await joinedRoomOf([])
+
+    expect((await room.fetch(resetRequest())).status).toBe(200)
+    expect(storage.data.size).toBe(0)
+  })
+})
+
+describe('socket age backstop', () => {
+  const maximumAge = TRIP_ROOM_MAX_SOCKET_AGE_MS
+
+  it('arms housekeeping at connect before hello', async () => {
+    const storage = fakeStorage()
+    const server = fakeSocket(identityWith('editor', 'ana'), 'accepted')
+    const sockets: Array<TripRoomSocket> = []
+    const state: TripRoomState = {
+      storage,
+      acceptWebSocket: (socket) => {
+        sockets.push(socket)
+      },
+      getWebSockets: () => sockets,
+    }
+    const NativeResponse = Response
+    vi.stubGlobal(
+      'WebSocketPair',
+      class {
+        0 = fakeSocket(identityWith('editor', 'ana'), 'client')
+        1 = server
+      },
+    )
+    vi.stubGlobal(
+      'Response',
+      class extends NativeResponse {
+        constructor(body: BodyInit | null, init: ResponseInit) {
+          super(body, {
+            ...init,
+            status: init.status === 101 ? 200 : init.status,
+          })
+        }
+      },
+    )
+    try {
+      const room = new TripRoom(
+        state,
+        {},
+        { now: () => 123, newId: () => 'accepted' },
+      )
+      await room.fetch(
+        new Request('https://room/connect', {
+          headers: {
+            upgrade: 'websocket',
+            'x-planned-trip-identity': JSON.stringify(
+              identityWith('editor', 'ana'),
+            ),
+          },
+        }),
+      )
+      expect(sockets).toEqual([server])
+      expect(server.deserializeAttachment()).toMatchObject({
+        joinedAt: 123,
+        joined: false,
+      })
+      expect(storage.alarmSet).toBe(1)
+      expect(storage.alarmAt).toBe(123 + TRIP_ROOM_ALARM_INTERVAL_MS)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('expires joined and unjoined attachments after hibernation, announces departure and reschedules', async () => {
+    let now = 1000
+    const storage = fakeStorage()
+    const old = fakeSocket(identityWith('editor', 'ana'), 'old')
+    const silent = fakeSocket(identityWith('viewer', 'ben'), 'silent')
+    const young = fakeSocket(identityWith('editor', 'cy'), 'young')
+    const sockets = [old, silent, young]
+    const state: TripRoomState = {
+      storage,
+      acceptWebSocket: () => undefined,
+      getWebSockets: () =>
+        sockets.filter((socket) => socket.closedWith === null),
+    }
+    const stamp = (socket: FakeSocket, joinedAt: number) => {
+      socket.serializeAttachment({
+        ...(socket.deserializeAttachment() as object),
+        joinedAt,
+      })
+    }
+    stamp(old, now)
+    stamp(silent, now)
+    const first = new TripRoom(state, {}, { now: () => now })
+    await first.webSocketMessage(old, HELLO)
+    now += maximumAge
+    stamp(young, now)
+    await first.webSocketMessage(young, HELLO)
+    // Reconstruct the room with only persisted socket attachments, as after hibernation.
+    const resumed = new TripRoom(state, {}, { now: () => now })
+    await resumed.alarm()
+    expect(old.closedWith).toBeNull() // Exactly the limit is not older than it.
+    now += 1
+    young.sent.length = 0
+    const armedBefore = storage.alarmSet
+    await resumed.alarm()
+    for (const expired of [old, silent]) {
+      expect(expired.closedWith).toBe(CLOSE_ROOM_CLOSED)
+      expect(expired.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
+    }
+    expect(young.closedWith).toBeNull()
+    expect(young.sent).toEqual([
+      expect.objectContaining({ t: 'presence', left: 'old' }),
+    ])
+    expect(storage.alarmSet).toBe(armedBefore + 1)
+    expect(storage.alarmAt).toBe(now + TRIP_ROOM_ALARM_INTERVAL_MS)
+    young.sent.length = 0
+    await resumed.webSocketMessage(old, HELLO)
+    await resumed.webSocketMessage(old, PATCH)
+    await resumed.fetch(commitRequest())
+    expect(old.sent.filter((frame) => frame.t === 'commit')).toEqual([])
   })
 })

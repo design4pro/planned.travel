@@ -16,6 +16,20 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': '邀請',
+  'workspace.invite.resend': '重新傳送',
+  'workspace.invite.revoke': '撤銷',
+  'workspace.invite.confirm': '撤銷邀請',
+  'workspace.invite.expired': '已過期',
+  'workspace.invite.by': '邀請人：{name}',
+  'workspace.invite.sent': '邀請已傳送',
+  'workspace.invite.revoked': '邀請已撤銷',
+  'workspace.invite.delivery': '邀請已儲存，但郵件傳送失敗。請重新傳送。',
+  'workspace.invite.duplicate': '已有待處理的邀請。請重新傳送。',
+  'workspace.invite.existing': '此人已是工作空間成員。',
+  'workspace.invite.failed': '邀請無法使用。請重新整理清單後重試。',
+  'workspace.invite.reload': '重新整理邀請',
+
   'page.eyebrow': '帳號',
   'page.title': '設定',
   'page.description':
@@ -531,6 +545,26 @@ const messages = {
   'passkeys.delete.failed': '密碼金鑰未能移除。請再試一次。',
   'passkeys.delete.removing': '正在移除密碼金鑰',
   'passkeys.delete.passwordRequired': '請輸入你的密碼以移除這個密碼金鑰。',
+  'workspace.departure.leave': '退出工作區',
+  'workspace.departure.remove': '移除成員',
+  'workspace.departure.title': '結束在 {workspace} 的成員資格？',
+  'workspace.departure.body':
+    '{name} 將失去對 {workspace} 的存取權。其帳戶以及保留的行程和費用記錄將繼續保留。',
+  'workspace.departure.cancel': '取消',
+  'workspace.departure.pending': '正在結束成員資格…',
+  'workspace.departure.lastOwner':
+    '退出或移除此擁有者之前，請先將另一位成員設為擁有者。',
+  'workspace.departure.notPermitted':
+    '您目前的角色無法移除此成員。請重新整理成員清單後再試。',
+  'workspace.departure.notFound': '此人已不再是此工作區的成員。',
+  'workspace.departure.impersonated':
+    '變更工作區成員資格之前，請先停止模擬其他使用者。',
+  'workspace.departure.failed': '無法確認結果。請重新載入工作區後再試。',
+  'workspace.departure.removed': '已移除成員',
+  'workspace.departure.reload': '重新載入工作區',
+  'workspace.departure.activationFailed':
+    '你已退出此工作空間。開啟下一個工作空間以繼續。',
+  'workspace.departure.recover': '開啟下一個工作空間',
 } satisfies TranslationOf<typeof En>
 
 export default messages

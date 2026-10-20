@@ -139,12 +139,16 @@ export const DISABLED_ADMIN_PATHS: string[] = [
  * `organization/remove-member` deletes the `member` row for an owner or an admin with the same gaps:
  * no audit entry and no refusal during impersonation (#1010). The product-owned removal is #1008,
  * which calls `auth.api.removeMember` in process so the after-hook that queues the removed person's
- * room eviction still runs. `organization/leave` is deliberately not here: the leave screen needs it,
- * and until #1008 ships a workspace has no way to remove a member over HTTP.
+ * room eviction still runs. `organization/leave` is closed too: the guarded product action calls the in-process
+ * API, so HTTP cannot bypass impersonation, audit or atomic owner protection (#1008).
  */
+/** Invitation mutations use the tenant repository lifecycle; recipient reads/accept/reject stay open. */
 export const DISABLED_ORGANIZATION_PATHS: string[] = [
   '/organization/update-member-role',
   '/organization/remove-member',
+  '/organization/leave',
+  '/organization/invite-member',
+  '/organization/cancel-invitation',
 ]
 
 /**

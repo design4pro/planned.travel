@@ -29,6 +29,21 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'دعوة',
+  'workspace.invite.resend': 'إعادة الإرسال',
+  'workspace.invite.revoke': 'إلغاء',
+  'workspace.invite.confirm': 'إلغاء الدعوة',
+  'workspace.invite.expired': 'منتهية الصلاحية',
+  'workspace.invite.by': 'دعوة من {name}',
+  'workspace.invite.sent': 'تم إرسال الدعوة',
+  'workspace.invite.revoked': 'تم إلغاء الدعوة',
+  'workspace.invite.delivery':
+    'تم حفظ الدعوة، لكن تعذر إرسال البريد. أعد الإرسال للمحاولة مجددًا.',
+  'workspace.invite.duplicate': 'توجد دعوة معلقة بالفعل. أعد إرسالها.',
+  'workspace.invite.existing': 'هذا الشخص عضو بالفعل في مساحة العمل.',
+  'workspace.invite.failed': 'الدعوة غير متاحة. حدّث القائمة وحاول مجددًا.',
+  'workspace.invite.reload': 'تحديث الدعوات',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'الحساب',
   'page.title': 'الإعدادات',
@@ -630,6 +645,27 @@ const messages = {
   'passkeys.delete.removing': 'جارٍ إزالة مفتاح المرور',
   'passkeys.delete.passwordRequired':
     'أدخل كلمة المرور لإزالة مفتاح المرور هذا.',
+  'workspace.departure.leave': 'مغادرة مساحة العمل',
+  'workspace.departure.remove': 'إزالة العضو',
+  'workspace.departure.title': 'إنهاء العضوية في {workspace}؟',
+  'workspace.departure.body':
+    'سيفقد {name} إمكانية الوصول إلى {workspace}. سيبقى حسابه والرحلات وسجلات التكاليف المحتفظ بها.',
+  'workspace.departure.cancel': 'إلغاء',
+  'workspace.departure.pending': 'جارٍ إنهاء العضوية…',
+  'workspace.departure.lastOwner':
+    'عيّن عضوًا آخر مالكًا قبل المغادرة أو إزالة هذا المالك.',
+  'workspace.departure.notPermitted':
+    'لا يسمح دورك الحالي بإزالة هذا العضو. حدّث قائمة الأعضاء قبل المحاولة مجددًا.',
+  'workspace.departure.notFound': 'لم يعد هذا الشخص عضوًا في مساحة العمل هذه.',
+  'workspace.departure.impersonated':
+    'أوقف انتحال هوية المستخدم قبل تغيير العضوية في مساحة العمل.',
+  'workspace.departure.failed':
+    'تعذّر تأكيد النتيجة. أعد تحميل مساحة العمل قبل المحاولة مجددًا.',
+  'workspace.departure.removed': 'تمت إزالة العضو',
+  'workspace.departure.reload': 'إعادة تحميل مساحة العمل',
+  'workspace.departure.activationFailed':
+    'لقد غادرت مساحة العمل هذه. افتح مساحة العمل التالية للمتابعة.',
+  'workspace.departure.recover': 'افتح مساحة العمل التالية',
 } satisfies TranslationOf<typeof En>
 
 export default messages

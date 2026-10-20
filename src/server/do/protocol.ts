@@ -45,9 +45,16 @@ export const TRIP_ROOM_IDLE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 export const TRIP_ROOM_ALARM_INTERVAL_MS = 5 * 60 * 1000
 
 /**
- * The close the room sends when somebody's access or the trip's state changed (`/close`). The
- * reason, not the code, tells the client apart from the other 1012 closes (no session, protocol
- * mismatch): only this one means the screen's role-dependent data may be stale, so only this one
+ * Maximum socket age before access is checked again. With the five-minute alarm interval,
+ * a missed revocation close or an in-flight connect keeps its old role for about 20 minutes.
+ */
+export const TRIP_ROOM_MAX_SOCKET_AGE_MS = 15 * 60 * 1000
+
+/**
+ * The close the room sends after an access or trip state change (`/close`), or when a socket
+ * exceeds the maximum age and must check access again. The reason, not the code, tells the client
+ * apart from the other 1012 closes (no session, protocol mismatch): only this one means the
+ * screen's role-dependent data may be stale, so only this one
  * makes the hook re-read its loader.
  */
 export const TRIP_ROOM_CLOSED_CODE = 1012

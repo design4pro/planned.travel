@@ -800,7 +800,9 @@ self-auditing endpoints, retention-pruned by the weekly cron), while the tenant 
 feeds also serves `listEntityHistory`, a per-entity capability the reference does not have. The
 tenant-security events still missing — member role change, invitation, removal — cannot be audited
 here because `changeMemberRole`, `createInvitation` and `removeMember` have no production caller
-yet, measured (`changeMemberRole` gained one, and its `member.role_changed` entry, in #995); each gains its `trail()` call in the stage that ships its write path (the ADM/ACC
+yet, measured (`changeMemberRole` gained one, and its `member.role_changed` entry, in #995;
+#1008 adds the production `removeMember` path with atomic `member.removed`/`member.left` audit entries);
+each gains its audit write in the stage that ships its write path (the ADM/ACC
 rows), and trip lifecycle audits ride TRP-03. Of the three call sites below,
 `workspace.defaults_changed` has direct reference parity; the file and reservation events are the
 entity-history half.
@@ -844,8 +846,9 @@ new token, no new primitive.
 
 **Creates no quota-bearing row, explicitly.** Audit entries are a compliance record, not a sold
 resource; metering them would give a tenant an incentive to act in ways that produce fewer of them,
-which is precisely backwards. Growth is bounded instead by `pruneAuditLog(scope, before)`, which
-already exists in the repository and is the retention lever. Nothing is added to `resolveLimits()`,
+which is precisely backwards. Growth is bounded instead by `pruneAuditLog(scope, now)`, which
+derives the 400-day retention cutoff internally and runs in bounded tenant-scoped batches from
+the weekly retention slot (#1064). Nothing is added to `resolveLimits()`,
 nothing to `PLAN_QUOTAS`, no case to `src/server/billing/__tests__/limits.test.ts`.
 
 ### Tenant isolation test

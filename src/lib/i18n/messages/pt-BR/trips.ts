@@ -513,6 +513,64 @@ const messages = {
     'Não foi possível entrar. O link continua funcionando; tente de novo.',
   'join.error.switch':
     'Não foi possível trocar de espaço de trabalho. Tente de novo.',
+
+  'invite.title': 'Link de convite',
+  'invite.description':
+    'Qualquer pessoa deste espaço que abrir o link entra na viagem.',
+  'invite.empty.title': 'Ainda não há link de convite',
+  'invite.empty.body':
+    'Crie um link e compartilhe no grupo para que as pessoas deste espaço possam entrar.',
+  'invite.action.create': 'Criar link',
+  'invite.link.label': 'Link de convite',
+  'invite.copy': 'Copiar link',
+  'invite.copied': 'Link copiado',
+  'invite.copyFailed':
+    'Não foi possível copiar. Selecione o link e copie manualmente.',
+  'invite.switch.label': 'Qualquer pessoa deste espaço com o link pode entrar',
+  'invite.switch.onHint':
+    'Desativar invalida o link para todos, inclusive as cópias já enviadas.',
+  'invite.switch.offHint':
+    'Reativar cria um novo link. Os anteriores continuam inválidos.',
+  'invite.off.body': 'O link está desativado. Ninguém pode entrar com ele.',
+  'invite.uses': {
+    one: 'Pessoas que entraram por este link: {count}',
+    many: 'Pessoas que entraram por este link: {count}',
+    other: 'Pessoas que entraram por este link: {count}',
+  },
+  'invite.uses.never': 'Ninguém entrou por este link ainda.',
+  'invite.lastUsed': 'Última entrada: {when}',
+  'invite.role.upgrade.title': 'Dar permissão de edição?',
+  'invite.role.upgrade.body':
+    'Isso vale para todas as cópias já enviadas e para quem entrar a partir de agora.',
+  'invite.role.upgrade.confirm': 'Dar permissão de edição',
+  'invite.replace.action': 'Substituir link',
+  'invite.replace.title': 'Substituir este link?',
+  'invite.replace.body':
+    'O link antigo para de funcionar imediatamente para todos. Quem já entrou continua na viagem; remova essas pessoas da lista abaixo se necessário.',
+  'invite.replace.deadBody':
+    'O link antigo não funciona mais. Quem já entrou continua na viagem.',
+  'invite.replace.confirm': 'Substituir link',
+  'invite.replace.pending': 'Substituindo o link',
+  'invite.stale': 'Este link não funciona mais. Substitua-o.',
+  'invite.creatorGone':
+    'O link parou de funcionar porque quem o criou não é mais proprietário. Substitua-o.',
+  'invite.archived':
+    'Esta viagem está arquivada. O link volta a funcionar quando ela for restaurada.',
+  'invite.announce.created': 'Link de convite criado',
+  'invite.announce.roleEditor': 'Quem entrar terá permissão de edição',
+  'invite.announce.off': 'Link de convite desativado',
+  'invite.announce.newLink':
+    'O novo link está pronto. Copie e envie novamente.',
+  'invite.announce.roleViewer': 'Quem entrar poderá visualizar a viagem',
+  'invite.error.title': 'Não foi possível carregar o link',
+  'invite.error.retry': 'Tentar novamente',
+  'invite.refusal.archived': 'Esta viagem está arquivada.',
+  'invite.refusal.notOwner':
+    'Só um proprietário da viagem pode alterar o link.',
+  'invite.refusal.changed':
+    'Alguém alterou o link. O atual está sendo exibido.',
+  'invite.announce.recovered':
+    'As configurações atuais do link estão sendo exibidas. Confira antes de alterar novamente.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

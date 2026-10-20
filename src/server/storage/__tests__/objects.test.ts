@@ -15,6 +15,7 @@ import {
   R2_DELETE_MAX_KEYS,
   copyObject,
   deleteObjects,
+  deletePrefix,
 } from '../objects'
 import type { FakeBucket, FakeObject } from './fake-bucket'
 import { fakeBucket } from './fake-bucket'
@@ -186,3 +187,82 @@ function strictBucket(
   }
   return strict
 }
+
+describe('deletePrefix', () => {
+  it('deletes every key under the prefix and nothing else', async () => {
+    const bucket = fakeBucket([
+      'trips/org-a/t1/one',
+      'trips/org-a/t2/two',
+      'trips/org-ab/t1/other',
+      'exports/org-a/t1/job.pdf',
+    ])
+
+    expect(await deletePrefix(bucket, 'trips/org-a/')).toBe(2)
+
+    // The trailing slash is the point: `org-ab` shares the leading characters of `org-a`.
+    expect([...bucket.remaining].sort()).toEqual([
+      'exports/org-a/t1/job.pdf',
+      'trips/org-ab/t1/other',
+    ])
+  })
+
+  it('works through a prefix larger than one listing page, deleting at most 1 000 keys a call', async () => {
+    const keys = Array.from(
+      { length: 2_500 },
+      (_, index) => `trips/o/t/${index}`,
+    )
+    const bucket = fakeBucket(keys, { pageSize: 1_000 })
+
+    expect(await deletePrefix(bucket, 'trips/o/')).toBe(2_500)
+
+    expect(bucket.remaining.size).toBe(0)
+    expect(bucket.listCalls).toHaveLength(3)
+    expect(Math.max(...bucket.calls.map((call) => call.length))).toBe(1_000)
+    expect(bucket.calls.flat()).toHaveLength(2_500)
+  })
+
+  it('finishes the job when a repeat follows a run that stopped part-way', async () => {
+    const keys = Array.from(
+      { length: 2_500 },
+      (_, index) => `trips/o/t/${index}`,
+    )
+    const bucket = fakeBucket(keys, { pageSize: 1_000 })
+    const realDelete = bucket.delete
+    let deleteCalls = 0
+    const flaky: typeof bucket = {
+      ...bucket,
+      delete: async (batch) => {
+        deleteCalls += 1
+        if (deleteCalls === 2) throw new Error('R2 went away')
+        return realDelete(batch)
+      },
+    }
+
+    await expect(deletePrefix(flaky, 'trips/o/')).rejects.toThrow(
+      'R2 went away',
+    )
+    expect(bucket.remaining.size).toBe(1_500)
+
+    // The same call again: what is already gone is not listed, what is left is deleted.
+    expect(await deletePrefix(bucket, 'trips/o/')).toBe(1_500)
+    expect(bucket.remaining.size).toBe(0)
+  })
+
+  it('succeeds on a prefix with nothing under it', async () => {
+    const bucket = fakeBucket(['trips/other/t/one'])
+
+    expect(await deletePrefix(bucket, 'trips/org/')).toBe(0)
+    expect(bucket.calls).toEqual([])
+    expect(bucket.remaining.size).toBe(1)
+  })
+
+  it('refuses a prefix that is not a whole directory, so a bad id cannot sweep a key family', async () => {
+    const bucket = fakeBucket(['trips/org/t/one'])
+
+    await expect(deletePrefix(bucket, '')).rejects.toThrow(/prefix/)
+    await expect(deletePrefix(bucket, 'trips/')).rejects.toThrow(/prefix/)
+    await expect(deletePrefix(bucket, 'trips/org')).rejects.toThrow(/prefix/)
+    expect(bucket.calls).toEqual([])
+    expect(bucket.remaining.size).toBe(1)
+  })
+})

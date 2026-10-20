@@ -419,6 +419,44 @@ const messages = {
   'card.error.body': 'لم تُحمَّل هذه الأرقام. لم يُفقد شيء.',
   'card.error.retry': 'حاول مجددًا',
   'overlay.close': 'إغلاق {name}',
+  'regions.label': 'المناطق',
+  'regions.hint': 'تؤدي إضافة منطقة أيضًا إلى تحديد {country} كبلد تمت زيارته.',
+  'regions.keeps': 'لا تؤدي إزالة منطقة إلى إزالة {country} من أطلسك.',
+  'regions.keeps.unvisited':
+    'تبقى هذه المناطق في سجلك. حدد {country} كبلد تمت زيارته أو أضف منطقة لإعادته إلى خريطتك.',
+  'regions.empty.title': 'لم تُسجل مناطق هنا بعد',
+  'regions.empty.body': 'أضف ولاية أو مقاطعة أو منطقة زرتها في {country}.',
+  'regions.input.label': 'إضافة منطقة في {country}',
+  'regions.input.placeholder': 'على سبيل المثال، بافاريا',
+  'regions.add': 'إضافة منطقة',
+  'regions.adding': 'جارٍ إضافة {region}',
+  'regions.remove': 'إزالة {region}',
+  'regions.loading': 'جارٍ تحميل مناطقك',
+  'regions.status.added': 'تمت إضافة {region}',
+  'regions.status.exists': '{region} مسجلة بالفعل',
+  'regions.status.removed': 'تمت إزالة {region}',
+  'regions.status.addedCountry':
+    'تمت إضافة {region}. تم الآن تحديد {country} كبلد تمت زيارته.',
+  'regions.error.invalid': 'أدخل اسم المنطقة.',
+  'regions.error.hidden':
+    'يحتوي الاسم على أحرف غير مسموح بها. أزلها وحاول مجددًا.',
+  'regions.error.load': 'تعذر تحميل مناطقك في {country}.',
+  'regions.error.add': 'تعذرت إضافة {region}. حاول مجددًا.',
+  'regions.error.remove': 'تعذرت إزالة {region}. حاول مجددًا.',
+  'regions.error.full': 'سجلت {limit} منطقة. أزل واحدة لإضافة أخرى.',
+  'regions.reload': 'إعادة تحميل المناطق',
+  'actions.confirm.visitRegions.body': {
+    zero: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
+    one: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
+    two: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
+    few: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
+    many: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
+    other: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
+  },
+  'regions.error.uncertain':
+    'تعذر تأكيد التغيير. أعد تحميل مناطقك للتحقق مما تم حفظه.',
+  'regions.status.refreshFailed':
+    '{result} تعذر تحديث الأطلس. أعد تحميله لتحديث الخريطة.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

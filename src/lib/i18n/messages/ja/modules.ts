@@ -877,6 +877,16 @@ const messages = {
   'files.action.add': 'ファイルを追加',
   'files.action.choose': 'ファイルを選ぶ',
   'files.action.upload': 'ファイルをアップロード',
+  'files.places.title': '場所のファイル',
+  'files.places.description':
+    'この旅行の場所を、座標のない場所も含めてGeoJSON形式でダウンロードします。',
+  'files.places.action': '場所をダウンロード (.geojson)',
+  'files.places.empty':
+    'ダウンロードするには、この旅行に場所を追加してください。',
+  'files.places.error':
+    '場所のファイルを準備できませんでした。もう一度お試しください。',
+  'files.places.pending': '場所のファイルを準備中…',
+  'files.places.done': '場所のファイルをダウンロードしました。',
   'files.calendar.live.action': '自動更新されるカレンダーリンク',
   'files.calendar.live.title': '自動更新されるカレンダーリンク',
   'files.calendar.warning':
@@ -1156,6 +1166,24 @@ const messages = {
   'vacay.error.title': '休暇プランナーを読み込めませんでした',
   'vacay.year.previous': '前の年',
   'vacay.year.next': '次の年',
+  'vacay.settings.open': '休暇プランの設定',
+  'vacay.settings.title': '休暇プランの設定',
+  'vacay.settings.description':
+    '使わなかった日数の繰り越し方法と、既定の日数を設定します。',
+  'vacay.settings.carryOver': '使わなかった日数を翌年に繰り越す',
+  'vacay.settings.carryOver.hint':
+    'オフにすると繰り越し日数は非表示になりますが、削除はされません。',
+  'vacay.settings.defaultAllowance': '既定の日数（年あたり）',
+  'vacay.settings.defaultAllowance.hint':
+    '自分の日数を設定していない年に適用されます。',
+  'vacay.settings.save': '設定を保存',
+  'vacay.settings.cancel': 'キャンセル',
+  'vacay.settings.saved': '休暇プランの設定を保存しました。',
+  'vacay.settings.error':
+    '休暇プランの設定を保存できませんでした。変更は反映されていません。',
+  'files.readOnly.title': '読み取り専用のファイル',
+  'files.readOnly.role':
+    'ファイルのアップロード、名前の変更、削除ができるのは旅行のオーナーと編集者のみです。ダウンロードは引き続き利用できます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

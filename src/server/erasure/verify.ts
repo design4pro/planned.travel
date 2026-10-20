@@ -14,7 +14,7 @@
  *
  * `platform_audit_log` is the one registered exception and is not swept. The platform-table places
  * that SPEC §5 keeps behind `src/server/catalog` are reported as unverified until the change that
- * ships their scrubs supplies their counts: **any gap fails the sweep**, and a missing email is
+ * ships their scrubs supplies their counts via `countPlatformUserReferences`: **any gap fails the sweep**, and a missing email is
  * never read as zero.
  *
  * **The report names places, never people.** A finding carries a `table.column` name, an opaque
@@ -66,7 +66,7 @@ export interface VerifyErasureInput {
   readonly email: string | null
   /**
    * Counts for the platform-table places (`staff_api_tokens`, `provider_registry`), read through
-   * `src/server/catalog` by the change that ships their scrubs. A place left out is reported as
+   * `countPlatformUserReferences` in `src/server/catalog/erasure.ts`. A place left out is reported as
    * unverified.
    */
   readonly platform?: ReadonlyArray<PlaceCount>

@@ -44,6 +44,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Mời',
+  'workspace.invite.resend': 'Gửi lại',
+  'workspace.invite.revoke': 'Thu hồi',
+  'workspace.invite.confirm': 'Thu hồi lời mời',
+  'workspace.invite.expired': 'Đã hết hạn',
+  'workspace.invite.by': 'Được mời bởi {name}',
+  'workspace.invite.sent': 'Đã gửi lời mời',
+  'workspace.invite.revoked': 'Đã thu hồi lời mời',
+  'workspace.invite.delivery':
+    'Đã lưu lời mời nhưng không gửi được email. Hãy gửi lại.',
+  'workspace.invite.duplicate': 'Đã có lời mời đang chờ. Hãy gửi lại.',
+  'workspace.invite.existing':
+    'Người này đã là thành viên không gian làm việc.',
+  'workspace.invite.failed':
+    'Lời mời không khả dụng. Làm mới danh sách và thử lại.',
+  'workspace.invite.reload': 'Làm mới lời mời',
+
   'page.eyebrow': 'Tài khoản',
   'page.title': 'Cài đặt',
   'page.description':
@@ -621,6 +638,28 @@ const messages = {
   'passkeys.delete.removing': 'Đang xóa khóa truy cập',
   'passkeys.delete.passwordRequired':
     'Hãy nhập mật khẩu của bạn để xóa khóa truy cập này.',
+  'workspace.departure.leave': 'Rời không gian làm việc',
+  'workspace.departure.remove': 'Xóa thành viên',
+  'workspace.departure.title': 'Chấm dứt tư cách thành viên tại {workspace}?',
+  'workspace.departure.body':
+    '{name} sẽ mất quyền truy cập vào {workspace}. Tài khoản cùng các chuyến đi và hồ sơ chi phí được lưu giữ vẫn sẽ còn.',
+  'workspace.departure.cancel': 'Hủy',
+  'workspace.departure.pending': 'Đang chấm dứt tư cách thành viên…',
+  'workspace.departure.lastOwner':
+    'Chỉ định một thành viên khác làm chủ sở hữu trước khi rời đi hoặc xóa chủ sở hữu này.',
+  'workspace.departure.notPermitted':
+    'Vai trò hiện tại của bạn không thể xóa thành viên này. Hãy làm mới danh sách thành viên trước khi thử lại.',
+  'workspace.departure.notFound':
+    'Người này không còn là thành viên của không gian làm việc này.',
+  'workspace.departure.impersonated':
+    'Dừng mạo danh trước khi thay đổi tư cách thành viên của không gian làm việc.',
+  'workspace.departure.failed':
+    'Không thể xác nhận kết quả. Hãy tải lại không gian làm việc trước khi thử lại.',
+  'workspace.departure.removed': 'Đã xóa thành viên',
+  'workspace.departure.reload': 'Tải lại không gian làm việc',
+  'workspace.departure.activationFailed':
+    'Bạn đã rời không gian làm việc này. Mở không gian tiếp theo để tiếp tục.',
+  'workspace.departure.recover': 'Mở không gian tiếp theo',
 } satisfies TranslationOf<typeof En>
 
 export default messages

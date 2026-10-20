@@ -30,6 +30,14 @@ const harness = vi.hoisted(() => {
         records.push(record)
       },
     },
+    tenantPrune: vi
+      .fn()
+      .mockResolvedValue({
+        deleted: 0,
+        batches: 0,
+        organizations: 0,
+        drained: true,
+      }),
     prune: vi.fn(),
     rollUp: vi.fn(),
     deadLetters: vi
@@ -54,6 +62,10 @@ vi.mock('@tanstack/react-start/server', () => ({
 vi.mock('../db/client', () => ({ createDb: () => ({ name: 'platform-db' }) }))
 
 vi.mock('../queue/consumer', () => ({ consumeTaskBatch: vi.fn() }))
+
+vi.mock('../audit/retention', () => ({
+  pruneTenantAuditLog: harness.tenantPrune,
+}))
 
 vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
 
@@ -339,5 +351,38 @@ describe('the weekly retention slot', () => {
     expect(harness.records.map((record) => record.msg)).toContain(
       'unrecognised cron expression',
     )
+  })
+})
+
+describe('tenant audit weekly retention', () => {
+  it('runs even when a sibling rejects and preserves the first rejection', async () => {
+    const failure = new Error('platform prune failed')
+    harness.prune.mockReset().mockRejectedValue(failure)
+    harness.rollUp.mockReset().mockResolvedValue({ drained: true })
+    harness.tenantPrune.mockClear()
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toBe(failure)
+    expect(harness.tenantPrune).toHaveBeenCalledTimes(1)
+    expect(harness.tenantPrune).toHaveBeenCalledWith(
+      { name: 'platform-db' },
+      PLATFORM_SYSTEM_ACTOR,
+      expect.anything(),
+      { now: new Date(SCHEDULED_AT) },
+    )
+    expect(harness.rollUp).toHaveBeenCalledTimes(1)
+  })
+  it('rethrows tenant pruning failure after starting every sibling', async () => {
+    const failure = new Error('tenant prune failed')
+    harness.prune.mockReset().mockResolvedValue({ drained: true })
+    harness.rollUp.mockReset().mockResolvedValue({ drained: true })
+    harness.deadLetters.mockReset().mockResolvedValue({ drained: true })
+    harness.tenantPrune.mockReset().mockRejectedValueOnce(failure)
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toBe(failure)
+    expect(harness.prune).toHaveBeenCalledTimes(1)
+    expect(harness.rollUp).toHaveBeenCalledTimes(1)
+    expect(harness.deadLetters).toHaveBeenCalledTimes(1)
   })
 })

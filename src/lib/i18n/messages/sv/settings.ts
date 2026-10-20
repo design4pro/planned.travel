@@ -29,6 +29,22 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Bjud in',
+  'workspace.invite.resend': 'Skicka igen',
+  'workspace.invite.revoke': 'Återkalla',
+  'workspace.invite.confirm': 'Återkalla inbjudan',
+  'workspace.invite.expired': 'Utgången',
+  'workspace.invite.by': 'Inbjuden av {name}',
+  'workspace.invite.sent': 'Inbjudan skickad',
+  'workspace.invite.revoked': 'Inbjudan återkallad',
+  'workspace.invite.delivery':
+    'Inbjudan sparad, men mejlet kunde inte skickas. Skicka igen.',
+  'workspace.invite.duplicate': 'En inbjudan väntar redan. Skicka igen.',
+  'workspace.invite.existing': 'Personen är redan medlem i arbetsytan.',
+  'workspace.invite.failed':
+    'Inbjudan är inte tillgänglig. Uppdatera listan och försök igen.',
+  'workspace.invite.reload': 'Uppdatera inbjudningar',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Konto',
   'page.title': 'Inställningar',
@@ -629,6 +645,28 @@ const messages = {
   'passkeys.delete.removing': 'Tar bort lösenordsnyckeln',
   'passkeys.delete.passwordRequired':
     'Ange ditt lösenord för att ta bort den här lösenordsnyckeln.',
+  'workspace.departure.leave': 'Lämna arbetsytan',
+  'workspace.departure.remove': 'Ta bort medlem',
+  'workspace.departure.title': 'Avsluta medlemskapet i {workspace}?',
+  'workspace.departure.body':
+    '{name} förlorar åtkomsten till {workspace}. Kontot samt sparade resor och kostnadsuppgifter finns kvar.',
+  'workspace.departure.cancel': 'Avbryt',
+  'workspace.departure.pending': 'Avslutar medlemskapet…',
+  'workspace.departure.lastOwner':
+    'Gör en annan medlem till ägare innan du lämnar eller tar bort den här ägaren.',
+  'workspace.departure.notPermitted':
+    'Din nuvarande roll tillåter inte att du tar bort den här medlemmen. Uppdatera medlemslistan innan du försöker igen.',
+  'workspace.departure.notFound':
+    'Den här personen är inte längre medlem i arbetsytan.',
+  'workspace.departure.impersonated':
+    'Sluta utge dig för att vara en annan användare innan du ändrar medlemskapet i arbetsytan.',
+  'workspace.departure.failed':
+    'Resultatet kunde inte bekräftas. Läs in arbetsytan igen innan du försöker igen.',
+  'workspace.departure.removed': 'Medlem borttagen',
+  'workspace.departure.reload': 'Läs in arbetsytan igen',
+  'workspace.departure.activationFailed':
+    'Du har lämnat den här arbetsytan. Öppna nästa för att fortsätta.',
+  'workspace.departure.recover': 'Öppna nästa arbetsyta',
 } satisfies TranslationOf<typeof En>
 
 export default messages

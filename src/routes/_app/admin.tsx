@@ -9,8 +9,16 @@ import {
   Users,
 } from 'lucide-react'
 
+import { WorkspaceInvitations } from '#/components/layout/workspace-invitations'
+import {
+  inviteWorkspaceFn,
+  resendWorkspaceInvitationFn,
+  revokeWorkspaceInvitationFn,
+} from '#/server/fns/workspace-invitations'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
+import { MemberDepartureControl } from '#/components/layout/member-departure-control'
+import { useMemberDeparture } from '#/components/layout/use-member-departure'
 import { MemberRoleControl } from '#/components/layout/member-role-control'
 import { PageHeader } from '#/components/layout/page-header'
 import { formatStorageSize } from '#/components/layout/storage-size'
@@ -164,6 +172,7 @@ function AdminDenied() {
 }
 
 function AdminConsole({ data }: { data: AdminPayload }) {
+  const { depart, recover, membersRef } = useMemberDeparture()
   const { t, locale } = useI18n()
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
   const planName = labelFor(PLAN_NAME, data.plan, t)
@@ -357,6 +366,25 @@ function AdminConsole({ data }: { data: AdminPayload }) {
               </ul>
             </Panel>
 
+            <WorkspaceInvitations
+              invitations={data.invitations}
+              roles={data.invitationRoles}
+              now={data.now}
+              reload={async () => {
+                await router.invalidate()
+              }}
+              onAction={async (action, input) => {
+                if (action === 'invite' && 'email' in input)
+                  return inviteWorkspaceFn({ data: input })
+                if ('invitationId' in input) {
+                  if (action === 'resend')
+                    return resendWorkspaceInvitationFn({ data: input })
+                  return revokeWorkspaceInvitationFn({ data: input })
+                }
+                return { ok: false, reason: 'not-permitted' }
+              }}
+            />
+
             <Panel
               label={t('shell.admin.members.label')}
               count={formatNumber(data.members.length, locale)}
@@ -381,7 +409,12 @@ function AdminConsole({ data }: { data: AdminPayload }) {
               flush
               bodyClassName="p-0"
             >
-              <Table label={t('shell.admin.members.table')} fixed>
+              <Table
+                ref={membersRef}
+                tabIndex={-1}
+                label={t('shell.admin.members.table')}
+                fixed
+              >
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('shell.admin.members.person')}</TableHead>
@@ -414,6 +447,16 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                             <span className="block truncate text-caption text-ink-3">
                               {member.email}
                             </span>
+                            {member.userId === data.viewerUserId ||
+                            member.assignableRoles.length > 0 ? (
+                              <MemberDepartureControl
+                                name={member.name}
+                                workspace={data.organization.name}
+                                self={member.userId === data.viewerUserId}
+                                onConfirm={() => depart(member.memberId)}
+                                onRecover={recover}
+                              />
+                            ) : null}
                           </span>
                         </span>
                       </TableCell>

@@ -82,3 +82,12 @@ export async function runBatch(
     await statement
   }
 }
+
+/** Refuses unsupported drivers before writing; reservation transfers cannot use sequential fallback. */
+export async function runAtomicBatch(
+  scope: TenantScope,
+  statements: readonly [BatchStatement, ...Array<BatchStatement>],
+): Promise<void> {
+  if (!supportsBatch(scope.db)) throw new Error('Atomic batch driver required.')
+  await scope.db.batch(statements)
+}

@@ -36,6 +36,22 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Zaproś',
+  'workspace.invite.resend': 'Wyślij ponownie',
+  'workspace.invite.revoke': 'Cofnij',
+  'workspace.invite.confirm': 'Cofnij zaproszenie',
+  'workspace.invite.expired': 'Wygasło',
+  'workspace.invite.by': 'Zaprasza: {name}',
+  'workspace.invite.sent': 'Zaproszenie wysłane',
+  'workspace.invite.revoked': 'Zaproszenie cofnięte',
+  'workspace.invite.delivery':
+    'Zaproszenie zapisane, ale wysyłka nie powiodła się. Wyślij je ponownie.',
+  'workspace.invite.duplicate': 'Zaproszenie już oczekuje. Wyślij je ponownie.',
+  'workspace.invite.existing': 'Ta osoba jest już członkiem przestrzeni.',
+  'workspace.invite.failed':
+    'Zaproszenie niedostępne. Odśwież listę i spróbuj ponownie.',
+  'workspace.invite.reload': 'Odśwież zaproszenia',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Konto',
   'page.title': 'Ustawienia',
@@ -659,6 +675,28 @@ const messages = {
   'passkeys.delete.removing': 'Usuwamy klucz dostępu',
   'passkeys.delete.passwordRequired':
     'Wpisz hasło, aby usunąć ten klucz dostępu.',
+  'workspace.departure.leave': 'Opuść przestrzeń roboczą',
+  'workspace.departure.remove': 'Usuń członka',
+  'workspace.departure.title': 'Zakończyć członkostwo w {workspace}?',
+  'workspace.departure.body':
+    '{name} utraci dostęp do {workspace}. Konto tej osoby oraz zachowane podróże i zapisy kosztów pozostaną.',
+  'workspace.departure.cancel': 'Anuluj',
+  'workspace.departure.pending': 'Kończenie członkostwa…',
+  'workspace.departure.lastOwner':
+    'Nadaj innemu członkowi rolę właściciela, zanim opuścisz przestrzeń lub usuniesz tego właściciela.',
+  'workspace.departure.notPermitted':
+    'Twoja obecna rola nie pozwala usunąć tego członka. Odśwież listę członków przed ponowną próbą.',
+  'workspace.departure.notFound':
+    'Ta osoba nie jest już członkiem tej przestrzeni roboczej.',
+  'workspace.departure.impersonated':
+    'Zakończ podszywanie się przed zmianą członkostwa w przestrzeni roboczej.',
+  'workspace.departure.failed':
+    'Nie udało się potwierdzić wyniku. Przeładuj przestrzeń roboczą przed ponowną próbą.',
+  'workspace.departure.removed': 'Usunięto członka',
+  'workspace.departure.reload': 'Przeładuj przestrzeń roboczą',
+  'workspace.departure.activationFailed':
+    'Opuszczono tę przestrzeń roboczą. Otwórz następną, aby kontynuować.',
+  'workspace.departure.recover': 'Otwórz następną przestrzeń',
 } satisfies TranslationOf<typeof En>
 
 export default messages

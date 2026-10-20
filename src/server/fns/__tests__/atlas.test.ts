@@ -62,8 +62,12 @@ const stubs = vi.hoisted(() => ({
    * Together these reproduce a race the harness cannot schedule on demand: a
    * concurrent request that commits between this one's read and its write.
    */
+  countryRejects: false,
   clashes: 0,
   clashLeavesRow: false,
+  regionClashes: 0,
+  regionClashLeavesRow: false,
+  regionGone: false,
   /** Every body handed to the `TASKS` binding, with the options it was sent under. */
   sent: [] as Array<{ body: unknown; options?: { delaySeconds?: number } }>,
   /** When true, the queue refuses the send the way an unreachable binding would. */
@@ -147,6 +151,25 @@ vi.mock('#/server/repos', async (importOriginal) => {
   const actual = await importOriginal<typeof Repos>()
   return {
     ...actual,
+    recordRegionVisit: async (
+      ...args: Parameters<typeof actual.recordRegionVisit>
+    ) => {
+      if (stubs.regionClashes > 0) {
+        stubs.regionClashes -= 1
+        if (stubs.regionClashLeavesRow) await actual.recordRegionVisit(...args)
+        throw uniqueIndexRefusal()
+      }
+      return actual.recordRegionVisit(...args)
+    },
+    unmarkRegionVisited: async (
+      ...args: Parameters<typeof actual.unmarkRegionVisited>
+    ) => {
+      if (stubs.regionGone) {
+        await actual.unmarkRegionVisited(...args)
+        throw new actual.NotFoundError('visited region', args[1])
+      }
+      return actual.unmarkRegionVisited(...args)
+    },
     createBucketListItem: async (
       ...args: Parameters<typeof actual.createBucketListItem>
     ) => {
@@ -163,6 +186,7 @@ vi.mock('#/server/repos', async (importOriginal) => {
     markCountryVisited: async (
       ...args: Parameters<typeof actual.markCountryVisited>
     ) => {
+      if (stubs.countryRejects) throw new Error('country unavailable')
       if (stubs.clashes > 0) {
         stubs.clashes -= 1
         if (stubs.clashLeavesRow) {
@@ -309,6 +333,10 @@ beforeEach(async () => {
   other = await harness.seedTenant('elsewhere')
   signIn(tenant.scope)
   stubs.quota = null
+  stubs.regionClashes = 0
+  stubs.regionClashLeavesRow = false
+  stubs.regionGone = false
+  stubs.countryRejects = false
   stubs.clashes = 0
   stubs.clashLeavesRow = false
   stubs.sent = []
@@ -1112,5 +1140,305 @@ describe('isUniqueConstraintViolation', () => {
     const looping = new Error('wrapped')
     Object.defineProperty(looping, 'cause', { value: looping })
     expect(isUniqueConstraintViolation(looping)).toBe(false)
+  })
+})
+
+describe('visited region boundary', () => {
+  async function addRegion(countryCode = 'DE', regionName = 'Bavaria') {
+    const api = await import('../atlas')
+    await startStorage.run(startContext(), () =>
+      api.markRegionVisitedFn({
+        data: api.markRegionVisitedInputSchema.parse({
+          countryCode,
+          regionName,
+        }),
+      }),
+    )
+  }
+
+  it('refuses an empty folded name before any write or cascade', async () => {
+    const api = await import('../atlas')
+    expect(
+      await validateAtBoundary(api.markRegionVisitedFn, {
+        countryCode: 'DE',
+        regionName: '\u0301',
+      }),
+    ).not.toBeNull()
+    const repos = await import('#/server/repos')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toEqual([])
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+    expect(stubs.sent).toEqual([])
+  })
+  it('recomputes a committed region after country failure and heals on retry', async () => {
+    stubs.countryRejects = true
+    await expect(addRegion()).rejects.toThrow('country unavailable')
+    const repos = await import('#/server/repos')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+    expect(stubs.sent).toHaveLength(1)
+    expect(
+      stubs.sent.map((entry) => taskEnvelopeSchema.parse(entry.body)),
+    ).toEqual([
+      expect.objectContaining({
+        kind: 'travel-stats',
+        orgId: tenant.scope.ctx.organizationId,
+        payload: { userId: tenant.ownerUserId, statYear: 0 },
+      }),
+    ])
+    stubs.countryRejects = false
+    await addRegion()
+    expect(await visitedCodes(tenant.scope)).toContain('DE')
+    expect(stubs.sent).toHaveLength(2)
+  })
+  it('records a region and its country exactly once, and heals an unmarked country', async () => {
+    const repos = await import('#/server/repos')
+    await addRegion()
+    await addRegion('DE', ' BÁVARIA ')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+    expect(
+      (await repos.listVisitedCountries(tenant.scope, tenant.ownerUserId))[0]
+        ?.visitCount,
+    ).toBe(1)
+    expect(stubs.sent).toHaveLength(1)
+    await unmarkVisited({ countryCode: 'DE' })
+    await addRegion()
+    expect(await visitedCodes(tenant.scope)).toContain('DE')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+  })
+
+  it('reuses a seeded region by name, separates countries and preserves stored case', async () => {
+    const repos = await import('#/server/repos')
+    const seeded = await repos.markRegionVisited(tenant.scope, {
+      countryCode: 'JP',
+      regionCode: 'JP-13',
+      regionName: 'Tokyo',
+    })
+    await addRegion('JP', ' TOKYO ')
+    await addRegion('DE', 'Tokyo')
+    const rows = await repos.listVisitedRegions(
+      tenant.scope,
+      tenant.ownerUserId,
+    )
+    expect(rows).toHaveLength(2)
+    expect(rows.find((row) => row.countryCode === 'JP')?.id).toBe(seeded.id)
+  })
+
+  it('refuses strict input extras, unknown countries and hidden names before writing', async () => {
+    const api = await import('../atlas')
+    for (const extra of ['userId', 'organizationId', 'regionCode']) {
+      expect(
+        api.markRegionVisitedInputSchema.safeParse({
+          countryCode: 'DE',
+          regionName: 'Bavaria',
+          [extra]: 'spoof',
+        }).success,
+      ).toBe(false)
+      expect(
+        api.loadCountryRegionsInputSchema.safeParse({
+          countryCode: 'DE',
+          [extra]: 'spoof',
+        }).success,
+      ).toBe(false)
+      expect(
+        api.unmarkRegionVisitedInputSchema.safeParse({
+          regionId: 'id',
+          [extra]: 'spoof',
+        }).success,
+      ).toBe(false)
+    }
+    await expect(addRegion('ZZ')).rejects.toThrow()
+    await expect(addRegion('DE', 'Bav\u200baria')).rejects.toThrow()
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+  })
+
+  it('refuses colleague, foreign-workspace and unknown ids alike without deleting', async () => {
+    const repos = await import('#/server/repos')
+    const api = await import('../atlas')
+    const colleague = tenant.scopeFor(await tenant.addUser('colleague'))
+    const colleagueRow = await repos.markRegionVisited(colleague, {
+      countryCode: 'DE',
+      regionCode: 'DE-BY',
+      regionName: 'Bavaria',
+    })
+    const foreign = await repos.markRegionVisited(other.scope, {
+      countryCode: 'DE',
+      regionCode: 'DE-BY',
+      regionName: 'Bavaria',
+    })
+    for (const regionId of [colleagueRow.id, foreign.id, 'missing']) {
+      await expect(
+        startStorage.run(startContext(), () =>
+          api.unmarkRegionVisitedFn({ data: { regionId } }),
+        ),
+      ).rejects.toBeInstanceOf(repos.NotFoundError)
+    }
+    expect(
+      await repos.listVisitedRegions(colleague, colleague.ctx.userId),
+    ).toHaveLength(1)
+    expect(
+      await repos.listVisitedRegions(other.scope, other.ownerUserId),
+    ).toHaveLength(1)
+  })
+
+  it('removes an own region without unmarking its country and tolerates a refused queue', async () => {
+    const repos = await import('#/server/repos')
+    const api = await import('../atlas')
+    stubs.queueRejects = true
+    await addRegion()
+    const [row] = await repos.listVisitedRegions(
+      tenant.scope,
+      tenant.ownerUserId,
+    )
+    if (!row) throw new Error('missing region')
+    stubs.queueRejects = false
+    await startStorage.run(startContext(), () =>
+      api.unmarkRegionVisitedFn({ data: { regionId: row.id } }),
+    )
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toEqual([])
+    expect(await visitedCodes(tenant.scope)).toContain('DE')
+    expect(stubs.sent).toHaveLength(1)
+  })
+})
+
+describe('region quota and traveller isolation', () => {
+  it('counts the acting traveller, permits a re-add at the ceiling, and refuses the next insert', async () => {
+    const repos = await import('#/server/repos')
+    const api = await import('../atlas')
+    const colleague = tenant.scopeFor(await tenant.addUser('quota colleague'))
+    for (let i = 0; i < 1000; i += 1) {
+      await repos.visitedRegionsRepository.insert(colleague, {
+        userId: colleague.ctx.userId,
+        countryCode: 'DE',
+        regionCode: `DE-${i}`,
+        regionName: `Region ${i}`,
+      })
+    }
+    await startStorage.run(startContext(), () =>
+      api.markRegionVisitedFn({
+        data: { countryCode: 'DE', regionName: 'Bavaria' },
+      }),
+    )
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+    signIn(colleague)
+    await expect(
+      startStorage.run(startContext(), () =>
+        api.markRegionVisitedFn({
+          data: { countryCode: 'DE', regionName: 'New region' },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(api.AtlasQuotaError)
+    await startStorage.run(startContext(), () =>
+      api.markRegionVisitedFn({
+        data: { countryCode: 'DE', regionName: 'Region 1' },
+      }),
+    )
+    expect(
+      await repos.listVisitedRegions(colleague, colleague.ctx.userId),
+    ).toHaveLength(1000)
+  })
+})
+
+describe('region race convergence and statement budget', () => {
+  async function add(regionName = 'Bavaria') {
+    const api = await import('../atlas')
+    await startStorage.run(startContext(), () =>
+      api.markRegionVisitedFn({ data: { countryCode: 'DE', regionName } }),
+    )
+  }
+  it('measures nine D1 statements for a new region plus country and none on a repeated recompute', async () => {
+    harness.statements.length = 0
+    await add()
+    expect(harness.statements).toHaveLength(9)
+    expect(stubs.sent).toHaveLength(1)
+    stubs.sent = []
+    await add()
+    expect(stubs.sent).toEqual([])
+  })
+  it('recovers an overlapping insert by code and never increments an existing country', async () => {
+    await markVisited({ countryCode: 'DE' })
+    stubs.sent = []
+    stubs.regionClashes = 1
+    stubs.regionClashLeavesRow = true
+    await add()
+    const repos = await import('#/server/repos')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+    expect(
+      (await repos.listVisitedCountries(tenant.scope, tenant.ownerUserId))[0]
+        ?.visitCount,
+    ).toBe(1)
+    expect(stubs.sent).toEqual([])
+  })
+  it('sanitizes consecutive unique refusals', async () => {
+    stubs.regionClashes = 2
+    const error = await add().catch((cause) => cause)
+    expect(error).toBeInstanceOf(AtlasConflictError)
+    expect(String(error)).not.toMatch(/insert into|org_seeded|user_seeded/)
+  })
+  it('treats a removal already completed in flight as success without recompute', async () => {
+    await add()
+    const repos = await import('#/server/repos')
+    const api = await import('../atlas')
+    const [row] = await repos.listVisitedRegions(
+      tenant.scope,
+      tenant.ownerUserId,
+    )
+    if (!row) throw new Error('missing region')
+    stubs.sent = []
+    stubs.regionGone = true
+    await startStorage.run(startContext(), () =>
+      api.unmarkRegionVisitedFn({ data: { regionId: row.id } }),
+    )
+    expect(stubs.sent).toEqual([])
+  })
+})
+
+describe('region cascade workspace boundary', () => {
+  it('writes the acting workspace country and region while preserving the other workspace', async () => {
+    const repos = await import('#/server/repos')
+    const api = await import('../atlas')
+    const bVisit = await repos.markCountryVisited(other.scope, {
+      countryCode: 'DE',
+    })
+    const bRegion = await repos.markRegionVisited(other.scope, {
+      countryCode: 'DE',
+      regionCode: 'DE-BY',
+      regionName: 'Bavaria',
+    })
+    await startStorage.run(startContext(), () =>
+      api.markRegionVisitedFn({
+        data: { countryCode: 'DE', regionName: 'Bavaria' },
+      }),
+    )
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+    expect(await visitedCodes(tenant.scope)).toContain('DE')
+    expect(
+      await repos.visitedCountriesRepository.requireById(
+        other.scope,
+        bVisit.id,
+      ),
+    ).toMatchObject({ visitCount: 1 })
+    expect(
+      await repos.visitedRegionsRepository.requireById(other.scope, bRegion.id),
+    ).toMatchObject({ regionName: 'Bavaria' })
+    const sent = stubs.sent.map((entry) => taskEnvelopeSchema.parse(entry.body))
+    expect(sent).toHaveLength(1)
+    expect(JSON.stringify(sent)).not.toContain(other.organizationId)
+    expect(JSON.stringify(sent)).not.toContain(other.ownerUserId)
   })
 })

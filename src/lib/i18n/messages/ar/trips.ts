@@ -526,6 +526,62 @@ const messages = {
   'join.error.busy': 'هذه الصفحة مشغولة. حاول مرة أخرى بعد دقيقة.',
   'join.error.join': 'تعذّر الانضمام. الرابط ما زال يعمل، حاول مرة أخرى.',
   'join.error.switch': 'تعذّر تبديل مساحة العمل. حاول مرة أخرى.',
+
+  'invite.title': 'رابط الدعوة',
+  'invite.description':
+    'ينضم أي شخص في مساحة العمل هذه إلى الرحلة عند فتح الرابط.',
+  'invite.empty.title': 'لا يوجد رابط دعوة بعد',
+  'invite.empty.body':
+    'أنشئ رابطًا وشاركه في محادثة المجموعة ليتمكن الأشخاص في مساحة العمل هذه من الانضمام.',
+  'invite.action.create': 'إنشاء رابط',
+  'invite.link.label': 'رابط الدعوة',
+  'invite.copy': 'نسخ الرابط',
+  'invite.copied': 'تم نسخ الرابط',
+  'invite.copyFailed': 'تعذر النسخ. حدد الرابط وانسخه يدويًا.',
+  'invite.switch.label': 'يمكن لأي شخص في مساحة العمل هذه يملك الرابط الانضمام',
+  'invite.switch.onHint':
+    'يؤدي الإيقاف إلى إبطال الرابط للجميع، بما في ذلك النسخ المرسلة سابقًا.',
+  'invite.switch.offHint':
+    'تؤدي إعادة التشغيل إلى إنشاء رابط جديد. تبقى الروابط السابقة غير صالحة.',
+  'invite.off.body': 'الرابط متوقف. لا يمكن لأحد الانضمام من خلاله.',
+  'invite.uses': {
+    zero: 'عدد المنضمين عبر هذا الرابط: {count}',
+    one: 'عدد المنضمين عبر هذا الرابط: {count}',
+    two: 'عدد المنضمين عبر هذا الرابط: {count}',
+    few: 'عدد المنضمين عبر هذا الرابط: {count}',
+    many: 'عدد المنضمين عبر هذا الرابط: {count}',
+    other: 'عدد المنضمين عبر هذا الرابط: {count}',
+  },
+  'invite.uses.never': 'لم ينضم أحد عبر هذا الرابط بعد.',
+  'invite.lastUsed': 'آخر انضمام: {when}',
+  'invite.role.upgrade.title': 'منح صلاحية التحرير؟',
+  'invite.role.upgrade.body':
+    'ينطبق هذا على جميع النسخ المرسلة وعلى كل من ينضم من الآن فصاعدًا.',
+  'invite.role.upgrade.confirm': 'منح صلاحية التحرير',
+  'invite.replace.action': 'استبدال الرابط',
+  'invite.replace.title': 'استبدال هذا الرابط؟',
+  'invite.replace.body':
+    'سيتوقف الرابط القديم فورًا للجميع. يبقى من انضم سابقًا في الرحلة؛ أزله من القائمة أدناه عند الحاجة.',
+  'invite.replace.deadBody':
+    'الرابط القديم لم يعد يعمل. يبقى من انضم سابقًا في الرحلة.',
+  'invite.replace.confirm': 'استبدال الرابط',
+  'invite.replace.pending': 'جارٍ استبدال الرابط',
+  'invite.stale': 'هذا الرابط لم يعد يعمل. استبدله.',
+  'invite.creatorGone': 'توقف الرابط لأن منشئه لم يعد مالكًا. استبدله.',
+  'invite.archived':
+    'هذه الرحلة مؤرشفة. سيعمل الرابط مجددًا عند استعادة الرحلة.',
+  'invite.announce.created': 'تم إنشاء رابط الدعوة',
+  'invite.announce.roleEditor': 'سيحصل المنضمون الجدد على صلاحية التحرير',
+  'invite.announce.off': 'تم إيقاف رابط الدعوة',
+  'invite.announce.newLink': 'رابط الدعوة الجديد جاهز. انسخه وأرسله مجددًا.',
+  'invite.announce.roleViewer': 'سيحصل المنضمون الجدد على صلاحية العرض',
+  'invite.error.title': 'تعذر تحميل رابط الدعوة',
+  'invite.error.retry': 'إعادة المحاولة',
+  'invite.refusal.archived': 'هذه الرحلة مؤرشفة.',
+  'invite.refusal.notOwner': 'يمكن لمالك الرحلة فقط تغيير رابط الدعوة.',
+  'invite.refusal.changed': 'غيّر شخص آخر الرابط. يُعرض الرابط الحالي.',
+  'invite.announce.recovered':
+    'تُعرض إعدادات الرابط الحالية. تحقق منها قبل إجراء تغيير آخر.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

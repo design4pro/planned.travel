@@ -13,6 +13,7 @@ import {
   StorageMeter,
   UploadFilesAction,
 } from '#/components/modules/files'
+import { PlacesPanel } from '#/components/modules/files/places-panel'
 import { Button, Card, Progress, StatCard } from '#/components/ui'
 import { formatStorage } from '#/lib/plans'
 import { loadTripFiles } from '../../-server/trip'
@@ -82,9 +83,11 @@ function FilesPage() {
               >
                 {t('modules.files.export.jump')}
               </Button>
-              <UploadFilesAction
-                onClick={() => setPickRequestedAt(Date.now())}
-              />
+              {data.canWrite ? (
+                <UploadFilesAction
+                  onClick={() => setPickRequestedAt(Date.now())}
+                />
+              ) : null}
             </>
           }
         >
@@ -134,7 +137,14 @@ function FilesPage() {
 
         <CalendarPanel tripId={tripId} hasDates={data.hasDates} />
 
+        <PlacesPanel
+          key={`places-${tripId}`}
+          tripId={tripId}
+          hasPlaces={data.hasPlaces}
+        />
+
         <FileLibrary
+          canWrite={data.canWrite}
           tripId={tripId}
           files={data.files}
           people={data.people}

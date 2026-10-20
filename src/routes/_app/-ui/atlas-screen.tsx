@@ -33,7 +33,7 @@ import {
 import { countryBounds, hasCountryOutline } from '#/lib/map'
 import { cn } from '#/lib/cn'
 import { WORLD_COUNTRY_COUNT } from '../-server/library'
-import { WorldCoverageMap } from './world-map'
+import { WorldCoverageMap } from '#/components/atlas/world-map'
 
 import type {
   AtlasPanelTab,
@@ -124,7 +124,7 @@ import type { AtlasPayload } from '../-server/library'
  * describing it.
  *
  * **The world is drawn twice, on purpose, and only ever visible once.** Behind
- * the canvas sits the static SVG world (`./world-map`), from the same bundled
+ * the canvas sits the static SVG world (`#/components/atlas/world-map`), from the same bundled
  * outlines, the same `--color-country-*` tokens and now the same frame. The
  * canvas is mounted with a transparent ground, so before the first painted frame
  * the reader sees the world rather than an empty rectangle, and if the renderer

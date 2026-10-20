@@ -1,10 +1,10 @@
 /**
  * Static pins around the participation anchor (ADR 0043).
  *
- * Three claims are asserted over the source tree, each with a fixture that proves the detector is
+ * Four claims are asserted over the source tree; fixtures prove the import and anchor detectors are
  * not blind: every place that inserts a membership also writes the anchor; the anchor's table is
- * named only by the modules allowed to touch it; and the erasure catalog read has no importer
- * outside the backfill handler.
+ * named only by the modules allowed to touch it; the erasure catalog has no importer
+ * outside the backfill handler; and its cleanup/count primitives have no production caller yet.
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
@@ -62,11 +62,17 @@ describe('every place that inserts a membership writes the anchor', () => {
     const index = codeOf(
       readFileSync(`${SOURCE_ROOT}/server/auth/index.ts`, 'utf8'),
     )
-    // Each hook is cut at the next one, so one hook's call cannot satisfy the other's check.
-    expect(index).toMatch(
-      /beforeAddMember[\s\S]*?recordParticipation\([\s\S]*?beforeAcceptInvitation/,
+    expect(index).toMatch(/beforeAddMember[\s\S]*?recordParticipation\(/)
+    expect(index).toContain('organizationWithAtomicInvitations')
+    const acceptance = codeOf(
+      readFileSync(
+        `${SOURCE_ROOT}/server/repos/workspace-invitation-acceptance.ts`,
+        'utf8',
+      ),
     )
-    expect(index).toMatch(/beforeAcceptInvitation[\s\S]*?recordParticipation\(/)
+    expect(acceptance).toMatch(
+      /runAtomicBatch[\s\S]*?prepareTenantInsert[\s\S]*?workspaceParticipants/,
+    )
   })
 
   it('notices an insert with no anchor write (fixture)', () => {
@@ -93,6 +99,7 @@ describe('the anchor table is named only where it may be', () => {
     'server/db/schema.ts',
     'server/erasure/registry.ts',
     'server/repos/participants.ts',
+    'server/repos/workspace-invitation-acceptance.ts',
   ]
   const NAME = /workspace_participants|workspaceParticipants/
 
@@ -112,7 +119,21 @@ describe('the anchor table is named only where it may be', () => {
   })
 })
 
-describe('who imports the erasure catalog read', () => {
+describe('who imports the erasure catalog', () => {
+  it('keeps cleanup and count primitives without production callers until the engine amendment', () => {
+    const workerOnly =
+      /\b(?:eraseWorkspaceInvitations|eraseAccountAuthLeftovers|erasePlatformUserReferences|countPlatformUserReferences)\b/
+    expect(
+      sourceTexts
+        .filter(
+          ([file, source]) =>
+            file !== 'server/catalog/erasure.ts' &&
+            workerOnly.test(codeOf(source)),
+        )
+        .map(([file]) => file),
+    ).toEqual([])
+  })
+
   const imports = (file: string, source: string) =>
     scanSpecifiers(codeOf(source)).specifiers.some(
       (specifier) =>

@@ -17,6 +17,24 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': '招待',
+  'workspace.invite.resend': '再送信',
+  'workspace.invite.revoke': '取り消す',
+  'workspace.invite.confirm': '招待を取り消す',
+  'workspace.invite.expired': '期限切れ',
+  'workspace.invite.by': '招待者: {name}',
+  'workspace.invite.sent': '招待を送信しました',
+  'workspace.invite.revoked': '招待を取り消しました',
+  'workspace.invite.delivery':
+    '招待は保存されましたが、メールを送信できませんでした。再送信してください。',
+  'workspace.invite.duplicate':
+    '保留中の招待が既にあります。再送信してください。',
+  'workspace.invite.existing':
+    'このユーザーは既にワークスペースのメンバーです。',
+  'workspace.invite.failed':
+    '招待を利用できません。一覧を更新して再試行してください。',
+  'workspace.invite.reload': '招待を更新',
+
   'page.eyebrow': 'アカウント',
   'page.title': '設定',
   'page.description':
@@ -592,6 +610,28 @@ const messages = {
   'passkeys.delete.removing': 'パスキーを削除しています',
   'passkeys.delete.passwordRequired':
     'このパスキーを削除するには、パスワードを入力してください。',
+  'workspace.departure.leave': 'ワークスペースから退出',
+  'workspace.departure.remove': 'メンバーを削除',
+  'workspace.departure.title': '{workspace} のメンバーシップを終了しますか？',
+  'workspace.departure.body':
+    '{name} は {workspace} にアクセスできなくなります。アカウントと保存されている旅行や費用の記録は残ります。',
+  'workspace.departure.cancel': 'キャンセル',
+  'workspace.departure.pending': 'メンバーシップを終了中…',
+  'workspace.departure.lastOwner':
+    '退出する前、またはこのオーナーを削除する前に、別のメンバーをオーナーにしてください。',
+  'workspace.departure.notPermitted':
+    '現在の役割ではこのメンバーを削除できません。メンバー一覧を更新してから、もう一度お試しください。',
+  'workspace.departure.notFound':
+    'このユーザーはすでにこのワークスペースのメンバーではありません。',
+  'workspace.departure.impersonated':
+    'ワークスペースのメンバーシップを変更する前に、代理操作を終了してください。',
+  'workspace.departure.failed':
+    '結果を確認できませんでした。ワークスペースを再読み込みしてから、もう一度お試しください。',
+  'workspace.departure.removed': 'メンバーを削除しました',
+  'workspace.departure.reload': 'ワークスペースを再読み込み',
+  'workspace.departure.activationFailed':
+    'このワークスペースから退出しました。次のワークスペースを開いて続行してください。',
+  'workspace.departure.recover': '次のワークスペースを開く',
 } satisfies TranslationOf<typeof En>
 
 export default messages

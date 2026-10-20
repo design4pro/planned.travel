@@ -483,6 +483,59 @@ const messages = {
   'join.error.join':
     '참여하지 못했어요. 링크는 계속 사용할 수 있으니 다시 시도해 주세요.',
   'join.error.switch': '워크스페이스를 전환하지 못했어요. 다시 시도해 주세요.',
+
+  'invite.title': '초대 링크',
+  'invite.description':
+    '이 워크스페이스의 누구든 링크를 열면 여행에 참여합니다.',
+  'invite.empty.title': '아직 초대 링크가 없습니다',
+  'invite.empty.body':
+    '링크를 만들어 그룹 채팅에 공유하면 이 워크스페이스의 사람들이 참여할 수 있습니다.',
+  'invite.action.create': '링크 만들기',
+  'invite.link.label': '초대 링크',
+  'invite.copy': '링크 복사',
+  'invite.copied': '링크를 복사했습니다',
+  'invite.copyFailed': '복사하지 못했습니다. 링크를 선택해 직접 복사하세요.',
+  'invite.switch.label':
+    '이 워크스페이스에서 링크를 가진 누구나 참여할 수 있습니다',
+  'invite.switch.onHint':
+    '끄면 이미 보낸 사본을 포함하여 모든 사람이 링크를 사용할 수 없게 됩니다.',
+  'invite.switch.offHint':
+    '다시 켜면 새 링크가 생성됩니다. 이전 링크는 계속 사용할 수 없습니다.',
+  'invite.off.body': '링크가 꺼져 있습니다. 이 링크로는 참여할 수 없습니다.',
+  'invite.uses': { other: '이 링크로 참여한 사람: {count}' },
+  'invite.uses.never': '아직 이 링크로 참여한 사람이 없습니다.',
+  'invite.lastUsed': '마지막 참여: {when}',
+  'invite.role.upgrade.title': '편집 권한을 부여할까요?',
+  'invite.role.upgrade.body':
+    '이미 보낸 모든 사본과 지금부터 참여하는 사람에게 적용됩니다.',
+  'invite.role.upgrade.confirm': '편집 권한 부여',
+  'invite.replace.action': '링크 교체',
+  'invite.replace.title': '이 링크를 교체할까요?',
+  'invite.replace.body':
+    '기존 링크는 즉시 모든 사람에게 무효가 됩니다. 이미 참여한 사람은 여행에 남습니다. 필요하면 아래 목록에서 삭제하세요.',
+  'invite.replace.deadBody':
+    '기존 링크는 더 이상 작동하지 않습니다. 이미 참여한 사람은 여행에 남습니다.',
+  'invite.replace.confirm': '링크 교체',
+  'invite.replace.pending': '링크 교체 중',
+  'invite.stale': '이 링크는 더 이상 작동하지 않습니다. 교체하세요.',
+  'invite.creatorGone':
+    '만든 사람이 더 이상 소유자가 아니므로 링크가 작동하지 않습니다. 교체하세요.',
+  'invite.archived':
+    '보관된 여행입니다. 여행을 복원하면 링크가 다시 작동합니다.',
+  'invite.announce.created': '초대 링크를 만들었습니다',
+  'invite.announce.roleEditor': '새로 참여하는 사람은 편집자가 됩니다',
+  'invite.announce.off': '초대 링크를 껐습니다',
+  'invite.announce.newLink':
+    '새 초대 링크가 준비되었습니다. 복사해서 다시 보내세요.',
+  'invite.announce.roleViewer': '새로 참여하는 사람은 열람자가 됩니다',
+  'invite.error.title': '초대 링크를 불러오지 못했습니다',
+  'invite.error.retry': '다시 시도',
+  'invite.refusal.archived': '보관된 여행입니다.',
+  'invite.refusal.notOwner': '여행 소유자만 초대 링크를 변경할 수 있습니다.',
+  'invite.refusal.changed':
+    '다른 사람이 링크를 변경했습니다. 현재 링크를 표시합니다.',
+  'invite.announce.recovered':
+    '현재 링크 설정을 표시합니다. 다음 변경 전에 확인하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

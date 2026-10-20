@@ -21,6 +21,24 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Πρόσκληση',
+  'workspace.invite.resend': 'Επαναποστολή',
+  'workspace.invite.revoke': 'Ανάκληση',
+  'workspace.invite.confirm': 'Ανάκληση πρόσκλησης',
+  'workspace.invite.expired': 'Έληξε',
+  'workspace.invite.by': 'Πρόσκληση από {name}',
+  'workspace.invite.sent': 'Η πρόσκληση στάλθηκε',
+  'workspace.invite.revoked': 'Η πρόσκληση ανακλήθηκε',
+  'workspace.invite.delivery':
+    'Η πρόσκληση αποθηκεύτηκε, αλλά η αποστολή email απέτυχε. Στείλτε την ξανά.',
+  'workspace.invite.duplicate':
+    'Υπάρχει ήδη εκκρεμής πρόσκληση. Στείλτε την ξανά.',
+  'workspace.invite.existing':
+    'Αυτό το άτομο είναι ήδη μέλος του χώρου εργασίας.',
+  'workspace.invite.failed':
+    'Η πρόσκληση δεν είναι διαθέσιμη. Ανανεώστε τη λίστα και δοκιμάστε ξανά.',
+  'workspace.invite.reload': 'Ανανέωση προσκλήσεων',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Λογαριασμός',
   'page.title': 'Ρυθμίσεις',
@@ -638,6 +656,28 @@ const messages = {
   'passkeys.delete.removing': 'Αφαίρεση του κλειδιού πρόσβασης',
   'passkeys.delete.passwordRequired':
     'Εισαγάγετε τον κωδικό πρόσβασής σας για να αφαιρέσετε αυτό το κλειδί πρόσβασης.',
+  'workspace.departure.leave': 'Αποχώρηση από τον χώρο εργασίας',
+  'workspace.departure.remove': 'Αφαίρεση μέλους',
+  'workspace.departure.title': 'Λήξη συμμετοχής στο {workspace};',
+  'workspace.departure.body':
+    'Το μέλος {name} θα χάσει την πρόσβαση στο {workspace}. Ο λογαριασμός του και τα διατηρημένα ταξίδια και αρχεία εξόδων θα παραμείνουν.',
+  'workspace.departure.cancel': 'Ακύρωση',
+  'workspace.departure.pending': 'Λήξη συμμετοχής…',
+  'workspace.departure.lastOwner':
+    'Ορίστε άλλο μέλος ως ιδιοκτήτη πριν αποχωρήσετε ή αφαιρέσετε αυτόν τον ιδιοκτήτη.',
+  'workspace.departure.notPermitted':
+    'Ο τρέχων ρόλος σας δεν επιτρέπει την αφαίρεση αυτού του μέλους. Ανανεώστε τη λίστα μελών πριν προσπαθήσετε ξανά.',
+  'workspace.departure.notFound':
+    'Αυτό το άτομο δεν είναι πλέον μέλος αυτού του χώρου εργασίας.',
+  'workspace.departure.impersonated':
+    'Σταματήστε την προσωποποίηση πριν αλλάξετε τη συμμετοχή στον χώρο εργασίας.',
+  'workspace.departure.failed':
+    'Δεν ήταν δυνατή η επιβεβαίωση του αποτελέσματος. Φορτώστε ξανά τον χώρο εργασίας πριν προσπαθήσετε ξανά.',
+  'workspace.departure.removed': 'Το μέλος αφαιρέθηκε',
+  'workspace.departure.reload': 'Επαναφόρτωση χώρου εργασίας',
+  'workspace.departure.activationFailed':
+    'Αποχωρήσατε από αυτόν τον χώρο εργασίας. Ανοίξτε τον επόμενο για να συνεχίσετε.',
+  'workspace.departure.recover': 'Άνοιγμα επόμενου χώρου',
 } satisfies TranslationOf<typeof En>
 
 export default messages

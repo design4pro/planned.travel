@@ -25,6 +25,23 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Davet et',
+  'workspace.invite.resend': 'Yeniden gönder',
+  'workspace.invite.revoke': 'İptal et',
+  'workspace.invite.confirm': 'Daveti iptal et',
+  'workspace.invite.expired': 'Süresi doldu',
+  'workspace.invite.by': 'Davet eden: {name}',
+  'workspace.invite.sent': 'Davet gönderildi',
+  'workspace.invite.revoked': 'Davet iptal edildi',
+  'workspace.invite.delivery':
+    'Davet kaydedildi ancak e-posta gönderilemedi. Yeniden gönderin.',
+  'workspace.invite.duplicate':
+    'Bekleyen bir davet zaten var. Yeniden gönderin.',
+  'workspace.invite.existing': 'Bu kişi zaten çalışma alanının üyesi.',
+  'workspace.invite.failed':
+    'Davet kullanılamıyor. Listeyi yenileyip tekrar deneyin.',
+  'workspace.invite.reload': 'Davetleri yenile',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Hesap',
   'page.title': 'Ayarlar',
@@ -623,6 +640,28 @@ const messages = {
   'passkeys.delete.removing': 'Geçiş anahtarı kaldırılıyor',
   'passkeys.delete.passwordRequired':
     'Bu geçiş anahtarını kaldırmak için şifrenizi girin.',
+  'workspace.departure.leave': 'Çalışma alanından ayrıl',
+  'workspace.departure.remove': 'Üyeyi kaldır',
+  'workspace.departure.title': '{workspace} üyeliği sonlandırılsın mı?',
+  'workspace.departure.body':
+    '{name}, {workspace} erişimini kaybedecek. Hesabı, saklanan gezileri ve maliyet kayıtları kalacak.',
+  'workspace.departure.cancel': 'İptal',
+  'workspace.departure.pending': 'Üyelik sonlandırılıyor…',
+  'workspace.departure.lastOwner':
+    'Ayrılmadan veya bu sahibi kaldırmadan önce başka bir üyeyi sahip yapın.',
+  'workspace.departure.notPermitted':
+    'Mevcut rolünüz bu üyeyi kaldıramaz. Tekrar denemeden önce üye listesini yenileyin.',
+  'workspace.departure.notFound':
+    'Bu kişi artık bu çalışma alanının üyesi değil.',
+  'workspace.departure.impersonated':
+    'Çalışma alanı üyeliğini değiştirmeden önce başka bir kullanıcı olarak işlem yapmayı durdurun.',
+  'workspace.departure.failed':
+    'Sonuç doğrulanamadı. Tekrar denemeden önce çalışma alanını yeniden yükleyin.',
+  'workspace.departure.removed': 'Üye kaldırıldı',
+  'workspace.departure.reload': 'Çalışma alanını yeniden yükle',
+  'workspace.departure.activationFailed':
+    'Bu çalışma alanından ayrıldınız. Devam etmek için sonraki çalışma alanını açın.',
+  'workspace.departure.recover': 'Sonraki çalışma alanını aç',
 } satisfies TranslationOf<typeof En>
 
 export default messages

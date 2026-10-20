@@ -33,6 +33,24 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'workspace.invite.invite': 'Пригласить',
+  'workspace.invite.resend': 'Отправить повторно',
+  'workspace.invite.revoke': 'Отозвать',
+  'workspace.invite.confirm': 'Отозвать приглашение',
+  'workspace.invite.expired': 'Истекло',
+  'workspace.invite.by': 'Приглашает {name}',
+  'workspace.invite.sent': 'Приглашение отправлено',
+  'workspace.invite.revoked': 'Приглашение отозвано',
+  'workspace.invite.delivery':
+    'Приглашение сохранено, но отправка письма не удалась. Отправьте повторно.',
+  'workspace.invite.duplicate':
+    'Приглашение уже ожидает ответа. Отправьте повторно.',
+  'workspace.invite.existing':
+    'Этот человек уже участник рабочего пространства.',
+  'workspace.invite.failed':
+    'Приглашение недоступно. Обновите список и попробуйте снова.',
+  'workspace.invite.reload': 'Обновить приглашения',
+
   /* ------------------------------------------------------------------ shell */
   'page.eyebrow': 'Аккаунт',
   'page.title': 'Настройки',
@@ -655,6 +673,28 @@ const messages = {
   'passkeys.delete.removing': 'Удаляем ключ доступа',
   'passkeys.delete.passwordRequired':
     'Введите пароль, чтобы удалить этот ключ доступа.',
+  'workspace.departure.leave': 'Покинуть рабочее пространство',
+  'workspace.departure.remove': 'Удалить участника',
+  'workspace.departure.title': 'Прекратить участие в {workspace}?',
+  'workspace.departure.body':
+    '{name} потеряет доступ к {workspace}. Аккаунт, сохранённые поездки и записи о расходах останутся.',
+  'workspace.departure.cancel': 'Отмена',
+  'workspace.departure.pending': 'Прекращение участия…',
+  'workspace.departure.lastOwner':
+    'Назначьте другого участника владельцем, прежде чем выйти или удалить этого владельца.',
+  'workspace.departure.notPermitted':
+    'Ваша текущая роль не позволяет удалить этого участника. Обновите список участников перед повторной попыткой.',
+  'workspace.departure.notFound':
+    'Этот человек больше не является участником этого рабочего пространства.',
+  'workspace.departure.impersonated':
+    'Прекратите работу от имени другого пользователя, прежде чем менять состав рабочего пространства.',
+  'workspace.departure.failed':
+    'Не удалось подтвердить результат. Перезагрузите рабочее пространство перед повторной попыткой.',
+  'workspace.departure.removed': 'Участник удалён',
+  'workspace.departure.reload': 'Перезагрузить рабочее пространство',
+  'workspace.departure.activationFailed':
+    'Вы покинули это рабочее пространство. Откройте следующее, чтобы продолжить.',
+  'workspace.departure.recover': 'Открыть следующее пространство',
 } satisfies TranslationOf<typeof En>
 
 export default messages

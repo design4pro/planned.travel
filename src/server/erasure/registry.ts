@@ -49,8 +49,7 @@ export type ErasureOrigin = (typeof ERASURE_ORIGINS)[number]
  * When in the engine's order the place is handled.
  *
  * - `scrub`: per workspace, through a `TenantScope` bound to it (engine step 4), or for the global
- *   tables through `src/server/catalog/erasure.ts` (phase 3: that module is read-only until an
- *   amendment to SPEC §5 admits the writes).
+ *   tables through the system-actor-only `src/server/catalog/erasure.ts` (SPEC §5, phase 3b).
  * - `account`: removed with the `user` row (engine step 6), by Better Auth's own cascade or by the
  *   auth-table cleanup that precedes it.
  * - `finish`: removed after the verification sweep (engine step 8). The sweep runs first and would
@@ -82,16 +81,16 @@ const TRIPS = 'src/server/repos/trips.ts'
 const EXPENSES = 'src/server/repos/expenses.ts'
 const LISTS = 'src/server/repos/lists.ts'
 const COLLAB = 'src/server/repos/collab.ts'
-const COLLECTIONS = 'src/server/repos/collections.ts'
-const JOURNEY = 'src/server/repos/journey.ts'
-const ATLAS = 'src/server/repos/atlas.ts'
-const VACAY = 'src/server/repos/vacay.ts'
+const COLLECTIONS = 'src/server/repos/collections-erasure.ts'
+const JOURNEY = 'src/server/repos/journey-erasure.ts'
+const ATLAS = 'src/server/repos/personal-erasure.ts'
+const VACAY = 'src/server/repos/vacay-erasure.ts'
 const NOTIFICATIONS = 'src/server/repos/notifications.ts'
-const AUDIT = 'src/server/repos/audit.ts'
+const AUDIT = 'src/server/repos/audit-erasure.ts'
 const PARTICIPANTS = 'src/server/repos/participants.ts'
 /**
  * The global tables and the auth-table cleanup (spec phase 3). The module is the third catalog
- * member and read-only today; the pull request that adds these writes amends SPEC §5 first.
+ * member; SPEC §5 admits system-actor cleanup alongside its read-only discovery functions.
  */
 const CATALOG_ERASURE = 'src/server/catalog/erasure.ts'
 
@@ -481,14 +480,14 @@ export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
   userRef(
     'notification_preferences',
     'user_id',
-    NOTIFICATIONS,
+    'src/server/repos/personal-erasure.ts',
     'remove',
     'Settings that only describe the person.',
   ),
   userRef(
     'user_settings',
     'user_id',
-    'src/server/repos/settings.ts',
+    'src/server/repos/personal-erasure.ts',
     'remove',
     'Settings that only describe the person.',
   ),

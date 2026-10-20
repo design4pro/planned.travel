@@ -185,6 +185,9 @@ describe('the organization member-write paths are closed beside the admin list (
     expect(DISABLED_ORGANIZATION_PATHS).toEqual([
       endpoints.updateMemberRole.path,
       endpoints.removeMember.path,
+      endpoints.leaveOrganization.path,
+      endpoints.createInvitation.path,
+      endpoints.cancelInvitation.path,
     ])
     expect(endpoints.updateMemberRole.path).toBe(
       '/organization/update-member-role',
@@ -192,8 +195,8 @@ describe('the organization member-write paths are closed beside the admin list (
     expect(endpoints.removeMember.path).toBe('/organization/remove-member')
   })
 
-  it('leaves organization/leave open, which the leave screen needs', () => {
-    expect(DISABLED_PATHS).not.toContain(
+  it('closes organization/leave while retaining the in-process endpoint', () => {
+    expect(DISABLED_PATHS).toContain(
       organization().endpoints.leaveOrganization.path,
     )
   })

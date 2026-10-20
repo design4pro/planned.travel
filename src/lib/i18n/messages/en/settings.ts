@@ -46,6 +46,23 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'workspace.invite.invite': 'Invite',
+  'workspace.invite.resend': 'Resend',
+  'workspace.invite.revoke': 'Revoke',
+  'workspace.invite.confirm': 'Revoke invitation',
+  'workspace.invite.expired': 'Expired',
+  'workspace.invite.by': 'Invited by {name}',
+  'workspace.invite.sent': 'Invitation sent',
+  'workspace.invite.revoked': 'Invitation revoked',
+  'workspace.invite.delivery':
+    'Invitation saved, but email delivery failed. Use Resend to try again.',
+  'workspace.invite.duplicate':
+    'A pending invitation already exists. Use Resend.',
+  'workspace.invite.existing': 'This person is already a workspace member.',
+  'workspace.invite.failed':
+    'Invitation unavailable. Refresh the list and try again.',
+  'workspace.invite.reload': 'Refresh invitations',
+
   /* ------------------------------------------------------------------ shell */
   /** The settings shell's page header, above the section index. */
   'page.eyebrow': 'Account',
@@ -708,6 +725,28 @@ const messages = {
   'passkeys.delete.removing': 'Removing the passkey',
   'passkeys.delete.passwordRequired':
     'Enter your password to remove this passkey.',
+  'workspace.departure.leave': 'Leave workspace',
+  'workspace.departure.remove': 'Remove member',
+  'workspace.departure.title': 'End membership in {workspace}?',
+  'workspace.departure.body':
+    '{name} will lose access to {workspace}. Their account and retained trips and cost records will stay.',
+  'workspace.departure.cancel': 'Cancel',
+  'workspace.departure.pending': 'Ending membership…',
+  'workspace.departure.lastOwner':
+    'Make another member an owner before leaving or removing this owner.',
+  'workspace.departure.notPermitted':
+    'Your current role cannot remove this member. Refresh the member list before trying again.',
+  'workspace.departure.notFound':
+    'This person is no longer a member of this workspace.',
+  'workspace.departure.impersonated':
+    'Stop impersonating before changing workspace membership.',
+  'workspace.departure.failed':
+    'The result could not be confirmed. Reload the workspace before trying again.',
+  'workspace.departure.removed': 'Member removed',
+  'workspace.departure.reload': 'Reload workspace',
+  'workspace.departure.activationFailed':
+    'You left this workspace. Open your next workspace to continue.',
+  'workspace.departure.recover': 'Open next workspace',
 } as const satisfies NamespaceMessages
 
 export default messages

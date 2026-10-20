@@ -23,6 +23,9 @@ import {
   sum,
 } from 'drizzle-orm'
 import { z } from 'zod'
+import { foldPlaceName } from '#/lib/atlas/place-name'
+import { VISITED_REGIONS_MAX_PER_TRAVELLER } from '#/lib/atlas/limits'
+import { QuotaExceededError } from './context'
 import {
   BUCKET_LIST_KINDS,
   bucketListItems,
@@ -232,11 +235,33 @@ export async function listVisitedRegions(
   })
 }
 
+/** Internal identity includes the country even though the unique index omits it. */
+export async function regionCodeFor(
+  countryCode: string,
+  name: string,
+): Promise<string> {
+  const code = countryCode.trim().toUpperCase()
+  const bytes = new TextEncoder().encode(`${code}|${foldPlaceName(name)}`)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const hex = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('')
+  return `${code}-${hex.slice(0, 12)}`
+}
+
 /** Idempotent: a region already recorded for that traveller is left as it is. */
 export async function markRegionVisited(
   scope: TenantScope,
   input: MarkRegionVisitedInput,
 ): Promise<VisitedRegion> {
+  return (await recordRegionVisit(scope, input)).row
+}
+
+/** Reports actual row changes so the boundary never enqueues for a no-op. */
+export async function recordRegionVisit(
+  scope: TenantScope,
+  input: MarkRegionVisitedInput,
+): Promise<{ row: VisitedRegion; created: boolean }> {
   const values = markRegionVisitedInput.parse(input)
   const userId = values.userId ?? scope.ctx.userId
 
@@ -248,15 +273,29 @@ export async function markRegionVisited(
     ),
   )
   if (existing) {
-    return existing
+    return { row: existing, created: false }
   }
-  return visitedRegionsRepository.insert(scope, {
+  // Count-then-insert is not atomic: overlapping requests can exceed the ceiling
+  // by their number in flight. Existing rows remain idempotent at the limit.
+  const current = await visitedRegionsRepository.count(
+    scope,
+    eq(visitedRegions.userId, userId),
+  )
+  if (current >= VISITED_REGIONS_MAX_PER_TRAVELLER) {
+    throw new QuotaExceededError(
+      'visited_regions_per_traveller',
+      VISITED_REGIONS_MAX_PER_TRAVELLER,
+      current,
+    )
+  }
+  const row = await visitedRegionsRepository.insert(scope, {
     userId,
     countryCode: values.countryCode,
     regionCode: values.regionCode,
     regionName: values.regionName,
     firstVisitedOn: values.visitedOn ?? null,
   })
+  return { row, created: true }
 }
 
 export async function unmarkRegionVisited(

@@ -35,8 +35,9 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  *
  * The role is read once, at connect, and an open socket keeps it - so the writes
  * that change it close the sockets they affect: a new role, a removal or a leave
- * closes that person's sockets (`closeRoomFor`), and an archive, a restore, a delete
- * or a visibility narrowed to private closes the whole room (`closeRoom`), both in
+ * closes that person's sockets (`closeRoomFor`). An archive, a restore or a visibility
+ * narrowed to private closes the whole room (`closeRoom`); deletion closes its sockets
+ * and erases stored room state (`resetRoom`). All three helpers live in
  * `src/server/fns/context.ts`. A person who stops belonging to the workspace
  * (removed, leaving, or banned, signed out or deleted by the platform console) has
  * the sockets they hold in every room of it closed by the `trip-room-evict` task, and
@@ -45,9 +46,10 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * the sockets of all their devices close and the next connect re-runs this handler.
  * The shipped client reconnects through this handler, which is what picks up the
  * stored role. The close is best effort: a room that
- * cannot be reached is logged and the old role holds until the socket drops, and so
- * does the role of a connect that was already in flight - its role was read before
- * the write, and its upgrade can reach the room after the close found no socket.
+ * cannot be reached is logged, and a connect already in flight can reach the room
+ * after the close found no socket. The room's maximum socket age (15 minutes) plus
+ * alarm interval (5 minutes) bounds either stale role window to about 20 minutes.
+ * Refusing a connect minted before a revocation is the exact race fix (#1085).
  */
 
 function json(body: unknown, status: number): Response {

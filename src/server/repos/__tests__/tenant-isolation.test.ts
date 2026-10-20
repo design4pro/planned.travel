@@ -65,8 +65,10 @@ import {
   collabPollVotesRepository,
   collabPollsRepository,
   createCheckIn,
+  countMessages,
   createCollabNote,
   createPoll,
+  deleteMessage,
   editMessage,
   listMessages,
   listReactions,
@@ -316,6 +318,7 @@ import {
   setEntry,
   setUserColour,
   updatePlan,
+  updatePlanSettings,
   vacayCompanyHolidaysRepository,
   vacayEntriesRepository,
   vacayHolidayCalendarsRepository,
@@ -4978,11 +4981,13 @@ describe('tenant isolation', () => {
       const strangerId = await alpha.tenant.addUser('Stranger')
       const stranger = alpha.tenant.scopeFor(strangerId)
 
+      const before = await filesOf(alpha.tenant.scope, alpha.tripId)
       for (const attempt of writersAs(stranger)) {
         const error = await captureError(attempt)
         expect(error).toBeInstanceOf(NotFoundError)
         expect(error).not.toBeInstanceOf(TripRoleError)
       }
+      expect(await filesOf(alpha.tenant.scope, alpha.tripId)).toEqual(before)
     })
 
     it('refuses a workspace member who can read an organization-visible trip but is not on it', async () => {
@@ -4999,6 +5004,7 @@ describe('tenant isolation', () => {
         await alpha.tenant.addUser('Reader of A'),
       )
 
+      const before = await filesOf(alpha.tenant.scope, open.id)
       for (const attempt of [
         () => recordFile(outsider, { ...INPUT, tripId: open.id }),
         () => updateFile(outsider, open.id, onOpen.id, { filename: 'new.pdf' }),
@@ -5006,6 +5012,30 @@ describe('tenant isolation', () => {
       ]) {
         expect(await captureError(attempt)).toBeInstanceOf(TripRoleError)
       }
+      expect(await filesOf(alpha.tenant.scope, open.id)).toEqual(before)
+    })
+
+    it('gives missing, other-trip and other-workspace deletes the identical file refusal', async () => {
+      const other = await createTrip(alpha.tenant.scope, {
+        title: 'Other trip',
+      })
+      const otherFile = await recordFile(alpha.tenant.scope, {
+        ...INPUT,
+        tripId: other.id,
+      })
+      const beforeOther = await getFile(alpha.tenant.scope, otherFile.id)
+      const beforeBeta = await getFile(beta.tenant.scope, beta.fileId)
+      for (const fileId of ['missing-file', otherFile.id, beta.fileId]) {
+        expect(
+          await captureError(() =>
+            deleteFile(alpha.tenant.scope, alpha.tripId, fileId),
+          ),
+        ).toEqual(new NotFoundError('file', fileId))
+      }
+      expect(await getFile(alpha.tenant.scope, otherFile.id)).toEqual(
+        beforeOther,
+      )
+      expect(await getFile(beta.tenant.scope, beta.fileId)).toEqual(beforeBeta)
     })
 
     it('binds a file id to the trip it names', async () => {
@@ -6974,6 +7004,21 @@ describe('tenant isolation', () => {
     })
   })
 
+  describe('the conversation count', () => {
+    it('counts the whole non-deleted thread of one trip, inside the tenant', async () => {
+      const scope = alpha.tenant.scope
+      const own = await countMessages(scope, alpha.tripId)
+      const kept = await postMessage(scope, { tripId: alpha.tripId, body: 'kept' })
+      const gone = await postMessage(scope, { tripId: alpha.tripId, body: 'gone' })
+      await deleteMessage(scope, alpha.tripId, gone.id)
+
+      expect(kept.id).not.toBe(gone.id)
+      expect(await countMessages(scope, alpha.tripId)).toBe(own + 1)
+      expect(await countMessages(scope, beta.tripId)).toBe(0)
+      expect(await countMessages(beta.tenant.scope, beta.tripId)).toBe(1)
+    })
+  })
+
   describe('the collaboration writers', () => {
     const rowsOf = (world: World): CollabRowIds => ({
       messageId: world.messageId,
@@ -7352,6 +7397,12 @@ describe('tenant isolation', () => {
             entitlementDays: 1,
           }),
         () => updatePlan(scope, beta.planId, { carryOverEnabled: false }),
+        () =>
+          updatePlanSettings(scope, beta.planId, {
+            carryOverEnabled: false,
+            defaultEntitlementDays: 1,
+          }),
+        () => updatePlanSettings(scope, beta.planId, {}),
         () => ensureYear(scope, beta.planId, 2031),
         () => getAllowance(scope, beta.planId, alpha.tenant.ownerUserId, 2026),
         () => requirePlanActor(scope, beta.planId),
@@ -7508,5 +7559,89 @@ describe('tenant isolation', () => {
       )
       expect(after.role).toBe(before.role)
     })
+  })
+})
+
+describe('visited region records across workspaces', () => {
+  it('scopes writes, reads, row removals and the ceiling to the target workspace', async () => {
+    const db = await createHarness()
+    try {
+      const a = await db.seedTenant('regions-a')
+      const b = await db.seedTenant('regions-b')
+      const {
+        listVisitedRegions,
+        recordRegionVisit,
+        regionCodeFor,
+        unmarkRegionVisited,
+      } = await import('../atlas')
+      const bCountry = await markCountryVisited(b.scope, { countryCode: 'DE' })
+      const bRow = await markRegionVisited(b.scope, {
+        countryCode: 'DE',
+        regionCode: 'DE-BY',
+        regionName: 'Bavaria',
+      })
+      const aCode = await regionCodeFor('DE', 'Bavaria')
+      expect(aCode).toBe(await regionCodeFor('DE', ' BÁVARIA '))
+      expect(aCode).not.toBe(await regionCodeFor('FR', 'Bavaria'))
+      const written = await recordRegionVisit(a.scope, {
+        countryCode: 'DE',
+        regionCode: aCode,
+        regionName: 'Bavaria',
+      })
+      expect(written.created).toBe(true)
+      expect(
+        (
+          await recordRegionVisit(a.scope, {
+            countryCode: 'DE',
+            regionCode: aCode,
+            regionName: 'Bavaria',
+          })
+        ).created,
+      ).toBe(false)
+      expect(await listVisitedRegions(b.scope, a.ownerUserId)).toEqual([])
+      await expect(
+        visitedRegionsRepository.requireById(b.scope, written.row.id),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      await expect(
+        unmarkRegionVisited(a.scope, bRow.id),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect(
+        (await visitedCountriesRepository.requireById(b.scope, bCountry.id))
+          .visitCount,
+      ).toBe(1)
+      expect(
+        await visitedRegionsRepository.requireById(b.scope, bRow.id),
+      ).toMatchObject({ regionName: 'Bavaria' })
+      for (let i = 1; i < 1000; i += 1) {
+        await visitedRegionsRepository.insert(b.scope, {
+          userId: b.ownerUserId,
+          countryCode: 'DE',
+          regionCode: `DE-${i}`,
+          regionName: `Region ${i}`,
+        })
+      }
+      await expect(
+        markRegionVisited(b.scope, {
+          countryCode: 'FR',
+          regionCode: 'FR-new',
+          regionName: 'New',
+        }),
+      ).rejects.toMatchObject({
+        metric: 'visited_regions_per_traveller',
+        limit: 1000,
+        current: 1000,
+      })
+      await markRegionVisited(a.scope, {
+        countryCode: 'FR',
+        regionCode: 'FR-new',
+        regionName: 'New',
+      })
+      expect(await listVisitedRegions(a.scope, a.ownerUserId)).toHaveLength(2)
+      expect(await listVisitedRegions(b.scope, b.ownerUserId)).toHaveLength(
+        1000,
+      )
+    } finally {
+      db.close()
+    }
   })
 })

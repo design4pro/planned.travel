@@ -37,10 +37,18 @@ import {
   generateSQLiteMigration,
 } from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest'
 import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { authSchema } from '#/server/db/auth-schema'
-import { workspaceParticipants } from '#/server/db/schema'
+import { subscriptions, workspaceParticipants } from '#/server/db/schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'
 import type { AuthDb } from '../db'
@@ -102,6 +110,7 @@ vi.mock('#/server/auth/env', () => ({
 
 vi.mock('#/server/auth/db', () => ({
   authDb: () => shared.db.current,
+  authRepositoryDb: () => repositoryDatabase,
 }))
 
 vi.mock('#/server/auth/email', () => ({
@@ -172,22 +181,70 @@ function runStatement(
 let sqlite: DatabaseSync
 /** The same handle `authDb()` is mocked to return, kept typed for the reference instance below. */
 let authDatabase: SqliteRemoteDatabase<typeof authSchema>
+let repositoryDatabase: SqliteRemoteDatabase
+let interleave: (() => Promise<void>) | undefined
 
 beforeAll(async () => {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants }),
+    await generateSQLiteDrizzleJson({
+      ...authSchema,
+      workspaceParticipants,
+      subscriptions,
+    }),
   )
   sqlite = new DatabaseSync(':memory:')
   for (const statement of statements) sqlite.exec(statement)
 
   authDatabase = drizzle(
-    async (query, params, method) => runStatement(sqlite, query, params, method),
-    async (queries) =>
-      queries.map((entry) =>
-        runStatement(sqlite, entry.sql, entry.params, entry.method),
-      ),
+    async (query, params, method) => {
+      const result = runStatement(sqlite, query, params, method)
+      if (
+        interleave &&
+        query.startsWith('update "invitation"') &&
+        params.includes('accepted')
+      ) {
+        const action = interleave
+        interleave = undefined
+        await action()
+      }
+      return result
+    },
+    async (queries) => {
+      sqlite.exec('BEGIN')
+      try {
+        const result = queries.map((entry) =>
+          runStatement(sqlite, entry.sql, entry.params, entry.method),
+        )
+        sqlite.exec('COMMIT')
+        return result
+      } catch (error) {
+        sqlite.exec('ROLLBACK')
+        throw error
+      }
+    },
     { schema: authSchema },
+  )
+  repositoryDatabase = drizzle(
+    async (q, p, m) => runStatement(sqlite, q, p, m),
+    async (queries) => {
+      sqlite.exec('BEGIN')
+      try {
+        const result = queries.map((entry) =>
+          runStatement(sqlite, entry.sql, entry.params, entry.method),
+        )
+        sqlite.exec('COMMIT')
+        if (interleave) {
+          const action = interleave
+          interleave = undefined
+          await action()
+        }
+        return result
+      } catch (error) {
+        if (sqlite.isTransaction) sqlite.exec('ROLLBACK')
+        throw error
+      }
+    },
   )
   shared.db.current = authDatabase
 })
@@ -566,7 +623,10 @@ describe('getSession() asks for an uncached read, in the only spelling that work
       // The control that gives the assertion below its meaning. `getSessionQuerySchema` strips keys
       // it does not declare and the endpoint reads `ctx.query`, so a sibling is not rejected, not
       // warned about and not read — it is simply somewhere the code never looks.
-      const siblingSpelling = { headers: cachedHeaders, disableCookieCache: true }
+      const siblingSpelling = {
+        headers: cachedHeaders,
+        disableCookieCache: true,
+      }
       const served = await referenceAuth.api.getSession(siblingSpelling)
       expect(served?.session).toBeDefined()
     })
@@ -643,12 +703,23 @@ describe('organization/set-active', () => {
       .prepare(
         'insert into organization (id, name, slug, created_at) values (?, ?, ?, ?)',
       )
-      .run(secondOrganizationId, 'Second workspace', 'second-workspace', Date.now())
+      .run(
+        secondOrganizationId,
+        'Second workspace',
+        'second-workspace',
+        Date.now(),
+      )
     sqlite
       .prepare(
         'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
       )
-      .run('mem_second_workspace', secondOrganizationId, userId, 'member', Date.now())
+      .run(
+        'mem_second_workspace',
+        secondOrganizationId,
+        userId,
+        'member',
+        Date.now(),
+      )
   })
 
   it('moves the session to another workspace the reader belongs to', async () => {
@@ -868,7 +939,11 @@ describe('organization/delete', () => {
   })
 
   it('refuses the owner of the workspace with 404 and deletes nothing', async () => {
-    const response = await post('/organization/delete', { organizationId }, cookie)
+    const response = await post(
+      '/organization/delete',
+      { organizationId },
+      cookie,
+    )
 
     expect(response.status).toBe(404)
     // The plugin's own refusal, so a 404 from the router having no such route cannot stand in.
@@ -894,7 +969,9 @@ describe('organization/delete', () => {
         headers: new Headers({ cookie }),
         body: { organizationId },
       }),
-    ).rejects.toMatchObject({ body: { code: 'ORGANIZATION_DELETION_DISABLED' } })
+    ).rejects.toMatchObject({
+      body: { code: 'ORGANIZATION_DELETION_DISABLED' },
+    })
     expect(count('organization')).toBe(1)
   })
 
@@ -964,6 +1041,32 @@ describe('organization/update-member-role', () => {
     }
   })
 
+  it('closes invitation creation, resend and cancellation over HTTP', async () => {
+    for (const [path, body] of [
+      [
+        '/organization/invite-member',
+        { email: 'closed@example.com', role: 'member', organizationId },
+      ],
+      [
+        '/organization/invite-member',
+        {
+          email: 'closed@example.com',
+          role: 'owner',
+          organizationId,
+          resend: true,
+        },
+      ],
+      ['/organization/cancel-invitation', { invitationId: 'pending' }],
+    ] as const) {
+      expect((await post(path, body, cookie)).status).toBe(404)
+    }
+    expect(
+      sqlite
+        .prepare('select count(*) as n from invitation where email = ?')
+        .get('closed@example.com'),
+    ).toEqual({ n: 0 })
+  })
+
   it('leaves organization/set-active answering for the same session (positive control)', async () => {
     const response = await post(
       '/organization/set-active',
@@ -995,7 +1098,7 @@ describe('organization/update-member-role', () => {
  * `organization/update-member-role`, and stays usable in process: `auth.api.removeMember` is what
  * the product-owned removal (#1008) must call, because the after-hook that queues the removed
  * person's room eviction hangs off it (`room-eviction.test.ts` pins that). `organization/leave`
- * stays open for the leave screen.
+ * is closed too; the guarded product departure uses its in-process API.
  */
 describe('organization/remove-member', () => {
   let cookie: string
@@ -1286,7 +1389,7 @@ describe('a workspace switch inside an impersonated session', () => {
     })
   })
 
-  it('writes the row, with a null after, when the impersonated session leaves its active workspace', async () => {
+  it('refuses impersonated HTTP leave without deleting membership or recording a workspace change', async () => {
     // A workspace of its own, so the membership this test deletes is not one the other tests use.
     const leavingOrganizationId = 'org_959_leave'
     sqlite
@@ -1319,16 +1422,9 @@ describe('a workspace switch inside an impersonated session', () => {
       cookie,
     )
 
-    expect(response.status).toBe(200)
-    expect(activeOrganizationOf(cookie)).toBeNull()
-    expect(onlyEntry().entry).toEqual({
-      action: ACTION,
-      entityId: targetId,
-      changes: {
-        before: { organizationId: leavingOrganizationId },
-        after: { organizationId: null },
-      },
-    })
+    expect(response.status).toBe(404)
+    expect(activeOrganizationOf(cookie)).toBe(leavingOrganizationId)
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
   })
 
   it('logs at error, and writes no row, when an impersonated update reaches the hook with no request context', async () => {
@@ -1483,4 +1579,387 @@ describe('a workspace switch inside an impersonated session', () => {
     expect(activeOrganizationOf(cookie)).toBe(secondOrganizationId)
     expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
   })
+})
+
+/** Product-created invitations retain the real recipient checks and participation anchor. */
+describe('product workspace invitations and the recipient HTTP endpoints', () => {
+  it('accepts once, rejects expired/revoked invitations, and preserves the participation anchor', async () => {
+    const { createScope } = await import('#/server/repos/base')
+    const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
+    const {
+      inviteToWorkspace,
+      resendWorkspaceInvitation,
+      revokeWorkspaceInvitation,
+    } = await import('#/server/fns/workspace-invitation-writes')
+    const inviterId = await createAccount('lifecycle-owner@planned.travel')
+    const recipientEmail = 'lifecycle-recipient@planned.travel'
+    const recipientId = await createAccount(recipientEmail)
+    sqlite
+      .prepare('update user set email_verified = 1 where id = ?')
+      .run(recipientId)
+    const org = sqlite
+      .prepare('select organization_id as id from member where user_id = ?')
+      .get(inviterId) as { id: string }
+    const scope = createScope(
+      drizzle(async (query, params, method) =>
+        runStatement(sqlite, query, params, method),
+      ),
+      {
+        userId: inviterId,
+        organizationId: org.id,
+        role: 'owner',
+        impersonatedBy: null,
+      },
+    )
+    await subscribeTenant(scope, 'crew', 10)
+    const send = vi.fn().mockResolvedValue(undefined)
+    const audit = vi.fn().mockResolvedValue(undefined)
+    const ports = {
+      scope,
+      baseUrl: BASE_URL,
+      now: () => new Date(),
+      send,
+      audit,
+    }
+    const invited = await inviteToWorkspace(ports, {
+      email: recipientEmail,
+      role: 'member',
+    })
+    if (!invited.ok) throw new Error('invitation was refused')
+    const recipientCookie = sessionCookie(await signIn(recipientEmail))
+    const ownerCookie = sessionCookie(
+      await signIn('lifecycle-owner@planned.travel'),
+    )
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          ownerCookie,
+        )
+      ).status,
+    ).toBe(403)
+    sqlite
+      .prepare('update invitation set expires_at = ? where id = ?')
+      .run(Date.now() - 10000, invited.invitationId)
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      await resendWorkspaceInvitation(ports, {
+        invitationId: invited.invitationId,
+      }),
+    ).toMatchObject({ ok: true, delivered: true })
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(200)
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: invited.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      sqlite
+        .prepare(
+          'select count(*) as n from workspace_participants where organization_id = ? and user_id = ?',
+        )
+        .get(org.id, recipientId),
+    ).toEqual({ n: 1 })
+    expect(
+      await revokeWorkspaceInvitation(ports, {
+        invitationId: invited.invitationId,
+      }),
+    ).toMatchObject({ ok: false, reason: 'not-found' })
+    const withdrawn = await inviteToWorkspace(ports, {
+      email: 'withdrawn@example.com',
+      role: 'member',
+    })
+    if (!withdrawn.ok) throw new Error('invitation was refused')
+    await revokeWorkspaceInvitation(ports, {
+      invitationId: withdrawn.invitationId,
+    })
+    expect(
+      (
+        await post(
+          '/organization/accept-invitation',
+          { invitationId: withdrawn.invitationId },
+          recipientCookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(send).toHaveBeenCalledTimes(3)
+  })
+})
+
+it('keeps recipient rejection open and lets only one of acceptance or revocation win', async () => {
+  const { createScope } = await import('#/server/repos/base')
+  const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
+  const {
+    inviteToWorkspace,
+    resendWorkspaceInvitation,
+    revokeWorkspaceInvitation,
+  } = await import('#/server/fns/workspace-invitation-writes')
+  const inviterId = await createAccount('race-owner@planned.travel')
+  const recipientEmail = 'race-recipient@planned.travel'
+  const recipientId = await createAccount(recipientEmail)
+  sqlite
+    .prepare('update user set email_verified = 1 where id = ?')
+    .run(recipientId)
+  const org = sqlite
+    .prepare('select organization_id as id from member where user_id = ?')
+    .get(inviterId) as { id: string }
+  const db = drizzle(async (query, params, method) =>
+    runStatement(sqlite, query, params, method),
+  )
+  const scope = createScope(db, {
+    userId: inviterId,
+    organizationId: org.id,
+    role: 'owner',
+    impersonatedBy: null,
+  })
+  await subscribeTenant(scope, 'crew', 10)
+  const ports = {
+    scope,
+    baseUrl: BASE_URL,
+    now: () => new Date(),
+    send: vi.fn().mockResolvedValue(undefined),
+    audit: vi.fn().mockResolvedValue(undefined),
+  }
+  const cookie = sessionCookie(await signIn(recipientEmail))
+  const declined = await inviteToWorkspace(ports, {
+    email: recipientEmail,
+    role: 'member',
+  })
+  if (!declined.ok) throw new Error('invitation was refused')
+  expect(
+    (
+      await post(
+        '/organization/reject-invitation',
+        { invitationId: declined.invitationId },
+        cookie,
+      )
+    ).status,
+  ).toBe(200)
+  expect(
+    await resendWorkspaceInvitation(ports, {
+      invitationId: declined.invitationId,
+    }),
+  ).toMatchObject({ ok: false, reason: 'not-found' })
+  const raced = await inviteToWorkspace(ports, {
+    email: recipientEmail,
+    role: 'member',
+  })
+  if (!raced.ok) throw new Error('invitation was refused')
+  const [acceptance, revocation] = await Promise.all([
+    post(
+      '/organization/accept-invitation',
+      { invitationId: raced.invitationId },
+      cookie,
+    ),
+    revokeWorkspaceInvitation(ports, { invitationId: raced.invitationId }),
+  ])
+  const state = sqlite
+    .prepare('select status from invitation where id = ?')
+    .get(raced.invitationId) as { status: string }
+  const membership = sqlite
+    .prepare(
+      'select count(*) as n from member where organization_id = ? and user_id = ?',
+    )
+    .get(org.id, recipientId)
+  if (state.status === 'accepted') {
+    expect(acceptance.status).toBe(200)
+    expect(revocation).toMatchObject({ ok: false, reason: 'not-found' })
+    expect(membership).toEqual({ n: 1 })
+  } else {
+    expect(state.status).toBe('canceled')
+    expect(acceptance.status).toBe(400)
+    expect(revocation).toMatchObject({ ok: true })
+    expect(membership).toEqual({ n: 0 })
+  }
+})
+
+it('review: acceptance must not release a reserved seat before membership insert', async () => {
+  shared.kv.clear()
+  const { createScope } = await import('#/server/repos/base')
+  const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
+  const { createInvitation, listPendingInvitations, countMembers } =
+    await import('#/server/repos/members')
+  const owner = await createAccount('boundary-owner@planned.travel')
+  const email = 'boundary-recipient@planned.travel'
+  const recipient = await createAccount(email)
+  sqlite
+    .prepare('update user set email_verified = 1 where id = ?')
+    .run(recipient)
+  const org = sqlite
+    .prepare('select organization_id as id from member where user_id = ?')
+    .get(owner) as { id: string }
+  const db = drizzle(async (q, p, m) => runStatement(sqlite, q, p, m))
+  const scope = createScope(db, {
+    userId: owner,
+    organizationId: org.id,
+    role: 'owner',
+    impersonatedBy: null,
+  })
+  await subscribeTenant(scope, 'crew', 10)
+  const invitation = await createInvitation(scope, {
+    email,
+    expiresAt: new Date(Date.now() + 86400000),
+  })
+  for (let i = 0; i < 8; i++)
+    await createInvitation(scope, {
+      email: `reserved${i}@example.com`,
+      expiresAt: new Date(Date.now() + 86400000),
+    })
+  expect(
+    (await countMembers(scope)) + (await listPendingInvitations(scope)).length,
+  ).toBe(10)
+  const cookie = sessionCookie(await signIn(email))
+  const competingClaim = vi.fn(async () => {
+    await expect(createInvitation(scope, { email, expiresAt: new Date(Date.now() + 86400000) })).rejects.toMatchObject({ code: 'ALREADY_MEMBER' })
+    await expect(
+      createInvitation(scope, {
+        email: 'stolen-seat@example.com',
+        expiresAt: new Date(Date.now() + 86400000),
+      }),
+    ).rejects.toThrow()
+  })
+  interleave = competingClaim
+  expect(
+    (
+      await post(
+        '/organization/accept-invitation',
+        { invitationId: invitation.id },
+        cookie,
+      )
+    ).status,
+  ).toBe(200)
+  expect(competingClaim).toHaveBeenCalledTimes(1)
+  expect(interleave).toBeUndefined()
+  expect(
+    (await countMembers(scope)) + (await listPendingInvitations(scope)).length,
+  ).toBe(10)
+})
+
+it('keeps the in-process acceptance contract and durable membership after activation failure', async () => {
+  shared.kv.clear()
+  const { createScope } = await import('#/server/repos/base')
+  const { createInvitation } = await import('#/server/repos/members')
+  const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
+  const owner = await createAccount('atomic-api-owner@planned.travel')
+  const email = 'atomic-api-recipient@planned.travel'
+  const recipient = await createAccount(email)
+  sqlite
+    .prepare('update user set email_verified = 1 where id = ?')
+    .run(recipient)
+  const org = sqlite
+    .prepare('select organization_id as id from member where user_id = ?')
+    .get(owner) as { id: string }
+  const ownerScope = createScope(repositoryDatabase, {
+    userId: owner,
+    organizationId: org.id,
+    role: 'owner',
+    impersonatedBy: null,
+  })
+  await subscribeTenant(ownerScope, 'crew', 10)
+  const invitation = await createInvitation(ownerScope, {
+    email,
+    expiresAt: new Date(Date.now() + 86400000),
+  })
+  const cookie = sessionCookie(await signIn(email))
+  const headers = new Headers({ cookie })
+  const context = await getAuth().$context
+  const activation = vi
+    .spyOn(context.internalAdapter, 'updateSession')
+    .mockRejectedValueOnce(new Error('KV activation unavailable'))
+  try {
+    await expect(
+      getAuth().api.acceptInvitation({
+        body: { invitationId: invitation.id },
+        headers,
+      }),
+    ).rejects.toMatchObject({ body: { code: 'USER_IS_ALREADY_A_MEMBER_OF_THIS_ORGANIZATION' } })
+  } finally {
+    activation.mockRestore()
+  }
+  expect(
+    sqlite
+      .prepare('select status from invitation where id = ?')
+      .get(invitation.id),
+  ).toEqual({ status: 'accepted' })
+  expect(
+    sqlite
+      .prepare(
+        'select count(*) as n from member where organization_id = ? and user_id = ?',
+      )
+      .get(org.id, recipient),
+  ).toEqual({ n: 1 })
+  expect(
+    sqlite
+      .prepare(
+        'select count(*) as n from workspace_participants where organization_id = ? and user_id = ?',
+      )
+      .get(org.id, recipient),
+  ).toEqual({ n: 1 })
+  expect(
+    (
+      await post(
+        '/organization/accept-invitation',
+        { invitationId: invitation.id },
+        cookie,
+      )
+    ).status,
+  ).toBe(400)
+  expect(
+    (await post('/organization/set-active', { organizationId: org.id }, cookie))
+      .status,
+  ).toBe(200)
+  const session = await getAuth().api.getSession({ headers })
+  expect(session?.session.activeOrganizationId).toBe(org.id)
+
+  const nextEmail = 'atomic-api-next@planned.travel'
+  const next = await createAccount(nextEmail)
+  sqlite.prepare('update user set email_verified = 1 where id = ?').run(next)
+  const nextInvite = await createInvitation(ownerScope, {
+    email: nextEmail,
+    expiresAt: new Date(Date.now() + 86400000),
+  })
+  const nextHeaders = new Headers({
+    cookie: sessionCookie(await signIn(nextEmail)),
+  })
+  const accepted = await getAuth().api.acceptInvitation({
+    body: { invitationId: nextInvite.id },
+    headers: nextHeaders,
+    returnHeaders: true,
+  })
+  expect(accepted.response.invitation).toMatchObject({
+    id: nextInvite.id,
+    status: 'accepted',
+    organizationId: org.id,
+  })
+  expect(accepted.response.member).toMatchObject({
+    userId: next,
+    role: 'member',
+    organizationId: org.id,
+  })
+  expect(accepted.headers).toBeInstanceOf(Headers)
+  expect(
+    (await getAuth().api.getSession({ headers: nextHeaders }))?.session
+      .activeOrganizationId,
+  ).toBe(org.id)
 })
