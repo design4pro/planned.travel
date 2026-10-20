@@ -11,7 +11,7 @@ import {
 import { useDirection, useLocale, useTranslate } from '#/lib/i18n'
 import { blockedReason, isWeekend } from '#/lib/vacay/day-rules'
 import { ENTRY_KINDS } from '#/lib/vacay/entry-kinds'
-import { moveDay } from '#/lib/vacay/week'
+import { moveDay, weekColumns, leadingDays } from '#/lib/vacay/week'
 import { KIND_LABEL, BLOCKED_LABEL } from './copy'
 import { DayCell, KindCue } from './day-cell'
 import { DayPicker } from './day-picker'
@@ -28,6 +28,7 @@ export interface GridSnapshot {
 export interface YearGridProps {
   year: number
   today: string
+  weekStartsOn?: number
   initial: GridSnapshot
   colour?: string
   ink: string
@@ -45,6 +46,7 @@ function kindOf(value: string | undefined): EntryKind | undefined {
 export function YearGrid({
   year,
   today,
+  weekStartsOn = 1,
   initial,
   colour,
   ink,
@@ -237,8 +239,7 @@ export function YearGrid({
         {Array.from({ length: 12 }, (_monthSlot, month) => {
           const prefix = `${year}-${String(month + 1).padStart(2, '0')}`
           const name = `${monthName(month, locale, 'long')} ${year}`
-          const leading =
-            (new Date(Date.UTC(year, month, 1)).getUTCDay() + 6) % 7
+          const leading = leadingDays(year, month, weekStartsOn)
           const count = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
           return (
             <Card key={month} padding="none" className="min-w-0 p-3.5">
@@ -256,17 +257,14 @@ export function YearGrid({
               >
                 <thead>
                   <tr>
-                    {Array.from({ length: 7 }, (_columnSlot, column) => (
+                    {weekColumns(weekStartsOn).map((weekday) => (
                       <th
-                        key={column}
+                        key={weekday}
                         scope="col"
-                        abbr={
-                          weekdayName((column + 1) % 7, locale, 'long') ??
-                          undefined
-                        }
+                        abbr={weekdayName(weekday, locale, 'long') ?? undefined}
                         className="truncate text-center text-micro font-semibold text-ink-3"
                       >
-                        {weekdayName((column + 1) % 7, locale)}
+                        {weekdayName(weekday, locale)}
                       </th>
                     ))}
                   </tr>
@@ -359,7 +357,9 @@ export function YearGrid({
                                 )
                                   return
                                 event.preventDefault()
-                                focus(moveDay(date, event.key, rtl))
+                                focus(
+                                  moveDay(date, event.key, rtl, weekStartsOn),
+                                )
                               }}
                               onClick={(event) => {
                                 if (pending.current.has(date)) return

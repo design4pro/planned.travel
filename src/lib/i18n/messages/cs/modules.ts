@@ -14,6 +14,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'vacay.page.eyebrow': 'Volno',
+  'vacay.page.title': 'Dovolená',
+  'vacay.page.description':
+    'Naplánujte si dny nepřítomnosti a porovnejte je s ostatními',
+  'vacay.people.title': 'Cestovatelé',
+  'vacay.people.you': '{name} (vy)',
+
   /* -------------------------------------------- shared by every module */
   'value.notSet': 'Nenastaveno',
   /* ----------------------------------------- the realtime presence bar */
