@@ -1,5 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearDay, markDay, readGrid } from '#/server/fns/vacay-lib/handlers'
+import * as settings from '../settings'
+import {
+  updateOrganizationSettings,
+  updateUserSettings,
+  getOrganizationSettings,
+  getUserSettings,
+  organizationSettingsRepository,
+  userSettingsRepository,
+} from '../settings'
 import { ensurePlan, updatePlan } from '../vacay'
 import { createHarness } from './harness'
 import type { Harness, SeededTenant } from './harness'
@@ -17,7 +26,69 @@ describe('leave day wire handlers', () => {
       defaultEntitlementDays: 25,
     })
   })
-  afterEach(() => h.close())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    h.close()
+  })
+  it.each([0, 1, 6])(
+    'reads workspace %i, personal override and cleared override without writing',
+    async (weekStartsOn) => {
+      await updateOrganizationSettings(tenant.scope, { weekStartsOn })
+      const read = () => readGrid(tenant.scope, { planId, year: 2026 })
+      expect((await read()).weekStartsOn).toBe(weekStartsOn)
+      await updateUserSettings(tenant.scope, { weekStartsOn: 0 })
+      expect((await read()).weekStartsOn).toBe(0)
+      await updateUserSettings(tenant.scope, { weekStartsOn: null })
+      expect((await read()).weekStartsOn).toBe(weekStartsOn)
+      const workspace = await getOrganizationSettings(tenant.scope)
+      const user = await getUserSettings(tenant.scope)
+      await read()
+      expect(await getOrganizationSettings(tenant.scope)).toEqual(workspace)
+      expect(await getUserSettings(tenant.scope)).toEqual(user)
+    },
+  )
+  it('uses Monday without creating missing settings rows', async () => {
+    const workspace = await getOrganizationSettings(tenant.scope)
+    const user = await getUserSettings(tenant.scope)
+    if (workspace)
+      await organizationSettingsRepository.requireRemove(
+        tenant.scope,
+        workspace.id,
+      )
+    if (user) await userSettingsRepository.requireRemove(tenant.scope, user.id)
+    const workspaceRead = vi.spyOn(settings, 'getOrganizationSettings')
+    const userRead = vi.spyOn(settings, 'getUserSettings')
+    expect(
+      (await readGrid(tenant.scope, { planId, year: 2026 })).weekStartsOn,
+    ).toBe(1)
+    expect(workspaceRead).toHaveBeenCalledTimes(1)
+    expect(userRead).toHaveBeenCalledTimes(1)
+    expect(await getOrganizationSettings(tenant.scope)).toBeNull()
+    expect(await getUserSettings(tenant.scope)).toBeNull()
+  })
+  it.each([-1, 7, 1.5])(
+    'falls back to Monday for stored invalid week start %s',
+    async (weekStartsOn) => {
+      const workspace = await updateOrganizationSettings(tenant.scope, {
+        weekStartsOn: 0,
+      })
+      vi.spyOn(settings, 'getOrganizationSettings').mockResolvedValueOnce({
+        ...workspace,
+        weekStartsOn,
+      })
+      expect(
+        (await readGrid(tenant.scope, { planId, year: 2026 })).weekStartsOn,
+      ).toBe(1)
+      const user = await updateUserSettings(tenant.scope, { weekStartsOn: 6 })
+      vi.spyOn(settings, 'getUserSettings').mockResolvedValueOnce({
+        ...user,
+        weekStartsOn,
+      })
+      expect(
+        (await readGrid(tenant.scope, { planId, year: 2026 })).weekStartsOn,
+      ).toBe(1)
+    },
+  )
   it('rejects explicit user IDs even when they identify the caller', async () => {
     const data = {
       planId,

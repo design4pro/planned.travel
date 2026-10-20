@@ -14,6 +14,12 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'vacay.page.eyebrow': '休息时间',
+  'vacay.page.title': '休假',
+  'vacay.page.description': '规划你不在的日子，并与其他人的安排对照',
+  'vacay.people.title': '旅行者',
+  'vacay.people.you': '{name}（你）',
+
   /* -------------------------------------------- shared by every module */
   'value.notSet': '未设置',
   /* ----------------------------------------- the realtime presence bar */

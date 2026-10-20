@@ -236,15 +236,22 @@ planned.travel's vocabulary against the eight `vacay_*` tables that already exis
    `journey_trips` join table, applied to a setting instead of a relation.
 
    The real defect is narrower than the row suggests, and it is **fixed in this plan rather than
-   deferred**: nothing in the leave planner reads the resolved value. `loadVacay` publishes a literal
-   `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`) that **no consumer reads** —
-   `grep -n weekStartsOn src/routes/_app/vacay.tsx` returns nothing — and the screen hard-codes a
+   deferred**: at plan drafting, nothing in the leave planner read the resolved value. `loadVacay`
+   publishes a literal
+   `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`) that **no consumer reads**.
+   At drafting the route had no week-start consumer, and the screen hard-coded a
    Monday-first header instead (`WEEKDAY_INITIALS`, `vacay.tsx:41-49`, rendered at `:337`). The month
    grid belongs to `08-S5`, so the wiring is `08-S5`'s and is specified there: it reads
-   `getEffectiveSettings` through this module's own server file and rotates the week, and `08-S7`,
+   existing settings through this module's own server file and rotates the week, and `08-S7`,
    which holds `library.ts` in wave 2, drops the unread literal in the same wave. This stage neither
    reads nor writes the setting — an allowance and a carry-over do not care where a week begins — so
    it is named here as measured fact and nowhere else in `08-S1`.
+
+   **08-S5b implementation (#1112):** the grid now reads existing workspace and traveller settings
+   once through `readGrid`, using the same override precedence and Monday for an invalid resolved
+   value. It does not call the row-creating `getEffectiveSettings` or write settings. Headings,
+   month padding and Home/End rotate together; the shared library loader and its literal stay
+   untouched for their assigned owner.
 
 2. The row calls the plan "auto-created per user". It already is: `ensurePlan`
    (`src/server/repos/vacay.ts:142`) creates the row and its membership on first read, behind the
@@ -1528,11 +1535,13 @@ measured the setting rather than the row's wording: `organization_settings.week_
 `:1857-1858`) and one resolver over the pair, `weekStartsOn: user?.weekStartsOn ??
 organization.weekStartsOn` in `getEffectiveSettings` (`src/server/repos/settings.ts:295`), with both
 editing surfaces already shipped at `src/routes/_app/settings/organization.tsx:434-450` and
-`src/routes/_app/settings/index.tsx:304-326`. Nothing in the leave planner reads any of it: the header is
+`src/routes/_app/settings/index.tsx:304-326`. At plan drafting, the leave planner read none of it:
+the header was
 a Monday-first literal (`WEEKDAY_INITIALS`, `vacay.tsx:41-49`, rendered at `:337`) and `loadVacay`
-publishes an unread `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`). This stage
-consumes the resolved value — see **Server** and **UI** — and adds **no column, no CHECK and no
-migration**, because a per-plan copy would be a second authority on a question the settings tables
+published an unread `weekStartsOn: 1` (`src/routes/_app/-server/library.ts:133-134`).
+08-S5b (#1112) now consumes the setting through the read-only handler described in the 08-S1
+implementation note above. This stage consumes the resolved value — see **Server** and **UI** —
+and adds **no column, no CHECK and no migration**, because a per-plan copy would be a second authority on a question the settings tables
 already answer.
 
 ### Owned paths
@@ -1608,9 +1617,11 @@ Dates stay `YYYY-MM-DD` text. No migration, no backfill, no index.
 - **Server functions — `src/routes/_app/-server/vacay.ts`**, all `POST` except the first:
   - `loadVacayGridFn` (`GET`) — the two things the grid needs that the plan overview does not carry:
     `tripWindows`, the year's trip date ranges for the dots, and `weekStartsOn`, the resolved
-    preference. The second is one call to `getEffectiveSettings(scope, scope.ctx.userId)`
-    (`src/server/repos/settings.ts:271`) and is read, never written — this stage owns no settings
-    file, mints no second resolver and adds no per-plan column. The returned value is narrowed at
+    preference. In 08-S5b (#1112), `readGrid` reads the existing workspace and traveller rows once
+    through `getOrganizationSettings` and `getUserSettings`, then applies the same nullish override
+    precedence as `getEffectiveSettings`. It avoids that helper because it can create a missing
+    workspace row: this stage reads settings, never writes them, and adds no per-plan column.
+    The returned value is narrowed at
     the boundary with `z.number().int().min(0).max(6).catch(1)` before it leaves the handler, so a
     row written before the CHECK existed cannot rotate the header into an undefined index; the CHECK
     makes that unreachable in D1 and the narrowing makes it unreachable in types as well. Separate
@@ -2128,8 +2139,9 @@ consequence is stated under **Quota** rather than hidden.
   `JourneyEntryCard` gains the fields the timeline and the map need. One line that belongs to another
   module travels with this edit for the single reason that this stage holds the file: `loadVacay`'s
   `weekStartsOn: 1` (`:133-134`) is deleted from its return shape and from `VacayOverview`
-  (`:77`). It is an unread literal — `grep -n weekStartsOn src/routes/_app/vacay.tsx` returns nothing
-  at HEAD — and `08-S5` reads the resolved setting through `src/routes/_app/-server/vacay.ts`
+  (`:77`). It is an unread literal; `08-S5b` (#1112) reads `data.grid.weekStartsOn` from the
+  read-only handler, rather than this library field. `08-S5` reads the resolved setting through
+  `src/routes/_app/-server/vacay.ts`
   instead, so leaving it would be a second answer to a question one resolver already answers. The
   deletion has exactly one owner, named here and in `08-S5`, and neither stage depends on the other's
   ordering within wave 2: `08-S5` never reads the field and nothing else does.

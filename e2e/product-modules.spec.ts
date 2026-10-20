@@ -192,6 +192,85 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     )
   })
 
+  test('08-S5b follows a Sunday-first workspace @chromium-only', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    await unblockCrossOriginFonts(page)
+    const selectWeek = async (value: string) => {
+      await page
+        .getByRole('combobox', { name: 'Week starts on', exact: true })
+        .click()
+      await page.getByRole('option', { name: value, exact: true }).click()
+      const written = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes('/_serverFn/'),
+      )
+      await page
+        .getByRole('button', { name: 'Save changes', exact: true })
+        .click()
+      expect((await written).ok()).toBe(true)
+    }
+    await page.goto('/settings/organization', { waitUntil: 'networkidle' })
+    const workspace = page.getByRole('combobox', {
+      name: 'Week starts on',
+      exact: true,
+    })
+    const originalWorkspace = (await workspace.innerText()).trim()
+    await page.goto('/settings', { waitUntil: 'networkidle' })
+    const originalUser = (
+      await page
+        .getByRole('combobox', { name: 'Week starts on', exact: true })
+        .innerText()
+    ).trim()
+    try {
+      if (!originalUser.startsWith('Workspace default'))
+        await selectWeek('Workspace default — ' + originalWorkspace)
+      await page.goto('/settings/organization', { waitUntil: 'networkidle' })
+      if (originalWorkspace !== 'Sunday') await selectWeek('Sunday')
+      await page.goto('/vacay?year=2026', { waitUntil: 'networkidle' })
+      const january = page.getByRole('grid', {
+        name: 'January 2026',
+        exact: true,
+      })
+      await expect(january.getByRole('columnheader').first()).toHaveAttribute(
+        'abbr',
+        'Sunday',
+      )
+      const first = january.getByRole('button', { name: /^1 Jan 2026/ })
+      await expect(first.locator('xpath=../preceding-sibling::td')).toHaveCount(
+        4,
+      )
+      const august = page.getByRole('grid', {
+        name: 'August 2026',
+        exact: true,
+      })
+      const fifth = august.getByRole('button', { name: /^5 Aug 2026/ })
+      await fifth.focus()
+      await fifth.press('Home')
+      await expect(
+        august.getByRole('button', { name: /^2 Aug 2026/ }),
+      ).toBeFocused()
+      await page.keyboard.press('End')
+      await expect(
+        august.getByRole('button', { name: /^8 Aug 2026/ }),
+      ).toBeFocused()
+      for (const day of [1, 2, 8, 9]) {
+        await expect(
+          august.getByRole('button', { name: new RegExp(`^${day} Aug 2026`) }),
+        ).toHaveClass(/bg-surface-inset/)
+      }
+    } finally {
+      await page.goto('/settings/organization', { waitUntil: 'networkidle' })
+      if (originalWorkspace !== 'Sunday') await selectWeek(originalWorkspace)
+      if (!originalUser.startsWith('Workspace default')) {
+        await page.goto('/settings', { waitUntil: 'networkidle' })
+        await selectWeek(originalUser)
+      }
+    }
+  })
+
   test('08-S5a logs and clears a day with the keyboard @chromium-only', async ({
     page,
   }) => {

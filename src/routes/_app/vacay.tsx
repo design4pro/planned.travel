@@ -78,9 +78,9 @@ function VacayPage() {
     <AppFrame>
       <AppSections>
         <PageHeader
-          eyebrow="Time off"
-          title="Vacay"
-          description="Plan the days you are away and see them against everyone else's"
+          eyebrow={t('modules.vacay.page.eyebrow')}
+          title={t('modules.vacay.page.title')}
+          description={t('modules.vacay.page.description')}
           actions={
             <div className="flex flex-wrap items-center gap-1.5">
               <PlanSettingsDialog
@@ -133,7 +133,7 @@ function VacayPage() {
             />
 
             <Panel
-              label="Travellers"
+              label={t('modules.vacay.people.title')}
               count={formatNumber(data.people.length, locale)}
               flush
             >
@@ -163,7 +163,7 @@ function VacayPage() {
                       <Avatar name={person.name} src={person.image} size="sm" />
                       <span className="min-w-0 flex-1 truncate text-caption text-ink">
                         {person.userId === data.viewerUserId
-                          ? `${person.name} (you)`
+                          ? t('modules.vacay.people.you', { name: person.name })
                           : person.name}
                       </span>
                       <span className="shrink-0 text-caption tabular-nums text-ink-4">
@@ -180,6 +180,7 @@ function VacayPage() {
             key={`${data.plan.id}-${data.year}`}
             year={data.year}
             today={data.grid.today}
+            weekStartsOn={data.grid.weekStartsOn}
             initial={data.grid}
             colour={colourByUser.get(data.viewerUserId)}
             ink={inkOn(colourByUser.get(data.viewerUserId))}
