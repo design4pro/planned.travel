@@ -80,7 +80,7 @@ const messages = {
   'landing.plans.compare': 'Jedes Limit vergleichen, Zeile für Zeile',
   'landing.questions.title': 'Fragen, klar beantwortet',
   'landing.questions.lede':
-    'Die sechs Dinge, die Leute wirklich wissen wollen, bevor sie anfangen.',
+    'Die fünf Dinge, die Leute wirklich wissen wollen, bevor sie anfangen.',
   'cta.heading':
     'Deine nächste Reise ist es schon wert, richtig geplant zu werden',
   'cta.lede':

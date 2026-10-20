@@ -72,7 +72,7 @@ const messages = {
     '每个方案都含逐日规划、地图、预算和行李清单。付费方案解锁不限次数的行程、预订、日志和导出。',
   'landing.plans.compare': '逐行比较每一项上限',
   'landing.questions.title': '问题，直接回答',
-  'landing.questions.lede': '大家在动手之前真正想知道的六件事。',
+  'landing.questions.lede': '大家在动手之前真正想知道的五件事。',
   'cta.heading': '你下一趟旅程已经值得好好规划',
   'cta.lede':
     '两趟行程、整张地图、逐日安排和行李清单：免费，不用绑卡，也没有倒计时。',

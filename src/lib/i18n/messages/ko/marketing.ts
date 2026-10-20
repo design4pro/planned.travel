@@ -74,7 +74,7 @@ const messages = {
   'landing.plans.compare': '모든 한도를 한 줄씩 비교하기',
   'landing.questions.title': '질문에 똑바로 답합니다',
   'landing.questions.lede':
-    '시작하기 전에 사람들이 정말로 궁금해하는 여섯 가지.',
+    '시작하기 전에 사람들이 정말로 궁금해하는 다섯 가지.',
   'cta.heading': '다음 여행은 이미 제대로 계획할 값을 합니다',
   'cta.lede':
     '여행 두 개, 지도 전체, 날짜별 일정, 준비물 목록. 무료이고, 카드도 필요 없고, 남은 시간을 세지도 않습니다.',

@@ -89,7 +89,7 @@ const messages = {
   'landing.plans.compare': 'Porównaj każdy limit, wiersz po wierszu',
   'landing.questions.title': 'Pytania, odpowiedzi bez owijania',
   'landing.questions.lede':
-    'Sześć rzeczy, o które ludzie naprawdę pytają, zanim zaczną planować.',
+    'Pięć rzeczy, o które ludzie naprawdę pytają, zanim zaczną planować.',
   'cta.heading': 'Twój następny wyjazd już zasługuje na porządny plan',
   'cta.lede':
     'Dwa wyjazdy, cała mapa, plan dnia i listy pakowania - bezpłatnie, bez karty i bez licznika.',

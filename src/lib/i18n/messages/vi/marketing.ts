@@ -74,7 +74,7 @@ const messages = {
   'landing.plans.compare': 'So sánh từng giới hạn, từng dòng một',
   'landing.questions.title': 'Câu hỏi, trả lời thẳng thắn',
   'landing.questions.lede':
-    'Sáu điều người ta thật sự muốn biết trước khi bắt đầu.',
+    'Năm điều người ta thật sự muốn biết trước khi bắt đầu.',
   'cta.heading': 'Chuyến đi tới của bạn đã xứng đáng được lên kế hoạch tử tế',
   'cta.lede':
     'Hai chuyến đi, cả bản đồ, lịch trình và danh sách hành lý: miễn phí, không cần thẻ và không có đồng hồ đếm ngược.',

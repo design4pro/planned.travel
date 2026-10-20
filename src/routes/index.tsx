@@ -224,7 +224,7 @@ function PricingSummary() {
 
 /* ------------------------------------------------------------------ questions */
 
-function Questions() {
+export function Questions() {
   const t = useTranslate()
   return (
     <Section

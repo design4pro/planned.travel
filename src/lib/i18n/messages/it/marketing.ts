@@ -84,7 +84,7 @@ const messages = {
   'landing.plans.compare': 'Confronta ogni limite, riga per riga',
   'landing.questions.title': 'Domande, risposte senza giri',
   'landing.questions.lede':
-    'Le sei cose che le persone vogliono davvero sapere prima di iniziare.',
+    'Le cinque cose che le persone vogliono davvero sapere prima di iniziare.',
   'cta.heading':
     'Il tuo prossimo viaggio merita già di essere organizzato bene',
   'cta.lede':

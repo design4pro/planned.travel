@@ -101,7 +101,7 @@ const messages = {
   'landing.plans.compare': 'Compare every limit, line by line',
   'landing.questions.title': 'Questions, answered plainly',
   'landing.questions.lede':
-    'The six things people actually want to know before they start planning.',
+    'The five things people actually want to know before they start planning.',
   'cta.heading': 'Your next trip is already worth planning properly',
   'cta.lede':
     'Two trips, the whole map, the itinerary and the packing lists — free, with no card and no countdown.',

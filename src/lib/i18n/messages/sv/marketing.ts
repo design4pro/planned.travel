@@ -79,7 +79,7 @@ const messages = {
   'landing.plans.compare': 'Jämför varje gräns, rad för rad',
   'landing.questions.title': 'Frågor, rakt besvarade',
   'landing.questions.lede':
-    'De sex sakerna folk faktiskt vill veta innan de börjar.',
+    'De fem sakerna folk faktiskt vill veta innan de börjar.',
   'cta.heading': 'Din nästa resa är redan värd att planeras ordentligt',
   'cta.lede':
     'Två resor, hela kartan, dagsplaneringen och packlistorna - gratis, utan kort och utan nedräkning.',

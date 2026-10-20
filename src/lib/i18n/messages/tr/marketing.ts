@@ -79,7 +79,7 @@ const messages = {
   'landing.plans.compare': 'Her sınırı satır satır karşılaştır',
   'landing.questions.title': 'Sorular, dosdoğru yanıtlar',
   'landing.questions.lede':
-    'İnsanların başlamadan önce gerçekten bilmek istediği altı şey.',
+    'İnsanların başlamadan önce gerçekten bilmek istediği beş şey.',
   'cta.heading': 'Bir sonraki seyahatin şimdiden düzgün planlanmayı hak ediyor',
   'cta.lede':
     'İki seyahat, haritanın tamamı, gün planı ve bavul listeleri: ücretsiz, kartsız ve geri sayımsız.',

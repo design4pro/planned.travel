@@ -33,6 +33,7 @@ import {
 } from '../plans'
 
 import { Comparison } from '#/routes/pricing'
+import { Questions } from '#/routes/index'
 
 import type { Catalogue, MessageKey } from '#/lib/i18n'
 import type { ReactNode } from 'react'
@@ -325,5 +326,16 @@ describe('pricing module comparison', () => {
         name: t('marketing.pricing.module.atlas'),
       }),
     ).toBeTruthy()
+  })
+})
+
+describe('landing questions', () => {
+  it('states the count it renders without an offline promise', () => {
+    const { container } = renderTranslated(<Questions />)
+    expect(container.querySelectorAll('summary')).toHaveLength(5)
+    expect(
+      screen.getByText(t('marketing.landing.questions.lede')).textContent,
+    ).toContain('five things')
+    expect(container.textContent).not.toMatch(/offline|without a signal/i)
   })
 })

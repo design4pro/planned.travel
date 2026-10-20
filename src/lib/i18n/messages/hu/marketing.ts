@@ -79,7 +79,7 @@ const messages = {
   'landing.plans.compare': 'Vesd össze minden korlátot, soronként',
   'landing.questions.title': 'Kérdések, kerek válaszok',
   'landing.questions.lede':
-    'A hat dolog, amit az emberek tényleg tudni akarnak, mielőtt belevágnak.',
+    'A öt dolog, amit az emberek tényleg tudni akarnak, mielőtt belevágnak.',
   'cta.heading': 'A következő utazásod már megérdemli a rendes tervet',
   'cta.lede':
     'Két utazás, a teljes térkép, a napi terv és a csomaglisták - ingyen, kártya nélkül és visszaszámlálás nélkül.',

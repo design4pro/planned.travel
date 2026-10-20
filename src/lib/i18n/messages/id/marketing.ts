@@ -74,7 +74,7 @@ const messages = {
   'landing.plans.compare': 'Bandingkan tiap batasan, baris demi baris',
   'landing.questions.title': 'Pertanyaan, dijawab lugas',
   'landing.questions.lede':
-    'Enam hal yang benar-benar ingin orang ketahui sebelum mulai.',
+    'Lima hal yang benar-benar ingin orang ketahui sebelum mulai.',
   'cta.heading': 'Perjalanan berikutmu sudah layak direncanakan dengan benar',
   'cta.lede':
     'Dua perjalanan, seluruh peta, rencana harian, dan daftar bawaan: gratis, tanpa kartu dan tanpa hitungan mundur.',

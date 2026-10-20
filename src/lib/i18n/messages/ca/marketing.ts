@@ -84,7 +84,7 @@ const messages = {
   'landing.plans.compare': 'Compara cada límit, línia per línia',
   'landing.questions.title': 'Preguntes, respostes sense voltes',
   'landing.questions.lede':
-    'Les sis coses que la gent vol saber de debò abans de començar.',
+    'Les cinc coses que la gent vol saber de debò abans de començar.',
   'cta.heading': 'El teu pròxim viatge ja mereix planificar-se bé',
   'cta.lede':
     'Dos viatges, tot el mapa, l’itinerari i les llistes d’equipatge: gratis, sense targeta i sense compte enrere.',

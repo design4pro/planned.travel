@@ -79,7 +79,7 @@ const messages = {
   'landing.plans.compare': 'Vergelijk elke limiet, regel voor regel',
   'landing.questions.title': 'Vragen, recht voor de raap beantwoord',
   'landing.questions.lede':
-    'De zes dingen die mensen echt willen weten voordat ze beginnen.',
+    'De vijf dingen die mensen echt willen weten voordat ze beginnen.',
   'cta.heading': 'Je volgende reis is het al waard om goed te plannen',
   'cta.lede':
     'Twee reizen, de hele kaart, de dagplanning en de paklijsten - gratis, zonder kaart en zonder aftelklok.',

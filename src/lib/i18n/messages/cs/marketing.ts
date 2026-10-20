@@ -88,7 +88,7 @@ const messages = {
   'landing.plans.compare': 'Porovnejte každý limit, řádek po řádku',
   'landing.questions.title': 'Otázky, odpovědi bez okolků',
   'landing.questions.lede':
-    'Šest věcí, které lidé opravdu chtějí vědět, než začnou.',
+    'Pět věcí, které lidé opravdu chtějí vědět, než začnou.',
   'cta.heading': 'Vaše příští cesta si už zaslouží poctivý plán',
   'cta.lede':
     'Dvě cesty, celá mapa, plán dne a seznamy na balení - bezplatně, bez karty a bez odpočtu.',

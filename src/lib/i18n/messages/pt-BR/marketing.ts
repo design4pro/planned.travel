@@ -84,7 +84,7 @@ const messages = {
   'landing.plans.compare': 'Compare cada limite, linha por linha',
   'landing.questions.title': 'Perguntas, respondidas sem rodeios',
   'landing.questions.lede':
-    'As seis coisas que as pessoas realmente querem saber antes de começar.',
+    'As cinco coisas que as pessoas realmente querem saber antes de começar.',
   'cta.heading': 'Sua próxima viagem já merece ser planejada direito',
   'cta.lede':
     'Duas viagens, o mapa inteiro, o roteiro e as listas de bagagem: de graça, sem cartão e sem contagem regressiva.',

@@ -72,7 +72,7 @@ const messages = {
     '每個方案都含逐日規劃、地圖、預算和行李清單。付費方案解鎖不限次數的行程、訂位、日誌和匯出。',
   'landing.plans.compare': '逐行比較每一項上限',
   'landing.questions.title': '問題，直接回答',
-  'landing.questions.lede': '大家在動手之前真正想知道的六件事。',
+  'landing.questions.lede': '大家在動手之前真正想知道的五件事。',
   'cta.heading': '你下一趟旅程已經值得好好規劃',
   'cta.lede':
     '兩趟行程、整張地圖、逐日安排和行李清單：免費，不用綁卡，也沒有倒數計時。',
