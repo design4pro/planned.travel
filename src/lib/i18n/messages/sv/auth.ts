@@ -354,6 +354,9 @@ const messages = {
   'error.locked.title': 'Kontot är tillfälligt låst',
   'error.locked.detail':
     'För många misslyckade försök. För din säkerhet är kontot låst i några minuter.',
+  'error.twoFactorOn.title': 'Tvåfaktorsautentisering är redan på',
+  'error.twoFactorOn.detail':
+    'Om du ställer in den igen skulle din nuvarande autentiseringsapp sluta fungera, så inget har ändrats. Du kan hantera den här.',
   'error.noTwoFactor.title': 'Det andra steget är inte inställt',
   'error.noTwoFactor.detail':
     'Logga in med mejladress och lösenord för att fortsätta.',

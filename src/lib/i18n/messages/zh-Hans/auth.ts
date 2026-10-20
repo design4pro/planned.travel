@@ -283,6 +283,9 @@ const messages = {
     '每个备用码只能用一次。请试试清单里还没用过的下一个。',
   'error.locked.title': '账号已暂时锁定',
   'error.locked.detail': '验证失败太多次。为了安全，这个账号会锁定几分钟。',
+  'error.twoFactorOn.title': '双重验证已开启',
+  'error.twoFactorOn.detail':
+    '重新设置会导致当前的身份验证器失效，因此未作任何更改。你可以在此管理。',
   'error.noTwoFactor.title': '还没有设置两步验证',
   'error.noTwoFactor.detail': '用邮箱和密码登录就能继续。',
   'error.twoFactorExpired.title': '请从登录重新开始',

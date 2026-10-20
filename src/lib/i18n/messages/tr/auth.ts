@@ -353,6 +353,9 @@ const messages = {
   'error.locked.title': 'Hesap geçici olarak kilitli',
   'error.locked.detail':
     'Çok fazla başarısız doğrulama denemesi. Güvenliğiniz için bu hesap birkaç dakika kilitli.',
+  'error.twoFactorOn.title': 'İki faktörlü kimlik doğrulama zaten açık',
+  'error.twoFactorOn.detail':
+    'Yeniden ayarlamak mevcut doğrulayıcının çalışmasını durduracağı için hiçbir şey değiştirilmedi. Buradan yönetebilirsin.',
   'error.noTwoFactor.title': 'İki adımlı doğrulama kurulmamış',
   'error.noTwoFactor.detail':
     'Devam etmek için e-postanız ve şifrenizle giriş yapın.',

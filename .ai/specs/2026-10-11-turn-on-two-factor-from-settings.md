@@ -685,3 +685,18 @@ The "Show setup key again" dialog, its call, its keys; it mounts `TwoFactorKey`.
 | 18  | Panel round 1 (product owner, software architect, security and tenancy, accessibility, traveller)                                  | All five: **approve with conditions**. Every condition applied in the commit that follows the first commit of this spec: replace-codes moved into the first screen ticket, one `TwoFactorKey`, pinned hook and test, screen-local 429 and field errors, Session Replay blocking, leave guard, copy and accessibility fixes | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; no specialist answered revise                                                                                                                                                                                                                    |
 | 19  | Panel round 2 (product owner, security and tenancy, software architect, accessibility)                                             | Product owner: **approve**. Security and tenancy: **approve**. Software architect: **approve with conditions** (reword the on-mount call claim; applied). Accessibility: **approve with conditions** (four focus-path wording fixes; applied). Both conditions were wording only; no third round was needed                | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; nobody answered revise after round 2 and the security reviewer approved                                                                                                                                                                          |
 | 20  | Security verdict on head `70f7e7c6` (autopilot round 1)                                                                            | **Ship with fixes**; five conditions applied to the spec text: the guard fails closed, checks its path inside the handler, and each half of its condition is tested alone; no Sentry capture of auth responses; the shared rate-limit bucket is named                                                                      | Decided by security and tenancy sub-agent (confidence high): every claim checked out against the library and the repository; the conditions bind tickets 09-S2a and 09-S2b                                                                                                                                   |
+
+## Amendment - 09-S2a session-read failure handling (#1150)
+
+Implementation uses the public `getSession()` endpoint directly rather than `getSessionFromCtx`.
+The installed Better Auth 1.7.1 helper catches session-read errors and returns `null`; falling through
+would let the endpoint retry that read and potentially reach setup. The guard instead propagates the
+error, bypasses cookie-cache reads, forwards session response headers as the library helper does, and
+sets the resolved session on the context. Fresh user and factor reads still go through the auth adapter
+and use only the session user's id. This preserves the endpoint's own 401 for a missing session.
+
+The real-handler regression tests live in `src/server/auth/__tests__/auth-handler-closure.test.ts`,
+reusing its in-memory database and production auth instance. Each new request supplies a distinct
+`cf-connecting-ip`; production rate limits remain unchanged. The check-then-act race described above
+remains: this guard does not serialize enable against a concurrent verification. The implementation PR
+number will be recorded by the PR-opening step.

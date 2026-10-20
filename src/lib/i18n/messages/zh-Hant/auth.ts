@@ -283,6 +283,9 @@ const messages = {
     '每一組備用碼只能用一次。請試試清單裡還沒用過的下一組。',
   'error.locked.title': '帳號暫時鎖住了',
   'error.locked.detail': '驗證失敗太多次。為了安全，這個帳號會鎖上幾分鐘。',
+  'error.twoFactorOn.title': '雙重驗證已開啟',
+  'error.twoFactorOn.detail':
+    '重新設定會導致目前的驗證器失效，因此未作任何變更。你可以在此管理。',
   'error.noTwoFactor.title': '還沒有設定兩步驗證',
   'error.noTwoFactor.detail': '用電子郵件和密碼登入就能繼續。',
   'error.twoFactorExpired.title': '請從登入重新開始',

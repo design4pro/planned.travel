@@ -347,6 +347,9 @@ const messages = {
   'error.locked.title': 'Akun terkunci sementara',
   'error.locked.detail':
     'Terlalu banyak percobaan verifikasi yang gagal. Demi keamanan, akun ini terkunci beberapa menit.',
+  'error.twoFactorOn.title': 'Autentikasi dua faktor sudah aktif',
+  'error.twoFactorOn.detail':
+    'Menyiapkannya kembali akan membuat autentikator saat ini berhenti berfungsi, jadi tidak ada yang diubah. Kamu dapat mengelolanya di sini.',
   'error.noTwoFactor.title': 'Verifikasi dua langkah belum disiapkan',
   'error.noTwoFactor.detail':
     'Masuk dengan email dan kata sandi Anda untuk melanjutkan.',

@@ -363,6 +363,9 @@ const messages = {
   'error.locked.title': 'Account bloccato per un po’',
   'error.locked.detail':
     'Troppe verifiche fallite. Per sicurezza questo account resta bloccato qualche minuto.',
+  'error.twoFactorOn.title': 'L’autenticazione a due fattori è già attiva',
+  'error.twoFactorOn.detail':
+    'Configurarla di nuovo impedirebbe al tuo autenticatore attuale di funzionare, quindi non è stato modificato nulla. Puoi gestirla qui.',
   'error.noTwoFactor.title': 'La verifica in due passaggi non è attiva',
   'error.noTwoFactor.detail':
     'Entra con la tua email e la tua password per continuare.',

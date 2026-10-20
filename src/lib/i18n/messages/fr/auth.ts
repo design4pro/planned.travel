@@ -373,6 +373,10 @@ const messages = {
   'error.locked.title': 'Compte temporairement verrouillé',
   'error.locked.detail':
     'Trop de vérifications ont échoué. Par sécurité, ce compte est verrouillé quelques minutes.',
+  'error.twoFactorOn.title':
+    'L’authentification à deux facteurs est déjà activée',
+  'error.twoFactorOn.detail':
+    'La configurer à nouveau empêcherait votre application d’authentification actuelle de fonctionner. Rien n’a donc été modifié. Vous pouvez la gérer ici.',
   'error.noTwoFactor.title': 'La vérification en deux étapes n’est pas active',
   'error.noTwoFactor.detail':
     'Connectez-vous avec votre e-mail et votre mot de passe pour continuer.',

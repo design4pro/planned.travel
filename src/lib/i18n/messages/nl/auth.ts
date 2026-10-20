@@ -362,6 +362,9 @@ const messages = {
   'error.locked.title': 'Account tijdelijk op slot',
   'error.locked.detail':
     'Te veel mislukte pogingen. Voor je veiligheid staat dit account een paar minuten op slot.',
+  'error.twoFactorOn.title': 'Tweestapsverificatie staat al aan',
+  'error.twoFactorOn.detail':
+    'Opnieuw instellen zou ervoor zorgen dat je huidige authenticator niet meer werkt. Daarom is er niets gewijzigd. Je kunt deze hier beheren.',
   'error.noTwoFactor.title': 'De tweede stap staat niet ingesteld',
   'error.noTwoFactor.detail':
     'Log in met je e-mailadres en wachtwoord om door te gaan.',

@@ -31,6 +31,7 @@
 
 import { DatabaseSync } from 'node:sqlite'
 import { betterAuth } from 'better-auth'
+import { symmetricDecrypt } from 'better-auth/crypto'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import {
   generateSQLiteDrizzleJson,
@@ -1962,4 +1963,200 @@ it('keeps the in-process acceptance contract and durable membership after activa
     (await getAuth().api.getSession({ headers: nextHeaders }))?.session
       .activeOrganizationId,
   ).toBe(org.id)
+})
+
+describe('two-factor setup protects a working factor', () => {
+  let nextAccount = 0
+  let nextAddress = 0
+
+  // Every call has a new IP; the plugin's production 3-per-10-seconds limit stays intact.
+  function factorPost(path: string, body: unknown, cookie?: string) {
+    return getAuth().handler(
+      new Request(`${AUTH_BASE}${path}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          origin: BASE_URL,
+          'cf-connecting-ip': `192.0.2.${++nextAddress}`,
+          ...(cookie ? { cookie } : {}),
+        },
+        body: JSON.stringify(body),
+      }),
+    )
+  }
+
+  async function person() {
+    const email = `factor-${++nextAccount}@planned.travel`
+    const created = await factorPost('/sign-up/email', {
+      email,
+      password: PASSWORD,
+      name: email,
+    })
+    expect(created.status).toBe(200)
+    const { user } = (await created.json()) as { user: { id: string } }
+    const signedIn = await factorPost('/sign-in/email', {
+      email,
+      password: PASSWORD,
+    })
+    expect(signedIn.status).toBe(200)
+    return { id: user.id, cookie: sessionCookie(signedIn) }
+  }
+
+  function stored(id: string) {
+    return sqlite.prepare('select * from two_factor where user_id = ?').get(id)
+  }
+
+  async function codeFor(id: string) {
+    const row = stored(id) as { secret: string }
+    const context = await getAuth().$context
+    const secret = await symmetricDecrypt({
+      key: context.secretConfig,
+      data: row.secret,
+    })
+    return (await getAuth().api.generateTOTP({ body: { secret } })).code
+  }
+
+  async function enrol(cookie: string) {
+    const response = await factorPost(
+      '/two-factor/enable',
+      { password: PASSWORD },
+      cookie,
+    )
+    expect(response.status).toBe(200)
+    return response.json()
+  }
+
+  it.each([
+    { flag: true, row: 'verified' },
+    { flag: true, row: 'none' },
+    { flag: true, row: 'unverified' },
+    { flag: false, row: 'verified' },
+  ])(
+    'refuses flag=$flag with $row row using fresh state',
+    async ({ flag, row }) => {
+      const { id, cookie } = await person()
+      if (row !== 'none') await enrol(cookie)
+      sqlite
+        .prepare('update user set two_factor_enabled = ? where id = ?')
+        .run(flag ? 1 : 0, id)
+      if (row !== 'none') {
+        sqlite
+          .prepare('update two_factor set verified = ? where user_id = ?')
+          .run(row === 'verified' ? 1 : 0, id)
+      }
+      const before = stored(id)
+      const response = await factorPost(
+        '/two-factor/enable',
+        { password: PASSWORD },
+        cookie,
+      )
+      expect(response.status).toBe(400)
+      expect(await response.json()).toMatchObject({
+        code: 'TWO_FACTOR_ALREADY_ENABLED',
+      })
+      expect(stored(id)).toEqual(before)
+      if (row === 'verified') {
+        const verification = await factorPost(
+          '/two-factor/verify-totp',
+          { code: await codeFor(id) },
+          cookie,
+        )
+        expect(verification.status).toBe(200)
+      }
+    },
+  )
+
+  it('allows a new setup, an abandoned setup, and a setup after disable', async () => {
+    const { id, cookie } = await person()
+    await enrol(cookie)
+    const abandoned = stored(id)
+    await enrol(cookie)
+    expect(stored(id)).not.toEqual(abandoned)
+    const verified = await factorPost(
+      '/two-factor/verify-totp',
+      { code: await codeFor(id) },
+      cookie,
+    )
+    expect(verified.status).toBe(200)
+    const enabledCookie = sessionCookie(verified)
+    const disabled = await factorPost(
+      '/two-factor/disable',
+      { password: PASSWORD },
+      enabledCookie,
+    )
+    expect(disabled.status).toBe(200)
+    expect(stored(id)).toBeUndefined()
+    await enrol(sessionCookie(disabled))
+  })
+
+  it('leaves an unauthenticated request to the endpoint 401', async () => {
+    const response = await factorPost('/two-factor/enable', {
+      password: PASSWORD,
+    })
+    expect(response.status).toBe(401)
+    expect(await response.json()).toMatchObject({ code: 'UNAUTHORIZED' })
+  })
+
+  it.each(['session', 'store'] as const)(
+    'fails closed when the %s read throws',
+    async (read) => {
+      const { id, cookie } = await person()
+      await enrol(cookie)
+      const before = stored(id)
+      const context = await getAuth().$context
+      const verifyPassword = vi.spyOn(context.password, 'verify')
+      const update = vi.spyOn(context.adapter, 'update')
+      const create = vi.spyOn(context.adapter, 'create')
+      const session = vi.spyOn(context.internalAdapter, 'findSession')
+      const find = vi.spyOn(context.adapter, 'findOne')
+      if (read === 'session')
+        session.mockRejectedValueOnce(new Error('session unavailable'))
+      else find.mockRejectedValueOnce(new Error('auth store unavailable'))
+      const response = await factorPost(
+        '/two-factor/enable',
+        { password: PASSWORD },
+        cookie,
+      )
+      expect(response.status).toBe(500)
+      expect(verifyPassword).not.toHaveBeenCalled()
+      expect(update).not.toHaveBeenCalled()
+      expect(create).not.toHaveBeenCalled()
+      expect(stored(id)).toEqual(before)
+      if (read === 'session') expect(session).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('keeps the plugin after-sign-in challenge running', async () => {
+    const { id, cookie } = await person()
+    await enrol(cookie)
+    const confirmed = await factorPost(
+      '/two-factor/verify-totp',
+      { code: await codeFor(id) },
+      cookie,
+    )
+    expect(confirmed.status).toBe(200)
+    const signedIn = await factorPost('/sign-in/email', {
+      email: `factor-${nextAccount}@planned.travel`,
+      password: PASSWORD,
+    })
+    expect(signedIn.status).toBe(200)
+    expect(await signedIn.json()).toMatchObject({ twoFactorRedirect: true })
+    expect(
+      signedIn.headers
+        .getSetCookie()
+        .some((value) => value.startsWith('planned.two_factor=')),
+    ).toBe(true)
+  })
+
+  it('does not apply another person’s factor to the signed-in person', async () => {
+    const other = await person()
+    await enrol(other.cookie)
+    sqlite
+      .prepare('update two_factor set verified = 1 where user_id = ?')
+      .run(other.id)
+    const before = stored(other.id)
+    const own = await person()
+    await enrol(own.cookie)
+    expect(stored(other.id)).toEqual(before)
+  })
 })

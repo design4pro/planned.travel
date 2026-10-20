@@ -141,6 +141,11 @@ const BY_CODE: Record<string, AuthMessage | undefined> = {
     'auth.error.locked.detail',
     'warning',
   ),
+  TWO_FACTOR_ALREADY_ENABLED: alert(
+    'auth.error.twoFactorOn.title',
+    'auth.error.twoFactorOn.detail',
+    'warning',
+  ),
   TWO_FACTOR_NOT_ENABLED: alert(
     'auth.error.noTwoFactor.title',
     'auth.error.noTwoFactor.detail',

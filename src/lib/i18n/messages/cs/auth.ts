@@ -358,6 +358,9 @@ const messages = {
   'error.locked.title': 'Účet je dočasně zamčený',
   'error.locked.detail':
     'Příliš mnoho neúspěšných pokusů o ověření. Kvůli bezpečnosti je účet na pár minut zamčený.',
+  'error.twoFactorOn.title': 'Dvoufázové ověření už je zapnuté',
+  'error.twoFactorOn.detail':
+    'Nové nastavení by zastavilo fungování současného autentikátoru, proto se nic nezměnilo. Spravovat ho můžete zde.',
   'error.noTwoFactor.title': 'Dvoufázové ověření není nastavené',
   'error.noTwoFactor.detail': 'Pokračujte přihlášením e-mailem a heslem.',
   'error.twoFactorExpired.title': 'Začněte znovu od přihlášení',
