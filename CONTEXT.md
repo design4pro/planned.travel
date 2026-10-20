@@ -74,3 +74,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
+
+- **Backup code** - a one-use code for signing in when the authenticator app is unavailable. A set is shown once when two-factor authentication is enabled or the codes are replaced. Replacing a set invalidates the previous set. Use “backup code”; avoid “recovery code”.

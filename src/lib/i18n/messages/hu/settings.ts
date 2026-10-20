@@ -214,7 +214,7 @@ const messages = {
   'security.password.action': 'Jelszó módosítása',
   'security.twoFactor.label': 'Kétfaktoros hitelesítés',
   'security.twoFactor.onHint':
-    'Minden új belépéshez kell egy kód a hitelesítő alkalmazásból.',
+    'E-mailes és jelszavas bejelentkezéskor kódot kérünk a hitelesítő alkalmazásból, kivéve, ha megbízol ebben a böngészőben.',
   'security.twoFactor.offHint':
     'Tegyen a jelszava mellé egy hatjegyű kódot egy hitelesítő alkalmazásból.',
   'security.twoFactor.on': 'Be',
@@ -672,6 +672,81 @@ const messages = {
   'workspace.departure.activationFailed':
     'Kiléptél ebből a munkaterületből. A folytatáshoz nyisd meg a következőt.',
   'workspace.departure.recover': 'Következő munkaterület megnyitása',
+  'twoFactor.back': 'Vissza a biztonsághoz',
+  'twoFactor.title': 'Kétlépcsős hitelesítés',
+  'twoFactor.description':
+    'Adj hozzá egy második lépést az e-mailes és jelszavas bejelentkezéshez.',
+  'twoFactor.error':
+    'Nem sikerült betölteni a kétlépcsős hitelesítés beállításait.',
+  'twoFactor.steps.label': 'Kétlépcsős hitelesítés beállítása',
+  'twoFactor.steps.password': 'Igazold a személyazonosságod',
+  'twoFactor.steps.key': 'Add hozzá a hitelesítő alkalmazáshoz',
+  'twoFactor.steps.confirm': 'Írj be egy kódot',
+  'twoFactor.steps.state.done': 'Kész',
+  'twoFactor.steps.state.current': 'Jelenlegi lépés',
+  'twoFactor.steps.state.todo': 'Még nem kezdődött el',
+  'twoFactor.password.label': 'A jelszavad',
+  'twoFactor.password.hint': 'A bejelentkezés módosítása előtt újra elkérjük.',
+  'twoFactor.password.submit': 'Tovább',
+  'twoFactor.password.pending': 'Beállítás folyamatban',
+  'twoFactor.password.invalid': 'Ez a jelszó helytelen.',
+  'twoFactor.key.intro':
+    'A telefonodon hitelesítő alkalmazásra van szükség. Add hozzá ezt a kulcsot, majd térj vissza ide. A kétlépcsős hitelesítés még nincs bekapcsolva.',
+  'twoFactor.key.label': 'Beállítási kulcs',
+  'twoFactor.key.copy': 'Kulcs másolása',
+  'twoFactor.key.copied': 'Kulcs másolva',
+  'twoFactor.key.copyFailed':
+    'A böngésző nem tudta másolni a kulcsot. Jelöld ki, és másold kézzel.',
+  'twoFactor.key.open': 'Megnyitás a hitelesítő alkalmazásban',
+  'twoFactor.key.startOver': 'Újrakezdés',
+  'twoFactor.key.startOverHint':
+    'Az újrakezdés új kulcsot hoz létre. Az alkalmazáshoz már hozzáadott kulcs nem fog működni.',
+  'twoFactor.key.next': 'Hozzáadtam',
+  'twoFactor.code.label': 'Kód az alkalmazásból',
+  'twoFactor.code.hint': 'Az alkalmazásban most látható hat számjegy.',
+  'twoFactor.code.submit': 'Kétlépcsős hitelesítés bekapcsolása',
+  'twoFactor.code.pending': 'Ellenőrzés',
+  'twoFactor.code.invalid':
+    'A kód nem egyezik. Ellenőrizd a telefon óráját, és írd be az alkalmazás legfrissebb kódját.',
+  'twoFactor.code.unclear':
+    'Nem tudjuk, hogy sikerült-e. Írd be a legfrissebb kódot az újrapróbáláshoz.',
+  'twoFactor.rateLimited.title': 'Túl sok próbálkozás rövid idő alatt',
+  'twoFactor.rateLimited.password':
+    'Várj körülbelül tíz másodpercet, majd próbáld újra. A beírt adatok megmaradtak.',
+  'twoFactor.rateLimited.code':
+    'Várj legfeljebb egy percet, majd próbáld újra. A beírt adatok megmaradtak.',
+  'twoFactor.codes.title': 'A tartalékkódjaid',
+  'twoFactor.codes.body':
+    'Minden kód egyszer használható, ha elveszíted a telefonod. Csak most láthatók, ezért tárold őket biztonságosan.',
+  'twoFactor.codes.copyAll': 'Összes másolása',
+  'twoFactor.codes.copied': 'Tartalékkódok másolva',
+  'twoFactor.codes.download': 'Letöltés szövegfájlként',
+  'twoFactor.codes.copyFailed':
+    'A böngésző nem tudta másolni a kódokat. Jelöld ki, és másold kézzel.',
+  'twoFactor.codes.stored': 'Elmentettem ezeket a tartalékkódokat',
+  'twoFactor.codes.done': 'Befejezés',
+  'twoFactor.codes.gate': 'Jelöld be a négyzetet a folytatáshoz.',
+  'twoFactor.codes.lost':
+    'Ha előbb elhagyod ezt az oldalt, itt készíthetsz új kódkészletet. A régi nem fog működni.',
+  'twoFactor.codes.leave.title': 'Kilépsz a kódok mentése nélkül?',
+  'twoFactor.codes.leave.body':
+    'A tartalékkódok csak egyszer láthatók. Ha most kilépsz, itt készíthetsz új készletet. A régi nem fog működni.',
+  'twoFactor.codes.leave.stay': 'Maradok',
+  'twoFactor.codes.leave.go': 'Kilépés',
+  'twoFactor.on.title': 'A kétlépcsős hitelesítés be van kapcsolva',
+  'twoFactor.on.badge': 'Bekapcsolva',
+  'twoFactor.on.body':
+    'E-mailes és jelszavas bejelentkezéskor kódot kérünk az alkalmazásból, kivéve, ha megbízol ebben a böngészőben. A Google-, Apple- vagy hozzáférési kulcsos bejelentkezés nem kér kódot.',
+  'twoFactor.replace.action': 'Tartalékkódok cseréje',
+  'twoFactor.replace.title': 'Lecseréled a tartalékkódjaidat?',
+  'twoFactor.replace.body':
+    'Új készletet kapsz. A jelenlegi a folytatás pillanatában érvénytelenné válik.',
+  'twoFactor.replace.confirm': 'Csere',
+  'twoFactor.replace.pending': 'Csere folyamatban',
+  'twoFactor.nopassword.title': 'Először állíts be jelszót',
+  'twoFactor.nopassword.body':
+    'Ehhez a fiókhoz jelszó szükséges a kétlépcsős hitelesítéshez. A következő oldal elkéri az e-mail-címed, és beállítási hivatkozást küld. A jelszó beállítása mindenhol kijelentkeztet. Jelentkezz be újra, és térj vissza ide.',
+  'twoFactor.nopassword.action': 'Jelszó beállítása',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -211,7 +211,7 @@ const messages = {
   'security.password.action': 'Şifreyi değiştir',
   'security.twoFactor.label': 'İki adımlı doğrulama',
   'security.twoFactor.onHint':
-    'Her yeni girişte doğrulayıcı uygulamanızdan bir kod istenir.',
+    'Bu tarayıcıya güvenmiyorsanız e-posta ve parolayla girişte doğrulayıcı uygulamanızdan bir kod istenir.',
   'security.twoFactor.offHint':
     'Şifrenizin üstüne bir doğrulayıcı uygulamadan altı haneli kod ekleyin.',
   'security.twoFactor.on': 'Açık',
@@ -662,6 +662,81 @@ const messages = {
   'workspace.departure.activationFailed':
     'Bu çalışma alanından ayrıldınız. Devam etmek için sonraki çalışma alanını açın.',
   'workspace.departure.recover': 'Sonraki çalışma alanını aç',
+  'twoFactor.back': 'Güvenliğe dön',
+  'twoFactor.title': 'İki faktörlü kimlik doğrulama',
+  'twoFactor.description':
+    'E-posta ve parolayla giriş yaparken ikinci bir adım ekleyin.',
+  'twoFactor.error': 'İki faktör ayarlarınız yüklenemedi.',
+  'twoFactor.steps.label': 'İki faktörü ayarla',
+  'twoFactor.steps.password': 'Kimliğinizi doğrulayın',
+  'twoFactor.steps.key': 'Doğrulayıcı uygulamanıza ekleyin',
+  'twoFactor.steps.confirm': 'Bir kod girin',
+  'twoFactor.steps.state.done': 'Tamamlandı',
+  'twoFactor.steps.state.current': 'Geçerli adım',
+  'twoFactor.steps.state.todo': 'Başlanmadı',
+  'twoFactor.password.label': 'Parolanız',
+  'twoFactor.password.hint':
+    'Giriş yönteminizi değiştirmeden önce yeniden sorarız.',
+  'twoFactor.password.submit': 'Devam et',
+  'twoFactor.password.pending': 'Ayarlanıyor',
+  'twoFactor.password.invalid': 'Bu parola doğru değil.',
+  'twoFactor.key.intro':
+    'Telefonunuzda bir doğrulayıcı uygulaması gerekiyor. Bu anahtarı ekleyip buraya dönün. İki faktör henüz açık değil.',
+  'twoFactor.key.label': 'Kurulum anahtarı',
+  'twoFactor.key.copy': 'Anahtarı kopyala',
+  'twoFactor.key.copied': 'Anahtar kopyalandı',
+  'twoFactor.key.copyFailed':
+    'Tarayıcınız anahtarı kopyalayamadı. Seçip elle kopyalayın.',
+  'twoFactor.key.open': 'Doğrulayıcı uygulamanızda aç',
+  'twoFactor.key.startOver': 'Baştan başla',
+  'twoFactor.key.startOverHint':
+    'Baştan başlamak yeni bir anahtar oluşturur. Bir uygulamaya eklediğiniz eski anahtar çalışmayı durdurur.',
+  'twoFactor.key.next': 'Ekledim',
+  'twoFactor.code.label': 'Uygulamadaki kod',
+  'twoFactor.code.hint': 'Uygulamanın şu anda gösterdiği altı rakam.',
+  'twoFactor.code.submit': 'İki faktörü aç',
+  'twoFactor.code.pending': 'Kontrol ediliyor',
+  'twoFactor.code.invalid':
+    'Kod eşleşmedi. Telefonunuzun saatini kontrol edip uygulamadaki en yeni kodu girin.',
+  'twoFactor.code.unclear':
+    'İşlemin başarılı olup olmadığını anlayamadık. Tekrar denemek için en yeni kodu girin.',
+  'twoFactor.rateLimited.title': 'Kısa sürede çok fazla deneme',
+  'twoFactor.rateLimited.password':
+    'Yaklaşık on saniye bekleyip tekrar deneyin. Yazdıklarınız korundu.',
+  'twoFactor.rateLimited.code':
+    'Bir dakikaya kadar bekleyip tekrar deneyin. Yazdıklarınız korundu.',
+  'twoFactor.codes.title': 'Yedek kodlarınız',
+  'twoFactor.codes.body':
+    'Telefonunuzu kaybederseniz her kod bir kez çalışır. Yalnızca şimdi gösterilirler; güvenli bir yerde saklayın.',
+  'twoFactor.codes.copyAll': 'Tümünü kopyala',
+  'twoFactor.codes.copied': 'Yedek kodlar kopyalandı',
+  'twoFactor.codes.download': 'Metin dosyası olarak indir',
+  'twoFactor.codes.copyFailed':
+    'Tarayıcınız kodları kopyalayamadı. Seçip elle kopyalayın.',
+  'twoFactor.codes.stored': 'Bu yedek kodları sakladım',
+  'twoFactor.codes.done': 'Bitti',
+  'twoFactor.codes.gate': 'Devam etmek için kutuyu işaretleyin.',
+  'twoFactor.codes.lost':
+    'Bu sayfadan önce ayrılırsanız buradan yeni bir küme oluşturabilirsiniz. Eskisi çalışmayı durdurur.',
+  'twoFactor.codes.leave.title': 'Kodları saklamadan ayrılsın mı?',
+  'twoFactor.codes.leave.body':
+    'Yedek kodlarınız yalnızca bir kez gösterilir. Şimdi ayrılırsanız buradan yeni bir küme oluşturabilirsiniz. Eskisi çalışmayı durdurur.',
+  'twoFactor.codes.leave.stay': 'Burada kal',
+  'twoFactor.codes.leave.go': 'Ayrıl',
+  'twoFactor.on.title': 'İki faktör açık',
+  'twoFactor.on.badge': 'Açık',
+  'twoFactor.on.body':
+    'Bu tarayıcıya güvenmiyorsanız e-posta ve parolayla girişte uygulamanızdan bir kod isteriz. Google, Apple veya geçiş anahtarıyla giriş kod istemez.',
+  'twoFactor.replace.action': 'Yedek kodları değiştir',
+  'twoFactor.replace.title': 'Yedek kodlarınız değiştirilsin mi?',
+  'twoFactor.replace.body':
+    'Yeni bir küme alacaksınız. Devam ettiğiniz anda mevcut küme çalışmayı durdurur.',
+  'twoFactor.replace.confirm': 'Değiştir',
+  'twoFactor.replace.pending': 'Değiştiriliyor',
+  'twoFactor.nopassword.title': 'Önce bir parola belirleyin',
+  'twoFactor.nopassword.body':
+    'İki faktör bu hesapta bir parola gerektirir. Sonraki sayfa e-postanızı ister ve ayarlamak için bağlantı gönderir. Parola belirlemek her yerde oturumunuzu kapatır. Tekrar giriş yapıp buraya dönün.',
+  'twoFactor.nopassword.action': 'Parola belirle',
 } satisfies TranslationOf<typeof En>
 
 export default messages

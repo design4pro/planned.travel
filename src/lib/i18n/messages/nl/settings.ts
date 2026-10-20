@@ -218,7 +218,7 @@ const messages = {
   'security.password.action': 'Wachtwoord wijzigen',
   'security.twoFactor.label': 'Tweestapsverificatie',
   'security.twoFactor.onHint':
-    'Bij elke nieuwe login wordt een code uit je verificatie-app gevraagd.',
+    'Bij aanmelden met e-mail en wachtwoord vragen we een code uit je app, tenzij je deze browser vertrouwt.',
   'security.twoFactor.offHint':
     'Zet naast je wachtwoord een code van zes cijfers uit een verificatie-app.',
   'security.twoFactor.on': 'Aan',
@@ -678,6 +678,82 @@ const messages = {
   'workspace.departure.activationFailed':
     'Je hebt deze werkruimte verlaten. Open de volgende om verder te gaan.',
   'workspace.departure.recover': 'Volgende werkruimte openen',
+  'twoFactor.back': 'Terug naar beveiliging',
+  'twoFactor.title': 'Tweestapsverificatie',
+  'twoFactor.description':
+    'Voeg een tweede stap toe bij aanmelden met e-mail en wachtwoord.',
+  'twoFactor.error':
+    'Je instellingen voor tweestapsverificatie konden niet worden geladen.',
+  'twoFactor.steps.label': 'Tweestapsverificatie instellen',
+  'twoFactor.steps.password': 'Bevestig je identiteit',
+  'twoFactor.steps.key': 'Voeg toe aan je authenticator-app',
+  'twoFactor.steps.confirm': 'Voer een code in',
+  'twoFactor.steps.state.done': 'Voltooid',
+  'twoFactor.steps.state.current': 'Huidige stap',
+  'twoFactor.steps.state.todo': 'Niet gestart',
+  'twoFactor.password.label': 'Je wachtwoord',
+  'twoFactor.password.hint':
+    'We vragen dit opnieuw voordat je manier van aanmelden verandert.',
+  'twoFactor.password.submit': 'Doorgaan',
+  'twoFactor.password.pending': 'Wordt ingesteld',
+  'twoFactor.password.invalid': 'Dit wachtwoord klopt niet.',
+  'twoFactor.key.intro':
+    'Je hebt een authenticator-app op je telefoon nodig. Voeg deze sleutel toe en kom hier terug. Tweestapsverificatie staat nog niet aan.',
+  'twoFactor.key.label': 'Instelsleutel',
+  'twoFactor.key.copy': 'Sleutel kopiëren',
+  'twoFactor.key.copied': 'Sleutel gekopieerd',
+  'twoFactor.key.copyFailed':
+    'Je browser kon de sleutel niet kopiëren. Selecteer en kopieer hem handmatig.',
+  'twoFactor.key.open': 'Openen in je authenticator-app',
+  'twoFactor.key.startOver': 'Opnieuw beginnen',
+  'twoFactor.key.startOverHint':
+    'Opnieuw beginnen maakt een nieuwe sleutel. Een sleutel die je al aan een app hebt toegevoegd, werkt dan niet meer.',
+  'twoFactor.key.next': 'Ik heb hem toegevoegd',
+  'twoFactor.code.label': 'Code uit de app',
+  'twoFactor.code.hint': 'De zes cijfers die de app nu toont.',
+  'twoFactor.code.submit': 'Tweestapsverificatie aanzetten',
+  'twoFactor.code.pending': 'Wordt gecontroleerd',
+  'twoFactor.code.invalid':
+    'Deze code klopt niet. Controleer de tijd op je telefoon en voer de nieuwste code uit de app in.',
+  'twoFactor.code.unclear':
+    'We konden niet vaststellen of het gelukt is. Voer de nieuwste code in om opnieuw te proberen.',
+  'twoFactor.rateLimited.title': 'Te veel pogingen kort na elkaar',
+  'twoFactor.rateLimited.password':
+    'Wacht ongeveer tien seconden en probeer opnieuw. Je invoer blijft bewaard.',
+  'twoFactor.rateLimited.code':
+    'Wacht maximaal een minuut en probeer opnieuw. Je invoer blijft bewaard.',
+  'twoFactor.codes.title': 'Je back-upcodes',
+  'twoFactor.codes.body':
+    'Elke code werkt eenmaal als je je telefoon verliest. Je ziet ze alleen nu, dus bewaar ze veilig.',
+  'twoFactor.codes.copyAll': 'Alles kopiëren',
+  'twoFactor.codes.copied': 'Back-upcodes gekopieerd',
+  'twoFactor.codes.download': 'Downloaden als tekstbestand',
+  'twoFactor.codes.copyFailed':
+    'Je browser kon de codes niet kopiëren. Selecteer en kopieer ze handmatig.',
+  'twoFactor.codes.stored': 'Ik heb deze back-upcodes bewaard',
+  'twoFactor.codes.done': 'Klaar',
+  'twoFactor.codes.gate': 'Vink het vakje aan om door te gaan.',
+  'twoFactor.codes.lost':
+    'Als je deze pagina eerder verlaat, kun je hier een nieuwe set maken. De oude werkt dan niet meer.',
+  'twoFactor.codes.leave.title': 'Verlaten zonder je codes te bewaren?',
+  'twoFactor.codes.leave.body':
+    'Je back-upcodes worden maar eenmaal getoond. Als je nu vertrekt, kun je hier een nieuwe set maken. De oude werkt dan niet meer.',
+  'twoFactor.codes.leave.stay': 'Hier blijven',
+  'twoFactor.codes.leave.go': 'Verlaten',
+  'twoFactor.on.title': 'Tweestapsverificatie staat aan',
+  'twoFactor.on.badge': 'Aan',
+  'twoFactor.on.body':
+    'We vragen een app-code bij aanmelden met e-mail en wachtwoord, tenzij je deze browser vertrouwt. Aanmelden met Google, Apple of een toegangssleutel vraagt geen code.',
+  'twoFactor.replace.action': 'Back-upcodes vervangen',
+  'twoFactor.replace.title': 'Je back-upcodes vervangen?',
+  'twoFactor.replace.body':
+    'Je krijgt een nieuwe set. De huidige werkt niet meer zodra je doorgaat.',
+  'twoFactor.replace.confirm': 'Vervangen',
+  'twoFactor.replace.pending': 'Wordt vervangen',
+  'twoFactor.nopassword.title': 'Stel eerst een wachtwoord in',
+  'twoFactor.nopassword.body':
+    'Tweestapsverificatie vereist een wachtwoord voor dit account. De volgende pagina vraagt je e-mail en stuurt een instellink. Een wachtwoord instellen meldt je overal af. Meld je opnieuw aan en kom hier terug.',
+  'twoFactor.nopassword.action': 'Wachtwoord instellen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

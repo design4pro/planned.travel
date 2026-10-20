@@ -217,7 +217,7 @@ const messages = {
   'security.password.action': 'Mudar a senha',
   'security.twoFactor.label': 'Verificação em duas etapas',
   'security.twoFactor.onHint':
-    'Um código do seu aplicativo autenticador é pedido em todo acesso novo.',
+    'Um código do aplicativo é solicitado ao entrar com e-mail e senha, a menos que este navegador seja confiável.',
   'security.twoFactor.offHint':
     'Some um código de seis dígitos de um aplicativo autenticador à sua senha.',
   'security.twoFactor.on': 'Ligada',
@@ -678,6 +678,82 @@ const messages = {
   'workspace.departure.activationFailed':
     'Você saiu deste espaço de trabalho. Abra o próximo para continuar.',
   'workspace.departure.recover': 'Abrir o próximo espaço',
+  'twoFactor.back': 'Voltar à segurança',
+  'twoFactor.title': 'Autenticação de dois fatores',
+  'twoFactor.description':
+    'Adicione uma segunda etapa ao entrar com e-mail e senha.',
+  'twoFactor.error':
+    'Não foi possível carregar suas configurações de dois fatores.',
+  'twoFactor.steps.label': 'Configurar dois fatores',
+  'twoFactor.steps.password': 'Confirme sua identidade',
+  'twoFactor.steps.key': 'Adicione ao aplicativo autenticador',
+  'twoFactor.steps.confirm': 'Digite um código',
+  'twoFactor.steps.state.done': 'Concluído',
+  'twoFactor.steps.state.current': 'Etapa atual',
+  'twoFactor.steps.state.todo': 'Não iniciado',
+  'twoFactor.password.label': 'Sua senha',
+  'twoFactor.password.hint':
+    'Pedimos novamente antes de mudar como você entra.',
+  'twoFactor.password.submit': 'Continuar',
+  'twoFactor.password.pending': 'Configurando',
+  'twoFactor.password.invalid': 'Essa senha está incorreta.',
+  'twoFactor.key.intro':
+    'Você precisa de um aplicativo autenticador no celular. Adicione esta chave e volte aqui. Os dois fatores ainda não estão ativados.',
+  'twoFactor.key.label': 'Chave de configuração',
+  'twoFactor.key.copy': 'Copiar chave',
+  'twoFactor.key.copied': 'Chave copiada',
+  'twoFactor.key.copyFailed':
+    'O navegador não copiou a chave. Selecione e copie manualmente.',
+  'twoFactor.key.open': 'Abrir no aplicativo autenticador',
+  'twoFactor.key.startOver': 'Recomeçar',
+  'twoFactor.key.startOverHint':
+    'Recomeçar cria uma nova chave. Uma chave já adicionada a um aplicativo deixará de funcionar.',
+  'twoFactor.key.next': 'Já adicionei',
+  'twoFactor.code.label': 'Código do aplicativo',
+  'twoFactor.code.hint': 'Os seis dígitos que o aplicativo mostra agora.',
+  'twoFactor.code.submit': 'Ativar dois fatores',
+  'twoFactor.code.pending': 'Verificando',
+  'twoFactor.code.invalid':
+    'O código não corresponde. Confira o horário do celular e digite o código mais recente do aplicativo.',
+  'twoFactor.code.unclear':
+    'Não foi possível saber se funcionou. Digite o código mais recente para tentar novamente.',
+  'twoFactor.rateLimited.title': 'Muitas tentativas em pouco tempo',
+  'twoFactor.rateLimited.password':
+    'Espere cerca de dez segundos e tente novamente. O que você digitou foi mantido.',
+  'twoFactor.rateLimited.code':
+    'Espere até um minuto e tente novamente. O que você digitou foi mantido.',
+  'twoFactor.codes.title': 'Seus códigos de backup',
+  'twoFactor.codes.body':
+    'Cada código funciona uma vez se você perder o celular. Eles só aparecem agora, então guarde em um lugar seguro.',
+  'twoFactor.codes.copyAll': 'Copiar todos',
+  'twoFactor.codes.copied': 'Códigos de backup copiados',
+  'twoFactor.codes.download': 'Baixar como arquivo de texto',
+  'twoFactor.codes.copyFailed':
+    'O navegador não copiou os códigos. Selecione e copie manualmente.',
+  'twoFactor.codes.stored': 'Guardei estes códigos de backup',
+  'twoFactor.codes.done': 'Pronto',
+  'twoFactor.codes.gate': 'Marque a caixa para continuar.',
+  'twoFactor.codes.lost':
+    'Se sair desta página antes, você poderá criar um novo conjunto aqui. O antigo deixará de funcionar.',
+  'twoFactor.codes.leave.title': 'Sair sem guardar seus códigos?',
+  'twoFactor.codes.leave.body':
+    'Seus códigos de backup aparecem uma única vez. Se sair agora, você poderá criar um novo conjunto aqui. O antigo deixará de funcionar.',
+  'twoFactor.codes.leave.stay': 'Ficar aqui',
+  'twoFactor.codes.leave.go': 'Sair',
+  'twoFactor.on.title': 'Dois fatores ativados',
+  'twoFactor.on.badge': 'Ativados',
+  'twoFactor.on.body':
+    'Pedimos um código do aplicativo ao entrar com e-mail e senha, a menos que este navegador seja confiável. Entrar com Google, Apple ou uma chave de acesso não pede código.',
+  'twoFactor.replace.action': 'Substituir códigos de backup',
+  'twoFactor.replace.title': 'Substituir seus códigos de backup?',
+  'twoFactor.replace.body':
+    'Você receberá um novo conjunto. O atual deixará de funcionar assim que continuar.',
+  'twoFactor.replace.confirm': 'Substituir',
+  'twoFactor.replace.pending': 'Substituindo',
+  'twoFactor.nopassword.title': 'Defina uma senha primeiro',
+  'twoFactor.nopassword.body':
+    'Os dois fatores precisam de uma senha nesta conta. A próxima página pede seu e-mail e envia um link para defini-la. Definir a senha encerra todas as sessões. Entre novamente e volte aqui.',
+  'twoFactor.nopassword.action': 'Definir uma senha',
 } satisfies TranslationOf<typeof En>
 
 export default messages
