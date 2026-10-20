@@ -409,7 +409,9 @@ export function CostsScreen({
 
         {data.canWrite ? null : (
           <Alert tone="info" size="sm" title={t('costs.readOnly.title')}>
-            {t('costs.readOnly.body')}
+            {trip.isArchived
+              ? t('costs.readOnly.archived')
+              : t('costs.readOnly.body')}
           </Alert>
         )}
 

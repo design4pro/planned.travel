@@ -188,6 +188,8 @@ const messages = {
   'payments.empty.body':
     'Sobald jemand einen Saldo zurückzahlt, wird die Überweisung hier erfasst.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Diese Reise ist archiviert. Stelle sie wieder her, bevor du die Kosten änderst.',
   'readOnly.title': 'Du kannst die Kosten ansehen, aber nicht ändern',
   'readOnly.body':
     'Ausgaben hinzufügen, ändern oder löschen und Zahlungen erfassen können nur die Eigentümer der Reise und Personen mit Bearbeitungsrechten. Wende dich an einen Eigentümer, wenn etwas geändert werden muss.',

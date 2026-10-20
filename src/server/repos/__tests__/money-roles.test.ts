@@ -5,7 +5,8 @@
  * workspace member who only reads an organization-visible trip, read. The guard sits in the
  * repository so it holds for every caller - the costs server functions, the booking ledger sync and
  * whatever route comes next - and each writer is asked in the order the boundary needs: the trip is
- * visible (`NotFoundError` if not), then the role (`TripRoleError` if not), then the write.
+ * visible (`NotFoundError` if not), then writable (`TripArchivedError` if not), then the role
+ * (`TripRoleError` if not), then the write.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -25,6 +26,10 @@ import {
   listBudgetItems,
   listSettlements,
   markShareSettled,
+  repriceExpense,
+  getTripSpendSummary,
+  listDailySpend,
+  suggestSettlements,
   setExpenseShares,
   updateBudgetItem,
   updateExpense,
@@ -34,7 +39,15 @@ import {
   getReservation,
   linkReservationExpense,
 } from '../reservations'
-import { TripRoleError, addTripMember, createTrip, updateTrip } from '../trips'
+import {
+  TripArchivedError,
+  TripRoleError,
+  addTripMember,
+  archiveTrip,
+  restoreTrip,
+  createTrip,
+  updateTrip,
+} from '../trips'
 import { captureError, createHarness } from './harness'
 import type { TenantScope } from '../base'
 import type { Harness, SeededTenant } from './harness'
@@ -140,6 +153,9 @@ describe('who writes a trip’s money', () => {
       budgetItems: await listBudgetItems(tenant.scope, ledger.tripId),
       settlements: await listSettlements(tenant.scope, ledger.tripId),
       balances: await getMemberBalances(tenant.scope, ledger.tripId),
+      summary: await getTripSpendSummary(tenant.scope, ledger.tripId),
+      daily: await listDailySpend(tenant.scope, ledger.tripId),
+      suggestions: await suggestSettlements(tenant.scope, ledger.tripId),
       bookingLink: (await getReservation(tenant.scope, ledger.reservationId))
         ?.expenseId,
     }
@@ -171,6 +187,15 @@ describe('who writes a trip’s money', () => {
           updateExpense(scope, tripId, ledger.expenseId, {
             title: 'Rewritten',
             amountMinor: 1,
+          }),
+      ],
+      [
+        'repriceExpense',
+        () =>
+          repriceExpense(scope, tripId, ledger.expenseId, {
+            title: 'Repriced',
+            amountMinor: 6001,
+            currency: 'EUR',
           }),
       ],
       [
@@ -218,7 +243,7 @@ describe('who writes a trip’s money', () => {
     ]
   }
 
-  const WRITER_COUNT = 10
+  const WRITER_COUNT = 11
 
   it('names every writer the repository has', () => {
     expect(writers(tenant.scope)).toHaveLength(WRITER_COUNT)
@@ -279,6 +304,101 @@ describe('who writes a trip’s money', () => {
     })
   })
 
+  describe('an archived ledger', () => {
+    it.each([
+      ['owner', () => tenant.scope],
+      ['editor', () => editor],
+      ['viewer', () => viewer],
+      ['workspace reader', () => reader],
+    ])(
+      'refuses every %s write before role and preserves all persisted data',
+      async (_role, who) => {
+        const before = await snapshot()
+        await archiveTrip(tenant.scope, ledger.tripId)
+        for (const [name, write] of writers(who())) {
+          const error = await captureError(write)
+          expect(error, name).toBeInstanceOf(TripArchivedError)
+          expect(error, name).toMatchObject({ code: 'TRIP_ARCHIVED' })
+          expect(await snapshot(), name).toEqual(before)
+        }
+      },
+    )
+
+    it.each([
+      ['owner', () => tenant.scope],
+      ['editor', () => editor],
+    ])('re-enables every %s writer after restoration', async (_role, who) => {
+      await archiveTrip(tenant.scope, ledger.tripId)
+      await restoreTrip(tenant.scope, ledger.tripId)
+      for (const [name, write] of writers(who())) {
+        await expect(write(), name).resolves.not.toBeInstanceOf(Error)
+      }
+    })
+
+    it('preserves every read for an archived viewer', async () => {
+      const read = async () => ({
+        expense: await getExpenseWithShares(viewer, ledger.expenseId),
+        budget: await listBudgetItems(viewer, ledger.tripId),
+        payments: await listSettlements(viewer, ledger.tripId),
+        balances: await getMemberBalances(viewer, ledger.tripId),
+        suggestions: await suggestSettlements(viewer, ledger.tripId),
+        summary: await getTripSpendSummary(viewer, ledger.tripId),
+        daily: await listDailySpend(viewer, ledger.tripId),
+      })
+      const before = await read()
+      await archiveTrip(tenant.scope, ledger.tripId)
+      expect(await read()).toEqual(before)
+    })
+
+    it('still refuses viewers after restoration', async () => {
+      await archiveTrip(tenant.scope, ledger.tripId)
+      await restoreTrip(tenant.scope, ledger.tripId)
+      for (const [name, write] of writers(viewer)) {
+        expect(await captureError(write), name).toBeInstanceOf(TripRoleError)
+      }
+    })
+
+    it('reveals no archived private trip to a workspace reader', async () => {
+      await updateTrip(tenant.scope, ledger.tripId, { visibility: 'private' })
+      await archiveTrip(tenant.scope, ledger.tripId)
+      const before = await snapshot()
+      for (const [name, write] of writers(reader)) {
+        expect(await captureError(write), name).toBeInstanceOf(NotFoundError)
+      }
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('reveals no archived trip to another workspace', async () => {
+      const other = await harness.seedTenant('archived-money-other')
+      await archiveTrip(tenant.scope, ledger.tripId)
+      const before = await snapshot()
+      for (const [name, write] of writers(other.scope)) {
+        expect(await captureError(write), name).toBeInstanceOf(NotFoundError)
+      }
+      expect(await snapshot()).toEqual(before)
+    })
+
+    it('binds every row writer to the request trip even when its row belongs to an archived trip', async () => {
+      await archiveTrip(tenant.scope, ledger.tripId)
+      const before = await snapshot()
+      const beforeTripId = ledger.tripId
+      const active = await createTrip(tenant.scope, {
+        title: 'Other trip',
+        startDate: '2026-04-10',
+        endDate: '2026-04-13',
+      })
+      ledger = { ...ledger, tripId: active.id }
+      const rowWriters = writers(tenant.scope).filter(
+        ([name]) => !name.startsWith('create'),
+      )
+      for (const [name, write] of rowWriters) {
+        expect(await captureError(write), name).toBeInstanceOf(NotFoundError)
+      }
+      ledger = { ...ledger, tripId: beforeTripId }
+      expect(await snapshot()).toEqual(before)
+    })
+  })
+
   describe('a caller who cannot see the trip', () => {
     it('gets NotFoundError, never TripRoleError, from every writer of a private trip', async () => {
       await updateTrip(tenant.scope, ledger.tripId, { visibility: 'private' })
@@ -308,10 +428,16 @@ describe('who writes a trip’s money', () => {
 
 describe('canWriteMoney', () => {
   it('admits an owner and an editor, and nobody else', () => {
-    expect(canWriteMoney('owner')).toBe(true)
-    expect(canWriteMoney('editor')).toBe(true)
-    expect(canWriteMoney('viewer')).toBe(false)
-    expect(canWriteMoney(null)).toBe(false)
+    expect(canWriteMoney({ isArchived: false }, 'owner')).toBe(true)
+    expect(canWriteMoney({ isArchived: false }, 'editor')).toBe(true)
+    expect(canWriteMoney({ isArchived: false }, 'viewer')).toBe(false)
+    expect(canWriteMoney({ isArchived: false }, null)).toBe(false)
+  })
+
+  it('refuses every role when archived', () => {
+    for (const role of ['owner', 'editor', 'viewer', null] as const) {
+      expect(canWriteMoney({ isArchived: true }, role)).toBe(false)
+    }
   })
 
   it('is the list the guard enforces', () => {

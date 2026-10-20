@@ -211,9 +211,8 @@ export interface CostsPayload {
   /** The pairs the reader's display currency could not be reached for; empty in per-trip mode. */
   readonly unconverted: ReadonlyArray<CostsUnconvertedPair>
   /**
-   * Whether the viewer may add, edit or delete money on this trip. Role only, worked out here from
-   * the stored role: the browser never inspects `people[].role` for it, and it is not `canWritePlan`
-   * (which also refuses an archived trip) because the money writers do not refuse one.
+   * Whether the viewer may add, edit or delete money on this trip, using the trip-owned
+   * archive and role predicate. The repository enforces the same rule for stale clients.
    */
   readonly canWrite: boolean
   /**
@@ -680,7 +679,7 @@ export async function costsPayload(
     displayCurrency: display.currency,
     displayChoices: display.choices,
     unconverted: display.unconverted,
-    canWrite: canWriteMoney(role),
+    canWrite: canWriteMoney(trip, role),
     suggestedRate,
     expenses: withShares.map(({ expense, shares }) => ({
       id: expense.id,

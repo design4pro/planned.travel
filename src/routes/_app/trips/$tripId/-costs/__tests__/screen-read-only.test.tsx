@@ -43,6 +43,8 @@ vi.mock('#/server/fns/trip-currency', () => ({
   previewCurrencyChangeFn: vi.fn(),
   changeTripCurrencyFn: vi.fn(),
 }))
+const route = vi.hoisted(() => ({ isArchived: false }))
+
 vi.mock('@tanstack/react-router', () => ({
   useLoaderData: () => ({
     today: '2026-04-10',
@@ -65,13 +67,16 @@ vi.mock('@tanstack/react-router', () => ({
       coverImageUrl: null,
       accentColour: null,
       budgetTargetMinor: null,
-      isArchived: false,
+      isArchived: route.isArchived,
     },
   }),
   useRouter: () => ({ invalidate: async () => undefined }),
 }))
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  route.isArchived = false
+})
 
 const OWNER = { email: '', image: null, role: 'owner' }
 
@@ -221,4 +226,20 @@ describe('the costs screen for a reader', () => {
     expect(screen.getByText(Costs['readOnly.settleEmpty'])).toBeTruthy()
     expect(screen.queryByText(Costs['settle.empty.body'])).toBeNull()
   })
+})
+
+it('shows an archived ledger with restore guidance and no write controls', () => {
+  route.isArchived = true
+  mount(payload({ canWrite: false, viewerUserId: 'u-ada' }))
+  expect(screen.getByText('Dinner')).toBeTruthy()
+  expect(screen.getByRole('status').textContent).toContain(
+    'This trip is archived. Restore it before changing costs.',
+  )
+  expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Edit / })).toBeNull()
+  expect(screen.queryByRole('button', { name: /^Delete / })).toBeNull()
+  expect(screen.queryByRole('button', { name: /settle/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: /payment/i })).toBeNull()
+  expect(screen.queryByRole('button', { name: /change.*currency/i })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Export CSV' })).toBeTruthy()
 })

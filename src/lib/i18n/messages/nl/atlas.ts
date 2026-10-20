@@ -142,16 +142,16 @@ const messages = {
   'panel.stat.placesNone': 'Nog niets vastgepind op een reis',
   'panel.stat.placesCaption':
     'Opgeslagen bezienswaardigheden, verblijven en stops',
-  'panel.stat.regions': 'Regio’s',
+  'panel.stat.regions': 'Je regio’s',
   'panel.stat.regionsNone': 'Nog geen regio’s gemarkeerd',
   'panel.stat.regionsCaption': 'Staten, provincies, prefecturen',
-  'panel.stat.visits': 'Bezoeken',
+  'panel.stat.visits': 'Je bezoeken',
   'panel.stat.visitsCaption': 'Elke vastgelegde aankomst',
   'panel.stat.trips': 'Jouw reizen',
   'panel.stat.tripsCaption': 'Alle reizen waar je bij bent',
-  'panel.stat.cities': 'Steden',
+  'panel.stat.cities': 'Je steden',
   'panel.stat.citiesCaption': 'Plaatsen waar je sliep of stopte',
-  'panel.stat.days': 'Dagen onderweg',
+  'panel.stat.days': 'Je reisdagen',
   'panel.stat.daysCaption': 'Over alle reizen in je reisarchief',
   'panel.continents.label': 'Landen per continent',
 
@@ -392,6 +392,28 @@ const messages = {
     'De wijziging kon niet worden bevestigd. Laad je regio’s opnieuw om te zien wat is opgeslagen.',
   'regions.status.refreshFailed':
     '{result} De atlas kon niet worden vernieuwd. Laad hem opnieuw om de kaart bij te werken.',
+
+  'panel.stat.periodLabel': 'Toon cijfers voor',
+  'panel.stat.allTime': 'Alle jaren',
+  'panel.stat.groupAll': 'Cijfers voor alle jaren',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Cijfers voor {year}',
+  'panel.stat.announceAll': 'Cijfers voor alle jaren worden getoond.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Cijfers voor {year} worden getoond.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Reizen die beginnen in {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Op reizen die beginnen in {year}',
+  'panel.stat.countries': 'Landen op je reizen',
+  'panel.stat.countriesCaption': 'Verschillende landen op deze reizen',
+  'panel.stat.streak': 'Je reeks reisjaren',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Elk jaar gereisd, van {first} tot {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Een reis in {last}',
+  'panel.stat.streakNone':
+    'Voeg een reis met datums toe om een reeks te beginnen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

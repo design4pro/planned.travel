@@ -260,6 +260,8 @@ const messages = {
   /** One pair the alert lists: "EUR to GBP on 14 Oct". */
   'display.alert.pair': '{from} to {to} on {date}',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'This trip is archived. Restore it before changing costs.',
   'readOnly.title': 'You can read the costs, not change them',
   'readOnly.body':
     'Only the trip’s owners and the people who can edit it add, change or delete expenses and record payments. Ask an owner if something needs changing.',

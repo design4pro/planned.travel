@@ -170,6 +170,7 @@ const messages = {
   'payments.empty.title': '尚無付款',
   'payments.empty.body': '有人還清餘額後，轉帳會記錄在這裡。',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived': '此行程已封存。請先還原行程再修改費用。',
   'readOnly.title': '你可以查看費用，但無法變更',
   'readOnly.body':
     '只有行程的擁有者和具編輯權限的人才能新增、修改或刪除支出並記錄付款。如需變更，請聯絡擁有者。',

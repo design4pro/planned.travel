@@ -170,6 +170,7 @@ const messages = {
   'payments.empty.title': '暂无付款',
   'payments.empty.body': '有人还清余额后，转账会记录在这里。',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived': '此行程已归档。请先恢复行程再修改费用。',
   'readOnly.title': '你可以查看费用，但不能更改',
   'readOnly.body':
     '只有行程的所有者和有编辑权限的人才能添加、修改或删除支出以及记录付款。如需更改，请联系所有者。',
