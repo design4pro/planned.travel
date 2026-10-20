@@ -140,16 +140,16 @@ const messages = {
   'panel.stat.places': 'A helyei',
   'panel.stat.placesNone': 'Még semmi sincs kitűzve egy utazáson sem',
   'panel.stat.placesCaption': 'Mentett látnivalók, szállások és megállók',
-  'panel.stat.regions': 'Régiók',
+  'panel.stat.regions': 'Régióid',
   'panel.stat.regionsNone': 'Még nincs megjelölt régió',
   'panel.stat.regionsCaption': 'Államok, tartományok, prefektúrák',
-  'panel.stat.visits': 'Látogatások',
+  'panel.stat.visits': 'Látogatásaid',
   'panel.stat.visitsCaption': 'Minden rögzített megérkezés',
   'panel.stat.trips': 'Az utazásai',
   'panel.stat.tripsCaption': 'Minden utazása, amelyen részt vesz',
-  'panel.stat.cities': 'Városok',
+  'panel.stat.cities': 'Városaid',
   'panel.stat.citiesCaption': 'Települések, ahol megszállt vagy megállt',
-  'panel.stat.days': 'Úton töltött napok',
+  'panel.stat.days': 'Utazási napjaid',
   'panel.stat.daysCaption': 'A nyilvántartás összes utazásán át',
   'panel.continents.label': 'Országok földrészenként',
 
@@ -395,6 +395,29 @@ const messages = {
     'A módosítást nem sikerült megerősíteni. Töltsd újra a régióidat, és ellenőrizd, mi lett elmentve.',
   'regions.status.refreshFailed':
     '{result} Az atlaszt nem sikerült frissíteni. Töltsd újra a térkép frissítéséhez.',
+
+  'panel.stat.periodLabel': 'Adatok megjelenítése',
+  'panel.stat.allTime': 'Teljes időszak',
+  'panel.stat.groupAll': 'A teljes időszak adatai',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'A kiválasztott év adatai: {year}',
+  'panel.stat.announceAll': 'A teljes időszak adatai láthatók.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'A kiválasztott év adatai láthatók: {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Az indulás éve: {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Az utazások indulási éve: {year}',
+  'panel.stat.countries': 'Országok az utazásaidon',
+  'panel.stat.countriesCaption': 'Az utazások különböző országai',
+  'panel.stat.streak': 'Egymást követő utazási éveid',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange':
+    'Utazás minden évben, kezdőév: {first}, záróév: {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Egy utazás, év: {last}',
+  'panel.stat.streakNone':
+    'Adj hozzá dátummal ellátott utazást a sorozat indításához',
 } satisfies TranslationOf<typeof En>
 
 export default messages

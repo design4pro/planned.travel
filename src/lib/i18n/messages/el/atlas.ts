@@ -134,16 +134,16 @@ const messages = {
   'panel.stat.places': 'Τα μέρη σας',
   'panel.stat.placesNone': 'Τίποτα καρφιτσωμένο σε ταξίδι ακόμη',
   'panel.stat.placesCaption': 'Αξιοθέατα, διαμονές και στάσεις αποθηκευμένα',
-  'panel.stat.regions': 'Περιφέρειες',
+  'panel.stat.regions': 'Οι περιοχές σου',
   'panel.stat.regionsNone': 'Καμία περιφέρεια σημειωμένη ακόμη',
   'panel.stat.regionsCaption': 'Πολιτείες, επαρχίες, νομοί',
-  'panel.stat.visits': 'Επισκέψεις',
+  'panel.stat.visits': 'Οι επισκέψεις σου',
   'panel.stat.visitsCaption': 'Κάθε καταγεγραμμένη άφιξη',
   'panel.stat.trips': 'Τα ταξίδια σας',
   'panel.stat.tripsCaption': 'Κάθε ταξίδι στο οποίο συμμετέχετε',
-  'panel.stat.cities': 'Πόλεις',
+  'panel.stat.cities': 'Οι πόλεις σου',
   'panel.stat.citiesCaption': 'Πόλεις όπου κοιμηθήκατε ή σταματήσατε',
-  'panel.stat.days': 'Ημέρες μακριά',
+  'panel.stat.days': 'Οι ημέρες σου σε ταξίδι',
   'panel.stat.daysCaption': 'Σε κάθε ταξίδι του αρχείου σας',
   'panel.continents.label': 'Χώρες ανά ήπειρο',
 
@@ -395,6 +395,28 @@ const messages = {
     'Δεν ήταν δυνατή η επιβεβαίωση της αλλαγής. Φόρτωσε ξανά τις περιφέρειες για να ελέγξεις τι αποθηκεύτηκε.',
   'regions.status.refreshFailed':
     '{result} Δεν ήταν δυνατή η ανανέωση του άτλαντα. Φόρτωσέ τον ξανά για να ενημερωθεί ο χάρτης.',
+
+  'panel.stat.periodLabel': 'Εμφάνιση στοιχείων για',
+  'panel.stat.allTime': 'Όλα τα έτη',
+  'panel.stat.groupAll': 'Στοιχεία για όλα τα έτη',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Στοιχεία για το {year}',
+  'panel.stat.announceAll': 'Εμφανίζονται στοιχεία για όλα τα έτη.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Εμφανίζονται στοιχεία για το {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Ταξίδια που ξεκινούν το {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Σε ταξίδια που ξεκινούν το {year}',
+  'panel.stat.countries': 'Χώρες στα ταξίδια σου',
+  'panel.stat.countriesCaption': 'Διαφορετικές χώρες σε αυτά τα ταξίδια',
+  'panel.stat.streak': 'Τα συνεχόμενα έτη ταξιδιών σου',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Ταξίδια κάθε χρόνο, από {first} έως {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Ένα ταξίδι το {last}',
+  'panel.stat.streakNone':
+    'Πρόσθεσε ένα ταξίδι με ημερομηνίες για να ξεκινήσεις μια σειρά',
 } satisfies TranslationOf<typeof En>
 
 export default messages

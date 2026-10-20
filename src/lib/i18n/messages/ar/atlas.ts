@@ -158,16 +158,16 @@ const messages = {
   'panel.stat.places': 'أماكنك',
   'panel.stat.placesNone': 'لم يُثبَّت شيء في رحلة بعد',
   'panel.stat.placesCaption': 'معالم وإقامات ومحطات محفوظة',
-  'panel.stat.regions': 'المناطق',
+  'panel.stat.regions': 'مناطقك',
   'panel.stat.regionsNone': 'لم تُسجَّل مناطق بعد',
   'panel.stat.regionsCaption': 'ولايات ومقاطعات ومحافظات',
-  'panel.stat.visits': 'الزيارات',
+  'panel.stat.visits': 'زياراتك',
   'panel.stat.visitsCaption': 'كل وصول مسجَّل',
   'panel.stat.trips': 'رحلاتك',
   'panel.stat.tripsCaption': 'كل رحلة تشارك فيها',
-  'panel.stat.cities': 'المدن',
+  'panel.stat.cities': 'مدنك',
   'panel.stat.citiesCaption': 'مدن بتَّ أو توقفت فيها',
-  'panel.stat.days': 'أيام السفر',
+  'panel.stat.days': 'أيام سفرك',
   'panel.stat.daysCaption': 'عبر كل رحلة في سجلك',
   'panel.continents.label': 'الدول حسب القارة',
 
@@ -457,6 +457,27 @@ const messages = {
     'تعذر تأكيد التغيير. أعد تحميل مناطقك للتحقق مما تم حفظه.',
   'regions.status.refreshFailed':
     '{result} تعذر تحديث الأطلس. أعد تحميله لتحديث الخريطة.',
+
+  'panel.stat.periodLabel': 'عرض الأرقام للفترة',
+  'panel.stat.allTime': 'كل الأوقات',
+  'panel.stat.groupAll': 'أرقام كل الأوقات',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'أرقام عام {year}',
+  'panel.stat.announceAll': 'تُعرض أرقام كل الأوقات.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'تُعرض أرقام عام {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'رحلات تبدأ في عام {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'في رحلات تبدأ في عام {year}',
+  'panel.stat.countries': 'البلدان في رحلاتك',
+  'panel.stat.countriesCaption': 'بلدان مختلفة ضمن هذه الرحلات',
+  'panel.stat.streak': 'سنوات سفرك المتتالية',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'رحلات كل عام، من {first} إلى {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'رحلة في عام {last}',
+  'panel.stat.streakNone': 'أضف رحلة بتواريخ لبدء سلسلة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

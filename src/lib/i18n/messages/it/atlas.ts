@@ -150,16 +150,16 @@ const messages = {
   'panel.stat.places': 'I tuoi luoghi',
   'panel.stat.placesNone': 'Ancora nulla fissato su un viaggio',
   'panel.stat.placesCaption': 'Attrazioni, alloggi e tappe salvati',
-  'panel.stat.regions': 'Regioni',
+  'panel.stat.regions': 'Le tue regioni',
   'panel.stat.regionsNone': 'Nessuna regione ancora segnata',
   'panel.stat.regionsCaption': 'Stati, province, prefetture',
-  'panel.stat.visits': 'Visite',
+  'panel.stat.visits': 'Le tue visite',
   'panel.stat.visitsCaption': 'Ogni arrivo registrato',
   'panel.stat.trips': 'I tuoi viaggi',
   'panel.stat.tripsCaption': 'Tutti i viaggi a cui partecipi',
-  'panel.stat.cities': 'Città',
+  'panel.stat.cities': 'Le tue città',
   'panel.stat.citiesCaption': 'Città dove hai dormito o fatto tappa',
-  'panel.stat.days': 'Giorni in viaggio',
+  'panel.stat.days': 'I tuoi giorni in viaggio',
   'panel.stat.daysCaption': 'Su tutti i viaggi del tuo registro',
   'panel.continents.label': 'Paesi per continente',
 
@@ -415,6 +415,28 @@ const messages = {
     'Impossibile confermare la modifica. Ricarica le regioni per verificare cosa è stato salvato.',
   'regions.status.refreshFailed':
     '{result} Impossibile aggiornare l’atlante. Ricaricalo per aggiornare la mappa.',
+
+  'panel.stat.periodLabel': 'Mostra le cifre per',
+  'panel.stat.allTime': 'Tutto il periodo',
+  'panel.stat.groupAll': 'Cifre per tutto il periodo',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Cifre per il {year}',
+  'panel.stat.announceAll': 'Sono mostrate le cifre per tutto il periodo.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Sono mostrate le cifre per il {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Viaggi che iniziano nel {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Nei viaggi che iniziano nel {year}',
+  'panel.stat.countries': 'Paesi dei tuoi viaggi',
+  'panel.stat.countriesCaption': 'Paesi distinti in questi viaggi',
+  'panel.stat.streak': 'La tua serie annuale',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Viaggi ogni anno, dal {first} al {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Un viaggio nel {last}',
+  'panel.stat.streakNone':
+    'Aggiungi un viaggio con date per iniziare una serie',
 } satisfies TranslationOf<typeof En>
 
 export default messages

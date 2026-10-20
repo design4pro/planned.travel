@@ -1823,6 +1823,14 @@ holiday manager:
 
 ## Stage 08-S6 — Statistics that move when the map does
 
+**Implementation contract:** [Atlas statistics spec](../../.ai/specs/2026-10-10-atlas-statistics-that-follow-the-trip.md)
+supersedes the original design below. #1119 keeps the roll-up current after place and transport writes;
+#1120 reads the existing `/atlas` year rows without `loadTravelStatsFn`, a new request, a stale marker
+or count-up motion. Figures belong to the traveller; distance is shown only above zero. The period
+control remains enabled during re-reads, and the stored all-time streak names its years. Empty and
+failed section states remain the following ticket's scope. The original server-function, labelling,
+motion and verification proposals below are historical, not implementation instructions.
+
 ### Stage id
 
 `08-S6` · Wave 2 · effort **S**. The smallest stage in this plan and the one with the worst symptom:

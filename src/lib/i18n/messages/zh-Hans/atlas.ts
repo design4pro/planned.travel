@@ -127,16 +127,16 @@ const messages = {
   'panel.stat.places': '你的地点',
   'panel.stat.placesNone': '行程里还没有钉下任何地点',
   'panel.stat.placesCaption': '保存的景点、住处和途经地',
-  'panel.stat.regions': '地区',
+  'panel.stat.regions': '你的地区',
   'panel.stat.regionsNone': '还没有标记任何地区',
   'panel.stat.regionsCaption': '州、省、都道府县',
-  'panel.stat.visits': '到访',
+  'panel.stat.visits': '你的到访次数',
   'panel.stat.visitsCaption': '每一次记录在案的抵达',
   'panel.stat.trips': '你的行程',
   'panel.stat.tripsCaption': '你参与的每一个行程',
-  'panel.stat.cities': '城市',
+  'panel.stat.cities': '你的城市',
   'panel.stat.citiesCaption': '住过或停留过的城市',
-  'panel.stat.days': '在外天数',
+  'panel.stat.days': '你的旅行天数',
   'panel.stat.daysCaption': '累计您记录中的每一次行程',
   'panel.continents.label': '按大洲统计的国家',
 
@@ -340,6 +340,27 @@ const messages = {
   'regions.error.uncertain': '无法确认更改。请重新加载地区以检查已保存的内容。',
   'regions.status.refreshFailed':
     '{result} 无法刷新地图集。请重新加载以更新地图。',
+
+  'panel.stat.periodLabel': '显示统计时段',
+  'panel.stat.allTime': '所有时间',
+  'panel.stat.groupAll': '所有时间的统计',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': '{year}年的统计',
+  'panel.stat.announceAll': '正在显示所有时间的统计。',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': '正在显示{year}年的统计。',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': '{year}年出发的旅行',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': '{year}年出发的旅行天数',
+  'panel.stat.countries': '你的旅行所经国家',
+  'panel.stat.countriesCaption': '这些旅行涉及的不同国家',
+  'panel.stat.streak': '你的连续旅行年数',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': '从{first}年到{last}年每年都有旅行',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': '{last}年有一次旅行',
+  'panel.stat.streakNone': '添加有日期的旅行以开始连续记录',
 } satisfies TranslationOf<typeof En>
 
 export default messages

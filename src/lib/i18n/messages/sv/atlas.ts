@@ -142,16 +142,16 @@ const messages = {
   'panel.stat.places': 'Dina platser',
   'panel.stat.placesNone': 'Inget fastnålat på någon resa ännu',
   'panel.stat.placesCaption': 'Sparade sevärdheter, boenden och stopp',
-  'panel.stat.regions': 'Regioner',
+  'panel.stat.regions': 'Dina regioner',
   'panel.stat.regionsNone': 'Inga regioner markerade ännu',
   'panel.stat.regionsCaption': 'Delstater, provinser, prefekturer',
-  'panel.stat.visits': 'Besök',
+  'panel.stat.visits': 'Dina besök',
   'panel.stat.visitsCaption': 'Varje registrerad ankomst',
   'panel.stat.trips': 'Dina resor',
   'panel.stat.tripsCaption': 'Alla resor du är med på',
-  'panel.stat.cities': 'Städer',
+  'panel.stat.cities': 'Dina städer',
   'panel.stat.citiesCaption': 'Orter du sov eller stannade i',
-  'panel.stat.days': 'Dagar på resa',
+  'panel.stat.days': 'Dina resdagar',
   'panel.stat.daysCaption': 'Över alla resor i din reselogg',
   'panel.continents.label': 'Länder per kontinent',
 
@@ -383,6 +383,27 @@ const messages = {
     'Ändringen kunde inte bekräftas. Läs in dina regioner igen för att se vad som sparades.',
   'regions.status.refreshFailed':
     '{result} Atlasen kunde inte uppdateras. Läs in den igen för att uppdatera kartan.',
+
+  'panel.stat.periodLabel': 'Visa siffror för',
+  'panel.stat.allTime': 'Alla år',
+  'panel.stat.groupAll': 'Siffror för alla år',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Siffror för {year}',
+  'panel.stat.announceAll': 'Visar siffror för alla år.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Visar siffror för {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Resor som börjar under {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'På resor som börjar under {year}',
+  'panel.stat.countries': 'Länder på dina resor',
+  'panel.stat.countriesCaption': 'Olika länder på dessa resor',
+  'panel.stat.streak': 'Din följd av reseår',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Resor varje år, från {first} till {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'En resa under {last}',
+  'panel.stat.streakNone': 'Lägg till en resa med datum för att börja en följd',
 } satisfies TranslationOf<typeof En>
 
 export default messages

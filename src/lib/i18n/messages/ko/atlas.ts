@@ -129,16 +129,16 @@ const messages = {
   'panel.stat.places': '내 장소',
   'panel.stat.placesNone': '여행에 고정해 둔 장소가 아직 없습니다',
   'panel.stat.placesCaption': '저장한 볼거리·숙소·경유지',
-  'panel.stat.regions': '지역',
+  'panel.stat.regions': '내 지역',
   'panel.stat.regionsNone': '표시한 지역이 아직 없습니다',
   'panel.stat.regionsCaption': '주, 도, 현 단위',
-  'panel.stat.visits': '방문',
+  'panel.stat.visits': '내 방문',
   'panel.stat.visitsCaption': '기록된 모든 도착',
   'panel.stat.trips': '내 여행',
   'panel.stat.tripsCaption': '참여한 모든 여행',
-  'panel.stat.cities': '도시',
+  'panel.stat.cities': '내 도시',
   'panel.stat.citiesCaption': '묵거나 들른 도시',
-  'panel.stat.days': '여행 일수',
+  'panel.stat.days': '내 여행 일수',
   'panel.stat.daysCaption': '기록에 있는 모든 여행 합산',
   'panel.continents.label': '대륙별 나라 수',
 
@@ -359,6 +359,27 @@ const messages = {
     '변경 사항을 확인하지 못했습니다. 지역을 다시 불러와 저장된 내용을 확인하세요.',
   'regions.status.refreshFailed':
     '{result} 아틀라스를 새로 고치지 못했습니다. 다시 불러와 지도를 업데이트하세요.',
+
+  'panel.stat.periodLabel': '통계 기간',
+  'panel.stat.allTime': '전체 기간',
+  'panel.stat.groupAll': '전체 기간 통계',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': '{year}년 통계',
+  'panel.stat.announceAll': '전체 기간 통계를 표시합니다.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': '{year}년 통계를 표시합니다.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': '{year}년에 시작하는 여행',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': '{year}년에 시작하는 여행의 일수',
+  'panel.stat.countries': '내 여행에 포함된 국가',
+  'panel.stat.countriesCaption': '이 여행들에 포함된 서로 다른 국가',
+  'panel.stat.streak': '내 연속 여행 연수',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': '{first}년부터 {last}년까지 매년 여행',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': '{last}년에 여행',
+  'panel.stat.streakNone': '날짜가 있는 여행을 추가하여 연속 기록을 시작하세요',
 } satisfies TranslationOf<typeof En>
 
 export default messages

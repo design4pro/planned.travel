@@ -24,6 +24,7 @@ import {
   Progress,
   ScrollArea,
   SectionLabel,
+  SimpleSelect,
   Skeleton,
   StatCard,
   Tabs,
@@ -40,8 +41,11 @@ import {
   formatDistance,
   formatNumber,
   formatPercent,
+  formatYear,
   humaniseToken,
 } from '#/lib/format'
+import { statsPeriod } from '#/lib/atlas/stats-period'
+import type { StatsPeriodRow } from '#/lib/atlas/stats-period'
 import { continentLabel } from './continent'
 import { AtlasLegend, AtlasLegendSkeleton } from './atlas-legend'
 import { CountriesList, CountriesListSkeleton } from './countries-list'
@@ -512,6 +516,8 @@ export interface AtlasPanelProps extends Omit<
    */
   readonly expanded: boolean | null
   readonly onExpandedChange: (expanded: boolean) => void
+  readonly statsRows?: ReadonlyArray<StatsPeriodRow>
+  readonly statsLoading?: boolean
   readonly stats: AtlasPanelStats
   readonly byContinent: ReadonlyArray<AtlasPanelContinent>
   /**
@@ -558,6 +564,8 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
       expanded,
       onExpandedChange,
       stats,
+      statsRows = [],
+      statsLoading = false,
       byContinent,
       bucketList,
       bucketTotal,
@@ -570,6 +578,46 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
   ) => {
     const { locale, t } = useAtlasI18n()
     const bodyId = React.useId()
+    const periodId = React.useId()
+    const [chosenPeriod, setChosenPeriod] = React.useState(0)
+    const [announcement, setAnnouncement] = React.useState('')
+    const period = statsPeriod(statsRows, chosenPeriod)
+    const year = formatYear(period.period, locale)
+    const figures = period.period === 0 ? stats : (period.row ?? stats)
+    React.useEffect(() => {
+      if (chosenPeriod === period.period) return
+      setChosenPeriod(period.period)
+      if (tab === 'stats') setAnnouncement(t('atlas.panel.stat.announceAll'))
+    }, [chosenPeriod, period.period, tab, t])
+    const tripsCaption =
+      period.period === 0
+        ? t('atlas.panel.stat.tripsCaption')
+        : t('atlas.panel.stat.tripsYear', { year })
+    const streakCaption = () => {
+      const streak = period.streak
+      if (streak === null || streak.count === 0)
+        return t('atlas.panel.stat.streakNone')
+      if (streak.count === 1)
+        return t('atlas.panel.stat.streakSingle', {
+          last: formatYear(streak.last, locale),
+        })
+      return t('atlas.panel.stat.streakRange', {
+        first: formatYear(streak.first, locale),
+        last: formatYear(streak.last, locale),
+      })
+    }
+    const changePeriod = (value: string) => {
+      const next = Number(value)
+      if (next === period.period) return
+      setChosenPeriod(next)
+      setAnnouncement(
+        next === 0
+          ? t('atlas.panel.stat.announceAll')
+          : t('atlas.panel.stat.announceYear', {
+              year: formatYear(next, locale),
+            }),
+      )
+    }
     /**
      * What the toggle says, what a screen reader is told, and what one press of
      * it does. `null` follows the breakpoint — measured, not assumed, because
@@ -655,6 +703,15 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
         className={cn(layout.root, className)}
         {...props}
       >
+        <div
+          data-part="stats-status"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {announcement}
+        </div>
         <Tabs
           value={tab}
           onValueChange={(next) => {
@@ -990,7 +1047,39 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       `StatCard`, so neither is a handle this panel can offer.
                       The name is the figure — `places`, `trips` — so it holds
                       when the copy does not. */}
-                  <div className={layout.statGrid}>
+                  {period.periods.length > 1 ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        htmlFor={periodId}
+                        className="text-caption font-medium text-ink-2"
+                      >
+                        {t('atlas.panel.stat.periodLabel')}
+                      </label>
+                      <SimpleSelect
+                        className="w-auto min-w-32 max-w-full"
+                        triggerId={periodId}
+                        value={String(period.period)}
+                        onValueChange={changePeriod}
+                        options={period.periods.map((value) => ({
+                          value: String(value),
+                          label:
+                            value === 0
+                              ? t('atlas.panel.stat.allTime')
+                              : formatYear(value, locale),
+                        }))}
+                      />
+                    </div>
+                  ) : null}
+                  <div
+                    role="group"
+                    aria-label={
+                      period.period === 0
+                        ? t('atlas.panel.stat.groupAll')
+                        : t('atlas.panel.stat.groupYear', { year })
+                    }
+                    aria-busy={statsLoading}
+                    className={layout.statGrid}
+                  >
                     {/* Places, not countries.
 
                         The count of countries and its share of the world are
@@ -1005,42 +1094,46 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       className={layout.statCard}
                       icon={<Landmark />}
                       label={t('atlas.panel.stat.places')}
-                      value={formatNumber(stats.placeCount ?? 0, locale)}
+                      value={formatNumber(figures.placeCount ?? 0, locale)}
                       caption={
-                        (stats.placeCount ?? 0) === 0
+                        (figures.placeCount ?? 0) === 0
                           ? t('atlas.panel.stat.placesNone')
                           : t('atlas.panel.stat.placesCaption')
                       }
                     />
-                    <StatCard
-                      data-stat="regions"
-                      className={layout.statCard}
-                      icon={<MapPin />}
-                      label={t('atlas.panel.stat.regions')}
-                      value={formatNumber(stats.regionCount, locale)}
-                      caption={
-                        stats.regionCount === 0
-                          ? t('atlas.panel.stat.regionsNone')
-                          : t('atlas.panel.stat.regionsCaption')
-                      }
-                    />
-                    <StatCard
-                      data-stat="visits"
-                      className={layout.statCard}
-                      icon={<Flag />}
-                      label={t('atlas.panel.stat.visits')}
-                      value={formatNumber(stats.visitCount, locale)}
-                      caption={t('atlas.panel.stat.visitsCaption')}
-                    />
+                    {period.tiles.includes('regions') ? (
+                      <StatCard
+                        data-stat="regions"
+                        className={layout.statCard}
+                        icon={<MapPin />}
+                        label={t('atlas.panel.stat.regions')}
+                        value={formatNumber(stats.regionCount, locale)}
+                        caption={
+                          stats.regionCount === 0
+                            ? t('atlas.panel.stat.regionsNone')
+                            : t('atlas.panel.stat.regionsCaption')
+                        }
+                      />
+                    ) : null}
+                    {period.tiles.includes('visits') ? (
+                      <StatCard
+                        data-stat="visits"
+                        className={layout.statCard}
+                        icon={<Flag />}
+                        label={t('atlas.panel.stat.visits')}
+                        value={formatNumber(stats.visitCount, locale)}
+                        caption={t('atlas.panel.stat.visitsCaption')}
+                      />
+                    ) : null}
                     <StatCard
                       data-stat="trips"
                       className={layout.statCard}
                       icon={<PlaneTakeoff />}
                       label={t('atlas.panel.stat.trips')}
-                      value={formatNumber(stats.tripCount ?? 0, locale)}
+                      value={formatNumber(figures.tripCount ?? 0, locale)}
                       caption={
-                        stats.distanceMetres === null ? (
-                          t('atlas.panel.stat.tripsCaption')
+                        (figures.distanceMetres ?? 0) <= 0 ? (
+                          tripsCaption
                         ) : (
                           // A figure and its unit are one run. Left bare in an
                           // Arabic paragraph the bidi algorithm resolves the
@@ -1052,7 +1145,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                           // inner span rather than on a positioned box.
                           <span data-numeric="">
                             {formatDistance(
-                              stats.distanceMetres,
+                              figures.distanceMetres ?? 0,
                               'metric',
                               locale,
                             )}
@@ -1065,7 +1158,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       className={layout.statCard}
                       icon={<MapPinned />}
                       label={t('atlas.panel.stat.cities')}
-                      value={formatNumber(stats.cityCount ?? 0, locale)}
+                      value={formatNumber(figures.cityCount ?? 0, locale)}
                       caption={t('atlas.panel.stat.citiesCaption')}
                     />
                     <StatCard
@@ -1073,43 +1166,72 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
                       className={layout.statCard}
                       icon={<Sun />}
                       label={t('atlas.panel.stat.days')}
-                      value={formatNumber(stats.dayCount ?? 0, locale)}
-                      caption={t('atlas.panel.stat.daysCaption')}
+                      value={formatNumber(figures.dayCount ?? 0, locale)}
+                      caption={
+                        period.period === 0
+                          ? t('atlas.panel.stat.daysCaption')
+                          : t('atlas.panel.stat.daysYear', { year })
+                      }
                     />
+                    {period.tiles.includes('countries') ? (
+                      <StatCard
+                        data-stat="countries"
+                        className={cn(
+                          layout.statCard,
+                          'col-span-2 sm:col-span-1',
+                        )}
+                        icon={<Globe />}
+                        label={t('atlas.panel.stat.countries')}
+                        value={formatNumber(figures.countryCount, locale)}
+                        caption={t('atlas.panel.stat.countriesCaption')}
+                      />
+                    ) : null}
+                    {period.streak !== null ? (
+                      <StatCard
+                        data-stat="streak"
+                        className={cn(layout.statCard, 'col-span-full')}
+                        icon={<Sparkles />}
+                        label={t('atlas.panel.stat.streak')}
+                        value={formatNumber(period.streak.count, locale)}
+                        caption={streakCaption()}
+                      />
+                    ) : null}
                   </div>
 
-                  <div>
-                    <SectionLabel as="h3" className="mb-1.5">
-                      {t('atlas.panel.continents.label')}
-                    </SectionLabel>
-                    <dl className={layout.continentRow}>
-                      {cells.map((cell) => (
-                        <div
-                          key={cell.key}
-                          data-continent={cell.key}
-                          className={layout.continentCell}
-                        >
-                          <dt className="min-w-0 truncate text-caption text-ink-2">
-                            {cell.label}
-                          </dt>
-                          {/* A zero is a figure. One step of ink separates it
+                  {period.period === 0 ? (
+                    <div>
+                      <SectionLabel as="h3" className="mb-1.5">
+                        {t('atlas.panel.continents.label')}
+                      </SectionLabel>
+                      <dl className={layout.continentRow}>
+                        {cells.map((cell) => (
+                          <div
+                            key={cell.key}
+                            data-continent={cell.key}
+                            className={layout.continentCell}
+                          >
+                            <dt className="min-w-0 truncate text-caption text-ink-2">
+                              {cell.label}
+                            </dt>
+                            {/* A zero is a figure. One step of ink separates it
                               from a live count — never a fade, never a smaller
                               size, because "none yet" is an answer the reader
                               asked for. */}
-                          <dd
-                            className={cn(
-                              layout.continentValue,
-                              cell.countryCount === 0
-                                ? 'text-ink-2'
-                                : 'text-ink',
-                            )}
-                          >
-                            {formatNumber(cell.countryCount, locale)}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
+                            <dd
+                              className={cn(
+                                layout.continentValue,
+                                cell.countryCount === 0
+                                  ? 'text-ink-2'
+                                  : 'text-ink',
+                              )}
+                            >
+                              {formatNumber(cell.countryCount, locale)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  ) : null}
                 </div>
               </ScrollArea>
             </TabsContent>
