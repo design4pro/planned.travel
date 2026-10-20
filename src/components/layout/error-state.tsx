@@ -33,6 +33,8 @@ const REPORTING_ENABLED =
 
 export interface ErrorPanelProps {
   error: unknown
+  /** Already-read prose and its provenance; the original error still owns reporting. */
+  detail?: { readonly message: string; readonly authored: boolean }
   /** Called instead of a router invalidation when the panel owns the retry. */
   onRetry?: () => void
   /** Already-translated heading. Defaults to the generic one. */
@@ -56,6 +58,7 @@ export interface ErrorPanelProps {
  */
 export function ErrorPanel({
   error,
+  detail,
   onRetry,
   title,
   className,
@@ -65,13 +68,19 @@ export function ErrorPanel({
   const state = shellStateOf(error)
   const failure = readPublicFailure(error)
 
-  /** Authored copy explains itself, so it is set as prose and no reference is offered. */
-  const authored =
-    state !== null
-      ? t(state)
-      : failure.kind === 'unexpected'
-        ? null
-        : failure.message
+  let message: string | null = null
+  let english = false
+  if (state !== null) {
+    message = t(state)
+  } else if (detail !== undefined) {
+    message = detail.message
+    english = detail.authored
+  } else if (failure.kind !== 'unexpected' && failure.message !== undefined) {
+    message = failure.message
+    english = true
+  }
+  // Display prose can be a console fallback; reporting still follows the original envelope.
+  const unexpected = state === null && failure.kind === 'unexpected'
 
   function retry(): void {
     if (onRetry) {
@@ -97,16 +106,20 @@ export function ErrorPanel({
             ? (title ?? t('shell.error.title'))
             : t('shell.error.session')}
         </h2>
-        <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
-          {authored ?? t('shell.error.body')}
+        <p
+          className="mx-auto max-w-md text-label leading-relaxed text-ink-3"
+          lang={english ? 'en' : undefined}
+          dir={english ? 'ltr' : undefined}
+        >
+          {message ?? t('shell.error.body')}
         </p>
-        {authored === null ? (
+        {unexpected ? (
           <p className="mx-auto max-w-md text-label leading-relaxed text-ink-3">
             {t('shell.error.reported')}
           </p>
         ) : null}
       </div>
-      {authored === null && failure.reference !== undefined ? (
+      {unexpected && failure.reference !== undefined ? (
         /* `code` keeps the reference left-to-right inside Arabic prose: the
            direction layer in `src/styles/styles.css` pins the run so an
            identifier does not reorder around its punctuation. */
@@ -127,9 +140,7 @@ export function ErrorPanel({
       </div>
       {/* Only where the reference points at a real Sentry event: without a DSN it is a request id,
           and feedback would attach to nothing. */}
-      {authored === null &&
-      failure.reference !== undefined &&
-      REPORTING_ENABLED ? (
+      {unexpected && failure.reference !== undefined && REPORTING_ENABLED ? (
         <FailureFeedback reference={failure.reference} />
       ) : null}
     </Panel>

@@ -121,6 +121,26 @@ describe('readConsoleFailureDetail', () => {
     ).toEqual({ message: 'Translated fallback.', authored: false })
   })
 
+  it.each([
+    encodePublicFailure({ kind: 'unexpected' }),
+    encodePublicFailure({
+      kind: 'unexpected',
+      message: 'SELECT secret FROM internal',
+    }),
+    'planned-travel/failure/1 {broken',
+    'planned-travel/failure/2 {"kind":"refusal","message":"Unknown format"}',
+  ])(
+    'withholds an unreadable or unexpected envelope without a reference: %s',
+    (raw) => {
+      expect(
+        readConsoleFailureDetail(new Error(raw), 'Translated fallback.'),
+      ).toEqual({
+        message: 'Translated fallback.',
+        authored: false,
+      })
+    },
+  )
+
   it('does not attribute a raw client-thrown message to the server', () => {
     expect(
       readConsoleFailureDetail(new Error('Network request failed')),
