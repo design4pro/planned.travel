@@ -219,7 +219,7 @@ const messages = {
   'security.password.action': 'Changer de mot de passe',
   'security.twoFactor.label': 'Double authentification',
   'security.twoFactor.onHint':
-    'Un code de votre application d’authentification est demandé à chaque nouvelle connexion.',
+    'Un code de votre application est demandé lors de la connexion par e-mail et mot de passe, sauf si ce navigateur est approuvé.',
   'security.twoFactor.offHint':
     'Ajoutez un code à six chiffres d’une application d’authentification par-dessus votre mot de passe.',
   'security.twoFactor.on': 'Active',
@@ -688,6 +688,82 @@ const messages = {
   'workspace.departure.activationFailed':
     'Vous avez quitté cet espace de travail. Ouvrez le suivant pour continuer.',
   'workspace.departure.recover': 'Ouvrir le prochain espace',
+  'twoFactor.back': 'Retour à la sécurité',
+  'twoFactor.title': 'Authentification à deux facteurs',
+  'twoFactor.description':
+    'Ajoutez une étape lors de la connexion par e-mail et mot de passe.',
+  'twoFactor.error': 'Impossible de charger vos paramètres à deux facteurs.',
+  'twoFactor.steps.label': 'Configurer les deux facteurs',
+  'twoFactor.steps.password': 'Confirmez votre identité',
+  'twoFactor.steps.key': 'Ajoutez la clé à votre application',
+  'twoFactor.steps.confirm': 'Saisissez un code',
+  'twoFactor.steps.state.done': 'Terminé',
+  'twoFactor.steps.state.current': 'Étape actuelle',
+  'twoFactor.steps.state.todo': 'Non commencé',
+  'twoFactor.password.label': 'Votre mot de passe',
+  'twoFactor.password.hint':
+    'Nous le redemandons avant de modifier votre connexion.',
+  'twoFactor.password.submit': 'Continuer',
+  'twoFactor.password.pending': 'Configuration en cours',
+  'twoFactor.password.invalid': 'Ce mot de passe est incorrect.',
+  'twoFactor.key.intro':
+    'Il vous faut une application d’authentification sur votre téléphone. Ajoutez-y cette clé, puis revenez ici. Les deux facteurs ne sont pas encore activés.',
+  'twoFactor.key.label': 'Clé de configuration',
+  'twoFactor.key.copy': 'Copier la clé',
+  'twoFactor.key.copied': 'Clé copiée',
+  'twoFactor.key.copyFailed':
+    'Votre navigateur n’a pas copié la clé. Sélectionnez-la et copiez-la manuellement.',
+  'twoFactor.key.open': 'Ouvrir dans votre application d’authentification',
+  'twoFactor.key.startOver': 'Recommencer',
+  'twoFactor.key.startOverHint':
+    'Recommencer crée une nouvelle clé. Une clé déjà ajoutée à une application cessera de fonctionner.',
+  'twoFactor.key.next': 'Je l’ai ajoutée',
+  'twoFactor.code.label': 'Code de l’application',
+  'twoFactor.code.hint':
+    'Les six chiffres affichés actuellement par l’application.',
+  'twoFactor.code.submit': 'Activer les deux facteurs',
+  'twoFactor.code.pending': 'Vérification en cours',
+  'twoFactor.code.invalid':
+    'Ce code ne correspond pas. Vérifiez l’heure du téléphone et saisissez le code le plus récent de l’application.',
+  'twoFactor.code.unclear':
+    'Nous ne savons pas si cela a fonctionné. Saisissez le code le plus récent pour réessayer.',
+  'twoFactor.rateLimited.title': 'Trop de tentatives rapprochées',
+  'twoFactor.rateLimited.password':
+    'Attendez environ dix secondes, puis réessayez. Vos saisies sont conservées.',
+  'twoFactor.rateLimited.code':
+    'Attendez jusqu’à une minute, puis réessayez. Vos saisies sont conservées.',
+  'twoFactor.codes.title': 'Vos codes de secours',
+  'twoFactor.codes.body':
+    'Chaque code fonctionne une fois si vous perdez votre téléphone. Ils ne sont affichés que maintenant : conservez-les en lieu sûr.',
+  'twoFactor.codes.copyAll': 'Tout copier',
+  'twoFactor.codes.copied': 'Codes de secours copiés',
+  'twoFactor.codes.download': 'Télécharger au format texte',
+  'twoFactor.codes.copyFailed':
+    'Votre navigateur n’a pas copié les codes. Sélectionnez-les et copiez-les manuellement.',
+  'twoFactor.codes.stored': 'J’ai conservé ces codes de secours',
+  'twoFactor.codes.done': 'Terminer',
+  'twoFactor.codes.gate': 'Cochez la case pour continuer.',
+  'twoFactor.codes.lost':
+    'Si vous quittez cette page avant, vous pourrez créer un nouveau jeu ici. L’ancien ne fonctionnera plus.',
+  'twoFactor.codes.leave.title': 'Partir sans conserver vos codes ?',
+  'twoFactor.codes.leave.body':
+    'Vos codes de secours ne sont affichés qu’une fois. Si vous partez, vous pourrez créer un nouveau jeu ici. L’ancien ne fonctionnera plus.',
+  'twoFactor.codes.leave.stay': 'Rester ici',
+  'twoFactor.codes.leave.go': 'Quitter',
+  'twoFactor.on.title': 'Les deux facteurs sont activés',
+  'twoFactor.on.badge': 'Activés',
+  'twoFactor.on.body':
+    'Nous demandons un code de l’application lors de la connexion par e-mail et mot de passe, sauf si ce navigateur est approuvé. Les connexions par Google, Apple ou clé d’accès ne demandent pas de code.',
+  'twoFactor.replace.action': 'Remplacer les codes de secours',
+  'twoFactor.replace.title': 'Remplacer vos codes de secours ?',
+  'twoFactor.replace.body':
+    'Vous recevrez un nouveau jeu. Le jeu actuel cesse de fonctionner dès que vous continuez.',
+  'twoFactor.replace.confirm': 'Remplacer',
+  'twoFactor.replace.pending': 'Remplacement en cours',
+  'twoFactor.nopassword.title': 'Définissez d’abord un mot de passe',
+  'twoFactor.nopassword.body':
+    'Les deux facteurs nécessitent un mot de passe pour ce compte. La page suivante demande votre e-mail et envoie un lien pour en définir un. Cela vous déconnecte partout. Reconnectez-vous, puis revenez ici.',
+  'twoFactor.nopassword.action': 'Définir un mot de passe',
 } satisfies TranslationOf<typeof En>
 
 export default messages

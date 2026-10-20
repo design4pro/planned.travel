@@ -222,7 +222,7 @@ const messages = {
   'security.password.action': 'Đổi mật khẩu',
   'security.twoFactor.label': 'Xác thực hai bước',
   'security.twoFactor.onHint':
-    'Mỗi lần đăng nhập mới đều cần mã từ ứng dụng xác thực.',
+    'Mã từ ứng dụng được yêu cầu khi đăng nhập bằng email và mật khẩu, trừ khi bạn tin cậy trình duyệt này.',
   'security.twoFactor.offHint':
     'Thêm một mã sáu chữ số từ ứng dụng xác thực bên cạnh mật khẩu.',
   'security.twoFactor.on': 'Bật',
@@ -660,6 +660,81 @@ const messages = {
   'workspace.departure.activationFailed':
     'Bạn đã rời không gian làm việc này. Mở không gian tiếp theo để tiếp tục.',
   'workspace.departure.recover': 'Mở không gian tiếp theo',
+  'twoFactor.back': 'Quay lại bảo mật',
+  'twoFactor.title': 'Xác thực hai yếu tố',
+  'twoFactor.description':
+    'Thêm bước thứ hai khi đăng nhập bằng email và mật khẩu.',
+  'twoFactor.error': 'Không thể tải cài đặt hai yếu tố.',
+  'twoFactor.steps.label': 'Thiết lập hai yếu tố',
+  'twoFactor.steps.password': 'Xác nhận danh tính của bạn',
+  'twoFactor.steps.key': 'Thêm vào ứng dụng xác thực',
+  'twoFactor.steps.confirm': 'Nhập mã',
+  'twoFactor.steps.state.done': 'Đã xong',
+  'twoFactor.steps.state.current': 'Bước hiện tại',
+  'twoFactor.steps.state.todo': 'Chưa bắt đầu',
+  'twoFactor.password.label': 'Mật khẩu của bạn',
+  'twoFactor.password.hint':
+    'Chúng tôi hỏi lại trước khi đổi cách bạn đăng nhập.',
+  'twoFactor.password.submit': 'Tiếp tục',
+  'twoFactor.password.pending': 'Đang thiết lập',
+  'twoFactor.password.invalid': 'Mật khẩu này không đúng.',
+  'twoFactor.key.intro':
+    'Bạn cần ứng dụng xác thực trên điện thoại. Thêm khóa này rồi quay lại đây. Hai yếu tố vẫn chưa được bật.',
+  'twoFactor.key.label': 'Khóa thiết lập',
+  'twoFactor.key.copy': 'Sao chép khóa',
+  'twoFactor.key.copied': 'Đã sao chép khóa',
+  'twoFactor.key.copyFailed':
+    'Trình duyệt không thể sao chép khóa. Hãy chọn và sao chép thủ công.',
+  'twoFactor.key.open': 'Mở trong ứng dụng xác thực',
+  'twoFactor.key.startOver': 'Bắt đầu lại',
+  'twoFactor.key.startOverHint':
+    'Bắt đầu lại sẽ tạo khóa mới. Khóa đã thêm vào ứng dụng sẽ ngừng hoạt động.',
+  'twoFactor.key.next': 'Tôi đã thêm',
+  'twoFactor.code.label': 'Mã từ ứng dụng',
+  'twoFactor.code.hint': 'Sáu chữ số ứng dụng đang hiển thị.',
+  'twoFactor.code.submit': 'Bật hai yếu tố',
+  'twoFactor.code.pending': 'Đang kiểm tra',
+  'twoFactor.code.invalid':
+    'Mã không khớp. Kiểm tra giờ trên điện thoại và nhập mã mới nhất trong ứng dụng.',
+  'twoFactor.code.unclear':
+    'Không thể xác định thao tác đã thành công chưa. Nhập mã mới nhất để thử lại.',
+  'twoFactor.rateLimited.title': 'Quá nhiều lần thử trong thời gian ngắn',
+  'twoFactor.rateLimited.password':
+    'Đợi khoảng mười giây rồi thử lại. Nội dung đã nhập được giữ nguyên.',
+  'twoFactor.rateLimited.code':
+    'Đợi tối đa một phút rồi thử lại. Nội dung đã nhập được giữ nguyên.',
+  'twoFactor.codes.title': 'Mã dự phòng của bạn',
+  'twoFactor.codes.body':
+    'Mỗi mã dùng được một lần nếu bạn mất điện thoại. Mã chỉ hiển thị lúc này, nên hãy cất ở nơi an toàn.',
+  'twoFactor.codes.copyAll': 'Sao chép tất cả',
+  'twoFactor.codes.copied': 'Đã sao chép mã dự phòng',
+  'twoFactor.codes.download': 'Tải xuống dưới dạng tệp văn bản',
+  'twoFactor.codes.copyFailed':
+    'Trình duyệt không thể sao chép mã. Hãy chọn và sao chép thủ công.',
+  'twoFactor.codes.stored': 'Tôi đã lưu các mã dự phòng này',
+  'twoFactor.codes.done': 'Hoàn tất',
+  'twoFactor.codes.gate': 'Đánh dấu ô để tiếp tục.',
+  'twoFactor.codes.lost':
+    'Nếu rời trang này trước, bạn có thể tạo bộ mã mới tại đây. Bộ cũ sẽ ngừng hoạt động.',
+  'twoFactor.codes.leave.title': 'Rời đi mà chưa lưu mã?',
+  'twoFactor.codes.leave.body':
+    'Mã dự phòng chỉ hiển thị một lần. Nếu rời đi bây giờ, bạn có thể tạo bộ mới tại đây. Bộ cũ sẽ ngừng hoạt động.',
+  'twoFactor.codes.leave.stay': 'Ở lại đây',
+  'twoFactor.codes.leave.go': 'Rời đi',
+  'twoFactor.on.title': 'Hai yếu tố đang bật',
+  'twoFactor.on.badge': 'Đang bật',
+  'twoFactor.on.body':
+    'Chúng tôi yêu cầu mã trong ứng dụng khi bạn đăng nhập bằng email và mật khẩu, trừ khi bạn tin cậy trình duyệt này. Đăng nhập bằng Google, Apple hoặc khóa truy cập không yêu cầu mã.',
+  'twoFactor.replace.action': 'Thay mã dự phòng',
+  'twoFactor.replace.title': 'Thay mã dự phòng của bạn?',
+  'twoFactor.replace.body':
+    'Bạn sẽ nhận bộ mới. Bộ hiện tại ngừng hoạt động ngay khi bạn tiếp tục.',
+  'twoFactor.replace.confirm': 'Thay thế',
+  'twoFactor.replace.pending': 'Đang thay thế',
+  'twoFactor.nopassword.title': 'Đặt mật khẩu trước',
+  'twoFactor.nopassword.body':
+    'Hai yếu tố cần mật khẩu cho tài khoản này. Trang tiếp theo yêu cầu email và gửi liên kết đặt mật khẩu. Việc đặt mật khẩu đăng xuất bạn ở mọi nơi. Đăng nhập lại rồi quay lại đây.',
+  'twoFactor.nopassword.action': 'Đặt mật khẩu',
 } satisfies TranslationOf<typeof En>
 
 export default messages

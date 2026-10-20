@@ -217,7 +217,7 @@ const messages = {
   'security.password.action': 'Změnit heslo',
   'security.twoFactor.label': 'Dvoufázové ověření',
   'security.twoFactor.onHint':
-    'Při každém novém přihlášení je potřeba kód z autentizační aplikace.',
+    'Při přihlášení e-mailem a heslem je vyžadován kód z ověřovací aplikace, pokud tento prohlížeč není důvěryhodný.',
   'security.twoFactor.offHint':
     'Přidejte k heslu šestimístný kód z autentizační aplikace.',
   'security.twoFactor.on': 'Zap.',
@@ -678,6 +678,82 @@ const messages = {
   'workspace.departure.activationFailed':
     'Tento pracovní prostor jste opustili. Pokračujte otevřením dalšího.',
   'workspace.departure.recover': 'Otevřít další prostor',
+  'twoFactor.back': 'Zpět na zabezpečení',
+  'twoFactor.title': 'Dvoufaktorové ověřování',
+  'twoFactor.description':
+    'Přidejte druhý krok při přihlášení e-mailem a heslem.',
+  'twoFactor.error':
+    'Nastavení dvoufaktorového ověřování se nepodařilo načíst.',
+  'twoFactor.steps.label': 'Nastavit dvoufaktorové ověřování',
+  'twoFactor.steps.password': 'Potvrďte svou totožnost',
+  'twoFactor.steps.key': 'Přidejte klíč do ověřovací aplikace',
+  'twoFactor.steps.confirm': 'Zadejte kód',
+  'twoFactor.steps.state.done': 'Hotovo',
+  'twoFactor.steps.state.current': 'Aktuální krok',
+  'twoFactor.steps.state.todo': 'Nezahájeno',
+  'twoFactor.password.label': 'Vaše heslo',
+  'twoFactor.password.hint':
+    'Před změnou způsobu přihlašování se zeptáme znovu.',
+  'twoFactor.password.submit': 'Pokračovat',
+  'twoFactor.password.pending': 'Nastavování',
+  'twoFactor.password.invalid': 'Toto heslo není správné.',
+  'twoFactor.key.intro':
+    'V telefonu potřebujete ověřovací aplikaci. Přidejte do ní tento klíč a vraťte se sem. Dvoufaktorové ověřování ještě není zapnuté.',
+  'twoFactor.key.label': 'Nastavovací klíč',
+  'twoFactor.key.copy': 'Kopírovat klíč',
+  'twoFactor.key.copied': 'Klíč zkopírován',
+  'twoFactor.key.copyFailed':
+    'Prohlížeč klíč nezkopíroval. Označte ho a zkopírujte ručně.',
+  'twoFactor.key.open': 'Otevřít v ověřovací aplikaci',
+  'twoFactor.key.startOver': 'Začít znovu',
+  'twoFactor.key.startOverHint':
+    'Nový začátek vytvoří nový klíč. Klíč, který jste již přidali do aplikace, přestane fungovat.',
+  'twoFactor.key.next': 'Klíč je přidaný',
+  'twoFactor.code.label': 'Kód z aplikace',
+  'twoFactor.code.hint': 'Šest číslic, které aplikace právě zobrazuje.',
+  'twoFactor.code.submit': 'Zapnout dvoufaktorové ověřování',
+  'twoFactor.code.pending': 'Kontrola',
+  'twoFactor.code.invalid':
+    'Kód nesouhlasí. Zkontrolujte čas v telefonu a zadejte nejnovější kód z aplikace.',
+  'twoFactor.code.unclear':
+    'Nepodařilo se zjistit, zda to fungovalo. Zadejte nejnovější kód a zkuste to znovu.',
+  'twoFactor.rateLimited.title': 'Příliš mnoho pokusů za krátkou dobu',
+  'twoFactor.rateLimited.password':
+    'Počkejte přibližně deset sekund a zkuste to znovu. Zadané údaje zůstaly zachovány.',
+  'twoFactor.rateLimited.code':
+    'Počkejte až minutu a zkuste to znovu. Zadané údaje zůstaly zachovány.',
+  'twoFactor.codes.title': 'Vaše záložní kódy',
+  'twoFactor.codes.body':
+    'Každý kód funguje jednou, pokud ztratíte telefon. Zobrazují se jen nyní, proto je bezpečně uložte.',
+  'twoFactor.codes.copyAll': 'Kopírovat vše',
+  'twoFactor.codes.copied': 'Záložní kódy zkopírovány',
+  'twoFactor.codes.download': 'Stáhnout jako textový soubor',
+  'twoFactor.codes.copyFailed':
+    'Prohlížeč kódy nezkopíroval. Označte je a zkopírujte ručně.',
+  'twoFactor.codes.stored': 'Tyto záložní kódy mám uložené',
+  'twoFactor.codes.done': 'Dokončit',
+  'twoFactor.codes.gate': 'Pokračujte zaškrtnutím políčka.',
+  'twoFactor.codes.lost':
+    'Pokud stránku nejdříve opustíte, můžete zde vytvořit novou sadu. Stará přestane fungovat.',
+  'twoFactor.codes.leave.title': 'Odejít bez uložení kódů?',
+  'twoFactor.codes.leave.body':
+    'Záložní kódy se zobrazují pouze jednou. Pokud nyní odejdete, můžete zde vytvořit novou sadu. Stará přestane fungovat.',
+  'twoFactor.codes.leave.stay': 'Zůstat zde',
+  'twoFactor.codes.leave.go': 'Odejít',
+  'twoFactor.on.title': 'Dvoufaktorové ověřování je zapnuté',
+  'twoFactor.on.badge': 'Zapnuto',
+  'twoFactor.on.body':
+    'Při přihlášení e-mailem a heslem žádáme kód z aplikace, pokud tento prohlížeč není důvěryhodný. Přihlášení přes Google, Apple nebo přístupový klíč kód nevyžaduje.',
+  'twoFactor.replace.action': 'Nahradit záložní kódy',
+  'twoFactor.replace.title': 'Nahradit vaše záložní kódy?',
+  'twoFactor.replace.body':
+    'Dostanete novou sadu. Současná přestane fungovat, jakmile budete pokračovat.',
+  'twoFactor.replace.confirm': 'Nahradit',
+  'twoFactor.replace.pending': 'Nahrazování',
+  'twoFactor.nopassword.title': 'Nejprve nastavte heslo',
+  'twoFactor.nopassword.body':
+    'Dvoufaktorové ověřování vyžaduje heslo k tomuto účtu. Další stránka požádá o e-mail a pošle odkaz k nastavení. Nastavení hesla vás všude odhlásí. Přihlaste se znovu a vraťte se sem.',
+  'twoFactor.nopassword.action': 'Nastavit heslo',
 } satisfies TranslationOf<typeof En>
 
 export default messages
