@@ -119,9 +119,41 @@ export function YearGrid({
     setDescribed(null)
     setFailure(null)
   }
-  const mutate = async (date: string, kind: EntryKind | null) => {
+  const mutate = async (
+    date: string,
+    kind: EntryKind | null,
+    reconcileFirst = false,
+  ) => {
     if (pending.current.has(date)) return
     pending.current.add(date)
+    if (reconcileFirst) {
+      try {
+        const read = await reread()
+        setSnapshot(read)
+        const persisted = read.entries.find((row) => row.date === date)?.kind
+        if (kind === null ? persisted === undefined : persisted === kind) {
+          pending.current.delete(date)
+          status(date, kind, read.remainingDays)
+          refresh()
+          return
+        }
+        if (
+          kind !== null &&
+          blockedReason(date, {
+            ...read,
+            companyHolidays: new Set(read.companyHolidays),
+          })
+        ) {
+          pending.current.delete(date)
+          setFailure({ date, kind, retryable: false })
+          return
+        }
+      } catch {
+        pending.current.delete(date)
+        setFailure({ date, kind, retryable: true })
+        return
+      }
+    }
     setOverrides((current) => new Map(current).set(date, kind))
     setPicker(null)
     focus(date)
@@ -172,7 +204,11 @@ export function YearGrid({
       const writable =
         currentRules && (kind === null || !blockedReason(date, currentRules))
       setMessage('')
-      setFailure({ date, kind, retryable: retryable && !!writable })
+      setFailure({
+        date,
+        kind,
+        retryable: retryable && (read === undefined || !!writable),
+      })
     }
   }
   return (
@@ -301,7 +337,9 @@ export function YearGrid({
                                   ? {
                                       background:
                                         colour ?? 'var(--color-brand)',
-                                      color: ink,
+                                      color: colour
+                                        ? ink
+                                        : 'var(--color-brand-on)',
                                     }
                                   : undefined
                               }
@@ -397,7 +435,7 @@ export function YearGrid({
         retry={
           failure?.retryable
             ? () => {
-                void mutate(failure.date, failure.kind)
+                void mutate(failure.date, failure.kind, true)
               }
             : undefined
         }

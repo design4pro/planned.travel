@@ -201,7 +201,7 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await page.emulateMedia({ colorScheme: 'light' })
     await page.goto(UNSET.path, { waitUntil: 'networkidle' })
     const grid = page.locator('[data-part="vacay-year"]')
-    const cell = grid.getByRole('button', { name: /^4 Aug 2031/ })
+    const cell = grid.getByRole('button', { name: /^4 Dec 2031/ })
     await expect(grid.locator('table button[tabindex="0"]')).toHaveCount(1)
     const jan31 = grid.getByRole('button', { name: /^31 Jan 2031/ })
     await jan31.focus()
@@ -212,7 +212,7 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await cell.focus()
     await cell.press('Enter')
     await expect(
-      page.getByRole('dialog', { name: 'Mark 4 Aug 2031' }),
+      page.getByRole('dialog', { name: 'Mark 4 Dec 2031' }),
     ).toBeVisible()
     await page
       .getByRole('button', { name: /^Half day of leave/ })
@@ -242,7 +242,7 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       await page.goto(UNSET.path, { waitUntil: 'networkidle' })
       const cell = page
         .locator('[data-part="vacay-year"]')
-        .getByRole('button', { name: /^4 Aug 2031/ })
+        .getByRole('button', { name: /^4 Dec 2031/ })
       await page.route('**/_serverFn/**', (route) =>
         route.request().method() === 'POST'
           ? route.abort('failed')
@@ -251,7 +251,7 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       try {
         await cell.click()
         await page.getByRole('button', { name: /^Leave\s*Uses/ }).click()
-        await expect(page.getByRole('alert')).toContainText('4 Aug 2031')
+        await expect(page.getByRole('alert')).toContainText('4 Dec 2031')
         await expect(cell).toBeFocused()
         const retry = page.getByRole('button', { name: 'Try again' })
         await expect(retry).toBeVisible()

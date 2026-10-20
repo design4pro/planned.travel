@@ -68,6 +68,14 @@ describe('year grid', () => {
     expect(document.activeElement).toBe(byDay(1, 1))
     fireEvent.keyDown(document.activeElement!, { key: 'PageDown' })
     expect(document.activeElement).toBe(byDay(2, 1))
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(byDay(2, 8))
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(byDay(2, 1))
+    fireEvent.keyDown(document.activeElement!, { key: 'PageUp' })
+    expect(document.activeElement).toBe(byDay(1, 1))
+    fireEvent.keyDown(document.activeElement!, { key: 'PageDown' })
+    expect(document.activeElement).toBe(byDay(2, 1))
     fireEvent.keyDown(document.activeElement!, { key: 'Home' })
     expect(document.activeElement).toBe(byDay(1, 23))
     fireEvent.keyDown(document.activeElement!, { key: 'End' })
@@ -176,6 +184,47 @@ describe('year grid', () => {
     expect(cell.getAttribute('aria-label')).not.toContain('Leave')
     expect(document.activeElement).toBe(cell)
   })
+  it('uses theme-aware ink for marked days without a stored colour', () => {
+    mount({
+      initial: {
+        ...initial,
+        entries: [{ date: '2026-08-03', kind: 'vacation' }],
+      },
+    })
+    expect(byDay(7, 3).style.color).toBe('var(--color-brand-on)')
+  })
+  it.each([true, false])(
+    'reconciles before recovery when both requests failed (committed=%s)',
+    async (committed) => {
+      const write = vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError('Offline'))
+        .mockResolvedValue({ ok: true })
+      const saved = {
+        ...initial,
+        remainingDays: 24,
+        entries: [{ date: '2026-08-03', kind: 'vacation' }],
+      }
+      const reread = vi
+        .fn()
+        .mockRejectedValueOnce(new TypeError('Offline'))
+        .mockResolvedValueOnce(committed ? saved : initial)
+        .mockResolvedValue(saved)
+      mount({ write, reread })
+      fireEvent.click(byDay(7, 3))
+      fireEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: /^Leave\s*Uses/,
+        }),
+      )
+      await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+      expect(write).toHaveBeenCalledTimes(committed ? 1 : 2)
+      expect(reread).toHaveBeenCalledTimes(committed ? 2 : 3)
+      expect(byDay(7, 3).getAttribute('aria-label')).toContain('Leave')
+    },
+  )
   it('keeps both optimistic fills when the second day settles before the first', async () => {
     const completions = new Map<string, (value: { ok: boolean }) => void>()
     const reread = vi

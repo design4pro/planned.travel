@@ -14,6 +14,7 @@ import {
   vacayEntriesRepository,
   vacayUserYearsRepository,
 } from '../vacay'
+import { MAX_BOUND_PARAMETERS } from '../batch'
 import { NotFoundError } from '../context'
 import { createHarness } from './harness'
 import type { Harness, SeededTenant } from './harness'
@@ -33,6 +34,7 @@ describe('personal leave days', () => {
     harness.close()
   })
   it('atomically replaces one day without reading its previous entry', async () => {
+    harness.statements.length = 0
     const read = vi.spyOn(vacayEntriesRepository, 'findOne')
     const a = await setEntry(tenant.scope, { planId, date: '2026-08-03' })
     const b = await setEntry(tenant.scope, {
@@ -45,6 +47,16 @@ describe('personal leave days', () => {
     expect(b.organizationId).toBe(tenant.scope.ctx.organizationId)
     expect(read).not.toHaveBeenCalled()
     expect(await listVacayEntries(tenant.scope, planId)).toHaveLength(1)
+    const inserts = harness.statements.filter((sql) =>
+      sql.startsWith('insert into "vacay_entries"'),
+    )
+    expect(inserts).toHaveLength(2)
+    for (const sql of inserts) {
+      const width = (sql.match(/\?/g) ?? []).length
+      expect(width).toBeGreaterThan(0)
+      expect(width).toBeLessThanOrEqual(MAX_BOUND_PARAMETERS)
+      expect(sql).toContain('on conflict')
+    }
     read.mockRestore()
   })
   it.each(['absent', 'pending', 'declined'] as const)(

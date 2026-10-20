@@ -236,21 +236,52 @@ function VacayPending() {
               ))}
             </Card>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 12 }, (_, index) => (
-              <Card key={index} className="space-y-3">
-                <Skeleton className="h-5 w-24" radius="sm" />
-                <div className="grid grid-cols-7 gap-1.5">
-                  {Array.from({ length: 42 }, (_slot, cell) => (
-                    <Skeleton
-                      key={cell}
-                      className="h-7 w-full [@media(pointer:coarse)]:h-10"
-                      radius="md"
-                    />
-                  ))}
-                </div>
-              </Card>
-            ))}
+          <div>
+            <Skeleton
+              className="mb-3 h-[calc(var(--text-caption)*var(--text-caption--line-height))] w-64 max-w-full"
+              radius="sm"
+            />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 12 }, (_monthSlot, index) => (
+                <Card key={index} padding="none" className="min-w-0 p-3.5">
+                  <Skeleton
+                    className="mb-3 h-[calc(var(--text-label)*var(--text-label--line-height))] w-24"
+                    radius="sm"
+                  />
+                  <table
+                    aria-hidden
+                    className="w-full table-fixed border-separate border-spacing-y-1"
+                  >
+                    <thead>
+                      <tr>
+                        {Array.from({ length: 7 }, (_columnSlot, column) => (
+                          <th key={column}>
+                            <Skeleton
+                              className="h-[calc(var(--text-micro)*var(--text-micro--line-height))] w-full"
+                              radius="sm"
+                            />
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 6 }, (_rowSlot, row) => (
+                        <tr key={row}>
+                          {Array.from({ length: 7 }, (_columnSlot, column) => (
+                            <td key={column}>
+                              <Skeleton
+                                className="h-7 w-full [@media(pointer:coarse)]:h-10"
+                                radius="md"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       </AppSections>
