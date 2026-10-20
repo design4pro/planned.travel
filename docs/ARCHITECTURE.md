@@ -336,6 +336,9 @@ own SQLite storage and its own WebSocket set. Concretely, from `src/server/do/pr
 
 - 32 KiB maximum frame; 40 messages per second per connection rate limit.
 - 5-minute alarm interval for housekeeping; a room idles out after 7 days.
+- Deleting a trip resets its room after the D1 deletion commits: sockets close and stored entity,
+  commit-log and presence state is erased. A room failure is logged without failing deletion;
+  idle expiry remains the backstop.
 - Patch log capacity and tombstone TTL are bounded, so an object's storage cannot grow without
   limit from edit history alone.
 
