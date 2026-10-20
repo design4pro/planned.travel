@@ -51,6 +51,13 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'vacay.page.eyebrow': 'Time off',
+  'vacay.page.title': 'Vacay',
+  'vacay.page.description':
+    'Plan the days you are away and see them against everyone else’s',
+  'vacay.people.title': 'Travellers',
+  'vacay.people.you': '{name} (you)',
+
   /* -------------------------------------------- shared by every module */
   'value.notSet': 'Not set',
   /* ----------------------------------------- the realtime presence bar */

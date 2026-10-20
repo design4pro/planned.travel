@@ -1,3 +1,16 @@
+/** Columns and month padding use JavaScript weekdays: Sunday is zero. */
+export function weekColumns(weekStartsOn: number): number[] {
+  return Array.from({ length: 7 }, (_, column) => (weekStartsOn + column) % 7)
+}
+
+export function leadingDays(
+  year: number,
+  month: number,
+  weekStartsOn: number,
+): number {
+  return (new Date(Date.UTC(year, month, 1)).getUTCDay() - weekStartsOn + 7) % 7
+}
+
 /** The year has one roving stop; month movement preserves the day where possible. */
 export function moveDay(
   date: string,

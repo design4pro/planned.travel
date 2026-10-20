@@ -57,6 +57,34 @@ const byDay = (month: number, number: number) =>
     [month].querySelectorAll<HTMLButtonElement>('button')[number - 1]!
 
 describe('year grid', () => {
+  it.each([
+    [0, 'Sunday', 4, 2, 8],
+    [1, 'Monday', 3, 3, 9],
+    [6, 'Saturday', 5, 1, 7],
+  ])(
+    'renders the week starting %i with real weekday shading and focus',
+    (weekStartsOn, first, column, home, end) => {
+      mount({ weekStartsOn })
+      const january = document.querySelector('table[role="grid"]')!
+      expect(january.querySelector('th')?.getAttribute('abbr')).toBe(first)
+      expect(
+        Array.from(byDay(0, 1).closest('tr')!.children).indexOf(
+          byDay(0, 1).closest('td')!,
+        ),
+      ).toBe(column)
+      for (const day of [1, 2, 3, 4, 5, 6, 7]) {
+        expect(byDay(7, day).classList.contains('bg-surface-inset')).toBe(
+          [1, 2].includes(day),
+        )
+      }
+      byDay(7, 5).focus()
+      fireEvent.keyDown(document.activeElement!, { key: 'Home' })
+      expect(document.activeElement).toBe(byDay(7, home))
+      byDay(7, 5).focus()
+      fireEvent.keyDown(document.activeElement!, { key: 'End' })
+      expect(document.activeElement).toBe(byDay(7, end))
+    },
+  )
   it('has one stop and moves real focus across months, weeks and year limits', () => {
     mount()
     expect(
