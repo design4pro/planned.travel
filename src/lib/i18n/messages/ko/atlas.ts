@@ -21,6 +21,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': '아직 집계할 내용이 없어요',
+  'panel.stats.empty.body':
+    '지도에 국가를 표시하거나 여행을 계획하면 여기에 수치가 표시돼요.',
+  'panel.stats.empty.action': '여행 계획하기',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': '세계 지도. 아직 방문한 나라가 표시되지 않았습니다.',
   'screen.world.summary':

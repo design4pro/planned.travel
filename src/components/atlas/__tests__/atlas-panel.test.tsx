@@ -1269,3 +1269,79 @@ describe('reading statistics by year', () => {
     expect(screen.queryByText('0 km')).toBeNull()
   })
 })
+
+describe('the Stats empty state', () => {
+  const emptyStats = {
+    ...STATS,
+    countryCount: 0,
+    regionCount: 0,
+    tripCount: 0,
+    visitCount: 0,
+  }
+  const row = {
+    statYear: 0,
+    tripCount: 0,
+    placeCount: 0,
+    cityCount: 0,
+    countryCount: 0,
+    dayCount: 0,
+    distanceMetres: 0,
+    yearStreak: 0,
+  }
+
+  it.each([{ statsRows: [] }, { statsRows: [row] }])(
+    'replaces zero tiles with a quiet invitation when the all-time row is %j',
+    ({ statsRows }) => {
+      const before = document.activeElement
+      const { container } = panel({
+        stats: emptyStats,
+        statsRows,
+        countries: [],
+        byContinent: [],
+      })
+      const title = screen.getByText('Nothing to count yet')
+      expect(
+        screen.getByText(
+          'Mark a country on the map, or plan a trip, and your figures start here.',
+        ),
+      ).toBeTruthy()
+      const link = screen.getByRole('link', { name: 'Plan a trip' })
+      expect(link.getAttribute('href')).toBe('/trips')
+      expect(container.querySelector('[data-stat]')).toBeNull()
+      expect(
+        screen.queryByRole('group', { name: 'Figures for all time' }),
+      ).toBeNull()
+      expect(
+        title.closest('[role="status"], [role="alert"], [aria-live]'),
+      ).toBeNull()
+      expect(
+        container.querySelector('[data-part="stats-status"]')?.textContent,
+      ).toBe('')
+      expect(document.activeElement).toBe(before)
+    },
+  )
+
+  it.each([
+    { stats: { ...emptyStats, countryCount: 1 }, statsRows: [row] },
+    { stats: { ...emptyStats, regionCount: 1 }, statsRows: [row] },
+    {
+      stats: { ...emptyStats, tripCount: 3 },
+      statsRows: [{ ...row, tripCount: 3 }],
+    },
+  ])(
+    'keeps the figures for a traveller with a country, region or trip: %j',
+    (values) => {
+      const { container } = panel({ ...values, countries: [], byContinent: [] })
+      expect(screen.queryByText('Nothing to count yet')).toBeNull()
+      expect(container.querySelector('[data-stat="trips"]')).toBeTruthy()
+    },
+  )
+
+  it('uses the all-time row even when the summary has trips or a year row has none', () => {
+    panel({
+      stats: { ...emptyStats, tripCount: 9 },
+      statsRows: [row, { ...row, statYear: 2025 }],
+    })
+    expect(screen.getByText('Nothing to count yet')).toBeTruthy()
+  })
+})

@@ -26,6 +26,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Még nincs mit számolni',
+  'panel.stats.empty.body':
+    'Jelölj meg egy országot a térképen, vagy tervezz utazást, és itt megjelennek a számaid.',
+  'panel.stats.empty.action': 'Utazás tervezése',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Világtérkép. Még egyetlen ország sincs meglátogatottként megjelölve.',

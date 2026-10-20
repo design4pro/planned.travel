@@ -27,6 +27,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Noch nichts zu zählen',
+  'panel.stats.empty.body':
+    'Markiere ein Land auf der Karte oder plane eine Reise. Hier erscheinen dann deine Zahlen.',
+  'panel.stats.empty.action': 'Reise planen',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': 'Weltkarte. Noch kein Land als besucht markiert.',
   'screen.world.summary':

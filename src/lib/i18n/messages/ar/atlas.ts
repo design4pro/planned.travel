@@ -25,6 +25,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'لا يوجد ما يُحصى بعد',
+  'panel.stats.empty.body':
+    'حدّد بلدًا على الخريطة أو خطّط لرحلة، وستبدأ أرقامك بالظهور هنا.',
+  'panel.stats.empty.action': 'خطّط لرحلة',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': 'خريطة العالم. لم تُسجَّل زيارة أي دولة بعد.',
   'screen.world.summary':
