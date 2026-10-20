@@ -184,6 +184,8 @@ const messages = {
   'payments.empty.body':
     'När någon betalar tillbaka ett saldo loggas överföringen här.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Den här resan är arkiverad. Återställ den innan du ändrar kostnaderna.',
   'readOnly.title': 'Du kan se kostnaderna men inte ändra dem',
   'readOnly.body':
     'Bara resens ägare och de som får redigera den lägger till, ändrar eller tar bort utgifter och registrerar betalningar. Fråga en ägare om något behöver ändras.',

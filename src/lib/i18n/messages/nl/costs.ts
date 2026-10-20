@@ -187,6 +187,8 @@ const messages = {
   'payments.empty.body':
     'Zodra iemand een saldo terugbetaalt, wordt de overboeking hier vastgelegd.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Deze reis is gearchiveerd. Herstel de reis voordat je de kosten wijzigt.',
   'readOnly.title': 'Je kunt de kosten bekijken, maar niet wijzigen',
   'readOnly.body':
     'Alleen de eigenaren van de reis en mensen die hem mogen bewerken voegen uitgaven toe, wijzigen of verwijderen ze en leggen betalingen vast. Vraag een eigenaar als er iets moet veranderen.',

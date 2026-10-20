@@ -195,6 +195,8 @@ const messages = {
   'payments.empty.body':
     'Gdy ktoś oddaje saldo, przelew zostaje zapisany tutaj.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Ta podróż jest zarchiwizowana. Przywróć ją, aby zmienić koszty.',
   'readOnly.title': 'Koszty możesz przeglądać, ale nie zmieniać',
   'readOnly.body':
     'Wydatki dodają, zmieniają i usuwają oraz wpłaty zapisują tylko właściciele wyjazdu i osoby, które mogą go edytować. Jeśli coś trzeba poprawić, poproś właściciela.',

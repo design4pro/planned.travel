@@ -184,6 +184,8 @@ const messages = {
   'payments.empty.body':
     'Begitu seseorang melunasi saldo, transfernya dicatat di sini.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Perjalanan ini diarsipkan. Pulihkan sebelum mengubah biaya.',
   'readOnly.title': 'Kamu bisa melihat biaya, tetapi tidak bisa mengubahnya',
   'readOnly.body':
     'Hanya pemilik perjalanan dan orang yang bisa mengedit yang dapat menambah, mengubah, atau menghapus pengeluaran dan mencatat pembayaran. Tanyakan kepada pemilik jika ada yang perlu diubah.',
