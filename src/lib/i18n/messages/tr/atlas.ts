@@ -350,6 +350,44 @@ const messages = {
   'card.error.body': 'Bu sayılar yüklenmedi. Hiçbir şey kaybolmadı.',
   'card.error.retry': 'Yeniden dene',
   'overlay.close': '{name} kartını kapat',
+  'regions.label': 'Bölgeler',
+  'regions.hint':
+    'Bölge eklemek {country} ülkesini de ziyaret edildi olarak işaretler.',
+  'regions.keeps': 'Bölgeyi kaldırmak {country} ülkesini atlasından kaldırmaz.',
+  'regions.keeps.unvisited':
+    'Bu bölgeler kayıtta kalır. {country} ülkesini ziyaret edildi olarak işaretleyerek veya bir bölge ekleyerek haritana geri koyabilirsin.',
+  'regions.empty.title': 'Burada henüz bölge kaydedilmedi',
+  'regions.empty.body':
+    '{country} içinde ziyaret ettiğin bir eyalet, il veya bölge ekle.',
+  'regions.input.label': '{country} içinde bölge ekle',
+  'regions.input.placeholder': 'Örneğin Bavyera',
+  'regions.add': 'Bölge ekle',
+  'regions.adding': '{region} ekleniyor',
+  'regions.remove': '{region} bölgesini kaldır',
+  'regions.loading': 'Bölgelerin yükleniyor',
+  'regions.status.added': '{region} eklendi',
+  'regions.status.exists': '{region} zaten kayıtlı',
+  'regions.status.removed': '{region} kaldırıldı',
+  'regions.status.addedCountry':
+    '{region} eklendi. {country} artık ziyaret edildi olarak işaretli.',
+  'regions.error.invalid': 'Bir bölge adı gir.',
+  'regions.error.hidden':
+    'Ad, izin verilmeyen karakterler içeriyor. Bunları kaldırıp tekrar dene.',
+  'regions.error.load': '{country} içindeki bölgelerin yüklenemedi.',
+  'regions.error.add': '{region} eklenemedi. Tekrar dene.',
+  'regions.error.remove': '{region} kaldırılamadı. Tekrar dene.',
+  'regions.error.full':
+    '{limit} bölge kaydettin. Başka bir bölge eklemek için birini kaldır.',
+  'regions.reload': 'Bölgeleri yeniden yükle',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}{country} içinde kaydettiğin bölgeler kayıtta kalır: {count}.',
+    other:
+      '{history}{country} içinde kaydettiğin bölgeler kayıtta kalır: {count}.',
+  },
+  'regions.error.uncertain':
+    'Değişiklik doğrulanamadı. Neyin kaydedildiğini kontrol etmek için bölgelerini yeniden yükle.',
+  'regions.status.refreshFailed':
+    '{result} Atlas yenilenemedi. Haritayı güncellemek için yeniden yükle.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

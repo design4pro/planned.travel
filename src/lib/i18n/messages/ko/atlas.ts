@@ -324,6 +324,41 @@ const messages = {
   'card.error.body': '이 수치를 불러오지 못했습니다. 잃어버린 것은 없습니다.',
   'card.error.retry': '다시 시도',
   'overlay.close': '{name} 닫기',
+  'regions.label': '지역',
+  'regions.hint': '지역을 추가하면 {country}도 방문한 국가로 표시됩니다.',
+  'regions.keeps':
+    '지역을 삭제해도 아틀라스에서 {country}는 삭제되지 않습니다.',
+  'regions.keeps.unvisited':
+    '이 지역들은 기록에 남습니다. {country}를 방문한 국가로 표시하거나 지역을 추가하면 지도에 다시 나타납니다.',
+  'regions.empty.title': '아직 기록된 지역이 없습니다',
+  'regions.empty.body': '{country}에서 방문한 주, 도 또는 지역을 추가하세요.',
+  'regions.input.label': '{country}의 지역 추가',
+  'regions.input.placeholder': '예: 바이에른',
+  'regions.add': '지역 추가',
+  'regions.adding': '{region} 추가 중',
+  'regions.remove': '{region} 삭제',
+  'regions.loading': '지역 불러오는 중',
+  'regions.status.added': '{region} 추가됨',
+  'regions.status.exists': '{region}은 이미 기록되어 있습니다',
+  'regions.status.removed': '{region} 삭제됨',
+  'regions.status.addedCountry':
+    '{region} 추가됨. {country}도 방문한 국가로 표시되었습니다.',
+  'regions.error.invalid': '지역 이름을 입력하세요.',
+  'regions.error.hidden':
+    '이름에 허용되지 않는 문자가 있습니다. 삭제하고 다시 시도하세요.',
+  'regions.error.load': '{country}의 지역을 불러오지 못했습니다.',
+  'regions.error.add': '{region}을 추가하지 못했습니다. 다시 시도하세요.',
+  'regions.error.remove': '{region}을 삭제하지 못했습니다. 다시 시도하세요.',
+  'regions.error.full':
+    '{limit}개 지역을 기록했습니다. 다른 지역을 추가하려면 하나를 삭제하세요.',
+  'regions.reload': '지역 다시 불러오기',
+  'actions.confirm.visitRegions.body': {
+    other: '{history}{country}에서 기록한 지역 {count}개는 기록에 남습니다.',
+  },
+  'regions.error.uncertain':
+    '변경 사항을 확인하지 못했습니다. 지역을 다시 불러와 저장된 내용을 확인하세요.',
+  'regions.status.refreshFailed':
+    '{result} 아틀라스를 새로 고치지 못했습니다. 다시 불러와 지도를 업데이트하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

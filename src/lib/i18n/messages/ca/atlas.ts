@@ -374,6 +374,44 @@ const messages = {
   'card.error.body': 'Aquestes xifres no s’han carregat. No s’ha perdut res.',
   'card.error.retry': 'Torna-ho a provar',
   'overlay.close': 'Tanca {name}',
+  'regions.label': 'Regions visitades',
+  'regions.hint': 'Afegir una regió també marca {country} com a visitat.',
+  'regions.keeps': 'Eliminar una regió no treu {country} del teu atles.',
+  'regions.keeps.unvisited':
+    'Aquestes regions queden desades. Marca {country} com a visitat o afegeix una regió per tornar-lo al mapa.',
+  'regions.empty.title': 'Encara no hi ha regions registrades aquí',
+  'regions.empty.body':
+    'Afegeix un estat, província o zona que hagis visitat a {country}.',
+  'regions.input.label': 'Afegir una regió a {country}',
+  'regions.input.placeholder': 'Per exemple, Baviera',
+  'regions.add': 'Afegir regió',
+  'regions.adding': 'Afegint {region}',
+  'regions.remove': 'Eliminar {region}',
+  'regions.loading': 'Carregant les teves regions',
+  'regions.status.added': 'S’ha afegit {region}',
+  'regions.status.exists': '{region} ja està registrat',
+  'regions.status.removed': 'S’ha eliminat {region}',
+  'regions.status.addedCountry':
+    'S’ha afegit {region}. {country} ara està marcat com a visitat.',
+  'regions.error.invalid': 'Escriu el nom d’una regió.',
+  'regions.error.hidden':
+    'El nom conté caràcters no admesos. Elimina’ls i torna-ho a provar.',
+  'regions.error.load': 'No hem pogut carregar les teves regions de {country}.',
+  'regions.error.add': 'No hem pogut afegir {region}. Torna-ho a provar.',
+  'regions.error.remove': 'No hem pogut eliminar {region}. Torna-ho a provar.',
+  'regions.error.full':
+    'Has registrat {limit} regions. Elimina’n una per afegir-ne una altra.',
+  'regions.reload': 'Recarregar regions',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Les regions registrades a {country} queden desades: {count}.',
+    many: '{history}Les regions registrades a {country} queden desades: {count}.',
+    other:
+      '{history}Les regions registrades a {country} queden desades: {count}.',
+  },
+  'regions.error.uncertain':
+    'No hem pogut confirmar el canvi. Recarrega les regions per comprovar què s’ha desat.',
+  'regions.status.refreshFailed':
+    '{result} No s’ha pogut actualitzar l’atles. Recarrega’l per actualitzar el mapa.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

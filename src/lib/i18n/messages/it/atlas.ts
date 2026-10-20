@@ -376,6 +376,45 @@ const messages = {
     'Questi numeri non si sono caricati. Non è andato perso nulla.',
   'card.error.retry': 'Riprova',
   'overlay.close': 'Chiudi {name}',
+  'regions.label': 'Regioni',
+  'regions.hint': 'Aggiungere una regione segna anche {country} come visitato.',
+  'regions.keeps':
+    'Rimuovere una regione non rimuove {country} dal tuo atlante.',
+  'regions.keeps.unvisited':
+    'Queste regioni restano registrate. Segna {country} come visitato o aggiungi una regione per riportarlo sulla mappa.',
+  'regions.empty.title': 'Nessuna regione ancora registrata qui',
+  'regions.empty.body':
+    'Aggiungi uno stato, una provincia o un’area visitata in {country}.',
+  'regions.input.label': 'Aggiungi una regione in {country}',
+  'regions.input.placeholder': 'Ad esempio, Baviera',
+  'regions.add': 'Aggiungi regione',
+  'regions.adding': 'Aggiunta di {region}',
+  'regions.remove': 'Rimuovi {region}',
+  'regions.loading': 'Caricamento delle tue regioni',
+  'regions.status.added': '{region} aggiunta',
+  'regions.status.exists': '{region} è già registrata',
+  'regions.status.removed': '{region} rimossa',
+  'regions.status.addedCountry':
+    '{region} aggiunta. {country} è ora segnato come visitato.',
+  'regions.error.invalid': 'Inserisci il nome di una regione.',
+  'regions.error.hidden':
+    'Il nome contiene caratteri non consentiti. Rimuovili e riprova.',
+  'regions.error.load': 'Impossibile caricare le tue regioni per {country}.',
+  'regions.error.add': 'Impossibile aggiungere {region}. Riprova.',
+  'regions.error.remove': 'Impossibile rimuovere {region}. Riprova.',
+  'regions.error.full':
+    'Hai registrato {limit} regioni. Rimuovine una per aggiungerne un’altra.',
+  'regions.reload': 'Ricarica regioni',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Le regioni registrate in {country} restano salvate: {count}.',
+    many: '{history}Le regioni registrate in {country} restano salvate: {count}.',
+    other:
+      '{history}Le regioni registrate in {country} restano salvate: {count}.',
+  },
+  'regions.error.uncertain':
+    'Impossibile confermare la modifica. Ricarica le regioni per verificare cosa è stato salvato.',
+  'regions.status.refreshFailed':
+    '{result} Impossibile aggiornare l’atlante. Ricaricalo per aggiornare la mappa.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

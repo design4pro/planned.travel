@@ -320,6 +320,41 @@ const messages = {
   'card.error.body': 'Các số liệu này chưa tải được. Không có gì bị mất.',
   'card.error.retry': 'Thử lại',
   'overlay.close': 'Đóng {name}',
+  'regions.label': 'Vùng',
+  'regions.hint': 'Thêm một vùng cũng đánh dấu {country} là đã ghé thăm.',
+  'regions.keeps': 'Xóa một vùng không xóa {country} khỏi tập bản đồ của bạn.',
+  'regions.keeps.unvisited':
+    'Các vùng này vẫn được lưu. Đánh dấu {country} là đã ghé thăm hoặc thêm một vùng để đưa quốc gia trở lại bản đồ.',
+  'regions.empty.title': 'Chưa có vùng nào được ghi lại ở đây',
+  'regions.empty.body':
+    'Thêm tiểu bang, tỉnh hoặc khu vực bạn đã ghé thăm tại {country}.',
+  'regions.input.label': 'Thêm một vùng tại {country}',
+  'regions.input.placeholder': 'Ví dụ: Bavaria',
+  'regions.add': 'Thêm vùng',
+  'regions.adding': 'Đang thêm {region}',
+  'regions.remove': 'Xóa {region}',
+  'regions.loading': 'Đang tải các vùng của bạn',
+  'regions.status.added': 'Đã thêm {region}',
+  'regions.status.exists': '{region} đã được ghi lại',
+  'regions.status.removed': 'Đã xóa {region}',
+  'regions.status.addedCountry':
+    'Đã thêm {region}. {country} hiện được đánh dấu là đã ghé thăm.',
+  'regions.error.invalid': 'Nhập tên vùng.',
+  'regions.error.hidden':
+    'Tên chứa ký tự không được phép. Hãy xóa chúng và thử lại.',
+  'regions.error.load': 'Không tải được các vùng của bạn tại {country}.',
+  'regions.error.add': 'Không thêm được {region}. Hãy thử lại.',
+  'regions.error.remove': 'Không xóa được {region}. Hãy thử lại.',
+  'regions.error.full':
+    'Bạn đã ghi lại {limit} vùng. Hãy xóa một vùng để thêm vùng khác.',
+  'regions.reload': 'Tải lại các vùng',
+  'actions.confirm.visitRegions.body': {
+    other: '{history}Các vùng bạn ghi lại tại {country} vẫn được lưu: {count}.',
+  },
+  'regions.error.uncertain':
+    'Không thể xác nhận thay đổi. Hãy tải lại các vùng để kiểm tra nội dung đã lưu.',
+  'regions.status.refreshFailed':
+    '{result} Không thể làm mới tập bản đồ. Hãy tải lại để cập nhật bản đồ.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

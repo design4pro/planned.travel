@@ -356,6 +356,45 @@ const messages = {
   'card.error.body': 'Ezek a számok nem töltődtek be. Semmi sem veszett el.',
   'card.error.retry': 'Újrapróbálkozás',
   'overlay.close': '{name} bezárása',
+  'regions.label': 'Régiók',
+  'regions.hint':
+    'Egy régió hozzáadása {country} országot is meglátogatottnak jelöli.',
+  'regions.keeps':
+    'Egy régió eltávolítása nem törli {country} országot az atlaszodból.',
+  'regions.keeps.unvisited':
+    'Ezek a régiók megmaradnak. Jelöld {country} országot meglátogatottnak vagy adj hozzá egy régiót, hogy visszakerüljön a térképre.',
+  'regions.empty.title': 'Még nincs itt rögzített régió',
+  'regions.empty.body':
+    'Adj hozzá egy államot, tartományt vagy területet, amelyet {country} területén meglátogattál.',
+  'regions.input.label': 'Régió hozzáadása: {country}',
+  'regions.input.placeholder': 'Például Bajorország',
+  'regions.add': 'Régió hozzáadása',
+  'regions.adding': '{region} hozzáadása',
+  'regions.remove': '{region} eltávolítása',
+  'regions.loading': 'Régióid betöltése',
+  'regions.status.added': '{region} hozzáadva',
+  'regions.status.exists': '{region} már szerepel a feljegyzéseidben',
+  'regions.status.removed': '{region} eltávolítva',
+  'regions.status.addedCountry':
+    '{region} hozzáadva. {country} most már meglátogatottként szerepel.',
+  'regions.error.invalid': 'Adj meg egy régiónevet.',
+  'regions.error.hidden':
+    'A név nem engedélyezett karaktereket tartalmaz. Távolítsd el őket és próbáld újra.',
+  'regions.error.load': 'Nem sikerült betölteni a régióidat: {country}.',
+  'regions.error.add': 'Nem sikerült hozzáadni: {region}. Próbáld újra.',
+  'regions.error.remove': 'Nem sikerült eltávolítani: {region}. Próbáld újra.',
+  'regions.error.full':
+    'Már {limit} régiót rögzítettél. Új hozzáadásához távolíts el egyet.',
+  'regions.reload': 'Régiók újratöltése',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}A(z) {country} területén rögzített régióid megmaradnak: {count}.',
+    other:
+      '{history}A(z) {country} területén rögzített régióid megmaradnak: {count}.',
+  },
+  'regions.error.uncertain':
+    'A módosítást nem sikerült megerősíteni. Töltsd újra a régióidat, és ellenőrizd, mi lett elmentve.',
+  'regions.status.refreshFailed':
+    '{result} Az atlaszt nem sikerült frissíteni. Töltsd újra a térkép frissítéséhez.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

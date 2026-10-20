@@ -71,7 +71,6 @@ function shippedSources(): ReadonlyArray<Source> {
   for (const path of [
     join(ROOT, 'src', 'routes', '_app', 'atlas.tsx'),
     join(ROOT, 'src', 'routes', '_app', '-ui', 'atlas-screen.tsx'),
-    join(ROOT, 'src', 'routes', '_app', '-ui', 'world-map.tsx'),
   ]) {
     files.push({
       name: path.split('/').at(-1) ?? path,
