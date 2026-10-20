@@ -5,7 +5,7 @@
 | **Status**         | implemented                                    |
 | **Issue**          | #1118                                     |
 | **Spec PR**        | #1109                                    |
-| **Implementation** | #1443, #1453                                     |
+| **Implementation** | #1443, #1453, #1462                                     |
 | **Plan**           | 08-S6 (docs/plans/08-product-modules.md) |
 
 ## 📝 TLDR
