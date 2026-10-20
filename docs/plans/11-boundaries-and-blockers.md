@@ -168,7 +168,7 @@ per-plan module flags** — `itinerary`, `map`, `budget`, `packing`, `reservatio
 `atlas`, `collaboration`, `realtime`, `offlineMaps`, `pdfExport`, `prioritySupport` — and
 `resolveLimits()` in `src/server/billing/limits.ts` resolves them for a tenant from the Stripe price
 id, with per-tenant overrides having the last word. `/pricing` already renders them as what a plan
-includes.
+includes, except the dormant `offlineMaps` flag, hidden by #1166 because no region-download feature exists.
 
 **The real work is enforcing them, and it has not been done.** Measured at HEAD: `hasFeature`,
 `currentLimits` and `assertWithinLimit` in `src/server/billing/entitlements.ts` have no callers
@@ -176,7 +176,7 @@ outside `__tests__`, and `FeatureLockedError` (`src/server/billing/types.ts`) is
 exactly one place — inside `assertWithinLimit`, which nothing calls — so it is never thrown in
 production. Worse, `resolveQuotas` in `src/server/repos/base.ts` calls the same resolver on every
 metered write and then returns only its column-shaped half, discarding the module flags it just
-computed. So the modules are sold, displayed and resolved, and gate nothing. That gap belongs to
+computed. So the advertised modules are sold, displayed and resolved, and gate nothing. That gap belongs to
 `08-product-modules.md`, which `README.md` scopes as the optional modules **and the entitlement gate
 that sells them**; this row is the reason it must be planned as enforcement rather than as a
 settings screen.
@@ -191,12 +191,14 @@ resolution rules is a **second** authority on what a concurrent edit means, comp
 we already have: the per-trip `TripRoom` Durable Object resolves last-write-wins per field against a
 monotonic room version and can report what a write overwrote. Two resolvers disagreeing about the
 same trip is the kind of defect that only appears in production, on a shared deployment, between two
-tenants' members. The offline **map** half is not affected by this and is already served correctly.
+tenants' members. Offline map regions are a separate feature that has not been built;
+#1166 removes the paid-plan promise while retaining the dormant catalogue flag.
 
 **Hosted equivalent: ACC-07**, installability — the manifest, icons, standalone display and theme
 colours — over the range-aware `.pmtiles` responses already served through the platform cache in
-`src/routes/api/tiles/-lib/serve.ts`. That is the part of offline that a hosted product can actually
-promise.
+`src/routes/api/tiles/-lib/serve.ts`. This platform cache serves online requests; it does not
+provide downloaded regions or guarantee map access without a connection. Installability makes
+no offline-map promise.
 
 #### ADM-05 — Instance operations
 

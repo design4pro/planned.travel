@@ -409,7 +409,7 @@ const messages = {
   'billing.renewal.paused':
     'Ця підписка припинена. Відновіть її, коли знову збиратиметеся в дорогу.',
   'billing.renewal.lapsed':
-    'Виберіть тариф нижче, щоб знову відкрити броні, щоденник і карти офлайн.',
+    'Виберіть тариф нижче, щоб знову відкрити броні і щоденник.',
   'billing.renewal.incomplete':
     'Polar усе ще чекає на підтвердження цього платежу.',
   'billing.renewal.free':
@@ -473,8 +473,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Поїздки та місця без обмежень',
   'billing.plan.solo.feature.modules':
     'Усі модулі планування — броні, щоденник, бюджети, збори',
-  'billing.plan.solo.feature.offline':
-    'Карти офлайн, завантажені ще до вильоту',
+  'billing.plan.solo.feature.storage': '5 ГБ для фотографій і документів',
   'billing.plan.solo.feature.export': 'Експорт у PDF і в календар',
   'billing.plan.crew.name': 'Команда',
   'billing.plan.crew.tagline': 'Для родин, друзів і невеликих команд',

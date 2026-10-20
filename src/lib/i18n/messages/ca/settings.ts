@@ -412,7 +412,7 @@ const messages = {
   'billing.renewal.paused':
     'Aquesta subscripció està en pausa. Reprèn-la quan tornis a tenir ganes de viatjar.',
   'billing.renewal.lapsed':
-    'Tria un pla de sota per tornar a obrir les reserves, el diari i els mapes sense connexió.',
+    'Tria un pla de sota per tornar a obrir les reserves i el diari.',
   'billing.renewal.incomplete':
     'Polar encara espera la confirmació d’aquest pagament.',
   'billing.renewal.free':
@@ -469,8 +469,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Viatges i llocs sense límit',
   'billing.plan.solo.feature.modules':
     'Tots els mòduls: reserves, diari, pressupostos i equipatge',
-  'billing.plan.solo.feature.offline':
-    'Mapes sense connexió que et descarregues abans de volar',
+  'billing.plan.solo.feature.storage': '5 GB per a fotos i documents',
   'billing.plan.solo.feature.export': 'Exportació a PDF i al calendari',
   'billing.plan.crew.name': 'En grup',
   'billing.plan.crew.tagline': 'Per a famílies, amics i equips petits',

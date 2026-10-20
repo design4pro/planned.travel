@@ -410,7 +410,7 @@ const messages = {
   'billing.renewal.paused':
     'Toto předplatné je pozastavené. Obnovte ho, až budete zase na cestách.',
   'billing.renewal.lapsed':
-    'Vyberte níže tarif a znovu odemknete rezervace, deník i offline mapy.',
+    'Vyberte níže tarif a znovu odemknete rezervace a deník.',
   'billing.renewal.incomplete': 'Polar stále čeká, až se tato platba potvrdí.',
   'billing.renewal.free':
     'Dvě cesty naráz, na náš účet. Vyšší tarif si vezmete, až vám to přestane stačit.',
@@ -467,8 +467,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Cesty a místa bez limitu',
   'billing.plan.solo.feature.modules':
     'Každý plánovací modul — rezervace, deník, rozpočty, balení',
-  'billing.plan.solo.feature.offline':
-    'Offline mapy stažené ještě před odletem',
+  'billing.plan.solo.feature.storage': '5 GB na fotky a dokumenty',
   'billing.plan.solo.feature.export': 'Export do PDF a do kalendáře',
   'billing.plan.crew.name': 'Parta',
   'billing.plan.crew.tagline': 'Pro rodiny, přátele a malé týmy',

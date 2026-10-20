@@ -398,7 +398,7 @@ const messages = {
   'billing.renewal.paused':
     'Bu abonelik duraklatıldı. Yeniden yola çıkmaya hazır olduğunuzda sürdürün.',
   'billing.renewal.lapsed':
-    'Rezervasyonları, günlüğü ve çevrimdışı haritaları yeniden açmak için aşağıdan bir paket seçin.',
+    'Rezervasyonları ve günlüğü yeniden açmak için aşağıdan bir paket seçin.',
   'billing.renewal.incomplete': 'Polar bu ödemenin onaylanmasını bekliyor.',
   'billing.renewal.free':
     'Aynı anda iki gezi, bizden. Size küçük gelmeye başlayınca yükseltin.',
@@ -450,8 +450,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Sınırsız gezi ve yer',
   'billing.plan.solo.feature.modules':
     'Her planlama modülü — rezervasyonlar, günlük, bütçeler, valiz',
-  'billing.plan.solo.feature.offline':
-    'Uçmadan önce indirdiğiniz çevrimdışı haritalar',
+  'billing.plan.solo.feature.storage': 'Fotoğraflar ve belgeler için 5 GB',
   'billing.plan.solo.feature.export': 'PDF ve takvim dışa aktarımı',
   'billing.plan.crew.name': 'Ekip',
   'billing.plan.crew.tagline': 'Aileler, arkadaşlar ve küçük ekipler için',

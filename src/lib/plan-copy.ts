@@ -60,7 +60,7 @@ export const PLAN_COPY: { readonly [K in PlanId]: PlanCopy } = {
     features: [
       'settings.billing.plan.solo.feature.trips',
       'settings.billing.plan.solo.feature.modules',
-      'settings.billing.plan.solo.feature.offline',
+      'settings.billing.plan.solo.feature.storage',
       'settings.billing.plan.solo.feature.export',
     ],
   },
@@ -130,6 +130,11 @@ export const PLAN_ALLOWANCE_CLAIMS: ReadonlyArray<PlanAllowanceClaim> = [
     key: 'settings.billing.plan.solo.feature.trips',
     plan: 'solo',
     quota: 'places',
+  },
+  {
+    key: 'settings.billing.plan.solo.feature.storage',
+    plan: 'solo',
+    quota: 'storageBytes',
   },
   {
     key: 'settings.billing.hero.singleTraveller',

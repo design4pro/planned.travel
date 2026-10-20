@@ -83,13 +83,13 @@ const messages = {
 
   'landing.plans.title': 'Zacznij bezpłatnie. Zapłać, gdy na to zasłuży.',
   'landing.plans.lede':
-    'Każdy plan zawiera plan dnia, mapę, budżety i listy pakowania. Plany płatne - od {price} miesięcznie - odblokowują wyjazdy bez limitu, rezerwacje, dziennik, mapy offline i eksporty.',
+    'Każdy plan zawiera plan dnia, mapę, budżety i listy pakowania. Plany płatne - od {price} miesięcznie - odblokowują wyjazdy bez limitu, rezerwacje, dziennik i eksporty.',
   'landing.plans.ledeFree':
-    'Każdy plan zawiera plan dnia, mapę, budżety i listy pakowania. Plany płatne odblokowują wyjazdy bez limitu, rezerwacje, dziennik, mapy offline i eksporty.',
+    'Każdy plan zawiera plan dnia, mapę, budżety i listy pakowania. Plany płatne odblokowują wyjazdy bez limitu, rezerwacje, dziennik i eksporty.',
   'landing.plans.compare': 'Porównaj każdy limit, wiersz po wierszu',
   'landing.questions.title': 'Pytania, odpowiedzi bez owijania',
   'landing.questions.lede':
-    'Sześć rzeczy, o które ludzie naprawdę pytają, zanim zaczną planować.',
+    'Pięć rzeczy, o które ludzie naprawdę pytają, zanim zaczną planować.',
   'cta.heading': 'Twój następny wyjazd już zasługuje na porządny plan',
   'cta.lede':
     'Dwa wyjazdy, cała mapa, plan dnia i listy pakowania - bezpłatnie, bez karty i bez licznika.',
@@ -99,9 +99,6 @@ const messages = {
   'landing.faq.phone.q': 'Czy działa porządnie na telefonie?',
   'landing.faq.phone.a':
     'Tak. Układy mobilne są rysowane osobno, a nie ściśnięte z wersji na komputer, i to jest strona internetowa, więc nie ma czego instalować ani aktualizować.',
-  'landing.faq.offline.q': 'Czy mogę używać mapy bez zasięgu?',
-  'landing.faq.offline.a':
-    'W planach {solo} i {crew} pobierzesz region przed wylotem, więc mapa nadal się rysuje, gdy wylądujesz bez danych. Edycja samego wyjazdu wymaga połączenia.',
   'landing.faq.privacy.q': 'Kto może zobaczyć mój wyjazd?',
   'landing.faq.privacy.a':
     'Wyjazd należy do jednego obszaru roboczego i otworzą go tylko osoby zaproszone do tego obszaru. Nic nie jest publiczne, nie ma żadnego kanału odkrywania i domyślnie nic nie jest z nikim dzielone.',
@@ -271,7 +268,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Każdy moduł planowania',
   'pricing.feature.solo.modulesDetail':
     'Rezerwacje, dziennik, budżety, pakowanie',
-  'pricing.feature.solo.offlineDetail': 'Pobierz regiony przed wylotem',
   'pricing.feature.crew.membersDetail':
     'Rozliczane od osoby, zmienisz kiedy chcesz',
   'pricing.feature.crew.realtimeDetail':

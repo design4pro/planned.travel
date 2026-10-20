@@ -459,7 +459,7 @@ const messages = {
   'billing.renewal.paused':
     'This subscription is paused. Resume it whenever you are ready to travel again.',
   'billing.renewal.lapsed':
-    'Choose a plan below to unlock reservations, the journal and offline maps again.',
+    'Choose a plan below to unlock reservations and the journal again.',
   'billing.renewal.incomplete':
     'Polar is still waiting for this payment to be confirmed.',
   'billing.renewal.free':
@@ -540,8 +540,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Unlimited trips and places',
   'billing.plan.solo.feature.modules':
     'Every planning module — reservations, journal, budgets, packing',
-  'billing.plan.solo.feature.offline':
-    'Offline maps you download before you fly',
+  'billing.plan.solo.feature.storage': '5 GB for photos and documents',
   'billing.plan.solo.feature.export': 'PDF and calendar export',
   'billing.plan.crew.name': 'Crew',
   'billing.plan.crew.tagline': 'For families, friends and small teams',
