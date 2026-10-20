@@ -740,6 +740,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'تتطلب المصادقة الثنائية كلمة مرور لهذا الحساب. تطلب الصفحة التالية بريدك الإلكتروني وترسل رابطًا لتعيينها. تعيين كلمة مرور يسجل خروجك من كل الأجهزة. سجل الدخول مجددًا وعد إلى هنا.',
   'twoFactor.nopassword.action': 'تعيين كلمة مرور',
+  'twoFactor.off.action': 'إيقاف المصادقة الثنائية',
+  'twoFactor.off.title': 'هل تريد إيقاف المصادقة الثنائية؟',
+  'twoFactor.off.body':
+    'سيتمكن أي شخص يعرف كلمة مرورك من تسجيل الدخول دون رمز. ستبقى أجهزتك الأخرى المسجّل دخولها متصلة بحسابك.',
+  'twoFactor.off.confirm': 'إيقاف',
+  'twoFactor.off.pending': 'جارٍ الإيقاف',
+  'twoFactor.off.cancel': 'إبقاؤها مفعّلة',
+  'twoFactor.off.done': 'المصادقة الثنائية متوقفة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import {
   Alert,
@@ -46,7 +47,12 @@ export function TwoFactorSettings({
   const t = useTranslate()
   const router = useRouter()
   const [enabled, setEnabled] = useState(twoFactorEnabled)
-  const on = enabled || twoFactorEnabled
+  const [loaderEnabled, setLoaderEnabled] = useState(twoFactorEnabled)
+  if (loaderEnabled !== twoFactorEnabled) {
+    setLoaderEnabled(twoFactorEnabled)
+    setEnabled(twoFactorEnabled)
+  }
+  const on = enabled
   const [credential, setCredential] = useState<boolean | null>(null)
   const [step, setStep] = useState(0)
   const [password, setPassword] = useState('')
@@ -219,6 +225,21 @@ export function TwoFactorSettings({
     showCodes(result.data.backupCodes)
     return null
   }
+  async function turnOff(value: string): Promise<AuthFailure | null> {
+    const result = await authClient.twoFactor.disable({ password: value })
+    if (result.error) return toAuthFailure(result.error)
+    if (result.data?.status !== true) return toAuthFailure(null)
+    clearSetup()
+    setStep(0)
+    setCodes(null)
+    setAlreadyOn(false)
+    setCredential(null)
+    setEnabled(false)
+    feedback.setFailure(null)
+    toast.success(t('settings.twoFactor.off.done'))
+    void router.invalidate().catch(() => undefined)
+    return null
+  }
   let content
   if (codes)
     content = (
@@ -250,6 +271,17 @@ export function TwoFactorSettings({
           confirm={t('settings.twoFactor.replace.confirm')}
           pending={t('settings.twoFactor.replace.pending')}
           onConfirm={replace}
+          focusReplacement={() => heading.current?.focus()}
+        />
+        <TwoFactorPasswordDialog
+          action={t('settings.twoFactor.off.action')}
+          title={t('settings.twoFactor.off.title')}
+          body={t('settings.twoFactor.off.body')}
+          confirm={t('settings.twoFactor.off.confirm')}
+          pending={t('settings.twoFactor.off.pending')}
+          cancel={t('settings.twoFactor.off.cancel')}
+          danger
+          onConfirm={turnOff}
           focusReplacement={() => heading.current?.focus()}
         />
       </Card>

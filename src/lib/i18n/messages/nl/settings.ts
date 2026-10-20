@@ -754,6 +754,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Tweestapsverificatie vereist een wachtwoord voor dit account. De volgende pagina vraagt je e-mail en stuurt een instellink. Een wachtwoord instellen meldt je overal af. Meld je opnieuw aan en kom hier terug.',
   'twoFactor.nopassword.action': 'Wachtwoord instellen',
+  'twoFactor.off.action': 'Tweestapsverificatie uitschakelen',
+  'twoFactor.off.title': 'Tweestapsverificatie uitschakelen?',
+  'twoFactor.off.body':
+    'Iedereen met je wachtwoord kan zonder code inloggen. Je andere ingelogde apparaten blijven ingelogd.',
+  'twoFactor.off.confirm': 'Uitschakelen',
+  'twoFactor.off.pending': 'Bezig met uitschakelen',
+  'twoFactor.off.cancel': 'Ingeschakeld houden',
+  'twoFactor.off.done': 'Tweestapsverificatie is uitgeschakeld',
 } satisfies TranslationOf<typeof En>
 
 export default messages

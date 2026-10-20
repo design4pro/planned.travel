@@ -759,6 +759,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Zwei-Faktor benötigt ein Passwort für dieses Konto. Die nächste Seite fragt nach deiner E-Mail und sendet einen Link zum Festlegen. Dabei wirst du überall abgemeldet. Melde dich danach erneut an und kehre hierher zurück.',
   'twoFactor.nopassword.action': 'Passwort festlegen',
+  'twoFactor.off.action': 'Zwei-Faktor-Authentifizierung ausschalten',
+  'twoFactor.off.title': 'Zwei-Faktor-Authentifizierung ausschalten?',
+  'twoFactor.off.body':
+    'Wer dein Passwort kennt, kann sich ohne Code anmelden. Deine anderen angemeldeten Geräte bleiben angemeldet.',
+  'twoFactor.off.confirm': 'Ausschalten',
+  'twoFactor.off.pending': 'Wird ausgeschaltet',
+  'twoFactor.off.cancel': 'Eingeschaltet lassen',
+  'twoFactor.off.done': 'Zwei-Faktor-Authentifizierung ist ausgeschaltet',
 } satisfies TranslationOf<typeof En>
 
 export default messages

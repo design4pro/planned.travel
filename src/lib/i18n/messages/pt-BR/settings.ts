@@ -754,6 +754,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Os dois fatores precisam de uma senha nesta conta. A próxima página pede seu e-mail e envia um link para defini-la. Definir a senha encerra todas as sessões. Entre novamente e volte aqui.',
   'twoFactor.nopassword.action': 'Definir uma senha',
+  'twoFactor.off.action': 'Desativar autenticação de dois fatores',
+  'twoFactor.off.title': 'Desativar autenticação de dois fatores?',
+  'twoFactor.off.body':
+    'Qualquer pessoa com sua senha poderá entrar sem um código. Seus outros dispositivos conectados continuarão conectados.',
+  'twoFactor.off.confirm': 'Desativar',
+  'twoFactor.off.pending': 'Desativando',
+  'twoFactor.off.cancel': 'Manter ativada',
+  'twoFactor.off.done': 'A autenticação de dois fatores está desativada',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   listAccounts: vi.fn(),
   getSession: vi.fn(),
   enable: vi.fn(),
+  disable: vi.fn(),
+  toast: vi.fn(),
   verifyTotp: vi.fn(),
   generateBackupCodes: vi.fn(),
   invalidate: vi.fn(),
@@ -28,11 +30,13 @@ vi.mock('#/lib/auth/client', async (load) => ({
     getSession: mocks.getSession,
     twoFactor: {
       enable: mocks.enable,
+      disable: mocks.disable,
       verifyTotp: mocks.verifyTotp,
       generateBackupCodes: mocks.generateBackupCodes,
     },
   },
 }))
+vi.mock('sonner', () => ({ toast: { success: mocks.toast } }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ invalidate: mocks.invalidate }),
   useBlocker: (options: unknown) => {
@@ -92,6 +96,7 @@ beforeEach(() => {
     data: { backupCodes: codes },
     error: null,
   })
+  mocks.disable.mockResolvedValue({ data: { status: true }, error: null })
   mocks.invalidate.mockResolvedValue(undefined)
 })
 afterEach(() => {
@@ -496,5 +501,176 @@ describe('two-factor settings', () => {
       screen.getByRole('dialog').hasAttribute('data-sentry-block') ||
         field.closest('[data-sentry-block]') !== null,
     ).toBe(true)
+  })
+})
+
+async function openTurnOff() {
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Turn off two-factor' }))
+  await user.type(screen.getByLabelText('Your password'), 'fresh-password')
+  return user
+}
+describe('turning two-factor off', () => {
+  it.each([true, false])(
+    'resets the initially enabled screen and focuses its replacement (credential=%s)',
+    async (credential) => {
+      mocks.listAccounts.mockResolvedValue({
+        data: credential
+          ? [{ providerId: 'credential' }]
+          : [{ providerId: 'google' }],
+      })
+      const view = render(page(true))
+      const user = await openTurnOff()
+      expect(
+        screen.getByText(
+          'Anyone with your password will be able to sign in without a code. Your other signed-in devices stay signed in.',
+        ),
+      ).toBeTruthy()
+      expect(screen.queryByLabelText('Code from the app')).toBeNull()
+      await user.click(screen.getByRole('button', { name: 'Turn off' }))
+      const heading = await screen.findByRole('heading', {
+        name: credential ? 'Confirm it is you' : 'Set a password first',
+        level: 3,
+      })
+      await waitFor(() => expect(document.activeElement).toBe(heading))
+      expect(mocks.disable).toHaveBeenCalledWith({ password: 'fresh-password' })
+      expect(mocks.invalidate).toHaveBeenCalledOnce()
+      expect(mocks.toast).toHaveBeenCalledWith('Two-factor is off')
+      expect(
+        screen.queryByRole('heading', { name: 'Two-factor is on' }),
+      ).toBeNull()
+      view.rerender(page(false))
+      view.rerender(page(true))
+      expect(
+        await screen.findByRole('heading', { name: 'Two-factor is on' }),
+      ).toBeTruthy()
+    },
+  )
+  it.each(['Keep it on', 'Escape', 'Close'])(
+    'keeps the factor on and returns focus on %s',
+    async (action) => {
+      render(page(true))
+      const trigger = screen.getByRole('button', {
+        name: 'Turn off two-factor',
+      })
+      const user = await openTurnOff()
+      if (action === 'Escape') await user.keyboard('{Escape}')
+      else await user.click(screen.getByRole('button', { name: action }))
+      await waitFor(() => expect(document.activeElement).toBe(trigger))
+      expect(mocks.disable).not.toHaveBeenCalled()
+      await user.click(trigger)
+      expect(
+        (screen.getByLabelText('Your password') as HTMLInputElement).value,
+      ).toBe('')
+    },
+  )
+  it('clears a wrong password and focuses the associated field error', async () => {
+    mocks.disable.mockResolvedValue({
+      error: { code: 'INVALID_PASSWORD', status: 400 },
+    })
+    render(page(true))
+    const user = await openTurnOff()
+    const field = screen.getByLabelText('Your password') as HTMLInputElement
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
+    expect(field.value).toBe('')
+    expect(document.activeElement).toBe(field)
+    expect(
+      screen.getByText(Settings['twoFactor.password.invalid']),
+    ).toBeTruthy()
+    expect(mocks.toast).not.toHaveBeenCalled()
+  })
+  it.each(['rate', 'network', 'refusal'])(
+    'handles %s without false success or automatic retries',
+    async (kind) => {
+      const timer = vi.spyOn(window, 'setTimeout')
+      if (kind === 'network')
+        mocks.disable.mockRejectedValue(new TypeError('offline'))
+      else
+        mocks.disable.mockResolvedValue({
+          error: { status: kind === 'rate' ? 429 : 403 },
+        })
+      render(page(true))
+      const user = await openTurnOff()
+      const field = screen.getByLabelText('Your password') as HTMLInputElement
+      const submit = screen.getByRole('button', {
+        name: 'Turn off',
+      }) as HTMLButtonElement
+      await user.click(submit)
+      await waitFor(() => expect(mocks.disable).toHaveBeenCalledOnce())
+      if (kind === 'rate') {
+        const warning = await screen.findByText(
+          Settings['twoFactor.rateLimited.password'],
+        )
+        expect(document.activeElement).toBe(warning.closest('[role=status]'))
+        expect(submit.disabled).toBe(true)
+        const scheduled = timer.mock.calls.find((args) => args[1] === 10000)
+        expect(scheduled).toBeTruthy()
+        act(() => {
+          if (typeof scheduled?.[0] === 'function') scheduled[0]()
+        })
+        expect(submit.disabled).toBe(false)
+        expect(screen.queryByText(Auth['error.rateLimited.detail'])).toBeNull()
+      } else if (kind === 'network')
+        await screen.findByText(Auth['error.offline.detail'])
+      else await waitFor(() => expect(field.value).toBe(''))
+      expect(field.value).toBe(kind === 'refusal' ? '' : 'fresh-password')
+      expect(mocks.toast).not.toHaveBeenCalled()
+      expect(mocks.invalidate).not.toHaveBeenCalled()
+      expect(mocks.disable).toHaveBeenCalledOnce()
+      expect(field.closest('[data-sentry-block]')).not.toBeNull()
+    },
+  )
+  it('prevents duplicate submits and dismissal while busy', async () => {
+    let finish:
+      ((value: { data: { status: boolean }; error: null }) => void) | undefined
+    mocks.disable.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    render(page(true))
+    const user = await openTurnOff()
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    expect(
+      screen
+        .getByRole('button', { name: /Turning off/ })
+        .getAttribute('aria-busy'),
+    ).toBe('true')
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(
+      (screen.getByRole('button', { name: 'Keep it on' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    expect(mocks.disable).toHaveBeenCalledOnce()
+    await act(async () => {
+      finish?.({ data: { status: true }, error: null })
+    })
+    await screen.findByRole('heading', { name: 'Confirm it is you', level: 3 })
+  })
+})
+
+describe('turn-off response boundaries', () => {
+  it('does not claim success without a confirmed response', async () => {
+    mocks.disable.mockResolvedValue({ data: null, error: null })
+    render(page(true))
+    const user = await openTurnOff()
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    await waitFor(() => expect(mocks.disable).toHaveBeenCalledOnce())
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(mocks.toast).not.toHaveBeenCalled()
+    expect(mocks.invalidate).not.toHaveBeenCalled()
+  })
+  it('keeps confirmed success when route refresh fails', async () => {
+    mocks.invalidate.mockRejectedValue(new TypeError('offline'))
+    render(page(true))
+    const user = await openTurnOff()
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    await screen.findByRole('heading', { name: 'Confirm it is you', level: 3 })
+    expect(mocks.disable).toHaveBeenCalledOnce()
+    expect(mocks.toast).toHaveBeenCalledWith('Two-factor is off')
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 })

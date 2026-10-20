@@ -633,6 +633,14 @@ const messages = {
   'twoFactor.nopassword.body':
     '此帳號需要密碼才能使用雙重身分驗證。下一頁會要求填寫電子郵件並傳送設定密碼的連結。設定密碼會登出所有裝置。請重新登入後回到這裡。',
   'twoFactor.nopassword.action': '設定密碼',
+  'twoFactor.off.action': '關閉雙重驗證',
+  'twoFactor.off.title': '要關閉雙重驗證嗎？',
+  'twoFactor.off.body':
+    '任何知道你密碼的人都可以無需驗證碼登入。你已登入的其他裝置將保持登入狀態。',
+  'twoFactor.off.confirm': '關閉',
+  'twoFactor.off.pending': '正在關閉',
+  'twoFactor.off.cancel': '保持開啟',
+  'twoFactor.off.done': '雙重驗證已關閉',
 } satisfies TranslationOf<typeof En>
 
 export default messages

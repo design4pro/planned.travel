@@ -821,6 +821,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Two-factor needs a password on this account. The next page asks for your email and sends a link to set one. Setting a password signs you out everywhere, so sign in again and come back here.',
   'twoFactor.nopassword.action': 'Set a password',
+  'twoFactor.off.action': 'Turn off two-factor',
+  'twoFactor.off.title': 'Turn off two-factor?',
+  'twoFactor.off.body':
+    'Anyone with your password will be able to sign in without a code. Your other signed-in devices stay signed in.',
+  'twoFactor.off.confirm': 'Turn off',
+  'twoFactor.off.pending': 'Turning off',
+  'twoFactor.off.cancel': 'Keep it on',
+  'twoFactor.off.done': 'Two-factor is off',
 } as const satisfies NamespaceMessages
 
 export default messages
