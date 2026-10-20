@@ -661,6 +661,15 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       const filteredTriggers = page.getByRole('button', {
         name: /: status .*Change status/,
       })
+      await expect
+        .poll(async () => {
+          const statuses = await filteredTriggers.allTextContents()
+          return (
+            statuses.length > 0 &&
+            statuses.every((value) => value.trim() === originalStatus)
+          )
+        })
+        .toBe(true)
       const nextTriggerName =
         (await filteredTriggers.count()) > 1
           ? await filteredTriggers.nth(1).getAttribute('aria-label')

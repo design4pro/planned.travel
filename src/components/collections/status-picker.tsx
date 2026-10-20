@@ -36,11 +36,13 @@ export function StatusPicker({
   const [open, setOpen] = useState(false)
   const lock = useRef(false)
   const committed = useRef(false)
+  const trigger = useRef<HTMLButtonElement>(null)
   async function save(status: PlaceStatus) {
     if (lock.current || status === place.status) return
     lock.current = true
     setOpen(false)
     setBusy(true)
+    if (failed) trigger.current?.focus()
     setFailed(null)
     committed.current = false
     try {
@@ -59,13 +61,14 @@ export function StatusPicker({
     lock.current = true
     setBusy(true)
     try {
-      const current = committed.current ? failed : await readCurrent()
+      const current = await readCurrent()
       if (!committed.current && current === place.status) {
         lock.current = false
         await save(failed)
         return
       }
       await onSaved(current)
+      if (trigger.current?.isConnected) trigger.current.focus()
       setFailed(null)
     } catch {
       setFailed(failed)
@@ -84,6 +87,7 @@ export function StatusPicker({
       >
         <DropdownMenuTrigger asChild>
           <button
+            ref={trigger}
             type="button"
             aria-busy={busy}
             aria-disabled={busy}

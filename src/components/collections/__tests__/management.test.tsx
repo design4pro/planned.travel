@@ -385,4 +385,192 @@ describe('collection controls', () => {
       expect((name as HTMLInputElement).value).toBe('Later')
     },
   )
+  it.each(['idea', 'visited'] as const)(
+    'restores the status trigger after retry reconciles %s',
+    async (current) => {
+      const user = userEvent.setup()
+      const setStatus = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('lost response'))
+        .mockResolvedValue(undefined)
+      mount(
+        <StatusPicker
+          place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
+          setStatus={setStatus}
+          onSaved={vi.fn()}
+          readCurrent={async () => current}
+        />,
+      )
+      const trigger = screen.getByRole('button', { name: /Cafe: status Idea/ })
+      await user.click(trigger)
+      await user.click(screen.getByRole('menuitemradio', { name: 'Visited' }))
+      await screen.findByRole('alert')
+      await user.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+      expect(document.activeElement).toBe(trigger)
+    },
+  )
+  it('shows current server details before retrying over a teammate edit while retaining the draft', async () => {
+    const user = userEvent.setup()
+    const update = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('lost response'))
+      .mockResolvedValue(undefined)
+    mount(
+      <CollectionEditDialog
+        collection={collection}
+        update={update}
+        readCurrent={async () => ({
+          ...collection,
+          name: 'Teammate name',
+          description: 'Teammate description',
+        })}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        returnFocus={vi.fn()}
+      />,
+    )
+    const name = screen.getByRole('textbox', { name: 'Name' })
+    await user.clear(name)
+    await user.type(name, 'My retained draft')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await screen.findByRole('alert')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('Teammate name'),
+    )
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Teammate description',
+    )
+    expect((name as HTMLInputElement).value).toBe('My retained draft')
+    expect(update).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(2))
+  })
+  it('refreshes the authoritative status after a confirmed write when a teammate changes it before recovery', async () => {
+    const user = userEvent.setup()
+    const setStatus = vi.fn().mockResolvedValue(undefined)
+    const onSaved = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('refresh failed'))
+      .mockResolvedValue(undefined)
+    mount(
+      <StatusPicker
+        place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
+        setStatus={setStatus}
+        onSaved={onSaved}
+        readCurrent={async () => 'planned'}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Cafe: status Idea/ }))
+    await user.click(screen.getByRole('menuitemradio', { name: 'Visited' }))
+    await screen.findByRole('alert')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+    expect(setStatus).toHaveBeenCalledTimes(1)
+    expect(onSaved).toHaveBeenLastCalledWith('planned')
+  })
+  it('retries absence reconciliation after a committed delete and both initial recovery reads fail', async () => {
+    const user = userEvent.setup()
+    const summary = vi
+      .fn()
+      .mockResolvedValueOnce({
+        name: 'Someday',
+        places: 0,
+        labels: 0,
+        requiresName: false,
+      })
+      .mockRejectedValue(new Error('unavailable or missing'))
+    const exists = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue(false)
+    const remove = vi.fn().mockRejectedValue(new Error('response lost'))
+    const onDeleted = vi.fn()
+    mount(
+      <CollectionDeleteDialog
+        collection={collection}
+        summary={summary}
+        exists={exists}
+        remove={remove}
+        onClose={vi.fn()}
+        onDeleted={onDeleted}
+        returnFocus={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+    await user.click(screen.getByRole('button', { name: 'Delete collection' }))
+    await screen.findByRole('button', { name: 'Try again' })
+    await waitFor(() => expect(exists).toHaveBeenCalledTimes(1))
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1))
+    expect(exists).toHaveBeenCalledTimes(2)
+    expect(remove).toHaveBeenCalledTimes(1)
+  })
+  it('reconciles a retained edit after a lost response and Escape/reopen before another write', async () => {
+    const user = userEvent.setup()
+    const update = vi.fn().mockRejectedValue(new Error('lost response'))
+    const readCurrent = vi
+      .fn()
+      .mockResolvedValue({ ...collection, name: 'Teammate name' })
+    mount(
+      <CollectionActions
+        canManage
+        collection={collection}
+        update={update}
+        readCurrent={readCurrent}
+        remove={vi.fn()}
+        summary={vi.fn()}
+        onSaved={vi.fn()}
+        onDeleted={vi.fn()}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Actions for/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    let name = screen.getByRole('textbox', { name: 'Name' })
+    await user.clear(name)
+    await user.type(name, 'My retained draft')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await screen.findByRole('alert')
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(screen.getByRole('button', { name: /Actions for/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    name = screen.getByRole('textbox', { name: 'Name' })
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(readCurrent).toHaveBeenCalledTimes(1))
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alert').textContent).toContain('Teammate name')
+    expect((name as HTMLInputElement).value).toBe('My retained draft')
+  })
+
+  it('returns focus to Cancel when the initial delete-summary retry succeeds', async () => {
+    const user = userEvent.setup()
+    const summary = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValue({
+        name: 'Someday',
+        places: 0,
+        labels: 0,
+        requiresName: false,
+      })
+    mount(
+      <CollectionDeleteDialog
+        collection={collection}
+        summary={summary}
+        remove={vi.fn()}
+        onClose={vi.fn()}
+        onDeleted={vi.fn()}
+        returnFocus={vi.fn()}
+      />,
+    )
+    await user.click(await screen.findByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Cancel' }),
+      ),
+    )
+  })
 })

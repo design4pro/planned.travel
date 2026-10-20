@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { CollectionActions } from '#/components/collections/collection-actions'
 import { StatusPicker } from '#/components/collections/status-picker'
@@ -7,6 +7,7 @@ import {
   COLLECTION_PLACE_STATUSES,
   STATUS_KEYS,
 } from '#/components/collections/status-copy'
+import type { PlaceStatus } from '#/components/collections/status-copy'
 import {
   collectionDeleteSummaryFn,
   deleteCollectionFn,
@@ -59,6 +60,14 @@ function CollectionPage() {
   const t = useTranslate()
   const router = useRouter()
   const [announcement, setAnnouncement] = useState('')
+  const [savedStatus, setSavedStatus] = useState<{
+    id: string
+    name: string
+    status: PlaceStatus
+    index: number
+    filter: string
+  } | null>(null)
+  const announcedFilter = useRef<string | null>(null)
   const cards = useRef<HTMLUListElement>(null)
   const empty = useRef<HTMLDivElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -76,11 +85,48 @@ function CollectionPage() {
     return true
   })
 
+  const filter = JSON.stringify([
+    search.status ?? null,
+    search.label ?? null,
+    locale,
+  ])
   useEffect(() => {
+    if (announcedFilter.current === filter) return
+    announcedFilter.current = filter
     setAnnouncement(
       t('modules.collections.filtered.showing', { count: visible.length }),
     )
-  }, [search.status, search.label, visible.length, t])
+  }, [filter, visible.length, t])
+
+  useLayoutEffect(() => {
+    if (!savedStatus) return
+    const persisted = data.places.find((place) => place.id === savedStatus.id)
+    if (persisted?.status !== savedStatus.status) return
+    const hidden =
+      search.status !== undefined && savedStatus.status !== search.status
+    setAnnouncement(
+      t(
+        hidden
+          ? 'modules.collections.statusPicker.hiddenNow'
+          : 'modules.collections.statusPicker.saved',
+        { place: savedStatus.name, status: t(STATUS_KEYS[savedStatus.status]) },
+      ),
+    )
+    if (hidden && savedStatus.filter === filter) {
+      const next = cards.current?.children
+        .item(savedStatus.index)
+        ?.querySelector('button')
+      if (next instanceof HTMLElement) next.focus()
+      else {
+        const emptyHeading = empty.current?.querySelector('h2')
+        if (emptyHeading) {
+          emptyHeading.tabIndex = -1
+          emptyHeading.focus()
+        } else heading.current?.focus()
+      }
+    }
+    setSavedStatus(null)
+  }, [data.places, savedStatus, search.status, filter, t])
 
   const countFor = (status: string): number =>
     data.byStatus.find((row) => row.status === status)?.value ?? 0
@@ -89,6 +135,7 @@ function CollectionPage() {
     <AppFrame>
       <AppSections>
         <PageHeader
+          className="[&_h1]:min-w-0 [&_h1]:wrap-anywhere [&_p]:wrap-anywhere"
           eyebrow={t('modules.collections.page.eyebrow')}
           title={data.collection.name}
           description={
@@ -100,6 +147,7 @@ function CollectionPage() {
           actions={
             <>
               <CollectionActions
+                key={data.collection.id}
                 canManage={data.canManage}
                 collection={data.collection}
                 readCurrent={async () =>
@@ -274,41 +322,16 @@ function CollectionPage() {
                         }}
                         setStatus={(input) => setPlaceStatusFn({ data: input })}
                         onSaved={async (status) => {
-                          const index = visible.findIndex(
-                            (row) => row.id === place.id,
-                          )
-                          const hidden =
-                            search.status !== undefined &&
-                            status !== search.status
-                          await router.invalidate()
-                          setAnnouncement(
-                            t(
-                              hidden
-                                ? 'modules.collections.statusPicker.hiddenNow'
-                                : 'modules.collections.statusPicker.saved',
-                              {
-                                place: place.name,
-                                status: t(STATUS_KEYS[status]),
-                              },
+                          setSavedStatus({
+                            id: place.id,
+                            name: place.name,
+                            status,
+                            index: visible.findIndex(
+                              (row) => row.id === place.id,
                             ),
-                          )
-                          if (hidden) {
-                            await new Promise<void>((resolve) =>
-                              requestAnimationFrame(() => resolve()),
-                            )
-                            const next = cards.current?.children
-                              .item(index)
-                              ?.querySelector('button')
-                            if (next instanceof HTMLElement) next.focus()
-                            else {
-                              const emptyHeading =
-                                empty.current?.querySelector('h2')
-                              if (emptyHeading) {
-                                emptyHeading.tabIndex = -1
-                                emptyHeading.focus()
-                              } else heading.current?.focus()
-                            }
-                          }
+                            filter,
+                          })
+                          await router.invalidate()
                         }}
                       />
                     </div>

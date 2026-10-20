@@ -51,6 +51,7 @@ export function CollectionDeleteDialog({
   const [busy, setBusy] = useState(false)
   const lock = useRef(false)
   const input = useRef<HTMLInputElement>(null)
+  const cancel = useRef<HTMLButtonElement>(null)
   const alert = useRef<HTMLDivElement>(null)
   async function read() {
     setLoading(true)
@@ -64,6 +65,29 @@ export function CollectionDeleteDialog({
       return null
     } finally {
       setLoading(false)
+    }
+  }
+  async function retryRead() {
+    if (lock.current) return
+    lock.current = true
+    setBusy(true)
+    try {
+      const next = await read()
+      if (next) {
+        requestAnimationFrame(() => {
+          if (next.requiresName) input.current?.focus()
+          else cancel.current?.focus()
+        })
+      } else if (failed && exists) {
+        try {
+          if (!(await exists())) await onDeleted()
+        } catch {
+          setLoadError(true)
+        }
+      }
+    } finally {
+      lock.current = false
+      setBusy(false)
     }
   }
   useEffect(() => {
@@ -144,7 +168,7 @@ export function CollectionDeleteDialog({
           aria-busy={busy || loading}
         >
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="wrap-anywhere">
               {t('modules.collections.delete.title', {
                 name: data?.name ?? collection.name,
               })}
@@ -164,7 +188,11 @@ export function CollectionDeleteDialog({
                 tone="danger"
                 title={t('modules.collections.delete.loadErrorTitle')}
                 actions={
-                  <Button type="button" onClick={() => void read()}>
+                  <Button
+                    type="button"
+                    aria-disabled={busy}
+                    onClick={() => void retryRead()}
+                  >
                     {t('modules.collections.delete.retry')}
                   </Button>
                 }
@@ -195,7 +223,7 @@ export function CollectionDeleteDialog({
                 </p>
                 {data.requiresName ? (
                   <>
-                    <p className="break-words font-semibold">
+                    <p className="wrap-anywhere font-semibold">
                       <bdi>{data.name}</bdi>
                     </p>
                     <Field
@@ -227,6 +255,7 @@ export function CollectionDeleteDialog({
           </DialogBody>
           <DialogFooter>
             <Button
+              ref={cancel}
               type="button"
               variant="ghost"
               aria-disabled={busy}

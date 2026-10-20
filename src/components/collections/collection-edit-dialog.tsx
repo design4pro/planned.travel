@@ -30,6 +30,7 @@ export type CollectionDraft = Pick<
 
 export interface CollectionEditProps {
   initialDraft?: CollectionDraft
+  initialBaseline?: EditableCollection
   onDraftChange?: (draft: CollectionDraft) => void
   onDiscard?: () => void
   readCurrent: () => Promise<EditableCollection>
@@ -47,6 +48,7 @@ export interface CollectionEditProps {
 export function CollectionEditDialog({
   collection,
   initialDraft,
+  initialBaseline,
   onDraftChange,
   onDiscard,
   readCurrent,
@@ -65,10 +67,13 @@ export function CollectionEditDialog({
   )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
+  const [currentDetails, setCurrentDetails] =
+    useState<EditableCollection | null>(null)
   const [nameError, setNameError] = useState<string>()
   const input = useRef<HTMLInputElement>(null)
   const lock = useRef(false)
-  const baseline = useRef(collection)
+  const baseline = useRef(initialBaseline ?? collection)
+  const needsReconciliation = useRef(Boolean(initialDraft))
   function remember(draft: CollectionDraft) {
     onDraftChange?.(draft)
   }
@@ -89,8 +94,9 @@ export function CollectionEditDialog({
     setBusy(true)
     setNameError(undefined)
     try {
-      if (error) {
+      if (error || needsReconciliation.current) {
         const current = await readCurrent()
+        needsReconciliation.current = false
         const matchesDraft =
           current.name === trimmed &&
           (current.description ?? '') === description &&
@@ -110,7 +116,8 @@ export function CollectionEditDialog({
         ) {
           await onSaved()
           baseline.current = current
-          setError(false)
+          setCurrentDetails(current)
+          setError(true)
           return
         }
       }
@@ -203,6 +210,28 @@ export function CollectionEditDialog({
                 title={t('modules.collections.edit.errorTitle')}
               >
                 {t('modules.collections.edit.error')}
+                {currentDetails ? (
+                  <dl className="mt-3 space-y-2 wrap-anywhere">
+                    <div>
+                      <dt className="font-semibold">
+                        {t('modules.collections.edit.name')}
+                      </dt>
+                      <dd>{currentDetails.name}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold">
+                        {t('modules.collections.edit.description')}
+                      </dt>
+                      <dd>{currentDetails.description}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-semibold">
+                        {t('modules.collections.edit.colour')}
+                      </dt>
+                      <dd>{currentDetails.colour}</dd>
+                    </div>
+                  </dl>
+                ) : null}
               </Alert>
             ) : null}
           </DialogBody>

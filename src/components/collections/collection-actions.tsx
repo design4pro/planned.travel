@@ -13,6 +13,7 @@ import { CollectionDeleteDialog } from './collection-delete-dialog'
 import type {
   CollectionDraft,
   CollectionEditProps,
+  EditableCollection,
 } from './collection-edit-dialog'
 import type { CollectionDeleteProps } from './collection-delete-dialog'
 
@@ -40,7 +41,10 @@ export function CollectionActions({
   const t = useTranslate()
   const trigger = useRef<HTMLButtonElement>(null)
   const [dialog, setDialog] = useState<'edit' | 'delete' | null>(null)
-  const [draft, setDraft] = useState<CollectionDraft>()
+  const [draft, setDraft] = useState<{
+    values: CollectionDraft
+    baseline: EditableCollection
+  }>()
   if (!canManage) return null
   const returnFocus = () => trigger.current?.focus()
   return (
@@ -71,8 +75,14 @@ export function CollectionActions({
       {dialog === 'edit' ? (
         <CollectionEditDialog
           collection={collection}
-          initialDraft={draft}
-          onDraftChange={setDraft}
+          initialDraft={draft?.values}
+          initialBaseline={draft?.baseline}
+          onDraftChange={(values) =>
+            setDraft((previous) => ({
+              values,
+              baseline: previous?.baseline ?? collection,
+            }))
+          }
           onDiscard={() => setDraft(undefined)}
           readCurrent={readCurrent}
           update={update}
