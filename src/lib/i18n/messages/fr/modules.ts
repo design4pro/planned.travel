@@ -1312,6 +1312,99 @@ const messages = {
     'Les paramètres du planning de congés ont été enregistrés.',
   'vacay.settings.error':
     'Impossible d’enregistrer les paramètres du planning de congés. Rien n’a été modifié.',
+  'collections.page.eyebrow': 'Collection de lieux',
+  'collections.page.all': 'Tous',
+  'collections.page.back': 'Toutes les collections',
+  'collections.page.savedPlaces': {
+    one: 'Lieux enregistrés : {count}',
+    many: 'Lieux enregistrés : {count}',
+    other: 'Lieux enregistrés : {count}',
+  },
+  'collections.page.loadErrorTitle': 'Impossible de charger cette collection',
+  'collections.status.idea': 'Idée',
+  'collections.status.shortlisted': 'Présélectionné',
+  'collections.status.planned': 'Prévu',
+  'collections.status.visited': 'Visité',
+  'collections.status.rejected': 'Écarté',
+  'collections.empty.title': 'Aucun lieu enregistré pour le moment',
+  'collections.empty.body':
+    'Enregistrez un lieu depuis la carte, un autre voyage ou une recommandation pour l’ajouter à cette collection.',
+  'collections.filtered.title': 'Rien ne correspond à ce filtre',
+  'collections.filtered.body':
+    'Essayez un autre statut ou retirez le filtre d’étiquette.',
+  'collections.filtered.reset': 'Réinitialiser les filtres',
+  'collections.filtered.showing': {
+    one: 'Lieux enregistrés affichés : {count}',
+    many: 'Lieux enregistrés affichés : {count}',
+    other: 'Lieux enregistrés affichés : {count}',
+  },
+  'collections.filters.statusGroup': 'Filtrer par statut',
+  'collections.labels.filterGroup': 'Filtrer par étiquette',
+  'collections.labels.panel': 'Étiquettes de cette collection',
+  'collections.card.noLocation': 'Emplacement non renseigné',
+  'collections.card.noPrice': 'Prix non renseigné',
+  'collections.card.website': 'Site web',
+  'collections.actions.trigger': 'Opérations pour {name}',
+  'collections.actions.edit': 'Modifier les détails',
+  'collections.actions.delete': 'Supprimer la collection…',
+  'collections.edit.title': 'Modifier la collection',
+  'collections.edit.name': 'Nom',
+  'collections.edit.description': 'Description de la collection',
+  'collections.edit.colour': 'Couleur',
+  'collections.edit.submit': 'Enregistrer les modifications',
+  'collections.edit.saving': 'Enregistrement',
+  'collections.edit.cancel': 'Annuler',
+  'collections.edit.saved': 'Collection mise à jour',
+  'collections.edit.errorTitle': 'Enregistrement impossible',
+  'collections.edit.error':
+    'Impossible de confirmer l’enregistrement. Vérifiez la collection avant de réessayer.',
+  'collections.edit.nameRequired': 'Donnez un nom à la collection.',
+  'collections.edit.nameTooLong': {
+    one: 'Longueur maximale du nom en caractères : {count}',
+    many: 'Longueur maximale du nom en caractères : {count}',
+    other: 'Longueur maximale du nom en caractères : {count}',
+  },
+  'collections.edit.currentColour': 'Couleur actuelle',
+  'collections.delete.title': 'Supprimer {name} ?',
+  'collections.delete.loading': 'Chargement du contenu de la collection',
+  'collections.delete.loadErrorTitle': 'Impossible de vérifier la collection',
+  'collections.delete.loadError':
+    'Impossible de lire la collection actuelle. Réessayez.',
+  'collections.delete.retry': 'Réessayer',
+  'collections.delete.places': {
+    one: 'Lieux enregistrés : {count}',
+    many: 'Lieux enregistrés : {count}',
+    other: 'Lieux enregistrés : {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Étiquettes : {count}',
+    many: 'Étiquettes : {count}',
+    other: 'Étiquettes : {count}',
+  },
+  'collections.delete.irreversible':
+    'Cette action est irréversible. Les lieux enregistrés et les étiquettes seront supprimés avec la collection. Les lieux de vos voyages resteront intacts.',
+  'collections.delete.typeName':
+    'Saisissez le nom de la collection pour la supprimer.',
+  'collections.delete.nameLabel': 'Nom de la collection',
+  'collections.delete.nameNeeded':
+    'Cette collection contient désormais des lieux enregistrés. Saisissez son nom pour la supprimer.',
+  'collections.delete.confirm': 'Supprimer la collection',
+  'collections.delete.deleting': 'Suppression en cours',
+  'collections.delete.cancel': 'Annuler',
+  'collections.delete.deleted': 'Collection supprimée',
+  'collections.delete.error':
+    'Impossible de confirmer la suppression. Vérifiez la collection et réessayez.',
+  'collections.statusPicker.trigger':
+    '{place} : statut {status}. Modifier le statut',
+  'collections.statusPicker.legend': 'Statut de {place}',
+  'collections.statusPicker.saved': '{place} : statut défini sur {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} a désormais le statut {status} et le filtre le masque',
+  'collections.statusPicker.error':
+    'Impossible de confirmer le statut de {place}. Vérifiez-le avant de réessayer.',
+  'collections.statusPicker.retry': 'Réessayer',
+
+  'collections.edit.retry': 'Réessayer',
 } satisfies TranslationOf<typeof En>
 
 export default messages

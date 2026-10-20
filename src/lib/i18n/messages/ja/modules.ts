@@ -1181,6 +1181,80 @@ const messages = {
   'vacay.settings.saved': '休暇プランの設定を保存しました。',
   'vacay.settings.error':
     '休暇プランの設定を保存できませんでした。変更は反映されていません。',
+  'collections.page.eyebrow': 'コレクション',
+  'collections.page.all': 'すべて',
+  'collections.page.back': 'すべてのコレクション',
+  'collections.page.savedPlaces': { other: '保存した場所：{count}件' },
+  'collections.page.loadErrorTitle': 'このコレクションを読み込めませんでした',
+  'collections.status.idea': '検討中',
+  'collections.status.shortlisted': '候補',
+  'collections.status.planned': '計画済み',
+  'collections.status.visited': '訪問済み',
+  'collections.status.rejected': '見送り',
+  'collections.empty.title': 'まだ場所が保存されていません',
+  'collections.empty.body':
+    '地図、別の旅行、おすすめから場所を保存すると、このコレクションに追加されます。',
+  'collections.filtered.title': 'このフィルターに合うものはありません',
+  'collections.filtered.body':
+    '別のステータスを選ぶか、ラベルの絞り込みを解除してください。',
+  'collections.filtered.reset': 'フィルターをリセット',
+  'collections.filtered.showing': { other: '表示中の保存した場所：{count}件' },
+  'collections.filters.statusGroup': 'ステータスで絞り込む',
+  'collections.labels.filterGroup': 'ラベルで絞り込む',
+  'collections.labels.panel': 'このコレクションのラベル',
+  'collections.card.noLocation': '場所の情報なし',
+  'collections.card.noPrice': '価格の記録なし',
+  'collections.card.website': 'ウェブサイト',
+  'collections.actions.trigger': '{name} への操作',
+  'collections.actions.edit': '詳細を編集',
+  'collections.actions.delete': 'コレクションを削除…',
+  'collections.edit.title': 'コレクションを編集',
+  'collections.edit.name': '名前',
+  'collections.edit.description': '説明',
+  'collections.edit.colour': '色',
+  'collections.edit.submit': '変更を保存',
+  'collections.edit.saving': '保存中',
+  'collections.edit.cancel': 'キャンセル',
+  'collections.edit.saved': 'コレクションを更新しました',
+  'collections.edit.errorTitle': '保存できませんでした',
+  'collections.edit.error':
+    '保存を確認できませんでした。再試行する前にコレクションを確認してください。',
+  'collections.edit.nameRequired': 'コレクションに名前を付けてください。',
+  'collections.edit.nameTooLong': { other: '名前の最大文字数：{count}' },
+  'collections.edit.currentColour': '現在の色',
+  'collections.delete.title': '{name}を削除しますか？',
+  'collections.delete.loading': 'コレクションの内容を読み込み中',
+  'collections.delete.loadErrorTitle': 'コレクションを確認できませんでした',
+  'collections.delete.loadError':
+    '現在のコレクションを読み取れませんでした。もう一度お試しください。',
+  'collections.delete.retry': 'もう一度試す',
+  'collections.delete.places': { other: '保存した場所：{count}件' },
+  'collections.delete.labels': { other: 'ラベル：{count}件' },
+  'collections.delete.irreversible':
+    'この操作は取り消せません。保存した場所とラベルはコレクションとともに削除されます。旅行内の場所には影響しません。',
+  'collections.delete.typeName':
+    '削除するにはコレクションの名前を入力してください。',
+  'collections.delete.nameLabel': 'コレクション名',
+  'collections.delete.nameNeeded':
+    'このコレクションに保存した場所が追加されました。削除するには名前を入力してください。',
+  'collections.delete.confirm': 'コレクションを削除',
+  'collections.delete.deleting': '削除中',
+  'collections.delete.cancel': 'キャンセル',
+  'collections.delete.deleted': 'コレクションを削除しました',
+  'collections.delete.error':
+    '削除を確認できませんでした。コレクションを確認して再試行してください。',
+  'collections.statusPicker.trigger':
+    '{place}：ステータスは{status}。ステータスを変更',
+  'collections.statusPicker.legend': '{place}のステータス',
+  'collections.statusPicker.saved':
+    '{place}：ステータスを{status}に変更しました',
+  'collections.statusPicker.hiddenNow':
+    '{place}は{status}になり、絞り込みにより非表示になりました',
+  'collections.statusPicker.error':
+    '{place}のステータスを確認できませんでした。再試行する前に現在のステータスを確認してください。',
+  'collections.statusPicker.retry': 'もう一度試す',
+
+  'collections.edit.retry': 'もう一度試す',
 } satisfies TranslationOf<typeof En>
 
 export default messages

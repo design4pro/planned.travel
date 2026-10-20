@@ -1320,6 +1320,104 @@ const messages = {
   'vacay.settings.saved': 'Настройки плана отпусков сохранены.',
   'vacay.settings.error':
     'Не удалось сохранить настройки плана отпусков. Ничего не изменилось.',
+  'collections.page.eyebrow': 'Коллекция',
+  'collections.page.all': 'Все',
+  'collections.page.back': 'Все коллекции',
+  'collections.page.savedPlaces': {
+    one: 'Сохранённые места: {count}',
+    few: 'Сохранённые места: {count}',
+    many: 'Сохранённые места: {count}',
+    other: 'Сохранённые места: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Не удалось загрузить коллекцию',
+  'collections.status.idea': 'Замысел',
+  'collections.status.shortlisted': 'В избранном',
+  'collections.status.planned': 'Запланировано',
+  'collections.status.visited': 'Посещено',
+  'collections.status.rejected': 'Отклонено',
+  'collections.empty.title': 'Здесь пока нет сохранённых мест',
+  'collections.empty.body':
+    'Сохраните место с карты, из другой поездки или из рекомендации, чтобы добавить его в коллекцию.',
+  'collections.filtered.title': 'Под этот фильтр ничего не подходит',
+  'collections.filtered.body':
+    'Выберите другой статус или уберите фильтр метки.',
+  'collections.filtered.reset': 'Сбросить фильтры',
+  'collections.filtered.showing': {
+    one: 'Показано сохранённых мест: {count}',
+    few: 'Показано сохранённых мест: {count}',
+    many: 'Показано сохранённых мест: {count}',
+    other: 'Показано сохранённых мест: {count}',
+  },
+  'collections.filters.statusGroup': 'Фильтр по статусу',
+  'collections.labels.filterGroup': 'Фильтр по метке',
+  'collections.labels.panel': 'Метки в этой коллекции',
+  'collections.card.noLocation': 'Местоположение не указано',
+  'collections.card.noPrice': 'Цена не указана',
+  'collections.card.website': 'Веб-сайт',
+  'collections.actions.trigger': 'Действия для {name}',
+  'collections.actions.edit': 'Изменить сведения',
+  'collections.actions.delete': 'Удалить коллекцию…',
+  'collections.edit.title': 'Изменить коллекцию',
+  'collections.edit.name': 'Имя',
+  'collections.edit.description': 'Описание',
+  'collections.edit.colour': 'Цвет',
+  'collections.edit.submit': 'Сохранить изменения',
+  'collections.edit.saving': 'Сохранение',
+  'collections.edit.cancel': 'Отмена',
+  'collections.edit.saved': 'Коллекция обновлена',
+  'collections.edit.errorTitle': 'Не удалось сохранить',
+  'collections.edit.error':
+    'Не удалось подтвердить сохранение. Проверьте коллекцию перед повторной попыткой.',
+  'collections.edit.nameRequired': 'Дайте коллекции название.',
+  'collections.edit.nameTooLong': {
+    one: 'Максимальная длина названия в символах: {count}',
+    few: 'Максимальная длина названия в символах: {count}',
+    many: 'Максимальная длина названия в символах: {count}',
+    other: 'Максимальная длина названия в символах: {count}',
+  },
+  'collections.edit.currentColour': 'Текущий цвет',
+  'collections.delete.title': 'Удалить {name}?',
+  'collections.delete.loading': 'Загрузка содержимого коллекции',
+  'collections.delete.loadErrorTitle': 'Не удалось проверить коллекцию',
+  'collections.delete.loadError':
+    'Не удалось прочитать текущую коллекцию. Попробуйте ещё раз.',
+  'collections.delete.retry': 'Попробовать ещё раз',
+  'collections.delete.places': {
+    one: 'Сохранённые места: {count}',
+    few: 'Сохранённые места: {count}',
+    many: 'Сохранённые места: {count}',
+    other: 'Сохранённые места: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Метки: {count}',
+    few: 'Метки: {count}',
+    many: 'Метки: {count}',
+    other: 'Метки: {count}',
+  },
+  'collections.delete.irreversible':
+    'Это действие нельзя отменить. Сохранённые места и метки будут удалены вместе с коллекцией. Места в ваших поездках останутся без изменений.',
+  'collections.delete.typeName':
+    'Введите название коллекции, чтобы удалить её.',
+  'collections.delete.nameLabel': 'Название коллекции',
+  'collections.delete.nameNeeded':
+    'В этой коллекции теперь есть сохранённые места. Введите её название для удаления.',
+  'collections.delete.confirm': 'Удалить коллекцию',
+  'collections.delete.deleting': 'Удаление',
+  'collections.delete.cancel': 'Отмена',
+  'collections.delete.deleted': 'Коллекция удалена',
+  'collections.delete.error':
+    'Не удалось подтвердить удаление. Проверьте коллекцию и попробуйте ещё раз.',
+  'collections.statusPicker.trigger':
+    '{place}: статус {status}. Изменить статус',
+  'collections.statusPicker.legend': 'Статус места {place}',
+  'collections.statusPicker.saved': '{place}: установлен статус {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} теперь имеет статус {status} и скрыто фильтром',
+  'collections.statusPicker.error':
+    'Не удалось подтвердить статус места {place}. Проверьте его перед повторной попыткой.',
+  'collections.statusPicker.retry': 'Попробовать ещё раз',
+
+  'collections.edit.retry': 'Попробовать ещё раз',
 } satisfies TranslationOf<typeof En>
 
 export default messages

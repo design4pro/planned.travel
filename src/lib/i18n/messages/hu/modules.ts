@@ -1251,6 +1251,93 @@ const messages = {
   'vacay.settings.saved': 'A szabadságterv beállításai mentve.',
   'vacay.settings.error':
     'A szabadságterv beállításait nem sikerült menteni. Semmi sem változott.',
+  'collections.page.eyebrow': 'Gyűjtemény',
+  'collections.page.all': 'Mind',
+  'collections.page.back': 'Összes gyűjtemény',
+  'collections.page.savedPlaces': {
+    one: 'Mentett helyek: {count}',
+    other: 'Mentett helyek: {count}',
+  },
+  'collections.page.loadErrorTitle': 'A gyűjtemény nem tölthető be',
+  'collections.status.idea': 'Ötlet',
+  'collections.status.shortlisted': 'Kiválasztva',
+  'collections.status.planned': 'Tervezett',
+  'collections.status.visited': 'Meglátogatva',
+  'collections.status.rejected': 'Elvetett',
+  'collections.empty.title': 'Még nincsenek mentett helyek',
+  'collections.empty.body':
+    'Ments el egy helyet a térképről, egy másik utazásból vagy egy ajánlásból a gyűjteményhez.',
+  'collections.filtered.title': 'Erre a szűrőre semmi nem illik',
+  'collections.filtered.body':
+    'Válassz másik állapotot, vagy töröld a címkeszűrőt.',
+  'collections.filtered.reset': 'Szűrők törlése',
+  'collections.filtered.showing': {
+    one: 'Megjelenített mentett helyek: {count}',
+    other: 'Megjelenített mentett helyek: {count}',
+  },
+  'collections.filters.statusGroup': 'Szűrés állapot szerint',
+  'collections.labels.filterGroup': 'Szűrés címke szerint',
+  'collections.labels.panel': 'A gyűjtemény címkéi',
+  'collections.card.noLocation': 'Nincs megadott hely',
+  'collections.card.noPrice': 'Nincs megadott ár',
+  'collections.card.website': 'Weboldal',
+  'collections.actions.trigger': 'Műveletek: {name}',
+  'collections.actions.edit': 'Részletek szerkesztése',
+  'collections.actions.delete': 'Gyűjtemény törlése…',
+  'collections.edit.title': 'Gyűjtemény szerkesztése',
+  'collections.edit.name': 'Név',
+  'collections.edit.description': 'Leírás',
+  'collections.edit.colour': 'Szín',
+  'collections.edit.submit': 'Módosítások mentése',
+  'collections.edit.saving': 'Mentés',
+  'collections.edit.cancel': 'Mégse',
+  'collections.edit.saved': 'Gyűjtemény frissítve',
+  'collections.edit.errorTitle': 'Nem sikerült menteni',
+  'collections.edit.error':
+    'A mentés nem erősíthető meg. Újrapróbálkozás előtt ellenőrizd a gyűjteményt.',
+  'collections.edit.nameRequired': 'Adj nevet a gyűjteménynek.',
+  'collections.edit.nameTooLong': {
+    one: 'A név maximális hossza karakterben: {count}',
+    other: 'A név maximális hossza karakterben: {count}',
+  },
+  'collections.edit.currentColour': 'Jelenlegi szín',
+  'collections.delete.title': 'Törlöd ezt: {name}?',
+  'collections.delete.loading': 'A gyűjtemény tartalmának betöltése',
+  'collections.delete.loadErrorTitle': 'A gyűjtemény nem ellenőrizhető',
+  'collections.delete.loadError':
+    'A jelenlegi gyűjtemény nem olvasható. Próbáld újra.',
+  'collections.delete.retry': 'Újrapróbálkozás',
+  'collections.delete.places': {
+    one: 'Mentett helyek: {count}',
+    other: 'Mentett helyek: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Címkék: {count}',
+    other: 'Címkék: {count}',
+  },
+  'collections.delete.irreversible':
+    'Ez nem vonható vissza. A mentett helyek és címkék a gyűjteménnyel együtt törlődnek. Az utazásaid helyei változatlanok maradnak.',
+  'collections.delete.typeName': 'A törléshez írd be a gyűjtemény nevét.',
+  'collections.delete.nameLabel': 'Gyűjtemény neve',
+  'collections.delete.nameNeeded':
+    'A gyűjtemény most már mentett helyeket tartalmaz. A törléshez írd be a nevét.',
+  'collections.delete.confirm': 'Gyűjtemény törlése',
+  'collections.delete.deleting': 'Törlés folyamatban',
+  'collections.delete.cancel': 'Mégse',
+  'collections.delete.deleted': 'Gyűjtemény törölve',
+  'collections.delete.error':
+    'A törlés nem erősíthető meg. Ellenőrizd a gyűjteményt, és próbáld újra.',
+  'collections.statusPicker.trigger':
+    '{place}: {status} állapot. Állapot módosítása',
+  'collections.statusPicker.legend': '{place} állapota',
+  'collections.statusPicker.saved': '{place}: az állapot {status} lett',
+  'collections.statusPicker.hiddenNow':
+    '{place} most {status} állapotú, és a szűrő elrejti',
+  'collections.statusPicker.error':
+    '{place} állapota nem erősíthető meg. Újrapróbálkozás előtt ellenőrizd.',
+  'collections.statusPicker.retry': 'Újrapróbálkozás',
+
+  'collections.edit.retry': 'Újrapróbálkozás',
 } satisfies TranslationOf<typeof En>
 
 export default messages

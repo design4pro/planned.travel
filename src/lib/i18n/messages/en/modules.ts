@@ -1434,6 +1434,92 @@ const messages = {
   'vacay.settings.saved': 'Leave plan settings saved.',
   'vacay.settings.error':
     'The leave plan settings could not be saved. Nothing was changed.',
+  'collections.page.eyebrow': 'Collection',
+  'collections.page.all': 'All',
+  'collections.page.back': 'All collections',
+  'collections.page.savedPlaces': {
+    one: '{count} saved place',
+    other: '{count} saved places',
+  },
+  'collections.page.loadErrorTitle': 'This collection did not load',
+  'collections.status.idea': 'Idea',
+  'collections.status.shortlisted': 'Shortlisted',
+  'collections.status.planned': 'Planned',
+  'collections.status.visited': 'Visited',
+  'collections.status.rejected': 'Rejected',
+  'collections.empty.title': 'Nothing saved here yet',
+  'collections.empty.body':
+    'Save a place from the map, from another trip, or straight from a recommendation, and it lands in this collection.',
+  'collections.filtered.title': 'Nothing matches that filter',
+  'collections.filtered.body':
+    'Try another status, or clear the label you are filtering by.',
+  'collections.filtered.reset': 'Reset filters',
+  'collections.filtered.showing': {
+    one: 'Showing {count} saved place',
+    other: 'Showing {count} saved places',
+  },
+  'collections.filters.statusGroup': 'Filter by status',
+  'collections.labels.filterGroup': 'Filter by label',
+  'collections.labels.panel': 'Labels in this collection',
+  'collections.card.noLocation': 'Location not recorded',
+  'collections.card.noPrice': 'No price noted',
+  'collections.card.website': 'Website',
+  'collections.actions.trigger': 'Actions for {name}',
+  'collections.actions.edit': 'Edit details',
+  'collections.actions.delete': 'Delete collection…',
+  'collections.edit.title': 'Edit collection',
+  'collections.edit.name': 'Name',
+  'collections.edit.description': 'Description',
+  'collections.edit.colour': 'Colour',
+  'collections.edit.submit': 'Save changes',
+  'collections.edit.saving': 'Saving',
+  'collections.edit.cancel': 'Cancel',
+  'collections.edit.saved': 'Collection updated',
+  'collections.edit.errorTitle': 'Could not save',
+  'collections.edit.error':
+    'Could not confirm the save. Check the collection before trying again.',
+  'collections.edit.nameRequired': 'Give the collection a name.',
+  'collections.edit.nameTooLong': {
+    one: 'A collection name can have at most {count} character.',
+    other: 'A collection name can have at most {count} characters.',
+  },
+  'collections.edit.currentColour': 'Current colour',
+  'collections.delete.title': 'Delete {name}?',
+  'collections.delete.loading': 'Loading what this collection holds',
+  'collections.delete.loadErrorTitle': 'Could not check the collection',
+  'collections.delete.loadError':
+    'Could not read the current collection. Try again.',
+  'collections.delete.retry': 'Try again',
+  'collections.delete.places': {
+    one: '{count} saved place',
+    other: '{count} saved places',
+  },
+  'collections.delete.labels': {
+    one: '{count} label',
+    other: '{count} labels',
+  },
+  'collections.delete.irreversible':
+    'This cannot be undone. The saved places and labels in this collection are removed with it. Places in your trips are not touched.',
+  'collections.delete.typeName': "Type the collection's name to delete it.",
+  'collections.delete.nameLabel': 'Collection name',
+  'collections.delete.nameNeeded':
+    'This collection now holds saved places. Type its name to delete it.',
+  'collections.delete.confirm': 'Delete collection',
+  'collections.delete.deleting': 'Deleting',
+  'collections.delete.cancel': 'Cancel',
+  'collections.delete.deleted': 'Collection deleted',
+  'collections.delete.error':
+    'Could not confirm the deletion. Check the collection and try again.',
+  'collections.statusPicker.trigger': '{place}: status {status}. Change status',
+  'collections.statusPicker.legend': 'Status of {place}',
+  'collections.statusPicker.saved': '{place}: status set to {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} is now {status} and hidden by the filter',
+  'collections.statusPicker.error':
+    'Could not confirm the status of {place}. Check its current status before trying again.',
+  'collections.statusPicker.retry': 'Try again',
+
+  'collections.edit.retry': 'Try again',
 } as const satisfies NamespaceMessages
 
 export default messages

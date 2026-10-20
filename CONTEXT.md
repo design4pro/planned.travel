@@ -66,3 +66,8 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Workspace deletion** — the removal of a workspace and everything in it, on its owner's request, when the owner is its only member; complete (tenant rows, stored files, the record of it). It is neither leaving a workspace (only the membership goes) nor _Erasure_ (a person's data across workspaces). _Avoid_: "closing", "archiving" a workspace.
 - **Deletion ledger** — the platform's own record that a workspace deletion was requested and how far it got; it outlives the workspace it names and carries no workspace content. Distinct from the audit trail, which is evidence and is kept longer.
+
+- **Collection** - a named, coloured collection of saved places shared within a workspace and independent of any single trip. Its owner or a workspace administrator may change its details or delete it.
+- **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
+- **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
+- **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.

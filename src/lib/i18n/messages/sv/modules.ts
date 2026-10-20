@@ -1240,6 +1240,93 @@ const messages = {
   'vacay.settings.saved': 'Inställningarna för ledighetsplanen sparades.',
   'vacay.settings.error':
     'Inställningarna för ledighetsplanen kunde inte sparas. Inget ändrades.',
+  'collections.page.eyebrow': 'Samling',
+  'collections.page.all': 'Alla',
+  'collections.page.back': 'Alla samlingar',
+  'collections.page.savedPlaces': {
+    one: 'Sparade platser: {count}',
+    other: 'Sparade platser: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Det gick inte att läsa in samlingen',
+  'collections.status.idea': 'Idé',
+  'collections.status.shortlisted': 'På kortlistan',
+  'collections.status.planned': 'Planerad',
+  'collections.status.visited': 'Besökt',
+  'collections.status.rejected': 'Avvisad',
+  'collections.empty.title': 'Inga sparade platser här ännu',
+  'collections.empty.body':
+    'Spara en plats från kartan, en annan resa eller en rekommendation för att lägga till den i samlingen.',
+  'collections.filtered.title': 'Inget matchar det filtret',
+  'collections.filtered.body':
+    'Välj en annan status eller ta bort etikettfiltret.',
+  'collections.filtered.reset': 'Återställ filter',
+  'collections.filtered.showing': {
+    one: 'Visade sparade platser: {count}',
+    other: 'Visade sparade platser: {count}',
+  },
+  'collections.filters.statusGroup': 'Filtrera efter status',
+  'collections.labels.filterGroup': 'Filtrera efter etikett',
+  'collections.labels.panel': 'Etiketter i samlingen',
+  'collections.card.noLocation': 'Plats saknas',
+  'collections.card.noPrice': 'Inget pris angivet',
+  'collections.card.website': 'Webbsida',
+  'collections.actions.trigger': 'Åtgärder för {name}',
+  'collections.actions.edit': 'Redigera detaljer',
+  'collections.actions.delete': 'Ta bort samling…',
+  'collections.edit.title': 'Redigera samling',
+  'collections.edit.name': 'Namn',
+  'collections.edit.description': 'Beskrivning',
+  'collections.edit.colour': 'Färg',
+  'collections.edit.submit': 'Spara ändringar',
+  'collections.edit.saving': 'Sparar',
+  'collections.edit.cancel': 'Avbryt',
+  'collections.edit.saved': 'Samlingen har uppdaterats',
+  'collections.edit.errorTitle': 'Det gick inte att spara',
+  'collections.edit.error':
+    'Det gick inte att bekräfta sparandet. Kontrollera samlingen innan du försöker igen.',
+  'collections.edit.nameRequired': 'Ge samlingen ett namn.',
+  'collections.edit.nameTooLong': {
+    one: 'Högsta namnlängd i tecken: {count}',
+    other: 'Högsta namnlängd i tecken: {count}',
+  },
+  'collections.edit.currentColour': 'Nuvarande färg',
+  'collections.delete.title': 'Ta bort {name}?',
+  'collections.delete.loading': 'Läser in samlingens innehåll',
+  'collections.delete.loadErrorTitle':
+    'Det gick inte att kontrollera samlingen',
+  'collections.delete.loadError':
+    'Det gick inte att läsa den aktuella samlingen. Försök igen.',
+  'collections.delete.retry': 'Försök igen',
+  'collections.delete.places': {
+    one: 'Sparade platser: {count}',
+    other: 'Sparade platser: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etiketter: {count}',
+    other: 'Etiketter: {count}',
+  },
+  'collections.delete.irreversible':
+    'Detta kan inte ångras. Sparade platser och etiketter tas bort med samlingen. Platser i dina resor påverkas inte.',
+  'collections.delete.typeName': 'Skriv samlingens namn för att ta bort den.',
+  'collections.delete.nameLabel': 'Samlingens namn',
+  'collections.delete.nameNeeded':
+    'Samlingen innehåller nu sparade platser. Skriv namnet för att ta bort den.',
+  'collections.delete.confirm': 'Ta bort samling',
+  'collections.delete.deleting': 'Tar bort',
+  'collections.delete.cancel': 'Avbryt',
+  'collections.delete.deleted': 'Samlingen har tagits bort',
+  'collections.delete.error':
+    'Det gick inte att bekräfta borttagningen. Kontrollera samlingen och försök igen.',
+  'collections.statusPicker.trigger': '{place}: status {status}. Ändra status',
+  'collections.statusPicker.legend': 'Status för {place}',
+  'collections.statusPicker.saved': '{place}: status ändrad till {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} har nu status {status} och döljs av filtret',
+  'collections.statusPicker.error':
+    'Det gick inte att bekräfta statusen för {place}. Kontrollera den innan du försöker igen.',
+  'collections.statusPicker.retry': 'Försök igen',
+
+  'collections.edit.retry': 'Försök igen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

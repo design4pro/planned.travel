@@ -1259,6 +1259,95 @@ const messages = {
   'vacay.settings.saved': 'De instellingen van het verlofplan zijn opgeslagen.',
   'vacay.settings.error':
     'De instellingen van het verlofplan konden niet worden opgeslagen. Er is niets gewijzigd.',
+  'collections.page.eyebrow': 'Verzameling',
+  'collections.page.all': 'Alle',
+  'collections.page.back': 'Alle verzamelingen',
+  'collections.page.savedPlaces': {
+    one: 'Opgeslagen plaatsen: {count}',
+    other: 'Opgeslagen plaatsen: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Deze verzameling kon niet worden geladen',
+  'collections.status.idea': 'Idee',
+  'collections.status.shortlisted': 'Op de shortlist',
+  'collections.status.planned': 'Gepland',
+  'collections.status.visited': 'Bezocht',
+  'collections.status.rejected': 'Afgewezen',
+  'collections.empty.title': 'Hier zijn nog geen plaatsen opgeslagen',
+  'collections.empty.body':
+    'Sla een plaats op vanaf de kaart, uit een andere reis of uit een aanbeveling om die aan deze verzameling toe te voegen.',
+  'collections.filtered.title': 'Niets past bij dit filter',
+  'collections.filtered.body':
+    'Kies een andere status of verwijder het labelfilter.',
+  'collections.filtered.reset': 'Filters wissen',
+  'collections.filtered.showing': {
+    one: 'Zichtbare opgeslagen plaatsen: {count}',
+    other: 'Zichtbare opgeslagen plaatsen: {count}',
+  },
+  'collections.filters.statusGroup': 'Filteren op status',
+  'collections.labels.filterGroup': 'Filteren op label',
+  'collections.labels.panel': 'Labels in deze verzameling',
+  'collections.card.noLocation': 'Locatie niet vastgelegd',
+  'collections.card.noPrice': 'Geen prijs vermeld',
+  'collections.card.website': 'Webpagina',
+  'collections.actions.trigger': 'Acties voor {name}',
+  'collections.actions.edit': 'Details bewerken',
+  'collections.actions.delete': 'Verzameling verwijderen…',
+  'collections.edit.title': 'Verzameling bewerken',
+  'collections.edit.name': 'Naam',
+  'collections.edit.description': 'Omschrijving',
+  'collections.edit.colour': 'Kleur',
+  'collections.edit.submit': 'Wijzigingen opslaan',
+  'collections.edit.saving': 'Opslaan',
+  'collections.edit.cancel': 'Annuleren',
+  'collections.edit.saved': 'Verzameling bijgewerkt',
+  'collections.edit.errorTitle': 'Opslaan mislukt',
+  'collections.edit.error':
+    'Het opslaan kon niet worden bevestigd. Controleer de verzameling voordat je het opnieuw probeert.',
+  'collections.edit.nameRequired': 'Geef de verzameling een naam.',
+  'collections.edit.nameTooLong': {
+    one: 'Maximale naamlengte in tekens: {count}',
+    other: 'Maximale naamlengte in tekens: {count}',
+  },
+  'collections.edit.currentColour': 'Huidige kleur',
+  'collections.delete.title': '{name} verwijderen?',
+  'collections.delete.loading': 'Inhoud van de verzameling laden',
+  'collections.delete.loadErrorTitle':
+    'Verzameling kon niet worden gecontroleerd',
+  'collections.delete.loadError':
+    'De huidige verzameling kon niet worden gelezen. Probeer het opnieuw.',
+  'collections.delete.retry': 'Opnieuw proberen',
+  'collections.delete.places': {
+    one: 'Opgeslagen plaatsen: {count}',
+    other: 'Opgeslagen plaatsen: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Labels: {count}',
+    other: 'Labels: {count}',
+  },
+  'collections.delete.irreversible':
+    'Dit kan niet ongedaan worden gemaakt. Opgeslagen plaatsen en labels worden met de verzameling verwijderd. Plaatsen in je reizen blijven behouden.',
+  'collections.delete.typeName':
+    'Typ de naam van de verzameling om deze te verwijderen.',
+  'collections.delete.nameLabel': 'Naam van de verzameling',
+  'collections.delete.nameNeeded':
+    'Deze verzameling bevat nu opgeslagen plaatsen. Typ de naam om deze te verwijderen.',
+  'collections.delete.confirm': 'Verzameling verwijderen',
+  'collections.delete.deleting': 'Wordt verwijderd',
+  'collections.delete.cancel': 'Annuleren',
+  'collections.delete.deleted': 'Verzameling verwijderd',
+  'collections.delete.error':
+    'Het verwijderen kon niet worden bevestigd. Controleer de verzameling en probeer het opnieuw.',
+  'collections.statusPicker.trigger':
+    '{place}: status {status}. Status wijzigen',
+  'collections.statusPicker.legend': 'Status van {place}',
+  'collections.statusPicker.saved': '{place}: status ingesteld op {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} heeft nu de status {status} en wordt door het filter verborgen',
+  'collections.statusPicker.error':
+    'De status van {place} kon niet worden bevestigd. Controleer deze voordat je het opnieuw probeert.',
+  'collections.statusPicker.retry': 'Opnieuw proberen',
+
+  'collections.edit.retry': 'Opnieuw proberen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -37,6 +37,16 @@ export function SwatchPicker({
     <fieldset>
       <legend className="mb-2 text-label font-medium text-ink">{legend}</legend>
       <div className="flex flex-wrap gap-2">
+        {value && !swatches.some((swatch) => swatch.value === value) ? (
+          <button
+            type="button"
+            aria-pressed="true"
+            aria-label={t('modules.collections.edit.currentColour')}
+            onClick={() => onChange(value)}
+            style={{ backgroundColor: value }}
+            className="relative size-8 rounded-full border border-edge-strong ring-2 ring-ink ring-offset-2 ring-offset-surface focus-ring"
+          />
+        ) : null}
         {swatches.map((swatch) => {
           // The absence of a colour is the one option a reader cannot see by
           // its colour, so it is drawn rather than tinted.

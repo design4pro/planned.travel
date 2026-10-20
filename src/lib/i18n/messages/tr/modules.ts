@@ -1235,6 +1235,93 @@ const messages = {
   'vacay.settings.saved': 'İzin planı ayarları kaydedildi.',
   'vacay.settings.error':
     'İzin planı ayarları kaydedilemedi. Hiçbir şey değişmedi.',
+  'collections.page.eyebrow': 'Koleksiyon',
+  'collections.page.all': 'Tümü',
+  'collections.page.back': 'Tüm koleksiyonlar',
+  'collections.page.savedPlaces': {
+    one: 'Kaydedilen yerler: {count}',
+    other: 'Kaydedilen yerler: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Bu koleksiyon yüklenemedi',
+  'collections.status.idea': 'Fikir',
+  'collections.status.shortlisted': 'Kısa listede',
+  'collections.status.planned': 'Planlandı',
+  'collections.status.visited': 'Gezildi',
+  'collections.status.rejected': 'Reddedildi',
+  'collections.empty.title': 'Henüz kaydedilmiş yer yok',
+  'collections.empty.body':
+    'Haritadan, başka bir geziden veya bir öneriden bir yer kaydederek bu koleksiyona ekleyin.',
+  'collections.filtered.title': 'Bu filtreye uyan bir şey yok',
+  'collections.filtered.body':
+    'Başka bir durum seçin veya etiket filtresini kaldırın.',
+  'collections.filtered.reset': 'Filtreleri sıfırla',
+  'collections.filtered.showing': {
+    one: 'Gösterilen kayıtlı yerler: {count}',
+    other: 'Gösterilen kayıtlı yerler: {count}',
+  },
+  'collections.filters.statusGroup': 'Duruma göre filtrele',
+  'collections.labels.filterGroup': 'Etikete göre filtrele',
+  'collections.labels.panel': 'Bu koleksiyondaki etiketler',
+  'collections.card.noLocation': 'Konum kaydedilmedi',
+  'collections.card.noPrice': 'Fiyat belirtilmedi',
+  'collections.card.website': 'Web sitesi',
+  'collections.actions.trigger': '{name} için işlemler',
+  'collections.actions.edit': 'Ayrıntıları düzenle',
+  'collections.actions.delete': 'Koleksiyonu sil…',
+  'collections.edit.title': 'Koleksiyonu düzenle',
+  'collections.edit.name': 'Ad',
+  'collections.edit.description': 'Açıklama',
+  'collections.edit.colour': 'Renk',
+  'collections.edit.submit': 'Değişiklikleri kaydet',
+  'collections.edit.saving': 'Kaydediliyor',
+  'collections.edit.cancel': 'Vazgeç',
+  'collections.edit.saved': 'Koleksiyon güncellendi',
+  'collections.edit.errorTitle': 'Kaydedilemedi',
+  'collections.edit.error':
+    'Kayıt doğrulanamadı. Yeniden denemeden önce koleksiyonu kontrol edin.',
+  'collections.edit.nameRequired': 'Koleksiyona bir ad verin.',
+  'collections.edit.nameTooLong': {
+    one: 'Adın en fazla karakter sayısı: {count}',
+    other: 'Adın en fazla karakter sayısı: {count}',
+  },
+  'collections.edit.currentColour': 'Geçerli renk',
+  'collections.delete.title': '{name} silinsin mi?',
+  'collections.delete.loading': 'Koleksiyonun içeriği yükleniyor',
+  'collections.delete.loadErrorTitle': 'Koleksiyon kontrol edilemedi',
+  'collections.delete.loadError':
+    'Geçerli koleksiyon okunamadı. Yeniden deneyin.',
+  'collections.delete.retry': 'Yeniden dene',
+  'collections.delete.places': {
+    one: 'Kaydedilen yerler: {count}',
+    other: 'Kaydedilen yerler: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etiketler: {count}',
+    other: 'Etiketler: {count}',
+  },
+  'collections.delete.irreversible':
+    'Bu işlem geri alınamaz. Kaydedilen yerler ve etiketler koleksiyonla birlikte silinir. Gezilerinizdeki yerler değişmez.',
+  'collections.delete.typeName': 'Silmek için koleksiyonun adını yazın.',
+  'collections.delete.nameLabel': 'Koleksiyon adı',
+  'collections.delete.nameNeeded':
+    'Bu koleksiyonda artık kaydedilmiş yerler var. Silmek için adını yazın.',
+  'collections.delete.confirm': 'Koleksiyonu sil',
+  'collections.delete.deleting': 'Siliniyor',
+  'collections.delete.cancel': 'Vazgeç',
+  'collections.delete.deleted': 'Koleksiyon silindi',
+  'collections.delete.error':
+    'Silme işlemi doğrulanamadı. Koleksiyonu kontrol edip yeniden deneyin.',
+  'collections.statusPicker.trigger':
+    '{place}: durum {status}. Durumu değiştir',
+  'collections.statusPicker.legend': '{place} durumu',
+  'collections.statusPicker.saved': '{place}: durum {status} olarak ayarlandı',
+  'collections.statusPicker.hiddenNow':
+    '{place} artık {status} durumunda ve filtre tarafından gizlendi',
+  'collections.statusPicker.error':
+    '{place} durumu doğrulanamadı. Yeniden denemeden önce geçerli durumunu kontrol edin.',
+  'collections.statusPicker.retry': 'Yeniden dene',
+
+  'collections.edit.retry': 'Yeniden dene',
 } satisfies TranslationOf<typeof En>
 
 export default messages

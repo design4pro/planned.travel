@@ -603,4 +603,78 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await page.keyboard.press('Escape')
     await expect(settingsDialog(page)).toHaveCount(0)
   })
+  test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
+    page,
+  }) => {
+    const routeCase: RouteCase = {
+      name: 'collection-management',
+      path: '/collections',
+      ready: 'main',
+    }
+    const watched = watchConsole(page, routeCase)
+    await visit(page, routeCase, 'light')
+    await page.locator('main a[href^="/collections/"]').first().click()
+    await expect(page.getByRole('button', { name: /^Actions for / })).toBeVisible()
+    const heading = page.getByRole('heading', { level: 1 })
+    const originalName = await heading.innerText()
+    const nextName = originalName + ' - edited'
+    const firstCard = page
+      .locator('main li')
+      .filter({
+        has: page.getByRole('button', { name: /: status .*Change status/ }),
+      })
+      .first()
+    const statusTrigger = firstCard.getByRole('button', {
+      name: /: status .*Change status/,
+    })
+    const originalStatus = (await statusTrigger.innerText()).trim()
+    const nextStatus = originalStatus === 'Visited' ? 'Idea' : 'Visited'
+    const detailPath = new URL(page.url()).pathname
+    async function rename(name: string) {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+      const dialog = page.getByRole('dialog')
+      await dialog
+        .getByRole('textbox', { name: 'Name', exact: true })
+        .fill(name)
+      await dialog.getByRole('button', { name: 'Save changes' }).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(heading).toHaveText(name)
+    }
+    async function status(name: string) {
+      await statusTrigger.click()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
+      await expect(statusTrigger).toHaveText(name)
+    }
+    try {
+      await rename(nextName)
+      await status(nextStatus)
+      await rename(originalName)
+      await status(originalStatus)
+      await page
+        .getByRole('link', { name: new RegExp('^' + originalStatus) })
+        .click()
+      const changedPlace = await statusTrigger.getAttribute('aria-label')
+      await statusTrigger.click()
+      await page
+        .getByRole('menuitemradio', { name: nextStatus, exact: true })
+        .click()
+      await expect(
+        page.getByRole('button', { name: changedPlace ?? '', exact: true }),
+      ).toHaveCount(0)
+      await expect
+        .poll(() => page.evaluate(() => document.activeElement?.tagName))
+        .toMatch(/BUTTON|H2/)
+      await page.goto(detailPath)
+      await status(originalStatus)
+    } finally {
+      await page.keyboard.press('Escape')
+      await page.goto(detailPath)
+      if ((await heading.innerText()) !== originalName)
+        await rename(originalName)
+      if ((await statusTrigger.innerText()).trim() !== originalStatus)
+        await status(originalStatus)
+    }
+    expect(watched().fatal).toEqual([])
+  })
 })

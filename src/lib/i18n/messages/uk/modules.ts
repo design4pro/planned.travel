@@ -1318,6 +1318,103 @@ const messages = {
   'vacay.settings.saved': 'Налаштування плану відпусток збережено.',
   'vacay.settings.error':
     'Не вдалося зберегти налаштування плану відпусток. Нічого не змінилося.',
+  'collections.page.eyebrow': 'Колекція',
+  'collections.page.all': 'Усі',
+  'collections.page.back': 'Усі колекції',
+  'collections.page.savedPlaces': {
+    one: 'Збережені місця: {count}',
+    few: 'Збережені місця: {count}',
+    many: 'Збережені місця: {count}',
+    other: 'Збережені місця: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Не вдалося завантажити колекцію',
+  'collections.status.idea': 'Задум',
+  'collections.status.shortlisted': 'У короткому списку',
+  'collections.status.planned': 'Заплановано',
+  'collections.status.visited': 'Відвідано',
+  'collections.status.rejected': 'Відхилено',
+  'collections.empty.title': 'Тут ще немає збережених місць',
+  'collections.empty.body':
+    'Збережіть місце з мапи, іншої подорожі або рекомендації, щоб додати його до колекції.',
+  'collections.filtered.title': 'Під цей фільтр нічого не підходить',
+  'collections.filtered.body':
+    'Виберіть інший статус або приберіть фільтр мітки.',
+  'collections.filtered.reset': 'Скинути фільтри',
+  'collections.filtered.showing': {
+    one: 'Показано збережених місць: {count}',
+    few: 'Показано збережених місць: {count}',
+    many: 'Показано збережених місць: {count}',
+    other: 'Показано збережених місць: {count}',
+  },
+  'collections.filters.statusGroup': 'Фільтр за статусом',
+  'collections.labels.filterGroup': 'Фільтр за міткою',
+  'collections.labels.panel': 'Мітки в цій колекції',
+  'collections.card.noLocation': 'Розташування не вказано',
+  'collections.card.noPrice': 'Ціну не вказано',
+  'collections.card.website': 'Вебсайт',
+  'collections.actions.trigger': 'Дії для {name}',
+  'collections.actions.edit': 'Редагувати відомості',
+  'collections.actions.delete': 'Видалити колекцію…',
+  'collections.edit.title': 'Редагувати колекцію',
+  'collections.edit.name': 'Ім’я',
+  'collections.edit.description': 'Опис',
+  'collections.edit.colour': 'Колір',
+  'collections.edit.submit': 'Зберегти зміни',
+  'collections.edit.saving': 'Збереження',
+  'collections.edit.cancel': 'Скасувати',
+  'collections.edit.saved': 'Колекцію оновлено',
+  'collections.edit.errorTitle': 'Не вдалося зберегти',
+  'collections.edit.error':
+    'Не вдалося підтвердити збереження. Перевірте колекцію перед повторною спробою.',
+  'collections.edit.nameRequired': 'Дайте колекції назву.',
+  'collections.edit.nameTooLong': {
+    one: 'Максимальна довжина назви в символах: {count}',
+    few: 'Максимальна довжина назви в символах: {count}',
+    many: 'Максимальна довжина назви в символах: {count}',
+    other: 'Максимальна довжина назви в символах: {count}',
+  },
+  'collections.edit.currentColour': 'Поточний колір',
+  'collections.delete.title': 'Видалити {name}?',
+  'collections.delete.loading': 'Завантаження вмісту колекції',
+  'collections.delete.loadErrorTitle': 'Не вдалося перевірити колекцію',
+  'collections.delete.loadError':
+    'Не вдалося прочитати поточну колекцію. Спробуйте ще раз.',
+  'collections.delete.retry': 'Спробувати ще раз',
+  'collections.delete.places': {
+    one: 'Збережені місця: {count}',
+    few: 'Збережені місця: {count}',
+    many: 'Збережені місця: {count}',
+    other: 'Збережені місця: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Мітки: {count}',
+    few: 'Мітки: {count}',
+    many: 'Мітки: {count}',
+    other: 'Мітки: {count}',
+  },
+  'collections.delete.irreversible':
+    'Цю дію не можна скасувати. Збережені місця та мітки буде видалено разом із колекцією. Місця у ваших подорожах залишаться без змін.',
+  'collections.delete.typeName': 'Введіть назву колекції, щоб видалити її.',
+  'collections.delete.nameLabel': 'Назва колекції',
+  'collections.delete.nameNeeded':
+    'У цій колекції тепер є збережені місця. Введіть її назву для видалення.',
+  'collections.delete.confirm': 'Видалити колекцію',
+  'collections.delete.deleting': 'Видалення',
+  'collections.delete.cancel': 'Скасувати',
+  'collections.delete.deleted': 'Колекцію видалено',
+  'collections.delete.error':
+    'Не вдалося підтвердити видалення. Перевірте колекцію та спробуйте ще раз.',
+  'collections.statusPicker.trigger':
+    '{place}: статус {status}. Змінити статус',
+  'collections.statusPicker.legend': 'Статус місця {place}',
+  'collections.statusPicker.saved': '{place}: установлено статус {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} тепер має статус {status} і приховане фільтром',
+  'collections.statusPicker.error':
+    'Не вдалося підтвердити статус місця {place}. Перевірте його перед повторною спробою.',
+  'collections.statusPicker.retry': 'Спробувати ще раз',
+
+  'collections.edit.retry': 'Спробувати ще раз',
 } satisfies TranslationOf<typeof En>
 
 export default messages
