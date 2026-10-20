@@ -8,6 +8,7 @@ import {
   createCollection,
   createLabel,
   deleteCollection,
+  deleteCollectionConfirmed,
   getCollection,
   listCollectionPlaces,
   listLabels,
@@ -42,6 +43,7 @@ describe('collection management', () => {
     for (const call of [
       () => updateCollection(member, collection.id, { name: 'Forged' }),
       () => deleteCollection(member, collection.id),
+      () => deleteCollectionConfirmed(member, collection.id, 'Someday'),
       () => collectionDeleteSummary(member, collection.id),
     ]) {
       await expect(call()).rejects.toMatchObject({ code: 'FORBIDDEN' })
@@ -93,6 +95,7 @@ describe('collection management', () => {
     for (const call of [
       () => updateCollection(caller, collection.id, { name: 'Forged' }),
       () => deleteCollection(caller, collection.id),
+      () => deleteCollectionConfirmed(caller, collection.id, 'Private tenant data'),
       () => collectionDeleteSummary(caller, collection.id),
       () => setCollectionPlaceStatus(caller, place.id, 'visited'),
     ]) {

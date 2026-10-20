@@ -7,7 +7,7 @@
  * something for later.
  */
 
-import { and, asc, count, desc, eq, inArray, like, ne, or } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, like, ne, notExists, or } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   COLLECTION_PLACE_STATUSES,
@@ -18,7 +18,7 @@ import {
   collectionPlaces,
   collections,
 } from '#/server/db/schema'
-import { assertQuota, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
+import { allOf, assertQuota, createTenantRepository, createTenantTableAccess, tenantFilter } from './base'
 import { categoriesRepository } from './categories'
 import { ForbiddenError, hasAtLeastRole } from './context'
 import { placesRepository } from './places'
@@ -369,6 +369,38 @@ export async function updateCollection(
 export async function deleteCollection(scope: TenantScope, collectionId: string): Promise<void> {
   await requireOwnedCollection(scope, collectionId)
   await collectionsRepository.requireRemove(scope, collectionId)
+}
+
+export async function deleteCollectionConfirmed(
+  scope: TenantScope,
+  collectionId: string,
+  confirmName?: string,
+): Promise<void> {
+  await requireOwnedCollection(scope, collectionId)
+  const savedPlace = scope.db
+    .select({ id: collectionPlaces.id })
+    .from(collectionPlaces)
+    .where(
+      tenantFilter(
+        scope,
+        collectionPlaces,
+        eq(collectionPlaces.collectionId, collectionId),
+      ),
+    )
+    .limit(1)
+  const removed = await collectionsRepository.removeWhere(
+    scope,
+    allOf(
+      eq(collections.id, collectionId),
+      or(
+        confirmName === undefined
+          ? undefined
+          : eq(collections.name, confirmName),
+        notExists(savedPlace),
+      ),
+    ),
+  )
+  z.literal(true).parse(removed > 0)
 }
 
 export async function addCollectionPlace(

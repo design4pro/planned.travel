@@ -23,7 +23,16 @@ export interface EditableCollection {
   description: string | null
   colour: string
 }
+export type CollectionDraft = Pick<
+  EditableCollection,
+  'name' | 'description' | 'colour'
+>
+
 export interface CollectionEditProps {
+  initialDraft?: CollectionDraft
+  onDraftChange?: (draft: CollectionDraft) => void
+  onDiscard?: () => void
+  readCurrent: () => Promise<EditableCollection>
   collection: EditableCollection
   update: (input: {
     collectionId: string
@@ -37,20 +46,32 @@ export interface CollectionEditProps {
 }
 export function CollectionEditDialog({
   collection,
+  initialDraft,
+  onDraftChange,
+  onDiscard,
+  readCurrent,
   update,
   onClose,
   onSaved,
   returnFocus,
 }: CollectionEditProps) {
   const t = useTranslate()
-  const [name, setName] = useState(collection.name)
-  const [description, setDescription] = useState(collection.description ?? '')
-  const [colour, setColour] = useState(collection.colour)
+  const [name, setName] = useState(initialDraft?.name ?? collection.name)
+  const [description, setDescription] = useState(
+    initialDraft?.description ?? collection.description ?? '',
+  )
+  const [colour, setColour] = useState(
+    initialDraft?.colour ?? collection.colour,
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(false)
   const [nameError, setNameError] = useState<string>()
   const input = useRef<HTMLInputElement>(null)
   const lock = useRef(false)
+  const baseline = useRef(collection)
+  function remember(draft: CollectionDraft) {
+    onDraftChange?.(draft)
+  }
   async function save(event: React.FormEvent) {
     event.preventDefault()
     if (lock.current) return
@@ -66,9 +87,33 @@ export function CollectionEditDialog({
     }
     lock.current = true
     setBusy(true)
-    setError(false)
     setNameError(undefined)
     try {
+      if (error) {
+        const current = await readCurrent()
+        const matchesDraft =
+          current.name === trimmed &&
+          (current.description ?? '') === description &&
+          current.colour === colour
+        if (matchesDraft) {
+          await onSaved()
+          toast.success(t('modules.collections.edit.saved'))
+          onDiscard?.()
+          onClose()
+          return
+        }
+        const previous = baseline.current
+        if (
+          current.name !== previous.name ||
+          current.description !== previous.description ||
+          current.colour !== previous.colour
+        ) {
+          await onSaved()
+          baseline.current = current
+          setError(false)
+          return
+        }
+      }
       await update({
         collectionId: collection.id,
         name: trimmed,
@@ -77,6 +122,7 @@ export function CollectionEditDialog({
       })
       await onSaved()
       toast.success(t('modules.collections.edit.saved'))
+      onDiscard?.()
       onClose()
     } catch {
       setError(true)
@@ -121,7 +167,10 @@ export function CollectionEditDialog({
               <Input
                 ref={input}
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value)
+                  remember({ name: event.target.value, description, colour })
+                }}
               />
             </Field>
             <Field
@@ -131,13 +180,19 @@ export function CollectionEditDialog({
               <Textarea
                 value={description}
                 maxLength={20000}
-                onChange={(event) => setDescription(event.target.value)}
+                onChange={(event) => {
+                  setDescription(event.target.value)
+                  remember({ name, description: event.target.value, colour })
+                }}
               />
             </Field>
             <fieldset disabled={busy}>
               <SwatchPicker
                 value={colour}
-                onChange={setColour}
+                onChange={(value) => {
+                  setColour(value)
+                  remember({ name, description, colour: value })
+                }}
                 legend={t('modules.collections.edit.colour')}
                 swatches={REQUIRED_SWATCHES}
               />
@@ -157,7 +212,10 @@ export function CollectionEditDialog({
               variant="ghost"
               aria-disabled={busy}
               onClick={() => {
-                if (!lock.current) onClose()
+                if (!lock.current) {
+                  onDiscard?.()
+                  onClose()
+                }
               }}
             >
               {t('modules.collections.edit.cancel')}

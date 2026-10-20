@@ -102,6 +102,10 @@ function CollectionPage() {
               <CollectionActions
                 canManage={data.canManage}
                 collection={data.collection}
+                readCurrent={async () =>
+                  (await loadCollectionDetail({ data: { collectionId } }))
+                    .collection
+                }
                 update={(input) => updateCollectionFn({ data: input })}
                 summary={(input) => collectionDeleteSummaryFn({ data: input })}
                 remove={(input) => deleteCollectionFn({ data: input })}
@@ -258,6 +262,16 @@ function CollectionPage() {
                       </h2>
                       <StatusPicker
                         place={place}
+                        readCurrent={async () => {
+                          const current = await loadCollectionDetail({
+                            data: { collectionId },
+                          })
+                          const saved = current.places.find(
+                            (row) => row.id === place.id,
+                          )
+                          if (!saved) throw new Error()
+                          return saved.status
+                        }}
                         setStatus={(input) => setPlaceStatusFn({ data: input })}
                         onSaved={async (status) => {
                           const index = visible.findIndex(

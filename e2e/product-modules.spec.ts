@@ -658,6 +658,13 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       await page
         .getByRole('link', { name: new RegExp('^' + originalStatus) })
         .click()
+      const filteredTriggers = page.getByRole('button', {
+        name: /: status .*Change status/,
+      })
+      const nextTriggerName =
+        (await filteredTriggers.count()) > 1
+          ? await filteredTriggers.nth(1).getAttribute('aria-label')
+          : null
       const changedPlace = await statusTrigger.getAttribute('aria-label')
       await statusTrigger.click()
       await page
@@ -666,9 +673,18 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       await expect(
         page.getByRole('button', { name: changedPlace ?? '', exact: true }),
       ).toHaveCount(0)
-      await expect
-        .poll(() => page.evaluate(() => document.activeElement?.tagName))
-        .toMatch(/BUTTON|H2/)
+      if (nextTriggerName) {
+        await expect(
+          page.getByRole('button', { name: nextTriggerName, exact: true }),
+        ).toBeFocused()
+      } else {
+        await expect(
+          page.getByRole('heading', { name: 'Nothing matches that filter' }),
+        ).toBeFocused()
+      }
+      await expect(
+        page.getByRole('status').filter({ hasText: 'hidden by the filter' }),
+      ).toContainText(nextStatus)
       await page.goto(detailPath)
       await settle(page, {
         name: 'collection-detail',

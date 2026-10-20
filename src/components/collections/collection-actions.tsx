@@ -10,7 +10,10 @@ import {
 } from '#/components/ui'
 import { CollectionEditDialog } from './collection-edit-dialog'
 import { CollectionDeleteDialog } from './collection-delete-dialog'
-import type { CollectionEditProps } from './collection-edit-dialog'
+import type {
+  CollectionDraft,
+  CollectionEditProps,
+} from './collection-edit-dialog'
 import type { CollectionDeleteProps } from './collection-delete-dialog'
 
 export function CollectionActions({
@@ -22,7 +25,9 @@ export function CollectionActions({
   onSaved,
   onDeleted,
   exists,
+  readCurrent,
 }: {
+  readCurrent: CollectionEditProps['readCurrent']
   canManage: boolean
   collection: CollectionEditProps['collection']
   update: CollectionEditProps['update']
@@ -35,6 +40,7 @@ export function CollectionActions({
   const t = useTranslate()
   const trigger = useRef<HTMLButtonElement>(null)
   const [dialog, setDialog] = useState<'edit' | 'delete' | null>(null)
+  const [draft, setDraft] = useState<CollectionDraft>()
   if (!canManage) return null
   const returnFocus = () => trigger.current?.focus()
   return (
@@ -65,6 +71,10 @@ export function CollectionActions({
       {dialog === 'edit' ? (
         <CollectionEditDialog
           collection={collection}
+          initialDraft={draft}
+          onDraftChange={setDraft}
+          onDiscard={() => setDraft(undefined)}
+          readCurrent={readCurrent}
           update={update}
           onClose={() => setDialog(null)}
           onSaved={onSaved}

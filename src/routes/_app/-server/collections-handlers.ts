@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
   collectionDeleteSummary,
-  deleteCollection,
+  deleteCollectionConfirmed,
   setCollectionPlaceStatus,
   updateCollection,
 } from '#/server/repos/collections'
@@ -45,7 +45,7 @@ export async function deleteCollectionResult(
       error: 'Type the collection name to confirm deletion.',
     }).parse(confirmName)
   }
-  await deleteCollection(scope, collectionId)
+  await deleteCollectionConfirmed(scope, collectionId, confirmName)
   return { ok: true }
 }
 export async function setPlaceStatusResult(

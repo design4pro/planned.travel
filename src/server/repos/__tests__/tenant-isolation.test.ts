@@ -83,6 +83,7 @@ import {
   collectionsRepository,
   collectionDeleteSummary,
   deleteCollection,
+  deleteCollectionConfirmed,
   updateCollection,
   setCollectionPlaceStatus,
   createCollection,
@@ -1263,6 +1264,7 @@ describe('tenant isolation', () => {
         for (const call of [
           () => updateCollection(scope, target.collectionId, { name: 'Forged' }),
           () => deleteCollection(scope, target.collectionId),
+          () => deleteCollectionConfirmed(scope, target.collectionId, 'Forged'),
           () => collectionDeleteSummary(scope, target.collectionId),
           () =>
             setCollectionPlaceStatus(scope, target.collectionPlaceId, 'visited'),

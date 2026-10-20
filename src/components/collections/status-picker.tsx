@@ -20,12 +20,14 @@ export function StatusPicker({
   place,
   setStatus,
   onSaved,
+  readCurrent,
 }: {
   place: { id: string; name: string; status: PlaceStatus }
   setStatus: (input: {
     collectionPlaceId: string
     status: PlaceStatus
   }) => Promise<unknown>
+  readCurrent: () => Promise<PlaceStatus>
   onSaved: (status: PlaceStatus) => Promise<void>
 }) {
   const t = useTranslate()
@@ -33,17 +35,40 @@ export function StatusPicker({
   const [failed, setFailed] = useState<PlaceStatus | null>(null)
   const [open, setOpen] = useState(false)
   const lock = useRef(false)
+  const committed = useRef(false)
   async function save(status: PlaceStatus) {
     if (lock.current || status === place.status) return
     lock.current = true
     setOpen(false)
     setBusy(true)
     setFailed(null)
+    committed.current = false
     try {
       await setStatus({ collectionPlaceId: place.id, status })
+      committed.current = true
       await onSaved(status)
     } catch {
       setFailed(status)
+    } finally {
+      lock.current = false
+      setBusy(false)
+    }
+  }
+  async function retry() {
+    if (lock.current || !failed) return
+    lock.current = true
+    setBusy(true)
+    try {
+      const current = committed.current ? failed : await readCurrent()
+      if (!committed.current && current === place.status) {
+        lock.current = false
+        await save(failed)
+        return
+      }
+      await onSaved(current)
+      setFailed(null)
+    } catch {
+      setFailed(failed)
     } finally {
       lock.current = false
       setBusy(false)
@@ -106,11 +131,7 @@ export function StatusPicker({
           tone="danger"
           className="w-full"
           actions={
-            <Button
-              size="sm"
-              aria-disabled={busy}
-              onClick={() => void save(failed)}
-            >
+            <Button size="sm" aria-disabled={busy} onClick={() => void retry()}>
               {t('modules.collections.statusPicker.retry')}
             </Button>
           }

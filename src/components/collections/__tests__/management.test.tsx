@@ -42,6 +42,7 @@ describe('collection controls', () => {
   it('hides management from a plain member', () => {
     mount(
       <CollectionActions
+        readCurrent={async () => collection}
         canManage={false}
         collection={collection}
         update={vi.fn()}
@@ -75,6 +76,7 @@ describe('collection controls', () => {
     const update = vi.fn().mockRejectedValue(new Error('write refused'))
     mount(
       <CollectionEditDialog
+        readCurrent={async () => collection}
         collection={collection}
         update={update}
         onClose={vi.fn()}
@@ -108,6 +110,7 @@ describe('collection controls', () => {
     const onSaved = vi.fn()
     mount(
       <StatusPicker
+        readCurrent={async () => 'idea'}
         place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
         setStatus={setStatus}
         onSaved={onSaved}
@@ -186,6 +189,7 @@ describe('collection controls', () => {
     )
     mount(
       <StatusPicker
+        readCurrent={async () => 'idea'}
         place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
         setStatus={setStatus}
         onSaved={vi.fn()}
@@ -235,6 +239,7 @@ describe('collection controls', () => {
     const setStatus = vi.fn().mockResolvedValue(undefined)
     mount(
       <StatusPicker
+        readCurrent={async () => 'idea'}
         place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
         setStatus={setStatus}
         onSaved={vi.fn()}
@@ -255,6 +260,7 @@ describe('collection controls', () => {
     const update = vi.fn()
     mount(
       <CollectionEditDialog
+        readCurrent={async () => collection}
         collection={collection}
         update={update}
         onClose={vi.fn()}
@@ -272,4 +278,111 @@ describe('collection controls', () => {
       screen.getByText('A collection name can have at most 200 characters.'),
     ).toBeTruthy()
   })
+  it.each(['response', 'refresh'] as const)(
+    'reconciles a committed status after a lost %s without resending it',
+    async (failure) => {
+      const user = userEvent.setup()
+      const setStatus =
+        failure === 'response'
+          ? vi.fn().mockRejectedValue(new Error('lost response'))
+          : vi.fn().mockResolvedValue(undefined)
+      const onSaved =
+        failure === 'refresh'
+          ? vi
+              .fn()
+              .mockRejectedValueOnce(new Error('refresh failed'))
+              .mockResolvedValue(undefined)
+          : vi.fn().mockResolvedValue(undefined)
+      const readCurrent = vi.fn().mockResolvedValue('visited')
+      mount(
+        <StatusPicker
+          place={{ id: 'cafe', name: 'Cafe', status: 'idea' }}
+          setStatus={setStatus}
+          onSaved={onSaved}
+          readCurrent={readCurrent}
+        />,
+      )
+      await user.click(
+        screen.getByRole('button', { name: /Cafe: status Idea/ }),
+      )
+      await user.click(screen.getByRole('menuitemradio', { name: 'Visited' }))
+      await screen.findByRole('alert')
+      await user.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+      expect(setStatus).toHaveBeenCalledTimes(1)
+      expect(onSaved).toHaveBeenLastCalledWith('visited')
+    },
+  )
+  it('retains the edit draft after Escape and reopening', async () => {
+    const user = userEvent.setup()
+    mount(
+      <CollectionActions
+        canManage
+        collection={collection}
+        update={vi.fn()}
+        remove={vi.fn()}
+        summary={vi.fn()}
+        onSaved={vi.fn()}
+        onDeleted={vi.fn()}
+        readCurrent={async () => collection}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: /Actions for/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    const name = screen.getByRole('textbox', { name: 'Name' })
+    await user.clear(name)
+    await user.type(name, 'My retained draft')
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(screen.getByRole('button', { name: /Actions for/ }))
+    await user.click(screen.getByRole('menuitem', { name: 'Edit details' }))
+    expect(
+      (screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value,
+    ).toBe('My retained draft')
+  })
+  it.each(['response', 'refresh'] as const)(
+    'reconciles a committed edit after a lost %s without resending it',
+    async (failure) => {
+      const user = userEvent.setup()
+      const update =
+        failure === 'response'
+          ? vi.fn().mockRejectedValue(new Error('lost response'))
+          : vi.fn().mockResolvedValue(undefined)
+      const onSaved =
+        failure === 'refresh'
+          ? vi
+              .fn()
+              .mockRejectedValueOnce(new Error('refresh failed'))
+              .mockResolvedValue(undefined)
+          : vi.fn().mockResolvedValue(undefined)
+      const onClose = vi.fn()
+      const readCurrent = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('read unavailable'))
+        .mockResolvedValue({ ...collection, name: 'Later' })
+      mount(
+        <CollectionEditDialog
+          collection={collection}
+          update={update}
+          onSaved={onSaved}
+          readCurrent={readCurrent}
+          onClose={onClose}
+          returnFocus={vi.fn()}
+        />,
+      )
+      const name = screen.getByRole('textbox', { name: 'Name' })
+      await user.clear(name)
+      await user.type(name, 'Later')
+      await user.click(screen.getByRole('button', { name: 'Save changes' }))
+      await screen.findByRole('alert')
+      await user.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(readCurrent).toHaveBeenCalledTimes(1))
+      expect(update).toHaveBeenCalledTimes(1)
+      expect(onClose).not.toHaveBeenCalled()
+      await user.click(screen.getByRole('button', { name: 'Try again' }))
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+      expect(update).toHaveBeenCalledTimes(1)
+      expect((name as HTMLInputElement).value).toBe('Later')
+    },
+  )
 })

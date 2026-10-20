@@ -4,6 +4,8 @@ import { createHarness } from '#/server/repos/__tests__/harness'
 import {
   addCollectionPlace,
   createCollection,
+  collectionsRepository,
+  updateCollection,
   getCollection,
 } from '#/server/repos/collections'
 import type { TenantScope } from '#/server/repos/base'
@@ -30,7 +32,10 @@ beforeEach(async () => {
   tenant = await harness.seedTenant('boundary')
   stubs.scope = tenant.scope
 })
-afterEach(() => harness.close())
+afterEach(() => {
+  vi.restoreAllMocks()
+  harness.close()
+})
 describe('collections boundary', () => {
   it.each([
     'slug',
@@ -66,6 +71,53 @@ describe('collections boundary', () => {
     })
     expect(await getCollection(tenant.scope, collection.id)).toBeNull()
   })
+  it.each(['save', 'rename'] as const)(
+    'refuses deletion when a concurrent %s invalidates confirmation after the summary',
+    async (change) => {
+      const collection = await createCollection(tenant.scope, {
+        name: 'Someday',
+      })
+      if (change === 'rename') {
+        await addCollectionPlace(tenant.scope, {
+          collectionId: collection.id,
+          name: 'Existing cafe',
+        })
+      }
+      const requireById = collectionsRepository.requireById
+      let reads = 0
+      vi.spyOn(collectionsRepository, 'requireById').mockImplementation(
+        async (scope, id) => {
+          const row = await requireById(scope, id)
+          reads += 1
+          if (reads === 2) {
+            if (change === 'save') {
+              await addCollectionPlace(tenant.scope, {
+                collectionId: collection.id,
+                name: 'Concurrent cafe',
+              })
+            } else {
+              await updateCollection(tenant.scope, collection.id, {
+                name: 'Later',
+              })
+            }
+          }
+          return row
+        },
+      )
+      await expect(
+        boundary.deleteCollectionResult({
+          collectionId: collection.id,
+          ...(change === 'rename' ? { confirmName: 'Someday' } : {}),
+        }),
+      ).rejects.toMatchObject({ name: 'ZodError' })
+      expect(await getCollection(tenant.scope, collection.id)).not.toBeNull()
+      expect(
+        await boundary.collectionDeleteSummaryResult({
+          collectionId: collection.id,
+        }),
+      ).toMatchObject({ places: 1, requiresName: true })
+    },
+  )
   it('deletes an empty collection without a name and returns a closed update projection', async () => {
     const collection = await createCollection(tenant.scope, { name: 'Someday' })
     const result = await boundary.updateCollectionResult({
