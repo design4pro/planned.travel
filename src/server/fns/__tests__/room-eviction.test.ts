@@ -53,7 +53,7 @@ vi.mock('#/server/observability', async (importOriginal) => {
   }
 })
 
-const { closeRoom, closeRoomFor } = await import('../context')
+const { closeRoom, closeRoomFor, resetRoom } = await import('../context')
 
 const scope = {
   ctx: { userId: 'owner-1', organizationId: 'org-1' },
@@ -122,4 +122,36 @@ describe('evicting sockets from a trip room', () => {
     })
     expect(stubs.warnings[0].fields).not.toHaveProperty('userId')
   })
+})
+
+describe('resetting a deleted trip room', () => {
+  it('resets only the named trip room', async () => {
+    await resetRoom(scope, 'trip-1')
+    expect(stubs.requests).toEqual([
+      {
+        room: 'trip-1',
+        url: 'https://trip-room.internal/trip-1/reset',
+        body: '',
+      },
+    ])
+  })
+
+  it.each(['transport', 'response'])(
+    'logs a %s failure without failing deletion',
+    async (failure) => {
+      stubs.roomThrows = failure === 'transport'
+      stubs.roomStatus = 500
+      await expect(resetRoom(scope, 'trip-1')).resolves.toBeUndefined()
+      expect(stubs.warnings).toEqual([
+        {
+          message: 'trip room eviction failed',
+          fields: expect.objectContaining({
+            tripId: 'trip-1',
+            organizationId: 'org-1',
+          }),
+        },
+      ])
+      expect(stubs.warnings[0].fields).not.toHaveProperty('userId')
+    },
+  )
 })

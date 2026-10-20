@@ -13,7 +13,12 @@ import { env } from 'cloudflare:workers'
 import { appUrl, taskQueue } from '#/server/auth/env'
 import { requireOrg } from '#/server/auth/session'
 import { getDb } from '#/server/db/client'
-import { closeTripRoom, closeTripRoomFor, commitToTripRoom } from '#/server/do'
+import {
+  closeTripRoom,
+  closeTripRoomFor,
+  commitToTripRoom,
+  resetTripRoom,
+} from '#/server/do'
 import { loggerFromEnv, serializeError } from '#/server/observability'
 import { createScope } from '#/server/repos'
 
@@ -141,13 +146,24 @@ export function closeRoomFor(
 
 /**
  * Closes every socket in a trip's room, after a change whose audience the server cannot enumerate:
- * the trip was archived, restored or deleted, or its visibility narrowed to private (the people who
+ * the trip was archived or restored, or its visibility narrowed to private (the people who
  * lose the right to read it are workspace members who were never on it). Same terms as
  * {@link closeRoomFor}.
  */
 export function closeRoom(scope: TenantScope, tripId: string): Promise<void> {
   return evictQuietly(scope, tripId, null, (namespace) =>
     closeTripRoom(namespace, tripId),
+  )
+}
+
+/**
+ * Erases the deleted trip's room after its authorized D1 deletion committed. The same reset used
+ * by erasure closes sockets and removes stored state; idle expiry remains the failure backstop.
+ * Call with the id resolved by the repository, on the same terms as {@link closeRoomFor}.
+ */
+export function resetRoom(scope: TenantScope, tripId: string): Promise<void> {
+  return evictQuietly(scope, tripId, null, (namespace) =>
+    resetTripRoom(namespace, tripId),
   )
 }
 
