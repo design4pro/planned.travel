@@ -2166,7 +2166,9 @@ export async function tripRoleFor(
  * person with (`src/routes/api/trip-room/-lib/connect.ts`), so widening it widens who may patch the
  * room. The room reads it once, at connect: the writes that change a role, remove a member or archive
  * the trip close the sockets they affect, so the next connect applies this rule again
- * (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
+ * (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`). A missed close or an in-flight
+ * connect retains the old role for at most the maximum socket age plus the alarm interval
+ * (15 + 5 minutes, about 20 minutes). Refusing a connect minted before revocation is #1085.
  */
 export function canWritePlan(
   trip: Pick<Trip, 'isArchived'>,
