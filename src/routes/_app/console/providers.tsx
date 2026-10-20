@@ -3,7 +3,7 @@ import { Gauge, ShieldAlert, TrendingUp, Users } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import { ErrorPanel } from '#/components/layout/error-state'
-import { readConsoleFailure } from '#/components/console'
+import { readConsoleFailureDetail } from '#/components/console'
 import {
   Badge,
   Card,
@@ -63,7 +63,8 @@ function ProvidersError({ error }: ErrorComponentProps) {
   const t = useTranslate()
   return (
     <ErrorPanel
-      error={readConsoleFailure(error, t('console.failure.fallback'))}
+      error={error}
+      detail={readConsoleFailureDetail(error, t('console.failure.fallback'))}
       title={t('console.providers.error.title')}
     />
   )

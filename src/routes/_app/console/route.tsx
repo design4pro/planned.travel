@@ -4,7 +4,10 @@ import { UserRoundSearch } from 'lucide-react'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
-import { PlatformRoleBadge, readConsoleFailure } from '#/components/console'
+import {
+  PlatformRoleBadge,
+  readConsoleFailureDetail,
+} from '#/components/console'
 import { Button, Card, EmptyState } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { loadConsoleAccess } from './-server/access'
@@ -55,7 +58,8 @@ function ConsoleError({ error }: ErrorComponentProps) {
   return (
     <AppFrame>
       <ErrorPanel
-        error={readConsoleFailure(error, t('console.failure.fallback'))}
+        error={error}
+        detail={readConsoleFailureDetail(error, t('console.failure.fallback'))}
         title={t('console.shell.error.title')}
       />
     </AppFrame>
