@@ -220,6 +220,8 @@ export interface ConfirmedBookingImport {
  * `#/server/geo/bindings` itself would pull `cloudflare:workers` into the browser build.
  */
 export interface ConfirmBookingImportPorts {
+  /** Rebuilds statistics after a confirm created at least one place. Never throws. */
+  readonly enqueueRollup: (scope: TenantScope, trip: Trip) => Promise<void>
   /** Mirrors one `trip` patch into the room. Never throws: the rows are already written. */
   readonly announce: (
     tripId: string,
@@ -606,6 +608,7 @@ function placeResolver(
   scope: TenantScope,
   geocoding: ConfirmBookingImportPorts['geocoding'],
   forTrip: string,
+  created: () => void,
 ): (row: StagedReservation) => Promise<string | null> {
   let byName: Map<string, string> | null = null
   // Read once per confirm, beside the trip's places and for the same reason: the workspace's
@@ -638,6 +641,7 @@ function placeResolver(
         address,
         source: 'import',
       })
+      created()
       byName.set(name.toLowerCase(), place.id)
       await pin(scope, geocoding, ceilingFor, place.id, address ?? name)
       return place.id
@@ -794,7 +798,10 @@ export async function confirmBookingImport(
     .sort((left, right) => left - right)
 
   const timeZone = resolveTimeZone(trip.timezone)
-  const placeFor = placeResolver(scope, ports.geocoding, trip.id)
+  let createdPlace = false
+  const placeFor = placeResolver(scope, ports.geocoding, trip.id, () => {
+    createdPlace = true
+  })
   const stayFor = stayWriter(scope, trip.id)
   /*
    * The name a row the source never titled is written under.
@@ -824,68 +831,72 @@ export async function confirmBookingImport(
   const written = [...already]
   let failed = 0
 
-  const importedAt = new Date()
-  for (const index of pending) {
-    const row = staged.reservations.at(index)
-    if (row === undefined) continue
-    const draft = draftOf(row, index, timeZone)
-    try {
-      const placeId =
-        draft.type === 'accommodation' ? await placeFor(row) : null
-      const reservation = await createImportedReservation(
-        scope,
-        {
+  try {
+    const importedAt = new Date()
+    for (const index of pending) {
+      const row = staged.reservations.at(index)
+      if (row === undefined) continue
+      const draft = draftOf(row, index, timeZone)
+      try {
+        const placeId =
+          draft.type === 'accommodation' ? await placeFor(row) : null
+        const reservation = await createImportedReservation(
+          scope,
+          {
+            tripId: trip.id,
+            placeId,
+            type: draft.type,
+            status: 'confirmed',
+            title: draft.title.length > 0 ? draft.title : await untitledTitle(),
+            location: draft.location,
+            confirmationNumber: draft.reference,
+            notes: row.notes,
+            startDate: draft.startDate,
+            startTime: draft.startTime,
+            endDate: draft.endDate,
+            endTime: draft.endTime,
+            priceMinor: draft.priceMinor,
+            currency: draft.currency,
+          },
+          importedAt,
+        )
+        written.push({ index, reservationId: reservation.id })
+        await settle(scope, trip, reservation, fileId)
+        if (draft.type === 'accommodation') await stayFor(draft, reservation)
+      } catch (cause) {
+        log().warn('booking import row not written', {
           tripId: trip.id,
-          placeId,
-          type: draft.type,
-          status: 'confirmed',
-          title: draft.title.length > 0 ? draft.title : await untitledTitle(),
-          location: draft.location,
-          confirmationNumber: draft.reference,
-          notes: row.notes,
-          startDate: draft.startDate,
-          startTime: draft.startTime,
-          endDate: draft.endDate,
-          endTime: draft.endTime,
-          priceMinor: draft.priceMinor,
-          currency: draft.currency,
-        },
-        importedAt,
-      )
-      written.push({ index, reservationId: reservation.id })
-      await settle(scope, trip, reservation, fileId)
-      if (draft.type === 'accommodation') await stayFor(draft, reservation)
-    } catch (cause) {
-      log().warn('booking import row not written', {
-        tripId: trip.id,
-        index,
-        organizationId: scope.ctx.organizationId,
-        ...serializeError(cause),
-      })
-      failed += 1
+          index,
+          organizationId: scope.ctx.organizationId,
+          ...serializeError(cause),
+        })
+        failed += 1
+      }
     }
-  }
 
-  const fresh = written.slice(already.length)
-  await persist(store, staged, written, {
-    asked: pending.length,
-    remaining: pending.length - fresh.length,
-  })
-
-  if (fresh.length > 0) {
-    // One patch for the batch: five hundred rows must refresh another tab once, not five hundred
-    // times. The desk re-reads its own list from the invalidation this triggers.
-    await ports.announce(trip.id, {
-      importJobId: staged.jobId,
-      importWritten: fresh.length,
-      importConfirmedAt: Date.now(),
+    const fresh = written.slice(already.length)
+    await persist(store, staged, written, {
+      asked: pending.length,
+      remaining: pending.length - fresh.length,
     })
-  }
 
-  return {
-    written: fresh.length,
-    failed,
-    remaining: pending.length - fresh.length,
+    if (fresh.length > 0) {
+      // One patch for the batch: five hundred rows must refresh another tab once, not five hundred
+      // times. The desk re-reads its own list from the invalidation this triggers.
+      await ports.announce(trip.id, {
+        importJobId: staged.jobId,
+        importWritten: fresh.length,
+        importConfirmedAt: Date.now(),
+      })
+    }
+
+    return {
+      written: fresh.length,
+      failed,
+      remaining: pending.length - fresh.length,
+    }
+  } finally {
+    if (createdPlace) await ports.enqueueRollup(scope, trip)
   }
 }
 
@@ -935,7 +946,10 @@ export const confirmBookingImportFn = createServerFn({ method: 'POST' })
   .validator(confirmBookingImportInputSchema)
   .handler(async ({ data }): Promise<ConfirmedBookingImport> => {
     const scope = await appScope()
+    const { enqueueTripRollup } =
+      await import('#/server/queue/travel-stats-fanout')
     return confirmBookingImport(scope, importStore(), data, {
+      enqueueRollup: enqueueTripRollup,
       announce: (trip, fields) =>
         mirrorToRoom(scope, trip, [patch('trip', trip, fields)]),
       geocoding: geocodeRuntime,

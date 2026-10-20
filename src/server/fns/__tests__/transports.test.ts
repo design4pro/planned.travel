@@ -18,17 +18,25 @@ import {
   createTransport,
   createTrip,
   getTransport,
+  listTravelStats,
 } from '#/server/repos'
 import { NotFoundError } from '#/server/repos/context'
-import { captureError, createHarness } from '#/server/repos/__tests__/harness'
+import {
+  captureError,
+  createHarness,
+  subscribeTenant,
+} from '#/server/repos/__tests__/harness'
 
 import type { TenantScope } from '#/server/repos'
+import type { TaskBindings, TaskEnvelopeOf } from '#/server/queue/types'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
 
 /* ------------------------------------------------------------------ mocking */
 
 const stubs = vi.hoisted(() => ({
   scope: null as TenantScope | null,
+  sent: [] as Array<unknown>,
+  rejects: false,
   mirrorToRoom: vi.fn(async (): Promise<void> => undefined),
 }))
 
@@ -60,9 +68,22 @@ vi.mock('../context', () => ({
   },
 }))
 
+vi.mock('#/routes/_app/-server/context', () => ({
+  appScope: async () => stubs.scope,
+}))
+
 /** The two modules below import `cloudflare:workers`; the handlers under test never reach them. */
 vi.mock('#/server/billing/runtime.cloudflare', () => ({ billingRuntime: {} }))
 vi.mock('#/server/transit/bindings', () => ({ transitRuntime: {} }))
+
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => ({
+    sendBatch: async (messages: Array<{ body: unknown }>) => {
+      if (stubs.rejects) throw new Error('queue unavailable')
+      stubs.sent.push(...messages.map((message) => message.body))
+    },
+  }),
+}))
 
 /* ------------------------------------------------------------ start context */
 
@@ -87,8 +108,12 @@ function startContext(): StartContext {
   }
 }
 
-const { deleteTransportFn, setTransportStatusFn } =
-  await import('../transports')
+const {
+  deleteTransportFn,
+  setTransportStatusFn,
+  saveTransportFn,
+  saveSearchedConnectionFn,
+} = await import('../transports')
 
 const setStatus = (data: {
   tripId: string
@@ -107,12 +132,19 @@ let tripA: string
 let tripB: string
 let transportB: string
 /** A writer on trip B and a viewer of trip A: sees both, may change only B. */
+let database: TenantScope['db']
+let seedForeign: (name: string) => Promise<SeededTenant>
 let caller: TenantScope
 
 beforeEach(async () => {
   stubs.mirrorToRoom.mockClear()
+  stubs.sent = []
+  stubs.rejects = false
   const harness = await createHarness()
+  database = harness.db
+  seedForeign = harness.seedTenant
   tenant = await harness.seedTenant('transports')
+  await subscribeTenant(tenant.scope, 'crew', 5)
   owner = tenant.scope
   tripA = (
     await createTrip(owner, {
@@ -255,5 +287,217 @@ describe('a transport write naming its own trip', () => {
     await remove({ tripId: tripB, transportId: transportB })
     expect(await getTransport(owner, transportB)).toBeNull()
     expect(stubs.mirrorToRoom).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('transport content roll-up', () => {
+  function record(departureDate: string) {
+    return {
+      tripId: tripB,
+      transportId: transportB,
+      mode: 'train' as const,
+      status: 'pending' as const,
+      title: 'Journey',
+      departureDayId: '',
+      arrivalDayId: '',
+      carrier: '',
+      serviceNumber: '',
+      bookingCode: '',
+      seat: '',
+      departureName: '',
+      departureCode: '',
+      departureDate,
+      departureTime: '',
+      arrivalName: '',
+      arrivalCode: '',
+      arrivalDate: '',
+      arrivalTime: '',
+      distanceMetres: 123000,
+      priceMinor: 0,
+      currency: '',
+      notes: '',
+      stations: [],
+      legs: [],
+    }
+  }
+  function expectEnvelopes(years: Array<number>) {
+    expect(stubs.sent).toHaveLength(years.length * 2)
+    for (const scope of [owner, caller])
+      for (const statYear of years)
+        expect(stubs.sent).toContainEqual(
+          expect.objectContaining({
+            orgId: tenant.organizationId,
+            id: expect.stringContaining(
+              `travel-stats:${tenant.organizationId}:${scope.ctx.userId}:${statYear}:`,
+            ),
+            payload: { userId: scope.ctx.userId, statYear },
+          }),
+        )
+  }
+  for (const intent of ['edit', undefined] as const)
+    it(`saves both departure years with intent ${intent} and updates the stored distances`, async () => {
+      await startStorage.run(startContext(), () =>
+        saveTransportFn({ data: record('2027-01-01') }),
+      )
+      expectEnvelopes([0, 2026, 2027])
+      stubs.sent = []
+      await startStorage.run(startContext(), () =>
+        saveTransportFn({ data: { ...record('2028-01-01'), intent } }),
+      )
+      expectEnvelopes([0, 2026, 2028, 2027])
+      const { createPlanPlaceFn } =
+        await import('#/routes/_app/trips/$tripId/-server/plan')
+      await startStorage.run(startContext(), () =>
+        createPlanPlaceFn({
+          data: {
+            tripId: tripB,
+            name: 'Station museum',
+            city: 'Osaka',
+            address: '',
+            categoryId: '',
+            durationMinutes: 0,
+            rating: 0,
+            lat: null,
+            lng: null,
+            dayId: '',
+          },
+        }),
+      )
+      const { createTravelStatsHandler } =
+        await import('#/server/queue/handlers/travel-stats')
+      const { createLogger, createMemorySink } =
+        await import('#/server/observability/logger')
+      const handler = createTravelStatsHandler(() => database)
+      const orgId = tenant.organizationId
+      for (const envelope of stubs.sent as Array<
+        TaskEnvelopeOf<'travel-stats'>
+      >) {
+        await handler(envelope.payload, {
+          orgId,
+          taskId: envelope.id,
+          attempt: 1,
+          now: Date.now,
+          logger: createLogger({ sink: createMemorySink() }),
+          env: {
+            DB: {} as D1Database,
+          } as TaskBindings,
+          callProvider: async (_provider, operation) => operation(),
+        })
+      }
+      const rows = await listTravelStats(owner, owner.ctx.userId)
+      expect(rows.find((row) => row.statYear === 2027)?.distanceMetres).toBe(0)
+      expect(rows.find((row) => row.statYear === 2028)?.distanceMetres).toBe(
+        123000,
+      )
+      expect(rows.find((row) => row.statYear === 0)?.distanceMetres).toBe(
+        123000,
+      )
+      expect(rows.find((row) => row.statYear === 0)?.placeCount).toBe(1)
+    })
+  it('deleting sends the removed departure year and status changes send nothing', async () => {
+    await startStorage.run(startContext(), () =>
+      saveTransportFn({ data: record('2027-01-01') }),
+    )
+    stubs.sent = []
+    await setStatus({
+      tripId: tripB,
+      transportId: transportB,
+      status: 'confirmed',
+    })
+    expect(stubs.sent).toEqual([])
+    await remove({ tripId: tripB, transportId: transportB })
+    expectEnvelopes([0, 2026, 2027])
+  })
+  it('refusing the queue does not fail a save', async () => {
+    stubs.rejects = true
+    await startStorage.run(startContext(), () =>
+      saveTransportFn({ data: record('2027-01-01') }),
+    )
+    expect((await getTransport(owner, transportB))?.departureDate).toBe(
+      '2027-01-01',
+    )
+  })
+  it('refuses foreign and private non-member trips with no envelopes', async () => {
+    const foreign = await seedForeign('foreign')
+    const foreignTrip = await createTrip(foreign.scope, { title: 'Foreign' })
+    await expect(
+      startStorage.run(startContext(), () =>
+        saveTransportFn({
+          data: { ...record('2027-01-01'), tripId: foreignTrip.id },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    const nonMember = tenant.scopeFor(await tenant.addUser('Not a traveller'))
+    stubs.scope = nonMember
+    await expect(
+      startStorage.run(startContext(), () =>
+        saveTransportFn({ data: record('2027-01-01') }),
+      ),
+    ).rejects.toThrow()
+    expect(stubs.sent).toEqual([])
+    const shared = await createTrip(owner, {
+      title: 'Shared',
+      visibility: 'organization',
+    })
+    await expect(
+      startStorage.run(startContext(), () =>
+        saveTransportFn({
+          data: {
+            ...record('2027-01-01'),
+            transportId: 'new-shared',
+            tripId: shared.id,
+          },
+        }),
+      ),
+    ).rejects.toThrow()
+    stubs.scope = caller
+    await expect(
+      startStorage.run(startContext(), () =>
+        saveTransportFn({
+          data: {
+            ...record('2027-01-01'),
+            transportId: 'new-viewer',
+            tripId: tripA,
+          },
+        }),
+      ),
+    ).rejects.toThrow()
+    expect(stubs.sent).toEqual([])
+  })
+  it('searched connections send old and new departure years', async () => {
+    await startStorage.run(startContext(), () =>
+      saveTransportFn({ data: record('2027-01-01') }),
+    )
+    stubs.sent = []
+    await startStorage.run(startContext(), () =>
+      saveSearchedConnectionFn({
+        data: {
+          tripId: tripB,
+          transportId: transportB,
+          mode: 'train',
+          title: 'Searched',
+          priceMinor: 0,
+          currency: '',
+          stations: [
+            { name: 'Paris', code: '', lat: null, lng: null, timezone: '' },
+            { name: 'Lyon', code: '', lat: null, lng: null, timezone: '' },
+          ],
+          legs: [
+            {
+              serviceNumber: '',
+              platform: '',
+              seat: '',
+              departureDayId: '',
+              arrivalDayId: '',
+              departureDate: '2028-01-01',
+              departureTime: '',
+              arrivalDate: '2028-01-01',
+              arrivalTime: '',
+            },
+          ],
+        },
+      }),
+    )
+    expectEnvelopes([0, 2026, 2028, 2027])
   })
 })

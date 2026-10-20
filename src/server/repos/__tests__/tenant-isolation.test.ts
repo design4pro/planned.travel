@@ -412,6 +412,9 @@ const { downloadTripExport, listTripExports } =
 
 /** The confirm's ports, stubbed to throw for the same reason: a refused confirm reaches neither. */
 const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
+  enqueueRollup: () => {
+    throw new Error("enqueueRollup is not reached: no place is written.")
+  },
   announce: () => {
     throw new Error('announce is not reached: nothing here is written.')
   },

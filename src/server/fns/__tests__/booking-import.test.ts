@@ -60,8 +60,11 @@ import type { ConfirmBookingImportPorts } from '../booking-import'
 const stubs = vi.hoisted(() => ({
   /** When `false`, the deployment holds no geocoding credential. */
   geocodingConfigured: true,
+  sent: [] as Array<unknown>,
+  rejects: false,
   /** When `true`, the stay an accommodation row would get is refused at its write. */
   failStayWrite: false,
+  failReservationWrite: false,
   /** Every patch the confirm's `announce` port was handed. */
   mirrored: [] as Array<unknown>,
   /** How many lookups the geocoding vendor was asked for. */
@@ -147,6 +150,13 @@ vi.mock('#/server/repos', async (importOriginal) => {
   const real = await importOriginal<typeof Repos>()
   return {
     ...real,
+    createImportedReservation: async (
+      ...args: Parameters<typeof real.createImportedReservation>
+    ) => {
+      if (stubs.failReservationWrite)
+        throw new Error('reservation write failed')
+      return real.createImportedReservation(...args)
+    },
     createAccommodation: async (
       ...args: Parameters<typeof real.createAccommodation>
     ) => {
@@ -171,11 +181,14 @@ vi.mock('../context', () => ({
   },
 }))
 
-/** Only the server-function wrappers reach for the queue binding, and none of them run here. */
+/** Confirm uses the real fan-out through its port; only the queue binding is replaced. */
 vi.mock('#/server/auth/env', () => ({
-  taskQueue: () => {
-    throw new Error('taskQueue is not reached: these tests hand the queue in.')
-  },
+  taskQueue: () => ({
+    sendBatch: async (messages: Array<{ body: unknown }>) => {
+      if (stubs.rejects) throw new Error('queue unavailable')
+      stubs.sent.push(...messages.map((message) => message.body))
+    },
+  }),
 }))
 
 const {
@@ -194,6 +207,11 @@ const {
  * real proxy.
  */
 const ports: ConfirmBookingImportPorts = {
+  enqueueRollup: async (scope, trip) =>
+    (await import('#/server/queue/travel-stats-fanout')).enqueueTripRollup(
+      scope,
+      trip,
+    ),
   announce: (tripId, fields) => {
     stubs.mirrored.push({
       entity: { kind: 'trip', id: tripId },
@@ -338,8 +356,11 @@ beforeEach(async () => {
   alpha = await seedWorld(await harness.seedTenant('alpha'), 'alpha')
   beta = await seedWorld(await harness.seedTenant('beta'), 'beta')
   store = memoryStore()
+  stubs.sent = []
+  stubs.rejects = false
   stubs.geocodingConfigured = true
   stubs.failStayWrite = false
+  stubs.failReservationWrite = false
   stubs.mirrored.length = 0
   stubs.vendorCalls = 0
   stubs.geoEntries.clear()
@@ -1053,6 +1074,7 @@ describe('confirmBookingImport', () => {
       ports,
     )
 
+    expect(stubs.sent).toEqual([])
     expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
     const written = await listTripReservations(alpha.tenant.scope, {
       tripId: alpha.tripId,
@@ -1087,6 +1109,7 @@ describe('confirmBookingImport', () => {
       await listTripReservations(alpha.tenant.scope, { tripId: alpha.tripId }),
     ).toEqual([])
     expect(stubs.mirrored).toEqual([])
+    expect(stubs.sent).toEqual([])
   })
 
   /*
@@ -1129,6 +1152,7 @@ describe('confirmBookingImport', () => {
       JSON.stringify(staged),
     )
     expect(stubs.mirrored).toEqual([])
+    expect(stubs.sent).toEqual([])
   })
 
   it('refuses an archived trip before any place is created or the geocoder is called', async () => {
@@ -1159,6 +1183,7 @@ describe('confirmBookingImport', () => {
       JSON.stringify(staged),
     )
     expect(stubs.mirrored).toEqual([])
+    expect(stubs.sent).toEqual([])
   })
 
   it('lets a trip editor confirm the same import, so the refusal is about the role only', async () => {
@@ -1178,6 +1203,7 @@ describe('confirmBookingImport', () => {
     )
 
     expect(result).toEqual({ written: 1, failed: 0, remaining: 0 })
+    expect(stubs.sent).toHaveLength(4)
     expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
     expect(stubs.vendorCalls).toBe(1)
     // `settle` logs a refused link instead of throwing, so only the row shows the editor's write held.
@@ -1471,5 +1497,84 @@ describe('confirmBookingImport — the stay an accommodation row becomes', () =>
       await listTripAccommodations(alpha.tenant.scope, alpha.tripId),
     ).toEqual([])
     expect(stayWarnings()).toEqual(['booking import stay not written'])
+  })
+})
+
+describe('booking import statistics', () => {
+  const confirm = () =>
+    confirmBookingImport(
+      alpha.tenant.scope,
+      store,
+      { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0, 1] },
+      ports,
+    )
+  it('enqueues once for the whole confirm after creating places', async () => {
+    await stage(alpha, {
+      reservations: [stagedRow(), stagedRow({ title: 'Other hotel' })],
+    })
+    await confirm()
+    expect(stubs.sent).toEqual(
+      expect.arrayContaining(
+        [0, 2026].map((statYear) =>
+          expect.objectContaining({
+            orgId: alpha.tenant.organizationId,
+            id: expect.stringContaining(
+              `travel-stats:${alpha.tenant.organizationId}:${alpha.tenant.ownerUserId}:${statYear}:`,
+            ),
+            payload: { userId: alpha.tenant.ownerUserId, statYear },
+          }),
+        ),
+      ),
+    )
+    expect(stubs.sent).toHaveLength(2)
+  })
+  it('still enqueues when persist fails after a place is created', async () => {
+    await stage(alpha)
+    store.delete = async () => {
+      throw new Error('persist failed')
+    }
+    await expect(confirm()).rejects.toThrow('persist failed')
+    expect(stubs.sent).toHaveLength(2)
+  })
+  it('enqueues once even when reservation fails after creating the place', async () => {
+    await stage(alpha)
+    stubs.failReservationWrite = true
+    await expect(confirm()).resolves.toMatchObject({ written: 0, failed: 1 })
+    expect(await countTripPlaces(alpha.tenant.scope, alpha.tripId)).toBe(1)
+    expect(stubs.sent).toHaveLength(2)
+  })
+  it('queue refusal does not fail the confirm', async () => {
+    await stage(alpha)
+    stubs.rejects = true
+    await expect(confirm()).resolves.toMatchObject({ written: 1 })
+  })
+})
+
+describe('import roll-up isolation', () => {
+  it('private non-members, workspace-visible non-members and foreign trips send nothing', async () => {
+    await stage(alpha)
+    const outsider = alpha.tenant.scopeFor(
+      await alpha.tenant.addUser('Outsider'),
+    )
+    const input = { tripId: alpha.tripId, jobId: alpha.jobId, accept: [0] }
+    await expect(
+      confirmBookingImport(outsider, store, input, ports),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expect(
+      confirmBookingImport(beta.tenant.scope, store, input, ports),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    const shared = await createTrip(alpha.tenant.scope, {
+      title: 'Shared import',
+      visibility: 'organization',
+    })
+    await expect(
+      confirmBookingImport(
+        outsider,
+        store,
+        { ...input, tripId: shared.id },
+        ports,
+      ),
+    ).rejects.toBeInstanceOf(TripRoleError)
+    expect(stubs.sent).toEqual([])
   })
 })

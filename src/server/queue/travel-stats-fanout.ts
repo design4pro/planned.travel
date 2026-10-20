@@ -6,8 +6,8 @@
  * module under `src/routes` is in the client graph, so the moment anything there *exports* a
  * function reaching this code, the client bundle has to resolve that specifier and the build fails.
  * The fan-out was private to `trip-lifecycle.ts` and survived only because nothing exported it. It
- * now has three callers — the trip lifecycle, `01-S6a`'s membership writes, and the atlas's visited
- * countries — so it needed a home outside the route tree rather than a second copy inside it
+ * serves trip lifecycle, membership, content and visited-country writes, so it needs a home
+ * outside the route tree rather than a second copy inside it
  * (`docs/SPEC.md` §8).
  *
  * `00-S4` owns what a recompute means; this owns only when one is asked for.
@@ -44,7 +44,8 @@ function yearOf(date: string | null | undefined): number | null {
 /**
  * The stat years one trip write can have moved: the all-time roll-up always, the year the trip starts
  * in when it has one, and — on an edit that moved the range — the year it *used* to start in, whose
- * row would otherwise keep counting a trip that has left it.
+ * row would otherwise keep counting a trip that has left it. Further dates also cover transport
+ * departures before and after a content write.
  *
  * A date, not a trip, so the atlas's visited countries pass their own: the date a country was
  * visited on, and on an undo the date carried by the row being removed. A date whose year is not one
@@ -53,10 +54,11 @@ function yearOf(date: string | null | undefined): number | null {
  */
 export function affectedStatYears(
   startDate: string | null | undefined,
-  previousStartDate?: string | null,
+  ...otherDates: ReadonlyArray<string | null | undefined>
 ): Array<number> {
   const years = new Set<number>([ALL_TIME_STAT_YEAR])
-  for (const candidate of [yearOf(startDate), yearOf(previousStartDate)]) {
+  for (const date of [startDate, ...otherDates]) {
+    const candidate = yearOf(date)
     if (candidate !== null) {
       years.add(candidate)
     }
@@ -197,5 +199,18 @@ export async function enqueueTripStatsFor(
     trip.id,
     affectedStatYears(trip.startDate),
     recipients,
+  )
+}
+
+/** A content write rebuilds the trip members' roll-ups, including extra departure dates. */
+export async function enqueueTripRollup(
+  scope: TenantScope,
+  trip: Trip,
+  otherDates: ReadonlyArray<string | null | undefined> = [],
+): Promise<void> {
+  await enqueueTravelStats(
+    scope,
+    trip.id,
+    affectedStatYears(trip.startDate, ...otherDates),
   )
 }

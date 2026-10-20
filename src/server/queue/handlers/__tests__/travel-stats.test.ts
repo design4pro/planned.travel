@@ -15,6 +15,9 @@ import {
   createPlace,
   createTransport,
   createTrip,
+  addTripMember,
+  getMembership,
+  removeMember,
   getTravelStats,
   listTravelStats,
   markCountryVisited,
@@ -28,11 +31,7 @@ import {
 import { createLogger, createMemorySink } from '#/server/observability/logger'
 import { taskHandlers } from '../../consumer'
 import { buildTaskEnvelope } from '../../jobs'
-import {
-  TaskConfigurationError,
-  TaskPermanentError,
-  travelStatsPayloadSchema,
-} from '../../types'
+import { TaskConfigurationError, travelStatsPayloadSchema } from '../../types'
 import {
   RECOMPUTE_WINDOW_MS,
   createTravelStatsHandler,
@@ -454,16 +453,42 @@ describe('handleTravelStats', () => {
     expect(allTime?.distanceMetres).toBe(0)
   })
 
-  it('fails permanently for a user who is no longer a member', async () => {
-    const failure = await recompute(
-      { userId: beta.ownerUserId, statYear: 0 },
-      context(alpha.organizationId),
-    ).catch((cause: unknown) => cause)
-
-    expect(failure).toBeInstanceOf(TaskPermanentError)
-    expect((failure as Error).message).toContain('no longer a member')
-    // Nothing was written for the stranger under the envelope's organization.
+  it('acknowledges a non-member without writing', async () => {
+    const sink = createMemorySink()
+    const ctx = {
+      ...context(alpha.organizationId),
+      logger: createLogger({ level: 'debug', sink }),
+    }
+    await expect(
+      recompute({ userId: beta.ownerUserId, statYear: 0 }, ctx),
+    ).resolves.toEqual({})
     expect(await listTravelStats(alpha.scope, beta.ownerUserId)).toEqual([])
+    expect(sink.records.filter((entry) => entry.level === 'warn')).toHaveLength(
+      1,
+    )
+  })
+
+  it('acknowledges a departed workspace member who remains on a trip', async () => {
+    const userId = await alpha.addUser('Departed traveller')
+    const trip = await createTrip(alpha.scope, { title: 'Still on the trip' })
+    await addTripMember(alpha.scope, {
+      tripId: trip.id,
+      userId,
+      role: 'editor',
+    })
+    const membership = await getMembership(alpha.scope, userId)
+    if (membership === null) throw new Error('Missing fixture membership')
+    await removeMember(alpha.scope, membership.id)
+    const sink = createMemorySink()
+    const ctx = {
+      ...context(alpha.organizationId),
+      logger: createLogger({ level: 'debug', sink }),
+    }
+    await expect(recompute({ userId, statYear: 0 }, ctx)).resolves.toEqual({})
+    expect(await listTravelStats(alpha.scope, userId)).toEqual([])
+    expect(sink.records.filter((entry) => entry.level === 'warn')).toHaveLength(
+      1,
+    )
   })
 
   it('never reads or writes outside the envelope’s organization', async () => {

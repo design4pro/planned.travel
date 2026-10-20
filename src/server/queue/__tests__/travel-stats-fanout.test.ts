@@ -21,6 +21,8 @@ import { ALL_TIME_STAT_YEAR } from '#/server/queue/types'
 import { QUEUE_BATCH_MAX } from '../jobs'
 import {
   enqueueTripStatsFor,
+  affectedStatYears,
+  enqueueTripRollup,
   requestTravelStatsRecompute,
 } from '../travel-stats-fanout'
 
@@ -270,5 +272,59 @@ describe('requestTravelStatsRecompute', () => {
     expect(line).toContain('"route":"a-caller-of-its-own"')
 
     warn.mockRestore()
+  })
+})
+
+describe('trip contents roll-up', () => {
+  it('keeps all-time and every distinct usable date year, with existing signatures unchanged', () => {
+    expect(affectedStatYears(null)).toEqual([0])
+    expect(affectedStatYears('2026-01-01', '2025-01-01')).toEqual([
+      0, 2026, 2025,
+    ])
+    expect(
+      affectedStatYears(
+        '2026-01-01',
+        '2027-01-01',
+        '2028-01-01',
+        '0000-01-01',
+        null,
+        undefined,
+        '2027-02-01',
+      ),
+    ).toEqual([0, 2026, 2027, 2028])
+  })
+
+  it('uses real trip recipients and tenant envelopes for all departure years, and survives queue refusal', async () => {
+    const harness = await createHarness()
+    const tenant = await harness.seedTenant('contents')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Across years',
+      startDate: '2026-12-31',
+      endDate: '2027-01-02',
+    })
+    stubs.sent = []
+    stubs.rejects = false
+    await enqueueTripRollup(tenant.scope, trip, ['2027-01-01', '2028-01-01'])
+    expect(stubs.sent).toHaveLength(4)
+    expect(stubs.sent).toEqual(
+      expect.arrayContaining(
+        [0, 2026, 2027, 2028].map((statYear) =>
+          expect.objectContaining({
+            orgId: tenant.organizationId,
+            id: expect.stringContaining(
+              `travel-stats:${tenant.organizationId}:${tenant.ownerUserId}:${statYear}:`,
+            ),
+            payload: { userId: tenant.ownerUserId, statYear },
+          }),
+        ),
+      ),
+    )
+    stubs.rejects = true
+    await expect(enqueueTripRollup(tenant.scope, trip)).resolves.toBeUndefined()
+    stubs.rejects = false
+    const foreign = await harness.seedTenant('foreign')
+    stubs.sent = []
+    await enqueueTripRollup(foreign.scope, trip)
+    expect(stubs.sent).toEqual([])
   })
 })
