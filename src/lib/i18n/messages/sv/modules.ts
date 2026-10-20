@@ -1330,6 +1330,37 @@ const messages = {
   'files.readOnly.title': 'Skrivskyddade filer',
   'files.readOnly.role':
     'Bara resans ägare och redigerare kan ladda upp, byta namn på eller ta bort filer. Du kan fortfarande ladda ner dem.',
+  'vacay.kind.vacation': 'Ledighet',
+  'vacay.kind.half_day': 'Halv ledig dag',
+  'vacay.kind.sick': 'Sjukdag',
+  'vacay.kind.remote': 'Distansarbete',
+  'vacay.kind.holiday': 'Helgdag',
+  'vacay.kind.other': 'Övrigt',
+  'vacay.kind.cost.full': 'Använder 1 dag av ditt saldo',
+  'vacay.kind.cost.half': 'Använder en halv dag av ditt saldo',
+  'vacay.kind.cost.none': 'Använder inte ditt saldo',
+  'vacay.day.clear': 'Rensa denna dag',
+  'vacay.day.choose': 'Välj typ av frånvaro',
+  'vacay.day.retry': 'Försök igen',
+  'vacay.day.title': 'Markera {date}',
+  'vacay.day.cleared': '{date} rensades.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend': 'Min ledighet: helger är spärrade i denna plan.',
+  'vacay.day.blocked.company':
+    'Min ledighet: företagslediga dagar är spärrade i denna plan.',
+  'vacay.day.failed':
+    'Kunde inte spara {date}. Den senast sparade posten visas.',
+  'vacay.grid.empty': 'Inga dagar markerade år {year}',
+  'vacay.grid.gesture': 'Välj en dag för att markera frånvaro.',
+  'vacay.grid.today': 'Gå till idag',
+  'vacay.grid.start': 'Gå till årets början',
+  'vacay.grid.help':
+    'Pilar flyttar dag eller vecka, Page Up och Page Down månad, Home och End till veckans gränser. Välj en dag att markera.',
+  'vacay.grid.others': 'Andra frånvarande resenärer: {value}',
+  'vacay.legend.title': 'Teckenförklaring',
+  'vacay.legend.company': 'Företagsledig dag',
+  'vacay.legend.other': 'Någon annan är borta',
+  'vacay.legend.weekend': 'Helg',
 } satisfies TranslationOf<typeof En>
 
 export default messages

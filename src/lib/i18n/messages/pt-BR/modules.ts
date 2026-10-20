@@ -1391,6 +1391,38 @@ const messages = {
   'files.readOnly.title': 'Arquivos somente para leitura',
   'files.readOnly.role':
     'Somente proprietários e editores da viagem podem enviar, renomear ou excluir arquivos. Você ainda pode baixá-los.',
+  'vacay.kind.vacation': 'Férias',
+  'vacay.kind.half_day': 'Meio dia de férias',
+  'vacay.kind.sick': 'Licença médica',
+  'vacay.kind.remote': 'Trabalho remoto',
+  'vacay.kind.holiday': 'Feriado',
+  'vacay.kind.other': 'Outro',
+  'vacay.kind.cost.full': 'Usa 1 dia do seu saldo',
+  'vacay.kind.cost.half': 'Usa meio dia do seu saldo',
+  'vacay.kind.cost.none': 'Não usa seu saldo',
+  'vacay.day.clear': 'Limpar este dia',
+  'vacay.day.choose': 'Escolha o tipo de ausência',
+  'vacay.day.retry': 'Tentar novamente',
+  'vacay.day.title': 'Marcar {date}',
+  'vacay.day.cleared': '{date} limpo.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Meu tempo livre: os fins de semana estão bloqueados neste plano.',
+  'vacay.day.blocked.company':
+    'Meu tempo livre: as folgas da empresa estão bloqueadas neste plano.',
+  'vacay.day.failed':
+    'Não foi possível salvar {date}. A última entrada salva é exibida.',
+  'vacay.grid.empty': 'Nenhum dia marcado em {year}',
+  'vacay.grid.gesture': 'Selecione um dia para marcar uma ausência.',
+  'vacay.grid.today': 'Ir para hoje',
+  'vacay.grid.start': 'Ir para o início do ano',
+  'vacay.grid.help':
+    'As setas mudam o dia ou a semana, Page Up e Page Down o mês, Home e End os limites da semana. Selecione um dia para marcá-lo.',
+  'vacay.grid.others': 'Outros viajantes ausentes: {value}',
+  'vacay.legend.title': 'Legenda de marcas',
+  'vacay.legend.company': 'Folga da empresa',
+  'vacay.legend.other': 'Outra pessoa ausente',
+  'vacay.legend.weekend': 'Fim de semana',
 } satisfies TranslationOf<typeof En>
 
 export default messages

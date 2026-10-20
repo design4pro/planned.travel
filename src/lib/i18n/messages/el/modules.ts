@@ -1362,6 +1362,38 @@ const messages = {
   'files.readOnly.title': 'Αρχεία μόνο για ανάγνωση',
   'files.readOnly.role':
     'Μόνο οι ιδιοκτήτες και οι συντάκτες του ταξιδιού μπορούν να ανεβάζουν, να μετονομάζουν ή να διαγράφουν αρχεία. Μπορείς ακόμα να τα κατεβάζεις.',
+  'vacay.kind.vacation': 'Άδεια',
+  'vacay.kind.half_day': 'Μισή ημέρα άδειας',
+  'vacay.kind.sick': 'Αναρρωτική άδεια',
+  'vacay.kind.remote': 'Εργασία εξ αποστάσεως',
+  'vacay.kind.holiday': 'Επίσημη αργία',
+  'vacay.kind.other': 'Άλλο',
+  'vacay.kind.cost.full': 'Χρησιμοποιεί 1 ημέρα από το υπόλοιπό σας',
+  'vacay.kind.cost.half': 'Χρησιμοποιεί μισή ημέρα από το υπόλοιπό σας',
+  'vacay.kind.cost.none': 'Δεν χρησιμοποιεί το υπόλοιπό σας',
+  'vacay.day.clear': 'Καθαρισμός ημέρας',
+  'vacay.day.choose': 'Επιλέξτε είδος απουσίας',
+  'vacay.day.retry': 'Δοκιμάστε ξανά',
+  'vacay.day.title': 'Σήμανση {date}',
+  'vacay.day.cleared': 'Η {date} καθαρίστηκε.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Ο ελεύθερος χρόνος μου: τα Σαββατοκύριακα είναι αποκλεισμένα σε αυτό το πλάνο.',
+  'vacay.day.blocked.company':
+    'Ο ελεύθερος χρόνος μου: οι εταιρικές αργίες είναι αποκλεισμένες σε αυτό το πλάνο.',
+  'vacay.day.failed':
+    'Δεν αποθηκεύτηκε η {date}. Εμφανίζεται η τελευταία αποθηκευμένη καταχώριση.',
+  'vacay.grid.empty': 'Καμία σήμανση το {year}',
+  'vacay.grid.gesture': 'Επιλέξτε μια ημέρα για να σημειώσετε απουσία.',
+  'vacay.grid.today': 'Μετάβαση στο σήμερα',
+  'vacay.grid.start': 'Μετάβαση στην αρχή του έτους',
+  'vacay.grid.help':
+    'Τα βέλη αλλάζουν ημέρα ή εβδομάδα, τα Page Up και Page Down μήνα, τα Home και End οδηγούν στα άκρα της εβδομάδας. Επιλέξτε ημέρα.',
+  'vacay.grid.others': 'Άλλοι απόντες ταξιδιώτες: {value}',
+  'vacay.legend.title': 'Υπόμνημα',
+  'vacay.legend.company': 'Εταιρική αργία',
+  'vacay.legend.other': 'Κάποιος άλλος απουσιάζει',
+  'vacay.legend.weekend': 'Σαββατοκύριακο',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1523,6 +1523,37 @@ const messages = {
   'files.readOnly.title': 'Read-only files',
   'files.readOnly.role':
     'Only trip owners and editors can upload, rename or delete files. You can still download them.',
+  'vacay.kind.vacation': 'Leave',
+  'vacay.kind.half_day': 'Half day of leave',
+  'vacay.kind.sick': 'Sick day',
+  'vacay.kind.remote': 'Working remotely',
+  'vacay.kind.holiday': 'Public holiday',
+  'vacay.kind.other': 'Other',
+  'vacay.kind.cost.full': 'Uses 1 day of your allowance',
+  'vacay.kind.cost.half': 'Uses half a day of your allowance',
+  'vacay.kind.cost.none': "Doesn't use your allowance",
+  'vacay.day.clear': 'Clear this day',
+  'vacay.day.choose': 'Choose a kind of time off',
+  'vacay.day.retry': 'Try again',
+  'vacay.day.title': 'Mark {date}',
+  'vacay.day.cleared': 'Cleared {date}.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'My time off: weekends are blocked in this plan.',
+  'vacay.day.blocked.company':
+    'My time off: company holidays are blocked in this plan.',
+  'vacay.day.failed': 'Could not save {date}. Your last saved entry is shown.',
+  'vacay.grid.empty': 'Nothing marked in {year}',
+  'vacay.grid.gesture': 'Select any day to mark it as time off.',
+  'vacay.grid.today': 'Go to today',
+  'vacay.grid.start': 'Go to the start of the year',
+  'vacay.grid.help':
+    'Use arrows to move by day or week, Page Up and Page Down by month, Home and End within the week. Select a day to mark it.',
+  'vacay.grid.others': 'Other travellers away: {value}',
+  'vacay.legend.title': 'Legend',
+  'vacay.legend.company': 'Company holiday',
+  'vacay.legend.other': 'Someone else away',
+  'vacay.legend.weekend': 'Weekend',
 } as const satisfies NamespaceMessages
 
 export default messages

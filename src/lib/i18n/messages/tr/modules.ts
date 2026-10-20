@@ -1325,6 +1325,38 @@ const messages = {
   'files.readOnly.title': 'Salt okunur dosyalar',
   'files.readOnly.role':
     'Yalnızca seyahat sahipleri ve düzenleyicileri dosya yükleyebilir, yeniden adlandırabilir veya silebilir. Dosyaları indirmeye devam edebilirsin.',
+  'vacay.kind.vacation': 'İzin',
+  'vacay.kind.half_day': 'Yarım gün izin',
+  'vacay.kind.sick': 'Hastalık izni',
+  'vacay.kind.remote': 'Uzaktan çalışma',
+  'vacay.kind.holiday': 'Resmî tatil',
+  'vacay.kind.other': 'Diğer',
+  'vacay.kind.cost.full': 'İzin hakkınızdan 1 gün kullanır',
+  'vacay.kind.cost.half': 'İzin hakkınızdan yarım gün kullanır',
+  'vacay.kind.cost.none': 'İzin hakkınızı kullanmaz',
+  'vacay.day.clear': 'Bu günü temizle',
+  'vacay.day.choose': 'İzin türünü seçin',
+  'vacay.day.retry': 'Tekrar dene',
+  'vacay.day.title': '{date} tarihini işaretle',
+  'vacay.day.cleared': '{date} temizlendi.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'İzinlerim: bu planda hafta sonları engellenmiştir.',
+  'vacay.day.blocked.company':
+    'İzinlerim: bu planda şirket tatilleri engellenmiştir.',
+  'vacay.day.failed':
+    '{date} kaydedilemedi. Son kaydedilen kayıt gösteriliyor.',
+  'vacay.grid.empty': '{year} yılında işaretli gün yok',
+  'vacay.grid.gesture': 'İzin olarak işaretlemek için bir gün seçin.',
+  'vacay.grid.today': 'Bugüne git',
+  'vacay.grid.start': 'Yılın başına git',
+  'vacay.grid.help':
+    'Oklar gün veya hafta, Page Up ve Page Down ay değiştirir, Home ve End haftanın sınırlarına gider. İşaretlemek için bir gün seçin.',
+  'vacay.grid.others': 'Diğer izinli gezginler: {value}',
+  'vacay.legend.title': 'İşaret açıklamaları',
+  'vacay.legend.company': 'Şirket tatili',
+  'vacay.legend.other': 'Başka biri izinli',
+  'vacay.legend.weekend': 'Hafta sonu',
 } satisfies TranslationOf<typeof En>
 
 export default messages

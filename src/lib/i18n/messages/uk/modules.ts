@@ -1418,6 +1418,38 @@ const messages = {
   'files.readOnly.title': 'Файли лише для читання',
   'files.readOnly.role':
     'Лише власники та редактори подорожі можуть завантажувати, перейменовувати або видаляти файли. Ви й надалі можете їх скачувати.',
+  'vacay.kind.vacation': 'Відпустка',
+  'vacay.kind.half_day': 'Пів дня відпустки',
+  'vacay.kind.sick': 'Лікарняний',
+  'vacay.kind.remote': 'Віддалена робота',
+  'vacay.kind.holiday': 'Державне свято',
+  'vacay.kind.other': 'Інше',
+  'vacay.kind.cost.full': 'Використовує 1 день вашого ліміту',
+  'vacay.kind.cost.half': 'Використовує пів дня вашого ліміту',
+  'vacay.kind.cost.none': 'Не використовує ваш ліміт',
+  'vacay.day.clear': 'Очистити цей день',
+  'vacay.day.choose': 'Виберіть вид відсутності',
+  'vacay.day.retry': 'Спробувати знову',
+  'vacay.day.title': 'Позначити {date}',
+  'vacay.day.cleared': '{date} очищено.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Мій відпочинок: вихідні заблоковані в цьому плані.',
+  'vacay.day.blocked.company':
+    'Мій відпочинок: неробочі дні компанії заблоковані в цьому плані.',
+  'vacay.day.failed':
+    'Не вдалося зберегти {date}. Показано останній збережений запис.',
+  'vacay.grid.empty': 'У {year} році немає позначок',
+  'vacay.grid.gesture': 'Виберіть день, щоб позначити відсутність.',
+  'vacay.grid.today': 'Перейти до сьогодні',
+  'vacay.grid.start': 'Перейти до початку року',
+  'vacay.grid.help':
+    'Стрілки змінюють день або тиждень, Page Up і Page Down місяць, Home і End переходять до меж тижня. Виберіть день для позначки.',
+  'vacay.grid.others': 'Інші відсутні мандрівники: {value}',
+  'vacay.legend.title': 'Умовні позначення',
+  'vacay.legend.company': 'Неробочий день компанії',
+  'vacay.legend.other': 'Хтось інший відсутній',
+  'vacay.legend.weekend': 'Вихідні',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1291,6 +1291,38 @@ const messages = {
   'files.readOnly.title': 'Berkas hanya baca',
   'files.readOnly.role':
     'Hanya pemilik dan editor perjalanan yang dapat mengunggah, mengganti nama, atau menghapus berkas. Kamu tetap dapat mengunduhnya.',
+  'vacay.kind.vacation': 'Cuti',
+  'vacay.kind.half_day': 'Cuti setengah hari',
+  'vacay.kind.sick': 'Izin sakit',
+  'vacay.kind.remote': 'Bekerja jarak jauh',
+  'vacay.kind.holiday': 'Hari libur nasional',
+  'vacay.kind.other': 'Lainnya',
+  'vacay.kind.cost.full': 'Menggunakan 1 hari jatah cuti',
+  'vacay.kind.cost.half': 'Menggunakan setengah hari jatah cuti',
+  'vacay.kind.cost.none': 'Tidak menggunakan jatah cuti',
+  'vacay.day.clear': 'Hapus hari ini',
+  'vacay.day.choose': 'Pilih jenis ketidakhadiran',
+  'vacay.day.retry': 'Coba lagi',
+  'vacay.day.title': 'Tandai {date}',
+  'vacay.day.cleared': '{date} dihapus.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Waktu libur saya: akhir pekan diblokir dalam rencana ini.',
+  'vacay.day.blocked.company':
+    'Waktu libur saya: hari libur perusahaan diblokir dalam rencana ini.',
+  'vacay.day.failed':
+    'Tidak dapat menyimpan {date}. Entri terakhir yang disimpan ditampilkan.',
+  'vacay.grid.empty': 'Belum ada tanda pada {year}',
+  'vacay.grid.gesture': 'Pilih hari untuk menandai waktu libur.',
+  'vacay.grid.today': 'Ke hari ini',
+  'vacay.grid.start': 'Ke awal tahun',
+  'vacay.grid.help':
+    'Panah berpindah hari atau minggu, Page Up dan Page Down berpindah bulan, Home dan End ke batas minggu. Pilih hari untuk menandai.',
+  'vacay.grid.others': 'Pelancong lain yang tidak hadir: {value}',
+  'vacay.legend.title': 'Keterangan',
+  'vacay.legend.company': 'Hari libur perusahaan',
+  'vacay.legend.other': 'Orang lain tidak hadir',
+  'vacay.legend.weekend': 'Akhir pekan',
 } satisfies TranslationOf<typeof En>
 
 export default messages

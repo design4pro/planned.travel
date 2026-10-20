@@ -1351,6 +1351,38 @@ const messages = {
   'files.readOnly.title': 'Alleen-lezenbestanden',
   'files.readOnly.role':
     'Alleen eigenaren en bewerkers van de reis kunnen bestanden uploaden, hernoemen of verwijderen. Je kunt ze nog steeds downloaden.',
+  'vacay.kind.vacation': 'Verlof',
+  'vacay.kind.half_day': 'Halve verlofdag',
+  'vacay.kind.sick': 'Ziektedag',
+  'vacay.kind.remote': 'Op afstand werken',
+  'vacay.kind.holiday': 'Feestdag',
+  'vacay.kind.other': 'Overig',
+  'vacay.kind.cost.full': 'Gebruikt 1 dag van je saldo',
+  'vacay.kind.cost.half': 'Gebruikt een halve dag van je saldo',
+  'vacay.kind.cost.none': 'Gebruikt je saldo niet',
+  'vacay.day.clear': 'Deze dag wissen',
+  'vacay.day.choose': 'Kies het soort afwezigheid',
+  'vacay.day.retry': 'Opnieuw proberen',
+  'vacay.day.title': '{date} markeren',
+  'vacay.day.cleared': '{date} gewist.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Mijn vrije tijd: weekenden zijn geblokkeerd in dit plan.',
+  'vacay.day.blocked.company':
+    'Mijn vrije tijd: bedrijfsvrije dagen zijn geblokkeerd in dit plan.',
+  'vacay.day.failed':
+    '{date} kon niet worden opgeslagen. De laatst opgeslagen invoer wordt getoond.',
+  'vacay.grid.empty': 'Geen dagen gemarkeerd in {year}',
+  'vacay.grid.gesture': 'Selecteer een dag om afwezigheid te markeren.',
+  'vacay.grid.today': 'Naar vandaag',
+  'vacay.grid.start': 'Naar het begin van het jaar',
+  'vacay.grid.help':
+    'Pijlen verplaatsen per dag of week, Page Up en Page Down per maand, Home en End naar de weekgrenzen. Selecteer een dag om te markeren.',
+  'vacay.grid.others': 'Andere afwezige reizigers: {value}',
+  'vacay.legend.title': 'Betekenis van tekens',
+  'vacay.legend.company': 'Bedrijfsvrije dag',
+  'vacay.legend.other': 'Iemand anders afwezig',
+  'vacay.legend.weekend': 'Weekeinde',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1400,6 +1400,38 @@ const messages = {
   'files.readOnly.title': 'File in sola lettura',
   'files.readOnly.role':
     'Solo i proprietari e gli editor del viaggio possono caricare, rinominare o eliminare file. Puoi comunque scaricarli.',
+  'vacay.kind.vacation': 'Ferie',
+  'vacay.kind.half_day': 'Mezza giornata di ferie',
+  'vacay.kind.sick': 'Malattia',
+  'vacay.kind.remote': 'Lavoro da remoto',
+  'vacay.kind.holiday': 'Festività nazionale',
+  'vacay.kind.other': 'Altro',
+  'vacay.kind.cost.full': 'Usa 1 giorno del tuo monte ferie',
+  'vacay.kind.cost.half': 'Usa mezza giornata del tuo monte ferie',
+  'vacay.kind.cost.none': 'Non usa il tuo monte ferie',
+  'vacay.day.clear': 'Cancella questo giorno',
+  'vacay.day.choose': 'Scegli il tipo di assenza',
+  'vacay.day.retry': 'Riprova',
+  'vacay.day.title': 'Segna {date}',
+  'vacay.day.cleared': '{date} cancellato.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Il mio tempo libero: i fine settimana sono bloccati in questo piano.',
+  'vacay.day.blocked.company':
+    'Il mio tempo libero: le chiusure aziendali sono bloccate in questo piano.',
+  'vacay.day.failed':
+    "Impossibile salvare {date}. Viene mostrata l'ultima voce salvata.",
+  'vacay.grid.empty': 'Nessun giorno segnato nel {year}',
+  'vacay.grid.gesture': "Seleziona un giorno per segnare un'assenza.",
+  'vacay.grid.today': 'Vai a oggi',
+  'vacay.grid.start': "Vai all'inizio dell'anno",
+  'vacay.grid.help':
+    'Le frecce cambiano giorno o settimana, Pag Su e Pag Giù il mese, Home e Fine i limiti della settimana. Seleziona un giorno per segnarlo.',
+  'vacay.grid.others': 'Altri viaggiatori assenti: {value}',
+  'vacay.legend.title': 'Legenda dei segni',
+  'vacay.legend.company': 'Chiusura aziendale',
+  'vacay.legend.other': 'Altra persona assente',
+  'vacay.legend.weekend': 'Fine settimana',
 } satisfies TranslationOf<typeof En>
 
 export default messages

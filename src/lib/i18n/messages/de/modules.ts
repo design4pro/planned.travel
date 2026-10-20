@@ -1363,6 +1363,39 @@ const messages = {
   'files.readOnly.title': 'Dateien nur zum Lesen',
   'files.readOnly.role':
     'Nur Eigentümer und Bearbeiter der Reise können Dateien hochladen, umbenennen oder löschen. Du kannst sie weiterhin herunterladen.',
+  'vacay.kind.vacation': 'Urlaub',
+  'vacay.kind.half_day': 'Halber Urlaubstag',
+  'vacay.kind.sick': 'Krankheitstag',
+  'vacay.kind.remote': 'Mobiles Arbeiten',
+  'vacay.kind.holiday': 'Gesetzlicher Feiertag',
+  'vacay.kind.other': 'Sonstiges',
+  'vacay.kind.cost.full': 'Verbraucht 1 Tag Ihres Kontingents',
+  'vacay.kind.cost.half': 'Verbraucht einen halben Tag Ihres Kontingents',
+  'vacay.kind.cost.none': 'Verbraucht kein Kontingent',
+  'vacay.day.clear': 'Diesen Tag löschen',
+  'vacay.day.choose': 'Art der Abwesenheit wählen',
+  'vacay.day.retry': 'Erneut versuchen',
+  'vacay.day.title': '{date} markieren',
+  'vacay.day.cleared': '{date} gelöscht.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Meine Auszeit: Wochenenden sind in diesem Plan gesperrt.',
+  'vacay.day.blocked.company':
+    'Meine Auszeit: Betriebsfeiertage sind in diesem Plan gesperrt.',
+  'vacay.day.failed':
+    '{date} konnte nicht gespeichert werden. Der zuletzt gespeicherte Eintrag wird angezeigt.',
+  'vacay.grid.empty': 'Keine Markierungen im Jahr {year}',
+  'vacay.grid.gesture':
+    'Wählen Sie einen Tag, um eine Abwesenheit einzutragen.',
+  'vacay.grid.today': 'Zu heute',
+  'vacay.grid.start': 'Zum Jahresanfang',
+  'vacay.grid.help':
+    'Pfeile wechseln Tag oder Woche, Bild auf und Bild ab den Monat, Pos1 und Ende die Wochengrenzen. Wählen Sie einen Tag zum Markieren.',
+  'vacay.grid.others': 'Andere abwesende Reisende: {value}',
+  'vacay.legend.title': 'Legende',
+  'vacay.legend.company': 'Betriebsfeiertag',
+  'vacay.legend.other': 'Andere Person abwesend',
+  'vacay.legend.weekend': 'Wochenende',
 } satisfies TranslationOf<typeof En>
 
 export default messages

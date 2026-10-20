@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
-import { visit, watchConsole } from './helpers/console.ts'
+import {
+  visit,
+  watchConsole,
+  unblockCrossOriginFonts,
+} from './helpers/console.ts'
 import { PINNED_YEAR } from './helpers/routes.ts'
 import type { RouteCase } from './helpers/routes.ts'
 import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
@@ -187,6 +191,128 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
       `${DEMO_EMAIL} has no session - run \`node scripts/seed/seed.mjs\` to provision the demo account`,
     )
   })
+
+  test('08-S5a logs and clears a day with the keyboard @chromium-only', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    const watched = watchConsole(page, UNSET)
+    await unblockCrossOriginFonts(page)
+    await page.emulateMedia({ colorScheme: 'light' })
+    await page.goto(UNSET.path, { waitUntil: 'networkidle' })
+    const grid = page.locator('[data-part="vacay-year"]')
+    const cell = grid.getByRole('button', { name: /^4 Dec 2031/ })
+    await expect(grid.locator('table button[tabindex="0"]')).toHaveCount(1)
+    const jan31 = grid.getByRole('button', { name: /^31 Jan 2031/ })
+    await jan31.focus()
+    await jan31.press('ArrowRight')
+    await expect(
+      grid.getByRole('button', { name: /^1 Feb 2031/ }),
+    ).toBeFocused()
+    await cell.focus()
+    await cell.press('Enter')
+    await expect(
+      page.getByRole('dialog', { name: 'Mark 4 Dec 2031' }),
+    ).toBeVisible()
+    await page
+      .getByRole('button', { name: /^Half day of leave/ })
+      .press('Enter')
+    await expect(cell).toBeFocused()
+    await expect(cell).toHaveAttribute('aria-label', /Half day of leave/)
+    await expect(
+      page.locator('[data-part="vacay-bottom-region"]').getByRole('status'),
+    ).toContainText('days left')
+    await page.reload({ waitUntil: 'networkidle' })
+    await expect(cell).toHaveAttribute('aria-label', /Half day of leave/)
+    expect(watched().fatal).toEqual([])
+    await cell.click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    const clear = page.getByRole('button', { name: 'Clear this day' })
+    await clear.click()
+    await expect(cell).not.toHaveAttribute('aria-label', /Half day of leave/)
+  })
+
+  for (const width of WIDTHS) {
+    test(`08-S5a failure recovery at ${width}px @chromium-only`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await unblockCrossOriginFonts(page)
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await page.goto(UNSET.path, { waitUntil: 'networkidle' })
+      const cell = page
+        .locator('[data-part="vacay-year"]')
+        .getByRole('button', { name: /^4 Dec 2031/ })
+      await page.route('**/_serverFn/**', (route) =>
+        route.request().method() === 'POST'
+          ? route.abort('failed')
+          : route.continue(),
+      )
+      try {
+        await cell.click()
+        await page.getByRole('button', { name: /^Leave\s*Uses/ }).click()
+        await expect(page.getByRole('alert')).toContainText('4 Dec 2031')
+        await expect(cell).toBeFocused()
+        const retry = page.getByRole('button', { name: 'Try again' })
+        await expect(retry).toBeVisible()
+        const box = await retry.boundingBox()
+        expect(box).not.toBeNull()
+        expect((box?.y ?? 800) + (box?.height ?? 0)).toBeLessThan(800 - 100)
+        await expect(cell).not.toHaveAttribute('aria-label', /Leave/)
+      } finally {
+        await page.unroute('**/_serverFn/**')
+      }
+    })
+  }
+
+  for (const locale of ['ar', 'pl', 'vi', 'zh-Hans']) {
+    test(`08-S5a month headings fit in ${locale} @chromium-only`, async ({
+      page,
+    }) => {
+      test.setTimeout(60_000)
+      await unblockCrossOriginFonts(page)
+      await page.setViewportSize({ width: 1280, height: 900 })
+      try {
+        await page.goto('/settings/language', { waitUntil: 'networkidle' })
+        const chip = page.getByTestId(`locale-chip-${locale}`)
+        await chip.scrollIntoViewIfNeeded()
+        if ((await chip.getAttribute('data-selected')) === null) {
+          const saved = page.waitForResponse(
+            (response) =>
+              response.request().method() === 'POST' &&
+              response.url().includes('/_serverFn/'),
+          )
+          await chip.click()
+          await saved
+        }
+        await expect(page.locator('html')).toHaveAttribute('lang', locale)
+        await page.goto(UNSET.path, { waitUntil: 'networkidle' })
+        const headings = page.locator('[id^="vacay-month-"]')
+        await expect(headings).toHaveCount(12)
+        expect(
+          await headings.evaluateAll((nodes) =>
+            nodes
+              .filter((node) => node.scrollWidth > node.clientWidth + 1)
+              .map((node) => node.textContent),
+          ),
+        ).toEqual([])
+      } finally {
+        await page.goto('/settings/language', { waitUntil: 'networkidle' })
+        const reset = page.getByTestId('locale-chip-workspace')
+        await reset.scrollIntoViewIfNeeded()
+        if ((await reset.getAttribute('data-selected')) === null) {
+          const saved = page.waitForResponse(
+            (response) =>
+              response.request().method() === 'POST' &&
+              response.url().includes('/_serverFn/'),
+          )
+          await reset.click()
+          await saved
+        }
+        await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+      }
+    })
+  }
 
   test('opens the editor, refuses a bad value, cancels, saves with Enter and puts the figure back', async ({
     page,

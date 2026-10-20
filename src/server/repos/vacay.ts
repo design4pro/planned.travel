@@ -9,9 +9,13 @@
 
 import { and, asc, count, desc, eq, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
+import { ENTRY_KIND_COST, MAX_ENTRY_RANGE_DAYS } from '#/lib/vacay/entry-kinds'
+import { blockedReason } from '#/lib/vacay/day-rules'
+import { createLogger, serializeError } from '#/server/observability/logger'
 import { walkCarryOver } from '#/lib/vacay/carry-over'
 import {
   VACAY_ENTRY_KINDS,
+  newId,
   VACAY_MEMBER_STATUSES,
   vacayCompanyHolidays,
   vacayEntries,
@@ -22,7 +26,7 @@ import {
   vacayUserYears,
   vacayYears,
 } from '#/server/db/schema'
-import { allOf, createTenantRepository, tenantFilter } from './base'
+import { allOf, createTenantRepository, prepareTenantInsert, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { getMembership } from './members'
@@ -66,16 +70,6 @@ export const vacayHolidayCalendarsRepository = createTenantRepository(
   'holiday calendar',
 )
 export const vacayUserColoursRepository = createTenantRepository(vacayUserColours, 'vacay colour')
-
-/** How much of a day each entry kind consumes from the allowance. */
-const ENTRY_KIND_COST: Record<(typeof VACAY_ENTRY_KINDS)[number], number> = {
-  vacation: 1,
-  half_day: 0.5,
-  sick: 0,
-  remote: 0,
-  holiday: 0,
-  other: 0,
-}
 
 /**
  * Thrown when someone who may see a leave plan asks for something only its owner may do: another
@@ -527,8 +521,7 @@ export interface CarryOverRecompute {
  * setting says; the setting only hides them.
  *
  * **Not a way in from a screen.** It resolves the plan, takes no figure from a client and is called
- * only by {@link saveAllowance} once its guard has passed (and, later, by the entry writers of this
- * repository). It is exported for the repository's own tests and stays off the import allowlist.
+ * by {@link saveAllowance} and the personal-entry writers once their guards have passed. It is exported for the repository's own tests and stays off the import allowlist.
  *
  * `yearsBeforeWrite` is the traveller's years before the write that triggered this call. A row that
  * had no year before it then, has one now and held a typed non-zero figure is reported as
@@ -718,35 +711,102 @@ export async function listVacayEntries(
   })
 }
 
-/** Marks one day. Re-marking a day replaces its kind rather than adding a second row. */
-export async function setEntry(scope: TenantScope, input: SetEntryInput): Promise<VacayEntry> {
-  const values = setEntryInput.parse(input)
-  await vacayPlansRepository.requireById(scope, values.planId)
-  const userId = values.userId ?? scope.ctx.userId
-
-  const existing = await vacayEntriesRepository.findOne(
-    scope,
-    allOf(
-      eq(vacayEntries.planId, values.planId),
-      eq(vacayEntries.userId, userId),
-      eq(vacayEntries.date, values.date),
-    ),
-  )
-
-  if (existing) {
-    return vacayEntriesRepository.requireUpdate(scope, existing.id, {
-      kind: values.kind ?? existing.kind,
-      note: values.note ?? existing.note,
-    })
+/** A valid plan day that the stored settings prevent a traveller from marking. */
+export class LeaveDayBlockedError extends RepositoryError {
+  constructor(date: string) {
+    super(`Leave entry blocked on ${date}.`, 'LEAVE_DAY_BLOCKED')
   }
+}
 
-  return vacayEntriesRepository.insert(scope, {
-    planId: values.planId,
+/** A follow-up failure cannot turn a committed entry into a failed write. */
+async function recomputeAfterEntry(
+  scope: TenantScope,
+  planId: string,
+  userId: string,
+): Promise<void> {
+  try {
+    await recomputeCarryOver(scope, planId, userId)
+  } catch (error) {
+    createLogger({
+      context: { orgId: scope.ctx.organizationId, component: 'vacay' },
+    }).error(
+      'Leave carry-over recompute failed after committed write',
+      serializeError(error),
+    )
+  }
+}
+
+/** Marks one own day atomically; an explicit seeder target follows the allowance target rule. */
+export async function setEntry(
+  scope: TenantScope,
+  input: SetEntryInput,
+): Promise<VacayEntry> {
+  const values = setEntryInput.parse(input)
+  const actor = await requirePlanActor(scope, values.planId)
+  const userId = await resolveAllowanceTarget(scope, actor, values.userId)
+  const holidays = await listCompanyHolidays(scope, actor.plan.id, {
+    year: Number(values.date.slice(0, 4)),
+  })
+  if (
+    blockedReason(values.date, {
+      ...actor.plan,
+      companyHolidays: new Set(holidays.map((row) => row.date)),
+    })
+  ) {
+    throw new LeaveDayBlockedError(values.date)
+  }
+  const rows = await prepareTenantInsert(scope, vacayEntries, {
+    id: newId(),
+    planId: actor.plan.id,
     userId,
     date: values.date,
-    kind: values.kind,
-    note: values.note,
+    kind: values.kind ?? 'vacation',
+    note: values.note ?? null,
   })
+    .onConflictDoUpdate({
+      target: [vacayEntries.planId, vacayEntries.userId, vacayEntries.date],
+      set: {
+        ...(values.kind === undefined ? {} : { kind: values.kind }),
+        ...(values.note == null ? {} : { note: values.note }),
+        updatedAt: new Date(),
+      },
+      setWhere: tenantFilter(scope, vacayEntries),
+    })
+    .returning()
+  const row = rows[0]
+  if (!row) throw new NotFoundError('vacay entry', values.date)
+  await recomputeAfterEntry(scope, actor.plan.id, userId)
+  return row
+}
+
+export const clearEntriesInput = z
+  .object({ planId: idSchema, from: dateSchema, to: dateSchema })
+  .refine(
+    (value) =>
+      value.from <= value.to &&
+      (Date.parse(value.to) - Date.parse(value.from)) / 86_400_000 <
+        MAX_ENTRY_RANGE_DAYS,
+    'Invalid leave date range',
+  )
+export type ClearEntriesInput = z.infer<typeof clearEntriesInput>
+
+/** Idempotently clears the caller's entries, preserving colleagues on the same dates. */
+export async function clearEntries(
+  scope: TenantScope,
+  input: ClearEntriesInput,
+): Promise<void> {
+  const values = clearEntriesInput.parse(input)
+  const { plan } = await requirePlanActor(scope, values.planId)
+  await vacayEntriesRepository.removeWhere(
+    scope,
+    allOf(
+      eq(vacayEntries.planId, plan.id),
+      eq(vacayEntries.userId, scope.ctx.userId),
+      gte(vacayEntries.date, values.from),
+      lte(vacayEntries.date, values.to),
+    ),
+  )
+  await recomputeAfterEntry(scope, plan.id, scope.ctx.userId)
 }
 
 /**

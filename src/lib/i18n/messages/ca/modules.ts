@@ -1398,6 +1398,38 @@ const messages = {
   'files.readOnly.title': 'Fitxers de només lectura',
   'files.readOnly.role':
     'Només els propietaris i editors del viatge poden pujar, reanomenar o suprimir fitxers. Encara els pots baixar.',
+  'vacay.kind.vacation': 'Vacances',
+  'vacay.kind.half_day': 'Mig dia de vacances',
+  'vacay.kind.sick': 'Baixa mèdica',
+  'vacay.kind.remote': 'Teletreball',
+  'vacay.kind.holiday': 'Dia festiu',
+  'vacay.kind.other': 'Altres',
+  'vacay.kind.cost.full': 'Utilitza 1 dia del teu saldo',
+  'vacay.kind.cost.half': 'Utilitza mig dia del teu saldo',
+  'vacay.kind.cost.none': 'No utilitza el teu saldo',
+  'vacay.day.clear': 'Esborra aquest dia',
+  'vacay.day.choose': "Tria el tipus d'absència",
+  'vacay.day.retry': 'Torna-ho a provar',
+  'vacay.day.title': 'Marca {date}',
+  'vacay.day.cleared': "S'ha esborrat {date}.",
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'El meu temps lliure: els caps de setmana estan bloquejats en aquest pla.',
+  'vacay.day.blocked.company':
+    "El meu temps lliure: els dies lliures d'empresa estan bloquejats en aquest pla.",
+  'vacay.day.failed':
+    "No s'ha pogut desar {date}. Es mostra l'última entrada desada.",
+  'vacay.grid.empty': 'Cap dia marcat el {year}',
+  'vacay.grid.gesture': 'Selecciona un dia per marcar una absència.',
+  'vacay.grid.today': 'Ves a avui',
+  'vacay.grid.start': "Ves a l'inici de l'any",
+  'vacay.grid.help':
+    'Les fletxes canvien el dia o la setmana, Re Pàg i Av Pàg el mes, Inici i Fi els límits de la setmana. Selecciona un dia per marcar-lo.',
+  'vacay.grid.others': 'Altres viatgers absents: {value}',
+  'vacay.legend.title': 'Llegenda',
+  'vacay.legend.company': "Dia lliure d'empresa",
+  'vacay.legend.other': 'Una altra persona absent',
+  'vacay.legend.weekend': 'Cap de setmana',
 } satisfies TranslationOf<typeof En>
 
 export default messages
