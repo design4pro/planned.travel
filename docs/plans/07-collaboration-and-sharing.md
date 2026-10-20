@@ -353,9 +353,12 @@ as `07-S2` does.
   seconds; a refresh in another colo inside it can re-cache a blob, which a second revoke of all
   sessions clears; only a D1 check closes it, #1085) (#1176). The close is
   best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
-  the room after the close, leaves the old role until the socket drops. Nothing in this
-  stage relaxes any of that, and the provider does not pass a trip id the layout did not already
-  resolve through its own loader.
+  the room after the close, leaves the old role for at most the maximum socket age plus the
+  alarm interval (15 + 5 minutes, about 20 minutes). Refusing a connect minted before a
+  revocation is the exact race fix (#1085). The age cap adds one reconnect per open socket per
+  maximum age: one app Worker request, a session read, two D1 reads and one Durable Object fetch,
+  plus the screen loader re-read. Nothing in this stage relaxes any of that, and the provider does
+  not pass a trip id the layout did not already resolve through its own loader.
 - **The wire contract, stated so no later stage regresses it.** These four sentences are the part of
   `COL-01` that is a contract rather than a feature:
   1. **The Durable Object already exists and is addressed by trip id.** One room per trip,
