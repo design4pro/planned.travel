@@ -1323,6 +1323,38 @@ const messages = {
   'files.readOnly.title': 'Файлы только для чтения',
   'files.readOnly.role':
     'Только владельцы и редакторы поездки могут загружать, переименовывать или удалять файлы. Вы по-прежнему можете их скачивать.',
+  'vacay.kind.vacation': 'Отпуск',
+  'vacay.kind.half_day': 'Полдня отпуска',
+  'vacay.kind.sick': 'Больничный',
+  'vacay.kind.remote': 'Удалённая работа',
+  'vacay.kind.holiday': 'Государственный праздник',
+  'vacay.kind.other': 'Другое',
+  'vacay.kind.cost.full': 'Использует 1 день вашего лимита',
+  'vacay.kind.cost.half': 'Использует полдня вашего лимита',
+  'vacay.kind.cost.none': 'Не использует ваш лимит',
+  'vacay.day.clear': 'Очистить этот день',
+  'vacay.day.choose': 'Выберите вид отсутствия',
+  'vacay.day.retry': 'Повторить попытку',
+  'vacay.day.title': 'Отметить {date}',
+  'vacay.day.cleared': '{date} очищено.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Мой отдых: выходные заблокированы в этом плане.',
+  'vacay.day.blocked.company':
+    'Мой отдых: нерабочие дни компании заблокированы в этом плане.',
+  'vacay.day.failed':
+    'Не удалось сохранить {date}. Показана последняя сохранённая запись.',
+  'vacay.grid.empty': 'В {year} году нет отметок',
+  'vacay.grid.gesture': 'Выберите любой день, чтобы отметить отсутствие.',
+  'vacay.grid.today': 'Перейти к сегодняшнему дню',
+  'vacay.grid.start': 'Перейти к началу года',
+  'vacay.grid.help':
+    'Стрелки меняют день или неделю, Page Up и Page Down месяц, Home и End переходят к границам недели. Выберите день для отметки.',
+  'vacay.grid.others': 'Другие отсутствующие путешественники: {value}',
+  'vacay.legend.title': 'Обозначения',
+  'vacay.legend.company': 'Нерабочий день компании',
+  'vacay.legend.other': 'Кто-то ещё отсутствует',
+  'vacay.legend.weekend': 'Выходные',
 } satisfies TranslationOf<typeof En>
 
 export default messages

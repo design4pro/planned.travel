@@ -1196,6 +1196,38 @@ const messages = {
   'files.readOnly.title': 'Tệp chỉ đọc',
   'files.readOnly.role':
     'Chỉ chủ sở hữu và người chỉnh sửa chuyến đi mới có thể tải lên, đổi tên hoặc xóa tệp. Bạn vẫn có thể tải tệp xuống.',
+  'vacay.kind.vacation': 'Nghỉ phép',
+  'vacay.kind.half_day': 'Nửa ngày nghỉ phép',
+  'vacay.kind.sick': 'Nghỉ ốm',
+  'vacay.kind.remote': 'Làm việc từ xa',
+  'vacay.kind.holiday': 'Ngày lễ',
+  'vacay.kind.other': 'Khác',
+  'vacay.kind.cost.full': 'Dùng 1 ngày trong hạn mức',
+  'vacay.kind.cost.half': 'Dùng nửa ngày trong hạn mức',
+  'vacay.kind.cost.none': 'Không dùng hạn mức',
+  'vacay.day.clear': 'Xóa ngày này',
+  'vacay.day.choose': 'Chọn loại vắng mặt',
+  'vacay.day.retry': 'Thử lại',
+  'vacay.day.title': 'Đánh dấu {date}',
+  'vacay.day.cleared': 'Đã xóa {date}.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Ngày nghỉ của tôi: cuối tuần bị chặn trong kế hoạch này.',
+  'vacay.day.blocked.company':
+    'Ngày nghỉ của tôi: ngày nghỉ công ty bị chặn trong kế hoạch này.',
+  'vacay.day.failed':
+    'Không thể lưu {date}. Mục đã lưu gần nhất được hiển thị.',
+  'vacay.grid.empty': 'Chưa đánh dấu ngày nào trong {year}',
+  'vacay.grid.gesture': 'Chọn một ngày để đánh dấu nghỉ.',
+  'vacay.grid.today': 'Đến hôm nay',
+  'vacay.grid.start': 'Đến đầu năm',
+  'vacay.grid.help':
+    'Phím mũi tên di chuyển theo ngày hoặc tuần, Page Up và Page Down theo tháng, Home và End đến đầu hoặc cuối tuần. Chọn ngày để đánh dấu.',
+  'vacay.grid.others': 'Những người đi cùng vắng mặt khác: {value}',
+  'vacay.legend.title': 'Chú giải',
+  'vacay.legend.company': 'Ngày nghỉ công ty',
+  'vacay.legend.other': 'Người khác vắng mặt',
+  'vacay.legend.weekend': 'Cuối tuần',
 } satisfies TranslationOf<typeof En>
 
 export default messages

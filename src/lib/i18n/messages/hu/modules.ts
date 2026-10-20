@@ -1254,6 +1254,38 @@ const messages = {
   'files.readOnly.title': 'Csak olvasható fájlok',
   'files.readOnly.role':
     'Csak az utazás tulajdonosai és szerkesztői tölthetnek fel, nevezhetnek át vagy törölhetnek fájlokat. Továbbra is letöltheted őket.',
+  'vacay.kind.vacation': 'Szabadság',
+  'vacay.kind.half_day': 'Fél nap szabadság',
+  'vacay.kind.sick': 'Betegnap',
+  'vacay.kind.remote': 'Távmunka',
+  'vacay.kind.holiday': 'Munkaszüneti nap',
+  'vacay.kind.other': 'Egyéb',
+  'vacay.kind.cost.full': '1 napot használ fel a keretből',
+  'vacay.kind.cost.half': 'Fél napot használ fel a keretből',
+  'vacay.kind.cost.none': 'Nem használ fel a keretből',
+  'vacay.day.clear': 'Nap törlése',
+  'vacay.day.choose': 'Válassza ki a távollét típusát',
+  'vacay.day.retry': 'Újrapróbálás',
+  'vacay.day.title': '{date} megjelölése',
+  'vacay.day.cleared': '{date} törölve.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Szabadidőm: a hétvégék le vannak tiltva ebben a tervben.',
+  'vacay.day.blocked.company':
+    'Szabadidőm: a céges szünnapok le vannak tiltva ebben a tervben.',
+  'vacay.day.failed':
+    '{date} mentése sikertelen. Az utolsó mentett bejegyzés látható.',
+  'vacay.grid.empty': 'Nincs jelölés {year} évben',
+  'vacay.grid.gesture': 'Válasszon egy napot a távollét jelöléséhez.',
+  'vacay.grid.today': 'Ugrás a mai napra',
+  'vacay.grid.start': 'Ugrás az év elejére',
+  'vacay.grid.help':
+    'A nyilak napot vagy hetet, a Page Up és Page Down hónapot vált, a Home és End a hét határaira lép. Válasszon egy napot.',
+  'vacay.grid.others': 'Más távol lévő utazók: {value}',
+  'vacay.legend.title': 'Jelmagyarázat',
+  'vacay.legend.company': 'Céges szünnap',
+  'vacay.legend.other': 'Más is távol van',
+  'vacay.legend.weekend': 'Hétvége',
 } satisfies TranslationOf<typeof En>
 
 export default messages

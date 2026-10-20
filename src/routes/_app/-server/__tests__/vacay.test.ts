@@ -34,6 +34,7 @@ vi.mock('../context', () => ({
 // Outside the Start build the wrapper discards return values. Keep the registered handler callable
 // so the assertions cover its result, with real repositories and an authenticated scope.
 vi.mock('@tanstack/react-start', () => ({
+  createServerOnlyFn: <T>(fn: T): T => fn,
   createServerFn: () => ({
     validator: () => ({
       handler: (handler: (options: { data: unknown }) => unknown) => handler,

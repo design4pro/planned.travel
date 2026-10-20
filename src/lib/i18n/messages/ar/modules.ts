@@ -1359,6 +1359,36 @@ const messages = {
   'files.readOnly.title': 'ملفات للقراءة فقط',
   'files.readOnly.role':
     'يمكن لمالكي الرحلة ومحرريها فقط رفع الملفات أو إعادة تسميتها أو حذفها. لا يزال بإمكانك تنزيلها.',
+  'vacay.kind.vacation': 'إجازة',
+  'vacay.kind.half_day': 'نصف يوم إجازة',
+  'vacay.kind.sick': 'إجازة مرضية',
+  'vacay.kind.remote': 'عمل عن بُعد',
+  'vacay.kind.holiday': 'عطلة رسمية',
+  'vacay.kind.other': 'أخرى',
+  'vacay.kind.cost.full': 'يستخدم يومًا واحدًا من رصيدك',
+  'vacay.kind.cost.half': 'يستخدم نصف يوم من رصيدك',
+  'vacay.kind.cost.none': 'لا يستخدم رصيدك',
+  'vacay.day.clear': 'مسح هذا اليوم',
+  'vacay.day.choose': 'اختر نوع الغياب',
+  'vacay.day.retry': 'حاول مجددًا',
+  'vacay.day.title': 'تحديد {date}',
+  'vacay.day.cleared': 'تم مسح {date}.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'وقتي الخاص: عطلات نهاية الأسبوع محظورة في هذه الخطة.',
+  'vacay.day.blocked.company': 'وقتي الخاص: عطلات الشركة محظورة في هذه الخطة.',
+  'vacay.day.failed': 'تعذر حفظ {date}. يظهر آخر إدخال محفوظ.',
+  'vacay.grid.empty': 'لا توجد أيام محددة في {year}',
+  'vacay.grid.gesture': 'اختر أي يوم لتسجيل وقت الغياب.',
+  'vacay.grid.today': 'الانتقال إلى اليوم',
+  'vacay.grid.start': 'الانتقال إلى بداية السنة',
+  'vacay.grid.help':
+    'تنتقل الأسهم بين الأيام والأسابيع، وPage Up وPage Down بين الأشهر، وHome وEnd إلى حدود الأسبوع. اختر يومًا لتحديده.',
+  'vacay.grid.others': 'المسافرون الآخرون الغائبون: {value}',
+  'vacay.legend.title': 'دليل الرموز',
+  'vacay.legend.company': 'عطلة الشركة',
+  'vacay.legend.other': 'غياب شخص آخر',
+  'vacay.legend.weekend': 'عطلة نهاية الأسبوع',
 } satisfies TranslationOf<typeof En>
 
 export default messages

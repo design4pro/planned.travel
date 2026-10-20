@@ -6,6 +6,7 @@
  * rule. `loadVacayAllowance` creates no plan; the route loader runs it after `loadVacay`, which has
  * already ensured the plan, because two concurrent `ensurePlan` calls would race on the owner index.
  */
+import { todayIso } from '#/server/serialise'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -18,6 +19,14 @@ import {
   updatePlanSettingsInput,
   yearSchema,
 } from '#/server/repos'
+import {
+  markDayInput,
+  clearDayInput,
+  gridInput,
+  markDay,
+  clearDay,
+  readGrid,
+} from '#/server/fns/vacay-lib/handlers'
 import { appScope } from './context'
 
 export interface VacayAllowance {
@@ -87,3 +96,19 @@ export const updateVacayPlanFn = createServerFn({ method: 'POST' })
       defaultEntitlementDays: plan.defaultEntitlementDays,
     }
   })
+
+/** Own-day operations have strict wire inputs: even the caller's userId is refused. */
+export const markVacayDayFn = createServerFn({ method: 'POST' })
+  .validator(markDayInput)
+  .handler(async ({ data }) => markDay(await appScope(), data))
+
+export const clearVacayDayFn = createServerFn({ method: 'POST' })
+  .validator(clearDayInput)
+  .handler(async ({ data }) => clearDay(await appScope(), data))
+
+export const loadVacayGridFn = createServerFn({ method: 'GET' })
+  .validator(gridInput)
+  .handler(async ({ data }) => ({
+    ...(await readGrid(await appScope(), data)),
+    today: todayIso(),
+  }))

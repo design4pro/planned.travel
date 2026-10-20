@@ -1184,6 +1184,38 @@ const messages = {
   'files.readOnly.title': '読み取り専用のファイル',
   'files.readOnly.role':
     'ファイルのアップロード、名前の変更、削除ができるのは旅行のオーナーと編集者のみです。ダウンロードは引き続き利用できます。',
+  'vacay.kind.vacation': '休暇',
+  'vacay.kind.half_day': '半日休暇',
+  'vacay.kind.sick': '病気休暇',
+  'vacay.kind.remote': 'リモート勤務',
+  'vacay.kind.holiday': '祝日',
+  'vacay.kind.other': 'その他',
+  'vacay.kind.cost.full': '休暇残日数を1日使用',
+  'vacay.kind.cost.half': '休暇残日数を半日使用',
+  'vacay.kind.cost.none': '休暇残日数を使用しません',
+  'vacay.day.clear': 'この日をクリア',
+  'vacay.day.choose': '不在の種類を選択',
+  'vacay.day.retry': '再試行',
+  'vacay.day.title': '{date}を記録',
+  'vacay.day.cleared': '{date}をクリアしました。',
+  'vacay.day.saved': '{date}：{kind}。',
+  'vacay.day.blocked.weekend':
+    '自分の休暇：このプランでは週末は記録できません。',
+  'vacay.day.blocked.company':
+    '自分の休暇：このプランでは会社休日は記録できません。',
+  'vacay.day.failed':
+    '{date}を保存できませんでした。最後に保存した記録を表示しています。',
+  'vacay.grid.empty': '{year}年の記録はありません',
+  'vacay.grid.gesture': '日付を選択して不在を記録してください。',
+  'vacay.grid.today': '今日へ移動',
+  'vacay.grid.start': '年の初めへ移動',
+  'vacay.grid.help':
+    '矢印で日または週、Page UpとPage Downで月、HomeとEndで週の端へ移動します。日付を選択して記録します。',
+  'vacay.grid.others': '他の不在の旅行者：{value}',
+  'vacay.legend.title': '凡例',
+  'vacay.legend.company': '会社休日',
+  'vacay.legend.other': '他の人が不在',
+  'vacay.legend.weekend': '週末',
 } satisfies TranslationOf<typeof En>
 
 export default messages

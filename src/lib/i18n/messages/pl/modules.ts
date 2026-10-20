@@ -1331,6 +1331,38 @@ const messages = {
   'files.readOnly.title': 'Pliki tylko do odczytu',
   'files.readOnly.role':
     'Tylko właściciele i edytorzy wyjazdu mogą przesyłać pliki, zmieniać ich nazwy lub je usuwać. Nadal możesz je pobierać.',
+  'vacay.kind.vacation': 'Urlop',
+  'vacay.kind.half_day': 'Pół dnia urlopu',
+  'vacay.kind.sick': 'Zwolnienie chorobowe',
+  'vacay.kind.remote': 'Praca zdalna',
+  'vacay.kind.holiday': 'Święto państwowe',
+  'vacay.kind.other': 'Inne',
+  'vacay.kind.cost.full': 'Wykorzystuje 1 dzień z limitu',
+  'vacay.kind.cost.half': 'Wykorzystuje pół dnia z limitu',
+  'vacay.kind.cost.none': 'Nie wykorzystuje limitu',
+  'vacay.day.clear': 'Wyczyść ten dzień',
+  'vacay.day.choose': 'Wybierz rodzaj nieobecności',
+  'vacay.day.retry': 'Spróbuj ponownie',
+  'vacay.day.title': 'Oznacz {date}',
+  'vacay.day.cleared': 'Wyczyszczono {date}.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Mój czas wolny: weekendy są zablokowane w tym planie.',
+  'vacay.day.blocked.company':
+    'Mój czas wolny: dni wolne w firmie są zablokowane w tym planie.',
+  'vacay.day.failed':
+    'Nie udało się zapisać {date}. Widać ostatnio zapisany wpis.',
+  'vacay.grid.empty': 'Brak oznaczeń w {year}',
+  'vacay.grid.gesture': 'Wybierz dowolny dzień, aby oznaczyć czas wolny.',
+  'vacay.grid.today': 'Przejdź do dzisiaj',
+  'vacay.grid.start': 'Przejdź do początku roku',
+  'vacay.grid.help':
+    'Strzałki zmieniają dzień lub tydzień, Page Up i Page Down miesiąc, Home i End prowadzą do granic tygodnia. Wybierz dzień, aby go oznaczyć.',
+  'vacay.grid.others': 'Inni nieobecni podróżnicy: {value}',
+  'vacay.legend.title': 'Legenda',
+  'vacay.legend.company': 'Dzień wolny w firmie',
+  'vacay.legend.other': 'Nieobecność innej osoby',
+  'vacay.legend.weekend': 'Soboty i niedziele',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1315,6 +1315,38 @@ const messages = {
   'files.readOnly.title': 'Fichiers en lecture seule',
   'files.readOnly.role':
     'Seuls les propriétaires et les éditeurs du voyage peuvent ajouter, renommer ou supprimer des fichiers. Vous pouvez toujours les télécharger.',
+  'vacay.kind.vacation': 'Congé',
+  'vacay.kind.half_day': 'Demi-journée de congé',
+  'vacay.kind.sick': 'Maladie',
+  'vacay.kind.remote': 'Télétravail',
+  'vacay.kind.holiday': 'Jour férié',
+  'vacay.kind.other': 'Autre',
+  'vacay.kind.cost.full': 'Utilise 1 jour de votre quota',
+  'vacay.kind.cost.half': 'Utilise une demi-journée de votre quota',
+  'vacay.kind.cost.none': "N'utilise pas votre quota",
+  'vacay.day.clear': 'Effacer ce jour',
+  'vacay.day.choose': "Choisir un type d'absence",
+  'vacay.day.retry': 'Réessayer',
+  'vacay.day.title': 'Marquer le {date}',
+  'vacay.day.cleared': '{date} effacé.',
+  'vacay.day.saved': '{kind} : {date}.',
+  'vacay.day.blocked.weekend':
+    'Mes congés : les week-ends sont bloqués dans ce planning.',
+  'vacay.day.blocked.company':
+    'Mes congés : les jours de fermeture sont bloqués dans ce planning.',
+  'vacay.day.failed':
+    "Impossible d'enregistrer le {date}. La dernière entrée enregistrée est affichée.",
+  'vacay.grid.empty': 'Aucun jour marqué en {year}',
+  'vacay.grid.gesture': 'Sélectionnez un jour pour indiquer une absence.',
+  'vacay.grid.today': "Aller à aujourd'hui",
+  'vacay.grid.start': "Aller au début de l'année",
+  'vacay.grid.help':
+    'Les flèches changent de jour ou de semaine, Page précédente et suivante de mois, Début et Fin atteignent les limites de la semaine. Sélectionnez un jour pour le marquer.',
+  'vacay.grid.others': 'Autres voyageurs absents : {value}',
+  'vacay.legend.title': 'Légende',
+  'vacay.legend.company': "Fermeture de l'entreprise",
+  'vacay.legend.other': 'Autre personne absente',
+  'vacay.legend.weekend': 'Week-end',
 } satisfies TranslationOf<typeof En>
 
 export default messages

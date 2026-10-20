@@ -1316,6 +1316,38 @@ const messages = {
   'files.readOnly.title': 'Soubory pouze pro čtení',
   'files.readOnly.role':
     'Pouze vlastníci a editoři cesty mohou soubory nahrávat, přejmenovávat nebo mazat. Stále je můžete stahovat.',
+  'vacay.kind.vacation': 'Dovolená',
+  'vacay.kind.half_day': 'Půlden dovolené',
+  'vacay.kind.sick': 'Nemocenská',
+  'vacay.kind.remote': 'Práce na dálku',
+  'vacay.kind.holiday': 'Státní svátek',
+  'vacay.kind.other': 'Jiné',
+  'vacay.kind.cost.full': 'Čerpá 1 den z vašeho nároku',
+  'vacay.kind.cost.half': 'Čerpá půl dne z vašeho nároku',
+  'vacay.kind.cost.none': 'Nečerpá váš nárok',
+  'vacay.day.clear': 'Vymazat tento den',
+  'vacay.day.choose': 'Vyberte druh nepřítomnosti',
+  'vacay.day.retry': 'Zkusit znovu',
+  'vacay.day.title': 'Označit {date}',
+  'vacay.day.cleared': '{date} vymazáno.',
+  'vacay.day.saved': '{kind}: {date}.',
+  'vacay.day.blocked.weekend':
+    'Moje volno: víkendy jsou v tomto plánu blokované.',
+  'vacay.day.blocked.company':
+    'Moje volno: firemní svátky jsou v tomto plánu blokované.',
+  'vacay.day.failed':
+    '{date} nelze uložit. Zobrazuje se poslední uložený záznam.',
+  'vacay.grid.empty': 'V roce {year} není nic označeno',
+  'vacay.grid.gesture': 'Vyberte den a označte volno.',
+  'vacay.grid.today': 'Přejít na dnešek',
+  'vacay.grid.start': 'Přejít na začátek roku',
+  'vacay.grid.help':
+    'Šipky mění den či týden, Page Up a Page Down měsíc, Home a End hranice týdne. Vyberte den k označení.',
+  'vacay.grid.others': 'Ostatní nepřítomní cestovatelé: {value}',
+  'vacay.legend.title': 'Vysvětlivky',
+  'vacay.legend.company': 'Firemní svátek',
+  'vacay.legend.other': 'Někdo jiný je pryč',
+  'vacay.legend.weekend': 'Víkend',
 } satisfies TranslationOf<typeof En>
 
 export default messages

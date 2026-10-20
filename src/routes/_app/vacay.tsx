@@ -1,5 +1,5 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
 import { z } from 'zod'
 
@@ -7,51 +7,23 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { PageHeader } from '#/components/layout/page-header'
-import {
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  Skeleton,
-} from '#/components/ui'
+import { Avatar, Button, Card, Skeleton } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { loadVacay } from './-server/library'
-import { loadVacayAllowance } from './-server/vacay'
-import { formatNumber, humaniseToken, pluralise } from './-lib/format'
-import { VACAY_KIND_TONE, inkOn, toneFor } from './-lib/tone'
+import { YearGrid } from '#/components/vacay/year-grid'
+import {
+  loadVacayGridFn,
+  markVacayDayFn,
+  clearVacayDayFn,
+  loadVacayAllowance,
+} from './-server/vacay'
+import { formatNumber } from './-lib/format'
+import { inkOn } from './-lib/tone'
 import { AllowancePanel } from './-ui/allowance-panel'
 import { PlanSettingsDialog } from './-ui/plan-settings-dialog'
 import { HeaderSkeleton, Panel } from './-ui/scaffold'
 
-import type { VacayPayload } from './-server/library'
 import type { AllowanceSaved } from './-server/vacay'
-
-const MONTH_NAMES: ReadonlyArray<string> = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-]
-
-/** Monday-first, matching the schema default for `week_starts_on`. */
-const WEEKDAY_INITIALS: ReadonlyArray<string> = [
-  'Mon',
-  'Tue',
-  'Wed',
-  'Thu',
-  'Fri',
-  'Sat',
-  'Sun',
-]
 
 export const Route = createFileRoute('/_app/vacay')({
   validateSearch: z.object({
@@ -65,7 +37,10 @@ export const Route = createFileRoute('/_app/vacay')({
     const allowance = await loadVacayAllowance({
       data: { planId: overview.plan.id, year: overview.year },
     })
-    return { ...overview, allowance }
+    const grid = await loadVacayGridFn({
+      data: { planId: overview.plan.id, year: overview.year },
+    })
+    return { ...overview, allowance, grid }
   },
   pendingComponent: VacayPending,
   errorComponent: VacayError,
@@ -84,6 +59,7 @@ function VacayError({ error }: { error: Error }) {
 function VacayPage() {
   const t = useTranslate()
   const locale = useLocale()
+  const router = useRouter()
   const data = Route.useLoaderData()
   /** Outlives the allowance panel, which is keyed by year: the replaced year is where they go next. */
   const [superseded, setSuperseded] =
@@ -92,24 +68,10 @@ function VacayPage() {
   const colourByUser = new Map(
     data.colours.map((row) => [row.userId, row.colour]),
   )
-  const holidays = new Set(data.companyHolidays.map((row) => row.date))
-
-  const mine = data.entries.filter(
-    (entry) => entry.userId === data.viewerUserId,
-  )
-  const others = data.entries.filter(
-    (entry) => entry.userId !== data.viewerUserId,
-  )
-
-  const entryByDate = new Map(mine.map((entry) => [entry.date, entry]))
-  const othersByDate = new Map<string, Array<string>>()
-  for (const entry of others) {
-    const bucket = othersByDate.get(entry.date)
-    if (bucket) {
-      bucket.push(entry.userId)
-    } else {
-      othersByDate.set(entry.date, [entry.userId])
-    }
+  const othersByDate = new Map<string, number>()
+  for (const entry of data.entries) {
+    if (entry.userId !== data.viewerUserId)
+      othersByDate.set(entry.date, (othersByDate.get(entry.date) ?? 0) + 1)
   }
 
   return (
@@ -212,200 +174,33 @@ function VacayPage() {
                 })}
               </ul>
             </Panel>
-
-            <Panel label="Legend">
-              <ul className="flex flex-col gap-2.5">
-                <LegendRow className="bg-brand" label="Your time off" />
-                <LegendRow className="bg-warning" label="Company holiday" />
-                <LegendRow className="bg-surface-inset" label="Weekend" />
-                <LegendRow className="bg-info" label="Someone else away" />
-              </ul>
-            </Panel>
           </aside>
 
-          <div className="min-w-0">
-            {data.entries.length === 0 && data.companyHolidays.length === 0 ? (
-              <Card variant="dashed" padding="none" className="mb-6">
-                <EmptyState
-                  size="md"
-                  tone="brand"
-                  icon={<CalendarDays />}
-                  title={`Nothing marked in ${data.year}`}
-                  description="Mark the days you are away and the whole year fills in below, weekends and company holidays included."
-                />
-              </Card>
-            ) : null}
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {MONTH_NAMES.map((name, month) => (
-                <MonthGrid
-                  key={name}
-                  name={name}
-                  year={data.year}
-                  month={month}
-                  holidays={holidays}
-                  entryByDate={entryByDate}
-                  othersByDate={othersByDate}
-                  colourByUser={colourByUser}
-                  data={data}
-                />
-              ))}
-            </div>
-          </div>
+          <YearGrid
+            key={`${data.plan.id}-${data.year}`}
+            year={data.year}
+            today={data.grid.today}
+            initial={data.grid}
+            colour={colourByUser.get(data.viewerUserId)}
+            ink={inkOn(colourByUser.get(data.viewerUserId))}
+            others={othersByDate}
+            write={(date, kind) =>
+              kind === null
+                ? clearVacayDayFn({ data: { planId: data.plan.id, date } })
+                : markVacayDayFn({ data: { planId: data.plan.id, date, kind } })
+            }
+            reread={() =>
+              loadVacayGridFn({
+                data: { planId: data.plan.id, year: data.year },
+              })
+            }
+            refresh={() => {
+              void router.invalidate()
+            }}
+          />
         </div>
       </AppSections>
     </AppFrame>
-  )
-}
-
-function LegendRow({ className, label }: { className: string; label: string }) {
-  return (
-    <li className="flex items-center gap-2.5 text-caption text-ink-2">
-      <span aria-hidden className={cn('size-3 rounded-sm', className)} />
-      {label}
-    </li>
-  )
-}
-
-function pad(value: number): string {
-  return value < 10 ? `0${value}` : String(value)
-}
-
-function MonthGrid({
-  name,
-  year,
-  month,
-  holidays,
-  entryByDate,
-  othersByDate,
-  colourByUser,
-  data,
-}: {
-  name: string
-  year: number
-  month: number
-  holidays: Set<string>
-  entryByDate: Map<string, VacayPayload['entries'][number]>
-  othersByDate: Map<string, Array<string>>
-  colourByUser: Map<string, string>
-  data: VacayPayload
-}) {
-  const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay()
-  // Monday-first: shift Sunday (0) to the end of the week.
-  const leading = (firstWeekday + 6) % 7
-  const dayCount = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-
-  const cells: Array<number | null> = [
-    ...Array.from({ length: leading }, () => null),
-    ...Array.from({ length: dayCount }, (_, index) => index + 1),
-  ]
-
-  return (
-    <Card padding="none" className="min-w-0 p-3.5">
-      <h2 className="mb-3 font-display text-subtitle font-bold tracking-tight text-ink">
-        {name}
-      </h2>
-
-      <div className="grid grid-cols-7 gap-y-1">
-        {WEEKDAY_INITIALS.map((initial) => (
-          <span
-            key={initial}
-            aria-hidden
-            className="pb-1 text-center text-micro font-semibold tracking-label uppercase text-ink-4"
-          >
-            {initial}
-          </span>
-        ))}
-
-        {cells.map((day, index) => {
-          if (day === null) {
-            return <span key={`blank-${index}`} aria-hidden />
-          }
-
-          const date = `${year}-${pad(month + 1)}-${pad(day)}`
-          // Column position in a Monday-first week: 5 and 6 are the weekend.
-          const isWeekend = index % 7 >= 5
-          const entry = entryByDate.get(date)
-          const holiday = holidays.has(date)
-          const otherIds = othersByDate.get(date) ?? []
-          const mineColour =
-            entry === undefined
-              ? undefined
-              : colourByUser.get(data.viewerUserId)
-
-          const label = [
-            date,
-            entry === undefined ? null : humaniseToken(entry.kind),
-            holiday ? 'company holiday' : null,
-            otherIds.length === 0
-              ? null
-              : pluralise(otherIds.length, 'other traveller'),
-          ]
-            .filter((part) => part !== null)
-            .join(' — ')
-
-          return (
-            <span
-              key={date}
-              title={label}
-              className={cn(
-                'relative mx-auto flex size-7 items-center justify-center rounded-md text-caption tabular-nums',
-                entry !== undefined
-                  ? 'font-semibold'
-                  : holiday
-                    ? 'bg-warning-soft font-semibold text-warning'
-                    : isWeekend
-                      ? 'bg-surface-inset text-ink-4'
-                      : 'text-ink-2',
-              )}
-              style={
-                entry === undefined
-                  ? undefined
-                  : {
-                      backgroundColor: mineColour ?? 'var(--color-brand)',
-                      // The traveller's own colour is theme-independent, so the
-                      // numeral on top of it has to be measured, not tokenised.
-                      color: inkOn(mineColour),
-                    }
-              }
-            >
-              {day}
-              {otherIds.length === 0 ? null : (
-                // Underneath the numeral, inside the cell. Pinned to the corner
-                // it floated clear of an unfilled chip and read as a stray dot
-                // hovering above the week rather than a mark on the day.
-                <span
-                  aria-hidden
-                  className="absolute bottom-[0.1875rem] left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-info"
-                />
-              )}
-            </span>
-          )
-        })}
-      </div>
-
-      {data.entries.filter((entry) =>
-        entry.date.startsWith(`${year}-${pad(month + 1)}`),
-      ).length === 0 ? null : (
-        <ul className="mt-3 flex flex-wrap gap-1.5 border-t border-edge-faint pt-3">
-          {[
-            ...new Set(
-              data.entries
-                .filter((entry) =>
-                  entry.date.startsWith(`${year}-${pad(month + 1)}`),
-                )
-                .map((entry) => entry.kind),
-            ),
-          ].map((kind) => (
-            <li key={kind}>
-              <Badge tone={toneFor(VACAY_KIND_TONE, kind)} size="sm">
-                {humaniseToken(kind)}
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Card>
   )
 }
 
@@ -442,12 +237,16 @@ function VacayPending() {
             </Card>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 6 }, (_, index) => (
+            {Array.from({ length: 12 }, (_, index) => (
               <Card key={index} className="space-y-3">
                 <Skeleton className="h-5 w-24" radius="sm" />
                 <div className="grid grid-cols-7 gap-1.5">
-                  {Array.from({ length: 35 }, (_slot, cell) => (
-                    <Skeleton key={cell} className="size-6" radius="md" />
+                  {Array.from({ length: 42 }, (_slot, cell) => (
+                    <Skeleton
+                      key={cell}
+                      className="h-7 w-full [@media(pointer:coarse)]:h-10"
+                      radius="md"
+                    />
                   ))}
                 </div>
               </Card>

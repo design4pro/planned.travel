@@ -11,7 +11,7 @@ import type {
 /**
  * What production code may import from the leave-planner repository, `src/server/repos/vacay.ts`.
  *
- * The repository's older writers and readers (`setEntry`, `updatePlan`, `listUserYears`, the
+ * The repository's older writers and readers (`setEntryRange`, `updatePlan`, `listUserYears`, the
  * `*Repository` objects, and the rest) prove a plan is in the caller's workspace and nothing more.
  * `requirePlanActor` / `requirePlanOwner` is the rule that a leave plan is personal, and a function
  * that takes a client-sent plan id is safe to call only once that rule stands in front of it. So the
@@ -28,6 +28,8 @@ import type {
  * callers.
  */
 const ALLOWED = new Set([
+  'setEntry',
+  'clearEntries',
   'ensurePlan',
   'getPlanOverview',
   'saveAllowance',
@@ -168,7 +170,7 @@ describe('the leave planner repository import allowlist', () => {
     const result = withProgram(
       {
         [probe('vacay-probe-direct')]:
-          "import { setEntry, vacayPlansRepository, recomputeCarryOver } from '#/server/repos'; void setEntry; void vacayPlansRepository; void recomputeCarryOver",
+          "import { setEntryRange, vacayPlansRepository, recomputeCarryOver } from '#/server/repos'; void setEntryRange; void vacayPlansRepository; void recomputeCarryOver",
         [probe('vacay-probe-deep')]:
           "import { updatePlan } from '#/server/repos/vacay'; void updatePlan",
         [probe('vacay-probe-barrel')]:
@@ -188,15 +190,15 @@ describe('the leave planner repository import allowlist', () => {
 
     expect(result.violations).toEqual(
       expect.arrayContaining([
-        'setEntry: src/vacay-probe-direct.ts',
+        'setEntryRange: src/vacay-probe-direct.ts',
         'vacayPlansRepository: src/vacay-probe-direct.ts',
         'recomputeCarryOver: src/vacay-probe-direct.ts',
         'updatePlan: src/vacay-probe-deep.ts',
         'removeEntry: src/vacay-probe-barrel.ts',
         'removeEntry: src/vacay-probe-alias.ts',
-        'namespace import exposes setEntry: src/vacay-probe-namespace.ts',
-        'star export exposes setEntry: src/vacay-probe-star.ts',
-        'dynamic import exposes setEntry: src/vacay-probe-dynamic.ts',
+        'namespace import exposes setEntryRange: src/vacay-probe-namespace.ts',
+        'star export exposes setEntryRange: src/vacay-probe-star.ts',
+        'dynamic import exposes setEntryRange: src/vacay-probe-dynamic.ts',
       ]),
     )
     expect(result.violations.join('\n')).not.toContain('vacay-probe-allowed')
