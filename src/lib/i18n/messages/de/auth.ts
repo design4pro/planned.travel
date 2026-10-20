@@ -369,6 +369,10 @@ const messages = {
   'error.locked.title': 'Konto vorübergehend gesperrt',
   'error.locked.detail':
     'Zu viele fehlgeschlagene Versuche. Zu deiner Sicherheit ist dieses Konto für ein paar Minuten gesperrt.',
+  'error.twoFactorOn.title':
+    'Die Zwei-Faktor-Authentifizierung ist bereits aktiv',
+  'error.twoFactorOn.detail':
+    'Eine erneute Einrichtung würde deine aktuelle Authenticator-App unbrauchbar machen. Deshalb wurde nichts geändert. Du kannst sie hier verwalten.',
   'error.noTwoFactor.title': 'Zwei-Faktor ist nicht eingerichtet',
   'error.noTwoFactor.detail':
     'Melde dich mit E-Mail und Passwort an, um weiterzumachen.',

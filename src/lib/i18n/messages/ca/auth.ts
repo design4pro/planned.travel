@@ -364,6 +364,9 @@ const messages = {
   'error.locked.title': 'Compte bloquejat una estona',
   'error.locked.detail':
     'Massa intents de verificació fallits. Per seguretat, aquest compte queda bloquejat uns minuts.',
+  'error.twoFactorOn.title': 'L’autenticació de dos factors ja està activada',
+  'error.twoFactorOn.detail':
+    'Si la tornessis a configurar, l’autenticador actual deixaria de funcionar; per això no s’ha canviat res. La pots gestionar aquí.',
   'error.noTwoFactor.title': 'No tens la verificació en dos passos',
   'error.noTwoFactor.detail':
     'Entra amb el teu correu i la teva contrasenya per continuar.',

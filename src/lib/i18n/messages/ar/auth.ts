@@ -363,6 +363,9 @@ const messages = {
   'error.locked.title': 'الحساب مقفل مؤقتًا',
   'error.locked.detail':
     'محاولات تحقق فاشلة كثيرة. لأمانك هذا الحساب مقفل لدقائق.',
+  'error.twoFactorOn.title': 'المصادقة الثنائية مفعّلة بالفعل',
+  'error.twoFactorOn.detail':
+    'إعدادها مرة أخرى سيوقف عمل تطبيق المصادقة الحالي، لذلك لم يتغير شيء. يمكنك إدارتها من هنا.',
   'error.noTwoFactor.title': 'التحقق بخطوتين غير مُعدّ',
   'error.noTwoFactor.detail': 'ادخل ببريدك وكلمة مرورك للمتابعة.',
   'error.twoFactorExpired.title': 'ابدأ من جديد من صفحة الدخول',

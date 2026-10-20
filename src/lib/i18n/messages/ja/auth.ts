@@ -305,6 +305,9 @@ const messages = {
   'error.locked.title': 'アカウントを一時的にロックしました',
   'error.locked.detail':
     '認証の失敗が続いたため、安全のためこのアカウントを数分間ロックしています。',
+  'error.twoFactorOn.title': '二要素認証はすでに有効です',
+  'error.twoFactorOn.detail':
+    '再設定すると現在の認証アプリが使えなくなるため、変更は行いませんでした。ここから管理できます。',
   'error.noTwoFactor.title': '二段階認証は設定されていません',
   'error.noTwoFactor.detail':
     'メールアドレスとパスワードでサインインして続けてください。',

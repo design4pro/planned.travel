@@ -296,6 +296,9 @@ const messages = {
   'error.locked.title': '계정을 잠시 잠갔어요',
   'error.locked.detail':
     '인증 실패가 이어졌어요. 안전을 위해 이 계정을 몇 분 동안 잠가 둡니다.',
+  'error.twoFactorOn.title': '2단계 인증이 이미 켜져 있습니다',
+  'error.twoFactorOn.detail':
+    '다시 설정하면 현재 인증 앱이 작동하지 않으므로 아무것도 변경하지 않았습니다. 여기에서 관리할 수 있습니다.',
   'error.noTwoFactor.title': '2단계 인증이 설정되어 있지 않아요',
   'error.noTwoFactor.detail': '이메일과 비밀번호로 로그인해서 계속해 주세요.',
   'error.twoFactorExpired.title': '로그인부터 다시 해 주세요',

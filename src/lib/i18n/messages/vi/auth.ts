@@ -343,6 +343,9 @@ const messages = {
   'error.locked.title': 'Tài khoản tạm bị khóa',
   'error.locked.detail':
     'Quá nhiều lần xác minh hỏng. Vì an toàn, tài khoản này bị khóa vài phút.',
+  'error.twoFactorOn.title': 'Xác thực hai yếu tố đã được bật',
+  'error.twoFactorOn.detail':
+    'Thiết lập lại sẽ khiến ứng dụng xác thực hiện tại ngừng hoạt động, nên không có gì được thay đổi. Bạn có thể quản lý tại đây.',
   'error.noTwoFactor.title': 'Chưa bật xác minh hai bước',
   'error.noTwoFactor.detail':
     'Đăng nhập bằng email và mật khẩu của bạn để tiếp tục.',

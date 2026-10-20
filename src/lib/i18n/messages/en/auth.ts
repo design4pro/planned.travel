@@ -422,6 +422,9 @@ const messages = {
   'error.locked.title': 'Account temporarily locked',
   'error.locked.detail':
     'Too many failed verification attempts. For your security this account is locked for a few minutes.',
+  'error.twoFactorOn.title': 'Two-factor is already on',
+  'error.twoFactorOn.detail':
+    'Setting it up again would stop your current authenticator working, so nothing was changed. You can manage it here.',
   'error.noTwoFactor.title': 'Two-factor is not set up',
   'error.noTwoFactor.detail':
     'Sign in with your email and password to continue.',

@@ -368,6 +368,9 @@ const messages = {
   'error.locked.title': 'A fiók átmenetileg zárolva',
   'error.locked.detail':
     'Túl sok sikertelen ellenőrzési kísérlet. Biztonsági okból néhány percre zároltuk ezt a fiókot.',
+  'error.twoFactorOn.title': 'A kétlépcsős hitelesítés már be van kapcsolva',
+  'error.twoFactorOn.detail':
+    'Az újbóli beállítás miatt a jelenlegi hitelesítő alkalmazásod nem működne tovább, ezért semmit sem módosítottunk. Itt kezelheted.',
   'error.noTwoFactor.title': 'A kétfaktoros hitelesítés nincs beállítva',
   'error.noTwoFactor.detail':
     'A folytatáshoz jelentkezzen be az e-mail-címével és a jelszavával.',

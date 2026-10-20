@@ -156,3 +156,20 @@ describe('describeCallbackError', () => {
     )
   })
 })
+
+it('maps an already-enabled factor to the dedicated catalogue copy', () => {
+  const message = describeFailure({
+    code: 'TWO_FACTOR_ALREADY_ENABLED',
+    status: 400,
+    message: 'raw',
+  })
+  expect(message).toEqual({
+    titleKey: 'auth.error.twoFactorOn.title',
+    detailKey: 'auth.error.twoFactorOn.detail',
+    tone: 'warning',
+  })
+  expect(rendered(message)).toEqual([
+    'Two-factor is already on',
+    'Setting it up again would stop your current authenticator working, so nothing was changed. You can manage it here.',
+  ])
+})

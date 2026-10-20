@@ -359,6 +359,10 @@ const messages = {
   'error.locked.title': 'Konto chwilowo zablokowane',
   'error.locked.detail':
     'Za dużo nieudanych prób weryfikacji. Dla bezpieczeństwa konto jest zablokowane na kilka minut.',
+  'error.twoFactorOn.title':
+    'Uwierzytelnianie dwuskładnikowe jest już włączone',
+  'error.twoFactorOn.detail':
+    'Ponowna konfiguracja sprawiłaby, że obecna aplikacja uwierzytelniająca przestałaby działać, więc nic nie zmieniono. Możesz nim zarządzać tutaj.',
   'error.noTwoFactor.title': 'Drugi składnik nie jest ustawiony',
   'error.noTwoFactor.detail':
     'Zaloguj się e-mailem i hasłem, aby przejść dalej.',

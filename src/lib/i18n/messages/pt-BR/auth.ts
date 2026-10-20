@@ -361,6 +361,9 @@ const messages = {
   'error.locked.title': 'Conta bloqueada por um tempo',
   'error.locked.detail':
     'Verificações demais falharam. Por segurança, esta conta fica bloqueada por alguns minutos.',
+  'error.twoFactorOn.title': 'A autenticação de dois fatores já está ativada',
+  'error.twoFactorOn.detail':
+    'Configurá-la novamente faria seu autenticador atual parar de funcionar, por isso nada foi alterado. Você pode gerenciá-la aqui.',
   'error.noTwoFactor.title': 'A verificação em duas etapas não está ligada',
   'error.noTwoFactor.detail':
     'Entre com seu e-mail e sua senha para continuar.',
