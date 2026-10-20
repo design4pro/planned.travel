@@ -21,6 +21,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { enqueueTripRollup } from '#/server/queue/travel-stats-fanout'
 import { RESERVATION_STATUSES } from '#/server/db/schema'
 import {
   NotFoundError,
@@ -50,7 +51,7 @@ import {
 import { appScope } from '../../../-server/context'
 
 import type { TenantScope, TimelineItemInput } from '#/server/repos'
-import type { Trip } from '#/server/db/types'
+import type { Place, Trip } from '#/server/db/types'
 import type { BookingDayOption } from '#/server/fns/reservations'
 
 /**
@@ -341,11 +342,12 @@ async function requirePlaceOfPlan(
   scope: TenantScope,
   trip: Trip,
   placeId: string,
-): Promise<void> {
+): Promise<Place> {
   const place = await getPlace(scope, placeId)
   if (place === null || place.tripId !== trip.id) {
     throw new NotFoundError('place', placeId)
   }
+  return place
 }
 
 /**
@@ -685,6 +687,8 @@ export const createPlanPlaceFn = createServerFn({ method: 'POST' })
         lng: data.lng,
       })
 
+      await enqueueTripRollup(scope, trip)
+
       if (data.dayId === '') {
         return { placeId: place.id, assignmentId: null }
       }
@@ -714,7 +718,7 @@ export const updatePlanPlaceFn = createServerFn({ method: 'POST' })
   .handler(async ({ data }): Promise<{ readonly placeId: string }> => {
     const scope = await appScope()
     const trip = await requireEditablePlan(scope, data.tripId)
-    await requirePlaceOfPlan(scope, trip, data.placeId)
+    const previous = await requirePlaceOfPlan(scope, trip, data.placeId)
 
     const updated = await updatePlace(scope, data.placeId, {
       name: data.name,
@@ -727,6 +731,7 @@ export const updatePlanPlaceFn = createServerFn({ method: 'POST' })
       lng: data.lng,
       isVisited: data.isVisited,
     })
+    if (previous.city !== updated.city) await enqueueTripRollup(scope, trip)
     return { placeId: updated.id }
   })
 
@@ -743,5 +748,6 @@ export const deletePlanPlaceFn = createServerFn({ method: 'POST' })
     const trip = await requireEditablePlan(scope, data.tripId)
     await requirePlaceOfPlan(scope, trip, data.placeId)
     await deletePlace(scope, data.placeId)
+    await enqueueTripRollup(scope, trip)
     return { removed: true }
   })

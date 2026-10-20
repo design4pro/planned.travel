@@ -18,8 +18,8 @@
  * `tenantFilter()`-bound to that same organization, so a forged envelope can only
  * rebuild rows its own tenant already owns. The role is not taken from the
  * message either: it is read from `member` inside that tenant, and a message
- * whose user is no longer a member is a permanent failure rather than five
- * retries against a membership that is not coming back.
+ * whose user is no longer a member is acknowledged without writing, rather than
+ * retried against a membership that is not coming back.
  */
 
 import { drizzle } from 'drizzle-orm/d1'
@@ -31,11 +31,7 @@ import {
   recomputeTravelStats,
   upsertTravelStats,
 } from '#/server/repos'
-import {
-  ALL_TIME_STAT_YEAR,
-  TaskConfigurationError,
-  TaskPermanentError,
-} from '../types'
+import { ALL_TIME_STAT_YEAR, TaskConfigurationError } from '../types'
 
 import type { Database, TravelStat } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
@@ -149,14 +145,14 @@ export function yearStreakFrom(rows: ReadonlyArray<TravelStat>): number {
  * so the membership read is made at the lowest privilege there is: `getMembership`
  * is a tenant-filtered `findOne` that asserts no role, so the probe can only ever
  * see the row that decides the real one. A message whose user is no longer a
- * member is a permanent failure rather than five retries against a membership
+ * member is acknowledged without writing rather than retried against a membership
  * that is not coming back.
  */
 async function scopeForTraveller(
   db: Database,
   organizationId: string,
   userId: string,
-): Promise<TenantScope> {
+): Promise<TenantScope | null> {
   const probe = createScope(db, {
     userId,
     organizationId,
@@ -165,9 +161,7 @@ async function scopeForTraveller(
   })
   const membership = await getMembership(probe, userId)
   if (membership === null) {
-    throw new TaskPermanentError(
-      `User ${userId} is no longer a member of ${organizationId}; travel stats will not be recomputed`,
-    )
+    return null
   }
 
   return createScope(db, {
@@ -229,6 +223,14 @@ export function createTravelStatsHandler(
       context.orgId,
       userId,
     )
+
+    if (scope === null) {
+      context.logger.warn(
+        'travel statistics skipped for a former workspace member',
+        { userId, organizationId: context.orgId },
+      )
+      return {}
+    }
 
     const row = await recomputeTravelStats(scope, userId, statYear)
     const yearStreak =
