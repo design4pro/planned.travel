@@ -74,3 +74,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
+
+- **Installed app** - planned.travel opened from a home-screen or dock icon in its own window. Installation is optional and does not make trips available offline.
