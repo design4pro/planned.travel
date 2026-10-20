@@ -128,16 +128,16 @@ const messages = {
   'panel.stat.places': 'Địa điểm của bạn',
   'panel.stat.placesNone': 'Chưa ghim gì trong chuyến đi nào',
   'panel.stat.placesCaption': 'Điểm tham quan, chỗ ở và điểm dừng đã lưu',
-  'panel.stat.regions': 'Vùng',
+  'panel.stat.regions': 'Vùng của bạn',
   'panel.stat.regionsNone': 'Chưa đánh dấu vùng nào',
   'panel.stat.regionsCaption': 'Bang, tỉnh, quận hạt',
-  'panel.stat.visits': 'Lượt thăm',
+  'panel.stat.visits': 'Lượt ghé thăm của bạn',
   'panel.stat.visitsCaption': 'Mọi lần đặt chân được ghi lại',
   'panel.stat.trips': 'Chuyến đi của bạn',
   'panel.stat.tripsCaption': 'Mọi chuyến đi bạn tham gia',
-  'panel.stat.cities': 'Thành phố',
+  'panel.stat.cities': 'Thành phố của bạn',
   'panel.stat.citiesCaption': 'Nơi bạn đã nghỉ đêm hoặc dừng chân',
-  'panel.stat.days': 'Ngày xa nhà',
+  'panel.stat.days': 'Ngày đi xa của bạn',
   'panel.stat.daysCaption': 'Tính trên mọi chuyến đi trong hồ sơ của bạn',
   'panel.continents.label': 'Quốc gia theo châu lục',
 
@@ -355,6 +355,28 @@ const messages = {
     'Không thể xác nhận thay đổi. Hãy tải lại các vùng để kiểm tra nội dung đã lưu.',
   'regions.status.refreshFailed':
     '{result} Không thể làm mới tập bản đồ. Hãy tải lại để cập nhật bản đồ.',
+
+  'panel.stat.periodLabel': 'Hiển thị số liệu cho',
+  'panel.stat.allTime': 'Toàn bộ thời gian',
+  'panel.stat.groupAll': 'Số liệu toàn bộ thời gian',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Số liệu năm {year}',
+  'panel.stat.announceAll': 'Đang hiển thị số liệu toàn bộ thời gian.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Đang hiển thị số liệu năm {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Chuyến đi bắt đầu năm {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Trong các chuyến đi bắt đầu năm {year}',
+  'panel.stat.countries': 'Quốc gia trong chuyến đi của bạn',
+  'panel.stat.countriesCaption':
+    'Các quốc gia khác nhau trong những chuyến đi này',
+  'panel.stat.streak': 'Chuỗi năm du lịch của bạn',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Du lịch mỗi năm, từ {first} đến {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Một chuyến đi năm {last}',
+  'panel.stat.streakNone': 'Thêm chuyến đi có ngày để bắt đầu chuỗi',
 } satisfies TranslationOf<typeof En>
 
 export default messages

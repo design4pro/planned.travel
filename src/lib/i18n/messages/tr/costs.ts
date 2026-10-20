@@ -187,6 +187,8 @@ const messages = {
   'payments.empty.body':
     'Biri bir bakiyeyi geri ödediğinde transfer buraya kaydedilir.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Bu gezi arşivlenmiş. Masrafları değiştirmeden önce geri yükleyin.',
   'readOnly.title': 'Masrafları görebilirsin ama değiştiremezsin',
   'readOnly.body':
     'Harcama ekleme, düzenleme, silme ve ödeme kaydetme yetkisi yalnızca gezinin sahiplerinde ve düzenleme izni olanlarda var. Bir şeyin değişmesi gerekiyorsa bir sahibe sor.',

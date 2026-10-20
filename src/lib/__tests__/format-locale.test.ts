@@ -799,3 +799,13 @@ describe('every rendered figure takes a locale', () => {
     ).toEqual([])
   })
 })
+
+describe('formatYear', () => {
+  it.each(['en', 'de', 'ar'] as const)(
+    'prints Latin years without grouping in %s',
+    async (locale) => {
+      const { formatYear } = await import('../format')
+      expect(formatYear(2027, locale)).toBe('2027')
+    },
+  )
+})

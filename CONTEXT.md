@@ -76,3 +76,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
 
 - **Backup code** - a one-use code for signing in when the authenticator app is unavailable. A set is shown once when two-factor authentication is enabled or the codes are replaced. Replacing a set invalidates the previous set. Use “backup code”; avoid “recovery code”.
+- **Travel statistics** — a traveller’s stored roll-up of trips they are on, shown in the Atlas Stats tab. The all-time view also reads their live visited regions, visits and continents; a year view counts countries on that year’s trips instead of their visited-country list.
+- **Stat year** — the calendar year of a travel-statistics row; `0` means all time. Trips, places, cities, days and trip countries follow the trip’s start year; distance follows each transport’s departure year. Only a year with a trip is a selectable period.

@@ -918,6 +918,8 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
           dayCount: allTime?.dayCount ?? null,
           distanceMetres: allTime?.distanceMetres ?? null,
         }}
+        statsRows={atlas.stats}
+        statsLoading={status === 'loading'}
         byContinent={atlas.byContinent}
         bucketList={atlas.bucketList}
         // The same uncapped index the map overlay reads, and for the same

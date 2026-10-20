@@ -185,6 +185,8 @@ const messages = {
   'payments.empty.body':
     'Khi ai đó trả lại số dư, giao dịch sẽ được ghi ở đây.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Chuyến đi này đã được lưu trữ. Hãy khôi phục trước khi thay đổi chi phí.',
   'readOnly.title': 'Bạn có thể xem chi phí nhưng không thể thay đổi',
   'readOnly.body':
     'Chỉ chủ chuyến đi và những người được phép chỉnh sửa mới có thể thêm, sửa hoặc xóa khoản chi và ghi nhận thanh toán. Hãy hỏi chủ chuyến đi nếu cần thay đổi gì.',

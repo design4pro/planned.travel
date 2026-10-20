@@ -2191,6 +2191,38 @@ describe('tenant isolation', () => {
   /** The calendar year both travel-stats blocks below seed into and recompute for. */
   const STAT_YEAR = 2026
 
+  it('lists only the named traveller’s statistics, including among workspace colleagues', async () => {
+    await travelStatsRepository.insert(alpha.tenant.scope, {
+      userId: alpha.secondUserId,
+      statYear: 2026,
+      tripCount: 99,
+      computedAt: new Date(),
+    })
+    await travelStatsRepository.insert(alpha.tenant.scope, {
+      userId: alpha.tenant.ownerUserId,
+      statYear: 0,
+      tripCount: 2,
+      computedAt: new Date(),
+    })
+    const rows = await listTravelStats(
+      alpha.tenant.scope,
+      alpha.tenant.ownerUserId,
+    )
+    expect(rows.map((row) => row.statYear)).toEqual([2026, 0])
+    expect(rows.every((row) => row.userId === alpha.tenant.ownerUserId)).toBe(
+      true,
+    )
+    expect(rows.some((row) => row.tripCount === 99)).toBe(false)
+    expect(
+      await listTravelStats(beta.tenant.scope, alpha.tenant.ownerUserId),
+    ).toEqual([])
+    expect(
+      (await listTravelStats(alpha.tenant.scope, alpha.secondUserId)).map(
+        (row) => row.tripCount,
+      ),
+    ).toEqual([99])
+  })
+
   /**
    * The recompute behind the atlas statistics panel, run from the wrong side of the boundary.
    *

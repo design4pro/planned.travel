@@ -192,6 +192,8 @@ const messages = {
   'payments.empty.body':
     'Cuando alguien devuelve un saldo, la transferencia queda registrada aquí.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Este viaje está archivado. Restáuralo antes de cambiar los gastos.',
   'readOnly.title': 'Puedes ver los costes, pero no cambiarlos',
   'readOnly.body':
     'Solo los propietarios del viaje y quienes pueden editarlo añaden, modifican o eliminan gastos y registran pagos. Pídeselo a un propietario si hay algo que cambiar.',
