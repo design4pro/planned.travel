@@ -10,7 +10,7 @@
  * Sockets use the **WebSocket Hibernation API**: the object accepts the socket
  * with `state.acceptWebSocket()` and then goes away. It is only billed and only
  * resident while a frame is actually being handled, and a room can hold idle
- * collaborators overnight for free. Connection state that must survive
+ * collaborators between periodic access checks. Connection state that must survive
  * hibernation lives in the socket's attachment; room state lives in storage.
  *
  * The Durable Object is a coordination and fan-out layer, not the system of
@@ -27,6 +27,7 @@ import {
   TRIP_ROOM_IDLE_TTL_MS,
   TRIP_ROOM_LOG_CAPACITY,
   TRIP_ROOM_MAX_SNAPSHOT_ENTITIES,
+  TRIP_ROOM_MAX_SOCKET_AGE_MS,
   TRIP_ROOM_PING_FRAME,
   TRIP_ROOM_PONG_FRAME,
   TRIP_ROOM_PROTOCOL_VERSION,
@@ -256,6 +257,7 @@ export class TripRoom implements DurableObject {
     // sockets without deserialising every attachment.
     this.state.acceptWebSocket(server, [identity.value.user.id])
     server.serializeAttachment(attachment)
+    await this.ensureAlarm()
 
     this.logger.debug('trip room socket accepted', {
       tripId: identity.value.tripId,
@@ -483,12 +485,22 @@ export class TripRoom implements DurableObject {
 
   /**
    * Periodic maintenance: trim the commit log to its capacity, drop expired
-   * tombstones, and erase a room nobody has touched for a week. Reschedules
-   * itself only while there is something left to look after.
+   * tombstones, evict over-age sockets, and erase a room nobody has touched for a week.
+   * Reschedules itself only while there is something left to look after.
    */
   async alarm(): Promise<void> {
     const meta = await this.loadMeta()
     const now = this.now()
+    this.evict(
+      this.state.getWebSockets().filter((socket) => {
+        const session = readAttachment(socket)
+        return (
+          session !== null &&
+          !session.evicted &&
+          now - session.joinedAt > TRIP_ROOM_MAX_SOCKET_AGE_MS
+        )
+      }),
+    )
     const sockets = this.state.getWebSockets().length
 
     const removed = await this.pruneLog(meta)
