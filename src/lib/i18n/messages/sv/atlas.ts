@@ -344,6 +344,41 @@ const messages = {
   'card.error.body': 'Siffrorna lästes inte in. Inget har gått förlorat.',
   'card.error.retry': 'Försök igen',
   'overlay.close': 'Stäng {name}',
+  'regions.label': 'Regioner',
+  'regions.hint':
+    'När du lägger till en region markeras även {country} som besökt.',
+  'regions.keeps':
+    'Att ta bort en region tar inte bort {country} från din atlas.',
+  'regions.keeps.unvisited':
+    'Regionerna finns kvar. Markera {country} som besökt eller lägg till en region för att visa landet på kartan igen.',
+  'regions.empty.title': 'Inga regioner registrerade här ännu',
+  'regions.empty.body':
+    'Lägg till en delstat, provins eller ett område du besökt i {country}.',
+  'regions.input.label': 'Lägg till en region i {country}',
+  'regions.input.placeholder': 'Till exempel Bayern',
+  'regions.add': 'Lägg till region',
+  'regions.adding': 'Lägger till {region}',
+  'regions.remove': 'Ta bort {region}',
+  'regions.loading': 'Läser in dina regioner',
+  'regions.status.added': '{region} har lagts till',
+  'regions.status.exists': '{region} finns redan registrerad',
+  'regions.status.removed': '{region} har tagits bort',
+  'regions.status.addedCountry':
+    '{region} har lagts till. {country} är nu markerat som besökt.',
+  'regions.error.invalid': 'Ange ett regionnamn.',
+  'regions.error.hidden':
+    'Namnet innehåller otillåtna tecken. Ta bort dem och försök igen.',
+  'regions.error.load': 'Vi kunde inte läsa in dina regioner för {country}.',
+  'regions.error.add': 'Vi kunde inte lägga till {region}. Försök igen.',
+  'regions.error.remove': 'Vi kunde inte ta bort {region}. Försök igen.',
+  'regions.error.full':
+    'Du har registrerat {limit} regioner. Ta bort en för att lägga till en annan.',
+  'regions.reload': 'Läs in regioner igen',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Regionerna du registrerat i {country} finns kvar: {count}.',
+    other:
+      '{history}Regionerna du registrerat i {country} finns kvar: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

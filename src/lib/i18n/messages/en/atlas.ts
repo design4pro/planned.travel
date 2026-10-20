@@ -441,6 +441,40 @@ const messages = {
   'card.error.body': 'These figures did not load. Nothing has been lost.',
   'card.error.retry': 'Try again',
   'overlay.close': 'Close {name}',
+  'regions.label': 'Regions',
+  'regions.hint': 'Adding a region marks {country} as visited too.',
+  'regions.keeps':
+    'Removing a region does not remove {country} from your atlas.',
+  'regions.keeps.unvisited':
+    'These regions stay on your record. Mark {country} as visited, or add a region, to put it back on your map.',
+  'regions.empty.title': 'No regions recorded here yet',
+  'regions.empty.body':
+    'Add a state, province or area you have visited in {country}.',
+  'regions.input.label': 'Add a region in {country}',
+  'regions.input.placeholder': 'For example, Bavaria',
+  'regions.add': 'Add region',
+  'regions.adding': 'Adding {region}',
+  'regions.remove': 'Remove {region}',
+  'regions.loading': 'Loading your regions',
+  'regions.status.added': 'Added {region}',
+  'regions.status.exists': '{region} is already on your record',
+  'regions.status.removed': 'Removed {region}',
+  'regions.status.addedCountry':
+    'Added {region}. {country} is now marked as visited.',
+  'regions.error.invalid': 'Enter a region name.',
+  'regions.error.hidden':
+    'That name contains characters we cannot keep. Remove them and try again.',
+  'regions.error.load': 'We could not load your regions for {country}.',
+  'regions.error.add': 'We could not add {region}. Try again.',
+  'regions.error.remove': 'We could not remove {region}. Try again.',
+  'regions.error.full':
+    'You have recorded {limit} regions. Remove one to add another.',
+  'regions.reload': 'Reload regions',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}{count} region you recorded in {country} stays on your record.',
+    other:
+      '{history}{count} regions you recorded in {country} stay on your record.',
+  },
 } as const satisfies NamespaceMessages
 
 export default messages

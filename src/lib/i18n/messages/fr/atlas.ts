@@ -372,6 +372,41 @@ const messages = {
   'card.error.body': 'Ces chiffres ne se sont pas chargés. Rien n’est perdu.',
   'card.error.retry': 'Réessayer',
   'overlay.close': 'Fermer {name}',
+  'regions.label': 'Régions',
+  'regions.hint': 'Ajouter une région marque aussi {country} comme visité.',
+  'regions.keeps':
+    'Supprimer une région ne retire pas {country} de votre atlas.',
+  'regions.keeps.unvisited':
+    'Ces régions restent enregistrées. Marquez {country} comme visité ou ajoutez une région pour le retrouver sur la carte.',
+  'regions.empty.title': 'Aucune région enregistrée ici',
+  'regions.empty.body':
+    'Ajoutez un État, une province ou une zone visitée dans ce pays : {country}.',
+  'regions.input.label': 'Ajouter une région : {country}',
+  'regions.input.placeholder': 'Par exemple, la Bavière',
+  'regions.add': 'Ajouter une région',
+  'regions.adding': 'Ajout de {region}',
+  'regions.remove': 'Supprimer {region}',
+  'regions.loading': 'Chargement de vos régions',
+  'regions.status.added': '{region} ajouté',
+  'regions.status.exists': '{region} est déjà enregistré',
+  'regions.status.removed': '{region} supprimé',
+  'regions.status.addedCountry':
+    '{region} ajouté. {country} est maintenant marqué comme visité.',
+  'regions.error.invalid': 'Saisissez un nom de région.',
+  'regions.error.hidden':
+    'Ce nom contient des caractères non autorisés. Retirez-les et réessayez.',
+  'regions.error.load': 'Impossible de charger vos régions : {country}.',
+  'regions.error.add': 'Impossible d’ajouter {region}. Réessayez.',
+  'regions.error.remove': 'Impossible de supprimer {region}. Réessayez.',
+  'regions.error.full':
+    'Vous avez enregistré {limit} régions. Supprimez-en une pour en ajouter une autre.',
+  'regions.reload': 'Recharger les régions',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Les régions enregistrées dans ce pays ({country}) restent dans vos données : {count}.',
+    many: '{history}Les régions enregistrées dans ce pays ({country}) restent dans vos données : {count}.',
+    other:
+      '{history}Les régions enregistrées dans ce pays ({country}) restent dans vos données : {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -353,6 +353,41 @@ const messages = {
   'card.error.body': 'Deze cijfers zijn niet geladen. Er is niets verloren.',
   'card.error.retry': 'Opnieuw proberen',
   'overlay.close': '{name} sluiten',
+  'regions.label': 'Regio’s',
+  'regions.hint': 'Een regio toevoegen markeert ook {country} als bezocht.',
+  'regions.keeps': 'Een regio verwijderen haalt {country} niet uit je atlas.',
+  'regions.keeps.unvisited':
+    'Deze regio’s blijven bewaard. Markeer {country} als bezocht of voeg een regio toe om het land weer op je kaart te zetten.',
+  'regions.empty.title': 'Hier zijn nog geen regio’s vastgelegd',
+  'regions.empty.body':
+    'Voeg een staat, provincie of gebied toe dat je in {country} hebt bezocht.',
+  'regions.input.label': 'Regio in {country} toevoegen',
+  'regions.input.placeholder': 'Bijvoorbeeld Beieren',
+  'regions.add': 'Regio toevoegen',
+  'regions.adding': '{region} toevoegen',
+  'regions.remove': '{region} verwijderen',
+  'regions.loading': 'Je regio’s laden',
+  'regions.status.added': '{region} toegevoegd',
+  'regions.status.exists': '{region} is al vastgelegd',
+  'regions.status.removed': '{region} verwijderd',
+  'regions.status.addedCountry':
+    '{region} toegevoegd. {country} is nu als bezocht gemarkeerd.',
+  'regions.error.invalid': 'Vul een regionaam in.',
+  'regions.error.hidden':
+    'De naam bevat ongeldige tekens. Verwijder ze en probeer het opnieuw.',
+  'regions.error.load': 'Je regio’s voor {country} konden niet worden geladen.',
+  'regions.error.add':
+    '{region} kon niet worden toegevoegd. Probeer het opnieuw.',
+  'regions.error.remove':
+    '{region} kon niet worden verwijderd. Probeer het opnieuw.',
+  'regions.error.full':
+    'Je hebt {limit} regio’s vastgelegd. Verwijder er een om een andere toe te voegen.',
+  'regions.reload': 'Regio’s opnieuw laden',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Je vastgelegde regio’s in {country} blijven bewaard: {count}.',
+    other:
+      '{history}Je vastgelegde regio’s in {country} blijven bewaard: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

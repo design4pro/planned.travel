@@ -1,88 +1,18 @@
 /**
- * Write paths for the atlas: the two things a traveller can do to a country
- * without planning a trip to it.
- *
- * `visited_countries` and `bucket_list_items` have had a complete, tenant-scoped,
- * isolation-tested repository since the schema landed, and nothing outside the
- * repository's own tests could reach it. This module is the missing boundary and
- * nothing more: it validates, it resolves the tenant, it calls named repository
- * functions, and it returns the state the caller should now render. There is no
- * SQL here, and there is no decision here that a client could have made.
- *
- * ## The shape every handler follows (ARCHITECTURE §2.2)
- *
- * 1. **Validate.** Zod at the boundary, and the repository parses its own input
- *    again, so a hand-rolled request cannot smuggle a field past the form.
- * 2. **Quota.** Neither table is metered: `USAGE_METRICS` sells trips, places,
- *    members, files, storage, exports, collections and journeys, and a country is
- *    none of those - a traveller who has been to 90 countries has not spent
- *    anything a plan rations. So no handler calls `assertQuota`, because there is
- *    no metric to assert against, and inventing one here would put the ceiling
- *    outside `src/server/repos/base.ts`, where §6 says it may not live. What every
- *    write *does* do is translate a `QuotaExceededError` should a repository ever
- *    start throwing one: see {@link AtlasQuotaError}. A plan ceiling that reaches
- *    the reader as a bare 500 is a bug waiting to happen, not a decision to defer.
- * 3. **Write.** One row, through one repository function. There is no multi-row
- *    invariant to hold, so there is nothing to wrap in a transaction. The
- *    unmetered table without a unique index pays for that with one extra read
- *    after its insert (see Idempotence below), which keeps every handler inside
- *    §2.2's 1-4 statement budget and none of them holding a lock across an await.
- * 4. **Invalidate.** Nothing to invalidate: `/atlas` is loader-driven straight off
- *    D1, and the only things this deployment keeps in KV are plan state and
- *    sessions, neither of which a country touches. Usage counters are not cached
- *    anywhere and are not cached here. The rule this obeys is §4's second one - a
- *    read-your-own-write path reads D1 - and {@link atlasCountryState} is where it
- *    is obeyed: every handler's answer is read back from D1 in the same request,
- *    never from a cache that is eventually consistent for up to a minute.
- * 5. **Return the new state.** {@link AtlasCountryState} is the whole answer for
- *    one country: whether it is visited, whether it is on the bucket list, and the
- *    continent it rolls up under. A caller can repaint the country and its popover
- *    from that alone, without waiting for a loader round trip.
- *
- * ## Idempotence
- *
- * All four handlers are safe to repeat, and "repeat" here means *overlapping*, not
- * merely sequential: a double-tapped button, a retried request and a reconnecting
- * client all arrive here, two of them can be in flight at once, and none of them
- * means the traveller went twice. Reading the row before writing it answers the
- * sequential case and cannot answer the concurrent one - between the read and the
- * write, the other request commits - so each write path also converges after the
- * fact, and the two tables need different mechanics for that because they are
- * protected differently:
- *
- * - `visited_countries` carries `visited_countries_org_user_country_unq` on
- *   `(organization_id, user_id, country_code)`. The loser of a race is refused by
- *   the database, so {@link markCountryVisitedFn} treats that refusal as the
- *   answer it was looking for - see {@link isUniqueConstraintViolation} - re-reads
- *   the winner's row from D1 and returns it. The raw refusal never leaves this
- *   module: the driver puts the whole `INSERT`, the organisation id, the user id
- *   and the country code into its message, and a boundary that forwards that is
- *   handing an internal schema to whoever double-tapped a button.
- * - `bucket_list_items` carries no unique index at all, so nothing refuses the
- *   loser and the duplicate is permanent rather than caught.
- *   {@link addCountryToBucketListFn} therefore re-reads its own write and
- *   collapses any rival entry for the same country onto one deterministic
- *   keeper - the lowest id, so both racers choose the same survivor and the
- *   loser's delete is a harmless no-op. A unique index would be cheaper and
- *   belongs in the schema; it is not this module's to add.
- * - The two undo paths converge the easy way: a row that has gone between this
- *   request's read and its delete is the state the caller asked for, so
- *   {@link alreadyGone} lets it pass. That never softens a refusal that meant
- *   "not yours" - ownership is proved before the delete is attempted, and a
- *   stranger's id is refused before any write is reached at all.
- *
- * ## Continent
- *
- * The continent is resolved from the country code by `#/lib/atlas/continents`,
- * server-side, and is never accepted from the client. The atlas summary groups on
- * that column in SQL, so a blank or misspelled value becomes a nameless cell in
- * the panel's roll-up with a real count in it.
+ * Atlas country and region boundaries. Every handler derives the acting traveller
+ * from appScope; id-addressed removals prove ownership through that traveller's rows.
+ * Country toggles remain idempotent. Region names resolve against own rows before
+ * hashing; unique-index races re-read by country and code without exposing SQL.
+ * The region ceiling is a noisy-neighbour guard, translated through withQuotaBoundary.
+ * Region writes enqueue all-time statistics once per changed call; queue failures
+ * are logged by the producer. A new region plus country cascade costs 8-9 D1 statements.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { continentOf } from '#/lib/atlas/continents'
-import { countryName } from '#/lib/atlas/country-names'
+import { foldPlaceName, placeNameSchema } from '#/lib/atlas/place-name'
+import { COUNTRY_NAMES, countryName } from '#/lib/atlas/country-names'
 import {
   affectedStatYears,
   requestTravelStatsRecompute,
@@ -94,6 +24,10 @@ import {
   deleteBucketListItem,
   listBucketList,
   listVisitedCountries,
+  listVisitedRegions,
+  recordRegionVisit,
+  regionCodeFor,
+  unmarkRegionVisited,
   markCountryVisited,
   isUniqueConstraintViolation,
   unmarkCountryVisited,
@@ -266,13 +200,15 @@ async function withQuotaBoundary<TResult>(
  * asked for. Only ever wrapped around a delete whose ownership has already been
  * proved, so nothing here can swallow a refusal that meant "not yours".
  */
-async function alreadyGone(remove: () => Promise<void>): Promise<void> {
+async function alreadyGone(remove: () => Promise<void>): Promise<boolean> {
   try {
     await remove()
+    return true
   } catch (cause) {
     if (!(cause instanceof NotFoundError)) {
       throw cause
     }
+    return false
   }
 }
 
@@ -401,52 +337,56 @@ const MARK_VISITED_ATTEMPTS = 2
  * optimistically from {@link AtlasCountryState}, and the panel catches up on its
  * next read once the `travel-stats` envelopes have been consumed.
  */
+async function recordCountryVisit(
+  scope: TenantScope,
+  code: string,
+  options: { visitedOn?: string | null; note?: string | null } = {},
+): Promise<{ state: AtlasCountryState; created: boolean }> {
+  for (let attempt = 0; attempt < MARK_VISITED_ATTEMPTS; attempt += 1) {
+    const current = await atlasCountryState(scope, code)
+    if (current.visit !== null) {
+      return { state: current, created: false }
+    }
+
+    try {
+      const visit = await withQuotaBoundary(() =>
+        markCountryVisited(scope, {
+          countryCode: code,
+          continent: continentOf(code),
+          visitedOn: optionalText(options.visitedOn),
+          note: optionalText(options.note),
+        }),
+      )
+      return {
+        state: { ...current, visit: visitRecordOf(visit) },
+        created: true,
+      }
+    } catch (cause) {
+      if (!isUniqueConstraintViolation(cause)) {
+        throw cause
+      }
+      // A concurrent request holds the index. Its row is the truth; go round
+      // and read it back from D1 rather than answering from this one's memory.
+    }
+  }
+
+  throw new AtlasConflictError(code)
+}
+
 export const markCountryVisitedFn = createServerFn({ method: 'POST' })
   .validator(markCountryVisitedInputSchema)
   .handler(async ({ data }): Promise<AtlasCountryState> => {
     const scope = await appScope()
-    const code = data.countryCode
-
-    for (let attempt = 0; attempt < MARK_VISITED_ATTEMPTS; attempt += 1) {
-      const current = await atlasCountryState(scope, code)
-      if (current.visit !== null) {
-        return current
-      }
-
-      try {
-        const visit = await withQuotaBoundary(() =>
-          markCountryVisited(scope, {
-            countryCode: code,
-            continent: continentOf(code),
-            visitedOn: optionalText(data.visitedOn),
-            note: optionalText(data.note),
-          }),
-        )
-        // The acting traveller and nobody else: a visited country with no trip
-        // behind it moves only that person's roll-up, which is the one argument
-        // that separates this call from the trip fan-out's.
-        //
-        // Both years are worth sending. On the all-time row a visit moves
-        // `countryCount` and `byContinent`; on a year row it moves
-        // `byContinent` alone, because a year's country count is derived from
-        // that year's trips and not from the visited list.
-        await requestTravelStatsRecompute(
-          scope,
-          [scope.ctx.userId],
-          affectedStatYears(data.visitedOn),
-          { route: 'atlas' },
-        )
-        return { ...current, visit: visitRecordOf(visit) }
-      } catch (cause) {
-        if (!isUniqueConstraintViolation(cause)) {
-          throw cause
-        }
-        // A concurrent request holds the index. Its row is the truth; go round
-        // and read it back from D1 rather than answering from this one's memory.
-      }
+    const result = await recordCountryVisit(scope, data.countryCode, data)
+    if (result.created) {
+      await requestTravelStatsRecompute(
+        scope,
+        [scope.ctx.userId],
+        affectedStatYears(data.visitedOn),
+        { route: 'atlas' },
+      )
     }
-
-    throw new AtlasConflictError(code)
+    return result.state
   })
 
 /**
@@ -584,4 +524,108 @@ export const removeCountryFromBucketListFn = createServerFn({ method: 'POST' })
 
     await alreadyGone(() => deleteBucketListItem(scope, item.id))
     return atlasCountryState(scope, item.countryCode)
+  })
+
+/* ----------------------------------------------------------- visited regions */
+const knownCountryCodeSchema = countryCodeSchema.refine(
+  (code) => COUNTRY_NAMES[code] !== undefined,
+)
+export const loadCountryRegionsInputSchema = z.strictObject({
+  countryCode: knownCountryCodeSchema,
+})
+export const markRegionVisitedInputSchema = z.strictObject({
+  countryCode: knownCountryCodeSchema,
+  regionName: placeNameSchema(120),
+})
+export const unmarkRegionVisitedInputSchema = z.strictObject({
+  regionId: rowIdSchema,
+})
+
+export interface AtlasRegionsState {
+  readonly regions: Array<{ id: string; name: string }>
+  readonly total: number
+}
+
+async function countryRegions(
+  scope: TenantScope,
+  code: string,
+): Promise<AtlasRegionsState> {
+  const rows = await listVisitedRegions(scope, scope.ctx.userId)
+  return {
+    regions: rows
+      .filter((row) => row.countryCode === code)
+      .map((row) => ({ id: row.id, name: row.regionName })),
+    total: rows.length,
+  }
+}
+
+export const loadCountryRegionsFn = createServerFn({ method: 'GET' })
+  .validator(loadCountryRegionsInputSchema)
+  .handler(async ({ data }): Promise<AtlasRegionsState> =>
+    countryRegions(await appScope(), data.countryCode),
+  )
+
+export const markRegionVisitedFn = createServerFn({ method: 'POST' })
+  .validator(markRegionVisitedInputSchema)
+  .handler(async ({ data }) => {
+    const scope = await appScope()
+    const code = data.countryCode
+    const own = await listVisitedRegions(scope, scope.ctx.userId)
+    const folded = foldPlaceName(data.regionName)
+    let existing = own.find(
+      (row) =>
+        row.countryCode === code && foldPlaceName(row.regionName) === folded,
+    )
+    let created = false
+    if (!existing) {
+      const regionCode = await regionCodeFor(code, data.regionName)
+      for (let attempt = 0; attempt < MARK_VISITED_ATTEMPTS; attempt += 1) {
+        try {
+          const result = await withQuotaBoundary(() =>
+            recordRegionVisit(scope, {
+              countryCode: code,
+              regionCode,
+              regionName: data.regionName,
+            }),
+          )
+          existing = result.row
+          created = result.created
+          break
+        } catch (cause) {
+          if (!isUniqueConstraintViolation(cause)) throw cause
+          existing = (await listVisitedRegions(scope, scope.ctx.userId)).find(
+            (row) => row.countryCode === code && row.regionCode === regionCode,
+          )
+          if (existing) break
+        }
+      }
+      if (!existing) throw new AtlasConflictError(code)
+    }
+    const country = await recordCountryVisit(scope, code)
+    if (created || country.created) {
+      await requestTravelStatsRecompute(scope, [scope.ctx.userId], [0], {
+        route: 'atlas',
+      })
+    }
+    return {
+      ...(await countryRegions(scope, code)),
+      country: country.state,
+      countryCreated: country.created,
+      created,
+    }
+  })
+
+export const unmarkRegionVisitedFn = createServerFn({ method: 'POST' })
+  .validator(unmarkRegionVisitedInputSchema)
+  .handler(async ({ data }): Promise<AtlasRegionsState> => {
+    const scope = await appScope()
+    const own = await listVisitedRegions(scope, scope.ctx.userId)
+    const row = own.find((item) => item.id === data.regionId)
+    if (!row) throw new NotFoundError('visited region', data.regionId)
+    const removed = await alreadyGone(() => unmarkRegionVisited(scope, row.id))
+    if (removed)
+      await requestTravelStatsRecompute(scope, [scope.ctx.userId], [0], {
+        route: 'atlas',
+      })
+    return countryRegions(scope, row.countryCode)
   })

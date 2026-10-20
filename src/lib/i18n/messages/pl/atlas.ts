@@ -395,6 +395,43 @@ const messages = {
   'card.error.body': 'Te liczby się nie wczytały. Nic nie przepadło.',
   'card.error.retry': 'Spróbuj ponownie',
   'overlay.close': 'Zamknij {name}',
+  'regions.label': 'Regiony',
+  'regions.hint': 'Dodanie regionu oznacza też {country} jako odwiedzony kraj.',
+  'regions.keeps':
+    'Usunięcie regionu nie usuwa kraju {country} z Twojego atlasu.',
+  'regions.keeps.unvisited':
+    'Te regiony pozostają w Twoich zapisach. Oznacz {country} jako odwiedzony kraj lub dodaj region, aby przywrócić go na mapie.',
+  'regions.empty.title': 'Nie zapisano tu jeszcze regionów',
+  'regions.empty.body':
+    'Dodaj stan, prowincję lub obszar odwiedzony w kraju {country}.',
+  'regions.input.label': 'Dodaj region w kraju {country}',
+  'regions.input.placeholder': 'Na przykład Bawaria',
+  'regions.add': 'Dodaj region',
+  'regions.adding': 'Dodawanie: {region}',
+  'regions.remove': 'Usuń {region}',
+  'regions.loading': 'Wczytywanie Twoich regionów',
+  'regions.status.added': 'Dodano {region}',
+  'regions.status.exists': '{region} jest już w Twoich zapisach',
+  'regions.status.removed': 'Usunięto {region}',
+  'regions.status.addedCountry':
+    'Dodano {region}. Kraj {country} jest teraz oznaczony jako odwiedzony.',
+  'regions.error.invalid': 'Wpisz nazwę regionu.',
+  'regions.error.hidden':
+    'Nazwa zawiera niedozwolone znaki. Usuń je i spróbuj ponownie.',
+  'regions.error.load':
+    'Nie udało się wczytać Twoich regionów w kraju {country}.',
+  'regions.error.add': 'Nie udało się dodać {region}. Spróbuj ponownie.',
+  'regions.error.remove': 'Nie udało się usunąć {region}. Spróbuj ponownie.',
+  'regions.error.full':
+    'Zapisano już {limit} regionów. Usuń jeden, aby dodać kolejny.',
+  'regions.reload': 'Wczytaj regiony ponownie',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Regiony zapisane w kraju {country} pozostaną w Twoich zapisach: {count}.',
+    few: '{history}Regiony zapisane w kraju {country} pozostaną w Twoich zapisach: {count}.',
+    many: '{history}Regiony zapisane w kraju {country} pozostaną w Twoich zapisach: {count}.',
+    other:
+      '{history}Regiony zapisane w kraju {country} pozostaną w Twoich zapisach: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

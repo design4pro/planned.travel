@@ -311,6 +311,33 @@ const messages = {
   'card.error.body': '這些數字沒有載入。什麼都沒有遺失。',
   'card.error.retry': '再試一次',
   'overlay.close': '關閉 {name}',
+  'regions.label': '地區',
+  'regions.hint': '新增地區也會將{country}標記為已造訪。',
+  'regions.keeps': '移除地區不會從你的地圖集中移除{country}。',
+  'regions.keeps.unvisited':
+    '這些地區會保留在記錄中。將{country}標記為已造訪或新增地區，即可在地圖上重新顯示該國。',
+  'regions.empty.title': '尚未記錄任何地區',
+  'regions.empty.body': '新增你在{country}造訪過的州、省或地區。',
+  'regions.input.label': '新增{country}的地區',
+  'regions.input.placeholder': '例如：巴伐利亞',
+  'regions.add': '新增地區',
+  'regions.adding': '正在新增{region}',
+  'regions.remove': '移除{region}',
+  'regions.loading': '正在載入你的地區',
+  'regions.status.added': '已新增{region}',
+  'regions.status.exists': '{region}已在記錄中',
+  'regions.status.removed': '已移除{region}',
+  'regions.status.addedCountry': '已新增{region}，{country}也已標記為已造訪。',
+  'regions.error.invalid': '請輸入地區名稱。',
+  'regions.error.hidden': '名稱包含不允許的字元。請移除後重試。',
+  'regions.error.load': '無法載入你在{country}的地區。',
+  'regions.error.add': '無法新增{region}，請重試。',
+  'regions.error.remove': '無法移除{region}，請重試。',
+  'regions.error.full': '你已記錄{limit}個地區。請先移除一個再新增其他地區。',
+  'regions.reload': '重新載入地區',
+  'actions.confirm.visitRegions.body': {
+    other: '{history}你在{country}記錄的{count}個地區將保留。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

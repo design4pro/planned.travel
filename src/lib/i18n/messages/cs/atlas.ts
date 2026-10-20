@@ -393,6 +393,42 @@ const messages = {
   'card.error.body': 'Tyto údaje se nenačetly. Nic se neztratilo.',
   'card.error.retry': 'Zkusit znovu',
   'overlay.close': 'Zavřít {name}',
+  'regions.label': 'Regiony',
+  'regions.hint':
+    'Přidání regionu označí také {country} jako navštívenou zemi.',
+  'regions.keeps': 'Odstranění regionu neodebere {country} z tvého atlasu.',
+  'regions.keeps.unvisited':
+    'Tyto regiony zůstanou uložené. Označ {country} jako navštívenou zemi nebo přidej region a vrať ji na mapu.',
+  'regions.empty.title': 'Zatím zde nejsou zaznamenané regiony',
+  'regions.empty.body':
+    'Přidej stát, provincii nebo oblast navštívenou v zemi {country}.',
+  'regions.input.label': 'Přidat region v zemi {country}',
+  'regions.input.placeholder': 'Například Bavorsko',
+  'regions.add': 'Přidat region',
+  'regions.adding': 'Přidávání: {region}',
+  'regions.remove': 'Odstranit {region}',
+  'regions.loading': 'Načítání tvých regionů',
+  'regions.status.added': 'Přidáno: {region}',
+  'regions.status.exists': '{region} už je zaznamenán',
+  'regions.status.removed': 'Odstraněno: {region}',
+  'regions.status.addedCountry':
+    'Přidáno: {region}. Země {country} je nyní označená jako navštívená.',
+  'regions.error.invalid': 'Zadej název regionu.',
+  'regions.error.hidden':
+    'Název obsahuje nepovolené znaky. Odstraň je a zkus to znovu.',
+  'regions.error.load': 'Nepodařilo se načíst tvé regiony pro {country}.',
+  'regions.error.add': 'Nepodařilo se přidat {region}. Zkus to znovu.',
+  'regions.error.remove': 'Nepodařilo se odstranit {region}. Zkus to znovu.',
+  'regions.error.full':
+    'Máš zaznamenáno {limit} regionů. Před přidáním dalšího jeden odstraň.',
+  'regions.reload': 'Znovu načíst regiony',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Regiony zaznamenané v zemi {country} zůstanou uložené: {count}.',
+    few: '{history}Regiony zaznamenané v zemi {country} zůstanou uložené: {count}.',
+    many: '{history}Regiony zaznamenané v zemi {country} zůstanou uložené: {count}.',
+    other:
+      '{history}Regiony zaznamenané v zemi {country} zůstanou uložené: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

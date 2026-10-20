@@ -20,6 +20,7 @@ import { cn } from '#/lib/cn'
 import { countryName } from '#/lib/atlas/country-names'
 import { visitSpan } from '#/lib/atlas/visit-span'
 import { formatNumber } from '#/lib/format'
+import { RegionRecord } from './region-record'
 import { visitLine } from './visit-copy'
 import {
   addCountryToBucketListFn,
@@ -749,6 +750,25 @@ export const CountryActions = React.forwardRef<
     const rowId = React.useId()
     const code = countryCode.trim().toUpperCase()
     const name = countryName(code)
+    const [regionState, setRegionState] = React.useState<{
+      code: string
+      count: number
+    }>({ code, count: 0 })
+    const [regionWrite, setRegionWrite] = React.useState<{
+      code: string
+      pending: boolean
+    }>({ code, pending: false })
+    const regionCount = regionState.code === code ? regionState.count : 0
+    const regionPending = regionWrite.code === code && regionWrite.pending
+    const onRegionCount = React.useCallback(
+      (count: number) => setRegionState({ code, count }),
+      [code],
+    )
+    const onRegionPending = React.useCallback(
+      (pending: boolean) => setRegionWrite({ code, pending }),
+      [code],
+    )
+
     const [confirm, setConfirm] = React.useState<ConfirmRequest | null>(null)
     const messageRef = React.useRef<HTMLParagraphElement | null>(null)
     const visitRef = React.useRef<HTMLButtonElement | null>(null)
@@ -1011,10 +1031,19 @@ export const CountryActions = React.forwardRef<
         runMark()
         return
       }
-      if (visit !== null && hasVisitHistory(visit)) {
+      if (visit !== null && (hasVisitHistory(visit) || regionCount > 0)) {
         setConfirm({
           title: t('atlas.actions.confirm.visit.title', { name }),
-          description: visitLossLine(visit, t, locale),
+          description:
+            regionCount > 0
+              ? t('atlas.actions.confirm.visitRegions.body', {
+                  count: regionCount,
+                  country: name,
+                  history: hasVisitHistory(visit)
+                    ? `${visitLossLine(visit, t, locale)} `
+                    : '',
+                })
+              : visitLossLine(visit, t, locale),
           confirmLabel: t('atlas.actions.button.remove'),
           onConfirm: runUnmark,
         })
@@ -1105,7 +1134,7 @@ export const CountryActions = React.forwardRef<
               }
               loading={visitBusy}
               loadingLabel={visitAction.busyName}
-              disabled={goalPending}
+              disabled={goalPending || regionPending}
               aria-label={
                 visitBusy ? visitAction.busyName : visitAction.restName
               }
@@ -1145,7 +1174,7 @@ export const CountryActions = React.forwardRef<
               icon={goalAction.intent === 'remove' ? <CircleMinus /> : <Plus />}
               loading={goalBusy}
               loadingLabel={goalAction.busyName}
-              disabled={visitPending}
+              disabled={visitPending || regionPending}
               aria-label={goalBusy ? goalAction.busyName : goalAction.restName}
               onClick={onGoalPress}
               className={layout.action}
@@ -1189,6 +1218,16 @@ export const CountryActions = React.forwardRef<
             </>
           )}
         </p>
+
+        <RegionRecord
+          key={code}
+          countryCode={code}
+          visited={visited}
+          headingLevel={headingLevel}
+          disabled={busy}
+          onCountChange={onRegionCount}
+          onPendingChange={onRegionPending}
+        />
 
         <ConfirmDialog
           request={confirm}

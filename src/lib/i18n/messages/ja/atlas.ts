@@ -322,6 +322,37 @@ const messages = {
     'この数字は読み込めませんでした。失われたものはありません。',
   'card.error.retry': 'もう一度試す',
   'overlay.close': '{name}を閉じる',
+  'regions.label': '地域',
+  'regions.hint': '地域を追加すると、{country}も訪問済みになります。',
+  'regions.keeps': '地域を削除しても、{country}はアトラスから削除されません。',
+  'regions.keeps.unvisited':
+    'これらの地域は記録に残ります。{country}を訪問済みにするか地域を追加すると、地図に再び表示されます。',
+  'regions.empty.title': 'まだ地域が記録されていません',
+  'regions.empty.body': '{country}で訪れた州、県、地域を追加しましょう。',
+  'regions.input.label': '{country}の地域を追加',
+  'regions.input.placeholder': '例：バイエルン',
+  'regions.add': '地域を追加',
+  'regions.adding': '{region}を追加中',
+  'regions.remove': '{region}を削除',
+  'regions.loading': '地域を読み込み中',
+  'regions.status.added': '{region}を追加しました',
+  'regions.status.exists': '{region}はすでに記録されています',
+  'regions.status.removed': '{region}を削除しました',
+  'regions.status.addedCountry':
+    '{region}を追加しました。{country}も訪問済みになりました。',
+  'regions.error.invalid': '地域名を入力してください。',
+  'regions.error.hidden':
+    '使用できない文字が含まれています。削除して再試行してください。',
+  'regions.error.load': '{country}の地域を読み込めませんでした。',
+  'regions.error.add': '{region}を追加できませんでした。再試行してください。',
+  'regions.error.remove':
+    '{region}を削除できませんでした。再試行してください。',
+  'regions.error.full':
+    'すでに{limit}地域を記録しています。別の地域を追加するには1つ削除してください。',
+  'regions.reload': '地域を再読み込み',
+  'actions.confirm.visitRegions.body': {
+    other: '{history}{country}で記録した{count}地域は記録に残ります。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -30,6 +30,9 @@ const atlas = vi.hoisted(() => ({
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
 vi.mock('#/server/fns/atlas', () => ({
+  loadCountryRegionsFn: vi.fn().mockResolvedValue({ regions: [], total: 0 }),
+  markRegionVisitedFn: vi.fn(),
+  unmarkRegionVisitedFn: vi.fn(),
   markCountryVisitedFn: atlas.mark,
   unmarkCountryVisitedFn: atlas.unmark,
   addCountryToBucketListFn: atlas.add,
@@ -1202,5 +1205,32 @@ describe('the motion under the rows', () => {
     expect(line?.className).not.toContain('animate-pop-out')
     // Pinned flat for a reader who asked for no motion.
     expect(line?.getAttribute('data-motion-transform')).toBe('')
+  })
+})
+
+describe('country regions', () => {
+  it('asks before unmarking a country with regions even without visit history', async () => {
+    const api = await import('#/server/fns/atlas')
+    vi.mocked(api.loadCountryRegionsFn).mockResolvedValueOnce({
+      regions: [{ id: 'one', name: 'Brittany' }],
+      total: 1,
+    })
+    block({
+      visit: {
+        firstVisitedOn: null,
+        lastVisitedOn: null,
+        visitCount: 1,
+        note: null,
+      },
+    })
+    await screen.findByRole('button', { name: 'Remove Brittany' })
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove France from your atlas' }),
+    )
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain(
+      '1 region you recorded in France stays on your record.',
+    )
+    expect(atlas.unmark).not.toHaveBeenCalled()
   })
 })

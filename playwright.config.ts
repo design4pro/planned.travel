@@ -134,8 +134,8 @@ export default defineConfig({
   // walk; the stay walk puts the project in its marker, so its two projects
   // never count each other's badges. `ACC-03` in `e2e/account-and-settings.spec.ts` is one more
   // writer: a Chromium-only serial walk that registers a passkey for the demo member through a
-  // virtual authenticator, takes it away through the delete dialog and, if it failed first, deletes it in its `finally`. `08-S1` in `e2e/product-modules.spec.ts` is another: a
-  // Chromium-only serial walk that sets the demo member's allowance and the leave plan's settings on `/vacay` and puts them back in its `finally`. The real contention is the auth rate
+  // virtual authenticator, takes it away through the delete dialog and, if it failed first, deletes it in its `finally`. `08-S1` and `08-S2a` in `e2e/product-modules.spec.ts` also write fixture state:
+  // Chromium-only serial walks that set the demo member's allowance and leave settings on `/vacay`, or add a region under a visited country on `/atlas`, and restore their changes in `finally`. The real contention is the auth rate
   // limiter's single per-path bucket, which `hasSession()` now asks once per worker.
   // One per CI shard, measured: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two

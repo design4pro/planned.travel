@@ -7534,3 +7534,87 @@ describe('tenant isolation', () => {
     })
   })
 })
+
+describe('visited region records across workspaces', () => {
+  it('scopes writes, reads, row removals and the ceiling to the target workspace', async () => {
+    const db = await createHarness()
+    try {
+      const a = await db.seedTenant('regions-a')
+      const b = await db.seedTenant('regions-b')
+      const {
+        listVisitedRegions,
+        recordRegionVisit,
+        regionCodeFor,
+        unmarkRegionVisited,
+      } = await import('../atlas')
+      const bCountry = await markCountryVisited(b.scope, { countryCode: 'DE' })
+      const bRow = await markRegionVisited(b.scope, {
+        countryCode: 'DE',
+        regionCode: 'DE-BY',
+        regionName: 'Bavaria',
+      })
+      const aCode = await regionCodeFor('DE', 'Bavaria')
+      expect(aCode).toBe(await regionCodeFor('DE', ' BÁVARIA '))
+      expect(aCode).not.toBe(await regionCodeFor('FR', 'Bavaria'))
+      const written = await recordRegionVisit(a.scope, {
+        countryCode: 'DE',
+        regionCode: aCode,
+        regionName: 'Bavaria',
+      })
+      expect(written.created).toBe(true)
+      expect(
+        (
+          await recordRegionVisit(a.scope, {
+            countryCode: 'DE',
+            regionCode: aCode,
+            regionName: 'Bavaria',
+          })
+        ).created,
+      ).toBe(false)
+      expect(await listVisitedRegions(b.scope, a.ownerUserId)).toEqual([])
+      await expect(
+        visitedRegionsRepository.requireById(b.scope, written.row.id),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      await expect(
+        unmarkRegionVisited(a.scope, bRow.id),
+      ).rejects.toBeInstanceOf(NotFoundError)
+      expect(
+        (await visitedCountriesRepository.requireById(b.scope, bCountry.id))
+          .visitCount,
+      ).toBe(1)
+      expect(
+        await visitedRegionsRepository.requireById(b.scope, bRow.id),
+      ).toMatchObject({ regionName: 'Bavaria' })
+      for (let i = 1; i < 1000; i += 1) {
+        await visitedRegionsRepository.insert(b.scope, {
+          userId: b.ownerUserId,
+          countryCode: 'DE',
+          regionCode: `DE-${i}`,
+          regionName: `Region ${i}`,
+        })
+      }
+      await expect(
+        markRegionVisited(b.scope, {
+          countryCode: 'FR',
+          regionCode: 'FR-new',
+          regionName: 'New',
+        }),
+      ).rejects.toMatchObject({
+        metric: 'visited_regions_per_traveller',
+        limit: 1000,
+        current: 1000,
+      })
+      await markRegionVisited(a.scope, {
+        countryCode: 'FR',
+        regionCode: 'FR-new',
+        regionName: 'New',
+      })
+      expect(await listVisitedRegions(a.scope, a.ownerUserId)).toHaveLength(2)
+      expect(await listVisitedRegions(b.scope, b.ownerUserId)).toHaveLength(
+        1000,
+      )
+    } finally {
+      db.close()
+    }
+  })
+})

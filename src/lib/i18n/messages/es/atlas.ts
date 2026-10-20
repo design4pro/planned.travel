@@ -372,6 +372,40 @@ const messages = {
   'card.error.body': 'Estas cifras no se cargaron. No se ha perdido nada.',
   'card.error.retry': 'Reintentar',
   'overlay.close': 'Cerrar {name}',
+  'regions.label': 'Regiones',
+  'regions.hint': 'Añadir una región también marca {country} como visitado.',
+  'regions.keeps': 'Eliminar una región no quita {country} de tu atlas.',
+  'regions.keeps.unvisited':
+    'Estas regiones siguen guardadas. Marca {country} como visitado o añade una región para devolverlo al mapa.',
+  'regions.empty.title': 'Aún no hay regiones registradas aquí',
+  'regions.empty.body':
+    'Añade un estado, provincia o zona que hayas visitado en {country}.',
+  'regions.input.label': 'Añadir una región en {country}',
+  'regions.input.placeholder': 'Por ejemplo, Baviera',
+  'regions.add': 'Añadir región',
+  'regions.adding': 'Añadiendo {region}',
+  'regions.remove': 'Eliminar {region}',
+  'regions.loading': 'Cargando tus regiones',
+  'regions.status.added': 'Se añadió {region}',
+  'regions.status.exists': '{region} ya está registrado',
+  'regions.status.removed': 'Se eliminó {region}',
+  'regions.status.addedCountry':
+    'Se añadió {region}. {country} ahora está marcado como visitado.',
+  'regions.error.invalid': 'Escribe el nombre de una región.',
+  'regions.error.hidden':
+    'El nombre contiene caracteres no admitidos. Elimínalos e inténtalo de nuevo.',
+  'regions.error.load': 'No pudimos cargar tus regiones de {country}.',
+  'regions.error.add': 'No pudimos añadir {region}. Inténtalo de nuevo.',
+  'regions.error.remove': 'No pudimos eliminar {region}. Inténtalo de nuevo.',
+  'regions.error.full':
+    'Has registrado {limit} regiones. Elimina una para añadir otra.',
+  'regions.reload': 'Recargar regiones',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Las regiones registradas en {country} permanecen guardadas: {count}.',
+    many: '{history}Las regiones registradas en {country} permanecen guardadas: {count}.',
+    other:
+      '{history}Las regiones registradas en {country} permanecen guardadas: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

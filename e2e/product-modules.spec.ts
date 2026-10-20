@@ -604,3 +604,70 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(settingsDialog(page)).toHaveCount(0)
   })
 })
+
+/** Regions write only in Chromium; WebKit checks the same form without changing the shared fixture. */
+test.describe('08-S2a - a traveller records regions', () => {
+  test.setTimeout(120_000)
+  test.describe.configure({ mode: 'serial' })
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+  })
+  for (const theme of ['light', 'dark'] as const) {
+    test(`adds and removes a region in ${theme}`, async ({
+      page,
+      browserName,
+    }) => {
+      const route: RouteCase = {
+        name: 'atlas',
+        path: '/atlas',
+        ready: 'main',
+        map: true,
+      }
+      const watched = watchConsole(page, route)
+      await visit(page, route, theme)
+      await page.getByRole('button', { name: 'Find a country' }).click()
+      await page
+        .getByRole('combobox', { name: 'Find a country' })
+        .fill('France')
+      await page.getByRole('option', { name: 'France' }).first().click()
+      const regions = page.locator(
+        '[data-part="country-panel"] [data-part="country-panel-regions"]',
+      )
+      await expect(regions).toHaveCount(1)
+      const input = regions.getByRole('textbox', {
+        name: 'Add a region in France',
+      })
+      await expect(input).toBeEnabled()
+      if (browserName === 'chromium') {
+        const name = `Atlas journey ${theme}`
+        const remove = regions.getByRole('button', {
+          name: `Remove ${name}`,
+          exact: true,
+        })
+        await expect(remove).toHaveCount(0)
+        try {
+          await input.fill(name)
+          await input.press('Enter')
+          await expect(remove).toBeVisible()
+          await expect(input).toHaveValue('')
+          await expect(input).toBeFocused()
+          await page.reload()
+          await settle(page, route)
+          await page.getByRole('button', { name: 'Find a country' }).click()
+          await page
+            .getByRole('combobox', { name: 'Find a country' })
+            .fill('France')
+          await page.getByRole('option', { name: 'France' }).first().click()
+          await expect(remove).toBeVisible()
+        } finally {
+          if (await remove.count()) {
+            await remove.click()
+            await expect(remove).toHaveCount(0)
+          }
+        }
+      }
+      expect(watched().fatal).toEqual([])
+    })
+  }
+})

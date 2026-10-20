@@ -310,6 +310,33 @@ const messages = {
   'card.error.body': '这些数字没有加载出来。什么都没有丢。',
   'card.error.retry': '再试一次',
   'overlay.close': '关闭 {name}',
+  'regions.label': '地区',
+  'regions.hint': '添加地区也会将{country}标记为已到访。',
+  'regions.keeps': '移除地区不会从你的地图集中移除{country}。',
+  'regions.keeps.unvisited':
+    '这些地区会保留在记录中。将{country}标记为已到访或添加地区，即可在地图上重新显示该国。',
+  'regions.empty.title': '尚未记录任何地区',
+  'regions.empty.body': '添加你在{country}到访过的州、省或地区。',
+  'regions.input.label': '添加{country}的地区',
+  'regions.input.placeholder': '例如：巴伐利亚',
+  'regions.add': '添加地区',
+  'regions.adding': '正在添加{region}',
+  'regions.remove': '移除{region}',
+  'regions.loading': '正在加载你的地区',
+  'regions.status.added': '已添加{region}',
+  'regions.status.exists': '{region}已在记录中',
+  'regions.status.removed': '已移除{region}',
+  'regions.status.addedCountry': '已添加{region}，{country}也已标记为已到访。',
+  'regions.error.invalid': '请输入地区名称。',
+  'regions.error.hidden': '名称包含不允许的字符。请移除后重试。',
+  'regions.error.load': '无法加载你在{country}的地区。',
+  'regions.error.add': '无法添加{region}，请重试。',
+  'regions.error.remove': '无法移除{region}，请重试。',
+  'regions.error.full': '你已记录{limit}个地区。请先移除一个再添加其他地区。',
+  'regions.reload': '重新加载地区',
+  'actions.confirm.visitRegions.body': {
+    other: '{history}你在{country}记录的{count}个地区将保留。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

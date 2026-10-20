@@ -388,6 +388,44 @@ const messages = {
   'card.error.body': 'Эти цифры не загрузились. Ничего не потеряно.',
   'card.error.retry': 'Попробовать ещё раз',
   'overlay.close': 'Закрыть {name}',
+  'regions.label': 'Регионы',
+  'regions.hint':
+    'Добавление региона также отмечает страну {country} как посещённую.',
+  'regions.keeps':
+    'Удаление региона не убирает страну {country} из вашего атласа.',
+  'regions.keeps.unvisited':
+    'Эти регионы останутся в записях. Отметьте страну {country} как посещённую или добавьте регион, чтобы вернуть её на карту.',
+  'regions.empty.title': 'Здесь пока нет записанных регионов',
+  'regions.empty.body':
+    'Добавьте штат, провинцию или область, которую вы посетили в стране {country}.',
+  'regions.input.label': 'Добавить регион в стране {country}',
+  'regions.input.placeholder': 'Например, Бавария',
+  'regions.add': 'Добавить регион',
+  'regions.adding': 'Добавление: {region}',
+  'regions.remove': 'Удалить {region}',
+  'regions.loading': 'Загрузка ваших регионов',
+  'regions.status.added': 'Добавлено: {region}',
+  'regions.status.exists': '{region} уже есть в записях',
+  'regions.status.removed': 'Удалено: {region}',
+  'regions.status.addedCountry':
+    'Добавлено: {region}. Страна {country} теперь отмечена как посещённая.',
+  'regions.error.invalid': 'Введите название региона.',
+  'regions.error.hidden':
+    'В названии есть недопустимые символы. Удалите их и повторите попытку.',
+  'regions.error.load':
+    'Не удалось загрузить ваши регионы для страны {country}.',
+  'regions.error.add': 'Не удалось добавить {region}. Повторите попытку.',
+  'regions.error.remove': 'Не удалось удалить {region}. Повторите попытку.',
+  'regions.error.full':
+    'Вы записали {limit} регионов. Удалите один, чтобы добавить другой.',
+  'regions.reload': 'Загрузить регионы заново',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Записанные регионы в стране {country} останутся в записях: {count}.',
+    few: '{history}Записанные регионы в стране {country} останутся в записях: {count}.',
+    many: '{history}Записанные регионы в стране {country} останутся в записях: {count}.',
+    other:
+      '{history}Записанные регионы в стране {country} останутся в записях: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

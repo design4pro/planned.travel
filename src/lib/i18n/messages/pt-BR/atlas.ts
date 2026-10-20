@@ -369,6 +369,40 @@ const messages = {
   'card.error.body': 'Esses números não carregaram. Nada foi perdido.',
   'card.error.retry': 'Tentar de novo',
   'overlay.close': 'Fechar {name}',
+  'regions.label': 'Regiões',
+  'regions.hint': 'Adicionar uma região também marca {country} como visitado.',
+  'regions.keeps': 'Remover uma região não remove {country} do seu atlas.',
+  'regions.keeps.unvisited':
+    'Essas regiões continuam registradas. Marque {country} como visitado ou adicione uma região para colocá-lo de volta no mapa.',
+  'regions.empty.title': 'Nenhuma região registrada aqui ainda',
+  'regions.empty.body':
+    'Adicione um estado, província ou área que você visitou em {country}.',
+  'regions.input.label': 'Adicionar uma região em {country}',
+  'regions.input.placeholder': 'Por exemplo, Baviera',
+  'regions.add': 'Adicionar região',
+  'regions.adding': 'Adicionando {region}',
+  'regions.remove': 'Remover {region}',
+  'regions.loading': 'Carregando suas regiões',
+  'regions.status.added': '{region} adicionada',
+  'regions.status.exists': '{region} já está registrada',
+  'regions.status.removed': '{region} removida',
+  'regions.status.addedCountry':
+    '{region} adicionada. {country} agora está marcado como visitado.',
+  'regions.error.invalid': 'Digite o nome de uma região.',
+  'regions.error.hidden':
+    'O nome contém caracteres não permitidos. Remova-os e tente novamente.',
+  'regions.error.load': 'Não foi possível carregar suas regiões de {country}.',
+  'regions.error.add': 'Não foi possível adicionar {region}. Tente novamente.',
+  'regions.error.remove': 'Não foi possível remover {region}. Tente novamente.',
+  'regions.error.full':
+    'Você registrou {limit} regiões. Remova uma para adicionar outra.',
+  'regions.reload': 'Recarregar regiões',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}As regiões registradas em {country} continuam salvas: {count}.',
+    many: '{history}As regiões registradas em {country} continuam salvas: {count}.',
+    other:
+      '{history}As regiões registradas em {country} continuam salvas: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

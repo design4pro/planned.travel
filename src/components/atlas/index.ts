@@ -95,3 +95,6 @@ export type {
 
 export { COUNTRY_FRAME_DURATION, CountrySearch } from './country-search'
 export type { CountrySearchProps } from './country-search'
+
+export { RegionRecord } from './region-record'
+export type { RegionRecordProps } from './region-record'

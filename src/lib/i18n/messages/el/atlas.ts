@@ -354,6 +354,43 @@ const messages = {
   'card.error.body': 'Αυτά τα στοιχεία δεν φορτώθηκαν. Τίποτα δεν χάθηκε.',
   'card.error.retry': 'Δοκιμάστε ξανά',
   'overlay.close': 'Κλείσιμο {name}',
+  'regions.label': 'Περιφέρειες',
+  'regions.hint':
+    'Η προσθήκη μιας περιφέρειας σημειώνει και τη χώρα {country} ως επισκέψιμη.',
+  'regions.keeps':
+    'Η αφαίρεση μιας περιφέρειας δεν αφαιρεί τη χώρα {country} από τον άτλαντά σου.',
+  'regions.keeps.unvisited':
+    'Αυτές οι περιφέρειες παραμένουν. Σημείωσε τη χώρα {country} ως επισκεφθείσα ή πρόσθεσε μια περιφέρεια για να επιστρέψει στον χάρτη.',
+  'regions.empty.title': 'Δεν έχουν καταγραφεί περιφέρειες εδώ ακόμα',
+  'regions.empty.body':
+    'Πρόσθεσε μια πολιτεία, επαρχία ή περιοχή που επισκέφθηκες στη χώρα {country}.',
+  'regions.input.label': 'Προσθήκη περιφέρειας στη χώρα {country}',
+  'regions.input.placeholder': 'Για παράδειγμα, Βαυαρία',
+  'regions.add': 'Προσθήκη περιφέρειας',
+  'regions.adding': 'Προσθήκη: {region}',
+  'regions.remove': 'Αφαίρεση: {region}',
+  'regions.loading': 'Φόρτωση των περιφερειών σου',
+  'regions.status.added': 'Προστέθηκε: {region}',
+  'regions.status.exists': 'Η περιφέρεια {region} έχει ήδη καταγραφεί',
+  'regions.status.removed': 'Αφαιρέθηκε: {region}',
+  'regions.status.addedCountry':
+    'Προστέθηκε: {region}. Η χώρα {country} σημειώθηκε ως επισκεφθείσα.',
+  'regions.error.invalid': 'Γράψε ένα όνομα περιφέρειας.',
+  'regions.error.hidden':
+    'Το όνομα περιέχει μη αποδεκτούς χαρακτήρες. Αφαίρεσέ τους και δοκίμασε ξανά.',
+  'regions.error.load':
+    'Δεν ήταν δυνατή η φόρτωση των περιφερειών σου για τη χώρα {country}.',
+  'regions.error.add': 'Δεν ήταν δυνατή η προσθήκη: {region}. Δοκίμασε ξανά.',
+  'regions.error.remove':
+    'Δεν ήταν δυνατή η αφαίρεση: {region}. Δοκίμασε ξανά.',
+  'regions.error.full':
+    'Έχεις καταγράψει {limit} περιφέρειες. Αφαίρεσε μία για να προσθέσεις άλλη.',
+  'regions.reload': 'Επαναφόρτωση περιφερειών',
+  'actions.confirm.visitRegions.body': {
+    one: '{history}Οι περιφέρειες που κατέγραψες στη χώρα {country} παραμένουν: {count}.',
+    other:
+      '{history}Οι περιφέρειες που κατέγραψες στη χώρα {country} παραμένουν: {count}.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages
