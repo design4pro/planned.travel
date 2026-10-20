@@ -326,6 +326,12 @@ const messages = {
   'passkeyNotice.action': '패스키 관리',
   'passkeyNotice.recovery':
     '이 변경을 알지 못한다면 비밀번호를 변경하고 알 수 없는 세션을 종료하세요. 비밀번호를 재설정해도 패스키는 삭제되지 않습니다. 패스키를 검토하고 알 수 없는 패스키를 삭제하세요.',
+  'error.passwordAttemptsLocked.title': '비밀번호 확인이 잠겼습니다',
+  'error.passwordAttemptsLocked.detail':
+    '이 세션에서는 더 이상 비밀번호를 확인할 수 없습니다. 로그아웃한 후 다시 로그인하세요.',
+  'error.passwordResultUnknown.title': '보안 설정을 확인하세요',
+  'error.passwordResultUnknown.detail':
+    '변경 사항이 저장되었을 수 있습니다. 다시 로그인할 수 있을 때까지 이 세션을 유지하세요. 비밀번호를 변경했다면 새 비밀번호를 사용해 보세요. 백업 코드를 교체했다면 이전 코드는 더 이상 작동하지 않을 수 있습니다. 인증 앱이나 이미 로그인된 다른 세션을 사용하여 새 코드를 생성하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

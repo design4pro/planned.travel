@@ -399,6 +399,12 @@ const messages = {
   'passkeyNotice.action': 'Hozzáférési kulcsok kezelése',
   'passkeyNotice.recovery':
     'Ha nem ismered fel ezt a módosítást, változtasd meg a jelszavad, és zárd be az ismeretlen munkameneteket. A jelszó visszaállítása nem távolítja el a hozzáférési kulcsokat. Ellenőrizd őket, és távolítsd el az ismeretleneket.',
+  'error.passwordAttemptsLocked.title': 'A jelszó megerősítése zárolva',
+  'error.passwordAttemptsLocked.detail':
+    'Ebben a munkamenetben már nem erősítheted meg a jelszavad. Jelentkezz ki, majd jelentkezz be újra.',
+  'error.passwordResultUnknown.title': 'Ellenőrizd a biztonsági beállításokat',
+  'error.passwordResultUnknown.detail':
+    'A módosítás mentése megtörténhetett. Tartsd nyitva ezt a munkamenetet, amíg újra be nem tudsz jelentkezni. Ha jelszót módosítottál, próbáld az újat. Ha lecserélted a tartalék kódokat, a régiek már nem biztos, hogy működnek; a hitelesítő alkalmazásoddal vagy egy másik bejelentkezett munkamenetben hozz létre új kódokat.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

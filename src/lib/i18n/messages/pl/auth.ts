@@ -391,6 +391,12 @@ const messages = {
   'passkeyNotice.action': 'Zarządzaj kluczami dostępu',
   'passkeyNotice.recovery':
     'Jeśli nie rozpoznajesz tej zmiany, zmień hasło i zakończ nieznane sesje. Reset hasła nie usuwa kluczy dostępu. Przejrzyj je i usuń te, których nie rozpoznajesz.',
+  'error.passwordAttemptsLocked.title': 'Potwierdzanie hasła zablokowane',
+  'error.passwordAttemptsLocked.detail':
+    'Ta sesja nie może już potwierdzać hasła. Wyloguj się i zaloguj ponownie.',
+  'error.passwordResultUnknown.title': 'Sprawdź ustawienia zabezpieczeń',
+  'error.passwordResultUnknown.detail':
+    'Zmiana mogła zostać zapisana. Nie zamykaj tej sesji, dopóki nie upewnisz się, że możesz zalogować się ponownie. Jeśli zmieniono hasło, spróbuj nowego. Jeśli wymieniono kody zapasowe, stary zestaw może już nie działać; użyj aplikacji uwierzytelniającej lub innej zalogowanej sesji, aby wygenerować nowy zestaw.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

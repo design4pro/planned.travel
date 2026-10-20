@@ -1177,12 +1177,18 @@ describe('concurrent passkey removal notices', () => {
         { cookie },
       ),
     ])
-    expect(responses.some((response) => response.status === 200)).toBe(true)
     expect(
-      responses.every(
-        (response) => response.status === 200 || response.status === 404,
-      ),
-    ).toBe(true)
+      responses.filter((response) => response.status === 200),
+    ).toHaveLength(1)
+    for (const response of responses) {
+      if (response.status === 200) continue
+      expect([403, 404]).toContain(response.status)
+      if (response.status === 403) {
+        expect(await response.json()).toMatchObject({
+          code: 'PASSWORD_ATTEMPTS_LOCKED',
+        })
+      }
+    }
     expect(auth.passkeyCount(aliceId)).toBe(0)
     expect(shared.email).toHaveBeenCalledTimes(1)
     expect(shared.queue).toHaveBeenCalledTimes(1)

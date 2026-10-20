@@ -385,6 +385,13 @@ const messages = {
   'passkeyNotice.action': 'Hantera passnycklar',
   'passkeyNotice.recovery':
     'Om du inte känner igen ändringen, byt lösenord och avsluta okända sessioner. En lösenordsåterställning tar inte bort passnycklar. Granska dem och ta bort dem du inte känner igen.',
+  'error.passwordAttemptsLocked.title': 'Lösenordsbekräftelse låst',
+  'error.passwordAttemptsLocked.detail':
+    'Den här sessionen kan inte längre bekräfta ditt lösenord. Logga ut och logga in igen.',
+  'error.passwordResultUnknown.title':
+    'Kontrollera dina säkerhetsinställningar',
+  'error.passwordResultUnknown.detail':
+    'Ändringen kan ha sparats. Håll den här sessionen öppen tills du kan logga in igen. Om du ändrade lösenordet, prova det nya. Om du ersatte reservkoder kan den gamla uppsättningen ha slutat fungera; använd din autentiseringsapp eller en annan inloggad session för att skapa nya koder.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

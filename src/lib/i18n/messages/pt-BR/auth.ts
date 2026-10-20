@@ -392,6 +392,13 @@ const messages = {
   'passkeyNotice.action': 'Gerenciar chaves de acesso',
   'passkeyNotice.recovery':
     'Se você não reconhece esta alteração, mude sua senha e encerre as sessões desconhecidas. Redefinir a senha não remove as chaves de acesso. Revise suas chaves e remova as que não reconhece.',
+  'error.passwordAttemptsLocked.title': 'Confirmação de senha bloqueada',
+  'error.passwordAttemptsLocked.detail':
+    'Esta sessão não pode mais confirmar sua senha. Saia e entre novamente.',
+  'error.passwordResultUnknown.title':
+    'Confira suas configurações de segurança',
+  'error.passwordResultUnknown.detail':
+    'A alteração pode ter sido salva. Mantenha esta sessão aberta até conseguir entrar novamente. Se você alterou a senha, tente a nova. Se substituiu os códigos de backup, os antigos podem não funcionar mais; use seu autenticador ou outra sessão conectada para gerar um novo conjunto.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -401,6 +401,12 @@ const messages = {
   'passkeyNotice.action': 'Passkeys verwalten',
   'passkeyNotice.recovery':
     'Wenn du diese Änderung nicht erkennst, ändere dein Passwort und beende unbekannte Sitzungen. Ein Zurücksetzen des Passworts entfernt keine Passkeys. Prüfe deine Passkeys und entferne unbekannte.',
+  'error.passwordAttemptsLocked.title': 'Passwortbestätigung gesperrt',
+  'error.passwordAttemptsLocked.detail':
+    'Diese Sitzung kann dein Passwort nicht mehr bestätigen. Melde dich ab und erneut an.',
+  'error.passwordResultUnknown.title': 'Prüfe deine Sicherheitseinstellungen',
+  'error.passwordResultUnknown.detail':
+    'Die Änderung wurde möglicherweise gespeichert. Halte diese Sitzung offen, bis du dich wieder anmelden kannst. Falls du dein Passwort geändert hast, versuche das neue. Falls du Backup-Codes ersetzt hast, funktioniert der alte Satz möglicherweise nicht mehr; nutze deine Authenticator-App oder eine andere angemeldete Sitzung, um neue Codes zu erstellen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

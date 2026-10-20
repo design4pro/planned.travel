@@ -78,3 +78,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Backup code** - a one-use code for signing in when the authenticator app is unavailable. A set is shown once when two-factor authentication is enabled or the codes are replaced. Replacing a set invalidates the previous set. Use “backup code”; avoid “recovery code”.
 - **Travel statistics** — a traveller’s stored roll-up of trips they are on, shown in the Atlas Stats tab. The all-time view also reads their live visited regions, visits and continents; a year view counts countries on that year’s trips instead of their visited-country list.
 - **Stat year** — the calendar year of a travel-statistics row; `0` means all time. Trips, places, cities, days and trip countries follow the trip’s start year; distance follows each transport’s departure year. Only a year with a trip is a selectable period.
+
+- **Session password lock** - after five wrong passwords across password-confirming actions, that session cannot confirm a password again. Other sessions remain usable; sign out and sign in again to recover.

@@ -396,6 +396,12 @@ const messages = {
   'passkeyNotice.action': 'Gestionar claves de acceso',
   'passkeyNotice.recovery':
     'Si no reconoces este cambio, cambia tu contraseña y cierra las sesiones desconocidas. Restablecer la contraseña no elimina las claves de acceso. Revísalas y elimina las que no reconozcas.',
+  'error.passwordAttemptsLocked.title': 'Confirmación de contraseña bloqueada',
+  'error.passwordAttemptsLocked.detail':
+    'Esta sesión ya no puede confirmar tu contraseña. Cierra sesión y vuelve a iniciarla.',
+  'error.passwordResultUnknown.title': 'Revisa los ajustes de seguridad',
+  'error.passwordResultUnknown.detail':
+    'Es posible que el cambio se haya guardado. Mantén esta sesión abierta hasta que puedas volver a entrar. Si cambiaste la contraseña, prueba la nueva. Si reemplazaste los códigos de respaldo, los anteriores podrían no funcionar; usa tu autenticador u otra sesión abierta para generar un nuevo conjunto.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
