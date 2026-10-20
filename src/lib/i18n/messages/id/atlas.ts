@@ -25,6 +25,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Belum ada yang bisa dihitung',
+  'panel.stats.empty.body':
+    'Tandai negara di peta atau rencanakan perjalanan, dan angkamu akan mulai muncul di sini.',
+  'panel.stats.empty.action': 'Rencanakan perjalanan',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Peta dunia. Belum ada negara yang ditandai sebagai dikunjungi.',

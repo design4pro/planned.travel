@@ -83,7 +83,7 @@ and leaves every figure beside it frozen at its seeded value.
 | `ADD-07` | `08-S3`  | 1    | partial → done       |
 | `ADD-09` | `08-S4`  | 1    | partial → done       |
 | `ADD-03` | `08-S5`  | 2    | partial → done       |
-| `ADD-06` | `08-S6`  | 2    | partial → done       |
+| `ADD-06` | `08-S6`  | 2    | done                 |
 | `ADD-08` | `08-S7`  | 2    | absent → done        |
 | `ADD-04` | `08-S8`  | 3    | partial → done       |
 | `ADD-10` | `08-S9`  | 3    | absent → **partial** |
@@ -1834,12 +1834,14 @@ holiday manager:
 
 ## Stage 08-S6 — Statistics that move when the map does
 
-**Implementation contract:** [Atlas statistics spec](../../.ai/specs/2026-10-10-atlas-statistics-that-follow-the-trip.md)
+**Implementation contract:** [Atlas statistics spec](../../.ai/specs/implemented/2026-10-10-atlas-statistics-that-follow-the-trip.md)
 supersedes the original design below. #1119 keeps the roll-up current after place and transport writes;
 #1120 reads the existing `/atlas` year rows without `loadTravelStatsFn`, a new request, a stale marker
 or count-up motion. Figures belong to the traveller; distance is shown only above zero. The period
-control remains enabled during re-reads, and the stored all-time streak names its years. Empty and
-failed section states remain the following ticket's scope. The original server-function, labelling,
+control remains enabled during re-reads, and the stored all-time streak names its years. #1121 adds
+the empty state with a trips link. Its real-router test proves a failed re-read replaces the screen,
+so no Stats failed alert is built; country-card recovery is tracked by #1456. `ADD-06` is done.
+The original server-function, labelling,
 motion and verification proposals below are historical, not implementation instructions.
 
 ### Stage id

@@ -22,6 +22,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'Поки немає що рахувати',
+  'panel.stats.empty.body':
+    'Позначте країну на карті або заплануйте подорож, і тут з’являться ваші показники.',
+  'panel.stats.empty.action': 'Запланувати подорож',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Карта світу. Жодну країну ще не позначено як відвідану.',

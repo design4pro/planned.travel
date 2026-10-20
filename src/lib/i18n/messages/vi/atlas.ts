@@ -25,6 +25,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Chưa có gì để thống kê',
+  'panel.stats.empty.body':
+    'Đánh dấu một quốc gia trên bản đồ hoặc lên kế hoạch cho chuyến đi, các số liệu của bạn sẽ bắt đầu xuất hiện ở đây.',
+  'panel.stats.empty.action': 'Lên kế hoạch chuyến đi',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Bản đồ thế giới. Chưa có quốc gia nào được đánh dấu là đã tới.',

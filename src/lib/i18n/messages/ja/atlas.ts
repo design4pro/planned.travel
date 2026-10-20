@@ -21,6 +21,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'まだ集計するものがありません',
+  'panel.stats.empty.body':
+    '地図で国をマークするか旅行を計画すると、ここに数値が表示されます。',
+  'panel.stats.empty.action': '旅行を計画する',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': '世界地図。訪問済みの国はまだありません。',
   'screen.world.summary':
