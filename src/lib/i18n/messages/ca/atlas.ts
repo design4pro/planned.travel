@@ -408,6 +408,10 @@ const messages = {
     other:
       '{history}Les regions registrades a {country} queden desades: {count}.',
   },
+  'regions.error.uncertain':
+    'No hem pogut confirmar el canvi. Recarrega les regions per comprovar què s’ha desat.',
+  'regions.status.refreshFailed':
+    '{result} No s’ha pogut actualitzar l’atles. Recarrega’l per actualitzar el mapa.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

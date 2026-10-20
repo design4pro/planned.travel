@@ -750,6 +750,12 @@ export const CountryActions = React.forwardRef<
     const rowId = React.useId()
     const code = countryCode.trim().toUpperCase()
     const name = countryName(code)
+    const [regionCountry, setRegionCountry] =
+      React.useState<AtlasCountryState | null>(null)
+    const onRegionCountry = React.useCallback(
+      (state: AtlasCountryState) => setRegionCountry(state),
+      [],
+    )
     const [regionState, setRegionState] = React.useState<{
       code: string
       count: number
@@ -784,7 +790,16 @@ export const CountryActions = React.forwardRef<
     const overlay = useOptimistic<boolean>()
     const visitKey = `${code}:visit`
     const goalKey = `${code}:goal`
-    const visited = overlay.get(visitKey) ?? visit !== null
+    const effectiveVisit =
+      visit ??
+      (regionCountry?.countryCode === code ? regionCountry.visit : null)
+    React.useEffect(() => {
+      if (visit !== null && regionCountry !== null) setRegionCountry(null)
+    }, [visit, regionCountry])
+    const visited =
+      overlay.get(visitKey) ??
+      (visit !== null ||
+        (regionCountry?.countryCode === code && regionCountry.visit !== null))
     const listed = overlay.get(goalKey) ?? bucketGoal !== null
 
     /**
@@ -896,6 +911,7 @@ export const CountryActions = React.forwardRef<
       releaseVisit()
       releaseGoal()
       setHeldGoal(null)
+      setRegionCountry(null)
     }, [code, clearMessages, releaseVisit, releaseGoal])
 
     // The props are the record as soon as they carry one, so the answer that was
@@ -985,8 +1001,11 @@ export const CountryActions = React.forwardRef<
       clearMessages()
       pressedRef.current = 'visit'
       void overlay.claim([[visitKey, false]], () =>
-        commit(visitHold, false, () =>
-          unmark.run({ data: { countryCode: code } }),
+        commit(
+          visitHold,
+          false,
+          () => unmark.run({ data: { countryCode: code } }),
+          () => setRegionCountry(null),
         ),
       )
     }
@@ -1031,7 +1050,10 @@ export const CountryActions = React.forwardRef<
         runMark()
         return
       }
-      if (visit !== null && (hasVisitHistory(visit) || regionCount > 0)) {
+      if (
+        effectiveVisit !== null &&
+        (hasVisitHistory(effectiveVisit) || regionCount > 0)
+      ) {
         setConfirm({
           title: t('atlas.actions.confirm.visit.title', { name }),
           description:
@@ -1039,11 +1061,11 @@ export const CountryActions = React.forwardRef<
               ? t('atlas.actions.confirm.visitRegions.body', {
                   count: regionCount,
                   country: name,
-                  history: hasVisitHistory(visit)
-                    ? `${visitLossLine(visit, t, locale)} `
+                  history: hasVisitHistory(effectiveVisit)
+                    ? `${visitLossLine(effectiveVisit, t, locale)} `
                     : '',
                 })
-              : visitLossLine(visit, t, locale),
+              : visitLossLine(effectiveVisit, t, locale),
           confirmLabel: t('atlas.actions.button.remove'),
           onConfirm: runUnmark,
         })
@@ -1075,7 +1097,7 @@ export const CountryActions = React.forwardRef<
       runDropGoal(itemId)
     }
 
-    const visitText = visitCopy(visited, visit, t, locale)
+    const visitText = visitCopy(visited, effectiveVisit, t, locale)
     const goalText = goalCopy(listed, goalRow, t)
     const Heading = HEADINGS[headingLevel]
     const visitTitleId = `${rowId}-visit`
@@ -1227,6 +1249,7 @@ export const CountryActions = React.forwardRef<
           disabled={busy}
           onCountChange={onRegionCount}
           onPendingChange={onRegionPending}
+          onCountryChange={onRegionCountry}
         />
 
         <ConfirmDialog

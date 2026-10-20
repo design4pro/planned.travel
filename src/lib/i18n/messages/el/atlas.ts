@@ -391,6 +391,10 @@ const messages = {
     other:
       '{history}Οι περιφέρειες που κατέγραψες στη χώρα {country} παραμένουν: {count}.',
   },
+  'regions.error.uncertain':
+    'Δεν ήταν δυνατή η επιβεβαίωση της αλλαγής. Φόρτωσε ξανά τις περιφέρειες για να ελέγξεις τι αποθηκεύτηκε.',
+  'regions.status.refreshFailed':
+    '{result} Δεν ήταν δυνατή η ανανέωση του άτλαντα. Φόρτωσέ τον ξανά για να ενημερωθεί ο χάρτης.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

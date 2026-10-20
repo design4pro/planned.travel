@@ -432,6 +432,10 @@ const messages = {
     other:
       '{history}Regiony zapisane w kraju {country} pozostaną w Twoich zapisach: {count}.',
   },
+  'regions.error.uncertain':
+    'Nie udało się potwierdzić zmiany. Wczytaj regiony ponownie, aby sprawdzić, co zapisano.',
+  'regions.status.refreshFailed':
+    '{result} Nie udało się odświeżyć atlasu. Wczytaj go ponownie, aby zaktualizować mapę.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -337,6 +337,9 @@ const messages = {
   'actions.confirm.visitRegions.body': {
     other: '{history}你在{country}记录的{count}个地区将保留。',
   },
+  'regions.error.uncertain': '无法确认更改。请重新加载地区以检查已保存的内容。',
+  'regions.status.refreshFailed':
+    '{result} 无法刷新地图集。请重新加载以更新地图。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

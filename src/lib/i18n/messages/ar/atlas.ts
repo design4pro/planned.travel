@@ -453,6 +453,10 @@ const messages = {
     many: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
     other: '{history}تبقى المناطق التي سجلتها في {country} في سجلك: {count}.',
   },
+  'regions.error.uncertain':
+    'تعذر تأكيد التغيير. أعد تحميل مناطقك للتحقق مما تم حفظه.',
+  'regions.status.refreshFailed':
+    '{result} تعذر تحديث الأطلس. أعد تحميله لتحديث الخريطة.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

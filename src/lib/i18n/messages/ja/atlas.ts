@@ -353,6 +353,10 @@ const messages = {
   'actions.confirm.visitRegions.body': {
     other: '{history}{country}で記録した{count}地域は記録に残ります。',
   },
+  'regions.error.uncertain':
+    '変更を確認できませんでした。地域を再読み込みして保存内容を確認してください。',
+  'regions.status.refreshFailed':
+    '{result} アトラスを更新できませんでした。再読み込みして地図を更新してください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

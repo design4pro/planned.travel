@@ -426,6 +426,10 @@ const messages = {
     other:
       '{history}Записанные регионы в стране {country} останутся в записях: {count}.',
   },
+  'regions.error.uncertain':
+    'Не удалось подтвердить изменение. Загрузите регионы заново, чтобы проверить сохранённые данные.',
+  'regions.status.refreshFailed':
+    '{result} Не удалось обновить атлас. Загрузите его заново, чтобы обновить карту.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

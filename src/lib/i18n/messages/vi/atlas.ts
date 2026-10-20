@@ -351,6 +351,10 @@ const messages = {
   'actions.confirm.visitRegions.body': {
     other: '{history}Các vùng bạn ghi lại tại {country} vẫn được lưu: {count}.',
   },
+  'regions.error.uncertain':
+    'Không thể xác nhận thay đổi. Hãy tải lại các vùng để kiểm tra nội dung đã lưu.',
+  'regions.status.refreshFailed':
+    '{result} Không thể làm mới tập bản đồ. Hãy tải lại để cập nhật bản đồ.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

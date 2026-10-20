@@ -429,6 +429,10 @@ const messages = {
     other:
       '{history}Regiony zaznamenané v zemi {country} zůstanou uložené: {count}.',
   },
+  'regions.error.uncertain':
+    'Změnu se nepodařilo potvrdit. Načti regiony znovu a ověř, co se uložilo.',
+  'regions.status.refreshFailed':
+    '{result} Atlas se nepodařilo obnovit. Načti jej znovu, aby se mapa aktualizovala.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

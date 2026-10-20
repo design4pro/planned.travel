@@ -407,6 +407,10 @@ const messages = {
     other:
       '{history}Les régions enregistrées dans ce pays ({country}) restent dans vos données : {count}.',
   },
+  'regions.error.uncertain':
+    'La modification n’a pas pu être confirmée. Rechargez vos régions pour vérifier les données enregistrées.',
+  'regions.status.refreshFailed':
+    '{result} L’atlas n’a pas pu être actualisé. Rechargez-le pour mettre la carte à jour.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

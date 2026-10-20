@@ -541,8 +541,14 @@ export const unmarkRegionVisitedInputSchema = z.strictObject({
   regionId: rowIdSchema,
 })
 
+export interface AtlasRegion {
+  readonly id: string
+  readonly name: string
+}
+
 export interface AtlasRegionsState {
-  readonly regions: Array<{ id: string; name: string }>
+  readonly countryCode: string
+  readonly regions: Array<AtlasRegion>
   readonly total: number
 }
 
@@ -552,6 +558,7 @@ async function countryRegions(
 ): Promise<AtlasRegionsState> {
   const rows = await listVisitedRegions(scope, scope.ctx.userId)
   return {
+    countryCode: code,
     regions: rows
       .filter((row) => row.countryCode === code)
       .map((row) => ({ id: row.id, name: row.regionName })),
@@ -610,14 +617,14 @@ export const markRegionVisitedFn = createServerFn({ method: 'POST' })
     return {
       ...(await countryRegions(scope, code)),
       country: country.state,
-      countryCreated: country.created,
-      created,
+      countryRecorded: country.created,
+      status: created ? ('added' as const) : ('exists' as const),
     }
   })
 
 export const unmarkRegionVisitedFn = createServerFn({ method: 'POST' })
   .validator(unmarkRegionVisitedInputSchema)
-  .handler(async ({ data }): Promise<AtlasRegionsState> => {
+  .handler(async ({ data }) => {
     const scope = await appScope()
     const own = await listVisitedRegions(scope, scope.ctx.userId)
     const row = own.find((item) => item.id === data.regionId)
@@ -627,5 +634,8 @@ export const unmarkRegionVisitedFn = createServerFn({ method: 'POST' })
       await requestTravelStatsRecompute(scope, [scope.ctx.userId], [0], {
         route: 'atlas',
       })
-    return countryRegions(scope, row.countryCode)
+    return {
+      ...(await countryRegions(scope, row.countryCode)),
+      country: await atlasCountryState(scope, row.countryCode),
+    }
   })

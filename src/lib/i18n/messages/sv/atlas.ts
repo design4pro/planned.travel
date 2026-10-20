@@ -379,6 +379,10 @@ const messages = {
     other:
       '{history}Regionerna du registrerat i {country} finns kvar: {count}.',
   },
+  'regions.error.uncertain':
+    'Ändringen kunde inte bekräftas. Läs in dina regioner igen för att se vad som sparades.',
+  'regions.status.refreshFailed':
+    '{result} Atlasen kunde inte uppdateras. Läs in den igen för att uppdatera kartan.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

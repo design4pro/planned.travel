@@ -355,6 +355,10 @@ const messages = {
   'actions.confirm.visitRegions.body': {
     other: '{history}{country}에서 기록한 지역 {count}개는 기록에 남습니다.',
   },
+  'regions.error.uncertain':
+    '변경 사항을 확인하지 못했습니다. 지역을 다시 불러와 저장된 내용을 확인하세요.',
+  'regions.status.refreshFailed':
+    '{result} 아틀라스를 새로 고치지 못했습니다. 다시 불러와 지도를 업데이트하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1212,6 +1212,7 @@ describe('country regions', () => {
   it('asks before unmarking a country with regions even without visit history', async () => {
     const api = await import('#/server/fns/atlas')
     vi.mocked(api.loadCountryRegionsFn).mockResolvedValueOnce({
+      countryCode: 'FR',
       regions: [{ id: 'one', name: 'Brittany' }],
       total: 1,
     })
@@ -1233,4 +1234,29 @@ describe('country regions', () => {
     )
     expect(atlas.unmark).not.toHaveBeenCalled()
   })
+})
+
+it('keeps a confirmed country cascade actionable and confirmed when the loader refresh fails', async () => {
+  const api = await import('#/server/fns/atlas')
+  vi.mocked(api.markRegionVisitedFn).mockResolvedValueOnce({
+    countryCode: 'FR',
+    regions: [{ id: 'brittany', name: 'Brittany' }],
+    total: 1,
+    status: 'added',
+    countryRecorded: true,
+    country: { ...answer({ visit: { visitCount: 1 } }), continent: 'Europe' },
+  })
+  router.invalidate.mockRejectedValue(new Error('loader unavailable'))
+  block()
+  const input = await screen.findByLabelText('Add a region in France')
+  await userEvent.type(input, 'Brittany{Enter}')
+  await userEvent.click(
+    await screen.findByRole('button', {
+      name: 'Remove France from your atlas',
+    }),
+  )
+  const dialog = await screen.findByRole('dialog')
+  expect(dialog.textContent).toContain(
+    '1 region you recorded in France stays on your record.',
+  )
 })

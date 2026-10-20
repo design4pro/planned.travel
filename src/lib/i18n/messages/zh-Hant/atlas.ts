@@ -338,6 +338,9 @@ const messages = {
   'actions.confirm.visitRegions.body': {
     other: '{history}你在{country}記錄的{count}個地區將保留。',
   },
+  'regions.error.uncertain': '無法確認變更。請重新載入地區以檢查已儲存的內容。',
+  'regions.status.refreshFailed':
+    '{result} 無法重新整理地圖集。請重新載入以更新地圖。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

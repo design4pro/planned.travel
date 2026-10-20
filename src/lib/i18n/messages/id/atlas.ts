@@ -356,6 +356,10 @@ const messages = {
     other:
       '{history}Wilayah yang Anda catat di {country} tetap tersimpan: {count}.',
   },
+  'regions.error.uncertain':
+    'Perubahan tidak dapat dikonfirmasi. Muat ulang wilayah Anda untuk memeriksa apa yang tersimpan.',
+  'regions.status.refreshFailed':
+    '{result} Atlas tidak dapat diperbarui. Muat ulang untuk memperbarui peta.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

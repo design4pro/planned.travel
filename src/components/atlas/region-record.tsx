@@ -1,10 +1,5 @@
 import * as React from 'react'
-import {
-  AnimatePresence,
-  motion,
-  useIsPresent,
-  useReducedMotion,
-} from 'motion/react'
+import { useRouter } from '@tanstack/react-router'
 import { X } from 'lucide-react'
 import {
   Button,
@@ -28,7 +23,7 @@ import {
   markRegionVisitedFn,
   unmarkRegionVisitedFn,
 } from '#/server/fns/atlas'
-import type { AtlasRegionsState } from '#/server/fns/atlas'
+import type { AtlasCountryState, AtlasRegionsState } from '#/server/fns/atlas'
 
 export interface RegionRecordProps {
   readonly countryCode: string
@@ -37,24 +32,40 @@ export interface RegionRecordProps {
   readonly disabled: boolean
   readonly onCountChange: (count: number) => void
   readonly onPendingChange: (pending: boolean) => void
+  readonly onCountryChange?: (country: AtlasCountryState) => void
 }
 
-function RegionRow({ children }: { children: React.ReactNode }) {
-  const present = useIsPresent()
-  const reduced = useReducedMotion()
+function RegionRow({
+  children,
+  exiting,
+}: {
+  children: React.ReactNode
+  exiting: boolean
+}) {
+  const [gone, setGone] = React.useState(false)
+  React.useEffect(() => {
+    if (!exiting) {
+      setGone(false)
+      return
+    }
+    const timer = window.setTimeout(() => setGone(true), 150)
+    return () => window.clearTimeout(timer)
+  }, [exiting])
+  if (exiting && gone) return null
   return (
-    <motion.li
-      inert={!present}
-      initial={{ opacity: 0, y: reduced ? 0 : 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: reduced ? 0 : 4 }}
-      transition={{ duration: present ? 0.18 : 0.15, ease: [0.22, 1, 0.36, 1] }}
+    <li
+      inert={exiting}
+      data-motion-transform=""
+      style={{ animationDuration: '180ms' }}
       className={cn(
-        'flex min-h-11 items-center justify-between gap-2 px-2 text-caption',
+        'flex min-h-11 items-center justify-between gap-2 px-2 text-caption transition-[opacity,transform] duration-150 ease-out-quint',
+        exiting
+          ? 'translate-y-1 opacity-0 motion-reduce:translate-y-0'
+          : 'animate-rise motion-reduce:animate-none',
       )}
     >
       {children}
-    </motion.li>
+    </li>
   )
 }
 
@@ -66,19 +77,25 @@ export function RegionRecord({
   disabled,
   onCountChange,
   onPendingChange,
+  onCountryChange,
 }: RegionRecordProps) {
   const { t } = useAtlasI18n()
+  const router = useRouter()
+  const instance = React.useId()
+  const loadRevision = React.useRef(0)
   const country = countryName(countryCode)
   // Router invalidation replaces catalogue objects; that must not reload the
   // section and disable the input just as an add restores focus.
   const copyRef = React.useRef(t)
   copyRef.current = t
   const [state, setState] = React.useState<AtlasRegionsState>({
+    countryCode,
     regions: [],
     total: 0,
   })
   const [loading, setLoading] = React.useState(true)
   const [loadFailed, setLoadFailed] = React.useState(false)
+  const [refreshFailed, setRefreshFailed] = React.useState(false)
   const [name, setName] = React.useState('')
   const [fieldError, setFieldError] = React.useState<string | null>(null)
   const [status, setStatus] = React.useState('')
@@ -97,19 +114,23 @@ export function RegionRecord({
   }, [])
 
   const load = React.useCallback(
-    async (restoreFocus = false) => {
-      setLoading(true)
-      setLoadFailed(false)
-      setStatus(copyRef.current('atlas.regions.loading'))
+    async (restoreFocus = false, background = false) => {
+      const revision = ++loadRevision.current
+      if (!background) {
+        setLoading(true)
+        setLoadFailed(false)
+        setStatus(copyRef.current('atlas.regions.loading'))
+      }
       try {
         const result = await loadCountryRegionsFn({ data: { countryCode } })
-        if (!alive.current) return
+        if (!alive.current || revision !== loadRevision.current) return
         setState(result)
         onCountChange(result.regions.length)
-        setStatus('')
+        setLoadFailed(false)
+        if (!background) setStatus('')
         if (restoreFocus) requestAnimationFrame(() => input.current?.focus())
       } catch {
-        if (alive.current) {
+        if (alive.current && revision === loadRevision.current) {
           setLoadFailed(true)
           setStatus(
             copyRef.current('atlas.regions.error.load', {
@@ -118,7 +139,8 @@ export function RegionRecord({
           )
         }
       } finally {
-        if (alive.current) setLoading(false)
+        if (alive.current && revision === loadRevision.current)
+          setLoading(false)
       }
     },
     [countryCode, onCountChange],
@@ -127,50 +149,110 @@ export function RegionRecord({
     void load()
   }, [load])
 
+  React.useEffect(() => {
+    const changed = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return
+      const detail: unknown = event.detail
+      if (
+        typeof detail !== 'object' ||
+        detail === null ||
+        !('origin' in detail) ||
+        !('countryCode' in detail)
+      )
+        return
+      if (detail.origin === instance || detail.countryCode !== countryCode)
+        return
+      void load(false, true)
+    }
+    window.addEventListener('atlas:regions-changed', changed)
+    return () => window.removeEventListener('atlas:regions-changed', changed)
+  }, [countryCode, instance, load])
+
+  const received = React.useCallback(
+    (result: AtlasRegionsState) => {
+      loadRevision.current += 1
+      setState(result)
+      onCountChange(result.regions.length)
+      window.dispatchEvent(
+        new CustomEvent('atlas:regions-changed', {
+          detail: { origin: instance, countryCode },
+        }),
+      )
+    },
+    [countryCode, instance, onCountChange],
+  )
+  const refresh = React.useCallback(async () => {
+    try {
+      await router.invalidate()
+      if (alive.current) setRefreshFailed(false)
+    } catch {
+      if (alive.current) setRefreshFailed(true)
+    }
+  }, [router])
+  const reconcile = React.useCallback(async () => {
+    try {
+      const snapshot = await loadCountryRegionsFn({ data: { countryCode } })
+      if (alive.current) received(snapshot)
+      return snapshot
+    } catch {
+      if (alive.current) setLoadFailed(true)
+      return null
+    }
+  }, [countryCode, received])
   const addWrite = React.useCallback(
     async (args: Parameters<typeof markRegionVisitedFn>[0]) => {
+      let result: Awaited<ReturnType<typeof markRegionVisitedFn>>
       try {
-        return await markRegionVisitedFn(args)
+        result = await markRegionVisitedFn(args)
       } catch {
-        throw new Error(t('atlas.regions.error.add', { region: name }))
+        await reconcile()
+        throw new Error(t('atlas.regions.error.uncertain'))
       }
+      await refresh()
+      return result
     },
-    [name, t],
+    [reconcile, refresh, t],
   )
   const removeWrite = React.useCallback(
-    async (args: Parameters<typeof unmarkRegionVisitedFn>[0]) => {
+    async (
+      args: Parameters<typeof unmarkRegionVisitedFn>[0],
+    ): Promise<AtlasRegionsState> => {
+      let result: AtlasRegionsState
       try {
-        return await unmarkRegionVisitedFn(args)
+        result = await unmarkRegionVisitedFn(args)
       } catch {
-        throw new Error(
-          t('atlas.regions.error.remove', {
-            region:
-              state.regions.find((row) => row.id === args.data.regionId)
-                ?.name ?? '',
-          }),
+        const snapshot = await reconcile()
+        if (!snapshot) throw new Error(t('atlas.regions.error.uncertain'))
+        const remaining = snapshot.regions.find(
+          (row) => row.id === args.data.regionId,
         )
+        if (remaining)
+          throw new Error(
+            t('atlas.regions.error.remove', { region: remaining.name }),
+          )
+        result = snapshot
       }
+      await refresh()
+      return result
     },
-    [state.regions, t],
+    [reconcile, refresh, t],
   )
   const add = useAction(addWrite, {
+    invalidate: false,
     failure: t('atlas.regions.error.add', { region: name }),
     fallback: t('atlas.actions.toast.fallback'),
   })
   const remove = useAction(removeWrite, {
+    invalidate: false,
     failure: t('atlas.regions.label'),
     fallback: t('atlas.actions.toast.fallback'),
   })
-  const pending = add.pending || remove.pending
+  const pending = add.pending || remove.pending || overlay.settling
   React.useEffect(() => {
     onPendingChange(pending)
   }, [pending, onPendingChange])
   React.useEffect(() => () => onPendingChange(false), [onPendingChange])
 
-  function received(result: AtlasRegionsState) {
-    setState(result)
-    onCountChange(result.regions.length)
-  }
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     if (writing.current || pending || disabled || loading || loadFailed) return
@@ -190,19 +272,21 @@ export function RegionRecord({
       return
     }
     writing.current = true
+    setRefreshFailed(false)
     setStatus(t('atlas.regions.adding', { region: name }))
     const result = await add.run({ data: { countryCode, regionName: name } })
     writing.current = false
     if (!alive.current) return
     if (result) {
       received(result)
+      onCountryChange?.(result.country)
       setName('')
       let key:
         | 'atlas.regions.status.exists'
         | 'atlas.regions.status.added'
         | 'atlas.regions.status.addedCountry' = 'atlas.regions.status.exists'
-      if (result.countryCreated) key = 'atlas.regions.status.addedCountry'
-      else if (result.created) key = 'atlas.regions.status.added'
+      if (result.countryRecorded) key = 'atlas.regions.status.addedCountry'
+      else if (result.status === 'added') key = 'atlas.regions.status.added'
       setStatus(t(key, { region: name, country }))
     } else setStatus('')
     input.current?.focus()
@@ -210,13 +294,17 @@ export function RegionRecord({
   function drop(id: string, region: string) {
     if (writing.current || pending || disabled) return
     writing.current = true
+    setRefreshFailed(false)
     add.reset()
     remove.reset()
     setFieldError(null)
     setStatus('')
     const index = state.regions.findIndex((row) => row.id === id)
     void overlay.claim([[id, true]], async () => {
-      const result = await remove.run({ data: { regionId: id } })
+      const [result] = await Promise.all([
+        remove.run({ data: { regionId: id } }),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 150)),
+      ])
       writing.current = false
       if (!alive.current) return
       if (result) {
@@ -237,6 +325,10 @@ export function RegionRecord({
       })
     })
   }
+  let spoken = status
+  if (refreshFailed)
+    spoken = t('atlas.regions.status.refreshFailed', { result: status })
+  if (loadFailed) spoken = t('atlas.regions.error.load', { country })
   const full =
     state.total >= VISITED_REGIONS_MAX_PER_TRAVELLER
       ? t('atlas.regions.error.full', {
@@ -264,25 +356,19 @@ export function RegionRecord({
         ) : (
           <>
             <ul ref={list} className={cn('m-0 list-none p-0')}>
-              <AnimatePresence initial={false}>
-                {state.regions
-                  .filter((row) => overlay.get(row.id) !== true)
-                  .map((row) => (
-                    <RegionRow key={row.id}>
-                      <span className={cn('min-w-0 break-words')}>
-                        {row.name}
-                      </span>
-                      <IconButton
-                        icon={<X />}
-                        data-region-id={row.id}
-                        size="sm"
-                        label={t('atlas.regions.remove', { region: row.name })}
-                        disabled={disabled || pending}
-                        onClick={() => drop(row.id, row.name)}
-                      />
-                    </RegionRow>
-                  ))}
-              </AnimatePresence>
+              {state.regions.map((row) => (
+                <RegionRow key={row.id} exiting={overlay.get(row.id) === true}>
+                  <span className={cn('min-w-0 break-words')}>{row.name}</span>
+                  <IconButton
+                    icon={<X />}
+                    data-region-id={row.id}
+                    size="sm"
+                    label={t('atlas.regions.remove', { region: row.name })}
+                    disabled={disabled || pending || loading || loadFailed}
+                    onClick={() => drop(row.id, row.name)}
+                  />
+                </RegionRow>
+              ))}
             </ul>
             {state.regions.length === 0 && !loadFailed ? (
               <div className={cn('p-3 text-caption text-ink-3')}>
@@ -335,7 +421,7 @@ export function RegionRecord({
         aria-live="polite"
         className={cn('min-h-10 text-caption text-ink-3')}
       >
-        {status}
+        {spoken}
       </div>
       <div
         className={cn(
@@ -345,11 +431,13 @@ export function RegionRecord({
       >
         {add.error ?? remove.error}
       </div>
-      {loadFailed ? (
+      {loadFailed || refreshFailed || add.error || remove.error ? (
         <Button
           size="sm"
           onClick={() => {
-            void load(true)
+            add.reset()
+            remove.reset()
+            void refresh().then(() => load(true))
           }}
         >
           {t('atlas.regions.reload')}

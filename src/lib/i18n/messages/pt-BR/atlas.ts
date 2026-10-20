@@ -403,6 +403,10 @@ const messages = {
     other:
       '{history}As regiões registradas em {country} continuam salvas: {count}.',
   },
+  'regions.error.uncertain':
+    'Não foi possível confirmar a alteração. Recarregue suas regiões para verificar o que foi salvo.',
+  'regions.status.refreshFailed':
+    '{result} Não foi possível atualizar o atlas. Recarregue-o para atualizar o mapa.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

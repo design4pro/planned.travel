@@ -42,8 +42,8 @@ describe('region record', () => {
     api.add.mockResolvedValue({
       regions: [{ id: 'bavaria', name: 'Bavaria' }],
       total: 1,
-      countryCreated: true,
-      created: true,
+      countryRecorded: true,
+      status: 'added',
     })
     mount()
     const input = await screen.findByLabelText('Add a region in Germany')
@@ -118,8 +118,8 @@ describe('region pending states and limits', () => {
     finish({
       regions: [{ id: 'one', name: 'Bavaria' }],
       total: 1,
-      countryCreated: false,
-      created: true,
+      countryRecorded: false,
+      status: 'added',
     })
     await screen.findByRole('button', { name: 'Remove Bavaria' })
   })
@@ -156,6 +156,11 @@ describe('region pending states and limits', () => {
       expect(document.activeElement).toBe(
         screen.getByRole('button', { name: 'Remove Berlin' }),
       ),
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'Remove Bavaria' }),
+      ).toBeNull(),
     )
   })
   it('ignores a reply for a country that has been closed', async () => {
@@ -214,5 +219,113 @@ it('keeps the loaded record and input focus when router invalidation replaces th
   input.focus()
   view.rerender(tree({ ...catalogue }))
   await waitFor(() => expect(api.load).toHaveBeenCalledTimes(1))
+  expect(document.activeElement).toBe(input)
+})
+
+it('keeps a committed add when refreshing the route fails', async () => {
+  api.invalidate.mockRejectedValue(new Error('route refresh failed'))
+  api.add.mockResolvedValue({
+    countryCode: 'DE',
+    regions: [{ id: 'one', name: 'Bavaria' }],
+    total: 1,
+    countryRecorded: true,
+    status: 'added',
+  })
+  mount()
+  const input = await screen.findByLabelText('Add a region in Germany')
+  await userEvent.type(input, 'Bavaria{Enter}')
+  await screen.findByRole('button', { name: 'Remove Bavaria' })
+  await waitFor(() => expect((input as HTMLInputElement).value).toBe(''))
+})
+
+it('reconciles a lost removal response instead of restoring a deleted row', async () => {
+  api.load
+    .mockResolvedValueOnce({
+      countryCode: 'DE',
+      regions: [{ id: 'one', name: 'Bavaria' }],
+      total: 1,
+    })
+    .mockResolvedValue({ countryCode: 'DE', regions: [], total: 0 })
+  api.remove.mockRejectedValue(new Error('response lost after commit'))
+  mount()
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'Remove Bavaria' }),
+  )
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: 'Remove Bavaria' })).toBeNull(),
+  )
+  expect(api.load).toHaveBeenCalledTimes(2)
+})
+
+it('offers reload and disables stale writes if an uncertain outcome cannot be reread', async () => {
+  api.load
+    .mockResolvedValueOnce({
+      countryCode: 'DE',
+      regions: [{ id: 'one', name: 'Bavaria' }],
+      total: 1,
+    })
+    .mockRejectedValueOnce(new Error('reread failed'))
+    .mockResolvedValue({ countryCode: 'DE', regions: [], total: 0 })
+  api.remove.mockRejectedValue(new Error('response lost'))
+  mount()
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'Remove Bavaria' }),
+  )
+  const reload = await screen.findByRole('button', { name: 'Reload regions' })
+  await userEvent.click(reload)
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByLabelText('Add a region in Germany'),
+    ),
+  )
+  expect(screen.queryByRole('button', { name: 'Remove Bavaria' })).toBeNull()
+})
+
+it('synchronizes both hosts after a region write without disabling or blurring the active input', async () => {
+  api.load
+    .mockResolvedValueOnce({ countryCode: 'DE', regions: [], total: 0 })
+    .mockResolvedValueOnce({ countryCode: 'DE', regions: [], total: 0 })
+    .mockResolvedValue({
+      countryCode: 'DE',
+      regions: [{ id: 'one', name: 'Bavaria' }],
+      total: 1,
+    })
+  api.add.mockResolvedValue({
+    countryCode: 'DE',
+    regions: [{ id: 'one', name: 'Bavaria' }],
+    total: 1,
+    status: 'added',
+    countryRecorded: false,
+  })
+  const count = vi.fn()
+  const pending = vi.fn()
+  render(
+    <>
+      <RegionRecord
+        countryCode="DE"
+        visited={true}
+        headingLevel={4}
+        disabled={false}
+        onCountChange={count}
+        onPendingChange={pending}
+      />
+      <RegionRecord
+        countryCode="DE"
+        visited={true}
+        headingLevel={4}
+        disabled={false}
+        onCountChange={count}
+        onPendingChange={pending}
+      />
+    </>,
+  )
+  const input = screen.getAllByLabelText('Add a region in Germany')[0]
+  await waitFor(() => expect(input.hasAttribute('disabled')).toBe(false))
+  await userEvent.type(input, 'Bavaria{Enter}')
+  await waitFor(() =>
+    expect(
+      screen.getAllByRole('button', { name: 'Remove Bavaria' }),
+    ).toHaveLength(2),
+  )
   expect(document.activeElement).toBe(input)
 })

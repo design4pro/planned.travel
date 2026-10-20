@@ -411,6 +411,10 @@ const messages = {
     other:
       '{history}Le regioni registrate in {country} restano salvate: {count}.',
   },
+  'regions.error.uncertain':
+    'Impossibile confermare la modifica. Ricarica le regioni per verificare cosa è stato salvato.',
+  'regions.status.refreshFailed':
+    '{result} Impossibile aggiornare l’atlante. Ricaricalo per aggiornare la mappa.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -388,6 +388,10 @@ const messages = {
     other:
       '{history}Je vastgelegde regio’s in {country} blijven bewaard: {count}.',
   },
+  'regions.error.uncertain':
+    'De wijziging kon niet worden bevestigd. Laad je regio’s opnieuw om te zien wat is opgeslagen.',
+  'regions.status.refreshFailed':
+    '{result} De atlas kon niet worden vernieuwd. Laad hem opnieuw om de kaart bij te werken.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

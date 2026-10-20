@@ -384,6 +384,10 @@ const messages = {
     other:
       '{history}{country} içinde kaydettiğin bölgeler kayıtta kalır: {count}.',
   },
+  'regions.error.uncertain':
+    'Değişiklik doğrulanamadı. Neyin kaydedildiğini kontrol etmek için bölgelerini yeniden yükle.',
+  'regions.status.refreshFailed':
+    '{result} Atlas yenilenemedi. Haritayı güncellemek için yeniden yükle.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

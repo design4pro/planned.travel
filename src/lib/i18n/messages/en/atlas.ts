@@ -475,6 +475,10 @@ const messages = {
     other:
       '{history}{count} regions you recorded in {country} stay on your record.',
   },
+  'regions.error.uncertain':
+    'We could not confirm the change. Reload your regions to check what was saved.',
+  'regions.status.refreshFailed':
+    '{result} The atlas could not refresh. Reload it to update the map.',
 } as const satisfies NamespaceMessages
 
 export default messages

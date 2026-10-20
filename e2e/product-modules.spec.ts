@@ -610,6 +610,7 @@ test.describe('08-S2a - a traveller records regions', () => {
   test.setTimeout(120_000)
   test.describe.configure({ mode: 'serial' })
   test.beforeEach(async ({ context, page, baseURL }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
   })
@@ -650,6 +651,11 @@ test.describe('08-S2a - a traveller records regions', () => {
           await input.fill(name)
           await input.press('Enter')
           await expect(remove).toBeVisible()
+          await expect(
+            page.getByRole('button', { name: `Remove ${name}`, exact: true }),
+          ).toHaveCount(
+            await page.locator('[data-part="country-actions"]').count(),
+          )
           await expect(input).toHaveValue('')
           await expect(input).toBeFocused()
           await page.reload()
@@ -664,10 +670,199 @@ test.describe('08-S2a - a traveller records regions', () => {
           if (await remove.count()) {
             await remove.click()
             await expect(remove).toHaveCount(0)
+            await expect(
+              page.getByRole('button', { name: `Remove ${name}`, exact: true }),
+            ).toHaveCount(0)
           }
         }
       }
       expect(watched().fatal).toEqual([])
+    })
+  }
+})
+
+type RegionShiftProbe = Window & {
+  regionShiftProbe: {
+    own: number
+    other: number
+    entries: number
+    reset: () => void
+    stop: () => void
+  }
+}
+
+test.describe('08-S2a - region loading and both hosts', () => {
+  test.setTimeout(120_000)
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+  })
+  for (const width of [360, 1280]) {
+    test(`keeps loading stable and all controls reachable at ${width}`, async ({
+      page,
+      browserName,
+    }, testInfo) => {
+      await page.setViewportSize({ width, height: width === 360 ? 800 : 900 })
+      const route: RouteCase = {
+        name: 'atlas',
+        path: '/atlas',
+        ready: 'main',
+        map: true,
+      }
+      const watched = watchConsole(page, route)
+      await visit(page, route, 'light')
+      let release: () => void = () => {}
+      const held = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      await page.route('**/_serverFn/**', async (request) => {
+        if (request.request().method() !== 'GET') {
+          await request.continue()
+          return
+        }
+        const response = await request.fetch()
+        const body = await response.text()
+        if (body.includes('"regions"') && body.includes('"total"')) await held
+        await request.fulfill({ response })
+      })
+      try {
+        await page.getByRole('button', { name: 'Find a country' }).click()
+        await page
+          .getByRole('combobox', { name: 'Find a country' })
+          .fill('France')
+        await page.getByRole('option', { name: 'France' }).first().click()
+        const panel = page.locator('[data-part="country-panel"]')
+        const section = panel.locator('[data-part="country-panel-regions"]')
+        await expect(section).toHaveCount(1)
+        await expect(section.getByRole('textbox')).toBeDisabled()
+        await section.scrollIntoViewIfNeeded()
+        if (browserName === 'chromium') {
+          await page.evaluate(() => {
+            const probe = {
+              own: 0,
+              other: 0,
+              entries: 0,
+              reset: () => {},
+              stop: () => {},
+            }
+            const observer = new PerformanceObserver((list) => {
+              for (const item of list.getEntries()) {
+                const shift = item as PerformanceEntry & {
+                  value: number
+                  sources?: Array<{ node?: Node }>
+                }
+                probe.entries += 1
+                const own = shift.sources?.some(
+                  (source) =>
+                    source.node instanceof Element &&
+                    source.node.closest(
+                      '[data-part="country-panel-regions"]',
+                    ) !== null,
+                )
+                if (own) probe.own += shift.value
+                else probe.other += shift.value
+              }
+            })
+            observer.observe({ type: 'layout-shift', buffered: false })
+            probe.reset = () => {
+              probe.own = 0
+              probe.other = 0
+              probe.entries = 0
+            }
+            probe.stop = () => observer.disconnect()
+            ;(window as unknown as RegionShiftProbe).regionShiftProbe = probe
+          })
+          const form = section.locator('form')
+          await form.evaluate((node) => {
+            node.style.marginBlockStart = '40px'
+          })
+          await page.waitForTimeout(120)
+          await form.evaluate((node) => {
+            node.style.marginBlockStart = '0px'
+          })
+          await page.waitForTimeout(120)
+          expect(
+            await page.evaluate(
+              () =>
+                (window as unknown as RegionShiftProbe).regionShiftProbe.own,
+            ),
+            'the probe must detect an intentional shift inside the measured section',
+          ).toBeGreaterThan(0)
+          await page.evaluate(() =>
+            (window as unknown as RegionShiftProbe).regionShiftProbe.reset(),
+          )
+        }
+        release()
+        const input = section.getByRole('textbox', {
+          name: 'Add a region in France',
+        })
+        await expect(input).toBeEnabled()
+        await page.waitForTimeout(200)
+        if (browserName === 'chromium') {
+          const measured = await page.evaluate(() => {
+            const probe = (window as unknown as RegionShiftProbe)
+              .regionShiftProbe
+            probe.stop()
+            return {
+              own: probe.own,
+              other: probe.other,
+              entries: probe.entries,
+            }
+          })
+          await testInfo.attach('region-loading-shifts', {
+            body: JSON.stringify(measured),
+            contentType: 'application/json',
+          })
+          expect(measured.own).toBe(0)
+        }
+        const hosts = page.locator('[data-part="country-actions"]')
+        expect(await hosts.count()).toBeGreaterThanOrEqual(1)
+        if (width === 1280) await expect(hosts).toHaveCount(2)
+        for (const host of await hosts.all()) {
+          await expect(
+            host.locator('[data-part="country-panel-regions"]'),
+          ).toHaveCount(1)
+          expect(
+            await host.evaluate((node) => {
+              const controls = [...node.querySelectorAll('button,input')]
+              const region = node.querySelector(
+                '[data-part="country-panel-regions"]',
+              )
+              const inputIndex = controls.findIndex(
+                (control) => control.tagName === 'INPUT',
+              )
+              const regionStart = controls.findIndex((control) =>
+                region?.contains(control),
+              )
+              return (
+                regionStart >= 2 &&
+                inputIndex >= regionStart &&
+                controls[inputIndex + 1]?.getAttribute('type') === 'submit'
+              )
+            }),
+          ).toBe(true)
+        }
+        await input.scrollIntoViewIfNeeded()
+        await input.focus()
+        await expect(input).toBeInViewport()
+        expect(
+          await panel.evaluate((node) => {
+            const box = node.getBoundingClientRect()
+            return box.left >= 0 && box.right <= innerWidth
+          }),
+        ).toBe(true)
+        if (width === 360) {
+          // A reduced visual viewport exercises the space left by a phone keyboard.
+          await page.setViewportSize({ width: 360, height: 480 })
+          await input.scrollIntoViewIfNeeded()
+          await expect(input).toBeInViewport()
+        }
+        expect(watched().fatal).toEqual([])
+      } finally {
+        release()
+        await page.unroute('**/_serverFn/**')
+      }
     })
   }
 })

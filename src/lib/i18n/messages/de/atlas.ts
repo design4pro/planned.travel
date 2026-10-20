@@ -392,6 +392,10 @@ const messages = {
     other:
       '{history}Deine erfassten Regionen in {country} bleiben gespeichert: {count}.',
   },
+  'regions.error.uncertain':
+    'Die Änderung konnte nicht bestätigt werden. Lade deine Regionen neu, um den gespeicherten Stand zu prüfen.',
+  'regions.status.refreshFailed':
+    '{result} Der Atlas konnte nicht aktualisiert werden. Lade ihn neu, um die Karte zu aktualisieren.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -391,6 +391,10 @@ const messages = {
     other:
       '{history}A(z) {country} területén rögzített régióid megmaradnak: {count}.',
   },
+  'regions.error.uncertain':
+    'A módosítást nem sikerült megerősíteni. Töltsd újra a régióidat, és ellenőrizd, mi lett elmentve.',
+  'regions.status.refreshFailed':
+    '{result} Az atlaszt nem sikerült frissíteni. Töltsd újra a térkép frissítéséhez.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
