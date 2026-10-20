@@ -1241,6 +1241,20 @@ describe('reading statistics by year', () => {
     expect(
       screen.getByRole('group', { name: 'Figures for all time' }),
     ).toBeTruthy()
+    const status = document.querySelector('[data-part="stats-status"]')
+    if (status === null) throw new Error('Missing statistics status region')
+    const messages: Array<string> = []
+    const observer = new MutationObserver(() => {
+      messages.push(status.textContent ?? '')
+    })
+    observer.observe(status, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    })
+    await chooseYear(user, '2025')
+    observer.disconnect()
+    expect(messages).toEqual(['Showing figures for 2025.'])
   })
   it.each([
     [0, 'Add a trip with dates to start a streak'],

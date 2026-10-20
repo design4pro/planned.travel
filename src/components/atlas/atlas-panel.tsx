@@ -580,15 +580,21 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
     const bodyId = React.useId()
     const periodId = React.useId()
     const [chosenPeriod, setChosenPeriod] = React.useState(0)
-    const [announcement, setAnnouncement] = React.useState('')
+    const [announcement, setAnnouncement] = React.useState({
+      text: '',
+      sequence: 0,
+    })
+    const announce = React.useCallback((text: string) => {
+      setAnnouncement((previous) => ({ text, sequence: previous.sequence + 1 }))
+    }, [])
     const period = statsPeriod(statsRows, chosenPeriod)
     const year = formatYear(period.period, locale)
     const figures = period.period === 0 ? stats : (period.row ?? stats)
     React.useEffect(() => {
       if (chosenPeriod === period.period) return
       setChosenPeriod(period.period)
-      if (tab === 'stats') setAnnouncement(t('atlas.panel.stat.announceAll'))
-    }, [chosenPeriod, period.period, tab, t])
+      if (tab === 'stats') announce(t('atlas.panel.stat.announceAll'))
+    }, [chosenPeriod, period.period, tab, t, announce])
     const tripsCaption =
       period.period === 0
         ? t('atlas.panel.stat.tripsCaption')
@@ -610,7 +616,7 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
       const next = Number(value)
       if (next === period.period) return
       setChosenPeriod(next)
-      setAnnouncement(
+      announce(
         next === 0
           ? t('atlas.panel.stat.announceAll')
           : t('atlas.panel.stat.announceYear', {
@@ -710,7 +716,9 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
           aria-atomic="true"
           className="sr-only"
         >
-          {announcement}
+          {announcement.text === '' ? null : (
+            <span key={announcement.sequence}>{announcement.text}</span>
+          )}
         </div>
         <Tabs
           value={tab}
