@@ -610,7 +610,6 @@ test.describe('08-S2a - a traveller records regions', () => {
   test.setTimeout(120_000)
   test.describe.configure({ mode: 'serial' })
   test.beforeEach(async ({ context, page, baseURL }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' })
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
   })
@@ -694,7 +693,6 @@ type RegionShiftProbe = Window & {
 test.describe('08-S2a - region loading and both hosts', () => {
   test.setTimeout(120_000)
   test.beforeEach(async ({ context, page, baseURL }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' })
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
   })
@@ -766,6 +764,7 @@ test.describe('08-S2a - region loading and both hosts', () => {
             })
             observer.observe({ type: 'layout-shift', buffered: false })
             probe.reset = () => {
+              observer.takeRecords()
               probe.own = 0
               probe.other = 0
               probe.entries = 0
@@ -774,21 +773,38 @@ test.describe('08-S2a - region loading and both hosts', () => {
             ;(window as unknown as RegionShiftProbe).regionShiftProbe = probe
           })
           const form = section.locator('form')
+          await form.scrollIntoViewIfNeeded()
+          await page.waitForTimeout(250)
           await form.evaluate((node) => {
-            node.style.marginBlockStart = '40px'
+            node.style.paddingInlineStart = '40px'
           })
-          await page.waitForTimeout(120)
+          await page.waitForTimeout(250)
           await form.evaluate((node) => {
-            node.style.marginBlockStart = '0px'
+            node.style.paddingInlineStart = '0px'
           })
-          await page.waitForTimeout(120)
-          expect(
-            await page.evaluate(
+          await expect
+            .poll(
               () =>
-                (window as unknown as RegionShiftProbe).regionShiftProbe.own,
+                page.evaluate(
+                  () =>
+                    (window as unknown as RegionShiftProbe).regionShiftProbe
+                      .own,
+                ),
+              {
+                message:
+                  'the probe must detect an intentional shift inside the measured section',
+              },
+            )
+            .toBeGreaterThan(0)
+          await testInfo.attach('region-positive-shift-probe', {
+            body: JSON.stringify(
+              await page.evaluate(
+                () => (window as unknown as RegionShiftProbe).regionShiftProbe,
+              ),
             ),
-            'the probe must detect an intentional shift inside the measured section',
-          ).toBeGreaterThan(0)
+            contentType: 'application/json',
+          })
+          await page.waitForTimeout(250)
           await page.evaluate(() =>
             (window as unknown as RegionShiftProbe).regionShiftProbe.reset(),
           )
