@@ -9,7 +9,7 @@ import {
   PlatformRoleBadge,
   VerificationMark,
   displayPlatformRole,
-  readConsoleFailure,
+  readConsoleFailureDetail,
 } from '#/components/console'
 import {
   Button,
@@ -87,7 +87,8 @@ function UsersError({ error }: ErrorComponentProps) {
   return (
     <ErrorPanel
       className="bg-surface-2"
-      error={readConsoleFailure(error, t('console.failure.fallback'))}
+      error={error}
+      detail={readConsoleFailureDetail(error, t('console.failure.fallback'))}
       title={t('console.users.error.title')}
     />
   )

@@ -84,7 +84,8 @@ export interface PublicFailure {
  * Versioned because it is a wire format between two halves of one deploy, and a rolling deploy
  * briefly runs both. An unrecognised version decodes as `unexpected`, which is the safe direction.
  */
-const ENVELOPE_PREFIX = 'planned-travel/failure/1 '
+const ENVELOPE_FAMILY = 'planned-travel/failure/'
+const ENVELOPE_PREFIX = ENVELOPE_FAMILY + '1 '
 
 export function encodePublicFailure(failure: PublicFailure): string {
   return ENVELOPE_PREFIX + JSON.stringify(failure)
@@ -94,6 +95,11 @@ function messageOf(cause: unknown): string | null {
   if (cause instanceof Error && cause.message.length > 0) return cause.message
   if (typeof cause === 'string' && cause.length > 0) return cause
   return null
+}
+
+/** Recognises the reserved wire-format family, including unreadable or newer envelopes. */
+export function isPublicFailureEnvelope(cause: unknown): boolean {
+  return messageOf(cause)?.startsWith(ENVELOPE_FAMILY) ?? false
 }
 
 function isCode(value: unknown): value is PublicFailureCode {

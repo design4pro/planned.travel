@@ -27,9 +27,11 @@ import {
   listDayAssignments,
   listTripDays,
   listTripPlaces,
+  listTravelStats,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
+import type { TaskBindings, TaskEnvelopeOf } from '#/server/queue/types'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
 
@@ -38,6 +40,8 @@ import type { TenantScope } from '#/server/repos'
 const stubs = vi.hoisted(() => ({
   /** The scope `appScope()` resolves to. */
   scope: null as TenantScope | null,
+  sent: [] as Array<unknown>,
+  rejects: false,
 }))
 
 vi.mock('../../../../-server/context', async () => {
@@ -54,6 +58,24 @@ vi.mock('../../../../-server/context', async () => {
     },
   }
 })
+
+vi.mock('#/server/fns/context', () => ({
+  mirrorToRoom: async () => undefined,
+  patch: (kind: string, id: string, fields: unknown) => ({
+    entity: { kind, id },
+    op: 'upsert',
+    fields,
+  }),
+}))
+
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => ({
+    sendBatch: async (messages: Array<{ body: unknown }>) => {
+      if (stubs.rejects) throw new Error('queue unavailable')
+      stubs.sent.push(...messages.map((message) => message.body))
+    },
+  }),
+}))
 
 /* ------------------------------------------------------------ start context */
 
@@ -83,6 +105,7 @@ const {
   deletePlanPlaceFn,
   rankIdeasFn,
   readPlanBoard,
+  reorderPlanFn,
   schedulePlaceFn,
   unschedulePlaceFn,
   updatePlanPlaceFn,
@@ -123,6 +146,7 @@ interface Fixture {
 
 let seedOtherTenant: (label: string) => Promise<SeededTenant>
 let tenant: SeededTenant
+let database: TenantScope['db']
 let owner: TenantScope
 let editor: TenantScope
 let viewer: TenantScope
@@ -132,9 +156,12 @@ let fixture: Fixture
 beforeEach(async () => {
   const harness = await createHarness()
   seedOtherTenant = harness.seedTenant
+  database = harness.db
   tenant = await harness.seedTenant('planner')
   owner = tenant.scope
   stubs.scope = owner
+  stubs.sent = []
+  stubs.rejects = false
 
   const editorId = await tenant.addUser('A co-planner')
   const viewerId = await tenant.addUser('A reader')
@@ -621,5 +648,178 @@ describe('who may write the plan', () => {
 
     const [stop] = await listDayAssignments(owner, fixture.dayId)
     expect(stop).toMatchObject({ id: fixture.stopId, startTime: '19:00' })
+  })
+})
+
+describe('plan content statistics envelopes', () => {
+  const fields = {
+    city: '',
+    address: '',
+    categoryId: '',
+    durationMinutes: 0,
+    rating: 0,
+    lat: null,
+    lng: null,
+  }
+  const add = (tripId = fixture.tripId) =>
+    inRequest(() =>
+      createPlanPlaceFn({
+        data: { tripId, name: 'Museum', ...fields, dayId: '' },
+      }),
+    )
+  function expectYears() {
+    expect(stubs.sent).toHaveLength(6)
+    for (const scope of [owner, editor, viewer]) {
+      for (const statYear of [0, 2026])
+        expect(stubs.sent).toContainEqual(
+          expect.objectContaining({
+            orgId: tenant.organizationId,
+            id: expect.stringContaining(
+              `travel-stats:${tenant.organizationId}:${scope.ctx.userId}:${statYear}:`,
+            ),
+            payload: { userId: scope.ctx.userId, statYear },
+          }),
+        )
+    }
+  }
+  it('enqueues after add and delete, and only a changed city on edit', async () => {
+    await add()
+    expectYears()
+    const { createTravelStatsHandler } =
+      await import('#/server/queue/handlers/travel-stats')
+    const { createLogger, createMemorySink } =
+      await import('#/server/observability/logger')
+    const handler = createTravelStatsHandler(() => database)
+    for (const envelope of stubs.sent as Array<
+      TaskEnvelopeOf<'travel-stats'>
+    >) {
+      await handler(envelope.payload, {
+        orgId: envelope.orgId,
+        taskId: envelope.id,
+        attempt: 1,
+        now: Date.now,
+        logger: createLogger({ sink: createMemorySink() }),
+        env: {
+          DB: {} as D1Database,
+        } as TaskBindings,
+        callProvider: async (_provider, send) => send(),
+      })
+    }
+    expect(
+      (await listTravelStats(owner, owner.ctx.userId)).find(
+        (row) => row.statYear === 0,
+      )?.placeCount,
+    ).toBe(3)
+    stubs.sent = []
+    const data = {
+      tripId: fixture.tripId,
+      placeId: fixture.cafeId,
+      name: 'Renamed',
+      ...fields,
+      isVisited: false,
+    }
+    await inRequest(() => updatePlanPlaceFn({ data }))
+    expect(stubs.sent).toEqual([])
+    await inRequest(() =>
+      updatePlanPlaceFn({ data: { ...data, city: 'Vienna' } }),
+    )
+    expectYears()
+    stubs.sent = []
+    await inRequest(() =>
+      deletePlanPlaceFn({
+        data: { tripId: fixture.tripId, placeId: fixture.cafeId },
+      }),
+    )
+    expectYears()
+  })
+  it('a refused queue leaves the place durable', async () => {
+    stubs.rejects = true
+    await add()
+    expect(
+      (await listTripPlaces(owner, { tripId: fixture.tripId })).some(
+        (place) => place.name === 'Museum',
+      ),
+    ).toBe(true)
+  })
+  it('refuses viewers, private non-members, shared non-members, archived and foreign trips without envelopes', async () => {
+    for (const scope of [viewer, stranger]) {
+      stubs.scope = scope
+      await expect(add()).rejects.toThrow()
+      expect(stubs.sent).toEqual([])
+    }
+    stubs.scope = owner
+    const foreign = await seedOtherTenant('foreign')
+    const foreignTrip = await createTrip(foreign.scope, { title: 'Foreign' })
+    await expect(add(foreignTrip.id)).rejects.toThrow()
+    const shared = await createTrip(owner, {
+      title: 'Shared',
+      visibility: 'organization',
+    })
+    stubs.scope = stranger
+    await expect(add(shared.id)).rejects.toThrow()
+    stubs.scope = owner
+    await archiveTrip(owner, fixture.tripId)
+    await expect(add()).rejects.toThrow()
+    expect(stubs.sent).toEqual([])
+  })
+  it('ranking, scheduling and stop edits enqueue nothing', async () => {
+    await inRequest(() =>
+      rankIdeasFn({
+        data: { tripId: fixture.tripId, placeIds: [fixture.cafeId] },
+      }),
+    )
+    await inRequest(() =>
+      schedulePlaceFn({
+        data: {
+          tripId: fixture.tripId,
+          placeId: fixture.cafeId,
+          dayId: fixture.dayId,
+          index: 0,
+        },
+      }),
+    )
+    await inRequest(() =>
+      updateStopFn({
+        data: {
+          tripId: fixture.tripId,
+          assignmentId: fixture.stopId,
+          startTime: '19:00',
+          endTime: '',
+          durationMinutes: 0,
+          notes: 'Changed stop',
+          reservationStatus: 'none',
+        },
+      }),
+    )
+    await inRequest(() =>
+      unschedulePlaceFn({
+        data: { tripId: fixture.tripId, assignmentId: fixture.stopId },
+      }),
+    )
+    const { createDayNoteFn } = await import('../day-notes')
+    await inRequest(() =>
+      createDayNoteFn({
+        data: {
+          tripId: fixture.tripId,
+          dayId: fixture.dayId,
+          body: 'Meet here',
+        },
+      }),
+    )
+    await inRequest(() =>
+      reorderPlanFn({
+        data: {
+          tripId: fixture.tripId,
+          days: [{ dayId: fixture.dayId, items: [] }],
+        },
+      }),
+    )
+    const { reorderDayTransportsFn } = await import('../plan-transports')
+    await inRequest(() =>
+      reorderDayTransportsFn({
+        data: { tripId: fixture.tripId, dayId: fixture.dayId, items: [] },
+      }),
+    )
+    expect(stubs.sent).toEqual([])
   })
 })

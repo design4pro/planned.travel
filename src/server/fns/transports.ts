@@ -15,11 +15,13 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { enqueueTripRollup } from '#/server/queue/travel-stats-fanout'
 import { TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
   assertTripRole,
   tripRoleFor,
   deleteTransport,
+  getTransport,
   listTripDays,
   listTripLegs,
   listTripTransports,
@@ -385,7 +387,8 @@ export const saveTransportFn = createServerFn({ method: 'POST' })
   .validator(saveTransportSchema)
   .handler(async ({ data }): Promise<{ readonly transportId: string }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
+    const trip = await requireTrip(scope, data.tripId)
+    const previous = await getTransport(scope, data.transportId)
 
     const { transport, legs } = await saveTransport(scope, {
       tripId: data.tripId,
@@ -396,6 +399,10 @@ export const saveTransportFn = createServerFn({ method: 'POST' })
       chain: chainInput(data),
     })
 
+    await enqueueTripRollup(scope, trip, [
+      transport.departureDate,
+      previous?.tripId === trip.id ? previous.departureDate : null,
+    ])
     await mirrorToRoom(scope, data.tripId, [
       patch('route', transport.id, {
         title: transport.title,
@@ -437,9 +444,14 @@ export const deleteTransportFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId, transportId: rowId }))
   .handler(async ({ data }): Promise<{ readonly deleted: true }> => {
     const scope = await appScope()
-    await requireTrip(scope, data.tripId)
-    await requireTransportOfTrip(scope, data.tripId, data.transportId)
+    const trip = await requireTrip(scope, data.tripId)
+    const previous = await requireTransportOfTrip(
+      scope,
+      data.tripId,
+      data.transportId,
+    )
     await deleteTransport(scope, data.transportId)
+    await enqueueTripRollup(scope, trip, [previous.departureDate])
 
     await mirrorToRoom(scope, data.tripId, [
       tombstone('route', data.transportId),
@@ -599,7 +611,11 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
       data,
     }): Promise<{ readonly transportId: string; readonly legs: number }> => {
       const scope = await appScope()
-      await requireTrip(scope, data.tripId)
+      const trip = await requireTrip(scope, data.tripId)
+      const previous =
+        data.transportId === ''
+          ? null
+          : await getTransport(scope, data.transportId)
 
       const saved = await saveSearchedConnection(scope, {
         tripId: data.tripId,
@@ -611,6 +627,10 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
         ...chainInput(data),
       })
 
+      await enqueueTripRollup(scope, trip, [
+        saved.transport.departureDate,
+        previous?.tripId === trip.id ? previous.departureDate : null,
+      ])
       await mirrorToRoom(scope, data.tripId, [
         patch('route', saved.transport.id, {
           title: saved.transport.title,

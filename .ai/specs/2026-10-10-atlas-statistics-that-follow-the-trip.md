@@ -164,12 +164,12 @@ missing row, or a row of another trip, means a create and contributes no previou
 Writes that must **not** enqueue, asserted by tests so the list does not erode: `rankIdeasFn`, `reorderPlanFn`, `schedulePlaceFn`, `unschedulePlaceFn`, `updateStopFn`, `setTransportStatusFn`, `reorderDayTransportsFn`, day notes and the import's `pin` step. (A place's visited flag goes through `updatePlanPlaceFn`, which the city-change rule already covers.)
 
 **A traveller who left the workspace.** `trip_members` rows outlive a departure (CONTEXT.md, stranded trips) and
-`enqueueTravelStats` addresses every member of the trip. The handler answers a message for a former workspace member with
-`TaskPermanentError`, which dead-letters it, so after this ships each place or transport write on such a trip would dead-letter
+`enqueueTravelStats` addresses every member of the trip. Before #1119, the handler answered a message for a former workspace member with
+`TaskPermanentError`, which dead-lettered it. Without the acknowledgement change, each place or transport write would dead-letter
 one envelope per year for every departed member (a KV record, an R2 object and an error log each). The handler changes in one
 place: `scopeForTraveller` returns `null` for "no longer a member" and the handler returns metrics such as `{ statYear, skipped: 'not a member' }` after one `warn` log, which the consumer acknowledges and marks done, instead of throwing. The file-header and `scopeForTraveller` doc comments, which say "permanent failure", are updated with it. The membership probe stays, so a message for a non-member still recomputes nothing; only the failure class
-changes. The handler test that expects the permanent failure (`travel-stats.test.ts`, "fails permanently for a user who is no
-longer a member") is renamed ("acknowledges ...") and updated to expect the acknowledgement and that nothing was written.
+changes. The handler tests (`travel-stats.test.ts`) assert acknowledgement with no write for both
+a non-member and a departed workspace member who remains on a trip.
 
 **Cost.** Only the recompute collapses. Each write sends members x years envelopes (at most four per member: the all-time row, the start year, a departure year and a previous one), each a queue operation plus a KV read at the consumer, and no module gate exists yet, so every
 workspace pays it whether or not it uses the atlas. Accepted: the envelopes are tiny and the count is bounded by the trip's
@@ -693,3 +693,11 @@ choices in historical Resolved assumptions rows 19 and 23. The operational scope
 call sites (three planner, three transport, one booking import), with no `trip.ts` producer or endpoint restoration.
 The planner keeps its archive-before-role guard; #928 already added owner/editor enforcement in the repository.
 The implementation PR for #936 records the intentional server-function removal and its compatibility exception.
+
+## Implementation amendment - issue #1119 (08-S6a)
+
+The producer slice adds the seven content-write triggers, variadic affected years and acknowledgement
+without a write for absent workspace members. The problem statements above describe the snapshot
+before this slice; 08-S6b still owns the period UI and glossary additions. Existing transport writers
+have no general archived-trip guard; this slice preserves their contract. The first-commit guard
+requirement in the original ticket brief was superseded by #936 and #928, as recorded above.

@@ -33,7 +33,7 @@ import {
   displayPlatformRole,
   formatConsoleInstant,
   platformActionTone,
-  readConsoleFailure,
+  readConsoleFailureDetail,
 } from '#/components/console'
 import {
   Alert,
@@ -124,7 +124,8 @@ function AccountError({ error }: ErrorComponentProps) {
   return (
     <ErrorPanel
       className="bg-surface-2"
-      error={readConsoleFailure(error, t('console.failure.fallback'))}
+      error={error}
+      detail={readConsoleFailureDetail(error, t('console.failure.fallback'))}
       title={t('console.account.error.title')}
     />
   )

@@ -24,7 +24,7 @@
  * becomes an unrecognisable one.
  */
 
-import { readPublicFailure } from '#/lib/errors'
+import { isPublicFailureEnvelope, readPublicFailure } from '#/lib/errors'
 
 /**
  * The fallback when a rejection carries nothing readable at all.
@@ -89,7 +89,7 @@ export function readConsoleFailureDetail(
       ? { message: fallback, authored: false }
       : { message: failure.message, authored: true }
   }
-  if (failure.reference !== undefined) {
+  if (isPublicFailureEnvelope(cause)) {
     return { message: fallback, authored: false }
   }
 
