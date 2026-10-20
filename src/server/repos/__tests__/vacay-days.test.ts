@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { member } from '#/server/db/auth-schema'
+import { member as workspaceMember } from '#/server/db/auth-schema'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   clearEntries,
@@ -145,11 +145,11 @@ describe('personal leave days', () => {
     const invited = await invitePlanMember(tenant.scope, planId, userId)
     await setPlanMemberStatus(tenant.scope, invited.id, 'accepted')
     await tenant.scope.db
-      .delete(member)
+      .delete(workspaceMember)
       .where(
         and(
-          eq(member.organizationId, tenant.scope.ctx.organizationId),
-          eq(member.userId, userId),
+          eq(workspaceMember.organizationId, tenant.scope.ctx.organizationId),
+          eq(workspaceMember.userId, userId),
         ),
       )
     await expect(

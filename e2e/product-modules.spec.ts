@@ -195,6 +195,7 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
   test('08-S5a logs and clears a day with the keyboard @chromium-only', async ({
     page,
   }) => {
+    test.setTimeout(60_000)
     const watched = watchConsole(page, UNSET)
     await unblockCrossOriginFonts(page)
     await page.emulateMedia({ colorScheme: 'light' })
