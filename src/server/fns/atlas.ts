@@ -608,7 +608,17 @@ export const markRegionVisitedFn = createServerFn({ method: 'POST' })
       }
       if (!existing) throw new AtlasConflictError(code)
     }
-    const country = await recordCountryVisit(scope, code)
+    let country: Awaited<ReturnType<typeof recordCountryVisit>>
+    try {
+      country = await recordCountryVisit(scope, code)
+    } catch (cause) {
+      if (created) {
+        await requestTravelStatsRecompute(scope, [scope.ctx.userId], [0], {
+          route: 'atlas',
+        })
+      }
+      throw cause
+    }
     if (created || country.created) {
       await requestTravelStatsRecompute(scope, [scope.ctx.userId], [0], {
         route: 'atlas',

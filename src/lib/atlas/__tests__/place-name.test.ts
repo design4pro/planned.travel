@@ -29,6 +29,7 @@ describe('region names', () => {
   })
   it('bounds the normalized display name and rejects empty names', () => {
     expect(placeNameSchema(120).safeParse('  ').success).toBe(false)
+    expect(placeNameSchema(120).safeParse('\u0301').success).toBe(false)
     expect(placeNameSchema(120).safeParse('\ufdfa'.repeat(8)).success).toBe(
       false,
     )

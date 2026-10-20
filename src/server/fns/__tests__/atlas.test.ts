@@ -62,6 +62,7 @@ const stubs = vi.hoisted(() => ({
    * Together these reproduce a race the harness cannot schedule on demand: a
    * concurrent request that commits between this one's read and its write.
    */
+  countryRejects: false,
   clashes: 0,
   clashLeavesRow: false,
   regionClashes: 0,
@@ -185,6 +186,7 @@ vi.mock('#/server/repos', async (importOriginal) => {
     markCountryVisited: async (
       ...args: Parameters<typeof actual.markCountryVisited>
     ) => {
+      if (stubs.countryRejects) throw new Error('country unavailable')
       if (stubs.clashes > 0) {
         stubs.clashes -= 1
         if (stubs.clashLeavesRow) {
@@ -334,6 +336,7 @@ beforeEach(async () => {
   stubs.regionClashes = 0
   stubs.regionClashLeavesRow = false
   stubs.regionGone = false
+  stubs.countryRejects = false
   stubs.clashes = 0
   stubs.clashLeavesRow = false
   stubs.sent = []
@@ -1153,6 +1156,44 @@ describe('visited region boundary', () => {
     )
   }
 
+  it('refuses an empty folded name before any write or cascade', async () => {
+    const api = await import('../atlas')
+    expect(
+      await validateAtBoundary(api.markRegionVisitedFn, {
+        countryCode: 'DE',
+        regionName: '\u0301',
+      }),
+    ).not.toBeNull()
+    const repos = await import('#/server/repos')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toEqual([])
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+    expect(stubs.sent).toEqual([])
+  })
+  it('recomputes a committed region after country failure and heals on retry', async () => {
+    stubs.countryRejects = true
+    await expect(addRegion()).rejects.toThrow('country unavailable')
+    const repos = await import('#/server/repos')
+    expect(
+      await repos.listVisitedRegions(tenant.scope, tenant.ownerUserId),
+    ).toHaveLength(1)
+    expect(await visitedCodes(tenant.scope)).toEqual([])
+    expect(stubs.sent).toHaveLength(1)
+    expect(
+      stubs.sent.map((entry) => taskEnvelopeSchema.parse(entry.body)),
+    ).toEqual([
+      expect.objectContaining({
+        kind: 'travel-stats',
+        orgId: tenant.scope.ctx.organizationId,
+        payload: { userId: tenant.ownerUserId, statYear: 0 },
+      }),
+    ])
+    stubs.countryRejects = false
+    await addRegion()
+    expect(await visitedCodes(tenant.scope)).toContain('DE')
+    expect(stubs.sent).toHaveLength(2)
+  })
   it('records a region and its country exactly once, and heals an unmarked country', async () => {
     const repos = await import('#/server/repos')
     await addRegion()

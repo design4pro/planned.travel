@@ -7,6 +7,13 @@ export function hasHiddenPlaceCharacters(value: string): boolean {
   )
 }
 
+function foldedName(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/gu, '')
+}
+
 /** The display name and its bound use the same normalized bytes in every runtime. */
 export function placeNameSchema(maximum: number) {
   return z
@@ -16,13 +23,12 @@ export function placeNameSchema(maximum: number) {
     })
     .transform((value) => value.normalize('NFKC').trim().replace(/\s+/gu, ' '))
     .pipe(z.string().min(1).max(maximum))
+    .refine((value) => foldedName(value).length > 0, {
+      message: 'A place name must have a non-empty identity.',
+    })
 }
 
 /** Locale-independent identity; strip Latin combining accents, never Indic vowel signs. */
 export function foldPlaceName(value: string): string {
-  return placeNameSchema(200)
-    .parse(value)
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/gu, '')
+  return foldedName(placeNameSchema(200).parse(value))
 }

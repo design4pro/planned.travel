@@ -340,7 +340,9 @@ export function RegionRecord({
       data-part="country-panel-regions"
       className={cn('flex min-w-0 flex-col gap-2 border-t border-edge pt-3')}
     >
-      <SectionLabel as={Heading}>{t('atlas.regions.label')}</SectionLabel>
+      <SectionLabel as={Heading} id={`${instance}-heading`}>
+        {t('atlas.regions.label')}
+      </SectionLabel>
       <p className={cn('text-caption text-ink-3')}>
         {t('atlas.regions.hint', { country })}
       </p>
@@ -355,7 +357,11 @@ export function RegionRecord({
           </div>
         ) : (
           <>
-            <ul ref={list} className={cn('m-0 list-none p-0')}>
+            <ul
+              aria-labelledby={`${instance}-heading`}
+              ref={list}
+              className={cn('m-0 list-none p-0')}
+            >
               {state.regions.map((row) => (
                 <RegionRow key={row.id} exiting={overlay.get(row.id) === true}>
                   <span className={cn('min-w-0 break-words')}>{row.name}</span>

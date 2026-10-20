@@ -329,3 +329,12 @@ it('synchronizes both hosts after a region write without disabling or blurring t
   )
   expect(document.activeElement).toBe(input)
 })
+
+it('refuses an accent-only name without writing and labels the region list', async () => {
+  mount()
+  const input = await screen.findByLabelText('Add a region in Germany')
+  await userEvent.type(input, '\u0301{Enter}')
+  expect(api.add).not.toHaveBeenCalled()
+  expect(input.getAttribute('aria-invalid')).toBe('true')
+  expect(screen.getByRole('list', { name: 'Regions' })).not.toBeNull()
+})
