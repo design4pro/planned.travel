@@ -3,6 +3,8 @@
  * the vacation planner, the atlas, the travel journal and saved collections.
  */
 import { createServerFn } from '@tanstack/react-start'
+import { COLLECTION_PLACE_STATUSES } from '#/server/db/schema'
+import { canManageCollection } from '#/server/repos/collections'
 import { z } from 'zod'
 
 import {
@@ -780,7 +782,7 @@ export interface SavedPlaceRow {
   readonly city: string | null
   readonly address: string | null
   readonly countryCode: string | null
-  readonly status: string
+  readonly status: (typeof COLLECTION_PLACE_STATUSES)[number]
   readonly priceMinor: number | null
   readonly currency: string | null
   readonly website: string | null
@@ -791,6 +793,7 @@ export interface SavedPlaceRow {
 }
 
 export interface CollectionDetailPayload {
+  readonly canManage: boolean
   readonly collection: CollectionCard
   readonly labels: ReadonlyArray<{
     readonly id: string
@@ -804,14 +807,6 @@ export interface CollectionDetailPayload {
   }>
   readonly people: ReadonlyArray<PersonRef>
 }
-
-const COLLECTION_STATUSES = [
-  'idea',
-  'shortlisted',
-  'planned',
-  'visited',
-  'rejected',
-] as const
 
 export const loadCollectionDetail = createServerFn({ method: 'GET' })
   .validator(z.object({ collectionId: idInput }))
@@ -834,6 +829,7 @@ export const loadCollectionDetail = createServerFn({ method: 'GET' })
     )
 
     return {
+      canManage: canManageCollection(scope, collection),
       people,
       labels: labels.map((row) => ({
         id: row.id,
@@ -852,7 +848,7 @@ export const loadCollectionDetail = createServerFn({ method: 'GET' })
         placeCount: places.length,
         updatedAt: isoOfRequired(collection.updatedAt),
       },
-      byStatus: COLLECTION_STATUSES.map((status) => ({
+      byStatus: COLLECTION_PLACE_STATUSES.map((status) => ({
         status,
         value: places.filter((row) => row.status === status).length,
       })),
@@ -863,7 +859,7 @@ export const loadCollectionDetail = createServerFn({ method: 'GET' })
         city: row.city,
         address: row.address,
         countryCode: row.countryCode,
-        status: row.status,
+        status: z.enum(COLLECTION_PLACE_STATUSES).parse(row.status),
         priceMinor: row.priceMinor,
         currency: row.currency,
         website: row.website,

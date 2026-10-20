@@ -1305,6 +1305,98 @@ const messages = {
   'vacay.settings.saved': 'Impostazioni del piano ferie salvate.',
   'vacay.settings.error':
     'Impossibile salvare le impostazioni del piano ferie. Non è stato modificato nulla.',
+  'collections.page.eyebrow': 'Raccolta',
+  'collections.page.all': 'Tutti',
+  'collections.page.back': 'Tutte le raccolte',
+  'collections.page.savedPlaces': {
+    one: 'Luoghi salvati: {count}',
+    many: 'Luoghi salvati: {count}',
+    other: 'Luoghi salvati: {count}',
+  },
+  'collections.page.loadErrorTitle': 'Impossibile caricare questa raccolta',
+  'collections.status.idea': 'Un’idea',
+  'collections.status.shortlisted': 'Selezionato',
+  'collections.status.planned': 'Pianificato',
+  'collections.status.visited': 'Visitato',
+  'collections.status.rejected': 'Scartato',
+  'collections.empty.title': 'Nessun luogo salvato per ora',
+  'collections.empty.body':
+    'Salva un luogo dalla mappa, da un altro viaggio o da un consiglio per aggiungerlo a questa raccolta.',
+  'collections.filtered.title': 'Niente corrisponde a questo filtro',
+  'collections.filtered.body':
+    'Prova un altro stato o rimuovi il filtro etichetta.',
+  'collections.filtered.reset': 'Reimposta i filtri',
+  'collections.filtered.showing': {
+    one: 'Luoghi salvati visualizzati: {count}',
+    many: 'Luoghi salvati visualizzati: {count}',
+    other: 'Luoghi salvati visualizzati: {count}',
+  },
+  'collections.filters.statusGroup': 'Filtra per stato',
+  'collections.labels.filterGroup': 'Filtra per etichetta',
+  'collections.labels.panel': 'Etichette di questa raccolta',
+  'collections.card.noLocation': 'Posizione non registrata',
+  'collections.card.noPrice': 'Prezzo non indicato',
+  'collections.card.website': 'Sito web',
+  'collections.actions.trigger': 'Azioni per {name}',
+  'collections.actions.edit': 'Modifica dettagli',
+  'collections.actions.delete': 'Elimina raccolta…',
+  'collections.edit.title': 'Modifica raccolta',
+  'collections.edit.name': 'Nome',
+  'collections.edit.description': 'Descrizione',
+  'collections.edit.colour': 'Colore',
+  'collections.edit.submit': 'Salva le modifiche',
+  'collections.edit.saving': 'Salvataggio',
+  'collections.edit.cancel': 'Annulla',
+  'collections.edit.saved': 'Raccolta aggiornata',
+  'collections.edit.errorTitle': 'Salvataggio non riuscito',
+  'collections.edit.error':
+    'Impossibile confermare il salvataggio. Controlla la raccolta prima di riprovare.',
+  'collections.edit.nameRequired': 'Dai un nome alla raccolta.',
+  'collections.edit.nameTooLong': {
+    one: 'Lunghezza massima del nome in caratteri: {count}',
+    many: 'Lunghezza massima del nome in caratteri: {count}',
+    other: 'Lunghezza massima del nome in caratteri: {count}',
+  },
+  'collections.edit.currentColour': 'Colore attuale',
+  'collections.delete.title': 'Eliminare {name}?',
+  'collections.delete.loading': 'Caricamento del contenuto della raccolta',
+  'collections.delete.loadErrorTitle': 'Impossibile controllare la raccolta',
+  'collections.delete.loadError':
+    'Impossibile leggere la raccolta attuale. Riprova.',
+  'collections.delete.retry': 'Riprova',
+  'collections.delete.places': {
+    one: 'Luoghi salvati: {count}',
+    many: 'Luoghi salvati: {count}',
+    other: 'Luoghi salvati: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etichette: {count}',
+    many: 'Etichette: {count}',
+    other: 'Etichette: {count}',
+  },
+  'collections.delete.irreversible':
+    'L’operazione non può essere annullata. I luoghi salvati e le etichette saranno eliminati insieme alla raccolta. I luoghi dei tuoi viaggi resteranno invariati.',
+  'collections.delete.typeName':
+    'Digita il nome della raccolta per eliminarla.',
+  'collections.delete.nameLabel': 'Nome della raccolta',
+  'collections.delete.nameNeeded':
+    'Questa raccolta ora contiene luoghi salvati. Digita il suo nome per eliminarla.',
+  'collections.delete.confirm': 'Elimina raccolta',
+  'collections.delete.deleting': 'Eliminazione in corso',
+  'collections.delete.cancel': 'Annulla',
+  'collections.delete.deleted': 'Raccolta eliminata',
+  'collections.delete.error':
+    'Impossibile confermare l’eliminazione. Controlla la raccolta e riprova.',
+  'collections.statusPicker.trigger': '{place}: stato {status}. Cambia stato',
+  'collections.statusPicker.legend': 'Stato di {place}',
+  'collections.statusPicker.saved': '{place}: stato impostato su {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} ora ha lo stato {status} ed è nascosto dal filtro',
+  'collections.statusPicker.error':
+    'Impossibile confermare lo stato di {place}. Controllalo prima di riprovare.',
+  'collections.statusPicker.retry': 'Riprova',
+
+  'collections.edit.retry': 'Riprova',
   'files.readOnly.title': 'File in sola lettura',
   'files.readOnly.role':
     'Solo i proprietari e gli editor del viaggio possono caricare, rinominare o eliminare file. Puoi comunque scaricarli.',

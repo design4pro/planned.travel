@@ -1299,6 +1299,99 @@ const messages = {
   'vacay.settings.saved': 'Se han guardado los ajustes del plan de vacaciones.',
   'vacay.settings.error':
     'No se pudieron guardar los ajustes del plan de vacaciones. No se ha cambiado nada.',
+  'collections.page.eyebrow': 'Colección',
+  'collections.page.all': 'Todos',
+  'collections.page.back': 'Todas las colecciones',
+  'collections.page.savedPlaces': {
+    one: 'Lugares guardados: {count}',
+    many: 'Lugares guardados: {count}',
+    other: 'Lugares guardados: {count}',
+  },
+  'collections.page.loadErrorTitle': 'No se pudo cargar esta colección',
+  'collections.status.idea': 'Una idea',
+  'collections.status.shortlisted': 'Preseleccionado',
+  'collections.status.planned': 'Planificado',
+  'collections.status.visited': 'Visitado',
+  'collections.status.rejected': 'Descartado',
+  'collections.empty.title': 'Todavía no hay lugares guardados',
+  'collections.empty.body':
+    'Guarda un lugar del mapa, de otro viaje o de una recomendación para añadirlo a esta colección.',
+  'collections.filtered.title': 'Nada coincide con ese filtro',
+  'collections.filtered.body':
+    'Prueba otro estado o quita el filtro de etiqueta.',
+  'collections.filtered.reset': 'Restablecer filtros',
+  'collections.filtered.showing': {
+    one: 'Lugares guardados visibles: {count}',
+    many: 'Lugares guardados visibles: {count}',
+    other: 'Lugares guardados visibles: {count}',
+  },
+  'collections.filters.statusGroup': 'Filtrar por estado',
+  'collections.labels.filterGroup': 'Filtrar por etiqueta',
+  'collections.labels.panel': 'Etiquetas de esta colección',
+  'collections.card.noLocation': 'Ubicación no registrada',
+  'collections.card.noPrice': 'Sin precio indicado',
+  'collections.card.website': 'Sitio web',
+  'collections.actions.trigger': 'Acciones para {name}',
+  'collections.actions.edit': 'Editar detalles',
+  'collections.actions.delete': 'Eliminar colección…',
+  'collections.edit.title': 'Editar colección',
+  'collections.edit.name': 'Nombre',
+  'collections.edit.description': 'Descripción',
+  'collections.edit.colour': 'Color',
+  'collections.edit.submit': 'Guardar cambios',
+  'collections.edit.saving': 'Guardando',
+  'collections.edit.cancel': 'Cancelar',
+  'collections.edit.saved': 'Colección actualizada',
+  'collections.edit.errorTitle': 'No se pudo guardar',
+  'collections.edit.error':
+    'No se pudo confirmar el guardado. Revisa la colección antes de volver a intentarlo.',
+  'collections.edit.nameRequired': 'Dale un nombre a la colección.',
+  'collections.edit.nameTooLong': {
+    one: 'Longitud máxima del nombre en caracteres: {count}',
+    many: 'Longitud máxima del nombre en caracteres: {count}',
+    other: 'Longitud máxima del nombre en caracteres: {count}',
+  },
+  'collections.edit.currentColour': 'Color actual',
+  'collections.delete.title': '¿Eliminar {name}?',
+  'collections.delete.loading': 'Cargando el contenido de la colección',
+  'collections.delete.loadErrorTitle': 'No se pudo comprobar la colección',
+  'collections.delete.loadError':
+    'No se pudo leer la colección actual. Inténtalo de nuevo.',
+  'collections.delete.retry': 'Reintentar',
+  'collections.delete.places': {
+    one: 'Lugares guardados: {count}',
+    many: 'Lugares guardados: {count}',
+    other: 'Lugares guardados: {count}',
+  },
+  'collections.delete.labels': {
+    one: 'Etiquetas: {count}',
+    many: 'Etiquetas: {count}',
+    other: 'Etiquetas: {count}',
+  },
+  'collections.delete.irreversible':
+    'Esta acción no se puede deshacer. Los lugares guardados y las etiquetas se eliminarán con la colección. Los lugares de tus viajes no se modificarán.',
+  'collections.delete.typeName':
+    'Escribe el nombre de la colección para eliminarla.',
+  'collections.delete.nameLabel': 'Nombre de la colección',
+  'collections.delete.nameNeeded':
+    'Esta colección ahora contiene lugares guardados. Escribe su nombre para eliminarla.',
+  'collections.delete.confirm': 'Eliminar colección',
+  'collections.delete.deleting': 'Eliminando',
+  'collections.delete.cancel': 'Cancelar',
+  'collections.delete.deleted': 'Colección eliminada',
+  'collections.delete.error':
+    'No se pudo confirmar la eliminación. Revisa la colección e inténtalo de nuevo.',
+  'collections.statusPicker.trigger':
+    '{place}: estado {status}. Cambiar estado',
+  'collections.statusPicker.legend': 'Estado de {place}',
+  'collections.statusPicker.saved': '{place}: estado establecido en {status}',
+  'collections.statusPicker.hiddenNow':
+    '{place} ahora tiene el estado {status} y está oculto por el filtro',
+  'collections.statusPicker.error':
+    'No se pudo confirmar el estado de {place}. Compruébalo antes de volver a intentarlo.',
+  'collections.statusPicker.retry': 'Reintentar',
+
+  'collections.edit.retry': 'Reintentar',
   'files.readOnly.title': 'Archivos de solo lectura',
   'files.readOnly.role':
     'Solo los propietarios y editores del viaje pueden subir, renombrar o eliminar archivos. Puedes seguir descargándolos.',

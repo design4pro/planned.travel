@@ -81,9 +81,15 @@ import {
   collectionLabelsRepository,
   collectionPlacesRepository,
   collectionsRepository,
+  collectionDeleteSummary,
+  deleteCollection,
+  deleteCollectionConfirmed,
+  updateCollection,
+  setCollectionPlaceStatus,
   createCollection,
   createLabel,
   listCollectionsWithCounts,
+  listCollectionPlaces,
   saveTripPlaceToCollection,
   setCollectionPlaceLabels,
 } from '../collections'
@@ -1229,6 +1235,52 @@ describe('tenant isolation', () => {
     harness = await createHarness()
     alpha = await seedWorld(await harness.seedTenant('alpha'))
     beta = await seedWorld(await harness.seedTenant('beta'))
+  })
+
+  describe('08-S4a collection management', () => {
+    it('refuses foreign ids before roles or counts and leaves both tenant worlds intact', async () => {
+      const snapshot = () => ({
+        collections: harness.sqlite
+          .prepare('SELECT * FROM collections ORDER BY id')
+          .all(),
+        places: harness.sqlite
+          .prepare('SELECT * FROM collection_places ORDER BY id')
+          .all(),
+        labels: harness.sqlite
+          .prepare('SELECT * FROM collection_labels ORDER BY id')
+          .all(),
+        assignments: harness.sqlite
+          .prepare(
+            'SELECT * FROM collection_place_labels ORDER BY collection_place_id, label_id',
+          )
+          .all(),
+      })
+      const before = snapshot()
+      for (const [actor, target] of [
+        [alpha, beta],
+        [beta, alpha],
+      ] as const) {
+        const scope = actor.tenant.scopeFor(actor.tenant.ownerUserId, 'member')
+        for (const call of [
+          () => updateCollection(scope, target.collectionId, { name: 'Forged' }),
+          () => deleteCollection(scope, target.collectionId),
+          () => deleteCollectionConfirmed(scope, target.collectionId, 'Forged'),
+          () => collectionDeleteSummary(scope, target.collectionId),
+          () =>
+            setCollectionPlaceStatus(scope, target.collectionPlaceId, 'visited'),
+        ])
+          await expect(call()).rejects.toMatchObject({ code: 'NOT_FOUND' })
+        expect(
+          await collectionsRepository.findById(scope, target.collectionId),
+        ).toBeNull()
+        expect(
+          await listCollectionPlaces(scope, {
+            collectionId: target.collectionId,
+          }),
+        ).toEqual([])
+      }
+      expect(snapshot()).toEqual(before)
+    })
   })
 
   it('seeds both tenants with a complete, independent world', () => {

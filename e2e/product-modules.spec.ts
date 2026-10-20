@@ -603,6 +603,119 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await page.keyboard.press('Escape')
     await expect(settingsDialog(page)).toHaveCount(0)
   })
+  // Reuses the Chromium-only serial fixture harness above.
+  test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000)
+    const routeCase: RouteCase = {
+      name: 'collection-management',
+      path: '/collections',
+      ready: 'main',
+    }
+    const watched = watchConsole(page, routeCase)
+    await visit(page, routeCase, 'light')
+    await page.locator('main a[href^="/collections/"]').first().click()
+    await expect(
+      page.getByRole('button', { name: /^Actions for / }),
+    ).toBeVisible()
+    const heading = page.getByRole('heading', { level: 1 })
+    const originalName = await heading.innerText()
+    const nextName = originalName + ' - edited'
+    const firstCard = page
+      .locator('main li')
+      .filter({
+        has: page.getByRole('button', { name: /: status .*Change status/ }),
+      })
+      .first()
+    const statusTrigger = firstCard.getByRole('button', {
+      name: /: status .*Change status/,
+    })
+    const originalStatus = (await statusTrigger.innerText()).trim()
+    const nextStatus = originalStatus === 'Visited' ? 'Idea' : 'Visited'
+    const detailPath = new URL(page.url()).pathname
+    async function rename(name: string) {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+      const dialog = page.getByRole('dialog')
+      await dialog
+        .getByRole('textbox', { name: 'Name', exact: true })
+        .fill(name)
+      await dialog.getByRole('button', { name: 'Save changes' }).click()
+      await expect(dialog).toHaveCount(0)
+      await expect(heading).toHaveText(name)
+    }
+    async function status(name: string) {
+      await statusTrigger.click()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
+      await expect(statusTrigger).toHaveText(name)
+    }
+    try {
+      await rename(nextName)
+      await status(nextStatus)
+      await rename(originalName)
+      await status(originalStatus)
+      await page
+        .getByRole('link', { name: new RegExp('^' + originalStatus) })
+        .click()
+      const filteredTriggers = page.getByRole('button', {
+        name: /: status .*Change status/,
+      })
+      await expect
+        .poll(async () => {
+          const statuses = await filteredTriggers.allTextContents()
+          return (
+            statuses.length > 0 &&
+            statuses.every((value) => value.trim() === originalStatus)
+          )
+        })
+        .toBe(true)
+      const nextTriggerName =
+        (await filteredTriggers.count()) > 1
+          ? await filteredTriggers.nth(1).getAttribute('aria-label')
+          : null
+      const changedPlace = await statusTrigger.getAttribute('aria-label')
+      await statusTrigger.click()
+      await page
+        .getByRole('menuitemradio', { name: nextStatus, exact: true })
+        .click()
+      await expect(
+        page.getByRole('button', { name: changedPlace ?? '', exact: true }),
+      ).toHaveCount(0)
+      if (nextTriggerName) {
+        await expect(
+          page.getByRole('button', { name: nextTriggerName, exact: true }),
+        ).toBeFocused()
+      } else {
+        await expect(
+          page.getByRole('heading', { name: 'Nothing matches that filter' }),
+        ).toBeFocused()
+      }
+      await expect(
+        page.getByRole('status').filter({ hasText: 'hidden by the filter' }),
+      ).toContainText(nextStatus)
+      await page.goto(detailPath)
+      await settle(page, {
+        name: 'collection-detail',
+        path: detailPath,
+        ready: 'main',
+      })
+      await status(originalStatus)
+    } finally {
+      await page.keyboard.press('Escape')
+      await page.goto(detailPath)
+      await settle(page, {
+        name: 'collection-detail',
+        path: detailPath,
+        ready: 'main',
+      })
+      if ((await heading.innerText()) !== originalName)
+        await rename(originalName)
+      if ((await statusTrigger.innerText()).trim() !== originalStatus)
+        await status(originalStatus)
+    }
+    expect(watched().fatal).toEqual([])
+  })
 })
 
 /** Regions write only in Chromium; WebKit checks the same form without changing the shared fixture. */
