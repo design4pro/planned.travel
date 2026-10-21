@@ -71,7 +71,7 @@ const COLUMN_MIN = '9.5rem'
 const NARROW_CHIPS = 'max-sm:[&_[role=radio]]:px-2'
 
 const TRIGGER = [
-  'inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full sm:w-auto sm:px-3',
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full xl:w-auto xl:px-3',
   'text-label font-medium text-ink-3 select-none focus-ring',
   'transition-colors duration-fast ease-out-quint',
   'hover:bg-hover hover:text-ink active:bg-active',
@@ -118,6 +118,7 @@ export function LanguageSwitcher({
   const [open, setOpen] = React.useState(false)
   const [pending, setPending] = React.useState<Locale | null>(null)
   const [announcement, setAnnouncement] = React.useState('')
+  const [moreBelow, setMoreBelow] = React.useState(true)
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)
 
@@ -206,7 +207,14 @@ export function LanguageSwitcher({
 
   return (
     <>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          // A reopened popover starts at the top of its list.
+          if (next) setMoreBelow(true)
+          setOpen(next)
+        }}
+      >
         <PopoverTrigger asChild>
           <button
             ref={triggerRef}
@@ -225,7 +233,7 @@ export function LanguageSwitcher({
             <span
               lang={active.tag}
               dir={active.dir === 'rtl' ? 'rtl' : undefined}
-              className="hidden sm:inline"
+              className="hidden xl:inline"
             >
               {active.nativeName}
             </span>
@@ -236,6 +244,12 @@ export function LanguageSwitcher({
           align="end"
           padding="none"
           aria-label={t('settings.language.label')}
+          onScroll={(event) => {
+            const list = event.currentTarget
+            setMoreBelow(
+              list.scrollTop + list.clientHeight < list.scrollHeight - 1,
+            )
+          }}
           className="w-[min(calc(100vw-2rem),24rem)] p-1.5 max-h-[min(70svh,32rem,var(--radix-popover-content-available-height))]"
         >
           <LanguagePicker
@@ -249,6 +263,18 @@ export function LanguageSwitcher({
               if (isLocale(choice)) void choose(choice)
             }}
           />
+          {/*
+            Twenty-three languages never fit: the list scrolls, and on a touch
+            screen a scrollbar is not drawn. The fade is the cue that more is
+            below, and it goes once the end is reached. It takes no height
+            (`-mt-8` against `h-8`), so removing it moves nothing.
+          */}
+          {moreBelow ? (
+            <div
+              aria-hidden
+              className="pointer-events-none sticky bottom-0 -mt-8 h-8 bg-linear-to-t from-surface to-transparent"
+            />
+          ) : null}
         </PopoverContent>
       </Popover>
       <span role="status" className="sr-only">

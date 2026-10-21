@@ -65,7 +65,7 @@ export function MarketingHeader({
         {anchors.length === 0 ? null : (
           <nav
             aria-label={t('marketing.nav.onThisPage')}
-            className="ms-6 hidden items-center lg:flex"
+            className="ms-6 hidden items-center xl:flex"
           >
             {anchors.map((anchor) => (
               <a
@@ -92,7 +92,7 @@ export function MarketingHeader({
                 variant="ghost"
                 size="sm"
                 shape="pill"
-                className="hidden sm:inline-flex"
+                className="hidden md:inline-flex"
               >
                 <Link to="/pricing" activeProps={{ 'aria-current': 'page' }}>
                   {t('marketing.action.pricing')}

@@ -561,7 +561,7 @@ outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their call
 
 ## Amendment
 
-### The switcher shipped differently in four places - #1173
+### The switcher shipped differently in five places - #1173
 
 - **The wordmark gives up more than its suffix.** The suffix alone was not enough: with the switcher mounted, the marketing
   header measured 372px in `en` at 360px, and the French "Start free" button alone is about 195px. `Wordmark` gained `compact`:
@@ -578,3 +578,11 @@ outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their call
   it does not tell a person to allow cookies. While a save runs the trigger carries `aria-busy` and a spinner, because Escape
   or an outside click closes the popover and its chip is the only other signal. Focus returns to the trigger after a switch only
   if it is still inside the popover, on the trigger or nowhere; someone who has moved on keeps their place.
+- **The header gives up room between 640px and 1280px, and the name shows from `xl`, not `sm`.** Measured against the header
+  with the switcher hidden, the name pushed the marketing header past the viewport between 640px and 1024px in 11 locales
+  (`fr` by 92px at 640px and 141px at 1024px; `es`, `nl`, `pt-BR`, `uk`, `de`, `pl` and others by 15-38px), because "Pricing",
+  "Sign in" and "Start free" are all visible there. The trigger is the icon alone (40px, the name stays in its accessible
+  name) until `xl`; "Pricing" shows from `md` instead of `sm` and the landing page's in-page anchors from `xl` instead of
+  `lg` (the French header was already 35px too wide at 1024px). After the change no width from 360px to 1280px overflows
+  because of the header in any of the 23 locales, and `/login` is clean at every width. Still wider than the screen,
+  untouched by this slice: the document at 320px in ten locales, and at 360px in `el`, `ru`, `uk` (#1497).

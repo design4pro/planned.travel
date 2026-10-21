@@ -3,7 +3,13 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -151,13 +157,13 @@ describe('LanguageSwitcher — who sees it', () => {
 })
 
 describe('LanguageSwitcher — the trigger', () => {
-  it('is 40px high, carries the active language in its name, and shows the native name from sm', () => {
+  it('is 40px high, carries the active language in its name, and shows the native name from xl', () => {
     mount()
     const button = trigger()
     expect(button.className).toContain('h-10')
     const visible = button.querySelector('[lang="en"]')
     expect(visible?.textContent).toBe('English')
-    expect(visible?.className).toContain('hidden sm:inline')
+    expect(visible?.className).toContain('hidden xl:inline')
   })
 })
 
@@ -172,6 +178,30 @@ describe('LanguageSwitcher — the popover', () => {
     expect(screen.getAllByRole('radio')).toHaveLength(23)
     expect(screen.queryByTestId('locale-chip-workspace')).toBeNull()
     expect(chip('en').getAttribute('aria-checked')).toBe('true')
+  })
+
+  it('shows a fade while more languages are below and drops it at the end of the list, again on reopening', async () => {
+    const { user } = mount()
+    const dialog = await open(user)
+    const cue = () =>
+      dialog.querySelector('[aria-hidden="true"].bg-linear-to-t')
+    expect(cue()).not.toBeNull()
+
+    // jsdom has no layout: give the list the geometry of "scrolled to the end".
+    Object.defineProperties(dialog, {
+      scrollHeight: { configurable: true, value: 600 },
+      clientHeight: { configurable: true, value: 300 },
+      scrollTop: { configurable: true, value: 300 },
+    })
+    fireEvent.scroll(dialog)
+    expect(cue()).toBeNull()
+
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const reopened = await open(user)
+    expect(
+      reopened.querySelector('[aria-hidden="true"].bg-linear-to-t'),
+    ).not.toBeNull()
   })
 
   it('opens from the keyboard and closes on Escape with focus back on the trigger', async () => {
