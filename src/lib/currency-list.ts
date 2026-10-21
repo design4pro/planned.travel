@@ -2,7 +2,7 @@
  * Which currencies a trip can be budgeted in, in what order, and what a search matches.
  *
  * **Codes and logic only - never a name.** The nine favourites are the product's choice; the words
- * beside them come from the translated regional module (`routes/_app/settings/-lib/regional.ts`), and
+ * beside them come from the currency-name module (`routes/_app/-lib/currency-names.ts`), and
  * the caller hands each option's name in when it searches. Writing a name here once put a second
  * English copy of nine currencies beside that set.
  */

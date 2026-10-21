@@ -37,8 +37,9 @@ import {
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { formatInverseRate, formatNumber, formatRateInput } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { openedCurrencyOptions } from '#/routes/_app/-lib/currency-names'
 import {
-  CURRENCY_OPTIONS,
+  OFFERED_CURRENCY_CODES,
   MAX_EXCHANGE_RATE,
   MIN_EXCHANGE_RATE,
   currencyCode,
@@ -356,12 +357,10 @@ export function CurrencyRebaseDialog({
     }
   }
 
-  const options = CURRENCY_OPTIONS.filter((entry) => entry.code !== from).map(
-    (entry) => ({
-      value: entry.code,
-      label: entry.code,
-      description: entry.name,
-    }),
+  const options = openedCurrencyOptions(
+    t,
+    locale,
+    OFFERED_CURRENCY_CODES.filter((code) => code !== from),
   )
 
   const shownRate = touched ? rateText : (ready?.rate?.value ?? null)

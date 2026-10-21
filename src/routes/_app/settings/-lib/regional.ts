@@ -31,6 +31,8 @@
 import { monthName, weekdayName } from '#/lib/format'
 import type { Locale, Translate } from '#/lib/i18n'
 
+import { currencyName } from '../../-lib/currency-names'
+
 /** One `SimpleSelect` option, in the shape the primitive takes. */
 export interface RegionalOption {
   value: string
@@ -82,78 +84,6 @@ export const DISTANCE_UNITS: ReadonlyArray<'metric' | 'imperial'> = [
   'metric',
   'imperial',
 ]
-
-/**
- * A currency's name, or the bare code for one a workspace stored before this
- * list existed. The code is always shown beside it, so an unnamed code still
- * identifies itself rather than rendering an empty option.
- */
-export function currencyName(t: Translate, code: string): string {
-  switch (code) {
-    case 'AUD':
-      return t('settings.regional.currency.AUD')
-    case 'CAD':
-      return t('settings.regional.currency.CAD')
-    case 'CHF':
-      return t('settings.regional.currency.CHF')
-    case 'EUR':
-      return t('settings.regional.currency.EUR')
-    case 'GBP':
-      return t('settings.regional.currency.GBP')
-    case 'JPY':
-      return t('settings.regional.currency.JPY')
-    case 'PLN':
-      return t('settings.regional.currency.PLN')
-    case 'SEK':
-      return t('settings.regional.currency.SEK')
-    case 'USD':
-      return t('settings.regional.currency.USD')
-    default:
-      return code
-  }
-}
-
-const platformCurrencyNames = new Map<Locale, Intl.DisplayNames | null>()
-
-/**
- * The currency's name as the platform writes it in this locale, or the bare code when it cannot.
- *
- * The catalogue names nine codes, and a name for the other ~300 cannot be written here without a
- * second English copy, so the rest come from `Intl.DisplayNames`. That API disagrees between
- * workerd and WebKit (`src/lib/i18n/__tests__/source-rules.test.ts` says why), so this is **only for
- * markup a reader opens**: the trip form's currency list renders after a click, never in the server
- * pass, so there is no second render to disagree with. Never call it from a page's first paint.
- */
-export function platformCurrencyName(locale: Locale, code: string): string {
-  let names = platformCurrencyNames.get(locale)
-  if (names === undefined) {
-    try {
-      names = new Intl.DisplayNames([locale], { type: 'currency' })
-    } catch {
-      names = null
-    }
-    platformCurrencyNames.set(locale, names)
-  }
-  try {
-    return names?.of(code) ?? code
-  } catch {
-    return code
-  }
-}
-
-/**
- * `currencyLabel` for markup a reader opens: the catalogue's name where it has one, the platform's
- * where it does not. See {@link platformCurrencyName} for why this is not `currencyLabel` itself.
- */
-export function openedCurrencyLabel(
-  t: Translate,
-  locale: Locale,
-  code: string,
-): string {
-  const named = currencyName(t, code)
-  const name = named === code ? platformCurrencyName(locale, code) : named
-  return name === code ? code : `${code} — ${name}`
-}
 
 /** `GBP` → `GBP — Pound sterling`; an unknown code stays just the code. */
 export function currencyLabel(t: Translate, code: string): string {

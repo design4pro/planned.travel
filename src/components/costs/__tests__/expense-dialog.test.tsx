@@ -13,8 +13,14 @@ import Costs from '#/lib/i18n/messages/en/costs'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { ExpenseDialog } from '../expense-dialog'
+import {
+  LOCALISED,
+  PL,
+  descriptionOf,
+  expectNamedByVisibleLabel,
+} from './localised'
 
-import type { Catalogue } from '#/lib/i18n'
+import type { Catalogue, Locale } from '#/lib/i18n'
 import type {
   CostsDepartedPerson,
   CostsExpense,
@@ -115,7 +121,7 @@ async function pickCurrency(
 ): Promise<void> {
   await user.click(
     screen.getByRole('combobox', {
-      name: 'Currency this receipt was written in',
+      name: 'Currency',
     }),
   )
   await user.click(
@@ -387,7 +393,7 @@ describe('the expense dialog’s suggested converted figure', { timeout: 20_000 
       ).toBeTruthy()
       expect(
         screen.getByRole('combobox', {
-          name: 'Currency this receipt was written in',
+          name: 'Currency',
         }).textContent,
       ).toContain('JPY')
       expect(screen.queryByText(REFUSAL)).toBeNull()
@@ -447,7 +453,7 @@ describe('the expense dialog’s suggested converted figure', { timeout: 20_000 
       expect(await screen.findByDisplayValue('100.00')).toBe(amountField())
       expect(
         screen.getByRole('combobox', {
-          name: 'Currency this receipt was written in',
+          name: 'Currency',
         }).textContent,
       ).toContain('GBP')
       expect(screen.getByLabelText(/^Converted to JPY/)).toHaveProperty(
@@ -697,7 +703,7 @@ describe('the people a new line of money may name, once someone has left the wor
   async function payerNames(
     user: ReturnType<typeof userEvent.setup>,
   ): Promise<Array<string>> {
-    await user.click(screen.getByRole('combobox', { name: 'Who paid' }))
+    await user.click(screen.getByRole('combobox', { name: 'Paid by' }))
     return (await screen.findAllByRole('option')).map(
       (option) => option.textContent,
     )
@@ -830,5 +836,50 @@ describe('the expense dialog when the save fails', () => {
     expect(
       await screen.findByText('The amount must be more than zero.'),
     ).toBeTruthy()
+  })
+})
+
+/** The dialog open in another reader's language, with the catalogue that language ships. */
+function openIn(locale: Locale, messages: Catalogue): void {
+  render(
+    <I18nProvider locale={locale} messages={messages}>
+      <ExpenseDialog
+        open
+        onOpenChange={() => {}}
+        expense={null}
+        people={PEOPLE}
+        viewerUserId="u1"
+        tripCurrency="EUR"
+        categories={[{ value: 'food', label: 'Food', icon: null }]}
+        defaultCategory="food"
+        today="2026-10-12"
+        suggestedRate={undefined}
+        onSubmit={async () => {}}
+      />
+    </I18nProvider>,
+  )
+}
+
+describe('the expense dialog in the reader’s language (#1217)', () => {
+  it.each(LOCALISED)(
+    'names every select and the date picker by its visible label in $locale',
+    ({ locale, messages }) => {
+      openIn(locale, messages)
+
+      // Currency, category, date, paid by.
+      expectNamedByVisibleLabel(screen.getByRole('dialog'), 4)
+    },
+  )
+
+  it('names a catalogued and an uncatalogued currency in the reader’s language', async () => {
+    const user = hand()
+    openIn(PL.locale, PL.messages)
+
+    await user.click(screen.getAllByRole('combobox')[0] as HTMLElement)
+
+    expect(descriptionOf('EUR')).toBe('euro')
+    const forint = descriptionOf('HUF')
+    expect(forint).toMatch(/forint/i)
+    expect(forint).not.toBe('Hungarian forint')
   })
 })
