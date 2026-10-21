@@ -20,6 +20,7 @@ import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { LanguageSwitcher } from '../language-switcher'
 
+import type * as I18nModule from '#/lib/i18n'
 import type { Catalogue, Locale } from '#/lib/i18n'
 
 /**
@@ -62,6 +63,20 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 vi.mock('sonner', () => ({ toast: notify }))
 
+// The one real network call after a switch is the catalogue chunk; a test can
+// take it away.
+const catalogues = vi.hoisted(() => ({ offline: false }))
+vi.mock('#/lib/i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof I18nModule>()
+  return {
+    ...actual,
+    loadCatalogue: (...args: Parameters<typeof actual.loadCatalogue>) =>
+      catalogues.offline
+        ? Promise.reject(new Error('offline'))
+        : actual.loadCatalogue(...args),
+  }
+})
+
 const EN: Catalogue = {
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('settings', Settings),
@@ -101,6 +116,7 @@ function setRoot(
 
 beforeEach(() => {
   served = 'en'
+  catalogues.offline = false
   setRoot(false)
   router.invalidate.mockReset()
   router.invalidate.mockImplementation(async () => {
@@ -385,6 +401,22 @@ describe('LanguageSwitcher — choosing a language', () => {
       Shell['language.notApplied'],
     )
     expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('still tells the person the page did not change when the on-screen catalogue cannot be fetched', async () => {
+    router.invalidate.mockImplementation(async () => {
+      setRoot(false, 'en', {})
+      catalogues.offline = true
+    })
+    const { user } = mount()
+    await open(user)
+    await user.click(chip('pl'))
+
+    await waitFor(() => expect(notify.warning).toHaveBeenCalled())
+    expect(notify.warning).toHaveBeenCalledWith(
+      Settings['language.reload.title'],
+      expect.anything(),
+    )
   })
 
   it('is unapplied when the browser did not keep the cookie: told so in the language still on screen, never announced', async () => {

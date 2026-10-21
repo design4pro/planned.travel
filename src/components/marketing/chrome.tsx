@@ -53,7 +53,7 @@ export function MarketingHeader({
 
   return (
     <header className="sticky top-0 z-nav border-b border-edge-faint bg-canvas/85 pt-safe backdrop-blur-xl">
-      <div className="mx-auto flex h-nav max-w-content items-center gap-2 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-nav max-w-content items-center gap-2 px-4 max-[22rem]:gap-1 max-[22rem]:px-3 sm:px-6 lg:px-8">
         <Link
           to="/"
           aria-label={t('marketing.nav.home')}
@@ -109,7 +109,13 @@ export function MarketingHeader({
               >
                 <Link to="/login">{t('marketing.action.signIn')}</Link>
               </Button>
-              <Button asChild variant="primary" size="sm" shape="pill">
+              <Button
+                asChild
+                variant="primary"
+                size="sm"
+                shape="pill"
+                className="max-[22rem]:px-2.5"
+              >
                 <Link to="/register">{t('marketing.action.startFree')}</Link>
               </Button>
             </>

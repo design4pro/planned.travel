@@ -584,5 +584,7 @@ outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their call
   "Sign in" and "Start free" are all visible there. The trigger is the icon alone (40px, the name stays in its accessible
   name) until `xl`; "Pricing" shows from `md` instead of `sm` and the landing page's in-page anchors from `xl` instead of
   `lg` (the French header was already 35px too wide at 1024px). After the change no width from 360px to 1280px overflows
-  because of the header in any of the 23 locales, and `/login` is clean at every width. Still wider than the screen,
+  because of the header in any of the 23 locales, and `/login` is clean at every width. Below 22rem the header takes
+  `px-3` and `gap-1` and "Start free" `px-2.5`, because the French row was 15px too wide at 320px; every locale's header
+  now fits at 320px. Still wider than the screen,
   untouched by this slice: the document at 320px in ten locales, and at 360px in `el`, `ru`, `uk` (#1497).

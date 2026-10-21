@@ -140,14 +140,20 @@ export function LanguageSwitcher({
   /**
    * A translator for the language the page is in once the refresh is over,
    * which is not the one this render captured: a toast in the old language
-   * under the new `<html lang>` is read in the wrong voice.
+   * under the new `<html lang>` is read in the wrong voice. When that
+   * catalogue cannot be fetched (the network went away mid-switch) the render's
+   * own `t` speaks: a toast in the old language beats no toast.
    */
   async function translatorOnScreen(): Promise<Translate> {
     const shown = rootData(router.state.matches)?.locale
     const target =
       SUPPORTED_LOCALES.find((descriptor) => descriptor.tag === shown)?.tag ??
       locale
-    return createTranslator(target, await loadCatalogue(target))
+    try {
+      return createTranslator(target, await loadCatalogue(target))
+    } catch {
+      return t
+    }
   }
 
   async function choose(next: Locale): Promise<void> {
@@ -244,13 +250,29 @@ export function LanguageSwitcher({
           align="end"
           padding="none"
           aria-label={t('settings.language.label')}
+          // Keep the card off the screen edge: its width assumes a gutter.
+          collisionPadding={16}
+          // Radix focuses the checked chip without scrolling, which leaves a
+          // language low in the list (`uk`, `vi`, `zh-*`) focused and out of view.
+          onOpenAutoFocus={(event) => {
+            event.preventDefault()
+            const checked = contentRef.current?.querySelector<HTMLElement>(
+              '[role=radio][tabindex="0"]',
+            )
+            ;(checked ?? contentRef.current)?.focus({ preventScroll: true })
+            // The list has no height limit until the popover is positioned, so
+            // the scroll waits for the next frame.
+            requestAnimationFrame(() =>
+              checked?.scrollIntoView({ block: 'nearest' }),
+            )
+          }}
           onScroll={(event) => {
             const list = event.currentTarget
             setMoreBelow(
               list.scrollTop + list.clientHeight < list.scrollHeight - 1,
             )
           }}
-          className="w-[min(calc(100vw-2rem),24rem)] p-1.5 max-h-[min(70svh,32rem,var(--radix-popover-content-available-height))]"
+          className="w-[min(calc(100vw-2rem),24rem)] scroll-pb-8 p-1.5 max-h-[min(70svh,32rem,var(--radix-popover-content-available-height))]"
         >
           <LanguagePicker
             value={locale}
