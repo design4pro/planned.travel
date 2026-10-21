@@ -1,11 +1,11 @@
 # Document the ON DELETE rule D1 enforces, not the one schema.ts declares
 
-| Field              | Value |
-| ------------------ | ----- |
-| **Status**         | ready |
-| **Issue**          | #192  |
-| **Spec PR**        | #626  |
-| **Implementation** | none  |
+| Field              | Value       |
+| ------------------ | ----------- |
+| **Status**         | implemented |
+| **Issue**          | #192        |
+| **Spec PR**        | #626        |
+| **Implementation** | #1485       |
 
 ## 📝 TLDR
 
@@ -230,3 +230,7 @@ deleted, and never takes it along'` to the equivalent.
 | A5  | Correct the false "SQLite's `ADD COLUMN` takes no `ON DELETE` clause" in the two sibling comments, and the "carries no `ON DELETE` clause" variant in `transports.ts`, `itinerary.ts` and `transport-schema.test.ts`? | Yes.                                                   | The issue's own title asks that the docs not state what is untrue. The fix is comment-only.                                                                                                                               |
 | A6  | Rewrite the `03` plan paragraph or annotate it?                                                                                                                                                                       | Annotate it with one `As deployed` line.               | The plan is the backlog source and still read. A one-line note is the smallest reversible change, and it leaves the stage's reasoning as written.                                                                         |
 | A7  | The issue carries `feature` although the work is documentation and tests.                                                                                                                                             | Left as is.                                            | Category relabels belong to a human. This run removed only its own trigger label, `spec`.                                                                                                                                 |
+
+## 🔧 Amendment
+
+**The record is ADR 0044, and the plan is not annotated (#192, PR #1485).** The spec named ADR 0024, which is taken; the next free number when the implementation opened was 0044. Step 2's `> **As deployed:**` note in `docs/plans/03-reservations-and-transport.md` (A6) was dropped: that plan is "Migrated - frozen" and takes no further edits (CODE_REVIEW.md, "Docs and CI"; #968 reverted the same kind of edit). The stale paragraph at that plan's line 1485 stays as written, and ADR 0044 states the deployed rule. The sweep also reworded places the spec's grep could not see: `repos/__tests__/harness.ts`, `workspace-deletion.test.ts`, `reservations.test.ts` and the titles in `migrations-match-schema.test.ts`.

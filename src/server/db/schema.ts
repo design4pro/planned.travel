@@ -1107,6 +1107,12 @@ export const dayAccommodations = sqliteTable(
      * than two. `set null` and never `cascade`: a stay is the record of where somebody slept and
      * outlives the reservation that held it — see
      * `docs/plans/03-reservations-and-transport.md`, `03-S8`.
+     *
+     * The `set null` here is the schema's, and the test database — built from this file — has it.
+     * The deployed one does not: the column arrived by `ADD COLUMN`, so D1 enforces `NO ACTION`,
+     * where deleting a booking a stay names fails rather than nulling the column. So
+     * `deleteReservation` clears it first, through `unlinkAccommodationsFromReservation`
+     * (ADR 0044).
      */
     reservationId: text('reservation_id').references(() => reservations.id, {
       onDelete: 'set null',
@@ -1150,10 +1156,10 @@ export const transports = sqliteTable(
      * The day it lands, when that is a different one. Null on every leg written before it.
      *
      * The `set null` here is the schema's, and the test database — built from this file — has it.
-     * The deployed one does not: SQLite's `ADD COLUMN` takes no `ON DELETE` clause, so
+     * The deployed one does not: drizzle-kit's `ADD COLUMN` writes no `ON DELETE` clause, so
      * `0006_mighty_nehzno` left the constraint at `NO ACTION`, where deleting a day a leg names
      * fails rather than nulling the column. So the day deleters in `repos/days.ts` clear it
-     * themselves first, through `unlinkTransportsFromDays` (#186).
+     * themselves first, through `unlinkTransportsFromDays` (#186, ADR 0044).
      */
     arrivalDayId: text('arrival_day_id').references(() => days.id, {
       onDelete: 'set null',
@@ -1244,7 +1250,7 @@ export const transports = sqliteTable(
  *
  * **The `set null` on the two day references is the deployed one**, unlike
  * `transports.arrival_day_id` above: this table arrives by `CREATE TABLE`, which carries the
- * `ON DELETE` clause SQLite's `ADD COLUMN` cannot.
+ * `ON DELETE` clause drizzle-kit's `ADD COLUMN` does not write.
  *
  * Nothing reads or writes this table yet. `03-S2` mints `transportLegsRepository` and the chain
  * writer; this stage ships the shape so that stage has one to compile against.
@@ -1342,9 +1348,14 @@ export const reservations = sqliteTable(
     }),
     /**
      * The ledger line this booking paid for, so editing a price rewrites one expense instead of
-     * leaving a new one behind each time. The link lives on this side because a deleted cost line
-     * then unlinks the booking with no code of ours running — see
+     * leaving a new one behind each time. The link lives on this side because deleting a cost line
+     * then only has to unlink the booking — see
      * `docs/plans/03-reservations-and-transport.md`, `03-S4`.
+     *
+     * The `set null` here is the schema's, and the test database — built from this file — has it.
+     * The deployed one does not: the column arrived by `ADD COLUMN`, so D1 enforces `NO ACTION`,
+     * where deleting an expense a booking names fails rather than unlinking the booking. So
+     * `deleteExpense` clears it first, through `unlinkReservationsFromExpense` (ADR 0044).
      */
     expenseId: text('expense_id').references(() => expenses.id, {
       onDelete: 'set null',
@@ -1492,9 +1503,9 @@ export const expenses = sqliteTable(
      * expense writer that can first set the column, so it is `NULL` on every row today.
      *
      * As with `transports.arrival_day_id`, the deployed constraint is `NO ACTION` rather than
-     * `set null` — `0006_mighty_nehzno` added the column, and SQLite's `ADD COLUMN` carries no
-     * `ON DELETE` clause. `04-S2` is the stage that first deletes a category, so it is the stage
-     * that has to null this column itself.
+     * `set null` — `0006_mighty_nehzno` added the column, and drizzle-kit's `ADD COLUMN` writes no
+     * `ON DELETE` clause (ADR 0044). No unlinker exists yet: `04-S2` is the stage that first
+     * deletes a category, so it is the stage that has to null this column itself.
      */
     costCategoryId: text('cost_category_id').references(
       () => tripCostCategories.id,

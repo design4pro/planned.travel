@@ -373,8 +373,9 @@ describe('a stay and the booking that pays for it', () => {
 /**
  * The same two deletes on the database D1 is actually running. `reservation_id` arrived by
  * `ADD COLUMN`, so what D1 enforces is `NO ACTION`, not the `set null` `schema.ts` declares
- * (`accommodation-schema.test.ts` pins both halves); on the default harness these cases would pass
- * whether or not the link is cleared before the booking goes.
+ * (`DEPLOYED_WITHOUT_ON_DELETE` in `migrations-match-schema.test.ts` registers it, ADR 0044); on the
+ * default harness these cases would pass whether or not the link is cleared before the booking
+ * goes.
  */
 describe('on the migrated database', () => {
   beforeEach(async () => {
