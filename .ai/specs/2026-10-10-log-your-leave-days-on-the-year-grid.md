@@ -82,14 +82,16 @@ Verified against the repository at HEAD:
   `true` by default, and nothing reads them.
 - **Holiday calendars paint nothing.** `vacay_holiday_calendars` is a subscription record (`region`, `label`, `colour`) with no day
   rows anywhere in the schema, and nothing under `src/routes/_app/vacay*` reads `calendars`.
-- **The week start is a shipped setting nobody reads here.** `getEffectiveSettings(scope, userId)` resolves
+- **Week start at drafting.** `getEffectiveSettings(scope, userId)` resolves
   `user_settings.week_starts_on ?? organization_settings.week_starts_on`, both editing surfaces ship, and
   `profile.weekStart.hint` already promises "Applies to every calendar, including the vacay year grid." The promise is false until
-  this stage.
+  08-S5b. That slice now reads the existing workspace and traveller settings once in `readGrid`,
+  validates the resolved value at the boundary (Monday for invalid or absent values), and rotates
+  headings, month padding and Home/End together without creating settings rows.
 - **Two words that collide.** The entry kind `holiday` (a personal day that costs nothing) sits beside "company holiday", and the
   shipped `en` catalogue is British English, where "holiday" is annual leave. `CONTEXT.md` defines **Day** as a trip day.
-- **The screen is English.** `vacay.tsx` carries its copy as literals (`docs/SPEC.md` §9). The allowance spec localises the lines it
-  rewrites; the rest is this stage's.
+- **Page copy at drafting.** `vacay.tsx` carried English literals (`docs/SPEC.md` §9). The allowance
+  slice localised its own lines; 08-S5b now localises the page header and travellers panel in all 23 locales.
 - **Mobile chrome.** Below `lg` a fixed tab bar (`src/components/layout/mobile-nav.tsx`) and a "Report a problem" button sit at the
   bottom; `AppToaster` clears the tab bar only (`offset` 5.5rem, `mobileOffset` 5.25rem in `src/components/layout/app-toaster.tsx`). The
   "Report a problem" actor (`#sentry-feedback`) floats in the end corner up to 132px above the foot, which is why `AppFrame` pads

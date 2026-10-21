@@ -2,14 +2,14 @@
  * Everything the authentication screens say, in Brazilian Portuguese.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Register.** «Você» with the verb in the third person, as everywhere else in
  * the Brazilian catalogue. These are the only screens a traveller reaches with
- * no session, so the language comes from `Accept-Language` alone and every
+ * no session, so the language comes from the visitor cookie, then `Accept-Language`, then English and every
  * validation message has to read as naturally as the headings do.
  *
  * **Plural.** `Intl.PluralRules('pt-BR')` reports `one`, `many` and `other`;
@@ -361,6 +361,9 @@ const messages = {
   'error.locked.title': 'Conta bloqueada por um tempo',
   'error.locked.detail':
     'Verificações demais falharam. Por segurança, esta conta fica bloqueada por alguns minutos.',
+  'error.twoFactorOn.title': 'A autenticação de dois fatores já está ativada',
+  'error.twoFactorOn.detail':
+    'Configurá-la novamente faria seu autenticador atual parar de funcionar, por isso nada foi alterado. Você pode gerenciá-la aqui.',
   'error.noTwoFactor.title': 'A verificação em duas etapas não está ligada',
   'error.noTwoFactor.detail':
     'Entre com seu e-mail e sua senha para continuar.',
@@ -389,6 +392,13 @@ const messages = {
   'passkeyNotice.action': 'Gerenciar chaves de acesso',
   'passkeyNotice.recovery':
     'Se você não reconhece esta alteração, mude sua senha e encerre as sessões desconhecidas. Redefinir a senha não remove as chaves de acesso. Revise suas chaves e remova as que não reconhece.',
+  'error.passwordAttemptsLocked.title': 'Confirmação de senha bloqueada',
+  'error.passwordAttemptsLocked.detail':
+    'Esta sessão não pode mais confirmar sua senha. Saia e entre novamente.',
+  'error.passwordResultUnknown.title':
+    'Confira suas configurações de segurança',
+  'error.passwordResultUnknown.detail':
+    'A alteração pode ter sido salva. Mantenha esta sessão aberta até conseguir entrar novamente. Se você alterou a senha, tente a nova. Se substituiu os códigos de backup, os antigos podem não funcionar mais; use seu autenticador ou outra sessão conectada para gerar um novo conjunto.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

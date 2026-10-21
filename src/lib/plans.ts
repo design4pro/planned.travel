@@ -123,6 +123,7 @@ export interface PlanModules {
   readonly collaboration: boolean
   /** Live cursors and instant sync through the per-trip Durable Object. */
   readonly realtime: boolean
+  /** #1166: dormant and hidden until a feature ships; removal is plan 08's price-list decision. */
   readonly offlineMaps: boolean
   readonly pdfExport: boolean
   readonly prioritySupport: boolean
@@ -274,7 +275,7 @@ const soloPlan: Plan = {
   name: 'Solo',
   tagline: 'For the traveller who plans everything',
   description:
-    'Unlimited trips and every planning module, for one person. Reservations, the travel journal, offline maps and PDF exports all unlock.',
+    'Unlimited trips and every planning module, for one person. Reservations, the travel journal and PDF exports all unlock.',
   seatBased: false,
   seatRange: { min: 1, max: 1 },
   trialDays: 14,
@@ -301,7 +302,6 @@ const soloPlan: Plan = {
       label: 'Every planning module',
       detail: 'Reservations, journal, budgets, packing',
     },
-    { label: 'Offline maps', detail: 'Download regions before you fly' },
     { label: 'PDF and calendar export' },
     { label: '5 GB for photos and documents' },
   ],

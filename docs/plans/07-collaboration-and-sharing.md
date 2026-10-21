@@ -338,7 +338,8 @@ as `07-S2` does.
   caller's tenant so a foreign trip id is a 404 before a socket exists, and only then asserts an
   identity to the room. The room role is `canWritePlan(trip, tripRole)`: an owner or editor of a
   trip that is not archived connects as `editor`; a trip viewer, a traveller who is not on the trip,
-  and anyone on an archived trip connect as `viewer` and have their patches refused inside the room.
+  and anyone on an archived trip connect as `viewer` and have their patches refused inside the room,
+  and so does a session an operator is impersonating (docs/ACCESS.md §6.4, #1253).
   The role is read at connect, so the writes that change it close the sockets they affect and the
   client's reconnect picks the stored role up: a role change, a removal or a leave closes that
   person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
@@ -347,7 +348,8 @@ as `07-S2` does.
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
   task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends
   their own session - a password reset, a password change that revokes the other sessions, a
-  sign-out, a revoke of one, the other or all sessions (#1093); a password reset, a revoke of all
+  sign-out, a revoke of one, the other or all sessions (#1093), and so does the person an operator
+  stops impersonating (#1179); a password reset, a revoke of all
   sessions and a password change that revokes the others also delete the cached session blob of each
   ended session by name, so the reconnect is refused within the KV convergence window (about 60
   seconds; a refresh in another colo inside it can re-cache a blob, which a second revoke of all

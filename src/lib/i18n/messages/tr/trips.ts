@@ -281,6 +281,12 @@ const messages = {
   'book.readOnly.archived':
     'Bu seyahat arşivlendi, bu yüzden rezervasyonlar ve konaklamalar salt okunur. Değiştirmek için seyahati geri yükleyin.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Bu değişiklik reddedildi. Başka değişiklikler yapmadan önce seyahatin güncel durumunu kontrol edin.',
+  'transports.recovery.failed':
+    'Seyahat yenilenemedi. Değişiklik yapmadan önce tekrar deneyin.',
+  'transports.readOnly.archived':
+    'Bu seyahat arşivlenmiş. Ulaşımı değiştirmek için geri yükleyin.',
   'transports.title': 'Yolculuklar',
   'transports.empty': 'Henüz bir kayıt yok',
   'transports.count.transports': {

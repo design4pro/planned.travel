@@ -67,12 +67,12 @@ const messages = {
 
   'landing.plans.title': '免费开始。等它值得了再付钱。',
   'landing.plans.lede':
-    '每个方案都含逐日规划、地图、预算和行李清单。付费方案 - 每月 {price} 起 - 解锁不限次数的行程、预订、日志、离线地图和导出。',
+    '每个方案都含逐日规划、地图、预算和行李清单。付费方案 - 每月 {price} 起 - 解锁不限次数的行程、预订、日志和导出。',
   'landing.plans.ledeFree':
-    '每个方案都含逐日规划、地图、预算和行李清单。付费方案解锁不限次数的行程、预订、日志、离线地图和导出。',
+    '每个方案都含逐日规划、地图、预算和行李清单。付费方案解锁不限次数的行程、预订、日志和导出。',
   'landing.plans.compare': '逐行比较每一项上限',
   'landing.questions.title': '问题，直接回答',
-  'landing.questions.lede': '大家在动手之前真正想知道的六件事。',
+  'landing.questions.lede': '大家在动手之前真正想知道的五件事。',
   'cta.heading': '你下一趟旅程已经值得好好规划',
   'cta.lede':
     '两趟行程、整张地图、逐日安排和行李清单：免费，不用绑卡，也没有倒计时。',
@@ -82,9 +82,6 @@ const messages = {
   'landing.faq.phone.q': '在手机上能好好用吗？',
   'landing.faq.phone.a':
     '能。手机版式是单独画的，不是从桌面版挤下来的；而且这是一个网站，没有东西要装，也没有东西要更新。',
-  'landing.faq.offline.q': '没有信号能用地图吗？',
-  'landing.faq.offline.a':
-    '{solo}和{crew}可以在起飞前下载一片区域，所以落地没网时地图照样能画。编辑行程本身需要联网。',
   'landing.faq.privacy.q': '谁能看到我的行程？',
   'landing.faq.privacy.a':
     '一趟行程属于一个工作区，只有被邀请进那个工作区的人才能打开。没有任何内容是公开的，没有发现流，默认也不会分享给任何人。',
@@ -228,7 +225,6 @@ const messages = {
   'pricing.feature.free.tripsDetail': '归档一次行程即可开始下一次',
   'pricing.feature.solo.modules': '全部规划模块',
   'pricing.feature.solo.modulesDetail': '预订、日志、预算、行李',
-  'pricing.feature.solo.offlineDetail': '出发前下载区域地图',
   'pricing.feature.crew.membersDetail': '按成员计费，随时调整',
   'pricing.feature.crew.realtimeDetail': '实时光标与即时同步',
   'pricing.feature.crew.supportDetail': '一个工作日内由真人回复',

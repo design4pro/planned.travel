@@ -2,14 +2,14 @@
  * Everything the authentication screens say, in French.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Register.** Vouvoiement, as everywhere else in the French catalogue. These
  * are the only screens a traveller reaches with no session, so the language
- * comes from `Accept-Language` alone and every validation message has to read
+ * comes from the visitor cookie, then `Accept-Language`, then English and every validation message has to read
  * as naturally as the headings do.
  *
  * **Plural.** `Intl.PluralRules('fr')` reports `one`, `many` and `other`;
@@ -373,6 +373,10 @@ const messages = {
   'error.locked.title': 'Compte temporairement verrouillé',
   'error.locked.detail':
     'Trop de vérifications ont échoué. Par sécurité, ce compte est verrouillé quelques minutes.',
+  'error.twoFactorOn.title':
+    'L’authentification à deux facteurs est déjà activée',
+  'error.twoFactorOn.detail':
+    'La configurer à nouveau empêcherait votre application d’authentification actuelle de fonctionner. Rien n’a donc été modifié. Vous pouvez la gérer ici.',
   'error.noTwoFactor.title': 'La vérification en deux étapes n’est pas active',
   'error.noTwoFactor.detail':
     'Connectez-vous avec votre e-mail et votre mot de passe pour continuer.',
@@ -401,6 +405,12 @@ const messages = {
   'passkeyNotice.action': 'Gérer les clés d’accès',
   'passkeyNotice.recovery':
     'Si vous ne reconnaissez pas ce changement, modifiez votre mot de passe et fermez les sessions inconnues. La réinitialisation du mot de passe ne supprime pas les clés d’accès. Vérifiez-les et supprimez celles que vous ne reconnaissez pas.',
+  'error.passwordAttemptsLocked.title': 'Confirmation du mot de passe bloquée',
+  'error.passwordAttemptsLocked.detail':
+    'Cette session ne peut plus confirmer votre mot de passe. Déconnectez-vous puis reconnectez-vous.',
+  'error.passwordResultUnknown.title': 'Vérifiez vos paramètres de sécurité',
+  'error.passwordResultUnknown.detail':
+    'La modification a peut-être été enregistrée. Gardez cette session ouverte tant que vous ne pouvez pas vous reconnecter. Si vous avez changé de mot de passe, essayez le nouveau. Si vous avez remplacé les codes de secours, les anciens peuvent ne plus fonctionner ; utilisez votre application d’authentification ou une autre session connectée pour en générer de nouveaux.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

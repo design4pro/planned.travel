@@ -29,6 +29,8 @@ import { unlinkReservationsFromExpense } from './reservations'
 import {
   assertExpectedTripCurrency,
   assertTripRole,
+  canWritePlan,
+  requireWritableTrip,
   requireTrip,
   tripMemberUserIdsInWorkspace,
 } from './trips'
@@ -78,33 +80,32 @@ export const settlementsRepository = createTenantRepository(
  * organization-visible trip (`CONTEXT.md`, "Trip member").
  *
  * The one place the money writers' role list is declared. Enforcement is {@link assertTripRole},
- * the trip's own guard, through {@link requireMoneyTrip}; {@link canWriteMoney} reads the same list
- * for a screen that has to decide which controls to draw.
+ * the trip's own guard, through {@link requireMoneyTrip}. The costs affordance delegates to
+ * {@link canWritePlan}, the trip-owned predicate, through {@link canWriteMoney}.
  */
 export const MONEY_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
 
 /**
- * Whether a trip role may write money - the role-only answer the costs screen draws its controls
- * from. Deliberately not `canWritePlan`: that also refuses an archived trip, and archived trips are
- * not decided for money (the writers here do not check archiving), so a control drawn from it
- * would disagree with the server.
+ * Whether the costs screen may offer writes. Money follows the trip-owned rule for the plan:
+ * an owner or editor on a trip that has not been archived.
  */
-export function canWriteMoney(role: string | null): boolean {
-  return MONEY_WRITE_ROLES.some((allowed) => allowed === role)
+export function canWriteMoney(
+  trip: Pick<Trip, 'isArchived'>,
+  role: string | null,
+): boolean {
+  return canWritePlan(trip, role)
 }
 
 /**
- * The two guards every money writer starts with, in the order the boundary needs them:
- * {@link requireTrip} first, so a caller who may not see the trip is answered with
- * {@link NotFoundError} and learns nothing, and only then the role, whose `TripRoleError` is safe
- * because by that point they have proved they may see the trip.
+ * Every money writer checks readability, then archiving, then role. The trip-owned writable
+ * guard keeps inaccessible trips indistinguishable from missing ones before any archive refusal.
  */
 async function requireMoneyTrip(
   scope: TenantScope,
   tripId: string,
   expectedTripCurrency?: string,
 ): Promise<Trip> {
-  const trip = await requireTrip(scope, tripId)
+  const trip = await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, MONEY_WRITE_ROLES)
   assertExpectedTripCurrency(trip, expectedTripCurrency)
   return trip

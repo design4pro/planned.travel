@@ -14,6 +14,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'vacay.page.eyebrow': 'Szabadidő',
+  'vacay.page.title': 'Szabadság',
+  'vacay.page.description':
+    'Tervezd meg a távolléted napjait, és vesd össze őket a többiekével',
+  'vacay.people.title': 'Utazók',
+  'vacay.people.you': '{name} (te)',
+
   /* -------------------------------------------- shared by every module */
   'value.notSet': 'Nincs beállítva',
   /* ----------------------------------------- the realtime presence bar */

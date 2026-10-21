@@ -851,3 +851,13 @@ export function countryFlag(code: string): string {
     ...[...upper].map((letter) => 0x1f1e6 + letter.charCodeAt(0) - 65),
   )
 }
+
+/** Calendar years are identifiers: Latin digits, without quantity grouping. */
+export function formatYear(
+  year: number,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  // The locale remains explicit at each call site like the other formatters.
+  void locale
+  return String(year)
+}

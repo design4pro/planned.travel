@@ -42,6 +42,10 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'Nothing to count yet',
+  'panel.stats.empty.body':
+    'Mark a country on the map, or plan a trip, and your figures start here.',
+  'panel.stats.empty.action': 'Plan a trip',
   /* ------------------------------------------------------------- the screen */
   /**
    * The map's accessible name. Two shapes, because "0 of 195" read out as a
@@ -186,10 +190,10 @@ const messages = {
   'panel.stat.places': 'Your places',
   'panel.stat.placesNone': 'Nothing pinned on a trip yet',
   'panel.stat.placesCaption': 'Sights, stays and stops saved',
-  'panel.stat.regions': 'Regions',
+  'panel.stat.regions': 'Your regions',
   'panel.stat.regionsNone': 'No regions marked yet',
   'panel.stat.regionsCaption': 'States, provinces, prefectures',
-  'panel.stat.visits': 'Visits',
+  'panel.stat.visits': 'Your visits',
   'panel.stat.visitsCaption': 'Every recorded arrival',
   /**
    * Whose trips, said in the label, because the screen prints two counts.
@@ -213,9 +217,9 @@ const messages = {
    */
   'panel.stat.trips': 'Your trips',
   'panel.stat.tripsCaption': 'Every trip you are on',
-  'panel.stat.cities': 'Cities',
+  'panel.stat.cities': 'Your cities',
   'panel.stat.citiesCaption': 'Towns you slept or stopped in',
-  'panel.stat.days': 'Days away',
+  'panel.stat.days': 'Your days away',
   'panel.stat.daysCaption': 'Across every trip on your record',
   'panel.continents.label': 'Countries by continent',
 
@@ -479,6 +483,27 @@ const messages = {
     'We could not confirm the change. Reload your regions to check what was saved.',
   'regions.status.refreshFailed':
     '{result} The atlas could not refresh. Reload it to update the map.',
+
+  'panel.stat.periodLabel': 'Show figures for',
+  'panel.stat.allTime': 'All time',
+  'panel.stat.groupAll': 'Figures for all time',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Figures for {year}',
+  'panel.stat.announceAll': 'Showing figures for all time.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Showing figures for {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Trips that start in {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'On trips that start in {year}',
+  'panel.stat.countries': 'Countries on your trips',
+  'panel.stat.countriesCaption': 'Distinct countries across these trips',
+  'panel.stat.streak': 'Your year streak',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Trips every year, {first} to {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'A trip in {last}',
+  'panel.stat.streakNone': 'Add a trip with dates to start a streak',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -73,13 +73,13 @@ const messages = {
 
   'landing.plans.title': 'Ücretsiz başla. Hak ettiğinde öde.',
   'landing.plans.lede':
-    'Her paket gün planlayıcıyı, haritayı, bütçeleri ve bavul listelerini içeriyor. Ücretli paketler - aylık {price} üzerinden - sınırsız seyahati, rezervasyonları, günlüğü, çevrimdışı haritaları ve dışa aktarmayı açıyor.',
+    'Her paket gün planlayıcıyı, haritayı, bütçeleri ve bavul listelerini içeriyor. Ücretli paketler - aylık {price} üzerinden - sınırsız seyahati, rezervasyonları, günlüğü ve dışa aktarmayı açıyor.',
   'landing.plans.ledeFree':
-    'Her paket gün planlayıcıyı, haritayı, bütçeleri ve bavul listelerini içeriyor. Ücretli paketler sınırsız seyahati, rezervasyonları, günlüğü, çevrimdışı haritaları ve dışa aktarmayı açıyor.',
+    'Her paket gün planlayıcıyı, haritayı, bütçeleri ve bavul listelerini içeriyor. Ücretli paketler sınırsız seyahati, rezervasyonları, günlüğü ve dışa aktarmayı açıyor.',
   'landing.plans.compare': 'Her sınırı satır satır karşılaştır',
   'landing.questions.title': 'Sorular, dosdoğru yanıtlar',
   'landing.questions.lede':
-    'İnsanların başlamadan önce gerçekten bilmek istediği altı şey.',
+    'İnsanların başlamadan önce gerçekten bilmek istediği beş şey.',
   'cta.heading': 'Bir sonraki seyahatin şimdiden düzgün planlanmayı hak ediyor',
   'cta.lede':
     'İki seyahat, haritanın tamamı, gün planı ve bavul listeleri: ücretsiz, kartsız ve geri sayımsız.',
@@ -90,9 +90,6 @@ const messages = {
   'landing.faq.phone.q': 'Telefonda düzgün çalışıyor mu?',
   'landing.faq.phone.a':
     'Evet. Mobil düzenler masaüstünden sıkıştırılmıyor, ayrıca çiziliyor; ve bu bir web sitesi, yani kurulacak bir şey de güncel tutulacak bir şey de yok.',
-  'landing.faq.offline.q': 'Haritayı sinyalsiz kullanabilir miyim?',
-  'landing.faq.offline.a':
-    '{solo} ve {crew} paketlerinde uçmadan önce bir bölgeyi indirebiliyorsun; böylece veri olmadan indiğinde harita yine çiziliyor. Seyahatin kendisini düzenlemek bağlantı gerektiriyor.',
   'landing.faq.privacy.q': 'Seyahatimi kim görebilir?',
   'landing.faq.privacy.a':
     'Bir seyahat tek bir çalışma alanına ait ve onu yalnızca o alana davet edilenler açabilir. Hiçbir şey herkese açık değil, keşfet akışı yok ve varsayılan olarak hiçbir şey kimseyle paylaşılmıyor.',
@@ -251,7 +248,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Tüm planlama modülleri',
   'pricing.feature.solo.modulesDetail':
     'Rezervasyonlar, günlük, bütçeler, bavul',
-  'pricing.feature.solo.offlineDetail': 'Uçmadan önce bölgeleri indir',
   'pricing.feature.crew.membersDetail':
     'Kişi başına faturalanır, istediğin zaman değiştir',
   'pricing.feature.crew.realtimeDetail': 'Canlı imleçler ve anında eşitleme',

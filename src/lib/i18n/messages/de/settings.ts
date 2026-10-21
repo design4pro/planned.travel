@@ -221,7 +221,7 @@ const messages = {
   'security.password.action': 'Passwort ändern',
   'security.twoFactor.label': 'Zwei-Faktor-Anmeldung',
   'security.twoFactor.onHint':
-    'Bei jeder neuen Anmeldung wird ein Code aus deiner Authenticator-App verlangt.',
+    'Bei der Anmeldung mit E-Mail und Passwort wird ein Code aus deiner Authenticator-App abgefragt, außer du vertraust diesem Browser.',
   'security.twoFactor.offHint':
     'Ergänze dein Passwort um einen sechsstelligen Code aus einer Authenticator-App.',
   'security.twoFactor.on': 'An',
@@ -413,7 +413,7 @@ const messages = {
   'billing.renewal.paused':
     'Dieses Abonnement pausiert. Setz es fort, sobald du wieder losziehst.',
   'billing.renewal.lapsed':
-    'Wähle unten einen Tarif, um Buchungen, Tagebuch und Offline-Karten wieder zu öffnen.',
+    'Wähle unten einen Tarif, um Buchungen und Tagebuch wieder zu öffnen.',
   'billing.renewal.incomplete':
     'Polar wartet noch auf die Bestätigung dieser Zahlung.',
   'billing.renewal.free':
@@ -467,8 +467,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Unbegrenzt viele Reisen und Orte',
   'billing.plan.solo.feature.modules':
     'Alle Planungsmodule — Buchungen, Tagebuch, Budgets, Packen',
-  'billing.plan.solo.feature.offline':
-    'Offline-Karten, die du vor dem Abflug lädst',
+  'billing.plan.solo.feature.storage': '5 GB für Fotos und Dokumente',
   'billing.plan.solo.feature.export': 'Export als PDF und Kalender',
   'billing.plan.crew.name': 'Gruppe',
   'billing.plan.crew.tagline': 'Für Familien, Freundeskreise und kleine Teams',
@@ -612,9 +611,9 @@ const messages = {
   'passkeys.add.failed':
     'Der Zugangsschlüssel wurde nicht hinzugefügt. Versuch es noch einmal.',
   'passkeys.add.stale':
-    'Zu deiner Sicherheit: Melde dich erneut an, um fortzufahren.',
+    'Zu deiner Sicherheit erfordert die Verwaltung von Zugangsschlüsseln eine aktuelle Anmeldung. Wenn du „Erneut anmelden“ wählst, wirst du zuerst abgemeldet und dann zur Anmeldeseite weitergeleitet.',
   'passkeys.error.sessionEnded':
-    'Deine Sitzung ist beendet. Melde dich erneut an, um fortzufahren.',
+    'Deine Sitzung ist beendet. Melde dich erneut an, um deine Zugangsschlüssel weiter zu verwalten.',
   'passkeys.signInAgain': 'Erneut anmelden',
   'passkeys.add.limit':
     'Du hast das Limit von {value} Zugangsschlüsseln erreicht. Entferne einen, um einen weiteren hinzuzufügen.',
@@ -654,7 +653,7 @@ const messages = {
   'passkeys.delete.cancel': 'Abbrechen',
   'passkeys.delete.wrongPassword': 'Dieses Passwort ist nicht richtig.',
   'passkeys.delete.stale':
-    'Zu deiner Sicherheit: Melde dich erneut an, bevor du einen Zugangsschlüssel entfernst.',
+    'Zu deiner Sicherheit erfordert das Entfernen eines Zugangsschlüssels eine aktuelle Anmeldung. Wenn du „Erneut anmelden“ wählst, wirst du zuerst abgemeldet und dann zur Anmeldeseite weitergeleitet.',
   'passkeys.delete.removed': 'Zugangsschlüssel entfernt',
   'passkeys.delete.failed':
     'Der Zugangsschlüssel wurde nicht entfernt. Versuche es erneut.',
@@ -683,6 +682,101 @@ const messages = {
   'workspace.departure.activationFailed':
     'Du hast diesen Arbeitsbereich verlassen. Öffne den nächsten, um fortzufahren.',
   'workspace.departure.recover': 'Nächsten Arbeitsbereich öffnen',
+  'twoFactor.back': 'Zurück zur Sicherheit',
+  'twoFactor.title': 'Zwei-Faktor-Authentifizierung',
+  'twoFactor.description':
+    'Füge beim Anmelden mit E-Mail und Passwort einen zweiten Schritt hinzu.',
+  'twoFactor.error':
+    'Deine Zwei-Faktor-Einstellungen konnten nicht geladen werden.',
+  'twoFactor.steps.label': 'Zwei-Faktor einrichten',
+  'twoFactor.steps.password': 'Bestätige deine Identität',
+  'twoFactor.steps.key': 'Zur Authenticator-App hinzufügen',
+  'twoFactor.steps.confirm': 'Code eingeben',
+  'twoFactor.steps.state.done': 'Erledigt',
+  'twoFactor.steps.state.current': 'Aktueller Schritt',
+  'twoFactor.steps.state.todo': 'Nicht begonnen',
+  'twoFactor.password.label': 'Dein Passwort',
+  'twoFactor.password.hint':
+    'Wir fragen erneut, bevor sich deine Anmeldung ändert.',
+  'twoFactor.password.submit': 'Weiter',
+  'twoFactor.password.pending': 'Wird eingerichtet',
+  'twoFactor.password.invalid': 'Dieses Passwort stimmt nicht.',
+  'twoFactor.key.intro':
+    'Du brauchst eine Authenticator-App auf deinem Handy. Füge diesen Schlüssel hinzu und kehre hierher zurück. Zwei-Faktor ist noch nicht aktiviert.',
+  'twoFactor.key.matrixLabel':
+    'Einrichtungscode. Derselbe Schlüssel ist als Text verfügbar',
+  'twoFactor.key.matrixFailed':
+    'Für diesen Schlüssel konnte kein Code erstellt werden. Gib den Einrichtungsschlüssel in deiner App ein.',
+  'twoFactor.key.label': 'Einrichtungsschlüssel',
+  'twoFactor.key.copy': 'Schlüssel kopieren',
+  'twoFactor.key.copied': 'Schlüssel kopiert',
+  'twoFactor.key.copyFailed':
+    'Dein Browser konnte den Schlüssel nicht kopieren. Markiere und kopiere ihn manuell.',
+  'twoFactor.key.open': 'In deiner Authenticator-App öffnen',
+  'twoFactor.key.startOver': 'Neu beginnen',
+  'twoFactor.key.startOverHint':
+    'Dabei wird ein neuer Schlüssel erstellt. Ein bereits zur App hinzugefügter Schlüssel funktioniert dann nicht mehr.',
+  'twoFactor.key.next': 'Ich habe ihn hinzugefügt',
+  'twoFactor.code.label': 'Code aus der App',
+  'twoFactor.code.hint': 'Die sechs Ziffern, die die App gerade zeigt.',
+  'twoFactor.code.submit': 'Zwei-Faktor aktivieren',
+  'twoFactor.code.pending': 'Wird geprüft',
+  'twoFactor.code.invalid':
+    'Der Code stimmt nicht. Prüfe die Uhrzeit deines Handys und gib den neuesten Code der App ein.',
+  'twoFactor.code.unclear':
+    'Wir konnten nicht feststellen, ob es geklappt hat. Gib den neuesten Code ein, um es erneut zu versuchen.',
+  'twoFactor.rateLimited.title': 'Zu viele Versuche in kurzer Zeit',
+  'twoFactor.rateLimited.password':
+    'Warte etwa zehn Sekunden und versuche es erneut. Deine Eingaben bleiben erhalten.',
+  'twoFactor.rateLimited.code':
+    'Warte bis zu einer Minute und versuche es erneut. Deine Eingaben bleiben erhalten.',
+  'twoFactor.codes.title': 'Deine Ersatzcodes',
+  'twoFactor.codes.body':
+    'Jeder Code funktioniert einmal, falls du dein Handy verlierst. Sie werden nur jetzt angezeigt. Bewahre sie sicher auf.',
+  'twoFactor.codes.copyAll': 'Alle kopieren',
+  'twoFactor.codes.copied': 'Ersatzcodes kopiert',
+  'twoFactor.codes.download': 'Als Textdatei herunterladen',
+  'twoFactor.codes.copyFailed':
+    'Dein Browser konnte die Codes nicht kopieren. Markiere und kopiere sie manuell.',
+  'twoFactor.codes.stored': 'Ich habe diese Ersatzcodes gespeichert',
+  'twoFactor.codes.done': 'Fertig',
+  'twoFactor.codes.gate': 'Aktiviere das Kästchen, um fortzufahren.',
+  'twoFactor.codes.lost':
+    'Wenn du diese Seite vorher verlässt, kannst du hier einen neuen Satz erstellen. Der alte funktioniert dann nicht mehr.',
+  'twoFactor.codes.leave.title': 'Ohne gespeicherte Codes verlassen?',
+  'twoFactor.codes.leave.body':
+    'Deine Ersatzcodes werden nur einmal angezeigt. Wenn du jetzt gehst, kannst du hier einen neuen Satz erstellen. Der alte funktioniert dann nicht mehr.',
+  'twoFactor.codes.leave.stay': 'Hier bleiben',
+  'twoFactor.codes.leave.go': 'Verlassen',
+  'twoFactor.on.title': 'Zwei-Faktor ist aktiviert',
+  'twoFactor.on.badge': 'Aktiviert',
+  'twoFactor.on.body':
+    'Bei der Anmeldung mit E-Mail und Passwort fragen wir nach einem App-Code, außer du vertraust diesem Browser. Die Anmeldung mit Google, Apple oder einem Passkey erfordert keinen Code.',
+  'twoFactor.replace.action': 'Ersatzcodes ersetzen',
+  'twoFactor.replace.title': 'Deine Ersatzcodes ersetzen?',
+  'twoFactor.replace.body':
+    'Du erhältst einen neuen Satz. Der aktuelle funktioniert nicht mehr, sobald du fortfährst.',
+  'twoFactor.replace.confirm': 'Ersetzen',
+  'twoFactor.replace.pending': 'Wird ersetzt',
+  'twoFactor.nopassword.title': 'Zuerst ein Passwort festlegen',
+  'twoFactor.nopassword.body':
+    'Zwei-Faktor benötigt ein Passwort für dieses Konto. Die nächste Seite fragt nach deiner E-Mail und sendet einen Link zum Festlegen. Dabei wirst du überall abgemeldet. Melde dich danach erneut an und kehre hierher zurück.',
+  'twoFactor.nopassword.action': 'Passwort festlegen',
+  'twoFactor.setup.action': 'Einrichtungsschlüssel erneut anzeigen',
+  'twoFactor.setup.title': 'Einrichtungsschlüssel',
+  'twoFactor.setup.body':
+    'Füge diesen Schlüssel auf einem weiteren Gerät hinzu. Der Schlüssel auf deinen anderen Geräten funktioniert weiterhin.',
+  'twoFactor.setup.done': 'Fertig',
+  'twoFactor.setup.confirm': 'Schlüssel anzeigen',
+  'twoFactor.setup.pending': 'Wird geprüft',
+  'twoFactor.off.action': 'Zwei-Faktor-Authentifizierung ausschalten',
+  'twoFactor.off.title': 'Zwei-Faktor-Authentifizierung ausschalten?',
+  'twoFactor.off.body':
+    'Wer dein Passwort kennt, kann sich ohne Code anmelden. Deine anderen angemeldeten Geräte bleiben angemeldet.',
+  'twoFactor.off.confirm': 'Ausschalten',
+  'twoFactor.off.pending': 'Wird ausgeschaltet',
+  'twoFactor.off.cancel': 'Eingeschaltet lassen',
+  'twoFactor.off.done': 'Zwei-Faktor-Authentifizierung ist ausgeschaltet',
 } satisfies TranslationOf<typeof En>
 
 export default messages

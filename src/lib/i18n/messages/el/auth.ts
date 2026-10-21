@@ -1,13 +1,12 @@
 /**
  * Everything the authentication screens say, in Greek.
  *
- * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §8.9
+ * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §9 rule 9
  * forbid deriving a catalogue from the reference project's AGPL translations, so
  * every sentence here was written against our English source.
  *
  * These are the only screens a traveller reaches with no session, so their
- * language comes purely from `Accept-Language` and there is no stored preference
- * to correct a bad guess with. Two thirds of the keys are validation messages
+ * language comes from the visitor cookie, then `Accept-Language`, then English. Two thirds of the keys are validation messages
  * and failure alerts, which appear exactly when a reader can least afford a
  * sentence in a language they do not read.
  *
@@ -358,6 +357,10 @@ const messages = {
   'error.locked.title': 'Ο λογαριασμός κλείδωσε προσωρινά',
   'error.locked.detail':
     'Πάρα πολλές αποτυχημένες προσπάθειες επιβεβαίωσης. Για την ασφάλειά σας ο λογαριασμός κλειδώνει για λίγα λεπτά.',
+  'error.twoFactorOn.title':
+    'Ο έλεγχος ταυτότητας δύο παραγόντων είναι ήδη ενεργός',
+  'error.twoFactorOn.detail':
+    'Η εκ νέου ρύθμιση θα σταματούσε τη λειτουργία της τρέχουσας εφαρμογής ελέγχου ταυτότητας, οπότε δεν άλλαξε τίποτα. Μπορείς να τον διαχειριστείς εδώ.',
   'error.noTwoFactor.title': 'Οι δύο παράγοντες δεν έχουν ρυθμιστεί',
   'error.noTwoFactor.detail':
     'Συνδεθείτε με το email και τον κωδικό σας για να συνεχίσετε.',
@@ -387,6 +390,12 @@ const messages = {
   'passkeyNotice.action': 'Διαχείριση κλειδιών πρόσβασης',
   'passkeyNotice.recovery':
     'Αν δεν αναγνωρίζετε αυτή την αλλαγή, αλλάξτε τον κωδικό σας και τερματίστε τις άγνωστες συνεδρίες. Η επαναφορά κωδικού δεν αφαιρεί τα κλειδιά πρόσβασης. Ελέγξτε τα και αφαιρέστε όσα δεν αναγνωρίζετε.',
+  'error.passwordAttemptsLocked.title': 'Η επιβεβαίωση κωδικού κλειδώθηκε',
+  'error.passwordAttemptsLocked.detail':
+    'Αυτή η συνεδρία δεν μπορεί πλέον να επιβεβαιώσει τον κωδικό σου. Αποσυνδέσου και συνδέσου ξανά.',
+  'error.passwordResultUnknown.title': 'Έλεγξε τις ρυθμίσεις ασφαλείας',
+  'error.passwordResultUnknown.detail':
+    'Η αλλαγή μπορεί να έχει αποθηκευτεί. Κράτησε αυτή τη συνεδρία ανοιχτή μέχρι να μπορείς να συνδεθείς ξανά. Αν άλλαξες κωδικό, δοκίμασε τον νέο. Αν αντικατέστησες τους εφεδρικούς κωδικούς, οι παλιοί μπορεί να μη λειτουργούν πια· χρησιμοποίησε την εφαρμογή επαλήθευσης ή άλλη συνδεδεμένη συνεδρία για να δημιουργήσεις νέους.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

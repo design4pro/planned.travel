@@ -283,6 +283,9 @@ const messages = {
     '每个备用码只能用一次。请试试清单里还没用过的下一个。',
   'error.locked.title': '账号已暂时锁定',
   'error.locked.detail': '验证失败太多次。为了安全，这个账号会锁定几分钟。',
+  'error.twoFactorOn.title': '双重验证已开启',
+  'error.twoFactorOn.detail':
+    '重新设置会导致当前的身份验证器失效，因此未作任何更改。你可以在此管理。',
   'error.noTwoFactor.title': '还没有设置两步验证',
   'error.noTwoFactor.detail': '用邮箱和密码登录就能继续。',
   'error.twoFactorExpired.title': '请从登录重新开始',
@@ -310,6 +313,12 @@ const messages = {
   'passkeyNotice.action': '管理通行密钥',
   'passkeyNotice.recovery':
     '如果你不认识此更改，请更改密码并结束不熟悉的会话。重置密码不会移除通行密钥。请检查通行密钥并移除不认识的密钥。',
+  'error.passwordAttemptsLocked.title': '密码确认已锁定',
+  'error.passwordAttemptsLocked.detail':
+    '此会话无法再确认你的密码。请退出登录后重新登录。',
+  'error.passwordResultUnknown.title': '请检查安全设置',
+  'error.passwordResultUnknown.detail':
+    '更改可能已保存。在确认能重新登录前，请保持此会话开启。如果你更改了密码，请尝试新密码。如果更换了备用码，旧备用码可能已失效；请使用身份验证应用或另一个已登录的会话生成一组新备用码。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

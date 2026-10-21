@@ -45,6 +45,7 @@ import { Route as AppSettingsLanguageRouteImport } from './routes/_app/settings/
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings/notifications'
 import { Route as AppSettingsOrganizationRouteImport } from './routes/_app/settings/organization'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
+import { Route as AppSettingsTwoFactorRouteImport } from './routes/_app/settings/two-factor'
 import { Route as AppTripsIndexRouteImport } from './routes/_app/trips/index'
 import { Route as AppTripsTripIdRouteRouteImport } from './routes/_app/trips/$tripId/route'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -249,6 +250,11 @@ const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
   path: '/security',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsTwoFactorRoute = AppSettingsTwoFactorRouteImport.update({
+  id: '/two-factor',
+  path: '/two-factor',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppTripsIndexRoute = AppTripsIndexRouteImport.update({
   id: '/trips/',
   path: '/trips/',
@@ -389,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/two-factor': typeof AppSettingsTwoFactorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/feed/$': typeof ApiFeedSplatRoute
@@ -443,6 +450,7 @@ export interface FileRoutesByTo {
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
   '/settings/security': typeof AppSettingsSecurityRoute
+  '/settings/two-factor': typeof AppSettingsTwoFactorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/feed/$': typeof ApiFeedSplatRoute
@@ -503,6 +511,7 @@ export interface FileRoutesById {
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/organization': typeof AppSettingsOrganizationRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
+  '/_app/settings/two-factor': typeof AppSettingsTwoFactorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/dev/seed': typeof ApiDevSeedRoute
   '/api/feed/$': typeof ApiFeedSplatRoute
@@ -563,6 +572,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/security'
+    | '/settings/two-factor'
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/feed/$'
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/security'
+    | '/settings/two-factor'
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/feed/$'
@@ -676,6 +687,7 @@ export interface FileRouteTypes {
     | '/_app/settings/notifications'
     | '/_app/settings/organization'
     | '/_app/settings/security'
+    | '/_app/settings/two-factor'
     | '/api/auth/$'
     | '/api/dev/seed'
     | '/api/feed/$'
@@ -980,6 +992,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsSecurityRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    '/_app/settings/two-factor': {
+      id: '/_app/settings/two-factor'
+      path: '/two-factor'
+      fullPath: '/settings/two-factor'
+      preLoaderRoute: typeof AppSettingsTwoFactorRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     '/_app/trips/': {
       id: '/_app/trips/'
       path: '/trips'
@@ -1169,6 +1188,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsOrganizationRoute: typeof AppSettingsOrganizationRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
+  AppSettingsTwoFactorRoute: typeof AppSettingsTwoFactorRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
 }
 
@@ -1179,6 +1199,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsOrganizationRoute: AppSettingsOrganizationRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
+  AppSettingsTwoFactorRoute: AppSettingsTwoFactorRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,
 }
 

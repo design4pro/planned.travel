@@ -208,7 +208,7 @@ const messages = {
   'security.password.action': 'تغيير كلمة المرور',
   'security.twoFactor.label': 'التحقق بخطوتين',
   'security.twoFactor.onHint':
-    'رمز من تطبيق المصادقة مطلوب عند كل تسجيل دخول جديد.',
+    'يُطلب رمز من تطبيق المصادقة عند تسجيل الدخول بالبريد الإلكتروني وكلمة المرور، إلا إذا اخترت الوثوق بهذا المتصفح.',
   'security.twoFactor.offHint':
     'أضف رمزًا من ستة أرقام من تطبيق مصادقة فوق كلمة مرورك.',
   'security.twoFactor.on': 'مُفعَّل',
@@ -217,7 +217,7 @@ const messages = {
   'security.twoFactor.enable': 'تفعيل',
   'security.passkeys.label': 'مفاتيح المرور',
   'security.passkeys.hint':
-    'سجّل الدخول ببصمة إصبعك أو ببصمة وجهك أو بمفتاح أمان بدلًا من كتابة أي شيء.',
+    'سجّل الدخول ببصمة إصبعك أو وجهك أو بمفتاح أمان بدلًا من كتابة أي شيء.',
   'security.passkeys.action': 'إدارة مفاتيح المرور',
   'security.session.title': 'هذه الجلسة',
   'security.session.description': 'المتصفح الذي تقرأ فيه هذا.',
@@ -399,8 +399,7 @@ const messages = {
   'billing.renewal.unpaid': 'هذا الاشتراك غير مدفوع، والوحدات المدفوعة مقفلة.',
   'billing.renewal.paused':
     'هذا الاشتراك موقوف مؤقتًا. استأنفه متى استعدت للسفر.',
-  'billing.renewal.lapsed':
-    'اختر خطة أدناه لتفتح الحجوزات واليوميات والخرائط دون اتصال مرة أخرى.',
+  'billing.renewal.lapsed': 'اختر خطة أدناه لتفتح الحجوزات واليوميات مرة أخرى.',
   'billing.renewal.incomplete': 'ما زال Polar ينتظر تأكيد هذه الدفعة.',
   'billing.renewal.free': 'رحلتان في وقت واحد، على حسابنا. ارتقِ متى ضاقت بك.',
   'billing.renewal.auto': 'يُجدَّد تلقائيًا.',
@@ -459,7 +458,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'رحلات وأماكن بلا حدود',
   'billing.plan.solo.feature.modules':
     'كل وحدات التخطيط — الحجوزات واليوميات والميزانيات والحزم',
-  'billing.plan.solo.feature.offline': 'خرائط دون اتصال تنزّلها قبل الطيران',
+  'billing.plan.solo.feature.storage': '5 غيغابايت للصور والمستندات',
   'billing.plan.solo.feature.export': 'تصدير إلى PDF وإلى التقويم',
   'billing.plan.crew.name': 'جماعية',
   'billing.plan.crew.tagline': 'للعائلات والأصدقاء والفرق الصغيرة',
@@ -599,8 +598,10 @@ const messages = {
   'passkeys.add.dismissed': 'لم تتم إضافة أي مفتاح مرور',
   'passkeys.add.exists': 'يحتوي هذا الجهاز بالفعل على مفتاح مرور لحسابك',
   'passkeys.add.failed': 'لم تتم إضافة مفتاح المرور. حاول مرة أخرى.',
-  'passkeys.add.stale': 'حفاظًا على أمانك، سجّل الدخول مرة أخرى للمتابعة.',
-  'passkeys.error.sessionEnded': 'انتهت جلستك. سجّل الدخول مرة أخرى للمتابعة.',
+  'passkeys.add.stale':
+    'حفاظًا على أمانك، تتطلب إدارة مفاتيح المرور تسجيل دخول حديثًا. عند اختيار «تسجيل الدخول مرة أخرى» سيتم تسجيل خروجك أولًا، ثم تنتقل إلى صفحة تسجيل الدخول.',
+  'passkeys.error.sessionEnded':
+    'انتهت جلستك. سجّل الدخول مرة أخرى لمتابعة إدارة مفاتيح المرور.',
   'passkeys.signInAgain': 'تسجيل الدخول مرة أخرى',
   'passkeys.add.limit':
     'وصلت إلى الحد الأقصى وهو {value} من مفاتيح المرور. احذف أحدها لتتمكن من إضافة مفتاح آخر.',
@@ -639,7 +640,7 @@ const messages = {
   'passkeys.delete.cancel': 'إلغاء',
   'passkeys.delete.wrongPassword': 'كلمة المرور هذه غير صحيحة.',
   'passkeys.delete.stale':
-    'حفاظًا على أمانك، سجّل الدخول مرة أخرى قبل إزالة مفتاح المرور.',
+    'حفاظًا على أمانك، تتطلب إزالة مفتاح المرور تسجيل دخول حديثًا. عند اختيار «تسجيل الدخول مرة أخرى» سيتم تسجيل خروجك أولًا، ثم تنتقل إلى صفحة تسجيل الدخول.',
   'passkeys.delete.removed': 'تمت إزالة مفتاح المرور',
   'passkeys.delete.failed': 'لم تتم إزالة مفتاح المرور. حاول مرة أخرى.',
   'passkeys.delete.removing': 'جارٍ إزالة مفتاح المرور',
@@ -666,6 +667,98 @@ const messages = {
   'workspace.departure.activationFailed':
     'لقد غادرت مساحة العمل هذه. افتح مساحة العمل التالية للمتابعة.',
   'workspace.departure.recover': 'افتح مساحة العمل التالية',
+  'twoFactor.back': 'العودة إلى الأمان',
+  'twoFactor.title': 'المصادقة الثنائية',
+  'twoFactor.description':
+    'أضف خطوة ثانية عند تسجيل الدخول بالبريد الإلكتروني وكلمة المرور.',
+  'twoFactor.error': 'تعذر تحميل إعدادات المصادقة الثنائية.',
+  'twoFactor.steps.label': 'إعداد المصادقة الثنائية',
+  'twoFactor.steps.password': 'أكد هويتك',
+  'twoFactor.steps.key': 'أضف المفتاح إلى تطبيق المصادقة',
+  'twoFactor.steps.confirm': 'أدخل رمزًا',
+  'twoFactor.steps.state.done': 'مكتملة',
+  'twoFactor.steps.state.current': 'الخطوة الحالية',
+  'twoFactor.steps.state.todo': 'لم تبدأ',
+  'twoFactor.password.label': 'كلمة مرورك',
+  'twoFactor.password.hint': 'نطلبها مجددًا قبل تغيير طريقة تسجيل دخولك.',
+  'twoFactor.password.submit': 'متابعة',
+  'twoFactor.password.pending': 'جارٍ الإعداد',
+  'twoFactor.password.invalid': 'كلمة المرور غير صحيحة.',
+  'twoFactor.key.intro':
+    'تحتاج إلى تطبيق مصادقة على هاتفك. أضف هذا المفتاح ثم عد إلى هنا. المصادقة الثنائية ليست مفعلة بعد.',
+  'twoFactor.key.matrixLabel': 'رمز الإعداد. المفتاح نفسه متاح كنص',
+  'twoFactor.key.matrixFailed':
+    'تعذر إنشاء رمز لهذا المفتاح. أدخل مفتاح الإعداد في تطبيقك.',
+  'twoFactor.key.label': 'مفتاح الإعداد',
+  'twoFactor.key.copy': 'نسخ المفتاح',
+  'twoFactor.key.copied': 'تم نسخ المفتاح',
+  'twoFactor.key.copyFailed':
+    'تعذر على المتصفح نسخ المفتاح. حدده وانسخه يدويًا.',
+  'twoFactor.key.open': 'فتح في تطبيق المصادقة',
+  'twoFactor.key.startOver': 'البدء من جديد',
+  'twoFactor.key.startOverHint':
+    'البدء من جديد ينشئ مفتاحًا جديدًا. المفتاح الذي أضفته إلى تطبيق سيتوقف عن العمل.',
+  'twoFactor.key.next': 'أضفته',
+  'twoFactor.code.label': 'الرمز من التطبيق',
+  'twoFactor.code.hint': 'الأرقام الستة التي يعرضها التطبيق الآن.',
+  'twoFactor.code.submit': 'تفعيل المصادقة الثنائية',
+  'twoFactor.code.pending': 'جارٍ التحقق',
+  'twoFactor.code.invalid':
+    'الرمز غير مطابق. تحقق من وقت هاتفك وأدخل أحدث رمز في التطبيق.',
+  'twoFactor.code.unclear':
+    'لم نتمكن من معرفة ما إذا نجح ذلك. أدخل أحدث رمز للمحاولة مجددًا.',
+  'twoFactor.rateLimited.title': 'محاولات كثيرة في وقت قصير',
+  'twoFactor.rateLimited.password':
+    'انتظر نحو عشر ثوانٍ ثم حاول مجددًا. تم الاحتفاظ بكل ما كتبته.',
+  'twoFactor.rateLimited.code':
+    'انتظر حتى دقيقة ثم حاول مجددًا. تم الاحتفاظ بكل ما كتبته.',
+  'twoFactor.codes.title': 'رموزك الاحتياطية',
+  'twoFactor.codes.body':
+    'يعمل كل رمز مرة واحدة إذا فقدت هاتفك. تظهر الآن فقط، لذا احفظها في مكان آمن.',
+  'twoFactor.codes.copyAll': 'نسخ الكل',
+  'twoFactor.codes.copied': 'تم نسخ الرموز الاحتياطية',
+  'twoFactor.codes.download': 'تنزيل كملف نصي',
+  'twoFactor.codes.copyFailed':
+    'تعذر على المتصفح نسخ الرموز. حددها وانسخها يدويًا.',
+  'twoFactor.codes.stored': 'حفظت هذه الرموز الاحتياطية',
+  'twoFactor.codes.done': 'تم',
+  'twoFactor.codes.gate': 'حدد المربع للمتابعة.',
+  'twoFactor.codes.lost':
+    'إذا غادرت هذه الصفحة أولًا يمكنك إنشاء مجموعة جديدة هنا. ستتوقف القديمة عن العمل.',
+  'twoFactor.codes.leave.title': 'المغادرة دون حفظ الرموز؟',
+  'twoFactor.codes.leave.body':
+    'تظهر الرموز الاحتياطية مرة واحدة فقط. إذا غادرت الآن يمكنك إنشاء مجموعة جديدة هنا. ستتوقف القديمة عن العمل.',
+  'twoFactor.codes.leave.stay': 'البقاء هنا',
+  'twoFactor.codes.leave.go': 'مغادرة',
+  'twoFactor.on.title': 'المصادقة الثنائية مفعلة',
+  'twoFactor.on.badge': 'مفعلة',
+  'twoFactor.on.body':
+    'نطلب رمزًا من تطبيق المصادقة عند تسجيل الدخول بالبريد الإلكتروني وكلمة المرور، إلا إذا اخترت الوثوق بهذا المتصفح. الدخول باستخدام Google أو Apple أو مفتاح مرور لا يطلب رمزًا.',
+  'twoFactor.replace.action': 'استبدال الرموز الاحتياطية',
+  'twoFactor.replace.title': 'استبدال رموزك الاحتياطية؟',
+  'twoFactor.replace.body':
+    'ستحصل على مجموعة جديدة. تتوقف المجموعة الحالية عن العمل فور المتابعة.',
+  'twoFactor.replace.confirm': 'استبدال',
+  'twoFactor.replace.pending': 'جارٍ الاستبدال',
+  'twoFactor.nopassword.title': 'عيّن كلمة مرور أولًا',
+  'twoFactor.nopassword.body':
+    'تتطلب المصادقة الثنائية كلمة مرور لهذا الحساب. تطلب الصفحة التالية بريدك الإلكتروني وترسل رابطًا لتعيينها. تعيين كلمة مرور يسجل خروجك من كل الأجهزة. سجل الدخول مجددًا وعد إلى هنا.',
+  'twoFactor.nopassword.action': 'تعيين كلمة مرور',
+  'twoFactor.setup.action': 'عرض مفتاح الإعداد مجددًا',
+  'twoFactor.setup.title': 'مفتاح الإعداد',
+  'twoFactor.setup.body':
+    'أضف هذا المفتاح إلى جهاز آخر. سيظل المفتاح الموجود على أجهزتك الأخرى يعمل.',
+  'twoFactor.setup.done': 'تم',
+  'twoFactor.setup.confirm': 'عرض المفتاح',
+  'twoFactor.setup.pending': 'جارٍ التحقق',
+  'twoFactor.off.action': 'إيقاف المصادقة الثنائية',
+  'twoFactor.off.title': 'هل تريد إيقاف المصادقة الثنائية؟',
+  'twoFactor.off.body':
+    'سيتمكن أي شخص يعرف كلمة مرورك من تسجيل الدخول دون رمز. ستبقى أجهزتك الأخرى المسجّل دخولها متصلة بحسابك.',
+  'twoFactor.off.confirm': 'إيقاف',
+  'twoFactor.off.pending': 'جارٍ الإيقاف',
+  'twoFactor.off.cancel': 'إبقاؤها مفعّلة',
+  'twoFactor.off.done': 'المصادقة الثنائية متوقفة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

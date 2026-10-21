@@ -14,6 +14,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'vacay.page.eyebrow': '休暇',
+  'vacay.page.title': '休暇プラン',
+  'vacay.page.description':
+    '不在の日を計画し、他のメンバーの予定と比較しましょう',
+  'vacay.people.title': '旅行者',
+  'vacay.people.you': '{name}（あなた）',
+
   /* -------------------------------------------- shared by every module */
   'value.notSet': '未設定',
   /* ----------------------------------------- the realtime presence bar */

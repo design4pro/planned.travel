@@ -2,15 +2,14 @@
  * Everything the authentication screens say, in Swedish.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Why these screens matter more than their size suggests.** They are the only
- * ones a traveller reaches with no session, so the language comes purely from
- * `Accept-Language` and there is no stored preference to correct a bad guess
- * with. Two thirds of the keys below are validation and failure copy that only
+ * ones a traveller reaches with no session, so the language comes from
+ * the visitor cookie, then `Accept-Language`, then English. Two thirds of the keys below are validation and failure copy that only
  * appears once something has gone wrong — exactly when a reader can least
  * afford a sentence in a language they do not read.
  *
@@ -354,6 +353,9 @@ const messages = {
   'error.locked.title': 'Kontot är tillfälligt låst',
   'error.locked.detail':
     'För många misslyckade försök. För din säkerhet är kontot låst i några minuter.',
+  'error.twoFactorOn.title': 'Tvåfaktorsautentisering är redan på',
+  'error.twoFactorOn.detail':
+    'Om du ställer in den igen skulle din nuvarande autentiseringsapp sluta fungera, så inget har ändrats. Du kan hantera den här.',
   'error.noTwoFactor.title': 'Det andra steget är inte inställt',
   'error.noTwoFactor.detail':
     'Logga in med mejladress och lösenord för att fortsätta.',
@@ -382,6 +384,13 @@ const messages = {
   'passkeyNotice.action': 'Hantera passnycklar',
   'passkeyNotice.recovery':
     'Om du inte känner igen ändringen, byt lösenord och avsluta okända sessioner. En lösenordsåterställning tar inte bort passnycklar. Granska dem och ta bort dem du inte känner igen.',
+  'error.passwordAttemptsLocked.title': 'Lösenordsbekräftelse låst',
+  'error.passwordAttemptsLocked.detail':
+    'Den här sessionen kan inte längre bekräfta ditt lösenord. Logga ut och logga in igen.',
+  'error.passwordResultUnknown.title':
+    'Kontrollera dina säkerhetsinställningar',
+  'error.passwordResultUnknown.detail':
+    'Ändringen kan ha sparats. Håll den här sessionen öppen tills du kan logga in igen. Om du ändrade lösenordet, prova det nya. Om du ersatte reservkoder kan den gamla uppsättningen ha slutat fungera; använd din autentiseringsapp eller en annan inloggad session för att skapa nya koder.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

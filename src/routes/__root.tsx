@@ -48,6 +48,7 @@ const FAVICON_HREF = `data:image/svg+xml,${encodeURIComponent(FAVICON_SVG)}`
 /** What the shell needs before it can write a single byte of the document. */
 interface ShellData {
   readonly locale: Locale
+  readonly signedIn: boolean
   readonly dir: TextDirection
   readonly messages: Catalogue
 }
@@ -55,13 +56,14 @@ interface ShellData {
 /** The language every request falls back to when negotiation cannot answer. */
 const SOURCE_LANGUAGE: ShellData = {
   locale: DEFAULT_LOCALE,
+  signedIn: false,
   dir: 'ltr',
   messages: {},
 }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   /**
-   * `docs/SPEC.md` §8.3: one negotiation, on the server, before first paint.
+   * `docs/SPEC.md` §9 rule 3: one negotiation, on the server, before first paint.
    *
    * It has to be `loader` rather than `beforeLoad` — loader data is dehydrated
    * into the SSR stream and read back during hydration, while `beforeLoad`
@@ -83,8 +85,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
    */
   loader: async (): Promise<ShellData> => {
     try {
-      const { locale, dir } = await negotiateRequestLocale()
-      return { locale, dir, messages: await loadCatalogue(locale) }
+      const { locale, dir, signedIn } = await negotiateRequestLocale()
+      return { locale, dir, signedIn, messages: await loadCatalogue(locale) }
     } catch {
       return SOURCE_LANGUAGE
     }
@@ -110,6 +112,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'description', content: DESCRIPTION },
       { name: 'application-name', content: SITE_NAME },
       { name: 'apple-mobile-web-app-title', content: 'planned' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'format-detection', content: 'telephone=no' },
       { name: 'color-scheme', content: 'light dark' },
       {
@@ -149,6 +152,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: 'stylesheet', href: FONT_STYLESHEET_HREF },
       { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: FAVICON_HREF, type: 'image/svg+xml' },
+      {
+        rel: 'manifest',
+        href: '/manifest.webmanifest',
+        crossOrigin: 'use-credentials',
+      },
+      { rel: 'apple-touch-icon', href: '/icons/apple-touch-icon-180.png' },
       { rel: 'canonical', href: SITE_URL },
     ],
   }),

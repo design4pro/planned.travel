@@ -41,7 +41,7 @@ import {
 } from './context'
 import { listDayNotes, listTripDays, requireTripDay } from './days'
 import { listDayAssignments } from './itinerary'
-import { assertTripRole, requireTrip } from './trips'
+import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
 
 import type { TripRole } from './trips'
 import { resolveTimeZone } from '#/lib/time'
@@ -366,7 +366,7 @@ export async function createTransport(
   input: CreateTransportInput,
 ): Promise<Transport> {
   const values = createTransportInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, WRITERS)
   await requireDayPair(
     scope,
@@ -384,9 +384,9 @@ export async function createTransport(
 /**
  * The transport a writer is about to change, once its trip is shown to be one the caller may see and
  * write to: `NotFoundError` when the row is not theirs or sits on a private trip they are not on,
- * `TripRoleError` when it is theirs to read and not to edit.
+ * `TripArchivedError` when its readable trip is archived, then `TripRoleError` for a reader who cannot edit.
  *
- * The order is the boundary's (ADR 0007): the row, then `requireTrip` on *its* trip, then the role.
+ * The order is the boundary's (ADR 0007): the row, then `requireWritableTrip` on *its* trip, then the role.
  * Asked the other way round, a caller who may not see a private trip and holds one of its transport
  * ids is told `FORBIDDEN` for a row that, from where they stand, does not exist.
  */
@@ -395,7 +395,7 @@ async function requireWritableTransport(
   transportId: string,
 ): Promise<Transport> {
   const existing = await transportsRepository.requireById(scope, transportId)
-  await requireTrip(scope, existing.tripId)
+  await requireWritableTrip(scope, existing.tripId)
   await assertTripRole(scope, existing.tripId, WRITERS)
   return existing
 }
@@ -442,11 +442,11 @@ export async function deleteTransport(
  *
  * Called by the day deleters in `days.ts` immediately before the days go, and that ordering is the
  * whole point. `schema.ts` declares `arrival_day_id` as `on delete: 'set null'`, but it arrived by
- * `ADD COLUMN`, which carries no `ON DELETE` clause, so what D1 actually enforces is `NO ACTION` —
- * pinned by `migrations-match-schema.test.ts`. Closing that gap in the database would mean either
- * hand-editing a generated migration or rebuilding the table, so the rule the schema promises is
- * kept here instead: without this, deleting the day a journey lands on raises
- * `FOREIGN KEY constraint failed` (#186).
+ * `ADD COLUMN`, and drizzle-kit writes no `ON DELETE` clause there, so what D1 actually enforces is
+ * `NO ACTION` — registered in `migrations-match-schema.test.ts`, ADR 0044. Closing that gap in the
+ * database would mean either hand-editing a generated migration or rebuilding the table, so the
+ * rule the schema promises is kept here instead: without this, deleting the day a journey lands on
+ * raises `FOREIGN KEY constraint failed` (#186).
  *
  * `day_id` needs no such help: it was created with its table, so its `set null` is the deployed one.
  *
@@ -673,29 +673,13 @@ function splitGap(
 export async function reorderDayTransports(
   scope: TenantScope,
   input: ReorderDayTransportsInput,
-  resolvedTrip?: Trip,
+  _resolvedTrip?: Trip,
 ): Promise<Array<DayRunItemInput>> {
   const values = reorderDayTransportsInput.parse(input)
 
-  // Trip, then role, then day — the order `reorderDayTimelines` records: a caller who may not see
-  // the trip learns nothing beyond `NotFoundError`.
-  //
-  // The trip is the one of the three a caller can hand in already proved, and `resolvedTrip` is
-  // that proof: the planner's handler resolves the trip to refuse an archived one immediately
-  // before calling this, so re-reading it here is a second read of a row already in memory. Omit
-  // the argument, or name a different trip with it, and the trip is resolved here exactly as
-  // before — which is what every other caller, and both isolation suites, do.
-  //
-  // What it is trusted for, exactly: that the caller has *already run this same guard in this same
-  // scope*. `Trip` cannot say so — the type is the row, not the proof — so a caller that hands in a
-  // row it read some other way trades the refusal this line would have given for the one
-  // `assertTripRole` gives next, `FORBIDDEN` rather than `NotFoundError`. The write is still
-  // refused either way (`member-isolation.test.ts` holds that line for the three-argument form),
-  // but the refusal names the trip, so this argument is for a caller that has run `requireTrip`
-  // and for no one else.
-  if (resolvedTrip?.id !== values.tripId) {
-    await requireTrip(scope, values.tripId)
-  }
+  // Resolve readability and archive state in this scope even when the caller supplies a row.
+  // A Trip is data, not proof of visibility or of the current archive state.
+  await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, WRITERS)
   await requireTripDay(scope, values.tripId, values.dayId)
 
@@ -1203,7 +1187,6 @@ export async function saveTransport(
   const { tripId, transportId, intent, record, chain } =
     saveTransportInput.parse(input)
   await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, WRITERS)
 
   const existing = await transportsRepository.findById(scope, transportId)
   if (
@@ -1212,6 +1195,8 @@ export async function saveTransport(
   ) {
     throw new NotFoundError('transport', transportId)
   }
+  await requireWritableTrip(scope, tripId)
+  await assertTripRole(scope, tripId, WRITERS)
 
   requireLegOrder(chain.stations, chain.legs)
   await requireChainDays(scope, tripId, chain.legs)

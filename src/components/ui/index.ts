@@ -67,3 +67,5 @@ export * from './empty-state'
 export * from './progress'
 export * from './skeleton'
 export * from './spinner'
+
+export { CodeInput } from './code-input'

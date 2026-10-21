@@ -317,7 +317,7 @@ describe('adding a passkey', () => {
 
     await waitFor(() =>
       expect(screen.getByRole('status').textContent).toContain(
-        'For your safety, sign in again to continue.',
+        'For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.',
       ),
     )
     await waitFor(() =>
@@ -343,6 +343,9 @@ describe('adding a passkey', () => {
       expect(screen.getByRole('status').textContent).toContain(
         'Your session has ended',
       ),
+    )
+    expect(screen.getByRole('status').textContent).not.toContain(
+      'recent sign-in',
     )
     expect(screen.getByRole('button', { name: 'Sign in again' })).toBeTruthy()
   })
@@ -1413,12 +1416,12 @@ describe('removing a passkey', () => {
       [
         'a stale session',
         failure(400, 'PASSKEY_SESSION_NOT_FRESH'),
-        'For your safety, sign in again before removing a passkey.',
+        'For your safety, removing a passkey requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.',
       ],
       [
         'an ended session',
         failure(401),
-        'Your session has ended. Sign in again to continue.',
+        'Your session has ended. Sign in again to continue managing your passkeys.',
       ],
       [
         'a rate limit',

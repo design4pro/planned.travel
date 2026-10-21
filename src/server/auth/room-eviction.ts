@@ -29,7 +29,9 @@ import type { BetterAuthPlugin } from 'better-auth'
  * to a person and not to a session, so signing out of one device also closes the sockets on their
  * other devices; they reconnect once, and the connect path re-runs the session and tenancy checks.
  * That is accepted: each narrower rule leaves a route the owner of a compromised account would use
- * with the attacker's socket still open.
+ * with the attacker's socket still open. The exception is a revoke of the other sessions when both
+ * the durable rows and the endpoint's session list prove there is no other live session (#1177):
+ * it ends nothing, so queues nothing, avoiding a repeatable paid fan-out with one cookie.
  *
  * So it only says who and where: one `trip-room-evict` job per workspace, and the queue consumer
  * (`src/server/queue/handlers/trip-room-evict.ts`) reads the rooms and closes them. A job is queued
@@ -44,6 +46,19 @@ import type { BetterAuthPlugin } from 'better-auth'
  * `after` half deletes each blob by name once the endpoint has succeeded, before the sockets are
  * closed. Best effort, like the close: the person's own action never fails on a KV error, and the
  * limit is the KV convergence window (see `./session-blobs`), not "immediately".
+ *
+ * Ending an impersonation (`/admin/stop-impersonating`, reached only in process through the console's
+ * End impersonation function: its HTTP path is closed, #1179) is a session end too. The `before` half
+ * reads the owner of the session cookie, which during an impersonation is the impersonated person,
+ * never the operator whose own session the signed `admin_session` cookie carries; the room records
+ * nothing about impersonation, so a socket opened under the worn identity cannot be told from the
+ * person's own and every socket of that person closes, on their own devices too. A sign-out inside an
+ * impersonated session resolves the same person and does the same. A failed exit queues nothing.
+ *
+ * Two concurrent sign-outs on one cookie both resolve the person before either deletes the session,
+ * so the eviction is queued twice. That is accepted (#1179): it costs one extra reconnect and loses
+ * nothing, a reliable guard needs atomic state across isolates that KV cannot give, and an
+ * idempotency key would swallow a legitimate second eviction.
  */
 
 /**
@@ -129,6 +144,7 @@ const SESSION_ENDING_PATHS: ReadonlySet<string> = new Set([
   '/revoke-other-sessions',
   '/revoke-sessions',
   '/admin/revoke-user-session',
+  '/admin/stop-impersonating',
 ])
 
 /** {@link SESSION_ENDING_PATHS} plus the one whose success depends on a flag in the body. */
@@ -150,6 +166,7 @@ const BLOB_PURGING_PATHS: ReadonlySet<string> = new Set([
 
 /** What {@link roomEvictionPrepareHook} leaves on the request for {@link roomEvictionHook}. */
 const resolvedPerson = z.object({ roomEvictionUserId: z.string().min(1) })
+const evictionDecision = z.object({ roomEvictionShouldEvict: z.boolean() })
 const resolvedTokens = z.object({
   roomEvictionSessionTokens: z.array(z.string().min(1)),
 })
@@ -180,10 +197,21 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
   ) {
     return
   }
+  let shouldEvict = true
   let userId: string | null = null
   let tokens: ReadonlyArray<string> = []
   try {
     userId = await personEndingSession(ctx)
+    if (userId !== null && ctx.path === '/revoke-other-sessions') {
+      try {
+        shouldEvict = await hasOtherSessions(ctx, userId)
+      } catch (cause) {
+        logAuth('warn', 'room-eviction.other-sessions.unread', {
+          source: ctx.path,
+          reason: cause instanceof Error ? cause.name : 'unknown',
+        })
+      }
+    }
     if (userId !== null && endsEveryRow(ctx)) {
       try {
         tokens = await collectSessionTokens(
@@ -213,6 +241,7 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
   return {
     context: {
       roomEvictionUserId: userId ?? '',
+      roomEvictionShouldEvict: shouldEvict,
       roomEvictionSessionTokens: [...tokens],
     },
   }
@@ -242,6 +271,41 @@ function endsEveryRow(ctx: PrepareContext): boolean {
   if (ctx.path === undefined || !BLOB_PURGING_PATHS.has(ctx.path)) return false
   return (
     ctx.path !== '/change-password' || revokingBody.safeParse(ctx.body).success
+  )
+}
+
+/**
+ * Only two successful empty reads can suppress the close. The adapter reads durable rows, while
+ * listSessions reads the same secondary-storage index the endpoint uses; neither substitutes for
+ * the other. One matching durable row suffices, so there is no unbounded walk. All failures leave
+ * the default decision intact. The current session is resolved from its signed cookie and store,
+ * never from a context an in-process caller supplied.
+ */
+async function hasOtherSessions(
+  ctx: PrepareContext,
+  userId: string,
+): Promise<boolean> {
+  const cookie = await ctx.getSignedCookie(
+    ctx.context.authCookies.sessionToken.name,
+    ctx.context.secret,
+  )
+  if (!cookie) return true
+  const own = await ctx.context.internalAdapter.findSession(cookie)
+  if (!own || own.session.userId !== userId) return true
+  const now = new Date()
+  const durable = await ctx.context.adapter.findMany({
+    model: 'session',
+    where: [
+      { field: 'userId', value: userId },
+      { field: 'expiresAt', operator: 'gt', value: now },
+      { field: 'token', operator: 'ne', value: own.session.token },
+    ],
+    limit: 1,
+  })
+  if (durable.length > 0) return true
+  const indexed = await ctx.context.internalAdapter.listSessions(userId)
+  return indexed.some(
+    (session) => session.expiresAt > now && session.token !== own.session.token,
   )
 }
 
@@ -342,6 +406,12 @@ export const roomEvictionHook = createAuthMiddleware(async (ctx) => {
   }
 
   if (SESSION_ENDING_PATHS.has(ctx.path)) {
+    if (
+      ctx.path === '/revoke-other-sessions' &&
+      evictionDecision.safeParse(ctx).data?.roomEvictionShouldEvict === false
+    ) {
+      return
+    }
     const prepared = resolvedPerson.safeParse(ctx)
     if (!prepared.success) return
     await purgeEndedSessions(ctx, prepared.data.roomEvictionUserId, ctx.path)

@@ -260,7 +260,7 @@ const messages = {
   'security.password.action': 'Change password',
   'security.twoFactor.label': 'Two-factor authentication',
   'security.twoFactor.onHint':
-    'A code from your authenticator app is required on every new sign-in.',
+    'A code from your authenticator app is asked when you sign in with your email and password, unless you trusted that browser.',
   'security.twoFactor.offHint':
     'Add a six-digit code from an authenticator app on top of your password.',
   'security.twoFactor.on': 'On',
@@ -269,7 +269,7 @@ const messages = {
   'security.twoFactor.enable': 'Turn on',
   'security.passkeys.label': 'Passkeys',
   'security.passkeys.hint':
-    'Sign in with the fingerprint reader, Face ID or a security key instead of typing anything.',
+    'Sign in with your fingerprint, your face or a security key instead of typing anything.',
   'security.passkeys.action': 'Manage passkeys',
   'security.session.title': 'This session',
   'security.session.description': 'The browser you are reading this in.',
@@ -459,7 +459,7 @@ const messages = {
   'billing.renewal.paused':
     'This subscription is paused. Resume it whenever you are ready to travel again.',
   'billing.renewal.lapsed':
-    'Choose a plan below to unlock reservations, the journal and offline maps again.',
+    'Choose a plan below to unlock reservations and the journal again.',
   'billing.renewal.incomplete':
     'Polar is still waiting for this payment to be confirmed.',
   'billing.renewal.free':
@@ -540,8 +540,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Unlimited trips and places',
   'billing.plan.solo.feature.modules':
     'Every planning module — reservations, journal, budgets, packing',
-  'billing.plan.solo.feature.offline':
-    'Offline maps you download before you fly',
+  'billing.plan.solo.feature.storage': '5 GB for photos and documents',
   'billing.plan.solo.feature.export': 'PDF and calendar export',
   'billing.plan.crew.name': 'Crew',
   'billing.plan.crew.tagline': 'For families, friends and small teams',
@@ -678,9 +677,10 @@ const messages = {
   'passkeys.add.dismissed': 'No passkey was added',
   'passkeys.add.exists': 'This device already has a passkey for your account',
   'passkeys.add.failed': 'The passkey was not added. Try again.',
-  'passkeys.add.stale': 'For your safety, sign in again to continue.',
+  'passkeys.add.stale':
+    'For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.',
   'passkeys.error.sessionEnded':
-    'Your session has ended. Sign in again to continue.',
+    'Your session has ended. Sign in again to continue managing your passkeys.',
   'passkeys.signInAgain': 'Sign in again',
   'passkeys.add.limit':
     'You have reached the limit of {value} passkeys. Remove one to add another.',
@@ -719,7 +719,7 @@ const messages = {
   'passkeys.delete.cancel': 'Cancel',
   'passkeys.delete.wrongPassword': 'That password is not right.',
   'passkeys.delete.stale':
-    'For your safety, sign in again before removing a passkey.',
+    'For your safety, removing a passkey requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.',
   'passkeys.delete.removed': 'Passkey removed',
   'passkeys.delete.failed': 'The passkey was not removed. Try again.',
   'passkeys.delete.removing': 'Removing the passkey',
@@ -747,6 +747,98 @@ const messages = {
   'workspace.departure.activationFailed':
     'You left this workspace. Open your next workspace to continue.',
   'workspace.departure.recover': 'Open next workspace',
+  'twoFactor.back': 'Back to security',
+  'twoFactor.title': 'Two-factor authentication',
+  'twoFactor.description':
+    'Add a second step when you sign in with your email and password.',
+  'twoFactor.error': 'We could not load your two-factor settings.',
+  'twoFactor.steps.label': 'Set up two-factor',
+  'twoFactor.steps.password': 'Confirm it is you',
+  'twoFactor.steps.key': 'Add it to your authenticator',
+  'twoFactor.steps.confirm': 'Enter a code',
+  'twoFactor.steps.state.done': 'Done',
+  'twoFactor.steps.state.current': 'Current step',
+  'twoFactor.steps.state.todo': 'Not started',
+  'twoFactor.password.label': 'Your password',
+  'twoFactor.password.hint': 'We ask again before changing how you sign in.',
+  'twoFactor.password.submit': 'Continue',
+  'twoFactor.password.pending': 'Setting up',
+  'twoFactor.password.invalid': 'That password is not right.',
+  'twoFactor.key.intro':
+    'You need an authenticator app on your phone. Add this key to it, then come back to this page. Two-factor is not on yet.',
+  'twoFactor.key.matrixLabel': 'Setup code. The same key is available as text',
+  'twoFactor.key.matrixFailed':
+    'We could not draw a code for this key. Enter the setup key in your app.',
+  'twoFactor.key.label': 'Setup key',
+  'twoFactor.key.copy': 'Copy key',
+  'twoFactor.key.copied': 'Key copied',
+  'twoFactor.key.copyFailed':
+    'Your browser would not copy the key. Select it and copy it by hand.',
+  'twoFactor.key.open': 'Open in your authenticator app',
+  'twoFactor.key.startOver': 'Start over',
+  'twoFactor.key.startOverHint':
+    'Starting over makes a new key. A key you already added to an app will stop working.',
+  'twoFactor.key.next': 'I have added it',
+  'twoFactor.code.label': 'Code from the app',
+  'twoFactor.code.hint': 'The six digits the app shows now.',
+  'twoFactor.code.submit': 'Turn on two-factor',
+  'twoFactor.code.pending': 'Checking',
+  'twoFactor.code.invalid':
+    'That code did not match. Check the time on your phone and enter the newest code the app shows.',
+  'twoFactor.code.unclear':
+    'We could not tell whether that worked. Enter the newest code to try again.',
+  'twoFactor.rateLimited.title': 'Too many tries in a short time',
+  'twoFactor.rateLimited.password':
+    'Wait about ten seconds, then try again. Nothing you typed was lost.',
+  'twoFactor.rateLimited.code':
+    'Wait up to a minute, then try again. Nothing you typed was lost.',
+  'twoFactor.codes.title': 'Your backup codes',
+  'twoFactor.codes.body':
+    'Each code works once if you lose your phone. They are shown only now, so keep them somewhere safe.',
+  'twoFactor.codes.copyAll': 'Copy all',
+  'twoFactor.codes.copied': 'Backup codes copied',
+  'twoFactor.codes.download': 'Download as a text file',
+  'twoFactor.codes.copyFailed':
+    'Your browser would not copy them. Select the codes and copy them by hand.',
+  'twoFactor.codes.stored': 'I have stored these backup codes',
+  'twoFactor.codes.done': 'Done',
+  'twoFactor.codes.gate': 'Tick the box to continue.',
+  'twoFactor.codes.lost':
+    'If you leave this page first you can make a new set from this screen, and the old one will stop working.',
+  'twoFactor.codes.leave.title': 'Leave without keeping your codes?',
+  'twoFactor.codes.leave.body':
+    'Your backup codes are shown only once. If you leave now you can make a new set from this screen, and the old one will stop working.',
+  'twoFactor.codes.leave.stay': 'Stay here',
+  'twoFactor.codes.leave.go': 'Leave',
+  'twoFactor.on.title': 'Two-factor is on',
+  'twoFactor.on.badge': 'On',
+  'twoFactor.on.body':
+    'We ask for a code from your authenticator app when you sign in with your email and password, unless you chose to trust that browser. Signing in with Google, Apple or a passkey does not ask for one.',
+  'twoFactor.replace.action': 'Replace backup codes',
+  'twoFactor.replace.title': 'Replace your backup codes?',
+  'twoFactor.replace.body':
+    'You will get a new set. The set you have now stops working as soon as you continue.',
+  'twoFactor.replace.confirm': 'Replace',
+  'twoFactor.replace.pending': 'Replacing',
+  'twoFactor.nopassword.title': 'Set a password first',
+  'twoFactor.nopassword.body':
+    'Two-factor needs a password on this account. The next page asks for your email and sends a link to set one. Setting a password signs you out everywhere, so sign in again and come back here.',
+  'twoFactor.nopassword.action': 'Set a password',
+  'twoFactor.setup.action': 'Show setup key again',
+  'twoFactor.setup.title': 'Setup key',
+  'twoFactor.setup.body':
+    'Add this key to another device. The key already on your other devices keeps working.',
+  'twoFactor.setup.done': 'Done',
+  'twoFactor.setup.confirm': 'Show key',
+  'twoFactor.setup.pending': 'Checking',
+  'twoFactor.off.action': 'Turn off two-factor',
+  'twoFactor.off.title': 'Turn off two-factor?',
+  'twoFactor.off.body':
+    'Anyone with your password will be able to sign in without a code. Your other signed-in devices stay signed in.',
+  'twoFactor.off.confirm': 'Turn off',
+  'twoFactor.off.pending': 'Turning off',
+  'twoFactor.off.cancel': 'Keep it on',
+  'twoFactor.off.done': 'Two-factor is off',
 } as const satisfies NamespaceMessages
 
 export default messages

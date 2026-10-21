@@ -2,14 +2,14 @@
  * Everything the authentication screens say, in Catalan.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Register.** Second person singular with imperative actions, as everywhere
  * else in the Catalan catalogue. These are the only screens a traveller reaches
- * with no session, so the language comes from `Accept-Language` alone and every
+ * with no session, so the language comes from the visitor cookie, then `Accept-Language`, then English and every
  * validation message has to read as naturally as the headings do.
  *
  * **Plural.** `Intl.PluralRules('ca')` reports `one`, `many` and `other`;
@@ -364,6 +364,9 @@ const messages = {
   'error.locked.title': 'Compte bloquejat una estona',
   'error.locked.detail':
     'Massa intents de verificació fallits. Per seguretat, aquest compte queda bloquejat uns minuts.',
+  'error.twoFactorOn.title': 'L’autenticació de dos factors ja està activada',
+  'error.twoFactorOn.detail':
+    'Si la tornessis a configurar, l’autenticador actual deixaria de funcionar; per això no s’ha canviat res. La pots gestionar aquí.',
   'error.noTwoFactor.title': 'No tens la verificació en dos passos',
   'error.noTwoFactor.detail':
     'Entra amb el teu correu i la teva contrasenya per continuar.',
@@ -392,6 +395,12 @@ const messages = {
   'passkeyNotice.action': 'Gestiona les claus d’accés',
   'passkeyNotice.recovery':
     'Si no reconeixes aquest canvi, canvia la contrasenya i tanca les sessions desconegudes. Restablir la contrasenya no elimina les claus d’accés. Revisa-les i elimina les que no reconeguis.',
+  'error.passwordAttemptsLocked.title': 'Confirmació de contrasenya bloquejada',
+  'error.passwordAttemptsLocked.detail':
+    'Aquesta sessió ja no pot confirmar la teva contrasenya. Tanca la sessió i torna a iniciar-la.',
+  'error.passwordResultUnknown.title': 'Revisa la configuració de seguretat',
+  'error.passwordResultUnknown.detail':
+    'És possible que el canvi s’hagi desat. Mantén aquesta sessió oberta fins que puguis tornar a entrar. Si has canviat la contrasenya, prova la nova. Si has substituït els codis de reserva, els antics podrien deixar de funcionar; utilitza l’autenticador o una altra sessió oberta per generar-ne un conjunt nou.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

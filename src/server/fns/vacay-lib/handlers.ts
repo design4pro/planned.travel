@@ -8,6 +8,10 @@ import {
   setEntry,
 } from '#/server/repos/vacay'
 import { dateSchema, idSchema, yearSchema } from '#/server/repos/validation'
+import {
+  getOrganizationSettings,
+  getUserSettings,
+} from '#/server/repos/settings'
 import { RepositoryError } from '#/server/repos/context'
 import type { TenantScope } from '#/server/repos/base'
 
@@ -27,11 +31,21 @@ export async function readGrid(
 ) {
   const { planId, year } = gridInput.parse(input)
   await requirePlanActor(scope, planId)
-  const [overview, allowance] = await Promise.all([
+  const [overview, allowance, workspace, user] = await Promise.all([
     getPlanOverview(scope, planId, year),
     getAllowance(scope, planId, scope.ctx.userId, year),
+    getOrganizationSettings(scope),
+    getUserSettings(scope),
   ])
   return {
+    // Read existing rows only: viewing a year must never create or alter settings.
+    weekStartsOn: z
+      .number()
+      .int()
+      .min(0)
+      .max(6)
+      .catch(1)
+      .parse(user?.weekStartsOn ?? workspace?.weekStartsOn ?? 1),
     entries: overview.entries
       .filter((row) => row.userId === scope.ctx.userId)
       .map((row) => ({ date: row.date, kind: row.kind })),

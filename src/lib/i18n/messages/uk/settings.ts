@@ -218,7 +218,7 @@ const messages = {
   'security.password.action': 'Змінити пароль',
   'security.twoFactor.label': 'Двофакторна аутентифікація',
   'security.twoFactor.onHint':
-    'На кожному новому вході потрібен код із застосунку-автентифікатора.',
+    'Під час входу за електронною поштою та паролем запитується код із застосунку, якщо браузер не є довіреним.',
   'security.twoFactor.offHint':
     'Додайте до пароля шестизначний код із застосунку-автентифікатора.',
   'security.twoFactor.on': 'Увімк.',
@@ -227,7 +227,7 @@ const messages = {
   'security.twoFactor.enable': 'Увімкнути',
   'security.passkeys.label': 'Ключі доступу',
   'security.passkeys.hint':
-    'Заходьте відбитком, Face ID або апаратним ключем — друкувати нічого не треба.',
+    'Заходьте за відбитком пальця, обличчям або апаратним ключем — друкувати нічого не треба.',
   'security.passkeys.action': 'Керувати ключами',
   'security.session.title': 'Цей сеанс',
   'security.session.description': 'Браузер, у якому ви це читаєте.',
@@ -409,7 +409,7 @@ const messages = {
   'billing.renewal.paused':
     'Ця підписка припинена. Відновіть її, коли знову збиратиметеся в дорогу.',
   'billing.renewal.lapsed':
-    'Виберіть тариф нижче, щоб знову відкрити броні, щоденник і карти офлайн.',
+    'Виберіть тариф нижче, щоб знову відкрити броні і щоденник.',
   'billing.renewal.incomplete':
     'Polar усе ще чекає на підтвердження цього платежу.',
   'billing.renewal.free':
@@ -473,8 +473,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Поїздки та місця без обмежень',
   'billing.plan.solo.feature.modules':
     'Усі модулі планування — броні, щоденник, бюджети, збори',
-  'billing.plan.solo.feature.offline':
-    'Карти офлайн, завантажені ще до вильоту',
+  'billing.plan.solo.feature.storage': '5 ГБ для фотографій і документів',
   'billing.plan.solo.feature.export': 'Експорт у PDF і в календар',
   'billing.plan.crew.name': 'Команда',
   'billing.plan.crew.tagline': 'Для родин, друзів і невеликих команд',
@@ -616,9 +615,10 @@ const messages = {
   'passkeys.add.exists':
     'На цьому пристрої вже є ключ доступу до вашого акаунта',
   'passkeys.add.failed': 'Ключ доступу не додано. Спробуйте ще раз.',
-  'passkeys.add.stale': 'Для вашої безпеки увійдіть знову, щоб продовжити.',
+  'passkeys.add.stale':
+    'Для вашої безпеки керування ключами доступу потребує нещодавнього входу. Якщо вибрати «Увійти знову», спочатку завершиться ваш сеанс, а потім відкриється сторінка входу.',
   'passkeys.error.sessionEnded':
-    'Ваш сеанс завершено. Увійдіть знову, щоб продовжити.',
+    'Ваш сеанс завершено. Увійдіть знову, щоб і далі керувати ключами доступу.',
   'passkeys.signInAgain': 'Увійти знову',
   'passkeys.add.limit':
     'Досягнуто ліміту: {value} ключів доступу. Видаліть один, щоб додати інший.',
@@ -656,7 +656,7 @@ const messages = {
   'passkeys.delete.cancel': 'Скасувати',
   'passkeys.delete.wrongPassword': 'Цей пароль неправильний.',
   'passkeys.delete.stale':
-    'Для вашої безпеки увійдіть знову, перш ніж видаляти ключ доступу.',
+    'Для вашої безпеки видалення ключа доступу потребує нещодавнього входу. Якщо вибрати «Увійти знову», спочатку завершиться ваш сеанс, а потім відкриється сторінка входу.',
   'passkeys.delete.removed': 'Ключ доступу видалено',
   'passkeys.delete.failed': 'Ключ доступу не видалено. Спробуйте ще раз.',
   'passkeys.delete.removing': 'Видаляємо ключ доступу',
@@ -684,6 +684,101 @@ const messages = {
   'workspace.departure.activationFailed':
     'Ви залишили цей робочий простір. Відкрийте наступний, щоб продовжити.',
   'workspace.departure.recover': 'Відкрити наступний простір',
+  'twoFactor.back': 'Назад до безпеки',
+  'twoFactor.title': 'Двофакторна автентифікація',
+  'twoFactor.description':
+    'Додайте другий крок під час входу за електронною поштою та паролем.',
+  'twoFactor.error':
+    'Не вдалося завантажити налаштування двофакторної автентифікації.',
+  'twoFactor.steps.label': 'Налаштувати двофакторну автентифікацію',
+  'twoFactor.steps.password': 'Підтвердьте свою особу',
+  'twoFactor.steps.key': 'Додайте ключ до застосунку автентифікації',
+  'twoFactor.steps.confirm': 'Введіть код',
+  'twoFactor.steps.state.done': 'Готово',
+  'twoFactor.steps.state.current': 'Поточний крок',
+  'twoFactor.steps.state.todo': 'Не розпочато',
+  'twoFactor.password.label': 'Ваш пароль',
+  'twoFactor.password.hint':
+    'Ми запитуємо його повторно перед зміною способу входу.',
+  'twoFactor.password.submit': 'Продовжити',
+  'twoFactor.password.pending': 'Налаштування',
+  'twoFactor.password.invalid': 'Цей пароль неправильний.',
+  'twoFactor.key.intro':
+    'Вам потрібен застосунок автентифікації на телефоні. Додайте до нього цей ключ і поверніться сюди. Двофакторну автентифікацію ще не ввімкнено.',
+  'twoFactor.key.matrixLabel':
+    'Код налаштування. Той самий ключ доступний як текст',
+  'twoFactor.key.matrixFailed':
+    'Не вдалося створити код для цього ключа. Введіть ключ налаштування у своєму застосунку.',
+  'twoFactor.key.label': 'Ключ налаштування',
+  'twoFactor.key.copy': 'Копіювати ключ',
+  'twoFactor.key.copied': 'Ключ скопійовано',
+  'twoFactor.key.copyFailed':
+    'Браузер не зміг скопіювати ключ. Виділіть його й скопіюйте вручну.',
+  'twoFactor.key.open': 'Відкрити в застосунку автентифікації',
+  'twoFactor.key.startOver': 'Почати спочатку',
+  'twoFactor.key.startOverHint':
+    'Повторний початок створює новий ключ. Ключ, уже доданий до застосунку, перестане працювати.',
+  'twoFactor.key.next': 'Ключ додано',
+  'twoFactor.code.label': 'Код із застосунку',
+  'twoFactor.code.hint': 'Шість цифр, які застосунок показує зараз.',
+  'twoFactor.code.submit': 'Увімкнути двофакторну автентифікацію',
+  'twoFactor.code.pending': 'Перевірка',
+  'twoFactor.code.invalid':
+    'Код не збігся. Перевірте час на телефоні й введіть найновіший код із застосунку.',
+  'twoFactor.code.unclear':
+    'Не вдалося визначити, чи це спрацювало. Введіть найновіший код, щоб спробувати ще раз.',
+  'twoFactor.rateLimited.title': 'Забагато спроб за короткий час',
+  'twoFactor.rateLimited.password':
+    'Зачекайте приблизно десять секунд і спробуйте знову. Введені дані збережено.',
+  'twoFactor.rateLimited.code':
+    'Зачекайте до хвилини й спробуйте знову. Введені дані збережено.',
+  'twoFactor.codes.title': 'Ваші резервні коди',
+  'twoFactor.codes.body':
+    'Кожен код працює один раз, якщо ви втратите телефон. Вони відображаються лише зараз, тому збережіть їх у безпечному місці.',
+  'twoFactor.codes.copyAll': 'Копіювати всі',
+  'twoFactor.codes.copied': 'Резервні коди скопійовано',
+  'twoFactor.codes.download': 'Завантажити текстовим файлом',
+  'twoFactor.codes.copyFailed':
+    'Браузер не зміг скопіювати коди. Виділіть їх і скопіюйте вручну.',
+  'twoFactor.codes.stored': 'Я зберіг ці резервні коди',
+  'twoFactor.codes.done': 'Завершити',
+  'twoFactor.codes.gate': 'Позначте поле, щоб продовжити.',
+  'twoFactor.codes.lost':
+    'Якщо спершу залишити цю сторінку, тут можна створити новий набір. Старий перестане працювати.',
+  'twoFactor.codes.leave.title': 'Залишити сторінку без збереження кодів?',
+  'twoFactor.codes.leave.body':
+    'Резервні коди відображаються лише один раз. Якщо піти зараз, тут можна створити новий набір. Старий перестане працювати.',
+  'twoFactor.codes.leave.stay': 'Залишитися тут',
+  'twoFactor.codes.leave.go': 'Вийти',
+  'twoFactor.on.title': 'Двофакторну автентифікацію ввімкнено',
+  'twoFactor.on.badge': 'Увімкнено',
+  'twoFactor.on.body':
+    'Під час входу за електронною поштою та паролем ми запитуємо код із застосунку, якщо браузер не є довіреним. Вхід через Google, Apple або ключ доступу не потребує коду.',
+  'twoFactor.replace.action': 'Замінити резервні коди',
+  'twoFactor.replace.title': 'Замінити ваші резервні коди?',
+  'twoFactor.replace.body':
+    'Ви отримаєте новий набір. Поточний перестане працювати, щойно ви продовжите.',
+  'twoFactor.replace.confirm': 'Замінити',
+  'twoFactor.replace.pending': 'Заміна',
+  'twoFactor.nopassword.title': 'Спершу встановіть пароль',
+  'twoFactor.nopassword.body':
+    'Двофакторна автентифікація потребує пароля для цього облікового запису. Наступна сторінка запитає електронну пошту й надішле посилання для налаштування. Це завершить сеанси всюди. Увійдіть знову й поверніться сюди.',
+  'twoFactor.nopassword.action': 'Встановити пароль',
+  'twoFactor.setup.action': 'Показати ключ налаштування знову',
+  'twoFactor.setup.title': 'Ключ налаштування',
+  'twoFactor.setup.body':
+    'Додайте цей ключ на інший пристрій. Ключ на решті пристроїв і далі працюватиме.',
+  'twoFactor.setup.done': 'Готово',
+  'twoFactor.setup.confirm': 'Показати ключ',
+  'twoFactor.setup.pending': 'Перевірка',
+  'twoFactor.off.action': 'Вимкнути двофакторну автентифікацію',
+  'twoFactor.off.title': 'Вимкнути двофакторну автентифікацію?',
+  'twoFactor.off.body':
+    'Кожен, хто знає ваш пароль, зможе ввійти без коду. На інших пристроях вхід в обліковий запис збережеться.',
+  'twoFactor.off.confirm': 'Вимкнути',
+  'twoFactor.off.pending': 'Вимкнення',
+  'twoFactor.off.cancel': 'Залишити ввімкненою',
+  'twoFactor.off.done': 'Двофакторну автентифікацію вимкнено',
 } satisfies TranslationOf<typeof En>
 
 export default messages

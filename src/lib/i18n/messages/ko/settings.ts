@@ -187,7 +187,8 @@ const messages = {
     '언제든 바꿀 수 있어요. 예전 비밀번호를 묻지 않고 한 번만 쓰는 링크를 보내 드려요.',
   'security.password.action': '비밀번호 변경',
   'security.twoFactor.label': '2단계 인증',
-  'security.twoFactor.onHint': '새로 로그인할 때마다 인증 앱 코드가 필요해요.',
+  'security.twoFactor.onHint':
+    '이메일과 비밀번호로 로그인할 때 신뢰하는 브라우저가 아니면 인증 앱 코드를 요청합니다.',
   'security.twoFactor.offHint':
     '비밀번호에 인증 앱의 여섯 자리 코드를 더할 수 있어요.',
   'security.twoFactor.on': '켬',
@@ -196,7 +197,7 @@ const messages = {
   'security.twoFactor.enable': '켜기',
   'security.passkeys.label': '패스키',
   'security.passkeys.hint':
-    '아무것도 입력하지 않고 지문이나 Face ID, 보안 키로 로그인해요.',
+    '아무것도 입력하지 않고 지문이나 얼굴, 보안 키로 로그인해요.',
   'security.passkeys.action': '패스키 관리',
   'security.session.title': '이 세션',
   'security.session.description': '지금 이 글을 읽고 있는 브라우저예요.',
@@ -361,7 +362,7 @@ const messages = {
   'billing.renewal.paused':
     '이 구독은 일시 중지 상태예요. 다시 떠날 준비가 되면 재개해 주세요.',
   'billing.renewal.lapsed':
-    '예약과 여행 일지, 오프라인 지도를 다시 쓰려면 아래에서 플랜을 골라 주세요.',
+    '예약과 여행 일지를 다시 쓰려면 아래에서 플랜을 골라 주세요.',
   'billing.renewal.incomplete':
     'Polar가 아직 이 결제의 확인을 기다리고 있어요.',
   'billing.renewal.free':
@@ -406,7 +407,7 @@ const messages = {
   'billing.plan.solo.tagline': '모든 것을 직접 계획하는 여행자에게',
   'billing.plan.solo.feature.trips': '여행과 장소 무제한',
   'billing.plan.solo.feature.modules': '예약과 일지, 예산, 준비물 — 모든 모듈',
-  'billing.plan.solo.feature.offline': '떠나기 전에 내려받는 오프라인 지도',
+  'billing.plan.solo.feature.storage': '사진과 문서용 5 GB',
   'billing.plan.solo.feature.export': 'PDF와 캘린더 내보내기',
   'billing.plan.crew.name': '크루',
   'billing.plan.crew.tagline': '가족과 친구, 작은 팀에게',
@@ -534,9 +535,10 @@ const messages = {
   'passkeys.add.dismissed': '패스키가 추가되지 않았어요',
   'passkeys.add.exists': '이 기기에는 이미 내 계정의 패스키가 있어요',
   'passkeys.add.failed': '패스키를 추가하지 못했어요. 다시 시도해 주세요.',
-  'passkeys.add.stale': '안전을 위해 계속하려면 다시 로그인해 주세요.',
+  'passkeys.add.stale':
+    '안전을 위해 패스키를 관리하려면 최근에 로그인해야 해요. ‘다시 로그인’을 누르면 먼저 로그아웃된 다음 로그인 페이지로 이동해요.',
   'passkeys.error.sessionEnded':
-    '세션이 끝났어요. 계속하려면 다시 로그인해 주세요.',
+    '세션이 끝났어요. 패스키 관리를 계속하려면 다시 로그인해 주세요.',
   'passkeys.signInAgain': '다시 로그인',
   'passkeys.add.limit':
     '패스키 {value}개 한도에 도달했어요. 다른 패스키를 추가하려면 하나를 삭제해 주세요.',
@@ -575,7 +577,7 @@ const messages = {
   'passkeys.delete.cancel': '취소',
   'passkeys.delete.wrongPassword': '비밀번호가 맞지 않아요.',
   'passkeys.delete.stale':
-    '안전을 위해 패스키를 삭제하기 전에 다시 로그인해 주세요.',
+    '안전을 위해 패스키를 삭제하려면 최근에 로그인해야 해요. ‘다시 로그인’을 누르면 먼저 로그아웃된 다음 로그인 페이지로 이동해요.',
   'passkeys.delete.removed': '패스키를 삭제했어요',
   'passkeys.delete.failed': '패스키를 삭제하지 못했어요. 다시 시도해 주세요.',
   'passkeys.delete.removing': '패스키를 삭제하는 중',
@@ -603,6 +605,99 @@ const messages = {
   'workspace.departure.activationFailed':
     '이 워크스페이스를 나갔습니다. 계속하려면 다음 워크스페이스를 여세요.',
   'workspace.departure.recover': '다음 워크스페이스 열기',
+  'twoFactor.back': '보안으로 돌아가기',
+  'twoFactor.title': '2단계 인증',
+  'twoFactor.description':
+    '이메일과 비밀번호로 로그인할 때 두 번째 단계를 추가하세요.',
+  'twoFactor.error': '2단계 인증 설정을 불러오지 못했습니다.',
+  'twoFactor.steps.label': '2단계 인증 설정',
+  'twoFactor.steps.password': '본인 확인',
+  'twoFactor.steps.key': '인증 앱에 추가',
+  'twoFactor.steps.confirm': '코드 입력',
+  'twoFactor.steps.state.done': '완료됨',
+  'twoFactor.steps.state.current': '현재 단계',
+  'twoFactor.steps.state.todo': '시작 전',
+  'twoFactor.password.label': '비밀번호',
+  'twoFactor.password.hint': '로그인 방식을 변경하기 전에 다시 확인합니다.',
+  'twoFactor.password.submit': '계속',
+  'twoFactor.password.pending': '설정 중',
+  'twoFactor.password.invalid': '비밀번호가 올바르지 않습니다.',
+  'twoFactor.key.intro':
+    '휴대전화에 인증 앱이 필요합니다. 이 키를 추가한 다음 여기로 돌아오세요. 2단계 인증은 아직 켜지지 않았습니다.',
+  'twoFactor.key.matrixLabel':
+    '설정 코드. 동일한 키를 텍스트로도 확인할 수 있습니다',
+  'twoFactor.key.matrixFailed':
+    '이 키의 코드를 생성하지 못했습니다. 앱에 설정 키를 입력하세요.',
+  'twoFactor.key.label': '설정 키',
+  'twoFactor.key.copy': '키 복사',
+  'twoFactor.key.copied': '키가 복사되었습니다',
+  'twoFactor.key.copyFailed':
+    '브라우저에서 키를 복사하지 못했습니다. 선택하여 직접 복사하세요.',
+  'twoFactor.key.open': '인증 앱에서 열기',
+  'twoFactor.key.startOver': '처음부터 다시 시작',
+  'twoFactor.key.startOverHint':
+    '다시 시작하면 새 키가 생성됩니다. 앱에 이미 추가한 키는 더 이상 작동하지 않습니다.',
+  'twoFactor.key.next': '추가했습니다',
+  'twoFactor.code.label': '앱의 코드',
+  'twoFactor.code.hint': '앱에 현재 표시된 여섯 자리 숫자입니다.',
+  'twoFactor.code.submit': '2단계 인증 켜기',
+  'twoFactor.code.pending': '확인 중',
+  'twoFactor.code.invalid':
+    '코드가 일치하지 않습니다. 휴대전화 시간을 확인하고 앱의 최신 코드를 입력하세요.',
+  'twoFactor.code.unclear':
+    '성공 여부를 확인하지 못했습니다. 최신 코드를 입력하여 다시 시도하세요.',
+  'twoFactor.rateLimited.title': '짧은 시간에 너무 많이 시도했습니다',
+  'twoFactor.rateLimited.password':
+    '약 10초 후에 다시 시도하세요. 입력한 내용은 유지됩니다.',
+  'twoFactor.rateLimited.code':
+    '최대 1분 후에 다시 시도하세요. 입력한 내용은 유지됩니다.',
+  'twoFactor.codes.title': '백업 코드',
+  'twoFactor.codes.body':
+    '휴대전화를 잃어버리면 각 코드를 한 번 사용할 수 있습니다. 지금만 표시되므로 안전한 곳에 보관하세요.',
+  'twoFactor.codes.copyAll': '모두 복사',
+  'twoFactor.codes.copied': '백업 코드가 복사되었습니다',
+  'twoFactor.codes.download': '텍스트 파일로 다운로드',
+  'twoFactor.codes.copyFailed':
+    '브라우저에서 코드를 복사하지 못했습니다. 선택하여 직접 복사하세요.',
+  'twoFactor.codes.stored': '이 백업 코드를 보관했습니다',
+  'twoFactor.codes.done': '완료',
+  'twoFactor.codes.gate': '계속하려면 상자를 선택하세요.',
+  'twoFactor.codes.lost':
+    '먼저 이 페이지를 떠나면 여기서 새 코드 묶음을 만들 수 있습니다. 기존 코드는 작동하지 않게 됩니다.',
+  'twoFactor.codes.leave.title': '코드를 보관하지 않고 떠날까요?',
+  'twoFactor.codes.leave.body':
+    '백업 코드는 한 번만 표시됩니다. 지금 떠나면 여기서 새 코드 묶음을 만들 수 있습니다. 기존 코드는 작동하지 않게 됩니다.',
+  'twoFactor.codes.leave.stay': '여기 머물기',
+  'twoFactor.codes.leave.go': '떠나기',
+  'twoFactor.on.title': '2단계 인증이 켜져 있습니다',
+  'twoFactor.on.badge': '켜짐',
+  'twoFactor.on.body':
+    '이메일과 비밀번호로 로그인할 때 신뢰하는 브라우저가 아니면 인증 앱 코드를 요청합니다. Google, Apple 또는 패스키로 로그인하면 코드를 요청하지 않습니다.',
+  'twoFactor.replace.action': '백업 코드 교체',
+  'twoFactor.replace.title': '백업 코드를 교체할까요?',
+  'twoFactor.replace.body':
+    '새 코드 묶음이 발급됩니다. 계속하면 현재 코드는 즉시 작동하지 않게 됩니다.',
+  'twoFactor.replace.confirm': '교체',
+  'twoFactor.replace.pending': '교체 중',
+  'twoFactor.nopassword.title': '먼저 비밀번호를 설정하세요',
+  'twoFactor.nopassword.body':
+    '2단계 인증을 사용하려면 이 계정에 비밀번호가 필요합니다. 다음 페이지에서 이메일을 입력하면 설정 링크가 전송됩니다. 비밀번호를 설정하면 모든 곳에서 로그아웃됩니다. 다시 로그인한 후 여기로 돌아오세요.',
+  'twoFactor.nopassword.action': '비밀번호 설정',
+  'twoFactor.setup.action': '설정 키 다시 보기',
+  'twoFactor.setup.title': '설정 키',
+  'twoFactor.setup.body':
+    '이 키를 다른 기기에 추가하세요. 다른 기기에 등록된 키도 계속 사용할 수 있습니다.',
+  'twoFactor.setup.done': '완료',
+  'twoFactor.setup.confirm': '키 보기',
+  'twoFactor.setup.pending': '확인 중',
+  'twoFactor.off.action': '2단계 인증 끄기',
+  'twoFactor.off.title': '2단계 인증을 끄시겠어요?',
+  'twoFactor.off.body':
+    '비밀번호를 아는 사람은 누구나 코드 없이 로그인할 수 있습니다. 로그인된 다른 기기는 로그인 상태를 유지합니다.',
+  'twoFactor.off.confirm': '끄기',
+  'twoFactor.off.pending': '끄는 중',
+  'twoFactor.off.cancel': '켜진 상태로 유지',
+  'twoFactor.off.done': '2단계 인증이 꺼졌습니다',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -2,14 +2,14 @@
  * Everything the authentication screens say, in Italian.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Register.** «Tu», as everywhere else in the Italian catalogue. These are
  * the only screens a traveller reaches with no session, so the language comes
- * from `Accept-Language` alone and every validation message has to read as
+ * from the visitor cookie, then `Accept-Language`, then English and every validation message has to read as
  * naturally as the headings do.
  *
  * **Plural.** `Intl.PluralRules('it')` reports `one`, `many` and `other`;
@@ -363,6 +363,9 @@ const messages = {
   'error.locked.title': 'Account bloccato per un po’',
   'error.locked.detail':
     'Troppe verifiche fallite. Per sicurezza questo account resta bloccato qualche minuto.',
+  'error.twoFactorOn.title': 'L’autenticazione a due fattori è già attiva',
+  'error.twoFactorOn.detail':
+    'Configurarla di nuovo impedirebbe al tuo autenticatore attuale di funzionare, quindi non è stato modificato nulla. Puoi gestirla qui.',
   'error.noTwoFactor.title': 'La verifica in due passaggi non è attiva',
   'error.noTwoFactor.detail':
     'Entra con la tua email e la tua password per continuare.',
@@ -391,6 +394,12 @@ const messages = {
   'passkeyNotice.action': 'Gestisci le passkey',
   'passkeyNotice.recovery':
     'Se non riconosci questa modifica, cambia la password e termina le sessioni sconosciute. Reimpostare la password non rimuove le passkey. Controllale e rimuovi quelle che non riconosci.',
+  'error.passwordAttemptsLocked.title': 'Conferma della password bloccata',
+  'error.passwordAttemptsLocked.detail':
+    'Questa sessione non può più confermare la tua password. Esci e accedi di nuovo.',
+  'error.passwordResultUnknown.title': 'Controlla le impostazioni di sicurezza',
+  'error.passwordResultUnknown.detail':
+    'La modifica potrebbe essere stata salvata. Mantieni aperta questa sessione finché non puoi accedere di nuovo. Se hai cambiato password, prova quella nuova. Se hai sostituito i codici di backup, quelli precedenti potrebbero non funzionare più; usa la tua app di autenticazione o un’altra sessione aperta per generarne di nuovi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

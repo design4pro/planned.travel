@@ -71,7 +71,7 @@ person plural, and the same vocabulary the shipped screens use — "workspace" f
 "trip" for a `trips` row, "traveller" for a member.
 
 **The citation is a line number and line numbers move, so here is the invariant behind it.** That
-module is being re-shaped by the localisation work `docs/SPEC.md` §8 governs: measured on disk while
+module is being re-shaped by the localisation work `docs/SPEC.md` §9 governs: measured on disk while
 this revision was written, `src/lib/format.ts` has become a module whose every function takes a
 trailing `locale` defaulting to `en`, which its own header at `:13-17` says "resolves to `en-GB`, the
 tag this module has always pinned — so every existing caller's output is unchanged to the byte". The
@@ -87,10 +87,10 @@ language a runtime choice; `09-S5` records why this plan does not build it, and 
 
 ### Where this plan's English copy lives
 
-`docs/SPEC.md` §8 rule 9 makes the copy ours to author, and the **Ownership** line of its catalogue
+`docs/SPEC.md` §9 rule 9 makes the copy ours to author, and the **Ownership** line of its catalogue
 section assigns the file it is authored in: _One item owns `messages/en/<namespace>.ts` for its own
 screens._ Seven of the eight stages below put English sentences on a screen under `src/routes/_app`,
-which §8 rule 8 puts squarely in scope, so this plan has to name that file and say who writes into
+which §9 rule 8 puts squarely in scope, so this plan has to name that file and say who writes into
 it. A plan that fixes the copy _language_ and leaves the copy _file_ unassigned has answered half the
 question.
 
@@ -108,7 +108,7 @@ the register that recorded the omission this section closes — so no sibling pl
 `messages/en/settings.ts` and this plan is the one that has to.
 
 **The namespace is `settings`, for all seven.** `src/lib/i18n/types.ts:115-126` freezes the ten
-names and §8 says an eleventh is a contract change rather than a builder's choice; `settings` is the
+names and §9 says an eleventh is a contract change rather than a builder's choice; `settings` is the
 one that names this area. One file therefore serves account, security, preference and handbook copy,
 and what makes that correct rather than a compromise is a property of the runtime: **a namespace is a
 unit of ownership and code-splitting, not an access boundary.** `catalogue.ts` merges every namespace
@@ -137,7 +137,7 @@ and `rewrite` as exclusive and treats `append` as the documented cooperative pat
 fifteen stages across these plans already use on
 `src/server/repos/__tests__/tenant-isolation.test.ts`. Three of the five appending stages here sit in
 wave 1 beside `09-S1`, so their order is not guaranteed, and the rule that makes that safe is set
-down rather than assumed: **the file's shape is fixed**, by §8 and by the one namespace file that
+down rather than assumed: **the file's shape is fixed**, by §9 and by the one namespace file that
 already exists — a header docstring, `import type { NamespaceMessages } from '../../types'`, then
 `const messages = { … } as const satisfies NamespaceMessages` and `export default messages`
 (`src/lib/i18n/messages/en/ui.ts`, its first and last lines). A stage that finds the file absent
@@ -149,9 +149,11 @@ agent ran first.
 
 - `09-S4` ships `public/manifest.webmanifest`. A web app manifest is a static JSON document the
   browser fetches once per origin, before any React tree exists; it cannot read the catalogue, and
-  serving a different one per language is a routing change §8 does not ask for. Its `name`,
-  `short_name` and `description` reuse `SITE_NAME` and `DESCRIPTION` from `src/routes/__root.tsx`,
-  and the stage renders no sentence inside the application at all.
+  serving a different one per language is a routing change §9 does not ask for. Its `name` and
+  `short_name` reuse `SITE_NAME` and the existing Apple title value `planned` from
+  `src/routes/__root.tsx`. There is no `description`: an optional untranslated sentence on an
+  installation surface would conflict with the 23-locale product. The stage renders no sentence
+  inside the application at all.
 - `09-S5` is blocked and ships no screen.
 
 **The stored-notification keys belong to `09-S7`, and that is the case that matters beyond screens.**
@@ -170,7 +172,7 @@ forty each other stage adds. Every one of the twenty-two non-`en` catalogues own
 `messages/<tag>/settings.ts` whole, so nothing here collides with them — but this namespace will be
 the largest in the product and the plan says so now rather than letting a translation run discover
 it. If the handbook is ever ruled out of scope the way `src/routes/legal/**` long-form prose already
-is by §8 rule 8, that is an amendment to §8 and an entry in
+is by §9 rule 8, that is an amendment to §9 and an entry in
 `docs/plans/11-boundaries-and-blockers.md`, not a choice a stage may make on its own; so this plan
 plans for the compliant case and names its cost.
 
@@ -178,7 +180,7 @@ plans for the compliant case and names its cost.
 `src/lib/i18n/__tests__/parity.test.ts` fails for every `en` key that has no translation yet, which
 is by construction until the per-tag translation work lands: it is already red on this branch for the
 whole of `messages/en/ui.ts`. A stage here adds English keys and therefore adds parity failures, and
-it must **not** write into `messages/<tag>/` to silence them — §8 gives those directories wholly to
+it must **not** write into `messages/<tag>/` to silence them — §9 gives those directories wholly to
 the translation items, so an English-side stage doing that is an ownership violation. Each stage runs
 `pnpm test`, records the parity count before and after its own change, and owns every failure that is
 not that suite.
@@ -1368,298 +1370,132 @@ one — `00-S3`'s audit trail is a wave-0 stage and is available, but this stage
 
 ## Stage 09-S4 — Installable, and honest about what it caches
 
+### Amendment
+
+This block replaces the original build design with the ready specification
+`.ai/specs/2026-10-11-installable-and-honest-about-what-it-caches.md` and the implementation
+that landed in #1454 (Closes #1162). The cache header and this amendment are #1163.
+
+`vite-plugin-pwa` stays installed at `1.3.0` and unused: its generation hook skips this
+multi-environment build after the SSR configuration overwrites its context. Installation uses
+reviewed static files and document-head links. Browser caching uses `public/_headers`.
+
+The first half retained `e2e/installable.spec.ts`, Chromium only: invoking the browser's manifest
+parser detected a deliberately malformed manifest, meeting ADR 0016's lower-layer bar.
+The local production preview ran without a Cloudflare login. Headed Chrome for Testing
+151.0.7922.34, using an ordinary profile, reported no manifest/installability errors and fired
+`beforeinstallprompt`, offering installation. This is scripted browser evidence, not a claimed
+human DevTools inspection or completed device installation. Physical-device checks remain #1167;
+ACC-07 is not declared complete by this amendment.
+
 ### Stage id
 
-`09-S4` · Wave 1 · effort **S**. The smallest stage in the plan, and the one whose build plugin is
-already installed.
+`09-S4` · Wave 1 · effort **S**.
 
 ### Reference rows
 
-- `ACC-07` absent → **done**.
-
-Sourced from `wiki: Offline-Mode-and-PWA` for the installability half only: a web application
-manifest, an icon set, a standalone display mode and theme colours.
-
-**Agreement with the row, and the correction that makes it cheap.** The row is right that
-`public/` holds exactly one file and that there is no manifest and no service worker. It is also
-right that the meta half already ships: `src/routes/__root.tsx:56-61` already sets
-`application-name`, `apple-mobile-web-app-title`, `color-scheme` and a **pair** of per-scheme
-`theme-color` values, and `:50-53` already sets `viewport-fit=cover`.
-
-The correction is about the dependency. **`vite-plugin-pwa` is already a devDependency at `1.3.0`**
-— measured in `package.json` and in `node_modules/vite-plugin-pwa/package.json` — so nothing is
-installed and `package.json` is not edited. One narrower fact governs the whole design, and it is
-`11-S2` entry 4's measurement: the plugin's service-worker toolbox arrives **transitively** and is
-not hoisted, so application code under `src/` cannot import it even though the build plugin can use
-it internally. That forbids the `injectManifest` strategy, which would require our own service-worker
-source file to import those packages. `generateSW` is therefore not a preference — it is the only
-strategy available under the freeze, and every decision below follows from it.
-
-**`ACC-08` is not this stage.** Offline trip bundles, a pending-change queue and a conflict console
-are excluded in `docs/plans/11-boundaries-and-blockers.md` — `11-S1` on the grounds that a second conflict
-authority would compete with the per-trip Durable Object, and `11-S2` entry 4 on the grounds that the
-client-side database it needs is absent. That file names `ACC-07` as the hosted equivalent, and this
-stage is it.
+- `ACC-07`: manifest, icons, standalone display and theme colours, sourced from
+  `wiki: Offline-Mode-and-PWA` for installability only.
+- `ACC-08` remains excluded by the conflict-authority and client-storage decisions in
+  `docs/plans/11-boundaries-and-blockers.md`.
 
 Rows unblocked: none. `ACC-07` has no dependants in `gap-rows.json`.
 
 ### Owned paths
 
-- `vite.config.ts` — edit. Adds the plugin, configured as below.
-- `public/manifest.webmanifest` — new. Hand-authored, not generated.
-- `public/icons/icon-192.png` — new.
-- `public/icons/icon-512.png` — new.
-- `public/icons/icon-maskable-512.png` — new.
-- `public/icons/apple-touch-icon-180.png` — new.
-- `scripts/render-app-icons.mjs` — new. Renders the four PNGs from the mark that
-  `src/routes/__root.tsx:35-41` already inlines as the favicon, using only Node builtins.
-- `src/routes/__root.tsx` — edit. The manifest link, the Apple touch icon link, the standalone meta,
-  and the registrar mount.
-- `src/components/layout/service-worker.tsx` — new. The client-only registration.
-- `src/components/layout/__tests__/service-worker.test.tsx` — new.
-- `src/components/layout/__tests__/manifest.test.ts` — new. The token-drift guard described below.
-- `e2e/account-and-settings.visual.spec.ts` — append.
-- `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append.
+- `public/manifest.webmanifest` — reviewed static manifest.
+- `public/icons/{icon-192,icon-512,icon-maskable-512,apple-touch-icon-180}.png` — platform icons.
+- `scripts/render-app-icons.mjs` — Node-builtins-only renderer from the inline favicon mark.
+- `src/routes/__root.tsx` — manifest and Apple touch icon links, and `mobile-web-app-capable`.
+- `src/lib/__tests__/app-manifest.test.ts` and
+  `scripts/__tests__/render-app-icons.test.mjs` — identity, colour and icon guards.
+- `e2e/installable.spec.ts` — the retained Chromium declaration.
+- `public/_headers` and `scripts/__tests__/static-headers.test.mjs` — cache policy and its guard.
+- This plan's cross-cutting catalogue note and notification push disposition, and entry 4 and the
+  installability sentence in `docs/plans/11-boundaries-and-blockers.md` — the required amendments.
 
-`wrangler.jsonc` is **not** claimed and needs no change: it declares no `assets` block today, and
-`public/` is already served — measured against a running dev server,
-`GET /atlas/country-outlines-50m.v1.txt` answers `200 text/plain`, because `@cloudflare/vite-plugin`
-derives the asset configuration from the client build. A file added to `public/` is served by the
-same path with no configuration change.
+`vite.config.ts`, `wrangler.jsonc`, `package.json` and `pnpm-lock.yaml` are unchanged.
+There is no registrar or new component.
 
 ### Data and migration
 
-**None.** No table, no column, no migration, and nothing filed for a wave-0 foundations schema stage.
-Installability is a manifest, four images and a build plugin; it stores nothing.
+None. No table, column, migration, quota, binding or stored application state.
 
 ### Server (repo, server function, Zod)
 
-**None of the three.** No repository — this stage writes no row and adds no SQL. No server function —
-the manifest and the icons are static assets served by the platform before the Worker runs. No Zod
-schema — there is no input to validate, because there is no request this stage handles.
-
-The one server-adjacent property that matters is stated here rather than assumed: the service worker
-must never answer a navigation. That is a build-configuration decision, described under **UI**
-because `vite.config.ts` is where it is written, and it is the single reason this stage cannot break
-streaming SSR.
+None. The platform serves the manifest, icons and build assets. No repository, SQL, server function
+or request input is added.
 
 ### UI (route, components)
 
-**No new route**, so `pnpm generate-routes` is not run by this stage. Two edited surfaces: the
-document head and the app shell.
+No new route or drawing component. The manifest link uses `crossOrigin: 'use-credentials'`; the meta
+adds `mobile-web-app-capable`. The inline favicon, theme-colour pair and safe-area viewport remain.
+No Apple capability or status-bar override is added.
 
-**`src/routes/__root.tsx`** gains, in `links`: `{ rel: 'manifest', href: '/manifest.webmanifest' }`
-and `{ rel: 'apple-touch-icon', href: '/icons/apple-touch-icon-180.png' }`; and in `meta`:
-`mobile-web-app-capable` and `apple-mobile-web-app-status-bar-style: black-translucent`, which is the
-value that makes `viewport-fit=cover` and the safe-area tokens mean something in standalone mode. The
-inline SVG favicon at `:34-43` stays exactly as it is — it costs no request and never 404s, and the
-PNG set exists for the platforms that will not read an SVG. The existing `theme-color` pair is not
-touched.
+The manifest uses `name: 'planned.travel'`, `short_name: 'planned'`, `lang: 'en'`, `id: '/'`,
+`scope: '/'`, `start_url: '/dashboard'` and `display: 'standalone'`. Its icon list has 192 and
+512 `any` entries and a 512 `maskable` entry; the 180 Apple icon is linked from the head.
+It has neither `orientation` (WCAG 2.2 1.3.4) nor `description` (an untranslated optional
+sentence). Theme and background use the light canvas `#faf9f7`, guarded against tokens and head
+meta by the manifest test. Dynamic theme parity remains #1165.
 
-**`public/manifest.webmanifest`, hand-authored.** `manifest: false` is set on the plugin so nothing
-generates a second one, because a generated manifest is a manifest nobody reviews. Its fields:
-`name` and `short_name` from `SITE_NAME`, `description`, `id: '/'`, `start_url: '/dashboard'`,
-`scope: '/'`, `display: 'standalone'`, `orientation: 'any'`, the four icons with `192`, `512`,
-`512 maskable` and the Apple touch size, `background_color` and `theme_color`.
+The icon renderer copies the inline mark using analytic geometry, supersampling and Node's
+`zlib`. Its tests decode the PNGs, compare pixels and check the maskable/Apple 40% safe circle.
 
-**The two colour values, and why they are literals here without breaking the token rule.** A
-manifest is JSON and cannot read a CSS custom property. `theme_color` and `background_color` are
-therefore the light canvas value `#faf9f7` — the same value `src/styles/tokens.css:27` gives
-`--color-canvas` and the same one `__root.tsx:60` already sends as the light `theme-color` meta. A
-manifest carries **one** `theme_color`; the per-scheme pair in the document head is what browsers
-consult while the app is open, and it stays the source of truth for the running product. The literal
-is guarded rather than trusted: `src/components/layout/__tests__/manifest.test.ts` reads both files
-and fails if the manifest's `theme_color` is not byte-identical to `--color-canvas` on bare `:root`
-in `src/styles/tokens.css`, so a token change that leaves the manifest behind is caught by
-`pnpm test` rather than by a reader noticing a wrong splash screen.
+**Cache.** Exactly one rule in `public/_headers` gives `/assets/*`
+`Cache-Control: public, max-age=31536000, immutable`. Only content-hashed build output belongs
+there. Nothing may be committed under `public/assets/`, and Vite's public-copying and hashed
+filename defaults must remain intact. The platform applies the header to existing static assets;
+documents, API and server-function responses, tile ranges and missing asset responses remain
+answered by the Worker with their own headers. Rollback deletes the file; already cached bytes
+remain valid for their content-hashed names.
 
-**The icons, and how four PNGs exist without an image dependency.** `scripts/render-app-icons.mjs`
-draws the mark analytically — a rounded rectangle, a circle and a pin, the same three shapes the
-inline favicon uses — supersamples four times for anti-aliasing, and encodes the result as a PNG with
-`node:zlib`'s `deflateSync`. Nothing else is imported. The precedent is `scripts/build-country-outlines.mjs`,
-which already generates an asset into `public/` from a committed script with Node builtins only. The
-script is idempotent: re-running it reproduces the same bytes, so a regenerated icon is a no-op diff.
-The maskable variant is the same mark inside the 40% safe zone the maskable spec requires, on a solid
-field, so a platform that crops to a circle never clips the pin.
-
-**The service worker, configured so it can only help.** `strategies: 'generateSW'` — forced, as
-established above. Then:
-
-- **`injectRegister: false`.** The plugin's other modes write a `<script>` into an HTML entry, and a
-  TanStack Start application has no static `index.html` to write into. Registration is therefore
-  first-party, in `src/components/layout/service-worker.tsx`: a component mounted in the body from
-  `__root.tsx`, which renders nothing, calls `navigator.serviceWorker.register('/sw.js', { scope: '/' })`
-  from an effect after `load`, guards on `'serviceWorker' in navigator`, guards on
-  `import.meta.env.PROD`, and swallows a rejected registration with a single structured log rather
-  than an unhandled rejection in the console.
-- **`registerType: 'autoUpdate'`**, so a new deployment takes over on the next load with no prompt UI
-  to design and no stale bundle to explain. This is safe **because** nothing but hashed, immutable
-  assets is precached; there is no cached HTML that could survive a deployment.
-- **No `navigateFallback`, and no `runtimeCaching` entry that matches a navigation.** This is the
-  clause that keeps streaming SSR intact. Every navigation goes to the network and is answered by the
-  Worker, streamed, with its loader data — exactly as it is today. A service worker that precached an
-  application shell would replace a server-rendered document with a cached one, and the reader would
-  see yesterday's trip.
-- **`workbox.globPatterns: ['assets/**/*.{js,css,woff2,svg}']`**, and explicitly **not** `**/*.html`.
-  Content-hashed asset filenames are immutable, so precaching them is a pure win and a precache miss
-  falls through to the network rather than failing.
-- **Nothing under `/api/` is matched by any rule**, which is how the byte-range tile route stays
-  correct. `/api/tiles/*` answers HTTP range requests with `206 Partial Content`, and the Cache API
-  cannot store a partial response at all — a `cache.put` of a 206 throws. Worse than useless, it
-  would be a second cache layer over one that already exists and is already right: the range-aware
-  path in `src/routes/api/tiles/-lib/serve.ts` caches through `caches.default` at the edge, which is
-  shared across every reader rather than per-browser. So the service worker never sees a tile
-  request, by having no rule that matches one, and the stage asserts this rather than assuming it.
-- **`devOptions.enabled: false`.** The service worker is not generated or registered under
-  `vite dev`. This matters beyond tidiness: `vite dev` is what `scripts/ultrabuild/resolve-port.sh`
-  resolves, what the Playwright gate's `webServer` starts and what every baseline and every capture
-  frame is taken against. A service worker caching development assets would poison all three.
-
-**States.** This stage ships no list and no async surface of its own, so there is no empty, skeleton
-or error state to design — and that sentence is the answer rather than an omission. The one visible
-consequence is the installed window: at 360px the standalone layout must not lose the safe-area
-padding, and the frames below prove it.
-
-**Motion.** None added.
-
-**Tokens.** None missing. The two literals in the manifest are the JSON exception argued above, and
-they are test-guarded.
-
-**Copy language: English, `en-GB`**, sentence case, as fixed in the area brief above. The manifest's
-`name`, `short_name` and `description` are the only user-visible strings this stage adds, and they
-reuse `SITE_NAME` and `DESCRIPTION` from `__root.tsx` rather than inventing a second wording.
-
-**This stage authors no catalogue key**, and the area brief's exemption is the reason rather than an
-oversight: a web app manifest is static JSON the browser fetches once per origin before any React
-tree exists, so it cannot read the catalogue, and this stage renders no sentence inside the
-application. `src/lib/i18n/messages/en/settings.ts` is therefore absent from **Owned paths** above.
+There is no new motion, state, copy or catalogue key. The manifest reuses `SITE_NAME` and
+the Apple title value; installed-window navigation uses the existing shell. The app still requires
+a network.
 
 ### Quota
 
-**No countable row.** This stage creates nothing in D1, nothing in R2 and nothing a plan can run out
-of. No metric is added to `resolveLimits()` or to `PLAN_QUOTAS`, no `assertQuota` call site is added,
-and nothing is added to `src/server/billing/__tests__/limits.test.ts`. The only cost it moves is
-build-output size: four PNGs and a service worker, together under 30 KB, against a 10 MB Worker
-ceiling.
+No countable row or quota call. The additions are static files, not part of the Worker code budget.
 
 ### Tenant isolation test
 
-**No case is appended to `src/server/repos/__tests__/tenant-isolation.test.ts`, because this stage
-adds no repository function and writes no row.** Nothing under `src/server/repos` is touched.
-
-The adjacent property that would be a defect if it were wrong — a cache that outlives a session and
-shows one tenant's data to the next reader of the same browser — is prevented by construction rather
-than by a test: only immutable, content-hashed, tenant-neutral build assets are precached, no
-navigation is ever answered from cache, and no `/api/` response is stored. The spec asserts the first
-and third of those directly, in the case listed under **Verification**.
+No repository method or row is added, so no tenant-isolation case is required. The cache boundary
+is public content-hashed build output only; no tenant document or API response receives the rule.
+The tooling guard checks the sole rule, the empty public assets namespace and Vite defaults.
 
 ### Verification
 
-**How this is run.** `docs/plans/12-verification-protocol.md` owns the procedure, and this is the one
-stage that could break it: §2 records that `vite dev` is what `resolve-port.sh` resolves, what the
-gate's `webServer` starts and what every capture frame is taken against, so `devOptions.enabled:
-false` is a verification requirement and not only a build preference.
+Run every `validation.commands` entry from `.ai/agentic.config.json` in order. After the build,
+list `dist/client` and verify `_headers` is byte-identical to `public/_headers`, alongside the
+manifest and icons.
 
-**The command gate, in this order:** `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
-`pnpm build` carries more weight here than in any other stage in this plan: it is the only place the
-plugin runs, and the stage inspects its output rather than trusting it.
+The tooling test parses exactly one path and one header, permits only blank/comment lines
+otherwise, rejects content under `public/assets/`, and rejects `publicDir`, `copyPublicDir`,
+`assetsDir`, `entryFileNames`, `chunkFileNames` and `assetFileNames` anywhere in the Vite config.
 
-**The Playwright run, written out in full.** There is no `test:e2e`, no `test:visual` and no
-`playwright` script, and `docs/SPEC.md` §3 freezes `package.json` so none may be added:
+Measure an existing hashed asset and a missing `/assets/` path with `curl -sI` against production
+preview or staging, before and after adding the header. Existing assets should receive the
+year-long immutable value; missing assets must never receive `immutable`. Record inability to
+run either environment. If local preview retains `max-age=0`, record that result; staging or
+the first production deploy decides, without blocking this ticket. Development does not apply
+the header, and its file content is a lower-layer fact, so this half adds no e2e declaration.
 
-```sh
-PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/account-and-settings.visual.spec.ts -g '09-S4'
-```
-
-Both browser projects run: `chromium` at 1440x900 and `mobile-safari` on WebKit at 393x659. Those
-are the gate's viewports and are separate from the evidence widths below — the gate proves nothing
-changed, the frames prove the thing is good. `--project=setup` is re-run whenever a cached session
-starts redirecting to `/login`; without `PLAYWRIGHT_BASE_URL` the config waits on port 3000 until the
-global timeout. Baselines are recorded with `--update-snapshots` under the same `-g` filter;
-`maxDiffPixelRatio` stays at `0.002` and `threshold` at `0.2` — neither is raised, per §5, and a
-failing comparison is either the renderer's or the product's.
-
-**Unit tests, by file and invariant.**
-
-- `src/components/layout/__tests__/manifest.test.ts` — the manifest parses as JSON; `display` is
-  `standalone`; `start_url` is within `scope`; the icon list contains a 192 and a 512 entry and one
-  `purpose: 'maskable'`; every icon `src` names a file that exists under `public/`; and `theme_color`
-  equals `--color-canvas` as declared on bare `:root` in `src/styles/tokens.css`.
-- `src/components/layout/__tests__/service-worker.test.tsx` — the component renders nothing; it does
-  not call `register` when `serviceWorker` is absent from the navigator; it does not call it when
-  `import.meta.env.PROD` is false; a rejected registration does not produce an unhandled rejection.
-
-**Build-output assertions, run as part of the stage rather than eyeballed.** After `pnpm build`: the
-client output contains `sw.js` and `manifest.webmanifest`; the generated precache manifest contains
-**no** entry ending in `.html`; and it contains no entry beginning `/api/`. These three are the
-mechanical form of the three promises above.
-
-**Browser evidence.** The manifest is a document-level artefact rather than a screen, so the frames
-are of the surface it changes: route `/dashboard`, both themes, at **360px, 1280px and 2560px** — six
-frames — which is where the standalone status bar and the safe-area padding are visible. Plus one
-declared non-resting state: `--state installable`, at 360px in both themes, captured after the spec
-has asserted `link[rel="manifest"]` resolves with `200` and `application/manifest+json`, so the frame
-and the assertion describe the same load.
-
-Selectors are verified with `page.locator(sel).count() === 1` against a running dev server before any
-frame is filed. Frames come from `scripts/ultrabuild/capture.mjs` with `PT_SERVER_TODAY=2026-08-20`
-and `--auth`, under `.claude/ultrabuild/shots/<slug>/round-<n>/09-S4/`.
-
-**The spec file.** Appends a `test.describe` block named for this stage, importing shared helpers
-from `./helpers/shoot.ts`. It adds one non-frame test: fetch `/manifest.webmanifest` and each icon
-path and assert `200`; and assert that under `vite dev` `navigator.serviceWorker.controller` is
-`null`, which is the runnable form of `devOptions.enabled: false`. `/dashboard` is already declared in
-`e2e/visual.spec.ts`'s `APP_ROUTES`; this spec's own route table declares it again for its own
-`auditServerClock` call, and the existing declaration is not edited. `e2e/helpers/shoot.ts` is not
-claimed.
-
-**Console must be silent**, asserted through `watchConsole` on every test. The registration failure
-path logs through the structured logger rather than `console`, so a browser without service-worker
-support produces no console output at all — which is itself asserted.
-
-**Layout shift after paint.** Measured as `09-S1` describes. It is worth measuring here specifically
-because an icon or manifest link added to `<head>` is the classic cause of a late reflow; the
-assertion is `0` after the settle mark, gated on `supportedEntryTypes`.
+The first half's Chromium test checks real manifest/icon responses, one manifest link and a clean
+console through the browser parser. Its PR records dashboard and landing A/B evidence in both
+themes and desktop/mobile widths. The header half has no visible change and no capture pair.
 
 ### Definition of done
 
-The six repository-wide items from `docs/SPEC.md` §7 apply unchanged: `pnpm build` succeeds; `pnpm
-lint` and `pnpm typecheck` are clean with no suppressions; new logic has tests and `pnpm test`
-passes; the feature is verified in a real browser in light and dark, desktop and mobile; nothing is
-left behind — no TODO, no placeholder copy, no `console.log`, no commented-out code; and no file
-outside **Owned paths** is touched.
-
-On top of those, the `docs/SPEC.md` §2 visual clauses, ticked per surface this stage ships:
-
-- [ ] Spacing is on the 4px grid, from `--space-*`. No eyeballed one-off margins.
-- [ ] Every interactive element has hover, focus-visible, active, disabled and loading states.
-- [ ] Every list has a designed empty state, a skeleton loading state and an error state, each drawn
-      on `--color-surface-2` rather than on the raw canvas.
-- [ ] Motion is 150–260ms on `--ease-out-quint` or a sibling token, transform and opacity only, and
-      `prefers-reduced-motion: reduce` is honoured.
-- [ ] Full parity in light **and** dark theme, with dark shadows re-declared rather than reused.
-- [ ] Checked at 360px, 1280px and 2560px, and the small layout is designed rather than a squeezed
-      desktop.
-- [ ] Keyboard navigable end to end, sensible focus order, accessible names, WCAG 2.2 AA contrast in
-      both themes.
-- [ ] Zero console errors or warnings, and zero layout shift after paint.
-
-The three list-shaped clauses are ticked as "no list and no async surface is shipped by this stage",
-which is the honest reading; ticking them any other way would be ticking a box nobody looked at.
+The repository gate passes, the cache rule is guarded, build output and measured headers are
+recorded honestly, and docs grep covers every term listed in the specification. No dependency,
+generated route, architecture document or plans README is edited.
 
 ### Blockers
 
-**None.** The build plugin is present at `1.3.0` and nothing is installed; `package.json` and
-`pnpm-lock.yaml` are not edited by this stage or by any other in this file. No binding is added to
-`wrangler.jsonc`. No third-party service is involved. No row in another plan gates this one.
-
-One adjacent constraint is recorded so a later reader does not mistake it for an oversight: the
-service-worker toolbox cannot be imported from `src/` (`11-S2` entry 4), so any future work wanting a
-hand-written service worker — background sync, push delivery, a genuine offline route — is blocked on
-that same measurement and is not made available by this stage.
+None. The plugin remains installed and unused; no dependency, binding or third-party service is
+added. The toolbox freeze prohibits importing an unavailable package, not an import-free script.
+Future offline delivery, push or background sync requires a new specification.
 
 ---
 
@@ -1828,11 +1664,11 @@ provider and types), `src/lib/fonts.ts`, and several hundred lines across `src/s
 `src/styles/tokens.css`. Re-measured while this revision was written, that is understated in two ways
 that change what this stage may do:
 
-- **`docs/SPEC.md` has grown a §8 that governs the row directly**, and it settles the questions this
+- **`docs/SPEC.md` has grown a §9 that governs the row directly**, and it settles the questions this
   stage was holding open. It fixes the exact set of twenty-three BCP-47 tags and their native names;
   it makes the message layer, the plural rules and the interpolation **ours**, restating §3's freeze
   rather than waiting for it to be lifted; it fixes server-side negotiation before first paint
-  (user → workspace → `Accept-Language` → `en`) with `<html lang>` and `<html dir>` server-rendered;
+  (user → workspace → visitor cookie → `Accept-Language` → `en`) with `<html lang>` and `<html dir>` server-rendered;
   it makes `ar` a designed right-to-left layout rather than a flip; it carries the cross-runtime
   formatting rule this stage records under **Server**; and it fixes the catalogue layout as
   `src/lib/i18n/messages/<locale>/<namespace>.ts` over ten named namespaces, saying in as many words
@@ -1840,17 +1676,17 @@ that change what this stage may do:
 - **The subsystem is materialising in this checkout, not only on `main`.** `src/lib/i18n/` and the
   re-shaped `src/lib/format.ts` are present and measurable here.
 
-So the chosen fallback in blocker 1 is not a proposal any more — §8 is the decision, and it says
+So the chosen fallback in blocker 1 is not a proposal any more — §9 is the decision, and it says
 hand-roll. What remains true, and is the whole reason this stage stays **BLOCKED** rather than
-becoming buildable, is that the work is owned elsewhere: §8 gives `src/lib/i18n/messages/<tag>/`
+becoming buildable, is that the work is owned elsewhere: §9 gives `src/lib/i18n/messages/<tag>/`
 wholly to the localisation items, and `src/styles/styles.css` and `src/styles/tokens.css` are shared
 paths `00-foundations.md` governs and no feature stage may claim in any wave. A stage in **this**
 plan that wrote a catalogue, a negotiator or a token would produce the worst outcome
 `README.md` describes: a second implementation of a shipped thing, in files two plans both claim.
 
 The re-planned stage's first act is therefore not code and not design. It is to diff this branch
-against `main` and against §8, establish what already exists, and re-specify **only** the gap —
-which, on the evidence above, may be nothing more than the language picker §8 rule 7 puts in
+against `main` and against §9, establish what already exists, and re-specify **only** the gap —
+which, on the evidence above, may be nothing more than the language picker §9 rule 7 puts in
 settings, and even that must be checked against `09-S8`'s ownership of the settings shell before it
 is claimed. **It must not re-specify what is already there.**
 
@@ -2573,9 +2409,10 @@ effect — that is precisely the class of defect this plan exists to repair — 
 
 - **Push — disposition: defer**, with its preconditions named so it is schedulable rather than
   wished for: a subscription record and its columns (a foundations ask), signing keys held as
-  secrets, and a service worker with a push handler. The third arrives with `09-S4`, but `11-S2`
-  entry 4 measured that the service-worker toolbox cannot be imported from `src/`, so the handler is
-  a hand-written worker and is blocked on that same measurement.
+  secrets, and a service worker with a push handler. `09-S4` delivers no service worker. The
+  toolbox freeze blocks importing unavailable packages, not an import-free worker; push remains
+  deferred until its subscription schema, signing keys and a separately specified handler exist.
+  No push handler is added by either stage.
 - **Webhook — disposition: drop** at our tier. A per-tenant outbound endpoint is a stored URL we
   fetch on a tenant's behalf, which is a request-forgery surface and an egress cost with no plan
   that sells it. Recorded here so a later reader does not read the enum and conclude it was
@@ -3218,7 +3055,7 @@ measurement, not an expectation: `grep -rln 'messages/en/' docs/plans` matches e
 this one and `OPEN-FINDINGS.md`, the register that recorded the omission this section closes. Three
 of the five appends are in wave 1 beside the stage that mints the file, and the area brief's
 **Where this plan's English copy lives** is what makes that safe — disjoint key prefixes, a file shape
-fixed by `docs/SPEC.md` §8 and by `src/lib/i18n/messages/en/ui.ts`, and an explicit rule for the stage
+fixed by `docs/SPEC.md` §9 and by `src/lib/i18n/messages/en/ui.ts`, and an explicit rule for the stage
 that arrives first. The other nine namespace files are named by no stage here, so nothing this plan
 does can stand in the way of the item that owns `messages/en/shell.ts`.
 

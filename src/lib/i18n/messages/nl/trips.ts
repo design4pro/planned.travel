@@ -287,6 +287,12 @@ const messages = {
   'book.readOnly.archived':
     'Deze reis is gearchiveerd, dus de boekingen en verblijven zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Deze wijziging is geweigerd. Bekijk de huidige reis voordat je meer wijzigingen aanbrengt.',
+  'transports.recovery.failed':
+    'De reis kon niet worden vernieuwd. Probeer het opnieuw voordat je wijzigingen aanbrengt.',
+  'transports.readOnly.archived':
+    'Deze reis is gearchiveerd. Herstel de reis om vervoer te wijzigen.',
   'transports.title': 'Trajecten',
   'transports.empty': 'Nog niets vastgelegd',
   'transports.count.transports': {

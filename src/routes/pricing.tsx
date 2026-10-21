@@ -81,6 +81,9 @@ const MODULE_LABELS: { readonly [K in ModuleKey]: MessageKey } = {
   prioritySupport: 'marketing.pricing.module.prioritySupport',
 }
 
+// #1166: keep the dormant flag out of customer promises until region downloads ship.
+const HIDDEN_MODULES: ReadonlySet<ModuleKey> = new Set(['offlineMaps'])
+
 /** The seven questions, as literal key pairs so a typo is a compile error. */
 const FAQ_KEYS: ReadonlyArray<{
   readonly question: MessageKey
@@ -245,7 +248,7 @@ const rowHeadClasses = cn(
   'sticky start-0 z-10 bg-surface px-5 py-3.5 text-start text-label font-medium text-ink',
 )
 
-function Comparison() {
+export function Comparison() {
   const t = useTranslate()
   return (
     <Section
@@ -326,24 +329,26 @@ function Comparison() {
                   {t('marketing.anchor.modules')}
                 </th>
               </tr>
-              {MODULE_KEYS.map((key) => (
-                <tr
-                  key={key}
-                  className="border-b border-edge-faint last:border-b-0"
-                >
-                  <th scope="row" className={rowHeadClasses}>
-                    {t(MODULE_LABELS[key])}
-                  </th>
-                  {PLAN_LIST.map((plan) => (
-                    <td key={plan.id} className="px-5 py-3.5 text-center">
-                      <IncludedCell
-                        included={plan.limits[key]}
-                        planName={t(PLAN_COPY[plan.id].name)}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {MODULE_KEYS.filter((key) => !HIDDEN_MODULES.has(key)).map(
+                (key) => (
+                  <tr
+                    key={key}
+                    className="border-b border-edge-faint last:border-b-0"
+                  >
+                    <th scope="row" className={rowHeadClasses}>
+                      {t(MODULE_LABELS[key])}
+                    </th>
+                    {PLAN_LIST.map((plan) => (
+                      <td key={plan.id} className="px-5 py-3.5 text-center">
+                        <IncludedCell
+                          included={plan.limits[key]}
+                          planName={t(PLAN_COPY[plan.id].name)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
         </div>

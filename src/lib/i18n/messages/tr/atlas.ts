@@ -26,6 +26,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Henüz sayılacak bir şey yok',
+  'panel.stats.empty.body':
+    'Haritada bir ülke işaretle veya bir seyahat planla; rakamların burada görünmeye başlasın.',
+  'panel.stats.empty.action': 'Seyahat planla',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Dünya haritası. Henüz gezildi olarak işaretlenmiş ülke yok.',
@@ -141,16 +145,16 @@ const messages = {
   'panel.stat.placesNone': 'Henüz bir geziye hiçbir yer iğnelenmedi',
   'panel.stat.placesCaption':
     'Kaydedilen görülecek yerler, konaklamalar ve duraklar',
-  'panel.stat.regions': 'Bölgeler',
+  'panel.stat.regions': 'Bölgelerin',
   'panel.stat.regionsNone': 'Henüz işaretlenmiş bölge yok',
   'panel.stat.regionsCaption': 'Eyaletler, iller, vilayetler',
-  'panel.stat.visits': 'Ziyaretler',
+  'panel.stat.visits': 'Ziyaretlerin',
   'panel.stat.visitsCaption': 'Kayıtlı her varış',
   'panel.stat.trips': 'Gezileriniz',
   'panel.stat.tripsCaption': 'Katıldığınız tüm geziler',
-  'panel.stat.cities': 'Şehirler',
+  'panel.stat.cities': 'Şehirlerin',
   'panel.stat.citiesCaption': 'Konakladığınız veya durduğunuz şehirler',
-  'panel.stat.days': 'Yolda geçen günler',
+  'panel.stat.days': 'Seyahat günlerin',
   'panel.stat.daysCaption': 'Kaydınızdaki tüm geziler boyunca',
   'panel.continents.label': 'Kıtalara göre ülkeler',
 
@@ -388,6 +392,28 @@ const messages = {
     'Değişiklik doğrulanamadı. Neyin kaydedildiğini kontrol etmek için bölgelerini yeniden yükle.',
   'regions.status.refreshFailed':
     '{result} Atlas yenilenemedi. Haritayı güncellemek için yeniden yükle.',
+
+  'panel.stat.periodLabel': 'Verileri göster',
+  'panel.stat.allTime': 'Tüm zamanlar',
+  'panel.stat.groupAll': 'Tüm zamanların verileri',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Seçilen yılın verileri: {year}',
+  'panel.stat.announceAll': 'Tüm zamanların verileri gösteriliyor.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Seçilen yılın verileri gösteriliyor: {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Başlangıç yılı: {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Seyahatlerin başlangıç yılı: {year}',
+  'panel.stat.countries': 'Seyahatlerindeki ülkeler',
+  'panel.stat.countriesCaption': 'Bu seyahatlerdeki farklı ülkeler',
+  'panel.stat.streak': 'Ardışık seyahat yılların',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange':
+    'Her yıl seyahat, ilk yıl: {first}, son yıl: {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Bir seyahat, yıl: {last}',
+  'panel.stat.streakNone': 'Seri başlatmak için tarihli bir seyahat ekle',
 } satisfies TranslationOf<typeof En>
 
 export default messages

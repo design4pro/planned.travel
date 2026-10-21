@@ -220,7 +220,7 @@ const messages = {
   'security.password.action': 'Ubah kata sandi',
   'security.twoFactor.label': 'Autentikasi dua langkah',
   'security.twoFactor.onHint':
-    'Kode dari aplikasi autentikator wajib pada setiap proses masuk yang baru.',
+    'Kode dari aplikasi diminta saat masuk dengan email dan kata sandi, kecuali browser ini dipercaya.',
   'security.twoFactor.offHint':
     'Tambahkan kode enam angka dari aplikasi autentikator di atas kata sandi Anda.',
   'security.twoFactor.on': 'Aktif',
@@ -229,7 +229,7 @@ const messages = {
   'security.twoFactor.enable': 'Aktifkan',
   'security.passkeys.label': 'Kunci sandi',
   'security.passkeys.hint':
-    'Masuk dengan pemindai sidik jari, Face ID atau kunci keamanan tanpa mengetik apa pun.',
+    'Masuk dengan sidik jari, wajah, atau kunci keamanan tanpa mengetik apa pun.',
   'security.passkeys.action': 'Kelola kunci sandi',
   'security.session.title': 'Sesi ini',
   'security.session.description': 'Peramban tempat Anda membaca ini.',
@@ -399,7 +399,7 @@ const messages = {
   'billing.renewal.paused':
     'Langganan ini dijeda. Lanjutkan kapan pun Anda siap bepergian lagi.',
   'billing.renewal.lapsed':
-    'Pilih paket di bawah untuk membuka lagi pemesanan, jurnal dan peta luring.',
+    'Pilih paket di bawah untuk membuka lagi pemesanan, jurnal.',
   'billing.renewal.incomplete':
     'Polar masih menunggu pembayaran ini dikonfirmasi.',
   'billing.renewal.free':
@@ -453,8 +453,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Perjalanan dan tempat tanpa batas',
   'billing.plan.solo.feature.modules':
     'Semua modul perencanaan — pemesanan, jurnal, anggaran, daftar bawaan',
-  'billing.plan.solo.feature.offline':
-    'Peta luring yang Anda unduh sebelum terbang',
+  'billing.plan.solo.feature.storage': '5 GB untuk foto dan dokumen',
   'billing.plan.solo.feature.export': 'Ekspor PDF dan kalender',
   'billing.plan.crew.name': 'Rombongan',
   'billing.plan.crew.tagline': 'Untuk keluarga, sahabat dan tim kecil',
@@ -590,9 +589,10 @@ const messages = {
   'passkeys.add.exists':
     'Perangkat ini sudah punya kunci sandi untuk akun Anda',
   'passkeys.add.failed': 'Kunci sandi tidak ditambahkan. Coba lagi.',
-  'passkeys.add.stale': 'Demi keamanan Anda, masuk lagi untuk melanjutkan.',
+  'passkeys.add.stale':
+    'Demi keamanan Anda, mengelola kunci sandi mengharuskan Anda baru saja masuk. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
   'passkeys.error.sessionEnded':
-    'Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.',
+    'Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan pengelolaan kunci sandi Anda.',
   'passkeys.signInAgain': 'Masuk lagi',
   'passkeys.add.limit':
     'Anda telah mencapai batas {value} kunci sandi. Hapus satu untuk menambahkan yang lain.',
@@ -632,7 +632,7 @@ const messages = {
   'passkeys.delete.cancel': 'Batal',
   'passkeys.delete.wrongPassword': 'Kata sandi itu tidak tepat.',
   'passkeys.delete.stale':
-    'Demi keamanan Anda, masuk lagi sebelum menghapus kunci sandi.',
+    'Demi keamanan Anda, menghapus kunci sandi mengharuskan Anda baru saja masuk. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
   'passkeys.delete.removed': 'Kunci sandi dihapus',
   'passkeys.delete.failed': 'Kunci sandi tidak dihapus. Coba lagi.',
   'passkeys.delete.removing': 'Menghapus kunci sandi',
@@ -660,6 +660,100 @@ const messages = {
   'workspace.departure.activationFailed':
     'Anda telah keluar dari ruang kerja ini. Buka ruang kerja berikutnya untuk melanjutkan.',
   'workspace.departure.recover': 'Buka ruang kerja berikutnya',
+  'twoFactor.back': 'Kembali ke keamanan',
+  'twoFactor.title': 'Autentikasi dua faktor',
+  'twoFactor.description':
+    'Tambahkan langkah kedua saat masuk dengan email dan kata sandi.',
+  'twoFactor.error': 'Pengaturan dua faktor tidak dapat dimuat.',
+  'twoFactor.steps.label': 'Siapkan dua faktor',
+  'twoFactor.steps.password': 'Konfirmasi identitas Anda',
+  'twoFactor.steps.key': 'Tambahkan ke aplikasi autentikator',
+  'twoFactor.steps.confirm': 'Masukkan kode',
+  'twoFactor.steps.state.done': 'Selesai',
+  'twoFactor.steps.state.current': 'Langkah saat ini',
+  'twoFactor.steps.state.todo': 'Belum dimulai',
+  'twoFactor.password.label': 'Kata sandi Anda',
+  'twoFactor.password.hint':
+    'Kami memintanya lagi sebelum mengubah cara Anda masuk.',
+  'twoFactor.password.submit': 'Lanjutkan',
+  'twoFactor.password.pending': 'Menyiapkan',
+  'twoFactor.password.invalid': 'Kata sandi itu salah.',
+  'twoFactor.key.intro':
+    'Anda memerlukan aplikasi autentikator di ponsel. Tambahkan kunci ini lalu kembali ke sini. Dua faktor belum aktif.',
+  'twoFactor.key.matrixLabel':
+    'Kode penyiapan. Kunci yang sama tersedia sebagai teks',
+  'twoFactor.key.matrixFailed':
+    'Kami tidak dapat membuat kode untuk kunci ini. Masukkan kunci penyiapan di aplikasi Anda.',
+  'twoFactor.key.label': 'Kunci penyiapan',
+  'twoFactor.key.copy': 'Salin kunci',
+  'twoFactor.key.copied': 'Kunci disalin',
+  'twoFactor.key.copyFailed':
+    'Browser tidak dapat menyalin kunci. Pilih dan salin secara manual.',
+  'twoFactor.key.open': 'Buka di aplikasi autentikator',
+  'twoFactor.key.startOver': 'Mulai lagi',
+  'twoFactor.key.startOverHint':
+    'Memulai lagi membuat kunci baru. Kunci yang sudah ditambahkan ke aplikasi akan berhenti berfungsi.',
+  'twoFactor.key.next': 'Sudah saya tambahkan',
+  'twoFactor.code.label': 'Kode dari aplikasi',
+  'twoFactor.code.hint': 'Enam digit yang ditampilkan aplikasi saat ini.',
+  'twoFactor.code.submit': 'Aktifkan dua faktor',
+  'twoFactor.code.pending': 'Memeriksa',
+  'twoFactor.code.invalid':
+    'Kode tidak cocok. Periksa waktu ponsel dan masukkan kode terbaru dari aplikasi.',
+  'twoFactor.code.unclear':
+    'Kami tidak dapat memastikan apakah berhasil. Masukkan kode terbaru untuk mencoba lagi.',
+  'twoFactor.rateLimited.title': 'Terlalu banyak percobaan dalam waktu singkat',
+  'twoFactor.rateLimited.password':
+    'Tunggu sekitar sepuluh detik lalu coba lagi. Semua yang diketik tetap tersimpan.',
+  'twoFactor.rateLimited.code':
+    'Tunggu hingga satu menit lalu coba lagi. Semua yang diketik tetap tersimpan.',
+  'twoFactor.codes.title': 'Kode cadangan Anda',
+  'twoFactor.codes.body':
+    'Setiap kode dapat digunakan sekali jika ponsel hilang. Kode hanya ditampilkan sekarang, jadi simpan di tempat aman.',
+  'twoFactor.codes.copyAll': 'Salin semua',
+  'twoFactor.codes.copied': 'Kode cadangan disalin',
+  'twoFactor.codes.download': 'Unduh sebagai berkas teks',
+  'twoFactor.codes.copyFailed':
+    'Browser tidak dapat menyalin kode. Pilih dan salin secara manual.',
+  'twoFactor.codes.stored': 'Saya sudah menyimpan kode cadangan ini',
+  'twoFactor.codes.done': 'Tuntas',
+  'twoFactor.codes.gate': 'Centang kotak untuk melanjutkan.',
+  'twoFactor.codes.lost':
+    'Jika meninggalkan halaman ini lebih dahulu, Anda dapat membuat kumpulan baru di sini. Kumpulan lama tidak akan berfungsi.',
+  'twoFactor.codes.leave.title': 'Keluar tanpa menyimpan kode?',
+  'twoFactor.codes.leave.body':
+    'Kode cadangan hanya ditampilkan sekali. Jika keluar sekarang, Anda dapat membuat kumpulan baru di sini. Kumpulan lama tidak akan berfungsi.',
+  'twoFactor.codes.leave.stay': 'Tetap di sini',
+  'twoFactor.codes.leave.go': 'Keluar',
+  'twoFactor.on.title': 'Dua faktor aktif',
+  'twoFactor.on.badge': 'Aktif',
+  'twoFactor.on.body':
+    'Kami meminta kode dari aplikasi saat Anda masuk dengan email dan kata sandi, kecuali browser ini dipercaya. Masuk dengan Google, Apple, atau kunci sandi tidak meminta kode.',
+  'twoFactor.replace.action': 'Ganti kode cadangan',
+  'twoFactor.replace.title': 'Ganti kode cadangan Anda?',
+  'twoFactor.replace.body':
+    'Anda akan mendapat kumpulan baru. Kumpulan saat ini berhenti berfungsi segera setelah Anda melanjutkan.',
+  'twoFactor.replace.confirm': 'Ganti',
+  'twoFactor.replace.pending': 'Mengganti',
+  'twoFactor.nopassword.title': 'Tetapkan kata sandi dahulu',
+  'twoFactor.nopassword.body':
+    'Dua faktor memerlukan kata sandi di akun ini. Halaman berikut meminta email dan mengirim tautan untuk menetapkannya. Menetapkan kata sandi mengeluarkan Anda dari semua sesi. Masuk lagi dan kembali ke sini.',
+  'twoFactor.nopassword.action': 'Tetapkan kata sandi',
+  'twoFactor.setup.action': 'Tampilkan kunci penyiapan lagi',
+  'twoFactor.setup.title': 'Kunci penyiapan',
+  'twoFactor.setup.body':
+    'Tambahkan kunci ini ke perangkat lain. Kunci di perangkat Anda yang lain tetap berfungsi.',
+  'twoFactor.setup.done': 'Selesai',
+  'twoFactor.setup.confirm': 'Tampilkan kunci',
+  'twoFactor.setup.pending': 'Memeriksa',
+  'twoFactor.off.action': 'Nonaktifkan autentikasi dua faktor',
+  'twoFactor.off.title': 'Nonaktifkan autentikasi dua faktor?',
+  'twoFactor.off.body':
+    'Siapa pun yang mengetahui kata sandi Anda dapat masuk tanpa kode. Perangkat lain yang sudah masuk akan tetap masuk.',
+  'twoFactor.off.confirm': 'Nonaktifkan',
+  'twoFactor.off.pending': 'Menonaktifkan',
+  'twoFactor.off.cancel': 'Tetap aktifkan',
+  'twoFactor.off.done': 'Autentikasi dua faktor nonaktif',
 } satisfies TranslationOf<typeof En>
 
 export default messages

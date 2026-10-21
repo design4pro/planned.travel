@@ -192,6 +192,8 @@ const messages = {
   'payments.empty.title': 'Zatím žádné platby',
   'payments.empty.body': 'Když někdo vrátí zůstatek, převod se zaznamená sem.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Tato cesta je archivovaná. Před změnou nákladů ji obnovte.',
   'readOnly.title': 'Náklady lze prohlížet, ale ne měnit',
   'readOnly.body':
     'Výdaje přidávat, upravovat a mazat a zapisovat platby mohou jen vlastníci cesty a lidé s právem ji upravovat. Pokud je třeba něco změnit, požádejte vlastníka.',

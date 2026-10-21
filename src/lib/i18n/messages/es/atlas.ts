@@ -29,6 +29,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Aún no hay nada que contar',
+  'panel.stats.empty.body':
+    'Marca un país en el mapa o planifica un viaje para empezar a ver tus cifras aquí.',
+  'panel.stats.empty.action': 'Planificar un viaje',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Mapa del mundo. Aún no hay países marcados como visitados.',
@@ -148,16 +152,16 @@ const messages = {
   'panel.stat.places': 'Tus lugares',
   'panel.stat.placesNone': 'Aún no hay nada fijado en un viaje',
   'panel.stat.placesCaption': 'Sitios, alojamientos y paradas guardados',
-  'panel.stat.regions': 'Regiones',
+  'panel.stat.regions': 'Tus regiones',
   'panel.stat.regionsNone': 'Aún no hay regiones marcadas',
   'panel.stat.regionsCaption': 'Estados, provincias, prefecturas',
-  'panel.stat.visits': 'Visitas',
+  'panel.stat.visits': 'Tus visitas',
   'panel.stat.visitsCaption': 'Cada llegada registrada',
   'panel.stat.trips': 'Tus viajes',
   'panel.stat.tripsCaption': 'Todos los viajes en los que participas',
-  'panel.stat.cities': 'Ciudades',
+  'panel.stat.cities': 'Tus ciudades',
   'panel.stat.citiesCaption': 'Ciudades donde dormiste o hiciste parada',
-  'panel.stat.days': 'Días fuera',
+  'panel.stat.days': 'Tus días de viaje',
   'panel.stat.daysCaption': 'Sumando todos los viajes de tu registro',
   'panel.continents.label': 'Países por continente',
 
@@ -410,6 +414,27 @@ const messages = {
     'No pudimos confirmar el cambio. Recarga tus regiones para comprobar qué se guardó.',
   'regions.status.refreshFailed':
     '{result} No se pudo actualizar el atlas. Recárgalo para actualizar el mapa.',
+
+  'panel.stat.periodLabel': 'Mostrar cifras de',
+  'panel.stat.allTime': 'Todo el periodo',
+  'panel.stat.groupAll': 'Cifras de todo el periodo',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Cifras de {year}',
+  'panel.stat.announceAll': 'Se muestran las cifras de todo el periodo.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Se muestran las cifras de {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Viajes que empiezan en {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'En viajes que empiezan en {year}',
+  'panel.stat.countries': 'Países de tus viajes',
+  'panel.stat.countriesCaption': 'Países distintos en estos viajes',
+  'panel.stat.streak': 'Tu racha de años',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Viajes cada año, de {first} a {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Un viaje en {last}',
+  'panel.stat.streakNone': 'Añade un viaje con fechas para iniciar una racha',
 } satisfies TranslationOf<typeof En>
 
 export default messages

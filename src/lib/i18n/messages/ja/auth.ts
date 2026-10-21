@@ -305,6 +305,9 @@ const messages = {
   'error.locked.title': 'アカウントを一時的にロックしました',
   'error.locked.detail':
     '認証の失敗が続いたため、安全のためこのアカウントを数分間ロックしています。',
+  'error.twoFactorOn.title': '二要素認証はすでに有効です',
+  'error.twoFactorOn.detail':
+    '再設定すると現在の認証アプリが使えなくなるため、変更は行いませんでした。ここから管理できます。',
   'error.noTwoFactor.title': '二段階認証は設定されていません',
   'error.noTwoFactor.detail':
     'メールアドレスとパスワードでサインインして続けてください。',
@@ -333,6 +336,12 @@ const messages = {
   'passkeyNotice.action': 'パスキーを管理',
   'passkeyNotice.recovery':
     'この変更に心当たりがない場合は、パスワードを変更し、見覚えのないセッションを終了してください。パスワードをリセットしてもパスキーは削除されません。パスキーを確認し、見覚えのないものを削除してください。',
+  'error.passwordAttemptsLocked.title': 'パスワードの確認がロックされました',
+  'error.passwordAttemptsLocked.detail':
+    'このセッションではパスワードを確認できなくなりました。ログアウトして、もう一度ログインしてください。',
+  'error.passwordResultUnknown.title': 'セキュリティ設定を確認してください',
+  'error.passwordResultUnknown.detail':
+    '変更が保存された可能性があります。再度ログインできるまで、このセッションを開いたままにしてください。パスワードを変更した場合は新しいものを試してください。バックアップコードを交換した場合、古いコードは使えない可能性があります。認証アプリまたは別のログイン済みセッションを使って、新しいコードを生成してください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

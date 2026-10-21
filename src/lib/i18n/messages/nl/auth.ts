@@ -2,15 +2,14 @@
  * Everything the authentication screens say, in Dutch.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Why the register matters most here.** These are the only screens a
- * traveller reaches with no session, so the language comes purely from
- * `Accept-Language` and there is no stored preference to correct a bad guess
- * with. They say `je` like the rest of the Dutch catalogue: an account that
+ * traveller reaches with no session, so the language comes from
+ * the visitor cookie, then `Accept-Language`, then English. They say `je` like the rest of the Dutch catalogue: an account that
  * greets you with `u` and then plans your holiday with `je` reads as two
  * products.
  *
@@ -362,6 +361,9 @@ const messages = {
   'error.locked.title': 'Account tijdelijk op slot',
   'error.locked.detail':
     'Te veel mislukte pogingen. Voor je veiligheid staat dit account een paar minuten op slot.',
+  'error.twoFactorOn.title': 'Tweestapsverificatie staat al aan',
+  'error.twoFactorOn.detail':
+    'Opnieuw instellen zou ervoor zorgen dat je huidige authenticator niet meer werkt. Daarom is er niets gewijzigd. Je kunt deze hier beheren.',
   'error.noTwoFactor.title': 'De tweede stap staat niet ingesteld',
   'error.noTwoFactor.detail':
     'Log in met je e-mailadres en wachtwoord om door te gaan.',
@@ -390,6 +392,12 @@ const messages = {
   'passkeyNotice.action': 'Passkeys beheren',
   'passkeyNotice.recovery':
     'Herken je deze wijziging niet, wijzig dan je wachtwoord en beëindig onbekende sessies. Een wachtwoordreset verwijdert geen passkeys. Controleer je passkeys en verwijder degene die je niet herkent.',
+  'error.passwordAttemptsLocked.title': 'Wachtwoordbevestiging geblokkeerd',
+  'error.passwordAttemptsLocked.detail':
+    'Deze sessie kan je wachtwoord niet meer bevestigen. Log uit en log opnieuw in.',
+  'error.passwordResultUnknown.title': 'Controleer je beveiligingsinstellingen',
+  'error.passwordResultUnknown.detail':
+    'De wijziging is mogelijk opgeslagen. Houd deze sessie open totdat je opnieuw kunt inloggen. Heb je je wachtwoord gewijzigd, probeer dan het nieuwe. Heb je back-upcodes vervangen, dan werkt de oude set mogelijk niet meer; gebruik je authenticator of een andere ingelogde sessie om een nieuwe set te maken.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

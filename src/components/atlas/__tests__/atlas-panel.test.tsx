@@ -748,11 +748,11 @@ describe('the stats section', () => {
 
     for (const label of [
       'Your places',
-      'Regions',
-      'Visits',
+      'Your regions',
+      'Your visits',
       'Your trips',
-      'Cities',
-      'Days away',
+      'Your cities',
+      'Your days away',
     ]) {
       expect(screen.getByText(label)).toBeTruthy()
     }
@@ -1113,5 +1113,235 @@ describe('holding still', () => {
     expect(value.className).toContain('w-16')
     expect(value.className).toContain('text-end')
     expect(value.className).toContain('tabular-nums')
+  })
+})
+
+const YEAR_ROWS = [
+  {
+    statYear: 0,
+    tripCount: 5,
+    placeCount: 15,
+    cityCount: 6,
+    countryCount: 12,
+    dayCount: 45,
+    distanceMetres: 82400000,
+    yearStreak: 2,
+  },
+  {
+    statYear: 2026,
+    tripCount: 2,
+    placeCount: 8,
+    cityCount: 3,
+    countryCount: 4,
+    dayCount: 12,
+    distanceMetres: 0,
+    yearStreak: 99,
+  },
+  {
+    statYear: 2025,
+    tripCount: 3,
+    placeCount: 7,
+    cityCount: 3,
+    countryCount: 5,
+    dayCount: 33,
+    distanceMetres: 1000,
+    yearStreak: 99,
+  },
+]
+
+async function chooseYear(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+) {
+  await user.click(screen.getByRole('combobox', { name: 'Show figures for' }))
+  await user.click(screen.getByRole('option', { name: label }))
+}
+
+describe('reading statistics by year', () => {
+  it('has no period control without a year and announces nothing on mount', () => {
+    panel()
+    expect(
+      screen.queryByRole('combobox', { name: 'Show figures for' }),
+    ).toBeNull()
+    expect(
+      document.querySelector('[data-part="stats-status"]')?.textContent,
+    ).toBe('')
+  })
+  it('changes the named figures and removes lifetime figures, without disabling the control on re-read', async () => {
+    const user = userEvent.setup()
+    const { container } = panel({ statsRows: YEAR_ROWS, statsLoading: true })
+    const allTime = screen.getByRole('group', { name: 'Figures for all time' })
+    expect(allTime.getAttribute('aria-busy')).toBe('true')
+    expect(container.querySelectorAll('[aria-busy]')).toHaveLength(1)
+    expect(screen.getByText('Show figures for').tagName).toBe('LABEL')
+    expect(screen.getByRole('combobox').hasAttribute('disabled')).toBe(false)
+    expect(screen.getByText('Trips every year, 2025 to 2026')).toBeTruthy()
+    const messages: Array<string> = []
+    const status = container.querySelector('[data-part="stats-status"]')
+    if (status === null) throw new Error('Missing statistics status region')
+    expect(status.textContent).toBe('')
+    const observer = new MutationObserver(() => {
+      messages.push(status.textContent ?? '')
+    })
+    observer.observe(status, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    })
+    await chooseYear(user, '2026')
+    observer.disconnect()
+    expect(messages).toEqual(['Showing figures for 2026.'])
+    const group = screen.getByRole('group', { name: 'Figures for 2026' })
+    expect(group.querySelectorAll('[data-stat]')).toHaveLength(5)
+    for (const [stat, value] of [
+      ['places', '8'],
+      ['trips', '2'],
+      ['cities', '3'],
+      ['days', '12'],
+      ['countries', '4'],
+    ]) {
+      expect(
+        group.querySelector(`[data-stat="${stat}"] .text-display`)?.textContent,
+      ).toBe(value)
+    }
+    expect(group.querySelector('[data-stat="trips"]')?.textContent).toContain(
+      '2',
+    )
+    expect(group.textContent).toContain('Trips that start in 2026')
+    expect(group.textContent).toContain('Countries on your trips')
+    for (const stat of ['regions', 'visits', 'streak'])
+      expect(group.querySelector(`[data-stat="${stat}"]`)).toBeNull()
+    expect(container.querySelector('[data-continent]')).toBeNull()
+    expect(group.querySelector('[data-stat="countries"]')?.className).toContain(
+      'col-span-2',
+    )
+    expect(
+      document.querySelector('[data-part="stats-status"]')?.textContent,
+    ).toBe('Showing figures for 2026.')
+  })
+  it('keeps the chosen period across tabs and announces a removed year only on Stats', async () => {
+    const user = userEvent.setup()
+    const initial = props({ statsRows: YEAR_ROWS })
+    const view = render(<AtlasPanel {...initial} />)
+    await chooseYear(user, '2026')
+    view.rerender(<AtlasPanel {...initial} tab="country" />)
+    view.rerender(<AtlasPanel {...initial} />)
+    expect(screen.getByRole('group', { name: 'Figures for 2026' })).toBeTruthy()
+    view.rerender(<AtlasPanel {...initial} statsRows={[]} />)
+    expect(
+      document.querySelector('[data-part="stats-status"]')?.textContent,
+    ).toBe('Showing figures for all time.')
+    view.rerender(<AtlasPanel {...initial} />)
+    await chooseYear(user, '2025')
+    view.rerender(<AtlasPanel {...initial} tab="country" statsRows={[]} />)
+    expect(
+      document.querySelector('[data-part="stats-status"]')?.textContent,
+    ).toBe('Showing figures for 2025.')
+    view.rerender(<AtlasPanel {...initial} />)
+    expect(
+      screen.getByRole('group', { name: 'Figures for all time' }),
+    ).toBeTruthy()
+    const status = document.querySelector('[data-part="stats-status"]')
+    if (status === null) throw new Error('Missing statistics status region')
+    const messages: Array<string> = []
+    const observer = new MutationObserver(() => {
+      messages.push(status.textContent ?? '')
+    })
+    observer.observe(status, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+    })
+    await chooseYear(user, '2025')
+    observer.disconnect()
+    expect(messages).toEqual(['Showing figures for 2025.'])
+  })
+  it.each([
+    [0, 'Add a trip with dates to start a streak'],
+    [1, 'A trip in 2026'],
+  ])('describes a streak of %i', (yearStreak, caption) => {
+    panel({ statsRows: [{ ...YEAR_ROWS[0], yearStreak }, YEAR_ROWS[1]] })
+    expect(screen.getByText(caption)).toBeTruthy()
+  })
+  it('shows no zero distance for lifetime figures', () => {
+    panel({ stats: { ...STATS, distanceMetres: 0 } })
+    expect(screen.getByText('Every trip you are on')).toBeTruthy()
+    expect(screen.queryByText('0 km')).toBeNull()
+  })
+})
+
+describe('the Stats empty state', () => {
+  const emptyStats = {
+    ...STATS,
+    countryCount: 0,
+    regionCount: 0,
+    tripCount: 0,
+    visitCount: 0,
+  }
+  const row = {
+    statYear: 0,
+    tripCount: 0,
+    placeCount: 0,
+    cityCount: 0,
+    countryCount: 0,
+    dayCount: 0,
+    distanceMetres: 0,
+    yearStreak: 0,
+  }
+
+  it.each([{ statsRows: [] }, { statsRows: [row] }])(
+    'replaces zero tiles with a quiet invitation when the all-time row is %j',
+    ({ statsRows }) => {
+      const before = document.activeElement
+      const { container } = panel({
+        stats: emptyStats,
+        statsRows,
+        countries: [],
+        byContinent: [],
+      })
+      const title = screen.getByText('Nothing to count yet')
+      expect(
+        screen.getByText(
+          'Mark a country on the map, or plan a trip, and your figures start here.',
+        ),
+      ).toBeTruthy()
+      const link = screen.getByRole('link', { name: 'Plan a trip' })
+      expect(link.getAttribute('href')).toBe('/trips')
+      expect(container.querySelector('[data-stat]')).toBeNull()
+      expect(
+        screen.queryByRole('group', { name: 'Figures for all time' }),
+      ).toBeNull()
+      expect(
+        title.closest('[role="status"], [role="alert"], [aria-live]'),
+      ).toBeNull()
+      expect(
+        container.querySelector('[data-part="stats-status"]')?.textContent,
+      ).toBe('')
+      expect(document.activeElement).toBe(before)
+    },
+  )
+
+  it.each([
+    { stats: { ...emptyStats, countryCount: 1 }, statsRows: [row] },
+    { stats: { ...emptyStats, regionCount: 1 }, statsRows: [row] },
+    {
+      stats: { ...emptyStats, tripCount: 3 },
+      statsRows: [{ ...row, tripCount: 3 }],
+    },
+  ])(
+    'keeps the figures for a traveller with a country, region or trip: %j',
+    (values) => {
+      const { container } = panel({ ...values, countries: [], byContinent: [] })
+      expect(screen.queryByText('Nothing to count yet')).toBeNull()
+      expect(container.querySelector('[data-stat="trips"]')).toBeTruthy()
+    },
+  )
+
+  it('uses the all-time row even when the summary has trips or a year row has none', () => {
+    panel({
+      stats: { ...emptyStats, tripCount: 9 },
+      statsRows: [row, { ...row, statYear: 2025 }],
+    })
+    expect(screen.getByText('Nothing to count yet')).toBeTruthy()
   })
 })

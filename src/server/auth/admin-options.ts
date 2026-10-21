@@ -152,10 +152,11 @@ export const DISABLED_ORGANIZATION_PATHS: string[] = [
 ]
 
 /**
- * What `disabledPaths` receives: both lists, merged once here so the drift tests and the running
+ * What `disabledPaths` receives: both lists and the unused password-verification endpoint, so the drift tests and the running
  * Worker read the same array.
  */
 export const DISABLED_PATHS: string[] = [
+  '/verify-password',
   ...DISABLED_ADMIN_PATHS,
   ...DISABLED_ORGANIZATION_PATHS,
 ]

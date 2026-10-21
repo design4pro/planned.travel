@@ -25,6 +25,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Zatím není co počítat',
+  'panel.stats.empty.body':
+    'Označ zemi na mapě nebo naplánuj cestu a tady se začnou objevovat tvé statistiky.',
+  'panel.stats.empty.action': 'Naplánovat cestu',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Mapa světa. Zatím nejsou označeny žádné navštívené země.',
@@ -149,16 +153,16 @@ const messages = {
   'panel.stat.places': 'Vaše místa',
   'panel.stat.placesNone': 'Na cestách zatím nic nepřipnuto',
   'panel.stat.placesCaption': 'Uložené památky, ubytování a zastávky',
-  'panel.stat.regions': 'Regiony',
+  'panel.stat.regions': 'Tvé regiony',
   'panel.stat.regionsNone': 'Zatím žádné označené regiony',
   'panel.stat.regionsCaption': 'Státy, provincie, prefektury',
-  'panel.stat.visits': 'Návštěvy',
+  'panel.stat.visits': 'Tvé návštěvy',
   'panel.stat.visitsCaption': 'Každý zaznamenaný příjezd',
   'panel.stat.trips': 'Vaše cesty',
   'panel.stat.tripsCaption': 'Všechny cesty, kterých se účastníte',
-  'panel.stat.cities': 'Města',
+  'panel.stat.cities': 'Tvá města',
   'panel.stat.citiesCaption': 'Města, kde jste přespali nebo zastavili',
-  'panel.stat.days': 'Dny na cestách',
+  'panel.stat.days': 'Tvé dny na cestách',
   'panel.stat.daysCaption': 'Napříč všemi cestami ve vašem záznamu',
   'panel.continents.label': 'Země podle kontinentů',
 
@@ -433,6 +437,27 @@ const messages = {
     'Změnu se nepodařilo potvrdit. Načti regiony znovu a ověř, co se uložilo.',
   'regions.status.refreshFailed':
     '{result} Atlas se nepodařilo obnovit. Načti jej znovu, aby se mapa aktualizovala.',
+
+  'panel.stat.periodLabel': 'Zobrazit údaje za',
+  'panel.stat.allTime': 'Celé období',
+  'panel.stat.groupAll': 'Údaje za celé období',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Údaje za rok {year}',
+  'panel.stat.announceAll': 'Zobrazeny údaje za celé období.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Zobrazeny údaje za rok {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Cesty začínající v roce {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'Na cestách začínajících v roce {year}',
+  'panel.stat.countries': 'Země na tvých cestách',
+  'panel.stat.countriesCaption': 'Různé země na těchto cestách',
+  'panel.stat.streak': 'Tvá série let',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Cesty každý rok, od {first} do {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Cesta v roce {last}',
+  'panel.stat.streakNone': 'Přidej cestu s daty a začni sérii',
 } satisfies TranslationOf<typeof En>
 
 export default messages

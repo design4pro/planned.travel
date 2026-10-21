@@ -21,6 +21,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'まだ集計するものがありません',
+  'panel.stats.empty.body':
+    '地図で国をマークするか旅行を計画すると、ここに数値が表示されます。',
+  'panel.stats.empty.action': '旅行を計画する',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': '世界地図。訪問済みの国はまだありません。',
   'screen.world.summary':
@@ -129,16 +133,16 @@ const messages = {
   'panel.stat.places': 'あなたの場所',
   'panel.stat.placesNone': '旅行にピン留めした場所はまだありません',
   'panel.stat.placesCaption': '保存した見どころ・宿・立ち寄り先',
-  'panel.stat.regions': '地域',
+  'panel.stat.regions': 'あなたの地域',
   'panel.stat.regionsNone': '記録した地域はまだありません',
   'panel.stat.regionsCaption': '州・省・都道府県',
-  'panel.stat.visits': '訪問',
+  'panel.stat.visits': 'あなたの訪問回数',
   'panel.stat.visitsCaption': '記録されたすべての到着',
   'panel.stat.trips': 'あなたの旅行',
   'panel.stat.tripsCaption': '参加しているすべての旅行',
-  'panel.stat.cities': '都市',
+  'panel.stat.cities': 'あなたの都市',
   'panel.stat.citiesCaption': '泊まった・立ち寄った街',
-  'panel.stat.days': '旅の日数',
+  'panel.stat.days': 'あなたの旅行日数',
   'panel.stat.daysCaption': '記録にあるすべての旅行の合計',
   'panel.continents.label': '大陸別の国数',
 
@@ -357,6 +361,27 @@ const messages = {
     '変更を確認できませんでした。地域を再読み込みして保存内容を確認してください。',
   'regions.status.refreshFailed':
     '{result} アトラスを更新できませんでした。再読み込みして地図を更新してください。',
+
+  'panel.stat.periodLabel': '集計期間',
+  'panel.stat.allTime': '全期間',
+  'panel.stat.groupAll': '全期間の集計',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': '{year}年の集計',
+  'panel.stat.announceAll': '全期間の集計を表示しています。',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': '{year}年の集計を表示しています。',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': '{year}年に出発する旅行',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': '{year}年に出発する旅行の日数',
+  'panel.stat.countries': 'あなたの旅行先の国',
+  'panel.stat.countriesCaption': 'これらの旅行に含まれる国の数',
+  'panel.stat.streak': 'あなたの連続旅行年数',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': '{first}年から{last}年まで毎年旅行',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': '{last}年に旅行',
+  'panel.stat.streakNone': '日付のある旅行を追加して記録を始めましょう',
 } satisfies TranslationOf<typeof En>
 
 export default messages

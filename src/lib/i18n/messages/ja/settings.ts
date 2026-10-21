@@ -202,7 +202,7 @@ const messages = {
   'security.password.action': 'パスワードを変更',
   'security.twoFactor.label': '二段階認証',
   'security.twoFactor.onHint':
-    '新しくサインインするたびに、認証アプリのコードが必要になります。',
+    'メールアドレスとパスワードでログインする際、信頼済みブラウザを除き認証アプリのコードが必要です。',
   'security.twoFactor.offHint':
     'パスワードに加えて、認証アプリの6桁のコードを足せます。',
   'security.twoFactor.on': 'オン',
@@ -211,7 +211,7 @@ const messages = {
   'security.twoFactor.enable': 'オンにする',
   'security.passkeys.label': 'パスキー',
   'security.passkeys.hint':
-    '何も入力せず、指紋認証や Face ID、セキュリティキーでサインインできます。',
+    '何も入力せず、指紋認証や顔認証、セキュリティキーでサインインできます。',
   'security.passkeys.action': 'パスキーを管理',
   'security.session.title': 'このセッション',
   'security.session.description': 'いまこれを読んでいるブラウザです。',
@@ -381,7 +381,7 @@ const messages = {
   'billing.renewal.paused':
     'このサブスクリプションは一時停止中です。また旅に出る気になったら再開してください。',
   'billing.renewal.lapsed':
-    '予約、旅の記録、オフライン地図をまた使うには、下からプランを選んでください。',
+    '予約と旅の記録をまた使うには、下からプランを選んでください。',
   'billing.renewal.incomplete':
     'Polar はまだ、この支払いの確認を待っています。',
   'billing.renewal.free':
@@ -429,7 +429,7 @@ const messages = {
   'billing.plan.solo.feature.trips': '旅と場所は無制限',
   'billing.plan.solo.feature.modules':
     '予約、旅の記録、予算、持ち物 — 全モジュール',
-  'billing.plan.solo.feature.offline': '出発前にダウンロードするオフライン地図',
+  'billing.plan.solo.feature.storage': '写真と書類に5 GB',
   'billing.plan.solo.feature.export': 'PDF とカレンダーへの書き出し',
   'billing.plan.crew.name': 'クルー',
   'billing.plan.crew.tagline': '家族、友人、少人数のチームに',
@@ -562,9 +562,9 @@ const messages = {
   'passkeys.add.failed':
     'パスキーを追加できませんでした。もう一度お試しください。',
   'passkeys.add.stale':
-    '安全のため、続けるにはもう一度サインインしてください。',
+    '安全のため、パスキーの管理には最近のサインインが必要です。「もう一度サインイン」を選ぶと、先にサインアウトされ、その後サインインページに移動します。',
   'passkeys.error.sessionEnded':
-    'セッションが終了しました。続けるにはもう一度サインインしてください。',
+    'セッションが終了しました。パスキーの管理を続けるには、もう一度サインインしてください。',
   'passkeys.signInAgain': 'もう一度サインイン',
   'passkeys.add.limit':
     'パスキーの上限（{value} 件）に達しました。別のパスキーを追加するには、どれかを削除してください。',
@@ -603,7 +603,7 @@ const messages = {
   'passkeys.delete.cancel': 'キャンセル',
   'passkeys.delete.wrongPassword': 'パスワードが正しくありません。',
   'passkeys.delete.stale':
-    '安全のため、パスキーを削除する前にもう一度サインインしてください。',
+    '安全のため、パスキーの削除には最近のサインインが必要です。「もう一度サインイン」を選ぶと、先にサインアウトされ、その後サインインページに移動します。',
   'passkeys.delete.removed': 'パスキーを削除しました',
   'passkeys.delete.failed':
     'パスキーを削除できませんでした。もう一度お試しください。',
@@ -632,6 +632,98 @@ const messages = {
   'workspace.departure.activationFailed':
     'このワークスペースから退出しました。次のワークスペースを開いて続行してください。',
   'workspace.departure.recover': '次のワークスペースを開く',
+  'twoFactor.back': 'セキュリティに戻る',
+  'twoFactor.title': '二要素認証',
+  'twoFactor.description':
+    'メールアドレスとパスワードでのログインに確認手順を追加します。',
+  'twoFactor.error': '二要素認証の設定を読み込めませんでした。',
+  'twoFactor.steps.label': '二要素認証を設定',
+  'twoFactor.steps.password': '本人確認',
+  'twoFactor.steps.key': '認証アプリに追加',
+  'twoFactor.steps.confirm': 'コードを入力',
+  'twoFactor.steps.state.done': '完了済み',
+  'twoFactor.steps.state.current': '現在の手順',
+  'twoFactor.steps.state.todo': '未開始',
+  'twoFactor.password.label': 'パスワード',
+  'twoFactor.password.hint': 'ログイン方法を変更する前に、もう一度確認します。',
+  'twoFactor.password.submit': '続ける',
+  'twoFactor.password.pending': '設定中',
+  'twoFactor.password.invalid': 'パスワードが正しくありません。',
+  'twoFactor.key.intro':
+    'スマートフォンに認証アプリが必要です。このキーを追加してから、このページに戻ってください。二要素認証はまだ有効ではありません。',
+  'twoFactor.key.matrixLabel': '設定コード。同じキーをテキストでも確認できます',
+  'twoFactor.key.matrixFailed':
+    'このキーのコードを生成できませんでした。アプリに設定キーを入力してください。',
+  'twoFactor.key.label': '設定キー',
+  'twoFactor.key.copy': 'キーをコピー',
+  'twoFactor.key.copied': 'キーをコピーしました',
+  'twoFactor.key.copyFailed':
+    'ブラウザでキーをコピーできませんでした。選択して手動でコピーしてください。',
+  'twoFactor.key.open': '認証アプリで開く',
+  'twoFactor.key.startOver': '最初からやり直す',
+  'twoFactor.key.startOverHint':
+    'やり直すと新しいキーが作成されます。すでにアプリに追加したキーは使えなくなります。',
+  'twoFactor.key.next': '追加しました',
+  'twoFactor.code.label': 'アプリのコード',
+  'twoFactor.code.hint': 'アプリに現在表示されている6桁の数字。',
+  'twoFactor.code.submit': '二要素認証を有効にする',
+  'twoFactor.code.pending': '確認中',
+  'twoFactor.code.invalid':
+    'コードが一致しません。スマートフォンの時刻を確認し、アプリの最新コードを入力してください。',
+  'twoFactor.code.unclear':
+    '成功したか確認できませんでした。最新のコードを入力して再試行してください。',
+  'twoFactor.rateLimited.title': '短時間に試行が集中しています',
+  'twoFactor.rateLimited.password':
+    '約10秒待ってから再試行してください。入力内容は保持されています。',
+  'twoFactor.rateLimited.code':
+    '最大1分待ってから再試行してください。入力内容は保持されています。',
+  'twoFactor.codes.title': 'バックアップコード',
+  'twoFactor.codes.body':
+    'スマートフォンを紛失した場合、各コードを一度だけ使用できます。表示は今だけなので、安全な場所に保管してください。',
+  'twoFactor.codes.copyAll': 'すべてコピー',
+  'twoFactor.codes.copied': 'バックアップコードをコピーしました',
+  'twoFactor.codes.download': 'テキストファイルでダウンロード',
+  'twoFactor.codes.copyFailed':
+    'ブラウザでコードをコピーできませんでした。選択して手動でコピーしてください。',
+  'twoFactor.codes.stored': 'バックアップコードを保管しました',
+  'twoFactor.codes.done': '完了',
+  'twoFactor.codes.gate': 'チェックを入れて続けてください。',
+  'twoFactor.codes.lost':
+    '先にこのページを離れた場合、ここで新しいコード一式を作成できます。古いコードは使えなくなります。',
+  'twoFactor.codes.leave.title': 'コードを保管せずに離れますか？',
+  'twoFactor.codes.leave.body':
+    'バックアップコードは一度しか表示されません。今離れた場合、ここで新しいコード一式を作成できます。古いコードは使えなくなります。',
+  'twoFactor.codes.leave.stay': 'このページに留まる',
+  'twoFactor.codes.leave.go': '離れる',
+  'twoFactor.on.title': '二要素認証は有効です',
+  'twoFactor.on.badge': '有効',
+  'twoFactor.on.body':
+    'メールアドレスとパスワードでログインする際、信頼済みブラウザを除き認証アプリのコードが必要です。Google、Apple、パスキーでのログインでは不要です。',
+  'twoFactor.replace.action': 'バックアップコードを置き換える',
+  'twoFactor.replace.title': 'バックアップコードを置き換えますか？',
+  'twoFactor.replace.body':
+    '新しいコード一式を発行します。続けると、現在のコードはすぐに使えなくなります。',
+  'twoFactor.replace.confirm': '置き換える',
+  'twoFactor.replace.pending': '置き換え中',
+  'twoFactor.nopassword.title': '先にパスワードを設定してください',
+  'twoFactor.nopassword.body':
+    '二要素認証にはアカウントのパスワードが必要です。次のページでメールアドレスを入力すると、設定リンクが届きます。設定するとすべての端末でログアウトします。再度ログインしてここに戻ってください。',
+  'twoFactor.nopassword.action': 'パスワードを設定',
+  'twoFactor.setup.action': '設定キーをもう一度表示',
+  'twoFactor.setup.title': '設定キー',
+  'twoFactor.setup.body':
+    'このキーを別の端末に追加します。他の端末に登録済みのキーは引き続き使えます。',
+  'twoFactor.setup.done': '完了',
+  'twoFactor.setup.confirm': 'キーを表示',
+  'twoFactor.setup.pending': '確認中',
+  'twoFactor.off.action': '二要素認証をオフにする',
+  'twoFactor.off.title': '二要素認証をオフにしますか？',
+  'twoFactor.off.body':
+    'パスワードを知っている人は誰でもコードなしでログインできるようになります。他のログイン済みのデバイスはログインしたままです。',
+  'twoFactor.off.confirm': 'オフにする',
+  'twoFactor.off.pending': 'オフにしています',
+  'twoFactor.off.cancel': 'オンのままにする',
+  'twoFactor.off.done': '二要素認証はオフです',
 } satisfies TranslationOf<typeof En>
 
 export default messages

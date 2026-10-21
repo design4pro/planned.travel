@@ -1,9 +1,9 @@
 /**
  * Everything the authentication screens say, in Polish.
  *
- * Authored from `../en/auth.ts` (`docs/SPEC.md` §8.9). These are the only
+ * Authored from `../en/auth.ts` (`docs/SPEC.md` §9 rule 9). These are the only
  * screens a traveller reaches with no session, so the language comes from
- * `Accept-Language` alone and two thirds of the keys are failures — the moment
+ * the visitor cookie, then `Accept-Language`, then English and two thirds of the keys are failures — the moment
  * a reader can least afford a sentence in a language they do not read.
  *
  * **Plural.** `pl` needs `one` · `few` · `many` · `other`, and `other` is a
@@ -359,6 +359,10 @@ const messages = {
   'error.locked.title': 'Konto chwilowo zablokowane',
   'error.locked.detail':
     'Za dużo nieudanych prób weryfikacji. Dla bezpieczeństwa konto jest zablokowane na kilka minut.',
+  'error.twoFactorOn.title':
+    'Uwierzytelnianie dwuskładnikowe jest już włączone',
+  'error.twoFactorOn.detail':
+    'Ponowna konfiguracja sprawiłaby, że obecna aplikacja uwierzytelniająca przestałaby działać, więc nic nie zmieniono. Możesz nim zarządzać tutaj.',
   'error.noTwoFactor.title': 'Drugi składnik nie jest ustawiony',
   'error.noTwoFactor.detail':
     'Zaloguj się e-mailem i hasłem, aby przejść dalej.',
@@ -387,6 +391,12 @@ const messages = {
   'passkeyNotice.action': 'Zarządzaj kluczami dostępu',
   'passkeyNotice.recovery':
     'Jeśli nie rozpoznajesz tej zmiany, zmień hasło i zakończ nieznane sesje. Reset hasła nie usuwa kluczy dostępu. Przejrzyj je i usuń te, których nie rozpoznajesz.',
+  'error.passwordAttemptsLocked.title': 'Potwierdzanie hasła zablokowane',
+  'error.passwordAttemptsLocked.detail':
+    'Ta sesja nie może już potwierdzać hasła. Wyloguj się i zaloguj ponownie.',
+  'error.passwordResultUnknown.title': 'Sprawdź ustawienia zabezpieczeń',
+  'error.passwordResultUnknown.detail':
+    'Zmiana mogła zostać zapisana. Nie zamykaj tej sesji, dopóki nie upewnisz się, że możesz zalogować się ponownie. Jeśli zmieniono hasło, spróbuj nowego. Jeśli wymieniono kody zapasowe, stary zestaw może już nie działać; użyj aplikacji uwierzytelniającej lub innej zalogowanej sesji, aby wygenerować nowy zestaw.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

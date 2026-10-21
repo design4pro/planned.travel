@@ -32,6 +32,9 @@ import {
   planScopeLine,
 } from '../plans'
 
+import { Comparison } from '#/routes/pricing'
+import { Questions } from '#/routes/index'
+
 import type { Catalogue, MessageKey } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 
@@ -157,10 +160,10 @@ describe('plan copy helpers', () => {
 })
 
 /**
- * Solo's four named bullets, in the order the card lists them. The fifth states
+ * Solo's three named bullets, in the order the card lists them. The fourth states
  * the storage figure, which the card interpolates, so it is asserted separately.
  *
- * Two of these are keys the comparison table further down the page uses for the
+ * One of these is a key the comparison table further down the page uses for the
  * same modules — that reuse is deliberate, and naming them here is what would
  * fail if the card grew a second wording of its own.
  */
@@ -168,7 +171,6 @@ const SOLO_BULLETS: ReadonlyArray<MessageKey> = [
   // The settings card says this sentence too, so there is one of it.
   'settings.billing.plan.solo.feature.trips',
   'marketing.pricing.feature.solo.modules',
-  'marketing.pricing.module.offlineMaps',
   'marketing.pricing.module.pdfExport',
 ]
 
@@ -203,6 +205,13 @@ describe('PlanCard', () => {
       ),
     ).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Start' })).toBeTruthy()
+  })
+
+  it.each(PLAN_LIST)('does not promise offline maps on $id', (plan) => {
+    const { container } = renderTranslated(
+      <PlanCard plan={plan} interval="monthly" cta={null} />,
+    )
+    expect(container.textContent).not.toMatch(/offline|download regions/i)
   })
 
   it('drops the per-feature detail lines at compact density', () => {
@@ -300,5 +309,33 @@ describe('the card no longer reads the English catalogue', () => {
       '',
     )
     expect(code).not.toContain(`plan.${field}`)
+  })
+})
+
+describe('pricing module comparison', () => {
+  it('hides the unbuilt offline feature while retaining shipped modules', () => {
+    const { container } = renderTranslated(<Comparison />)
+    expect(container.textContent).not.toMatch(/offline|download regions/i)
+    expect(
+      screen.getByRole('rowheader', {
+        name: t('marketing.pricing.module.pdfExport'),
+      }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('rowheader', {
+        name: t('marketing.pricing.module.atlas'),
+      }),
+    ).toBeTruthy()
+  })
+})
+
+describe('landing questions', () => {
+  it('states the count it renders without an offline promise', () => {
+    const { container } = renderTranslated(<Questions />)
+    expect(container.querySelectorAll('summary')).toHaveLength(5)
+    expect(
+      screen.getByText(t('marketing.landing.questions.lede')).textContent,
+    ).toContain('five things')
+    expect(container.textContent).not.toMatch(/offline|without a signal/i)
   })
 })

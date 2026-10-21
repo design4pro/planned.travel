@@ -2,10 +2,10 @@
 
 | Field              | Value                                    |
 | ------------------ | ---------------------------------------- |
-| **Status**         | ready                                    |
-| **Issue**          | none                                     |
+| **Status**         | implemented                                    |
+| **Issue**          | #1118                                     |
 | **Spec PR**        | #1109                                    |
-| **Implementation** | none                                     |
+| **Implementation** | #1443, #1453, #1462                                     |
 | **Plan**           | 08-S6 (docs/plans/08-product-modules.md) |
 
 ## 📝 TLDR
@@ -20,7 +20,7 @@ describes what is **left** at HEAD (`4ed3a555`), as **two tickets that are each 
    nothing, so a traveller who plans a trip and then fills it sees "Your places: 0" until something unrelated happens to enqueue a
    recompute. One helper in the existing fan-out module is called from the six server functions and the one import routine that move
    those figures.
-2. **08-S6b - read the roll-up by year.** The year rows are already in the `/atlas` payload and nothing reads them. The Stats tab
+2. **08-S6b - read the roll-up by year.** The year rows are already in the `/atlas` payload and #1120 reads them by period. The Stats tab
    gains a period control ("All time" and every year with a trip), the traveller's year streak with the years it spans, the
    countries a year's trips cover, and a designed empty state and failed state for the section. The payload does not change.
 
@@ -58,11 +58,10 @@ Verified against the repository at HEAD:
 - **Years are attributed differently per figure.** Trips, days, places and cities of a year row are the trips whose `start_date`
   falls in it. Distance is the transports whose own `departure_date` falls in it (`recomputeTravelStats`, `transportYearFilter`), so a trip that starts on 30 December has transports in two years. A producer that sends only the trip's start year leaves the right row
   stale for any transport that departs in another year, and an edit that moves a transport's departure date moves two rows.
-- **Year rows ship and nobody reads them.** `loadAtlas` (`src/routes/_app/-server/library.ts`) returns `stats` with one entry per
+- **Year rows ship without a separate read.** `loadAtlas` (`src/routes/_app/-server/library.ts`) returns `stats` with one entry per
   `travel_stats` row (`statYear`, `tripCount`, `placeCount`, `cityCount`, `countryCount`, `dayCount`, `distanceMetres`,
-  `yearStreak`), and the screen takes `statYear === 0` and discards the rest. There is no year control, no "this year" figure, no
-  streak anywhere on the screen, although the reference figure set the plan cites is "trips all time and this year" and "a streak of
-  consecutive years". Every field the year view needs is in those rows already.
+  `yearStreak`). Issue #1120 adds the period control and year view in `AtlasPanel`, with a traveller-owned all-time streak.
+  The payload and read remain unchanged; every field the year view needs is in those rows already.
 - **The labelling the plan asks for is already in the catalogue, and says the opposite of what the plan says.** The plan labels seven
   figures the workspace's. The recompute is member-scoped, `src/lib/i18n/messages/en/atlas.ts` already reads "Your trips" and "Your
   places", and its comments record why. `year_streak` is the **traveller's** (`yearStreakFrom`); the recompute writes it on the
@@ -79,7 +78,7 @@ Verified against the repository at HEAD:
   which is over by the time the atlas opens.
 - **The Stats tab has no section states of its own.** No empty state beyond per-tile captions, and no failed state: a failed
   re-read after a write is already detected on this screen (`status` in `atlas-screen.tsx`, `match.status === 'error'`) and feeds
-  the country card's retry, and the Stats tab ignores it.
+  the country card's retry. The Stats tile group now reflects loading; the section's failed state remains the next ticket's scope.
 - **The plan's verification paths are history.** `e2e/product-modules.visual.spec.ts`, `e2e/__screenshots__/` and the four
   `atlas-*` baselines do not exist (ADR 0016: journeys replace the visual gate).
 
@@ -92,12 +91,12 @@ Verified against the repository at HEAD:
 | `src/server/queue/travel-stats-fanout.ts` - `enqueueTripRollup`; `affectedStatYears` takes any number of further dates (08-S6a)                                                                                                                                                                                                                                                                                                                                                             | `src/server/repos/atlas.ts` (`recomputeTravelStats`, `listTravelStats`): **not touched**; the recompute is correct, only its triggers are missing. `src/server/queue/handlers/travel-stats.ts` changes in one place (a former member's message is acknowledged, not dead-lettered) |
 | The call sites: `plan.ts` (three functions; `requirePlaceOfPlan` returns the place), `transports.ts` (three functions), `booking-import.ts` (`confirmBookingImport`)                                                                                                                                                                                                                                                      | `src/server/queue/handlers/trip-copy.ts`: its private fan-out stays (Risks)                                                                                                                                                                                                        |
 | `src/routes/_app/-server/library.ts`: **not touched**; the year rows already ship                                                                                                                                                                                                                                                                                                                                                                                                           | The `loadAtlas` payload, the seven reads, the 40-row bucket-list cap, the live figures                                                                                                                                                                                             |
-| `src/components/atlas/stats-model.ts` (+ test) - new, pure: which periods exist, which tiles a period shows, whose figure each is                                                                                                                                                                                                                                                                                                                                                           | `src/components/ui/*`: untouched; `StatCard`, `Select`, `Alert`, `EmptyState`, `Skeleton` reused as they are                                                                                                                                                                       |
+| `src/lib/atlas/stats-period.ts` (+ test) - new, pure: which periods exist, which tiles a period shows, whose figure each is                                                                                                                                                                                                                                                                                                                                                           | `src/components/ui/*`: untouched; `StatCard`, `Select`, `Alert`, `EmptyState`, `Skeleton` reused as they are                                                                                                                                                                       |
 | `src/components/atlas/atlas-panel.tsx` - the Stats tab: the period control, the streak and countries tiles, the section states                                                                                                                                                                                                                                                                                                                                                              | The Country and Bucket list tabs, the headline, the map                                                                                                                                                                                                                            |
 | `src/routes/_app/-ui/atlas-screen.tsx` - passes the year rows and the section status down                                                                                                                                                                                                                                                                                                                                                                                                   | `src/routes/_app/atlas.tsx`: no route change; `pnpm generate-routes` is not run                                                                                                                                                                                                    |
 | `src/lib/format.ts` - `formatYear` (+ a case in `src/lib/__tests__/format-locale.test.ts`)                                                                                                                                                                                                                                                                                                                                                                                                  | `src/server/db/schema.ts`, `drizzle/`: no schema change. `src/lib/plans.ts`, `src/server/billing/**`: no quota, no `MODULE_KEYS` entry                                                                                                                                             |
 | `src/lib/i18n/messages/<locale>/atlas.ts` - edit, **all 23 locales**                                                                                                                                                                                                                                                                                                                                                                                                                        | `src/routes/api/dev/-seed/**`: the seed already writes 2026 and 2025 rows and a streak, which is what the browser spec reads                                                                                                                                                       |
-| Tests: `src/server/queue/__tests__/travel-stats-fanout.test.ts`, `src/routes/_app/trips/$tripId/-server/__tests__/`, `src/routes/_app/-server/__tests__/` and `src/server/fns/__tests__/` (producer side-effect and isolation tests), a repository isolation test for `listTravelStats`, the outcome test per ticket, `src/components/atlas/__tests__/stats-model.test.ts`, `atlas-panel.test.tsx`; the atlas journey in `e2e/journeys.spec.ts` - create or append (no baselines; ADR 0016) |                                                                                                                                                                                                                                                                                    |
+| Tests: `src/server/queue/__tests__/travel-stats-fanout.test.ts`, `src/routes/_app/trips/$tripId/-server/__tests__/`, `src/routes/_app/-server/__tests__/` and `src/server/fns/__tests__/` (producer side-effect and isolation tests), a repository isolation test for `listTravelStats`, the outcome test per ticket, `src/lib/atlas/__tests__/stats-period.test.ts`, `atlas-panel.test.tsx`; the atlas journey in `e2e/journeys.spec.ts` - create or append (no baselines; ADR 0016) |                                                                                                                                                                                                                                                                                    |
 | `CONTEXT.md` - **Travel statistics**, **Stat year** (neither is in the glossary)                                                                                                                                                                                                                                                                                                                                                                                                            |                                                                                                                                                                                                                                                                                    |
 
 ### Phase boundaries (tickets)
@@ -110,7 +109,7 @@ only once the producers have run), so it is `Blocked by` the first.
 | Ticket | Delivers                                                                                                                                                                                                                  | Rows                                        |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
 | 08-S6a | `enqueueTripRollup`; the seven call sites; the year attribution for transports; unit tests for the producer and for every site, including the writes that must not enqueue | the "stays current" half                    |
-| 08-S6b | `stats-model.ts`; the period control; the streak and countries tiles; the empty and failed states; `formatYear`; the 23 locales; the `CONTEXT.md` entries                                                                 | the "read by year" half; `ADD-06` -> `done` |
+| 08-S6b | `stats-period.ts`; the period control; the streak and countries tiles; the empty and failed states; `formatYear`; the 23 locales; the `CONTEXT.md` entries                                                                 | the "read by year" half; `ADD-06` -> `done` |
 
 ### The producer (08-S6a)
 
@@ -184,7 +183,7 @@ travelled plus the all-time row, so the count is bounded by the years a person h
 field is added. There is no second request, so no loading state, no failed state and no waterfall for a year change: it is a local
 state change over data in hand. The plan's lazy `loadTravelStatsFn` is not built.
 
-**Periods.** `stats-model.ts` derives them: "All time" first, then every year whose row has `tripCount > 0`, newest first. A year
+**Periods.** `stats-period.ts` derives them: "All time" first, then every year whose row has `tripCount > 0`, newest first. A year
 whose row exists with zero trips (a recompute after the last trip left the year, or a transport that departs in a year with no trip
 starting in it) is not a period: it would be a screen of zeros. The control is shown only when at least one year exists; a
 traveller with no dated trip sees the Stats tab exactly as today plus the streak tile. The period is component state of
@@ -274,7 +273,7 @@ tabular-nums` (the tile primitive already does) so nothing shifts.
 
 - **Owner module of each new concept (`docs/SPEC.md` §8):** when a trip's contents ask for a recompute ->
   `src/server/queue/travel-stats-fanout.ts` (`enqueueTripRollup`); which periods exist, which tiles a period shows and whose each
-  figure is -> `src/components/atlas/stats-model.ts` (pure, no I/O, no React), so a future figure cannot be added without choosing a
+  figure is -> `src/lib/atlas/stats-period.ts` (pure, no I/O, no React), so a future figure cannot be added without choosing a
   side; rendering -> `src/components/atlas/atlas-panel.tsx`; the year row shape on the wire -> `AtlasPayload` in `library.ts`; year
   digits -> `src/lib/format.ts`.
 - **The route-tree constraint holds.** `travel-stats-fanout.ts` reaches the queue binding through `#/server/auth/env`
@@ -319,7 +318,7 @@ export async function enqueueTripRollup(
   otherDates?: ReadonlyArray<string | null | undefined>,
 ): Promise<void> // never throws
 
-// src/components/atlas/stats-model.ts (pure)
+// src/lib/atlas/stats-period.ts (pure)
 type StatsPeriod = { kind: 'all' } | { kind: 'year'; year: number }
 type StatTileId =
   | 'places'
@@ -603,7 +602,7 @@ Before the first PR of either phase, the "Docs and CI" grep (`AGENTS.md`) runs o
 ### Phase 2 - read the roll-up by year (08-S6b)
 
 0. A real-router test that shows whether a failed `router.invalidate()` leaves `AtlasScreen` mounted (decides whether the failed state is built).
-1. `stats-model.ts` and its test (periods, tiles per period, whose figure, zero-distance rule, streak range, fall-back).
+1. `stats-period.ts` and its test (periods, tiles per period, whose figure, zero-distance rule, streak range, fall-back).
 2. `formatYear` in `src/lib/format.ts` and a case in `src/lib/__tests__/format-locale.test.ts`.
 3. `atlas-panel.tsx`: the period state and the live region in `AtlasPanel`, the control, the group name, the streak and countries
    tiles, the `> 0` distance test, the empty and failed states, the Stats `TabsContent` focus outline; `atlas-screen.tsx` passes the
@@ -630,7 +629,7 @@ Before the first PR of either phase, the "Docs and CI" grep (`AGENTS.md`) runs o
   - One outcome test in the Node `server` project: the envelopes a place add and a cross-year transport save produce, run through
     the recompute, move `placeCount` and the year rows' `distanceMetres` as `listTravelStats` reads them.
   - A repository test: `listTravelStats` with a colleague's rows seeded returns only the named user's rows.
-  - `src/components/atlas/__tests__/stats-model.test.ts` - periods exclude zero-trip years and sort newest first; per-period tiles
+  - `src/lib/atlas/__tests__/stats-period.test.ts` - periods exclude zero-trip years and sort newest first; per-period tiles
     and whose figure each is; distance 0 prints nothing; streak only on all time, read from the all-time row, with its range; the
     fall-back when the year is gone.
   - `src/components/atlas/__tests__/atlas-panel.test.tsx` - the control appears only with a year, has a visible label, is never
@@ -698,6 +697,29 @@ The implementation PR for #936 records the intentional server-function removal a
 
 The producer slice adds the seven content-write triggers, variadic affected years and acknowledgement
 without a write for absent workspace members. The problem statements above describe the snapshot
-before this slice; 08-S6b still owns the period UI and glossary additions. Existing transport writers
-have no general archived-trip guard; this slice preserves their contract. The first-commit guard
+before this slice; 08-S6b still owns the period UI and glossary additions. At that snapshot, transport writers had no general archived-trip guard; #1041 now applies the shared repository guard to transport writes until the trip is restored. The first-commit guard
 requirement in the original ticket brief was superseded by #936 and #928, as recorded above.
+
+## Implementation amendment - issue #1120 (08-S6b1)
+
+The period model lives in `src/lib/atlas/stats-period.ts`. `AtlasPanel` owns the chosen period and a persistent live region, reads the existing `atlas.stats` rows, and exposes a named, busy tile group. Year views omit lifetime regions, visits, streak and continents; all time retains the live figures and adds the stored streak with its range. Zero distance uses the trip caption. Four existing labels now explicitly name the traveller; the fourteen new keys and year translator comments are present in all 23 locales. `formatYear` prints Latin digits without grouping. The empty and failed section states remain the following ticket's scope.
+
+
+## Implementation amendment - issue #1121 (08-S6b2)
+
+The Stats tab now replaces its figures with a filled, surface-2 empty state when live country and
+region counts are zero and the all-time row has no trips (a missing all-time row also means none).
+It offers one link to `/trips`, with no live announcement or focus move. The three empty-state keys
+ship in all 23 locales.
+
+The real-router test `src/routes/_app/-ui/__tests__/atlas-reload.test.tsx` uses the production atlas
+route's loader and rendering options. A successful initial read followed by a rejected invalidation
+unmounts the atlas and renders the route error component. Per the conditional scope in #1121, the
+Stats failed alert, its four keys and its focus rules are therefore not built. The same unreachable
+country-card retry is tracked by #1456. The earlier failed-state descriptions above are design
+history, superseded by this measured branch.
+
+`ADD-06` is **done** with this final slice. The original gap matrix is no longer present (see
+`docs/plans/README.md`); this disposition records the historical row's completion. The implementation
+metadata lists the already merged producer and year-view PRs; the PR-opening step appends this final
+slice's PR number when it exists.

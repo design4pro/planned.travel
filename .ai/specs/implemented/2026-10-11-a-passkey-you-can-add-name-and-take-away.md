@@ -274,9 +274,9 @@ report about syncing, not "the device in your hand", so the badge says what it k
 - **Failed** - verify failures, an expired challenge or a dropped connection after the sheet closed: "The passkey was not added. Try again." in
   the status region in the danger tone.
 - **Session not fresh or ended** - two different sentences, never swapped. `PASSKEY_SESSION_NOT_FRESH` (registration here, removal in 09-S1c)
-  means the session is valid but too old: registration writes `passkeys.add.stale` ("For your safety, sign in again to continue.") into the
+  means the session is valid but too old: registration writes `passkeys.add.stale` ("For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.") into the
   status region, removal `passkeys.delete.stale` in the dialog. A `401` means the session is gone: `passkeys.error.sessionEnded` ("Your session
-  has ended. Sign in again to continue."). Both offer the same **Sign in again** button, which moves focus to itself when it appears, shows
+  has ended. Sign in again to continue managing your passkeys."). Both offer the same **Sign in again** button, which moves focus to itself when it appears, shows
   `loading` while it posts to `SIGN_OUT_ENDPOINT` (`src/components/layout/session.ts`) and then goes to `/login?redirect=/passkeys`. A plain
   "sign in again" is a loop otherwise: `login.tsx` redirects a signed-in visitor straight back. A `401` during rename shows the same session-ended
   line and action beside the row.
@@ -354,8 +354,8 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.add.dismissed`           | No passkey was added                                                                                       | a      |
 | `passkeys.add.exists`              | This device already has a passkey for your account                                                         | a      |
 | `passkeys.add.failed`              | The passkey was not added. Try again.                                                                      | a      |
-| `passkeys.add.stale`               | For your safety, sign in again to continue.                                                                | a      |
-| `passkeys.error.sessionEnded`      | Your session has ended. Sign in again to continue.                                                         | a      |
+| `passkeys.add.stale`               | For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.                                                                | a      |
+| `passkeys.error.sessionEnded`      | Your session has ended. Sign in again to continue managing your passkeys.                                                         | a      |
 | `passkeys.signInAgain`             | Sign in again                                                                                              | a      |
 | `passkeys.add.limit`               | You have reached the limit of {value} passkeys. Remove one to add another.                                 | a      |
 | `passkeys.add.unsupported`         | This browser cannot create passkeys. Try another browser or device.                                        | a      |
@@ -386,7 +386,7 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.delete.confirm`          | Remove passkey                                                                                             | c      |
 | `passkeys.delete.cancel`           | Cancel                                                                                                     | c      |
 | `passkeys.delete.wrongPassword`    | That password is not right.                                                                                | c      |
-| `passkeys.delete.stale`            | For your safety, sign in again before removing a passkey.                                                  | c      |
+| `passkeys.delete.stale`            | For your safety, removing a passkey requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.                                                  | c      |
 | `passkeys.delete.removed`          | Passkey removed                                                                                            | c      |
 | `passkeys.delete.failed`           | The passkey was not removed. Try again.                                                                    | c      |
 | `passkeys.delete.removing`         | Removing the passkey                                                                                       | c      |

@@ -1,9 +1,8 @@
 /**
  * Everything the authentication screens say, in Ukrainian.
  *
- * Authored from `../en/auth.ts` (`docs/SPEC.md` §8.9). These screens are
- * reachable with no session, so their language comes from `Accept-Language`
- * alone and two thirds of the keys are failures — the moment a reader can least
+ * Authored from `../en/auth.ts` (`docs/SPEC.md` §9 rule 9). These screens are
+ * reachable with no session, so their language comes from the visitor cookie, then `Accept-Language`, then English and two thirds of the keys are failures — the moment a reader can least
  * afford a sentence in a language they do not read.
  *
  * **Plural.** `uk` needs `one` (1, 21 …) · `few` (2–4) · `many` (0, 5–20) ·
@@ -353,6 +352,9 @@ const messages = {
   'error.locked.title': 'Акаунт тимчасово заблоковано',
   'error.locked.detail':
     'Надто багато невдалих спроб перевірки. Для безпеки акаунт заблоковано на кілька хвилин.',
+  'error.twoFactorOn.title': 'Двофакторну автентифікацію вже ввімкнено',
+  'error.twoFactorOn.detail':
+    'Повторне налаштування зупинило б роботу поточного застосунку автентифікації, тому нічого не змінено. Керувати нею можна тут.',
   'error.noTwoFactor.title': 'Другий фактор не налаштовано',
   'error.noTwoFactor.detail': 'Продовжте входом за адресою й паролем.',
   'error.twoFactorExpired.title': 'Почніть заново від входу',
@@ -380,6 +382,12 @@ const messages = {
   'passkeyNotice.action': 'Керування ключами доступу',
   'passkeyNotice.recovery':
     'Якщо ви не впізнаєте цю зміну, змініть пароль і завершіть незнайомі сеанси. Скидання пароля не видаляє ключі доступу. Перегляньте їх і видаліть ті, яких не впізнаєте.',
+  'error.passwordAttemptsLocked.title': 'Підтвердження пароля заблоковано',
+  'error.passwordAttemptsLocked.detail':
+    'У цьому сеансі більше не можна підтвердити пароль. Вийдіть і ввійдіть знову.',
+  'error.passwordResultUnknown.title': 'Перевірте налаштування безпеки',
+  'error.passwordResultUnknown.detail':
+    'Зміна могла зберегтися. Не виходьте з цього сеансу, доки не зможете ввійти знову. Якщо ви змінювали пароль, спробуйте новий. Якщо ви замінювали резервні коди, старий набір уже може не працювати; скористайтеся застосунком автентифікації або іншим відкритим сеансом, щоб створити новий набір.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

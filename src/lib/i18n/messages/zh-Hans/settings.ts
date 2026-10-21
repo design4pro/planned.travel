@@ -179,7 +179,7 @@ const messages = {
   'security.password.action': '更改密码',
   'security.twoFactor.label': '两步验证',
   'security.twoFactor.onHint':
-    '每次在新地方登录，都要输一次验证器应用里的验证码。',
+    '使用邮箱和密码登录时，需要身份验证应用的验证码，除非你选择信任此浏览器。',
   'security.twoFactor.offHint': '在密码之外，再加上验证器应用的六位验证码。',
   'security.twoFactor.on': '已开启',
   'security.twoFactor.off': '已关闭',
@@ -333,8 +333,7 @@ const messages = {
     '上一次付款没有成功。更新银行卡，免得付费模块被锁。',
   'billing.renewal.unpaid': '这个订阅尚未付款，付费模块已经锁上。',
   'billing.renewal.paused': '这个订阅暂停了。等你准备再出发，随时恢复。',
-  'billing.renewal.lapsed':
-    '想重新用上预订、旅行日志和离线地图，从下面挑一个方案。',
+  'billing.renewal.lapsed': '想重新用上预订、旅行日志，从下面挑一个方案。',
   'billing.renewal.incomplete': 'Polar 还在等这笔付款被确认。',
   'billing.renewal.free': '同时两趟行程，我们请。等你觉得不够了再升。',
   'billing.renewal.auto': '会自动续期。',
@@ -377,7 +376,7 @@ const messages = {
   'billing.plan.solo.tagline': '给什么都自己安排的旅行者',
   'billing.plan.solo.feature.trips': '行程和地点不限数量',
   'billing.plan.solo.feature.modules': '全部规划模块——预订、日志、预算、行李',
-  'billing.plan.solo.feature.offline': '出发前先下好的离线地图',
+  'billing.plan.solo.feature.storage': '5 GB 照片和文档空间',
   'billing.plan.solo.feature.export': '导出 PDF 和日历',
   'billing.plan.crew.name': '同行版',
   'billing.plan.crew.tagline': '给家人、朋友和小团队',
@@ -498,8 +497,10 @@ const messages = {
   'passkeys.add.dismissed': '没有添加通行密钥',
   'passkeys.add.exists': '这台设备已经有你账号的通行密钥',
   'passkeys.add.failed': '没有添加成功。请再试一次。',
-  'passkeys.add.stale': '为了你的安全，请重新登录后继续。',
-  'passkeys.error.sessionEnded': '你的会话已结束。请重新登录后继续。',
+  'passkeys.add.stale':
+    '为了你的安全，管理通行密钥需要最近登录过。选择“重新登录”会先退出登录，然后带你前往登录页面。',
+  'passkeys.error.sessionEnded':
+    '你的会话已结束。请重新登录以继续管理通行密钥。',
   'passkeys.signInAgain': '重新登录',
   'passkeys.add.limit':
     '你已达到 {value} 个通行密钥的上限。请先删除一个，再添加新的。',
@@ -536,7 +537,8 @@ const messages = {
   'passkeys.delete.confirm': '删除通行密钥',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '这个密码不正确。',
-  'passkeys.delete.stale': '为了你的安全，请先重新登录，再删除通行密钥。',
+  'passkeys.delete.stale':
+    '为了你的安全，删除通行密钥需要最近登录过。选择“重新登录”会先退出登录，然后带你前往登录页面。',
   'passkeys.delete.removed': '通行密钥已删除',
   'passkeys.delete.failed': '通行密钥未能删除。请重试。',
   'passkeys.delete.removing': '正在删除通行密钥',
@@ -561,6 +563,92 @@ const messages = {
   'workspace.departure.activationFailed':
     '你已退出此工作空间。打开下一个工作空间以继续。',
   'workspace.departure.recover': '打开下一个工作空间',
+  'twoFactor.back': '返回安全设置',
+  'twoFactor.title': '双重身份验证',
+  'twoFactor.description': '使用邮箱和密码登录时增加第二个步骤。',
+  'twoFactor.error': '无法加载双重身份验证设置。',
+  'twoFactor.steps.label': '设置双重身份验证',
+  'twoFactor.steps.password': '确认是你本人',
+  'twoFactor.steps.key': '添加到身份验证应用',
+  'twoFactor.steps.confirm': '输入验证码',
+  'twoFactor.steps.state.done': '已完成',
+  'twoFactor.steps.state.current': '当前步骤',
+  'twoFactor.steps.state.todo': '尚未开始',
+  'twoFactor.password.label': '你的密码',
+  'twoFactor.password.hint': '更改登录方式前，我们会再次确认。',
+  'twoFactor.password.submit': '继续',
+  'twoFactor.password.pending': '正在设置',
+  'twoFactor.password.invalid': '密码不正确。',
+  'twoFactor.key.intro':
+    '你需要在手机上安装身份验证应用。添加此密钥后，回到本页面。双重身份验证尚未启用。',
+  'twoFactor.key.matrixLabel': '设置码。同一密钥也以文本形式提供',
+  'twoFactor.key.matrixFailed':
+    '无法为此密钥生成代码。请在应用中输入设置密钥。',
+  'twoFactor.key.label': '设置密钥',
+  'twoFactor.key.copy': '复制密钥',
+  'twoFactor.key.copied': '已复制密钥',
+  'twoFactor.key.copyFailed': '浏览器无法复制密钥。请选中并手动复制。',
+  'twoFactor.key.open': '在身份验证应用中打开',
+  'twoFactor.key.startOver': '重新开始',
+  'twoFactor.key.startOverHint':
+    '重新开始会生成新密钥。你已经添加到应用的密钥将失效。',
+  'twoFactor.key.next': '我已添加',
+  'twoFactor.code.label': '应用中的验证码',
+  'twoFactor.code.hint': '应用当前显示的六位数字。',
+  'twoFactor.code.submit': '启用双重身份验证',
+  'twoFactor.code.pending': '正在检查',
+  'twoFactor.code.invalid':
+    '验证码不匹配。请检查手机时间，然后输入应用显示的最新验证码。',
+  'twoFactor.code.unclear': '无法确定是否成功。请输入最新验证码重试。',
+  'twoFactor.rateLimited.title': '短时间内尝试次数过多',
+  'twoFactor.rateLimited.password': '请等待约十秒后重试。你输入的内容已保留。',
+  'twoFactor.rateLimited.code': '请等待最多一分钟后重试。你输入的内容已保留。',
+  'twoFactor.codes.title': '你的备用码',
+  'twoFactor.codes.body':
+    '丢失手机时，每个备用码可使用一次。它们只在此时显示，请妥善保管。',
+  'twoFactor.codes.copyAll': '全部复制',
+  'twoFactor.codes.copied': '已复制备用码',
+  'twoFactor.codes.download': '下载为文本文件',
+  'twoFactor.codes.copyFailed': '浏览器无法复制备用码。请选中并手动复制。',
+  'twoFactor.codes.stored': '我已保存这些备用码',
+  'twoFactor.codes.done': '完成',
+  'twoFactor.codes.gate': '请勾选此框以继续。',
+  'twoFactor.codes.lost':
+    '如果先离开本页面，你可以在这里生成新的一组备用码，旧备用码将失效。',
+  'twoFactor.codes.leave.title': '不保存备用码就离开？',
+  'twoFactor.codes.leave.body':
+    '备用码仅显示一次。如果现在离开，你可以在这里生成新的一组，旧备用码将失效。',
+  'twoFactor.codes.leave.stay': '留在此页',
+  'twoFactor.codes.leave.go': '离开',
+  'twoFactor.on.title': '双重身份验证已启用',
+  'twoFactor.on.badge': '已启用',
+  'twoFactor.on.body':
+    '使用邮箱和密码登录时，我们会要求输入身份验证应用的验证码，除非你选择信任此浏览器。通过 Google、Apple 或通行密钥登录不需要验证码。',
+  'twoFactor.replace.action': '更换备用码',
+  'twoFactor.replace.title': '更换你的备用码？',
+  'twoFactor.replace.body':
+    '你将获得一组新备用码。继续后，当前备用码立即失效。',
+  'twoFactor.replace.confirm': '更换',
+  'twoFactor.replace.pending': '正在更换',
+  'twoFactor.nopassword.title': '请先设置密码',
+  'twoFactor.nopassword.body':
+    '此账户需要密码才能使用双重身份验证。下一页面会要求填写邮箱并发送设置密码的链接。设置密码会退出所有设备上的登录。请重新登录后返回这里。',
+  'twoFactor.nopassword.action': '设置密码',
+  'twoFactor.setup.action': '再次显示设置密钥',
+  'twoFactor.setup.title': '设置密钥',
+  'twoFactor.setup.body':
+    '将此密钥添加到另一台设备。其他设备上已有的密钥仍可使用。',
+  'twoFactor.setup.done': '完成',
+  'twoFactor.setup.confirm': '显示密钥',
+  'twoFactor.setup.pending': '正在检查',
+  'twoFactor.off.action': '关闭双重验证',
+  'twoFactor.off.title': '要关闭双重验证吗？',
+  'twoFactor.off.body':
+    '任何知道你密码的人都可以无需验证码登录。你已登录的其他设备将保持登录状态。',
+  'twoFactor.off.confirm': '关闭',
+  'twoFactor.off.pending': '正在关闭',
+  'twoFactor.off.cancel': '保持开启',
+  'twoFactor.off.done': '双重验证已关闭',
 } satisfies TranslationOf<typeof En>
 
 export default messages

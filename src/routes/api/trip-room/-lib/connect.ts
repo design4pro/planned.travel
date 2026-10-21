@@ -31,7 +31,10 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * connects as an `editor`; a trip viewer, a workspace member with no place on
  * the trip, and anyone looking at an archived trip connect as a `viewer`. A
  * viewer receives commits and their patches are refused by the room, which is
- * the same answer `assertTripRole` gives their write to D1.
+ * the same answer `assertTripRole` gives their write to D1. A session an operator is
+ * impersonating (`context.impersonatedBy`) connects as a `viewer` whatever the trip role:
+ * a room commit is authored by the person alone, so only a read-only socket keeps
+ * docs/ACCESS.md §6.4 true.
  *
  * The role is read once, at connect, and an open socket keeps it - so the writes
  * that change it close the sockets they affect: a new role, a removal or a leave
@@ -42,8 +45,10 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * (removed, leaving, or banned, signed out or deleted by the platform console) has
  * the sockets they hold in every room of it closed by the `trip-room-evict` task, and
  * so does a person who ends their own session (a password reset, a password change that
- * revokes the others, a sign-out, a revoke of one, the other or all sessions, #1093):
+ * revokes the others, a sign-out, a revoke of one, the other or all sessions, #1093),
+ * and so does the person an operator ends an impersonation of (#1179):
  * the sockets of all their devices close and the next connect re-runs this handler.
+ * Two concurrent sign-outs queue the close twice, which is accepted.
  * The shipped client reconnects through this handler, which is what picks up the
  * stored role. The close is best effort: a room that
  * cannot be reached is logged, and a connect already in flight can reach the room
@@ -143,6 +148,12 @@ export async function serveTripRoom(
 
   const tripRole = await tripRoleFor(scope, trip.id, context.userId)
 
+  // An impersonated session never commits over the socket: the room stamps a commit with the
+  // person it was opened for and records no operator, so there would be nothing to attribute it
+  // to (docs/ACCESS.md §6.4). Read off the resolved context, never off the request.
+  const canCommit =
+    context.impersonatedBy === null && canWritePlan(trip, tripRole)
+
   const name = displayNameOf(session.user)
   const user: PresenceUser = {
     id: context.userId,
@@ -156,7 +167,7 @@ export async function serveTripRoom(
     tripId: trip.id,
     orgId: context.organizationId,
     user,
-    role: canWritePlan(trip, tripRole) ? 'editor' : 'viewer',
+    role: canCommit ? 'editor' : 'viewer',
   }
 
   return connectToTripRoom(namespace, identity, request)

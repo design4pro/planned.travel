@@ -2,11 +2,11 @@
  * The sign-in, sign-up, recovery and invitation screens, in Indonesian.
  *
  * Authored from `../en/auth`, which is our own English copy — never another
- * product's catalogue (`docs/SPEC.md` §1, §8.9).
+ * product's catalogue (`docs/SPEC.md` §1, §9 rule 9).
  *
  * These are the only screens a traveller reaches with no session, so the
- * language is negotiated from `Accept-Language` alone and there is no stored
- * preference to correct a bad guess with. Two thirds of the keys are validation
+ * language is negotiated from the visitor cookie, then `Accept-Language`, then
+ * English. Two thirds of the keys are validation
  * and failure copy, read at the worst possible moment — so they are plain
  * sentences, not clipped labels.
  *
@@ -347,6 +347,9 @@ const messages = {
   'error.locked.title': 'Akun terkunci sementara',
   'error.locked.detail':
     'Terlalu banyak percobaan verifikasi yang gagal. Demi keamanan, akun ini terkunci beberapa menit.',
+  'error.twoFactorOn.title': 'Autentikasi dua faktor sudah aktif',
+  'error.twoFactorOn.detail':
+    'Menyiapkannya kembali akan membuat autentikator saat ini berhenti berfungsi, jadi tidak ada yang diubah. Kamu dapat mengelolanya di sini.',
   'error.noTwoFactor.title': 'Verifikasi dua langkah belum disiapkan',
   'error.noTwoFactor.detail':
     'Masuk dengan email dan kata sandi Anda untuk melanjutkan.',
@@ -375,6 +378,12 @@ const messages = {
   'passkeyNotice.action': 'Kelola kunci sandi',
   'passkeyNotice.recovery':
     'Jika Anda tidak mengenali perubahan ini, ubah kata sandi dan akhiri sesi yang tidak dikenal. Pengaturan ulang kata sandi tidak menghapus kunci sandi. Tinjau kunci sandi Anda dan hapus yang tidak dikenali.',
+  'error.passwordAttemptsLocked.title': 'Konfirmasi kata sandi dikunci',
+  'error.passwordAttemptsLocked.detail':
+    'Sesi ini tidak dapat lagi mengonfirmasi kata sandi Anda. Keluar lalu masuk kembali.',
+  'error.passwordResultUnknown.title': 'Periksa pengaturan keamanan Anda',
+  'error.passwordResultUnknown.detail':
+    'Perubahan mungkin telah tersimpan. Biarkan sesi ini tetap terbuka sampai Anda dapat masuk kembali. Jika Anda mengubah kata sandi, coba yang baru. Jika Anda mengganti kode cadangan, kode lama mungkin tidak lagi berfungsi; gunakan aplikasi autentikator atau sesi lain yang sudah masuk untuk membuat kode baru.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

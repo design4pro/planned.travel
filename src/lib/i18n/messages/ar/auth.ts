@@ -1,13 +1,12 @@
 /**
  * Everything the authentication screens say, in Arabic.
  *
- * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §8.9
+ * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §9 rule 9
  * forbid deriving a catalogue from the reference project's AGPL translations, so
  * every sentence here was written against our English source.
  *
  * These are the only screens a traveller reaches with no session, so their
- * language comes purely from `Accept-Language` and there is no stored preference
- * to correct a bad guess with. Two thirds of the keys are validation messages
+ * language comes from the visitor cookie, then `Accept-Language`, then English. Two thirds of the keys are validation messages
  * and failure alerts, which appear exactly when a reader can least afford a
  * sentence in a language they do not read.
  *
@@ -363,6 +362,9 @@ const messages = {
   'error.locked.title': 'الحساب مقفل مؤقتًا',
   'error.locked.detail':
     'محاولات تحقق فاشلة كثيرة. لأمانك هذا الحساب مقفل لدقائق.',
+  'error.twoFactorOn.title': 'المصادقة الثنائية مفعّلة بالفعل',
+  'error.twoFactorOn.detail':
+    'إعدادها مرة أخرى سيوقف عمل تطبيق المصادقة الحالي، لذلك لم يتغير شيء. يمكنك إدارتها من هنا.',
   'error.noTwoFactor.title': 'التحقق بخطوتين غير مُعدّ',
   'error.noTwoFactor.detail': 'ادخل ببريدك وكلمة مرورك للمتابعة.',
   'error.twoFactorExpired.title': 'ابدأ من جديد من صفحة الدخول',
@@ -389,6 +391,12 @@ const messages = {
   'passkeyNotice.action': 'إدارة مفاتيح المرور',
   'passkeyNotice.recovery':
     'إذا لم تتعرف على هذا التغيير، فغيّر كلمة المرور وأنهِ الجلسات غير المعروفة. إعادة تعيين كلمة المرور لا تزيل مفاتيح المرور. راجع مفاتيح المرور وأزل أي مفتاح لا تتعرف عليه.',
+  'error.passwordAttemptsLocked.title': 'تم قفل تأكيد كلمة المرور',
+  'error.passwordAttemptsLocked.detail':
+    'لم يعد بإمكان هذه الجلسة تأكيد كلمة مرورك. سجّل الخروج ثم سجّل الدخول مجددًا.',
+  'error.passwordResultUnknown.title': 'تحقق من إعدادات الأمان',
+  'error.passwordResultUnknown.detail':
+    'ربما تم حفظ التغيير. أبقِ هذه الجلسة مفتوحة حتى تتمكن من تسجيل الدخول مجددًا. إذا غيّرت كلمة المرور، فجرّب الجديدة. إذا استبدلت الرموز الاحتياطية، فقد لا تعمل المجموعة القديمة؛ استخدم تطبيق المصادقة أو جلسة أخرى مسجّلًا فيها الدخول لإنشاء مجموعة جديدة.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -219,7 +219,7 @@ const messages = {
   'security.password.action': 'Changer de mot de passe',
   'security.twoFactor.label': 'Double authentification',
   'security.twoFactor.onHint':
-    'Un code de votre application d’authentification est demandé à chaque nouvelle connexion.',
+    'Un code de votre application est demandé lors de la connexion par e-mail et mot de passe, sauf si ce navigateur est approuvé.',
   'security.twoFactor.offHint':
     'Ajoutez un code à six chiffres d’une application d’authentification par-dessus votre mot de passe.',
   'security.twoFactor.on': 'Active',
@@ -228,7 +228,7 @@ const messages = {
   'security.twoFactor.enable': 'Activer',
   'security.passkeys.label': 'Clés d’accès',
   'security.passkeys.hint':
-    'Connectez-vous avec le lecteur d’empreinte, Face ID ou une clé de sécurité, sans rien saisir.',
+    'Connectez-vous avec votre empreinte, votre visage ou une clé de sécurité, sans rien saisir.',
   'security.passkeys.action': 'Gérer les clés d’accès',
   'security.session.title': 'Cette session',
   'security.session.description': 'Le navigateur dans lequel vous lisez ceci.',
@@ -413,7 +413,7 @@ const messages = {
   'billing.renewal.paused':
     'Cet abonnement est en pause. Reprenez-le quand vous serez prêt à repartir.',
   'billing.renewal.lapsed':
-    'Choisissez une formule ci-dessous pour rouvrir les réservations, le journal et les cartes hors ligne.',
+    'Choisissez une formule ci-dessous pour rouvrir les réservations et le journal.',
   'billing.renewal.incomplete':
     'Polar attend encore la confirmation de ce paiement.',
   'billing.renewal.free':
@@ -472,8 +472,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Voyages et lieux illimités',
   'billing.plan.solo.feature.modules':
     'Tous les modules — réservations, journal, budgets, bagages',
-  'billing.plan.solo.feature.offline':
-    'Des cartes hors ligne à télécharger avant l’embarquement',
+  'billing.plan.solo.feature.storage': '5 Go pour les photos et documents',
   'billing.plan.solo.feature.export': 'Export PDF et calendrier',
   'billing.plan.crew.name': 'En groupe',
   'billing.plan.crew.tagline': 'Pour les familles, les amis et les équipes',
@@ -618,9 +617,10 @@ const messages = {
   'passkeys.add.exists':
     'Cet appareil a déjà une clé d’accès pour votre compte',
   'passkeys.add.failed': 'La clé d’accès n’a pas été ajoutée. Réessayez.',
-  'passkeys.add.stale': 'Pour votre sécurité, reconnectez-vous pour continuer.',
+  'passkeys.add.stale':
+    'Pour votre sécurité, la gestion des clés d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
   'passkeys.error.sessionEnded':
-    'Votre session est terminée. Reconnectez-vous pour continuer.',
+    'Votre session est terminée. Reconnectez-vous pour continuer à gérer vos clés d’accès.',
   'passkeys.signInAgain': 'Se reconnecter',
   'passkeys.add.limit':
     'Vous avez atteint la limite de {value} clés d’accès. Supprimez-en une pour en ajouter une autre.',
@@ -660,7 +660,7 @@ const messages = {
   'passkeys.delete.cancel': 'Annuler',
   'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',
   'passkeys.delete.stale':
-    'Pour votre sécurité, reconnectez-vous avant de supprimer une clé d’accès.',
+    'Pour votre sécurité, la suppression d’une clé d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
   'passkeys.delete.removed': 'Clé d’accès supprimée',
   'passkeys.delete.failed': 'La clé d’accès n’a pas été supprimée. Réessayez.',
   'passkeys.delete.removing': 'Suppression de la clé d’accès',
@@ -688,6 +688,101 @@ const messages = {
   'workspace.departure.activationFailed':
     'Vous avez quitté cet espace de travail. Ouvrez le suivant pour continuer.',
   'workspace.departure.recover': 'Ouvrir le prochain espace',
+  'twoFactor.back': 'Retour à la sécurité',
+  'twoFactor.title': 'Authentification à deux facteurs',
+  'twoFactor.description':
+    'Ajoutez une étape lors de la connexion par e-mail et mot de passe.',
+  'twoFactor.error': 'Impossible de charger vos paramètres à deux facteurs.',
+  'twoFactor.steps.label': 'Configurer les deux facteurs',
+  'twoFactor.steps.password': 'Confirmez votre identité',
+  'twoFactor.steps.key': 'Ajoutez la clé à votre application',
+  'twoFactor.steps.confirm': 'Saisissez un code',
+  'twoFactor.steps.state.done': 'Terminé',
+  'twoFactor.steps.state.current': 'Étape actuelle',
+  'twoFactor.steps.state.todo': 'Non commencé',
+  'twoFactor.password.label': 'Votre mot de passe',
+  'twoFactor.password.hint':
+    'Nous le redemandons avant de modifier votre connexion.',
+  'twoFactor.password.submit': 'Continuer',
+  'twoFactor.password.pending': 'Configuration en cours',
+  'twoFactor.password.invalid': 'Ce mot de passe est incorrect.',
+  'twoFactor.key.intro':
+    'Il vous faut une application d’authentification sur votre téléphone. Ajoutez-y cette clé, puis revenez ici. Les deux facteurs ne sont pas encore activés.',
+  'twoFactor.key.matrixLabel':
+    'Code de configuration. La même clé est disponible en texte',
+  'twoFactor.key.matrixFailed':
+    'Impossible de générer un code pour cette clé. Saisissez la clé de configuration dans votre application.',
+  'twoFactor.key.label': 'Clé de configuration',
+  'twoFactor.key.copy': 'Copier la clé',
+  'twoFactor.key.copied': 'Clé copiée',
+  'twoFactor.key.copyFailed':
+    'Votre navigateur n’a pas copié la clé. Sélectionnez-la et copiez-la manuellement.',
+  'twoFactor.key.open': 'Ouvrir dans votre application d’authentification',
+  'twoFactor.key.startOver': 'Recommencer',
+  'twoFactor.key.startOverHint':
+    'Recommencer crée une nouvelle clé. Une clé déjà ajoutée à une application cessera de fonctionner.',
+  'twoFactor.key.next': 'Je l’ai ajoutée',
+  'twoFactor.code.label': 'Code de l’application',
+  'twoFactor.code.hint':
+    'Les six chiffres affichés actuellement par l’application.',
+  'twoFactor.code.submit': 'Activer les deux facteurs',
+  'twoFactor.code.pending': 'Vérification en cours',
+  'twoFactor.code.invalid':
+    'Ce code ne correspond pas. Vérifiez l’heure du téléphone et saisissez le code le plus récent de l’application.',
+  'twoFactor.code.unclear':
+    'Nous ne savons pas si cela a fonctionné. Saisissez le code le plus récent pour réessayer.',
+  'twoFactor.rateLimited.title': 'Trop de tentatives rapprochées',
+  'twoFactor.rateLimited.password':
+    'Attendez environ dix secondes, puis réessayez. Vos saisies sont conservées.',
+  'twoFactor.rateLimited.code':
+    'Attendez jusqu’à une minute, puis réessayez. Vos saisies sont conservées.',
+  'twoFactor.codes.title': 'Vos codes de secours',
+  'twoFactor.codes.body':
+    'Chaque code fonctionne une fois si vous perdez votre téléphone. Ils ne sont affichés que maintenant : conservez-les en lieu sûr.',
+  'twoFactor.codes.copyAll': 'Tout copier',
+  'twoFactor.codes.copied': 'Codes de secours copiés',
+  'twoFactor.codes.download': 'Télécharger au format texte',
+  'twoFactor.codes.copyFailed':
+    'Votre navigateur n’a pas copié les codes. Sélectionnez-les et copiez-les manuellement.',
+  'twoFactor.codes.stored': 'J’ai conservé ces codes de secours',
+  'twoFactor.codes.done': 'Terminer',
+  'twoFactor.codes.gate': 'Cochez la case pour continuer.',
+  'twoFactor.codes.lost':
+    'Si vous quittez cette page avant, vous pourrez créer un nouveau jeu ici. L’ancien ne fonctionnera plus.',
+  'twoFactor.codes.leave.title': 'Partir sans conserver vos codes ?',
+  'twoFactor.codes.leave.body':
+    'Vos codes de secours ne sont affichés qu’une fois. Si vous partez, vous pourrez créer un nouveau jeu ici. L’ancien ne fonctionnera plus.',
+  'twoFactor.codes.leave.stay': 'Rester ici',
+  'twoFactor.codes.leave.go': 'Quitter',
+  'twoFactor.on.title': 'Les deux facteurs sont activés',
+  'twoFactor.on.badge': 'Activés',
+  'twoFactor.on.body':
+    'Nous demandons un code de l’application lors de la connexion par e-mail et mot de passe, sauf si ce navigateur est approuvé. Les connexions par Google, Apple ou clé d’accès ne demandent pas de code.',
+  'twoFactor.replace.action': 'Remplacer les codes de secours',
+  'twoFactor.replace.title': 'Remplacer vos codes de secours ?',
+  'twoFactor.replace.body':
+    'Vous recevrez un nouveau jeu. Le jeu actuel cesse de fonctionner dès que vous continuez.',
+  'twoFactor.replace.confirm': 'Remplacer',
+  'twoFactor.replace.pending': 'Remplacement en cours',
+  'twoFactor.nopassword.title': 'Définissez d’abord un mot de passe',
+  'twoFactor.nopassword.body':
+    'Les deux facteurs nécessitent un mot de passe pour ce compte. La page suivante demande votre e-mail et envoie un lien pour en définir un. Cela vous déconnecte partout. Reconnectez-vous, puis revenez ici.',
+  'twoFactor.nopassword.action': 'Définir un mot de passe',
+  'twoFactor.setup.action': 'Afficher à nouveau la clé de configuration',
+  'twoFactor.setup.title': 'Clé de configuration',
+  'twoFactor.setup.body':
+    'Ajoutez cette clé sur un autre appareil. La clé sur vos autres appareils continue de fonctionner.',
+  'twoFactor.setup.done': 'Terminé',
+  'twoFactor.setup.confirm': 'Afficher la clé',
+  'twoFactor.setup.pending': 'Vérification',
+  'twoFactor.off.action': 'Désactiver la double authentification',
+  'twoFactor.off.title': 'Désactiver la double authentification ?',
+  'twoFactor.off.body':
+    'Toute personne connaissant votre mot de passe pourra se connecter sans code. Vos autres appareils connectés resteront connectés.',
+  'twoFactor.off.confirm': 'Désactiver',
+  'twoFactor.off.pending': 'Désactivation',
+  'twoFactor.off.cancel': 'La garder activée',
+  'twoFactor.off.done': 'La double authentification est désactivée',
 } satisfies TranslationOf<typeof En>
 
 export default messages

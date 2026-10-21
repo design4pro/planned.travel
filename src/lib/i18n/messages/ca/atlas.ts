@@ -30,6 +30,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Encara no hi ha res per comptar',
+  'panel.stats.empty.body':
+    'Marca un país al mapa o planifica un viatge i les teves xifres començaran aquí.',
+  'panel.stats.empty.action': 'Planifica un viatge',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Mapa del món. Encara no hi ha cap país marcat com a visitat.',
@@ -149,16 +153,16 @@ const messages = {
   'panel.stat.places': 'Els teus llocs',
   'panel.stat.placesNone': 'Encara no hi ha res fixat en cap viatge',
   'panel.stat.placesCaption': 'Llocs d’interès, allotjaments i parades desats',
-  'panel.stat.regions': 'Regions marcades',
+  'panel.stat.regions': 'Les teves regions',
   'panel.stat.regionsNone': 'Encara no hi ha cap regió marcada',
   'panel.stat.regionsCaption': 'Estats, províncies, prefectures',
-  'panel.stat.visits': 'Visites',
+  'panel.stat.visits': 'Les teves visites',
   'panel.stat.visitsCaption': 'Cada arribada registrada',
   'panel.stat.trips': 'Els teus viatges',
   'panel.stat.tripsCaption': 'Tots els viatges en què participes',
-  'panel.stat.cities': 'Ciutats',
+  'panel.stat.cities': 'Les teves ciutats',
   'panel.stat.citiesCaption': 'Ciutats on has dormit o has fet parada',
-  'panel.stat.days': 'Dies fora',
+  'panel.stat.days': 'Els teus dies de viatge',
   'panel.stat.daysCaption': 'Comptant tots els viatges del teu registre',
   'panel.continents.label': 'Països per continent',
 
@@ -412,6 +416,27 @@ const messages = {
     'No hem pogut confirmar el canvi. Recarrega les regions per comprovar què s’ha desat.',
   'regions.status.refreshFailed':
     '{result} No s’ha pogut actualitzar l’atles. Recarrega’l per actualitzar el mapa.',
+
+  'panel.stat.periodLabel': 'Mostra les xifres de',
+  'panel.stat.allTime': 'Tot el període',
+  'panel.stat.groupAll': 'Xifres de tot el període',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.groupYear': 'Xifres de {year}',
+  'panel.stat.announceAll': 'Es mostren les xifres de tot el període.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.announceYear': 'Es mostren les xifres de {year}.',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.tripsYear': 'Viatges que comencen el {year}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.daysYear': 'En viatges que comencen el {year}',
+  'panel.stat.countries': 'Països dels teus viatges',
+  'panel.stat.countriesCaption': 'Països diferents en aquests viatges',
+  'panel.stat.streak': 'La teva ratxa anual',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakRange': 'Viatges cada any, de {first} a {last}',
+  // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
+  'panel.stat.streakSingle': 'Un viatge el {last}',
+  'panel.stat.streakNone': 'Afegeix un viatge amb dates per iniciar una ratxa',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -9,9 +9,8 @@
  * Every word these components say comes out of the `auth` catalogue through
  * `t()`, including the ones only a screen reader hears - the reveal control on a
  * password field, the sentence a button announces while it is busy. These are
- * the only screens with no session behind them, so the language is whatever
- * `Accept-Language` negotiated and there is no stored preference to correct it
- * with (`docs/SPEC.md` §8.3, §8.6).
+ * screens reachable without a session, so their language comes from the visitor
+ * cookie, then `Accept-Language`, then English (`docs/SPEC.md` §9 rules 3 and 6).
  */
 import * as React from 'react'
 import { Eye, EyeOff, Fingerprint } from 'lucide-react'
@@ -67,6 +66,42 @@ export function visibleError(meta: {
   errors: ReadonlyArray<unknown>
 }): string | undefined {
   return meta.isTouched ? firstError(meta.errors) : undefined
+}
+
+/** The public field seam needed to refresh already visible client errors. */
+interface AuthValidationForm {
+  readonly fieldInfo: Readonly<
+    Record<
+      string,
+      | {
+          readonly instance: {
+            readonly getMeta: () => {
+              readonly isTouched: boolean
+              readonly errors: ReadonlyArray<unknown>
+            }
+            readonly validate: (cause: 'change') => unknown
+          } | null
+        }
+      | undefined
+    >
+  >
+}
+
+/** Re-run validation only for fields displaying an error, without submitting or resetting. */
+export function useRevalidateAuthErrors(form: AuthValidationForm): void {
+  const { locale } = useI18n()
+  const previousLocale = React.useRef(locale)
+  React.useEffect(() => {
+    if (previousLocale.current === locale) return
+    previousLocale.current = locale
+    // useForm updates its validators in a layout effect before this effect.
+    const fields = Object.values(form.fieldInfo)
+      .map((info) => info?.instance)
+      .filter((field) => field && visibleError(field.getMeta()) !== undefined)
+    for (const field of fields) {
+      if (field) void field.validate('change')
+    }
+  }, [form, locale])
 }
 
 /* ------------------------------------------------------------------ layout */
@@ -230,36 +265,6 @@ export const PasswordInput = React.forwardRef<
   )
 })
 PasswordInput.displayName = 'PasswordInput'
-
-/**
- * The six-digit authenticator input. Wide tracking and tabular figures so the
- * digits read as a code rather than as a word, and every browser autofill hint
- * a one-time code can carry.
- *
- * `data-numeric` pins the run left-to-right: a code is digits in every locale,
- * and under `dir="rtl"` the surrounding paragraph would otherwise reorder the
- * separators a reader pastes with it.
- */
-export const CodeInput = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, ...props }, ref) => (
-    <Input
-      ref={ref}
-      inputMode="numeric"
-      autoComplete="one-time-code"
-      autoCapitalize="off"
-      autoCorrect="off"
-      spellCheck={false}
-      size="lg"
-      data-numeric
-      className={cn(
-        'text-center font-display text-2xl font-bold tracking-widest numeral',
-        className,
-      )}
-      {...props}
-    />
-  ),
-)
-CodeInput.displayName = 'CodeInput'
 
 /* ----------------------------------------------------------- social sign-in */
 

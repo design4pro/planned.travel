@@ -1,9 +1,8 @@
 /**
  * Everything the authentication screens say, in Russian.
  *
- * Authored from `../en/auth.ts` (`docs/SPEC.md` §8.9). These screens are
- * reachable with no session, so their language comes from `Accept-Language`
- * alone and two thirds of the keys are failures — the moment a reader can least
+ * Authored from `../en/auth.ts` (`docs/SPEC.md` §9 rule 9). These screens are
+ * reachable with no session, so their language comes from the visitor cookie, then `Accept-Language`, then English and two thirds of the keys are failures — the moment a reader can least
  * afford a sentence in a language they do not read.
  *
  * **Plural.** `ru` needs `one` (1, 21 …) · `few` (2–4) · `many` (0, 5–20) ·
@@ -356,6 +355,9 @@ const messages = {
   'error.locked.title': 'Аккаунт временно заблокирован',
   'error.locked.detail':
     'Слишком много неудачных попыток проверки. Для безопасности аккаунт заблокирован на несколько минут.',
+  'error.twoFactorOn.title': 'Двухфакторная аутентификация уже включена',
+  'error.twoFactorOn.detail':
+    'Повторная настройка остановила бы работу текущего приложения-аутентификатора, поэтому ничего не изменилось. Управлять ею можно здесь.',
   'error.noTwoFactor.title': 'Второй фактор не настроен',
   'error.noTwoFactor.detail': 'Продолжите входом по адресу и паролю.',
   'error.twoFactorExpired.title': 'Начните заново со входа',
@@ -383,6 +385,12 @@ const messages = {
   'passkeyNotice.action': 'Управление ключами доступа',
   'passkeyNotice.recovery':
     'Если вы не узнаёте это изменение, смените пароль и завершите незнакомые сеансы. Сброс пароля не удаляет ключи доступа. Проверьте их и удалите те, которые не узнаёте.',
+  'error.passwordAttemptsLocked.title': 'Подтверждение пароля заблокировано',
+  'error.passwordAttemptsLocked.detail':
+    'В этом сеансе больше нельзя подтвердить пароль. Выйдите и войдите снова.',
+  'error.passwordResultUnknown.title': 'Проверьте настройки безопасности',
+  'error.passwordResultUnknown.detail':
+    'Изменение могло сохраниться. Не выходите из этого сеанса, пока не сможете войти снова. Если вы меняли пароль, попробуйте новый. Если вы заменяли резервные коды, старый набор уже может не работать; используйте приложение-аутентификатор или другой открытый сеанс, чтобы создать новый набор.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

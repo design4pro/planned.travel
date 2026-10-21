@@ -2,11 +2,11 @@
  * The sign-in, sign-up, recovery and invitation screens, in Vietnamese.
  *
  * Authored from `../en/auth`, which is our own English copy — never another
- * product's catalogue (`docs/SPEC.md` §1, §8.9).
+ * product's catalogue (`docs/SPEC.md` §1, §9 rule 9).
  *
  * These are the only screens a traveller reaches with no session, so the
- * language is negotiated from `Accept-Language` alone and there is no stored
- * preference to correct a bad guess with. Two thirds of the keys are validation
+ * language is negotiated from the visitor cookie, then `Accept-Language`, then
+ * English. Two thirds of the keys are validation
  * and failure copy, read at the worst possible moment — so they are whole
  * sentences with the subject restored, because Vietnamese error copy that drops
  * the pronoun reads as a machine talking to itself.
@@ -343,6 +343,9 @@ const messages = {
   'error.locked.title': 'Tài khoản tạm bị khóa',
   'error.locked.detail':
     'Quá nhiều lần xác minh hỏng. Vì an toàn, tài khoản này bị khóa vài phút.',
+  'error.twoFactorOn.title': 'Xác thực hai yếu tố đã được bật',
+  'error.twoFactorOn.detail':
+    'Thiết lập lại sẽ khiến ứng dụng xác thực hiện tại ngừng hoạt động, nên không có gì được thay đổi. Bạn có thể quản lý tại đây.',
   'error.noTwoFactor.title': 'Chưa bật xác minh hai bước',
   'error.noTwoFactor.detail':
     'Đăng nhập bằng email và mật khẩu của bạn để tiếp tục.',
@@ -371,6 +374,12 @@ const messages = {
   'passkeyNotice.action': 'Quản lý khóa truy cập',
   'passkeyNotice.recovery':
     'Nếu bạn không nhận ra thay đổi này, hãy đổi mật khẩu và kết thúc các phiên không quen thuộc. Đặt lại mật khẩu không xóa khóa truy cập. Hãy kiểm tra và xóa những khóa bạn không nhận ra.',
+  'error.passwordAttemptsLocked.title': 'Đã khóa xác nhận mật khẩu',
+  'error.passwordAttemptsLocked.detail':
+    'Phiên này không còn có thể xác nhận mật khẩu của bạn. Hãy đăng xuất rồi đăng nhập lại.',
+  'error.passwordResultUnknown.title': 'Kiểm tra cài đặt bảo mật',
+  'error.passwordResultUnknown.detail':
+    'Thay đổi có thể đã được lưu. Giữ phiên này mở cho đến khi bạn có thể đăng nhập lại. Nếu đã đổi mật khẩu, hãy thử mật khẩu mới. Nếu đã thay mã dự phòng, bộ mã cũ có thể không còn hoạt động; dùng ứng dụng xác thực hoặc một phiên khác đã đăng nhập để tạo bộ mã mới.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

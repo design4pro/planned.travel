@@ -283,6 +283,9 @@ const messages = {
     '每一組備用碼只能用一次。請試試清單裡還沒用過的下一組。',
   'error.locked.title': '帳號暫時鎖住了',
   'error.locked.detail': '驗證失敗太多次。為了安全，這個帳號會鎖上幾分鐘。',
+  'error.twoFactorOn.title': '雙重驗證已開啟',
+  'error.twoFactorOn.detail':
+    '重新設定會導致目前的驗證器失效，因此未作任何變更。你可以在此管理。',
   'error.noTwoFactor.title': '還沒有設定兩步驗證',
   'error.noTwoFactor.detail': '用電子郵件和密碼登入就能繼續。',
   'error.twoFactorExpired.title': '請從登入重新開始',
@@ -309,6 +312,12 @@ const messages = {
   'passkeyNotice.action': '管理通行密鑰',
   'passkeyNotice.recovery':
     '如果你不認識此變更，請更改密碼並結束不熟悉的工作階段。重設密碼不會移除通行密鑰。請檢查通行密鑰並移除不認識的密鑰。',
+  'error.passwordAttemptsLocked.title': '密碼確認已鎖定',
+  'error.passwordAttemptsLocked.detail':
+    '此工作階段無法再確認你的密碼。請登出後重新登入。',
+  'error.passwordResultUnknown.title': '請檢查安全設定',
+  'error.passwordResultUnknown.detail':
+    '變更可能已儲存。在確認能重新登入前，請保持此工作階段開啟。如果你變更了密碼，請嘗試新密碼。如果更換了備用碼，舊備用碼可能已失效；請使用驗證應用程式或另一個已登入的工作階段產生一組新備用碼。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

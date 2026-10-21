@@ -2,6 +2,7 @@
 
 A glossary and nothing else. No implementation details, no file paths, no commands. Terms are added lazily, during grilling sessions, when they earn their place. Decisions with rationale belong in docs/adr/, not here.
 
+- **Installed app** - planned.travel opened from a home-screen or dock icon in its own window. Installation is optional and does not make trips available offline.
 - **Organization (tenant)** — the unit of isolation and billing. Every product row belongs to exactly one organization; a user acts inside one organization at a time.
 - **Workspace console** — the administrative surface where an organization manages members, billing and settings.
 - **Trip** — the central planning object: a titled journey owned by an organization, with members and guests. It may be dated (a start and an end) or not yet: an undated trip still has a run of numbered days.
@@ -10,7 +11,7 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Trip copy** — a new trip, owned by whoever copied it, that reproduces the source's plan (days, places and their tags, notes, budget lines, packing lists and to-dos with nothing ticked) and never its record (reservations, stays, transports, expenses, files, conversations, share tokens) or its people. Dates and title are chosen at copy time, defaulting to the source's.
 - **Trip export** — a snapshot document of one trip's plan and record (days, stops, reservations, transport and stays), made on request to hand to someone who has no account. It is a snapshot, not a live view: editing the trip afterwards changes no export, and exporting again makes another. It is kept for seven days, and a trip keeps at most its five newest. _Avoid_: "plan export" (a trip's plan excludes its record), "booking" for any of it.
 - **Favourite** — one person's bookmark on a trip they may read. It is private to that person, shows nothing to anyone else and grants nothing. _Avoid_: "starred", "pinned", a favourite trip as a property of the trip.
-- **Archive** — the reversible shelving of a trip: an archived trip leaves the default lists and the reminder scan but keeps everything, including its lifecycle status, and restoring it brings that status back unchanged. Archiving is not a status. _Avoid_: "archived" as a trip status.
+- **Archive** — the reversible shelving of a trip: an archived trip leaves the default lists and the reminder scan but keeps everything, including its lifecycle status, and restoring it brings that status back unchanged. An archived trip refuses changes until it is restored; owner trip-date enforcement is tracked separately in #1040. Archiving is not a status. _Avoid_: "archived" as a trip status.
 - **Place** — a location attached to a trip, created by hand, from search or from an import. Its point is what puts it on the map; a place whose point is not known yet is still a place, listed but unmarked.
 - **Reservation** — a booked commitment (lodging, activity, table) with dates, status and optional documents. _Avoid_: "booking" for the record itself; a booking desk is the screen where reservations are read, not a second name for one.
 - **Import job** — the reading of one confirmation file, from the moment it is dropped on a trip's bookings screen until its rows are confirmed or the reader dismisses it. It is working, then ready (rows to review), refused (the file could not be read) or stalled (the app stopped waiting while the reading may still finish), and the reader can leave and find it again from any screen. A row becomes a reservation only when the reader confirms it. _Avoid_: "upload" for the job; an upload is only its first step.
@@ -74,3 +75,13 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
+
+- **Setup key** - the shared authenticator secret used for two-factor codes. Showing it again adds the same secret to another device and keeps existing authenticators working.
+- **Setup code** - a scannable QR representation of the authenticator setup URI. The same setup key remains available as text when the code cannot be drawn or scanned.
+- **Backup code** - a one-use code for signing in when the authenticator app is unavailable. A set is shown once when two-factor authentication is enabled or the codes are replaced. Replacing a set invalidates the previous set. Use “backup code”; avoid “recovery code”.
+- **Travel statistics** — a traveller’s stored roll-up of trips they are on, shown in the Atlas Stats tab. The all-time view also reads their live visited regions, visits and continents; a year view counts countries on that year’s trips instead of their visited-country list.
+- **Stat year** — the calendar year of a travel-statistics row; `0` means all time. Trips, places, cities, days and trip countries follow the trip’s start year; distance follows each transport’s departure year. Only a year with a trip is a selectable period.
+
+- **Session password lock** - after five wrong passwords across password-confirming actions, that session cannot confirm a password again. Other sessions remain usable; sign out and sign in again to recover.
+
+- **Visitor language** - the language remembered on a browser for signed-out pages, held for a year in a first-party cookie containing only a language code. A personal or workspace language takes precedence when signed in. _Avoid_: "anonymous account", "guest profile".

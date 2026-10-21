@@ -1274,7 +1274,9 @@ appends `platform.user.impersonation_ended` to `platform_audit_log` and then cal
 `auth.api.stopImpersonating` in process, restoring the admin's own session from the signed
 `admin_session` cookie the plugin set when impersonation began. It does not call the plugin's
 `/admin/stop-impersonating` endpoint directly, because §2.6 answers that path with `404`; the
-detour is what makes the second half of the impersonation lifecycle auditable.
+detour is what makes the second half of the impersonation lifecycle auditable. A successful exit
+also closes the impersonated person's open trip-room sockets, on their own devices too, because a
+socket is tied to a person and records nothing about impersonation (#1179).
 
 The bar is not dismissible. A dismissible warning about a live credential for someone else's
 account is a warning that will be dismissed.
@@ -1353,7 +1355,21 @@ existing `metadata` column of the tenant `audit_log` as `impersonatedBy`, so a w
 their own audit trail can see that an operator, not they, made the change. `trail()` writes it after
 the caller's own keys and from the scope alone: a call site can neither forget it nor state it, a
 caller-supplied `impersonatedBy` never wins, and an ordinary session's entry carries no such key
-(implemented, #1010).
+(implemented, #1010). The trip room refuses the session's commits too (below).
+
+**The trip room is read-only for an impersonated session (#1253).** A commit over the realtime
+socket is stored and sent to every other collaborator as authored by the person alone: the room's
+identity and its commit entries hold no operator, so nothing there could be attributed to the
+impersonator. `serveTripRoom` (`src/routes/api/trip-room/-lib/connect.ts`) therefore connects a
+session whose resolved context carries `impersonatedBy` as a `viewer`, whatever the person's trip
+role: the socket still receives presence and commit signals, which is what reproducing a
+collaboration report needs, and the room refuses its `patch` frames before it stores or broadcasts
+anything. Its `hello` still announces the worn person to the other collaborators, so a colleague on
+the trip can see them present while support is the one looking. The shipped client never sends a `patch` frame (it re-reads its loader from D1 on a signal), so no
+screen loses a control. The writes that matter go through server functions and are attributed by
+`trail()` above. One limit stays: the room entry that `mirrorToRoom` writes for such a server write
+carries the worn person's id, and the operator is named only in the tenant `audit_log`. Closing the
+sockets when an operator ends the impersonation is a separate rule (§6.1, #1179).
 
 **Changing a member's role is refused by name too.** `changeMemberRoleFn` (`src/server/fns/members.ts`)
 reads the session, and a missing session counts as impersonated (`isImpersonated`), so it throws

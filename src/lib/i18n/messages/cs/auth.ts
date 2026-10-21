@@ -1,9 +1,8 @@
 /**
  * Everything the authentication screens say, in Czech.
  *
- * Authored from `../en/auth.ts` (`docs/SPEC.md` §8.9). These screens are
- * reachable with no session, so their language comes from `Accept-Language`
- * alone and two thirds of the keys are failures — the moment a reader can least
+ * Authored from `../en/auth.ts` (`docs/SPEC.md` §9 rule 9). These screens are
+ * reachable with no session, so their language comes from the visitor cookie, then `Accept-Language`, then English and two thirds of the keys are failures — the moment a reader can least
  * afford a sentence in a language they do not read.
  *
  * **Plural.** Czech `one` (1) · `few` (2–4) · `other` (0 and 5 up) · `many`
@@ -358,6 +357,9 @@ const messages = {
   'error.locked.title': 'Účet je dočasně zamčený',
   'error.locked.detail':
     'Příliš mnoho neúspěšných pokusů o ověření. Kvůli bezpečnosti je účet na pár minut zamčený.',
+  'error.twoFactorOn.title': 'Dvoufázové ověření už je zapnuté',
+  'error.twoFactorOn.detail':
+    'Nové nastavení by zastavilo fungování současného autentikátoru, proto se nic nezměnilo. Spravovat ho můžete zde.',
   'error.noTwoFactor.title': 'Dvoufázové ověření není nastavené',
   'error.noTwoFactor.detail': 'Pokračujte přihlášením e-mailem a heslem.',
   'error.twoFactorExpired.title': 'Začněte znovu od přihlášení',
@@ -385,6 +387,12 @@ const messages = {
   'passkeyNotice.action': 'Spravovat přístupové klíče',
   'passkeyNotice.recovery':
     'Pokud tuto změnu nepoznáváte, změňte heslo a ukončete neznámé relace. Obnovení hesla neodebere přístupové klíče. Zkontrolujte je a odeberte ty, které nepoznáváte.',
+  'error.passwordAttemptsLocked.title': 'Potvrzení hesla je zablokováno',
+  'error.passwordAttemptsLocked.detail':
+    'V této relaci už nelze potvrdit heslo. Odhlaste se a znovu se přihlaste.',
+  'error.passwordResultUnknown.title': 'Zkontrolujte nastavení zabezpečení',
+  'error.passwordResultUnknown.detail':
+    'Změna se mohla uložit. Nechte tuto relaci otevřenou, dokud se nebudete moci znovu přihlásit. Pokud jste měnili heslo, zkuste nové. Pokud jste nahrazovali záložní kódy, staré už nemusí fungovat; pomocí ověřovací aplikace nebo jiné přihlášené relace vygenerujte novou sadu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

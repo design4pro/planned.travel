@@ -73,6 +73,16 @@ const BY_CODE: Record<string, AuthMessage | undefined> = {
     'auth.error.credentials.detail',
     'danger',
   ),
+  PASSWORD_ATTEMPTS_RESULT_UNKNOWN: alert(
+    'auth.error.passwordResultUnknown.title',
+    'auth.error.passwordResultUnknown.detail',
+    'warning',
+  ),
+  PASSWORD_ATTEMPTS_LOCKED: alert(
+    'auth.error.passwordAttemptsLocked.title',
+    'auth.error.passwordAttemptsLocked.detail',
+    'warning',
+  ),
   INVALID_PASSWORD: alert(
     'auth.error.password.title',
     'auth.error.password.detail',
@@ -139,6 +149,11 @@ const BY_CODE: Record<string, AuthMessage | undefined> = {
   ACCOUNT_TEMPORARILY_LOCKED: alert(
     'auth.error.locked.title',
     'auth.error.locked.detail',
+    'warning',
+  ),
+  TWO_FACTOR_ALREADY_ENABLED: alert(
+    'auth.error.twoFactorOn.title',
+    'auth.error.twoFactorOn.detail',
     'warning',
   ),
   TWO_FACTOR_NOT_ENABLED: alert(

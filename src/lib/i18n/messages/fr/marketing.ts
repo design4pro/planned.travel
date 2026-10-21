@@ -78,13 +78,13 @@ const messages = {
 
   'landing.plans.title': 'Commencez gratuitement. Payez quand ça le mérite.',
   'landing.plans.lede':
-    'Toutes les formules incluent le planning quotidien, la carte, les budgets et les listes à emporter. Les formules payantes - à partir de {price} par mois - débloquent les voyages illimités, les réservations, le carnet, les cartes hors ligne et les exports.',
+    'Toutes les formules incluent le planning quotidien, la carte, les budgets et les listes à emporter. Les formules payantes - à partir de {price} par mois - débloquent les voyages illimités, les réservations, le carnet et les exports.',
   'landing.plans.ledeFree':
-    'Toutes les formules incluent le planning quotidien, la carte, les budgets et les listes à emporter. Les formules payantes débloquent les voyages illimités, les réservations, le carnet, les cartes hors ligne et les exports.',
+    'Toutes les formules incluent le planning quotidien, la carte, les budgets et les listes à emporter. Les formules payantes débloquent les voyages illimités, les réservations, le carnet et les exports.',
   'landing.plans.compare': 'Comparer chaque limite, ligne par ligne',
   'landing.questions.title': 'Des questions, des réponses nettes',
   'landing.questions.lede':
-    'Les six choses que les gens veulent vraiment savoir avant de commencer.',
+    'Les cinq choses que les gens veulent vraiment savoir avant de commencer.',
   'cta.heading': 'Votre prochain voyage mérite déjà d’être bien préparé',
   'cta.lede':
     'Deux voyages, toute la carte, l’itinéraire et les listes à emporter : gratuitement, sans carte et sans compte à rebours.',
@@ -95,9 +95,6 @@ const messages = {
   'landing.faq.phone.q': 'Est-ce que ça marche bien sur téléphone ?',
   'landing.faq.phone.a':
     'Oui. Les mises en page mobiles sont dessinées à part, et non compressées depuis celles de bureau, et c’est un site web : il n’y a rien à installer ni à maintenir à jour.',
-  'landing.faq.offline.q': 'Puis-je utiliser la carte sans réseau ?',
-  'landing.faq.offline.a':
-    'Avec {solo} et {crew}, vous pouvez télécharger une région avant de décoller, donc la carte s’affiche encore quand vous atterrissez sans données. Modifier le voyage lui-même demande une connexion.',
   'landing.faq.privacy.q': 'Qui peut voir mon voyage ?',
   'landing.faq.privacy.a':
     'Un voyage appartient à un seul espace de travail, et seules les personnes invitées dans cet espace peuvent l’ouvrir. Rien n’est public, il n’y a aucun fil de découverte, et rien n’est partagé avec qui que ce soit par défaut.',
@@ -268,8 +265,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Tous les modules de préparation',
   'pricing.feature.solo.modulesDetail':
     'Réservations, carnet, budgets, bagages',
-  'pricing.feature.solo.offlineDetail':
-    'Téléchargez les régions avant de décoller',
   'pricing.feature.crew.membersDetail':
     'Facturé par membre, modifiable à tout moment',
   'pricing.feature.crew.realtimeDetail':

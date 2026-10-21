@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { commitLanguage, localeInForce } from '../language-commit'
+import { commitLanguage, localeInForce } from '../commit-language'
 
-import type { LanguageCommitDeps, LanguageOverride } from '../language-commit'
+import type { LanguageCommitDeps, LanguageOverride } from '../commit-language'
 import type { Translate } from '#/lib/i18n'
 
 /**

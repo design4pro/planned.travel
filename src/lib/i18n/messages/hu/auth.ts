@@ -1,13 +1,12 @@
 /**
  * Everything the authentication screens say, in Hungarian.
  *
- * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §8.9
+ * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §9 rule 9
  * forbid deriving a catalogue from the reference project's AGPL translations, so
  * every sentence here was written against our English source.
  *
  * These are the only screens a traveller reaches with no session, so their
- * language comes purely from `Accept-Language` and there is no stored preference
- * to correct a bad guess with. Two thirds of the keys are validation messages
+ * language comes from the visitor cookie, then `Accept-Language`, then English. Two thirds of the keys are validation messages
  * and failure alerts, which surface exactly when a reader can least afford a
  * sentence in a language they do not read.
  *
@@ -368,6 +367,9 @@ const messages = {
   'error.locked.title': 'A fiók átmenetileg zárolva',
   'error.locked.detail':
     'Túl sok sikertelen ellenőrzési kísérlet. Biztonsági okból néhány percre zároltuk ezt a fiókot.',
+  'error.twoFactorOn.title': 'A kétlépcsős hitelesítés már be van kapcsolva',
+  'error.twoFactorOn.detail':
+    'Az újbóli beállítás miatt a jelenlegi hitelesítő alkalmazásod nem működne tovább, ezért semmit sem módosítottunk. Itt kezelheted.',
   'error.noTwoFactor.title': 'A kétfaktoros hitelesítés nincs beállítva',
   'error.noTwoFactor.detail':
     'A folytatáshoz jelentkezzen be az e-mail-címével és a jelszavával.',
@@ -396,6 +398,12 @@ const messages = {
   'passkeyNotice.action': 'Hozzáférési kulcsok kezelése',
   'passkeyNotice.recovery':
     'Ha nem ismered fel ezt a módosítást, változtasd meg a jelszavad, és zárd be az ismeretlen munkameneteket. A jelszó visszaállítása nem távolítja el a hozzáférési kulcsokat. Ellenőrizd őket, és távolítsd el az ismeretleneket.',
+  'error.passwordAttemptsLocked.title': 'A jelszó megerősítése zárolva',
+  'error.passwordAttemptsLocked.detail':
+    'Ebben a munkamenetben már nem erősítheted meg a jelszavad. Jelentkezz ki, majd jelentkezz be újra.',
+  'error.passwordResultUnknown.title': 'Ellenőrizd a biztonsági beállításokat',
+  'error.passwordResultUnknown.detail':
+    'A módosítás mentése megtörténhetett. Tartsd nyitva ezt a munkamenetet, amíg újra be nem tudsz jelentkezni. Ha jelszót módosítottál, próbáld az újat. Ha lecserélted a tartalék kódokat, a régiek már nem biztos, hogy működnek; a hitelesítő alkalmazásoddal vagy egy másik bejelentkezett munkamenetben hozz létre új kódokat.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

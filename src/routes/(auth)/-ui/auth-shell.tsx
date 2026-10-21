@@ -27,7 +27,7 @@
  * with no rule of its own; what does need saying is the art. The diagonal wash,
  * the corner bloom and the climbing route all point the way reading travels, so
  * each one is mirrored under `rtl:` rather than left pointing back at a reader
- * who has just arrived (`docs/SPEC.md` §8.4 - a designed layout, not a flipped
+ * who has just arrived (`docs/SPEC.md` §9 rule 4 - a designed layout, not a flipped
  * one).
  */
 import * as React from 'react'
@@ -38,7 +38,7 @@ import { Wordmark } from '#/components/layout/brand'
 import { ThemeToggle } from '#/components/layout/theme-toggle'
 import { SectionLabel, Separator } from '#/components/ui'
 import { cn } from '#/lib/cn'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { MessageKey } from '#/lib/i18n'
 import type { ReactNode } from 'react'
@@ -290,19 +290,24 @@ export function AuthShell({
    * happened. Moving focus to the new heading is the same move a router makes
    * on a navigation, and the heading is where the answer is written.
    *
+   * A translated heading is the same screen, so a locale change keeps focus.
    * Never on first paint, which is why the ref is consulted rather than the
    * effect simply run: four of the seven screens autofocus a field, and
    * stealing that focus would be a worse bug than the one this fixes.
    */
   const headingRef = React.useRef<HTMLHeadingElement>(null)
   const painted = React.useRef(false)
+  const locale = useLocale()
+  const previousLocale = React.useRef(locale)
   React.useEffect(() => {
+    const localeChanged = previousLocale.current !== locale
+    previousLocale.current = locale
     if (!painted.current) {
       painted.current = true
       return
     }
-    headingRef.current?.focus()
-  }, [heading])
+    if (!localeChanged) headingRef.current?.focus()
+  }, [heading, locale])
 
   /**
    * One measure for the card, and — once the form track is wide enough for the
@@ -374,7 +379,7 @@ export function AuthShell({
 
           <PromiseRibbon className={cn('mx-auto w-full', measure)} />
 
-          {/* The legal pages are `src/routes/legal/**`, which SPEC §8.8 keeps in
+          {/* The legal pages are `src/routes/legal/**`, which SPEC §9 rule 8 keeps in
               English; the notice names them rather than linking them, because
               splitting one sentence into three keys would fix the English word
               order onto twenty-two other grammars. */}

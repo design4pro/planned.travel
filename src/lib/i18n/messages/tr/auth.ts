@@ -1,13 +1,12 @@
 /**
  * Everything the authentication screens say, in Turkish.
  *
- * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §8.9
+ * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §9 rule 9
  * forbid deriving a catalogue from the reference project's AGPL translations, so
  * every sentence here was written against our English source.
  *
  * These are the only screens a traveller reaches with no session, so their
- * language comes purely from `Accept-Language` and there is no stored preference
- * to correct a bad guess with. Two thirds of the keys are validation messages
+ * language comes from the visitor cookie, then `Accept-Language`, then English. Two thirds of the keys are validation messages
  * and failure alerts, which appear exactly when a reader can least afford a
  * sentence in a language they do not read.
  *
@@ -353,6 +352,9 @@ const messages = {
   'error.locked.title': 'Hesap geçici olarak kilitli',
   'error.locked.detail':
     'Çok fazla başarısız doğrulama denemesi. Güvenliğiniz için bu hesap birkaç dakika kilitli.',
+  'error.twoFactorOn.title': 'İki faktörlü kimlik doğrulama zaten açık',
+  'error.twoFactorOn.detail':
+    'Yeniden ayarlamak mevcut doğrulayıcının çalışmasını durduracağı için hiçbir şey değiştirilmedi. Buradan yönetebilirsin.',
   'error.noTwoFactor.title': 'İki adımlı doğrulama kurulmamış',
   'error.noTwoFactor.detail':
     'Devam etmek için e-postanız ve şifrenizle giriş yapın.',
@@ -381,6 +383,12 @@ const messages = {
   'passkeyNotice.action': 'Geçiş anahtarlarını yönet',
   'passkeyNotice.recovery':
     'Bu değişikliği tanımıyorsanız parolanızı değiştirin ve tanımadığınız oturumları sonlandırın. Parolayı sıfırlamak geçiş anahtarlarını kaldırmaz. Geçiş anahtarlarınızı inceleyin ve tanımadıklarınızı kaldırın.',
+  'error.passwordAttemptsLocked.title': 'Parola doğrulama kilitlendi',
+  'error.passwordAttemptsLocked.detail':
+    'Bu oturum artık parolanızı doğrulayamaz. Oturumu kapatıp yeniden giriş yapın.',
+  'error.passwordResultUnknown.title': 'Güvenlik ayarlarınızı kontrol edin',
+  'error.passwordResultUnknown.detail':
+    'Değişiklik kaydedilmiş olabilir. Yeniden giriş yapabileceğinizden emin olana kadar bu oturumu açık tutun. Parolanızı değiştirdiyseniz yenisini deneyin. Yedek kodları değiştirdiyseniz eski kodlar artık çalışmayabilir; yeni bir set oluşturmak için kimlik doğrulama uygulamanızı veya açık olan başka bir oturumu kullanın.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

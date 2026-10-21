@@ -18,6 +18,7 @@ import {
   FieldStack,
   FormAlert,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -110,6 +111,7 @@ function VerifyEmailPage() {
       await resendTo(parsed.data.email)
     },
   })
+  useRevalidateAuthErrors(form)
 
   /* ------------------------------------------------------ already verified */
 

@@ -211,7 +211,7 @@ const messages = {
   'security.password.action': 'Byt lösenord',
   'security.twoFactor.label': 'Tvåstegsverifiering',
   'security.twoFactor.onHint':
-    'Vid varje ny inloggning krävs en kod från din autentiseringsapp.',
+    'En kod från appen efterfrågas vid inloggning med e-post och lösenord, om du inte litar på webbläsaren.',
   'security.twoFactor.offHint':
     'Lägg en sexsiffrig kod från en autentiseringsapp ovanpå lösenordet.',
   'security.twoFactor.on': 'På',
@@ -400,7 +400,7 @@ const messages = {
   'billing.renewal.paused':
     'Det här abonnemanget är pausat. Återuppta det när du vill ge dig ut igen.',
   'billing.renewal.lapsed':
-    'Välj ett abonnemang nedan för att låsa upp bokningar, dagboken och offlinekartor igen.',
+    'Välj ett abonnemang nedan för att låsa upp bokningar och dagboken igen.',
   'billing.renewal.incomplete':
     'Polar väntar fortfarande på att den här betalningen ska bekräftas.',
   'billing.renewal.free':
@@ -456,8 +456,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Obegränsat med resor och platser',
   'billing.plan.solo.feature.modules':
     'Alla planeringsmoduler — bokningar, dagbok, budgetar, packning',
-  'billing.plan.solo.feature.offline':
-    'Offlinekartor som du laddar ned före avfärd',
+  'billing.plan.solo.feature.storage': '5 GB för foton och dokument',
   'billing.plan.solo.feature.export': 'Export till pdf och kalender',
   'billing.plan.crew.name': 'Grupp',
   'billing.plan.crew.tagline': 'För familjer, vänner och små lag',
@@ -598,9 +597,10 @@ const messages = {
   'passkeys.add.exists':
     'Den här enheten har redan en lösenordsnyckel för ditt konto',
   'passkeys.add.failed': 'Lösenordsnyckeln lades inte till. Försök igen.',
-  'passkeys.add.stale': 'Av säkerhetsskäl: logga in igen för att fortsätta.',
+  'passkeys.add.stale':
+    'Av säkerhetsskäl kräver hantering av lösenordsnycklar en nyligen genomförd inloggning. Om du väljer ”Logga in igen” loggas du först ut och förs sedan till inloggningssidan.',
   'passkeys.error.sessionEnded':
-    'Din session har avslutats. Logga in igen för att fortsätta.',
+    'Din session har avslutats. Logga in igen för att fortsätta hantera dina lösenordsnycklar.',
   'passkeys.signInAgain': 'Logga in igen',
   'passkeys.add.limit':
     'Du har nått gränsen på {value} lösenordsnycklar. Ta bort en för att lägga till en ny.',
@@ -639,7 +639,7 @@ const messages = {
   'passkeys.delete.cancel': 'Avbryt',
   'passkeys.delete.wrongPassword': 'Lösenordet stämmer inte.',
   'passkeys.delete.stale':
-    'Av säkerhetsskäl: logga in igen innan du tar bort en lösenordsnyckel.',
+    'Av säkerhetsskäl kräver borttagning av en lösenordsnyckel en nyligen genomförd inloggning. Om du väljer ”Logga in igen” loggas du först ut och förs sedan till inloggningssidan.',
   'passkeys.delete.removed': 'Lösenordsnyckeln togs bort',
   'passkeys.delete.failed': 'Lösenordsnyckeln togs inte bort. Försök igen.',
   'passkeys.delete.removing': 'Tar bort lösenordsnyckeln',
@@ -667,6 +667,98 @@ const messages = {
   'workspace.departure.activationFailed':
     'Du har lämnat den här arbetsytan. Öppna nästa för att fortsätta.',
   'workspace.departure.recover': 'Öppna nästa arbetsyta',
+  'twoFactor.back': 'Tillbaka till säkerhet',
+  'twoFactor.title': 'Tvåfaktorsautentisering',
+  'twoFactor.description':
+    'Lägg till ett andra steg när du loggar in med e-post och lösenord.',
+  'twoFactor.error': 'Det gick inte att läsa in dina tvåfaktorsinställningar.',
+  'twoFactor.steps.label': 'Ställ in tvåfaktor',
+  'twoFactor.steps.password': 'Bekräfta din identitet',
+  'twoFactor.steps.key': 'Lägg till i din autentiseringsapp',
+  'twoFactor.steps.confirm': 'Ange en kod',
+  'twoFactor.steps.state.done': 'Klart',
+  'twoFactor.steps.state.current': 'Aktuellt steg',
+  'twoFactor.steps.state.todo': 'Inte påbörjat',
+  'twoFactor.password.label': 'Ditt lösenord',
+  'twoFactor.password.hint': 'Vi frågar igen innan vi ändrar hur du loggar in.',
+  'twoFactor.password.submit': 'Fortsätt',
+  'twoFactor.password.pending': 'Ställer in',
+  'twoFactor.password.invalid': 'Lösenordet stämmer inte.',
+  'twoFactor.key.intro':
+    'Du behöver en autentiseringsapp på telefonen. Lägg till nyckeln och kom tillbaka hit. Tvåfaktor är inte på ännu.',
+  'twoFactor.key.matrixLabel': 'Inställningskod. Samma nyckel finns som text',
+  'twoFactor.key.matrixFailed':
+    'Vi kunde inte skapa en kod för den här nyckeln. Ange inställningsnyckeln i din app.',
+  'twoFactor.key.label': 'Inställningsnyckel',
+  'twoFactor.key.copy': 'Kopiera nyckel',
+  'twoFactor.key.copied': 'Nyckeln kopierad',
+  'twoFactor.key.copyFailed':
+    'Webbläsaren kunde inte kopiera nyckeln. Markera och kopiera den manuellt.',
+  'twoFactor.key.open': 'Öppna i din autentiseringsapp',
+  'twoFactor.key.startOver': 'Börja om',
+  'twoFactor.key.startOverHint':
+    'Om du börjar om skapas en ny nyckel. En nyckel som redan lagts till i en app slutar fungera.',
+  'twoFactor.key.next': 'Jag har lagt till den',
+  'twoFactor.code.label': 'Kod från appen',
+  'twoFactor.code.hint': 'De sex siffror som appen visar nu.',
+  'twoFactor.code.submit': 'Slå på tvåfaktor',
+  'twoFactor.code.pending': 'Kontrollerar',
+  'twoFactor.code.invalid':
+    'Koden stämde inte. Kontrollera tiden på telefonen och ange den senaste koden från appen.',
+  'twoFactor.code.unclear':
+    'Vi kunde inte avgöra om det fungerade. Ange den senaste koden för att försöka igen.',
+  'twoFactor.rateLimited.title': 'För många försök på kort tid',
+  'twoFactor.rateLimited.password':
+    'Vänta ungefär tio sekunder och försök igen. Det du skrev finns kvar.',
+  'twoFactor.rateLimited.code':
+    'Vänta upp till en minut och försök igen. Det du skrev finns kvar.',
+  'twoFactor.codes.title': 'Dina reservkoder',
+  'twoFactor.codes.body':
+    'Varje kod fungerar en gång om du tappar telefonen. De visas bara nu, så förvara dem säkert.',
+  'twoFactor.codes.copyAll': 'Kopiera alla',
+  'twoFactor.codes.copied': 'Reservkoderna kopierade',
+  'twoFactor.codes.download': 'Ladda ned som textfil',
+  'twoFactor.codes.copyFailed':
+    'Webbläsaren kunde inte kopiera koderna. Markera och kopiera dem manuellt.',
+  'twoFactor.codes.stored': 'Jag har sparat dessa reservkoder',
+  'twoFactor.codes.done': 'Färdig',
+  'twoFactor.codes.gate': 'Markera rutan för att fortsätta.',
+  'twoFactor.codes.lost':
+    'Om du lämnar sidan först kan du skapa en ny uppsättning här. Den gamla slutar fungera.',
+  'twoFactor.codes.leave.title': 'Lämna utan att spara koderna?',
+  'twoFactor.codes.leave.body':
+    'Dina reservkoder visas bara en gång. Om du lämnar nu kan du skapa en ny uppsättning här. Den gamla slutar fungera.',
+  'twoFactor.codes.leave.stay': 'Stanna här',
+  'twoFactor.codes.leave.go': 'Lämna',
+  'twoFactor.on.title': 'Tvåfaktor är på',
+  'twoFactor.on.badge': 'På',
+  'twoFactor.on.body':
+    'Vi ber om en kod från appen när du loggar in med e-post och lösenord, om du inte litar på webbläsaren. Inloggning med Google, Apple eller en passnyckel kräver ingen kod.',
+  'twoFactor.replace.action': 'Byt ut reservkoder',
+  'twoFactor.replace.title': 'Byta ut dina reservkoder?',
+  'twoFactor.replace.body':
+    'Du får en ny uppsättning. Den nuvarande slutar fungera så snart du fortsätter.',
+  'twoFactor.replace.confirm': 'Byt ut',
+  'twoFactor.replace.pending': 'Byter ut',
+  'twoFactor.nopassword.title': 'Ange ett lösenord först',
+  'twoFactor.nopassword.body':
+    'Tvåfaktor kräver ett lösenord på kontot. Nästa sida ber om din e-post och skickar en länk för att ange ett. När du gör det loggas du ut överallt. Logga in igen och kom tillbaka hit.',
+  'twoFactor.nopassword.action': 'Ange ett lösenord',
+  'twoFactor.setup.action': 'Visa inställningsnyckeln igen',
+  'twoFactor.setup.title': 'Inställningsnyckel',
+  'twoFactor.setup.body':
+    'Lägg till den här nyckeln på en annan enhet. Nyckeln på dina andra enheter fortsätter att fungera.',
+  'twoFactor.setup.done': 'Klart',
+  'twoFactor.setup.confirm': 'Visa nyckel',
+  'twoFactor.setup.pending': 'Kontrollerar',
+  'twoFactor.off.action': 'Stäng av tvåfaktorsautentisering',
+  'twoFactor.off.title': 'Stäng av tvåfaktorsautentisering?',
+  'twoFactor.off.body':
+    'Alla som har ditt lösenord kan logga in utan kod. Dina andra inloggade enheter förblir inloggade.',
+  'twoFactor.off.confirm': 'Stäng av',
+  'twoFactor.off.pending': 'Stänger av',
+  'twoFactor.off.cancel': 'Behåll på',
+  'twoFactor.off.done': 'Tvåfaktorsautentisering är avstängd',
 } satisfies TranslationOf<typeof En>
 
 export default messages

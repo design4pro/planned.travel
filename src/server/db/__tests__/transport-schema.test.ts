@@ -259,8 +259,8 @@ describe('the transport chain and airport catalogue schema', () => {
     it('releases a leg from a day that is deleted rather than deleting the leg', async () => {
       // The opposite disposition to the cascade above, and the reason the two are asserted
       // together: `transport_legs` is created by `CREATE TABLE`, so unlike
-      // `transports.arrival_day_id` — added by an `ALTER` that carries no `ON DELETE` clause — the
-      // deployed constraint is the declared one.
+      // `transports.arrival_day_id` — added by an `ALTER` whose `ON DELETE` clause drizzle-kit
+      // never wrote — the deployed constraint is the declared one.
       const { organizationId, tripId, dayId, transportId } = await seedChain()
       await harness.db.insert(transportLegs).values({
         organizationId,

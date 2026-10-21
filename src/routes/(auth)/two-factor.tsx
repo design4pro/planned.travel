@@ -1,11 +1,12 @@
 import * as React from 'react'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, redirect } from '@tanstack/react-router'
 import { useForm } from '@tanstack/react-form'
 import { KeyRound, ShieldCheck, Smartphone } from 'lucide-react'
 import { z } from 'zod'
 
 import {
   Button,
+  CodeInput,
   Checkbox,
   Field,
   Input,
@@ -17,15 +18,16 @@ import {
 import { authClient, toAuthFailure } from '#/lib/auth/client'
 import { useTranslate } from '#/lib/i18n'
 import { describeFailure } from './-lib/errors'
+import { loadAuthConfig } from './-server/config'
 import { signInHead } from './-lib/head'
 import { safeRedirect } from './-lib/redirect'
 import { AuthShell } from './-ui/auth-shell'
 import {
   AuthPanel,
-  CodeInput,
   FieldStack,
   FormAlert,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -39,6 +41,10 @@ const searchSchema = z.object({
 export const Route = createFileRoute('/(auth)/two-factor')({
   validateSearch: searchSchema,
   head: signInHead,
+  beforeLoad: async () => {
+    const config = await loadAuthConfig()
+    if (config.signedIn) throw redirect({ href: '/settings/two-factor' })
+  },
   component: TwoFactorPage,
 })
 
@@ -86,6 +92,7 @@ function TwoFactorPage() {
       handOff()
     },
   })
+  useRevalidateAuthErrors(totpForm)
 
   const backupForm = useForm({
     defaultValues: BACKUP_DEFAULTS,
@@ -106,6 +113,7 @@ function TwoFactorPage() {
       handOff()
     },
   })
+  useRevalidateAuthErrors(backupForm)
 
   return (
     <AuthShell

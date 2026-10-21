@@ -194,6 +194,8 @@ const messages = {
   'payments.empty.body':
     'Dès que quelqu’un rembourse un solde, le virement est enregistré ici.',
   /* ------------------------------------------- read-only ledger (#837) */
+  'readOnly.archived':
+    'Ce voyage est archivé. Restaurez-le avant de modifier les dépenses.',
   'readOnly.title': 'Vous pouvez consulter les coûts, pas les modifier',
   'readOnly.body':
     'Seuls les propriétaires du voyage et les personnes autorisées à le modifier peuvent ajouter, modifier ou supprimer des dépenses et enregistrer des paiements. Contactez un propriétaire si quelque chose doit changer.',

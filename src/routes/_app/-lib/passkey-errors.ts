@@ -88,6 +88,22 @@ export interface DeleteFailure {
 }
 
 export function deleteFailure(failure: AuthFailure): DeleteFailure {
+  if (failure.code === 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN') {
+    return {
+      target: 'alert',
+      notice: notice('auth.error.passwordResultUnknown.detail', 'danger', true),
+    }
+  }
+  if (failure.code === 'PASSWORD_ATTEMPTS_LOCKED') {
+    return {
+      target: 'alert',
+      notice: notice(
+        'auth.error.passwordAttemptsLocked.detail',
+        'danger',
+        true,
+      ),
+    }
+  }
   if (failure.code === PASSWORD_REQUIRED) {
     return {
       target: 'password',

@@ -2,13 +2,13 @@
  * The Start instance, and the only two things registered globally.
  *
  * `functionMiddleware` runs ahead of every server function's own middleware and of its input
- * validator, so registering the redaction boundary here covers all 73 `createServerFn` call sites
+ * validator, so registering the redaction boundary here covers every `createServerFn` call site
  * at once - including the Zod rejections that fire before a handler is entered. Doing it per call
- * site would make "a diagnostic never reaches the browser" a thing 73 places have to keep being
+ * site would make "a diagnostic never reaches the browser" a thing every call site has to keep being
  * true, which is exactly the shape of rule that stops being true.
  *
  * `requestMiddleware` carries the CSRF check, and the same argument applies twice over: a
- * per-call-site guard is a rule 73 places have to keep, and the one place that forgets is the
+ * per-call-site guard is a rule every call site has to keep, and the one place that forgets is the
  * vulnerability.
  */
 
