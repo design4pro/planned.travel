@@ -758,6 +758,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Zwei-Faktor benötigt ein Passwort für dieses Konto. Die nächste Seite fragt nach deiner E-Mail und sendet einen Link zum Festlegen. Dabei wirst du überall abgemeldet. Melde dich danach erneut an und kehre hierher zurück.',
   'twoFactor.nopassword.action': 'Passwort festlegen',
+  'twoFactor.setup.action': 'Einrichtungsschlüssel erneut anzeigen',
+  'twoFactor.setup.title': 'Einrichtungsschlüssel',
+  'twoFactor.setup.body':
+    'Füge diesen Schlüssel auf einem weiteren Gerät hinzu. Der Schlüssel auf deinen anderen Geräten funktioniert weiterhin.',
+  'twoFactor.setup.done': 'Fertig',
+  'twoFactor.setup.confirm': 'Schlüssel anzeigen',
+  'twoFactor.setup.pending': 'Wird geprüft',
   'twoFactor.off.action': 'Zwei-Faktor-Authentifizierung ausschalten',
   'twoFactor.off.title': 'Zwei-Faktor-Authentifizierung ausschalten?',
   'twoFactor.off.body':

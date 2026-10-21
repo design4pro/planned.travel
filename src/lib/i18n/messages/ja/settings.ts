@@ -706,6 +706,13 @@ const messages = {
   'twoFactor.nopassword.body':
     '二要素認証にはアカウントのパスワードが必要です。次のページでメールアドレスを入力すると、設定リンクが届きます。設定するとすべての端末でログアウトします。再度ログインしてここに戻ってください。',
   'twoFactor.nopassword.action': 'パスワードを設定',
+  'twoFactor.setup.action': '設定キーをもう一度表示',
+  'twoFactor.setup.title': '設定キー',
+  'twoFactor.setup.body':
+    'このキーを別の端末に追加します。他の端末に登録済みのキーは引き続き使えます。',
+  'twoFactor.setup.done': '完了',
+  'twoFactor.setup.confirm': 'キーを表示',
+  'twoFactor.setup.pending': '確認中',
   'twoFactor.off.action': '二要素認証をオフにする',
   'twoFactor.off.title': '二要素認証をオフにしますか？',
   'twoFactor.off.body':

@@ -759,6 +759,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Двофакторна автентифікація потребує пароля для цього облікового запису. Наступна сторінка запитає електронну пошту й надішле посилання для налаштування. Це завершить сеанси всюди. Увійдіть знову й поверніться сюди.',
   'twoFactor.nopassword.action': 'Встановити пароль',
+  'twoFactor.setup.action': 'Показати ключ налаштування знову',
+  'twoFactor.setup.title': 'Ключ налаштування',
+  'twoFactor.setup.body':
+    'Додайте цей ключ на інший пристрій. Ключ на решті пристроїв і далі працюватиме.',
+  'twoFactor.setup.done': 'Готово',
+  'twoFactor.setup.confirm': 'Показати ключ',
+  'twoFactor.setup.pending': 'Перевірка',
   'twoFactor.off.action': 'Вимкнути двофакторну автентифікацію',
   'twoFactor.off.title': 'Вимкнути двофакторну автентифікацію?',
   'twoFactor.off.body':
