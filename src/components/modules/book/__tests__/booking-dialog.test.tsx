@@ -2,6 +2,7 @@
 // scroll stubs jsdom does not implement.
 import '#/components/ui/__tests__/test-env'
 
+import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
@@ -434,21 +435,35 @@ describe('BookingDialog — a ledger write that was refused', () => {
     }
   })
 
-  function mount(booking: BookingRow | undefined, onOpenChange: () => void) {
-    const ui = (b: BookingRow | undefined) => (
-      <I18nProvider locale="en" messages={EN}>
-        <BookingDialog
-          tripId="trip-1"
-          booking={b}
-          days={DAYS}
-          currency="JPY"
-          open
-          onOpenChange={onOpenChange}
-        />
-      </I18nProvider>
+  /** Controlled like the real parent: closing the dialog unmounts its content, which raises the warning. */
+  function mount(
+    booking: BookingRow | undefined,
+    onOpenChange: (open: boolean) => void,
+  ) {
+    function Harness({ row }: { readonly row: BookingRow | undefined }) {
+      const [open, setOpen] = useState(true)
+      return (
+        <I18nProvider locale="en" messages={EN}>
+          <BookingDialog
+            tripId="trip-1"
+            booking={row}
+            days={DAYS}
+            currency="JPY"
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next)
+              onOpenChange(next)
+            }}
+          />
+        </I18nProvider>
+      )
+    }
+    const ui = (row: BookingRow | undefined, key: string) => (
+      <Harness key={key} row={row} />
     )
-    const view = render(ui(booking))
-    return { reopenOn: (b: BookingRow) => view.rerender(ui(b)) }
+    const view = render(ui(booking, 'first'))
+    // A remount with the saved row stands for the reader opening it again from the list.
+    return { reopenOn: (b: BookingRow) => view.rerender(ui(b, 'reopened')) }
   }
 
   function chooseOther(): void {
@@ -476,11 +491,16 @@ describe('BookingDialog — a ledger write that was refused', () => {
     chooseOther()
     submitTheForm()
 
-    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
+    expect(onOpenChange).toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(reservations.create).toHaveBeenCalledTimes(1)
+    // It stays until the reader closes it: it is the only record that the cost line is missing.
     expect(warning).toHaveBeenCalledWith('Saved, but not added to the costs', {
+      id: 'book-ledger-refused',
       description: 'Open the booking and save it again to add its cost line.',
-      duration: 10_000,
+      duration: Infinity,
+      cancel: { label: 'Close', onClick: expect.any(Function) },
     })
     expect(success).not.toHaveBeenCalled()
   })
@@ -535,6 +555,14 @@ describe('BookingDialog — a ledger write that was refused', () => {
       description: 'It is on the timeline now.',
     })
     expect(warning).not.toHaveBeenCalled()
+  })
+
+  it('takes the warning down when the booking is opened again', async () => {
+    vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const dismiss = vi.spyOn(toast, 'dismiss').mockReturnValue('toast')
+    mount(MUSEUM, vi.fn())
+
+    expect(dismiss).toHaveBeenCalledWith('book-ledger-refused')
   })
 
   it('updates the saved booking when it is reopened, and never creates a second one', async () => {

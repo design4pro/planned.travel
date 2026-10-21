@@ -154,8 +154,12 @@ function stopChoice(
   return null
 }
 
-/** How long the refusal warning stays up: it names the next step, so it outlives the default. */
-const LEDGER_REFUSED_TOAST_MS = 10_000
+/**
+ * The refusal warning is the only place that says a saved booking has no cost line, and it names
+ * the next step, so it stays until the reader closes it (WCAG 2.2.1) or opens a booking again. One
+ * fixed id keeps a second refusal from stacking a second copy.
+ */
+const LEDGER_REFUSED_TOAST_ID = 'book-ledger-refused'
 
 /**
  * The success toast of a write, kept back when the booking saved but its ledger write was refused:
@@ -244,6 +248,8 @@ export function BookingDialog({
   /** Saved, with its cost line's split no longer adding up: the one thing left is to say so. */
   const [splitStale, setSplitStale] = useState(false)
   const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
+  /** Set by a refused save; the warning is shown once the dialog has fully closed. */
+  const ledgerRefusedRef = useRef(false)
 
   // The save button is disabled while it saves, which drops focus to the dialog itself; the notice
   // is what the reader needs next, so it takes focus (and is read out) when it appears.
@@ -257,6 +263,8 @@ export function BookingDialog({
     if (!open) {
       return
     }
+    // Reopening a booking is the follow-up the warning asked for, and the toast would cover the form.
+    toast.dismiss(LEDGER_REFUSED_TOAST_ID)
     setDraft(
       booking === undefined
         ? newDraft(currency, initialStayDayId)
@@ -381,11 +389,8 @@ export function BookingDialog({
     if (result.ledger === 'failed') {
       // A partial success: the booking is on the trip and its cost line is not. The next save of
       // the booking adds the line, because the sync keys off the row's own expense link, so the
-      // dialog closes and the warning toast tells the reader so.
-      toast.warning(t('modules.book.toast.ledgerRefused'), {
-        description: t('modules.book.toast.ledgerRefusedBody'),
-        duration: LEDGER_REFUSED_TOAST_MS,
-      })
+      // dialog closes and `onCloseAutoFocus` raises the warning that tells the reader so.
+      ledgerRefusedRef.current = true
       onOpenChange(false)
       return
     }
@@ -455,7 +460,23 @@ export function BookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent
+        size="lg"
+        onCloseAutoFocus={() => {
+          // Until the exit animation ends the page behind is hidden from assistive technology, so a
+          // toast raised earlier may never be read out (WCAG 4.1.3).
+          if (!ledgerRefusedRef.current) {
+            return
+          }
+          ledgerRefusedRef.current = false
+          toast.warning(t('modules.book.toast.ledgerRefused'), {
+            id: LEDGER_REFUSED_TOAST_ID,
+            description: t('modules.book.toast.ledgerRefusedBody'),
+            duration: Infinity,
+            cancel: { label: t('ui.action.close'), onClick: () => {} },
+          })
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {editing
