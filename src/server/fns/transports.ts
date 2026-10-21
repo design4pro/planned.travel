@@ -25,6 +25,7 @@ import {
   listTripDays,
   listTripLegs,
   listTripTransports,
+  canWritePlan,
   requireTransportOfTrip,
   requireTrip,
   saveSearchedConnection,
@@ -230,7 +231,9 @@ export interface TransportDayOption {
 }
 
 export interface TransportDeskPayload {
-  /** Role-only capability: archived trips may still search. */
+  readonly canWrite: boolean
+  readonly isArchived: boolean
+  /** Role-only API capability; the desk hides search when saving is unavailable. */
   readonly canSearchConnections: boolean
   readonly currency: string
   readonly transports: ReadonlyArray<TransportRow>
@@ -275,6 +278,8 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
     }
 
     return {
+      canWrite: canWritePlan(trip, role),
+      isArchived: trip.isArchived,
       canSearchConnections: role === 'owner' || role === 'editor',
       currency: trip.currency,
       byMode,

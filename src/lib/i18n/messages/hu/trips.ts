@@ -287,6 +287,12 @@ const messages = {
   'book.readOnly.archived':
     'Ez az utazás archiválva van, ezért a foglalások és a szállások csak olvashatók. Állítsd vissza az utazást a módosításukhoz.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'A módosítást elutasítottuk. További módosítások előtt ellenőrizd az utazás aktuális állapotát.',
+  'transports.recovery.failed':
+    'Az utazást nem sikerült frissíteni. Módosítás előtt próbáld újra.',
+  'transports.readOnly.archived':
+    'Ez az utazás archiválva van. Állítsd vissza a közlekedés módosításához.',
   'transports.title': 'Utak',
   'transports.empty': 'Még nincs rögzítve semmi',
   'transports.count.transports': {

@@ -590,16 +590,10 @@ describe('member isolation', () => {
     })
 
     it('refuses the same reorder when the trip is handed in already resolved', async () => {
-      // `reorderDayTransports` takes an optional third argument — the trip its caller has already
-      // resolved — so that the planner's handler, which resolves it to refuse an archived trip,
-      // does not pay for the row twice. A `Trip` is a row and not a proof, so this asserts what
-      // happens when the proof is false: the row read in the owner's scope, handed in by somebody
-      // who may not see the trip at all.
+      // A row resolved in the owner's scope is not proof of visibility in the caller's scope.
+      // The optional argument cannot bypass readability or the current archive state.
       const asTheOwnerSeesIt = await requireTrip(alpha.scope, fixture.tripId)
 
-      // Still refused. The visibility guard is skipped, so the refusal comes from the role
-      // assertion behind it and says `FORBIDDEN` rather than `NotFoundError` — the one thing this
-      // argument costs, and the reason it is for a caller that has run `requireTrip` and no other.
       expect(
         await captureError(() =>
           reorderDayTransports(
@@ -612,7 +606,7 @@ describe('member isolation', () => {
             asTheOwnerSeesIt,
           ),
         ),
-      ).toBeInstanceOf(TripRoleError)
+      ).toBeInstanceOf(NotFoundError)
 
       // A trip of another workspace is refused by the tenant filter whatever is handed in.
       expect(await listTrips(stranger)).toEqual([])

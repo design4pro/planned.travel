@@ -293,6 +293,12 @@ const messages = {
   'book.readOnly.archived':
     'Questo viaggio è archiviato, quindi le prenotazioni e i soggiorni sono di sola lettura. Ripristina il viaggio per modificarli.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Questa modifica è stata rifiutata. Controlla lo stato attuale del viaggio prima di altre modifiche.',
+  'transports.recovery.failed':
+    'Non è stato possibile aggiornare il viaggio. Riprova prima di apportare modifiche.',
+  'transports.readOnly.archived':
+    'Questo viaggio è archiviato. Ripristinalo per modificare i trasporti.',
   'transports.title': 'Spostamenti',
   'transports.empty': 'Ancora nulla registrato',
   'transports.count.transports': {

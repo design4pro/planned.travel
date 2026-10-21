@@ -23,7 +23,9 @@
  * over it, and the things that *are* controls — the status, the overflow menu —
  * look like controls.
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
+import { readPublicFailure } from '#/lib/errors'
 import {
   AlertTriangle,
   ArrowRight,
@@ -44,6 +46,7 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { Locale, Translate } from '#/lib/i18n'
 import {
+  loadTransportDeskFn,
   deleteTransportFn,
   setTransportStatusFn,
 } from '#/server/fns/transports'
@@ -125,19 +128,21 @@ export interface TransportsTimelineProps {
   readonly transports: ReadonlyArray<TransportData>
   /** The trip's days: what the two day selects offer, and what a day chip reads. */
   readonly days: ReadonlyArray<TransportDayData>
+  readonly canWrite: boolean
+  readonly isArchived: boolean
   readonly canSearchConnections: boolean
   readonly currency: string
   /**
    * The reader's own display preference, read by the route beside the transport
-   * desk and handed down: a `components/modules` component never fetches and
-   * never imports from `server/`, so the booking reference below obeys a switch
-   * it is told about rather than one it goes looking for.
+   * desk and handed down. The booking reference obeys that switch; revalidating
+   * write capability after a refusal does not replace the display preference.
    *
    * Required rather than defaulted — a masking flag that can be forgotten at a
    * call site is a masking flag that leaks a code.
    */
   readonly maskCodes: boolean
   readonly newTransportOpen: boolean
+  readonly onWriteBlockedChange?: (blocked: boolean) => void
   readonly onNewTransportOpenChange: (open: boolean) => void
 }
 
@@ -150,8 +155,11 @@ export function TransportsTimeline({
   currency,
   maskCodes,
   canSearchConnections,
+  canWrite,
+  isArchived,
   newTransportOpen,
   onNewTransportOpenChange,
+  onWriteBlockedChange,
 }: TransportsTimelineProps) {
   const locale = useLocale()
   const t = useTranslate()
@@ -160,16 +168,89 @@ export function TransportsTimeline({
   const [editing, setEditing] = useState<TransportData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
 
+  const router = useRouter()
+  const noticeRef = useRef<HTMLDivElement>(null)
+  const currentTripId = useRef(tripId)
+  currentTripId.current = tripId
+  const [recovery, setRecovery] = useState<
+    'idle' | 'refreshing' | 'failed' | 'ready'
+  >('idle')
+  const [freshCapability, setFreshCapability] = useState<{
+    canWrite: boolean
+    isArchived: boolean
+  } | null>(null)
+  const writable =
+    canWrite &&
+    freshCapability?.canWrite !== false &&
+    recovery !== 'refreshing' &&
+    recovery !== 'failed'
+  const archived = freshCapability?.isArchived ?? isArchived
+
+  useEffect(() => {
+    setFreshCapability(null)
+  }, [canWrite, isArchived])
+  useEffect(() => {
+    setRecovery('idle')
+    setFreshCapability(null)
+  }, [tripId])
+  useEffect(() => {
+    if (
+      !canWrite &&
+      (editing !== null || confirm !== null || newTransportOpen)
+    ) {
+      setEditing(null)
+      setConfirm(null)
+      onNewTransportOpenChange(false)
+      noticeRef.current?.focus()
+    }
+  }, [canWrite, editing, confirm, newTransportOpen, onNewTransportOpenChange])
+  useEffect(() => {
+    if (recovery === 'ready' || recovery === 'failed')
+      noticeRef.current?.focus()
+  }, [recovery])
+
+  async function refreshAfterRefusal(): Promise<void> {
+    if (currentTripId.current !== tripId) return
+    setRecovery('refreshing')
+    setEditing(null)
+    setConfirm(null)
+    onNewTransportOpenChange(false)
+    onWriteBlockedChange?.(true)
+    try {
+      // invalidate alone can resolve even when a loader fails. Confirm capability through the
+      // server interface before allowing a new action; a retry here repeats only this read.
+      const fresh = await loadTransportDeskFn({ data: { tripId } })
+      if (currentTripId.current !== tripId) return
+      setFreshCapability({
+        canWrite: fresh.canWrite,
+        isArchived: fresh.isArchived,
+      })
+      await router.invalidate({ sync: true })
+      if (currentTripId.current !== tripId) return
+      setRecovery('ready')
+      onWriteBlockedChange?.(!fresh.canWrite)
+    } catch {
+      if (currentTripId.current !== tripId) return
+      setRecovery('failed')
+    }
+  }
+
+  function onWriteError(cause: unknown): void {
+    if (readPublicFailure(cause).kind === 'refusal') void refreshAfterRefusal()
+  }
+
   const statuses = useOptimistic<TransportStatus>()
 
   const setStatus = useAction(setTransportStatusFn, {
     failure: t('modules.transports.toast.statusFailed.title'),
     fallback: t('modules.transports.toast.statusFailed.body'),
+    onError: onWriteError,
   })
   const remove = useAction(deleteTransportFn, {
     success: t('modules.transports.toast.removed'),
     failure: t('modules.transports.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
+    onError: onWriteError,
   })
 
   const rendered = useMemo<Array<TransportData>>(
@@ -233,9 +314,33 @@ export function TransportsTimeline({
     )
   }
 
+  let noticeCopy = t('trips.transports.recovery.refused')
+  if (archived) noticeCopy = t('trips.transports.readOnly.archived')
+  if (recovery === 'failed') noticeCopy = t('trips.transports.recovery.failed')
+  const archiveNotice =
+    archived || recovery !== 'idle' ? (
+      <Alert
+        ref={noticeRef}
+        aria-busy={recovery === 'refreshing'}
+        tabIndex={-1}
+        tone={recovery === 'failed' ? 'danger' : 'neutral'}
+        className="focus-visible:outline-2 focus-visible:outline-ring"
+        actions={
+          recovery === 'failed' ? (
+            <Button onClick={() => void refreshAfterRefusal()}>
+              {t('shell.error.retry')}
+            </Button>
+          ) : undefined
+        }
+      >
+        {noticeCopy}
+      </Alert>
+    ) : null
+
   if (transports.length === 0) {
     return (
       <>
+        {archiveNotice}
         <EmptyState
           variant="dashed"
           size="lg"
@@ -244,29 +349,35 @@ export function TransportsTimeline({
           title={t('modules.transports.empty.title')}
           description={t('modules.transports.empty.body')}
           action={
-            <Button
-              variant="primary"
-              shape="pill"
-              onClick={() => onNewTransportOpenChange(true)}
-            >
-              {t('modules.transports.empty.action')}
-            </Button>
+            writable ? (
+              <Button
+                variant="primary"
+                shape="pill"
+                onClick={() => onNewTransportOpenChange(true)}
+              >
+                {t('modules.transports.empty.action')}
+              </Button>
+            ) : undefined
           }
         />
-        <TransportDialog
-          canSearchConnections={canSearchConnections}
-          tripId={tripId}
-          days={days}
-          currency={currency}
-          open={newTransportOpen}
-          onOpenChange={onNewTransportOpenChange}
-        />
+        {writable ? (
+          <TransportDialog
+            onWriteError={onWriteError}
+            canSearchConnections={canSearchConnections}
+            tripId={tripId}
+            days={days}
+            currency={currency}
+            open={newTransportOpen}
+            onOpenChange={onNewTransportOpenChange}
+          />
+        ) : null}
       </>
     )
   }
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
+      {archiveNotice}
       {summary.impossible === 0 ? null : (
         <Alert
           tone="danger"
@@ -345,6 +456,7 @@ export function TransportsTimeline({
               <li key={transport.id} className="min-w-0">
                 <TransportCard
                   transport={transport}
+                  canWrite={writable}
                   currency={currency}
                   maskCodes={maskCodes}
                   departureDay={dayNumberOf(transport.departureDayId)}
@@ -381,30 +493,35 @@ export function TransportsTimeline({
         </ol>
       )}
 
-      <TransportDialog
-        canSearchConnections={canSearchConnections}
-        tripId={tripId}
-        transport={editing ?? undefined}
-        days={days}
-        currency={currency}
-        open={newTransportOpen || editing !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setEditing(null)
-            onNewTransportOpenChange(false)
-          }
-        }}
-      />
+      {writable ? (
+        <>
+          <TransportDialog
+            onWriteError={onWriteError}
+            canSearchConnections={canSearchConnections}
+            tripId={tripId}
+            transport={editing ?? undefined}
+            days={days}
+            currency={currency}
+            open={newTransportOpen || editing !== null}
+            onOpenChange={(next) => {
+              if (!next) {
+                setEditing(null)
+                onNewTransportOpenChange(false)
+              }
+            }}
+          />
 
-      <ConfirmDialog
-        request={confirm}
-        pending={remove.pending}
-        onOpenChange={(next) => {
-          if (!next) {
-            setConfirm(null)
-          }
-        }}
-      />
+          <ConfirmDialog
+            request={confirm}
+            pending={remove.pending}
+            onOpenChange={(next) => {
+              if (!next) {
+                setConfirm(null)
+              }
+            }}
+          />
+        </>
+      ) : null}
     </div>
   )
 }
@@ -475,6 +592,7 @@ function Junction({ connection }: { connection: Connection }) {
 
 function TransportCard({
   transport,
+  canWrite,
   currency,
   maskCodes,
   departureDay,
@@ -484,6 +602,7 @@ function TransportCard({
   onDelete,
 }: {
   transport: TransportData
+  canWrite: boolean
   currency: string
   /** Whether the booking reference below is kept off the screen until it is asked for. */
   maskCodes: boolean
@@ -580,29 +699,37 @@ function TransportCard({
         >
           {transport.title}
         </h2>
-        <StatusMenu
-          current={statusOption(transport.status, t)}
-          options={statusOptions(t)}
-          label={t('modules.statusOf', { title: transport.title })}
-          onSelect={onStatus}
-        />
-        <RowMenu
-          label={t('modules.actionsFor', { name: transport.title })}
-          items={[
-            {
-              label: t('modules.transports.menu.edit'),
-              icon: <Pencil aria-hidden />,
-              onSelect: onEdit,
-            },
-            {
-              label: t('modules.transports.remove.confirm'),
-              icon: <Trash2 aria-hidden />,
-              tone: 'danger',
-              separated: true,
-              onSelect: onDelete,
-            },
-          ]}
-        />
+        {canWrite ? (
+          <StatusMenu
+            current={statusOption(transport.status, t)}
+            options={statusOptions(t)}
+            label={t('modules.statusOf', { title: transport.title })}
+            onSelect={onStatus}
+          />
+        ) : (
+          <Badge tone={statusOption(transport.status, t).tone}>
+            {statusOption(transport.status, t).label}
+          </Badge>
+        )}
+        {canWrite ? (
+          <RowMenu
+            label={t('modules.actionsFor', { name: transport.title })}
+            items={[
+              {
+                label: t('modules.transports.menu.edit'),
+                icon: <Pencil aria-hidden />,
+                onSelect: onEdit,
+              },
+              {
+                label: t('modules.transports.remove.confirm'),
+                icon: <Trash2 aria-hidden />,
+                tone: 'danger',
+                separated: true,
+                onSelect: onDelete,
+              },
+            ]}
+          />
+        ) : null}
       </div>
 
       <div className="flex min-w-0 flex-col gap-4 px-4 py-4 sm:px-5">

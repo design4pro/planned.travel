@@ -298,6 +298,12 @@ const messages = {
   'book.readOnly.archived':
     'Tato cesta je archivovaná, takže rezervace a pobyty jsou jen pro čtení. Chcete-li je změnit, cestu obnovte.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Tato změna byla odmítnuta. Před dalšími změnami zkontrolujte aktuální stav cesty.',
+  'transports.recovery.failed':
+    'Cestu se nepodařilo aktualizovat. Před provedením změn to zkuste znovu.',
+  'transports.readOnly.archived':
+    'Tato cesta je archivovaná. Obnovte ji, abyste mohli změnit dopravu.',
   'transports.title': 'Přesuny',
   'transports.empty': 'Zatím nic zaznamenáno',
   'transports.count.transports': {

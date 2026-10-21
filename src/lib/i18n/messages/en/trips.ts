@@ -436,6 +436,12 @@ const messages = {
   'book.readOnly.archived':
     'This trip is archived, so its bookings and stays are read-only. Restore the trip to change them.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'This change was refused. Review the current trip before making more changes.',
+  'transports.recovery.failed':
+    'The trip could not be refreshed. Try again before making changes.',
+  'transports.readOnly.archived':
+    'This trip is archived. Restore it to change transports.',
   'transports.title': 'Transports',
   'transports.empty': 'Nothing recorded yet',
   /**
