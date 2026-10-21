@@ -1274,7 +1274,9 @@ appends `platform.user.impersonation_ended` to `platform_audit_log` and then cal
 `auth.api.stopImpersonating` in process, restoring the admin's own session from the signed
 `admin_session` cookie the plugin set when impersonation began. It does not call the plugin's
 `/admin/stop-impersonating` endpoint directly, because §2.6 answers that path with `404`; the
-detour is what makes the second half of the impersonation lifecycle auditable.
+detour is what makes the second half of the impersonation lifecycle auditable. A successful exit
+also closes the impersonated person's open trip-room sockets, on their own devices too, because a
+socket is tied to a person and records nothing about impersonation (#1179).
 
 The bar is not dismissible. A dismissible warning about a live credential for someone else's
 account is a warning that will be dismissed.
