@@ -44,8 +44,8 @@ export function messageOf(error: unknown, fallback: string): string {
 }
 
 export interface ActionOptions<TResult> {
-  /** Toast title on success. Omit for a silent success. */
-  readonly success?: string | ((result: TResult) => string)
+  /** Toast title on success. Omit, or return `undefined` from the function, for a silent success. */
+  readonly success?: string | ((result: TResult) => string | undefined)
   /** Second line of the success toast. */
   readonly description?: string | ((result: TResult) => string)
   /** Toast title on failure. */
@@ -72,7 +72,7 @@ export interface Action<TInput, TResult> {
 }
 
 function resolve<TResult>(
-  value: string | ((result: TResult) => string) | undefined,
+  value: string | ((result: TResult) => string | undefined) | undefined,
   result: TResult,
 ): string | undefined {
   return typeof value === 'function' ? value(result) : value

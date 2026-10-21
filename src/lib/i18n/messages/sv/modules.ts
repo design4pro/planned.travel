@@ -257,6 +257,9 @@ const messages = {
   'book.toast.addFailed': 'Bokningen lades inte till',
   'book.toast.updated': 'Bokningen uppdaterad',
   'book.toast.updateFailed': 'Bokningen uppdaterades inte',
+  'book.toast.ledgerRefused': 'Sparad, men inte lagd till kostnaderna',
+  'book.toast.ledgerRefusedBody':
+    'Öppna bokningen och spara den igen för att lägga till dess kostnadsrad.',
 
   'book.emptyFacts':
     'Utöver namnet finns inget än. Öppna den för att lägga till tid, pris och bokningsnummer.',
@@ -531,10 +534,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Inte kopplad till ett stopp',
   'book.field.stopSearch': 'Sök bland stopp och dagar',
   'book.field.stopEmpty': 'Inget stopp matchar',
-  'book.ledger.refused.title': 'Sparad, men inte lagd till kostnaderna',
-  'book.ledger.refused.body':
-    'Bokningen ligger på resan. Att lägga dess kostnadsrad till resans kostnader gick inte — försök med den halvan igen.',
-  'book.action.ledgerRetry': 'Lägg till i kostnaderna',
   'book.ledger.splitStale.title':
     'Sparat, men uppdelningen stämmer inte längre',
   'book.ledger.splitStale.body':

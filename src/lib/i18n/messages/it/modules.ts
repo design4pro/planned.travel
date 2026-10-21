@@ -270,6 +270,9 @@ const messages = {
   'book.toast.addFailed': 'La prenotazione non è stata aggiunta',
   'book.toast.updated': 'Prenotazione aggiornata',
   'book.toast.updateFailed': 'La prenotazione non è stata aggiornata',
+  'book.toast.ledgerRefused': 'Salvato, ma non aggiunto ai costi',
+  'book.toast.ledgerRefusedBody':
+    'Apri la prenotazione e salvala di nuovo per aggiungere la sua voce di costo.',
 
   'book.emptyFacts':
     'A parte il nome non c’è ancora nulla. Aprilo per aggiungere l’ora, il prezzo e il numero di conferma.',
@@ -557,10 +560,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Non legata a una fermata',
   'book.field.stopSearch': 'Cerca fra fermate e giorni',
   'book.field.stopEmpty': 'Nessuna fermata corrisponde',
-  'book.ledger.refused.title': 'Salvato, ma non aggiunto ai costi',
-  'book.ledger.refused.body':
-    'La prenotazione è sul viaggio. Aggiungere la sua voce ai costi del viaggio non è andata a buon fine — riprova quella metà.',
-  'book.action.ledgerRetry': 'Aggiungilo ai costi',
   'book.ledger.splitStale.title': 'Salvato, ma la divisione non torna più',
   'book.ledger.splitStale.body':
     'La prenotazione e il suo nuovo prezzo sono salvati, ma la divisione di questa voce di costo non ha potuto seguire il nuovo totale. Apri la voce in Costi e correggi la divisione.',

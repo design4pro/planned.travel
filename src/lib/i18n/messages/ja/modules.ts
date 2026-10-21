@@ -250,6 +250,9 @@ const messages = {
   'book.toast.addFailed': '予約を追加できませんでした',
   'book.toast.updated': '予約を更新しました',
   'book.toast.updateFailed': '予約を更新できませんでした',
+  'book.toast.ledgerRefused': '保存しましたが、費用には入れられませんでした',
+  'book.toast.ledgerRefusedBody':
+    '予約を開いてもう一度保存すると、費用の行が追加されます。',
 
   'book.emptyFacts':
     '名前以外はまだ何も入っていません。開いて時刻・料金・確認番号を足してください。',
@@ -512,10 +515,6 @@ const messages = {
   'book.field.stopPlaceholder': '立ち寄り先なし',
   'book.field.stopSearch': '立ち寄り先と日を検索',
   'book.field.stopEmpty': '該当する立ち寄り先はありません',
-  'book.ledger.refused.title': '保存しましたが、費用には入れられませんでした',
-  'book.ledger.refused.body':
-    '予約は旅程に入りました。費用の行を旅程の費用に追加できませんでした — その半分だけやり直してください。',
-  'book.action.ledgerRetry': '費用に追加する',
   'book.ledger.splitStale.title':
     '保存しましたが、割り勘の合計が合わなくなりました',
   'book.ledger.splitStale.body':

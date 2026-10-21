@@ -237,6 +237,9 @@ const messages = {
   'book.toast.addFailed': '未能新增該訂位',
   'book.toast.updated': '已更新訂位',
   'book.toast.updateFailed': '未能更新該訂位',
+  'book.toast.ledgerRefused': '已儲存，但未計入費用',
+  'book.toast.ledgerRefusedBody':
+    '開啟該訂位並再次儲存，即可新增它的費用項目。',
 
   'book.emptyFacts': '除了名稱還什麼都沒有。打開它，補上時間、價格和確認號。',
   'book.onItinerary': '已在行程中：{day}',
@@ -492,10 +495,6 @@ const messages = {
   'book.field.stopPlaceholder': '不關聯停留點',
   'book.field.stopSearch': '在停留點和日期中搜尋',
   'book.field.stopEmpty': '沒有相符的停留點',
-  'book.ledger.refused.title': '已儲存，但未計入費用',
-  'book.ledger.refused.body':
-    '預訂已在行程裡。把它的費用列加進行程費用沒有成功 — 請重試這一半。',
-  'book.action.ledgerRetry': '加入費用',
   'book.ledger.splitStale.title': '已儲存，但分攤已與總額不符',
   'book.ledger.splitStale.body':
     '預訂及其新價格已儲存，但這筆費用的分攤無法跟隨新的總額。請在「費用」中開啟這一項並修正分攤。',

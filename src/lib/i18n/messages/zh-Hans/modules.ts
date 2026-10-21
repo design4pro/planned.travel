@@ -237,6 +237,9 @@ const messages = {
   'book.toast.addFailed': '未能添加该预订',
   'book.toast.updated': '已更新预订',
   'book.toast.updateFailed': '未能更新该预订',
+  'book.toast.ledgerRefused': '已保存，但未计入费用',
+  'book.toast.ledgerRefusedBody':
+    '打开该预订并再次保存，即可添加它的费用条目。',
 
   'book.emptyFacts': '除了名称还什么都没有。打开它，补上时间、价格和确认号。',
   'book.onItinerary': '已在行程中：{day}',
@@ -492,10 +495,6 @@ const messages = {
   'book.field.stopPlaceholder': '不关联停留点',
   'book.field.stopSearch': '在停留点和日期中搜索',
   'book.field.stopEmpty': '没有匹配的停留点',
-  'book.ledger.refused.title': '已保存，但未计入费用',
-  'book.ledger.refused.body':
-    '预订已在行程里。把它的费用行加进行程费用没有成功 — 请重试这一半。',
-  'book.action.ledgerRetry': '加入费用',
   'book.ledger.splitStale.title': '已保存，但分摊已与总额不符',
   'book.ledger.splitStale.body':
     '预订及其新价格已保存，但这笔费用的分摊无法跟随新的总额。请在“费用”中打开这一项并修正分摊。',
