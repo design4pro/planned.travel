@@ -8,6 +8,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { airports } from '#/server/db/schema'
 import {
   NotFoundError,
   addTripMember,
@@ -15,6 +16,7 @@ import {
   createPlace,
   createTrip,
   listTripDays,
+  requireTrip,
   updateOrganizationSettings,
 } from '#/server/repos'
 import {
@@ -28,6 +30,7 @@ import { OSLO_DAILY } from '#/server/weather/__tests__/nasa-power.fixture'
 import { OSLO_FORECAST_DETAIL } from '#/server/weather/__tests__/locationforecast-detail.fixture'
 import { OSLO_FORECAST } from '#/server/weather/__tests__/locationforecast.fixture'
 
+import type { NewAirport } from '#/server/db/types'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
 import type { WeatherRuntimeOptions } from '#/server/weather/bindings'
@@ -340,6 +343,138 @@ describe('loadTripWeather', () => {
       ),
     )
     expect(withSun.some((day) => day.status === 'ok' && day.sun)).toBe(true)
+  })
+
+  describe('a trip with no zone of its own', () => {
+    /** Gardermoen, about 37 km from the hotel: Norway has one time zone, so the catalogue zones it. */
+    const GARDERMOEN: NewAirport = {
+      id: 'apt_osl',
+      iataCode: 'OSL',
+      name: 'Oslo Gardermoen',
+      countryCode: 'NO',
+      timezone: 'Europe/Oslo',
+      lat: 60.1939,
+      lng: 11.1004,
+    }
+
+    async function stock(...rows: Array<NewAirport>) {
+      await owner.db.insert(airports).values(rows)
+    }
+
+    /** The fixture's Oslo trip, made again with the given zone and the hotel's country. */
+    async function oslo(options: {
+      timezone?: string
+      countryCode?: string
+    }): Promise<string> {
+      const trip = await createTrip(owner, {
+        title: 'Zone derivation',
+        startDate: '2026-10-08',
+        endDate: '2026-10-10',
+        currency: 'NOK',
+        ...(options.timezone === undefined
+          ? {}
+          : { timezone: options.timezone }),
+      })
+      const days = await listTripDays(owner, trip.id)
+      const place = await createPlace(owner, {
+        tripId: trip.id,
+        name: 'Hotel',
+        lat: 59.9139,
+        lng: 10.7522,
+        countryCode: options.countryCode,
+      })
+      await createAccommodation(owner, {
+        tripId: trip.id,
+        startDayId: days[0].id,
+        endDayId: days[2].id,
+        placeId: place.id,
+        name: 'Hotel',
+      })
+      return trip.id
+    }
+
+    const read = async (id: string) =>
+      (await loadTripWeather(owner, { tripId: id }, ports())).days.map(
+        ({ dayId: _dayId, ...rest }) => rest,
+      )
+
+    beforeEach(async () => {
+      // The free plan holds two trips and the fixture already has one.
+      await subscribeTenant(owner, 'solo')
+    })
+
+    it('shows sunrise and sunset in the clock of the nearest airport’s zone, and buckets the days in it', async () => {
+      await stock(GARDERMOEN)
+      const derived = await oslo({})
+      const stored = await oslo({ timezone: 'Europe/Oslo' })
+
+      expect(await read(derived)).toEqual(await read(stored))
+      const last = (await read(derived))[2]
+      if (last.status !== 'ok') throw new Error('The last day has a stay.')
+      expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+    })
+
+    it('writes nothing: the trip still has no zone afterwards', async () => {
+      await stock(GARDERMOEN)
+      const id = await oslo({})
+
+      await read(id)
+
+      expect((await requireTrip(owner, id)).timezone).toBeNull()
+    })
+
+    it('lets the stored zone win over the derived one', async () => {
+      await stock({ ...GARDERMOEN, timezone: 'Asia/Tokyo' })
+      const id = await oslo({ timezone: 'Europe/Oslo' })
+
+      const last = (await read(id))[2]
+      if (last.status !== 'ok') throw new Error('The last day has a stay.')
+      expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+    })
+
+    it.each([
+      ['no airport within 100 km', [{ ...GARDERMOEN, lat: 61.5 }], undefined],
+      [
+        'an unzoned airport nearest, though a zoned one is in reach',
+        [
+          {
+            ...GARDERMOEN,
+            id: 'apt_near',
+            iataCode: 'NEA',
+            timezone: null,
+            lat: 59.95,
+            lng: 10.75,
+          },
+          GARDERMOEN,
+        ],
+        undefined,
+      ],
+      ['a country other than the airport’s', [GARDERMOEN], 'SE'],
+      [
+        'a zone name Intl does not accept',
+        [{ ...GARDERMOEN, timezone: 'Mars/Olympus_Mons' }],
+        undefined,
+      ],
+      ['no airport at all', [], undefined],
+    ])(
+      'gives no sun times and groups in UTC for %s',
+      async (_, rows, countryCode) => {
+        if (rows.length > 0) await stock(...rows)
+        const id = await oslo({ countryCode })
+        const utc = await oslo({ timezone: 'UTC' })
+
+        const unzoned = await read(id)
+
+        expect(unzoned).toEqual(
+          (await read(utc)).map((day) =>
+            day.status === 'ok' ? { status: 'ok', reading: day.reading } : day,
+          ),
+        )
+        expect(unzoned.some((day) => day.status === 'ok' && day.sun)).toBe(
+          false,
+        )
+      },
+    )
   })
 
   it('is not-found for a private trip the caller is not on, before the runtime is built', async () => {

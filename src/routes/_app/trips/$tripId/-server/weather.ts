@@ -28,6 +28,7 @@ import {
   requireTrip,
 } from '#/server/repos'
 import { weatherRuntime } from '#/server/weather/bindings'
+import { deriveTripZone } from '#/server/weather/trip-zone'
 import { resolveTripWeather } from '#/server/weather/weather'
 import { appScope } from '../../../-server/context'
 
@@ -60,9 +61,10 @@ export interface TripWeatherPorts {
 }
 
 /**
- * The outcome as it goes on the wire. A trip with no zone of its own has days bucketed in UTC, and
- * sunrise and sunset in UTC are the wrong clock for the place, so its days carry no `sun`: the
- * panel then draws neither row rather than a time that can be hours off.
+ * The outcome as it goes on the wire. A trip with no zone at all - neither its own nor one derived
+ * from its place - has days bucketed in UTC, and sunrise and sunset in UTC are the wrong clock for
+ * the place, so its days carry no `sun`: the panel then draws neither row rather than a time that
+ * can be hours off.
  */
 function withSunOf(outcome: WeatherOutcome | undefined, hasZone: boolean) {
   if (outcome === undefined) {
@@ -91,6 +93,11 @@ export async function loadTripWeather(
     getSubscription(scope),
   ])
 
+  // The trip's own zone wins. Without one, the zone of the airport nearest its first located day,
+  // when that can be said safely (`trip-zone.ts`); nothing is stored. The same zone feeds the day
+  // bucketing, today and the sun times, so the three cannot disagree.
+  const zone = trip.timezone ?? (await deriveTripZone(scope.db, locations))
+
   const runtime = ports.weather({
     organizationId: scope.ctx.organizationId,
     ceiling: resolveLimitsFromRow(subscription).rates.weather_lookups_per_month,
@@ -98,9 +105,9 @@ export async function loadTripWeather(
   const outcomes = await resolveTripWeather(
     runtime,
     locations.map(({ date, location }) => ({ date, location })),
-    // The trip's own zone, UTC when it has none: never the reader's, so two members of one trip
+    // The trip's zone, UTC when there is none: never the reader's, so two members of one trip
     // see one answer.
-    trip.timezone ?? 'UTC',
+    zone ?? 'UTC',
     { recorded: input.recorded === true, estimate: input.estimate === true },
   )
 
@@ -108,7 +115,7 @@ export async function loadTripWeather(
     distanceUnit: settings.distanceUnit,
     days: locations.map(({ dayId }, index) => ({
       dayId,
-      ...withSunOf(outcomes[index], trip.timezone !== null),
+      ...withSunOf(outcomes[index], zone !== null),
     })),
   }
 }

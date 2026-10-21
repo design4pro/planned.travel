@@ -48,7 +48,10 @@ import {
 import {
   AIRPORT_MATCH_LIMIT,
   AIRPORT_TERM_MAX_LENGTH,
+  EARTH_RADIUS_KM,
+  NEAREST_AIRPORT_RADIUS_KM,
   findAirportByCode,
+  findNearestAirport,
   searchAirports,
 } from '../airports'
 import type { DatabaseSync } from 'node:sqlite'
@@ -527,5 +530,153 @@ describe('findAirportByCode', () => {
     const { db } = await catalogue()
 
     await expect(findAirportByCode(db, '   ')).resolves.toBeNull()
+  })
+})
+
+describe('findNearestAirport', () => {
+  const ORIGIN = { lat: 0, lng: 0 }
+
+  /** A degree of latitude is the same length everywhere on the sphere the distance is read on. */
+  const degreesOfLatitude = (km: number) =>
+    (km / EARTH_RADIUS_KM) * (180 / Math.PI)
+
+  it('answers the nearest airport, whatever order the table holds them in', async () => {
+    const { db } = await catalogue()
+
+    // Both are in reach; Heathrow is the nearer, and Gatwick is the first row.
+    const found = await findNearestAirport(db, { lat: 51.55, lng: -0.3 })
+
+    expect(found?.id).toBe('apt_lhr')
+  })
+
+  it('answers null over an empty catalogue and for a point nothing is near', async () => {
+    const { db } = await catalogue([])
+    await expect(findNearestAirport(db, ORIGIN)).resolves.toBeNull()
+
+    const { db: populated } = await catalogue()
+    // Mid-Atlantic.
+    await expect(
+      findNearestAirport(populated, { lat: 35, lng: -40 }),
+    ).resolves.toBeNull()
+  })
+
+  it('keeps an airport exactly at the radius and drops one a metre beyond it', async () => {
+    const { db } = await catalogue([
+      airport({
+        id: 'apt_edge',
+        iataCode: 'EDG',
+        lat: degreesOfLatitude(NEAREST_AIRPORT_RADIUS_KM),
+        lng: 0,
+      }),
+    ])
+
+    expect((await findNearestAirport(db, ORIGIN))?.id).toBe('apt_edge')
+    await expect(
+      findNearestAirport(db, {
+        lat: -degreesOfLatitude(0.001),
+        lng: 0,
+      }),
+    ).resolves.toBeNull()
+  })
+
+  it('breaks a tie between two airports at one distance by IATA code', async () => {
+    const { db } = await catalogue([
+      airport({ id: 'apt_b', iataCode: 'BBB', lat: 0.5, lng: 0 }),
+      airport({ id: 'apt_a', iataCode: 'AAA', lat: -0.5, lng: 0 }),
+    ])
+
+    expect((await findNearestAirport(db, ORIGIN))?.id).toBe('apt_a')
+  })
+
+  it('is not taken by a nearer airport that has no zone: the nearest of any kind answers', async () => {
+    const { db } = await catalogue([
+      airport({ id: 'apt_near', iataCode: 'NEA', lat: 0.1, lng: 0 }),
+      airport({
+        id: 'apt_far',
+        iataCode: 'FAR',
+        lat: 0.5,
+        lng: 0,
+        timezone: 'Europe/Warsaw',
+        countryCode: 'PL',
+      }),
+    ])
+
+    const found = await findNearestAirport(db, ORIGIN)
+
+    expect(found?.id).toBe('apt_near')
+    expect(found?.timezone).toBeNull()
+  })
+
+  it('ignores a row with no coordinate', async () => {
+    const { db } = await catalogue([
+      airport({ id: 'apt_blind', iataCode: 'BLD', lat: null, lng: null }),
+    ])
+
+    await expect(findNearestAirport(db, ORIGIN)).resolves.toBeNull()
+  })
+
+  it('widens its longitude window with latitude, so a far-north airport 99 km east is found', async () => {
+    // At 70°N a degree of longitude is 38 km, so 99 km is 2.6° of longitude. A window of the
+    // latitude's width (0.9°) would never reach it.
+    const lat = 70
+    const lng =
+      (99 / (EARTH_RADIUS_KM * Math.cos((lat * Math.PI) / 180))) *
+      (180 / Math.PI)
+    const { db } = await catalogue([
+      airport({ id: 'apt_north', iataCode: 'NTH', lat, lng }),
+    ])
+
+    expect((await findNearestAirport(db, { lat, lng: 0 }))?.id).toBe(
+      'apt_north',
+    )
+  })
+
+  it('finds an airport across the antimeridian from either side', async () => {
+    const { db } = await catalogue([
+      airport({ id: 'apt_east', iataCode: 'EST', lat: 0, lng: 179.9 }),
+      airport({ id: 'apt_west', iataCode: 'WST', lat: 5, lng: -179.9 }),
+    ])
+
+    expect((await findNearestAirport(db, { lat: 0, lng: -179.95 }))?.id).toBe(
+      'apt_east',
+    )
+    expect((await findNearestAirport(db, { lat: 5, lng: 179.95 }))?.id).toBe(
+      'apt_west',
+    )
+  })
+
+  it('finds an airport on the far side of a pole, where a degree of longitude is nothing', async () => {
+    const { db } = await catalogue([
+      airport({ id: 'apt_pole', iataCode: 'POL', lat: 89.9, lng: 180 }),
+    ])
+
+    expect((await findNearestAirport(db, { lat: 89.9, lng: 0 }))?.id).toBe(
+      'apt_pole',
+    )
+  })
+
+  it('asks the database nothing for a coordinate that is not on the globe', async () => {
+    const { db, queries } = await catalogue()
+
+    await expect(
+      findNearestAirport(db, { lat: Number.NaN, lng: 0 }),
+    ).resolves.toBeNull()
+    await expect(
+      findNearestAirport(db, { lat: 91, lng: 0 }),
+    ).resolves.toBeNull()
+    await expect(
+      findNearestAirport(db, { lat: 0, lng: 181 }),
+    ).resolves.toBeNull()
+    expect(queries).toEqual([])
+  })
+
+  it('reads `airports` and no tenant table', async () => {
+    const { db, queries } = await catalogue()
+
+    await findNearestAirport(db, { lat: 51.5, lng: -0.3 })
+
+    expect(queries).toHaveLength(1)
+    expect(queries[0]).toContain('airports')
+    expect(queries[0]).not.toContain('organization_id')
   })
 })
