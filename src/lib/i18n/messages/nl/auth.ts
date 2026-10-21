@@ -393,6 +393,12 @@ const messages = {
   'passkeyNotice.action': 'Passkeys beheren',
   'passkeyNotice.recovery':
     'Herken je deze wijziging niet, wijzig dan je wachtwoord en beëindig onbekende sessies. Een wachtwoordreset verwijdert geen passkeys. Controleer je passkeys en verwijder degene die je niet herkent.',
+  'error.passwordAttemptsLocked.title': 'Wachtwoordbevestiging geblokkeerd',
+  'error.passwordAttemptsLocked.detail':
+    'Deze sessie kan je wachtwoord niet meer bevestigen. Log uit en log opnieuw in.',
+  'error.passwordResultUnknown.title': 'Controleer je beveiligingsinstellingen',
+  'error.passwordResultUnknown.detail':
+    'De wijziging is mogelijk opgeslagen. Houd deze sessie open totdat je opnieuw kunt inloggen. Heb je je wachtwoord gewijzigd, probeer dan het nieuwe. Heb je back-upcodes vervangen, dan werkt de oude set mogelijk niet meer; gebruik je authenticator of een andere ingelogde sessie om een nieuwe set te maken.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

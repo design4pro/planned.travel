@@ -384,6 +384,12 @@ const messages = {
   'passkeyNotice.action': 'Geçiş anahtarlarını yönet',
   'passkeyNotice.recovery':
     'Bu değişikliği tanımıyorsanız parolanızı değiştirin ve tanımadığınız oturumları sonlandırın. Parolayı sıfırlamak geçiş anahtarlarını kaldırmaz. Geçiş anahtarlarınızı inceleyin ve tanımadıklarınızı kaldırın.',
+  'error.passwordAttemptsLocked.title': 'Parola doğrulama kilitlendi',
+  'error.passwordAttemptsLocked.detail':
+    'Bu oturum artık parolanızı doğrulayamaz. Oturumu kapatıp yeniden giriş yapın.',
+  'error.passwordResultUnknown.title': 'Güvenlik ayarlarınızı kontrol edin',
+  'error.passwordResultUnknown.detail':
+    'Değişiklik kaydedilmiş olabilir. Yeniden giriş yapabileceğinizden emin olana kadar bu oturumu açık tutun. Parolanızı değiştirdiyseniz yenisini deneyin. Yedek kodları değiştirdiyseniz eski kodlar artık çalışmayabilir; yeni bir set oluşturmak için kimlik doğrulama uygulamanızı veya açık olan başka bir oturumu kullanın.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

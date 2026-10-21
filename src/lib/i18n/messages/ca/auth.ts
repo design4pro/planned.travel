@@ -395,6 +395,12 @@ const messages = {
   'passkeyNotice.action': 'Gestiona les claus d’accés',
   'passkeyNotice.recovery':
     'Si no reconeixes aquest canvi, canvia la contrasenya i tanca les sessions desconegudes. Restablir la contrasenya no elimina les claus d’accés. Revisa-les i elimina les que no reconeguis.',
+  'error.passwordAttemptsLocked.title': 'Confirmació de contrasenya bloquejada',
+  'error.passwordAttemptsLocked.detail':
+    'Aquesta sessió ja no pot confirmar la teva contrasenya. Tanca la sessió i torna a iniciar-la.',
+  'error.passwordResultUnknown.title': 'Revisa la configuració de seguretat',
+  'error.passwordResultUnknown.detail':
+    'És possible que el canvi s’hagi desat. Mantén aquesta sessió oberta fins que puguis tornar a entrar. Si has canviat la contrasenya, prova la nova. Si has substituït els codis de reserva, els antics podrien deixar de funcionar; utilitza l’autenticador o una altra sessió oberta per generar-ne un conjunt nou.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

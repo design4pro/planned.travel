@@ -313,6 +313,12 @@ const messages = {
   'passkeyNotice.action': '管理通行密钥',
   'passkeyNotice.recovery':
     '如果你不认识此更改，请更改密码并结束不熟悉的会话。重置密码不会移除通行密钥。请检查通行密钥并移除不认识的密钥。',
+  'error.passwordAttemptsLocked.title': '密码确认已锁定',
+  'error.passwordAttemptsLocked.detail':
+    '此会话无法再确认你的密码。请退出登录后重新登录。',
+  'error.passwordResultUnknown.title': '请检查安全设置',
+  'error.passwordResultUnknown.detail':
+    '更改可能已保存。在确认能重新登录前，请保持此会话开启。如果你更改了密码，请尝试新密码。如果更换了备用码，旧备用码可能已失效；请使用身份验证应用或另一个已登录的会话生成一组新备用码。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

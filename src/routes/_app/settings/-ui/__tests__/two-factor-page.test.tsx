@@ -498,3 +498,39 @@ describe('two-factor settings', () => {
     ).toBe(true)
   })
 })
+
+it('shows session lock recovery without the ten-second wait', async () => {
+  mocks.enable.mockResolvedValue({
+    data: null,
+    error: { code: 'PASSWORD_ATTEMPTS_LOCKED', status: 403 },
+  })
+  render(page())
+  await start()
+  expect(
+    await screen.findByText(Auth['error.passwordAttemptsLocked.detail']),
+  ).toBeTruthy()
+  expect(
+    screen.queryByText(Settings['twoFactor.rateLimited.password']),
+  ).toBeNull()
+})
+
+it('explains a possibly committed backup-code replacement and focuses its recovery alert', async () => {
+  mocks.generateBackupCodes.mockResolvedValue({
+    data: null,
+    error: { code: 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN', status: 403 },
+  })
+  const user = userEvent.setup()
+  render(page(true))
+  await user.click(screen.getByRole('button', { name: 'Replace backup codes' }))
+  await user.type(screen.getByLabelText('Your password'), 'my-password')
+  await user.click(screen.getByRole('button', { name: 'Replace' }))
+  expect(
+    await screen.findByText(Auth['error.passwordResultUnknown.detail']),
+  ).toBeTruthy()
+  await waitFor(() =>
+    expect(document.activeElement?.textContent).toContain(
+      Auth['error.passwordResultUnknown.detail'],
+    ),
+  )
+  expect(mocks.generateBackupCodes).toHaveBeenCalledTimes(1)
+})

@@ -273,8 +273,7 @@ route trees, Resolved assumption 5) for everything else:
 - everything else is an `Alert tone="danger"` or `warning` with "Try again" as a **user action**, never an automatic retry.
 
 Every failure first passes through `toAuthFailure` (`src/lib/auth/client.ts`). The password-guessing exposure of the four
-password-gated endpoints (about 72 attempts a minute per IP, no lockout) exists today without any screen; it is named under Risks
-and filed as a follow-up, not fixed here.
+password-gated endpoints was filed as follow-up #1155. That follow-up adds a session password lock shared with password changes and passkey removal, without changing the per-address windows.
 
 ### The scannable code (09-S2d)
 
@@ -484,7 +483,7 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
 4. `roomEvictionHook` still runs as the `after` hook. No SQL of ours reads the table. `describeFailure` maps the new code to the two
    `auth.error.twoFactorOn.*` keys, present in 23 locales; the client's `toAuthFailure` surfaces `TWO_FACTOR_ALREADY_ENABLED`.
 5. The test drives the real handler, and its cases do not hit the plugin's 3-per-10-seconds rule on `/two-factor/enable`: each case
-   uses a distinct `x-forwarded-for` or a fresh KV. No `rateLimit` setting in `src/server/auth/index.ts` is relaxed to make it pass.
+   uses a distinct `cf-connecting-ip` or a fresh KV. No `rateLimit` setting in `src/server/auth/index.ts` is relaxed to make it pass.
    It also proves three things about the guard: it **fails closed** (a test makes the session read and the adapter read throw and
    shows `enable` is never reached); it sits on **one path only** (at least one other `/two-factor/*` call passes through the hook
    unchanged); and **each half of the refusal condition is sufficient alone** (the flag on with no row, the flag on with an
@@ -541,9 +540,7 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
 
 - **Authentication change (09-S2a, 09-S2b).** Both are `risk-high` and `security`: they gate a working second factor. The guard is
   server-side and tested through the real handler; the screen is courtesy on top.
-- **Existing exposure, not made worse and not fixed here.** The four password-gated endpoints take roughly 72 password guesses a
-  minute per IP with no lockout, and the counter is not atomic. A stolen session can try passwords through them. The slicer files a
-  follow-up.
+- **Password guessing (#1155).** Five wrong passwords lock the current session across the four password-gated two-factor endpoints, change-password and passkey removal. An atomic D1 reservation precedes verification; a lost race or storage error is refused. The unused verify-password endpoint is closed. Per-address windows remain unchanged.
 - **Social and passkey sign-in skip the code.** The factor protects password sign-in only. The copy says so. Whether the other doors
   should ask is a product decision for a follow-up.
 - **The guard is check-then-act.** `enable` reads the row again after the guard, so an `enable` racing a `verify-totp` in a second tab
@@ -558,11 +555,7 @@ The "already on" notice reuses `auth.error.twoFactorOn.*` (09-S2a); this stage a
   days. The copy says "unless you chose to trust that browser"; clearing trusted devices on a change is a follow-up.
 - **Session Replay.** The setup key rides in an `href` that attribute masking does not clearly cover; the key display, the setup-key
   dialog body and the backup-code panel are blocked from the recording (`data-sentry-block`).
-- **Per-IP limits depend on the client address.** The "per IP" figures assume the Worker sees a single-value `x-forwarded-for`; if it
-  does not, better-auth puts every user in one `no-trusted-ip` bucket per path (`@better-auth/core` `utils/ip.mjs`, and `better-auth` `dist/api/rate-limiter/index.mjs`, which holds the key),
-  so anyone can exhaust the 3-per-10-seconds allowance for every user and block turning two-factor on or off, not merely tighten
-  the limit. Not verified here (needs a running Worker); the screen's 429 handling holds either way, and the follow-up for the
-  password-gated endpoints' rate limit names this shared bucket.
+- **Per-IP limits use the Cloudflare client address.** `cf-connecting-ip` is the only auth address header; `x-forwarded-for` cannot choose a bucket. This configuration already landed with passkeys and re-keyed all rules and new-session addresses shown in the console. The production header shape still needs QA on a deployed Worker; that does not block #1155.
 - **Closing the panel loses the codes.** Unavoidable (they are shown once); a leave guard asks first and the recovery is "Replace backup
   codes".
 - **A hand-rolled encoder can be subtly wrong.** Known-answer vectors plus a real phone scan; the typed key is always the working
@@ -615,7 +608,7 @@ security decision; clearing trusted devices; sign out other devices). It is clos
    row allowed; allowed again after `disable`; no session left to the endpoint's 401. It also covers the guard's three properties
    (AC 5): fails closed (the session read throws, and separately the adapter read throws, and `enable` is never reached); one path
    only (another `/two-factor/*` call passes through unchanged); each half of the refusal condition alone (the flag on with no row,
-   the flag on with an unverified row, a verified row with the flag off). Each case uses a distinct `x-forwarded-for` or
+   the flag on with an unverified row, a verified row with the flag off). Each case uses a distinct `cf-connecting-ip` or
    a fresh KV (the 3-per-10-seconds rule would otherwise answer 429); no `rateLimit` setting is relaxed.
 3. `TWO_FACTOR_ALREADY_ENABLED` in `describeFailure`, two keys in `en/auth.ts`, 23 locales.
 
@@ -704,3 +697,13 @@ number will be recorded by the PR-opening step.
 ## Amendment - enrolment and backup-code replacement (#1151)
 
 The first screen slice implements enrolment, the On view and replacement of backup codes. Turning the factor off is a separate slice (#1152), so this screen does not yet offer that action. The existing challenge redirects a full signed-in session to `/settings/two-factor`; a sessionless visitor still sees the challenge. `CodeInput` now lives in `src/components/ui/code-input.tsx` and the sign-in form kit no longer exports it. The shared key display and password-confirm dialog are owned by `settings/-ui/two-factor-key.tsx` and `settings/-ui/two-factor-password-dialog.tsx`. Setup secrets stay in component state and Replay-blocked subtrees, and the backup-code panel takes precedence over loader updates.
+
+### Password confirmation hardening (#1155)
+
+A local plugin owns before/after hooks, leaving the two-factor setup guard and after-sign-in challenge intact. The D1 auth adapter stores the counter under a deterministic verification primary key derived from the session id, never the token. Each attempt reserves a unique pending value with compare-and-swap before checking the password, then finalizes it with compare-and-swap. Both INVALID_PASSWORD and PASSKEY_INVALID_PASSWORD count; a successful password check resets the count; unrelated refusals preserve it. Five failures permanently close password confirmation on that session (403 PASSWORD_ATTEMPTS_LOCKED), including correct guesses. Other sessions are unaffected. A pending request, lost race, malformed counter or storage error also refuses confirmation. An interrupted request leaves its session closed rather than recovering an unsafe reservation.
+
+The usual extra cost is one D1 counter read and two writes per attempt; passkey removal also reads the credential account to distinguish passwordless success. Counter rows use a distant expiry to survive rolling session extensions, so verification expiry cleanup cannot unlock a live session. They contain no password or token; eventual cleanup of rows for ended sessions is separate retention work. No migration or binding is added.
+
+Recovery: sign out and sign in again; the owner can revoke unfamiliar sessions or reset the password by email (which already revokes all sessions). Both auth and two-factor settings render the localized session-lock title and detail, with no ten-second wait; passkey removal offers Sign in again. The production shape of cf-connecting-ip and x-forwarded-for remains an open deployed-Worker QA item.
+
+If finalizing the counter fails after an endpoint succeeds, the action may already have committed. The refusal uses `PASSWORD_ATTEMPTS_RESULT_UNKNOWN`, keeps the session closed, and tells the person to keep this session open until they can sign in again, try their new password if they changed it, and use an authenticator or another signed-in session to generate another set of backup codes if they were replacing them. It never claims the mutation was rolled back or invites an automatic retry.

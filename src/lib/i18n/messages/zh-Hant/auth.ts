@@ -312,6 +312,12 @@ const messages = {
   'passkeyNotice.action': '管理通行密鑰',
   'passkeyNotice.recovery':
     '如果你不認識此變更，請更改密碼並結束不熟悉的工作階段。重設密碼不會移除通行密鑰。請檢查通行密鑰並移除不認識的密鑰。',
+  'error.passwordAttemptsLocked.title': '密碼確認已鎖定',
+  'error.passwordAttemptsLocked.detail':
+    '此工作階段無法再確認你的密碼。請登出後重新登入。',
+  'error.passwordResultUnknown.title': '請檢查安全設定',
+  'error.passwordResultUnknown.detail':
+    '變更可能已儲存。在確認能重新登入前，請保持此工作階段開啟。如果你變更了密碼，請嘗試新密碼。如果更換了備用碼，舊備用碼可能已失效；請使用驗證應用程式或另一個已登入的工作階段產生一組新備用碼。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

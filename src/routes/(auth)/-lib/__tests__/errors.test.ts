@@ -27,6 +27,8 @@ const t = authTranslator(DEFAULT_LOCALE)
 const CODES = [
   'INVALID_EMAIL_OR_PASSWORD',
   'INVALID_PASSWORD',
+  'PASSWORD_ATTEMPTS_LOCKED',
+  'PASSWORD_ATTEMPTS_RESULT_UNKNOWN',
   'CREDENTIAL_ACCOUNT_NOT_FOUND',
   'EMAIL_NOT_VERIFIED',
   'USER_ALREADY_EXISTS',
@@ -172,4 +174,17 @@ it('maps an already-enabled factor to the dedicated catalogue copy', () => {
     'Two-factor is already on',
     'Setting it up again would stop your current authenticator working, so nothing was changed. You can manage it here.',
   ])
+})
+
+it('gives the session password lock its own recovery copy', () => {
+  expect(
+    describeFailure({
+      code: 'PASSWORD_ATTEMPTS_LOCKED',
+      status: 403,
+      message: '',
+    }),
+  ).toMatchObject({
+    titleKey: 'auth.error.passwordAttemptsLocked.title',
+    detailKey: 'auth.error.passwordAttemptsLocked.detail',
+  })
 })
