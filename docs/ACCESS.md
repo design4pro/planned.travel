@@ -1355,6 +1355,19 @@ the caller's own keys and from the scope alone: a call site can neither forget i
 caller-supplied `impersonatedBy` never wins, and an ordinary session's entry carries no such key
 (implemented, #1010).
 
+**The trip room is read-only for an impersonated session (#1253).** A commit over the realtime
+socket is stored and sent to every other collaborator as authored by the person alone: the room's
+identity and its commit entries hold no operator, so nothing there could be attributed to the
+impersonator. `serveTripRoom` (`src/routes/api/trip-room/-lib/connect.ts`) therefore connects a
+session whose resolved context carries `impersonatedBy` as a `viewer`, whatever the person's trip
+role: the socket still receives presence and commit signals, which is what reproducing a
+collaboration report needs, and the room refuses its `patch` frames before it stores or broadcasts
+anything. The shipped client never sends one (it re-reads its loader from D1 on a signal), so no
+screen loses a control. The writes that matter go through server functions and are attributed by
+`trail()` above. One limit stays: the room entry that `mirrorToRoom` writes for such a server write
+carries the worn person's id, and the operator is named only in the tenant `audit_log`. A socket
+opened before an impersonation ends or expires keeps its role (§6.2, #1252, #1179).
+
 **Changing a member's role is refused by name too.** `changeMemberRoleFn` (`src/server/fns/members.ts`)
 reads the session, and a missing session counts as impersonated (`isImpersonated`), so it throws
 `AuthRequirementError('impersonated', <message key>)` before any repository read or write: a role an

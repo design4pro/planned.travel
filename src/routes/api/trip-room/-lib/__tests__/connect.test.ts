@@ -109,12 +109,13 @@ describe('the trip room connection role', () => {
     workspaceRole: TenantContext['role'] = userId === alpha.ownerUserId
       ? 'owner'
       : 'member',
+    impersonatedBy: string | null = null,
   ): void {
     stubs.ctx = {
       userId,
       organizationId: alpha.organizationId,
       role: workspaceRole,
-      impersonatedBy: null,
+      impersonatedBy,
     }
   }
 
@@ -191,6 +192,44 @@ describe('the trip room connection role', () => {
     expect(await roleOf(await joinAs('Olive', 'viewer'), 'owner')).toBe(
       'viewer',
     )
+  })
+
+  describe('under an impersonated session (docs/ACCESS.md §6.4)', () => {
+    // The room stamps a commit with the person it was opened for and records nothing about an
+    // operator, so a socket opened under an impersonated session never gets to commit.
+    it('admits the trip owner as a viewer when an operator is wearing the session', async () => {
+      actAs(alpha.ownerUserId, 'owner', 'operator-1')
+      const { namespace, identities } = recordingNamespace()
+
+      const response = await serveTripRoom(namespace, upgrade(tripId), tripId)
+
+      expect(response.status).toBe(200)
+      expect(identities[0]?.role).toBe('viewer')
+      expect(identities[0]?.user.id).toBe(alpha.ownerUserId)
+    })
+
+    it('admits a trip editor as a viewer when an operator is wearing the session', async () => {
+      const editorId = await joinAs('Eddie', 'editor')
+      actAs(editorId, 'member', 'operator-1')
+      const { namespace, identities } = recordingNamespace()
+
+      await serveTripRoom(namespace, upgrade(tripId), tripId)
+
+      expect(identities[0]?.role).toBe('viewer')
+    })
+
+    it('still admits the same person as an editor when no operator is wearing the session', async () => {
+      expect(await roleOf(alpha.ownerUserId)).toBe('editor')
+    })
+
+    it('does not put the operator in the identity the room is handed', async () => {
+      actAs(alpha.ownerUserId, 'owner', 'operator-1')
+      const { namespace, identities } = recordingNamespace()
+
+      await serveTripRoom(namespace, upgrade(tripId), tripId)
+
+      expect(JSON.stringify(identities[0])).not.toContain('operator-1')
+    })
   })
 
   it('ignores an identity header the client sends itself', async () => {

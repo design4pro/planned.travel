@@ -338,7 +338,8 @@ as `07-S2` does.
   caller's tenant so a foreign trip id is a 404 before a socket exists, and only then asserts an
   identity to the room. The room role is `canWritePlan(trip, tripRole)`: an owner or editor of a
   trip that is not archived connects as `editor`; a trip viewer, a traveller who is not on the trip,
-  and anyone on an archived trip connect as `viewer` and have their patches refused inside the room.
+  and anyone on an archived trip connect as `viewer` and have their patches refused inside the room,
+  and so does a session an operator is impersonating (docs/ACCESS.md §6.4, #1253).
   The role is read at connect, so the writes that change it close the sockets they affect and the
   client's reconnect picks the stored role up: a role change, a removal or a leave closes that
   person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
