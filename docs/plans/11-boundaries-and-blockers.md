@@ -448,9 +448,11 @@ change queue. No such package is present at any depth.
 of them is not absent: `vite-plugin-pwa` at `1.3.0` **is** in `devDependencies`. Its service-worker
 toolbox arrives transitively — the store carries the toolbox packages as its dependencies — but they
 are not hoisted, so application code under `src/` cannot import them even though the build plugin
-can use them internally. The correct reading is therefore narrower than the row's: generating a
-service worker and a manifest through the plugin is available; importing the toolbox from our own
-code is not; and the client-side database is absent outright.
+can use them internally. Generating a service worker through the plugin is not available in this
+multi-environment build: its generation hook skips after the SSR configuration overwrites its
+context (the installability specification records the measured build). The manifest is static.
+Importing the toolbox from our own code is unavailable; an import-free script is not blocked by
+that freeze, and the client-side database is absent outright.
 
 **Fallback: drop.** The pending-change queue, the conflict tokens and the offline console are not
 built — see the conflict-authority argument under ACC-08 in `11-S1`. ACC-07 is unaffected and stays
@@ -579,8 +581,9 @@ first of the three binding decisions put to the user.
 Recorded so no stage re-litigates them: the budget donut and any other chart (MNY-04) is SVG arc
 geometry over existing tokens, and `src/components/ui/sparkline.tsx` already sets the precedent;
 calendar output (DOC-07) is a serialiser we write, and the reader already exists; comma-separated
-export (MNY-05) is done; installability (ACC-07) has its build plugin present already; and every
-formatter ACC-06 needs is a platform `Intl` object rather than a package.
+export (MNY-05) is done; installability (ACC-07) has its build plugin present and unused because its
+generation hook skips this multi-environment build; static manifest/icons and the asset header
+implement the stage; and every formatter ACC-06 needs is a platform `Intl` object rather than a package.
 
 ### Owned paths
 
