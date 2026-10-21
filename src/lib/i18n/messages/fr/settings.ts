@@ -618,7 +618,7 @@ const messages = {
     'Cet appareil a déjà une clé d’accès pour votre compte',
   'passkeys.add.failed': 'La clé d’accès n’a pas été ajoutée. Réessayez.',
   'passkeys.add.stale':
-    'Pour votre sécurité, la gestion des clés d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
+    'Pour votre sécurité, la gestion des clés d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
   'passkeys.error.sessionEnded':
     'Votre session est terminée. Reconnectez-vous pour continuer à gérer vos clés d’accès.',
   'passkeys.signInAgain': 'Se reconnecter',
@@ -660,7 +660,7 @@ const messages = {
   'passkeys.delete.cancel': 'Annuler',
   'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',
   'passkeys.delete.stale':
-    'Pour votre sécurité, la suppression d’une clé d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
+    'Pour votre sécurité, la suppression d’une clé d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
   'passkeys.delete.removed': 'Clé d’accès supprimée',
   'passkeys.delete.failed': 'La clé d’accès n’a pas été supprimée. Réessayez.',
   'passkeys.delete.removing': 'Suppression de la clé d’accès',

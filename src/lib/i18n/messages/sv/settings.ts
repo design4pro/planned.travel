@@ -598,7 +598,7 @@ const messages = {
     'Den här enheten har redan en lösenordsnyckel för ditt konto',
   'passkeys.add.failed': 'Lösenordsnyckeln lades inte till. Försök igen.',
   'passkeys.add.stale':
-    'Av säkerhetsskäl kräver hanteringen av lösenordsnycklar en nyligen genomförd inloggning. Om du väljer ”Logga in igen” loggas du först ut och förs sedan till inloggningssidan.',
+    'Av säkerhetsskäl kräver hantering av lösenordsnycklar en nyligen genomförd inloggning. Om du väljer ”Logga in igen” loggas du först ut och förs sedan till inloggningssidan.',
   'passkeys.error.sessionEnded':
     'Din session har avslutats. Logga in igen för att fortsätta hantera dina lösenordsnycklar.',
   'passkeys.signInAgain': 'Logga in igen',

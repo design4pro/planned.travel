@@ -590,7 +590,7 @@ const messages = {
     'Perangkat ini sudah punya kunci sandi untuk akun Anda',
   'passkeys.add.failed': 'Kunci sandi tidak ditambahkan. Coba lagi.',
   'passkeys.add.stale':
-    'Demi keamanan Anda, mengelola kunci sandi memerlukan proses masuk yang baru. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
+    'Demi keamanan Anda, mengelola kunci sandi mengharuskan Anda baru saja masuk. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
   'passkeys.error.sessionEnded':
     'Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan pengelolaan kunci sandi Anda.',
   'passkeys.signInAgain': 'Masuk lagi',
@@ -632,7 +632,7 @@ const messages = {
   'passkeys.delete.cancel': 'Batal',
   'passkeys.delete.wrongPassword': 'Kata sandi itu tidak tepat.',
   'passkeys.delete.stale':
-    'Demi keamanan Anda, menghapus kunci sandi memerlukan proses masuk yang baru. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
+    'Demi keamanan Anda, menghapus kunci sandi mengharuskan Anda baru saja masuk. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
   'passkeys.delete.removed': 'Kunci sandi dihapus',
   'passkeys.delete.failed': 'Kunci sandi tidak dihapus. Coba lagi.',
   'passkeys.delete.removing': 'Menghapus kunci sandi',
