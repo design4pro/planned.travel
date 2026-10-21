@@ -264,6 +264,11 @@ const messages = {
   'book.readOnly.archived':
     '此行程已归档，因此预订和住宿为只读。恢复该行程后才能更改。',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    '此更改已被拒绝。继续更改前，请查看行程的当前状态。',
+  'transports.recovery.failed': '无法刷新行程。请重试后再进行更改。',
+  'transports.readOnly.archived':
+    '此行程已归档。请先恢复行程，再修改交通安排。',
   'transports.title': '交通',
   'transports.empty': '尚未记录',
   'transports.count.transports': {

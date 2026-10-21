@@ -220,8 +220,8 @@ export const reorderDayTransportsFn = createServerFn({ method: 'POST' })
 
     // The run as written, not as asked for: the repository drops an id it does not know and puts
     // back a known one the payload left out, so the request and the day on disk can differ — and
-    // the room, like the count, has to hear the disk. The trip goes with it: the repository keeps
-    // its own guard for every other caller and reads the row again only when it is not handed one.
+    // the room, like the count, has to hear the disk. The repository independently checks current
+    // readability and archive state, including when the caller supplies the resolved trip.
     const journeys = await reorderDayTransports(scope, data, trip)
     await mirrorDayJourneys(scope, data.tripId, data.dayId, journeys)
 

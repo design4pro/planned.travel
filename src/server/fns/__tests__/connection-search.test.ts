@@ -182,13 +182,13 @@ it.each(['viewer', 'non-member', 'foreign'] as const)(
     if (role !== 'foreign') {
       expect(
         await loadTransportDeskFn({ data: { tripId: trip.id } }),
-      ).toMatchObject({ canSearchConnections: false })
+      ).toMatchObject({ canSearchConnections: false, canWrite: false })
     }
   },
 )
 
 it.each(['owner', 'editor'] as const)(
-  'allows %s to search and exposes the capability even on an archived trip',
+  'allows %s to search archived trips while exposing writes only on active trips',
   async (role) => {
     const tenant = await (await createHarness()).seedTenant('writer')
     const trip = await createTrip(tenant.scope, { title: 'Portugal' })
@@ -239,7 +239,11 @@ it.each(['owner', 'editor'] as const)(
       stubs.scope = scope
       expect(
         await loadTransportDeskFn({ data: { tripId: trip.id } }),
-      ).toMatchObject({ canSearchConnections: true })
+      ).toMatchObject({
+        canSearchConnections: true,
+        canWrite: !archived,
+        isArchived: archived,
+      })
       expect(
         await searchConnections(scope, { tripId: trip.id, ...query }, ports),
       ).toMatchObject({ ok: true, cached: false, ceiling: 250, remaining: 249 })

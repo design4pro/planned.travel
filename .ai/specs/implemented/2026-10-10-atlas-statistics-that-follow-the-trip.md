@@ -697,8 +697,7 @@ The implementation PR for #936 records the intentional server-function removal a
 
 The producer slice adds the seven content-write triggers, variadic affected years and acknowledgement
 without a write for absent workspace members. The problem statements above describe the snapshot
-before this slice; 08-S6b still owns the period UI and glossary additions. Existing transport writers
-have no general archived-trip guard; this slice preserves their contract. The first-commit guard
+before this slice; 08-S6b still owns the period UI and glossary additions. At that snapshot, transport writers had no general archived-trip guard; #1041 now applies the shared repository guard to transport writes until the trip is restored. The first-commit guard
 requirement in the original ticket brief was superseded by #936 and #928, as recorded above.
 
 ## Implementation amendment - issue #1120 (08-S6b1)
