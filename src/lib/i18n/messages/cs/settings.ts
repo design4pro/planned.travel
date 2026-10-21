@@ -226,7 +226,7 @@ const messages = {
   'security.twoFactor.enable': 'Zapnout',
   'security.passkeys.label': 'Přístupové klíče',
   'security.passkeys.hint':
-    'Přihlašujte se čtečkou prstu, Face ID nebo bezpečnostním klíčem, bez psaní.',
+    'Přihlašujte se otiskem prstu, obličejem nebo bezpečnostním klíčem, bez psaní.',
   'security.passkeys.action': 'Spravovat klíče',
   'security.session.title': 'Toto sezení',
   'security.session.description': 'Prohlížeč, ve kterém tohle čtete.',
@@ -608,9 +608,10 @@ const messages = {
   'passkeys.add.dismissed': 'Žádný přístupový klíč nebyl přidán',
   'passkeys.add.exists': 'Toto zařízení už má přístupový klíč k vašemu účtu',
   'passkeys.add.failed': 'Přístupový klíč nebyl přidán. Zkuste to znovu.',
-  'passkeys.add.stale': 'Pro vaši bezpečnost se přihlaste znovu a pokračujte.',
+  'passkeys.add.stale':
+    'Pro vaši bezpečnost vyžaduje správa přístupových klíčů nedávné přihlášení. Volba „Přihlásit se znovu“ vás nejprve odhlásí a poté přesměruje na přihlašovací stránku.',
   'passkeys.error.sessionEnded':
-    'Vaše sezení skončilo. Přihlaste se znovu a pokračujte.',
+    'Vaše sezení skončilo. Přihlaste se znovu a pokračujte ve správě přístupových klíčů.',
   'passkeys.signInAgain': 'Přihlásit se znovu',
   'passkeys.add.limit':
     'Dosáhli jste limitu {value} přístupových klíčů. Odeberte jeden, abyste mohli přidat další.',
@@ -649,7 +650,7 @@ const messages = {
   'passkeys.delete.cancel': 'Zrušit',
   'passkeys.delete.wrongPassword': 'Toto heslo není správné.',
   'passkeys.delete.stale':
-    'Pro vaši bezpečnost se před odebráním přístupového klíče přihlaste znovu.',
+    'Pro vaši bezpečnost vyžaduje odebrání přístupového klíče nedávné přihlášení. Volba „Přihlásit se znovu“ vás nejprve odhlásí a poté přesměruje na přihlašovací stránku.',
   'passkeys.delete.removed': 'Přístupový klíč byl odebrán',
   'passkeys.delete.failed': 'Přístupový klíč nebyl odebrán. Zkuste to znovu.',
   'passkeys.delete.removing': 'Odebíráme přístupový klíč',

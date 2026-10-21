@@ -607,9 +607,10 @@ const messages = {
     'Dit apparaat heeft al een toegangssleutel voor je account',
   'passkeys.add.failed':
     'De toegangssleutel is niet toegevoegd. Probeer het opnieuw.',
-  'passkeys.add.stale': 'Voor je veiligheid: log opnieuw in om door te gaan.',
+  'passkeys.add.stale':
+    'Voor je veiligheid moet je recent zijn ingelogd om toegangssleutels te beheren. Kies je ‘Opnieuw inloggen’, dan word je eerst uitgelogd en daarna naar de inlogpagina gebracht.',
   'passkeys.error.sessionEnded':
-    'Je sessie is beëindigd. Log opnieuw in om door te gaan.',
+    'Je sessie is beëindigd. Log opnieuw in om je toegangssleutels te blijven beheren.',
   'passkeys.signInAgain': 'Opnieuw inloggen',
   'passkeys.add.limit':
     'Je hebt de limiet van {value} toegangssleutels bereikt. Verwijder er een om een andere toe te voegen.',
@@ -648,7 +649,7 @@ const messages = {
   'passkeys.delete.cancel': 'Annuleren',
   'passkeys.delete.wrongPassword': 'Dat wachtwoord klopt niet.',
   'passkeys.delete.stale':
-    'Voor je veiligheid: log opnieuw in voordat je een toegangssleutel verwijdert.',
+    'Voor je veiligheid moet je recent zijn ingelogd om een toegangssleutel te verwijderen. Kies je ‘Opnieuw inloggen’, dan word je eerst uitgelogd en daarna naar de inlogpagina gebracht.',
   'passkeys.delete.removed': 'Toegangssleutel verwijderd',
   'passkeys.delete.failed':
     'De toegangssleutel is niet verwijderd. Probeer het opnieuw.',

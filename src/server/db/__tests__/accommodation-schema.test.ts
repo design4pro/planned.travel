@@ -17,26 +17,21 @@
  *    is nowhere.
  * 3. **A disposition that is declared and not deployed.** `reservation_id` arrives by
  *    `ALTER TABLE … ADD COLUMN`, and the `ADD COLUMN` drizzle-kit writes carries the `REFERENCES`
- *    clause and no `ON DELETE` one — the generator's limit, not the engine's, measured in
- *    `reservation-schema.test.ts` for `expense_id` before it. Both halves are pinned below, because
- *    here the gap does more than mis-dispose: `NO ACTION` makes deleting a linked booking *fail*
- *    rather than release the stay, and the stage that first deletes one has to null the column
- *    itself.
+ *    clause and no `ON DELETE` one — the generator's limit, not the engine's, as for `expense_id`
+ *    in `reservation-schema.test.ts` before it (ADR 0044). The declaration is pinned below; the
+ *    deployed `NO ACTION` is registered in `migrations-match-schema.test.ts`. Here the gap does
+ *    more than mis-dispose: `NO ACTION` makes deleting a linked booking *fail* rather than release
+ *    the stay, so the deleter nulls the column itself, and that is tested on the migrated DDL in
+ *    `fns/__tests__/stays.test.ts`.
  * 4. **A cascade nobody asked for.** This is the one rule the ticket states twice: deleting the
  *    booking must not delete the nights. A stay is a record of where somebody slept and outlives
- *    the confirmation that reserved it, so the declared disposition is `set null` and a case below
- *    deletes a booking and counts the stay that is left.
+ *    the confirmation that reserved it, so the declared disposition is `set null`, asserted
+ *    below, and a booking deleted on the migrated DDL leaves its stay behind, asserted in
+ *    `fns/__tests__/stays.test.ts`.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { eq } from 'drizzle-orm'
-import {
-  dayAccommodations,
-  days,
-  newId,
-  reservations,
-  trips,
-} from '#/server/db/schema'
+import { dayAccommodations, days, newId, trips } from '#/server/db/schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { shippedMigrations, statementsOf } from './migration-files'
 import {
@@ -60,7 +55,7 @@ describe("the stay's reservation link", () => {
       expect(column(dayAccommodations, 'reservation_id').hasDefault).toBe(false)
     })
 
-    it('releases the stay when the booking is deleted, and never takes it along', () => {
+    it('declares the stay link set null, never cascade, which D1 does not enforce (ADR 0044)', () => {
       expect(foreignKeys(dayAccommodations)).toEqual([
         'end_day_id -> days.id (cascade)',
         'organization_id -> organization.id (cascade)',
@@ -121,35 +116,6 @@ describe("the stay's reservation link", () => {
       ])
       return { tenant, tripId, startDayId, endDayId }
     }
-
-    it('keeps the nights when the booking that reserved them is deleted', async () => {
-      const { tenant, tripId, startDayId, endDayId } =
-        await seedStayable('link')
-      const reservationId = newId()
-
-      await harness.db.insert(reservations).values({
-        id: reservationId,
-        organizationId: tenant.organizationId,
-        tripId,
-        title: 'Ryokan',
-      })
-      await harness.db.insert(dayAccommodations).values({
-        organizationId: tenant.organizationId,
-        tripId,
-        startDayId,
-        endDayId,
-        name: 'Ryokan',
-        reservationId,
-      })
-
-      await harness.db
-        .delete(reservations)
-        .where(eq(reservations.id, reservationId))
-
-      const rows = await harness.db.select().from(dayAccommodations)
-      expect(rows).toHaveLength(1)
-      expect(rows[0]?.reservationId).toBeNull()
-    })
 
     it('reads a stay nobody booked as a stay with no booking', async () => {
       const { tenant, tripId, startDayId, endDayId } =

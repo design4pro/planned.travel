@@ -188,8 +188,7 @@ const messages = {
   'security.twoFactor.manage': '管理',
   'security.twoFactor.enable': '開啟',
   'security.passkeys.label': '密碼金鑰',
-  'security.passkeys.hint':
-    '什麼都不用打，用指紋、Face ID 或安全金鑰就能登入。',
+  'security.passkeys.hint': '什麼都不用打，用指紋、臉部或安全金鑰就能登入。',
   'security.passkeys.action': '管理密碼金鑰',
   'security.session.title': '這個工作階段',
   'security.session.description': '你正在讀這段字的這個瀏覽器。',
@@ -501,8 +500,10 @@ const messages = {
   'passkeys.add.dismissed': '沒有新增密碼金鑰',
   'passkeys.add.exists': '這個裝置已經有你帳號的密碼金鑰',
   'passkeys.add.failed': '沒有新增成功。請再試一次。',
-  'passkeys.add.stale': '為了你的安全，請重新登入後繼續。',
-  'passkeys.error.sessionEnded': '你的工作階段已結束。請重新登入後繼續。',
+  'passkeys.add.stale':
+    '為了你的安全，管理密碼金鑰需要最近登入過。選擇「重新登入」會先登出，然後帶你前往登入頁面。',
+  'passkeys.error.sessionEnded':
+    '你的工作階段已結束。請重新登入以繼續管理密碼金鑰。',
   'passkeys.signInAgain': '重新登入',
   'passkeys.add.limit':
     '你已達到 {value} 個密碼金鑰的上限。請先移除一個，再新增新的。',
@@ -539,7 +540,8 @@ const messages = {
   'passkeys.delete.confirm': '移除密碼金鑰',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '這個密碼不正確。',
-  'passkeys.delete.stale': '為了你的安全，請先重新登入，再移除密碼金鑰。',
+  'passkeys.delete.stale':
+    '為了你的安全，移除密碼金鑰需要最近登入過。選擇「重新登入」會先登出，然後帶你前往登入頁面。',
   'passkeys.delete.removed': '密碼金鑰已移除',
   'passkeys.delete.failed': '密碼金鑰未能移除。請再試一次。',
   'passkeys.delete.removing': '正在移除密碼金鑰',

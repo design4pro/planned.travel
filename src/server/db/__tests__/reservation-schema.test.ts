@@ -23,23 +23,17 @@
  *    is the generator's limit, not the engine's, and `drizzle/` is generated and never hand-edited.
  *    The declared `set null` is therefore real on a database built from `schema.ts` and *absent*
  *    from the one D1 is running, exactly as for `transports.arrival_day_id` and
- *    `expenses.cost_category_id` before it. Both halves are pinned below, because the plan's
- *    argument for this direction — the engine unlinks the booking with no code running — is the half
- *    that is not true yet, and the stage that first deletes an expense has to know that.
+ *    `expenses.cost_category_id` before it (ADR 0044). The declaration is pinned below; the
+ *    deployed `NO ACTION` is registered in `migrations-match-schema.test.ts`, and the code-side
+ *    unlink that keeps the rule is tested on the migrated DDL in `fns/__tests__/reservations.test.ts`.
+ *    No case here asserts an engine unlink: the database this file builds is the one nobody deploys.
  * 4. **A display preference with no answer.** `mask_confirmation_codes` is `NOT NULL DEFAULT 0` in
  *    the idiom of `reduce_motion` beside it, so an existing settings row reads as "not masking"
  *    rather than as "never asked".
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { eq } from 'drizzle-orm'
-import {
-  expenses,
-  newId,
-  reservations,
-  trips,
-  userSettings,
-} from '#/server/db/schema'
+import { newId, reservations, trips, userSettings } from '#/server/db/schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { shippedMigrations, statementsOf } from './migration-files'
 import {
@@ -72,7 +66,7 @@ describe('the reservation ledger link, import marker and masking switch', () => 
       expect(marker.getSQLType()).toBe('integer')
     })
 
-    it('releases the booking when its ledger line is deleted', () => {
+    it('declares the ledger link set null, which D1 does not enforce (ADR 0044)', () => {
       expect(foreignKeys(reservations)).toEqual([
         'assignment_id -> day_assignments.id (set null)',
         'day_id -> days.id (set null)',
@@ -136,33 +130,6 @@ describe('the reservation ledger link, import marker and masking switch', () => 
       return { tenant, tripId }
     }
 
-    it('unlinks the booking rather than deleting it when the expense goes', async () => {
-      const { tenant, tripId } = await seedTrip('ledger')
-      const expenseId = newId()
-
-      await harness.db.insert(expenses).values({
-        id: expenseId,
-        organizationId: tenant.organizationId,
-        tripId,
-        title: 'Ryokan',
-        amountMinor: 42_000,
-        spentOn: '2026-04-01',
-        createdBy: tenant.ownerUserId,
-      })
-      await harness.db.insert(reservations).values({
-        organizationId: tenant.organizationId,
-        tripId,
-        title: 'Ryokan',
-        expenseId,
-      })
-
-      await harness.db.delete(expenses).where(eq(expenses.id, expenseId))
-
-      const rows = await harness.db.select().from(reservations)
-      expect(rows).toHaveLength(1)
-      expect(rows[0]?.expenseId).toBeNull()
-    })
-
     it('reads a booking nobody imported as typed by a person', async () => {
       const { tenant, tripId } = await seedTrip('marker')
       await harness.db.insert(reservations).values({
@@ -191,8 +158,9 @@ describe('the reservation ledger link, import marker and masking switch', () => 
   describe('the shipped migrations', () => {
     // That the three columns and both indexes reached `drizzle/*.sql`, and that `expense_id` is
     // deployed as `NO ACTION` where `schema.ts` declares `set null`, is asked of every table at once
-    // in `migrations-match-schema.test.ts` — the second of those on the allowlist of references an
-    // `ADD COLUMN` cannot carry a disposition for, with what the gap costs written out there (#184).
+    // in `migrations-match-schema.test.ts` — the second of those on the register of references an
+    // `ADD COLUMN` was deployed without a disposition for, with what the gap costs written out there
+    // (#184, ADR 0044).
     // What is left here is the one question about this stage rather than about the schema.
 
     it('adds all three columns in one migration and rebuilds nothing', () => {

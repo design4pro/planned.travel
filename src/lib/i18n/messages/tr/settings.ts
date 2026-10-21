@@ -220,7 +220,7 @@ const messages = {
   'security.twoFactor.enable': 'Aç',
   'security.passkeys.label': 'Geçiş anahtarları',
   'security.passkeys.hint':
-    'Bir şey yazmak yerine parmak izi okuyucuyla, Face ID ile veya güvenlik anahtarıyla girin.',
+    'Bir şey yazmak yerine parmak izinizle, yüzünüzle veya güvenlik anahtarınızla giriş yapın.',
   'security.passkeys.action': 'Geçiş anahtarlarını yönet',
   'security.session.title': 'Bu oturum',
   'security.session.description': 'Bunu okuduğunuz tarayıcı.',
@@ -592,9 +592,9 @@ const messages = {
     'Bu cihazda hesabınız için zaten bir geçiş anahtarı var',
   'passkeys.add.failed': 'Geçiş anahtarı eklenmedi. Tekrar deneyin.',
   'passkeys.add.stale':
-    'Güvenliğiniz için devam etmek üzere yeniden giriş yapın.',
+    'Güvenliğiniz için geçiş anahtarlarını yönetmek yakın zamanda yapılmış bir giriş gerektirir. “Yeniden giriş yap” seçeneğini seçerseniz önce oturumunuz kapatılır, ardından giriş sayfasına yönlendirilirsiniz.',
   'passkeys.error.sessionEnded':
-    'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+    'Oturumunuz sona erdi. Geçiş anahtarlarınızı yönetmeye devam etmek için yeniden giriş yapın.',
   'passkeys.signInAgain': 'Yeniden giriş yap',
   'passkeys.add.limit':
     '{value} geçiş anahtarı sınırına ulaştınız. Yenisini eklemek için birini kaldırın.',
@@ -633,7 +633,7 @@ const messages = {
   'passkeys.delete.cancel': 'İptal',
   'passkeys.delete.wrongPassword': 'Bu şifre doğru değil.',
   'passkeys.delete.stale':
-    'Güvenliğiniz için bir geçiş anahtarını kaldırmadan önce yeniden giriş yapın.',
+    'Güvenliğiniz için bir geçiş anahtarını kaldırmak yakın zamanda yapılmış bir giriş gerektirir. “Yeniden giriş yap” seçeneğini seçerseniz önce oturumunuz kapatılır, ardından giriş sayfasına yönlendirilirsiniz.',
   'passkeys.delete.removed': 'Geçiş anahtarı kaldırıldı',
   'passkeys.delete.failed': 'Geçiş anahtarı kaldırılamadı. Tekrar deneyin.',
   'passkeys.delete.removing': 'Geçiş anahtarı kaldırılıyor',

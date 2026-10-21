@@ -611,9 +611,9 @@ const messages = {
   'passkeys.add.failed':
     'Der Zugangsschlüssel wurde nicht hinzugefügt. Versuch es noch einmal.',
   'passkeys.add.stale':
-    'Zu deiner Sicherheit: Melde dich erneut an, um fortzufahren.',
+    'Zu deiner Sicherheit erfordert die Verwaltung von Zugangsschlüsseln eine aktuelle Anmeldung. Wenn du „Erneut anmelden“ wählst, wirst du zuerst abgemeldet und dann zur Anmeldeseite weitergeleitet.',
   'passkeys.error.sessionEnded':
-    'Deine Sitzung ist beendet. Melde dich erneut an, um fortzufahren.',
+    'Deine Sitzung ist beendet. Melde dich erneut an, um deine Zugangsschlüssel weiter zu verwalten.',
   'passkeys.signInAgain': 'Erneut anmelden',
   'passkeys.add.limit':
     'Du hast das Limit von {value} Zugangsschlüsseln erreicht. Entferne einen, um einen weiteren hinzuzufügen.',
@@ -653,7 +653,7 @@ const messages = {
   'passkeys.delete.cancel': 'Abbrechen',
   'passkeys.delete.wrongPassword': 'Dieses Passwort ist nicht richtig.',
   'passkeys.delete.stale':
-    'Zu deiner Sicherheit: Melde dich erneut an, bevor du einen Zugangsschlüssel entfernst.',
+    'Zu deiner Sicherheit erfordert das Entfernen eines Zugangsschlüssels eine aktuelle Anmeldung. Wenn du „Erneut anmelden“ wählst, wirst du zuerst abgemeldet und dann zur Anmeldeseite weitergeleitet.',
   'passkeys.delete.removed': 'Zugangsschlüssel entfernt',
   'passkeys.delete.failed':
     'Der Zugangsschlüssel wurde nicht entfernt. Versuche es erneut.',
