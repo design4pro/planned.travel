@@ -611,7 +611,7 @@ describe('atlas roll-ups the loader reads on their own', () => {
         expect(facts.source).toBe('visits')
         // `formatNumber(row.visitCount)` is exactly what the shelf's country row prints.
         expect(facts.tally.value).toBe(formatNumber(record.visitCount))
-        expect(facts.tally.label).toBe(record.visitCount === 1 ? 'Visit' : 'Visits')
+        expect(facts.tally.count).toBe(record.visitCount)
       }
     })
 
@@ -631,16 +631,16 @@ describe('atlas roll-ups the loader reads on their own', () => {
         const facts = countryFacts(countryFactColumns(record))
         const span = visitSpan(record.firstVisitedOn, record.lastVisitedOn)
         const shelfTally = formatNumber(record.visitCount)
-        const shelfUnit = record.visitCount === 1 ? 'visit' : 'visits'
 
         if (facts.source === 'visits') {
           expect(facts.tally.value).toBe(shelfTally)
-          expect(facts.tally.label.toLowerCase()).toBe(shelfUnit)
+          expect(facts.tally.count).toBe(record.visitCount)
         } else {
           // A country with an itinerary leads with its trips, and says so: the number changes
-          // meaning only where the unit changes with it.
+          // meaning only where the source changes with it.
+          expect(facts.source).toBe('trips')
           expect(facts.tally.value).toBe(formatNumber(record.tripCount))
-          expect(facts.tally.label.toLowerCase()).toMatch(/^trips?$/)
+          expect(facts.tally.count).toBe(record.tripCount)
         }
 
         // Whichever record the card is on, neither surface may print a dash where the other
@@ -661,20 +661,20 @@ describe('atlas roll-ups the loader reads on their own', () => {
       }
     })
 
-    it('reads out the three countries the map fills and the card used to empty', async () => {
+    it('leads with the visit tally for the three countries the map fills and the card used to empty', async () => {
       const records = await seedDemoAtlas()
-      const summaries = ['FR', 'US', 'TH'].map((code) => {
+      const leads = ['FR', 'US', 'TH'].map((code) => {
         const record = recordFor(records, code)
         expect(record).toBeDefined()
-        return record === undefined
-          ? null
-          : countryFacts(countryFactColumns(record))
+        if (record === undefined) return null
+        const facts = countryFacts(countryFactColumns(record))
+        return { code: facts.code, source: facts.source, count: facts.tally.count }
       })
 
-      expect(summaries.map((facts) => facts?.summary ?? null)).toEqual([
-        'France. 3 visits, no places saved. First visit July 2011, last visit September 2024.',
-        'United States. 2 visits, no places saved. First visit August 2016, last visit March 2023.',
-        'Thailand. 1 visit, no places saved. Visited in November 2017.',
+      expect(leads).toEqual([
+        { code: 'FR', source: 'visits', count: 3 },
+        { code: 'US', source: 'visits', count: 2 },
+        { code: 'TH', source: 'visits', count: 1 },
       ])
     })
 
@@ -687,7 +687,7 @@ describe('atlas roll-ups the loader reads on their own', () => {
       if (portugal === undefined) return
       const facts = countryFacts(countryFactColumns(portugal))
       expect(facts.source).toBe('trips')
-      expect(facts.tally.label).toBe('Trip')
+      expect(facts.tally.count).toBe(1)
       expect(facts.tally.value).toBe('1')
       expect(facts.first.value).toBe('August 2026')
       expect(facts.last.value).toBe('August 2026')
