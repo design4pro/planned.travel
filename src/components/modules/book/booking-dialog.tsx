@@ -255,9 +255,10 @@ export function BookingDialog({
    * handed back to the control that opened it first and the toast does not sit over the dialog's
    * footer while it is still on screen. `onCloseAutoFocus` raises them. One entry per booking, so a
    * second refused save does not replace the first one's warning. A dialog that is already closed
-   * (Cancel or Escape while the save ran), already unmounted (the timeline swaps this dialog's
-   * instance when the first booking lands on an empty trip) or opened again since the save started
-   * has no close left to wait for, so those raise it at once.
+   * (Cancel or Escape while the save ran) or already unmounted (the timeline swaps this dialog's
+   * instance when the first booking lands on an empty trip) has no close left to wait for. One
+   * opened again since the save started is the reader's next task, whose close may be far off, so
+   * the warning would be late: those raise it at once.
    */
   const pendingWarningsRef = useRef(new Map<string, () => void>())
   const openRef = useRef(open)
@@ -431,11 +432,16 @@ export function BookingDialog({
     if (result === null) {
       return
     }
+    const toastId = ledgerRefusedToastId(result.reservationId)
+    if (result.ledger !== 'failed') {
+      // The cost line exists now, so a warning that it did not is out of date, shown or held.
+      pendingWarningsRef.current.delete(toastId)
+      toast.dismiss(toastId)
+    }
     if (result.ledger === 'failed') {
       // A partial success: the booking is on the trip and its cost line is not. The next save of
       // the booking adds the line, because the sync keys off the row's own expense link, so the
       // dialog closes and `onCloseAutoFocus` raises the warning that tells the reader so.
-      const toastId = ledgerRefusedToastId(result.reservationId)
       const raise = () =>
         toast.warning(t('modules.book.toast.ledgerRefused'), {
           id: toastId,
@@ -449,9 +455,9 @@ export function BookingDialog({
       } else {
         raise()
       }
-      // A dialog opened again since this save started is the reader's next task, not this save's:
-      // closing it would drop what they have typed.
-      if (!mountedRef.current || sameSession) {
+      // Only this save's own dialog is closed: one the reader closed already has nothing left to
+      // close, and one opened again since is their next task, whose typed input a close would drop.
+      if (!mountedRef.current || (sameSession && openRef.current)) {
         onOpenChange(false)
       }
       return

@@ -660,6 +660,49 @@ describe('BookingDialog — a ledger write that was refused', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
+  it('takes the warning down when the next save of that booking added its cost line', async () => {
+    vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    vi.spyOn(toast, 'success').mockReturnValue('toast')
+    const dismiss = vi.spyOn(toast, 'dismiss').mockReturnValue('toast')
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'created',
+    })
+    const onOpenChange = vi.fn()
+    mount(MUSEUM, onOpenChange)
+    dismiss.mockClear()
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(dismiss).toHaveBeenCalledWith('book-ledger-refused-booking-2')
+  })
+
+  it('does not close a dialog the reader had already closed when the refusal lands', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    let refuse: (value: {
+      reservationId: string
+      ledger: string
+    }) => void = () => undefined
+    reservations.create.mockReturnValue(
+      new Promise((resolve) => {
+        refuse = resolve
+      }),
+    )
+    const onOpenChange = vi.fn()
+    mount(undefined, onOpenChange)
+    chooseOther()
+    submitTheForm()
+    await vi.waitFor(() => expect(reservations.create).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    onOpenChange.mockClear()
+
+    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+
+    await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
   it('updates the saved booking when it is reopened, and never creates a second one', async () => {
     vi.spyOn(toast, 'warning').mockReturnValue('toast')
     vi.spyOn(toast, 'success').mockReturnValue('toast')
