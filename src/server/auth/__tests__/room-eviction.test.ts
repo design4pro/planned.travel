@@ -51,6 +51,7 @@ const shared = vi.hoisted(() => ({
   authDb: { current: null } as Holder<unknown>,
   kv: { current: null } as Holder<unknown>,
   queued: [] as Array<unknown>,
+  batchSizes: [] as Array<number>,
   queueFails: false,
   emails: [] as Array<{ url?: string }>,
 }))
@@ -72,6 +73,7 @@ vi.mock('#/server/auth/env', () => ({
     },
     sendBatch: async (messages: Array<{ body: unknown }>) => {
       if (shared.queueFails) throw new Error('the queue is unreachable')
+      shared.batchSizes.push(messages.length)
       shared.queued.push(...messages.map((message) => message.body))
     },
   }),
@@ -112,6 +114,7 @@ beforeEach(() => {
   authDatabase.reset()
   ;(shared.kv.current as SessionKv).clear()
   shared.queued = []
+  shared.batchSizes = []
   shared.queueFails = false
   shared.emails = []
 })
@@ -365,6 +368,7 @@ describe('losing a place in a workspace queues the close of the person’s trip-
 
     await queueRoomEviction('user_wide', organizationIds, 'test')
 
+    expect(shared.batchSizes).toEqual([100, 100, 50])
     expect(evictions()).toEqual(
       organizationIds.map((orgId) => ({ orgId, userId: 'user_wide' })),
     )
