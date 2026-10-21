@@ -262,6 +262,9 @@ const messages = {
   'book.toast.addFailed': 'Η κράτηση δεν προστέθηκε',
   'book.toast.updated': 'Η κράτηση ενημερώθηκε',
   'book.toast.updateFailed': 'Η κράτηση δεν ενημερώθηκε',
+  'book.toast.ledgerRefused': 'Αποθηκεύτηκε, αλλά δεν μπήκε στα έξοδα',
+  'book.toast.ledgerRefusedBody':
+    'Άνοιξε την κράτηση και αποθήκευσέ την ξανά για να προστεθεί η γραμμή κόστους της.',
 
   'book.emptyFacts':
     'Πέρα από το όνομα δεν υπάρχει ακόμη τίποτα. Άνοιξέ το για να προσθέσεις ώρα, τιμή και κωδικό επιβεβαίωσης.',
@@ -545,10 +548,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Χωρίς στάση',
   'book.field.stopSearch': 'Αναζήτηση σε στάσεις και μέρες',
   'book.field.stopEmpty': 'Καμία στάση δεν ταιριάζει',
-  'book.ledger.refused.title': 'Αποθηκεύτηκε, αλλά δεν μπήκε στα έξοδα',
-  'book.ledger.refused.body':
-    'Η κράτηση είναι στο ταξίδι. Η γραμμή εξόδου της δεν μπήκε στα έξοδα του ταξιδιού — δοκίμασε ξανά αυτό το μισό.',
-  'book.action.ledgerRetry': 'Πρόσθεσέ το στα έξοδα',
   'book.ledger.splitStale.title':
     'Αποθηκεύτηκε, αλλά η διαίρεση δεν βγαίνει πια',
   'book.ledger.splitStale.body':

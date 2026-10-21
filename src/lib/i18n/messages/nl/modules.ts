@@ -260,6 +260,9 @@ const messages = {
   'book.toast.addFailed': 'De boeking is niet toegevoegd',
   'book.toast.updated': 'Boeking bijgewerkt',
   'book.toast.updateFailed': 'De boeking is niet bijgewerkt',
+  'book.toast.ledgerRefused': 'Bewaard, maar niet bij de kosten gezet',
+  'book.toast.ledgerRefusedBody':
+    'Open de boeking en bewaar hem opnieuw om de kostenregel toe te voegen.',
 
   'book.emptyFacts':
     'Behalve de naam staat er nog niets. Open het om de tijd, de prijs en het bevestigingsnummer toe te voegen.',
@@ -541,10 +544,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Niet aan een halte gebonden',
   'book.field.stopSearch': 'Zoek in haltes en dagen',
   'book.field.stopEmpty': 'Geen halte komt overeen',
-  'book.ledger.refused.title': 'Bewaard, maar niet bij de kosten gezet',
-  'book.ledger.refused.body':
-    'De boeking staat op de reis. De kostenregel bij de reiskosten zetten lukte niet — probeer die helft opnieuw.',
-  'book.action.ledgerRetry': 'Bij de kosten zetten',
   'book.ledger.splitStale.title':
     'Opgeslagen, maar de verdeling klopt niet meer',
   'book.ledger.splitStale.body':

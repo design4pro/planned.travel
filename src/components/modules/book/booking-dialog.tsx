@@ -11,7 +11,7 @@
  * than by typed dates, so choosing it swaps the date block for `StayFields` and saves through the
  * stay's own writes, which record the booking and its nights together.
  */
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import {
   Bed,
   Landmark,
@@ -38,6 +38,7 @@ import {
   Input,
   SimpleSelect,
   Textarea,
+  toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -154,19 +155,23 @@ function stopChoice(
 }
 
 /**
- * What the save button offers, which is a statement of what is left to do.
- *
- * After a ledger refusal the booking itself is already saved, so pressing it again is not another
- * save — it is the half that did not go through.
+ * The refusal warning is the only place that says a saved booking has no cost line, and it names
+ * the next step, so it stays until the reader closes it (WCAG 2.2.1) or opens that booking again.
+ * One id per booking keeps a repeated refusal of it from stacking a copy and lets two refused
+ * bookings each keep their own warning.
  */
-function saveLabel(state: {
-  readonly ledgerRefused: boolean
-  readonly editing: boolean
-}): MessageKey {
-  if (state.ledgerRefused) {
-    return 'modules.book.action.ledgerRetry'
-  }
-  return state.editing ? 'modules.book.action.save' : 'modules.book.action.add'
+const ledgerRefusedToastId = (reservationId: string) =>
+  `book-ledger-refused-${reservationId}`
+
+/**
+ * The success toast of a write, kept back when the booking saved but its ledger write was refused:
+ * `submit` shows the warning in its place, and a reader must not be told "added" and "not added"
+ * for the same save.
+ */
+function unlessLedgerRefused(
+  message: string,
+): (result: { readonly ledger: string }) => string | undefined {
+  return (result) => (result.ledger === 'failed' ? undefined : message)
 }
 
 function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
@@ -242,20 +247,44 @@ export function BookingDialog({
     newDraft(currency, initialStayDayId),
   )
   const [touched, setTouched] = useState(false)
-  /**
-   * The booking this dialog has already written, when it wrote one and stayed open.
-   *
-   * Only a ledger refusal leaves it open after a successful save, and the retry has to be an
-   * *update* of that row rather than a second create — otherwise pressing "Add it to the ledger"
-   * would book the same thing twice.
-   */
-  const [savedId, setSavedId] = useState<string | null>(null)
-  /** The stay written with `savedId`, when the saved booking is a stay — its retry updates both. */
-  const [savedStayId, setSavedStayId] = useState<string | null>(null)
-  const [ledgerRefused, setLedgerRefused] = useState(false)
   /** Saved, with its cost line's split no longer adding up: the one thing left is to say so. */
   const [splitStale, setSplitStale] = useState(false)
   const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
+  /**
+   * The warnings of refused saves, held until the dialog has fully closed so that focus has been
+   * handed back to the control that opened it first and the toast does not sit over the dialog's
+   * footer while it is still on screen. `onCloseAutoFocus` raises them. One entry per booking, so a
+   * second refused save does not replace the first one's warning. A dialog that is already closed
+   * (Cancel or Escape while the save ran) or already unmounted (the timeline swaps this dialog's
+   * instance when the first booking lands on an empty trip) has no close left to wait for. One
+   * opened again since the save started is the reader's next task, whose close may be far off, so
+   * the warning would be late: those raise it at once.
+   */
+  const pendingWarningsRef = useRef(new Map<string, () => void>())
+  const openRef = useRef(open)
+  openRef.current = open
+  /** Counts the times this dialog was opened, to tell a save's own open from a later one. */
+  const sessionRef = useRef(0)
+  const mountedRef = useRef(true)
+  const flushWarnings = useCallback(() => {
+    const pending = [...pendingWarningsRef.current.values()]
+    pendingWarningsRef.current.clear()
+    for (const raise of pending) {
+      raise()
+    }
+  }, [])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      flushWarnings()
+    }
+  }, [flushWarnings])
+  useEffect(() => {
+    if (open) {
+      sessionRef.current += 1
+    }
+  }, [open])
 
   // The save button is disabled while it saves, which drops focus to the dialog itself; the notice
   // is what the reader needs next, so it takes focus (and is read out) when it appears.
@@ -275,28 +304,37 @@ export function BookingDialog({
         : draftFrom(booking, currency),
     )
     setTouched(false)
-    setSavedId(null)
-    setSavedStayId(null)
-    setLedgerRefused(false)
     setSplitStale(false)
   }, [open, booking, currency, initialStayDayId])
 
+  // Opening the booking a warning is about is the follow-up it asked for, and the toast would cover
+  // the form, so a warning shown or still held for it goes. Another booking, or a new one, leaves
+  // the warnings where they are.
+  const bookingId = booking?.id
+  useEffect(() => {
+    if (open && bookingId !== undefined) {
+      const toastId = ledgerRefusedToastId(bookingId)
+      pendingWarningsRef.current.delete(toastId)
+      toast.dismiss(toastId)
+    }
+  }, [open, bookingId])
+
   const create = useAction(createBookingFn, {
-    success: t('modules.book.toast.added'),
+    success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const update = useAction(updateBookingFn, {
-    success: t('modules.book.toast.updated'),
+    success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
   const createStay = useAction(createStayFn, {
-    success: t('modules.book.toast.added'),
+    success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const updateStay = useAction(updateStayFn, {
-    success: t('modules.book.toast.updated'),
+    success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
 
@@ -309,18 +347,15 @@ export function BookingDialog({
     draft.type === 'accommodation' &&
     days.length > 0 &&
     (booking === undefined || booking.stay !== null)
-  const stayId = booking?.stay?.id ?? savedStayId
-  const writing = editing || savedId !== null
-  const bookingAction = writing ? update : create
-  const stayAction = writing ? updateStay : createStay
+  const stayId = booking?.stay?.id ?? null
+  const bookingAction = editing ? update : create
+  const stayAction = editing ? updateStay : createStay
   const action = stayBranch ? stayAction : bookingAction
   /*
-   * The type is fixed once a row exists behind it: after a save the dialog stays open only to retry
-   * the ledger line, and switching the type then would write a second booking (into the stay branch)
-   * or retype a booking whose nights are still linked to it (out of it). An existing stay is fixed for
-   * the second reason.
+   * The type of an existing stay is fixed: switching it out would retype a booking whose nights are
+   * still linked to it.
    */
-  const typeLocked = savedId !== null || (booking?.stay ?? null) !== null
+  const typeLocked = (booking?.stay ?? null) !== null
 
   const stops = useMemo(() => stopOptions(days, t), [days, t])
   const stopIds = useMemo(() => stops.map((option) => option.value), [stops])
@@ -333,6 +368,9 @@ export function BookingDialog({
     [draft, stopIds, stayBranch, days],
   )
   const invalid = hasBookingErrors(errors)
+  const saveLabel: MessageKey = editing
+    ? 'modules.book.action.save'
+    : 'modules.book.action.add'
   const shape = bookingShape(draft.type)
 
   /** The date behind the day this booking is pinned to — the middle link of the ledger's chain. */
@@ -349,12 +387,6 @@ export function BookingDialog({
    */
   const tripStartDate = days.at(0)?.date ?? null
   const notice = ledgerNotice(draft, {
-    /*
-     * The link the row carried when the dialog opened, and deliberately not `savedId`: the only
-     * thing that leaves this dialog open after a successful save is a ledger write that was
-     * *refused*, so at that moment there is still no line and the retry has one to add rather than
-     * one to update.
-     */
     linked: booking?.hasLedgerLine ?? false,
     dayDate: linkedDayDate,
     tripStartDate,
@@ -392,6 +424,7 @@ export function BookingDialog({
     if (invalid) {
       return
     }
+    const session = sessionRef.current
     const priceMinor = parseMoneyToMinor(draft.price, draft.currency) ?? 0
     const result = stayBranch
       ? await saveStay(priceMinor)
@@ -399,27 +432,47 @@ export function BookingDialog({
     if (result === null) {
       return
     }
+    const toastId = ledgerRefusedToastId(result.reservationId)
+    if (result.ledger !== 'failed') {
+      // The cost line exists now, so a warning that it did not is out of date, shown or held.
+      pendingWarningsRef.current.delete(toastId)
+      toast.dismiss(toastId)
+    }
     if (result.ledger === 'failed') {
-      // A partial success: the booking is on the trip and its cost line is not. Saying so and
-      // closing would leave the reader to discover a missing line later, so the dialog stays open
-      // and offers the half that failed.
-      setSavedId(result.reservationId)
-      setLedgerRefused(true)
+      // A partial success: the booking is on the trip and its cost line is not. The next save of
+      // the booking adds the line, because the sync keys off the row's own expense link, so the
+      // dialog closes and `onCloseAutoFocus` raises the warning that tells the reader so.
+      const raise = () =>
+        toast.warning(t('modules.book.toast.ledgerRefused'), {
+          id: toastId,
+          description: t('modules.book.toast.ledgerRefusedBody'),
+          duration: Infinity,
+          cancel: { label: t('ui.action.close'), onClick: () => {} },
+        })
+      const sameSession = mountedRef.current && session === sessionRef.current
+      if (sameSession && openRef.current) {
+        pendingWarningsRef.current.set(toastId, raise)
+      } else {
+        raise()
+      }
+      // Only this save's own dialog is closed: one the reader closed already has nothing left to
+      // close, and one opened again since is their next task, whose typed input a close would drop.
+      if (!mountedRef.current || (sameSession && openRef.current)) {
+        onOpenChange(false)
+      }
       return
     }
     if (result.ledger === 'split-stale') {
       // Also a partial success, and the other way round: the booking and the new amount are
       // saved, the split of its cost line is not. Closing would leave the reader to find a split
       // that no longer adds up, so the dialog says so and waits to be dismissed.
-      setSavedId(result.reservationId)
-      setLedgerRefused(false)
       setSplitStale(true)
       return
     }
     onOpenChange(false)
   }
 
-  /** The stay's two rows in one action; a retry after a ledger refusal updates both. */
+  /** The stay's two rows in one action. */
   async function saveStay(priceMinor: number) {
     const payload = {
       tripId,
@@ -439,14 +492,11 @@ export function BookingDialog({
       checkInEndTime: draft.checkInEndTime,
       checkOutTime: draft.endTime,
     }
-    const existingId = booking?.id ?? savedId
-    if (existingId === null || stayId === null) {
-      const result = await createStay.run({ data: payload })
-      setSavedStayId(result?.stayId ?? null)
-      return result
+    if (booking === undefined || stayId === null) {
+      return createStay.run({ data: payload })
     }
     return updateStay.run({
-      data: { ...payload, reservationId: existingId, stayId },
+      data: { ...payload, reservationId: booking.id, stayId },
     })
   }
 
@@ -471,15 +521,14 @@ export function BookingDialog({
       assignmentId: draft.assignmentId,
       notes: draft.notes,
     }
-    const existingId = booking?.id ?? savedId
-    return existingId === null
+    return booking === undefined
       ? create.run({ data: payload })
-      : update.run({ data: { ...payload, reservationId: existingId } })
+      : update.run({ data: { ...payload, reservationId: booking.id } })
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent size="lg" onCloseAutoFocus={flushWarnings}>
         <DialogHeader>
           <DialogTitle>
             {editing
@@ -519,15 +568,6 @@ export function BookingDialog({
                 {action.error}
               </Alert>
             )}
-
-            {ledgerRefused ? (
-              <Alert
-                tone="warning"
-                title={t('modules.book.ledger.refused.title')}
-              >
-                {t('modules.book.ledger.refused.body')}
-              </Alert>
-            ) : null}
 
             <fieldset className="min-w-0">
               <legend className="mb-2 text-label font-medium text-ink">
@@ -890,11 +930,7 @@ export function BookingDialog({
             loadingLabel={t('modules.book.action.saving')}
             onClick={splitStale ? () => onOpenChange(false) : undefined}
           >
-            {t(
-              splitStale
-                ? 'modules.book.action.done'
-                : saveLabel({ ledgerRefused, editing }),
-            )}
+            {t(splitStale ? 'modules.book.action.done' : saveLabel)}
           </Button>
         </DialogFooter>
       </DialogContent>

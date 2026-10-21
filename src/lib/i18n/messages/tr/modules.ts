@@ -257,6 +257,9 @@ const messages = {
   'book.toast.addFailed': 'Rezervasyon eklenmedi',
   'book.toast.updated': 'Rezervasyon güncellendi',
   'book.toast.updateFailed': 'Rezervasyon güncellenmedi',
+  'book.toast.ledgerRefused': 'Kaydedildi ama masraflara eklenmedi',
+  'book.toast.ledgerRefusedBody':
+    'Rezervasyonu açıp yeniden kaydedin; masraf satırı eklenir.',
 
   'book.emptyFacts':
     'Adının dışında henüz bir şey yok. Saati, fiyatı ve onay numarasını eklemek için aç.',
@@ -529,10 +532,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Bir durağa bağlı değil',
   'book.field.stopSearch': 'Duraklarda ve günlerde ara',
   'book.field.stopEmpty': 'Eşleşen durak yok',
-  'book.ledger.refused.title': 'Kaydedildi ama masraflara eklenmedi',
-  'book.ledger.refused.body':
-    'Rezervasyon gezide. Masraf satırını gezinin masraflarına eklemek olmadı — o yarısını tekrar dene.',
-  'book.action.ledgerRetry': 'Masraflara ekle',
   'book.ledger.splitStale.title': 'Kaydedildi, ancak bölüşüm artık tutmuyor',
   'book.ledger.splitStale.body':
     'Rezervasyon ve yeni fiyatı kaydedildi, ancak bu masrafın bölüşümü yeni toplamı izleyemedi. Masraflar bölümünde kalemi açıp bölüşümü düzeltin.',
