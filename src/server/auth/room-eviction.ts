@@ -44,6 +44,19 @@ import type { BetterAuthPlugin } from 'better-auth'
  * `after` half deletes each blob by name once the endpoint has succeeded, before the sockets are
  * closed. Best effort, like the close: the person's own action never fails on a KV error, and the
  * limit is the KV convergence window (see `./session-blobs`), not "immediately".
+ *
+ * Ending an impersonation (`/admin/stop-impersonating`, reached only in process through the console's
+ * End impersonation function: its HTTP path is closed, #1179) is a session end too. The `before` half
+ * reads the owner of the session cookie, which during an impersonation is the impersonated person,
+ * never the operator whose own session the signed `admin_session` cookie carries; the room records
+ * nothing about impersonation, so a socket opened under the worn identity cannot be told from the
+ * person's own and every socket of that person closes, on their own devices too. A sign-out inside an
+ * impersonated session resolves the same person and does the same. A failed exit queues nothing.
+ *
+ * Two concurrent sign-outs on one cookie both resolve the person before either deletes the session,
+ * so the eviction is queued twice. That is accepted (#1179): it costs one extra reconnect and loses
+ * nothing, a reliable guard needs atomic state across isolates that KV cannot give, and an
+ * idempotency key would swallow a legitimate second eviction.
  */
 
 /**
@@ -129,6 +142,7 @@ const SESSION_ENDING_PATHS: ReadonlySet<string> = new Set([
   '/revoke-other-sessions',
   '/revoke-sessions',
   '/admin/revoke-user-session',
+  '/admin/stop-impersonating',
 ])
 
 /** {@link SESSION_ENDING_PATHS} plus the one whose success depends on a flag in the body. */

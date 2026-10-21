@@ -6,7 +6,11 @@
  * removed from the workspace (by an owner, by leaving, or by the platform console banning, signing
  * out or deleting the account) keeps receiving every commit and presence frame until it drops;
  * so does a socket of a person who then resets their password or signs out (#1093). A socket is
- * not tied to a session, so every socket of that person closes, on their other devices too.
+ * not tied to a session, so every socket of that person closes, on their other devices too. Ending
+ * an impersonation closes the impersonated person's sockets for the same reason, on their own
+ * devices too, because a socket records nothing about impersonation (#1179). Two concurrent
+ * sign-outs queue this job twice; the second close can drop a socket that already reconnected, so
+ * the person reconnects once more, which is accepted.
  * #1050 closes sockets on trip-level changes; this is the same close for the workspace-level ones,
  * and the person's next connect re-runs the session and tenancy checks. After losing a place that
  * connect is refused; after ending one's own session it is refused only on a device with no valid
