@@ -698,6 +698,10 @@ const messages = {
   'twoFactor.password.invalid': 'Dit wachtwoord klopt niet.',
   'twoFactor.key.intro':
     'Je hebt een authenticator-app op je telefoon nodig. Voeg deze sleutel toe en kom hier terug. Tweestapsverificatie staat nog niet aan.',
+  'twoFactor.key.matrixLabel':
+    'Instelcode. Dezelfde sleutel is beschikbaar als tekst',
+  'twoFactor.key.matrixFailed':
+    'We konden geen code voor deze sleutel maken. Voer de instelsleutel in je app in.',
   'twoFactor.key.label': 'Instelsleutel',
   'twoFactor.key.copy': 'Sleutel kopiëren',
   'twoFactor.key.copied': 'Sleutel gekopieerd',

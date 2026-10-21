@@ -685,6 +685,9 @@ const messages = {
   'twoFactor.password.invalid': 'Lösenordet stämmer inte.',
   'twoFactor.key.intro':
     'Du behöver en autentiseringsapp på telefonen. Lägg till nyckeln och kom tillbaka hit. Tvåfaktor är inte på ännu.',
+  'twoFactor.key.matrixLabel': 'Inställningskod. Samma nyckel finns som text',
+  'twoFactor.key.matrixFailed':
+    'Vi kunde inte skapa en kod för den här nyckeln. Ange inställningsnyckeln i din app.',
   'twoFactor.key.label': 'Inställningsnyckel',
   'twoFactor.key.copy': 'Kopiera nyckel',
   'twoFactor.key.copied': 'Nyckeln kopierad',
