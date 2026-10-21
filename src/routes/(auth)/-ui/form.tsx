@@ -10,8 +10,7 @@
  * `t()`, including the ones only a screen reader hears - the reveal control on a
  * password field, the sentence a button announces while it is busy. These are
  * the only screens with no session behind them, so the language is whatever
- * `Accept-Language` negotiated and there is no stored preference to correct it
- * with (`docs/SPEC.md` §8.3, §8.6).
+ * the server negotiated (`docs/SPEC.md` §9 rules 3 and 6).
  */
 import * as React from 'react'
 import { Eye, EyeOff, Fingerprint } from 'lucide-react'
@@ -67,6 +66,42 @@ export function visibleError(meta: {
   errors: ReadonlyArray<unknown>
 }): string | undefined {
   return meta.isTouched ? firstError(meta.errors) : undefined
+}
+
+/** The public field seam needed to refresh already visible client errors. */
+interface AuthValidationForm {
+  readonly fieldInfo: Readonly<
+    Record<
+      string,
+      | {
+          readonly instance: {
+            readonly getMeta: () => {
+              readonly isTouched: boolean
+              readonly errors: ReadonlyArray<unknown>
+            }
+            readonly validate: (cause: 'change') => unknown
+          } | null
+        }
+      | undefined
+    >
+  >
+}
+
+/** Re-run validation only for fields displaying an error, without submitting or resetting. */
+export function useRevalidateAuthErrors(form: AuthValidationForm): void {
+  const { locale } = useI18n()
+  const previousLocale = React.useRef(locale)
+  React.useEffect(() => {
+    if (previousLocale.current === locale) return
+    previousLocale.current = locale
+    // useForm updates its validators in a layout effect before this effect.
+    const fields = Object.values(form.fieldInfo)
+      .map((info) => info?.instance)
+      .filter((field) => field && visibleError(field.getMeta()) !== undefined)
+    for (const field of fields) {
+      if (field) void field.validate('change')
+    }
+  }, [form, locale])
 }
 
 /* ------------------------------------------------------------------ layout */

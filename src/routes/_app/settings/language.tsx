@@ -20,18 +20,18 @@ import {
 } from '#/lib/i18n'
 import { saveLanguagePreference } from '../-server/settings'
 import { SettingsSection } from '../-ui/settings-nav'
-import { commitLanguage, localeInForce } from './-lib/language-commit'
+import { commitLanguage, localeInForce } from '#/lib/i18n/commit-language'
 import { RouteError } from './-ui/route-error'
 import { loadLanguageSettings } from './-server/preferences'
 
 import type { LocaleChoice } from '#/components/settings'
-import type { LanguageOverride } from './-lib/language-commit'
+import type { LanguageOverride } from '#/lib/i18n/commit-language'
 import type { ReactNode } from 'react'
 
 /**
  * The language screen: twenty-three languages, each written in its own script.
  *
- * **Why it is a route of its own.** `docs/SPEC.md` §8.7 puts the picker "in
+ * **Why it is a route of its own.** `docs/SPEC.md` §9 rule 7 puts the picker "in
  * settings" and no further. It cannot live in a `SettingsRow`, whose control
  * column is a fixed `sm:w-64` so that a column of selects lands on one edge
  * rather than four — a twenty-four-option wrapped grid in 256px is a list of
@@ -53,7 +53,7 @@ import type { ReactNode } from 'react'
  * `overrideOrNull` turns into the SQL `NULL` which makes `getEffectiveSettings`
  * fall back to the workspace row.
  *
- * **Why `router.invalidate()` and not a client-side catalogue swap.** §8.3 has
+ * **Why `router.invalidate()` and not a client-side catalogue swap.** §9 rule 3 has
  * the locale negotiated on the server, once, before first paint, with
  * `<html lang>` and `<html dir>` server-rendered. Invalidating re-runs the root
  * loader, which re-negotiates from the row this write just changed and hands
@@ -106,7 +106,7 @@ function LanguagePage() {
 
   /**
    * The click. Everything that decides *which* of the three things happened
-   * lives in `./-lib/language-commit`; what is left here is the part that is
+   * lives in `#/lib/i18n/commit-language`; what is left here is the part that is
    * only true of a screen — moving the selection before the write answers so a
    * chip never stalls under a finger, putting it back when the write is
    * refused, and choosing which of three authored sentences to say.
@@ -149,7 +149,7 @@ function LanguagePage() {
         // Already resolved by the root loader that `refresh()` just re-ran, so
         // this reads `loadCatalogue`'s map rather than fetching a second time.
         // A locale whose catalogue is still empty renders its keys, on purpose:
-        // `createTranslator` has no English branch, because §8.2 bans the
+        // `createTranslator` has no English branch, because §9 rule 2 bans the
         // silent fallback that hides a hole.
         translatorFor: async (target) =>
           createTranslator(target, await loadCatalogue(target)),

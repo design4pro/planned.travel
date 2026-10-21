@@ -14,6 +14,7 @@ import {
   FieldStack,
   FormAlert,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -57,6 +58,7 @@ function ForgotPasswordPage() {
       setSentTo(parsed.data.email)
     },
   })
+  useRevalidateAuthErrors(form)
 
   async function resend(): Promise<void> {
     if (!sentTo) return

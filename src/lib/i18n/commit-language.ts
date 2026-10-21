@@ -5,10 +5,8 @@
  * The click has three outcomes and only one of them is a success, so the screen
  * has to tell them apart before it opens its mouth. It is written here, away
  * from the route, for one reason: the branch that matters most is the one that
- * cannot be reached by clicking. `src/routes/**` is compiled into the `server`
- * vitest project, which has no DOM, so a route component's own logic is
- * unreachable from a test — and the round before this one answered that by
- * asserting the *source text* of `language.tsx` with regular expressions. Those
+ * cannot be reached by clicking. Earlier tests asserted the *source text* of
+ * `language.tsx` with regular expressions. Those
  * tests broke on a reformat and passed on a rewrite that meant the opposite. A
  * plain function with its four collaborators passed in is testable for what it
  * does instead of for how it is spelled.
