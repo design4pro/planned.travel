@@ -270,6 +270,9 @@ const messages = {
   'book.toast.addFailed': 'Бронювання не додано',
   'book.toast.updated': 'Бронювання змінено',
   'book.toast.updateFailed': 'Бронювання не змінено',
+  'book.toast.ledgerRefused': 'Збережено, але не додано до витрат',
+  'book.toast.ledgerRefusedBody':
+    'Відкрийте бронювання й збережіть його ще раз, щоб додати рядок витрат.',
 
   'book.emptyFacts':
     'Крім назви поки нічого немає. Відкрийте, щоб додати час, ціну та номер підтвердження.',
@@ -554,10 +557,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Без зупинки',
   'book.field.stopSearch': 'Пошук серед зупинок і днів',
   'book.field.stopEmpty': 'Жодна зупинка не підходить',
-  'book.ledger.refused.title': 'Збережено, але не додано до витрат',
-  'book.ledger.refused.body':
-    'Бронювання вже в подорожі. Додати його рядок до витрат подорожі не вдалося — повторіть цю половину.',
-  'book.action.ledgerRetry': 'Додати до витрат',
   'book.ledger.splitStale.title': 'Збережено, але розподіл більше не сходиться',
   'book.ledger.splitStale.body':
     'Бронювання та його нова ціна збережені, але розподіл цієї витрати не зміг підлаштуватися під нову суму. Відкрийте витрату в розділі «Витрати» й виправте розподіл.',

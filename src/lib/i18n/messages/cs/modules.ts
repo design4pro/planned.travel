@@ -269,6 +269,9 @@ const messages = {
   'book.toast.addFailed': 'Rezervace nebyla přidána',
   'book.toast.updated': 'Rezervace upravena',
   'book.toast.updateFailed': 'Rezervace nebyla upravena',
+  'book.toast.ledgerRefused': 'Uloženo, ale nepřidáno do nákladů',
+  'book.toast.ledgerRefusedBody':
+    'Otevřete rezervaci a uložte ji znovu, aby se přidala její nákladová položka.',
 
   'book.emptyFacts':
     'Kromě názvu tu zatím nic není. Otevři to a doplň čas, cenu a potvrzovací číslo.',
@@ -549,10 +552,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Bez zastávky',
   'book.field.stopSearch': 'Hledej zastávky a dny',
   'book.field.stopEmpty': 'Žádná zastávka neodpovídá',
-  'book.ledger.refused.title': 'Uloženo, ale nepřidáno do nákladů',
-  'book.ledger.refused.body':
-    'Rezervace je na výletě. Přidat její položku do nákladů výletu se nepovedlo — zkus tuhle půlku znovu.',
-  'book.action.ledgerRetry': 'Přidat do nákladů',
   'book.ledger.splitStale.title': 'Uloženo, ale rozdělení už nesedí',
   'book.ledger.splitStale.body':
     'Rezervace i její nová cena jsou uloženy, ale rozdělení této položky mezi lidi nemohlo následovat nový součet. Otevřete položku v Nákladech a rozdělení opravte.',

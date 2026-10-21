@@ -268,6 +268,9 @@ const messages = {
   'book.toast.addFailed': 'La reserva no s’ha afegit',
   'book.toast.updated': 'Reserva actualitzada',
   'book.toast.updateFailed': 'La reserva no s’ha actualitzat',
+  'book.toast.ledgerRefused': 'Desat, però no afegit a les despeses',
+  'book.toast.ledgerRefusedBody':
+    'Obre la reserva i torna-la a desar per afegir-ne la línia de cost.',
 
   'book.emptyFacts':
     'A part del nom encara no hi ha res. Obre-ho per afegir l’hora, el preu i el número de confirmació.',
@@ -551,10 +554,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Sense parada',
   'book.field.stopSearch': 'Cerca parades i dies',
   'book.field.stopEmpty': 'Cap parada coincideix',
-  'book.ledger.refused.title': 'Desat, però no afegit a les despeses',
-  'book.ledger.refused.body':
-    'La reserva és al viatge. Afegir-ne la línia de despesa a les despeses del viatge no ha funcionat — torna a provar aquesta meitat.',
-  'book.action.ledgerRetry': 'Afegeix-ho a les despeses',
   'book.ledger.splitStale.title': 'Desat, però el repartiment ja no quadra',
   'book.ledger.splitStale.body':
     'La reserva i el nou preu s’han desat, però el repartiment d’aquesta despesa no ha pogut seguir el nou total. Obre la despesa a Despeses i corregeix el repartiment.',
