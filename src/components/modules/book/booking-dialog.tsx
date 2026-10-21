@@ -251,28 +251,39 @@ export function BookingDialog({
   const [splitStale, setSplitStale] = useState(false)
   const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
   /**
-   * The warning of a refused save, held until the dialog has fully closed: until then the page
-   * behind is hidden from assistive technology and a toast raised earlier may never be read out
-   * (WCAG 4.1.3). `onCloseAutoFocus` raises it. A dialog that is already closed (Cancel or Escape
-   * while the save ran) or already unmounted (the timeline swaps this dialog's instance when the
-   * first booking lands on an empty trip) has no close left to wait for, so those raise it at once.
+   * The warnings of refused saves, held until the dialog has fully closed so that focus has been
+   * handed back to the control that opened it first and the toast does not sit over the dialog's
+   * footer while it is still on screen. `onCloseAutoFocus` raises them. One entry per booking, so a
+   * second refused save does not replace the first one's warning. A dialog that is already closed
+   * (Cancel or Escape while the save ran), already unmounted (the timeline swaps this dialog's
+   * instance when the first booking lands on an empty trip) or opened again since the save started
+   * has no close left to wait for, so those raise it at once.
    */
-  const pendingWarningRef = useRef<(() => void) | null>(null)
+  const pendingWarningsRef = useRef(new Map<string, () => void>())
   const openRef = useRef(open)
   openRef.current = open
+  /** Counts the times this dialog was opened, to tell a save's own open from a later one. */
+  const sessionRef = useRef(0)
   const mountedRef = useRef(true)
-  const flushWarning = useCallback(() => {
-    const raise = pendingWarningRef.current
-    pendingWarningRef.current = null
-    raise?.()
+  const flushWarnings = useCallback(() => {
+    const pending = [...pendingWarningsRef.current.values()]
+    pendingWarningsRef.current.clear()
+    for (const raise of pending) {
+      raise()
+    }
   }, [])
   useEffect(() => {
     mountedRef.current = true
     return () => {
       mountedRef.current = false
-      flushWarning()
+      flushWarnings()
     }
-  }, [flushWarning])
+  }, [flushWarnings])
+  useEffect(() => {
+    if (open) {
+      sessionRef.current += 1
+    }
+  }, [open])
 
   // The save button is disabled while it saves, which drops focus to the dialog itself; the notice
   // is what the reader needs next, so it takes focus (and is read out) when it appears.
@@ -296,11 +307,14 @@ export function BookingDialog({
   }, [open, booking, currency, initialStayDayId])
 
   // Opening the booking a warning is about is the follow-up it asked for, and the toast would cover
-  // the form. Another booking, or a new one, leaves the warning where it is.
+  // the form, so a warning shown or still held for it goes. Another booking, or a new one, leaves
+  // the warnings where they are.
   const bookingId = booking?.id
   useEffect(() => {
     if (open && bookingId !== undefined) {
-      toast.dismiss(ledgerRefusedToastId(bookingId))
+      const toastId = ledgerRefusedToastId(bookingId)
+      pendingWarningsRef.current.delete(toastId)
+      toast.dismiss(toastId)
     }
   }, [open, bookingId])
 
@@ -409,6 +423,7 @@ export function BookingDialog({
     if (invalid) {
       return
     }
+    const session = sessionRef.current
     const priceMinor = parseMoneyToMinor(draft.price, draft.currency) ?? 0
     const result = stayBranch
       ? await saveStay(priceMinor)
@@ -420,19 +435,25 @@ export function BookingDialog({
       // A partial success: the booking is on the trip and its cost line is not. The next save of
       // the booking adds the line, because the sync keys off the row's own expense link, so the
       // dialog closes and `onCloseAutoFocus` raises the warning that tells the reader so.
+      const toastId = ledgerRefusedToastId(result.reservationId)
       const raise = () =>
         toast.warning(t('modules.book.toast.ledgerRefused'), {
-          id: ledgerRefusedToastId(result.reservationId),
+          id: toastId,
           description: t('modules.book.toast.ledgerRefusedBody'),
           duration: Infinity,
           cancel: { label: t('ui.action.close'), onClick: () => {} },
         })
-      if (mountedRef.current && openRef.current) {
-        pendingWarningRef.current = raise
+      const sameSession = mountedRef.current && session === sessionRef.current
+      if (sameSession && openRef.current) {
+        pendingWarningsRef.current.set(toastId, raise)
       } else {
         raise()
       }
-      onOpenChange(false)
+      // A dialog opened again since this save started is the reader's next task, not this save's:
+      // closing it would drop what they have typed.
+      if (!mountedRef.current || sameSession) {
+        onOpenChange(false)
+      }
       return
     }
     if (result.ledger === 'split-stale') {
@@ -501,7 +522,7 @@ export function BookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" onCloseAutoFocus={flushWarning}>
+      <DialogContent size="lg" onCloseAutoFocus={flushWarnings}>
         <DialogHeader>
           <DialogTitle>
             {editing

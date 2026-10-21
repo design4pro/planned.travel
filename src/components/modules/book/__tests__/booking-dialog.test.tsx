@@ -4,7 +4,7 @@ import '#/components/ui/__tests__/test-env'
 
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 
 import { toast } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
@@ -435,6 +435,8 @@ describe('BookingDialog — a ledger write that was refused', () => {
     }
   })
 
+  let setDialogOpen: (open: boolean) => void = () => undefined
+
   /** Controlled like the real parent: closing the dialog unmounts its content, which raises the warning. */
   function mount(
     booking: BookingRow | undefined,
@@ -442,6 +444,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
   ) {
     function Harness({ row }: { readonly row: BookingRow | undefined }) {
       const [open, setOpen] = useState(true)
+      setDialogOpen = setOpen
       return (
         <I18nProvider locale="en" messages={EN}>
           <BookingDialog
@@ -465,6 +468,8 @@ describe('BookingDialog — a ledger write that was refused', () => {
     // A remount with the saved row stands for the reader opening it again from the list.
     return {
       reopenOn: (b: BookingRow) => view.rerender(ui(b, 'reopened')),
+      /** The same dialog instance, closed and opened again by its parent. */
+      setOpen: (next: boolean) => act(() => setDialogOpen(next)),
       unmount: () => view.unmount(),
     }
   }
@@ -624,6 +629,35 @@ describe('BookingDialog — a ledger write that was refused', () => {
     refuse({ reservationId: 'booking-2', ledger: 'failed' })
 
     await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
+  })
+
+  it('warns at once and leaves the dialog alone when it was opened again since the save started', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    let refuse: (value: {
+      reservationId: string
+      ledger: string
+    }) => void = () => undefined
+    reservations.create.mockReturnValue(
+      new Promise((resolve) => {
+        refuse = resolve
+      }),
+    )
+    const onOpenChange = vi.fn()
+    const dialog = mount(undefined, onOpenChange)
+    chooseOther()
+    submitTheForm()
+    await vi.waitFor(() => expect(reservations.create).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    dialog.setOpen(true)
+    await screen.findByRole('dialog')
+    onOpenChange.mockClear()
+
+    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+
+    await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
+    expect(onOpenChange).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
   it('updates the saved booking when it is reopened, and never creates a second one', async () => {
