@@ -20,11 +20,9 @@ export const FOLLOW_WORKSPACE = 'workspace' as const
 /** What the picker can be set to: one of the shipped locales, or "follow". */
 export type LocaleChoice = Locale | typeof FOLLOW_WORKSPACE
 
-export interface LanguagePickerProps {
+interface LanguagePickerBaseProps {
   /** The traveller's current choice. */
   readonly value: LocaleChoice
-  /** The workspace default, named in its own script on the "follow" option. */
-  readonly workspaceDefault: Locale
   /** Called once per committed change. Never fired by focus movement. */
   readonly onSelect: (choice: LocaleChoice) => void
   /**
@@ -40,28 +38,32 @@ export interface LanguagePickerProps {
    *
    * Copy arrives already translated: this component is presentational, so the
    * host route passes `t('settings.language.label')`. It cannot call `t()`
-   * itself — `MessageKey` is derived from `messages/en/*.ts`, the `settings`
-   * namespace is owned by a later item, and a key that does not exist yet is a
-   * compile error rather than a runtime fallback (`docs/SPEC.md` §8.2).
+   * itself. `MessageKey` is derived from `messages/en/*.ts`, so a missing key
+   * is a compile error rather than a runtime fallback (`docs/SPEC.md` §9 rule 2).
    */
   readonly label: string
-  /** The "follow the workspace" option's text — `t('settings.language.followWorkspace')`. */
-  readonly followWorkspaceLabel: string
+  /** Minimum grid track width; settings keeps its measured 10.5rem default. */
+  readonly columnMin?: string
   readonly className?: string
 }
+
+/** The workspace name and label are supplied together, or the row is absent. */
+export type LanguagePickerProps = LanguagePickerBaseProps &
+  (
+    | {
+        readonly followWorkspaceLabel: string
+        readonly workspaceDefault: Locale
+      }
+    | {
+        readonly followWorkspaceLabel?: undefined
+        readonly workspaceDefault?: never
+      }
+  )
 
 interface PickerItem {
   readonly choice: LocaleChoice
   readonly descriptor: LocaleDescriptor | null
 }
-
-const ITEMS: ReadonlyArray<PickerItem> = [
-  { choice: FOLLOW_WORKSPACE, descriptor: null },
-  ...SUPPORTED_LOCALES.map((descriptor) => ({
-    choice: descriptor.tag,
-    descriptor,
-  })),
-]
 
 /**
  * Every chip is the same 44px box whatever script it holds.
@@ -212,7 +214,7 @@ const CHIP_REST_OFF = 'border-edge bg-surface-2 text-ink-3'
  * three and stops 日本語 sitting alone in a 236px box.
  */
 const GRID =
-  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,10.5rem),1fr))] gap-2'
+  'grid grid-cols-[repeat(auto-fill,minmax(min(100%,var(--language-column-min,10.5rem)),1fr))] gap-2'
 
 /**
  * The `SectionLabel`'s line box, written in the two tokens that draw it.
@@ -242,14 +244,17 @@ function isRtl(element: HTMLElement): boolean {
  * The grid is `auto-fill`, so the column count is a function of the container's
  * width and no React state knows it. Measuring it at keypress time is what lets
  * ArrowDown mean "the chip below this one" instead of "the next chip", which is
- * the difference between a grid and a list wearing a grid's clothes. Index 0 is
- * the full-width "follow" row and is skipped.
+ * the difference between a grid and a list wearing a grid's clothes. The optional full-width
+ * "follow" row is skipped when present.
  */
-function columnsIn(nodes: ReadonlyArray<HTMLButtonElement | null>): number {
-  const first = nodes[1]
+function columnsIn(
+  nodes: ReadonlyArray<HTMLButtonElement | null>,
+  firstLanguage: number,
+): number {
+  const first = nodes[firstLanguage]
   if (!first) return 1
   let columns = 0
-  for (let index = 1; index < nodes.length; index += 1) {
+  for (let index = firstLanguage; index < nodes.length; index += 1) {
     const node = nodes[index]
     if (!node || node.offsetTop !== first.offsetTop) break
     columns += 1
@@ -259,14 +264,14 @@ function columnsIn(nodes: ReadonlyArray<HTMLButtonElement | null>): number {
   // `offsetTop: 0` for everything. Both want the same answer: there is no row
   // below, so ArrowDown should behave as ArrowRight rather than firing the
   // reader to the end of the group.
-  if (columns >= nodes.length - 1) return 1
+  if (columns >= nodes.length - firstLanguage) return 1
   return Math.max(1, columns)
 }
 
 /**
- * The language picker: one control, twenty-four options, every state drawn.
+ * The language picker: one control, twenty-three languages and an optional follow row, every state drawn.
  *
- * **It is one tab stop, not twenty-four.** `role="radiogroup"` with a roving
+ * **It is one tab stop.** `role="radiogroup"` with a roving
  * tabindex means a keyboard reader arrives on the language they are already
  * using and leaves with one more Tab, rather than pressing it two dozen times
  * to get past a settings section.
@@ -289,7 +294,7 @@ function columnsIn(nodes: ReadonlyArray<HTMLButtonElement | null>): number {
  * **`ar` carries `dir="rtl"` on the option itself, not on a span inside it.**
  * The whole chip therefore mirrors inside an otherwise left-to-right grid: the
  * name sets from the right and the selection mark sits at its trailing edge.
- * That is deliberate. `docs/SPEC.md` §8.4 asks for RTL as a designed layout
+ * That is deliberate. `docs/SPEC.md` §9 rule 4 asks for RTL as a designed layout
  * rather than a flipped afterthought, and an Arabic reader scanning for their
  * own language finds it faster where their eye starts. Everything inside the
  * chip is expressed in logical properties, so the same markup mirrors again —
@@ -306,21 +311,32 @@ export function LanguagePicker({
   disabled = false,
   label,
   followWorkspaceLabel,
+  columnMin,
   className,
 }: LanguagePickerProps) {
   const labelId = React.useId()
   const nodes = React.useRef<Array<HTMLButtonElement | null>>([])
   const busy = pending !== null
+  const hasFollowRow = followWorkspaceLabel !== undefined
+  const firstLanguage = hasFollowRow ? 1 : 0
+  const items = React.useMemo<ReadonlyArray<PickerItem>>(() => {
+    const languages = SUPPORTED_LOCALES.map((descriptor) => ({
+      choice: descriptor.tag,
+      descriptor,
+    }))
+    if (!hasFollowRow) return languages
+    return [{ choice: FOLLOW_WORKSPACE, descriptor: null }, ...languages]
+  }, [hasFollowRow])
 
   const setNode = React.useMemo(
     () =>
-      ITEMS.map((_, index) => (node: HTMLButtonElement | null): void => {
+      items.map((_, index) => (node: HTMLButtonElement | null): void => {
         nodes.current[index] = node
       }),
-    [],
+    [items],
   )
 
-  const selectedIndex = ITEMS.findIndex((item) => item.choice === value)
+  const selectedIndex = items.findIndex((item) => item.choice === value)
   const [focusIndex, setFocusIndex] = React.useState(() =>
     Math.max(selectedIndex, 0),
   )
@@ -340,7 +356,7 @@ export function LanguagePicker({
   //      outside the component — a router invalidation, another tab, a reset —
   //      where the last focused index is stale rather than intentional.
   React.useEffect(() => {
-    if (selectedIndex >= 0) setFocusIndex(selectedIndex)
+    setFocusIndex(Math.max(selectedIndex, 0))
   }, [selectedIndex])
 
   const focusAt = React.useCallback((index: number) => {
@@ -351,25 +367,27 @@ export function LanguagePicker({
   }, [])
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    const last = ITEMS.length - 1
+    const last = items.length - 1
     const step = isRtl(event.currentTarget) ? -1 : 1
     const current = Math.min(Math.max(focusIndex, 0), last)
 
     const rowStep = (delta: number): number => {
-      if (current === 0) return delta > 0 ? 1 : 0
-      const raw = current + delta * columnsIn(nodes.current)
-      if (raw < 1) return 0
+      if (hasFollowRow && current === 0) return delta > 0 ? 1 : 0
+      const raw =
+        current +
+        delta * columnsIn(nodes.current.slice(0, items.length), firstLanguage)
+      if (raw < firstLanguage) return 0
       return Math.min(raw, last)
     }
 
     switch (event.key) {
       case 'ArrowRight':
         event.preventDefault()
-        focusAt((current + step + ITEMS.length) % ITEMS.length)
+        focusAt((current + step + items.length) % items.length)
         break
       case 'ArrowLeft':
         event.preventDefault()
-        focusAt((current - step + ITEMS.length) % ITEMS.length)
+        focusAt((current - step + items.length) % items.length)
         break
       case 'ArrowDown':
         event.preventDefault()
@@ -409,8 +427,13 @@ export function LanguagePicker({
         aria-labelledby={labelId}
         onKeyDown={onKeyDown}
         className={GRID}
+        style={
+          columnMin === undefined
+            ? undefined
+            : ({ '--language-column-min': columnMin } as React.CSSProperties)
+        }
       >
-        {ITEMS.map((item, index) => {
+        {items.map((item, index) => {
           const selected = item.choice === value
           const writing = busy && item.choice === pending
           const rtl = item.descriptor?.dir === 'rtl'
@@ -463,7 +486,7 @@ export function LanguagePicker({
                   : item.descriptor.nativeName}
               </span>
               <span className="ms-auto flex min-w-0 shrink items-center gap-2">
-                {item.descriptor === null ? (
+                {item.descriptor === null && workspaceDefault !== undefined ? (
                   <WorkspaceName tag={workspaceDefault} selected={selected} />
                 ) : null}
                 <Mark selected={selected} writing={writing} />

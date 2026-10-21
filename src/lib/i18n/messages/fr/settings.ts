@@ -707,6 +707,10 @@ const messages = {
   'twoFactor.password.invalid': 'Ce mot de passe est incorrect.',
   'twoFactor.key.intro':
     'Il vous faut une application d’authentification sur votre téléphone. Ajoutez-y cette clé, puis revenez ici. Les deux facteurs ne sont pas encore activés.',
+  'twoFactor.key.matrixLabel':
+    'Code de configuration. La même clé est disponible en texte',
+  'twoFactor.key.matrixFailed':
+    'Impossible de générer un code pour cette clé. Saisissez la clé de configuration dans votre application.',
   'twoFactor.key.label': 'Clé de configuration',
   'twoFactor.key.copy': 'Copier la clé',
   'twoFactor.key.copied': 'Clé copiée',

@@ -698,6 +698,10 @@ const messages = {
   'twoFactor.password.invalid': 'Toto heslo není správné.',
   'twoFactor.key.intro':
     'V telefonu potřebujete ověřovací aplikaci. Přidejte do ní tento klíč a vraťte se sem. Dvoufaktorové ověřování ještě není zapnuté.',
+  'twoFactor.key.matrixLabel':
+    'Kód pro nastavení. Stejný klíč je dostupný jako text',
+  'twoFactor.key.matrixFailed':
+    'Pro tento klíč se nepodařilo vytvořit kód. Zadejte klíč pro nastavení do aplikace.',
   'twoFactor.key.label': 'Nastavovací klíč',
   'twoFactor.key.copy': 'Kopírovat klíč',
   'twoFactor.key.copied': 'Klíč zkopírován',

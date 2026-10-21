@@ -703,6 +703,10 @@ const messages = {
   'twoFactor.password.invalid': 'Dieses Passwort stimmt nicht.',
   'twoFactor.key.intro':
     'Du brauchst eine Authenticator-App auf deinem Handy. Füge diesen Schlüssel hinzu und kehre hierher zurück. Zwei-Faktor ist noch nicht aktiviert.',
+  'twoFactor.key.matrixLabel':
+    'Einrichtungscode. Derselbe Schlüssel ist als Text verfügbar',
+  'twoFactor.key.matrixFailed':
+    'Für diesen Schlüssel konnte kein Code erstellt werden. Gib den Einrichtungsschlüssel in deiner App ein.',
   'twoFactor.key.label': 'Einrichtungsschlüssel',
   'twoFactor.key.copy': 'Schlüssel kopieren',
   'twoFactor.key.copied': 'Schlüssel kopiert',

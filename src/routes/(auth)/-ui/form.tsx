@@ -68,6 +68,42 @@ export function visibleError(meta: {
   return meta.isTouched ? firstError(meta.errors) : undefined
 }
 
+/** The public field seam needed to refresh already visible client errors. */
+interface AuthValidationForm {
+  readonly fieldInfo: Readonly<
+    Record<
+      string,
+      | {
+          readonly instance: {
+            readonly getMeta: () => {
+              readonly isTouched: boolean
+              readonly errors: ReadonlyArray<unknown>
+            }
+            readonly validate: (cause: 'change') => unknown
+          } | null
+        }
+      | undefined
+    >
+  >
+}
+
+/** Re-run validation only for fields displaying an error, without submitting or resetting. */
+export function useRevalidateAuthErrors(form: AuthValidationForm): void {
+  const { locale } = useI18n()
+  const previousLocale = React.useRef(locale)
+  React.useEffect(() => {
+    if (previousLocale.current === locale) return
+    previousLocale.current = locale
+    // useForm updates its validators in a layout effect before this effect.
+    const fields = Object.values(form.fieldInfo)
+      .map((info) => info?.instance)
+      .filter((field) => field && visibleError(field.getMeta()) !== undefined)
+    for (const field of fields) {
+      if (field) void field.validate('change')
+    }
+  }, [form, locale])
+}
+
 /* ------------------------------------------------------------------ layout */
 
 /** The card every form lives in. One shape, so all seven screens agree. */

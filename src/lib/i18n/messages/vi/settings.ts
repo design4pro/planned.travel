@@ -679,6 +679,10 @@ const messages = {
   'twoFactor.password.invalid': 'Mật khẩu này không đúng.',
   'twoFactor.key.intro':
     'Bạn cần ứng dụng xác thực trên điện thoại. Thêm khóa này rồi quay lại đây. Hai yếu tố vẫn chưa được bật.',
+  'twoFactor.key.matrixLabel':
+    'Mã thiết lập. Khóa này cũng có sẵn dưới dạng văn bản',
+  'twoFactor.key.matrixFailed':
+    'Không thể tạo mã cho khóa này. Hãy nhập khóa thiết lập vào ứng dụng của bạn.',
   'twoFactor.key.label': 'Khóa thiết lập',
   'twoFactor.key.copy': 'Sao chép khóa',
   'twoFactor.key.copied': 'Đã sao chép khóa',

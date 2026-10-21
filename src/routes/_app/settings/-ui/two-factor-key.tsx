@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Button } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { extractSetupKey, groupSetupKey } from '../-lib/two-factor'
+import { TwoFactorMatrix } from './two-factor-matrix'
 
-/** One display owns the secret, including the URI-bearing link's Replay boundary. */
+/** One display owns every representation of the secret and its Replay boundary. */
 export function TwoFactorKey({ uri }: { uri: string }) {
   const t = useTranslate()
   const key = extractSetupKey(uri)
@@ -21,6 +22,7 @@ export function TwoFactorKey({ uri }: { uri: string }) {
       <p className="text-label font-medium">
         {t('settings.twoFactor.key.label')}
       </p>
+      <TwoFactorMatrix uri={uri} />
       <p
         dir="ltr"
         className="break-words rounded-lg bg-surface-2 p-4 font-mono text-xl tracking-wider"

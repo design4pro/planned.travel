@@ -26,6 +26,7 @@ import {
   PasswordInput,
   SocialButtons,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -112,6 +113,7 @@ function LoginPage() {
       handOff(target)
     },
   })
+  useRevalidateAuthErrors(form)
 
   async function signInWithProvider(provider: SocialProviderId): Promise<void> {
     setFailure(null)

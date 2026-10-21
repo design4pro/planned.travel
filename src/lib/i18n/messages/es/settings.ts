@@ -706,6 +706,10 @@ const messages = {
   'twoFactor.password.invalid': 'Esa contraseña no es correcta.',
   'twoFactor.key.intro':
     'Necesitas una aplicación de autenticación en el móvil. Añade esta clave y vuelve aquí. Los dos factores aún no están activados.',
+  'twoFactor.key.matrixLabel':
+    'Código de configuración. La misma clave está disponible como texto',
+  'twoFactor.key.matrixFailed':
+    'No pudimos generar un código para esta clave. Introduce la clave de configuración en tu aplicación.',
   'twoFactor.key.label': 'Clave de configuración',
   'twoFactor.key.copy': 'Copiar clave',
   'twoFactor.key.copied': 'Clave copiada',
