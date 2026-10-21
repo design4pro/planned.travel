@@ -266,6 +266,9 @@ const messages = {
   'book.toast.addFailed': 'A reserva não foi adicionada',
   'book.toast.updated': 'Reserva atualizada',
   'book.toast.updateFailed': 'A reserva não foi atualizada',
+  'book.toast.ledgerRefused': 'Salvo, mas não adicionado aos custos',
+  'book.toast.ledgerRefusedBody':
+    'Abra a reserva e salve de novo para adicionar a linha de custo dela.',
 
   'book.emptyFacts':
     'Além do nome ainda não há nada. Abra para adicionar o horário, o preço e o número de confirmação.',
@@ -548,10 +551,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Sem parada',
   'book.field.stopSearch': 'Busque paradas e dias',
   'book.field.stopEmpty': 'Nenhuma parada corresponde',
-  'book.ledger.refused.title': 'Salvo, mas não adicionado aos custos',
-  'book.ledger.refused.body':
-    'A reserva está na viagem. Adicionar a linha de custo aos custos da viagem não deu certo — tente essa metade de novo.',
-  'book.action.ledgerRetry': 'Adicionar aos custos',
   'book.ledger.splitStale.title': 'Salvo, mas a divisão não bate mais',
   'book.ledger.splitStale.body':
     'A reserva e o novo preço foram salvos, mas a divisão deste custo não conseguiu acompanhar o novo total. Abra o item em Custos e corrija a divisão.',

@@ -252,6 +252,9 @@ const messages = {
   'book.toast.addFailed': 'Pemesanan tidak ditambahkan',
   'book.toast.updated': 'Pemesanan diperbarui',
   'book.toast.updateFailed': 'Pemesanan tidak diperbarui',
+  'book.toast.ledgerRefused': 'Tersimpan, tetapi belum masuk ke biaya',
+  'book.toast.ledgerRefusedBody':
+    'Buka pemesanan lalu simpan lagi untuk menambahkan baris biayanya.',
 
   'book.emptyFacts':
     'Selain namanya belum ada apa-apa. Buka untuk menambahkan waktu, harga, dan nomor konfirmasi.',
@@ -530,10 +533,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Tidak terkait perhentian',
   'book.field.stopSearch': 'Cari perhentian dan hari',
   'book.field.stopEmpty': 'Tidak ada perhentian yang cocok',
-  'book.ledger.refused.title': 'Tersimpan, tetapi belum masuk ke biaya',
-  'book.ledger.refused.body':
-    'Pemesanan sudah ada di perjalanan. Menambahkan baris biayanya ke biaya perjalanan tidak berhasil — coba lagi bagian itu.',
-  'book.action.ledgerRetry': 'Tambahkan ke biaya',
   'book.ledger.splitStale.title':
     'Tersimpan, tetapi pembagiannya tidak lagi pas',
   'book.ledger.splitStale.body':

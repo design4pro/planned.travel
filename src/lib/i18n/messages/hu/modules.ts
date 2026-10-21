@@ -258,6 +258,9 @@ const messages = {
   'book.toast.addFailed': 'A foglalás nem lett hozzáadva',
   'book.toast.updated': 'Foglalás frissítve',
   'book.toast.updateFailed': 'A foglalás nem lett frissítve',
+  'book.toast.ledgerRefused': 'Mentve, de a költségekhez nem került be',
+  'book.toast.ledgerRefusedBody':
+    'Nyisd meg a foglalást, és mentsd el újra, hogy a költségsora felkerüljön.',
 
   'book.emptyFacts':
     'A nevén kívül még semmi sincs rögzítve. Nyisd meg, és add meg az időt, az árat és a visszaigazolási számot.',
@@ -539,10 +542,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Nincs megállóhoz kötve',
   'book.field.stopSearch': 'Keresés megállók és napok között',
   'book.field.stopEmpty': 'Nincs találat a megállók közt',
-  'book.ledger.refused.title': 'Mentve, de a költségekhez nem került be',
-  'book.ledger.refused.body':
-    'A foglalás rajta van az úton. A költségsorát nem sikerült az út költségeihez adni — próbáld újra ezt a felét.',
-  'book.action.ledgerRetry': 'Hozzáadás a költségekhez',
   'book.ledger.splitStale.title': 'Mentve, de a megosztás már nem jön ki',
   'book.ledger.splitStale.body':
     'A foglalás és az új ára mentve lett, de a költségtétel megosztása nem tudta követni az új végösszeget. Nyisd meg a tételt a Költségeknél, és javítsd a megosztást.',

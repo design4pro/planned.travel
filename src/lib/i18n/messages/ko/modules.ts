@@ -247,6 +247,9 @@ const messages = {
   'book.toast.addFailed': '예약을 추가하지 못했습니다',
   'book.toast.updated': '예약을 수정했습니다',
   'book.toast.updateFailed': '예약을 수정하지 못했습니다',
+  'book.toast.ledgerRefused': '저장했지만 비용에는 넣지 못했습니다',
+  'book.toast.ledgerRefusedBody':
+    '예약을 열어 다시 저장하면 비용 항목이 추가됩니다.',
 
   'book.emptyFacts':
     '이름 말고는 아직 아무것도 없습니다. 열어서 시각, 금액, 확인 번호를 넣어 주세요.',
@@ -508,10 +511,6 @@ const messages = {
   'book.field.stopPlaceholder': '경유지 없음',
   'book.field.stopSearch': '경유지와 날짜 검색',
   'book.field.stopEmpty': '일치하는 경유지가 없습니다',
-  'book.ledger.refused.title': '저장했지만 비용에는 넣지 못했습니다',
-  'book.ledger.refused.body':
-    '예약은 여행에 들어갔습니다. 비용 항목을 여행 비용에 추가하지 못했습니다 — 그 절반만 다시 시도하세요.',
-  'book.action.ledgerRetry': '비용에 추가',
   'book.ledger.splitStale.title':
     '저장했지만 정산 분배가 더 이상 맞지 않습니다',
   'book.ledger.splitStale.body':
