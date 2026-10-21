@@ -113,7 +113,7 @@ Everything else is unchanged: layout, copy, fields, error placement and keys, th
 ### Details the tickets must pin
 
 - `endsOf` and `withEnd` take and return the field names of today's flat form, so the error keys of `validateTransportDraft` and the dialog's field wiring keep their type (`TransportErrors` is keyed by `keyof TransportDraft | 'form'` today, so once the ten fields leave the draft it is keyed by `keyof TransportDraft | EndField | 'form'`, where `EndField` is the union of the ten names; the keys themselves, `arrivalDate` among them, do not change); `withEnd(chain, field, value)` returns a new chain and `endsOf(chain)` returns the ten values as strings.
-- The day of the first and last Leg after put-back comes from `collapseToEnds` (the first Leg's departure day, the last Leg's arrival day); no day is recomputed.
+- The day of the first and last Leg after put-back comes from `collapseToEnds` (the first Leg's departure day, the last Leg's arrival day); no day is recomputed. Today a put-back shows the record's own day columns; the design shows the first and last Leg's day, and a save already overwrites the record's day with the first Leg's day (null when the Leg has none), so only the put-back path differs.
 - A catalogue answer that arrives after put-back (the editor is gone) is ignored; focus is lost on put-back as it is on the first click (follow-up (e) below covers both).
 - The dialog's local `chainFor` is deleted or becomes a one-line wrapper over `transportPayload`; no new helper takes that name.
 
