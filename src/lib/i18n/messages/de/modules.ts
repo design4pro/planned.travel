@@ -262,6 +262,10 @@ const messages = {
   'book.toast.addFailed': 'Die Buchung wurde nicht hinzugefügt',
   'book.toast.updated': 'Buchung aktualisiert',
   'book.toast.updateFailed': 'Die Buchung wurde nicht aktualisiert',
+  'book.toast.ledgerRefused':
+    'Gespeichert, aber nicht zu den Kosten hinzugefügt',
+  'book.toast.ledgerRefusedBody':
+    'Öffne die Buchung und speichere sie erneut, um ihre Kostenzeile hinzuzufügen.',
 
   'book.emptyFacts':
     'Außer dem Namen ist noch nichts erfasst. Öffne es, um Uhrzeit, Preis und Bestätigungsnummer zu ergänzen.',
@@ -549,11 +553,6 @@ const messages = {
   'book.field.stopPlaceholder': 'An keinen Halt gebunden',
   'book.field.stopSearch': 'Halte und Tage durchsuchen',
   'book.field.stopEmpty': 'Kein Halt passt dazu',
-  'book.ledger.refused.title':
-    'Gespeichert, aber nicht zu den Kosten hinzugefügt',
-  'book.ledger.refused.body':
-    'Die Buchung steht auf der Reise. Ihre Kostenzeile zu den Reisekosten hinzuzufügen hat nicht geklappt — versuche diese Hälfte noch einmal.',
-  'book.action.ledgerRetry': 'Zu den Kosten hinzufügen',
   'book.ledger.splitStale.title':
     'Gespeichert, aber die Aufteilung stimmt nicht mehr',
   'book.ledger.splitStale.body':

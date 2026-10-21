@@ -270,6 +270,9 @@ const messages = {
   'book.toast.addFailed': 'La réservation n’a pas été ajoutée',
   'book.toast.updated': 'Réservation mise à jour',
   'book.toast.updateFailed': 'La réservation n’a pas été mise à jour',
+  'book.toast.ledgerRefused': 'Enregistré, mais pas ajouté aux dépenses',
+  'book.toast.ledgerRefusedBody':
+    'Ouvrez la réservation et enregistrez-la de nouveau pour ajouter sa ligne de dépense.',
 
   'book.emptyFacts':
     'Rien d’autre que le nom pour l’instant. Ouvre-le pour ajouter l’heure, le prix et le numéro de confirmation.',
@@ -558,10 +561,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Lié à aucun arrêt',
   'book.field.stopSearch': 'Rechercher parmi les arrêts et les journées',
   'book.field.stopEmpty': 'Aucun arrêt ne correspond',
-  'book.ledger.refused.title': 'Enregistré, mais pas ajouté aux dépenses',
-  'book.ledger.refused.body':
-    'La réservation est sur le voyage. L’ajout de sa ligne de dépense aux dépenses du voyage n’a pas abouti — réessayez cette moitié.',
-  'book.action.ledgerRetry': 'Ajouter aux dépenses',
   'book.ledger.splitStale.title':
     'Enregistré, mais la répartition ne tombe plus juste',
   'book.ledger.splitStale.body':

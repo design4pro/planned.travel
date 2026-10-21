@@ -272,6 +272,9 @@ const messages = {
   'book.toast.addFailed': 'Rezerwacja nie została dodana',
   'book.toast.updated': 'Rezerwacja zaktualizowana',
   'book.toast.updateFailed': 'Rezerwacja nie została zaktualizowana',
+  'book.toast.ledgerRefused': 'Zapisane, ale nie dodane do kosztów',
+  'book.toast.ledgerRefusedBody':
+    'Otwórz rezerwację i zapisz ją ponownie, aby dodać jej pozycję kosztów.',
 
   'book.emptyFacts':
     'Poza nazwą nic tu jeszcze nie ma. Otwórz, aby dodać godzinę, cenę i numer potwierdzenia.',
@@ -559,10 +562,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Bez przystanku',
   'book.field.stopSearch': 'Szukaj wśród przystanków i dni',
   'book.field.stopEmpty': 'Żaden przystanek nie pasuje',
-  'book.ledger.refused.title': 'Zapisane, ale nie dodane do kosztów',
-  'book.ledger.refused.body':
-    'Rezerwacja jest na wyjeździe. Dodanie jej pozycji do kosztów wyjazdu się nie udało — spróbuj jeszcze raz tej połowy.',
-  'book.action.ledgerRetry': 'Dodaj do kosztów',
   'book.ledger.splitStale.title': 'Zapisano, ale podział przestał się zgadzać',
   'book.ledger.splitStale.body':
     'Rezerwacja i jej nowa cena są zapisane, ale podział tego kosztu nie mógł podążyć za nową sumą. Otwórz pozycję w Kosztach i popraw podział.',

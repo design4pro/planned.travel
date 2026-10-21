@@ -38,6 +38,7 @@ import {
   Input,
   SimpleSelect,
   Textarea,
+  toast,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -154,19 +155,14 @@ function stopChoice(
 }
 
 /**
- * What the save button offers, which is a statement of what is left to do.
- *
- * After a ledger refusal the booking itself is already saved, so pressing it again is not another
- * save — it is the half that did not go through.
+ * The success toast of a write, kept back when the booking saved but its ledger write was refused:
+ * `submit` shows the warning in its place, and a reader must not be told "added" and "not added"
+ * for the same save.
  */
-function saveLabel(state: {
-  readonly ledgerRefused: boolean
-  readonly editing: boolean
-}): MessageKey {
-  if (state.ledgerRefused) {
-    return 'modules.book.action.ledgerRetry'
-  }
-  return state.editing ? 'modules.book.action.save' : 'modules.book.action.add'
+function unlessLedgerRefused(
+  message: string,
+): (result: { readonly ledger: string }) => string | undefined {
+  return (result) => (result.ledger === 'failed' ? undefined : message)
 }
 
 function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
@@ -242,17 +238,6 @@ export function BookingDialog({
     newDraft(currency, initialStayDayId),
   )
   const [touched, setTouched] = useState(false)
-  /**
-   * The booking this dialog has already written, when it wrote one and stayed open.
-   *
-   * Only a ledger refusal leaves it open after a successful save, and the retry has to be an
-   * *update* of that row rather than a second create — otherwise pressing "Add it to the ledger"
-   * would book the same thing twice.
-   */
-  const [savedId, setSavedId] = useState<string | null>(null)
-  /** The stay written with `savedId`, when the saved booking is a stay — its retry updates both. */
-  const [savedStayId, setSavedStayId] = useState<string | null>(null)
-  const [ledgerRefused, setLedgerRefused] = useState(false)
   /** Saved, with its cost line's split no longer adding up: the one thing left is to say so. */
   const [splitStale, setSplitStale] = useState(false)
   const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
@@ -275,28 +260,25 @@ export function BookingDialog({
         : draftFrom(booking, currency),
     )
     setTouched(false)
-    setSavedId(null)
-    setSavedStayId(null)
-    setLedgerRefused(false)
     setSplitStale(false)
   }, [open, booking, currency, initialStayDayId])
 
   const create = useAction(createBookingFn, {
-    success: t('modules.book.toast.added'),
+    success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const update = useAction(updateBookingFn, {
-    success: t('modules.book.toast.updated'),
+    success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
   const createStay = useAction(createStayFn, {
-    success: t('modules.book.toast.added'),
+    success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const updateStay = useAction(updateStayFn, {
-    success: t('modules.book.toast.updated'),
+    success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
 
@@ -309,18 +291,15 @@ export function BookingDialog({
     draft.type === 'accommodation' &&
     days.length > 0 &&
     (booking === undefined || booking.stay !== null)
-  const stayId = booking?.stay?.id ?? savedStayId
-  const writing = editing || savedId !== null
-  const bookingAction = writing ? update : create
-  const stayAction = writing ? updateStay : createStay
+  const stayId = booking?.stay?.id ?? null
+  const bookingAction = editing ? update : create
+  const stayAction = editing ? updateStay : createStay
   const action = stayBranch ? stayAction : bookingAction
   /*
-   * The type is fixed once a row exists behind it: after a save the dialog stays open only to retry
-   * the ledger line, and switching the type then would write a second booking (into the stay branch)
-   * or retype a booking whose nights are still linked to it (out of it). An existing stay is fixed for
-   * the second reason.
+   * The type of an existing stay is fixed: switching it out would retype a booking whose nights are
+   * still linked to it.
    */
-  const typeLocked = savedId !== null || (booking?.stay ?? null) !== null
+  const typeLocked = (booking?.stay ?? null) !== null
 
   const stops = useMemo(() => stopOptions(days, t), [days, t])
   const stopIds = useMemo(() => stops.map((option) => option.value), [stops])
@@ -333,6 +312,9 @@ export function BookingDialog({
     [draft, stopIds, stayBranch, days],
   )
   const invalid = hasBookingErrors(errors)
+  const saveLabel: MessageKey = editing
+    ? 'modules.book.action.save'
+    : 'modules.book.action.add'
   const shape = bookingShape(draft.type)
 
   /** The date behind the day this booking is pinned to — the middle link of the ledger's chain. */
@@ -349,12 +331,6 @@ export function BookingDialog({
    */
   const tripStartDate = days.at(0)?.date ?? null
   const notice = ledgerNotice(draft, {
-    /*
-     * The link the row carried when the dialog opened, and deliberately not `savedId`: the only
-     * thing that leaves this dialog open after a successful save is a ledger write that was
-     * *refused*, so at that moment there is still no line and the retry has one to add rather than
-     * one to update.
-     */
     linked: booking?.hasLedgerLine ?? false,
     dayDate: linkedDayDate,
     tripStartDate,
@@ -400,26 +376,26 @@ export function BookingDialog({
       return
     }
     if (result.ledger === 'failed') {
-      // A partial success: the booking is on the trip and its cost line is not. Saying so and
-      // closing would leave the reader to discover a missing line later, so the dialog stays open
-      // and offers the half that failed.
-      setSavedId(result.reservationId)
-      setLedgerRefused(true)
+      // A partial success: the booking is on the trip and its cost line is not. The next save of
+      // the booking adds the line, because the sync keys off the row's own expense link, so the
+      // dialog closes and the warning toast tells the reader so.
+      toast.warning(t('modules.book.toast.ledgerRefused'), {
+        description: t('modules.book.toast.ledgerRefusedBody'),
+      })
+      onOpenChange(false)
       return
     }
     if (result.ledger === 'split-stale') {
       // Also a partial success, and the other way round: the booking and the new amount are
       // saved, the split of its cost line is not. Closing would leave the reader to find a split
       // that no longer adds up, so the dialog says so and waits to be dismissed.
-      setSavedId(result.reservationId)
-      setLedgerRefused(false)
       setSplitStale(true)
       return
     }
     onOpenChange(false)
   }
 
-  /** The stay's two rows in one action; a retry after a ledger refusal updates both. */
+  /** The stay's two rows in one action. */
   async function saveStay(priceMinor: number) {
     const payload = {
       tripId,
@@ -439,14 +415,11 @@ export function BookingDialog({
       checkInEndTime: draft.checkInEndTime,
       checkOutTime: draft.endTime,
     }
-    const existingId = booking?.id ?? savedId
-    if (existingId === null || stayId === null) {
-      const result = await createStay.run({ data: payload })
-      setSavedStayId(result?.stayId ?? null)
-      return result
+    if (booking === undefined || stayId === null) {
+      return createStay.run({ data: payload })
     }
     return updateStay.run({
-      data: { ...payload, reservationId: existingId, stayId },
+      data: { ...payload, reservationId: booking.id, stayId },
     })
   }
 
@@ -471,10 +444,9 @@ export function BookingDialog({
       assignmentId: draft.assignmentId,
       notes: draft.notes,
     }
-    const existingId = booking?.id ?? savedId
-    return existingId === null
+    return booking === undefined
       ? create.run({ data: payload })
-      : update.run({ data: { ...payload, reservationId: existingId } })
+      : update.run({ data: { ...payload, reservationId: booking.id } })
   }
 
   return (
@@ -519,15 +491,6 @@ export function BookingDialog({
                 {action.error}
               </Alert>
             )}
-
-            {ledgerRefused ? (
-              <Alert
-                tone="warning"
-                title={t('modules.book.ledger.refused.title')}
-              >
-                {t('modules.book.ledger.refused.body')}
-              </Alert>
-            ) : null}
 
             <fieldset className="min-w-0">
               <legend className="mb-2 text-label font-medium text-ink">
@@ -890,11 +853,7 @@ export function BookingDialog({
             loadingLabel={t('modules.book.action.saving')}
             onClick={splitStale ? () => onOpenChange(false) : undefined}
           >
-            {t(
-              splitStale
-                ? 'modules.book.action.done'
-                : saveLabel({ ledgerRefused, editing }),
-            )}
+            {t(splitStale ? 'modules.book.action.done' : saveLabel)}
           </Button>
         </DialogFooter>
       </DialogContent>

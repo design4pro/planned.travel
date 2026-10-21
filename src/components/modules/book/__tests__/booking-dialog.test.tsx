@@ -5,6 +5,7 @@ import '#/components/ui/__tests__/test-env'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
+import { toast } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -205,35 +206,6 @@ describe('BookingDialog — a stay', () => {
     expect(other?.disabled).toBe(true)
   })
 
-  it('fixes the type once a ledger refusal leaves a saved booking open', async () => {
-    reservations.create.mockResolvedValue({
-      reservationId: 'booking-2',
-      ledger: 'failed',
-    })
-    openStay()
-    const other = document.querySelector<HTMLButtonElement>(
-      '[data-part="type-other"]',
-    )
-    if (other === null) {
-      throw new Error('the dialog rendered no "other" type chip')
-    }
-    fireEvent.click(other)
-    fireEvent.change(screen.getByRole('textbox', { name: /name/iu }), {
-      target: { value: 'Museum pass' },
-    })
-    submitTheForm()
-
-    await vi.waitFor(() => expect(reservations.create).toHaveBeenCalledTimes(1))
-    // Switching to a stay now would write a second booking through the stay's own create.
-    await vi.waitFor(() =>
-      expect(
-        document.querySelector<HTMLButtonElement>(
-          '[data-part="type-accommodation"]',
-        )?.disabled,
-      ).toBe(true),
-    )
-  })
-
   it('saves an edited stay through the stay write, naming both rows', async () => {
     stays.update.mockResolvedValue({
       reservationId: 'booking-1',
@@ -405,27 +377,6 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
     await vi.waitFor(() => expect(document.activeElement).toBe(notice))
   })
 
-  it('shows only the split notice when the retry of a refused ledger write comes back stale', async () => {
-    reservations.update
-      .mockResolvedValueOnce({ reservationId: 'booking-3', ledger: 'failed' })
-      .mockResolvedValueOnce({
-        reservationId: 'booking-3',
-        ledger: 'split-stale',
-      })
-    openEditing(DINNER, vi.fn())
-    submitTheForm()
-    expect(
-      await screen.findByText('Saved, but not added to the costs'),
-    ).not.toBeNull()
-
-    submitTheForm()
-
-    expect(
-      await screen.findByText('Saved, but the split no longer adds up'),
-    ).not.toBeNull()
-    expect(screen.queryByText('Saved, but not added to the costs')).toBeNull()
-  })
-
   it('says the same after a stay is saved', async () => {
     stays.update.mockResolvedValue({
       reservationId: 'booking-1',
@@ -455,5 +406,191 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
     expect(
       screen.queryByText('Saved, but the split no longer adds up'),
     ).toBeNull()
+  })
+})
+
+/* --------------------------------------------------- a cost line the ledger refused */
+
+describe('BookingDialog — a ledger write that was refused', () => {
+  const MUSEUM: BookingRow = {
+    ...STAY,
+    id: 'booking-2',
+    type: 'other',
+    title: 'Museum pass',
+    stay: null,
+    priceMinor: 3_000,
+    currency: 'JPY',
+    hasLedgerLine: false,
+  }
+
+  beforeEach(() => {
+    for (const fn of [
+      reservations.create,
+      reservations.update,
+      stays.create,
+      stays.update,
+    ]) {
+      fn.mockReset()
+    }
+  })
+
+  function mount(booking: BookingRow | undefined, onOpenChange: () => void) {
+    const ui = (b: BookingRow | undefined) => (
+      <I18nProvider locale="en" messages={EN}>
+        <BookingDialog
+          tripId="trip-1"
+          booking={b}
+          days={DAYS}
+          currency="JPY"
+          open
+          onOpenChange={onOpenChange}
+        />
+      </I18nProvider>
+    )
+    const view = render(ui(booking))
+    return { reopenOn: (b: BookingRow) => view.rerender(ui(b)) }
+  }
+
+  function chooseOther(): void {
+    const other = document.querySelector<HTMLButtonElement>(
+      '[data-part="type-other"]',
+    )
+    if (other === null) {
+      throw new Error('the dialog rendered no "other" type chip')
+    }
+    fireEvent.click(other)
+    fireEvent.change(screen.getByRole('textbox', { name: /name/iu }), {
+      target: { value: 'Museum pass' },
+    })
+  }
+
+  it('closes on a refused write and warns instead of announcing the booking as added', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    reservations.create.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'failed',
+    })
+    const onOpenChange = vi.fn()
+    mount(undefined, onOpenChange)
+    chooseOther()
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(reservations.create).toHaveBeenCalledTimes(1)
+    expect(warning).toHaveBeenCalledWith('Saved, but not added to the costs', {
+      description: 'Open the booking and save it again to add its cost line.',
+    })
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('does the same when an edit of an existing booking is refused', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'failed',
+    })
+    const onOpenChange = vi.fn()
+    mount(MUSEUM, onOpenChange)
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(warning).toHaveBeenCalledTimes(1)
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('does the same for a stay', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    stays.update.mockResolvedValue({
+      reservationId: 'booking-1',
+      stayId: 'stay-1',
+      ledger: 'failed',
+    })
+    const onOpenChange = vi.fn()
+    mount(STAY, onOpenChange)
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(warning).toHaveBeenCalledTimes(1)
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('still announces a booking whose cost line went through', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    reservations.create.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'created',
+    })
+    const onOpenChange = vi.fn()
+    mount(undefined, onOpenChange)
+    chooseOther()
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(success).toHaveBeenCalledWith('Booking added', {
+      description: 'It is on the timeline now.',
+    })
+    expect(warning).not.toHaveBeenCalled()
+  })
+
+  it('updates the saved booking when it is reopened, and never creates a second one', async () => {
+    vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    vi.spyOn(toast, 'success').mockReturnValue('toast')
+    reservations.create.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'failed',
+    })
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'created',
+    })
+    const onOpenChange = vi.fn()
+    const dialog = mount(undefined, onOpenChange)
+    chooseOther()
+    submitTheForm()
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+
+    // The list reloads and the reader opens the row that is now on the trip.
+    dialog.reopenOn(MUSEUM)
+    submitTheForm()
+
+    await vi.waitFor(() => expect(reservations.update).toHaveBeenCalledTimes(1))
+    expect(reservations.update.mock.calls[0]?.[0]).toMatchObject({
+      data: { reservationId: 'booking-2' },
+    })
+    expect(reservations.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates the saved stay through the stay write when it is reopened', async () => {
+    vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    vi.spyOn(toast, 'success').mockReturnValue('toast')
+    stays.update
+      .mockResolvedValueOnce({
+        reservationId: 'booking-1',
+        stayId: 'stay-1',
+        ledger: 'failed',
+      })
+      .mockResolvedValueOnce({
+        reservationId: 'booking-1',
+        stayId: 'stay-1',
+        ledger: 'created',
+      })
+    const onOpenChange = vi.fn()
+    const dialog = mount(STAY, onOpenChange)
+    submitTheForm()
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+
+    dialog.reopenOn({ ...STAY })
+    submitTheForm()
+
+    await vi.waitFor(() => expect(stays.update).toHaveBeenCalledTimes(2))
+    expect(stays.update.mock.calls[1]?.[0]).toMatchObject({
+      data: { reservationId: 'booking-1', stayId: 'stay-1' },
+    })
+    expect(stays.create).not.toHaveBeenCalled()
+    expect(reservations.create).not.toHaveBeenCalled()
   })
 })
