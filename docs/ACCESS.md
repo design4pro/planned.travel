@@ -1346,7 +1346,7 @@ call the guard before they touch a row. A veto that lives in one function while 
 also has a public URL is not a veto.
 
 Tenant actions of the impersonated user **are** permitted, because reproducing a report often means
-saving the thing that fails to save. Two are refused by name: **changing a member's role** (below) and **creating a workspace** (§2.7). The second
+saving the thing that fails to save. Two are refused by name: **changing a member's role** (below) and **creating a workspace** (§2.7); the trip room also refuses the session's commits (below). The second
 mints a new tenant owned by the account being worn, which is not a write to something that already
 exists, and the owner's audit trail could only ever show that an operator created a workspace they
 now cannot leave. `createWorkspace` throws `AuthRequirementError('impersonated')` before it reads the
@@ -1364,7 +1364,8 @@ impersonator. `serveTripRoom` (`src/routes/api/trip-room/-lib/connect.ts`) there
 session whose resolved context carries `impersonatedBy` as a `viewer`, whatever the person's trip
 role: the socket still receives presence and commit signals, which is what reproducing a
 collaboration report needs, and the room refuses its `patch` frames before it stores or broadcasts
-anything. The shipped client never sends one (it re-reads its loader from D1 on a signal), so no
+anything. Its `hello` still announces the worn person to the other collaborators, so a colleague on
+the trip can see them present while support is the one looking. The shipped client never sends one (it re-reads its loader from D1 on a signal), so no
 screen loses a control. The writes that matter go through server functions and are attributed by
 `trail()` above. One limit stays: the room entry that `mirrorToRoom` writes for such a server write
 carries the worn person's id, and the operator is named only in the tenant `audit_log`. Closing the
