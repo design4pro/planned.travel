@@ -93,6 +93,7 @@ import {
   createReservation,
   deleteReservation,
   getReservation,
+  createReservationExpense,
   linkReservationExpense,
   setReservationStatus,
   updateReservation,
@@ -2179,6 +2180,16 @@ describe('member isolation', () => {
         [
           'linking a booking to an expense',
           () => linkReservationExpense(scope, reservationId, expenseId),
+        ],
+        [
+          'creating a booking’s cost line',
+          () =>
+            createReservationExpense(scope, reservationId, {
+              tripId: fixture.tripId,
+              title: 'Hijacked',
+              amountMinor: 1_000,
+              spentOn: '2026-04-10',
+            }),
         ],
         [
           'clearing a booking’s import marker',

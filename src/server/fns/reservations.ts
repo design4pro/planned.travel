@@ -16,8 +16,8 @@ import {
   canWritePlan,
   clearReservationImported,
   countTripReservationsByStatus,
-  createExpense,
   createReservation,
+  createReservationExpense,
   deleteReservation,
   getDay,
   getTripItinerary,
@@ -273,6 +273,30 @@ async function spentOnFor(
   return trip.startDate
 }
 
+/** Brings the cost line a booking points at up to the booking's title, amount and currency. */
+async function repriceLinkedExpense(
+  scope: TenantScope,
+  reservation: Reservation,
+  expenseId: string,
+  figures: { readonly amountMinor: number; readonly currency: string },
+): Promise<LedgerOutcome> {
+  const { splitStale } = await repriceExpense(
+    scope,
+    reservation.tripId,
+    expenseId,
+    { title: reservation.title, ...figures },
+  )
+  if (!splitStale) {
+    return 'updated'
+  }
+  log().info('booking price change left its cost-line split stale', {
+    reservationId: reservation.id,
+    tripId: reservation.tripId,
+    organizationId: scope.ctx.organizationId,
+  })
+  return 'split-stale'
+}
+
 /**
  * The single place a booking's price meets the trip's ledger.
  *
@@ -285,6 +309,11 @@ async function spentOnFor(
  * `reservation.expenseId` is the idempotency key for every branch, and it is read off the row that
  * was just written rather than off the request — which is what makes the third save of the same
  * booking an update rather than a fourth ledger line.
+ *
+ * The cost line and that link are written as one atomic batch, and only while the booking is still
+ * unlinked ({@link createReservationExpense}). So `failed` means nothing reached the ledger and the
+ * next save is a clean retry, and of two overlapping saves of one unlinked booking the second
+ * inserts nothing and reprices the line the first created.
  *
  * Nothing here can fail the save. D1 has already committed the booking by the time this runs, so a
  * refused ledger write is logged and reported as `failed`; turning it into a thrown error would
@@ -326,21 +355,15 @@ export async function syncReservationExpense(
     const currency = reservation.currency ?? trip.currency
 
     if (reservation.expenseId !== null) {
-      const { splitStale } = await repriceExpense(
+      return await repriceLinkedExpense(
         scope,
-        reservation.tripId,
+        reservation,
         reservation.expenseId,
-        { title: reservation.title, amountMinor, currency },
+        {
+          amountMinor,
+          currency,
+        },
       )
-      if (!splitStale) {
-        return 'updated'
-      }
-      log().info('booking price change left its cost-line split stale', {
-        reservationId: reservation.id,
-        tripId: reservation.tripId,
-        organizationId: scope.ctx.organizationId,
-      })
-      return 'split-stale'
     }
 
     const spentOn = await spentOnFor(scope, reservation, trip)
@@ -348,7 +371,7 @@ export async function syncReservationExpense(
       return 'undated'
     }
 
-    const { expense } = await createExpense(scope, {
+    const written = await createReservationExpense(scope, reservation.id, {
       tripId: reservation.tripId,
       title: reservation.title,
       amountMinor,
@@ -358,9 +381,21 @@ export async function syncReservationExpense(
       placeId: reservation.placeId,
       spentOn,
     })
-    // Two writes, and the second is what makes the next save an update rather than a second line.
-    await linkReservationExpense(scope, reservation.id, expense.id)
-    return 'created'
+    if (written.reservation.expenseId === written.expenseId) {
+      return 'created'
+    }
+    // Another save linked the booking first and this one inserted nothing: answer as that link dictates.
+    if (written.reservation.expenseId === null) {
+      throw new Error(
+        'The booking is not linked to the cost line that was written for it.',
+      )
+    }
+    return await repriceLinkedExpense(
+      scope,
+      reservation,
+      written.reservation.expenseId,
+      { amountMinor, currency },
+    )
   } catch (cause) {
     log().warn('booking ledger sync failed', {
       reservationId: reservation.id,

@@ -15,19 +15,27 @@ import {
   inArray,
   isNull,
   lte,
+  sql,
 } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   RESERVATION_STATUSES,
   RESERVATION_TYPES,
   dayAssignments,
+  expenses,
+  newId,
   reservations,
 } from '#/server/db/schema'
-import { allOf, createTenantRepository, tenantFilter } from './base'
-import { MAX_BOUND_PARAMETERS } from './batch'
+import {
+  allOf,
+  createTenantRepository,
+  prepareTenantInsert,
+  tenantFilter,
+} from './base'
+import { MAX_BOUND_PARAMETERS, runAtomicBatch } from './batch'
 import { NotFoundError } from './context'
 import { requireTripDay } from './days'
-import { getExpense } from './expenses'
+import { getExpense, prepareExpenseInsert } from './expenses'
 import { unlinkAccommodationsFromReservation } from './itinerary'
 import { requirePlaceOfTrip } from './places'
 import { requireTransportOfTrip } from './transports'
@@ -48,6 +56,7 @@ import {
 } from './validation'
 import type { Reservation, Trip } from '#/server/db/types'
 import type { TenantScope } from './base'
+import type { CreateExpenseInput } from './expenses'
 import type { TripRole } from './trips'
 
 export const reservationsRepository = createTenantRepository(
@@ -438,6 +447,79 @@ export async function linkReservationExpense(
   return reservationsRepository.requireUpdate(scope, reservationId, {
     expenseId: id,
   })
+}
+
+/** What {@link createReservationExpense} answers: the chosen id, and the booking as it is afterwards. */
+export interface ReservationExpenseWrite {
+  /** The id the cost line was written under. It is the booking's link only when this write won. */
+  readonly expenseId: string
+  readonly reservation: Reservation
+}
+
+/**
+ * Creates a booking's cost line and links the booking to it as one all-or-nothing write.
+ *
+ * Two separate writes would leave a line nothing points at whenever the second one failed, and the
+ * next save of the booking, still unlinked, would insert another. Here both statements share one
+ * atomic batch (`runAtomicBatch`: a driver without batch support writes nothing), and the line's id
+ * is chosen in advance so the link update can name a row the same batch is inserting.
+ *
+ * A batch does not roll back an `UPDATE` that matched no row, so both statements are conditional on
+ * the booking still being unlinked in this tenant and trip. Of two overlapping saves of the same
+ * booking only the first finds it unlinked; the other writes nothing, and the caller learns that
+ * from the booking read back after the batch, whose link equals {@link ReservationExpenseWrite.expenseId}
+ * only when this call won.
+ *
+ * Every guard `createExpense` runs still runs before the batch ({@link prepareExpenseInsert}),
+ * and the booking is resolved through the same writable-booking check as every other booking write,
+ * in the trip the expense is for. The line is created without participants, as the sync always did.
+ */
+export async function createReservationExpense(
+  scope: TenantScope,
+  reservationId: string,
+  input: Omit<CreateExpenseInput, 'participants'>,
+): Promise<ReservationExpenseWrite> {
+  const { values } = await prepareExpenseInsert(scope, input)
+  const booking = await requireWritableReservation(scope, reservationId)
+  if (booking.tripId !== values.tripId) {
+    throw new NotFoundError('reservation', reservationId)
+  }
+
+  const expenseId = newId()
+  const stillUnlinked = tenantFilter(
+    scope,
+    reservations,
+    eq(reservations.id, reservationId),
+    eq(reservations.tripId, values.tripId),
+    isNull(reservations.expenseId),
+  )
+  await runAtomicBatch(scope, [
+    prepareTenantInsert(
+      scope,
+      expenses,
+      { ...values, id: expenseId, createdBy: scope.ctx.userId },
+      sql`exists (select 1 from ${reservations} where ${stillUnlinked})`,
+    ),
+    scope.db
+      .update(reservations)
+      .set({ expenseId })
+      .where(
+        tenantFilter(
+          scope,
+          reservations,
+          eq(reservations.id, reservationId),
+          eq(reservations.tripId, values.tripId),
+          isNull(reservations.expenseId),
+          sql`exists (select 1 from ${expenses} where ${tenantFilter(scope, expenses, eq(expenses.id, expenseId))})`,
+        ),
+      ),
+  ])
+
+  const reservation = await reservationsRepository.requireById(
+    scope,
+    reservationId,
+  )
+  return { expenseId, reservation }
 }
 
 /**

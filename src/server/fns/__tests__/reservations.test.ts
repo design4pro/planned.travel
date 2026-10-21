@@ -526,6 +526,144 @@ describe('syncReservationExpense with a link to another trip’s expense', () =>
   })
 })
 
+/**
+ * The cost line and its link to the booking are one write (#1493). A line the booking does not
+ * point at is a line nothing owns, and the next save of the same booking would insert a second one.
+ */
+describe('syncReservationExpense writes the cost line and its link as one unit', () => {
+  async function pricedBooking() {
+    return createReservation(scope, {
+      tripId: trip.id,
+      title: 'Dinner at Den',
+      startDate: '2026-04-11',
+      priceMinor: 24_000,
+      currency: 'JPY',
+    })
+  }
+
+  async function linkOf(reservationId: string): Promise<string | null> {
+    return (await getReservation(scope, reservationId))?.expenseId ?? null
+  }
+
+  it('leaves no cost line behind when the link write is refused, and a retry finds a clean slate', async () => {
+    const reservation = await pricedBooking()
+    harness.sqlite.exec(
+      `CREATE TRIGGER refuse_link BEFORE UPDATE OF expense_id ON reservations
+       BEGIN SELECT RAISE(ABORT, 'link refused'); END`,
+    )
+
+    expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
+      'failed',
+    )
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(await linkOf(reservation.id)).toBeNull()
+
+    harness.sqlite.exec('DROP TRIGGER refuse_link')
+    expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
+      'created',
+    )
+    const lines = await listTripExpenses(scope, trip.id)
+    expect(lines).toHaveLength(1)
+    expect(await linkOf(reservation.id)).toBe(lines[0]?.id)
+  })
+
+  it('writes nothing when the whole batch is refused', async () => {
+    const reservation = await pricedBooking()
+    const database = scope.db as unknown as {
+      batch: (...args: ReadonlyArray<unknown>) => Promise<unknown>
+    }
+    const batch = vi
+      .spyOn(database, 'batch')
+      .mockRejectedValueOnce(new Error('D1 refused the batch'))
+
+    expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
+      'failed',
+    )
+    batch.mockRestore()
+
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(await linkOf(reservation.id)).toBeNull()
+    expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
+      'created',
+    )
+    expect(await listTripExpenses(scope, trip.id)).toHaveLength(1)
+  })
+
+  it('writes nothing on a driver without batch support', async () => {
+    const reservation = await pricedBooking()
+    const withoutBatch = new Proxy(scope.db, {
+      get: (target, property, receiver) =>
+        property === 'batch'
+          ? undefined
+          : Reflect.get(target, property, receiver),
+    })
+
+    expect(
+      await syncReservationExpense(
+        { ...scope, db: withoutBatch },
+        { reservation, trip },
+      ),
+    ).toBe('failed')
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(await linkOf(reservation.id)).toBeNull()
+  })
+
+  it('leaves exactly one cost line when two saves of the same unlinked booking overlap', async () => {
+    const reservation = await pricedBooking()
+
+    const outcomes = await Promise.all([
+      syncReservationExpense(scope, { reservation, trip }),
+      syncReservationExpense(scope, { reservation, trip }),
+    ])
+
+    expect([...outcomes].sort()).toEqual(['created', 'updated'])
+    const lines = await listTripExpenses(scope, trip.id)
+    expect(lines).toHaveLength(1)
+    expect(await linkOf(reservation.id)).toBe(lines[0]?.id)
+  })
+
+  it('does not insert a second line for a stale copy of a booking that is linked since', async () => {
+    const reservation = await pricedBooking()
+    await syncReservationExpense(scope, { reservation, trip })
+
+    expect(
+      await syncReservationExpense(scope, {
+        reservation: { ...reservation, priceMinor: 30_000 },
+        trip,
+      }),
+    ).toBe('updated')
+
+    const lines = await listTripExpenses(scope, trip.id)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]?.amountMinor).toBe(30_000)
+  })
+
+  it('refuses an archived trip and a viewer without creating a line', async () => {
+    const viewerId = await tenant.addUser('A viewer')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: viewerId,
+      role: 'viewer',
+    })
+    const reservation = await pricedBooking()
+
+    expect(
+      await syncReservationExpense(tenant.scopeFor(viewerId), {
+        reservation,
+        trip,
+      }),
+    ).toBe('failed')
+
+    await archiveTrip(scope, trip.id)
+    expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
+      'failed',
+    )
+
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(await linkOf(reservation.id)).toBeNull()
+  })
+})
+
 describe('linkReservationExpense across two trips of one workspace', () => {
   it('refuses a cost line belonging to another trip', async () => {
     const other = await createTrip(scope, {
