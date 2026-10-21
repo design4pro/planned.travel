@@ -1,9 +1,9 @@
 /**
  * Everything the authentication screens say, in Polish.
  *
- * Authored from `../en/auth.ts` (`docs/SPEC.md` §8.9). These are the only
+ * Authored from `../en/auth.ts` (`docs/SPEC.md` §9 rule 9). These are the only
  * screens a traveller reaches with no session, so the language comes from
- * `Accept-Language` alone and two thirds of the keys are failures — the moment
+ * the visitor cookie, then `Accept-Language`, then English and two thirds of the keys are failures — the moment
  * a reader can least afford a sentence in a language they do not read.
  *
  * **Plural.** `pl` needs `one` · `few` · `many` · `other`, and `other` is a

@@ -121,8 +121,8 @@ export const SIGN_OUT_ENDPOINT = '/api/auth/sign-out'
  *
  * The key travels rather than a sentence, deliberately. The failing request has
  * no workspace, so it cannot reach the stored language preference and would have
- * only `Accept-Language` to negotiate with; the boundary that catches the throw
- * is inside the document's own `I18nProvider` and knows the locale the page was
+ * the visitor cookie and `Accept-Language` to negotiate with; the boundary that
+ * catches the throw is inside the document's own `I18nProvider` and knows the locale the page was
  * actually rendered in. An `Error.message` is also the one field that survives
  * the server-function boundary intact, where a subclass or an extra property
  * does not.

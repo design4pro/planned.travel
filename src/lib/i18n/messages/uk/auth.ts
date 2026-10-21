@@ -1,9 +1,8 @@
 /**
  * Everything the authentication screens say, in Ukrainian.
  *
- * Authored from `../en/auth.ts` (`docs/SPEC.md` §8.9). These screens are
- * reachable with no session, so their language comes from `Accept-Language`
- * alone and two thirds of the keys are failures — the moment a reader can least
+ * Authored from `../en/auth.ts` (`docs/SPEC.md` §9 rule 9). These screens are
+ * reachable with no session, so their language comes from the visitor cookie, then `Accept-Language`, then English and two thirds of the keys are failures — the moment a reader can least
  * afford a sentence in a language they do not read.
  *
  * **Plural.** `uk` needs `one` (1, 21 …) · `few` (2–4) · `many` (0, 5–20) ·

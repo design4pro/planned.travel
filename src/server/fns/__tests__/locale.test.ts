@@ -1,11 +1,11 @@
 /**
  * Locale negotiation, and the bytes it puts on the wire.
  *
- * Two things are proved here, because §8.3 is only kept if both are true: that
+ * Two things are proved here, because §9 rule 3 is only kept if both are true: that
  * the chain picks the right language, and that the document actually goes out
  * carrying it.
  *
- * **The chain.** `negotiateLocaleFrom` takes its three inputs as callbacks
+ * **The chain.** `negotiateLocaleFrom` takes its inputs as callbacks
  * rather than reaching for the session, the repository and the header itself,
  * which is what lets this file assert what `docs/SPEC.md` §5 promises — that an
  * anonymous request to a marketing page never reaches D1. A query counter would
@@ -50,6 +50,7 @@ import { Route as rootRoute } from '#/routes/__root'
 import { negotiateLocaleFrom } from '../locale'
 
 import type { Locale } from '#/lib/i18n'
+import type * as I18nModule from '#/lib/i18n'
 import type { AuthSession } from '#/server/auth/session'
 import type * as LocaleModule from '../locale'
 import type { LocaleRequestSource, NegotiatedLocale } from '../locale'
@@ -69,15 +70,36 @@ vi.mock('../context', () => ({
  * because `vi.mock` factories are lifted above every import, so a plain `let`
  * would still be in its temporal dead zone when the factory below runs.
  */
-const wire = vi.hoisted((): { negotiated: NegotiatedLocale } => ({
-  negotiated: { locale: 'en', dir: 'ltr' },
-}))
+const wire = vi.hoisted(
+  (): {
+    negotiated: NegotiatedLocale
+    fail: boolean
+    failCatalogue: boolean
+  } => ({
+    fail: false,
+    failCatalogue: false,
+    negotiated: { locale: 'en', dir: 'ltr', signedIn: false },
+  }),
+)
 
 vi.mock('../locale', async (importOriginal) => ({
   ...(await importOriginal<typeof LocaleModule>()),
-  negotiateRequestLocale: async (): Promise<NegotiatedLocale> =>
-    wire.negotiated,
+  negotiateRequestLocale: async (): Promise<NegotiatedLocale> => {
+    if (wire.fail) throw new Error('negotiation failed')
+    return wire.negotiated
+  },
 }))
+
+vi.mock('#/lib/i18n', async (importOriginal) => {
+  const actual = await importOriginal<typeof I18nModule>()
+  return {
+    ...actual,
+    loadCatalogue: async (locale: Locale) => {
+      if (wire.failCatalogue) throw new Error('catalogue failed')
+      return actual.loadCatalogue(locale)
+    },
+  }
+})
 
 /* ------------------------------------------------------------------- chain */
 
@@ -89,6 +111,7 @@ interface RequestInputs {
   readonly session?: AuthSession | null
   /** What `getEffectiveSettings` would answer for `locale`, or a rejection. */
   readonly stored?: string | null | Error
+  readonly visitor?: string | null
   readonly acceptLanguage?: string | null
 }
 
@@ -105,18 +128,31 @@ function source(request: RequestInputs): LocaleRequestSource & {
       }
       return stored
     }),
+    visitorLocale: () => request.visitor ?? null,
     acceptLanguage: () => request.acceptLanguage ?? null,
   }
 }
 
 describe('negotiateLocaleFrom', () => {
   describe('an anonymous request', () => {
+    it('uses a visitor choice without reading settings', async () => {
+      const request = source({ visitor: 'pl', acceptLanguage: 'de' })
+      await expect(negotiateLocaleFrom(request)).resolves.toEqual({
+        locale: 'pl',
+        dir: 'ltr',
+        signedIn: false,
+      })
+      expect(request.storedLocale).not.toHaveBeenCalled()
+      expect(request.session).toHaveBeenCalledTimes(1)
+    })
+
     it('never reads the settings, so no marketing page touches D1', async () => {
       const request = source({ acceptLanguage: 'pl-PL,pl;q=0.9,en;q=0.8' })
 
       await expect(negotiateLocaleFrom(request)).resolves.toEqual({
         locale: 'pl',
         dir: 'ltr',
+        signedIn: false,
       })
       expect(request.storedLocale).not.toHaveBeenCalled()
     })
@@ -124,26 +160,27 @@ describe('negotiateLocaleFrom', () => {
     it('falls to the source language when the header offers nothing we ship', async () => {
       await expect(
         negotiateLocaleFrom(source({ acceptLanguage: 'is,fo;q=0.8' })),
-      ).resolves.toEqual({ locale: 'en', dir: 'ltr' })
+      ).resolves.toEqual({ locale: 'en', dir: 'ltr', signedIn: false })
     })
 
     it('falls to the source language when there is no header at all', async () => {
       await expect(negotiateLocaleFrom(source({}))).resolves.toEqual({
         locale: 'en',
         dir: 'ltr',
+        signedIn: false,
       })
     })
 
     it('answers a right-to-left script with its direction', async () => {
       await expect(
         negotiateLocaleFrom(source({ acceptLanguage: 'ar-EG,ar;q=0.9' })),
-      ).resolves.toEqual({ locale: 'ar', dir: 'rtl' })
+      ).resolves.toEqual({ locale: 'ar', dir: 'rtl', signedIn: false })
     })
 
     it('honours the header quality order rather than the written order', async () => {
       await expect(
         negotiateLocaleFrom(source({ acceptLanguage: 'de;q=0.3,ja;q=0.9' })),
-      ).resolves.toEqual({ locale: 'ja', dir: 'ltr' })
+      ).resolves.toEqual({ locale: 'ja', dir: 'ltr', signedIn: false })
     })
   })
 
@@ -152,12 +189,14 @@ describe('negotiateLocaleFrom', () => {
       const request = source({
         session: SIGNED_IN,
         stored: 'ar',
+        visitor: 'de',
         acceptLanguage: 'pl,en;q=0.8',
       })
 
       await expect(negotiateLocaleFrom(request)).resolves.toEqual({
         locale: 'ar',
         dir: 'rtl',
+        signedIn: true,
       })
       expect(request.storedLocale).toHaveBeenCalledTimes(1)
     })
@@ -165,11 +204,11 @@ describe('negotiateLocaleFrom', () => {
     it('canonicalises the region-tagged values already in the column', async () => {
       await expect(
         negotiateLocaleFrom(source({ session: SIGNED_IN, stored: 'en-GB' })),
-      ).resolves.toEqual({ locale: 'en', dir: 'ltr' })
+      ).resolves.toEqual({ locale: 'en', dir: 'ltr', signedIn: true })
 
       await expect(
         negotiateLocaleFrom(source({ session: SIGNED_IN, stored: 'zh-TW' })),
-      ).resolves.toEqual({ locale: 'zh-Hant', dir: 'ltr' })
+      ).resolves.toEqual({ locale: 'zh-Hant', dir: 'ltr', signedIn: true })
     })
 
     it('falls to the header when the traveller has set nothing', async () => {
@@ -177,7 +216,7 @@ describe('negotiateLocaleFrom', () => {
         negotiateLocaleFrom(
           source({ session: SIGNED_IN, stored: null, acceptLanguage: 'uk' }),
         ),
-      ).resolves.toEqual({ locale: 'uk', dir: 'ltr' })
+      ).resolves.toEqual({ locale: 'uk', dir: 'ltr', signedIn: true })
     })
 
     it('falls to the header when the stored value is not a language we ship', async () => {
@@ -185,7 +224,7 @@ describe('negotiateLocaleFrom', () => {
         negotiateLocaleFrom(
           source({ session: SIGNED_IN, stored: 'xx-YY', acceptLanguage: 'sv' }),
         ),
-      ).resolves.toEqual({ locale: 'sv', dir: 'ltr' })
+      ).resolves.toEqual({ locale: 'sv', dir: 'ltr', signedIn: true })
     })
 
     it('degrades to the header rather than failing the document when the read throws', async () => {
@@ -198,6 +237,7 @@ describe('negotiateLocaleFrom', () => {
       await expect(negotiateLocaleFrom(request)).resolves.toEqual({
         locale: 'tr',
         dir: 'ltr',
+        signedIn: true,
       })
       expect(request.storedLocale).toHaveBeenCalledTimes(1)
     })
@@ -207,7 +247,7 @@ describe('negotiateLocaleFrom', () => {
     for (const { tag, dir } of SUPPORTED_LOCALES) {
       await expect(
         negotiateLocaleFrom(source({ session: SIGNED_IN, stored: tag })),
-      ).resolves.toEqual({ locale: tag, dir })
+      ).resolves.toEqual({ locale: tag, dir, signedIn: true })
     }
   })
 })
@@ -240,8 +280,11 @@ function probeTag(html: string): string {
 }
 
 /** The document the root route serves for one negotiated locale. */
-async function serveDocument(locale: Locale): Promise<string> {
-  wire.negotiated = { locale, dir: directionOf(locale) }
+async function serveDocument(
+  locale: Locale,
+  signedIn = false,
+): Promise<string> {
+  wire.negotiated = { locale, dir: directionOf(locale), signedIn }
 
   const index = createRoute({
     getParentRoute: () => rootRoute,
@@ -255,10 +298,45 @@ async function serveDocument(locale: Locale): Promise<string> {
   })
 
   await router.load()
+  const data = router.state.matches[0]?.loaderData
+  expect(data).toMatchObject({
+    signedIn: wire.fail || wire.failCatalogue ? false : signedIn,
+  })
   return renderToString(createElement(RouterProvider, { router }))
 }
 
 describe('the served document', () => {
+  it('carries the signed-in presentation hint', async () => {
+    expect(await serveDocument('de', true)).toContain('<html lang="de"')
+  })
+
+  it('renders an anonymous cookie choice in the first HTML bytes', async () => {
+    const result = await negotiateLocaleFrom(
+      source({ visitor: 'pl', acceptLanguage: 'de' }),
+    )
+    expect(await serveDocument(result.locale, result.signedIn)).toContain(
+      '<html lang="pl"',
+    )
+  })
+
+  it.each(['fail', 'failCatalogue'] as const)(
+    'uses a signed-out source-language fallback on %s',
+    async (failure) => {
+      wire[failure] = true
+      try {
+        expect(await serveDocument('de', true)).toContain('<html lang="en"')
+      } finally {
+        wire[failure] = false
+      }
+    },
+  )
+
+  it('varies the document by language and cookie', () => {
+    expect(rootRoute.options.headers?.({} as never)).toEqual({
+      vary: 'accept-language, cookie',
+    })
+  })
+
   it('opens in the negotiated language', async () => {
     expect(await serveDocument('pl')).toContain('<html lang="pl" dir="ltr"')
   })

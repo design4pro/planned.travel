@@ -311,7 +311,7 @@ The placeholder is one fixed `/join/[redacted]` (and `%2Fjoin%2F[redacted]`) on 
 `/two-factor` also receives the `redirect` (login hands over to it after a password sign-in), so it carries the `strict-origin` referrer meta with the other three sign-in pages.
 
 **i18n of the surface.** `/join` needs no new locale work: the root loader already negotiates it (`__root.tsx:86`) server-side, before
-first paint, from `Accept-Language` for an anonymous visitor and the stored preference for a signed-in one, with
+first paint, from the visitor cookie then `Accept-Language` for an anonymous visitor and the stored preference for a signed-in one, with
 `<html lang dir>` set. The `ar` card is designed in RTL (only the URL element is forced `dir="ltr"`).
 
 ### Rate limiting (Phase 2, used in Phases 3 and 4)

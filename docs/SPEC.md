@@ -910,8 +910,8 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 2. **Source locale is `en`.** Every key exists in every locale. A test proves parity — no missing
    key, no orphan key, no locale silently falling back to English at runtime.
 3. **Negotiation happens on the server, once, before first paint**: user setting → workspace
-   setting → `Accept-Language` → `en`. `<html lang>` and `<html dir>` are server-rendered. No
-   locale flash, no hydration mismatch, no second render to correct the language.
+   setting → visitor cookie → `Accept-Language` → `en`. `<html lang>` and `<html dir>` are
+   server-rendered. No locale flash, no hydration mismatch, no second render to correct the language.
 4. **`ar` is RTL.** Layout uses logical properties, not `left`/`right`. Directional icons mirror.
    RTL is a designed layout, exactly as dark mode is, not a flipped afterthought.
 5. **Formatting must agree across runtimes.** `src/lib/format.ts` pins `en-GB` and freezes the
@@ -922,8 +922,10 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
    this task — treat a divergence as a defect, never as a tolerance.
 6. **No untranslated string reaches a screen.** §7.5's ban on placeholder copy covers an
    English string sitting in a non-English catalogue.
-7. **The language picker** lives in settings, lists every locale in its native name and script,
-   shows the active one, and persists through a reload.
+7. **One language picker** lists every locale in its native name and script, shows the active one,
+   and persists through a reload. Settings saves a personal override (or follows the workspace);
+   signed-out controls reuse this picker and save only the visitor cookie. The visitor cookie
+   holds only a language tag for 365 days, is HttpOnly, SameSite=Lax, Path=/ and Secure on HTTPS.
 8. **Scope.** In: `src/routes/(auth)`, `src/routes/_app`, the marketing landing and pricing pages,
    and every component they render. Out, for now: `src/routes/legal/**` long-form terms and privacy
    prose, which stays English and says so on the page — translated legal text needs review this

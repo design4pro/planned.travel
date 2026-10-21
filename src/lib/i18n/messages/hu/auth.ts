@@ -1,13 +1,12 @@
 /**
  * Everything the authentication screens say, in Hungarian.
  *
- * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §8.9
+ * Made from `../en/auth.ts` and from nothing else. `docs/SPEC.md` §1 and §9 rule 9
  * forbid deriving a catalogue from the reference project's AGPL translations, so
  * every sentence here was written against our English source.
  *
  * These are the only screens a traveller reaches with no session, so their
- * language comes purely from `Accept-Language` and there is no stored preference
- * to correct a bad guess with. Two thirds of the keys are validation messages
+ * language comes from the visitor cookie, then `Accept-Language`, then English. Two thirds of the keys are validation messages
  * and failure alerts, which surface exactly when a reader can least afford a
  * sentence in a language they do not read.
  *
