@@ -2,11 +2,11 @@
  * The sign-in, sign-up, recovery and invitation screens, in Vietnamese.
  *
  * Authored from `../en/auth`, which is our own English copy — never another
- * product's catalogue (`docs/SPEC.md` §1, §8.9).
+ * product's catalogue (`docs/SPEC.md` §1, §9 rule 9).
  *
  * These are the only screens a traveller reaches with no session, so the
- * language is negotiated from `Accept-Language` alone and there is no stored
- * preference to correct a bad guess with. Two thirds of the keys are validation
+ * language is negotiated from the visitor cookie, then `Accept-Language`, then
+ * English. Two thirds of the keys are validation
  * and failure copy, read at the worst possible moment — so they are whole
  * sentences with the subject restored, because Vietnamese error copy that drops
  * the pronoun reads as a machine talking to itself.

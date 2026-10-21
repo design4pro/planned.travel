@@ -1,8 +1,9 @@
 /**
  * Which language the document is written in, decided once per request.
  *
- * `docs/SPEC.md` §8.3 fixes both the order — user setting → workspace setting →
- * `Accept-Language` → `en` — and the place: on the server, before first paint,
+ * `docs/SPEC.md` §9 rule 3 fixes both the order — user setting → workspace setting →
+ * visitor cookie → `Accept-Language` → `en` — and the place: on the server,
+ * before first paint,
  * so `<html lang>` and `<html dir>` are part of the first bytes and no screen
  * ever renders twice to correct itself. `src/routes/__root.tsx` calls
  * {@link negotiateRequestLocale} from its `loader` (never `beforeLoad`, which is
@@ -11,8 +12,7 @@
  *
  * **The anonymous path costs nothing.** `docs/SPEC.md` §5 keeps D1 out of the
  * critical path for marketing pages, and this function runs on every one of
- * them. Better Auth answers `null` from the signed cookie alone when there is no
- * session cookie, so an anonymous request to `/` or `/pricing` reaches
+ * them. Better Auth answers `null` when there is no session cookie, so an anonymous request to `/` or `/pricing` reaches
  * {@link LocaleRequestSource.storedLocale} — the only member that touches the
  * database — never at all. That short-circuit is a guarantee, not an
  * optimisation, which is why the reads are injected: a test can prove the D1
@@ -20,16 +20,19 @@
  *
  * **Negotiation never fails a page.** A settings read that throws — a signed-in
  * caller whose workspace cannot be resolved, a D1 hiccup — drops through to
- * `Accept-Language` and then to `en`. A document that renders in the wrong
+ * the visitor cookie, `Accept-Language` and then to `en`. A document in the wrong
  * language is a defect; a document that does not render at all is a worse one.
  */
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { z } from 'zod'
 
-import { directionOf, negotiate } from '#/lib/i18n'
+import { directionOf, LOCALE_TAGS, negotiate } from '#/lib/i18n'
+import { parseVisitorLocaleCookie } from '#/lib/i18n/visitor-locale'
 import { getSession } from '#/server/auth/session'
 import { getEffectiveSettings } from '#/server/repos'
 import { appScope } from './context'
+import { writeVisitorLocaleCookie } from './-lib/visitor-locale'
 
 import type { Direction, Locale } from '#/lib/i18n'
 import type { AuthSession } from '#/server/auth/session'
@@ -40,10 +43,12 @@ export interface NegotiatedLocale {
   readonly locale: Locale
   /** The writing direction of that locale's script. */
   readonly dir: Direction
+  /** Presentation hint only, never an authorisation decision. */
+  readonly signedIn: boolean
 }
 
 /**
- * The three things a request can say about language, each behind a call so the
+ * The things a request can say about language, each behind a call so the
  * expensive one stays unevaluated when the cheap one has already answered.
  */
 export interface LocaleRequestSource {
@@ -57,15 +62,17 @@ export interface LocaleRequestSource {
   readonly storedLocale: () => Promise<string | null>
   /** The `Accept-Language` header, verbatim. Never a normalised copy. */
   readonly acceptLanguage: () => string | null
+  /** The bounded and canonicalised visitor cookie, or null when absent. */
+  readonly visitorLocale: () => string | null
 }
 
 /**
- * Runs §8.3's chain over one request's inputs.
+ * Runs §9 rule 3's chain over one request's inputs.
  *
- * A stored tag is passed to `negotiate` rather than trusted: `en-GB` is the
- * column default and free text was writable before the picker existed, so
+ * A stored tag is passed to `negotiate` rather than trusted: `en-GB` was the
+ * legacy column default and free text was writable before the picker existed, so
  * `resolveLocaleTag` canonicalises it and an unresolvable value falls to the
- * header exactly as an absent one does.
+ * visitor cookie and then the header, exactly as an absent one does.
  *
  * There is no separate `workspace` argument because the first two steps of the
  * chain have already been taken by the time this sees them — the repository's
@@ -75,18 +82,21 @@ export interface LocaleRequestSource {
 export async function negotiateLocaleFrom(
   source: LocaleRequestSource,
 ): Promise<NegotiatedLocale> {
+  const session = await source.session()
   const locale = negotiate({
-    user: await storedLocaleForCaller(source),
+    user: await storedLocaleForCaller(source, session),
+    visitor: source.visitorLocale(),
     acceptLanguage: source.acceptLanguage(),
   })
-  return { locale, dir: directionOf(locale) }
+  return { locale, dir: directionOf(locale), signedIn: session !== null }
 }
 
 /** The caller's stored preference, or `null` for anyone who has none. */
 async function storedLocaleForCaller(
   source: LocaleRequestSource,
+  session: AuthSession | null,
 ): Promise<string | null> {
-  if ((await source.session()) === null) {
+  if (session === null) {
     return null
   }
   try {
@@ -102,6 +112,8 @@ const requestSource: LocaleRequestSource = {
   storedLocale: async () =>
     (await getEffectiveSettings(await appScope())).locale,
   acceptLanguage: () => getRequestHeader('accept-language') ?? null,
+  visitorLocale: () =>
+    parseVisitorLocaleCookie(getRequestHeader('cookie') ?? null),
 }
 
 /**
@@ -112,3 +124,11 @@ const requestSource: LocaleRequestSource = {
 export const negotiateRequestLocale = createServerFn({ method: 'GET' }).handler(
   async (): Promise<NegotiatedLocale> => negotiateLocaleFrom(requestSource),
 )
+
+/** Anonymous, same-origin preference write. Global CSRF middleware covers this POST. */
+export const saveVisitorLanguage = createServerFn({ method: 'POST' })
+  .validator(z.object({ locale: z.enum(LOCALE_TAGS) }))
+  .handler(async ({ data }) => {
+    writeVisitorLocaleCookie(data.locale)
+    return { locale: data.locale }
+  })

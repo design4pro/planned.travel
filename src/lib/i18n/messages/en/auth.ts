@@ -1,16 +1,16 @@
 /**
  * Everything the authentication screens say, in the source locale.
  *
- * `docs/SPEC.md` §8 fixes the shape: one flat object of keys, default-exported,
+ * `docs/SPEC.md` §9 fixes the shape: one flat object of keys, default-exported,
  * at `messages/<locale>/<namespace>.ts`. A screen reads a key as
  * `t('auth.<key>')`, and `../../types.ts` derives the key union from this file,
  * so a typo is a compile error at the call site rather than English leaking onto
- * an Arabic screen (§8.2 bans the silent fallback outright).
+ * an Arabic screen (§9 rule 2 bans the silent fallback outright).
  *
  * **Why this namespace matters more than its size suggests.** These are the only
- * screens a traveller can reach with no session, so their language comes purely
- * from `Accept-Language` - there is no stored preference to correct a bad guess
- * with. They are also where copy hides longest: two thirds of the keys below are
+ * screens a traveller can reach with no session, so their language comes from
+ * the visitor cookie, then `Accept-Language`, then English. They are also where
+ * copy hides longest: two thirds of the keys below are
  * validation messages and failure alerts that only appear once something has
  * gone wrong, which is exactly when a reader can least afford a sentence in a
  * language they do not read.
@@ -36,10 +36,10 @@
  *   appears inside a sentence it is written out rather than interpolated,
  *   because several languages inflect around it.
  * - *Dates.* An invitation's expiry is formatted by `src/lib/format.ts`, frozen
- *   against the workerd/WebKit divergence §8.5 calls a defect. No key below
+ *   against the workerd/WebKit divergence §9 rule 5 calls a defect. No key below
  *   names a month.
  *
- * **Numbers.** §8's rule: `count` picks the CLDR plural branch and is never
+ * **Numbers.** §9's rule: `count` picks the CLDR plural branch and is never
  * rendered. A number a reader sees arrives as `{value}`, already grouped for the
  * locale by `formatNumber` - a raw substitution prints `1234` with no separator
  * in all twenty-three. Where a number is part of the prose rather than a value
@@ -53,7 +53,7 @@ const messages = {
   /* ------------------------------------------------------------------ shell */
   /** Accessible name of the wordmark, which links back to the marketing site. */
   'shell.home': 'planned.travel home',
-  /** The standing notice under every card. The legal pages are English (§8.8). */
+  /** The standing notice under every card. The legal pages are English (§9 rule 8). */
   'shell.legal':
     'By continuing you agree to the planned.travel terms of service and privacy notice.',
 
@@ -116,7 +116,7 @@ const messages = {
    * Every Zod message on these screens. They are built by
    * `-lib/schemas.ts`'s factory rather than written into the schema, so the
    * inline message under a field is in the reader's language on the very first
-   * keystroke - `docs/SPEC.md` §8.6 covers a validation message exactly as it
+   * keystroke - `docs/SPEC.md` §9 rule 6 covers a validation message exactly as it
    * covers a heading.
    */
   'validation.emailRequired': 'Enter your email address.',
@@ -365,7 +365,7 @@ const messages = {
    * Every failure these screens can surface, as a headline and one quiet line
    * under it. `-lib/errors.ts` maps an auth API code onto a pair of these keys
    * and never onto a sentence, which is what keeps a server-authored English
-   * message off a non-English screen (§8.6). A code with no entry lands on
+   * message off a non-English screen (§9 rule 6). A code with no entry lands on
    * `error.unexpected`, deliberately, rather than showing whatever the endpoint
    * happened to say.
    */
