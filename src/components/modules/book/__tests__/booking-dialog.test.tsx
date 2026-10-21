@@ -480,6 +480,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     expect(reservations.create).toHaveBeenCalledTimes(1)
     expect(warning).toHaveBeenCalledWith('Saved, but not added to the costs', {
       description: 'Open the booking and save it again to add its cost line.',
+      duration: 10_000,
     })
     expect(success).not.toHaveBeenCalled()
   })

@@ -154,6 +154,9 @@ function stopChoice(
   return null
 }
 
+/** How long the refusal warning stays up: it names the next step, so it outlives the default. */
+const LEDGER_REFUSED_TOAST_MS = 10_000
+
 /**
  * The success toast of a write, kept back when the booking saved but its ledger write was refused:
  * `submit` shows the warning in its place, and a reader must not be told "added" and "not added"
@@ -381,6 +384,7 @@ export function BookingDialog({
       // dialog closes and the warning toast tells the reader so.
       toast.warning(t('modules.book.toast.ledgerRefused'), {
         description: t('modules.book.toast.ledgerRefusedBody'),
+        duration: LEDGER_REFUSED_TOAST_MS,
       })
       onOpenChange(false)
       return
