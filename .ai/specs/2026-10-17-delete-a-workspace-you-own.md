@@ -252,7 +252,7 @@ for a very large workspace and then fail the same way on every retry, so the fin
 and each selecting its rows with a `LIMIT` subselect, never a list of bound ids (D1 accepts 100 bound parameters,
 `MAX_BOUND_PARAMETERS` in `repos/batch.ts`): per step, the next 100 trips are selected, their rooms are closed and the trips
 are deleted (the room closing is therefore as bounded as the delete, and stays under the Workers subrequest limit). The four
-`NO ACTION` foreign keys of `.ai/specs/2026-09-19-deployed-on-delete-rules.md` (`transports.arrival_day_id`,
+`NO ACTION` foreign keys of `.ai/specs/implemented/2026-09-19-deployed-on-delete-rules.md` (`transports.arrival_day_id`,
 `reservations.expense_id`, `day_accommodations.reservation_id`, `expenses.cost_category_id`) do not make a trip delete fail:
 each one points at a row of the same trip (the repositories verify that before they store the first three; nothing writes
 `expenses.cost_category_id` yet, and `04-S2`, the stage that does, owes the same check), so the parent and every row that names
@@ -641,7 +641,7 @@ enumerates every table with an `organization_id` column from the schema and asse
 fails when a future table forgets `orgRef()`); both it and a case that drains a trip carrying all four `NO ACTION` pointers (a leg
 landing on another day, a booking paid by an expense, a night reserved by a booking, an expense in a cost category) and expects no
 foreign-key failure run against the **migrated** DDL (`drizzle/`) and not only the harness built from `schema.ts`, because those four
-`ADD COLUMN` foreign keys are `NO ACTION` in the deployed database (`.ai/specs/2026-09-19-deployed-on-delete-rules.md`); a volume case with more trips than one step, and one with more `audit_log` rows
+`ADD COLUMN` foreign keys are `NO ACTION` in the deployed database (`.ai/specs/implemented/2026-09-19-deployed-on-delete-rules.md`); a volume case with more trips than one step, and one with more `audit_log` rows
 than one step.
 
 ### Phase 3 - Stale session recovery

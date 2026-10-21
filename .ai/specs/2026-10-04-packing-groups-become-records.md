@@ -135,7 +135,7 @@ Indexes: `packing_category_members_org_idx (organization_id, category_id)` and t
 `packing_items.category_id` — `text`, nullable, declared `REFERENCES packing_categories(id) ON DELETE
 SET NULL`, with `packing_items_category_idx (organization_id, category_id)`. **The declared rule is
 not the deployed one:** drizzle-kit's `ADD COLUMN` writes no `ON DELETE` clause, so D1 enforces `NO
-ACTION` (the same gap `.ai/specs/2026-09-19-deployed-on-delete-rules.md` records, and the
+ACTION` (the same gap `.ai/specs/implemented/2026-09-19-deployed-on-delete-rules.md` records, and the
 `DEPLOYED_WITHOUT_ON_DELETE` register in `src/server/db/__tests__/migrations-match-schema.test.ts`
 tracks). Nothing in this design relies on `SET NULL`: the delete path clears the column itself
 (below). Phase 2 adds `packing_items.category_id` to that register, and the group-delete, list-delete
