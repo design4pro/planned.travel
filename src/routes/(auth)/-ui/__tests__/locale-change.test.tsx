@@ -18,6 +18,9 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('#/components/layout/theme-toggle', () => ({
   ThemeToggle: () => <button>Theme</button>,
 }))
+vi.mock('#/components/layout/visitor-language-switcher', () => ({
+  VisitorLanguageSwitcher: () => <button>Language</button>,
+}))
 afterEach(cleanup)
 
 function provider(locale: Locale, children: React.ReactNode) {

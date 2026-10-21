@@ -43,12 +43,18 @@ export interface WordmarkProps {
   size?: keyof typeof WORDMARK_SIZES
   /** Show the `.travel` tail — used on the public pages and in the footer. */
   showSuffix?: boolean
+  /**
+   * Below `sm` the tail gives way to the brand dot. A header that carries more
+   * targets than a 360px phone has room for drops the tail, never a target.
+   */
+  suffixFromSm?: boolean
   className?: string
 }
 
 export function Wordmark({
   size = 'md',
   showSuffix = false,
+  suffixFromSm = false,
   className,
 }: WordmarkProps) {
   const scale = WORDMARK_SIZES[size]
@@ -63,7 +69,21 @@ export function Wordmark({
       >
         planned
         {showSuffix ? (
-          <span className="font-bold text-ink-4">.travel</span>
+          <>
+            {suffixFromSm ? (
+              <span aria-hidden className="text-brand sm:hidden">
+                .
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                'font-bold text-ink-4',
+                suffixFromSm && 'max-sm:hidden',
+              )}
+            >
+              .travel
+            </span>
+          </>
         ) : (
           <span className="text-brand">.</span>
         )}

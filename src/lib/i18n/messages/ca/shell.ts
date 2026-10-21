@@ -97,6 +97,12 @@ const messages = {
   'theme.state.dark': 'fosc',
   'theme.state.system': 'com el sistema',
   'theme.trigger': 'Tema: {state}. Canvia el tema',
+  'language.trigger': 'Idioma: {language}. Canvia l’idioma',
+  'language.hint':
+    'Es recorda en aquest dispositiu. Quan inicieu la sessió, s’aplica l’idioma definit al vostre compte; el podeu canviar a Configuració.',
+  'language.announce': 'S’ha canviat l’idioma a {language}',
+  'language.notApplied':
+    'Aquest navegador no ha conservat la vostra tria. Permeteu les galetes d’aquest lloc i torneu a triar.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Notificacions, cap per llegir',

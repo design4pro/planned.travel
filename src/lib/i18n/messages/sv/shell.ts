@@ -94,6 +94,12 @@ const messages = {
   'theme.state.dark': 'mörkt',
   'theme.state.system': 'som enheten',
   'theme.trigger': 'Utseende: {state}. Byt utseende',
+  'language.trigger': 'Språk: {language}. Byt språk',
+  'language.hint':
+    'Sparas på den här enheten. När du har loggat in gäller språket som är inställt i ditt konto; du kan ändra det under Inställningar.',
+  'language.announce': 'Språket ändrades till {language}',
+  'language.notApplied':
+    'Den här webbläsaren behöll inte ditt val. Tillåt cookies för den här webbplatsen och välj igen.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Aviseringar, inget oläst',

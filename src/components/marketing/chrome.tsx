@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 
 import { Wordmark } from '#/components/layout/brand'
 import { ThemeToggle } from '#/components/layout/theme-toggle'
+import { VisitorLanguageSwitcher } from '#/components/layout/visitor-language-switcher'
 import { Button, Separator } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -58,7 +59,7 @@ export function MarketingHeader({
           aria-label={t('marketing.nav.home')}
           className="shrink-0 rounded-md focus-ring"
         >
-          <Wordmark showSuffix />
+          <Wordmark showSuffix suffixFromSm />
         </Link>
 
         {anchors.length === 0 ? null : (
@@ -83,7 +84,10 @@ export function MarketingHeader({
 
         <div className="ms-auto flex items-center gap-1">
           {minimal ? (
-            <ThemeToggle />
+            <>
+              <ThemeToggle />
+              <VisitorLanguageSwitcher />
+            </>
           ) : (
             <>
               <Button
@@ -98,6 +102,7 @@ export function MarketingHeader({
                 </Link>
               </Button>
               <ThemeToggle />
+              <VisitorLanguageSwitcher />
               <Button
                 asChild
                 variant="ghost"

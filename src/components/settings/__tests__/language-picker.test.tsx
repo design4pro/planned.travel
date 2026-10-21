@@ -528,3 +528,30 @@ describe('LanguagePicker — disabled', () => {
     expect(chip('de').className).not.toContain('active:')
   })
 })
+
+describe('LanguagePicker — the group description', () => {
+  it('places the description between the label and the grid and describes the group with it', () => {
+    renderPicker({
+      followWorkspaceLabel: undefined,
+      workspaceDefault: undefined,
+      description: 'Remembered on this device.',
+    })
+    const group = screen.getByRole('radiogroup')
+    const hint = screen.getByText('Remembered on this device.')
+    expect(group.getAttribute('aria-describedby')).toBe(hint.id)
+    expect(
+      hint.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      screen.getByText('Language').compareDocumentPosition(hint) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('leaves the group undescribed when there is none, as on the settings screen', () => {
+    renderPicker()
+    expect(
+      screen.getByRole('radiogroup').getAttribute('aria-describedby'),
+    ).toBeNull()
+  })
+})

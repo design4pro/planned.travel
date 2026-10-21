@@ -98,6 +98,12 @@ const messages = {
   'theme.state.dark': 'sötét',
   'theme.state.system': 'a rendszert követi',
   'theme.trigger': 'Téma: {state}. Téma módosítása',
+  'language.trigger': 'Nyelv: {language}. Nyelv módosítása',
+  'language.hint':
+    'Ezen az eszközön megjegyezzük. Bejelentkezés után a fiókodban beállított nyelv érvényes; a Beállításokban módosíthatod.',
+  'language.announce': 'A nyelv módosítva: {language}',
+  'language.notApplied':
+    'Ez a böngésző nem tartotta meg a választásodat. Engedélyezd a sütiket ezen az oldalon, majd válassz újra.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Értesítések, nincs olvasatlan',

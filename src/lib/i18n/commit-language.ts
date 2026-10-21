@@ -11,7 +11,7 @@
  * plain function with its four collaborators passed in is testable for what it
  * does instead of for how it is spelled.
  *
- * **The three outcomes.**
+ * **The outcomes.**
  *
  * - `rejected` — `saveLanguagePreference` threw, so `user_settings.locale` is
  *   untouched. The selection goes back to what D1 still holds and the reader is
@@ -26,6 +26,11 @@
  *   to fetch. "Your language was not changed" would contradict both D1 and the
  *   chip the reader is looking at, so this outcome gets the saved-not-switched
  *   pair of sentences and a reload instead.
+ * - `unapplied` — only for a caller that can check (`applied`): the write
+ *   answered and the loaders re-ran, yet the document still negotiated another
+ *   language. The browser did not keep the cookie, or the caller turned out to
+ *   be signed in and so ignores it. It never claims success: the caller says
+ *   nothing was applied, in the language still on screen.
  *
  * **Why `refreshed` is a question and not a `catch`.** The obvious shape —
  * `try { await router.invalidate() } catch` — is dead code. TanStack routes a
@@ -78,6 +83,12 @@ export type LanguageCommit =
       readonly landed: LanguageOverride
       readonly inForce: Locale
     }
+  | {
+      readonly status: 'unapplied'
+      readonly landed: LanguageOverride
+      /** The language that was asked for, which is not the one on screen. */
+      readonly inForce: Locale
+    }
 
 export interface LanguageCommitDeps {
   /**
@@ -93,6 +104,12 @@ export interface LanguageCommitDeps {
   readonly refresh: () => Promise<void>
   /** `false` once any match is showing its error boundary instead of its data. */
   readonly refreshed: () => boolean
+  /**
+   * Whether the page now speaks what was asked for, answered after the
+   * loaders ran. Optional: the settings screen writes a row that every request
+   * reads, so for it a clean refresh is proof enough.
+   */
+  readonly applied?: () => boolean
   /** The incoming locale's catalogue, wrapped as a translator. */
   readonly translatorFor: (locale: Locale) => Promise<Translate>
 }
@@ -105,6 +122,22 @@ export interface LanguageCommitRequest {
   readonly workspace: Locale
 }
 
+/** What a caller that supplies no `applied` check can be handed back. */
+export type CheckedFreeLanguageCommit = Exclude<
+  LanguageCommit,
+  { readonly status: 'unapplied' }
+>
+
+// Two overloads so the settings screen, which supplies no check, is not made to
+// handle an outcome it cannot receive.
+export function commitLanguage(
+  request: LanguageCommitRequest,
+  deps: LanguageCommitDeps & { readonly applied?: undefined },
+): Promise<CheckedFreeLanguageCommit>
+export function commitLanguage(
+  request: LanguageCommitRequest,
+  deps: LanguageCommitDeps,
+): Promise<LanguageCommit>
 export async function commitLanguage(
   request: LanguageCommitRequest,
   deps: LanguageCommitDeps,
@@ -125,6 +158,9 @@ export async function commitLanguage(
   try {
     await deps.refresh()
     if (!deps.refreshed()) return { status: 'stale', landed, inForce }
+    if (deps.applied && !deps.applied()) {
+      return { status: 'unapplied', landed, inForce }
+    }
     return {
       status: 'switched',
       landed,
