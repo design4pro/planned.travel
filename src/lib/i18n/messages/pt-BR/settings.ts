@@ -226,7 +226,7 @@ const messages = {
   'security.twoFactor.enable': 'Ligar',
   'security.passkeys.label': 'Chaves de acesso',
   'security.passkeys.hint':
-    'Entre com a digital, com o Face ID ou com uma chave de segurança, sem digitar nada.',
+    'Entre com a digital, o rosto ou uma chave de segurança, sem digitar nada.',
   'security.passkeys.action': 'Gerenciar as chaves de acesso',
   'security.session.title': 'Esta sessão',
   'security.session.description': 'O navegador em que você está lendo isto.',
@@ -607,9 +607,10 @@ const messages = {
   'passkeys.add.exists':
     'Este dispositivo já tem uma chave de acesso para a sua conta',
   'passkeys.add.failed': 'A chave de acesso não foi adicionada. Tente de novo.',
-  'passkeys.add.stale': 'Para a sua segurança, entre de novo para continuar.',
+  'passkeys.add.stale':
+    'Para a sua segurança, gerenciar as chaves de acesso exige um login recente. Se você escolher “Entrar de novo”, sua sessão será encerrada primeiro e depois você irá para a página de login.',
   'passkeys.error.sessionEnded':
-    'Sua sessão terminou. Entre de novo para continuar.',
+    'Sua sessão terminou. Entre de novo para continuar gerenciando suas chaves de acesso.',
   'passkeys.signInAgain': 'Entrar de novo',
   'passkeys.add.limit':
     'Você atingiu o limite de {value} chaves de acesso. Remova uma para adicionar outra.',
@@ -648,7 +649,7 @@ const messages = {
   'passkeys.delete.cancel': 'Cancelar',
   'passkeys.delete.wrongPassword': 'Essa senha não está correta.',
   'passkeys.delete.stale':
-    'Para a sua segurança, entre de novo antes de remover uma chave de acesso.',
+    'Para a sua segurança, remover uma chave de acesso exige um login recente. Se você escolher “Entrar de novo”, sua sessão será encerrada primeiro e depois você irá para a página de login.',
   'passkeys.delete.removed': 'Chave de acesso removida',
   'passkeys.delete.failed':
     'A chave de acesso não foi removida. Tente de novo.',

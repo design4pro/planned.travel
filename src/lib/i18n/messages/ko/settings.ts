@@ -197,7 +197,7 @@ const messages = {
   'security.twoFactor.enable': '켜기',
   'security.passkeys.label': '패스키',
   'security.passkeys.hint':
-    '아무것도 입력하지 않고 지문이나 Face ID, 보안 키로 로그인해요.',
+    '아무것도 입력하지 않고 지문이나 얼굴, 보안 키로 로그인해요.',
   'security.passkeys.action': '패스키 관리',
   'security.session.title': '이 세션',
   'security.session.description': '지금 이 글을 읽고 있는 브라우저예요.',
@@ -535,9 +535,10 @@ const messages = {
   'passkeys.add.dismissed': '패스키가 추가되지 않았어요',
   'passkeys.add.exists': '이 기기에는 이미 내 계정의 패스키가 있어요',
   'passkeys.add.failed': '패스키를 추가하지 못했어요. 다시 시도해 주세요.',
-  'passkeys.add.stale': '안전을 위해 계속하려면 다시 로그인해 주세요.',
+  'passkeys.add.stale':
+    '안전을 위해 패스키를 관리하려면 최근에 로그인해야 해요. ‘다시 로그인’을 누르면 먼저 로그아웃된 다음 로그인 페이지로 이동해요.',
   'passkeys.error.sessionEnded':
-    '세션이 끝났어요. 계속하려면 다시 로그인해 주세요.',
+    '세션이 끝났어요. 패스키 관리를 계속하려면 다시 로그인해 주세요.',
   'passkeys.signInAgain': '다시 로그인',
   'passkeys.add.limit':
     '패스키 {value}개 한도에 도달했어요. 다른 패스키를 추가하려면 하나를 삭제해 주세요.',
@@ -576,7 +577,7 @@ const messages = {
   'passkeys.delete.cancel': '취소',
   'passkeys.delete.wrongPassword': '비밀번호가 맞지 않아요.',
   'passkeys.delete.stale':
-    '안전을 위해 패스키를 삭제하기 전에 다시 로그인해 주세요.',
+    '안전을 위해 패스키를 삭제하려면 최근에 로그인해야 해요. ‘다시 로그인’을 누르면 먼저 로그아웃된 다음 로그인 페이지로 이동해요.',
   'passkeys.delete.removed': '패스키를 삭제했어요',
   'passkeys.delete.failed': '패스키를 삭제하지 못했어요. 다시 시도해 주세요.',
   'passkeys.delete.removing': '패스키를 삭제하는 중',

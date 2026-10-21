@@ -223,7 +223,7 @@ const messages = {
   'security.twoFactor.enable': 'Bekapcsolás',
   'security.passkeys.label': 'Belépési kulcsok',
   'security.passkeys.hint':
-    'Lépjen be ujjlenyomattal, Face ID-val vagy biztonsági kulccsal, gépelés nélkül.',
+    'Lépjen be ujjlenyomattal, arcfelismeréssel vagy biztonsági kulccsal, gépelés nélkül.',
   'security.passkeys.action': 'Belépési kulcsok kezelése',
   'security.session.title': 'Ez a munkamenet',
   'security.session.description': 'A böngésző, amelyben ezt olvassa.',
@@ -601,9 +601,9 @@ const messages = {
   'passkeys.add.exists': 'Ezen az eszközön már van belépési kulcs a fiókjához',
   'passkeys.add.failed': 'A belépési kulcs nem lett hozzáadva. Próbálja újra.',
   'passkeys.add.stale':
-    'A biztonsága érdekében a folytatáshoz jelentkezzen be újra.',
+    'A biztonsága érdekében a belépési kulcsok kezeléséhez friss bejelentkezés szükséges. Ha a „Bejelentkezés újra” lehetőséget választja, előbb kijelentkeztetjük, majd a bejelentkezési oldalra irányítjuk.',
   'passkeys.error.sessionEnded':
-    'A munkamenete véget ért. A folytatáshoz jelentkezzen be újra.',
+    'A munkamenete véget ért. A belépési kulcsok kezelésének folytatásához jelentkezzen be újra.',
   'passkeys.signInAgain': 'Bejelentkezés újra',
   'passkeys.add.limit':
     'Elérte a(z) {value} belépési kulcsos korlátot. Távolítson el egyet, hogy újat adhasson hozzá.',
@@ -642,7 +642,7 @@ const messages = {
   'passkeys.delete.cancel': 'Mégse',
   'passkeys.delete.wrongPassword': 'Ez a jelszó nem helyes.',
   'passkeys.delete.stale':
-    'A biztonsága érdekében a belépési kulcs eltávolítása előtt jelentkezzen be újra.',
+    'A biztonsága érdekében a belépési kulcs eltávolításához friss bejelentkezés szükséges. Ha a „Bejelentkezés újra” lehetőséget választja, előbb kijelentkeztetjük, majd a bejelentkezési oldalra irányítjuk.',
   'passkeys.delete.removed': 'Belépési kulcs eltávolítva',
   'passkeys.delete.failed':
     'A belépési kulcs eltávolítása nem sikerült. Próbálja újra.',

@@ -229,7 +229,7 @@ const messages = {
   'security.twoFactor.enable': 'Activa',
   'security.passkeys.label': 'Claus d’accés',
   'security.passkeys.hint':
-    'Entra amb l’empremta, amb Face ID o amb una clau de seguretat, sense escriure res.',
+    'Entra amb l’empremta, el rostre o una clau de seguretat, sense escriure res.',
   'security.passkeys.action': 'Gestiona les claus d’accés',
   'security.session.title': 'Aquesta sessió',
   'security.session.description': 'El navegador on estàs llegint això.',
@@ -615,9 +615,9 @@ const messages = {
     'Aquest dispositiu ja té una clau d’accés per al teu compte',
   'passkeys.add.failed': 'No s’ha afegit la clau d’accés. Torna-ho a provar.',
   'passkeys.add.stale':
-    'Per la teva seguretat, torna a iniciar la sessió per continuar.',
+    'Per la teva seguretat, gestionar les claus d’accés requereix haver iniciat la sessió fa poc. Si tries «Inicia la sessió de nou», primer es tancarà la teva sessió i després aniràs a la pàgina d’inici de sessió.',
   'passkeys.error.sessionEnded':
-    'La teva sessió ha acabat. Torna a iniciar la sessió per continuar.',
+    'La teva sessió ha acabat. Inicia la sessió de nou per continuar gestionant les claus d’accés.',
   'passkeys.signInAgain': 'Inicia la sessió de nou',
   'passkeys.add.limit':
     'Has arribat al límit de {value} claus d’accés. Elimina’n una per afegir-ne una altra.',
@@ -656,7 +656,7 @@ const messages = {
   'passkeys.delete.cancel': 'Cancel·la',
   'passkeys.delete.wrongPassword': 'Aquesta contrasenya no és correcta.',
   'passkeys.delete.stale':
-    'Per la teva seguretat, torna a iniciar la sessió abans d’eliminar una clau d’accés.',
+    'Per la teva seguretat, eliminar una clau d’accés requereix haver iniciat la sessió fa poc. Si tries «Inicia la sessió de nou», primer es tancarà la teva sessió i després aniràs a la pàgina d’inici de sessió.',
   'passkeys.delete.removed': 'Clau d’accés eliminada',
   'passkeys.delete.failed':
     'No s’ha eliminat la clau d’accés. Torna-ho a provar.',

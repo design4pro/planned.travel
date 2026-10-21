@@ -229,7 +229,7 @@ const messages = {
   'security.twoFactor.enable': 'Attiva ora',
   'security.passkeys.label': 'Chiavi d’accesso',
   'security.passkeys.hint':
-    'Entra con l’impronta, con Face ID o con una chiave di sicurezza, senza scrivere niente.',
+    'Entra con l’impronta, il volto o una chiave di sicurezza, senza scrivere niente.',
   'security.passkeys.action': 'Gestisci le chiavi d’accesso',
   'security.session.title': 'Questa sessione',
   'security.session.description': 'Il browser in cui stai leggendo.',
@@ -612,9 +612,10 @@ const messages = {
   'passkeys.add.exists':
     'Questo dispositivo ha già una chiave d’accesso per il tuo account',
   'passkeys.add.failed': 'La chiave d’accesso non è stata aggiunta. Riprova.',
-  'passkeys.add.stale': 'Per la tua sicurezza, accedi di nuovo per continuare.',
+  'passkeys.add.stale':
+    'Per la tua sicurezza, gestire le chiavi d’accesso richiede un accesso recente. Se scegli «Accedi di nuovo», la sessione corrente verrà chiusa e poi ti porteremo alla pagina di accesso.',
   'passkeys.error.sessionEnded':
-    'La tua sessione è terminata. Accedi di nuovo per continuare.',
+    'La tua sessione è terminata. Accedi di nuovo per continuare a gestire le tue chiavi d’accesso.',
   'passkeys.signInAgain': 'Accedi di nuovo',
   'passkeys.add.limit':
     'Hai raggiunto il limite di {value} chiavi d’accesso. Rimuovine una per aggiungerne un’altra.',
@@ -652,7 +653,7 @@ const messages = {
   'passkeys.delete.cancel': 'Annulla',
   'passkeys.delete.wrongPassword': 'Questa password non è corretta.',
   'passkeys.delete.stale':
-    'Per la tua sicurezza, accedi di nuovo prima di rimuovere una chiave d’accesso.',
+    'Per la tua sicurezza, rimuovere una chiave d’accesso richiede un accesso recente. Se scegli «Accedi di nuovo», la sessione corrente verrà chiusa e poi ti porteremo alla pagina di accesso.',
   'passkeys.delete.removed': 'Chiave d’accesso rimossa',
   'passkeys.delete.failed': 'La chiave d’accesso non è stata rimossa. Riprova.',
   'passkeys.delete.removing': 'Rimozione della chiave d’accesso',
