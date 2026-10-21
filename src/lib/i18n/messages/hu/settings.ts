@@ -691,6 +691,10 @@ const messages = {
   'twoFactor.password.invalid': 'Ez a jelszó helytelen.',
   'twoFactor.key.intro':
     'A telefonodon hitelesítő alkalmazásra van szükség. Add hozzá ezt a kulcsot, majd térj vissza ide. A kétlépcsős hitelesítés még nincs bekapcsolva.',
+  'twoFactor.key.matrixLabel':
+    'Beállítási kód. Ugyanez a kulcs szövegként is elérhető',
+  'twoFactor.key.matrixFailed':
+    'Nem sikerült kódot létrehozni ehhez a kulcshoz. Add meg a beállítási kulcsot az alkalmazásban.',
   'twoFactor.key.label': 'Beállítási kulcs',
   'twoFactor.key.copy': 'Kulcs másolása',
   'twoFactor.key.copied': 'Kulcs másolva',

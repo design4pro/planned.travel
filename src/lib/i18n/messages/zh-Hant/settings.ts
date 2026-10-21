@@ -582,6 +582,9 @@ const messages = {
   'twoFactor.password.invalid': '密碼不正確。',
   'twoFactor.key.intro':
     '你需要在手機上安裝身分驗證應用程式。加入此金鑰後，回到本頁。雙重身分驗證尚未啟用。',
+  'twoFactor.key.matrixLabel': '設定碼。同一金鑰也以文字形式提供',
+  'twoFactor.key.matrixFailed':
+    '無法為此金鑰產生代碼。請在應用程式中輸入設定金鑰。',
   'twoFactor.key.label': '設定金鑰',
   'twoFactor.key.copy': '複製金鑰',
   'twoFactor.key.copied': '已複製金鑰',

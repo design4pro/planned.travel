@@ -679,6 +679,10 @@ const messages = {
   'twoFactor.password.invalid': 'Kata sandi itu salah.',
   'twoFactor.key.intro':
     'Anda memerlukan aplikasi autentikator di ponsel. Tambahkan kunci ini lalu kembali ke sini. Dua faktor belum aktif.',
+  'twoFactor.key.matrixLabel':
+    'Kode penyiapan. Kunci yang sama tersedia sebagai teks',
+  'twoFactor.key.matrixFailed':
+    'Kami tidak dapat membuat kode untuk kunci ini. Masukkan kunci penyiapan di aplikasi Anda.',
   'twoFactor.key.label': 'Kunci penyiapan',
   'twoFactor.key.copy': 'Salin kunci',
   'twoFactor.key.copied': 'Kunci disalin',
