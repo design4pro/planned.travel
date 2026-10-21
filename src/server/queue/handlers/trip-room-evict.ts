@@ -18,7 +18,9 @@
  * Queued rather than run in the request because it is a fan-out over every room the person could
  * open, and because the producer is the auth layer (`src/server/auth/room-eviction.ts`), whose
  * module graph the platform console shares and must not reach a tenant repository. The producer
- * enqueues only after the change committed.
+ * enqueues only after the change committed. A revoke of the other sessions that ended none queues
+ * nothing (#1177): two empty session sources prove there is no session to evict for, so repeating
+ * that no-op cannot trigger this paid fan-out.
  *
  * ## What the envelope may and may not decide
  *
