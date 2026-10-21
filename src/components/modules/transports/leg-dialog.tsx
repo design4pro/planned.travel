@@ -28,9 +28,9 @@
  * fields, which is the whole point of re-searching rather than starting again.
  *
  * The save is one call: the record and its chain go to the server together and land together or
- * not at all, so a failed save leaves the dialog open with the whole chain exactly as typed and
- * nothing half-written behind it. A chain is expensive to retype and losing it to a network blip
- * is unforgivable.
+ * not at all. Validation and network failures keep the draft open. An authored server refusal
+ * instead closes the invalid action and refreshes the desk capability before another write is
+ * offered; retrying that refresh repeats a read, never the refused save.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
@@ -156,6 +156,7 @@ export function TransportDialog({
   canSearchConnections,
   open,
   onOpenChange,
+  onWriteError,
 }: {
   tripId: string
   /** Absent for a new transport. */
@@ -166,6 +167,7 @@ export function TransportDialog({
   canSearchConnections: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
+  onWriteError?: (cause: unknown) => void
 }) {
   const t = useTranslate()
   const locale = useLocale()
@@ -218,10 +220,12 @@ export function TransportDialog({
     saveTransportFn,
     editing
       ? {
+          onError: onWriteError,
           success: t('modules.transports.toast.updated'),
           failure: t('modules.transports.toast.updateFailed'),
         }
       : {
+          onError: onWriteError,
           success: t('modules.transports.toast.added'),
           description: t('modules.transports.toast.addedBody'),
           failure: t('modules.transports.toast.addFailed'),
@@ -373,6 +377,7 @@ export function TransportDialog({
               transportId={editing ? transport.id : undefined}
               journey={editing ? transport : undefined}
               days={days}
+              onWriteError={onWriteError}
               onSaved={() => onOpenChange(false)}
             />
           ) : (
