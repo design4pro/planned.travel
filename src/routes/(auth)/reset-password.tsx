@@ -21,6 +21,7 @@ import {
   FormAlert,
   PasswordInput,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -71,6 +72,7 @@ function ResetPasswordPage() {
       setDone(true)
     },
   })
+  useRevalidateAuthErrors(form)
 
   const backToSignIn = (
     <Link

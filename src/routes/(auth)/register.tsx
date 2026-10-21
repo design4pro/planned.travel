@@ -27,6 +27,7 @@ import {
   PasswordInput,
   SocialButtons,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -187,6 +188,7 @@ function RegisterPage() {
       )
     },
   })
+  useRevalidateAuthErrors(form)
 
   async function signUpWithProvider(provider: SocialProviderId): Promise<void> {
     setFailure(null)

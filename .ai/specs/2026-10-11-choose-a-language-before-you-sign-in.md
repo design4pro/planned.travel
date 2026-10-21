@@ -65,7 +65,7 @@ The reference row asks for a runtime and four behaviours. Everything but one is 
 | Runtime, twenty-three languages, parity                        | done        | `src/lib/i18n/` (catalogue, negotiate, plural, interpolate, provider), `src/lib/i18n/messages/<tag>/<namespace>.ts`, `src/lib/i18n/__tests__/parity.test.ts`, `e2e/i18n-runtime-parity.spec.ts`                                                           |
 | Resolve the language through a chain, server-side              | done        | `src/server/fns/locale.ts` (`negotiateLocaleFrom`: stored user, else workspace, else `Accept-Language`, else `en`), called from the root `loader` in `src/routes/__root.tsx`; `<html lang dir>` server-rendered                                           |
 | Right-to-left layout                                           | done        | `ar` has `dir: 'rtl'` in `src/lib/i18n/locales.ts`; `__root.tsx` wraps the tree in a direction provider; logical properties and `rtl:` mirrors in `auth-shell.tsx`                                                                                        |
-| Choose a language **after** signing in, apply without a reload | done        | `src/routes/_app/settings/language.tsx`, `src/components/settings/language-picker.tsx`, `saveLanguagePreference` in `src/routes/_app/-server/settings.ts`, `commitLanguage` in `src/routes/_app/settings/-lib/language-commit.ts` (`router.invalidate()`) |
+| Choose a language **after** signing in, apply without a reload | done        | `src/routes/_app/settings/language.tsx`, `src/components/settings/language-picker.tsx`, `saveLanguagePreference` in `src/routes/_app/-server/settings.ts`, `commitLanguage` in `src/lib/i18n/commit-language.ts` (`router.invalidate()`) |
 | Choose a language **before** signing in                        | **missing** | No control in `src/routes/(auth)/**`, `src/routes/index.tsx`, `src/routes/pricing.tsx`, `src/components/marketing/**` or `src/components/layout/**`. `src/lib/i18n/negotiate.ts` is pure and reads no cookie                                              |
 
 One fact decides the cookie's place in the chain. `organization_settings.locale` is `NOT NULL DEFAULT 'en'`
@@ -492,6 +492,10 @@ Each ticket is a full path: 09-S5a from a settings save to a signed-out screen r
    test pinning the root `vary`.
 
 ### Phase 2 - the switcher (09-S5b)
+
+The prefactor ticket #1172 owns the helper move and tests, optional follow row and `columnMin`,
+and auth focus/error re-validation. It preserves settings behaviour and the helper's three existing
+outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their caller and the remaining UI.
 
 1. Lift `commitLanguage` / `localeInForce` and their tests; add `applied` and `unapplied`; update `/settings/language`'s import.
 2. `LanguagePicker`: `followWorkspaceLabel` and `columnMin` optional, the item list derived without the follow row; tests for both

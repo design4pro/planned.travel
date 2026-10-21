@@ -27,6 +27,7 @@ import {
   FieldStack,
   FormAlert,
   useAuthSchemas,
+  useRevalidateAuthErrors,
   visibleError,
 } from './-ui/form'
 
@@ -91,6 +92,7 @@ function TwoFactorPage() {
       handOff()
     },
   })
+  useRevalidateAuthErrors(totpForm)
 
   const backupForm = useForm({
     defaultValues: BACKUP_DEFAULTS,
@@ -111,6 +113,7 @@ function TwoFactorPage() {
       handOff()
     },
   })
+  useRevalidateAuthErrors(backupForm)
 
   return (
     <AuthShell
