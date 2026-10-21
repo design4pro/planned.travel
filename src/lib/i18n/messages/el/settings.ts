@@ -405,7 +405,7 @@ const messages = {
   'billing.renewal.paused':
     'Αυτή η συνδρομή είναι σε παύση. Συνεχίστε την όποτε είστε έτοιμοι να ταξιδέψετε ξανά.',
   'billing.renewal.lapsed':
-    'Διαλέξτε πλάνο παρακάτω για να ξεκλειδώσετε ξανά κρατήσεις, χρονικό και χάρτες εκτός σύνδεσης.',
+    'Διαλέξτε πλάνο παρακάτω για να ξεκλειδώσετε ξανά κρατήσεις και χρονικό.',
   'billing.renewal.incomplete':
     'Το Polar περιμένει ακόμη επιβεβαίωση αυτής της πληρωμής.',
   'billing.renewal.free':
@@ -463,8 +463,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Απεριόριστα ταξίδια και μέρη',
   'billing.plan.solo.feature.modules':
     'Κάθε ενότητα σχεδιασμού — κρατήσεις, χρονικό, προϋπολογισμοί, αποσκευές',
-  'billing.plan.solo.feature.offline':
-    'Χάρτες εκτός σύνδεσης που κατεβάζετε πριν πετάξετε',
+  'billing.plan.solo.feature.storage': '5 GB για φωτογραφίες και έγγραφα',
   'billing.plan.solo.feature.export': 'Εξαγωγή σε PDF και σε ημερολόγιο',
   'billing.plan.crew.name': 'Ομαδικό',
   'billing.plan.crew.tagline': 'Για οικογένειες, φίλους και μικρές ομάδες',

@@ -73,13 +73,13 @@ const messages = {
 
   'landing.plans.title': 'Begin gratis. Betaal pas als het het verdient.',
   'landing.plans.lede':
-    'Elk pakket bevat de dagplanner, de kaart, budgetten en paklijsten. Betaalde pakketten - vanaf {price} per maand - openen onbeperkt reizen, reserveringen, het dagboek, offlinekaarten en exports.',
+    'Elk pakket bevat de dagplanner, de kaart, budgetten en paklijsten. Betaalde pakketten - vanaf {price} per maand - openen onbeperkt reizen, reserveringen, het dagboek en exports.',
   'landing.plans.ledeFree':
-    'Elk pakket bevat de dagplanner, de kaart, budgetten en paklijsten. Betaalde pakketten openen onbeperkt reizen, reserveringen, het dagboek, offlinekaarten en exports.',
+    'Elk pakket bevat de dagplanner, de kaart, budgetten en paklijsten. Betaalde pakketten openen onbeperkt reizen, reserveringen, het dagboek en exports.',
   'landing.plans.compare': 'Vergelijk elke limiet, regel voor regel',
   'landing.questions.title': 'Vragen, recht voor de raap beantwoord',
   'landing.questions.lede':
-    'De zes dingen die mensen echt willen weten voordat ze beginnen.',
+    'De vijf dingen die mensen echt willen weten voordat ze beginnen.',
   'cta.heading': 'Je volgende reis is het al waard om goed te plannen',
   'cta.lede':
     'Twee reizen, de hele kaart, de dagplanning en de paklijsten - gratis, zonder kaart en zonder aftelklok.',
@@ -89,9 +89,6 @@ const messages = {
   'landing.faq.phone.q': 'Werkt het goed op een telefoon?',
   'landing.faq.phone.a':
     'Ja. De mobiele indelingen zijn apart getekend in plaats van uit de desktopversies geperst, en het is een website: er is niets te installeren en niets bij te houden.',
-  'landing.faq.offline.q': 'Kan ik de kaart zonder bereik gebruiken?',
-  'landing.faq.offline.a':
-    'Met {solo} en {crew} download je een regio voordat je vliegt, dus de kaart tekent nog als je zonder data landt. De reis zelf bewerken heeft verbinding nodig.',
   'landing.faq.privacy.q': 'Wie kan mijn reis zien?',
   'landing.faq.privacy.a':
     'Een reis hoort bij één werkruimte, en alleen de mensen die in die werkruimte zijn uitgenodigd kunnen hem openen. Niets is openbaar, er is geen ontdekkingsfeed, en standaard wordt er niets met iemand gedeeld.',
@@ -254,7 +251,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Elke planningsmodule',
   'pricing.feature.solo.modulesDetail':
     'Reserveringen, dagboek, budgetten, inpakken',
-  'pricing.feature.solo.offlineDetail': 'Download regio’s voordat je vliegt',
   'pricing.feature.crew.membersDetail':
     'Per lid afgerekend, altijd aan te passen',
   'pricing.feature.crew.realtimeDetail':

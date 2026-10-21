@@ -333,8 +333,7 @@ const messages = {
     '上一次付款没有成功。更新银行卡，免得付费模块被锁。',
   'billing.renewal.unpaid': '这个订阅尚未付款，付费模块已经锁上。',
   'billing.renewal.paused': '这个订阅暂停了。等你准备再出发，随时恢复。',
-  'billing.renewal.lapsed':
-    '想重新用上预订、旅行日志和离线地图，从下面挑一个方案。',
+  'billing.renewal.lapsed': '想重新用上预订、旅行日志，从下面挑一个方案。',
   'billing.renewal.incomplete': 'Polar 还在等这笔付款被确认。',
   'billing.renewal.free': '同时两趟行程，我们请。等你觉得不够了再升。',
   'billing.renewal.auto': '会自动续期。',
@@ -377,7 +376,7 @@ const messages = {
   'billing.plan.solo.tagline': '给什么都自己安排的旅行者',
   'billing.plan.solo.feature.trips': '行程和地点不限数量',
   'billing.plan.solo.feature.modules': '全部规划模块——预订、日志、预算、行李',
-  'billing.plan.solo.feature.offline': '出发前先下好的离线地图',
+  'billing.plan.solo.feature.storage': '5 GB 照片和文档空间',
   'billing.plan.solo.feature.export': '导出 PDF 和日历',
   'billing.plan.crew.name': '同行版',
   'billing.plan.crew.tagline': '给家人、朋友和小团队',

@@ -42,6 +42,10 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'Nothing to count yet',
+  'panel.stats.empty.body':
+    'Mark a country on the map, or plan a trip, and your figures start here.',
+  'panel.stats.empty.action': 'Plan a trip',
   /* ------------------------------------------------------------- the screen */
   /**
    * The map's accessible name. Two shapes, because "0 of 195" read out as a

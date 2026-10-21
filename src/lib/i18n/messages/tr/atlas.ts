@@ -26,6 +26,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Henüz sayılacak bir şey yok',
+  'panel.stats.empty.body':
+    'Haritada bir ülke işaretle veya bir seyahat planla; rakamların burada görünmeye başlasın.',
+  'panel.stats.empty.action': 'Seyahat planla',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Dünya haritası. Henüz gezildi olarak işaretlenmiş ülke yok.',

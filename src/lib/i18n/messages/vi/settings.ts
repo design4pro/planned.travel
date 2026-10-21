@@ -401,7 +401,7 @@ const messages = {
   'billing.renewal.paused':
     'Gói đăng ký này đang tạm dừng. Mở lại bất cứ khi nào bạn sẵn sàng lên đường.',
   'billing.renewal.lapsed':
-    'Chọn một gói bên dưới để mở lại phần đặt chỗ, nhật ký và bản đồ ngoại tuyến.',
+    'Chọn một gói bên dưới để mở lại phần đặt chỗ và nhật ký.',
   'billing.renewal.incomplete': 'Polar vẫn đang chờ khoản này được xác nhận.',
   'billing.renewal.free':
     'Hai chuyến cùng lúc, miễn phí. Nâng gói khi nào bạn thấy chật.',
@@ -454,8 +454,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Chuyến đi và địa điểm không giới hạn',
   'billing.plan.solo.feature.modules':
     'Đủ mọi phần lên kế hoạch — đặt chỗ, nhật ký, ngân sách, hành lý',
-  'billing.plan.solo.feature.offline':
-    'Bản đồ ngoại tuyến tải sẵn trước khi bay',
+  'billing.plan.solo.feature.storage': '5 GB cho ảnh và tài liệu',
   'billing.plan.solo.feature.export': 'Xuất PDF và lịch',
   'billing.plan.crew.name': 'Nhóm',
   'billing.plan.crew.tagline': 'Dành cho gia đình, bạn bè và nhóm nhỏ',

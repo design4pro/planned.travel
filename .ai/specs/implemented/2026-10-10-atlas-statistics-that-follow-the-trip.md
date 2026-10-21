@@ -2,10 +2,10 @@
 
 | Field              | Value                                    |
 | ------------------ | ---------------------------------------- |
-| **Status**         | ready                                    |
-| **Issue**          | none                                     |
+| **Status**         | implemented                                    |
+| **Issue**          | #1118                                     |
 | **Spec PR**        | #1109                                    |
-| **Implementation** | none                                     |
+| **Implementation** | #1443, #1453, #1462                                     |
 | **Plan**           | 08-S6 (docs/plans/08-product-modules.md) |
 
 ## 📝 TLDR
@@ -704,3 +704,23 @@ requirement in the original ticket brief was superseded by #936 and #928, as rec
 ## Implementation amendment - issue #1120 (08-S6b1)
 
 The period model lives in `src/lib/atlas/stats-period.ts`. `AtlasPanel` owns the chosen period and a persistent live region, reads the existing `atlas.stats` rows, and exposes a named, busy tile group. Year views omit lifetime regions, visits, streak and continents; all time retains the live figures and adds the stored streak with its range. Zero distance uses the trip caption. Four existing labels now explicitly name the traveller; the fourteen new keys and year translator comments are present in all 23 locales. `formatYear` prints Latin digits without grouping. The empty and failed section states remain the following ticket's scope.
+
+
+## Implementation amendment - issue #1121 (08-S6b2)
+
+The Stats tab now replaces its figures with a filled, surface-2 empty state when live country and
+region counts are zero and the all-time row has no trips (a missing all-time row also means none).
+It offers one link to `/trips`, with no live announcement or focus move. The three empty-state keys
+ship in all 23 locales.
+
+The real-router test `src/routes/_app/-ui/__tests__/atlas-reload.test.tsx` uses the production atlas
+route's loader and rendering options. A successful initial read followed by a rejected invalidation
+unmounts the atlas and renders the route error component. Per the conditional scope in #1121, the
+Stats failed alert, its four keys and its focus rules are therefore not built. The same unreachable
+country-card retry is tracked by #1456. The earlier failed-state descriptions above are design
+history, superseded by this measured branch.
+
+`ADD-06` is **done** with this final slice. The original gap matrix is no longer present (see
+`docs/plans/README.md`); this disposition records the historical row's completion. The implementation
+metadata lists the already merged producer and year-view PRs; the PR-opening step appends this final
+slice's PR number when it exists.

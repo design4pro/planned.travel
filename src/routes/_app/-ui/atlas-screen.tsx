@@ -752,12 +752,9 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
    * which on this screen is `/_app/atlas` by construction, and `isFetching` is
    * true for exactly the re-read.
    *
-   * The failed branch is deliberately kept beside it, and it is honest about what
-   * it covers: a loader that throws on the *first* read is caught by the route's
-   * own `errorComponent`, which replaces this whole screen. This is the state
-   * where the payload on screen is stale and the re-read behind it did not come
-   * back — the card says the figures did not arrive rather than printing the old
-   * ones as though they were current.
+   * A rejected initial read or re-read is caught by the route's errorComponent,
+   * which replaces this screen (atlas-reload.test.tsx). The country card's
+   * in-screen failed recovery is tracked separately in #1456.
    */
   const router = useRouter()
   const status = useRouterState({

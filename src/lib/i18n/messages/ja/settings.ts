@@ -381,7 +381,7 @@ const messages = {
   'billing.renewal.paused':
     'このサブスクリプションは一時停止中です。また旅に出る気になったら再開してください。',
   'billing.renewal.lapsed':
-    '予約、旅の記録、オフライン地図をまた使うには、下からプランを選んでください。',
+    '予約と旅の記録をまた使うには、下からプランを選んでください。',
   'billing.renewal.incomplete':
     'Polar はまだ、この支払いの確認を待っています。',
   'billing.renewal.free':
@@ -429,7 +429,7 @@ const messages = {
   'billing.plan.solo.feature.trips': '旅と場所は無制限',
   'billing.plan.solo.feature.modules':
     '予約、旅の記録、予算、持ち物 — 全モジュール',
-  'billing.plan.solo.feature.offline': '出発前にダウンロードするオフライン地図',
+  'billing.plan.solo.feature.storage': '写真と書類に5 GB',
   'billing.plan.solo.feature.export': 'PDF とカレンダーへの書き出し',
   'billing.plan.crew.name': 'クルー',
   'billing.plan.crew.tagline': '家族、友人、少人数のチームに',

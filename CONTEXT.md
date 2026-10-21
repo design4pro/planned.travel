@@ -2,6 +2,7 @@
 
 A glossary and nothing else. No implementation details, no file paths, no commands. Terms are added lazily, during grilling sessions, when they earn their place. Decisions with rationale belong in docs/adr/, not here.
 
+- **Installed app** - planned.travel opened from a home-screen or dock icon in its own window. Installation is optional and does not make trips available offline.
 - **Organization (tenant)** — the unit of isolation and billing. Every product row belongs to exactly one organization; a user acts inside one organization at a time.
 - **Workspace console** — the administrative surface where an organization manages members, billing and settings.
 - **Trip** — the central planning object: a titled journey owned by an organization, with members and guests. It may be dated (a start and an end) or not yet: an undated trip still has a run of numbered days.

@@ -413,7 +413,7 @@ const messages = {
   'billing.renewal.paused':
     'Cet abonnement est en pause. Reprenez-le quand vous serez prêt à repartir.',
   'billing.renewal.lapsed':
-    'Choisissez une formule ci-dessous pour rouvrir les réservations, le journal et les cartes hors ligne.',
+    'Choisissez une formule ci-dessous pour rouvrir les réservations et le journal.',
   'billing.renewal.incomplete':
     'Polar attend encore la confirmation de ce paiement.',
   'billing.renewal.free':
@@ -472,8 +472,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Voyages et lieux illimités',
   'billing.plan.solo.feature.modules':
     'Tous les modules — réservations, journal, budgets, bagages',
-  'billing.plan.solo.feature.offline':
-    'Des cartes hors ligne à télécharger avant l’embarquement',
+  'billing.plan.solo.feature.storage': '5 Go pour les photos et documents',
   'billing.plan.solo.feature.export': 'Export PDF et calendrier',
   'billing.plan.crew.name': 'En groupe',
   'billing.plan.crew.tagline': 'Pour les familles, les amis et les équipes',

@@ -399,8 +399,7 @@ const messages = {
   'billing.renewal.unpaid': 'هذا الاشتراك غير مدفوع، والوحدات المدفوعة مقفلة.',
   'billing.renewal.paused':
     'هذا الاشتراك موقوف مؤقتًا. استأنفه متى استعدت للسفر.',
-  'billing.renewal.lapsed':
-    'اختر خطة أدناه لتفتح الحجوزات واليوميات والخرائط دون اتصال مرة أخرى.',
+  'billing.renewal.lapsed': 'اختر خطة أدناه لتفتح الحجوزات واليوميات مرة أخرى.',
   'billing.renewal.incomplete': 'ما زال Polar ينتظر تأكيد هذه الدفعة.',
   'billing.renewal.free': 'رحلتان في وقت واحد، على حسابنا. ارتقِ متى ضاقت بك.',
   'billing.renewal.auto': 'يُجدَّد تلقائيًا.',
@@ -459,7 +458,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'رحلات وأماكن بلا حدود',
   'billing.plan.solo.feature.modules':
     'كل وحدات التخطيط — الحجوزات واليوميات والميزانيات والحزم',
-  'billing.plan.solo.feature.offline': 'خرائط دون اتصال تنزّلها قبل الطيران',
+  'billing.plan.solo.feature.storage': '5 غيغابايت للصور والمستندات',
   'billing.plan.solo.feature.export': 'تصدير إلى PDF وإلى التقويم',
   'billing.plan.crew.name': 'جماعية',
   'billing.plan.crew.tagline': 'للعائلات والأصدقاء والفرق الصغيرة',

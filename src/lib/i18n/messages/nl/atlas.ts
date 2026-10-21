@@ -28,6 +28,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Nog niets om te tellen',
+  'panel.stats.empty.body':
+    'Markeer een land op de kaart of plan een reis. Je cijfers verschijnen dan hier.',
+  'panel.stats.empty.action': 'Een reis plannen',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': 'Wereldkaart. Nog geen landen als bezocht gemarkeerd.',
   'screen.world.summary':

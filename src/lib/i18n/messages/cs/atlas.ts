@@ -25,6 +25,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/atlas'
 
 const messages = {
+  'panel.stats.empty.title': 'Zatím není co počítat',
+  'panel.stats.empty.body':
+    'Označ zemi na mapě nebo naplánuj cestu a tady se začnou objevovat tvé statistiky.',
+  'panel.stats.empty.action': 'Naplánovat cestu',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Mapa světa. Zatím nejsou označeny žádné navštívené země.',

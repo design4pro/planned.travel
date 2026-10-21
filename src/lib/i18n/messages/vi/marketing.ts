@@ -68,13 +68,13 @@ const messages = {
 
   'landing.plans.title': 'Bắt đầu miễn phí. Trả tiền khi nó xứng đáng.',
   'landing.plans.lede':
-    'Mọi gói đều có lịch trình theo ngày, bản đồ, ngân sách và danh sách hành lý. Các gói trả phí - từ {price} mỗi tháng - mở khóa chuyến đi không giới hạn, đặt chỗ, sổ tay, bản đồ ngoại tuyến và xuất dữ liệu.',
+    'Mọi gói đều có lịch trình theo ngày, bản đồ, ngân sách và danh sách hành lý. Các gói trả phí - từ {price} mỗi tháng - mở khóa chuyến đi không giới hạn, đặt chỗ, sổ tay và xuất dữ liệu.',
   'landing.plans.ledeFree':
-    'Mọi gói đều có lịch trình theo ngày, bản đồ, ngân sách và danh sách hành lý. Các gói trả phí mở khóa chuyến đi không giới hạn, đặt chỗ, sổ tay, bản đồ ngoại tuyến và xuất dữ liệu.',
+    'Mọi gói đều có lịch trình theo ngày, bản đồ, ngân sách và danh sách hành lý. Các gói trả phí mở khóa chuyến đi không giới hạn, đặt chỗ, sổ tay và xuất dữ liệu.',
   'landing.plans.compare': 'So sánh từng giới hạn, từng dòng một',
   'landing.questions.title': 'Câu hỏi, trả lời thẳng thắn',
   'landing.questions.lede':
-    'Sáu điều người ta thật sự muốn biết trước khi bắt đầu.',
+    'Năm điều người ta thật sự muốn biết trước khi bắt đầu.',
   'cta.heading': 'Chuyến đi tới của bạn đã xứng đáng được lên kế hoạch tử tế',
   'cta.lede':
     'Hai chuyến đi, cả bản đồ, lịch trình và danh sách hành lý: miễn phí, không cần thẻ và không có đồng hồ đếm ngược.',
@@ -84,9 +84,6 @@ const messages = {
   'landing.faq.phone.q': 'Nó chạy tốt trên điện thoại chứ?',
   'landing.faq.phone.a':
     'Có. Bố cục cho điện thoại được vẽ riêng chứ không phải bóp nhỏ từ bản máy tính, và đây là một trang web: không có gì phải cài và không có gì phải cập nhật.',
-  'landing.faq.offline.q': 'Tôi dùng bản đồ khi không có tín hiệu được không?',
-  'landing.faq.offline.a':
-    'Gói {solo} và {crew} tải được một vùng trước khi bay, nên bản đồ vẫn hiện khi bạn hạ cánh mà không có dữ liệu. Sửa chính chuyến đi thì cần kết nối.',
   'landing.faq.privacy.q': 'Ai có thể xem chuyến đi của tôi?',
   'landing.faq.privacy.a':
     'Một chuyến đi thuộc về một không gian làm việc, và chỉ những người được mời vào đó mới mở được. Không có gì công khai, không có bảng tin khám phá, và mặc định không chia sẻ gì với ai.',
@@ -246,7 +243,6 @@ const messages = {
     'Lưu trữ một chuyến để bắt đầu chuyến khác',
   'pricing.feature.solo.modules': 'Mọi mô-đun lập kế hoạch',
   'pricing.feature.solo.modulesDetail': 'Đặt chỗ, sổ tay, ngân sách, hành lý',
-  'pricing.feature.solo.offlineDetail': 'Tải vùng bản đồ trước khi bay',
   'pricing.feature.crew.membersDetail':
     'Tính phí theo từng thành viên, đổi lúc nào cũng được',
   'pricing.feature.crew.realtimeDetail': 'Con trỏ trực tiếp và đồng bộ tức thì',

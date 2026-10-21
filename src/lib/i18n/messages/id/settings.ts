@@ -399,7 +399,7 @@ const messages = {
   'billing.renewal.paused':
     'Langganan ini dijeda. Lanjutkan kapan pun Anda siap bepergian lagi.',
   'billing.renewal.lapsed':
-    'Pilih paket di bawah untuk membuka lagi pemesanan, jurnal dan peta luring.',
+    'Pilih paket di bawah untuk membuka lagi pemesanan, jurnal.',
   'billing.renewal.incomplete':
     'Polar masih menunggu pembayaran ini dikonfirmasi.',
   'billing.renewal.free':
@@ -453,8 +453,7 @@ const messages = {
   'billing.plan.solo.feature.trips': 'Perjalanan dan tempat tanpa batas',
   'billing.plan.solo.feature.modules':
     'Semua modul perencanaan — pemesanan, jurnal, anggaran, daftar bawaan',
-  'billing.plan.solo.feature.offline':
-    'Peta luring yang Anda unduh sebelum terbang',
+  'billing.plan.solo.feature.storage': '5 GB untuk foto dan dokumen',
   'billing.plan.solo.feature.export': 'Ekspor PDF dan kalender',
   'billing.plan.crew.name': 'Rombongan',
   'billing.plan.crew.tagline': 'Untuk keluarga, sahabat dan tim kecil',

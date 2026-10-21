@@ -3,8 +3,9 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
+import marketing from '#/lib/i18n/messages/en/marketing'
 import settings from '#/lib/i18n/messages/en/settings'
-import { PLANS, PLAN_IDS, PLAN_LIST } from '#/lib/plans'
+import { PLANS, PLAN_IDS, PLAN_LIST, formatStorage } from '#/lib/plans'
 import { PLAN_ALLOWANCE_CLAIMS, PLAN_COPY } from '#/lib/plan-copy'
 import { TIER_FOR_PLAN } from '#/server/billing/limits'
 import { PLAN_QUOTAS, UNLIMITED } from '#/server/db/types'
@@ -134,7 +135,10 @@ describe('the copy states the allowances the plans actually carry', () => {
       } else {
         limit = PLANS[claim.plan].limits[claim.quota]
       }
-      const word = spellAllowance(limit)
+      const word =
+        claim.quota === 'storageBytes'
+          ? formatStorage(limit ?? 0).toLowerCase()
+          : spellAllowance(limit)
       const short = claim.key.replace(/^settings\./, '')
       const value = settings[short as keyof typeof settings]
       expect(typeof value).toBe('string')
@@ -185,5 +189,54 @@ describe('the copy states the allowances the plans actually carry', () => {
     expect(
       [...new Set(PLAN_ALLOWANCE_CLAIMS.map((claim) => claim.plan))].sort(),
     ).toEqual([...PLAN_IDS].sort())
+  })
+})
+
+describe('plan surfaces do not promise an unbuilt offline feature (#1166)', () => {
+  it('guards the replacement storage bullet against the live Solo quota', () => {
+    expect(PLAN_ALLOWANCE_CLAIMS).toContainEqual({
+      key: 'settings.billing.plan.solo.feature.storage',
+      plan: 'solo',
+      quota: 'storageBytes',
+    })
+  })
+
+  it('retains the dormant module contract and existing plan values', () => {
+    expect(PLAN_LIST.map((plan) => plan.limits.offlineMaps)).toEqual([
+      false,
+      true,
+      true,
+    ])
+  })
+
+  it('keeps catalogue descriptions and features honest, including structured offers', () => {
+    for (const plan of PLAN_LIST) {
+      expect(JSON.stringify([plan.description, plan.features])).not.toMatch(
+        /offline|download regions/i,
+      )
+    }
+  })
+
+  it('keeps billing cards and renewal copy free of the claim', () => {
+    const sentences = keysOf().map(
+      (key) =>
+        settings[key.replace(/^settings\./, '') as keyof typeof settings],
+    )
+    sentences.push(settings['billing.renewal.lapsed'])
+    expect(sentences.join(' ')).not.toMatch(/offline|download regions/i)
+  })
+
+  it('removes the offline FAQ and the claim in both landing ledes', () => {
+    expect(
+      Object.keys(marketing).filter((key) =>
+        key.startsWith('landing.faq.offline.'),
+      ),
+    ).toEqual([])
+    expect(
+      [
+        marketing['landing.plans.lede'],
+        marketing['landing.plans.ledeFree'],
+      ].join(' '),
+    ).not.toMatch(/offline|download regions/i)
   })
 })

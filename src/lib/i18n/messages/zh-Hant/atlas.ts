@@ -21,6 +21,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': '還沒有可統計的內容',
+  'panel.stats.empty.body':
+    '在地圖上標記一個國家，或規劃一次旅行，你的數據就會從這裡開始。',
+  'panel.stats.empty.action': '規劃旅行',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty': '世界地圖。還沒有國家被標為去過。',
   'screen.world.summary':

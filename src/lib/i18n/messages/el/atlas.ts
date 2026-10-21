@@ -20,6 +20,10 @@ import type En from '../en/atlas'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'panel.stats.empty.title': 'Δεν υπάρχει κάτι να μετρήσουμε ακόμα',
+  'panel.stats.empty.body':
+    'Σημείωσε μια χώρα στον χάρτη ή σχεδίασε ένα ταξίδι και τα στοιχεία σου θα αρχίσουν να εμφανίζονται εδώ.',
+  'panel.stats.empty.action': 'Σχεδίασε ένα ταξίδι',
   /* ------------------------------------------------------------- the screen */
   'screen.world.empty':
     'Παγκόσμιος χάρτης. Καμία χώρα δεν έχει σημειωθεί ακόμη ως επισκεφθείσα.',

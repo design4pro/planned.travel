@@ -95,13 +95,13 @@ const messages = {
 
   'landing.plans.title': 'Start free. Pay only once it earns it.',
   'landing.plans.lede':
-    'Every plan includes the day planner, the map, budgets and packing lists. Paid plans — from {price} a month — unlock unlimited trips, reservations, the journal, offline maps and exports.',
+    'Every plan includes the day planner, the map, budgets and packing lists. Paid plans — from {price} a month — unlock unlimited trips, reservations, the journal and exports.',
   'landing.plans.ledeFree':
-    'Every plan includes the day planner, the map, budgets and packing lists. Paid plans unlock unlimited trips, reservations, the journal, offline maps and exports.',
+    'Every plan includes the day planner, the map, budgets and packing lists. Paid plans unlock unlimited trips, reservations, the journal and exports.',
   'landing.plans.compare': 'Compare every limit, line by line',
   'landing.questions.title': 'Questions, answered plainly',
   'landing.questions.lede':
-    'The six things people actually want to know before they start planning.',
+    'The five things people actually want to know before they start planning.',
   'cta.heading': 'Your next trip is already worth planning properly',
   'cta.lede':
     'Two trips, the whole map, the itinerary and the packing lists — free, with no card and no countdown.',
@@ -111,9 +111,6 @@ const messages = {
   'landing.faq.phone.q': 'Does it work properly on a phone?',
   'landing.faq.phone.a':
     'Yes. The mobile layouts are drawn separately rather than squeezed down from the desktop ones, and it is a website, so there is nothing to install and nothing to keep updated.',
-  'landing.faq.offline.q': 'Can I use the map without a signal?',
-  'landing.faq.offline.a':
-    '{solo} and {crew} can download a region before you fly, so the map still draws when you land with no data. Editing the trip itself needs a connection.',
   'landing.faq.privacy.q': 'Who can see my trip?',
   'landing.faq.privacy.a':
     'A trip belongs to one workspace, and only the people invited into that workspace can open it. Nothing is public, there is no discovery feed, and nothing is shared with anyone else by default.',
@@ -272,7 +269,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Every planning module',
   'pricing.feature.solo.modulesDetail':
     'Reservations, journal, budgets, packing',
-  'pricing.feature.solo.offlineDetail': 'Download regions before you fly',
   'pricing.feature.crew.membersDetail': 'Billed per member, change any time',
   'pricing.feature.crew.realtimeDetail': 'Live cursors and instant sync',
   'pricing.feature.crew.supportDetail':

@@ -78,13 +78,13 @@ const messages = {
 
   'landing.plans.title': 'Comença gratis. Paga només quan s’ho guanyi.',
   'landing.plans.lede':
-    'Tots els plans inclouen el planificador diari, el mapa, els pressupostos i les llistes d’equipatge. Els plans de pagament - des de {price} al mes - desbloquegen viatges il·limitats, reserves, el diari, mapes fora de línia i exportacions.',
+    'Tots els plans inclouen el planificador diari, el mapa, els pressupostos i les llistes d’equipatge. Els plans de pagament - des de {price} al mes - desbloquegen viatges il·limitats, reserves, el diari i exportacions.',
   'landing.plans.ledeFree':
-    'Tots els plans inclouen el planificador diari, el mapa, els pressupostos i les llistes d’equipatge. Els plans de pagament desbloquegen viatges il·limitats, reserves, el diari, mapes fora de línia i exportacions.',
+    'Tots els plans inclouen el planificador diari, el mapa, els pressupostos i les llistes d’equipatge. Els plans de pagament desbloquegen viatges il·limitats, reserves, el diari i exportacions.',
   'landing.plans.compare': 'Compara cada límit, línia per línia',
   'landing.questions.title': 'Preguntes, respostes sense voltes',
   'landing.questions.lede':
-    'Les sis coses que la gent vol saber de debò abans de començar.',
+    'Les cinc coses que la gent vol saber de debò abans de començar.',
   'cta.heading': 'El teu pròxim viatge ja mereix planificar-se bé',
   'cta.lede':
     'Dos viatges, tot el mapa, l’itinerari i les llistes d’equipatge: gratis, sense targeta i sense compte enrere.',
@@ -94,9 +94,6 @@ const messages = {
   'landing.faq.phone.q': 'Funciona bé al mòbil?',
   'landing.faq.phone.a':
     'Sí. Les disposicions per a mòbil es dibuixen a part en lloc de comprimir-se des de les d’escriptori, i és un web: no hi ha res a instal·lar ni a mantenir actualitzat.',
-  'landing.faq.offline.q': 'Puc fer servir el mapa sense cobertura?',
-  'landing.faq.offline.a':
-    'Amb {solo} i {crew} pots baixar una regió abans de volar, així que el mapa es dibuixa igual quan aterres sense dades. Editar el viatge sí que necessita connexió.',
   'landing.faq.privacy.q': 'Qui pot veure el meu viatge?',
   'landing.faq.privacy.a':
     'Un viatge pertany a un sol espai de treball, i només les persones convidades a aquell espai el poden obrir. Res no és públic, no hi ha cap canal de descoberta i, per defecte, res no es comparteix amb ningú.',
@@ -260,7 +257,6 @@ const messages = {
   'pricing.feature.solo.modules': 'Tots els mòduls de planificació',
   'pricing.feature.solo.modulesDetail':
     'Reserves, diari, pressupostos, equipatge',
-  'pricing.feature.solo.offlineDetail': 'Baixa les regions abans de volar',
   'pricing.feature.crew.membersDetail':
     'Es factura per membre, canvia-ho quan vulguis',
   'pricing.feature.crew.realtimeDetail':
