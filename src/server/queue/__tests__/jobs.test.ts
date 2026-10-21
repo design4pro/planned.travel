@@ -6,21 +6,34 @@ import type { TaskEnvelope, TaskQueue } from '../types'
 
 type Message = { body: unknown; delaySeconds?: number }
 
-/** A `TaskQueue` that records every `sendBatch` call, and can be told to refuse the n-th one. */
+/**
+ * A `TaskQueue` that records every `sendBatch` attempt, in the order it was made, and can be told to
+ * refuse the n-th one. Each call settles on a later tick, so a producer that fires the batches
+ * together (`Promise.all`) shows as overlapping `events` and as extra attempts after a refusal.
+ */
 function stubQueue(options: { failOnCall?: number } = {}) {
   const batches: Array<Array<Message>> = []
+  const events: Array<string> = []
+  let attempts = 0
   const queue: TaskQueue = {
     send: async () => {
       throw new Error('enqueueTasks must not use the single-message path')
     },
     sendBatch: async (messages) => {
-      if (batches.length + 1 === options.failOnCall) {
+      attempts += 1
+      const call = attempts
+      events.push(`start ${call}`)
+      await Promise.resolve()
+      await Promise.resolve()
+      if (call === options.failOnCall) {
+        events.push(`refused ${call}`)
         throw new Error('the queue refused the batch')
       }
       batches.push(messages)
+      events.push(`end ${call}`)
     },
   }
-  return { queue, batches }
+  return { queue, batches, events, attempts: () => attempts }
 }
 
 const NOW = 1_700_000_000_000
@@ -142,14 +155,30 @@ describe('enqueueTasks', () => {
     ).toBe(mixed.map((input) => input.orgId).join())
   })
 
+  it('awaits each batch before it starts the next', async () => {
+    const { queue, events } = stubQueue()
+
+    await enqueueTasks(queue, inputs(250), () => NOW)
+
+    expect(events).toEqual([
+      'start 1',
+      'end 1',
+      'start 2',
+      'end 2',
+      'start 3',
+      'end 3',
+    ])
+  })
+
   it('throws the first refusal and leaves the batches before it sent', async () => {
-    const { queue, batches } = stubQueue({ failOnCall: 2 })
+    const { queue, batches, attempts } = stubQueue({ failOnCall: 2 })
 
     await expect(enqueueTasks(queue, inputs(250))).rejects.toThrow(
       'the queue refused the batch',
     )
 
-    // Awaited one after another: the third batch was never attempted, the first stays sent.
+    // The first batch stays sent and the third was never attempted: two attempts, not three.
     expect(batches.map((batch) => batch.length)).toEqual([100])
+    expect(attempts()).toBe(2)
   })
 })

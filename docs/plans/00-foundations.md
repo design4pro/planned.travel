@@ -668,7 +668,7 @@ sizes declared as named constants in the dispatch module beside the line they we
   it renders at 8 KiB, which with the envelope's own fields is under 9 KiB per message, and
   `256 KB ÷ 9 KiB ≈ 28`, so 25 clears the byte cap with margin and clears the 100-message cap four
   times over. The byte limit binds first here, which is why sizing against the message count alone —
-  the number the helper's own comment names — would have been sized against the wrong limit.
+  the number `QUEUE_BATCH_MAX` names — would have been sized against the wrong limit.
 
 No recipient is dropped, no member ceiling is assumed, and both bounds are unit tests rather than
 comments: an event with 501 distinct recipients writes 501 in-app rows across two `notifyMany` calls

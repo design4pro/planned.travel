@@ -89,7 +89,8 @@ vi.mock('#/server/auth/email', () => ({
 }))
 
 const { getAuth } = await import('#/server/auth')
-const { roomEvictionHook } = await import('#/server/auth/room-eviction')
+const { queueRoomEviction, roomEvictionHook } =
+  await import('#/server/auth/room-eviction')
 
 let authDatabase: AuthDatabase
 
@@ -354,6 +355,19 @@ describe('losing a place in a workspace queues the close of the person’s trip-
     ).rejects.toBeDefined()
 
     expect(evictions()).toEqual([])
+  })
+
+  it('queues an eviction in every workspace of a person who belongs to more than one batch of them', async () => {
+    const organizationIds = Array.from(
+      { length: 250 },
+      (_unused, index) => `org_${index}`,
+    )
+
+    await queueRoomEviction('user_wide', organizationIds, 'test')
+
+    expect(evictions()).toEqual(
+      organizationIds.map((orgId) => ({ orgId, userId: 'user_wide' })),
+    )
   })
 
   it('lets the removal stand when the queue cannot be reached', async () => {

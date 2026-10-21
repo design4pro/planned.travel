@@ -1173,8 +1173,7 @@ describe('the trip room after a lifecycle write', () => {
 
   it('does not reset a room when D1 refuses the deletion', async () => {
     const tripId = await sketchTrip()
-    harness.sqlite
-      .exec(`CREATE TRIGGER refuse_trip_delete BEFORE DELETE ON trips
+    harness.sqlite.exec(`CREATE TRIGGER refuse_trip_delete BEFORE DELETE ON trips
       BEGIN SELECT RAISE(ABORT, 'Deletion refused'); END`)
 
     await expect(deleteTrip({ tripId })).rejects.toThrow()
@@ -1190,9 +1189,7 @@ describe('the trip room after a lifecycle write', () => {
       userId: await tenant.addUser('Companion'),
       role: 'editor',
     })
-    await expect(
-      deleteTrip({ tripId, confirmTitle: 'wrong' }),
-    ).rejects.toThrow()
+    await expect(deleteTrip({ tripId, confirmTitle: 'wrong' })).rejects.toThrow()
     expect(stubs.reset).toEqual([])
     expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
   })
