@@ -191,17 +191,18 @@ trip and the trip id is the shard key, so nothing a stage adds may make the room
 `TASKS` through `src/server/queue/jobs.ts`, with an idempotency-keyed envelope, and never run inline
 in a server function. Envelopes carry a deterministic id so a redelivery is a no-op.
 
-**A producer that can fan out chunks its own enqueue.** Measured: `enqueueTasks`
-(`src/server/queue/jobs.ts:79-94`) carries the comment _"Sends up to 100 messages in one round trip —
-the Queues batch limit"_ and then maps **every** input into a single `sendBatch` without chunking.
-The limit the comment names is the platform's and is three limits at once: a `sendBatch` array holds
-at most 100 messages, each message at most 128 KB, and the whole array at most 256 KB. The helper is
-therefore safe only for a caller that already knows its input is short, and the comment reads as a
-guarantee it does not make. Any stage whose producer scales with something — one message per
-recipient, per member, per file — chunks before it calls, declares the chunk size as a named constant
-next to the limit it was derived from, and holds the bound in a unit test rather than in a comment.
-`00-S2` does this for its per-recipient email envelopes, and the rewritten `00-S5` sweep inherits
-the bound by dispatching through `00-S2`'s chunked path rather than enqueueing directly.
+**`enqueueTasks` holds the message-count bound; a producer holds the byte bound.** The limit is the
+platform's and is three limits at once: a `sendBatch` array holds at most 100 messages, each message
+at most 128 KB, and the whole array at most 256 KB. `enqueueTasks` (`src/server/queue/jobs.ts`) owns
+the first: it cuts its input into batches of at most `QUEUE_BATCH_MAX` (100) and sends them in order,
+one after another, so a producer hands it every envelope it has and does not loop. It cannot own the
+other two, which depend on what a producer puts in a message. Any stage whose producer scales with
+something — one message per recipient, per member, per file — and whose messages are large cuts its
+input before it calls, declares the chunk size as a named constant next to the limit it was derived
+from, and holds the bound in a unit test rather than in a comment. `00-S2` does this for its
+per-recipient email envelopes (a byte bound), and the rewritten `00-S5` sweep inherits it by
+dispatching through `00-S2`'s chunked path rather than enqueueing directly. _(Before this, the helper
+mapped every input into one `sendBatch` and each producer carried its own slice loop — #208.)_
 
 Three measured facts about the background surface that a stage must not walk into blind:
 
@@ -226,17 +227,16 @@ Three measured facts about the background surface that a stage must not walk int
   follow-up, not billing state. Disposition, decided: no wave-0 stage is minted for it. It is a
   wave-1 candidate that becomes cheap once `00-S2` ships, because a `billing.*` handler is then one
   `dispatch` call to the organization's admins.
-- **The unchunked enqueue has exactly one caller in `src/` today, and it is the sweep**
-  (`src/server/queue/reminders.ts:144`; every other producer uses the single-message `enqueueTask`).
-  `sweepReminders` (`:119-154`) reads up to `limit` due reminders — the default is 200,
-  and `src/server/worker.ts:65` calls it with the default — then hands all of them to `enqueueTasks`
-  in one call. Past 100 due reminders in a single tick that batch exceeds the platform cap and the
-  whole sweep throws, losing every reminder in the tick rather than the surplus. It has never fired,
-  because `scheduleReminder` has no caller and the index is empty. Decided during grilling: `00-S5`
-  replaces the schedule-at-write design outright, so the index is never filled and the rewritten
-  sweep dispatches through `00-S2`'s chunked path instead. That leaves `enqueueTasks` with zero
-  callers in `src/`; the helper stays, and the chunking rule above binds whichever producer reaches
-  for it next.
+- **The unchunked enqueue had exactly one caller in `src/` when this was measured, and it was the
+  sweep** (`src/server/queue/reminders.ts:144`; every other producer used the single-message
+  `enqueueTask`). `sweepReminders` (`:119-154`) read up to `limit` due reminders — the default is 200,
+  and `src/server/worker.ts:65` called it with the default — then handed all of them to `enqueueTasks`
+  in one call. Past 100 due reminders in a single tick that batch exceeded the platform cap and the
+  whole sweep threw, losing every reminder in the tick rather than the surplus. It never fired,
+  because `scheduleReminder` had no caller and the index was empty. Decided during grilling: `00-S5`
+  replaced the schedule-at-write design outright, so the sweep dispatches through `00-S2`'s chunked
+  path instead. `enqueueTasks` has since taken the message-count bound itself (#208), so no caller
+  can reach the cap by passing it a long list.
 
 ## Bindings a later plan assumes and `wrangler.jsonc` does not declare
 

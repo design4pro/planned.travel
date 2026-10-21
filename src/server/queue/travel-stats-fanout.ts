@@ -19,7 +19,7 @@ import {
   recomputeDelaySeconds,
   travelStatsTaskId,
 } from '#/server/queue/handlers/travel-stats'
-import { QUEUE_BATCH_MAX, enqueueTasks } from '#/server/queue/jobs'
+import { enqueueTasks } from '#/server/queue/jobs'
 import { ALL_TIME_STAT_YEAR, isCalendarStatYear } from '#/server/queue/types'
 
 import type { Trip } from '#/server/db/types'
@@ -78,8 +78,9 @@ export function affectedStatYears(
  * - **A queue refusal never fails the write.** D1 is the durable record and has already been written
  *   by the time this runs; a stale statistics panel is a much smaller harm than a save that appears
  *   to have failed. Caught, logged once, and returned from — the same posture `mirrorToRoom` takes.
- * - **It chunks.** Cloudflare Queues accepts at most {@link QUEUE_BATCH_MAX} messages per
- *   `sendBatch`, and a trip's membership is bounded by a plan rather than by anything here.
+ * - **It sends everything in one call.** Cloudflare Queues accepts at most `QUEUE_BATCH_MAX`
+ *   messages per `sendBatch`, and a trip's membership is bounded by a plan rather than by anything
+ *   here; `enqueueTasks` cuts the envelopes at that bound, so this does not.
  *
  * **Who the recipients are is the caller's**, and it is the only thing that varies between the
  * writes that reach this: a trip write fans out to the trip's members (PRD #104 decision 9), an
@@ -124,9 +125,7 @@ export async function requestTravelStatsRecompute(
 
     const { taskQueue } = await import('#/server/auth/env')
     const queue = taskQueue()
-    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
-      await enqueueTasks(queue, envelopes.slice(index, index + QUEUE_BATCH_MAX))
-    }
+    await enqueueTasks(queue, envelopes)
   } catch (cause) {
     log().warn('travel statistics were not enqueued', {
       organizationId: orgId,

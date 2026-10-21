@@ -846,14 +846,13 @@ therefore enqueues the `travel-stats` envelopes `00-S4` defined, with `00-S4`'s 
   to rebuild its own scope.
 - **The years** are the all-time roll-up (`statYear = 0`) always, plus the year of the trip's
   `start_date` when it has one, plus the **previous** `start_date`'s year on an edit that moved it.
-- **The fan-out is chunked before it is enqueued, and the bound is not a comment.** This producer
-  scales with membership, which is exactly the shape `00-foundations.md` names: `enqueueTasks`
-  (`src/server/queue/jobs.ts:79-94`) maps every input into one `sendBatch` without chunking, and a
-  `sendBatch` array holds at most 100 messages. So the envelopes go out in chunks of
-  `QUEUE_BATCH_MAX = 100`, declared at the top of `src/routes/_app/-server/trip-lifecycle.ts` beside
-  that citation, and a unit test with 250 envelopes asserts three calls. The 100-member ceiling
+- **The fan-out is cut at the batch bound, and the bound is not a comment.** This producer scales
+  with membership, which is exactly the shape `00-foundations.md` names, and a `sendBatch` array
+  holds at most 100 messages. `enqueueTasks` (`src/server/queue/jobs.ts`) cuts its input into
+  batches of `QUEUE_BATCH_MAX = 100`, so the producer hands it every envelope (#208), and a unit test
+  with 250 envelopes asserts three calls. The 100-member ceiling
   Better Auth's organization plugin is configured with is a configuration value and not a guarantee,
-  so the chunk loop does not lean on it.
+  so the batching does not lean on it.
 - **A queue failure never fails the write.** It is caught, logged once with `serializeError`, and the
   trip write still returns — the same isolation `00-S2` requires of dispatch. A stale statistics
   panel is a smaller harm than a save that appears to have failed.
@@ -1102,7 +1101,7 @@ assertions rather than as prose:
 
 1. `createTripFn`, `updateTripFn`, `deleteTripFn` and the `trip-copy` handler each enqueue the
    `travel-stats` envelopes for every **trip member** (decision 9), with `00-S4`'s deterministic ids,
-   and a trip of 250 members produces three `enqueueTasks` calls of at most 100 envelopes each; a
+   and a trip of 250 members produces three `sendBatch` calls of at most 100 envelopes each; a
    workspace member who is not on the trip receives none.
 2. A queue rejection does not propagate: the write still returns.
 3. No lifecycle function touches reminder code — the module imports nothing from

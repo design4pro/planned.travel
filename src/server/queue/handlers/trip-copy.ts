@@ -50,7 +50,7 @@ import {
 import { copyObject } from '#/server/storage/objects'
 import { storageKeyFor } from '#/server/fns/file-policy'
 import { coverUrlFor, fileIdOfStorageKey } from '#/lib/trip-cover'
-import { QUEUE_BATCH_MAX, enqueueTasks } from '../jobs'
+import { enqueueTasks } from '../jobs'
 import { recomputeDelaySeconds, travelStatsTaskId } from './travel-stats'
 import {
   ALL_TIME_STAT_YEAR,
@@ -206,8 +206,8 @@ async function copyCover(
  *
  * The recipient set is the **trip's** members and not the workspace (decision 9): a private trip is
  * invisible to a non-member, so its statistics must be too. For a fresh copy that set is one person,
- * which is why this is cheap — the chunk loop is there for the producer's shape, not its current
- * cardinality.
+ * which is why this is cheap — `enqueueTasks` cuts the batches for the producer's shape, not its
+ * current cardinality.
  *
  * `src/routes/_app/-server/trip-lifecycle.ts` has a fan-out of its own and this is not it: a queue
  * handler cannot import a route module, which is the layering that keeps `createServerFn` out of the
@@ -242,12 +242,7 @@ async function enqueueTravelStats(
         })
       }
     }
-    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
-      await enqueueTasks(
-        context.env.TASKS,
-        envelopes.slice(index, index + QUEUE_BATCH_MAX),
-      )
-    }
+    await enqueueTasks(context.env.TASKS, envelopes)
   } catch (cause) {
     context.logger.warn('travel statistics were not enqueued for a trip copy', {
       tripId: target.id,

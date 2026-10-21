@@ -11,9 +11,10 @@
  * What the module before this one did instead, and why none of it survives: it built a KV key whose
  * zero-padded due time sorted lexicographically, and `scheduleReminder`/`cancelReminder` had zero
  * callers anywhere in `src/`. The sweep therefore ran every fifteen minutes over an empty index and
- * had never delivered anything. Its unchunked `enqueueTasks` — the landmine
- * `docs/plans/00-foundations.md` records — goes with it: dispatch owns the fan-out now and chunks
- * against the limits each half actually has.
+ * had never delivered anything. Its `enqueueTasks` call — which
+ * once sent every due reminder in one unchunked batch, the landmine `docs/plans/00-foundations.md`
+ * records — goes with it: dispatch owns the fan-out now and chunks against the limits each half
+ * actually has.
  *
  * ## The four decisions
  *

@@ -974,6 +974,43 @@ describe('the storage purge a delete leaves behind', () => {
       expect(new Set(enqueued[0]?.payload.keys)).toEqual(new Set(keys))
     })
 
+    it('purges every key of a trip whose exports need more envelopes than one batch holds', async () => {
+      const tripId = await bareTrip('Exported to excess')
+      // One key past a full batch of full envelopes: a producer (or `enqueueTasks`) that dropped the
+      // short tail leaves that object in the bucket with nothing to say so.
+      const keys = Array.from(
+        { length: QUEUE_BATCH_MAX * MAX_PURGE_KEYS + 1 },
+        (_unused, index) =>
+          `exports/${tenant.organizationId}/${tripId}/task_${String(index).padStart(6, '0')}.pdf`,
+      )
+      stubs.bucket = fakeBucket(keys)
+      stubs.batches = []
+
+      await deleteTrip({ tripId })
+
+      // The delete's own statistics envelope travels in a batch of its own; the purge is cut at the bound.
+      const purgeBatches = stubs.batches
+        .map((batch) =>
+          batch.filter(
+            (body) => taskEnvelopeSchema.parse(body).kind === 'trip-purge',
+          ),
+        )
+        .filter((batch) => batch.length > 0)
+      expect(purgeBatches.map((batch) => batch.length)).toEqual([
+        QUEUE_BATCH_MAX,
+        1,
+      ])
+      const enqueued = purges()
+      expect(enqueued).toHaveLength(QUEUE_BATCH_MAX + 1)
+      expect(new Set(enqueued.map((envelope) => envelope.id)).size).toBe(
+        QUEUE_BATCH_MAX + 1,
+      )
+      expect(
+        enqueued.flatMap((envelope) => envelope.payload.keys).sort(),
+      ).toEqual(keys)
+      expect(stubs.warnings).toEqual([])
+    }, 60_000)
+
     it('carries the exports beside the attachments and the cover in one envelope', async () => {
       const { tripId, fileKey, coverKey } = await tripWithObjects()
       const keys = exportKeys(tenant.organizationId, tripId, 'task_1')
@@ -1136,7 +1173,8 @@ describe('the trip room after a lifecycle write', () => {
 
   it('does not reset a room when D1 refuses the deletion', async () => {
     const tripId = await sketchTrip()
-    harness.sqlite.exec(`CREATE TRIGGER refuse_trip_delete BEFORE DELETE ON trips
+    harness.sqlite
+      .exec(`CREATE TRIGGER refuse_trip_delete BEFORE DELETE ON trips
       BEGIN SELECT RAISE(ABORT, 'Deletion refused'); END`)
 
     await expect(deleteTrip({ tripId })).rejects.toThrow()
@@ -1152,7 +1190,9 @@ describe('the trip room after a lifecycle write', () => {
       userId: await tenant.addUser('Companion'),
       role: 'editor',
     })
-    await expect(deleteTrip({ tripId, confirmTitle: 'wrong' })).rejects.toThrow()
+    await expect(
+      deleteTrip({ tripId, confirmTitle: 'wrong' }),
+    ).rejects.toThrow()
     expect(stubs.reset).toEqual([])
     expect(await canReadTrip(tenant.scope, tripId)).toBe(true)
   })

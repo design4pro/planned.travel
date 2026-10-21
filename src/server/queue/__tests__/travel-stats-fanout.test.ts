@@ -230,8 +230,8 @@ describe('requestTravelStatsRecompute', () => {
   it('does not even reach for the binding when there is no year to recompute', async () => {
     await requestTravelStatsRecompute(alpha.scope, [alpha.ownerUserId], [])
 
-    // A batch count alone cannot tell the guard from its absence — the chunk loop would not run
-    // either way. Reaching `taskQueue()` is the cost the guard exists to avoid.
+    // A batch count alone cannot tell the guard from its absence — `enqueueTasks` would send
+    // nothing either way. Reaching `taskQueue()` is the cost the guard exists to avoid.
     expect(stubs.bindingReads).toBe(0)
     expect(stubs.batchSizes).toEqual([])
   })
