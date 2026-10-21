@@ -59,7 +59,7 @@ export function MarketingHeader({
           aria-label={t('marketing.nav.home')}
           className="shrink-0 rounded-md focus-ring"
         >
-          <Wordmark showSuffix suffixFromSm />
+          <Wordmark showSuffix compact />
         </Link>
 
         {anchors.length === 0 ? null : (

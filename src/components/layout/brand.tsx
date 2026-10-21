@@ -44,17 +44,18 @@ export interface WordmarkProps {
   /** Show the `.travel` tail — used on the public pages and in the footer. */
   showSuffix?: boolean
   /**
-   * Below `sm` the tail gives way to the brand dot. A header that carries more
-   * targets than a 360px phone has room for drops the tail, never a target.
+   * For a header that carries more targets than a phone has room for: below
+   * `sm` the tail gives way to the brand dot, and below 30rem the word gives
+   * way to the mark. The wordmark is what shrinks, never a target.
    */
-  suffixFromSm?: boolean
+  compact?: boolean
   className?: string
 }
 
 export function Wordmark({
   size = 'md',
   showSuffix = false,
-  suffixFromSm = false,
+  compact = false,
   className,
 }: WordmarkProps) {
   const scale = WORDMARK_SIZES[size]
@@ -65,21 +66,19 @@ export function Wordmark({
         className={cn(
           'font-display font-extrabold leading-none tracking-tighter text-ink',
           scale.word,
+          compact && 'max-[30rem]:hidden',
         )}
       >
         planned
         {showSuffix ? (
           <>
-            {suffixFromSm ? (
+            {compact ? (
               <span aria-hidden className="text-brand sm:hidden">
                 .
               </span>
             ) : null}
             <span
-              className={cn(
-                'font-bold text-ink-4',
-                suffixFromSm && 'max-sm:hidden',
-              )}
+              className={cn('font-bold text-ink-4', compact && 'max-sm:hidden')}
             >
               .travel
             </span>

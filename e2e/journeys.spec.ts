@@ -27,6 +27,7 @@ import type { RouteCase, Theme } from './helpers/routes.ts'
 import {
   DEMO_EMAIL,
   hasSession,
+  pinDemoLanguage,
   signIn,
   useSession,
 } from './helpers/session.ts'
@@ -2840,4 +2841,116 @@ test('two-factor separates signed-in settings from the sign-in challenge', async
   } finally {
     await anonymous.close()
   }
+})
+
+/**
+ * Journey: a visitor chooses a language before signing in (09-S5b).
+ *
+ * Routing and cookies are what a browser is the only place to answer: the
+ * choice has to survive a reload, reach a second screen, and be dropped for a
+ * signed-in person. The anonymous half sends `Accept-Language: en` so the
+ * cookie, not the header, is what speaks Polish afterwards.
+ */
+test('a visitor chooses Polish on the sign-in screen and keeps it', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    locale: 'en',
+    extraHTTPHeaders: { 'accept-language': 'en' },
+  })
+  try {
+    const page = await context.newPage()
+    const login = { name: 'login', path: '/login', ready: 'form' }
+    const readConsole = watchConsole(page, login)
+    await visit(page, login, 'light')
+
+    await page
+      .getByRole('button', { name: 'Language: English. Change language' })
+      .click()
+    await page.getByTestId('locale-chip-pl').click()
+
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Zaloguj się do planned.travel',
+      }),
+    ).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pl')
+    const trigger = page.getByRole('button', {
+      name: 'Język: Polski. Zmień język',
+    })
+    await expect(trigger).toBeFocused()
+
+    await page.reload()
+    await settle(page, login)
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pl')
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Zaloguj się do planned.travel',
+      }),
+    ).toBeVisible()
+
+    await page.goto('/register')
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Zacznij planować w kilka minut',
+      }),
+    ).toBeVisible()
+    expect(readConsole().fatal).toEqual([])
+  } finally {
+    await context.close()
+  }
+})
+
+/**
+ * The signed-in half writes the demo member's language, so it runs on Chromium
+ * alone, in order, and puts the fixture back in `finally` (the same contract as
+ * the other serial walks that write fixture state). "Signing out" drops the
+ * session cookies of this browser context only: revoking the session on the
+ * server would end the one every other journey shares.
+ */
+test.describe('the visitor language after a signed-in choice', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  test('a signed-in visit shows no switcher, and a settings choice outlives sign-out', async ({
+    context,
+    page,
+    baseURL,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'writes the demo member language')
+    await useSession(context, page, baseURL)
+    test.skip(!(await hasSession(page)), 'no demo session; seed the database')
+
+    try {
+      await page.goto('/pricing')
+      await expect(page.getByRole('main')).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: /^Language: / }),
+      ).toHaveCount(0)
+
+      await page.goto('/settings/language', { waitUntil: 'networkidle' })
+      const german = page.getByTestId('locale-chip-de')
+      await german.waitFor({ state: 'visible' })
+      const written = page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes('/_serverFn/'),
+      )
+      await german.click()
+      await written
+      await expect(page.locator('html')).toHaveAttribute('lang', 'de')
+
+      await context.clearCookies({ name: /planned\.session/ })
+      await page.goto('/login')
+      await expect(page.locator('html')).toHaveAttribute('lang', 'de')
+    } finally {
+      await useSession(context, page, baseURL)
+      await pinDemoLanguage(page)
+    }
+  })
 })
