@@ -2,7 +2,7 @@
 
 Status: accepted
 Date: 2026-10-21
-Issue: #192 (spec `.ai/specs/2026-09-19-deployed-on-delete-rules.md`)
+Issue: #192 (spec `.ai/specs/implemented/2026-09-19-deployed-on-delete-rules.md`)
 Records: #184, #186
 
 ## Context
@@ -39,7 +39,8 @@ promises.
    repository. Today that is `unlinkReservationsFromExpense` (called by `deleteExpense`),
    `unlinkAccommodationsFromReservation` (called by `deleteReservation`) and
    `unlinkTransportsFromDays` (called by the day deleters). `expenses.cost_category_id` has no
-   unlinker yet; `04-S2`, the stage that first deletes a cost category, owes it one.
+   deleter yet; the stage that first deletes a cost category (`04-S2`) must move or delete that
+   category's expenses before it deletes the category, in the same batch.
 2. **One register.** `DEPLOYED_WITHOUT_ON_DELETE` in
    `src/server/db/__tests__/migrations-match-schema.test.ts` lists the columns, as
    `table.column`. It is the one owner of the divergence.
