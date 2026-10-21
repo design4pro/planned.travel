@@ -81,3 +81,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Stat year** — the calendar year of a travel-statistics row; `0` means all time. Trips, places, cities, days and trip countries follow the trip’s start year; distance follows each transport’s departure year. Only a year with a trip is a selectable period.
 
 - **Session password lock** - after five wrong passwords across password-confirming actions, that session cannot confirm a password again. Other sessions remain usable; sign out and sign in again to recover.
+
+- **Visitor language** - the language remembered on a browser for signed-out pages, held for a year in a first-party cookie containing only a language code. A personal or workspace language takes precedence when signed in. _Avoid_: "anonymous account", "guest profile".

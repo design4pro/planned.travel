@@ -10,10 +10,11 @@
  * **Why a factory rather than seven module-level constants.** A Zod message is
  * baked into the schema when the schema is constructed, so a module-level schema
  * can only ever carry one language - and these are the screens where the reader
- * has no stored preference to fall back on, only `Accept-Language`. Taking the
- * bound translator as an argument moves the decision to render time, where the
+ * uses the visitor cookie or `Accept-Language` without a stored account preference.
+ * Taking the bound translator as an argument moves the decision to render time,
+ * where the
  * negotiated locale is known, and keeps the module free of React so the tests
- * can drive it with the source catalogue. `docs/SPEC.md` §8.6 covers a
+ * can drive it with the source catalogue. `docs/SPEC.md` §9 rule 6 covers a
  * validation message exactly as it covers a heading.
  *
  * Bounds mirror `emailAndPassword` in `src/server/auth/index.ts` on purpose

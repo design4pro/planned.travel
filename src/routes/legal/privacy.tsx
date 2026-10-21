@@ -179,12 +179,18 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
       <>
         <p>
           We use no advertising or analytics cookies, so there is no consent
-          banner to dismiss. What we do set is small and necessary:
+          banner to dismiss. The cookies we set are small and used only to make
+          the product work as you have set it up:
         </p>
         <ul>
           <li>
             A <strong>session cookie</strong> that keeps you signed in. It is
             HTTP-only, secure, and cleared when you sign out.
+          </li>
+          <li>
+            A <strong>visitor language cookie</strong> remembers your language
+            choice for a year. It holds only a language code, identifies nobody,
+            and is sent to our servers with every request.
           </li>
           <li>
             A <strong>theme preference</strong> stored in your browser, so the

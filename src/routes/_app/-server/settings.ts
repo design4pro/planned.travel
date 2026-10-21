@@ -14,6 +14,7 @@ import { resolveLocaleTag } from '#/lib/i18n/negotiate'
 // and the bundled world geometry into the server graph for one string array.
 import { BASEMAP_IDS } from '#/lib/map/basemap'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
+import { writeVisitorLocaleCookie } from '#/server/fns/-lib/visitor-locale'
 import { getSession } from '#/server/auth/session'
 import {
   DISTANCE_UNITS,
@@ -236,6 +237,10 @@ export const saveLanguagePreference = createServerFn({ method: 'POST' })
     const row = await updateUserSettings(scope, {
       locale: overrideOrNull(data.locale),
     })
+    const effective = await getEffectiveSettings(scope)
+    writeVisitorLocaleCookie(
+      resolveLocaleTag(effective.locale) ?? DEFAULT_LOCALE,
+    )
     return { locale: resolveLocaleTag(row.locale) }
   })
 

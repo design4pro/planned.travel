@@ -2,15 +2,14 @@
  * Everything the authentication screens say, in Dutch.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Why the register matters most here.** These are the only screens a
- * traveller reaches with no session, so the language comes purely from
- * `Accept-Language` and there is no stored preference to correct a bad guess
- * with. They say `je` like the rest of the Dutch catalogue: an account that
+ * traveller reaches with no session, so the language comes from
+ * the visitor cookie, then `Accept-Language`, then English. They say `je` like the rest of the Dutch catalogue: an account that
  * greets you with `u` and then plans your holiday with `je` reads as two
  * products.
  *

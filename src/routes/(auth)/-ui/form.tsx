@@ -9,9 +9,8 @@
  * Every word these components say comes out of the `auth` catalogue through
  * `t()`, including the ones only a screen reader hears - the reveal control on a
  * password field, the sentence a button announces while it is busy. These are
- * the only screens with no session behind them, so the language is whatever
- * `Accept-Language` negotiated and there is no stored preference to correct it
- * with (`docs/SPEC.md` §8.3, §8.6).
+ * screens reachable without a session, so their language comes from the visitor
+ * cookie, then `Accept-Language`, then English (`docs/SPEC.md` §9 rules 3 and 6).
  */
 import * as React from 'react'
 import { Eye, EyeOff, Fingerprint } from 'lucide-react'

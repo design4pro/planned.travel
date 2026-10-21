@@ -14,9 +14,9 @@ Plan stage `09-S5` (`docs/plans/09-account-and-settings.md`, reference row `ACC-
 written as **BLOCKED**: no message runtime, and the work owned by another plan. Both blockers are gone. The runtime, the
 twenty-three catalogues, server-side negotiation, the right-to-left layout and the signed-in language picker all exist, and the
 plan itself says its re-planned stage "must not re-specify what is already there". Checked against the repository, **one**
-behaviour of the row is missing: **choosing a language before signing in.** A visitor on a sign-in, registration or marketing page
-can only read the language their browser's `Accept-Language` header names, or English, and has no control to change it; and the
-account they then create opens in English whatever they were reading. This spec closes exactly that, in three tickets, built in
+behaviour of the row is missing: **choosing a language before signing in.** At specification time, a visitor on a sign-in, registration or marketing page
+could only read the language their browser's `Accept-Language` header named, or English, and had no control to change it; and the
+account they then created opened in English whatever they were reading. This spec closes exactly that, in three tickets, built in
 this order:
 
 1. **09-S5a - the visitor's language, remembered and read before first paint.** A first-party cookie `planned.locale`, one server
@@ -48,7 +48,7 @@ including the marketing header at 360px in `fr`, `de` and `uk`.
 
 ## 📝 Problem Statement
 
-### What a person meets today
+### What a person met at specification time
 
 A traveller whose browser says English opens a link a Polish colleague sent, lands on `/register`, and reads English with no way
 to change it. A traveller whose browser says Polish sees Polish on the same page, registers, and is then shown **English**
@@ -63,7 +63,7 @@ The reference row asks for a runtime and four behaviours. Everything but one is 
 | ACC-06 behaviour                                               | State       | Evidence                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Runtime, twenty-three languages, parity                        | done        | `src/lib/i18n/` (catalogue, negotiate, plural, interpolate, provider), `src/lib/i18n/messages/<tag>/<namespace>.ts`, `src/lib/i18n/__tests__/parity.test.ts`, `e2e/i18n-runtime-parity.spec.ts`                                                           |
-| Resolve the language through a chain, server-side              | done        | `src/server/fns/locale.ts` (`negotiateLocaleFrom`: stored user, else workspace, else `Accept-Language`, else `en`), called from the root `loader` in `src/routes/__root.tsx`; `<html lang dir>` server-rendered                                           |
+| Resolve the language through a chain, server-side              | done        | `src/server/fns/locale.ts` (`negotiateLocaleFrom`: stored user, else workspace, else visitor cookie (09-S5a), else `Accept-Language`, else `en`), called from the root `loader` in `src/routes/__root.tsx`; `<html lang dir>` server-rendered                                           |
 | Right-to-left layout                                           | done        | `ar` has `dir: 'rtl'` in `src/lib/i18n/locales.ts`; `__root.tsx` wraps the tree in a direction provider; logical properties and `rtl:` mirrors in `auth-shell.tsx`                                                                                        |
 | Choose a language **after** signing in, apply without a reload | done        | `src/routes/_app/settings/language.tsx`, `src/components/settings/language-picker.tsx`, `saveLanguagePreference` in `src/routes/_app/-server/settings.ts`, `commitLanguage` in `src/routes/_app/settings/-lib/language-commit.ts` (`router.invalidate()`) |
 | Choose a language **before** signing in                        | **missing** | No control in `src/routes/(auth)/**`, `src/routes/index.tsx`, `src/routes/pricing.tsx`, `src/components/marketing/**` or `src/components/layout/**`. `src/lib/i18n/negotiate.ts` is pure and reads no cookie                                              |
