@@ -384,18 +384,17 @@ export async function syncReservationExpense(
     if (written.reservation.expenseId === written.expenseId) {
       return 'created'
     }
-    // Another save linked the booking first and this one inserted nothing: answer as that link dictates.
     if (written.reservation.expenseId === null) {
       throw new Error(
         'The booking is not linked to the cost line that was written for it.',
       )
     }
-    return await repriceLinkedExpense(
-      scope,
-      reservation,
-      written.reservation.expenseId,
-      { amountMinor, currency },
-    )
+    // Another save linked the booking first and this one inserted nothing: answer as that link
+    // dictates, from the booking as it stands now rather than from this save's possibly older copy.
+    return await syncReservationExpense(scope, {
+      reservation: written.reservation,
+      trip,
+    })
   } catch (cause) {
     log().warn('booking ledger sync failed', {
       reservationId: reservation.id,

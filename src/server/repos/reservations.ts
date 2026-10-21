@@ -414,7 +414,8 @@ export async function deleteReservation(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * The only way `reservations.expense_id` is ever written.
+ * The way `reservations.expense_id` is changed on a booking that already has, or loses, its cost
+ * line; {@link createReservationExpense} is the one other writer, setting it together with the line.
  *
  * `expenseId` is deliberately absent from {@link reservationFields}, so no client payload can set
  * it: the link is a consequence of the server's own ledger side effect, never a field a caller

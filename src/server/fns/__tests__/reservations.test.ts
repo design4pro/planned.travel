@@ -579,6 +579,7 @@ describe('syncReservationExpense writes the cost line and its link as one unit',
     expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
       'failed',
     )
+    expect(batch).toHaveBeenCalledTimes(1)
     batch.mockRestore()
 
     expect(await listTripExpenses(scope, trip.id)).toEqual([])
@@ -587,6 +588,22 @@ describe('syncReservationExpense writes the cost line and its link as one unit',
       'created',
     )
     expect(await listTripExpenses(scope, trip.id)).toHaveLength(1)
+  })
+
+  it('answers failed when the batch ran without writing the line or the link', async () => {
+    const reservation = await pricedBooking()
+    const database = scope.db as unknown as {
+      batch: (...args: ReadonlyArray<unknown>) => Promise<unknown>
+    }
+    const batch = vi.spyOn(database, 'batch').mockResolvedValueOnce(undefined)
+
+    expect(await syncReservationExpense(scope, { reservation, trip })).toBe(
+      'failed',
+    )
+    batch.mockRestore()
+
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(await linkOf(reservation.id)).toBeNull()
   })
 
   it('writes nothing on a driver without batch support', async () => {
@@ -622,7 +639,7 @@ describe('syncReservationExpense writes the cost line and its link as one unit',
     expect(await linkOf(reservation.id)).toBe(lines[0]?.id)
   })
 
-  it('does not insert a second line for a stale copy of a booking that is linked since', async () => {
+  it('does not insert a second line for a stale copy of a booking that is linked since, and prices it from the stored booking', async () => {
     const reservation = await pricedBooking()
     await syncReservationExpense(scope, { reservation, trip })
 
@@ -635,7 +652,7 @@ describe('syncReservationExpense writes the cost line and its link as one unit',
 
     const lines = await listTripExpenses(scope, trip.id)
     expect(lines).toHaveLength(1)
-    expect(lines[0]?.amountMinor).toBe(30_000)
+    expect(lines[0]?.amountMinor).toBe(reservation.priceMinor)
   })
 
   it('refuses an archived trip and a viewer without creating a line', async () => {
