@@ -88,7 +88,11 @@ export function TwoFactorPasswordDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button ref={trigger} variant="secondary">
+        <Button
+          ref={trigger}
+          variant="secondary"
+          className="h-auto min-h-10 whitespace-normal"
+        >
           {action}
         </Button>
       </DialogTrigger>
