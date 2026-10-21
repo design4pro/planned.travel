@@ -463,7 +463,10 @@ describe('BookingDialog — a ledger write that was refused', () => {
     )
     const view = render(ui(booking, 'first'))
     // A remount with the saved row stands for the reader opening it again from the list.
-    return { reopenOn: (b: BookingRow) => view.rerender(ui(b, 'reopened')) }
+    return {
+      reopenOn: (b: BookingRow) => view.rerender(ui(b, 'reopened')),
+      unmount: () => view.unmount(),
+    }
   }
 
   function chooseOther(): void {
@@ -497,7 +500,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     expect(reservations.create).toHaveBeenCalledTimes(1)
     // It stays until the reader closes it: it is the only record that the cost line is missing.
     expect(warning).toHaveBeenCalledWith('Saved, but not added to the costs', {
-      id: 'book-ledger-refused',
+      id: 'book-ledger-refused-booking-2',
       description: 'Open the booking and save it again to add its cost line.',
       duration: Infinity,
       cancel: { label: 'Close', onClick: expect.any(Function) },
@@ -557,12 +560,70 @@ describe('BookingDialog — a ledger write that was refused', () => {
     expect(warning).not.toHaveBeenCalled()
   })
 
-  it('takes the warning down when the booking is opened again', async () => {
+  it('takes the warning down when the booking it is about is opened again', () => {
     vi.spyOn(toast, 'warning').mockReturnValue('toast')
     const dismiss = vi.spyOn(toast, 'dismiss').mockReturnValue('toast')
     mount(MUSEUM, vi.fn())
 
-    expect(dismiss).toHaveBeenCalledWith('book-ledger-refused')
+    expect(dismiss).toHaveBeenCalledWith('book-ledger-refused-booking-2')
+  })
+
+  it('leaves the warning up when a new booking is opened', () => {
+    const dismiss = vi.spyOn(toast, 'dismiss').mockReturnValue('toast')
+    mount(undefined, vi.fn())
+
+    expect(dismiss).not.toHaveBeenCalled()
+  })
+
+  it('still warns when the reader closed the dialog while the save ran', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    let refuse: (value: {
+      reservationId: string
+      ledger: string
+    }) => void = () => undefined
+    reservations.create.mockReturnValue(
+      new Promise((resolve) => {
+        refuse = resolve
+      }),
+    )
+    mount(undefined, vi.fn())
+    chooseOther()
+    submitTheForm()
+    await vi.waitFor(() => expect(reservations.create).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // Past the focus scope's own close timer, as a response over the network is.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+
+    await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('still warns when the dialog is replaced while the save ran', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    let refuse: (value: {
+      reservationId: string
+      ledger: string
+    }) => void = () => undefined
+    reservations.create.mockReturnValue(
+      new Promise((resolve) => {
+        refuse = resolve
+      }),
+    )
+    // The first booking on an empty trip swaps the timeline branch, and with it this dialog.
+    const dialog = mount(undefined, vi.fn())
+    chooseOther()
+    submitTheForm()
+    await vi.waitFor(() => expect(reservations.create).toHaveBeenCalledTimes(1))
+    dialog.unmount()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+
+    await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
   })
 
   it('updates the saved booking when it is reopened, and never creates a second one', async () => {
