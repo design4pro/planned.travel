@@ -27,8 +27,9 @@ import type {
  * pointer crosses it, and the pointer clicks it. Those are one card. Written
  * twice they would drift on the first edit and the map would end up reporting
  * two different truths about the same country depending on how you touched it,
- * so this component is the only place either moment is typeset, and it takes
- * its strings from `countryFacts()` rather than deciding any of them itself.
+ * so this component is the only place either moment is typeset. It takes its
+ * facts from `countryFacts()` and every caption from the `atlas.card.*` keys of
+ * the locale catalogue, so no wording is decided anywhere else.
  *
  * It fetches nothing, knows nothing about MapLibre and holds no state. That is
  * deliberate: the hard parts of a map overlay are anchoring, collision and
@@ -92,8 +93,8 @@ import type {
  * `aria-hidden` and paired with words, because a reader hearing "dash" cannot
  * tell a missing date from a broken one. All three are the same grid, the same
  * rules and the same type ladder, so the card's height never changes as the
- * pointer crosses a border — `countryFacts()` chooses the wording and this file
- * draws whatever it was handed.
+ * pointer crosses a border — `countryFacts()` chooses the record and this file
+ * draws whatever it was handed, in the catalogue's words.
  *
  * **Both records are passed or the card lies.** The trip columns alone cannot
  * tell a country nobody has recorded from a country visited three times, and a
@@ -511,8 +512,7 @@ interface CountryCardBaseProps extends Omit<
    * `true` when the surface that opened this card already carries the same
    * facts as its accessible name — a hovered map polygon, for instance. The
    * card becomes purely visual and the reader hears the country once instead of
-   * twice. `countryFacts().summary` is the string that name should be built
-   * from.
+   * twice. The host builds that accessible name itself.
    */
   readonly decorative?: boolean
 }

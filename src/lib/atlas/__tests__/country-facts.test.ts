@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  ABSENT_FACT_LABEL,
   ABSENT_FACT_MARK,
   countryFactColumns,
   countryFactCount,
@@ -71,21 +70,17 @@ describe('countryFactMonth', () => {
    * assertion is on the exact characters, not on a substring.
    */
   it('prints September the same way on every runtime', () => {
-    expect(countryFactMonth('First trip', '2026-09-06').value).toBe(
-      'September 2026',
-    )
-    expect(countryFactMonth('First trip', '2026-09-30').value).toBe(
-      'September 2026',
-    )
+    expect(countryFactMonth('2026-09-06').value).toBe('September 2026')
+    expect(countryFactMonth('2026-09-30').value).toBe('September 2026')
   })
 
   it('coarsens a day column to its month', () => {
-    expect(countryFactMonth('Last trip', '2011-03-19').value).toBe('March 2011')
+    expect(countryFactMonth('2011-03-19').value).toBe('March 2011')
   })
 
   it('carries a machine-readable year and month', () => {
-    expect(countryFactMonth('First trip', '2026-09-06').iso).toBe('2026-09')
-    expect(countryFactMonth('First trip', '2004-01-02').iso).toBe('2004-01')
+    expect(countryFactMonth('2026-09-06').iso).toBe('2026-09')
+    expect(countryFactMonth('2004-01-02').iso).toBe('2004-01')
   })
 
   /**
@@ -112,7 +107,7 @@ describe('countryFactMonth', () => {
     ]
     months.forEach((name, index) => {
       const column = `2026-${String(index + 1).padStart(2, '0')}-15`
-      expect(countryFactMonth('First trip', column).value).toBe(`${name} 2026`)
+      expect(countryFactMonth(column).value).toBe(`${name} 2026`)
     })
   })
 
@@ -130,8 +125,7 @@ describe('countryFactMonth', () => {
       ['2026-09-30T23:30:00.000Z', 'September 2026', '2026-09'],
     ] as const
     for (const [column, value, iso] of pairs) {
-      expect(countryFactMonth('Last trip', column)).toEqual({
-        label: 'Last trip',
+      expect(countryFactMonth(column)).toEqual({
         value,
         iso,
       })
@@ -145,27 +139,22 @@ describe('countryFactMonth', () => {
    * planet, so the date portion is taken literally and the offset is ignored.
    */
   it('does not let a timezone offset move a trip into another month', () => {
-    expect(countryFactMonth('First trip', '2026-10-01T00:30:00+02:00')).toEqual(
-      {
-        label: 'First trip',
-        value: 'October 2026',
-        iso: '2026-10',
-      },
-    )
-  })
-
-  it('accepts a full instant as readily as a day column', () => {
-    expect(countryFactMonth('Last trip', '2026-10-02T09:30:00.000Z')).toEqual({
-      label: 'Last trip',
+    expect(countryFactMonth('2026-10-01T00:30:00+02:00')).toEqual({
       value: 'October 2026',
       iso: '2026-10',
     })
   })
 
-  it('keeps the label and reports nothing for an unusable column', () => {
+  it('accepts a full instant as readily as a day column', () => {
+    expect(countryFactMonth('2026-10-02T09:30:00.000Z')).toEqual({
+      value: 'October 2026',
+      iso: '2026-10',
+    })
+  })
+
+  it('reports nothing for an unusable column', () => {
     for (const value of [null, undefined, '', '2011-13-45', 'yesterday']) {
-      expect(countryFactMonth('First trip', value)).toEqual({
-        label: 'First trip',
+      expect(countryFactMonth(value)).toEqual({
         value: null,
         iso: null,
       })
@@ -195,20 +184,27 @@ describe('countryFacts', () => {
     expect(facts.places.value).toBe('12')
   })
 
-  it('agrees the unit with the count', () => {
-    const one = countryFacts({ ...FRANCE, tripCount: 1, placeCount: 1 })
-    expect(one.tally.label).toBe('Trip')
-    expect(one.places.label).toBe('Place')
-
-    const many = countryFacts({ ...FRANCE, tripCount: 2, placeCount: 0 })
-    expect(many.tally.label).toBe('Trips')
-    expect(many.places.label).toBe('Places')
-  })
-
-  it('heads the two date columns consistently', () => {
+  /**
+   * The catalogue is the only copy source. A noun, a unit or a spoken sentence
+   * added back here would be an English path nothing translates, so the shape
+   * is pinned to structured facts.
+   */
+  it('returns structured facts and no wording', () => {
     const facts = countryFacts(FRANCE)
-    expect(facts.first.label).toBe('First trip')
-    expect(facts.last.label).toBe('Last trip')
+    expect(Object.keys(facts).sort()).toEqual([
+      'code',
+      'first',
+      'last',
+      'name',
+      'places',
+      'source',
+      'tally',
+      'visited',
+    ])
+    expect(Object.keys(facts.tally).sort()).toEqual(['count', 'value'])
+    expect(Object.keys(facts.places).sort()).toEqual(['count', 'value'])
+    expect(Object.keys(facts.first).sort()).toEqual(['iso', 'value'])
+    expect(Object.keys(facts.last).sort()).toEqual(['iso', 'value'])
   })
 
   it('carries both months through the pinned formatter', () => {
@@ -233,21 +229,8 @@ describe('countryFacts', () => {
       expect(facts.last.iso).toBeNull()
     })
 
-    it('says so in words a reader can hear', () => {
-      expect(countryFacts(ALGERIA).summary).toBe(
-        'Algeria. No trips yet, no places saved. No trip dates recorded.',
-      )
-    })
-
     it('names the state, so a card can style it without re-deriving it', () => {
       expect(countryFacts(ALGERIA).source).toBe('none')
-    })
-
-    it('keeps the trip wording, which is what an empty card should offer', () => {
-      const facts = countryFacts(ALGERIA)
-      expect(facts.tally.label).toBe('Trips')
-      expect(facts.first.label).toBe('First trip')
-      expect(facts.last.label).toBe('Last trip')
     })
   })
 
@@ -262,16 +245,13 @@ describe('countryFacts', () => {
     it('draws its figures from the visit record instead', () => {
       const facts = countryFacts(THAILAND)
       expect(facts.source).toBe('visits')
-      expect(facts.tally.label).toBe('Visits')
       expect(facts.tally.count).toBe(3)
       expect(facts.tally.value).toBe('3')
     })
 
     it('prints both visit months rather than two dashes', () => {
       const facts = countryFacts(THAILAND)
-      expect(facts.first.label).toBe('First visit')
       expect(facts.first.value).toBe('July 2011')
-      expect(facts.last.label).toBe('Last visit')
       expect(facts.last.value).toBe('September 2024')
       expect(facts.last.iso).toBe('2024-09')
     })
@@ -280,33 +260,10 @@ describe('countryFacts', () => {
       expect(countryFacts(THAILAND).visited).toBe(true)
     })
 
-    it('agrees the unit with the tally', () => {
-      const one = countryFacts({ ...THAILAND, visitCount: 1 })
-      expect(one.tally.label).toBe('Visit')
-    })
-
     it('still prints the places it has, in their own cell', () => {
       const facts = countryFacts({ ...THAILAND, placeCount: 4 })
       expect(facts.places.value).toBe('4')
       expect(facts.source).toBe('visits')
-    })
-
-    it('speaks in visits, not in trips', () => {
-      expect(countryFacts(THAILAND).summary).toBe(
-        'Thailand. 3 visits, no places saved. First visit July 2011, last visit September 2024.',
-      )
-    })
-
-    it('says a single month once', () => {
-      const facts = countryFacts({
-        ...THAILAND,
-        visitCount: 1,
-        firstVisitedOn: '2017-11-08',
-        lastVisitedOn: '2017-11-08',
-      })
-      expect(facts.summary).toBe(
-        'Thailand. 1 visit, no places saved. Visited in November 2017.',
-      )
     })
 
     it('is honest when the tally is there and the dates are not', () => {
@@ -319,9 +276,6 @@ describe('countryFacts', () => {
       expect(facts.tally.value).toBe('3')
       expect(facts.first.value).toBeNull()
       expect(facts.last.value).toBeNull()
-      expect(facts.summary).toBe(
-        'Thailand. 3 visits, no places saved. No visit dates recorded.',
-      )
     })
   })
 
@@ -344,9 +298,7 @@ describe('countryFacts', () => {
         lastVisitedOn: '2026-08-17',
       })
       expect(facts.source).toBe('trips')
-      expect(facts.tally.label).toBe('Trip')
       expect(facts.tally.value).toBe('1')
-      expect(facts.first.label).toBe('First trip')
       expect(facts.first.value).toBe('August 2026')
       expect(facts.last.value).toBe('August 2026')
     })
@@ -362,7 +314,7 @@ describe('countryFacts', () => {
       expect(facts.first.value).toBe('February 2026')
     })
 
-    it('does not let a saved place alone choose the trip wording', () => {
+    it('does not let a saved place alone choose the trip reading', () => {
       const facts = countryFacts({ ...THAILAND, placeCount: 2 })
       expect(facts.source).toBe('visits')
       expect(facts.first.value).toBe('July 2011')
@@ -394,42 +346,11 @@ describe('countryFacts', () => {
       ).toBe(true)
     })
   })
-
-  describe('summary', () => {
-    it('folds the whole card into one sentence', () => {
-      expect(countryFacts(FRANCE).summary).toBe(
-        'France. 3 trips, 12 places. First trip July 2019, last trip September 2026.',
-      )
-    })
-
-    it('never reads the same month out twice', () => {
-      const facts = countryFacts({
-        ...FRANCE,
-        tripCount: 1,
-        placeCount: 1,
-        firstTripOn: '2026-10-02',
-        lastTripOn: '2026-10-09',
-      })
-      expect(facts.summary).toBe(
-        'France. 1 trip, 1 place. Travelled in October 2026.',
-      )
-    })
-
-    it('is honest about a half-recorded span', () => {
-      expect(countryFacts({ ...FRANCE, lastTripOn: null }).summary).toBe(
-        'France. 3 trips, 12 places. First trip July 2019, last trip not recorded.',
-      )
-      expect(countryFacts({ ...FRANCE, firstTripOn: null }).summary).toBe(
-        'France. 3 trips, 12 places. First trip not recorded, last trip September 2026.',
-      )
-    })
-  })
 })
 
-describe('the absent-value pair', () => {
-  it('is an em dash and the words that stand in for it', () => {
+describe('the absent-value mark', () => {
+  it('is an em dash', () => {
     expect(ABSENT_FACT_MARK).toBe('—')
-    expect(ABSENT_FACT_LABEL).toBe('Not recorded')
   })
 })
 
@@ -470,7 +391,7 @@ describe('countryFactColumns', () => {
     const facts = countryFacts(countryFactColumns(VISITED_RECORD))
     expect(facts.source).toBe('visits')
     expect(facts.visited).toBe(true)
-    expect(facts.tally).toMatchObject({ label: 'Visits', value: '3' })
+    expect(facts.tally).toMatchObject({ count: 3, value: '3' })
     expect(facts.first.value).toBe('July 2011')
     expect(facts.last.value).toBe('September 2024')
   })
@@ -487,7 +408,7 @@ describe('countryFactColumns', () => {
       }),
     )
     expect(facts.source).toBe('trips')
-    expect(facts.tally).toMatchObject({ label: 'Trip', value: '1' })
+    expect(facts.tally).toMatchObject({ count: 1, value: '1' })
     expect(facts.places.value).toBe('4')
     expect(facts.first.value).toBe('August 2026')
   })
