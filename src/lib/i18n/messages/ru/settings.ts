@@ -771,6 +771,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Для двухфакторной аутентификации у этого аккаунта должен быть пароль. Следующая страница запросит электронную почту и отправит ссылку для его настройки. Это завершит сеансы на всех устройствах. Войдите снова и вернитесь сюда.',
   'twoFactor.nopassword.action': 'Задать пароль',
+  'twoFactor.off.action': 'Отключить двухфакторную аутентификацию',
+  'twoFactor.off.title': 'Отключить двухфакторную аутентификацию?',
+  'twoFactor.off.body':
+    'Любой, кто знает ваш пароль, сможет войти без кода. На других устройствах вход в аккаунт сохранится.',
+  'twoFactor.off.confirm': 'Отключить',
+  'twoFactor.off.pending': 'Отключение',
+  'twoFactor.off.cancel': 'Оставить включённой',
+  'twoFactor.off.done': 'Двухфакторная аутентификация отключена',
 } satisfies TranslationOf<typeof En>
 
 export default messages

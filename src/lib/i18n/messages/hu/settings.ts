@@ -746,6 +746,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Ehhez a fiókhoz jelszó szükséges a kétlépcsős hitelesítéshez. A következő oldal elkéri az e-mail-címed, és beállítási hivatkozást küld. A jelszó beállítása mindenhol kijelentkeztet. Jelentkezz be újra, és térj vissza ide.',
   'twoFactor.nopassword.action': 'Jelszó beállítása',
+  'twoFactor.off.action': 'Kétlépcsős hitelesítés kikapcsolása',
+  'twoFactor.off.title': 'Kikapcsolod a kétlépcsős hitelesítést?',
+  'twoFactor.off.body':
+    'Aki ismeri a jelszavadat, kód nélkül is bejelentkezhet. A többi bejelentkezett eszközöd bejelentkezve marad.',
+  'twoFactor.off.confirm': 'Kikapcsolás',
+  'twoFactor.off.pending': 'Kikapcsolás folyamatban',
+  'twoFactor.off.cancel': 'Maradjon bekapcsolva',
+  'twoFactor.off.done': 'A kétlépcsős hitelesítés ki van kapcsolva',
 } satisfies TranslationOf<typeof En>
 
 export default messages

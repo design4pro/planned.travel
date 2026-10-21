@@ -696,7 +696,11 @@ number will be recorded by the PR-opening step.
 
 ## Amendment - enrolment and backup-code replacement (#1151)
 
-The first screen slice implements enrolment, the On view and replacement of backup codes. Turning the factor off is a separate slice (#1152), so this screen does not yet offer that action. The existing challenge redirects a full signed-in session to `/settings/two-factor`; a sessionless visitor still sees the challenge. `CodeInput` now lives in `src/components/ui/code-input.tsx` and the sign-in form kit no longer exports it. The shared key display and password-confirm dialog are owned by `settings/-ui/two-factor-key.tsx` and `settings/-ui/two-factor-password-dialog.tsx`. Setup secrets stay in component state and Replay-blocked subtrees, and the backup-code panel takes precedence over loader updates.
+The first screen slice implements enrolment, the On view and replacement of backup codes. Turning the factor off was deferred to the separate slice #1152, delivered by PR #1466 as described below. The existing challenge redirects a full signed-in session to `/settings/two-factor`; a sessionless visitor still sees the challenge. `CodeInput` now lives in `src/components/ui/code-input.tsx` and the sign-in form kit no longer exports it. The shared key display and password-confirm dialog are owned by `settings/-ui/two-factor-key.tsx` and `settings/-ui/two-factor-password-dialog.tsx`. Setup secrets stay in component state and Replay-blocked subtrees, and the backup-code panel takes precedence over loader updates.
+
+## Amendment - turning two-factor off (#1152, PR #1466)
+
+The On view now offers password-only turn-off through the existing shared password-confirm dialog. It explains that future sign-ins need no code and other signed-in devices stay signed in. Confirmed success clears setup state, shows the off toast and focuses the replacing wizard or no-password heading. Cancellation returns focus to the trigger; wrong-password refusals clear the password, while rate limits and network failures retain it without automatic retry. The shared action triggers wrap long translated labels on narrow screens.
 
 ### Password confirmation hardening (#1155)
 
