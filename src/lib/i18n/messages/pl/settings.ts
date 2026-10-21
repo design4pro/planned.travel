@@ -772,6 +772,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Uwierzytelnianie dwuskładnikowe wymaga hasła do tego konta. Następna strona poprosi o e-mail i wyśle link do ustawienia hasła. Ustawienie hasła wyloguje Cię wszędzie. Zaloguj się ponownie i wróć tutaj.',
   'twoFactor.nopassword.action': 'Ustaw hasło',
+  'twoFactor.setup.action': 'Pokaż ponownie klucz konfiguracji',
+  'twoFactor.setup.title': 'Klucz konfiguracji',
+  'twoFactor.setup.body':
+    'Dodaj ten klucz na innym urządzeniu. Klucz na pozostałych urządzeniach nadal działa.',
+  'twoFactor.setup.done': 'Gotowe',
+  'twoFactor.setup.confirm': 'Pokaż klucz',
+  'twoFactor.setup.pending': 'Sprawdzanie',
 } satisfies TranslationOf<typeof En>
 
 export default messages

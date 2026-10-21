@@ -752,6 +752,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Οι δύο παράγοντες απαιτούν κωδικό πρόσβασης σε αυτόν τον λογαριασμό. Η επόμενη σελίδα ζητά το email σας και στέλνει σύνδεσμο για να τον ορίσετε. Αυτό σας αποσυνδέει παντού. Συνδεθείτε ξανά και επιστρέψτε εδώ.',
   'twoFactor.nopassword.action': 'Ορισμός κωδικού πρόσβασης',
+  'twoFactor.setup.action': 'Εμφάνιση ξανά του κλειδιού ρύθμισης',
+  'twoFactor.setup.title': 'Κλειδί ρύθμισης',
+  'twoFactor.setup.body':
+    'Πρόσθεσε αυτό το κλειδί σε άλλη συσκευή. Το κλειδί στις άλλες συσκευές σου συνεχίζει να λειτουργεί.',
+  'twoFactor.setup.done': 'Τέλος',
+  'twoFactor.setup.confirm': 'Εμφάνιση κλειδιού',
+  'twoFactor.setup.pending': 'Έλεγχος',
 } satisfies TranslationOf<typeof En>
 
 export default messages

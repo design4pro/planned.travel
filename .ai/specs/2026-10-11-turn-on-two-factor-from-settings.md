@@ -707,3 +707,8 @@ The usual extra cost is one D1 counter read and two writes per attempt; passkey 
 Recovery: sign out and sign in again; the owner can revoke unfamiliar sessions or reset the password by email (which already revokes all sessions). Both auth and two-factor settings render the localized session-lock title and detail, with no ten-second wait; passkey removal offers Sign in again. The production shape of cf-connecting-ip and x-forwarded-for remains an open deployed-Worker QA item.
 
 If finalizing the counter fails after an endpoint succeeds, the action may already have committed. The refusal uses `PASSWORD_ATTEMPTS_RESULT_UNKNOWN`, keeps the session closed, and tells the person to keep this session open until they can sign in again, try their new password if they changed it, and use an authenticator or another signed-in session to generate another set of backup codes if they were replacing them. It never claims the mutation was rolled back or invites an automatic retry.
+
+
+## Amendment - showing the existing setup key (#1154)
+
+The On view also offers Show setup key again. The existing password-confirm dialog keeps the successful `getTotpUri` response in its own component state and replaces the password field with the shared `TwoFactorKey`, moving focus to Done. Done, Escape and dismissal clear the key and return focus to the trigger; opening again asks for a fresh password. The dialog stays busy until the request settles, so a response cannot reopen a dismissed dialog. No setup call, key rotation, telemetry capture or network-detail capture is added. Existing session password-lock refusals and the ten-second endpoint wait remain in force.

@@ -736,6 +736,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'İki faktör bu hesapta bir parola gerektirir. Sonraki sayfa e-postanızı ister ve ayarlamak için bağlantı gönderir. Parola belirlemek her yerde oturumunuzu kapatır. Tekrar giriş yapıp buraya dönün.',
   'twoFactor.nopassword.action': 'Parola belirle',
+  'twoFactor.setup.action': 'Kurulum anahtarını yeniden göster',
+  'twoFactor.setup.title': 'Kurulum anahtarı',
+  'twoFactor.setup.body':
+    'Bu anahtarı başka bir cihaza ekleyin. Diğer cihazlarınızdaki anahtar çalışmaya devam eder.',
+  'twoFactor.setup.done': 'Bitti',
+  'twoFactor.setup.confirm': 'Anahtarı göster',
+  'twoFactor.setup.pending': 'Kontrol ediliyor',
 } satisfies TranslationOf<typeof En>
 
 export default messages

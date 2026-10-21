@@ -219,6 +219,13 @@ export function TwoFactorSettings({
     showCodes(result.data.backupCodes)
     return null
   }
+  async function showKey(value: string) {
+    const result = await authClient.twoFactor.getTotpUri({ password: value })
+    if (result.error) return toAuthFailure(result.error)
+    if (!result.data) return toAuthFailure(null)
+    extractSetupKey(result.data.totpURI)
+    return { uri: result.data.totpURI }
+  }
   let content
   if (codes)
     content = (
@@ -250,6 +257,16 @@ export function TwoFactorSettings({
           confirm={t('settings.twoFactor.replace.confirm')}
           pending={t('settings.twoFactor.replace.pending')}
           onConfirm={replace}
+          focusReplacement={() => heading.current?.focus()}
+        />
+        <TwoFactorPasswordDialog
+          action={t('settings.twoFactor.setup.action')}
+          title={t('settings.twoFactor.setup.title')}
+          body={t('settings.twoFactor.setup.body')}
+          confirm={t('settings.twoFactor.setup.confirm')}
+          pending={t('settings.twoFactor.setup.pending')}
+          done={t('settings.twoFactor.setup.done')}
+          onConfirm={showKey}
           focusReplacement={() => heading.current?.focus()}
         />
       </Card>

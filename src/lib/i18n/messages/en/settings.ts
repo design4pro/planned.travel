@@ -820,6 +820,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Two-factor needs a password on this account. The next page asks for your email and sends a link to set one. Setting a password signs you out everywhere, so sign in again and come back here.',
   'twoFactor.nopassword.action': 'Set a password',
+  'twoFactor.setup.action': 'Show setup key again',
+  'twoFactor.setup.title': 'Setup key',
+  'twoFactor.setup.body':
+    'Add this key to another device. The key already on your other devices keeps working.',
+  'twoFactor.setup.done': 'Done',
+  'twoFactor.setup.confirm': 'Show key',
+  'twoFactor.setup.pending': 'Checking',
 } as const satisfies NamespaceMessages
 
 export default messages

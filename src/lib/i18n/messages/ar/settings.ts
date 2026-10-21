@@ -739,6 +739,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'تتطلب المصادقة الثنائية كلمة مرور لهذا الحساب. تطلب الصفحة التالية بريدك الإلكتروني وترسل رابطًا لتعيينها. تعيين كلمة مرور يسجل خروجك من كل الأجهزة. سجل الدخول مجددًا وعد إلى هنا.',
   'twoFactor.nopassword.action': 'تعيين كلمة مرور',
+  'twoFactor.setup.action': 'عرض مفتاح الإعداد مجددًا',
+  'twoFactor.setup.title': 'مفتاح الإعداد',
+  'twoFactor.setup.body':
+    'أضف هذا المفتاح إلى جهاز آخر. سيظل المفتاح الموجود على أجهزتك الأخرى يعمل.',
+  'twoFactor.setup.done': 'تم',
+  'twoFactor.setup.confirm': 'عرض المفتاح',
+  'twoFactor.setup.pending': 'جارٍ التحقق',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -753,6 +753,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Tweestapsverificatie vereist een wachtwoord voor dit account. De volgende pagina vraagt je e-mail en stuurt een instellink. Een wachtwoord instellen meldt je overal af. Meld je opnieuw aan en kom hier terug.',
   'twoFactor.nopassword.action': 'Wachtwoord instellen',
+  'twoFactor.setup.action': 'Instelsleutel opnieuw tonen',
+  'twoFactor.setup.title': 'Instelsleutel',
+  'twoFactor.setup.body':
+    'Voeg deze sleutel toe op een ander apparaat. De sleutel op je andere apparaten blijft werken.',
+  'twoFactor.setup.done': 'Klaar',
+  'twoFactor.setup.confirm': 'Sleutel tonen',
+  'twoFactor.setup.pending': 'Controleren',
 } satisfies TranslationOf<typeof En>
 
 export default messages

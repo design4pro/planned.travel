@@ -734,6 +734,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Dua faktor memerlukan kata sandi di akun ini. Halaman berikut meminta email dan mengirim tautan untuk menetapkannya. Menetapkan kata sandi mengeluarkan Anda dari semua sesi. Masuk lagi dan kembali ke sini.',
   'twoFactor.nopassword.action': 'Tetapkan kata sandi',
+  'twoFactor.setup.action': 'Tampilkan kunci penyiapan lagi',
+  'twoFactor.setup.title': 'Kunci penyiapan',
+  'twoFactor.setup.body':
+    'Tambahkan kunci ini ke perangkat lain. Kunci di perangkat Anda yang lain tetap berfungsi.',
+  'twoFactor.setup.done': 'Selesai',
+  'twoFactor.setup.confirm': 'Tampilkan kunci',
+  'twoFactor.setup.pending': 'Memeriksa',
 } satisfies TranslationOf<typeof En>
 
 export default messages

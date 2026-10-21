@@ -746,6 +746,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Ehhez a fiókhoz jelszó szükséges a kétlépcsős hitelesítéshez. A következő oldal elkéri az e-mail-címed, és beállítási hivatkozást küld. A jelszó beállítása mindenhol kijelentkeztet. Jelentkezz be újra, és térj vissza ide.',
   'twoFactor.nopassword.action': 'Jelszó beállítása',
+  'twoFactor.setup.action': 'Beállítási kulcs megjelenítése újra',
+  'twoFactor.setup.title': 'Beállítási kulcs',
+  'twoFactor.setup.body':
+    'Add hozzá ezt a kulcsot egy másik eszközhöz. A többi eszközödön lévő kulcs továbbra is működik.',
+  'twoFactor.setup.done': 'Kész',
+  'twoFactor.setup.confirm': 'Kulcs megjelenítése',
+  'twoFactor.setup.pending': 'Ellenőrzés',
 } satisfies TranslationOf<typeof En>
 
 export default messages
