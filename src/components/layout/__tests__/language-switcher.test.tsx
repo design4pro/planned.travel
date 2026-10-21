@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Settings from '#/lib/i18n/messages/en/settings'
+import PlSettings from '#/lib/i18n/messages/pl/settings'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { LanguageSwitcher } from '../language-switcher'
@@ -30,7 +31,11 @@ const router = vi.hoisted(() => ({
     matches: [] as Array<{
       routeId: string
       status: 'success' | 'error'
-      loaderData?: { locale: string; signedIn: boolean }
+      loaderData?: {
+        locale: string
+        signedIn: boolean
+        messages: Record<string, string>
+      }
     }>,
   },
 }))
@@ -74,12 +79,16 @@ function deferred<T>(): {
 /** What the root loader answers on the next `invalidate()`. */
 let served: Locale
 
-function setRoot(signedIn: boolean, locale: Locale = 'en'): void {
+function setRoot(
+  signedIn: boolean,
+  locale: Locale = 'en',
+  messages: Record<string, string> = { loaded: 'yes' },
+): void {
   router.state.matches = [
     {
       routeId: '__root__',
       status: 'success',
-      loaderData: { locale, signedIn },
+      loaderData: { locale, signedIn, messages },
     },
   ]
 }
@@ -240,6 +249,54 @@ describe('LanguageSwitcher — choosing a language', () => {
     expect(document.activeElement).toBe(trigger())
   })
 
+  it('marks the trigger busy while the save runs, so a closed popover still shows work in flight', async () => {
+    served = 'pl'
+    const write = deferred<{ locale: Locale }>()
+    const { user } = mount(() => write.promise)
+    await open(user)
+    await user.click(chip('pl'))
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(trigger().getAttribute('aria-busy')).toBe('true')
+
+    write.resolve({ locale: 'pl' })
+    await waitFor(() => expect(trigger().getAttribute('aria-busy')).toBeNull())
+  })
+
+  it('leaves focus where the person put it when they moved on during the save', async () => {
+    served = 'pl'
+    const write = deferred<{ locale: Locale }>()
+    const { user } = mount(() => write.promise)
+    await open(user)
+    await user.click(chip('pl'))
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const elsewhere = screen.getByRole('button', { name: 'before' })
+    elsewhere.focus()
+
+    write.resolve({ locale: 'pl' })
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Zmieniono język na Polski',
+      ),
+    )
+    expect(document.activeElement).toBe(elsewhere)
+  })
+
+  it('is unapplied, with the switcher gone, when the refresh shows the person is signed in', async () => {
+    router.invalidate.mockImplementation(async () => {
+      setRoot(true, 'en')
+    })
+    const { user } = mount()
+    await open(user)
+    await user.click(chip('pl'))
+
+    await waitFor(() => expect(notify.warning).toHaveBeenCalled())
+    expect(notify.warning).toHaveBeenCalledWith(Shell['language.notApplied'])
+    expect(screen.queryByRole('button', { name: /Language/ })).toBeNull()
+    expect(notify.success).not.toHaveBeenCalled()
+  })
+
   it('is rejected quietly: the existing toast, the popover stays, nothing is announced', async () => {
     const { user } = mount(async () => {
       throw new Error('Failed to fetch')
@@ -273,9 +330,29 @@ describe('LanguageSwitcher — choosing a language', () => {
     await user.click(chip('pl'))
 
     await waitFor(() => expect(notify.warning).toHaveBeenCalled())
+    // The page is Polish by now, so the toast is too.
+    expect(notify.warning).toHaveBeenCalledWith(
+      PlSettings['language.reload.title'],
+      expect.anything(),
+    )
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it('is stale, not a cookie complaint, when the root loader fell back to English with no messages', async () => {
+    router.invalidate.mockImplementation(async () => {
+      setRoot(false, 'en', {})
+    })
+    const { user } = mount()
+    await open(user)
+    await user.click(chip('pl'))
+
+    await waitFor(() => expect(notify.warning).toHaveBeenCalled())
     expect(notify.warning).toHaveBeenCalledWith(
       Settings['language.reload.title'],
       expect.anything(),
+    )
+    expect(notify.warning).not.toHaveBeenCalledWith(
+      Shell['language.notApplied'],
     )
     expect(screen.getByRole('status').textContent).toBe('')
   })

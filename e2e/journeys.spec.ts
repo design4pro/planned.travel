@@ -2907,6 +2907,85 @@ test('a visitor chooses Polish on the sign-in screen and keeps it', async ({
 })
 
 /**
+ * The refresh behind a language switch runs every loader in the foreground, and
+ * the sign-up form must come through it with what the person already typed.
+ */
+test('a half-filled sign-up form keeps its values through a language switch', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    locale: 'en',
+    extraHTTPHeaders: { 'accept-language': 'en' },
+  })
+  try {
+    const page = await context.newPage()
+    const register = { name: 'register', path: '/register', ready: 'form' }
+    await visit(page, register, 'light')
+    await page.locator('#name').fill('Ada Lovelace')
+    await page.locator('#email').fill('ada@example.com')
+
+    await page
+      .getByRole('button', { name: 'Language: English. Change language' })
+      .click()
+    await page.getByTestId('locale-chip-pl').click()
+
+    await expect(
+      page.getByRole('heading', {
+        level: 1,
+        name: 'Zacznij planować w kilka minut',
+      }),
+    ).toBeVisible()
+    await expect(page.locator('#name')).toHaveValue('Ada Lovelace')
+    await expect(page.locator('#email')).toHaveValue('ada@example.com')
+  } finally {
+    await context.close()
+  }
+})
+
+/** The marketing header is the busiest one: the control has to be reachable and usable by keyboard. */
+test('a visitor switches language from the marketing header with the keyboard', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    locale: 'en',
+    extraHTTPHeaders: { 'accept-language': 'en' },
+  })
+  try {
+    const page = await context.newPage()
+    const pricing = { name: 'pricing', path: '/pricing', ready: 'main' }
+    await visit(page, pricing, 'light')
+
+    const trigger = page.getByRole('button', {
+      name: 'Language: English. Change language',
+    })
+    await trigger.focus()
+    await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'Choose a language' })
+    await expect(dialog).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toBeHidden()
+    await expect(trigger).toBeFocused()
+
+    await page.keyboard.press('Space')
+    await expect(dialog).toBeVisible()
+    await page.getByTestId('locale-chip-pl').focus()
+    await page.keyboard.press('Enter')
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'pl')
+    await expect(
+      page.getByRole('button', { name: 'Język: Polski. Zmień język' }),
+    ).toBeFocused()
+  } finally {
+    await context.close()
+  }
+})
+
+/**
  * The signed-in half writes the demo member's language, so it runs on Chromium
  * alone, in order, and puts the fixture back in `finally` (the same contract as
  * the other serial walks that write fixture state). "Signing out" drops the
@@ -2950,7 +3029,8 @@ test.describe('the visitor language after a signed-in choice', () => {
       await expect(page.locator('html')).toHaveAttribute('lang', 'de')
     } finally {
       await useSession(context, page, baseURL)
-      await pinDemoLanguage(page)
+      // A fixture left speaking German would red-line every journey behind it.
+      expect(await pinDemoLanguage(page)).toBe(true)
     }
   })
 })

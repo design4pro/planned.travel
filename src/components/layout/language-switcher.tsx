@@ -4,7 +4,12 @@ import { Globe } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { LanguagePicker } from '#/components/settings'
-import { Popover, PopoverContent, PopoverTrigger } from '#/components/ui'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Spinner,
+} from '#/components/ui'
 import { cn } from '#/lib/cn'
 import {
   SUPPORTED_LOCALES,
@@ -17,7 +22,7 @@ import {
 import { commitLanguage } from '#/lib/i18n/commit-language'
 
 import type { LocaleChoice } from '#/components/settings'
-import type { Locale } from '#/lib/i18n'
+import type { Locale, Translate } from '#/lib/i18n'
 
 /**
  * The root loader's data, read through the router and never by importing the
@@ -29,11 +34,23 @@ function rootData(
     readonly routeId: string
     readonly loaderData?: unknown
   }>,
-): { readonly locale?: unknown; readonly signedIn?: unknown } | null {
+): {
+  readonly locale?: unknown
+  readonly signedIn?: unknown
+  readonly messages?: unknown
+} | null {
   const data = matches.find(
     (match) => match.routeId === rootRouteId,
   )?.loaderData
   return typeof data === 'object' && data !== null ? data : null
+}
+
+function hasMessages(messages: unknown): boolean {
+  return (
+    typeof messages === 'object' &&
+    messages !== null &&
+    Object.keys(messages).length > 0
+  )
 }
 
 function isLocale(choice: LocaleChoice): choice is Locale {
@@ -102,10 +119,35 @@ export function LanguageSwitcher({
   const [pending, setPending] = React.useState<Locale | null>(null)
   const [announcement, setAnnouncement] = React.useState('')
   const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
 
   if (signedIn) return null
 
   const active = localeDescriptor(locale)
+
+  /** Focus is still the switcher's own: inside the popover, on the trigger or nowhere. */
+  function focusIsFree(): boolean {
+    const focused = document.activeElement
+    return (
+      focused === null ||
+      focused === document.body ||
+      focused === triggerRef.current ||
+      contentRef.current?.contains(focused) === true
+    )
+  }
+
+  /**
+   * A translator for the language the page is in once the refresh is over,
+   * which is not the one this render captured: a toast in the old language
+   * under the new `<html lang>` is read in the wrong voice.
+   */
+  async function translatorOnScreen(): Promise<Translate> {
+    const shown = rootData(router.state.matches)?.locale
+    const target =
+      SUPPORTED_LOCALES.find((descriptor) => descriptor.tag === shown)?.tag ??
+      locale
+    return createTranslator(target, await loadCatalogue(target))
+  }
 
   async function choose(next: Locale): Promise<void> {
     setAnnouncement('')
@@ -118,8 +160,12 @@ export function LanguageSwitcher({
         // `forcePending` runs the load in the foreground, so what the checks
         // below read is the outcome and not the page before it.
         refresh: () => router.invalidate({ forcePending: true }),
+        // The root loader never rejects: when negotiating or loading the
+        // catalogue fails it answers English with no messages. That is a
+        // refresh that did not happen, not a browser that dropped the cookie.
         refreshed: () =>
-          !router.state.matches.some((match) => match.status === 'error'),
+          !router.state.matches.some((match) => match.status === 'error') &&
+          hasMessages(rootData(router.state.matches)?.messages),
         // The root loader answers with the language the request negotiated: a
         // browser that dropped the cookie, or a caller who is signed in, leaves
         // it where it was.
@@ -138,17 +184,22 @@ export function LanguageSwitcher({
           description: t('settings.language.saveFailedBody', { language }),
         })
         return
-      case 'stale':
-        toast.warning(t('settings.language.reload.title'), {
-          description: t('settings.language.reload.body', { language }),
+      case 'stale': {
+        const onScreen = await translatorOnScreen()
+        toast.warning(onScreen('settings.language.reload.title'), {
+          description: onScreen('settings.language.reload.body', { language }),
         })
         return
+      }
       case 'unapplied':
-        toast.warning(t('shell.language.notApplied'))
+        toast.warning((await translatorOnScreen())('shell.language.notApplied'))
         return
       case 'switched':
+        // Focus goes back only if nobody has moved it since: a person who
+        // pressed Escape and tabbed into the form while the save ran must
+        // keep typing where they are (WCAG 3.2.2).
+        if (focusIsFree()) triggerRef.current?.focus()
         setOpen(false)
-        triggerRef.current?.focus()
         setAnnouncement(commit.speak('shell.language.announce', { language }))
     }
   }
@@ -160,12 +211,17 @@ export function LanguageSwitcher({
           <button
             ref={triggerRef}
             type="button"
+            aria-busy={pending !== null || undefined}
             aria-label={t('shell.language.trigger', {
               language: active.nativeName,
             })}
             className={cn(TRIGGER, className)}
           >
-            <Globe aria-hidden className="size-[18px] shrink-0" />
+            {pending === null ? (
+              <Globe aria-hidden className="size-[18px] shrink-0" />
+            ) : (
+              <Spinner size="md" label={null} className="shrink-0" />
+            )}
             <span
               lang={active.tag}
               dir={active.dir === 'rtl' ? 'rtl' : undefined}
@@ -176,6 +232,7 @@ export function LanguageSwitcher({
           </button>
         </PopoverTrigger>
         <PopoverContent
+          ref={contentRef}
           align="end"
           padding="none"
           aria-label={t('settings.language.label')}

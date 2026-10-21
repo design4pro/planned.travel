@@ -8,7 +8,7 @@
  * cannot be reached by clicking. Earlier tests asserted the *source text* of
  * `language.tsx` with regular expressions. Those
  * tests broke on a reformat and passed on a rewrite that meant the opposite. A
- * plain function with its four collaborators passed in is testable for what it
+ * plain function with its collaborators passed in is testable for what it
  * does instead of for how it is spelled.
  *
  * **The outcomes.**

@@ -84,10 +84,7 @@ export function MarketingHeader({
 
         <div className="ms-auto flex items-center gap-1">
           {minimal ? (
-            <>
-              <ThemeToggle />
-              <VisitorLanguageSwitcher />
-            </>
+            <ThemeToggle />
           ) : (
             <>
               <Button
