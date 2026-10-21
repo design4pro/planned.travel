@@ -48,7 +48,9 @@
  * equality compares with the column's own collation and a `NOCASE` index could not serve it. A
  * leading wildcard can use none of this, so a term that appears in the middle of a name is
  * deliberately not found; a `LIKE '%term%'` over the whole catalogue behind a type-ahead is the
- * shape that reads fine in a test with four rows and scans the table in production.
+ * shape that reads fine in a test with four rows and scans the table in production. The one
+ * exception is {@link findNearestAirport}: `airports` has no index on the coordinates, so its
+ * latitude/longitude window is a bounded scan of the table (see that function).
  *
  * The result is capped at {@link AIRPORT_MATCH_LIMIT}, and the cap is a ceiling rather than a
  * default: a caller may ask for fewer and cannot ask for more. A two-letter prefix matches hundreds
@@ -232,6 +234,16 @@ export const NEAREST_AIRPORT_RADIUS_KM = 100
 /** A metre of slack, so an airport exactly at the radius is not lost to the last bit of a sine. */
 const RADIUS_TOLERANCE_KM = 0.001
 
+/** Two distances closer than this (a micrometre) are the same distance. */
+const TIE_KM = 1e-9
+
+/**
+ * Degrees of slack on every edge of the SQL window (about 10 cm). The window and the exact
+ * distance are computed through different sines, so an airport exactly at the radius could sit
+ * on the far side of the window's edge by the last bit and never reach the exact check.
+ */
+const WINDOW_SLACK_DEGREES = 1e-6
+
 /** A point on the map, in decimal degrees. */
 export interface NearestAirportPoint {
   readonly lat: number
@@ -262,7 +274,7 @@ function distanceKm(a: NearestAirportPoint, b: NearestAirportPoint): number {
  */
 function windowAround(point: NearestAirportPoint, radiusKm: number): SQL {
   const angular = radiusKm / EARTH_RADIUS_KM
-  const latMargin = (angular * 180) / Math.PI
+  const latMargin = (angular * 180) / Math.PI + WINDOW_SLACK_DEGREES
   const latitude = and(
     gte(airports.lat, Math.max(-90, point.lat - latMargin)),
     lte(airports.lat, Math.min(90, point.lat + latMargin)),
@@ -277,7 +289,7 @@ function windowAround(point: NearestAirportPoint, radiusKm: number): SQL {
   ) {
     return and(latitude, isNotNull(airports.lng)) as SQL
   }
-  const lngMargin = (Math.asin(ratio) * 180) / Math.PI
+  const lngMargin = (Math.asin(ratio) * 180) / Math.PI + WINDOW_SLACK_DEGREES
   const west = point.lng - lngMargin
   const east = point.lng + lngMargin
   const longitude =
@@ -335,11 +347,9 @@ export async function findNearestAirport(
     if (row.lat === null || row.lng === null) continue
     const km = distanceKm(point, { lat: row.lat, lng: row.lng })
     if (km > radiusKm + RADIUS_TOLERANCE_KM) continue
-    if (
-      best === null ||
-      km < best.km ||
-      (km === best.km && sortsBefore(row, best.row))
-    ) {
+    // Distances within a micrometre are one distance: float error must not decide a tie.
+    const tied = best !== null && Math.abs(km - best.km) < TIE_KM
+    if (best === null || (tied ? sortsBefore(row, best.row) : km < best.km)) {
       best = { row, km }
     }
   }

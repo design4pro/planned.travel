@@ -153,6 +153,24 @@ describe('deriveTripZone', () => {
     ).toBeNull()
   })
 
+  it('takes the nearest airport’s zone for a place that records no country, as planner places do', async () => {
+    // The accepted limit of the country guard (#1498): with no code there is nothing to compare.
+    await stock(OSLO_AIRPORT)
+
+    expect(await deriveTripZone(db, [day(OSLO_HOTEL, null)])).toBe(
+      'Europe/Oslo',
+    )
+  })
+
+  it('reads no catalogue when no located day is dated', async () => {
+    await stock(OSLO_AIRPORT)
+    const undated = { ...day(OSLO_HOTEL), date: null }
+    statements.length = 0
+
+    expect(await deriveTripZone(db, [undated])).toBeNull()
+    expect(statements).toEqual([])
+  })
+
   it('has no zone for a name Intl does not accept', async () => {
     await stock({ ...OSLO_AIRPORT, timezone: 'Mars/Olympus_Mons' })
 

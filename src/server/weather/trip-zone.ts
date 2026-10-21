@@ -15,7 +15,9 @@
  * - that airport has a zone. The catalogue zones an airport only when its country has exactly one
  *   zone, so the nearest airport of *any* kind is taken rather than the nearest zoned one, which
  *   is what stops a place near a border from taking the neighbouring country's clock;
- * - the place's country code, when it has one, is the airport's;
+ * - the place's country code, when it has one, is the airport's (a place made in the planner records
+ *   none, so for it the guard is the nearest-of-any-kind rule alone, and a place within 100 km of
+ *   a neighbour's airport can take its clock, #1498);
  * - `Intl` accepts the name.
  *
  * Trips in a country with several zones therefore get no derived zone (#1498).
@@ -31,6 +33,11 @@ export async function deriveTripZone(
   db: Database,
   locations: ReadonlyArray<DayLocation>,
 ): Promise<string | null> {
+  // No dated, located day means no weather query to bucket or to give sun times, so the catalogue
+  // is not read at all (a plan with only undated days refetches on every edit).
+  if (!locations.some((day) => day.date !== null && day.location !== null)) {
+    return null
+  }
   const first = locations.find((day) => day.location !== null)
   const point = first?.location ?? null
   if (first === undefined || point === null) return null

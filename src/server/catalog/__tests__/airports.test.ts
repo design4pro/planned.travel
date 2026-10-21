@@ -573,10 +573,19 @@ describe('findNearestAirport', () => {
     expect((await findNearestAirport(db, ORIGIN))?.id).toBe('apt_edge')
     await expect(
       findNearestAirport(db, {
-        lat: -degreesOfLatitude(0.001),
+        lat: -degreesOfLatitude(0.01),
         lng: 0,
       }),
     ).resolves.toBeNull()
+  })
+
+  it('drops an airport in a corner of the SQL window that lies outside the circle', async () => {
+    // 0.8 degrees on both axes is inside the window (0.899 on each) and about 126 km away.
+    const { db } = await catalogue([
+      airport({ id: 'apt_corner', iataCode: 'CRN', lat: 0.8, lng: 0.8 }),
+    ])
+
+    await expect(findNearestAirport(db, ORIGIN)).resolves.toBeNull()
   })
 
   it('breaks a tie between two airports at one distance by IATA code', async () => {
