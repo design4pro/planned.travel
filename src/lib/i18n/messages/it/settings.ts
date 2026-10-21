@@ -760,6 +760,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'I due fattori richiedono una password per questo account. La pagina seguente chiede l’e-mail e invia un link per impostarla. Verrai disconnesso ovunque. Accedi di nuovo e torna qui.',
   'twoFactor.nopassword.action': 'Imposta una password',
+  'twoFactor.setup.action': 'Mostra di nuovo la chiave di configurazione',
+  'twoFactor.setup.title': 'Chiave di configurazione',
+  'twoFactor.setup.body':
+    'Aggiungi questa chiave su un altro dispositivo. La chiave sugli altri dispositivi continuerà a funzionare.',
+  'twoFactor.setup.done': 'Fatto',
+  'twoFactor.setup.confirm': 'Mostra chiave',
+  'twoFactor.setup.pending': 'Verifica in corso',
+  'twoFactor.off.action': 'Disattiva l’autenticazione a due fattori',
+  'twoFactor.off.title': 'Disattivare l’autenticazione a due fattori?',
+  'twoFactor.off.body':
+    'Chiunque conosca la tua password potrà accedere senza un codice. Gli altri dispositivi connessi resteranno connessi.',
+  'twoFactor.off.confirm': 'Disattiva',
+  'twoFactor.off.pending': 'Disattivazione',
+  'twoFactor.off.cancel': 'Mantieni attiva',
+  'twoFactor.off.done': 'L’autenticazione a due fattori è disattivata',
 } satisfies TranslationOf<typeof En>
 
 export default messages

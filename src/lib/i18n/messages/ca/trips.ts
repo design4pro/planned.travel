@@ -291,6 +291,12 @@ const messages = {
   'book.readOnly.archived':
     'Aquest viatge està arxivat, així que les reserves i les estades són només de lectura. Restaura el viatge per canviar-les.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Aquest canvi s’ha rebutjat. Revisa l’estat actual del viatge abans de fer més canvis.',
+  'transports.recovery.failed':
+    'No s’ha pogut actualitzar el viatge. Torna-ho a provar abans de fer canvis.',
+  'transports.readOnly.archived':
+    'Aquest viatge està arxivat. Restaura’l per modificar els transports.',
   'transports.title': 'Trajectes',
   'transports.empty': 'Encara no s’ha registrat res',
   'transports.count.transports': {

@@ -743,6 +743,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'Tvåfaktor kräver ett lösenord på kontot. Nästa sida ber om din e-post och skickar en länk för att ange ett. När du gör det loggas du ut överallt. Logga in igen och kom tillbaka hit.',
   'twoFactor.nopassword.action': 'Ange ett lösenord',
+  'twoFactor.setup.action': 'Visa inställningsnyckeln igen',
+  'twoFactor.setup.title': 'Inställningsnyckel',
+  'twoFactor.setup.body':
+    'Lägg till den här nyckeln på en annan enhet. Nyckeln på dina andra enheter fortsätter att fungera.',
+  'twoFactor.setup.done': 'Klart',
+  'twoFactor.setup.confirm': 'Visa nyckel',
+  'twoFactor.setup.pending': 'Kontrollerar',
+  'twoFactor.off.action': 'Stäng av tvåfaktorsautentisering',
+  'twoFactor.off.title': 'Stäng av tvåfaktorsautentisering?',
+  'twoFactor.off.body':
+    'Alla som har ditt lösenord kan logga in utan kod. Dina andra inloggade enheter förblir inloggade.',
+  'twoFactor.off.confirm': 'Stäng av',
+  'twoFactor.off.pending': 'Stänger av',
+  'twoFactor.off.cancel': 'Behåll på',
+  'twoFactor.off.done': 'Tvåfaktorsautentisering är avstängd',
 } satisfies TranslationOf<typeof En>
 
 export default messages

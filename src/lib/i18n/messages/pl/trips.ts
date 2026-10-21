@@ -301,6 +301,12 @@ const messages = {
   'book.readOnly.archived':
     'Ta podróż jest zarchiwizowana, więc rezerwacje i noclegi są tylko do odczytu. Przywróć podróż, aby je zmienić.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Zmiana została odrzucona. Sprawdź aktualny stan podróży przed kolejną zmianą.',
+  'transports.recovery.failed':
+    'Nie udało się odświeżyć podróży. Spróbuj ponownie przed wprowadzeniem zmian.',
+  'transports.readOnly.archived':
+    'Ta podróż jest zarchiwizowana. Przywróć ją, aby zmienić transport.',
   'transports.title': 'Przejazdy',
   'transports.empty': 'Nic jeszcze nie zapisano',
   'transports.count.transports': {

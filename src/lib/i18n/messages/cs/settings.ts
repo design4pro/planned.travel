@@ -757,6 +757,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'Dvoufaktorové ověřování vyžaduje heslo k tomuto účtu. Další stránka požádá o e-mail a pošle odkaz k nastavení. Nastavení hesla vás všude odhlásí. Přihlaste se znovu a vraťte se sem.',
   'twoFactor.nopassword.action': 'Nastavit heslo',
+  'twoFactor.setup.action': 'Znovu zobrazit nastavovací klíč',
+  'twoFactor.setup.title': 'Nastavovací klíč',
+  'twoFactor.setup.body':
+    'Přidejte tento klíč do dalšího zařízení. Klíč na ostatních zařízeních bude dál fungovat.',
+  'twoFactor.setup.done': 'Hotovo',
+  'twoFactor.setup.confirm': 'Zobrazit klíč',
+  'twoFactor.setup.pending': 'Ověřování',
+  'twoFactor.off.action': 'Vypnout dvoufaktorové ověřování',
+  'twoFactor.off.title': 'Vypnout dvoufaktorové ověřování?',
+  'twoFactor.off.body':
+    'Kdokoli s vaším heslem se bude moci přihlásit bez kódu. Vaše ostatní přihlášená zařízení zůstanou přihlášená.',
+  'twoFactor.off.confirm': 'Vypnout',
+  'twoFactor.off.pending': 'Vypínání',
+  'twoFactor.off.cancel': 'Ponechat zapnuté',
+  'twoFactor.off.done': 'Dvoufaktorové ověřování je vypnuté',
 } satisfies TranslationOf<typeof En>
 
 export default messages

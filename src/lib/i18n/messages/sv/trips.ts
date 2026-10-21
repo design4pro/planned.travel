@@ -282,6 +282,12 @@ const messages = {
   'book.readOnly.archived':
     'Den här resan är arkiverad, så bokningarna och boendena är skrivskyddade. Återställ resan för att ändra dem.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Ändringen nekades. Kontrollera resans aktuella läge innan du gör fler ändringar.',
+  'transports.recovery.failed':
+    'Resan kunde inte uppdateras. Försök igen innan du gör ändringar.',
+  'transports.readOnly.archived':
+    'Den här resan är arkiverad. Återställ den för att ändra transporter.',
   'transports.title': 'Färder',
   'transports.empty': 'Inget noterat än',
   'transports.count.transports': {

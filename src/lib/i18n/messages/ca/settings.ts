@@ -764,6 +764,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'Els dos factors requereixen una contrasenya en aquest compte. La pàgina següent demana el correu i envia un enllaç per establir-la. Això tanca totes les sessions. Torna a entrar i torna aquí.',
   'twoFactor.nopassword.action': 'Estableix una contrasenya',
+  'twoFactor.setup.action': 'Torna a mostrar la clau de configuració',
+  'twoFactor.setup.title': 'Clau de configuració',
+  'twoFactor.setup.body':
+    'Afegeix aquesta clau a un altre dispositiu. La clau dels altres dispositius continua funcionant.',
+  'twoFactor.setup.done': 'Fet',
+  'twoFactor.setup.confirm': 'Mostra la clau',
+  'twoFactor.setup.pending': 'S’està comprovant',
+  'twoFactor.off.action': 'Desactiva l’autenticació de dos factors',
+  'twoFactor.off.title': 'Vols desactivar l’autenticació de dos factors?',
+  'twoFactor.off.body':
+    'Qualsevol persona amb la teva contrasenya podrà iniciar sessió sense cap codi. Els altres dispositius on has iniciat sessió continuaran connectats.',
+  'twoFactor.off.confirm': 'Desactiva',
+  'twoFactor.off.pending': 'S’està desactivant',
+  'twoFactor.off.cancel': 'Mantén-la activada',
+  'twoFactor.off.done': 'L’autenticació de dos factors està desactivada',
 } satisfies TranslationOf<typeof En>
 
 export default messages

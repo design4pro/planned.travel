@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   addTripMember,
+  archiveTrip,
   createTransport,
   createTrip,
   getTransport,
@@ -267,6 +268,34 @@ describe('the pairing is checked before the role', () => {
   })
 })
 
+it.each(['private', 'foreign'] as const)(
+  'hides an archived %s transport named with a readable trip in status/delete calls',
+  async (kind) => {
+    const actualOwner =
+      kind === 'foreign' ? (await seedForeign('hidden-transport')).scope : owner
+    const hiddenTrip = await createTrip(actualOwner, {
+      title: 'Hidden',
+      visibility: 'private',
+    })
+    const hidden = await createTransport(actualOwner, {
+      tripId: hiddenTrip.id,
+      title: 'Hidden train',
+      mode: 'train',
+    })
+    await archiveTrip(actualOwner, hiddenTrip.id)
+    stubs.scope = caller
+    await expect(
+      setStatus({ tripId: tripA, transportId: hidden.id, status: 'confirmed' }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expect(
+      remove({ tripId: tripA, transportId: hidden.id }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    expect(await getTransport(actualOwner, hidden.id)).toEqual(hidden)
+    expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+    expect(stubs.sent).toEqual([])
+  },
+)
+
 describe('a transport write naming its own trip', () => {
   it('changes the status and tells that trip’s room', async () => {
     await setStatus({
@@ -320,6 +349,79 @@ describe('transport content roll-up', () => {
       legs: [],
     }
   }
+  it('refuses archived writes before room notifications or roll-up messages', async () => {
+    await archiveTrip(owner, tripB)
+    const before = await getTransport(owner, transportB)
+    const operations = [
+      () =>
+        setStatus({
+          tripId: tripB,
+          transportId: transportB,
+          status: 'confirmed',
+        }),
+      () => remove({ tripId: tripB, transportId: transportB }),
+      () =>
+        startStorage.run(startContext(), () =>
+          saveTransportFn({ data: record('2026-06-01') }),
+        ),
+      () =>
+        startStorage.run(startContext(), () =>
+          saveSearchedConnectionFn({
+            data: {
+              tripId: tripB,
+              transportId: '',
+              mode: 'train',
+              title: 'Searched journey',
+              priceMinor: 0,
+              currency: '',
+              stations: [
+                { name: 'Osaka', code: '', lat: null, lng: null, timezone: '' },
+                { name: 'Tokyo', code: '', lat: null, lng: null, timezone: '' },
+              ],
+              legs: [
+                {
+                  serviceNumber: '',
+                  platform: '',
+                  seat: '',
+                  departureDayId: '',
+                  arrivalDayId: '',
+                  departureDate: '',
+                  departureTime: '',
+                  arrivalDate: '',
+                  arrivalTime: '',
+                },
+              ],
+            },
+          }),
+        ),
+    ]
+    for (const operation of operations) {
+      await expect(operation()).rejects.toMatchObject({ code: 'TRIP_ARCHIVED' })
+      expect(await getTransport(owner, transportB)).toEqual(before)
+      expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+      expect(stubs.sent).toEqual([])
+    }
+    for (const requestedTrip of [tripA, tripB]) {
+      await expect(
+        setStatus({
+          tripId: requestedTrip,
+          transportId: 'missing',
+          status: 'confirmed',
+        }),
+      ).rejects.toBeInstanceOf(NotFoundError)
+    }
+    await expect(
+      setStatus({
+        tripId: tripA,
+        transportId: transportB,
+        status: 'confirmed',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+    await expect(
+      remove({ tripId: tripA, transportId: transportB }),
+    ).rejects.toBeInstanceOf(NotFoundError)
+  })
+
   function expectEnvelopes(years: Array<number>) {
     expect(stubs.sent).toHaveLength(years.length * 2)
     for (const scope of [owner, caller])

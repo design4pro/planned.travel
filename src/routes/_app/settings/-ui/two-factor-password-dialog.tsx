@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Button,
   Dialog,
@@ -15,6 +15,7 @@ import {
 import { useTranslate } from '#/lib/i18n'
 import { thrownToAuthFailure } from '#/lib/auth/client'
 import { TwoFactorFeedback, useTwoFactorFeedback } from './two-factor-feedback'
+import { TwoFactorKey } from './two-factor-key'
 import type { AuthFailure } from '#/lib/auth/client'
 
 /** Each action asks anew; only a successful action may replace the opener. */
@@ -24,19 +25,30 @@ export function TwoFactorPasswordDialog({
   body,
   confirm,
   pending,
+  cancel,
+  danger = false,
   onConfirm,
   focusReplacement,
+  done,
 }: {
   action: string
   title: string
   body: string
   confirm: string
   pending: string
-  onConfirm: (password: string) => Promise<AuthFailure | null>
+  onConfirm: (password: string) => Promise<AuthFailure | { uri: string } | null>
+  done?: string
+  cancel?: string
+  danger?: boolean
   focusReplacement: () => void
 }) {
   const t = useTranslate()
   const [open, setOpen] = useState(false)
+  const [uri, setUri] = useState<string | null>(null)
+  const doneButton = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (uri) doneButton.current?.focus()
+  }, [uri])
   const [password, setPassword] = useState('')
   const [invalid, setInvalid] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -44,6 +56,11 @@ export function TwoFactorPasswordDialog({
   const field = useRef<HTMLInputElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const feedback = useTwoFactorFeedback()
+  function close() {
+    setOpen(false)
+    setPassword('')
+    setUri(null)
+  }
   async function submit() {
     if (busy || feedback.wait || !password) return
     setBusy(true)
@@ -55,6 +72,9 @@ export function TwoFactorPasswordDialog({
         succeeded.current = true
         setPassword('')
         setOpen(false)
+      } else if ('uri' in failure) {
+        setPassword('')
+        setUri(failure.uri)
       } else if (failure.code === 'INVALID_PASSWORD') {
         setPassword('')
         setInvalid(true)
@@ -74,9 +94,9 @@ export function TwoFactorPasswordDialog({
       open={open}
       onOpenChange={(value) => {
         if (busy) return
-        setOpen(value)
-        if (!value) setPassword('')
+        if (!value) close()
         else {
+          setOpen(true)
           setInvalid(false)
           feedback.setFailure(null)
           succeeded.current = false
@@ -84,7 +104,11 @@ export function TwoFactorPasswordDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button ref={trigger} variant="secondary">
+        <Button
+          ref={trigger}
+          variant="secondary"
+          className="h-auto min-h-10 whitespace-normal"
+        >
           {action}
         </Button>
       </DialogTrigger>
@@ -109,41 +133,51 @@ export function TwoFactorPasswordDialog({
           </DialogHeader>
           <DialogBody className="flex flex-col gap-4">
             <TwoFactorFeedback failure={feedback.failure} />
-            <Field
-              label={t('settings.twoFactor.password.label')}
-              error={
-                invalid ? t('settings.twoFactor.password.invalid') : undefined
-              }
-            >
-              <Input
-                ref={field}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </Field>
+            {uri ? (
+              <TwoFactorKey uri={uri} />
+            ) : (
+              <Field
+                label={t('settings.twoFactor.password.label')}
+                error={
+                  invalid ? t('settings.twoFactor.password.invalid') : undefined
+                }
+              >
+                <Input
+                  ref={field}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                />
+              </Field>
+            )}
           </DialogBody>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => {
-                setOpen(false)
-                setPassword('')
-              }}
-            >
-              {t('modules.action.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              loading={busy}
-              loadingLabel={pending}
-              disabled={!password || !!feedback.wait}
-            >
-              {confirm}
-            </Button>
+            {uri ? (
+              <Button ref={doneButton} type="button" onClick={close}>
+                {done}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={close}
+                >
+                  {cancel ?? t('modules.action.cancel')}
+                </Button>
+                <Button
+                  type="submit"
+                  variant={danger ? 'danger' : undefined}
+                  loading={busy}
+                  loadingLabel={pending}
+                  disabled={!password || !!feedback.wait}
+                >
+                  {confirm}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

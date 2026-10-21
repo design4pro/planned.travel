@@ -308,6 +308,12 @@ const messages = {
   'book.readOnly.archived':
     'هذه الرحلة مؤرشفة، لذا الحجوزات والإقامات للقراءة فقط. استعد الرحلة من الأرشيف لتغييرها.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'تم رفض هذا التغيير. راجع الحالة الحالية للرحلة قبل إجراء تغييرات أخرى.',
+  'transports.recovery.failed':
+    'تعذر تحديث الرحلة. حاول مرة أخرى قبل إجراء تغييرات.',
+  'transports.readOnly.archived':
+    'هذه الرحلة مؤرشفة. استعدها لتعديل وسائل النقل.',
   'transports.title': 'التنقلات',
   'transports.empty': 'لا شيء مسجَّل بعد',
   'transports.count.transports': {

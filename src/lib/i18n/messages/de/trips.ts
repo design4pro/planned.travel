@@ -288,6 +288,12 @@ const messages = {
   'book.readOnly.archived':
     'Diese Reise ist archiviert, Buchungen und Unterkünfte sind daher schreibgeschützt. Stelle die Reise wieder her, um sie zu ändern.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Diese Änderung wurde abgelehnt. Prüfe den aktuellen Stand der Reise vor weiteren Änderungen.',
+  'transports.recovery.failed':
+    'Die Reise konnte nicht aktualisiert werden. Versuche es vor weiteren Änderungen erneut.',
+  'transports.readOnly.archived':
+    'Diese Reise ist archiviert. Stelle sie wieder her, um Transporte zu ändern.',
   'transports.title': 'Transfers',
   'transports.empty': 'Noch nichts erfasst',
   'transports.count.transports': {

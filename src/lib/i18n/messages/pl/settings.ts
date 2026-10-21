@@ -776,6 +776,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'Uwierzytelnianie dwuskładnikowe wymaga hasła do tego konta. Następna strona poprosi o e-mail i wyśle link do ustawienia hasła. Ustawienie hasła wyloguje Cię wszędzie. Zaloguj się ponownie i wróć tutaj.',
   'twoFactor.nopassword.action': 'Ustaw hasło',
+  'twoFactor.setup.action': 'Pokaż ponownie klucz konfiguracji',
+  'twoFactor.setup.title': 'Klucz konfiguracji',
+  'twoFactor.setup.body':
+    'Dodaj ten klucz na innym urządzeniu. Klucz na pozostałych urządzeniach nadal działa.',
+  'twoFactor.setup.done': 'Gotowe',
+  'twoFactor.setup.confirm': 'Pokaż klucz',
+  'twoFactor.setup.pending': 'Sprawdzanie',
+  'twoFactor.off.action': 'Wyłącz uwierzytelnianie dwuskładnikowe',
+  'twoFactor.off.title': 'Wyłączyć uwierzytelnianie dwuskładnikowe?',
+  'twoFactor.off.body':
+    'Każdy, kto zna Twoje hasło, będzie mógł zalogować się bez kodu. Pozostałe zalogowane urządzenia pozostaną zalogowane.',
+  'twoFactor.off.confirm': 'Wyłącz',
+  'twoFactor.off.pending': 'Wyłączanie',
+  'twoFactor.off.cancel': 'Pozostaw włączone',
+  'twoFactor.off.done': 'Uwierzytelnianie dwuskładnikowe jest wyłączone',
 } satisfies TranslationOf<typeof En>
 
 export default messages

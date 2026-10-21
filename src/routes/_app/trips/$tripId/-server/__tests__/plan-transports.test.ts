@@ -377,7 +377,7 @@ describe('what one placement costs', () => {
         sql.split(' where ')[0].endsWith(`from "${table}"`),
     )
 
-  it('resolves the trip once and reads only the day it places', async () => {
+  it('rechecks trip writability at the repository boundary and reads only the day it places', async () => {
     const scope = tenant.scope
     // A journey on another day of the same trip. The planner issues one placement per day a drag
     // touches, in parallel, so a read that took the trip to place a day would grow with the
@@ -400,9 +400,9 @@ describe('what one placement costs', () => {
       ],
     })
 
-    // Once: the handler proves the trip is writable and hands that same row to the repository,
-    // whose own guard reads it again only for a caller that hands it nothing.
-    expect(readsOf('trips')).toHaveLength(1)
+    // Both boundaries enforce current readability and archive state. A supplied row cannot
+    // stand in for the repository guard, even though the handler has already checked it.
+    expect(readsOf('trips')).toHaveLength(2)
 
     // And the journeys were read as the day: three questions, none of them the trip's whole set.
     // *Which* rows each one reaches is the query plan's answer, not this file's — the assertion

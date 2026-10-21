@@ -631,6 +631,21 @@ const messages = {
   'twoFactor.nopassword.body':
     '此账户需要密码才能使用双重身份验证。下一页面会要求填写邮箱并发送设置密码的链接。设置密码会退出所有设备上的登录。请重新登录后返回这里。',
   'twoFactor.nopassword.action': '设置密码',
+  'twoFactor.setup.action': '再次显示设置密钥',
+  'twoFactor.setup.title': '设置密钥',
+  'twoFactor.setup.body':
+    '将此密钥添加到另一台设备。其他设备上已有的密钥仍可使用。',
+  'twoFactor.setup.done': '完成',
+  'twoFactor.setup.confirm': '显示密钥',
+  'twoFactor.setup.pending': '正在检查',
+  'twoFactor.off.action': '关闭双重验证',
+  'twoFactor.off.title': '要关闭双重验证吗？',
+  'twoFactor.off.body':
+    '任何知道你密码的人都可以无需验证码登录。你已登录的其他设备将保持登录状态。',
+  'twoFactor.off.confirm': '关闭',
+  'twoFactor.off.pending': '正在关闭',
+  'twoFactor.off.cancel': '保持开启',
+  'twoFactor.off.done': '双重验证已关闭',
 } satisfies TranslationOf<typeof En>
 
 export default messages

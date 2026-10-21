@@ -135,6 +135,28 @@ describe('TransportDialog', () => {
     expect(save.mock.calls[0]?.[0].data).toMatchObject({ intent: 'create' })
   })
 
+  it('passes an authored save refusal to the desk recovery owner', async () => {
+    const onWriteError = vi.fn()
+    const refusal = new Error('refused')
+    save.mockRejectedValueOnce(refusal)
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <TransportDialog
+          tripId="trip-1"
+          transport={TRANSPORT}
+          days={[]}
+          canSearchConnections={false}
+          currency="EUR"
+          open
+          onOpenChange={() => {}}
+          onWriteError={onWriteError}
+        />
+      </I18nProvider>,
+    )
+    submitTheForm()
+    await vi.waitFor(() => expect(onWriteError).toHaveBeenCalledWith(refusal))
+  })
+
   it('saves an existing transport with the edit intent and its own id', async () => {
     openDialog(TRANSPORT)
     submitTheForm()

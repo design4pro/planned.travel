@@ -767,6 +767,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'Les deux facteurs nécessitent un mot de passe pour ce compte. La page suivante demande votre e-mail et envoie un lien pour en définir un. Cela vous déconnecte partout. Reconnectez-vous, puis revenez ici.',
   'twoFactor.nopassword.action': 'Définir un mot de passe',
+  'twoFactor.setup.action': 'Afficher à nouveau la clé de configuration',
+  'twoFactor.setup.title': 'Clé de configuration',
+  'twoFactor.setup.body':
+    'Ajoutez cette clé sur un autre appareil. La clé sur vos autres appareils continue de fonctionner.',
+  'twoFactor.setup.done': 'Terminé',
+  'twoFactor.setup.confirm': 'Afficher la clé',
+  'twoFactor.setup.pending': 'Vérification',
+  'twoFactor.off.action': 'Désactiver la double authentification',
+  'twoFactor.off.title': 'Désactiver la double authentification ?',
+  'twoFactor.off.body':
+    'Toute personne connaissant votre mot de passe pourra se connecter sans code. Vos autres appareils connectés resteront connectés.',
+  'twoFactor.off.confirm': 'Désactiver',
+  'twoFactor.off.pending': 'Désactivation',
+  'twoFactor.off.cancel': 'La garder activée',
+  'twoFactor.off.done': 'La double authentification est désactivée',
 } satisfies TranslationOf<typeof En>
 
 export default messages

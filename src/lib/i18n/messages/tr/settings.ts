@@ -740,6 +740,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'İki faktör bu hesapta bir parola gerektirir. Sonraki sayfa e-postanızı ister ve ayarlamak için bağlantı gönderir. Parola belirlemek her yerde oturumunuzu kapatır. Tekrar giriş yapıp buraya dönün.',
   'twoFactor.nopassword.action': 'Parola belirle',
+  'twoFactor.setup.action': 'Kurulum anahtarını yeniden göster',
+  'twoFactor.setup.title': 'Kurulum anahtarı',
+  'twoFactor.setup.body':
+    'Bu anahtarı başka bir cihaza ekleyin. Diğer cihazlarınızdaki anahtar çalışmaya devam eder.',
+  'twoFactor.setup.done': 'Bitti',
+  'twoFactor.setup.confirm': 'Anahtarı göster',
+  'twoFactor.setup.pending': 'Kontrol ediliyor',
+  'twoFactor.off.action': 'İki faktörlü doğrulamayı kapat',
+  'twoFactor.off.title': 'İki faktörlü doğrulama kapatılsın mı?',
+  'twoFactor.off.body':
+    'Parolanızı bilen herkes kod olmadan giriş yapabilecek. Diğer giriş yapılmış cihazlarınız açık kalacak.',
+  'twoFactor.off.confirm': 'Kapat',
+  'twoFactor.off.pending': 'Kapatılıyor',
+  'twoFactor.off.cancel': 'Açık tut',
+  'twoFactor.off.done': 'İki faktörlü doğrulama kapalı',
 } satisfies TranslationOf<typeof En>
 
 export default messages

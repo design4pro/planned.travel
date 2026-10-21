@@ -738,6 +738,21 @@ const messages = {
   'twoFactor.nopassword.body':
     'Hai yếu tố cần mật khẩu cho tài khoản này. Trang tiếp theo yêu cầu email và gửi liên kết đặt mật khẩu. Việc đặt mật khẩu đăng xuất bạn ở mọi nơi. Đăng nhập lại rồi quay lại đây.',
   'twoFactor.nopassword.action': 'Đặt mật khẩu',
+  'twoFactor.setup.action': 'Hiện lại khóa thiết lập',
+  'twoFactor.setup.title': 'Khóa thiết lập',
+  'twoFactor.setup.body':
+    'Thêm khóa này vào thiết bị khác. Khóa trên các thiết bị khác của bạn vẫn hoạt động.',
+  'twoFactor.setup.done': 'Xong',
+  'twoFactor.setup.confirm': 'Hiện khóa',
+  'twoFactor.setup.pending': 'Đang kiểm tra',
+  'twoFactor.off.action': 'Tắt xác thực hai yếu tố',
+  'twoFactor.off.title': 'Tắt xác thực hai yếu tố?',
+  'twoFactor.off.body':
+    'Bất kỳ ai biết mật khẩu của bạn đều có thể đăng nhập mà không cần mã. Các thiết bị khác đã đăng nhập vẫn sẽ duy trì đăng nhập.',
+  'twoFactor.off.confirm': 'Tắt',
+  'twoFactor.off.pending': 'Đang tắt',
+  'twoFactor.off.cancel': 'Giữ bật',
+  'twoFactor.off.done': 'Xác thực hai yếu tố đã tắt',
 } satisfies TranslationOf<typeof En>
 
 export default messages
