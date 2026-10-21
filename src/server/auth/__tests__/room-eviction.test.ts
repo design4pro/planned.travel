@@ -672,6 +672,123 @@ describe('ending one’s own session queues the close of the person’s trip-roo
     expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
   })
 
+  it('queues nothing when neither source has another unexpired session', async () => {
+    const person = await signedInPerson('alone')
+    memberOfTwoMore(person)
+    await signedInPerson('bystander')
+
+    await getAuth().api.revokeOtherSessions({ headers: person.headers })
+
+    expect(evictions()).toEqual([])
+  })
+
+  it('still queues when only the durable rows contain another session', async () => {
+    const person = await signedInPerson('unindexed')
+    await signInAgain(person)
+    const spaces = memberOfTwoMore(person)
+    loseIndexOf(person)
+
+    await getAuth().api.revokeOtherSessions({ headers: person.headers })
+
+    expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
+  })
+
+  it('still queues when only the endpoint list contains another session', async () => {
+    const person = await signedInPerson('cached')
+    const originalTokens = sessionTokensOf(person)
+    await signInAgain(person)
+    const spaces = memberOfTwoMore(person)
+    for (const token of sessionTokensOf(person)) {
+      if (!originalTokens.includes(token)) {
+        authDatabase.sqlite.prepare('delete from session where token = ?').run(token)
+      }
+    }
+
+    await getAuth().api.revokeOtherSessions({ headers: person.headers })
+
+    expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
+  })
+
+  it('queues nothing for expired other sessions in either source', async () => {
+    const person = await signedInPerson('expired')
+    const originalTokens = sessionTokensOf(person)
+    await signInAgain(person)
+    memberOfTwoMore(person)
+    const expiredAt = Date.now() - 60_000
+    for (const token of sessionTokensOf(person)) {
+      if (!originalTokens.includes(token)) {
+        authDatabase.sqlite.prepare('update session set expires_at = ? where token = ?').run(expiredAt, token)
+      }
+    }
+    const indexKey = indexKeyOf(person)
+    const index = JSON.parse(String(kv().store.get(indexKey))) as Array<{ token: string; expiresAt: number }>
+    kv().store.set(indexKey, JSON.stringify(index.map((entry) => originalTokens.includes(entry.token) ? entry : { ...entry, expiresAt: expiredAt })))
+
+    await getAuth().api.revokeOtherSessions({ headers: person.headers })
+
+    expect(evictions()).toEqual([])
+  })
+
+  it.each(['durable', 'index'] as const)('evicts on a %s read error and logs only its name', async (source) => {
+    const person = await signedInPerson('unreadable')
+    const spaces = memberOfTwoMore(person)
+    const [token] = sessionTokensOf(person)
+    const { adapter, internalAdapter } = await getAuth().$context
+    const failure = new TypeError(`Failed query with token ${token}`)
+    if (source === 'durable') {
+      const real = adapter.findMany.bind(adapter)
+      vi.spyOn(adapter, 'findMany').mockImplementation(async (query) => {
+        if (query.model === 'session') throw failure
+        return real(query)
+      })
+    } else {
+      vi.spyOn(internalAdapter, 'listSessions').mockRejectedValueOnce(failure)
+    }
+    const warnings = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+
+    await expect(getAuth().api.revokeOtherSessions({ headers: person.headers })).resolves.toMatchObject({ status: true })
+
+    expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
+    expect(warnings).toHaveBeenCalledOnce()
+    const line = String(warnings.mock.calls[0]?.[0])
+    expect(JSON.parse(line)).toMatchObject({ event: 'room-eviction.other-sessions.unread', reason: 'TypeError' })
+    expect(line).not.toContain(String(token))
+    expect(line).not.toContain(failure.message)
+  })
+
+  it('overwrites a skip flag supplied by an in-process caller', async () => {
+    const person = await signedInPerson('forged')
+    await signInAgain(person)
+    const spaces = memberOfTwoMore(person)
+
+    await getAuth().api.revokeOtherSessions({
+      headers: person.headers,
+      roomEvictionShouldEvict: false,
+    } as { headers: Headers })
+
+    expect(evictedWorkspaces(person)).toEqual(expectedWorkspaces(spaces))
+  })
+
+  it('keeps the shipped rate-limit configuration unchanged', () => {
+    expect(getAuth().options.rateLimit).toEqual({
+      enabled: true,
+      storage: 'secondary-storage',
+      window: 60,
+      max: 100,
+      customRules: {
+        '/sign-in/email': { window: 60, max: 10 },
+        '/sign-up/email': { window: 300, max: 5 },
+        '/request-password-reset': { window: 300, max: 5 },
+        '/reset-password': { window: 300, max: 10 },
+        '/send-verification-email': { window: 300, max: 5 },
+        '/two-factor/verify-totp': { window: 60, max: 10 },
+        '/two-factor/verify-backup-code': { window: 300, max: 5 },
+        '/passkey/authenticate/verify': { window: 60, max: 20 },
+        '/organization/accept-invitation': { window: 300, max: 20 },
+      },
+    })
+  })
+
   it('queues it when a person revokes all their sessions', async () => {
     const person = await signedInPerson('careful')
     await signInAgain(person)
