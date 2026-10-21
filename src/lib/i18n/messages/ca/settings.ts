@@ -705,6 +705,10 @@ const messages = {
   'twoFactor.password.invalid': 'Aquesta contrasenya no és correcta.',
   'twoFactor.key.intro':
     'Necessites una aplicació d’autenticació al mòbil. Afegeix-hi aquesta clau i torna aquí. Els dos factors encara no estan activats.',
+  'twoFactor.key.matrixLabel':
+    'Codi de configuració. La mateixa clau està disponible com a text',
+  'twoFactor.key.matrixFailed':
+    'No hem pogut generar un codi per a aquesta clau. Introdueix la clau de configuració a la teva aplicació.',
   'twoFactor.key.label': 'Clau de configuració',
   'twoFactor.key.copy': 'Copia la clau',
   'twoFactor.key.copied': 'Clau copiada',

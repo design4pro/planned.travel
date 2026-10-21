@@ -684,6 +684,9 @@ const messages = {
   'twoFactor.password.invalid': 'كلمة المرور غير صحيحة.',
   'twoFactor.key.intro':
     'تحتاج إلى تطبيق مصادقة على هاتفك. أضف هذا المفتاح ثم عد إلى هنا. المصادقة الثنائية ليست مفعلة بعد.',
+  'twoFactor.key.matrixLabel': 'رمز الإعداد. المفتاح نفسه متاح كنص',
+  'twoFactor.key.matrixFailed':
+    'تعذر إنشاء رمز لهذا المفتاح. أدخل مفتاح الإعداد في تطبيقك.',
   'twoFactor.key.label': 'مفتاح الإعداد',
   'twoFactor.key.copy': 'نسخ المفتاح',
   'twoFactor.key.copied': 'تم نسخ المفتاح',

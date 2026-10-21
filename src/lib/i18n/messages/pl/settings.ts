@@ -717,6 +717,10 @@ const messages = {
   'twoFactor.password.invalid': 'To hasło jest nieprawidłowe.',
   'twoFactor.key.intro':
     'Potrzebujesz aplikacji uwierzytelniającej w telefonie. Dodaj do niej ten klucz i wróć tutaj. Uwierzytelnianie dwuskładnikowe nie jest jeszcze włączone.',
+  'twoFactor.key.matrixLabel':
+    'Kod konfiguracji. Ten sam klucz jest dostępny jako tekst',
+  'twoFactor.key.matrixFailed':
+    'Nie udało się wygenerować kodu dla tego klucza. Wpisz klucz konfiguracji w aplikacji.',
   'twoFactor.key.label': 'Klucz konfiguracji',
   'twoFactor.key.copy': 'Kopiuj klucz',
   'twoFactor.key.copied': 'Skopiowano klucz',

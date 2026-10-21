@@ -681,6 +681,10 @@ const messages = {
   'twoFactor.password.invalid': 'Bu parola doğru değil.',
   'twoFactor.key.intro':
     'Telefonunuzda bir doğrulayıcı uygulaması gerekiyor. Bu anahtarı ekleyip buraya dönün. İki faktör henüz açık değil.',
+  'twoFactor.key.matrixLabel':
+    'Kurulum kodu. Aynı anahtar metin olarak da mevcuttur',
+  'twoFactor.key.matrixFailed':
+    'Bu anahtar için kod oluşturamadık. Kurulum anahtarını uygulamanıza girin.',
   'twoFactor.key.label': 'Kurulum anahtarı',
   'twoFactor.key.copy': 'Anahtarı kopyala',
   'twoFactor.key.copied': 'Anahtar kopyalandı',

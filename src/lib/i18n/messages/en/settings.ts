@@ -765,6 +765,9 @@ const messages = {
   'twoFactor.password.invalid': 'That password is not right.',
   'twoFactor.key.intro':
     'You need an authenticator app on your phone. Add this key to it, then come back to this page. Two-factor is not on yet.',
+  'twoFactor.key.matrixLabel': 'Setup code. The same key is available as text',
+  'twoFactor.key.matrixFailed':
+    'We could not draw a code for this key. Enter the setup key in your app.',
   'twoFactor.key.label': 'Setup key',
   'twoFactor.key.copy': 'Copy key',
   'twoFactor.key.copied': 'Key copied',

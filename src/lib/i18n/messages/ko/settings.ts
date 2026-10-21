@@ -623,6 +623,10 @@ const messages = {
   'twoFactor.password.invalid': '비밀번호가 올바르지 않습니다.',
   'twoFactor.key.intro':
     '휴대전화에 인증 앱이 필요합니다. 이 키를 추가한 다음 여기로 돌아오세요. 2단계 인증은 아직 켜지지 않았습니다.',
+  'twoFactor.key.matrixLabel':
+    '설정 코드. 동일한 키를 텍스트로도 확인할 수 있습니다',
+  'twoFactor.key.matrixFailed':
+    '이 키의 코드를 생성하지 못했습니다. 앱에 설정 키를 입력하세요.',
   'twoFactor.key.label': '설정 키',
   'twoFactor.key.copy': '키 복사',
   'twoFactor.key.copied': '키가 복사되었습니다',

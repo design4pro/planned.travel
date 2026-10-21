@@ -578,6 +578,9 @@ const messages = {
   'twoFactor.password.invalid': '密码不正确。',
   'twoFactor.key.intro':
     '你需要在手机上安装身份验证应用。添加此密钥后，回到本页面。双重身份验证尚未启用。',
+  'twoFactor.key.matrixLabel': '设置码。同一密钥也以文本形式提供',
+  'twoFactor.key.matrixFailed':
+    '无法为此密钥生成代码。请在应用中输入设置密钥。',
   'twoFactor.key.label': '设置密钥',
   'twoFactor.key.copy': '复制密钥',
   'twoFactor.key.copied': '已复制密钥',

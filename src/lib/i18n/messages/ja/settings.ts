@@ -651,6 +651,9 @@ const messages = {
   'twoFactor.password.invalid': 'パスワードが正しくありません。',
   'twoFactor.key.intro':
     'スマートフォンに認証アプリが必要です。このキーを追加してから、このページに戻ってください。二要素認証はまだ有効ではありません。',
+  'twoFactor.key.matrixLabel': '設定コード。同じキーをテキストでも確認できます',
+  'twoFactor.key.matrixFailed':
+    'このキーのコードを生成できませんでした。アプリに設定キーを入力してください。',
   'twoFactor.key.label': '設定キー',
   'twoFactor.key.copy': 'キーをコピー',
   'twoFactor.key.copied': 'キーをコピーしました',
