@@ -515,6 +515,23 @@ describe('ending one’s own session queues the close of the person’s trip-roo
     expect(evictions()).toEqual([])
   })
 
+  it('queues nothing for a reset token that has expired', async () => {
+    const person = await signedInPerson('late')
+    memberOfTwoMore(person)
+    const token = await resetTokenFor(person)
+    authDatabase.sqlite
+      .prepare('update verification set expires_at = ? where identifier = ?')
+      .run(Date.now() - 60_000, `reset-password:${token}`)
+
+    await expect(
+      getAuth().api.resetPassword({
+        body: { token, newPassword: 'a-brand-new-passphrase-1' },
+      }),
+    ).rejects.toBeDefined()
+
+    expect(evictions()).toEqual([])
+  })
+
   it('reads the reset token from the query when the body has none', async () => {
     const person = await signedInPerson('querying')
     const spaces = memberOfTwoMore(person)
@@ -946,6 +963,129 @@ describe('ending one’s own session queues the close of the person’s trip-roo
     expect(line).toContain(person.userId)
     expect(line).not.toContain(person.email)
     warnings.mockRestore()
+  })
+})
+
+/* ------------------------------------------------------ ending an impersonated session */
+
+/** Last write wins and an empty value is a deletion, as a browser treats the six cookies of an impersonation. */
+function cookieHeaderAfter(
+  setCookies: ReadonlyArray<string>,
+): Record<string, string> {
+  const jar = new Map<string, string>()
+  for (const entry of setCookies) {
+    const pair = entry.split(';')[0]
+    const separator = pair.indexOf('=')
+    const name = pair.slice(0, separator).trim()
+    const value = pair.slice(separator + 1)
+    if (value === '') jar.delete(name)
+    else jar.set(name, value)
+  }
+  return {
+    cookie: [...jar].map(([name, value]) => `${name}=${value}`).join('; '),
+  }
+}
+
+/** The operator wears `worn`'s account: the headers a browser would then send, and nothing queued yet. */
+async function impersonating(worn: Person): Promise<{
+  operator: Person
+  worn: Person
+  headers: Headers
+}> {
+  const admin = await operator()
+  const started = await getAuth().api.impersonateUser({
+    body: { userId: worn.userId },
+    headers: admin.headers,
+    returnHeaders: true,
+  })
+  shared.queued = []
+  return {
+    operator: admin,
+    worn,
+    headers: new Headers(cookieHeaderAfter(started.headers.getSetCookie())),
+  }
+}
+
+describe('ending an impersonated session queues the close of the impersonated person’s trip-room sockets', () => {
+  it('queues it for every workspace of the person who was impersonated, and none of the operator’s', async () => {
+    const worn = await signedInPerson('worn')
+    const spaces = memberOfTwoMore(worn)
+    const { operator: admin, headers } = await impersonating(worn)
+
+    await getAuth().api.stopImpersonating({ headers, returnHeaders: true })
+
+    expect(evictedWorkspaces(worn)).toEqual(expectedWorkspaces(spaces))
+    expect(evictedWorkspaces(admin)).toEqual([])
+    expect(evictions()).toHaveLength(expectedWorkspaces(spaces).length)
+  })
+
+  it('no longer authenticates the impersonated session after the exit', async () => {
+    const worn = await signedInPerson('worn')
+    const { headers } = await impersonating(worn)
+
+    await getAuth().api.stopImpersonating({ headers, returnHeaders: true })
+
+    await expect(getAuth().api.getSession({ headers })).resolves.toBeNull()
+  })
+
+  it('queues nothing when the exit fails for want of the signed operator cookie', async () => {
+    const worn = await signedInPerson('worn')
+    memberOfTwoMore(worn)
+    const { headers } = await impersonating(worn)
+    const wornOnly = new Headers({
+      cookie: (headers.get('cookie') ?? '')
+        .split('; ')
+        .filter((pair) => !pair.startsWith('planned.admin_session='))
+        .join('; '),
+    })
+
+    await expect(
+      getAuth().api.stopImpersonating({ headers: wornOnly }),
+    ).rejects.toBeDefined()
+
+    expect(evictions()).toEqual([])
+  })
+
+  it('queues nothing for a caller with no session', async () => {
+    await expect(
+      getAuth().api.stopImpersonating({ headers: new Headers() }),
+    ).rejects.toBeDefined()
+
+    expect(evictions()).toEqual([])
+  })
+
+  it('lets the exit stand, and forwards its cookies, when the queue cannot be reached', async () => {
+    const worn = await signedInPerson('worn')
+    memberOfTwoMore(worn)
+    const { headers } = await impersonating(worn)
+    shared.queueFails = true
+    const warnings = vi
+      .spyOn(console, 'warn')
+      .mockImplementation(() => undefined)
+
+    const exit = await getAuth().api.stopImpersonating({
+      headers,
+      returnHeaders: true,
+    })
+
+    expect(exit.headers.getSetCookie().length).toBeGreaterThan(0)
+    expect(warnings).toHaveBeenCalledOnce()
+    const line = String(warnings.mock.calls[0]?.[0])
+    expect(line).toContain('room-eviction.enqueue.failed')
+    expect(line).toContain(worn.userId)
+    expect(line).not.toContain(worn.email)
+    warnings.mockRestore()
+  })
+
+  it('queues the impersonated person, and not the operator, when the person signs out of it', async () => {
+    const worn = await signedInPerson('worn')
+    const spaces = memberOfTwoMore(worn)
+    const { operator: admin, headers } = await impersonating(worn)
+
+    await getAuth().api.signOut({ headers })
+
+    expect(evictedWorkspaces(worn)).toEqual(expectedWorkspaces(spaces))
+    expect(evictedWorkspaces(admin)).toEqual([])
   })
 })
 

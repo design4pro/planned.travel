@@ -348,7 +348,8 @@ as `07-S2` does.
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
   task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends
   their own session - a password reset, a password change that revokes the other sessions, a
-  sign-out, a revoke of one, the other or all sessions (#1093); a password reset, a revoke of all
+  sign-out, a revoke of one, the other or all sessions (#1093), and so does the person an operator
+  stops impersonating (#1179); a password reset, a revoke of all
   sessions and a password change that revokes the others also delete the cached session blob of each
   ended session by name, so the reconnect is refused within the KV convergence window (about 60
   seconds; a refresh in another colo inside it can re-cache a blob, which a second revoke of all
