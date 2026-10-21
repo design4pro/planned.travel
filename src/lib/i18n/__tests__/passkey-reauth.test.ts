@@ -37,6 +37,14 @@ describe('the passkeys stale-session notices', () => {
         expect(typeof sentence).toBe('string')
         expect(sentence as string).toContain(action as string)
       }
+      // Three different situations, three different sentences: a stale session to add, a stale
+      // session to remove, and a session that has already ended.
+      const sentences = [
+        messages['passkeys.add.stale'],
+        messages['passkeys.delete.stale'],
+        messages['passkeys.error.sessionEnded'],
+      ]
+      expect(new Set(sentences).size).toBe(sentences.length)
     },
   )
 })
