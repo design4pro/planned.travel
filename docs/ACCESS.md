@@ -1367,8 +1367,8 @@ collaboration report needs, and the room refuses its `patch` frames before it st
 anything. The shipped client never sends one (it re-reads its loader from D1 on a signal), so no
 screen loses a control. The writes that matter go through server functions and are attributed by
 `trail()` above. One limit stays: the room entry that `mirrorToRoom` writes for such a server write
-carries the worn person's id, and the operator is named only in the tenant `audit_log`. A socket
-opened before an impersonation ends or expires keeps its role (§6.2, #1252, #1179).
+carries the worn person's id, and the operator is named only in the tenant `audit_log`. Closing the
+sockets when an operator ends the impersonation is a separate rule (§6.1, #1179).
 
 **Changing a member's role is refused by name too.** `changeMemberRoleFn` (`src/server/fns/members.ts`)
 reads the session, and a missing session counts as impersonated (`isImpersonated`), so it throws
