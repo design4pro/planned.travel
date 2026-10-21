@@ -753,6 +753,14 @@ const messages = {
   'twoFactor.setup.done': 'Kész',
   'twoFactor.setup.confirm': 'Kulcs megjelenítése',
   'twoFactor.setup.pending': 'Ellenőrzés',
+  'twoFactor.off.action': 'Kétlépcsős hitelesítés kikapcsolása',
+  'twoFactor.off.title': 'Kikapcsolod a kétlépcsős hitelesítést?',
+  'twoFactor.off.body':
+    'Aki ismeri a jelszavadat, kód nélkül is bejelentkezhet. A többi bejelentkezett eszközöd bejelentkezve marad.',
+  'twoFactor.off.confirm': 'Kikapcsolás',
+  'twoFactor.off.pending': 'Kikapcsolás folyamatban',
+  'twoFactor.off.cancel': 'Maradjon bekapcsolva',
+  'twoFactor.off.done': 'A kétlépcsős hitelesítés ki van kapcsolva',
 } satisfies TranslationOf<typeof En>
 
 export default messages

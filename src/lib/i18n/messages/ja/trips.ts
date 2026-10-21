@@ -277,6 +277,12 @@ const messages = {
   'book.readOnly.archived':
     'この旅行はアーカイブ済みのため、予約と宿泊は閲覧専用です。変更するには旅行を元に戻してください。',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'この変更は拒否されました。さらに変更する前に、旅行の現在の状態を確認してください。',
+  'transports.recovery.failed':
+    '旅行を再読み込みできませんでした。変更する前にもう一度お試しください。',
+  'transports.readOnly.archived':
+    'この旅行はアーカイブされています。移動手段を変更するには復元してください。',
   'transports.title': '移動',
   'transports.empty': 'まだ何も記録されていません',
   'transports.count.transports': {

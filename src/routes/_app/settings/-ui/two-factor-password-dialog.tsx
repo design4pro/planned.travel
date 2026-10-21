@@ -25,6 +25,8 @@ export function TwoFactorPasswordDialog({
   body,
   confirm,
   pending,
+  cancel,
+  danger = false,
   onConfirm,
   focusReplacement,
   done,
@@ -36,6 +38,8 @@ export function TwoFactorPasswordDialog({
   pending: string
   onConfirm: (password: string) => Promise<AuthFailure | { uri: string } | null>
   done?: string
+  cancel?: string
+  danger?: boolean
   focusReplacement: () => void
 }) {
   const t = useTranslate()
@@ -100,7 +104,11 @@ export function TwoFactorPasswordDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button ref={trigger} variant="secondary">
+        <Button
+          ref={trigger}
+          variant="secondary"
+          className="h-auto min-h-10 whitespace-normal"
+        >
           {action}
         </Button>
       </DialogTrigger>
@@ -157,10 +165,11 @@ export function TwoFactorPasswordDialog({
                   disabled={busy}
                   onClick={close}
                 >
-                  {t('modules.action.cancel')}
+                  {cancel ?? t('modules.action.cancel')}
                 </Button>
                 <Button
                   type="submit"
+                  variant={danger ? 'danger' : undefined}
                   loading={busy}
                   loadingLabel={pending}
                   disabled={!password || !!feedback.wait}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Route as RouteIcon } from 'lucide-react'
 
@@ -27,8 +27,8 @@ import { TripModuleHeader } from '../../-ui/trip-header'
 export const Route = createFileRoute('/_app/trips/$tripId/transports')({
   /*
    * Two reads, one round trip. Without this the transport card's mask has no
-   * channel at all: `TransportsTimeline` is a `components/modules` component, so
-   * it never fetches, and neither `src/server/fns/transports.ts` nor
+   * channel at all: `TransportsTimeline` does not read display preferences,
+   * and neither `src/server/fns/transports.ts` nor
    * `src/routes/_app/-server/trip.ts` is free to carry the preference — so the
    * preference reaches this tab through the route or not at all.
    */
@@ -60,6 +60,10 @@ function TransportsPage() {
   const data = Route.useLoaderData()
   const { tripId } = Route.useParams()
   const [newTransportOpen, setNewTransportOpen] = useState(false)
+  const [writeBlocked, setWriteBlocked] = useState(false)
+  useEffect(() => {
+    setWriteBlocked(false)
+  }, [data.canWrite, tripId])
 
   const busiest = [...data.byMode]
     .sort((left, right) => right.count - left.count)
@@ -100,7 +104,9 @@ function TransportsPage() {
                 ].join(' · ')
           }
           actions={
-            <NewTransportAction onClick={() => setNewTransportOpen(true)} />
+            data.canWrite && !writeBlocked ? (
+              <NewTransportAction onClick={() => setNewTransportOpen(true)} />
+            ) : undefined
           }
         >
           {summary.checked === 0 ? null : (
@@ -161,13 +167,16 @@ function TransportsPage() {
         )}
 
         <TransportsTimeline
-          canSearchConnections={data.canSearchConnections}
+          canWrite={data.canWrite}
+          isArchived={data.isArchived}
+          canSearchConnections={data.canWrite && data.canSearchConnections}
           tripId={tripId}
           transports={data.transports}
           days={data.days}
           currency={data.currency}
           maskCodes={data.maskCodes}
           newTransportOpen={newTransportOpen}
+          onWriteBlockedChange={setWriteBlocked}
           onNewTransportOpenChange={setNewTransportOpen}
         />
       </AppSections>

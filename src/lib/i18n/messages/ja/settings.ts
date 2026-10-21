@@ -713,6 +713,14 @@ const messages = {
   'twoFactor.setup.done': '完了',
   'twoFactor.setup.confirm': 'キーを表示',
   'twoFactor.setup.pending': '確認中',
+  'twoFactor.off.action': '二要素認証をオフにする',
+  'twoFactor.off.title': '二要素認証をオフにしますか？',
+  'twoFactor.off.body':
+    'パスワードを知っている人は誰でもコードなしでログインできるようになります。他のログイン済みのデバイスはログインしたままです。',
+  'twoFactor.off.confirm': 'オフにする',
+  'twoFactor.off.pending': 'オフにしています',
+  'twoFactor.off.cancel': 'オンのままにする',
+  'twoFactor.off.done': '二要素認証はオフです',
 } satisfies TranslationOf<typeof En>
 
 export default messages

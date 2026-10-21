@@ -817,6 +817,7 @@ export interface ConnectionSearchProps {
   days: ReadonlyArray<TransportDayData>
   /** Called once a connection has been written, so the dialog can close. */
   onSaved: () => void
+  onWriteError?: (cause: unknown) => void
 }
 
 export function ConnectionSearch({
@@ -825,6 +826,7 @@ export function ConnectionSearch({
   journey,
   days,
   onSaved,
+  onWriteError,
 }: ConnectionSearchProps) {
   const t = useTranslate()
   const dated = useMemo(() => datedDays(days), [days])
@@ -854,6 +856,7 @@ export function ConnectionSearch({
         : 'modules.transports.connection.replacedBody',
     ),
     failure: t('modules.transports.connection.saveFailed'),
+    onError: onWriteError,
   })
 
   /**

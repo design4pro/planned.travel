@@ -685,6 +685,14 @@ const messages = {
   'twoFactor.setup.done': '완료',
   'twoFactor.setup.confirm': '키 보기',
   'twoFactor.setup.pending': '확인 중',
+  'twoFactor.off.action': '2단계 인증 끄기',
+  'twoFactor.off.title': '2단계 인증을 끄시겠어요?',
+  'twoFactor.off.body':
+    '비밀번호를 아는 사람은 누구나 코드 없이 로그인할 수 있습니다. 로그인된 다른 기기는 로그인 상태를 유지합니다.',
+  'twoFactor.off.confirm': '끄기',
+  'twoFactor.off.pending': '끄는 중',
+  'twoFactor.off.cancel': '켜진 상태로 유지',
+  'twoFactor.off.done': '2단계 인증이 꺼졌습니다',
 } satisfies TranslationOf<typeof En>
 
 export default messages

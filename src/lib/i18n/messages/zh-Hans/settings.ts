@@ -635,6 +635,14 @@ const messages = {
   'twoFactor.setup.done': '完成',
   'twoFactor.setup.confirm': '显示密钥',
   'twoFactor.setup.pending': '正在检查',
+  'twoFactor.off.action': '关闭双重验证',
+  'twoFactor.off.title': '要关闭双重验证吗？',
+  'twoFactor.off.body':
+    '任何知道你密码的人都可以无需验证码登录。你已登录的其他设备将保持登录状态。',
+  'twoFactor.off.confirm': '关闭',
+  'twoFactor.off.pending': '正在关闭',
+  'twoFactor.off.cancel': '保持开启',
+  'twoFactor.off.done': '双重验证已关闭',
 } satisfies TranslationOf<typeof En>
 
 export default messages

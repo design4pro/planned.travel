@@ -763,6 +763,14 @@ const messages = {
   'twoFactor.setup.done': 'Fatto',
   'twoFactor.setup.confirm': 'Mostra chiave',
   'twoFactor.setup.pending': 'Verifica in corso',
+  'twoFactor.off.action': 'Disattiva l’autenticazione a due fattori',
+  'twoFactor.off.title': 'Disattivare l’autenticazione a due fattori?',
+  'twoFactor.off.body':
+    'Chiunque conosca la tua password potrà accedere senza un codice. Gli altri dispositivi connessi resteranno connessi.',
+  'twoFactor.off.confirm': 'Disattiva',
+  'twoFactor.off.pending': 'Disattivazione',
+  'twoFactor.off.cancel': 'Mantieni attiva',
+  'twoFactor.off.done': 'L’autenticazione a due fattori è disattivata',
 } satisfies TranslationOf<typeof En>
 
 export default messages

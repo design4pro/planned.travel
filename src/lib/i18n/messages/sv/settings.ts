@@ -747,6 +747,14 @@ const messages = {
   'twoFactor.setup.done': 'Klart',
   'twoFactor.setup.confirm': 'Visa nyckel',
   'twoFactor.setup.pending': 'Kontrollerar',
+  'twoFactor.off.action': 'Stäng av tvåfaktorsautentisering',
+  'twoFactor.off.title': 'Stäng av tvåfaktorsautentisering?',
+  'twoFactor.off.body':
+    'Alla som har ditt lösenord kan logga in utan kod. Dina andra inloggade enheter förblir inloggade.',
+  'twoFactor.off.confirm': 'Stäng av',
+  'twoFactor.off.pending': 'Stänger av',
+  'twoFactor.off.cancel': 'Behåll på',
+  'twoFactor.off.done': 'Tvåfaktorsautentisering är avstängd',
 } satisfies TranslationOf<typeof En>
 
 export default messages

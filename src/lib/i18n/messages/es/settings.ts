@@ -768,6 +768,14 @@ const messages = {
   'twoFactor.setup.done': 'Listo',
   'twoFactor.setup.confirm': 'Mostrar clave',
   'twoFactor.setup.pending': 'Comprobando',
+  'twoFactor.off.action': 'Desactivar la autenticación de dos factores',
+  'twoFactor.off.title': '¿Desactivar la autenticación de dos factores?',
+  'twoFactor.off.body':
+    'Cualquier persona con tu contraseña podrá iniciar sesión sin un código. Tus otros dispositivos conectados seguirán conectados.',
+  'twoFactor.off.confirm': 'Desactivar',
+  'twoFactor.off.pending': 'Desactivando',
+  'twoFactor.off.cancel': 'Mantener activada',
+  'twoFactor.off.done': 'La autenticación de dos factores está desactivada',
 } satisfies TranslationOf<typeof En>
 
 export default messages

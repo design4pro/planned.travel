@@ -760,6 +760,14 @@ const messages = {
   'twoFactor.setup.done': 'Klaar',
   'twoFactor.setup.confirm': 'Sleutel tonen',
   'twoFactor.setup.pending': 'Controleren',
+  'twoFactor.off.action': 'Tweestapsverificatie uitschakelen',
+  'twoFactor.off.title': 'Tweestapsverificatie uitschakelen?',
+  'twoFactor.off.body':
+    'Iedereen met je wachtwoord kan zonder code inloggen. Je andere ingelogde apparaten blijven ingelogd.',
+  'twoFactor.off.confirm': 'Uitschakelen',
+  'twoFactor.off.pending': 'Bezig met uitschakelen',
+  'twoFactor.off.cancel': 'Ingeschakeld houden',
+  'twoFactor.off.done': 'Tweestapsverificatie is uitgeschakeld',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -779,6 +779,14 @@ const messages = {
   'twoFactor.setup.done': 'Gotowe',
   'twoFactor.setup.confirm': 'Pokaż klucz',
   'twoFactor.setup.pending': 'Sprawdzanie',
+  'twoFactor.off.action': 'Wyłącz uwierzytelnianie dwuskładnikowe',
+  'twoFactor.off.title': 'Wyłączyć uwierzytelnianie dwuskładnikowe?',
+  'twoFactor.off.body':
+    'Każdy, kto zna Twoje hasło, będzie mógł zalogować się bez kodu. Pozostałe zalogowane urządzenia pozostaną zalogowane.',
+  'twoFactor.off.confirm': 'Wyłącz',
+  'twoFactor.off.pending': 'Wyłączanie',
+  'twoFactor.off.cancel': 'Pozostaw włączone',
+  'twoFactor.off.done': 'Uwierzytelnianie dwuskładnikowe jest wyłączone',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -778,6 +778,14 @@ const messages = {
   'twoFactor.setup.done': 'Готово',
   'twoFactor.setup.confirm': 'Показать ключ',
   'twoFactor.setup.pending': 'Проверка',
+  'twoFactor.off.action': 'Отключить двухфакторную аутентификацию',
+  'twoFactor.off.title': 'Отключить двухфакторную аутентификацию?',
+  'twoFactor.off.body':
+    'Любой, кто знает ваш пароль, сможет войти без кода. На других устройствах вход в аккаунт сохранится.',
+  'twoFactor.off.confirm': 'Отключить',
+  'twoFactor.off.pending': 'Отключение',
+  'twoFactor.off.cancel': 'Оставить включённой',
+  'twoFactor.off.done': 'Двухфакторная аутентификация отключена',
 } satisfies TranslationOf<typeof En>
 
 export default messages

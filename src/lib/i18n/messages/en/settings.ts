@@ -827,6 +827,14 @@ const messages = {
   'twoFactor.setup.done': 'Done',
   'twoFactor.setup.confirm': 'Show key',
   'twoFactor.setup.pending': 'Checking',
+  'twoFactor.off.action': 'Turn off two-factor',
+  'twoFactor.off.title': 'Turn off two-factor?',
+  'twoFactor.off.body':
+    'Anyone with your password will be able to sign in without a code. Your other signed-in devices stay signed in.',
+  'twoFactor.off.confirm': 'Turn off',
+  'twoFactor.off.pending': 'Turning off',
+  'twoFactor.off.cancel': 'Keep it on',
+  'twoFactor.off.done': 'Two-factor is off',
 } as const satisfies NamespaceMessages
 
 export default messages

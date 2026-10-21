@@ -759,6 +759,14 @@ const messages = {
   'twoFactor.setup.done': 'Τέλος',
   'twoFactor.setup.confirm': 'Εμφάνιση κλειδιού',
   'twoFactor.setup.pending': 'Έλεγχος',
+  'twoFactor.off.action': 'Απενεργοποίηση ελέγχου δύο παραγόντων',
+  'twoFactor.off.title': 'Απενεργοποίηση ελέγχου δύο παραγόντων;',
+  'twoFactor.off.body':
+    'Όποιος γνωρίζει τον κωδικό πρόσβασής σας θα μπορεί να συνδεθεί χωρίς κωδικό επαλήθευσης. Οι άλλες συνδεδεμένες συσκευές σας θα παραμείνουν συνδεδεμένες.',
+  'twoFactor.off.confirm': 'Απενεργοποίηση',
+  'twoFactor.off.pending': 'Γίνεται απενεργοποίηση',
+  'twoFactor.off.cancel': 'Διατήρηση ενεργού',
+  'twoFactor.off.done': 'Ο έλεγχος δύο παραγόντων είναι απενεργοποιημένος',
 } satisfies TranslationOf<typeof En>
 
 export default messages

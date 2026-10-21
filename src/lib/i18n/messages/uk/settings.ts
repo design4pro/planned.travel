@@ -766,6 +766,14 @@ const messages = {
   'twoFactor.setup.done': 'Готово',
   'twoFactor.setup.confirm': 'Показати ключ',
   'twoFactor.setup.pending': 'Перевірка',
+  'twoFactor.off.action': 'Вимкнути двофакторну автентифікацію',
+  'twoFactor.off.title': 'Вимкнути двофакторну автентифікацію?',
+  'twoFactor.off.body':
+    'Кожен, хто знає ваш пароль, зможе ввійти без коду. На інших пристроях вхід в обліковий запис збережеться.',
+  'twoFactor.off.confirm': 'Вимкнути',
+  'twoFactor.off.pending': 'Вимкнення',
+  'twoFactor.off.cancel': 'Залишити ввімкненою',
+  'twoFactor.off.done': 'Двофакторну автентифікацію вимкнено',
 } satisfies TranslationOf<typeof En>
 
 export default messages

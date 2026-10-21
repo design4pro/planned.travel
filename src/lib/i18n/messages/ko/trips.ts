@@ -275,6 +275,12 @@ const messages = {
   'book.readOnly.archived':
     '이 여행은 보관되어 있어 예약과 숙박은 읽기 전용입니다. 변경하려면 여행을 복원하세요.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    '이 변경은 거부되었습니다. 추가 변경 전에 현재 여행 상태를 확인하세요.',
+  'transports.recovery.failed':
+    '여행을 새로 불러오지 못했습니다. 변경하기 전에 다시 시도하세요.',
+  'transports.readOnly.archived':
+    '이 여행은 보관되었습니다. 교통편을 변경하려면 복원하세요.',
   'transports.title': '이동',
   'transports.empty': '아직 기록된 것이 없습니다',
   'transports.count.transports': {

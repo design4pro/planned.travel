@@ -770,6 +770,14 @@ const messages = {
   'twoFactor.setup.done': 'Terminé',
   'twoFactor.setup.confirm': 'Afficher la clé',
   'twoFactor.setup.pending': 'Vérification',
+  'twoFactor.off.action': 'Désactiver la double authentification',
+  'twoFactor.off.title': 'Désactiver la double authentification ?',
+  'twoFactor.off.body':
+    'Toute personne connaissant votre mot de passe pourra se connecter sans code. Vos autres appareils connectés resteront connectés.',
+  'twoFactor.off.confirm': 'Désactiver',
+  'twoFactor.off.pending': 'Désactivation',
+  'twoFactor.off.cancel': 'La garder activée',
+  'twoFactor.off.done': 'La double authentification est désactivée',
 } satisfies TranslationOf<typeof En>
 
 export default messages

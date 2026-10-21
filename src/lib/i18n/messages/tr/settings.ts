@@ -743,6 +743,14 @@ const messages = {
   'twoFactor.setup.done': 'Bitti',
   'twoFactor.setup.confirm': 'Anahtarı göster',
   'twoFactor.setup.pending': 'Kontrol ediliyor',
+  'twoFactor.off.action': 'İki faktörlü doğrulamayı kapat',
+  'twoFactor.off.title': 'İki faktörlü doğrulama kapatılsın mı?',
+  'twoFactor.off.body':
+    'Parolanızı bilen herkes kod olmadan giriş yapabilecek. Diğer giriş yapılmış cihazlarınız açık kalacak.',
+  'twoFactor.off.confirm': 'Kapat',
+  'twoFactor.off.pending': 'Kapatılıyor',
+  'twoFactor.off.cancel': 'Açık tut',
+  'twoFactor.off.done': 'İki faktörlü doğrulama kapalı',
 } satisfies TranslationOf<typeof En>
 
 export default messages

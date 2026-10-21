@@ -741,6 +741,14 @@ const messages = {
   'twoFactor.setup.done': 'Selesai',
   'twoFactor.setup.confirm': 'Tampilkan kunci',
   'twoFactor.setup.pending': 'Memeriksa',
+  'twoFactor.off.action': 'Nonaktifkan autentikasi dua faktor',
+  'twoFactor.off.title': 'Nonaktifkan autentikasi dua faktor?',
+  'twoFactor.off.body':
+    'Siapa pun yang mengetahui kata sandi Anda dapat masuk tanpa kode. Perangkat lain yang sudah masuk akan tetap masuk.',
+  'twoFactor.off.confirm': 'Nonaktifkan',
+  'twoFactor.off.pending': 'Menonaktifkan',
+  'twoFactor.off.cancel': 'Tetap aktifkan',
+  'twoFactor.off.done': 'Autentikasi dua faktor nonaktif',
 } satisfies TranslationOf<typeof En>
 
 export default messages

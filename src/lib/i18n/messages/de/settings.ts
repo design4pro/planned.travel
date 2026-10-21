@@ -765,6 +765,14 @@ const messages = {
   'twoFactor.setup.done': 'Fertig',
   'twoFactor.setup.confirm': 'Schlüssel anzeigen',
   'twoFactor.setup.pending': 'Wird geprüft',
+  'twoFactor.off.action': 'Zwei-Faktor-Authentifizierung ausschalten',
+  'twoFactor.off.title': 'Zwei-Faktor-Authentifizierung ausschalten?',
+  'twoFactor.off.body':
+    'Wer dein Passwort kennt, kann sich ohne Code anmelden. Deine anderen angemeldeten Geräte bleiben angemeldet.',
+  'twoFactor.off.confirm': 'Ausschalten',
+  'twoFactor.off.pending': 'Wird ausgeschaltet',
+  'twoFactor.off.cancel': 'Eingeschaltet lassen',
+  'twoFactor.off.done': 'Zwei-Faktor-Authentifizierung ist ausgeschaltet',
 } satisfies TranslationOf<typeof En>
 
 export default messages

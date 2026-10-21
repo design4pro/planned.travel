@@ -760,6 +760,14 @@ const messages = {
   'twoFactor.setup.done': 'Hotovo',
   'twoFactor.setup.confirm': 'Zobrazit klíč',
   'twoFactor.setup.pending': 'Ověřování',
+  'twoFactor.off.action': 'Vypnout dvoufaktorové ověřování',
+  'twoFactor.off.title': 'Vypnout dvoufaktorové ověřování?',
+  'twoFactor.off.body':
+    'Kdokoli s vaším heslem se bude moci přihlásit bez kódu. Vaše ostatní přihlášená zařízení zůstanou přihlášená.',
+  'twoFactor.off.confirm': 'Vypnout',
+  'twoFactor.off.pending': 'Vypínání',
+  'twoFactor.off.cancel': 'Ponechat zapnuté',
+  'twoFactor.off.done': 'Dvoufaktorové ověřování je vypnuté',
 } satisfies TranslationOf<typeof En>
 
 export default messages

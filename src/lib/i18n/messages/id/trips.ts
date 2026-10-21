@@ -277,6 +277,12 @@ const messages = {
   'book.readOnly.archived':
     'Perjalanan ini diarsipkan, jadi pemesanan dan penginapannya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
   /* ---------------------------------------------- the transports tab */
+  'transports.recovery.refused':
+    'Perubahan ini ditolak. Periksa keadaan perjalanan saat ini sebelum membuat perubahan lain.',
+  'transports.recovery.failed':
+    'Perjalanan tidak dapat dimuat ulang. Coba lagi sebelum membuat perubahan.',
+  'transports.readOnly.archived':
+    'Perjalanan ini diarsipkan. Pulihkan untuk mengubah transportasi.',
   'transports.title': 'Transportasi',
   'transports.empty': 'Belum ada yang dicatat',
   'transports.count.transports': {
