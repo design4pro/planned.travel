@@ -1,15 +1,19 @@
 /**
- * What the atlas knows about one country, resolved into the exact strings a
- * card prints.
+ * What the atlas knows about one country, resolved into the facts a card
+ * prints.
  *
  * The world map has two surfaces that say the same thing: a card that follows
  * the pointer and a card that stays put when you click. If each of them decided
- * for itself how to plural a unit, when a month is missing and what a reader
- * hears instead of a dash, the two would disagree the first time either was
+ * for itself which record a country speaks for, how a count is clamped and when
+ * a month is missing, the two would disagree the first time either was
  * edited — and a product whose hover and its click report different facts about
  * the same country has a credibility problem, not a formatting one. So the
  * decisions are made once, here, and returned as data. The card renders a shape
  * it has been handed rather than parsing prose back out of a formatted line.
+ *
+ * **This module holds no wording.** Every caption, unit and spoken phrase is a
+ * key in the locale catalogue (`atlas.card.*`), which is the single copy source;
+ * a noun is renamed there and nowhere else.
  *
  * **Nothing in this module asks the platform to format anything.** Names come
  * from the frozen table in `./country-names`, and months from `formatMonthYear`
@@ -33,7 +37,6 @@ import {
   formatNumber,
   parseInstant,
   parseIsoDate,
-  pluralise,
 } from '#/lib/format'
 
 /**
@@ -42,18 +45,13 @@ import {
  * An em dash, and only ever behind `aria-hidden`: a screen reader announcing
  * "dash" for a missing first trip is indistinguishable from one announcing a
  * hyphen in a value, and both are indistinguishable from a rendering failure.
- * The card pairs this with {@link ABSENT_FACT_LABEL} so the eye gets the mark
- * and the ear gets the words.
+ * The card pairs this with the `atlas.card.absent` caption so the eye gets the
+ * mark and the ear gets the words.
  */
 export const ABSENT_FACT_MARK = '—'
 
-/** What a reader hears in place of {@link ABSENT_FACT_MARK}. */
-export const ABSENT_FACT_LABEL = 'Not recorded'
-
-/** One counted figure: a unit heading, the number, and the number as printed. */
+/** One counted figure: the number, and the number as printed. */
 export interface CountryFactFigure {
-  /** `Trip` or `Trips` — the unit, agreeing with the count. */
-  readonly label: string
   /** The clamped count, for a caller that needs to branch on it. */
   readonly count: number
   /** The count as printed, grouped: `1,204`. */
@@ -62,7 +60,6 @@ export interface CountryFactFigure {
 
 /** One month-precision date, printable and machine-readable. */
 export interface CountryFactMonth {
-  readonly label: string
   /** `September 2026`, or `null` when the column was never filled in. */
   readonly value: string | null
   /** `2026-09`, for a `<time dateTime>`. `null` alongside a `null` value. */
@@ -199,19 +196,13 @@ export interface CountryFacts {
   readonly source: CountryFactSource
   /**
    * The leading figure: trips when a trip is on record, otherwise the visits
-   * that were recorded without one. Its `label` says which — `Trips` or
-   * `Visits` — so the card never has to caption it itself.
+   * that were recorded without one. {@link source} says which, so the card
+   * picks the caption for it.
    */
   readonly tally: CountryFactFigure
   readonly places: CountryFactFigure
   readonly first: CountryFactMonth
   readonly last: CountryFactMonth
-  /**
-   * The whole card as one sentence, for a trigger that has to carry its own
-   * accessible name — a map polygon has no text of its own, and a card that
-   * only exists while the pointer is over it cannot be that name.
-   */
-  readonly summary: string
 }
 
 /**
@@ -236,137 +227,25 @@ export function countryFactCount(value: number): number {
  * record, which prints both ends as whole days.
  */
 export function countryFactMonth(
-  label: string,
   value: string | null | undefined,
 ): CountryFactMonth {
   const at = parseIsoDate(value) ?? parseInstant(value)
   const printed = at === null ? null : formatMonthYear(value)
   if (at === null || printed === null) {
-    return { label, value: null, iso: null }
+    return { value: null, iso: null }
   }
   const month = String(at.getUTCMonth() + 1).padStart(2, '0')
-  return { label, value: printed, iso: `${at.getUTCFullYear()}-${month}` }
+  return { value: printed, iso: `${at.getUTCFullYear()}-${month}` }
 }
 
-/**
- * The unit heading over a numeral, agreeing with it.
- *
- * The heading sits above the number rather than beside it, so `1` under `TRIPS`
- * would still parse — but a card that says `TRIPS` over `1` and `PLACES` over
- * `1` in the same row, when the reference product it is judged against manages
- * the agreement, is a detail lost for nothing. The column is a fixed width, so
- * the shorter word costs no movement.
- */
-function figure(
-  count: number,
-  singular: string,
-  plural: string,
-): CountryFactFigure {
+/** A count clamped to what the card prints, with the number as printed. */
+function figure(count: number): CountryFactFigure {
   const clamped = countryFactCount(count)
-  return {
-    label: clamped === 1 ? singular : plural,
-    count: clamped,
-    value: formatNumber(clamped),
-  }
+  return { count: clamped, value: formatNumber(clamped) }
 }
 
 /**
- * `no trips yet` reads better than `0 trips` in a spoken sentence.
- *
- * The singular is passed in rather than read off `label`, which already agrees
- * with the count: `pluralise` does its own agreement, and handing it a plural
- * produces `3 tripss`.
- */
-function figurePhrase(
-  value: CountryFactFigure,
-  singular: string,
-  empty: string,
-): string {
-  return value.count === 0 ? empty : pluralise(value.count, singular)
-}
-
-/**
- * Everything that changes between the two records, held as data.
- *
- * The card is one component printing one geometry, and the only difference
- * between a country with an itinerary and a country somebody simply marked is
- * the noun. Writing that difference as a table rather than as branches through
- * the derivation keeps the two readings honest with each other — a heading, its
- * unit, its empty phrase and its spoken clause are chosen together or not at
- * all — and it is the reason the visited-without-a-trip card has exactly the
- * height, the rules and the type ladder of the one beside it.
- */
-interface FactWording {
-  /** The heading over the first month cell. */
-  readonly first: string
-  /** The heading over the second. */
-  readonly last: string
-  /** The unit over the leading numeral, singular and plural. */
-  readonly unit: string
-  readonly units: string
-  /** The noun in a spoken clause: `3 visits`, `no visit dates recorded`. */
-  readonly noun: string
-  /** What a spoken sentence says instead of `0 trips`. */
-  readonly empty: string
-  /** Both ends inside one month, said once rather than twice. */
-  readonly together: (month: string) => string
-}
-
-const TRIP_WORDING: FactWording = {
-  first: 'First trip',
-  last: 'Last trip',
-  unit: 'Trip',
-  units: 'Trips',
-  noun: 'trip',
-  empty: 'no trips yet',
-  together: (month) => `Travelled in ${month}`,
-}
-
-const VISIT_WORDING: FactWording = {
-  first: 'First visit',
-  last: 'Last visit',
-  unit: 'Visit',
-  units: 'Visits',
-  noun: 'visit',
-  empty: 'no visits yet',
-  together: (month) => `Visited in ${month}`,
-}
-
-/**
- * The two months as one clause.
- *
- * A country seen inside a single month gets one statement rather than the same
- * month read out twice under two different headings — the card still shows both
- * cells, because they are two columns of a table and a table with a hole in it
- * reads as a fault, but a sentence has no such obligation.
- */
-function monthPhrase(
-  first: CountryFactMonth,
-  last: CountryFactMonth,
-  words: FactWording,
-): string {
-  const { noun } = words
-  if (first.value === null && last.value === null) {
-    return `No ${noun} dates recorded`
-  }
-  if (first.value !== null && last.value !== null) {
-    return first.iso === last.iso
-      ? words.together(first.value)
-      : `First ${noun} ${first.value}, last ${noun} ${last.value}`
-  }
-  if (first.value !== null) {
-    return `First ${noun} ${first.value}, last ${noun} not recorded`
-  }
-  return `First ${noun} not recorded, last ${noun} ${last.value ?? ''}`
-}
-
-/** Opens a clause as a sentence. A clause starting with a digit is left alone. */
-function sentence(value: string): string {
-  return value.slice(0, 1).toUpperCase() + value.slice(1)
-}
-
-/**
- * Every string one country card prints, from the columns behind it.
+ * Every fact one country card prints, from the columns behind it.
  *
  * Pure, synchronous and free of any component import, so the card can be built
  * and proved before there is a map to hang it on.
@@ -380,26 +259,26 @@ function sentence(value: string): string {
  * dashes over a country the same screen has just painted as visited, and says
  * it about most of a real record rather than about an edge case. So the trip
  * columns are consulted first, because an itinerary is the more specific thing
- * to know; when there is no trip at all the visit record answers instead, in
- * its own words, at the same geometry; and the dashes are kept for the one case
- * that has earned them — a country nothing has ever been written about.
+ * to know; when there is no trip at all the visit record answers instead, at
+ * the same geometry; and the dashes are kept for the one case that has earned
+ * them — a country nothing has ever been written about.
  */
 export function countryFacts(input: CountryFactsInput): CountryFacts {
   const code = input.countryCode.trim().toUpperCase()
   const name = countryName(code)
-  const places = figure(input.placeCount, 'Place', 'Places')
+  const places = figure(input.placeCount)
 
   const tripCount = countryFactCount(input.tripCount)
-  const firstTrip = countryFactMonth(TRIP_WORDING.first, input.firstTripOn)
-  const lastTrip = countryFactMonth(TRIP_WORDING.last, input.lastTripOn)
+  const firstTrip = countryFactMonth(input.firstTripOn)
+  const lastTrip = countryFactMonth(input.lastTripOn)
 
   const visitCount = countryFactCount(input.visitCount ?? 0)
-  const firstVisit = countryFactMonth(VISIT_WORDING.first, input.firstVisitedOn)
-  const lastVisit = countryFactMonth(VISIT_WORDING.last, input.lastVisitedOn)
+  const firstVisit = countryFactMonth(input.firstVisitedOn)
+  const lastVisit = countryFactMonth(input.lastVisitedOn)
 
   // A saved place is deliberately not evidence of a trip here. It is counted in
   // its own cell either way, and letting it choose the record would put a
-  // country with a shortlist and a visit back on the trip wording — which is
+  // country with a shortlist and a visit back on the trip reading — which is
   // the four-dash card again, wearing a number.
   const hasTrips =
     tripCount > 0 || firstTrip.iso !== null || lastTrip.iso !== null
@@ -411,19 +290,9 @@ export function countryFacts(input: CountryFactsInput): CountryFacts {
     : hasVisits
       ? 'visits'
       : 'none'
-  const words = source === 'visits' ? VISIT_WORDING : TRIP_WORDING
-  const tally =
-    source === 'visits'
-      ? figure(visitCount, VISIT_WORDING.unit, VISIT_WORDING.units)
-      : figure(tripCount, TRIP_WORDING.unit, TRIP_WORDING.units)
+  const tally = figure(source === 'visits' ? visitCount : tripCount)
   const first = source === 'visits' ? firstVisit : firstTrip
   const last = source === 'visits' ? lastVisit : lastTrip
-
-  const counted = `${figurePhrase(tally, words.noun, words.empty)}, ${figurePhrase(
-    places,
-    'place',
-    'no places saved',
-  )}`
 
   return {
     code,
@@ -434,6 +303,5 @@ export function countryFacts(input: CountryFactsInput): CountryFacts {
     places,
     first,
     last,
-    summary: `${name}. ${sentence(counted)}. ${monthPhrase(first, last, words)}.`,
   }
 }
