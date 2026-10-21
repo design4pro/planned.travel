@@ -378,6 +378,12 @@ const messages = {
   'passkeyNotice.action': 'Kelola kunci sandi',
   'passkeyNotice.recovery':
     'Jika Anda tidak mengenali perubahan ini, ubah kata sandi dan akhiri sesi yang tidak dikenal. Pengaturan ulang kata sandi tidak menghapus kunci sandi. Tinjau kunci sandi Anda dan hapus yang tidak dikenali.',
+  'error.passwordAttemptsLocked.title': 'Konfirmasi kata sandi dikunci',
+  'error.passwordAttemptsLocked.detail':
+    'Sesi ini tidak dapat lagi mengonfirmasi kata sandi Anda. Keluar lalu masuk kembali.',
+  'error.passwordResultUnknown.title': 'Periksa pengaturan keamanan Anda',
+  'error.passwordResultUnknown.detail':
+    'Perubahan mungkin telah tersimpan. Biarkan sesi ini tetap terbuka sampai Anda dapat masuk kembali. Jika Anda mengubah kata sandi, coba yang baru. Jika Anda mengganti kode cadangan, kode lama mungkin tidak lagi berfungsi; gunakan aplikasi autentikator atau sesi lain yang sudah masuk untuk membuat kode baru.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -388,6 +388,12 @@ const messages = {
   'passkeyNotice.action': 'Spravovat přístupové klíče',
   'passkeyNotice.recovery':
     'Pokud tuto změnu nepoznáváte, změňte heslo a ukončete neznámé relace. Obnovení hesla neodebere přístupové klíče. Zkontrolujte je a odeberte ty, které nepoznáváte.',
+  'error.passwordAttemptsLocked.title': 'Potvrzení hesla je zablokováno',
+  'error.passwordAttemptsLocked.detail':
+    'V této relaci už nelze potvrdit heslo. Odhlaste se a znovu se přihlaste.',
+  'error.passwordResultUnknown.title': 'Zkontrolujte nastavení zabezpečení',
+  'error.passwordResultUnknown.detail':
+    'Změna se mohla uložit. Nechte tuto relaci otevřenou, dokud se nebudete moci znovu přihlásit. Pokud jste měnili heslo, zkuste nové. Pokud jste nahrazovali záložní kódy, staré už nemusí fungovat; pomocí ověřovací aplikace nebo jiné přihlášené relace vygenerujte novou sadu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

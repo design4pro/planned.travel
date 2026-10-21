@@ -453,6 +453,12 @@ const messages = {
   'passkeyNotice.action': 'Manage passkeys',
   'passkeyNotice.recovery':
     'If you do not recognize this change, change your password and end unfamiliar sessions. A password reset does not remove passkeys. Review your passkeys and remove any you do not recognize.',
+  'error.passwordAttemptsLocked.title': 'Password confirmation locked',
+  'error.passwordAttemptsLocked.detail':
+    'This session can no longer confirm your password. Sign out and sign in again.',
+  'error.passwordResultUnknown.title': 'Check your security settings',
+  'error.passwordResultUnknown.detail':
+    'The change may have completed. Keep this session open until you can sign in again. If you changed your password, try the new one. If you replaced backup codes, the old set may no longer work; use your authenticator or another signed-in session to generate a new set.',
 } as const satisfies NamespaceMessages
 
 export default messages

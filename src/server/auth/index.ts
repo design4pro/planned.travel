@@ -50,6 +50,7 @@ import {
   workspaceIdsOf,
 } from './room-eviction'
 import { createKvSecondaryStorage } from './secondary-storage'
+import { passwordAttempts } from './password-attempts'
 import { twoFactorEnableGuard } from './two-factor-guard'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
@@ -569,6 +570,7 @@ function buildAuth() {
 
       // Reads the person a session-ending endpoint is about before it deletes the session (#1093).
       roomEvictionPrepare,
+      passwordAttempts,
 
       // Keeps the refresh from re-issuing an impersonated session's cookie for 30 days, and ends an
       // expired impersonated session on the library's own endpoints (docs/ACCESS.md §6.2).

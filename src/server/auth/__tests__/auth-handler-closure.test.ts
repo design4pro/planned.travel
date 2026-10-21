@@ -2026,6 +2026,515 @@ describe('two-factor setup protects a working factor', () => {
     return response.json()
   }
 
+  it('bounds password guesses across calls per session and leaves another session usable', async () => {
+    const { cookie } = await person()
+    const other = await factorPost('/sign-in/email', {
+      email: `factor-${nextAccount}@planned.travel`,
+      password: PASSWORD,
+    })
+    for (let i = 0; i < 5; i++) {
+      const response = await factorPost(
+        i % 2 ? '/change-password' : '/two-factor/enable',
+        i % 2
+          ? { currentPassword: 'wrong-password', newPassword: PASSWORD }
+          : { password: 'wrong-password' },
+        cookie,
+      )
+      expect(await response.json()).toMatchObject({ code: 'INVALID_PASSWORD' })
+    }
+    const context = await getAuth().$context
+    const verify = vi.spyOn(context.password, 'verify')
+    for (const path of [
+      '/two-factor/enable',
+      '/two-factor/get-totp-uri',
+      '/two-factor/generate-backup-codes',
+      '/two-factor/disable',
+      '/change-password',
+    ]) {
+      for (const password of [PASSWORD, 'wrong-password']) {
+        const response = await factorPost(
+          path,
+          { password, currentPassword: password, newPassword: PASSWORD },
+          cookie,
+        )
+        expect(response.status).toBe(403)
+        expect(await response.json()).toMatchObject({
+          code: 'PASSWORD_ATTEMPTS_LOCKED',
+        })
+      }
+    }
+    expect(verify).not.toHaveBeenCalled()
+    expect(
+      (
+        await factorPost(
+          '/two-factor/enable',
+          { password: PASSWORD },
+          sessionCookie(other),
+        )
+      ).status,
+    ).toBe(200)
+  })
+
+  it('resets wrong guesses after a successful password check', async () => {
+    const { cookie } = await person()
+    for (let round = 0; round < 2; round++) {
+      for (let i = 0; i < 4; i++) {
+        const response = await factorPost(
+          '/two-factor/enable',
+          { password: 'wrong-password' },
+          cookie,
+        )
+        expect(await response.json()).toMatchObject({
+          code: 'INVALID_PASSWORD',
+        })
+      }
+      expect(
+        (await factorPost('/two-factor/enable', { password: PASSWORD }, cookie))
+          .status,
+      ).toBe(200)
+    }
+  })
+
+  it.each([
+    '/two-factor/get-totp-uri',
+    '/two-factor/generate-backup-codes',
+    '/two-factor/disable',
+  ])('counts wrong passwords on %s', async (path) => {
+    const { id, cookie: initialCookie } = await person()
+    await enrol(initialCookie)
+    const confirmed = await factorPost(
+      '/two-factor/verify-totp',
+      { code: await codeFor(id) },
+      initialCookie,
+    )
+    expect(confirmed.status).toBe(200)
+    const cookie = sessionCookie(confirmed)
+    for (let i = 0; i < 5; i++) {
+      const response = await factorPost(
+        path,
+        { password: 'wrong-password' },
+        cookie,
+      )
+      expect(await response.json()).toMatchObject({ code: 'INVALID_PASSWORD' })
+    }
+    expect(
+      (
+        await factorPost(
+          '/change-password',
+          { currentPassword: PASSWORD, newPassword: PASSWORD },
+          cookie,
+        )
+      ).status,
+    ).toBe(403)
+  })
+
+  it.each(['read', 'create', 'reserve', 'finalize'] as const)(
+    'fails closed on a counter %s error',
+    async (operation) => {
+      const { cookie } = await person()
+      if (operation === 'reserve') {
+        await factorPost(
+          '/change-password',
+          { currentPassword: 'wrong-password', newPassword: PASSWORD },
+          cookie,
+        )
+      }
+      const context = await getAuth().$context
+      const verify = vi.spyOn(context.password, 'verify')
+      let fault: { mockRestore: () => void }
+      if (operation === 'read') {
+        const original = context.adapter.findOne.bind(context.adapter)
+        fault = vi
+          .spyOn(context.adapter, 'findOne')
+          .mockImplementation(async (input) => {
+            if (input.model === 'verification')
+              throw new Error('counter unavailable')
+            return original(input)
+          })
+      } else if (operation === 'create') {
+        const original = context.adapter.create.bind(context.adapter)
+        fault = vi
+          .spyOn(context.adapter, 'create')
+          .mockImplementation(async (input) => {
+            if (input.model === 'verification')
+              throw new Error('counter unavailable')
+            return original(input)
+          })
+      } else {
+        const original = context.adapter.update.bind(context.adapter)
+        fault = vi
+          .spyOn(context.adapter, 'update')
+          .mockImplementation(async (input) => {
+            if (input.model === 'verification')
+              throw new Error('counter unavailable')
+            return original(input)
+          })
+      }
+      const response = await factorPost(
+        '/change-password',
+        {
+          currentPassword: PASSWORD,
+          newPassword: operation === 'finalize' ? `${PASSWORD}-new` : PASSWORD,
+        },
+        cookie,
+      )
+      expect(response.status).toBe(403)
+      expect(await response.json()).toMatchObject({
+        code:
+          operation === 'finalize'
+            ? 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN'
+            : 'PASSWORD_ATTEMPTS_LOCKED',
+      })
+      if (operation !== 'finalize') expect(verify).not.toHaveBeenCalled()
+      fault.mockRestore()
+      if (operation === 'finalize') {
+        expect(
+          (
+            await factorPost('/sign-in/email', {
+              email: `factor-${nextAccount}@planned.travel`,
+              password: `${PASSWORD}-new`,
+            })
+          ).status,
+        ).toBe(200)
+        expect(
+          (
+            await factorPost(
+              '/change-password',
+              {
+                currentPassword: PASSWORD,
+                newPassword:
+                  operation === 'finalize' ? `${PASSWORD}-new` : PASSWORD,
+              },
+              cookie,
+            )
+          ).status,
+        ).toBe(403)
+      }
+    },
+  )
+
+  it('reports an uncertain outcome when backup codes changed before finalization failed', async () => {
+    const { id, cookie: initialCookie } = await person()
+    await enrol(initialCookie)
+    const confirmed = await factorPost(
+      '/two-factor/verify-totp',
+      { code: await codeFor(id) },
+      initialCookie,
+    )
+    const cookie = sessionCookie(confirmed)
+    const before = stored(id)
+    const context = await getAuth().$context
+    const original = context.adapter.update.bind(context.adapter)
+    const fault = vi
+      .spyOn(context.adapter, 'update')
+      .mockImplementation(async (input) => {
+        if (
+          input.model === 'verification' &&
+          typeof input.update.value === 'string' &&
+          input.update.value.includes('"pending":false')
+        )
+          throw new Error('finalization unavailable')
+        return original(input)
+      })
+    const response = await factorPost(
+      '/two-factor/generate-backup-codes',
+      { password: PASSWORD },
+      cookie,
+    )
+    expect(response.status).toBe(403)
+    expect(await response.json()).toMatchObject({
+      code: 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN',
+    })
+    expect(stored(id)).not.toEqual(before)
+    fault.mockRestore()
+    expect(
+      (
+        await factorPost(
+          '/change-password',
+          { currentPassword: PASSWORD, newPassword: PASSWORD },
+          cookie,
+        )
+      ).status,
+    ).toBe(403)
+  })
+
+  it('refuses a missing session without retrying the read in the password endpoint', async () => {
+    const { cookie } = await person()
+    const context = await getAuth().$context
+    const verify = vi.spyOn(context.password, 'verify')
+    const find = vi
+      .spyOn(context.internalAdapter, 'findSession')
+      .mockResolvedValueOnce(null)
+    const response = await factorPost(
+      '/change-password',
+      { currentPassword: PASSWORD, newPassword: PASSWORD },
+      cookie,
+    )
+    expect(response.status).toBe(401)
+    expect(find).toHaveBeenCalledTimes(1)
+    expect(verify).not.toHaveBeenCalled()
+  })
+
+  it('refuses an unconfirmed counter insert before checking the password', async () => {
+    const { cookie } = await person()
+    const context = await getAuth().$context
+    const verify = vi.spyOn(context.password, 'verify')
+    vi.spyOn(context.adapter, 'create').mockResolvedValueOnce({})
+    const response = await factorPost(
+      '/change-password',
+      { currentPassword: PASSWORD, newPassword: PASSWORD },
+      cookie,
+    )
+    expect(response.status).toBe(403)
+    expect(verify).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    'refuses concurrent losers before checking a password (existing=%s)',
+    async (existing) => {
+      const { cookie } = await person()
+      if (existing)
+        await factorPost(
+          '/change-password',
+          { currentPassword: 'wrong-password', newPassword: PASSWORD },
+          cookie,
+        )
+      const context = await getAuth().$context
+      const verify = vi.spyOn(context.password, 'verify')
+      const original = context.adapter.findOne.bind(context.adapter)
+      let release: () => void = () => undefined
+      const barrier = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let reads = 0
+      vi.spyOn(context.adapter, 'findOne').mockImplementation(async (input) => {
+        const row = await original(input)
+        if (input.model === 'verification') {
+          if (++reads === 2) release()
+          await barrier
+        }
+        return row
+      })
+      const responses = await Promise.all(
+        [1, 2].map(() =>
+          factorPost(
+            '/change-password',
+            { currentPassword: 'wrong-password', newPassword: PASSWORD },
+            cookie,
+          ),
+        ),
+      )
+      expect(responses.map((response) => response.status).sort()).toEqual([
+        400, 403,
+      ])
+      expect(verify).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('uses only the Cloudflare address for session metadata and rate-limit buckets', async () => {
+    const { cookie } = await person()
+    const call = (ip: string, forwarded: string) =>
+      getAuth().handler(
+        new Request(`${AUTH_BASE}/change-password`, {
+          method: 'POST',
+          headers: {
+            cookie,
+            origin: BASE_URL,
+            'content-type': 'application/json',
+            'cf-connecting-ip': ip,
+            'x-forwarded-for': forwarded,
+          },
+          body: JSON.stringify({
+            currentPassword: PASSWORD,
+            newPassword: PASSWORD,
+          }),
+        }),
+      )
+    for (const forwarded of ['1.2.3.4', '9.8.7.6', '1.2.3.4, 5.6.7.8'])
+      expect((await call('198.51.100.1', forwarded)).status).toBe(200)
+    expect((await call('198.51.100.1', '8.8.8.8')).status).toBe(429)
+    expect((await call('198.51.100.2', '8.8.8.8')).status).toBe(200)
+    const signed = await getAuth().handler(
+      new Request(`${AUTH_BASE}/sign-in/email`, {
+        method: 'POST',
+        headers: {
+          origin: BASE_URL,
+          'content-type': 'application/json',
+          'cf-connecting-ip': '198.51.100.3',
+          'x-forwarded-for': '1.2.3.4, 5.6.7.8',
+        },
+        body: JSON.stringify({
+          email: `factor-${nextAccount}@planned.travel`,
+          password: PASSWORD,
+        }),
+      }),
+    )
+    const session = await getAuth().api.getSession({
+      headers: new Headers({ cookie: sessionCookie(signed) }),
+    })
+    expect(session?.session.ipAddress).toBe('198.51.100.3')
+  })
+
+  it('includes passkey removal guesses in the session counter', async () => {
+    const { id, cookie } = await person()
+    const context = await getAuth().$context
+    const passkey = await context.adapter.create<{ id: string }>({
+      model: 'passkey',
+      data: {
+        userId: id,
+        credentialId: crypto.randomUUID(),
+        publicKey: 'unused',
+        algorithm: -7,
+        counter: 0,
+        deviceType: 'singleDevice',
+        backedUp: false,
+        createdAt: new Date(),
+      },
+    })
+    for (let i = 0; i < 5; i++) {
+      const response = await factorPost(
+        i % 2 ? '/change-password' : '/passkey/delete',
+        i % 2
+          ? { currentPassword: 'wrong-password', newPassword: PASSWORD }
+          : { id: passkey.id, password: 'wrong-password' },
+        cookie,
+      )
+      expect(await response.json()).toMatchObject({
+        code: i % 2 ? 'INVALID_PASSWORD' : 'PASSKEY_INVALID_PASSWORD',
+      })
+    }
+    const verify = vi.spyOn(context.password, 'verify')
+    expect(
+      (
+        await factorPost(
+          '/passkey/delete',
+          { id: passkey.id, password: PASSWORD },
+          cookie,
+        )
+      ).status,
+    ).toBe(403)
+    expect(verify).not.toHaveBeenCalled()
+    expect(
+      await context.adapter.findOne({
+        model: 'passkey',
+        where: [{ field: 'id', value: passkey.id }],
+      }),
+    ).toBeTruthy()
+  })
+
+  it('does not reset wrong guesses on unrelated passkey refusals or passwordless success', async () => {
+    const { id, cookie } = await person()
+    const context = await getAuth().$context
+    for (let i = 0; i < 4; i++) {
+      await factorPost(
+        '/change-password',
+        { currentPassword: 'wrong-password', newPassword: PASSWORD },
+        cookie,
+      )
+    }
+    expect(
+      (
+        await factorPost(
+          '/passkey/delete',
+          { id: 'not-my-passkey', password: PASSWORD },
+          cookie,
+        )
+      ).status,
+    ).toBe(404)
+    const key = await context.adapter.create<{ id: string }>({
+      model: 'passkey',
+      data: {
+        userId: id,
+        credentialId: crypto.randomUUID(),
+        publicKey: 'unused',
+        algorithm: -7,
+        counter: 0,
+        deviceType: 'singleDevice',
+        backedUp: false,
+        createdAt: new Date(),
+      },
+    })
+    expect(
+      (await factorPost('/passkey/delete', { id: key.id }, cookie)).status,
+    ).toBe(400)
+    const account = await context.internalAdapter.findCredentialAccount(id)
+    if (!account) throw new Error('Missing credential account')
+    await context.adapter.update({
+      model: 'account',
+      where: [{ field: 'id', value: account.id }],
+      update: { password: null },
+    })
+    expect(
+      (await factorPost('/passkey/delete', { id: key.id }, cookie)).status,
+    ).toBe(200)
+    await context.adapter.update({
+      model: 'account',
+      where: [{ field: 'id', value: account.id }],
+      update: { password: account.password },
+    })
+    expect(
+      (
+        await factorPost(
+          '/change-password',
+          { currentPassword: 'wrong-password', newPassword: PASSWORD },
+          cookie,
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await factorPost(
+          '/change-password',
+          { currentPassword: PASSWORD, newPassword: PASSWORD },
+          cookie,
+        )
+      ).status,
+    ).toBe(403)
+  })
+
+  it.each([
+    '/two-factor/enable',
+    '/two-factor/get-totp-uri',
+    '/two-factor/generate-backup-codes',
+    '/two-factor/disable',
+  ])('keeps the three-per-ten-second window on %s', async (path) => {
+    const { id, cookie: initialCookie } = await person()
+    let cookie = initialCookie
+    if (path !== '/two-factor/enable') {
+      await enrol(cookie)
+      const confirmed = await factorPost(
+        '/two-factor/verify-totp',
+        { code: await codeFor(id) },
+        cookie,
+      )
+      cookie = sessionCookie(confirmed)
+    }
+    const ip = `203.0.113.${++nextAddress}`
+    const call = () =>
+      getAuth().handler(
+        new Request(`${AUTH_BASE}${path}`, {
+          method: 'POST',
+          headers: {
+            cookie,
+            origin: BASE_URL,
+            'content-type': 'application/json',
+            'cf-connecting-ip': ip,
+          },
+          body: JSON.stringify({ password: 'wrong-password' }),
+        }),
+      )
+    for (let i = 0; i < 3; i++) expect((await call()).status).toBe(400)
+    expect((await call()).status).toBe(429)
+  })
+
+  it('closes the unused verify-password HTTP endpoint', async () => {
+    const { cookie } = await person()
+    expect(
+      (await factorPost('/verify-password', { password: PASSWORD }, cookie))
+        .status,
+    ).toBe(404)
+  })
+
   it.each([
     { flag: true, row: 'verified' },
     { flag: true, row: 'none' },
@@ -2044,6 +2553,11 @@ describe('two-factor setup protects a working factor', () => {
           .prepare('update two_factor set verified = ? where user_id = ?')
           .run(row === 'verified' ? 1 : 0, id)
       }
+      const attemptsBefore = sqlite
+        .prepare(
+          "select id, value from verification where id like 'password-attempts:%' order by id",
+        )
+        .all()
       const before = stored(id)
       const response = await factorPost(
         '/two-factor/enable',
@@ -2054,6 +2568,13 @@ describe('two-factor setup protects a working factor', () => {
       expect(await response.json()).toMatchObject({
         code: 'TWO_FACTOR_ALREADY_ENABLED',
       })
+      expect(
+        sqlite
+          .prepare(
+            "select id, value from verification where id like 'password-attempts:%' order by id",
+          )
+          .all(),
+      ).toEqual(attemptsBefore)
       expect(stored(id)).toEqual(before)
       if (row === 'verified') {
         const verification = await factorPost(

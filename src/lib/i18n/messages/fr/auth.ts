@@ -405,6 +405,12 @@ const messages = {
   'passkeyNotice.action': 'Gérer les clés d’accès',
   'passkeyNotice.recovery':
     'Si vous ne reconnaissez pas ce changement, modifiez votre mot de passe et fermez les sessions inconnues. La réinitialisation du mot de passe ne supprime pas les clés d’accès. Vérifiez-les et supprimez celles que vous ne reconnaissez pas.',
+  'error.passwordAttemptsLocked.title': 'Confirmation du mot de passe bloquée',
+  'error.passwordAttemptsLocked.detail':
+    'Cette session ne peut plus confirmer votre mot de passe. Déconnectez-vous puis reconnectez-vous.',
+  'error.passwordResultUnknown.title': 'Vérifiez vos paramètres de sécurité',
+  'error.passwordResultUnknown.detail':
+    'La modification a peut-être été enregistrée. Gardez cette session ouverte tant que vous ne pouvez pas vous reconnecter. Si vous avez changé de mot de passe, essayez le nouveau. Si vous avez remplacé les codes de secours, les anciens peuvent ne plus fonctionner ; utilisez votre application d’authentification ou une autre session connectée pour en générer de nouveaux.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

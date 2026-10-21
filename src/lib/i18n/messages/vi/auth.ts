@@ -374,6 +374,12 @@ const messages = {
   'passkeyNotice.action': 'Quản lý khóa truy cập',
   'passkeyNotice.recovery':
     'Nếu bạn không nhận ra thay đổi này, hãy đổi mật khẩu và kết thúc các phiên không quen thuộc. Đặt lại mật khẩu không xóa khóa truy cập. Hãy kiểm tra và xóa những khóa bạn không nhận ra.',
+  'error.passwordAttemptsLocked.title': 'Đã khóa xác nhận mật khẩu',
+  'error.passwordAttemptsLocked.detail':
+    'Phiên này không còn có thể xác nhận mật khẩu của bạn. Hãy đăng xuất rồi đăng nhập lại.',
+  'error.passwordResultUnknown.title': 'Kiểm tra cài đặt bảo mật',
+  'error.passwordResultUnknown.detail':
+    'Thay đổi có thể đã được lưu. Giữ phiên này mở cho đến khi bạn có thể đăng nhập lại. Nếu đã đổi mật khẩu, hãy thử mật khẩu mới. Nếu đã thay mã dự phòng, bộ mã cũ có thể không còn hoạt động; dùng ứng dụng xác thực hoặc một phiên khác đã đăng nhập để tạo bộ mã mới.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

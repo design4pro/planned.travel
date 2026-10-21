@@ -201,8 +201,9 @@ describe('the organization member-write paths are closed beside the admin list (
     )
   })
 
-  it('merges both lists into the one array disabledPaths receives, without touching the admin list', () => {
+  it('closes password verification alongside both plugin lists without changing the admin list', () => {
     expect(DISABLED_PATHS).toEqual([
+      '/verify-password',
       ...DISABLED_ADMIN_PATHS,
       ...DISABLED_ORGANIZATION_PATHS,
     ])
