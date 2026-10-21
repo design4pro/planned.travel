@@ -446,7 +446,7 @@ export async function linkReservationExpense(
  * Called by {@link deleteExpense} immediately before the expense row goes, and that ordering is
  * the whole point. `schema.ts` declares the column `on delete: 'set null'`, but drizzle-kit's
  * `ADD COLUMN` emits `REFERENCES` with no `ON DELETE` clause, so what D1 actually enforces is
- * `NO ACTION` — pinned, deliberately, by `reservation-schema.test.ts`. Closing that gap in the
+ * `NO ACTION` — registered in `migrations-match-schema.test.ts`, ADR 0044. Closing that gap in the
  * database would mean either hand-editing a generated migration or rebuilding the table, and
  * `drizzle/` forbids the first. So the rule the schema promises is kept here instead: without
  * this, deleting a priced booking's cost line raises `FOREIGN KEY constraint failed` and the

@@ -780,10 +780,11 @@ describe('the booking desk’s payload', () => {
  * `{ ddl: 'migrations' }` and not the default, and that is the whole test. `schema.ts` declares
  * `reservations.expense_id` as `on delete: 'set null'`, so on a schema-built database the engine
  * unlinks the booking by itself and this passes whatever `deleteExpense` does. What ships is a
- * `REFERENCES` clause with no `ON DELETE` — drizzle-kit's `ADD COLUMN` cannot emit one — so the
+ * `REFERENCES` clause with no `ON DELETE` — drizzle-kit's `ADD COLUMN` writes none — so the
  * deployed rule is `NO ACTION` and the same delete raises `FOREIGN KEY constraint failed` unless
- * the repository clears the column first. `reservation-schema.test.ts` pins that gap; this is the
- * test that the code closes it.
+ * the repository clears the column first. `DEPLOYED_WITHOUT_ON_DELETE` in
+ * `migrations-match-schema.test.ts` registers that gap (ADR 0044); this is the test that the code
+ * closes it.
  */
 describe('deleting an expense a booking points at, as deployed', () => {
   let deployed: Harness

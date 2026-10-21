@@ -1488,6 +1488,10 @@ three writers below compilable the moment this stage opens.
   the column as part of that delete and the booking is unlinked with no code in this plan running, no
   cross-module hook, and no scheduled repair. Pointing the other way, that same delete would have
   needed `04-budget-and-currencies.md` to know about bookings.
+
+  > **As deployed:** D1 enforces `NO ACTION` on this column, not `SET NULL`, so `deleteExpense`
+  > unlinks the booking itself through `unlinkReservationsFromExpense` (ADR 0044).
+
 - **Everything the side effect calls already exists and is exported**: `createExpense` (`:288`),
   `updateExpense` (`:318`), `getExpense` (`:265`) and `deleteExpense` (`:399`) in
   `src/server/repos/expenses.ts`. `createExpenseInput` (`:107`) already accepts every field this stage

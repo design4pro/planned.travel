@@ -2,8 +2,8 @@
  * Deleting a workspace (#1057): what goes, what is refused, and what the refusal leaves behind.
  *
  * Run on the DDL D1 is running (`{ ddl: 'migrations' }`) rather than the one `schema.ts` declares:
- * the cascade out of `organization` is the whole mechanism, and `drizzle-kit`'s `ADD COLUMN` cannot
- * express every `ON DELETE` rule, so a gap between the two would be invisible on the default.
+ * the cascade out of `organization` is the whole mechanism, and `drizzle-kit`'s `ADD COLUMN` does
+ * not write every `ON DELETE` rule, so a gap between the two would be invisible on the default.
  */
 import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'

@@ -141,7 +141,7 @@ export interface HarnessOptions {
    * They are not the same database, and the difference is the point of the option. `'schema'`
    * builds what `schema.ts` declares, which is what a repository is written against. `'migrations'`
    * replays `drizzle/*.sql` in journal order, which is what D1 is actually running — and
-   * drizzle-kit's `ADD COLUMN` cannot express every clause the schema declares, so a rule that
+   * drizzle-kit's `ADD COLUMN` does not write every clause the schema declares, so a rule that
    * holds in one can be absent from the other (`reservations.expense_id` is the live example:
    * `set null` declared, `NO ACTION` deployed). A repository whose correctness depends on closing
    * such a gap has to be tested on the second one, or the test proves the gap does not matter.

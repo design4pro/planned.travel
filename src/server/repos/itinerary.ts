@@ -789,9 +789,9 @@ export async function deleteAccommodation(
  *
  * Called by {@link deleteReservation} immediately before the booking goes, and that ordering is the
  * whole point. `schema.ts` declares `reservation_id` as `on delete: 'set null'`, but it arrived by
- * `ADD COLUMN`, which carries no `ON DELETE` clause, so what D1 actually enforces is `NO ACTION` —
- * pinned by `accommodation-schema.test.ts` and `migrations-match-schema.test.ts`. Closing that gap in
- * the database would mean either hand-editing a generated migration or rebuilding the table, so the
+ * `ADD COLUMN`, and drizzle-kit writes no `ON DELETE` clause there, so what D1 actually enforces is
+ * `NO ACTION` — registered in `migrations-match-schema.test.ts`, ADR 0044. Closing that gap in the
+ * database would mean either hand-editing a generated migration or rebuilding the table, so the
  * rule the schema promises is kept here instead: without this, deleting a stay's booking raises
  * `FOREIGN KEY constraint failed` and the nights never get the chance to outlive it.
  *

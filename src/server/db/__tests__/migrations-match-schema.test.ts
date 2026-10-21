@@ -42,7 +42,8 @@ import type { Harness } from '#/server/repos/__tests__/harness'
  * rather than fixed: closing the gap means either hand-editing a migration, which `drizzle/` forbids
  * as a generated directory, or a table rebuild, which `BACKWARD_COMPATIBILITY.md` forbids. A fifth
  * entry appearing here is a new instance of that debt and wants the same treatment on the caller
- * side; an entry that stops diverging reddens this file too, and should simply be removed.
+ * side; an entry that stops diverging reddens this file too, and should simply be removed. The rule
+ * and what an entry commits its author to are recorded once, in ADR 0044.
  */
 const DEPLOYED_WITHOUT_ON_DELETE: ReadonlyArray<string> = [
   'day_accommodations.reservation_id',
@@ -69,7 +70,7 @@ function sortedColumns(sqlite: DatabaseSync, table: string): Array<string> {
   return physicalColumns(sqlite, table).sort()
 }
 
-/** One declared foreign key, rewritten to the disposition an `ADD COLUMN` could actually express. */
+/** One declared foreign key, rewritten to the disposition the generated `ADD COLUMN` deployed. */
 function asD1Deploys(table: string, foreignKey: string): string {
   const [column] = foreignKey.split(' ')
   return DEPLOYED_WITHOUT_ON_DELETE.includes(`${table}.${column}`)
@@ -110,7 +111,7 @@ describe('the shipped migrations', () => {
     )
   })
 
-  it('deploy every foreign key as declared, bar the ones an ADD COLUMN could not carry', () => {
+  it('deploy every foreign key as declared, bar the ones the generated ADD COLUMN wrote no disposition for', () => {
     const declared = Object.entries(
       inventory(harness.sqlite, physicalForeignKeys),
     ).map(([table, foreignKeys]) => [

@@ -442,11 +442,11 @@ export async function deleteTransport(
  *
  * Called by the day deleters in `days.ts` immediately before the days go, and that ordering is the
  * whole point. `schema.ts` declares `arrival_day_id` as `on delete: 'set null'`, but it arrived by
- * `ADD COLUMN`, which carries no `ON DELETE` clause, so what D1 actually enforces is `NO ACTION` —
- * pinned by `migrations-match-schema.test.ts`. Closing that gap in the database would mean either
- * hand-editing a generated migration or rebuilding the table, so the rule the schema promises is
- * kept here instead: without this, deleting the day a journey lands on raises
- * `FOREIGN KEY constraint failed` (#186).
+ * `ADD COLUMN`, and drizzle-kit writes no `ON DELETE` clause there, so what D1 actually enforces is
+ * `NO ACTION` — registered in `migrations-match-schema.test.ts`, ADR 0044. Closing that gap in the
+ * database would mean either hand-editing a generated migration or rebuilding the table, so the
+ * rule the schema promises is kept here instead: without this, deleting the day a journey lands on
+ * raises `FOREIGN KEY constraint failed` (#186).
  *
  * `day_id` needs no such help: it was created with its table, so its `set null` is the deployed one.
  *
