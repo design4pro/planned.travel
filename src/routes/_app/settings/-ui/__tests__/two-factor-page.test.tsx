@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   toast: vi.fn(),
   verifyTotp: vi.fn(),
   generateBackupCodes: vi.fn(),
+  getTotpUri: vi.fn(),
   invalidate: vi.fn(),
   blocker: { status: 'idle', proceed: vi.fn(), reset: vi.fn() },
   blockOptions: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock('#/lib/auth/client', async (load) => ({
       disable: mocks.disable,
       verifyTotp: mocks.verifyTotp,
       generateBackupCodes: mocks.generateBackupCodes,
+      getTotpUri: mocks.getTotpUri,
     },
   },
 }))
@@ -94,6 +96,10 @@ beforeEach(() => {
   mocks.verifyTotp.mockResolvedValue({ data: { status: true }, error: null })
   mocks.generateBackupCodes.mockResolvedValue({
     data: { backupCodes: codes },
+    error: null,
+  })
+  mocks.getTotpUri.mockResolvedValue({
+    data: { totpURI: 'otpauth://totp/existing?secret=ZYXWVUTS2345' },
     error: null,
   })
   mocks.disable.mockResolvedValue({ data: { status: true }, error: null })
@@ -709,4 +715,164 @@ it('explains a possibly committed backup-code replacement and focuses its recove
     ),
   )
   expect(mocks.generateBackupCodes).toHaveBeenCalledTimes(1)
+})
+
+describe('show existing setup key', () => {
+  async function openKey() {
+    const user = userEvent.setup()
+    render(page(true))
+    const trigger = screen.getByRole('button', { name: 'Show setup key again' })
+    await user.click(trigger)
+    return { user, trigger }
+  }
+  it('reads only after a password, shows the shared blocked key and discards it on Done', async () => {
+    const { user, trigger } = await openKey()
+    expect(mocks.getTotpUri).not.toHaveBeenCalled()
+    expect(
+      screen.getByText(
+        'Add this key to another device. The key already on your other devices keeps working.',
+      ),
+    ).toBeTruthy()
+    await user.type(screen.getByLabelText('Your password'), 'fresh-password')
+    await user.click(screen.getByRole('button', { name: 'Show key' }))
+    const key = await screen.findByText('ZYXW VUTS 2345')
+    expect(key.closest('[data-sentry-block]')).not.toBeNull()
+    const link = screen.getByRole('link', {
+      name: 'Open in your authenticator app',
+    })
+    expect(link.getAttribute('href')).toBe(
+      'otpauth://totp/existing?secret=ZYXWVUTS2345',
+    )
+    expect(link.closest('[data-sentry-block]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Copy key' })).toBeTruthy()
+    expect(mocks.getTotpUri).toHaveBeenCalledExactlyOnceWith({
+      password: 'fresh-password',
+    })
+    expect(mocks.enable).not.toHaveBeenCalled()
+    expect(mocks.generateBackupCodes).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('Your password')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    await user.click(trigger)
+    expect(screen.queryByText('ZYXW VUTS 2345')).toBeNull()
+    expect(
+      (screen.getByLabelText('Your password') as HTMLInputElement).value,
+    ).toBe('')
+    expect(mocks.getTotpUri).toHaveBeenCalledOnce()
+  })
+  it.each(['cancel', 'escape', 'key escape'])(
+    'clears state and restores trigger focus on %s',
+    async (close) => {
+      const { user, trigger } = await openKey()
+      await user.type(screen.getByLabelText('Your password'), 'forget-me')
+      if (close === 'key escape') {
+        await user.click(screen.getByRole('button', { name: 'Show key' }))
+        await screen.findByText('ZYXW VUTS 2345')
+      }
+      if (close === 'cancel')
+        await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      else await user.keyboard('{Escape}')
+      await waitFor(() => expect(document.activeElement).toBe(trigger))
+      await user.click(trigger)
+      expect(
+        (screen.getByLabelText('Your password') as HTMLInputElement).value,
+      ).toBe('')
+      expect(screen.queryByText('ZYXW VUTS 2345')).toBeNull()
+    },
+  )
+  it('clears a wrong password and focuses its field', async () => {
+    mocks.getTotpUri.mockResolvedValue({
+      error: { code: 'INVALID_PASSWORD', status: 400 },
+    })
+    const { user } = await openKey()
+    const field = screen.getByLabelText('Your password') as HTMLInputElement
+    await user.type(field, 'wrong')
+    await user.click(screen.getByRole('button', { name: 'Show key' }))
+    await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
+    expect(field.value).toBe('')
+    expect(document.activeElement).toBe(field)
+  })
+  it('keeps the password for the ten-second wait with no automatic retry', async () => {
+    mocks.getTotpUri.mockResolvedValue({ error: { status: 429 } })
+    const timer = vi.spyOn(window, 'setTimeout')
+    const { user } = await openKey()
+    const field = screen.getByLabelText('Your password') as HTMLInputElement
+    await user.type(field, 'keep-me')
+    const submit = screen.getByRole('button', {
+      name: 'Show key',
+    }) as HTMLButtonElement
+    await user.click(submit)
+    const warning = await screen.findByText(
+      Settings['twoFactor.rateLimited.password'],
+    )
+    expect(document.activeElement).toBe(warning.closest('[role=status]'))
+    expect(field.value).toBe('keep-me')
+    expect(submit.disabled).toBe(true)
+    const scheduled = timer.mock.calls.find((args) => args[1] === 10000)
+    expect(scheduled).toBeTruthy()
+    act(() => {
+      if (typeof scheduled?.[0] === 'function') scheduled[0]()
+    })
+    expect(submit.disabled).toBe(false)
+    expect(mocks.getTotpUri).toHaveBeenCalledOnce()
+    expect(screen.queryByText(Auth['error.rateLimited.detail'])).toBeNull()
+  })
+  it('prevents duplicate submissions while checking and ignores a response after unmount', async () => {
+    let resolve: (value: unknown) => void = () => undefined
+    mocks.getTotpUri.mockImplementation(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const { user } = await openKey()
+    await user.type(screen.getByLabelText('Your password'), 'fresh-password')
+    await user.click(screen.getByRole('button', { name: 'Show key' }))
+    expect(
+      screen
+        .getByRole('button', { name: /Show keyChecking/ })
+        .getAttribute('aria-busy'),
+    ).not.toBeNull()
+    expect(mocks.getTotpUri).toHaveBeenCalledOnce()
+    cleanup()
+    await act(async () => {
+      resolve({
+        data: { totpURI: 'otpauth://totp/existing?secret=ZYXWVUTS2345' },
+      })
+    })
+    render(page(true))
+    await user.click(
+      screen.getByRole('button', { name: 'Show setup key again' }),
+    )
+    expect(screen.queryByText('ZYXW VUTS 2345')).toBeNull()
+    expect(screen.getByLabelText('Your password')).toBeTruthy()
+  })
+  it.each(['returned', 'thrown', 'malformed'])(
+    'contains a secret-bearing %s failure without rendering raw messages',
+    async (kind) => {
+      const secret = 'otpauth://totp/existing?secret=ZYXWVUTS2345'
+      if (kind === 'thrown')
+        mocks.getTotpUri.mockRejectedValue(new Error(secret))
+      else if (kind === 'malformed')
+        mocks.getTotpUri.mockResolvedValue({
+          data: { totpURI: 'https://unsafe.test/?secret=ZYXWVUTS2345' },
+        })
+      else
+        mocks.getTotpUri.mockResolvedValue({
+          error: { status: 500, message: secret },
+        })
+      const { user } = await openKey()
+      await user.type(screen.getByLabelText('Your password'), 'fresh-password')
+      await user.click(screen.getByRole('button', { name: 'Show key' }))
+      await screen.findByText(
+        kind === 'returned'
+          ? Auth['error.unexpected.detail']
+          : Auth['error.offline.detail'],
+      )
+      expect(screen.queryByText(/ZYXW/)).toBeNull()
+      expect(
+        screen.queryByRole('link', { name: 'Open in your authenticator app' }),
+      ).toBeNull()
+    },
+  )
 })

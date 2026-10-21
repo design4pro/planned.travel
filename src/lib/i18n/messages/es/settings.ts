@@ -761,6 +761,13 @@ const messages = {
   'twoFactor.nopassword.body':
     'Los dos factores necesitan una contraseña en esta cuenta. La página siguiente pide tu correo y envía un enlace para establecerla. Esto cierra tus sesiones en todos los dispositivos. Inicia sesión de nuevo y vuelve aquí.',
   'twoFactor.nopassword.action': 'Establecer contraseña',
+  'twoFactor.setup.action': 'Volver a mostrar la clave de configuración',
+  'twoFactor.setup.title': 'Clave de configuración',
+  'twoFactor.setup.body':
+    'Añade esta clave a otro dispositivo. La clave de tus otros dispositivos seguirá funcionando.',
+  'twoFactor.setup.done': 'Listo',
+  'twoFactor.setup.confirm': 'Mostrar clave',
+  'twoFactor.setup.pending': 'Comprobando',
   'twoFactor.off.action': 'Desactivar la autenticación de dos factores',
   'twoFactor.off.title': '¿Desactivar la autenticación de dos factores?',
   'twoFactor.off.body':

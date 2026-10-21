@@ -678,6 +678,13 @@ const messages = {
   'twoFactor.nopassword.body':
     '2단계 인증을 사용하려면 이 계정에 비밀번호가 필요합니다. 다음 페이지에서 이메일을 입력하면 설정 링크가 전송됩니다. 비밀번호를 설정하면 모든 곳에서 로그아웃됩니다. 다시 로그인한 후 여기로 돌아오세요.',
   'twoFactor.nopassword.action': '비밀번호 설정',
+  'twoFactor.setup.action': '설정 키 다시 보기',
+  'twoFactor.setup.title': '설정 키',
+  'twoFactor.setup.body':
+    '이 키를 다른 기기에 추가하세요. 다른 기기에 등록된 키도 계속 사용할 수 있습니다.',
+  'twoFactor.setup.done': '완료',
+  'twoFactor.setup.confirm': '키 보기',
+  'twoFactor.setup.pending': '확인 중',
   'twoFactor.off.action': '2단계 인증 끄기',
   'twoFactor.off.title': '2단계 인증을 끄시겠어요?',
   'twoFactor.off.body':
