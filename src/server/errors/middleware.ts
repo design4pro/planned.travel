@@ -2,7 +2,7 @@
  * The one place a server function's failure becomes something a browser is allowed to see.
  *
  * It is registered globally in `src/start.ts`, which is what makes it a boundary rather than a
- * convention: there are 73 `createServerFn` call sites in this project and none of them has to
+ * convention: no `createServerFn` call site in this project has to
  * remember anything. `getStartOptions().functionMiddleware` is flattened ahead of a function's own
  * middleware, and the input validator runs inside the `next()` below - so a Zod rejection, which
  * fires before the handler is ever entered, is caught here too.

@@ -71,7 +71,7 @@ person plural, and the same vocabulary the shipped screens use — "workspace" f
 "trip" for a `trips` row, "traveller" for a member.
 
 **The citation is a line number and line numbers move, so here is the invariant behind it.** That
-module is being re-shaped by the localisation work `docs/SPEC.md` §8 governs: measured on disk while
+module is being re-shaped by the localisation work `docs/SPEC.md` §9 governs: measured on disk while
 this revision was written, `src/lib/format.ts` has become a module whose every function takes a
 trailing `locale` defaulting to `en`, which its own header at `:13-17` says "resolves to `en-GB`, the
 tag this module has always pinned — so every existing caller's output is unchanged to the byte". The
@@ -87,10 +87,10 @@ language a runtime choice; `09-S5` records why this plan does not build it, and 
 
 ### Where this plan's English copy lives
 
-`docs/SPEC.md` §8 rule 9 makes the copy ours to author, and the **Ownership** line of its catalogue
+`docs/SPEC.md` §9 rule 9 makes the copy ours to author, and the **Ownership** line of its catalogue
 section assigns the file it is authored in: _One item owns `messages/en/<namespace>.ts` for its own
 screens._ Seven of the eight stages below put English sentences on a screen under `src/routes/_app`,
-which §8 rule 8 puts squarely in scope, so this plan has to name that file and say who writes into
+which §9 rule 8 puts squarely in scope, so this plan has to name that file and say who writes into
 it. A plan that fixes the copy _language_ and leaves the copy _file_ unassigned has answered half the
 question.
 
@@ -108,7 +108,7 @@ the register that recorded the omission this section closes — so no sibling pl
 `messages/en/settings.ts` and this plan is the one that has to.
 
 **The namespace is `settings`, for all seven.** `src/lib/i18n/types.ts:115-126` freezes the ten
-names and §8 says an eleventh is a contract change rather than a builder's choice; `settings` is the
+names and §9 says an eleventh is a contract change rather than a builder's choice; `settings` is the
 one that names this area. One file therefore serves account, security, preference and handbook copy,
 and what makes that correct rather than a compromise is a property of the runtime: **a namespace is a
 unit of ownership and code-splitting, not an access boundary.** `catalogue.ts` merges every namespace
@@ -137,7 +137,7 @@ and `rewrite` as exclusive and treats `append` as the documented cooperative pat
 fifteen stages across these plans already use on
 `src/server/repos/__tests__/tenant-isolation.test.ts`. Three of the five appending stages here sit in
 wave 1 beside `09-S1`, so their order is not guaranteed, and the rule that makes that safe is set
-down rather than assumed: **the file's shape is fixed**, by §8 and by the one namespace file that
+down rather than assumed: **the file's shape is fixed**, by §9 and by the one namespace file that
 already exists — a header docstring, `import type { NamespaceMessages } from '../../types'`, then
 `const messages = { … } as const satisfies NamespaceMessages` and `export default messages`
 (`src/lib/i18n/messages/en/ui.ts`, its first and last lines). A stage that finds the file absent
@@ -149,7 +149,7 @@ agent ran first.
 
 - `09-S4` ships `public/manifest.webmanifest`. A web app manifest is a static JSON document the
   browser fetches once per origin, before any React tree exists; it cannot read the catalogue, and
-  serving a different one per language is a routing change §8 does not ask for. Its `name` and
+  serving a different one per language is a routing change §9 does not ask for. Its `name` and
   `short_name` reuse `SITE_NAME` and the existing Apple title value `planned` from
   `src/routes/__root.tsx`. There is no `description`: an optional untranslated sentence on an
   installation surface would conflict with the 23-locale product. The stage renders no sentence
@@ -172,7 +172,7 @@ forty each other stage adds. Every one of the twenty-two non-`en` catalogues own
 `messages/<tag>/settings.ts` whole, so nothing here collides with them — but this namespace will be
 the largest in the product and the plan says so now rather than letting a translation run discover
 it. If the handbook is ever ruled out of scope the way `src/routes/legal/**` long-form prose already
-is by §8 rule 8, that is an amendment to §8 and an entry in
+is by §9 rule 8, that is an amendment to §9 and an entry in
 `docs/plans/11-boundaries-and-blockers.md`, not a choice a stage may make on its own; so this plan
 plans for the compliant case and names its cost.
 
@@ -180,7 +180,7 @@ plans for the compliant case and names its cost.
 `src/lib/i18n/__tests__/parity.test.ts` fails for every `en` key that has no translation yet, which
 is by construction until the per-tag translation work lands: it is already red on this branch for the
 whole of `messages/en/ui.ts`. A stage here adds English keys and therefore adds parity failures, and
-it must **not** write into `messages/<tag>/` to silence them — §8 gives those directories wholly to
+it must **not** write into `messages/<tag>/` to silence them — §9 gives those directories wholly to
 the translation items, so an English-side stage doing that is an ownership violation. Each stage runs
 `pnpm test`, records the parity count before and after its own change, and owns every failure that is
 not that suite.
@@ -1664,11 +1664,11 @@ provider and types), `src/lib/fonts.ts`, and several hundred lines across `src/s
 `src/styles/tokens.css`. Re-measured while this revision was written, that is understated in two ways
 that change what this stage may do:
 
-- **`docs/SPEC.md` has grown a §8 that governs the row directly**, and it settles the questions this
+- **`docs/SPEC.md` has grown a §9 that governs the row directly**, and it settles the questions this
   stage was holding open. It fixes the exact set of twenty-three BCP-47 tags and their native names;
   it makes the message layer, the plural rules and the interpolation **ours**, restating §3's freeze
   rather than waiting for it to be lifted; it fixes server-side negotiation before first paint
-  (user → workspace → `Accept-Language` → `en`) with `<html lang>` and `<html dir>` server-rendered;
+  (user → workspace → visitor cookie → `Accept-Language` → `en`) with `<html lang>` and `<html dir>` server-rendered;
   it makes `ar` a designed right-to-left layout rather than a flip; it carries the cross-runtime
   formatting rule this stage records under **Server**; and it fixes the catalogue layout as
   `src/lib/i18n/messages/<locale>/<namespace>.ts` over ten named namespaces, saying in as many words
@@ -1676,17 +1676,17 @@ that change what this stage may do:
 - **The subsystem is materialising in this checkout, not only on `main`.** `src/lib/i18n/` and the
   re-shaped `src/lib/format.ts` are present and measurable here.
 
-So the chosen fallback in blocker 1 is not a proposal any more — §8 is the decision, and it says
+So the chosen fallback in blocker 1 is not a proposal any more — §9 is the decision, and it says
 hand-roll. What remains true, and is the whole reason this stage stays **BLOCKED** rather than
-becoming buildable, is that the work is owned elsewhere: §8 gives `src/lib/i18n/messages/<tag>/`
+becoming buildable, is that the work is owned elsewhere: §9 gives `src/lib/i18n/messages/<tag>/`
 wholly to the localisation items, and `src/styles/styles.css` and `src/styles/tokens.css` are shared
 paths `00-foundations.md` governs and no feature stage may claim in any wave. A stage in **this**
 plan that wrote a catalogue, a negotiator or a token would produce the worst outcome
 `README.md` describes: a second implementation of a shipped thing, in files two plans both claim.
 
 The re-planned stage's first act is therefore not code and not design. It is to diff this branch
-against `main` and against §8, establish what already exists, and re-specify **only** the gap —
-which, on the evidence above, may be nothing more than the language picker §8 rule 7 puts in
+against `main` and against §9, establish what already exists, and re-specify **only** the gap —
+which, on the evidence above, may be nothing more than the language picker §9 rule 7 puts in
 settings, and even that must be checked against `09-S8`'s ownership of the settings shell before it
 is claimed. **It must not re-specify what is already there.**
 
@@ -3055,7 +3055,7 @@ measurement, not an expectation: `grep -rln 'messages/en/' docs/plans` matches e
 this one and `OPEN-FINDINGS.md`, the register that recorded the omission this section closes. Three
 of the five appends are in wave 1 beside the stage that mints the file, and the area brief's
 **Where this plan's English copy lives** is what makes that safe — disjoint key prefixes, a file shape
-fixed by `docs/SPEC.md` §8 and by `src/lib/i18n/messages/en/ui.ts`, and an explicit rule for the stage
+fixed by `docs/SPEC.md` §9 and by `src/lib/i18n/messages/en/ui.ts`, and an explicit rule for the stage
 that arrives first. The other nine namespace files are named by no stage here, so nothing this plan
 does can stand in the way of the item that owns `messages/en/shell.ts`.
 

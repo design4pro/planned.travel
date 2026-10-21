@@ -3,12 +3,12 @@ import { DEFAULT_LOCALE, LOCALE_TAGS } from './locales'
 import type { Locale } from './locales'
 
 /**
- * Locale negotiation, exactly as `docs/SPEC.md` §8.3 orders it:
+ * Locale negotiation, exactly as `docs/SPEC.md` §9 rule 3 orders it:
  *
- *   user setting → workspace setting → `Accept-Language` → `en`
+ *   user setting → workspace setting → visitor cookie → `Accept-Language` → `en`
  *
  * **This module is pure.** It reads no request, no cookie, no `navigator`. The
- * caller passes the three inputs in and gets one tag back, which is what lets
+ * caller passes the inputs in and gets one tag back, which is what lets
  * the same function run in the Worker before first paint and in a unit test
  * without a fake request. It also sidesteps a trap: `navigator.language` exists
  * in workerd and is hard-coded to `'en'`, so isomorphic code that consults it
@@ -16,10 +16,10 @@ import type { Locale } from './locales'
  * visitor gets a hydration mismatch on the whole document.
  *
  * **Stored tags are normalised, not trusted.** `organization_settings.locale`
- * defaults to `en-GB`, which is not one of the twenty-three, and a traveller's
- * override was writable as free text before the picker existed. A plain
- * membership test would answer "unsupported" for every workspace created so
- * far and drop them all to `Accept-Language`. So a tag is matched
+ * once defaulted to `en-GB`, which is not one of the twenty-three, and a
+ * traveller's override was writable as free text before the picker existed. A plain
+ * membership test would answer "unsupported" for every legacy workspace and
+ * drop them to the visitor cookie or header. So a tag is matched
  * case-insensitively, then through an explicit alias table, then by BCP-47
  * truncation: `en-GB` → `en`, `pl-PL` → `pl`, `zh-Hant-TW` → `zh-Hant`. What
  * truncation cannot reach is unsupported, and unsupported means the next step
@@ -166,12 +166,14 @@ export function parseAcceptLanguage(
   return ranked.map((entry) => entry.tag)
 }
 
-/** The three inputs §8.3 negotiates between, in the order it consults them. */
+/** The inputs §9 rule 3 negotiates between, in the order it consults them. */
 export interface LocalePreferences {
   /** `user_settings.locale` — the traveller's own override. May be absent. */
   readonly user?: string | null
   /** `organization_settings.locale` — the workspace default. */
   readonly workspace?: string | null
+  /** The bounded, parsed visitor cookie. Canonicalised like a stored tag. */
+  readonly visitor?: string | null
   /** The raw request header. Never a normalised or cached copy of it. */
   readonly acceptLanguage?: string | null
 }
@@ -183,7 +185,8 @@ export interface LocalePreferences {
 export function negotiate(preferences: LocalePreferences): Locale {
   const stored =
     resolveLocaleTag(preferences.user) ??
-    resolveLocaleTag(preferences.workspace)
+    resolveLocaleTag(preferences.workspace) ??
+    resolveLocaleTag(preferences.visitor)
   if (stored !== null) {
     return stored
   }

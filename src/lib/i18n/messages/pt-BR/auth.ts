@@ -2,14 +2,14 @@
  * Everything the authentication screens say, in Brazilian Portuguese.
  *
  * Authored from `../en/auth.ts`, never from another product's catalogue
- * (`docs/SPEC.md` §1, §8.9). The English file is the schema:
+ * (`docs/SPEC.md` §1, §9 rule 9). The English file is the schema:
  * `TranslationOf<typeof En>` makes a missing or invented key a compile error,
  * and `__tests__/parity.test.ts` checks the placeholders and the plural
  * branches.
  *
  * **Register.** «Você» with the verb in the third person, as everywhere else in
  * the Brazilian catalogue. These are the only screens a traveller reaches with
- * no session, so the language comes from `Accept-Language` alone and every
+ * no session, so the language comes from the visitor cookie, then `Accept-Language`, then English and every
  * validation message has to read as naturally as the headings do.
  *
  * **Plural.** `Intl.PluralRules('pt-BR')` reports `one`, `many` and `other`;

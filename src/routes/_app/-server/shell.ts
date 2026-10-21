@@ -59,12 +59,12 @@ export interface ShellPayload {
  * A fatal shell state, as the key the error boundary will resolve.
  *
  * The sentence used to be composed here, against `Accept-Language` — the only
- * signal this path has, because both callers have already failed to resolve the
+ * signal this path had then, because both callers had failed to resolve the
  * very workspace the stored language preference hangs off. That put the one
  * screen a blocked traveller sees in a language the document around it may not
  * be in. Throwing the key moves the resolution to
  * `src/components/layout/error-state.tsx`, which renders inside the document's
- * own `I18nProvider` and therefore in the locale §8.3 negotiated before first
+ * own `I18nProvider` and therefore in the locale §9 rule 3 negotiated before first
  * paint. `Error.message` is the field that survives the server-function
  * boundary, so the key travels as the message and nothing else changes.
  */
