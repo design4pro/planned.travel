@@ -237,10 +237,15 @@ export const saveLanguagePreference = createServerFn({ method: 'POST' })
     const row = await updateUserSettings(scope, {
       locale: overrideOrNull(data.locale),
     })
-    const effective = await getEffectiveSettings(scope)
-    writeVisitorLocaleCookie(
-      resolveLocaleTag(effective.locale) ?? DEFAULT_LOCALE,
-    )
+    // The row is already committed, so a failed read must not turn the save into a rejection: the
+    // client would roll its chip back to a language D1 no longer holds. It only skips refreshing
+    // the visitor cookie, which the next successful save rewrites.
+    const effective = await getEffectiveSettings(scope).catch(() => null)
+    if (effective) {
+      writeVisitorLocaleCookie(
+        resolveLocaleTag(effective.locale) ?? DEFAULT_LOCALE,
+      )
+    }
     return { locale: resolveLocaleTag(row.locale) }
   })
 

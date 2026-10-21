@@ -151,13 +151,15 @@ describe('signed-in language save', () => {
     expect(state.effective).not.toHaveBeenCalled()
   })
 
-  it('does not set the cookie if the effective-language read fails', async () => {
+  it('reports the committed save without a cookie if the effective-language read fails', async () => {
     state.effective.mockRejectedValue(new Error('read failed'))
-    const { response } = await request(
+    const { response, result } = await request(
       'https://planned.travel/_serverFn/language',
-      () => saveLanguagePreference({ data: { locale: '' } }),
+      () => saveLanguagePreference({ data: { locale: 'de' } }),
     )
-    expect(response.status).toBe(500)
+    expect(state.update).toHaveBeenCalledWith(state.scope, { locale: 'de' })
+    expect(result).toEqual({ locale: 'de' })
+    expect(response.status).toBe(204)
     expect(response.headers.get('set-cookie')).toBeNull()
   })
 
