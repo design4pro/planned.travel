@@ -231,7 +231,7 @@ const messages = {
   'security.twoFactor.enable': 'Bật lên',
   'security.passkeys.label': 'Khóa truy cập',
   'security.passkeys.hint':
-    'Đăng nhập bằng vân tay, Face ID hoặc khóa bảo mật mà không phải gõ gì.',
+    'Đăng nhập bằng vân tay, khuôn mặt hoặc khóa bảo mật mà không phải gõ gì.',
   'security.passkeys.action': 'Quản lý khóa truy cập',
   'security.session.title': 'Phiên này',
   'security.session.description': 'Trình duyệt bạn đang đọc dòng này.',
@@ -591,9 +591,10 @@ const messages = {
   'passkeys.add.exists':
     'Thiết bị này đã có khóa truy cập cho tài khoản của bạn',
   'passkeys.add.failed': 'Chưa thêm được khóa truy cập. Hãy thử lại.',
-  'passkeys.add.stale': 'Để an toàn, hãy đăng nhập lại để tiếp tục.',
+  'passkeys.add.stale':
+    'Để an toàn, việc quản lý khóa truy cập yêu cầu bạn đã đăng nhập gần đây. Nếu chọn “Đăng nhập lại”, bạn sẽ bị đăng xuất trước, rồi được chuyển đến trang đăng nhập.',
   'passkeys.error.sessionEnded':
-    'Phiên của bạn đã kết thúc. Hãy đăng nhập lại để tiếp tục.',
+    'Phiên của bạn đã kết thúc. Hãy đăng nhập lại để tiếp tục quản lý khóa truy cập.',
   'passkeys.signInAgain': 'Đăng nhập lại',
   'passkeys.add.limit':
     'Bạn đã đạt giới hạn {value} khóa truy cập. Hãy xóa một khóa để thêm khóa khác.',
@@ -631,7 +632,7 @@ const messages = {
   'passkeys.delete.cancel': 'Hủy',
   'passkeys.delete.wrongPassword': 'Mật khẩu này không đúng.',
   'passkeys.delete.stale':
-    'Để an toàn, hãy đăng nhập lại trước khi xóa khóa truy cập.',
+    'Để an toàn, việc xóa khóa truy cập yêu cầu bạn đã đăng nhập gần đây. Nếu chọn “Đăng nhập lại”, bạn sẽ bị đăng xuất trước, rồi được chuyển đến trang đăng nhập.',
   'passkeys.delete.removed': 'Đã xóa khóa truy cập',
   'passkeys.delete.failed': 'Chưa xóa được khóa truy cập. Hãy thử lại.',
   'passkeys.delete.removing': 'Đang xóa khóa truy cập',

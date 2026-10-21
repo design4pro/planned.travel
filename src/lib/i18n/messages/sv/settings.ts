@@ -597,9 +597,10 @@ const messages = {
   'passkeys.add.exists':
     'Den här enheten har redan en lösenordsnyckel för ditt konto',
   'passkeys.add.failed': 'Lösenordsnyckeln lades inte till. Försök igen.',
-  'passkeys.add.stale': 'Av säkerhetsskäl: logga in igen för att fortsätta.',
+  'passkeys.add.stale':
+    'Av säkerhetsskäl kräver hanteringen av lösenordsnycklar en nyligen genomförd inloggning. Om du väljer ”Logga in igen” loggas du först ut och förs sedan till inloggningssidan.',
   'passkeys.error.sessionEnded':
-    'Din session har avslutats. Logga in igen för att fortsätta.',
+    'Din session har avslutats. Logga in igen för att fortsätta hantera dina lösenordsnycklar.',
   'passkeys.signInAgain': 'Logga in igen',
   'passkeys.add.limit':
     'Du har nått gränsen på {value} lösenordsnycklar. Ta bort en för att lägga till en ny.',
@@ -638,7 +639,7 @@ const messages = {
   'passkeys.delete.cancel': 'Avbryt',
   'passkeys.delete.wrongPassword': 'Lösenordet stämmer inte.',
   'passkeys.delete.stale':
-    'Av säkerhetsskäl: logga in igen innan du tar bort en lösenordsnyckel.',
+    'Av säkerhetsskäl kräver borttagning av en lösenordsnyckel en nyligen genomförd inloggning. Om du väljer ”Logga in igen” loggas du först ut och förs sedan till inloggningssidan.',
   'passkeys.delete.removed': 'Lösenordsnyckeln togs bort',
   'passkeys.delete.failed': 'Lösenordsnyckeln togs inte bort. Försök igen.',
   'passkeys.delete.removing': 'Tar bort lösenordsnyckeln',

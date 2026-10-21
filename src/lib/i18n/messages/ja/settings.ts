@@ -211,7 +211,7 @@ const messages = {
   'security.twoFactor.enable': 'オンにする',
   'security.passkeys.label': 'パスキー',
   'security.passkeys.hint':
-    '何も入力せず、指紋認証や Face ID、セキュリティキーでサインインできます。',
+    '何も入力せず、指紋認証や顔認証、セキュリティキーでサインインできます。',
   'security.passkeys.action': 'パスキーを管理',
   'security.session.title': 'このセッション',
   'security.session.description': 'いまこれを読んでいるブラウザです。',
@@ -562,9 +562,9 @@ const messages = {
   'passkeys.add.failed':
     'パスキーを追加できませんでした。もう一度お試しください。',
   'passkeys.add.stale':
-    '安全のため、続けるにはもう一度サインインしてください。',
+    '安全のため、パスキーの管理には最近のサインインが必要です。「もう一度サインイン」を選ぶと、先にサインアウトされ、その後サインインページに移動します。',
   'passkeys.error.sessionEnded':
-    'セッションが終了しました。続けるにはもう一度サインインしてください。',
+    'セッションが終了しました。パスキーの管理を続けるには、もう一度サインインしてください。',
   'passkeys.signInAgain': 'もう一度サインイン',
   'passkeys.add.limit':
     'パスキーの上限（{value} 件）に達しました。別のパスキーを追加するには、どれかを削除してください。',
@@ -603,7 +603,7 @@ const messages = {
   'passkeys.delete.cancel': 'キャンセル',
   'passkeys.delete.wrongPassword': 'パスワードが正しくありません。',
   'passkeys.delete.stale':
-    '安全のため、パスキーを削除する前にもう一度サインインしてください。',
+    '安全のため、パスキーの削除には最近のサインインが必要です。「もう一度サインイン」を選ぶと、先にサインアウトされ、その後サインインページに移動します。',
   'passkeys.delete.removed': 'パスキーを削除しました',
   'passkeys.delete.failed':
     'パスキーを削除できませんでした。もう一度お試しください。',

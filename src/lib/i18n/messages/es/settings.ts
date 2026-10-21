@@ -229,7 +229,7 @@ const messages = {
   'security.twoFactor.enable': 'Activar',
   'security.passkeys.label': 'Claves de acceso',
   'security.passkeys.hint':
-    'Entra con la huella, con Face ID o con una llave de seguridad, sin escribir nada.',
+    'Entra con tu huella, tu rostro o una llave de seguridad, sin escribir nada.',
   'security.passkeys.action': 'Gestionar las claves',
   'security.session.title': 'Esta sesión',
   'security.session.description': 'El navegador en el que lees esto.',
@@ -616,9 +616,9 @@ const messages = {
     'Este dispositivo ya tiene una clave de acceso para tu cuenta',
   'passkeys.add.failed': 'No se añadió la clave de acceso. Inténtalo de nuevo.',
   'passkeys.add.stale':
-    'Por tu seguridad, vuelve a iniciar sesión para continuar.',
+    'Por tu seguridad, gestionar las claves de acceso requiere un inicio de sesión reciente. Si eliges «Iniciar sesión de nuevo», primero se cerrará tu sesión y después irás a la página de inicio de sesión.',
   'passkeys.error.sessionEnded':
-    'Tu sesión ha terminado. Vuelve a iniciar sesión para continuar.',
+    'Tu sesión ha terminado. Vuelve a iniciar sesión para seguir gestionando tus claves de acceso.',
   'passkeys.signInAgain': 'Iniciar sesión de nuevo',
   'passkeys.add.limit':
     'Has alcanzado el límite de {value} claves de acceso. Elimina una para añadir otra.',
@@ -657,7 +657,7 @@ const messages = {
   'passkeys.delete.cancel': 'Cancelar',
   'passkeys.delete.wrongPassword': 'Esa contraseña no es correcta.',
   'passkeys.delete.stale':
-    'Por tu seguridad, vuelve a iniciar sesión antes de eliminar una clave de acceso.',
+    'Por tu seguridad, eliminar una clave de acceso requiere un inicio de sesión reciente. Si eliges «Iniciar sesión de nuevo», primero se cerrará tu sesión y después irás a la página de inicio de sesión.',
   'passkeys.delete.removed': 'Clave de acceso eliminada',
   'passkeys.delete.failed':
     'No se eliminó la clave de acceso. Inténtalo de nuevo.',

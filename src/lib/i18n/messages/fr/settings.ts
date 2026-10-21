@@ -228,7 +228,7 @@ const messages = {
   'security.twoFactor.enable': 'Activer',
   'security.passkeys.label': 'Clés d’accès',
   'security.passkeys.hint':
-    'Connectez-vous avec le lecteur d’empreinte, Face ID ou une clé de sécurité, sans rien saisir.',
+    'Connectez-vous avec votre empreinte, votre visage ou une clé de sécurité, sans rien saisir.',
   'security.passkeys.action': 'Gérer les clés d’accès',
   'security.session.title': 'Cette session',
   'security.session.description': 'Le navigateur dans lequel vous lisez ceci.',
@@ -617,9 +617,10 @@ const messages = {
   'passkeys.add.exists':
     'Cet appareil a déjà une clé d’accès pour votre compte',
   'passkeys.add.failed': 'La clé d’accès n’a pas été ajoutée. Réessayez.',
-  'passkeys.add.stale': 'Pour votre sécurité, reconnectez-vous pour continuer.',
+  'passkeys.add.stale':
+    'Pour votre sécurité, la gestion des clés d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
   'passkeys.error.sessionEnded':
-    'Votre session est terminée. Reconnectez-vous pour continuer.',
+    'Votre session est terminée. Reconnectez-vous pour continuer à gérer vos clés d’accès.',
   'passkeys.signInAgain': 'Se reconnecter',
   'passkeys.add.limit':
     'Vous avez atteint la limite de {value} clés d’accès. Supprimez-en une pour en ajouter une autre.',
@@ -659,7 +660,7 @@ const messages = {
   'passkeys.delete.cancel': 'Annuler',
   'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',
   'passkeys.delete.stale':
-    'Pour votre sécurité, reconnectez-vous avant de supprimer une clé d’accès.',
+    'Pour votre sécurité, la suppression d’une clé d’accès exige une connexion récente. Choisir « Se reconnecter » ferme d’abord votre session, puis vous amène à la page de connexion.',
   'passkeys.delete.removed': 'Clé d’accès supprimée',
   'passkeys.delete.failed': 'La clé d’accès n’a pas été supprimée. Réessayez.',
   'passkeys.delete.removing': 'Suppression de la clé d’accès',

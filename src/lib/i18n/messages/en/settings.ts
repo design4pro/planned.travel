@@ -269,7 +269,7 @@ const messages = {
   'security.twoFactor.enable': 'Turn on',
   'security.passkeys.label': 'Passkeys',
   'security.passkeys.hint':
-    'Sign in with the fingerprint reader, Face ID or a security key instead of typing anything.',
+    'Sign in with your fingerprint, your face or a security key instead of typing anything.',
   'security.passkeys.action': 'Manage passkeys',
   'security.session.title': 'This session',
   'security.session.description': 'The browser you are reading this in.',
@@ -677,9 +677,10 @@ const messages = {
   'passkeys.add.dismissed': 'No passkey was added',
   'passkeys.add.exists': 'This device already has a passkey for your account',
   'passkeys.add.failed': 'The passkey was not added. Try again.',
-  'passkeys.add.stale': 'For your safety, sign in again to continue.',
+  'passkeys.add.stale':
+    'For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.',
   'passkeys.error.sessionEnded':
-    'Your session has ended. Sign in again to continue.',
+    'Your session has ended. Sign in again to continue managing your passkeys.',
   'passkeys.signInAgain': 'Sign in again',
   'passkeys.add.limit':
     'You have reached the limit of {value} passkeys. Remove one to add another.',
@@ -718,7 +719,7 @@ const messages = {
   'passkeys.delete.cancel': 'Cancel',
   'passkeys.delete.wrongPassword': 'That password is not right.',
   'passkeys.delete.stale':
-    'For your safety, sign in again before removing a passkey.',
+    'For your safety, removing a passkey requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.',
   'passkeys.delete.removed': 'Passkey removed',
   'passkeys.delete.failed': 'The passkey was not removed. Try again.',
   'passkeys.delete.removing': 'Removing the passkey',

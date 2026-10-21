@@ -229,7 +229,7 @@ const messages = {
   'security.twoFactor.enable': 'Aktifkan',
   'security.passkeys.label': 'Kunci sandi',
   'security.passkeys.hint':
-    'Masuk dengan pemindai sidik jari, Face ID atau kunci keamanan tanpa mengetik apa pun.',
+    'Masuk dengan sidik jari, wajah, atau kunci keamanan tanpa mengetik apa pun.',
   'security.passkeys.action': 'Kelola kunci sandi',
   'security.session.title': 'Sesi ini',
   'security.session.description': 'Peramban tempat Anda membaca ini.',
@@ -589,9 +589,10 @@ const messages = {
   'passkeys.add.exists':
     'Perangkat ini sudah punya kunci sandi untuk akun Anda',
   'passkeys.add.failed': 'Kunci sandi tidak ditambahkan. Coba lagi.',
-  'passkeys.add.stale': 'Demi keamanan Anda, masuk lagi untuk melanjutkan.',
+  'passkeys.add.stale':
+    'Demi keamanan Anda, mengelola kunci sandi memerlukan proses masuk yang baru. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
   'passkeys.error.sessionEnded':
-    'Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan.',
+    'Sesi Anda telah berakhir. Masuk lagi untuk melanjutkan pengelolaan kunci sandi Anda.',
   'passkeys.signInAgain': 'Masuk lagi',
   'passkeys.add.limit':
     'Anda telah mencapai batas {value} kunci sandi. Hapus satu untuk menambahkan yang lain.',
@@ -631,7 +632,7 @@ const messages = {
   'passkeys.delete.cancel': 'Batal',
   'passkeys.delete.wrongPassword': 'Kata sandi itu tidak tepat.',
   'passkeys.delete.stale':
-    'Demi keamanan Anda, masuk lagi sebelum menghapus kunci sandi.',
+    'Demi keamanan Anda, menghapus kunci sandi memerlukan proses masuk yang baru. Jika Anda memilih “Masuk lagi”, Anda akan keluar dulu, lalu dibawa ke halaman masuk.',
   'passkeys.delete.removed': 'Kunci sandi dihapus',
   'passkeys.delete.failed': 'Kunci sandi tidak dihapus. Coba lagi.',
   'passkeys.delete.removing': 'Menghapus kunci sandi',

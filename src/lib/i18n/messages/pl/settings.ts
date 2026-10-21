@@ -230,7 +230,7 @@ const messages = {
   'security.twoFactor.enable': 'Włącz',
   'security.passkeys.label': 'Klucze dostępu',
   'security.passkeys.hint':
-    'Loguj się czytnikiem odcisku, Face ID albo kluczem sprzętowym, bez wpisywania czegokolwiek.',
+    'Loguj się odciskiem palca, twarzą lub kluczem sprzętowym, bez wpisywania czegokolwiek.',
   'security.passkeys.action': 'Zarządzaj kluczami',
   'security.session.title': 'Ta sesja',
   'security.session.description': 'Przeglądarka, w której to czytasz.',
@@ -628,9 +628,9 @@ const messages = {
   'passkeys.add.exists': 'To urządzenie ma już klucz dostępu do Twojego konta',
   'passkeys.add.failed': 'Nie dodano klucza dostępu. Spróbuj ponownie.',
   'passkeys.add.stale':
-    'Ze względów bezpieczeństwa zaloguj się ponownie, aby kontynuować.',
+    'Ze względów bezpieczeństwa zarządzanie kluczami dostępu wymaga niedawnego logowania. Wybranie „Zaloguj się ponownie” najpierw wyloguje Cię, a potem przeniesie na stronę logowania.',
   'passkeys.error.sessionEnded':
-    'Twoja sesja wygasła. Zaloguj się ponownie, aby kontynuować.',
+    'Twoja sesja wygasła. Zaloguj się ponownie, aby dalej zarządzać kluczami dostępu.',
   'passkeys.signInAgain': 'Zaloguj się ponownie',
   'passkeys.add.limit':
     'Osiągnięto limit {value} kluczy dostępu. Usuń jeden, aby dodać kolejny.',
@@ -669,7 +669,7 @@ const messages = {
   'passkeys.delete.cancel': 'Anuluj',
   'passkeys.delete.wrongPassword': 'To hasło jest nieprawidłowe.',
   'passkeys.delete.stale':
-    'Ze względów bezpieczeństwa zaloguj się ponownie przed usunięciem klucza dostępu.',
+    'Ze względów bezpieczeństwa usunięcie klucza dostępu wymaga niedawnego logowania. Wybranie „Zaloguj się ponownie” najpierw wyloguje Cię, a potem przeniesie na stronę logowania.',
   'passkeys.delete.removed': 'Usunięto klucz dostępu',
   'passkeys.delete.failed': 'Nie usunięto klucza dostępu. Spróbuj ponownie.',
   'passkeys.delete.removing': 'Usuwamy klucz dostępu',

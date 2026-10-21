@@ -497,8 +497,10 @@ const messages = {
   'passkeys.add.dismissed': '没有添加通行密钥',
   'passkeys.add.exists': '这台设备已经有你账号的通行密钥',
   'passkeys.add.failed': '没有添加成功。请再试一次。',
-  'passkeys.add.stale': '为了你的安全，请重新登录后继续。',
-  'passkeys.error.sessionEnded': '你的会话已结束。请重新登录后继续。',
+  'passkeys.add.stale':
+    '为了你的安全，管理通行密钥需要最近登录过。选择“重新登录”会先退出登录，然后带你前往登录页面。',
+  'passkeys.error.sessionEnded':
+    '你的会话已结束。请重新登录以继续管理通行密钥。',
   'passkeys.signInAgain': '重新登录',
   'passkeys.add.limit':
     '你已达到 {value} 个通行密钥的上限。请先删除一个，再添加新的。',
@@ -535,7 +537,8 @@ const messages = {
   'passkeys.delete.confirm': '删除通行密钥',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '这个密码不正确。',
-  'passkeys.delete.stale': '为了你的安全，请先重新登录，再删除通行密钥。',
+  'passkeys.delete.stale':
+    '为了你的安全，删除通行密钥需要最近登录过。选择“重新登录”会先退出登录，然后带你前往登录页面。',
   'passkeys.delete.removed': '通行密钥已删除',
   'passkeys.delete.failed': '通行密钥未能删除。请重试。',
   'passkeys.delete.removing': '正在删除通行密钥',
