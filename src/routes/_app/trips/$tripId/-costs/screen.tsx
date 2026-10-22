@@ -44,7 +44,7 @@ import {
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { categoryOptions } from './categories'
 import { ExpenseList } from './expense-list'
-import { CostsRail, paymentArrow, paymentWho } from './rail'
+import { CostsRail, isolate, paymentArrow, paymentWho } from './rail'
 import { StatTiles } from './stat-tiles'
 import { useCostsActions } from './actions'
 import { CurrencyRebaseDialog } from './currency-rebase-dialog'
@@ -155,7 +155,7 @@ export function CostsScreen({
       data.viewerUserId,
       t,
     )
-    return `${who.from} ${paymentArrow(locale)} ${who.to}`
+    return `${isolate(who.from)} ${paymentArrow(locale)} ${isolate(who.to)}`
   }
 
   const openDeletePayment = useCallback(
@@ -646,11 +646,16 @@ export function CostsScreen({
               t('costs.person.removedTarget'),
           )}
           onConfirm={() => removePayment(session.row)}
-          // The payment's own row is gone by the time the dialog closes (and comes back as a new
-          // node after a refusal), so the Payments list is where focus goes.
-          onCloseAutoFocus={(event) => {
-            event.preventDefault()
-            paymentsRef.current?.focus()
+          // The dialog hands focus back to the button that opened it. After a delete that button
+          // is gone (and after a refusal the row is a new node), so once the dialog has done its
+          // part and left focus on nothing, it goes to the Payments list instead.
+          onCloseAutoFocus={() => {
+            queueMicrotask(() => {
+              const holder = document.activeElement
+              if (holder === null || holder === document.body) {
+                paymentsRef.current?.focus()
+              }
+            })
           }}
         />
       ) : null}

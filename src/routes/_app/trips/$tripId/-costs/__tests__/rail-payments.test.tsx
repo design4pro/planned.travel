@@ -7,7 +7,7 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
 import { formatDayLabel } from '#/components/costs'
-import { CostsRail } from '../rail'
+import { CostsRail, isolate, paymentArrow } from '../rail'
 
 import type { Catalogue } from '#/lib/i18n'
 import type { CostsSnapshot } from '#/components/costs'
@@ -118,6 +118,21 @@ describe('the Payments list', () => {
       button.getAttribute('aria-label'),
     )
     expect(new Set(names).size).toBe(2)
+  })
+
+  it('isolates each name of the arrow line, so two Latin-script names cannot turn a mirrored arrow around', () => {
+    const { container } = mount([payment('pay-1')], false)
+
+    const row = container.querySelector('li p')
+    expect(
+      Array.from(row?.querySelectorAll('bdi') ?? []).map((n) => n.textContent),
+    ).toEqual(['You', 'Anna'])
+  })
+
+  it('points the arrow the way the money goes in both writing directions', () => {
+    expect(paymentArrow('en')).toBe('→')
+    expect(paymentArrow('ar')).toBe('←')
+    expect(isolate('Anna')).toBe('\u2068Anna\u2069')
   })
 
   it('hands the dialog a focus target that survives the row being deleted', () => {

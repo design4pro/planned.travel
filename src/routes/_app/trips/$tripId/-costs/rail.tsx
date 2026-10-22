@@ -402,10 +402,16 @@ function ByCategory({
 
 /* -------------------------------------------------------------------------- */
 
+/** A name wrapped so that its script's direction cannot leak into the text around it. */
+export function isolate(text: string): string {
+  return `\u2068${text}\u2069`
+}
+
 /**
  * The arrow between a payment's two people. It points the way the money goes, so in a right-to-left
  * locale it is the mirrored glyph: U+2192 is not mirrored by the text direction and would read
- * from the payee back to the payer.
+ * from the payee back to the payer. A caller isolates each name (`<bdi>`, or {@link isolate}), or
+ * two names in a left-to-right script would make the neutral arrow left-to-right again.
  */
 export function paymentArrow(locale: Locale): string {
   return directionOf(locale) === 'rtl' ? '←' : '→'
@@ -488,9 +494,9 @@ function Payments({
                   <PanelRow>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-caption font-medium text-ink">
-                        {who.from}
+                        <bdi>{who.from}</bdi>
                         {` ${paymentArrow(locale)} `}
-                        {who.to}
+                        <bdi>{who.to}</bdi>
                       </p>
                       <p className="truncate text-caption text-ink-3">
                         {formatDayLabel(row.settledOn, locale)} ·{' '}

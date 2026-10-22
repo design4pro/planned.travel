@@ -62,8 +62,8 @@ export interface ConfirmDeleteDialogProps {
   readonly affects: ReadonlyArray<string>
   readonly onConfirm: () => Promise<void>
   /**
-   * Where focus goes when the dialog closes. A delete takes the row that opened it off the page,
-   * and a dialog can only hand focus back to something still there; the caller names the next place.
+   * Runs when the dialog closes. A dialog hands focus back to what opened it, and a delete takes
+   * that row off the page: this is where the caller sees that happen and names the next place.
    */
   readonly onCloseAutoFocus?: (event: Event) => void
 }
@@ -107,7 +107,11 @@ export function ConfirmDeleteDialog({
         if (!working) onOpenChange(next)
       }}
     >
-      <DialogContent size="sm" onCloseAutoFocus={onCloseAutoFocus}>
+      <DialogContent
+        size="sm"
+        hideClose={working}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <DialogHeader>
           <DialogTitle>{t(copy.title)}</DialogTitle>
           <DialogDescription>
