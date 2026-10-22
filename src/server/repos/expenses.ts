@@ -1030,13 +1030,18 @@ export async function createSettlement(
   })
 }
 
+/**
+ * Removes a payment of the trip, for good, and hands back the row it removed so the caller can
+ * record what was deleted: the row is gone once this returns, and the audit entry names its amount.
+ */
 export async function deleteSettlement(
   scope: TenantScope,
   tripId: string,
   settlementId: string,
-): Promise<void> {
-  await requireTripSettlement(scope, tripId, settlementId)
+): Promise<Settlement> {
+  const settlement = await requireTripSettlement(scope, tripId, settlementId)
   await settlementsRepository.requireRemove(scope, settlementId)
+  return settlement
 }
 
 /* -------------------------------------------------------------------------------------------------

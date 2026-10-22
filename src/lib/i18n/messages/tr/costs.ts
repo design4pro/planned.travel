@@ -30,6 +30,12 @@ const messages = {
   'delete.balancesChange': '{names} bakiyeleri değişiyor.',
   'delete.confirm': 'Masrafı sil',
   'delete.working': 'Masraf siliniyor',
+  'delete.payment.title': 'Bu ödeme silinsin mi?',
+  'delete.payment.description':
+    '“{title}” hesaptan çıkıyor. Bu geri alınamaz. Bir ödemeyi düzeltmek için onu yeniden kaydet.',
+  'delete.payment.failedBody': 'Ödeme silinemedi. Birazdan tekrar dene.',
+  'delete.payment.confirm': 'Ödemeyi sil',
+  'delete.payment.working': 'Ödeme siliniyor',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Masraflar',
@@ -178,6 +184,7 @@ const messages = {
   'payments.empty.title': 'Henüz ödeme yok',
   'payments.empty.body':
     'Biri bir bakiyeyi geri ödediğinde transfer buraya kaydedilir.',
+  'payments.delete': 'Ödemeyi sil: ödeyen {from}, alan {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Bu gezi arşivlenmiş. Masrafları değiştirmeden önce geri yükleyin.',
@@ -349,6 +356,8 @@ const messages = {
   'write.paymentRecorded': 'Ödeme kaydedildi',
   'write.paymentRecordedBody': 'İki bakiye de güncellendi.',
   'write.paymentFailed': 'Ödeme kaydedilemedi',
+  'write.paymentDeleted': 'Ödeme silindi',
+  'write.paymentDeleteFailed': 'Ödeme silinmedi',
   'write.rolledBack': 'Değişiklik geri alındı.',
   'expense.saveFallback': 'Masraf kaydedilemedi. Birazdan tekrar dene.',
 } satisfies TranslationOf<typeof En>

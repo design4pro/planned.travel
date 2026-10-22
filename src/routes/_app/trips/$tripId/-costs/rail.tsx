@@ -7,12 +7,20 @@
  * at most `travellers − 1` payments to clear the whole trip — so accepting one is
  * always a step towards zero rather than a guess.
  */
-import { ArrowRight, Plus, Scale, Wallet } from 'lucide-react'
+import { ArrowRight, Plus, Scale, Trash2, Wallet } from 'lucide-react'
 
-import { Avatar, Badge, Button, EmptyState, Progress } from '#/components/ui'
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  Progress,
+  focusRingInset,
+} from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
-import { useLocale, useTranslate } from '#/lib/i18n'
+import { directionOf, useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney, formatSignedMoney } from '#/lib/money'
 import {
   CategoryDonut,
@@ -25,6 +33,8 @@ import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
 import { categoryColour } from './chart-colours'
 import { ConvertedFigure } from './converted-figure'
 
+import type { Locale, Translate } from '#/lib/i18n'
+import type { RefObject } from 'react'
 import type { CostsSnapshot, DonutRow } from '#/components/costs'
 import type { DisplayCurrency } from '#/lib/money'
 import type {
@@ -46,6 +56,12 @@ export interface CostsRailProps {
   readonly canWrite: boolean
   readonly onSettle: (suggestion: CostsSuggestion) => void
   readonly onAddPayment: () => void
+  readonly onDeletePayment: (payment: CostsSettlement) => void
+  /**
+   * Where focus goes when the delete dialog closes. The row that opened it is gone by then, and
+   * a dialog can only hand focus back to something still on the page.
+   */
+  readonly paymentsRef: RefObject<HTMLDivElement | null>
 }
 
 export function CostsRail({
@@ -58,6 +74,8 @@ export function CostsRail({
   canWrite,
   onSettle,
   onAddPayment,
+  onDeletePayment,
+  paymentsRef,
 }: CostsRailProps) {
   const t = useTranslate()
   const nameOf = (userId: string): string =>
@@ -98,6 +116,9 @@ export function CostsRail({
         display={display}
         nameOf={nameOf}
         viewerUserId={viewerUserId}
+        canWrite={canWrite}
+        onDelete={onDeletePayment}
+        focusRef={paymentsRef}
       />
     </aside>
   )
@@ -381,18 +402,61 @@ function ByCategory({
 
 /* -------------------------------------------------------------------------- */
 
+/** A name wrapped so that its script's direction cannot leak into the text around it. */
+export function isolate(text: string): string {
+  return `\u2068${text}\u2069`
+}
+
+/**
+ * The arrow between a payment's two people. It points the way the money goes, so in a right-to-left
+ * locale it is the mirrored glyph: U+2192 is not mirrored by the text direction and would read
+ * from the payee back to the payer. A caller isolates each name (`<bdi>`, or {@link isolate}), or
+ * two names in a left-to-right script would make the neutral arrow left-to-right again.
+ */
+export function paymentArrow(locale: Locale): string {
+  return directionOf(locale) === 'rtl' ? '←' : '→'
+}
+
+/**
+ * "You → Anna": a payment's two people as the reader sees them, the same words on the row, on its
+ * delete button and in the dialog that confirms the delete.
+ */
+export function paymentWho(
+  row: Pick<CostsSettlement, 'fromUserId' | 'toUserId'>,
+  nameOf: (userId: string) => string,
+  viewerUserId: string,
+  t: Translate,
+): { readonly from: string; readonly to: string } {
+  return {
+    from:
+      row.fromUserId === viewerUserId
+        ? t('costs.person.you')
+        : nameOf(row.fromUserId),
+    to:
+      row.toUserId === viewerUserId
+        ? t('costs.person.youTarget')
+        : nameOf(row.toUserId),
+  }
+}
+
 function Payments({
   settlements,
   currency,
   display,
   nameOf,
   viewerUserId,
+  canWrite,
+  onDelete,
+  focusRef,
 }: {
   settlements: ReadonlyArray<CostsSettlement>
   currency: string
   display: DisplayCurrency
   nameOf: (userId: string) => string
   viewerUserId: string
+  canWrite: boolean
+  onDelete: (payment: CostsSettlement) => void
+  focusRef: RefObject<HTMLDivElement | null>
 }) {
   const locale = useLocale()
   const t = useTranslate()
@@ -403,51 +467,76 @@ function Payments({
       count={settlements.length === 0 ? undefined : String(settlements.length)}
       flush
     >
-      {settlements.length === 0 ? (
-        <div className="px-5 py-7">
-          <EmptyState
-            size="sm"
-            icon={<Wallet />}
-            title={t('costs.payments.empty.title')}
-            description={t('costs.payments.empty.body')}
-          />
-        </div>
-      ) : (
-        <ul>
-          {settlements.map((row) => (
-            <li key={row.id}>
-              <PanelRow>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-caption font-medium text-ink">
-                    {row.fromUserId === viewerUserId
-                      ? t('costs.person.you')
-                      : nameOf(row.fromUserId)}
-                    {' → '}
-                    {row.toUserId === viewerUserId
-                      ? t('costs.person.youTarget')
-                      : nameOf(row.toUserId)}
-                  </p>
-                  <p className="truncate text-caption text-ink-3">
-                    {formatDayLabel(row.settledOn, locale)} ·{' '}
-                    {paymentMethodLabel(row.method, t)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <Badge tone="success" size="sm" className="tabular-nums">
-                    {formatMoney(row.amountMinor, currency, locale)}
-                  </Badge>
-                  {isOptimisticId(row.id) ? null : (
-                    <ConvertedFigure
-                      display={display}
-                      convertedMinor={row.convertedMinor}
-                    />
-                  )}
-                </div>
-              </PanelRow>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* A deleted payment takes its own button with it, so the dialog that confirmed the delete
+          returns focus here instead of dropping it to the page. */}
+      <div
+        ref={focusRef}
+        tabIndex={-1}
+        role="group"
+        aria-label={t('costs.payments.label')}
+        className={cn('rounded-b-xl outline-none', focusRingInset)}
+      >
+        {settlements.length === 0 ? (
+          <div className="px-5 py-7">
+            <EmptyState
+              size="sm"
+              icon={<Wallet />}
+              title={t('costs.payments.empty.title')}
+              description={t('costs.payments.empty.body')}
+            />
+          </div>
+        ) : (
+          <ul>
+            {settlements.map((row) => {
+              const who = paymentWho(row, nameOf, viewerUserId, t)
+              return (
+                <li key={row.id}>
+                  <PanelRow>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-caption font-medium text-ink">
+                        <bdi>{who.from}</bdi>
+                        {` ${paymentArrow(locale)} `}
+                        <bdi>{who.to}</bdi>
+                      </p>
+                      <p className="truncate text-caption text-ink-3">
+                        {formatDayLabel(row.settledOn, locale)} ·{' '}
+                        {paymentMethodLabel(row.method, t)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge tone="success" size="sm" className="tabular-nums">
+                        {formatMoney(row.amountMinor, currency, locale)}
+                      </Badge>
+                      {isOptimisticId(row.id) ? null : (
+                        <ConvertedFigure
+                          display={display}
+                          convertedMinor={row.convertedMinor}
+                        />
+                      )}
+                    </div>
+                    {canWrite && !isOptimisticId(row.id) ? (
+                      <IconButton
+                        size="sm"
+                        variant="danger"
+                        icon={<Trash2 aria-hidden />}
+                        // Names, not "You": the button's name sits mid-sentence, where the
+                        // arrow line's "You" forms are wrong in most locales. The day follows the
+                        // amount so two equal payments between the same people can be told apart.
+                        label={t('costs.payments.delete', {
+                          from: nameOf(row.fromUserId),
+                          to: nameOf(row.toUserId),
+                          amount: `${formatMoney(row.amountMinor, currency, locale)}, ${formatDayLabel(row.settledOn, locale)}`,
+                        })}
+                        onClick={() => onDelete(row)}
+                      />
+                    ) : null}
+                  </PanelRow>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
     </Panel>
   )
 }

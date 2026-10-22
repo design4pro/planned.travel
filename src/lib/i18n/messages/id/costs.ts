@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Saldo {names} berubah.',
   'delete.confirm': 'Hapus pengeluaran',
   'delete.working': 'Menghapus pengeluaran',
+  'delete.payment.title': 'Hapus pembayaran ini?',
+  'delete.payment.description':
+    '“{title}” keluar dari catatan. Ini tidak bisa dibatalkan. Untuk mengoreksi pembayaran, catat ulang.',
+  'delete.payment.failedBody':
+    'Pembayaran tidak bisa dihapus. Coba lagi sebentar.',
+  'delete.payment.confirm': 'Hapus pembayaran',
+  'delete.payment.working': 'Menghapus pembayaran',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Pengeluaran',
@@ -175,6 +182,7 @@ const messages = {
   'payments.empty.title': 'Belum ada pembayaran',
   'payments.empty.body':
     'Begitu seseorang melunasi saldo, transfernya dicatat di sini.',
+  'payments.delete': 'Hapus pembayaran dari {from} ke {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Perjalanan ini diarsipkan. Pulihkan sebelum mengubah biaya.',
@@ -342,6 +350,8 @@ const messages = {
   'write.paymentRecorded': 'Pembayaran dicatat',
   'write.paymentRecordedBody': 'Kedua saldo sudah diperbarui.',
   'write.paymentFailed': 'Pembayaran tidak dicatat',
+  'write.paymentDeleted': 'Pembayaran dihapus',
+  'write.paymentDeleteFailed': 'Pembayaran tidak dihapus',
   'write.rolledBack': 'Perubahan dibatalkan.',
   'expense.saveFallback':
     'Pengeluaran tidak bisa disimpan. Coba lagi sebentar lagi.',
