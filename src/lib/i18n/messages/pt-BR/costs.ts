@@ -31,6 +31,13 @@ const messages = {
   'delete.balancesChange': 'Os saldos de {names} mudam.',
   'delete.confirm': 'Excluir despesa',
   'delete.working': 'Excluindo a despesa',
+  'delete.payment.title': 'Excluir este pagamento?',
+  'delete.payment.description':
+    '“{title}” sai da conta. Isso não pode ser desfeito. Para corrigir um pagamento, registre-o de novo.',
+  'delete.payment.failedBody':
+    'Não foi possível excluir o pagamento. Tente de novo em um instante.',
+  'delete.payment.confirm': 'Excluir pagamento',
+  'delete.payment.working': 'Excluindo o pagamento',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Despesas',
@@ -181,6 +188,7 @@ const messages = {
   'payments.empty.title': 'Ainda sem pagamentos',
   'payments.empty.body':
     'Quando alguém devolve um saldo, a transferência fica registrada aqui.',
+  'payments.delete': 'Excluir o pagamento de {from} para {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Esta viagem está arquivada. Restaure-a antes de alterar os custos.',
@@ -362,6 +370,8 @@ const messages = {
   'write.paymentRecorded': 'Pagamento registrado',
   'write.paymentRecordedBody': 'Os dois saldos foram atualizados.',
   'write.paymentFailed': 'O pagamento não foi registrado',
+  'write.paymentDeleted': 'Pagamento excluído',
+  'write.paymentDeleteFailed': 'O pagamento não foi excluído',
   'write.rolledBack': 'A alteração foi desfeita.',
   'expense.saveFallback':
     'Não foi possível salvar a despesa. Tente de novo em instantes.',

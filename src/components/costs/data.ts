@@ -256,6 +256,11 @@ export type CostsOp =
       readonly key: string
       readonly row: CostsSettlement
     }
+  | {
+      readonly kind: 'unpay'
+      readonly key: string
+      readonly previous: CostsSettlement
+    }
 
 /** The screen's data after any in-flight writes are folded in. */
 export interface CostsSnapshot {
@@ -321,7 +326,7 @@ export function applyOps(
 
   const rows = new Map(payload.expenses.map((row) => [row.id, row]))
   const created: Array<CostsExpense> = []
-  const settlements = [...payload.settlements]
+  let settlements = [...payload.settlements]
   const busyExpenseIds = new Set<string>()
   const balanceDelta = new Map<string, number>()
   const categoryDelta = new Map<string, number>()
@@ -365,6 +370,19 @@ export function applyOps(
       addCategory(op.previous.category, -op.previous.amountMinor, -1)
       spentDelta -= op.previous.amountMinor
       expenseCountDelta -= 1
+      continue
+    }
+    if (op.kind === 'unpay') {
+      settlements = settlements.filter((row) => row.id !== op.previous.id)
+      balanceDelta.set(
+        op.previous.fromUserId,
+        (balanceDelta.get(op.previous.fromUserId) ?? 0) -
+          op.previous.amountMinor,
+      )
+      balanceDelta.set(
+        op.previous.toUserId,
+        (balanceDelta.get(op.previous.toUserId) ?? 0) + op.previous.amountMinor,
+      )
       continue
     }
     settlements.unshift(op.row)

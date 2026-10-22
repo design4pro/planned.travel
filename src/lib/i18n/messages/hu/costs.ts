@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': '{names} egyenlege változik.',
   'delete.confirm': 'Kiadás törlése',
   'delete.working': 'A kiadás törlése folyik',
+  'delete.payment.title': 'Törlöd ezt a fizetést?',
+  'delete.payment.description':
+    '„{title}” kiesik az elszámolásból. Ezt nem lehet visszavonni. Egy fizetés javításához rögzítsd újra.',
+  'delete.payment.failedBody':
+    'A fizetést nem sikerült törölni. Próbáld meg egy pillanat múlva.',
+  'delete.payment.confirm': 'Fizetés törlése',
+  'delete.payment.working': 'A fizetés törlése folyik',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Kiadások',
@@ -180,6 +187,7 @@ const messages = {
   'payments.empty.title': 'Még nincs fizetés',
   'payments.empty.body':
     'Amint valaki visszafizet egy egyenleget, az átutalás ide kerül.',
+  'payments.delete': 'Fizetés törlése: {from} → {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ez az utazás archiválva van. A költségek módosítása előtt állítsd vissza.',
@@ -355,6 +363,8 @@ const messages = {
   'write.paymentRecorded': 'Befizetés rögzítve',
   'write.paymentRecordedBody': 'Mindkét egyenleg frissült.',
   'write.paymentFailed': 'A befizetés nem lett rögzítve',
+  'write.paymentDeleted': 'Fizetés törölve',
+  'write.paymentDeleteFailed': 'A fizetés nem lett törölve',
   'write.rolledBack': 'A módosítás vissza lett vonva.',
   'expense.saveFallback':
     'A kiadást nem sikerült elmenteni. Próbáld újra egy pillanat múlva.',

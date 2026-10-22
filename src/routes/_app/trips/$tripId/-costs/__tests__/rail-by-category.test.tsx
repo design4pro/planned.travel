@@ -57,6 +57,7 @@ function mountRail(
         canWrite={false}
         onSettle={() => undefined}
         onAddPayment={() => undefined}
+        onDeletePayment={() => undefined}
       />
     </I18nProvider>,
   )

@@ -44,7 +44,7 @@ import {
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { categoryOptions } from './categories'
 import { ExpenseList } from './expense-list'
-import { CostsRail } from './rail'
+import { CostsRail, paymentWho } from './rail'
 import { StatTiles } from './stat-tiles'
 import { useCostsActions } from './actions'
 import { CurrencyRebaseDialog } from './currency-rebase-dialog'
@@ -57,6 +57,7 @@ import type {
 import type {
   CostsExpense,
   CostsPayload,
+  CostsSettlement,
   CostsSuggestion,
   ExpenseCategory,
 } from '#/server/fns/costs'
@@ -81,6 +82,11 @@ type Session =
     }
   | { readonly kind: 'delete'; readonly id: number; readonly row: CostsExpense }
   | {
+      readonly kind: 'deletePayment'
+      readonly id: number
+      readonly row: CostsSettlement
+    }
+  | {
       readonly kind: 'currency'
       readonly id: number
       readonly currency: string
@@ -101,6 +107,7 @@ export function CostsScreen({
     editExpense,
     removeExpense,
     addPayment,
+    removePayment,
     setDisplay,
     savingDisplay,
   } = useCostsActions(data)
@@ -134,6 +141,25 @@ export function CostsScreen({
   const openDelete = useCallback(
     (row: CostsExpense): void => {
       start((id) => ({ kind: 'delete', id, row }))
+    },
+    [start],
+  )
+
+  const paymentTitle = (row: CostsSettlement): string => {
+    const who = paymentWho(
+      row,
+      (userId) =>
+        data.people.find((person) => person.userId === userId)?.name ??
+        t('costs.person.removed'),
+      data.viewerUserId,
+      t,
+    )
+    return `${who.from} → ${who.to}`
+  }
+
+  const openDeletePayment = useCallback(
+    (row: CostsSettlement): void => {
+      start((id) => ({ kind: 'deletePayment', id, row }))
     },
     [start],
   )
@@ -532,6 +558,7 @@ export function CostsScreen({
             canWrite={data.canWrite}
             onSettle={settle}
             onAddPayment={() => openPayment(null)}
+            onDeletePayment={openDeletePayment}
           />
         </div>
       </AppSections>
@@ -599,6 +626,24 @@ export function CostsScreen({
             toast.success(t('costs.rebase.done', { to }))
             void router.invalidate({ sync: true })
           }}
+        />
+      ) : null}
+
+      {session.kind === 'deletePayment' ? (
+        <ConfirmDeleteDialog
+          key={`delete-payment-${session.id}`}
+          open={open}
+          onOpenChange={setOpen}
+          subject="payment"
+          title={paymentTitle(session.row)}
+          amountMinor={session.row.amountMinor}
+          currency={data.currency}
+          affects={[session.row.fromUserId, session.row.toUserId].map(
+            (userId) =>
+              data.people.find((person) => person.userId === userId)?.name ??
+              t('costs.person.removedTarget'),
+          )}
+          onConfirm={() => removePayment(session.row)}
         />
       ) : null}
 

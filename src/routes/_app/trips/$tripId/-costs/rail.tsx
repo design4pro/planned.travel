@@ -7,9 +7,16 @@
  * at most `travellers − 1` payments to clear the whole trip — so accepting one is
  * always a step towards zero rather than a guess.
  */
-import { ArrowRight, Plus, Scale, Wallet } from 'lucide-react'
+import { ArrowRight, Plus, Scale, Trash2, Wallet } from 'lucide-react'
 
-import { Avatar, Badge, Button, EmptyState, Progress } from '#/components/ui'
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  IconButton,
+  Progress,
+} from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -25,6 +32,7 @@ import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
 import { categoryColour } from './chart-colours'
 import { ConvertedFigure } from './converted-figure'
 
+import type { Translate } from '#/lib/i18n'
 import type { CostsSnapshot, DonutRow } from '#/components/costs'
 import type { DisplayCurrency } from '#/lib/money'
 import type {
@@ -46,6 +54,7 @@ export interface CostsRailProps {
   readonly canWrite: boolean
   readonly onSettle: (suggestion: CostsSuggestion) => void
   readonly onAddPayment: () => void
+  readonly onDeletePayment: (payment: CostsSettlement) => void
 }
 
 export function CostsRail({
@@ -58,6 +67,7 @@ export function CostsRail({
   canWrite,
   onSettle,
   onAddPayment,
+  onDeletePayment,
 }: CostsRailProps) {
   const t = useTranslate()
   const nameOf = (userId: string): string =>
@@ -98,6 +108,8 @@ export function CostsRail({
         display={display}
         nameOf={nameOf}
         viewerUserId={viewerUserId}
+        canWrite={canWrite}
+        onDelete={onDeletePayment}
       />
     </aside>
   )
@@ -381,18 +393,44 @@ function ByCategory({
 
 /* -------------------------------------------------------------------------- */
 
+/**
+ * "You → Anna": a payment's two people as the reader sees them, the same words on the row, on its
+ * delete button and in the dialog that confirms the delete.
+ */
+export function paymentWho(
+  row: Pick<CostsSettlement, 'fromUserId' | 'toUserId'>,
+  nameOf: (userId: string) => string,
+  viewerUserId: string,
+  t: Translate,
+): { readonly from: string; readonly to: string } {
+  return {
+    from:
+      row.fromUserId === viewerUserId
+        ? t('costs.person.you')
+        : nameOf(row.fromUserId),
+    to:
+      row.toUserId === viewerUserId
+        ? t('costs.person.youTarget')
+        : nameOf(row.toUserId),
+  }
+}
+
 function Payments({
   settlements,
   currency,
   display,
   nameOf,
   viewerUserId,
+  canWrite,
+  onDelete,
 }: {
   settlements: ReadonlyArray<CostsSettlement>
   currency: string
   display: DisplayCurrency
   nameOf: (userId: string) => string
   viewerUserId: string
+  canWrite: boolean
+  onDelete: (payment: CostsSettlement) => void
 }) {
   const locale = useLocale()
   const t = useTranslate()
@@ -414,38 +452,50 @@ function Payments({
         </div>
       ) : (
         <ul>
-          {settlements.map((row) => (
-            <li key={row.id}>
-              <PanelRow>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-caption font-medium text-ink">
-                    {row.fromUserId === viewerUserId
-                      ? t('costs.person.you')
-                      : nameOf(row.fromUserId)}
-                    {' → '}
-                    {row.toUserId === viewerUserId
-                      ? t('costs.person.youTarget')
-                      : nameOf(row.toUserId)}
-                  </p>
-                  <p className="truncate text-caption text-ink-3">
-                    {formatDayLabel(row.settledOn, locale)} ·{' '}
-                    {paymentMethodLabel(row.method, t)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <Badge tone="success" size="sm" className="tabular-nums">
-                    {formatMoney(row.amountMinor, currency, locale)}
-                  </Badge>
-                  {isOptimisticId(row.id) ? null : (
-                    <ConvertedFigure
-                      display={display}
-                      convertedMinor={row.convertedMinor}
+          {settlements.map((row) => {
+            const who = paymentWho(row, nameOf, viewerUserId, t)
+            return (
+              <li key={row.id}>
+                <PanelRow>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-caption font-medium text-ink">
+                      {who.from}
+                      {' → '}
+                      {who.to}
+                    </p>
+                    <p className="truncate text-caption text-ink-3">
+                      {formatDayLabel(row.settledOn, locale)} ·{' '}
+                      {paymentMethodLabel(row.method, t)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge tone="success" size="sm" className="tabular-nums">
+                      {formatMoney(row.amountMinor, currency, locale)}
+                    </Badge>
+                    {isOptimisticId(row.id) ? null : (
+                      <ConvertedFigure
+                        display={display}
+                        convertedMinor={row.convertedMinor}
+                      />
+                    )}
+                  </div>
+                  {canWrite && !isOptimisticId(row.id) ? (
+                    <IconButton
+                      size="sm"
+                      variant="danger"
+                      icon={<Trash2 aria-hidden />}
+                      label={t('costs.payments.delete', {
+                        from: who.from,
+                        to: who.to,
+                        amount: formatMoney(row.amountMinor, currency, locale),
+                      })}
+                      onClick={() => onDelete(row)}
                     />
-                  )}
-                </div>
-              </PanelRow>
-            </li>
-          ))}
+                  ) : null}
+                </PanelRow>
+              </li>
+            )
+          })}
         </ul>
       )}
     </Panel>

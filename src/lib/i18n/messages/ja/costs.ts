@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': '{names} の残高が変わります。',
   'delete.confirm': '支出を削除',
   'delete.working': '支出を削除しています',
+  'delete.payment.title': 'この支払いを削除しますか？',
+  'delete.payment.description':
+    '「{title}」が精算から消えます。取り消せません。支払いを訂正するには、もう一度記録してください。',
+  'delete.payment.failedBody':
+    '支払いを削除できませんでした。少し待って、もう一度お試しください。',
+  'delete.payment.confirm': '支払いを削除',
+  'delete.payment.working': '支払いを削除しています',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': '支出',
@@ -175,6 +182,7 @@ const messages = {
   'payments.label': '記録された支払い',
   'payments.empty.title': 'まだ支払いはありません',
   'payments.empty.body': '誰かが残高を返済すると、送金がここに記録されます。',
+  'payments.delete': '{from}から{to}への支払い（{amount}）を削除',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'この旅行はアーカイブされています。費用を変更する前に復元してください。',
@@ -338,6 +346,8 @@ const messages = {
   'write.paymentRecorded': '支払いを記録しました',
   'write.paymentRecordedBody': '双方の残高を更新しました。',
   'write.paymentFailed': '支払いを記録できませんでした',
+  'write.paymentDeleted': '支払いを削除しました',
+  'write.paymentDeleteFailed': '支払いを削除できませんでした',
   'write.rolledBack': '変更を元に戻しました。',
   'expense.saveFallback':
     '支出を保存できませんでした。しばらくしてからもう一度お試しください。',

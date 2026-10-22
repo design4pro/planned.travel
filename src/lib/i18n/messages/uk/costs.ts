@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Змінюються сальдо: {names}.',
   'delete.confirm': 'Видалити витрату',
   'delete.working': 'Витрата видаляється',
+  'delete.payment.title': 'Видалити цей платіж?',
+  'delete.payment.description':
+    '«{title}» зникає з розрахунку. Це не можна скасувати. Щоб виправити платіж, запишіть його знову.',
+  'delete.payment.failedBody':
+    'Платіж не вдалося видалити. Спробуйте за хвилину.',
+  'delete.payment.confirm': 'Видалити платіж',
+  'delete.payment.working': 'Платіж видаляється',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Витрати',
@@ -182,6 +189,7 @@ const messages = {
   'payments.label': 'Записані платежі',
   'payments.empty.title': 'Платежів ще немає',
   'payments.empty.body': 'Коли хтось повертає баланс, переказ записується тут.',
+  'payments.delete': 'Видалити платіж: {from} → {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ця подорож в архіві. Відновіть її, перш ніж змінювати витрати.',
@@ -367,6 +375,8 @@ const messages = {
   'write.paymentRecorded': 'Платіж записано',
   'write.paymentRecordedBody': 'Обидва баланси оновлено.',
   'write.paymentFailed': 'Платіж не записано',
+  'write.paymentDeleted': 'Платіж видалено',
+  'write.paymentDeleteFailed': 'Платіж не видалено',
   'write.rolledBack': 'Зміну скасовано.',
   'expense.saveFallback':
     'Не вдалося зберегти витрату. Спробуйте ще раз за хвилину.',

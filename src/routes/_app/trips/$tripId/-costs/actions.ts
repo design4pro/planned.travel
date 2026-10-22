@@ -22,6 +22,7 @@ import { impliedRate } from '#/lib/money'
 import {
   createExpenseFn,
   deleteExpenseFn,
+  deletePaymentFn,
   loadCosts,
   recordPaymentFn,
   setDisplayCurrencyFn,
@@ -34,7 +35,11 @@ import type {
   ExpenseFormValue,
   PaymentFormValue,
 } from '#/components/costs'
-import type { CostsExpense, CostsPayload } from '#/server/fns/costs'
+import type {
+  CostsExpense,
+  CostsPayload,
+  CostsSettlement,
+} from '#/server/fns/costs'
 
 export interface CostsActions {
   /** The payload with any in-flight writes folded in. */
@@ -46,6 +51,7 @@ export interface CostsActions {
   ) => Promise<void>
   readonly removeExpense: (expense: CostsExpense) => Promise<void>
   readonly addPayment: (value: PaymentFormValue) => Promise<void>
+  readonly removePayment: (payment: CostsSettlement) => Promise<void>
   /** Store the reader's display currency (`null` = each trip in its own) and reload the figures. */
   readonly setDisplay: (code: string | null) => Promise<void>
   readonly savingDisplay: boolean
@@ -282,6 +288,24 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
     [payload.currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
+  const removePayment = useCallback(
+    async (payment: CostsSettlement): Promise<void> => {
+      const key = optimisticId()
+      await run(
+        { kind: 'unpay', key, previous: payment },
+        () =>
+          deletePaymentFn({
+            data: { tripId: payload.tripId, settlementId: payment.id },
+          }),
+        t('costs.write.paymentDeleteFailed'),
+      )
+      toast.success(t('costs.write.paymentDeleted'), {
+        description: t('costs.write.paymentRecordedBody'),
+      })
+    },
+    [payload.tripId, run, t],
+  )
+
   const setDisplay = useCallback(
     async (code: string | null): Promise<void> => {
       setSavingDisplay(true)
@@ -305,6 +329,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
     editExpense,
     removeExpense,
     addPayment,
+    removePayment,
     setDisplay,
     savingDisplay,
   }
