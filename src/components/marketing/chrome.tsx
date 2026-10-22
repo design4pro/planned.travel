@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 
 import { Wordmark } from '#/components/layout/brand'
 import { ThemeToggle } from '#/components/layout/theme-toggle'
+import { VisitorLanguageSwitcher } from '#/components/layout/visitor-language-switcher'
 import { Button, Separator } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -52,19 +53,19 @@ export function MarketingHeader({
 
   return (
     <header className="sticky top-0 z-nav border-b border-edge-faint bg-canvas/85 pt-safe backdrop-blur-xl">
-      <div className="mx-auto flex h-nav max-w-content items-center gap-2 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-nav max-w-content items-center gap-2 px-4 max-[22rem]:gap-1 max-[22rem]:px-3 sm:px-6 lg:px-8">
         <Link
           to="/"
           aria-label={t('marketing.nav.home')}
           className="shrink-0 rounded-md focus-ring"
         >
-          <Wordmark showSuffix />
+          <Wordmark showSuffix compact />
         </Link>
 
         {anchors.length === 0 ? null : (
           <nav
             aria-label={t('marketing.nav.onThisPage')}
-            className="ms-6 hidden items-center lg:flex"
+            className="ms-6 hidden items-center xl:flex"
           >
             {anchors.map((anchor) => (
               <a
@@ -91,13 +92,14 @@ export function MarketingHeader({
                 variant="ghost"
                 size="sm"
                 shape="pill"
-                className="hidden sm:inline-flex"
+                className="hidden md:inline-flex"
               >
                 <Link to="/pricing" activeProps={{ 'aria-current': 'page' }}>
                   {t('marketing.action.pricing')}
                 </Link>
               </Button>
               <ThemeToggle />
+              <VisitorLanguageSwitcher />
               <Button
                 asChild
                 variant="ghost"
@@ -107,7 +109,13 @@ export function MarketingHeader({
               >
                 <Link to="/login">{t('marketing.action.signIn')}</Link>
               </Button>
-              <Button asChild variant="primary" size="sm" shape="pill">
+              <Button
+                asChild
+                variant="primary"
+                size="sm"
+                shape="pill"
+                className="max-[22rem]:px-2.5"
+              >
                 <Link to="/register">{t('marketing.action.startFree')}</Link>
               </Button>
             </>

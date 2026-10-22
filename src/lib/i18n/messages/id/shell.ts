@@ -108,6 +108,12 @@ const messages = {
   'theme.state.dark': 'gelap',
   'theme.state.system': 'mengikuti sistem',
   'theme.trigger': 'Tema: {state}. Ubah tema',
+  'language.trigger': 'Bahasa: {language}. Ubah bahasa',
+  'language.hint':
+    'Diingat di perangkat ini. Setelah Anda masuk, bahasa yang diatur di akun Anda berlaku; Anda bisa mengubahnya di Pengaturan.',
+  'language.announce': 'Bahasa diubah ke {language}',
+  'language.notApplied':
+    'Peramban ini tidak menyimpan pilihan Anda. Izinkan cookie untuk situs ini, lalu pilih lagi.',
 
   'bell.none': 'Notifikasi, semua sudah dibaca',
   'bell.unread': { other: 'Notifikasi, {unread} belum dibaca' },

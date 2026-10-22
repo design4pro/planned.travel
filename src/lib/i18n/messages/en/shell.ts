@@ -143,6 +143,12 @@ const messages = {
   'theme.state.dark': 'dark',
   'theme.state.system': 'matching system',
   'theme.trigger': 'Theme: {state}. Change theme',
+  'language.trigger': 'Language: {language}. Change language',
+  'language.hint':
+    'Remembered on this device. Once you sign in, the language set in your account applies; you can change it in Settings.',
+  'language.announce': 'Language changed to {language}',
+  'language.notApplied':
+    'This browser did not keep your choice. Allow cookies for this site, then choose again.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Notifications, none unread',

@@ -98,6 +98,12 @@ const messages = {
   'theme.state.dark': 'donker',
   'theme.state.system': 'zoals het apparaat',
   'theme.trigger': 'Weergave: {state}. Weergave wisselen',
+  'language.trigger': 'Taal: {language}. Taal wijzigen',
+  'language.hint':
+    'Wordt onthouden op dit apparaat. Zodra je inlogt, geldt de taal die in je account is ingesteld; je kunt die wijzigen in Instellingen.',
+  'language.announce': 'Taal gewijzigd naar {language}',
+  'language.notApplied':
+    'Deze browser heeft je keuze niet bewaard. Sta cookies toe voor deze site en kies opnieuw.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Meldingen, alles gelezen',

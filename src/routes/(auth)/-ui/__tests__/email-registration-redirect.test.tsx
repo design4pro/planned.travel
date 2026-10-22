@@ -38,6 +38,9 @@ const page = vi.hoisted((): PageState => ({
 }))
 const signUpEmail = vi.hoisted(() => vi.fn())
 
+vi.mock('#/components/layout/visitor-language-switcher', () => ({
+  VisitorLanguageSwitcher: () => null,
+}))
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (options: object) => ({
     options,
