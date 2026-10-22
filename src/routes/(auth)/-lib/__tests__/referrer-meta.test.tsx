@@ -9,6 +9,9 @@ import { describe, expect, it, vi } from 'vitest'
 import { signInHead } from '../head'
 
 // The loaders reach the Worker's bindings, which a jsdom test cannot load; the head never calls them.
+vi.mock('#/components/layout/visitor-language-switcher', () => ({
+  VisitorLanguageSwitcher: () => null,
+}))
 vi.mock('../../-server/config', () => ({
   loadAuthConfig: vi.fn(),
   loadVerificationState: vi.fn(),

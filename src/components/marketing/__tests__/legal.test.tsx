@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import './test-env'
 
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -12,6 +12,9 @@ import type { Catalogue } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { LegalSection } from '../legal'
 
+vi.mock('#/components/layout/visitor-language-switcher', () => ({
+  VisitorLanguageSwitcher: () => null,
+}))
 afterEach(cleanup)
 
 /** The shipped source catalogue, namespaced the way the provider expects. */

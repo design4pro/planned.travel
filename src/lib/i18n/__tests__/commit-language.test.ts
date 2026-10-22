@@ -193,3 +193,60 @@ describe('a click that was written but did not finish turning the page', () => {
     expect(commit.landed).toBe(GERMAN)
   })
 })
+
+describe('a click the caller can check was applied', () => {
+  it('is switched when the check answers true after the refresh', async () => {
+    const order: Array<string> = []
+    const commit = await commitLanguage(
+      request(GERMAN),
+      deps({
+        refresh: async () => {
+          order.push('refresh')
+        },
+        applied: () => {
+          order.push('applied')
+          return true
+        },
+      }),
+    )
+    expect(commit.status).toBe('switched')
+    // Asked after the loaders ran: before them it can only answer for the old page.
+    expect(order).toEqual(['refresh', 'applied'])
+  })
+
+  it('is unapplied, never switched, when the browser did not keep the cookie', async () => {
+    // The write answered, the loaders re-ran, and the document still negotiated
+    // the old language: the cookie never came back on the request.
+    const collaborators = deps({ applied: () => false })
+    const commit = await commitLanguage(request(GERMAN, 'pl'), collaborators)
+    expect(commit.status).toBe('unapplied')
+    if (commit.status !== 'unapplied') return
+    expect(commit.landed).toBe(GERMAN)
+    // The language still on screen: the toast that follows is written in it.
+    expect(commit.inForce).toBe(GERMAN)
+    expect(collaborators.translatorFor).not.toHaveBeenCalled()
+  })
+
+  it('is unapplied when the caller turned out to be signed in', async () => {
+    // A signed-in request ignores the visitor cookie, so the root loader keeps
+    // answering with the stored language and the check fails the same way.
+    const commit = await commitLanguage(
+      request(GERMAN),
+      deps({ applied: () => false }),
+    )
+    expect(commit.status).toBe('unapplied')
+  })
+
+  it('is stale, not unapplied, when a match ended in its error boundary', async () => {
+    const commit = await commitLanguage(
+      request(GERMAN),
+      deps({ refreshed: () => false, applied: () => false }),
+    )
+    expect(commit.status).toBe('stale')
+  })
+
+  it('does not change the settings path, which supplies no check', async () => {
+    const commit = await commitLanguage(request(GERMAN), deps())
+    expect(commit.status).toBe('switched')
+  })
+})

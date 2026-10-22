@@ -38,6 +38,9 @@ import { Questions } from '#/routes/index'
 import type { Catalogue, MessageKey } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 
+vi.mock('#/components/layout/visitor-language-switcher', () => ({
+  VisitorLanguageSwitcher: () => null,
+}))
 afterEach(cleanup)
 
 /**
