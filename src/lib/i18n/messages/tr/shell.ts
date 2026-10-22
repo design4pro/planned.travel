@@ -518,6 +518,27 @@ const messages = {
     'Gezi oluşturuldu ama “{name}” kapak olarak yüklenemedi.',
   'newTrip.coverRetry': 'Yeniden dene',
   'newTrip.coverContinue': 'Geziyi kapaksız aç',
+  'newTrip.people': 'Kişiler',
+  'newTrip.peopleHint':
+    'Gezi oluşturulur oluşturulmaz eklenirler. Sahibi olmaya devam edersiniz.',
+  'newTrip.peoplePlaceholder': 'Çalışma alanınızdan seçin',
+  'newTrip.peopleSearch': 'Ada göre ara',
+  'newTrip.peopleLoading': 'Çalışma alanınızdaki kişiler yükleniyor',
+  'newTrip.peopleLoadError':
+    'Çalışma alanınızdaki kişiler yüklenemedi. Geziyi oluşturun ve Kişiler ekranından ekleyin.',
+  'newTrip.peopleNone': 'Şimdilik bu çalışma alanındaki tek kişi sizsiniz.',
+  'newTrip.peopleNoneMember':
+    'Çalışma alanının sahibi veya yöneticisi daha fazla kişiyi davet edebilir.',
+  'newTrip.peopleInvite': 'Çalışma alanına kişi davet et',
+  'newTrip.peopleChosen': 'Seçilen kişiler ve rolleri',
+  'newTrip.peopleFailedTitle': 'Gezi oluşturuldu ama herkes eklenemedi',
+  'newTrip.noticeBothTitle': 'Gezi oluşturuldu ama her şey eklenemedi',
+  'newTrip.peopleNotInWorkspace':
+    '{name} artık bu çalışma alanında olmadığı için eklenmedi.',
+  'newTrip.peopleAlreadyOn': '{name} zaten bu gezideydi.',
+  'newTrip.peopleUnconfirmed':
+    '{name} için ekleme doğrulanamadı. Eklenip eklenmediğini Kişiler ekranından kontrol edin.',
+  'newTrip.peopleContinue': 'Devam',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} için işlemler',

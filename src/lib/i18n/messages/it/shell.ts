@@ -556,6 +556,30 @@ const messages = {
     'Il viaggio è stato creato, ma non è stato possibile caricare “{name}” come copertina.',
   'newTrip.coverRetry': 'Riprova',
   'newTrip.coverContinue': 'Apri il viaggio senza copertina',
+  'newTrip.people': 'Persone',
+  'newTrip.peopleHint':
+    'Vengono aggiunte appena il viaggio è creato. Ne resti il proprietario.',
+  'newTrip.peoplePlaceholder': 'Scegli dal tuo spazio di lavoro',
+  'newTrip.peopleSearch': 'Cerca per nome',
+  'newTrip.peopleLoading': 'Caricamento delle persone del tuo spazio di lavoro',
+  'newTrip.peopleLoadError':
+    'Non è stato possibile caricare le persone del tuo spazio di lavoro. Crea il viaggio e aggiungile dalla sua schermata Persone.',
+  'newTrip.peopleNone':
+    'Per ora sei l’unica persona di questo spazio di lavoro.',
+  'newTrip.peopleNoneMember':
+    'Un proprietario o un amministratore dello spazio di lavoro può invitare altre persone.',
+  'newTrip.peopleInvite': 'Invita persone nello spazio di lavoro',
+  'newTrip.peopleChosen': 'Persone scelte e i loro ruoli',
+  'newTrip.peopleFailedTitle':
+    'Il viaggio è stato creato, ma non tutti sono stati aggiunti',
+  'newTrip.noticeBothTitle':
+    'Il viaggio è stato creato, ma non tutto è stato aggiunto',
+  'newTrip.peopleNotInWorkspace':
+    '{name} non fa più parte di questo spazio di lavoro: l’aggiunta non è avvenuta.',
+  'newTrip.peopleAlreadyOn': '{name} era già in questo viaggio.',
+  'newTrip.peopleUnconfirmed':
+    'Non è stato possibile confermare {name}. Controlla in Persone se l’aggiunta è andata a buon fine.',
+  'newTrip.peopleContinue': 'Continua',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Azioni per {title}',

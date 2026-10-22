@@ -586,6 +586,28 @@ const messages = {
     'Wyjazd został utworzony, ale nie udało się przesłać pliku „{name}” jako okładki.',
   'newTrip.coverRetry': 'Spróbuj ponownie',
   'newTrip.coverContinue': 'Otwórz wyjazd bez okładki',
+  'newTrip.people': 'Osoby',
+  'newTrip.peopleHint':
+    'Zostaną dodane od razu po utworzeniu wyjazdu. Nadal jesteś jego właścicielem.',
+  'newTrip.peoplePlaceholder': 'Wybierz z przestrzeni roboczej',
+  'newTrip.peopleSearch': 'Szukaj po nazwie',
+  'newTrip.peopleLoading': 'Wczytywanie osób z Twojej przestrzeni',
+  'newTrip.peopleLoadError':
+    'Nie udało się wczytać osób z Twojej przestrzeni. Utwórz wyjazd i dodaj je na jego ekranie Osoby.',
+  'newTrip.peopleNone': 'Na razie jesteś jedyną osobą w tej przestrzeni.',
+  'newTrip.peopleNoneMember':
+    'Kolejne osoby może zaprosić właściciel lub administrator przestrzeni.',
+  'newTrip.peopleInvite': 'Zaproś osoby do przestrzeni',
+  'newTrip.peopleChosen': 'Wybrane osoby i ich role',
+  'newTrip.peopleFailedTitle':
+    'Wyjazd został utworzony, ale nie wszystkich dodano',
+  'newTrip.noticeBothTitle': 'Wyjazd został utworzony, ale nie wszystko dodano',
+  'newTrip.peopleNotInWorkspace':
+    'Nie dodano: {name} nie należy już do tej przestrzeni.',
+  'newTrip.peopleAlreadyOn': '{name} jest już na tym wyjeździe.',
+  'newTrip.peopleUnconfirmed':
+    'Nie udało się potwierdzić dodania: {name}. Sprawdź w Osobach, czy się udało.',
+  'newTrip.peopleContinue': 'Dalej',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Działania dla „{title}”',

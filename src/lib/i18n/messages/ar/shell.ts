@@ -610,6 +610,26 @@ const messages = {
   'newTrip.coverFailed': 'أُنشئت الرحلة، لكن تعذّر رفع «{name}» كغلاف لها.',
   'newTrip.coverRetry': 'حاول مرة أخرى',
   'newTrip.coverContinue': 'افتح الرحلة بلا غلاف',
+  'newTrip.people': 'الأشخاص',
+  'newTrip.peopleHint': 'تُضاف فور إنشاء الرحلة. وتبقى أنت مالكها.',
+  'newTrip.peoplePlaceholder': 'اختر من مساحة العمل',
+  'newTrip.peopleSearch': 'ابحث بالاسم',
+  'newTrip.peopleLoading': 'جارٍ تحميل الأشخاص في مساحة العمل',
+  'newTrip.peopleLoadError':
+    'تعذّر تحميل الأشخاص في مساحة العمل. أنشئ الرحلة وأضفهم من شاشة الأشخاص فيها.',
+  'newTrip.peopleNone': 'أنت الشخص الوحيد في مساحة العمل هذه حتى الآن.',
+  'newTrip.peopleNoneMember':
+    'يمكن لمالك مساحة العمل أو مسؤولها دعوة المزيد من الأشخاص.',
+  'newTrip.peopleInvite': 'ادعُ أشخاصًا إلى مساحة العمل',
+  'newTrip.peopleChosen': 'الأشخاص المختارون وأدوارهم',
+  'newTrip.peopleFailedTitle': 'أُنشئت الرحلة، لكن لم تتم إضافة الجميع',
+  'newTrip.noticeBothTitle': 'أُنشئت الرحلة، لكن لم تتم إضافة كل شيء',
+  'newTrip.peopleNotInWorkspace':
+    '{name} لم يعد في مساحة العمل هذه، لذلك لم تتم إضافته.',
+  'newTrip.peopleAlreadyOn': '{name} موجود في هذه الرحلة بالفعل.',
+  'newTrip.peopleUnconfirmed':
+    'تعذّر تأكيد إضافة {name}. افتح شاشة الأشخاص لتتحقق من ذلك.',
+  'newTrip.peopleContinue': 'متابعة',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'إجراءات {title}',

@@ -575,6 +575,27 @@ const messages = {
     'Поїздку створено, але файл «{name}» не вдалося завантажити як обкладинку.',
   'newTrip.coverRetry': 'Спробувати ще раз',
   'newTrip.coverContinue': 'Відкрити поїздку без обкладинки',
+  'newTrip.people': 'Учасники',
+  'newTrip.peopleHint':
+    'Їх буде додано одразу після створення поїздки. Власником залишаєтеся ви.',
+  'newTrip.peoplePlaceholder': 'Виберіть із простору',
+  'newTrip.peopleSearch': 'Пошук за іменем',
+  'newTrip.peopleLoading': 'Завантажуємо учасників вашого простору',
+  'newTrip.peopleLoadError':
+    'Не вдалося завантажити учасників вашого простору. Створіть поїздку та додайте їх на її екрані «Учасники».',
+  'newTrip.peopleNone': 'Поки що ви єдина людина в цьому просторі.',
+  'newTrip.peopleNoneMember':
+    'Запросити більше людей може власник або адміністратор простору.',
+  'newTrip.peopleInvite': 'Запросити людей у простір',
+  'newTrip.peopleChosen': 'Вибрані люди та їхні ролі',
+  'newTrip.peopleFailedTitle': 'Поїздку створено, але додано не всіх',
+  'newTrip.noticeBothTitle': 'Поїздку створено, але додано не все',
+  'newTrip.peopleNotInWorkspace':
+    '{name} більше немає в цьому просторі, тому додати не вдалося.',
+  'newTrip.peopleAlreadyOn': '{name} уже є в цій поїздці.',
+  'newTrip.peopleUnconfirmed':
+    'Не вдалося підтвердити додавання: {name}. Перевірте на екрані «Учасники», чи додавання відбулося.',
+  'newTrip.peopleContinue': 'Продовжити',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Дії для «{title}»',

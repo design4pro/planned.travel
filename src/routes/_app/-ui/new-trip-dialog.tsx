@@ -6,7 +6,7 @@
  * feature module of its own.
  */
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useNavigate, useRouteContext, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -32,6 +32,32 @@ import {
   tripFormPayload,
   useTripForm,
 } from './trip-form'
+import { addPeople } from './trip-people-add'
+import { TripPeopleField } from './trip-people-field'
+
+import type { ChosenPerson, NotAdded, NotAddedReason } from './trip-people-add'
+
+/**
+ * What did not land once the trip exists. The form is never shown again from here: a second submit
+ * would create a second trip, so the only moves left are to retry the cover or to go on.
+ */
+interface TripNotice {
+  tripId: string
+  /** Who was not added, and why; empty when only the cover failed. */
+  people: Array<NotAdded>
+  /** The cover that did not land, or `null` when it did or none was chosen. */
+  cover: {
+    filename: string
+    uploadedFileId: string | null
+    reason: string | null
+  } | null
+}
+
+const NOT_ADDED_COPY = {
+  'not-in-workspace': 'shell.newTrip.peopleNotInWorkspace',
+  'already-on-trip': 'shell.newTrip.peopleAlreadyOn',
+  unconfirmed: 'shell.newTrip.peopleUnconfirmed',
+} as const satisfies Record<NotAddedReason, string>
 
 export interface NewTripDialogProps {
   /** The workspace default currency, pre-selected for a new trip. */
@@ -49,29 +75,22 @@ export function NewTripDialog({
   const t = useTranslate()
   const router = useRouter()
   const navigate = useNavigate()
+  // Only a workspace owner or admin can send an invitation, so only they are pointed at them.
+  const { shell } = useRouteContext({ from: '/_app' })
 
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [coverProgress, setCoverProgress] = useState<number | null>(null)
-  /**
-   * Set once the trip exists but its cover did not land. The form is not shown again from here: a
-   * second submit would create a second trip, so the only moves left are to retry the cover or to
-   * go on without one.
-   */
-  const [coverFailure, setCoverFailure] = useState<{
-    tripId: string
-    filename: string
-    uploadedFileId: string | null
-    reason: string | null
-  } | null>(null)
-  const failureRef = useRef<HTMLDivElement>(null)
-  // The form is replaced by the failure notice, so focus would otherwise fall to the dialog root.
+  const [people, setPeople] = useState<Array<ChosenPerson>>([])
+  const [notice, setNotice] = useState<TripNotice | null>(null)
+  const noticeRef = useRef<HTMLDivElement>(null)
+  // The form is replaced by the notice, so focus would otherwise fall to the dialog root.
   useEffect(() => {
-    if (coverFailure !== null) {
-      failureRef.current?.focus()
+    if (notice !== null) {
+      noticeRef.current?.focus()
     }
-  }, [coverFailure])
+  }, [notice])
   const form = useTripForm(
     {
       title: '',
@@ -89,18 +108,33 @@ export function NewTripDialog({
   function reset(): void {
     form.reset()
     setError(null)
-    setCoverFailure(null)
+    setPeople([])
+    setNotice(null)
     setCoverProgress(null)
   }
 
-  async function finish(tripId: string): Promise<void> {
+  /** Opens the trip: its plan, or its People screen when somebody still has to be added there. */
+  async function finish(tripId: string, toPeople = false): Promise<void> {
     await router.invalidate()
     setOpen(false)
     reset()
     toast.success(t('shell.newTrip.created'), {
       description: t('shell.newTrip.createdBody'),
     })
-    await navigate({ to: '/trips/$tripId/plan', params: { tripId } })
+    await navigate(
+      toPeople
+        ? { to: '/trips/$tripId/people', params: { tripId } }
+        : { to: '/trips/$tripId/plan', params: { tripId } },
+    )
+  }
+
+  /** Ends the dialog, or keeps it open on one notice when anything did not land. */
+  async function conclude(next: TripNotice): Promise<void> {
+    if (next.cover === null && next.people.length === 0) {
+      await finish(next.tripId)
+      return
+    }
+    setNotice(next)
   }
 
   /**
@@ -111,6 +145,7 @@ export function NewTripDialog({
     tripId: string,
     file: File,
     uploadedFileId: string | null,
+    notAdded: Array<NotAdded>,
   ): Promise<void> {
     setCoverProgress(0)
     const attached = await attachCover({
@@ -121,15 +156,27 @@ export function NewTripDialog({
     })
     setCoverProgress(null)
     if (attached.ok) {
-      await finish(tripId)
+      await conclude({ tripId, people: notAdded, cover: null })
       return
     }
-    setCoverFailure({
+    setNotice({
       tripId,
-      filename: attached.filename,
-      uploadedFileId: attached.uploadedFileId,
-      reason: attached.reason,
+      people: notAdded,
+      cover: {
+        filename: attached.filename,
+        uploadedFileId: attached.uploadedFileId,
+        reason: attached.reason,
+      },
     })
+  }
+
+  function noticeTitle({ cover, people: notAdded }: TripNotice): string {
+    if (cover === null) {
+      return t('shell.newTrip.peopleFailedTitle')
+    }
+    return notAdded.length === 0
+      ? t('shell.newTrip.coverFailedTitle')
+      : t('shell.newTrip.noticeBothTitle')
   }
 
   async function submit(): Promise<void> {
@@ -139,10 +186,12 @@ export function NewTripDialog({
       const { tripId } = await createTripFn({
         data: tripFormPayload(form, { creating: true, owner: true }),
       })
+      // Never throws: a person who cannot be added must not reach the create-failure path below.
+      const notAdded = await addPeople(tripId, people)
       if (form.cover === null) {
-        await finish(tripId)
+        await conclude({ tripId, people: notAdded, cover: null })
       } else {
-        await addCover(tripId, form.cover, null)
+        await addCover(tripId, form.cover, null, notAdded)
       }
     } catch (cause) {
       setError(messageOf(cause, t('shell.newTrip.error')))
@@ -152,15 +201,16 @@ export function NewTripDialog({
   }
 
   async function retryCover(): Promise<void> {
-    if (coverFailure === null || form.cover === null) {
+    if (notice === null || notice.cover === null || form.cover === null) {
       return
     }
     setSaving(true)
     try {
       await addCover(
-        coverFailure.tripId,
+        notice.tripId,
         form.cover,
-        coverFailure.uploadedFileId,
+        notice.cover.uploadedFileId,
+        notice.people,
       )
     } finally {
       setSaving(false)
@@ -175,8 +225,8 @@ export function NewTripDialog({
         if (saving) return
         setOpen(next)
         if (!next) {
-          // The trip exists even when its cover did not land; the list has to show it.
-          if (coverFailure !== null) {
+          // The trip exists even when something did not land; the list has to show it.
+          if (notice !== null) {
             void router.invalidate()
           }
           reset()
@@ -220,25 +270,46 @@ export function NewTripDialog({
               </Alert>
             )}
 
-            {coverFailure === null ? (
-              <TripFormFields
-                form={form}
-                placeholders
-                coverProgress={coverProgress}
-              />
+            {notice === null ? (
+              <>
+                <TripFormFields
+                  form={form}
+                  placeholders
+                  coverProgress={coverProgress}
+                />
+                <fieldset disabled={form.saving} className="contents">
+                  <TripPeopleField
+                    value={people}
+                    onChange={setPeople}
+                    canInvite={shell.role !== 'member'}
+                  />
+                </fieldset>
+              </>
             ) : (
-              <div ref={failureRef} tabIndex={-1} className="outline-none">
-                <Alert
-                  tone="warning"
-                  title={t('shell.newTrip.coverFailedTitle')}
-                >
-                  {t('shell.newTrip.coverFailed', {
-                    name: coverFailure.filename,
-                  })}
-                  {coverFailure.reason === null ? null : (
-                    <span className="mt-1 block break-words">
-                      {coverFailure.reason}
-                    </span>
+              <div ref={noticeRef} tabIndex={-1} className="outline-none">
+                <Alert tone="warning" title={noticeTitle(notice)}>
+                  {notice.cover === null ? null : (
+                    <>
+                      {t('shell.newTrip.coverFailed', {
+                        name: notice.cover.filename,
+                      })}
+                      {notice.cover.reason === null ? null : (
+                        <span className="mt-1 block break-words">
+                          {notice.cover.reason}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {notice.people.length === 0 ? null : (
+                    <ul className="mt-1 flex flex-col gap-1">
+                      {notice.people.map((person) => (
+                        <li key={person.userId}>
+                          {t(NOT_ADDED_COPY[person.reason], {
+                            name: person.name,
+                          })}
+                        </li>
+                      ))}
+                    </ul>
                   )}
                 </Alert>
               </div>
@@ -246,7 +317,7 @@ export function NewTripDialog({
           </form>
         </DialogBody>
 
-        {coverFailure === null ? (
+        {notice === null ? (
           <DialogFooter key="create">
             <Button
               type="button"
@@ -272,20 +343,22 @@ export function NewTripDialog({
             </Button>
           </DialogFooter>
         ) : (
-          <DialogFooter key="cover-failed">
-            <Button
-              type="button"
-              variant="ghost"
-              shape="pill"
-              disabled={saving}
-              loading={saving}
-              loadingLabel={t('shell.newTrip.coverUploading')}
-              onClick={() => {
-                void retryCover()
-              }}
-            >
-              {t('shell.newTrip.coverRetry')}
-            </Button>
+          <DialogFooter key="notice">
+            {notice.cover === null ? null : (
+              <Button
+                type="button"
+                variant="ghost"
+                shape="pill"
+                disabled={saving}
+                loading={saving}
+                loadingLabel={t('shell.newTrip.coverUploading')}
+                onClick={() => {
+                  void retryCover()
+                }}
+              >
+                {t('shell.newTrip.coverRetry')}
+              </Button>
+            )}
             <Button
               type="button"
               variant="primary"
@@ -293,12 +366,16 @@ export function NewTripDialog({
               disabled={saving}
               onClick={() => {
                 setSaving(true)
-                void finish(coverFailure.tripId).finally(() => {
-                  setSaving(false)
-                })
+                void finish(notice.tripId, notice.people.length > 0).finally(
+                  () => {
+                    setSaving(false)
+                  },
+                )
               }}
             >
-              {t('shell.newTrip.coverContinue')}
+              {notice.people.length === 0
+                ? t('shell.newTrip.coverContinue')
+                : t('shell.newTrip.peopleContinue')}
             </Button>
           </DialogFooter>
         )}

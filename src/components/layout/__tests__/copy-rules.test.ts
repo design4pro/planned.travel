@@ -60,6 +60,7 @@ const APP_FILES = [
   join('-ui', 'new-trip-dialog.tsx'),
   join('-ui', 'trip-form.tsx'),
   join('-ui', 'trip-cover-field.tsx'),
+  join('-ui', 'trip-people-field.tsx'),
   join('-ui', 'trip-actions.tsx'),
   join('-ui', 'trip-copy-dialog.tsx'),
   join('-ui', 'create-dialogs.tsx'),

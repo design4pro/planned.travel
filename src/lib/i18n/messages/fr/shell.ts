@@ -557,6 +557,31 @@ const messages = {
     'Le voyage a été créé, mais « {name} » n’a pas pu être envoyé comme couverture.',
   'newTrip.coverRetry': 'Réessayer',
   'newTrip.coverContinue': 'Ouvrir le voyage sans couverture',
+  'newTrip.people': 'Personnes',
+  'newTrip.peopleHint':
+    'Elles sont ajoutées dès que le voyage est créé. Vous en restez le propriétaire.',
+  'newTrip.peoplePlaceholder': 'Choisir dans votre espace de travail',
+  'newTrip.peopleSearch': 'Rechercher par nom',
+  'newTrip.peopleLoading':
+    'Chargement des personnes de votre espace de travail',
+  'newTrip.peopleLoadError':
+    'Les personnes de votre espace de travail n’ont pas pu être chargées. Créez le voyage et ajoutez-les depuis son écran Personnes.',
+  'newTrip.peopleNone':
+    'Vous êtes pour l’instant la seule personne de cet espace de travail.',
+  'newTrip.peopleNoneMember':
+    'Un propriétaire ou un administrateur de l’espace de travail peut inviter d’autres personnes.',
+  'newTrip.peopleInvite': 'Inviter des personnes dans l’espace de travail',
+  'newTrip.peopleChosen': 'Personnes choisies et leurs rôles',
+  'newTrip.peopleFailedTitle':
+    'Le voyage a été créé, mais tout le monde n’a pas été ajouté',
+  'newTrip.noticeBothTitle':
+    'Le voyage a été créé, mais tout n’a pas été ajouté',
+  'newTrip.peopleNotInWorkspace':
+    'L’ajout de {name} n’a pas eu lieu : cette personne ne fait plus partie de cet espace de travail.',
+  'newTrip.peopleAlreadyOn': '{name} participe déjà à ce voyage.',
+  'newTrip.peopleUnconfirmed':
+    'L’ajout de {name} n’a pas pu être confirmé. Vérifiez dans Personnes s’il a eu lieu.',
+  'newTrip.peopleContinue': 'Continuer',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Actions pour {title}',

@@ -1991,3 +1991,114 @@ test.describe('01-S9a - Adjustable planner workspace', () => {
     expect(consoleReport().fatal).toEqual([])
   })
 })
+
+test.describe('01-S8c — Initial members on trip creation', () => {
+  const TRIPS: RouteCase = { name: 'trips', path: '/trips', ready: 'main' }
+
+  const CARD = '[data-part="trip-tile"]:visible, [data-part="trip-row"]:visible'
+  const TRIGGER = '[data-part="trip-actions-trigger"]:visible'
+
+  test.beforeEach(async ({ context, page, baseURL }) => {
+    await useSession(context, page, baseURL)
+    test.skip(
+      !(await hasSession(page)),
+      `${DEMO_EMAIL} has no session — run \`node scripts/seed/seed.mjs\` to provision the demo account`,
+    )
+  })
+
+  /**
+   * Deletes the trip this walk created, so the shared demo workspace keeps the trip count the other
+   * blocks rely on. The delete dialog arms on its own for a trip that carries nothing and asks for
+   * the trip's name when it carries something; a trip with two members may be either.
+   */
+  async function deleteTrip(page: Page, title: string): Promise<void> {
+    await visit(page, TRIPS, 'light')
+    const card = page.locator(CARD).filter({ hasText: title }).first()
+    await card.locator(TRIGGER).click()
+    await page
+      .getByRole('menu')
+      .getByRole('menuitem', { name: /^Delete( permanently)?$/ })
+      .click()
+    const dialog = page.locator('[data-part="trip-delete-dialog"]')
+    const confirm = dialog.getByRole('button', { name: 'Delete permanently' })
+    await expect(dialog.getByRole('listitem').first()).toBeVisible()
+    const field = dialog.getByLabel(/Type the trip’s name/)
+    if ((await field.count()) === 1) {
+      await field.fill(title)
+    }
+    await confirm.click()
+    await expect(dialog).toBeHidden()
+  }
+
+  /**
+   * Creates a trip with two of the workspace's people - the first as an editor, the second as a
+   * viewer - and reads both back on the trip's People screen. This one saves, because the claim is
+   * the write; the trip is deleted at the end.
+   */
+  test('a trip created with an editor and a viewer lists both on its People screen', async ({
+    page,
+  }) => {
+    const report = watchConsole(page, TRIPS)
+    await visit(page, TRIPS, 'light')
+
+    const create = page
+      .getByRole('button', { name: 'New trip' })
+      .filter({ visible: true })
+      .first()
+    test.skip(
+      !(await create.isEnabled()),
+      'the plan has no room for another trip',
+    )
+    await create.click()
+
+    const dialog = page.getByRole('dialog')
+    const title = `Initial members ${Date.now()}`
+    await dialog.getByLabel(/Trip name/).fill(title)
+
+    const picker = dialog.getByRole('button', { name: 'People', exact: true })
+    await picker.click()
+    const options = page.getByRole('option')
+    await expect(options.nth(1)).toBeVisible()
+    const editor = (await options.nth(0).innerText()).split('\n')[0]
+    const viewer = (await options.nth(1).innerText()).split('\n')[0]
+    await options.nth(0).click()
+    await options.nth(1).click()
+    await page.keyboard.press('Escape')
+
+    await expect(
+      dialog.getByRole('combobox', { name: `Role · ${editor}` }),
+    ).toContainText('Editor')
+    await dialog.getByRole('combobox', { name: `Role · ${viewer}` }).click()
+    await page.getByRole('option', { name: 'Viewer', exact: true }).click()
+
+    await dialog.getByRole('button', { name: 'Create trip' }).click()
+    await expect(page).toHaveURL(/\/trips\/[^/]+\/plan(\?|$)/)
+
+    const peopleUrl = page.url().replace(/\/plan(\?.*)?$/, '/people')
+    try {
+      await visit(
+        page,
+        {
+          name: 'trip-people',
+          path: new URL(peopleUrl).pathname,
+          ready: TRIP_SECTIONS,
+        },
+        'light',
+      )
+      await expect(
+        page.getByRole('heading', { name: 'On this trip' }),
+      ).toBeVisible()
+      await expect(
+        page.getByRole('combobox', { name: `Role · ${editor}` }),
+      ).toContainText('Editor')
+      await expect(
+        page.getByRole('combobox', { name: `Role · ${viewer}` }),
+      ).toContainText('Viewer')
+    } finally {
+      await deleteTrip(page, title)
+    }
+
+    const verdict = report()
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
+  })
+})

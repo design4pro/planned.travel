@@ -613,6 +613,29 @@ const messages = {
     'The trip was created, but “{name}” could not be uploaded as its cover.',
   'newTrip.coverRetry': 'Try again',
   'newTrip.coverContinue': 'Open the trip without a cover',
+  'newTrip.people': 'People',
+  'newTrip.peopleHint':
+    'Added as soon as the trip is created. You stay its owner.',
+  'newTrip.peoplePlaceholder': 'Choose from your workspace',
+  'newTrip.peopleSearch': 'Search by name',
+  'newTrip.peopleLoading': 'Loading the people in your workspace',
+  'newTrip.peopleLoadError':
+    'The people in your workspace could not be loaded. Create the trip and add them from its People screen.',
+  'newTrip.peopleNone': 'You are the only person in this workspace so far.',
+  'newTrip.peopleNoneMember':
+    'A workspace owner or admin can invite more people.',
+  'newTrip.peopleInvite': 'Invite people to the workspace',
+  'newTrip.peopleChosen': 'Chosen people and their roles',
+  'newTrip.peopleFailedTitle':
+    'The trip was created, but not everyone was added',
+  'newTrip.noticeBothTitle':
+    'The trip was created, but not everything was added',
+  'newTrip.peopleNotInWorkspace':
+    '{name} is no longer in this workspace, so was not added.',
+  'newTrip.peopleAlreadyOn': '{name} was already on this trip.',
+  'newTrip.peopleUnconfirmed':
+    '{name} could not be confirmed. Check People to see whether they were added.',
+  'newTrip.peopleContinue': 'Continue',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Actions for {title}',
