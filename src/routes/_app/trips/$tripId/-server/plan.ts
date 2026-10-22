@@ -383,8 +383,8 @@ async function requireStopOfPlan(
  * Tells the trip room that these days were rearranged: one `day` upsert each,
  * carrying the merged order and the journeys placed beside it.
  *
- * The journeys travel under their own field, the one `reorderDayTransportsFn` writes, because
- * the two halves of a day are two news items and neither should overwrite the other's.
+ * The journeys travel under their own field, the one `reorderDayTransportsFn` also writes when
+ * it restates journeys alone, so a patch from either writer leaves the other field as it was.
  *
  * The bridge is reached at call time rather than imported at the top of the file,
  * and that is not stylistic. `#/server/fns/context` imports `cloudflare:workers` and

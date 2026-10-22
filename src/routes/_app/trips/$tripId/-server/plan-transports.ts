@@ -179,8 +179,9 @@ export const loadPlanTransports = createServerFn({ method: 'GET' })
 /**
  * Tells the trip room that this day's journeys were re-placed.
  *
- * Under its own field rather than beside the `items` `reorderPlanFn` mirrors, because the two
- * writes carry two different halves of one day and neither should overwrite the other's news.
+ * Under its own field, because this is the news of a write that renumbers nothing (schedule,
+ * unschedule, delete): it carries the journeys alone and must not overwrite the `items` that
+ * `reorderPlanFn` mirrors beside its own `journeys` when it renumbers a day.
  *
  * `#/server/fns/context` is reached at call time rather than imported at the top of the file: it
  * imports `cloudflare:workers` and the trip room's Durable Object module, and this file is imported
