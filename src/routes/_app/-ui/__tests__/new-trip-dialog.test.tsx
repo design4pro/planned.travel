@@ -515,22 +515,20 @@ describe('NewTripDialog', () => {
       })
     })
 
-    it('forgets a pick the next opening no longer lists, so no ghost is submitted', async () => {
+    it('starts empty after Cancel, so a pick the next opening cannot show is never submitted', async () => {
       const user = await openAndName()
       await choose(user, 'Ana Souza')
       await user.click(screen.getByRole('button', { name: 'Cancel' }))
 
-      // Ana left the workspace while the dialog was shut.
-      roster.load.mockResolvedValue([ben, cy])
+      // The next opening cannot read the roster, so it shows no picker at all.
+      roster.load.mockRejectedValue(new Error('offline'))
       await user.click(screen.getByRole('button', { name: 'New trip' }))
-      await screen.findByRole('button', { name: 'People' })
-
-      await waitFor(() => {
-        expect(
-          screen.queryByRole('list', { name: 'Chosen people and their roles' }),
-        ).toBeNull()
-      })
+      await screen.findByText(
+        /The people in your workspace could not be loaded/,
+      )
+      await user.type(await screen.findByLabelText(/Trip name/), 'Porto')
       await user.click(screen.getByRole('button', { name: 'Create trip' }))
+
       await waitFor(() => {
         expect(server.create).toHaveBeenCalledOnce()
       })

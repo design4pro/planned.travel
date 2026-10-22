@@ -150,15 +150,6 @@ function Picker({
 }) {
   const t = useTranslate()
 
-  // The dialog keeps its draft when it is cancelled, and the roster is read again on every opening:
-  // a pick for somebody who has since left the workspace would be a row the picker cannot show.
-  useEffect(() => {
-    const listed = value.filter((person) =>
-      people.some((entry) => entry.userId === person.userId),
-    )
-    if (listed.length !== value.length) onChange(listed)
-  }, [people, value, onChange])
-
   const options = useMemo<Array<ComboboxOption>>(
     () =>
       people.map((person) => ({ value: person.userId, label: person.name })),

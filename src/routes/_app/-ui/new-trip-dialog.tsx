@@ -326,6 +326,9 @@ export function NewTripDialog({
               disabled={saving}
               onClick={() => {
                 setOpen(false)
+                // Like every other way out: picks kept for the next opening would be submitted
+                // even when that opening shows no picker (roster loading, failed or empty).
+                reset()
               }}
             >
               {t('modules.action.cancel')}
