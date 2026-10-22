@@ -38,10 +38,11 @@ import {
 import { messageOf } from '#/components/modules/shared'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { openedCurrencyOptions } from '#/routes/_app/-lib/currency-names'
 
 import type { MessageKey } from '#/lib/i18n'
 import {
-  CURRENCY_OPTIONS,
+  OFFERED_CURRENCY_CODES,
   currencyCode,
   formatExchangeRate,
   formatMoney,
@@ -323,7 +324,6 @@ export function PaymentDialog({
                   options={options}
                   value={fromUserId}
                   onValueChange={setFromUserId}
-                  ariaLabel={t('costs.payment.whoPaying')}
                 />
               </Field>
               <Field
@@ -335,7 +335,6 @@ export function PaymentDialog({
                   options={options}
                   value={toUserId === '' ? undefined : toUserId}
                   onValueChange={setToUserId}
-                  ariaLabel={t('costs.payment.whoPaid')}
                 />
               </Field>
             </div>
@@ -369,14 +368,13 @@ export function PaymentDialog({
                 data-part="payment-currency"
               >
                 <SimpleSelect
-                  options={CURRENCY_OPTIONS.map((entry) => ({
-                    value: entry.code,
-                    label: entry.code,
-                    description: entry.name,
-                  }))}
+                  options={openedCurrencyOptions(
+                    t,
+                    locale,
+                    OFFERED_CURRENCY_CODES,
+                  )}
                   value={sourceCurrency}
                   onValueChange={changeSourceCurrency}
-                  ariaLabel={t('costs.payment.currencyLabel')}
                 />
               </Field>
             </div>
@@ -423,7 +421,6 @@ export function PaymentDialog({
                   }))}
                   value={method}
                   onValueChange={(next) => setMethod(asMethod(next))}
-                  ariaLabel={t('costs.payment.howMade')}
                 />
               </Field>
               <Field label={t('costs.field.date')}>
@@ -432,7 +429,6 @@ export function PaymentDialog({
                   onChange={(next) =>
                     setSettledOn(next === null ? today : toDayString(next))
                   }
-                  ariaLabel={t('costs.payment.dateLabel')}
                 />
               </Field>
             </div>

@@ -92,18 +92,15 @@ const messages = {
   'expense.what': 'Chi cho việc gì',
   'expense.whatPlaceholder': 'Bữa tối ở Kyubey',
   'expense.amountNotANumber': 'Nhập số tiền dưới dạng số.',
-  'expense.currencyLabel': 'Tiền tệ ghi trên biên lai này',
   'expense.convertedTo': 'Quy đổi thành {currency}',
   'expense.convertedHint':
     '{from} quy ra {to} trên sao kê của bạn là bao nhiêu.',
   'expense.convertedSuggested':
     'Gợi ý từ tỷ giá đã dùng trong chuyến đi này ({date}, {rate}). Hãy sửa lại cho khớp với sao kê của bạn.',
   'expense.convertedNotANumber': 'Nhập số tiền quy đổi dưới dạng số.',
-  'expense.dateLabel': 'Ngày phát sinh khoản chi',
   'expense.paidByHint':
     'Để trống người trả nếu bạn đang ghi một biên lai chưa ai ứng.',
   'expense.nobodyYet': 'Chưa có ai',
-  'expense.whoPaid': 'Ai đã trả',
   'expense.notesHint': 'Không bắt buộc. Bất cứ điều gì biên lai không nói.',
   'expense.notesPlaceholder': 'Chia suất nếm thử, đồ uống tính riêng.',
   'expense.noAmount': 'Chưa có số tiền',
@@ -120,14 +117,9 @@ const messages = {
   'payment.pickTwo': 'Chọn hai người khác nhau.',
   'payment.paidTo': 'Trả cho',
   'payment.needsTwo': 'Một khoản trả cần hai người khác nhau.',
-  'payment.whoPaying': 'Ai trả',
-  'payment.whoPaid': 'Ai nhận',
   'payment.amountIn': 'Số tiền bằng {currency}',
   'payment.amountPositive': 'Nhập số tiền lớn hơn không.',
-  'payment.currencyLabel': 'Tiền tệ dùng để thanh toán',
   'payment.how': 'Bằng cách nào',
-  'payment.howMade': 'Khoản trả được thực hiện thế nào',
-  'payment.dateLabel': 'Ngày trả',
   'payment.note': 'Ghi chú',
   'payment.noteHint':
     'Không bắt buộc. Một mã tham chiếu, hoặc khoản này chi trả cho gì.',
