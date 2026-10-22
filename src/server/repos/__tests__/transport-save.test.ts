@@ -11,6 +11,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { mintId } from '#/lib/ids'
 import { NotFoundError } from '../context'
 import { createDay, listTripDays } from '../days'
 import { listFilesForEntity, recordFile } from '../files'
@@ -120,6 +121,37 @@ describe('saving a transport with its legs', () => {
     expect(saved.transport.departureName).toBe('Narita')
     expect(saved.transport.arrivalName).toBe('Shinjuku')
     expect(await listTripLegs(tenant.scope, tripId)).toEqual([])
+  })
+
+  /**
+   * The dialog mints a new record's id in the browser with the shared generator, so equal-order
+   * undated transports must list by creation and not by a random tail. The ids are minted in
+   * distinct milliseconds: within one the order is the random tail and asserts nothing (#462).
+   */
+  it('lists undated transports of equal order in the order their dialog ids were minted', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-22T12:00:00.000Z'))
+    const minted: Array<string> = []
+    for (let i = 0; i < 6; i += 1) {
+      minted.push(mintId())
+      vi.advanceTimersByTime(1)
+    }
+    vi.useRealTimers()
+
+    // Saved out of order and titled against it, so neither the write order nor the title can
+    // stand in for the id.
+    for (const index of [3, 0, 5, 1, 4, 2]) {
+      await saveTransport(tenant.scope, {
+        tripId,
+        transportId: minted[index],
+        intent: 'create',
+        record: { title: `Idea ${minted.length - index}`, mode: 'train' },
+        chain: NO_CHAIN,
+      })
+    }
+
+    const listed = await listTripTransports(tenant.scope, tripId)
+    expect(listed.map((row) => row.id)).toEqual(minted)
   })
 
   /**
