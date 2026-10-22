@@ -47,44 +47,50 @@ const FIVE = 53
  * rows is a worse experience than one with the thirty currencies our trips are
  * actually priced in, and any code outside it still renders correctly because
  * formatting resolves through `Intl` rather than through this table.
+ *
+ * Codes only - never a name. A picker names each code in the reader's language through
+ * `src/routes/_app/-lib/currency-names.ts`; an English `name` here was copy outside the catalogue.
  */
 export const CURRENCY_OPTIONS: ReadonlyArray<{
   readonly code: string
-  readonly name: string
 }> = [
-  { code: 'EUR', name: 'Euro' },
-  { code: 'GBP', name: 'Pound sterling' },
-  { code: 'USD', name: 'US dollar' },
-  { code: 'JPY', name: 'Japanese yen' },
-  { code: 'CHF', name: 'Swiss franc' },
-  { code: 'AUD', name: 'Australian dollar' },
-  { code: 'CAD', name: 'Canadian dollar' },
-  { code: 'NZD', name: 'New Zealand dollar' },
-  { code: 'SEK', name: 'Swedish krona' },
-  { code: 'NOK', name: 'Norwegian krone' },
-  { code: 'DKK', name: 'Danish krone' },
-  { code: 'PLN', name: 'Polish złoty' },
-  { code: 'CZK', name: 'Czech koruna' },
-  { code: 'HUF', name: 'Hungarian forint' },
-  { code: 'RON', name: 'Romanian leu' },
-  { code: 'ISK', name: 'Icelandic króna' },
-  { code: 'TRY', name: 'Turkish lira' },
-  { code: 'MAD', name: 'Moroccan dirham' },
-  { code: 'ZAR', name: 'South African rand' },
-  { code: 'AED', name: 'UAE dirham' },
-  { code: 'SGD', name: 'Singapore dollar' },
-  { code: 'HKD', name: 'Hong Kong dollar' },
-  { code: 'KRW', name: 'South Korean won' },
-  { code: 'CNY', name: 'Chinese yuan' },
-  { code: 'THB', name: 'Thai baht' },
-  { code: 'VND', name: 'Vietnamese dong' },
-  { code: 'IDR', name: 'Indonesian rupiah' },
-  { code: 'INR', name: 'Indian rupee' },
-  { code: 'MXN', name: 'Mexican peso' },
-  { code: 'BRL', name: 'Brazilian real' },
-  { code: 'ARS', name: 'Argentine peso' },
-  { code: 'CLP', name: 'Chilean peso' },
+  { code: 'EUR' },
+  { code: 'GBP' },
+  { code: 'USD' },
+  { code: 'JPY' },
+  { code: 'CHF' },
+  { code: 'AUD' },
+  { code: 'CAD' },
+  { code: 'NZD' },
+  { code: 'SEK' },
+  { code: 'NOK' },
+  { code: 'DKK' },
+  { code: 'PLN' },
+  { code: 'CZK' },
+  { code: 'HUF' },
+  { code: 'RON' },
+  { code: 'ISK' },
+  { code: 'TRY' },
+  { code: 'MAD' },
+  { code: 'ZAR' },
+  { code: 'AED' },
+  { code: 'SGD' },
+  { code: 'HKD' },
+  { code: 'KRW' },
+  { code: 'CNY' },
+  { code: 'THB' },
+  { code: 'VND' },
+  { code: 'IDR' },
+  { code: 'INR' },
+  { code: 'MXN' },
+  { code: 'BRL' },
+  { code: 'ARS' },
+  { code: 'CLP' },
 ]
+
+/** The codes of {@link CURRENCY_OPTIONS}, in the order the pickers list them. */
+export const OFFERED_CURRENCY_CODES: ReadonlyArray<string> =
+  CURRENCY_OPTIONS.map((option) => option.code)
 
 const CODE_PATTERN = /^[A-Z]{3}$/
 
