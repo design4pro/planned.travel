@@ -296,6 +296,16 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         () =>
           deletePaymentFn({
             data: { tripId: payload.tripId, settlementId: payment.id },
+          }).catch(async (cause: unknown) => {
+            // A refusal, a lost response and a payment someone else already removed all arrive as
+            // the same failure, and "try again" is wrong for the last two. Only the server knows
+            // which, so ask it: a payment that is no longer there is what the person wanted.
+            const gone = await loadCosts({ data: { tripId: payload.tripId } })
+              .then((fresh) =>
+                fresh.settlements.every((row) => row.id !== payment.id),
+              )
+              .catch(() => false)
+            if (!gone) throw cause
           }),
         t('costs.write.paymentDeleteFailed'),
       )

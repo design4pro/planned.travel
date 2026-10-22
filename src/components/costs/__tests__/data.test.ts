@@ -595,6 +595,22 @@ describe('applyOps — unpay', () => {
     expect(net(snapshot.balances)).toEqual(net(PAYLOAD.balances))
   })
 
+  it('does not shift the balances twice once the loader has already lost the payment', () => {
+    const reloaded: CostsPayload = {
+      ...PAYLOAD,
+      settlements: PAYLOAD.settlements.filter((row) => row.id !== recorded.id),
+    }
+    const snapshot = applyOps(reloaded, [
+      { kind: 'unpay', key: 'k1', previous: recorded },
+    ])
+    expect(snapshot.settlements).toEqual(reloaded.settlements)
+    const net = (rows: ReadonlyArray<CostsBalance>): Array<[string, number]> =>
+      rows
+        .map((row): [string, number] => [row.userId, row.balanceMinor])
+        .sort(([left], [right]) => left.localeCompare(right))
+    expect(net(snapshot.balances)).toEqual(net(reloaded.balances))
+  })
+
   it('leaves the expense list untouched', () => {
     const snapshot = applyOps(PAYLOAD, [
       { kind: 'unpay', key: 'k1', previous: recorded },

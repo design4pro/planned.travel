@@ -44,7 +44,7 @@ import {
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { categoryOptions } from './categories'
 import { ExpenseList } from './expense-list'
-import { CostsRail, paymentWho } from './rail'
+import { CostsRail, paymentArrow, paymentWho } from './rail'
 import { StatTiles } from './stat-tiles'
 import { useCostsActions } from './actions'
 import { CurrencyRebaseDialog } from './currency-rebase-dialog'
@@ -117,6 +117,7 @@ export function CostsScreen({
   // A monotonic counter, not state: it only ever feeds the `key` of the dialog
   // being opened, and bumping it must not itself schedule a render.
   const sessions = useRef(0)
+  const paymentsRef = useRef<HTMLDivElement>(null)
 
   const start = useCallback((make: (id: number) => Session): void => {
     sessions.current += 1
@@ -154,7 +155,7 @@ export function CostsScreen({
       data.viewerUserId,
       t,
     )
-    return `${who.from} → ${who.to}`
+    return `${who.from} ${paymentArrow(locale)} ${who.to}`
   }
 
   const openDeletePayment = useCallback(
@@ -559,6 +560,7 @@ export function CostsScreen({
             onSettle={settle}
             onAddPayment={() => openPayment(null)}
             onDeletePayment={openDeletePayment}
+            paymentsRef={paymentsRef}
           />
         </div>
       </AppSections>
@@ -644,6 +646,12 @@ export function CostsScreen({
               t('costs.person.removedTarget'),
           )}
           onConfirm={() => removePayment(session.row)}
+          // The payment's own row is gone by the time the dialog closes (and comes back as a new
+          // node after a refusal), so the Payments list is where focus goes.
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            paymentsRef.current?.focus()
+          }}
         />
       ) : null}
 

@@ -184,7 +184,7 @@ const messages = {
   'payments.empty.title': 'Henüz ödeme yok',
   'payments.empty.body':
     'Biri bir bakiyeyi geri ödediğinde transfer buraya kaydedilir.',
-  'payments.delete': '{from} → {to} ödemesini sil, {amount}',
+  'payments.delete': 'Ödemeyi sil: ödeyen {from}, alan {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Bu gezi arşivlenmiş. Masrafları değiştirmeden önce geri yükleyin.',

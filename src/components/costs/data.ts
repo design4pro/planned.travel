@@ -373,6 +373,9 @@ export function applyOps(
       continue
     }
     if (op.kind === 'unpay') {
+      // A loader that answered before the op was dropped has already lost the row and its share of
+      // the balances: shifting them again would take the payment out twice.
+      if (!settlements.some((row) => row.id === op.previous.id)) continue
       settlements = settlements.filter((row) => row.id !== op.previous.id)
       balanceDelta.set(
         op.previous.fromUserId,

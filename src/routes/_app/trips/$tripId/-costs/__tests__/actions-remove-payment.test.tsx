@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
-import { deletePaymentFn } from '#/server/fns/costs'
+import { deletePaymentFn, loadCosts } from '#/server/fns/costs'
 import { useCostsActions } from '../actions'
 
 import type { ReactNode } from 'react'
@@ -124,5 +124,43 @@ describe('removing a payment from the costs screen', () => {
       expect.anything(),
     )
     expect(result.current.snapshot.settlements).toEqual([PAYMENT])
+  })
+
+  describe('when the server refuses because the payment is not there any more', () => {
+    it('reads the trip again and treats a payment that is gone as deleted, not as a failure to retry', async () => {
+      vi.mocked(deletePaymentFn).mockRejectedValue(new Error('not found'))
+      vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, settlements: [] })
+      const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
+
+      await act(async () => {
+        await result.current.removePayment(PAYMENT)
+      })
+
+      expect(loadCosts).toHaveBeenCalledWith({ data: { tripId: 'trip-1' } })
+      expect(toast.error).not.toHaveBeenCalled()
+      expect(refresh.invalidate).toHaveBeenCalledTimes(1)
+      expect(toast.success).toHaveBeenCalledWith(
+        Costs['write.paymentDeleted'],
+        expect.anything(),
+      )
+    })
+
+    it('still reports the failure when the payment is there, or the trip cannot be read', async () => {
+      vi.mocked(deletePaymentFn).mockRejectedValue(new Error('refused'))
+      const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
+
+      vi.mocked(loadCosts).mockResolvedValueOnce(PAYLOAD)
+      await expect(
+        act(() => result.current.removePayment(PAYMENT)),
+      ).rejects.toThrow('refused')
+
+      vi.mocked(loadCosts).mockRejectedValueOnce(new Error('offline'))
+      await expect(
+        act(() => result.current.removePayment(PAYMENT)),
+      ).rejects.toThrow('refused')
+
+      expect(toast.error).toHaveBeenCalledTimes(2)
+      expect(toast.success).not.toHaveBeenCalled()
+    })
   })
 })

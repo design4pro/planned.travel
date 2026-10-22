@@ -61,6 +61,11 @@ export interface ConfirmDeleteDialogProps {
   /** Who is affected, already resolved to names. */
   readonly affects: ReadonlyArray<string>
   readonly onConfirm: () => Promise<void>
+  /**
+   * Where focus goes when the dialog closes. A delete takes the row that opened it off the page,
+   * and a dialog can only hand focus back to something still there; the caller names the next place.
+   */
+  readonly onCloseAutoFocus?: (event: Event) => void
 }
 
 export function ConfirmDeleteDialog({
@@ -72,6 +77,7 @@ export function ConfirmDeleteDialog({
   currency,
   affects,
   onConfirm,
+  onCloseAutoFocus,
 }: ConfirmDeleteDialogProps) {
   const t = useTranslate()
   const copy = COPY[subject]
@@ -93,8 +99,15 @@ export function ConfirmDeleteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm">
+    // While the delete is in flight the dialog cannot be dismissed: Escape, a tap outside or "Keep
+    // it" would close it on a delete that still goes through.
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!working) onOpenChange(next)
+      }}
+    >
+      <DialogContent size="sm" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{t(copy.title)}</DialogTitle>
           <DialogDescription>
@@ -132,6 +145,7 @@ export function ConfirmDeleteDialog({
             variant="secondary"
             shape="pill"
             autoFocus
+            disabled={working}
             onClick={() => onOpenChange(false)}
           >
             {t('ui.action.keep')}

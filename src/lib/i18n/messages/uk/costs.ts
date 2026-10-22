@@ -189,7 +189,8 @@ const messages = {
   'payments.label': 'Записані платежі',
   'payments.empty.title': 'Платежів ще немає',
   'payments.empty.body': 'Коли хтось повертає баланс, переказ записується тут.',
-  'payments.delete': 'Видалити платіж: {from} → {to}, {amount}',
+  'payments.delete':
+    'Видалити платіж: платник {from}, отримувач {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ця подорож в архіві. Відновіть її, перш ніж змінювати витрати.',

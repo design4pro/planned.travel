@@ -1,3 +1,4 @@
+import { createRef } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -5,6 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
+import { formatDayLabel } from '#/components/costs'
 import { CostsRail } from '../rail'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -32,7 +34,7 @@ const PEOPLE: ReadonlyArray<CostsPerson> = [
   },
 ]
 
-function payment(id: string): CostsSettlement {
+function payment(id: string, settledOn = '2026-04-11'): CostsSettlement {
   return {
     id,
     fromUserId: 'u-1',
@@ -41,7 +43,7 @@ function payment(id: string): CostsSettlement {
     currency: 'EUR',
     convertedMinor: 1_000,
     method: 'cash',
-    settledOn: '2026-04-11',
+    settledOn,
     note: null,
   }
 }
@@ -50,6 +52,7 @@ function mount(
   settlements: ReadonlyArray<CostsSettlement>,
   canWrite: boolean,
   onDeletePayment: (payment: CostsSettlement) => void = () => undefined,
+  paymentsRef = createRef<HTMLDivElement>(),
 ) {
   const snapshot: CostsSnapshot = {
     expenses: [],
@@ -75,6 +78,7 @@ function mount(
         onSettle={() => undefined}
         onAddPayment={() => undefined}
         onDeletePayment={onDeletePayment}
+        paymentsRef={paymentsRef}
       />
     </I18nProvider>,
   )
@@ -92,14 +96,47 @@ describe('the Payments list', () => {
 
     expect(deleteButtons()).toHaveLength(2)
     const first = deleteButtons()[0]
+    // Names rather than the arrow line's "You", and the day, so two payments of the same amount
+    // between the same people have different names.
     expect(first.getAttribute('aria-label')).toBe(
-      'Delete the payment from You to Anna, €10.00',
+      `Delete the payment from Rafał to Anna, €10.00, ${formatDayLabel('2026-04-11', 'en')}`,
     )
 
     await user.click(first)
 
     expect(onDelete).toHaveBeenCalledTimes(1)
     expect(onDelete).toHaveBeenCalledWith(rows[0])
+  })
+
+  it('tells two payments of the same amount between the same people apart', () => {
+    mount(
+      [payment('pay-1', '2026-04-11'), payment('pay-2', '2026-04-12')],
+      true,
+    )
+
+    const names = deleteButtons().map((button) =>
+      button.getAttribute('aria-label'),
+    )
+    expect(new Set(names).size).toBe(2)
+  })
+
+  it('hands the dialog a focus target that survives the row being deleted', () => {
+    const paymentsRef = createRef<HTMLDivElement>()
+    mount([payment('pay-1')], true, undefined, paymentsRef)
+
+    const region = paymentsRef.current
+    expect(region).not.toBeNull()
+    expect(region?.getAttribute('tabindex')).toBe('-1')
+    expect(region?.getAttribute('role')).toBe('group')
+    expect(region?.getAttribute('aria-label')).toBe(Costs['payments.label'])
+    expect(region?.contains(deleteButtons()[0])).toBe(true)
+  })
+
+  it('keeps the focus target when the last payment is gone', () => {
+    const paymentsRef = createRef<HTMLDivElement>()
+    mount([], true, undefined, paymentsRef)
+
+    expect(paymentsRef.current).not.toBeNull()
   })
 
   it('offers nothing to delete to someone who may only read', () => {

@@ -194,7 +194,8 @@ const messages = {
   'payments.empty.title': 'Пока нет платежей',
   'payments.empty.body':
     'Когда кто-то возвращает баланс, перевод записывается здесь.',
-  'payments.delete': 'Удалить платёж: {from} → {to}, {amount}',
+  'payments.delete':
+    'Удалить платёж: плательщик {from}, получатель {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Эта поездка в архиве. Восстановите её, прежде чем изменять расходы.',

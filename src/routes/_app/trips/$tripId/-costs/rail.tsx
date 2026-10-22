@@ -16,10 +16,11 @@ import {
   EmptyState,
   IconButton,
   Progress,
+  focusRingInset,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { formatNumber } from '#/lib/format'
-import { useLocale, useTranslate } from '#/lib/i18n'
+import { directionOf, useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney, formatSignedMoney } from '#/lib/money'
 import {
   CategoryDonut,
@@ -32,7 +33,8 @@ import { EXPENSE_CATEGORY_ORDER, categoryLabel } from './categories'
 import { categoryColour } from './chart-colours'
 import { ConvertedFigure } from './converted-figure'
 
-import type { Translate } from '#/lib/i18n'
+import type { Locale, Translate } from '#/lib/i18n'
+import type { RefObject } from 'react'
 import type { CostsSnapshot, DonutRow } from '#/components/costs'
 import type { DisplayCurrency } from '#/lib/money'
 import type {
@@ -55,6 +57,11 @@ export interface CostsRailProps {
   readonly onSettle: (suggestion: CostsSuggestion) => void
   readonly onAddPayment: () => void
   readonly onDeletePayment: (payment: CostsSettlement) => void
+  /**
+   * Where focus goes when the delete dialog closes. The row that opened it is gone by then, and
+   * a dialog can only hand focus back to something still on the page.
+   */
+  readonly paymentsRef: RefObject<HTMLDivElement | null>
 }
 
 export function CostsRail({
@@ -68,6 +75,7 @@ export function CostsRail({
   onSettle,
   onAddPayment,
   onDeletePayment,
+  paymentsRef,
 }: CostsRailProps) {
   const t = useTranslate()
   const nameOf = (userId: string): string =>
@@ -110,6 +118,7 @@ export function CostsRail({
         viewerUserId={viewerUserId}
         canWrite={canWrite}
         onDelete={onDeletePayment}
+        focusRef={paymentsRef}
       />
     </aside>
   )
@@ -394,6 +403,15 @@ function ByCategory({
 /* -------------------------------------------------------------------------- */
 
 /**
+ * The arrow between a payment's two people. It points the way the money goes, so in a right-to-left
+ * locale it is the mirrored glyph: U+2192 is not mirrored by the text direction and would read
+ * from the payee back to the payer.
+ */
+export function paymentArrow(locale: Locale): string {
+  return directionOf(locale) === 'rtl' ? '←' : '→'
+}
+
+/**
  * "You → Anna": a payment's two people as the reader sees them, the same words on the row, on its
  * delete button and in the dialog that confirms the delete.
  */
@@ -423,6 +441,7 @@ function Payments({
   viewerUserId,
   canWrite,
   onDelete,
+  focusRef,
 }: {
   settlements: ReadonlyArray<CostsSettlement>
   currency: string
@@ -431,6 +450,7 @@ function Payments({
   viewerUserId: string
   canWrite: boolean
   onDelete: (payment: CostsSettlement) => void
+  focusRef: RefObject<HTMLDivElement | null>
 }) {
   const locale = useLocale()
   const t = useTranslate()
@@ -441,63 +461,76 @@ function Payments({
       count={settlements.length === 0 ? undefined : String(settlements.length)}
       flush
     >
-      {settlements.length === 0 ? (
-        <div className="px-5 py-7">
-          <EmptyState
-            size="sm"
-            icon={<Wallet />}
-            title={t('costs.payments.empty.title')}
-            description={t('costs.payments.empty.body')}
-          />
-        </div>
-      ) : (
-        <ul>
-          {settlements.map((row) => {
-            const who = paymentWho(row, nameOf, viewerUserId, t)
-            return (
-              <li key={row.id}>
-                <PanelRow>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-caption font-medium text-ink">
-                      {who.from}
-                      {' → '}
-                      {who.to}
-                    </p>
-                    <p className="truncate text-caption text-ink-3">
-                      {formatDayLabel(row.settledOn, locale)} ·{' '}
-                      {paymentMethodLabel(row.method, t)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <Badge tone="success" size="sm" className="tabular-nums">
-                      {formatMoney(row.amountMinor, currency, locale)}
-                    </Badge>
-                    {isOptimisticId(row.id) ? null : (
-                      <ConvertedFigure
-                        display={display}
-                        convertedMinor={row.convertedMinor}
+      {/* A deleted payment takes its own button with it, so the dialog that confirmed the delete
+          returns focus here instead of dropping it to the page. */}
+      <div
+        ref={focusRef}
+        tabIndex={-1}
+        role="group"
+        aria-label={t('costs.payments.label')}
+        className={cn('rounded-b-xl outline-none', focusRingInset)}
+      >
+        {settlements.length === 0 ? (
+          <div className="px-5 py-7">
+            <EmptyState
+              size="sm"
+              icon={<Wallet />}
+              title={t('costs.payments.empty.title')}
+              description={t('costs.payments.empty.body')}
+            />
+          </div>
+        ) : (
+          <ul>
+            {settlements.map((row) => {
+              const who = paymentWho(row, nameOf, viewerUserId, t)
+              return (
+                <li key={row.id}>
+                  <PanelRow>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-caption font-medium text-ink">
+                        {who.from}
+                        {` ${paymentArrow(locale)} `}
+                        {who.to}
+                      </p>
+                      <p className="truncate text-caption text-ink-3">
+                        {formatDayLabel(row.settledOn, locale)} ·{' '}
+                        {paymentMethodLabel(row.method, t)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge tone="success" size="sm" className="tabular-nums">
+                        {formatMoney(row.amountMinor, currency, locale)}
+                      </Badge>
+                      {isOptimisticId(row.id) ? null : (
+                        <ConvertedFigure
+                          display={display}
+                          convertedMinor={row.convertedMinor}
+                        />
+                      )}
+                    </div>
+                    {canWrite && !isOptimisticId(row.id) ? (
+                      <IconButton
+                        size="sm"
+                        variant="danger"
+                        icon={<Trash2 aria-hidden />}
+                        // Names, not "You": the button's name sits mid-sentence, where the
+                        // arrow line's "You" forms are wrong in most locales. The day follows the
+                        // amount so two equal payments between the same people can be told apart.
+                        label={t('costs.payments.delete', {
+                          from: nameOf(row.fromUserId),
+                          to: nameOf(row.toUserId),
+                          amount: `${formatMoney(row.amountMinor, currency, locale)}, ${formatDayLabel(row.settledOn, locale)}`,
+                        })}
+                        onClick={() => onDelete(row)}
                       />
-                    )}
-                  </div>
-                  {canWrite && !isOptimisticId(row.id) ? (
-                    <IconButton
-                      size="sm"
-                      variant="danger"
-                      icon={<Trash2 aria-hidden />}
-                      label={t('costs.payments.delete', {
-                        from: who.from,
-                        to: who.to,
-                        amount: formatMoney(row.amountMinor, currency, locale),
-                      })}
-                      onClick={() => onDelete(row)}
-                    />
-                  ) : null}
-                </PanelRow>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                    ) : null}
+                  </PanelRow>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
     </Panel>
   )
 }

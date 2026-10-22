@@ -187,7 +187,7 @@ const messages = {
   'payments.empty.title': 'Még nincs fizetés',
   'payments.empty.body':
     'Amint valaki visszafizet egy egyenleget, az átutalás ide kerül.',
-  'payments.delete': 'Fizetés törlése: {from} → {to}, {amount}',
+  'payments.delete': 'Fizetés törlése: fizető {from}, fogadó {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ez az utazás archiválva van. A költségek módosítása előtt állítsd vissza.',
