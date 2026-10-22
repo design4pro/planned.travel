@@ -57,6 +57,7 @@ export const AUDIT_ACTIONS = {
   RESERVATION_CREATED: 'reservation.created',
   RESERVATION_UPDATED: 'reservation.updated',
   RESERVATION_DELETED: 'reservation.deleted',
+  PAYMENT_DELETED: 'payment.deleted',
   WORKSPACE_DEFAULTS_CHANGED: 'workspace.defaults_changed',
   TRIP_CURRENCY_CHANGED: 'trip.currency_changed',
   MEMBER_INVITED: 'member.invited',

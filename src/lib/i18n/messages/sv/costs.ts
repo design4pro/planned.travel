@@ -29,6 +29,13 @@ const messages = {
   'delete.balancesChange': 'Saldona för {names} ändras.',
   'delete.confirm': 'Ta bort utgift',
   'delete.working': 'Utgiften tas bort',
+  'delete.payment.title': 'Ta bort den här betalningen?',
+  'delete.payment.description':
+    '”{title}” lämnar avräkningen. Det går inte att ångra. Vill du rätta en betalning, registrera den på nytt.',
+  'delete.payment.failedBody':
+    'Betalningen kunde inte tas bort. Försök igen om en stund.',
+  'delete.payment.confirm': 'Ta bort betalning',
+  'delete.payment.working': 'Betalningen tas bort',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Utgifter',
@@ -175,6 +182,7 @@ const messages = {
   'payments.empty.title': 'Inga betalningar än',
   'payments.empty.body':
     'När någon betalar tillbaka ett saldo loggas överföringen här.',
+  'payments.delete': 'Ta bort betalningen från {from} till {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Den här resan är arkiverad. Återställ den innan du ändrar kostnaderna.',
@@ -344,6 +352,8 @@ const messages = {
   'write.paymentRecorded': 'Betalning registrerad',
   'write.paymentRecordedBody': 'Båda saldona är uppdaterade.',
   'write.paymentFailed': 'Betalningen registrerades inte',
+  'write.paymentDeleted': 'Betalning borttagen',
+  'write.paymentDeleteFailed': 'Betalningen togs inte bort',
   'write.rolledBack': 'Ändringen ångrades.',
   'expense.saveFallback':
     'Utgiften kunde inte sparas. Försök igen om en stund.',
