@@ -167,13 +167,15 @@ export function PaymentDialog({
       ? undefined
       : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
-  const typedMinor = parseMoney(amount, sourceCurrency)
+  const typedMinor = parseMoney(amount, sourceCurrency, locale)
   const staleOnAmount = foreign ? undefined : staleMessage
   const amountError =
     amount.trim() !== '' && (typedMinor === null || typedMinor === 0)
       ? t('costs.payment.amountPositive')
       : staleOnAmount
-  const amountMinor = foreign ? parseMoney(converted, currency) : typedMinor
+  const amountMinor = foreign
+    ? parseMoney(converted, currency, locale)
+    : typedMinor
   const rate = foreign
     ? formatExchangeRate(
         {
