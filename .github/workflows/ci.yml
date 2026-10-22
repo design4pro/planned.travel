@@ -43,13 +43,50 @@ env:
 # path that does not need the host to be up. ADR 0027.
 
 jobs:
+  # Whether an agent already ran the validation gate on exactly this tree, so that `verify` and
+  # `test` below can be skipped on a pull request (ADR 0045). Pull requests only; a push to
+  # `develop` or `main` always runs both, and the deploys wait on them. Never a verdict of its own:
+  # `valid` is `true` only for an attestation scripts/ci/attestation.mjs accepts, and anything else
+  # - no comment, another tree, a diff that touches the gate itself, an error here - leaves both jobs
+  # to run, as they did before. GitHub-hosted on purpose: it is a few seconds of API calls, and on
+  # the two-slot pool it would queue behind the jobs it exists to skip.
+  attestation:
+    name: agent attestation
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      valid: ${{ steps.judge.outputs.valid }}
+    steps:
+      # The pull request's own head, not the merge commit: the attestation is of the tree the
+      # agent ran the gate on.
+      - name: Check out the head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Judge the attestation
+        id: judge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/ci/attestation.mjs verify
+
   verify:
     name: lint · typecheck · build
+    needs: attestation
     # A develop→main (or main→develop) PR duplicates the push-triggered run on
     # the same commits; the push run is canonical for the shared branches. The
     # `e2e` job carries the same clause in its own `if`, since it does not wait
-    # on this one.
-    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
+    # on this one. A valid attestation skips it (ADR 0045); `!cancelled()` is what
+    # lets it start behind an `attestation` that a push skipped. A skipped
+    # required check counts as passed.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))) && needs.attestation.outputs.valid != 'true' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 20
 
@@ -100,7 +137,9 @@ jobs:
   # path) it takes minutes again, which that path can afford.
   test:
     name: unit tests
-    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
+    needs: attestation
+    # Skipped by a valid attestation, like `verify` (ADR 0045).
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))) && needs.attestation.outputs.valid != 'true' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 25
 
