@@ -14,9 +14,11 @@ import { encodePublicFailure, readPublicFailure } from '#/lib/errors'
 import {
   WORKSPACE_CHANGED_KEY,
   WORKSPACE_CLAIM_HEADER,
+  isWorkspaceChanged,
 } from '../workspace-claim'
 import {
   beginWorkspaceSwitch,
+  dismissWorkspaceNotice,
   markWorkspaceStale,
   resetWorkspaceClaim,
   setWorkspaceClaim,
@@ -115,18 +117,28 @@ describe('workspaceClaimMiddleware', () => {
     })
   })
 
-  it('stops a stale tab locally: no request, the same refusal, the notice again', async () => {
+  it('hands the caller an error a form cannot mistake for authored copy', async () => {
+    setWorkspaceClaim('org_a')
+    const next = vi.fn().mockRejectedValue(refusal())
+
+    const outcome = await middleware({ next }).catch((cause: unknown) => cause)
+
+    expect(isWorkspaceChanged(outcome)).toBe(true)
+    // A reader that only knows the redaction envelope sees a failure with no sentence of its own.
+    expect(readPublicFailure(outcome)).toEqual({ kind: 'unexpected' })
+  })
+
+  it('stops a stale tab locally: no request, the same refusal, and the notice left as the reader set it', async () => {
     setWorkspaceClaim('org_a')
     markWorkspaceStale('org_a')
+    dismissWorkspaceNotice()
     const next = vi.fn()
 
     const outcome = await middleware({ next }).catch((cause: unknown) => cause)
 
     expect(next).not.toHaveBeenCalled()
-    expect(readPublicFailure(outcome)).toEqual({
-      kind: 'refusal',
-      message: WORKSPACE_CHANGED_KEY,
-    })
-    expect(workspaceClaimState().noticeOpen).toBe(true)
+    expect(isWorkspaceChanged(outcome)).toBe(true)
+    // A poll is not the reader asking: it must not pull the dialog back after "Not now".
+    expect(workspaceClaimState().noticeOpen).toBe(false)
   })
 })

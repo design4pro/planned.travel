@@ -21,6 +21,10 @@ import {
   WORKSPACE_CHANGED_KEY,
   isWorkspaceChanged,
 } from '#/lib/workspace-claim'
+import {
+  beginWorkspaceSwitch,
+  endWorkspaceSwitch,
+} from '#/lib/workspace-claim-store'
 import { createWorkspaceFn } from '#/server/fns/workspace'
 import { useWorkspaceResync } from './workspace-switcher'
 
@@ -89,7 +93,18 @@ export function CreateWorkspaceDialog({
 
   const canSubmit = name.trim().length > 0 && !pending
 
+  // Creating a workspace activates it on the session, so this tab changes workspace itself: its
+  // own calls must not be refused for the claim it has not re-read yet (as in the switcher).
   async function submit(): Promise<void> {
+    beginWorkspaceSwitch()
+    try {
+      await create()
+    } finally {
+      endWorkspaceSwitch()
+    }
+  }
+
+  async function create(): Promise<void> {
     setPending(true)
     setNotice(null)
     let created = false

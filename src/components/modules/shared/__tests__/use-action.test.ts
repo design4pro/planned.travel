@@ -8,11 +8,18 @@
  * being the only thing between an envelope and an `Alert`.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 
 import { encodePublicFailure } from '#/lib/errors'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
+import {
+  dismissWorkspaceNotice,
+  markWorkspaceStale,
+  resetWorkspaceClaim,
+  setWorkspaceClaim,
+  workspaceClaimState,
+} from '#/lib/workspace-claim-store'
 import { messageOf, useAction } from '../use-action'
 
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
@@ -72,6 +79,10 @@ describe('messageOf', () => {
 })
 
 describe("a call refused because the tab's workspace is not the session's", () => {
+  afterEach(() => {
+    resetWorkspaceClaim()
+  })
+
   const refusal = () =>
     new Error(
       encodePublicFailure({ kind: 'refusal', message: WORKSPACE_CHANGED_KEY }),
@@ -95,6 +106,20 @@ describe("a call refused because the tab's workspace is not the session's", () =
     expect(notify.error).not.toHaveBeenCalled()
     expect(result.current.error).toBeNull()
     expect(result.current.pending).toBe(false)
+  })
+
+  it('brings the notice back when the reader acted after closing it', async () => {
+    setWorkspaceClaim('org_a')
+    markWorkspaceStale('org_a')
+    dismissWorkspaceNotice()
+    const fn = vi.fn().mockRejectedValue(refusal())
+    const { result } = renderHook(() => useAction(fn))
+
+    await act(async () => {
+      await result.current.run(undefined)
+    })
+
+    expect(workspaceClaimState().noticeOpen).toBe(true)
   })
 
   it('still rolls an optimistic overlay back, and does not re-read the loaders', async () => {

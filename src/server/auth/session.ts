@@ -6,10 +6,17 @@
  * can be tested without a request; this module supplies the request.
  */
 import { getRequest } from '@tanstack/react-start/server'
-import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
+import {
+  WORKSPACE_CHANGED_KEY,
+  WORKSPACE_CLAIM_HEADER,
+  parseWorkspaceClaim,
+} from '#/lib/workspace-claim'
 import { authDb } from './db'
 import { getAuth } from './index'
-import { resolveOrProvisionOrganization } from './provisioning'
+import {
+  firstOrganizationIdFor,
+  resolveOrProvisionOrganization,
+} from './provisioning'
 import { resolveActiveWorkspace } from './active-workspace'
 import {
   AuthRequirementError,
@@ -92,6 +99,7 @@ export async function requireOrg(
   const session = await getSession()
   const user = requireUserFrom(session)
   let organizationId = session?.session.activeOrganizationId ?? null
+  const claim = getRequest().headers.get(WORKSPACE_CLAIM_HEADER)
 
   if (!organizationId) {
     // Sessions issued before the active organization could be resolved (and any
@@ -99,7 +107,18 @@ export async function requireOrg(
     // authenticated screen. Adopt the user's own oldest membership for this
     // request instead of failing; `session.create.before` is what makes new
     // sessions carry it durably.
-    organizationId = await resolveOrProvisionOrganization(authDb(), user.id)
+    //
+    // A call that states the workspace its tab shows never provisions: a tab showing a workspace
+    // for a user who has none left is refused, because the refusal below could not be avoided
+    // and a refused call writes nothing.
+    if (parseWorkspaceClaim(claim).status === 'absent') {
+      organizationId = await resolveOrProvisionOrganization(authDb(), user.id)
+    } else {
+      organizationId = await firstOrganizationIdFor(authDb(), user.id)
+      if (!organizationId) {
+        throw new AuthRequirementError('workspace-changed', WORKSPACE_CHANGED_KEY)
+      }
+    }
   }
 
   if (!organizationId) {
@@ -119,8 +138,6 @@ export async function requireOrg(
     ? { ...session, session: { ...session.session, activeOrganizationId: organizationId } }
     : session
 
-  return requireOrgFrom(effective, role, {
-    claim: getRequest().headers.get(WORKSPACE_CLAIM_HEADER),
-    ...options,
-  })
+  // The header is spread last: a caller's options cannot switch the comparison off.
+  return requireOrgFrom(effective, role, { ...options, claim })
 }

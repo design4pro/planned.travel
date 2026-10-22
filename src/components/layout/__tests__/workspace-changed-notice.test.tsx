@@ -185,4 +185,41 @@ describe('WorkspaceChangedNotice', () => {
 
     expect(document.activeElement).toBe(save)
   })
+
+  it('ignores Escape once the reload has started', async () => {
+    const user = userEvent.setup()
+    mount()
+    refuse()
+    await user.click(
+      await screen.findByRole('button', { name: 'Open the current workspace' }),
+    )
+    const dialog = screen.getByRole('alertdialog')
+
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+
+    expect(screen.queryByRole('alertdialog')).not.toBeNull()
+  })
+
+  it('puts focus on the main landmark when the control that made the call is gone', async () => {
+    const user = userEvent.setup()
+    const view = render(
+      <I18nProvider locale="en" messages={EN}>
+        <main>
+          <button type="button">Save trip</button>
+        </main>
+        <WorkspaceChangedNotice organizationName="Alpha Travel" />
+      </I18nProvider>,
+    )
+    const save = screen.getByRole('button', { name: 'Save trip' })
+    save.focus()
+    refuse()
+    await screen.findByRole('alertdialog')
+    save.remove()
+
+    await user.click(screen.getByRole('button', { name: 'Not now' }))
+
+    expect(document.activeElement).toBe(
+      view.container.ownerDocument.querySelector('main'),
+    )
+  })
 })

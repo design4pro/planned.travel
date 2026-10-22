@@ -14,6 +14,7 @@ import { useRouter } from '@tanstack/react-router'
 import { toast } from '#/components/ui'
 import { readPublicFailure } from '#/lib/errors'
 import { isWorkspaceChanged } from '#/lib/workspace-claim'
+import { reopenWorkspaceNotice } from '#/lib/workspace-claim-store'
 
 /**
  * Pulls a line the reader is allowed to see out of whatever the server threw.
@@ -118,8 +119,10 @@ export function useAction<TInput, TResult>(
       } catch (cause) {
         // The tab's workspace is no longer the session's. The notice is the one surface for this:
         // a second "That did not save" toast over it would say the same thing worse. Nothing was
-        // saved, so an optimistic overlay still rolls back.
+        // saved, so an optimistic overlay still rolls back. The reader acted, so the notice comes
+        // back if "Not now" had closed it.
         if (isWorkspaceChanged(cause)) {
+          reopenWorkspaceNotice()
           options.onError?.(cause)
           return null
         }

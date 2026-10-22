@@ -51,9 +51,15 @@ export function workspaceClaimState(): WorkspaceClaimState {
   return state
 }
 
-/** The shell was read for this tab: it now shows `organizationId`, and a stale tab is current. */
+/**
+ * The shell was read for this tab: it now shows `organizationId`, and a stale tab is current.
+ *
+ * It does not end a switch: a link followed while the switcher is still working reads the shell too,
+ * and closing the window then would make the switcher's own next call refuse itself. Only
+ * `endWorkspaceSwitch` closes it.
+ */
 export function setWorkspaceClaim(organizationId: string | null): void {
-  commit({ organizationId, stale: false, noticeOpen: false, switching: false })
+  commit({ organizationId, stale: false, noticeOpen: false })
 }
 
 /**
@@ -75,7 +81,7 @@ export function markWorkspaceStale(sentWith: string): void {
   commit({ stale: true, noticeOpen: true })
 }
 
-/** A call was stopped locally because the tab is stale: say so again. */
+/** The reader did something and it was stopped because the tab is stale: say so again. */
 export function reopenWorkspaceNotice(): void {
   commit({ noticeOpen: true })
 }

@@ -14,6 +14,8 @@
  * This module is the pure half - the header name, the parser, the refusal key - and is read by the
  * server in `src/server/auth/tenant.ts`. The tab's own store is `./workspace-claim-store`.
  */
+import { z } from 'zod'
+
 import { readPublicFailure } from '#/lib/errors'
 
 /** The request header a tab states its workspace in. */
@@ -33,7 +35,7 @@ export const WORKSPACE_CLAIM_HEADER = 'x-planned-workspace'
 export const WORKSPACE_CHANGED_KEY = 'shell.session.workspaceChanged'
 
 /** Better Auth ids are `nanoid(24)`: URL-safe, so this is the whole alphabet a claim may use. */
-const CLAIM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
+const claimSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/)
 
 export type ParsedClaim =
   | { readonly status: 'absent' }
@@ -51,8 +53,9 @@ export function parseWorkspaceClaim(
   raw: string | null | undefined,
 ): ParsedClaim {
   if (raw === null || raw === undefined) return { status: 'absent' }
-  return CLAIM_PATTERN.test(raw)
-    ? { status: 'valid', organizationId: raw }
+  const parsed = claimSchema.safeParse(raw)
+  return parsed.success
+    ? { status: 'valid', organizationId: parsed.data }
     : { status: 'malformed' }
 }
 

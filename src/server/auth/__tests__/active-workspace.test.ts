@@ -214,6 +214,43 @@ describe('requireOrg with the workspace claim header', () => {
     expect(await db.select().from(member)).toEqual(members)
   })
 
+  it('does not provision a workspace for a call that states one, then refuse it', async () => {
+    const { b } = await fixture()
+    await db.delete(member).where(eq(member.userId, b.ownerUserId))
+    requestSession(b.ownerUserId, null)
+    shared.claim = b.organizationId
+    const organizations = await db.select().from(organization)
+    const members = await db.select().from(member)
+
+    await expect(requireOrg()).rejects.toMatchObject({
+      reason: 'workspace-changed',
+      status: 403,
+    })
+
+    expect(await db.select().from(organization)).toEqual(organizations)
+    expect(await db.select().from(member)).toEqual(members)
+  })
+
+  it('still adopts the oldest membership for a session with no active workspace when the claim names it', async () => {
+    const { a } = await fixture()
+    requestSession(a.ownerUserId, null)
+    shared.claim = a.organizationId
+
+    await expect(requireOrg()).resolves.toMatchObject({
+      organizationId: a.organizationId,
+    })
+  })
+
+  it("cannot be switched off by a caller's own options", async () => {
+    const { a, c } = await fixture()
+    requestSession(a.ownerUserId, c.organizationId)
+    shared.claim = a.organizationId
+
+    await expect(requireOrg({ claim: null })).rejects.toMatchObject({
+      reason: 'workspace-changed',
+    })
+  })
+
   it('refuses a claim for a workspace the caller is not a member of, without the role check', async () => {
     const { a, b } = await fixture()
     requestSession(a.ownerUserId, a.organizationId)

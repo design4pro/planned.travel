@@ -25,7 +25,8 @@ import { useOpenCurrentWorkspace } from './use-open-current-workspace'
  * written (`src/lib/workspace-claim.ts`). It is an `alertdialog`: it interrupts, because the reader
  * pressed something and nothing happened, and it explains rather than recovering on their behalf.
  * Nothing reloads automatically and nothing typed is cleared - "Not now" closes it and leaves the
- * page exactly as it was, and the next call from this tab opens it again.
+ * page exactly as it was. It comes back when the reader acts again (`useAction`), not on a poll or
+ * a link preload, which would pull focus away from what they are doing.
  *
  * Mounted once, in the authenticated shell, because the store it reads is the tab's.
  *
@@ -43,6 +44,7 @@ export function WorkspaceChangedNotice({
   const { noticeOpen } = useWorkspaceClaim()
   const currentWorkspace = useOpenCurrentWorkspace()
   const primary = useRef<HTMLButtonElement>(null)
+  const opener = useRef<Element | null>(null)
 
   // The name is a proper noun in someone else's script and direction: it is interpolated and
   // isolated, never concatenated, so it cannot reorder the sentence around it.
@@ -50,14 +52,16 @@ export function WorkspaceChangedNotice({
     organizationName === null
       ? t(WORKSPACE_CHANGED_KEY)
       : t('shell.session.workspaceChangedBody', {
-          name: `⁨${organizationName}⁩`,
+          name: `\u2068${organizationName}\u2069`,
         })
 
   return (
     <Dialog
       open={noticeOpen}
       onOpenChange={(open) => {
-        if (!open) dismissWorkspaceNotice()
+        // Escape while the page is already leaving would close the dialog under a reload that
+        // cannot be taken back: "Not now" is disabled then, and so is this.
+        if (!open && !currentWorkspace.opening) dismissWorkspaceNotice()
       }}
     >
       <DialogContent
@@ -65,10 +69,24 @@ export function WorkspaceChangedNotice({
         size="sm"
         hideClose
         onOpenAutoFocus={(event) => {
+          opener.current = document.activeElement
           event.preventDefault()
           primary.current?.focus()
         }}
         onInteractOutside={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => {
+          // `DialogContent` returns focus to the control the reader pressed. A refusal that replaced
+          // the screen that control sat on (a route error panel) removed it, and focus would fall
+          // to the document: the main landmark is the nearest stable place to start again from.
+          const target = opener.current
+          opener.current = null
+          if (target?.isConnected !== false) return
+          const landmark = document.querySelector<HTMLElement>('main')
+          if (landmark === null) return
+          event.preventDefault()
+          landmark.tabIndex = -1
+          landmark.focus()
+        }}
       >
         <DialogHeader className="pe-5 sm:pe-6">
           <DialogTitle>{t('shell.session.workspaceChangedTitle')}</DialogTitle>

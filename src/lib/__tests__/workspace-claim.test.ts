@@ -156,17 +156,20 @@ describe('the tab store', () => {
     expect(workspaceClaimState().organizationId).toBe('org_b')
   })
 
-  it('lets the tab that is switching finish without refusing itself', () => {
+  it('keeps the switching window open across a navigation that reads the shell, until the switch ends', () => {
     setWorkspaceClaim('org_a')
     beginWorkspaceSwitch()
     expect(workspaceClaimState().switching).toBe(true)
 
-    // The navigation re-read the shell: the claim is current, so the window closes with it.
+    // A link followed mid-switch reads the shell too; that must not end the switcher's window.
     setWorkspaceClaim('org_b')
     expect(workspaceClaimState()).toMatchObject({
       organizationId: 'org_b',
-      switching: false,
+      switching: true,
     })
+
+    endWorkspaceSwitch()
+    expect(workspaceClaimState().switching).toBe(false)
   })
 
   it('closes the switching window when the switch ends without a new shell', () => {
