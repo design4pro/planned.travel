@@ -2033,26 +2033,13 @@ that claimed it anyway would clobber a sibling; a stage that moved to a wave whe
 clobber a different sibling on `day-section.tsx`. So the ownership is split at the file boundary
 rather than at the wave boundary, and the cost is paid once, here, in the open.
 
-**What that costs, stated rather than discovered: a reorder that interleaves kinds is two calls.**
-`reorderPlanFn` writes the stops and the notes; `reorderDayTransportsFn` writes the transport rows.
-Each is atomic in itself and neither is atomic with the other, so if the second fails the day's
-transport rows keep their previous positions while the stops and notes have moved. Four things bound
-that, and all four are properties of code that already exists:
-
-1. Positions are recomputed from array index on **every** successful reorder, so the next successful
-   move heals the day completely — the self-healing contract `-server/plan.ts:261-267` already
-   documents for the two tables it owns.
-2. The merged sequence sorts on `(time, position, id)`, and a transport row almost always carries a
-   departure time, so a stale position between two timed rows changes nothing a reader can see.
-3. The client issues the two calls together and rolls its optimistic order back if **either** fails,
-   which is the contract `plan-screen.tsx` already implements for the single-call case.
-4. The two calls are ordered stops-then-transports, so the failure that survives is the one that
-   leaves the less visible half stale.
-
-The better shape — one batch over one number line, inside `reorderDayTimeline` — is a small change in
-`src/server/repos/itinerary.ts` on the day a wave exists in which this plan may hold that file. It is
-written so that making it is a **deletion**, not a redesign: `reorderDayTransports` disappears into
-the existing batch and the second server function loses its writer.
+**What that cost, and how it was closed (#239).** This stage shipped with a reorder that interleaved
+kinds as two calls, `reorderPlanFn` for the stops and the notes and `reorderDayTransportsFn` for the
+transport rows, neither atomic with the other. A reorder is now one call: `reorderPlanFn` takes the
+day's whole run and `reorderDayTimelines` in `src/server/repos/itinerary.ts` writes the stops, the
+notes and the journeys in one batch, placing each journey against the numbering that same batch
+produces. The rule for a journey's position lives once, in `src/server/repos/day-journeys.ts`;
+`reorderDayTransports` is a thin wrapper over it for the writes that never renumber a day.
 
 **Route data — `src/routes/_app/trips/$tripId/plan.tsx`.** The route's loader resolves
 `loadPlanBoard` and `loadPlanTransportsFn` together with `Promise.all`, so the second read costs no

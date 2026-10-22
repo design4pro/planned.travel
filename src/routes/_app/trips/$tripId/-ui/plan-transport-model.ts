@@ -1,10 +1,14 @@
 /**
- * The journeys' write half: what a landed write owes the server.
+ * The journeys' write half: the run a day's write names, and what a landed write owes the server.
  *
  * Reading a Day — where each journey row sits — is `plan-board.ts`. Every function here is pure,
- * and the fractions they restate are the server's: a journey's `sort_order` is where it sits among
- * its **departure** day's stops and notes, and the rows it shows on the other days it covers are
+ * and the fractions are the server's: a journey's `sort_order` is where it sits among its
+ * **departure** day's stops and notes, and the rows it shows on the other days it covers are
  * placed on the client and never stored.
+ *
+ * A reorder carries its journeys in the same call as the stops and notes (`reorderPlanFn`), so it
+ * needs no follow-up; the schedule, unschedule and delete writes do not renumber a day and still
+ * restate their day's journeys on their own (#816).
  */
 
 import {
@@ -19,8 +23,8 @@ import {
 
 import type { PlanOrder, PlannerTransport } from '#/components/planner'
 
-/** One row of a day's run, in the four id spaces `reorderDayTransports` validates. */
-interface DayRunRef {
+/** One row of a day's run, in the four id spaces the server validates. */
+export interface DayRunRef {
   readonly kind: 'stop' | 'note' | 'transport' | 'leg'
   readonly id: string
 }
@@ -31,26 +35,49 @@ export interface JourneyWrite {
   readonly items: ReadonlyArray<DayRunRef>
 }
 
+/** The draggable ids of the journeys that depart from the day they are drawn on. */
+export function departingItemIds(
+  rows: ReadonlyArray<PlannerTransport>,
+): ReadonlySet<string> {
+  return new Set(
+    rows.filter((row) => row.part === 'departing').map((row) => row.itemId),
+  )
+}
+
+/**
+ * One day as the server names it: its stops, its notes and the journeys that depart from it.
+ *
+ * The run carries the day exactly as the board now reads it, and the server takes from it only
+ * which row each journey follows; the fractions themselves are derived on the server, so a client
+ * can never inject a position of its own choosing. The rows a journey shows on days it merely
+ * crosses are dropped, because they are placed on the client and have nothing to write.
+ */
+export function dayRun(
+  itemIds: ReadonlyArray<string>,
+  departing: ReadonlySet<string>,
+): Array<DayRunRef> {
+  return itemIds.flatMap((itemId): Array<DayRunRef> => {
+    const leg = legRefOfLegItem(itemId)
+    if (leg !== null) {
+      return departing.has(itemId) ? [{ kind: leg.kind, id: leg.id }] : []
+    }
+    return [refOf(itemId)]
+  })
+}
+
 /**
  * The follow-up writes a change to these days needs, and no others.
  *
- * A journey is written only by a reorder of the day it *departs* from. Restating it from any
+ * A journey is written only by a write of the day it *departs* from. Restating it from any
  * other day it covers would overwrite a number measured against one day's stops with one
  * measured against another's, and each day's restatement would then undo the other's.
- *
- * The run carries the day exactly as the board now reads it — stops, notes and the journeys
- * departing from it — and the server takes from it only which row each journey follows; the
- * fractions themselves are derived from the day as stored. The rows a journey shows on days it
- * merely crosses are dropped, because they are placed on the client and have nothing to write.
  */
 export function journeyWrites(
   order: PlanOrder,
   dayIds: ReadonlyArray<string>,
   rows: ReadonlyArray<PlannerTransport>,
 ): Array<JourneyWrite> {
-  const departing = new Set(
-    rows.filter((row) => row.part === 'departing').map((row) => row.itemId),
-  )
+  const departing = departingItemIds(rows)
   if (departing.size === 0) return []
 
   const writes: Array<JourneyWrite> = []
@@ -59,14 +86,7 @@ export function journeyWrites(
     if (day === undefined) continue
     if (!day.itemIds.some((itemId) => departing.has(itemId))) continue
 
-    const items = day.itemIds.flatMap((itemId): Array<DayRunRef> => {
-      const leg = legRefOfLegItem(itemId)
-      if (leg !== null) {
-        return departing.has(itemId) ? [{ kind: leg.kind, id: leg.id }] : []
-      }
-      return [refOf(itemId)]
-    })
-    writes.push({ dayId, items })
+    writes.push({ dayId, items: dayRun(day.itemIds, departing) })
   }
   return writes
 }
@@ -78,11 +98,6 @@ export function journeyWrites(
  * delete carries no `next`: its board is `before` with the stop taken out.
  */
 export type JourneyRestatement =
-  | {
-      readonly kind: 'reorder'
-      readonly next: PlanOrder
-      readonly dayIds: ReadonlyArray<string>
-    }
   | {
       readonly kind: 'schedule'
       readonly next: PlanOrder
@@ -106,7 +121,6 @@ export type JourneyRestatement =
  * The journey writes one landed write owes, which is {@link journeyWrites} asked about the right
  * board and the right days.
  *
- * - A reorder restates every day it touched, against the board it produced.
  * - A schedule restates the day it lands on — but its board still calls the new stop by its
  *   `idea:` id, which the run would drop as a row the day does not hold, so the stop is renamed to
  *   the assignment the write actually created first.
@@ -118,8 +132,6 @@ export function journeyWritesFor(
   rows: ReadonlyArray<PlannerTransport>,
 ): Array<JourneyWrite> {
   switch (change.kind) {
-    case 'reorder':
-      return journeyWrites(change.next, change.dayIds, rows)
     case 'schedule':
       return journeyWrites(
         renameItem(

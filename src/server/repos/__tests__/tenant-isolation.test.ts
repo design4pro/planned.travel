@@ -4845,6 +4845,7 @@ describe('tenant isolation', () => {
             { kind: 'note', id: extraNote.id },
             { kind: 'stop', id: alpha.assignmentId },
           ],
+          journeys: [{ kind: 'transport', id: alpha.transportId }],
         },
       ])
       expect(await positionsOf(scope, alpha.dayId)).toEqual({
