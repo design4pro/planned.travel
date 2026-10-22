@@ -13,6 +13,15 @@ export const ID_RANDOM_LENGTH = 16
 export const ID_TIME_LENGTH = 9
 
 /**
+ * The exact shape {@link mintId} produces, anchored. The one declaration of it: a server path that
+ * accepts an id a client minted checks it against this, and builds no second pattern of its own.
+ * The time prefix is lower-case base 36 and the tail is the `nanoid` alphabet.
+ */
+export const ID_PATTERN = new RegExp(
+  `^[0-9a-z]{${ID_TIME_LENGTH}}[A-Za-z0-9_-]{${ID_RANDOM_LENGTH}}$`,
+)
+
+/**
  * Time-sortable, URL-safe, 25 character identifier: a base-36 millisecond timestamp followed by
  * 16 random characters. Sorting by `id` is therefore sorting by creation time - but only to the
  * millisecond: ids minted in the same millisecond order by their random tail (#462, #472).
