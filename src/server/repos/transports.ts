@@ -35,6 +35,17 @@ import {
 import { createTenantRepository, tenantFilter } from './base'
 import { boundParametersPerRow, chunkFor, runBatch } from './batch'
 import {
+  DAY_RUN_ANCHORS_MESSAGE,
+  DAY_RUN_MAX_ITEMS,
+  byDayRun,
+  dayRunItemInput,
+  dayRunKey,
+  departingJourneys,
+  journeyPositionStatements,
+  placeJourneys,
+  withinAnchorBound,
+} from './day-journeys'
+import {
   isUniqueConstraintViolation,
   NotFoundError,
   RepositoryError,
@@ -72,6 +83,7 @@ import {
 import type { Transport, TransportLeg, Trip } from '#/server/db/types'
 import type { LegClocks, LegZones } from '#/lib/transport-timing'
 import type { BatchStatement } from './batch'
+import type { DayRunEntry, DayRunItemInput } from './day-journeys'
 import type { TenantScope } from './base'
 
 export const transportsRepository = createTenantRepository(
@@ -469,189 +481,29 @@ export async function unlinkTransportsFromDays(
  * A journey's place on the day's number line
  * ---------------------------------------------------------------------------------------------- */
 
-/**
- * One row of a day's resulting run, as the reorder names it.
- *
- * The stops and the notes are the **ruler**: they are read to find the gap a journey was dropped
- * into and are never written by this path — `reorderDayTimelines` owns their two columns.
- */
-export const dayRunItemInput = z.strictObject(
-  {
-    kind: z.enum(['stop', 'note', 'transport', 'leg']),
-    id: idSchema,
-  },
-  {
-    error:
-      'A day run item is a stop, a note, a transport or a leg, named by its id.',
-  },
-)
-export type DayRunItemInput = z.infer<typeof dayRunItemInput>
-
-/**
- * The most rows one day's run may carry.
- *
- * `reorderPlanFn` caps a day at 200 stops and notes; the journeys get their own 200 rather than
- * taking them out of that budget, so a day the primary write accepts is never refused for its
- * journeys.
- */
-export const DAY_RUN_MAX_ITEMS = 400
-
-/** The bound `reorderPlanFn` already applies to one day's stops and notes. */
-export const DAY_RUN_MAX_ANCHORS = 200
-
 export const reorderDayTransportsInput = z
   .object({
     tripId: idSchema,
     dayId: idSchema,
     items: z.array(dayRunItemInput).max(DAY_RUN_MAX_ITEMS),
   })
-  .refine(
-    ({ items }) =>
-      items.filter((item) => item.kind === 'stop' || item.kind === 'note')
-        .length <= DAY_RUN_MAX_ANCHORS,
-    {
-      message: `A day carries at most ${DAY_RUN_MAX_ANCHORS} stops and notes.`,
-      path: ['items'],
-    },
-  )
+  .refine(({ items }) => withinAnchorBound(items), {
+    message: DAY_RUN_ANCHORS_MESSAGE,
+    path: ['items'],
+  })
 export type ReorderDayTransportsInput = z.infer<
   typeof reorderDayTransportsInput
 >
 
-/** `kind/id`, so the four id spaces share one `Set` without colliding. */
-function runKey(ref: DayRunItemInput): string {
-  return `${ref.kind}/${ref.id}`
-}
-
-/** True for the two kinds that carry a stored position this path may not write. */
-function isAnchor(ref: DayRunItemInput): boolean {
-  return ref.kind === 'stop' || ref.kind === 'note'
-}
-
-interface DayRunEntry {
-  readonly ref: DayRunItemInput
-  readonly position: number
-}
-
 /**
- * The journeys that **depart** from one day: a record with no legs whose `day_id` is this day, and
- * a leg whose `departure_day_id` is.
+ * Places one day's journey rows between the stops and notes the run names, against the numbering
+ * the day already has.
  *
- * A journey drawn as its legs is never also drawn whole, so a record that has legs contributes
- * nothing here — its legs do, each on its own departure day.
- *
- * Read as the **day** rather than as the trip, unlike {@link listTripDayTransports}, which answers
- * the board and has to draw every day at once. The placement below needs one day of a set that
- * grows with the whole itinerary, and the planner issues one placement per day a drag touches, in
- * parallel — so borrowing the board's read here meant pulling every `transports` and
- * `transport_legs` row of the trip to keep one day's.
- *
- * Three questions, asked together, and each one of them an index seek rather than a filter over
- * the trip — `EXPLAIN QUERY PLAN` is the assertion, in `transports.test.ts`, because a day-scoped
- * `WHERE` that the planner answers by walking the trip is trip-wide work wearing the right words,
- * and D1 bills rows read:
- *
- * 1. the records of this day (`transports_org_trip_day_idx`),
- * 2. the legs that depart from it (`transport_legs_org_trip_departure_day_idx`) — the half this
- *    run places,
- * 3. which of those records have legs at all (`transport_legs_org_transport_idx`), which is the
- *    only thing that can say a record of this day is drawn as its legs and so not drawn whole.
- *
- * The third is one question, not three merged into the second with an `OR`: an `OR` across two
- * columns costs SQLite the seek and sends it back to walking the trip's legs. It reads the ids it
- * needs as a subquery rather than waiting for (1), so all three still go out together.
- *
- * None of them orders, unlike the trip-wide reads next door: the caller sorts this list against
- * the day's stops and notes and breaks every tie by id, so an `ORDER BY` here would be a sort
- * SQLite performs and the caller discards.
- */
-async function departingJourneys(
-  scope: TenantScope,
-  tripId: string,
-  dayId: string,
-): Promise<Array<DayRunEntry>> {
-  const ofTheDay = and(
-    eq(transports.tripId, tripId),
-    eq(transports.dayId, dayId),
-  )
-  const theDaysRecords = scope.db
-    .select({ id: transports.id })
-    .from(transports)
-    .where(tenantFilter(scope, transports, ofTheDay))
-
-  const [records, legs, chainedRows] = await Promise.all([
-    transportsRepository.findMany(scope, { where: ofTheDay }),
-    transportLegsRepository.findMany(scope, {
-      where: and(
-        eq(transportLegs.tripId, tripId),
-        eq(transportLegs.departureDayId, dayId),
-      ),
-    }),
-    scope.db
-      .select({ transportId: transportLegs.transportId })
-      .from(transportLegs)
-      .where(
-        tenantFilter(
-          scope,
-          transportLegs,
-          inArray(transportLegs.transportId, theDaysRecords),
-        ),
-      ),
-  ])
-
-  const chained = new Set(chainedRows.map((row) => row.transportId))
-  return [
-    ...records
-      .filter((row) => !chained.has(row.id))
-      .map((row) => ({
-        ref: { kind: 'transport' as const, id: row.id },
-        position: row.sortOrder,
-      })),
-    ...legs.map((leg) => ({
-      ref: { kind: 'leg' as const, id: leg.id },
-      position: leg.sortOrder,
-    })),
-  ]
-}
-
-/**
- * The value a journey takes between the anchor it follows and the next one.
- *
- * `a` is the **stored** position of the preceding stop or note and `b` the next stored position
- * strictly greater than it — never a count of entries, because a day is numbered `0..n-1` only
- * straight after `reorderPlanFn` renumbers it: `schedulePlaceFn` stores a new stop at the midpoint
- * of its neighbours and `unschedulePlaceFn` deletes one without renumbering, so on a day of stops
- * at `0` and `2` an index formula would write `1.5` for a journey that belongs behind the second.
- *
- * An open end is one unit wide: `b − 1` ahead of the day's first anchor, `a + 1` behind its last,
- * and `0`/`1` on a day with neither. Every value therefore lies strictly between two stored
- * positions and ties with no stop or note.
- */
-function splitGap(
-  before: number | null,
-  anchorPositions: ReadonlyArray<number>,
-  sharing: number,
-): Array<number> {
-  const first = anchorPositions.at(0)
-  const [low, high] =
-    before === null
-      ? [(first ?? 1) - 1, first ?? 1]
-      : [before, anchorPositions.find((value) => value > before) ?? before + 1]
-
-  return Array.from(
-    { length: sharing },
-    (_unused, index) => low + ((index + 1) * (high - low)) / (sharing + 1),
-  )
-}
-
-/**
- * Places one day's journey rows between the stops and notes the run names.
- *
- * A day is one number line, and the writer that renumbers it — `reorderDayTimelines` — is owned by
- * another module this stage may not edit. A journey therefore cannot be *inside* that renumbering
- * and expresses where it sits **between** two of its positions, through the fractional key
- * `sort_order` was declared to be (`schema.ts`). The server derives the fraction; the client sends
- * only which stop or note each journey follows.
+ * A thin wrapper: the rule — which gap a journey sits in and how a gap is shared — is
+ * `./day-journeys`'s, and `reorderDayTimelines` applies the same rule in the batch that renumbers
+ * a day. What is left here is for the writes that never renumber one: scheduling a stop stores it
+ * at a midpoint, unscheduling and deleting leave a hole, and each of them needs its day's
+ * journeys said again against the positions as they now are (#816).
  *
  * The three rules about the list the client sends are `reorderDayTimelines`'s, for the same reasons:
  *
@@ -700,21 +552,15 @@ export async function reorderDayTransports(
     })),
   ]
 
-  // The day as it stands. A journey that ties with a stop or a note follows it — the client's rule,
-  // and the only tie this design can produce (`schedulePlaceFn` positions a stop among stops alone,
-  // so it can land on a note's integer).
-  const current = [...anchors, ...journeys].sort(
-    (a, b) =>
-      a.position - b.position ||
-      Number(isAnchor(b.ref)) - Number(isAnchor(a.ref)) ||
-      a.ref.id.localeCompare(b.ref.id),
-  )
+  const current = [...anchors, ...journeys].sort(byDayRun)
 
-  const known = new Map(current.map((entry) => [runKey(entry.ref), entry.ref]))
+  const known = new Map(
+    current.map((entry) => [dayRunKey(entry.ref), entry.ref]),
+  )
   const wanted: Array<DayRunItemInput> = []
   const seen = new Set<string>()
   for (const ref of values.items) {
-    const key = runKey(ref)
+    const key = dayRunKey(ref)
     const row = known.get(key)
     if (row === undefined || seen.has(key)) continue
     seen.add(key)
@@ -723,64 +569,26 @@ export async function reorderDayTransports(
 
   let previousKey: string | null = null
   for (const entry of current) {
-    const key = runKey(entry.ref)
+    const key = dayRunKey(entry.ref)
     if (!seen.has(key)) {
       const anchor =
         previousKey === null
           ? -1
-          : wanted.findIndex((ref) => runKey(ref) === previousKey)
+          : wanted.findIndex((ref) => dayRunKey(ref) === previousKey)
       seen.add(key)
       wanted.splice(anchor + 1, 0, entry.ref)
     }
     previousKey = key
   }
 
-  const positionOfAnchor = new Map(
-    anchors.map((entry) => [runKey(entry.ref), entry.position]),
-  )
-  const anchorPositions = anchors
-    .map((entry) => entry.position)
-    .sort((a, b) => a - b)
-
-  const written: Array<{ ref: DayRunItemInput; position: number }> = []
-  let before: number | null = null
-  let run: Array<DayRunItemInput> = []
-  const flush = (): void => {
-    if (run.length === 0) return
-    const positions = splitGap(before, anchorPositions, run.length)
-    for (const [index, ref] of run.entries()) {
-      written.push({ ref, position: positions[index] })
-    }
-    run = []
-  }
-  for (const ref of wanted) {
-    if (isAnchor(ref)) {
-      flush()
-      before = positionOfAnchor.get(runKey(ref)) ?? before
-      continue
-    }
-    run.push(ref)
-  }
-  flush()
-
-  await runBatch(
-    scope,
-    written.map(({ ref, position }) =>
-      ref.kind === 'transport'
-        ? scope.db
-            .update(transports)
-            .set({ sortOrder: position })
-            .where(tenantFilter(scope, transports, eq(transports.id, ref.id)))
-        : scope.db
-            .update(transportLegs)
-            .set({ sortOrder: position })
-            .where(
-              tenantFilter(scope, transportLegs, eq(transportLegs.id, ref.id)),
-            ),
-    ),
+  const placed = placeJourneys(
+    wanted,
+    new Map(anchors.map((entry) => [dayRunKey(entry.ref), entry.position])),
   )
 
-  return written.map(({ ref }) => ref)
+  await runBatch(scope, journeyPositionStatements(scope, placed))
+
+  return placed.map(({ ref }) => ref)
 }
 
 /* -------------------------------------------------------------------------------------------------

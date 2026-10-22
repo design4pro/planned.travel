@@ -61,7 +61,6 @@ import {
   IDEAS_CONTAINER,
   IdeasList,
   initialSelection,
-  isLegItemId,
   itemsIn,
   journeyName,
   noteItemId,
@@ -566,10 +565,11 @@ export function PlanScreen({
   /**
    * Restates the journeys departing from these days, against the board as it now reads.
    *
-   * A journey's `sort_order` is a *relation* to the day's stops and notes, and
-   * `reorderPlanFn` renumbers those without ever consulting a journey — so any write that
-   * touches a day has to say again where that day's journeys sit. One rule, two call
-   * sites: here, behind every primary write, and the delete handler.
+   * A journey's `sort_order` is a *relation* to the day's stops and notes. A reorder renumbers
+   * those and carries the journeys in the same call (`reorderPlanFn`), so it owes nothing here;
+   * a schedule, an unschedule and a delete do not renumber the day, and each has to say again
+   * where that day's journeys sit. One rule, two call sites: here, behind those primary writes,
+   * and the delete handler.
    *
    * Awaited by the caller, so a failure rolls the optimistic order back together with the
    * write it followed. The days are written in parallel because each is a separate run and
@@ -601,17 +601,15 @@ export function PlanScreen({
     ): Promise<void> => {
       switch (change.kind) {
         case 'reorder':
-          // A journey carries no `order_index` of its own, so moving one leaves every stop
-          // and note of the day exactly where it was. Its day run *is* the whole write.
-          if (!isLegItemId(itemId)) {
-            await reorderPlanFn({
-              data: reorderPayload(payload.tripId, change, clearTime),
-            })
-          }
-          await restateJourneys({
-            kind: 'reorder',
-            next,
-            dayIds: change.days.map((day) => day.dayId),
+          // One call and one transaction: the day's stops, notes and journeys go together, so a
+          // failure cannot leave the stops renumbered beside journeys that name the old gaps.
+          await reorderPlanFn({
+            data: reorderPayload(
+              payload.tripId,
+              change,
+              clearTime,
+              transportRows,
+            ),
           })
           return
         case 'schedule': {
@@ -653,7 +651,7 @@ export function PlanScreen({
           return
       }
     },
-    [order, payload.tripId, restateJourneys],
+    [order, payload.tripId, restateJourneys, transportRows],
   )
 
   /**

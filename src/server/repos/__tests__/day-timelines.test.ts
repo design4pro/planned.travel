@@ -525,6 +525,7 @@ describe('a drag across days', () => {
           { kind: 'note', id: noteA },
           { kind: 'stop', id: stopA1 },
         ],
+        journeys: [],
       },
     ])
     expect(await lineOf(otherDay.id)).toEqual([
@@ -559,5 +560,30 @@ describe('a drag across days', () => {
     })
     expect(reorderDayTimelinesInput.safeParse(oneDay(200)).success).toBe(true)
     expect(reorderDayTimelinesInput.safeParse(oneDay(201)).success).toBe(false)
+
+    // The journeys of a day get their own 200 rather than taking them out of the stops' budget.
+    const journeys = (count: number) =>
+      Array.from({ length: count }, () => ({
+        kind: 'transport' as const,
+        id: stopA1,
+      }))
+    const withJourneys = (anchors: number, journeyCount: number) => ({
+      tripId,
+      days: [
+        {
+          dayId: dayA,
+          items: [...items(anchors), ...journeys(journeyCount)],
+        },
+      ],
+    })
+    expect(
+      reorderDayTimelinesInput.safeParse(withJourneys(200, 200)).success,
+    ).toBe(true)
+    expect(
+      reorderDayTimelinesInput.safeParse(withJourneys(200, 201)).success,
+    ).toBe(false)
+    expect(
+      reorderDayTimelinesInput.safeParse(withJourneys(201, 0)).success,
+    ).toBe(false)
   })
 })
