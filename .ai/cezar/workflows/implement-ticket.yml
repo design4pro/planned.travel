@@ -51,7 +51,7 @@ steps:
 
       If a progress-log line of this run's handoff file starts with `STOP:`, end at once with CEZ:DONE.
 
-      Otherwise open the PR per om-open-pr, with the issue number from the handoff file's `ISSUE:` line as the issue id. Put the Resolved assumptions table from the handoff file in the PR body, and reference the issue with `Fixes #<number>`.
+      Otherwise open the PR per om-open-pr as a draft (`--draft`, SDLC.md § Draft until the last push), with the issue number from the handoff file's `ISSUE:` line as the issue id. Put the Resolved assumptions table from the handoff file in the PR body, and reference the issue with `Fixes #<number>`.
   # The chain does not stop at an open PR: om-pr-autopilot reviews, fixes, runs QA, waits for CI and
   # squash-merges into develop (ADR 0031) - the develop ruleset requires no approving review. It
   # never merges the develop -> main promotion. QA, `risk-high` and `security` are judged by
@@ -70,4 +70,5 @@ steps:
       Otherwise run `/om-pr-autopilot <that PR number> --allow-merge`:
       - Before QA needs the app, provision the worktree with `bash .ai/scripts/bootstrap.sh --profile worktree --no-seed`.
       - Review reports the Standards axis and the Spec axis separately (CODE_REVIEW.md), and the Spec axis checks each acceptance criterion from the issue's Agent Brief.
+      - The PR is a draft: keep it so through review, QA and fix rounds, and after the last push attest and run `gh pr ready <number>` before waiting on CI or merging (SDLC.md § Draft until the last push).
       - Merge only into `develop`.
