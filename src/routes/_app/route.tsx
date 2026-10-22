@@ -2,12 +2,17 @@ import { useEffect } from 'react'
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 
 import { publishBasemap } from '#/lib/map/basemap'
+import {
+  resumeWorkspaceClaim,
+  setWorkspaceClaim,
+} from '#/lib/workspace-claim-store'
 import { AppFrame } from '#/components/layout/app-frame'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { ImpersonationBar } from '#/components/layout/impersonation-bar'
 import { MobileNav } from '#/components/layout/mobile-nav'
 import { NotFoundPanel } from '#/components/layout/not-found'
 import { TopNav } from '#/components/layout/top-nav'
+import { WorkspaceChangedNotice } from '#/components/layout/workspace-changed-notice'
 import { BookImportWidget, bookImportsOwner } from '#/components/modules/book'
 import { loadShell } from './-server/shell'
 
@@ -21,7 +26,10 @@ import { loadShell } from './-server/shell'
  * every navigation component reads the current user without re-fetching.
  */
 export const Route = createFileRoute('/_app')({
-  beforeLoad: async ({ location }) => {
+  beforeLoad: async ({ location, preload }) => {
+    // A navigation re-reads the shell, so a tab that was refused may call again; a preload
+    // must not change what the tab believes, only the navigation that commits does.
+    if (!preload) resumeWorkspaceClaim()
     const shell = await loadShell()
 
     if (shell === null) {
@@ -32,8 +40,13 @@ export const Route = createFileRoute('/_app')({
       })
     }
 
+    // Set here, before the loaders of this navigation run, so a switch navigation's own loaders
+    // carry the workspace they are about to show and not the one being left.
+    if (!preload) setWorkspaceClaim(shell.session.organization?.id ?? null)
+
     return { shell }
   },
+  onLeave: () => setWorkspaceClaim(null),
   errorComponent: RootErrorBoundary,
   notFoundComponent: () => (
     <AppFrame>
@@ -98,6 +111,16 @@ function AppShell() {
     publishBasemap(shell.mapStyle)
   }, [shell.mapStyle])
 
+  /*
+   * The server-rendered document is hydrated rather than navigated, so `beforeLoad` above does
+   * not run in the browser for the first screen. The claim is seeded here, once the shell is in
+   * hand; every later navigation has already set it.
+   */
+  const organizationId = shell.session.organization?.id ?? null
+  useEffect(() => {
+    setWorkspaceClaim(organizationId)
+  }, [organizationId])
+
   return (
     <div
       className="flex min-h-svh flex-col bg-canvas"
@@ -112,6 +135,9 @@ function AppShell() {
       />
       <Outlet />
       <MobileNav />
+      <WorkspaceChangedNotice
+        organizationName={shell.session.organization?.name ?? null}
+      />
       {/*
        * Mounted here because a confirmation import outlives the desk that started it: the reader
        * closes the dialog, walks to another trip, reloads, and the reading is still running and

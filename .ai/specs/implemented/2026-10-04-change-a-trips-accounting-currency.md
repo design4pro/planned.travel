@@ -5,7 +5,7 @@
 | **Status**         | implemented                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #828                                           |
-| **Implementation** | #896, #1221, #1241, #1251, #1267, #1525        |
+| **Implementation** | #896, #1221, #1241, #1251, #1267, #1523, #1525 |
 | **Plan**           | 04-S5 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR
@@ -153,6 +153,16 @@ r, origCur, currency)` within one minor unit of the row's current `amount_minor`
 9. **Only the owner, only on a writable trip.** `requireWritableTrip` first (a non-member learns
    nothing; an archived trip is refused), then `assertTripRole(scope, tripId, ['owner'])`. An editor
    or viewer gets `FORBIDDEN`. Both preview and commit are guarded.
+10. **An edit that moves the figure clears the triple.** A writer that changes a row's amount
+    (`amount_minor` / `planned_amount_minor`) or `currency` without a new typed figure sets
+    `original_amount_minor`, `original_currency` and `exchange_rate` to null in the same statement:
+    `repriceExpense` (a booking's price change) and `updateBudgetItem`. A write that changes neither
+    (a title, a note, persons, days) keeps the triple, and a write that sends a complete typed figure
+    stores it (the Costs-tab expense edit). Left in place the triple describes a sum the row no
+    longer holds, misleads a later re-basing and stays in the frozen-rate pool as an observation of
+    a pair the row no longer carries. A booking save resends the booking's own price, so it clears
+    the line's triple only when that price differs from the line's stored figure. Rows already stale
+    are not migrated; how the re-basing plan treats them is settled by #1224, which is still open.
 
 ### Rounding is honest, not hidden
 
@@ -848,6 +858,14 @@ isolation cases for the functions it adds.
 | 23  | The empty-trip path: a pending trip copy, archived trips, when the guard applies             | `copy_pending_at IS NOT NULL` counts as priced (in the guard and in Phase 3's stale test, with a preview refusal); a currency change on an archived trip is refused with `TripArchivedError`, other fields unchanged; the guard applies only when the incoming currency differs; ABORT conflict resolution; a target of 0 counts as priced.                                                                                      | Security and tenancy reviewer (round 2, conditions 1–3, medium) and the product owner (round 2, condition 2): a copy in progress looks empty and its places would be silently relabelled; `requireOwnedTrip` does not check the archive flag, so the rule had to be stated; an unconditional guard would refuse every save on a priced trip.                                                                                                                                                        |
 | 24  | A dropped response after a commit, and a stale dialog after a refusal                        | After a non-refusal failure the dialog re-reads the trip and shows success if its currency is already `to`; the commit has a 30-second timeout; a refused stale save keeps the typed digits, marks the amount invalid and resets the currency control to the trip's new currency; the refusal names `{to}`.                                                                                                                      | Traveller (round 2, conditions 1–2, medium): "nothing was changed" would be false after a lost success, and the expense dialog would otherwise flip to a foreign amount silently or re-label a payment's digits.                                                                                                                                                                                                                                                                                    |
 | 25  | Final panel verdicts (round 2 of at most two)                                                | Product owner: approve with conditions (high). Software architect: approve with conditions (medium). Security and tenancy reviewer: approve with conditions (medium). Accessibility specialist: approve with conditions (high). Traveller / UX: approve with conditions (medium; round 1 was **revise**). Every condition of both rounds is applied in this spec; none is open and no specialist answered **revise** in round 2. | `afk-plan-to-spec` § 5. The security reviewer and the product owner asked whether a person must confirm the money-policy rows 7 and 8; `afk-decide` § 5 does not reserve money policy for a person, so they are applied and disclosed (preview and audit row). The security reviewer also asked that the cross-trip expense edit/delete be filed as a `security` issue before this PR merges: this skill files no tickets, so the PR body names it for the person merging and for `afk-to-tickets`. |
+
+## Amendment
+
+Implemented in #1523 (#1521). Rule 10 was added after the stage shipped: the stage's writers
+pinned and converted triples but left the two per-row writers that change a figure without a typed
+one (`repriceExpense`, `updateBudgetItem`) free to outlive them. The commit's optimistic guards
+(`sameValue` on the three triple columns, `movedSinceReadSql`) are unchanged, so a triple cleared
+between preview and commit still fails the batch and the dialog re-previews.
 
 ## Amendment - how a re-basing reads stale, partial and zero source triples (#1224)
 

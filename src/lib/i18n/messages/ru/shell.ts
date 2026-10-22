@@ -769,6 +769,13 @@ const messages = {
   'session.noWorkspace':
     'Ваш аккаунт пока не привязан к пространству. Выйдите и войдите снова, чтобы настройка завершилась.',
   'session.membershipRemoved': 'Ваше участие в этом пространстве прекращено.',
+  'session.workspaceChanged':
+    'Пространство было изменено в другой вкладке или окне. Ничего не сохранено.',
+  'session.workspaceChangedTitle': 'Пространство изменилось в другой вкладке',
+  'session.workspaceChangedBody':
+    'Эта вкладка показывает «{name}», но пространство было изменено в другой вкладке или окне. Ничего не сохранено.',
+  'session.openCurrentWorkspace': 'Открыть текущее пространство',
+  'session.workspaceChangedDismiss': 'Не сейчас',
 } satisfies TranslationOf<typeof En>
 
 export default messages

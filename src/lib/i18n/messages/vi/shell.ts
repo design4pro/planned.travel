@@ -656,6 +656,13 @@ const messages = {
   'session.noWorkspace':
     'Tài khoản của bạn chưa gắn với không gian làm việc nào. Hãy đăng xuất rồi đăng nhập lại để hoàn tất.',
   'session.membershipRemoved': 'Bạn đã bị gỡ khỏi không gian làm việc này.',
+  'session.workspaceChanged':
+    'Không gian làm việc đã được đổi ở một tab hoặc cửa sổ khác. Chưa có gì được lưu.',
+  'session.workspaceChangedTitle': 'Không gian làm việc đã đổi ở tab khác',
+  'session.workspaceChangedBody':
+    'Tab này đang hiển thị {name}, nhưng không gian làm việc đã được đổi ở một tab hoặc cửa sổ khác. Chưa có gì được lưu.',
+  'session.openCurrentWorkspace': 'Mở không gian làm việc hiện tại',
+  'session.workspaceChangedDismiss': 'Để sau',
 } satisfies TranslationOf<typeof En>
 
 export default messages

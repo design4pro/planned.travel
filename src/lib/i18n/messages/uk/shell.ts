@@ -757,6 +757,13 @@ const messages = {
   'session.noWorkspace':
     'Ваш акаунт поки не прив’язаний до простору. Вийдіть і зайдіть знову, щоб налаштування завершилося.',
   'session.membershipRemoved': 'Вашу участь у цьому просторі припинено.',
+  'session.workspaceChanged':
+    'Простір було змінено в іншій вкладці або вікні. Нічого не збережено.',
+  'session.workspaceChangedTitle': 'Простір змінився в іншій вкладці',
+  'session.workspaceChangedBody':
+    'Ця вкладка показує «{name}», але простір було змінено в іншій вкладці або вікні. Нічого не збережено.',
+  'session.openCurrentWorkspace': 'Відкрити поточний простір',
+  'session.workspaceChangedDismiss': 'Не зараз',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -26,8 +26,13 @@ describe('day locations', () => {
   let tripId: string
   let dayIds: Array<string>
 
-  async function place(name: string, lat: number | null, lng: number | null) {
-    return createPlace(tenant.scope, { tripId, name, lat, lng })
+  async function place(
+    name: string,
+    lat: number | null,
+    lng: number | null,
+    countryCode?: string,
+  ) {
+    return createPlace(tenant.scope, { tripId, name, lat, lng, countryCode })
   }
 
   beforeEach(async () => {
@@ -182,6 +187,51 @@ describe('day locations', () => {
     expect(result[0].location).toEqual({ lat: 38.7, lng: -9.1 })
   })
 
+  it('carries the country of the place the location came from, and null when that place has none', async () => {
+    const hotel = await place('Hotel', 41.1, -8.6, 'PT')
+    const museum = await place('Museum', 38.7, -9.1)
+    await createAccommodation(tenant.scope, {
+      tripId,
+      startDayId: dayIds[0],
+      endDayId: dayIds[0],
+      placeId: hotel.id,
+      name: 'Hotel',
+    })
+    await createAssignment(tenant.scope, {
+      tripId,
+      dayId: dayIds[1],
+      placeId: museum.id,
+    })
+
+    const result = await readDayLocations(tenant.scope, tripId)
+
+    expect(result.map((row) => row.countryCode)).toEqual([
+      'PT',
+      null,
+      null,
+      null,
+    ])
+  })
+
+  it('does not take the country of a place that has no coordinate', async () => {
+    const vague = await place('Somewhere in Portugal', null, null, 'PT')
+    const exact = await place('Museum', 38.7, -9.1)
+    await createAssignment(tenant.scope, {
+      tripId,
+      dayId: dayIds[0],
+      placeId: vague.id,
+    })
+    await createAssignment(tenant.scope, {
+      tripId,
+      dayId: dayIds[0],
+      placeId: exact.id,
+    })
+
+    const result = await readDayLocations(tenant.scope, tripId)
+
+    expect(result[0].countryCode).toBeNull()
+  })
+
   it('keeps an undated day with a null date, so the caller can tell it has no forecast', async () => {
     const undated = await createTrip(tenant.scope, { title: 'Someday' })
     const days = await listTripDays(tenant.scope, undated.id)
@@ -202,7 +252,12 @@ describe('day locations', () => {
 
     const result = await readDayLocations(tenant.scope, tripId)
 
-    expect(Object.keys(result[0]).sort()).toEqual(['date', 'dayId', 'location'])
+    expect(Object.keys(result[0]).sort()).toEqual([
+      'countryCode',
+      'date',
+      'dayId',
+      'location',
+    ])
     expect(Object.keys(result[0].location ?? {}).sort()).toEqual(['lat', 'lng'])
   })
 

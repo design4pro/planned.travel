@@ -565,6 +565,12 @@ const messages = {
   'session.noWorkspace':
     '你的账号还没有挂在任何工作区上。退出后重新登录，就能把它配好。',
   'session.membershipRemoved': '你在这个工作区的成员身份已被移除。',
+  'session.workspaceChanged': '工作区已在另一个标签页或窗口中切换。没有保存任何内容。',
+  'session.workspaceChangedTitle': '工作区已在另一个标签页中切换',
+  'session.workspaceChangedBody':
+    '此标签页显示的是“{name}”，但工作区已在另一个标签页或窗口中切换。没有保存任何内容。',
+  'session.openCurrentWorkspace': '打开当前工作区',
+  'session.workspaceChangedDismiss': '暂不',
 } satisfies TranslationOf<typeof En>
 
 export default messages

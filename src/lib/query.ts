@@ -1,5 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 
+import { isWorkspaceChanged } from './workspace-claim'
+
 const ONE_MINUTE = 60_000
 
 /**
@@ -25,6 +27,8 @@ function statusOf(error: unknown): number | undefined {
 
 /** 4xx means we asked wrongly — hammering the edge will not change the answer. */
 export function isRetriableError(error: unknown): boolean {
+  // The same call would be refused again: the tab's workspace is not the session's until it reloads.
+  if (isWorkspaceChanged(error)) return false
   const status = statusOf(error)
   if (status === undefined) return true
   if (status === 408 || status === 425 || status === 429) return true

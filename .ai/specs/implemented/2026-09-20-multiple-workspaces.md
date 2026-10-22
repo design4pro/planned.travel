@@ -347,9 +347,14 @@ read wrongly on the already-checked item.
 - **A name that slugifies to nothing** (`"日本"`, `"!!!"`). `slugify` returns `''`; the contract falls
   back to `'workspace'` and `reserveSlug` disambiguates. The display name is kept verbatim.
 - **Two tabs, two workspaces.** Each tab's next server call resolves the _session's_ active
-  workspace, so a stale tab silently starts serving the other workspace's data. Inherent to storing
+  workspace, so a stale tab silently started serving the other workspace's data. Inherent to storing
   the active workspace on the session; it is the strongest argument for the URL-scoped design this
-  spec rejects on compatibility grounds. Not solved here - recorded as a known limitation.
+  spec rejects on compatibility grounds. Not solved here; closed afterwards by #805: every server
+  function called from the authenticated shell carries the workspace the tab is showing (the
+  _workspace claim_, header `x-planned-workspace`), `requireOrg` refuses a call whose claim differs
+  from the session's workspace with `workspace-changed` before any role check or write, and the stale
+  tab shows a notice that reloads into the current workspace. A call with no claim (MCP, `/api/*`, a
+  call before the shell loaded) behaves as before.
 - **KV session cache.** Sessions live in `SESSIONS` KV (`src/server/auth/secondary-storage.ts`), and
   `getSession()` passes `disableCookieCache: true` **as a query parameter**
   (`src/server/auth/session.ts:70`) - the file warns at `:51-52` that the sibling-option spelling is

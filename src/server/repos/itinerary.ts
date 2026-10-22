@@ -345,18 +345,29 @@ export interface DayCoordinate {
 /**
  * Where one day is, for anything that looks a day up by place - today the weather.
  *
- * Only the day, its date and a coordinate: no place, stay or member id, because the reader of this
- * shape hands it onward and a caller must not be able to leak what it never held.
+ * Only the day, its date, a coordinate and the country code of the place it came from: no place,
+ * stay or member id, because the reader of this shape hands it onward and a caller must not be able
+ * to leak what it never held.
  */
 export interface DayLocation {
   readonly dayId: string
   readonly date: string | null
   readonly location: DayCoordinate | null
+  /** ISO-3166-1 alpha-2 of the place `location` came from; null when it records none, or no location. */
+  readonly countryCode: string | null
 }
 
-function coordinateOf(place: Place | undefined): DayCoordinate | null {
+interface LocatedPlace {
+  readonly location: DayCoordinate
+  readonly countryCode: string | null
+}
+
+function locatedOf(place: Place | undefined): LocatedPlace | null {
   return place !== undefined && place.lat !== null && place.lng !== null
-    ? { lat: place.lat, lng: place.lng }
+    ? {
+        location: { lat: place.lat, lng: place.lng },
+        countryCode: place.countryCode,
+      }
     : null
 }
 
@@ -405,12 +416,12 @@ export async function readDayLocations(
     .flatMap((stay) => {
       const from = dayNumbers.get(stay.startDayId)
       const to = dayNumbers.get(stay.endDayId)
-      const location = coordinateOf(
+      const located = locatedOf(
         stay.placeId === null ? undefined : placesById.get(stay.placeId),
       )
-      return from === undefined || to === undefined || location === null
+      return from === undefined || to === undefined || located === null
         ? []
-        : [{ id: stay.id, from, to, location }]
+        : [{ id: stay.id, from, to, located }]
     })
     .sort((a, b) => b.from - a.from || (a.id < b.id ? -1 : 1))
 
@@ -430,15 +441,17 @@ export async function readDayLocations(
     )
     // `stays` is sorted latest start first, so the stay starting on this day, if any, leads.
     const stay = covering.at(0)
-    const stopLocation =
+    const stop =
       (stopsByDay.get(day.id) ?? [])
-        .map((stop) => coordinateOf(placesById.get(stop.placeId)))
-        .find((location) => location !== null) ?? null
+        .map((assignment) => locatedOf(placesById.get(assignment.placeId)))
+        .find((located) => located !== null) ?? null
+    const located = stay?.located ?? stop
 
     return {
       dayId: day.id,
       date: day.date,
-      location: stay?.location ?? stopLocation,
+      location: located?.location ?? null,
+      countryCode: located?.countryCode ?? null,
     }
   })
 }

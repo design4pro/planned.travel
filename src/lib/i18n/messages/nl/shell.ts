@@ -717,6 +717,14 @@ const messages = {
     'Je account hoort nog bij geen enkele werkruimte. Log uit en weer in om dat af te ronden.',
   'session.membershipRemoved':
     'Je lidmaatschap van deze werkruimte is beëindigd.',
+  'session.workspaceChanged':
+    'De werkruimte is gewijzigd in een ander tabblad of venster. Er is niets opgeslagen.',
+  'session.workspaceChangedTitle':
+    'De werkruimte is gewijzigd in een ander tabblad',
+  'session.workspaceChangedBody':
+    'Dit tabblad toont {name}, maar de werkruimte is gewijzigd in een ander tabblad of venster. Er is niets opgeslagen.',
+  'session.openCurrentWorkspace': 'Open de huidige werkruimte',
+  'session.workspaceChangedDismiss': 'Niet nu',
 } satisfies TranslationOf<typeof En>
 
 export default messages

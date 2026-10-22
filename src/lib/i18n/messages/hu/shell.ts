@@ -714,6 +714,14 @@ const messages = {
   'session.noWorkspace':
     'A fiókja még nincs munkaterülethez kötve. Jelentkezzen ki, majd újra be, hogy a beállítás befejeződjön.',
   'session.membershipRemoved': 'A munkaterületi tagságát megszüntették.',
+  'session.workspaceChanged':
+    'A munkaterületet egy másik lapon vagy ablakban megváltoztatták. Semmi sem lett mentve.',
+  'session.workspaceChangedTitle':
+    'A munkaterület megváltozott egy másik lapon',
+  'session.workspaceChangedBody':
+    'Ez a lap ezt a munkaterületet mutatja: {name}. A munkaterületet azonban egy másik lapon vagy ablakban megváltoztatták. Semmi sem lett mentve.',
+  'session.openCurrentWorkspace': 'Az aktuális munkaterület megnyitása',
+  'session.workspaceChangedDismiss': 'Most nem',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1,5 +1,6 @@
 /**
- * The airport catalogue's read side — a prefix lookup over `airports`, and nothing that writes.
+ * The airport catalogue's read side — a prefix lookup over `airports` and the airport nearest a point,
+ * and nothing that writes.
  *
  * ## Which exception this is, and why it is the one being used
  *
@@ -47,7 +48,9 @@
  * equality compares with the column's own collation and a `NOCASE` index could not serve it. A
  * leading wildcard can use none of this, so a term that appears in the middle of a name is
  * deliberately not found; a `LIKE '%term%'` over the whole catalogue behind a type-ahead is the
- * shape that reads fine in a test with four rows and scans the table in production.
+ * shape that reads fine in a test with four rows and scans the table in production. The one
+ * exception is {@link findNearestAirport}: `airports` has no index on the coordinates, so its
+ * latitude/longitude window is a bounded scan of the table (see that function).
  *
  * The result is capped at {@link AIRPORT_MATCH_LIMIT}, and the cap is a ceiling rather than a
  * default: a caller may ask for fewer and cannot ask for more. A two-letter prefix matches hundreds
@@ -65,7 +68,7 @@
  * picker above it keeps working because a term that finds nothing is free text a traveller keeps.
  */
 
-import { eq, or, sql } from 'drizzle-orm'
+import { and, eq, gte, isNotNull, lte, or, sql } from 'drizzle-orm'
 import { airports } from '#/server/db/schema'
 import type { SQL } from 'drizzle-orm'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
@@ -209,6 +212,148 @@ export async function searchAirports(
     .where(or(byIata, byIcao, byName, byCity))
     .orderBy(rank, airports.name, airports.id)
     .limit(limit)
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The airport nearest a point
+ * ---------------------------------------------------------------------------------------------- */
+
+/** The mean Earth radius the great-circle distance and the bounding window are both worked in. */
+export const EARTH_RADIUS_KM = 6371
+
+/**
+ * How far from a point an airport may be and still answer for it.
+ *
+ * 100 km is the distance at which "the airport's clock" stops being a safe stand-in for "the
+ * place's clock" for the one reader that asks, the weather's sun times: a region's zone boundary
+ * seldom runs closer than that to a single-zone country's airport, and the catalogue only zones an
+ * airport whose whole country has one zone.
+ */
+export const NEAREST_AIRPORT_RADIUS_KM = 100
+
+/** A metre of slack, so an airport exactly at the radius is not lost to the last bit of a sine. */
+const RADIUS_TOLERANCE_KM = 0.001
+
+/** Two distances closer than this (a micrometre) are the same distance. */
+const TIE_KM = 1e-9
+
+/**
+ * Degrees of slack on every edge of the SQL window (about 10 cm). The window and the exact
+ * distance are computed through different sines, so an airport exactly at the radius could sit
+ * on the far side of the window's edge by the last bit and never reach the exact check.
+ */
+const WINDOW_SLACK_DEGREES = 1e-6
+
+/** A point on the map, in decimal degrees. */
+export interface NearestAirportPoint {
+  readonly lat: number
+  readonly lng: number
+}
+
+const toRadians = (degrees: number) => (degrees * Math.PI) / 180
+
+/** Great-circle distance in kilometres (haversine), over the degrees the columns hold. */
+function distanceKm(a: NearestAirportPoint, b: NearestAirportPoint): number {
+  const dLat = toRadians(b.lat - a.lat)
+  const dLng = toRadians(b.lng - a.lng)
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(a.lat)) *
+      Math.cos(toRadians(b.lat)) *
+      Math.sin(dLng / 2) ** 2
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)))
+}
+
+/**
+ * The SQL window that holds every airport within `radiusKm` of the point, and a few that are not.
+ *
+ * A degree of latitude is the same length everywhere, but a degree of longitude shrinks with the
+ * cosine of the latitude, so the longitude margin is the angular radius divided by that cosine
+ * (exactly: `asin(sin(r) / cos(lat))`). Where the cap reaches a pole that margin has no solution
+ * and the window is every longitude. A window that crosses the antimeridian is two ranges.
+ */
+function windowAround(point: NearestAirportPoint, radiusKm: number): SQL {
+  const angular = radiusKm / EARTH_RADIUS_KM
+  const latMargin = (angular * 180) / Math.PI + WINDOW_SLACK_DEGREES
+  const latitude = and(
+    gte(airports.lat, Math.max(-90, point.lat - latMargin)),
+    lte(airports.lat, Math.min(90, point.lat + latMargin)),
+  )
+
+  const ratio = Math.sin(angular) / Math.cos(toRadians(point.lat))
+  if (
+    !Number.isFinite(ratio) ||
+    ratio >= 1 ||
+    point.lat + latMargin >= 90 ||
+    point.lat - latMargin <= -90
+  ) {
+    return and(latitude, isNotNull(airports.lng)) as SQL
+  }
+  const lngMargin = (Math.asin(ratio) * 180) / Math.PI + WINDOW_SLACK_DEGREES
+  const west = point.lng - lngMargin
+  const east = point.lng + lngMargin
+  const longitude =
+    west < -180
+      ? or(gte(airports.lng, west + 360), lte(airports.lng, east))
+      : east > 180
+        ? or(gte(airports.lng, west), lte(airports.lng, east - 360))
+        : and(gte(airports.lng, west), lte(airports.lng, east))
+  return and(latitude, longitude) as SQL
+}
+
+/** True when `a` sorts before `b` at one distance: lower IATA code, then ICAO, then id. */
+function sortsBefore(a: AirportMatch, b: AirportMatch): boolean {
+  const key = (row: AirportMatch) =>
+    `${row.iataCode ?? '\uffff'}|${row.icaoCode ?? '\uffff'}|${row.id}`
+  return key(a) < key(b)
+}
+
+/**
+ * The airport nearest to a point, of any kind, or `null` when none lies within `radiusKm`.
+ *
+ * "Of any kind" is the point: an airport with no zone still answers. The catalogue zones an airport
+ * only when its country has exactly one zone, so the nearest *zoned* airport of a place near a
+ * border is the neighbouring country's, and the caller reading `timezone` off the answer would take
+ * a clock from the wrong side of it. The caller decides what an unzoned answer means.
+ *
+ * A bounding window in the database narrows the table to a handful of rows without an index
+ * (`airports` carries none on the coordinates, and a scan over about nine thousand rows is what
+ * this costs), then the exact distance is read in code. Ties go to the lower IATA code so two runs
+ * over the same rows agree. A coordinate that is not on the globe is `null` without a query.
+ */
+export async function findNearestAirport(
+  db: Database,
+  point: NearestAirportPoint,
+  radiusKm: number = NEAREST_AIRPORT_RADIUS_KM,
+): Promise<AirportMatch | null> {
+  const { lat, lng } = point
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    Math.abs(lat) > 90 ||
+    Math.abs(lng) > 180 ||
+    !(radiusKm > 0)
+  ) {
+    return null
+  }
+
+  const candidates = await db
+    .select(MATCH_COLUMNS)
+    .from(airports)
+    .where(windowAround(point, radiusKm))
+
+  let best: { row: AirportMatch; km: number } | null = null
+  for (const row of candidates) {
+    if (row.lat === null || row.lng === null) continue
+    const km = distanceKm(point, { lat: row.lat, lng: row.lng })
+    if (km > radiusKm + RADIUS_TOLERANCE_KM) continue
+    // Distances within a micrometre are one distance: float error must not decide a tie.
+    const tied = best !== null && Math.abs(km - best.km) < TIE_KM
+    if (best === null || (tied ? sortsBefore(row, best.row) : km < best.km)) {
+      best = { row, km }
+    }
+  }
+  return best?.row ?? null
 }
 
 /**

@@ -162,6 +162,9 @@ order, writing nothing on a refusal until step 5:
 3. an `expectedOrganizationId` that is not the scope's organization (`workspace-changed`). The id is a **precondition, never
    the target**: after tab 1 deletes the workspace and the person is given a fresh personal one, tab 2 resolves to that new
    workspace, whose name is deterministic and may equal the name typed in tab 2, and would otherwise delete it;
+   this is the function's own `ok: false` reason, not the `workspace-changed` `AuthRequirementError` that `requireOrg` throws
+   when a tab's workspace claim (#805, `x-planned-workspace`) differs from the session's workspace. That one refuses the call
+   before the function runs; this precondition stays for the callers that send no claim;
 4. a `name` that is not the workspace's name, compared as typed after `trim()` and Unicode NFC, case-sensitive, against the
    name read on the server (`name-mismatch`);
 5. a failed **step-up** (`verifyStepUp`): the **password** when the account has one (a missing and a wrong one are distinct

@@ -737,6 +737,13 @@ const messages = {
     'Sua conta ainda não está ligada a um espaço de trabalho. Saia e entre de novo para terminar de configurá-la.',
   'session.membershipRemoved':
     'Sua participação neste espaço de trabalho foi removida.',
+  'session.workspaceChanged':
+    'O espaço de trabalho foi alterado em outra aba ou janela. Nada foi salvo.',
+  'session.workspaceChangedTitle': 'O espaço de trabalho mudou em outra aba',
+  'session.workspaceChangedBody':
+    'Esta aba mostra {name}, mas o espaço de trabalho foi alterado em outra aba ou janela. Nada foi salvo.',
+  'session.openCurrentWorkspace': 'Abrir o espaço de trabalho atual',
+  'session.workspaceChangedDismiss': 'Agora não',
 } satisfies TranslationOf<typeof En>
 
 export default messages

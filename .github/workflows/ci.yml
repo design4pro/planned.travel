@@ -34,7 +34,8 @@ env:
   VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
-# `runs-on` in every job below reads through `vars.RUNNER_CI`, a repository
+# `runs-on` in every job below except `attestation`, `scope` and `e2e-report` (seconds of work,
+# GitHub-hosted, ADR 0045) reads through `vars.RUNNER_CI`, a repository
 # variable that is deliberately unset: unset, each job's own default selects the
 # `ci` slots of the VPS pool - two ephemeral x64 containers of 4 CPU / 8 GB on KVM
 # Haswell vCPUs, about three times slower per core than the machines most numbers
@@ -43,13 +44,50 @@ env:
 # path that does not need the host to be up. ADR 0027.
 
 jobs:
+  # Whether an agent already ran the validation gate on exactly this tree, so that `verify` and
+  # `test` below can be skipped on a pull request (ADR 0045). Pull requests only; a push to
+  # `develop` or `main` always runs both, and the deploys wait on them. Never a verdict of its own:
+  # `valid` is `true` only for an attestation scripts/ci/attestation.mjs accepts, and anything else
+  # - no comment, another tree, a diff that touches the gate itself, an error here - leaves both jobs
+  # to run, as they did before. GitHub-hosted on purpose: it is a few seconds of API calls, and on
+  # the two-slot pool it would queue behind the jobs it exists to skip.
+  attestation:
+    name: agent attestation
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      valid: ${{ steps.judge.outputs.valid }}
+    steps:
+      # The pull request's own head, not the merge commit: the attestation is of the tree the
+      # agent ran the gate on.
+      - name: Check out the head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Judge the attestation
+        id: judge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: node scripts/ci/attestation.mjs verify
+
   verify:
     name: lint · typecheck · build
+    needs: attestation
     # A develop→main (or main→develop) PR duplicates the push-triggered run on
     # the same commits; the push run is canonical for the shared branches. The
     # `e2e` job carries the same clause in its own `if`, since it does not wait
-    # on this one.
-    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
+    # on this one. A valid attestation skips it (ADR 0045); `!cancelled()` is what
+    # lets it start behind an `attestation` that a push skipped. A skipped
+    # required check counts as passed.
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))) && needs.attestation.outputs.valid != 'true' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 20
 
@@ -100,7 +138,9 @@ jobs:
   # path) it takes minutes again, which that path can afford.
   test:
     name: unit tests
-    if: github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))
+    needs: attestation
+    # Skipped by a valid attestation, like `verify` (ADR 0045).
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))) && needs.attestation.outputs.valid != 'true' }}
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 25
 
@@ -127,7 +167,9 @@ jobs:
   scope:
     name: change scope
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    # GitHub-hosted: a few seconds of `git diff`, and on the pool it queued ~44 min for a slot
+    # (median over 25 green PR runs, 2026-10-22). ADR 0045.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       e2e: ${{ steps.classify.outputs.e2e }}
@@ -310,7 +352,9 @@ jobs:
     needs: [scope, e2e, verify, test]
     # Not on a draft: its gates did not run, so there is nothing to report.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    # GitHub-hosted: it only reads the shards' verdict, and on the pool it queued ~31 min after the
+    # last shard had finished (median over 25 green PR runs, 2026-10-22). ADR 0045.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     # The only job that writes to a pull request, and only the comment below.
     permissions:

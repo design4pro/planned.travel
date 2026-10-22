@@ -596,6 +596,12 @@ const messages = {
   'session.noWorkspace':
     '이 계정은 아직 워크스페이스에 연결되지 않았어요. 로그아웃한 뒤 다시 로그인하면 설정이 마무리돼요.',
   'session.membershipRemoved': '이 워크스페이스의 멤버 자격이 해제됐어요.',
+  'session.workspaceChanged': '워크스페이스가 다른 탭이나 창에서 바뀌었어요. 저장된 내용은 없어요.',
+  'session.workspaceChangedTitle': '다른 탭에서 워크스페이스가 바뀌었어요',
+  'session.workspaceChangedBody':
+    '이 탭에는 {name}이(가) 표시되어 있지만, 워크스페이스가 다른 탭이나 창에서 바뀌었어요. 저장된 내용은 없어요.',
+  'session.openCurrentWorkspace': '현재 워크스페이스 열기',
+  'session.workspaceChangedDismiss': '나중에',
 } satisfies TranslationOf<typeof En>
 
 export default messages

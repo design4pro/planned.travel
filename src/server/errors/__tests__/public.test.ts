@@ -13,6 +13,7 @@ import { z } from 'zod'
 
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
+import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import { AuthRequirementError } from '#/server/auth/tenant'
 import { PolarApiError } from '#/server/billing/polar'
 import {
@@ -96,6 +97,29 @@ describe('the currency refusal keys are closed', () => {
     expect(classifyFailure(new RepositoryError(message, 'ANY'))).toEqual({
       kind: 'unexpected',
     })
+  })
+})
+
+describe("a tab whose workspace is no longer the session's", () => {
+  it('crosses as the catalogue key, not as an English sentence', () => {
+    const cause = new AuthRequirementError(
+      'workspace-changed',
+      WORKSPACE_CHANGED_KEY,
+    )
+
+    expect(classifyFailure(cause)).toEqual({
+      kind: 'refusal',
+      message: WORKSPACE_CHANGED_KEY,
+    })
+  })
+
+  it('is let through by exact match only, so a near miss stays a diagnostic', () => {
+    expect(
+      classifyFailure(new RepositoryError(`${WORKSPACE_CHANGED_KEY}.`, 'ANY')),
+    ).toEqual({ kind: 'unexpected' })
+    expect(
+      classifyFailure(new RepositoryError(` ${WORKSPACE_CHANGED_KEY}`, 'ANY')),
+    ).toEqual({ kind: 'unexpected' })
   })
 })
 
