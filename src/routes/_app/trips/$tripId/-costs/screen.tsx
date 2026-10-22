@@ -118,6 +118,7 @@ export function CostsScreen({
   // being opened, and bumping it must not itself schedule a render.
   const sessions = useRef(0)
   const paymentsRef = useRef<HTMLDivElement>(null)
+  const paymentOpener = useRef<HTMLElement | null>(null)
 
   const start = useCallback((make: (id: number) => Session): void => {
     sessions.current += 1
@@ -160,6 +161,10 @@ export function CostsScreen({
 
   const openDeletePayment = useCallback(
     (row: CostsSettlement): void => {
+      paymentOpener.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null
       start((id) => ({ kind: 'deletePayment', id, row }))
     },
     [start],
@@ -646,16 +651,16 @@ export function CostsScreen({
               t('costs.person.removedTarget'),
           )}
           onConfirm={() => removePayment(session.row)}
-          // The dialog hands focus back to the button that opened it. After a delete that button
-          // is gone (and after a refusal the row is a new node), so once the dialog has done its
-          // part and left focus on nothing, it goes to the Payments list instead.
-          onCloseAutoFocus={() => {
-            queueMicrotask(() => {
-              const holder = document.activeElement
-              if (holder === null || holder === document.body) {
-                paymentsRef.current?.focus()
-              }
-            })
+          // The dialog cannot hand focus back itself: its own button takes focus first (`autoFocus`),
+          // so the element it remembers is gone with it. The button that opened it gets focus back
+          // while it is still on the page; after a delete it is not (and after a refusal the row is a
+          // new node), and the Payments list takes focus instead.
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            const opener = paymentOpener.current
+            paymentOpener.current = null
+            const target = opener?.isConnected ? opener : paymentsRef.current
+            target?.focus({ preventScroll: true })
           }}
         />
       ) : null}
