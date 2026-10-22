@@ -161,9 +161,12 @@ export function CostsScreen({
 
   const openDeletePayment = useCallback(
     (row: CostsSettlement): void => {
+      // Safari and Firefox on macOS do not focus a button on click, so the focus holder can be the
+      // page itself: that is no opener, and the Payments list takes focus instead.
+      const holder = document.activeElement
       paymentOpener.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
+        holder instanceof HTMLElement && holder !== document.body
+          ? holder
           : null
       start((id) => ({ kind: 'deletePayment', id, row }))
     },

@@ -3,7 +3,13 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -172,6 +178,21 @@ describe('focus after the delete-payment dialog closes', () => {
     await user.click(
       screen.getByRole('button', { name: Costs['delete.payment.confirm'] }),
     )
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(document.activeElement).toBe(
+      screen.getByRole('group', { name: Costs['payments.label'] }),
+    )
+  })
+
+  it('lands on the Payments list when the click never focused the button (Safari, Firefox on macOS)', async () => {
+    const user = userEvent.setup({ delay: null })
+    mount()
+
+    // `fireEvent.click` does not move focus, which is what those browsers do on a mouse click.
+    fireEvent.click(openerButton())
+    await screen.findByRole('dialog')
+    await user.click(screen.getByRole('button', { name: 'Keep it' }))
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(document.activeElement).toBe(

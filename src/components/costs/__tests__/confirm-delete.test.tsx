@@ -161,6 +161,7 @@ describe('the delete confirmation while the delete is in flight', () => {
 
     const keep = screen.getByRole('button', { name: Ui['action.keep'] })
     expect((keep as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
     await user.keyboard('{Escape}')
     expect(onOpenChange).not.toHaveBeenCalled()
 
