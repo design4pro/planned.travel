@@ -519,10 +519,12 @@ describe('a journey with more than two stations', () => {
 /**
  * A day is one number line, and a journey's place on it.
  *
- * The writer that renumbers a day's stops and notes — `reorderDayTimelines` — belongs to another
- * module, so a journey cannot be inside that renumbering and expresses where it sits *between* two
- * of its positions instead, through the fractional key `sort_order` was declared to be. These cases
- * are about that arithmetic and about the three rules the payload is read under; the client half
+ * A journey expresses where it sits *between* two of the day's stops and notes through the
+ * fractional key `sort_order` was declared to be. `reorderDayTimelines` places journeys in the same
+ * batch that renumbers a day (`day-journeys.test.ts`); `reorderDayTransports`, covered here, places
+ * them against the numbering already stored, for the writes that never renumber (schedule,
+ * unschedule, delete). These cases are about that arithmetic and about the three rules the payload
+ * is read under; the client half
  * that decides *which* gap a drag names is asserted in `-ui/__tests__/plan-transport-model.test.ts`.
  */
 describe('a journey between the stops and notes of its day', () => {

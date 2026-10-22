@@ -24,12 +24,15 @@ import { z } from 'zod'
 import { enqueueTripRollup } from '#/server/queue/travel-stats-fanout'
 import { RESERVATION_STATUSES } from '#/server/db/schema'
 import {
+  DAY_RUN_ANCHORS_MESSAGE,
+  DAY_RUN_MAX_ITEMS,
   NotFoundError,
   PLACE_WRITE_ROLES,
   assertTripRole,
   canWritePlan,
   createAssignment,
   createPlace,
+  dayRunItemInput,
   deleteAssignment,
   deletePlace,
   getPlace,
@@ -47,10 +50,15 @@ import {
   tripRoleFor,
   updateAssignment,
   updatePlace,
+  withinAnchorBound,
 } from '#/server/repos'
 import { appScope } from '../../../-server/context'
 
-import type { TenantScope, TimelineItemInput } from '#/server/repos'
+import type {
+  DayRunItemInput,
+  TenantScope,
+  TimelineItemInput,
+} from '#/server/repos'
 import type { Place, Trip } from '#/server/db/types'
 import type { BookingDayOption } from '#/server/fns/reservations'
 
@@ -373,7 +381,10 @@ async function requireStopOfPlan(
 
 /**
  * Tells the trip room that these days were rearranged: one `day` upsert each,
- * carrying the merged order.
+ * carrying the merged order and the journeys placed beside it.
+ *
+ * The journeys travel under their own field, the one `reorderDayTransportsFn` also writes when
+ * it restates journeys alone, so a patch from either writer leaves the other field as it was.
  *
  * The bridge is reached at call time rather than imported at the top of the file,
  * and that is not stylistic. `#/server/fns/context` imports `cloudflare:workers` and
@@ -391,6 +402,7 @@ async function mirrorDayOrder(
   days: ReadonlyArray<{
     readonly dayId: string
     readonly items: ReadonlyArray<TimelineItemInput>
+    readonly journeys: ReadonlyArray<DayRunItemInput>
   }>,
 ): Promise<void> {
   const { mirrorToRoom, patch } = await import('#/server/fns/context')
@@ -400,24 +412,32 @@ async function mirrorDayOrder(
     days.map((day) =>
       patch('day', day.dayId, {
         items: day.items.map((item) => ({ kind: item.kind, id: item.id })),
+        journeys: day.journeys.map((ref) => ({ kind: ref.kind, id: ref.id })),
       }),
     ),
   )
 }
 
-/** One row of a day's sequence, as the browser names it. */
+/** A stop or a note, as the browser names it: the rows `clearTime` can name. */
 const timelineItem = z.strictObject(
   { kind: z.enum(['stop', 'note']), id },
   { error: 'A timeline item is a stop or a note, named by its id.' },
 )
 
-/** `kind/id` — the pair is the identity, because both tables mint ids the same way. */
-function timelineKey(item: z.infer<typeof timelineItem>): string {
+/** `kind/id` — the pair is the identity, because the id spaces are minted the same way. */
+function timelineKey(item: {
+  readonly kind: string
+  readonly id: string
+}): string {
   return `${item.kind}/${item.id}`
 }
 
 /**
  * The board's new arrangement: for each day a drag touched, the whole sequence.
+ *
+ * `items` is the day's whole run: its stops and notes and, since a journey is placed in the same
+ * write that renumbers them (#239), the journeys that depart from it. A client that names no
+ * journey is still served — each is put back where it was — so the field only ever gained values.
  *
  * `clearTime` is the reader's answer to "move this and drop its 14:30?" (PRD #104
  * decision 9) and is refined against `items` rather than trusted: clearing a time is
@@ -431,7 +451,10 @@ export const reorderPlanInputSchema = z.strictObject({
       z
         .strictObject({
           dayId: id,
-          items: z.array(timelineItem).max(200),
+          items: z
+            .array(dayRunItemInput)
+            .max(DAY_RUN_MAX_ITEMS)
+            .refine(withinAnchorBound, { error: DAY_RUN_ANCHORS_MESSAGE }),
           clearTime: z.array(timelineItem).max(200).optional(),
         })
         .superRefine((day, ctx) => {
@@ -456,7 +479,7 @@ export const reorderPlanInputSchema = z.strictObject({
  * The client sends the *resulting* sequence of every day a drag touched — at most
  * two — and the server derives every position from array index. That is what makes
  * the indices self-healing: whatever fractional values a mid-list insert left behind,
- * the next drag renumbers the day to `0..n-1` across both position columns at once.
+ * the next drag renumbers the day to `0..n-1` across the position columns of the stops, the notes and the journeys at once.
  * It also means a client cannot inject an index of its own choosing, only a
  * permutation of ids it can already see.
  *
@@ -467,9 +490,10 @@ export const reorderPlanInputSchema = z.strictObject({
  * One write: `reorderDayTimelines` takes every touched day and, in one batch, gives each
  * row the day it was named under next to its position — `day_assignments.order_index`
  * and `day_notes.sort_order` as a single number line — plus a `NULL` time for every
- * `clearTime` entry. A stop or a note that changed day is therefore moved by the same
- * statement that numbers it, and the reader's "drop its time and move it" is one
- * transaction, never a moment in which the row has a time and the wrong position. A
+ * `clearTime` entry, and places the day's journeys (`transports.sort_order`,
+ * `transport_legs.sort_order`) against the numbering that same batch produces. A stop
+ * or a note that changed day is therefore moved by the same statement that numbers it,
+ * and the reader's "drop its time and move it" is one transaction, never a moment in which the row has a time and the wrong position. A
  * forged day id fails before any position is written.
  *
  * The plan's content is the editor's (PRD #104 decision 6): the repository asserts the
