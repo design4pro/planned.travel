@@ -256,6 +256,7 @@ import {
   replaceTransportChain,
   requireTransportOfTrip,
   saveSearchedConnection,
+  CLIENT_ID_WINDOW_MS,
   saveTransport,
   setTransportStatus,
   summariseTripTransports,
@@ -359,7 +360,7 @@ import {
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
 import { classifyFailure } from '#/server/errors/public'
-import { ID_PATTERN, mintId } from '#/lib/ids'
+import { ID_PATTERN, ID_TIME_LENGTH, mintId } from '#/lib/ids'
 import type {
   KeyedTenantTable,
   TenantPatch,
@@ -422,7 +423,7 @@ const { downloadTripExport, listTripExports } =
 /** The confirm's ports, stubbed to throw for the same reason: a refused confirm reaches neither. */
 const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
   enqueueRollup: () => {
-    throw new Error('enqueueRollup is not reached: no place is written.')
+    throw new Error("enqueueRollup is not reached: no place is written.")
   },
   announce: () => {
     throw new Error('announce is not reached: nothing here is written.')
@@ -1268,17 +1269,12 @@ describe('tenant isolation', () => {
       ] as const) {
         const scope = actor.tenant.scopeFor(actor.tenant.ownerUserId, 'member')
         for (const call of [
-          () =>
-            updateCollection(scope, target.collectionId, { name: 'Forged' }),
+          () => updateCollection(scope, target.collectionId, { name: 'Forged' }),
           () => deleteCollection(scope, target.collectionId),
           () => deleteCollectionConfirmed(scope, target.collectionId, 'Forged'),
           () => collectionDeleteSummary(scope, target.collectionId),
           () =>
-            setCollectionPlaceStatus(
-              scope,
-              target.collectionPlaceId,
-              'visited',
-            ),
+            setCollectionPlaceStatus(scope, target.collectionPlaceId, 'visited'),
         ])
           await expect(call()).rejects.toMatchObject({ code: 'NOT_FOUND' })
         expect(
@@ -3411,6 +3407,12 @@ describe('tenant isolation', () => {
         alpha.tripId,
       )
       expect(beta.transportId).toMatch(ID_PATTERN)
+      // In window too, so A's call reaches the primary-key clash and not an earlier refusal.
+      expect(
+        Math.abs(
+          parseInt(beta.transportId.slice(0, ID_TIME_LENGTH), 36) - Date.now(),
+        ),
+      ).toBeLessThanOrEqual(CLIENT_ID_WINDOW_MS)
       const refuse = (transportId: string) =>
         captureError(() =>
           saveTransport(alpha.tenant.scope, {
@@ -7272,9 +7274,7 @@ describe('tenant isolation', () => {
   describe('collaboration section configuration', () => {
     it('hides a foreign trip and leaves its stored configuration and timestamps byte-identical', async () => {
       const readForeignTrip = () =>
-        harness.sqlite
-          .prepare('SELECT * FROM trips WHERE id = ?')
-          .get(beta.tripId)
+        harness.sqlite.prepare('SELECT * FROM trips WHERE id = ?').get(beta.tripId)
       const before = readForeignTrip()
       await expect(
         setTripCollabSections(alpha.tenant.scope, beta.tripId, {
@@ -7289,10 +7289,7 @@ describe('tenant isolation', () => {
   describe('older conversation pages', () => {
     it('scopes foreign and arbitrary cursors, message ids and reactions without changing B', async () => {
       const scope = alpha.tenant.scope
-      await postMessage(scope, {
-        tripId: alpha.tripId,
-        body: 'another A message',
-      })
+      await postMessage(scope, { tripId: alpha.tripId, body: 'another A message' })
       const before = await collabRows(beta.tenant.scope)
       expect((await listMessages(scope, beta.tripId)).items).toEqual([])
       await expect(
@@ -7315,14 +7312,8 @@ describe('tenant isolation', () => {
     it('counts the whole non-deleted thread of one trip, inside the tenant', async () => {
       const scope = alpha.tenant.scope
       const own = await countMessages(scope, alpha.tripId)
-      const kept = await postMessage(scope, {
-        tripId: alpha.tripId,
-        body: 'kept',
-      })
-      const gone = await postMessage(scope, {
-        tripId: alpha.tripId,
-        body: 'gone',
-      })
+      const kept = await postMessage(scope, { tripId: alpha.tripId, body: 'kept' })
+      const gone = await postMessage(scope, { tripId: alpha.tripId, body: 'gone' })
       await deleteMessage(scope, alpha.tripId, gone.id)
 
       expect(kept.id).not.toBe(gone.id)
