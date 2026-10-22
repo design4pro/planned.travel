@@ -97,18 +97,15 @@ const messages = {
   'expense.what': 'За что это было',
   'expense.whatPlaceholder': 'Ужин в Kyubey',
   'expense.amountNotANumber': 'Введите сумму числом.',
-  'expense.currencyLabel': 'Валюта, в которой выписан чек',
   'expense.convertedTo': 'Пересчитано в {currency}',
   'expense.convertedHint':
     'Во сколько {from} обошлось в {to} по вашей выписке.',
   'expense.convertedSuggested':
     'Предложено по курсу, использованному в этой поездке ({date}, {rate}). Измените сумму, чтобы она совпадала с вашей выпиской.',
   'expense.convertedNotANumber': 'Введите пересчитанную сумму числом.',
-  'expense.dateLabel': 'Дата траты',
   'expense.paidByHint':
     'Оставьте без плательщика, если записываете чек, который ещё никто не покрыл.',
   'expense.nobodyYet': 'Пока никто',
-  'expense.whoPaid': 'Кто оплатил',
   'expense.notesHint': 'Необязательно. Всё, чего не говорит чек.',
   'expense.notesPlaceholder':
     'Разделили дегустационное меню, напитки отдельно.',
@@ -126,14 +123,9 @@ const messages = {
   'payment.pickTwo': 'Выберите двух разных участников.',
   'payment.paidTo': 'Оплачено кому',
   'payment.needsTwo': 'Платёж требует двух разных участников.',
-  'payment.whoPaying': 'Кто платит',
-  'payment.whoPaid': 'Кто получает',
   'payment.amountIn': 'Сумма в {currency}',
   'payment.amountPositive': 'Введите сумму больше нуля.',
-  'payment.currencyLabel': 'Валюта, в которой был сделан платёж',
   'payment.how': 'Как',
-  'payment.howMade': 'Как прошёл платёж',
-  'payment.dateLabel': 'Дата платежа',
   'payment.note': 'Заметка',
   'payment.noteHint': 'Необязательно. Референс или за что это было.',
   'payment.notePlaceholder': 'Покрывает отель в Киото и билеты JR.',
