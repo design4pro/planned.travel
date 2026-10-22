@@ -576,10 +576,13 @@ be erased in only one workspace. No tenant content table is read or written in t
 per-workspace domain scrubs still require the reserved owner `TenantScope` and tenant repository.
 The catalog graph remains forbidden from importing tenant repositories.
 
-The auth layer cannot reach the tenant repository graph except for recipient invitation consumption
-(issue #1009): `auth/organization-invitations.ts` imports the auth-runtime-free
+The auth layer cannot reach the tenant repository graph except through two closed, auth-runtime-free
+leaves. Recipient invitation consumption (issue #1009): `auth/organization-invitations.ts` imports
 `repos/workspace-invitation-acceptance.ts` and its `base`, `batch` and `context` primitives. The
-console graph pins this closed set; no tenant server-function bootstrap or repository barrel is
+sign-up language seed (issue #1174): `auth/signup-locale.ts` imports `repos/user-locale-seed.ts`,
+whose one function inserts the new account's own `user_settings.locale` row if none exists, for the
+scope's own user and organization, and imports no repository but `base`. The console graph pins this
+closed set; no tenant server-function bootstrap, repository barrel or `settings.ts` is
 reachable. `resolveWorkspaceInvitationScopeUnscoped` has that one production caller and returns only
 an organization id by matching the invitation with the authenticated user's current email (FU-3).
 The recipient scope carries the authenticated user, least-privilege member role and impersonator.
@@ -926,6 +929,9 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
    and persists through a reload. Settings saves a personal override (or follows the workspace);
    signed-out controls reuse this picker and save only the visitor cookie. The visitor cookie
    holds only a language tag for 365 days, is HttpOnly, SameSite=Lax, Path=/ and Secure on HTTPS.
+   Registering is the one moment the visitor language reaches an account: a self-registration seeds
+   the new account's own `user_settings.locale` with the language the request resolved (cookie, else
+   `Accept-Language`) when it is not `en`; signing in never writes a setting.
 8. **Scope.** In: `src/routes/(auth)`, `src/routes/_app`, the marketing landing and pricing pages,
    and every component they render. Out, for now: `src/routes/legal/**` long-form terms and privacy
    prose, which stays English and says so on the page — translated legal text needs review this

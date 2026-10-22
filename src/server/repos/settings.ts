@@ -13,6 +13,10 @@
  * rule 2 of that section is why it stays that way — a locale write is read back on the next request
  * from D1, so the read-your-own-write path can never serve KV's up-to-60-second stale answer.
  *
+ * The one write of `user_settings.locale` that does not pass through this module is the sign-up
+ * seed, `user-locale-seed.ts`: a closed leaf the auth layer may reach (docs/SPEC.md §5), insert-if-absent,
+ * taking an already negotiated tag. It is why `updateUserSettings` is not the only writer of the column.
+ *
  * `app_settings` is instance-wide deployment configuration and has no `organization_id`. It is reached
  * through the {@link appSettingsStore} helpers, which take a plain {@link Database} rather than a
  * {@link TenantScope} —

@@ -193,13 +193,14 @@ not that suite.
 | `ACC-02` | `09-S2` | 1    | partial → done                    |
 | `ACC-01` | `09-S3` | 1    | partial → done                    |
 | `ACC-07` | `09-S4` | 1    | absent → done                     |
-| `ACC-06` | `09-S5` | 1    | partial → partial, **BLOCKED**    |
+| `ACC-06` | `09-S5` | 1    | partial → done                    |
 | `EXT-04` | `09-S6` | 1    | absent → done                     |
 | `ACC-05` | `09-S7` | 2    | partial → done                    |
 | `ACC-04` | `09-S8` | 3    | partial → partial, **stays open** |
 
-Two rows do not reach **done**, and both say so in the same words as the stage that owns them.
-`ACC-06` is blocked outright (`09-S5`). `ACC-04` is the interesting one: `09-S8` closes five of the
+One row does not reach **done**, and it says so in the same words as the stage that owns it
+(`ACC-06` was blocked outright in `09-S5` and is now delivered; see the `Delivered:` line under that
+stage). `ACC-04` is the interesting one: `09-S8` closes five of the
 nine behaviours the row names, closes the temperature unit as "no separate preference" (ADR 0038)
 and defers the other three, because the surface each of those three would govern belongs to another
 plan or does not exist yet. The ledger records
@@ -1501,6 +1502,8 @@ Future offline delivery, push or background sync requires a new specification.
 
 ## Stage 09-S5 — Speaking more than one language: BLOCKED
 
+Delivered: 2026-10-22 - the visitor cookie and negotiation (#1171), the header language switcher (#1173) and the seed of a new account's own language at sign-up (#1174: `seedSignupLocale` in `src/server/auth/signup-locale.ts`, `src/server/auth/__tests__/signup-locale.test.ts`); the runtime, catalogues and settings picker were already in place
+
 ### Stage id
 
 `09-S5` · Wave 1 · effort **S**. **BLOCKED.** The effort is for the record this stage ships, not for
@@ -1510,7 +1513,7 @@ a stage somebody schedules.
 
 ### Reference rows
 
-- `ACC-06` partial → **partial**, and the reason it does not move is this stage's whole content.
+- `ACC-06` partial → **done** (it was recorded here as partial while the row was blocked; the `Delivered:` line above is the closing record).
 
 Sourced from `wiki: Languages` for the behaviours: choose a language before and after signing in,
 apply it without a reload, lay the interface out right-to-left where the language requires it, and
