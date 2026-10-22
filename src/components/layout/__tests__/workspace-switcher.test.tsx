@@ -1114,6 +1114,23 @@ describe('creating a workspace', () => {
     })
   })
 
+  it('re-reads the shell with the claim held back after a failure whose outcome is unknown', async () => {
+    setWorkspaceClaim('org_a')
+    const seen: Array<boolean> = []
+    workspace.create.mockRejectedValue(new Error('D1_ERROR: no such column'))
+    router.navigate.mockImplementation(async () => {
+      seen.push(workspaceClaimState().switching)
+    })
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    await vi.waitFor(() => {
+      expect(seen).toEqual([true])
+    })
+    expect(workspaceClaimState().switching).toBe(false)
+  })
+
   it('does not re-read the shell after a stale-tab refusal, and brings the notice back', async () => {
     setWorkspaceClaim('org_a')
     markWorkspaceStale('org_a')

@@ -94,7 +94,9 @@ export function CreateWorkspaceDialog({
   // Creating a workspace activates it on the session, so this tab changes workspace itself: the
   // re-read after it must not be refused for the claim it has not re-read yet (as in the switcher).
   // The create call itself keeps the claim, so a tab showing a stale workspace is refused before it
-  // is checked against a role and a plan it does not show.
+  // is checked against a role and a plan it does not show. The price is a short window, between the
+  // server activating the new workspace and its answer, in which a poll of this tab can be refused
+  // and open the notice for a change this tab itself made; the re-read closes it again.
   async function resyncSwitching(): Promise<void> {
     beginWorkspaceSwitch()
     try {
