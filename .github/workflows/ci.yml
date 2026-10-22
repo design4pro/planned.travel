@@ -34,7 +34,8 @@ env:
   VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
-# `runs-on` in every job below reads through `vars.RUNNER_CI`, a repository
+# `runs-on` in every job below except `attestation`, `scope` and `e2e-report` (seconds of work,
+# GitHub-hosted, ADR 0045) reads through `vars.RUNNER_CI`, a repository
 # variable that is deliberately unset: unset, each job's own default selects the
 # `ci` slots of the VPS pool - two ephemeral x64 containers of 4 CPU / 8 GB on KVM
 # Haswell vCPUs, about three times slower per core than the machines most numbers
@@ -166,7 +167,9 @@ jobs:
   scope:
     name: change scope
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    # GitHub-hosted: a few seconds of `git diff`, and on the pool it queued ~44 min for a slot
+    # (median over 25 green PR runs, 2026-10-22). ADR 0045.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       e2e: ${{ steps.classify.outputs.e2e }}
@@ -349,7 +352,9 @@ jobs:
     needs: [scope, e2e, verify, test]
     # Not on a draft: its gates did not run, so there is nothing to report.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
-    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    # GitHub-hosted: it only reads the shards' verdict, and on the pool it queued ~31 min after the
+    # last shard had finished (median over 25 green PR runs, 2026-10-22). ADR 0045.
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     # The only job that writes to a pull request, and only the comment below.
     permissions:

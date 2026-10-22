@@ -42,4 +42,11 @@ describe('ci.yml attestation gate', () => {
       'ref: ${{ github.event.pull_request.head.sha }}',
     )
   })
+
+  it.each(['attestation', 'scope', 'e2e-report'])(
+    '%s runs GitHub-hosted: seconds of work must not queue for a pool slot',
+    (job) => {
+      expect(block(job)).toMatch(/^ {4}runs-on: ubuntu-latest$/m)
+    },
+  )
 })

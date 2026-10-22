@@ -182,6 +182,10 @@ Any non-zero exit fails the gate and blocks the PR. The implementing skills run 
 
 When the gate is green on the commit an agent is about to hand over, it records that with `node scripts/ci/attestation.mjs attest --pr <n>`: the script runs the committed head's gate from a clean tree and posts the result as a PR comment bound to the tree. CI's `attestation` job accepts it, and `lint · typecheck · build` and `unit tests` then report skipped (which counts as passed) instead of repeating the run. Do it **after the last push**: another commit changes the tree and voids the record, and the full jobs run as before. A diff that touches the gate itself or a `risk-high` path never rides on an attestation, and the e2e journeys always run. The push to `develop` runs everything and gates the deploy.
 
+### Draft until the last push
+
+A draft runs no CI (ADR 0037), so a chain keeps its PR a draft while it still pushes and lets CI start once, on the head it hands over. The chain opens the PR with `om-open-pr --draft` and keeps pushing review, QA and fix-round commits to it. After the last push it attests (above), then marks the PR ready (`gh pr ready <number>`); that `ready_for_review` is what starts CI. It never ends a run on a draft it opened: `om-approve-merge-pr` stops on drafts, so a stranded one never merges. A push after the PR is ready (a CI repair) re-runs CI as before and needs a new attestation.
+
 ## Repo automations
 
 The cezar cockpit runs this process unattended: an automation watches GitHub for one event, and launches one workflow from `.ai/cezar/workflows/` when a record matches its filters. The automations this repository runs are tabulated in `## This repository`; the definitions are committed, and the cockpit's copy under `.ai/cezar/` is runtime state that is rebuilt from them.

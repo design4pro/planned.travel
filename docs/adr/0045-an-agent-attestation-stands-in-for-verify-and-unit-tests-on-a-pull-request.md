@@ -60,5 +60,13 @@ be something CI can check, not something it must believe.
 - **Agents must attest last.** Any later push to the head changes the tree and voids the record. The
   four skills that push (`om-auto-create-pr`, `om-auto-continue-pr` and their `-loop` variants) run
   the attest step after their final push and the e2e journeys stay in CI.
+- **Three seconds-long jobs leave the pool.** `attestation`, `scope` and `e2e-report` run on
+  `ubuntu-latest`: over 25 green pull request runs they queued a median 31-44 min for a pool slot to
+  do a few seconds of work, ahead of and after the jobs that need the pool. This does not use
+  `vars.RUNNER_CI`; the recovery path of ADR 0027 still moves everything else.
+- **A draft until the last push.** A chain opens its PR as a draft and marks it ready after its last
+  push and attestation (SDLC.md § Draft until the last push), so CI starts once on the final head
+  instead of on every checkpoint: 146 of 300 recent CI runs were cancelled by a later push.
+  Review and QA fix rounds push to the draft.
 - **Rollback** is reverting the `attestation` job and the two `needs`/`if` edits in `ci.yml`; no
   setting outside the repository moved.
