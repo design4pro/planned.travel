@@ -4917,6 +4917,7 @@ describe('tenant isolation', () => {
               { kind: 'stop', id: beta.assignmentId },
               { kind: 'note', id: alpha.dayNoteId },
               { kind: 'note', id: beta.dayNoteId },
+              { kind: 'transport', id: beta.transportId },
               { kind: 'stop', id: extraStop.id },
               { kind: 'note', id: extraNote.id },
               { kind: 'stop', id: alpha.assignmentId },
@@ -4925,7 +4926,8 @@ describe('tenant isolation', () => {
         ],
       })
 
-      // B's two ids are gone from the write, and A's four are numbered 0..3.
+      // B's three ids (two rows and a journey) are gone from the write, and A's four are
+      // numbered 0..3.
       expect(written).toEqual([
         {
           dayId: alpha.dayId,
@@ -4935,6 +4937,7 @@ describe('tenant isolation', () => {
             { kind: 'note', id: extraNote.id },
             { kind: 'stop', id: alpha.assignmentId },
           ],
+          journeys: [{ kind: 'transport', id: alpha.transportId }],
         },
       ])
       expect(await positionsOf(scope, alpha.dayId)).toEqual({

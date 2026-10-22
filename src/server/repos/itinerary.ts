@@ -25,6 +25,18 @@ import {
 } from './base'
 import { runBatch } from './batch'
 import { NotFoundError } from './context'
+import {
+  DAY_RUN_ANCHORS_MESSAGE,
+  DAY_RUN_MAX_ITEMS,
+  byDayRun,
+  dayRunItemInput,
+  dayRunKey,
+  departingJourneys,
+  isAnchor,
+  journeyPositionStatements,
+  placeJourneys,
+  withinAnchorBound,
+} from './day-journeys'
 import { listTripDayNotes, listTripDays, requireTripDay } from './days'
 import { placesRepository, requirePlaceOfTrip } from './places'
 import { requireReservationOfTrip } from './reservations'
@@ -47,6 +59,7 @@ import type {
   DayAssignment,
   Place,
 } from '#/server/db/types'
+import type { DayRunEntry, DayRunItemInput } from './day-journeys'
 import type { TenantScope } from './base'
 
 export const dayAssignmentsRepository = createTenantRepository(
@@ -110,10 +123,20 @@ export type TimelineItemInput = z.infer<typeof timelineItemInput>
 /** The most days one drag can touch: the day a row leaves and the day it lands on, with room to spare. */
 const MAX_DAYS_PER_MOVE = 4
 
-/** One day of a drag: the whole sequence the day should end up with. */
+/**
+ * One day of a drag: the whole sequence the day should end up with.
+ *
+ * `items` is the day's whole run: stops and notes, and the journeys that depart from it (a
+ * `transport` record, or one `leg` of a chained journey). A journey is placed against the
+ * numbering this same write gives the stops and notes, so it never needs a call of its own; a
+ * caller that does not know about journeys sends none, and each is put back where it was.
+ */
 export const dayTimelineInput = z.object({
   dayId: idSchema,
-  items: z.array(timelineItemInput).max(200),
+  items: z
+    .array(dayRunItemInput)
+    .max(DAY_RUN_MAX_ITEMS)
+    .refine(withinAnchorBound, { error: DAY_RUN_ANCHORS_MESSAGE }),
   /**
    * Rows whose time is dropped as part of this move (PRD #104 decision 9). Every
    * entry must also be in `items`: clearing a time is a consequence of a move, never
@@ -136,10 +159,17 @@ export const reorderDayTimelinesInput = z.object({
 })
 export type ReorderDayTimelinesInput = z.infer<typeof reorderDayTimelinesInput>
 
-/** A day's sequence as written: what the caller mirrors to the trip room. */
+/**
+ * A day's sequence as written: what the caller mirrors to the trip room.
+ *
+ * The stops and notes under `items`, the journeys placed beside them under `journeys` — two
+ * fields because the room keeps two halves of one day and neither should overwrite the other's
+ * news.
+ */
 export interface WrittenDayTimeline {
   readonly dayId: string
   readonly items: ReadonlyArray<TimelineItemInput>
+  readonly journeys: ReadonlyArray<DayRunItemInput>
 }
 
 export const createAccommodationInput = z.object({
@@ -518,11 +548,6 @@ export async function deleteAssignment(
  * One day, one number line
  * ---------------------------------------------------------------------------------------------- */
 
-/** `kind/id`, so the two id spaces can share one `Set` without colliding. */
-function refKey(ref: TimelineItemInput): string {
-  return `${ref.kind}/${ref.id}`
-}
-
 /**
  * Writes every day a drag touched as a single sequence of positions `0..n-1` per day
  * (PRD #104 decision 9), moving the rows that changed day in the same write.
@@ -539,13 +564,22 @@ function refKey(ref: TimelineItemInput): string {
  * the day it was named under next to its position. A cross-day move is therefore the
  * same write as a reorder, for both tables, and there is no step in front of it.
  *
+ * The day's journeys are on the same line. A journey (a `transport` record, or one `leg`
+ * of a chained journey) keeps a fractional `sort_order` that is a *relation* to the stops
+ * and notes around it, so a write that renumbers them has to say again where it sits. It
+ * is placed here, in the same batch, against the numbering that very write produces
+ * (`./day-journeys` holds the rule), so no failure can leave renumbered stops beside a
+ * journey that still names the old gaps. A journey departs from one day and cannot be
+ * given another by this write.
+ *
  * Four rules about the lists the client sends, each of which exists because a board
  * can be stale:
  *
  * - **Unknown ids are dropped, not rejected.** A tab one delete behind should still
  *   be able to reorder the rows that do exist, which is the rule
  *   `reorderPlanFn` has always stated. A foreign tenant's id is unknown here for the
- *   same reason it is unknown everywhere else: the two reads below are scoped.
+ *   same reason it is unknown everywhere else: the reads below are scoped. A journey
+ *   named under a day it does not depart from is unknown too.
  * - **A row named under two days is applied once, under the first day that names it.**
  * - **Known ids the client omitted go back behind the row they currently follow**,
  *   on the day that still holds them, so a partial list cannot silently unposition
@@ -561,7 +595,7 @@ function refKey(ref: TimelineItemInput): string {
  * `organization_id` predicate a handle would have applied, and both tables carry the
  * column and lead a composite index with it.
  *
- * All of it — every day, every position and every `NULL` time — goes out as one
+ * All of it — every day, every position, every journey and every `NULL` time — goes out as one
  * {@link runBatch}, which on D1 is one transaction: a half-applied reorder is a day
  * whose two columns disagree about one number line, and there is no honest way to
  * render that. That atomicity is what keeps a payload that would put one place
@@ -571,7 +605,8 @@ function refKey(ref: TimelineItemInput): string {
  * by {@link MAX_DAYS_PER_MOVE} days of at most 200 rows, one `UPDATE` per row.
  *
  * Returns each day's sequence as written, in the order the days were named, which is
- * what the caller mirrors to the trip room.
+ * what the caller mirrors to the trip room: the stops and notes under `items`, the
+ * journeys under `journeys`.
  */
 export async function reorderDayTimelines(
   scope: TenantScope,
@@ -589,18 +624,21 @@ export async function reorderDayTimelines(
     values.days.map((day) => requireTripDay(scope, values.tripId, day.dayId)),
   )
 
-  const [stops, notes] = await Promise.all([
+  const [stops, notes, journeysByDay] = await Promise.all([
     listTripAssignments(scope, values.tripId),
     listTripDayNotes(scope, values.tripId),
+    // A journey lives on the one day it departs from, so only the named days are read.
+    Promise.all(
+      values.days.map((day) =>
+        departingJourneys(scope, values.tripId, day.dayId),
+      ),
+    ),
   ])
 
-  // The trip as it stands, both tables on one line per day. Positions are the sort key
-  // because that is what the line *is*; the id breaks a tie two rows should never have.
-  const current: Array<{
-    ref: TimelineItemInput
-    dayId: string
-    position: number
-  }> = [
+  // The trip as it stands, every table on one line per day. Positions are the sort key
+  // because that is what the line *is*; the id breaks a tie two rows should never have, and a
+  // journey that ties with a stop or a note follows it.
+  const current: Array<DayRunEntry & { dayId: string }> = [
     ...stops.map((row) => ({
       ref: { kind: 'stop' as const, id: row.id },
       dayId: row.dayId,
@@ -611,30 +649,38 @@ export async function reorderDayTimelines(
       dayId: row.dayId,
       position: row.sortOrder,
     })),
-  ].sort((a, b) => a.position - b.position || a.ref.id.localeCompare(b.ref.id))
+    ...values.days.flatMap((day, index) =>
+      journeysByDay[index].map((entry) => ({ ...entry, dayId: day.dayId })),
+    ),
+  ].sort(byDayRun)
 
-  const known = new Map(current.map((entry) => [refKey(entry.ref), entry.ref]))
+  const known = new Map(
+    current.map((entry) => [dayRunKey(entry.ref), entry.ref]),
+  )
   const heldBy = new Map(
-    current.map((entry) => [refKey(entry.ref), entry.dayId]),
+    current.map((entry) => [dayRunKey(entry.ref), entry.dayId]),
   )
 
   // First every day takes what it names, so that the splice below can tell a row the
   // client left out from a row another day took.
   const claimed = new Set<string>()
   const lines = values.days.map((day) => {
-    const wanted: Array<TimelineItemInput> = []
+    const wanted: Array<DayRunItemInput> = []
     for (const ref of day.items) {
-      const key = refKey(ref)
+      const key = dayRunKey(ref)
       const row = known.get(key)
       if (row === undefined || claimed.has(key)) continue
+      // A journey cannot change day: its day is its departure, which this write does not own.
+      // Named under any other day it is unknown, like a forged id.
+      if (!isAnchor(row) && heldBy.get(key) !== day.dayId) continue
       claimed.add(key)
       wanted.push(row)
     }
     // Resolved here, while `wanted` holds exactly what the caller asked to move: the
     // splice below adds the rows the caller left out, and those may not lose a time.
-    const moving = new Set(wanted.map(refKey))
+    const moving = new Set(wanted.map(dayRunKey))
     const cleared = new Set(
-      day.clearTime?.map(refKey).filter((key) => moving.has(key)) ?? [],
+      day.clearTime?.map(dayRunKey).filter((key) => moving.has(key)) ?? [],
     )
     return { dayId: day.dayId, wanted, held: moving, cleared }
   })
@@ -646,13 +692,13 @@ export async function reorderDayTimelines(
     let previousKey: string | null = null
     for (const entry of current) {
       if (entry.dayId !== line.dayId) continue
-      const key = refKey(entry.ref)
+      const key = dayRunKey(entry.ref)
       if (!line.held.has(key)) {
         if (claimed.has(key)) continue
         const anchor =
           previousKey === null
             ? -1
-            : line.wanted.findIndex((ref) => refKey(ref) === previousKey)
+            : line.wanted.findIndex((ref) => dayRunKey(ref) === previousKey)
         line.held.add(key)
         line.wanted.splice(anchor + 1, 0, entry.ref)
       }
@@ -660,43 +706,70 @@ export async function reorderDayTimelines(
     }
   }
 
-  const statements = lines.flatMap((line) =>
-    line.wanted.map((ref, position) => {
-      const dropTime = line.cleared.has(refKey(ref))
-      // Only a row that changes day is given one. A row that stays — a spliced-back
-      // omission above all — must not have its day rewritten from this read, or a move
-      // another editor committed in between would be silently undone.
-      const day =
-        heldBy.get(refKey(ref)) === line.dayId ? {} : { dayId: line.dayId }
-      if (ref.kind === 'stop') {
+  // The ruler first: a day's stops and notes are `0..n-1` in the order the line names them, and
+  // the journeys are measured against exactly that numbering, never against the stored one.
+  const days = lines.map((line) => {
+    const anchors = line.wanted.filter(isAnchor)
+    const placed = placeJourneys(
+      line.wanted,
+      new Map(anchors.map((ref, position) => [dayRunKey(ref), position])),
+    )
+    return { ...line, anchors, placed }
+  })
+
+  const statements = [
+    ...days.flatMap((line) =>
+      line.anchors.map((ref, position) => {
+        const dropTime = line.cleared.has(dayRunKey(ref))
+        // Only a row that changes day is given one. A row that stays — a spliced-back
+        // omission above all — must not have its day rewritten from this read, or a move
+        // another editor committed in between would be silently undone.
+        const day =
+          heldBy.get(dayRunKey(ref)) === line.dayId ? {} : { dayId: line.dayId }
+        if (ref.kind === 'stop') {
+          return scope.db
+            .update(dayAssignments)
+            .set(
+              // Both columns, not just the start. A stop keeping its `end_time` renders
+              // as an open-start range — a row still visibly wearing the time the reader
+              // was just told it had lost — and the board's time index reads `start_time` alone, so
+              // from then on the clock rule cannot see it and never asks about it again.
+              dropTime
+                ? {
+                    ...day,
+                    orderIndex: position,
+                    startTime: null,
+                    endTime: null,
+                  }
+                : { ...day, orderIndex: position },
+            )
+            .where(
+              tenantFilter(
+                scope,
+                dayAssignments,
+                eq(dayAssignments.id, ref.id),
+              ),
+            )
+        }
         return scope.db
-          .update(dayAssignments)
+          .update(dayNotes)
           .set(
-            // Both columns, not just the start. A stop keeping its `end_time` renders
-            // as an open-start range — a row still visibly wearing the time the reader
-            // was just told it had lost — and the board's time index reads `start_time` alone, so
-            // from then on the clock rule cannot see it and never asks about it again.
             dropTime
-              ? { ...day, orderIndex: position, startTime: null, endTime: null }
-              : { ...day, orderIndex: position },
+              ? { ...day, sortOrder: position, time: null }
+              : { ...day, sortOrder: position },
           )
-          .where(
-            tenantFilter(scope, dayAssignments, eq(dayAssignments.id, ref.id)),
-          )
-      }
-      return scope.db
-        .update(dayNotes)
-        .set(
-          dropTime
-            ? { ...day, sortOrder: position, time: null }
-            : { ...day, sortOrder: position },
-        )
-        .where(tenantFilter(scope, dayNotes, eq(dayNotes.id, ref.id)))
-    }),
-  )
+          .where(tenantFilter(scope, dayNotes, eq(dayNotes.id, ref.id)))
+      }),
+    ),
+    ...days.flatMap((line) => journeyPositionStatements(scope, line.placed)),
+  ]
 
   await runBatch(scope, statements)
-  return lines.map((line) => ({ dayId: line.dayId, items: line.wanted }))
+  return days.map((line) => ({
+    dayId: line.dayId,
+    items: line.anchors,
+    journeys: line.placed.map(({ ref }) => ref),
+  }))
 }
 
 /** Replaces the participant set of one stop. */

@@ -1,20 +1,19 @@
 /**
- * The planner's third read, and the writer that places a journey on a day.
+ * The planner's third read, and the writer that restates a day's journeys.
  *
- * Its own module rather than a section of `-server/plan.ts`, and that is a stated trade-off rather
- * than an accident: `-server/plan.ts`, `-ui/plan-model.ts`, `repos/itinerary.ts` and `repos/days.ts`
- * are claimed by sibling stages in every wave this one could occupy, and there is no wave in which
- * `03-S5` could take them *and* take `day-section.tsx`. Everything here therefore reaches the data
+ * Its own module rather than a section of `-server/plan.ts`: everything here reaches the data
  * through the exported repositories, and the shared planner modules are left exactly as they are.
  *
- * **The day is one number line and this module writes only half of it.** `reorderPlanFn` renumbers
- * a day's stops and notes `0..n-1`; a journey expresses where it sits *between* two of those
- * positions, through the fractional `sort_order` its own columns were declared to be. The two
- * writes are not atomic with each other, and four properties of code that already exists are what
- * makes that survivable: positions are recomputed on every successful reorder, the merged sequence
- * sorts on time before position, the client issues both calls together and rolls its optimistic
- * order back if either fails, and the calls are ordered stops-then-journeys so the failure that
- * survives leaves the less visible half stale.
+ * **The day is one number line, and a reorder writes all of it in one call.** `reorderPlanFn`
+ * carries the day's stops, notes and journeys, and `reorderDayTimelines` renumbers the stops and
+ * notes `0..n-1` and places each journey between two of them in the same batch (#239), so no
+ * failure can leave renumbered stops beside journeys that still name the old gaps.
+ *
+ * What is left here is the writer for the paths that never renumber a day: scheduling a stop
+ * stores it at a midpoint, unscheduling and deleting one leave a hole, and each of them restates
+ * its day's journeys afterwards through {@link reorderDayTransportsFn}. A failed restatement
+ * there leaves a day that still sorts consistently, because no stop moved; folding those writes
+ * into their own transactions is #816.
  */
 
 import { createServerFn } from '@tanstack/react-start'
@@ -180,8 +179,9 @@ export const loadPlanTransports = createServerFn({ method: 'GET' })
 /**
  * Tells the trip room that this day's journeys were re-placed.
  *
- * Under its own field rather than beside the `items` `reorderPlanFn` mirrors, because the two
- * writes carry two different halves of one day and neither should overwrite the other's news.
+ * Under its own field, because this is the news of a write that renumbers nothing (schedule,
+ * unschedule, delete): it carries the journeys alone and must not overwrite the `items` that
+ * `reorderPlanFn` mirrors beside its own `journeys` when it renumbers a day.
  *
  * `#/server/fns/context` is reached at call time rather than imported at the top of the file: it
  * imports `cloudflare:workers` and the trip room's Durable Object module, and this file is imported
@@ -203,7 +203,8 @@ async function mirrorDayJourneys(
 }
 
 /**
- * Places one day's journeys between the stops and notes the run names.
+ * Places one day's journeys between the stops and notes the run names, against the numbering the
+ * day already has — for the writes that do not renumber it.
  *
  * The client sends the day's *resulting* run — stops, notes and journeys, in order — and the server
  * takes from it only which stop or note each journey follows; the fractions themselves are derived

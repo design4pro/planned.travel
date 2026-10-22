@@ -1,15 +1,16 @@
 /**
- * The journeys' write half: what a landed write owes the server.
+ * The journeys' write half: the run a day's write names, and what a landed write owes the server.
  *
- * The last case of `journeyWrites` is the one that measures the design. The two writes are not
- * atomic with each other, so the only thing that keeps a journey beside its neighbours across a
- * reorder is that the run `journeyWrites` produces names those neighbours by id rather than by
- * number.
+ * A reorder carries its journeys in the same call as the stops and notes, so the thing that keeps
+ * a journey beside its neighbours across a reorder is that the run names those neighbours by id
+ * rather than by number. The schedule, unschedule and delete writes do not renumber a day and
+ * still restate their journeys afterwards.
  */
 import { describe, expect, it } from 'vitest'
 
 import { ideaItemId, legItemId } from '#/components/planner'
 import { planBoard } from '../plan-board'
+import { reorderPayload } from '../plan-move'
 import { journeyWrites, journeyWritesFor } from '../plan-transport-model'
 import {
   board,
@@ -101,12 +102,12 @@ describe('journeyWrites', () => {
   /**
    * The case that measures the design.
    *
-   * `reorderPlanFn` renumbers a day's stops and notes `0..n-1` without consulting a single
-   * journey, so any number this module had stored is measured against a ruler that no longer
-   * exists. What survives it is that the run names the journey's neighbours by id: the reader
-   * dropped the journey after `a2`, and after the renumbering the payload still says so.
+   * A write that renumbers a day's stops and notes `0..n-1` leaves any number stored for a
+   * journey measured against a ruler that no longer exists. What survives it is that the run
+   * names the journey's neighbours by id: the reader dropped the journey after `a2`, and after
+   * the renumbering the payload still says so.
    */
-  it('restores a journey to the neighbours it had before a reorder renumbered the day', () => {
+  it('restores a journey to the neighbours it had before a write renumbered the day', () => {
     const restored = boardOf({ d1: ['a1', 'a2', 'a3'] }, [
       journey('j1', { position: 1.5 }),
     ])
@@ -117,8 +118,8 @@ describe('journeyWrites', () => {
       'a3',
     ])
 
-    // The reader drags `a3` to the front. `reorderPlanFn` renumbers the stops 0..2 and knows
-    // nothing about the journey, whose stored 1.5 now names an entirely different gap.
+    // The reader drags `a3` to the front. The stops are renumbered 0..2, and the journey's
+    // stored 1.5 would now name an entirely different gap.
     const after: PlanOrder = {
       days: [{ dayId: 'd1', itemIds: ['a3', 'a1', 'a2', leg('j1')] }],
       ideaIds: [],
@@ -217,13 +218,97 @@ describe('journeyWritesFor', () => {
       d1(stopRef('a1'), stopRef('a2'), j1, stopRef('asg9'), stopRef('a3')),
     )
   })
+})
 
-  it('restates every day a reorder touched that a journey departs from', () => {
-    expect(
-      journeyWritesFor(
-        { kind: 'reorder', next: before, dayIds: ['d1', 'd2'] },
-        rows,
-      ),
-    ).toEqual(d1(stopRef('a1'), stopRef('a2'), j1, stopRef('a3')))
+/**
+ * `reorderPlanFn`'s input for one reorder: the whole run of every touched day, journeys included,
+ * so the stops, the notes and the journeys are one call and one transaction.
+ */
+describe('reorderPayload with journeys', () => {
+  const result = boardOf({ d1: ['a1', 'a2', 'a3'], d2: ['b1'] }, [
+    journey('j1', { position: 1.5 }),
+  ])
+  const rows = result.transportRows
+
+  it('carries the journey in its departure day’s run, between the rows it follows', () => {
+    const payload = reorderPayload(
+      'trip-1',
+      {
+        kind: 'reorder',
+        days: [{ dayId: 'd1', itemIds: ['a3', 'a1', leg('j1'), 'a2'] }],
+      },
+      null,
+      rows,
+    )
+
+    expect(payload.days).toEqual([
+      {
+        dayId: 'd1',
+        items: [
+          { kind: 'stop', id: 'a3' },
+          { kind: 'stop', id: 'a1' },
+          { kind: 'transport', id: 'j1' },
+          { kind: 'stop', id: 'a2' },
+        ],
+      },
+    ])
+  })
+
+  it('makes a journey-only move the same call, with every stop and note where it was', () => {
+    const payload = reorderPayload(
+      'trip-1',
+      {
+        kind: 'reorder',
+        days: [{ dayId: 'd1', itemIds: [leg('j1'), 'a1', 'a2', 'a3'] }],
+      },
+      null,
+      rows,
+    )
+
+    expect(payload.days[0].items).toEqual([
+      { kind: 'transport', id: 'j1' },
+      { kind: 'stop', id: 'a1' },
+      { kind: 'stop', id: 'a2' },
+      { kind: 'stop', id: 'a3' },
+    ])
+  })
+
+  it('leaves out a journey row that only crosses the day', () => {
+    const crossing = boardOf({ d1: ['a1'], d2: ['b1'] }, [
+      journey('j2', { arrivalDayId: 'd2', position: 0.5 }),
+    ])
+    const crossed = crossing.transportRows.find((row) => row.dayId === 'd2')
+    expect(crossed?.part).not.toBe('departing')
+
+    const payload = reorderPayload(
+      'trip-1',
+      {
+        kind: 'reorder',
+        days: [
+          {
+            dayId: 'd2',
+            itemIds: [crossed?.itemId ?? '', 'b1'],
+          },
+        ],
+      },
+      null,
+      crossing.transportRows,
+    )
+
+    expect(payload.days[0].items).toEqual([{ kind: 'stop', id: 'b1' }])
+  })
+
+  it('never asks a journey to drop a time', () => {
+    const payload = reorderPayload(
+      'trip-1',
+      {
+        kind: 'reorder',
+        days: [{ dayId: 'd1', itemIds: ['a1', leg('j1'), 'a2', 'a3'] }],
+      },
+      leg('j1'),
+      rows,
+    )
+
+    expect(payload.days[0].clearTime).toBeUndefined()
   })
 })
