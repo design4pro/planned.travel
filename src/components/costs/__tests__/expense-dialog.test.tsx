@@ -16,6 +16,7 @@ import { ExpenseDialog } from '../expense-dialog'
 import {
   LOCALISED,
   PL,
+  copyOf,
   descriptionOf,
   expectNamedByVisibleLabel,
 } from './localised'
@@ -875,7 +876,9 @@ describe('the expense dialog in the reader’s language (#1217)', () => {
     const user = hand()
     openIn(PL.locale, PL.messages)
 
-    await user.click(screen.getAllByRole('combobox')[0] as HTMLElement)
+    await user.click(
+      screen.getByRole('combobox', { name: copyOf(PL.messages, 'costs.field.currency') }),
+    )
 
     expect(descriptionOf('EUR')).toBe('euro')
     const forint = descriptionOf('HUF')

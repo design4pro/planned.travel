@@ -66,6 +66,15 @@ export const PL: { locale: Locale; messages: Catalogue } = {
   messages: catalogue(PlCosts, PlModules, PlSettings, PlUi),
 }
 
+/** A plain-string message of `messages`, for looking a control up by the label a reader sees. */
+export function copyOf(messages: Catalogue, key: string): string {
+  const message = messages[key]
+  if (typeof message !== 'string') {
+    throw new Error(`${key} is not a plain string message`)
+  }
+  return message
+}
+
 /** A label's text as a reader gets it: the required marker is `aria-hidden` and drops out. */
 function visibleText(label: HTMLLabelElement): string {
   const copy = label.cloneNode(true) as HTMLLabelElement
