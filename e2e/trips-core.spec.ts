@@ -2072,10 +2072,9 @@ test.describe('01-S8c — Initial members on trip creation', () => {
     await page.getByRole('option', { name: 'Viewer', exact: true }).click()
 
     await dialog.getByRole('button', { name: 'Create trip' }).click()
-    await expect(page).toHaveURL(/\/trips\/[^/]+\/plan(\?|$)/)
-
-    const peopleUrl = page.url().replace(/\/plan(\?.*)?$/, '/people')
     try {
+      await expect(page).toHaveURL(/\/trips\/[^/]+\/plan(\?|$)/)
+      const peopleUrl = page.url().replace(/\/plan(\?.*)?$/, '/people')
       await visit(
         page,
         {

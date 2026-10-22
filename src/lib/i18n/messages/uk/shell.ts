@@ -596,6 +596,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Не вдалося підтвердити додавання: {name}. Перевірте на екрані «Учасники», чи додавання відбулося.',
   'newTrip.peopleContinue': 'Продовжити',
+  'newTrip.peopleRetry': 'Повторити',
+  'newTrip.coverRetryOnly': 'Повторити з обкладинкою',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Дії для «{title}»',

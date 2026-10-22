@@ -303,7 +303,7 @@ export function NewTripDialog({
                   {notice.people.length === 0 ? null : (
                     <ul className="mt-1 flex flex-col gap-1">
                       {notice.people.map((person) => (
-                        <li key={person.userId}>
+                        <li key={person.userId} className="break-words">
                           {t(NOT_ADDED_COPY[person.reason], {
                             name: person.name,
                           })}
@@ -356,7 +356,10 @@ export function NewTripDialog({
                   void retryCover()
                 }}
               >
-                {t('shell.newTrip.coverRetry')}
+                {/* Beside a list of people the plain label would read as retrying them too. */}
+                {notice.people.length === 0
+                  ? t('shell.newTrip.coverRetry')
+                  : t('shell.newTrip.coverRetryOnly')}
               </Button>
             )}
             <Button

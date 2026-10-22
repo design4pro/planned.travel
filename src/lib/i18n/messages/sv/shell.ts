@@ -547,6 +547,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Det gick inte att bekräfta {name}. Kolla under Personer om personen lades till.',
   'newTrip.peopleContinue': 'Fortsätt',
+  'newTrip.peopleRetry': 'Försök igen',
+  'newTrip.coverRetryOnly': 'Försök med omslaget igen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Åtgärder för {title}',

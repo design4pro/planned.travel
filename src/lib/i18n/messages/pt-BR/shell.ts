@@ -578,6 +578,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Não foi possível confirmar {name}. Veja em Pessoas se a adição foi feita.',
   'newTrip.peopleContinue': 'Continuar',
+  'newTrip.peopleRetry': 'Tentar de novo',
+  'newTrip.coverRetryOnly': 'Tentar a capa de novo',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ações de {title}',

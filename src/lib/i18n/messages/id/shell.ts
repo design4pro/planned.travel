@@ -514,6 +514,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     '{name} tidak bisa dipastikan. Periksa di Orang apakah sudah ditambahkan.',
   'newTrip.peopleContinue': 'Lanjutkan',
+  'newTrip.peopleRetry': 'Coba lagi',
+  'newTrip.coverRetryOnly': 'Coba lagi sampulnya',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Tindakan untuk {title}',

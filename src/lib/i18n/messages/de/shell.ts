@@ -572,6 +572,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     '{name} konnte nicht bestätigt werden. Prüfe unter „Personen“, ob die Person hinzugefügt wurde.',
   'newTrip.peopleContinue': 'Weiter',
+  'newTrip.peopleRetry': 'Erneut versuchen',
+  'newTrip.coverRetryOnly': 'Titelbild erneut versuchen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Aktionen für {title}',

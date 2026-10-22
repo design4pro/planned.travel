@@ -608,6 +608,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Nie udało się potwierdzić dodania: {name}. Sprawdź w Osobach, czy się udało.',
   'newTrip.peopleContinue': 'Dalej',
+  'newTrip.peopleRetry': 'Spróbuj ponownie',
+  'newTrip.coverRetryOnly': 'Spróbuj ponownie z okładką',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Działania dla „{title}”',

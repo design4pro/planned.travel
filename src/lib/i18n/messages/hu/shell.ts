@@ -562,6 +562,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     '{name} hozzáadását nem sikerült megerősíteni. Az Emberek képernyőn ellenőrizheted.',
   'newTrip.peopleContinue': 'Tovább',
+  'newTrip.peopleRetry': 'Próbáld újra',
+  'newTrip.coverRetryOnly': 'A borító újrapróbálása',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Műveletek: {title}',

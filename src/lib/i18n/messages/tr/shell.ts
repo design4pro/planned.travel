@@ -539,6 +539,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     '{name} için ekleme doğrulanamadı. Eklenip eklenmediğini Kişiler ekranından kontrol edin.',
   'newTrip.peopleContinue': 'Devam',
+  'newTrip.peopleRetry': 'Tekrar dene',
+  'newTrip.coverRetryOnly': 'Kapağı tekrar dene',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} için işlemler',

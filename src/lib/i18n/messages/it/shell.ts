@@ -580,6 +580,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Non è stato possibile confermare {name}. Controlla in Persone se l’aggiunta è andata a buon fine.',
   'newTrip.peopleContinue': 'Continua',
+  'newTrip.peopleRetry': 'Riprova',
+  'newTrip.coverRetryOnly': 'Riprova la copertina',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Azioni per {title}',

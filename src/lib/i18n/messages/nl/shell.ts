@@ -563,6 +563,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Het toevoegen van {name} kon niet worden bevestigd. Kijk bij Personen of het gelukt is.',
   'newTrip.peopleContinue': 'Verder',
+  'newTrip.peopleRetry': 'Opnieuw proberen',
+  'newTrip.coverRetryOnly': 'Omslag opnieuw proberen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acties voor {title}',

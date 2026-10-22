@@ -593,6 +593,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Přidání osoby {name} se nepodařilo potvrdit. Zkontrolujte na obrazovce Lidé, zda se přidala.',
   'newTrip.peopleContinue': 'Pokračovat',
+  'newTrip.peopleRetry': 'Zkusit znovu',
+  'newTrip.coverRetryOnly': 'Zkusit znovu s titulním obrázkem',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Akce pro {title}',

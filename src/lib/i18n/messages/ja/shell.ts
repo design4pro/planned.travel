@@ -461,6 +461,8 @@ const messages = {
   'newTrip.peopleAlreadyOn': '{name}さんはすでにこの旅行にいます。',
   'newTrip.peopleUnconfirmed': '{name}さんの追加を確認できませんでした。メンバー画面で追加されたかご確認ください。',
   'newTrip.peopleContinue': '続ける',
+  'newTrip.peopleRetry': 'もう一度試す',
+  'newTrip.coverRetryOnly': 'カバーをもう一度試す',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} の操作',

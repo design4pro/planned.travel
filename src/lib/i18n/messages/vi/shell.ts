@@ -513,6 +513,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Không xác nhận được việc thêm {name}. Hãy kiểm tra ở Người tham gia xem đã thêm chưa.',
   'newTrip.peopleContinue': 'Tiếp tục',
+  'newTrip.peopleRetry': 'Thử lại',
+  'newTrip.coverRetryOnly': 'Thử lại ảnh bìa',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Thao tác cho {title}',

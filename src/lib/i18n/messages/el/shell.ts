@@ -544,6 +544,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Δεν επιβεβαιώθηκε η προσθήκη του ατόμου {name}. Έλεγξε στην οθόνη Άτομα αν προστέθηκε.',
   'newTrip.peopleContinue': 'Συνέχεια',
+  'newTrip.peopleRetry': 'Δοκίμασε ξανά',
+  'newTrip.coverRetryOnly': 'Δοκίμασε ξανά το εξώφυλλο',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ενέργειες για {title}',

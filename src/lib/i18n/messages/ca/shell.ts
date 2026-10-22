@@ -582,6 +582,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'No s’ha pogut confirmar {name}. Mira a Persones si s’ha afegit.',
   'newTrip.peopleContinue': 'Continua',
+  'newTrip.peopleRetry': 'Torna-ho a provar',
+  'newTrip.coverRetryOnly': 'Torna a provar la portada',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Accions per a {title}',

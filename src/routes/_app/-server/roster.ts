@@ -2,10 +2,12 @@
  * The people the creation dialog's picker offers: the workspace, minus the person asking.
  *
  * **A picker's answer, not a directory.** Name and image are what a person is recognised by; the
- * address, the workspace role, the membership id and the join date stay in the repository. A plain
- * member already receives their own trip's roster from `readTripPeople`, so nothing here is news to
- * them - but it is scoped to the caller's workspace by the same `listMemberProfiles` read, and it
- * writes nothing: who may be added to a trip is still decided by `addTripMember`.
+ * address, the workspace role, the membership id and the join date stay in the repository. Any
+ * workspace member may read it, a plain `member` included: `loadOrganizationSettings` already hands
+ * every member the whole list with addresses, and a member who creates a trip owns it and reads the
+ * same names as `invitable` on its People screen. It is scoped to the caller's workspace by the same
+ * `listMemberProfiles` read, and it writes nothing: who may be added to a trip is still decided by
+ * `addTripMember`.
  *
  * Fetched when the dialog opens and by no loader, so a screen that never opens the dialog never
  * pays for the roster.

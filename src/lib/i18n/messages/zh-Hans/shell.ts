@@ -426,6 +426,8 @@ const messages = {
   'newTrip.peopleAlreadyOn': '{name}已在这次行程中。',
   'newTrip.peopleUnconfirmed': '无法确认是否已添加{name}。请到成员页面查看。',
   'newTrip.peopleContinue': '继续',
+  'newTrip.peopleRetry': '重试',
+  'newTrip.coverRetryOnly': '重试封面',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 的操作',

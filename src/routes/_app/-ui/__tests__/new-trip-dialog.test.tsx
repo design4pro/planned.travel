@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import Modules from '#/lib/i18n/messages/en/modules'
 import Settings from '#/lib/i18n/messages/en/settings'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Trips from '#/lib/i18n/messages/en/trips'
@@ -15,6 +16,7 @@ import { NewTripDialog } from '../new-trip-dialog'
 import type { Catalogue } from '#/lib/i18n'
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('modules', Modules),
   ...namespaceCatalogue('settings', Settings),
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('trips', Trips),
@@ -49,8 +51,15 @@ vi.mock('@tanstack/react-router', async () => {
     useRouter: () => router,
     useNavigate: () => navigation.navigate,
     useRouteContext: () => ({ shell }),
-    Link: ({ to, children }: { to: string; children: React.ReactNode }) =>
-      createElement('a', { href: to }, children),
+    Link: ({
+      to,
+      children,
+      target,
+    }: {
+      to: string
+      children: React.ReactNode
+      target?: string
+    }) => createElement('a', { href: to, target }, children),
   }
 })
 
@@ -417,7 +426,11 @@ describe('NewTripDialog', () => {
 
       upload.upload.mockResolvedValue({ ok: true, file: { id: 'file-2' } })
       server.update.mockResolvedValue(undefined)
-      await user.click(screen.getByRole('button', { name: 'Try again' }))
+      // Beside a list of people the label says it retries the cover only.
+      expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+      await user.click(
+        screen.getByRole('button', { name: 'Try the cover again' }),
+      )
 
       await waitFor(() => {
         expect(server.update).toHaveBeenCalledOnce()
@@ -461,6 +474,8 @@ describe('NewTripDialog', () => {
         name: 'Invite people to the workspace',
       })
       expect(link.getAttribute('href')).toBe('/settings/organization')
+      // The form is on this page: a same-tab visit would drop what was typed.
+      expect(link.getAttribute('target')).toBe('_blank')
       expect(screen.queryByRole('button', { name: 'People' })).toBeNull()
     })
 
@@ -498,6 +513,65 @@ describe('NewTripDialog', () => {
       await waitFor(() => {
         expect(server.create).toHaveBeenCalledOnce()
       })
+    })
+
+    it('forgets a pick the next opening no longer lists, so no ghost is submitted', async () => {
+      const user = await openAndName()
+      await choose(user, 'Ana Souza')
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+      // Ana left the workspace while the dialog was shut.
+      roster.load.mockResolvedValue([ben, cy])
+      await user.click(screen.getByRole('button', { name: 'New trip' }))
+      await screen.findByRole('button', { name: 'People' })
+
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('list', { name: 'Chosen people and their roles' }),
+        ).toBeNull()
+      })
+      await user.click(screen.getByRole('button', { name: 'Create trip' }))
+      await waitFor(() => {
+        expect(server.create).toHaveBeenCalledOnce()
+      })
+      expect(roster.add).not.toHaveBeenCalled()
+    })
+
+    it('reads the roster again on a retry, in the same live region', async () => {
+      roster.load.mockRejectedValueOnce(new Error('offline'))
+      const user = await openAndName()
+
+      const region = await screen.findByRole('status')
+      expect(region.textContent).toContain(
+        'The people in your workspace could not be loaded',
+      )
+      roster.load.mockResolvedValue([
+        { userId: 'u-ana', name: 'Ana Souza', image: null },
+      ])
+      await user.click(screen.getByRole('button', { name: 'Try again' }))
+
+      expect(await screen.findByRole('button', { name: 'People' })).toBeTruthy()
+      expect(roster.load).toHaveBeenCalledTimes(2)
+    })
+
+    it('keeps one live region through loading and the empty state', async () => {
+      let resolve: (people: Array<never>) => void = () => {}
+      roster.load.mockReturnValue(
+        new Promise<Array<never>>((done) => {
+          resolve = done
+        }),
+      )
+      await openAndName('member')
+
+      const region = await screen.findByRole('status')
+      expect(region.getAttribute('aria-busy')).toBe('true')
+      resolve([])
+
+      await screen.findByText(
+        'You are the only person in this workspace so far.',
+      )
+      expect(screen.getByRole('status')).toBe(region)
+      expect(region.getAttribute('aria-busy')).toBeNull()
     })
   })
 })

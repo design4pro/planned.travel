@@ -604,6 +604,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'Не удалось подтвердить добавление: {name}. Проверьте на экране «Участники», добавлен ли человек.',
   'newTrip.peopleContinue': 'Продолжить',
+  'newTrip.peopleRetry': 'Повторить',
+  'newTrip.coverRetryOnly': 'Повторить с обложкой',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Действия для «{title}»',

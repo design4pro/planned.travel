@@ -582,6 +582,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'L’ajout de {name} n’a pas pu être confirmé. Vérifiez dans Personnes s’il a eu lieu.',
   'newTrip.peopleContinue': 'Continuer',
+  'newTrip.peopleRetry': 'Réessayer',
+  'newTrip.coverRetryOnly': 'Réessayer la couverture',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Actions pour {title}',

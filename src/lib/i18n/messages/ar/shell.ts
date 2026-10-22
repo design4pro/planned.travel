@@ -630,6 +630,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     'تعذّر تأكيد إضافة {name}. افتح شاشة الأشخاص لتتحقق من ذلك.',
   'newTrip.peopleContinue': 'متابعة',
+  'newTrip.peopleRetry': 'حاول مرة أخرى',
+  'newTrip.coverRetryOnly': 'أعد محاولة صورة الغلاف',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'إجراءات {title}',

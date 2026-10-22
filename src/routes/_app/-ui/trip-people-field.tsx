@@ -5,16 +5,19 @@
  * mounted while it is shut, so the roster is read once per opening and by no loader: the trips
  * index and the app shell never carry it.
  *
- * **Four states, none of them blank.** Loading is three skeleton rows announced once; a failed read
- * says so and leaves the trip creatable, since the People screen adds people later; a workspace with
+ * **Four states, none of them blank.** Loading is three skeleton rows; a failed read says so, offers
+ * a retry and leaves the trip creatable, since the People screen adds people later; a workspace with
  * nobody else is told so, with a pointer at invitations only for the roles that can send one; and
- * the picker itself. Owner is never offered: the creator is the trip's owner already.
+ * the picker itself. The first three share one live region that stays mounted across them, so the
+ * outcome of the read is announced when it arrives. Owner is never offered: the creator is the
+ * trip's owner already.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 
 import {
   Avatar,
+  Button,
   Field,
   MultiCombobox,
   SimpleSelect,
@@ -39,8 +42,9 @@ const ROLE_COPY = {
 } as const satisfies Record<StartingRole, string>
 const STARTING_ROLES: ReadonlyArray<StartingRole> = ['editor', 'viewer']
 
-function useRoster(): RosterState {
+function useRoster(): [RosterState, () => void] {
   const [state, setState] = useState<RosterState>({ status: 'loading' })
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let current = true
@@ -55,9 +59,14 @@ function useRoster(): RosterState {
     return () => {
       current = false
     }
-  }, [])
+  }, [attempt])
 
-  return state
+  function retry(): void {
+    setState({ status: 'loading' })
+    setAttempt((count) => count + 1)
+  }
+
+  return [state, retry]
 }
 
 export interface TripPeopleFieldProps {
@@ -73,9 +82,11 @@ export function TripPeopleField({
   canInvite,
 }: TripPeopleFieldProps) {
   const t = useTranslate()
-  const roster = useRoster()
+  const [roster, retry] = useRoster()
 
-  if (roster.status === 'loading') {
+  if (roster.status !== 'ready' || roster.people.length === 0) {
+    const loading = roster.status === 'loading'
+    const failed = roster.status === 'failed'
     return (
       <div className="flex flex-col gap-1.5">
         <span className="text-label font-medium text-ink-2">
@@ -83,45 +94,45 @@ export function TripPeopleField({
         </span>
         <div
           role="status"
-          aria-busy="true"
-          aria-label={t('shell.newTrip.peopleLoading')}
-          className="flex flex-col gap-2"
+          aria-busy={loading || undefined}
+          aria-label={loading ? t('shell.newTrip.peopleLoading') : undefined}
+          className="flex flex-col gap-2 text-caption text-ink-3"
         >
-          {Array.from({ length: SKELETON_ROWS }, (_, index) => (
-            <Skeleton key={index} className="h-9" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (roster.status === 'failed') {
-    return (
-      <Field label={t('shell.newTrip.people')}>
-        <p className="text-caption text-ink-3">
-          {t('shell.newTrip.peopleLoadError')}
-        </p>
-      </Field>
-    )
-  }
-
-  if (roster.people.length === 0) {
-    return (
-      <Field label={t('shell.newTrip.people')}>
-        <div className="flex flex-col gap-1 text-caption text-ink-3">
-          <p>{t('shell.newTrip.peopleNone')}</p>
-          {canInvite ? (
-            <Link
-              to="/settings/organization"
-              className="w-fit rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
-            >
-              {t('shell.newTrip.peopleInvite')}
-            </Link>
-          ) : (
+          {loading
+            ? Array.from({ length: SKELETON_ROWS }, (_, index) => (
+                <Skeleton key={index} className="h-9" />
+              ))
+            : null}
+          {failed ? <p>{t('shell.newTrip.peopleLoadError')}</p> : null}
+          {!loading && !failed ? <p>{t('shell.newTrip.peopleNone')}</p> : null}
+          {!loading && !failed && !canInvite ? (
             <p>{t('shell.newTrip.peopleNoneMember')}</p>
-          )}
+          ) : null}
         </div>
-      </Field>
+        {failed ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            shape="pill"
+            className="w-fit"
+            onClick={retry}
+          >
+            {t('shell.newTrip.peopleRetry')}
+          </Button>
+        ) : null}
+        {!loading && !failed && canInvite ? (
+          // A new tab: the form being filled in is on this page and a same-tab visit would drop it.
+          <Link
+            to="/settings/organization"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-fit rounded-sm text-caption font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
+          >
+            {t('shell.newTrip.peopleInvite')}
+          </Link>
+        ) : null}
+      </div>
     )
   }
 
@@ -138,6 +149,15 @@ function Picker({
   onChange: (next: Array<ChosenPerson>) => void
 }) {
   const t = useTranslate()
+
+  // The dialog keeps its draft when it is cancelled, and the roster is read again on every opening:
+  // a pick for somebody who has since left the workspace would be a row the picker cannot show.
+  useEffect(() => {
+    const listed = value.filter((person) =>
+      people.some((entry) => entry.userId === person.userId),
+    )
+    if (listed.length !== value.length) onChange(listed)
+  }, [people, value, onChange])
 
   const options = useMemo<Array<ComboboxOption>>(
     () =>
@@ -192,16 +212,22 @@ function Picker({
           className="flex flex-col gap-2"
         >
           {value.map((person) => (
-            <li key={person.userId} className="flex min-w-0 items-center gap-3">
-              <Avatar
-                src={
-                  people.find((entry) => entry.userId === person.userId)
-                    ?.image ?? null
-                }
-                name={person.name}
-                size="sm"
-              />
-              <span className="min-w-0 flex-1 truncate text-label font-medium text-ink">
+            <li
+              key={person.userId}
+              className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2"
+            >
+              {/* Decorative here: the name beside it already names the row. */}
+              <span aria-hidden="true" className="inline-flex shrink-0">
+                <Avatar
+                  src={
+                    people.find((entry) => entry.userId === person.userId)
+                      ?.image ?? null
+                  }
+                  name={person.name}
+                  size="sm"
+                />
+              </span>
+              <span className="min-w-0 flex-1 basis-32 truncate text-label font-medium text-ink">
                 {person.name}
               </span>
               <SimpleSelect

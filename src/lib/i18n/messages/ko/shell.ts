@@ -451,6 +451,8 @@ const messages = {
   'newTrip.peopleUnconfirmed':
     '{name}님의 추가를 확인하지 못했습니다. 참여자 화면에서 추가됐는지 확인해 주세요.',
   'newTrip.peopleContinue': '계속',
+  'newTrip.peopleRetry': '다시 시도',
+  'newTrip.coverRetryOnly': '커버 다시 시도',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 작업',
