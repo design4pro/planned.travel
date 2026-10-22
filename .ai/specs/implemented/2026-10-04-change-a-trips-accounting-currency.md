@@ -144,8 +144,9 @@ Phases 2 to 5 are an ordered chain behind the `04-S1` ticket. Phase 1 is not.
     (a title, a note, persons, days) keeps the triple, and a write that sends a complete typed figure
     stores it (the Costs-tab expense edit). Left in place the triple describes a sum the row no
     longer holds, misleads a later re-basing and stays in the frozen-rate pool as an observation of
-    a pair the row no longer carries. Rows already stale are not migrated; the planner's own check
-    (#1224) covers them.
+    a pair the row no longer carries. A booking save resends the booking's own price, so it clears
+    the line's triple only when that price differs from the line's stored figure. Rows already stale
+    are not migrated; how the re-basing plan treats them is settled by #1224, which is still open.
 
 ### Rounding is honest, not hidden
 
