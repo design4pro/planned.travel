@@ -290,6 +290,7 @@ export function ExpenseDialog({
           expense.currency,
           expense.splitMethod,
           expense.shares,
+          locale,
         ),
   )
   // Up while the converted field is still the one the dialog opened with (empty) and the reader has
@@ -336,7 +337,7 @@ export function ExpenseDialog({
       ? undefined
       : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
-  const typedMinor = parseMoney(form.amount, form.currency)
+  const typedMinor = parseMoney(form.amount, form.currency, locale)
   const staleOnAmount = foreign ? undefined : staleMessage
   const amountError =
     form.amount.trim() !== '' && typedMinor === null
@@ -355,13 +356,13 @@ export function ExpenseDialog({
   // Computed here, not in an effect, so the figure follows the amount and the currency at once.
   const converted = suggesting ? suggested : form.converted
   const convertedMinor = foreign
-    ? parseMoney(converted, tripCurrency)
+    ? parseMoney(converted, tripCurrency, locale)
     : typedMinor
   const amountMinor = convertedMinor ?? 0
 
   const preview = useMemo(
-    () => previewFor(draft, amountMinor, tripCurrency),
-    [draft, amountMinor, tripCurrency],
+    () => previewFor(draft, amountMinor, tripCurrency, locale),
+    [draft, amountMinor, tripCurrency, locale],
   )
 
   const rate = foreign
@@ -426,7 +427,7 @@ export function ExpenseDialog({
         paidBy: form.paidBy === NO_PAYER ? null : form.paidBy,
         splitMethod: draft.method,
         notes: form.notes.trim() === '' ? null : form.notes.trim(),
-        participants: draftToInputs(draft, tripCurrency),
+        participants: draftToInputs(draft, tripCurrency, locale),
         shares: sharesOf(draft, preview),
       })
       onOpenChange(false)

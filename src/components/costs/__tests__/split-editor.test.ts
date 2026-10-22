@@ -25,7 +25,7 @@ describe('the draft of a stored split', () => {
       STORED,
     )
 
-    expect(draftToInputs(draft, 'EUR')).toEqual([
+    expect(draftToInputs(draft, 'EUR', 'en')).toEqual([
       { userId: 'u1', weight: 1 },
       { userId: 'u9', weight: 2 },
     ])
@@ -48,9 +48,14 @@ describe('the draft of an expense that names someone who left the trip', () => {
       'EUR',
       'equal',
       STORED_EQUAL,
+      'en',
     )
 
-    const computed = splitShares(1_001, 'equal', draftToInputs(draft, 'EUR'))
+    const computed = splitShares(
+      1_001,
+      'equal',
+      draftToInputs(draft, 'EUR', 'en'),
+    )
     expect(
       Object.fromEntries(computed.map((row) => [row.userId, row.shareMinor])),
     ).toEqual({ ada: 334, cy: 334, bo: 333 })
@@ -60,7 +65,7 @@ describe('the draft of an expense that names someone who left the trip', () => {
     const people = [{ userId: 'ada' }, { userId: 'bo' }]
 
     expect(
-      draftForDeparted(people, [], 1_001, 'EUR', 'equal', STORED_EQUAL),
+      draftForDeparted(people, [], 1_001, 'EUR', 'equal', STORED_EQUAL, 'en'),
     ).toEqual(draftFor(people, 1_001, 'EUR', 'equal', STORED_EQUAL))
   })
 })

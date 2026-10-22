@@ -21,6 +21,7 @@
  */
 
 import {
+  decimalMark,
   formatMoneyMinor,
   formatMoneyMinorPlain,
   formatRate,
@@ -316,17 +317,113 @@ export function resolveDisplayCurrency(input: {
 /* Parsing                                                                    */
 /* -------------------------------------------------------------------------- */
 
+type Separator = '.' | ','
+
+/** Digits after a lone separator that make it ambiguous: `1.250` is a grouping or a fraction. */
+const GROUP_SIZE = 3
+
+/** What may open a grouped figure: one to three digits, no leading zero (`0.500` groups nothing). */
+const GROUP_HEAD = /^[1-9]\d{0,2}$/
+
+/**
+ * Whether `whole` is a figure grouped by `mark`: `1,234,567`, and the Indian `12,34,567` a banking
+ * app prints for INR. `1.2.3` and `1.250.50` are not, so they are refused rather than guessed at.
+ */
+function isGrouped(whole: string, mark: Separator): boolean {
+  const [head = '', ...rest] = whole.split(mark)
+  const last = rest.at(-1)
+  const middle = rest.slice(0, -1)
+  return (
+    /^\d{1,3}$/.test(head) &&
+    last?.length === GROUP_SIZE &&
+    (middle.every((group) => group.length === GROUP_SIZE) ||
+      (head.length <= 2 && middle.every((group) => group.length === 2)))
+  )
+}
+
+/** Whether a lone mark followed by three digits groups them rather than starting a fraction. */
+function readsAsGrouping(
+  mark: Separator,
+  digits: number,
+  locale: Locale,
+): boolean {
+  if (digits === 0) {
+    return true
+  }
+  if (digits === GROUP_SIZE && mark === '.') {
+    return false
+  }
+  return mark !== decimalMark(locale)
+}
+
+/**
+ * Splits a typed figure (digits, `.` and `,` only) into its whole and fraction digits, or `null`
+ * when it is not a well-formed number. The shape of the figure decides first:
+ *
+ * 1. both marks present: the last one is the decimal mark and the other groups the whole part;
+ * 2. one mark repeated: grouping, and the groups must be well-formed;
+ * 3. one mark once, followed by anything but three digits: the decimal mark, in every locale;
+ * 4. one mark once, followed by exactly three digits after a head that could be a group (`1.250`,
+ *    not `0.500` or `1234.567`): the only real tie. A zero-decimal currency has no fraction to
+ *    read, so it is grouping (`¥ 54,705`); a three-decimal currency reads a dot as the fraction;
+ *    otherwise it is the fraction only when it is the reader's own decimal mark, so `1.250` EUR is
+ *    1.25 in `en` and 1250 in `de`.
+ *
+ * A well-formed figure is never refused: a refusal needs a message in every locale and the split
+ * editor would show it as zero, while the wrong reading is only possible in the one tie above.
+ */
+function resolveFigure(
+  figure: string,
+  digits: number,
+  locale: Locale,
+): { readonly whole: string; readonly fraction: string } | null {
+  const lastDot = figure.lastIndexOf('.')
+  const lastComma = figure.lastIndexOf(',')
+  if (lastDot < 0 && lastComma < 0) {
+    return { whole: figure, fraction: '' }
+  }
+  const mark: Separator = lastDot > lastComma ? '.' : ','
+  const at = Math.max(lastDot, lastComma)
+  const other: Separator = mark === '.' ? ',' : '.'
+  const head = figure.slice(0, at)
+  const tail = figure.slice(at + 1)
+  const markCount = figure.split(mark).length - 1
+
+  if (figure.includes(other)) {
+    // Both present: the last is the decimal mark, so it must be alone, and the other must group.
+    return markCount === 1 && isGrouped(head, other)
+      ? { whole: head.replaceAll(other, ''), fraction: tail }
+      : null
+  }
+  if (markCount > 1) {
+    return isGrouped(figure, mark)
+      ? { whole: figure.replaceAll(mark, ''), fraction: '' }
+      : null
+  }
+  const grouping =
+    tail.length === GROUP_SIZE &&
+    GROUP_HEAD.test(head) &&
+    readsAsGrouping(mark, digits, locale)
+  return grouping
+    ? { whole: `${head}${tail}`, fraction: '' }
+    : { whole: head, fraction: tail }
+}
+
 /**
  * A typed major amount into minor units: `2,384.00` GBP → `238400`.
  *
- * Grouping separators and stray currency glyphs are discarded rather than
- * rejected — a reader who pastes `¥ 54,705` out of a banking app should not be
- * told off for it. Anything that is not a single non-negative decimal number
- * returns `null`, and the caller decides what to say about it.
+ * `locale` is the reader's own: it breaks the one tie the figure's shape cannot (see
+ * {@link resolveFigure}), so `85,50` EUR is 85.50 in every locale and `1.250` EUR is 1.25 in `en`
+ * but 1250 in `de`.
+ *
+ * Spaces and stray currency glyphs are discarded rather than rejected — a reader who pastes
+ * `¥ 54,705` out of a banking app should not be told off for it. Anything that is not a single
+ * non-negative decimal number returns `null`, and the caller decides what to say about it.
  */
 export function parseMoney(
   text: string,
   currency: string | null | undefined,
+  locale: Locale,
 ): number | null {
   // A minus sign of any flavour is rejected rather than stripped: an expense is
   // never negative, and silently turning a negative figure positive is a lie.
@@ -334,21 +431,26 @@ export function parseMoney(
     return null
   }
   const figure = text
-    // Spaces of every width, plus the separators a European locale groups with.
-    .replace(/[\s\u00a0\u202f,'\u2019]/g, '')
+    // Spaces of every width, plus the apostrophes a Swiss figure groups with.
+    .replace(/[\s\u00a0\u202f'\u2019]/g, '')
     // A leading currency glyph, and a trailing code or glyph.
-    .replace(/^[^\d.]+/, '')
-    .replace(/[^\d.]+$/, '')
+    .replace(/^[^\d.,]+/, '')
+    .replace(/[^\d.,]+$/, '')
 
-  if (figure === '' || figure === '.' || !/^\d*\.?\d*$/.test(figure)) {
+  if (!/^[\d.,]+$/.test(figure) || !/\d/.test(figure)) {
+    return null
+  }
+
+  const digits = minorUnitDigits(currency)
+  const resolved = resolveFigure(figure, digits, locale)
+  if (resolved === null) {
     return null
   }
 
   // Scaled by moving the decimal point in the *string*, not by multiplying a
   // float: `1.005 * 100` is `100.49999999999999` in IEEE 754, which would round a
   // penny away. Money never touches floating point in this module.
-  const digits = minorUnitDigits(currency)
-  const [whole = '', fraction = ''] = figure.split('.')
+  const { whole, fraction } = resolved
   const scaled = `${whole === '' ? '0' : whole}${fraction.padEnd(digits, '0').slice(0, digits)}`
   const dropped = fraction.slice(digits)
   const base = Number.parseInt(scaled, 10)

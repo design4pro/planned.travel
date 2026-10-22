@@ -23,7 +23,8 @@ import {
   toAmountInput,
 } from '../money'
 
-import { formatInverseRate, formatRateInput } from '../format'
+import { decimalMark, formatInverseRate, formatRateInput } from '../format'
+import { LOCALE_TAGS as LOCALES } from '../i18n/locales'
 
 import type { SplitInput } from '../money'
 
@@ -190,33 +191,139 @@ describe('impliedRate', () => {
 
 describe('parseMoney', () => {
   it('accepts what a reader actually pastes', () => {
-    expect(parseMoney('2,384.00', 'GBP')).toBe(238_400)
-    expect(parseMoney('¥ 54,705', 'JPY')).toBe(54_705)
-    expect(parseMoney(' 1 234.5 ', 'EUR')).toBe(123_450)
-    expect(parseMoney('300 USD', 'USD')).toBe(30_000)
+    expect(parseMoney('2,384.00', 'GBP', 'en')).toBe(238_400)
+    expect(parseMoney('¥ 54,705', 'JPY', 'en')).toBe(54_705)
+    expect(parseMoney(' 1 234.5 ', 'EUR', 'en')).toBe(123_450)
+    expect(parseMoney('300 USD', 'USD', 'en')).toBe(30_000)
+    expect(parseMoney('1\u202f234,5 €', 'EUR', 'fr')).toBe(123_450)
+    expect(parseMoney("1'234.50", 'CHF', 'de')).toBe(123_450)
   })
 
   it('rounds to the currency’s own minor unit', () => {
-    expect(parseMoney('54705.4', 'JPY')).toBe(54_705)
-    expect(parseMoney('1.005', 'EUR')).toBe(101)
+    expect(parseMoney('54705.4', 'JPY', 'en')).toBe(54_705)
+    expect(parseMoney('1.005', 'EUR', 'en')).toBe(101)
   })
 
   it('rejects rather than reinterprets', () => {
-    expect(parseMoney('', 'EUR')).toBeNull()
-    expect(parseMoney('.', 'EUR')).toBeNull()
-    expect(parseMoney('abc', 'EUR')).toBeNull()
-    expect(parseMoney('1.2.3', 'EUR')).toBeNull()
+    for (const locale of LOCALES) {
+      expect(parseMoney('', 'EUR', locale)).toBeNull()
+      expect(parseMoney('.', 'EUR', locale)).toBeNull()
+      expect(parseMoney(',', 'EUR', locale)).toBeNull()
+      expect(parseMoney('abc', 'EUR', locale)).toBeNull()
+      expect(parseMoney('1.2.3', 'EUR', locale)).toBeNull()
+      expect(parseMoney('1,2,3', 'EUR', locale)).toBeNull()
+      expect(parseMoney('1.250.50', 'EUR', locale)).toBeNull()
+      expect(parseMoney('1,234.567,5', 'EUR', locale)).toBeNull()
+      expect(parseMoney('1234,56.78', 'EUR', locale)).toBeNull()
+    }
   })
 
   it('never turns a negative figure positive', () => {
-    expect(parseMoney('-5', 'EUR')).toBeNull()
-    expect(parseMoney('−5', 'EUR')).toBeNull()
+    expect(parseMoney('-5', 'EUR', 'en')).toBeNull()
+    expect(parseMoney('−5', 'EUR', 'en')).toBeNull()
+  })
+
+  it.each(['en', 'pl', 'de'] as const)(
+    'reads a decimal comma as the fraction in %s',
+    (locale) => {
+      expect(parseMoney('85,50', 'EUR', locale)).toBe(8_550)
+      expect(parseMoney('0,5', 'EUR', locale)).toBe(50)
+      expect(parseMoney('1234,5', 'EUR', locale)).toBe(123_450)
+      expect(parseMoney('85.50', 'EUR', locale)).toBe(8_550)
+    },
+  )
+
+  it.each(['en', 'pl', 'de'] as const)(
+    'reads a dot-grouped yen figure as grouping in %s',
+    (locale) => {
+      expect(parseMoney('46.488', 'JPY', locale)).toBe(46_488)
+      expect(parseMoney('46,488', 'JPY', locale)).toBe(46_488)
+      expect(parseMoney('¥ 54,705', 'JPY', locale)).toBe(54_705)
+      expect(parseMoney('1.234.567', 'JPY', locale)).toBe(1_234_567)
+    },
+  )
+
+  it.each(['en', 'pl', 'de'] as const)(
+    'lets whichever separator comes last be the decimal mark in %s',
+    (locale) => {
+      expect(parseMoney('1.234,50', 'EUR', locale)).toBe(123_450)
+      expect(parseMoney('1,234.50', 'EUR', locale)).toBe(123_450)
+      expect(parseMoney('1,234,567.50', 'EUR', locale)).toBe(123_456_750)
+      expect(parseMoney('1.234.567,5', 'EUR', locale)).toBe(123_456_750)
+    },
+  )
+
+  it('breaks the one tie, a lone mark and three digits, with the reader’s own decimal mark', () => {
+    expect(parseMoney('1.250', 'EUR', 'en')).toBe(125)
+    expect(parseMoney('1,250', 'EUR', 'en')).toBe(125_000)
+    for (const locale of ['de', 'pl', 'fr'] as const) {
+      expect(parseMoney('1.250', 'EUR', locale)).toBe(125_000)
+      expect(parseMoney('1,250', 'EUR', locale)).toBe(125)
+    }
+  })
+
+  it('reads a lone dot as the fraction of a three-decimal currency in every locale', () => {
+    for (const locale of ['en', 'de', 'pl'] as const) {
+      expect(parseMoney('1.250', 'KWD', locale)).toBe(1_250)
+    }
+    expect(parseMoney('1,250', 'KWD', 'en')).toBe(1_250_000)
+    expect(parseMoney('1,250', 'KWD', 'de')).toBe(1_250)
+  })
+
+  it('does not group digits that could not be a group', () => {
+    expect(parseMoney('0.500', 'EUR', 'de')).toBe(50)
+    expect(parseMoney('1234.567', 'EUR', 'de')).toBe(123_457)
+  })
+
+  it('keeps the Indian grouping a banking app prints', () => {
+    expect(parseMoney('₹ 12,34,567.50', 'INR', 'en')).toBe(123_456_750)
+    expect(parseMoney('12,34,567', 'INR', 'en')).toBe(123_456_700)
+  })
+
+  it('takes a trailing or leading mark as a fraction mark', () => {
+    expect(parseMoney('5.', 'EUR', 'en')).toBe(500)
+    expect(parseMoney('.5', 'EUR', 'en')).toBe(50)
+    expect(parseMoney(',5', 'EUR', 'de')).toBe(50)
   })
 
   it('round-trips through the editable form', () => {
     expect(toAmountInput(238_400, 'GBP')).toBe('2384.00')
     expect(toAmountInput(54_705, 'JPY')).toBe('54705')
-    expect(parseMoney(toAmountInput(238_400, 'GBP'), 'GBP')).toBe(238_400)
+    expect(parseMoney(toAmountInput(238_400, 'GBP'), 'GBP', 'en')).toBe(238_400)
+  })
+
+  it('reads back what toAmountInput wrote, in every locale', () => {
+    const cases: ReadonlyArray<readonly [string, ReadonlyArray<number>]> = [
+      ['EUR', [0, 5, 85, 100, 125_000, 8_550, 123_456_789]],
+      ['JPY', [0, 5, 46_488, 54_705, 1_234_567]],
+      ['KWD', [0, 5, 1_250, 2_384, 1_234_567]],
+    ]
+    for (const locale of LOCALES) {
+      for (const [currency, amounts] of cases) {
+        for (const minor of amounts) {
+          expect(
+            parseMoney(toAmountInput(minor, currency), currency, locale),
+          ).toBe(minor)
+        }
+      }
+    }
+  })
+})
+
+describe('decimalMark', () => {
+  it('is the mark the locale writes a fraction with', () => {
+    expect(decimalMark('en')).toBe('.')
+    expect(decimalMark('ja')).toBe('.')
+    expect(decimalMark('pl')).toBe(',')
+    expect(decimalMark('de')).toBe(',')
+    expect(decimalMark('fr')).toBe(',')
+  })
+
+  it('is one of the two marks a field can hold, in all 23 locales', () => {
+    expect(LOCALES).toHaveLength(23)
+    for (const locale of LOCALES) {
+      expect(['.', ',']).toContain(decimalMark(locale))
+    }
   })
 })
 
