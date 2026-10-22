@@ -1500,15 +1500,15 @@ Future offline delivery, push or background sync requires a new specification.
 
 ---
 
-## Stage 09-S5 — Speaking more than one language: BLOCKED
+## Stage 09-S5 — Speaking more than one language
 
 Delivered: 2026-10-22 - the visitor cookie and negotiation (#1171), the header language switcher (#1173) and the seed of a new account's own language at sign-up (#1174: `seedSignupLocale` in `src/server/auth/signup-locale.ts`, `src/server/auth/__tests__/signup-locale.test.ts`); the runtime, catalogues and settings picker were already in place
 
 ### Stage id
 
-`09-S5` · Wave 1 · effort **S**. **BLOCKED.** The effort is for the record this stage ships, not for
+`09-S5` · Wave 1 · effort **S**. Was **BLOCKED**, now delivered (see `Delivered:` above). The effort is for the record this stage ships, not for
 the feature: `gap-rows.json` scores the row itself far higher, and none of that work can be started
-until the block below is lifted. A blocked stage that quietly carried a large effort roll-up would be
+until the block below was lifted. A blocked stage that quietly carried a large effort roll-up would be
 a stage somebody schedules.
 
 ### Reference rows

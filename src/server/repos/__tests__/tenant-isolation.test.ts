@@ -4866,8 +4866,8 @@ describe('tenant isolation', () => {
       const newcomer = await alpha.tenant.addUser('Newcomer')
 
       await expect(
-        // @ts-expect-error - the argument type is the shipped tags; this is the runtime defence.
-        seedUserLocale(alpha.tenant.scopeFor(newcomer), 'xx-nope'),
+        // The argument type is the shipped tags; the cast reaches the runtime defence.
+        seedUserLocale(alpha.tenant.scopeFor(newcomer), 'xx-nope' as never),
       ).rejects.toThrow()
       expect(await getUserSettings(alpha.tenant.scope, newcomer)).toBeNull()
     })
