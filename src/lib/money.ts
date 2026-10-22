@@ -334,7 +334,7 @@ function isGrouped(whole: string, mark: Separator): boolean {
   const last = rest.at(-1)
   const middle = rest.slice(0, -1)
   return (
-    /^\d{1,3}$/.test(head) &&
+    GROUP_HEAD.test(head) &&
     last?.length === GROUP_SIZE &&
     (middle.every((group) => group.length === GROUP_SIZE) ||
       (head.length <= 2 && middle.every((group) => group.length === 2)))

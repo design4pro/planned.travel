@@ -215,6 +215,8 @@ describe('parseMoney', () => {
       expect(parseMoney('1.250.50', 'EUR', locale)).toBeNull()
       expect(parseMoney('1,234.567,5', 'EUR', locale)).toBeNull()
       expect(parseMoney('1234,56.78', 'EUR', locale)).toBeNull()
+      expect(parseMoney('0.500.000', 'EUR', locale)).toBeNull()
+      expect(parseMoney('0,123.50', 'EUR', locale)).toBeNull()
     }
   })
 
