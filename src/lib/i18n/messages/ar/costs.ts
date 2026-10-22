@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'تتغير أرصدة {names}.',
   'delete.confirm': 'احذف المصروف',
   'delete.working': 'يجري حذف المصروف',
+  'delete.payment.title': 'أتحذف هذه الدفعة؟',
+  'delete.payment.description':
+    '«{title}» تخرج من الحساب. ولا رجعة في ذلك. ولتصحيح دفعة، سجّلها من جديد.',
+  'delete.payment.failedBody':
+    'لم نتمكن من حذف الدفعة. أعِد المحاولة بعد لحظة.',
+  'delete.payment.confirm': 'احذف الدفعة',
+  'delete.payment.working': 'يجري حذف الدفعة',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'المصاريف',
@@ -187,6 +194,7 @@ const messages = {
   'payments.label': 'الدفعات المسجّلة',
   'payments.empty.title': 'لا دفعات بعد',
   'payments.empty.body': 'عندما يسدّد أحدهم رصيدًا، يُسجّل التحويل هنا.',
+  'payments.delete': 'حذف الدفعة من {from} إلى {to}، {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived': 'هذه الرحلة مؤرشفة. استعدها قبل تغيير التكاليف.',
   'readOnly.title': 'يمكنك الاطّلاع على التكاليف لكن لا يمكنك تغييرها',
@@ -384,6 +392,8 @@ const messages = {
   'write.paymentRecorded': 'سُجّلت الدفعة',
   'write.paymentRecordedBody': 'تحدّث الرصيدان كلاهما.',
   'write.paymentFailed': 'لم تُسجَّل الدفعة',
+  'write.paymentDeleted': 'حُذفت الدفعة',
+  'write.paymentDeleteFailed': 'لم تُحذَف الدفعة',
   'write.rolledBack': 'جرى التراجع عن التغيير.',
   'expense.saveFallback': 'تعذّر حفظ المصروف. حاول مجددًا بعد قليل.',
 } satisfies TranslationOf<typeof En>

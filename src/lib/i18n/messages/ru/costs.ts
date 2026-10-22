@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Меняются балансы: {names}.',
   'delete.confirm': 'Удалить трату',
   'delete.working': 'Трата удаляется',
+  'delete.payment.title': 'Удалить этот платёж?',
+  'delete.payment.description':
+    '«{title}» уходит из расчёта. Это нельзя отменить. Чтобы исправить платёж, запишите его заново.',
+  'delete.payment.failedBody':
+    'Платёж не удалось удалить. Попробуйте через минуту.',
+  'delete.payment.confirm': 'Удалить платёж',
+  'delete.payment.working': 'Платёж удаляется',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Траты',
@@ -187,6 +194,8 @@ const messages = {
   'payments.empty.title': 'Пока нет платежей',
   'payments.empty.body':
     'Когда кто-то возвращает баланс, перевод записывается здесь.',
+  'payments.delete':
+    'Удалить платёж: плательщик {from}, получатель {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Эта поездка в архиве. Восстановите её, прежде чем изменять расходы.',
@@ -377,6 +386,8 @@ const messages = {
   'write.paymentRecorded': 'Платёж записан',
   'write.paymentRecordedBody': 'Оба баланса обновлены.',
   'write.paymentFailed': 'Платёж не записан',
+  'write.paymentDeleted': 'Платёж удалён',
+  'write.paymentDeleteFailed': 'Платёж не удалён',
   'write.rolledBack': 'Изменение отменено.',
   'expense.saveFallback':
     'Не удалось сохранить трату. Попробуйте ещё раз через минуту.',

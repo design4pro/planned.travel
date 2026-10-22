@@ -49,6 +49,15 @@ const messages = {
   'delete.balancesChange': 'Balances change for {names}.',
   'delete.confirm': 'Delete expense',
   'delete.working': 'Deleting the expense',
+  /* ------------------------------------------------ delete a payment */
+  'delete.payment.title': 'Delete this payment?',
+  /** `{title}` is the two people: "You → Anna". */
+  'delete.payment.description':
+    '“{title}” comes off the ledger. This cannot be undone. To correct a payment, record it again.',
+  'delete.payment.failedBody':
+    'The payment could not be deleted. Try again in a moment.',
+  'delete.payment.confirm': 'Delete payment',
+  'delete.payment.working': 'Deleting the payment',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Expenses',
@@ -219,6 +228,8 @@ const messages = {
    */
   'payments.empty.body':
     'Once someone pays a balance back, the transfer is logged here.',
+  /** The accessible name of a payment row's delete button; `{from}` and `{to}` are people ("You", "Anna"). */
+  'payments.delete': 'Delete the payment from {from} to {to}, {amount}',
   /* ---------------------------------------- display currency (#844) */
   /**
    * The reader's display currency: a second figure beside the budget-currency one, never a
@@ -414,6 +425,8 @@ const messages = {
   'write.paymentRecorded': 'Payment recorded',
   'write.paymentRecordedBody': 'Both balances are updated.',
   'write.paymentFailed': 'The payment was not recorded',
+  'write.paymentDeleted': 'Payment deleted',
+  'write.paymentDeleteFailed': 'The payment was not deleted',
   /** The failure toast's second line when the server gave no sentence to show. */
   'write.rolledBack': 'The change was rolled back.',
   /** The expense dialog's inline reason when the server gave no sentence to show. */

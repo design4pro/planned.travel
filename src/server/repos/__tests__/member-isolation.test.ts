@@ -1455,7 +1455,9 @@ describe('member isolation', () => {
       expect(item.name).toBe('Meals')
 
       await deleteBudgetItem(stranger, mine, own.budgetItemId)
-      await deleteSettlement(stranger, mine, own.settlementId)
+      const removed = await deleteSettlement(stranger, mine, own.settlementId)
+      expect(removed.id).toBe(own.settlementId)
+      expect(removed.tripId).toBe(mine)
       expect(await listBudgetItems(stranger, mine)).toEqual([])
       expect(await listSettlements(stranger, mine)).toEqual([])
     })

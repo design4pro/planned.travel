@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Canvien els saldos de {names}.',
   'delete.confirm': 'Elimina la despesa',
   'delete.working': 'S’està eliminant la despesa',
+  'delete.payment.title': 'Vols eliminar aquest pagament?',
+  'delete.payment.description':
+    '«{title}» surt del compte. Això no es pot desfer. Per corregir un pagament, torna a registrar-lo.',
+  'delete.payment.failedBody':
+    'No s’ha pogut eliminar el pagament. Torna-ho a provar en un moment.',
+  'delete.payment.confirm': 'Elimina el pagament',
+  'delete.payment.working': 'S’està eliminant el pagament',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Despeses',
@@ -182,6 +189,7 @@ const messages = {
   'payments.empty.title': 'Encara cap pagament',
   'payments.empty.body':
     'Quan algú retorna un saldo, la transferència queda registrada aquí.',
+  'payments.delete': 'Elimina el pagament de {from} a {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Aquest viatge està arxivat. Restaura’l abans de canviar les despeses.',
@@ -363,6 +371,8 @@ const messages = {
   'write.paymentRecorded': 'Pagament registrat',
   'write.paymentRecordedBody': 'Els dos saldos s’han actualitzat.',
   'write.paymentFailed': 'No s’ha registrat el pagament',
+  'write.paymentDeleted': 'Pagament eliminat',
+  'write.paymentDeleteFailed': 'No s’ha eliminat el pagament',
   'write.rolledBack': 'El canvi s’ha desfet.',
   'expense.saveFallback':
     'No s’ha pogut desar la despesa. Torna-ho a provar d’aquí a un moment.',

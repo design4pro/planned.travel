@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Số dư của {names} thay đổi.',
   'delete.confirm': 'Xóa khoản chi',
   'delete.working': 'Đang xóa khoản chi',
+  'delete.payment.title': 'Xóa khoản thanh toán này?',
+  'delete.payment.description':
+    '“{title}” rời khỏi bảng tính. Không thể hoàn lại. Để sửa một khoản thanh toán, hãy ghi lại nó.',
+  'delete.payment.failedBody':
+    'Không xóa được khoản thanh toán. Thử lại sau một lát.',
+  'delete.payment.confirm': 'Xóa khoản thanh toán',
+  'delete.payment.working': 'Đang xóa khoản thanh toán',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Khoản chi',
@@ -176,6 +183,7 @@ const messages = {
   'payments.empty.title': 'Chưa có khoản trả nào',
   'payments.empty.body':
     'Khi ai đó trả lại số dư, giao dịch sẽ được ghi ở đây.',
+  'payments.delete': 'Xóa khoản thanh toán từ {from} cho {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Chuyến đi này đã được lưu trữ. Hãy khôi phục trước khi thay đổi chi phí.',
@@ -341,6 +349,8 @@ const messages = {
   'write.paymentRecorded': 'Đã ghi nhận khoản thanh toán',
   'write.paymentRecordedBody': 'Cả hai số dư đã được cập nhật.',
   'write.paymentFailed': 'Chưa ghi nhận được khoản thanh toán',
+  'write.paymentDeleted': 'Đã xoá khoản thanh toán',
+  'write.paymentDeleteFailed': 'Chưa xoá được khoản thanh toán',
   'write.rolledBack': 'Thay đổi đã được hoàn lại.',
   'expense.saveFallback': 'Không lưu được khoản chi. Hãy thử lại sau một lát.',
 } satisfies TranslationOf<typeof En>
