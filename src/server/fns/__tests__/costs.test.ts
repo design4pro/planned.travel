@@ -28,9 +28,12 @@ import {
   createTrip,
   deleteExpense,
   getExpenseWithShares,
+  getMemberBalances,
+  listAuditLog,
   getDisplayCurrency,
   listSettlements,
   setDisplayCurrency,
+  suggestSettlements,
   listTripExpenses,
   removeTripMember,
   updateTrip,
@@ -100,6 +103,8 @@ const {
   costsPayload,
   createExpenseFn,
   deleteExpenseFn,
+  deletePaymentFn,
+  deletePaymentSchema,
   recordPaymentFn,
   recordPaymentSchema,
   setDisplayCurrencyFn,
@@ -373,6 +378,230 @@ describe('the costs boundary', () => {
             originalCurrency: 'GB',
           }).success,
         ).toBe(false)
+      })
+    })
+  })
+
+  describe('deleting a payment', () => {
+    let settlementId: string
+    let balancesWithout: Awaited<ReturnType<typeof getMemberBalances>>
+    let suggestionsWithout: Awaited<ReturnType<typeof suggestSettlements>>
+
+    beforeEach(async () => {
+      balancesWithout = await getMemberBalances(tenant.scope, tripId)
+      suggestionsWithout = await suggestSettlements(tenant.scope, tripId)
+      const recorded = await createSettlement(tenant.scope, payment())
+      settlementId = recorded.id
+      stubs.mirrorToRoom.mockClear()
+    })
+
+    const remove = (id = settlementId, onTrip = tripId) =>
+      inStart(() =>
+        deletePaymentFn({ data: { tripId: onTrip, settlementId: id } }),
+      )
+
+    const paymentAudit = async () =>
+      (await listAuditLog(tenant.scope, { entityType: 'payment' })).items
+
+    it.each([
+      ['a viewer', () => viewer],
+      ['a workspace member who only reads the trip', () => reader],
+    ])(
+      'is refused for %s: the payment stays, no room is told, nothing is audited',
+      async (_name, who) => {
+        stubs.scope = who()
+
+        const error = await captureError(() => remove())
+
+        expect(error).toBeInstanceOf(TripRoleError)
+        expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
+        expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+        expect(await paymentAudit()).toEqual([])
+      },
+    )
+
+    it('is removed by an editor who did not record it, and the balances and suggestions forget it', async () => {
+      stubs.scope = editor
+      const withPayment = await getMemberBalances(tenant.scope, tripId)
+      expect(withPayment).not.toEqual(balancesWithout)
+
+      await remove()
+
+      expect(await listSettlements(tenant.scope, tripId)).toEqual([])
+      expect(await getMemberBalances(tenant.scope, tripId)).toEqual(
+        balancesWithout,
+      )
+      expect(await suggestSettlements(tenant.scope, tripId)).toEqual(
+        suggestionsWithout,
+      )
+    })
+
+    it('is removed by the owner', async () => {
+      stubs.scope = tenant.scope
+
+      await remove()
+
+      expect(await listSettlements(tenant.scope, tripId)).toEqual([])
+    })
+
+    it('tells the room the trip’s money changed, with no tombstone', async () => {
+      stubs.scope = editor
+
+      await remove()
+
+      expect(stubs.mirrorToRoom).toHaveBeenCalledTimes(1)
+      expect(stubs.mirrorToRoom).toHaveBeenCalledWith(
+        expect.anything(),
+        tripId,
+        [
+          {
+            entity: { kind: 'trip', id: tripId },
+            op: 'upsert',
+            fields: { expensesChangedAt: expect.any(Number) },
+          },
+        ],
+      )
+    })
+
+    it('writes one payment.deleted entry that carries the amount and currency and no person', async () => {
+      stubs.scope = editor
+
+      await remove()
+
+      const entries = await paymentAudit()
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toMatchObject({
+        action: 'payment.deleted',
+        entityType: 'payment',
+        entityId: settlementId,
+        metadata: { tripId, amountMinor: 1_000, currency: 'EUR' },
+      })
+      expect(Object.keys(entries[0]?.metadata ?? {}).sort()).toEqual([
+        'amountMinor',
+        'currency',
+        'tripId',
+      ])
+    })
+
+    it('answers a missing id like an id of another trip of the workspace, and deletes nothing', async () => {
+      stubs.scope = editor
+      const elsewhere = await createTrip(tenant.scope, {
+        title: 'Porto',
+        slug: 'porto',
+        startDate: '2026-05-01',
+        endDate: '2026-05-03',
+        currency: 'EUR',
+      })
+
+      const missing = await captureError(() => remove('missing-payment-id'))
+      const otherTrip = await captureError(() =>
+        remove(settlementId, elsewhere.id),
+      )
+
+      expect(missing).toBeInstanceOf(NotFoundError)
+      expect(otherTrip).toBeInstanceOf(NotFoundError)
+      expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
+      expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+      expect(await paymentAudit()).toEqual([])
+    })
+
+    it('answers an id of another workspace as a missing id: nothing is deleted and neither workspace is audited', async () => {
+      const stranger = await harness.seedTenant('payment-stranger')
+      const strangerTrip = await createTrip(stranger.scope, {
+        title: 'Elsewhere',
+        slug: 'elsewhere',
+        startDate: '2026-04-10',
+        endDate: '2026-04-13',
+        currency: 'EUR',
+      })
+      const strangerPayer = await stranger.addUser('Their payer')
+      await addTripMember(stranger.scope, {
+        tripId: strangerTrip.id,
+        userId: strangerPayer,
+        role: 'viewer',
+      })
+      const theirs = await createSettlement(stranger.scope, {
+        tripId: strangerTrip.id,
+        fromUserId: strangerPayer,
+        toUserId: stranger.ownerUserId,
+        amountMinor: 500,
+        method: 'cash',
+        settledOn: '2026-04-11',
+        note: null,
+      })
+      stubs.scope = editor
+
+      const naming = await captureError(() => remove(theirs.id))
+      const withTheirTrip = await captureError(() =>
+        remove(theirs.id, strangerTrip.id),
+      )
+
+      expect(naming).toBeInstanceOf(NotFoundError)
+      expect(withTheirTrip).toBeInstanceOf(NotFoundError)
+      expect(
+        await listSettlements(stranger.scope, strangerTrip.id),
+      ).toHaveLength(1)
+      expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
+      expect(await paymentAudit()).toEqual([])
+      expect(
+        (await listAuditLog(stranger.scope, { entityType: 'payment' })).items,
+      ).toEqual([])
+    })
+
+    it('is refused on an archived trip, and the payment stays', async () => {
+      stubs.scope = editor
+      await archiveTrip(tenant.scope, tripId)
+
+      const error = await captureError(() => remove())
+
+      expect(error).toBeInstanceOf(TripArchivedError)
+      expect(await listSettlements(tenant.scope, tripId)).toHaveLength(1)
+      expect(await paymentAudit()).toEqual([])
+    })
+
+    it('removes a payment whose recorder has left the trip', async () => {
+      const leaving = await tenant.addUser('The recorder who leaves')
+      const seat = await addTripMember(tenant.scope, {
+        tripId,
+        userId: leaving,
+        role: 'editor',
+      })
+      const theirs = await createSettlement(tenant.scopeFor(leaving), payment())
+      await removeTripMember(tenant.scope, seat.id)
+      stubs.scope = editor
+
+      await remove(theirs.id)
+
+      expect(
+        (await listSettlements(tenant.scope, tripId)).map((row) => row.id),
+      ).toEqual([settlementId])
+    })
+
+    it('removes a payment the trip’s currency change re-based', async () => {
+      await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: 160 })
+      stubs.scope = editor
+
+      await remove()
+
+      expect(await listSettlements(tenant.scope, tripId)).toEqual([])
+      expect((await paymentAudit())[0]?.metadata).toMatchObject({
+        currency: 'JPY',
+      })
+    })
+
+    describe('input', () => {
+      it('is strict: it takes the trip and the payment and nothing else', () => {
+        expect(
+          deletePaymentSchema.safeParse({ tripId, settlementId }).success,
+        ).toBe(true)
+        expect(
+          deletePaymentSchema.safeParse({ tripId, settlementId, note: 'x' })
+            .success,
+        ).toBe(false)
+        expect(deletePaymentSchema.safeParse({ tripId }).success).toBe(false)
+        expect(deletePaymentSchema.safeParse({ settlementId }).success).toBe(
+          false,
+        )
       })
     })
   })

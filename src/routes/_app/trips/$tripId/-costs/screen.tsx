@@ -44,7 +44,7 @@ import {
 import { TripModuleHeader, useTripHeader } from '../../../-ui/trip-header'
 import { categoryOptions } from './categories'
 import { ExpenseList } from './expense-list'
-import { CostsRail } from './rail'
+import { CostsRail, isolate, paymentArrow, paymentWho } from './rail'
 import { StatTiles } from './stat-tiles'
 import { useCostsActions } from './actions'
 import { CurrencyRebaseDialog } from './currency-rebase-dialog'
@@ -57,6 +57,7 @@ import type {
 import type {
   CostsExpense,
   CostsPayload,
+  CostsSettlement,
   CostsSuggestion,
   ExpenseCategory,
 } from '#/server/fns/costs'
@@ -81,6 +82,11 @@ type Session =
     }
   | { readonly kind: 'delete'; readonly id: number; readonly row: CostsExpense }
   | {
+      readonly kind: 'deletePayment'
+      readonly id: number
+      readonly row: CostsSettlement
+    }
+  | {
       readonly kind: 'currency'
       readonly id: number
       readonly currency: string
@@ -101,6 +107,7 @@ export function CostsScreen({
     editExpense,
     removeExpense,
     addPayment,
+    removePayment,
     setDisplay,
     savingDisplay,
   } = useCostsActions(data)
@@ -110,6 +117,8 @@ export function CostsScreen({
   // A monotonic counter, not state: it only ever feeds the `key` of the dialog
   // being opened, and bumping it must not itself schedule a render.
   const sessions = useRef(0)
+  const paymentsRef = useRef<HTMLDivElement>(null)
+  const paymentOpener = useRef<HTMLElement | null>(null)
 
   const start = useCallback((make: (id: number) => Session): void => {
     sessions.current += 1
@@ -134,6 +143,32 @@ export function CostsScreen({
   const openDelete = useCallback(
     (row: CostsExpense): void => {
       start((id) => ({ kind: 'delete', id, row }))
+    },
+    [start],
+  )
+
+  const paymentTitle = (row: CostsSettlement): string => {
+    const who = paymentWho(
+      row,
+      (userId) =>
+        data.people.find((person) => person.userId === userId)?.name ??
+        t('costs.person.removed'),
+      data.viewerUserId,
+      t,
+    )
+    return `${isolate(who.from)} ${paymentArrow(locale)} ${isolate(who.to)}`
+  }
+
+  const openDeletePayment = useCallback(
+    (row: CostsSettlement): void => {
+      // Safari and Firefox on macOS do not focus a button on click, so the focus holder can be the
+      // page itself: that is no opener, and the Payments list takes focus instead.
+      const holder = document.activeElement
+      paymentOpener.current =
+        holder instanceof HTMLElement && holder !== document.body
+          ? holder
+          : null
+      start((id) => ({ kind: 'deletePayment', id, row }))
     },
     [start],
   )
@@ -532,6 +567,8 @@ export function CostsScreen({
             canWrite={data.canWrite}
             onSettle={settle}
             onAddPayment={() => openPayment(null)}
+            onDeletePayment={openDeletePayment}
+            paymentsRef={paymentsRef}
           />
         </div>
       </AppSections>
@@ -598,6 +635,35 @@ export function CostsScreen({
           onChanged={(to) => {
             toast.success(t('costs.rebase.done', { to }))
             void router.invalidate({ sync: true })
+          }}
+        />
+      ) : null}
+
+      {session.kind === 'deletePayment' ? (
+        <ConfirmDeleteDialog
+          key={`delete-payment-${session.id}`}
+          open={open}
+          onOpenChange={setOpen}
+          subject="payment"
+          title={paymentTitle(session.row)}
+          amountMinor={session.row.amountMinor}
+          currency={data.currency}
+          affects={[session.row.fromUserId, session.row.toUserId].map(
+            (userId) =>
+              data.people.find((person) => person.userId === userId)?.name ??
+              t('costs.person.removedTarget'),
+          )}
+          onConfirm={() => removePayment(session.row)}
+          // The dialog cannot hand focus back itself: its own button takes focus first (`autoFocus`),
+          // so the element it remembers is gone with it. The button that opened it gets focus back
+          // while it is still on the page; after a delete it is not (and after a refusal the row is a
+          // new node), and the Payments list takes focus instead.
+          onCloseAutoFocus={(event) => {
+            event.preventDefault()
+            const opener = paymentOpener.current
+            paymentOpener.current = null
+            const target = opener?.isConnected ? opener : paymentsRef.current
+            target?.focus({ preventScroll: true })
           }}
         />
       ) : null}

@@ -24,6 +24,7 @@ import {
 
 import type { CostsFilters, CostsOp } from '../data'
 import type {
+  CostsBalance,
   CostsExpense,
   CostsPayload,
   CostsPerson,
@@ -553,6 +554,66 @@ describe('applyOps — payment', () => {
   it('leaves the expense list untouched', () => {
     const snapshot = applyOps(PAYLOAD, [
       { kind: 'payment', key: 'k1', row: payment },
+    ])
+    expect(snapshot.expenses).toHaveLength(3)
+    expect(snapshot.busyExpenseIds.size).toBe(0)
+  })
+})
+
+describe('applyOps — unpay', () => {
+  const recorded = PAYLOAD.settlements[0]
+
+  it('drops the payment from the list and puts both sides of the balance back', () => {
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'unpay', key: 'k1', previous: recorded },
+    ])
+    expect(snapshot.settlements.map((row) => row.id)).not.toContain(recorded.id)
+    expect(snapshot.settlements).toHaveLength(PAYLOAD.settlements.length - 1)
+    const balance = (userId: string): number =>
+      snapshot.balances.find((row) => row.userId === userId)?.balanceMinor ?? 0
+    const before = (userId: string): number =>
+      PAYLOAD.balances.find((row) => row.userId === userId)?.balanceMinor ?? 0
+    expect(balance(recorded.fromUserId)).toBe(
+      before(recorded.fromUserId) - recorded.amountMinor,
+    )
+    expect(balance(recorded.toUserId)).toBe(
+      before(recorded.toUserId) + recorded.amountMinor,
+    )
+  })
+
+  it('undoes a payment exactly: recording and then removing it changes nothing', () => {
+    const payment: CostsSettlement = { ...recorded, id: 'pending-pay' }
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'payment', key: 'k1', row: payment },
+      { kind: 'unpay', key: 'k2', previous: payment },
+    ])
+    expect(snapshot.settlements).toEqual(PAYLOAD.settlements)
+    const net = (rows: ReadonlyArray<CostsBalance>): Array<[string, number]> =>
+      rows
+        .map((row): [string, number] => [row.userId, row.balanceMinor])
+        .sort(([left], [right]) => left.localeCompare(right))
+    expect(net(snapshot.balances)).toEqual(net(PAYLOAD.balances))
+  })
+
+  it('does not shift the balances twice once the loader has already lost the payment', () => {
+    const reloaded: CostsPayload = {
+      ...PAYLOAD,
+      settlements: PAYLOAD.settlements.filter((row) => row.id !== recorded.id),
+    }
+    const snapshot = applyOps(reloaded, [
+      { kind: 'unpay', key: 'k1', previous: recorded },
+    ])
+    expect(snapshot.settlements).toEqual(reloaded.settlements)
+    const net = (rows: ReadonlyArray<CostsBalance>): Array<[string, number]> =>
+      rows
+        .map((row): [string, number] => [row.userId, row.balanceMinor])
+        .sort(([left], [right]) => left.localeCompare(right))
+    expect(net(snapshot.balances)).toEqual(net(reloaded.balances))
+  })
+
+  it('leaves the expense list untouched', () => {
+    const snapshot = applyOps(PAYLOAD, [
+      { kind: 'unpay', key: 'k1', previous: recorded },
     ])
     expect(snapshot.expenses).toHaveLength(3)
     expect(snapshot.busyExpenseIds.size).toBe(0)

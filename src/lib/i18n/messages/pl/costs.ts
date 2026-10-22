@@ -35,6 +35,13 @@ const messages = {
   'delete.balancesChange': 'Zmieniają się salda: {names}.',
   'delete.confirm': 'Usuń wydatek',
   'delete.working': 'Usuwanie wydatku',
+  'delete.payment.title': 'Usunąć tę płatność?',
+  'delete.payment.description':
+    '„{title}” znika z rozliczenia. Tego nie da się cofnąć. Aby poprawić płatność, zapisz ją jeszcze raz.',
+  'delete.payment.failedBody':
+    'Nie udało się usunąć płatności. Spróbuj za chwilę.',
+  'delete.payment.confirm': 'Usuń płatność',
+  'delete.payment.working': 'Usuwanie płatności',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Wydatki',
@@ -186,6 +193,7 @@ const messages = {
   'payments.empty.title': 'Jeszcze bez wpłat',
   'payments.empty.body':
     'Gdy ktoś oddaje saldo, przelew zostaje zapisany tutaj.',
+  'payments.delete': 'Usuń płatność od {from} do {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ta podróż jest zarchiwizowana. Przywróć ją, aby zmienić koszty.',
@@ -376,6 +384,8 @@ const messages = {
   'write.paymentRecorded': 'Zapisano płatność',
   'write.paymentRecordedBody': 'Oba salda są zaktualizowane.',
   'write.paymentFailed': 'Nie zapisano płatności',
+  'write.paymentDeleted': 'Usunięto płatność',
+  'write.paymentDeleteFailed': 'Nie usunięto płatności',
   'write.rolledBack': 'Zmiana została cofnięta.',
   'expense.saveFallback': 'Nie udało się zapisać wydatku. Spróbuj za chwilę.',
 } satisfies TranslationOf<typeof En>

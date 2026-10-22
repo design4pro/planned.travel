@@ -31,6 +31,13 @@ const messages = {
   'delete.balancesChange': 'Cambian los saldos de {names}.',
   'delete.confirm': 'Eliminar gasto',
   'delete.working': 'Eliminando el gasto',
+  'delete.payment.title': '¿Eliminar este pago?',
+  'delete.payment.description':
+    '«{title}» sale de la cuenta. Esto no se puede deshacer. Para corregir un pago, vuelve a registrarlo.',
+  'delete.payment.failedBody':
+    'No se ha podido eliminar el pago. Inténtalo en un momento.',
+  'delete.payment.confirm': 'Eliminar pago',
+  'delete.payment.working': 'Eliminando el pago',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Gastos',
@@ -183,6 +190,7 @@ const messages = {
   'payments.empty.title': 'Aún no hay pagos',
   'payments.empty.body':
     'Cuando alguien devuelve un saldo, la transferencia queda registrada aquí.',
+  'payments.delete': 'Eliminar el pago de {from} a {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Este viaje está archivado. Restáuralo antes de cambiar los gastos.',
@@ -363,6 +371,8 @@ const messages = {
   'write.paymentRecorded': 'Pago registrado',
   'write.paymentRecordedBody': 'Los dos saldos están actualizados.',
   'write.paymentFailed': 'No se registró el pago',
+  'write.paymentDeleted': 'Pago eliminado',
+  'write.paymentDeleteFailed': 'No se eliminó el pago',
   'write.rolledBack': 'Se deshizo el cambio.',
   'expense.saveFallback':
     'No se pudo guardar el gasto. Inténtalo de nuevo en un momento.',
