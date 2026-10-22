@@ -78,6 +78,11 @@ const messages = {
   'theme.state.dark': 'ダーク',
   'theme.state.system': 'システムに合わせています',
   'theme.trigger': 'テーマ: {state}。テーマを変更',
+  'language.trigger': '言語: {language}。言語を変更',
+  'language.hint': 'この端末に保存されます。ログインすると、アカウントで設定した言語が適用されます。設定で変更できます。',
+  'language.announce': '言語を{language}に変更しました',
+  'language.notApplied':
+    'このブラウザーは選択を保存しませんでした。このサイトのCookieを許可してから、もう一度選択してください。',
   'bell.none': '通知、未読はありません',
   'bell.unread': { other: '通知、未読{unread}件' },
   'inbox.eyebrow': '受信箱',

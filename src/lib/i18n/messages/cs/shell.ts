@@ -100,6 +100,12 @@ const messages = {
   'theme.state.dark': 'tmavý',
   'theme.state.system': 'podle systému',
   'theme.trigger': 'Téma: {state}. Změnit téma',
+  'language.trigger': 'Jazyk: {language}. Změnit jazyk',
+  'language.hint':
+    'Pamatuje se na tomto zařízení. Po přihlášení platí jazyk nastavený ve vašem účtu; změnit jej můžete v Nastavení.',
+  'language.announce': 'Jazyk byl změněn na {language}',
+  'language.notApplied':
+    'Tento prohlížeč vaši volbu nezachoval. Povolte pro tento web cookies a vyberte jazyk znovu.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Oznámení, nic nepřečteného',

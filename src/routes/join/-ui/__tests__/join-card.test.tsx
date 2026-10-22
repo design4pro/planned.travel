@@ -21,6 +21,9 @@ import type { ReactNode } from 'react'
 
 const auth = vi.hoisted(() => ({ setActive: vi.fn() }))
 
+vi.mock('#/components/layout/visitor-language-switcher', () => ({
+  VisitorLanguageSwitcher: () => null,
+}))
 vi.mock('#/lib/auth/client', () => ({
   authClient: { organization: { setActive: auth.setActive } },
 }))

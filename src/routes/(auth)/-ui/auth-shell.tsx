@@ -36,6 +36,7 @@ import { Map, Users, Wallet } from 'lucide-react'
 
 import { Wordmark } from '#/components/layout/brand'
 import { ThemeToggle } from '#/components/layout/theme-toggle'
+import { VisitorLanguageSwitcher } from '#/components/layout/visitor-language-switcher'
 import { SectionLabel, Separator } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -344,7 +345,10 @@ export function AuthShell({
             >
               <Wordmark size="md" showSuffix />
             </Link>
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <VisitorLanguageSwitcher />
+            </div>
           </header>
 
           <main
