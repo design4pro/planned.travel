@@ -558,3 +558,49 @@ outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their call
 | 17  | Panel round 1 (product owner, software architect, security and tenancy, accessibility, traveller) | All five: **approve with conditions**. Every condition is applied in the revision that follows the first commit of this spec                                                                                                                                                                                                                                                                                                                                                                                                                                                             | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; no specialist answered revise                                                                                                                                                         |
 | 18  | Panel round 2 (product owner, software architect, security and tenancy, accessibility, traveller) | Product owner, accessibility, traveller: **approve**. Software architect: **approve with conditions** (callback path matched by prefix; `signedIn` read through the router, not by importing `__root.tsx`; the scope's plain `Database` handle and the `authDb` comment; a harness that migrates the full schema). Security and tenancy: **approve with conditions** (the ordering clause failed closed, since replaced by the race test of row 19; no server-side sign-up caller forwards another person's headers). All conditions were wording or test-harness points and are applied | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; nobody answered revise after round 2 and the security reviewer approved with conditions that are now in the text                                                                      |
 | 19  | Late round-2 review (product owner, second pass)                                                  | **Approve with conditions**, all applied: the "workspace created in this call" gate is removed (row 13); the race test replaces the ordering clause; the first-render edge case is stated; the privacy intro no longer calls the cookie necessary; the evidence-table sentence agrees with its rows                                                                                                                                                                                                                                                                                      | Panel verdicts recorded as `afk-plan-to-spec` § 5 requires; nobody answered revise                                                                                                                                                                |
+
+## Amendment
+
+### The switcher shipped differently in five places - #1173
+
+- **The wordmark gives up more than its suffix.** The suffix alone was not enough: with the switcher mounted, the marketing
+  header measured 372px in `en` at 360px, and the French "Start free" button alone is about 195px. `Wordmark` gained `compact`:
+  below `sm` the `.travel` suffix becomes a dot, and below 30rem the word goes and the mark stands alone (the home link keeps its
+  `aria-label`). The header no longer scrolls horizontally at 360px in `en`, `fr`, `de` and `uk`. The "Start free" button and
+  every target size are unchanged.
+- **The popover is named with `aria-label`, not `aria-labelledby`.** The label string lives inside the picker, and the popover
+  and the group would otherwise be named from two sources; `settings.language.label` is passed to both.
+- **The join page does not carry the switcher.** `MarketingHeader minimal` (used by `/join/$token`) stays the wordmark and the
+  theme toggle. `/join/$token` declares a `pendingComponent` with `staleTime: 0`, so a foreground refresh there can replace the
+  frame, header included, and lose the pending state, the announcement and focus.
+- **A refresh that did not happen is `stale`, and the trigger shows work in flight.** The root loader never rejects: on a failed
+  negotiation or catalogue load it answers English with no messages. The switcher treats that as `stale`, not as `unapplied`, so
+  it does not tell a person to allow cookies. While a save runs the trigger carries `aria-busy` and a spinner, because Escape
+  or an outside click closes the popover and its chip is the only other signal. Focus returns to the trigger after a switch only
+  if it is still inside the popover, on the trigger or nowhere; someone who has moved on keeps their place.
+- **The header gives up room between 640px and 1280px, and the name shows from `xl`, not `sm`.** Measured against the header
+  with the switcher hidden, the name pushed the marketing header past the viewport between 640px and 1024px in 11 locales
+  (`fr` by 92px at 640px and 141px at 1024px; `es`, `nl`, `pt-BR`, `uk`, `de`, `pl` and others by 15-38px), because "Pricing",
+  "Sign in" and "Start free" are all visible there. The trigger is the icon alone (40px, the name stays in its accessible
+  name) until `xl`; "Pricing" shows from `md` instead of `sm` and the landing page's in-page anchors from `xl` instead of
+  `lg` (the French header was already 35px too wide at 1024px). After the change no width from 360px to 1280px overflows
+  because of the header in any of the 23 locales, and `/login` is clean at every width. Below 22rem the header takes
+  `px-3` and `gap-1` and "Start free" `px-2.5`, because the French row was 15px too wide at 320px; every locale's header
+  now fits at 320px. Still wider than the screen,
+  untouched by this slice: the document at 320px in ten locales, and at 360px in `el`, `ru`, `uk` (#1497).
+
+### The sign-up seed shipped in its own closed leaf, behind an allowlist - #1174
+
+- **`seedUserLocale` lives in `src/server/repos/user-locale-seed.ts`, not `settings.ts`.** The auth layer may reach the
+  repository graph only through auth-runtime-free leaf modules (docs/SPEC.md §5, ADR 0043, pinned by
+  `src/server/fns/console/__tests__/isolation.test.ts`). `settings.ts` also holds `appSettingsStore` (the global
+  `app_settings` writer) and `updateOrganizationSettings`; importing it from the sign-up hook would have put both into the
+  console and auth graph. The leaf imports only `./base`, the schema and the locale list, and is the second closed exception
+  after `workspace-invitation-acceptance` (#1009).
+- **Seeding is allowed on `/sign-up/email` and the `/callback/` prefix only, and only from `context.request`.** The hook cannot
+  tell a person registering from an administrator's `createUser` by a session check, because `/admin/create-user` forwards the
+  admin's own cookie. An in-process `auth.api.*` call carries `headers` but no `request`, so a server-side caller can never
+  seed. The id-token route `/sign-in/social` is off the list; no client of this product sends an `idToken`.
+- **The scope role is `member`.** The insert needs no administrator right.
+- **The `authDb` comment was already stale.** `organization-invitations.ts` imported `#/server/repos/base` before this change,
+  so the repository graph was not a new edge for the auth layer; only `index.ts` importing it directly is new.

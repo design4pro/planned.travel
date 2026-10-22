@@ -40,7 +40,7 @@ import {
 import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_DAY_COUNT_MAX, inclusiveDays, shiftDate } from '#/lib/trip-dates'
-import { openedCurrencyLabel } from '../settings/-lib/regional'
+import { openedCurrencyLabel } from '../-lib/currency-names'
 import { TripCoverField } from './trip-cover-field'
 
 import type { ComboboxOption } from '#/components/ui'

@@ -574,11 +574,18 @@ export async function getExpenseWithShares(
   return { expense, shares }
 }
 
-/** Creates an expense and, when participants are supplied, its split rows. */
-export async function createExpense(
+/**
+ * Parses a new expense and runs every guard that precedes its insert: the trip is readable,
+ * writable and not archived, the caller holds a money role, the trip currency matches the caller's
+ * expectation, and the day, place, budget line and people it names belong to the trip.
+ *
+ * The one place those guards live, shared by {@link createExpense} and the writer that creates a
+ * booking's cost line together with its link, so the two cannot drift apart.
+ */
+export async function prepareExpenseInsert(
   scope: TenantScope,
   input: CreateExpenseInput,
-): Promise<ExpenseWithShares> {
+) {
   const {
     participants,
     expectedTripCurrency: expected,
@@ -600,6 +607,15 @@ export async function createExpense(
     [values.paidBy, ...(participants ?? []).map((part) => part.userId)],
     async () => [],
   )
+  return { values, participants }
+}
+
+/** Creates an expense and, when participants are supplied, its split rows. */
+export async function createExpense(
+  scope: TenantScope,
+  input: CreateExpenseInput,
+): Promise<ExpenseWithShares> {
+  const { values, participants } = await prepareExpenseInsert(scope, input)
 
   const expense = await expensesRepository.insert(scope, {
     ...values,
@@ -1014,13 +1030,18 @@ export async function createSettlement(
   })
 }
 
+/**
+ * Removes a payment of the trip, for good, and hands back the row it removed so the caller can
+ * record what was deleted: the row is gone once this returns, and the audit entry names its amount.
+ */
 export async function deleteSettlement(
   scope: TenantScope,
   tripId: string,
   settlementId: string,
-): Promise<void> {
-  await requireTripSettlement(scope, tripId, settlementId)
+): Promise<Settlement> {
+  const settlement = await requireTripSettlement(scope, tripId, settlementId)
   await settlementsRepository.requireRemove(scope, settlementId)
+  return settlement
 }
 
 /* -------------------------------------------------------------------------------------------------

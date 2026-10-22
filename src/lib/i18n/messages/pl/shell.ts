@@ -103,6 +103,12 @@ const messages = {
   'theme.state.dark': 'ciemny',
   'theme.state.system': 'jak w systemie',
   'theme.trigger': 'Motyw: {state}. Zmień motyw',
+  'language.trigger': 'Język: {language}. Zmień język',
+  'language.hint':
+    'Zapamiętany na tym urządzeniu. Po zalogowaniu obowiązuje język ustawiony w Twoim koncie; możesz go zmienić w Ustawieniach.',
+  'language.announce': 'Zmieniono język na {language}',
+  'language.notApplied':
+    'Ta przeglądarka nie zachowała Twojego wyboru. Zezwól na pliki cookie dla tej witryny i wybierz ponownie.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Powiadomienia, nic nieprzeczytanego',

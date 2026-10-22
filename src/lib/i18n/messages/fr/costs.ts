@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Les soldes de {names} changent.',
   'delete.confirm': 'Supprimer la dépense',
   'delete.working': 'Suppression de la dépense',
+  'delete.payment.title': 'Supprimer ce paiement ?',
+  'delete.payment.description':
+    '« {title} » quitte le décompte. C’est irréversible. Pour corriger un paiement, enregistrez-le à nouveau.',
+  'delete.payment.failedBody':
+    'Le paiement n’a pas pu être supprimé. Réessayez dans un instant.',
+  'delete.payment.confirm': 'Supprimer le paiement',
+  'delete.payment.working': 'Suppression du paiement',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Dépenses',
@@ -97,18 +104,15 @@ const messages = {
   'expense.what': 'C’était pour quoi',
   'expense.whatPlaceholder': 'Dîner au Kyubey',
   'expense.amountNotANumber': 'Saisissez le montant sous forme de nombre.',
-  'expense.currencyLabel': 'Devise dans laquelle ce justificatif est libellé',
   'expense.convertedTo': 'Converti en {currency}',
   'expense.convertedHint': 'Ce que {from} a donné en {to} sur votre relevé.',
   'expense.convertedSuggested':
     'Suggéré d’après le taux utilisé sur ce voyage le {date} ({rate}). Modifiez-le pour qu’il corresponde à votre relevé.',
   'expense.convertedNotANumber':
     'Saisissez le montant converti sous forme de nombre.',
-  'expense.dateLabel': 'Date de la dépense',
   'expense.paidByHint':
     'Laissez sans payeur si vous notez un justificatif que personne n’a encore pris en charge.',
   'expense.nobodyYet': 'Personne encore',
-  'expense.whoPaid': 'Qui a payé',
   'expense.notesHint': 'Facultatif. Tout ce que le justificatif ne dit pas.',
   'expense.notesPlaceholder': 'Menu dégustation partagé, boissons à part.',
   'expense.noAmount': 'Pas encore de montant',
@@ -125,14 +129,9 @@ const messages = {
   'payment.pickTwo': 'Choisissez deux personnes différentes.',
   'payment.paidTo': 'Payé à',
   'payment.needsTwo': 'Un paiement demande deux personnes différentes.',
-  'payment.whoPaying': 'Qui paie',
-  'payment.whoPaid': 'Qui est payé',
   'payment.amountIn': 'Montant en {currency}',
   'payment.amountPositive': 'Saisissez un montant supérieur à zéro.',
-  'payment.currencyLabel': 'Devise dans laquelle le paiement a été effectué',
   'payment.how': 'Comment',
-  'payment.howMade': 'Comment le paiement a été fait',
-  'payment.dateLabel': 'Date du paiement',
   'payment.note': 'Note',
   'payment.noteHint': 'Facultatif. Une référence, ou ce que ça couvrait.',
   'payment.notePlaceholder': 'Couvre l’hôtel de Kyoto et les pass JR.',
@@ -193,6 +192,7 @@ const messages = {
   'payments.empty.title': 'Aucun paiement pour l’instant',
   'payments.empty.body':
     'Dès que quelqu’un rembourse un solde, le virement est enregistré ici.',
+  'payments.delete': 'Supprimer le paiement de {from} à {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ce voyage est archivé. Restaurez-le avant de modifier les dépenses.',
@@ -376,6 +376,8 @@ const messages = {
   'write.paymentRecorded': 'Paiement enregistré',
   'write.paymentRecordedBody': 'Les deux soldes sont à jour.',
   'write.paymentFailed': 'Le paiement n’a pas été enregistré',
+  'write.paymentDeleted': 'Paiement supprimé',
+  'write.paymentDeleteFailed': 'Le paiement n’a pas été supprimé',
   'write.rolledBack': 'La modification a été annulée.',
   'expense.saveFallback':
     'La dépense n’a pas pu être enregistrée. Réessayez dans un instant.',

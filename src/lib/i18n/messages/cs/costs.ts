@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Mění se zůstatky: {names}.',
   'delete.confirm': 'Smazat výdaj',
   'delete.working': 'Výdaj se maže',
+  'delete.payment.title': 'Smazat tuto platbu?',
+  'delete.payment.description':
+    '„{title}“ mizí z vyúčtování. Tohle nelze vzít zpět. Chcete-li platbu opravit, zaznamenejte ji znovu.',
+  'delete.payment.failedBody':
+    'Platbu se nepodařilo smazat. Zkuste to za chvíli.',
+  'delete.payment.confirm': 'Smazat platbu',
+  'delete.payment.working': 'Platba se maže',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Výdaje',
@@ -97,17 +104,14 @@ const messages = {
   'expense.what': 'Za co to bylo',
   'expense.whatPlaceholder': 'Večeře v Kyubey',
   'expense.amountNotANumber': 'Zadejte částku jako číslo.',
-  'expense.currencyLabel': 'Měna, ve které je účtenka vystavená',
   'expense.convertedTo': 'Přepočteno na {currency}',
   'expense.convertedHint': 'Kolik {from} vyšlo v {to} na vašem výpisu.',
   'expense.convertedSuggested':
     'Navrženo podle kurzu použitého na této cestě dne {date} ({rate}). Upravte částku tak, aby seděla s vaším výpisem.',
   'expense.convertedNotANumber': 'Zadejte přepočtenou částku jako číslo.',
-  'expense.dateLabel': 'Datum výdaje',
   'expense.paidByHint':
     'Nechte bez plátce, pokud zapisujete účtenku, kterou ještě nikdo nepokryl.',
   'expense.nobodyYet': 'Ještě nikdo',
-  'expense.whoPaid': 'Kdo zaplatil',
   'expense.notesHint': 'Nepovinné. Cokoli, co účtenka neříká.',
   'expense.notesPlaceholder': 'Rozdělené degustační menu, pití zvlášť.',
   'expense.noAmount': 'Ještě bez částky',
@@ -124,14 +128,9 @@ const messages = {
   'payment.pickTwo': 'Vyberte dva různé lidi.',
   'payment.paidTo': 'Zaplaceno komu',
   'payment.needsTwo': 'Platba potřebuje dva různé lidi.',
-  'payment.whoPaying': 'Kdo platí',
-  'payment.whoPaid': 'Kdo dostává',
   'payment.amountIn': 'Částka v {currency}',
   'payment.amountPositive': 'Zadejte částku větší než nula.',
-  'payment.currencyLabel': 'Měna, ve které byla platba provedena',
   'payment.how': 'Jak',
-  'payment.howMade': 'Jak platba proběhla',
-  'payment.dateLabel': 'Datum platby',
   'payment.note': 'Poznámka',
   'payment.noteHint': 'Nepovinné. Reference, nebo za co to bylo.',
   'payment.notePlaceholder': 'Pokrývá hotel v Kjótu a jízdenky JR.',
@@ -191,6 +190,7 @@ const messages = {
   'payments.label': 'Zaznamenané platby',
   'payments.empty.title': 'Zatím žádné platby',
   'payments.empty.body': 'Když někdo vrátí zůstatek, převod se zaznamená sem.',
+  'payments.delete': 'Smazat platbu od {from} pro {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Tato cesta je archivovaná. Před změnou nákladů ji obnovte.',
@@ -378,6 +378,8 @@ const messages = {
   'write.paymentRecorded': 'Platba zaznamenána',
   'write.paymentRecordedBody': 'Oba zůstatky jsou aktualizované.',
   'write.paymentFailed': 'Platba se nezaznamenala',
+  'write.paymentDeleted': 'Platba smazána',
+  'write.paymentDeleteFailed': 'Platba se nesmazala',
   'write.rolledBack': 'Změna byla vrácena zpět.',
   'expense.saveFallback':
     'Výdaj se nepodařilo uložit. Zkus to za chvíli znovu.',

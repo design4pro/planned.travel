@@ -79,6 +79,20 @@ const BASEMAP_PICKER_FILE = join(
 )
 
 /**
+ * The currency names, which left `regional.ts` for `_app/-lib/` when the costs dialogs started
+ * reading them. They are still this module's copy (`settings.regional.currency.*`), so the gate
+ * follows them, or the nine keys look like dead copy to the orphan check below.
+ */
+const CURRENCY_NAMES_FILE = join(
+  process.cwd(),
+  'src',
+  'routes',
+  '_app',
+  '-lib',
+  'currency-names.ts',
+)
+
+/**
  * The passkeys screen (09-S1a) lives in `_app/` rather than under settings, and so do the
  * modules that hold its copy; 09-S1b adds the rename field and 09-S1c the delete dialog and the
  * Sign in again action it shares with the manager. `passkey-errors.ts` is the one that
@@ -127,6 +141,10 @@ function shippedSources(): ReadonlyArray<Source> {
   files.push({
     path: BASEMAP_PICKER_FILE,
     text: readFileSync(BASEMAP_PICKER_FILE, 'utf8'),
+  })
+  files.push({
+    path: CURRENCY_NAMES_FILE,
+    text: readFileSync(CURRENCY_NAMES_FILE, 'utf8'),
   })
   for (const path of PASSKEY_FILES) {
     files.push({ path, text: readFileSync(path, 'utf8') })

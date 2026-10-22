@@ -29,6 +29,13 @@ const messages = {
   'delete.balancesChange': 'Saldona för {names} ändras.',
   'delete.confirm': 'Ta bort utgift',
   'delete.working': 'Utgiften tas bort',
+  'delete.payment.title': 'Ta bort den här betalningen?',
+  'delete.payment.description':
+    '”{title}” lämnar avräkningen. Det går inte att ångra. Vill du rätta en betalning, registrera den på nytt.',
+  'delete.payment.failedBody':
+    'Betalningen kunde inte tas bort. Försök igen om en stund.',
+  'delete.payment.confirm': 'Ta bort betalning',
+  'delete.payment.working': 'Betalningen tas bort',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Utgifter',
@@ -91,17 +98,14 @@ const messages = {
   'expense.what': 'Vad var det för',
   'expense.whatPlaceholder': 'Middag på Kyubey',
   'expense.amountNotANumber': 'Skriv beloppet som ett tal.',
-  'expense.currencyLabel': 'Valuta som kvittot är skrivet i',
   'expense.convertedTo': 'Omräknat till {currency}',
   'expense.convertedHint': 'Vad {from} blev i {to} på ditt utdrag.',
   'expense.convertedSuggested':
     'Föreslaget utifrån kursen som användes på den här resan den {date} ({rate}). Ändra så att det stämmer med ditt kontoutdrag.',
   'expense.convertedNotANumber': 'Skriv det omräknade beloppet som ett tal.',
-  'expense.dateLabel': 'Datum för utgiften',
   'expense.paidByHint':
     'Lämna den utan betalare om du skriver upp ett kvitto ingen har täckt än.',
   'expense.nobodyYet': 'Ingen än',
-  'expense.whoPaid': 'Vem som betalade',
   'expense.notesHint': 'Frivilligt. Allt kvittot inte säger.',
   'expense.notesPlaceholder': 'Delad avsmakningsmeny, drycker separat.',
   'expense.noAmount': 'Inget belopp än',
@@ -118,14 +122,9 @@ const messages = {
   'payment.pickTwo': 'Välj två olika personer.',
   'payment.paidTo': 'Betalad till',
   'payment.needsTwo': 'En betalning behöver två olika personer.',
-  'payment.whoPaying': 'Vem som betalar',
-  'payment.whoPaid': 'Vem som får',
   'payment.amountIn': 'Belopp i {currency}',
   'payment.amountPositive': 'Skriv ett belopp större än noll.',
-  'payment.currencyLabel': 'Valuta som betalningen gjordes i',
   'payment.how': 'Hur',
-  'payment.howMade': 'Hur betalningen gjordes',
-  'payment.dateLabel': 'Datum för betalningen',
   'payment.note': 'Anteckning',
   'payment.noteHint': 'Frivilligt. En referens, eller vad den täckte.',
   'payment.notePlaceholder': 'Täcker hotellet i Kyoto och JR-korten.',
@@ -183,6 +182,7 @@ const messages = {
   'payments.empty.title': 'Inga betalningar än',
   'payments.empty.body':
     'När någon betalar tillbaka ett saldo loggas överföringen här.',
+  'payments.delete': 'Ta bort betalningen från {from} till {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Den här resan är arkiverad. Återställ den innan du ändrar kostnaderna.',
@@ -352,6 +352,8 @@ const messages = {
   'write.paymentRecorded': 'Betalning registrerad',
   'write.paymentRecordedBody': 'Båda saldona är uppdaterade.',
   'write.paymentFailed': 'Betalningen registrerades inte',
+  'write.paymentDeleted': 'Betalning borttagen',
+  'write.paymentDeleteFailed': 'Betalningen togs inte bort',
   'write.rolledBack': 'Ändringen ångrades.',
   'expense.saveFallback':
     'Utgiften kunde inte sparas. Försök igen om en stund.',

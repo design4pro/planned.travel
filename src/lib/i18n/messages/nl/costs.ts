@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'De saldi van {names} veranderen.',
   'delete.confirm': 'Uitgave verwijderen',
   'delete.working': 'Uitgave wordt verwijderd',
+  'delete.payment.title': 'Deze betaling verwijderen?',
+  'delete.payment.description':
+    '‘{title}’ gaat uit de afrekening. Dit kun je niet terugdraaien. Wil je een betaling corrigeren, leg haar dan opnieuw vast.',
+  'delete.payment.failedBody':
+    'De betaling kon niet worden verwijderd. Probeer het straks nog eens.',
+  'delete.payment.confirm': 'Betaling verwijderen',
+  'delete.payment.working': 'Betaling wordt verwijderd',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Uitgaven',
@@ -93,17 +100,14 @@ const messages = {
   'expense.what': 'Waar was het voor',
   'expense.whatPlaceholder': 'Diner bij Kyubey',
   'expense.amountNotANumber': 'Vul het bedrag in als getal.',
-  'expense.currencyLabel': 'Valuta waarin deze bon is opgemaakt',
   'expense.convertedTo': 'Omgerekend naar {currency}',
   'expense.convertedHint': 'Waar {from} op je afschrift in {to} op uitkwam.',
   'expense.convertedSuggested':
     'Voorgesteld op basis van de koers die op deze reis op {date} is gebruikt ({rate}). Pas het aan zodat het klopt met je afschrift.',
   'expense.convertedNotANumber': 'Vul het omgerekende bedrag in als getal.',
-  'expense.dateLabel': 'Datum van de uitgave',
   'expense.paidByHint':
     'Laat het zonder betaler als je een bon vastlegt die nog niemand heeft voorgeschoten.',
   'expense.nobodyYet': 'Nog niemand',
-  'expense.whoPaid': 'Wie heeft betaald',
   'expense.notesHint': 'Optioneel. Alles wat de bon niet zegt.',
   'expense.notesPlaceholder': 'Menu gedeeld, drankjes apart.',
   'expense.noAmount': 'Nog geen bedrag',
@@ -120,14 +124,9 @@ const messages = {
   'payment.pickTwo': 'Kies twee verschillende mensen.',
   'payment.paidTo': 'Betaald aan',
   'payment.needsTwo': 'Een betaling heeft twee verschillende mensen nodig.',
-  'payment.whoPaying': 'Wie betaalt',
-  'payment.whoPaid': 'Wie betaald wordt',
   'payment.amountIn': 'Bedrag in {currency}',
   'payment.amountPositive': 'Vul een bedrag groter dan nul in.',
-  'payment.currencyLabel': 'Valuta waarin de betaling is gedaan',
   'payment.how': 'Hoe',
-  'payment.howMade': 'Hoe de betaling is gedaan',
-  'payment.dateLabel': 'Datum van de betaling',
   'payment.note': 'Notitie',
   'payment.noteHint': 'Optioneel. Een referentie, of waar het voor was.',
   'payment.notePlaceholder': 'Dekt het hotel in Kyoto en de JR-passen.',
@@ -186,6 +185,7 @@ const messages = {
   'payments.empty.title': 'Nog geen betalingen',
   'payments.empty.body':
     'Zodra iemand een saldo terugbetaalt, wordt de overboeking hier vastgelegd.',
+  'payments.delete': 'Betaling van {from} aan {to} verwijderen, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Deze reis is gearchiveerd. Herstel de reis voordat je de kosten wijzigt.',
@@ -360,6 +360,8 @@ const messages = {
   'write.paymentRecorded': 'Betaling vastgelegd',
   'write.paymentRecordedBody': 'Beide saldi zijn bijgewerkt.',
   'write.paymentFailed': 'De betaling is niet vastgelegd',
+  'write.paymentDeleted': 'Betaling verwijderd',
+  'write.paymentDeleteFailed': 'De betaling is niet verwijderd',
   'write.rolledBack': 'De wijziging is teruggedraaid.',
   'expense.saveFallback':
     'De uitgave kon niet worden opgeslagen. Probeer het zo meteen opnieuw.',

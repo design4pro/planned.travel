@@ -277,6 +277,9 @@ const messages = {
   'book.toast.addFailed': 'لم يُضَف الحجز',
   'book.toast.updated': 'حُدِّث الحجز',
   'book.toast.updateFailed': 'لم يُحدَّث الحجز',
+  'book.toast.ledgerRefused': 'حُفظ، لكنه لم يُضف إلى التكاليف',
+  'book.toast.ledgerRefusedBody':
+    'افتح الحجز واحفظه مرة أخرى لإضافة بند تكلفته.',
 
   'book.emptyFacts':
     'لا شيء بعد سوى الاسم. افتحه لإضافة الوقت والسعر ورقم التأكيد.',
@@ -558,10 +561,6 @@ const messages = {
   'book.field.stopPlaceholder': 'غير مرتبط بمحطة',
   'book.field.stopSearch': 'ابحث في المحطات والأيام',
   'book.field.stopEmpty': 'لا محطة تطابق ذلك',
-  'book.ledger.refused.title': 'حُفظ، لكنه لم يُضف إلى التكاليف',
-  'book.ledger.refused.body':
-    'الحجز على الرحلة. إضافة بند تكلفته إلى تكاليف الرحلة لم تنجح — أعد محاولة هذا النصف.',
-  'book.action.ledgerRetry': 'أضفه إلى دفتر التكاليف',
   'book.ledger.splitStale.title': 'حُفظ، لكن التقسيم لم يعد يطابق الإجمالي',
   'book.ledger.splitStale.body':
     'حُفظ الحجز وسعره الجديد، لكن طريقة تقسيم بند التكلفة هذا لم تتمكن من مواكبة الإجمالي الجديد. افتح البند في التكاليف وصحّح التقسيم.',

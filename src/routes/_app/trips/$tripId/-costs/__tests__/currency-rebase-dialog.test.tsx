@@ -23,6 +23,11 @@ import Costs from '#/lib/i18n/messages/en/costs'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
 import {
+  PL,
+  copyOf,
+  descriptionOf,
+} from '#/components/costs/__tests__/localised'
+import {
   COMMIT_TIMEOUT_MS,
   CurrencyRebaseDialog,
 } from '../currency-rebase-dialog'
@@ -1014,5 +1019,36 @@ describe('the budget currency dialog: its code', () => {
     // A type-only import is erased; any other import from `#/server` would reach the Worker.
     expect(source).not.toMatch(/^import(?!\s+type)[^']*?from\s+'#\/server/ms)
     expect(source).toMatch(/^import type [^']*?from\s+'#\/server/ms)
+  })
+})
+
+describe('the currency picker in the reader’s language (#1217)', () => {
+  it('names a catalogued and an uncatalogued currency in Polish, never the English literal', async () => {
+    const user = hand()
+    render(
+      <I18nProvider locale={PL.locale} messages={PL.messages}>
+        <CurrencyRebaseDialog
+          open
+          onOpenChange={() => {}}
+          currency="EUR"
+          people={PEOPLE}
+          loadPreview={async () => preview()}
+          commit={async () => undefined}
+          readCurrency={async () => 'EUR'}
+          onChanged={() => {}}
+        />
+      </I18nProvider>,
+    )
+
+    await user.click(
+      screen.getByRole('combobox', {
+        name: copyOf(PL.messages, 'costs.rebase.to'),
+      }),
+    )
+
+    expect(descriptionOf('PLN')).toBe('złoty polski')
+    const forint = descriptionOf('HUF')
+    expect(forint).toMatch(/forint/i)
+    expect(forint).not.toBe('Hungarian forint')
   })
 })

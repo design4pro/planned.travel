@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Saldo {names} berubah.',
   'delete.confirm': 'Hapus pengeluaran',
   'delete.working': 'Menghapus pengeluaran',
+  'delete.payment.title': 'Hapus pembayaran ini?',
+  'delete.payment.description':
+    '“{title}” keluar dari catatan. Ini tidak bisa dibatalkan. Untuk mengoreksi pembayaran, catat ulang.',
+  'delete.payment.failedBody':
+    'Pembayaran tidak bisa dihapus. Coba lagi sebentar.',
+  'delete.payment.confirm': 'Hapus pembayaran',
+  'delete.payment.working': 'Menghapus pembayaran',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Pengeluaran',
@@ -92,17 +99,14 @@ const messages = {
   'expense.what': 'Untuk apa ini',
   'expense.whatPlaceholder': 'Makan malam di Kyubey',
   'expense.amountNotANumber': 'Tulis jumlahnya sebagai angka.',
-  'expense.currencyLabel': 'Mata uang yang tertulis di kuitansi ini',
   'expense.convertedTo': 'Dikonversi ke {currency}',
   'expense.convertedHint': 'Berapa {from} jadinya dalam {to} di rekeningmu.',
   'expense.convertedSuggested':
     'Disarankan dari kurs yang dipakai di perjalanan ini pada {date} ({rate}). Ubah agar sesuai dengan rekeningmu.',
   'expense.convertedNotANumber': 'Tulis jumlah hasil konversi sebagai angka.',
-  'expense.dateLabel': 'Tanggal pengeluaran',
   'expense.paidByHint':
     'Biarkan tanpa pembayar kalau kamu mencatat kuitansi yang belum ditanggung siapa pun.',
   'expense.nobodyYet': 'Belum ada',
-  'expense.whoPaid': 'Siapa yang membayar',
   'expense.notesHint': 'Opsional. Apa pun yang tidak tertulis di kuitansi.',
   'expense.notesPlaceholder': 'Menu degustasi dibagi, minuman terpisah.',
   'expense.noAmount': 'Belum ada jumlah',
@@ -119,14 +123,9 @@ const messages = {
   'payment.pickTwo': 'Pilih dua orang yang berbeda.',
   'payment.paidTo': 'Dibayar ke',
   'payment.needsTwo': 'Pembayaran butuh dua orang yang berbeda.',
-  'payment.whoPaying': 'Siapa yang membayar',
-  'payment.whoPaid': 'Siapa yang dibayar',
   'payment.amountIn': 'Jumlah dalam {currency}',
   'payment.amountPositive': 'Tulis jumlah yang lebih dari nol.',
-  'payment.currencyLabel': 'Mata uang pembayaran',
   'payment.how': 'Bagaimana',
-  'payment.howMade': 'Bagaimana pembayarannya dilakukan',
-  'payment.dateLabel': 'Tanggal pembayaran',
   'payment.note': 'Catatan',
   'payment.noteHint':
     'Opsional. Sebuah referensi, atau apa yang ditanggungnya.',
@@ -183,6 +182,7 @@ const messages = {
   'payments.empty.title': 'Belum ada pembayaran',
   'payments.empty.body':
     'Begitu seseorang melunasi saldo, transfernya dicatat di sini.',
+  'payments.delete': 'Hapus pembayaran dari {from} ke {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Perjalanan ini diarsipkan. Pulihkan sebelum mengubah biaya.',
@@ -350,6 +350,8 @@ const messages = {
   'write.paymentRecorded': 'Pembayaran dicatat',
   'write.paymentRecordedBody': 'Kedua saldo sudah diperbarui.',
   'write.paymentFailed': 'Pembayaran tidak dicatat',
+  'write.paymentDeleted': 'Pembayaran dihapus',
+  'write.paymentDeleteFailed': 'Pembayaran tidak dihapus',
   'write.rolledBack': 'Perubahan dibatalkan.',
   'expense.saveFallback':
     'Pengeluaran tidak bisa disimpan. Coba lagi sebentar lagi.',

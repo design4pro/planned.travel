@@ -98,6 +98,12 @@ const messages = {
   'theme.state.dark': 'koyu',
   'theme.state.system': 'sistemle aynı',
   'theme.trigger': 'Tema: {state}. Temayı değiştir',
+  'language.trigger': 'Dil: {language}. Dili değiştir',
+  'language.hint':
+    'Bu cihazda hatırlanır. Giriş yaptığınızda hesabınızda ayarlanan dil geçerli olur; bunu Ayarlar’dan değiştirebilirsiniz.',
+  'language.announce': 'Dil {language} olarak değiştirildi',
+  'language.notApplied':
+    'Bu tarayıcı seçiminizi saklamadı. Bu site için çerezlere izin verin, ardından yeniden seçin.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Bildirimler, okunmamış yok',

@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Змінюються сальдо: {names}.',
   'delete.confirm': 'Видалити витрату',
   'delete.working': 'Витрата видаляється',
+  'delete.payment.title': 'Видалити цей платіж?',
+  'delete.payment.description':
+    '«{title}» зникає з розрахунку. Це не можна скасувати. Щоб виправити платіж, запишіть його знову.',
+  'delete.payment.failedBody':
+    'Платіж не вдалося видалити. Спробуйте за хвилину.',
+  'delete.payment.confirm': 'Видалити платіж',
+  'delete.payment.working': 'Платіж видаляється',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Витрати',
@@ -96,17 +103,14 @@ const messages = {
   'expense.what': 'За що це було',
   'expense.whatPlaceholder': 'Вечеря в Kyubey',
   'expense.amountNotANumber': 'Введіть суму числом.',
-  'expense.currencyLabel': 'Валюта, у якій виписано чек',
   'expense.convertedTo': 'Перераховано в {currency}',
   'expense.convertedHint': 'У скільки {from} вийшло в {to} за вашою випискою.',
   'expense.convertedSuggested':
     'Запропоновано за курсом, використаним у цій поїздці ({date}, {rate}). Змініть суму, щоб вона збігалася з вашою випискою.',
   'expense.convertedNotANumber': 'Введіть перераховану суму числом.',
-  'expense.dateLabel': 'Дата витрати',
   'expense.paidByHint':
     'Залиште без платника, якщо записуєте чек, який ще ніхто не покрив.',
   'expense.nobodyYet': 'Поки ніхто',
-  'expense.whoPaid': 'Хто оплатив',
   'expense.notesHint': 'Необов’язково. Усе, чого не каже чек.',
   'expense.notesPlaceholder': 'Поділили дегустаційне меню, напої окремо.',
   'expense.noAmount': 'Поки без суми',
@@ -123,14 +127,9 @@ const messages = {
   'payment.pickTwo': 'Виберіть двох різних учасників.',
   'payment.paidTo': 'Оплачено кому',
   'payment.needsTwo': 'Платіж потребує двох різних учасників.',
-  'payment.whoPaying': 'Хто платить',
-  'payment.whoPaid': 'Хто отримує',
   'payment.amountIn': 'Сума в {currency}',
   'payment.amountPositive': 'Введіть суму більшу за нуль.',
-  'payment.currencyLabel': 'Валюта, у якій здійснено платіж',
   'payment.how': 'Як',
-  'payment.howMade': 'Як пройшов платіж',
-  'payment.dateLabel': 'Дата платежу',
   'payment.note': 'Нотатка',
   'payment.noteHint': 'Необов’язково. Референс або за що це було.',
   'payment.notePlaceholder': 'Покриває готель у Кіото і квитки JR.',
@@ -190,6 +189,8 @@ const messages = {
   'payments.label': 'Записані платежі',
   'payments.empty.title': 'Платежів ще немає',
   'payments.empty.body': 'Коли хтось повертає баланс, переказ записується тут.',
+  'payments.delete':
+    'Видалити платіж: платник {from}, отримувач {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ця подорож в архіві. Відновіть її, перш ніж змінювати витрати.',
@@ -375,6 +376,8 @@ const messages = {
   'write.paymentRecorded': 'Платіж записано',
   'write.paymentRecordedBody': 'Обидва баланси оновлено.',
   'write.paymentFailed': 'Платіж не записано',
+  'write.paymentDeleted': 'Платіж видалено',
+  'write.paymentDeleteFailed': 'Платіж не видалено',
   'write.rolledBack': 'Зміну скасовано.',
   'expense.saveFallback':
     'Не вдалося зберегти витрату. Спробуйте ще раз за хвилину.',

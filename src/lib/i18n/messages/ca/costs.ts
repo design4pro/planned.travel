@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Canvien els saldos de {names}.',
   'delete.confirm': 'Elimina la despesa',
   'delete.working': 'S’està eliminant la despesa',
+  'delete.payment.title': 'Vols eliminar aquest pagament?',
+  'delete.payment.description':
+    '«{title}» surt del compte. Això no es pot desfer. Per corregir un pagament, torna a registrar-lo.',
+  'delete.payment.failedBody':
+    'No s’ha pogut eliminar el pagament. Torna-ho a provar en un moment.',
+  'delete.payment.confirm': 'Elimina el pagament',
+  'delete.payment.working': 'S’està eliminant el pagament',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Despeses',
@@ -94,17 +101,14 @@ const messages = {
   'expense.what': 'Per a què era',
   'expense.whatPlaceholder': 'Sopar al Kyubey',
   'expense.amountNotANumber': 'Escriu l’import com a número.',
-  'expense.currencyLabel': 'Moneda en què està escrit aquest rebut',
   'expense.convertedTo': 'Convertit a {currency}',
   'expense.convertedHint': 'A quant va sortir {from} en {to} al teu extracte.',
   'expense.convertedSuggested':
     'Suggerit a partir de la taxa usada en aquest viatge el {date} ({rate}). Canvia-ho perquè coincideixi amb el teu extracte.',
   'expense.convertedNotANumber': 'Escriu l’import convertit com a número.',
-  'expense.dateLabel': 'Data de la despesa',
   'expense.paidByHint':
     'Deixa-ho sense pagador si estàs anotant un rebut que encara ningú no ha cobert.',
   'expense.nobodyYet': 'Encara ningú',
-  'expense.whoPaid': 'Qui ha pagat',
   'expense.notesHint': 'Opcional. Allò que el rebut no digui.',
   'expense.notesPlaceholder':
     'Menú de degustació compartit, les begudes a part.',
@@ -122,14 +126,9 @@ const messages = {
   'payment.pickTwo': 'Tria dues persones diferents.',
   'payment.paidTo': 'Pagat a',
   'payment.needsTwo': 'Un pagament necessita dues persones diferents.',
-  'payment.whoPaying': 'Qui paga',
-  'payment.whoPaid': 'Qui rep',
   'payment.amountIn': 'Import en {currency}',
   'payment.amountPositive': 'Escriu un import més gran que zero.',
-  'payment.currencyLabel': 'Moneda en què s’ha fet el pagament',
   'payment.how': 'Com',
-  'payment.howMade': 'Com es va fer el pagament',
-  'payment.dateLabel': 'Data del pagament',
   'payment.note': 'Nota',
   'payment.noteHint': 'Opcional. Una referència, o què cobria.',
   'payment.notePlaceholder': 'Cobreix l’hotel de Kyoto i els passis JR.',
@@ -190,6 +189,7 @@ const messages = {
   'payments.empty.title': 'Encara cap pagament',
   'payments.empty.body':
     'Quan algú retorna un saldo, la transferència queda registrada aquí.',
+  'payments.delete': 'Elimina el pagament de {from} a {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Aquest viatge està arxivat. Restaura’l abans de canviar les despeses.',
@@ -371,6 +371,8 @@ const messages = {
   'write.paymentRecorded': 'Pagament registrat',
   'write.paymentRecordedBody': 'Els dos saldos s’han actualitzat.',
   'write.paymentFailed': 'No s’ha registrat el pagament',
+  'write.paymentDeleted': 'Pagament eliminat',
+  'write.paymentDeleteFailed': 'No s’ha eliminat el pagament',
   'write.rolledBack': 'El canvi s’ha desfet.',
   'expense.saveFallback':
     'No s’ha pogut desar la despesa. Torna-ho a provar d’aquí a un moment.',

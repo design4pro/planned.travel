@@ -250,6 +250,9 @@ const messages = {
   'book.toast.addFailed': 'Chưa thêm được chỗ đặt',
   'book.toast.updated': 'Đã cập nhật chỗ đặt',
   'book.toast.updateFailed': 'Chưa cập nhật được chỗ đặt',
+  'book.toast.ledgerRefused': 'Đã lưu, nhưng chưa thêm vào chi phí',
+  'book.toast.ledgerRefusedBody':
+    'Mở chỗ đặt rồi lưu lại để thêm dòng chi phí của nó.',
 
   'book.emptyFacts':
     'Ngoài tên thì chưa có gì. Mở ra để thêm giờ, giá và mã xác nhận.',
@@ -523,10 +526,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Không gắn điểm dừng',
   'book.field.stopSearch': 'Tìm trong điểm dừng và ngày',
   'book.field.stopEmpty': 'Không có điểm dừng nào khớp',
-  'book.ledger.refused.title': 'Đã lưu, nhưng chưa thêm vào chi phí',
-  'book.ledger.refused.body':
-    'Đặt chỗ đã nằm trong chuyến đi. Việc thêm dòng chi phí vào chi phí chuyến đi không thành — hãy thử lại nửa đó.',
-  'book.action.ledgerRetry': 'Thêm vào chi phí',
   'book.ledger.splitStale.title': 'Đã lưu, nhưng phần chia không còn khớp',
   'book.ledger.splitStale.body':
     'Đặt chỗ và giá mới đã được lưu, nhưng cách chia khoản chi phí này không theo kịp tổng mới. Hãy mở khoản đó trong Chi phí và sửa lại phần chia.',

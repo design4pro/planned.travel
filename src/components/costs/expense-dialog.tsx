@@ -42,8 +42,9 @@ import { messageOf } from '#/components/modules/shared'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { formatDate } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { openedCurrencyOptions } from '#/routes/_app/-lib/currency-names'
 import {
-  CURRENCY_OPTIONS,
+  OFFERED_CURRENCY_CODES,
   currencyCode,
   convertMinor,
   formatExchangeRate,
@@ -508,17 +509,16 @@ export function ExpenseDialog({
               </Field>
               <Field label={t('costs.field.currency')}>
                 <SimpleSelect
-                  options={CURRENCY_OPTIONS.map((entry) => ({
-                    value: entry.code,
-                    label: entry.code,
-                    description: entry.name,
-                  }))}
+                  options={openedCurrencyOptions(
+                    t,
+                    locale,
+                    OFFERED_CURRENCY_CODES,
+                  )}
                   value={form.currency}
                   onValueChange={(next) => {
                     stale.dismiss()
                     setForm({ ...form, currency: next })
                   }}
-                  ariaLabel={t('costs.expense.currencyLabel')}
                 />
               </Field>
             </div>
@@ -566,7 +566,6 @@ export function ExpenseDialog({
                   onValueChange={(next) =>
                     setForm({ ...form, category: asCategory(next, categories) })
                   }
-                  ariaLabel={t('modules.field.category')}
                 />
               </Field>
               <Field label={t('costs.field.date')}>
@@ -578,7 +577,6 @@ export function ExpenseDialog({
                       spentOn: next === null ? today : toDayString(next),
                     })
                   }
-                  ariaLabel={t('costs.expense.dateLabel')}
                 />
               </Field>
             </div>
@@ -601,7 +599,6 @@ export function ExpenseDialog({
                 ]}
                 value={form.paidBy}
                 onValueChange={(next) => setForm({ ...form, paidBy: next })}
-                ariaLabel={t('costs.expense.whoPaid')}
               />
             </Field>
 

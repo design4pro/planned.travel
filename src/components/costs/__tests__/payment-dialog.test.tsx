@@ -13,8 +13,14 @@ import Costs from '#/lib/i18n/messages/en/costs'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { PaymentDialog } from '../payment-dialog'
+import {
+  LOCALISED,
+  PL,
+  descriptionOf,
+  expectNamedByVisibleLabel,
+} from './localised'
 
-import type { Catalogue } from '#/lib/i18n'
+import type { Catalogue, Locale } from '#/lib/i18n'
 import type { CostsPerson } from '#/server/fns/costs'
 import type { PaymentFormValue, PaymentSeed } from '../payment-dialog'
 
@@ -441,7 +447,7 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
     const user = hand()
     open(undefined, undefined, null, WITH_LEAVER)
 
-    for (const name of ['Who is paying', 'Who is being paid']) {
+    for (const name of ['Paid by', 'Paid to']) {
       expect((await optionsOf(user, name)).join('|')).not.toContain('Dee')
     }
   })
@@ -455,7 +461,7 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
       WITH_LEAVER,
     )
 
-    expect((await optionsOf(user, 'Who is paying')).join('|')).toContain('Dee')
+    expect((await optionsOf(user, 'Paid by')).join('|')).toContain('Dee')
   })
 
   it('still offers her on the receiving side of a payment that carries her', async () => {
@@ -467,17 +473,57 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
       WITH_LEAVER,
     )
 
-    expect((await optionsOf(user, 'Who is being paid')).join('|')).toContain(
-      'Dee',
-    )
+    expect((await optionsOf(user, 'Paid to')).join('|')).toContain('Dee')
   })
 
   it('offers her on a blank payment while she still has a balance', async () => {
     const user = hand()
     open(undefined, undefined, null, WITH_LEAVER, ['u3'])
 
-    for (const name of ['Who is paying', 'Who is being paid']) {
+    for (const name of ['Paid by', 'Paid to']) {
       expect((await optionsOf(user, name)).join('|')).toContain('Dee')
     }
+  })
+})
+
+/** The dialog open in another reader's language, with the catalogue that language ships. */
+function openIn(locale: Locale, messages: Catalogue): void {
+  render(
+    <I18nProvider locale={locale} messages={messages}>
+      <PaymentDialog
+        open
+        onOpenChange={() => {}}
+        seed={null}
+        people={PEOPLE}
+        viewerUserId="u1"
+        currency="EUR"
+        today="2026-10-12"
+        onSubmit={async () => {}}
+      />
+    </I18nProvider>,
+  )
+}
+
+describe('the payment dialog in the reader’s language (#1217)', () => {
+  it.each(LOCALISED)(
+    'names every select and the date picker by its visible label in $locale',
+    ({ locale, messages }) => {
+      openIn(locale, messages)
+
+      // Paid by, paid to, currency, method, date.
+      expectNamedByVisibleLabel(screen.getByRole('dialog'), 5)
+    },
+  )
+
+  it('names a catalogued and an uncatalogued currency in the reader’s language', async () => {
+    const user = hand()
+    openIn(PL.locale, PL.messages)
+
+    await user.click(currencyPicker())
+
+    expect(descriptionOf('EUR')).toBe('euro')
+    const forint = descriptionOf('HUF')
+    expect(forint).toMatch(/forint/i)
+    expect(forint).not.toBe('Hungarian forint')
   })
 })

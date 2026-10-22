@@ -20,7 +20,8 @@
  * | `categories`    | `categories` |
  * | `tags`          | `tags` |
  * | `transports`    | `transports` |
- * | `reservations`  | `reservations` |
+ * | `day-journeys`  | — `transports.sort_order` and `transport_legs.sort_order`: where a journey sits on a day's number line, planned for `itinerary` and `transports` and written in their batches |
+ * | `reservations`  | `reservations`; also inserts the booking's `expenses` line, in one atomic batch with the booking's link to it |
  * | `expenses`      | `budget_items`, `expenses`, `expense_shares`, `settlements` |
  * | `rates`         | — reads `expenses` and `settlements` for the newest frozen rate of a currency pair |
  * | `trip-currency` | — previews and commits re-basing a trip's budget currency; reads and, in one atomic batch, rewrites `expenses`, `expense_shares`, `settlements`, `budget_items`, `trips` and pins the priced rows of `places`, `reservations`, `transports`, `day_accommodations` |
@@ -54,6 +55,14 @@ export * from './categories'
 export * from './collab'
 export * from './collections'
 export * from './dashboard'
+export {
+  DAY_RUN_ANCHORS_MESSAGE,
+  DAY_RUN_MAX_ANCHORS,
+  DAY_RUN_MAX_ITEMS,
+  dayRunItemInput,
+  withinAnchorBound,
+} from './day-journeys'
+export type { DayRunItemInput } from './day-journeys'
 export * from './days'
 export * from './expenses'
 export * from './files'

@@ -22,7 +22,13 @@
  *   rendered with: a second tab left open while the traveller changed language
  *   in the first would, on Save changes, put the stale tag back — or clear a
  *   freshly-set override to `NULL`. One column, one writer, and the writer for
- *   `user_settings.locale` is `saveLanguagePreference`. `updateUserSettings`
+ *   `user_settings.locale` is `saveLanguagePreference` - with one named second
+ *   writer: sign-up. `seedUserLocale` (`src/server/repos/user-locale-seed.ts`;
+ *   `src/server/auth/signup-locale.ts` calls it from the user-created hook) inserts the row once for a brand-new account so a
+ *   person who registered on a Polish screen opens it in Polish. It is
+ *   insert-if-absent, so it can never put a tag over a saved choice or race this
+ *   writer into restoring a stale one, and signing in never calls it.
+ *   `updateUserSettings`
  *   passes its parsed patch through `definedOnly`, so a column this input does
  *   not carry is not in the `SET` clause at all: the guarantee is structural,
  *   not a promise the client is trusted to keep.

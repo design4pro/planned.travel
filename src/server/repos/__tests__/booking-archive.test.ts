@@ -23,6 +23,7 @@ import {
   createImportedReservation,
   createReservation,
   deleteReservation,
+  createReservationExpense,
   linkReservationExpense,
   listTripReservations,
   markReservationsImported,
@@ -173,6 +174,16 @@ describe('an archived trip’s bookings and stays', () => {
       [
         'linkReservationExpense',
         () => linkReservationExpense(scope, desk.reservationId, desk.expenseId),
+      ],
+      [
+        'createReservationExpense',
+        () =>
+          createReservationExpense(scope, desk.reservationId, {
+            tripId: desk.tripId,
+            title: 'Museum',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
       ],
       [
         'clearReservationImported',

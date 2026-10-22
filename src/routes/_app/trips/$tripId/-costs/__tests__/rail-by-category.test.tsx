@@ -1,3 +1,4 @@
+import { createRef } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 
@@ -57,6 +58,8 @@ function mountRail(
         canWrite={false}
         onSettle={() => undefined}
         onAddPayment={() => undefined}
+        onDeletePayment={() => undefined}
+        paymentsRef={createRef()}
       />
     </I18nProvider>,
   )

@@ -120,9 +120,12 @@ async function storeSession(
  * It runs once per run, in the setup project, because it is the only place a
  * write belongs — a per-test reset would be a write per frame against a
  * database every worker shares. That is enforced by the call graph rather than
- * asserted in prose: the one caller is `cacheSession()`, which `auth.setup.ts`
- * alone runs, and the sign-in fallback a filtered run needs goes to
- * `storeSession()` instead, which touches no fixture data.
+ * asserted in prose: the callers are `cacheSession()`, which `auth.setup.ts`
+ * alone runs, and the `finally` of the one Chromium-only serial walk that
+ * writes the demo member's language ("the visitor language after a signed-in
+ * choice" in `journeys.spec.ts`), which puts the fixture back and asserts it
+ * did. The sign-in fallback a filtered run needs goes to `storeSession()`
+ * instead, which touches no fixture data.
  *
  * The workspace default itself is not ours to set: it is `organization_settings`
  * and an owner's to change. So the pin verifies rather than assumes, and reports

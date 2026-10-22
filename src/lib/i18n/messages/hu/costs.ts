@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': '{names} egyenlege változik.',
   'delete.confirm': 'Kiadás törlése',
   'delete.working': 'A kiadás törlése folyik',
+  'delete.payment.title': 'Törlöd ezt a fizetést?',
+  'delete.payment.description':
+    '„{title}” kiesik az elszámolásból. Ezt nem lehet visszavonni. Egy fizetés javításához rögzítsd újra.',
+  'delete.payment.failedBody':
+    'A fizetést nem sikerült törölni. Próbáld meg egy pillanat múlva.',
+  'delete.payment.confirm': 'Fizetés törlése',
+  'delete.payment.working': 'A fizetés törlése folyik',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Kiadások',
@@ -96,17 +103,14 @@ const messages = {
   'expense.what': 'Mire volt',
   'expense.whatPlaceholder': 'Vacsora a Kyubeyben',
   'expense.amountNotANumber': 'Írd be az összeget számként.',
-  'expense.currencyLabel': 'Az a valuta, amiben a számla készült',
   'expense.convertedTo': 'Átszámítva {currency}-re',
   'expense.convertedHint': 'Mennyi lett {from} a kivonatodon {to}-ben.',
   'expense.convertedSuggested':
     'Javasolt érték az ezen az úton használt árfolyam alapján ({date}, {rate}). Módosítsd, hogy egyezzen a kivonatoddal.',
   'expense.convertedNotANumber': 'Írd be az átszámított összeget számként.',
-  'expense.dateLabel': 'A kiadás dátuma',
   'expense.paidByHint':
     'Hagyd fizető nélkül, ha olyan számlát írsz fel, amit még senki nem állt.',
   'expense.nobodyYet': 'Még senki',
-  'expense.whoPaid': 'Ki fizette',
   'expense.notesHint': 'Nem kötelező. Bármi, amit a számla nem mond el.',
   'expense.notesPlaceholder': 'Megosztott kóstolómenü, az italok külön.',
   'expense.noAmount': 'Még nincs összeg',
@@ -123,14 +127,9 @@ const messages = {
   'payment.pickTwo': 'Válassz két különböző embert.',
   'payment.paidTo': 'Kinek fizette',
   'payment.needsTwo': 'Egy fizetéshez két különböző ember kell.',
-  'payment.whoPaying': 'Ki fizet',
-  'payment.whoPaid': 'Ki kapja',
   'payment.amountIn': 'Összeg {currency}-ben',
   'payment.amountPositive': 'Írj be nullánál nagyobb összeget.',
-  'payment.currencyLabel': 'Valuta, amelyben a fizetés történt',
   'payment.how': 'Hogyan',
-  'payment.howMade': 'Hogyan történt a fizetés',
-  'payment.dateLabel': 'A fizetés dátuma',
   'payment.note': 'Megjegyzés',
   'payment.noteHint': 'Nem kötelező. Egy hivatkozás, vagy hogy mit fedezett.',
   'payment.notePlaceholder': 'A kiotói szállást és a JR-bérleteket fedezi.',
@@ -188,6 +187,7 @@ const messages = {
   'payments.empty.title': 'Még nincs fizetés',
   'payments.empty.body':
     'Amint valaki visszafizet egy egyenleget, az átutalás ide kerül.',
+  'payments.delete': 'Fizetés törlése: fizető {from}, fogadó {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ez az utazás archiválva van. A költségek módosítása előtt állítsd vissza.',
@@ -363,6 +363,8 @@ const messages = {
   'write.paymentRecorded': 'Befizetés rögzítve',
   'write.paymentRecordedBody': 'Mindkét egyenleg frissült.',
   'write.paymentFailed': 'A befizetés nem lett rögzítve',
+  'write.paymentDeleted': 'Fizetés törölve',
+  'write.paymentDeleteFailed': 'A fizetés nem lett törölve',
   'write.rolledBack': 'A módosítás vissza lett vonva.',
   'expense.saveFallback':
     'A kiadást nem sikerült elmenteni. Próbáld újra egy pillanat múlva.',

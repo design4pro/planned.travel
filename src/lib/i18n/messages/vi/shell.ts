@@ -115,6 +115,12 @@ const messages = {
   'theme.state.dark': 'tối',
   'theme.state.system': 'theo hệ thống',
   'theme.trigger': 'Giao diện: {state}. Đổi giao diện',
+  'language.trigger': 'Ngôn ngữ: {language}. Đổi ngôn ngữ',
+  'language.hint':
+    'Được ghi nhớ trên thiết bị này. Sau khi bạn đăng nhập, ngôn ngữ đặt trong tài khoản sẽ được áp dụng; bạn có thể đổi trong Cài đặt.',
+  'language.announce': 'Đã đổi ngôn ngữ sang {language}',
+  'language.notApplied':
+    'Trình duyệt này không lưu lựa chọn của bạn. Hãy cho phép cookie cho trang này rồi chọn lại.',
 
   'bell.none': 'Thông báo, không có mục chưa đọc',
   'bell.unread': { other: 'Thông báo, {unread} mục chưa đọc' },

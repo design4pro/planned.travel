@@ -49,6 +49,15 @@ const messages = {
   'delete.balancesChange': 'Balances change for {names}.',
   'delete.confirm': 'Delete expense',
   'delete.working': 'Deleting the expense',
+  /* ------------------------------------------------ delete a payment */
+  'delete.payment.title': 'Delete this payment?',
+  /** `{title}` is the two people: "You → Anna". */
+  'delete.payment.description':
+    '“{title}” comes off the ledger. This cannot be undone. To correct a payment, record it again.',
+  'delete.payment.failedBody':
+    'The payment could not be deleted. Try again in a moment.',
+  'delete.payment.confirm': 'Delete payment',
+  'delete.payment.working': 'Deleting the payment',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Expenses',
@@ -112,17 +121,14 @@ const messages = {
   'expense.what': 'What was it for',
   'expense.whatPlaceholder': 'Dinner at Kyubey',
   'expense.amountNotANumber': 'Enter the amount as a number.',
-  'expense.currencyLabel': 'Currency this receipt was written in',
   'expense.convertedTo': 'Converted to {currency}',
   'expense.convertedHint': 'What {from} came to in {to} on your statement.',
   'expense.convertedSuggested':
     'Suggested from the rate used on this trip on {date} ({rate}). Change it to match your statement.',
   'expense.convertedNotANumber': 'Enter the converted amount as a number.',
-  'expense.dateLabel': 'Date this was spent',
   'expense.paidByHint':
     'Leave it unclaimed if you are logging a receipt nobody has covered yet.',
   'expense.nobodyYet': 'Nobody yet',
-  'expense.whoPaid': 'Who paid',
   'expense.notesHint': 'Optional. Anything the receipt does not say.',
   'expense.notesPlaceholder': 'Split the tasting menu, drinks were separate.',
   'expense.noAmount': 'No amount yet',
@@ -139,14 +145,9 @@ const messages = {
   'payment.pickTwo': 'Pick two different travellers.',
   'payment.paidTo': 'Paid to',
   'payment.needsTwo': 'A payment needs two different travellers.',
-  'payment.whoPaying': 'Who is paying',
-  'payment.whoPaid': 'Who is being paid',
   'payment.amountIn': 'Amount in {currency}',
   'payment.amountPositive': 'Enter an amount greater than zero.',
-  'payment.currencyLabel': 'Currency the payment was made in',
   'payment.how': 'How',
-  'payment.howMade': 'How the payment was made',
-  'payment.dateLabel': 'Date of the payment',
   'payment.note': 'Note',
   'payment.noteHint': 'Optional. A reference, or what it covered.',
   'payment.notePlaceholder': 'Covers the Kyoto hotel and the JR passes.',
@@ -227,6 +228,8 @@ const messages = {
    */
   'payments.empty.body':
     'Once someone pays a balance back, the transfer is logged here.',
+  /** The accessible name of a payment row's delete button; `{from}` and `{to}` are people ("You", "Anna"). */
+  'payments.delete': 'Delete the payment from {from} to {to}, {amount}',
   /* ---------------------------------------- display currency (#844) */
   /**
    * The reader's display currency: a second figure beside the budget-currency one, never a
@@ -422,6 +425,8 @@ const messages = {
   'write.paymentRecorded': 'Payment recorded',
   'write.paymentRecordedBody': 'Both balances are updated.',
   'write.paymentFailed': 'The payment was not recorded',
+  'write.paymentDeleted': 'Payment deleted',
+  'write.paymentDeleteFailed': 'The payment was not deleted',
   /** The failure toast's second line when the server gave no sentence to show. */
   'write.rolledBack': 'The change was rolled back.',
   /** The expense dialog's inline reason when the server gave no sentence to show. */

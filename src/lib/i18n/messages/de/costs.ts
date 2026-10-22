@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Salden ändern sich für {names}.',
   'delete.confirm': 'Ausgabe löschen',
   'delete.working': 'Ausgabe wird gelöscht',
+  'delete.payment.title': 'Diese Zahlung löschen?',
+  'delete.payment.description':
+    '„{title}“ verschwindet aus der Abrechnung. Das lässt sich nicht rückgängig machen. Um eine Zahlung zu korrigieren, erfasse sie neu.',
+  'delete.payment.failedBody':
+    'Die Zahlung konnte nicht gelöscht werden. Versuch es gleich noch einmal.',
+  'delete.payment.confirm': 'Zahlung löschen',
+  'delete.payment.working': 'Zahlung wird gelöscht',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Ausgaben',
@@ -95,17 +102,14 @@ const messages = {
   'expense.what': 'Wofür war das',
   'expense.whatPlaceholder': 'Abendessen im Kyubey',
   'expense.amountNotANumber': 'Gib den Betrag als Zahl ein.',
-  'expense.currencyLabel': 'Währung, in der dieser Belegt ausgestellt wurde',
   'expense.convertedTo': 'Umgerechnet in {currency}',
   'expense.convertedHint': 'Was {from} auf deinem Auszug in {to} ergab.',
   'expense.convertedSuggested':
     'Vorgeschlagen nach dem Kurs, der auf dieser Reise am {date} verwendet wurde ({rate}). Ändere den Betrag, damit er zu deinem Auszug passt.',
   'expense.convertedNotANumber': 'Gib den umgerechneten Betrag als Zahl ein.',
-  'expense.dateLabel': 'Datum der Ausgabe',
   'expense.paidByHint':
     'Lass es offen, wenn du einen Belegt erfasst, den noch niemand übernommen hat.',
   'expense.nobodyYet': 'Noch niemand',
-  'expense.whoPaid': 'Wer bezahlt hat',
   'expense.notesHint': 'Optional. Alles, was der Belegt nicht sagt.',
   'expense.notesPlaceholder': 'Menü geteilt, Getränke separat.',
   'expense.noAmount': 'Noch kein Betrag',
@@ -122,14 +126,9 @@ const messages = {
   'payment.pickTwo': 'Wähle zwei verschiedene Personen.',
   'payment.paidTo': 'Bezahlt an',
   'payment.needsTwo': 'Eine Zahlung braucht zwei verschiedene Personen.',
-  'payment.whoPaying': 'Wer zahlt',
-  'payment.whoPaid': 'Wer bezahlt wird',
   'payment.amountIn': 'Betrag in {currency}',
   'payment.amountPositive': 'Gib einen Betrag über null ein.',
-  'payment.currencyLabel': 'Währung, in der bezahlt wurde',
   'payment.how': 'Wie',
-  'payment.howMade': 'Wie die Zahlung erfolgt ist',
-  'payment.dateLabel': 'Datum der Zahlung',
   'payment.note': 'Notiz',
   'payment.noteHint': 'Optional. Eine Referenz, oder wofür es war.',
   'payment.notePlaceholder': 'Deckt das Hotel in Kyoto und die JR-Tickets.',
@@ -187,6 +186,7 @@ const messages = {
   'payments.empty.title': 'Noch keine Zahlungen',
   'payments.empty.body':
     'Sobald jemand einen Saldo zurückzahlt, wird die Überweisung hier erfasst.',
+  'payments.delete': 'Zahlung von {from} an {to} löschen, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Diese Reise ist archiviert. Stelle sie wieder her, bevor du die Kosten änderst.',
@@ -362,6 +362,8 @@ const messages = {
   'write.paymentRecorded': 'Zahlung erfasst',
   'write.paymentRecordedBody': 'Beide Salden sind aktualisiert.',
   'write.paymentFailed': 'Die Zahlung wurde nicht erfasst',
+  'write.paymentDeleted': 'Zahlung gelöscht',
+  'write.paymentDeleteFailed': 'Die Zahlung wurde nicht gelöscht',
   'write.rolledBack': 'Die Änderung wurde zurückgenommen.',
   'expense.saveFallback':
     'Die Ausgabe konnte nicht gespeichert werden. Versuche es gleich noch einmal.',

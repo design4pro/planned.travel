@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': '{names} の残高が変わります。',
   'delete.confirm': '支出を削除',
   'delete.working': '支出を削除しています',
+  'delete.payment.title': 'この支払いを削除しますか？',
+  'delete.payment.description':
+    '「{title}」が精算から消えます。取り消せません。支払いを訂正するには、もう一度記録してください。',
+  'delete.payment.failedBody':
+    '支払いを削除できませんでした。少し待って、もう一度お試しください。',
+  'delete.payment.confirm': '支払いを削除',
+  'delete.payment.working': '支払いを削除しています',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': '支出',
@@ -94,17 +101,14 @@ const messages = {
   'expense.what': '何の費用か',
   'expense.whatPlaceholder': 'Kyubey での夕食',
   'expense.amountNotANumber': '金額は数字で入力してください。',
-  'expense.currencyLabel': 'このレシートが書かれている通貨',
   'expense.convertedTo': '{currency} に換算',
   'expense.convertedHint': '明細で {from} が {to} でいくらになったか。',
   'expense.convertedSuggested':
     'この旅行で {date} に使われたレート ({rate}) から提案しています。明細に合わせて変更してください。',
   'expense.convertedNotANumber': '換算後の金額は数字で入力してください。',
-  'expense.dateLabel': '支出した日',
   'expense.paidByHint':
     '誰も立て替えていないレシートを記録するなら、支払った人は空のままで構いません。',
   'expense.nobodyYet': 'まだ誰もいません',
-  'expense.whoPaid': '支払った人',
   'expense.notesHint': '任意。レシートに書かれていないこと。',
   'expense.notesPlaceholder': 'コース料理は割り勘、飲み物は別。',
   'expense.noAmount': 'まだ金額がありません',
@@ -121,14 +125,9 @@ const messages = {
   'payment.pickTwo': '別々の2人を選んでください。',
   'payment.paidTo': '受け取った人',
   'payment.needsTwo': '支払いには別々の2人が必要です。',
-  'payment.whoPaying': '支払う人',
-  'payment.whoPaid': '受け取る人',
   'payment.amountIn': '{currency} での金額',
   'payment.amountPositive': '0 より大きい金額を入力してください。',
-  'payment.currencyLabel': '支払いに使った通貨',
   'payment.how': '方法',
-  'payment.howMade': '支払いの方法',
-  'payment.dateLabel': '支払った日',
   'payment.note': 'メモ',
   'payment.noteHint': '任意。参照番号や、何の分か。',
   'payment.notePlaceholder': '京都のホテルと JR パスの分。',
@@ -183,6 +182,7 @@ const messages = {
   'payments.label': '記録された支払い',
   'payments.empty.title': 'まだ支払いはありません',
   'payments.empty.body': '誰かが残高を返済すると、送金がここに記録されます。',
+  'payments.delete': '{from}から{to}への支払い（{amount}）を削除',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'この旅行はアーカイブされています。費用を変更する前に復元してください。',
@@ -346,6 +346,8 @@ const messages = {
   'write.paymentRecorded': '支払いを記録しました',
   'write.paymentRecordedBody': '双方の残高を更新しました。',
   'write.paymentFailed': '支払いを記録できませんでした',
+  'write.paymentDeleted': '支払いを削除しました',
+  'write.paymentDeleteFailed': '支払いを削除できませんでした',
   'write.rolledBack': '変更を元に戻しました。',
   'expense.saveFallback':
     '支出を保存できませんでした。しばらくしてからもう一度お試しください。',

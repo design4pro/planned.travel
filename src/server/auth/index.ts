@@ -50,6 +50,7 @@ import {
   workspaceIdsOf,
 } from './room-eviction'
 import { createKvSecondaryStorage } from './secondary-storage'
+import { seedSignupLocale } from './signup-locale'
 import { passwordAttempts } from './password-attempts'
 import { twoFactorEnableGuard } from './two-factor-guard'
 import type { Database } from '#/server/db/types'
@@ -447,12 +448,18 @@ function buildAuth() {
     databaseHooks: {
       user: {
         create: {
-          after: async (user) => {
+          after: async (user, context) => {
             const organizationId = await provisionPersonalOrganization(
               authDb(),
               { id: user.id, name: user.name, email: user.email },
             )
             logAuth('info', 'organization.provisioned', {
+              userId: user.id,
+              organizationId,
+            })
+            // The only place a sign-up's language is carried into the account; the sign-in fallback
+            // in `session.create.before` never seeds. Best-effort: it cannot fail the sign-up.
+            await seedSignupLocale(() => authRepositoryDb(), context, {
               userId: user.id,
               organizationId,
             })

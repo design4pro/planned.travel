@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Αλλάζουν τα υπόλοιπα: {names}.',
   'delete.confirm': 'Διαγραφή εξόδου',
   'delete.working': 'Το έξοδο διαγράφεται',
+  'delete.payment.title': 'Να διαγραφεί αυτή η πληρωμή;',
+  'delete.payment.description':
+    '«{title}» φεύγει από τον λογαριασμό. Αυτό δεν αναιρείται. Για να διορθώσεις μια πληρωμή, κατάγραψέ την ξανά.',
+  'delete.payment.failedBody':
+    'Η πληρωμή δεν διαγράφηκε. Δοκίμασε ξανά σε λίγο.',
+  'delete.payment.confirm': 'Διαγραφή πληρωμής',
+  'delete.payment.working': 'Η πληρωμή διαγράφεται',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Έξοδα',
@@ -93,17 +100,14 @@ const messages = {
   'expense.what': 'Για ποιο πράγμα ήταν',
   'expense.whatPlaceholder': 'Δείπνο στο Kyubey',
   'expense.amountNotANumber': 'Γράψε το ποσό ως αριθμό.',
-  'expense.currencyLabel': 'Το νόμισμα στο οποίο είναι γραμμένη η απόδειξη',
   'expense.convertedTo': 'Μετατράπηκε σε {currency}',
   'expense.convertedHint': 'Σε πόσα βγήκε {from} σε {to} στο αντίγραφό σου.',
   'expense.convertedSuggested':
     'Προτείνεται από την ισοτιμία που χρησιμοποιήθηκε σε αυτό το ταξίδι στις {date} ({rate}). Άλλαξέ το ώστε να ταιριάζει με το αντίγραφό σου.',
   'expense.convertedNotANumber': 'Γράψε το μετατραπέν ποσό ως αριθμό.',
-  'expense.dateLabel': 'Ημερομηνία του εξόδου',
   'expense.paidByHint':
     'Άφησέ το χωρίς πληρωτή αν καταγράφεις απόδειξη που δεν κάλυψε κανείς ακόμη.',
   'expense.nobodyYet': 'Κανείς ακόμη',
-  'expense.whoPaid': 'Ποιος πλήρωσε',
   'expense.notesHint': 'Προαιρετικό. Ό,τι δεν λέει η απόδειξη.',
   'expense.notesPlaceholder': 'Μοιρασμένο μενού γευσιγνωσίας, τα ποτά χωριστά.',
   'expense.noAmount': 'Χωρίς ποσό ακόμη',
@@ -120,14 +124,9 @@ const messages = {
   'payment.pickTwo': 'Διάλεξε δύο διαφορετικά πρόσωπα.',
   'payment.paidTo': 'Πληρώθηκε σε',
   'payment.needsTwo': 'Μια πληρωμή χρειάζεται δύο διαφορετικά πρόσωπα.',
-  'payment.whoPaying': 'Ποιος πληρώνει',
-  'payment.whoPaid': 'Ποιος πληρώνεται',
   'payment.amountIn': 'Ποσό σε {currency}',
   'payment.amountPositive': 'Γράψε ποσό μεγαλύτερο από μηδέν.',
-  'payment.currencyLabel': 'Νόμισμα στο οποίο έγινε η πληρωμή',
   'payment.how': 'Πώς',
-  'payment.howMade': 'Πώς έγινε η πληρωμή',
-  'payment.dateLabel': 'Ημερομηνία της πληρωμής',
   'payment.note': 'Σημείωση',
   'payment.noteHint': 'Προαιρετικό. Μια αναφορά, ή τι κάλυπτε.',
   'payment.notePlaceholder':
@@ -187,6 +186,7 @@ const messages = {
   'payments.empty.title': 'Καμία πληρωμή ακόμη',
   'payments.empty.body':
     'Μόλις κάποιος επιστρέψει ένα υπόλοιπο, η μεταφορά καταγράφεται εδώ.',
+  'payments.delete': 'Διαγραφή της πληρωμής από {from} προς {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Αυτό το ταξίδι έχει αρχειοθετηθεί. Επαναφέρετέ το πριν αλλάξετε τα έξοδα.',
@@ -365,6 +365,8 @@ const messages = {
   'write.paymentRecorded': 'Η πληρωμή καταγράφηκε',
   'write.paymentRecordedBody': 'Και τα δύο υπόλοιπα ενημερώθηκαν.',
   'write.paymentFailed': 'Η πληρωμή δεν καταγράφηκε',
+  'write.paymentDeleted': 'Η πληρωμή διαγράφηκε',
+  'write.paymentDeleteFailed': 'Η πληρωμή δεν διαγράφηκε',
   'write.rolledBack': 'Η αλλαγή αναιρέθηκε.',
   'expense.saveFallback': 'Το έξοδο δεν αποθηκεύτηκε. Δοκίμασε ξανά σε λίγο.',
 } satisfies TranslationOf<typeof En>

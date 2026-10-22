@@ -267,6 +267,9 @@ const messages = {
   'book.toast.addFailed': 'La reserva no se añadió',
   'book.toast.updated': 'Reserva actualizada',
   'book.toast.updateFailed': 'La reserva no se actualizó',
+  'book.toast.ledgerRefused': 'Guardado, pero no añadido a los gastos',
+  'book.toast.ledgerRefusedBody':
+    'Abre la reserva y guárdala de nuevo para añadir su línea de coste.',
 
   'book.emptyFacts':
     'Aparte del nombre todavía no hay nada. Ábrelo para añadir la hora, el precio y el número de confirmación.',
@@ -551,10 +554,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Sin parada',
   'book.field.stopSearch': 'Busca paradas y días',
   'book.field.stopEmpty': 'Ninguna parada coincide',
-  'book.ledger.refused.title': 'Guardado, pero no añadido a los gastos',
-  'book.ledger.refused.body':
-    'La reserva está en el viaje. Añadir su línea de gasto a los gastos del viaje no funcionó — vuelve a intentar esa mitad.',
-  'book.action.ledgerRetry': 'Añádelo a los gastos',
   'book.ledger.splitStale.title': 'Guardado, pero el reparto ya no cuadra',
   'book.ledger.splitStale.body':
     'La reserva y su nuevo precio se han guardado, pero el reparto de este gasto no ha podido seguir el nuevo total. Abre el gasto en Gastos y corrige el reparto.',

@@ -123,6 +123,7 @@ export const Fab = React.forwardRef<HTMLButtonElement, FabProps>(
           )}
           aria-label={extended ? undefined : label}
           aria-disabled={isDisabled || undefined}
+          aria-busy={loading || undefined}
           {...props}
         >
           <Slot.Slottable>{children}</Slot.Slottable>

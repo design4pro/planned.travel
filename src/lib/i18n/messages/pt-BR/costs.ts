@@ -31,6 +31,13 @@ const messages = {
   'delete.balancesChange': 'Os saldos de {names} mudam.',
   'delete.confirm': 'Excluir despesa',
   'delete.working': 'Excluindo a despesa',
+  'delete.payment.title': 'Excluir este pagamento?',
+  'delete.payment.description':
+    '“{title}” sai da conta. Isso não pode ser desfeito. Para corrigir um pagamento, registre-o de novo.',
+  'delete.payment.failedBody':
+    'Não foi possível excluir o pagamento. Tente de novo em um instante.',
+  'delete.payment.confirm': 'Excluir pagamento',
+  'delete.payment.working': 'Excluindo o pagamento',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Despesas',
@@ -95,17 +102,14 @@ const messages = {
   'expense.what': 'Foi para quê',
   'expense.whatPlaceholder': 'Jantar no Kyubey',
   'expense.amountNotANumber': 'Escreva o valor como número.',
-  'expense.currencyLabel': 'Moeda em que este comprovante foi emitido',
   'expense.convertedTo': 'Convertido para {currency}',
   'expense.convertedHint': 'Quanto {from} deu em {to} no seu extrato.',
   'expense.convertedSuggested':
     'Sugerido a partir da taxa usada nesta viagem em {date} ({rate}). Altere para bater com o seu extrato.',
   'expense.convertedNotANumber': 'Escreva o valor convertido como número.',
-  'expense.dateLabel': 'Data da despesa',
   'expense.paidByHint':
     'Deixe sem pagante se você está registrando um comprovante que ninguém cobriu ainda.',
   'expense.nobodyYet': 'Ninguém ainda',
-  'expense.whoPaid': 'Quem pagou',
   'expense.notesHint': 'Opcional. O que o comprovante não diz.',
   'expense.notesPlaceholder': 'Menu degustação dividido, bebidas à parte.',
   'expense.noAmount': 'Ainda sem valor',
@@ -122,14 +126,9 @@ const messages = {
   'payment.pickTwo': 'Escolha duas pessoas diferentes.',
   'payment.paidTo': 'Pago para',
   'payment.needsTwo': 'Um pagamento precisa de duas pessoas diferentes.',
-  'payment.whoPaying': 'Quem paga',
-  'payment.whoPaid': 'Quem recebe',
   'payment.amountIn': 'Valor em {currency}',
   'payment.amountPositive': 'Escreva um valor maior que zero.',
-  'payment.currencyLabel': 'Moeda em que o pagamento foi feito',
   'payment.how': 'Como',
-  'payment.howMade': 'Como o pagamento foi feito',
-  'payment.dateLabel': 'Data do pagamento',
   'payment.note': 'Observação',
   'payment.noteHint': 'Opcional. Uma referência, ou o que isso cobriu.',
   'payment.notePlaceholder': 'Cobre o hotel de Quioto e os passes JR.',
@@ -189,6 +188,7 @@ const messages = {
   'payments.empty.title': 'Ainda sem pagamentos',
   'payments.empty.body':
     'Quando alguém devolve um saldo, a transferência fica registrada aqui.',
+  'payments.delete': 'Excluir o pagamento de {from} para {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Esta viagem está arquivada. Restaure-a antes de alterar os custos.',
@@ -370,6 +370,8 @@ const messages = {
   'write.paymentRecorded': 'Pagamento registrado',
   'write.paymentRecordedBody': 'Os dois saldos foram atualizados.',
   'write.paymentFailed': 'O pagamento não foi registrado',
+  'write.paymentDeleted': 'Pagamento excluído',
+  'write.paymentDeleteFailed': 'O pagamento não foi excluído',
   'write.rolledBack': 'A alteração foi desfeita.',
   'expense.saveFallback':
     'Não foi possível salvar a despesa. Tente de novo em instantes.',

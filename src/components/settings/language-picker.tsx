@@ -42,6 +42,12 @@ interface LanguagePickerBaseProps {
    * is a compile error rather than a runtime fallback (`docs/SPEC.md` §9 rule 2).
    */
   readonly label: string
+  /**
+   * One sentence under the label and above the grid, which describes the group
+   * (`aria-describedby`) so it is heard when focus enters it. Copy arrives
+   * translated, like `label`; the settings screen has none.
+   */
+  readonly description?: string
   /** Minimum grid track width; settings keeps its measured 10.5rem default. */
   readonly columnMin?: string
   readonly className?: string
@@ -310,11 +316,13 @@ export function LanguagePicker({
   pending = null,
   disabled = false,
   label,
+  description,
   followWorkspaceLabel,
   columnMin,
   className,
 }: LanguagePickerProps) {
   const labelId = React.useId()
+  const descriptionId = React.useId()
   const nodes = React.useRef<Array<HTMLButtonElement | null>>([])
   const busy = pending !== null
   const hasFollowRow = followWorkspaceLabel !== undefined
@@ -422,9 +430,19 @@ export function LanguagePicker({
     <div className={cn('flex flex-col gap-3', className)}>
       <SectionLabel id={labelId}>{label}</SectionLabel>
 
+      {description === undefined ? null : (
+        <p
+          id={descriptionId}
+          className="text-caption leading-relaxed text-ink-3"
+        >
+          {description}
+        </p>
+      )}
+
       <div
         role="radiogroup"
         aria-labelledby={labelId}
+        aria-describedby={description === undefined ? undefined : descriptionId}
         onKeyDown={onKeyDown}
         className={GRID}
         style={

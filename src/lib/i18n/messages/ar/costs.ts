@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'تتغير أرصدة {names}.',
   'delete.confirm': 'احذف المصروف',
   'delete.working': 'يجري حذف المصروف',
+  'delete.payment.title': 'أتحذف هذه الدفعة؟',
+  'delete.payment.description':
+    '«{title}» تخرج من الحساب. ولا رجعة في ذلك. ولتصحيح دفعة، سجّلها من جديد.',
+  'delete.payment.failedBody':
+    'لم نتمكن من حذف الدفعة. أعِد المحاولة بعد لحظة.',
+  'delete.payment.confirm': 'احذف الدفعة',
+  'delete.payment.working': 'يجري حذف الدفعة',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'المصاريف',
@@ -97,17 +104,14 @@ const messages = {
   'expense.what': 'لأي شيء كان',
   'expense.whatPlaceholder': 'عشاء في Kyubey',
   'expense.amountNotANumber': 'اكتب المبلغ رقمًا.',
-  'expense.currencyLabel': 'العملة التي كُتب بها هذا الإيصال',
   'expense.convertedTo': 'محوَّل إلى {currency}',
   'expense.convertedHint': 'ما صار إليه {from} بعملة {to} في كشف حسابك.',
   'expense.convertedSuggested':
     'مقترح من السعر المستخدم في هذه الرحلة بتاريخ {date} ({rate}). عدّله ليطابق كشف حسابك.',
   'expense.convertedNotANumber': 'اكتب المبلغ المحوَّل رقمًا.',
-  'expense.dateLabel': 'تاريخ المصروف',
   'expense.paidByHint':
     'اتركه بلا دافع إن كنت تسجّل إيصالًا لم يتكفّل به أحد بعد.',
   'expense.nobodyYet': 'لا أحد بعد',
-  'expense.whoPaid': 'من دفع',
   'expense.notesHint': 'اختياري. كل ما لا يقوله الإيصال.',
   'expense.notesPlaceholder':
     'تقاسمنا قائمة التذوّق، والمشروبات على حساب كل واحد.',
@@ -125,14 +129,9 @@ const messages = {
   'payment.pickTwo': 'اختر شخصين مختلفين.',
   'payment.paidTo': 'دُفعت إلى',
   'payment.needsTwo': 'الدفعة تحتاج شخصين مختلفين.',
-  'payment.whoPaying': 'من يدفع',
-  'payment.whoPaid': 'من يستلم',
   'payment.amountIn': 'المبلغ بعملة {currency}',
   'payment.amountPositive': 'اكتب مبلغًا أكبر من صفر.',
-  'payment.currencyLabel': 'العملة التي تم بها الدفع',
   'payment.how': 'كيف',
-  'payment.howMade': 'كيف جرت الدفعة',
-  'payment.dateLabel': 'تاريخ الدفعة',
   'payment.note': 'ملاحظة',
   'payment.noteHint': 'اختياري. مرجع، أو ما غطّته.',
   'payment.notePlaceholder': 'تغطي فندق كيوتو وتذاكر JR.',
@@ -195,6 +194,7 @@ const messages = {
   'payments.label': 'الدفعات المسجّلة',
   'payments.empty.title': 'لا دفعات بعد',
   'payments.empty.body': 'عندما يسدّد أحدهم رصيدًا، يُسجّل التحويل هنا.',
+  'payments.delete': 'حذف الدفعة من {from} إلى {to}، {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived': 'هذه الرحلة مؤرشفة. استعدها قبل تغيير التكاليف.',
   'readOnly.title': 'يمكنك الاطّلاع على التكاليف لكن لا يمكنك تغييرها',
@@ -392,6 +392,8 @@ const messages = {
   'write.paymentRecorded': 'سُجّلت الدفعة',
   'write.paymentRecordedBody': 'تحدّث الرصيدان كلاهما.',
   'write.paymentFailed': 'لم تُسجَّل الدفعة',
+  'write.paymentDeleted': 'حُذفت الدفعة',
+  'write.paymentDeleteFailed': 'لم تُحذَف الدفعة',
   'write.rolledBack': 'جرى التراجع عن التغيير.',
   'expense.saveFallback': 'تعذّر حفظ المصروف. حاول مجددًا بعد قليل.',
 } satisfies TranslationOf<typeof En>

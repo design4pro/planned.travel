@@ -93,6 +93,7 @@ import {
   createReservation,
   deleteReservation,
   getReservation,
+  createReservationExpense,
   linkReservationExpense,
   setReservationStatus,
   updateReservation,
@@ -1454,7 +1455,9 @@ describe('member isolation', () => {
       expect(item.name).toBe('Meals')
 
       await deleteBudgetItem(stranger, mine, own.budgetItemId)
-      await deleteSettlement(stranger, mine, own.settlementId)
+      const removed = await deleteSettlement(stranger, mine, own.settlementId)
+      expect(removed.id).toBe(own.settlementId)
+      expect(removed.tripId).toBe(mine)
       expect(await listBudgetItems(stranger, mine)).toEqual([])
       expect(await listSettlements(stranger, mine)).toEqual([])
     })
@@ -2179,6 +2182,16 @@ describe('member isolation', () => {
         [
           'linking a booking to an expense',
           () => linkReservationExpense(scope, reservationId, expenseId),
+        ],
+        [
+          'creating a booking’s cost line',
+          () =>
+            createReservationExpense(scope, reservationId, {
+              tripId: fixture.tripId,
+              title: 'Hijacked',
+              amountMinor: 1_000,
+              spentOn: '2026-04-10',
+            }),
         ],
         [
           'clearing a booking’s import marker',

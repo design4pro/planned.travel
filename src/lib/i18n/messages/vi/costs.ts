@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Số dư của {names} thay đổi.',
   'delete.confirm': 'Xóa khoản chi',
   'delete.working': 'Đang xóa khoản chi',
+  'delete.payment.title': 'Xóa khoản thanh toán này?',
+  'delete.payment.description':
+    '“{title}” rời khỏi bảng tính. Không thể hoàn lại. Để sửa một khoản thanh toán, hãy ghi lại nó.',
+  'delete.payment.failedBody':
+    'Không xóa được khoản thanh toán. Thử lại sau một lát.',
+  'delete.payment.confirm': 'Xóa khoản thanh toán',
+  'delete.payment.working': 'Đang xóa khoản thanh toán',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Khoản chi',
@@ -92,18 +99,15 @@ const messages = {
   'expense.what': 'Chi cho việc gì',
   'expense.whatPlaceholder': 'Bữa tối ở Kyubey',
   'expense.amountNotANumber': 'Nhập số tiền dưới dạng số.',
-  'expense.currencyLabel': 'Tiền tệ ghi trên biên lai này',
   'expense.convertedTo': 'Quy đổi thành {currency}',
   'expense.convertedHint':
     '{from} quy ra {to} trên sao kê của bạn là bao nhiêu.',
   'expense.convertedSuggested':
     'Gợi ý từ tỷ giá đã dùng trong chuyến đi này ({date}, {rate}). Hãy sửa lại cho khớp với sao kê của bạn.',
   'expense.convertedNotANumber': 'Nhập số tiền quy đổi dưới dạng số.',
-  'expense.dateLabel': 'Ngày phát sinh khoản chi',
   'expense.paidByHint':
     'Để trống người trả nếu bạn đang ghi một biên lai chưa ai ứng.',
   'expense.nobodyYet': 'Chưa có ai',
-  'expense.whoPaid': 'Ai đã trả',
   'expense.notesHint': 'Không bắt buộc. Bất cứ điều gì biên lai không nói.',
   'expense.notesPlaceholder': 'Chia suất nếm thử, đồ uống tính riêng.',
   'expense.noAmount': 'Chưa có số tiền',
@@ -120,14 +124,9 @@ const messages = {
   'payment.pickTwo': 'Chọn hai người khác nhau.',
   'payment.paidTo': 'Trả cho',
   'payment.needsTwo': 'Một khoản trả cần hai người khác nhau.',
-  'payment.whoPaying': 'Ai trả',
-  'payment.whoPaid': 'Ai nhận',
   'payment.amountIn': 'Số tiền bằng {currency}',
   'payment.amountPositive': 'Nhập số tiền lớn hơn không.',
-  'payment.currencyLabel': 'Tiền tệ dùng để thanh toán',
   'payment.how': 'Bằng cách nào',
-  'payment.howMade': 'Khoản trả được thực hiện thế nào',
-  'payment.dateLabel': 'Ngày trả',
   'payment.note': 'Ghi chú',
   'payment.noteHint':
     'Không bắt buộc. Một mã tham chiếu, hoặc khoản này chi trả cho gì.',
@@ -184,6 +183,7 @@ const messages = {
   'payments.empty.title': 'Chưa có khoản trả nào',
   'payments.empty.body':
     'Khi ai đó trả lại số dư, giao dịch sẽ được ghi ở đây.',
+  'payments.delete': 'Xóa khoản thanh toán từ {from} cho {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Chuyến đi này đã được lưu trữ. Hãy khôi phục trước khi thay đổi chi phí.',
@@ -349,6 +349,8 @@ const messages = {
   'write.paymentRecorded': 'Đã ghi nhận khoản thanh toán',
   'write.paymentRecordedBody': 'Cả hai số dư đã được cập nhật.',
   'write.paymentFailed': 'Chưa ghi nhận được khoản thanh toán',
+  'write.paymentDeleted': 'Đã xoá khoản thanh toán',
+  'write.paymentDeleteFailed': 'Chưa xoá được khoản thanh toán',
   'write.rolledBack': 'Thay đổi đã được hoàn lại.',
   'expense.saveFallback': 'Không lưu được khoản chi. Hãy thử lại sau một lát.',
 } satisfies TranslationOf<typeof En>

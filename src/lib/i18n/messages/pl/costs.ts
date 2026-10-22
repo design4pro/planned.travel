@@ -35,6 +35,13 @@ const messages = {
   'delete.balancesChange': 'Zmieniają się salda: {names}.',
   'delete.confirm': 'Usuń wydatek',
   'delete.working': 'Usuwanie wydatku',
+  'delete.payment.title': 'Usunąć tę płatność?',
+  'delete.payment.description':
+    '„{title}” znika z rozliczenia. Tego nie da się cofnąć. Aby poprawić płatność, zapisz ją jeszcze raz.',
+  'delete.payment.failedBody':
+    'Nie udało się usunąć płatności. Spróbuj za chwilę.',
+  'delete.payment.confirm': 'Usuń płatność',
+  'delete.payment.working': 'Usuwanie płatności',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Wydatki',
@@ -100,17 +107,14 @@ const messages = {
   'expense.what': 'Za co to było',
   'expense.whatPlaceholder': 'Kolacja w Kyubey',
   'expense.amountNotANumber': 'Wpisz kwotę jako liczbę.',
-  'expense.currencyLabel': 'Waluta, w której wystawiono paragon',
   'expense.convertedTo': 'Przeliczone na {currency}',
   'expense.convertedHint': 'Ile {from} wyszło w {to} na twoim wyciągu.',
   'expense.convertedSuggested':
     'Podpowiedź z kursu użytego w tej podróży dnia {date} ({rate}). Zmień kwotę, aby zgadzała się z twoim wyciągiem.',
   'expense.convertedNotANumber': 'Wpisz przeliczoną kwotę jako liczbę.',
-  'expense.dateLabel': 'Data wydatku',
   'expense.paidByHint':
     'Zostaw bez płatnika, jeśli zapisujesz paragon, którego nikt jeszcze nie pokrył.',
   'expense.nobodyYet': 'Jeszcze nikt',
-  'expense.whoPaid': 'Kto zapłacił',
   'expense.notesHint': 'Opcjonalnie. Cokolwiek, czego paragon nie mówi.',
   'expense.notesPlaceholder': 'Podzielone menu degustacyjne, napoje osobno.',
   'expense.noAmount': 'Jeszcze bez kwoty',
@@ -127,14 +131,9 @@ const messages = {
   'payment.pickTwo': 'Wybierz dwie różne osoby.',
   'payment.paidTo': 'Zapłacone do',
   'payment.needsTwo': 'Płatność wymaga dwóch różnych osób.',
-  'payment.whoPaying': 'Kto płaci',
-  'payment.whoPaid': 'Kto otrzymuje',
   'payment.amountIn': 'Kwota w {currency}',
   'payment.amountPositive': 'Wpisz kwotę większą od zera.',
-  'payment.currencyLabel': 'Waluta, w której dokonano płatności',
   'payment.how': 'Jak',
-  'payment.howMade': 'Jak wykonano płatność',
-  'payment.dateLabel': 'Data płatności',
   'payment.note': 'Notatka',
   'payment.noteHint': 'Opcjonalnie. Numer referencyjny albo za co to było.',
   'payment.notePlaceholder': 'Za hotel w Kioto i bilety JR.',
@@ -194,6 +193,7 @@ const messages = {
   'payments.empty.title': 'Jeszcze bez wpłat',
   'payments.empty.body':
     'Gdy ktoś oddaje saldo, przelew zostaje zapisany tutaj.',
+  'payments.delete': 'Usuń płatność od {from} do {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ta podróż jest zarchiwizowana. Przywróć ją, aby zmienić koszty.',
@@ -384,6 +384,8 @@ const messages = {
   'write.paymentRecorded': 'Zapisano płatność',
   'write.paymentRecordedBody': 'Oba salda są zaktualizowane.',
   'write.paymentFailed': 'Nie zapisano płatności',
+  'write.paymentDeleted': 'Usunięto płatność',
+  'write.paymentDeleteFailed': 'Nie usunięto płatności',
   'write.rolledBack': 'Zmiana została cofnięta.',
   'expense.saveFallback': 'Nie udało się zapisać wydatku. Spróbuj za chwilę.',
 } satisfies TranslationOf<typeof En>

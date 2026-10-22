@@ -31,6 +31,13 @@ const messages = {
   'delete.balancesChange': '{names}의 잔액이 바뀝니다.',
   'delete.confirm': '지출 삭제',
   'delete.working': '지출을 삭제하는 중',
+  'delete.payment.title': '이 결제를 삭제할까요?',
+  'delete.payment.description':
+    '「{title}」이(가) 정산에서 사라집니다. 되돌릴 수 없습니다. 결제를 바로잡으려면 다시 기록하세요.',
+  'delete.payment.failedBody':
+    '결제를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  'delete.payment.confirm': '결제 삭제',
+  'delete.payment.working': '결제를 삭제하는 중',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': '지출',
@@ -92,17 +99,14 @@ const messages = {
   'expense.what': '무엇에 쓴 돈인지',
   'expense.whatPlaceholder': 'Kyubey에서 저녁',
   'expense.amountNotANumber': '금액을 숫자로 입력해 주세요.',
-  'expense.currencyLabel': '이 영수증에 적힌 통화',
   'expense.convertedTo': '{currency}로 환산',
   'expense.convertedHint': '명세서에서 {from}이 {to}로 얼마가 되었는지.',
   'expense.convertedSuggested':
     '이 여행에서 {date}에 사용한 환율({rate})을 바탕으로 제안한 금액입니다. 명세서에 맞게 수정하세요.',
   'expense.convertedNotANumber': '환산된 금액을 숫자로 입력해 주세요.',
-  'expense.dateLabel': '지출한 날짜',
   'expense.paidByHint':
     '아직 아무도 대신 내지 않은 영수증이라면 결제한 사람을 비워 두세요.',
   'expense.nobodyYet': '아직 없음',
-  'expense.whoPaid': '누가 결제했는지',
   'expense.notesHint': '선택. 영수증에 없는 내용은 여기에.',
   'expense.notesPlaceholder': '코스 요리는 나눠 내고, 음료는 따로.',
   'expense.noAmount': '아직 금액이 없습니다',
@@ -119,14 +123,9 @@ const messages = {
   'payment.pickTwo': '서로 다른 두 사람을 고르세요.',
   'payment.paidTo': '받은 사람',
   'payment.needsTwo': '결제에는 서로 다른 두 사람이 필요합니다.',
-  'payment.whoPaying': '보내는 사람',
-  'payment.whoPaid': '받는 사람',
   'payment.amountIn': '{currency} 금액',
   'payment.amountPositive': '0보다 큰 금액을 입력해 주세요.',
-  'payment.currencyLabel': '결제에 사용한 통화',
   'payment.how': '방법',
-  'payment.howMade': '결제 방법',
-  'payment.dateLabel': '결제한 날짜',
   'payment.note': '메모',
   'payment.noteHint': '선택. 참조 번호나 무엇에 쓴 돈인지.',
   'payment.notePlaceholder': '교토 숙소와 JR 패스 몫.',
@@ -179,6 +178,7 @@ const messages = {
   'payments.label': '기록된 결제',
   'payments.empty.title': '아직 결제가 없습니다',
   'payments.empty.body': '누군가 잔액을 갚으면 송금이 여기에 기록됩니다.',
+  'payments.delete': '{from}에서 {to}에게 간 결제 {amount} 삭제',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     '이 여행은 보관되었습니다. 비용을 변경하려면 먼저 복원하세요.',
@@ -343,6 +343,8 @@ const messages = {
   'write.paymentRecorded': '결제를 기록했습니다',
   'write.paymentRecordedBody': '양쪽 잔액이 업데이트되었습니다.',
   'write.paymentFailed': '결제를 기록하지 못했습니다',
+  'write.paymentDeleted': '결제를 삭제했습니다',
+  'write.paymentDeleteFailed': '결제가 삭제되지 않았습니다',
   'write.rolledBack': '변경을 되돌렸습니다.',
   'expense.saveFallback':
     '지출을 저장하지 못했습니다. 잠시 후 다시 시도하세요.',

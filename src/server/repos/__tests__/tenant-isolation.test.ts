@@ -222,6 +222,7 @@ import {
   createImportedReservation,
   deleteReservation,
   getReservation,
+  createReservationExpense,
   linkReservationExpense,
   listTripReservations,
   markReservationsImported,
@@ -308,6 +309,7 @@ import {
   renameTripGuest,
   tripGuestsRepository,
 } from '../trip-guests'
+import { seedUserLocale } from '../user-locale-seed'
 import {
   addCompanyHoliday,
   addHolidayCalendar,
@@ -3752,6 +3754,95 @@ describe('tenant isolation', () => {
       ).toBeNull()
     })
 
+    /**
+     * The cost line and its link are one write, so the tenant and the trip of both are the scope's:
+     * a B booking named from A inserts nothing in either workspace, and neither does an A booking
+     * named under another trip.
+     */
+    it('creates a booking’s cost line only for a booking of its own tenant and trip', async () => {
+      const scope = alpha.tenant.scope
+      const expensesA = await expensesRepository.count(scope)
+      const expensesB = await expensesRepository.count(beta.tenant.scope)
+
+      expect(
+        await captureError(() =>
+          createReservationExpense(scope, beta.reservationId, {
+            tripId: alpha.tripId,
+            title: 'Cost of a booking that is not ours',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          createReservationExpense(scope, beta.reservationId, {
+            tripId: beta.tripId,
+            title: 'Cost on a trip that is not ours',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      const otherTrip = await createTrip(scope, {
+        title: 'Elsewhere',
+        currency: 'EUR',
+      })
+      expect(
+        await captureError(() =>
+          createReservationExpense(scope, alpha.reservationId, {
+            tripId: otherTrip.id,
+            title: 'Cost under another trip',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await expensesRepository.count(scope)).toBe(expensesA)
+      expect(await expensesRepository.count(beta.tenant.scope)).toBe(expensesB)
+      expect(
+        (await getReservation(beta.tenant.scope, beta.reservationId))
+          ?.expenseId,
+      ).toBeNull()
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.expenseId,
+      ).toBeNull()
+    })
+
+    it('creates a booking’s cost line and links it in one write, once', async () => {
+      const scope = alpha.tenant.scope
+      const input = {
+        tripId: alpha.tripId,
+        title: 'Dinner',
+        amountMinor: 4_000,
+        spentOn: '2026-04-10',
+      }
+
+      const first = await createReservationExpense(
+        scope,
+        alpha.reservationId,
+        input,
+      )
+      expect(first.reservation.expenseId).toBe(first.expenseId)
+      expect(await getExpense(scope, first.expenseId)).toMatchObject({
+        tripId: alpha.tripId,
+        title: 'Dinner',
+      })
+
+      // The booking is linked now, so a second write inserts nothing and is told so by the link.
+      const countBefore = await expensesRepository.count(scope)
+      const second = await createReservationExpense(
+        scope,
+        alpha.reservationId,
+        input,
+      )
+      expect(second.reservation.expenseId).toBe(first.expenseId)
+      expect(second.expenseId).not.toBe(first.expenseId)
+      expect(await expensesRepository.count(scope)).toBe(countBefore)
+      expect(await getExpense(scope, second.expenseId)).toBeNull()
+    })
+
     it('links a booking to a cost line of its own trip, and unlinks it again', async () => {
       const scope = alpha.tenant.scope
 
@@ -4715,6 +4806,74 @@ describe('tenant isolation', () => {
   })
 
   /**
+   * `09-S5c`: sign-up seeds the new account's language through `seedUserLocale`, called from the
+   * auth layer with a scope it builds from the organization and user it has just created.
+   *
+   * The scope is the only thing that decides where the row lands, so the cases are about the scope:
+   * the row carries the scope's organization and user, nothing is written for the other
+   * organization, and a row that already exists is left exactly as it was.
+   */
+  describe('seeding a new member’s language', () => {
+    async function rowsOf(world: World): Promise<Array<UserSettings>> {
+      return userSettingsRepository.findMany(world.tenant.scope)
+    }
+
+    it('writes one row for the scope’s own organization and user, and none in another', async () => {
+      const newcomer = await alpha.tenant.addUser('Newcomer')
+      const betaBefore = await rowsOf(beta)
+
+      await seedUserLocale(alpha.tenant.scopeFor(newcomer), 'pl')
+
+      const written = await getUserSettings(alpha.tenant.scope, newcomer)
+      expect(written?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(written?.userId).toBe(newcomer)
+      expect(written?.locale).toBe('pl')
+      expect(await rowsOf(beta)).toEqual(betaBefore)
+      expect(await getUserSettings(beta.tenant.scope, newcomer)).toBeNull()
+    })
+
+    it('is insert-if-absent: a row that exists keeps every column', async () => {
+      const before = await getUserSettings(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+      )
+      expect(before?.theme).toBe('dark')
+
+      await seedUserLocale(alpha.tenant.scope, 'de')
+      await seedUserLocale(alpha.tenant.scope, 'fr')
+
+      expect(
+        await getUserSettings(alpha.tenant.scope, alpha.tenant.ownerUserId),
+      ).toEqual(before)
+    })
+
+    it('a repeated seed adds nothing', async () => {
+      const newcomer = await alpha.tenant.addUser('Newcomer')
+      const scope = alpha.tenant.scopeFor(newcomer)
+
+      await seedUserLocale(scope, 'pl')
+      await seedUserLocale(scope, 'uk')
+
+      expect(
+        (await userSettingsRepository.findMany(alpha.tenant.scope)).filter(
+          (row) => row.userId === newcomer,
+        ),
+      ).toHaveLength(1)
+      expect((await getUserSettings(scope))?.locale).toBe('pl')
+    })
+
+    it('refuses a tag the catalogue does not ship', async () => {
+      const newcomer = await alpha.tenant.addUser('Newcomer')
+
+      await expect(
+        // The argument type is the shipped tags; the cast reaches the runtime defence.
+        seedUserLocale(alpha.tenant.scopeFor(newcomer), 'xx-nope' as never),
+      ).rejects.toThrow()
+      expect(await getUserSettings(alpha.tenant.scope, newcomer)).toBeNull()
+    })
+  })
+
+  /**
    * `01-S4a`: one number line per day, written across two tables in one batch.
    *
    * The batch is the reason this block exists rather than riding on the generic
@@ -4827,6 +4986,7 @@ describe('tenant isolation', () => {
               { kind: 'stop', id: beta.assignmentId },
               { kind: 'note', id: alpha.dayNoteId },
               { kind: 'note', id: beta.dayNoteId },
+              { kind: 'transport', id: beta.transportId },
               { kind: 'stop', id: extraStop.id },
               { kind: 'note', id: extraNote.id },
               { kind: 'stop', id: alpha.assignmentId },
@@ -4835,7 +4995,8 @@ describe('tenant isolation', () => {
         ],
       })
 
-      // B's two ids are gone from the write, and A's four are numbered 0..3.
+      // B's three ids (two rows and a journey) are gone from the write, and A's four are
+      // numbered 0..3.
       expect(written).toEqual([
         {
           dayId: alpha.dayId,
@@ -4845,6 +5006,7 @@ describe('tenant isolation', () => {
             { kind: 'note', id: extraNote.id },
             { kind: 'stop', id: alpha.assignmentId },
           ],
+          journeys: [{ kind: 'transport', id: alpha.transportId }],
         },
       ])
       expect(await positionsOf(scope, alpha.dayId)).toEqual({

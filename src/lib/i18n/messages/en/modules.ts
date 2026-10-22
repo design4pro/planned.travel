@@ -348,6 +348,9 @@ const messages = {
   'book.toast.addFailed': 'The booking was not added',
   'book.toast.updated': 'Booking updated',
   'book.toast.updateFailed': 'The booking was not updated',
+  'book.toast.ledgerRefused': 'Saved, but not added to the costs',
+  'book.toast.ledgerRefusedBody':
+    'Open the booking and save it again to add its cost line.',
 
   'book.emptyFacts':
     'Nothing recorded yet beyond the name. Open it to add the time, the price and the confirmation number.',
@@ -687,10 +690,6 @@ const messages = {
   'book.field.stopPlaceholder': 'Not tied to a stop',
   'book.field.stopSearch': 'Search stops and days',
   'book.field.stopEmpty': 'No stop matches that',
-  'book.ledger.refused.title': 'Saved, but not added to the costs',
-  'book.ledger.refused.body':
-    'The booking is on the trip. Adding its cost line to the trip’s costs did not go through — try that half again.',
-  'book.action.ledgerRetry': 'Add it to the ledger',
   'book.ledger.splitStale.title': 'Saved, but the split no longer adds up',
   'book.ledger.splitStale.body':
     'The booking and its new price are saved, but the way this cost line was split could not follow the new total. Open the line on Costs and fix the split.',
