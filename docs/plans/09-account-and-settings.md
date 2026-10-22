@@ -154,7 +154,7 @@ agent ran first.
   `src/routes/__root.tsx`. There is no `description`: an optional untranslated sentence on an
   installation surface would conflict with the 23-locale product. The stage renders no sentence
   inside the application at all.
-- `09-S5` is blocked and ships no screen.
+- `09-S5` is delivered (see its `Delivered:` line); this plan writes no screen for it.
 
 **The stored-notification keys belong to `09-S7`, and that is the case that matters beyond screens.**
 `src/server/repos/notifications.ts` deliberately stores `titleKey`, `bodyKey` and a `params` record
