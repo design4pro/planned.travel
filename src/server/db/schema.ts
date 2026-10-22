@@ -33,16 +33,13 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
-import { nanoid } from 'nanoid'
+import { mintId } from '#/lib/ids'
 import { organization } from './auth-schema'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 
 /* -------------------------------------------------------------------------------------------------
  * Identifiers, shared column builders and constraint helpers
  * ---------------------------------------------------------------------------------------------- */
-
-const ID_RANDOM_LENGTH = 16
-const ID_TIME_LENGTH = 9
 
 /** Column defaults a fixture supplies for itself, in place of the clock and the random source. */
 export interface SuppliedRowDefaults {
@@ -83,7 +80,7 @@ export function newId(): string {
   if (supplied !== null) {
     return supplied.id()
   }
-  return `${Date.now().toString(36).padStart(ID_TIME_LENGTH, '0')}${nanoid(ID_RANDOM_LENGTH)}`
+  return mintId()
 }
 
 /** The instant a mutated row is stamped with when the caller does not name one itself. */
