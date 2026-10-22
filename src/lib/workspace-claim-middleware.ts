@@ -15,7 +15,7 @@
  * until a navigation re-reads the shell (`src/routes/_app/route.tsx`). They do not reopen the
  * notice: a poll or a link preload is not the reader asking, and a dialog that came back every few
  * seconds after "Not now" would pull focus away from whatever they were doing. The surfaces a
- * reader's own action ends in (`useAction`, `ErrorPanel`) reopen it.
+ * reader's own action ends in (`useAction`, `messageOf`, `ErrorPanel`) reopen it.
  *
  * The refusal the caller sees is a plain `Error` carrying the catalogue key, not the redaction
  * envelope the server sent. A reader of the envelope that does not know this key (a form, a toast)

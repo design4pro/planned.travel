@@ -7,6 +7,8 @@
  */
 import { useSyncExternalStore } from 'react'
 
+import { isWorkspaceChanged } from './workspace-claim'
+
 export interface WorkspaceClaimState {
   /** The workspace the tab is showing, or `null` before the shell has loaded. */
   readonly organizationId: string | null
@@ -84,6 +86,17 @@ export function markWorkspaceStale(sentWith: string): void {
 /** The reader did something and it was stopped because the tab is stale: say so again. */
 export function reopenWorkspaceNotice(): void {
   commit({ noticeOpen: true })
+}
+
+/**
+ * For the `catch` of an action the reader started: when `error` is the workspace-changed refusal,
+ * brings the notice back (a stale tab's later calls fail locally and do not) and says so, so the
+ * caller shows no message of its own. Never call it from a poll or a preload.
+ */
+export function reopenNoticeFor(error: unknown): boolean {
+  if (!isWorkspaceChanged(error)) return false
+  reopenWorkspaceNotice()
+  return true
 }
 
 export function dismissWorkspaceNotice(): void {

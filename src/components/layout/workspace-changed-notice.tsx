@@ -25,7 +25,7 @@ import { useOpenCurrentWorkspace } from './use-open-current-workspace'
  * written (`src/lib/workspace-claim.ts`). It is an `alertdialog`: it interrupts, because the reader
  * pressed something and nothing happened, and it explains rather than recovering on their behalf.
  * Nothing reloads automatically and nothing typed is cleared - "Not now" closes it and leaves the
- * page exactly as it was. It comes back when the reader acts again (`useAction`), not on a poll or
+ * page exactly as it was. It comes back when the reader acts again (`useAction`, `messageOf`), not on a poll or
  * a link preload, which would pull focus away from what they are doing.
  *
  * Mounted once, in the authenticated shell, because the store it reads is the tab's.

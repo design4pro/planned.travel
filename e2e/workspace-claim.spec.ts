@@ -15,14 +15,33 @@ import { DEMO_EMAIL, signIn } from './helpers/session.ts'
 const FIRST = "Rafal's Travel"
 const SECOND = 'Wolak Family Trips'
 
+/**
+ * Opens the account menu and reads whether `workspace` is the checked one. A click before the page
+ * has hydrated opens nothing, so each attempt starts from a closed menu and the whole open-and-read
+ * is retried. The menu is left open.
+ */
+async function expectActive(page: Page, workspace: string): Promise<void> {
+  await expect(async () => {
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await expect(
+      page.getByRole('menuitemradio', { name: workspace }),
+    ).toHaveAttribute('aria-checked', 'true', { timeout: 8_000 })
+  }).toPass({ timeout: 45_000 })
+}
+
 async function switchTo(page: Page, workspace: string): Promise<void> {
-  await page.getByRole('button', { name: 'Account menu' }).click()
-  await page.getByRole('menuitemradio', { name: workspace }).click()
+  const item = page.getByRole('menuitemradio', { name: workspace })
+  // Only the opening is retried: the click on the item changes the session, so a second one would
+  // find the workspace already active.
+  await expect(async () => {
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Account menu' }).click()
+    await expect(item).toBeVisible({ timeout: 8_000 })
+  }).toPass({ timeout: 45_000 })
+  await item.click()
   await expect(page).toHaveURL(/\/dashboard$/)
-  await page.getByRole('button', { name: 'Account menu' }).click()
-  await expect(
-    page.getByRole('menuitemradio', { name: workspace }),
-  ).toHaveAttribute('aria-checked', 'true')
+  await expectActive(page, workspace)
   await page.keyboard.press('Escape')
 }
 
@@ -46,13 +65,16 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
   // Tab A: the first workspace, with a trip about to be created.
   await page.goto('/trips', { waitUntil: 'networkidle' })
   const title = `Claim proof ${Date.now()}`
-  await page
-    .getByRole('button', { name: 'New trip', exact: true })
-    .filter({ visible: true })
-    .first()
-    .click()
   const creation = page.getByRole('dialog', { name: /trip/i })
-  await creation.getByLabel('Trip name').fill(title)
+  // A click before the page has hydrated opens nothing, so the open is retried.
+  await expect(async () => {
+    await page
+      .getByRole('button', { name: 'New trip', exact: true })
+      .filter({ visible: true })
+      .first()
+      .click()
+    await creation.getByLabel('Trip name').fill(title, { timeout: 5_000 })
+  }).toPass({ timeout: 45_000 })
 
   // Tab B: the same session switches to the second workspace.
   const other = await context.newPage()
@@ -98,8 +120,6 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
     .getByRole('button', { name: 'Open the current workspace' })
     .click()
   await expect(page).toHaveURL(/\/dashboard$/)
-  await page.getByRole('button', { name: 'Account menu' }).click()
-  await expect(
-    page.getByRole('menuitemradio', { name: FIRST }),
-  ).toHaveAttribute('aria-checked', 'true')
+  // A full reload into the workspace B just switched back to.
+  await expectActive(page, FIRST)
 })

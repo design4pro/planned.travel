@@ -92,6 +92,25 @@ describe("a call refused because the tab's workspace is not the session's", () =
     expect(messageOf(refusal(), FALLBACK)).toBe(FALLBACK)
   })
 
+  it('brings the notice back for a form that reads the failure itself, as the new-trip dialog does', () => {
+    setWorkspaceClaim('org_a')
+    markWorkspaceStale('org_a')
+    dismissWorkspaceNotice()
+
+    // The stale tab's local refusal: a plain Error carrying the key, not the server's envelope.
+    expect(messageOf(new Error(WORKSPACE_CHANGED_KEY), FALLBACK)).toBe(FALLBACK)
+    expect(workspaceClaimState().noticeOpen).toBe(true)
+  })
+
+  it('leaves the notice alone for any other failure', () => {
+    setWorkspaceClaim('org_a')
+    markWorkspaceStale('org_a')
+    dismissWorkspaceNotice()
+
+    messageOf(new Error('boom'), FALLBACK)
+    expect(workspaceClaimState().noticeOpen).toBe(false)
+  })
+
   it('raises no "did not save" toast and no inline error, because the notice is the one surface', async () => {
     const onError = vi.fn()
     const fn = vi.fn().mockRejectedValue(refusal())

@@ -13,8 +13,7 @@ import { useRouter } from '@tanstack/react-router'
 
 import { toast } from '#/components/ui'
 import { readPublicFailure } from '#/lib/errors'
-import { isWorkspaceChanged } from '#/lib/workspace-claim'
-import { reopenWorkspaceNotice } from '#/lib/workspace-claim-store'
+import { reopenNoticeFor } from '#/lib/workspace-claim-store'
 
 /**
  * Pulls a line the reader is allowed to see out of whatever the server threw.
@@ -27,8 +26,9 @@ import { reopenWorkspaceNotice } from '#/lib/workspace-claim-store'
  */
 export function messageOf(error: unknown, fallback: string): string {
   // A catalogue key, not a sentence: printing it would show the key itself. The workspace notice
-  // (`workspace-changed-notice.tsx`) is the surface that explains it.
-  if (isWorkspaceChanged(error)) return fallback
+  // (`workspace-changed-notice.tsx`) is the surface that explains it, and a form that reads the
+  // failure here is the reader's own action, so it comes back if "Not now" had closed it.
+  if (reopenNoticeFor(error)) return fallback
   const failure = readPublicFailure(error)
   if (failure.kind !== 'unexpected' && failure.message !== undefined) {
     return failure.message
@@ -121,8 +121,7 @@ export function useAction<TInput, TResult>(
         // a second "That did not save" toast over it would say the same thing worse. Nothing was
         // saved, so an optimistic overlay still rolls back. The reader acted, so the notice comes
         // back if "Not now" had closed it.
-        if (isWorkspaceChanged(cause)) {
-          reopenWorkspaceNotice()
+        if (reopenNoticeFor(cause)) {
           options.onError?.(cause)
           return null
         }
