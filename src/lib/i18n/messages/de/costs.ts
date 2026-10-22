@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Salden ändern sich für {names}.',
   'delete.confirm': 'Ausgabe löschen',
   'delete.working': 'Ausgabe wird gelöscht',
+  'delete.payment.title': 'Diese Zahlung löschen?',
+  'delete.payment.description':
+    '„{title}“ verschwindet aus der Abrechnung. Das lässt sich nicht rückgängig machen. Um eine Zahlung zu korrigieren, erfasse sie neu.',
+  'delete.payment.failedBody':
+    'Die Zahlung konnte nicht gelöscht werden. Versuch es gleich noch einmal.',
+  'delete.payment.confirm': 'Zahlung löschen',
+  'delete.payment.working': 'Zahlung wird gelöscht',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Ausgaben',
@@ -179,6 +186,7 @@ const messages = {
   'payments.empty.title': 'Noch keine Zahlungen',
   'payments.empty.body':
     'Sobald jemand einen Saldo zurückzahlt, wird die Überweisung hier erfasst.',
+  'payments.delete': 'Zahlung von {from} an {to} löschen, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Diese Reise ist archiviert. Stelle sie wieder her, bevor du die Kosten änderst.',
@@ -354,6 +362,8 @@ const messages = {
   'write.paymentRecorded': 'Zahlung erfasst',
   'write.paymentRecordedBody': 'Beide Salden sind aktualisiert.',
   'write.paymentFailed': 'Die Zahlung wurde nicht erfasst',
+  'write.paymentDeleted': 'Zahlung gelöscht',
+  'write.paymentDeleteFailed': 'Die Zahlung wurde nicht gelöscht',
   'write.rolledBack': 'Die Änderung wurde zurückgenommen.',
   'expense.saveFallback':
     'Die Ausgabe konnte nicht gespeichert werden. Versuche es gleich noch einmal.',

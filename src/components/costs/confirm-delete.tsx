@@ -4,7 +4,8 @@
  * Deleting an expense re-writes four people's balances, so it gets a real
  * confirmation rather than an undo-toast gamble: it names the expense, shows the
  * amount that is about to leave the ledger, and puts the destructive verb on the
- * destructive button.
+ * destructive button. A recorded payment moves two balances and is just as permanent,
+ * so it asks through the same dialog, in its own words (`subject`).
  *
  * `Keep it` is the default focus target. The dialog is not a place to lose money by
  * pressing Enter.
@@ -28,27 +29,58 @@ import { formatList } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
 
+/** What is being deleted; it only picks the words, the dialog behaves the same. */
+export type DeleteSubject = 'expense' | 'payment'
+
+const COPY = {
+  expense: {
+    title: 'costs.delete.title',
+    description: 'costs.delete.description',
+    failedBody: 'costs.delete.failedBody',
+    confirm: 'costs.delete.confirm',
+    working: 'costs.delete.working',
+  },
+  payment: {
+    title: 'costs.delete.payment.title',
+    description: 'costs.delete.payment.description',
+    failedBody: 'costs.delete.payment.failedBody',
+    confirm: 'costs.delete.payment.confirm',
+    working: 'costs.delete.payment.working',
+  },
+} as const
+
 export interface ConfirmDeleteDialogProps {
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
+  /** The expense's title, or the payment's "payer → payee". */
   readonly title: string
+  /** Defaults to an expense. */
+  readonly subject?: DeleteSubject
   readonly amountMinor: number
   readonly currency: string
   /** Who is affected, already resolved to names. */
   readonly affects: ReadonlyArray<string>
   readonly onConfirm: () => Promise<void>
+  /**
+   * Runs when the dialog closes. A dialog hands focus back to what opened it, and a delete takes
+   * that row off the page: this is where the caller sees that happen and names the next place.
+   */
+  readonly onCloseAutoFocus?: (event: Event) => void
 }
 
 export function ConfirmDeleteDialog({
   open,
   onOpenChange,
   title,
+  subject = 'expense',
   amountMinor,
   currency,
   affects,
   onConfirm,
+  onCloseAutoFocus,
 }: ConfirmDeleteDialogProps) {
   const t = useTranslate()
+  const copy = COPY[subject]
   const locale = useLocale()
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,19 +92,30 @@ export function ConfirmDeleteDialog({
       await onConfirm()
       onOpenChange(false)
     } catch (cause) {
-      setError(messageOf(cause, t('costs.delete.failedBody')))
+      setError(messageOf(cause, t(copy.failedBody)))
     } finally {
       setWorking(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm">
+    // While the delete is in flight the dialog cannot be dismissed: Escape, a tap outside or "Keep
+    // it" would close it on a delete that still goes through.
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!working) onOpenChange(next)
+      }}
+    >
+      <DialogContent
+        size="sm"
+        hideClose={working}
+        onCloseAutoFocus={onCloseAutoFocus}
+      >
         <DialogHeader>
-          <DialogTitle>{t('costs.delete.title')}</DialogTitle>
+          <DialogTitle>{t(copy.title)}</DialogTitle>
           <DialogDescription>
-            {t('costs.delete.description', { title })}
+            {t(copy.description, { title })}
           </DialogDescription>
         </DialogHeader>
 
@@ -106,6 +149,7 @@ export function ConfirmDeleteDialog({
             variant="secondary"
             shape="pill"
             autoFocus
+            disabled={working}
             onClick={() => onOpenChange(false)}
           >
             {t('ui.action.keep')}
@@ -115,10 +159,10 @@ export function ConfirmDeleteDialog({
             variant="danger"
             shape="pill"
             loading={working}
-            loadingLabel={t('costs.delete.working')}
+            loadingLabel={t(copy.working)}
             onClick={() => void confirm()}
           >
-            {t('costs.delete.confirm')}
+            {t(copy.confirm)}
           </Button>
         </DialogFooter>
       </DialogContent>

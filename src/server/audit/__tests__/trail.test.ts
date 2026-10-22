@@ -346,6 +346,7 @@ describe('trail', () => {
       ['RESERVATION_CREATED', 'RESERVATION_UPDATED', 'RESERVATION_DELETED'],
     ],
     ['src/routes/_app/-server/settings.ts', ['WORKSPACE_DEFAULTS_CHANGED']],
+    ['src/server/fns/costs.ts', ['PAYMENT_DELETED']],
     ['src/server/fns/trip-currency.ts', ['TRIP_CURRENCY_CHANGED']],
     ['src/server/fns/member-role-writes.ts', ['MEMBER_ROLE_CHANGED']],
     [
@@ -377,6 +378,7 @@ describe('trail', () => {
       'reservation.created',
       'reservation.updated',
       'reservation.deleted',
+      'payment.deleted',
       'workspace.defaults_changed',
       'trip.currency_changed',
       'member.invited',

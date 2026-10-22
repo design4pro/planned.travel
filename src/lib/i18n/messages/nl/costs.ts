@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'De saldi van {names} veranderen.',
   'delete.confirm': 'Uitgave verwijderen',
   'delete.working': 'Uitgave wordt verwijderd',
+  'delete.payment.title': 'Deze betaling verwijderen?',
+  'delete.payment.description':
+    '‘{title}’ gaat uit de afrekening. Dit kun je niet terugdraaien. Wil je een betaling corrigeren, leg haar dan opnieuw vast.',
+  'delete.payment.failedBody':
+    'De betaling kon niet worden verwijderd. Probeer het straks nog eens.',
+  'delete.payment.confirm': 'Betaling verwijderen',
+  'delete.payment.working': 'Betaling wordt verwijderd',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Uitgaven',
@@ -178,6 +185,7 @@ const messages = {
   'payments.empty.title': 'Nog geen betalingen',
   'payments.empty.body':
     'Zodra iemand een saldo terugbetaalt, wordt de overboeking hier vastgelegd.',
+  'payments.delete': 'Betaling van {from} aan {to} verwijderen, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Deze reis is gearchiveerd. Herstel de reis voordat je de kosten wijzigt.',
@@ -352,6 +360,8 @@ const messages = {
   'write.paymentRecorded': 'Betaling vastgelegd',
   'write.paymentRecordedBody': 'Beide saldi zijn bijgewerkt.',
   'write.paymentFailed': 'De betaling is niet vastgelegd',
+  'write.paymentDeleted': 'Betaling verwijderd',
+  'write.paymentDeleteFailed': 'De betaling is niet verwijderd',
   'write.rolledBack': 'De wijziging is teruggedraaid.',
   'expense.saveFallback':
     'De uitgave kon niet worden opgeslagen. Probeer het zo meteen opnieuw.',

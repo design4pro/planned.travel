@@ -30,6 +30,13 @@ const messages = {
   'delete.balancesChange': 'Αλλάζουν τα υπόλοιπα: {names}.',
   'delete.confirm': 'Διαγραφή εξόδου',
   'delete.working': 'Το έξοδο διαγράφεται',
+  'delete.payment.title': 'Να διαγραφεί αυτή η πληρωμή;',
+  'delete.payment.description':
+    '«{title}» φεύγει από τον λογαριασμό. Αυτό δεν αναιρείται. Για να διορθώσεις μια πληρωμή, κατάγραψέ την ξανά.',
+  'delete.payment.failedBody':
+    'Η πληρωμή δεν διαγράφηκε. Δοκίμασε ξανά σε λίγο.',
+  'delete.payment.confirm': 'Διαγραφή πληρωμής',
+  'delete.payment.working': 'Η πληρωμή διαγράφεται',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Έξοδα',
@@ -179,6 +186,7 @@ const messages = {
   'payments.empty.title': 'Καμία πληρωμή ακόμη',
   'payments.empty.body':
     'Μόλις κάποιος επιστρέψει ένα υπόλοιπο, η μεταφορά καταγράφεται εδώ.',
+  'payments.delete': 'Διαγραφή της πληρωμής από {from} προς {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Αυτό το ταξίδι έχει αρχειοθετηθεί. Επαναφέρετέ το πριν αλλάξετε τα έξοδα.',
@@ -357,6 +365,8 @@ const messages = {
   'write.paymentRecorded': 'Η πληρωμή καταγράφηκε',
   'write.paymentRecordedBody': 'Και τα δύο υπόλοιπα ενημερώθηκαν.',
   'write.paymentFailed': 'Η πληρωμή δεν καταγράφηκε',
+  'write.paymentDeleted': 'Η πληρωμή διαγράφηκε',
+  'write.paymentDeleteFailed': 'Η πληρωμή δεν διαγράφηκε',
   'write.rolledBack': 'Η αλλαγή αναιρέθηκε.',
   'expense.saveFallback': 'Το έξοδο δεν αποθηκεύτηκε. Δοκίμασε ξανά σε λίγο.',
 } satisfies TranslationOf<typeof En>

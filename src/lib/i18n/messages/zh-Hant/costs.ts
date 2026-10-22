@@ -28,6 +28,12 @@ const messages = {
   'delete.balancesChange': '{names} 的餘額會變動。',
   'delete.confirm': '刪除支出',
   'delete.working': '正在刪除支出',
+  'delete.payment.title': '要刪除這筆付款嗎？',
+  'delete.payment.description':
+    '「{title}」將從結算中移除。此操作無法復原。若要更正付款，請重新記錄。',
+  'delete.payment.failedBody': '這筆付款沒能刪除。請稍後再試。',
+  'delete.payment.confirm': '刪除付款',
+  'delete.payment.working': '正在刪除付款',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': '支出',
@@ -161,6 +167,7 @@ const messages = {
   'payments.label': '已記錄的付款',
   'payments.empty.title': '尚無付款',
   'payments.empty.body': '有人還清餘額後，轉帳會記錄在這裡。',
+  'payments.delete': '刪除 {from} 付給 {to} 的付款，{amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived': '此行程已封存。請先還原行程再修改費用。',
   'readOnly.title': '你可以查看費用，但無法變更',
@@ -312,6 +319,8 @@ const messages = {
   'write.paymentRecorded': '已記錄付款',
   'write.paymentRecordedBody': '雙方的餘額都已更新。',
   'write.paymentFailed': '付款未能記錄',
+  'write.paymentDeleted': '已刪除付款',
+  'write.paymentDeleteFailed': '付款未能刪除',
   'write.rolledBack': '變更已撤回。',
   'expense.saveFallback': '無法儲存這筆支出。請稍後再試。',
 } satisfies TranslationOf<typeof En>

@@ -27,6 +27,7 @@ import {
   createSettlement,
   currencySchema,
   deleteExpense,
+  deleteSettlement,
   getExpenseWithShares,
   ensureOrganizationSettings,
   getDisplayCurrency,
@@ -46,6 +47,7 @@ import {
   updateExpense,
 } from '#/server/repos'
 import { convertMinor, impliedRate, resolveDisplayCurrency } from '#/lib/money'
+import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { dispatchQuietly } from '#/server/notifications/dispatch'
 import {
   appScope,
@@ -288,6 +290,11 @@ const updateExpenseSchema = z.object({
 const deleteExpenseSchema = z.object({
   tripId: tripIdSchema,
   expenseId: idSchema,
+})
+
+export const deletePaymentSchema = z.strictObject({
+  tripId: tripIdSchema,
+  settlementId: idSchema,
 })
 
 /**
@@ -807,6 +814,33 @@ export const recordPaymentFn = createServerFn({ method: 'POST' })
       patch('trip', trip.id, { expensesChangedAt: Date.now() }),
     ])
     return { settlementId: settlement.id }
+  })
+
+export const deletePaymentFn = createServerFn({ method: 'POST' })
+  .validator(deletePaymentSchema)
+  .handler(async ({ data }): Promise<{ readonly settlementId: string }> => {
+    const scope = await appScope()
+    const trip = await requireTrip(scope, data.tripId)
+    // The repository checks readability, archiving, the money role and that the payment belongs to
+    // this trip, in that order, so an id from another tenant or trip answers as a missing one.
+    const removed = await deleteSettlement(scope, trip.id, data.settlementId)
+
+    await mirrorToRoom(scope, trip.id, [
+      patch('trip', trip.id, { expensesChangedAt: Date.now() }),
+    ])
+    // After the delete has committed. The metadata names the figures and no person: erasure scrubs
+    // the actor and the entity id of an entry, not what a call site put in `metadata`.
+    await trail(scope, {
+      action: AUDIT_ACTIONS.PAYMENT_DELETED,
+      entityType: 'payment',
+      entityId: removed.id,
+      metadata: {
+        tripId: trip.id,
+        amountMinor: removed.amountMinor,
+        currency: removed.currency,
+      },
+    })
+    return { settlementId: removed.id }
   })
 
 export const setDisplayCurrencyFn = createServerFn({ method: 'POST' })

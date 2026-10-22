@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Mění se zůstatky: {names}.',
   'delete.confirm': 'Smazat výdaj',
   'delete.working': 'Výdaj se maže',
+  'delete.payment.title': 'Smazat tuto platbu?',
+  'delete.payment.description':
+    '„{title}“ mizí z vyúčtování. Tohle nelze vzít zpět. Chcete-li platbu opravit, zaznamenejte ji znovu.',
+  'delete.payment.failedBody':
+    'Platbu se nepodařilo smazat. Zkuste to za chvíli.',
+  'delete.payment.confirm': 'Smazat platbu',
+  'delete.payment.working': 'Platba se maže',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Výdaje',
@@ -183,6 +190,7 @@ const messages = {
   'payments.label': 'Zaznamenané platby',
   'payments.empty.title': 'Zatím žádné platby',
   'payments.empty.body': 'Když někdo vrátí zůstatek, převod se zaznamená sem.',
+  'payments.delete': 'Smazat platbu od {from} pro {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Tato cesta je archivovaná. Před změnou nákladů ji obnovte.',
@@ -370,6 +378,8 @@ const messages = {
   'write.paymentRecorded': 'Platba zaznamenána',
   'write.paymentRecordedBody': 'Oba zůstatky jsou aktualizované.',
   'write.paymentFailed': 'Platba se nezaznamenala',
+  'write.paymentDeleted': 'Platba smazána',
+  'write.paymentDeleteFailed': 'Platba se nesmazala',
   'write.rolledBack': 'Změna byla vrácena zpět.',
   'expense.saveFallback':
     'Výdaj se nepodařilo uložit. Zkus to za chvíli znovu.',
