@@ -309,6 +309,7 @@ import {
   renameTripGuest,
   tripGuestsRepository,
 } from '../trip-guests'
+import { seedUserLocale } from '../user-locale-seed'
 import {
   addCompanyHoliday,
   addHolidayCalendar,
@@ -4801,6 +4802,74 @@ describe('tenant isolation', () => {
       expect(
         (await getEffectiveSettings(beta.tenant.scope)).maskConfirmationCodes,
       ).toBe(false)
+    })
+  })
+
+  /**
+   * `09-S5c`: sign-up seeds the new account's language through `seedUserLocale`, called from the
+   * auth layer with a scope it builds from the organization and user it has just created.
+   *
+   * The scope is the only thing that decides where the row lands, so the cases are about the scope:
+   * the row carries the scope's organization and user, nothing is written for the other
+   * organization, and a row that already exists is left exactly as it was.
+   */
+  describe('seeding a new member’s language', () => {
+    async function rowsOf(world: World): Promise<Array<UserSettings>> {
+      return userSettingsRepository.findMany(world.tenant.scope)
+    }
+
+    it('writes one row for the scope’s own organization and user, and none in another', async () => {
+      const newcomer = await alpha.tenant.addUser('Newcomer')
+      const betaBefore = await rowsOf(beta)
+
+      await seedUserLocale(alpha.tenant.scopeFor(newcomer), 'pl')
+
+      const written = await getUserSettings(alpha.tenant.scope, newcomer)
+      expect(written?.organizationId).toBe(alpha.tenant.organizationId)
+      expect(written?.userId).toBe(newcomer)
+      expect(written?.locale).toBe('pl')
+      expect(await rowsOf(beta)).toEqual(betaBefore)
+      expect(await getUserSettings(beta.tenant.scope, newcomer)).toBeNull()
+    })
+
+    it('is insert-if-absent: a row that exists keeps every column', async () => {
+      const before = await getUserSettings(
+        alpha.tenant.scope,
+        alpha.tenant.ownerUserId,
+      )
+      expect(before?.theme).toBe('dark')
+
+      await seedUserLocale(alpha.tenant.scope, 'de')
+      await seedUserLocale(alpha.tenant.scope, 'fr')
+
+      expect(
+        await getUserSettings(alpha.tenant.scope, alpha.tenant.ownerUserId),
+      ).toEqual(before)
+    })
+
+    it('a repeated seed adds nothing', async () => {
+      const newcomer = await alpha.tenant.addUser('Newcomer')
+      const scope = alpha.tenant.scopeFor(newcomer)
+
+      await seedUserLocale(scope, 'pl')
+      await seedUserLocale(scope, 'uk')
+
+      expect(
+        (await userSettingsRepository.findMany(alpha.tenant.scope)).filter(
+          (row) => row.userId === newcomer,
+        ),
+      ).toHaveLength(1)
+      expect((await getUserSettings(scope))?.locale).toBe('pl')
+    })
+
+    it('refuses a tag the catalogue does not ship', async () => {
+      const newcomer = await alpha.tenant.addUser('Newcomer')
+
+      await expect(
+        // The argument type is the shipped tags; the cast reaches the runtime defence.
+        seedUserLocale(alpha.tenant.scopeFor(newcomer), 'xx-nope' as never),
+      ).rejects.toThrow()
+      expect(await getUserSettings(alpha.tenant.scope, newcomer)).toBeNull()
     })
   })
 

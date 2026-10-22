@@ -70,7 +70,9 @@ describe('the console directory reaches no tenant layer', () => {
     expect(graph.unresolved.filter((entry) => !pending.test(entry))).toEqual([])
   })
 
-  it('reaches only the closed recipient-consumption repository and primitives', () => {
+  it('reaches only the two closed auth-layer repositories and the primitives', () => {
+    // #1009: recipient invitation consumption. #1174: the insert-if-absent of a new account's own
+    // language. Each is an auth-runtime-free leaf; the barrel and `settings.ts` stay out of reach.
     const reached = graph.modules.filter((file) =>
       file.startsWith(`${TENANT_REPOS}/`),
     )
@@ -79,6 +81,7 @@ describe('the console directory reaches no tenant layer', () => {
         'base.ts',
         'batch.ts',
         'context.ts',
+        'user-locale-seed.ts',
         'workspace-invitation-acceptance.ts',
       ]
         .map((name) => join(TENANT_REPOS, name))

@@ -588,3 +588,19 @@ outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their call
   `px-3` and `gap-1` and "Start free" `px-2.5`, because the French row was 15px too wide at 320px; every locale's header
   now fits at 320px. Still wider than the screen,
   untouched by this slice: the document at 320px in ten locales, and at 360px in `el`, `ru`, `uk` (#1497).
+
+### The sign-up seed shipped in its own closed leaf, behind an allowlist - #1174
+
+- **`seedUserLocale` lives in `src/server/repos/user-locale-seed.ts`, not `settings.ts`.** The auth layer may reach the
+  repository graph only through auth-runtime-free leaf modules (docs/SPEC.md §5, ADR 0043, pinned by
+  `src/server/fns/console/__tests__/isolation.test.ts`). `settings.ts` also holds `appSettingsStore` (the global
+  `app_settings` writer) and `updateOrganizationSettings`; importing it from the sign-up hook would have put both into the
+  console and auth graph. The leaf imports only `./base`, the schema and the locale list, and is the second closed exception
+  after `workspace-invitation-acceptance` (#1009).
+- **Seeding is allowed on `/sign-up/email` and the `/callback/` prefix only, and only from `context.request`.** The hook cannot
+  tell a person registering from an administrator's `createUser` by a session check, because `/admin/create-user` forwards the
+  admin's own cookie. An in-process `auth.api.*` call carries `headers` but no `request`, so a server-side caller can never
+  seed. The id-token route `/sign-in/social` is off the list; no client of this product sends an `idToken`.
+- **The scope role is `member`.** The insert needs no administrator right.
+- **The `authDb` comment was already stale.** `organization-invitations.ts` imported `#/server/repos/base` before this change,
+  so the repository graph was not a new edge for the auth layer; only `index.ts` importing it directly is new.

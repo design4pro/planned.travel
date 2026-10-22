@@ -56,6 +56,8 @@ Issue #1009 amends the original auth-layer restriction: recipient invitation con
 writes membership, anchor and accepted invitation in one required atomic batch. Other auth writes
 retain the write-only `auth/participation.ts`; their organization id comes from minted ids or resolved
 hook data, never a request body. The source and console graph tests pin these closed exceptions.
+Issue #1174 adds `repos/user-locale-seed.ts` (insert-if-absent of the new user's own `user_settings`
+row, called from `auth/signup-locale.ts`); the console graph test pins it too.
 
 **4. A third catalog member.** `src/server/catalog/erasure.ts` holds `listWorkspacesHoldingUser` and
 `listOrganizationIds`. Both take a plain `Database` and have four properties that stand in for the
