@@ -21,7 +21,7 @@
  * | `tags`          | `tags` |
  * | `transports`    | `transports` |
  * | `day-journeys`  | — `transports.sort_order` and `transport_legs.sort_order`: where a journey sits on a day's number line, planned for `itinerary` and `transports` and written in their batches |
- * | `reservations`  | `reservations` |
+ * | `reservations`  | `reservations`; also inserts the booking's `expenses` line, in one atomic batch with the booking's link to it |
  * | `expenses`      | `budget_items`, `expenses`, `expense_shares`, `settlements` |
  * | `rates`         | — reads `expenses` and `settlements` for the newest frozen rate of a currency pair |
  * | `trip-currency` | — previews and commits re-basing a trip's budget currency; reads and, in one atomic batch, rewrites `expenses`, `expense_shares`, `settlements`, `budget_items`, `trips` and pins the priced rows of `places`, `reservations`, `transports`, `day_accommodations` |
