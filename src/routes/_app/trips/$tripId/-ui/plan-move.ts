@@ -20,6 +20,7 @@ import {
   movePlanItem,
   noteIdOfNoteItem,
 } from '#/components/planner'
+import { dayRun, departingItemIds } from './plan-transport-model'
 
 import type { z } from 'zod'
 import type { MessageKey } from '#/lib/i18n'
@@ -29,6 +30,7 @@ import type {
   PlanMoveRefusal,
   PlanOrder,
   PlanTarget,
+  PlannerTransport,
   TimeOfItem,
 } from '#/components/planner'
 import type { reorderPlanInputSchema } from '../-server/plan'
@@ -145,26 +147,31 @@ function timelineItem(itemId: string): { kind: 'stop' | 'note'; id: string } {
 /**
  * `reorderPlanFn`'s input for one reorder.
  *
+ * Each day carries its whole run, journeys included: the server places a journey against the
+ * numbering the same write gives the stops and notes, so a reorder is one call and one
+ * transaction and no follow-up can fail on its own. A journey-only move is the same call.
+ *
  * `clearTime` is a draggable id rather than a flag, and it is attached to the day that
  * actually holds the item, because the server refuses a payload that drops the time of
- * a row it is not being asked to move.
+ * a row it is not being asked to move. A journey never carries one: a departure time
+ * belongs to a timetable, and `planMoveOutcome` refuses before it is ever asked.
  */
 export function reorderPayload(
   tripId: string,
   change: ReorderChange,
-  clearTime: string | null = null,
+  clearTime: string | null,
+  transportRows: ReadonlyArray<PlannerTransport>,
 ): ReorderPlanInput {
+  const departing = departingItemIds(transportRows)
   return {
     tripId,
     days: change.days.map((day) => {
-      // A `leg:` id is `reorderDayTransportsFn`'s, and this payload is the stops and
-      // notes'. Sent here a chained leg's id is dropped as a stop the day does not hold,
-      // and a leg-less record's — 65 characters — fails `id.max(64)` for the whole
-      // payload, refusing every drag on that day.
-      const items = day.itemIds
-        .filter((itemId) => !isLegItemId(itemId))
-        .map((itemId) => timelineItem(itemId))
-      if (clearTime === null || !day.itemIds.includes(clearTime)) {
+      const items = dayRun(day.itemIds, departing)
+      if (
+        clearTime === null ||
+        isLegItemId(clearTime) ||
+        !day.itemIds.includes(clearTime)
+      ) {
         return { dayId: day.dayId, items }
       }
       return { dayId: day.dayId, items, clearTime: [timelineItem(clearTime)] }

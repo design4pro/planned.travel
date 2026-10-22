@@ -31,6 +31,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   RepositoryError,
   addTripMember,
+  createTransport,
   createAssignment,
   createDayNote,
   createPlace,
@@ -248,6 +249,132 @@ async function sequenceOf(dayId: string): Promise<Array<[string, number]>> {
 
 /* --------------------------------------------------------------- the writes */
 
+describe('a journey travels with its day', () => {
+  async function journeyOnTheDay(): Promise<string> {
+    const created = await createTransport(tenant.scope, {
+      tripId: fixture.tripId,
+      title: 'The 14:05',
+      mode: 'train',
+      dayId: fixture.dayId,
+    })
+    return created.id
+  }
+
+  async function sortOrderOfJourney(id: string): Promise<number> {
+    const row = harness.sqlite
+      .prepare('select sort_order from transports where id = ?')
+      .get(id) as { sort_order: number }
+    return row.sort_order
+  }
+
+  it('places the journey in the same call that renumbers the stops and notes', async () => {
+    const journeyId = await journeyOnTheDay()
+
+    await reorderPlan({
+      tripId: fixture.tripId,
+      days: [
+        {
+          dayId: fixture.dayId,
+          items: [
+            { kind: 'note', id: fixture.firstNoteId },
+            { kind: 'stop', id: fixture.eveningId },
+            { kind: 'transport', id: journeyId },
+            { kind: 'stop', id: fixture.morningId },
+            { kind: 'note', id: fixture.secondNoteId },
+          ],
+        },
+      ],
+    })
+
+    expect(await sequenceOf(fixture.dayId)).toEqual([
+      [fixture.firstNoteId, 0],
+      [fixture.eveningId, 1],
+      [fixture.morningId, 2],
+      [fixture.secondNoteId, 3],
+    ])
+    // Between `eveningId` (1) and `morningId` (2), measured against the numbering just written.
+    expect(await sortOrderOfJourney(journeyId)).toBe(1.5)
+  })
+
+  it('tells the room the day it wrote, journeys beside the stops and notes, in one patch', async () => {
+    const journeyId = await journeyOnTheDay()
+
+    await reorderPlan({
+      tripId: fixture.tripId,
+      days: [
+        {
+          dayId: fixture.dayId,
+          items: [
+            { kind: 'transport', id: journeyId },
+            { kind: 'stop', id: fixture.morningId },
+            { kind: 'stop', id: fixture.eveningId },
+            { kind: 'note', id: fixture.firstNoteId },
+            { kind: 'note', id: fixture.secondNoteId },
+          ],
+        },
+      ],
+    })
+
+    expect(stubs.mirrored).toHaveLength(1)
+    expect(stubs.mirrored.at(0)?.patches).toHaveLength(1)
+    expect(stubs.mirrored.at(0)?.patches.at(0)?.fields).toEqual({
+      items: [
+        { kind: 'stop', id: fixture.morningId },
+        { kind: 'stop', id: fixture.eveningId },
+        { kind: 'note', id: fixture.firstNoteId },
+        { kind: 'note', id: fixture.secondNoteId },
+      ],
+      journeys: [{ kind: 'transport', id: journeyId }],
+    })
+  })
+
+  it('still accepts a payload that names no journey, and puts the journey back where it was', async () => {
+    const journeyId = await journeyOnTheDay()
+    harness.sqlite
+      .prepare('update transports set sort_order = 0.5 where id = ?')
+      .run(journeyId)
+
+    // A tab loaded before this deploy: stops and notes only, the order reversed.
+    await reorderPlan({
+      tripId: fixture.tripId,
+      days: [
+        {
+          dayId: fixture.dayId,
+          items: [
+            { kind: 'stop', id: fixture.eveningId },
+            { kind: 'stop', id: fixture.morningId },
+          ],
+        },
+      ],
+    })
+
+    // The notes the tab never mentioned go back behind the evening stop, and the journey goes
+    // back behind the morning stop it followed: last, so after the last position, 3.
+    expect(await sortOrderOfJourney(journeyId)).toBe(3.5)
+  })
+
+  it('refuses a day that names more than 200 stops and notes, journeys or not', () => {
+    const anchor = { kind: 'stop' as const, id: 'a' }
+    const journey = { kind: 'leg' as const, id: 'l' }
+    const day = (anchors: number, journeys: number) => ({
+      tripId: fixture.tripId,
+      days: [
+        {
+          dayId: fixture.dayId,
+          items: [
+            ...Array.from({ length: anchors }, () => anchor),
+            ...Array.from({ length: journeys }, () => journey),
+          ],
+        },
+      ],
+    })
+
+    expect(reorderPlanInputSchema.safeParse(day(200, 200)).success).toBe(true)
+    expect(reorderPlanInputSchema.safeParse(day(201, 0)).success).toBe(false)
+    expect(reorderPlanInputSchema.safeParse(day(0, 401)).success).toBe(false)
+  })
+})
+
 describe('the merged day reaches both position columns', () => {
   it('interleaves a note between two stops and numbers the day 0..n-1', async () => {
     await reorderPlan({
@@ -363,6 +490,7 @@ describe('a note that changes day', () => {
     ).toEqual([fixture.firstNoteId])
     expect(stubs.mirrored.at(0)?.patches.at(0)?.fields).toEqual({
       items: [{ kind: 'note', id: fixture.firstNoteId }],
+      journeys: [],
     })
   })
 })
@@ -515,6 +643,7 @@ describe('the trip room still hears about it', () => {
         { kind: 'stop', id: fixture.morningId },
         { kind: 'note', id: fixture.secondNoteId },
       ],
+      journeys: [],
     })
   })
 

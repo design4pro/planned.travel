@@ -170,10 +170,12 @@ describe('planMoveOutcome', () => {
 
 describe('reorderPayload', () => {
   it('names a note as a note and a stop as a stop, by its bare row id', () => {
-    const payload = reorderPayload('t1', {
-      kind: 'reorder',
-      days: [{ dayId: 'd1', itemIds: [N1, 'a1', 'a2'] }],
-    })
+    const payload = reorderPayload(
+      't1',
+      { kind: 'reorder', days: [{ dayId: 'd1', itemIds: [N1, 'a1', 'a2'] }] },
+      null,
+      [],
+    )
 
     expect(payload).toEqual({
       tripId: 't1',
@@ -199,6 +201,7 @@ describe('reorderPayload', () => {
       't1',
       { kind: 'reorder', days: [{ dayId: 'd1', itemIds: [N1, 'a1', 'a2'] }] },
       N1,
+      [],
     )
 
     expect(payload.days).toHaveLength(1)
@@ -221,6 +224,7 @@ describe('reorderPayload', () => {
         ],
       },
       N1,
+      [],
     )
 
     expect(payload.days[0].clearTime).toBeUndefined()
@@ -335,11 +339,16 @@ describe('a journey on the board', () => {
     expect(refusalCopy('timed', 'a1')).toBeNull()
   })
 
-  it('is left out of the reorder the stops and notes are written with', () => {
-    const payload = reorderPayload('trip-1', {
-      kind: 'reorder',
-      days: [{ dayId: 'd1', itemIds: ['a1', N1, J1, 'a2'] }],
-    })
+  it('is left out of the run when the board does not draw it as departing from the day', () => {
+    const payload = reorderPayload(
+      'trip-1',
+      {
+        kind: 'reorder',
+        days: [{ dayId: 'd1', itemIds: ['a1', N1, J1, 'a2'] }],
+      },
+      null,
+      [],
+    )
 
     expect(payload.days[0].items).toEqual([
       { kind: 'stop', id: 'a1' },
