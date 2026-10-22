@@ -333,6 +333,18 @@ const sourceAmountFields = {
   exchangeRate: z.number().finite().positive().nullish(),
 }
 
+/**
+ * The source triple of a row that no longer has one. A writer that moves a row's amount or currency
+ * without a typed figure stores this beside the new figures: the earlier triple described a sum the
+ * row no longer holds, and left in place it would be read as an observation of a pair the row does
+ * not carry (#1521).
+ */
+const NO_SOURCE_AMOUNT = {
+  originalAmountMinor: null,
+  originalCurrency: null,
+  exchangeRate: null,
+} as const
+
 const expenseFields = {
   expectedTripCurrency,
   dayId: idSchema.nullish(),
@@ -510,12 +522,20 @@ export async function updateBudgetItem(
 ): Promise<BudgetItem> {
   const { expectedTripCurrency: expected, ...patch } =
     updateBudgetItemInput.parse(input)
-  await requireTripBudgetItem(scope, tripId, budgetItemId, expected)
-  return budgetItemsRepository.requireUpdate(
+  const existing = await requireTripBudgetItem(
     scope,
+    tripId,
     budgetItemId,
-    definedOnly(patch),
+    expected,
   )
+  const moved =
+    (patch.plannedAmountMinor !== undefined &&
+      patch.plannedAmountMinor !== existing.plannedAmountMinor) ||
+    (patch.currency !== undefined && patch.currency !== existing.currency)
+  return budgetItemsRepository.requireUpdate(scope, budgetItemId, {
+    ...definedOnly(patch),
+    ...(moved ? NO_SOURCE_AMOUNT : {}),
+  })
 }
 
 export async function deleteBudgetItem(
@@ -761,8 +781,13 @@ export async function repriceExpense(
   expenseId: string,
   input: RepriceExpenseInput,
 ): Promise<RepricedExpense> {
-  const patch = repriceExpenseInput.parse(input)
+  const figures = repriceExpenseInput.parse(input)
   const existing = await requireTripExpense(scope, tripId, expenseId)
+  const patch =
+    figures.amountMinor !== existing.amountMinor ||
+    figures.currency !== existing.currency
+      ? { ...figures, ...NO_SOURCE_AMOUNT }
+      : figures
   const shares = await expenseSharesRepository.findMany(scope, {
     where: eq(expenseShares.expenseId, expenseId),
     orderBy: [asc(expenseShares.id)],

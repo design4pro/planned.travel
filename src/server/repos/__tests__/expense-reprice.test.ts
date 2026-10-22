@@ -16,8 +16,9 @@ import {
   repriceExpense,
   updateExpense,
 } from '../expenses'
+import { listAnsweringCurrencies, resolveRate } from '../rates'
 import { TripRoleError, addTripMember, createTrip } from '../trips'
-import { captureError, createHarness } from './harness'
+import { captureError, createHarness, subscribeTenant } from './harness'
 import type { TenantScope } from '../base'
 import type { Harness, SeededTenant } from './harness'
 
@@ -130,5 +131,136 @@ describe('repriceExpense', () => {
       ),
     ).toBeInstanceOf(TripRoleError)
     expect(await getExpenseWithShares(tenant.scope, expenseId)).toEqual(before)
+  })
+})
+
+/**
+ * An edit that moves a cost line's amount or currency without a typed figure cannot leave the
+ * earlier source triple behind (#1521): `10000 GBP @ 1.15` would outlive a price change to 200.00 EUR,
+ * and the frozen-rate pool would keep offering it as an observation of a pair the row no longer
+ * describes.
+ */
+describe('repriceExpense and the source triple', () => {
+  const NO_TRIPLE = {
+    originalAmountMinor: null,
+    originalCurrency: null,
+    exchangeRate: null,
+  }
+  const TRIPLE = {
+    originalAmountMinor: 8000,
+    originalCurrency: 'GBP',
+    exchangeRate: 1.15,
+  }
+
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+  let expenseId: string
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('reprice-triple')
+    await subscribeTenant(tenant.scope, 'crew')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Lisbon',
+      startDate: '2026-04-10',
+      endDate: '2026-04-13',
+      currency: 'EUR',
+    })
+    tripId = trip.id
+    const { expense } = await createExpense(tenant.scope, {
+      tripId,
+      title: 'Hotel',
+      amountMinor: 10_000,
+      currency: 'EUR',
+      ...TRIPLE,
+      spentOn: '2026-04-11',
+    })
+    expenseId = expense.id
+  })
+
+  it('keeps the triple when only the title changes', async () => {
+    const { expense } = await repriceExpense(tenant.scope, tripId, expenseId, {
+      title: 'Hotel Baixa',
+      amountMinor: 10_000,
+      currency: 'EUR',
+    })
+
+    expect(expense).toMatchObject({ title: 'Hotel Baixa', ...TRIPLE })
+  })
+
+  it.each([
+    ['amount', { amountMinor: 20_000, currency: 'EUR' }],
+    ['currency', { amountMinor: 10_000, currency: 'USD' }],
+  ])('clears the triple when the %s changes', async (_, figures) => {
+    const { expense } = await repriceExpense(tenant.scope, tripId, expenseId, {
+      title: 'Hotel',
+      ...figures,
+    })
+
+    expect(expense).toMatchObject({ ...figures, ...NO_TRIPLE })
+  })
+
+  it('clears the triple on the path that re-divides the shares too', async () => {
+    await updateExpense(tenant.scope, tripId, expenseId, {
+      splitMethod: 'equal',
+      participants: [{ userId: tenant.ownerUserId }],
+    })
+
+    const { expense, shares } = await repriceExpense(
+      tenant.scope,
+      tripId,
+      expenseId,
+      { title: 'Hotel', amountMinor: 20_000, currency: 'EUR' },
+    )
+
+    expect(shares.map((share) => share.shareMinor)).toEqual([20_000])
+    expect(expense).toMatchObject({ amountMinor: 20_000, ...NO_TRIPLE })
+  })
+
+  it('stops offering the old pair as a frozen rate once the line is re-priced', async () => {
+    const pair = { from: 'GBP', to: 'EUR', on: '2026-04-11' }
+    expect(await resolveRate(tenant.scope, pair)).toMatchObject({ rate: 1.15 })
+    expect(await listAnsweringCurrencies(tenant.scope, 'GBP')).toEqual(['EUR'])
+
+    await repriceExpense(tenant.scope, tripId, expenseId, {
+      title: 'Hotel',
+      amountMinor: 20_000,
+      currency: 'EUR',
+    })
+
+    expect(await resolveRate(tenant.scope, pair)).toBeNull()
+    expect(await listAnsweringCurrencies(tenant.scope, 'GBP')).toEqual([])
+  })
+
+  it('leaves the triple of another workspace alone', async () => {
+    const elsewhere = await harness.seedTenant('elsewhere-triple')
+    const abroad = await createTrip(elsewhere.scope, {
+      title: 'Porto',
+      startDate: '2026-05-01',
+      endDate: '2026-05-03',
+      currency: 'EUR',
+    })
+    const { expense } = await createExpense(elsewhere.scope, {
+      tripId: abroad.id,
+      title: 'Hotel',
+      amountMinor: 10_000,
+      currency: 'EUR',
+      ...TRIPLE,
+      spentOn: '2026-05-01',
+    })
+
+    expect(
+      await captureError(() =>
+        repriceExpense(tenant.scope, abroad.id, expense.id, {
+          title: 'Hotel',
+          amountMinor: 20_000,
+          currency: 'EUR',
+        }),
+      ),
+    ).toBeInstanceOf(NotFoundError)
+    expect(
+      (await getExpenseWithShares(elsewhere.scope, expense.id)).expense,
+    ).toMatchObject({ amountMinor: 10_000, ...TRIPLE })
   })
 })
