@@ -222,6 +222,7 @@ import {
   createImportedReservation,
   deleteReservation,
   getReservation,
+  createReservationExpense,
   linkReservationExpense,
   listTripReservations,
   markReservationsImported,
@@ -3750,6 +3751,95 @@ describe('tenant isolation', () => {
       expect(
         (await getReservation(scope, alpha.reservationId))?.expenseId,
       ).toBeNull()
+    })
+
+    /**
+     * The cost line and its link are one write, so the tenant and the trip of both are the scope's:
+     * a B booking named from A inserts nothing in either workspace, and neither does an A booking
+     * named under another trip.
+     */
+    it('creates a booking’s cost line only for a booking of its own tenant and trip', async () => {
+      const scope = alpha.tenant.scope
+      const expensesA = await expensesRepository.count(scope)
+      const expensesB = await expensesRepository.count(beta.tenant.scope)
+
+      expect(
+        await captureError(() =>
+          createReservationExpense(scope, beta.reservationId, {
+            tripId: alpha.tripId,
+            title: 'Cost of a booking that is not ours',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          createReservationExpense(scope, beta.reservationId, {
+            tripId: beta.tripId,
+            title: 'Cost on a trip that is not ours',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      const otherTrip = await createTrip(scope, {
+        title: 'Elsewhere',
+        currency: 'EUR',
+      })
+      expect(
+        await captureError(() =>
+          createReservationExpense(scope, alpha.reservationId, {
+            tripId: otherTrip.id,
+            title: 'Cost under another trip',
+            amountMinor: 1_000,
+            spentOn: '2026-04-10',
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+
+      expect(await expensesRepository.count(scope)).toBe(expensesA)
+      expect(await expensesRepository.count(beta.tenant.scope)).toBe(expensesB)
+      expect(
+        (await getReservation(beta.tenant.scope, beta.reservationId))
+          ?.expenseId,
+      ).toBeNull()
+      expect(
+        (await getReservation(scope, alpha.reservationId))?.expenseId,
+      ).toBeNull()
+    })
+
+    it('creates a booking’s cost line and links it in one write, once', async () => {
+      const scope = alpha.tenant.scope
+      const input = {
+        tripId: alpha.tripId,
+        title: 'Dinner',
+        amountMinor: 4_000,
+        spentOn: '2026-04-10',
+      }
+
+      const first = await createReservationExpense(
+        scope,
+        alpha.reservationId,
+        input,
+      )
+      expect(first.reservation.expenseId).toBe(first.expenseId)
+      expect(await getExpense(scope, first.expenseId)).toMatchObject({
+        tripId: alpha.tripId,
+        title: 'Dinner',
+      })
+
+      // The booking is linked now, so a second write inserts nothing and is told so by the link.
+      const countBefore = await expensesRepository.count(scope)
+      const second = await createReservationExpense(
+        scope,
+        alpha.reservationId,
+        input,
+      )
+      expect(second.reservation.expenseId).toBe(first.expenseId)
+      expect(second.expenseId).not.toBe(first.expenseId)
+      expect(await expensesRepository.count(scope)).toBe(countBefore)
+      expect(await getExpense(scope, second.expenseId)).toBeNull()
     })
 
     it('links a booking to a cost line of its own trip, and unlinks it again', async () => {
