@@ -109,14 +109,12 @@ describe('WorkspaceChangedNotice', () => {
     ).toBeTruthy()
   })
 
-  it('puts focus on the primary action', async () => {
+  it('puts focus on "Not now", so a reflexive Enter does not reload the page under a form', async () => {
     mount()
     refuse()
 
-    const primary = await screen.findByRole('button', {
-      name: 'Open the current workspace',
-    })
-    expect(document.activeElement).toBe(primary)
+    const dismiss = await screen.findByRole('button', { name: 'Not now' })
+    expect(document.activeElement).toBe(dismiss)
   })
 
   it('reloads into the dashboard from the primary action and shows it working', async () => {

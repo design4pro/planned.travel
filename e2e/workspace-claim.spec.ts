@@ -90,9 +90,7 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
   })
   await expect(notice).toBeVisible()
   await expect(notice).toContainText(FIRST)
-  await expect(
-    notice.getByRole('button', { name: 'Open the current workspace' }),
-  ).toBeFocused()
+  await expect(notice.getByRole('button', { name: 'Not now' })).toBeFocused()
   await expect(page).toHaveURL(/\/trips$/)
 
   // "Not now" leaves the tab stopped: the next attempt reopens the notice and sends nothing.

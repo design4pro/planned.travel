@@ -30,7 +30,9 @@ import { useOpenCurrentWorkspace } from './use-open-current-workspace'
  *
  * Mounted once, in the authenticated shell, because the store it reads is the tab's.
  *
- * **Focus.** It lands on the primary action, Radix traps it inside, Escape is "Not now", and on
+ * **Focus.** It lands on "Not now", the action that loses nothing: a refusal the reader did not cause
+ * (a poll, a link preload) can open it while they are typing, and a reflexive Enter must not reload
+ * the page under their form. Radix traps it inside, Escape is "Not now", and on
  * close `DialogContent` returns it to whatever held it when the notice opened - the control the
  * reader pressed. A click outside does not dismiss it: an alert is answered, not clicked past.
  */
@@ -43,7 +45,7 @@ export function WorkspaceChangedNotice({
   const t = useTranslate()
   const { noticeOpen } = useWorkspaceClaim()
   const currentWorkspace = useOpenCurrentWorkspace()
-  const primary = useRef<HTMLButtonElement>(null)
+  const dismiss = useRef<HTMLButtonElement>(null)
   const opener = useRef<Element | null>(null)
 
   // The name is a proper noun in someone else's script and direction: it is interpolated and
@@ -68,10 +70,13 @@ export function WorkspaceChangedNotice({
         role="alertdialog"
         size="sm"
         hideClose
+        // Above a dialog the reader already has open (a form the refusal interrupted), so its
+        // backdrop covers that one instead of painting underneath it.
+        overlayClassName="z-modal"
         onOpenAutoFocus={(event) => {
           opener.current = document.activeElement
           event.preventDefault()
-          primary.current?.focus()
+          dismiss.current?.focus()
         }}
         onInteractOutside={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => {
@@ -94,6 +99,7 @@ export function WorkspaceChangedNotice({
         </DialogHeader>
         <DialogFooter>
           <Button
+            ref={dismiss}
             variant="secondary"
             shape="pill"
             onClick={dismissWorkspaceNotice}
@@ -102,7 +108,7 @@ export function WorkspaceChangedNotice({
             {t('shell.session.workspaceChangedDismiss')}
           </Button>
           <Button
-            ref={primary}
+            variant="primary"
             shape="pill"
             onClick={currentWorkspace.open}
             loading={currentWorkspace.opening}

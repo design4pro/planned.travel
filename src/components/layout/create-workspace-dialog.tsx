@@ -17,13 +17,11 @@ import {
 } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { readPublicFailure } from '#/lib/errors'
-import {
-  WORKSPACE_CHANGED_KEY,
-  isWorkspaceChanged,
-} from '#/lib/workspace-claim'
+import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import {
   beginWorkspaceSwitch,
   endWorkspaceSwitch,
+  reopenNoticeFor,
 } from '#/lib/workspace-claim-store'
 import { createWorkspaceFn } from '#/server/fns/workspace'
 import { useWorkspaceResync } from './workspace-switcher'
@@ -93,12 +91,14 @@ export function CreateWorkspaceDialog({
 
   const canSubmit = name.trim().length > 0 && !pending
 
-  // Creating a workspace activates it on the session, so this tab changes workspace itself: its
-  // own calls must not be refused for the claim it has not re-read yet (as in the switcher).
-  async function submit(): Promise<void> {
+  // Creating a workspace activates it on the session, so this tab changes workspace itself: the
+  // re-read after it must not be refused for the claim it has not re-read yet (as in the switcher).
+  // The create call itself keeps the claim, so a tab showing a stale workspace is refused before it
+  // is checked against a role and a plan it does not show.
+  async function resyncSwitching(): Promise<void> {
     beginWorkspaceSwitch()
     try {
-      await create()
+      await resync()
     } finally {
       endWorkspaceSwitch()
     }
@@ -123,7 +123,7 @@ export function CreateWorkspaceDialog({
     } catch (cause) {
       const failure = readPublicFailure(cause)
       // A catalogue key rather than a sentence, so it is resolved here and is not the English kind.
-      const changed = isWorkspaceChanged(cause)
+      const changed = reopenNoticeFor(cause)
       setNotice({
         kind: 'failure',
         message: changed
@@ -131,15 +131,18 @@ export function CreateWorkspaceDialog({
           : (failure.message ?? t('shell.workspace.createFailed')),
         authored: !changed && failure.message !== undefined,
       })
-      // Only an unknown outcome needs a re-read: a refusal or a validation failure wrote nothing.
-      if (failure.kind === 'unexpected') await resync().catch(() => undefined)
+      // Only an unknown outcome needs a re-read: a refusal, a validation failure or a stale tab wrote
+      // nothing.
+      if (failure.kind === 'unexpected' && !changed) {
+        await resyncSwitching().catch(() => undefined)
+      }
     } finally {
       setPending(false)
     }
 
     if (created) {
       onOpenChange(false)
-      await resync().catch(() => undefined)
+      await resyncSwitching().catch(() => undefined)
     }
   }
 
@@ -174,7 +177,7 @@ export function CreateWorkspaceDialog({
             className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault()
-              if (canSubmit) void submit()
+              if (canSubmit) void create()
             }}
           >
             {notice === null ? null : (

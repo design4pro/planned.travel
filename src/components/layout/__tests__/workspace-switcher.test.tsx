@@ -11,7 +11,10 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
+import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import {
+  dismissWorkspaceNotice,
+  markWorkspaceStale,
   resetWorkspaceClaim,
   setWorkspaceClaim,
   workspaceClaimState,
@@ -1084,6 +1087,49 @@ describe('creating a workspace', () => {
       expect(router.navigate).not.toHaveBeenCalled()
     },
   )
+
+  it('sends the claim with the create call and holds it back only for the re-read that follows', async () => {
+    setWorkspaceClaim('org_a')
+    const seen: Array<string> = []
+    workspace.create.mockImplementation(async () => {
+      seen.push(`create:${workspaceClaimState().switching}`)
+      return { ok: true, organizationId: 'org_new', activated: true }
+    })
+    router.navigate.mockImplementation(async () => {
+      seen.push(`navigate:${workspaceClaimState().switching}`)
+      setWorkspaceClaim('org_new')
+    })
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    await vi.waitFor(() => {
+      expect(seen).toEqual(['create:false', 'navigate:true'])
+    })
+    await vi.waitFor(() => {
+      expect(workspaceClaimState()).toMatchObject({
+        organizationId: 'org_new',
+        switching: false,
+      })
+    })
+  })
+
+  it('does not re-read the shell after a stale-tab refusal, and brings the notice back', async () => {
+    setWorkspaceClaim('org_a')
+    markWorkspaceStale('org_a')
+    dismissWorkspaceNotice()
+    workspace.create.mockRejectedValue(new Error(WORKSPACE_CHANGED_KEY))
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe(
+      'The workspace was changed in another tab or window. Nothing was saved.',
+    )
+    expect(workspaceClaimState().noticeOpen).toBe(true)
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
 
   it('shows the authored sentence of a thrown refusal', async () => {
     workspace.create.mockRejectedValue(
