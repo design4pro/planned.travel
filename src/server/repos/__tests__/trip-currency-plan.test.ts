@@ -346,6 +346,31 @@ describe('planning a re-basing', () => {
       expect(second.exchangeRate).toBeCloseTo(1.04, 9)
     })
 
+    it('does not trust the constant 1 an earlier zero-amount re-basing left across two currencies', () => {
+      // The shape the old planner wrote: a zero row typed in EUR, counted in JPY, rate 1.
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e-legacy',
+              amountMinor: 0,
+              currency: 'JPY',
+              originalAmountMinor: 0,
+              originalCurrency: 'EUR',
+              exchangeRate: 1,
+            }),
+          ],
+        }),
+        { from: 'JPY', to: 'USD', rate: 0.0065 },
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        originalCurrency: 'JPY',
+        currency: 'USD',
+        exchangeRate: 0.0065,
+      })
+    })
+
     it('never writes the constant 1 across two currencies', () => {
       const plan = planned(fixture())
 
@@ -929,6 +954,57 @@ describe('planning a re-basing', () => {
         original: { amountMinor: 4200, currency: 'EUR' },
         converted: { amountMinor: 6720, currency: 'JPY' },
       })
+    })
+
+    it('does not show a kept foreign figure or a rate-less typed figure as the example', () => {
+      const plan = planned(
+        snapshot({
+          expenses: [
+            // 100.00 GBP kept on a row already in yen: the confirmed rate did not touch it.
+            expense({
+              id: 'a-kept-foreign',
+              amountMinor: 18_400,
+              currency: 'JPY',
+              originalAmountMinor: 10_000,
+              originalCurrency: 'GBP',
+              exchangeRate: 184,
+            }),
+            // A typed figure with no rate: its amount is converted, the typed figure is not.
+            expense({
+              id: 'b-rateless',
+              amountMinor: 1000,
+              originalAmountMinor: 500,
+              originalCurrency: 'GBP',
+              exchangeRate: null,
+            }),
+            expense({ id: 'c-moved', amountMinor: 4200 }),
+          ],
+        }),
+      )
+
+      expect(plan.example).toEqual({
+        original: { amountMinor: 4200, currency: 'EUR' },
+        converted: { amountMinor: 6720, currency: 'JPY' },
+      })
+    })
+
+    it('has no example when only a kept foreign figure is priced', () => {
+      const plan = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'a-kept-foreign',
+              amountMinor: 18_400,
+              currency: 'JPY',
+              originalAmountMinor: 10_000,
+              originalCurrency: 'GBP',
+              exchangeRate: 184,
+            }),
+          ],
+        }),
+      )
+
+      expect(plan.example).toBeNull()
     })
 
     it('falls back to the budget target when no row is priced', () => {

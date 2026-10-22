@@ -494,6 +494,15 @@ function sourceOf(row: MoneyColumns): Source {
   if (!isUsableRate(exchangeRate)) {
     return { kind: 'typed', originalAmountMinor, originalCurrency }
   }
+  if (
+    originalAmountMinor === 0 &&
+    exchangeRate === 1 &&
+    originalCurrency !== row.currency
+  ) {
+    // How the old zero-amount special case left a row across two currencies: a constant, not a
+    // conversion rate of that pair, and a zero figure carries no rate of its own to agree with.
+    return { kind: 'none' }
+  }
   return agreesWithAmount(
     row,
     originalAmountMinor,
@@ -523,21 +532,22 @@ function rebaseMoney(
   if (row.currency === to) {
     // Already in the new currency, so the figure is the truth: nothing to convert, and a typed
     // foreign figure it carries stays readable.
-    return source.kind === 'none'
-      ? {
-          amountMinor: row.amountMinor,
-          currency: to,
-          originalAmountMinor: row.amountMinor,
-          originalCurrency: to,
-          exchangeRate: 1,
-        }
-      : {
-          amountMinor: row.amountMinor,
-          currency: to,
-          originalAmountMinor: source.originalAmountMinor,
-          originalCurrency: source.originalCurrency,
-          exchangeRate: source.kind === 'triple' ? source.exchangeRate : null,
-        }
+    if (source.kind === 'none') {
+      return {
+        amountMinor: row.amountMinor,
+        currency: to,
+        originalAmountMinor: row.amountMinor,
+        originalCurrency: to,
+        exchangeRate: 1,
+      }
+    }
+    return {
+      amountMinor: row.amountMinor,
+      currency: to,
+      originalAmountMinor: source.originalAmountMinor,
+      originalCurrency: source.originalCurrency,
+      exchangeRate: source.kind === 'triple' ? source.exchangeRate : null,
+    }
   }
   if (source.kind === 'typed') {
     // A typed figure without a rate cannot drive the amount: the row's own amount is converted, and
@@ -687,18 +697,25 @@ function refused(refusal: RebaseRefusal): RebaseOutcome {
   return { kind: 'refused', refusal }
 }
 
+/**
+ * The first priced row as the figure typed and what it will count as. `moved` holds the rows the
+ * confirmed rate actually converted: a figure kept as it was (typed in the new currency, or a
+ * foreign figure on a row already in it) shows nothing of the rate the owner is about to confirm,
+ * so it is only shown when no row moves and it was typed in the new currency.
+ */
 function firstExample(
   rows: ReadonlyArray<RebasedMoney>,
+  moved: ReadonlySet<RebasedMoney>,
   to: string,
 ): RebasePlan['example'] {
   const priced = rows.filter(
     (candidate) =>
       candidate.amountMinor > 0 && candidate.originalAmountMinor > 0,
   )
-  // A figure typed in the new currency is kept, not converted, so it shows nothing of the rate the
-  // owner is about to confirm: prefer a row that moves.
   const row =
-    priced.find((candidate) => candidate.originalCurrency !== to) ?? priced[0]
+    priced.find(
+      (candidate) => moved.has(candidate) && candidate.originalCurrency !== to,
+    ) ?? priced.find((candidate) => candidate.originalCurrency === to)
   return row === undefined
     ? null
     : {
@@ -806,6 +823,21 @@ export function planRebase(
       ),
     }))
 
+    // Rows the rate converted: they left the old currency with a rate, not as a kept or rate-less figure.
+    const moved = new Set<RebasedMoney>(
+      [
+        ...rebasedExpenses.filter(
+          (_, index) => snapshot.expenses[index]?.currency === from,
+        ),
+        ...rebasedPayments.filter(
+          (_, index) => snapshot.payments[index]?.currency === from,
+        ),
+        ...rebasedItems.filter(
+          (_, index) => snapshot.plannedItems[index]?.currency === from,
+        ),
+      ].filter((row) => row.exchangeRate !== null),
+    )
+
     const budgetTarget =
       snapshot.budgetTargetMinor === null
         ? null
@@ -848,6 +880,7 @@ export function planRebase(
         example:
           firstExample(
             [...rebasedExpenses, ...rebasedPayments, ...rebasedItems],
+            moved,
             to,
           ) ??
           (budgetTarget !== null && budgetTarget.before > 0

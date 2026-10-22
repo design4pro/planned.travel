@@ -5,7 +5,7 @@
 | **Status**         | implemented                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #828                                           |
-| **Implementation** | #896, #1221, #1241, #1251, #1267               |
+| **Implementation** | #896, #1221, #1241, #1251, #1267, #1525        |
 | **Plan**           | 04-S5 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR
@@ -870,9 +870,18 @@ and in rules 1, 4 and 5 above, which now state them in place:
   source triple, or of its own amount where it has none or only a rate-less typed figure.
 - **A zero amount no longer special-cases the rate.** It converts to zero at `r × k`, so no row
   leaves the old currency with a rate that is not a conversion of its own pair, and a second
-  re-basing in a row stays correct. The frozen-rate pool (`rates.ts`) therefore never reads a
-  constant 1 or an old pair's rate as an observation of the new pair.
+  re-basing in a row stays correct. The planner no longer writes a constant 1 or an old pair's rate
+  that the frozen-rate pool (`rates.ts`) would read as an observation of the new pair, and it does
+  not trust the constant 1 an earlier zero-amount re-basing left on a zero source across two
+  currencies: such a row is pinned from its amount and gets the real rate of its pair.
+
+- **The preview's example is a row the rate converted.** A foreign figure kept on a row already in
+  the new currency and a rate-less typed figure are not shown beside the confirmed rate; only a
+  figure typed in the new currency is shown when no row moves.
 
 Not decided here, and tracked as #1521: who clears a triple when an amount is edited (booking
 re-price, planned-item update), so the writers stop producing stale rows. Rows already stale in
-production are not migrated; the planner guard above covers them without a backfill.
+production are not migrated: the planner guard covers a stale triple at the next re-basing without a
+backfill, but zero-source rows an earlier re-basing wrote with a carried-over rate (other than the
+constant 1 above) still sit in the frozen-rate pool until their trip is re-based again, and
+`frozenRatePredicates` still reads them. Tracked as #1526.
