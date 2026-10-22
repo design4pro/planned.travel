@@ -5,6 +5,10 @@
  * "who is this, and which tenant may they touch" are unit-testable in isolation
  * from the transport that supplies the session.
  */
+import {
+  parseWorkspaceClaim,
+  WORKSPACE_CHANGED_KEY,
+} from '#/lib/workspace-claim'
 import { ORGANIZATION_ROLES } from '#/server/db/auth-schema'
 import { asDate, isImpersonationExpired } from './impersonation-expiry'
 import type { OrganizationRole } from '#/server/db/auth-schema'
@@ -103,8 +107,11 @@ export function roleSatisfies(
  *
  * One vocabulary for every denial, tenant and platform alike. The last three are the platform
  * guard's: a banned account, a role that does not hold the statement, and an impersonated session
- * reaching for a platform capability §6.4 vetoes. A second denial type beside this one would be a
- * second answer to "why was this refused".
+ * reaching for a platform capability §6.4 vetoes. `workspace-changed` is a tab that states a
+ * workspace other than the session's effective one (`src/lib/workspace-claim.ts`): the caller is
+ * not refused for who they are but for which workspace they believe they are in, which is why it is
+ * not `not-a-member`. A second denial type beside this one would be a second answer to "why was
+ * this refused".
  */
 export type AuthFailureReason =
   | 'unauthenticated'
@@ -114,6 +121,7 @@ export type AuthFailureReason =
   | 'banned'
   | 'insufficient-platform-permission'
   | 'impersonated'
+  | 'workspace-changed'
 
 export class AuthRequirementError extends Error {
   readonly reason: AuthFailureReason
@@ -153,6 +161,12 @@ export type RequireOrgOptions = {
    * silent switch.
    */
   organizationId?: string
+  /**
+   * The workspace the calling tab says it is showing, verbatim from its request header
+   * (`WORKSPACE_CLAIM_HEADER`). Compared with the resolved organization and never used to choose
+   * it: absent is allowed, a different or malformed value is `workspace-changed`.
+   */
+  claim?: string | null
 }
 
 /**
@@ -173,6 +187,14 @@ export function requireOrgFrom(
       'no-active-organization',
       'Choose a workspace before continuing.',
     )
+  }
+
+  const claim = parseWorkspaceClaim(options.claim)
+  if (
+    claim.status === 'malformed' ||
+    (claim.status === 'valid' && claim.organizationId !== activeOrganizationId)
+  ) {
+    throw new AuthRequirementError('workspace-changed', WORKSPACE_CHANGED_KEY)
   }
 
   if (

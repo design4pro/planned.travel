@@ -661,6 +661,13 @@ const messages = {
     'Akun Anda belum terhubung ke ruang kerja mana pun. Keluar lalu masuk lagi untuk menuntaskan penyiapannya.',
   'session.membershipRemoved':
     'Keanggotaan Anda di ruang kerja ini sudah dicabut.',
+  'session.workspaceChanged':
+    'Ruang kerja diubah di tab atau jendela lain. Tidak ada yang disimpan.',
+  'session.workspaceChangedTitle': 'Ruang kerja berubah di tab lain',
+  'session.workspaceChangedBody':
+    'Tab ini menampilkan {name}, tetapi ruang kerja diubah di tab atau jendela lain. Tidak ada yang disimpan.',
+  'session.openCurrentWorkspace': 'Buka ruang kerja saat ini',
+  'session.workspaceChangedDismiss': 'Nanti saja',
 } satisfies TranslationOf<typeof En>
 
 export default messages

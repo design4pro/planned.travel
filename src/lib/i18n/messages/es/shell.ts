@@ -739,6 +739,14 @@ const messages = {
     'Tu cuenta todavía no está en ningún espacio de trabajo. Cierra la sesión y vuelve a entrar para terminar de configurarla.',
   'session.membershipRemoved':
     'Se ha retirado tu pertenencia a este espacio de trabajo.',
+  'session.workspaceChanged':
+    'El espacio de trabajo se cambió en otra pestaña o ventana. No se guardó nada.',
+  'session.workspaceChangedTitle':
+    'El espacio de trabajo cambió en otra pestaña',
+  'session.workspaceChangedBody':
+    'Esta pestaña muestra {name}, pero el espacio de trabajo se cambió en otra pestaña o ventana. No se guardó nada.',
+  'session.openCurrentWorkspace': 'Abrir el espacio de trabajo actual',
+  'session.workspaceChangedDismiss': 'Ahora no',
 } satisfies TranslationOf<typeof En>
 
 export default messages

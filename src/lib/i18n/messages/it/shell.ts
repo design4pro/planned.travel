@@ -739,6 +739,14 @@ const messages = {
     'Il tuo account non è ancora collegato a uno spazio di lavoro. Esci e rientra per finire di configurarlo.',
   'session.membershipRemoved':
     'La tua appartenenza a questo spazio di lavoro è stata revocata.',
+  'session.workspaceChanged':
+    'Lo spazio di lavoro è stato cambiato in un’altra scheda o finestra. Non è stato salvato nulla.',
+  'session.workspaceChangedTitle':
+    'Lo spazio di lavoro è cambiato in un’altra scheda',
+  'session.workspaceChangedBody':
+    'Questa scheda mostra {name}, ma lo spazio di lavoro è stato cambiato in un’altra scheda o finestra. Non è stato salvato nulla.',
+  'session.openCurrentWorkspace': 'Apri lo spazio di lavoro attuale',
+  'session.workspaceChangedDismiss': 'Non ora',
 } satisfies TranslationOf<typeof En>
 
 export default messages

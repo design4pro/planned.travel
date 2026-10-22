@@ -73,7 +73,7 @@ const APP_FILES = [
  * classifies them and the shell resolves them. The shell is what reads them, so the keys they name
  * are read here like the two `SHELL_STATE_KEYS` in `session.ts`.
  */
-const LIB_FILES = ['currency-refusals.ts']
+const LIB_FILES = ['currency-refusals.ts', 'workspace-claim.ts']
 
 interface Source {
   readonly name: string

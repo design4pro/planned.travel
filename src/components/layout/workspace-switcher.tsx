@@ -10,6 +10,10 @@ import {
 } from '#/lib/auth/client'
 import { Spinner } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
+import {
+  beginWorkspaceSwitch,
+  endWorkspaceSwitch,
+} from '#/lib/workspace-claim-store'
 import { MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem } from './menu'
 
 import { foldWorkspaceName } from './workspace-name'
@@ -90,6 +94,9 @@ export function useWorkspaceSwitch({
     const chosenName = chosen.name
     switching.current = true
     setPendingId(organizationId)
+    // `setActive` moves the session before this tab's shell is re-read, and a call this tab makes in
+    // between (a poll, an upload status) would be refused for a change the reader just made.
+    beginWorkspaceSwitch()
     try {
       const failure = await authClient.organization
         .setActive({ organizationId })
@@ -122,6 +129,7 @@ export function useWorkspaceSwitch({
       }
       if (failure) return
     } finally {
+      endWorkspaceSwitch()
       switching.current = false
       // Commit the close, including Radix's modal cleanup, before announcing outside the menu.
       flushSync(() => {

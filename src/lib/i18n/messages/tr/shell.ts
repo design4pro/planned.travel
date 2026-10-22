@@ -691,6 +691,13 @@ const messages = {
   'session.noWorkspace':
     'Hesabınız henüz bir çalışma alanına bağlı değil. Kurulumu tamamlamak için çıkış yapıp yeniden girin.',
   'session.membershipRemoved': 'Bu çalışma alanındaki üyeliğiniz kaldırıldı.',
+  'session.workspaceChanged':
+    'Çalışma alanı başka bir sekmede veya pencerede değiştirildi. Hiçbir şey kaydedilmedi.',
+  'session.workspaceChangedTitle': 'Çalışma alanı başka bir sekmede değişti',
+  'session.workspaceChangedBody':
+    'Bu sekme {name} çalışma alanını gösteriyor, ancak çalışma alanı başka bir sekmede veya pencerede değiştirildi. Hiçbir şey kaydedilmedi.',
+  'session.openCurrentWorkspace': 'Geçerli çalışma alanını aç',
+  'session.workspaceChangedDismiss': 'Şimdi değil',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -756,6 +756,13 @@ const messages = {
   'session.noWorkspace':
     'Váš účet zatím nepatří k žádnému prostoru. Odhlaste se a znovu přihlaste, ať se nastavení dokončí.',
   'session.membershipRemoved': 'Vaše členství v tomto prostoru bylo odebráno.',
+  'session.workspaceChanged':
+    'Prostor byl změněn v jiné kartě nebo okně. Nic se neuložilo.',
+  'session.workspaceChangedTitle': 'Prostor se změnil v jiné kartě',
+  'session.workspaceChangedBody':
+    'Tato karta zobrazuje {name}, ale prostor byl změněn v jiné kartě nebo okně. Nic se neuložilo.',
+  'session.openCurrentWorkspace': 'Otevřít aktuální prostor',
+  'session.workspaceChangedDismiss': 'Teď ne',
 } satisfies TranslationOf<typeof En>
 
 export default messages

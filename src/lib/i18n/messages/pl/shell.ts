@@ -773,6 +773,13 @@ const messages = {
     'Twoje konto nie jest jeszcze przypisane do żadnej przestrzeni. Wyloguj się i zaloguj ponownie, aby dokończyć konfigurację.',
   'session.membershipRemoved':
     'Twoje członkostwo w tej przestrzeni zostało usunięte.',
+  'session.workspaceChanged':
+    'Przestrzeń została zmieniona w innej karcie lub oknie. Nic nie zostało zapisane.',
+  'session.workspaceChangedTitle': 'Przestrzeń zmieniła się w innej karcie',
+  'session.workspaceChangedBody':
+    'Ta karta pokazuje przestrzeń {name}, ale przestrzeń została zmieniona w innej karcie lub oknie. Nic nie zostało zapisane.',
+  'session.openCurrentWorkspace': 'Otwórz bieżącą przestrzeń',
+  'session.workspaceChangedDismiss': 'Nie teraz',
 } satisfies TranslationOf<typeof En>
 
 export default messages

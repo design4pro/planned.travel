@@ -27,11 +27,13 @@ import {
 } from '#/components/ui'
 import { SwatchPicker } from '#/components/modules/shared'
 import { useTranslate } from '#/lib/i18n'
+import { reopenNoticeFor } from '#/lib/workspace-claim-store'
 
 import { REQUIRED_DEFAULT, REQUIRED_SWATCHES } from '#/lib/swatches'
 import { createCollectionFn, createJourneyFn } from '../-server/library'
 
 function messageOf(error: unknown, fallback: string): string {
+  if (reopenNoticeFor(error)) return fallback
   if (error instanceof Error && error.message.length > 0) {
     return error.message
   }

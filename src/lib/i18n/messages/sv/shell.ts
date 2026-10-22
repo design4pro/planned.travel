@@ -699,6 +699,13 @@ const messages = {
     'Ditt konto hör ännu inte till någon arbetsyta. Logga ut och in igen för att bli klar med det.',
   'session.membershipRemoved':
     'Ditt medlemskap i den här arbetsytan har avslutats.',
+  'session.workspaceChanged':
+    'Arbetsytan ändrades i en annan flik eller ett annat fönster. Inget sparades.',
+  'session.workspaceChangedTitle': 'Arbetsytan ändrades i en annan flik',
+  'session.workspaceChangedBody':
+    'Den här fliken visar {name}, men arbetsytan ändrades i en annan flik eller ett annat fönster. Inget sparades.',
+  'session.openCurrentWorkspace': 'Öppna den aktuella arbetsytan',
+  'session.workspaceChangedDismiss': 'Inte nu',
 } satisfies TranslationOf<typeof En>
 
 export default messages

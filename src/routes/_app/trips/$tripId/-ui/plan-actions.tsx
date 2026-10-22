@@ -55,6 +55,7 @@ import {
 } from '#/lib/geo/handoff'
 import { formatCoordinate, parsePosition } from '#/lib/geo/position'
 import { useTranslate } from '#/lib/i18n'
+import { reopenNoticeFor } from '#/lib/workspace-claim-store'
 
 import type { PlannerCategory, PlannerRow } from '#/components/planner'
 import type { Translate, MessageKey } from '#/lib/i18n'
@@ -118,6 +119,7 @@ function asBookingStatus(value: string): PlanReservationStatus {
 }
 
 export function messageOf(error: unknown, fallback: string): string {
+  if (reopenNoticeFor(error)) return fallback
   if (error instanceof Error && error.message.length > 0) return error.message
   return fallback
 }
