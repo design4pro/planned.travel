@@ -16,8 +16,6 @@
  */
 import { readPublicFailure } from '#/lib/errors'
 
-import type { MessageKey } from '#/lib/i18n'
-
 /** The request header a tab states its workspace in. */
 export const WORKSPACE_CLAIM_HEADER = 'x-planned-workspace'
 
@@ -27,9 +25,12 @@ export const WORKSPACE_CLAIM_HEADER = 'x-planned-workspace'
  * Same shape as `SHELL_STATE_KEYS` (`src/components/layout/session.ts`): the server throws the key
  * and the browser resolves it in the locale the page was rendered in, so no English sentence
  * crosses the boundary. `classifyFailure` lets exactly this string through as authored copy.
+ *
+ * It is a plain literal, not `satisfies MessageKey`: the server reaches this module, and a type
+ * import of the catalogue is an edge the catalog isolation walk would follow into every locale
+ * file. `workspace-claim.test.ts` checks the key against the catalogue instead.
  */
-export const WORKSPACE_CHANGED_KEY =
-  'shell.session.workspaceChanged' as const satisfies MessageKey
+export const WORKSPACE_CHANGED_KEY = 'shell.session.workspaceChanged'
 
 /** Better Auth ids are `nanoid(24)`: URL-safe, so this is the whole alphabet a claim may use. */
 const CLAIM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/

@@ -9,6 +9,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { encodePublicFailure } from '#/lib/errors'
+import type { MessageKey } from '#/lib/i18n'
+import En from '#/lib/i18n/messages/en/shell'
 
 import {
   WORKSPACE_CHANGED_KEY,
@@ -31,6 +33,13 @@ import {
 afterEach(() => {
   resetWorkspaceClaim()
   vi.unstubAllGlobals()
+})
+
+describe('WORKSPACE_CHANGED_KEY', () => {
+  it('is a key of the catalogue, so the browser can resolve what the server throws', () => {
+    const key: MessageKey = WORKSPACE_CHANGED_KEY
+    expect(Object.keys(En).map((name) => `shell.${name}`)).toContain(key)
+  })
 })
 
 describe('parseWorkspaceClaim', () => {
