@@ -316,7 +316,7 @@ describe('a day reordered in one write', () => {
       }),
     )
 
-    expect(error).toBeInstanceOf(Error)
+    expect(String(error)).toContain('forced failure')
     expect(await positions()).toEqual(before)
   })
 

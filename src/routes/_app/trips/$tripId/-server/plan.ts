@@ -479,7 +479,7 @@ export const reorderPlanInputSchema = z.strictObject({
  * The client sends the *resulting* sequence of every day a drag touched — at most
  * two — and the server derives every position from array index. That is what makes
  * the indices self-healing: whatever fractional values a mid-list insert left behind,
- * the next drag renumbers the day to `0..n-1` across both position columns at once.
+ * the next drag renumbers the day to `0..n-1` across the position columns of the stops, the notes and the journeys at once.
  * It also means a client cannot inject an index of its own choosing, only a
  * permutation of ids it can already see.
  *
