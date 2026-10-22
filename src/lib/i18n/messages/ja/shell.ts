@@ -611,6 +611,12 @@ const messages = {
     'このアカウントはまだワークスペースに紐づいていません。サインアウトして入り直すと、設定が仕上がります。',
   'session.membershipRemoved':
     'このワークスペースのメンバーではなくなりました。',
+  'session.workspaceChanged': 'ワークスペースが別のタブまたはウィンドウで切り替えられました。何も保存されていません。',
+  'session.workspaceChangedTitle': '別のタブでワークスペースが切り替わりました',
+  'session.workspaceChangedBody':
+    'このタブには「{name}」が表示されていますが、ワークスペースは別のタブまたはウィンドウで切り替えられました。何も保存されていません。',
+  'session.openCurrentWorkspace': '現在のワークスペースを開く',
+  'session.workspaceChangedDismiss': '今はしない',
 } satisfies TranslationOf<typeof En>
 
 export default messages

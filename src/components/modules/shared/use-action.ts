@@ -13,6 +13,7 @@ import { useRouter } from '@tanstack/react-router'
 
 import { toast } from '#/components/ui'
 import { readPublicFailure } from '#/lib/errors'
+import { isWorkspaceChanged } from '#/lib/workspace-claim'
 
 /**
  * Pulls a line the reader is allowed to see out of whatever the server threw.
@@ -24,6 +25,9 @@ import { readPublicFailure } from '#/lib/errors'
  * reporting a problem is looking.
  */
 export function messageOf(error: unknown, fallback: string): string {
+  // A catalogue key, not a sentence: printing it would show the key itself. The workspace notice
+  // (`workspace-changed-notice.tsx`) is the surface that explains it.
+  if (isWorkspaceChanged(error)) return fallback
   const failure = readPublicFailure(error)
   if (failure.kind !== 'unexpected' && failure.message !== undefined) {
     return failure.message
@@ -112,6 +116,13 @@ export function useAction<TInput, TResult>(
         options.onSuccess?.(result)
         return result
       } catch (cause) {
+        // The tab's workspace is no longer the session's. The notice is the one surface for this:
+        // a second "That did not save" toast over it would say the same thing worse. Nothing was
+        // saved, so an optimistic overlay still rolls back.
+        if (isWorkspaceChanged(cause)) {
+          options.onError?.(cause)
+          return null
+        }
         const message = messageOf(
           cause,
           options.fallback ?? 'Try again in a moment.',

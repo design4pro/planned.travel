@@ -6,6 +6,7 @@
  * can be tested without a request; this module supplies the request.
  */
 import { getRequest } from '@tanstack/react-start/server'
+import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
 import { authDb } from './db'
 import { getAuth } from './index'
 import { resolveOrProvisionOrganization } from './provisioning'
@@ -118,5 +119,8 @@ export async function requireOrg(
     ? { ...session, session: { ...session.session, activeOrganizationId: organizationId } }
     : session
 
-  return requireOrgFrom(effective, role, options)
+  return requireOrgFrom(effective, role, {
+    claim: getRequest().headers.get(WORKSPACE_CLAIM_HEADER),
+    ...options,
+  })
 }

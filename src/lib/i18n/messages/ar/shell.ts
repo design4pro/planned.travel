@@ -799,6 +799,13 @@ const messages = {
   'session.noWorkspace':
     'حسابك غير مرتبط بمساحة عمل بعد. سجّل الخروج ثم الدخول مرة أخرى لإكمال إعداده.',
   'session.membershipRemoved': 'أُلغيت عضويتك في مساحة العمل هذه.',
+  'session.workspaceChanged':
+    'تم تغيير مساحة العمل في علامة تبويب أو نافذة أخرى. لم يتم حفظ أي شيء.',
+  'session.workspaceChangedTitle': 'تغيّرت مساحة العمل في علامة تبويب أخرى',
+  'session.workspaceChangedBody':
+    'تعرض علامة التبويب هذه {name}، لكن مساحة العمل تغيّرت في علامة تبويب أو نافذة أخرى. لم يتم حفظ أي شيء.',
+  'session.openCurrentWorkspace': 'افتح مساحة العمل الحالية',
+  'session.workspaceChangedDismiss': 'ليس الآن',
 } satisfies TranslationOf<typeof En>
 
 export default messages

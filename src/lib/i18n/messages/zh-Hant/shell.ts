@@ -568,6 +568,11 @@ const messages = {
   'session.noWorkspace':
     '你的帳號還沒有掛在任何工作區上。登出後重新登入，就能把它設好。',
   'session.membershipRemoved': '你在這個工作區的成員資格已被移除。',
+  'session.workspaceChanged': '工作區已在另一個分頁或視窗中切換。沒有儲存任何內容。',
+  'session.workspaceChangedTitle': '工作區已在另一個分頁中切換',
+  'session.workspaceChangedBody': '此分頁顯示的是「{name}」，但工作區已在另一個分頁或視窗中切換。沒有儲存任何內容。',
+  'session.openCurrentWorkspace': '開啟目前的工作區',
+  'session.workspaceChangedDismiss': '暫不',
 } satisfies TranslationOf<typeof En>
 
 export default messages

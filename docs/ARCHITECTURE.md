@@ -84,6 +84,13 @@ Same path from step 3, minus rendering. Mutations follow one shape: validate →
 touched → enqueue anything slow → return the new state. Budget: **~4 ms CPU**, 1 KV read,
 1–4 D1 statements.
 
+A call from the authenticated shell also carries the workspace the tab is showing, in the
+`x-planned-workspace` header (the _workspace claim_, `src/lib/workspace-claim-middleware.ts`).
+`requireOrg` compares it with the session's effective workspace before the role check and any data
+access, and a mismatch is refused as `workspace-changed` (403) with nothing written, so a tab left
+open before another tab switched workspace cannot write into the workspace it is not showing. The
+claim only narrows access: the tenant context still comes from the session alone.
+
 ### 2.3 A tile range request (`GET /api/tiles/basemap.pmtiles`, `Range: bytes=…`)
 
 Implemented in `src/routes/api/tiles/$.ts` and `-lib/`. MapLibre reads a Protomaps archive by

@@ -728,6 +728,14 @@ const messages = {
     'Dein Konto hängt noch an keinem Arbeitsbereich. Melde dich ab und wieder an, um das abzuschließen.',
   'session.membershipRemoved':
     'Deine Mitgliedschaft in diesem Arbeitsbereich wurde beendet.',
+  'session.workspaceChanged':
+    'Der Arbeitsbereich wurde in einem anderen Tab oder Fenster gewechselt. Es wurde nichts gespeichert.',
+  'session.workspaceChangedTitle':
+    'Der Arbeitsbereich hat sich in einem anderen Tab geändert',
+  'session.workspaceChangedBody':
+    'Dieser Tab zeigt {name}, aber der Arbeitsbereich wurde in einem anderen Tab oder Fenster gewechselt. Es wurde nichts gespeichert.',
+  'session.openCurrentWorkspace': 'Aktuellen Arbeitsbereich öffnen',
+  'session.workspaceChangedDismiss': 'Jetzt nicht',
 } satisfies TranslationOf<typeof En>
 
 export default messages

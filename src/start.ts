@@ -1,11 +1,15 @@
 /**
- * The Start instance, and the only two things registered globally.
+ * The Start instance, and the only things registered globally.
  *
  * `functionMiddleware` runs ahead of every server function's own middleware and of its input
  * validator, so registering the redaction boundary here covers every `createServerFn` call site
  * at once - including the Zod rejections that fire before a handler is entered. Doing it per call
  * site would make "a diagnostic never reaches the browser" a thing every call site has to keep being
  * true, which is exactly the shape of rule that stops being true.
+ *
+ * `workspaceClaimMiddleware` is the same argument for a different rule: a tab states the workspace
+ * it is showing on every call, so a tab whose workspace another tab switched is refused instead of
+ * silently reading or writing the new one. It has no server half; `requireOrg` compares.
  *
  * `requestMiddleware` carries the CSRF check, and the same argument applies twice over: a
  * per-call-site guard is a rule every call site has to keep, and the one place that forgets is the
@@ -14,6 +18,7 @@
 
 import { createCsrfMiddleware, createStart } from '@tanstack/react-start'
 
+import { workspaceClaimMiddleware } from '#/lib/workspace-claim-middleware'
 import { failureRedactionMiddleware } from '#/server/errors/middleware'
 
 /**
@@ -45,6 +50,6 @@ const csrfMiddleware = createCsrfMiddleware({
 })
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [failureRedactionMiddleware],
+  functionMiddleware: [failureRedactionMiddleware, workspaceClaimMiddleware],
   requestMiddleware: [csrfMiddleware],
 }))

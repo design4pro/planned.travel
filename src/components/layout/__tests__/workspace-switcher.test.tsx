@@ -11,6 +11,11 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
+import {
+  resetWorkspaceClaim,
+  setWorkspaceClaim,
+  workspaceClaimState,
+} from '#/lib/workspace-claim-store'
 import { UserMenu } from '../user-menu'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -156,6 +161,7 @@ function descriptionOf(element: HTMLElement): string {
 }
 
 beforeEach(() => {
+  resetWorkspaceClaim()
   auth.setActive.mockReset()
   router.clearCache.mockReset()
   router.invalidate.mockReset()
@@ -350,6 +356,51 @@ describe('switching', () => {
     // The previous workspace's cached `/dashboard` is dropped before the navigation can show it.
     expect(calls).toEqual(['setActive', 'clearCache', 'navigate', 'invalidate'])
     expect(notify.error).not.toHaveBeenCalled()
+  })
+
+  it('does not refuse itself: the claim is held back while it switches and is the new workspace after', async () => {
+    setWorkspaceClaim('org_a')
+    const seen: Array<boolean> = []
+    auth.setActive.mockImplementation(async () => {
+      seen.push(workspaceClaimState().switching)
+      return { data: {}, error: null }
+    })
+    router.navigate.mockImplementation(async () => {
+      // What `_app`'s `beforeLoad` does once `loadShell` has answered for the new workspace.
+      setWorkspaceClaim('org_b')
+    })
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    await vi.waitFor(() => {
+      expect(notify.success).toHaveBeenCalled()
+    })
+    expect(seen).toEqual([true])
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_b',
+      switching: false,
+      stale: false,
+    })
+  })
+
+  it('ends the switching window when the activation fails, keeping the claim it had', async () => {
+    setWorkspaceClaim('org_a')
+    auth.setActive.mockResolvedValue({
+      data: null,
+      error: { status: 403, message: 'no' },
+    })
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    await vi.waitFor(() => {
+      expect(notify.error).toHaveBeenCalled()
+    })
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_a',
+      switching: false,
+    })
   })
 
   it('does not move the check, or leave the page, until the switch has resolved', async () => {

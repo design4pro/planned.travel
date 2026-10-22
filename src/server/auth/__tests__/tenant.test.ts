@@ -16,6 +16,7 @@ import {
   normaliseSession,
   requireOrgFrom,
 } from '#/server/auth/tenant'
+import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import { requireTenantContext } from '#/server/repos/context'
 import type { AuthFailureReason } from '#/server/auth/tenant'
 
@@ -198,5 +199,83 @@ describe('requireOrgFrom after a workspace switch', () => {
     if (!ordinary) throw new Error('the fixture session did not normalise')
 
     expect(requireOrgFrom(ordinary, 'owner').impersonatedBy).toBeNull()
+  })
+})
+
+describe('requireOrgFrom with a workspace claim', () => {
+  // The tab states the workspace it is showing; the server only compares it. A claim never selects
+  // the workspace and never opens one, so every case below is either today's answer or a refusal.
+  function sessionActiveIn(organizationId: string) {
+    const normalised = normaliseSession({
+      user: { id: 'usr_1', email: 'kasia@planned.travel', name: 'Kasia' },
+      session: {
+        id: 'ses_1',
+        token: 'tok_1',
+        userId: 'usr_1',
+        activeOrganizationId: organizationId,
+        expiresAt: EXPIRES_AT,
+      },
+    })
+    if (!normalised) throw new Error('the fixture session did not normalise')
+    return normalised
+  }
+
+  it('behaves exactly as before when the claim names the session\'s workspace', () => {
+    expect(
+      requireOrgFrom(sessionActiveIn('org_b'), 'member', { claim: 'org_b' }),
+    ).toEqual(requireOrgFrom(sessionActiveIn('org_b'), 'member'))
+  })
+
+  it.each([undefined, null])('allows a call with no claim (%s)', (claim) => {
+    expect(
+      requireOrgFrom(sessionActiveIn('org_b'), 'member', { claim })
+        .organizationId,
+    ).toBe('org_b')
+  })
+
+  it('refuses a claim for another workspace with its own reason, not not-a-member', () => {
+    const attempt = () =>
+      requireOrgFrom(sessionActiveIn('org_b'), 'member', { claim: 'org_a' })
+
+    expect(attempt).toThrow(AuthRequirementError)
+    expect(attempt).toThrow(
+      expect.objectContaining({
+        reason: 'workspace-changed',
+        status: 403,
+        message: WORKSPACE_CHANGED_KEY,
+      }),
+    )
+  })
+
+  it('refuses before the role check, whatever the caller holds', () => {
+    expect(() =>
+      requireOrgFrom(sessionActiveIn('org_b'), null, { claim: 'org_a' }),
+    ).toThrow(expect.objectContaining({ reason: 'workspace-changed' }))
+    expect(() =>
+      requireOrgFrom(sessionActiveIn('org_b'), 'member', {
+        claim: 'org_a',
+        role: 'owner',
+      }),
+    ).toThrow(expect.objectContaining({ reason: 'workspace-changed' }))
+  })
+
+  it.each([
+    ['empty', ''],
+    ['padded', ' org_b '],
+    ['too long', 'a'.repeat(65)],
+    ['carrying a separator', 'org_a,org_b'],
+    ['carrying markup', '<org_b>'],
+  ])('refuses a claim that is %s instead of ignoring it', (_name, claim) => {
+    expect(() => requireOrgFrom(sessionActiveIn('org_b'), 'member', { claim })).toThrow(
+      expect.objectContaining({ reason: 'workspace-changed' }),
+    )
+  })
+
+  it('never lets the claim choose the workspace', () => {
+    // The claim names a workspace the caller belongs to elsewhere; the context is still the session's.
+    const context = requireOrgFrom(sessionActiveIn('org_b'), 'member', {
+      claim: 'org_b',
+    })
+    expect(context.organizationId).toBe('org_b')
   })
 })

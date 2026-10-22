@@ -821,6 +821,19 @@ const messages = {
     'Your account is not attached to a workspace yet. Sign out and back in to finish setting it up.',
   'session.membershipRemoved':
     'Your membership of this workspace has been removed.',
+  /**
+   * A call from a tab whose workspace is no longer the session's. `workspaceChanged` is the key
+   * the server throws (`WORKSPACE_CHANGED_KEY` in `src/lib/workspace-claim.ts`) and the error panel
+   * prints; the rest belong to the notice a stale tab opens (`workspace-changed-notice.tsx`).
+   * `{name}` is the workspace the tab is showing.
+   */
+  'session.workspaceChanged':
+    'The workspace was changed in another tab or window. Nothing was saved.',
+  'session.workspaceChangedTitle': 'The workspace changed in another tab',
+  'session.workspaceChangedBody':
+    'This tab is showing {name}, but the workspace was changed in another tab or window. Nothing was saved.',
+  'session.openCurrentWorkspace': 'Open the current workspace',
+  'session.workspaceChangedDismiss': 'Not now',
 } as const satisfies NamespaceMessages
 
 export default messages

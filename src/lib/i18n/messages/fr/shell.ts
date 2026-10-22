@@ -744,6 +744,14 @@ const messages = {
     'Votre compte n’est rattaché à aucun espace de travail. Déconnectez-vous puis reconnectez-vous pour terminer sa mise en place.',
   'session.membershipRemoved':
     'Votre appartenance à cet espace de travail a été retirée.',
+  'session.workspaceChanged':
+    'L’espace de travail a été changé dans un autre onglet ou une autre fenêtre. Rien n’a été enregistré.',
+  'session.workspaceChangedTitle':
+    'L’espace de travail a changé dans un autre onglet',
+  'session.workspaceChangedBody':
+    'Cet onglet affiche {name}, mais l’espace de travail a été changé dans un autre onglet ou une autre fenêtre. Rien n’a été enregistré.',
+  'session.openCurrentWorkspace': 'Ouvrir l’espace de travail actuel',
+  'session.workspaceChangedDismiss': 'Pas maintenant',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -740,6 +740,14 @@ const messages = {
     'El teu compte encara no està lligat a cap espai de treball. Tanca la sessió i torna a entrar per acabar de configurar-lo.',
   'session.membershipRemoved':
     'S’ha retirat la teva pertinença a aquest espai de treball.',
+  'session.workspaceChanged':
+    'L’espai de treball s’ha canviat en una altra pestanya o finestra. No s’ha desat res.',
+  'session.workspaceChangedTitle':
+    'L’espai de treball ha canviat en una altra pestanya',
+  'session.workspaceChangedBody':
+    'Aquesta pestanya mostra {name}, però l’espai de treball s’ha canviat en una altra pestanya o finestra. No s’ha desat res.',
+  'session.openCurrentWorkspace': 'Obre l’espai de treball actual',
+  'session.workspaceChangedDismiss': 'Ara no',
 } satisfies TranslationOf<typeof En>
 
 export default messages

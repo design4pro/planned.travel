@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
 import { member, organization } from '#/server/db/auth-schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { resolveActiveWorkspace } from '../active-workspace'
@@ -14,13 +15,18 @@ const shared = vi.hoisted(() => ({
     user?: Record<string, unknown>
     session?: Record<string, unknown>
   },
+  claim: null as string | null,
 }))
 vi.mock('../db', () => ({ authDb: () => shared.db }))
 vi.mock('../index', () => ({
   getAuth: () => ({ api: { getSession: async () => shared.session } }),
 }))
 vi.mock('@tanstack/react-start/server', () => ({
-  getRequest: () => new Request('http://localhost/'),
+  getRequest: () =>
+    new Request('http://localhost/', {
+      headers:
+        shared.claim === null ? {} : { [WORKSPACE_CLAIM_HEADER]: shared.claim },
+    }),
 }))
 
 function requestSession(userId: string, activeOrganizationId: string | null) {
@@ -42,6 +48,7 @@ function requestSession(userId: string, activeOrganizationId: string | null) {
 let harness: Harness
 let db: AuthDb
 beforeEach(async () => {
+  shared.claim = null
   harness = await createHarness()
   db = harness.db as unknown as AuthDb
   shared.db = db
@@ -177,5 +184,79 @@ describe('requireOrg request resolution', () => {
     expect(await db.select().from(organization)).toHaveLength(
       organizations.length + 1,
     )
+  })
+})
+
+describe('requireOrg with the workspace claim header', () => {
+  it('answers as before when the tab names the workspace the session resolves to', async () => {
+    const { a } = await fixture()
+    requestSession(a.ownerUserId, a.organizationId)
+    shared.claim = a.organizationId
+    await expect(requireOrg()).resolves.toMatchObject({
+      organizationId: a.organizationId,
+    })
+  })
+
+  it("refuses a tab whose workspace is not the session's, with nothing read or written", async () => {
+    const { a, c } = await fixture()
+    // Another tab switched to `c`; this tab still believes it is in `a`.
+    requestSession(a.ownerUserId, c.organizationId)
+    shared.claim = a.organizationId
+    const organizations = await db.select().from(organization)
+    const members = await db.select().from(member)
+
+    await expect(requireOrg()).rejects.toMatchObject({
+      reason: 'workspace-changed',
+      status: 403,
+    })
+
+    expect(await db.select().from(organization)).toEqual(organizations)
+    expect(await db.select().from(member)).toEqual(members)
+  })
+
+  it('refuses a claim for a workspace the caller is not a member of, without the role check', async () => {
+    const { a, b } = await fixture()
+    requestSession(a.ownerUserId, a.organizationId)
+    shared.claim = b.organizationId
+
+    await expect(requireOrg()).rejects.toMatchObject({
+      reason: 'workspace-changed',
+      status: 403,
+    })
+  })
+
+  it('compares against the workspace the request resolves to, not the stale session value', async () => {
+    const { a, b } = await fixture()
+    // The session still points at `b`, where the membership was removed: the request falls back to `a`.
+    await db.delete(member).where(eq(member.userId, b.ownerUserId))
+    requestSession(a.ownerUserId, b.organizationId)
+
+    shared.claim = a.organizationId
+    await expect(requireOrg()).resolves.toMatchObject({
+      organizationId: a.organizationId,
+    })
+    shared.claim = b.organizationId
+    await expect(requireOrg()).rejects.toMatchObject({
+      reason: 'workspace-changed',
+    })
+  })
+
+  it('refuses a malformed claim instead of ignoring it', async () => {
+    const { a } = await fixture()
+    requestSession(a.ownerUserId, a.organizationId)
+    shared.claim = 'a b'
+    await expect(requireOrg()).rejects.toMatchObject({
+      reason: 'workspace-changed',
+    })
+  })
+
+  it('never lets a claim choose the workspace for a session that has none', async () => {
+    const { a } = await fixture()
+    requestSession(a.ownerUserId, null)
+    // The fallback adopts the oldest membership; a claim for a different workspace is refused, not obeyed.
+    shared.claim = 'someone-elses-workspace'
+    await expect(requireOrg()).rejects.toMatchObject({
+      reason: 'workspace-changed',
+    })
   })
 })

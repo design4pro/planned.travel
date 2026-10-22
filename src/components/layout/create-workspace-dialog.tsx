@@ -17,6 +17,10 @@ import {
 } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 import { readPublicFailure } from '#/lib/errors'
+import {
+  WORKSPACE_CHANGED_KEY,
+  isWorkspaceChanged,
+} from '#/lib/workspace-claim'
 import { createWorkspaceFn } from '#/server/fns/workspace'
 import { useWorkspaceResync } from './workspace-switcher'
 
@@ -103,10 +107,14 @@ export function CreateWorkspaceDialog({
       }
     } catch (cause) {
       const failure = readPublicFailure(cause)
+      // A catalogue key rather than a sentence, so it is resolved here and is not the English kind.
+      const changed = isWorkspaceChanged(cause)
       setNotice({
         kind: 'failure',
-        message: failure.message ?? t('shell.workspace.createFailed'),
-        authored: failure.message !== undefined,
+        message: changed
+          ? t(WORKSPACE_CHANGED_KEY)
+          : (failure.message ?? t('shell.workspace.createFailed')),
+        authored: !changed && failure.message !== undefined,
       })
       // Only an unknown outcome needs a re-read: a refusal or a validation failure wrote nothing.
       if (failure.kind === 'unexpected') await resync().catch(() => undefined)

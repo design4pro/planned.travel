@@ -698,6 +698,13 @@ const messages = {
     'Ο λογαριασμός σας δεν είναι ακόμη συνδεδεμένος με χώρο εργασίας. Αποσυνδεθείτε και μπείτε ξανά για να ολοκληρωθεί η ρύθμιση.',
   'session.membershipRemoved':
     'Η συμμετοχή σας σε αυτόν τον χώρο εργασίας καταργήθηκε.',
+  'session.workspaceChanged':
+    'Ο χώρος εργασίας άλλαξε σε άλλη καρτέλα ή παράθυρο. Δεν αποθηκεύτηκε τίποτα.',
+  'session.workspaceChangedTitle': 'Ο χώρος εργασίας άλλαξε σε άλλη καρτέλα',
+  'session.workspaceChangedBody':
+    'Αυτή η καρτέλα εμφανίζει τον χώρο «{name}», αλλά ο χώρος εργασίας άλλαξε σε άλλη καρτέλα ή παράθυρο. Δεν αποθηκεύτηκε τίποτα.',
+  'session.openCurrentWorkspace': 'Άνοιγμα του τρέχοντος χώρου εργασίας',
+  'session.workspaceChangedDismiss': 'Όχι τώρα',
 } satisfies TranslationOf<typeof En>
 
 export default messages
