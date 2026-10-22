@@ -103,6 +103,12 @@ const messages = {
   'theme.state.dark': 'dunkel',
   'theme.state.system': 'wie das Gerät',
   'theme.trigger': 'Darstellung: {state}. Darstellung wechseln',
+  'language.trigger': 'Sprache: {language}. Sprache ändern',
+  'language.hint':
+    'Wird auf diesem Gerät gespeichert. Nach der Anmeldung gilt die Sprache aus Ihrem Konto; Sie können sie in den Einstellungen ändern.',
+  'language.announce': 'Sprache auf {language} geändert',
+  'language.notApplied':
+    'Dieser Browser hat Ihre Auswahl nicht gespeichert. Erlauben Sie Cookies für diese Website und wählen Sie erneut.',
 
   /* ------------------------------------------------------------------ bell */
   'bell.none': 'Mitteilungen, alles gelesen',
