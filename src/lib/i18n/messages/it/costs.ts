@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Cambiano i saldi di {names}.',
   'delete.confirm': 'Elimina spesa',
   'delete.working': 'Eliminazione della spesa',
+  'delete.payment.title': 'Eliminare questo pagamento?',
+  'delete.payment.description':
+    '«{title}» esce dal conteggio. Non si può annullare. Per correggere un pagamento, registralo di nuovo.',
+  'delete.payment.failedBody':
+    'Non è stato possibile eliminare il pagamento. Riprova tra un momento.',
+  'delete.payment.confirm': 'Elimina pagamento',
+  'delete.payment.working': 'Eliminazione del pagamento',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Spese',
@@ -184,6 +191,7 @@ const messages = {
   'payments.empty.title': 'Nessun pagamento ancora',
   'payments.empty.body':
     'Quando qualcuno restituisce un saldo, il trasferimento viene registrato qui.',
+  'payments.delete': 'Elimina il pagamento da {from} a {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Questo viaggio è archiviato. Ripristinalo prima di modificare le spese.',
@@ -365,6 +373,8 @@ const messages = {
   'write.paymentRecorded': 'Pagamento registrato',
   'write.paymentRecordedBody': 'Entrambi i saldi sono aggiornati.',
   'write.paymentFailed': 'Il pagamento non è stato registrato',
+  'write.paymentDeleted': 'Pagamento eliminato',
+  'write.paymentDeleteFailed': 'Il pagamento non è stato eliminato',
   'write.rolledBack': 'La modifica è stata annullata.',
   'expense.saveFallback':
     'Non è stato possibile salvare la spesa. Riprova tra un momento.',

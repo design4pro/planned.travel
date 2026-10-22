@@ -32,6 +32,13 @@ const messages = {
   'delete.balancesChange': 'Les soldes de {names} changent.',
   'delete.confirm': 'Supprimer la dépense',
   'delete.working': 'Suppression de la dépense',
+  'delete.payment.title': 'Supprimer ce paiement ?',
+  'delete.payment.description':
+    '« {title} » quitte le décompte. C’est irréversible. Pour corriger un paiement, enregistrez-le à nouveau.',
+  'delete.payment.failedBody':
+    'Le paiement n’a pas pu être supprimé. Réessayez dans un instant.',
+  'delete.payment.confirm': 'Supprimer le paiement',
+  'delete.payment.working': 'Suppression du paiement',
 
   /* ---------------------------------------------- the filter bar */
   'toolbar.title': 'Dépenses',
@@ -185,6 +192,7 @@ const messages = {
   'payments.empty.title': 'Aucun paiement pour l’instant',
   'payments.empty.body':
     'Dès que quelqu’un rembourse un solde, le virement est enregistré ici.',
+  'payments.delete': 'Supprimer le paiement de {from} à {to}, {amount}',
   /* ------------------------------------------- read-only ledger (#837) */
   'readOnly.archived':
     'Ce voyage est archivé. Restaurez-le avant de modifier les dépenses.',
@@ -368,6 +376,8 @@ const messages = {
   'write.paymentRecorded': 'Paiement enregistré',
   'write.paymentRecordedBody': 'Les deux soldes sont à jour.',
   'write.paymentFailed': 'Le paiement n’a pas été enregistré',
+  'write.paymentDeleted': 'Paiement supprimé',
+  'write.paymentDeleteFailed': 'Le paiement n’a pas été supprimé',
   'write.rolledBack': 'La modification a été annulée.',
   'expense.saveFallback':
     'La dépense n’a pas pu être enregistrée. Réessayez dans un instant.',
