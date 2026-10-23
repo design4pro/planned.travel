@@ -2,9 +2,10 @@
  * The `travel-stats` fan-out — who a trip write moves statistics for, and which years.
  *
  * Lives in `src/server/queue` rather than beside its first caller, and that placement is the point.
- * It reaches the queue binding through `#/server/auth/env`, which imports `cloudflare:workers`; a
- * module under `src/routes` is in the client graph, so the moment anything there *exports* a
- * function reaching this code, the client bundle has to resolve that specifier and the build fails.
+ * It reaches the queue binding through `enqueueDetached`, which imports `#/server/auth/env`, which
+ * imports `cloudflare:workers`; a module under `src/routes` is in the client graph, so the moment
+ * anything there *exports* a function reaching this code, the client bundle has to resolve that
+ * specifier and the build fails.
  * The fan-out was private to `trip-lifecycle.ts` and survived only because nothing exported it. It
  * serves trip lifecycle, membership, content and visited-country writes, so it needs a home
  * outside the route tree rather than a second copy inside it
@@ -19,7 +20,7 @@ import {
   recomputeDelaySeconds,
   travelStatsTaskId,
 } from '#/server/queue/handlers/travel-stats'
-import { enqueueTasks } from '#/server/queue/jobs'
+import { enqueueDetached } from '#/server/queue/enqueue-detached'
 import { ALL_TIME_STAT_YEAR, isCalendarStatYear } from '#/server/queue/types'
 
 import type { Trip } from '#/server/db/types'
@@ -77,7 +78,8 @@ export function affectedStatYears(
  *   window has closed, so the recompute that survives the collapse sees every write in it.
  * - **A queue refusal never fails the write.** D1 is the durable record and has already been written
  *   by the time this runs; a stale statistics panel is a much smaller harm than a save that appears
- *   to have failed. Caught, logged once, and returned from — the same posture `mirrorToRoom` takes.
+ *   to have failed. `enqueueDetached` owns the catch: logged once, under this producer's own message
+ *   and context, and returned from — the same posture `mirrorToRoom` takes.
  * - **It sends everything in one call.** Cloudflare Queues accepts at most `QUEUE_BATCH_MAX`
  *   messages per `sendBatch`, and a trip's membership is bounded by a plan rather than by anything
  *   here; `enqueueTasks` cuts the envelopes at that bound, so this does not.
@@ -89,9 +91,10 @@ export function affectedStatYears(
  * arrive deduplicated; a repeated one costs a second envelope that the collapse window would ack as
  * a duplicate anyway.
  *
- * The binding is reached inside the function rather than at module scope: `#/server/auth/env` imports
- * `cloudflare:workers`, a specifier that does not resolve outside workerd, and this module is
- * imported by suites that run in plain Node. It is not reached at all when there is nothing to send.
+ * The binding is not this module's to reach: `enqueueDetached` imports `#/server/auth/env` lazily,
+ * inside the function rather than at module scope, because that module imports `cloudflare:workers`,
+ * a specifier that does not resolve outside workerd, and this module is imported by suites that run
+ * in plain Node. It is not reached at all when there is nothing to send.
  *
  * `context` is what the caller's own write is identified by — a trip id, a route — and exists because
  * the one line this can emit is otherwise unattributable: "statistics were not enqueued" for an
@@ -105,35 +108,33 @@ export async function requestTravelStatsRecompute(
 ): Promise<void> {
   const orgId = scope.ctx.organizationId
 
-  try {
-    const at = Date.now()
-    const envelopes: Array<EnqueueInput<'travel-stats'>> = []
-    for (const userId of userIds) {
-      for (const statYear of years) {
-        envelopes.push({
-          kind: 'travel-stats',
-          orgId,
-          id: travelStatsTaskId(orgId, userId, statYear, at),
-          payload: { userId, statYear },
-          delaySeconds: recomputeDelaySeconds(at),
-        })
+  await enqueueDetached(
+    () => {
+      const at = Date.now()
+      const envelopes: Array<EnqueueInput<'travel-stats'>> = []
+      for (const userId of userIds) {
+        for (const statYear of years) {
+          envelopes.push({
+            kind: 'travel-stats',
+            orgId,
+            id: travelStatsTaskId(orgId, userId, statYear, at),
+            payload: { userId, statYear },
+            delaySeconds: recomputeDelaySeconds(at),
+          })
+        }
       }
-    }
-    if (envelopes.length === 0) {
-      return
-    }
-
-    const { taskQueue } = await import('#/server/auth/env')
-    const queue = taskQueue()
-    await enqueueTasks(queue, envelopes)
-  } catch (cause) {
-    log().warn('travel statistics were not enqueued', {
-      organizationId: orgId,
-      travellers: userIds.length,
-      ...context,
-      ...serializeError(cause),
-    })
-  }
+      return envelopes
+    },
+    {
+      logger: log(),
+      message: 'travel statistics were not enqueued',
+      context: {
+        organizationId: orgId,
+        travellers: userIds.length,
+        ...context,
+      },
+    },
+  )
 }
 
 /**

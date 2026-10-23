@@ -276,7 +276,7 @@ tabular-nums` (the tile primitive already does) so nothing shifts.
   figure is -> `src/lib/atlas/stats-period.ts` (pure, no I/O, no React), so a future figure cannot be added without choosing a
   side; rendering -> `src/components/atlas/atlas-panel.tsx`; the year row shape on the wire -> `AtlasPayload` in `library.ts`; year
   digits -> `src/lib/format.ts`.
-- **The route-tree constraint holds.** `travel-stats-fanout.ts` reaches the queue binding through `#/server/auth/env`
+- **The route-tree constraint holds.** `travel-stats-fanout.ts` reaches the queue binding through `enqueueDetached`, which imports `#/server/auth/env`
   (`cloudflare:workers`), so the helper lives under `src/server/queue` and is **never defined or exported from a route module**.
   Call sites in `src/routes/**` import it as `people.ts` and `trip-lifecycle.ts` already do; `src/server/fns/**` sites are outside the
   route tree, as `atlas.ts` shows.

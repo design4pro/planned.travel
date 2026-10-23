@@ -204,6 +204,13 @@ per-recipient email envelopes (a byte bound), and the rewritten `00-S5` sweep in
 dispatching through `00-S2`'s chunked path rather than enqueueing directly. _(Before this, the helper
 mapped every input into one `sendBatch` and each producer carried its own slice loop — #208.)_
 
+**`enqueueDetached` owns the follow-up producer's shell.** A producer that enqueues after a write D1
+already holds (`travel-stats` fan-out, `trip-purge`) builds its envelopes in a thunk and hands them to
+`enqueueDetached` (`src/server/queue/enqueue-detached.ts`), with its own logger, message and context.
+The helper holds the one lazy `#/server/auth/env` import, skips the binding when there is nothing to
+send, and catches and logs a refusal once with `serializeError`, so the write never fails. A producer
+that rethrows after compensating (`trip-copy`) is outside it.
+
 Three measured facts about the background surface that a stage must not walk into blind:
 
 - `TASK_KINDS` (`src/server/queue/types.ts:13-24`) declares eight job kinds and

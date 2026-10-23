@@ -854,7 +854,7 @@ therefore enqueues the `travel-stats` envelopes `00-S4` defined, with `00-S4`'s 
   that citation, and a unit test with 250 envelopes asserts three calls. The 100-member ceiling
   Better Auth's organization plugin is configured with is a configuration value and not a guarantee,
   so the chunk loop does not lean on it.
-- **A queue failure never fails the write.** It is caught, logged once with `serializeError`, and the
+- **A queue failure never fails the write.** It is caught (by `enqueueDetached`), logged once with `serializeError`, and the
   trip write still returns — the same isolation `00-S2` requires of dispatch. A stale statistics
   panel is a smaller harm than a save that appears to have failed.
 
