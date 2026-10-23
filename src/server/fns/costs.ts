@@ -49,6 +49,7 @@ import {
 import { convertMinor, impliedRate, resolveDisplayCurrency } from '#/lib/money'
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { dispatchQuietly } from '#/server/notifications/dispatch'
+import { orAbsent } from '#/server/fns/-lib/absence'
 import {
   appScope,
   mirrorToRoom,
@@ -57,6 +58,7 @@ import {
   tombstone,
 } from './context'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { DisplayCurrency } from '#/lib/money'
 import type { ExpenseShare, Trip } from '#/server/db/types'
 import type { MemberProfile, ResolvedRate, TenantScope } from '#/server/repos'
@@ -606,9 +608,10 @@ async function displayFor(
  */
 export const loadCosts = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: tripIdSchema }))
-  .handler(async ({ data }): Promise<CostsPayload> =>
-    costsPayload(await appScope(), data.tripId),
-  )
+  .handler(async ({ data }): Promise<OrAbsent<CostsPayload>> => {
+    const scope = await appScope()
+    return orAbsent(() => costsPayload(scope, data.tripId))
+  })
 
 /**
  * What {@link loadCosts} answers, as a plain function.

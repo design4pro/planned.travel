@@ -35,9 +35,12 @@ import {
 } from '#/server/repos'
 import { FILE_WRITE_ROLES } from '#/server/repos/files'
 import { serverToday } from '#/server/clock'
+import { ABSENT } from '#/lib/absence'
+import { nullWhenMissing } from '#/server/fns/-lib/absence'
 import { appScope } from './context'
 import { isoOfRequired } from '#/server/serialise'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { TenantScope } from '#/server/repos'
 import type { DayNote } from '#/server/db/types'
 
@@ -361,9 +364,10 @@ export interface ListsPayload {
 
 export const loadTripLists = createServerFn({ method: 'GET' })
   .validator(tripInput)
-  .handler(async ({ data }): Promise<ListsPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<ListsPayload>> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await nullWhenMissing(() => requireTrip(scope, data.tripId))
+    if (trip === null) return ABSENT
 
     const [progress, people] = await Promise.all([
       listTripListsWithProgress(scope, trip.id),
@@ -398,6 +402,7 @@ export const loadTripLists = createServerFn({ method: 'GET' })
     }))
 
     return {
+      found: true,
       lists,
       people,
       itemCount: lists.reduce((total, list) => total + list.itemCount, 0),
@@ -557,9 +562,10 @@ export interface FilesPayload {
 
 export const loadTripFiles = createServerFn({ method: 'GET' })
   .validator(tripInput)
-  .handler(async ({ data }): Promise<FilesPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<FilesPayload>> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await nullWhenMissing(() => requireTrip(scope, data.tripId))
+    if (trip === null) return ABSENT
 
     const [files, tripBytes, usage, quotas, people, placeCount, role] =
       await Promise.all([
@@ -573,6 +579,7 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
       ])
 
     return {
+      found: true,
       canWrite: FILE_WRITE_ROLES.some((allowed) => allowed === role),
       hasPlaces: placeCount > 0,
       tripBytes,

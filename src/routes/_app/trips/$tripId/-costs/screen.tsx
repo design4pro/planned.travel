@@ -33,6 +33,7 @@ import {
   isFiltered,
   totalsFor,
 } from '#/components/costs'
+import { requireFound } from '#/lib/absence'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
@@ -629,7 +630,7 @@ export function CostsScreen({
           }
           readCurrency={() =>
             loadCosts({ data: { tripId: data.tripId } }).then(
-              (fresh) => fresh.currency,
+              (fresh) => requireFound(fresh).currency,
             )
           }
           onChanged={(to) => {

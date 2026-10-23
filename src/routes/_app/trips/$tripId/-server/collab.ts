@@ -20,6 +20,7 @@ import {
   resolveCollabSections,
 } from '#/lib/collab-sections'
 import { mirrorToRoom, patch } from '#/server/fns/context'
+import type { OrAbsent } from '#/lib/absence'
 import type { CollabSections } from '#/lib/collab-sections'
 import { resolveTimeZone } from '#/lib/time'
 import {
@@ -27,6 +28,8 @@ import {
   pollsPayload,
   threadPayload,
 } from '#/server/fns/collab-payloads'
+import { ABSENT } from '#/lib/absence'
+import { nullWhenMissing } from '#/server/fns/-lib/absence'
 import { appScope } from '../../../-server/context'
 import { loadPeople, tripInput } from '../../../-server/trip'
 
@@ -61,9 +64,10 @@ export interface CollabPayload {
 
 export const loadTripCollab = createServerFn({ method: 'GET' })
   .validator(tripInput)
-  .handler(async ({ data }): Promise<CollabPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<CollabPayload>> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await nullWhenMissing(() => requireTrip(scope, data.tripId))
+    if (trip === null) return ABSENT
 
     const sections = resolveCollabSections(trip.collabModules)
     const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
@@ -77,6 +81,7 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
     ])
 
     return {
+      found: true,
       sections,
       canConfigure: canWritePlan(trip, role),
       people,

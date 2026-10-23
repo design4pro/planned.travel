@@ -17,6 +17,7 @@ import {
 import { Bookmark, ChevronLeft, ExternalLink, MapPin, Tag } from 'lucide-react'
 import { z } from 'zod'
 
+import { requireFound } from '#/lib/absence'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -43,8 +44,12 @@ export const Route = createFileRoute('/_app/collections/$collectionId')({
     status: z.enum(COLLECTION_PLACE_STATUSES).optional(),
     label: z.string().trim().min(1).max(64).optional(),
   }),
-  loader: ({ params }) =>
-    loadCollectionDetail({ data: { collectionId: params.collectionId } }),
+  loader: async ({ params }) =>
+    requireFound(
+      await loadCollectionDetail({
+        data: { collectionId: params.collectionId },
+      }),
+    ),
   pendingComponent: CollectionPending,
   notFoundComponent: () => (
     <AppFrame>
@@ -151,8 +156,9 @@ function CollectionPage() {
                 canManage={data.canManage}
                 collection={data.collection}
                 readCurrent={async () =>
-                  (await loadCollectionDetail({ data: { collectionId } }))
-                    .collection
+                  requireFound(
+                    await loadCollectionDetail({ data: { collectionId } }),
+                  ).collection
                 }
                 update={(input) => updateCollectionFn({ data: input })}
                 summary={(input) => collectionDeleteSummaryFn({ data: input })}
@@ -311,9 +317,11 @@ function CollectionPage() {
                       <StatusPicker
                         place={place}
                         readCurrent={async () => {
-                          const current = await loadCollectionDetail({
-                            data: { collectionId },
-                          })
+                          const current = requireFound(
+                            await loadCollectionDetail({
+                              data: { collectionId },
+                            }),
+                          )
                           const saved = current.places.find(
                             (row) => row.id === place.id,
                           )

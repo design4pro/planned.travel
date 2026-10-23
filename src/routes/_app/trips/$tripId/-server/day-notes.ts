@@ -39,8 +39,10 @@ import {
   tripRoleFor,
   updateDayNote,
 } from '#/server/repos'
+import { orAbsent } from '#/server/fns/-lib/absence'
 import { appScope } from '../../../-server/context'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { TenantScope, TimelineItemInput } from '#/server/repos'
 
 /* -------------------------------------------------------------------------------------------------
@@ -267,8 +269,9 @@ export async function readDayNotes(
 
 export const loadDayNotes = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: id }))
-  .handler(async ({ data }): Promise<PlanNotesPayload> => {
-    return readDayNotes(await appScope(), data.tripId)
+  .handler(async ({ data }): Promise<OrAbsent<PlanNotesPayload>> => {
+    const scope = await appScope()
+    return orAbsent(() => readDayNotes(scope, data.tripId))
   })
 
 /* -------------------------------------------------------------------------------------------------
