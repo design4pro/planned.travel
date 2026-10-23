@@ -652,7 +652,9 @@ describe('a visited stop', () => {
   function mainButton(name: string): HTMLElement {
     const button = screen
       .getAllByRole('button')
-      .find((entry) => (entry.getAttribute('aria-label') ?? '').startsWith(name))
+      .find((entry) =>
+        (entry.getAttribute('aria-label') ?? '').startsWith(name),
+      )
     if (button === undefined) throw new Error(`no row button for ${name}`)
     return button
   }
@@ -760,6 +762,59 @@ describe('a visited stop', () => {
     expect(screen.getAllByText('Visited')).toHaveLength(1)
   })
 
+  it('says it on a scheduled place in the places column, beside its day row', () => {
+    const scheduled = row({
+      placeId: 'p-sensoji',
+      itemId: 'a-1',
+      visited: true,
+    })
+    render(
+      <Harness>
+        <DaySection day={dayOf([scheduled])} categoryFor={categoryFor} />
+        <IdeasList
+          rows={[scheduled]}
+          total={1}
+          categoryFor={categoryFor}
+          query=""
+          onQueryChange={noop}
+          scope="all"
+          onScopeChange={noop}
+          scopeCounts={{ all: 1, unplanned: 0 }}
+        />
+      </Harness>,
+    )
+
+    const buttons = screen
+      .getAllByRole('button')
+      .filter((entry) =>
+        (entry.getAttribute('aria-label') ?? '').startsWith('Sensō-ji'),
+      )
+    expect(buttons).toHaveLength(2)
+    for (const button of buttons) {
+      expect(within(button).getByText('Visited')).toBeDefined()
+      expect(button.getAttribute('aria-label')).toContain('Visited')
+    }
+  })
+
+  it('says it in the reader’s own language, from the catalogue and not from a literal', async () => {
+    const polish = await loadCatalogue('pl')
+    mount(
+      <I18nProvider locale="pl" messages={polish}>
+        <Harness>
+          <DaySection
+            day={dayOf([row({ placeId: 'p-sensoji', visited: true })])}
+            categoryFor={categoryFor}
+          />
+        </Harness>
+      </I18nProvider>,
+    )
+
+    const button = mainButton('Sensō-ji')
+    expect(within(button).getByText('Odwiedzone')).toBeDefined()
+    expect(button.getAttribute('aria-label')).toContain('Odwiedzone')
+    expect(screen.queryByText('Visited')).toBeNull()
+  })
+
   it('draws the visible text and the name from the same words, and keeps one tab stop', () => {
     mountDay(dayOf([row({ placeId: 'p-sensoji', visited: true })]))
 
@@ -767,7 +822,8 @@ describe('a visited stop', () => {
     const badge = within(button).getByText('Visited')
     expect(button.getAttribute('aria-label')).toContain(badge.textContent)
     // The check glyph is for the eye only: the word is what carries the meaning.
-    expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+    const glyph = badge.querySelector('svg')
+    expect(glyph?.closest('[aria-hidden="true"]')).not.toBeNull()
     // A badge is not a control: the row still has its drag handle and its main button.
     expect(button.querySelectorAll('button, a, [tabindex]')).toHaveLength(0)
   })
