@@ -14,7 +14,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { editTransport } from './edit-transport'
+import { editTransport, replaceChain } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { NotFoundError } from '../context'
 import { departingJourneys } from '../day-journeys'
@@ -25,7 +25,6 @@ import {
   getTransport,
   listTransportLegs,
   listTripDayTransports,
-  replaceTransportChain,
   saveSearchedConnection,
   transportsRepository,
 } from '../transports'
@@ -94,7 +93,7 @@ describe('a saved connection that is searched again', () => {
 
   it('keeps an anchored journey on the day it departs from', async () => {
     const transportId = await saveUnanchored(1)
-    const [anchored] = await replaceTransportChain(tenant.scope, transportId, {
+    const [anchored] = await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[1].id, departureTime: '09:00' }],
     })
@@ -120,7 +119,7 @@ describe('a saved connection that is searched again', () => {
 
   it('keeps each position’s pair and its place in the day when the number of legs is the same', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { departureDayId: days[0].id, sortOrder: 2.5 },
@@ -147,7 +146,7 @@ describe('a saved connection that is searched again', () => {
 
   it('carries only the two ends when the number of legs changes', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { departureDayId: days[0].id },
@@ -223,7 +222,7 @@ describe('a saved connection that is searched again', () => {
 
   it('treats the null day reference the dialog’s empty selects become as naming none', async () => {
     const transportId = await saveUnanchored(1)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[1].id, arrivalDayId: days[2].id }],
     })
@@ -244,7 +243,7 @@ describe('a saved connection that is searched again', () => {
 
   it('never overwrites a day the re-search names', async () => {
     const transportId = await saveUnanchored(1)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[0].id, arrivalDayId: days[1].id }],
     })
@@ -278,7 +277,7 @@ describe('a saved connection that is searched again', () => {
 
   it('drops a carried arrival that would land before the departure, and keeps the departure', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { departureDayId: days[2].id },
@@ -303,7 +302,7 @@ describe('a saved connection that is searched again', () => {
 
   it('drops a carried departure that a named arrival would precede', async () => {
     const transportId = await saveUnanchored(1)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[3].id }],
     })
@@ -330,7 +329,7 @@ describe('a saved connection that is searched again', () => {
       bookingCode: 'ABC123',
       dayId: days[1].id,
     })
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[1].id }],
     })

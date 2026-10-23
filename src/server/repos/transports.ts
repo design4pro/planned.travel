@@ -7,10 +7,10 @@
  *
  * A long-distance journey is a **chain of stations** rather than a pair of them, and the part
  * between two consecutive stations is a **leg** (`CONTEXT.md`). Legs are rows in `transport_legs`
- * and are written only by {@link saveTransport} and {@link replaceTransportChain}, which share one
- * planner for the rows; a transport with no rows there is read as
- * the one-leg chain its own flat endpoints already describe, which is why nothing was backfilled
- * and why every journey recorded before chains existed keeps reading exactly as it did.
+ * and are written only by {@link saveTransport}, through one planner for the rows; a transport
+ * with no rows there is read as the one-leg chain its own flat endpoints already describe, which is
+ * why nothing was backfilled and why every journey recorded before chains existed keeps reading
+ * exactly as it did.
  */
 
 import {
@@ -522,7 +522,7 @@ function refineChainShape(
 }
 
 /**
- * A whole chain, as the chain writers accept it.
+ * A whole chain, as the writer accepts it.
  *
  * Stations and legs arrive apart rather than as legs carrying two endpoints each, and that is the
  * whole of the join guarantee: the station two legs meet at is written once and read into both
@@ -645,8 +645,8 @@ type ChainEndpoints = Pick<
  * The statements that put a chain in place of whatever the transport had, and the endpoints the
  * record takes from it.
  *
- * Shared by the two writers of `transport_legs` so that "the outer stations are the record's
- * endpoints" is stated once. `endpoints` is `null` for an empty chain: the record's own endpoints
+ * The one place that plans the rows of `transport_legs`, so that "the outer stations are the
+ * record's endpoints" is stated once. `endpoints` is `null` for an empty chain: the record's own endpoints
  * are then the journey and are left as they were.
  *
  * The chain is rewritten by delete-and-reinsert, so a leg's day position would be lost on every
@@ -747,53 +747,6 @@ function planChain(
   }
 }
 
-/**
- * Replaces the chain of a transport that already exists.
- *
- * It resolves the parent inside the caller's own scope first — a well-formed transport id from a
- * client is not an authorised transport id — then resolves every day reference against *that
- * record's* trip, then deletes and re-inserts the whole chain in **one batch**. `db.batch()` is a
- * real transaction on D1: statements run in order and a failure rolls the sequence back, which is
- * the property a chain needs, because a half-replaced chain is a journey with two station threes.
- *
- * The parent's flat `departure_*` / `arrival_*` columns are rewritten from the first and last
- * station in that same batch, so the two representations of one journey cannot drift apart and a
- * reader that knows nothing about legs still sees where the journey starts and ends.
- *
- * Neither save path comes through here: {@link saveTransport} writes the record in the same batch,
- * for the hand-typed dialog and for a found connection alike. This is the chain on its own, for a
- * record that already exists and needs nothing but its route replaced.
- */
-export async function replaceTransportChain(
-  scope: TenantScope,
-  transportId: string,
-  input: TransportChainInput,
-): Promise<Array<TransportLeg>> {
-  const chain = transportChainInput.parse(input)
-  const parent = await requireWritableTransport(scope, transportId)
-
-  requireLegOrder(chain.stations, chain.legs)
-  await requireChainDays(scope, parent.tripId, chain.legs)
-
-  const { statements, endpoints } = planChain(
-    scope,
-    parent,
-    chain,
-    await listTransportLegs(scope, parent.id),
-  )
-  if (endpoints !== null) {
-    statements.push(
-      scope.db
-        .update(transports)
-        .set(endpoints)
-        .where(tenantFilter(scope, transports, eq(transports.id, parent.id))),
-    )
-  }
-
-  await runBatch(scope, statements)
-  return listTransportLegs(scope, parent.id)
-}
-
 /* -------------------------------------------------------------------------------------------------
  * A transport and its legs, saved as one
  * ---------------------------------------------------------------------------------------------- */
@@ -891,7 +844,7 @@ function requireNewTitle(title: string | undefined): string {
  *
  * **The record's day pair is the caller's.** Nothing here derives a day from the legs: a night
  * train leaves on one day and lands on another and only the traveller knows which. Each leg's days
- * are resolved against the trip like the chain writer's, and the record's pair is ordered over the
+ * are resolved against the trip like the chain's own, and the record's pair is ordered over the
  * row that results.
  *
  * **Every refusal comes before the batch.** The trip, the role, the existence of the record an
