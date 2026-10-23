@@ -35,6 +35,7 @@ import {
   createTrip,
   deleteTrip,
   getFile,
+  getFileByStorageKey,
   getTripSpendSummary,
   listTripStorageKeys,
   requireTrip,
@@ -58,8 +59,13 @@ import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import { MAX_PURGE_KEYS } from '#/server/queue/types'
 import { listExportKeys } from '#/server/storage/export-artifacts'
+import { deleteObjects } from '#/server/storage/objects'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
-import { coverUrlFor, isCoverContentType } from '#/lib/trip-cover'
+import {
+  coverUrlFor,
+  isCoverContentType,
+  tripStoragePrefix,
+} from '#/lib/trip-cover'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
@@ -640,6 +646,9 @@ export interface TripCoverPatch {
  * 4. **An image the cover route will serve.** `isCoverContentType` is the route's own list.
  *
  * `origin` is the configured app origin, passed in because reading it reaches `cloudflare:workers`.
+ *
+ * This only derives the patch. The cover it replaces is dealt with by {@link updateTripFn}, once the
+ * write has succeeded: a row-less cover (the object a copy made) is deleted from the bucket there.
  */
 export async function coverPatchFor(
   scope: TenantScope,
@@ -671,10 +680,55 @@ export async function coverPatchFor(
 }
 
 /**
+ * Deletes the object a cover pointed at once the trip no longer points at it, when nothing else
+ * could be using it.
+ *
+ * A copied trip's cover is an object with **no file row** (the copy-a-trip spec: the cover "is not a
+ * file row"), so no file-delete path will ever reach it. A cover chosen by upload is a file row and
+ * stays: it is still a file in the trip's library. "Row-less" is therefore both halves of a test:
+ * the key sits under this workspace's and this trip's own prefix, **and** the workspace has no file
+ * row for it. The tenant-scoped lookup alone is not enough - a key from another workspace matches no
+ * row here and would be deleted - which is why the prefix is checked first.
+ *
+ * Best effort by design: the pointer change is what the owner asked for and a stray object is the
+ * lesser harm, so a failure is logged and the save stands.
+ */
+async function reclaimReplacedCover(
+  scope: TenantScope,
+  tripId: string,
+  previousKey: string | null,
+  nextKey: string | null,
+): Promise<void> {
+  if (previousKey === null || previousKey === nextKey) {
+    return
+  }
+  if (
+    !previousKey.startsWith(tripStoragePrefix(scope.ctx.organizationId, tripId))
+  ) {
+    return
+  }
+  try {
+    if ((await getFileByStorageKey(scope, previousKey)) !== null) {
+      return
+    }
+    const { filesBucket } = await import('#/server/fns/context')
+    await deleteObjects(filesBucket(), [previousKey])
+  } catch (cause) {
+    log().warn('the previous cover of a trip could not be reclaimed', {
+      organizationId: scope.ctx.organizationId,
+      tripId,
+      storageKey: previousKey,
+      ...serializeError(cause),
+    })
+  }
+}
+
+/**
  * Edits a trip's metadata. Owner only, decided in the repository.
  *
  * A `coverFileId` makes the file the cover (`null` clears it) through {@link coverPatchFor}, which
- * derives the key and the URL itself.
+ * derives the key and the URL itself. A cover the trip leaves behind that is not a file row - the
+ * object a copy made - is deleted from the bucket after the write ({@link reclaimReplacedCover}).
  *
  * The day run follows the dates without anything here arranging it: `updateTrip` reconciles it
  * through `syncTripDays` when the range moves, which is why the edit path needs no day handling of
@@ -701,6 +755,14 @@ export const updateTripFn = createServerFn({ method: 'POST' })
             (await import('#/server/auth/env')).appUrl(),
           )
     const trip = await updateTrip(scope, tripId, { ...patch, ...cover })
+    if (coverFileId !== undefined) {
+      await reclaimReplacedCover(
+        scope,
+        tripId,
+        before.coverImageKey,
+        trip.coverImageKey,
+      )
+    }
 
     await enqueueTravelStats(
       scope,
