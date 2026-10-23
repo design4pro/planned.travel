@@ -218,6 +218,8 @@ const messages = {
     'Choisie, mais aucun taux enregistré ne la couvre',
   'display.menu.needsLiveRate':
     'Nécessite un taux en direct, pas encore disponible',
+  'display.menu.disabledHint':
+    'Les devises sans taux enregistré figurent dans la liste, mais ne peuvent pas être choisies : elles nécessitent un taux en direct, pas encore disponible.',
   'display.menu.saving': 'Enregistrement du choix',
   'display.error.title': 'La devise d’affichage n’a pas été enregistrée',
   'display.error.body':

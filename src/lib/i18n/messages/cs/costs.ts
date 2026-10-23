@@ -215,6 +215,8 @@ const messages = {
   'display.menu.currentHint': 'Vybraná, ale žádný uložený kurz ji nepokrývá',
   'display.menu.needsLiveRate':
     'Vyžaduje aktuální kurz, který zatím není k dispozici',
+  'display.menu.disabledHint':
+    'Měny bez zaznamenaného kurzu jsou v seznamu, ale nelze je vybrat: potřebují aktuální kurz, který zatím není k dispozici.',
   'display.menu.saving': 'Ukládám váš výběr',
   'display.error.title': 'Zobrazená měna nebyla uložena',
   'display.error.body':

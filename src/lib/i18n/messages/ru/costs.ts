@@ -220,6 +220,8 @@ const messages = {
   'display.menu.currentHint':
     'Выбрана, но ни один записанный курс её не покрывает',
   'display.menu.needsLiveRate': 'Нужен текущий курс, который пока недоступен',
+  'display.menu.disabledHint':
+    'Валюты без записанного курса есть в списке, но выбрать их нельзя: им нужен актуальный курс, который пока недоступен.',
   'display.menu.saving': 'Сохраняем ваш выбор',
   'display.error.title': 'Валюта отображения не сохранена',
   'display.error.body':

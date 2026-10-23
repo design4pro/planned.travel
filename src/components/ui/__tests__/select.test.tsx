@@ -173,6 +173,42 @@ describe('SimpleSelect', () => {
     )
   })
 
+  it('keeps the caller’s description beside the dropped-value sentence, never instead of it', () => {
+    render(
+      <>
+        <span id="caller-hint">Some currencies are unavailable.</span>
+        <SimpleSelect
+          options={options}
+          value="chf"
+          ariaLabel="Currency"
+          aria-describedby="caller-hint"
+        />
+      </>,
+    )
+    const ids = (
+      screen.getByRole('combobox').getAttribute('aria-describedby') ?? ''
+    ).split(' ')
+    const text = ids.map((id) => document.getElementById(id)?.textContent)
+    expect(ids).toContain('caller-hint')
+    expect(text).toContain(
+      'The saved choice chf is no longer available. Choose another.',
+    )
+  })
+
+  it('hands the trigger a caller description alone when the value is not orphaned', () => {
+    render(
+      <SimpleSelect
+        options={options}
+        value="gbp"
+        ariaLabel="Currency"
+        aria-describedby="caller-hint"
+      />,
+    )
+    expect(screen.getByRole('combobox').getAttribute('aria-describedby')).toBe(
+      'caller-hint',
+    )
+  })
+
   it('leaves an untouched control untouched', () => {
     render(
       <SimpleSelect

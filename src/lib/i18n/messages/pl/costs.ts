@@ -219,6 +219,8 @@ const messages = {
     'Wybrana, ale żaden zapisany kurs jej nie obejmuje',
   'display.menu.needsLiveRate':
     'Wymaga kursu bieżącego, który nie jest jeszcze dostępny',
+  'display.menu.disabledHint':
+    'Waluty bez zapisanego kursu są na liście, ale nie można ich wybrać: wymagają kursu bieżącego, który nie jest jeszcze dostępny.',
   'display.menu.saving': 'Zapisywanie wyboru',
   'display.error.title': 'Nie zapisano waluty wyświetlania',
   'display.error.body':

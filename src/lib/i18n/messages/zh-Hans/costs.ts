@@ -189,6 +189,8 @@ const messages = {
   'display.menu.rateHint': '使用行程中已记录的汇率',
   'display.menu.currentHint': '已选择，但没有已记录的汇率适用',
   'display.menu.needsLiveRate': '需要实时汇率，目前尚不可用',
+  'display.menu.disabledHint':
+    '没有已记录汇率的货币会列出，但无法选择：它们需要实时汇率，而目前尚不可用。',
   'display.menu.saving': '正在保存你的选择',
   'display.error.title': '未能保存显示货币',
   'display.error.body': '无法保存你的选择，请稍后再试。',

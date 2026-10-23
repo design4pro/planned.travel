@@ -211,6 +211,8 @@ const messages = {
   'display.menu.currentHint': 'Gekozen, maar geen vastgelegde koers dekt hem',
   'display.menu.needsLiveRate':
     'Heeft een actuele koers nodig, die nog niet beschikbaar is',
+  'display.menu.disabledHint':
+    "Valuta's zonder vastgelegde koers staan in de lijst, maar kunnen niet worden gekozen: ze hebben een live koers nodig die nog niet beschikbaar is.",
   'display.menu.saving': 'Je keuze wordt opgeslagen',
   'display.error.title': 'De weergavevaluta is niet opgeslagen',
   'display.error.body':

@@ -214,6 +214,8 @@ const messages = {
   'display.menu.rateHint': 'Використовує курс, уже записаний у подорожі',
   'display.menu.currentHint': 'Обрана, але жоден записаний курс її не покриває',
   'display.menu.needsLiveRate': 'Потрібен поточний курс, який поки недоступний',
+  'display.menu.disabledHint':
+    'Валюти без записаного курсу є в списку, але вибрати їх не можна: їм потрібен актуальний курс, який поки недоступний.',
   'display.menu.saving': 'Зберігаємо ваш вибір',
   'display.error.title': 'Валюту відображення не збережено',
   'display.error.body':
