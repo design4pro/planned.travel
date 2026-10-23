@@ -181,21 +181,6 @@ function ExpenseRow({
             )}
             <Dot />
             <span className="truncate">{categoryLabel(row.category, t)}</span>
-            {sharesDoNotAddUp(row) ? (
-              <>
-                <Dot />
-                {/* May wrap: the quiet line is the narrowest column of a 360px row, and the longer
-                    locales do not fit one line beside the share figure and the row's buttons. */}
-                <Badge
-                  tone="warning"
-                  size="sm"
-                  icon={<AlertTriangle />}
-                  className="h-auto min-w-0 shrink whitespace-normal py-0.5 text-start"
-                >
-                  {t('costs.row.splitOff')}
-                </Badge>
-              </>
-            ) : null}
             {conversion === null ? null : (
               <>
                 <Dot />
@@ -225,6 +210,21 @@ function ExpenseRow({
                 })}
           </span>
         </div>
+
+        {sharesDoNotAddUp(row) ? (
+          // Its own line, like the converted figure: the quiet line is the narrowest column of a
+          // 360px row, and the longer locales do not fit one line beside the share figure.
+          <div className="flex">
+            <Badge
+              tone="warning"
+              size="sm"
+              icon={<AlertTriangle />}
+              className="h-auto min-w-0 shrink whitespace-normal py-0.5 text-start"
+            >
+              {t('costs.row.splitOff')}
+            </Badge>
+          </div>
+        ) : null}
 
         {display.mode === 'fixed' && !locked ? (
           // Its own line, under the amount it converts: beside the share it would take the width
