@@ -114,10 +114,7 @@ const messages = {
     'Miejsce może pojawić się w dniu tylko raz. Przenieś je do innego dnia.',
   'plan.move.refused.notInIdeas': 'Notatka zostaje w dniu',
   'plan.move.refused.notInIdeasBody':
-    'Pomysły to miejsca czekające na swój dzień. Notatka należy do dnia, dla którego ją zapisano.',
-  'plan.move.refused.notInAnotherDay': 'Notatka zostaje w swoim dniu',
-  'plan.move.refused.notInAnotherDayBody':
-    'Notatek nie można jeszcze przenosić między dniami. Edytuj notatkę albo zapisz ją w innym dniu.',
+    'Pomysły to miejsca czekające na swój dzień. Notatka zawsze należy do jakiegoś dnia.',
   'plan.move.refused.journeyNotInIdeas': 'Przejazd zostaje w dniu',
   'plan.move.refused.journeyNotInIdeasBody':
     'Pomysły to miejsca czekające na swój dzień. Przejazd należy do dnia, w którym się odbywa.',
@@ -131,8 +128,6 @@ const messages = {
     '{name} nie został przeniesiony. Ten dzień już go ma.',
   'plan.move.spoken.notInIdeas':
     '{name} nie został przeniesiony. Notatka zostaje w dniu.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} nie został przeniesiony. Notatka zostaje w swoim dniu.',
   'plan.move.spoken.timed': '{name} ma godzinę {time}. Pytamy, czy ją usunąć.',
   'plan.move.spoken.journeyNotInIdeas':
     '{name} nie został przeniesiony. Przejazd zostaje w dniu.',
@@ -187,6 +182,7 @@ const messages = {
   'plan.note.showLess': 'Pokaż mniej',
   'plan.note.moveUp': 'Przenieś w górę',
   'plan.note.moveDown': 'Przenieś w dół',
+  'plan.note.moveToDay': 'Przenieś do innego dnia',
   'plan.note.drag': 'Zmień kolejność notatki',
   'plan.note.edit': 'Edytuj notatkę',
   'plan.note.delete': 'Usuń notatkę',

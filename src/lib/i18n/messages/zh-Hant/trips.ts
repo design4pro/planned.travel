@@ -104,10 +104,7 @@ const messages = {
     '同一地點每天只能出現一次。請把它移到另一天。',
   'plan.move.refused.notInIdeas': '備註留在這一天裡',
   'plan.move.refused.notInIdeasBody':
-    '想法是等待安排日期的地點。備註屬於它所寫的那一天。',
-  'plan.move.refused.notInAnotherDay': '備註留在自己的那一天',
-  'plan.move.refused.notInAnotherDayBody':
-    '備註還不能在不同日期之間移動。請編輯備註，或在另一天重新寫一則。',
+    '想法是等待安排日期的地點。備註總是屬於某一天。',
   'plan.move.refused.journeyNotInIdeas': '行程留在這一天裡',
   'plan.move.refused.journeyNotInIdeasBody':
     '想法是等待安排日期的地點。行程屬於它發生的那一天。',
@@ -119,7 +116,6 @@ const messages = {
     '出發時間屬於時刻表，不屬於計畫。請把行程放在它的時間該在的位置。',
   'plan.move.spoken.duplicate': '{name} 沒有移動。那一天已經有它了。',
   'plan.move.spoken.notInIdeas': '{name} 沒有移動。備註留在這一天裡。',
-  'plan.move.spoken.notInAnotherDay': '{name} 沒有移動。備註留在自己的那一天。',
   'plan.move.spoken.timed': '{name} 設定了 {time}。正在詢問是否放棄這個時間。',
   'plan.move.spoken.journeyNotInIdeas': '{name} 沒有移動。行程留在這一天裡。',
   'plan.move.spoken.journeyNotInAnotherDay':
@@ -169,6 +165,7 @@ const messages = {
   'plan.note.showLess': '收合',
   'plan.note.moveUp': '上移',
   'plan.note.moveDown': '下移',
+  'plan.note.moveToDay': '移到其他日期',
   'plan.note.drag': '重新排序備註',
   'plan.note.edit': '編輯備註',
   'plan.note.delete': '刪除備註',

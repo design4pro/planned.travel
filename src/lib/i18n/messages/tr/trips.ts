@@ -109,10 +109,7 @@ const messages = {
     'Bir yer bir günde yalnızca bir kez yer alabilir. Onu başka bir güne taşıyın.',
   'plan.move.refused.notInIdeas': 'Not günün içinde kalır',
   'plan.move.refused.notInIdeasBody':
-    'Fikirler bir gün bekleyen yerlerdir. Not, yazıldığı güne aittir.',
-  'plan.move.refused.notInAnotherDay': 'Not kendi gününde kalır',
-  'plan.move.refused.notInAnotherDayBody':
-    'Notlar henüz günler arasında taşınamıyor. Notu düzenleyin ya da diğer güne yazın.',
+    'Fikirler bir gün bekleyen yerlerdir. Not her zaman bir güne aittir.',
   'plan.move.refused.journeyNotInIdeas': 'Yolculuk günün içinde kalır',
   'plan.move.refused.journeyNotInIdeasBody':
     'Fikirler bir gün bekleyen yerlerdir. Yolculuk, gerçekleştiği güne aittir.',
@@ -124,8 +121,6 @@ const messages = {
     'Kalkış saati tarifenin, planın değil. Yolculuğu saatinin gösterdiği yere koyun.',
   'plan.move.spoken.duplicate': '{name} taşınmadı. O günde zaten var.',
   'plan.move.spoken.notInIdeas': '{name} taşınmadı. Not günün içinde kalır.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} taşınmadı. Not kendi gününde kalır.',
   'plan.move.spoken.timed':
     '{name} öğesinde {time} var. Saati bırakalım mı diye soruyoruz.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -179,6 +174,7 @@ const messages = {
   'plan.note.showLess': 'Daha az göster',
   'plan.note.moveUp': 'Yukarı taşı',
   'plan.note.moveDown': 'Aşağı taşı',
+  'plan.note.moveToDay': 'Başka bir güne taşı',
   'plan.note.drag': 'Notu yeniden sırala',
   'plan.note.edit': 'Notu düzenle',
   'plan.note.delete': 'Notu sil',

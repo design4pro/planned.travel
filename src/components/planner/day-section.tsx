@@ -20,6 +20,7 @@ import type {
   PlannerNote,
   PlannerRow,
 } from './types'
+import type { NoteDayTarget } from './note-row'
 import type { DayWeatherView } from './weather-model'
 
 export interface DaySectionProps {
@@ -55,6 +56,13 @@ export interface DaySectionProps {
   readonly onDeleteNote?: (note: PlannerNote) => void
   /** `-1` is one place earlier in the day's sequence, `1` one place later. */
   readonly onMoveNote?: (note: PlannerNote, direction: -1 | 1) => void
+  /**
+   * Every day of the trip, this one included: a note's "Move to day" menu lists the others.
+   * Omitted where the screen offers no such move.
+   */
+  readonly moveTargets?: ReadonlyArray<NoteDayTarget>
+  /** `dayId` is the destination: the note goes to the end of that day. */
+  readonly onMoveNoteToDay?: (note: PlannerNote, dayId: string) => void
   /**
    * What the day's footer offers beyond its note, drawn under the note control. The
    * screen composes it, so a stage that adds a footer control never edits this file.
@@ -106,6 +114,8 @@ export function DaySection({
   onEditNote,
   onDeleteNote,
   onMoveNote,
+  moveTargets,
+  onMoveNoteToDay,
   dayTools,
   weather,
   weatherUnit = 'metric',
@@ -303,6 +313,10 @@ export function DaySection({
                         pendingItemIds?.has(noteItemId(note.id)) ?? false
                       }
                       onMove={(direction) => onMoveNote?.(note, direction)}
+                      otherDays={moveTargets?.filter(
+                        (target) => target.dayId !== day.dayId,
+                      )}
+                      onMoveToDay={(dayId) => onMoveNoteToDay?.(note, dayId)}
                       onEdit={() => onEditNote?.(note)}
                       onDelete={() => onDeleteNote?.(note)}
                     />

@@ -3,9 +3,10 @@
  *
  * Three behaviours are the ones most likely to be got wrong and the three least
  * reachable through `plan-screen.tsx`, which would first need a map, a router and a
- * trip: the cross-day note refusal that must happen *before* the engine, the payload
- * that has to name a note as a note, and the refusal vocabulary the live region reads.
- * All three are decided in `plan-move.ts`, so all three are assertions here.
+ * trip: the cross-day journey refusal that must happen *before* the engine, the payload
+ * that has to name a note as a note on whichever day it lands, and the refusal vocabulary
+ * the live region reads. All three are decided in `plan-move.ts`, so all three are
+ * assertions here.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -50,20 +51,80 @@ const TIMES: Readonly<Record<string, string>> = {
   a1: '09:00',
   [N1]: '11:00',
   a2: '14:00',
+  a3: '10:00',
 }
 
 const timeOfItem = (itemId: string): string | null => TIMES[itemId] ?? null
 
 describe('planMoveOutcome', () => {
-  it('refuses a note dropped on another day, without asking the engine', () => {
+  it('commits a note dropped on another day, naming both days the move touched', () => {
+    const outcome = planMoveOutcome(
+      ORDER,
+      N1,
+      { container: 'd2', index: 1 },
+      { placeOfItem },
+    )
+
+    expect(outcome.kind).toBe('commit')
+    if (outcome.kind !== 'commit') return
+    expect(outcome.order.days).toEqual([
+      { dayId: 'd1', itemIds: ['a1', 'a2'] },
+      { dayId: 'd2', itemIds: ['a3', N1] },
+    ])
+    expect(outcome.change).toEqual({
+      kind: 'reorder',
+      days: [
+        { dayId: 'd2', itemIds: ['a3', N1] },
+        { dayId: 'd1', itemIds: ['a1', 'a2'] },
+      ],
+    })
+  })
+
+  it('keeps the time of a note dropped on another day where the clock agrees', () => {
+    // 11:00 below the 10:00 that is all `d2` holds.
+    const outcome = planMoveOutcome(
+      ORDER,
+      N1,
+      { container: 'd2', index: 1 },
+      { placeOfItem, timeOfItem },
+    )
+
+    expect(outcome.kind).toBe('commit')
+  })
+
+  it('asks about the time of a note dropped on another day against that day’s clock', () => {
+    // 11:00 above the 10:00 that opens `d2`.
     const outcome = planMoveOutcome(
       ORDER,
       N1,
       { container: 'd2', index: 0 },
-      { placeOfItem },
+      { placeOfItem, timeOfItem },
     )
 
-    expect(outcome).toEqual({ kind: 'refused', reason: 'not-in-another-day' })
+    expect(outcome).toEqual({
+      kind: 'ask-drop-time',
+      itemId: N1,
+      time: '11:00',
+    })
+  })
+
+  it('commits the cross-day move once the reader agrees to drop the time', () => {
+    const outcome = planMoveOutcome(
+      ORDER,
+      N1,
+      { container: 'd2', index: 0 },
+      { placeOfItem, timeOfItem, dropTime: true },
+    )
+
+    expect(outcome.kind).toBe('commit')
+    if (outcome.kind !== 'commit') return
+    expect(outcome.change).toEqual({
+      kind: 'reorder',
+      days: [
+        { dayId: 'd2', itemIds: [N1, 'a3'] },
+        { dayId: 'd1', itemIds: ['a1', 'a2'] },
+      ],
+    })
   })
 
   it('refuses a note dropped into the ideas rail, as the engine does', () => {
@@ -213,6 +274,39 @@ describe('reorderPayload', () => {
     ])
   })
 
+  it('carries both days of a note moved across, and clears its time on the one that holds it', () => {
+    const payload = reorderPayload(
+      't1',
+      {
+        kind: 'reorder',
+        days: [
+          { dayId: 'd2', itemIds: [N1, 'a3'] },
+          { dayId: 'd1', itemIds: ['a1', 'a2'] },
+        ],
+      },
+      N1,
+      [],
+    )
+
+    expect(payload.days).toEqual([
+      {
+        dayId: 'd2',
+        items: [
+          { kind: 'note', id: 'n1' },
+          { kind: 'stop', id: 'a3' },
+        ],
+        clearTime: [{ kind: 'note', id: 'n1' }],
+      },
+      {
+        dayId: 'd1',
+        items: [
+          { kind: 'stop', id: 'a1' },
+          { kind: 'stop', id: 'a2' },
+        ],
+      },
+    ])
+  })
+
   it('leaves a day the dropped row does not sit in alone', () => {
     const payload = reorderPayload(
       't1',
@@ -234,15 +328,19 @@ describe('reorderPayload', () => {
 
 describe('refusalCopy', () => {
   it('gives every refusal a reader sees its own three keys', () => {
-    const spoken = (
-      ['duplicate', 'not-in-ideas', 'not-in-another-day'] as const
-    )
+    const spoken = (['duplicate', 'not-in-ideas'] as const)
       .map((reason) => refusalCopy(reason, 'a1'))
       .map((copy) => [copy?.title, copy?.body, copy?.spoken].join('|'))
 
-    expect(spoken).toHaveLength(3)
-    expect(new Set(spoken).size).toBe(3)
+    expect(spoken).toHaveLength(2)
+    expect(new Set(spoken).size).toBe(2)
     for (const keys of spoken) expect(keys).not.toContain('undefined')
+  })
+
+  /** Only a journey is still refused for the day it lands on; a note has nothing to say. */
+  it('has no sentence for a note about another day', () => {
+    expect(refusalCopy('not-in-another-day', N1)).toBeNull()
+    expect(refusalCopy('not-in-another-day', 'a1')).toBeNull()
   })
 
   /** A row put back where it was is not an error, and neither is a drag onto nothing. */
@@ -321,7 +419,7 @@ describe('a journey on the board', () => {
     expect(outcome).toEqual({ kind: 'refused', reason: 'timed' })
   })
 
-  it('answers in its own words, and leaves the note’s untouched', () => {
+  it('answers in its own words', () => {
     const journey = (['not-in-ideas', 'not-in-another-day', 'timed'] as const)
       .map((reason) => refusalCopy(reason, J1))
       .map((copy) => [copy?.title, copy?.body, copy?.spoken].join('|'))
@@ -331,11 +429,7 @@ describe('a journey on the board', () => {
       expect(keys).not.toContain('undefined')
       expect(keys).toContain('journey')
     }
-    // The same reason, asked about a note, still says what it always said.
-    expect(refusalCopy('not-in-another-day', N1)?.title).toBe(
-      'trips.plan.move.refused.notInAnotherDay',
-    )
-    // And a stop's `'timed'` is still the dialog's, not a refusal with words.
+    // A stop's `'timed'` is still the dialog's, not a refusal with words.
     expect(refusalCopy('timed', 'a1')).toBeNull()
   })
 

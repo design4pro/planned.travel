@@ -112,10 +112,7 @@ const messages = {
     'Un lieu ne peut apparaître qu’une fois par journée. Déplacez-le vers une autre journée.',
   'plan.move.refused.notInIdeas': 'Une note reste dans la journée',
   'plan.move.refused.notInIdeasBody':
-    'Les idées sont des lieux en attente d’une journée. Une note appartient à la journée pour laquelle elle a été écrite.',
-  'plan.move.refused.notInAnotherDay': 'Une note reste dans sa journée',
-  'plan.move.refused.notInAnotherDayBody':
-    'Les notes ne peuvent pas encore changer de journée. Modifiez la note, ou écrivez-la dans l’autre journée.',
+    'Les idées sont des lieux en attente d’une journée. Une note appartient toujours à une journée.',
   'plan.move.refused.journeyNotInIdeas': 'Un trajet reste dans la journée',
   'plan.move.refused.journeyNotInIdeasBody':
     'Les idées sont des lieux en attente d’une journée. Un trajet appartient à la journée où il a lieu.',
@@ -129,8 +126,6 @@ const messages = {
     '{name} n’a pas été déplacé. Cette journée le contient déjà.',
   'plan.move.spoken.notInIdeas':
     '{name} n’a pas été déplacé. Une note reste dans la journée.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} n’a pas été déplacé. Une note reste dans sa journée.',
   'plan.move.spoken.timed':
     '{name} porte {time}. Nous demandons s’il faut l’abandonner.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -186,6 +181,7 @@ const messages = {
   'plan.note.showLess': 'Afficher moins',
   'plan.note.moveUp': 'Monter',
   'plan.note.moveDown': 'Descendre',
+  'plan.note.moveToDay': 'Déplacer vers un autre jour',
   'plan.note.drag': 'Réorganiser la note',
   'plan.note.edit': 'Modifier la note',
   'plan.note.delete': 'Supprimer la note',

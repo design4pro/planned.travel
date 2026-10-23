@@ -104,10 +104,7 @@ const messages = {
     '同一地点每天只能出现一次。请把它移到另一天。',
   'plan.move.refused.notInIdeas': '备注留在这一天里',
   'plan.move.refused.notInIdeasBody':
-    '想法是等待安排日期的地点。备注属于它所写的那一天。',
-  'plan.move.refused.notInAnotherDay': '备注留在自己的那一天',
-  'plan.move.refused.notInAnotherDayBody':
-    '备注还不能在不同日期之间移动。请编辑备注，或在另一天重新写一条。',
+    '想法是等待安排日期的地点。备注总是属于某一天。',
   'plan.move.refused.journeyNotInIdeas': '行程留在这一天里',
   'plan.move.refused.journeyNotInIdeasBody':
     '想法是等待安排日期的地点。行程属于它发生的那一天。',
@@ -119,7 +116,6 @@ const messages = {
     '出发时间属于时刻表，不属于计划。请把行程放在它的时间该在的位置。',
   'plan.move.spoken.duplicate': '{name} 没有移动。那一天已经有它了。',
   'plan.move.spoken.notInIdeas': '{name} 没有移动。备注留在这一天里。',
-  'plan.move.spoken.notInAnotherDay': '{name} 没有移动。备注留在自己的那一天。',
   'plan.move.spoken.timed': '{name} 设定了 {time}。正在询问是否放弃这个时间。',
   'plan.move.spoken.journeyNotInIdeas': '{name} 没有移动。行程留在这一天里。',
   'plan.move.spoken.journeyNotInAnotherDay':
@@ -169,6 +165,7 @@ const messages = {
   'plan.note.showLess': '收起',
   'plan.note.moveUp': '上移',
   'plan.note.moveDown': '下移',
+  'plan.note.moveToDay': '移到其他日期',
   'plan.note.drag': '重新排序备注',
   'plan.note.edit': '编辑备注',
   'plan.note.delete': '删除备注',

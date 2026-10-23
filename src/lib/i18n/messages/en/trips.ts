@@ -130,24 +130,21 @@ const messages = {
    * Without the second one a refused keyboard drag is silence — the row simply
    * stays where it was and nothing explains it.
    *
-   * `{name}` is the place or the note's headline. The two `notInIdeas` /
-   * `notInAnotherDay` refusals are product statements rather than failures: the
-   * ideas rail is the trip's unscheduled *place* inventory, and a note belongs to
-   * the day it was written for.
+   * `{name}` is the place or the note's headline. The `notInIdeas` refusals are
+   * product statements rather than failures: the ideas rail is the trip's unscheduled
+   * *place* inventory, and a note always belongs to a day. A note may move between
+   * days, so only a journey has a `journeyNotInAnotherDay` sentence.
    */
   'plan.move.refused.duplicate': '{name} is already on that day',
   'plan.move.refused.duplicateBody':
     'A place can only appear once per day. Move it to another day instead.',
   'plan.move.refused.notInIdeas': 'A note stays in the day',
   'plan.move.refused.notInIdeasBody':
-    'Ideas are places waiting for a day. A note belongs to the day it was written on.',
-  'plan.move.refused.notInAnotherDay': 'A note stays on its own day',
-  'plan.move.refused.notInAnotherDayBody':
-    'Notes cannot be moved between days yet. Edit the note, or write it on the other day.',
+    'Ideas are places waiting for a day. A note always belongs to a day.',
   /**
    * The same three sentences a journey needs, said in its own words.
    *
-   * A journey cannot borrow the note's: "a note belongs to the day it was written on"
+   * A journey cannot borrow the note's: "a note always belongs to a day"
    * is true of a note and false of a train, whose day is its timetable's and not the
    * reader's. `{name}` is the journey said in words — "Tokyo to Kyoto".
    */
@@ -164,8 +161,6 @@ const messages = {
     '{name} was not moved. That day already has it.',
   'plan.move.spoken.notInIdeas':
     '{name} was not moved. A note stays in the day.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} was not moved. A note stays on its own day.',
   'plan.move.spoken.timed': '{name} carries {time}. Asking whether to drop it.',
   'plan.move.spoken.journeyNotInIdeas':
     '{name} was not moved. A journey stays in the day.',
@@ -275,6 +270,7 @@ const messages = {
   'plan.note.showLess': 'Show less',
   'plan.note.moveUp': 'Move up',
   'plan.note.moveDown': 'Move down',
+  'plan.note.moveToDay': 'Move to day',
   /**
    * The note's drag handle, named as an action rather than a thing: it is the
    * control's whole accessible name, and a screen reader that has just heard the

@@ -109,10 +109,7 @@ const messages = {
     'En plats kan bara finnas en gång per dag. Flytta den till en annan dag i stället.',
   'plan.move.refused.notInIdeas': 'En anteckning stannar i dagen',
   'plan.move.refused.notInIdeasBody':
-    'Idéer är platser som väntar på en dag. En anteckning hör till dagen den skrevs för.',
-  'plan.move.refused.notInAnotherDay': 'En anteckning stannar på sin egen dag',
-  'plan.move.refused.notInAnotherDayBody':
-    'Anteckningar kan ännu inte flyttas mellan dagar. Redigera anteckningen, eller skriv den på den andra dagen.',
+    'Idéer är platser som väntar på en dag. En anteckning hör alltid till en dag.',
   'plan.move.refused.journeyNotInIdeas': 'En färd stannar i dagen',
   'plan.move.refused.journeyNotInIdeasBody':
     'Idéer är platser som väntar på en dag. En färd hör till dagen den sker.',
@@ -126,8 +123,6 @@ const messages = {
     '{name} flyttades inte. Den dagen har den redan.',
   'plan.move.spoken.notInIdeas':
     '{name} flyttades inte. En anteckning stannar i dagen.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} flyttades inte. En anteckning stannar på sin egen dag.',
   'plan.move.spoken.timed':
     '{name} har tiden {time}. Vi frågar om den ska tas bort.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -179,6 +174,7 @@ const messages = {
   'plan.note.showLess': 'Visa mindre',
   'plan.note.moveUp': 'Flytta upp',
   'plan.note.moveDown': 'Flytta ner',
+  'plan.note.moveToDay': 'Flytta till en annan dag',
   'plan.note.drag': 'Ändra ordning på anteckningen',
   'plan.note.edit': 'Redigera anteckningen',
   'plan.note.delete': 'Ta bort anteckningen',
