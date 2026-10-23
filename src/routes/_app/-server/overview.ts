@@ -14,13 +14,13 @@ import {
   assignableRoles,
   countAuditActions,
   countFavourites,
+  countQuotaJourneys,
   countUnread,
   getAtlasSummary,
   getDashboardSummary,
   getOrganization,
   listAuditLog,
   listCollectionsWithCounts,
-  listJourneysWithCounts,
   listMemberProfiles,
   listNotifications,
   listPendingInvitationProfiles,
@@ -635,7 +635,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
       audit,
       actionCounts,
       collections,
-      journeys,
+      journeysUsed,
     ] = await Promise.all([
       getOrganization(scope),
       getDashboardSummary(scope, { today: serverToday() }),
@@ -645,7 +645,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
       listAuditLog(scope, { limit: 25 }),
       countAuditActions(scope, { limit: 8 }),
       listCollectionsWithCounts(scope),
-      listJourneysWithCounts(scope),
+      countQuotaJourneys(scope),
     ])
 
     return {
@@ -690,7 +690,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
         },
         {
           metric: 'journeys',
-          used: journeys.length,
+          used: journeysUsed,
           limit: overTheWire(quotas.limits.journeys),
         },
       ],
