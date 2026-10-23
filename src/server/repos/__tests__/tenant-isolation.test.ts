@@ -429,7 +429,7 @@ const { downloadTripExport, listTripExports } =
 /** The confirm's ports, stubbed to throw for the same reason: a refused confirm reaches neither. */
 const unreachedPorts: Parameters<typeof confirmBookingImport>[3] = {
   enqueueRollup: () => {
-    throw new Error('enqueueRollup is not reached: no place is written.')
+    throw new Error("enqueueRollup is not reached: no place is written.")
   },
   announce: () => {
     throw new Error('announce is not reached: nothing here is written.')
@@ -1275,17 +1275,12 @@ describe('tenant isolation', () => {
       ] as const) {
         const scope = actor.tenant.scopeFor(actor.tenant.ownerUserId, 'member')
         for (const call of [
-          () =>
-            updateCollection(scope, target.collectionId, { name: 'Forged' }),
+          () => updateCollection(scope, target.collectionId, { name: 'Forged' }),
           () => deleteCollection(scope, target.collectionId),
           () => deleteCollectionConfirmed(scope, target.collectionId, 'Forged'),
           () => collectionDeleteSummary(scope, target.collectionId),
           () =>
-            setCollectionPlaceStatus(
-              scope,
-              target.collectionPlaceId,
-              'visited',
-            ),
+            setCollectionPlaceStatus(scope, target.collectionPlaceId, 'visited'),
         ])
           await expect(call()).rejects.toMatchObject({ code: 'NOT_FOUND' })
         expect(
@@ -3193,8 +3188,8 @@ describe('tenant isolation', () => {
    * their own trip is refused and an editor on that same trip is allowed, which
    * proves the guard discriminates rather than merely throws.
    *
-   * Every attempt names a Transport that **exists** and sends an empty record: the chain-only
-   * save, which `saveTransport` takes without a title for a row that is already there.
+   * Every attempt names a Transport that **exists**, and the chain-only ones send an empty
+   * record: `saveTransport` takes that without a title for a row that is already there.
    */
   describe('a transport’s station chain', () => {
     /** Three stations, so a refusal that dropped one leg would still be visible. */
@@ -7386,9 +7381,7 @@ describe('tenant isolation', () => {
   describe('collaboration section configuration', () => {
     it('hides a foreign trip and leaves its stored configuration and timestamps byte-identical', async () => {
       const readForeignTrip = () =>
-        harness.sqlite
-          .prepare('SELECT * FROM trips WHERE id = ?')
-          .get(beta.tripId)
+        harness.sqlite.prepare('SELECT * FROM trips WHERE id = ?').get(beta.tripId)
       const before = readForeignTrip()
       await expect(
         setTripCollabSections(alpha.tenant.scope, beta.tripId, {
@@ -7403,10 +7396,7 @@ describe('tenant isolation', () => {
   describe('older conversation pages', () => {
     it('scopes foreign and arbitrary cursors, message ids and reactions without changing B', async () => {
       const scope = alpha.tenant.scope
-      await postMessage(scope, {
-        tripId: alpha.tripId,
-        body: 'another A message',
-      })
+      await postMessage(scope, { tripId: alpha.tripId, body: 'another A message' })
       const before = await collabRows(beta.tenant.scope)
       expect((await listMessages(scope, beta.tripId)).items).toEqual([])
       await expect(
@@ -7429,14 +7419,8 @@ describe('tenant isolation', () => {
     it('counts the whole non-deleted thread of one trip, inside the tenant', async () => {
       const scope = alpha.tenant.scope
       const own = await countMessages(scope, alpha.tripId)
-      const kept = await postMessage(scope, {
-        tripId: alpha.tripId,
-        body: 'kept',
-      })
-      const gone = await postMessage(scope, {
-        tripId: alpha.tripId,
-        body: 'gone',
-      })
+      const kept = await postMessage(scope, { tripId: alpha.tripId, body: 'kept' })
+      const gone = await postMessage(scope, { tripId: alpha.tripId, body: 'gone' })
       await deleteMessage(scope, alpha.tripId, gone.id)
 
       expect(kept.id).not.toBe(gone.id)
