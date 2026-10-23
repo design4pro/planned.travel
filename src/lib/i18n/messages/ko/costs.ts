@@ -98,7 +98,7 @@ const messages = {
   'expense.saveFailed': '저장하지 못했습니다',
   'expense.splitOff.title': '저장된 분담액의 합계가 맞지 않습니다',
   'expense.splitOff.body':
-    '합계는 {shares}인데 비용은 {total}입니다. 분담액을 조정한 뒤 저장하면 바로잡을 수 있습니다.',
+    '합계는 {shares}인데 총액은 {total}입니다. 아래 분담 내역을 확인한 뒤 저장하면 바로잡을 수 있습니다.',
   'expense.what': '무엇에 쓴 돈인지',
   'expense.whatPlaceholder': 'Kyubey에서 저녁',
   'expense.amountNotANumber': '금액을 숫자로 입력해 주세요.',

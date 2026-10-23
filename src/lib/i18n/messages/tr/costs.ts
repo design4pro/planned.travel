@@ -98,7 +98,7 @@ const messages = {
   'expense.saveFailed': 'Kaydedilemedi',
   'expense.splitOff.title': 'Kayıtlı paylar toplamı tutmuyor',
   'expense.splitOff.body':
-    'Paylar toplam {shares} ediyor, ancak masraf {total}. Payları düzeltip kaydederek bunu giderebilirsin.',
+    'Paylar toplam {shares} ediyor, ancak toplam tutar {total}. Aşağıdaki bölüşümü kontrol edip kaydederek bunu giderebilirsin.',
   'expense.what': 'Ne içindi',
   'expense.whatPlaceholder': 'Kyubey’de akşam yemeği',
   'expense.amountNotANumber': 'Tutarı sayı olarak yaz.',

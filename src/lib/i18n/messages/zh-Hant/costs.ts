@@ -90,7 +90,7 @@ const messages = {
   'expense.saveFailed': '儲存失敗',
   'expense.splitOff.title': '已儲存的分攤額總和與總額不符',
   'expense.splitOff.body':
-    '分攤額合計為 {shares}，但費用為 {total}。調整分攤額並儲存即可修正。',
+    '分攤額合計為 {shares}，但總額為 {total}。請檢查下方的分攤並儲存即可修正。',
   'expense.what': '這筆錢花在什麼上',
   'expense.whatPlaceholder': '在 Kyubey 的晚餐',
   'expense.amountNotANumber': '請用數字填寫金額。',

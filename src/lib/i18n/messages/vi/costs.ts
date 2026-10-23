@@ -98,7 +98,7 @@ const messages = {
   'expense.saveFailed': 'Không lưu được',
   'expense.splitOff.title': 'Các phần đã lưu không khớp tổng',
   'expense.splitOff.body':
-    'Tổng các phần là {shares}, nhưng chi phí là {total}. Hãy chỉnh các phần rồi lưu để sửa.',
+    'Tổng các phần là {shares}, nhưng tổng số là {total}. Hãy kiểm tra phần chia bên dưới rồi lưu để sửa.',
   'expense.what': 'Chi cho việc gì',
   'expense.whatPlaceholder': 'Bữa tối ở Kyubey',
   'expense.amountNotANumber': 'Nhập số tiền dưới dạng số.',

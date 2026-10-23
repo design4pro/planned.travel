@@ -120,7 +120,7 @@ const messages = {
   'expense.saveFailed': 'That did not save',
   'expense.splitOff.title': 'The saved shares don’t add up',
   'expense.splitOff.body':
-    'They add up to {shares}, but the cost is {total}. Adjust the shares and save to correct it.',
+    'They add up to {shares}, but the total is {total}. Check the split below and save to correct it.',
   'expense.what': 'What was it for',
   'expense.whatPlaceholder': 'Dinner at Kyubey',
   'expense.amountNotANumber': 'Enter the amount as a number.',

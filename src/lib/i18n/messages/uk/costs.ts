@@ -102,7 +102,7 @@ const messages = {
   'expense.saveFailed': 'Зберегти не вдалося',
   'expense.splitOff.title': 'Збережені частки не сходяться із сумою',
   'expense.splitOff.body':
-    'Разом вони дають {shares}, а витрата становить {total}. Виправ частки й збережи, щоб це усунути.',
+    'Разом вони дають {shares}, а підсумок становить {total}. Перевірте поділ нижче й збережіть, щоб це усунути.',
   'expense.what': 'За що це було',
   'expense.whatPlaceholder': 'Вечеря в Kyubey',
   'expense.amountNotANumber': 'Введіть суму числом.',

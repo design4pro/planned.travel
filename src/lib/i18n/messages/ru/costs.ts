@@ -103,7 +103,7 @@ const messages = {
   'expense.saveFailed': 'Сохранить не удалось',
   'expense.splitOff.title': 'Сохранённые доли не сходятся с суммой',
   'expense.splitOff.body':
-    'В сумме они дают {shares}, а расход составляет {total}. Поправь доли и сохрани, чтобы исправить.',
+    'В сумме они дают {shares}, а итог составляет {total}. Проверьте разделение ниже и сохраните, чтобы исправить.',
   'expense.what': 'За что это было',
   'expense.whatPlaceholder': 'Ужин в Kyubey',
   'expense.amountNotANumber': 'Введите сумму числом.',

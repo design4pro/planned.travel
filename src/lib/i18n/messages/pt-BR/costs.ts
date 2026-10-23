@@ -101,7 +101,7 @@ const messages = {
   'expense.saveFailed': 'Não deu para salvar',
   'expense.splitOff.title': 'As partes salvas não somam o total',
   'expense.splitOff.body':
-    'Elas somam {shares}, mas o custo é {total}. Ajuste as partes e salve para corrigir.',
+    'Elas somam {shares}, mas o total é {total}. Confira a divisão abaixo e salve para corrigir.',
   'expense.what': 'Foi para quê',
   'expense.whatPlaceholder': 'Jantar no Kyubey',
   'expense.amountNotANumber': 'Escreva o valor como número.',

@@ -106,7 +106,7 @@ const messages = {
   'expense.saveFailed': 'Nie udało się zapisać',
   'expense.splitOff.title': 'Zapisane udziały nie sumują się do kwoty',
   'expense.splitOff.body':
-    'Razem dają {shares}, a koszt to {total}. Popraw udziały i zapisz, aby to naprawić.',
+    'Razem dają {shares}, a suma to {total}. Sprawdź podział poniżej i zapisz, aby to naprawić.',
   'expense.what': 'Za co to było',
   'expense.whatPlaceholder': 'Kolacja w Kyubey',
   'expense.amountNotANumber': 'Wpisz kwotę jako liczbę.',

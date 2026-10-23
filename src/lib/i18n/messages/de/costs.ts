@@ -101,7 +101,7 @@ const messages = {
   'expense.saveFailed': 'Das hat nicht geklappt',
   'expense.splitOff.title': 'Die gespeicherten Anteile ergeben nicht die Summe',
   'expense.splitOff.body':
-    'Sie ergeben zusammen {shares}, die Kosten betragen aber {total}. Passe die Anteile an und speichere, um das zu korrigieren.',
+    'Sie ergeben zusammen {shares}, die Summe beträgt aber {total}. Prüfe die Aufteilung unten und speichere, um das zu korrigieren.',
   'expense.what': 'Wofür war das',
   'expense.whatPlaceholder': 'Abendessen im Kyubey',
   'expense.amountNotANumber': 'Gib den Betrag als Zahl ein.',

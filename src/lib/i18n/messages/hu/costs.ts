@@ -102,7 +102,7 @@ const messages = {
   'expense.saveFailed': 'A mentés nem sikerült',
   'expense.splitOff.title': 'A mentett részek nem adják ki az összeget',
   'expense.splitOff.body':
-    'Összesen {shares}, a költség viszont {total}. Igazítsd a részeket, és mentsd el a javításhoz.',
+    'Összesen {shares}, a végösszeg viszont {total}. Nézd át az alábbi felosztást, és mentsd el a javításhoz.',
   'expense.what': 'Mire volt',
   'expense.whatPlaceholder': 'Vacsora a Kyubeyben',
   'expense.amountNotANumber': 'Írd be az összeget számként.',

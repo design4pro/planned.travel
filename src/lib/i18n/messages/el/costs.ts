@@ -99,7 +99,7 @@ const messages = {
   'expense.saveFailed': 'Η αποθήκευση δεν έγινε',
   'expense.splitOff.title': 'Τα αποθηκευμένα μερίδια δεν αθροίζουν στο σύνολο',
   'expense.splitOff.body':
-    'Αθροίζουν {shares}, αλλά το κόστος είναι {total}. Προσάρμοσε τα μερίδια και αποθήκευσε για να το διορθώσεις.',
+    'Αθροίζουν {shares}, αλλά το σύνολο είναι {total}. Έλεγξε τον επιμερισμό παρακάτω και αποθήκευσε για να το διορθώσεις.',
   'expense.what': 'Για ποιο πράγμα ήταν',
   'expense.whatPlaceholder': 'Δείπνο στο Kyubey',
   'expense.amountNotANumber': 'Γράψε το ποσό ως αριθμό.',

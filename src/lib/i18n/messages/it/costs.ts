@@ -102,7 +102,7 @@ const messages = {
   'expense.saveFailed': 'Salvataggio non riuscito',
   'expense.splitOff.title': 'Le quote salvate non coincidono col totale',
   'expense.splitOff.body':
-    'Sommano {shares}, ma il costo è {total}. Correggi le quote e salva per sistemare.',
+    'Sommano {shares}, ma il totale è {total}. Controlla la suddivisione qui sotto e salva per correggere.',
   'expense.what': 'Per cosa era',
   'expense.whatPlaceholder': 'Cena al Kyubey',
   'expense.amountNotANumber': 'Scrivi l’importo come numero.',

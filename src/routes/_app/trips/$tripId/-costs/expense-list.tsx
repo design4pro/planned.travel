@@ -184,7 +184,14 @@ function ExpenseRow({
             {sharesDoNotAddUp(row) ? (
               <>
                 <Dot />
-                <Badge tone="warning" size="sm" icon={<AlertTriangle />}>
+                {/* May wrap: the quiet line is the narrowest column of a 360px row, and the longer
+                    locales do not fit one line beside the share figure and the row's buttons. */}
+                <Badge
+                  tone="warning"
+                  size="sm"
+                  icon={<AlertTriangle />}
+                  className="h-auto min-w-0 shrink whitespace-normal py-0.5 text-start"
+                >
                   {t('costs.row.splitOff')}
                 </Badge>
               </>

@@ -103,7 +103,7 @@ const messages = {
   'expense.saveFailed': 'Uložení se nepovedlo',
   'expense.splitOff.title': 'Uložené podíly nesedí',
   'expense.splitOff.body':
-    'Dohromady dávají {shares}, ale náklad je {total}. Uprav podíly a ulož je, aby se to opravilo.',
+    'Dohromady dávají {shares}, ale celkem je to {total}. Zkontroluj rozdělení níže a ulož, aby se to opravilo.',
   'expense.what': 'Za co to bylo',
   'expense.whatPlaceholder': 'Večeře v Kyubey',
   'expense.amountNotANumber': 'Zadejte částku jako číslo.',

@@ -97,7 +97,7 @@ const messages = {
   'expense.saveFailed': 'Det gick inte att spara',
   'expense.splitOff.title': 'De sparade andelarna summerar inte till totalen',
   'expense.splitOff.body':
-    'De blir tillsammans {shares}, men kostnaden är {total}. Justera andelarna och spara för att rätta till det.',
+    'De blir tillsammans {shares}, men totalen är {total}. Kontrollera fördelningen nedan och spara för att rätta till det.',
   'expense.what': 'Vad var det för',
   'expense.whatPlaceholder': 'Middag på Kyubey',
   'expense.amountNotANumber': 'Skriv beloppet som ett tal.',

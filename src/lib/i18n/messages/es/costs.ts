@@ -101,7 +101,7 @@ const messages = {
   'expense.saveFailed': 'No se pudo guardar',
   'expense.splitOff.title': 'Las partes guardadas no suman el total',
   'expense.splitOff.body':
-    'Suman {shares}, pero el coste es {total}. Ajusta las partes y guarda para corregirlo.',
+    'Suman {shares}, pero el total es {total}. Revisa el reparto de abajo y guarda para corregirlo.',
   'expense.what': 'Para qué fue',
   'expense.whatPlaceholder': 'Cena en Kyubey',
   'expense.amountNotANumber': 'Escribe el importe como número.',

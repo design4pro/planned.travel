@@ -268,6 +268,20 @@ describe('sharesDoNotAddUp', () => {
     expect(sharesDoNotAddUp(row)).toBe(true)
   })
 
+  it('flags shares that are all zero on a line with an amount', () => {
+    const row = expense({
+      shares: expense().shares.map((share) => ({ ...share, shareMinor: 0 })),
+    })
+    expect(sharesDoNotAddUp(row)).toBe(true)
+  })
+
+  it('counts a settled share like any other', () => {
+    const row = expense({
+      shares: expense().shares.map((share) => ({ ...share, isSettled: true })),
+    })
+    expect(sharesDoNotAddUp(row)).toBe(false)
+  })
+
   it('clears once the split is corrected', () => {
     const off = expense({ amountMinor: 33_000 })
     const fixed = expense({

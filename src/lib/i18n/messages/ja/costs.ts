@@ -100,7 +100,7 @@ const messages = {
   'expense.saveFailed': '保存できませんでした',
   'expense.splitOff.title': '保存された分担額の合計が一致しません',
   'expense.splitOff.body':
-    '分担額の合計は{shares}ですが、費用は{total}です。分担額を調整して保存すると修正できます。',
+    '分担額の合計は{shares}ですが、総額は{total}です。下の分担を確認して保存すると修正できます。',
   'expense.what': '何の費用か',
   'expense.whatPlaceholder': 'Kyubey での夕食',
   'expense.amountNotANumber': '金額は数字で入力してください。',

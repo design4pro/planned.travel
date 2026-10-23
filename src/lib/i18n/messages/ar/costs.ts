@@ -103,7 +103,7 @@ const messages = {
   'expense.saveFailed': 'لم يُحفظ',
   'expense.splitOff.title': 'الحصص المحفوظة لا تُطابق الإجمالي',
   'expense.splitOff.body':
-    'مجموعها {shares}، بينما التكلفة {total}. عدّل الحصص ثم احفظ لتصحيحها.',
+    'مجموعها {shares}، بينما الإجمالي {total}. راجع التقسيم أدناه ثم احفظ لتصحيحه.',
   'expense.what': 'لأي شيء كان',
   'expense.whatPlaceholder': 'عشاء في Kyubey',
   'expense.amountNotANumber': 'اكتب المبلغ رقمًا.',

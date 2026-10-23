@@ -100,7 +100,7 @@ const messages = {
   'expense.saveFailed': 'No s’ha pogut desar',
   'expense.splitOff.title': 'Les parts desades no quadren',
   'expense.splitOff.body':
-    'Sumen {shares}, però el cost és {total}. Ajusta les parts i desa per corregir-ho.',
+    'Sumen {shares}, però el total és {total}. Revisa el repartiment de sota i desa per corregir-ho.',
   'expense.what': 'Per a què era',
   'expense.whatPlaceholder': 'Sopar al Kyubey',
   'expense.amountNotANumber': 'Escriu l’import com a número.',

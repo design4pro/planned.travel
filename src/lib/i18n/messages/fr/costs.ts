@@ -103,7 +103,7 @@ const messages = {
   'expense.saveFailed': 'L’enregistrement a échoué',
   'expense.splitOff.title': 'Les parts enregistrées ne font pas le total',
   'expense.splitOff.body':
-    'Elles totalisent {shares}, mais la dépense est de {total}. Ajustez les parts et enregistrez pour corriger.',
+    'Elles totalisent {shares}, mais le total est de {total}. Vérifiez la répartition ci-dessous et enregistrez pour corriger.',
   'expense.what': 'C’était pour quoi',
   'expense.whatPlaceholder': 'Dîner au Kyubey',
   'expense.amountNotANumber': 'Saisissez le montant sous forme de nombre.',

@@ -816,10 +816,42 @@ describe('the expense dialog on a stored split that does not add up (#883)', () 
 
     expect(screen.getByText(TITLE)).toBeTruthy()
     expect(
-      screen.getByText(/add up to .*40.*, but the cost is .*60.*/),
+      screen.getByText(/add up to .*40.*, but the total is .*60.*/),
     ).toBeTruthy()
     // The editor re-derives an equal split from the amount, which is why the alert exists.
     expect(screen.getByText('Balanced')).toBeTruthy()
+  })
+
+  it('words the figures in the line’s own currency, not the trip’s', () => {
+    open(undefined, {
+      expense: expenseRow({
+        currency: 'JPY',
+        amountMinor: 24_000,
+        splitMethod: 'exact',
+        shares: [
+          { userId: 'u1', shareMinor: 10_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 10_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(
+      screen.getByText(/add up to .*20,000.*, but the total is .*24,000/),
+    ).toBeTruthy()
+  })
+
+  it('is read with the dialog’s description, so a screen reader hears it on open', () => {
+    open(undefined, { expense: OFF })
+
+    const described = screen
+      .getByRole('dialog')
+      .getAttribute('aria-describedby')
+      ?.split(' ')
+    expect(described).toHaveLength(2)
+    const text = described?.map(
+      (id) => document.getElementById(id)?.textContent,
+    )
+    expect(text?.join(' ')).toContain(TITLE)
   })
 
   it('stays quiet when the stored shares add up', () => {

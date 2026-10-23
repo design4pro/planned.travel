@@ -98,7 +98,7 @@ const messages = {
   'expense.saveFailed': 'Gagal disimpan',
   'expense.splitOff.title': 'Bagian yang tersimpan tidak sesuai total',
   'expense.splitOff.body':
-    'Jumlahnya {shares}, padahal biayanya {total}. Sesuaikan bagian lalu simpan untuk memperbaikinya.',
+    'Jumlahnya {shares}, padahal totalnya {total}. Periksa pembagian di bawah lalu simpan untuk memperbaikinya.',
   'expense.what': 'Untuk apa ini',
   'expense.whatPlaceholder': 'Makan malam di Kyubey',
   'expense.amountNotANumber': 'Tulis jumlahnya sebagai angka.',

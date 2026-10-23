@@ -307,6 +307,7 @@ export function ExpenseDialog({
       ? {
           sharesMinor: shareTotalOf(expense) ?? 0,
           totalMinor: expense.amountMinor,
+          currency: expense.currency,
         }
       : null,
   )
@@ -327,6 +328,8 @@ export function ExpenseDialog({
     foreign ? convertedRef.current : amountRef.current,
   )
   const formId = `expense-form-${useId()}`
+  const descriptionId = `expense-description-${useId()}`
+  const noticeId = `expense-notice-${useId()}`
 
   // The trip's currency changed while this was open and the screen has refreshed: what was typed
   // stays, a currency control still on the old one follows the trip, and a converted figure (which
@@ -461,12 +464,19 @@ export function ExpenseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent
+        size="lg"
+        // The warning is part of what the dialog says on open: a polite region that mounts already
+        // filled is not announced, and focus lands on the field below it.
+        aria-describedby={
+          storedOff === null ? undefined : `${descriptionId} ${noticeId}`
+        }
+      >
         <DialogHeader>
           <DialogTitle>
             {t(editing ? 'costs.expense.editTitle' : 'costs.expense.addTitle')}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             {editing
               ? t('costs.expense.editDescription')
               : t('costs.expense.addDescription', {
@@ -491,16 +501,20 @@ export function ExpenseDialog({
             )}
 
             {storedOff === null ? null : (
-              <Alert tone="warning" title={t('costs.expense.splitOff.title')}>
+              <Alert
+                id={noticeId}
+                tone="warning"
+                title={t('costs.expense.splitOff.title')}
+              >
                 {t('costs.expense.splitOff.body', {
                   shares: formatMoney(
                     storedOff.sharesMinor,
-                    tripCurrency,
+                    storedOff.currency,
                     locale,
                   ),
                   total: formatMoney(
                     storedOff.totalMinor,
-                    tripCurrency,
+                    storedOff.currency,
                     locale,
                   ),
                 })}

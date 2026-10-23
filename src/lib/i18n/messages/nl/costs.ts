@@ -99,7 +99,7 @@ const messages = {
   'expense.saveFailed': 'Opslaan is mislukt',
   'expense.splitOff.title': 'De opgeslagen delen tellen niet op tot het totaal',
   'expense.splitOff.body':
-    'Samen zijn ze {shares}, maar de kosten zijn {total}. Pas de delen aan en sla op om dit te corrigeren.',
+    'Samen zijn ze {shares}, maar het totaal is {total}. Controleer de verdeling hieronder en sla op om dit te corrigeren.',
   'expense.what': 'Waar was het voor',
   'expense.whatPlaceholder': 'Diner bij Kyubey',
   'expense.amountNotANumber': 'Vul het bedrag in als getal.',
