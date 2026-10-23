@@ -174,6 +174,7 @@ const messages = {
   'plan.note.showLess': 'Visa mindre',
   'plan.note.moveUp': 'Flytta upp',
   'plan.note.moveDown': 'Flytta ner',
+  'plan.note.moveToDay': 'Flytta till en annan dag',
   'plan.note.drag': 'Ändra ordning på anteckningen',
   'plan.note.edit': 'Redigera anteckningen',
   'plan.note.delete': 'Ta bort anteckningen',

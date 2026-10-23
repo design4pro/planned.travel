@@ -181,6 +181,7 @@ const messages = {
   'plan.note.showLess': 'Показати менше',
   'plan.note.moveUp': 'Перемістити вгору',
   'plan.note.moveDown': 'Перемістити вниз',
+  'plan.note.moveToDay': 'Перемістити на інший день',
   'plan.note.drag': 'Змінити порядок нотатки',
   'plan.note.edit': 'Редагувати нотатку',
   'plan.note.delete': 'Видалити нотатку',

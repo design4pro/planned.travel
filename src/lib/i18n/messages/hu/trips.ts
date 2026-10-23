@@ -179,6 +179,7 @@ const messages = {
   'plan.note.showLess': 'Kevesebb megjelenítése',
   'plan.note.moveUp': 'Mozgatás felfelé',
   'plan.note.moveDown': 'Mozgatás lefelé',
+  'plan.note.moveToDay': 'Áthelyezés másik napra',
   'plan.note.drag': 'Jegyzet átrendezése',
   'plan.note.edit': 'Jegyzet szerkesztése',
   'plan.note.delete': 'Jegyzet törlése',

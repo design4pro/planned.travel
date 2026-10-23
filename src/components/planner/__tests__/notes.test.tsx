@@ -212,6 +212,50 @@ describe('NoteRow', () => {
     expect(onMove.mock.calls).toEqual([[-1], [1]])
   })
 
+  /**
+   * A drag has to have a single-pointer equivalent (WCAG 2.2 SC 2.5.7), and a note can now
+   * be dragged to another day: the chevrons stay inside the day, so this menu is the only
+   * pointer route there.
+   */
+  it('moves the note to another day from a menu, without a drag', async () => {
+    const user = userEvent.setup()
+    const onMoveToDay = vi.fn()
+    renderRow({
+      otherDays: [
+        { dayId: 'd2', title: 'Day 2 — Kyoto by train' },
+        { dayId: 'd3', title: 'Day 3 — Nara' },
+      ],
+      onMoveToDay,
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Move to day' }))
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Day 3 — Nara' }),
+    )
+
+    expect(onMoveToDay.mock.calls).toEqual([['d3']])
+  })
+
+  it('offers no day menu when there is no other day to go to', () => {
+    renderRow({ otherDays: [], onMoveToDay: vi.fn() })
+
+    expect(screen.queryByRole('button', { name: 'Move to day' })).toBeNull()
+  })
+
+  it('holds the day menu still while the row’s own write is in flight', () => {
+    renderRow({
+      pending: true,
+      otherDays: [{ dayId: 'd2', title: 'Day 2' }],
+      onMoveToDay: vi.fn(),
+    })
+
+    expect(
+      screen
+        .getByRole('button', { name: 'Move to day' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
+  })
+
   it('opens the editor and the delete from the row', async () => {
     const user = userEvent.setup()
     const onEdit = vi.fn()
@@ -230,9 +274,15 @@ describe('NoteRow', () => {
    * server, after the click — the control is the thing that has to go.
    */
   it('offers a reader with no write not one control', () => {
-    renderRow({ canWrite: false, note: note({ id: 'n1', detail: 'More' }) })
+    renderRow({
+      canWrite: false,
+      note: note({ id: 'n1', detail: 'More' }),
+      otherDays: [{ dayId: 'd2', title: 'Day 2' }],
+      onMoveToDay: vi.fn(),
+    })
 
     expect(screen.queryByRole('button', { name: 'Move up' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Move to day' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Edit note' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Delete note' })).toBeNull()
     // The detail is still readable: reading is the whole of what a viewer does.
@@ -333,6 +383,30 @@ describe('DaySection notes', () => {
     await user.click(down)
     expect(onMoveNote.mock.calls).toHaveLength(1)
     expect(onMoveNote.mock.calls[0][1]).toBe(1)
+  })
+
+  it('offers every day but its own as a place to move a note to', async () => {
+    const user = userEvent.setup()
+    const onMoveNoteToDay = vi.fn()
+    const here = note({ id: 'n1', body: 'Tickets are at the desk' })
+    renderDay([noteItem(here)], {
+      canWriteNotes: true,
+      moveTargets: [
+        { dayId: 'd1', title: 'Asakusa and the river' },
+        { dayId: 'd2', title: 'Kyoto by train' },
+      ],
+      onMoveNoteToDay,
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Move to day' }))
+
+    expect(
+      screen.queryByRole('menuitem', { name: 'Asakusa and the river' }),
+    ).toBeNull()
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'Kyoto by train' }),
+    )
+    expect(onMoveNoteToDay.mock.calls).toEqual([[here, 'd2']])
   })
 
   it('refuses the note that is last in the sequence its own way down', () => {

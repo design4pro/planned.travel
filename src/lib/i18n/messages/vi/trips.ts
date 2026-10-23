@@ -172,6 +172,7 @@ const messages = {
   'plan.note.showLess': 'Thu gọn',
   'plan.note.moveUp': 'Di chuyển lên',
   'plan.note.moveDown': 'Di chuyển xuống',
+  'plan.note.moveToDay': 'Chuyển sang ngày khác',
   'plan.note.drag': 'Sắp xếp lại ghi chú',
   'plan.note.edit': 'Sửa ghi chú',
   'plan.note.delete': 'Xóa ghi chú',

@@ -270,6 +270,7 @@ const messages = {
   'plan.note.showLess': 'Show less',
   'plan.note.moveUp': 'Move up',
   'plan.note.moveDown': 'Move down',
+  'plan.note.moveToDay': 'Move to day',
   /**
    * The note's drag handle, named as an action rather than a thing: it is the
    * control's whole accessible name, and a screen reader that has just heard the

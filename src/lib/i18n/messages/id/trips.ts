@@ -175,6 +175,7 @@ const messages = {
   'plan.note.showLess': 'Tampilkan lebih sedikit',
   'plan.note.moveUp': 'Pindahkan ke atas',
   'plan.note.moveDown': 'Pindahkan ke bawah',
+  'plan.note.moveToDay': 'Pindahkan ke hari lain',
   'plan.note.drag': 'Ubah urutan catatan',
   'plan.note.edit': 'Edit catatan',
   'plan.note.delete': 'Hapus catatan',

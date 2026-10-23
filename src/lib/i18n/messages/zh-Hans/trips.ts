@@ -165,6 +165,7 @@ const messages = {
   'plan.note.showLess': '收起',
   'plan.note.moveUp': '上移',
   'plan.note.moveDown': '下移',
+  'plan.note.moveToDay': '移到其他日期',
   'plan.note.drag': '重新排序备注',
   'plan.note.edit': '编辑备注',
   'plan.note.delete': '删除备注',

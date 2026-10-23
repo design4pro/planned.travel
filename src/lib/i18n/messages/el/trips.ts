@@ -180,6 +180,7 @@ const messages = {
   'plan.note.showLess': 'Λιγότερα',
   'plan.note.moveUp': 'Μετακίνηση πάνω',
   'plan.note.moveDown': 'Μετακίνηση κάτω',
+  'plan.note.moveToDay': 'Μετακίνηση σε άλλη ημέρα',
   'plan.note.drag': 'Αναδιάταξη σημείωσης',
   'plan.note.edit': 'Επεξεργασία σημείωσης',
   'plan.note.delete': 'Διαγραφή σημείωσης',

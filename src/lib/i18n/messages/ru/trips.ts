@@ -181,6 +181,7 @@ const messages = {
   'plan.note.showLess': 'Показать меньше',
   'plan.note.moveUp': 'Переместить вверх',
   'plan.note.moveDown': 'Переместить вниз',
+  'plan.note.moveToDay': 'Переместить на другой день',
   'plan.note.drag': 'Изменить порядок заметки',
   'plan.note.edit': 'Изменить заметку',
   'plan.note.delete': 'Удалить заметку',

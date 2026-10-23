@@ -177,6 +177,7 @@ const messages = {
   'plan.note.showLess': 'Mostra’n menys',
   'plan.note.moveUp': 'Mou amunt',
   'plan.note.moveDown': 'Mou avall',
+  'plan.note.moveToDay': 'Mou a un altre dia',
   'plan.note.drag': 'Reordena la nota',
   'plan.note.edit': 'Edita la nota',
   'plan.note.delete': 'Suprimeix la nota',

@@ -178,6 +178,7 @@ const messages = {
   'plan.note.showLess': 'عرض أقل',
   'plan.note.moveUp': 'تحريك لأعلى',
   'plan.note.moveDown': 'تحريك لأسفل',
+  'plan.note.moveToDay': 'نقل إلى يوم آخر',
   'plan.note.drag': 'إعادة ترتيب الملاحظة',
   'plan.note.edit': 'تعديل الملاحظة',
   'plan.note.delete': 'حذف الملاحظة',

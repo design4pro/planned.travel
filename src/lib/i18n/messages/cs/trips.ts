@@ -178,6 +178,7 @@ const messages = {
   'plan.note.showLess': 'Zobrazit méně',
   'plan.note.moveUp': 'Posunout nahoru',
   'plan.note.moveDown': 'Posunout dolů',
+  'plan.note.moveToDay': 'Přesunout na jiný den',
   'plan.note.drag': 'Změnit pořadí poznámky',
   'plan.note.edit': 'Upravit poznámku',
   'plan.note.delete': 'Smazat poznámku',

@@ -181,6 +181,7 @@ const messages = {
   'plan.note.showLess': 'Afficher moins',
   'plan.note.moveUp': 'Monter',
   'plan.note.moveDown': 'Descendre',
+  'plan.note.moveToDay': 'Déplacer vers un autre jour',
   'plan.note.drag': 'Réorganiser la note',
   'plan.note.edit': 'Modifier la note',
   'plan.note.delete': 'Supprimer la note',

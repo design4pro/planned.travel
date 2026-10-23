@@ -174,6 +174,7 @@ const messages = {
   'plan.note.showLess': '접기',
   'plan.note.moveUp': '위로 이동',
   'plan.note.moveDown': '아래로 이동',
+  'plan.note.moveToDay': '다른 날로 이동',
   'plan.note.drag': '메모 순서 바꾸기',
   'plan.note.edit': '메모 편집',
   'plan.note.delete': '메모 삭제',

@@ -174,6 +174,7 @@ const messages = {
   'plan.note.showLess': 'Daha az göster',
   'plan.note.moveUp': 'Yukarı taşı',
   'plan.note.moveDown': 'Aşağı taşı',
+  'plan.note.moveToDay': 'Başka bir güne taşı',
   'plan.note.drag': 'Notu yeniden sırala',
   'plan.note.edit': 'Notu düzenle',
   'plan.note.delete': 'Notu sil',

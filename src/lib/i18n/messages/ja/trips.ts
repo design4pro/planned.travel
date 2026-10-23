@@ -176,6 +176,7 @@ const messages = {
   'plan.note.showLess': '折りたたむ',
   'plan.note.moveUp': '上へ移動',
   'plan.note.moveDown': '下へ移動',
+  'plan.note.moveToDay': '別の日へ移動',
   'plan.note.drag': 'メモを並べ替える',
   'plan.note.edit': 'メモを編集',
   'plan.note.delete': 'メモを削除',

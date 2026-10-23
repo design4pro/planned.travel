@@ -179,6 +179,7 @@ const messages = {
   'plan.note.showLess': 'Minder tonen',
   'plan.note.moveUp': 'Omhoog verplaatsen',
   'plan.note.moveDown': 'Omlaag verplaatsen',
+  'plan.note.moveToDay': 'Naar een andere dag verplaatsen',
   'plan.note.drag': 'Notitie herschikken',
   'plan.note.edit': 'Notitie bewerken',
   'plan.note.delete': 'Notitie verwijderen',

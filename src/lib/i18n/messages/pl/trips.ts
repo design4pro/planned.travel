@@ -182,6 +182,7 @@ const messages = {
   'plan.note.showLess': 'Pokaż mniej',
   'plan.note.moveUp': 'Przenieś w górę',
   'plan.note.moveDown': 'Przenieś w dół',
+  'plan.note.moveToDay': 'Przenieś do innego dnia',
   'plan.note.drag': 'Zmień kolejność notatki',
   'plan.note.edit': 'Edytuj notatkę',
   'plan.note.delete': 'Usuń notatkę',

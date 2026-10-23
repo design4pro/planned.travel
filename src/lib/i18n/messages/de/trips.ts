@@ -180,6 +180,7 @@ const messages = {
   'plan.note.showLess': 'Weniger anzeigen',
   'plan.note.moveUp': 'Nach oben',
   'plan.note.moveDown': 'Nach unten',
+  'plan.note.moveToDay': 'In einen anderen Tag verschieben',
   'plan.note.drag': 'Notiz umsortieren',
   'plan.note.edit': 'Notiz bearbeiten',
   'plan.note.delete': 'Notiz löschen',
