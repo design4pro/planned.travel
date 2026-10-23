@@ -572,6 +572,29 @@ const messages = {
     'Cesta byla vytvořena, ale soubor „{name}“ se nepodařilo nahrát jako titulní obrázek.',
   'newTrip.coverRetry': 'Zkusit znovu',
   'newTrip.coverContinue': 'Otevřít cestu bez titulního obrázku',
+  'newTrip.people': 'Lidé',
+  'newTrip.peopleHint':
+    'Přidají se hned po vytvoření cesty. Zůstáváte jejím vlastníkem.',
+  'newTrip.peoplePlaceholder': 'Vyberte z pracovního prostoru',
+  'newTrip.peopleSearch': 'Hledat podle jména',
+  'newTrip.peopleLoading': 'Načítání lidí z vašeho prostoru',
+  'newTrip.peopleLoadError':
+    'Lidi z vašeho prostoru se nepodařilo načíst. Vytvořte cestu a přidejte je na její obrazovce Lidé.',
+  'newTrip.peopleNone': 'Zatím jste v tomto prostoru jediný člověk.',
+  'newTrip.peopleNoneMember':
+    'Další lidi může pozvat vlastník nebo správce prostoru.',
+  'newTrip.peopleInvite': 'Pozvat lidi do prostoru',
+  'newTrip.peopleChosen': 'Vybraní lidé a jejich role',
+  'newTrip.peopleFailedTitle': 'Cesta byla vytvořena, ale nepřidali se všichni',
+  'newTrip.noticeBothTitle': 'Cesta byla vytvořena, ale nepřidalo se všechno',
+  'newTrip.peopleNotInWorkspace':
+    'Osoba {name} už v tomto prostoru není, a proto nebyla přidána.',
+  'newTrip.peopleAlreadyOn': 'Osoba {name} už na této cestě byla.',
+  'newTrip.peopleUnconfirmed':
+    'Přidání osoby {name} se nepodařilo potvrdit. Zkontrolujte na obrazovce Lidé, zda se přidala.',
+  'newTrip.peopleContinue': 'Pokračovat',
+  'newTrip.peopleRetry': 'Zkusit znovu',
+  'newTrip.coverRetryOnly': 'Zkusit znovu s titulním obrázkem',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Akce pro {title}',

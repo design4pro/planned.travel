@@ -204,6 +204,24 @@ describe('MultiCombobox', () => {
     expect(screen.queryByRole('listbox')).not.toBeNull()
   })
 
+  it('marks its listbox multiselectable and the single one not', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(
+      <MultiCombobox options={options} ariaLabel="Interests" />,
+    )
+    await user.click(screen.getByRole('button', { name: 'Interests' }))
+    expect(
+      screen.getByRole('listbox').getAttribute('aria-multiselectable'),
+    ).toBe('true')
+    unmount()
+
+    render(<Combobox options={options} ariaLabel="Destination" />)
+    await user.click(screen.getByRole('button', { name: 'Destination' }))
+    expect(
+      screen.getByRole('listbox').getAttribute('aria-multiselectable'),
+    ).toBeNull()
+  })
+
   it('deselects a row that is already chosen', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ID_RANDOM_LENGTH, ID_TIME_LENGTH, mintId } from '../ids'
+import { ID_PATTERN, ID_RANDOM_LENGTH, ID_TIME_LENGTH, mintId } from '../ids'
 
 describe('the time-sortable id generator', () => {
   afterEach(() => {
@@ -12,6 +12,23 @@ describe('the time-sortable id generator', () => {
 
     expect(id).toHaveLength(ID_TIME_LENGTH + ID_RANDOM_LENGTH)
     expect(id).toMatch(/^[0-9a-z]{9}[A-Za-z0-9_-]{16}$/)
+  })
+
+  it('declares the shape once, and every id it mints matches it', () => {
+    for (let i = 0; i < 200; i += 1) {
+      expect(mintId()).toMatch(ID_PATTERN)
+    }
+    expect(ID_PATTERN.source).toBe('^[0-9a-z]{9}[A-Za-z0-9_-]{16}$')
+  })
+
+  it('rejects an id of another length, case or alphabet, and a trailing line break', () => {
+    const id = mintId()
+
+    expect(ID_PATTERN.test(id.slice(1))).toBe(false)
+    expect(ID_PATTERN.test(`${id}a`)).toBe(false)
+    expect(ID_PATTERN.test(id.toUpperCase())).toBe(false)
+    expect(ID_PATTERN.test(`${id.slice(1)}!`)).toBe(false)
+    expect(ID_PATTERN.test(`${id}\n`)).toBe(false)
   })
 
   it('exports the two lengths the shape is built from', () => {

@@ -555,6 +555,31 @@ const messages = {
     'A viagem foi criada, mas não foi possível enviar “{name}” como capa.',
   'newTrip.coverRetry': 'Tentar de novo',
   'newTrip.coverContinue': 'Abrir a viagem sem capa',
+  'newTrip.people': 'Pessoas',
+  'newTrip.peopleHint':
+    'São adicionadas assim que a viagem é criada. Você continua sendo o proprietário.',
+  'newTrip.peoplePlaceholder': 'Escolha no seu espaço de trabalho',
+  'newTrip.peopleSearch': 'Buscar por nome',
+  'newTrip.peopleLoading': 'Carregando as pessoas do seu espaço de trabalho',
+  'newTrip.peopleLoadError':
+    'Não foi possível carregar as pessoas do seu espaço de trabalho. Crie a viagem e adicione-as na tela Pessoas dela.',
+  'newTrip.peopleNone':
+    'Por enquanto você é a única pessoa neste espaço de trabalho.',
+  'newTrip.peopleNoneMember':
+    'Um proprietário ou administrador do espaço de trabalho pode convidar mais pessoas.',
+  'newTrip.peopleInvite': 'Convidar pessoas para o espaço de trabalho',
+  'newTrip.peopleChosen': 'Pessoas escolhidas e seus papéis',
+  'newTrip.peopleFailedTitle':
+    'A viagem foi criada, mas nem todos foram adicionados',
+  'newTrip.noticeBothTitle': 'A viagem foi criada, mas nem tudo foi adicionado',
+  'newTrip.peopleNotInWorkspace':
+    'Não foi possível adicionar {name}: a pessoa não está mais neste espaço de trabalho.',
+  'newTrip.peopleAlreadyOn': '{name} já estava nesta viagem.',
+  'newTrip.peopleUnconfirmed':
+    'Não foi possível confirmar {name}. Veja em Pessoas se a adição foi feita.',
+  'newTrip.peopleContinue': 'Continuar',
+  'newTrip.peopleRetry': 'Tentar de novo',
+  'newTrip.coverRetryOnly': 'Tentar a capa de novo',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ações de {title}',

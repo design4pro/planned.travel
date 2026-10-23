@@ -557,6 +557,31 @@ const messages = {
     'El viaje se creó, pero no se pudo subir «{name}» como portada.',
   'newTrip.coverRetry': 'Inténtalo de nuevo',
   'newTrip.coverContinue': 'Abrir el viaje sin portada',
+  'newTrip.people': 'Personas',
+  'newTrip.peopleHint':
+    'Se añaden en cuanto se crea el viaje. Sigues siendo su propietario.',
+  'newTrip.peoplePlaceholder': 'Elige de tu espacio de trabajo',
+  'newTrip.peopleSearch': 'Buscar por nombre',
+  'newTrip.peopleLoading': 'Cargando las personas de tu espacio de trabajo',
+  'newTrip.peopleLoadError':
+    'No se pudieron cargar las personas de tu espacio de trabajo. Crea el viaje y añádelas desde su pantalla de personas.',
+  'newTrip.peopleNone':
+    'Por ahora eres la única persona de este espacio de trabajo.',
+  'newTrip.peopleNoneMember':
+    'Un propietario o administrador del espacio de trabajo puede invitar a más personas.',
+  'newTrip.peopleInvite': 'Invitar personas al espacio de trabajo',
+  'newTrip.peopleChosen': 'Personas elegidas y sus roles',
+  'newTrip.peopleFailedTitle':
+    'El viaje se creó, pero no se añadió a todo el mundo',
+  'newTrip.noticeBothTitle': 'El viaje se creó, pero no se añadió todo',
+  'newTrip.peopleNotInWorkspace':
+    '{name} ya no está en este espacio de trabajo, así que no se añadió.',
+  'newTrip.peopleAlreadyOn': '{name} ya estaba en este viaje.',
+  'newTrip.peopleUnconfirmed':
+    'No se pudo confirmar a {name}. Mira en Personas si se añadió.',
+  'newTrip.peopleContinue': 'Continuar',
+  'newTrip.peopleRetry': 'Reintentar',
+  'newTrip.coverRetryOnly': 'Reintentar la portada',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acciones para {title}',

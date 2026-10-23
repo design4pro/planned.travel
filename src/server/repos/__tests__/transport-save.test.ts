@@ -9,15 +9,18 @@
  * The cross-workspace cases are asserted in `tenant-isolation.test.ts`, as for every writer.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { mintId } from '#/lib/ids'
+import { ID_TIME_LENGTH, mintId } from '#/lib/ids'
+import { transports as transportsTable } from '#/server/db/schema'
+import { AUTHORED_ERROR_NAMES, classifyFailure } from '#/server/errors/public'
 import { NotFoundError } from '../context'
 import { createDay, listTripDays } from '../days'
 import { listFilesForEntity, recordFile } from '../files'
 import { createReservation, listTripReservations } from '../reservations'
 import { TripRoleError, addTripMember, createTrip } from '../trips'
 import {
+  CLIENT_ID_WINDOW_MS,
   deleteTransport,
   getTransport,
   listTransportLegs,
@@ -40,6 +43,22 @@ const LONDON = { name: 'Heathrow', code: 'LHR', timezone: 'Europe/London' }
 const NEW_YORK = { name: 'JFK', code: 'JFK', timezone: 'America/New_York' }
 
 const NO_CHAIN = { stations: [], legs: [] }
+
+/**
+ * A server refuses a new Transport id that is not the generator's shape and recent, so a fixture
+ * names its rows by label and gets one well-formed id for it. The same label is the same id for the
+ * whole file, which is what lets a test save a draft twice or name it in an assertion.
+ */
+const mintedByLabel = new Map<string, string>()
+function idFor(label: string): string {
+  const known = mintedByLabel.get(label)
+  if (known !== undefined) {
+    return known
+  }
+  const id = mintId()
+  mintedByLabel.set(label, id)
+  return id
+}
 
 describe('saving a transport with its legs', () => {
   let harness: Harness
@@ -71,7 +90,7 @@ describe('saving a transport with its legs', () => {
   it('creates the record and its legs in one call, endpoints taken from the outer stations', async () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
-      transportId: 'draft-1',
+      transportId: idFor('draft-1'),
       intent: 'create',
       record: {
         title: 'Osaka to Tokyo',
@@ -88,12 +107,12 @@ describe('saving a transport with its legs', () => {
       },
     })
 
-    expect(saved.transport.id).toBe('draft-1')
+    expect(saved.transport.id).toBe(idFor('draft-1'))
     expect(saved.legs.map((leg) => [leg.fromName, leg.toName])).toEqual([
       ['Shin-Osaka', 'Nagoya'],
       ['Nagoya', 'Tokyo'],
     ])
-    const record = await getTransport(tenant.scope, 'draft-1')
+    const record = await getTransport(tenant.scope, idFor('draft-1'))
     expect(record?.bookingCode).toBe('ABC123')
     expect(record?.departureName).toBe('Shin-Osaka')
     expect(record?.departureCode).toBe('OSA')
@@ -106,7 +125,7 @@ describe('saving a transport with its legs', () => {
   it('creates an unchained transport with the endpoints the caller typed', async () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
-      transportId: 'draft-2',
+      transportId: idFor('draft-2'),
       intent: 'create',
       record: {
         title: 'Airport train',
@@ -129,8 +148,9 @@ describe('saving a transport with its legs', () => {
    * distinct milliseconds: within one the order is the random tail and asserts nothing (#462).
    */
   it('lists undated transports of equal order in the order their dialog ids were minted', async () => {
+    const start = Date.now()
     vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date('2026-10-22T12:00:00.000Z'))
+    vi.setSystemTime(start)
     const minted: Array<string> = []
     for (let i = 0; i < 6; i += 1) {
       minted.push(mintId())
@@ -161,7 +181,7 @@ describe('saving a transport with its legs', () => {
   it('keeps the record’s day pair exactly as sent, whatever the legs name', async () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
-      transportId: 'draft-3',
+      transportId: idFor('draft-3'),
       intent: 'create',
       record: {
         title: 'Night train',
@@ -184,7 +204,7 @@ describe('saving a transport with its legs', () => {
   it('writes no day for a record sent with none, even when its legs have days', async () => {
     const saved = await saveTransport(tenant.scope, {
       tripId,
-      transportId: 'draft-4',
+      transportId: idFor('draft-4'),
       intent: 'create',
       record: { title: 'Undated idea', mode: 'train' },
       chain: {
@@ -201,7 +221,7 @@ describe('saving a transport with its legs', () => {
     beforeEach(async () => {
       await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'existing',
+        transportId: idFor('existing'),
         intent: 'create',
         record: {
           title: 'Osaka to Tokyo',
@@ -219,7 +239,7 @@ describe('saving a transport with its legs', () => {
     it('replaces the record and the chain in one call, endpoints following the new outer stations', async () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'existing',
+        transportId: idFor('existing'),
         intent: 'edit',
         record: { title: 'Osaka to Nagoya', mode: 'train', seat: '12B' },
         chain: {
@@ -229,7 +249,9 @@ describe('saving a transport with its legs', () => {
       })
 
       expect(saved.legs).toHaveLength(1)
-      expect(await listTransportLegs(tenant.scope, 'existing')).toHaveLength(1)
+      expect(
+        await listTransportLegs(tenant.scope, idFor('existing')),
+      ).toHaveLength(1)
       expect(saved.transport.title).toBe('Osaka to Nagoya')
       expect(saved.transport.seat).toBe('12B')
       expect(saved.transport.arrivalName).toBe('Nagoya')
@@ -240,7 +262,7 @@ describe('saving a transport with its legs', () => {
     it('removes the legs when sent an empty chain, and keeps the typed endpoints', async () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'existing',
+        transportId: idFor('existing'),
         intent: 'edit',
         record: {
           title: 'Osaka to Tokyo',
@@ -252,7 +274,9 @@ describe('saving a transport with its legs', () => {
       })
 
       expect(saved.legs).toEqual([])
-      expect(await listTransportLegs(tenant.scope, 'existing')).toEqual([])
+      expect(await listTransportLegs(tenant.scope, idFor('existing'))).toEqual(
+        [],
+      )
       expect(saved.transport.departureName).toBe('Osaka')
       expect(saved.transport.arrivalName).toBe('Tokyo')
     })
@@ -260,7 +284,7 @@ describe('saving a transport with its legs', () => {
     it('leaves the stored zones alone when the record names none and the chain is empty', async () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'existing',
+        transportId: idFor('existing'),
         intent: 'edit',
         record: { title: 'Osaka to Tokyo', mode: 'train' },
         chain: NO_CHAIN,
@@ -274,7 +298,7 @@ describe('saving a transport with its legs', () => {
   it('does not create a second transport when the same draft is saved twice', async () => {
     const draft = {
       tripId,
-      transportId: 'pressed-twice',
+      transportId: idFor('pressed-twice'),
       intent: 'create' as const,
       record: { title: 'Osaka to Tokyo', mode: 'train' as const },
       chain: {
@@ -338,21 +362,23 @@ describe('saving a transport with its legs', () => {
     }
 
     it('refuses an edit of a transport deleted in the meantime and brings nothing back', async () => {
-      await seedLinkedTransport('deleted-in-tab-b')
-      await deleteTransport(tenant.scope, 'deleted-in-tab-b')
+      await seedLinkedTransport(idFor('deleted-in-tab-b'))
+      await deleteTransport(tenant.scope, idFor('deleted-in-tab-b'))
 
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'deleted-in-tab-b',
+          transportId: idFor('deleted-in-tab-b'),
           intent: 'edit',
           record: { title: 'Saved from tab A', mode: 'train' },
           chain: CHAINED,
         }),
       )
 
-      expect(error).toEqual(new NotFoundError('transport', 'deleted-in-tab-b'))
-      expect(await leftOver('deleted-in-tab-b')).toEqual({
+      expect(error).toEqual(
+        new NotFoundError('transport', idFor('deleted-in-tab-b')),
+      )
+      expect(await leftOver(idFor('deleted-in-tab-b'))).toEqual({
         row: null,
         legs: [],
         reservations: 0,
@@ -362,13 +388,13 @@ describe('saving a transport with its legs', () => {
     })
 
     it('refuses an edit of a deleted transport sent with no chain, too', async () => {
-      await seedLinkedTransport('deleted-unchained')
-      await deleteTransport(tenant.scope, 'deleted-unchained')
+      await seedLinkedTransport(idFor('deleted-unchained'))
+      await deleteTransport(tenant.scope, idFor('deleted-unchained'))
 
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'deleted-unchained',
+          transportId: idFor('deleted-unchained'),
           intent: 'edit',
           record: { title: 'Saved from tab A', mode: 'train' },
           chain: NO_CHAIN,
@@ -384,7 +410,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'never-existed',
+          transportId: idFor('never-existed'),
           intent: 'edit',
           record: {
             title: 'Inverted',
@@ -407,23 +433,23 @@ describe('saving a transport with its legs', () => {
     it('creates a transport for the intent create', async () => {
       await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'fresh',
+        transportId: idFor('fresh'),
         intent: 'create',
         record: { title: 'Osaka to Tokyo', mode: 'train' },
         chain: CHAINED,
       })
 
       expect((await snapshot()).transports.map((row) => row.id)).toEqual([
-        'fresh',
+        idFor('fresh'),
       ])
     })
 
     it('treats a create of an id the caller already wrote as an edit of that row', async () => {
-      await seedLinkedTransport('written-once')
+      await seedLinkedTransport(idFor('written-once'))
 
       await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'written-once',
+        transportId: idFor('written-once'),
         intent: 'create',
         record: { title: 'Renamed by the second press', mode: 'train' },
         chain: CHAINED,
@@ -434,7 +460,7 @@ describe('saving a transport with its legs', () => {
         'Renamed by the second press',
       ])
       expect(
-        await listTransportLegs(tenant.scope, 'written-once'),
+        await listTransportLegs(tenant.scope, idFor('written-once')),
       ).toHaveLength(2)
     })
 
@@ -456,13 +482,13 @@ describe('saving a transport with its legs', () => {
       }
 
       it('answers not-found for a chained edit instead of a foreign-key failure', async () => {
-        await seedLinkedTransport('raced')
-        await deleteAfterTheRead('raced')
+        await seedLinkedTransport(idFor('raced'))
+        await deleteAfterTheRead(idFor('raced'))
 
         const error = await captureError(() =>
           saveTransport(tenant.scope, {
             tripId,
-            transportId: 'raced',
+            transportId: idFor('raced'),
             intent: 'edit',
             record: { title: 'Saved from tab A', mode: 'train' },
             chain: CHAINED,
@@ -470,7 +496,7 @@ describe('saving a transport with its legs', () => {
         )
 
         expect(error).toBeInstanceOf(NotFoundError)
-        expect(await leftOver('raced')).toEqual({
+        expect(await leftOver(idFor('raced'))).toEqual({
           row: null,
           legs: [],
           reservations: 0,
@@ -479,13 +505,13 @@ describe('saving a transport with its legs', () => {
       })
 
       it('answers not-found for an unchained edit', async () => {
-        await seedLinkedTransport('raced-bare')
-        await deleteAfterTheRead('raced-bare')
+        await seedLinkedTransport(idFor('raced-bare'))
+        await deleteAfterTheRead(idFor('raced-bare'))
 
         const error = await captureError(() =>
           saveTransport(tenant.scope, {
             tripId,
-            transportId: 'raced-bare',
+            transportId: idFor('raced-bare'),
             intent: 'edit',
             record: { title: 'Saved from tab A', mode: 'train' },
             chain: NO_CHAIN,
@@ -493,7 +519,7 @@ describe('saving a transport with its legs', () => {
         )
 
         expect(error).toBeInstanceOf(NotFoundError)
-        expect((await leftOver('raced-bare')).row).toBeNull()
+        expect((await leftOver(idFor('raced-bare'))).row).toBeNull()
       })
     })
   })
@@ -515,7 +541,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'doomed',
+          transportId: idFor('doomed'),
           intent: 'create',
           record: { title: 'Osaka to Tokyo', mode: 'train' },
           chain: { stations: [OSAKA, NAGOYA, TOKYO], legs: [{}, {}] },
@@ -529,7 +555,7 @@ describe('saving a transport with its legs', () => {
     it('leaves an existing transport and its chain exactly as they were', async () => {
       await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'kept',
+        transportId: idFor('kept'),
         intent: 'create',
         record: { title: 'Osaka to Tokyo', mode: 'train' },
         chain: { stations: [OSAKA, TOKYO], legs: [{}] },
@@ -539,7 +565,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'kept',
+          transportId: idFor('kept'),
           intent: 'edit',
           record: { title: 'Renamed', mode: 'train' },
           chain: { stations: [OSAKA, NAGOYA, TOKYO], legs: [{}, {}] },
@@ -556,7 +582,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'inverted-leg',
+          transportId: idFor('inverted-leg'),
           intent: 'create',
           record: { title: 'BA 117', mode: 'flight' },
           chain: {
@@ -580,7 +606,7 @@ describe('saving a transport with its legs', () => {
     it('judges the record in the zones of its outer stations', async () => {
       const saved = await saveTransport(tenant.scope, {
         tripId,
-        transportId: 'westbound',
+        transportId: idFor('westbound'),
         intent: 'create',
         record: { title: 'NH 184', mode: 'flight' },
         chain: {
@@ -603,7 +629,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'inverted-record',
+          transportId: idFor('inverted-record'),
           intent: 'create',
           record: {
             title: 'BA 117',
@@ -627,7 +653,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'backwards',
+          transportId: idFor('backwards'),
           intent: 'create',
           record: {
             title: 'Backwards',
@@ -653,7 +679,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'cross-trip',
+          transportId: idFor('cross-trip'),
           intent: 'create',
           record: { title: 'Cross-trip', mode: 'train' },
           chain: {
@@ -671,7 +697,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'lopsided',
+          transportId: idFor('lopsided'),
           intent: 'create',
           record: { title: 'Lopsided', mode: 'train' },
           chain: { stations: [OSAKA, NAGOYA, TOKYO], legs: [{}] },
@@ -687,7 +713,7 @@ describe('saving a transport with its legs', () => {
     const other = await createTrip(tenant.scope, { title: 'Kyushu' })
     await saveTransport(tenant.scope, {
       tripId: other.id,
-      transportId: 'kyushu-ferry',
+      transportId: idFor('kyushu-ferry'),
       intent: 'create',
       record: { title: 'Ferry', mode: 'ferry' },
       chain: NO_CHAIN,
@@ -697,7 +723,7 @@ describe('saving a transport with its legs', () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
-          transportId: 'kyushu-ferry',
+          transportId: idFor('kyushu-ferry'),
           intent,
           record: { title: 'Moved', mode: 'ferry' },
           chain: { stations: [OSAKA, TOKYO], legs: [{}] },
@@ -706,10 +732,12 @@ describe('saving a transport with its legs', () => {
 
       expect(error).toBeInstanceOf(NotFoundError)
     }
-    expect((await getTransport(tenant.scope, 'kyushu-ferry'))?.title).toBe(
-      'Ferry',
-    )
-    expect(await listTransportLegs(tenant.scope, 'kyushu-ferry')).toEqual([])
+    expect(
+      (await getTransport(tenant.scope, idFor('kyushu-ferry')))?.title,
+    ).toBe('Ferry')
+    expect(
+      await listTransportLegs(tenant.scope, idFor('kyushu-ferry')),
+    ).toEqual([])
   })
 
   it('refuses a viewer and admits an editor on the same trip', async () => {
@@ -735,7 +763,7 @@ describe('saving a transport with its legs', () => {
       await captureError(() =>
         saveTransport(tenant.scopeFor(viewerId), {
           ...draft,
-          transportId: 'viewer-draft',
+          transportId: idFor('viewer-draft'),
           intent: 'create',
         }),
       ),
@@ -744,10 +772,194 @@ describe('saving a transport with its legs', () => {
 
     const saved = await saveTransport(tenant.scopeFor(editorId), {
       ...draft,
-      transportId: 'editor-draft',
+      transportId: idFor('editor-draft'),
       intent: 'create',
     })
     expect(saved.legs).toHaveLength(1)
+  })
+
+  /**
+   * The id of a new Transport is the browser's invention, so the server takes it only when it is
+   * the shape the generator makes and was minted close to now. Every refusal is the not-found a
+   * foreign id gets, so none of them says anything about another workspace's rows; the edit of a
+   * row the caller already has never meets these checks, however old that row is.
+   */
+  describe('the id of a new transport', () => {
+    const NOW = new Date('2026-10-22T12:00:00.000Z').getTime()
+    const create = (transportId: string) =>
+      saveTransport(tenant.scope, {
+        tripId,
+        transportId,
+        intent: 'create',
+        record: { title: 'Osaka to Tokyo', mode: 'train' },
+        chain: { stations: [OSAKA, TOKYO], legs: [{}] },
+      })
+
+    /** A generator-shaped id whose time prefix is `instant`, whatever the clock says. */
+    const mintedAt = (instant: number) =>
+      `${instant.toString(36).padStart(ID_TIME_LENGTH, '0')}${mintId().slice(ID_TIME_LENGTH)}`
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it.each([
+      ['an id of no particular shape', 'draft-1'],
+      ['an id one character short', mintId().slice(1)],
+      ['an id one character long', `${mintId()}a`],
+      ['a time prefix in upper case', mintId().toUpperCase()],
+      ['a character outside the URL-safe alphabet', `${mintId().slice(1)}!`],
+      ['a 21 character nanoid', 'V1StGXR8_Z5jdHi6B-myT'],
+    ])(
+      'refuses %s as the id of a new transport and writes nothing',
+      async (_, id) => {
+        const error = await captureError(() => create(id))
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect(await snapshot()).toEqual({ transports: [], legs: [] })
+      },
+    )
+
+    it('matches the shape against the trimmed id, the value that is stored', async () => {
+      const id = mintId()
+
+      const saved = await create(`  ${id}  `)
+
+      expect(saved.transport.id).toBe(id)
+    })
+
+    it.each([
+      [
+        'just inside, ahead of the server clock',
+        NOW + CLIENT_ID_WINDOW_MS,
+        true,
+      ],
+      [
+        'just outside, ahead of the server clock',
+        NOW + CLIENT_ID_WINDOW_MS + 1,
+        false,
+      ],
+      ['just inside, behind the server clock', NOW - CLIENT_ID_WINDOW_MS, true],
+      [
+        'just outside, behind the server clock',
+        NOW - CLIENT_ID_WINDOW_MS - 1,
+        false,
+      ],
+    ])('judges a time prefix %s', async (_, instant, accepted) => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(NOW)
+      const id = mintedAt(instant)
+
+      if (accepted) {
+        await create(id)
+        expect((await snapshot()).transports.map((row) => row.id)).toEqual([id])
+      } else {
+        expect(await captureError(() => create(id))).toBeInstanceOf(
+          NotFoundError,
+        )
+        expect(await snapshot()).toEqual({ transports: [], legs: [] })
+      }
+    })
+
+    it('answers a wrong shape, a stale prefix and a clash with one error class, code and message', async () => {
+      const other = await harness.seedTenant('other')
+      const otherTrip = await createTrip(other.scope, { title: 'Elsewhere' })
+      const foreign = mintId()
+      await saveTransport(other.scope, {
+        tripId: otherTrip.id,
+        transportId: foreign,
+        intent: 'create',
+        record: { title: 'Theirs', mode: 'train' },
+        chain: NO_CHAIN,
+      })
+      const stale = mintedAt(Date.now() - 3 * CLIENT_ID_WINDOW_MS)
+      const refusals = [
+        { id: 'draft-1', error: await captureError(() => create('draft-1')) },
+        { id: stale, error: await captureError(() => create(stale)) },
+        { id: foreign, error: await captureError(() => create(foreign)) },
+      ]
+
+      for (const { id, error } of refusals) {
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((error as NotFoundError).code).toBe('NOT_FOUND')
+        expect(error.message.replace(id, '<id>')).toBe(
+          'transport <id> was not found.',
+        )
+        expect(classifyFailure(error)).toEqual({ kind: 'unexpected' })
+      }
+      expect(AUTHORED_ERROR_NAMES.has(NotFoundError.name)).toBe(false)
+    })
+
+    it('never upserts over the row a clashing id belongs to, and puts the record first in the batch', async () => {
+      const other = await harness.seedTenant('other')
+      const otherTrip = await createTrip(other.scope, { title: 'Elsewhere' })
+      const foreign = mintId()
+      await saveTransport(other.scope, {
+        tripId: otherTrip.id,
+        transportId: foreign,
+        intent: 'create',
+        record: { title: 'Theirs', mode: 'train' },
+        chain: { stations: [OSAKA, TOKYO], legs: [{}] },
+      })
+      const before = await listTripLegs(other.scope, otherTrip.id)
+      harness.statements.length = 0
+
+      const error = await captureError(() => create(foreign))
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(harness.statements.some((sql) => /on conflict/i.test(sql))).toBe(
+        false,
+      )
+      const writes = harness.statements.filter((sql) =>
+        /^(insert|update|delete)/i.test(sql),
+      )
+      expect(writes[0]).toMatch(/^insert into "transports"/i)
+      expect((await getTransport(other.scope, foreign))?.title).toBe('Theirs')
+      expect(await listTripLegs(other.scope, otherTrip.id)).toEqual(before)
+      expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
+
+    it('still saves an edit of a transport of the caller’s own that is older than the window', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(NOW - 40 * 24 * 60 * 60 * 1000)
+      const old = mintId()
+      await create(old)
+      vi.setSystemTime(NOW)
+
+      const saved = await saveTransport(tenant.scope, {
+        tripId,
+        transportId: old,
+        intent: 'edit',
+        record: { title: 'Renamed', mode: 'train' },
+        chain: NO_CHAIN,
+      })
+
+      expect(saved.transport.title).toBe('Renamed')
+      expect(await listTripTransports(tenant.scope, tripId)).toHaveLength(1)
+    })
+
+    it('still saves an edit of a transport created before the shared generator, with a 21 character id', async () => {
+      const legacy = 'V1StGXR8_Z5jdHi6B-myT'
+      await harness.db.insert(transportsTable).values({
+        id: legacy,
+        organizationId: tenant.organizationId,
+        tripId,
+        title: 'Before the generator',
+        mode: 'train',
+      })
+
+      for (const intent of ['edit', 'create'] as const) {
+        const saved = await saveTransport(tenant.scope, {
+          tripId,
+          transportId: legacy,
+          intent,
+          record: { title: `Saved as ${intent}`, mode: 'train' },
+          chain: NO_CHAIN,
+        })
+        expect(saved.transport.id).toBe(legacy)
+        expect(saved.transport.title).toBe(`Saved as ${intent}`)
+      }
+    })
   })
 
   /**

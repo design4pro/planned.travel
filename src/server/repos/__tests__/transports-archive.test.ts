@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { mintId } from '#/lib/ids'
 import { NotFoundError } from '../context'
 import { listTripDays } from '../days'
 import {
@@ -25,6 +26,9 @@ import { createHarness } from './harness'
 import type { TenantScope } from '../base'
 import type { Trip } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
+
+/** A new Transport's id is refused unless it is generator-shaped and recent, so a draft gets a real one. */
+const newDraftId = mintId()
 
 const chain = { stations: [{ name: 'Osaka' }, { name: 'Tokyo' }], legs: [{}] }
 
@@ -56,7 +60,7 @@ describe('archived transport write boundary', () => {
     transportId = (
       await saveTransport(tenant.scope, {
         tripId: trip.id,
-        transportId: 'existing',
+        transportId: mintId(),
         intent: 'create',
         record: { title: 'Train', mode: 'train', dayId },
         chain,
@@ -101,7 +105,7 @@ describe('archived transport write boundary', () => {
       case 'save-edit':
         return saveTransport(scope, {
           tripId: requestedTrip,
-          transportId: kind === 'save-new' ? 'new' : id,
+          transportId: kind === 'save-new' ? newDraftId : id,
           intent: kind === 'save-new' ? 'create' : 'edit',
           record: { title: 'Changed', mode: 'train' },
           chain,

@@ -539,6 +539,32 @@ const messages = {
     'De reis is aangemaakt, maar ‘{name}’ kon niet als omslag worden geüpload.',
   'newTrip.coverRetry': 'Opnieuw proberen',
   'newTrip.coverContinue': 'Reis openen zonder omslag',
+  'newTrip.people': 'Personen',
+  'newTrip.peopleHint':
+    'Ze worden toegevoegd zodra de reis is aangemaakt. Jij blijft de eigenaar.',
+  'newTrip.peoplePlaceholder': 'Kies uit je werkruimte',
+  'newTrip.peopleSearch': 'Zoeken op naam',
+  'newTrip.peopleLoading': 'De personen in je werkruimte worden geladen',
+  'newTrip.peopleLoadError':
+    'De personen in je werkruimte konden niet worden geladen. Maak de reis aan en voeg ze toe via het scherm Personen van de reis.',
+  'newTrip.peopleNone':
+    'Je bent voorlopig de enige persoon in deze werkruimte.',
+  'newTrip.peopleNoneMember':
+    'Een eigenaar of beheerder van de werkruimte kan meer mensen uitnodigen.',
+  'newTrip.peopleInvite': 'Mensen uitnodigen voor de werkruimte',
+  'newTrip.peopleChosen': 'Gekozen personen en hun rollen',
+  'newTrip.peopleFailedTitle':
+    'De reis is aangemaakt, maar niet iedereen is toegevoegd',
+  'newTrip.noticeBothTitle':
+    'De reis is aangemaakt, maar niet alles is toegevoegd',
+  'newTrip.peopleNotInWorkspace':
+    '{name} zit niet meer in deze werkruimte en is daarom niet toegevoegd.',
+  'newTrip.peopleAlreadyOn': '{name} stond al op deze reis.',
+  'newTrip.peopleUnconfirmed':
+    'Het toevoegen van {name} kon niet worden bevestigd. Kijk bij Personen of het gelukt is.',
+  'newTrip.peopleContinue': 'Verder',
+  'newTrip.peopleRetry': 'Opnieuw proberen',
+  'newTrip.coverRetryOnly': 'Omslag opnieuw proberen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Acties voor {title}',
