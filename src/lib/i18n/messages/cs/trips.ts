@@ -147,15 +147,16 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Přesunout na jiný den',
   'plan.stop.menu.backToUnplanned': 'Zpět mezi nenaplánovaná',
   'plan.stop.menu.delete': 'Smazat z výletu',
-  'plan.delete.title': 'Smazat {name}?',
+  'plan.delete.title': 'Smazat „{name}“?',
+  'plan.delete.titleUnnamed': 'Smazat toto místo?',
   'plan.delete.bodyUnplanned':
     'Z míst výletu zmizí úplně. Tuto akci nelze vrátit zpět.',
   'plan.delete.bodyOnDays': {
     one: 'Je v {count} dni tohoto výletu a zmizí z něj. Tuto akci nelze vrátit zpět.',
-    few: 'Je ve {count} dnech tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
+    few: 'Je zařazeno do {count} dnů tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
     many: 'Je v {count} dne tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
     other:
-      'Je v {count} dnech tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
+      'Je zařazeno do {count} dnů tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
   },
   'plan.delete.error': 'Smazání se nepodařilo',
   'plan.delete.confirm': 'Smazat místo',

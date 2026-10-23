@@ -145,11 +145,12 @@ const messages = {
   'plan.stop.menu.backToUnplanned': '미계획으로 되돌리기',
   'plan.stop.menu.delete': '여행에서 삭제',
   'plan.delete.title': '{name}을(를) 삭제할까요?',
+  'plan.delete.titleUnnamed': '이 장소를 삭제할까요?',
   'plan.delete.bodyUnplanned':
     '이 여행의 장소에서 완전히 사라집니다. 이 작업은 되돌릴 수 없습니다.',
   'plan.delete.bodyOnDays': {
     other:
-      '이 여행의 {count}일에 들어 있으며 모든 날에서 사라집니다. 이 작업은 되돌릴 수 없습니다.',
+      '이 여행의 {count}일 동안 들어 있으며 해당하는 날에서도 삭제됩니다. 이 작업은 되돌릴 수 없습니다.',
   },
   'plan.delete.error': '삭제하지 못했습니다',
   'plan.delete.confirm': '장소 삭제',

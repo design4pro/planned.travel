@@ -148,9 +148,10 @@ const messages = {
   'plan.stop.menu.placeOnMap': 'Umieść na mapie',
   'plan.stop.menu.movePin': 'Przesuń pinezkę',
   'plan.stop.menu.moveToDay': 'Przenieś do innego dnia',
-  'plan.stop.menu.backToUnplanned': 'Wróć do niezaplanowanych',
+  'plan.stop.menu.backToUnplanned': 'Przenieś do niezaplanowanych',
   'plan.stop.menu.delete': 'Usuń z podróży',
-  'plan.delete.title': 'Usunąć: {name}?',
+  'plan.delete.title': 'Usunąć „{name}”?',
+  'plan.delete.titleUnnamed': 'Usunąć to miejsce?',
   'plan.delete.bodyUnplanned':
     'Miejsce całkowicie zniknie z miejsc podróży. Tej operacji nie można cofnąć.',
   'plan.delete.bodyOnDays': {

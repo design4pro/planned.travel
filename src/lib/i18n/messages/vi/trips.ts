@@ -143,11 +143,12 @@ const messages = {
   'plan.stop.menu.backToUnplanned': 'Đưa về chưa lên kế hoạch',
   'plan.stop.menu.delete': 'Xóa khỏi chuyến đi',
   'plan.delete.title': 'Xóa {name}?',
+  'plan.delete.titleUnnamed': 'Xóa địa điểm này?',
   'plan.delete.bodyUnplanned':
     'Địa điểm sẽ biến mất hoàn toàn khỏi các địa điểm của chuyến đi. Không thể hoàn tác thao tác này.',
   'plan.delete.bodyOnDays': {
     other:
-      'Địa điểm này có trong {count} ngày của chuyến đi và sẽ bị gỡ khỏi tất cả các ngày đó. Không thể hoàn tác thao tác này.',
+      'Địa điểm này có trong {count} ngày của chuyến đi và sẽ bị gỡ khỏi từng ngày đó. Không thể hoàn tác thao tác này.',
   },
   'plan.delete.error': 'Không xóa được',
   'plan.delete.confirm': 'Xóa địa điểm',

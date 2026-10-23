@@ -145,7 +145,8 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Flytta till en annan dag',
   'plan.stop.menu.backToUnplanned': 'Tillbaka till oplanerat',
   'plan.stop.menu.delete': 'Ta bort från resan',
-  'plan.delete.title': 'Ta bort {name}?',
+  'plan.delete.title': 'Ta bort ”{name}”?',
+  'plan.delete.titleUnnamed': 'Ta bort den här platsen?',
   'plan.delete.bodyUnplanned':
     'Platsen försvinner helt från resans platser. Det går inte att ångra.',
   'plan.delete.bodyOnDays': {

@@ -200,6 +200,7 @@ const messages = {
    * is what the reader is weighing and every language counts it differently.
    */
   'plan.delete.title': 'Delete {name}?',
+  'plan.delete.titleUnnamed': 'Delete this place?',
   'plan.delete.bodyUnplanned':
     'It leaves the trip’s places entirely. This cannot be undone.',
   'plan.delete.bodyOnDays': {

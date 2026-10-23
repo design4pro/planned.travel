@@ -939,7 +939,8 @@ export function TimingDialog({
 export interface DeleteDialogProps {
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
-  readonly placeName: string
+  /** `null` while the place cannot be named, e.g. as the dialog closes. */
+  readonly placeName: string | null
   readonly dayCount: number
   readonly saving: boolean
   readonly error: string | null
@@ -967,7 +968,9 @@ export function DeleteDialog({
       <DialogContent size="sm" hideClose={saving}>
         <DialogHeader>
           <DialogTitle>
-            {t('trips.plan.delete.title', { name: placeName })}
+            {placeName === null
+              ? t('trips.plan.delete.titleUnnamed')
+              : t('trips.plan.delete.title', { name: placeName })}
           </DialogTitle>
           <DialogDescription>
             {dayCount === 0

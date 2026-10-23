@@ -150,6 +150,7 @@ const messages = {
   'plan.stop.menu.backToUnplanned': 'Επιστροφή στα μη προγραμματισμένα',
   'plan.stop.menu.delete': 'Διαγραφή από το ταξίδι',
   'plan.delete.title': 'Διαγραφή του «{name}»;',
+  'plan.delete.titleUnnamed': 'Διαγραφή αυτού του μέρους;',
   'plan.delete.bodyUnplanned':
     'Αφαιρείται εντελώς από τα μέρη του ταξιδιού. Αυτό δεν αναιρείται.',
   'plan.delete.bodyOnDays': {

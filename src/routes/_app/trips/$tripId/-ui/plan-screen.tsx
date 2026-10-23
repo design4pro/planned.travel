@@ -864,7 +864,8 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ forms */
 
-  const { claim: claimWrite, release: releaseDialog } = useDialogOwnership(dialog)
+  const { claim: claimWrite, release: releaseDialog } =
+    useDialogOwnership(dialog)
 
   const closeDialog = React.useCallback((): void => {
     releaseDialog()
@@ -914,9 +915,7 @@ export function PlanScreen({
         return false
       } finally {
         // An older write must not release the newer form's pending state.
-        setSavingWrite((current) =>
-          current?.token === token ? null : current,
-        )
+        setSavingWrite((current) => (current?.token === token ? null : current))
       }
     },
     [claimWrite, closeDialog, dialog, router, t],
@@ -1536,8 +1535,8 @@ export function PlanScreen({
         }}
         placeName={
           dialog?.kind === 'delete'
-            ? (placeById.get(dialog.placeId)?.name ?? 'this place')
-            : 'this place'
+            ? (placeById.get(dialog.placeId)?.name ?? null)
+            : null
         }
         dayCount={
           dialog?.kind === 'delete'

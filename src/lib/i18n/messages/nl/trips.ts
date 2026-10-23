@@ -147,7 +147,8 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Naar een andere dag verplaatsen',
   'plan.stop.menu.backToUnplanned': 'Terug naar ongepland',
   'plan.stop.menu.delete': 'Uit de reis verwijderen',
-  'plan.delete.title': '{name} verwijderen?',
+  'plan.delete.title': '„{name}” verwijderen?',
+  'plan.delete.titleUnnamed': 'Deze plek verwijderen?',
   'plan.delete.bodyUnplanned':
     'De plek verdwijnt helemaal uit de plekken van de reis. Dit kan niet ongedaan worden gemaakt.',
   'plan.delete.bodyOnDays': {

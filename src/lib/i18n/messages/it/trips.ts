@@ -148,7 +148,8 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Sposta in un altro giorno',
   'plan.stop.menu.backToUnplanned': 'Riporta tra i non pianificati',
   'plan.stop.menu.delete': 'Elimina dal viaggio',
-  'plan.delete.title': 'Eliminare {name}?',
+  'plan.delete.title': 'Eliminare «{name}»?',
+  'plan.delete.titleUnnamed': 'Eliminare questo luogo?',
   'plan.delete.bodyUnplanned':
     'Sparisce del tutto dai luoghi del viaggio. Questa azione non può essere annullata.',
   'plan.delete.bodyOnDays': {

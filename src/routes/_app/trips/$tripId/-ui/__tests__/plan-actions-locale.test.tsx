@@ -159,6 +159,7 @@ describe('StopMenu — localised', () => {
 describe('DeleteDialog — localised', () => {
   const DELETE_ENGLISH = [
     'Delete Senso-ji?',
+    'Delete this place?',
     'It leaves the trip’s places entirely',
     'of this trip, and it leaves',
     'This cannot be undone',
@@ -168,12 +169,17 @@ describe('DeleteDialog — localised', () => {
     'Deleting the place',
   ]
 
-  function dialog(dayCount: number, error: string | null, saving = false) {
+  function dialog(
+    dayCount: number,
+    error: string | null,
+    saving = false,
+    placeName: string | null = 'Senso-ji',
+  ) {
     return (
       <DeleteDialog
         open
         onOpenChange={vi.fn()}
-        placeName="Senso-ji"
+        placeName={placeName}
         dayCount={dayCount}
         saving={saving}
         error={error}
@@ -203,6 +209,38 @@ describe('DeleteDialog — localised', () => {
 
       expectNoEnglish(DELETE_ENGLISH)
       expect(surface()).toContain('The server said no')
+    },
+  )
+
+  // The screen passes no name while the dialog closes or when the place is gone.
+  it.each(NON_ENGLISH)(
+    'renders no English literal for a place that cannot be named in %s',
+    (locale) => {
+      render(dialog(0, null, false, null), locale)
+
+      expectNoEnglish(DELETE_ENGLISH)
+      expect(screen.getByRole('dialog').textContent).not.toContain('Senso-ji')
+    },
+  )
+
+  // The branch each count lands in, asserted on text only that branch carries.
+  it.each([
+    ['en', 1, 'leaves that day'],
+    ['en', 2, 'leaves all of them'],
+    ['pl', 1, '1 dniu'],
+    ['pl', 5, 'w 5 dniach'],
+    ['pl', 22, 'w 22 dniach'],
+    ['ru', 21, 'на 21 день'],
+    ['ru', 5, 'из всех'],
+    ['ar', 2, 'يومين'],
+    ['ar', 3, '3 أيام'],
+    ['ar', 11, '11 يومًا'],
+  ] as const)(
+    'picks the %s branch for %i days',
+    async (locale, count, text) => {
+      render(dialog(count, null), locale)
+
+      expect(screen.getByRole('dialog').textContent).toContain(text)
     },
   )
 

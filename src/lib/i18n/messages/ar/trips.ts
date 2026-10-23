@@ -150,6 +150,7 @@ const messages = {
   'plan.stop.menu.backToUnplanned': 'إعادته إلى غير المجدولة',
   'plan.stop.menu.delete': 'حذف من الرحلة',
   'plan.delete.title': 'حذف {name}؟',
+  'plan.delete.titleUnnamed': 'حذف هذا المكان؟',
   'plan.delete.bodyUnplanned':
     'سيُزال من أماكن الرحلة بالكامل. لا يمكن التراجع عن ذلك.',
   'plan.delete.bodyOnDays': {

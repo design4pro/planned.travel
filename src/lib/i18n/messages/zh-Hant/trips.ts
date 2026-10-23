@@ -137,10 +137,11 @@ const messages = {
   'plan.stop.menu.backToUnplanned': '移回未安排',
   'plan.stop.menu.delete': '從行程中刪除',
   'plan.delete.title': '刪除「{name}」？',
+  'plan.delete.titleUnnamed': '刪除此地點？',
   'plan.delete.bodyUnplanned': '它會從行程的地點中徹底移除。此操作無法復原。',
   'plan.delete.bodyOnDays': {
     other:
-      '它出現在這次行程的 {count} 天裡，並會從所有這些天中移除。此操作無法復原。',
+      '它出現在這次行程的 {count} 天裡，並會從相應的日期中移除。此操作無法復原。',
   },
   'plan.delete.error': '未能刪除',
   'plan.delete.confirm': '刪除地點',

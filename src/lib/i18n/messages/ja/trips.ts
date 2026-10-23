@@ -146,11 +146,12 @@ const messages = {
   'plan.stop.menu.backToUnplanned': '未計画に戻す',
   'plan.stop.menu.delete': '旅行から削除',
   'plan.delete.title': '{name} を削除しますか？',
+  'plan.delete.titleUnnamed': 'この場所を削除しますか？',
   'plan.delete.bodyUnplanned':
     'この旅行の場所から完全に削除されます。この操作は元に戻せません。',
   'plan.delete.bodyOnDays': {
     other:
-      'この旅行の {count} 日分に入っており、そのすべてから削除されます。この操作は元に戻せません。',
+      'この旅行の {count} 日に入っており、それらの日からも削除されます。この操作は元に戻せません。',
   },
   'plan.delete.error': '削除できませんでした',
   'plan.delete.confirm': '場所を削除',

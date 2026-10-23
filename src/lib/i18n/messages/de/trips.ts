@@ -145,10 +145,11 @@ const messages = {
   'plan.stop.menu.setTime': 'Uhrzeit festlegen',
   'plan.stop.menu.placeOnMap': 'Auf der Karte platzieren',
   'plan.stop.menu.movePin': 'Pin verschieben',
-  'plan.stop.menu.moveToDay': 'In einen anderen Tag verschieben',
+  'plan.stop.menu.moveToDay': 'Auf einen anderen Tag verschieben',
   'plan.stop.menu.backToUnplanned': 'Zurück zu ungeplant',
   'plan.stop.menu.delete': 'Aus der Reise löschen',
-  'plan.delete.title': '{name} löschen?',
+  'plan.delete.title': '„{name}“ löschen?',
+  'plan.delete.titleUnnamed': 'Diesen Ort löschen?',
   'plan.delete.bodyUnplanned':
     'Der Ort verschwindet vollständig aus den Orten der Reise. Das lässt sich nicht rückgängig machen.',
   'plan.delete.bodyOnDays': {

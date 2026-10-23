@@ -144,9 +144,10 @@ const messages = {
   'plan.stop.menu.placeOnMap': 'Colocar no mapa',
   'plan.stop.menu.movePin': 'Mover o marcador',
   'plan.stop.menu.moveToDay': 'Mover para outro dia',
-  'plan.stop.menu.backToUnplanned': 'Voltar para sem planejar',
+  'plan.stop.menu.backToUnplanned': 'Mover para sem planejamento',
   'plan.stop.menu.delete': 'Excluir da viagem',
-  'plan.delete.title': 'Excluir {name}?',
+  'plan.delete.title': 'Excluir “{name}”?',
+  'plan.delete.titleUnnamed': 'Excluir este lugar?',
   'plan.delete.bodyUnplanned':
     'Ele some por completo dos lugares da viagem. Esta ação não pode ser desfeita.',
   'plan.delete.bodyOnDays': {

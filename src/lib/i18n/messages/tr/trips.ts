@@ -143,7 +143,8 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Başka bir güne taşı',
   'plan.stop.menu.backToUnplanned': 'Planlanmamışlara geri al',
   'plan.stop.menu.delete': 'Geziden sil',
-  'plan.delete.title': '{name} silinsin mi?',
+  'plan.delete.title': '“{name}” silinsin mi?',
+  'plan.delete.titleUnnamed': 'Bu yer silinsin mi?',
   'plan.delete.bodyUnplanned':
     'Gezinin yerlerinden tamamen kalkar. Bu işlem geri alınamaz.',
   'plan.delete.bodyOnDays': {

@@ -146,11 +146,12 @@ const messages = {
   'plan.stop.menu.backToUnplanned': 'Kembali ke belum dijadwalkan',
   'plan.stop.menu.delete': 'Hapus dari perjalanan',
   'plan.delete.title': 'Hapus {name}?',
+  'plan.delete.titleUnnamed': 'Hapus tempat ini?',
   'plan.delete.bodyUnplanned':
     'Tempat ini hilang sepenuhnya dari daftar tempat perjalanan. Tindakan ini tidak dapat dibatalkan.',
   'plan.delete.bodyOnDays': {
     other:
-      'Tempat ini ada di {count} hari perjalanan ini dan akan hilang dari semuanya. Tindakan ini tidak dapat dibatalkan.',
+      'Tempat ini ada di {count} hari perjalanan ini dan akan hilang dari hari yang memuatnya. Tindakan ini tidak dapat dibatalkan.',
   },
   'plan.delete.error': 'Penghapusan gagal',
   'plan.delete.confirm': 'Hapus tempat',
