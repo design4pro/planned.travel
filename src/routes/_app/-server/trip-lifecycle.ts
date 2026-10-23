@@ -48,7 +48,8 @@ import {
   RepositoryError,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
-import { enqueueTask, enqueueTasks } from '#/server/queue/jobs'
+import { enqueueDetached } from '#/server/queue/enqueue-detached'
+import { enqueueTask } from '#/server/queue/jobs'
 import {
   affectedStatYears,
   enqueueTravelStats,
@@ -433,8 +434,8 @@ async function listTripExportKeys(
  *
  * - **It never fails the delete.** D1 is the record and has already been written; a queue that is
  *   unreachable leaves objects in the bucket, which is a sweep job, where a save that appears to have
- *   failed is a reader deleting the same trip twice. Caught, logged once, returned from — the posture
- *   the statistics fan-out already takes.
+ *   failed is a reader deleting the same trip twice. `enqueueDetached` owns the catch — logged once,
+ *   under this producer's own message and context — the posture the statistics fan-out takes too.
  * - **It chunks the keys.** `files` is `UNLIMITED` on the business tier, so the key list has no
  *   product bound, and a Queues message body is capped at 128 KB: {@link MAX_PURGE_KEYS} keys per
  *   envelope. Cutting the envelopes into `sendBatch` calls is `enqueueTasks`'s, at
@@ -463,29 +464,26 @@ async function enqueueTripPurge(
     return
   }
 
-  try {
-    const envelopes: Array<EnqueueInput<'trip-purge'>> = []
-    for (let index = 0; index < unique.length; index += MAX_PURGE_KEYS) {
-      const chunk = index / MAX_PURGE_KEYS
-      envelopes.push({
-        kind: 'trip-purge',
-        orgId,
-        id: tripPurgeTaskId(tripId, chunk),
-        payload: { keys: unique.slice(index, index + MAX_PURGE_KEYS) },
-      })
-    }
-
-    const { taskQueue } = await import('#/server/auth/env')
-    const queue = taskQueue()
-    await enqueueTasks(queue, envelopes)
-  } catch (cause) {
-    log().warn('the storage purge for a deleted trip was not enqueued', {
-      organizationId: orgId,
-      tripId,
-      keys: unique.length,
-      ...serializeError(cause),
-    })
-  }
+  await enqueueDetached(
+    () => {
+      const envelopes: Array<EnqueueInput<'trip-purge'>> = []
+      for (let index = 0; index < unique.length; index += MAX_PURGE_KEYS) {
+        const chunk = index / MAX_PURGE_KEYS
+        envelopes.push({
+          kind: 'trip-purge',
+          orgId,
+          id: tripPurgeTaskId(tripId, chunk),
+          payload: { keys: unique.slice(index, index + MAX_PURGE_KEYS) },
+        })
+      }
+      return envelopes
+    },
+    {
+      logger: log(),
+      message: 'the storage purge for a deleted trip was not enqueued',
+      context: { organizationId: orgId, tripId, keys: unique.length },
+    },
+  )
 }
 
 /**
