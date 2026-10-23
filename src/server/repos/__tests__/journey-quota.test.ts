@@ -16,7 +16,13 @@ import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { member, user } from '#/server/db/auth-schema'
 import { QuotaExceededError } from '../context'
-import { createJourney, deleteJourney, journeysRepository } from '../journey'
+import {
+  countQuotaJourneys,
+  createJourney,
+  deleteJourney,
+  journeysRepository,
+  listJourneys,
+} from '../journey'
 import { createTrip, deleteTrip } from '../trips'
 import { captureError, createHarness } from './harness'
 import type { Harness, SeededTenant } from './harness'
@@ -145,5 +151,61 @@ describe('the journeys quota and an orphaned journey', () => {
       createJourney(beta.scope, { title: 'One too many' }),
     )
     expect(error).toBeInstanceOf(QuotaExceededError)
+  })
+})
+
+describe('the journeys meter and the journeys quota', () => {
+  let harness: Harness
+  let alpha: SeededTenant
+  let memberScope: TenantScope
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    alpha = await harness.seedTenant('alpha')
+    memberScope = alpha.scopeFor(await alpha.addUser('Member'))
+  })
+
+  afterEach(() => {
+    harness.close()
+  })
+
+  /** An orphan its owner still holds a seat for: counted by the quota, readable by the owner alone. */
+  async function orphanOfMember(): Promise<void> {
+    const trip = await createTrip(memberScope, { title: 'Lisbon in spring' })
+    const journey = await createJourney(memberScope, {
+      title: 'Lisbon, written up',
+      tripId: trip.id,
+    })
+    await deleteTrip(memberScope, trip.id)
+    expect(
+      (await journeysRepository.requireById(memberScope, journey.id)).tripId,
+    ).toBeNull()
+  }
+
+  it('reads the number createJourney checks, orphan included, for a caller who cannot read it', async () => {
+    await orphanOfMember()
+
+    expect(await listJourneys(alpha.scope)).toEqual([])
+    expect(await countQuotaJourneys(alpha.scope)).toBe(1)
+    // The free plan sells one journey: the refusal is the quota agreeing with the meter's `1`.
+    const error = await captureError(() =>
+      createJourney(alpha.scope, { title: 'One too many' }),
+    )
+    expect(error).toBeInstanceOf(QuotaExceededError)
+  })
+
+  it('counts the same for every caller of the workspace', async () => {
+    await orphanOfMember()
+
+    expect(await countQuotaJourneys(memberScope)).toBe(1)
+    expect(await countQuotaJourneys(alpha.scope)).toBe(1)
+  })
+
+  it('does not count another workspace’s journeys', async () => {
+    const beta = await harness.seedTenant('beta')
+    await createJourney(beta.scope, { title: 'Elsewhere' })
+
+    expect(await countQuotaJourneys(alpha.scope)).toBe(0)
+    expect(await countQuotaJourneys(beta.scope)).toBe(1)
   })
 })
