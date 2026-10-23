@@ -138,6 +138,27 @@ const messages = {
     'Esta posición contradice la hora que tiene. Moverlo aquí borra la hora: el nuevo orden y la hora borrada se guardan juntos.',
   'plan.move.dropTime.confirm': 'Mover y quitar la hora',
   'plan.move.dropTime.cancel': 'Dejarlo donde está',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Editar lugar',
+  'plan.stop.menu.setTime': 'Fijar una hora',
+  'plan.stop.menu.placeOnMap': 'Colocarlo en el mapa',
+  'plan.stop.menu.movePin': 'Mover su marcador',
+  'plan.stop.menu.moveToDay': 'Mover a otro día',
+  'plan.stop.menu.backToUnplanned': 'Devolver a sin planificar',
+  'plan.stop.menu.delete': 'Eliminar del viaje',
+  'plan.delete.title': '¿Eliminar «{name}»?',
+  'plan.delete.titleUnnamed': '¿Eliminar este lugar?',
+  'plan.delete.bodyUnplanned':
+    'Desaparece por completo de los lugares del viaje. Esta acción no se puede deshacer.',
+  'plan.delete.bodyOnDays': {
+    one: 'Está en {count} día de este viaje y desaparece de él. Esta acción no se puede deshacer.',
+    many: 'Está en {count} días de este viaje y desaparece de todos. Esta acción no se puede deshacer.',
+    other:
+      'Está en {count} días de este viaje y desaparece de todos. Esta acción no se puede deshacer.',
+  },
+  'plan.delete.error': 'No se pudo eliminar',
+  'plan.delete.confirm': 'Eliminar lugar',
+  'plan.delete.deleting': 'Eliminando el lugar',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Añadir una nota',
   'plan.note.addForDay': 'Añadir una nota, {day}',

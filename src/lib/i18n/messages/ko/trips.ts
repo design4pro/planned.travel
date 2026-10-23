@@ -136,6 +136,25 @@ const messages = {
     '이 자리는 지정된 시간과 맞지 않습니다. 여기로 옮기면 시간이 지워지고, 새 순서와 지워진 시간이 함께 저장됩니다.',
   'plan.move.dropTime.confirm': '옮기고 시간 지우기',
   'plan.move.dropTime.cancel': '그대로 두기',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': '장소 수정',
+  'plan.stop.menu.setTime': '시간 설정',
+  'plan.stop.menu.placeOnMap': '지도에 배치',
+  'plan.stop.menu.movePin': '핀 옮기기',
+  'plan.stop.menu.moveToDay': '다른 날로 이동',
+  'plan.stop.menu.backToUnplanned': '미계획으로 되돌리기',
+  'plan.stop.menu.delete': '여행에서 삭제',
+  'plan.delete.title': '{name}을(를) 삭제할까요?',
+  'plan.delete.titleUnnamed': '이 장소를 삭제할까요?',
+  'plan.delete.bodyUnplanned':
+    '이 여행의 장소에서 완전히 사라집니다. 이 작업은 되돌릴 수 없습니다.',
+  'plan.delete.bodyOnDays': {
+    other:
+      '이 여행의 {count}일 동안 들어 있으며 해당하는 날에서도 삭제됩니다. 이 작업은 되돌릴 수 없습니다.',
+  },
+  'plan.delete.error': '삭제하지 못했습니다',
+  'plan.delete.confirm': '장소 삭제',
+  'plan.delete.deleting': '장소를 삭제하는 중',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '메모 추가',
   'plan.note.addForDay': '메모 추가 — {day}',

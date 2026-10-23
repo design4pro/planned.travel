@@ -216,6 +216,7 @@ export function StopMenu({
   onUnschedule,
   onDelete,
 }: StopMenuProps) {
+  const t = useTranslate()
   const elsewhere = days.filter((day) => day.dayNumber !== row.dayNumber)
 
   return (
@@ -223,25 +224,31 @@ export function StopMenu({
       <DropdownMenuTrigger asChild>
         <IconButton
           icon={<MoreHorizontal />}
-          label={`Actions for ${row.name}`}
+          label={t('modules.actionsFor', { name: row.name })}
           size="sm"
           variant="ghost"
           disabled={disabled}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      {/* Sized by its longest label, not a fixed width: translations run longer than English. */}
+      <DropdownMenuContent
+        align="end"
+        className="max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-56"
+      >
         <DropdownMenuItem icon={<PencilLine />} onSelect={onEditPlace}>
-          Edit place
+          {t('trips.plan.stop.menu.editPlace')}
         </DropdownMenuItem>
 
         {row.assignmentId === null ? null : (
           <DropdownMenuItem icon={<Clock />} onSelect={onEditTiming}>
-            Set a time
+            {t('trips.plan.stop.menu.setTime')}
           </DropdownMenuItem>
         )}
 
         <DropdownMenuItem icon={<Crosshair />} onSelect={onPickPosition}>
-          {row.lat === null ? 'Place it on the map' : 'Move its pin'}
+          {row.lat === null
+            ? t('trips.plan.stop.menu.placeOnMap')
+            : t('trips.plan.stop.menu.movePin')}
         </DropdownMenuItem>
 
         <StopHandoffItems row={row} />
@@ -251,7 +258,7 @@ export function StopMenu({
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger icon={<ArrowRightLeft />}>
-                Move to day
+                {t('trips.plan.stop.menu.moveToDay')}
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-72 w-48 overflow-y-auto">
                 {elsewhere.map((day) => (
@@ -264,7 +271,8 @@ export function StopMenu({
                       </span>
                     }
                   >
-                    {day.title ?? `Day ${day.dayNumber}`}
+                    {day.title ??
+                      t('trips.plan.editor.dayNumber', { day: day.dayNumber })}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuSubContent>
@@ -274,13 +282,13 @@ export function StopMenu({
 
         {row.assignmentId === null ? null : (
           <DropdownMenuItem icon={<Undo2 />} onSelect={onUnschedule}>
-            Back to unplanned
+            {t('trips.plan.stop.menu.backToUnplanned')}
           </DropdownMenuItem>
         )}
 
         <DropdownMenuSeparator />
         <DropdownMenuItem destructive icon={<Trash2 />} onSelect={onDelete}>
-          Delete from trip
+          {t('trips.plan.stop.menu.delete')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -935,7 +943,8 @@ export function TimingDialog({
 export interface DeleteDialogProps {
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
-  readonly placeName: string
+  /** `null` while the place cannot be named, e.g. as the dialog closes. */
+  readonly placeName: string | null
   readonly dayCount: number
   readonly saving: boolean
   readonly error: string | null
@@ -952,6 +961,7 @@ export function DeleteDialog({
   error,
   onConfirm,
 }: DeleteDialogProps) {
+  const t = useTranslate()
   const changeOpen = (nextOpen: boolean) => {
     if (!nextOpen && saving) return
     onOpenChange(nextOpen)
@@ -961,17 +971,21 @@ export function DeleteDialog({
     <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent size="sm" hideClose={saving}>
         <DialogHeader>
-          <DialogTitle>Delete {placeName}?</DialogTitle>
+          <DialogTitle>
+            {placeName === null
+              ? t('trips.plan.delete.titleUnnamed')
+              : t('trips.plan.delete.title', { name: placeName })}
+          </DialogTitle>
           <DialogDescription>
             {dayCount === 0
-              ? 'It leaves the trip’s places entirely. This cannot be undone.'
-              : `It is on ${dayCount === 1 ? '1 day' : `${dayCount} days`} of this trip, and it leaves all of them. This cannot be undone.`}
+              ? t('trips.plan.delete.bodyUnplanned')
+              : t('trips.plan.delete.bodyOnDays', { count: dayCount })}
           </DialogDescription>
         </DialogHeader>
 
         {error === null ? null : (
           <DialogBody>
-            <Alert tone="danger" title="That did not delete">
+            <Alert tone="danger" title={t('trips.plan.delete.error')}>
               {error}
             </Alert>
           </DialogBody>
@@ -986,17 +1000,17 @@ export function DeleteDialog({
             className="aria-disabled:text-ink-4"
             onClick={() => changeOpen(false)}
           >
-            Keep it
+            {t('ui.action.keep')}
           </Button>
           <Button
             type="button"
             variant="danger"
             shape="pill"
             loading={saving}
-            loadingLabel="Deleting the place"
+            loadingLabel={t('trips.plan.delete.deleting')}
             onClick={onConfirm}
           >
-            Delete place
+            {t('trips.plan.delete.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

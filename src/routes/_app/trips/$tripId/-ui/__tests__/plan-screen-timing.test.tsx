@@ -44,9 +44,9 @@ it('opens the real timing form with the stop name and a Polish day description',
   )
   await userEvent.click(screen.getByRole('button', { name: 'Dni' }))
   await userEvent.click(
-    screen.getByRole('button', { name: 'Actions for Place p1' }),
+    screen.getByRole('button', { name: 'Działania dla: Place p1' }),
   )
-  await userEvent.click(screen.getByRole('menuitem', { name: 'Set a time' }))
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Ustaw godzinę' }))
   const dialog = screen.getByRole('dialog')
   expect(within(dialog).getByRole('heading', { name: 'Place p1' })).toBeTruthy()
   expect(dialog.getAttribute('aria-describedby')).toBeTruthy()

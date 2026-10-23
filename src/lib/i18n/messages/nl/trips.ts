@@ -139,6 +139,26 @@ const messages = {
     'Deze plek spreekt de tijd erop tegen. Hierheen verplaatsen wist de tijd — de nieuwe volgorde en de gewiste tijd worden samen opgeslagen.',
   'plan.move.dropTime.confirm': 'Verplaatsen en tijd wissen',
   'plan.move.dropTime.cancel': 'Laat staan waar het staat',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Plek bewerken',
+  'plan.stop.menu.setTime': 'Tijd instellen',
+  'plan.stop.menu.placeOnMap': 'Op de kaart plaatsen',
+  'plan.stop.menu.movePin': 'Speld verplaatsen',
+  'plan.stop.menu.moveToDay': 'Naar een andere dag verplaatsen',
+  'plan.stop.menu.backToUnplanned': 'Terug naar ongepland',
+  'plan.stop.menu.delete': 'Uit de reis verwijderen',
+  'plan.delete.title': '„{name}” verwijderen?',
+  'plan.delete.titleUnnamed': 'Deze plek verwijderen?',
+  'plan.delete.bodyUnplanned':
+    'De plek verdwijnt helemaal uit de plekken van de reis. Dit kan niet ongedaan worden gemaakt.',
+  'plan.delete.bodyOnDays': {
+    one: 'De plek staat op {count} dag van deze reis en verdwijnt daarvan. Dit kan niet ongedaan worden gemaakt.',
+    other:
+      'De plek staat op {count} dagen van deze reis en verdwijnt van allemaal. Dit kan niet ongedaan worden gemaakt.',
+  },
+  'plan.delete.error': 'Verwijderen is niet gelukt',
+  'plan.delete.confirm': 'Plek verwijderen',
+  'plan.delete.deleting': 'Plek wordt verwijderd',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Notitie toevoegen',
   'plan.note.addForDay': 'Notitie toevoegen: {day}',
