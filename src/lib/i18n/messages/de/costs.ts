@@ -211,6 +211,8 @@ const messages = {
   'display.menu.currentHint': 'Gewählt, aber kein erfasster Kurs deckt sie ab',
   'display.menu.needsLiveRate':
     'Braucht einen Live-Kurs, der noch nicht verfügbar ist',
+  'display.menu.disabledHint':
+    'Währungen ohne erfassten Kurs sind aufgeführt, lassen sich aber nicht wählen: Sie brauchen einen Live-Kurs, der noch nicht verfügbar ist.',
   'display.menu.saving': 'Auswahl wird gespeichert',
   'display.error.title': 'Die Anzeigewährung wurde nicht gespeichert',
   'display.error.body':

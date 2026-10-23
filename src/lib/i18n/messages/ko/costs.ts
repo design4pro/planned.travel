@@ -203,6 +203,8 @@ const messages = {
   'display.menu.currentHint':
     '선택했지만 기록된 환율이 이 통화를 지원하지 않습니다',
   'display.menu.needsLiveRate': '아직 사용할 수 없는 실시간 환율이 필요합니다',
+  'display.menu.disabledHint':
+    '기록된 환율이 없는 통화는 목록에 표시되지만 선택할 수 없습니다. 아직 사용할 수 없는 실시간 환율이 필요합니다.',
   'display.menu.saving': '선택을 저장하는 중',
   'display.error.title': '표시 통화를 저장하지 못했습니다',
   'display.error.body':

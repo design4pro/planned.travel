@@ -213,6 +213,8 @@ const messages = {
     'Kiválasztva, de egyetlen rögzített árfolyam sem fedi le',
   'display.menu.needsLiveRate':
     'Élő árfolyam kell hozzá, ami még nem érhető el',
+  'display.menu.disabledHint':
+    'Az árfolyam nélküli pénznemek szerepelnek a listán, de nem választhatók: élő árfolyamra van szükségük, ami még nem érhető el.',
   'display.menu.saving': 'A választás mentése folyamatban',
   'display.error.title': 'A megjelenítési pénznem nem lett elmentve',
   'display.error.body':

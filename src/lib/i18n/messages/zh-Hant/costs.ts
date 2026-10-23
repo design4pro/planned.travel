@@ -189,6 +189,8 @@ const messages = {
   'display.menu.rateHint': '使用行程中已記錄的匯率',
   'display.menu.currentHint': '已選擇，但沒有已記錄的匯率適用',
   'display.menu.needsLiveRate': '需要即時匯率，目前尚無法使用',
+  'display.menu.disabledHint':
+    '沒有已記錄匯率的貨幣會列出，但無法選擇：它們需要即時匯率，而目前尚不可用。',
   'display.menu.saving': '正在儲存你的選擇',
   'display.error.title': '未能儲存顯示貨幣',
   'display.error.body': '無法儲存你的選擇，請稍後再試。',

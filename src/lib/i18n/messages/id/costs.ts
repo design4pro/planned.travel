@@ -208,6 +208,8 @@ const messages = {
   'display.menu.currentHint':
     'Dipilih, tetapi tidak ada kurs tercatat yang mencakupnya',
   'display.menu.needsLiveRate': 'Memerlukan kurs langsung yang belum tersedia',
+  'display.menu.disabledHint':
+    'Mata uang tanpa kurs yang tercatat tercantum dalam daftar tetapi tidak dapat dipilih: memerlukan kurs langsung yang belum tersedia.',
   'display.menu.saving': 'Menyimpan pilihan Anda',
   'display.error.title': 'Mata uang tampilan tidak tersimpan',
   'display.error.body':

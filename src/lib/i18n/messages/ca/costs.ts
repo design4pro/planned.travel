@@ -214,6 +214,8 @@ const messages = {
   'display.menu.currentHint': 'Triada, però cap tipus registrat la cobreix',
   'display.menu.needsLiveRate':
     'Necessita un tipus en directe, que encara no està disponible',
+  'display.menu.disabledHint':
+    'Les divises sense un canvi registrat apareixen a la llista, però no es poden triar: necessiten un canvi en directe que encara no està disponible.',
   'display.menu.saving': 'Desant la teva elecció',
   'display.error.title': 'No s’ha desat la moneda de visualització',
   'display.error.body':

@@ -248,6 +248,9 @@ const messages = {
   'display.menu.currentHint': 'Chosen, but no recorded rate answers for it yet',
   /** The reason a code cannot be picked, in words rather than by colour alone. */
   'display.menu.needsLiveRate': 'Needs a live rate, which is not available yet',
+  /** Read once when the control takes focus, because a disabled option is skipped by arrow keys and its own reason is never reached. */
+  'display.menu.disabledHint':
+    'Currencies without a recorded rate are listed but cannot be chosen: they need a live rate, which is not available yet.',
   'display.menu.saving': 'Saving your choice',
   'display.error.title': 'The display currency was not saved',
   'display.error.body':

@@ -216,6 +216,8 @@ const messages = {
   'display.menu.currentHint': 'Scelta, ma nessun tasso registrato la copre',
   'display.menu.needsLiveRate':
     'Richiede un tasso in tempo reale, non ancora disponibile',
+  'display.menu.disabledHint':
+    "Le valute senza un tasso registrato sono nell'elenco ma non si possono scegliere: richiedono un tasso in tempo reale, non ancora disponibile.",
   'display.menu.saving': 'Salvataggio della scelta',
   'display.error.title': 'La valuta di visualizzazione non è stata salvata',
   'display.error.body':
