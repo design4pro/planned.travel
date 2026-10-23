@@ -1924,8 +1924,8 @@ transcript is exactly the traffic burst this stage's budget exists to prevent.
   signal and the thread re-reads — the frame carries no preview data, because a commit frame is a
   signal and not a data channel.
 - **Queue.** A new `link-preview` kind in `TASK_KINDS` with its own payload schema and a handler
-  module. Enqueued through the existing single-message `enqueueTask`, never the unchunked batch
-  producer: this producer emits exactly one message per posted message that contains a URL, so it
+  module. Enqueued through the existing single-message `enqueueTask`, never the batch helper:
+  this producer emits exactly one message per posted message that contains a URL, so it
   does not scale with anything and needs no chunking — which is stated because
   `00-foundations.md` requires a producer to answer that question rather than skip it.
 - **The outbound-fetch budget, stated as numbers rather than intentions.** Every one of these is a

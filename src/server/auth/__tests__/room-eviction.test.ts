@@ -51,6 +51,7 @@ const shared = vi.hoisted(() => ({
   authDb: { current: null } as Holder<unknown>,
   kv: { current: null } as Holder<unknown>,
   queued: [] as Array<unknown>,
+  batchSizes: [] as Array<number>,
   queueFails: false,
   emails: [] as Array<{ url?: string }>,
 }))
@@ -72,6 +73,7 @@ vi.mock('#/server/auth/env', () => ({
     },
     sendBatch: async (messages: Array<{ body: unknown }>) => {
       if (shared.queueFails) throw new Error('the queue is unreachable')
+      shared.batchSizes.push(messages.length)
       shared.queued.push(...messages.map((message) => message.body))
     },
   }),
@@ -89,7 +91,8 @@ vi.mock('#/server/auth/email', () => ({
 }))
 
 const { getAuth } = await import('#/server/auth')
-const { roomEvictionHook } = await import('#/server/auth/room-eviction')
+const { queueRoomEviction, roomEvictionHook } =
+  await import('#/server/auth/room-eviction')
 
 let authDatabase: AuthDatabase
 
@@ -111,6 +114,7 @@ beforeEach(() => {
   authDatabase.reset()
   ;(shared.kv.current as SessionKv).clear()
   shared.queued = []
+  shared.batchSizes = []
   shared.queueFails = false
   shared.emails = []
 })
@@ -354,6 +358,20 @@ describe('losing a place in a workspace queues the close of the person’s trip-
     ).rejects.toBeDefined()
 
     expect(evictions()).toEqual([])
+  })
+
+  it('queues an eviction in every workspace of a person who belongs to more than one batch of them', async () => {
+    const organizationIds = Array.from(
+      { length: 250 },
+      (_unused, index) => `org_${index}`,
+    )
+
+    await queueRoomEviction('user_wide', organizationIds, 'test')
+
+    expect(shared.batchSizes).toEqual([100, 100, 50])
+    expect(evictions()).toEqual(
+      organizationIds.map((orgId) => ({ orgId, userId: 'user_wide' })),
+    )
   })
 
   it('lets the removal stand when the queue cannot be reached', async () => {
