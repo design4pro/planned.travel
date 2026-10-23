@@ -215,6 +215,8 @@ const messages = {
   'display.menu.currentHint': 'Elegida, pero ningún tipo registrado la cubre',
   'display.menu.needsLiveRate':
     'Necesita un tipo en vivo, que aún no está disponible',
+  'display.menu.disabledHint':
+    'Las divisas sin una tasa registrada aparecen en la lista, pero no se pueden elegir: necesitan una tasa en vivo que aún no está disponible.',
   'display.menu.saving': 'Guardando tu elección',
   'display.error.title': 'No se guardó la moneda de visualización',
   'display.error.body':

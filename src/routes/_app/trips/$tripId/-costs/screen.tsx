@@ -496,6 +496,7 @@ export function CostsScreen({
                     choices={data.displayChoices}
                     budgetCurrency={data.currency}
                     saving={savingDisplay}
+                    unconverted={data.unconverted.length > 0}
                     onChange={(code) => void setDisplay(code)}
                   />
                 </div>
@@ -515,6 +516,7 @@ export function CostsScreen({
                   display={data.displayCurrency}
                   displayChoices={data.displayChoices}
                   savingDisplay={savingDisplay}
+                  displayUnconverted={data.unconverted.length > 0}
                   onDisplayChange={(code) => void setDisplay(code)}
                 />
               </Card>

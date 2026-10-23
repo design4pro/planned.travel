@@ -207,6 +207,8 @@ const messages = {
   'display.menu.currentHint': 'Vald, men ingen sparad kurs täcker den',
   'display.menu.needsLiveRate':
     'Kräver en aktuell kurs, som inte är tillgänglig ännu',
+  'display.menu.disabledHint':
+    'Valutor utan registrerad kurs finns i listan men kan inte väljas: de behöver en livekurs, som ännu inte är tillgänglig.',
   'display.menu.saving': 'Sparar ditt val',
   'display.error.title': 'Visningsvalutan sparades inte',
   'display.error.body': 'Ditt val kunde inte sparas. Försök igen om en stund.',
