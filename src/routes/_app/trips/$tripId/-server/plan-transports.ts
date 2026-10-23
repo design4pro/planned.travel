@@ -9,13 +9,20 @@
  * `0..n-1` and places each journey between two of them in the same batch (#239). The writes that
  * never renumber a day — scheduling a stop stores it at a midpoint, unscheduling and deleting one
  * leave a hole — place their day's journeys in their own batch too (#816), so this module has no
- * writer: a journey's position is written by the same call that changes the stop beside it.
+ * writer: a journey's position is written by the same call that changes the stop beside it. The one
+ * export that looks like a writer, {@link reorderDayTransportsFn}, is a deprecated no-op.
  */
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { listTripDayTransports, requireTrip } from '#/server/repos'
+import {
+  dayRunInput,
+  listTripDayTransports,
+  requireTrip,
+  requireTripDay,
+  requireWritableTrip,
+} from '#/server/repos'
 import { appScope } from '../../../-server/context'
 
 import type { TenantScope } from '#/server/repos'
@@ -160,4 +167,23 @@ export const loadPlanTransports = createServerFn({ method: 'GET' })
   .handler(async ({ data }): Promise<PlanTransportsPayload> => {
     const scope = await appScope()
     return readPlanTransports(scope, data.tripId)
+  })
+
+/**
+ * Deprecated: stale-tab compatibility only, to be removed one release after #816.
+ *
+ * It used to be the second call of schedule, unschedule and delete, which placed the day's journeys
+ * after the stop write. Those writes place them in their own batch now, so a tab loaded before the
+ * deploy that still makes this call has nothing left to do: it answers `placed: 0` without writing,
+ * which keeps that tab's optimistic board instead of rolling it back (BACKWARD_COMPATIBILITY.md §2).
+ * The input is accepted exactly as before, and the trip and the day are still checked, so the
+ * function reveals nothing it did not.
+ */
+export const reorderDayTransportsFn = createServerFn({ method: 'POST' })
+  .validator(z.object({ tripId: id, dayId: id, items: dayRunInput }))
+  .handler(async ({ data }): Promise<{ readonly placed: number }> => {
+    const scope = await appScope()
+    const trip = await requireWritableTrip(scope, data.tripId)
+    await requireTripDay(scope, trip.id, data.dayId)
+    return { placed: 0 }
   })

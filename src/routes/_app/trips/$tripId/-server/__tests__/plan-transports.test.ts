@@ -110,7 +110,8 @@ function startContext(): StartContext {
   }
 }
 
-const { readPlanTransports } = await import('../plan-transports')
+const { readPlanTransports, reorderDayTransportsFn } =
+  await import('../plan-transports')
 const {
   deletePlanPlaceFn,
   schedulePlaceFn,
@@ -494,5 +495,49 @@ describe('what one write costs', () => {
     expect(
       payload.transports.find((row) => row.id === elsewhere.id)?.position,
     ).toBe(elsewhere.sortOrder)
+  })
+})
+
+describe('the deprecated second call a tab loaded before the deploy still makes', () => {
+  const staleCall = (tripId: string, dayId: string) =>
+    inRequest(() =>
+      reorderDayTransportsFn({
+        data: {
+          tripId,
+          dayId,
+          items: [
+            { kind: 'stop', id: fixture.assignmentId },
+            { kind: 'transport', id: fixture.flightId },
+          ],
+        },
+      }),
+    )
+
+  it('resolves and writes and mirrors nothing', async () => {
+    await inRequest(() =>
+      unschedulePlaceFn({
+        data: { tripId: fixture.tripId, assignmentId: fixture.assignmentId },
+      }),
+    )
+    const written = await readPlanTransports(tenant.scope, fixture.tripId)
+    stubs.mirrored = []
+    harness.statements.length = 0
+
+    // The `{ placed: 0 }` answer is not asserted: outside a Start build a handler's return value is
+    // discarded, so what can be checked here is that it resolves and leaves the day alone.
+    await staleCall(fixture.tripId, fixture.dayId)
+
+    expect(stubs.mirrored).toEqual([])
+    expect(
+      harness.statements.filter((sql) => /^(insert|update|delete)/.test(sql)),
+    ).toEqual([])
+    expect(await readPlanTransports(tenant.scope, fixture.tripId)).toEqual(
+      written,
+    )
+  })
+
+  it('still refuses a trip or a day that is not the caller’s', async () => {
+    await expect(staleCall('no-such-trip', fixture.dayId)).rejects.toThrow()
+    await expect(staleCall(fixture.tripId, 'no-such-day')).rejects.toThrow()
   })
 })

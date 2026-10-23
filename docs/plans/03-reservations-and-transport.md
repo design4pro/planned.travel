@@ -2022,7 +2022,9 @@ and performs no conversion.
   returning one entry per covered day: the record or leg id, the mode, the status, the two
   endpoint names, the two times, the two day ids and the position. The plan route calls it beside
   `loadPlanBoard` rather than inside it.
-- No writer. The module is read-only: `reorderPlanFn`, `schedulePlaceFn`, `unschedulePlaceFn` and
+- No writer. The module is read-only apart from `reorderDayTransportsFn`, a deprecated no-op that
+  answers `placed: 0` for a tab loaded before #816 and is removed one release later
+  (BACKWARD_COMPATIBILITY.md §2). `reorderPlanFn`, `schedulePlaceFn`, `unschedulePlaceFn` and
   `deletePlanPlaceFn` each write the journeys of the day they change in their own batch, then mirror
   one `day` upsert carrying the written `journeys` into the trip's room so other tabs see the move —
   the same mirror shape every other writer in this plan uses.
