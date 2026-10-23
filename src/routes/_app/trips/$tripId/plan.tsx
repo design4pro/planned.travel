@@ -5,6 +5,7 @@ import { ErrorPanel } from '#/components/layout/error-state'
 import { GlassPanel, SectionLabel, Skeleton } from '#/components/ui'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
 import { cn } from '#/lib/cn'
+import { requireFound } from '#/lib/absence'
 import { useTranslate } from '#/lib/i18n'
 import { loadDayNotes } from './-server/day-notes'
 import { loadPlanBoard } from './-server/plan'
@@ -31,7 +32,11 @@ export const Route = createFileRoute('/_app/trips/$tripId/plan')({
       loadDayNotes({ data: { tripId: params.tripId } }),
       loadPlanTransports({ data: { tripId: params.tripId } }),
     ])
-    return { board, notes, transports }
+    return {
+      board: requireFound(board),
+      notes: requireFound(notes),
+      transports: requireFound(transports),
+    }
   },
   pendingMs: 0,
   pendingMinMs: 0,

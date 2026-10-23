@@ -14,6 +14,7 @@ import {
   NotFoundError,
   updateTrip,
 } from '#/server/repos'
+import { requireFound } from '#/lib/absence'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
@@ -153,7 +154,7 @@ describe('collaboration handlers', () => {
       ],
     })
     await write()
-    const payload = await loadTripCollab({ data: { tripId } })
+    const payload = requireFound(await loadTripCollab({ data: { tripId } }))
     expect(payload.sections).toEqual({
       conversation: true,
       notes: true,
@@ -173,7 +174,7 @@ describe('collaboration handlers', () => {
     for (let index = 1; index <= 52; index += 1) {
       await postMessage(tenant.scope, { tripId, body: `message ${index}` })
     }
-    const payload = await loadTripCollab({ data: { tripId } })
+    const payload = requireFound(await loadTripCollab({ data: { tripId } }))
     expect(payload.messages).toHaveLength(50)
     expect(payload.messageCount).toBe(52)
   })
@@ -183,7 +184,7 @@ describe('collaboration handlers', () => {
     await tripsRepository.requireUpdate(tenant.scope, tripId, {
       collabModules: { conversation: false, notes: true, polls: true },
     })
-    const payload = await loadTripCollab({ data: { tripId } })
+    const payload = requireFound(await loadTripCollab({ data: { tripId } }))
     expect(payload.messageCount).toBeNull()
     expect(payload.messages).toHaveLength(1)
   })
@@ -191,25 +192,27 @@ describe('collaboration handlers', () => {
   it('offers configuration only to non-archived owners and editors', async () => {
     await updateTrip(tenant.scope, tripId, { visibility: 'organization' })
     stubs.scope = tenant.scopeFor(readerId)
-    expect((await loadTripCollab({ data: { tripId } })).canConfigure).toBe(
-      false,
-    )
+    expect(
+      requireFound(await loadTripCollab({ data: { tripId } })).canConfigure,
+    ).toBe(false)
     await addTripMember(tenant.scope, {
       tripId,
       userId: readerId,
       role: 'editor',
     })
-    expect((await loadTripCollab({ data: { tripId } })).canConfigure).toBe(true)
+    expect(
+      requireFound(await loadTripCollab({ data: { tripId } })).canConfigure,
+    ).toBe(true)
     await archiveTrip(tenant.scope, tripId)
-    expect((await loadTripCollab({ data: { tripId } })).canConfigure).toBe(
-      false,
-    )
+    expect(
+      requireFound(await loadTripCollab({ data: { tripId } })).canConfigure,
+    ).toBe(false)
   })
 
   it('does not read child payloads for an invisible trip', async () => {
     stubs.scope = tenant.scopeFor(readerId)
-    await expect(loadTripCollab({ data: { tripId } })).rejects.toBeInstanceOf(
-      NotFoundError,
-    )
+    await expect(loadTripCollab({ data: { tripId } })).resolves.toStrictEqual({
+      found: false,
+    })
   })
 })

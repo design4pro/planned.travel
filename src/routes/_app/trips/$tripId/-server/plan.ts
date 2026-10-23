@@ -54,6 +54,7 @@ import {
   updatePlace,
   withinAnchorBound,
 } from '#/server/repos'
+import { orAbsent } from '#/server/fns/-lib/absence'
 import { appScope } from '../../../-server/context'
 
 import type {
@@ -62,6 +63,7 @@ import type {
   TimelineItemInput,
   WrittenDayJourneys,
 } from '#/server/repos'
+import type { OrAbsent } from '#/lib/absence'
 import type { Place, Trip } from '#/server/db/types'
 import type { BookingDayOption } from '#/server/fns/reservations'
 
@@ -219,8 +221,9 @@ export interface PlanBoardPayload {
 
 export const loadPlanBoard = createServerFn({ method: 'GET' })
   .validator(tripInput)
-  .handler(async ({ data }): Promise<PlanBoardPayload> => {
-    return readPlanBoard(await appScope(), data.tripId)
+  .handler(async ({ data }): Promise<OrAbsent<PlanBoardPayload>> => {
+    const scope = await appScope()
+    return orAbsent(data.tripId, () => readPlanBoard(scope, data.tripId))
   })
 
 /**
