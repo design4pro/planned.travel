@@ -52,6 +52,7 @@ import {
   CHAIN_MIN_STATIONS,
   chainShapeIssue,
 } from '#/lib/transport-chain'
+import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
 import { TRANSPORT_SAVE_INTENTS } from '#/lib/transport-save-intent'
 import { arrivesBeforeDeparts } from '#/lib/transport-timing'
 import {
@@ -69,6 +70,8 @@ import {
   timeSchema,
   titleSchema,
 } from './validation'
+import type { TransportRefusalKey } from '#/lib/transport-refusals'
+import type { TransportSaveIntent } from '#/lib/transport-save-intent'
 import type { Transport, TransportLeg } from '#/server/db/types'
 import type { LegClocks, LegZones } from '#/lib/transport-timing'
 import type { BatchStatement } from './batch'
@@ -799,6 +802,41 @@ export async function replaceTransportChain(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Thrown when a save names a Transport this workspace no longer has: an `edit` of a row that was
+ * deleted in another tab, or a re-search of one.
+ *
+ * The `message` is a catalogue key from `TRANSPORT_REFUSAL_KEYS`, never a sentence, and the class is
+ * deliberately **not** in `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`): that list is
+ * closed by `docs/SPEC.md` §9 rule 10 because each of its entries reaches the reader in English.
+ * A key is resolved by the dialog in the reader's own locale instead, and `classifyFailure` lets it
+ * through by exact match on the key, not on this class - so a row of another workspace, which the
+ * scope cannot tell from a deleted one, gets the same answer and confirms nothing.
+ *
+ * It is thrown only where "the row is gone" is the whole story. A trip that is not there, a
+ * transport of another trip and a clash with the id of another workspace's row stay
+ * {@link NotFoundError} diagnostics.
+ */
+export class TransportRefusalError extends RepositoryError {
+  constructor(key: TransportRefusalKey = TRANSPORT_REFUSAL_KEYS[0]) {
+    super(key, 'TRANSPORT_REFUSED')
+  }
+}
+
+/**
+ * What a save answers for a row that is no longer there after it was read: the gone refusal for an
+ * `edit`, which is the traveller's own transport vanishing under them, and the plain diagnostic for
+ * a `create`, whose id the caller invented and whose row nobody else could have known to delete.
+ */
+function goneError(
+  intent: TransportSaveIntent,
+  transportId: string,
+): RepositoryError {
+  return intent === 'edit'
+    ? new TransportRefusalError()
+    : new NotFoundError('transport', transportId)
+}
+
+/**
  * Whether the row is no longer there, asked after a failed save.
  *
  * A read that fails too answers "not known", so the caller rethrows the failure that mattered
@@ -887,9 +925,10 @@ export interface SavedTransport {
  * database can refuse. The existence check comes ahead of every ordering rule, so a row of another
  * workspace is a `NotFoundError` and never a timing refusal that would confirm it exists.
  *
- * **An `edit` never inserts.** A row that is not there is a `NotFoundError`, and a row deleted
- * between the read and the batch is one too: the update then matches nothing, and a chain that
- * could not be attached to the vanished parent is answered the same way.
+ * **An `edit` never inserts.** A row that is not there is a {@link TransportRefusalError}, and a row
+ * deleted between the read and the batch is one too: the update then matches nothing, and a chain
+ * that could not be attached to the vanished parent is answered the same way. The id of a row that
+ * belongs to another trip is still a `NotFoundError`.
  */
 export async function saveTransport(
   scope: TenantScope,
@@ -900,10 +939,10 @@ export async function saveTransport(
   await requireTrip(scope, tripId)
 
   const existing = await transportsRepository.findById(scope, transportId)
-  if (
-    (existing === null && intent === 'edit') ||
-    (existing !== null && existing.tripId !== tripId)
-  ) {
+  if (existing === null && intent === 'edit') {
+    throw new TransportRefusalError()
+  }
+  if (existing !== null && existing.tripId !== tripId) {
     throw new NotFoundError('transport', transportId)
   }
   // Only a row the scope has not seen is inserted, so only then is the id the caller's invention.
@@ -971,15 +1010,18 @@ export async function saveTransport(
     // An update of a row deleted since the read matches nothing, and the legs that were to hang off
     // it then fail on their foreign key. That is the same "not there" the read would have said.
     if (existing !== null && (await isGone(scope, transportId))) {
-      throw new NotFoundError('transport', transportId)
+      throw goneError(intent, transportId)
     }
     throw cause
   }
 
-  return {
-    transport: await transportsRepository.requireById(scope, transportId),
-    legs: await listTransportLegs(scope, transportId),
+  // An update of a row deleted since the read can match nothing without any statement failing, so
+  // the row read back is where that shows.
+  const saved = await transportsRepository.findById(scope, transportId)
+  if (saved === null) {
+    throw goneError(intent, transportId)
   }
+  return { transport: saved, legs: await listTransportLegs(scope, transportId) }
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -1137,11 +1179,17 @@ export async function saveSearchedConnection(
 ): Promise<SavedConnection> {
   const values = searchedConnectionInput.parse(input)
 
+  // The trip first, as the writer does: a trip the caller cannot see is a diagnostic, and only a
+  // journey missing from a trip they can see is the gone refusal.
+  await requireTrip(scope, values.tripId)
   const requested = values.transportId ?? null
   const existing =
     requested === null
       ? null
-      : await transportsRepository.requireById(scope, requested)
+      : await transportsRepository.findById(scope, requested)
+  if (requested !== null && existing === null) {
+    throw new TransportRefusalError()
+  }
   if (existing !== null && existing.tripId !== values.tripId) {
     throw new NotFoundError('transport', existing.id)
   }

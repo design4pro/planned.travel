@@ -13,6 +13,7 @@ import { z } from 'zod'
 
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
+import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import { AuthRequirementError } from '#/server/auth/tenant'
 import { PolarApiError } from '#/server/billing/polar'
@@ -33,6 +34,7 @@ import {
   QuotaExceededError,
   RepositoryError,
 } from '#/server/repos/context'
+import { TransportRefusalError } from '#/server/repos/transports'
 import {
   CurrencyRefusalError,
   TripArchivedError,
@@ -93,6 +95,49 @@ describe('the currency refusal keys are closed', () => {
     ['a key of the same family', 'shell.editTrip.currency'],
     ['a key of the costs family that is not listed', 'costs.refusal.other'],
     ['a listed key with a suffix', 'costs.refusal.rebaseChanged.'],
+  ])('still redacts %s thrown as a repository error', (_name, message) => {
+    expect(classifyFailure(new RepositoryError(message, 'ANY'))).toEqual({
+      kind: 'unexpected',
+    })
+  })
+})
+
+describe('the transport refusal keys are closed', () => {
+  /**
+   * A transport that is gone is refused with a key, not an authored class: the list of classes that
+   * may speak English stays closed, and a key added here fails this test until its author reads it.
+   */
+  it('names exactly the one key a save of a missing transport may be refused with', () => {
+    expect([...TRANSPORT_REFUSAL_KEYS]).toEqual([
+      'modules.transports.refusal.gone',
+    ])
+  })
+
+  it('is not an authored class, and a missing row is not reclassified in general', () => {
+    expect(AUTHORED_ERROR_NAMES.has('TransportRefusalError')).toBe(false)
+    expect(AUTHORED_ERROR_NAMES.has(NotFoundError.name)).toBe(false)
+    expect(classifyFailure(new NotFoundError('transport', 'abc'))).toEqual({
+      kind: 'unexpected',
+    })
+  })
+
+  it('lets the key through as a refusal, which is not reported as an incident', () => {
+    for (const key of TRANSPORT_REFUSAL_KEYS) {
+      expect(classifyFailure(new TransportRefusalError(key))).toEqual({
+        kind: 'refusal',
+        message: key,
+      })
+    }
+  })
+
+  it.each([
+    ['a database diagnostic', 'NOT NULL constraint failed: transports.title'],
+    ['a key with a suffix', 'modules.transports.refusal.goneAgain'],
+    ['a key with a prefix', 'x.modules.transports.refusal.gone'],
+    ['a key with padding', ' modules.transports.refusal.gone '],
+    ['a key of the same family', 'modules.transports.refusal'],
+    ['a key of the family that is not listed', 'modules.transports.toast.added'],
+    ['a listed key with a suffix', 'modules.transports.refusal.gone.'],
   ])('still redacts %s thrown as a repository error', (_name, message) => {
     expect(classifyFailure(new RepositoryError(message, 'ANY'))).toEqual({
       kind: 'unexpected',

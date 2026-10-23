@@ -14,6 +14,8 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
+
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { NotFoundError } from '../context'
@@ -25,8 +27,10 @@ import {
   getTransport,
   listTransportLegs,
   listTripDayTransports,
+  deleteTransport,
   replaceTransportChain,
   saveSearchedConnection,
+  TransportRefusalError,
 } from '../transports'
 import type { Day, TransportLeg } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -385,5 +389,61 @@ describe('a saved connection that is searched again', () => {
       }),
     )
     expect(error).toBeInstanceOf(NotFoundError)
+  })
+
+  describe('when the journey is no longer there', () => {
+    const resend = (transportId: string, tripId: string) =>
+      saveSearchedConnection(tenant.scope, {
+        tripId,
+        transportId,
+        mode: 'train',
+        title: 'Osaka to Tokyo',
+        stations: [OSAKA, TOKYO],
+        legs: [{}],
+      })
+
+    it('answers the gone refusal for a journey deleted in another tab, and writes nothing', async () => {
+      const transportId = await saveUnanchored(1)
+      await deleteTransport(tenant.scope, transportId)
+
+      const error = await captureError(() => resend(transportId, tripId))
+
+      expect(error).toEqual(
+        new TransportRefusalError(TRANSPORT_REFUSAL_KEYS[0]),
+      )
+      expect(await getTransport(tenant.scope, transportId)).toBeNull()
+      expect(await listTransportLegs(tenant.scope, transportId)).toEqual([])
+    })
+
+    it('answers the same refusal for an id this workspace never had', async () => {
+      const error = await captureError(() => resend('never-existed', tripId))
+
+      expect(error).toBeInstanceOf(TransportRefusalError)
+    })
+
+    it('keeps a journey of another trip a not-found diagnostic', async () => {
+      const transportId = await saveUnanchored(1)
+      const other = await createTrip(tenant.scope, {
+        title: 'Elsewhere',
+        startDate: '2026-05-01',
+        endDate: '2026-05-02',
+        currency: 'JPY',
+      })
+
+      const error = await captureError(() => resend(transportId, other.id))
+
+      expect(error).toBeInstanceOf(NotFoundError)
+    })
+
+    it('keeps a trip that is not there a not-found diagnostic', async () => {
+      const transportId = await saveUnanchored(1)
+      await deleteTransport(tenant.scope, transportId)
+
+      const error = await captureError(() =>
+        resend(transportId, 'no-such-trip'),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+    })
   })
 })

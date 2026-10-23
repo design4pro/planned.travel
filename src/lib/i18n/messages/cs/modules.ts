@@ -86,6 +86,10 @@ const messages = {
   'transports.noTime': 'Zatím bez času',
   'transports.toast.statusFailed.title': 'Stav se nezměnil',
   'transports.toast.statusFailed.body': 'Přesun zůstal v předchozím stavu.',
+  'transports.refusal.gone':
+    'Byl smazán, když bylo toto okno otevřené, takže se změny nedají uložit. Zavři okno a uvidíš aktuální seznam.',
+  'transports.refusal.goneTitle': 'Tento přesun už neexistuje',
+  'transports.error.saveFallback': 'Zkus to za chvíli znovu.',
   'transports.toast.removed': 'Přesun odebrán',
   'transports.toast.removeFailed': 'Přesun nebyl odebrán',
 

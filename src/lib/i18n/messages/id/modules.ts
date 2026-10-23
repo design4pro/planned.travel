@@ -75,6 +75,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Status tidak berubah',
   'transports.toast.statusFailed.body':
     'Transportasi masih dalam keadaan sebelumnya.',
+  'transports.refusal.gone':
+    'Transportasi ini dihapus saat jendela ini terbuka, sehingga perubahanmu tidak dapat disimpan. Tutup jendela ini untuk melihat daftar terbaru.',
+  'transports.refusal.goneTitle': 'Transportasi ini sudah tidak ada',
+  'transports.error.saveFallback': 'Coba lagi sebentar lagi.',
   'transports.toast.removed': 'Transportasi dihapus',
   'transports.toast.removeFailed': 'Transportasi tidak terhapus',
 

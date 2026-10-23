@@ -269,6 +269,7 @@ import {
   summariseTripTransports,
   totalTripDistanceMetres,
   transportLegsRepository,
+  TransportRefusalError,
   transportsRepository,
   unlinkTransportsFromDays,
 } from '../transports'
@@ -3475,12 +3476,13 @@ describe('tenant isolation', () => {
           }),
         )
 
-      const foreign = (await refuse(beta.transportId)) as NotFoundError
-      const absent = (await refuse('never-existed')) as NotFoundError
+      const foreign = (await refuse(beta.transportId)) as RepositoryError
+      const absent = (await refuse('never-existed')) as RepositoryError
 
-      expect(foreign).toBeInstanceOf(NotFoundError)
-      expect(absent).toBeInstanceOf(NotFoundError)
+      expect(foreign).toBeInstanceOf(TransportRefusalError)
+      expect(absent).toBeInstanceOf(TransportRefusalError)
       expect(foreign.code).toBe(absent.code)
+      expect(foreign.message).toBe(absent.message)
     })
 
     it('refuses a leg day or a record day belonging to B, and writes nothing', async () => {
@@ -4342,7 +4344,12 @@ describe('tenant isolation', () => {
       )
       expect(before).toHaveLength(2)
 
-      for (const tripId of [beta.tripId, alpha.tripId]) {
+      // B's trip is not A's to see, so it is refused as a trip; B's transport named under A's own
+      // trip reads as a transport that is not there, which is the answer an absent id gets.
+      for (const [tripId, refusal] of [
+        [beta.tripId, NotFoundError],
+        [alpha.tripId, TransportRefusalError],
+      ] as const) {
         expect(
           await captureError(() =>
             saveSearchedConnection(alpha.tenant.scope, {
@@ -4353,8 +4360,23 @@ describe('tenant isolation', () => {
               legs: [{}],
             }),
           ),
-        ).toBeInstanceOf(NotFoundError)
+        ).toBeInstanceOf(refusal)
       }
+      const absent = await captureError(() =>
+        saveSearchedConnection(alpha.tenant.scope, {
+          ...CONNECTION,
+          tripId: alpha.tripId,
+          transportId: 'never-existed',
+        }),
+      )
+      const foreign = await captureError(() =>
+        saveSearchedConnection(alpha.tenant.scope, {
+          ...CONNECTION,
+          tripId: alpha.tripId,
+          transportId: beta.transportId,
+        }),
+      )
+      expect(foreign).toEqual(absent)
 
       expect(
         await listTransportLegs(beta.tenant.scope, beta.transportId),

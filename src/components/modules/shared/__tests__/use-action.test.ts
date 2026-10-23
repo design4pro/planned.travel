@@ -169,3 +169,46 @@ describe("a call refused because the tab's workspace is not the session's", () =
     expect(notify.error).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('a refusal the caller has a sentence for', () => {
+  const GONE = 'modules.transports.refusal.gone'
+  const refusal = () =>
+    new Error(encodePublicFailure({ kind: 'refusal', message: GONE }))
+  const sentence = (cause: unknown): string | null =>
+    cause instanceof Error && cause.message.includes(GONE)
+      ? 'Ten przejazd już nie istnieje'
+      : null
+
+  it('puts the sentence in the inline error and the toast, never the key', async () => {
+    const fn = vi.fn().mockRejectedValue(refusal())
+    const { result } = renderHook(() =>
+      useAction(fn, { refusal: sentence, failure: 'Not updated' }),
+    )
+
+    await act(async () => {
+      await result.current.run(undefined)
+    })
+
+    expect(result.current.error).toBe('Ten przejazd już nie istnieje')
+    expect(notify.error).toHaveBeenCalledWith('Not updated', {
+      description: 'Ten przejazd już nie istnieje',
+    })
+  })
+
+  it('reads any other failure the usual way', async () => {
+    const fn = vi
+      .fn()
+      .mockRejectedValue(
+        new Error(encodePublicFailure({ kind: 'unexpected', reference: 'r1' })),
+      )
+    const { result } = renderHook(() =>
+      useAction(fn, { refusal: sentence, fallback: 'Spróbuj za chwilę.' }),
+    )
+
+    await act(async () => {
+      await result.current.run(undefined)
+    })
+
+    expect(result.current.error).toBe('Spróbuj za chwilę.')
+  })
+})

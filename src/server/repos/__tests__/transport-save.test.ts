@@ -12,6 +12,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ID_TIME_LENGTH, mintId } from '#/lib/ids'
+import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
 import { transports as transportsTable } from '#/server/db/schema'
 import { AUTHORED_ERROR_NAMES, classifyFailure } from '#/server/errors/public'
 import { NotFoundError } from '../context'
@@ -29,6 +30,7 @@ import {
   saveSearchedConnection,
   saveTransport,
   transportsRepository,
+  TransportRefusalError,
 } from '../transports'
 import { captureError, createHarness } from './harness'
 import type { Day } from '#/server/db/types'
@@ -375,9 +377,11 @@ describe('saving a transport with its legs', () => {
         }),
       )
 
-      expect(error).toEqual(
-        new NotFoundError('transport', idFor('deleted-in-tab-b')),
-      )
+      expect(error).toEqual(new TransportRefusalError(TRANSPORT_REFUSAL_KEYS[0]))
+      expect(classifyFailure(error)).toEqual({
+        kind: 'refusal',
+        message: TRANSPORT_REFUSAL_KEYS[0],
+      })
       expect(await leftOver(idFor('deleted-in-tab-b'))).toEqual({
         row: null,
         legs: [],
@@ -401,12 +405,12 @@ describe('saving a transport with its legs', () => {
         }),
       )
 
-      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).toBeInstanceOf(TransportRefusalError)
       expect(await snapshot()).toEqual({ transports: [], legs: [] })
     })
 
     /** The existence check comes first, so the row is not confirmed by a timing or day refusal. */
-    it('answers not-found, and not an ordering refusal, for an edit of a transport that is not there', async () => {
+    it('answers gone, and not an ordering refusal, for an edit of a transport that is not there', async () => {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
@@ -426,8 +430,37 @@ describe('saving a transport with its legs', () => {
         }),
       )
 
-      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).toBeInstanceOf(TransportRefusalError)
       expect(await snapshot()).toEqual({ transports: [], legs: [] })
+    })
+
+    it('keeps a missing trip a not-found diagnostic, not the gone refusal', async () => {
+      const error = await captureError(() =>
+        saveTransport(tenant.scope, {
+          tripId: idFor('no-such-trip'),
+          transportId: idFor('never-existed'),
+          intent: 'edit',
+          record: { title: 'Nowhere', mode: 'train' },
+          chain: NO_CHAIN,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(classifyFailure(error)).toEqual({ kind: 'unexpected' })
+    })
+
+    it('does not give a create of an id that is not there the gone refusal', async () => {
+      const error = await captureError(() =>
+        saveTransport(tenant.scope, {
+          tripId,
+          transportId: 'not-a-generated-id',
+          intent: 'create',
+          record: { title: 'Malformed', mode: 'train' },
+          chain: NO_CHAIN,
+        }),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
     })
 
     it('creates a transport for the intent create', async () => {
@@ -481,7 +514,7 @@ describe('saving a transport with its legs', () => {
         )
       }
 
-      it('answers not-found for a chained edit instead of a foreign-key failure', async () => {
+      it('answers gone for a chained edit instead of a foreign-key failure', async () => {
         await seedLinkedTransport(idFor('raced'))
         await deleteAfterTheRead(idFor('raced'))
 
@@ -495,7 +528,7 @@ describe('saving a transport with its legs', () => {
           }),
         )
 
-        expect(error).toBeInstanceOf(NotFoundError)
+        expect(error).toBeInstanceOf(TransportRefusalError)
         expect(await leftOver(idFor('raced'))).toEqual({
           row: null,
           legs: [],
@@ -504,7 +537,7 @@ describe('saving a transport with its legs', () => {
         })
       })
 
-      it('answers not-found for an unchained edit', async () => {
+      it('answers gone for an unchained edit', async () => {
         await seedLinkedTransport(idFor('raced-bare'))
         await deleteAfterTheRead(idFor('raced-bare'))
 
@@ -518,7 +551,7 @@ describe('saving a transport with its legs', () => {
           }),
         )
 
-        expect(error).toBeInstanceOf(NotFoundError)
+        expect(error).toBeInstanceOf(TransportRefusalError)
         expect((await leftOver(idFor('raced-bare'))).row).toBeNull()
       })
     })
@@ -1048,7 +1081,7 @@ describe('saving a transport with its legs', () => {
         }),
       )
 
-      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).toBeInstanceOf(TransportRefusalError)
       expect(await snapshot()).toEqual({ transports: [], legs: [] })
     })
   })

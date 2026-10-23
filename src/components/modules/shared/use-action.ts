@@ -58,6 +58,13 @@ export interface ActionOptions<TResult> {
   /** Fallback body when the thrown error carries no message. */
   readonly fallback?: string
   /**
+   * The sentence for a refusal the caller owns, in the reader's locale, or `null` for any other
+   * failure. A refusal can travel as a catalogue key rather than a sentence (see
+   * `transport-refusals.ts`), and `messageOf` would print that key: this is the one place the
+   * caller, which has a translator, turns it into words for the toast and the inline error.
+   */
+  readonly refusal?: (error: unknown) => string | null
+  /**
    * Re-run the route loaders after a successful call. On by default: the screens
    * are loader-driven, so skipping it would leave the optimistic overlay as the
    * only record of the change.
@@ -125,10 +132,9 @@ export function useAction<TInput, TResult>(
           options.onError?.(cause)
           return null
         }
-        const message = messageOf(
-          cause,
-          options.fallback ?? 'Try again in a moment.',
-        )
+        const message =
+          options.refusal?.(cause) ??
+          messageOf(cause, options.fallback ?? 'Try again in a moment.')
         setError(message)
         options.onError?.(cause)
         toast.error(options.failure ?? 'That did not save', {
@@ -149,6 +155,7 @@ export function useAction<TInput, TResult>(
       options.description,
       options.failure,
       options.fallback,
+      options.refusal,
       options.onSuccess,
       options.onError,
     ],
