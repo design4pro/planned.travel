@@ -140,6 +140,26 @@ const messages = {
     'Questa posizione contraddice l’orario che porta. Spostarlo qui cancella l’orario: il nuovo ordine e l’orario cancellato si salvano insieme.',
   'plan.move.dropTime.confirm': 'Sposta e rimuovi l’orario',
   'plan.move.dropTime.cancel': 'Lascialo dov’è',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Modifica luogo',
+  'plan.stop.menu.setTime': 'Imposta un orario',
+  'plan.stop.menu.placeOnMap': 'Posizionalo sulla mappa',
+  'plan.stop.menu.movePin': 'Sposta il suo segnaposto',
+  'plan.stop.menu.moveToDay': 'Sposta in un altro giorno',
+  'plan.stop.menu.backToUnplanned': 'Riporta tra i non pianificati',
+  'plan.stop.menu.delete': 'Elimina dal viaggio',
+  'plan.delete.title': 'Eliminare {name}?',
+  'plan.delete.bodyUnplanned':
+    'Sparisce del tutto dai luoghi del viaggio. Questa azione non può essere annullata.',
+  'plan.delete.bodyOnDays': {
+    one: 'È in {count} giorno di questo viaggio e ne viene rimosso. Questa azione non può essere annullata.',
+    many: 'È in {count} giorni di questo viaggio e viene rimosso da tutti. Questa azione non può essere annullata.',
+    other:
+      'È in {count} giorni di questo viaggio e viene rimosso da tutti. Questa azione non può essere annullata.',
+  },
+  'plan.delete.error': 'L’eliminazione non è riuscita',
+  'plan.delete.confirm': 'Elimina luogo',
+  'plan.delete.deleting': 'Eliminazione del luogo',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Aggiungi una nota',
   'plan.note.addForDay': 'Aggiungi una nota, {day}',

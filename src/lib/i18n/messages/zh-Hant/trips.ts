@@ -128,6 +128,23 @@ const messages = {
     '這個位置與它的時間互相矛盾。移到這裡會清除時間——新的順序和被清除的時間會一起儲存。',
   'plan.move.dropTime.confirm': '移動並清除時間',
   'plan.move.dropTime.cancel': '保持原位',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': '編輯地點',
+  'plan.stop.menu.setTime': '設定時間',
+  'plan.stop.menu.placeOnMap': '放到地圖上',
+  'plan.stop.menu.movePin': '移動標記',
+  'plan.stop.menu.moveToDay': '移到其他日期',
+  'plan.stop.menu.backToUnplanned': '移回未安排',
+  'plan.stop.menu.delete': '從行程中刪除',
+  'plan.delete.title': '刪除「{name}」？',
+  'plan.delete.bodyUnplanned': '它會從行程的地點中徹底移除。此操作無法復原。',
+  'plan.delete.bodyOnDays': {
+    other:
+      '它出現在這次行程的 {count} 天裡，並會從所有這些天中移除。此操作無法復原。',
+  },
+  'plan.delete.error': '未能刪除',
+  'plan.delete.confirm': '刪除地點',
+  'plan.delete.deleting': '正在刪除地點',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': '新增備註',
   'plan.note.addForDay': '新增備註——{day}',

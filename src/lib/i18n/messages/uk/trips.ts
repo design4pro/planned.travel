@@ -142,6 +142,27 @@ const messages = {
     'Це місце суперечить зазначеному часу. Перенесення сюди стирає час — новий порядок і стертий час зберігаються разом.',
   'plan.move.dropTime.confirm': 'Перемістити й прибрати час',
   'plan.move.dropTime.cancel': 'Залишити на місці',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Змінити місце',
+  'plan.stop.menu.setTime': 'Вказати час',
+  'plan.stop.menu.placeOnMap': 'Поставити на мапу',
+  'plan.stop.menu.movePin': 'Перемістити позначку',
+  'plan.stop.menu.moveToDay': 'Перемістити на інший день',
+  'plan.stop.menu.backToUnplanned': 'Повернути до незапланованих',
+  'plan.stop.menu.delete': 'Видалити з подорожі',
+  'plan.delete.title': 'Видалити «{name}»?',
+  'plan.delete.bodyUnplanned':
+    'Місце повністю зникне з місць подорожі. Цю дію не можна скасувати.',
+  'plan.delete.bodyOnDays': {
+    one: 'Місце є в {count} дні цієї подорожі й зникне з нього. Цю дію не можна скасувати.',
+    few: 'Місце є в {count} днях цієї подорожі й зникне з усіх. Цю дію не можна скасувати.',
+    many: 'Місце є в {count} днях цієї подорожі й зникне з усіх. Цю дію не можна скасувати.',
+    other:
+      'Місце є в {count} дня цієї подорожі й зникне з усіх. Цю дію не можна скасувати.',
+  },
+  'plan.delete.error': 'Не вдалося видалити',
+  'plan.delete.confirm': 'Видалити місце',
+  'plan.delete.deleting': 'Видаляємо місце',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Додати нотатку',
   'plan.note.addForDay': 'Додати нотатку, {day}',

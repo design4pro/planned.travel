@@ -140,6 +140,25 @@ const messages = {
     'Diese Position widerspricht der Zeit darauf. Ein Verschieben hierher löscht die Zeit — die neue Reihenfolge und die gelöschte Zeit werden zusammen gespeichert.',
   'plan.move.dropTime.confirm': 'Verschieben und Zeit entfernen',
   'plan.move.dropTime.cancel': 'So lassen',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Ort bearbeiten',
+  'plan.stop.menu.setTime': 'Uhrzeit festlegen',
+  'plan.stop.menu.placeOnMap': 'Auf der Karte platzieren',
+  'plan.stop.menu.movePin': 'Pin verschieben',
+  'plan.stop.menu.moveToDay': 'In einen anderen Tag verschieben',
+  'plan.stop.menu.backToUnplanned': 'Zurück zu ungeplant',
+  'plan.stop.menu.delete': 'Aus der Reise löschen',
+  'plan.delete.title': '{name} löschen?',
+  'plan.delete.bodyUnplanned':
+    'Der Ort verschwindet vollständig aus den Orten der Reise. Das lässt sich nicht rückgängig machen.',
+  'plan.delete.bodyOnDays': {
+    one: 'Der Ort steht an {count} Tag dieser Reise und verschwindet von diesem Tag. Das lässt sich nicht rückgängig machen.',
+    other:
+      'Der Ort steht an {count} Tagen dieser Reise und verschwindet von allen. Das lässt sich nicht rückgängig machen.',
+  },
+  'plan.delete.error': 'Das Löschen hat nicht geklappt',
+  'plan.delete.confirm': 'Ort löschen',
+  'plan.delete.deleting': 'Ort wird gelöscht',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Notiz hinzufügen',
   'plan.note.addForDay': 'Notiz hinzufügen: {day}',

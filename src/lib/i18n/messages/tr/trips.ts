@@ -135,6 +135,25 @@ const messages = {
     'Bu konum üzerindeki saatle çelişiyor. Buraya taşımak saati siler — yeni sıra ile silinen saat birlikte kaydedilir.',
   'plan.move.dropTime.confirm': 'Taşı ve saati kaldır',
   'plan.move.dropTime.cancel': 'Olduğu yerde kalsın',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Yeri düzenle',
+  'plan.stop.menu.setTime': 'Saat belirle',
+  'plan.stop.menu.placeOnMap': 'Haritaya yerleştir',
+  'plan.stop.menu.movePin': 'İğnesini taşı',
+  'plan.stop.menu.moveToDay': 'Başka bir güne taşı',
+  'plan.stop.menu.backToUnplanned': 'Planlanmamışlara geri al',
+  'plan.stop.menu.delete': 'Geziden sil',
+  'plan.delete.title': '{name} silinsin mi?',
+  'plan.delete.bodyUnplanned':
+    'Gezinin yerlerinden tamamen kalkar. Bu işlem geri alınamaz.',
+  'plan.delete.bodyOnDays': {
+    one: 'Bu gezinin {count} gününde yer alıyor ve o günden kalkar. Bu işlem geri alınamaz.',
+    other:
+      'Bu gezinin {count} gününde yer alıyor ve hepsinden kalkar. Bu işlem geri alınamaz.',
+  },
+  'plan.delete.error': 'Silinemedi',
+  'plan.delete.confirm': 'Yeri sil',
+  'plan.delete.deleting': 'Yer siliniyor',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Not ekle',
   'plan.note.addForDay': 'Not ekle: {day}',
