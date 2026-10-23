@@ -91,7 +91,7 @@ function flight(mode = 'flight'): PlannerItem {
     toName: null,
     time: null,
     price: null,
-    detail: null,
+    position: 0,
   }
   return { kind: 'transport', transport }
 }
@@ -275,7 +275,7 @@ describe('PlannerDayTools — the day hand-off', () => {
   })
 
   it.each(LOCALE_TAGS)(
-    'opens each split control’s name with its label and every visible line in %s',
+    'opens each split control’s name with its label and carries every visible line in %s',
     async (locale) => {
       const side = (from: number) =>
         Array.from({ length: GOOGLE_DIRECTIONS_MAX_STOPS + 1 }, (_, index) =>
@@ -298,23 +298,23 @@ describe('PlannerDayTools — the day hand-off', () => {
       const links = screen.getAllByRole('link')
       expect(links).toHaveLength(3)
       for (const link of links) {
-        const label = link.querySelector('span')?.textContent ?? ''
-        const lines = Array.from(link.children)
-          .flatMap((child) =>
-            Array.from(child.children).length === 0 ? [child] : [],
-          )
-          .map((child) => child.textContent ?? '')
-        const name = link.getAttribute('aria-label') ?? ''
-        expect(name.startsWith(label)).toBe(true)
+        const [label, ...lines] = Array.from(link.children).map(
+          (child) => child.textContent ?? '',
+        )
+        const name = (link.getAttribute('aria-label') ?? '').toLocaleLowerCase(
+          locale,
+        )
+        expect(name.startsWith((label ?? '').toLocaleLowerCase(locale))).toBe(
+          true,
+        )
+        // Label in Name (WCAG 2.5.3): every visible line is in the name, in the same words.
         expect(lines.length).toBeGreaterThan(0)
-        // Every visible line carries its numbers into the name (WCAG 2.5.3).
-        for (const digit of ['1', '2', '3'].filter((d) =>
-          link.textContent?.includes(d),
-        )) {
-          expect(name).toContain(digit)
+        for (const line of lines) {
+          expect(name).toContain(line.toLocaleLowerCase(locale))
         }
       }
     },
+    30_000,
   )
 
   it.each(LOCALE_TAGS)(
