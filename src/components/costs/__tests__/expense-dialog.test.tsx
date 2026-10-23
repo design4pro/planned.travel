@@ -851,6 +851,8 @@ describe('the expense dialog on a stored split that does not add up (#883)', () 
     const text = described?.map(
       (id) => document.getElementById(id)?.textContent,
     )
+    expect(text).not.toContain(undefined)
+    expect(text?.join(' ')).toContain('Changing the amount re-splits it')
     expect(text?.join(' ')).toContain(TITLE)
   })
 
