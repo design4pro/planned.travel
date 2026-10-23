@@ -180,6 +180,13 @@ const messages = {
   'plan.handoff.day.point': '{service}에서 보기',
   'plan.handoff.day.pointName':
     '{service}에서 보기: {day}에서 위치가 있는 유일한 방문지(새 탭에서 열림)',
+  'plan.handoff.day.part': '{count}개 중 {n}번째 부분',
+  'plan.handoff.day.directionsPartName':
+    '{service}에서 길찾기: {day}, {count}개 중 {n}번째 부분(새 탭에서 열림)',
+  'plan.handoff.day.directionsPartialPartName':
+    '{service}에서 길찾기: {day}, {count}개 중 {n}번째 부분, 방문지: 처음 {carried}곳 / 전체 {total}곳(새 탭에서 열림)',
+  'plan.handoff.day.pointPartName':
+    '{service}에서 보기: {day}에서 위치가 있는 유일한 방문지, {count}개 중 {n}번째 부분(새 탭에서 열림)',
   'plan.drop.hint':
     '지도를 마우스 오른쪽 버튼으로 클릭하거나 길게 누르면 바로 그 위치에 장소가 추가됩니다.',
   'plan.drop.armed':

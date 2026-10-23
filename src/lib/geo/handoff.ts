@@ -21,6 +21,7 @@
 
 import { formatCoordinate } from './position'
 
+import type { TransportMode } from '#/components/modules/transports/vocabulary'
 import type { GeoPosition } from './position'
 
 export type MapService = 'google' | 'openstreetmap'
@@ -138,4 +139,58 @@ export function dayHandoff(
     carried: carried.length,
     total: placed.length,
   }
+}
+
+/**
+ * The Transport modes that split a day: a flight, a ferry or a train leaves the area one
+ * map link can serve, so the stops either side of it are not routed together. A local mode
+ * (a bus, a taxi, a walk) stays within it, and `other` says nothing about distance.
+ *
+ * Typed from the Transport mode vocabulary, so a mode renamed there is a compile error
+ * here. The decision is by mode alone: names and times are free text and nothing is
+ * computed from coordinates (ADR 0019).
+ */
+export const JOURNEY_SPLIT_MODES: ReadonlyArray<TransportMode> = [
+  'flight',
+  'ferry',
+  'train',
+]
+
+/**
+ * What a day's displayed sequence holds, as far as the hand-off reads it. `PlannerItem`
+ * satisfies it structurally, so the planner passes `day.items` as it is. `mode` is a plain
+ * string because the column's `CHECK` was added after rows existed.
+ */
+export type DayHandoffItem =
+  | { readonly kind: 'stop'; readonly row: HandoffStop }
+  | {
+      readonly kind: 'transport'
+      readonly transport: { readonly mode: string }
+    }
+  | { readonly kind: 'note' }
+
+function splitsDay(item: DayHandoffItem): boolean {
+  if (item.kind !== 'transport') return false
+  return (JOURNEY_SPLIT_MODES as ReadonlyArray<string>).includes(
+    item.transport.mode,
+  )
+}
+
+/**
+ * The links a day offers: its displayed sequence cut at every {@link JOURNEY_SPLIT_MODES}
+ * Transport, each stretch handled by {@link dayHandoff}. A day no journey splits gives the
+ * one link it always gave; a stretch with no placed stop gives none, so a journey first or
+ * last in the day, or next to another, cuts nothing visible. The cut is by position in the
+ * sequence the reader sees, never by a part, a time or a coordinate.
+ */
+export function dayHandoffs(
+  items: ReadonlyArray<DayHandoffItem>,
+): ReadonlyArray<DayHandoff> {
+  const stretches: Array<Array<HandoffStop>> = [[]]
+  for (const item of items) {
+    if (splitsDay(item)) stretches.push([])
+    else if (item.kind === 'stop')
+      stretches[stretches.length - 1]?.push(item.row)
+  }
+  return stretches.flatMap((stops) => dayHandoff(stops) ?? [])
 }

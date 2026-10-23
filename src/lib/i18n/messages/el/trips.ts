@@ -187,6 +187,13 @@ const messages = {
   'plan.handoff.day.point': 'Εμφάνιση στο {service}',
   'plan.handoff.day.pointName':
     'Εμφάνιση στο {service}: η μοναδική στάση με θέση στον χάρτη, {day} (ανοίγει σε νέα καρτέλα)',
+  'plan.handoff.day.part': 'Μέρος {n} από {count}',
+  'plan.handoff.day.directionsPartName':
+    'Οδηγίες στο {service}: {day}, μέρος {n} από {count} (ανοίγει σε νέα καρτέλα)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Οδηγίες στο {service}: {day}, μέρος {n} από {count}, στάσεις: οι πρώτες {carried} από {total} (ανοίγει σε νέα καρτέλα)',
+  'plan.handoff.day.pointPartName':
+    'Εμφάνιση στο {service}: η μοναδική στάση με θέση στον χάρτη, {day}, μέρος {n} από {count} (ανοίγει σε νέα καρτέλα)',
   'plan.drop.hint':
     'Κάντε δεξί κλικ στον χάρτη ή πατήστε παρατεταμένα για να προσθέσετε μια τοποθεσία ακριβώς εκεί.',
   'plan.drop.armed':

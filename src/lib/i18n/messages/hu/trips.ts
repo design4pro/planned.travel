@@ -185,6 +185,13 @@ const messages = {
   'plan.handoff.day.point': 'Megjelenítés itt: {service}',
   'plan.handoff.day.pointName':
     'Megjelenítés itt: {service}, {day} egyetlen térképen szereplő megállója (új lapon nyílik meg)',
+  'plan.handoff.day.part': '{n}. rész, összesen {count}',
+  'plan.handoff.day.directionsPartName':
+    'Útvonal itt: {service}, {day}, {n}. rész, összesen {count} (új lapon nyílik meg)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Útvonal itt: {service}, {day}, {n}. rész, összesen {count}, megállók: első {carried}, összesen {total} (új lapon nyílik meg)',
+  'plan.handoff.day.pointPartName':
+    'Megjelenítés itt: {service}, {day} egyetlen térképen szereplő megállója, {n}. rész, összesen {count} (új lapon nyílik meg)',
   'plan.drop.hint':
     'Kattints jobb gombbal a térképre, vagy tartsd rajta az ujjad, hogy pontosan oda adj hozzá egy helyet.',
   'plan.drop.armed':

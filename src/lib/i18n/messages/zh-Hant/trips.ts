@@ -171,6 +171,13 @@ const messages = {
   'plan.handoff.day.point': '在{service}中查看',
   'plan.handoff.day.pointName':
     '在{service}中查看：{day}中唯一有位置的停留點（在新分頁中開啟）',
+  'plan.handoff.day.part': '第 {n} 部分，共 {count} 部分',
+  'plan.handoff.day.directionsPartName':
+    '在{service}中查看路線：{day}，第 {n} 部分，共 {count} 部分（在新分頁中開啟）',
+  'plan.handoff.day.directionsPartialPartName':
+    '在{service}中查看路線：{day}，第 {n} 部分，共 {count} 部分，停留點：前 {carried} 個，共 {total} 個（在新分頁中開啟）',
+  'plan.handoff.day.pointPartName':
+    '在{service}中查看：{day}中唯一有位置的停留點，第 {n} 部分，共 {count} 部分（在新分頁中開啟）',
   'plan.drop.hint': '在地圖上按右鍵或長按，即可在該處新增地點。',
   'plan.drop.armed':
     '在地圖上點選它所在的位置，或移動地圖後按 Enter 鍵，將其放在中央。',

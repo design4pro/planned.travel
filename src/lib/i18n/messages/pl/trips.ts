@@ -190,6 +190,13 @@ const messages = {
   'plan.handoff.day.point': 'Pokaż w {service}',
   'plan.handoff.day.pointName':
     'Pokaż w {service}: jedyny przystanek z pinezką na mapie, {day} (otwiera się w nowej karcie)',
+  'plan.handoff.day.part': 'Część {n} z {count}',
+  'plan.handoff.day.directionsPartName':
+    'Trasa w {service}: {day}, część {n} z {count} (otwiera się w nowej karcie)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Trasa w {service}: {day}, część {n} z {count}, przystanki: pierwsze {carried} z {total} (otwiera się w nowej karcie)',
+  'plan.handoff.day.pointPartName':
+    'Pokaż w {service}: jedyny przystanek z pinezką na mapie, {day}, część {n} z {count} (otwiera się w nowej karcie)',
   'plan.drop.hint':
     'Kliknij mapę prawym przyciskiem albo przytrzymaj na niej palec, aby dodać miejsce dokładnie tam.',
   'plan.drop.armed':
