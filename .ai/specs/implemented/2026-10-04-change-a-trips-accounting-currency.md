@@ -5,7 +5,7 @@
 | **Status**         | implemented                                    |
 | **Issue**          | none                                           |
 | **Spec PR**        | #828                                           |
-| **Implementation** | #896, #1221, #1241, #1251, #1267, #1523        |
+| **Implementation** | #896, #1221, #1241, #1251, #1267, #1523, #1525 |
 | **Plan**           | 04-S5 (docs/plans/04-budget-and-currencies.md) |
 
 ## 📝 TLDR
@@ -98,9 +98,10 @@ Phases 2 to 5 are an ordered chain behind the `04-S1` ticket. Phase 1 is not.
 
 ### The rules (what each prevents)
 
-1. **Pin before you move.** A row that inherited the trip's currency gets its source triple filled
-   from itself (`original_amount_minor = amount_minor`, `original_currency = old`,
-   `exchange_rate = 1`) in the same statement that converts it. Otherwise the typed figure is lost.
+1. **Pin before you move.** A row that inherited the trip's currency, or whose triple is not
+   trustworthy (rule 4), gets its source triple filled from itself (`original_amount_minor =
+amount_minor`, `original_currency = old`, `exchange_rate = 1`) in the same statement that
+   converts it. Otherwise the typed figure is lost.
 2. **Amount and code move together.** One `UPDATE` per row writes `amount_minor` (or
    `planned_amount_minor`), `currency` and the source triple at once. A row is never left with the
    new amount and the old code.
@@ -109,13 +110,28 @@ Phases 2 to 5 are an ordered chain behind the `04-S1` ticket. Phase 1 is not.
 4. **Converting a row.** Let the row's source be `(orig, origCur, r)`, pinned as above for an
    inherited row (`r = 1`). If `origCur === new`: `amount = orig`, `rate = 1` (the traveller's figure
    is the truth; no rounding drift). Otherwise `amount = convertMinor(orig, r × k, origCur, new)` and
-   `exchange_rate = r × k`. A source amount of zero converts to zero and keeps its stored rate.
+   `exchange_rate = r × k`. A source amount of zero converts like any other: to zero, at
+   `exchange_rate = r × k`, so the written rate is always the real rate of the row's source currency
+   to its new one (never the rate of the old pair carried over, never a constant 1). Which source a
+   row has is decided by what its columns say:
+   - **A whole, coherent triple** (all three set, rate finite and above zero, and `convertMinor(orig,
+r, origCur, currency)` within one minor unit of the row's current `amount_minor`) is the source.
+   - **A triple that no longer agrees with the amount** (a booking repriced after a typed
+     conversion, an earlier edit that left the triple behind) is stale and is not trusted: the row is
+     re-based from its current amount as an inherited row (rule 1).
+   - **A typed figure with no usable rate** (`original_amount_minor` and `original_currency` set,
+     `exchange_rate` null, or not finite and above zero; how a zero converted amount is stored) keeps
+     both, converts **its own amount** at `k`, and is written with `exchange_rate = NULL`: the typed
+     figure never drives the amount, and a row with no rate stays out of the rate pool. Any other
+     partial shape carries nothing worth keeping and is pinned from the amount.
 5. **Rows already in another currency.** An expense, settlement **or budget item** whose `currency`
    is neither `old` nor `new` (a booking priced in yen synced into the ledger without a source
    triple, `fns/reservations.ts:309-337`; a planned item typed in any currency, since
    `createBudgetItemInput` takes a free `currency`) has no rate to `new` that `k` supplies. The
-   re-basing is **refused** with the count, never guessed. A row whose `currency === new` is kept as
-   typed (`orig = amount`, `rate = 1`).
+   re-basing is **refused** with the count, never guessed. A row whose `currency === new` is kept
+   as typed: its amount stays, a coherent triple (rule 4) is kept whole, a typed figure with no rate
+   is kept with a null rate, and a row with nothing worth keeping is filled `orig = amount`,
+   `rate = 1`. A typed foreign figure is therefore never replaced by the row's own amount.
 6. **Shares are recomputed through the one splitter.** For every expense with share rows, new shares
    come from `computeShares` (`src/server/repos/expenses.ts`), imported, not copied. The input it
    takes depends on the method: `equal` takes no weight; `shares` takes each participant's stored
@@ -565,11 +581,13 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | Same currency as now                                                   | Refused by the input refinement; the select omits it.                                                                                                                    |
 | No rate on record and none typed                                       | Preview `refusal: 'no-rate'`; nothing is invented; confirm disabled.                                                                                                     |
 | Rate outside `[1e-7, 1e7]` or a converted amount not a safe integer    | Refused, nothing written.                                                                                                                                                |
-| Row in a third currency, no triple (booking sync, planned item)        | Refused with the count (rule 5); a row already in `new` is kept as typed.                                                                                                |
+| Row in a third currency, no triple (booking sync, planned item)        | Refused with the count (rule 5); a row already in `new` keeps its amount and its coherent triple.                                                                        |
 | Foreign receipt whose `original_currency` is the new base              | `amount = orig`, `rate = 1`; the typed figure is exact.                                                                                                                  |
 | `exact` split                                                          | Shares distributed over the new amount in proportion to old `share_minor` (rule 6).                                                                                      |
 | `percentage` split                                                     | The stored weight is passed as `percentage`; no `SPLIT_MISMATCH`.                                                                                                        |
-| Zero amount                                                            | Zero amount, zero shares; stored rate unchanged.                                                                                                                         |
+| Zero amount                                                            | Zero amount, zero shares; the rate is `r × k` like any other row (rule 4), never the stored rate of the old pair and never 1.                                            |
+| Typed figure with no rate (zero converted amount, partial triple)      | Typed amount and currency kept, own amount converted at `k`, `exchange_rate` NULL (rule 4).                                                                              |
+| Triple that disagrees with the amount by more than one minor unit      | Not trusted; the row is re-based from its current amount as an inherited row (rule 4).                                                                                   |
 | Trip with nothing priced, edited from the sheet                        | Currency changes in the same save; no rate, no conversion.                                                                                                               |
 | Trip gained a priced row between the page and the save                 | The single-statement guard fails; nothing in the save is applied; the owner sees the Phase 1 refusal.                                                                    |
 | Trip with priced rows, edited from the sheet                           | Whole save refused with `shell.editTrip.currencyLocked`; nothing applied.                                                                                                |
@@ -848,3 +866,40 @@ pinned and converted triples but left the two per-row writers that change a figu
 one (`repriceExpense`, `updateBudgetItem`) free to outlive them. The commit's optimistic guards
 (`sameValue` on the three triple columns, `movedSinceReadSql`) are unchanged, so a triple cleared
 between preview and commit still fails the batch and the dialog re-previews.
+
+## Amendment - how a re-basing reads stale, partial and zero source triples (#1224)
+
+Issue #1224 settled four cases the rules left open, in `planRebase` (`src/server/repos/trip-currency.ts`)
+and in rules 1, 4 and 5 above, which now state them in place:
+
+- **A row already in the new currency keeps its typed figure.** A coherent triple on it is kept
+  whole (a 100.00 GBP typed on a JPY expense stays 100.00 GBP at its rate); only a row with nothing
+  worth keeping is filled `orig = amount`, `rate = 1`. Resolved assumption 5 and the edge-case row
+  "Foreign receipt whose `original_currency` is the new base" are unchanged.
+- **A typed figure with no rate is kept, not pinned over.** It converts its own amount at `k` and is
+  written with a NULL rate. `RebasedMoney.exchangeRate` is `number | null` for this case only.
+  Refusing a partial triple was rejected: the normal form keeps creating them (a zero converted
+  amount stores no rate), so a refusal could trap an owner.
+- **A stale triple is not trusted.** A triple counts only when converting its typed figure at its
+  rate into the row's currency lands within one minor unit of the row's current amount; otherwise the
+  row is re-based from its current amount as an inherited row. A row an expense edit wrote and a row
+  an earlier re-basing wrote are both coherent, so acceptance criterion 4 (JPY to EUR to JPY) holds.
+  Acceptance criterion 2 reads accordingly: a row's amount equals the conversion of its own coherent
+  source triple, or of its own amount where it has none or only a rate-less typed figure.
+- **A zero amount no longer special-cases the rate.** It converts to zero at `r × k`, so no row
+  leaves the old currency with a rate that is not a conversion of its own pair, and a second
+  re-basing in a row stays correct. The planner no longer writes a constant 1 or an old pair's rate
+  that the frozen-rate pool (`rates.ts`) would read as an observation of the new pair, and it does
+  not trust the constant 1 an earlier zero-amount re-basing left on a zero source across two
+  currencies: such a row is pinned from its amount and gets the real rate of its pair.
+
+- **The preview's example is a row the rate converted.** A foreign figure kept on a row already in
+  the new currency and a rate-less typed figure are not shown beside the confirmed rate; only a
+  figure typed in the new currency is shown when no row moves.
+
+Not decided here, and tracked as #1521: who clears a triple when an amount is edited (booking
+re-price, planned-item update), so the writers stop producing stale rows. Rows already stale in
+production are not migrated: the planner guard covers a stale triple at the next re-basing without a
+backfill, but zero-source rows an earlier re-basing wrote with a carried-over rate (other than the
+constant 1 above) still sit in the frozen-rate pool until their trip is re-based again, and
+`frozenRatePredicates` still reads them. Tracked as #1526.
