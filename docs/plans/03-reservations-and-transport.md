@@ -2123,12 +2123,12 @@ not an owned path.
 
 Appended as one `describe` block. Covered: `listTripDayTransports`, and the journey placement inside `reorderDayTimelines`, `scheduleAssignment`, `unscheduleAssignment` and `deletePlaceWithJourneys`.
 
-The cases: A cannot list B's day transports by trip id; A cannot reorder a day belonging to B's trip,
-which is a `NotFoundError` from `requireTripDay` and not an empty success; and A passing B's transport
-ids or B's leg ids inside a reorder of A's **own** day must move nothing at all — the ids are
-dropped as unknown, and B's `sort_order` values on both tables are re-read afterwards and must be
-identical. That last case is the one this stage genuinely adds, because a reorder is the one write
-shaped like a bulk update over ids the client chose.
+The cases: A cannot list B's day transports by trip id; A cannot schedule onto a day, place or stop
+belonging to B's trip, which is a `NotFoundError` and not an empty success; and A passing B's transport
+ids or B's leg ids inside the run of a schedule of A's **own** day must move nothing at all — the ids
+are dropped as unknown, and B's `sort_order` values on both tables are re-read afterwards and must be
+identical. That last case is the one this stage genuinely adds, because a run is the one input shaped
+like a bulk update over ids the client chose.
 
 ### Verification
 

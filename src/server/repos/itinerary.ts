@@ -193,7 +193,7 @@ export interface WrittenDayTimeline {
  * the write leaves them, so a client can never inject a position of its own choosing. Bounded
  * as a reorder's day is.
  */
-const dayRunInput = z
+export const dayRunInput = z
   .array(dayRunItemInput)
   .max(DAY_RUN_MAX_ITEMS)
   .refine(withinAnchorBound, { error: DAY_RUN_ANCHORS_MESSAGE })
@@ -599,13 +599,6 @@ export async function reorderAssignments(
     scope,
     applicable.map((move) => move.assignmentId),
   )
-}
-
-export async function deleteAssignment(
-  scope: TenantScope,
-  assignmentId: string,
-): Promise<void> {
-  await dayAssignmentsRepository.requireRemove(scope, assignmentId)
 }
 
 /* -------------------------------------------------------------------------------------------------

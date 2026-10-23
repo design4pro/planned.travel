@@ -32,6 +32,7 @@ import {
   canWritePlan,
   createAssignment,
   createPlace,
+  dayRunInput,
   dayRunItemInput,
   deletePlaceWithJourneys,
   getPlace,
@@ -584,11 +585,7 @@ export const schedulePlaceInputSchema = z.object({
   placeId: id,
   dayId: id,
   index: z.number().int().min(0).max(500),
-  items: z
-    .array(dayRunItemInput)
-    .max(DAY_RUN_MAX_ITEMS)
-    .refine(withinAnchorBound, { error: DAY_RUN_ANCHORS_MESSAGE })
-    .optional(),
+  items: dayRunInput.optional(),
 })
 
 /**
