@@ -1807,6 +1807,66 @@ pnpm exec wrangler secret put POLAR_WEBHOOK_SECRET        # rotate in the dashbo
 pnpm exec wrangler r2 object get planned-travel-files/backups/LATEST_KEY --file ./restore.sql --remote
 ```
 
+### 13.1 The `here` ceiling for connection search
+
+This section is about **connection search**, the public-transit lookup bought from HERE (ADR 0011,
+`HERE_API_KEY` in §6). It says nothing about road routing (ADR 0019), which is a different call
+site: do not read a promise about routing into it. If road routing is ever built on the `here`
+slug, the ceiling below would count and refuse it too, and this section needs a second look.
+
+Two layers decide whether a search reaches HERE, and an operator sets only one of them.
+
+| Layer                            | Who sets it                                                                     | What it counts                                                                       | When it refuses                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Per-workspace plan allowance     | The plan, in code (`PLAN_RATE_CEILINGS`); changing a figure is a pricing change | One unit per search that misses the cache, per workspace, per month                  | That workspace has spent its allowance: **Free 0, Solo 250, Crew 1,000** searches a month |
+| Deployment-wide provider ceiling | The operator, at `/console/providers` (`provider:configure`), no deploy needed  | Every connection-search call to HERE from every workspace, in the `here` ledger rows | Only under the `block` policy, and only once the ceiling is spent                         |
+
+The plan allowance is always on. A Free workspace, and any workspace without an entitling
+subscription, has an allowance of zero and is refused before the cache is read, so it never
+reaches HERE at all. A workspace on a paid plan can spend at most its own allowance, whatever the
+provider ceiling says. **The provider ceiling is therefore not the only thing between a workspace
+and the HERE bill**, and an operator who leaves it unset still has the per-workspace bound; what
+it does not have is a bound on the sum, which is the number HERE invoices.
+
+The provider ceiling is a row in `provider_registry` for the `here` slug: a number of calls, a
+window (a calendar month or a day, in UTC) and a policy for what happens once the window's calls
+reach the number. With no row, or a row with no number, nothing is ever refused. The console edits
+it as **Calls included**, **Measured over** and **At the ceiling**, plus the two percentages
+(**Warn at (%)**, **Alarm at (%)**, 70 and 90 until changed). A change takes effect on each Worker isolate within about a minute
+(the row is read at most once a minute per isolate; the count never is).
+
+**The choice, as two options.** Which one to run in production is the operator's cost choice. The
+repository does not make it and neither does this text.
+
+| Option                                                                | What happens at the ceiling                                                                                                                                                                             | What it costs you                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`block`** ("Refuse further calls")                                  | Once the window's calls have reached the number, every further search is refused **for every workspace at once**, because the gate sums every workspace's calls. It resumes when the window rolls over. | A hard cap on the HERE bill, paid for with the feature: workspaces inside their own allowance cannot search either, and the search fails as it would if HERE were unreachable. A refused call spends no workspace unit and is counted as blocked demand. |
+| **`allow`** ("Keep calling, and pay") with warn and alarm percentages | Nothing is refused. Calls carry on past the number and **HERE bills them under your agreement**.                                                                                                        | Nothing stops, so nothing protects the bill but the plan allowances. Crossing a percentage only turns the meter amber or red on the console providers page; **nobody is emailed or paged**, so an operator has to look.                                  |
+
+Two facts that apply to both options. The gate reads the count live, so `block` lets in the calls
+that were already in flight when the number was reached. And the gate fails open: if the usage read
+itself fails, the call goes through and the Worker logs `provider gate unavailable; allowing the
+call`, so a `block` is a strong cap and not an absolute one. If you pick `allow`, check
+`/console/providers` on a rhythm that suits your bill, and see the 90 % and blocked-count items in
+`docs/ARCHITECTURE.md` §9 ("Numbers worth alerting on") for what else to watch.
+
+**The ledger counts `here` from the deploy that adopted it.** Until that release `provider_usage` had no rows for
+`here`; it starts at zero and counts in UTC calendar months (or UTC days,
+if the window is a day), from the first call after that deploy. HERE counts on its own side from
+its own start date, and the repository does not know when that billing cycle begins: **check it
+in your HERE account** rather than assuming it is the first of the month. The consequence for a
+limit set in the first month is that the ledger has seen fewer calls than HERE has, so a `block`
+number set against HERE's figure triggers late, by up to the calls made before the deploy. Either
+subtract what HERE reports as already used this period from the number you enter in that first
+month, or accept the margin and tighten it once the ledger has seen a full window of its own.
+
+⚠️ A `block` ceiling of **zero** turns every search away. Leave **Calls included** empty for "no
+ceiling"; empty and zero are different settings.
+
+The decision itself is recorded in the audit trail as `provider.policy_changed` (and
+`provider.limit_changed` for the number or the window), `docs/ACCESS.md` §4.2. ADR 0011 records
+why the plan allowance exists and why a noisy workspace must not become everyone's cost.
+
 ---
 
 ## 14. Platform roles and MCP tokens

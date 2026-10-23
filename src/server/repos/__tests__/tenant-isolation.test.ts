@@ -148,12 +148,15 @@ import {
   dayAccommodationsRepository,
   dayAssignmentsRepository,
   deleteAccommodation,
+  deletePlaceWithJourneys,
   getTripItinerary,
   listDayAssignments,
   listTripAccommodations,
   readDayLocations,
   reorderDayTimelines,
+  scheduleAssignment,
   setAssignmentParticipants,
+  unscheduleAssignment,
   updateAccommodation,
 } from '../itinerary'
 import {
@@ -215,7 +218,12 @@ import {
   notifyMany,
   setPreference,
 } from '../notifications'
-import { createPlace, placesRepository, setPlaceTags } from '../places'
+import {
+  createPlace,
+  getPlace,
+  placesRepository,
+  setPlaceTags,
+} from '../places'
 import {
   clearReservationImported,
   createReservation,
@@ -252,7 +260,6 @@ import {
   listTripLegs,
   listTripTransports,
   nextDeparture,
-  reorderDayTransports,
   replaceTransportChain,
   requireTransportOfTrip,
   saveSearchedConnection,
@@ -5732,14 +5739,13 @@ describe('tenant isolation', () => {
   })
 
   /**
-   * `03-S5`: the board's read of a trip's journeys, and the reorder that places them.
+   * `03-S5`: the board's read of a trip's journeys, and the writes that place them.
    *
-   * The read is ordinary and is asserted for completeness. The **reorder** is the case this block
-   * genuinely adds, because it is the one write in this file shaped like a bulk update over ids the
-   * client chose: it takes a whole day's run and writes `sort_order` on two tables from it. A
-   * forged id must therefore be *dropped*, not merely refused at the end — and the only honest
-   * proof of that is B's stored values, re-read on both tables afterwards and byte-for-byte
-   * identical.
+   * The read is ordinary and is asserted for completeness. The **writes** are the case this block
+   * genuinely adds: schedule, unschedule and delete (#816) each write `sort_order` on two tables
+   * from a run the client chose, so a forged id must be *dropped*, not merely refused at the end —
+   * and the only honest proof of that is B's stored values, re-read on both tables afterwards and
+   * byte-for-byte identical.
    */
   describe('a day’s journeys and the run that places them', () => {
     /** Every `sort_order` B holds, on both tables, keyed by row id. */
@@ -5775,55 +5781,104 @@ describe('tenant isolation', () => {
       expect(own.legs).toHaveLength(1)
     })
 
-    it('refuses to reorder a day of B’s trip, named with B’s trip or with A’s own', async () => {
+    it('refuses to schedule onto a day of B’s trip, named with B’s trip or with A’s own', async () => {
       const scope = alpha.tenant.scope
 
       expect(
         await captureError(() =>
-          reorderDayTransports(scope, {
+          scheduleAssignment(scope, {
             tripId: beta.tripId,
             dayId: beta.dayId,
-            items: [{ kind: 'transport', id: beta.transportId }],
+            placeId: beta.placeId,
+            orderIndex: 0,
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
 
-      // A's own trip with B's day: the tenant filter alone lets this one through,
+      // A's own trip with B's day and B's place: the tenant filter alone lets the day through,
       // because every row it would write is A's. `requireTripDay` is what refuses it.
       expect(
         await captureError(() =>
-          reorderDayTransports(scope, {
+          scheduleAssignment(scope, {
             tripId: alpha.tripId,
             dayId: beta.dayId,
-            items: [{ kind: 'transport', id: beta.transportId }],
+            placeId: alpha.placeId,
+            orderIndex: 0,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
+      expect(
+        await captureError(() =>
+          scheduleAssignment(scope, {
+            tripId: alpha.tripId,
+            dayId: alpha.lastDayId,
+            placeId: beta.placeId,
+            orderIndex: 0,
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
     })
 
-    it('drops B’s transport and leg ids inside a reorder of A’s own day', async () => {
+    it('refuses to unschedule B’s stop and to delete B’s place, named with B’s trip or with A’s own', async () => {
+      const scope = alpha.tenant.scope
+      const before = await positionsOf(beta)
+
+      for (const tripId of [beta.tripId, alpha.tripId]) {
+        expect(
+          await captureError(() =>
+            unscheduleAssignment(scope, {
+              tripId,
+              assignmentId: beta.assignmentId,
+            }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+        expect(
+          await captureError(() =>
+            deletePlaceWithJourneys(scope, { tripId, placeId: beta.placeId }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+      }
+
+      // B still holds the stop, the place and every position it held.
+      expect(
+        await listDayAssignments(beta.tenant.scope, beta.dayId),
+      ).toHaveLength(1)
+      expect(await getPlace(beta.tenant.scope, beta.placeId)).not.toBeNull()
+      expect(await positionsOf(beta)).toEqual(before)
+    })
+
+    it('drops B’s transport and leg ids inside a schedule onto A’s own day', async () => {
       const before = await positionsOf(beta)
       const betaLegs = await listTripLegs(beta.tenant.scope, beta.tripId)
+      const place = await createPlace(alpha.tenant.scope, {
+        tripId: alpha.tripId,
+        name: 'A second stop',
+      })
 
-      await reorderDayTransports(alpha.tenant.scope, {
+      const scheduled = await scheduleAssignment(alpha.tenant.scope, {
         tripId: alpha.tripId,
         dayId: alpha.dayId,
+        placeId: place.id,
+        orderIndex: 1000,
         items: [
           { kind: 'stop', id: alpha.assignmentId },
           { kind: 'transport', id: beta.transportId },
           { kind: 'leg', id: betaLegs[0].id },
           { kind: 'note', id: beta.dayNoteId },
+          { kind: 'stop', id: beta.assignmentId },
+          { kind: 'stop', id: place.id },
         ],
       })
 
       // Not one number of B's moved — on either table.
       expect(await positionsOf(beta)).toEqual(before)
-      // A's own journey was placed, so the call did do its work rather than failing silently.
-      const alphaRecords = await listTripTransports(
-        alpha.tenant.scope,
-        alpha.tripId,
-      )
-      expect(alphaRecords[0].sortOrder).toBe(0.5)
+      // A's own journey was placed, and the room hears only A's rows.
+      expect(scheduled.days).toEqual([
+        {
+          dayId: alpha.dayId,
+          journeys: [{ kind: 'transport', id: alpha.transportId }],
+        },
+      ])
     })
   })
 

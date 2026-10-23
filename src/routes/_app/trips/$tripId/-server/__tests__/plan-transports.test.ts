@@ -1,14 +1,16 @@
 /**
- * The planner's journey read and the writer that places one on a day.
+ * The planner's journey read, and the writes that place a day's journeys with the stop they change.
  *
- * Three claims, and each is a way this module could fail quietly:
+ * Four claims, and each is a way this module could fail quietly:
  *
  * 1. **The read draws every journey exactly once.** A record whose legs carry the day references
  *    contributes its legs and no spanning row; a record with no day at all is not on the board.
- * 2. **The validator counts stops and notes by `reorderPlanFn`'s rule**, so a day the primary write
- *    accepts is never refused for its journeys, and a run past either bound is refused whole.
- * 3. **The write mirrors one `day` upsert to the trip room**, under its own field, and a room that
+ * 2. **A schedule's validator counts stops and notes by `reorderPlanFn`'s rule**, so a day the
+ *    primary write accepts is never refused for its journeys, and a run past either bound is
+ *    refused whole.
+ * 3. **Each write mirrors one `day` upsert to the trip room**, under its own field, and a room that
  *    refuses does not fail the save — D1 is the record and the room is a signal.
+ * 4. **A write reads only the day it places**, not the trip's whole set of journeys.
  *
  * The three `createServerFn` properties the wrappers below work around are the framework's and are
  * recorded in full in `plan-reorder.test.ts`: a handler only runs inside Start's
@@ -24,6 +26,7 @@ import {
   createPlace,
   createTransport,
   createTrip,
+  listDayAssignments,
   listTripDays,
   replaceTransportChain,
   saveSearchedConnection,
@@ -63,6 +66,10 @@ vi.mock('#/server/fns/context', () => ({
     id: string,
     fields: TripPatch['fields'],
   ): TripPatch => ({ entity: { kind, id }, op: 'upsert', fields }),
+}))
+
+vi.mock('#/server/auth/env', () => ({
+  taskQueue: () => ({ sendBatch: async (): Promise<void> => undefined }),
 }))
 
 vi.mock('../../../../-server/context', async () => {
@@ -105,14 +112,21 @@ function startContext(): StartContext {
 
 const { readPlanTransports, reorderDayTransportsFn } =
   await import('../plan-transports')
-const { reorderDayTransportsInput } = await import('#/server/repos')
+const {
+  deletePlanPlaceFn,
+  schedulePlaceFn,
+  schedulePlaceInputSchema,
+  unschedulePlaceFn,
+} = await import('../plan')
 
-/** The boundary validator, then the handler, inside a request context. */
-const reorderJourneys = async (data: unknown): Promise<void> => {
-  const validated = reorderDayTransportsInput.parse(data)
-  await startStorage.run(startContext(), () =>
-    reorderDayTransportsFn({ data: validated }),
-  )
+/** A handler inside a request context, as the runtime runs it. */
+const inRequest = <T>(run: () => Promise<T>): Promise<T> =>
+  startStorage.run(startContext(), run)
+
+/** The boundary validator, then the handler. */
+const schedule = async (data: unknown): Promise<void> => {
+  const validated = schedulePlaceInputSchema.parse(data)
+  await inRequest(() => schedulePlaceFn({ data: validated }))
 }
 
 /* -------------------------------------------------------------------- setup */
@@ -271,12 +285,14 @@ describe('the journeys a day can draw', () => {
   })
 })
 
-describe('the run the writer accepts', () => {
-  /** A run of `anchors` stops and notes plus `journeys` journeys, all well-formed. */
+describe('the run a schedule accepts', () => {
+  /** A schedule carrying `anchors` stops and notes plus `journeys` journeys, all well-formed. */
   function runOf(anchors: number, journeys: number): unknown {
     return {
       tripId: fixture.tripId,
+      placeId: 'place-1',
       dayId: fixture.dayId,
+      index: 0,
       items: [
         ...Array.from({ length: anchors }, (_unused, index) => ({
           kind: index % 2 === 0 ? 'stop' : 'note',
@@ -291,48 +307,57 @@ describe('the run the writer accepts', () => {
   }
 
   it('accepts 200 stops and notes beside journeys of their own', () => {
-    expect(reorderDayTransportsInput.safeParse(runOf(200, 150)).success).toBe(
+    expect(schedulePlaceInputSchema.safeParse(runOf(200, 150)).success).toBe(
       true,
     )
   })
 
   it('refuses a 201st stop or note, and a run past the whole cap', () => {
-    expect(reorderDayTransportsInput.safeParse(runOf(201, 0)).success).toBe(
+    expect(schedulePlaceInputSchema.safeParse(runOf(201, 0)).success).toBe(
       false,
     )
-    expect(reorderDayTransportsInput.safeParse(runOf(200, 201)).success).toBe(
+    expect(schedulePlaceInputSchema.safeParse(runOf(200, 201)).success).toBe(
       false,
     )
   })
 
   it('refuses a kind the day’s number line does not hold', () => {
     expect(
-      reorderDayTransportsInput.safeParse({
+      schedulePlaceInputSchema.safeParse({
         tripId: fixture.tripId,
+        placeId: 'place-1',
         dayId: fixture.dayId,
+        index: 0,
         items: [{ kind: 'stay', id: 'anything' }],
       }).success,
     ).toBe(false)
   })
+
+  it('still accepts the schedule a tab loaded before the run existed sends', () => {
+    expect(
+      schedulePlaceInputSchema.safeParse({
+        tripId: fixture.tripId,
+        placeId: 'place-1',
+        dayId: fixture.dayId,
+        index: 0,
+      }).success,
+    ).toBe(true)
+  })
 })
 
-describe('placing a journey on the day', () => {
-  it('writes the position and mirrors one day upsert carrying the journeys', async () => {
-    await reorderJourneys({
-      tripId: fixture.tripId,
-      dayId: fixture.dayId,
-      items: [
-        { kind: 'stop', id: fixture.assignmentId },
-        { kind: 'transport', id: fixture.flightId },
-        { kind: 'note', id: fixture.noteId },
-      ],
-    })
-
+describe('placing the day’s journeys with the stop that changes', () => {
+  async function flightPosition(): Promise<number | undefined> {
     const payload = await readPlanTransports(tenant.scope, fixture.tripId)
-    expect(
-      payload.transports.find((row) => row.id === fixture.flightId)?.position,
-    ).toBe(0.5)
+    return payload.transports.find((row) => row.id === fixture.flightId)
+      ?.position
+  }
 
+  async function placeIdOfStop(): Promise<string> {
+    const stops = await listDayAssignments(tenant.scope, fixture.dayId)
+    return stops[0].placeId
+  }
+
+  function expectOneDayMirrored(): void {
     expect(stubs.mirrored).toHaveLength(1)
     const [patch] = stubs.mirrored[0].patches
     expect(patch.entity).toEqual({ kind: 'day', id: fixture.dayId })
@@ -340,30 +365,91 @@ describe('placing a journey on the day', () => {
     expect(patch.fields).toEqual({
       journeys: [{ kind: 'transport', id: fixture.flightId }],
     })
+  }
+
+  it('schedules a place and mirrors one day upsert carrying the journeys', async () => {
+    const place = await createPlace(tenant.scope, {
+      tripId: fixture.tripId,
+      name: 'Kinkaku-ji',
+    })
+
+    await schedule({
+      tripId: fixture.tripId,
+      placeId: place.id,
+      dayId: fixture.dayId,
+      index: 1,
+      items: [
+        { kind: 'stop', id: fixture.assignmentId },
+        { kind: 'transport', id: fixture.flightId },
+        { kind: 'stop', id: place.id },
+        { kind: 'note', id: fixture.noteId },
+      ],
+    })
+
+    // The flight sits between the first stop at 0 and the new one at 1.
+    expect(await flightPosition()).toBe(0.5)
+    expectOneDayMirrored()
+  })
+
+  it('unschedules a stop and mirrors one day upsert carrying the journeys', async () => {
+    await inRequest(() =>
+      unschedulePlaceFn({
+        data: { tripId: fixture.tripId, assignmentId: fixture.assignmentId },
+      }),
+    )
+
+    // Only the note is left at 1: an open end one unit wide puts the flight at 0.5.
+    expect(await flightPosition()).toBe(0.5)
+    expect(await listDayAssignments(tenant.scope, fixture.dayId)).toEqual([])
+    expectOneDayMirrored()
+  })
+
+  it('deletes a place and mirrors one day upsert carrying the journeys', async () => {
+    const placeId = await placeIdOfStop()
+
+    await inRequest(() =>
+      deletePlanPlaceFn({ data: { tripId: fixture.tripId, placeId } }),
+    )
+
+    expect(await flightPosition()).toBe(0.5)
+    expect(await listDayAssignments(tenant.scope, fixture.dayId)).toEqual([])
+    expectOneDayMirrored()
+  })
+
+  it('mirrors nothing for a day that has no journey', async () => {
+    const place = await createPlace(tenant.scope, {
+      tripId: fixture.tripId,
+      name: 'Kinkaku-ji',
+    })
+
+    await schedule({
+      tripId: fixture.tripId,
+      placeId: place.id,
+      dayId: fixture.secondDayId,
+      index: 0,
+    })
+
+    expect(stubs.mirrored).toEqual([])
+    expect(stubs.refused).toBe(0)
   })
 
   it('still writes the day when the room refuses', async () => {
     stubs.roomRejects = true
 
-    await reorderJourneys({
-      tripId: fixture.tripId,
-      dayId: fixture.dayId,
-      items: [
-        { kind: 'stop', id: fixture.assignmentId },
-        { kind: 'transport', id: fixture.flightId },
-      ],
-    })
+    await inRequest(() =>
+      unschedulePlaceFn({
+        data: { tripId: fixture.tripId, assignmentId: fixture.assignmentId },
+      }),
+    )
 
     expect(stubs.refused).toBe(1)
     expect(stubs.mirrored).toEqual([])
-    const payload = await readPlanTransports(tenant.scope, fixture.tripId)
-    expect(
-      payload.transports.find((row) => row.id === fixture.flightId)?.position,
-    ).toBe(0.5)
+    expect(await listDayAssignments(tenant.scope, fixture.dayId)).toEqual([])
+    expect(await flightPosition()).toBe(0.5)
   })
 })
 
-describe('what one placement costs', () => {
+describe('what one write costs', () => {
   /**
    * The statements Drizzle sent, narrowed to the reads this table *drives*.
    *
@@ -377,11 +463,10 @@ describe('what one placement costs', () => {
         sql.split(' where ')[0].endsWith(`from "${table}"`),
     )
 
-  it('rechecks trip writability at the repository boundary and reads only the day it places', async () => {
+  it('reads only the day it places, and leaves another day’s journey alone', async () => {
     const scope = tenant.scope
-    // A journey on another day of the same trip. The planner issues one placement per day a drag
-    // touches, in parallel, so a read that took the trip to place a day would grow with the
-    // itinerary and be answered mostly by rows the placement then throws away.
+    // A journey on another day of the same trip. A read that took the trip to place a day would
+    // grow with the itinerary and be answered mostly by rows the placement then throws away.
     const elsewhere = await createTransport(scope, {
       tripId: fixture.tripId,
       dayId: fixture.secondDayId,
@@ -390,21 +475,13 @@ describe('what one placement costs', () => {
     })
 
     harness.statements.length = 0
-    await reorderJourneys({
-      tripId: fixture.tripId,
-      dayId: fixture.dayId,
-      items: [
-        { kind: 'stop', id: fixture.assignmentId },
-        { kind: 'transport', id: fixture.flightId },
-        { kind: 'note', id: fixture.noteId },
-      ],
-    })
+    await inRequest(() =>
+      unschedulePlaceFn({
+        data: { tripId: fixture.tripId, assignmentId: fixture.assignmentId },
+      }),
+    )
 
-    // Both boundaries enforce current readability and archive state. A supplied row cannot
-    // stand in for the repository guard, even though the handler has already checked it.
-    expect(readsOf('trips')).toHaveLength(2)
-
-    // And the journeys were read as the day: three questions, none of them the trip's whole set.
+    // The journeys were read as the day: three questions, none of them the trip's whole set.
     // *Which* rows each one reaches is the query plan's answer, not this file's — the assertion
     // that a `day_id` in the `WHERE` clause is worth anything lives in `transports.test.ts`.
     const journeyReads = [
@@ -418,5 +495,49 @@ describe('what one placement costs', () => {
     expect(
       payload.transports.find((row) => row.id === elsewhere.id)?.position,
     ).toBe(elsewhere.sortOrder)
+  })
+})
+
+describe('the deprecated second call a tab loaded before the deploy still makes', () => {
+  const staleCall = (tripId: string, dayId: string) =>
+    inRequest(() =>
+      reorderDayTransportsFn({
+        data: {
+          tripId,
+          dayId,
+          items: [
+            { kind: 'stop', id: fixture.assignmentId },
+            { kind: 'transport', id: fixture.flightId },
+          ],
+        },
+      }),
+    )
+
+  it('resolves and writes and mirrors nothing', async () => {
+    await inRequest(() =>
+      unschedulePlaceFn({
+        data: { tripId: fixture.tripId, assignmentId: fixture.assignmentId },
+      }),
+    )
+    const written = await readPlanTransports(tenant.scope, fixture.tripId)
+    stubs.mirrored = []
+    harness.statements.length = 0
+
+    // The `{ placed: 0 }` answer is not asserted: outside a Start build a handler's return value is
+    // discarded, so what can be checked here is that it resolves and leaves the day alone.
+    await staleCall(fixture.tripId, fixture.dayId)
+
+    expect(stubs.mirrored).toEqual([])
+    expect(
+      harness.statements.filter((sql) => /^(insert|update|delete)/.test(sql)),
+    ).toEqual([])
+    expect(await readPlanTransports(tenant.scope, fixture.tripId)).toEqual(
+      written,
+    )
+  })
+
+  it('still refuses a trip or a day that is not the caller’s', async () => {
+    await expect(staleCall('no-such-trip', fixture.dayId)).rejects.toThrow()
+    await expect(staleCall(fixture.tripId, 'no-such-day')).rejects.toThrow()
   })
 })

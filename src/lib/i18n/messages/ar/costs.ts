@@ -101,6 +101,9 @@ const messages = {
   'expense.addDescription':
     'مبالغ هذه الرحلة تُحفَظ بعملة {currency}. سجِّل الإيصال بعملته، واكتب ما صار إليه بعد التحويل.',
   'expense.saveFailed': 'لم يُحفظ',
+  'expense.splitOff.title': 'الحصص المحفوظة لا تُطابق الإجمالي',
+  'expense.splitOff.body':
+    'مجموعها {shares}، بينما الإجمالي {total}. راجع التقسيم أدناه ثم احفظ لتصحيحه.',
   'expense.what': 'لأي شيء كان',
   'expense.whatPlaceholder': 'عشاء في Kyubey',
   'expense.amountNotANumber': 'اكتب المبلغ رقمًا.',
@@ -217,6 +220,8 @@ const messages = {
   'display.menu.rateHint': 'يستخدم سعرًا سُجّل مسبقًا في رحلة',
   'display.menu.currentHint': 'محددة، لكن لا يغطيها أي سعر مسجّل',
   'display.menu.needsLiveRate': 'تحتاج إلى سعر مباشر غير متاح بعد',
+  'display.menu.disabledHint':
+    'العملات التي لا يوجد لها سعر صرف مسجّل تظهر في القائمة لكن لا يمكن اختيارها: فهي تحتاج إلى سعر صرف مباشر غير متاح بعد.',
   'display.menu.saving': 'جارٍ حفظ اختيارك',
   'display.error.title': 'لم تُحفظ عملة العرض',
   'display.error.body': 'تعذّر حفظ اختيارك. حاول مرة أخرى بعد قليل.',
@@ -354,6 +359,7 @@ const messages = {
   'row.edit': 'تعديل {title}',
   'row.delete': 'حذف {title}',
   'row.saving': 'جارٍ الحفظ',
+  'row.splitOff': 'الحصص لا تُطابق الإجمالي',
   'tile.owe.label': 'عليك',
   'tile.owe.settled': 'لا شيء عليك',
   'tile.owe.pending': 'سدّد قبل أن تعود إلى بيتك',

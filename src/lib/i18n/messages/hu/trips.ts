@@ -139,6 +139,26 @@ const messages = {
     'Ez a hely ellentmond a rajta lévő időpontnak. Az ide helyezés törli az időpontot — az új sorrend és a törölt időpont együtt mentődik.',
   'plan.move.dropTime.confirm': 'Áthelyezés az időpont nélkül',
   'plan.move.dropTime.cancel': 'Maradjon, ahol van',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Hely szerkesztése',
+  'plan.stop.menu.setTime': 'Időpont megadása',
+  'plan.stop.menu.placeOnMap': 'Elhelyezés a térképen',
+  'plan.stop.menu.movePin': 'Jelölő áthelyezése',
+  'plan.stop.menu.moveToDay': 'Áthelyezés másik napra',
+  'plan.stop.menu.backToUnplanned': 'Vissza a tervezetlenek közé',
+  'plan.stop.menu.delete': 'Törlés az útból',
+  'plan.delete.title': 'Törlöd: „{name}”?',
+  'plan.delete.titleUnnamed': 'Törlöd ezt a helyet?',
+  'plan.delete.bodyUnplanned':
+    'Teljesen eltűnik az út helyei közül. Ez nem vonható vissza.',
+  'plan.delete.bodyOnDays': {
+    one: 'Az út {count} napján szerepel, és eltűnik onnan. Ez nem vonható vissza.',
+    other:
+      'Az út {count} napján szerepel, és mindegyikről eltűnik. Ez nem vonható vissza.',
+  },
+  'plan.delete.error': 'A törlés nem sikerült',
+  'plan.delete.confirm': 'Hely törlése',
+  'plan.delete.deleting': 'A hely törlése folyamatban',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Jegyzet hozzáadása',
   'plan.note.addForDay': 'Jegyzet hozzáadása: {day}',

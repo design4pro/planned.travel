@@ -185,6 +185,32 @@ const messages = {
     'This position contradicts the time on it. Moving it here clears the time — the new order and the cleared time are saved together.',
   'plan.move.dropTime.confirm': 'Move and drop the time',
   'plan.move.dropTime.cancel': 'Keep it where it is',
+  /* ------------------------------------------- a stop's menu and its delete */
+  /** The row menu's entries; the trigger reads `modules.actionsFor`. */
+  'plan.stop.menu.editPlace': 'Edit place',
+  'plan.stop.menu.setTime': 'Set a time',
+  'plan.stop.menu.placeOnMap': 'Place it on the map',
+  'plan.stop.menu.movePin': 'Move its pin',
+  'plan.stop.menu.moveToDay': 'Move to day',
+  'plan.stop.menu.backToUnplanned': 'Back to unplanned',
+  'plan.stop.menu.delete': 'Delete from trip',
+  /**
+   * The delete confirmation. A place on no day has nothing to count, so it keeps
+   * its own sentence; `bodyOnDays` is a plural message because the number of days
+   * is what the reader is weighing and every language counts it differently.
+   */
+  'plan.delete.title': 'Delete {name}?',
+  'plan.delete.titleUnnamed': 'Delete this place?',
+  'plan.delete.bodyUnplanned':
+    'It leaves the trip’s places entirely. This cannot be undone.',
+  'plan.delete.bodyOnDays': {
+    one: 'It is on {count} day of this trip, and it leaves that day. This cannot be undone.',
+    other:
+      'It is on {count} days of this trip, and it leaves all of them. This cannot be undone.',
+  },
+  'plan.delete.error': 'That did not delete',
+  'plan.delete.confirm': 'Delete place',
+  'plan.delete.deleting': 'Deleting the place',
   /* ------------------------------------------------- a day's own notes */
   /**
    * The note affordances. `add` is the control's own label; `addForDay` is the

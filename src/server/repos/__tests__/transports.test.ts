@@ -18,9 +18,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import { NotFoundError, RepositoryError } from '../context'
-import { createDay, createDayNote, deleteDay, listTripDays } from '../days'
-import { createAssignment } from '../itinerary'
-import { createPlace } from '../places'
+import { departingJourneys } from '../day-journeys'
+import { createDay, deleteDay, listTripDays } from '../days'
 import { TripRoleError, addTripMember, createTrip, updateTrip } from '../trips'
 import {
   createTransport,
@@ -31,7 +30,6 @@ import {
   listTripDayTransports,
   listTripLegs,
   listTripTransports,
-  reorderDayTransports,
   replaceTransportChain,
   saveSearchedConnection,
   setTransportStatus,
@@ -520,43 +518,17 @@ describe('a journey with more than two stations', () => {
  * A day is one number line, and a journey's place on it.
  *
  * A journey expresses where it sits *between* two of the day's stops and notes through the
- * fractional key `sort_order` was declared to be. `reorderDayTimelines` places journeys in the same
- * batch that renumbers a day (`day-journeys.test.ts`); `reorderDayTransports`, covered here, places
- * them against the numbering already stored, for the writes that never renumber (schedule,
- * unschedule, delete). These cases are about that arithmetic and about the three rules the payload
- * is read under; the client half
- * that decides *which* gap a drag names is asserted in `-ui/__tests__/plan-transport-model.test.ts`.
+ * fractional key `sort_order` was declared to be. The arithmetic and the three rules a run is read
+ * under are asserted in `day-journeys-rule.test.ts`; the writes that apply them are in
+ * `day-journeys.test.ts` (a reorder) and `day-writes-journeys.test.ts` (schedule, unschedule,
+ * delete). What is left here is the read of the trip's journeys and how a chain rewrite keeps a
+ * leg's fraction.
  */
 describe('a journey between the stops and notes of its day', () => {
   let harness: Harness
   let tenant: SeededTenant
   let tripId: string
   let days: Array<Day>
-
-  /** A stop at an explicit stored position, so a case can name the day's numbering exactly. */
-  async function stopAt(dayId: string, orderIndex: number): Promise<string> {
-    const place = await createPlace(tenant.scope, {
-      tripId,
-      name: `Place ${orderIndex}`,
-    })
-    const assignment = await createAssignment(tenant.scope, {
-      tripId,
-      dayId,
-      placeId: place.id,
-      orderIndex,
-    })
-    return assignment.id
-  }
-
-  async function noteAt(dayId: string, sortOrder: number): Promise<string> {
-    const note = await createDayNote(tenant.scope, {
-      tripId,
-      dayId,
-      body: `Note ${sortOrder}`,
-      sortOrder,
-    })
-    return note.id
-  }
 
   async function journeyOn(
     dayId: string | null,
@@ -570,12 +542,6 @@ describe('a journey between the stops and notes of its day', () => {
       ...extra,
     })
     return created.id
-  }
-
-  async function sortOrderOf(transportId: string): Promise<number> {
-    const row = await getTransport(tenant.scope, transportId)
-    if (row === null) throw new Error('the journey went missing')
-    return row.sortOrder
   }
 
   beforeEach(async () => {
@@ -608,258 +574,6 @@ describe('a journey between the stops and notes of its day', () => {
     expect(legs.map((leg) => leg.position)).toEqual([0, 1])
   })
 
-  it('places a journey strictly between the stored positions of its neighbours', async () => {
-    const first = await stopAt(days[0].id, 0)
-    const second = await stopAt(days[0].id, 1)
-    const journey = await journeyOn(days[0].id)
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: first },
-        { kind: 'transport', id: journey },
-        { kind: 'stop', id: second },
-      ],
-    })
-
-    expect(await sortOrderOf(journey)).toBe(0.5)
-  })
-
-  it('takes an open end one unit wide, at either end and on an empty day', async () => {
-    const only = await stopAt(days[0].id, 0)
-    const ahead = await journeyOn(days[0].id)
-    const behind = await journeyOn(days[0].id)
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'transport', id: ahead },
-        { kind: 'stop', id: only },
-        { kind: 'transport', id: behind },
-      ],
-    })
-
-    expect(await sortOrderOf(ahead)).toBe(-0.5)
-    expect(await sortOrderOf(behind)).toBe(0.5)
-
-    const alone = await journeyOn(days[1].id)
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[1].id,
-      items: [{ kind: 'transport', id: alone }],
-    })
-    expect(await sortOrderOf(alone)).toBe(0.5)
-  })
-
-  it('splits one gap between two journeys, in the order the client sent', async () => {
-    const first = await stopAt(days[0].id, 0)
-    const second = await stopAt(days[0].id, 1)
-    const early = await journeyOn(days[0].id)
-    const late = await journeyOn(days[0].id)
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: first },
-        { kind: 'transport', id: late },
-        { kind: 'transport', id: early },
-        { kind: 'stop', id: second },
-      ],
-    })
-
-    const lateOrder = await sortOrderOf(late)
-    const earlyOrder = await sortOrderOf(early)
-    expect(lateOrder).toBeCloseTo(1 / 3, 10)
-    expect(earlyOrder).toBeCloseTo(2 / 3, 10)
-    // Neither can collide with a stop, which is the property the gap split exists for.
-    expect(lateOrder).toBeGreaterThan(0)
-    expect(earlyOrder).toBeLessThan(1)
-  })
-
-  it('names the gap from stored positions, not from a count of entries', async () => {
-    // The day `unschedulePlaceFn` leaves behind: stops at 0 and 2, with nothing at 1.
-    const first = await stopAt(days[0].id, 0)
-    const second = await stopAt(days[0].id, 2)
-    const journey = await journeyOn(days[0].id)
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: first },
-        { kind: 'stop', id: second },
-        { kind: 'transport', id: journey },
-      ],
-    })
-
-    // An index formula would write 1.5 — ahead of the second stop it was dropped behind.
-    expect(await sortOrderOf(journey)).toBe(2.5)
-  })
-
-  it('places a journey behind a stop scheduled at a midpoint', async () => {
-    const first = await stopAt(days[0].id, 0)
-    const middle = await stopAt(days[0].id, 0.5)
-    const last = await stopAt(days[0].id, 1)
-    const journey = await journeyOn(days[0].id)
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: first },
-        { kind: 'stop', id: middle },
-        { kind: 'transport', id: journey },
-        { kind: 'stop', id: last },
-      ],
-    })
-
-    expect(await sortOrderOf(journey)).toBe(0.75)
-  })
-
-  it('counts a journey the payload omitted among the journeys sharing its gap', async () => {
-    const first = await stopAt(days[0].id, 0)
-    const second = await stopAt(days[0].id, 1)
-    const omitted = await journeyOn(days[0].id)
-
-    // Give the omitted one a stored place first, so the splice has something to follow.
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: first },
-        { kind: 'transport', id: omitted },
-        { kind: 'stop', id: second },
-      ],
-    })
-    expect(await sortOrderOf(omitted)).toBe(0.5)
-
-    // A second journey arrives and is dragged in ahead of it, naming only itself.
-    const named = await journeyOn(days[0].id)
-    const written = await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: first },
-        { kind: 'transport', id: named },
-        { kind: 'stop', id: second },
-      ],
-    })
-
-    // Both are rewritten together, so the named one cannot land on the omitted one's value.
-    expect(await sortOrderOf(named)).toBeCloseTo(1 / 3, 10)
-    expect(await sortOrderOf(omitted)).toBeCloseTo(2 / 3, 10)
-    // And what comes back is the day as written — the omitted journey included, in its place.
-    expect(written).toEqual([
-      { kind: 'transport', id: named },
-      { kind: 'transport', id: omitted },
-    ])
-  })
-
-  it('rebuilds a journey tied with a note after that note', async () => {
-    const note = await noteAt(days[0].id, 0)
-    const stop = await stopAt(days[0].id, 1)
-    // `sortOrder` defaults to 0 — the value every journey on disk today holds.
-    const journey = await journeyOn(days[0].id)
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      // The client omits the journey entirely, so only the stored run decides.
-      items: [
-        { kind: 'note', id: note },
-        { kind: 'stop', id: stop },
-      ],
-    })
-
-    expect(await sortOrderOf(journey)).toBe(0.5)
-  })
-
-  it('writes nothing for a journey that only arrives on the day', async () => {
-    const stop = await stopAt(days[1].id, 0)
-    const journey = await journeyOn(days[0].id, { arrivalDayId: days[1].id })
-
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[1].id,
-      items: [
-        { kind: 'stop', id: stop },
-        { kind: 'transport', id: journey },
-      ],
-    })
-
-    // Its `sort_order` belongs to day 1's ruler; day 2 measures against a different one.
-    expect(await sortOrderOf(journey)).toBe(0)
-  })
-
-  it('drops an id the day does not hold, and moves nothing for it', async () => {
-    const stop = await stopAt(days[0].id, 0)
-    const elsewhere = await journeyOn(days[1].id)
-    const here = await journeyOn(days[0].id)
-
-    const written = await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'transport', id: elsewhere },
-        { kind: 'stop', id: stop },
-        { kind: 'transport', id: here },
-      ],
-    })
-
-    expect(await sortOrderOf(elsewhere)).toBe(0)
-    expect(await sortOrderOf(here)).toBe(0.5)
-    // The dropped id is absent from what comes back, so nothing mirrors it to the room either.
-    expect(written).toEqual([{ kind: 'transport', id: here }])
-  })
-
-  it('refuses a day belonging to another trip', async () => {
-    const other = await createTrip(tenant.scope, { title: 'Osaka weekend' })
-    const foreignDay = await createDay(tenant.scope, {
-      tripId: other.id,
-      dayNumber: 1,
-    })
-
-    expect(
-      await captureError(() =>
-        reorderDayTransports(tenant.scope, {
-          tripId,
-          dayId: foreignDay.id,
-          items: [],
-        }),
-      ),
-    ).toBeInstanceOf(NotFoundError)
-  })
-
-  it('leaves a record of this day out of the run when it is drawn as its legs', async () => {
-    // The record keeps the `day_id` it was created with — `replaceTransportChain` does not clear
-    // it — and a journey drawn as its legs is never also drawn whole. Neither leg departs from
-    // this day, so nothing in the day's own rows says the record is chained: the read has to ask.
-    const chained = await journeyOn(days[0].id)
-    await replaceTransportChain(tenant.scope, chained, {
-      stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
-      legs: [{ departureDayId: days[1].id }, { departureDayId: days[2].id }],
-    })
-    const stop = await stopAt(days[0].id, 0)
-    const whole = await journeyOn(days[0].id)
-
-    const written = await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: stop },
-        { kind: 'transport', id: whole },
-      ],
-    })
-
-    // Placed, it would be written a fraction and mirrored to the room as a row no board draws.
-    expect(written).toEqual([{ kind: 'transport', id: whole }])
-    expect(await sortOrderOf(chained)).toBe(0)
-    expect(await sortOrderOf(whole)).toBe(0.5)
-  })
-
   it('keeps a leg on its day when the chain is rewritten around it', async () => {
     const chained = await journeyOn(null)
     await replaceTransportChain(tenant.scope, chained, {
@@ -867,16 +581,11 @@ describe('a journey between the stops and notes of its day', () => {
       legs: [{ departureDayId: days[0].id }, { departureDayId: days[1].id }],
     })
 
-    const stop = await stopAt(days[0].id, 0)
+    // The fraction a write of the day gave the leg, stored the way those writes store it.
     const [firstLeg] = await listTransportLegs(tenant.scope, chained)
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [
-        { kind: 'stop', id: stop },
-        { kind: 'leg', id: firstLeg.id },
-      ],
-    })
+    harness.sqlite
+      .prepare('update transport_legs set sort_order = 0.5 where id = ?')
+      .run(firstLeg.id)
     const placed = (await listTransportLegs(tenant.scope, chained))[0].sortOrder
     expect(placed).toBe(0.5)
 
@@ -968,11 +677,7 @@ describe('the plan behind one day’s journey read', () => {
     })
 
     harness.statements.length = 0
-    await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId: days[0].id,
-      items: [],
-    })
+    await departingJourneys(tenant.scope, tripId, days[0].id)
 
     // The three reads the day costs, by the table each one drives on.
     const reads = harness.statements.filter(

@@ -389,7 +389,13 @@ describe('the catalogue and the shell agree', () => {
     const unused = Object.keys(shell).filter(
       (key) => !used.has(key) && !key.startsWith(STORED_PREFIX),
     )
-    expect(unused).toEqual([])
+    // A key reads as unused when the file that reads it is not scanned. A new file that spells
+    // `shell.*` keys joins APP_FILES or LIB_FILES above before any key is deleted (#1230, #1507,
+    // #1522, #1532 each went red on exactly that).
+    expect(
+      unused,
+      'unread shell keys: if a file reads them, add that file to APP_FILES or LIB_FILES',
+    ).toEqual([])
   })
 
   it('resolves a stored key through the catalogue rather than a second table', () => {

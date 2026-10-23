@@ -354,6 +354,11 @@ export async function setPlaceVisited(
   return placesRepository.requireUpdate(scope, placeId, { isVisited })
 }
 
+/**
+ * Removes a place and nothing else. A place that is on a day goes through `deletePlaceWithJourneys`
+ * instead, which places the day's journeys in the same batch; this one would leave them where the
+ * deleted stop's neighbours used to be.
+ */
 export async function deletePlace(scope: TenantScope, placeId: string): Promise<void> {
   await requireEditablePlace(scope, placeId)
   await placesRepository.requireRemove(scope, placeId)

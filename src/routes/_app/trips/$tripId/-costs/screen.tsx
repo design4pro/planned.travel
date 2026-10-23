@@ -33,6 +33,7 @@ import {
   isFiltered,
   totalsFor,
 } from '#/components/costs'
+import { requireFound } from '#/lib/absence'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
@@ -495,6 +496,7 @@ export function CostsScreen({
                     choices={data.displayChoices}
                     budgetCurrency={data.currency}
                     saving={savingDisplay}
+                    unconverted={data.unconverted.length > 0}
                     onChange={(code) => void setDisplay(code)}
                   />
                 </div>
@@ -514,6 +516,7 @@ export function CostsScreen({
                   display={data.displayCurrency}
                   displayChoices={data.displayChoices}
                   savingDisplay={savingDisplay}
+                  displayUnconverted={data.unconverted.length > 0}
                   onDisplayChange={(code) => void setDisplay(code)}
                 />
               </Card>
@@ -629,7 +632,7 @@ export function CostsScreen({
           }
           readCurrency={() =>
             loadCosts({ data: { tripId: data.tripId } }).then(
-              (fresh) => fresh.currency,
+              (fresh) => requireFound(fresh).currency,
             )
           }
           onChanged={(to) => {

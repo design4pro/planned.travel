@@ -118,6 +118,9 @@ const messages = {
   'expense.addDescription':
     'Amounts are held in {currency} for this trip. Log a receipt in its own currency and record what it converted to.',
   'expense.saveFailed': 'That did not save',
+  'expense.splitOff.title': 'The saved shares don’t add up',
+  'expense.splitOff.body':
+    'They add up to {shares}, but the total is {total}. Check the split below and save to correct it.',
   'expense.what': 'What was it for',
   'expense.whatPlaceholder': 'Dinner at Kyubey',
   'expense.amountNotANumber': 'Enter the amount as a number.',
@@ -248,6 +251,9 @@ const messages = {
   'display.menu.currentHint': 'Chosen, but no recorded rate answers for it yet',
   /** The reason a code cannot be picked, in words rather than by colour alone. */
   'display.menu.needsLiveRate': 'Needs a live rate, which is not available yet',
+  /** Read once when the control takes focus, because a disabled option is skipped by arrow keys and its own reason is never reached. */
+  'display.menu.disabledHint':
+    'Currencies without a recorded rate are listed but cannot be chosen: they need a live rate, which is not available yet.',
   'display.menu.saving': 'Saving your choice',
   'display.error.title': 'The display currency was not saved',
   'display.error.body':
@@ -384,6 +390,7 @@ const messages = {
   'row.edit': 'Edit {title}',
   'row.delete': 'Delete {title}',
   'row.saving': 'Saving',
+  'row.splitOff': 'Shares don’t add up',
   /* ------------------------------------------------ the four tiles */
   'tile.owe.label': 'You owe',
   'tile.owe.settled': 'You are all settled up',

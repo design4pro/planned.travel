@@ -100,6 +100,9 @@ const messages = {
   'expense.addDescription':
     'Ennél az utazásnál az összegeket {currency}-ben tartjuk. Írd fel a számlát a saját valutájában, és add meg, mennyi lett átszámítva.',
   'expense.saveFailed': 'A mentés nem sikerült',
+  'expense.splitOff.title': 'A mentett részek nem adják ki az összeget',
+  'expense.splitOff.body':
+    'Összesen {shares}, a végösszeg viszont {total}. Nézd át az alábbi felosztást, és mentsd el a javításhoz.',
   'expense.what': 'Mire volt',
   'expense.whatPlaceholder': 'Vacsora a Kyubeyben',
   'expense.amountNotANumber': 'Írd be az összeget számként.',
@@ -213,6 +216,8 @@ const messages = {
     'Kiválasztva, de egyetlen rögzített árfolyam sem fedi le',
   'display.menu.needsLiveRate':
     'Élő árfolyam kell hozzá, ami még nem érhető el',
+  'display.menu.disabledHint':
+    'Az árfolyam nélküli pénznemek szerepelnek a listán, de nem választhatók: élő árfolyamra van szükségük, ami még nem érhető el.',
   'display.menu.saving': 'A választás mentése folyamatban',
   'display.error.title': 'A megjelenítési pénznem nem lett elmentve',
   'display.error.body':
@@ -329,6 +334,7 @@ const messages = {
   'row.edit': '{title} szerkesztése',
   'row.delete': '{title} törlése',
   'row.saving': 'Mentés',
+  'row.splitOff': 'A részek nem adják ki az összeget',
   'tile.owe.label': 'Te tartozol',
   'tile.owe.settled': 'Minden rendezve nálad',
   'tile.owe.pending': 'Rendezd, mielőtt hazarepülsz',

@@ -99,6 +99,9 @@ const messages = {
   'expense.addDescription':
     'Los importes de este viaje se guardan en {currency}. Anota un recibo en su propia moneda y registra a cuánto se convirtió.',
   'expense.saveFailed': 'No se pudo guardar',
+  'expense.splitOff.title': 'Las partes guardadas no suman el total',
+  'expense.splitOff.body':
+    'Suman {shares}, pero el total es {total}. Revisa el reparto de abajo y guarda para corregirlo.',
   'expense.what': 'Para qué fue',
   'expense.whatPlaceholder': 'Cena en Kyubey',
   'expense.amountNotANumber': 'Escribe el importe como número.',
@@ -215,6 +218,8 @@ const messages = {
   'display.menu.currentHint': 'Elegida, pero ningún tipo registrado la cubre',
   'display.menu.needsLiveRate':
     'Necesita un tipo en vivo, que aún no está disponible',
+  'display.menu.disabledHint':
+    'Las divisas sin una tasa registrada aparecen en la lista, pero no se pueden elegir: necesitan una tasa en vivo que aún no está disponible.',
   'display.menu.saving': 'Guardando tu elección',
   'display.error.title': 'No se guardó la moneda de visualización',
   'display.error.body':
@@ -336,6 +341,7 @@ const messages = {
   'row.edit': 'Editar {title}',
   'row.delete': 'Eliminar {title}',
   'row.saving': 'Guardando',
+  'row.splitOff': 'Las partes no suman el total',
   'tile.owe.label': 'Debes',
   'tile.owe.settled': 'Estás al día',
   'tile.owe.pending': 'Salda cuentas antes de volar a casa',

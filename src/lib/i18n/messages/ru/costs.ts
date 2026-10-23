@@ -101,6 +101,9 @@ const messages = {
   'expense.addDescription':
     'Суммы этой поездки ведутся в {currency}. Запишите чек в его собственной валюте и укажите, во сколько он пересчитался.',
   'expense.saveFailed': 'Сохранить не удалось',
+  'expense.splitOff.title': 'Сохранённые доли не сходятся с суммой',
+  'expense.splitOff.body':
+    'В сумме они дают {shares}, а итог составляет {total}. Проверьте разделение ниже и сохраните, чтобы исправить.',
   'expense.what': 'За что это было',
   'expense.whatPlaceholder': 'Ужин в Kyubey',
   'expense.amountNotANumber': 'Введите сумму числом.',
@@ -220,6 +223,8 @@ const messages = {
   'display.menu.currentHint':
     'Выбрана, но ни один записанный курс её не покрывает',
   'display.menu.needsLiveRate': 'Нужен текущий курс, который пока недоступен',
+  'display.menu.disabledHint':
+    'Валюты без записанного курса есть в списке, но выбрать их нельзя: им нужен актуальный курс, который пока недоступен.',
   'display.menu.saving': 'Сохраняем ваш выбор',
   'display.error.title': 'Валюта отображения не сохранена',
   'display.error.body':
@@ -350,6 +355,7 @@ const messages = {
   'row.edit': 'Изменить «{title}»',
   'row.delete': 'Удалить «{title}»',
   'row.saving': 'Сохранение',
+  'row.splitOff': 'Доли не сходятся с суммой',
   'tile.owe.label': 'Вы должны',
   'tile.owe.settled': 'Вы в расчёте',
   'tile.owe.pending': 'Рассчитайтесь до отлёта домой',

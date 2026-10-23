@@ -89,7 +89,10 @@ export class ForbiddenError extends RepositoryError {
 
 /** Thrown when a row addressed by id does not exist inside the caller's tenant. */
 export class NotFoundError extends RepositoryError {
-  constructor(entity: string, id: string) {
+  constructor(
+    readonly entity: string,
+    readonly id: string,
+  ) {
     super(`${entity} ${id} was not found.`, 'NOT_FOUND')
   }
 }

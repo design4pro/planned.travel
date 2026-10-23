@@ -47,6 +47,8 @@ import {
   searchTransitConnections,
   transitQuerySchema,
 } from '#/server/transit/search'
+import { ABSENT } from '#/lib/absence'
+import { nullWhenMissing } from '#/server/fns/-lib/absence'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
 import {
   rowId,
@@ -55,6 +57,7 @@ import {
   tripId,
 } from './transport-wire'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { AirportMatch } from '#/server/catalog/airports'
 import type { TransportLeg } from '#/server/db/types'
 import type { TenantScope, TransportModeTotals } from '#/server/repos'
@@ -254,9 +257,10 @@ export interface TransportDeskPayload {
  */
 export const loadTransportDeskFn = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId }))
-  .handler(async ({ data }): Promise<TransportDeskPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<TransportDeskPayload>> => {
     const scope = await appScope()
-    const trip = await requireTrip(scope, data.tripId)
+    const trip = await nullWhenMissing(() => requireTrip(scope, data.tripId))
+    if (trip === null) return ABSENT
 
     const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
 
@@ -278,6 +282,7 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
     }
 
     return {
+      found: true,
       canWrite: canWritePlan(trip, role),
       isArchived: trip.isArchived,
       canSearchConnections: role === 'owner' || role === 'editor',

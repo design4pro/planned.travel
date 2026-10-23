@@ -141,6 +141,27 @@ const messages = {
     'Cette position contredit l’heure qui y figure. Le déplacer ici efface l’heure : le nouvel ordre et l’heure effacée sont enregistrés ensemble.',
   'plan.move.dropTime.confirm': 'Déplacer et effacer l’heure',
   'plan.move.dropTime.cancel': 'Le laisser où il est',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Modifier le lieu',
+  'plan.stop.menu.setTime': 'Définir une heure',
+  'plan.stop.menu.placeOnMap': 'Le placer sur la carte',
+  'plan.stop.menu.movePin': 'Déplacer son repère',
+  'plan.stop.menu.moveToDay': 'Déplacer vers un autre jour',
+  'plan.stop.menu.backToUnplanned': 'Remettre en non planifié',
+  'plan.stop.menu.delete': 'Supprimer du voyage',
+  'plan.delete.title': 'Supprimer « {name} » ?',
+  'plan.delete.titleUnnamed': 'Supprimer ce lieu ?',
+  'plan.delete.bodyUnplanned':
+    'Il disparaît entièrement des lieux du voyage. Cette action est irréversible.',
+  'plan.delete.bodyOnDays': {
+    one: 'Il figure sur {count} jour de ce voyage et en disparaît. Cette action est irréversible.',
+    many: 'Il figure sur {count} jours de ce voyage et disparaît de tous. Cette action est irréversible.',
+    other:
+      'Il figure sur {count} jours de ce voyage et disparaît de tous. Cette action est irréversible.',
+  },
+  'plan.delete.error': 'La suppression a échoué',
+  'plan.delete.confirm': 'Supprimer le lieu',
+  'plan.delete.deleting': 'Suppression du lieu',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Ajouter une note',
   'plan.note.addForDay': 'Ajouter une note, {day}',

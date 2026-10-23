@@ -79,7 +79,6 @@ import {
   emptyDraft,
   emptyTiming,
   messageOf,
-  refreshOnFailure,
 } from './plan-actions'
 import {
   filterRows,
@@ -89,7 +88,7 @@ import {
   routeDaysOf,
 } from './plan-model'
 import { planBoard } from './plan-board'
-import { journeyWritesFor } from './plan-transport-model'
+import { scheduleRun } from './plan-transport-model'
 import { planMoveOutcome, refusalCopy, reorderPayload } from './plan-move'
 import {
   createPlanPlaceFn,
@@ -106,7 +105,6 @@ import {
   deleteDayNoteFn,
   updateDayNoteFn,
 } from '../-server/day-notes'
-import { reorderDayTransportsFn } from '../-server/plan-transports'
 import {
   PlannerAddPlace,
   reportLateWriteFailure,
@@ -138,7 +136,6 @@ import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardPayload } from '../-server/plan'
 import type { PlanTransportsPayload } from '../-server/plan-transports'
 import type { PlaceDraft, PlaceFormValues, TimingDraft } from './plan-actions'
-import type { JourneyRestatement } from './plan-transport-model'
 import type { NoteDraft } from './note-dialog'
 import type { PlaceWriteReport } from './planner-add-place'
 
@@ -562,41 +559,10 @@ export function PlanScreen({
     [],
   )
 
-  /**
-   * Restates the journeys departing from these days, against the board as it now reads.
-   *
-   * A journey's `sort_order` is a *relation* to the day's stops and notes. A reorder renumbers
-   * those and carries the journeys in the same call (`reorderPlanFn`), so it owes nothing here;
-   * a schedule, an unschedule and a delete do not renumber the day, and each has to say again
-   * where that day's journeys sit. One rule, two call sites: here, behind those primary writes,
-   * and the delete handler.
-   *
-   * Awaited by the caller, so a failure rolls the optimistic order back together with the
-   * write it followed. The days are written in parallel because each is a separate run and
-   * no day's fractions are measured against another's.
-   */
-  const restateJourneys = React.useCallback(
-    async (change: JourneyRestatement): Promise<void> => {
-      await Promise.all(
-        journeyWritesFor(change, transportRows).map((write) =>
-          reorderDayTransportsFn({
-            data: {
-              tripId: payload.tripId,
-              dayId: write.dayId,
-              items: [...write.items],
-            },
-          }),
-        ),
-      )
-    },
-    [payload.tripId, transportRows],
-  )
-
   const applyChange = React.useCallback(
     async (
       change: PlanChange,
       next: PlanOrder,
-      itemId: string,
       clearTime: string | null,
     ): Promise<void> => {
       switch (change.kind) {
@@ -612,36 +578,32 @@ export function PlanScreen({
             ),
           })
           return
-        case 'schedule': {
-          const { assignmentId } = await schedulePlaceFn({
+        case 'schedule':
+          // The same for a schedule: the run names the new stop by its place, and the server places
+          // the day's journeys against the stop it creates in the batch that creates it.
+          await schedulePlaceFn({
             data: {
               tripId: payload.tripId,
               placeId: change.placeId,
               dayId: change.dayId,
               index: change.index,
+              items: scheduleRun(
+                next,
+                change.placeId,
+                change.dayId,
+                transportRows,
+              ),
             },
           })
-          await restateJourneys({
-            kind: 'schedule',
-            next,
-            placeId: change.placeId,
-            assignmentId,
-            dayId: change.dayId,
-          })
           return
-        }
         case 'unschedule':
+          // The server places the day's journeys against the day it leaves behind, in the same
+          // transaction as the delete, so there is nothing to send beyond the stop.
           await unschedulePlaceFn({
             data: {
               tripId: payload.tripId,
               assignmentId: change.assignmentId,
             },
-          })
-          await restateJourneys({
-            kind: 'unschedule',
-            before: order,
-            next,
-            itemId,
           })
           return
         case 'rank-ideas':
@@ -651,7 +613,7 @@ export function PlanScreen({
           return
       }
     },
-    [order, payload.tripId, restateJourneys, transportRows],
+    [payload.tripId, transportRows],
   )
 
   /**
@@ -721,12 +683,7 @@ export function PlanScreen({
       setOrder(outcome.order)
       markPending(itemId, true)
 
-      void applyChange(
-        outcome.change,
-        outcome.order,
-        itemId,
-        drop ? itemId : null,
-      )
+      void applyChange(outcome.change, outcome.order, drop ? itemId : null)
         .then(() => router.invalidate())
         .catch((cause: unknown) => {
           setOrder(previous)
@@ -907,7 +864,8 @@ export function PlanScreen({
 
   /* ------------------------------------------------------------------ forms */
 
-  const { claim: claimWrite, release: releaseDialog } = useDialogOwnership(dialog)
+  const { claim: claimWrite, release: releaseDialog } =
+    useDialogOwnership(dialog)
 
   const closeDialog = React.useCallback((): void => {
     releaseDialog()
@@ -957,9 +915,7 @@ export function PlanScreen({
         return false
       } finally {
         // An older write must not release the newer form's pending state.
-        setSavingWrite((current) =>
-          current?.token === token ? null : current,
-        )
+        setSavingWrite((current) => (current?.token === token ? null : current))
       }
     },
     [claimWrite, closeDialog, dialog, router, t],
@@ -1037,22 +993,10 @@ export function PlanScreen({
   const confirmDelete = React.useCallback((): void => {
     if (dialog?.kind !== 'delete') return
     const placeId = dialog.placeId
-    const itemId = model.rowsByPlace.get(placeId)?.itemId ?? null
 
     void runWrite(
-      async () => {
-        await deletePlanPlaceFn({ data: { tripId: payload.tripId, placeId } })
-        // Deleting a stop renumbers its day, so the journeys placed against those
-        // numbers are restated against the day the delete leaves behind — the second
-        // of the rule's two call sites. The delete has landed by then, so a refused
-        // restatement still refreshes the board before its error is shown.
-        if (itemId !== null) {
-          await refreshOnFailure(
-            () => restateJourneys({ kind: 'delete', before: order, itemId }),
-            () => router.invalidate(),
-          )
-        }
-      },
+      // One call and one transaction: the place, its stops and the journeys of the days it was on.
+      () => deletePlanPlaceFn({ data: { tripId: payload.tripId, placeId } }),
       {
         fallback: t('trips.plan.place.error.delete'),
         success: t('trips.plan.place.toast.deleted'),
@@ -1062,16 +1006,7 @@ export function PlanScreen({
       // The place is gone whether or not its dialog still is.
       if (landed) dispatch({ type: 'forget', placeId })
     })
-  }, [
-    dialog,
-    model.rowsByPlace,
-    order,
-    payload.tripId,
-    restateJourneys,
-    router,
-    runWrite,
-    t,
-  ])
+  }, [dialog, payload.tripId, runWrite, t])
 
   /* ------------------------------------------------------------------ notes */
 
@@ -1600,8 +1535,8 @@ export function PlanScreen({
         }}
         placeName={
           dialog?.kind === 'delete'
-            ? (placeById.get(dialog.placeId)?.name ?? 'this place')
-            : 'this place'
+            ? (placeById.get(dialog.placeId)?.name ?? null)
+            : null
         }
         dayCount={
           dialog?.kind === 'delete'

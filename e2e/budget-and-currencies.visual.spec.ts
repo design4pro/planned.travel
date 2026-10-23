@@ -143,6 +143,11 @@ const MENU = '[data-part="display-currency"]'
 const PER_TRIP = /Each trip in its own currency/
 const NOT_CONVERTED = 'Not converted'
 const FALLBACK_ALERT = 'Some figures are not converted'
+const DISABLED_HINT =
+  'Currencies without a recorded rate are listed but cannot be chosen: they need a live rate, which is not available yet.'
+/** The alert itself: its title is also read by the control's live region, so the text alone matches twice. */
+const ALERT = '[data-part="display-currency-alert"]'
+const LIVE = '[data-part="display-currency-live"]'
 
 /** Open the menu behind the toolbar's display-currency control. */
 async function openMenu(page: Page): Promise<void> {
@@ -153,13 +158,14 @@ async function openMenu(page: Page): Promise<void> {
 async function chooseUnansweredCurrency(page: Page): Promise<void> {
   await openMenu(page)
   await page.getByRole('option', { name: /workspace default/ }).click()
-  await expect(page.getByText(FALLBACK_ALERT)).toBeVisible()
+  await expect(page.locator(ALERT)).toBeVisible()
   await settleMutations(page)
 }
 
 async function restorePerTrip(page: Page): Promise<void> {
   await openMenu(page)
   await page.getByRole('option', { name: PER_TRIP }).click()
+  await expect(page.locator(ALERT)).toHaveCount(0)
   await expect(page.getByText(FALLBACK_ALERT)).toHaveCount(0)
   await settleMutations(page)
 }
@@ -189,6 +195,12 @@ test.describe('04-S1 — display currency', () => {
       await expect(
         page.locator(MENU).getByRole('combobox', { name: 'Display currency' }),
       ).toBeVisible()
+
+      // Arrow keys skip a disabled option, so its own reason is out of a keyboard user's reach: the
+      // trigger, where focus lands, carries it once.
+      const trigger = page.locator(MENU).getByRole('combobox')
+      await trigger.focus()
+      await expect(trigger).toHaveAccessibleDescription(DISABLED_HINT)
 
       await openMenu(page)
       await expect(page.getByRole('option', { name: PER_TRIP })).toBeVisible()
@@ -225,6 +237,8 @@ test.describe('04-S1 — display currency', () => {
       await expect(
         page.getByRole('status').filter({ hasText: /JPY to GBP on / }),
       ).toBeVisible()
+      // The control's live region reads the fallback together with the indicator.
+      await expect(page.locator(LIVE)).toContainText(FALLBACK_ALERT)
 
       await restorePerTrip(page)
       await expect(page.getByText(NOT_CONVERTED)).toHaveCount(0)

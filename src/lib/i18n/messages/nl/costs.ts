@@ -97,6 +97,9 @@ const messages = {
   'expense.addDescription':
     'Bedragen worden voor deze reis in {currency} bijgehouden. Leg een bon vast in zijn eigen valuta en noteer waar hij op uitkwam.',
   'expense.saveFailed': 'Opslaan is mislukt',
+  'expense.splitOff.title': 'De opgeslagen delen tellen niet op tot het totaal',
+  'expense.splitOff.body':
+    'Samen zijn ze {shares}, maar het totaal is {total}. Controleer de verdeling hieronder en sla op om dit te corrigeren.',
   'expense.what': 'Waar was het voor',
   'expense.whatPlaceholder': 'Diner bij Kyubey',
   'expense.amountNotANumber': 'Vul het bedrag in als getal.',
@@ -211,6 +214,8 @@ const messages = {
   'display.menu.currentHint': 'Gekozen, maar geen vastgelegde koers dekt hem',
   'display.menu.needsLiveRate':
     'Heeft een actuele koers nodig, die nog niet beschikbaar is',
+  'display.menu.disabledHint':
+    "Valuta's zonder vastgelegde koers staan in de lijst, maar kunnen niet worden gekozen: ze hebben een live koers nodig die nog niet beschikbaar is.",
   'display.menu.saving': 'Je keuze wordt opgeslagen',
   'display.error.title': 'De weergavevaluta is niet opgeslagen',
   'display.error.body':
@@ -326,6 +331,7 @@ const messages = {
   'row.edit': '{title} bewerken',
   'row.delete': '{title} verwijderen',
   'row.saving': 'Opslaan',
+  'row.splitOff': 'Delen tellen niet op tot het totaal',
   'tile.owe.label': 'Jij betaalt nog',
   'tile.owe.settled': 'Je staat helemaal quitte',
   'tile.owe.pending': 'Reken af voordat je naar huis vliegt',

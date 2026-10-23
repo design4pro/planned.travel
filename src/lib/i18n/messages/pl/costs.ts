@@ -104,6 +104,9 @@ const messages = {
   'expense.addDescription':
     'Kwoty tego wyjazdu trzymamy w {currency}. Zapisz paragon w jego własnej walucie i podaj, na ile się przeliczył.',
   'expense.saveFailed': 'Nie udało się zapisać',
+  'expense.splitOff.title': 'Zapisane udziały nie sumują się do kwoty',
+  'expense.splitOff.body':
+    'Razem dają {shares}, a suma to {total}. Sprawdź podział poniżej i zapisz, aby to naprawić.',
   'expense.what': 'Za co to było',
   'expense.whatPlaceholder': 'Kolacja w Kyubey',
   'expense.amountNotANumber': 'Wpisz kwotę jako liczbę.',
@@ -219,6 +222,8 @@ const messages = {
     'Wybrana, ale żaden zapisany kurs jej nie obejmuje',
   'display.menu.needsLiveRate':
     'Wymaga kursu bieżącego, który nie jest jeszcze dostępny',
+  'display.menu.disabledHint':
+    'Waluty bez zapisanego kursu są na liście, ale nie można ich wybrać: wymagają kursu bieżącego, który nie jest jeszcze dostępny.',
   'display.menu.saving': 'Zapisywanie wyboru',
   'display.error.title': 'Nie zapisano waluty wyświetlania',
   'display.error.body':
@@ -348,6 +353,7 @@ const messages = {
   'row.edit': 'Edytuj: {title}',
   'row.delete': 'Usuń: {title}',
   'row.saving': 'Zapisywanie',
+  'row.splitOff': 'Udziały nie sumują się do kwoty',
   'tile.owe.label': 'Twój dług',
   'tile.owe.settled': 'Wszystko rozliczone',
   'tile.owe.pending': 'Rozlicz się przed powrotem do domu',

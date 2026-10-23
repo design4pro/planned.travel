@@ -99,6 +99,9 @@ const messages = {
   'expense.addDescription':
     'Os valores desta viagem ficam em {currency}. Registre um comprovante na moeda dele e anote quanto deu na conversão.',
   'expense.saveFailed': 'Não deu para salvar',
+  'expense.splitOff.title': 'As partes salvas não somam o total',
+  'expense.splitOff.body':
+    'Elas somam {shares}, mas o total é {total}. Confira a divisão abaixo e salve para corrigir.',
   'expense.what': 'Foi para quê',
   'expense.whatPlaceholder': 'Jantar no Kyubey',
   'expense.amountNotANumber': 'Escreva o valor como número.',
@@ -213,6 +216,8 @@ const messages = {
   'display.menu.currentHint': 'Escolhida, mas nenhuma taxa registrada a cobre',
   'display.menu.needsLiveRate':
     'Precisa de uma taxa ao vivo, que ainda não está disponível',
+  'display.menu.disabledHint':
+    'As moedas sem uma taxa registrada aparecem na lista, mas não podem ser escolhidas: precisam de uma taxa ao vivo, que ainda não está disponível.',
   'display.menu.saving': 'Salvando sua escolha',
   'display.error.title': 'A moeda de exibição não foi salva',
   'display.error.body':
@@ -335,6 +340,7 @@ const messages = {
   'row.edit': 'Editar {title}',
   'row.delete': 'Excluir {title}',
   'row.saving': 'Salvando',
+  'row.splitOff': 'As partes não somam o total',
   'tile.owe.label': 'Você deve',
   'tile.owe.settled': 'Você está quite',
   'tile.owe.pending': 'Acerte antes de voltar para casa',

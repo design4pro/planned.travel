@@ -96,6 +96,9 @@ const messages = {
   'expense.addDescription':
     'Số tiền của chuyến này được giữ bằng {currency}. Ghi biên lai theo đúng tiền tệ của nó và cho biết quy đổi ra bao nhiêu.',
   'expense.saveFailed': 'Không lưu được',
+  'expense.splitOff.title': 'Các phần đã lưu không khớp tổng',
+  'expense.splitOff.body':
+    'Tổng các phần là {shares}, nhưng tổng số là {total}. Hãy kiểm tra phần chia bên dưới rồi lưu để sửa.',
   'expense.what': 'Chi cho việc gì',
   'expense.whatPlaceholder': 'Bữa tối ở Kyubey',
   'expense.amountNotANumber': 'Nhập số tiền dưới dạng số.',
@@ -208,6 +211,8 @@ const messages = {
   'display.menu.currentHint':
     'Đã chọn, nhưng không có tỷ giá đã ghi nào bao phủ',
   'display.menu.needsLiveRate': 'Cần tỷ giá trực tiếp, hiện chưa có',
+  'display.menu.disabledHint':
+    'Các loại tiền không có tỷ giá đã ghi vẫn hiện trong danh sách nhưng không thể chọn: chúng cần tỷ giá trực tiếp, hiện chưa có.',
   'display.menu.saving': 'Đang lưu lựa chọn của bạn',
   'display.error.title': 'Chưa lưu được tiền tệ hiển thị',
   'display.error.body':
@@ -316,6 +321,7 @@ const messages = {
   'row.edit': 'Sửa {title}',
   'row.delete': 'Xoá {title}',
   'row.saving': 'Đang lưu',
+  'row.splitOff': 'Các phần không khớp tổng',
   'tile.owe.label': 'Bạn nợ',
   'tile.owe.settled': 'Bạn đã thanh toán xong',
   'tile.owe.pending': 'Thanh toán trước khi bay về nhà',

@@ -96,6 +96,9 @@ const messages = {
   'expense.addDescription':
     '이 여행의 금액은 {currency}로 관리합니다. 영수증은 그 통화로 기록하고, 환산된 금액을 적어 주세요.',
   'expense.saveFailed': '저장하지 못했습니다',
+  'expense.splitOff.title': '저장된 분담액의 합계가 맞지 않습니다',
+  'expense.splitOff.body':
+    '합계는 {shares}인데 총액은 {total}입니다. 아래 분담 내역을 확인한 뒤 저장하면 바로잡을 수 있습니다.',
   'expense.what': '무엇에 쓴 돈인지',
   'expense.whatPlaceholder': 'Kyubey에서 저녁',
   'expense.amountNotANumber': '금액을 숫자로 입력해 주세요.',
@@ -203,6 +206,8 @@ const messages = {
   'display.menu.currentHint':
     '선택했지만 기록된 환율이 이 통화를 지원하지 않습니다',
   'display.menu.needsLiveRate': '아직 사용할 수 없는 실시간 환율이 필요합니다',
+  'display.menu.disabledHint':
+    '기록된 환율이 없는 통화는 목록에 표시되지만 선택할 수 없습니다. 아직 사용할 수 없는 실시간 환율이 필요합니다.',
   'display.menu.saving': '선택을 저장하는 중',
   'display.error.title': '표시 통화를 저장하지 못했습니다',
   'display.error.body':
@@ -310,6 +315,7 @@ const messages = {
   'row.edit': '{title} 수정',
   'row.delete': '{title} 삭제',
   'row.saving': '저장 중',
+  'row.splitOff': '분담액 합계가 맞지 않음',
   'tile.owe.label': '내가 줄 돈',
   'tile.owe.settled': '모두 정산되었습니다',
   'tile.owe.pending': '집에 돌아가기 전에 정산하세요',

@@ -142,6 +142,28 @@ const messages = {
     'To miejsce jest sprzeczne z ustawioną godziną. Przeniesienie tutaj usuwa godzinę - nowa kolejność i usunięta godzina zapisują się razem.',
   'plan.move.dropTime.confirm': 'Przenieś i usuń godzinę',
   'plan.move.dropTime.cancel': 'Zostaw na miejscu',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Edytuj miejsce',
+  'plan.stop.menu.setTime': 'Ustaw godzinę',
+  'plan.stop.menu.placeOnMap': 'Umieść na mapie',
+  'plan.stop.menu.movePin': 'Przesuń pinezkę',
+  'plan.stop.menu.moveToDay': 'Przenieś do innego dnia',
+  'plan.stop.menu.backToUnplanned': 'Przenieś do niezaplanowanych',
+  'plan.stop.menu.delete': 'Usuń z podróży',
+  'plan.delete.title': 'Usunąć „{name}”?',
+  'plan.delete.titleUnnamed': 'Usunąć to miejsce?',
+  'plan.delete.bodyUnplanned':
+    'Miejsce całkowicie zniknie z miejsc podróży. Tej operacji nie można cofnąć.',
+  'plan.delete.bodyOnDays': {
+    one: 'Miejsce jest w {count} dniu tej podróży i zniknie z tego dnia. Tej operacji nie można cofnąć.',
+    few: 'Miejsce jest w {count} dniach tej podróży i zniknie ze wszystkich. Tej operacji nie można cofnąć.',
+    many: 'Miejsce jest w {count} dniach tej podróży i zniknie ze wszystkich. Tej operacji nie można cofnąć.',
+    other:
+      'Miejsce jest w {count} dniach tej podróży i zniknie ze wszystkich. Tej operacji nie można cofnąć.',
+  },
+  'plan.delete.error': 'Nie udało się usunąć',
+  'plan.delete.confirm': 'Usuń miejsce',
+  'plan.delete.deleting': 'Usuwanie miejsca',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Dodaj notatkę',
   'plan.note.addForDay': 'Dodaj notatkę: {day}',

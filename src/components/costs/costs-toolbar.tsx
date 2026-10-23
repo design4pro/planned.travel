@@ -61,6 +61,8 @@ export interface CostsToolbarProps {
   readonly display: DisplayCurrency
   readonly displayChoices: CostsDisplayChoices
   readonly savingDisplay: boolean
+  /** Some figures have no rate for their pair; the display-currency control announces it. */
+  readonly displayUnconverted: boolean
   readonly onDisplayChange: (code: string | null) => void
 }
 
@@ -77,6 +79,7 @@ export function CostsToolbar({
   display,
   displayChoices,
   savingDisplay,
+  displayUnconverted,
   onDisplayChange,
 }: CostsToolbarProps) {
   const t = useTranslate()
@@ -160,6 +163,7 @@ export function CostsToolbar({
             choices={displayChoices}
             budgetCurrency={currency}
             saving={savingDisplay}
+            unconverted={displayUnconverted}
             onChange={onDisplayChange}
           />
           <SimpleSelect

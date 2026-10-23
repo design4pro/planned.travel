@@ -16,7 +16,6 @@ import {
   deleteTransport,
   listTripTransports,
   listTripLegs,
-  reorderDayTransports,
   replaceTransportChain,
   saveSearchedConnection,
   saveTransport,
@@ -77,8 +76,6 @@ describe('archived transport write boundary', () => {
     'save-edit',
     'search-new',
     'search-edit',
-    'reorder',
-    'reorder-resolved',
   ] as const
   type Writer = (typeof writers)[number]
 
@@ -119,17 +116,6 @@ describe('archived transport write boundary', () => {
           title: 'Connection',
           ...chain,
         })
-      case 'reorder':
-      case 'reorder-resolved':
-        return reorderDayTransports(
-          scope,
-          {
-            tripId: requestedTrip,
-            dayId,
-            items: [{ kind: 'transport', id: transportId }],
-          },
-          kind === 'reorder-resolved' ? trip : undefined,
-        )
     }
   }
 

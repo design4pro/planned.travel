@@ -96,6 +96,9 @@ const messages = {
   'expense.addDescription':
     'Bu seyahatte tutarlar {currency} cinsinden tutuluyor. Fişi kendi para biriminde yaz ve çevrildiğinde ne olduğunu kaydet.',
   'expense.saveFailed': 'Kaydedilemedi',
+  'expense.splitOff.title': 'Kayıtlı paylar toplamı tutmuyor',
+  'expense.splitOff.body':
+    'Paylar toplam {shares} ediyor, ancak toplam tutar {total}. Aşağıdaki bölüşümü kontrol edip kaydederek bunu giderebilirsin.',
   'expense.what': 'Ne içindi',
   'expense.whatPlaceholder': 'Kyubey’de akşam yemeği',
   'expense.amountNotANumber': 'Tutarı sayı olarak yaz.',
@@ -208,6 +211,8 @@ const messages = {
   'display.menu.rateHint': 'Bir gezide kayıtlı kuru kullanır',
   'display.menu.currentHint': 'Seçili, ancak kayıtlı hiçbir kur onu kapsamıyor',
   'display.menu.needsLiveRate': 'Henüz mevcut olmayan canlı bir kur gerektirir',
+  'display.menu.disabledHint':
+    'Kaydedilmiş kuru olmayan para birimleri listede yer alır ancak seçilemez: henüz mevcut olmayan canlı bir kura ihtiyaç duyarlar.',
   'display.menu.saving': 'Seçiminiz kaydediliyor',
   'display.error.title': 'Görüntüleme para birimi kaydedilmedi',
   'display.error.body': 'Seçiminiz kaydedilemedi. Birazdan tekrar deneyin.',
@@ -322,6 +327,7 @@ const messages = {
   'row.edit': '{title} düzenle',
   'row.delete': '{title} sil',
   'row.saving': 'Kaydediliyor',
+  'row.splitOff': 'Paylar toplamı tutmuyor',
   'tile.owe.label': 'Borcun',
   'tile.owe.settled': 'Hesabın tamamen ödeşti',
   'tile.owe.pending': 'Eve dönmeden önce ödeş',

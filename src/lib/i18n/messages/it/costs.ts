@@ -100,6 +100,9 @@ const messages = {
   'expense.addDescription':
     'Gli importi di questo viaggio sono tenuti in {currency}. Registra una ricevuta nella sua valuta e indica a quanto è stata convertita.',
   'expense.saveFailed': 'Salvataggio non riuscito',
+  'expense.splitOff.title': 'Le quote salvate non coincidono col totale',
+  'expense.splitOff.body':
+    'Sommano {shares}, ma il totale è {total}. Controlla la suddivisione qui sotto e salva per correggere.',
   'expense.what': 'Per cosa era',
   'expense.whatPlaceholder': 'Cena al Kyubey',
   'expense.amountNotANumber': 'Scrivi l’importo come numero.',
@@ -216,6 +219,8 @@ const messages = {
   'display.menu.currentHint': 'Scelta, ma nessun tasso registrato la copre',
   'display.menu.needsLiveRate':
     'Richiede un tasso in tempo reale, non ancora disponibile',
+  'display.menu.disabledHint':
+    "Le valute senza un tasso registrato sono nell'elenco ma non si possono scegliere: richiedono un tasso in tempo reale, non ancora disponibile.",
   'display.menu.saving': 'Salvataggio della scelta',
   'display.error.title': 'La valuta di visualizzazione non è stata salvata',
   'display.error.body':
@@ -338,6 +343,7 @@ const messages = {
   'row.edit': 'Modifica {title}',
   'row.delete': 'Elimina {title}',
   'row.saving': 'Salvataggio',
+  'row.splitOff': 'Le quote non coincidono col totale',
   'tile.owe.label': 'Devi',
   'tile.owe.settled': 'Sei in pari',
   'tile.owe.pending': 'Salda prima di tornare a casa',

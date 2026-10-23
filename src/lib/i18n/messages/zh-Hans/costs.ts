@@ -88,6 +88,9 @@ const messages = {
   'expense.addDescription':
     '这趟行程的金额以 {currency} 记账。请按收据本身的货币录入，并填写换算后的金额。',
   'expense.saveFailed': '保存失败',
+  'expense.splitOff.title': '已保存的分摊额之和与总额不符',
+  'expense.splitOff.body':
+    '分摊额合计为 {shares}，但总额为 {total}。请检查下方的分摊并保存即可修正。',
   'expense.what': '这笔钱花在什么上',
   'expense.whatPlaceholder': '在 Kyubey 的晚餐',
   'expense.amountNotANumber': '请用数字填写金额。',
@@ -189,6 +192,8 @@ const messages = {
   'display.menu.rateHint': '使用行程中已记录的汇率',
   'display.menu.currentHint': '已选择，但没有已记录的汇率适用',
   'display.menu.needsLiveRate': '需要实时汇率，目前尚不可用',
+  'display.menu.disabledHint':
+    '没有已记录汇率的货币会列出，但无法选择：它们需要实时汇率，而目前尚不可用。',
   'display.menu.saving': '正在保存你的选择',
   'display.error.title': '未能保存显示货币',
   'display.error.body': '无法保存你的选择，请稍后再试。',
@@ -286,6 +291,7 @@ const messages = {
   'row.edit': '编辑 {title}',
   'row.delete': '删除 {title}',
   'row.saving': '正在保存',
+  'row.splitOff': '分摊额之和与总额不符',
   'tile.owe.label': '你欠',
   'tile.owe.settled': '你已全部结清',
   'tile.owe.pending': '回家之前把账结清',

@@ -17,10 +17,13 @@ import {
   dayAccommodations,
   dayAssignments,
   dayNotes,
+  newId,
+  places,
 } from '#/server/db/schema'
 import {
   createTenantRepository,
   createTenantTableAccess,
+  prepareTenantInsert,
   tenantFilter,
 } from './base'
 import { runBatch } from './batch'
@@ -35,10 +38,20 @@ import {
   isAnchor,
   journeyPositionStatements,
   placeJourneys,
+  resolveDayRun,
   withinAnchorBound,
 } from './day-journeys'
-import { listTripDayNotes, listTripDays, requireTripDay } from './days'
-import { placesRepository, requirePlaceOfTrip } from './places'
+import {
+  listDayNotes,
+  listTripDayNotes,
+  listTripDays,
+  requireTripDay,
+} from './days'
+import {
+  PLACE_WRITE_ROLES,
+  placesRepository,
+  requirePlaceOfTrip,
+} from './places'
 import { requireReservationOfTrip } from './reservations'
 import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
 import {
@@ -59,6 +72,7 @@ import type {
   DayAssignment,
   Place,
 } from '#/server/db/types'
+import type { BatchStatement } from './batch'
 import type { DayRunEntry, DayRunItemInput } from './day-journeys'
 import type { TenantScope } from './base'
 
@@ -169,6 +183,56 @@ export type ReorderDayTimelinesInput = z.infer<typeof reorderDayTimelinesInput>
 export interface WrittenDayTimeline {
   readonly dayId: string
   readonly items: ReadonlyArray<TimelineItemInput>
+  readonly journeys: ReadonlyArray<DayRunItemInput>
+}
+
+/**
+ * The day's whole resulting run, as a write that adds or removes a stop may send it.
+ *
+ * Only the journeys' place in it matters: the server places each against the stops and notes as
+ * the write leaves them, so a client can never inject a position of its own choosing. Bounded
+ * as a reorder's day is.
+ */
+export const dayRunInput = z
+  .array(dayRunItemInput)
+  .max(DAY_RUN_MAX_ITEMS)
+  .refine(withinAnchorBound, { error: DAY_RUN_ANCHORS_MESSAGE })
+
+/**
+ * Gives a place to a day at a stored position, and the day's journeys theirs.
+ *
+ * `items` is the day's resulting run, and names the stop being created by its **place id**, because
+ * its assignment id does not exist until this write mints it. A caller that sends none leaves each
+ * journey where the stored numbering already puts it.
+ */
+export const scheduleAssignmentInput = z.object({
+  tripId: idSchema,
+  dayId: idSchema,
+  placeId: idSchema,
+  orderIndex: sortOrderSchema,
+  items: dayRunInput.optional(),
+})
+export type ScheduleAssignmentInput = z.infer<typeof scheduleAssignmentInput>
+
+export const unscheduleAssignmentInput = z.object({
+  tripId: idSchema,
+  assignmentId: idSchema,
+})
+export type UnscheduleAssignmentInput = z.infer<
+  typeof unscheduleAssignmentInput
+>
+
+export const deletePlaceWithJourneysInput = z.object({
+  tripId: idSchema,
+  placeId: idSchema,
+})
+export type DeletePlaceWithJourneysInput = z.infer<
+  typeof deletePlaceWithJourneysInput
+>
+
+/** The journeys one write placed on a day: what the caller mirrors to the trip room. */
+export interface WrittenDayJourneys {
+  readonly dayId: string
   readonly journeys: ReadonlyArray<DayRunItemInput>
 }
 
@@ -537,13 +601,6 @@ export async function reorderAssignments(
   )
 }
 
-export async function deleteAssignment(
-  scope: TenantScope,
-  assignmentId: string,
-): Promise<void> {
-  await dayAssignmentsRepository.requireRemove(scope, assignmentId)
-}
-
 /* -------------------------------------------------------------------------------------------------
  * One day, one number line
  * ---------------------------------------------------------------------------------------------- */
@@ -770,6 +827,223 @@ export async function reorderDayTimelines(
     items: line.anchors,
     journeys: line.placed.map(({ ref }) => ref),
   }))
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * The writes that restate a day's journeys without renumbering it
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * What one write does to one day's stops, for the journeys placed against it.
+ *
+ * `removed` are assignment ids that will be gone once the batch lands; `added` is the stop it
+ * creates. The notes and every other stop stay as they are stored.
+ */
+interface DayChange {
+  readonly removed?: ReadonlySet<string>
+  readonly added?: { readonly id: string; readonly orderIndex: number }
+  readonly requested?: ReadonlyArray<DayRunItemInput>
+}
+
+/**
+ * The statements that place one day's journeys against the day as `change` leaves it, and the
+ * journeys they write.
+ *
+ * The stops and notes are the ruler and are never written here: a schedule stores a midpoint and
+ * an unschedule leaves a hole, so the numbering the journeys are measured against is the stored
+ * one, minus what goes and plus what arrives. The rule is `./day-journeys`'s — the same one
+ * `reorderDayTimelines` applies against the numbering it produces itself.
+ */
+async function restateDayJourneys(
+  scope: TenantScope,
+  tripId: string,
+  dayId: string,
+  change: DayChange,
+): Promise<{
+  readonly statements: Array<BatchStatement>
+  readonly written: WrittenDayJourneys
+}> {
+  const [stops, notes, journeys] = await Promise.all([
+    listDayAssignments(scope, dayId),
+    listDayNotes(scope, dayId),
+    departingJourneys(scope, tripId, dayId),
+  ])
+
+  const anchors: Array<DayRunEntry> = [
+    ...stops
+      .filter((row) => change.removed?.has(row.id) !== true)
+      .map((row) => ({
+        ref: { kind: 'stop' as const, id: row.id },
+        position: row.orderIndex,
+      })),
+    ...(change.added === undefined
+      ? []
+      : [
+          {
+            ref: { kind: 'stop' as const, id: change.added.id },
+            position: change.added.orderIndex,
+          },
+        ]),
+    ...notes.map((row) => ({
+      ref: { kind: 'note' as const, id: row.id },
+      position: row.sortOrder,
+    })),
+  ]
+
+  const wanted = resolveDayRun(
+    [...anchors, ...journeys].sort(byDayRun),
+    change.requested,
+  )
+  const placed = placeJourneys(
+    wanted,
+    new Map(anchors.map((entry) => [dayRunKey(entry.ref), entry.position])),
+  )
+
+  return {
+    statements: journeyPositionStatements(scope, placed),
+    written: { dayId, journeys: placed.map(({ ref }) => ref) },
+  }
+}
+
+/** The days that placed at least one journey: a day with none has nothing to tell the room. */
+function writtenDays(
+  days: ReadonlyArray<WrittenDayJourneys>,
+): Array<WrittenDayJourneys> {
+  return days.filter((day) => day.journeys.length > 0)
+}
+
+/**
+ * Gives a place a day and places the day's journeys, in one batch.
+ *
+ * The stop is stored at `orderIndex`, the midpoint its caller computed among the day's stops, so
+ * the day is not renumbered; the journeys are placed against the day with that stop in it. Both go
+ * out as one {@link runBatch} — one transaction on D1 — so no failure can leave a stop on the day
+ * beside journeys that still name the gaps it was inserted into.
+ *
+ * The assignment id is minted here, before the batch, so that the run the caller sent can name the
+ * stop (by its place id) and the batch can place the journeys against it without a read in between.
+ * The usual stop rules apply: the trip may be written, the caller is an owner or an editor, and the
+ * day and the place belong to the trip. A place already on the day is refused by
+ * `day_assignments_day_place_unq`, and the batch rolls back with it.
+ */
+export async function scheduleAssignment(
+  scope: TenantScope,
+  input: ScheduleAssignmentInput,
+): Promise<{
+  readonly assignmentId: string
+  readonly days: Array<WrittenDayJourneys>
+}> {
+  const values = scheduleAssignmentInput.parse(input)
+  await requireWritableTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await requireTripDay(scope, values.tripId, values.dayId)
+  await requirePlaceOfTrip(scope, values.tripId, values.placeId)
+
+  const assignmentId = newId()
+  const { statements, written } = await restateDayJourneys(
+    scope,
+    values.tripId,
+    values.dayId,
+    {
+      added: { id: assignmentId, orderIndex: values.orderIndex },
+      requested: values.items?.map((ref) =>
+        ref.kind === 'stop' && ref.id === values.placeId
+          ? { kind: 'stop' as const, id: assignmentId }
+          : ref,
+      ),
+    },
+  )
+
+  await runBatch(scope, [
+    prepareTenantInsert(scope, dayAssignments, {
+      id: assignmentId,
+      tripId: values.tripId,
+      dayId: values.dayId,
+      placeId: values.placeId,
+      orderIndex: values.orderIndex,
+    }),
+    ...statements,
+  ])
+  return { assignmentId, days: writtenDays([written]) }
+}
+
+/**
+ * Takes a stop off its day and places the day's journeys, in one batch.
+ *
+ * The day is not renumbered, so the journeys are measured against the stops that are left, at the
+ * positions they hold. The stop must be one of `tripId`'s — an id of another trip, or of another
+ * workspace, is not found. Its participants go with it, as they do for a bare delete.
+ */
+export async function unscheduleAssignment(
+  scope: TenantScope,
+  input: UnscheduleAssignmentInput,
+): Promise<Array<WrittenDayJourneys>> {
+  const values = unscheduleAssignmentInput.parse(input)
+  await requireWritableTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+
+  const stop = await dayAssignmentsRepository.findById(
+    scope,
+    values.assignmentId,
+  )
+  if (stop === null || stop.tripId !== values.tripId) {
+    throw new NotFoundError('day assignment', values.assignmentId)
+  }
+
+  const { statements, written } = await restateDayJourneys(
+    scope,
+    values.tripId,
+    stop.dayId,
+    { removed: new Set([stop.id]) },
+  )
+
+  await runBatch(scope, [
+    scope.db
+      .delete(dayAssignments)
+      .where(
+        tenantFilter(scope, dayAssignments, eq(dayAssignments.id, stop.id)),
+      ),
+    ...statements,
+  ])
+  return writtenDays([written])
+}
+
+/**
+ * Deletes a place and places the journeys of every day it was on, in one batch.
+ *
+ * The place's stops go with it (`day_assignments.place_id` cascades), one per day at most, and
+ * each of those days has its journeys measured against the stops it keeps. The place must be one
+ * of `tripId`'s: an id of another trip, or of another workspace, is not found.
+ */
+export async function deletePlaceWithJourneys(
+  scope: TenantScope,
+  input: DeletePlaceWithJourneysInput,
+): Promise<Array<WrittenDayJourneys>> {
+  const values = deletePlaceWithJourneysInput.parse(input)
+  await requireWritableTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await requirePlaceOfTrip(scope, values.tripId, values.placeId)
+
+  const stops = await dayAssignmentsRepository.findMany(scope, {
+    where: eq(dayAssignments.placeId, values.placeId),
+  })
+  const restated = await Promise.all(
+    [...new Set(stops.map((stop) => stop.dayId))].map((dayId) =>
+      restateDayJourneys(scope, values.tripId, dayId, {
+        removed: new Set(
+          stops.filter((stop) => stop.dayId === dayId).map((stop) => stop.id),
+        ),
+      }),
+    ),
+  )
+
+  await runBatch(scope, [
+    scope.db
+      .delete(places)
+      .where(tenantFilter(scope, places, eq(places.id, values.placeId))),
+    ...restated.flatMap((day) => day.statements),
+  ])
+  return writtenDays(restated.map((day) => day.written))
 }
 
 /** Replaces the participant set of one stop. */

@@ -98,6 +98,9 @@ const messages = {
   'expense.addDescription':
     'Els imports d’aquest viatge es guarden en {currency}. Anota un rebut en la seva pròpia moneda i indica a quant es va convertir.',
   'expense.saveFailed': 'No s’ha pogut desar',
+  'expense.splitOff.title': 'Les parts desades no quadren',
+  'expense.splitOff.body':
+    'Sumen {shares}, però el total és {total}. Revisa el repartiment de sota i desa per corregir-ho.',
   'expense.what': 'Per a què era',
   'expense.whatPlaceholder': 'Sopar al Kyubey',
   'expense.amountNotANumber': 'Escriu l’import com a número.',
@@ -214,6 +217,8 @@ const messages = {
   'display.menu.currentHint': 'Triada, però cap tipus registrat la cobreix',
   'display.menu.needsLiveRate':
     'Necessita un tipus en directe, que encara no està disponible',
+  'display.menu.disabledHint':
+    'Les divises sense un canvi registrat apareixen a la llista, però no es poden triar: necessiten un canvi en directe que encara no està disponible.',
   'display.menu.saving': 'Desant la teva elecció',
   'display.error.title': 'No s’ha desat la moneda de visualització',
   'display.error.body':
@@ -336,6 +341,7 @@ const messages = {
   'row.edit': 'Edita {title}',
   'row.delete': 'Elimina {title}',
   'row.saving': 'Desant',
+  'row.splitOff': 'Les parts no quadren',
   'tile.owe.label': 'Deus',
   'tile.owe.settled': 'Estàs en paus',
   'tile.owe.pending': 'Salda-ho abans de tornar a casa',

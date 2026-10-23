@@ -141,6 +141,26 @@ const messages = {
     'Αυτή η θέση έρχεται σε αντίθεση με την ώρα που έχει. Η μετακίνηση εδώ σβήνει την ώρα — η νέα σειρά και η σβησμένη ώρα αποθηκεύονται μαζί.',
   'plan.move.dropTime.confirm': 'Μετακίνηση και κατάργηση ώρας',
   'plan.move.dropTime.cancel': 'Να μείνει όπου είναι',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Επεξεργασία μέρους',
+  'plan.stop.menu.setTime': 'Ορισμός ώρας',
+  'plan.stop.menu.placeOnMap': 'Τοποθέτηση στον χάρτη',
+  'plan.stop.menu.movePin': 'Μετακίνηση της καρφίτσας',
+  'plan.stop.menu.moveToDay': 'Μετακίνηση σε άλλη ημέρα',
+  'plan.stop.menu.backToUnplanned': 'Επιστροφή στα μη προγραμματισμένα',
+  'plan.stop.menu.delete': 'Διαγραφή από το ταξίδι',
+  'plan.delete.title': 'Διαγραφή του «{name}»;',
+  'plan.delete.titleUnnamed': 'Διαγραφή αυτού του μέρους;',
+  'plan.delete.bodyUnplanned':
+    'Αφαιρείται εντελώς από τα μέρη του ταξιδιού. Αυτό δεν αναιρείται.',
+  'plan.delete.bodyOnDays': {
+    one: 'Βρίσκεται σε {count} ημέρα αυτού του ταξιδιού και αφαιρείται από αυτήν. Αυτό δεν αναιρείται.',
+    other:
+      'Βρίσκεται σε {count} ημέρες αυτού του ταξιδιού και αφαιρείται από όλες. Αυτό δεν αναιρείται.',
+  },
+  'plan.delete.error': 'Η διαγραφή δεν ολοκληρώθηκε',
+  'plan.delete.confirm': 'Διαγραφή μέρους',
+  'plan.delete.deleting': 'Διαγραφή του μέρους',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Προσθήκη σημείωσης',
   'plan.note.addForDay': 'Προσθήκη σημείωσης, {day}',

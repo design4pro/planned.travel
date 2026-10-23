@@ -138,6 +138,27 @@ const messages = {
     'Aquesta posició contradiu l’hora que té. Moure’l aquí esborra l’hora: el nou ordre i l’hora esborrada es desen alhora.',
   'plan.move.dropTime.confirm': 'Mou-lo i esborra l’hora',
   'plan.move.dropTime.cancel': 'Deixa’l on és',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Edita el lloc',
+  'plan.stop.menu.setTime': 'Defineix una hora',
+  'plan.stop.menu.placeOnMap': 'Situa-ho al mapa',
+  'plan.stop.menu.movePin': 'Mou-ne la xinxeta',
+  'plan.stop.menu.moveToDay': 'Mou a un altre dia',
+  'plan.stop.menu.backToUnplanned': 'Torna a sense planificar',
+  'plan.stop.menu.delete': 'Elimina del viatge',
+  'plan.delete.title': 'Vols eliminar «{name}»?',
+  'plan.delete.titleUnnamed': 'Vols eliminar aquest lloc?',
+  'plan.delete.bodyUnplanned':
+    'Desapareix del tot dels llocs del viatge. Aquesta acció no es pot desfer.',
+  'plan.delete.bodyOnDays': {
+    one: 'És en {count} dia d’aquest viatge i en desapareix. Aquesta acció no es pot desfer.',
+    many: 'És en {count} dies d’aquest viatge i desapareix de tots. Aquesta acció no es pot desfer.',
+    other:
+      'És en {count} dies d’aquest viatge i desapareix de tots. Aquesta acció no es pot desfer.',
+  },
+  'plan.delete.error': 'No s’ha pogut eliminar',
+  'plan.delete.confirm': 'Elimina el lloc',
+  'plan.delete.deleting': 'S’està eliminant el lloc',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Afegeix una nota',
   'plan.note.addForDay': 'Afegeix una nota, {day}',

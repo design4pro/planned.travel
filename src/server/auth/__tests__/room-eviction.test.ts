@@ -1400,3 +1400,285 @@ describe('ending one’s own sessions purges the cached blobs the durable rows n
     }
   })
 })
+
+/* ------------------------------------- revoke-other-sessions ends a session the index lost */
+
+interface Devices {
+  /** The device that asks to end the others. */
+  readonly caller: Person
+  readonly callerToken: string
+  /** The device that signed in first, with the headers that authenticate it. */
+  readonly other: Person
+  readonly otherTokens: Array<string>
+}
+
+/** A person on two devices whose per-user index lost every entry, so Better Auth cannot name any blob. */
+async function twoDevicesWithoutIndex(name: string): Promise<Devices> {
+  const other = await signedInPerson(name)
+  const otherTokens = sessionTokensOf(other)
+  const caller = await signInAgain(other)
+  const callerToken = sessionTokensOf(caller).find(
+    (token) => !otherTokens.includes(token),
+  )
+  if (callerToken === undefined) throw new Error('no session was created')
+  loseIndexOf(caller)
+  return { caller, callerToken, other, otherTokens }
+}
+
+const authenticates = async (person: Person): Promise<boolean> =>
+  (await getAuth().api.getSession({ headers: person.headers })) !== null
+
+const rowsHeld = (tokens: ReadonlyArray<string>): Array<string> =>
+  tokens.filter(
+    (token) =>
+      authDatabase.sqlite
+        .prepare('select 1 as present from session where token = ?')
+        .get(token) !== undefined,
+  )
+
+/** What the sweep passes to the hook besides the endpoint's own answer. */
+async function sweepInProcess(
+  prepared: Record<string, unknown>,
+): Promise<void> {
+  await roomEvictionHook({
+    path: '/revoke-other-sessions',
+    context: { ...(await getAuth().$context), returned: { status: true } },
+    ...prepared,
+  } as Parameters<typeof roomEvictionHook>[0])
+}
+
+describe('revoke-other-sessions ends every other session of the person, indexed or not (#1240)', () => {
+  it('removes the row and the blob of a session the index does not name, and it stops authenticating', async () => {
+    const { caller, other, otherTokens } = await twoDevicesWithoutIndex('sweep')
+    expect(await authenticates(other)).toBe(true)
+
+    await expect(
+      getAuth().api.revokeOtherSessions({ headers: caller.headers }),
+    ).resolves.toMatchObject({ status: true })
+
+    expect(rowsHeld(otherTokens)).toEqual([])
+    expect(blobsHeld(otherTokens)).toEqual([])
+    expect(await authenticates(other)).toBe(false)
+  })
+
+  it('leaves the caller’s row, blob and index entry alone', async () => {
+    const { caller, callerToken } = await twoDevicesWithoutIndex('sweep')
+    const deletes = kv().deleted.length
+
+    await getAuth().api.revokeOtherSessions({ headers: caller.headers })
+
+    expect(rowsHeld([callerToken])).toEqual([callerToken])
+    expect(blobsHeld([callerToken])).toEqual([callerToken])
+    expect(await authenticates(caller)).toBe(true)
+    expect(kv().deleted.slice(deletes)).not.toContain(callerToken)
+    expect(kv().deleted.slice(deletes)).not.toContain(indexKeyOf(caller))
+  })
+
+  it('keeps the indexed caller in the index when the others were indexed', async () => {
+    const other = await signedInPerson('indexed')
+    const caller = await signInAgain(other)
+    const [callerToken] = sessionTokensOf(caller).slice(-1)
+
+    await getAuth().api.revokeOtherSessions({ headers: caller.headers })
+
+    expect(kv().store.get(indexKeyOf(caller))).toContain(String(callerToken))
+    expect(sessionTokensOf(caller)).toEqual([callerToken])
+  })
+
+  it('never reaches another person’s sessions', async () => {
+    const { caller } = await twoDevicesWithoutIndex('sweep')
+    const bystander = await signedInPerson('bystander')
+    loseIndexOf(bystander)
+    const bystanderTokens = sessionTokensOf(bystander)
+
+    await getAuth().api.revokeOtherSessions({ headers: caller.headers })
+
+    expect(rowsHeld(bystanderTokens)).toEqual(bystanderTokens)
+    expect(blobsHeld(bystanderTokens)).toEqual(bystanderTokens)
+    expect(await authenticates(bystander)).toBe(true)
+  })
+
+  it('ends sessions past one page of rows and past one delete’s bound parameters', async () => {
+    const { caller, callerToken } = await twoDevicesWithoutIndex('many')
+    const now = Date.now()
+    const insert = authDatabase.sqlite.prepare(
+      `insert into session
+         (id, token, user_id, active_organization_id, ip_address, user_agent,
+          impersonated_by, expires_at, created_at, updated_at)
+       values (?, ?, ?, null, null, null, null, ?, ?, ?)`,
+    )
+    const bulk: Array<string> = []
+    for (let index = 0; index < 230; index += 1) {
+      const token = `sweep_bulk_${String(index).padStart(4, '0')}`
+      insert.run(
+        `sweep_bulk_id_${index}`,
+        token,
+        caller.userId,
+        now + 86_400_000,
+        now,
+        now,
+      )
+      kv().store.set(token, '{}')
+      bulk.push(token)
+    }
+
+    await getAuth().api.revokeOtherSessions({ headers: caller.headers })
+
+    expect(rowsHeld(bulk)).toEqual([])
+    expect(blobsHeld(bulk)).toEqual([])
+    expect(sessionTokensOf(caller)).toEqual([callerToken])
+  })
+
+  it('runs although the room-eviction decision says nothing needs closing', async () => {
+    const { caller, callerToken, otherTokens } =
+      await twoDevicesWithoutIndex('sweep')
+
+    await sweepInProcess({
+      roomEvictionUserId: caller.userId,
+      roomEvictionCallerToken: callerToken,
+      roomEvictionShouldEvict: false,
+    })
+
+    expect(rowsHeld(otherTokens)).toEqual([])
+    expect(blobsHeld(otherTokens)).toEqual([])
+    expect(evictions()).toEqual([])
+  })
+
+  it('deletes nothing when the person or the caller’s token was not resolved', async () => {
+    const { caller, callerToken, otherTokens } =
+      await twoDevicesWithoutIndex('sweep')
+    const all = [...otherTokens, callerToken]
+
+    await sweepInProcess({ roomEvictionUserId: caller.userId })
+    await sweepInProcess({
+      roomEvictionUserId: caller.userId,
+      roomEvictionCallerToken: '',
+    })
+    await sweepInProcess({ roomEvictionCallerToken: callerToken })
+    await sweepInProcess({
+      roomEvictionUserId: '',
+      roomEvictionCallerToken: callerToken,
+    })
+
+    expect(rowsHeld(all)).toEqual(all)
+    expect(blobsHeld(all)).toEqual(all)
+  })
+
+  it('ignores keys an in-process caller of the auth API supplies', async () => {
+    const victim = await signedInPerson('victim')
+    loseIndexOf(victim)
+    const victimTokens = sessionTokensOf(victim)
+    const attacker = await signedInPerson('attacker')
+    await signInAgain(attacker)
+    loseIndexOf(attacker)
+
+    await getAuth().api.revokeOtherSessions({
+      headers: attacker.headers,
+      roomEvictionUserId: victim.userId,
+      roomEvictionCallerToken: 'not-the-token',
+    } as { headers: Headers })
+
+    expect(rowsHeld(victimTokens)).toEqual(victimTokens)
+    expect(blobsHeld(victimTokens)).toEqual(victimTokens)
+    expect(await authenticates(victim)).toBe(true)
+  })
+
+  it('deletes nothing when the endpoint refuses', async () => {
+    const { other, otherTokens } = await twoDevicesWithoutIndex('sweep')
+    const deletes = kv().deleted.length
+
+    await expect(
+      getAuth().api.revokeOtherSessions({ headers: new Headers() }),
+    ).rejects.toBeDefined()
+
+    expect(kv().deleted).toHaveLength(deletes)
+    expect(rowsHeld(otherTokens)).toEqual(otherTokens)
+    expect(await authenticates(other)).toBe(true)
+  })
+
+  it('answers success and logs ids and counts only when the rows cannot be read', async () => {
+    const { caller, other, otherTokens } = await twoDevicesWithoutIndex('sweep')
+    const { adapter } = await getAuth().$context
+    const real = adapter.findMany.bind(adapter)
+    vi.spyOn(adapter, 'findMany').mockImplementation(async (query) => {
+      if (query.model === 'session') {
+        throw new Error(`Failed query: ${otherTokens.join()}`)
+      }
+      return real(query)
+    })
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    await expect(
+      getAuth().api.revokeOtherSessions({ headers: caller.headers }),
+    ).resolves.toMatchObject({ status: true })
+
+    expect(errors).toHaveBeenCalledOnce()
+    const line = String(errors.mock.calls[0]?.[0])
+    expect(JSON.parse(line)).toMatchObject({
+      level: 'error',
+      event: 'room-eviction.sweep.unread',
+      userId: caller.userId,
+      source: '/revoke-other-sessions',
+      reason: 'Error',
+    })
+    for (const token of otherTokens) expect(line).not.toContain(token)
+    expect(line).not.toContain('Failed query')
+    expect(await authenticates(other)).toBe(true)
+  })
+
+  it('answers success, still ends the others and logs counts only when one delete is rejected', async () => {
+    const { caller, callerToken, otherTokens } =
+      await twoDevicesWithoutIndex('sweep')
+    const [stuck, ...rest] = otherTokens
+    kv().failing.add(String(stuck))
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    await expect(
+      getAuth().api.revokeOtherSessions({ headers: caller.headers }),
+    ).resolves.toMatchObject({ status: true })
+
+    expect(rowsHeld(rest)).toEqual([])
+    expect(blobsHeld(rest)).toEqual([])
+    expect(rowsHeld([callerToken])).toEqual([callerToken])
+    expect(errors).toHaveBeenCalledOnce()
+    const line = String(errors.mock.calls[0]?.[0])
+    expect(JSON.parse(line)).toMatchObject({
+      level: 'error',
+      event: 'room-eviction.sweep.failed',
+      userId: caller.userId,
+      source: '/revoke-other-sessions',
+      found: otherTokens.length,
+      failed: 1,
+    })
+    for (const token of [...otherTokens, callerToken]) {
+      expect(line).not.toContain(token)
+    }
+  })
+
+  it('answers success and logs the error’s name only when the delete itself throws', async () => {
+    const { caller, otherTokens } = await twoDevicesWithoutIndex('sweep')
+    const { internalAdapter } = await getAuth().$context
+    vi.spyOn(internalAdapter, 'deleteSessions').mockRejectedValue(
+      new TypeError(`Failed query: ${otherTokens.join()}`),
+    )
+    const errors = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+
+    await expect(
+      getAuth().api.revokeOtherSessions({ headers: caller.headers }),
+    ).resolves.toMatchObject({ status: true })
+
+    const lines = errors.mock.calls.map((call) => String(call[0]))
+    expect(lines).toHaveLength(1)
+    expect(JSON.parse(String(lines[0]))).toMatchObject({
+      event: 'room-eviction.sweep.failed',
+      reason: 'TypeError',
+    })
+    for (const token of otherTokens) expect(lines[0]).not.toContain(token)
+  })
+})

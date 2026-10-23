@@ -30,8 +30,11 @@ import {
   createAccommodation,
   createAssignment,
   deleteAccommodation,
+  deletePlaceWithJourneys,
   listTripAccommodations,
   reorderDayTimelines,
+  scheduleAssignment,
+  unscheduleAssignment,
   updateAccommodation,
 } from '../itinerary'
 import {
@@ -141,7 +144,6 @@ import {
   getTransport,
   listTransportLegs,
   listTripDayTransports,
-  reorderDayTransports,
   replaceTransportChain,
   requireTransportOfTrip,
   setTransportStatus,
@@ -569,7 +571,7 @@ describe('member isolation', () => {
       ).toBeInstanceOf(NotFoundError)
     })
 
-    it('refuses to list or reorder its day journeys (03-S5)', async () => {
+    it('refuses to list its day journeys, or to place them by a schedule, an unschedule or a delete (03-S5, #816)', async () => {
       // A private trip's journeys are endpoints, times, service numbers and fares, so the read
       // resolves the trip before it reads a row — the guard is in the repository function rather
       // than in the planner's loader, where a later caller could forget it.
@@ -579,38 +581,33 @@ describe('member isolation', () => {
         ),
       ).toBeInstanceOf(NotFoundError)
 
+      // The three writes that place a day's journeys name a trip id too, and answer the same way.
       expect(
         await captureError(() =>
-          reorderDayTransports(stranger, {
+          scheduleAssignment(stranger, {
             tripId: fixture.tripId,
             dayId: fixture.dayId,
-            items: [{ kind: 'note', id: fixture.noteId }],
+            placeId: fixture.placeId,
+            orderIndex: 0,
           }),
         ),
       ).toBeInstanceOf(NotFoundError)
-    })
-
-    it('refuses the same reorder when the trip is handed in already resolved', async () => {
-      // A row resolved in the owner's scope is not proof of visibility in the caller's scope.
-      // The optional argument cannot bypass readability or the current archive state.
-      const asTheOwnerSeesIt = await requireTrip(alpha.scope, fixture.tripId)
-
       expect(
         await captureError(() =>
-          reorderDayTransports(
-            stranger,
-            {
-              tripId: fixture.tripId,
-              dayId: fixture.dayId,
-              items: [{ kind: 'note', id: fixture.noteId }],
-            },
-            asTheOwnerSeesIt,
-          ),
+          unscheduleAssignment(stranger, {
+            tripId: fixture.tripId,
+            assignmentId: fixture.assignmentId,
+          }),
         ),
       ).toBeInstanceOf(NotFoundError)
-
-      // A trip of another workspace is refused by the tenant filter whatever is handed in.
-      expect(await listTrips(stranger)).toEqual([])
+      expect(
+        await captureError(() =>
+          deletePlaceWithJourneys(stranger, {
+            tripId: fixture.tripId,
+            placeId: fixture.placeId,
+          }),
+        ),
+      ).toBeInstanceOf(NotFoundError)
     })
 
     it('refuses a child write parented onto it', async () => {

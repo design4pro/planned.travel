@@ -1,15 +1,16 @@
 /**
- * A journey's place on the day's number line: the one rule, shared by both writers of it.
+ * A journey's place on the day's number line: the one rule, shared by every writer of it.
  *
  * A day is one number line. `reorderDayTimelines` (`./itinerary`) owns it and numbers the stops and
  * notes `0..n-1`; a journey expresses where it sits **between** two of those positions, through the
- * fractional `sort_order` its own columns were declared to be (`schema.ts`). Two callers place
- * journeys, and the rule exists once, here:
+ * fractional `sort_order` its own columns were declared to be (`schema.ts`). Every writer that places
+ * journeys shares the rule, which exists once, here:
  *
  * - `reorderDayTimelines` places them in the same batch that renumbers the stops and notes, against
  *   the numbering that very write produces.
- * - `reorderDayTransports` (`./transports`) places them against the numbering already stored, for
- *   the writes that never renumber a day (schedule, unschedule, delete).
+ * - `scheduleAssignment`, `unscheduleAssignment` and `deletePlaceWithJourneys` (`./itinerary`)
+ *   place them against the numbering already stored, in the batch that adds or removes the stop,
+ *   for the writes that never renumber a day.
  *
  * This module reads and plans; it writes nothing itself. The caller owns the batch.
  */
@@ -211,6 +212,55 @@ function splitGap(
     { length: sharing },
     (_unused, index) => low + ((index + 1) * (high - low)) / (sharing + 1),
   )
+}
+
+/**
+ * The day's whole run as a write should place it: what the caller asked for, then what it left out.
+ *
+ * `current` is the day as it stands once the write has landed, sorted by {@link byDayRun};
+ * `requested` is the run the caller sent, or none. The three rules `reorderDayTimelines` states for
+ * its lists apply here for the same reasons:
+ *
+ * - **Unknown ids are dropped, not rejected.** A tab one delete behind must still be able to write
+ *   the rows that do exist, and a forged id moves nothing.
+ * - **A row named twice is taken once**, at its first mention.
+ * - **Known ids the caller omitted go back behind the row they currently follow**, so a journey the
+ *   payload left out is counted among the journeys sharing its gap rather than left at a value a
+ *   recomputed sibling could land on.
+ *
+ * With no `requested` run the day is returned in its stored order.
+ */
+export function resolveDayRun(
+  current: ReadonlyArray<DayRunEntry>,
+  requested: ReadonlyArray<DayRunItemInput> = [],
+): Array<DayRunItemInput> {
+  const known = new Map(
+    current.map((entry) => [dayRunKey(entry.ref), entry.ref]),
+  )
+  const wanted: Array<DayRunItemInput> = []
+  const seen = new Set<string>()
+  for (const ref of requested) {
+    const key = dayRunKey(ref)
+    const row = known.get(key)
+    if (row === undefined || seen.has(key)) continue
+    seen.add(key)
+    wanted.push(row)
+  }
+
+  let previousKey: string | null = null
+  for (const entry of current) {
+    const key = dayRunKey(entry.ref)
+    if (!seen.has(key)) {
+      const anchor =
+        previousKey === null
+          ? -1
+          : wanted.findIndex((ref) => dayRunKey(ref) === previousKey)
+      seen.add(key)
+      wanted.splice(anchor + 1, 0, entry.ref)
+    }
+    previousKey = key
+  }
+  return wanted
 }
 
 export interface PlacedJourney {

@@ -99,6 +99,9 @@ const messages = {
   'expense.addDescription':
     'Beträge werden für diese Reise in {currency} geführt. Erfasse einen Belegt in seiner eigenen Währung und trag ein, was er umgerechnet ergab.',
   'expense.saveFailed': 'Das hat nicht geklappt',
+  'expense.splitOff.title': 'Die gespeicherten Anteile ergeben nicht die Summe',
+  'expense.splitOff.body':
+    'Sie ergeben zusammen {shares}, die Summe beträgt aber {total}. Prüfe die Aufteilung unten und speichere, um das zu korrigieren.',
   'expense.what': 'Wofür war das',
   'expense.whatPlaceholder': 'Abendessen im Kyubey',
   'expense.amountNotANumber': 'Gib den Betrag als Zahl ein.',
@@ -211,6 +214,8 @@ const messages = {
   'display.menu.currentHint': 'Gewählt, aber kein erfasster Kurs deckt sie ab',
   'display.menu.needsLiveRate':
     'Braucht einen Live-Kurs, der noch nicht verfügbar ist',
+  'display.menu.disabledHint':
+    'Währungen ohne erfassten Kurs sind aufgeführt, lassen sich aber nicht wählen: Sie brauchen einen Live-Kurs, der noch nicht verfügbar ist.',
   'display.menu.saving': 'Auswahl wird gespeichert',
   'display.error.title': 'Die Anzeigewährung wurde nicht gespeichert',
   'display.error.body':
@@ -328,6 +333,7 @@ const messages = {
   'row.edit': '{title} bearbeiten',
   'row.delete': '{title} löschen',
   'row.saving': 'Wird gespeichert',
+  'row.splitOff': 'Anteile ergeben nicht die Summe',
   'tile.owe.label': 'Du schuldest',
   'tile.owe.settled': 'Bei dir ist alles beglichen',
   'tile.owe.pending': 'Gleiche es aus, bevor du heimfliegst',

@@ -1955,7 +1955,7 @@ about it.
 - `src/routes/_app/trips/$tripId/-ui/plan-screen.tsx` — edit. The drag path routes a transport move to
   this stage's writer. Shared with `01-S2` (wave 1), `01-S4` (wave 2), `02-S4` (wave 3) and `01-S9`
   (wave 5); five stages, five waves.
-- `src/server/repos/transports.ts` — edit. `listTripDayTransports` and `reorderDayTransports`. Third
+- `src/server/repos/transports.ts` — edit. `listTripDayTransports`. Third
   claim by this plan, at wave 4; `03-S1` holds it in wave 1 and `03-S2` in wave 2, and no sibling plan
   claims it at all.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append.
@@ -2005,14 +2005,16 @@ and performs no conversion.
 - `listTripDayTransports(scope, tripId)` — every transport and every leg of the trip that carries
   a day reference, with both ends, so the caller can compute what each day sees. One query per table,
   both `tenantFilter()`-scoped, both ordered by `sort_order` then `id`.
-- `reorderDayTransports(scope, { tripId, dayId, items })` — writes `sort_order` for the transport rows
-  and the leg rows of one day from array index, in a single `scope.db.batch()`, which on D1 is a
-  real transaction: statements run sequentially and a failure rolls the whole sequence back. It drops
-  an incoming id that is not on that day rather than rejecting the whole call — a tab one delete
-  behind should still be able to reorder the rows that do exist, which is the rule the jsdoc at
-  `-server/plan.ts:252-254` already states over `reorderPlanFn` — and appends any known id the
-  client omitted at its
-  current relative position, so a partial list cannot silently delete a position.
+- A journey's `sort_order` is written by the same batch that changes the stop beside it, never by a
+  call of its own. `reorderDayTimelines` (`src/server/repos/itinerary.ts`) renumbers the day's stops
+  and notes and places each journey between two of them (#239); `scheduleAssignment`,
+  `unscheduleAssignment` and `deletePlaceWithJourneys` place the day's journeys in the batch that
+  inserts or deletes the stop (#816). The gap-splitting arithmetic is `placeJourneys` and
+  `resolveDayRun` in `src/server/repos/day-journeys.ts`, shared by all four writers. An incoming id
+  that is not on the day is dropped rather than rejected — a tab one delete behind should still be
+  able to reorder the rows that do exist, which is the rule the jsdoc over `reorderPlanFn` already
+  states — and a known id the client omitted keeps its current relative position, so a partial list
+  cannot silently delete a position.
 
 **Server function — `src/routes/_app/trips/$tripId/-server/plan-transports.ts`, a module of its own.**
 
@@ -2020,39 +2022,25 @@ and performs no conversion.
   returning one entry per covered day: the record or leg id, the mode, the status, the two
   endpoint names, the two times, the two day ids and the position. The plan route calls it beside
   `loadPlanBoard` rather than inside it.
-- `reorderDayTransportsFn` — `createServerFn({ method: 'POST' })`, validator
-  `z.object({ tripId, dayId, items: z.array(z.object({ kind: z.enum(['transport', 'leg']), id })).max(200) })`.
-  It resolves the scope, the trip and the day, calls `reorderDayTransports`, then mirrors one `day`
-  upsert into the trip's room so other tabs see the move — the same mirror shape every other writer in
-  this plan uses.
+- No writer. The module is read-only apart from `reorderDayTransportsFn`, a deprecated no-op that
+  answers `placed: 0` for a tab loaded before #816 and is removed one release later
+  (BACKWARD_COMPATIBILITY.md §2). `reorderPlanFn`, `schedulePlaceFn`, `unschedulePlaceFn` and
+  `deletePlanPlaceFn` each write the journeys of the day they change in their own batch, then mirror
+  one `day` upsert carrying the written `journeys` into the trip's room so other tabs see the move —
+  the same mirror shape every other writer in this plan uses.
 
-**Why a second module and not two more functions in `-server/plan.ts`, since this is the one design
+**Why a second module and not more functions in `-server/plan.ts`, since this is the one design
 decision in the stage.** That file is claimed by four stages in three other plans, in waves 1, 2, 4
 and 5, and this stage's other files are only jointly free in wave 4 — where `02-S7` holds it. A stage
 that claimed it anyway would clobber a sibling; a stage that moved to a wave where it is free would
 clobber a different sibling on `day-section.tsx`. So the ownership is split at the file boundary
 rather than at the wave boundary, and the cost is paid once, here, in the open.
 
-**What that costs, stated rather than discovered: a reorder that interleaves kinds is two calls.**
-`reorderPlanFn` writes the stops and the notes; `reorderDayTransportsFn` writes the transport rows.
-Each is atomic in itself and neither is atomic with the other, so if the second fails the day's
-transport rows keep their previous positions while the stops and notes have moved. Four things bound
-that, and all four are properties of code that already exists:
-
-1. Positions are recomputed from array index on **every** successful reorder, so the next successful
-   move heals the day completely — the self-healing contract `-server/plan.ts:261-267` already
-   documents for the two tables it owns.
-2. The merged sequence sorts on `(time, position, id)`, and a transport row almost always carries a
-   departure time, so a stale position between two timed rows changes nothing a reader can see.
-3. The client issues the two calls together and rolls its optimistic order back if **either** fails,
-   which is the contract `plan-screen.tsx` already implements for the single-call case.
-4. The two calls are ordered stops-then-transports, so the failure that survives is the one that
-   leaves the less visible half stale.
-
-The better shape — one batch over one number line, inside `reorderDayTimeline` — is a small change in
-`src/server/repos/itinerary.ts` on the day a wave exists in which this plan may hold that file. It is
-written so that making it is a **deletion**, not a redesign: `reorderDayTransports` disappears into
-the existing batch and the second server function loses its writer.
+**A reorder that interleaves kinds is one call and one batch.** The day is one number line:
+`reorderPlanFn` carries the day's stops, notes and journeys, and `reorderDayTimelines` renumbers the
+stops and notes and places each journey in the same `runBatch`, so a failure leaves the day exactly as
+it was. Scheduling a place, unscheduling a stop and deleting a place do the same for the day they
+touch, and the plan screen makes no separate journey-restating call after any of them.
 
 **Route data — `src/routes/_app/trips/$tripId/plan.tsx`.** The route's loader resolves
 `loadPlanBoard` and `loadPlanTransportsFn` together with `Promise.all`, so the second read costs no
@@ -2062,7 +2050,7 @@ extra round trip on the critical path, and hands both to the screen.
 repository resolves every row inside the tenant scope. A reorder is a write and is authorised like
 one.
 
-**Nothing is enqueued.** A reorder is one small batch per touched day and per writer.
+**Nothing is enqueued.** A reorder is one small batch.
 
 ### UI (route, components)
 
@@ -2135,14 +2123,14 @@ not an owned path.
 
 ### Tenant isolation test
 
-Appended as one `describe` block. Covered: `listTripDayTransports` and `reorderDayTransports`.
+Appended as one `describe` block. Covered: `listTripDayTransports`, and the journey placement inside `reorderDayTimelines`, `scheduleAssignment`, `unscheduleAssignment` and `deletePlaceWithJourneys`.
 
-The cases: A cannot list B's day transports by trip id; A cannot reorder a day belonging to B's trip,
-which is a `NotFoundError` from `requireTripDay` and not an empty success; and A passing B's transport
-ids or B's leg ids inside a reorder of A's **own** day must move nothing at all — the ids are
-dropped as unknown, and B's `sort_order` values on both tables are re-read afterwards and must be
-identical. That last case is the one this stage genuinely adds, because a reorder is the one write
-shaped like a bulk update over ids the client chose.
+The cases: A cannot list B's day transports by trip id; A cannot schedule onto a day, place or stop
+belonging to B's trip, which is a `NotFoundError` and not an empty success; and A passing B's transport
+ids or B's leg ids inside the run of a schedule of A's **own** day must move nothing at all — the ids
+are dropped as unknown, and B's `sort_order` values on both tables are re-read afterwards and must be
+identical. That last case is the one this stage genuinely adds, because a run is the one input shaped
+like a bulk update over ids the client chose.
 
 ### Verification
 

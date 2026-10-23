@@ -47,6 +47,14 @@ import type { BetterAuthPlugin } from 'better-auth'
  * closed. Best effort, like the close: the person's own action never fails on a KV error, and the
  * limit is the KV convergence window (see `./session-blobs`), not "immediately".
  *
+ * A revoke of the other sessions has the same gap and a different cure (#1240): Better Auth lists the
+ * sessions to end from that same index and deletes those, so a session it missed keeps its row and
+ * its blob. The `after` half therefore reads the person's other live rows once the endpoint has run,
+ * the caller's own session excluded, and ends them through `internalAdapter.deleteSessions`
+ * ({@link sweepOtherSessions}). That sweep runs on every successful revoke, whatever the #1177
+ * decision says; the decision only keeps the socket close from being queued. Each call costs one
+ * paged D1 read and one KV delete per session found, inside the endpoint's rate limit.
+ *
  * Ending an impersonation (`/admin/stop-impersonating`, reached only in process through the console's
  * End impersonation function: its HTTP path is closed, #1179) is a session end too. The `before` half
  * reads the owner of the session cookie, which during an impersonation is the impersonated person,
@@ -149,8 +157,10 @@ const PREPARED_PATHS: ReadonlySet<string> = new Set([
 
 /**
  * The paths that end every session row of the person while Better Auth removes only the indexed
- * blobs (`internalAdapter.deleteUserSessions`). Sign-out and the revoke of one delete their blob by
- * name already; revoke-other-sessions lists from the same index, so its gap is a revocation gap.
+ * blobs (`internalAdapter.deleteUserSessions`), so the `before` half reads their tokens from the rows.
+ * Sign-out and the revoke of one delete their blob by name already. Revoke-other-sessions lists from the
+ * same index, but it does not end every row, so it is not here: it is swept in the `after` half
+ * ({@link sweepOtherSessions}, #1240).
  */
 const BLOB_PURGING_PATHS: ReadonlySet<string> = new Set([
   '/reset-password',
@@ -161,6 +171,8 @@ const BLOB_PURGING_PATHS: ReadonlySet<string> = new Set([
 /** What {@link roomEvictionPrepareHook} leaves on the request for {@link roomEvictionHook}. */
 const resolvedPerson = z.object({ roomEvictionUserId: z.string().min(1) })
 const evictionDecision = z.object({ roomEvictionShouldEvict: z.boolean() })
+/** The caller's own session token, proven to belong to the person, which the sweep must spare (#1240). */
+const resolvedCaller = z.object({ roomEvictionCallerToken: z.string().min(1) })
 const resolvedTokens = z.object({
   roomEvictionSessionTokens: z.array(z.string().min(1)),
 })
@@ -193,12 +205,14 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
   }
   let shouldEvict = true
   let userId: string | null = null
+  let callerToken = ''
   let tokens: ReadonlyArray<string> = []
   try {
     userId = await personEndingSession(ctx)
     if (userId !== null && ctx.path === '/revoke-other-sessions') {
       try {
-        shouldEvict = await hasOtherSessions(ctx, userId)
+        callerToken = await callerTokenOf(ctx, userId)
+        shouldEvict = await hasOtherSessions(ctx, userId, callerToken)
       } catch (cause) {
         logAuth('warn', 'room-eviction.other-sessions.unread', {
           source: ctx.path,
@@ -230,12 +244,13 @@ const roomEvictionPrepareHook = createAuthMiddleware(async (ctx) => {
     })
   }
   // Always written, empty when nobody was resolved: a key an in-process `auth.api.*` caller put on
-  // the call itself must not survive into the `after` hook and name somebody else, or somebody
-  // else's blobs.
+  // the call itself must not survive into the `after` hook and name somebody else, somebody else's
+  // blobs, or a caller's session token to spare.
   return {
     context: {
       roomEvictionUserId: userId ?? '',
       roomEvictionShouldEvict: shouldEvict,
+      roomEvictionCallerToken: callerToken,
       roomEvictionSessionTokens: [...tokens],
     },
   }
@@ -269,6 +284,25 @@ function endsEveryRow(ctx: PrepareContext): boolean {
 }
 
 /**
+ * The token of the caller's own session, read from its signed cookie and the store and kept only when
+ * that session belongs to `userId`: the one session a revoke of the others must spare. Empty when the
+ * cookie or the session is missing or is somebody else's, which means "nothing to spare, so nothing to
+ * sweep" and never "sweep everything".
+ */
+async function callerTokenOf(
+  ctx: PrepareContext,
+  userId: string,
+): Promise<string> {
+  const cookie = await ctx.getSignedCookie(
+    ctx.context.authCookies.sessionToken.name,
+    ctx.context.secret,
+  )
+  if (!cookie) return ''
+  const own = await ctx.context.internalAdapter.findSession(cookie)
+  return own !== null && own.session.userId === userId ? own.session.token : ''
+}
+
+/**
  * Only two successful empty reads can suppress the close. The adapter reads durable rows, while
  * listSessions reads the same secondary-storage index the endpoint uses; neither substitutes for
  * the other. One matching durable row suffices, so there is no unbounded walk. All failures leave
@@ -278,28 +312,23 @@ function endsEveryRow(ctx: PrepareContext): boolean {
 async function hasOtherSessions(
   ctx: PrepareContext,
   userId: string,
+  callerToken: string,
 ): Promise<boolean> {
-  const cookie = await ctx.getSignedCookie(
-    ctx.context.authCookies.sessionToken.name,
-    ctx.context.secret,
-  )
-  if (!cookie) return true
-  const own = await ctx.context.internalAdapter.findSession(cookie)
-  if (!own || own.session.userId !== userId) return true
+  if (callerToken === '') return true
   const now = new Date()
   const durable = await ctx.context.adapter.findMany({
     model: 'session',
     where: [
       { field: 'userId', value: userId },
       { field: 'expiresAt', operator: 'gt', value: now },
-      { field: 'token', operator: 'ne', value: own.session.token },
+      { field: 'token', operator: 'ne', value: callerToken },
     ],
     limit: 1,
   })
   if (durable.length > 0) return true
   const indexed = await ctx.context.internalAdapter.listSessions(userId)
   return indexed.some(
-    (session) => session.expiresAt > now && session.token !== own.session.token,
+    (session) => session.expiresAt > now && session.token !== callerToken,
   )
 }
 
@@ -350,7 +379,8 @@ async function personEndingSession(
  * `hooks.after` for the endpoints whose success ends a person's place in a workspace or ends their
  * sessions: remove member, leave, ban, sign out every session, and the self-service ones (#1093).
  * On a password reset, a revoke of all sessions and a password change that revokes the others it also
- * deletes the cached session blobs the `before` half read, before queueing the close (#1176).
+ * deletes the cached session blobs the `before` half read, before queueing the close (#1176). A revoke
+ * of the other sessions first sweeps the rows and blobs the index did not name (#1240).
  * Keyed on the path and on a response that is not an error, and on the ids the endpoint itself resolved (the member it
  * returned, the validated `userId` it was given, the person {@link roomEvictionPrepareHook} read from
  * the store), never on anything read from a request header.
@@ -400,11 +430,15 @@ export const roomEvictionHook = createAuthMiddleware(async (ctx) => {
   }
 
   if (SESSION_ENDING_PATHS.has(ctx.path)) {
-    if (
-      ctx.path === '/revoke-other-sessions' &&
-      evictionDecision.safeParse(ctx).data?.roomEvictionShouldEvict === false
-    ) {
-      return
+    if (ctx.path === '/revoke-other-sessions') {
+      // Whatever #1177 decided: that flag only avoids a paid socket fan-out, it never says whether
+      // a session the index lost is still live.
+      await sweepOtherSessions(ctx)
+      if (
+        evictionDecision.safeParse(ctx).data?.roomEvictionShouldEvict === false
+      ) {
+        return
+      }
     }
     const prepared = resolvedPerson.safeParse(ctx)
     if (!prepared.success) return
@@ -450,6 +484,93 @@ async function purgeEndedSessions(
       userId,
       source,
       reason: cause instanceof Error ? cause.name : 'unknown',
+    })
+  }
+}
+
+/** Below D1's limit of 100 bound parameters per statement, which a `token in (…)` delete spends one each. */
+const SWEEP_CHUNK_SIZE = 50
+
+const errorName = (cause: unknown): string =>
+  cause instanceof Error ? cause.name : 'unknown'
+
+/**
+ * Ends one batch of sessions through `internalAdapter.deleteSessions`, which deletes the blobs by name
+ * and then the rows. A rejected blob delete aborts the whole batch before any row is touched, so a
+ * failed batch is retried one session at a time and one stuck key cannot keep the others signed in.
+ * Counts what stayed; never throws.
+ */
+async function endSessions(
+  context: PrepareContext['context'],
+  tokens: ReadonlyArray<string>,
+): Promise<{ failed: number; reason: string | undefined }> {
+  try {
+    await context.internalAdapter.deleteSessions([...tokens])
+    return { failed: 0, reason: undefined }
+  } catch (cause) {
+    if (tokens.length === 1) return { failed: 1, reason: errorName(cause) }
+    let failed = 0
+    let reason: string | undefined
+    for (const token of tokens) {
+      const single = await endSessions(context, [token])
+      failed += single.failed
+      reason ??= single.reason
+    }
+    return { failed, reason }
+  }
+}
+
+/**
+ * After a successful revoke-other-sessions, ends every other live session of the caller, named by the
+ * index or not (#1240). Better Auth lists the sessions to end from the eventually-consistent
+ * `active-sessions-<userId>` index, so a session the index missed keeps its `session` row and its blob
+ * and stays signed in. The rows are read here, after the endpoint ran, so a session created between the
+ * two halves is covered, and ended through the library's own `internalAdapter.deleteSessions`: no SQL
+ * of ours, and the blobs go by name.
+ *
+ * The person and the caller's token are the ones {@link roomEvictionPrepareHook} read from the signed
+ * cookie and the store. Missing either, nothing is deleted: there is no fallback to "this person's
+ * every session". Best effort like the rest of this module: nothing rejects into the request, and a
+ * failure is logged at error level with the person's id, the path, counts and the error's name, never
+ * a token. The limit is the KV convergence window, not "immediately" (see `./session-blobs`).
+ */
+async function sweepOtherSessions(ctx: PrepareContext): Promise<void> {
+  const person = resolvedPerson.safeParse(ctx)
+  const caller = resolvedCaller.safeParse(ctx)
+  if (!person.success || !caller.success) return
+  const userId = person.data.roomEvictionUserId
+  const callerToken = caller.data.roomEvictionCallerToken
+  let others: ReadonlyArray<string>
+  try {
+    const live = await collectSessionTokens(
+      createSessionPageReader(async () => ctx.context.adapter, userId),
+    )
+    others = live.filter((token) => token !== callerToken)
+  } catch (cause) {
+    logAuth('error', 'room-eviction.sweep.unread', {
+      userId,
+      source: ctx.path,
+      reason: errorName(cause),
+    })
+    return
+  }
+  let failed = 0
+  let reason: string | undefined
+  for (let start = 0; start < others.length; start += SWEEP_CHUNK_SIZE) {
+    const outcome = await endSessions(
+      ctx.context,
+      others.slice(start, start + SWEEP_CHUNK_SIZE),
+    )
+    failed += outcome.failed
+    reason ??= outcome.reason
+  }
+  if (failed > 0) {
+    logAuth('error', 'room-eviction.sweep.failed', {
+      userId,
+      source: ctx.path,
+      found: others.length,
+      failed,
+      reason,
     })
   }
 }

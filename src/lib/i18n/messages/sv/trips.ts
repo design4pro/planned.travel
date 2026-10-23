@@ -137,6 +137,26 @@ const messages = {
     'Den här platsen motsäger tiden på den. Att flytta hit rensar tiden — den nya ordningen och den rensade tiden sparas tillsammans.',
   'plan.move.dropTime.confirm': 'Flytta och ta bort tiden',
   'plan.move.dropTime.cancel': 'Låt den vara',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Redigera plats',
+  'plan.stop.menu.setTime': 'Ange en tid',
+  'plan.stop.menu.placeOnMap': 'Placera på kartan',
+  'plan.stop.menu.movePin': 'Flytta nålen',
+  'plan.stop.menu.moveToDay': 'Flytta till en annan dag',
+  'plan.stop.menu.backToUnplanned': 'Tillbaka till oplanerat',
+  'plan.stop.menu.delete': 'Ta bort från resan',
+  'plan.delete.title': 'Ta bort ”{name}”?',
+  'plan.delete.titleUnnamed': 'Ta bort den här platsen?',
+  'plan.delete.bodyUnplanned':
+    'Platsen försvinner helt från resans platser. Det går inte att ångra.',
+  'plan.delete.bodyOnDays': {
+    one: 'Platsen finns på {count} dag av den här resan och försvinner därifrån. Det går inte att ångra.',
+    other:
+      'Platsen finns på {count} dagar av den här resan och försvinner från alla. Det går inte att ångra.',
+  },
+  'plan.delete.error': 'Borttagningen misslyckades',
+  'plan.delete.confirm': 'Ta bort platsen',
+  'plan.delete.deleting': 'Tar bort platsen',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Lägg till en anteckning',
   'plan.note.addForDay': 'Lägg till en anteckning: {day}',

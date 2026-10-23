@@ -88,6 +88,9 @@ const messages = {
   'expense.addDescription':
     '這趟行程的金額以 {currency} 記帳。請按收據本身的貨幣輸入，並填寫換算後的金額。',
   'expense.saveFailed': '儲存失敗',
+  'expense.splitOff.title': '已儲存的分攤額總和與總額不符',
+  'expense.splitOff.body':
+    '分攤額合計為 {shares}，但總額為 {total}。請檢查下方的分攤並儲存即可修正。',
   'expense.what': '這筆錢花在什麼上',
   'expense.whatPlaceholder': '在 Kyubey 的晚餐',
   'expense.amountNotANumber': '請用數字填寫金額。',
@@ -189,6 +192,8 @@ const messages = {
   'display.menu.rateHint': '使用行程中已記錄的匯率',
   'display.menu.currentHint': '已選擇，但沒有已記錄的匯率適用',
   'display.menu.needsLiveRate': '需要即時匯率，目前尚無法使用',
+  'display.menu.disabledHint':
+    '沒有已記錄匯率的貨幣會列出，但無法選擇：它們需要即時匯率，而目前尚不可用。',
   'display.menu.saving': '正在儲存你的選擇',
   'display.error.title': '未能儲存顯示貨幣',
   'display.error.body': '無法儲存你的選擇，請稍後再試。',
@@ -286,6 +291,7 @@ const messages = {
   'row.edit': '編輯 {title}',
   'row.delete': '刪除 {title}',
   'row.saving': '正在儲存',
+  'row.splitOff': '分攤額總和與總額不符',
   'tile.owe.label': '你欠',
   'tile.owe.settled': '你已全部結清',
   'tile.owe.pending': '回家之前把帳結清',

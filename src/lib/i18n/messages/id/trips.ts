@@ -137,6 +137,25 @@ const messages = {
     'Posisi ini bertentangan dengan waktu yang tertera. Memindahkannya ke sini menghapus waktu — urutan baru dan waktu yang dihapus disimpan bersamaan.',
   'plan.move.dropTime.confirm': 'Pindahkan dan hapus waktunya',
   'plan.move.dropTime.cancel': 'Biarkan di tempatnya',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Edit tempat',
+  'plan.stop.menu.setTime': 'Atur waktu',
+  'plan.stop.menu.placeOnMap': 'Tempatkan di peta',
+  'plan.stop.menu.movePin': 'Pindahkan pinnya',
+  'plan.stop.menu.moveToDay': 'Pindahkan ke hari lain',
+  'plan.stop.menu.backToUnplanned': 'Kembali ke belum dijadwalkan',
+  'plan.stop.menu.delete': 'Hapus dari perjalanan',
+  'plan.delete.title': 'Hapus {name}?',
+  'plan.delete.titleUnnamed': 'Hapus tempat ini?',
+  'plan.delete.bodyUnplanned':
+    'Tempat ini hilang sepenuhnya dari daftar tempat perjalanan. Tindakan ini tidak dapat dibatalkan.',
+  'plan.delete.bodyOnDays': {
+    other:
+      'Tempat ini ada di {count} hari perjalanan ini dan akan hilang dari hari yang memuatnya. Tindakan ini tidak dapat dibatalkan.',
+  },
+  'plan.delete.error': 'Penghapusan gagal',
+  'plan.delete.confirm': 'Hapus tempat',
+  'plan.delete.deleting': 'Menghapus tempat',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Tambahkan catatan',
   'plan.note.addForDay': 'Tambahkan catatan, {day}',

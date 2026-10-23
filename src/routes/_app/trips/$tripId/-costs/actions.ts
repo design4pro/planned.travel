@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 
 import { applyOps, optimisticId } from '#/components/costs'
 import { messageOf } from '#/components/modules/shared'
+import { requireFound } from '#/lib/absence'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useTranslate } from '#/lib/i18n'
 import { impliedRate } from '#/lib/money'
@@ -145,7 +146,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           // after every successful save. `sync` makes the promise wait for the loader, where a
           // background reload would resolve while the old figures are still shown.
           const live = await loadCosts({ data: { tripId: payload.tripId } })
-            .then((fresh) => fresh.currency)
+            .then((fresh) => requireFound(fresh).currency)
             .catch(() => null)
           if (live !== null) {
             await router.invalidate({
@@ -302,7 +303,9 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
             // which, so ask it: a payment that is no longer there is what the person wanted.
             const gone = await loadCosts({ data: { tripId: payload.tripId } })
               .then((fresh) =>
-                fresh.settlements.every((row) => row.id !== payment.id),
+                requireFound(fresh).settlements.every(
+                  (row) => row.id !== payment.id,
+                ),
               )
               .catch(() => false)
             if (!gone) throw cause
@@ -321,7 +324,9 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       setSavingDisplay(true)
       try {
         await setDisplayCurrencyFn({ data: { code } })
-        await router.invalidate()
+        // The choice is stored from here on. A reload that fails does not reject in the router (it
+        // swaps the screen for the error panel), and one that does must not read as "not saved".
+        await router.invalidate().catch(() => undefined)
       } catch {
         toast.error(t('costs.display.error.title'), {
           description: t('costs.display.error.body'),

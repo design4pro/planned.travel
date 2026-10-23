@@ -237,8 +237,13 @@ describe('the display currency on the costs screen', () => {
 
     expect(screen.getByText(Costs['display.row.notConverted'])).toBeTruthy()
     expect(document.body.textContent).not.toContain('60.00 GBP')
-    const alert = screen.getByText(Costs['display.alert.title']).closest('div')
+    // The alert title is also read by the control's live region, so the alert is found by its part.
+    const alert = document.querySelector('[data-part="display-currency-alert"]')
+    expect(alert?.textContent).toContain(Costs['display.alert.title'])
     expect(alert?.textContent).toContain('EUR to GBP on')
+    expect(
+      Array.from(live()?.children ?? []).map((child) => child.textContent),
+    ).toEqual(['Also in GBP', Costs['display.alert.title']])
   })
 
   it('names the control and writes the choice, null for each trip in its own currency', async () => {
@@ -283,6 +288,19 @@ describe('the display currency on the costs screen', () => {
     expect(usd.getAttribute('aria-disabled')).toBe('true')
     expect(usd.textContent).toContain(Costs['display.menu.needsLiveRate'])
   })
+
+  it('tells the trigger, where a keyboard user lands, why some currencies cannot be chosen', () => {
+    mount(payload({ canWrite: true }))
+
+    const trigger = screen.getByRole('combobox', {
+      name: Costs['display.label'],
+    })
+    expect(
+      document.getElementById(trigger.getAttribute('aria-describedby') ?? '')
+        ?.textContent,
+    ).toBe(Costs['display.menu.disabledHint'])
+  })
+
   it('keeps the trigger focusable while the choice is saving and ignores a second pick', async () => {
     const user = userEvent.setup()
     let finish: (value: { code: string | null }) => void = () => undefined
