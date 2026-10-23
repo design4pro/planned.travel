@@ -98,6 +98,9 @@ const messages = {
   'expense.addDescription':
     'Els imports d’aquest viatge es guarden en {currency}. Anota un rebut en la seva pròpia moneda i indica a quant es va convertir.',
   'expense.saveFailed': 'No s’ha pogut desar',
+  'expense.splitOff.title': 'Les parts desades no quadren',
+  'expense.splitOff.body':
+    'Sumen {shares}, però el total és {total}. Revisa el repartiment de sota i desa per corregir-ho.',
   'expense.what': 'Per a què era',
   'expense.whatPlaceholder': 'Sopar al Kyubey',
   'expense.amountNotANumber': 'Escriu l’import com a número.',
@@ -338,6 +341,7 @@ const messages = {
   'row.edit': 'Edita {title}',
   'row.delete': 'Elimina {title}',
   'row.saving': 'Desant',
+  'row.splitOff': 'Les parts no quadren',
   'tile.owe.label': 'Deus',
   'tile.owe.settled': 'Estàs en paus',
   'tile.owe.pending': 'Salda-ho abans de tornar a casa',

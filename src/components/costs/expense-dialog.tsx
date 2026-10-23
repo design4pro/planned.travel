@@ -53,7 +53,13 @@ import {
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
-import { offeredPeople, parseDay, toDayString } from './data'
+import {
+  offeredPeople,
+  parseDay,
+  shareTotalOf,
+  sharesDoNotAddUp,
+  toDayString,
+} from './data'
 import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
@@ -293,6 +299,18 @@ export function ExpenseDialog({
           locale,
         ),
   )
+  // What the stored shares add up to when that is not the expense's total. Read off the stored rows
+  // and fixed when the dialog opens, like the draft: the editor below re-derives an equal, percent
+  // or shares split from the amount and would read balanced, which is why this says otherwise (#883).
+  const [storedOff] = useState(() =>
+    expense !== null && sharesDoNotAddUp(expense)
+      ? {
+          sharesMinor: shareTotalOf(expense) ?? 0,
+          totalMinor: expense.amountMinor,
+          currency: expense.currency,
+        }
+      : null,
+  )
   // Up while the converted field is still the one the dialog opened with (empty) and the reader has
   // not typed in it. Never raised again: a stored or typed figure must not be overwritten, and a
   // field the reader cleared is theirs.
@@ -310,6 +328,8 @@ export function ExpenseDialog({
     foreign ? convertedRef.current : amountRef.current,
   )
   const formId = `expense-form-${useId()}`
+  const descriptionId = `expense-description-${useId()}`
+  const noticeId = `expense-notice-${useId()}`
 
   // The trip's currency changed while this was open and the screen has refreshed: what was typed
   // stays, a currency control still on the old one follows the trip, and a converted figure (which
@@ -444,12 +464,20 @@ export function ExpenseDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent
+        size="lg"
+        // The warning is part of what the dialog says on open: a polite region that mounts already
+        // filled is not announced, and focus lands on the field below it. The description carries its own id
+        // (below), which replaces Radix's default, so it is named here whether or not the warning is up.
+        aria-describedby={
+          storedOff === null ? descriptionId : `${descriptionId} ${noticeId}`
+        }
+      >
         <DialogHeader>
           <DialogTitle>
             {t(editing ? 'costs.expense.editTitle' : 'costs.expense.addTitle')}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             {editing
               ? t('costs.expense.editDescription')
               : t('costs.expense.addDescription', {
@@ -470,6 +498,27 @@ export function ExpenseDialog({
             {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
                 {error ?? t('costs.refusal.rebaseChanged')}
+              </Alert>
+            )}
+
+            {storedOff === null ? null : (
+              <Alert
+                id={noticeId}
+                tone="warning"
+                title={t('costs.expense.splitOff.title')}
+              >
+                {t('costs.expense.splitOff.body', {
+                  shares: formatMoney(
+                    storedOff.sharesMinor,
+                    storedOff.currency,
+                    locale,
+                  ),
+                  total: formatMoney(
+                    storedOff.totalMinor,
+                    storedOff.currency,
+                    locale,
+                  ),
+                })}
               </Alert>
             )}
 

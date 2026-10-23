@@ -97,6 +97,9 @@ const messages = {
   'expense.addDescription':
     'Τα ποσά αυτού του ταξιδιού τηρούνται σε {currency}. Κατέγραψε μια απόδειξη στο δικό της νόμισμα και σημείωσε σε πόσα μετατράπηκε.',
   'expense.saveFailed': 'Η αποθήκευση δεν έγινε',
+  'expense.splitOff.title': 'Τα αποθηκευμένα μερίδια δεν αθροίζουν στο σύνολο',
+  'expense.splitOff.body':
+    'Αθροίζουν {shares}, αλλά το σύνολο είναι {total}. Έλεγξε τον επιμερισμό παρακάτω και αποθήκευσε για να το διορθώσεις.',
   'expense.what': 'Για ποιο πράγμα ήταν',
   'expense.whatPlaceholder': 'Δείπνο στο Kyubey',
   'expense.amountNotANumber': 'Γράψε το ποσό ως αριθμό.',
@@ -333,6 +336,7 @@ const messages = {
   'row.edit': 'Επεξεργασία: {title}',
   'row.delete': 'Διαγραφή: {title}',
   'row.saving': 'Αποθήκευση',
+  'row.splitOff': 'Τα μερίδια δεν αθροίζουν στο σύνολο',
   'tile.owe.label': 'Οφείλεις',
   'tile.owe.settled': 'Είσαι πλήρως εξοφλημένος',
   'tile.owe.pending': 'Ξεχρέωσε πριν γυρίσεις σπίτι',
