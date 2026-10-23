@@ -150,6 +150,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Przenieś do innego dnia',
   'plan.stop.menu.backToUnplanned': 'Przenieś do niezaplanowanych',
   'plan.stop.menu.delete': 'Usuń z podróży',
+  'plan.stop.visited': 'Odwiedzone',
   'plan.delete.title': 'Usunąć „{name}”?',
   'plan.delete.titleUnnamed': 'Usunąć to miejsce?',
   'plan.delete.bodyUnplanned':

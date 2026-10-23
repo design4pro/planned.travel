@@ -147,6 +147,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Áthelyezés másik napra',
   'plan.stop.menu.backToUnplanned': 'Vissza a tervezetlenek közé',
   'plan.stop.menu.delete': 'Törlés az útból',
+  'plan.stop.visited': 'Meglátogatva',
   'plan.delete.title': 'Törlöd: „{name}”?',
   'plan.delete.titleUnnamed': 'Törlöd ezt a helyet?',
   'plan.delete.bodyUnplanned':

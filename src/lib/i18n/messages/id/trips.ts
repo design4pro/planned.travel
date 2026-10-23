@@ -145,6 +145,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Pindahkan ke hari lain',
   'plan.stop.menu.backToUnplanned': 'Kembali ke belum dijadwalkan',
   'plan.stop.menu.delete': 'Hapus dari perjalanan',
+  'plan.stop.visited': 'Dikunjungi',
   'plan.delete.title': 'Hapus {name}?',
   'plan.delete.titleUnnamed': 'Hapus tempat ini?',
   'plan.delete.bodyUnplanned':
