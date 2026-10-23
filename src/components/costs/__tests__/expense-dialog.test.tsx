@@ -854,6 +854,28 @@ describe('the expense dialog on a stored split that does not add up (#883)', () 
     expect(text?.join(' ')).toContain(TITLE)
   })
 
+  it('keeps the dialog described by its description when there is no warning', () => {
+    open(undefined)
+    const added = screen.getByRole('dialog').getAttribute('aria-describedby')
+    expect(document.getElementById(added ?? '')?.textContent).toContain(
+      'Amounts are held in EUR',
+    )
+    cleanup()
+
+    open(undefined, {
+      expense: expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+    const edited = screen.getByRole('dialog').getAttribute('aria-describedby')
+    expect(document.getElementById(edited ?? '')?.textContent).toContain(
+      'Changing the amount re-splits it',
+    )
+  })
+
   it('stays quiet when the stored shares add up', () => {
     open(undefined, {
       expense: expenseRow({
