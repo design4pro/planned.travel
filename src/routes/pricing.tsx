@@ -25,7 +25,7 @@ import {
   formatQuota,
   isUnlimited,
 } from '#/lib/plans'
-import { PLAN_COPY, QUOTA_LABEL_KEYS } from '#/lib/plan-copy'
+import { PLAN_COPY, PUBLISHED_PLACES, QUOTA_LABEL_KEYS } from '#/lib/plan-copy'
 
 import type { FaqItem, MarketingAnchor } from '#/components/marketing'
 import type { MessageKey, Translate } from '#/lib/i18n'
@@ -319,6 +319,24 @@ export function Comparison() {
                   ))}
                 </tr>
               ))}
+              <tr className="border-b border-edge-faint">
+                <th scope="row" className={rowHeadClasses}>
+                  {t('settings.billing.quota.places')}
+                </th>
+                {PLAN_LIST.map((plan) => {
+                  const places = PUBLISHED_PLACES[plan.id]
+                  return (
+                    <td
+                      key={plan.id}
+                      className="px-5 py-3.5 text-center text-label tabular-nums text-ink-2"
+                    >
+                      {places === null
+                        ? t('settings.billing.quota.unlimited')
+                        : places}
+                    </td>
+                  )
+                })}
+              </tr>
 
               <tr className="bg-surface-2/60">
                 <th
