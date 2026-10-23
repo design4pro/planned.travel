@@ -80,6 +80,13 @@ floor guard script; the review now does.
   explanation with usable focus, and the next permitted action; retry must not silently reuse intent
   invalidated by the refusal (#1241, #1251, #1207).
 
+- **A result is applied only to the state it was started from.** A save, reload or loader refresh
+  that settles after the user moved on (another dialog open, a second write, a different session)
+  must not overwrite what is on screen: capture a generation or session counter when the request
+  starts and compare it when it settles, seed a draft when its dialog opens rather than from loader
+  object identity, and let a local "succeeded" value stand until the loader changes. The test holds
+  the first request on a deferred promise, acts again, then resolves it (#1323, #1337, #1466, #1488;
+  #1241 and #1251 were the same shape in a money write).
 - **A control its own action disables or removes hands focus to a named target.** A disabled button
   cannot keep focus and a removed one drops it to `body`, so the fix names where focus goes (the
   trigger once the request settles, the surviving sibling, or the heading) and a test asserts
