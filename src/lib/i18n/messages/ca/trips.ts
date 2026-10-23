@@ -111,10 +111,7 @@ const messages = {
     'Un lloc només pot aparèixer un cop per dia. Mou-lo a un altre dia.',
   'plan.move.refused.notInIdeas': 'Una nota es queda dins del dia',
   'plan.move.refused.notInIdeasBody':
-    'Les idees són llocs que esperen un dia. Una nota pertany al dia per al qual es va escriure.',
-  'plan.move.refused.notInAnotherDay': 'Una nota es queda al seu dia',
-  'plan.move.refused.notInAnotherDayBody':
-    'Encara no es poden moure notes entre dies. Editeu la nota o escriviu-la a l’altre dia.',
+    'Les idees són llocs que esperen un dia. Una nota sempre pertany a un dia.',
   'plan.move.refused.journeyNotInIdeas': 'Un trajecte es queda dins del dia',
   'plan.move.refused.journeyNotInIdeasBody':
     'Les idees són llocs que esperen un dia. Un trajecte pertany al dia en què passa.',
@@ -127,8 +124,6 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} no s’ha mogut. Aquell dia ja el té.',
   'plan.move.spoken.notInIdeas':
     '{name} no s’ha mogut. Una nota es queda dins del dia.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} no s’ha mogut. Una nota es queda al seu dia.',
   'plan.move.spoken.timed':
     '{name} porta l’hora {time}. Us preguntem si voleu deixar-la anar.',
   'plan.move.spoken.journeyNotInIdeas':

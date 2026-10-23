@@ -309,8 +309,9 @@ export const createDayNoteFn = createServerFn({ method: 'POST' })
  * Rewrites a note in place.
  *
  * The note row names the trip and the day the write is guarded by — the client's `tripId` addresses
- * the note, it never chooses what is checked. A note stays on its day: moving one between days is
- * `01-S4b`'s, and with no client-chosen `dayId` there is no cross-day patch left to guard.
+ * the note, it never chooses what is checked. An edit never changes the day: dragging a note to
+ * another day is `reorderPlanFn`'s, and with no client-chosen `dayId` there is no cross-day patch
+ * left to guard.
  */
 export const updateDayNoteFn = createServerFn({ method: 'POST' })
   .validator(

@@ -116,10 +116,7 @@ const messages = {
     'لا يمكن أن يظهر المكان أكثر من مرة في اليوم الواحد. انقله إلى يوم آخر بدلاً من ذلك.',
   'plan.move.refused.notInIdeas': 'الملاحظة تبقى داخل اليوم',
   'plan.move.refused.notInIdeasBody':
-    'الأفكار أماكن تنتظر يومًا، أما الملاحظة فتخص اليوم الذي كُتبت له.',
-  'plan.move.refused.notInAnotherDay': 'الملاحظة تبقى في يومها',
-  'plan.move.refused.notInAnotherDayBody':
-    'لا يمكن نقل الملاحظات بين الأيام بعد. عدّل الملاحظة أو اكتبها في اليوم الآخر.',
+    'الأفكار أماكن تنتظر يومًا، أما الملاحظة فتنتمي دائمًا إلى يوم.',
   'plan.move.refused.journeyNotInIdeas': 'الرحلة تبقى داخل اليوم',
   'plan.move.refused.journeyNotInIdeasBody':
     'الأفكار أماكن تنتظر يومًا، أما الرحلة فتخص اليوم الذي تحدث فيه.',
@@ -131,8 +128,6 @@ const messages = {
     'وقت المغادرة يخص الجدول الزمني لا الخطة. ضع الرحلة حيث تشير ساعتها.',
   'plan.move.spoken.duplicate': 'لم يُنقل {name}. ذلك اليوم يحتوي عليه بالفعل.',
   'plan.move.spoken.notInIdeas': 'لم يُنقل {name}. الملاحظة تبقى داخل اليوم.',
-  'plan.move.spoken.notInAnotherDay':
-    'لم يُنقل {name}. الملاحظة تبقى في يومها.',
   'plan.move.spoken.timed': '{name} يحمل الساعة {time}. نسأل هل نُسقطها.',
   'plan.move.spoken.journeyNotInIdeas':
     'لم تُنقل {name}. الرحلة تبقى داخل اليوم.',

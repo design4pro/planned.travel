@@ -111,10 +111,7 @@ const messages = {
     'Un lugar solo puede aparecer una vez por día. Muévelo a otro día.',
   'plan.move.refused.notInIdeas': 'Una nota se queda en el día',
   'plan.move.refused.notInIdeasBody':
-    'Las ideas son lugares que esperan un día. Una nota pertenece al día para el que se escribió.',
-  'plan.move.refused.notInAnotherDay': 'Una nota se queda en su día',
-  'plan.move.refused.notInAnotherDayBody':
-    'Todavía no se pueden mover notas entre días. Edita la nota o escríbela en el otro día.',
+    'Las ideas son lugares que esperan un día. Una nota siempre pertenece a un día.',
   'plan.move.refused.journeyNotInIdeas': 'Un trayecto se queda en el día',
   'plan.move.refused.journeyNotInIdeasBody':
     'Las ideas son lugares que esperan un día. Un trayecto pertenece al día en que ocurre.',
@@ -127,8 +124,6 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} no se ha movido. Ese día ya lo tiene.',
   'plan.move.spoken.notInIdeas':
     '{name} no se ha movido. Una nota se queda en el día.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} no se ha movido. Una nota se queda en su día.',
   'plan.move.spoken.timed':
     '{name} tiene la hora {time}. Preguntamos si quitarla.',
   'plan.move.spoken.journeyNotInIdeas':

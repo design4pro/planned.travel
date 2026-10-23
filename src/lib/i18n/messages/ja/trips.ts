@@ -108,10 +108,7 @@ const messages = {
     '同じ場所は1日に1回までです。別の日に移動してください。',
   'plan.move.refused.notInIdeas': 'メモは日の中にとどまります',
   'plan.move.refused.notInIdeasBody':
-    'アイデアは日付を待っている場所です。メモは書かれた日に属します。',
-  'plan.move.refused.notInAnotherDay': 'メモは自分の日にとどまります',
-  'plan.move.refused.notInAnotherDayBody':
-    'メモはまだ別の日へ移動できません。メモを編集するか、別の日に書いてください。',
+    'アイデアは日付を待っている場所です。メモは必ずいずれかの日に属します。',
   'plan.move.refused.journeyNotInIdeas': '移動は日の中にとどまります',
   'plan.move.refused.journeyNotInIdeasBody':
     'アイデアは日付を待っている場所です。移動はそれが起こる日に属します。',
@@ -125,8 +122,6 @@ const messages = {
     '{name} は移動しませんでした。その日にはすでにあります。',
   'plan.move.spoken.notInIdeas':
     '{name} は移動しませんでした。メモは日の中にとどまります。',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} は移動しませんでした。メモは自分の日にとどまります。',
   'plan.move.spoken.timed':
     '{name} には {time} が設定されています。時刻を外すか確認します。',
   'plan.move.spoken.journeyNotInIdeas':

@@ -115,10 +115,7 @@ const messages = {
     'Місце може бути в дні лише один раз. Перенесіть його в інший день.',
   'plan.move.refused.notInIdeas': 'Нотатка лишається в дні',
   'plan.move.refused.notInIdeasBody':
-    'Ідеї — це місця, що чекають на свій день. Нотатка належить дню, для якого її написали.',
-  'plan.move.refused.notInAnotherDay': 'Нотатка лишається у своєму дні',
-  'plan.move.refused.notInAnotherDayBody':
-    'Нотатки поки не можна переносити між днями. Змініть нотатку або напишіть її в іншому дні.',
+    'Ідеї — це місця, що чекають на свій день. Нотатка завжди належить якомусь дню.',
   'plan.move.refused.journeyNotInIdeas': 'Переїзд лишається в дні',
   'plan.move.refused.journeyNotInIdeasBody':
     'Ідеї — це місця, що чекають на свій день. Переїзд належить дню, у який він відбувається.',
@@ -131,8 +128,6 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} не переміщено. У цьому дні він уже є.',
   'plan.move.spoken.notInIdeas':
     '{name} не переміщено. Нотатка лишається в дні.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} не переміщено. Нотатка лишається у своєму дні.',
   'plan.move.spoken.timed':
     'У {name} стоїть {time}. Запитуємо, чи прибрати час.',
   'plan.move.spoken.journeyNotInIdeas':

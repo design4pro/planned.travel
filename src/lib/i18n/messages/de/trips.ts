@@ -110,10 +110,7 @@ const messages = {
     'Ein Ort kann pro Tag nur einmal vorkommen. Verschiebe ihn stattdessen auf einen anderen Tag.',
   'plan.move.refused.notInIdeas': 'Eine Notiz bleibt im Tag',
   'plan.move.refused.notInIdeasBody':
-    'Ideen sind Orte, die auf einen Tag warten. Eine Notiz gehört zu dem Tag, für den sie geschrieben wurde.',
-  'plan.move.refused.notInAnotherDay': 'Eine Notiz bleibt an ihrem Tag',
-  'plan.move.refused.notInAnotherDayBody':
-    'Notizen lassen sich noch nicht zwischen Tagen verschieben. Bearbeite die Notiz, oder schreib sie am anderen Tag.',
+    'Ideen sind Orte, die auf einen Tag warten. Eine Notiz gehört immer zu einem Tag.',
   'plan.move.refused.journeyNotInIdeas': 'Ein Transfer bleibt im Tag',
   'plan.move.refused.journeyNotInIdeasBody':
     'Ideen sind Orte, die auf einen Tag warten. Ein Transfer gehört zu dem Tag, an dem er stattfindet.',
@@ -128,8 +125,6 @@ const messages = {
     '{name} wurde nicht verschoben. Dieser Tag hat den Ort schon.',
   'plan.move.spoken.notInIdeas':
     '{name} wurde nicht verschoben. Eine Notiz bleibt im Tag.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} wurde nicht verschoben. Eine Notiz bleibt an ihrem Tag.',
   'plan.move.spoken.timed':
     '{name} trägt {time}. Wir fragen, ob die Zeit entfallen soll.',
   'plan.move.spoken.journeyNotInIdeas':

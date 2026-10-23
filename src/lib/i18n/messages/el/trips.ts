@@ -110,10 +110,7 @@ const messages = {
     'Ένα μέρος μπορεί να εμφανίζεται μία φορά ανά ημέρα. Μετακινήστε το σε άλλη ημέρα.',
   'plan.move.refused.notInIdeas': 'Η σημείωση μένει μέσα στην ημέρα',
   'plan.move.refused.notInIdeasBody':
-    'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η σημείωση ανήκει στην ημέρα για την οποία γράφτηκε.',
-  'plan.move.refused.notInAnotherDay': 'Η σημείωση μένει στη δική της ημέρα',
-  'plan.move.refused.notInAnotherDayBody':
-    'Οι σημειώσεις δεν μετακινούνται ακόμη μεταξύ ημερών. Επεξεργαστείτε τη σημείωση ή γράψτε την στην άλλη ημέρα.',
+    'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η σημείωση ανήκει πάντα σε μια ημέρα.',
   'plan.move.refused.journeyNotInIdeas': 'Η μετακίνηση μένει μέσα στην ημέρα',
   'plan.move.refused.journeyNotInIdeasBody':
     'Οι ιδέες είναι μέρη που περιμένουν ημέρα. Η μετακίνηση ανήκει στην ημέρα που γίνεται.',
@@ -128,8 +125,6 @@ const messages = {
     'Το {name} δεν μετακινήθηκε. Εκείνη η ημέρα το έχει ήδη.',
   'plan.move.spoken.notInIdeas':
     'Το {name} δεν μετακινήθηκε. Η σημείωση μένει μέσα στην ημέρα.',
-  'plan.move.spoken.notInAnotherDay':
-    'Το {name} δεν μετακινήθηκε. Η σημείωση μένει στη δική της ημέρα.',
   'plan.move.spoken.timed':
     'Το {name} έχει ώρα {time}. Ρωτάμε αν θα την αφήσουμε.',
   'plan.move.spoken.journeyNotInIdeas':

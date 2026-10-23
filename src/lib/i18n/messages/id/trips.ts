@@ -107,10 +107,7 @@ const messages = {
     'Satu tempat hanya bisa muncul sekali per hari. Pindahkan ke hari lain.',
   'plan.move.refused.notInIdeas': 'Catatan tetap di dalam harinya',
   'plan.move.refused.notInIdeasBody':
-    'Ide adalah tempat yang menunggu hari. Catatan milik hari tempat ia ditulis.',
-  'plan.move.refused.notInAnotherDay': 'Catatan tetap di harinya sendiri',
-  'plan.move.refused.notInAnotherDayBody':
-    'Catatan belum bisa dipindah antar hari. Ubah catatannya, atau tulis di hari yang lain.',
+    'Ide adalah tempat yang menunggu hari. Catatan selalu milik suatu hari.',
   'plan.move.refused.journeyNotInIdeas': 'Perjalanan tetap di dalam harinya',
   'plan.move.refused.journeyNotInIdeasBody':
     'Ide adalah tempat yang menunggu hari. Perjalanan milik hari saat ia berlangsung.',
@@ -125,8 +122,6 @@ const messages = {
     '{name} tidak dipindahkan. Hari itu sudah memilikinya.',
   'plan.move.spoken.notInIdeas':
     '{name} tidak dipindahkan. Catatan tetap di dalam harinya.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} tidak dipindahkan. Catatan tetap di harinya sendiri.',
   'plan.move.spoken.timed':
     '{name} punya waktu {time}. Kami tanya apakah waktunya dilepas.',
   'plan.move.spoken.journeyNotInIdeas':

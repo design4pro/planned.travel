@@ -114,10 +114,7 @@ const messages = {
     'Место может быть в дне только один раз. Перенесите его в другой день.',
   'plan.move.refused.notInIdeas': 'Заметка остаётся внутри дня',
   'plan.move.refused.notInIdeasBody':
-    'Идеи — это места, ждущие своего дня. Заметка принадлежит дню, для которого её написали.',
-  'plan.move.refused.notInAnotherDay': 'Заметка остаётся в своём дне',
-  'plan.move.refused.notInAnotherDayBody':
-    'Заметки пока нельзя переносить между днями. Измените заметку или напишите её в другом дне.',
+    'Идеи — это места, ждущие своего дня. Заметка всегда принадлежит какому-нибудь дню.',
   'plan.move.refused.journeyNotInIdeas': 'Переезд остаётся внутри дня',
   'plan.move.refused.journeyNotInIdeasBody':
     'Идеи — это места, ждущие своего дня. Переезд принадлежит дню, в который он происходит.',
@@ -130,8 +127,6 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} не перемещён. В этом дне он уже есть.',
   'plan.move.spoken.notInIdeas':
     '{name} не перемещён. Заметка остаётся внутри дня.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} не перемещён. Заметка остаётся в своём дне.',
   'plan.move.spoken.timed':
     'У {name} стоит {time}. Спрашиваем, убрать ли время.',
   'plan.move.spoken.journeyNotInIdeas':
