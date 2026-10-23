@@ -5,7 +5,7 @@ import { render as mount, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
-import { DeleteDialog, DropTimeDialog, refreshOnFailure } from '../plan-actions'
+import { DeleteDialog, DropTimeDialog } from '../plan-actions'
 
 /**
  * The one question the drag policy ever asks a reader.
@@ -79,36 +79,6 @@ describe('DropTimeDialog', () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1)
     expect(onDecline).not.toHaveBeenCalled()
-  })
-})
-
-/**
- * A delete lands and its journey restatement is then refused: the stop is already gone, so the
- * board has to be refreshed even though the write as a whole failed. A write that goes through is
- * refreshed by its caller, and must not be refreshed twice.
- */
-describe('refreshOnFailure', () => {
-  it('refreshes after the rest of a write is refused, and still reports the failure', async () => {
-    const calls: Array<string> = []
-    const refusal = new Error('The journeys could not be saved.')
-    const work = async () => {
-      calls.push('restate')
-      await Promise.resolve()
-      throw refusal
-    }
-    const refresh = vi.fn(async () => {
-      calls.push('refresh')
-    })
-
-    await expect(refreshOnFailure(work, refresh)).rejects.toBe(refusal)
-    expect(calls).toEqual(['restate', 'refresh'])
-  })
-
-  it('leaves the refresh to the caller when the rest of the write lands', async () => {
-    const refresh = vi.fn(async () => {})
-
-    await refreshOnFailure(async () => {}, refresh)
-    expect(refresh).not.toHaveBeenCalled()
   })
 })
 

@@ -1,29 +1,26 @@
 /**
- * The planner's third read, and the writer that restates a day's journeys.
+ * The planner's third read: the journeys a day can draw.
  *
  * Its own module rather than a section of `-server/plan.ts`: everything here reaches the data
  * through the exported repositories, and the shared planner modules are left exactly as they are.
  *
- * **The day is one number line, and a reorder writes all of it in one call.** `reorderPlanFn`
- * carries the day's stops, notes and journeys, and `reorderDayTimelines` renumbers the stops and
- * notes `0..n-1` and places each journey between two of them in the same batch (#239), so no
- * failure can leave renumbered stops beside journeys that still name the old gaps.
- *
- * What is left here is the writer for the paths that never renumber a day: scheduling a stop
- * stores it at a midpoint, unscheduling and deleting one leave a hole, and each of them restates
- * its day's journeys afterwards through {@link reorderDayTransportsFn}. A failed restatement
- * there leaves a day that still sorts consistently, because no stop moved; folding those writes
- * into their own transactions is #816.
+ * **The day is one number line, and every write of it is one call.** `reorderPlanFn` carries the
+ * day's stops, notes and journeys, and `reorderDayTimelines` renumbers the stops and notes
+ * `0..n-1` and places each journey between two of them in the same batch (#239). The writes that
+ * never renumber a day — scheduling a stop stores it at a midpoint, unscheduling and deleting one
+ * leave a hole — place their day's journeys in their own batch too (#816), so this module has no
+ * writer: a journey's position is written by the same call that changes the stop beside it. The one
+ * export that looks like a writer, {@link reorderDayTransportsFn}, is a deprecated no-op.
  */
 
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import {
+  dayRunInput,
   listTripDayTransports,
-  reorderDayTransports,
-  reorderDayTransportsInput,
   requireTrip,
+  requireTripDay,
   requireWritableTrip,
 } from '#/server/repos'
 import { appScope } from '../../../-server/context'
@@ -172,59 +169,21 @@ export const loadPlanTransports = createServerFn({ method: 'GET' })
     return readPlanTransports(scope, data.tripId)
   })
 
-/* -------------------------------------------------------------------------------------------------
- * Write
- * ---------------------------------------------------------------------------------------------- */
-
 /**
- * Tells the trip room that this day's journeys were re-placed.
+ * Deprecated: stale-tab compatibility only, to be removed one release after #816.
  *
- * Under its own field, because this is the news of a write that renumbers nothing (schedule,
- * unschedule, delete): it carries the journeys alone and must not overwrite the `items` that
- * `reorderPlanFn` mirrors beside its own `journeys` when it renumbers a day.
- *
- * `#/server/fns/context` is reached at call time rather than imported at the top of the file: it
- * imports `cloudflare:workers` and the trip room's Durable Object module, and this file is imported
- * by the planner route, so a static import would put both into that route's module graph. The
- * posture `-server/plan.ts` records in the same words, for the same reason.
- */
-async function mirrorDayJourneys(
-  scope: TenantScope,
-  tripId: string,
-  dayId: string,
-  journeys: ReadonlyArray<{ readonly kind: string; readonly id: string }>,
-): Promise<void> {
-  const { mirrorToRoom, patch } = await import('#/server/fns/context')
-  await mirrorToRoom(scope, tripId, [
-    patch('day', dayId, {
-      journeys: journeys.map((ref) => ({ kind: ref.kind, id: ref.id })),
-    }),
-  ])
-}
-
-/**
- * Places one day's journeys between the stops and notes the run names, against the numbering the
- * day already has — for the writes that do not renumber it.
- *
- * The client sends the day's *resulting* run — stops, notes and journeys, in order — and the server
- * takes from it only which stop or note each journey follows; the fractions themselves are derived
- * from the day as stored, so a client can never inject a position of its own choosing. The
- * repository's own schema is the validator, so the wire contract and the boundary check cannot
- * drift apart: at most 400 rows, of which at most 200 are stops and notes — `reorderPlanFn`'s
- * per-day cap counted by the same rule, so a day the primary write accepts is never refused here.
+ * It used to be the second call of schedule, unschedule and delete, which placed the day's journeys
+ * after the stop write. Those writes place them in their own batch now, so a tab loaded before the
+ * deploy that still makes this call has nothing left to do: it answers `placed: 0` without writing,
+ * which keeps that tab's optimistic board instead of rolling it back (BACKWARD_COMPATIBILITY.md §2).
+ * The input is accepted exactly as before, and the trip and the day are still checked, so the
+ * function reveals nothing it did not.
  */
 export const reorderDayTransportsFn = createServerFn({ method: 'POST' })
-  .validator(reorderDayTransportsInput)
+  .validator(z.object({ tripId: id, dayId: id, items: dayRunInput }))
   .handler(async ({ data }): Promise<{ readonly placed: number }> => {
     const scope = await appScope()
     const trip = await requireWritableTrip(scope, data.tripId)
-
-    // The run as written, not as asked for: the repository drops an id it does not know and puts
-    // back a known one the payload left out, so the request and the day on disk can differ — and
-    // the room, like the count, has to hear the disk. The repository independently checks current
-    // readability and archive state, including when the caller supplies the resolved trip.
-    const journeys = await reorderDayTransports(scope, data, trip)
-    await mirrorDayJourneys(scope, data.tripId, data.dayId, journeys)
-
-    return { placed: journeys.length }
+    await requireTripDay(scope, trip.id, data.dayId)
+    return { placed: 0 }
   })

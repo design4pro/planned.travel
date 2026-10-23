@@ -35,23 +35,11 @@ import {
 import { createTenantRepository, tenantFilter } from './base'
 import { boundParametersPerRow, chunkFor, runBatch } from './batch'
 import {
-  DAY_RUN_ANCHORS_MESSAGE,
-  DAY_RUN_MAX_ITEMS,
-  byDayRun,
-  dayRunItemInput,
-  dayRunKey,
-  departingJourneys,
-  journeyPositionStatements,
-  placeJourneys,
-  withinAnchorBound,
-} from './day-journeys'
-import {
   isUniqueConstraintViolation,
   NotFoundError,
   RepositoryError,
 } from './context'
-import { listDayNotes, listTripDays, requireTripDay } from './days'
-import { listDayAssignments } from './itinerary'
+import { listTripDays, requireTripDay } from './days'
 import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
 
 import type { TripRole } from './trips'
@@ -81,10 +69,9 @@ import {
   timeSchema,
   titleSchema,
 } from './validation'
-import type { Transport, TransportLeg, Trip } from '#/server/db/types'
+import type { Transport, TransportLeg } from '#/server/db/types'
 import type { LegClocks, LegZones } from '#/lib/transport-timing'
 import type { BatchStatement } from './batch'
-import type { DayRunEntry, DayRunItemInput } from './day-journeys'
 import type { TenantScope } from './base'
 
 export const transportsRepository = createTenantRepository(
@@ -476,120 +463,6 @@ export async function unlinkTransportsFromDays(
     { arrivalDayId: null },
   )
   return rows.length
-}
-
-/* -------------------------------------------------------------------------------------------------
- * A journey's place on the day's number line
- * ---------------------------------------------------------------------------------------------- */
-
-export const reorderDayTransportsInput = z
-  .object({
-    tripId: idSchema,
-    dayId: idSchema,
-    items: z.array(dayRunItemInput).max(DAY_RUN_MAX_ITEMS),
-  })
-  .refine(({ items }) => withinAnchorBound(items), {
-    message: DAY_RUN_ANCHORS_MESSAGE,
-    path: ['items'],
-  })
-export type ReorderDayTransportsInput = z.infer<
-  typeof reorderDayTransportsInput
->
-
-/**
- * Places one day's journey rows between the stops and notes the run names, against the numbering
- * the day already has.
- *
- * A thin wrapper: the rule — which gap a journey sits in and how a gap is shared — is
- * `./day-journeys`'s, and `reorderDayTimelines` applies the same rule in the batch that renumbers
- * a day. What is left here is for the writes that never renumber one: scheduling a stop stores it
- * at a midpoint, unscheduling and deleting leave a hole, and each of them needs its day's
- * journeys said again against the positions as they now are (#816).
- *
- * The three rules about the list the client sends are `reorderDayTimelines`'s, for the same reasons:
- *
- * - **Unknown ids are dropped, not rejected.** A tab one delete behind must still be able to
- *   reorder the rows that do exist. A forged id therefore moves nothing, and a real stop id placed
- *   out of order can only misposition the caller's own journey inside the caller's own day — an
- *   arrangement they could have sent directly, and one the next reorder heals.
- * - **Known ids the client omitted go back behind the row they currently follow**, before any gap
- *   is split, so a journey the payload left out is counted among the journeys sharing its gap and
- *   rewritten with them rather than left at a value a recomputed sibling could land on.
- * - **The stops and notes are the ruler and are never written.** Only `transports.sort_order` and
- *   `transport_legs.sort_order` are, and all of them in one {@link runBatch} — one transaction on
- *   D1, because half a day's journeys re-placed is not a state anything can render honestly.
- *
- * Returns the journeys as written, in the order they were written, which is what the caller mirrors
- * to the trip room — `reorderDayTimelines`'s contract, for its reason: a dropped id and a re-inserted
- * one both make the request a different day from the one on disk, and the room must hear the disk.
- */
-export async function reorderDayTransports(
-  scope: TenantScope,
-  input: ReorderDayTransportsInput,
-  _resolvedTrip?: Trip,
-): Promise<Array<DayRunItemInput>> {
-  const values = reorderDayTransportsInput.parse(input)
-
-  // Resolve readability and archive state in this scope even when the caller supplies a row.
-  // A Trip is data, not proof of visibility or of the current archive state.
-  await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, WRITERS)
-  await requireTripDay(scope, values.tripId, values.dayId)
-
-  const [stops, notes, journeys] = await Promise.all([
-    listDayAssignments(scope, values.dayId),
-    listDayNotes(scope, values.dayId),
-    departingJourneys(scope, values.tripId, values.dayId),
-  ])
-
-  const anchors: Array<DayRunEntry> = [
-    ...stops.map((row) => ({
-      ref: { kind: 'stop' as const, id: row.id },
-      position: row.orderIndex,
-    })),
-    ...notes.map((row) => ({
-      ref: { kind: 'note' as const, id: row.id },
-      position: row.sortOrder,
-    })),
-  ]
-
-  const current = [...anchors, ...journeys].sort(byDayRun)
-
-  const known = new Map(
-    current.map((entry) => [dayRunKey(entry.ref), entry.ref]),
-  )
-  const wanted: Array<DayRunItemInput> = []
-  const seen = new Set<string>()
-  for (const ref of values.items) {
-    const key = dayRunKey(ref)
-    const row = known.get(key)
-    if (row === undefined || seen.has(key)) continue
-    seen.add(key)
-    wanted.push(row)
-  }
-
-  let previousKey: string | null = null
-  for (const entry of current) {
-    const key = dayRunKey(entry.ref)
-    if (!seen.has(key)) {
-      const anchor =
-        previousKey === null
-          ? -1
-          : wanted.findIndex((ref) => dayRunKey(ref) === previousKey)
-      seen.add(key)
-      wanted.splice(anchor + 1, 0, entry.ref)
-    }
-    previousKey = key
-  }
-
-  const placed = placeJourneys(
-    wanted,
-    new Map(anchors.map((entry) => [dayRunKey(entry.ref), entry.position])),
-  )
-
-  await runBatch(scope, journeyPositionStatements(scope, placed))
-
-  return placed.map(({ ref }) => ref)
 }
 
 /* -------------------------------------------------------------------------------------------------
