@@ -223,8 +223,11 @@ function categoryFor(type: string): (typeof EXPENSE_CATEGORIES)[number] {
 /**
  * What became of a booking's cost line, reported back to the screen that saved it.
  *
- * `failed` is the one the dialog acts on: the booking is saved and the ledger is not, which is a
- * partial success rather than an error, and the reader is told exactly which half did not happen.
+ * The screen does not read this name; it reads the two flags of `LedgerReport`. Two outcomes are
+ * the ones it acts on.
+ *
+ * `failed`: the booking is saved and the ledger is not, which is a partial success rather than an
+ * error, and the reader is told exactly which half did not happen.
  *
  * `split-stale` is the other half-done answer: the line's new amount is saved, but its shares could
  * not follow it (an `exact` split, or weights the split arithmetic refuses), so they no longer add
@@ -245,9 +248,11 @@ export type LedgerOutcome =
  * two answers the screen acts on.
  *
  * The flags are the contract the screen reads; `ledger` stays populated for one release so a tab
- * on the previous bundle keeps working against the new Worker (`BACKWARD_COMPATIBILITY.md` §2),
- * and a later change removes it. Both flags are derived here, from the same value, so no write path
- * can report a name and a flag that disagree.
+ * on the previous bundle keeps working against the new Worker (`BACKWARD_COMPATIBILITY.md` §2).
+ * Removing it, and `LedgerOutcome` from the wire, is phase 2 of #814.
+ *
+ * Both flags are derived here, from the same value, so no write path can report a name and a flag
+ * that disagree.
  */
 export interface LedgerReport {
   readonly ledger: LedgerOutcome
