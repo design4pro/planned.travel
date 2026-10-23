@@ -173,6 +173,21 @@ describe('absence of the thing a loader reads', () => {
     }
   })
 
+  it('answers the same bare absence for a journey on a private trip the reader is not on', async () => {
+    const privateTrip = await createTrip(tenant.scope, {
+      title: 'Private secret',
+      visibility: 'private',
+    })
+    const journey = await createJourney(tenant.scope, {
+      title: 'Private write-up',
+      tripId: privateTrip.id,
+    })
+    stubs.scope = tenant.scopeFor(await tenant.addUser('non-participant'))
+    await expect(
+      loadJourneyStory({ data: { journeyId: journey.id } }),
+    ).resolves.toStrictEqual({ found: false })
+  })
+
   it('flags a readable journey as found', async () => {
     const journey = await createJourney(tenant.scope, { title: 'Readable' })
     await expect(
