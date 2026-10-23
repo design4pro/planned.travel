@@ -80,6 +80,26 @@ floor guard script; the review now does.
   explanation with usable focus, and the next permitted action; retry must not silently reuse intent
   invalidated by the refusal (#1241, #1251, #1207).
 
+- **A control its own action disables or removes hands focus to a named target.** A disabled button
+  cannot keep focus and a removed one drops it to `body`, so the fix names where focus goes (the
+  trigger once the request settles, the surviving sibling, or the heading) and a test asserts
+  `document.activeElement` on the confirm and the retry path, not only the direct one: jsdom does not
+  blur on disable, so the direct path alone passes. A keyboard user who loses their place is a
+  blocker when the focused control leaves the DOM (#1439, WCAG 2.4.3) and a should-fix otherwise
+  (#1297, #1391, #1430, #1488).
+
+## Concurrent writes (should fix)
+
+- **A write whose condition was read by an earlier statement binds that condition into the writing
+  statement.** A guard that reads a row, decides, then writes by id is racy on D1: two calls both
+  pass the check and the later write undoes the earlier. Put the condition in the `WHERE` of the
+  `UPDATE` or `DELETE` (status, version, owner, the id list the user confirmed), or in the same
+  `batch`, and check that a row actually changed; a read-modify-write of a whole record puts a version
+  in the `WHERE` or becomes per-field writes. A destructive confirmation, an ownership change or a
+  seat count that can be lost this way is a major, and the PR carries a test that races two calls
+  (#1308 and #1439 majors; #1391, #1426, #1430 and #1250 found the same shape; the `Promise.allSettled`
+  test in `member-roles.test.ts` is the pattern).
+
 ## Localisation (blocker)
 
 User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
@@ -108,6 +128,9 @@ files in `tooling` (vitest.config.ts). A new e2e journey belongs in `e2e/` and m
 An assertion on the order of rows a test wrote itself holds only if the query's `ORDER BY` puts
 those rows in that order. Rows written in the same millisecond tie on `created_at` and on `newId()`'s
 time prefix, so their order is random: assert a set, or give the rows distinct instants (#500, #510).
+Two forms keep returning: sorting ids in the test with `localeCompare`, which orders the random tail
+differently from SQLite's binary `ORDER BY id` (a blocker in #1250, red about 3 runs in 10), and
+writing a batch of rows with no pause between them (#1271, 52 posts in one millisecond).
 
 A constant, fixture or contract that encodes what a vendor returns or refuses (what a parameter
 means, which fields a product carries, the first date a range accepts) is checked against one live
@@ -143,7 +166,12 @@ check without that failing probe is a should-fix (#1209, #1283).
   in `.ai/specs/` (a spec still telling a ticket to delete what is already gone), `CONTEXT.md`, and the
   docblocks and comments in `src/` - not only `docs/`. Leaving one stale is a should-fix, and a
   "none" in the PR body's grep box on a PR that changed behaviour counts as unchecked (#880, #925,
-  #964, #977, #798; waiting specs also in #682's and #819's runs). A `docs/plans/` file headed
+  #964, #977, #798; waiting specs also in #682's and #819's runs). The grep also covers the OLD
+  text, not only the new name: a PR that rewrites a user-facing sentence or label greps a distinctive
+  phrase of the old one over `e2e/` and the test files (`e2e/journeys.spec.ts` still asserted the old sentence in #1366, found only by the product-owner review; a surface moved to the catalogue broke
+  tests that found it by English labels in #1549), an invariant by its constant name as well as the
+  feature's words (`DEAD_KEYS` sat in a waiting spec the feature grep missed, #1314), and a count a
+  skill override repeats is searched in the overrides too (#1434). A `docs/plans/` file headed
   "Migrated" and "frozen" is not edited (#968 reverted it): the stale statement goes in the PR body.
 - **Widening what an unattended run accepts names every input it now admits.** A PR that drops or
   loosens a filter, trusted-author list or trigger of an automation, schedule or `afk-*` skill
