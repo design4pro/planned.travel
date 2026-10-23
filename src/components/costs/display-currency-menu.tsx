@@ -140,6 +140,7 @@ export function DisplayCurrencyMenu({
           visible indicator is hidden from a screen reader so it is read once). */}
       <span
         aria-live="polite"
+        aria-atomic="true"
         data-part="display-currency-live"
         className="sr-only"
       >

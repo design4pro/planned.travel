@@ -108,5 +108,7 @@ describe('the display-currency control, for a keyboard and a screen reader', () 
 
     expect(live()).toBe(region)
     expect(live()?.textContent).toContain(Costs['display.alert.title'])
+    // Atomic, so a change inside the region (the indicator alone) is read together with the fallback.
+    expect(live()?.getAttribute('aria-atomic')).toBe('true')
   })
 })
