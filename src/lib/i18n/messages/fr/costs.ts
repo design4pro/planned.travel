@@ -101,6 +101,9 @@ const messages = {
   'expense.addDescription':
     'Les montants de ce voyage sont tenus en {currency}. Notez un justificatif dans sa propre devise et indiquez ce qu’il a donné à la conversion.',
   'expense.saveFailed': 'L’enregistrement a échoué',
+  'expense.splitOff.title': 'Les parts enregistrées ne font pas le total',
+  'expense.splitOff.body':
+    'Elles totalisent {shares}, mais la dépense est de {total}. Ajustez les parts et enregistrez pour corriger.',
   'expense.what': 'C’était pour quoi',
   'expense.whatPlaceholder': 'Dîner au Kyubey',
   'expense.amountNotANumber': 'Saisissez le montant sous forme de nombre.',
@@ -341,6 +344,7 @@ const messages = {
   'row.edit': 'Modifier {title}',
   'row.delete': 'Supprimer {title}',
   'row.saving': 'Enregistrement',
+  'row.splitOff': 'Les parts ne font pas le total',
   'tile.owe.label': 'Vous devez',
   'tile.owe.settled': 'Vous êtes à jour',
   'tile.owe.pending': 'Réglez avant de rentrer chez vous',

@@ -95,6 +95,9 @@ const messages = {
   'expense.addDescription':
     'Belopp hålls i {currency} för den här resan. Skriv upp ett kvitto i dess egen valuta och ange vad det blev omräknat.',
   'expense.saveFailed': 'Det gick inte att spara',
+  'expense.splitOff.title': 'De sparade andelarna summerar inte till totalen',
+  'expense.splitOff.body':
+    'De blir tillsammans {shares}, men kostnaden är {total}. Justera andelarna och spara för att rätta till det.',
   'expense.what': 'Vad var det för',
   'expense.whatPlaceholder': 'Middag på Kyubey',
   'expense.amountNotANumber': 'Skriv beloppet som ett tal.',
@@ -318,6 +321,7 @@ const messages = {
   'row.edit': 'Redigera {title}',
   'row.delete': 'Ta bort {title}',
   'row.saving': 'Sparar',
+  'row.splitOff': 'Andelarna summerar inte till totalen',
   'tile.owe.label': 'Du är skyldig',
   'tile.owe.settled': 'Du är helt kvitt',
   'tile.owe.pending': 'Gör upp innan du flyger hem',

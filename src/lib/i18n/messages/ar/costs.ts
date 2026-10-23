@@ -101,6 +101,9 @@ const messages = {
   'expense.addDescription':
     'مبالغ هذه الرحلة تُحفَظ بعملة {currency}. سجِّل الإيصال بعملته، واكتب ما صار إليه بعد التحويل.',
   'expense.saveFailed': 'لم يُحفظ',
+  'expense.splitOff.title': 'الحصص المحفوظة لا تُطابق الإجمالي',
+  'expense.splitOff.body':
+    'مجموعها {shares}، بينما التكلفة {total}. عدّل الحصص ثم احفظ لتصحيحها.',
   'expense.what': 'لأي شيء كان',
   'expense.whatPlaceholder': 'عشاء في Kyubey',
   'expense.amountNotANumber': 'اكتب المبلغ رقمًا.',
@@ -354,6 +357,7 @@ const messages = {
   'row.edit': 'تعديل {title}',
   'row.delete': 'حذف {title}',
   'row.saving': 'جارٍ الحفظ',
+  'row.splitOff': 'الحصص لا تُطابق الإجمالي',
   'tile.owe.label': 'عليك',
   'tile.owe.settled': 'لا شيء عليك',
   'tile.owe.pending': 'سدّد قبل أن تعود إلى بيتك',

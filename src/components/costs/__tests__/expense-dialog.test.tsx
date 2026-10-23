@@ -800,6 +800,51 @@ describe('the people a new line of money may name, once someone has left the wor
   })
 })
 
+describe('the expense dialog on a stored split that does not add up (#883)', () => {
+  const TITLE = 'The saved shares don’t add up'
+  const OFF = expenseRow({
+    amountMinor: 6_000,
+    splitMethod: 'equal',
+    shares: [
+      { userId: 'u1', shareMinor: 2_000, weight: 1, isSettled: false },
+      { userId: 'u2', shareMinor: 2_000, weight: 1, isSettled: false },
+    ],
+  })
+
+  it('says what the shares add up to and what to do, though the editor reads balanced', () => {
+    open(undefined, { expense: OFF })
+
+    expect(screen.getByText(TITLE)).toBeTruthy()
+    expect(
+      screen.getByText(/add up to .*40.*, but the cost is .*60.*/),
+    ).toBeTruthy()
+    // The editor re-derives an equal split from the amount, which is why the alert exists.
+    expect(screen.getByText('Balanced')).toBeTruthy()
+  })
+
+  it('stays quiet when the stored shares add up', () => {
+    open(undefined, {
+      expense: expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(screen.queryByText(TITLE)).toBeNull()
+  })
+
+  it('stays quiet for an expense with no shares and for a new one', () => {
+    open(undefined, { expense: expenseRow({ shares: [] }) })
+    expect(screen.queryByText(TITLE)).toBeNull()
+    cleanup()
+
+    open(undefined)
+    expect(screen.queryByText(TITLE)).toBeNull()
+  })
+})
+
 describe('the expense dialog when the save fails', () => {
   async function failWith(cause: Error): Promise<void> {
     const user = hand()

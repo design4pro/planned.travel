@@ -18,6 +18,8 @@ import {
   optimisticId,
   parseDay,
   shareOf,
+  shareTotalOf,
+  sharesDoNotAddUp,
   toDayString,
   totalsFor,
 } from '../data'
@@ -229,6 +231,51 @@ describe('shareOf', () => {
 
   it('is zero for someone left out of the split', () => {
     expect(shareOf(ROWS[2], 'u-mika')).toBe(0)
+  })
+})
+
+describe('shareTotalOf', () => {
+  it('adds the stored shares up', () => {
+    expect(shareTotalOf(ROWS[0])).toBe(30_000)
+  })
+
+  it('is null for a line with no shares', () => {
+    expect(shareTotalOf(expense({ shares: [] }))).toBeNull()
+  })
+})
+
+describe('sharesDoNotAddUp', () => {
+  it('does not flag shares that add up to the total', () => {
+    expect(sharesDoNotAddUp(ROWS[0])).toBe(false)
+  })
+
+  it('does not flag a line with no shares', () => {
+    expect(sharesDoNotAddUp(expense({ shares: [] }))).toBe(false)
+  })
+
+  it('flags shares that fall short of the total', () => {
+    const row = expense({ amountMinor: 33_000 })
+    expect(sharesDoNotAddUp(row)).toBe(true)
+  })
+
+  it('flags shares that run over the total', () => {
+    const row = expense({ amountMinor: 27_000 })
+    expect(sharesDoNotAddUp(row)).toBe(true)
+  })
+
+  it('is exact: one minor unit off is still flagged', () => {
+    const row = expense({ amountMinor: 30_001 })
+    expect(sharesDoNotAddUp(row)).toBe(true)
+  })
+
+  it('clears once the split is corrected', () => {
+    const off = expense({ amountMinor: 33_000 })
+    const fixed = expense({
+      amountMinor: 33_000,
+      shares: off.shares.map((share) => ({ ...share, shareMinor: 11_000 })),
+    })
+    expect(sharesDoNotAddUp(off)).toBe(true)
+    expect(sharesDoNotAddUp(fixed)).toBe(false)
   })
 })
 

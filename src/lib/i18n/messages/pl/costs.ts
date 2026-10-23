@@ -104,6 +104,9 @@ const messages = {
   'expense.addDescription':
     'Kwoty tego wyjazdu trzymamy w {currency}. Zapisz paragon w jego własnej walucie i podaj, na ile się przeliczył.',
   'expense.saveFailed': 'Nie udało się zapisać',
+  'expense.splitOff.title': 'Zapisane udziały nie sumują się do kwoty',
+  'expense.splitOff.body':
+    'Razem dają {shares}, a koszt to {total}. Popraw udziały i zapisz, aby to naprawić.',
   'expense.what': 'Za co to było',
   'expense.whatPlaceholder': 'Kolacja w Kyubey',
   'expense.amountNotANumber': 'Wpisz kwotę jako liczbę.',
@@ -348,6 +351,7 @@ const messages = {
   'row.edit': 'Edytuj: {title}',
   'row.delete': 'Usuń: {title}',
   'row.saving': 'Zapisywanie',
+  'row.splitOff': 'Udziały nie sumują się do kwoty',
   'tile.owe.label': 'Twój dług',
   'tile.owe.settled': 'Wszystko rozliczone',
   'tile.owe.pending': 'Rozlicz się przed powrotem do domu',

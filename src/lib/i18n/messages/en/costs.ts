@@ -118,6 +118,9 @@ const messages = {
   'expense.addDescription':
     'Amounts are held in {currency} for this trip. Log a receipt in its own currency and record what it converted to.',
   'expense.saveFailed': 'That did not save',
+  'expense.splitOff.title': 'The saved shares don’t add up',
+  'expense.splitOff.body':
+    'They add up to {shares}, but the cost is {total}. Adjust the shares and save to correct it.',
   'expense.what': 'What was it for',
   'expense.whatPlaceholder': 'Dinner at Kyubey',
   'expense.amountNotANumber': 'Enter the amount as a number.',
@@ -384,6 +387,7 @@ const messages = {
   'row.edit': 'Edit {title}',
   'row.delete': 'Delete {title}',
   'row.saving': 'Saving',
+  'row.splitOff': 'Shares don’t add up',
   /* ------------------------------------------------ the four tiles */
   'tile.owe.label': 'You owe',
   'tile.owe.settled': 'You are all settled up',

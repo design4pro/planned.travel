@@ -96,6 +96,9 @@ const messages = {
   'expense.addDescription':
     'Bu seyahatte tutarlar {currency} cinsinden tutuluyor. Fişi kendi para biriminde yaz ve çevrildiğinde ne olduğunu kaydet.',
   'expense.saveFailed': 'Kaydedilemedi',
+  'expense.splitOff.title': 'Kayıtlı paylar toplamı tutmuyor',
+  'expense.splitOff.body':
+    'Paylar toplam {shares} ediyor, ancak masraf {total}. Payları düzeltip kaydederek bunu giderebilirsin.',
   'expense.what': 'Ne içindi',
   'expense.whatPlaceholder': 'Kyubey’de akşam yemeği',
   'expense.amountNotANumber': 'Tutarı sayı olarak yaz.',
@@ -322,6 +325,7 @@ const messages = {
   'row.edit': '{title} düzenle',
   'row.delete': '{title} sil',
   'row.saving': 'Kaydediliyor',
+  'row.splitOff': 'Paylar toplamı tutmuyor',
   'tile.owe.label': 'Borcun',
   'tile.owe.settled': 'Hesabın tamamen ödeşti',
   'tile.owe.pending': 'Eve dönmeden önce ödeş',

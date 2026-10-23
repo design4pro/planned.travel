@@ -13,7 +13,7 @@
  * quiet detail shares the second, which is a designed small screen rather than a
  * squeezed large one.
  */
-import { Pencil, StickyNote, Trash2 } from 'lucide-react'
+import { AlertTriangle, Pencil, StickyNote, Trash2 } from 'lucide-react'
 
 import {
   Avatar,
@@ -26,7 +26,12 @@ import {
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { formatConversion, formatMoney } from '#/lib/money'
-import { groupByDay, isOptimisticId, shareOf } from '#/components/costs'
+import {
+  groupByDay,
+  isOptimisticId,
+  shareOf,
+  sharesDoNotAddUp,
+} from '#/components/costs'
 import { Panel } from '../../../-ui/scaffold'
 import { ConvertedFigure } from './converted-figure'
 import { CategoryGlyph, categoryLabel } from './categories'
@@ -176,6 +181,14 @@ function ExpenseRow({
             )}
             <Dot />
             <span className="truncate">{categoryLabel(row.category, t)}</span>
+            {sharesDoNotAddUp(row) ? (
+              <>
+                <Dot />
+                <Badge tone="warning" size="sm" icon={<AlertTriangle />}>
+                  {t('costs.row.splitOff')}
+                </Badge>
+              </>
+            ) : null}
             {conversion === null ? null : (
               <>
                 <Dot />

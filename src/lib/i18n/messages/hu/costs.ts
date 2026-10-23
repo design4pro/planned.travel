@@ -100,6 +100,9 @@ const messages = {
   'expense.addDescription':
     'Ennél az utazásnál az összegeket {currency}-ben tartjuk. Írd fel a számlát a saját valutájában, és add meg, mennyi lett átszámítva.',
   'expense.saveFailed': 'A mentés nem sikerült',
+  'expense.splitOff.title': 'A mentett részek nem adják ki az összeget',
+  'expense.splitOff.body':
+    'Összesen {shares}, a költség viszont {total}. Igazítsd a részeket, és mentsd el a javításhoz.',
   'expense.what': 'Mire volt',
   'expense.whatPlaceholder': 'Vacsora a Kyubeyben',
   'expense.amountNotANumber': 'Írd be az összeget számként.',
@@ -329,6 +332,7 @@ const messages = {
   'row.edit': '{title} szerkesztése',
   'row.delete': '{title} törlése',
   'row.saving': 'Mentés',
+  'row.splitOff': 'A részek nem adják ki az összeget',
   'tile.owe.label': 'Te tartozol',
   'tile.owe.settled': 'Minden rendezve nálad',
   'tile.owe.pending': 'Rendezd, mielőtt hazarepülsz',

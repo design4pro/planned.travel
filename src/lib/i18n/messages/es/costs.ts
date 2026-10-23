@@ -99,6 +99,9 @@ const messages = {
   'expense.addDescription':
     'Los importes de este viaje se guardan en {currency}. Anota un recibo en su propia moneda y registra a cuánto se convirtió.',
   'expense.saveFailed': 'No se pudo guardar',
+  'expense.splitOff.title': 'Las partes guardadas no suman el total',
+  'expense.splitOff.body':
+    'Suman {shares}, pero el coste es {total}. Ajusta las partes y guarda para corregirlo.',
   'expense.what': 'Para qué fue',
   'expense.whatPlaceholder': 'Cena en Kyubey',
   'expense.amountNotANumber': 'Escribe el importe como número.',
@@ -336,6 +339,7 @@ const messages = {
   'row.edit': 'Editar {title}',
   'row.delete': 'Eliminar {title}',
   'row.saving': 'Guardando',
+  'row.splitOff': 'Las partes no suman el total',
   'tile.owe.label': 'Debes',
   'tile.owe.settled': 'Estás al día',
   'tile.owe.pending': 'Salda cuentas antes de volar a casa',

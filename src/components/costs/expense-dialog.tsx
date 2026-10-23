@@ -53,7 +53,13 @@ import {
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
-import { offeredPeople, parseDay, toDayString } from './data'
+import {
+  offeredPeople,
+  parseDay,
+  shareTotalOf,
+  sharesDoNotAddUp,
+  toDayString,
+} from './data'
 import { useStaleTripCurrency } from './stale-trip-currency'
 import {
   SplitEditor,
@@ -293,6 +299,17 @@ export function ExpenseDialog({
           locale,
         ),
   )
+  // What the stored shares add up to when that is not the expense's total. Read off the stored rows
+  // and fixed when the dialog opens, like the draft: the editor below re-derives an equal, percent
+  // or shares split from the amount and would read balanced, which is why this says otherwise (#883).
+  const [storedOff] = useState(() =>
+    expense !== null && sharesDoNotAddUp(expense)
+      ? {
+          sharesMinor: shareTotalOf(expense) ?? 0,
+          totalMinor: expense.amountMinor,
+        }
+      : null,
+  )
   // Up while the converted field is still the one the dialog opened with (empty) and the reader has
   // not typed in it. Never raised again: a stored or typed figure must not be overwritten, and a
   // field the reader cleared is theirs.
@@ -470,6 +487,23 @@ export function ExpenseDialog({
             {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
                 {error ?? t('costs.refusal.rebaseChanged')}
+              </Alert>
+            )}
+
+            {storedOff === null ? null : (
+              <Alert tone="warning" title={t('costs.expense.splitOff.title')}>
+                {t('costs.expense.splitOff.body', {
+                  shares: formatMoney(
+                    storedOff.sharesMinor,
+                    tripCurrency,
+                    locale,
+                  ),
+                  total: formatMoney(
+                    storedOff.totalMinor,
+                    tripCurrency,
+                    locale,
+                  ),
+                })}
               </Alert>
             )}
 

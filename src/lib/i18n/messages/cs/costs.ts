@@ -101,6 +101,9 @@ const messages = {
   'expense.addDescription':
     'Částky se u této cesty vedou v {currency}. Zapište účtenku v její vlastní měně a doplňte, na kolik se přepočítala.',
   'expense.saveFailed': 'Uložení se nepovedlo',
+  'expense.splitOff.title': 'Uložené podíly nesedí',
+  'expense.splitOff.body':
+    'Dohromady dávají {shares}, ale náklad je {total}. Uprav podíly a ulož je, aby se to opravilo.',
   'expense.what': 'Za co to bylo',
   'expense.whatPlaceholder': 'Večeře v Kyubey',
   'expense.amountNotANumber': 'Zadejte částku jako číslo.',
@@ -342,6 +345,7 @@ const messages = {
   'row.edit': 'Upravit {title}',
   'row.delete': 'Smazat {title}',
   'row.saving': 'Ukládání',
+  'row.splitOff': 'Podíly nesedí',
   'tile.owe.label': 'Dlužíš',
   'tile.owe.settled': 'Vše je vyrovnáno',
   'tile.owe.pending': 'Vyrovnej to před odletem domů',

@@ -99,6 +99,9 @@ const messages = {
   'expense.addDescription':
     'Beträge werden für diese Reise in {currency} geführt. Erfasse einen Belegt in seiner eigenen Währung und trag ein, was er umgerechnet ergab.',
   'expense.saveFailed': 'Das hat nicht geklappt',
+  'expense.splitOff.title': 'Die gespeicherten Anteile ergeben nicht die Summe',
+  'expense.splitOff.body':
+    'Sie ergeben zusammen {shares}, die Kosten betragen aber {total}. Passe die Anteile an und speichere, um das zu korrigieren.',
   'expense.what': 'Wofür war das',
   'expense.whatPlaceholder': 'Abendessen im Kyubey',
   'expense.amountNotANumber': 'Gib den Betrag als Zahl ein.',
@@ -328,6 +331,7 @@ const messages = {
   'row.edit': '{title} bearbeiten',
   'row.delete': '{title} löschen',
   'row.saving': 'Wird gespeichert',
+  'row.splitOff': 'Anteile ergeben nicht die Summe',
   'tile.owe.label': 'Du schuldest',
   'tile.owe.settled': 'Bei dir ist alles beglichen',
   'tile.owe.pending': 'Gleiche es aus, bevor du heimfliegst',

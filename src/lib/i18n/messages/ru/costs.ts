@@ -101,6 +101,9 @@ const messages = {
   'expense.addDescription':
     'Суммы этой поездки ведутся в {currency}. Запишите чек в его собственной валюте и укажите, во сколько он пересчитался.',
   'expense.saveFailed': 'Сохранить не удалось',
+  'expense.splitOff.title': 'Сохранённые доли не сходятся с суммой',
+  'expense.splitOff.body':
+    'В сумме они дают {shares}, а расход составляет {total}. Поправь доли и сохрани, чтобы исправить.',
   'expense.what': 'За что это было',
   'expense.whatPlaceholder': 'Ужин в Kyubey',
   'expense.amountNotANumber': 'Введите сумму числом.',
@@ -350,6 +353,7 @@ const messages = {
   'row.edit': 'Изменить «{title}»',
   'row.delete': 'Удалить «{title}»',
   'row.saving': 'Сохранение',
+  'row.splitOff': 'Доли не сходятся с суммой',
   'tile.owe.label': 'Вы должны',
   'tile.owe.settled': 'Вы в расчёте',
   'tile.owe.pending': 'Рассчитайтесь до отлёта домой',
