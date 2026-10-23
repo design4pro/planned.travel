@@ -714,7 +714,7 @@ async function reclaimReplacedCover(
     const { filesBucket } = await import('#/server/fns/context')
     await deleteObjects(filesBucket(), [previousKey])
   } catch (cause) {
-    log().warn('the previous cover of a trip could not be deleted', {
+    log().warn('the previous cover of a trip could not be reclaimed', {
       organizationId: scope.ctx.organizationId,
       tripId,
       storageKey: previousKey,

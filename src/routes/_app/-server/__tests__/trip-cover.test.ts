@@ -12,8 +12,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   NotFoundError,
   RepositoryError,
+  TripArchivedError,
   TripRoleError,
   addTripMember,
+  archiveTrip,
   createTrip,
   getFileByStorageKey,
   getTrip,
@@ -158,7 +160,7 @@ async function tripWithCopiedCover(
 ): Promise<{ tripId: string; coverKey: string }> {
   const trip = await createTrip(scope, { title: 'Lisbon (copy)' })
   const coverKey = `trips/${organizationId}/${trip.id}/copied00000000000000001-cover.jpg`
-  stubs.bucket = fakeBucket([...(stubs.bucket?.remaining ?? []), coverKey])
+  putObject(coverKey)
   await writeTrip(scope, trip.id, {
     coverImageKey: coverKey,
     coverImageUrl: `${ORIGIN}/api/trips/${trip.id}/cover?v=copied`,
@@ -463,6 +465,24 @@ describe('updateTripFn reclaiming the cover it leaves behind', () => {
     await expect(
       updateTrip({ tripId, coverFileId: foreign.fileId }),
     ).rejects.toBeInstanceOf(NotFoundError)
+
+    expect(stubs.bucket?.calls).toEqual([])
+    expect(stubs.bucket?.remaining.has(coverKey)).toBe(true)
+    expect((await getTrip(tenant.scope, tripId))?.coverImageKey).toBe(coverKey)
+  })
+
+  it('deletes nothing when the trip write itself fails after the cover is derived', async () => {
+    const { tripId, coverKey } = await tripWithCopiedCover(
+      tenant.scope,
+      tenant.organizationId,
+    )
+    await archiveTrip(tenant.scope, tripId)
+    const currency =
+      (await getTrip(tenant.scope, tripId))?.currency === 'EUR' ? 'USD' : 'EUR'
+
+    await expect(
+      updateTrip({ tripId, coverFileId: null, currency }),
+    ).rejects.toBeInstanceOf(TripArchivedError)
 
     expect(stubs.bucket?.calls).toEqual([])
     expect(stubs.bucket?.remaining.has(coverKey)).toBe(true)
