@@ -98,6 +98,9 @@ const messages = {
   'expense.addDescription':
     'この旅行の金額は {currency} で管理します。レシートはその通貨で記録し、換算後の額を入力してください。',
   'expense.saveFailed': '保存できませんでした',
+  'expense.splitOff.title': '保存された分担額の合計が一致しません',
+  'expense.splitOff.body':
+    '分担額の合計は{shares}ですが、総額は{total}です。下の分担を確認して保存すると修正できます。',
   'expense.what': '何の費用か',
   'expense.whatPlaceholder': 'Kyubey での夕食',
   'expense.amountNotANumber': '金額は数字で入力してください。',
@@ -315,6 +318,7 @@ const messages = {
   'row.edit': '{title} を編集',
   'row.delete': '{title} を削除',
   'row.saving': '保存中',
+  'row.splitOff': '分担額の合計が一致しません',
   'tile.owe.label': '支払うべき額',
   'tile.owe.settled': 'すべて精算済みです',
   'tile.owe.pending': '帰国前に精算しましょう',

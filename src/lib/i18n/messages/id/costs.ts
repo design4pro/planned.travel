@@ -96,6 +96,9 @@ const messages = {
   'expense.addDescription':
     'Jumlah untuk perjalanan ini disimpan dalam {currency}. Catat kuitansi dalam mata uangnya sendiri, lalu tulis hasil konversinya.',
   'expense.saveFailed': 'Gagal disimpan',
+  'expense.splitOff.title': 'Bagian yang tersimpan tidak sesuai total',
+  'expense.splitOff.body':
+    'Jumlahnya {shares}, padahal totalnya {total}. Periksa pembagian di bawah lalu simpan untuk memperbaikinya.',
   'expense.what': 'Untuk apa ini',
   'expense.whatPlaceholder': 'Makan malam di Kyubey',
   'expense.amountNotANumber': 'Tulis jumlahnya sebagai angka.',
@@ -319,6 +322,7 @@ const messages = {
   'row.edit': 'Ubah {title}',
   'row.delete': 'Hapus {title}',
   'row.saving': 'Menyimpan',
+  'row.splitOff': 'Bagian tidak sesuai total',
   'tile.owe.label': 'Kamu berutang',
   'tile.owe.settled': 'Semuanya sudah lunas',
   'tile.owe.pending': 'Lunasi sebelum pulang',
