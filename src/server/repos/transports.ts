@@ -828,6 +828,11 @@ async function isGone(
  * class, one code and one message once the id is taken out of it, and no insert ever resolves a
  * clash by overwriting. A row the caller's scope already holds is edited whatever its id or age.
  *
+ * **The record is a patch.** Every field is optional, `title` included: a row that already exists
+ * keeps whatever the record leaves out, so a caller that has nothing to say about the title (a
+ * re-search) sends none and cannot write back a title it read earlier. A row that does not exist yet
+ * needs one, and a save without it is refused with `TITLE_REQUIRED` before the batch.
+ *
  * `intent` says what the caller means, and it only chooses between two outcomes that are both
  * inside the caller's own scope, so it widens no access: `edit` refuses a row that is not there
  * (deleted in another tab, or never the caller's) instead of writing it back, and `create` of an id
@@ -838,7 +843,7 @@ export const saveTransportInput = z.object({
   tripId: idSchema,
   transportId: idSchema,
   intent: z.enum(TRANSPORT_SAVE_INTENTS),
-  record: z.object(transportFields),
+  record: z.object(transportFields).partial(),
   chain: transportChainInput,
 })
 export type SaveTransportInput = z.input<typeof saveTransportInput>
@@ -869,6 +874,14 @@ function isAcceptableNewId(id: string): boolean {
 export interface SavedTransport {
   readonly transport: Transport
   readonly legs: Array<TransportLeg>
+}
+
+/** The title a new row is inserted with, or the refusal that stops the save before the batch. */
+function requireNewTitle(title: string | undefined): string {
+  if (title === undefined) {
+    throw new RepositoryError('A transport needs a title.', 'TITLE_REQUIRED')
+  }
+  return title
 }
 
 /**
@@ -914,6 +927,10 @@ export async function saveTransport(
   }
   await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, WRITERS)
+  // An insert needs a title and an update does not. The check sits after the scoped lookup, the
+  // trip agreement and the role, so it tells a caller nothing about a row they cannot see: a
+  // foreign id and an id that never existed are both "not here yet" and are refused alike.
+  const newTitle = existing === null ? requireNewTitle(record.title) : null
 
   requireLegOrder(chain.stations, chain.legs)
   await requireChainDays(scope, tripId, chain.legs)
@@ -926,8 +943,8 @@ export async function saveTransport(
     chain,
     previousLegs,
   )
-  // `definedOnly` widens `title` to optional; it is required, and an insert needs it typed so.
-  const values = { ...definedOnly(record), title: record.title, ...endpoints }
+  // An omitted field is left out of the update's `SET`, so it keeps the stored value.
+  const values = { ...definedOnly(record), ...endpoints }
 
   await requireDayPair(
     scope,
@@ -943,24 +960,29 @@ export async function saveTransport(
     to: resulting.arrivalTimezone,
   })
 
-  // The record goes first: the legs reference it.
+  // The record goes first: the legs reference it. An update with nothing to set (an empty record
+  // and an empty chain) has nothing to write, and drizzle refuses an empty `SET`.
+  const recordStatements: Array<BatchStatement> = []
+  if (newTitle !== null) {
+    recordStatements.push(
+      scope.db.insert(transports).values({
+        ...values,
+        title: newTitle,
+        id: transportId,
+        tripId,
+        organizationId: scope.ctx.organizationId,
+      }),
+    )
+  } else if (Object.keys(values).length > 0) {
+    recordStatements.push(
+      scope.db
+        .update(transports)
+        .set(values)
+        .where(tenantFilter(scope, transports, eq(transports.id, transportId))),
+    )
+  }
   try {
-    await runBatch(scope, [
-      existing === null
-        ? scope.db.insert(transports).values({
-            ...values,
-            id: transportId,
-            tripId,
-            organizationId: scope.ctx.organizationId,
-          })
-        : scope.db
-            .update(transports)
-            .set(values)
-            .where(
-              tenantFilter(scope, transports, eq(transports.id, transportId)),
-            ),
-      ...statements,
-    ])
+    await runBatch(scope, [...recordStatements, ...statements])
   } catch (cause) {
     // The scope sees no row under this id, so a primary-key refusal on the insert means the id
     // belongs to a row outside the scope: answer it like every other foreign id, not as a raw
@@ -1111,9 +1133,11 @@ async function carryAnchors(
  * press wrote.
  *
  * **A re-search keeps the record.** The plan's story is a timetable change that must not cost the
- * traveller their booking code and their seat, so the writer is handed the row's own title and no
- * mode, status, price or booking field: those stay where they were, and only the stations, the
- * legs and the flat endpoints derived from them move. A journey re-searched is the same journey.
+ * traveller their booking code and their seat, so the writer is handed an empty record: no title,
+ * mode, status, price or booking field is sent, those stay where they were, and only the stations,
+ * the legs and the flat endpoints derived from them move. The title is left out on purpose, so a
+ * rename that lands between the read above and the batch is never written back. A journey
+ * re-searched is the same journey.
  *
  * **The transport is resolved before the writer is asked.** Two ids arrive from the browser and a
  * well-formed one is not an authorised one, and the writer would take an id it cannot find as the
@@ -1158,7 +1182,7 @@ export async function saveSearchedConnection(
             priceMinor: values.priceMinor,
             currency: values.currency,
           }
-        : { title: existing.title },
+        : {},
     chain: {
       stations: values.stations,
       legs:

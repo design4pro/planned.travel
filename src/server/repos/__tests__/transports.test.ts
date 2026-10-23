@@ -17,6 +17,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
+import { newId } from '#/server/db/schema'
 import { NotFoundError, RepositoryError } from '../context'
 import { departingJourneys } from '../day-journeys'
 import { createDay, deleteDay, listTripDays } from '../days'
@@ -32,6 +33,7 @@ import {
   listTripTransports,
   replaceTransportChain,
   saveSearchedConnection,
+  saveTransport,
   setTransportStatus,
 } from '../transports'
 import { editTransport } from './edit-transport'
@@ -996,5 +998,91 @@ describe('a journey that arrives before it departs', () => {
     })
     expect(saved.legs).toHaveLength(1)
     expect(saved.transport.arrivalTime).toBe('09:00')
+  })
+})
+
+describe('a transport saved without a title', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+  let transportId: string
+
+  const OSAKA = { name: 'Shin-Osaka', code: 'OSA', timezone: 'Asia/Tokyo' }
+  const TOKYO = { name: 'Tokyo', code: 'TYO', timezone: 'Asia/Tokyo' }
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('untitled')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Sanyo line',
+      startDate: '2026-04-10',
+      endDate: '2026-04-13',
+      currency: 'JPY',
+    })
+    tripId = trip.id
+    transportId = (
+      await createTransport(tenant.scope, {
+        tripId,
+        title: 'Osaka to Tokyo',
+        mode: 'train',
+        bookingCode: 'ABC123',
+      })
+    ).id
+  })
+
+  it('keeps the stored title of a row that exists and writes the chain and its endpoints', async () => {
+    const saved = await editTransport(
+      tenant.scope,
+      tripId,
+      transportId,
+      {},
+      { stations: [OSAKA, TOKYO], legs: [{}] },
+    )
+
+    expect(saved.transport.title).toBe('Osaka to Tokyo')
+    expect(saved.transport.bookingCode).toBe('ABC123')
+    expect(saved.transport.departureName).toBe('Shin-Osaka')
+    expect(saved.transport.arrivalName).toBe('Tokyo')
+    expect(saved.legs).toHaveLength(1)
+  })
+
+  it('leaves the row as it was when there is nothing to write but an empty chain', async () => {
+    const before = await getTransport(tenant.scope, transportId)
+
+    const saved = await editTransport(tenant.scope, tripId, transportId, {})
+
+    expect(saved.transport).toEqual(before)
+    expect(saved.legs).toEqual([])
+  })
+
+  it('refuses to create a row without one before the batch, and writes no row and no leg', async () => {
+    const error = await captureError(() =>
+      saveTransport(tenant.scope, {
+        tripId,
+        transportId: newId(),
+        intent: 'create',
+        record: { mode: 'train' },
+        chain: { stations: [OSAKA, TOKYO], legs: [{}] },
+      }),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('TITLE_REQUIRED')
+    expect(await listTripTransports(tenant.scope, tripId)).toHaveLength(1)
+    expect(await listTripLegs(tenant.scope, tripId)).toEqual([])
+  })
+
+  it('still refuses an id that is not of the generator’s shape as a foreign id', async () => {
+    const error = await captureError(() =>
+      saveTransport(tenant.scope, {
+        tripId,
+        transportId: 'not-an-id',
+        intent: 'create',
+        record: {},
+        chain: { stations: [], legs: [] },
+      }),
+    )
+
+    expect(error).toBeInstanceOf(NotFoundError)
   })
 })
