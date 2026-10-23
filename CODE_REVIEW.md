@@ -79,13 +79,12 @@ floor guard script; the review now does.
   snapshot through the refusal, a current-state re-read (including its failure), a visible localised
   explanation with usable focus, and the next permitted action; retry must not silently reuse intent
   invalidated by the refusal (#1241, #1251, #1207).
-
 - **A result is applied only to the state it was started from.** A save, reload or loader refresh
   that settles after the user moved on (another dialog open, a second write, a different session)
   must not overwrite what is on screen: capture a generation or session counter when the request
   starts and compare it when it settles, seed a draft when its dialog opens rather than from loader
   object identity, and let a local "succeeded" value stand until the loader changes. The test holds
-  the first request on a deferred promise, acts again, then resolves it (#1323, #1337, #1466, #1488;
+  the first request on a deferred promise, acts again, then resolves it (#1337, #1466;
   #1241 and #1251 were the same shape in a money write).
 - **A control its own action disables or removes hands focus to a named target.** A disabled button
   cannot keep focus and a removed one drops it to `body`, so the fix names where focus goes (the
@@ -104,7 +103,7 @@ floor guard script; the review now does.
   `batch`, and check that a row actually changed; a read-modify-write of a whole record puts a version
   in the `WHERE` or becomes per-field writes. A destructive confirmation, an ownership change or a
   seat count that can be lost this way is a major, and the PR carries a test that races two calls
-  (#1308 and #1439 majors; #1391, #1426, #1430 and #1250 found the same shape; the `Promise.allSettled`
+  (#1439 a major; #1308 is the same shape, waived there because its spec documents last-write-wins, so a documented last-write-wins is the exception; #1391, #1426, #1430 and #1250 found the same shape; the `Promise.allSettled`
   test in `member-roles.test.ts` is the pattern).
 
 ## Localisation (blocker)
