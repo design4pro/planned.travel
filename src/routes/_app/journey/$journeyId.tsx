@@ -19,6 +19,7 @@ import {
   EmptyState,
   Skeleton,
 } from '#/components/ui'
+import { requireFound } from '#/lib/absence'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadJourneyStory } from '../-server/library'
 import {
@@ -34,8 +35,10 @@ import { HeaderSkeleton, Panel } from '../-ui/scaffold'
 import type { JourneyEntryCard, JourneyStoryPayload } from '../-server/library'
 
 export const Route = createFileRoute('/_app/journey/$journeyId')({
-  loader: ({ params }) =>
-    loadJourneyStory({ data: { journeyId: params.journeyId } }),
+  loader: async ({ params }) =>
+    requireFound(
+      await loadJourneyStory({ data: { journeyId: params.journeyId } }),
+    ),
   pendingComponent: StoryPending,
   notFoundComponent: () => (
     <AppFrame>

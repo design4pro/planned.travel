@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, useRouteContext } from '@tanstack/react-router'
 import { CheckCheck, Scale } from 'lucide-react'
 
+import { requireFound } from '#/lib/absence'
 import { useLocale } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -22,7 +23,8 @@ import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/lists')({
-  loader: ({ params }) => loadTripLists({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) =>
+    requireFound(await loadTripLists({ data: { tripId: params.tripId } })),
   pendingComponent: ListsPending,
   errorComponent: ({ error }) => (
     <AppFrame>

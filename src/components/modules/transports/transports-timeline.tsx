@@ -25,6 +25,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { requireFound } from '#/lib/absence'
 import { readPublicFailure } from '#/lib/errors'
 import {
   AlertTriangle,
@@ -219,7 +220,9 @@ export function TransportsTimeline({
     try {
       // invalidate alone can resolve even when a loader fails. Confirm capability through the
       // server interface before allowing a new action; a retry here repeats only this read.
-      const fresh = await loadTransportDeskFn({ data: { tripId } })
+      const fresh = requireFound(
+        await loadTransportDeskFn({ data: { tripId } }),
+      )
       if (currentTripId.current !== tripId) return
       setFreshCapability({
         canWrite: fresh.canWrite,

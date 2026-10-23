@@ -36,9 +36,13 @@ import {
   listVisitedCountries,
   tallyMoods,
 } from '#/server/repos'
+import { ABSENT } from '#/lib/absence'
+import { nullWhenMissing } from '#/server/fns/-lib/absence'
 import { appScope } from './context'
 import { createCollectionSchema } from './library-wire'
 import { currentYear, isoOf, isoOfRequired, todayIso } from '#/server/serialise'
+
+import type { OrAbsent } from '#/lib/absence'
 
 const idInput = z.string().trim().min(1).max(64)
 
@@ -657,14 +661,15 @@ export interface JourneyStoryPayload {
 
 export const loadJourneyStory = createServerFn({ method: 'GET' })
   .validator(z.object({ journeyId: idInput }))
-  .handler(async ({ data }): Promise<JourneyStoryPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<JourneyStoryPayload>> => {
     const scope = await appScope()
 
     const [story, moods, unattached] = await Promise.all([
-      getJourneyStory(scope, data.journeyId),
+      nullWhenMissing(() => getJourneyStory(scope, data.journeyId)),
       listMoods(scope),
       listUnattachedPhotos(scope, data.journeyId),
     ])
+    if (story === null) return ABSENT
 
     const people = await peopleFor(
       scope,
@@ -677,6 +682,7 @@ export const loadJourneyStory = createServerFn({ method: 'GET' })
     )
 
     return {
+      found: true,
       moods: moods.map((mood) => ({
         id: mood.id,
         label: mood.label,
@@ -810,13 +816,11 @@ export interface CollectionDetailPayload {
 
 export const loadCollectionDetail = createServerFn({ method: 'GET' })
   .validator(z.object({ collectionId: idInput }))
-  .handler(async ({ data }): Promise<CollectionDetailPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<CollectionDetailPayload>> => {
     const scope = await appScope()
 
     const collection = await getCollection(scope, data.collectionId)
-    if (collection === null) {
-      throw new Error('That collection no longer exists.')
-    }
+    if (collection === null) return ABSENT
 
     const [places, labels] = await Promise.all([
       listCollectionPlacesWithLabels(scope, collection.id),
@@ -829,6 +833,7 @@ export const loadCollectionDetail = createServerFn({ method: 'GET' })
     )
 
     return {
+      found: true,
       canManage: canManageCollection(scope, collection),
       people,
       labels: labels.map((row) => ({

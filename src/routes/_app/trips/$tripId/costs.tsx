@@ -17,10 +17,10 @@ import { z } from 'zod'
 
 import { AppFrame } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
-import { NotFoundPanel } from '#/components/layout/not-found'
 import { EXPENSE_VIEWS } from '#/components/costs'
 import { loadCosts } from '#/server/fns/costs'
 import { EXPENSE_CATEGORY_ORDER } from './-costs/categories'
+import { requireFound } from '#/lib/absence'
 import { useTranslate } from '#/lib/i18n'
 import { CostsScreen } from './-costs/screen'
 import { CostsSkeleton } from './-costs/skeleton'
@@ -49,13 +49,9 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute('/_app/trips/$tripId/costs')({
   validateSearch: searchSchema,
-  loader: ({ params }) => loadCosts({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) =>
+    requireFound(await loadCosts({ data: { tripId: params.tripId } })),
   pendingComponent: CostsSkeleton,
-  notFoundComponent: () => (
-    <AppFrame>
-      <NotFoundPanel />
-    </AppFrame>
-  ),
   errorComponent: CostsError,
   component: CostsPage,
 })

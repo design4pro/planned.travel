@@ -54,8 +54,10 @@ import {
 } from '#/server/repos'
 import { readTripInvite } from '#/server/repos/invites'
 import type { TripInviteView } from '#/server/repos/invites'
+import { orAbsent } from '#/server/fns/-lib/absence'
 import { appScope } from '../../../-server/context'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { Trip, TripMember } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
 import type {
@@ -280,9 +282,12 @@ export async function readTripPeople(
 
 export const loadTripPeople = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: id }))
-  .handler(async ({ data }): Promise<TripPeoplePayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<TripPeoplePayload>> => {
     const { authSecret } = await import('#/server/auth/env')
-    return readTripPeople(await appScope(), data.tripId, authSecret())
+    const scope = await appScope()
+    return orAbsent(data.tripId, () =>
+      readTripPeople(scope, data.tripId, authSecret()),
+    )
   })
 
 /* -------------------------------------------------------------------------------------------------

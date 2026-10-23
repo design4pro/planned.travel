@@ -32,8 +32,10 @@ import {
   tripRoleFor,
   updateReservation,
 } from '#/server/repos'
+import { orAbsent } from '#/server/fns/-lib/absence'
 import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { EXPENSE_CATEGORIES } from '#/server/db/schema'
 import type { Logger } from '#/server/observability'
 import type { Reservation, Trip } from '#/server/db/types'
@@ -739,9 +741,10 @@ export interface BookingDeskPayload {
  */
 export const loadBookingDeskFn = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId }))
-  .handler(async ({ data }): Promise<BookingDeskPayload> =>
-    bookingDeskPayload(await appScope(), data.tripId),
-  )
+  .handler(async ({ data }): Promise<OrAbsent<BookingDeskPayload>> => {
+    const scope = await appScope()
+    return orAbsent(data.tripId, () => bookingDeskPayload(scope, data.tripId))
+  })
 
 /**
  * What {@link loadBookingDeskFn} answers, as a plain function.

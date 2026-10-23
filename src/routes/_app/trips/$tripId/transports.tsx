@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Route as RouteIcon } from 'lucide-react'
 
+import { requireFound } from '#/lib/absence'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
@@ -37,7 +38,7 @@ export const Route = createFileRoute('/_app/trips/$tripId/transports')({
       loadTransportDeskFn({ data: { tripId: params.tripId } }),
       loadDisplayPreferences(),
     ])
-    return { ...desk, maskCodes: display.maskConfirmationCodes }
+    return { ...requireFound(desk), maskCodes: display.maskConfirmationCodes }
   },
   pendingComponent: TransportsPending,
   errorComponent: TransportsError,
