@@ -223,8 +223,11 @@ function categoryFor(type: string): (typeof EXPENSE_CATEGORIES)[number] {
 /**
  * What became of a booking's cost line, reported back to the screen that saved it.
  *
- * `failed` is the one the dialog acts on: the booking is saved and the ledger is not, which is a
- * partial success rather than an error, and the reader is told exactly which half did not happen.
+ * The screen does not read this name; it reads the two flags of `LedgerReport`. Two outcomes are
+ * the ones it acts on.
+ *
+ * `failed`: the booking is saved and the ledger is not, which is a partial success rather than an
+ * error, and the reader is told exactly which half did not happen.
  *
  * `split-stale` is the other half-done answer: the line's new amount is saved, but its shares could
  * not follow it (an `exact` split, or weights the split arithmetic refuses), so they no longer add
@@ -239,6 +242,33 @@ export type LedgerOutcome =
   | 'kept'
   | 'none'
   | 'failed'
+
+/**
+ * What a booking or stay write reports about its cost line: the outcome name and, beside it, the
+ * two answers the screen acts on.
+ *
+ * The flags are the contract the screen reads; `ledger` stays populated for one release so a tab
+ * on the previous bundle keeps working against the new Worker (`BACKWARD_COMPATIBILITY.md` §2).
+ * Removing it, and `LedgerOutcome` from the wire, is phase 2 of #814.
+ *
+ * Both flags are derived here, from the same value, so no write path can report a name and a flag
+ * that disagree.
+ */
+export interface LedgerReport {
+  readonly ledger: LedgerOutcome
+  /** The booking is saved and its cost line is not. */
+  readonly ledgerFailed: boolean
+  /** The cost line's new amount is saved, but its shares no longer add up to it. */
+  readonly ledgerSplitStale: boolean
+}
+
+export function ledgerReport(ledger: LedgerOutcome): LedgerReport {
+  return {
+    ledger,
+    ledgerFailed: ledger === 'failed',
+    ledgerSplitStale: ledger === 'split-stale',
+  }
+}
 
 export interface LedgerSubject {
   /** The row as it now stands — read back from the write, never from the request. */
@@ -423,9 +453,8 @@ export async function syncReservationExpense(
 export type MarkerOutcome = 'cleared' | 'failed'
 
 /** What a booking write answers with: the row, what the ledger did, and what the marker did. */
-export interface BookingWriteResult {
+export interface BookingWriteResult extends LedgerReport {
   readonly reservationId: string
-  readonly ledger: LedgerOutcome
   /** Only a save can clear a marker, so only the update path reports one. */
   readonly marker?: MarkerOutcome
 }
@@ -481,7 +510,7 @@ export const createBookingFn = createServerFn({ method: 'POST' })
       entityId: reservation.id,
       metadata: auditMetadata(data),
     })
-    return { reservationId: reservation.id, ledger }
+    return { reservationId: reservation.id, ...ledgerReport(ledger) }
   })
 
 export const updateBookingFn = createServerFn({ method: 'POST' })
@@ -516,7 +545,11 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
       entityId: data.reservationId,
       metadata: auditMetadata(data),
     })
-    return { reservationId: data.reservationId, ledger, marker }
+    return {
+      reservationId: data.reservationId,
+      ...ledgerReport(ledger),
+      marker,
+    }
   })
 
 /**

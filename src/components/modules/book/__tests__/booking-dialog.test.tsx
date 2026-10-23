@@ -58,6 +58,22 @@ vi.mock('#/server/fns/stays', () => ({
 }))
 vi.mock('@tanstack/react-router', () => ({ useRouter: () => router }))
 
+/**
+ * What a booking write answers with, as the server builds it: the outcome name and the two flags
+ * the dialog acts on. The dialog reads the flags; the name stays on the wire for one release.
+ */
+function written(ledger: string): {
+  ledger: string
+  ledgerFailed: boolean
+  ledgerSplitStale: boolean
+} {
+  return {
+    ledger,
+    ledgerFailed: ledger === 'failed',
+    ledgerSplitStale: ledger === 'split-stale',
+  }
+}
+
 function openDialog(): void {
   render(
     <I18nProvider locale="en" messages={EN}>
@@ -211,7 +227,7 @@ describe('BookingDialog — a stay', () => {
     stays.update.mockResolvedValue({
       reservationId: 'booking-1',
       stayId: 'stay-1',
-      ledger: 'none',
+      ...written('none'),
     })
     openStay(STAY)
     submitTheForm()
@@ -324,7 +340,7 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
   it('says so and stays open instead of closing on a saved booking', async () => {
     reservations.update.mockResolvedValue({
       reservationId: 'booking-3',
-      ledger: 'split-stale',
+      ...written('split-stale'),
     })
     const onOpenChange = vi.fn()
     openEditing(DINNER, onOpenChange)
@@ -342,7 +358,7 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
   it('closes from the one button that is left, and offers no second save', async () => {
     reservations.update.mockResolvedValue({
       reservationId: 'booking-3',
-      ledger: 'split-stale',
+      ...written('split-stale'),
     })
     const onOpenChange = vi.fn()
     openEditing(DINNER, onOpenChange)
@@ -359,7 +375,7 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
   it('locks the form and moves focus to the notice, so a late edit is not lost to "Done"', async () => {
     reservations.update.mockResolvedValue({
       reservationId: 'booking-3',
-      ledger: 'split-stale',
+      ...written('split-stale'),
     })
     openEditing(DINNER, vi.fn())
     await vi.waitFor(() =>
@@ -382,7 +398,7 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
     stays.update.mockResolvedValue({
       reservationId: 'booking-1',
       stayId: 'stay-1',
-      ledger: 'split-stale',
+      ...written('split-stale'),
     })
     const onOpenChange = vi.fn()
     openEditing(STAY, onOpenChange)
@@ -394,10 +410,27 @@ describe('BookingDialog — a split that no longer adds up after the save', () =
     expect(onOpenChange).not.toHaveBeenCalled()
   })
 
-  it('closes as before when the line was updated', async () => {
+  it('keeps the notice up on the split flag, not on the outcome name beside it', async () => {
     reservations.update.mockResolvedValue({
       reservationId: 'booking-3',
       ledger: 'updated',
+      ledgerFailed: false,
+      ledgerSplitStale: true,
+    })
+    const onOpenChange = vi.fn()
+    openEditing(DINNER, onOpenChange)
+    submitTheForm()
+
+    expect(
+      await screen.findByText('Saved, but the split no longer adds up'),
+    ).not.toBeNull()
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
+  it('closes as before when the line was updated', async () => {
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-3',
+      ...written('updated'),
     })
     const onOpenChange = vi.fn()
     openEditing(DINNER, onOpenChange)
@@ -492,7 +525,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
     reservations.create.mockResolvedValue({
       reservationId: 'booking-2',
-      ledger: 'failed',
+      ...written('failed'),
     })
     const onOpenChange = vi.fn()
     mount(undefined, onOpenChange)
@@ -518,7 +551,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
     reservations.update.mockResolvedValue({
       reservationId: 'booking-2',
-      ledger: 'failed',
+      ...written('failed'),
     })
     const onOpenChange = vi.fn()
     mount(MUSEUM, onOpenChange)
@@ -535,10 +568,28 @@ describe('BookingDialog — a ledger write that was refused', () => {
     stays.update.mockResolvedValue({
       reservationId: 'booking-1',
       stayId: 'stay-1',
-      ledger: 'failed',
+      ...written('failed'),
     })
     const onOpenChange = vi.fn()
     mount(STAY, onOpenChange)
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
+    expect(warning).toHaveBeenCalledTimes(1)
+    expect(success).not.toHaveBeenCalled()
+  })
+
+  it('acts on the flag, not on the outcome name beside it', async () => {
+    const warning = vi.spyOn(toast, 'warning').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    reservations.update.mockResolvedValue({
+      reservationId: 'booking-2',
+      ledger: 'created',
+      ledgerFailed: true,
+      ledgerSplitStale: false,
+    })
+    const onOpenChange = vi.fn()
+    mount(MUSEUM, onOpenChange)
     submitTheForm()
 
     await vi.waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false))
@@ -551,7 +602,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
     reservations.create.mockResolvedValue({
       reservationId: 'booking-2',
-      ledger: 'created',
+      ...written('created'),
     })
     const onOpenChange = vi.fn()
     mount(undefined, onOpenChange)
@@ -586,6 +637,8 @@ describe('BookingDialog — a ledger write that was refused', () => {
     let refuse: (value: {
       reservationId: string
       ledger: string
+      ledgerFailed: boolean
+      ledgerSplitStale: boolean
     }) => void = () => undefined
     reservations.create.mockReturnValue(
       new Promise((resolve) => {
@@ -601,7 +654,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     // Past the focus scope's own close timer, as a response over the network is.
     await new Promise((resolve) => setTimeout(resolve, 50))
 
-    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+    refuse({ reservationId: 'booking-2', ...written('failed') })
 
     await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
     expect(success).not.toHaveBeenCalled()
@@ -612,6 +665,8 @@ describe('BookingDialog — a ledger write that was refused', () => {
     let refuse: (value: {
       reservationId: string
       ledger: string
+      ledgerFailed: boolean
+      ledgerSplitStale: boolean
     }) => void = () => undefined
     reservations.create.mockReturnValue(
       new Promise((resolve) => {
@@ -626,7 +681,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     dialog.unmount()
     await new Promise((resolve) => setTimeout(resolve, 50))
 
-    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+    refuse({ reservationId: 'booking-2', ...written('failed') })
 
     await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
   })
@@ -636,6 +691,8 @@ describe('BookingDialog — a ledger write that was refused', () => {
     let refuse: (value: {
       reservationId: string
       ledger: string
+      ledgerFailed: boolean
+      ledgerSplitStale: boolean
     }) => void = () => undefined
     reservations.create.mockReturnValue(
       new Promise((resolve) => {
@@ -653,7 +710,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     await screen.findByRole('dialog')
     onOpenChange.mockClear()
 
-    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+    refuse({ reservationId: 'booking-2', ...written('failed') })
 
     await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
     expect(onOpenChange).not.toHaveBeenCalled()
@@ -666,7 +723,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     const dismiss = vi.spyOn(toast, 'dismiss').mockReturnValue('toast')
     reservations.update.mockResolvedValue({
       reservationId: 'booking-2',
-      ledger: 'created',
+      ...written('created'),
     })
     const onOpenChange = vi.fn()
     mount(MUSEUM, onOpenChange)
@@ -682,6 +739,8 @@ describe('BookingDialog — a ledger write that was refused', () => {
     let refuse: (value: {
       reservationId: string
       ledger: string
+      ledgerFailed: boolean
+      ledgerSplitStale: boolean
     }) => void = () => undefined
     reservations.create.mockReturnValue(
       new Promise((resolve) => {
@@ -697,7 +756,7 @@ describe('BookingDialog — a ledger write that was refused', () => {
     await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     onOpenChange.mockClear()
 
-    refuse({ reservationId: 'booking-2', ledger: 'failed' })
+    refuse({ reservationId: 'booking-2', ...written('failed') })
 
     await vi.waitFor(() => expect(warning).toHaveBeenCalledTimes(1))
     expect(onOpenChange).not.toHaveBeenCalled()
@@ -708,11 +767,11 @@ describe('BookingDialog — a ledger write that was refused', () => {
     vi.spyOn(toast, 'success').mockReturnValue('toast')
     reservations.create.mockResolvedValue({
       reservationId: 'booking-2',
-      ledger: 'failed',
+      ...written('failed'),
     })
     reservations.update.mockResolvedValue({
       reservationId: 'booking-2',
-      ledger: 'created',
+      ...written('created'),
     })
     const onOpenChange = vi.fn()
     const dialog = mount(undefined, onOpenChange)
@@ -738,12 +797,12 @@ describe('BookingDialog — a ledger write that was refused', () => {
       .mockResolvedValueOnce({
         reservationId: 'booking-1',
         stayId: 'stay-1',
-        ledger: 'failed',
+        ...written('failed'),
       })
       .mockResolvedValueOnce({
         reservationId: 'booking-1',
         stayId: 'stay-1',
-        ledger: 'created',
+        ...written('created'),
       })
     const onOpenChange = vi.fn()
     const dialog = mount(STAY, onOpenChange)

@@ -22,7 +22,7 @@ import {
   updateReservation,
 } from '#/server/repos'
 import { mirrorToRoom, orNull, patch, tombstone } from './context'
-import { syncReservationExpense } from './reservations'
+import { ledgerReport, syncReservationExpense } from './reservations'
 
 import type { Logger } from '#/server/observability'
 import type { Day, DayAccommodation } from '#/server/db/types'
@@ -211,7 +211,11 @@ export async function createStay(
     entityId: reservation.id,
     metadata: auditMetadata(data),
   })
-  return { reservationId: reservation.id, stayId: stay.id, ledger }
+  return {
+    reservationId: reservation.id,
+    stayId: stay.id,
+    ...ledgerReport(ledger),
+  }
 }
 
 /**
@@ -251,7 +255,11 @@ export async function updateStay(
     entityId: reservation.id,
     metadata: auditMetadata(data),
   })
-  return { reservationId: reservation.id, stayId: stay.id, ledger }
+  return {
+    reservationId: reservation.id,
+    stayId: stay.id,
+    ...ledgerReport(ledger),
+  }
 }
 
 /**
