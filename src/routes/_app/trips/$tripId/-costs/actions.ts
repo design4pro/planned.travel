@@ -321,7 +321,9 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       setSavingDisplay(true)
       try {
         await setDisplayCurrencyFn({ data: { code } })
-        await router.invalidate()
+        // The choice is stored from here on. A reload that fails does not reject in the router (it
+        // swaps the screen for the error panel), and one that does must not read as "not saved".
+        await router.invalidate().catch(() => undefined)
       } catch {
         toast.error(t('costs.display.error.title'), {
           description: t('costs.display.error.body'),

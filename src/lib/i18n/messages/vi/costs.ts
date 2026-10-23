@@ -208,6 +208,8 @@ const messages = {
   'display.menu.currentHint':
     'Đã chọn, nhưng không có tỷ giá đã ghi nào bao phủ',
   'display.menu.needsLiveRate': 'Cần tỷ giá trực tiếp, hiện chưa có',
+  'display.menu.disabledHint':
+    'Các loại tiền không có tỷ giá đã ghi vẫn hiện trong danh sách nhưng không thể chọn: chúng cần tỷ giá trực tiếp, hiện chưa có.',
   'display.menu.saving': 'Đang lưu lựa chọn của bạn',
   'display.error.title': 'Chưa lưu được tiền tệ hiển thị',
   'display.error.body':

@@ -213,6 +213,8 @@ const messages = {
   'display.menu.currentHint': 'Escolhida, mas nenhuma taxa registrada a cobre',
   'display.menu.needsLiveRate':
     'Precisa de uma taxa ao vivo, que ainda não está disponível',
+  'display.menu.disabledHint':
+    'As moedas sem uma taxa registrada aparecem na lista, mas não podem ser escolhidas: precisam de uma taxa ao vivo, que ainda não está disponível.',
   'display.menu.saving': 'Salvando sua escolha',
   'display.error.title': 'A moeda de exibição não foi salva',
   'display.error.body':

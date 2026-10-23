@@ -208,6 +208,8 @@ const messages = {
   'display.menu.rateHint': 'Bir gezide kayıtlı kuru kullanır',
   'display.menu.currentHint': 'Seçili, ancak kayıtlı hiçbir kur onu kapsamıyor',
   'display.menu.needsLiveRate': 'Henüz mevcut olmayan canlı bir kur gerektirir',
+  'display.menu.disabledHint':
+    'Kaydedilmiş kuru olmayan para birimleri listede yer alır ancak seçilemez: henüz mevcut olmayan canlı bir kura ihtiyaç duyarlar.',
   'display.menu.saving': 'Seçiminiz kaydediliyor',
   'display.error.title': 'Görüntüleme para birimi kaydedilmedi',
   'display.error.body': 'Seçiminiz kaydedilemedi. Birazdan tekrar deneyin.',

@@ -208,6 +208,8 @@ const messages = {
     '選択中ですが、記録済みのレートが対応していません',
   'display.menu.needsLiveRate':
     'リアルタイムのレートが必要ですが、まだ利用できません',
+  'display.menu.disabledHint':
+    'レートが記録されていない通貨は一覧に表示されますが、選択できません。まだ利用できないリアルタイムのレートが必要です。',
   'display.menu.saving': '選択を保存しています',
   'display.error.title': '表示通貨を保存できませんでした',
   'display.error.body':

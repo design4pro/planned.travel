@@ -217,6 +217,8 @@ const messages = {
   'display.menu.rateHint': 'يستخدم سعرًا سُجّل مسبقًا في رحلة',
   'display.menu.currentHint': 'محددة، لكن لا يغطيها أي سعر مسجّل',
   'display.menu.needsLiveRate': 'تحتاج إلى سعر مباشر غير متاح بعد',
+  'display.menu.disabledHint':
+    'العملات التي لا يوجد لها سعر صرف مسجّل تظهر في القائمة لكن لا يمكن اختيارها: فهي تحتاج إلى سعر صرف مباشر غير متاح بعد.',
   'display.menu.saving': 'جارٍ حفظ اختيارك',
   'display.error.title': 'لم تُحفظ عملة العرض',
   'display.error.body': 'تعذّر حفظ اختيارك. حاول مرة أخرى بعد قليل.',

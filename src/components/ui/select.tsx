@@ -268,6 +268,8 @@ export type SimpleSelectProps = Omit<
   className?: string
   triggerId?: string
   'aria-disabled'?: boolean
+  /** Ids of the caller's own description; kept beside, never instead of, the orphaned-value notice. */
+  'aria-describedby'?: string
   /** Accessible name when no visible label sits next to the control. */
   ariaLabel?: string
 }
@@ -286,6 +288,7 @@ export const SimpleSelect = React.forwardRef<
       triggerId,
       ariaLabel,
       'aria-disabled': ariaDisabled,
+      'aria-describedby': callerDescribedBy,
       value,
       defaultValue,
       onValueChange,
@@ -383,7 +386,11 @@ export const SimpleSelect = React.forwardRef<
           className={className}
           aria-label={ariaLabel}
           aria-disabled={ariaDisabled}
-          aria-describedby={orphaned ? notice : undefined}
+          aria-describedby={
+            [callerDescribedBy, orphaned ? notice : undefined]
+              .filter(Boolean)
+              .join(' ') || undefined
+          }
           data-placeholder={placeholderFlag}
           data-orphaned={orphaned ? '' : undefined}
           leading={
