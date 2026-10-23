@@ -124,28 +124,6 @@ export function messageOf(error: unknown, fallback: string): string {
   return fallback
 }
 
-/**
- * Runs the rest of a board write whose first part has already landed, and refreshes the board
- * if that rest fails.
- *
- * A delete whose follow-up journey restatement is refused has already taken the stop out of the
- * database, so the board catches up to what the server now holds before the failure reaches the
- * caller. Only such a write refreshes on failure: one that failed outright changed nothing, and
- * when it failed because the server was unreachable, the refresh would fail too and put the
- * route's error panel in place of the dialog holding the reader's input.
- */
-export async function refreshOnFailure(
-  work: () => Promise<unknown>,
-  refresh: () => Promise<unknown>,
-): Promise<void> {
-  try {
-    await work()
-  } catch (cause) {
-    await refresh()
-    throw cause
-  }
-}
-
 function categoryOptions(
   categories: ReadonlyArray<PlannerCategory>,
   t: Translate,

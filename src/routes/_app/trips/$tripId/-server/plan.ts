@@ -33,8 +33,7 @@ import {
   createAssignment,
   createPlace,
   dayRunItemInput,
-  deleteAssignment,
-  deletePlace,
+  deletePlaceWithJourneys,
   getPlace,
   getTripItinerary,
   listCategories,
@@ -48,6 +47,8 @@ import {
   requireTripDay,
   requireWritableTrip,
   tripRoleFor,
+  scheduleAssignment,
+  unscheduleAssignment,
   updateAssignment,
   updatePlace,
   withinAnchorBound,
@@ -58,6 +59,7 @@ import type {
   DayRunItemInput,
   TenantScope,
   TimelineItemInput,
+  WrittenDayJourneys,
 } from '#/server/repos'
 import type { Place, Trip } from '#/server/db/types'
 import type { BookingDayOption } from '#/server/fns/reservations'
@@ -383,8 +385,8 @@ async function requireStopOfPlan(
  * Tells the trip room that these days were rearranged: one `day` upsert each,
  * carrying the merged order and the journeys placed beside it.
  *
- * The journeys travel under their own field, the one `reorderDayTransportsFn` also writes when
- * it restates journeys alone, so a patch from either writer leaves the other field as it was.
+ * The journeys travel under their own field, the one {@link mirrorDayJourneys} also writes for the
+ * writes that renumber nothing, so a patch from either leaves the other field as it was.
  *
  * The bridge is reached at call time rather than imported at the top of the file,
  * and that is not stylistic. `#/server/fns/context` imports `cloudflare:workers` and
@@ -412,6 +414,33 @@ async function mirrorDayOrder(
     days.map((day) =>
       patch('day', day.dayId, {
         items: day.items.map((item) => ({ kind: item.kind, id: item.id })),
+        journeys: day.journeys.map((ref) => ({ kind: ref.kind, id: ref.id })),
+      }),
+    ),
+  )
+}
+
+/**
+ * Tells the trip room where the journeys of these days now sit.
+ *
+ * Under its own field, because this is the news of a write that renumbers nothing (schedule,
+ * unschedule, delete): it carries the journeys alone and must not overwrite the `items` that
+ * {@link mirrorDayOrder} sends beside its own `journeys` when it renumbers a day. A day that placed
+ * no journey is not mirrored, and a write that placed none sends nothing. Reached at call time for
+ * the reason {@link mirrorDayOrder} records.
+ */
+async function mirrorDayJourneys(
+  scope: TenantScope,
+  tripId: string,
+  days: ReadonlyArray<WrittenDayJourneys>,
+): Promise<void> {
+  if (days.length === 0) return
+  const { mirrorToRoom, patch } = await import('#/server/fns/context')
+  await mirrorToRoom(
+    scope,
+    tripId,
+    days.map((day) =>
+      patch('day', day.dayId, {
         journeys: day.journeys.map((ref) => ({ kind: ref.kind, id: ref.id })),
       }),
     ),
@@ -543,39 +572,67 @@ function indexBetween(
   return (before + after) / 2
 }
 
-/** Gives an unscheduled place a day, at the position it was dropped. */
+/**
+ * What a schedule takes: where the place was dropped and, optionally, the day's resulting run.
+ *
+ * `items` names the new stop by its **place id**, because its assignment id does not exist until
+ * the write mints it; a client that sends none leaves each journey where it already sits. Bounded
+ * as a reorder's day is.
+ */
+export const schedulePlaceInputSchema = z.object({
+  tripId: id,
+  placeId: id,
+  dayId: id,
+  index: z.number().int().min(0).max(500),
+  items: z
+    .array(dayRunItemInput)
+    .max(DAY_RUN_MAX_ITEMS)
+    .refine(withinAnchorBound, { error: DAY_RUN_ANCHORS_MESSAGE })
+    .optional(),
+})
+
+/**
+ * Gives an unscheduled place a day, at the position it was dropped.
+ *
+ * The stop and the day's journeys are one write (`scheduleAssignment`): the journeys are placed
+ * against the day with the new stop in it, in the same transaction, so there is no second call to
+ * fail. The room hears the journeys of the day, as {@link mirrorDayJourneys} says.
+ */
 export const schedulePlaceFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      tripId: id,
-      placeId: id,
-      dayId: id,
-      index: z.number().int().min(0).max(500),
-    }),
-  )
+  .validator(schedulePlaceInputSchema)
   .handler(async ({ data }): Promise<{ readonly assignmentId: string }> => {
     const scope = await appScope()
     const trip = await requireEditablePlan(scope, data.tripId)
 
     const ordered = await listDayAssignments(scope, data.dayId)
-    const assignment = await createAssignment(scope, {
+    const scheduled = await scheduleAssignment(scope, {
       tripId: trip.id,
       dayId: data.dayId,
       placeId: data.placeId,
       orderIndex: indexBetween(ordered, data.index),
+      items: data.items,
     })
+    await mirrorDayJourneys(scope, trip.id, scheduled.days)
 
-    return { assignmentId: assignment.id }
+    return { assignmentId: scheduled.assignmentId }
   })
 
-/** Takes a stop off its day. The place stays in the trip's inventory. */
+/**
+ * Takes a stop off its day. The place stays in the trip's inventory.
+ *
+ * The delete and the day's journeys are one write (`unscheduleAssignment`), and the stop must be
+ * one of this trip's: any other id is not found.
+ */
 export const unschedulePlaceFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, assignmentId: id }))
   .handler(async ({ data }): Promise<{ readonly removed: true }> => {
     const scope = await appScope()
     const trip = await requireEditablePlan(scope, data.tripId)
-    await requireStopOfPlan(scope, trip, data.assignmentId)
-    await deleteAssignment(scope, data.assignmentId)
+    const written = await unscheduleAssignment(scope, {
+      tripId: trip.id,
+      assignmentId: data.assignmentId,
+    })
+    await mirrorDayJourneys(scope, trip.id, written)
     return { removed: true }
   })
 
@@ -763,15 +820,20 @@ export const updatePlanPlaceFn = createServerFn({ method: 'POST' })
  * Removes a place from the trip entirely.
  *
  * Its assignments go with it — `day_assignments.place_id` cascades — so this is the
- * one destructive action on the screen and the only one behind a confirmation.
+ * one destructive action on the screen and the only one behind a confirmation. The delete and
+ * the journeys of every day the place was on are one write (`deletePlaceWithJourneys`), and the
+ * place must be one of this trip's: any other id is not found.
  */
 export const deletePlanPlaceFn = createServerFn({ method: 'POST' })
   .validator(z.object({ tripId: id, placeId: id }))
   .handler(async ({ data }): Promise<{ readonly removed: true }> => {
     const scope = await appScope()
     const trip = await requireEditablePlan(scope, data.tripId)
-    await requirePlaceOfPlan(scope, trip, data.placeId)
-    await deletePlace(scope, data.placeId)
+    const written = await deletePlaceWithJourneys(scope, {
+      tripId: trip.id,
+      placeId: data.placeId,
+    })
+    await mirrorDayJourneys(scope, trip.id, written)
     await enqueueTripRollup(scope, trip)
     return { removed: true }
   })

@@ -814,12 +814,6 @@ describe('plan content statistics envelopes', () => {
         },
       }),
     )
-    const { reorderDayTransportsFn } = await import('../plan-transports')
-    await inRequest(() =>
-      reorderDayTransportsFn({
-        data: { tripId: fixture.tripId, dayId: fixture.dayId, items: [] },
-      }),
-    )
     expect(stubs.sent).toEqual([])
   })
 })

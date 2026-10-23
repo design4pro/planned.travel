@@ -8,8 +8,8 @@
  * journey had before, and a day the caller does name always wins.
  *
  * A new file rather than a block in `transports.test.ts`: the subject is one rule of one writer,
- * and it reads the journey back the way the planner does, through `reorderDayTransports` (which
- * finds a day's journeys by `departingJourneys`) and `listTripDayTransports`.
+ * and it reads the journey back the way the planner does, through `departingJourneys` (which finds
+ * the journeys every write of a day places) and `listTripDayTransports`.
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -17,6 +17,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { NotFoundError } from '../context'
+import { departingJourneys } from '../day-journeys'
 import { listTripDays } from '../days'
 import { createTrip } from '../trips'
 import {
@@ -24,7 +25,6 @@ import {
   getTransport,
   listTransportLegs,
   listTripDayTransports,
-  reorderDayTransports,
   replaceTransportChain,
   saveSearchedConnection,
 } from '../transports'
@@ -65,17 +65,17 @@ describe('a saved connection that is searched again', () => {
     }))
   }
 
-  /** The journeys a day finds to place: the ids `reorderDayTransports` accepts for it. */
+  /** Which of these legs a day finds to place: the ones that depart from it, in the order given. */
   async function legsDeparting(
     dayId: string,
     legs: ReadonlyArray<TransportLeg>,
   ): Promise<Array<string>> {
-    const written = await reorderDayTransports(tenant.scope, {
-      tripId,
-      dayId,
-      items: legs.map((leg) => ({ kind: 'leg' as const, id: leg.id })),
-    })
-    return written.map((item) => item.id)
+    const departing = new Set(
+      (await departingJourneys(tenant.scope, tripId, dayId)).map(
+        (entry) => entry.ref.id,
+      ),
+    )
+    return legs.map((leg) => leg.id).filter((id) => departing.has(id))
   }
 
   beforeEach(async () => {
