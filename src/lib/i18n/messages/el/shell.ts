@@ -520,6 +520,32 @@ const messages = {
     'Το ταξίδι δημιουργήθηκε, αλλά το «{name}» δεν μεταφορτώθηκε ως εξώφυλλο.',
   'newTrip.coverRetry': 'Δοκίμασε ξανά',
   'newTrip.coverContinue': 'Άνοιγμα του ταξιδιού χωρίς εξώφυλλο',
+  'newTrip.people': 'Άτομα',
+  'newTrip.peopleHint':
+    'Προστίθενται μόλις δημιουργηθεί το ταξίδι. Παραμένεις ο ιδιοκτήτης του.',
+  'newTrip.peoplePlaceholder': 'Επίλεξε από τον χώρο εργασίας σου',
+  'newTrip.peopleSearch': 'Αναζήτηση με όνομα',
+  'newTrip.peopleLoading': 'Φόρτωση των ατόμων του χώρου εργασίας σου',
+  'newTrip.peopleLoadError':
+    'Δεν φορτώθηκαν τα άτομα του χώρου εργασίας σου. Δημιούργησε το ταξίδι και πρόσθεσέ τα από την οθόνη Άτομα του.',
+  'newTrip.peopleNone':
+    'Προς το παρόν είσαι το μόνο άτομο σε αυτόν τον χώρο εργασίας.',
+  'newTrip.peopleNoneMember':
+    'Ο ιδιοκτήτης ή ένας διαχειριστής του χώρου εργασίας μπορεί να προσκαλέσει κι άλλα άτομα.',
+  'newTrip.peopleInvite': 'Πρόσκληση ατόμων στον χώρο εργασίας',
+  'newTrip.peopleChosen': 'Επιλεγμένα άτομα και οι ρόλοι τους',
+  'newTrip.peopleFailedTitle':
+    'Το ταξίδι δημιουργήθηκε, αλλά δεν προστέθηκαν όλοι',
+  'newTrip.noticeBothTitle':
+    'Το ταξίδι δημιουργήθηκε, αλλά δεν προστέθηκαν όλα',
+  'newTrip.peopleNotInWorkspace':
+    'Το άτομο {name} δεν ανήκει πια σε αυτόν τον χώρο εργασίας, γι’ αυτό δεν προστέθηκε.',
+  'newTrip.peopleAlreadyOn': 'Το άτομο {name} ήταν ήδη σε αυτό το ταξίδι.',
+  'newTrip.peopleUnconfirmed':
+    'Δεν επιβεβαιώθηκε η προσθήκη του ατόμου {name}. Έλεγξε στην οθόνη Άτομα αν προστέθηκε.',
+  'newTrip.peopleContinue': 'Συνέχεια',
+  'newTrip.peopleRetry': 'Δοκίμασε ξανά',
+  'newTrip.coverRetryOnly': 'Δοκίμασε ξανά το εξώφυλλο',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Ενέργειες για {title}',

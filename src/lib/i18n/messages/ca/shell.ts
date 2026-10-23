@@ -558,6 +558,32 @@ const messages = {
     'El viatge s’ha creat, però no s’ha pogut pujar «{name}» com a portada.',
   'newTrip.coverRetry': 'Torna-ho a provar',
   'newTrip.coverContinue': 'Obre el viatge sense portada',
+  'newTrip.people': 'Persones',
+  'newTrip.peopleHint':
+    'S’afegeixen tan bon punt es crea el viatge. Tu continues sent-ne el propietari.',
+  'newTrip.peoplePlaceholder': 'Tria de l’espai de treball',
+  'newTrip.peopleSearch': 'Cerca per nom',
+  'newTrip.peopleLoading':
+    'S’estan carregant les persones de l’espai de treball',
+  'newTrip.peopleLoadError':
+    'No s’han pogut carregar les persones de l’espai de treball. Crea el viatge i afegeix-les des de la seva pantalla de persones.',
+  'newTrip.peopleNone':
+    'De moment ets l’única persona d’aquest espai de treball.',
+  'newTrip.peopleNoneMember':
+    'Un propietari o administrador de l’espai de treball pot convidar més persones.',
+  'newTrip.peopleInvite': 'Convida persones a l’espai de treball',
+  'newTrip.peopleChosen': 'Persones triades i els seus rols',
+  'newTrip.peopleFailedTitle':
+    'El viatge s’ha creat, però no s’ha afegit tothom',
+  'newTrip.noticeBothTitle': 'El viatge s’ha creat, però no s’ha afegit tot',
+  'newTrip.peopleNotInWorkspace':
+    '{name} ja no és en aquest espai de treball, per això no s’ha afegit.',
+  'newTrip.peopleAlreadyOn': '{name} ja era en aquest viatge.',
+  'newTrip.peopleUnconfirmed':
+    'No s’ha pogut confirmar {name}. Mira a Persones si s’ha afegit.',
+  'newTrip.peopleContinue': 'Continua',
+  'newTrip.peopleRetry': 'Torna-ho a provar',
+  'newTrip.coverRetryOnly': 'Torna a provar la portada',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Accions per a {title}',

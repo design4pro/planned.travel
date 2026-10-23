@@ -68,6 +68,8 @@ type ListboxProps = {
   onPick: (option: ComboboxOption) => void
   emptyMessage: React.ReactNode
   loading: boolean
+  /** True when several options can be selected at once, so assistive tech reads each as on or off. */
+  multiselectable?: boolean
 }
 
 function Listbox({
@@ -79,6 +81,7 @@ function Listbox({
   onPick,
   emptyMessage,
   loading,
+  multiselectable,
 }: ListboxProps) {
   const t = useUiCopy()
   const activeRef = React.useRef<HTMLDivElement | null>(null)
@@ -108,6 +111,7 @@ function Listbox({
   return (
     <div
       role="listbox"
+      aria-multiselectable={multiselectable || undefined}
       id={listId}
       className="max-h-64 overflow-y-auto overscroll-contain py-1"
     >
@@ -652,6 +656,7 @@ export const MultiCombobox = React.forwardRef<
             onPick={(option) => toggle(option.value)}
             emptyMessage={emptyMessage ?? t('ui.combobox.empty')}
             loading={loading}
+            multiselectable
           />
         </PopoverContent>
       </Popover>
