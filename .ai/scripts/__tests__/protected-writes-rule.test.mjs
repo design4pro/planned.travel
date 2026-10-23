@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest'
 const SKILLS = new URL('../../skills/', import.meta.url)
 
 // Overrides of skills that edit files or push a branch. `om-auto-review-pr` carries the rule in its
-// own wording; the other eight carry the paragraph written for #670.
+// own wording; the other nine carry the paragraph written for #670.
 const COVERED = [
   'om-auto-review-pr',
   'om-auto-fix-pr',
@@ -23,6 +23,7 @@ const COVERED = [
   'om-auto-create-pr-loop',
   'om-auto-fix-issue',
   'om-auto-implement-spec',
+  'om-check-and-commit',
 ]
 
 // Overrides without the rule. The `afk-*` skills and the review, merge and housekeeping skills
