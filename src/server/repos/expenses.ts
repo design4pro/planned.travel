@@ -20,8 +20,13 @@ import {
   expenses,
   settlements,
 } from '#/server/db/schema'
-import { allOf, createTenantRepository, tenantFilter } from './base'
-import { runBatch } from './batch'
+import {
+  allOf,
+  createTenantRepository,
+  prepareTenantInsert,
+  tenantFilter,
+} from './base'
+import { runAtomicBatch, runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { requirePlaceOfTrip } from './places'
@@ -876,36 +881,54 @@ export async function setExpenseShares(
   return writeShares(scope, expense, parsed, method ?? expense.splitMethod)
 }
 
+/**
+ * Replaces an expense's split rows in one atomic batch, so a failure leaves the previous split
+ * intact instead of a line with no shares. The split is worked out first, so one that does not add
+ * up is refused before anything is written. The delete and every insert carry the tenant (the
+ * delete through its filter, the inserts stamped from the scope) and share a single
+ * {@link runAtomicBatch}: a driver without batch support writes nothing rather than half a split.
+ * Share ids and `is_settled` are reset by an edit, as they always were.
+ */
 async function writeShares(
   scope: TenantScope,
   expense: Expense,
   participants: ReadonlyArray<SplitParticipantInput>,
   method: string,
 ): Promise<Array<ExpenseShare>> {
-  await expenseSharesRepository.removeWhere(
-    scope,
-    eq(expenseShares.expenseId, expense.id),
-  )
-  if (participants.length === 0) {
-    return []
-  }
   const computed = computeShares(
     expense.amountMinor,
     z.enum(SPLIT_METHODS).parse(method),
     participants,
   )
-  const rows = await expenseSharesRepository.insertMany(
-    scope,
-    computed.map((share) => ({
-      tripId: expense.tripId,
-      expenseId: expense.id,
-      userId: share.userId,
-      shareMinor: share.shareMinor,
-      weight: share.weight,
-    })),
-  )
+  await runAtomicBatch(scope, [
+    scope.db
+      .delete(expenseShares)
+      .where(
+        tenantFilter(
+          scope,
+          expenseShares,
+          eq(expenseShares.expenseId, expense.id),
+          eq(expenseShares.tripId, expense.tripId),
+        ),
+      ),
+    ...computed.map((share) =>
+      prepareTenantInsert(scope, expenseShares, {
+        tripId: expense.tripId,
+        expenseId: expense.id,
+        userId: share.userId,
+        shareMinor: share.shareMinor,
+        weight: share.weight,
+      }),
+    ),
+  ])
+  if (computed.length === 0) {
+    return []
+  }
 
-  // `RETURNING` has no defined row order, so the rows are handed back in participant order.
+  // The rows are read back in no defined order, so they are handed back in participant order.
+  const rows = await expenseSharesRepository.findMany(scope, {
+    where: eq(expenseShares.expenseId, expense.id),
+  })
   const position = new Map(
     computed.map((share, index) => [share.userId, index]),
   )
