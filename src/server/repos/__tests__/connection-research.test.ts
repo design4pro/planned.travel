@@ -435,6 +435,21 @@ describe('a saved connection that is searched again', () => {
     ])
   })
 
+  it('never costs a leg its own arrival day for a departure borrowed from another leg', async () => {
+    const transportId = await saveUnanchored(2)
+    await replaceTransportChain(tenant.scope, transportId, {
+      stations: [OSAKA, NAGOYA, TOKYO],
+      legs: [{ arrivalDayId: days[1].id }, { departureDayId: days[2].id }],
+    })
+
+    const saved = await researchWith(transportId, 2)
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: null, arrival: days[1].id },
+      { departure: days[2].id, arrival: null },
+    ])
+  })
+
   it('prefers the old legs’ own days to the record’s', async () => {
     const transportId = await saveUnanchored(2)
     await editTransport(tenant.scope, tripId, transportId, {

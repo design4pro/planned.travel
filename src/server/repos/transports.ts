@@ -1043,7 +1043,8 @@ export type SavedConnection = SavedTransport
  *
  * A carried day never makes the re-search fail. One that the trip no longer has is not carried (the
  * next candidate is), and a pair that would arrive before it departs loses the side that was
- * carried (the arrival first). A pair the caller named in full is left to {@link requireChainDays},
+ * carried (the arrival first), except that a day borrowed from another leg or the record never
+ * costs a leg the day its own position had. A pair the caller named in full is left to {@link requireChainDays},
  * which refuses it.
  */
 async function carryAnchors(
@@ -1072,16 +1073,22 @@ async function carryAnchors(
   ])
 
   // What each new leg is offered: its own position's pair when the shape is unchanged, then the two
-  // ends of the old journey on the first and the last leg.
+  // ends of the old journey on the first and the last leg. `borrowed` marks a day that came from
+  // another leg or the record rather than from the leg's own position.
   const offered = legs.map((_leg, index) => {
     const position =
       previous.length === legs.length ? previous.at(index) : undefined
+    const own = {
+      departure: usable(position?.departureDayId),
+      arrival: usable(position?.arrivalDayId),
+    }
     return {
-      departureDayId:
-        usable(position?.departureDayId) ?? (index === 0 ? start : null),
-      arrivalDayId:
-        usable(position?.arrivalDayId) ??
-        (index === legs.length - 1 ? end : null),
+      departureDayId: own.departure ?? (index === 0 ? start : null),
+      arrivalDayId: own.arrival ?? (index === legs.length - 1 ? end : null),
+      borrowed: {
+        departure: own.departure === null,
+        arrival: own.arrival === null,
+      },
     }
   })
 
@@ -1101,11 +1108,17 @@ async function carryAnchors(
     const from = departure === null ? undefined : dayNumbers.get(departure)
     const to = arrival === null ? undefined : dayNumbers.get(arrival)
     const inverted = from !== undefined && to !== undefined && to < from
+    // Of an inverted pair the carried departure goes only when it is the only carried side, or when
+    // it was borrowed and the arrival is the leg's own; otherwise the carried arrival goes.
+    const dropDeparture =
+      carried.departure !== null &&
+      (carried.arrival === null ||
+        (offered[index].borrowed.departure && !offered[index].borrowed.arrival))
+    const dropArrival = carried.arrival !== null && !dropDeparture
     return {
       ...leg,
-      departureDayId:
-        inverted && carried.arrival === null ? named.departure : departure,
-      arrivalDayId: inverted && carried.arrival !== null ? null : arrival,
+      departureDayId: inverted && dropDeparture ? named.departure : departure,
+      arrivalDayId: inverted && dropArrival ? null : arrival,
     }
   })
 }
