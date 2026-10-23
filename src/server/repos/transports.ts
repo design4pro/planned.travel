@@ -1028,16 +1028,23 @@ export type SavedConnection = SavedTransport
  * draws a record that has legs through its legs alone, each on its departure day. A leg that names
  * no day therefore takes the anchor the journey had, and a day the caller does name always wins.
  *
- * - **The same number of legs** keeps each position's pair.
- * - **A different number** keeps only the two ends: the first leg departs on the day the old first
- *   leg did and the last lands on the day the old last leg did, and the legs between stay
- *   unanchored, because which of them belongs to which day is not something the old chain can say.
- * - **A record that had no legs** is anchored by its own pair: its `day_id` is the first leg's
- *   departure and its `arrival_day_id` the last leg's arrival.
+ * What a new leg is offered, in this order, for the same and for a different number of legs:
  *
- * A carried day never makes the re-search fail. One that the trip no longer has is not carried, and
- * a pair that would arrive before it departs loses the side that was carried (the arrival first).
- * A pair the caller named in full is left to {@link requireChainDays}, which refuses it.
+ * 1. **The same number of legs** first offers each position's own pair.
+ * 2. **The first leg's departure** then falls back to the first old leg that names a departure day,
+ *    and after that to the record's own `day_id`.
+ * 3. **The last leg's arrival** falls back to the last old leg that names an arrival day, and after
+ *    that to the record's own `arrival_day_id`.
+ *
+ * The record's pair is the last resort rather than a rule for a journey that has no legs: a journey
+ * the pre-#788 re-search damaged kept the record's days and lost the legs', and this brings it back.
+ * The legs between the ends of a changed-count chain stay unanchored, because which of them belongs
+ * to which day is not something the old chain can say.
+ *
+ * A carried day never makes the re-search fail. One that the trip no longer has is not carried (the
+ * next candidate is), and a pair that would arrive before it departs loses the side that was
+ * carried (the arrival first). A pair the caller named in full is left to {@link requireChainDays},
+ * which refuses it.
  */
 async function carryAnchors(
   scope: TenantScope,
@@ -1049,23 +1056,31 @@ async function carryAnchors(
     listTripDays(scope, existing.tripId),
   ])
   const dayNumbers = new Map(tripDays.map((day) => [day.id, day.dayNumber]))
-  const usable = (id: string | null): string | null =>
-    id !== null && dayNumbers.has(id) ? id : null
+  const firstUsable = (ids: ReadonlyArray<string | null>): string | null =>
+    ids.find((id) => id !== null && dayNumbers.has(id)) ?? null
 
-  // What each new leg is offered: its own position's pair when the shape is unchanged, otherwise
-  // the two ends of the old journey on the first and the last leg.
+  // The two ends of the old journey, by the legs first and the record's own pair last.
+  const start = firstUsable([
+    ...previous.map((leg) => leg.departureDayId),
+    existing.dayId,
+  ])
+  const end = firstUsable([
+    ...previous.map((leg) => leg.arrivalDayId).reverse(),
+    existing.arrivalDayId,
+  ])
+
+  // What each new leg is offered: its own position's pair when the shape is unchanged, then the two
+  // ends of the old journey on the first and the last leg.
   const offered = legs.map((_leg, index) => {
-    if (previous.length === legs.length) {
-      return previous[index]
-    }
-    // The record's own pair anchors a journey only while it has no legs to say otherwise.
-    const first = previous.at(0)
-    const last = previous.at(-1)
-    const start = first === undefined ? existing.dayId : first.departureDayId
-    const end = last === undefined ? existing.arrivalDayId : last.arrivalDayId
+    const position =
+      previous.length === legs.length ? previous.at(index) : undefined
     return {
-      departureDayId: index > 0 ? null : start,
-      arrivalDayId: index < legs.length - 1 ? null : end,
+      departureDayId:
+        firstUsable([position?.departureDayId ?? null]) ??
+        (index === 0 ? start : null),
+      arrivalDayId:
+        firstUsable([position?.arrivalDayId ?? null]) ??
+        (index === legs.length - 1 ? end : null),
     }
   })
 
@@ -1076,9 +1091,8 @@ async function carryAnchors(
     }
     const carried = {
       departure:
-        named.departure === null ? usable(offered[index].departureDayId) : null,
-      arrival:
-        named.arrival === null ? usable(offered[index].arrivalDayId) : null,
+        named.departure === null ? offered[index].departureDayId : null,
+      arrival: named.arrival === null ? offered[index].arrivalDayId : null,
     }
     const departure = named.departure ?? carried.departure
     const arrival = named.arrival ?? carried.arrival

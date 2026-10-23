@@ -18,7 +18,7 @@ import { editTransport } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { NotFoundError } from '../context'
 import { departingJourneys } from '../day-journeys'
-import { listTripDays } from '../days'
+import { createDay, deleteDay, listTripDays } from '../days'
 import { createTrip } from '../trips'
 import {
   createTransport,
@@ -318,6 +318,180 @@ describe('a saved connection that is searched again', () => {
 
     expect(anchorsOf(saved.legs)).toEqual([
       { departure: null, arrival: days[1].id },
+    ])
+  })
+
+  /**
+   * A journey the pre-#788 bug left behind: a record that names its days and legs that name none,
+   * so the planner draws it on no day. The legs are written after the record because the writer
+   * derives nothing of the record's own days from them.
+   */
+  async function saveDamaged(
+    legCount: number,
+    recordDays: { dayId?: string; arrivalDayId?: string },
+  ): Promise<string> {
+    const transportId = await saveUnanchored(legCount)
+    const stations = [OSAKA, NAGOYA, KYOTO, TOKYO].slice(0, legCount + 1)
+    await editTransport(tenant.scope, tripId, transportId, {
+      title: 'Osaka to Tokyo',
+      ...recordDays,
+    })
+    await replaceTransportChain(tenant.scope, transportId, {
+      stations,
+      legs: stations.slice(1).map(() => ({})),
+    })
+    return transportId
+  }
+
+  /** Re-searches the saved journey as the dialog does: legs that name no day. */
+  function researchWith(transportId: string, legCount: number) {
+    const stations = [OSAKA, NAGOYA, KYOTO, TOKYO].slice(0, legCount + 1)
+    return saveSearchedConnection(tenant.scope, {
+      tripId,
+      transportId,
+      mode: 'train',
+      title: 'Osaka to Tokyo',
+      stations,
+      legs: stations.slice(1).map(() => ({})),
+    })
+  }
+
+  it('brings a journey whose legs name no day back from the record’s days when the number of legs is the same', async () => {
+    const transportId = await saveDamaged(2, {
+      dayId: days[1].id,
+      arrivalDayId: days[2].id,
+    })
+    expect(
+      await legsDeparting(
+        days[1].id,
+        await listTransportLegs(tenant.scope, transportId),
+      ),
+    ).toEqual([])
+
+    const saved = await researchWith(transportId, 2)
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: days[1].id, arrival: null },
+      { departure: null, arrival: days[2].id },
+    ])
+    expect(await legsDeparting(days[1].id, saved.legs)).toEqual([
+      saved.legs[0].id,
+    ])
+  })
+
+  it('brings it back from the record’s days when the number of legs changes, leaving the inner legs unanchored', async () => {
+    const transportId = await saveDamaged(2, {
+      dayId: days[1].id,
+      arrivalDayId: days[3].id,
+    })
+
+    const saved = await researchWith(transportId, 3)
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: days[1].id, arrival: null },
+      { departure: null, arrival: null },
+      { departure: null, arrival: days[3].id },
+    ])
+    expect(await legsDeparting(days[1].id, saved.legs)).toEqual([
+      saved.legs[0].id,
+    ])
+  })
+
+  it('anchors a one-leg journey on both of the record’s days', async () => {
+    const transportId = await saveDamaged(1, {
+      dayId: days[1].id,
+      arrivalDayId: days[2].id,
+    })
+
+    const saved = await researchWith(transportId, 1)
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: days[1].id, arrival: days[2].id },
+    ])
+  })
+
+  it('takes the first departure and the last arrival the old legs name when only inner legs were anchored', async () => {
+    const transportId = await saveUnanchored(3)
+    await replaceTransportChain(tenant.scope, transportId, {
+      stations: [OSAKA, NAGOYA, KYOTO, TOKYO],
+      legs: [
+        {},
+        { departureDayId: days[1].id, arrivalDayId: days[2].id },
+        { departureDayId: days[2].id },
+      ],
+    })
+
+    const saved = await researchWith(transportId, 2)
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: days[1].id, arrival: null },
+      { departure: null, arrival: days[2].id },
+    ])
+    expect(await legsDeparting(days[1].id, saved.legs)).toEqual([
+      saved.legs[0].id,
+    ])
+  })
+
+  it('prefers the old legs’ own days to the record’s', async () => {
+    const transportId = await saveUnanchored(2)
+    await editTransport(tenant.scope, tripId, transportId, {
+      title: 'Osaka to Tokyo',
+      dayId: days[0].id,
+      arrivalDayId: days[4].id,
+    })
+    await replaceTransportChain(tenant.scope, transportId, {
+      stations: [OSAKA, NAGOYA, TOKYO],
+      legs: [{}, { departureDayId: days[2].id, arrivalDayId: days[3].id }],
+    })
+
+    const saved = await researchWith(transportId, 3)
+
+    expect(anchorsOf(saved.legs)).toEqual([
+      { departure: days[2].id, arrival: null },
+      { departure: null, arrival: null },
+      { departure: null, arrival: days[3].id },
+    ])
+  })
+
+  it('does not carry a record day the trip no longer has, and still saves', async () => {
+    const extra = await createDay(tenant.scope, {
+      tripId,
+      dayNumber: days.length + 1,
+    })
+    const transportId = await saveDamaged(1, { dayId: extra.id })
+    await deleteDay(tenant.scope, extra.id)
+
+    const saved = await researchWith(transportId, 1)
+
+    expect(anchorsOf(saved.legs)).toEqual([{ departure: null, arrival: null }])
+  })
+
+  it('drops a fallback arrival that would land before the departure, and a day the re-search names stays', async () => {
+    const transportId = await saveUnanchored(1)
+    await editTransport(tenant.scope, tripId, transportId, {
+      title: 'Osaka to Tokyo',
+      arrivalDayId: days[1].id,
+    })
+    await replaceTransportChain(tenant.scope, transportId, {
+      stations: [OSAKA, TOKYO],
+      legs: [{ departureDayId: days[3].id }],
+    })
+
+    const dropped = await researchWith(transportId, 1)
+    expect(anchorsOf(dropped.legs)).toEqual([
+      { departure: days[3].id, arrival: null },
+    ])
+
+    const named = await saveSearchedConnection(tenant.scope, {
+      tripId,
+      transportId,
+      mode: 'train',
+      title: 'Osaka to Tokyo',
+      stations: [OSAKA, TOKYO],
+      legs: [{ arrivalDayId: days[4].id }],
+    })
+    expect(anchorsOf(named.legs)).toEqual([
+      { departure: days[3].id, arrival: days[4].id },
     ])
   })
 
