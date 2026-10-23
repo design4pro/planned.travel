@@ -71,21 +71,16 @@ const { loadJourneyStory, loadCollectionDetail } = await import('../library')
 const { loadCosts } = await import('#/server/fns/costs')
 const { loadBookingDeskFn } = await import('#/server/fns/reservations')
 const { loadTransportDeskFn } = await import('#/server/fns/transports')
-const { loadTripCollab } = await import(
-  '#/routes/_app/trips/$tripId/-server/collab'
-)
-const { loadTripPeople } = await import(
-  '#/routes/_app/trips/$tripId/-server/people'
-)
-const { loadPlanBoard } = await import(
-  '#/routes/_app/trips/$tripId/-server/plan'
-)
-const { loadDayNotes } = await import(
-  '#/routes/_app/trips/$tripId/-server/day-notes'
-)
-const { loadPlanTransports } = await import(
-  '#/routes/_app/trips/$tripId/-server/plan-transports'
-)
+const { loadTripCollab } =
+  await import('#/routes/_app/trips/$tripId/-server/collab')
+const { loadTripPeople } =
+  await import('#/routes/_app/trips/$tripId/-server/people')
+const { loadPlanBoard } =
+  await import('#/routes/_app/trips/$tripId/-server/plan')
+const { loadDayNotes } =
+  await import('#/routes/_app/trips/$tripId/-server/day-notes')
+const { loadPlanTransports } =
+  await import('#/routes/_app/trips/$tripId/-server/plan-transports')
 
 type Read = (input: { data: Record<string, string> }) => Promise<unknown>
 
@@ -142,9 +137,9 @@ describe('absence of the thing a loader reads', () => {
 
     it('flags a readable trip as found', async () => {
       const trip = await createTrip(tenant.scope, { title: 'Readable' })
-      await expect(read({ data: { tripId: trip.id } })).resolves.toMatchObject(
-        { found: true },
-      )
+      await expect(read({ data: { tripId: trip.id } })).resolves.toMatchObject({
+        found: true,
+      })
     })
 
     it.each([

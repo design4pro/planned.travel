@@ -2534,6 +2534,24 @@ test.describe('switching workspace', () => {
     ).toBe(true)
     if (TRIPS === undefined) throw new Error('APP_ROUTES has no trips entry')
 
+    // One detail id per route kind, read while the first workspace is active, to be asked for
+    // from the second.
+    const foreignPaths: Array<string> = []
+    for (const [list, detail] of [
+      ['/journey', /^\/journey\/[\w-]+$/],
+      ['/collections', /^\/collections\/[\w-]+$/],
+    ] as const) {
+      await page.goto(list)
+      const hrefs = await page
+        .locator('main a[href]')
+        .evaluateAll((links) =>
+          links.map((link) => link.getAttribute('href') ?? ''),
+        )
+      const href = hrefs.find((candidate) => detail.test(candidate))
+      if (href === undefined) throw new Error(`${list} lists no detail link`)
+      foreignPaths.push(href)
+    }
+
     const firstTripId = await aTripToWalk(page, FIRST.trip)
     await expect(
       page.getByRole('heading', { name: FIRST.trip, exact: true }),
@@ -2591,6 +2609,29 @@ test.describe('switching workspace', () => {
       const text = await panel.innerText()
       if (foreignScreen === undefined) foreignScreen = text
       else expect(text).toBe(foreignScreen)
+    }
+
+    // A journey story and a collection of the other workspace, and a random id of each kind,
+    // answer with the same not-found screen, not the retry panel.
+    let missingScreen: string | undefined
+    for (const path of [
+      ...foreignPaths,
+      '/journey/missing-journey-953',
+      '/collections/missing-collection-953',
+    ]) {
+      const response = await page.goto(path)
+      expect(response?.status(), path).toBe(404)
+      const panel = page
+        .getByRole('heading', { name: 'This page is not on the map' })
+        .locator('..')
+        .locator('..')
+      await expect(panel).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
+        0,
+      )
+      const text = await panel.innerText()
+      if (missingScreen === undefined) missingScreen = text
+      else expect(text).toBe(missingScreen)
     }
 
     await visit(page, TRIPS, 'light')

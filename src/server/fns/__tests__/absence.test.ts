@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import { ABSENT } from '#/lib/absence'
-import { ForbiddenError, NotFoundError, TenantIsolationError } from '#/server/repos'
+import {
+  ForbiddenError,
+  NotFoundError,
+  TenantIsolationError,
+} from '#/server/repos'
 
 import { nullWhenMissing, orAbsent } from '../-lib/absence'
 

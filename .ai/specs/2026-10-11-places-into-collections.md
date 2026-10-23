@@ -202,8 +202,9 @@ Modelled on `readableJourneyFilter`, `inReadableJourney` and `countedJourneyFilt
   `listCollectionPlaces`, `listCollectionPlacesWithLabels`, `listLabels`, `countCollectionPlacesByCountry` (the "Where they are" panel
   must not count a private list's places for a non-owner), `nextCollectionPlaceSortOrder` and `collectionDeleteSummary`; every reader this
   spec adds (`listCollectionPlacesFiltered`, `listCollectionPins`, the duplicate lookups, `listTripPlacesForSaving`, `listPlaceLists`, the
-  sharing summary) joins the list when it is written. `loadCollectionDetail` starts from `requireReadableCollection` and turns
-  `NotFoundError` into the route's `notFound()`, so the existing `notFoundComponent` renders instead of the plain `Error` it throws today.
+  sharing summary) joins the list when it is written. `loadCollectionDetail` starts from `requireReadableCollection` and
+  reports a `NotFoundError` as the plain `{ found: false }` result (`OrAbsent`, `src/lib/absence.ts`, #953), which the route loader turns into the
+  router's `notFound()`, so the existing `notFoundComponent` renders instead of the error panel.
 - Every writer keyed by a **collection id, a place id or a label id** goes through it too (`addCollectionPlace` resolves its collection with `requireById` today, a workspace check only; the others never resolve one): `addCollectionPlace`, `updateCollectionPlace`, `setCollectionPlaceStatus`, `deleteCollectionPlace`, `setCollectionPlaceLabels`, and the label writers
   (`createLabel` and `deleteLabel`, which exist at HEAD, and `updateLabel` from the change-a-collection spec). A member must not be able to write into a private list by passing a place id.
 - `countCollectionsAgainstPlan(scope)`: `collectionsRepository.count(scope, not(strandedCollectionFilter(scope)))`, where a stranded collection is the exact negation of the read rule's workspace half - `NOT (visibility IN ('organization', 'public'))` and `NOT stillInWorkspace(scope, collections.ownerUserId)`, never `visibility = 'private'` - so the quota exemption and the read rule cannot drift apart (`strandedTripFilter` uses `ne(visibility, 'organization')` for the same reason) (`src/server/repos/members.ts`).
