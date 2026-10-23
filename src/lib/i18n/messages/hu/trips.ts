@@ -109,10 +109,7 @@ const messages = {
     'Egy hely naponta csak egyszer szerepelhet. Tegye inkább egy másik napra.',
   'plan.move.refused.notInIdeas': 'A jegyzet a napon belül marad',
   'plan.move.refused.notInIdeasBody':
-    'Az ötletek napra váró helyek. A jegyzet ahhoz a naphoz tartozik, amelyikre írták.',
-  'plan.move.refused.notInAnotherDay': 'A jegyzet a saját napján marad',
-  'plan.move.refused.notInAnotherDayBody':
-    'A jegyzetek egyelőre nem helyezhetők át másik napra. Szerkessze a jegyzetet, vagy írja meg a másik napon.',
+    'Az ötletek napra váró helyek. A jegyzet mindig egy naphoz tartozik.',
   'plan.move.refused.journeyNotInIdeas': 'Az út a napon belül marad',
   'plan.move.refused.journeyNotInIdeasBody':
     'Az ötletek napra váró helyek. Az út ahhoz a naphoz tartozik, amelyiken megtörténik.',
@@ -126,8 +123,6 @@ const messages = {
     '{name} nem lett áthelyezve. Az a nap már tartalmazza.',
   'plan.move.spoken.notInIdeas':
     '{name} nem lett áthelyezve. A jegyzet a napon belül marad.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} nem lett áthelyezve. A jegyzet a saját napján marad.',
   'plan.move.spoken.timed':
     '{name} időpontja {time}. Megkérdezzük, elhagyjuk-e.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -184,6 +179,7 @@ const messages = {
   'plan.note.showLess': 'Kevesebb megjelenítése',
   'plan.note.moveUp': 'Mozgatás felfelé',
   'plan.note.moveDown': 'Mozgatás lefelé',
+  'plan.note.moveToDay': 'Áthelyezés másik napra',
   'plan.note.drag': 'Jegyzet átrendezése',
   'plan.note.edit': 'Jegyzet szerkesztése',
   'plan.note.delete': 'Jegyzet törlése',

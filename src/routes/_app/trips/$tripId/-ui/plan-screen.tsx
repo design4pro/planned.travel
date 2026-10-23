@@ -1166,6 +1166,20 @@ export function PlanScreen({
     [commitMove, order.days],
   )
 
+  /**
+   * Moves a note to the end of another day: the menu's way to do what a drag to that day
+   * does, through the same `commitMove`, so the two cannot disagree.
+   */
+  const moveNoteToDay = React.useCallback(
+    (note: PlannerNote, dayId: string): void => {
+      commitMove(noteItemId(note.id), {
+        container: dayId,
+        index: (itemsIn(order, dayId) ?? []).length,
+      })
+    },
+    [commitMove, order],
+  )
+
   const savePosition = React.useCallback(
     (position: LngLat): void => {
       const row = picking
@@ -1313,6 +1327,8 @@ export function PlanScreen({
               setDialog({ kind: 'note-delete', noteId: note.id })
             }
             onMoveNote={moveNote}
+            moveTargets={model.days}
+            onMoveNoteToDay={moveNoteToDay}
             weather={weather.viewOf(day.dayId)}
             weatherUnit={weather.unit}
             dayTools={

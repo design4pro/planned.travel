@@ -119,6 +119,7 @@ const {
   bookingUpdateSchema,
   createBookingFn,
   deleteBookingFn,
+  ledgerReport,
   setBookingStatusFn,
   syncReservationExpense,
   updateBookingFn,
@@ -346,6 +347,49 @@ describe('a priced booking and the trip’s ledger', () => {
     })
 
     expect(await listTripExpenses(scope, trip.id)).toEqual([])
+  })
+})
+
+/**
+ * The three fields a booking or stay write reports its ledger with. The write functions discard
+ * their answer outside a Start build, so the one function that builds all four answers is driven
+ * directly: a flag that disagreed with the name beside it would be wrong in every write path.
+ */
+describe('ledgerReport', () => {
+  it('keeps the outcome name and derives both flags from it', () => {
+    expect(ledgerReport('failed')).toEqual({
+      ledger: 'failed',
+      ledgerFailed: true,
+      ledgerSplitStale: false,
+    })
+    expect(ledgerReport('split-stale')).toEqual({
+      ledger: 'split-stale',
+      ledgerFailed: false,
+      ledgerSplitStale: true,
+    })
+    expect(ledgerReport('created')).toEqual({
+      ledger: 'created',
+      ledgerFailed: false,
+      ledgerSplitStale: false,
+    })
+  })
+
+  it('raises a flag for exactly one outcome and for no other', () => {
+    const outcomes = [
+      'created',
+      'updated',
+      'split-stale',
+      'unlinked',
+      'undated',
+      'kept',
+      'none',
+      'failed',
+    ] as const
+    const failed = outcomes.filter((o) => ledgerReport(o).ledgerFailed)
+    const splitStale = outcomes.filter((o) => ledgerReport(o).ledgerSplitStale)
+
+    expect(failed).toEqual(['failed'])
+    expect(splitStale).toEqual(['split-stale'])
   })
 })
 

@@ -4,10 +4,15 @@ import { Button } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { readPublicFailure } from '#/lib/errors'
 import { useTranslate } from '#/lib/i18n'
+import {
+  WORKSPACE_CHANGED_KEY,
+  isWorkspaceChanged,
+} from '#/lib/workspace-claim'
 import { Wordmark } from './brand'
 import { Panel } from './kit'
 import { FailureFeedback } from './failure-feedback'
 import { shellStateOf } from './session'
+import { useOpenCurrentWorkspace } from './use-open-current-workspace'
 
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
@@ -65,13 +70,18 @@ export function ErrorPanel({
 }: ErrorPanelProps) {
   const router = useRouter()
   const t = useTranslate()
+  const currentWorkspace = useOpenCurrentWorkspace()
   const state = shellStateOf(error)
   const failure = readPublicFailure(error)
+  // A refused call is a stale tab: retrying would be refused again, so the way out is a reload.
+  const workspaceChanged = isWorkspaceChanged(error)
 
   let message: string | null = null
   let english = false
   if (state !== null) {
     message = t(state)
+  } else if (workspaceChanged) {
+    message = t(WORKSPACE_CHANGED_KEY)
   } else if (detail !== undefined) {
     message = detail.message
     english = detail.authored
@@ -80,7 +90,15 @@ export function ErrorPanel({
     english = true
   }
   // Display prose can be a console fallback; reporting still follows the original envelope.
-  const unexpected = state === null && failure.kind === 'unexpected'
+  const unexpected =
+    state === null && !workspaceChanged && failure.kind === 'unexpected'
+
+  let heading = title ?? t('shell.error.title')
+  if (workspaceChanged) {
+    heading = t('shell.session.workspaceChangedTitle')
+  } else if (state !== null) {
+    heading = t('shell.error.session')
+  }
 
   function retry(): void {
     if (onRetry) {
@@ -101,11 +119,7 @@ export function ErrorPanel({
         <TriangleAlert aria-hidden className="size-5" />
       </span>
       <div className="space-y-1.5">
-        <h2 className="font-display text-subtitle text-ink">
-          {state === null
-            ? (title ?? t('shell.error.title'))
-            : t('shell.error.session')}
-        </h2>
+        <h2 className="font-display text-subtitle text-ink">{heading}</h2>
         <p
           className="mx-auto max-w-md text-label leading-relaxed text-ink-3"
           lang={english ? 'en' : undefined}
@@ -131,9 +145,19 @@ export function ErrorPanel({
         </p>
       ) : null}
       <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-        <Button shape="pill" onClick={retry} icon={<RotateCw aria-hidden />}>
-          {t('shell.error.retry')}
-        </Button>
+        {workspaceChanged ? (
+          <Button
+            shape="pill"
+            onClick={currentWorkspace.open}
+            loading={currentWorkspace.opening}
+          >
+            {t('shell.session.openCurrentWorkspace')}
+          </Button>
+        ) : (
+          <Button shape="pill" onClick={retry} icon={<RotateCw aria-hidden />}>
+            {t('shell.error.retry')}
+          </Button>
+        )}
         <Button asChild variant="secondary" shape="pill">
           <Link to="/dashboard">{t('shell.error.dashboard')}</Link>
         </Button>

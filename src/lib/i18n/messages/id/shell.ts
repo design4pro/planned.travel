@@ -490,6 +490,32 @@ const messages = {
     'Perjalanan sudah dibuat, tetapi “{name}” tidak bisa diunggah sebagai sampulnya.',
   'newTrip.coverRetry': 'Coba lagi',
   'newTrip.coverContinue': 'Buka perjalanan tanpa sampul',
+  'newTrip.people': 'Orang',
+  'newTrip.peopleHint':
+    'Ditambahkan begitu perjalanan dibuat. Anda tetap menjadi pemiliknya.',
+  'newTrip.peoplePlaceholder': 'Pilih dari ruang kerja Anda',
+  'newTrip.peopleSearch': 'Cari berdasarkan nama',
+  'newTrip.peopleLoading': 'Memuat orang di ruang kerja Anda',
+  'newTrip.peopleLoadError':
+    'Orang di ruang kerja Anda tidak bisa dimuat. Buat perjalanannya, lalu tambahkan dari layar Orang miliknya.',
+  'newTrip.peopleNone':
+    'Sejauh ini Anda satu-satunya orang di ruang kerja ini.',
+  'newTrip.peopleNoneMember':
+    'Pemilik atau admin ruang kerja bisa mengundang lebih banyak orang.',
+  'newTrip.peopleInvite': 'Undang orang ke ruang kerja',
+  'newTrip.peopleChosen': 'Orang yang dipilih dan perannya',
+  'newTrip.peopleFailedTitle':
+    'Perjalanan sudah dibuat, tetapi tidak semua orang ditambahkan',
+  'newTrip.noticeBothTitle':
+    'Perjalanan sudah dibuat, tetapi tidak semuanya ditambahkan',
+  'newTrip.peopleNotInWorkspace':
+    '{name} sudah tidak ada di ruang kerja ini, jadi tidak ditambahkan.',
+  'newTrip.peopleAlreadyOn': '{name} sudah ada di perjalanan ini.',
+  'newTrip.peopleUnconfirmed':
+    '{name} tidak bisa dipastikan. Periksa di Orang apakah sudah ditambahkan.',
+  'newTrip.peopleContinue': 'Lanjutkan',
+  'newTrip.peopleRetry': 'Coba lagi',
+  'newTrip.coverRetryOnly': 'Coba lagi sampulnya',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Tindakan untuk {title}',
@@ -661,6 +687,13 @@ const messages = {
     'Akun Anda belum terhubung ke ruang kerja mana pun. Keluar lalu masuk lagi untuk menuntaskan penyiapannya.',
   'session.membershipRemoved':
     'Keanggotaan Anda di ruang kerja ini sudah dicabut.',
+  'session.workspaceChanged':
+    'Ruang kerja diubah di tab atau jendela lain. Tidak ada yang disimpan.',
+  'session.workspaceChangedTitle': 'Ruang kerja berubah di tab lain',
+  'session.workspaceChangedBody':
+    'Tab ini menampilkan {name}, tetapi ruang kerja diubah di tab atau jendela lain. Tidak ada yang disimpan.',
+  'session.openCurrentWorkspace': 'Buka ruang kerja saat ini',
+  'session.workspaceChangedDismiss': 'Nanti saja',
 } satisfies TranslationOf<typeof En>
 
 export default messages

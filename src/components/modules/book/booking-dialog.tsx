@@ -170,8 +170,8 @@ const ledgerRefusedToastId = (reservationId: string) =>
  */
 function unlessLedgerRefused(
   message: string,
-): (result: { readonly ledger: string }) => string | undefined {
-  return (result) => (result.ledger === 'failed' ? undefined : message)
+): (result: { readonly ledgerFailed: boolean }) => string | undefined {
+  return (result) => (result.ledgerFailed ? undefined : message)
 }
 
 function draftFrom(row: BookingRow, fallbackCurrency: string): BookingDraft {
@@ -433,12 +433,12 @@ export function BookingDialog({
       return
     }
     const toastId = ledgerRefusedToastId(result.reservationId)
-    if (result.ledger !== 'failed') {
+    if (!result.ledgerFailed) {
       // The cost line exists now, so a warning that it did not is out of date, shown or held.
       pendingWarningsRef.current.delete(toastId)
       toast.dismiss(toastId)
     }
-    if (result.ledger === 'failed') {
+    if (result.ledgerFailed) {
       // A partial success: the booking is on the trip and its cost line is not. The next save of
       // the booking adds the line, because the sync keys off the row's own expense link, so the
       // dialog closes and `onCloseAutoFocus` raises the warning that tells the reader so.
@@ -462,7 +462,7 @@ export function BookingDialog({
       }
       return
     }
-    if (result.ledger === 'split-stale') {
+    if (result.ledgerSplitStale) {
       // Also a partial success, and the other way round: the booking and the new amount are
       // saved, the split of its cost line is not. Closing would leave the reader to find a split
       // that no longer adds up, so the dialog says so and waits to be dismissed.

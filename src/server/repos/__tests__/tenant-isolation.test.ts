@@ -256,6 +256,7 @@ import {
   replaceTransportChain,
   requireTransportOfTrip,
   saveSearchedConnection,
+  CLIENT_ID_WINDOW_MS,
   saveTransport,
   setTransportStatus,
   summariseTripTransports,
@@ -359,6 +360,7 @@ import {
 import { captureError, createHarness } from './harness'
 import { PRICED_KINDS } from './priced-rows'
 import { classifyFailure } from '#/server/errors/public'
+import { ID_PATTERN, ID_TIME_LENGTH, mintId } from '#/lib/ids'
 import type {
   KeyedTenantTable,
   TenantPatch,
@@ -3339,12 +3341,13 @@ describe('tenant isolation', () => {
 
     it('refuses B’s trip from A’s scope and writes nothing', async () => {
       const before = await betaWorld()
+      const brandNew = mintId()
 
       expect(
         await captureError(() =>
           saveTransport(alpha.tenant.scope, {
             tripId: beta.tripId,
-            transportId: 'brand-new',
+            transportId: brandNew,
             intent: 'create',
             record: { title: 'Hijacked', mode: 'train' },
             chain: CHAIN,
@@ -3364,7 +3367,7 @@ describe('tenant isolation', () => {
       ).toBeInstanceOf(NotFoundError)
 
       expect(await betaWorld()).toEqual(before)
-      expect(await getTransport(alpha.tenant.scope, 'brand-new')).toBeNull()
+      expect(await getTransport(alpha.tenant.scope, brandNew)).toBeNull()
     })
 
     it('does not touch B’s transport when A names it under A’s own trip', async () => {
@@ -3388,6 +3391,57 @@ describe('tenant isolation', () => {
       }
 
       expect(await betaWorld()).toEqual(before)
+      expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])
+    })
+
+    /**
+     * The id the other test names is a fixture of no shape; this one is B's real id, well-formed and
+     * minted just now, which is the only id that gets past the shape and window checks and so the
+     * one that reaches the primary-key clash. A is refused as it is for any invalid id, and nothing
+     * of B's - the record or its legs - moves.
+     */
+    it('answers A naming B’s real, well-formed id as it answers any other invalid id', async () => {
+      const before = await betaWorld()
+      const alphaBefore = await listTripTransports(
+        alpha.tenant.scope,
+        alpha.tripId,
+      )
+      expect(beta.transportId).toMatch(ID_PATTERN)
+      // In window too, so A's call reaches the primary-key clash and not an earlier refusal.
+      expect(
+        Math.abs(
+          parseInt(beta.transportId.slice(0, ID_TIME_LENGTH), 36) - Date.now(),
+        ),
+      ).toBeLessThanOrEqual(CLIENT_ID_WINDOW_MS)
+      const refuse = (transportId: string) =>
+        captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            transportId,
+            intent: 'create',
+            record: { title: 'Hijacked', mode: 'train' },
+            chain: CHAIN,
+          }),
+        )
+
+      const clash = (await refuse(beta.transportId)) as NotFoundError
+      const malformed = (await refuse('not-a-generated-id')) as NotFoundError
+      const stale = (await refuse(
+        `000000000${beta.transportId.slice(9)}`,
+      )) as NotFoundError
+
+      for (const refusal of [clash, malformed, stale]) {
+        expect(refusal).toBeInstanceOf(NotFoundError)
+        expect(refusal.code).toBe(clash.code)
+        expect(classifyFailure(refusal)).toEqual({ kind: 'unexpected' })
+      }
+      expect(clash.message.replace(beta.transportId, '<id>')).toBe(
+        malformed.message.replace('not-a-generated-id', '<id>'),
+      )
+      expect(await betaWorld()).toEqual(before)
+      expect(
+        await listTripTransports(alpha.tenant.scope, alpha.tripId),
+      ).toEqual(alphaBefore)
       expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])
     })
 
@@ -3425,6 +3479,7 @@ describe('tenant isolation', () => {
     it('refuses a leg day or a record day belonging to B, and writes nothing', async () => {
       const scope = alpha.tenant.scope
       const alphaBefore = await listTripTransports(scope, alpha.tripId)
+      const crossParented = mintId()
 
       for (const draft of [
         { record: { dayId: beta.dayId }, chain: CHAIN },
@@ -3441,7 +3496,7 @@ describe('tenant isolation', () => {
           await captureError(() =>
             saveTransport(scope, {
               tripId: alpha.tripId,
-              transportId: 'cross-parented',
+              transportId: crossParented,
               intent: 'create',
               ...draft,
               record: {
@@ -3455,7 +3510,7 @@ describe('tenant isolation', () => {
       }
 
       expect(await listTripTransports(scope, alpha.tripId)).toEqual(alphaBefore)
-      expect(await getTransport(scope, 'cross-parented')).toBeNull()
+      expect(await getTransport(scope, crossParented)).toBeNull()
     })
 
     it('refuses A’s transport named under another trip of A', async () => {

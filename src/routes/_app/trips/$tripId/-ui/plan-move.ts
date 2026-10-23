@@ -7,7 +7,7 @@
  * owns rather than the engine, whether it is a **question** rather than a refusal, and
  * what the write is when it is neither.
  *
- * Pure, and free of React: the whole policy is one function over ids, so "a note cannot
+ * Pure, and free of React: the whole policy is one function over ids, so "a journey cannot
  * change day", "a timed row asks before it moves" and "confirming sends exactly one
  * call carrying the cleared time" are assertions rather than a screen harness.
  */
@@ -38,14 +38,14 @@ import type { reorderPlanInputSchema } from '../-server/plan'
 /**
  * Why a move did not happen — the engine's refusals, plus the one this screen owns.
  *
- * A note cannot change day because no repository verb relocates one: `day_notes.day_id`
- * is written by the editor, never by a drag. The engine does not know that, and should
- * not — it is a gap in the write path, not a rule about ordering — so the screen refuses
- * it before delegating rather than letting the board claim a move the write would drop.
+ * A journey cannot change day: its day comes from its departure and arrival dates, which
+ * are the Transports tab's to change, and the write drops a journey it is asked to move
+ * to a day it does not depart from. The engine does not know that, and should not — it is
+ * a rule about where a journey comes from, not about ordering — so the screen refuses it
+ * before delegating rather than letting the board claim a move the write would discard.
  *
- * A journey cannot change day for a different reason with the same shape: its day comes
- * from its departure and arrival dates, which are the Transports tab's to change. Same
- * refusal, different sentence — see {@link refusalCopy}.
+ * A note is not refused: `reorderPlanFn` gives every row the day it was named under, so a
+ * note dropped on another day is a plain reorder of both days.
  */
 export type PlanMoveReason = PlanMoveRefusal | 'not-in-another-day'
 
@@ -82,7 +82,7 @@ function without(timeOfItem: TimeOfItem, itemId: string): TimeOfItem {
 /**
  * The whole drag policy, as one pure function.
  *
- * Order matters: the cross-day note is refused first, because the answer does not
+ * Order matters: the cross-day journey is refused first, because the answer does not
  * depend on where in the day it was dropped and delegating would only produce a
  * plausible-looking `commit` the write path discards.
  */
@@ -94,7 +94,7 @@ export function planMoveOutcome(
 ): PlanMoveOutcome {
   const from = containerOf(order, itemId)
   if (
-    (isNoteItemId(itemId) || isLegItemId(itemId)) &&
+    isLegItemId(itemId) &&
     from !== null &&
     target.container !== IDEAS_CONTAINER &&
     target.container !== from
@@ -197,10 +197,11 @@ export interface RefusalCopy {
  * was is not an error, and neither is a drag that resolved to nothing.
  *
  * `itemId` is **required** rather than optional so that no caller can forget it and show
- * a note's sentence to somebody who dragged a Shinkansen: "notes cannot be moved between
- * days yet" is true of a note and simply wrong about a train. A journey answers from its
- * own three sentences, and `'timed'` has copy at all only because of it — until now
- * `'timed'` was never a refusal a reader saw, because it became the dialog.
+ * a note's sentence to somebody who dragged a Shinkansen: "a note belongs to a day" is true
+ * of a note and simply wrong about a train. A journey answers from its own three sentences,
+ * and `'timed'` has copy at all only because of it — until now `'timed'` was never a
+ * refusal a reader saw, because it became the dialog. A note has none for
+ * `'not-in-another-day'`: it is never refused that.
  */
 export function refusalCopy(
   reason: PlanMoveReason,
@@ -219,12 +220,6 @@ export function refusalCopy(
         title: 'trips.plan.move.refused.notInIdeas',
         body: 'trips.plan.move.refused.notInIdeasBody',
         spoken: 'trips.plan.move.spoken.notInIdeas',
-      }
-    case 'not-in-another-day':
-      return {
-        title: 'trips.plan.move.refused.notInAnotherDay',
-        body: 'trips.plan.move.refused.notInAnotherDayBody',
-        spoken: 'trips.plan.move.spoken.notInAnotherDay',
       }
     default:
       return null

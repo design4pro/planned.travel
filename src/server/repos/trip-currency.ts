@@ -195,13 +195,17 @@ export interface RebaseSnapshot {
   readonly pinnedPrices: number
 }
 
-/** A figure after a re-basing: the amount and its code move together, and the typed figure is kept. */
+/**
+ * A figure after a re-basing: the amount and its code move together, and the typed figure is kept.
+ * `exchangeRate` is null only for a typed figure that never had a rate (rule 4): it is never a
+ * rate of another pair, and never a constant 1 across two currencies.
+ */
 export interface RebasedMoney {
   readonly amountMinor: number
   readonly currency: string
   readonly originalAmountMinor: number
   readonly originalCurrency: string
-  readonly exchangeRate: number
+  readonly exchangeRate: number | null
 }
 
 export interface RebasedRow extends RebasedMoney {
@@ -424,34 +428,89 @@ function balanceDisclosure(
  * Converting one figure
  * ---------------------------------------------------------------------------------------------- */
 
-/** A row's typed figure: what it was entered as, in which currency, at which frozen rate. */
-interface Source {
-  readonly originalAmountMinor: number
-  readonly originalCurrency: string
-  readonly exchangeRate: number
+/** What a row's source columns amount to. */
+type Source =
+  /** A whole triple that agrees with the row's amount: what was typed, in which currency, at which rate. */
+  | {
+      readonly kind: 'triple'
+      readonly originalAmountMinor: number
+      readonly originalCurrency: string
+      readonly exchangeRate: number
+    }
+  /** A typed figure and its currency with no usable rate (how a zero converted amount is stored). */
+  | {
+      readonly kind: 'typed'
+      readonly originalAmountMinor: number
+      readonly originalCurrency: string
+    }
+  /** Nothing to keep: an inherited row, a stray column, or a triple the amount has outgrown. */
+  | { readonly kind: 'none' }
+
+/** A frozen rate that can convert: finite and above zero. */
+function isUsableRate(rate: number | null): rate is number {
+  return rate !== null && Number.isFinite(rate) && rate > 0
 }
 
 /**
- * The source of a row in the trip's old currency. A row that carries a whole triple keeps it; one
- * that inherited the trip's currency has none, and is pinned from itself (rule 1) so the typed
- * figure is not lost when its amount moves.
+ * Whether converting a typed figure at its rate lands within one minor unit of the row's amount. An
+ * amount an earlier edit moved away from its triple (a booking repriced after a typed conversion)
+ * does not, and converting the stale figure would put a number nobody typed in the ledger.
  */
-function sourceOf(row: MoneyColumns, from: string): Source {
+function agreesWithAmount(
+  row: MoneyColumns,
+  originalAmountMinor: number,
+  originalCurrency: string,
+  rate: number,
+): boolean {
+  try {
+    return (
+      Math.abs(
+        convertMinor(
+          originalAmountMinor,
+          rate,
+          originalCurrency,
+          row.currency,
+        ) - row.amountMinor,
+      ) <= 1
+    )
+  } catch (error) {
+    if (error instanceof RangeError) {
+      return false
+    }
+    throw error
+  }
+}
+
+/**
+ * The source of a row. A whole triple counts only when it agrees with the row's amount; a typed
+ * figure with no usable rate is kept as it is; any other shape carries nothing worth keeping and the
+ * row is pinned from its own amount (rule 1) when it leaves the old currency.
+ */
+function sourceOf(row: MoneyColumns): Source {
   const { originalAmountMinor, originalCurrency, exchangeRate } = row
+  if (originalAmountMinor === null || originalCurrency === null) {
+    return { kind: 'none' }
+  }
+  if (!isUsableRate(exchangeRate)) {
+    return { kind: 'typed', originalAmountMinor, originalCurrency }
+  }
   if (
-    originalAmountMinor !== null &&
-    originalCurrency !== null &&
-    exchangeRate !== null &&
-    Number.isFinite(exchangeRate) &&
-    exchangeRate > 0
+    originalAmountMinor === 0 &&
+    exchangeRate === 1 &&
+    originalCurrency !== row.currency
   ) {
-    return { originalAmountMinor, originalCurrency, exchangeRate }
+    // How the old zero-amount special case left a row across two currencies: a constant, not a
+    // conversion rate of that pair, and a zero figure carries no rate of its own to agree with.
+    return { kind: 'none' }
   }
-  return {
-    originalAmountMinor: row.amountMinor,
-    originalCurrency: from,
-    exchangeRate: 1,
-  }
+  return agreesWithAmount(
+    row,
+    originalAmountMinor,
+    originalCurrency,
+    exchangeRate,
+  )
+    ? { kind: 'triple', originalAmountMinor, originalCurrency, exchangeRate }
+    : { kind: 'none' }
 }
 
 /**
@@ -466,43 +525,70 @@ function rebaseMoney(
   from: string,
   to: string,
 ): RebasedMoney | null {
+  if (row.currency !== to && row.currency !== from) {
+    return null
+  }
+  const source = sourceOf(row)
   if (row.currency === to) {
-    // Already in the new currency, so the figure is the truth: nothing to convert.
+    // Already in the new currency, so the figure is the truth: nothing to convert, and a typed
+    // foreign figure it carries stays readable.
+    if (source.kind === 'none') {
+      return {
+        amountMinor: row.amountMinor,
+        currency: to,
+        originalAmountMinor: row.amountMinor,
+        originalCurrency: to,
+        exchangeRate: 1,
+      }
+    }
     return {
       amountMinor: row.amountMinor,
       currency: to,
-      originalAmountMinor: row.amountMinor,
-      originalCurrency: to,
-      exchangeRate: 1,
+      originalAmountMinor: source.originalAmountMinor,
+      originalCurrency: source.originalCurrency,
+      exchangeRate: source.kind === 'triple' ? source.exchangeRate : null,
     }
   }
-  if (row.currency !== from) {
-    return null
+  if (source.kind === 'typed') {
+    // A typed figure without a rate cannot drive the amount: the row's own amount is converted, and
+    // no rate is written because none was ever frozen for that pair.
+    return {
+      amountMinor: convertMinor(row.amountMinor, rate, from, to),
+      currency: to,
+      originalAmountMinor: source.originalAmountMinor,
+      originalCurrency: source.originalCurrency,
+      exchangeRate: null,
+    }
   }
-  const source = sourceOf(row, from)
+  const pinned =
+    source.kind === 'triple'
+      ? source
+      : {
+          originalAmountMinor: row.amountMinor,
+          originalCurrency: from,
+          exchangeRate: 1,
+        }
   const typed = {
     currency: to,
-    originalAmountMinor: source.originalAmountMinor,
-    originalCurrency: source.originalCurrency,
+    originalAmountMinor: pinned.originalAmountMinor,
+    originalCurrency: pinned.originalCurrency,
   }
-  if (source.originalCurrency === to) {
+  if (pinned.originalCurrency === to) {
     // Typed in the currency the trip is moving to: used verbatim, so a round trip does not drift.
     return {
       ...typed,
-      amountMinor: source.originalAmountMinor,
+      amountMinor: pinned.originalAmountMinor,
       exchangeRate: 1,
     }
   }
-  if (source.originalAmountMinor === 0) {
-    return { ...typed, amountMinor: 0, exchangeRate: source.exchangeRate }
-  }
-  const combined = source.exchangeRate * rate
+  // A zero amount converts like any other, so its rate is a real conversion rate of its pair.
+  const combined = pinned.exchangeRate * rate
   return {
     ...typed,
     amountMinor: convertMinor(
-      source.originalAmountMinor,
+      pinned.originalAmountMinor,
       combined,
-      source.originalCurrency,
+      pinned.originalCurrency,
       to,
     ),
     exchangeRate: combined,
@@ -611,18 +697,25 @@ function refused(refusal: RebaseRefusal): RebaseOutcome {
   return { kind: 'refused', refusal }
 }
 
+/**
+ * The first priced row as the figure typed and what it will count as. `moved` holds the rows the
+ * confirmed rate actually converted: a figure kept as it was (typed in the new currency, or a
+ * foreign figure on a row already in it) shows nothing of the rate the owner is about to confirm,
+ * so it is only shown when no row moves and it was typed in the new currency.
+ */
 function firstExample(
   rows: ReadonlyArray<RebasedMoney>,
+  moved: ReadonlySet<RebasedMoney>,
   to: string,
 ): RebasePlan['example'] {
   const priced = rows.filter(
     (candidate) =>
       candidate.amountMinor > 0 && candidate.originalAmountMinor > 0,
   )
-  // A figure typed in the new currency is kept, not converted, so it shows nothing of the rate the
-  // owner is about to confirm: prefer a row that moves.
   const row =
-    priced.find((candidate) => candidate.originalCurrency !== to) ?? priced[0]
+    priced.find(
+      (candidate) => moved.has(candidate) && candidate.originalCurrency !== to,
+    ) ?? priced.find((candidate) => candidate.originalCurrency === to)
   return row === undefined
     ? null
     : {
@@ -730,6 +823,21 @@ export function planRebase(
       ),
     }))
 
+    // Rows the rate converted: they left the old currency with a rate, not as a kept or rate-less figure.
+    const moved = new Set<RebasedMoney>(
+      [
+        ...rebasedExpenses.filter(
+          (_, index) => snapshot.expenses[index]?.currency === from,
+        ),
+        ...rebasedPayments.filter(
+          (_, index) => snapshot.payments[index]?.currency === from,
+        ),
+        ...rebasedItems.filter(
+          (_, index) => snapshot.plannedItems[index]?.currency === from,
+        ),
+      ].filter((row) => row.exchangeRate !== null),
+    )
+
     const budgetTarget =
       snapshot.budgetTargetMinor === null
         ? null
@@ -772,6 +880,7 @@ export function planRebase(
         example:
           firstExample(
             [...rebasedExpenses, ...rebasedPayments, ...rebasedItems],
+            moved,
             to,
           ) ??
           (budgetTarget !== null && budgetTarget.before > 0

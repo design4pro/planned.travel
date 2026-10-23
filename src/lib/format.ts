@@ -109,6 +109,7 @@ const numberFormatters = new Map<Locale, Intl.NumberFormat>()
 const percentFormatters = new Map<Locale, Intl.NumberFormat>()
 const fixedFormatters = new Map<string, Intl.NumberFormat>()
 const rateInputFormatters = new Map<Locale, Intl.NumberFormat>()
+const decimalMarks = new Map<Locale, '.' | ','>()
 const currencySymbols = new Map<string, string>()
 
 /** The frozen row for a locale: names, patterns and layouts, no `Intl`. */
@@ -544,6 +545,25 @@ export function formatRateInput(
     rateInputFormatters.set(locale, formatter)
   }
   return formatter.format(value)
+}
+
+/**
+ * The mark this locale writes between a whole number and its fraction: `,` for `pl`, `de`, `fr`,
+ * `.` for `en`, `ja`, `zh`. Read from the frozen row's numbering system like every other number
+ * here, and narrowed to the two marks a field can hold: `parseMoney` (`#/lib/money`) uses it to
+ * settle the one figure its shape cannot, a lone separator followed by three digits.
+ */
+export function decimalMark(locale: Locale = DEFAULT_LOCALE): '.' | ',' {
+  const cached = decimalMarks.get(locale)
+  if (cached !== undefined) {
+    return cached
+  }
+  const part = new Intl.NumberFormat(formatsFor(locale).intlLocale)
+    .formatToParts(1.5)
+    .find((entry) => entry.type === 'decimal')
+  const mark = part?.value === ',' ? ',' : '.'
+  decimalMarks.set(locale, mark)
+  return mark
 }
 
 /** `-3` → `3`, keeping the sign out of a label that already says "ago". */

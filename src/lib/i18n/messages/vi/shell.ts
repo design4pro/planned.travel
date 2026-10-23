@@ -490,6 +490,31 @@ const messages = {
     'Đã tạo chuyến đi, nhưng không tải “{name}” lên làm ảnh bìa được.',
   'newTrip.coverRetry': 'Thử lại',
   'newTrip.coverContinue': 'Mở chuyến đi không có ảnh bìa',
+  'newTrip.people': 'Người tham gia',
+  'newTrip.peopleHint':
+    'Họ được thêm ngay khi chuyến đi được tạo. Bạn vẫn là chủ sở hữu.',
+  'newTrip.peoplePlaceholder': 'Chọn từ không gian làm việc',
+  'newTrip.peopleSearch': 'Tìm theo tên',
+  'newTrip.peopleLoading': 'Đang tải những người trong không gian làm việc',
+  'newTrip.peopleLoadError':
+    'Không tải được những người trong không gian làm việc. Hãy tạo chuyến đi rồi thêm họ ở màn hình Người tham gia.',
+  'newTrip.peopleNone':
+    'Hiện bạn là người duy nhất trong không gian làm việc này.',
+  'newTrip.peopleNoneMember':
+    'Chủ sở hữu hoặc quản trị viên của không gian làm việc có thể mời thêm người.',
+  'newTrip.peopleInvite': 'Mời người vào không gian làm việc',
+  'newTrip.peopleChosen': 'Những người đã chọn và vai trò của họ',
+  'newTrip.peopleFailedTitle':
+    'Đã tạo chuyến đi, nhưng chưa thêm được tất cả mọi người',
+  'newTrip.noticeBothTitle': 'Đã tạo chuyến đi, nhưng chưa thêm được tất cả',
+  'newTrip.peopleNotInWorkspace':
+    '{name} không còn trong không gian làm việc này nên chưa được thêm.',
+  'newTrip.peopleAlreadyOn': '{name} đã có trong chuyến đi này.',
+  'newTrip.peopleUnconfirmed':
+    'Không xác nhận được việc thêm {name}. Hãy kiểm tra ở Người tham gia xem đã thêm chưa.',
+  'newTrip.peopleContinue': 'Tiếp tục',
+  'newTrip.peopleRetry': 'Thử lại',
+  'newTrip.coverRetryOnly': 'Thử lại ảnh bìa',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Thao tác cho {title}',
@@ -656,6 +681,13 @@ const messages = {
   'session.noWorkspace':
     'Tài khoản của bạn chưa gắn với không gian làm việc nào. Hãy đăng xuất rồi đăng nhập lại để hoàn tất.',
   'session.membershipRemoved': 'Bạn đã bị gỡ khỏi không gian làm việc này.',
+  'session.workspaceChanged':
+    'Không gian làm việc đã được đổi ở một tab hoặc cửa sổ khác. Chưa có gì được lưu.',
+  'session.workspaceChangedTitle': 'Không gian làm việc đã đổi ở tab khác',
+  'session.workspaceChangedBody':
+    'Tab này đang hiển thị {name}, nhưng không gian làm việc đã được đổi ở một tab hoặc cửa sổ khác. Chưa có gì được lưu.',
+  'session.openCurrentWorkspace': 'Mở không gian làm việc hiện tại',
+  'session.workspaceChangedDismiss': 'Để sau',
 } satisfies TranslationOf<typeof En>
 
 export default messages

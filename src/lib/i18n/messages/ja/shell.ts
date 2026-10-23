@@ -444,6 +444,25 @@ const messages = {
     '旅行は作成されましたが、「{name}」をカバーとしてアップロードできませんでした。',
   'newTrip.coverRetry': '再試行',
   'newTrip.coverContinue': 'カバーなしで旅行を開く',
+  'newTrip.people': 'メンバー',
+  'newTrip.peopleHint': '旅行が作成されるとすぐに追加されます。あなたは引き続きオーナーです。',
+  'newTrip.peoplePlaceholder': 'ワークスペースから選択',
+  'newTrip.peopleSearch': '名前で検索',
+  'newTrip.peopleLoading': 'ワークスペースのメンバーを読み込み中',
+  'newTrip.peopleLoadError':
+    'ワークスペースのメンバーを読み込めませんでした。旅行を作成してから、その旅行のメンバー画面で追加してください。',
+  'newTrip.peopleNone': 'このワークスペースには、今のところあなただけがいます。',
+  'newTrip.peopleNoneMember': 'ワークスペースのオーナーまたは管理者が、ほかのメンバーを招待できます。',
+  'newTrip.peopleInvite': 'ワークスペースにメンバーを招待',
+  'newTrip.peopleChosen': '選択したメンバーと役割',
+  'newTrip.peopleFailedTitle': '旅行は作成されましたが、全員は追加されませんでした',
+  'newTrip.noticeBothTitle': '旅行は作成されましたが、すべては追加されませんでした',
+  'newTrip.peopleNotInWorkspace': '{name}さんはもうこのワークスペースにいないため、追加されませんでした。',
+  'newTrip.peopleAlreadyOn': '{name}さんはすでにこの旅行にいます。',
+  'newTrip.peopleUnconfirmed': '{name}さんの追加を確認できませんでした。メンバー画面で追加されたかご確認ください。',
+  'newTrip.peopleContinue': '続ける',
+  'newTrip.peopleRetry': 'もう一度試す',
+  'newTrip.coverRetryOnly': 'カバーをもう一度試す',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} の操作',
@@ -611,6 +630,12 @@ const messages = {
     'このアカウントはまだワークスペースに紐づいていません。サインアウトして入り直すと、設定が仕上がります。',
   'session.membershipRemoved':
     'このワークスペースのメンバーではなくなりました。',
+  'session.workspaceChanged': 'ワークスペースが別のタブまたはウィンドウで切り替えられました。何も保存されていません。',
+  'session.workspaceChangedTitle': '別のタブでワークスペースが切り替わりました',
+  'session.workspaceChangedBody':
+    'このタブには「{name}」が表示されていますが、ワークスペースは別のタブまたはウィンドウで切り替えられました。何も保存されていません。',
+  'session.openCurrentWorkspace': '現在のワークスペースを開く',
+  'session.workspaceChangedDismiss': '今はしない',
 } satisfies TranslationOf<typeof En>
 
 export default messages

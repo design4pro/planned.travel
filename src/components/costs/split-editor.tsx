@@ -38,7 +38,7 @@ import {
   toAmountInput,
 } from '#/lib/money'
 
-import type { MessageKey, Translate } from '#/lib/i18n'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { ReactNode } from 'react'
 import type { SplitMethod, SplitPreview } from '#/lib/money'
 import type { CostsDepartedPerson, CostsPerson } from '#/server/fns/costs'
@@ -173,6 +173,7 @@ export function draftForDeparted(
     readonly shareMinor: number
     readonly weight: number
   }>,
+  locale: Locale,
 ): SplitDraft {
   if (departed.length === 0) {
     return draftFor(members, amountMinor, currency, splitMethod, shares)
@@ -192,7 +193,7 @@ export function draftForDeparted(
     const computed = splitShares(
       amountMinor,
       draft.method,
-      draftToInputs(draft, currency),
+      draftToInputs(draft, currency, locale),
     )
     return (
       computed.length === shares.length &&
@@ -211,6 +212,7 @@ export function draftForDeparted(
 export function draftToInputs(
   draft: SplitDraft,
   currency: string,
+  locale: Locale,
 ): Array<{
   readonly userId: string
   readonly weight?: number
@@ -223,7 +225,7 @@ export function draftToInputs(
       if (draft.method === 'exact') {
         return {
           userId: row.userId,
-          shareMinor: exactField(row.exact, currency),
+          shareMinor: exactField(row.exact, currency, locale),
         }
       }
       if (draft.method === 'percentage') {
@@ -243,8 +245,8 @@ export function draftToInputs(
  * every keystroke that cleared a field, and the reader would be chasing a target
  * that moves while they aim at it.
  */
-function exactField(text: string, currency: string): number {
-  return parseMoney(text, currency) ?? 0
+function exactField(text: string, currency: string, locale: Locale): number {
+  return parseMoney(text, currency, locale) ?? 0
 }
 
 function percentField(text: string): number {
@@ -260,8 +262,13 @@ export function previewFor(
   draft: SplitDraft,
   amountMinor: number,
   currency: string,
+  locale: Locale,
 ): SplitPreview {
-  return splitPreview(amountMinor, draft.method, draftToInputs(draft, currency))
+  return splitPreview(
+    amountMinor,
+    draft.method,
+    draftToInputs(draft, currency, locale),
+  )
 }
 
 export interface SplitEditorProps {

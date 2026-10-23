@@ -484,7 +484,7 @@ describe('keyboard drag', () => {
    */
   it('speaks the screen’s refusal instead of claiming the move saved', async () => {
     const onMove = moveSpy(
-      'Buy the metro pass was not moved. A note stays on its own day.',
+      'Buy the metro pass was not moved. A note stays in the day.',
     )
     const { container } = render(<Board onMove={onMove} />)
     layout(container)
@@ -497,7 +497,7 @@ describe('keyboard drag', () => {
     await press(document.body, ' ', 'Space')
 
     expect(said.at(-1)).toBe(
-      'Buy the metro pass was not moved. A note stays on its own day.',
+      'Buy the metro pass was not moved. A note stays in the day.',
     )
   })
 })

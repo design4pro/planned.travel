@@ -413,6 +413,24 @@ const messages = {
   'newTrip.coverFailed': '行程已建立，但「{name}」未能上傳為封面。',
   'newTrip.coverRetry': '重試',
   'newTrip.coverContinue': '不帶封面開啟行程',
+  'newTrip.people': '成員',
+  'newTrip.peopleHint': '行程建立後會立即加入。你仍是行程的擁有者。',
+  'newTrip.peoplePlaceholder': '從工作區中選擇',
+  'newTrip.peopleSearch': '依姓名搜尋',
+  'newTrip.peopleLoading': '正在載入工作區成員',
+  'newTrip.peopleLoadError': '無法載入工作區成員。請先建立行程，再到其成員頁面加入。',
+  'newTrip.peopleNone': '目前這個工作區裡只有你一個人。',
+  'newTrip.peopleNoneMember': '工作區的擁有者或管理員可以邀請更多人。',
+  'newTrip.peopleInvite': '邀請成員加入工作區',
+  'newTrip.peopleChosen': '已選成員及其角色',
+  'newTrip.peopleFailedTitle': '行程已建立，但並非所有人都已加入',
+  'newTrip.noticeBothTitle': '行程已建立，但並非所有內容都已加入',
+  'newTrip.peopleNotInWorkspace': '{name}已不在這個工作區，因此未加入。',
+  'newTrip.peopleAlreadyOn': '{name}已在這次行程中。',
+  'newTrip.peopleUnconfirmed': '無法確認是否已加入{name}。請到成員頁面查看。',
+  'newTrip.peopleContinue': '繼續',
+  'newTrip.peopleRetry': '重試',
+  'newTrip.coverRetryOnly': '重試封面',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 的操作',
@@ -568,6 +586,11 @@ const messages = {
   'session.noWorkspace':
     '你的帳號還沒有掛在任何工作區上。登出後重新登入，就能把它設好。',
   'session.membershipRemoved': '你在這個工作區的成員資格已被移除。',
+  'session.workspaceChanged': '工作區已在另一個分頁或視窗中切換。沒有儲存任何內容。',
+  'session.workspaceChangedTitle': '工作區已在另一個分頁中切換',
+  'session.workspaceChangedBody': '此分頁顯示的是「{name}」，但工作區已在另一個分頁或視窗中切換。沒有儲存任何內容。',
+  'session.openCurrentWorkspace': '開啟目前的工作區',
+  'session.workspaceChangedDismiss': '暫不',
 } satisfies TranslationOf<typeof En>
 
 export default messages

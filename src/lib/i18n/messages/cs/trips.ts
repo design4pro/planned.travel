@@ -112,10 +112,7 @@ const messages = {
     'Místo se může v jednom dni objevit jen jednou. Přesuňte ho na jiný den.',
   'plan.move.refused.notInIdeas': 'Poznámka zůstává ve dni',
   'plan.move.refused.notInIdeasBody':
-    'Nápady jsou místa, která čekají na svůj den. Poznámka patří ke dni, ke kterému byla napsána.',
-  'plan.move.refused.notInAnotherDay': 'Poznámka zůstává u svého dne',
-  'plan.move.refused.notInAnotherDayBody':
-    'Poznámky zatím nelze přesouvat mezi dny. Upravte poznámku, nebo ji napište k jinému dni.',
+    'Nápady jsou místa, která čekají na svůj den. Poznámka vždy patří ke dni.',
   'plan.move.refused.journeyNotInIdeas': 'Přesun zůstává ve dni',
   'plan.move.refused.journeyNotInIdeasBody':
     'Nápady jsou místa, která čekají na svůj den. Přesun patří ke dni, kdy se odehrává.',
@@ -128,8 +125,6 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} se nepřesunul. Ten den ho už má.',
   'plan.move.spoken.notInIdeas':
     '{name} se nepřesunul. Poznámka zůstává ve dni.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} se nepřesunul. Poznámka zůstává u svého dne.',
   'plan.move.spoken.timed':
     '{name} má čas {time}. Ptáme se, jestli ho zahodit.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -183,6 +178,7 @@ const messages = {
   'plan.note.showLess': 'Zobrazit méně',
   'plan.note.moveUp': 'Posunout nahoru',
   'plan.note.moveDown': 'Posunout dolů',
+  'plan.note.moveToDay': 'Přesunout na jiný den',
   'plan.note.drag': 'Změnit pořadí poznámky',
   'plan.note.edit': 'Upravit poznámku',
   'plan.note.delete': 'Smazat poznámku',

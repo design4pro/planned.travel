@@ -34,7 +34,6 @@
  */
 import { useEffect, useId, useMemo, useState } from 'react'
 import { ArrowRight, Plus } from 'lucide-react'
-import { nanoid } from 'nanoid'
 
 import {
   Alert,
@@ -53,6 +52,7 @@ import {
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { mintId } from '#/lib/ids'
 import { saveTransportFn } from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { ChainEditor } from './chain-editor'
@@ -187,7 +187,7 @@ export function TransportDialog({
    * draft - a double click, Enter after the button, a retry after a failure - rewrites the
    * transport the first press wrote instead of creating another.
    */
-  const [draftId, setDraftId] = useState(() => nanoid())
+  const [draftId, setDraftId] = useState(mintId)
   const transportId = transport?.id ?? draftId
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export function TransportDialog({
     setChain(chainFor(transport))
     setTouched(false)
     setFillMode('form')
-    setDraftId(nanoid())
+    setDraftId(mintId())
   }, [open, transport, currency])
 
   /**

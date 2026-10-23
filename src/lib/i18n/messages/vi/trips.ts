@@ -106,10 +106,7 @@ const messages = {
     'Một địa điểm chỉ xuất hiện một lần mỗi ngày. Hãy chuyển nó sang ngày khác.',
   'plan.move.refused.notInIdeas': 'Ghi chú ở lại trong ngày',
   'plan.move.refused.notInIdeasBody':
-    'Ý tưởng là những địa điểm đang chờ một ngày. Ghi chú thuộc về ngày mà nó được viết.',
-  'plan.move.refused.notInAnotherDay': 'Ghi chú ở lại ngày của nó',
-  'plan.move.refused.notInAnotherDayBody':
-    'Ghi chú chưa thể chuyển sang ngày khác. Hãy sửa ghi chú, hoặc viết nó ở ngày kia.',
+    'Ý tưởng là những địa điểm đang chờ một ngày. Ghi chú luôn thuộc về một ngày.',
   'plan.move.refused.journeyNotInIdeas': 'Chuyến đi ở lại trong ngày',
   'plan.move.refused.journeyNotInIdeasBody':
     'Ý tưởng là những địa điểm đang chờ một ngày. Chuyến đi thuộc về ngày mà nó diễn ra.',
@@ -122,8 +119,6 @@ const messages = {
   'plan.move.spoken.duplicate': '{name} chưa được chuyển. Ngày đó đã có rồi.',
   'plan.move.spoken.notInIdeas':
     '{name} chưa được chuyển. Ghi chú ở lại trong ngày.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} chưa được chuyển. Ghi chú ở lại ngày của nó.',
   'plan.move.spoken.timed':
     '{name} có giờ {time}. Chúng tôi hỏi xem có bỏ giờ không.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -177,6 +172,7 @@ const messages = {
   'plan.note.showLess': 'Thu gọn',
   'plan.note.moveUp': 'Di chuyển lên',
   'plan.note.moveDown': 'Di chuyển xuống',
+  'plan.note.moveToDay': 'Chuyển sang ngày khác',
   'plan.note.drag': 'Sắp xếp lại ghi chú',
   'plan.note.edit': 'Sửa ghi chú',
   'plan.note.delete': 'Xóa ghi chú',

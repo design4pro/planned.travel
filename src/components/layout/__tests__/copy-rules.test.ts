@@ -60,6 +60,7 @@ const APP_FILES = [
   join('-ui', 'new-trip-dialog.tsx'),
   join('-ui', 'trip-form.tsx'),
   join('-ui', 'trip-cover-field.tsx'),
+  join('-ui', 'trip-people-field.tsx'),
   join('-ui', 'trip-actions.tsx'),
   join('-ui', 'trip-copy-dialog.tsx'),
   join('-ui', 'create-dialogs.tsx'),
@@ -73,7 +74,7 @@ const APP_FILES = [
  * classifies them and the shell resolves them. The shell is what reads them, so the keys they name
  * are read here like the two `SHELL_STATE_KEYS` in `session.ts`.
  */
-const LIB_FILES = ['currency-refusals.ts']
+const LIB_FILES = ['currency-refusals.ts', 'workspace-claim.ts']
 
 interface Source {
   readonly name: string

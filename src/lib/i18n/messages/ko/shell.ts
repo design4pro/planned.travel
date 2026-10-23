@@ -433,6 +433,26 @@ const messages = {
     '여행은 만들었지만 “{name}”을(를) 표지로 업로드하지 못했습니다.',
   'newTrip.coverRetry': '다시 시도',
   'newTrip.coverContinue': '표지 없이 여행 열기',
+  'newTrip.people': '참여자',
+  'newTrip.peopleHint': '여행을 만들면 바로 추가됩니다. 소유자는 그대로 유지돼요.',
+  'newTrip.peoplePlaceholder': '워크스페이스에서 선택',
+  'newTrip.peopleSearch': '이름으로 검색',
+  'newTrip.peopleLoading': '워크스페이스의 사람들을 불러오는 중',
+  'newTrip.peopleLoadError':
+    '워크스페이스의 사람들을 불러오지 못했습니다. 여행을 만든 뒤 참여자 화면에서 추가해 주세요.',
+  'newTrip.peopleNone': '지금은 이 워크스페이스에 회원님뿐이에요.',
+  'newTrip.peopleNoneMember': '워크스페이스의 소유자나 관리자가 더 많은 사람을 초대할 수 있어요.',
+  'newTrip.peopleInvite': '워크스페이스에 사람 초대하기',
+  'newTrip.peopleChosen': '선택한 사람과 역할',
+  'newTrip.peopleFailedTitle': '여행은 만들었지만 모두를 추가하지는 못했습니다',
+  'newTrip.noticeBothTitle': '여행은 만들었지만 모든 것을 추가하지는 못했습니다',
+  'newTrip.peopleNotInWorkspace': '{name}님은 더 이상 이 워크스페이스에 없어서 추가되지 않았습니다.',
+  'newTrip.peopleAlreadyOn': '{name}님은 이미 이 여행에 있습니다.',
+  'newTrip.peopleUnconfirmed':
+    '{name}님의 추가를 확인하지 못했습니다. 참여자 화면에서 추가됐는지 확인해 주세요.',
+  'newTrip.peopleContinue': '계속',
+  'newTrip.peopleRetry': '다시 시도',
+  'newTrip.coverRetryOnly': '커버 다시 시도',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': '{title} 작업',
@@ -596,6 +616,12 @@ const messages = {
   'session.noWorkspace':
     '이 계정은 아직 워크스페이스에 연결되지 않았어요. 로그아웃한 뒤 다시 로그인하면 설정이 마무리돼요.',
   'session.membershipRemoved': '이 워크스페이스의 멤버 자격이 해제됐어요.',
+  'session.workspaceChanged': '워크스페이스가 다른 탭이나 창에서 바뀌었어요. 저장된 내용은 없어요.',
+  'session.workspaceChangedTitle': '다른 탭에서 워크스페이스가 바뀌었어요',
+  'session.workspaceChangedBody':
+    '이 탭에는 {name}이(가) 표시되어 있지만, 워크스페이스가 다른 탭이나 창에서 바뀌었어요. 저장된 내용은 없어요.',
+  'session.openCurrentWorkspace': '현재 워크스페이스 열기',
+  'session.workspaceChangedDismiss': '나중에',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -538,6 +538,32 @@ const messages = {
     'Az utazás létrejött, de a(z) „{name}” fájlt nem sikerült borítóként feltölteni.',
   'newTrip.coverRetry': 'Próbáld újra',
   'newTrip.coverContinue': 'Az utazás megnyitása borítókép nélkül',
+  'newTrip.people': 'Emberek',
+  'newTrip.peopleHint':
+    'Az utazás létrehozása után azonnal hozzáadódnak. Te maradsz a tulajdonosa.',
+  'newTrip.peoplePlaceholder': 'Válassz a munkaterületedről',
+  'newTrip.peopleSearch': 'Keresés név szerint',
+  'newTrip.peopleLoading': 'A munkaterület tagjainak betöltése',
+  'newTrip.peopleLoadError':
+    'A munkaterület tagjait nem sikerült betölteni. Hozd létre az utazást, és add hozzá őket az Emberek képernyőn.',
+  'newTrip.peopleNone':
+    'Egyelőre te vagy az egyetlen ember ezen a munkaterületen.',
+  'newTrip.peopleNoneMember':
+    'További embereket a munkaterület tulajdonosa vagy adminisztrátora hívhat meg.',
+  'newTrip.peopleInvite': 'Emberek meghívása a munkaterületre',
+  'newTrip.peopleChosen': 'Kiválasztott emberek és szerepeik',
+  'newTrip.peopleFailedTitle':
+    'Az utazás létrejött, de nem mindenki lett hozzáadva',
+  'newTrip.noticeBothTitle':
+    'Az utazás létrejött, de nem minden lett hozzáadva',
+  'newTrip.peopleNotInWorkspace':
+    '{name} már nincs ezen a munkaterületen, ezért nem lett hozzáadva.',
+  'newTrip.peopleAlreadyOn': '{name} már rajta volt ezen az utazáson.',
+  'newTrip.peopleUnconfirmed':
+    '{name} hozzáadását nem sikerült megerősíteni. Az Emberek képernyőn ellenőrizheted.',
+  'newTrip.peopleContinue': 'Tovább',
+  'newTrip.peopleRetry': 'Próbáld újra',
+  'newTrip.coverRetryOnly': 'A borító újrapróbálása',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Műveletek: {title}',
@@ -714,6 +740,14 @@ const messages = {
   'session.noWorkspace':
     'A fiókja még nincs munkaterülethez kötve. Jelentkezzen ki, majd újra be, hogy a beállítás befejeződjön.',
   'session.membershipRemoved': 'A munkaterületi tagságát megszüntették.',
+  'session.workspaceChanged':
+    'A munkaterületet egy másik lapon vagy ablakban megváltoztatták. Semmi sem lett mentve.',
+  'session.workspaceChangedTitle':
+    'A munkaterület megváltozott egy másik lapon',
+  'session.workspaceChangedBody':
+    'Ez a lap ezt a munkaterületet mutatja: {name}. A munkaterületet azonban egy másik lapon vagy ablakban megváltoztatták. Semmi sem lett mentve.',
+  'session.openCurrentWorkspace': 'Az aktuális munkaterület megnyitása',
+  'session.workspaceChangedDismiss': 'Most nem',
 } satisfies TranslationOf<typeof En>
 
 export default messages

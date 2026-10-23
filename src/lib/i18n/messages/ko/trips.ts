@@ -107,10 +107,7 @@ const messages = {
     '한 장소는 하루에 한 번만 넣을 수 있습니다. 다른 날로 옮겨 보세요.',
   'plan.move.refused.notInIdeas': '메모는 그날 안에 남습니다',
   'plan.move.refused.notInIdeasBody':
-    '아이디어는 날짜를 기다리는 장소입니다. 메모는 작성한 날에 속합니다.',
-  'plan.move.refused.notInAnotherDay': '메모는 자기 날에 남습니다',
-  'plan.move.refused.notInAnotherDayBody':
-    '메모는 아직 다른 날로 옮길 수 없습니다. 메모를 수정하거나 다른 날에 새로 쓰세요.',
+    '아이디어는 날짜를 기다리는 장소입니다. 메모는 항상 특정한 날에 속합니다.',
   'plan.move.refused.journeyNotInIdeas': '이동은 그날 안에 남습니다',
   'plan.move.refused.journeyNotInIdeasBody':
     '아이디어는 날짜를 기다리는 장소입니다. 이동은 그것이 일어나는 날에 속합니다.',
@@ -124,8 +121,6 @@ const messages = {
     '{name}은(는) 이동하지 않았습니다. 그날에는 이미 있습니다.',
   'plan.move.spoken.notInIdeas':
     '{name}은(는) 이동하지 않았습니다. 메모는 그날 안에 남습니다.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name}은(는) 이동하지 않았습니다. 메모는 자기 날에 남습니다.',
   'plan.move.spoken.timed':
     '{name}에는 {time}이(가) 있습니다. 시간을 지울지 묻습니다.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -179,6 +174,7 @@ const messages = {
   'plan.note.showLess': '접기',
   'plan.note.moveUp': '위로 이동',
   'plan.note.moveDown': '아래로 이동',
+  'plan.note.moveToDay': '다른 날로 이동',
   'plan.note.drag': '메모 순서 바꾸기',
   'plan.note.edit': '메모 편집',
   'plan.note.delete': '메모 삭제',

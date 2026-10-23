@@ -48,7 +48,7 @@ import {
   RepositoryError,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
-import { QUEUE_BATCH_MAX, enqueueTask, enqueueTasks } from '#/server/queue/jobs'
+import { enqueueTask, enqueueTasks } from '#/server/queue/jobs'
 import {
   affectedStatYears,
   enqueueTravelStats,
@@ -73,11 +73,10 @@ import type { TenantScope } from '#/server/repos'
 /**
  * How many envelopes may go in one `sendBatch`, re-exported from the module that owns the bound.
  *
- * It applies here because {@link enqueueTripPurge} scales with the objects a trip owns, which has no
- * product ceiling: `files` is `UNLIMITED` on the business tier, and a chunk loop that leaned on a
- * plan's number would break the day an operator raised it. It is declared beside `enqueueTasks`
- * rather than here because the `trip-copy` handler and the statistics fan-out chunk the same way and
- * three spellings of one limit is two too many.
+ * `enqueueTasks` cuts its input at this number, so {@link enqueueTripPurge} hands it every envelope
+ * it has and does not chunk. It matters here because that producer scales with the objects a trip
+ * owns, which has no product ceiling: `files` is `UNLIMITED` on the business tier. The constant is
+ * re-exported only so the side-effect tests can name the bound they assert against.
  */
 export { QUEUE_BATCH_MAX } from '#/server/queue/jobs'
 
@@ -436,9 +435,10 @@ async function listTripExportKeys(
  *   unreachable leaves objects in the bucket, which is a sweep job, where a save that appears to have
  *   failed is a reader deleting the same trip twice. Caught, logged once, returned from — the posture
  *   the statistics fan-out already takes.
- * - **It chunks.** `files` is `UNLIMITED` on the business tier, so the key list has no product bound,
- *   and a Queues message body is capped at 128 KB. {@link MAX_PURGE_KEYS} keys per envelope,
- *   {@link QUEUE_BATCH_MAX} envelopes per `sendBatch`.
+ * - **It chunks the keys.** `files` is `UNLIMITED` on the business tier, so the key list has no
+ *   product bound, and a Queues message body is capped at 128 KB: {@link MAX_PURGE_KEYS} keys per
+ *   envelope. Cutting the envelopes into `sendBatch` calls is `enqueueTasks`'s, at
+ *   `QUEUE_BATCH_MAX`.
  * - **Each chunk's id is deterministic on it.** Two chunks sharing one id would see the second acked
  *   as a duplicate of the first and its objects left in the bucket for good.
  *
@@ -477,9 +477,7 @@ async function enqueueTripPurge(
 
     const { taskQueue } = await import('#/server/auth/env')
     const queue = taskQueue()
-    for (let index = 0; index < envelopes.length; index += QUEUE_BATCH_MAX) {
-      await enqueueTasks(queue, envelopes.slice(index, index + QUEUE_BATCH_MAX))
-    }
+    await enqueueTasks(queue, envelopes)
   } catch (cause) {
     log().warn('the storage purge for a deleted trip was not enqueued', {
       organizationId: orgId,

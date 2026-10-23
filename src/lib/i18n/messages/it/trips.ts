@@ -110,10 +110,7 @@ const messages = {
     'Un luogo può comparire una sola volta al giorno. Spostalo in un altro giorno.',
   'plan.move.refused.notInIdeas': 'Una nota resta nel giorno',
   'plan.move.refused.notInIdeasBody':
-    'Le idee sono luoghi in attesa di un giorno. Una nota appartiene al giorno per cui è stata scritta.',
-  'plan.move.refused.notInAnotherDay': 'Una nota resta nel suo giorno',
-  'plan.move.refused.notInAnotherDayBody':
-    'Le note non si possono ancora spostare tra i giorni. Modifica la nota, oppure scrivila nell’altro giorno.',
+    'Le idee sono luoghi in attesa di un giorno. Una nota appartiene sempre a un giorno.',
   'plan.move.refused.journeyNotInIdeas': 'Uno spostamento resta nel giorno',
   'plan.move.refused.journeyNotInIdeasBody':
     'Le idee sono luoghi in attesa di un giorno. Uno spostamento appartiene al giorno in cui avviene.',
@@ -128,8 +125,6 @@ const messages = {
     '{name} non è stato spostato. Quel giorno lo contiene già.',
   'plan.move.spoken.notInIdeas':
     '{name} non è stato spostato. Una nota resta nel giorno.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} non è stato spostato. Una nota resta nel suo giorno.',
   'plan.move.spoken.timed':
     '{name} porta l’orario {time}. Chiediamo se lasciarlo andare.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -184,6 +179,7 @@ const messages = {
   'plan.note.showLess': 'Mostra di meno',
   'plan.note.moveUp': 'Sposta su',
   'plan.note.moveDown': 'Sposta giù',
+  'plan.note.moveToDay': 'Sposta in un altro giorno',
   'plan.note.drag': 'Riordina la nota',
   'plan.note.edit': 'Modifica la nota',
   'plan.note.delete': 'Elimina la nota',

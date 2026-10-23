@@ -29,9 +29,9 @@ export const SYSTEM_ORG_ID = 'system'
 /**
  * How many envelopes may go in one `sendBatch`.
  *
- * Cloudflare Queues accepts at most 100 messages per batch, and {@link enqueueTasks} maps every
- * input into one `sendBatch` without chunking — so the bound has to be held by each producer, and
- * it is declared here, beside the call it bounds, rather than once per producer.
+ * Cloudflare Queues accepts at most 100 messages per batch. {@link enqueueTasks} is the one place
+ * that holds the bound: it cuts its input into batches of this size, so a producer hands it every
+ * envelope it has and does not chunk. It is declared here, beside the call it bounds.
  */
 export const QUEUE_BATCH_MAX = 100
 
@@ -87,20 +87,33 @@ export async function enqueueTask<TKind extends TaskKind>(
   return envelope
 }
 
-/** Sends up to 100 messages in one round trip — the Queues batch limit. */
+/**
+ * Sends every input, in batches of at most {@link QUEUE_BATCH_MAX}, and answers with the envelopes
+ * in input order.
+ *
+ * The batches go one after another, each awaited before the next, so the order on the queue is the
+ * order of `inputs`. The first refusal is thrown to the caller and the batches before it stay sent:
+ * a caller that needs all-or-nothing has to make its envelopes idempotent (deterministic `id`),
+ * which a redelivery then folds. Each message keeps the `orgId` its input carries; nothing here sets
+ * or overrides one.
+ *
+ * This holds the message-count bound only. A `sendBatch` array is also capped at 256 KB in total,
+ * which a producer of large bodies has to respect by cutting its input (`EMAIL_CHUNK_SIZE`).
+ */
 export async function enqueueTasks(
   queue: TaskQueue,
   inputs: Array<EnqueueInput<TaskKind>>,
   now?: () => number,
 ): Promise<Array<TaskEnvelope>> {
   const envelopes = inputs.map((input) => buildTaskEnvelope(input, now))
-  if (envelopes.length === 0) return envelopes
-  await queue.sendBatch(
-    envelopes.map((body, index) => {
-      const delaySeconds = inputs[index]?.delaySeconds
-      return delaySeconds === undefined ? { body } : { body, delaySeconds }
-    }),
-  )
+  for (let start = 0; start < envelopes.length; start += QUEUE_BATCH_MAX) {
+    await queue.sendBatch(
+      envelopes.slice(start, start + QUEUE_BATCH_MAX).map((body, offset) => {
+        const delaySeconds = inputs[start + offset]?.delaySeconds
+        return delaySeconds === undefined ? { body } : { body, delaySeconds }
+      }),
+    )
+  }
   return envelopes
 }
 

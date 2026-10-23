@@ -583,6 +583,29 @@ const messages = {
     'Поездка создана, но файл «{name}» не удалось загрузить как обложку.',
   'newTrip.coverRetry': 'Повторить',
   'newTrip.coverContinue': 'Открыть поездку без обложки',
+  'newTrip.people': 'Участники',
+  'newTrip.peopleHint':
+    'Они добавятся сразу после создания поездки. Владельцем останетесь вы.',
+  'newTrip.peoplePlaceholder': 'Выберите из пространства',
+  'newTrip.peopleSearch': 'Поиск по имени',
+  'newTrip.peopleLoading': 'Загружаем участников вашего пространства',
+  'newTrip.peopleLoadError':
+    'Не удалось загрузить участников вашего пространства. Создайте поездку и добавьте их на её экране «Участники».',
+  'newTrip.peopleNone': 'Пока вы единственный человек в этом пространстве.',
+  'newTrip.peopleNoneMember':
+    'Пригласить ещё людей может владелец или администратор пространства.',
+  'newTrip.peopleInvite': 'Пригласить людей в пространство',
+  'newTrip.peopleChosen': 'Выбранные люди и их роли',
+  'newTrip.peopleFailedTitle': 'Поездка создана, но добавлены не все',
+  'newTrip.noticeBothTitle': 'Поездка создана, но добавлено не всё',
+  'newTrip.peopleNotInWorkspace':
+    '{name} больше нет в этом пространстве, поэтому добавить не удалось.',
+  'newTrip.peopleAlreadyOn': '{name} уже участвует в этой поездке.',
+  'newTrip.peopleUnconfirmed':
+    'Не удалось подтвердить добавление: {name}. Проверьте на экране «Участники», добавлен ли человек.',
+  'newTrip.peopleContinue': 'Продолжить',
+  'newTrip.peopleRetry': 'Повторить',
+  'newTrip.coverRetryOnly': 'Повторить с обложкой',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Действия для «{title}»',
@@ -769,6 +792,13 @@ const messages = {
   'session.noWorkspace':
     'Ваш аккаунт пока не привязан к пространству. Выйдите и войдите снова, чтобы настройка завершилась.',
   'session.membershipRemoved': 'Ваше участие в этом пространстве прекращено.',
+  'session.workspaceChanged':
+    'Пространство было изменено в другой вкладке или окне. Ничего не сохранено.',
+  'session.workspaceChangedTitle': 'Пространство изменилось в другой вкладке',
+  'session.workspaceChangedBody':
+    'Эта вкладка показывает «{name}», но пространство было изменено в другой вкладке или окне. Ничего не сохранено.',
+  'session.openCurrentWorkspace': 'Открыть текущее пространство',
+  'session.workspaceChangedDismiss': 'Не сейчас',
 } satisfies TranslationOf<typeof En>
 
 export default messages

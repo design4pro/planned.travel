@@ -247,6 +247,36 @@ describe('a stay and the booking that pays for it', () => {
     expect(await listTripAccommodations(scope, trip.id)).toEqual([])
   })
 
+  it('reports the booking’s cost line as a name and as the two flags the dialog reads', async () => {
+    const free = await createStay(scope, stayPayload())
+    expect(free).toMatchObject({
+      ledger: 'none',
+      ledgerFailed: false,
+      ledgerSplitStale: false,
+    })
+
+    const priced = await createStay(
+      scope,
+      stayPayload({ priceMinor: 42_000, currency: 'JPY' }),
+    )
+    expect(priced).toMatchObject({
+      ledger: 'created',
+      ledgerFailed: false,
+      ledgerSplitStale: false,
+    })
+
+    const repriced = await updateStay(scope, {
+      ...stayPayload({ priceMinor: 50_000, currency: 'JPY' }),
+      reservationId: priced.reservationId,
+      stayId: priced.stayId,
+    })
+    expect(repriced).toMatchObject({
+      ledger: 'updated',
+      ledgerFailed: false,
+      ledgerSplitStale: false,
+    })
+  })
+
   it('updates both halves, and moves the booking’s dates with the days', async () => {
     const result = await createStay(scope, stayPayload())
 

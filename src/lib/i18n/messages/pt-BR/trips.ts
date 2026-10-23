@@ -110,10 +110,7 @@ const messages = {
     'Um lugar só pode aparecer uma vez por dia. Mova-o para outro dia.',
   'plan.move.refused.notInIdeas': 'Uma nota fica no dia',
   'plan.move.refused.notInIdeasBody':
-    'As ideias são lugares esperando por um dia. Uma nota pertence ao dia para o qual foi escrita.',
-  'plan.move.refused.notInAnotherDay': 'Uma nota fica no dia dela',
-  'plan.move.refused.notInAnotherDayBody':
-    'Ainda não dá para mover notas entre dias. Edite a nota, ou escreva-a no outro dia.',
+    'As ideias são lugares esperando por um dia. Uma nota sempre pertence a um dia.',
   'plan.move.refused.journeyNotInIdeas': 'Um deslocamento fica no dia',
   'plan.move.refused.journeyNotInIdeasBody':
     'As ideias são lugares esperando por um dia. Um deslocamento pertence ao dia em que acontece.',
@@ -127,8 +124,6 @@ const messages = {
   'plan.move.spoken.duplicate':
     '{name} não foi movido. Esse dia já tem esse lugar.',
   'plan.move.spoken.notInIdeas': '{name} não foi movido. Uma nota fica no dia.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} não foi movido. Uma nota fica no dia dela.',
   'plan.move.spoken.timed':
     '{name} tem o horário {time}. Perguntamos se deve ser removido.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -182,6 +177,7 @@ const messages = {
   'plan.note.showLess': 'Mostrar menos',
   'plan.note.moveUp': 'Mover para cima',
   'plan.note.moveDown': 'Mover para baixo',
+  'plan.note.moveToDay': 'Mover para outro dia',
   'plan.note.drag': 'Reordenar a nota',
   'plan.note.edit': 'Editar a nota',
   'plan.note.delete': 'Excluir a nota',

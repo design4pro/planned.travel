@@ -1,6 +1,6 @@
 import { createAuthMiddleware, isAPIError } from 'better-auth/api'
 import { z } from 'zod'
-import { QUEUE_BATCH_MAX, enqueueTasks } from '#/server/queue/jobs'
+import { enqueueTasks } from '#/server/queue/jobs'
 import { authDb } from './db'
 import { sessionStore, taskQueue } from './env'
 import { logAuth } from './log'
@@ -90,20 +90,14 @@ export async function queueRoomEviction(
   if (organizationIds.length === 0) return
   try {
     const queue = taskQueue()
-    for (
-      let start = 0;
-      start < organizationIds.length;
-      start += QUEUE_BATCH_MAX
-    ) {
-      await enqueueTasks(
-        queue,
-        organizationIds.slice(start, start + QUEUE_BATCH_MAX).map((orgId) => ({
-          kind: 'trip-room-evict' as const,
-          orgId,
-          payload: { userId },
-        })),
-      )
-    }
+    await enqueueTasks(
+      queue,
+      organizationIds.map((orgId) => ({
+        kind: 'trip-room-evict' as const,
+        orgId,
+        payload: { userId },
+      })),
+    )
   } catch (cause) {
     logAuth('warn', 'room-eviction.enqueue.failed', {
       userId,

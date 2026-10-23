@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
   AlarmClock,
+  ArrowRightLeft,
   BedDouble,
   Bus,
   Camera,
@@ -30,6 +31,10 @@ import {
 
 import { cn } from '#/lib/cn'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   IconButton,
   Spinner,
   focusRing,
@@ -129,6 +134,12 @@ export function dayNoteIconLabel(name: string): MessageKey {
   return ICON_LABEL[dayNoteIcon(name)]
 }
 
+/** A day a note can be moved to: its id, and the title the day carries in the plan. */
+export interface NoteDayTarget {
+  readonly dayId: string
+  readonly title: string
+}
+
 export interface NoteRowProps {
   readonly note: PlannerNote
   /** Position in the day's sequence, 0-based: the ends disable their own chevron. */
@@ -146,6 +157,13 @@ export interface NoteRowProps {
    */
   readonly draggable?: boolean
   readonly onMove?: (direction: -1 | 1) => void
+  /**
+   * The days other than the note's own. The single-pointer way to change day, as a stop's
+   * menu is: a drag is not available to every reader (WCAG 2.2 SC 2.5.7), and the chevrons
+   * stay inside the day. Empty or omitted draws no menu.
+   */
+  readonly otherDays?: ReadonlyArray<NoteDayTarget>
+  readonly onMoveToDay?: (dayId: string) => void
   readonly onEdit?: () => void
   readonly onDelete?: () => void
 }
@@ -171,6 +189,8 @@ export function NoteRow({
   pending = false,
   draggable = false,
   onMove,
+  otherDays = [],
+  onMoveToDay,
   onEdit,
   onDelete,
 }: NoteRowProps) {
@@ -323,6 +343,29 @@ export function NoteRow({
               disabled={pending || position === count - 1}
               onClick={() => onMove?.(1)}
             />
+            {otherDays.length > 0 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton
+                    size="sm"
+                    variant="ghost"
+                    label={t('trips.plan.note.moveToDay')}
+                    icon={<ArrowRightLeft />}
+                    disabled={pending}
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="max-h-72 w-56">
+                  {otherDays.map((target) => (
+                    <DropdownMenuItem
+                      key={target.dayId}
+                      onSelect={() => onMoveToDay?.(target.dayId)}
+                    >
+                      {target.title}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
             <IconButton
               size="sm"
               variant="ghost"

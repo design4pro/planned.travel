@@ -55,6 +55,7 @@ import { listDayAssignments } from './itinerary'
 import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
 
 import type { TripRole } from './trips'
+import { ID_PATTERN, ID_TIME_LENGTH } from '#/lib/ids'
 import { resolveTimeZone } from '#/lib/time'
 import {
   CHAIN_MAX_LEGS,
@@ -947,6 +948,13 @@ async function isGone(
  * `transportId` is the row's identity and the caller mints it for a new transport: saving the same
  * draft twice is then an edit of the row the first press wrote, not a second row.
  *
+ * **A new row's id is untrusted input.** The caller mints it, so a row that does not exist yet is
+ * inserted only under an id of the generator's exact shape whose time prefix lies within
+ * {@link CLIENT_ID_WINDOW_MS} of the server's clock. Anything else is refused as a foreign id is,
+ * and so is an id that clashes with a row of another workspace: the three answers are one error
+ * class, one code and one message once the id is taken out of it, and no insert ever resolves a
+ * clash by overwriting. A row the caller's scope already holds is edited whatever its id or age.
+ *
  * `intent` says what the caller means, and it only chooses between two outcomes that are both
  * inside the caller's own scope, so it widens no access: `edit` refuses a row that is not there
  * (deleted in another tab, or never the caller's) instead of writing it back, and `create` of an id
@@ -961,6 +969,28 @@ export const saveTransportInput = z.object({
   chain: transportChainInput,
 })
 export type SaveTransportInput = z.input<typeof saveTransportInput>
+
+/**
+ * How far from the server's clock the time prefix of a client-minted Transport id may lie, in
+ * either direction. Lists order by sort order and then by `id`, so a prefix the client forged would
+ * let it pin its own row ahead of or behind the rows of its workspace that tie on sort order. A
+ * day is wide enough for a client clock that is off by hours and for a draft left open overnight,
+ * and a tighter window would refuse honest travellers for no gain.
+ */
+export const CLIENT_ID_WINDOW_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Whether `id` is an id this server would accept for a row it has not seen: exactly the shape the
+ * shared generator produces, with a time prefix within {@link CLIENT_ID_WINDOW_MS} of the server's
+ * clock. The prefix is read only after the shape matched, so it is always nine base-36 digits.
+ */
+function isAcceptableNewId(id: string): boolean {
+  if (!ID_PATTERN.test(id)) {
+    return false
+  }
+  const mintedAt = parseInt(id.slice(0, ID_TIME_LENGTH), 36)
+  return Math.abs(mintedAt - Date.now()) <= CLIENT_ID_WINDOW_MS
+}
 
 /** What a save answers: the record as written, and the chain it now has. */
 export interface SavedTransport {
@@ -1001,6 +1031,12 @@ export async function saveTransport(
     (existing === null && intent === 'edit') ||
     (existing !== null && existing.tripId !== tripId)
   ) {
+    throw new NotFoundError('transport', transportId)
+  }
+  // Only a row the scope has not seen is inserted, so only then is the id the caller's invention.
+  // It is refused as a foreign id is, so a malformed id and the real id of another workspace's
+  // row get one answer; an existing row of the caller's own scope is edited whatever its age.
+  if (existing === null && !isAcceptableNewId(transportId)) {
     throw new NotFoundError('transport', transportId)
   }
   await requireWritableTrip(scope, tripId)

@@ -11,6 +11,14 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
+import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
+import {
+  dismissWorkspaceNotice,
+  markWorkspaceStale,
+  resetWorkspaceClaim,
+  setWorkspaceClaim,
+  workspaceClaimState,
+} from '#/lib/workspace-claim-store'
 import { UserMenu } from '../user-menu'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -156,6 +164,7 @@ function descriptionOf(element: HTMLElement): string {
 }
 
 beforeEach(() => {
+  resetWorkspaceClaim()
   auth.setActive.mockReset()
   router.clearCache.mockReset()
   router.invalidate.mockReset()
@@ -350,6 +359,51 @@ describe('switching', () => {
     // The previous workspace's cached `/dashboard` is dropped before the navigation can show it.
     expect(calls).toEqual(['setActive', 'clearCache', 'navigate', 'invalidate'])
     expect(notify.error).not.toHaveBeenCalled()
+  })
+
+  it('does not refuse itself: the claim is held back while it switches and is the new workspace after', async () => {
+    setWorkspaceClaim('org_a')
+    const seen: Array<boolean> = []
+    auth.setActive.mockImplementation(async () => {
+      seen.push(workspaceClaimState().switching)
+      return { data: {}, error: null }
+    })
+    router.navigate.mockImplementation(async () => {
+      // What `_app`'s `beforeLoad` does once `loadShell` has answered for the new workspace.
+      setWorkspaceClaim('org_b')
+    })
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    await vi.waitFor(() => {
+      expect(notify.success).toHaveBeenCalled()
+    })
+    expect(seen).toEqual([true])
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_b',
+      switching: false,
+      stale: false,
+    })
+  })
+
+  it('ends the switching window when the activation fails, keeping the claim it had', async () => {
+    setWorkspaceClaim('org_a')
+    auth.setActive.mockResolvedValue({
+      data: null,
+      error: { status: 403, message: 'no' },
+    })
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+
+    await user.click(screen.getByRole('menuitemradio', { name: 'Beta Family' }))
+
+    await vi.waitFor(() => {
+      expect(notify.error).toHaveBeenCalled()
+    })
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_a',
+      switching: false,
+    })
   })
 
   it('does not move the check, or leave the page, until the switch has resolved', async () => {
@@ -1033,6 +1087,66 @@ describe('creating a workspace', () => {
       expect(router.navigate).not.toHaveBeenCalled()
     },
   )
+
+  it('sends the claim with the create call and holds it back only for the re-read that follows', async () => {
+    setWorkspaceClaim('org_a')
+    const seen: Array<string> = []
+    workspace.create.mockImplementation(async () => {
+      seen.push(`create:${workspaceClaimState().switching}`)
+      return { ok: true, organizationId: 'org_new', activated: true }
+    })
+    router.navigate.mockImplementation(async () => {
+      seen.push(`navigate:${workspaceClaimState().switching}`)
+      setWorkspaceClaim('org_new')
+    })
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    await vi.waitFor(() => {
+      expect(seen).toEqual(['create:false', 'navigate:true'])
+    })
+    await vi.waitFor(() => {
+      expect(workspaceClaimState()).toMatchObject({
+        organizationId: 'org_new',
+        switching: false,
+      })
+    })
+  })
+
+  it('re-reads the shell with the claim held back after a failure whose outcome is unknown', async () => {
+    setWorkspaceClaim('org_a')
+    const seen: Array<boolean> = []
+    workspace.create.mockRejectedValue(new Error('D1_ERROR: no such column'))
+    router.navigate.mockImplementation(async () => {
+      seen.push(workspaceClaimState().switching)
+    })
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    await vi.waitFor(() => {
+      expect(seen).toEqual([true])
+    })
+    expect(workspaceClaimState().switching).toBe(false)
+  })
+
+  it('does not re-read the shell after a stale-tab refusal, and brings the notice back', async () => {
+    setWorkspaceClaim('org_a')
+    markWorkspaceStale('org_a')
+    dismissWorkspaceNotice()
+    workspace.create.mockRejectedValue(new Error(WORKSPACE_CHANGED_KEY))
+    const { user } = await openDialog()
+
+    await submit(user, 'Lisbon')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe(
+      'The workspace was changed in another tab or window. Nothing was saved.',
+    )
+    expect(workspaceClaimState().noticeOpen).toBe(true)
+    expect(router.navigate).not.toHaveBeenCalled()
+  })
 
   it('shows the authored sentence of a thrown refusal', async () => {
     workspace.create.mockRejectedValue(

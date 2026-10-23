@@ -19,7 +19,7 @@ import { appScope } from './context'
 import { bookingInputSchema } from './reservations'
 import { createStay, deleteStay, updateStay } from './stay-writes'
 
-import type { LedgerOutcome } from './reservations'
+import type { LedgerReport } from './reservations'
 
 /* ------------------------------------------------------------------ inputs */
 
@@ -69,10 +69,9 @@ export type StayUpdate = z.infer<typeof stayUpdateSchema>
 export type StayDelete = z.infer<typeof stayDeleteSchema>
 
 /** What a stay write answers with: both rows, and what the booking's ledger line did. */
-export interface StayWriteResult {
+export interface StayWriteResult extends LedgerReport {
   readonly reservationId: string
   readonly stayId: string
-  readonly ledger: LedgerOutcome
 }
 
 export const createStayFn = createServerFn({ method: 'POST' })

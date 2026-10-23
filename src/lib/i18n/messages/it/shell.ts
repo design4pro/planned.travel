@@ -556,6 +556,32 @@ const messages = {
     'Il viaggio è stato creato, ma non è stato possibile caricare “{name}” come copertina.',
   'newTrip.coverRetry': 'Riprova',
   'newTrip.coverContinue': 'Apri il viaggio senza copertina',
+  'newTrip.people': 'Persone',
+  'newTrip.peopleHint':
+    'Vengono aggiunte appena il viaggio è creato. Ne resti il proprietario.',
+  'newTrip.peoplePlaceholder': 'Scegli dal tuo spazio di lavoro',
+  'newTrip.peopleSearch': 'Cerca per nome',
+  'newTrip.peopleLoading': 'Caricamento delle persone del tuo spazio di lavoro',
+  'newTrip.peopleLoadError':
+    'Non è stato possibile caricare le persone del tuo spazio di lavoro. Crea il viaggio e aggiungile dalla sua schermata Persone.',
+  'newTrip.peopleNone':
+    'Per ora sei l’unica persona di questo spazio di lavoro.',
+  'newTrip.peopleNoneMember':
+    'Un proprietario o un amministratore dello spazio di lavoro può invitare altre persone.',
+  'newTrip.peopleInvite': 'Invita persone nello spazio di lavoro',
+  'newTrip.peopleChosen': 'Persone scelte e i loro ruoli',
+  'newTrip.peopleFailedTitle':
+    'Il viaggio è stato creato, ma non tutti sono stati aggiunti',
+  'newTrip.noticeBothTitle':
+    'Il viaggio è stato creato, ma non tutto è stato aggiunto',
+  'newTrip.peopleNotInWorkspace':
+    '{name} non fa più parte di questo spazio di lavoro: l’aggiunta non è avvenuta.',
+  'newTrip.peopleAlreadyOn': '{name} era già in questo viaggio.',
+  'newTrip.peopleUnconfirmed':
+    'Non è stato possibile confermare {name}. Controlla in Persone se l’aggiunta è andata a buon fine.',
+  'newTrip.peopleContinue': 'Continua',
+  'newTrip.peopleRetry': 'Riprova',
+  'newTrip.coverRetryOnly': 'Riprova la copertina',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Azioni per {title}',
@@ -739,6 +765,14 @@ const messages = {
     'Il tuo account non è ancora collegato a uno spazio di lavoro. Esci e rientra per finire di configurarlo.',
   'session.membershipRemoved':
     'La tua appartenenza a questo spazio di lavoro è stata revocata.',
+  'session.workspaceChanged':
+    'Lo spazio di lavoro è stato cambiato in un’altra scheda o finestra. Non è stato salvato nulla.',
+  'session.workspaceChangedTitle':
+    'Lo spazio di lavoro è cambiato in un’altra scheda',
+  'session.workspaceChangedBody':
+    'Questa scheda mostra {name}, ma lo spazio di lavoro è stato cambiato in un’altra scheda o finestra. Non è stato salvato nulla.',
+  'session.openCurrentWorkspace': 'Apri lo spazio di lavoro attuale',
+  'session.workspaceChangedDismiss': 'Non ora',
 } satisfies TranslationOf<typeof En>
 
 export default messages

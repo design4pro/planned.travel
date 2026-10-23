@@ -282,17 +282,22 @@ describe('planning a re-basing', () => {
   })
 
   describe('a zero amount (rule 4)', () => {
-    it('stays zero, with zero shares, and keeps the rate it had', () => {
+    it('stays zero, with zero shares, and takes the confirmed rate like any other row', () => {
       const plan = planned(fixture())
       const row = plan.expenses.find((r) => r.id === 'e-zero')
 
-      expect(row).toMatchObject({ amountMinor: 0, currency: 'JPY' })
-      // Pinned from itself, so the rate it keeps is the pinned 1.
-      expect(row?.exchangeRate).toBe(1)
+      expect(row).toMatchObject({
+        amountMinor: 0,
+        currency: 'JPY',
+        originalAmountMinor: 0,
+        originalCurrency: 'EUR',
+        // Pinned from itself (r = 1), so the rate is the real EUR to JPY one, never a constant 1.
+        exchangeRate: 160,
+      })
       expect(row?.shares.map((s) => s.shareMinor)).toEqual([0, 0])
     })
 
-    it('keeps the stored rate of a zero row that already had a triple', () => {
+    it('re-anchors the rate of a zero row that already had a triple to the old rate times the new one', () => {
       const row = planned(
         snapshot({
           expenses: [
@@ -307,7 +312,402 @@ describe('planning a re-basing', () => {
         }),
       ).expenses[0]
 
-      expect(row).toMatchObject({ amountMinor: 0, exchangeRate: 1.15 })
+      expect(row).toMatchObject({
+        amountMinor: 0,
+        originalCurrency: 'GBP',
+        originalAmountMinor: 0,
+      })
+      expect(row.exchangeRate).toBeCloseTo(184, 9)
+    })
+
+    it('writes a real rate of its pair on a second re-basing in a row too', () => {
+      const first = planned(
+        snapshot({ expenses: [expense({ id: 'e-zero', amountMinor: 0 })] }),
+      ).expenses[0]
+      const second = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: first.id,
+              amountMinor: first.amountMinor,
+              currency: first.currency,
+              originalAmountMinor: first.originalAmountMinor,
+              originalCurrency: first.originalCurrency,
+              exchangeRate: first.exchangeRate,
+            }),
+          ],
+        }),
+        { from: 'JPY', to: 'USD', rate: 0.0065 },
+      ).expenses[0]
+
+      // EUR typed, then JPY, then USD: the source stays EUR and the rate is EUR to USD, 160 x 0.0065.
+      expect(second.originalCurrency).toBe('EUR')
+      expect(second.currency).toBe('USD')
+      expect(second.exchangeRate).toBeCloseTo(1.04, 9)
+    })
+
+    it('does not trust the constant 1 an earlier zero-amount re-basing left across two currencies', () => {
+      // The shape the old planner wrote: a zero row typed in EUR, counted in JPY, rate 1.
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e-legacy',
+              amountMinor: 0,
+              currency: 'JPY',
+              originalAmountMinor: 0,
+              originalCurrency: 'EUR',
+              exchangeRate: 1,
+            }),
+          ],
+        }),
+        { from: 'JPY', to: 'USD', rate: 0.0065 },
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        originalCurrency: 'JPY',
+        currency: 'USD',
+        exchangeRate: 0.0065,
+      })
+    })
+
+    it('never writes the constant 1 across two currencies', () => {
+      const plan = planned(fixture())
+
+      for (const row of [
+        ...plan.expenses,
+        ...plan.payments,
+        ...plan.plannedItems,
+      ]) {
+        if (row.originalCurrency !== row.currency) {
+          expect(row.exchangeRate).not.toBe(1)
+          expect(row.exchangeRate).not.toBeNull()
+        }
+      }
+    })
+  })
+
+  describe('a figure typed in a foreign currency on a row already in the new one (rule 5)', () => {
+    // 100.00 GBP typed on a JPY expense, 18,400 yen counted at 184 JPY to the pound.
+    const keptTriple = {
+      amountMinor: 18_400,
+      currency: 'JPY',
+      originalAmountMinor: 10_000,
+      originalCurrency: 'GBP',
+      exchangeRate: 184,
+    } as const
+
+    it('keeps the typed figure and its rate, and the amount', () => {
+      const row = planned(
+        snapshot({ expenses: [expense({ id: 'e', ...keptTriple })] }),
+      ).expenses[0]
+
+      expect(row).toMatchObject(keptTriple)
+    })
+
+    it('keeps a payment and a planned item the same way', () => {
+      const plan = planned(
+        snapshot({
+          payments: [payment({ id: 'p', ...keptTriple })],
+          plannedItems: [
+            plannedItem({
+              id: 'b',
+              plannedAmountMinor: keptTriple.amountMinor,
+              currency: keptTriple.currency,
+              originalAmountMinor: keptTriple.originalAmountMinor,
+              originalCurrency: keptTriple.originalCurrency,
+              exchangeRate: keptTriple.exchangeRate,
+            }),
+          ],
+        }),
+      )
+
+      expect(plan.payments[0]).toMatchObject(keptTriple)
+      expect(plan.plannedItems[0]).toMatchObject(keptTriple)
+    })
+
+    it('fills orig = amount and rate 1 when the row carries nothing', () => {
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({ id: 'e', amountMinor: 18_400, currency: 'JPY' }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 18_400,
+        currency: 'JPY',
+        originalAmountMinor: 18_400,
+        originalCurrency: 'JPY',
+        exchangeRate: 1,
+      })
+    })
+
+    it('re-bases from the amount when the triple has outgrown it (a stale triple)', () => {
+      // The row was repriced to 20,000 yen after 100.00 GBP was typed; the triple still says 100.00 GBP.
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e',
+              ...keptTriple,
+              amountMinor: 20_000,
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 20_000,
+        originalAmountMinor: 20_000,
+        originalCurrency: 'JPY',
+        exchangeRate: 1,
+      })
+    })
+
+    it('keeps a typed figure that has no rate, and writes no rate', () => {
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e',
+              amountMinor: 0,
+              currency: 'JPY',
+              originalAmountMinor: 500,
+              originalCurrency: 'GBP',
+              exchangeRate: null,
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 0,
+        currency: 'JPY',
+        originalAmountMinor: 500,
+        originalCurrency: 'GBP',
+        exchangeRate: null,
+      })
+    })
+  })
+
+  describe('a typed figure without a rate (rule 4)', () => {
+    const rateless = (over: Partial<RebaseExpense> = {}) =>
+      expense({
+        id: 'e',
+        amountMinor: 0,
+        originalAmountMinor: 500,
+        originalCurrency: 'GBP',
+        exchangeRate: null,
+        ...over,
+      })
+
+    it('keeps the typed amount and currency, converts its own amount and writes a null rate', () => {
+      const row = planned(
+        snapshot({ expenses: [rateless({ amountMinor: 1000 })] }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 1600,
+        currency: 'JPY',
+        originalAmountMinor: 500,
+        originalCurrency: 'GBP',
+        exchangeRate: null,
+      })
+    })
+
+    it('keeps a zero amount at zero with the typed figure', () => {
+      const row = planned(snapshot({ expenses: [rateless()] })).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 0,
+        originalAmountMinor: 500,
+        originalCurrency: 'GBP',
+        exchangeRate: null,
+      })
+    })
+
+    it('never lets the typed figure drive the amount, even in the new currency', () => {
+      const row = planned(
+        snapshot({
+          expenses: [
+            rateless({
+              amountMinor: 1000,
+              originalAmountMinor: 9999,
+              originalCurrency: 'JPY',
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 1600,
+        originalAmountMinor: 9999,
+        originalCurrency: 'JPY',
+        exchangeRate: null,
+      })
+    })
+
+    it('treats a rate that cannot convert as no rate', () => {
+      const row = planned(
+        snapshot({
+          expenses: [rateless({ amountMinor: 1000, exchangeRate: 0 })],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 1600,
+        originalAmountMinor: 500,
+        originalCurrency: 'GBP',
+        exchangeRate: null,
+      })
+    })
+
+    it('pins any other partial shape from the amount', () => {
+      for (const partial of [
+        { originalAmountMinor: 500 },
+        { originalCurrency: 'GBP' },
+        { exchangeRate: 1.15 },
+        { originalAmountMinor: 500, exchangeRate: 1.15 },
+        { originalCurrency: 'GBP', exchangeRate: 1.15 },
+      ] as const) {
+        const row = planned(
+          snapshot({
+            expenses: [expense({ id: 'e', amountMinor: 4200, ...partial })],
+          }),
+        ).expenses[0]
+
+        expect(row).toMatchObject({
+          amountMinor: 6720,
+          originalAmountMinor: 4200,
+          originalCurrency: 'EUR',
+          exchangeRate: 160,
+        })
+      }
+    })
+  })
+
+  describe('a stale triple (rule 4)', () => {
+    it('converts the current amount of an old-currency row, not the typed figure', () => {
+      // A booking synced as 100.00 GBP at 1.15 was repriced to 200.00 EUR; the triple stayed.
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e',
+              amountMinor: 20_000,
+              originalAmountMinor: 10_000,
+              originalCurrency: 'GBP',
+              exchangeRate: 1.15,
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        amountMinor: 32_000,
+        originalAmountMinor: 20_000,
+        originalCurrency: 'EUR',
+        exchangeRate: 160,
+      })
+    })
+
+    it('trusts a triple that is within one minor unit of the amount', () => {
+      // 33 GBP at 1.15 is 37.95 EUR; a row counted as 37.96 is one unit off, a rounding.
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e',
+              amountMinor: 3796,
+              originalAmountMinor: 3300,
+              originalCurrency: 'GBP',
+              exchangeRate: 1.15,
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row.originalCurrency).toBe('GBP')
+      expect(row.originalAmountMinor).toBe(3300)
+    })
+
+    it('does not trust a triple two minor units off', () => {
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e',
+              amountMinor: 3797,
+              originalAmountMinor: 3300,
+              originalCurrency: 'GBP',
+              exchangeRate: 1.15,
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row.originalCurrency).toBe('EUR')
+      expect(row.originalAmountMinor).toBe(3797)
+    })
+
+    it('does not trust a typed figure that overflows a safe integer', () => {
+      const row = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'e',
+              amountMinor: 100,
+              originalAmountMinor: Number.MAX_SAFE_INTEGER + 2,
+              originalCurrency: 'GBP',
+              exchangeRate: 1.15,
+            }),
+          ],
+        }),
+      ).expenses[0]
+
+      expect(row).toMatchObject({
+        originalAmountMinor: 100,
+        originalCurrency: 'EUR',
+      })
+    })
+
+    it('keeps a row an edit wrote and a row an earlier re-basing wrote', () => {
+      // The Costs-tab edit stores the converted figure it showed: 100.00 USD at 0.92 is 92.00 EUR.
+      const edited = expense({
+        id: 'edited',
+        amountMinor: 9200,
+        originalAmountMinor: 10_000,
+        originalCurrency: 'USD',
+        exchangeRate: 0.92,
+      })
+      const there = planned(snapshot({ expenses: [edited] })).expenses[0]
+      const back = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: there.id,
+              amountMinor: there.amountMinor,
+              currency: there.currency,
+              originalAmountMinor: there.originalAmountMinor,
+              originalCurrency: there.originalCurrency,
+              exchangeRate: there.exchangeRate,
+            }),
+          ],
+        }),
+        { from: 'JPY', to: 'EUR', rate: 1 / 160 },
+      ).expenses[0]
+
+      expect(there).toMatchObject({
+        originalAmountMinor: 10_000,
+        originalCurrency: 'USD',
+      })
+      expect(back).toMatchObject({
+        amountMinor: 9200,
+        originalAmountMinor: 10_000,
+        originalCurrency: 'USD',
+      })
     })
   })
 
@@ -554,6 +954,57 @@ describe('planning a re-basing', () => {
         original: { amountMinor: 4200, currency: 'EUR' },
         converted: { amountMinor: 6720, currency: 'JPY' },
       })
+    })
+
+    it('does not show a kept foreign figure or a rate-less typed figure as the example', () => {
+      const plan = planned(
+        snapshot({
+          expenses: [
+            // 100.00 GBP kept on a row already in yen: the confirmed rate did not touch it.
+            expense({
+              id: 'a-kept-foreign',
+              amountMinor: 18_400,
+              currency: 'JPY',
+              originalAmountMinor: 10_000,
+              originalCurrency: 'GBP',
+              exchangeRate: 184,
+            }),
+            // A typed figure with no rate: its amount is converted, the typed figure is not.
+            expense({
+              id: 'b-rateless',
+              amountMinor: 1000,
+              originalAmountMinor: 500,
+              originalCurrency: 'GBP',
+              exchangeRate: null,
+            }),
+            expense({ id: 'c-moved', amountMinor: 4200 }),
+          ],
+        }),
+      )
+
+      expect(plan.example).toEqual({
+        original: { amountMinor: 4200, currency: 'EUR' },
+        converted: { amountMinor: 6720, currency: 'JPY' },
+      })
+    })
+
+    it('has no example when only a kept foreign figure is priced', () => {
+      const plan = planned(
+        snapshot({
+          expenses: [
+            expense({
+              id: 'a-kept-foreign',
+              amountMinor: 18_400,
+              currency: 'JPY',
+              originalAmountMinor: 10_000,
+              originalCurrency: 'GBP',
+              exchangeRate: 184,
+            }),
+          ],
+        }),
+      )
+
+      expect(plan.example).toBeNull()
     })
 
     it('falls back to the budget target when no row is priced', () => {

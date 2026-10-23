@@ -548,6 +548,32 @@ const messages = {
     'Die Reise wurde angelegt, aber „{name}“ konnte nicht als Titelbild hochgeladen werden.',
   'newTrip.coverRetry': 'Erneut versuchen',
   'newTrip.coverContinue': 'Reise ohne Titelbild öffnen',
+  'newTrip.people': 'Personen',
+  'newTrip.peopleHint':
+    'Sie werden hinzugefügt, sobald die Reise angelegt ist. Du bleibst ihr Eigentümer.',
+  'newTrip.peoplePlaceholder': 'Aus deinem Arbeitsbereich wählen',
+  'newTrip.peopleSearch': 'Nach Namen suchen',
+  'newTrip.peopleLoading': 'Personen deines Arbeitsbereichs werden geladen',
+  'newTrip.peopleLoadError':
+    'Die Personen deines Arbeitsbereichs konnten nicht geladen werden. Lege die Reise an und füge sie auf ihrer Seite „Personen“ hinzu.',
+  'newTrip.peopleNone':
+    'Du bist bisher die einzige Person in diesem Arbeitsbereich.',
+  'newTrip.peopleNoneMember':
+    'Eigentümer oder Admins des Arbeitsbereichs können weitere Personen einladen.',
+  'newTrip.peopleInvite': 'Personen in den Arbeitsbereich einladen',
+  'newTrip.peopleChosen': 'Ausgewählte Personen und ihre Rollen',
+  'newTrip.peopleFailedTitle':
+    'Die Reise wurde angelegt, aber nicht alle wurden hinzugefügt',
+  'newTrip.noticeBothTitle':
+    'Die Reise wurde angelegt, aber nicht alles wurde hinzugefügt',
+  'newTrip.peopleNotInWorkspace':
+    '{name} ist nicht mehr in diesem Arbeitsbereich und wurde deshalb nicht hinzugefügt.',
+  'newTrip.peopleAlreadyOn': '{name} war bereits auf dieser Reise.',
+  'newTrip.peopleUnconfirmed':
+    '{name} konnte nicht bestätigt werden. Prüfe unter „Personen“, ob die Person hinzugefügt wurde.',
+  'newTrip.peopleContinue': 'Weiter',
+  'newTrip.peopleRetry': 'Erneut versuchen',
+  'newTrip.coverRetryOnly': 'Titelbild erneut versuchen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Aktionen für {title}',
@@ -728,6 +754,14 @@ const messages = {
     'Dein Konto hängt noch an keinem Arbeitsbereich. Melde dich ab und wieder an, um das abzuschließen.',
   'session.membershipRemoved':
     'Deine Mitgliedschaft in diesem Arbeitsbereich wurde beendet.',
+  'session.workspaceChanged':
+    'Der Arbeitsbereich wurde in einem anderen Tab oder Fenster gewechselt. Es wurde nichts gespeichert.',
+  'session.workspaceChangedTitle':
+    'Der Arbeitsbereich hat sich in einem anderen Tab geändert',
+  'session.workspaceChangedBody':
+    'Dieser Tab zeigt {name}, aber der Arbeitsbereich wurde in einem anderen Tab oder Fenster gewechselt. Es wurde nichts gespeichert.',
+  'session.openCurrentWorkspace': 'Aktuellen Arbeitsbereich öffnen',
+  'session.workspaceChangedDismiss': 'Jetzt nicht',
 } satisfies TranslationOf<typeof En>
 
 export default messages

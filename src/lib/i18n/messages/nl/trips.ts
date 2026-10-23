@@ -109,10 +109,7 @@ const messages = {
     'Een plek kan maar één keer per dag voorkomen. Verplaats hem naar een andere dag.',
   'plan.move.refused.notInIdeas': 'Een notitie blijft in de dag',
   'plan.move.refused.notInIdeasBody':
-    'Ideeën zijn plekken die op een dag wachten. Een notitie hoort bij de dag waarvoor ze is geschreven.',
-  'plan.move.refused.notInAnotherDay': 'Een notitie blijft op haar eigen dag',
-  'plan.move.refused.notInAnotherDayBody':
-    'Notities kunnen nog niet naar een andere dag. Bewerk de notitie, of schrijf haar op de andere dag.',
+    'Ideeën zijn plekken die op een dag wachten. Een notitie hoort altijd bij een dag.',
   'plan.move.refused.journeyNotInIdeas': 'Een traject blijft in de dag',
   'plan.move.refused.journeyNotInIdeasBody':
     'Ideeën zijn plekken die op een dag wachten. Een traject hoort bij de dag waarop het plaatsvindt.',
@@ -127,8 +124,6 @@ const messages = {
     '{name} is niet verplaatst. Die dag heeft hem al.',
   'plan.move.spoken.notInIdeas':
     '{name} is niet verplaatst. Een notitie blijft in de dag.',
-  'plan.move.spoken.notInAnotherDay':
-    '{name} is niet verplaatst. Een notitie blijft op haar eigen dag.',
   'plan.move.spoken.timed':
     '{name} heeft {time}. We vragen of die tijd mag vervallen.',
   'plan.move.spoken.journeyNotInIdeas':
@@ -184,6 +179,7 @@ const messages = {
   'plan.note.showLess': 'Minder tonen',
   'plan.note.moveUp': 'Omhoog verplaatsen',
   'plan.note.moveDown': 'Omlaag verplaatsen',
+  'plan.note.moveToDay': 'Naar een andere dag verplaatsen',
   'plan.note.drag': 'Notitie herschikken',
   'plan.note.edit': 'Notitie bewerken',
   'plan.note.delete': 'Notitie verwijderen',

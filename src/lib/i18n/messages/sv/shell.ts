@@ -525,6 +525,30 @@ const messages = {
     'Resan skapades, men ”{name}” kunde inte laddas upp som omslag.',
   'newTrip.coverRetry': 'Försök igen',
   'newTrip.coverContinue': 'Öppna resan utan omslag',
+  'newTrip.people': 'Personer',
+  'newTrip.peopleHint':
+    'De läggs till så fort resan har skapats. Du förblir ägare.',
+  'newTrip.peoplePlaceholder': 'Välj från din arbetsyta',
+  'newTrip.peopleSearch': 'Sök på namn',
+  'newTrip.peopleLoading': 'Läser in personerna på din arbetsyta',
+  'newTrip.peopleLoadError':
+    'Personerna på din arbetsyta kunde inte läsas in. Skapa resan och lägg till dem från resans vy Personer.',
+  'newTrip.peopleNone':
+    'Du är än så länge den enda personen på den här arbetsytan.',
+  'newTrip.peopleNoneMember':
+    'En ägare eller administratör av arbetsytan kan bjuda in fler personer.',
+  'newTrip.peopleInvite': 'Bjud in personer till arbetsytan',
+  'newTrip.peopleChosen': 'Valda personer och deras roller',
+  'newTrip.peopleFailedTitle': 'Resan skapades, men alla lades inte till',
+  'newTrip.noticeBothTitle': 'Resan skapades, men allt lades inte till',
+  'newTrip.peopleNotInWorkspace':
+    '{name} finns inte längre på den här arbetsytan och lades därför inte till.',
+  'newTrip.peopleAlreadyOn': '{name} var redan med på resan.',
+  'newTrip.peopleUnconfirmed':
+    'Det gick inte att bekräfta {name}. Kolla under Personer om personen lades till.',
+  'newTrip.peopleContinue': 'Fortsätt',
+  'newTrip.peopleRetry': 'Försök igen',
+  'newTrip.coverRetryOnly': 'Försök med omslaget igen',
 
   /* ------------------------------- the trip action menu */
   'tripActions.trigger': 'Åtgärder för {title}',
@@ -699,6 +723,13 @@ const messages = {
     'Ditt konto hör ännu inte till någon arbetsyta. Logga ut och in igen för att bli klar med det.',
   'session.membershipRemoved':
     'Ditt medlemskap i den här arbetsytan har avslutats.',
+  'session.workspaceChanged':
+    'Arbetsytan ändrades i en annan flik eller ett annat fönster. Inget sparades.',
+  'session.workspaceChangedTitle': 'Arbetsytan ändrades i en annan flik',
+  'session.workspaceChangedBody':
+    'Den här fliken visar {name}, men arbetsytan ändrades i en annan flik eller ett annat fönster. Inget sparades.',
+  'session.openCurrentWorkspace': 'Öppna den aktuella arbetsytan',
+  'session.workspaceChangedDismiss': 'Inte nu',
 } satisfies TranslationOf<typeof En>
 
 export default messages
