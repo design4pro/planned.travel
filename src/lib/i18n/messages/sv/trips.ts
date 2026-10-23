@@ -183,11 +183,11 @@ const messages = {
     'Visa i {service}: det enda stoppet med position på {day} (öppnas i en ny flik)',
   'plan.handoff.day.part': 'Del {n} av {count}',
   'plan.handoff.day.directionsPartName':
-    'Vägbeskrivning i {service}: {day}, del {n} av {count} (öppnas i en ny flik)',
+    'Vägbeskrivning i {service}, del {n} av {count}, {day} (öppnas i en ny flik)',
   'plan.handoff.day.directionsPartialPartName':
-    'Vägbeskrivning i {service}: {day}, del {n} av {count}, stopp: de första {carried} av {total} (öppnas i en ny flik)',
+    'Vägbeskrivning i {service}, del {n} av {count}, stopp: de första {carried} av {total}, {day} (öppnas i en ny flik)',
   'plan.handoff.day.pointPartName':
-    'Visa i {service}: det enda stoppet med position på {day}, del {n} av {count} (öppnas i en ny flik)',
+    'Visa i {service}, del {n} av {count}, {day} (öppnas i en ny flik)',
   'plan.drop.hint':
     'Högerklicka på kartan, eller tryck och håll, för att lägga till en plats precis där.',
   'plan.drop.armed':

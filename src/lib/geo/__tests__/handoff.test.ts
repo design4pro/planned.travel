@@ -249,9 +249,14 @@ describe('dayHandoffs — a day split by a journey', () => {
   })
 
   it.each(['ferry', 'train'])('splits at a %s too', (mode) => {
-    expect(
-      dayHandoffs([stop(1), stop(2), journey(mode), stop(3), stop(4)]),
-    ).toHaveLength(2)
+    const links = dayHandoffs([
+      stop(1),
+      stop(2),
+      journey(mode),
+      stop(3),
+      stop(4),
+    ])
+    expect(links.map((link) => link.carried)).toEqual([2, 2])
   })
 
   it('gives a point link for a side with one placed stop', () => {
@@ -263,7 +268,7 @@ describe('dayHandoffs — a day split by a journey', () => {
     )
   })
 
-  it('gives up to three links for two journeys', () => {
+  it('gives three links for two journeys', () => {
     const links = dayHandoffs([
       stop(1),
       stop(2),
@@ -306,19 +311,22 @@ describe('dayHandoffs — a day split by a journey', () => {
     expect(links).toHaveLength(2)
   })
 
-  it('reads the displayed sequence, so a leading travelling row cuts nothing', () => {
-    // A `travelling` row, or an untimed `arriving` one, sits at the head of the day.
-    expect(dayHandoffs([journey('flight'), stop(1), stop(2)])).toHaveLength(1)
+  it.each([
+    'bus',
+    'taxi',
+    'car',
+    'transit',
+    'metro',
+    'tram',
+    'bike',
+    'walk',
+    'other',
+    'hovercraft',
+  ])('leaves the day whole across a %s', (mode) => {
+    const links = dayHandoffs([stop(1), journey(mode), stop(2)])
+    expect(links).toHaveLength(1)
+    expect(links[0]).toMatchObject({ kind: 'directions', carried: 2 })
   })
-
-  it.each(['bus', 'taxi', 'other', 'hovercraft'])(
-    'leaves the day whole across a %s',
-    (mode) => {
-      const links = dayHandoffs([stop(1), journey(mode), stop(2)])
-      expect(links).toHaveLength(1)
-      expect(links[0]).toMatchObject({ kind: 'directions', carried: 2 })
-    },
-  )
 
   it('splits at a short ferry between two of the day’s own stops: the mode decides', () => {
     expect(dayHandoffs([stop(1), journey('ferry'), stop(2)])).toHaveLength(2)

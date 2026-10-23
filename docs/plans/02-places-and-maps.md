@@ -2530,7 +2530,8 @@ stated with its reason rather than carried across, and a third that is supersede
   copied list has no `href` to carry. What replaces it: named links built from documented public URL
   formats by one pure builder (`src/lib/geo/handoff.ts`) — a stop offers "Google Maps" and
   "OpenStreetMap", a day offers one Google Maps directions link through its placed stops in visiting
-  order, carrying at most the first five and saying so when it carries fewer. The day hand-off
+  order, carrying at most the first five and saying so when it carries fewer (since #960, one link per
+  side of a flight, ferry or train, each by that rule). The day hand-off
   ("Take this day with you") is now owned by #663, not by this stage (`docs/SPEC.md` §8, one concept
   one owner); the cost accepted is the one this bullet used to avoid — two companies' URL formats
   must keep existing — and it is bounded to the one file.

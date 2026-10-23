@@ -16,7 +16,8 @@
  * for most readers. Coordinates go through `formatCoordinate`, the one formatter for them,
  * so a link carries dot decimals and never a locale comma or an exponent.
  *
- * Pure and isomorphic: no DOM, no network, no dependency.
+ * Pure and isomorphic: no DOM, no network, no runtime dependency (the one import from another
+ * layer is a type).
  */
 
 import { formatCoordinate } from './position'

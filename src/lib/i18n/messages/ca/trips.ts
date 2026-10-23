@@ -186,11 +186,11 @@ const messages = {
     'Mostra a {service}: l’única parada amb ubicació de {day} (s’obre en una pestanya nova)',
   'plan.handoff.day.part': 'Part {n} de {count}',
   'plan.handoff.day.directionsPartName':
-    'Indicacions a {service}: {day}, part {n} de {count} (s’obre en una pestanya nova)',
+    'Indicacions a {service}, part {n} de {count}, {day} (s’obre en una pestanya nova)',
   'plan.handoff.day.directionsPartialPartName':
-    'Indicacions a {service}: {day}, part {n} de {count}, parades: les primeres {carried} de {total} (s’obre en una pestanya nova)',
+    'Indicacions a {service}, part {n} de {count}, parades: les primeres {carried} de {total}, {day} (s’obre en una pestanya nova)',
   'plan.handoff.day.pointPartName':
-    'Mostra a {service}: l’única parada amb ubicació de {day}, part {n} de {count} (s’obre en una pestanya nova)',
+    'Mostra a {service}, part {n} de {count}, {day} (s’obre en una pestanya nova)',
   'plan.drop.hint':
     'Fes clic amb el botó dret al mapa, o mantén-lo premut, per afegir-hi un lloc just allà.',
   'plan.drop.armed':

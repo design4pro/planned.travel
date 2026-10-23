@@ -183,11 +183,11 @@ const messages = {
     '{service} içinde göster: {day} için haritada konumu olan tek durak (yeni sekmede açılır)',
   'plan.handoff.day.part': 'Bölüm {n} / {count}',
   'plan.handoff.day.directionsPartName':
-    '{service} içinde yol tarifi: {day}, bölüm {n} / {count} (yeni sekmede açılır)',
+    '{service} içinde yol tarifi, bölüm {n} / {count}, {day} (yeni sekmede açılır)',
   'plan.handoff.day.directionsPartialPartName':
-    '{service} içinde yol tarifi: {day}, bölüm {n} / {count}, duraklar: {total} duraktan ilk {carried} (yeni sekmede açılır)',
+    '{service} içinde yol tarifi, bölüm {n} / {count}, duraklar: {total} duraktan ilk {carried}, {day} (yeni sekmede açılır)',
   'plan.handoff.day.pointPartName':
-    '{service} içinde göster: {day} için haritada konumu olan tek durak, bölüm {n} / {count} (yeni sekmede açılır)',
+    '{service} içinde göster, bölüm {n} / {count}, {day} (yeni sekmede açılır)',
   'plan.drop.hint':
     'Tam oraya bir yer eklemek için haritaya sağ tıklayın veya basılı tutun.',
   'plan.drop.armed':

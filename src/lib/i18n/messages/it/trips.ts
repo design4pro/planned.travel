@@ -188,11 +188,11 @@ const messages = {
     'Mostra in {service}: l’unica tappa con posizione di {day} (si apre in una nuova scheda)',
   'plan.handoff.day.part': 'Parte {n} di {count}',
   'plan.handoff.day.directionsPartName':
-    'Indicazioni in {service}: {day}, parte {n} di {count} (si apre in una nuova scheda)',
+    'Indicazioni in {service}, parte {n} di {count}, {day} (si apre in una nuova scheda)',
   'plan.handoff.day.directionsPartialPartName':
-    'Indicazioni in {service}: {day}, parte {n} di {count}, tappe: le prime {carried} su {total} (si apre in una nuova scheda)',
+    'Indicazioni in {service}, parte {n} di {count}, tappe: le prime {carried} su {total}, {day} (si apre in una nuova scheda)',
   'plan.handoff.day.pointPartName':
-    'Mostra in {service}: l’unica tappa con posizione di {day}, parte {n} di {count} (si apre in una nuova scheda)',
+    'Mostra in {service}, parte {n} di {count}, {day} (si apre in una nuova scheda)',
   'plan.drop.hint':
     'Fai clic destro sulla mappa, o tieni premuto, per aggiungere un luogo proprio lì.',
   'plan.drop.armed':

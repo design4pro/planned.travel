@@ -270,11 +270,11 @@ const messages = {
     'Show on {service}: the one mapped stop of {day} (opens in a new tab)',
   'plan.handoff.day.part': 'Part {n} of {count}',
   'plan.handoff.day.directionsPartName':
-    'Directions in {service} for {day}, part {n} of {count} (opens in a new tab)',
+    'Directions in {service}, part {n} of {count} for {day} (opens in a new tab)',
   'plan.handoff.day.directionsPartialPartName':
-    'Directions in {service} for {day}, part {n} of {count}, stops: first {carried} of {total} (opens in a new tab)',
+    'Directions in {service}, part {n} of {count}, stops: first {carried} of {total} for {day} (opens in a new tab)',
   'plan.handoff.day.pointPartName':
-    'Show on {service}: the one mapped stop of {day}, part {n} of {count} (opens in a new tab)',
+    'Show on {service}, part {n} of {count} for {day} (opens in a new tab)',
   /**
    * Dropping a pin on the map: the empty map's hint, the arming banner and its
    * stop button, the provisional pin's name, and what a refused drop says.

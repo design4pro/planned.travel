@@ -191,11 +191,11 @@ const messages = {
     'عرض في {service}، المحطة الوحيدة المحددة على الخريطة في {day} (يفتح في علامة تبويب جديدة)',
   'plan.handoff.day.part': 'الجزء {n} من {count}',
   'plan.handoff.day.directionsPartName':
-    'الاتجاهات في {service}، {day}، الجزء {n} من {count} (يفتح في علامة تبويب جديدة)',
+    'الاتجاهات في {service}، الجزء {n} من {count}، {day} (يفتح في علامة تبويب جديدة)',
   'plan.handoff.day.directionsPartialPartName':
-    'الاتجاهات في {service}، {day}، الجزء {n} من {count}، المحطات: أول {carried} من {total} (يفتح في علامة تبويب جديدة)',
+    'الاتجاهات في {service}، الجزء {n} من {count}، المحطات: أول {carried} من {total}، {day} (يفتح في علامة تبويب جديدة)',
   'plan.handoff.day.pointPartName':
-    'عرض في {service}، المحطة الوحيدة المحددة على الخريطة في {day}، الجزء {n} من {count} (يفتح في علامة تبويب جديدة)',
+    'عرض في {service}، الجزء {n} من {count}، {day} (يفتح في علامة تبويب جديدة)',
   'plan.drop.hint':
     'انقر بزر الفأرة الأيمن على الخريطة، أو اضغط مطوّلًا، لإضافة مكان في ذلك الموضع تمامًا.',
   'plan.drop.armed':

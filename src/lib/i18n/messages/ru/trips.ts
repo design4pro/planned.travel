@@ -191,11 +191,11 @@ const messages = {
     'Показать в {service}: единственная остановка на карте, {day} (откроется в новой вкладке)',
   'plan.handoff.day.part': 'Часть {n} из {count}',
   'plan.handoff.day.directionsPartName':
-    'Маршрут в {service}: {day}, часть {n} из {count} (откроется в новой вкладке)',
+    'Маршрут в {service}, часть {n} из {count}, {day} (откроется в новой вкладке)',
   'plan.handoff.day.directionsPartialPartName':
-    'Маршрут в {service}: {day}, часть {n} из {count}, остановки: первые {carried} из {total} (откроется в новой вкладке)',
+    'Маршрут в {service}, часть {n} из {count}, остановки: первые {carried} из {total}, {day} (откроется в новой вкладке)',
   'plan.handoff.day.pointPartName':
-    'Показать в {service}: единственная остановка на карте, {day}, часть {n} из {count} (откроется в новой вкладке)',
+    'Показать в {service}, часть {n} из {count}, {day} (откроется в новой вкладке)',
   'plan.drop.hint':
     'Щёлкните по карте правой кнопкой мыши или нажмите и удерживайте, чтобы добавить место именно там.',
   'plan.drop.armed':

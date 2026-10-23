@@ -76,13 +76,16 @@ function dayOf(rows: ReadonlyArray<PlannerRow>): PlannerDay {
   }
 }
 
-function flight(mode = 'flight'): PlannerItem {
+function transportItem(
+  mode = 'flight',
+  part: PlannerTransport['part'] = 'departing',
+): PlannerItem {
   const transport: PlannerTransport = {
     itemId: `leg-${mode}`,
     kind: 'transport',
     id: `transport-${mode}`,
     dayId: 'd3',
-    part: 'departing',
+    part,
     phase: null,
     mode,
     status: 'confirmed',
@@ -189,7 +192,7 @@ describe('PlannerDayTools — the day hand-off', () => {
         dayWith([
           stopItem('1', 1),
           stopItem('2', 2),
-          flight(),
+          transportItem(),
           stopItem('3', 3),
         ]),
       ),
@@ -201,8 +204,8 @@ describe('PlannerDayTools — the day hand-off', () => {
       'Show on Google MapsPart 2 of 2',
     ])
     expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
-      'Directions in Google Maps for Day 3, part 1 of 2 (opens in a new tab)',
-      'Show on Google Maps: the one mapped stop of Day 3, part 2 of 2 (opens in a new tab)',
+      'Directions in Google Maps, part 1 of 2 for Day 3 (opens in a new tab)',
+      'Show on Google Maps, part 2 of 2 for Day 3 (opens in a new tab)',
     ])
   })
 
@@ -211,7 +214,7 @@ describe('PlannerDayTools — the day hand-off', () => {
       Array.from({ length: GOOGLE_DIRECTIONS_MAX_STOPS + 1 }, (_, index) =>
         stopItem(String(from + index), from + index),
       )
-    render(tools(dayWith([...side(1), flight('ferry'), ...side(20)])))
+    render(tools(dayWith([...side(1), transportItem('ferry'), ...side(20)])))
 
     const total = GOOGLE_DIRECTIONS_MAX_STOPS + 1
     const note = `Stops: first ${GOOGLE_DIRECTIONS_MAX_STOPS} of ${total}`
@@ -221,7 +224,7 @@ describe('PlannerDayTools — the day hand-off', () => {
       `Directions in Google MapsPart 2 of 2${note}`,
     ])
     expect(links[1]?.getAttribute('aria-label')).toBe(
-      `Directions in Google Maps for Day 3, part 2 of 2, ${note.toLowerCase()} (opens in a new tab)`,
+      `Directions in Google Maps, part 2 of 2, ${note.toLowerCase()} for Day 3 (opens in a new tab)`,
     )
   })
 
@@ -231,8 +234,8 @@ describe('PlannerDayTools — the day hand-off', () => {
         dayWith([
           stopItem('1', 1),
           stopItem('2', 2),
-          flight(),
-          flight('train'),
+          transportItem(),
+          transportItem('train'),
           stopItem('3', 3),
           stopItem('4', 4),
         ]),
@@ -248,7 +251,9 @@ describe('PlannerDayTools — the day hand-off', () => {
   })
 
   it('keeps the plain copy when a journey leaves one link', () => {
-    render(tools(dayWith([flight(), stopItem('1', 1), stopItem('2', 2)])))
+    render(
+      tools(dayWith([transportItem(), stopItem('1', 1), stopItem('2', 2)])),
+    )
 
     const link = screen.getByRole('link')
     expect(link.textContent).toBe('Directions in Google Maps')
@@ -258,37 +263,63 @@ describe('PlannerDayTools — the day hand-off', () => {
   })
 
   it('leaves the day whole across a bus', () => {
-    render(tools(dayWith([stopItem('1', 1), flight('bus'), stopItem('2', 2)])))
+    render(
+      tools(
+        dayWith([stopItem('1', 1), transportItem('bus'), stopItem('2', 2)]),
+      ),
+    )
 
     expect(screen.getAllByRole('link')).toHaveLength(1)
     expect(screen.queryByText(/Part 1 of/)).toBeNull()
   })
 
-  it('shows the same split links in the read-only footer', () => {
+  it('shows the same split links, lines and names in the read-only footer', () => {
     render(
       <PlannerDayHandoff
-        day={dayWith([stopItem('1', 1), flight(), stopItem('2', 2)])}
+        day={dayWith([stopItem('1', 1), transportItem(), stopItem('2', 2)])}
       />,
     )
 
-    expect(screen.getAllByRole('link')).toHaveLength(2)
+    const links = screen.getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Show on Google MapsPart 1 of 2',
+      'Show on Google MapsPart 2 of 2',
+    ])
+    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Show on Google Maps, part 1 of 2 for Day 3 (opens in a new tab)',
+      'Show on Google Maps, part 2 of 2 for Day 3 (opens in a new tab)',
+    ])
+  })
+
+  it('cuts nothing at a travelling row, which sits at the head of the day', () => {
+    render(
+      tools(
+        dayWith([
+          transportItem('flight', 'travelling'),
+          stopItem('1', 1),
+          stopItem('2', 2),
+        ]),
+      ),
+    )
+
+    expect(screen.getAllByRole('link')).toHaveLength(1)
   })
 
   it.each(LOCALE_TAGS)(
-    'opens each split control’s name with its label and carries every visible line in %s',
+    'opens each split control’s name with its label and its visible lines, then the day, in %s',
     async (locale) => {
-      const side = (from: number) =>
-        Array.from({ length: GOOGLE_DIRECTIONS_MAX_STOPS + 1 }, (_, index) =>
+      const side = (from: number, count: number) =>
+        Array.from({ length: count }, (_, index) =>
           stopItem(String(from + index), from + index),
         )
       render(
         tools(
           dayWith([
-            ...side(1),
-            flight(),
-            stopItem('9', 9),
-            flight('train'),
-            ...side(20),
+            ...side(1, GOOGLE_DIRECTIONS_MAX_STOPS + 1),
+            transportItem(),
+            ...side(10, 2),
+            transportItem('train'),
+            stopItem('20', 20),
           ]),
         ),
         locale,
@@ -301,17 +332,19 @@ describe('PlannerDayTools — the day hand-off', () => {
         const [label, ...lines] = Array.from(link.children).map(
           (child) => child.textContent ?? '',
         )
-        const name = (link.getAttribute('aria-label') ?? '').toLocaleLowerCase(
-          locale,
-        )
-        expect(name.startsWith((label ?? '').toLocaleLowerCase(locale))).toBe(
-          true,
-        )
-        // Label in Name (WCAG 2.5.3): every visible line is in the name, in the same words.
+        const lower = (text: string) => text.toLocaleLowerCase(locale)
+        const name = lower(link.getAttribute('aria-label') ?? '')
+        expect(name.startsWith(lower(label ?? ''))).toBe(true)
+        // Label in Name (WCAG 2.5.3): the visible lines follow the label, in the same words
+        // and the same order, before the day, so a spoken phrase is one run of the name.
         expect(lines.length).toBeGreaterThan(0)
+        let from = lower(label ?? '').length
         for (const line of lines) {
-          expect(name).toContain(line.toLocaleLowerCase(locale))
+          const at = name.indexOf(lower(line), from)
+          expect(at).toBeGreaterThanOrEqual(from)
+          from = at + line.length
         }
+        expect(name.indexOf('day 3', from)).toBeGreaterThanOrEqual(from)
       }
     },
     30_000,

@@ -188,11 +188,11 @@ const messages = {
     'In {service} anzeigen: der einzige verortete Stopp von {day} (öffnet in einem neuen Tab)',
   'plan.handoff.day.part': 'Teil {n} von {count}',
   'plan.handoff.day.directionsPartName':
-    'Route in {service}: {day}, Teil {n} von {count} (öffnet in einem neuen Tab)',
+    'Route in {service}, Teil {n} von {count}, {day} (öffnet in einem neuen Tab)',
   'plan.handoff.day.directionsPartialPartName':
-    'Route in {service}: {day}, Teil {n} von {count}, Stopps: die ersten {carried} von {total} (öffnet in einem neuen Tab)',
+    'Route in {service}, Teil {n} von {count}, Stopps: die ersten {carried} von {total}, {day} (öffnet in einem neuen Tab)',
   'plan.handoff.day.pointPartName':
-    'In {service} anzeigen: der einzige verortete Stopp von {day}, Teil {n} von {count} (öffnet in einem neuen Tab)',
+    'In {service} anzeigen, Teil {n} von {count}, {day} (öffnet in einem neuen Tab)',
   'plan.drop.hint':
     'Klick mit der rechten Maustaste auf die Karte oder halte sie gedrückt, um genau dort einen Ort hinzuzufügen.',
   'plan.drop.armed':

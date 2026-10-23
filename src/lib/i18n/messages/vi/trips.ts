@@ -180,11 +180,11 @@ const messages = {
     'Xem trong {service}: điểm dừng duy nhất có vị trí của {day} (mở trong tab mới)',
   'plan.handoff.day.part': 'Phần {n} trong {count}',
   'plan.handoff.day.directionsPartName':
-    'Chỉ đường trong {service}: {day}, phần {n} trong {count} (mở trong tab mới)',
+    'Chỉ đường trong {service}, phần {n} trong {count}, {day} (mở trong tab mới)',
   'plan.handoff.day.directionsPartialPartName':
-    'Chỉ đường trong {service}: {day}, phần {n} trong {count}, điểm dừng: {carried} đầu tiên trong {total} (mở trong tab mới)',
+    'Chỉ đường trong {service}, phần {n} trong {count}, điểm dừng: {carried} đầu tiên trong {total}, {day} (mở trong tab mới)',
   'plan.handoff.day.pointPartName':
-    'Xem trong {service}: điểm dừng duy nhất có vị trí của {day}, phần {n} trong {count} (mở trong tab mới)',
+    'Xem trong {service}, phần {n} trong {count}, {day} (mở trong tab mới)',
   'plan.drop.hint':
     'Nhấp chuột phải vào bản đồ, hoặc nhấn giữ, để thêm một địa điểm ngay tại đó.',
   'plan.drop.armed':
