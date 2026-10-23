@@ -290,6 +290,20 @@ function countedJourneyFilter(scope: TenantScope): SQL {
   )
 }
 
+/**
+ * The number the journeys quota is enforced against, and the one the admin overview's journeys meter
+ * reports as `used`: `createJourney` and the meter both read it here, so they cannot drift apart.
+ *
+ * It counts every journey row of the workspace, less the orphans {@link countedJourneyFilter} lets
+ * go of, on purpose and not what the caller can read: a journey on a trip the caller is not on, or
+ * an orphan owned by another member, holds a slot all the same. A `used` higher than the journeys the
+ * caller can list is therefore the meter working. What the quota should count is narrowed in
+ * {@link countedJourneyFilter}, and this function follows it.
+ */
+export function countQuotaJourneys(scope: TenantScope): Promise<number> {
+  return journeysRepository.count(scope, countedJourneyFilter(scope))
+}
+
 /** A journey the caller may read, or the `NotFoundError` a foreign tenant's id raises. */
 async function requireJourney(
   scope: TenantScope,
@@ -736,11 +750,7 @@ export async function createJourney(
   if (values.tripId) {
     await requireTrip(scope, values.tripId)
   }
-  await assertQuota(
-    scope,
-    'journeys',
-    await journeysRepository.count(scope, countedJourneyFilter(scope)),
-  )
+  await assertQuota(scope, 'journeys', await countQuotaJourneys(scope))
   const slug = await reserveSlug(scope, values.slug ?? values.title)
   return journeysRepository.insert(scope, {
     ...values,
