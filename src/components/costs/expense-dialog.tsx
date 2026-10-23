@@ -467,8 +467,8 @@ export function ExpenseDialog({
       <DialogContent
         size="lg"
         // The warning is part of what the dialog says on open: a polite region that mounts already
-        // filled is not announced, and focus lands on the field below it. The description's own id is
-        // replaced above, so it is named here whether or not the warning is up.
+        // filled is not announced, and focus lands on the field below it. The description carries its own id
+        // (below), which replaces Radix's default, so it is named here whether or not the warning is up.
         aria-describedby={
           storedOff === null ? descriptionId : `${descriptionId} ${noticeId}`
         }
