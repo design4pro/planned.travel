@@ -743,7 +743,7 @@ export const loadBookingDeskFn = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId }))
   .handler(async ({ data }): Promise<OrAbsent<BookingDeskPayload>> => {
     const scope = await appScope()
-    return orAbsent(() => bookingDeskPayload(scope, data.tripId))
+    return orAbsent(data.tripId, () => bookingDeskPayload(scope, data.tripId))
   })
 
 /**

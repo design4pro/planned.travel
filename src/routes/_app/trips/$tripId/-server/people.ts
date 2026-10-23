@@ -285,7 +285,9 @@ export const loadTripPeople = createServerFn({ method: 'GET' })
   .handler(async ({ data }): Promise<OrAbsent<TripPeoplePayload>> => {
     const { authSecret } = await import('#/server/auth/env')
     const scope = await appScope()
-    return orAbsent(() => readTripPeople(scope, data.tripId, authSecret()))
+    return orAbsent(data.tripId, () =>
+      readTripPeople(scope, data.tripId, authSecret()),
+    )
   })
 
 /* -------------------------------------------------------------------------------------------------

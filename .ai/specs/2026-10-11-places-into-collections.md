@@ -66,7 +66,7 @@ Verified against the repository at HEAD:
   to this stage; ticket #1106 retires the two options at creation without adding a read filter and says enforcement belongs here.
   Stored `private` and `public` rows exist and keep their values. `createCollectionInput` and `updateCollectionInput` also still carry
   `visibility` (`collections.ts:68`, `:80`), so an admin can rewrite it through the update path, and `loadCollectionDetail` answers an
-  unknown collection with a plain `Error` (`library.ts`) that would reach the error panel as `unexpected`.
+  unknown collection with `{ found: false }` (`library.ts`, #953), which the route loader turns into the router's not-found.
 - **`saveTripPlaceToCollection` can read a private trip.** It resolves the place with `placesRepository.requireById`, a tenant filter
   only, and never `requireTrip` (`collections.ts`), so a member could copy a place out of a private trip they are not on, by id. It is
   harmless while nothing calls it; this stage gives it callers.

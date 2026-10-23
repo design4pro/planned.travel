@@ -271,7 +271,7 @@ export const loadDayNotes = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: id }))
   .handler(async ({ data }): Promise<OrAbsent<PlanNotesPayload>> => {
     const scope = await appScope()
-    return orAbsent(() => readDayNotes(scope, data.tripId))
+    return orAbsent(data.tripId, () => readDayNotes(scope, data.tripId))
   })
 
 /* -------------------------------------------------------------------------------------------------

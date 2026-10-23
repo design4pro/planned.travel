@@ -11,32 +11,28 @@ import { nullWhenMissing, orAbsent } from '../-lib/absence'
 
 describe('orAbsent', () => {
   it('adds the found flag to a payload', async () => {
-    await expect(orAbsent(async () => ({ title: 'Kyoto' }))).resolves.toEqual({
-      found: true,
-      title: 'Kyoto',
-    })
+    await expect(
+      orAbsent('trip-1', async () => ({ title: 'Kyoto' })),
+    ).resolves.toEqual({ found: true, title: 'Kyoto' })
   })
 
-  it('answers the same bare result for any not-found error', async () => {
-    for (const error of [
-      new NotFoundError('trip', 'foreign-id'),
-      new NotFoundError('journey', 'missing-id'),
-    ]) {
-      await expect(
-        orAbsent(async () => {
-          throw error
-        }),
-      ).resolves.toStrictEqual(ABSENT)
-    }
+  it('answers the bare result when the trip itself is missing', async () => {
+    await expect(
+      orAbsent('trip-1', async () => {
+        throw new NotFoundError('trip', 'trip-1')
+      }),
+    ).resolves.toStrictEqual(ABSENT)
   })
 
   it.each([
+    new NotFoundError('expense', 'gone-mid-read'),
+    new NotFoundError('trip', 'another-trip'),
     new ForbiddenError('read', ['owner']),
     new TenantIsolationError('trip'),
     new Error('Database unavailable'),
   ])('rethrows every other failure: %s', async (error) => {
     await expect(
-      orAbsent(async () => {
+      orAbsent('trip-1', async () => {
         throw error
       }),
     ).rejects.toBe(error)

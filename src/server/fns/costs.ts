@@ -610,7 +610,7 @@ export const loadCosts = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: tripIdSchema }))
   .handler(async ({ data }): Promise<OrAbsent<CostsPayload>> => {
     const scope = await appScope()
-    return orAbsent(() => costsPayload(scope, data.tripId))
+    return orAbsent(data.tripId, () => costsPayload(scope, data.tripId))
   })
 
 /**

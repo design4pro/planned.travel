@@ -223,7 +223,7 @@ export const loadPlanBoard = createServerFn({ method: 'GET' })
   .validator(tripInput)
   .handler(async ({ data }): Promise<OrAbsent<PlanBoardPayload>> => {
     const scope = await appScope()
-    return orAbsent(() => readPlanBoard(scope, data.tripId))
+    return orAbsent(data.tripId, () => readPlanBoard(scope, data.tripId))
   })
 
 /**
