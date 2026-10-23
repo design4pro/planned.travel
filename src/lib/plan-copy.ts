@@ -159,6 +159,26 @@ export const PLAN_ALLOWANCE_CLAIMS: ReadonlyArray<PlanAllowanceClaim> = [
 ]
 
 /**
+ * The places ceiling each plan publishes, for the pricing comparison table.
+ *
+ * Places are an operational metric: `PLAN_QUOTAS` in `src/server/db/types.ts`
+ * owns the ceiling and `TIER_FOR_PLAN` maps each plan to its tier. Neither can be
+ * imported here, because this module is read by the isomorphic pricing route and
+ * the tier table sits beside server-only schema imports. So the published number
+ * is a second copy, and `__tests__/plan-copy.test.ts` compares it with the tier
+ * table for every plan: changing the ceiling fails there rather than on a
+ * customer's screen. `null` is unlimited, as it is in the catalogue.
+ *
+ * It stays out of `PlanLimits` on purpose: the catalogue contract is the three
+ * quotas the repositories enforce under the same names.
+ */
+export const PUBLISHED_PLACES: { readonly [K in PlanId]: number | null } = {
+  free: 150,
+  solo: null,
+  crew: null,
+}
+
+/**
  * What the usage meters call each quota, as catalogue keys.
  *
  * `QUOTA_LABELS` in `src/lib/plans.ts` names the same three quotas in English,

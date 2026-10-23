@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { formatPrice } from '#/lib/format'
-import { PLAN_COPY } from '#/lib/plan-copy'
+import { PLAN_COPY, PUBLISHED_PLACES } from '#/lib/plan-copy'
 import { I18nProvider, createTranslator } from '#/lib/i18n'
 import marketing from '#/lib/i18n/messages/en/marketing'
 import settings from '#/lib/i18n/messages/en/settings'
@@ -329,6 +329,31 @@ describe('pricing module comparison', () => {
         name: t('marketing.pricing.module.atlas'),
       }),
     ).toBeTruthy()
+  })
+})
+
+describe('pricing places row', () => {
+  it('compares places across every plan, after the catalogue quota rows', () => {
+    renderTranslated(<Comparison />)
+    const row = screen
+      .getByRole('rowheader', { name: t('settings.billing.quota.places') })
+      .closest('tr')
+    expect(row).not.toBeNull()
+    const cells = Array.from(row?.querySelectorAll('td') ?? []).map(
+      (cell) => cell.textContent,
+    )
+    expect(cells).toEqual(
+      PLAN_LIST.map((plan) => {
+        const places = PUBLISHED_PLACES[plan.id]
+        return places === null
+          ? t('settings.billing.quota.unlimited')
+          : String(places)
+      }),
+    )
+    expect(cells).toEqual(['150', 'Unlimited', 'Unlimited'])
+    expect(row?.previousElementSibling?.textContent).toContain(
+      t('settings.billing.quota.storageBytes'),
+    )
   })
 })
 

@@ -6,7 +6,11 @@ import { describe, expect, it } from 'vitest'
 import marketing from '#/lib/i18n/messages/en/marketing'
 import settings from '#/lib/i18n/messages/en/settings'
 import { PLANS, PLAN_IDS, PLAN_LIST, formatStorage } from '#/lib/plans'
-import { PLAN_ALLOWANCE_CLAIMS, PLAN_COPY } from '#/lib/plan-copy'
+import {
+  PLAN_ALLOWANCE_CLAIMS,
+  PLAN_COPY,
+  PUBLISHED_PLACES,
+} from '#/lib/plan-copy'
 import { TIER_FOR_PLAN } from '#/server/billing/limits'
 import { PLAN_QUOTAS, UNLIMITED } from '#/server/db/types'
 
@@ -189,6 +193,17 @@ describe('the copy states the allowances the plans actually carry', () => {
     expect(
       [...new Set(PLAN_ALLOWANCE_CLAIMS.map((claim) => claim.plan))].sort(),
     ).toEqual([...PLAN_IDS].sort())
+  })
+})
+
+describe('the pricing page publishes the places ceiling the tier table enforces', () => {
+  it.each(PLAN_IDS)('%s publishes its tier ceiling', (plan) => {
+    const ceiling = PLAN_QUOTAS[TIER_FOR_PLAN[plan]].places
+    expect(PUBLISHED_PLACES[plan]).toBe(ceiling === UNLIMITED ? null : ceiling)
+  })
+
+  it('publishes a number for every plan and nothing else', () => {
+    expect(Object.keys(PUBLISHED_PLACES).sort()).toEqual([...PLAN_IDS].sort())
   })
 })
 
