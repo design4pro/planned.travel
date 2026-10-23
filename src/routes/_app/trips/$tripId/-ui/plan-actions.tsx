@@ -230,7 +230,11 @@ export function StopMenu({
           disabled={disabled}
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      {/* Sized by its longest label, not a fixed width: translations run longer than English. */}
+      <DropdownMenuContent
+        align="end"
+        className="max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-56"
+      >
         <DropdownMenuItem icon={<PencilLine />} onSelect={onEditPlace}>
           {t('trips.plan.stop.menu.editPlace')}
         </DropdownMenuItem>
