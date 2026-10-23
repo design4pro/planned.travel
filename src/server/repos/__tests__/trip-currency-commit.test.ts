@@ -10,7 +10,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { convertMinor } from '#/lib/money'
 import {
   budgetItems,
@@ -328,6 +328,40 @@ describe('committing a change of a trip’s budget currency', () => {
       expect(byTitle(before.expenses, 'Souvenirs').originalAmountMinor).toBe(
         1100,
       )
+    })
+
+    it('writes a null rate for a typed figure that never had one, and the real rate for a zero row', async () => {
+      await seedLedger()
+      const [dinner] = await harness.db
+        .select()
+        .from(expenses)
+        .where(eq(expenses.title, 'Dinner'))
+      // How a zero converted amount with a typed figure is stored: both set, no rate.
+      await harness.db
+        .update(expenses)
+        .set({ originalAmountMinor: 500, originalCurrency: 'GBP' })
+        .where(eq(expenses.title, 'Free ticket'))
+      await harness.db
+        .update(expenses)
+        .set({ originalAmountMinor: 500, originalCurrency: 'GBP' })
+        .where(eq(expenses.id, dinner.id))
+
+      await changeTripCurrency(tenant.scope, tripId, { to: 'JPY', rate: RATE })
+
+      const after = await rows()
+      for (const title of ['Free ticket', 'Dinner']) {
+        expect(after.expenses.find((row) => row.title === title)).toMatchObject(
+          {
+            currency: 'JPY',
+            originalAmountMinor: 500,
+            originalCurrency: 'GBP',
+            exchangeRate: null,
+          },
+        )
+      }
+      expect(
+        after.expenses.find((row) => row.title === 'Dinner')?.amountMinor,
+      ).toBe(convertMinor(4201, RATE, 'EUR', 'JPY'))
     })
 
     it('keeps the split method, the weights and the settled flag of every share', async () => {
