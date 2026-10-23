@@ -13,6 +13,10 @@ import type { createAuthMiddleware } from 'better-auth/api'
  * (`storeSessionInDatabase: true`), so the tokens are read from it and each blob is deleted by name
  * (docs/ARCHITECTURE.md §4 rule 2: a read-your-own-write path reads D1, not the cache).
  *
+ * Revoke-other-sessions has the same gap (#1240), and its cure reuses {@link collectSessionTokens} and
+ * {@link createSessionPageReader} but not the blob delete here: it ends the rows too, through
+ * `internalAdapter.deleteSessions` (`./room-eviction`), which deletes each blob by name itself.
+ *
  * Two callers share this module and neither is the other's: the room-eviction hooks beside the auth
  * instance (`./room-eviction`, self-service revocation, best effort) and the platform console
  * (`#/server/fns/console/session-keys`, which maps a failure to its own fail-closed refusal). The
