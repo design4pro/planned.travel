@@ -741,3 +741,9 @@ is not part of this workspace's plan", "all N of its searches this month") which
 No geocoding caller shows that sentence: the booking import's pin step and the dropped-pin reverse
 lookup both swallow the refusal and return no address. The error's wording stays as it is, because
 #220 was declined.
+
+**The ordering accepted under "One ordering is imperfect" no longer holds (#927).** Geocoding and
+connection search spend the workspace's unit in `callProvider`'s `beforeSend` step, after the
+operator's block gate has passed, so a call refused at the gate records `blocked` demand and spends
+no unit. The paragraph under the edge-case table and the non-goal about splitting the gate out of
+`callProvider` are both superseded; the design above is left as written.
