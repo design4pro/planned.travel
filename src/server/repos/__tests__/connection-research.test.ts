@@ -377,6 +377,9 @@ describe('a saved connection that is searched again', () => {
     expect(await legsDeparting(days[1].id, saved.legs)).toEqual([
       saved.legs[0].id,
     ])
+    const record = await getTransport(tenant.scope, transportId)
+    expect(record?.dayId).toBe(days[1].id)
+    expect(record?.arrivalDayId).toBe(days[2].id)
   })
 
   it('brings it back from the record’s days when the number of legs changes, leaving the inner legs unanchored', async () => {
@@ -453,7 +456,7 @@ describe('a saved connection that is searched again', () => {
     ])
   })
 
-  it('does not carry a record day the trip no longer has, and still saves', async () => {
+  it('anchors nothing and still saves when the record’s day was deleted with the day', async () => {
     const extra = await createDay(tenant.scope, {
       tripId,
       dayNumber: days.length + 1,

@@ -1056,8 +1056,10 @@ async function carryAnchors(
     listTripDays(scope, existing.tripId),
   ])
   const dayNumbers = new Map(tripDays.map((day) => [day.id, day.dayNumber]))
+  const usable = (id: string | null | undefined): string | null =>
+    id !== undefined && id !== null && dayNumbers.has(id) ? id : null
   const firstUsable = (ids: ReadonlyArray<string | null>): string | null =>
-    ids.find((id) => id !== null && dayNumbers.has(id)) ?? null
+    ids.map(usable).find((id) => id !== null) ?? null
 
   // The two ends of the old journey, by the legs first and the record's own pair last.
   const start = firstUsable([
@@ -1076,10 +1078,9 @@ async function carryAnchors(
       previous.length === legs.length ? previous.at(index) : undefined
     return {
       departureDayId:
-        firstUsable([position?.departureDayId ?? null]) ??
-        (index === 0 ? start : null),
+        usable(position?.departureDayId) ?? (index === 0 ? start : null),
       arrivalDayId:
-        firstUsable([position?.arrivalDayId ?? null]) ??
+        usable(position?.arrivalDayId) ??
         (index === legs.length - 1 ? end : null),
     }
   })
