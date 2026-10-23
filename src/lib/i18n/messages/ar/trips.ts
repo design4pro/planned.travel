@@ -141,6 +141,30 @@ const messages = {
     'هذا الموضع يتعارض مع الوقت المسجَّل عليه. نقله هنا يمسح الوقت، ويُحفظ الترتيب الجديد والوقت الممسوح معًا.',
   'plan.move.dropTime.confirm': 'انقل وأسقط الوقت',
   'plan.move.dropTime.cancel': 'اتركه في مكانه',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'تعديل المكان',
+  'plan.stop.menu.setTime': 'تحديد وقت',
+  'plan.stop.menu.placeOnMap': 'وضعه على الخريطة',
+  'plan.stop.menu.movePin': 'نقل دبوسه',
+  'plan.stop.menu.moveToDay': 'نقل إلى يوم آخر',
+  'plan.stop.menu.backToUnplanned': 'إعادته إلى غير المجدولة',
+  'plan.stop.menu.delete': 'حذف من الرحلة',
+  'plan.delete.title': 'حذف {name}؟',
+  'plan.delete.titleUnnamed': 'حذف هذا المكان؟',
+  'plan.delete.bodyUnplanned':
+    'سيُزال من أماكن الرحلة بالكامل. لا يمكن التراجع عن ذلك.',
+  'plan.delete.bodyOnDays': {
+    zero: 'موجود في {count} يوم من هذه الرحلة وسيُزال منها كلها. لا يمكن التراجع عن ذلك.',
+    one: 'موجود في يوم واحد من هذه الرحلة وسيُزال منه. لا يمكن التراجع عن ذلك.',
+    two: 'موجود في يومين من هذه الرحلة وسيُزال منهما. لا يمكن التراجع عن ذلك.',
+    few: 'موجود في {count} أيام من هذه الرحلة وسيُزال منها كلها. لا يمكن التراجع عن ذلك.',
+    many: 'موجود في {count} يومًا من هذه الرحلة وسيُزال منها كلها. لا يمكن التراجع عن ذلك.',
+    other:
+      'موجود في {count} يوم من هذه الرحلة وسيُزال منها كلها. لا يمكن التراجع عن ذلك.',
+  },
+  'plan.delete.error': 'تعذّر الحذف',
+  'plan.delete.confirm': 'حذف المكان',
+  'plan.delete.deleting': 'جارٍ حذف المكان',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'إضافة ملاحظة',
   'plan.note.addForDay': 'إضافة ملاحظة، {day}',

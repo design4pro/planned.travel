@@ -137,6 +137,25 @@ const messages = {
     'この位置は設定された時刻と矛盾します。ここへ移動すると時刻が消え、新しい順序と消えた時刻はまとめて保存されます。',
   'plan.move.dropTime.confirm': '移動して時刻を外す',
   'plan.move.dropTime.cancel': 'そのままにする',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': '場所を編集',
+  'plan.stop.menu.setTime': '時刻を設定',
+  'plan.stop.menu.placeOnMap': '地図に配置',
+  'plan.stop.menu.movePin': 'ピンを移動',
+  'plan.stop.menu.moveToDay': '別の日へ移動',
+  'plan.stop.menu.backToUnplanned': '未計画に戻す',
+  'plan.stop.menu.delete': '旅行から削除',
+  'plan.delete.title': '{name} を削除しますか？',
+  'plan.delete.titleUnnamed': 'この場所を削除しますか？',
+  'plan.delete.bodyUnplanned':
+    'この旅行の場所から完全に削除されます。この操作は元に戻せません。',
+  'plan.delete.bodyOnDays': {
+    other:
+      'この旅行の {count} 日に入っており、それらの日からも削除されます。この操作は元に戻せません。',
+  },
+  'plan.delete.error': '削除できませんでした',
+  'plan.delete.confirm': '場所を削除',
+  'plan.delete.deleting': '場所を削除しています',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'メモを追加',
   'plan.note.addForDay': 'メモを追加 — {day}',

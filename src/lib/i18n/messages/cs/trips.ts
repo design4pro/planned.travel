@@ -139,6 +139,28 @@ const messages = {
     'Tato pozice je v rozporu s časem, který má. Přesunutí sem čas smaže — nové pořadí i smazaný čas se uloží společně.',
   'plan.move.dropTime.confirm': 'Přesunout a smazat čas',
   'plan.move.dropTime.cancel': 'Nechat na místě',
+  /* ------------------------------------------- a stop's menu and its delete */
+  'plan.stop.menu.editPlace': 'Upravit místo',
+  'plan.stop.menu.setTime': 'Nastavit čas',
+  'plan.stop.menu.placeOnMap': 'Umístit na mapu',
+  'plan.stop.menu.movePin': 'Přesunout špendlík',
+  'plan.stop.menu.moveToDay': 'Přesunout na jiný den',
+  'plan.stop.menu.backToUnplanned': 'Zpět mezi nenaplánovaná',
+  'plan.stop.menu.delete': 'Smazat z výletu',
+  'plan.delete.title': 'Smazat „{name}“?',
+  'plan.delete.titleUnnamed': 'Smazat toto místo?',
+  'plan.delete.bodyUnplanned':
+    'Z míst výletu zmizí úplně. Tuto akci nelze vrátit zpět.',
+  'plan.delete.bodyOnDays': {
+    one: 'Je v {count} dni tohoto výletu a zmizí z něj. Tuto akci nelze vrátit zpět.',
+    few: 'Je zařazeno do {count} dnů tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
+    many: 'Je v {count} dne tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
+    other:
+      'Je zařazeno do {count} dnů tohoto výletu a zmizí ze všech. Tuto akci nelze vrátit zpět.',
+  },
+  'plan.delete.error': 'Smazání se nepodařilo',
+  'plan.delete.confirm': 'Smazat místo',
+  'plan.delete.deleting': 'Místo se maže',
   /* --------------------------------------------------- a day's own notes */
   'plan.note.add': 'Přidat poznámku',
   'plan.note.addForDay': 'Přidat poznámku: {day}',

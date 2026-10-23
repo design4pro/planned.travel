@@ -142,9 +142,9 @@ function deferred() {
   })
   return { promise, resolve, reject }
 }
-async function menu(action: string, place = 'p1') {
+async function menu(action: string, place = 'p1', actionsFor = 'Actions for') {
   await userEvent.click(
-    screen.getAllByRole('button', { name: `Actions for Place ${place}` })[0],
+    screen.getAllByRole('button', { name: `${actionsFor} Place ${place}` })[0],
   )
   await userEvent.click(screen.getByRole('menuitem', { name: action }))
 }
@@ -185,7 +185,7 @@ describe('planner write callers', () => {
     const pending = deferred()
     mocks.write.mockReturnValue(pending.promise)
     await mount(payload, 'pl')
-    await menu('Edit place')
+    await menu('Edytuj miejsce', 'p1', 'Działania dla:')
     submit()
     await close()
     await act(async () => pending.reject(new Error('Refused write')))
@@ -197,7 +197,7 @@ describe('planner write callers', () => {
   it('toasts a pinned place name in Polish', async () => {
     mocks.write.mockResolvedValue(undefined)
     await mount(payload, 'pl')
-    await menu('Move its pin')
+    await menu('Przesuń pinezkę', 'p1', 'Działania dla:')
     await act(async () => mocks.click?.({ lngLat: { lng: 10, lat: 20 } }))
     expect(mocks.success).toHaveBeenCalledWith('Przypięto Place p1')
   })
