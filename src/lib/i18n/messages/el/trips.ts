@@ -149,6 +149,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Μετακίνηση σε άλλη ημέρα',
   'plan.stop.menu.backToUnplanned': 'Επιστροφή στα μη προγραμματισμένα',
   'plan.stop.menu.delete': 'Διαγραφή από το ταξίδι',
+  'plan.stop.visited': 'Επισκεφθήκατε',
   'plan.delete.title': 'Διαγραφή του «{name}»;',
   'plan.delete.titleUnnamed': 'Διαγραφή αυτού του μέρους;',
   'plan.delete.bodyUnplanned':

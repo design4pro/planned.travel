@@ -195,6 +195,12 @@ const messages = {
   'plan.stop.menu.backToUnplanned': 'Back to unplanned',
   'plan.stop.menu.delete': 'Delete from trip',
   /**
+   * The planner row's "visited" badge and its word in the row's accessible name - one key for
+   * both, so the name always contains the visible text (WCAG 2.5.3). The standalone capitalised
+   * form; the lowercase clause of the map pin's name is `atlas.map.place.clause.visited`.
+   */
+  'plan.stop.visited': 'Visited',
+  /**
    * The delete confirmation. A place on no day has nothing to count, so it keeps
    * its own sentence; `bodyOnDays` is a plural message because the number of days
    * is what the reader is weighing and every language counts it differently.

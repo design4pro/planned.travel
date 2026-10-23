@@ -620,6 +620,160 @@ describe('IdeasList', () => {
 })
 
 /* -------------------------------------------------------------------------------------------------
+ * Visited stops
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * The mark belongs to the place, so every row of it says so: in a day, in the ideas column,
+ * on each day the place is on. The row reads `row.visited` and takes no prop for it.
+ */
+describe('a visited stop', () => {
+  const noop = (): void => {}
+
+  /** A day holding exactly these rows, in order. */
+  function dayOf(rows: ReadonlyArray<PlannerRow>, dayId = 'd1'): PlannerDay {
+    return {
+      ...DAY,
+      dayId,
+      stays: [],
+      ...sequence(rows.map((entry) => ({ kind: 'stop', row: entry }))),
+    }
+  }
+
+  function mountDay(day: PlannerDay) {
+    return render(
+      <Harness>
+        <DaySection day={day} categoryFor={categoryFor} />
+      </Harness>,
+    )
+  }
+
+  /** The row's main button, found by the stop's name. */
+  function mainButton(name: string): HTMLElement {
+    const button = screen
+      .getAllByRole('button')
+      .find((entry) => (entry.getAttribute('aria-label') ?? '').startsWith(name))
+    if (button === undefined) throw new Error(`no row button for ${name}`)
+    return button
+  }
+
+  it('says so in the day list, in the row and in the name of its button', () => {
+    mountDay(dayOf([row({ placeId: 'p-sensoji', visited: true })]))
+
+    const button = mainButton('Sensō-ji')
+    expect(within(button).getByText('Visited')).toBeDefined()
+    expect(button.getAttribute('aria-label')).toContain('Visited')
+  })
+
+  it('says nothing when the place is not visited', () => {
+    mountDay(dayOf([row({ placeId: 'p-sensoji' })]))
+
+    expect(screen.queryByText('Visited')).toBeNull()
+    expect(mainButton('Sensō-ji').getAttribute('aria-label')).not.toContain(
+      'isited',
+    )
+    expect(screen.queryByText(/not visited/i)).toBeNull()
+  })
+
+  it('still shows the badge when the row has no duration, rating or booking', () => {
+    mountDay(
+      dayOf([
+        row({
+          placeId: 'p-bare',
+          duration: null,
+          rating: null,
+          reservationStatus: 'none',
+          visited: true,
+        }),
+      ]),
+    )
+
+    expect(within(mainButton('Sensō-ji')).getByText('Visited')).toBeDefined()
+  })
+
+  it('shows it next to the booking state rather than instead of it', () => {
+    mountDay(
+      dayOf([
+        row({
+          placeId: 'p-sensoji',
+          reservationStatus: 'confirmed',
+          visited: true,
+        }),
+      ]),
+    )
+
+    const button = mainButton('Sensō-ji')
+    expect(within(button).getByText('Visited')).toBeDefined()
+    expect(within(button).getByText('Booked')).toBeDefined()
+  })
+
+  it('says it on every day the place is on', () => {
+    const twice = [
+      row({ placeId: 'p-sensoji', itemId: 'a-1', visited: true }),
+      row({ placeId: 'p-sensoji', itemId: 'a-2', dayNumber: 2, visited: true }),
+    ]
+    render(
+      <Harness>
+        <DaySection day={dayOf([twice[0]], 'd1')} categoryFor={categoryFor} />
+        <DaySection
+          day={{ ...dayOf([twice[1]], 'd2'), dayNumber: 2 }}
+          categoryFor={categoryFor}
+        />
+      </Harness>,
+    )
+
+    expect(screen.getAllByText('Visited')).toHaveLength(2)
+  })
+
+  it('says it in the ideas column too', () => {
+    const rows = [
+      row({
+        placeId: 'p-ichiran',
+        itemId: ideaItemId('p-ichiran'),
+        assignmentId: null,
+        name: 'Ichiran Shibuya',
+        dayNumber: null,
+        visited: true,
+      }),
+      row({
+        placeId: 'p-kinkaku',
+        itemId: ideaItemId('p-kinkaku'),
+        assignmentId: null,
+        name: 'Kinkaku-ji',
+        dayNumber: null,
+      }),
+    ]
+    render(
+      <Harness>
+        <IdeasList
+          rows={rows}
+          total={rows.length}
+          categoryFor={categoryFor}
+          query=""
+          onQueryChange={noop}
+        />
+      </Harness>,
+    )
+
+    expect(within(mainButton('Ichiran')).getByText('Visited')).toBeDefined()
+    expect(within(mainButton('Kinkaku')).queryByText('Visited')).toBeNull()
+    expect(screen.getAllByText('Visited')).toHaveLength(1)
+  })
+
+  it('draws the visible text and the name from the same words, and keeps one tab stop', () => {
+    mountDay(dayOf([row({ placeId: 'p-sensoji', visited: true })]))
+
+    const button = mainButton('Sensō-ji')
+    const badge = within(button).getByText('Visited')
+    expect(button.getAttribute('aria-label')).toContain(badge.textContent)
+    // The check glyph is for the eye only: the word is what carries the meaning.
+    expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+    // A badge is not a control: the row still has its drag handle and its main button.
+    expect(button.querySelectorAll('button, a, [tabindex]')).toHaveLength(0)
+  })
+})
+
+/* -------------------------------------------------------------------------------------------------
  * Rail shell
  * ---------------------------------------------------------------------------------------------- */
 
