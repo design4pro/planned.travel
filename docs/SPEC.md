@@ -396,6 +396,17 @@ sweep go through the caller's `TenantScope`; the three platform references are c
 scope argument, not a fourth catalog member (`.ai/specs/2026-10-08-erase-a-persons-data.md`,
 Amendment - phase 5).
 
+The carry of a paid plan's unlimited trips adds a sixth, `findSponsorStandingUnscoped(db, organizationId)` in
+`src/server/repos/billing.ts` (ADR 0046, `.ai/specs/2026-10-24-carry-a-paid-plan-across-workspaces.md`). Given the
+caller's own active organization id it returns, for that workspace's recorded sponsor only, the sponsor's `status`,
+`plan`, `seats` and `providerProductId`, the `createdBy` of the carry and two booleans (the creator is still an owner of
+the sponsor, and of the carried workspace). It never returns the sponsor's id, name, members, trips or any other content, takes no
+request value and cannot list the workspaces a sponsor carries. It is the one FU-3 function with **two** named production
+callers, `resolveQuotas` (`src/server/repos/base.ts`) and `createSubscriptionStore().findByOrganization`
+(`src/server/billing/store.ts`), because the repository guard and the billing plan-state loader are different layers that
+must give one answer; a source test lists the importers and fails on a third. The decision is made once, by `applyCarry` in
+`src/server/billing/limits.ts`. This is an exception to the scope argument, not a fifth catalog member.
+
 #### Global-catalogue carve-out
 
 "Every domain row is scoped by `organization_id`" and "every query goes through a scoped
@@ -577,7 +588,7 @@ per-workspace domain scrubs still require the reserved owner `TenantScope` and t
 The catalog graph remains forbidden from importing tenant repositories.
 
 The auth layer cannot reach the tenant repository graph except through two closed, auth-runtime-free
-leaves. Recipient invitation consumption (issue #1009): `auth/organization-invitations.ts` imports
+leaves (and the write-only statements named below). Recipient invitation consumption (issue #1009): `auth/organization-invitations.ts` imports
 `repos/workspace-invitation-acceptance.ts` and its `base`, `batch` and `context` primitives. The
 sign-up language seed (issue #1174): `auth/signup-locale.ts` imports `repos/user-locale-seed.ts`,
 whose one function inserts the new account's own `user_settings.locale` row if none exists, for the
@@ -594,6 +605,13 @@ above a downgraded plan's quota; it never releases a seat between statements. Re
 Session activation still uses Better Auth's internal adapter after commit, preserving KV and audit
 hooks. Activation failure never restores pending or removes durable membership; the existing workspace
 switcher recovers activation. Repeating acceptance remains a refusal and never restores removed access.
+
+Workspace creation adds one more write-only statement to its batch: `src/server/auth/carry.ts` (`recordCarry`, ADR 0046),
+a sibling of `participation.ts` with no select, update or delete of its own. It is an `INSERT … SELECT … WHERE` into
+`workspace_carries` that writes a row only when the creator is an owner of the sponsor (the source workspace if it holds an
+entitling subscription, otherwise the sponsor of the source's own carry) and the sponsor has an entitling subscription row.
+The source workspace id comes from the caller's tenant scope, never from a request body; the sponsor is chosen inside the
+statement. A source test pins its writers.
 
 Other auth membership paths retain `src/server/auth/participation.ts`: a write-only `INSERT OR IGNORE`
 of `organization_id` and `user_id`, with no select, update or delete, whose organization id comes from
@@ -764,6 +782,9 @@ Rules:
   stranger may see, so leaking a field is unexpressible - executed through `server/repos` for
   token-resolved tenant resources and `server/catalog` for published global rows. The tenant
   scope it passes is always the one derived from the share, feed or trip invite link record it resolved, never fabricated.
+- A workspace's plan can be carried by another workspace's subscription (ADR 0046): the only code that decides it is
+  `applyCarry` in `server/billing/limits.ts`, fed by `findSponsorStandingUnscoped` in `server/repos/billing.ts` and written
+  by `server/auth/carry.ts`; §5 states the three. Nothing but the billing webhook writes `subscriptions`.
 - `server/mcp` owns transport and tool schemas only. Every tool authorises through the same
   `requirePermission` the console uses and reaches data through `server/catalog`; it never grows
   a second authorisation path or a second query layer.
