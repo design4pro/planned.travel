@@ -7,10 +7,10 @@
  *
  * A long-distance journey is a **chain of stations** rather than a pair of them, and the part
  * between two consecutive stations is a **leg** (`CONTEXT.md`). Legs are rows in `transport_legs`
- * and are written only by {@link saveTransport} and {@link replaceTransportChain}, which share one
- * planner for the rows; a transport with no rows there is read as
- * the one-leg chain its own flat endpoints already describe, which is why nothing was backfilled
- * and why every journey recorded before chains existed keeps reading exactly as it did.
+ * and are written only by {@link saveTransport}, through one planner for the rows; a transport
+ * with no rows there is read as the one-leg chain its own flat endpoints already describe, which is
+ * why nothing was backfilled and why every journey recorded before chains existed keeps reading
+ * exactly as it did.
  */
 
 import {
@@ -522,7 +522,7 @@ function refineChainShape(
 }
 
 /**
- * A whole chain, as the chain writers accept it.
+ * A whole chain, as the writer accepts it.
  *
  * Stations and legs arrive apart rather than as legs carrying two endpoints each, and that is the
  * whole of the join guarantee: the station two legs meet at is written once and read into both
@@ -645,8 +645,8 @@ type ChainEndpoints = Pick<
  * The statements that put a chain in place of whatever the transport had, and the endpoints the
  * record takes from it.
  *
- * Shared by the two writers of `transport_legs` so that "the outer stations are the record's
- * endpoints" is stated once. `endpoints` is `null` for an empty chain: the record's own endpoints
+ * The one place that plans the rows of `transport_legs`, so that "the outer stations are the
+ * record's endpoints" is stated once. `endpoints` is `null` for an empty chain: the record's own endpoints
  * are then the journey and are left as they were.
  *
  * The chain is rewritten by delete-and-reinsert, so a leg's day position would be lost on every
@@ -747,53 +747,6 @@ function planChain(
   }
 }
 
-/**
- * Replaces the chain of a transport that already exists.
- *
- * It resolves the parent inside the caller's own scope first — a well-formed transport id from a
- * client is not an authorised transport id — then resolves every day reference against *that
- * record's* trip, then deletes and re-inserts the whole chain in **one batch**. `db.batch()` is a
- * real transaction on D1: statements run in order and a failure rolls the sequence back, which is
- * the property a chain needs, because a half-replaced chain is a journey with two station threes.
- *
- * The parent's flat `departure_*` / `arrival_*` columns are rewritten from the first and last
- * station in that same batch, so the two representations of one journey cannot drift apart and a
- * reader that knows nothing about legs still sees where the journey starts and ends.
- *
- * Neither save path comes through here: {@link saveTransport} writes the record in the same batch,
- * for the hand-typed dialog and for a found connection alike. This is the chain on its own, for a
- * record that already exists and needs nothing but its route replaced.
- */
-export async function replaceTransportChain(
-  scope: TenantScope,
-  transportId: string,
-  input: TransportChainInput,
-): Promise<Array<TransportLeg>> {
-  const chain = transportChainInput.parse(input)
-  const parent = await requireWritableTransport(scope, transportId)
-
-  requireLegOrder(chain.stations, chain.legs)
-  await requireChainDays(scope, parent.tripId, chain.legs)
-
-  const { statements, endpoints } = planChain(
-    scope,
-    parent,
-    chain,
-    await listTransportLegs(scope, parent.id),
-  )
-  if (endpoints !== null) {
-    statements.push(
-      scope.db
-        .update(transports)
-        .set(endpoints)
-        .where(tenantFilter(scope, transports, eq(transports.id, parent.id))),
-    )
-  }
-
-  await runBatch(scope, statements)
-  return listTransportLegs(scope, parent.id)
-}
-
 /* -------------------------------------------------------------------------------------------------
  * A transport and its legs, saved as one
  * ---------------------------------------------------------------------------------------------- */
@@ -828,6 +781,11 @@ async function isGone(
  * class, one code and one message once the id is taken out of it, and no insert ever resolves a
  * clash by overwriting. A row the caller's scope already holds is edited whatever its id or age.
  *
+ * **The record is a patch.** Every field is optional, `title` included: a row that already exists
+ * keeps whatever the record leaves out, so a caller that has nothing to say about the title (a
+ * re-search) sends none and cannot write back a title it read earlier. A row that does not exist yet
+ * needs one, and a save without it is refused with `TITLE_REQUIRED` before the batch.
+ *
  * `intent` says what the caller means, and it only chooses between two outcomes that are both
  * inside the caller's own scope, so it widens no access: `edit` refuses a row that is not there
  * (deleted in another tab, or never the caller's) instead of writing it back, and `create` of an id
@@ -838,7 +796,7 @@ export const saveTransportInput = z.object({
   tripId: idSchema,
   transportId: idSchema,
   intent: z.enum(TRANSPORT_SAVE_INTENTS),
-  record: z.object(transportFields),
+  record: z.object(transportFields).partial(),
   chain: transportChainInput,
 })
 export type SaveTransportInput = z.input<typeof saveTransportInput>
@@ -871,6 +829,14 @@ export interface SavedTransport {
   readonly legs: Array<TransportLeg>
 }
 
+/** The title a new row is inserted with, or the refusal that stops the save before the batch. */
+function requireNewTitle(title: string | undefined): string {
+  if (title === undefined) {
+    throw new RepositoryError('A transport needs a title.', 'TITLE_REQUIRED')
+  }
+  return title
+}
+
 /**
  * Saves a Transport and its Legs in **one batch**: the record is created or updated, the chain
  * replaced, and the record's endpoints taken from the chain's outer stations — all or nothing, so
@@ -878,7 +844,7 @@ export interface SavedTransport {
  *
  * **The record's day pair is the caller's.** Nothing here derives a day from the legs: a night
  * train leaves on one day and lands on another and only the traveller knows which. Each leg's days
- * are resolved against the trip like the chain writer's, and the record's pair is ordered over the
+ * are resolved against the trip like the chain's own, and the record's pair is ordered over the
  * row that results.
  *
  * **Every refusal comes before the batch.** The trip, the role, the existence of the record an
@@ -914,6 +880,10 @@ export async function saveTransport(
   }
   await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, WRITERS)
+  // An insert needs a title and an update does not. The check sits after the scoped lookup, the
+  // trip agreement and the role, so it tells a caller nothing about a row they cannot see: a
+  // foreign id and an id that never existed are both "not here yet" and are refused alike.
+  const newTitle = existing === null ? requireNewTitle(record.title) : null
 
   requireLegOrder(chain.stations, chain.legs)
   await requireChainDays(scope, tripId, chain.legs)
@@ -926,8 +896,8 @@ export async function saveTransport(
     chain,
     previousLegs,
   )
-  // `definedOnly` widens `title` to optional; it is required, and an insert needs it typed so.
-  const values = { ...definedOnly(record), title: record.title, ...endpoints }
+  // An omitted field is left out of the update's `SET`, so it keeps the stored value.
+  const values = { ...definedOnly(record), ...endpoints }
 
   await requireDayPair(
     scope,
@@ -943,24 +913,29 @@ export async function saveTransport(
     to: resulting.arrivalTimezone,
   })
 
-  // The record goes first: the legs reference it.
+  // The record goes first: the legs reference it. An update with nothing to set (an empty record
+  // and an empty chain) has nothing to write, and drizzle refuses an empty `SET`.
+  const recordStatements: Array<BatchStatement> = []
+  if (newTitle !== null) {
+    recordStatements.push(
+      scope.db.insert(transports).values({
+        ...values,
+        title: newTitle,
+        id: transportId,
+        tripId,
+        organizationId: scope.ctx.organizationId,
+      }),
+    )
+  } else if (Object.keys(values).length > 0) {
+    recordStatements.push(
+      scope.db
+        .update(transports)
+        .set(values)
+        .where(tenantFilter(scope, transports, eq(transports.id, transportId))),
+    )
+  }
   try {
-    await runBatch(scope, [
-      existing === null
-        ? scope.db.insert(transports).values({
-            ...values,
-            id: transportId,
-            tripId,
-            organizationId: scope.ctx.organizationId,
-          })
-        : scope.db
-            .update(transports)
-            .set(values)
-            .where(
-              tenantFilter(scope, transports, eq(transports.id, transportId)),
-            ),
-      ...statements,
-    ])
+    await runBatch(scope, [...recordStatements, ...statements])
   } catch (cause) {
     // The scope sees no row under this id, so a primary-key refusal on the insert means the id
     // belongs to a row outside the scope: answer it like every other foreign id, not as a raw
@@ -1111,9 +1086,11 @@ async function carryAnchors(
  * press wrote.
  *
  * **A re-search keeps the record.** The plan's story is a timetable change that must not cost the
- * traveller their booking code and their seat, so the writer is handed the row's own title and no
- * mode, status, price or booking field: those stay where they were, and only the stations, the
- * legs and the flat endpoints derived from them move. A journey re-searched is the same journey.
+ * traveller their booking code and their seat, so the writer is handed an empty record: no title,
+ * mode, status, price or booking field is sent, those stay where they were, and only the stations,
+ * the legs and the flat endpoints derived from them move. The title is left out on purpose, so a
+ * rename that lands between the read above and the batch is never written back. A journey
+ * re-searched is the same journey.
  *
  * **The transport is resolved before the writer is asked.** Two ids arrive from the browser and a
  * well-formed one is not an authorised one, and the writer would take an id it cannot find as the
@@ -1158,7 +1135,7 @@ export async function saveSearchedConnection(
             priceMinor: values.priceMinor,
             currency: values.currency,
           }
-        : { title: existing.title },
+        : {},
     chain: {
       stations: values.stations,
       legs:

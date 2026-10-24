@@ -872,9 +872,10 @@ is added, and:
 
 - `listTransportLegs(scope, transportId)` — ordered by `position` then `id`.
 - `listTripLegs(scope, tripId)` — every leg of the trip, for the desk and for `03-S5`.
-- `replaceTransportChain(scope, transportId, legs)` — the only writer. It resolves the parent with
-  `transportsRepository.requireById`, resolves every referenced day with `requireTripDay` against the
-  parent's own trip, deletes the record's existing legs and inserts the new ones with `position`
+- `saveTransport(scope, input)` — the only writer (it replaced a chain-only `replaceTransportChain`,
+  which no production code called once both save paths wrote through it; a chain-only save is an
+  `edit` with an empty record). It resolves the parent in the caller's own scope, resolves every
+  referenced day with `requireTripDay` against the parent's own trip, deletes the record's existing legs and inserts the new ones with `position`
   assigned from array index, **in one `scope.db.batch()`**. `db.batch()` on D1 is a real transaction —
   statements run sequentially and a failure rolls the whole sequence back — which is the property a
   chain needs, because a half-replaced chain is a journey with two station threes.
@@ -1016,14 +1017,14 @@ added to `resolveLimits()` or `PLAN_QUOTAS`, and
 
 ### Tenant isolation test
 
-Appended as one `describe` block. Covered: `listTransportLegs`, `listTripLegs`,
-`replaceTransportChain`.
+Appended as one `describe` block. Covered: `listTransportLegs`, `listTripLegs`, and a chain-only
+`saveTransport` (an `edit` of an existing transport with an empty record).
 
 The cases: A cannot list B's legs by transport id or by trip id; A cannot replace the chain of B's
 transport; A cannot write a leg whose `departure_day_id` or `arrival_day_id` is one of B's days,
 even when the parent transport is A's own — that one is the parenting case, and it is a
-`NotFoundError` from `requireTripDay`, not a silently dropped reference. Because `replaceTransportChain`
-deletes before it inserts, the block also asserts the **destructive** direction explicitly: a
+`NotFoundError` from `requireTripDay`, not a silently dropped reference. Because `saveTransport`
+deletes the chain before it inserts, the block also asserts the **destructive** direction explicitly: a
 cross-tenant call must delete nothing, so B's leg rows are counted before and after and must be
 identical.
 
@@ -1195,7 +1196,7 @@ that rule is broken by accident.
 `03-S2` already built rather than beside it:
 
 - `saveSearchedConnection(scope, tripId, connection)` — creates the `transports` row and its
-  `transport_legs` in one `scope.db.batch()`, by calling `03-S2`'s `replaceTransportChain` for the
+  `transport_legs` in one `scope.db.batch()`, by calling `03-S2`'s chain writer (today `saveTransport`) for the
   legs rather than inserting them itself. Re-searching an existing connection replaces the chain on
   the **same** `transports` row, so the record keeps its id, its booking fields and its day
   assignment — which is the behaviour the row asks for, and it falls out of reusing the chain writer

@@ -17,6 +17,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
+import { newId } from '#/server/db/schema'
 import { NotFoundError, RepositoryError } from '../context'
 import { departingJourneys } from '../day-journeys'
 import { createDay, deleteDay, listTripDays } from '../days'
@@ -30,11 +31,11 @@ import {
   listTripDayTransports,
   listTripLegs,
   listTripTransports,
-  replaceTransportChain,
   saveSearchedConnection,
+  saveTransport,
   setTransportStatus,
 } from '../transports'
-import { editTransport } from './edit-transport'
+import { editTransport, replaceChain } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import type { Day } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -258,7 +259,7 @@ describe('a journey with more than two stations', () => {
   })
 
   it('writes exactly N−1 legs for N stations, in chain order', async () => {
-    const legs = await replaceTransportChain(tenant.scope, transportId, {
+    const legs = await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { serviceNumber: 'Hikari 500', departureTime: '09:00' },
@@ -282,7 +283,7 @@ describe('a journey with more than two stations', () => {
    * disagree about which station they name.
    */
   it('writes the shared station into both rows that meet at it', async () => {
-    const legs = await replaceTransportChain(tenant.scope, transportId, {
+    const legs = await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{}, {}],
     })
@@ -294,7 +295,7 @@ describe('a journey with more than two stations', () => {
 
   /** The two representations cannot disagree, so the record is rewritten too. */
   it('rewrites the record’s own endpoints from the outer two stations', async () => {
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{ departureTime: '09:00' }, { arrivalTime: '12:40' }],
     })
@@ -310,11 +311,11 @@ describe('a journey with more than two stations', () => {
   })
 
   it('replaces rather than appends, leaving no orphan from the previous chain', async () => {
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{}, {}],
     })
-    const legs = await replaceTransportChain(tenant.scope, transportId, {
+    const legs = await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{}],
     })
@@ -324,13 +325,13 @@ describe('a journey with more than two stations', () => {
   })
 
   it('clears the chain when handed no stations, and leaves the record standing', async () => {
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{}, {}],
     })
 
     expect(
-      await replaceTransportChain(tenant.scope, transportId, {
+      await replaceChain(tenant.scope, tripId, transportId, {
         stations: [],
         legs: [],
       }),
@@ -346,7 +347,7 @@ describe('a journey with more than two stations', () => {
     ]) {
       expect(
         await captureError(() =>
-          replaceTransportChain(tenant.scope, transportId, input),
+          replaceChain(tenant.scope, tripId, transportId, input),
         ),
       ).not.toBeNull()
     }
@@ -364,7 +365,7 @@ describe('a journey with more than two stations', () => {
     const legs = Array.from({ length: CHAIN_MAX_LEGS }, () => ({}))
 
     expect(
-      await replaceTransportChain(tenant.scope, transportId, {
+      await replaceChain(tenant.scope, tripId, transportId, {
         stations,
         legs,
       }),
@@ -372,7 +373,7 @@ describe('a journey with more than two stations', () => {
 
     expect(
       await captureError(() =>
-        replaceTransportChain(tenant.scope, transportId, {
+        replaceChain(tenant.scope, tripId, transportId, {
           stations: [...stations, { name: 'One too many' }],
           legs: [...legs, {}],
         }),
@@ -392,7 +393,7 @@ describe('a journey with more than two stations', () => {
 
     expect(
       await captureError(() =>
-        replaceTransportChain(tenant.scope, transportId, {
+        replaceChain(tenant.scope, tripId, transportId, {
           stations: [OSAKA, TOKYO],
           legs: [{ departureDayId: foreignDay.id }],
         }),
@@ -403,7 +404,7 @@ describe('a journey with more than two stations', () => {
 
   it('refuses a leg that lands on a day before the one it left on', async () => {
     const error = await captureError(() =>
-      replaceTransportChain(tenant.scope, transportId, {
+      replaceChain(tenant.scope, tripId, transportId, {
         stations: [OSAKA, TOKYO],
         legs: [{ departureDayId: days[2].id, arrivalDayId: days[0].id }],
       }),
@@ -414,7 +415,7 @@ describe('a journey with more than two stations', () => {
   })
 
   it('keeps a night leg that lands on the day after', async () => {
-    const legs = await replaceTransportChain(tenant.scope, transportId, {
+    const legs = await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [
         {
@@ -436,11 +437,11 @@ describe('a journey with more than two stations', () => {
       title: 'Ferry to Shikoku',
       mode: 'ferry',
     })
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{}, {}],
     })
-    await replaceTransportChain(tenant.scope, second.id, {
+    await replaceChain(tenant.scope, tripId, second.id, {
       stations: [{ name: 'Kobe' }, { name: 'Takamatsu' }],
       legs: [{}],
     })
@@ -473,7 +474,7 @@ describe('a journey with more than two stations', () => {
     })
 
     const refused = await captureError(() =>
-      replaceTransportChain(tenant.scopeFor(viewerId), transportId, {
+      replaceChain(tenant.scopeFor(viewerId), tripId, transportId, {
         stations: [OSAKA, TOKYO],
         legs: [{}],
       }),
@@ -482,7 +483,7 @@ describe('a journey with more than two stations', () => {
     expect(await listTransportLegs(tenant.scope, transportId)).toEqual([])
 
     expect(
-      await replaceTransportChain(tenant.scopeFor(editorId), transportId, {
+      await replaceChain(tenant.scopeFor(editorId), tripId, transportId, {
         stations: [OSAKA, TOKYO],
         legs: [{}],
       }),
@@ -559,7 +560,7 @@ describe('a journey between the stops and notes of its day', () => {
 
   it('answers every journey of the trip, including a chained record that names no day', async () => {
     const chained = await journeyOn(null)
-    await replaceTransportChain(tenant.scope, chained, {
+    await replaceChain(tenant.scope, tripId, chained, {
       stations: [{ name: 'Shin-Osaka' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: days[0].id }, { departureDayId: days[1].id }],
     })
@@ -576,7 +577,7 @@ describe('a journey between the stops and notes of its day', () => {
 
   it('keeps a leg on its day when the chain is rewritten around it', async () => {
     const chained = await journeyOn(null)
-    await replaceTransportChain(tenant.scope, chained, {
+    await replaceChain(tenant.scope, tripId, chained, {
       stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: days[0].id }, { departureDayId: days[1].id }],
     })
@@ -591,7 +592,7 @@ describe('a journey between the stops and notes of its day', () => {
 
     // A service number is renamed: without the carry-forward this leg would go to
     // the head of its day, because the chain writer would hand it its chain index.
-    await replaceTransportChain(tenant.scope, chained, {
+    await replaceChain(tenant.scope, tripId, chained, {
       stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
       legs: [
         { departureDayId: days[0].id, serviceNumber: 'Hikari 501' },
@@ -605,7 +606,7 @@ describe('a journey between the stops and notes of its day', () => {
 
   it('hands a leg its chain index when it now departs from another day, and lets an explicit value win', async () => {
     const chained = await journeyOn(null)
-    await replaceTransportChain(tenant.scope, chained, {
+    await replaceChain(tenant.scope, tripId, chained, {
       stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: days[0].id, sortOrder: 4.25 }],
     })
@@ -614,7 +615,7 @@ describe('a journey between the stops and notes of its day', () => {
     )
 
     // The day changed, so the fraction was measured against a ruler this leg has left.
-    await replaceTransportChain(tenant.scope, chained, {
+    await replaceChain(tenant.scope, tripId, chained, {
       stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: days[2].id }],
     })
@@ -623,7 +624,7 @@ describe('a journey between the stops and notes of its day', () => {
     )
 
     // And an explicit value always wins over the carry-forward.
-    await replaceTransportChain(tenant.scope, chained, {
+    await replaceChain(tenant.scope, tripId, chained, {
       stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: days[2].id, sortOrder: 9.5 }],
     })
@@ -671,7 +672,7 @@ describe('the plan behind one day’s journey read', () => {
       mode: 'train',
       dayId: days[0].id,
     })
-    await replaceTransportChain(tenant.scope, chained.id, {
+    await replaceChain(tenant.scope, tripId, chained.id, {
       stations: [{ name: 'Kyoto' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: days[1].id }],
     })
@@ -951,7 +952,7 @@ describe('a journey that arrives before it departs', () => {
     })
 
     await expectTimeOrder(() =>
-      replaceTransportChain(tenant.scope, created.id, {
+      replaceChain(tenant.scope, tripId, created.id, {
         stations: [TOKYO, HONOLULU, LONDON, NEW_YORK],
         legs: [WESTBOUND, {}, INVERTED],
       }),
@@ -966,7 +967,7 @@ describe('a journey that arrives before it departs', () => {
       mode: 'flight',
     })
 
-    const legs = await replaceTransportChain(tenant.scope, created.id, {
+    const legs = await replaceChain(tenant.scope, tripId, created.id, {
       stations: [TOKYO, HONOLULU],
       legs: [WESTBOUND],
     })
@@ -996,5 +997,91 @@ describe('a journey that arrives before it departs', () => {
     })
     expect(saved.legs).toHaveLength(1)
     expect(saved.transport.arrivalTime).toBe('09:00')
+  })
+})
+
+describe('a transport saved without a title', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+  let tripId: string
+  let transportId: string
+
+  const OSAKA = { name: 'Shin-Osaka', code: 'OSA', timezone: 'Asia/Tokyo' }
+  const TOKYO = { name: 'Tokyo', code: 'TYO', timezone: 'Asia/Tokyo' }
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('untitled')
+    const trip = await createTrip(tenant.scope, {
+      title: 'Sanyo line',
+      startDate: '2026-04-10',
+      endDate: '2026-04-13',
+      currency: 'JPY',
+    })
+    tripId = trip.id
+    transportId = (
+      await createTransport(tenant.scope, {
+        tripId,
+        title: 'Osaka to Tokyo',
+        mode: 'train',
+        bookingCode: 'ABC123',
+      })
+    ).id
+  })
+
+  it('keeps the stored title of a row that exists and writes the chain and its endpoints', async () => {
+    const saved = await editTransport(
+      tenant.scope,
+      tripId,
+      transportId,
+      {},
+      { stations: [OSAKA, TOKYO], legs: [{}] },
+    )
+
+    expect(saved.transport.title).toBe('Osaka to Tokyo')
+    expect(saved.transport.bookingCode).toBe('ABC123')
+    expect(saved.transport.departureName).toBe('Shin-Osaka')
+    expect(saved.transport.arrivalName).toBe('Tokyo')
+    expect(saved.legs).toHaveLength(1)
+  })
+
+  it('leaves the row as it was when there is nothing to write but an empty chain', async () => {
+    const before = await getTransport(tenant.scope, transportId)
+
+    const saved = await editTransport(tenant.scope, tripId, transportId, {})
+
+    expect(saved.transport).toEqual(before)
+    expect(saved.legs).toEqual([])
+  })
+
+  it('refuses to create a row without one before the batch, and writes no row and no leg', async () => {
+    const error = await captureError(() =>
+      saveTransport(tenant.scope, {
+        tripId,
+        transportId: newId(),
+        intent: 'create',
+        record: { mode: 'train' },
+        chain: { stations: [OSAKA, TOKYO], legs: [{}] },
+      }),
+    )
+
+    expect(error).toBeInstanceOf(RepositoryError)
+    expect((error as RepositoryError).code).toBe('TITLE_REQUIRED')
+    expect(await listTripTransports(tenant.scope, tripId)).toHaveLength(1)
+    expect(await listTripLegs(tenant.scope, tripId)).toEqual([])
+  })
+
+  it('still refuses an id that is not of the generator’s shape as a foreign id', async () => {
+    const error = await captureError(() =>
+      saveTransport(tenant.scope, {
+        tripId,
+        transportId: 'not-an-id',
+        intent: 'create',
+        record: {},
+        chain: { stations: [], legs: [] },
+      }),
+    )
+
+    expect(error).toBeInstanceOf(NotFoundError)
   })
 })

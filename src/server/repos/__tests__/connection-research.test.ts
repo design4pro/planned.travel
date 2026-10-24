@@ -12,9 +12,9 @@
  * the journeys every write of a day places) and `listTripDayTransports`.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { editTransport } from './edit-transport'
+import { editTransport, replaceChain } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import { NotFoundError } from '../context'
 import { departingJourneys } from '../day-journeys'
@@ -25,8 +25,8 @@ import {
   getTransport,
   listTransportLegs,
   listTripDayTransports,
-  replaceTransportChain,
   saveSearchedConnection,
+  transportsRepository,
 } from '../transports'
 import type { Day, TransportLeg } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -93,7 +93,7 @@ describe('a saved connection that is searched again', () => {
 
   it('keeps an anchored journey on the day it departs from', async () => {
     const transportId = await saveUnanchored(1)
-    const [anchored] = await replaceTransportChain(tenant.scope, transportId, {
+    const [anchored] = await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[1].id, departureTime: '09:00' }],
     })
@@ -119,7 +119,7 @@ describe('a saved connection that is searched again', () => {
 
   it('keeps each position’s pair and its place in the day when the number of legs is the same', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { departureDayId: days[0].id, sortOrder: 2.5 },
@@ -146,7 +146,7 @@ describe('a saved connection that is searched again', () => {
 
   it('carries only the two ends when the number of legs changes', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { departureDayId: days[0].id },
@@ -222,7 +222,7 @@ describe('a saved connection that is searched again', () => {
 
   it('treats the null day reference the dialog’s empty selects become as naming none', async () => {
     const transportId = await saveUnanchored(1)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[1].id, arrivalDayId: days[2].id }],
     })
@@ -243,7 +243,7 @@ describe('a saved connection that is searched again', () => {
 
   it('never overwrites a day the re-search names', async () => {
     const transportId = await saveUnanchored(1)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[0].id, arrivalDayId: days[1].id }],
     })
@@ -277,7 +277,7 @@ describe('a saved connection that is searched again', () => {
 
   it('drops a carried arrival that would land before the departure, and keeps the departure', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [
         { departureDayId: days[2].id },
@@ -302,7 +302,7 @@ describe('a saved connection that is searched again', () => {
 
   it('drops a carried departure that a named arrival would precede', async () => {
     const transportId = await saveUnanchored(1)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[3].id }],
     })
@@ -329,7 +329,7 @@ describe('a saved connection that is searched again', () => {
       bookingCode: 'ABC123',
       dayId: days[1].id,
     })
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[1].id }],
     })
@@ -351,6 +351,44 @@ describe('a saved connection that is searched again', () => {
     expect(record?.bookingCode).toBe('ABC123')
     expect(record?.dayId).toBe(days[1].id)
     expect(record?.arrivalDayId).toBeNull()
+  })
+
+  describe('when the title changes while the re-search is running', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('does not write the title it read back over a rename that landed after the read', async () => {
+      const transportId = await saveUnanchored(1)
+      const read = transportsRepository.requireById.bind(transportsRepository)
+      let renamed = false
+      vi.spyOn(transportsRepository, 'requireById').mockImplementation(
+        async (scope, id) => {
+          const row = await read(scope, id)
+          if (!renamed && id === transportId) {
+            renamed = true
+            await transportsRepository.requireUpdate(scope, id, {
+              title: 'Renamed in another tab',
+            })
+          }
+          return row
+        },
+      )
+
+      await saveSearchedConnection(tenant.scope, {
+        tripId,
+        transportId,
+        mode: 'train',
+        title: 'Osaka to Tokyo',
+        stations: [OSAKA, TOKYO],
+        legs: [{ departureTime: '09:30' }],
+      })
+
+      expect(renamed).toBe(true)
+      expect((await getTransport(tenant.scope, transportId))?.title).toBe(
+        'Renamed in another tab',
+      )
+    })
   })
 
   it('carries nothing into a connection that is saved as new', async () => {
