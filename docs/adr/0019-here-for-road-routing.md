@@ -182,6 +182,15 @@ Four further terms travel with it:
   not a web address is dropped and its words kept. Road routing has no such field in its response
   and is unchanged._
 
+  _Update, 2026-10-24 (#1038): a notice is rendered without `lang`. HERE's `Attribution` carries
+  no language (`id`, `text`, `href`, `hrefText`, `type`) and the text is the operator's own words,
+  which §6.4 c forbids us to alter, so any `lang` we set would be a guess, and a wrong one makes a
+  screen reader use the wrong voice; sending the traveller's locale to HERE would change the station
+  names the traveller sees. This is a known gap against WCAG 3.1.2 (partial conformance), not a claim
+  that the exception for indeterminate language applies. The caption's markup (wrapping of an
+  unbroken string, a `bdi` around each notice, real spaces around the separator) is pinned by
+  `connection-credit.test.tsx`._
+
 - **Personal data reaching HERE carries a notice duty.** "If any personal data of End Users is
   delivered to HERE by the End User or through the End User's use of your Application ... you shall
   make the End User Terms and the HERE Privacy Policy available to End Users in Applications or
