@@ -182,6 +182,13 @@ const messages = {
   'plan.handoff.day.point': 'Tampilkan di {service}',
   'plan.handoff.day.pointName':
     'Tampilkan di {service}: satu-satunya perhentian bertitik peta pada {day} (terbuka di tab baru)',
+  'plan.handoff.day.part': 'Bagian {n} dari {count}',
+  'plan.handoff.day.directionsPartName':
+    'Petunjuk arah di {service}, bagian {n} dari {count}, {day} (terbuka di tab baru)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Petunjuk arah di {service}, bagian {n} dari {count}, perhentian: {carried} pertama dari {total}, {day} (terbuka di tab baru)',
+  'plan.handoff.day.pointPartName':
+    'Tampilkan di {service}, bagian {n} dari {count}, {day} (terbuka di tab baru)',
   'plan.drop.hint':
     'Klik kanan pada peta, atau tekan dan tahan, untuk menambahkan tempat tepat di sana.',
   'plan.drop.armed':

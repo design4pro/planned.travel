@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
-import { MAP_SERVICE_NAME, dayHandoff } from '#/lib/geo/handoff'
+import { MAP_SERVICE_NAME, dayHandoffs } from '#/lib/geo/handoff'
 import { useTranslate } from '#/lib/i18n'
 import { focusRing, transitionBase } from '#/components/ui'
 
@@ -37,7 +37,7 @@ export function PlannerDayTools({
   onAddStay,
 }: PlannerDayToolsProps) {
   const t = useTranslate()
-  const handoff = dayHandoff(day.rows)
+  const handoffs = dayHandoffs(day.items)
 
   return (
     <div className="flex flex-col gap-1.5 px-2 pb-2">
@@ -53,21 +53,44 @@ export function PlannerDayTools({
         name={t('trips.plan.day.addStay', { day: day.title })}
         onClick={() => onAddStay(day.dayId)}
       />
-      {handoff === null ? null : <DayHandoffLink day={day} handoff={handoff} />}
+      <DayHandoffLinks day={day} handoffs={handoffs} />
     </div>
   )
 }
 
 /** The read-only footer shares the editor's link and its partial-day note. */
 export function PlannerDayHandoff({ day }: { readonly day: PlannerDay }) {
-  const handoff = dayHandoff(day.rows)
-  if (handoff === null) return null
+  const handoffs = dayHandoffs(day.items)
+  if (handoffs.length === 0) return null
 
   return (
     <div className="flex flex-col gap-1.5 px-2 pb-2">
-      <DayHandoffLink day={day} handoff={handoff} />
+      <DayHandoffLinks day={day} handoffs={handoffs} />
     </div>
   )
+}
+
+/**
+ * One link per side of a flight, ferry or train, numbered "Part n of count" when there is more
+ * than one; a single link keeps the plain copy, so a day no journey splits reads as before.
+ */
+function DayHandoffLinks({
+  day,
+  handoffs,
+}: {
+  readonly day: PlannerDay
+  readonly handoffs: ReadonlyArray<DayHandoff>
+}) {
+  return handoffs.map((handoff, index) => (
+    <DayHandoffLink
+      key={index}
+      day={day}
+      handoff={handoff}
+      part={
+        handoffs.length > 1 ? { n: index + 1, count: handoffs.length } : null
+      }
+    />
+  ))
 }
 
 /**
@@ -79,15 +102,20 @@ export function PlannerDayHandoff({ day }: { readonly day: PlannerDay }) {
 function DayHandoffLink({
   day,
   handoff,
+  part,
 }: {
   readonly day: PlannerDay
   readonly handoff: DayHandoff
+  /** Which of the day's links this is, or `null` when the day offers just one. */
+  readonly part: { readonly n: number; readonly count: number } | null
 }) {
   const t = useTranslate()
   const service = MAP_SERVICE_NAME.google
   const counts = { carried: handoff.carried, total: handoff.total }
   const partial =
     handoff.kind === 'directions' && handoff.carried < handoff.total
+  const partLine = part === null ? [] : [t('trips.plan.handoff.day.part', part)]
+  const named = { service, day: day.title }
 
   if (handoff.kind === 'point') {
     return (
@@ -95,10 +123,12 @@ function DayHandoffLink({
         icon={Navigation}
         href={handoff.href}
         label={t('trips.plan.handoff.day.point', { service })}
-        name={t('trips.plan.handoff.day.pointName', {
-          service,
-          day: day.title,
-        })}
+        notes={partLine}
+        name={
+          part === null
+            ? t('trips.plan.handoff.day.pointName', named)
+            : t('trips.plan.handoff.day.pointPartName', { ...named, ...part })
+        }
       />
     )
   }
@@ -108,23 +138,38 @@ function DayHandoffLink({
       icon={Route}
       href={handoff.href}
       label={t('trips.plan.handoff.day.directions', { service })}
-      note={
-        partial ? t('trips.plan.handoff.day.directionsPartial', counts) : null
-      }
-      name={
+      notes={
         partial
-          ? t('trips.plan.handoff.day.directionsPartialName', {
-              service,
-              day: day.title,
-              ...counts,
-            })
-          : t('trips.plan.handoff.day.directionsName', {
-              service,
-              day: day.title,
-            })
+          ? [...partLine, t('trips.plan.handoff.day.directionsPartial', counts)]
+          : partLine
       }
+      name={directionsName(t, named, part, partial ? counts : null)}
     />
   )
+}
+
+/** The accessible name of a directions link: a full catalogue sentence per combination. */
+function directionsName(
+  t: ReturnType<typeof useTranslate>,
+  named: { readonly service: string; readonly day: string },
+  part: { readonly n: number; readonly count: number } | null,
+  counts: { readonly carried: number; readonly total: number } | null,
+): string {
+  if (part === null) {
+    return counts === null
+      ? t('trips.plan.handoff.day.directionsName', named)
+      : t('trips.plan.handoff.day.directionsPartialName', {
+          ...named,
+          ...counts,
+        })
+  }
+  return counts === null
+    ? t('trips.plan.handoff.day.directionsPartName', { ...named, ...part })
+    : t('trips.plan.handoff.day.directionsPartialPartName', {
+        ...named,
+        ...part,
+        ...counts,
+      })
 }
 
 const DAY_TOOL_CLASS = cn(
@@ -166,20 +211,20 @@ function DayTool({
 
 /**
  * A footer control that leaves the app: the same look as {@link DayTool}, a real anchor
- * that opens a new tab without sending the trip's URL as a referrer. `note` is a second
- * visible line for what the label cannot carry, and part of `name`.
+ * that opens a new tab without sending the trip's URL as a referrer. `notes` are further
+ * visible lines for what the label cannot carry, and part of `name`.
  */
 function DayLink({
   icon: Icon,
   href,
   label,
-  note = null,
+  notes,
   name,
 }: {
   readonly icon: LucideIcon
   readonly href: string
   readonly label: string
-  readonly note?: string | null
+  readonly notes: ReadonlyArray<string>
   readonly name: string
 }) {
   return (
@@ -200,9 +245,11 @@ function DayLink({
           data-mirror-rtl
         />
       </span>
-      {note === null ? null : (
-        <span className="text-micro text-ink-3">{note}</span>
-      )}
+      {notes.map((note) => (
+        <span key={note} className="text-micro text-ink-3">
+          {note}
+        </span>
+      ))}
     </a>
   )
 }
