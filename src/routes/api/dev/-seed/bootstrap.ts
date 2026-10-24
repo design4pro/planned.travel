@@ -758,10 +758,12 @@ const PLATFORM_LEDGER: ReadonlyArray<LedgerFixtureEntry> = [
     action: PLATFORM_ACTIONS.USER_IMPERSONATION_STARTED,
     daysAgo: 2,
     minute: 41,
-    // The impersonation verbs record a session rather than an account, so their payload is the one
-    // `src/server/fns/console/impersonation.ts` writes and not `auditUserState`'s key set. A fixture
+    // The impersonation verbs record a session rather than an account, so their payload is the shape
+    // of `src/server/fns/console/impersonation.ts` and not `auditUserState`'s key set. A fixture
     // that reused the account shape here would render an entry with nothing under it, which a reader
-    // would take to mean the platform recorded nothing.
+    // would take to mean the platform recorded nothing. The live start row also carries
+    // `organizationId`, the workspace the session landed in; the seed leaves it out because the
+    // subject's workspace id is not known here, and a row without it is the shape older rows have.
     changes: (subjectId) => ({
       before: { impersonating: null },
       after: {
