@@ -39,7 +39,7 @@ import { getExpense, prepareExpenseInsert } from './expenses'
 import { unlinkAccommodationsFromReservation } from './itinerary'
 import { requirePlaceOfTrip } from './places'
 import { requireTransportOfTrip } from './transports'
-import { assertTripRole, requireWritableTrip } from './trips'
+import { TRIP_WRITE_ROLES, assertTripRole, requireWritableTrip } from './trips'
 import {
   currencySchema,
   dateSchema,
@@ -57,7 +57,6 @@ import {
 import type { Reservation, Trip } from '#/server/db/types'
 import type { TenantScope } from './base'
 import type { CreateExpenseInput } from './expenses'
-import type { TripRole } from './trips'
 
 export const reservationsRepository = createTenantRepository(
   reservations,
@@ -229,15 +228,6 @@ export async function totalTripReservationsMinor(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Trip roles that may change a trip's bookings. A `viewer` reads the desk and writes nothing.
- *
- * The one place the booking writers' role list is declared. Whether a caller holds one of them is
- * not decided here: that is {@link assertTripRole}, the trip's own guard, so a booking refusal is
- * the same `TripRoleError` every other trip writer raises and reaches the reader as a refusal.
- */
-const BOOKING_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
-
-/**
  * The trip a booking writer may change, or a refusal: the layers every booking write shares, in the
  * boundary's order (ADR 0007).
  *
@@ -259,7 +249,7 @@ export async function requireWritableBookingTrip(
   tripId: string,
 ): Promise<Trip> {
   const trip = await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, tripId, BOOKING_WRITE_ROLES)
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
   return trip
 }
 

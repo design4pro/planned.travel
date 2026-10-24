@@ -20,7 +20,7 @@ import { assertQuota, createTenantRepository, createTenantTableAccess, resolveQu
 import { runBatch } from './batch'
 import { categoriesRepository } from './categories'
 import { NotFoundError } from './context'
-import { assertTripRole, requireTrip } from './trips'
+import { TRIP_WRITE_ROLES, assertTripRole, requireTrip } from './trips'
 import {
   countryCodeSchema,
   currencySchema,
@@ -41,14 +41,10 @@ import type { SQL } from 'drizzle-orm'
 import type { OpeningHours } from '#/server/db/schema'
 import type { Place, Tag } from '#/server/db/types'
 import type { TenantScope } from './base'
-import type { TripRole } from './trips'
-
-/** Shared by the repository writers and the planner's write guard. */
-export const PLACE_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
 
 async function requirePlaceWriteRole(scope: TenantScope, tripId: string): Promise<void> {
   await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
 }
 
 async function requireEditablePlace(scope: TenantScope, placeId: string): Promise<Place> {

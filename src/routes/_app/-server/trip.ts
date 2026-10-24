@@ -28,12 +28,12 @@ import {
   tripRoleFor,
   listTripPlacesWithTags,
   listUnscheduledPlaces,
+  isTripWriteRole,
   listUserProfiles,
   requireTrip,
   resolveQuotas,
   listItems,
 } from '#/server/repos'
-import { FILE_WRITE_ROLES } from '#/server/repos/files'
 import { serverToday } from '#/server/clock'
 import { ABSENT } from '#/lib/absence'
 import { nullWhenMissing } from '#/server/fns/-lib/absence'
@@ -580,7 +580,7 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
 
     return {
       found: true,
-      canWrite: FILE_WRITE_ROLES.some((allowed) => allowed === role),
+      canWrite: isTripWriteRole(role),
       hasPlaces: placeCount > 0,
       tripBytes,
       people,
