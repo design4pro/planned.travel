@@ -1322,8 +1322,9 @@ sound precisely because the answer is a public fact.
 
 1. `saveSearchedConnection` under β's scope against α's trip id is a `NotFoundError`, and no
    `transports` row and no `transport_legs` row is written.
-2. Re-searching an existing connection under β's scope against α's transport id is a `NotFoundError`,
-   and α's chain is byte-identical afterwards. This is the case that exists because a re-search
+2. Re-searching an existing connection under β's scope against α's transport id is a
+   `TransportRefusalError` (#973: the answer an absent id gets, so it confirms nothing about α's
+   row), and α's chain is byte-identical afterwards. This is the case that exists because a re-search
    _replaces_ rows, so a missing scope check would not fail loudly — it would quietly rewrite another
    tenant's journey.
 

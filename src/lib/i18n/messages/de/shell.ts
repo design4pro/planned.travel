@@ -61,7 +61,7 @@ const messages = {
   'trip.tab.collab': 'Austausch',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Kontomenü',
+  'account.menu': '{name}, Kontomenü',
   'account.settings': 'Einstellungen',
   'account.billing': 'Tarif und Abrechnung',
   'account.admin': 'Verwaltung',
