@@ -207,6 +207,11 @@ export function TransportDialog({
    */
   const [goneIn, setGoneIn] = useState<string | null>(null)
   const gone = goneIn === draftId
+  /** The open the dialog is in now, for a callback that was created in an earlier one. */
+  const currentOpen = useRef(draftId)
+  useEffect(() => {
+    currentOpen.current = draftId
+  }, [draftId])
   const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -248,9 +253,15 @@ export function TransportDialog({
       return
     }
     // `onError` is the one this render handed to `useAction`, so `draftId` is the open the press
-    // happened in, not the open the answer arrives in.
-    setGoneIn(draftId)
+    // happened in, not the open the answer arrives in. An answer to an earlier open describes a
+    // state this one never had: it marks nothing, and the inline error `useAction` just set from it
+    // is taken back.
     void router.invalidate()
+    if (draftId !== currentOpen.current) {
+      save.reset()
+      return
+    }
+    setGoneIn(draftId)
   }
 
   // The control the reader pressed (Save, or a result row's button) has just become disabled, and

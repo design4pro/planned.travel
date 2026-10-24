@@ -353,7 +353,10 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     refuse(goneRefusal())
     await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
 
+    // Neither the gone state nor the inline error that refusal set before it was recognised.
     expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+    expect(document.body.textContent).not.toContain('deleted while this window')
     expect(saveButton().getAttribute('disabled')).toBeNull()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
   })
