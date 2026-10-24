@@ -14,7 +14,7 @@
  * tenant context to scope the *discovery* query with — the question is "which of every workspace's
  * trips is due", which the tenant repository layer cannot ask by construction, and handing that
  * layer a fabricated context to make it ask would destroy the guarantee it exists to give
- * (`docs/SPEC.md` §5). `server/catalog` is the single stated exception to "all SQL lives in
+ * (`docs/SPEC.md` §5). `server/catalog` is a stated exception to "all SQL lives in
  * `server/repos`" and `catalog/audit.ts` is the precedent: a plain {@link Database}, no
  * `TenantScope`, no reach into `src/server/repos/**` — a property of the module graph that
  * `src/server/catalog/__tests__/isolation.test.ts` walks from every module in this directory.

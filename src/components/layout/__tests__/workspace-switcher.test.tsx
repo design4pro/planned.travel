@@ -12,6 +12,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
+import { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 import {
   dismissWorkspaceNotice,
   markWorkspaceStale,
@@ -944,6 +945,14 @@ describe('creating a workspace', () => {
     )
     expect(document.activeElement).toBe(
       screen.getByRole('textbox', { name: /Workspace name/ }),
+    )
+  })
+
+  it('says there is no way to delete a workspace yet and that it counts toward the limit an account can belong to', async () => {
+    const { dialog } = await openDialog()
+
+    expect(dialog.textContent).toContain(
+      `There is no option to delete a workspace in planned.travel yet. Each workspace counts toward the ${WORKSPACE_LIMIT} workspaces an account can belong to, including those you are invited to.`,
     )
   })
 

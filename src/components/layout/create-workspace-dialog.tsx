@@ -15,9 +15,11 @@ import {
   Field,
   Input,
 } from '#/components/ui'
-import { useTranslate } from '#/lib/i18n'
+import { formatNumber } from '#/lib/format'
+import { useI18n, useTranslate } from '#/lib/i18n'
 import { readPublicFailure } from '#/lib/errors'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
+import { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 import {
   beginWorkspaceSwitch,
   endWorkspaceSwitch,
@@ -75,7 +77,7 @@ export function CreateWorkspaceDialog({
   /** Where focus goes when the dialog closes: the menu trigger the reader opened it from. */
   onCloseAutoFocus: () => void
 }) {
-  const t = useTranslate()
+  const { t, locale } = useI18n()
   const formId = useId()
   const resync = useWorkspaceResync()
   const [name, setName] = useState('')
@@ -199,6 +201,12 @@ export function CreateWorkspaceDialog({
                 required
               />
             </Field>
+
+            <p className="text-caption text-ink-3">
+              {t('shell.workspace.createPermanent', {
+                limit: formatNumber(WORKSPACE_LIMIT, locale),
+              })}
+            </p>
           </form>
         </DialogBody>
 

@@ -79,6 +79,8 @@ const messages = {
   'workspace.createTitle': 'Criar um espaço',
   'workspace.createDescription':
     'Um espaço separado, com viagens, lugares e pessoas próprios. Começa no plano Grátis e não compartilha o plano do espaço em que você está.',
+  'workspace.createPermanent':
+    'No planned.travel ainda não há opção para excluir um espaço. Cada espaço conta para os {limit} espaços de que uma conta pode participar, inclusive aqueles para os quais você foi convidado.',
   'workspace.createName': 'Nome do espaço',
   'workspace.createUpgrade':
     '“{workspace}” está no plano Grátis, e só um espaço com plano pago pode criar outro. Se algum dos seus outros espaços tiver plano pago, troque para ele e crie a partir de lá. Caso contrário, faça o upgrade de “{workspace}”.',

@@ -79,6 +79,8 @@ const messages = {
   'workspace.createTitle': 'Crea un espai nou',
   'workspace.createDescription':
     'Un espai separat amb els seus propis viatges, llocs i persones. Comença amb el pla gratuït i no comparteix el pla de l’espai on ets.',
+  'workspace.createPermanent':
+    'A planned.travel encara no hi ha cap opció per suprimir un espai. Cada espai compta dins dels {limit} espais als quals pot pertànyer un compte, també aquells als quals t’han convidat.',
   'workspace.createName': 'Nom de l’espai',
   'workspace.createUpgrade':
     '«{workspace}» és al pla gratuït, i només un espai amb un pla de pagament en pot crear un altre. Si algun dels teus altres espais té un pla de pagament, canvia-hi i crea’n un des d’allà. Si no, millora el pla de «{workspace}».',

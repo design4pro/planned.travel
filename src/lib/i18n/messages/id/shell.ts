@@ -91,6 +91,8 @@ const messages = {
   'workspace.createTitle': 'Buat ruang kerja baru',
   'workspace.createDescription':
     'Ruang terpisah untuk perjalanan, tempat, dan orangnya sendiri. Dimulai dengan paket Gratis dan tidak berbagi paket dengan ruang kerja tempat Anda berada.',
+  'workspace.createPermanent':
+    'Di planned.travel belum ada opsi untuk menghapus ruang kerja. Setiap ruang kerja dihitung dalam batas {limit} ruang kerja yang bisa diikuti satu akun, termasuk yang mengundang Anda.',
   'workspace.createName': 'Nama ruang kerja',
   'workspace.createUpgrade':
     '“{workspace}” ada di paket Gratis, dan hanya ruang kerja dengan paket berbayar yang bisa membuat ruang kerja lain. Jika salah satu ruang kerja Anda yang lain memakai paket berbayar, pindah ke sana dan buat dari sana. Jika tidak, tingkatkan paket “{workspace}”.',

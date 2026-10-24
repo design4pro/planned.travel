@@ -339,7 +339,7 @@ Every domain row is scoped by `organization_id`. A user belongs to one or more o
 through `member`. **Every** query goes through a scoped repository in `src/server/repos/**`
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
 Tenant isolation is enforced in the repository layer and covered by tests. The bounded
-`…Unscoped` shape below and the four closed catalog exceptions are the explicit exceptions to the tenant-context argument.
+`…Unscoped` shape below, the four closed catalog exceptions and the identity-table SQL of the auth provisioning module (§6) are the explicit exceptions to the tenant-context argument.
 
 Erasure repository primitives use `createErasureScope` (`server/erasure/scope.ts`), the single
 factory for the reserved `system:erasure` owner actor. It binds one organization and no session;
@@ -715,10 +715,10 @@ src/
     <module>/        product components for one module
   server/
     db/              drizzle schema + client
-    auth/            Better Auth setup, tenant context, permission guard, mail message contract
+    auth/            Better Auth setup, tenant context, permission guard, mail message contract; provisioning.ts is a stated SQL exception
     email/           React Email templates + the HTML/plain-text renderer, no bindings
     repos/           tenant-scoped data access (every tenant query and its SQL)
-    catalog/         global catalogue access - the single stated exception to the SQL rule
+    catalog/         global catalogue access - a stated exception to the SQL rule
     public/          session-less reads - read-only, column-whitelisted projections only
     security/        pure secret derivation and digest leaf - no SQL, no binding; repos may import it
     mcp/             JSON-RPC 2.0 tool server - transport and tool schemas, no data layer
@@ -739,7 +739,8 @@ Rules:
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`, normally through the tenant-scoped base repository; FU-3
   permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
-- The single stated exception is `server/catalog`, and §5 states it as a closed list of four. The
+- The stated exceptions are three, and closed: the bounded `…Unscoped` shape above, `server/catalog`
+  and the identity-table access of the auth provisioning module. §5 states `server/catalog` as a closed list of four. The
   first member is the twelve global tables: eleven carry no `organization_id` at all and the twelfth,
   `provider_usage`, carries one only as attribution, so none of them can pass through the tenant
   repository, and every path that mutates or serves that platform content is guarded instead by an
@@ -758,6 +759,16 @@ Rules:
   through `repos/audit.ts`, by `created_at` alone: 400 days, 200 ids per batch, 250 batches shared
   across the run, no self-audit, error on `drained: false`. Four, and closed; a fifth one changes
   this contract.
+- The third exception is `src/server/auth/provisioning.ts` (workspace creation and sign-up
+  provisioning). It reads `user` and writes `organization` and `member`, all Better Auth identity
+  tables imported from `server/db/auth-schema` and never from the tenant schema; a create has no
+  tenant scope yet, so there is none to pass, and
+  `src/server/auth/__tests__/provisioning-boundary.test.ts` pins the import boundary. The
+  participation anchor is written only through `auth/participation.ts` (§5, ADR 0043).
+  `createOrganizationWithinLimit` deletes an `organization` row, which cascades over tenant tables,
+  and touches no tenant row only because that organization was created in the same call: the
+  withdrawal is never pointed at an organization that already exists. Adding a table is a contract
+  change.
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
   Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a

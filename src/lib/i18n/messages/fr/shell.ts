@@ -77,6 +77,8 @@ const messages = {
   'workspace.createTitle': 'Créer un nouvel espace',
   'workspace.createDescription':
     'Un espace distinct avec ses propres voyages, lieux et personnes. Il démarre avec l’offre Gratuite et ne partage pas l’offre de l’espace où vous êtes.',
+  'workspace.createPermanent':
+    'Il n’existe pas encore d’option pour supprimer un espace dans planned.travel. Chaque espace compte parmi les {limit} espaces auxquels un compte peut appartenir, y compris ceux où vous êtes invité.',
   'workspace.createName': 'Nom de l’espace',
   'workspace.createUpgrade':
     '« {workspace} » est dans l’offre Gratuite, et seul un espace avec une offre payante peut en créer un autre. Si l’un de vos autres espaces a une offre payante, passez-y et créez depuis celui-ci. Sinon, faites passer « {workspace} » à une offre payante.',

@@ -63,6 +63,8 @@ const messages = {
   'workspace.createTitle': 'ワークスペースを作成する',
   'workspace.createDescription':
     '旅行・場所・メンバーを分けて管理できる、独立したスペースです。フリープランで始まり、現在のワークスペースのプランは共有されません。',
+  'workspace.createPermanent':
+    'planned.travel には、ワークスペースを削除するオプションはまだありません。ワークスペースはすべて、1つのアカウントが参加できる{limit}個の上限に含まれます。招待された分も含みます。',
   'workspace.createName': 'ワークスペース名',
   'workspace.createUpgrade':
     '「{workspace}」はフリープランで、ワークスペースを追加で作成できるのは有料プランのワークスペースだけです。ほかのワークスペースに有料プランのものがあれば、そちらに切り替えて作成してください。ない場合は「{workspace}」を有料プランにアップグレードしてください。',
