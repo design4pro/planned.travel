@@ -760,15 +760,16 @@ Rules:
   across the run, no self-audit, error on `drained: false`. Four, and closed; a fifth one changes
   this contract.
 - The third exception is `src/server/auth/provisioning.ts` (workspace creation and sign-up
-  provisioning). It reads `user` and writes `organization` and `member`, all Better Auth identity
-  tables imported from `server/db/auth-schema` and never from the tenant schema; a create has no
-  tenant scope yet, so there is none to pass, and
-  `src/server/auth/__tests__/provisioning-boundary.test.ts` pins the import boundary. The
-  participation anchor is written only through `auth/participation.ts` (§5, ADR 0043).
+  provisioning). It reads `user` and reads and writes `organization` and `member`, all Better Auth
+  identity tables imported from `server/db/auth-schema` and never from the tenant schema; a create
+  has no tenant scope yet, so there is none to pass.
+  `src/server/auth/__tests__/provisioning-boundary.test.ts` pins the named imports and the import
+  boundary. The module reaches the tenant layer only through the participation anchor, which it
+  writes with `auth/participation.ts` (§5, ADR 0043), as invitation acceptance does in its own batch.
   `createOrganizationWithinLimit` deletes an `organization` row, which cascades over tenant tables,
-  and touches no tenant row only because that organization was created in the same call: the
-  withdrawal is never pointed at an organization that already exists. Adding a table is a contract
-  change.
+  and removes only rows that same call wrote (the organization, its membership and its participation
+  anchor): the withdrawal is never pointed at an organization that already exists. Adding a table is
+  a contract change.
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
   Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a

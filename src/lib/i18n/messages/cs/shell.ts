@@ -83,7 +83,7 @@ const messages = {
   'workspace.createDescription':
     'Samostatný prostor s vlastními cestami, místy a lidmi. Začíná v tarifu Zdarma a nesdílí tarif prostoru, ve kterém jste.',
   'workspace.createPermanent':
-    'V planned.travel zatím není možnost prostor smazat. Každý prostor se počítá do {limit} prostorů, do kterých může patřit jeden účet, včetně těch, do nichž jste byli pozváni.',
+    'V planned.travel zatím není možnost prostor smazat. Každý prostor se počítá do limitu prostorů, do kterých může patřit jeden účet (limit: {limit}), včetně těch, do nichž jste byli pozváni.',
   'workspace.createName': 'Název prostoru',
   'workspace.createUpgrade':
     '„{workspace}“ je v tarifu Zdarma a další prostor může vytvořit jen prostor s placeným tarifem. Pokud má některý z vašich dalších prostorů placený tarif, přepněte na něj a vytvořte prostor odtud. Jinak u prostoru „{workspace}“ přejděte na placený tarif.',

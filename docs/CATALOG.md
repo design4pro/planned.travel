@@ -35,8 +35,8 @@ line of its schema, copy or vocabulary is reproduced here.
 
 ### 2.1 Global versus tenant, and why the distinction is structural
 
-`docs/SPEC.md` §5 states that every domain row is scoped by `organization_id` and names exactly
-one exception. These eight tables are that exception. They hold **platform content** - places we
+`docs/SPEC.md` §5 states that every domain row is scoped by `organization_id` and names the global
+catalogue as an exception (§6 lists three closed exceptions to the SQL rule; this is the first). These tables are that exception. They hold **platform content** - places we
 curate and packs we sell - and they carry no `organization_id` because no workspace owns them.
 
 Saying it in our own words, because it is the rule most likely to be broken by a builder in a

@@ -26,7 +26,7 @@
   {
     "id": "om-auto-create-pr",
     "label": "om-auto-create-pr - run a task end to end and ship a PR",
-    "text": "<the task - one sentence or several paragraphs>\n\nFlags: --spec <ref> · --slug <kebab-case> · --skill-url <url> (repeatable, reference only) ·\n--loop · --force.\nTarget develop, never main. Blockers: a new i18n key missing from any of the 23 locales; SQL\noutside src/server/repos (server/catalog excepted); a repo method without a tenant-isolation test;\ncomponents/ui fetching data or importing from server/; a server function whose input is not\nvalidated with Zod; generated files edited by hand instead of pnpm generate-routes / pnpm\ndb:generate. Never run pnpm add|remove|update - the stack is pinned (docs/SPEC.md §3); stop with\nStatus: blocked instead. Fast loop: pnpm typecheck && pnpm lint && pnpm test.",
+    "text": "<the task - one sentence or several paragraphs>\n\nFlags: --spec <ref> · --slug <kebab-case> · --skill-url <url> (repeatable, reference only) ·\n--loop · --force.\nTarget develop, never main. Blockers: a new i18n key missing from any of the 23 locales; SQL\noutside src/server/repos (server/catalog and auth provisioning's identity tables excepted, SPEC §6); a repo method without a tenant-isolation test;\ncomponents/ui fetching data or importing from server/; a server function whose input is not\nvalidated with Zod; generated files edited by hand instead of pnpm generate-routes / pnpm\ndb:generate. Never run pnpm add|remove|update - the stack is pinned (docs/SPEC.md §3); stop with\nStatus: blocked instead. Fast loop: pnpm typecheck && pnpm lint && pnpm test.",
     "skills": ["om-auto-create-pr"]
   },
   {

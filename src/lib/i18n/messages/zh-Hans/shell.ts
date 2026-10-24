@@ -61,7 +61,7 @@ const messages = {
   'workspace.createDescription':
     '一个独立的空间，有自己的旅行、地点和成员。创建后从免费版开始，不会沿用你当前所在工作区的方案。',
   'workspace.createPermanent':
-    'planned.travel 暂时还没有删除工作区的选项。每个工作区都计入一个账号可加入的 {limit} 个上限，受邀加入的工作区也包括在内。',
+    'planned.travel 暂时还没有删除工作区的选项。每个工作区都计入一个账号最多可加入 {limit} 个工作区的上限，受邀加入的工作区也包括在内。',
   'workspace.createName': '工作区名称',
   'workspace.createUpgrade':
     '“{workspace}”使用的是免费版，只有付费方案中的工作区才能再创建工作区。如果你的其他工作区属于付费方案，请切换过去再创建；否则请升级“{workspace}”。',

@@ -86,7 +86,7 @@ const messages = {
   'workspace.createDescription':
     'Osobna przestrzeń z własnymi podróżami, miejscami i osobami. Zaczyna od planu Darmowy i nie dzieli planu przestrzeni, w której jesteś.',
   'workspace.createPermanent':
-    'W planned.travel nie ma jeszcze opcji usunięcia przestrzeni. Każda przestrzeń wlicza się do {limit} przestrzeni, do których może należeć jedno konto, także tych, do których cię zaproszono.',
+    'W planned.travel nie ma jeszcze opcji usunięcia przestrzeni. Każda przestrzeń wlicza się do limitu przestrzeni, do których może należeć jedno konto (limit: {limit}), także tych, do których cię zaproszono.',
   'workspace.createName': 'Nazwa przestrzeni',
   'workspace.createUpgrade':
     '„{workspace}” jest w planie Darmowy, a kolejną przestrzeń może utworzyć tylko przestrzeń z planem płatnym. Jeśli któraś z innych Twoich przestrzeni ma plan płatny, przełącz się na nią i utwórz stamtąd. W przeciwnym razie przejdź w „{workspace}” na plan płatny.',
