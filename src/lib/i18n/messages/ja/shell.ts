@@ -41,7 +41,7 @@ const messages = {
   'trip.tab.costs': '費用',
   'trip.tab.files': 'ファイル',
   'trip.tab.collab': 'コラボ',
-  'account.menu': 'アカウントメニュー',
+  'account.menu': '{name}、アカウントメニュー',
   'account.settings': '設定',
   'account.billing': 'プランと請求',
   'account.admin': '管理',
