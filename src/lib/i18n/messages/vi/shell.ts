@@ -76,7 +76,7 @@ const messages = {
   'trip.tab.files': 'Tệp',
   'trip.tab.collab': 'Cùng nhau',
 
-  'account.menu': 'Menu tài khoản',
+  'account.menu': '{name}, menu tài khoản',
   'account.settings': 'Cài đặt',
   'account.billing': 'Gói và thanh toán',
   'account.admin': 'Quản trị',

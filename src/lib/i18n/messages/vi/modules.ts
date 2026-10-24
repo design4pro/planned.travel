@@ -81,6 +81,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Trạng thái không thay đổi',
   'transports.toast.statusFailed.body':
     'Lượt di chuyển vẫn ở trạng thái trước đó.',
+  'transports.refusal.gone':
+    'Lượt di chuyển đã bị xoá khi cửa sổ này đang mở nên không thể lưu thay đổi của bạn. Hãy đóng cửa sổ để xem danh sách mới nhất.',
+  'transports.refusal.goneTitle': 'Lượt di chuyển này không còn tồn tại',
+  'transports.error.saveFallback': 'Hãy thử lại sau giây lát.',
   'transports.toast.removed': 'Đã xoá lượt di chuyển',
   'transports.toast.removeFailed': 'Không xoá được lượt di chuyển',
 

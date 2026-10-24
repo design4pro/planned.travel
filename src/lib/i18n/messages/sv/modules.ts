@@ -85,6 +85,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Statusen ändrades inte',
   'transports.toast.statusFailed.body':
     'Färden står kvar i sitt tidigare läge.',
+  'transports.refusal.gone':
+    'Den togs bort medan det här fönstret var öppet, så dina ändringar kan inte sparas. Stäng fönstret för att se den uppdaterade listan.',
+  'transports.refusal.goneTitle': 'Den här färden finns inte längre',
+  'transports.error.saveFallback': 'Försök igen om en stund.',
   'transports.toast.removed': 'Färden borttagen',
   'transports.toast.removeFailed': 'Färden togs inte bort',
 

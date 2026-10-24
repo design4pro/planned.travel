@@ -91,6 +91,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Le statut n’a pas changé',
   'transports.toast.statusFailed.body':
     'Le trajet est resté dans son état précédent.',
+  'transports.refusal.gone':
+    'Il a été supprimé pendant que cette fenêtre était ouverte, vos modifications ne peuvent donc pas être enregistrées. Fermez la fenêtre pour voir la liste à jour.',
+  'transports.refusal.goneTitle': 'Ce trajet n’existe plus',
+  'transports.error.saveFallback': 'Réessayez dans un instant.',
   'transports.toast.removed': 'Trajet supprimé',
   'transports.toast.removeFailed': 'Le trajet n’a pas été supprimé',
 

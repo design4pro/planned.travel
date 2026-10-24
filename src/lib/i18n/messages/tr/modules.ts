@@ -84,6 +84,10 @@ const messages = {
   'transports.noTime': 'Henüz saat yok',
   'transports.toast.statusFailed.title': 'Durum değişmedi',
   'transports.toast.statusFailed.body': 'Yolculuk önceki durumunda kaldı.',
+  'transports.refusal.gone':
+    'Bu pencere açıkken silindi, bu yüzden değişiklikler kaydedilemez. Güncel listeyi görmek için pencereyi kapat.',
+  'transports.refusal.goneTitle': 'Bu yolculuk artık yok',
+  'transports.error.saveFallback': 'Birazdan yeniden dene.',
   'transports.toast.removed': 'Yolculuk kaldırıldı',
   'transports.toast.removeFailed': 'Yolculuk kaldırılamadı',
 

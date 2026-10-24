@@ -86,6 +86,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Η κατάσταση δεν άλλαξε',
   'transports.toast.statusFailed.body':
     'Η μετακίνηση έμεινε στην προηγούμενη κατάστασή της.',
+  'transports.refusal.gone':
+    'Διαγράφηκε ενώ αυτό το παράθυρο ήταν ανοιχτό, γι’ αυτό οι αλλαγές σου δεν μπορούν να αποθηκευτούν. Κλείσε το παράθυρο για να δεις την ενημερωμένη λίστα.',
+  'transports.refusal.goneTitle': 'Αυτή η μετακίνηση δεν υπάρχει πια',
+  'transports.error.saveFallback': 'Δοκίμασε ξανά σε λίγο.',
   'transports.toast.removed': 'Η μετακίνηση αφαιρέθηκε',
   'transports.toast.removeFailed': 'Η μετακίνηση δεν αφαιρέθηκε',
 

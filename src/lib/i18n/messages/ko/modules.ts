@@ -78,6 +78,10 @@ const messages = {
   'transports.noTime': '시간 미정',
   'transports.toast.statusFailed.title': '상태가 변경되지 않았습니다',
   'transports.toast.statusFailed.body': '이동은 이전 상태 그대로입니다.',
+  'transports.refusal.gone':
+    '이 창이 열려 있는 동안 삭제되어 변경 내용을 저장할 수 없습니다. 창을 닫으면 최신 목록을 볼 수 있습니다.',
+  'transports.refusal.goneTitle': '이 이동은 더 이상 존재하지 않습니다',
+  'transports.error.saveFallback': '잠시 후 다시 시도하세요.',
   'transports.toast.removed': '이동을 삭제했습니다',
   'transports.toast.removeFailed': '이동을 삭제하지 못했습니다',
 

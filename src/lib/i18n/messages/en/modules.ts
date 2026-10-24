@@ -145,6 +145,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'The status did not change',
   'transports.toast.statusFailed.body':
     'The transport is still in its previous state.',
+  'transports.refusal.gone':
+    'It was deleted while this window was open, so your changes can’t be saved. Close this window to see the up-to-date list.',
+  'transports.refusal.goneTitle': 'This transport no longer exists',
+  'transports.error.saveFallback': 'Try again in a moment.',
   'transports.toast.removed': 'Transport removed',
   'transports.toast.removeFailed': 'The transport was not removed',
 

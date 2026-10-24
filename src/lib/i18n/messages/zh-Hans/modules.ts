@@ -77,6 +77,10 @@ const messages = {
   'transports.noTime': '还没有时间',
   'transports.toast.statusFailed.title': '状态没有改变',
   'transports.toast.statusFailed.body': '这段交通仍处于原来的状态。',
+  'transports.refusal.gone':
+    '它在此窗口打开期间被删除，因此无法保存你的更改。关闭窗口即可查看最新列表。',
+  'transports.refusal.goneTitle': '这段交通已不存在',
+  'transports.error.saveFallback': '请稍后再试一次。',
   'transports.toast.removed': '已删除这段交通',
   'transports.toast.removeFailed': '未能删除这段交通',
 

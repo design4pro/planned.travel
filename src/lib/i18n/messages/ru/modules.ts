@@ -92,6 +92,10 @@ const messages = {
   'transports.noTime': 'Пока без времени',
   'transports.toast.statusFailed.title': 'Статус не изменился',
   'transports.toast.statusFailed.body': 'Переезд остался в прежнем состоянии.',
+  'transports.refusal.gone':
+    'Он был удалён, пока это окно было открыто, поэтому изменения нельзя сохранить. Закройте окно, чтобы увидеть актуальный список.',
+  'transports.refusal.goneTitle': 'Этого переезда больше нет',
+  'transports.error.saveFallback': 'Попробуйте ещё раз через мгновение.',
   'transports.toast.removed': 'Переезд удалён',
   'transports.toast.removeFailed': 'Переезд не удалён',
 

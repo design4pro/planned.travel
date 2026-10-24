@@ -91,6 +91,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'L’estat no ha canviat',
   'transports.toast.statusFailed.body':
     'El trajecte s’ha quedat en el seu estat anterior.',
+  'transports.refusal.gone':
+    'S’ha eliminat mentre aquesta finestra era oberta, així que no es poden desar els canvis. Tanca la finestra per veure la llista actualitzada.',
+  'transports.refusal.goneTitle': 'Aquest trajecte ja no existeix',
+  'transports.error.saveFallback': 'Torna-ho a provar d’aquí a un moment.',
   'transports.toast.removed': 'Trajecte eliminat',
   'transports.toast.removeFailed': 'El trajecte no s’ha eliminat',
 

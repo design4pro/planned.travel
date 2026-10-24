@@ -98,6 +98,10 @@ const messages = {
   'transports.noTime': 'لا وقت بعد',
   'transports.toast.statusFailed.title': 'لم تتغيّر الحالة',
   'transports.toast.statusFailed.body': 'بقي التنقل على حالته السابقة.',
+  'transports.refusal.gone':
+    'حُذف أثناء فتح هذه النافذة، لذا لا يمكن حفظ تغييراتك. أغلق النافذة لترى القائمة المحدّثة.',
+  'transports.refusal.goneTitle': 'لم يعد هذا التنقل موجودًا',
+  'transports.error.saveFallback': 'أعد المحاولة بعد لحظة.',
   'transports.toast.removed': 'أُزيل التنقل',
   'transports.toast.removeFailed': 'لم يُزَل التنقل',
 

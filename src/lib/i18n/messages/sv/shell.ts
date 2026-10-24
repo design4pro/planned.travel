@@ -54,7 +54,7 @@ const messages = {
   'trip.tab.collab': 'Samarbete',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Kontomeny',
+  'account.menu': '{name}, kontomeny',
   'account.settings': 'Inställningar',
   'account.billing': 'Abonnemang och betalning',
   'account.admin': 'Administration',

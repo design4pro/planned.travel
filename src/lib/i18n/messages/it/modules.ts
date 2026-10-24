@@ -91,6 +91,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Lo stato non è cambiato',
   'transports.toast.statusFailed.body':
     'Lo spostamento è rimasto nello stato precedente.',
+  'transports.refusal.gone':
+    'È stato eliminato mentre questa finestra era aperta, quindi le tue modifiche non possono essere salvate. Chiudi la finestra per vedere l’elenco aggiornato.',
+  'transports.refusal.goneTitle': 'Questo spostamento non esiste più',
+  'transports.error.saveFallback': 'Riprova fra un momento.',
   'transports.toast.removed': 'Spostamento rimosso',
   'transports.toast.removeFailed': 'Lo spostamento non è stato rimosso',
 

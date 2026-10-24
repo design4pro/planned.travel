@@ -85,6 +85,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Der Status hat sich nicht geändert',
   'transports.toast.statusFailed.body':
     'Der Transfer steht noch auf seinem vorherigen Stand.',
+  'transports.refusal.gone':
+    'Er wurde gelöscht, während dieses Fenster offen war, deshalb lassen sich deine Änderungen nicht speichern. Schließe das Fenster, um die aktuelle Liste zu sehen.',
+  'transports.refusal.goneTitle': 'Dieser Transfer existiert nicht mehr',
+  'transports.error.saveFallback': 'Versuche es gleich noch einmal.',
   'transports.toast.removed': 'Transfer entfernt',
   'transports.toast.removeFailed': 'Der Transfer wurde nicht entfernt',
 
