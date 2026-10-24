@@ -27,11 +27,8 @@ import {
   archiveTrip,
   createTrip,
 } from '../trips'
-import {
-  createTransport,
-  listTransportLegs,
-  replaceTransportChain,
-} from '../transports'
+import { createTransport, listTransportLegs } from '../transports'
+import { replaceChain } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import type { Day } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -299,7 +296,7 @@ describe('the writes that restate a day’s journeys in their own batch', () => 
         title: 'The Hikari',
         mode: 'train',
       })
-      await replaceTransportChain(tenant.scope, chained.id, {
+      await replaceChain(tenant.scope, tripId, chained.id, {
         stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }],
         legs: [{ departureDayId: dayId, sortOrder: 1.5 }],
       })
@@ -478,11 +475,11 @@ describe('the writes that restate a day’s journeys in their own batch', () => 
     })
 
     it('leaves a record of the day out of the run when it is drawn as its legs', async () => {
-      // The record keeps the `day_id` it was created with — `replaceTransportChain` does not clear
-      // it — and a journey drawn as its legs is never also drawn whole.
+      // The record keeps the `day_id` it was created with — a chain-only save does not clear it —
+      // and a journey drawn as its legs is never also drawn whole.
       const dayId = days[0].id
       const chained = await journeyAt(dayId, 0)
-      await replaceTransportChain(tenant.scope, chained, {
+      await replaceChain(tenant.scope, tripId, chained, {
         stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
         legs: [{ departureDayId: days[1].id }, { departureDayId: days[2].id }],
       })

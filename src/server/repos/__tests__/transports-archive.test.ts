@@ -16,12 +16,12 @@ import {
   deleteTransport,
   listTripTransports,
   listTripLegs,
-  replaceTransportChain,
   saveSearchedConnection,
   saveTransport,
   setTransportStatus,
   TransportRefusalError,
 } from '../transports'
+import { replaceChain } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import type { TenantScope } from '../base'
 import type { Trip } from '#/server/db/types'
@@ -98,7 +98,7 @@ describe('archived transport write boundary', () => {
       case 'delete':
         return deleteTransport(scope, id)
       case 'chain':
-        return replaceTransportChain(scope, id, chain)
+        return replaceChain(scope, requestedTrip, id, chain)
       case 'save-new':
       case 'save-edit':
         return saveTransport(scope, {
@@ -179,9 +179,9 @@ describe('archived transport write boundary', () => {
     '%s preserves missing-id errors on an archived trip',
     async (kind) => {
       await archiveTrip(tenant.scope, trip.id)
-      // A save-edit of an id the scope does not hold is the "this transport is gone" refusal.
+      // An edit of an id the scope does not hold is the "this transport is gone" refusal.
       const refusal =
-        kind === 'save-edit' || kind === 'search-edit'
+        kind === 'chain' || kind === 'save-edit' || kind === 'search-edit'
           ? TransportRefusalError
           : NotFoundError
       await expect(write(kind, tenant.scope, 'missing')).rejects.toBeInstanceOf(
