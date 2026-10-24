@@ -2697,6 +2697,33 @@ test.describe('switching workspace', () => {
     await expect(announcement).toHaveAttribute('aria-live', 'polite')
     await expect(announcement).toBeEmpty()
 
+    // ARIA 1.2 lets a menu own only groups, items and separators, so the header with the person's
+    // name and email is hidden from assistive technology and the menu is described by it instead.
+    expect(
+      await menu.evaluate((element) =>
+        Array.from(element.children)
+          .filter(
+            (child) =>
+              child.getAttribute('aria-hidden') !== 'true' &&
+              ![
+                'group',
+                'menuitem',
+                'menuitemcheckbox',
+                'menuitemradio',
+                'separator',
+              ].includes(child.getAttribute('role') ?? ''),
+          )
+          .map((child) => child.outerHTML.slice(0, 80)),
+      ),
+      'every child of the open menu is an item, a group, a separator or hidden',
+    ).toEqual([])
+    await expect(menu).toHaveAccessibleName('Account menu')
+    await expect(menu).toHaveAccessibleDescription(
+      // The name, then the email.
+      new RegExp(`\\S\\s+${DEMO_EMAIL.replaceAll('.', '\\.')}$`),
+    )
+    await expect(menu.getByText(DEMO_EMAIL)).toBeVisible()
+
     await second.click()
     await expect(
       menu,
