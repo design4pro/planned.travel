@@ -65,11 +65,11 @@ async function reserveSlug(db: AuthDb, base: string): Promise<string> {
 }
 
 /**
- * How many workspaces one account may belong to. The organization plugin's `organizationLimit`
- * reads this, and so does workspace creation, which is why it is one exported value (defined in
- * `#/lib/workspace-limit`, which the browser may import): the plugin
- * enforces its limit only inside its own `organization/create` endpoint, and creation no longer
- * goes through that endpoint.
+ * How many workspaces an account may belong to before it can create another (joining is not
+ * capped). The organization plugin's `organizationLimit` reads this, and so does workspace
+ * creation, which is why it is one exported value (defined in `#/lib/workspace-limit`, which the
+ * browser may import): the plugin enforces its limit only inside its own `organization/create`
+ * endpoint, and creation no longer goes through that endpoint.
  */
 export { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 
