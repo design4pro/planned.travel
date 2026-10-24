@@ -1049,7 +1049,7 @@ they are marked "here" in the last column.
 | `platform.user.deleted`               | An account is deleted; refused for the only owner of a workspace other people belong to (`target-sole-owner`, no row) | here (`user:delete`)               |
 | `platform.user.password_set`          | An administrator sets a password; the value is never in `changes`                                                     | here (`user:set-password`)         |
 | `platform.user.email_set`             | An administrator changes an address                                                                                   | here (`user:set-email`)            |
-| `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target                                                                       | here (§6)                          |
+| `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target; `changes.after.organizationId` is the workspace the session starts in (§6.4) | here (§6)                          |
 | `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                                                                | here (§6)                          |
 | `platform.user.impersonation_workspace_changed` | An impersonated session changes its active workspace, from `databaseHooks.session.update` (§6.4); `entity_id` is the target, the actor is the operator | here (§6.4) |
 | `platform.session.revoked`            | One session of one account is revoked                                                                                 | here (`session:revoke`)            |
@@ -1136,8 +1136,10 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   clear it) and none of them goes through a server function: a hook on one URL misses the others, and
   a wrapper misses a direct `POST /api/auth/organization/set-active`. Removing the target from a
   workspace is not one of them: the plugin clears only the session of the member who makes the call,
-  so the worn session keeps its workspace and the §6.4 fallback applies on the next request. It
-  appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
+  so the worn session keeps its workspace and the §6.4 fallback applies on the next request. The
+  workspace the session *starts* in is not this row's business: `platform.user.impersonation_started`
+  carries it as `changes.after.organizationId` (§6.4), so start, switches and end read as one timeline.
+  It appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
   is set, so a session refresh costs nothing. It is retried once and raised at `error` like the other
   four, and like the ban tripwire it swallows every error it can raise: a switch that succeeded is
   never failed by its own audit row. **Its two stated gaps are logged at `error`, never silent:** an
@@ -1411,6 +1413,13 @@ remove passkeys; removing a passkey does not end sessions it already opened.
 Entering and leaving impersonation are both audited (§4.3), with the impersonator in
 `actor_user_id` and the target in `entity_id`.
 
+The start event also names the workspace the new session is landed in: `changes.after.organizationId`
+on `platform.user.impersonation_started`, the id `session.create.before` chose and nothing else (no
+workspace name). It is `null` only when the body of the plugin's answer carried no workspace. That
+landing workspace may have been created by the impersonation itself, because `session.create.before`
+provisions a personal workspace for an account that has none; the start event is the only row that
+shows it.
+
 So is every workspace the operator moves into between the two. A change of the session's
 `activeOrganizationId` inside an impersonated session appends
 `platform.user.impersonation_workspace_changed` to `platform_audit_log`, in the same timeline as the
@@ -1425,12 +1434,15 @@ workspace, a refused `organization/set-active` and a refused `organization/get-o
 workspace the target does not belong to all do; the plugin clears it before it refuses, so a refused
 request is still a switch of the session and is recorded as one. A `null` workspace means the next
 request falls back to the oldest membership (`src/server/auth/session.ts`), and that fallback is
-not itself recorded, nor is a per-request choice made by `requireOrg` without a session update. If
+not itself recorded, nor is a per-request choice made by `requireOrg` without a session update: the
+ledger shows the workspace a session started in and every switch that went through a session update,
+and nothing that only a single request resolved. If
 the operator's role cannot be read, no row is written and an `error` line says so: a row naming an
 administrator as `user` is worse than a gap that is logged. The same holds for an impersonated
 update that reaches the hook with no request context (`audit.impersonation-workspace.no-context`):
 nothing pairs it with a previous workspace, so it is logged and not recorded. Creating a workspace is not a path to
-this row: an impersonated session cannot reach it (§2.7).
+this row: an impersonated session cannot reach it (§2.7). The one workspace an impersonation can
+create, the personal one provisioned when the session starts, is visible in the start event instead.
 
 ---
 

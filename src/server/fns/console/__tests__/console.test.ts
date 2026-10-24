@@ -2537,6 +2537,67 @@ describe('impersonation', () => {
     expect(jarHeader(jar)).toContain('planned.admin_session=')
   })
 
+  it('records the workspace the impersonated session starts in, as an id and nothing else', async () => {
+    const worn = seedUser()
+    const team = seedWorkspace('Acme Travel')
+    seedMember(team, worn.id, 'owner')
+
+    await impersonate({ userId: worn.id })
+
+    const landed = authDatabase.sqlite
+      .prepare(
+        'select active_organization_id as id from session where user_id = ?',
+      )
+      .get(worn.id) as { id: string | null }
+    expect(landed.id).toBe(team)
+
+    const rows = await auditRows()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.changes?.after?.organizationId).toBe(team)
+    expect(JSON.stringify(rows[0]?.changes)).not.toContain('Acme Travel')
+  })
+
+  it('records the same workspace the session row carries when the account had none', async () => {
+    const worn = seedUser()
+
+    await impersonate({ userId: worn.id })
+
+    const landed = authDatabase.sqlite
+      .prepare(
+        'select active_organization_id as id from session where user_id = ?',
+      )
+      .get(worn.id) as { id: string | null }
+    const rows = await auditRows()
+    expect(rows[0]?.changes?.after?.organizationId).toBe(landed.id)
+  })
+
+  it('records null, and still starts, when the plugin body carries no landing workspace', async () => {
+    const worn = seedUser()
+    // The call is made with `returnHeaders: true`, so the real answer is `{ headers, response }`;
+    // the declared overload does not say so.
+    interface WithHeaders {
+      headers: Headers
+      response: { session: Record<string, unknown> }
+    }
+    const realImpersonate = getAuth().api.impersonateUser as unknown as (
+      options: unknown,
+    ) => Promise<WithHeaders>
+    vi.spyOn(getAuth().api, 'impersonateUser').mockImplementation((async (
+      options: unknown,
+    ) => {
+      const result = await realImpersonate(options)
+      const { activeOrganizationId: _landed, ...session } =
+        result.response.session
+      return { ...result, response: { ...result.response, session } }
+    }) as never)
+
+    await impersonate({ userId: worn.id })
+
+    const rows = await auditRows()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.changes?.after?.organizationId).toBeNull()
+  })
+
   it('refuses a banned target with its own error and never mints a session', async () => {
     const impersonateSpy = vi.spyOn(getAuth().api, 'impersonateUser')
     const target = seedUser({ banned: true, banReason: 'abuse' })
