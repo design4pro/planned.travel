@@ -171,6 +171,10 @@ export function TransportsTimeline({
 
   const router = useRouter()
   const noticeRef = useRef<HTMLDivElement>(null)
+  // What is still on the page once a transport deleted elsewhere is gone from the list: the
+  // list's container, or the empty state's action when the list is empty.
+  const listFocusRef = useRef<HTMLElement | null>(null)
+  const closeFocusTarget = () => listFocusRef.current
   const currentTripId = useRef(tripId)
   currentTripId.current = tripId
   const [recovery, setRecovery] = useState<
@@ -357,6 +361,9 @@ export function TransportsTimeline({
           action={
             writable ? (
               <Button
+                ref={(node) => {
+                  listFocusRef.current = node
+                }}
                 variant="primary"
                 shape="pill"
                 onClick={() => onNewTransportOpenChange(true)}
@@ -382,7 +389,13 @@ export function TransportsTimeline({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div
+      ref={(node) => {
+        listFocusRef.current = node
+      }}
+      tabIndex={-1}
+      className="flex min-w-0 flex-col gap-5 outline-none"
+    >
       {archiveNotice}
       {summary.impossible === 0 ? null : (
         <Alert
@@ -509,6 +522,7 @@ export function TransportsTimeline({
             days={days}
             currency={currency}
             open={newTransportOpen || editing !== null}
+            closeFocusTarget={closeFocusTarget}
             onOpenChange={(next) => {
               if (!next) {
                 setEditing(null)

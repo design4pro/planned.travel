@@ -1174,10 +1174,11 @@ async function carryAnchors(
  * **The transport is resolved before the writer is asked.** Two ids arrive from the browser and a
  * well-formed one is not an authorised one, and the writer would take an id it cannot find as the
  * identity of a new row. Resolving it here inside the caller's scope is what makes a transport of
- * another workspace a `NotFoundError` rather than a journey created under a client-chosen id; the
- * agreement of the transport with the trip is checked here too, and again by the writer, because
- * within one workspace a transport of *another* trip would otherwise be re-routed by a caller who
- * named a trip they can see and a transport they can also see.
+ * another workspace a {@link TransportRefusalError}, the answer an absent id gets, rather than a
+ * journey created under a client-chosen id; the agreement of the transport with the trip is checked
+ * here too, and again by the writer, because within one workspace a transport of *another* trip
+ * would otherwise be re-routed by a caller who named a trip they can see and a transport they can
+ * also see.
  *
  * **No day reference is invented, and none is lost.** A timetable knows dates and clocks; it does
  * not know which day of the trip they are. The legs carry the wall clocks the provider stated and

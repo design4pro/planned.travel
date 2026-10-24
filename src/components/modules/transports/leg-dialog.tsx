@@ -169,6 +169,7 @@ export function TransportDialog({
   open,
   onOpenChange,
   onWriteError,
+  closeFocusTarget,
 }: {
   tripId: string
   /** Absent for a new transport. */
@@ -180,6 +181,12 @@ export function TransportDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   onWriteError?: (cause: unknown) => void
+  /**
+   * Where focus goes when the dialog closes from its gone state. The row the dialog was opened from
+   * is deleted by then and the loaders have removed it, so the default hand-back to the opener
+   * would leave focus on the document body.
+   */
+  closeFocusTarget?: () => HTMLElement | null
 }) {
   const t = useTranslate()
   const locale = useLocale()
@@ -390,7 +397,15 @@ export function TransportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg">
+      <DialogContent
+        size="lg"
+        onCloseAutoFocus={(event) => {
+          const target = gone ? (closeFocusTarget?.() ?? null) : null
+          if (target === null) return
+          event.preventDefault()
+          target.focus({ preventScroll: true })
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {editing

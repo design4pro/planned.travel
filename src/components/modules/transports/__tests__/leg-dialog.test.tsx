@@ -232,6 +232,7 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     open: boolean,
     onOpenChange: (next: boolean) => void,
     onWriteError?: (cause: unknown) => void,
+    closeFocusTarget?: () => HTMLElement | null,
   ) {
     return (
       <I18nProvider locale="en" messages={EN}>
@@ -244,6 +245,7 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
           open={open}
           onOpenChange={onOpenChange}
           onWriteError={onWriteError}
+          closeFocusTarget={closeFocusTarget}
         />
       </I18nProvider>
     )
@@ -339,6 +341,39 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     expect(footerClose?.getAttribute('aria-describedby')).toBe(
       alert?.getAttribute('id'),
     )
+  })
+
+  it('hands focus to the target the owner names when it closes from the gone state, since the row it was opened from is gone', async () => {
+    const target = document.createElement('div')
+    target.tabIndex = -1
+    document.body.append(target)
+    const onOpenChange = vi.fn()
+    save.mockRejectedValueOnce(goneRefusal())
+    const view = render(dialog(true, onOpenChange, vi.fn(), () => target))
+    submitTheForm()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-part="transport-gone"]'),
+      ).not.toBeNull(),
+    )
+
+    view.rerender(dialog(false, onOpenChange, vi.fn(), () => target))
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(target))
+    target.remove()
+  })
+
+  it('leaves the hand-back to the opener alone when the dialog was not in its gone state', async () => {
+    const target = document.createElement('div')
+    target.tabIndex = -1
+    document.body.append(target)
+    const view = render(dialog(true, vi.fn(), vi.fn(), () => target))
+
+    view.rerender(dialog(false, vi.fn(), vi.fn(), () => target))
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(document.activeElement).not.toBe(target)
+    target.remove()
   })
 
   it('ignores a refusal that settles after the dialog was closed and opened again', async () => {
