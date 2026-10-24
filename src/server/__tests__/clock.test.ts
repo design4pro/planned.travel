@@ -167,6 +167,13 @@ describe('serverToday', () => {
     expect(pinned?.[1], 'e2e/fixture-day.ts pins no fixture day').toBeTypeOf(
       'string',
     )
+
+    // The build the CI suite runs against takes its day from the same constant. A define that
+    // stopped reading it would fall back to the wall clock, and the fixture would drain again.
+    const vite = read('vite.config.ts')
+    expect(vite).toContain(`import { FIXTURE_DAY } from './e2e/fixture-day'`)
+    expect(vite).toContain('JSON.stringify(FIXTURE_DAY)')
+    expect(vite).toContain('__E2E_SERVER_TODAY__: e2eServerToday')
   })
 })
 

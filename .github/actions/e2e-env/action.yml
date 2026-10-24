@@ -325,20 +325,22 @@ runs:
       run: node scripts/seed/verify.mjs
 
     # SIGTERM is the signal Vite's CLI handles by closing the server and the workerd children the
-    # Cloudflare plugin spawned; the loop waits for the port so preview's `--strictPort` finds it free.
+    # Cloudflare plugin spawned. The loop waits for the process itself to exit, not only for the
+    # port to go quiet, so the SQLite state is released before preview opens it.
     - name: Stop the dev server
       shell: bash
       run: |
         set -euo pipefail
-        kill "$(cat dev-server.pid)"
+        pid="$(cat dev-server.pid)"
+        kill "$pid"
         for _ in $(seq 1 30); do
-          if ! curl --silent --output /dev/null http://localhost:3000/; then
+          if ! kill -0 "$pid" 2>/dev/null && ! curl --silent --output /dev/null http://localhost:3000/; then
             echo "dev server stopped"
             exit 0
           fi
           sleep 1
         done
-        echo "::error title=Dev server::still answering on :3000 30s after SIGTERM"
+        echo "::error title=Dev server::still running or answering on :3000 30s after SIGTERM"
         exit 1
 
     - name: Start the preview server

@@ -126,7 +126,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  // Parallel workers share one dev server and one D1 file, and that is safe
+  // Parallel workers share one server (a dev server locally, a build on CI) and one D1 file, and that is safe
   // because every write the suite makes to the fixture is accounted for: the
   // sign-in and the language pin (setup project, which finishes before the browser
   // projects start, plus the restore in the `finally` of the visitor-language walk, listed below), and the impersonation fixture — whose session lives in its
@@ -140,7 +140,7 @@ export default defineConfig({
   // virtual authenticator, takes it away through the delete dialog and, if it failed first, deletes it in its `finally`. The "visitor language after a signed-in choice" walk in `e2e/journeys.spec.ts` is another: Chromium-only and serial, it sets the demo member's language to German in settings and pins it back to following the workspace in `finally`. `08-S1` and `08-S2a` in `e2e/product-modules.spec.ts` also write fixture state:
   // Chromium-only serial walks that set the demo member's allowance and leave settings on `/vacay`, or add a region under a visited country on `/atlas`, and restore their changes in `finally`. The real contention is the auth rate
   // limiter's single per-path bucket, which `hasSession()` now asks once per worker.
-  // One per CI shard, measured: two workers on the 2-vCPU runner starved the
+  // One per CI shard. Measured on `vite dev`, before CI served a build: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two
   // browsers plus Vite SSR competing, React hydration outran the 10 s action
   // timeout on 17 tests and left 12 flaky, all timeouts (PR #84, run
