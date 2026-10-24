@@ -57,9 +57,9 @@ vi.mock('#/server/repos', async (importOriginal) => {
 const { loadAdmin } = await import('../overview')
 
 const read = async () => {
-  const payload = await (loadAdmin as unknown as () => Promise<
-    Awaited<ReturnType<typeof loadAdmin>>
-  >)()
+  const payload = await (
+    loadAdmin as unknown as () => Promise<Awaited<ReturnType<typeof loadAdmin>>>
+  )()
   if (payload === null) throw new Error('The owner must be served the console.')
   return payload.limits
 }
