@@ -132,6 +132,7 @@ jobs:
             test-results/**/error-context.md
             e2e-runtime.log
             dev-server.log
+            preview-server.log
 
   # This aggregate depends only on test outcomes, not artifact storage. A cancelled run has no
   # outcome to aggregate, so it does not take a `ci` slot.

@@ -5,7 +5,7 @@
  *    `SEED_ANCHOR_DAY`, so the rows in D1 are a pure function of `../dataset`. A seed run in October
  *    writes the same workspace as one run in August.
  * 2. **The fixture and the e2e suite agree about what day it is.** The suite pins the Worker's
- *    clock to `FIXTURE_DAY` in `playwright.config.ts`; the fixture writes its dates around
+ *    clock to `FIXTURE_DAY` in `e2e/fixture-day.ts`; the fixture writes its dates around
  *    `SEED_ANCHOR_DAY`. Those two constants cannot be shared by import — nothing in the Worker may
  *    reach into `e2e/` — so they are compared here, off disk, against the file that declares them.
  *
@@ -72,11 +72,11 @@ function seedSources(): ReadonlyArray<readonly [string, string]> {
 describe('the fixture anchor', () => {
   it('names the same day the e2e suite pins the Worker to', () => {
     const declaration = /const FIXTURE_DAY = '(\d{4}-\d{2}-\d{2})'/
-    const inConfig = declaration.exec(read('playwright.config.ts'))
+    const inConfig = declaration.exec(read('e2e/fixture-day.ts'))
 
     expect(
       inConfig?.[1],
-      'playwright.config.ts must declare FIXTURE_DAY',
+      'e2e/fixture-day.ts must declare FIXTURE_DAY',
     ).toBeDefined()
     expect(inConfig?.[1]).toBe(SEED_ANCHOR_DAY)
   })

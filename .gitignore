@@ -73,6 +73,8 @@ e2e/.auth
 # Local basemap cache for e2e (pulled from R2).
 .e2e-tiles/
 dev-server.log
+dev-server.pid
+preview-server.log
 
 # Impeccable design skill. Three files in here are project truth and are tracked
 # on purpose: `design.json` is the DESIGN.md sidecar (tonal ramps, shadows,

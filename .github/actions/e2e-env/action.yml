@@ -1,9 +1,9 @@
 name: Prepare the e2e environment
 description: >
   Everything the Playwright suite needs before a single spec runs: dependencies,
-  a migrated local D1, a dev server on port 3000 and the seeded demo workspace
-  behind it. Optionally the PMTiles basemap in the local R2 simulator - see the
-  `basemap` input, which is off.
+  a migrated local D1, an `E2E_BUILD=1` build served by `vite preview` on port
+  3000 and the seeded demo workspace behind it. Optionally the PMTiles basemap
+  in the local R2 simulator - see the `basemap` input, which is off.
 
   Brings its own browsers. The step below installs exactly the projects the
   caller asks for, on every runner, because only the pool's image ships them
@@ -177,9 +177,32 @@ runs:
           --local --file .e2e-tiles/basemap.pmtiles \
           --content-type application/octet-stream
 
-    # Started here rather than by Playwright's `webServer` because the seed has
-    # to run against it before the first spec: the seed endpoint lives inside the
-    # Worker, so there is no seeding a database without a server in front of it.
+    # A build, not `vite dev`, is what the suite runs against. Under the dev server Vite compiles
+    # each route's module graph on first visit, and with the suite at 85 journeys that put the
+    # chromium shards at 1500-1770 s of journeys on the pool (runs 40042501156-40066728326) where
+    # 58 had taken 285 s. A bundle has no per-route compile, and it is the artefact that deploys.
+    # MT made the same move for the same reason (its `.github/actions/e2e-env`).
+    #
+    # `E2E_BUILD=1` folds `e2e/fixture-day.ts` in as the day `serverToday()` answers, because the
+    # `x-pt-server-today` header only works under `import.meta.env.DEV`. Unset, the define emits
+    # `undefined` and the branch leaves the bundle, so a deployed Worker is unchanged. After
+    # `.dev.vars` on purpose: the plugin copies it into `dist/server`, which is where preview reads it.
+    #
+    # It also gives server functions the dev server's readable ids, which the suite matches
+    # requests by (`e2e/helpers/server-fn.ts`). That is why this is `vite build` and not
+    # `pnpm build`: the manifest check `pnpm build` runs after it reads the production hashes, and
+    # `verify` in ci.yml still runs it on the plain build that deploys.
+    - name: Build the application
+      shell: bash
+      env:
+        E2E_BUILD: '1'
+      run: pnpm exec vite build
+
+    # The seed still needs the dev server: `/api/dev/seed` is compiled out of every build, the
+    # E2E one included, and it stays that way - an endpoint that rewrites the owner's password
+    # does not belong in any bundle. So `vite dev` lives only for the seed, writes into
+    # `.wrangler/state`, and the preview below serves the build over that same state (both read
+    # the plugin's default `persistState`).
     - name: Start the dev server
       shell: bash
       # E2E=1 is what vite.config.ts reads to turn the devtools console relay off. Without it the
@@ -196,7 +219,9 @@ runs:
         # in seed.mjs resolves localhost to 127.0.0.1 and then finds nothing —
         # the seed fails against a server curl just proved alive. Same trap,
         # same fix as .ai/scripts/test-env-up.sh.
-        pnpm exec vite dev --port 3000 --host > dev-server.log 2>&1 &
+        # The bin shim `exec`s node, so `$!` is vite itself and the stop step can signal it.
+        ./node_modules/.bin/vite dev --port 3000 --strictPort --host > dev-server.log 2>&1 &
+        echo $! > dev-server.pid
         for _ in $(seq 1 60); do
           if curl --silent --fail --output /dev/null http://localhost:3000/; then
             echo "dev server up"
@@ -298,3 +323,38 @@ runs:
       if: inputs.verify-seed == 'true'
       shell: bash
       run: node scripts/seed/verify.mjs
+
+    # SIGTERM is the signal Vite's CLI handles by closing the server and the workerd children the
+    # Cloudflare plugin spawned. The loop waits for the process itself to exit, not only for the
+    # port to go quiet, so the SQLite state is released before preview opens it.
+    - name: Stop the dev server
+      shell: bash
+      run: |
+        set -euo pipefail
+        pid="$(cat dev-server.pid)"
+        kill "$pid"
+        for _ in $(seq 1 30); do
+          if ! kill -0 "$pid" 2>/dev/null && ! curl --silent --output /dev/null http://localhost:3000/; then
+            echo "dev server stopped"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "::error title=Dev server::still running or answering on :3000 30s after SIGTERM"
+        exit 1
+
+    - name: Start the preview server
+      shell: bash
+      run: |
+        set -euo pipefail
+        ./node_modules/.bin/vite preview --port 3000 --strictPort --host > preview-server.log 2>&1 &
+        for _ in $(seq 1 60); do
+          if curl --silent --fail --output /dev/null http://localhost:3000/; then
+            echo "preview server up"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "::error title=Preview server::did not answer on :3000 within 120s"
+        tail -50 preview-server.log
+        exit 1

@@ -24,7 +24,7 @@
  *
  * `SEED_ANCHOR_DAY` is the day the end-to-end suite tells the Worker it is.
  * `serverToday()` in `src/server/clock.ts` accepts an `x-pt-server-today` header
- * on a development request, and `playwright.config.ts` sends `FIXTURE_DAY` on
+ * on a development request, and `e2e/fixture-day.ts` sends `FIXTURE_DAY` on
  * both browser projects — so the fixture and the reader of the fixture agree
  * about the day without either of them asking the machine. The two constants are
  * deliberately duplicated across the `src/` and `e2e/` boundary (nothing in the
@@ -32,7 +32,7 @@
  * the config back off disk and fails if they ever drift apart.
  *
  * Moving the anchor translates the whole fixture calendar rigidly. Do it in one
- * commit, with `FIXTURE_DAY` in `playwright.config.ts` moved to match.
+ * commit, with `FIXTURE_DAY` in `e2e/fixture-day.ts` moved to match.
  *
  * ## The three helpers, and when each is right
  *
@@ -58,7 +58,7 @@ const MS_PER_DAY = 86_400_000
 /**
  * The fixture's today, as `YYYY-MM-DD`.
  *
- * Keep in step with `FIXTURE_DAY` in `playwright.config.ts`.
+ * Keep in step with `FIXTURE_DAY` in `e2e/fixture-day.ts`.
  * `__tests__/fixture-calendar.test.ts` enforces it.
  */
 export const SEED_ANCHOR_DAY = '2026-08-20'
