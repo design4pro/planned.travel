@@ -79,11 +79,13 @@ const messages = {
   'workspace.createTitle': 'Criar um espaço',
   'workspace.createDescription':
     'Um espaço separado, com viagens, lugares e pessoas próprios. Começa no plano Grátis e não compartilha o plano do espaço em que você está.',
+  'workspace.createPermanent':
+    'No planned.travel ainda não há opção para excluir um espaço. Cada espaço que você cria ou em que entra conta para o limite: quando você participa de {limit} espaços, não é possível criar outro.',
   'workspace.createName': 'Nome do espaço',
   'workspace.createUpgrade':
     '“{workspace}” está no plano Grátis, e só um espaço com plano pago pode criar outro. Se algum dos seus outros espaços tiver plano pago, troque para ele e crie a partir de lá. Caso contrário, faça o upgrade de “{workspace}”.',
   'workspace.createLimitReached':
-    'Você chegou ao máximo de espaços de que uma conta pode participar.',
+    'Você participa de tantos espaços quanto o limite permite, então não é possível criar outro.',
   'workspace.createRoleRequired':
     'Só um administrador do espaço pode criar um espaço. Peça a um administrador deste espaço ou troque para um espaço que você administra.',
   'workspace.createFailed': 'Não foi possível criar o espaço',

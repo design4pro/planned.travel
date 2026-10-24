@@ -98,11 +98,13 @@ const messages = {
   'workspace.createTitle': 'Tạo một không gian',
   'workspace.createDescription':
     'Một không gian riêng với chuyến đi, địa điểm và người của riêng nó. Bắt đầu ở gói Miễn phí và không dùng chung gói với không gian bạn đang ở.',
+  'workspace.createPermanent':
+    'planned.travel chưa có tùy chọn xóa một không gian. Mỗi không gian bạn tạo hoặc tham gia đều được tính vào giới hạn: khi bạn thuộc {limit} không gian, bạn không thể tạo thêm.',
   'workspace.createName': 'Tên không gian',
   'workspace.createUpgrade':
     '“{workspace}” đang ở gói Miễn phí, và chỉ không gian ở gói trả phí mới tạo được không gian khác. Nếu một không gian khác của bạn đang ở gói trả phí, hãy chuyển sang đó và tạo từ đó. Nếu không, hãy nâng cấp “{workspace}”.',
   'workspace.createLimitReached':
-    'Bạn đã đạt số không gian tối đa mà một tài khoản có thể tham gia.',
+    'Bạn đã thuộc số không gian tối đa mà giới hạn cho phép, nên không thể tạo thêm.',
   'workspace.createRoleRequired':
     'Chỉ quản trị viên của không gian mới tạo được không gian. Hãy nhờ một quản trị viên của không gian này, hoặc chuyển sang không gian bạn quản trị.',
   'workspace.createFailed': 'Chưa tạo được không gian',

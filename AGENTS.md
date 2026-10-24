@@ -17,7 +17,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 
 ## Rules
 
-- All SQL lives in `server/repos` and goes through the tenant-scoped base repository; `server/catalog` is the single stated exception. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
+- All SQL lives in `server/repos` and goes through the tenant-scoped base repository; the stated exceptions are three, and closed (SPEC §6): `server/catalog`, the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`; adding one is a contract change) and the `…Unscoped` shape. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
 - `components/ui` never fetches data and never imports from `server/`.
 - Validate every server-function input with Zod. Named exports only (route modules excepted).
 - Definition of done for any task: docs/SPEC.md §7. Decomposition rule ("one concept, one owner"): docs/SPEC.md §8.

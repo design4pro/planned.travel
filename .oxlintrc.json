@@ -132,8 +132,8 @@
       }
     },
     {
-      // Layering law (docs/SPEC.md §6): all SQL lives in server/repos (catalog is the single
-      // stated exception). Client-side layers never see drizzle-orm.
+      // Layering law (docs/SPEC.md §6): all SQL lives in server/repos (the stated exceptions
+      // are three and closed: catalog, auth provisioning, `...Unscoped`). Client-side layers never see drizzle-orm.
       "files": ["src/components/**", "src/lib/**", "src/routes/**"],
       "rules": {
         "no-restricted-imports": [

@@ -208,8 +208,8 @@ entry rule. These are architectural paths; some surfaces remain planned. Bounded
 another catalog member.
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
-  `organization_id`; `provider_usage` uses it only for attribution. Catalog is the single
-  exception outside repos, with exactly four members (these tables, bounded reminder discovery,
+  `organization_id`; `provider_usage` uses it only for attribution. Catalog is one of the three
+  closed exceptions outside repos (SPEC §6; the others are the `…Unscoped` shape and the identity-table SQL of `src/server/auth/provisioning.ts`), with exactly four members (these tables, bounded reminder discovery,
   the erasure catalog (ids-only discovery and system-actor cleanup) and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
   the bounded shape-based exceptions stated in SPEC §5.
