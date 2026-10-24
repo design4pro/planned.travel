@@ -394,7 +394,7 @@ export function TransportsTimeline({
         listFocusRef.current = node
       }}
       tabIndex={-1}
-      className="flex min-w-0 flex-col gap-5 outline-none"
+      className="flex min-w-0 flex-col gap-5 focus-visible:outline-2 focus-visible:outline-ring"
     >
       {archiveNotice}
       {summary.impossible === 0 ? null : (
