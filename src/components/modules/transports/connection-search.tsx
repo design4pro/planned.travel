@@ -252,8 +252,9 @@ export interface AnchoredJourney {
  * they sit on the old anchor day. For a saved journey the field therefore starts, in this order, on:
  *
  * 1. the date of the day the journey is anchored to - the first leg's departure day, and the
- *    record's own only when it has no legs, which is the rule `carryAnchors` applies; an id the trip
- *    no longer has is no anchor;
+ *    record's own only when it has no legs (`carryAnchors` also falls back to the record's day when
+ *    the legs name none, which this field does not mirror yet, #969); an id the trip no longer has
+ *    is no anchor;
  * 2. the journey's own recorded departure date, when the anchor says nothing;
  * 3. the first dated day, as for a journey that is not saved yet.
  *
