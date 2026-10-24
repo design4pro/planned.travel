@@ -83,6 +83,8 @@ export function CreateWorkspaceDialog({
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [nameMissing, setNameMissing] = useState(false)
+  // Counts refused submits, so focus can move after the error is committed (see the effect below).
+  const [refusals, setRefusals] = useState(0)
   const nameRef = useRef<HTMLInputElement>(null)
 
   // Re-seeded on open, so the dialog never shows the last name typed or the last refusal.
@@ -92,6 +94,12 @@ export function CreateWorkspaceDialog({
     setNotice(null)
     setNameMissing(false)
   }, [open])
+
+  // Focus moves once the error is in the DOM, so the input is announced already invalid and
+  // described by it; moving it inside the submit handler would announce the input without either.
+  useEffect(() => {
+    if (refusals > 0) nameRef.current?.focus()
+  }, [refusals])
 
   // Creating a workspace activates it on the session, so this tab changes workspace itself: the
   // re-read after it must not be refused for the claim it has not re-read yet (as in the switcher).
@@ -187,7 +195,7 @@ export function CreateWorkspaceDialog({
               if (pending) return
               if (!hasVisibleCharacter(name)) {
                 setNameMissing(true)
-                nameRef.current?.focus()
+                setRefusals((count) => count + 1)
                 return
               }
               void create()
