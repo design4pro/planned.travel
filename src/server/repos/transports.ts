@@ -810,11 +810,12 @@ export async function replaceTransportChain(
  * closed by `docs/SPEC.md` §9 rule 10 because each of its entries reaches the reader in English.
  * A key is resolved by the dialog in the reader's own locale instead, and `classifyFailure` lets it
  * through by exact match on the key, not on this class - so a row of another workspace, which the
- * scope cannot tell from a deleted one, gets the same answer and confirms nothing.
+ * scope cannot tell from a deleted one, and a row of another trip, which the lookup would
+ * otherwise tell from one, get the same answer and confirm nothing.
  *
- * It is thrown only where "the row is gone" is the whole story. A trip that is not there, a
- * transport of another trip and a clash with the id of another workspace's row stay
- * {@link NotFoundError} diagnostics.
+ * It is thrown only where "the row is gone" is the whole story, and only for an `edit`. A trip that
+ * is not there, a `create` of the id of a row on another trip and a clash with the id of another
+ * workspace's row stay {@link NotFoundError} diagnostics.
  */
 export class TransportRefusalError extends RepositoryError {
   constructor(key: TransportRefusalKey = TRANSPORT_REFUSAL_KEYS[0]) {
@@ -929,8 +930,10 @@ export interface SavedTransport {
  *
  * **An `edit` never inserts.** A row that is not there is a {@link TransportRefusalError}, and a row
  * deleted between the read and the batch is one too: the update then matches nothing, and a chain
- * that could not be attached to the vanished parent is answered the same way. The id of a row that
- * belongs to another trip is still a `NotFoundError`.
+ * that could not be attached to the vanished parent is answered the same way. So is the id of a row
+ * that belongs to another trip, since the lookup is by workspace and any other answer would tell a
+ * member who cannot read that trip that the row exists. A `create` of such an id stays a
+ * `NotFoundError`.
  */
 export async function saveTransport(
   scope: TenantScope,
@@ -941,10 +944,14 @@ export async function saveTransport(
   await requireTrip(scope, tripId)
 
   const existing = await transportsRepository.findById(scope, transportId)
-  if (existing === null && intent === 'edit') {
+  const elsewhere = existing !== null && existing.tripId !== tripId
+  // An edit of a row that is not on this trip is answered as one that is not there at all: the
+  // lookup is by workspace, so a different answer would tell a member who cannot read the trip a
+  // row sits on that the row exists.
+  if (intent === 'edit' && (existing === null || elsewhere)) {
     throw new TransportRefusalError()
   }
-  if (existing !== null && existing.tripId !== tripId) {
+  if (elsewhere) {
     throw new NotFoundError('transport', transportId)
   }
   // Only a row the scope has not seen is inserted, so only then is the id the caller's invention.
@@ -1189,11 +1196,11 @@ export async function saveSearchedConnection(
     requested === null
       ? null
       : await transportsRepository.findById(scope, requested)
-  if (requested !== null && existing === null) {
+  if (
+    requested !== null &&
+    (existing === null || existing.tripId !== values.tripId)
+  ) {
     throw new TransportRefusalError()
-  }
-  if (existing !== null && existing.tripId !== values.tripId) {
-    throw new NotFoundError('transport', existing.id)
   }
 
   return saveTransport(scope, {

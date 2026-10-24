@@ -94,7 +94,11 @@ import {
 } from './leg-form'
 import { MODE_ICON } from './mode-icon'
 import { transportDurationMinutes } from './leg-timing'
-import { TransportGoneAlert, useGoneSentence } from './transport-gone'
+import {
+  TRANSPORT_GONE_ALERT_ID,
+  TransportGoneAlert,
+  useGoneSentence,
+} from './transport-gone'
 
 import type { ChainDraft, TransportDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
@@ -889,6 +893,7 @@ export function TransportDialog({
         <DialogFooter>
           <Button
             ref={closeRef}
+            aria-describedby={gone ? TRANSPORT_GONE_ALERT_ID : undefined}
             type="button"
             variant="ghost"
             shape="pill"

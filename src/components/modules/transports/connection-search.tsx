@@ -1022,7 +1022,7 @@ export function ConnectionSearch({
           data-part="connection-search-run"
           variant="primary"
           shape="pill"
-          disabled={!ready}
+          disabled={!ready || transportGone}
           loading={search.pending}
           loadingLabel={t('modules.transports.connection.searching')}
           onClick={() => void run()}

@@ -340,7 +340,10 @@ export function TransportsTimeline({
       </Alert>
     ) : null
 
-  if (transports.length === 0) {
+  // A transport being edited that was the trip's last one, and was deleted elsewhere, leaves the
+  // list empty under an open dialog. The dialog stays where it is, with its gone state, until the
+  // reader closes it; the empty state below is a different tree and would unmount it.
+  if (transports.length === 0 && editing === null) {
     return (
       <>
         {archiveNotice}
@@ -430,7 +433,7 @@ export function TransportsTimeline({
         </FilterRow>
       )}
 
-      {visible.length === 0 ? (
+      {visible.length === 0 && transports.length > 0 ? (
         <EmptyState
           variant="filled"
           size="md"

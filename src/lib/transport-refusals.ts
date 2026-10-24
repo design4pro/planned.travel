@@ -13,7 +13,8 @@
  * The list is closed on purpose and pinned by `src/server/errors/__tests__/public.test.ts`:
  * `classifyFailure` lets a message through as authored copy only when it is exactly one of these.
  * It holds the one state a reader can act on - the row is gone - and nothing else about a
- * transport: a transport of another workspace or another trip stays an ordinary `NotFoundError`.
+ * transport: a transport of another workspace or another trip gets the same answer as a missing
+ * one, so the refusal confirms nothing about a row the reader cannot see.
  *
  * Framework-free, like the module it is modelled on: it imports no React, no router and nothing
  * from `src/server`, so the server and a component can both read it.

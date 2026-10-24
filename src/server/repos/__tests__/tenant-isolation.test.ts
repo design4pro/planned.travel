@@ -3576,7 +3576,12 @@ describe('tenant isolation', () => {
         alpha.transportId,
       )
 
-      for (const intent of ['create', 'edit'] as const) {
+      // An edit reads as a transport that is not there, the answer an absent id gets, so the
+      // lookup by workspace tells nobody that a row of a trip they cannot read exists.
+      for (const [intent, refusal] of [
+        ['create', NotFoundError],
+        ['edit', TransportRefusalError],
+      ] as const) {
         expect(
           await captureError(() =>
             saveTransport(alpha.tenant.scope, {
@@ -3587,7 +3592,7 @@ describe('tenant isolation', () => {
               chain: CHAIN,
             }),
           ),
-        ).toBeInstanceOf(NotFoundError)
+        ).toBeInstanceOf(refusal)
       }
 
       expect(
@@ -4443,7 +4448,7 @@ describe('tenant isolation', () => {
             transportId: alpha.transportId,
           }),
         ),
-      ).toBeInstanceOf(NotFoundError)
+      ).toBeInstanceOf(TransportRefusalError)
       expect(
         await listTransportLegs(alpha.tenant.scope, alpha.transportId),
       ).toEqual([])

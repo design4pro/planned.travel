@@ -754,7 +754,12 @@ describe('saving a transport with its legs', () => {
       chain: NO_CHAIN,
     })
 
-    for (const intent of ['create', 'edit'] as const) {
+    // An edit gets the answer a missing id gets, so the lookup by workspace tells nobody that a
+    // row of a trip they cannot read exists; a create of the id stays a plain not-found.
+    for (const [intent, refusal] of [
+      ['create', NotFoundError],
+      ['edit', TransportRefusalError],
+    ] as const) {
       const error = await captureError(() =>
         saveTransport(tenant.scope, {
           tripId,
@@ -765,7 +770,7 @@ describe('saving a transport with its legs', () => {
         }),
       )
 
-      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).toBeInstanceOf(refusal)
     }
     expect(
       (await getTransport(tenant.scope, idFor('kyushu-ferry')))?.title,

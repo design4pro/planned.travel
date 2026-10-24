@@ -8,7 +8,7 @@
  * being the only thing between an envelope and an `Alert`.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -171,6 +171,10 @@ describe("a call refused because the tab's workspace is not the session's", () =
 })
 
 describe('a refusal the caller has a sentence for', () => {
+  beforeEach(() => {
+    notify.error.mockClear()
+  })
+
   const GONE = 'modules.transports.refusal.gone'
   const refusal = () =>
     new Error(encodePublicFailure({ kind: 'refusal', message: GONE }))
@@ -179,7 +183,7 @@ describe('a refusal the caller has a sentence for', () => {
       ? 'Ten przejazd już nie istnieje'
       : null
 
-  it('puts the sentence in the inline error and the toast, never the key', async () => {
+  it('puts the sentence in the inline error, never the key, and raises no toast over the state it names', async () => {
     const fn = vi.fn().mockRejectedValue(refusal())
     const { result } = renderHook(() =>
       useAction(fn, { refusal: sentence, failure: 'Not updated' }),
@@ -190,9 +194,7 @@ describe('a refusal the caller has a sentence for', () => {
     })
 
     expect(result.current.error).toBe('Ten przejazd już nie istnieje')
-    expect(notify.error).toHaveBeenCalledWith('Not updated', {
-      description: 'Ten przejazd już nie istnieje',
-    })
+    expect(notify.error).not.toHaveBeenCalled()
   })
 
   it('reads any other failure the usual way', async () => {
@@ -210,5 +212,6 @@ describe('a refusal the caller has a sentence for', () => {
     })
 
     expect(result.current.error).toBe('Spróbuj za chwilę.')
+    expect(notify.error).toHaveBeenCalledTimes(1)
   })
 })

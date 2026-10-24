@@ -421,7 +421,7 @@ describe('a saved connection that is searched again', () => {
       expect(error).toBeInstanceOf(TransportRefusalError)
     })
 
-    it('keeps a journey of another trip a not-found diagnostic', async () => {
+    it('answers a journey of another trip as one that is gone', async () => {
       const transportId = await saveUnanchored(1)
       const other = await createTrip(tenant.scope, {
         title: 'Elsewhere',
@@ -432,7 +432,7 @@ describe('a saved connection that is searched again', () => {
 
       const error = await captureError(() => resend(transportId, other.id))
 
-      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).toBeInstanceOf(TransportRefusalError)
     })
 
     it('keeps a trip that is not there a not-found diagnostic', async () => {

@@ -28,11 +28,19 @@ export function useGoneSentence(): (cause: unknown) => string | null {
   )
 }
 
+/**
+ * The alert's id, so the Close button can be described by it: focus moves there when the state
+ * appears, and a screen reader announces the control it lands on, which would cut the alert short.
+ * One dialog is open at a time, and only one of its two tabs shows the alert.
+ */
+export const TRANSPORT_GONE_ALERT_ID = 'transport-gone-alert'
+
 /** The alert itself: a title that says what happened and a body that says what to do. */
 export function TransportGoneAlert() {
   const t = useTranslate()
   return (
     <Alert
+      id={TRANSPORT_GONE_ALERT_ID}
       data-part="transport-gone"
       tone="danger"
       title={t('modules.transports.refusal.goneTitle')}

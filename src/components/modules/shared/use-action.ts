@@ -61,7 +61,9 @@ export interface ActionOptions<TResult> {
    * The sentence for a refusal the caller owns, in the reader's locale, or `null` for any other
    * failure. A refusal can travel as a catalogue key rather than a sentence (see
    * `transport-refusals.ts`), and `messageOf` would print that key: this is the one place the
-   * caller, which has a translator, turns it into words for the toast and the inline error.
+   * caller, which has a translator, turns it into words for the inline error. Such a refusal is
+   * the caller's own designed state, so it gets no toast: a toast would repeat the sentence and
+   * sit over the controls the state leaves the reader.
    */
   readonly refusal?: (error: unknown) => string | null
   /**
@@ -132,14 +134,17 @@ export function useAction<TInput, TResult>(
           options.onError?.(cause)
           return null
         }
+        const owned = options.refusal?.(cause) ?? null
         const message =
-          options.refusal?.(cause) ??
+          owned ??
           messageOf(cause, options.fallback ?? 'Try again in a moment.')
         setError(message)
         options.onError?.(cause)
-        toast.error(options.failure ?? 'That did not save', {
-          description: message,
-        })
+        if (owned === null) {
+          toast.error(options.failure ?? 'That did not save', {
+            description: message,
+          })
+        }
         return null
       } finally {
         setPending(false)

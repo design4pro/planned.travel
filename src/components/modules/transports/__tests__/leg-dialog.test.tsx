@@ -334,6 +334,11 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
       .find((button) => button.textContent === 'Close')
     expect(footerClose).toBeDefined()
     expect(document.activeElement).toBe(footerClose)
+    // Focus lands on it, so what it announces is the alert and not just "Close".
+    const alert = document.querySelector('[data-part="transport-gone"]')
+    expect(footerClose?.getAttribute('aria-describedby')).toBe(
+      alert?.getAttribute('id'),
+    )
   })
 
   it('ignores a refusal that settles after the dialog was closed and opened again', async () => {
