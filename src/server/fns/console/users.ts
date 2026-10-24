@@ -65,7 +65,7 @@
  * **What is deliberately not here: the MCP credential half of a role change.** docs/ACCESS.md §5
  * requires a role change to revoke the account's `staff_api_tokens` rows in the same call, audited
  * as `platform.token.revoked`. That statement cannot be written from `src/server/fns` - SPEC §6 puts
- * all SQL in `server/repos` and names `server/catalog` as its single exception, and a second
+ * all SQL in `server/repos` and names `server/catalog` among its three closed exceptions, and a fourth
  * exception is a change to that contract rather than a file placement. It also has nothing to revoke
  * in this phase: Faza B ships the `staff_api_tokens` *table* and no issuance surface at all, so the
  * table is empty by construction and the revocation is unreachable code guarding a state that cannot

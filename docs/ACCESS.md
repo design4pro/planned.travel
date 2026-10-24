@@ -515,6 +515,8 @@ plugin's `organizationLimit` because the plugin enforces that limit only inside 
 and then the plan (Free keeps the one workspace it was provisioned with). The limit runs before the
 plan so that an admin who already belongs to twenty workspaces is told so, not sent to pay for a
 create that would still be refused.
+Trial eligibility stays per workspace: a created workspace is its own billing customer with its own first trial, and no
+check reads another workspace of the account (current behaviour, recorded on #989 as a money decision that stays with a person; revisit when #998 is decided or when billing data shows trials chained within one account).
 `src/server/auth/__tests__/workspace-access.test.ts` pins this section to the constant the code
 uses.
 

@@ -80,12 +80,14 @@ const messages = {
   'workspace.createTitle': 'Çalışma alanı oluşturun',
   'workspace.createDescription':
     'Kendi gezileri, yerleri ve kişileri olan ayrı bir alan. Ücretsiz planla başlar ve içinde bulunduğunuz çalışma alanının planını paylaşmaz.',
+  'workspace.createPermanent':
+    'planned.travel’da henüz bir çalışma alanını silme seçeneği yok. Oluşturduğunuz veya katıldığınız her çalışma alanı sınıra dahildir: {limit} çalışma alanına üye olduğunuzda yenisini oluşturamazsınız.',
   'workspace.createName': 'Çalışma alanı adı',
   'workspace.createNameRequired': 'Çalışma alanı için bir ad girin.',
   'workspace.createUpgrade':
     '“{workspace}” Ücretsiz planda; yeni bir çalışma alanını yalnızca ücretli planı olan bir çalışma alanı oluşturabilir. Diğer çalışma alanlarınızdan birinin ücretli planı varsa ona geçin ve oradan oluşturun. Aksi halde “{workspace}” alanını ücretli plana yükseltin.',
   'workspace.createLimitReached':
-    'Bir hesabın üye olabileceği en yüksek çalışma alanı sayısına ulaştınız.',
+    'Sınırın izin verdiği kadar çalışma alanına üyesiniz, bu yüzden yenisini oluşturamazsınız.',
   'workspace.createRoleRequired':
     'Yeni bir çalışma alanını yalnızca bir çalışma alanı yöneticisi oluşturabilir. Bu çalışma alanının bir yöneticisinden isteyin ya da yönettiğiniz bir çalışma alanına geçin.',
   'workspace.createFailed': 'Çalışma alanı oluşturulamadı',

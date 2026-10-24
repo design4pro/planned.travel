@@ -82,12 +82,14 @@ const messages = {
   'workspace.createTitle': 'Vytvoření prostoru',
   'workspace.createDescription':
     'Samostatný prostor s vlastními cestami, místy a lidmi. Začíná v tarifu Zdarma a nesdílí tarif prostoru, ve kterém jste.',
+  'workspace.createPermanent':
+    'V planned.travel zatím není možnost prostor smazat. Každý prostor, který vytvoříte nebo do kterého vstoupíte, se počítá do limitu: jakmile patříte do {limit} prostorů, nelze vytvořit další.',
   'workspace.createName': 'Název prostoru',
   'workspace.createNameRequired': 'Zadejte název prostoru.',
   'workspace.createUpgrade':
     '„{workspace}“ je v tarifu Zdarma a další prostor může vytvořit jen prostor s placeným tarifem. Pokud má některý z vašich dalších prostorů placený tarif, přepněte na něj a vytvořte prostor odtud. Jinak u prostoru „{workspace}“ přejděte na placený tarif.',
   'workspace.createLimitReached':
-    'Dosáhli jste největšího počtu prostorů, do kterých může patřit jeden účet.',
+    'Patříte do tolika prostorů, kolik limit dovoluje, proto nelze vytvořit další.',
   'workspace.createRoleRequired':
     'Prostor může vytvořit jen jeho správce. Požádejte správce tohoto prostoru nebo přepněte na prostor, který spravujete.',
   'workspace.createFailed': 'Prostor se nepodařilo vytvořit',

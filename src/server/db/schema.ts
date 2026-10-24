@@ -3202,7 +3202,7 @@ export const providerUsage = sqliteTable(
  * The airport reference dataset behind the endpoint type-ahead (`03-S2`, PRD #167 decision 4).
  *
  * **It carries no `organization_id`, and that is the point.** An airport belongs to no workspace,
- * so there is no tenant discriminator for a filter to be forgotten on — the single stated exception
+ * so there is no tenant discriminator for a filter to be forgotten on — a stated exception
  * to the tenant-scoped repository rule (`AGENTS.md`, docs/SPEC.md §6). Reads go through
  * `src/server/catalog/**` when `03-S2` writes them, never through `createTenantRepository()`.
  *

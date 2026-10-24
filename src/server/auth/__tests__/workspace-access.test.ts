@@ -59,6 +59,14 @@ describe('docs/ACCESS.md §2.7', () => {
   })
 })
 
+describe('docs/ACCESS.md §2.7 trial eligibility', () => {
+  it('states that a created workspace is its own billing customer with its own first trial', () => {
+    expect(section('2.7 Creating a workspace')).toContain(
+      'a created workspace is its own billing customer with its own first trial',
+    )
+  })
+})
+
 describe('docs/ACCESS.md §6.4', () => {
   it('names workspace creation as refused under impersonation', () => {
     const text = section(

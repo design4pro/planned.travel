@@ -12,6 +12,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
+import { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 import {
   dismissWorkspaceNotice,
   markWorkspaceStale,
@@ -947,6 +948,30 @@ describe('creating a workspace', () => {
     )
   })
 
+  it('says there is no way to delete a workspace yet and that creating or joining one counts toward the limit', async () => {
+    const { dialog } = await openDialog()
+
+    expect(dialog.textContent).toContain(
+      `There is no option to delete a workspace in planned.travel yet. Each workspace you create or join counts toward your limit: once you belong to ${WORKSPACE_LIMIT} workspaces, you cannot create another.`,
+    )
+  })
+
+  it('describes the name field with that warning, so a screen reader reads it before the user commits', async () => {
+    await openDialog()
+
+    const describedBy = screen
+      .getByRole('textbox', { name: /Workspace name/ })
+      .getAttribute('aria-describedby')
+    const warning = describedBy
+      ?.split(' ')
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ')
+
+    expect(warning).toContain(
+      'There is no option to delete a workspace in planned.travel yet.',
+    )
+  })
+
   it('keeps the create button enabled, so a blank name is answered rather than silently refused', async () => {
     await openDialog()
 
@@ -1119,7 +1144,7 @@ describe('creating a workspace', () => {
   it.each([
     [
       'limit-reached',
-      'You have reached the most workspaces one account can belong to.',
+      'You belong to as many workspaces as the limit allows, so you cannot create another.',
     ],
     [
       'role-required',

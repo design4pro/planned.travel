@@ -62,11 +62,13 @@ const messages = {
   'workspace.createTitle': '새 워크스페이스 만들기',
   'workspace.createDescription':
     '자체 여행, 장소, 사람을 따로 모아 두는 별도의 공간이에요. 프리 요금제로 시작하며, 지금 있는 워크스페이스의 요금제와는 공유되지 않아요.',
+  'workspace.createPermanent':
+    'planned.travel에는 아직 워크스페이스를 삭제하는 옵션이 없어요. 만들거나 참여한 워크스페이스는 모두 한도에 포함되며, {limit}개의 워크스페이스에 속하면 새로 만들 수 없어요.',
   'workspace.createName': '워크스페이스 이름',
   'workspace.createNameRequired': '워크스페이스 이름을 입력해 주세요.',
   'workspace.createUpgrade':
     '“{workspace}”은(는) 프리 요금제라서, 유료 요금제의 워크스페이스에서만 다른 워크스페이스를 만들 수 있어요. 다른 워크스페이스 중에 유료 요금제인 곳이 있다면 그곳으로 전환해서 만들어 주세요. 없다면 “{workspace}”을(를) 유료 요금제로 업그레이드해 주세요.',
-  'workspace.createLimitReached': '한 계정이 속할 수 있는 워크스페이스 최대 개수에 도달했어요.',
+  'workspace.createLimitReached': '한도까지 워크스페이스에 속해 있어서 새로 만들 수 없어요.',
   'workspace.createRoleRequired':
     '워크스페이스는 워크스페이스 관리자만 만들 수 있어요. 이 워크스페이스의 관리자에게 요청하거나, 직접 관리하는 워크스페이스로 전환해 주세요.',
   'workspace.createFailed': '워크스페이스를 만들지 못했어요',

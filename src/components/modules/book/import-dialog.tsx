@@ -235,6 +235,9 @@ export function ImportBookingsDialog({
       setStage({ kind: 'uploadFailed', filename: outcome.filename })
       return
     }
+    for (const cause of outcome.refreshFailures) {
+      reportFailure(cause)
+    }
     setStage({ kind: 'reviewing' })
   }
 

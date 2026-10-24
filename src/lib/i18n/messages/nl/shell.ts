@@ -80,12 +80,14 @@ const messages = {
   'workspace.createTitle': 'Een werkruimte maken',
   'workspace.createDescription':
     'Een aparte ruimte met eigen reizen, plekken en mensen. Begint met het abonnement Gratis en deelt het abonnement van de werkruimte waarin je zit niet.',
+  'workspace.createPermanent':
+    'In planned.travel is er nog geen optie om een werkruimte te verwijderen. Elke werkruimte die je aanmaakt of waartoe je toetreedt, telt mee voor de limiet: zodra je bij {limit} werkruimtes hoort, kun je er geen nieuwe meer aanmaken.',
   'workspace.createName': 'Naam van de werkruimte',
   'workspace.createNameRequired': 'Geef de werkruimte een naam.',
   'workspace.createUpgrade':
     '“{workspace}” heeft het abonnement Gratis, en alleen een werkruimte met een betaald abonnement kan er nog een maken. Heeft een van je andere werkruimtes een betaald abonnement, wissel daar dan naartoe en maak de nieuwe werkruimte vanaf daar. Anders upgrade je “{workspace}”.',
   'workspace.createLimitReached':
-    'Je hebt het maximale aantal werkruimtes bereikt waartoe één account kan behoren.',
+    'Je hoort bij evenveel werkruimtes als de limiet toestaat, dus je kunt er geen nieuwe aanmaken.',
   'workspace.createRoleRequired':
     'Alleen een beheerder van de werkruimte kan een werkruimte maken. Vraag een beheerder van deze werkruimte of wissel naar een werkruimte die je beheert.',
   'workspace.createFailed': 'De werkruimte kon niet worden gemaakt',

@@ -60,14 +60,14 @@ vi.mock('@tanstack/react-router', () => ({
 /** The account every job in this file belongs to — the register is keyed by it. */
 const USER = 'user-1'
 
-function open(): void {
+function open(onOpenChange: (open: boolean) => void = () => {}): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <ImportBookingsDialog
         tripId="trip-1"
         userId={USER}
         open
-        onOpenChange={() => {}}
+        onOpenChange={onOpenChange}
       />
     </I18nProvider>,
   )
@@ -132,6 +132,7 @@ beforeEach(() => {
   stubs.start.mockReset()
   stubs.confirm.mockReset()
   stubs.upload.mockReset()
+  stubs.router.invalidate.mockReset()
   stubs.view.mockResolvedValue({
     status: 'working',
   } satisfies BookingImportView)
@@ -242,6 +243,35 @@ describe('the import dialog at its boundary', () => {
       description: EN['modules.book.import.actionFailed'],
     })
   })
+
+  it('reports a failed refresh after a start and still moves on to the review', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    stubs.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+    stubs.start.mockResolvedValue({ jobId: 'booking-import:trip-1:file-1' })
+    // Not an Error with a message of its own, so the toast has to fall back to the catalogue.
+    stubs.router.invalidate.mockRejectedValue({})
+    open()
+
+    drop(
+      new File(['x'], 'first.ics', { type: 'text/calendar' }),
+      new File(['x'], 'second.ics', { type: 'text/calendar' }),
+    )
+
+    await waitFor(() => {
+      expect(error).toHaveBeenCalledTimes(2)
+    })
+    expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
+      description: EN['modules.book.import.actionFailed'],
+    })
+    // Both files uploaded and started although the refresh failed after each, and the server's
+    // work is not reported as an upload that did not happen.
+    expect(stubs.start).toHaveBeenCalledTimes(2)
+    expect(readBookImports(USER).map((job) => job.filename)).toEqual([
+      'first.ics',
+      'second.ics',
+    ])
+    expect(screen.queryByText(/did not upload/)).toBeNull()
+  })
 })
 
 describe('the import dialog’s controls', () => {
@@ -333,6 +363,41 @@ describe('the import dialog on a staged answer', () => {
     expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
       description: EN['modules.book.import.actionFailed'],
     })
+  })
+
+  it('still shows the success of a full write when the refresh after it fails, and reports the failure', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    const success = vi.spyOn(toast, 'success').mockReturnValue('toast')
+    const onOpenChange = vi.fn()
+    stubs.confirm.mockResolvedValue({ written: 2, failed: 0, remaining: 0 })
+    stubs.router.invalidate.mockRejectedValue({})
+    open(onOpenChange)
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add 2 bookings' }),
+    )
+
+    await waitFor(() => {
+      expect(onOpenChange).toHaveBeenCalledWith(false)
+    })
+    expect(success).toHaveBeenCalledTimes(1)
+    expect(error).toHaveBeenCalledWith(EN['modules.form.saveError'], {
+      description: EN['modules.book.import.actionFailed'],
+    })
+  })
+
+  it('shows the partial result and the error when the refresh after a partial write fails', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    stubs.confirm.mockResolvedValue({ written: 1, failed: 1, remaining: 1 })
+    stubs.router.invalidate.mockRejectedValue({})
+    open()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Add 2 bookings' }),
+    )
+
+    expect(await screen.findByText('1 of 2 bookings were added')).toBeTruthy()
+    expect(error).toHaveBeenCalledTimes(1)
   })
 
   it('offers every row selected, counted in the confirm', async () => {

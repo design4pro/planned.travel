@@ -26,7 +26,7 @@
   {
     "id": "om-auto-create-pr",
     "label": "om-auto-create-pr - run a task end to end and ship a PR",
-    "text": "<the task - one sentence or several paragraphs>\n\nFlags: --spec <ref> · --slug <kebab-case> · --skill-url <url> (repeatable, reference only) ·\n--loop · --force.\nTarget develop, never main. Blockers: a new i18n key missing from any of the 23 locales; SQL\noutside src/server/repos (server/catalog excepted); a repo method without a tenant-isolation test;\ncomponents/ui fetching data or importing from server/; a server function whose input is not\nvalidated with Zod; generated files edited by hand instead of pnpm generate-routes / pnpm\ndb:generate. Never run pnpm add|remove|update - the stack is pinned (docs/SPEC.md §3); stop with\nStatus: blocked instead. Fast loop: pnpm typecheck && pnpm lint && pnpm test.",
+    "text": "<the task - one sentence or several paragraphs>\n\nFlags: --spec <ref> · --slug <kebab-case> · --skill-url <url> (repeatable, reference only) ·\n--loop · --force.\nTarget develop, never main. Blockers: a new i18n key missing from any of the 23 locales; SQL\noutside src/server/repos (server/catalog and auth provisioning's identity tables excepted, SPEC §6); a repo method without a tenant-isolation test;\ncomponents/ui fetching data or importing from server/; a server function whose input is not\nvalidated with Zod; generated files edited by hand instead of pnpm generate-routes / pnpm\ndb:generate. Never run pnpm add|remove|update - the stack is pinned (docs/SPEC.md §3); stop with\nStatus: blocked instead. Fast loop: pnpm typecheck && pnpm lint && pnpm test.",
     "skills": ["om-auto-create-pr"]
   },
   {
@@ -176,7 +176,7 @@
   {
     "id": "om-code-review",
     "label": "om-code-review - review a diff, branch or PR against the standards",
-    "text": "<PR number, branch, or commit range - leave empty for the current branch vs develop>\n\nNo flags. Run the validation gate, then apply the built-in checklist plus\ndocs/agents/CODING_STANDARDS.md, and produce severity-ranked findings with an approve or\nrequest-changes verdict.\nBlockers checkable on the diff alone: an added @ts-ignore, @ts-expect-error or eslint-disable; an\nadded .skip/.only/.todo/xit/xdescribe; tests deleted without the code; a generated-file diff\ncheck-generated.sh cannot reproduce; a dependency change outside a dependencies PR; a repo method\nwithout a tenant-isolation test; SQL outside src/server/repos or server/catalog; a missing locale\nkey; a server function calling another server function. Style smells are minor, never blockers."
+    "text": "<PR number, branch, or commit range - leave empty for the current branch vs develop>\n\nNo flags. Run the validation gate, then apply the built-in checklist plus\ndocs/agents/CODING_STANDARDS.md, and produce severity-ranked findings with an approve or\nrequest-changes verdict.\nBlockers checkable on the diff alone: an added @ts-ignore, @ts-expect-error or eslint-disable; an\nadded .skip/.only/.todo/xit/xdescribe; tests deleted without the code; a generated-file diff\ncheck-generated.sh cannot reproduce; a dependency change outside a dependencies PR; a repo method\nwithout a tenant-isolation test; SQL outside src/server/repos (server/catalog and auth provisioning's identity tables excepted, SPEC §6); a missing locale\nkey; a server function calling another server function. Style smells are minor, never blockers."
   },
   {
     "id": "om-verify-in-repo",
@@ -191,7 +191,7 @@
   {
     "id": "om-fix",
     "label": "om-fix - implement the minimal fix plus a regression test",
-    "text": "<issue number only on this line - e.g. 1234>\n\nNo flags. Stop and report if om-root-cause has not produced an analysis for this issue.\nClaim the issue first: assignee, the in-progress label, and a claim comment; release it on exit,\nincluding on error. Implement the minimal change and add a regression test that fails without it.\nDo not commit, push or open a PR - that is om-open-pr's job.\nBlockers: a new i18n key missing from any of the 23 locales; SQL outside src/server/repos; a repo\nmethod without a tenant-isolation test; components/ui fetching data or importing from server/; a\nserver-function input not validated with Zod; hand-edited generated files. Never run pnpm\nadd|remove|update - stop with Status: blocked. Gate: pnpm typecheck && pnpm lint && pnpm test."
+    "text": "<issue number only on this line - e.g. 1234>\n\nNo flags. Stop and report if om-root-cause has not produced an analysis for this issue.\nClaim the issue first: assignee, the in-progress label, and a claim comment; release it on exit,\nincluding on error. Implement the minimal change and add a regression test that fails without it.\nDo not commit, push or open a PR - that is om-open-pr's job.\nBlockers: a new i18n key missing from any of the 23 locales; SQL outside src/server/repos (server/catalog and auth provisioning's identity tables excepted, SPEC §6); a repo\nmethod without a tenant-isolation test; components/ui fetching data or importing from server/; a\nserver-function input not validated with Zod; hand-edited generated files. Never run pnpm\nadd|remove|update - stop with Status: blocked. Gate: pnpm typecheck && pnpm lint && pnpm test."
   },
   {
     "id": "om-open-pr",

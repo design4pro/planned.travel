@@ -76,12 +76,14 @@ const messages = {
   'workspace.createTitle': 'Skapa en arbetsyta',
   'workspace.createDescription':
     'En separat yta med egna resor, platser och personer. Den startar i planen Gratis och delar inte plan med arbetsytan du är i.',
+  'workspace.createPermanent':
+    'I planned.travel finns det ännu inget sätt att ta bort en arbetsyta. Varje arbetsyta du skapar eller går med i räknas mot gränsen: när du tillhör {limit} arbetsytor kan du inte skapa fler.',
   'workspace.createName': 'Arbetsytans namn',
   'workspace.createNameRequired': 'Ange ett namn på arbetsytan.',
   'workspace.createUpgrade':
     '”{workspace}” är på planen Gratis, och bara en arbetsyta med en betald plan kan skapa en till. Har någon av dina andra arbetsytor en betald plan, byt till den och skapa därifrån. Annars uppgraderar du ”{workspace}”.',
   'workspace.createLimitReached':
-    'Du har nått det största antalet arbetsytor som ett konto kan tillhöra.',
+    'Du tillhör lika många arbetsytor som gränsen tillåter, så du kan inte skapa fler.',
   'workspace.createRoleRequired':
     'Bara en administratör för arbetsytan kan skapa en arbetsyta. Fråga en administratör för den här arbetsytan eller byt till en arbetsyta som du administrerar.',
   'workspace.createFailed': 'Det gick inte att skapa arbetsytan',

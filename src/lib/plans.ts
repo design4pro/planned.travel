@@ -199,7 +199,7 @@ export interface Plan {
   /** True when the subscription bills one unit per member rather than a flat fee. */
   readonly seatBased: boolean
   readonly seatRange: { readonly min: number; readonly max: number | null }
-  /** Free-trial length applied on a customer's first paid subscription. */
+  /** Free-trial length applied on the workspace's first paid subscription. */
   readonly trialDays: number
   /** The plan we visually lead with. */
   readonly recommended: boolean
